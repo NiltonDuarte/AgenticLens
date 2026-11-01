@@ -20,9 +20,13 @@ Consolidated delivery acceptance is approved for those observed paths with the s
 
 ## Workspace consolidation: 2026-11-02
 
-User steering: reduce committed workspace files while preserving every finding and reviewer/model attribution, then update the skill instructions. The workspace now keeps nine files. REVIEW_RUNS.json embeds all 30 original reports and 17 supporting documents, plus original versions of rewritten records, with SHA-256 checks. All 47 removed file bodies were verified byte-for-byte before deletion. Original filenames resolve through archive.reference_index. Raw transcripts remain outside Git. The archive preserves evidence size while reducing file count.
+User steering: reduce committed workspace files while preserving every finding and reviewer/model attribution, then update the skill instructions. The workspace now keeps nine files. REVIEW_RUNS.json embeds all 30 original reports and 17 supporting documents, plus original versions of rewritten records, with complete original contents. All 47 removed file bodies were verified byte-for-byte before deletion. Original filenames resolve through archive.reference_index. Raw transcripts remain outside Git. The archive preserves evidence size while reducing file count.
 
-The development/review skills and owning contributor guidance now require private temporary reviewer outputs, a parent-owned lossless archive, and hash/reference/provenance checks before removal. Review coverage, model policy, approval gates and runtime schemas are unchanged. Archive integrity, complete finding/run provenance, all pointers and edited skill metadata are verified. This documentation-only change reuses the unchanged application's integrated test evidence.
+The development/review skills and owning contributor guidance now require private temporary reviewer outputs, a parent-owned lossless archive, and byte/reference/provenance checks before removal. Review coverage, model policy, approval gates and runtime schemas are unchanged. Archive integrity, complete finding/run provenance, all pointers and edited skill metadata are verified. This documentation-only change reuses the unchanged application's integrated test evidence.
+
+## Review bookkeeping simplification
+
+User steering: remove unnecessary review hashes while retaining the runtime ledger/report pairing. REVIEW_RUNS.json and FINDINGS.json now use candidate-01 through candidate-04 and direct archived-content references. Repeated report/policy/persona/procedure/prompt hashes are removed. Original archived report/support bodies remain unchanged, preserving historical evidence. Skills now require direct content/provenance checks rather than persistent review hash fields. All 48 run attributions, 12 findings and candidate associations are verified; the workspace still has nine files.
 
 ## Final session telemetry
 

@@ -1,6 +1,6 @@
 # AL-68 iteration 01 consolidated review
 
-Scoped code verdict: APPROVED. Delivery verdict: APPROVED for the documented observed paths, with degraded/unverified coverage below. All twelve final focus/profile reviews approve candidate `c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec` against baseline `7bc670a7f5c9e93a220f3596f3d0e05cb6007332`. All twelve confirmed finding classes are fixed.
+Scoped code verdict: APPROVED. Delivery verdict: APPROVED for the documented observed paths, with degraded/unverified coverage below. All twelve final focus/profile reviews approve `candidate-04` against baseline `7bc670a7f5c9e93a220f3596f3d0e05cb6007332`. All twelve confirmed finding classes are fixed.
 
 ## Findings and discovery credit
 
@@ -33,61 +33,67 @@ Ticket completed_at remains unknown while the orchestration is active. The legac
 
 ## Complete run roster
 
-[REVIEW_RUNS.json](REVIEW_RUNS.json) contains every run, full dispatch/source metadata and candidate fingerprint. Each produced report resolves via report_pointer to archive.reports[run_id].content and has a verified original SHA-256. Cancelled cells retain original planned paths and explicit absent-report records. No absent report is fabricated.
+[REVIEW_RUNS.json](REVIEW_RUNS.json) contains every run, full dispatch/source metadata and readable candidate references. Each produced report resolves via report_pointer to archive.reports[run_id].content. Cancelled cells retain original planned paths and explicit absent-report records. No absent report is fabricated.
 
-| Run | Persona | Observed model / effort | Phase | Candidate prefix | Execution / historical verdict | Evidence |
+| Run | Persona | Observed model / effort | Phase | Candidate | Execution / historical verdict | Evidence |
 | --- | --- | --- | --- | --- | --- | --- |
-| behavior-sol-01 | reviewer-behavior | gpt-6.1-sol/high | discovery | c7dade3313a1 | completed / CHANGES_REQUESTED | [archive](REVIEW_RUNS.json#/archive/reports/behavior-sol-01/content) |
-| behavior-luna-01 | reviewer-behavior | gpt-6-luna/medium | discovery | c7dade3313a1 | completed / CHANGES_REQUESTED | [archive](REVIEW_RUNS.json#/archive/reports/behavior-luna-01/content) |
-| data-sol-01 | reviewer-data | gpt-6.1-sol/high | discovery | c7dade3313a1 | completed / CHANGES_REQUESTED | [archive](REVIEW_RUNS.json#/archive/reports/data-sol-01/content) |
-| data-luna-01 | reviewer-data | gpt-6-luna/medium | discovery | c7dade3313a1 | completed / CHANGES_REQUESTED | [archive](REVIEW_RUNS.json#/archive/reports/data-luna-01/content) |
-| architecture-sol-01 | reviewer-architecture | gpt-6.1-sol/high | discovery | c7dade3313a1 | completed / CHANGES_REQUESTED | [archive](REVIEW_RUNS.json#/archive/reports/architecture-sol-01/content) |
-| architecture-luna-01 | reviewer-architecture | gpt-6-luna/medium | discovery | c7dade3313a1 | completed / INCOMPLETE | [archive](REVIEW_RUNS.json#/archive/reports/architecture-luna-01/content) |
-| tests-sol-01 | reviewer-tests | gpt-6.1-sol/high | discovery | c7dade3313a1 | completed / CHANGES_REQUESTED | [archive](REVIEW_RUNS.json#/archive/reports/tests-sol-01/content) |
-| tests-luna-01 | reviewer-tests | gpt-6-luna/medium | discovery | c7dade3313a1 | completed / INCOMPLETE | [archive](REVIEW_RUNS.json#/archive/reports/tests-luna-01/content) |
-| security-sol-01 | reviewer | gpt-6.1-sol/high | discovery | c7dade3313a1 | completed / CHANGES_REQUESTED | [archive](REVIEW_RUNS.json#/archive/reports/security-sol-01/content) |
-| security-luna-01 | reviewer | gpt-6-luna/medium | discovery | c7dade3313a1 | completed / INCOMPLETE | [archive](REVIEW_RUNS.json#/archive/reports/security-luna-01/content) |
-| release-sol-01 | reviewer | gpt-6.1-sol/high | discovery | c7dade3313a1 | completed / CHANGES_REQUESTED | [archive](REVIEW_RUNS.json#/archive/reports/release-sol-01/content) |
-| release-luna-01 | reviewer | gpt-6-luna/medium | discovery | c7dade3313a1 | completed / CHANGES_REQUESTED | [archive](REVIEW_RUNS.json#/archive/reports/release-luna-01/content) |
-| behavior-sol-02 | reviewer-behavior | gpt-6.1-sol/high | re_review | 17fdae376119 | completed / CHANGES_REQUESTED | [archive](REVIEW_RUNS.json#/archive/reports/behavior-sol-02/content) |
-| behavior-luna-02 | reviewer-behavior | unavailable; requested gpt-6-luna/medium | re_review | 17fdae376119 | cancelled / INCOMPLETE | not produced |
-| data-sol-02 | reviewer-data | gpt-6.1-sol/high | re_review | 17fdae376119 | completed / CHANGES_REQUESTED | [archive](REVIEW_RUNS.json#/archive/reports/data-sol-02/content) |
-| data-luna-02 | reviewer-data | unavailable; requested gpt-6-luna/medium | re_review | 17fdae376119 | cancelled / INCOMPLETE | not produced |
-| architecture-sol-02 | reviewer-architecture | gpt-6.1-sol/high | re_review | 17fdae376119 | completed / CHANGES_REQUESTED | [archive](REVIEW_RUNS.json#/archive/reports/architecture-sol-02/content) |
-| architecture-luna-02 | reviewer-architecture | unavailable; requested gpt-6-luna/medium | re_review | 17fdae376119 | cancelled / INCOMPLETE | not produced |
-| tests-sol-02 | reviewer-tests | unavailable; requested gpt-6.1-sol/high | re_review | 17fdae376119 | cancelled / INCOMPLETE | not produced |
-| tests-luna-02 | reviewer-tests | unavailable; requested gpt-6-luna/medium | re_review | 17fdae376119 | cancelled / INCOMPLETE | not produced |
-| security-sol-02 | reviewer | unavailable; requested gpt-6.1-sol/high | re_review | 17fdae376119 | cancelled / INCOMPLETE | not produced |
-| security-luna-02 | reviewer | unavailable; requested gpt-6-luna/medium | re_review | 17fdae376119 | cancelled / INCOMPLETE | not produced |
-| release-sol-02 | reviewer | unavailable; requested gpt-6.1-sol/high | re_review | 17fdae376119 | cancelled / INCOMPLETE | not produced |
-| release-luna-02 | reviewer | unavailable; requested gpt-6-luna/medium | re_review | 17fdae376119 | cancelled / INCOMPLETE | not produced |
-| behavior-sol-03 | reviewer-behavior | gpt-6.1-sol/high | re_review | 26898644f865 | completed / INCOMPLETE | [archive](REVIEW_RUNS.json#/archive/reports/behavior-sol-03/content) |
-| behavior-luna-03 | reviewer-behavior | unavailable; requested gpt-6-luna/medium | re_review | 26898644f865 | cancelled / INCOMPLETE | not produced |
-| data-sol-03 | reviewer-data | gpt-6.1-sol/high | re_review | 26898644f865 | completed / CHANGES_REQUESTED | [archive](REVIEW_RUNS.json#/archive/reports/data-sol-03/content) |
-| data-luna-03 | reviewer-data | unavailable; requested gpt-6-luna/medium | re_review | 26898644f865 | cancelled / INCOMPLETE | not produced |
-| architecture-sol-03 | reviewer-architecture | gpt-6.1-sol/high | re_review | 26898644f865 | completed / CHANGES_REQUESTED | [archive](REVIEW_RUNS.json#/archive/reports/architecture-sol-03/content) |
-| architecture-luna-03 | reviewer-architecture | unavailable; requested gpt-6-luna/medium | re_review | 26898644f865 | cancelled / INCOMPLETE | not produced |
-| tests-sol-03 | reviewer-tests | unavailable; requested gpt-6.1-sol/high | re_review | 26898644f865 | cancelled / INCOMPLETE | not produced |
-| tests-luna-03 | reviewer-tests | unavailable; requested gpt-6-luna/medium | re_review | 26898644f865 | cancelled / INCOMPLETE | not produced |
-| security-sol-03 | reviewer | unavailable; requested gpt-6.1-sol/high | re_review | 26898644f865 | cancelled / INCOMPLETE | not produced |
-| security-luna-03 | reviewer | unavailable; requested gpt-6-luna/medium | re_review | 26898644f865 | cancelled / INCOMPLETE | not produced |
-| release-sol-03 | reviewer | unavailable; requested gpt-6.1-sol/high | re_review | 26898644f865 | cancelled / INCOMPLETE | not produced |
-| release-luna-03 | reviewer | unavailable; requested gpt-6-luna/medium | re_review | 26898644f865 | cancelled / INCOMPLETE | not produced |
-| behavior-sol-04 | reviewer-behavior | gpt-6.1-sol/high | re_review | c34cc9492786 | completed / INCOMPLETE | [archive](REVIEW_RUNS.json#/archive/reports/behavior-sol-04/content) |
-| behavior-luna-04 | reviewer-behavior | gpt-6-luna/medium | re_review | c34cc9492786 | completed / INCOMPLETE | [archive](REVIEW_RUNS.json#/archive/reports/behavior-luna-04/content) |
-| data-sol-04 | reviewer-data | gpt-6.1-sol/high | re_review | c34cc9492786 | completed / INCOMPLETE | [archive](REVIEW_RUNS.json#/archive/reports/data-sol-04/content) |
-| data-luna-04 | reviewer-data | gpt-6-luna/medium | re_review | c34cc9492786 | completed / INCOMPLETE | [archive](REVIEW_RUNS.json#/archive/reports/data-luna-04/content) |
-| architecture-sol-04 | reviewer-architecture | gpt-6.1-sol/high | re_review | c34cc9492786 | completed / INCOMPLETE | [archive](REVIEW_RUNS.json#/archive/reports/architecture-sol-04/content) |
-| architecture-luna-04 | reviewer-architecture | gpt-6-luna/medium | re_review | c34cc9492786 | completed / INCOMPLETE | [archive](REVIEW_RUNS.json#/archive/reports/architecture-luna-04/content) |
-| tests-sol-04 | reviewer-tests | gpt-6.1-sol/high | re_review | c34cc9492786 | completed / INCOMPLETE | [archive](REVIEW_RUNS.json#/archive/reports/tests-sol-04/content) |
-| tests-luna-04 | reviewer-tests | gpt-6-luna/medium | re_review | c34cc9492786 | completed / INCOMPLETE | [archive](REVIEW_RUNS.json#/archive/reports/tests-luna-04/content) |
-| security-sol-04 | reviewer | gpt-6.1-sol/high | re_review | c34cc9492786 | completed / INCOMPLETE | [archive](REVIEW_RUNS.json#/archive/reports/security-sol-04/content) |
-| security-luna-04 | reviewer | gpt-6-luna/medium | re_review | c34cc9492786 | completed / INCOMPLETE | [archive](REVIEW_RUNS.json#/archive/reports/security-luna-04/content) |
-| release-sol-04 | reviewer | gpt-6.1-sol/high | re_review | c34cc9492786 | completed / INCOMPLETE | [archive](REVIEW_RUNS.json#/archive/reports/release-sol-04/content) |
-| release-luna-04 | reviewer | gpt-6-luna/medium | re_review | c34cc9492786 | completed / INCOMPLETE | [archive](REVIEW_RUNS.json#/archive/reports/release-luna-04/content) |
+| behavior-sol-01 | reviewer-behavior | gpt-6.1-sol/high | discovery | candidate-01 | completed / CHANGES_REQUESTED | [archive](REVIEW_RUNS.json#/archive/reports/behavior-sol-01/content) |
+| behavior-luna-01 | reviewer-behavior | gpt-6-luna/medium | discovery | candidate-01 | completed / CHANGES_REQUESTED | [archive](REVIEW_RUNS.json#/archive/reports/behavior-luna-01/content) |
+| data-sol-01 | reviewer-data | gpt-6.1-sol/high | discovery | candidate-01 | completed / CHANGES_REQUESTED | [archive](REVIEW_RUNS.json#/archive/reports/data-sol-01/content) |
+| data-luna-01 | reviewer-data | gpt-6-luna/medium | discovery | candidate-01 | completed / CHANGES_REQUESTED | [archive](REVIEW_RUNS.json#/archive/reports/data-luna-01/content) |
+| architecture-sol-01 | reviewer-architecture | gpt-6.1-sol/high | discovery | candidate-01 | completed / CHANGES_REQUESTED | [archive](REVIEW_RUNS.json#/archive/reports/architecture-sol-01/content) |
+| architecture-luna-01 | reviewer-architecture | gpt-6-luna/medium | discovery | candidate-01 | completed / INCOMPLETE | [archive](REVIEW_RUNS.json#/archive/reports/architecture-luna-01/content) |
+| tests-sol-01 | reviewer-tests | gpt-6.1-sol/high | discovery | candidate-01 | completed / CHANGES_REQUESTED | [archive](REVIEW_RUNS.json#/archive/reports/tests-sol-01/content) |
+| tests-luna-01 | reviewer-tests | gpt-6-luna/medium | discovery | candidate-01 | completed / INCOMPLETE | [archive](REVIEW_RUNS.json#/archive/reports/tests-luna-01/content) |
+| security-sol-01 | reviewer | gpt-6.1-sol/high | discovery | candidate-01 | completed / CHANGES_REQUESTED | [archive](REVIEW_RUNS.json#/archive/reports/security-sol-01/content) |
+| security-luna-01 | reviewer | gpt-6-luna/medium | discovery | candidate-01 | completed / INCOMPLETE | [archive](REVIEW_RUNS.json#/archive/reports/security-luna-01/content) |
+| release-sol-01 | reviewer | gpt-6.1-sol/high | discovery | candidate-01 | completed / CHANGES_REQUESTED | [archive](REVIEW_RUNS.json#/archive/reports/release-sol-01/content) |
+| release-luna-01 | reviewer | gpt-6-luna/medium | discovery | candidate-01 | completed / CHANGES_REQUESTED | [archive](REVIEW_RUNS.json#/archive/reports/release-luna-01/content) |
+| behavior-sol-02 | reviewer-behavior | gpt-6.1-sol/high | re_review | candidate-02 | completed / CHANGES_REQUESTED | [archive](REVIEW_RUNS.json#/archive/reports/behavior-sol-02/content) |
+| behavior-luna-02 | reviewer-behavior | unavailable; requested gpt-6-luna/medium | re_review | candidate-02 | cancelled / INCOMPLETE | not produced |
+| data-sol-02 | reviewer-data | gpt-6.1-sol/high | re_review | candidate-02 | completed / CHANGES_REQUESTED | [archive](REVIEW_RUNS.json#/archive/reports/data-sol-02/content) |
+| data-luna-02 | reviewer-data | unavailable; requested gpt-6-luna/medium | re_review | candidate-02 | cancelled / INCOMPLETE | not produced |
+| architecture-sol-02 | reviewer-architecture | gpt-6.1-sol/high | re_review | candidate-02 | completed / CHANGES_REQUESTED | [archive](REVIEW_RUNS.json#/archive/reports/architecture-sol-02/content) |
+| architecture-luna-02 | reviewer-architecture | unavailable; requested gpt-6-luna/medium | re_review | candidate-02 | cancelled / INCOMPLETE | not produced |
+| tests-sol-02 | reviewer-tests | unavailable; requested gpt-6.1-sol/high | re_review | candidate-02 | cancelled / INCOMPLETE | not produced |
+| tests-luna-02 | reviewer-tests | unavailable; requested gpt-6-luna/medium | re_review | candidate-02 | cancelled / INCOMPLETE | not produced |
+| security-sol-02 | reviewer | unavailable; requested gpt-6.1-sol/high | re_review | candidate-02 | cancelled / INCOMPLETE | not produced |
+| security-luna-02 | reviewer | unavailable; requested gpt-6-luna/medium | re_review | candidate-02 | cancelled / INCOMPLETE | not produced |
+| release-sol-02 | reviewer | unavailable; requested gpt-6.1-sol/high | re_review | candidate-02 | cancelled / INCOMPLETE | not produced |
+| release-luna-02 | reviewer | unavailable; requested gpt-6-luna/medium | re_review | candidate-02 | cancelled / INCOMPLETE | not produced |
+| behavior-sol-03 | reviewer-behavior | gpt-6.1-sol/high | re_review | candidate-03 | completed / INCOMPLETE | [archive](REVIEW_RUNS.json#/archive/reports/behavior-sol-03/content) |
+| behavior-luna-03 | reviewer-behavior | unavailable; requested gpt-6-luna/medium | re_review | candidate-03 | cancelled / INCOMPLETE | not produced |
+| data-sol-03 | reviewer-data | gpt-6.1-sol/high | re_review | candidate-03 | completed / CHANGES_REQUESTED | [archive](REVIEW_RUNS.json#/archive/reports/data-sol-03/content) |
+| data-luna-03 | reviewer-data | unavailable; requested gpt-6-luna/medium | re_review | candidate-03 | cancelled / INCOMPLETE | not produced |
+| architecture-sol-03 | reviewer-architecture | gpt-6.1-sol/high | re_review | candidate-03 | completed / CHANGES_REQUESTED | [archive](REVIEW_RUNS.json#/archive/reports/architecture-sol-03/content) |
+| architecture-luna-03 | reviewer-architecture | unavailable; requested gpt-6-luna/medium | re_review | candidate-03 | cancelled / INCOMPLETE | not produced |
+| tests-sol-03 | reviewer-tests | unavailable; requested gpt-6.1-sol/high | re_review | candidate-03 | cancelled / INCOMPLETE | not produced |
+| tests-luna-03 | reviewer-tests | unavailable; requested gpt-6-luna/medium | re_review | candidate-03 | cancelled / INCOMPLETE | not produced |
+| security-sol-03 | reviewer | unavailable; requested gpt-6.1-sol/high | re_review | candidate-03 | cancelled / INCOMPLETE | not produced |
+| security-luna-03 | reviewer | unavailable; requested gpt-6-luna/medium | re_review | candidate-03 | cancelled / INCOMPLETE | not produced |
+| release-sol-03 | reviewer | unavailable; requested gpt-6.1-sol/high | re_review | candidate-03 | cancelled / INCOMPLETE | not produced |
+| release-luna-03 | reviewer | unavailable; requested gpt-6-luna/medium | re_review | candidate-03 | cancelled / INCOMPLETE | not produced |
+| behavior-sol-04 | reviewer-behavior | gpt-6.1-sol/high | re_review | candidate-04 | completed / INCOMPLETE | [archive](REVIEW_RUNS.json#/archive/reports/behavior-sol-04/content) |
+| behavior-luna-04 | reviewer-behavior | gpt-6-luna/medium | re_review | candidate-04 | completed / INCOMPLETE | [archive](REVIEW_RUNS.json#/archive/reports/behavior-luna-04/content) |
+| data-sol-04 | reviewer-data | gpt-6.1-sol/high | re_review | candidate-04 | completed / INCOMPLETE | [archive](REVIEW_RUNS.json#/archive/reports/data-sol-04/content) |
+| data-luna-04 | reviewer-data | gpt-6-luna/medium | re_review | candidate-04 | completed / INCOMPLETE | [archive](REVIEW_RUNS.json#/archive/reports/data-luna-04/content) |
+| architecture-sol-04 | reviewer-architecture | gpt-6.1-sol/high | re_review | candidate-04 | completed / INCOMPLETE | [archive](REVIEW_RUNS.json#/archive/reports/architecture-sol-04/content) |
+| architecture-luna-04 | reviewer-architecture | gpt-6-luna/medium | re_review | candidate-04 | completed / INCOMPLETE | [archive](REVIEW_RUNS.json#/archive/reports/architecture-luna-04/content) |
+| tests-sol-04 | reviewer-tests | gpt-6.1-sol/high | re_review | candidate-04 | completed / INCOMPLETE | [archive](REVIEW_RUNS.json#/archive/reports/tests-sol-04/content) |
+| tests-luna-04 | reviewer-tests | gpt-6-luna/medium | re_review | candidate-04 | completed / INCOMPLETE | [archive](REVIEW_RUNS.json#/archive/reports/tests-luna-04/content) |
+| security-sol-04 | reviewer | gpt-6.1-sol/high | re_review | candidate-04 | completed / INCOMPLETE | [archive](REVIEW_RUNS.json#/archive/reports/security-sol-04/content) |
+| security-luna-04 | reviewer | gpt-6-luna/medium | re_review | candidate-04 | completed / INCOMPLETE | [archive](REVIEW_RUNS.json#/archive/reports/security-luna-04/content) |
+| release-sol-04 | reviewer | gpt-6.1-sol/high | re_review | candidate-04 | completed / INCOMPLETE | [archive](REVIEW_RUNS.json#/archive/reports/release-sol-04/content) |
+| release-luna-04 | reviewer | gpt-6-luna/medium | re_review | candidate-04 | completed / INCOMPLETE | [archive](REVIEW_RUNS.json#/archive/reports/release-luna-04/content) |
 
 ## Archive integrity
 
 The workspace was reduced from 56 to nine files after byte-for-byte UTF-8/SHA-256 verification of all 47 removed bodies: 30 per-run reports and 17 supporting documents. Original consolidated records are retained under archive.retained_versions. Original local IDs, claims, severities, commands, dissent, no-findings results and all attribution remain in the complete original bodies. archive.reference_index resolves original filenames and relative/repository paths to the archived content.
 
-Validation compares all 48 original run records and all 12 findings, allowing only explicit reference relocation fields; checks every current JSON pointer/hash and the ledger/report digest; and validates the edited development/review skill metadata. The canonical model policy and application/test/runtime files are unchanged. File consolidation preserves evidence size; it reduces the number of committed artifacts.
+Validation compares all 48 original run records and all 12 findings, allowing only explicit reference relocation fields; checks every current JSON pointer and the ledger/report digest; and validates the edited development/review skill metadata. The canonical model policy and application/test/runtime files are unchanged. File consolidation preserves evidence size; it reduces the number of committed artifacts.
+
+## Review bookkeeping simplification
+
+The user requested removal of review hashes after their purpose was explained. Current structured records use candidate-01 through candidate-04, which resolve to the original archived manifests, and direct file/JSON-pointer report references. Per-report, policy, persona, procedure and prompt hashes are removed. Original archived bodies remain byte-for-byte unchanged, including historical hashes and verdicts. Source commit IDs remain ordinary version references. The runtime capture_report.json ledger digest remains intact; its duplicate review-record copy is removed.
+
+Validation compares every archived body directly with its pre-cleanup bytes and verifies all reviewer/model/phase/outcome, finding/discovery/verification and candidate associations. The nine-file layout, code/test evidence, model policy and runtime acceptance limits are unchanged.

@@ -22,54 +22,47 @@
           "run_id": "behavior-sol-01",
           "report_path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-behavior-sol.md",
-          "report_pointer": "/archive/reports/behavior-sol-01/content",
-          "report_sha256": "528a0feac32e137fb2c7a290b127d89f31b6f41db0b8204e16ac49a1151ca78f"
+          "report_pointer": "/archive/reports/behavior-sol-01/content"
         },
         {
           "run_id": "data-sol-01",
           "report_path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-data-sol.md",
-          "report_pointer": "/archive/reports/data-sol-01/content",
-          "report_sha256": "1ee502b7f5ec88566da6face68341c8986e00945b34c9f126139aa1051fb08b8"
+          "report_pointer": "/archive/reports/data-sol-01/content"
         },
         {
           "run_id": "architecture-sol-01",
           "report_path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-architecture-sol.md",
-          "report_pointer": "/archive/reports/architecture-sol-01/content",
-          "report_sha256": "cd9482c046f37a46f343be85221e57c1b3bf97ce13d9c3564478c76b3fe442ef"
+          "report_pointer": "/archive/reports/architecture-sol-01/content"
         },
         {
           "run_id": "tests-sol-01",
           "report_path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-tests-sol.md",
-          "report_pointer": "/archive/reports/tests-sol-01/content",
-          "report_sha256": "30014cd8b1619a084e266f2b2849d9bb165c0d16480b65cb39d786e484f6f6c2"
+          "report_pointer": "/archive/reports/tests-sol-01/content"
         }
       ],
       "correction_evidence": [
         {
           "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "pointer": "/archive/documents/iterations~101~1IMPLEMENTATION.md/content",
-          "sha256": "0f84fd58ecbfe5fa631cddc8c4619f9cfcaef0f75d5bd4ca80745d3a24e06f5a",
           "original_path": "IMPLEMENTATION.md"
         },
         {
           "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "pointer": "/archive/documents/iterations~101~1TEST_REPORT.md/content",
-          "sha256": "504049442707221ebf253aa429463244d23b19002587111841c24c35de2ceed1",
           "original_path": "TEST_REPORT.md"
         },
         {
           "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "pointer": "/archive/documents/iterations~101~1SETUP_IMPLEMENTATION.md/content",
-          "sha256": "05ce021321f0254353bc9c243f8d8d1d71e2138b38fddca19b2d131471d01efc",
           "original_path": "SETUP_IMPLEMENTATION.md"
         }
       ],
-      "corrected_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "corrected_candidate": "candidate-04",
       "remaining_trigger": "See REVIEW-data-sol-02.md for successful older-source reread and actual-store symlink alias counterexamples.",
-      "resolution_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "resolution_candidate": "candidate-04",
       "resolution": "Corrected production paths and meaningful regression oracles verified by current applicable focused reviews; historical confirmed disposition retained.",
       "verification_run_ids": [
         "behavior-sol-04",
@@ -105,32 +98,28 @@
           "run_id": "data-sol-01",
           "report_path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-data-sol.md",
-          "report_pointer": "/archive/reports/data-sol-01/content",
-          "report_sha256": "1ee502b7f5ec88566da6face68341c8986e00945b34c9f126139aa1051fb08b8"
+          "report_pointer": "/archive/reports/data-sol-01/content"
         }
       ],
       "correction_evidence": [
         {
           "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "pointer": "/archive/documents/iterations~101~1IMPLEMENTATION.md/content",
-          "sha256": "0f84fd58ecbfe5fa631cddc8c4619f9cfcaef0f75d5bd4ca80745d3a24e06f5a",
           "original_path": "IMPLEMENTATION.md"
         },
         {
           "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "pointer": "/archive/documents/iterations~101~1TEST_REPORT.md/content",
-          "sha256": "504049442707221ebf253aa429463244d23b19002587111841c24c35de2ceed1",
           "original_path": "TEST_REPORT.md"
         },
         {
           "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "pointer": "/archive/documents/iterations~101~1SETUP_IMPLEMENTATION.md/content",
-          "sha256": "05ce021321f0254353bc9c243f8d8d1d71e2138b38fddca19b2d131471d01efc",
           "original_path": "SETUP_IMPLEMENTATION.md"
         }
       ],
-      "corrected_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
-      "resolution_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "corrected_candidate": "candidate-04",
+      "resolution_candidate": "candidate-04",
       "resolution": "Corrected production paths and meaningful regression oracles verified by current applicable focused reviews; historical confirmed disposition retained.",
       "verification_run_ids": [
         "data-sol-04",
@@ -164,33 +153,29 @@
           "run_id": "data-sol-01",
           "report_path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-data-sol.md",
-          "report_pointer": "/archive/reports/data-sol-01/content",
-          "report_sha256": "1ee502b7f5ec88566da6face68341c8986e00945b34c9f126139aa1051fb08b8"
+          "report_pointer": "/archive/reports/data-sol-01/content"
         }
       ],
       "correction_evidence": [
         {
           "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "pointer": "/archive/documents/iterations~101~1IMPLEMENTATION.md/content",
-          "sha256": "0f84fd58ecbfe5fa631cddc8c4619f9cfcaef0f75d5bd4ca80745d3a24e06f5a",
           "original_path": "IMPLEMENTATION.md"
         },
         {
           "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "pointer": "/archive/documents/iterations~101~1TEST_REPORT.md/content",
-          "sha256": "504049442707221ebf253aa429463244d23b19002587111841c24c35de2ceed1",
           "original_path": "TEST_REPORT.md"
         },
         {
           "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "pointer": "/archive/documents/iterations~101~1SETUP_IMPLEMENTATION.md/content",
-          "sha256": "05ce021321f0254353bc9c243f8d8d1d71e2138b38fddca19b2d131471d01efc",
           "original_path": "SETUP_IMPLEMENTATION.md"
         }
       ],
-      "corrected_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "corrected_candidate": "candidate-04",
       "remaining_trigger": "See REVIEW-data-sol-02.md for successful older-source reread and actual-store symlink alias counterexamples.",
-      "resolution_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "resolution_candidate": "candidate-04",
       "resolution": "Corrected production paths and meaningful regression oracles verified by current applicable focused reviews; historical confirmed disposition retained.",
       "verification_run_ids": [
         "behavior-sol-04",
@@ -226,32 +211,28 @@
           "run_id": "behavior-sol-01",
           "report_path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-behavior-sol.md",
-          "report_pointer": "/archive/reports/behavior-sol-01/content",
-          "report_sha256": "528a0feac32e137fb2c7a290b127d89f31b6f41db0b8204e16ac49a1151ca78f"
+          "report_pointer": "/archive/reports/behavior-sol-01/content"
         }
       ],
       "correction_evidence": [
         {
           "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "pointer": "/archive/documents/iterations~101~1IMPLEMENTATION.md/content",
-          "sha256": "0f84fd58ecbfe5fa631cddc8c4619f9cfcaef0f75d5bd4ca80745d3a24e06f5a",
           "original_path": "IMPLEMENTATION.md"
         },
         {
           "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "pointer": "/archive/documents/iterations~101~1TEST_REPORT.md/content",
-          "sha256": "504049442707221ebf253aa429463244d23b19002587111841c24c35de2ceed1",
           "original_path": "TEST_REPORT.md"
         },
         {
           "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "pointer": "/archive/documents/iterations~101~1SETUP_IMPLEMENTATION.md/content",
-          "sha256": "05ce021321f0254353bc9c243f8d8d1d71e2138b38fddca19b2d131471d01efc",
           "original_path": "SETUP_IMPLEMENTATION.md"
         }
       ],
-      "corrected_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
-      "resolution_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "corrected_candidate": "candidate-04",
+      "resolution_candidate": "candidate-04",
       "resolution": "Corrected production paths and meaningful regression oracles verified by current applicable focused reviews; historical confirmed disposition retained.",
       "verification_run_ids": [
         "behavior-sol-04",
@@ -285,32 +266,28 @@
           "run_id": "architecture-sol-01",
           "report_path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-architecture-sol.md",
-          "report_pointer": "/archive/reports/architecture-sol-01/content",
-          "report_sha256": "cd9482c046f37a46f343be85221e57c1b3bf97ce13d9c3564478c76b3fe442ef"
+          "report_pointer": "/archive/reports/architecture-sol-01/content"
         }
       ],
       "correction_evidence": [
         {
           "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "pointer": "/archive/documents/iterations~101~1IMPLEMENTATION.md/content",
-          "sha256": "0f84fd58ecbfe5fa631cddc8c4619f9cfcaef0f75d5bd4ca80745d3a24e06f5a",
           "original_path": "IMPLEMENTATION.md"
         },
         {
           "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "pointer": "/archive/documents/iterations~101~1TEST_REPORT.md/content",
-          "sha256": "504049442707221ebf253aa429463244d23b19002587111841c24c35de2ceed1",
           "original_path": "TEST_REPORT.md"
         },
         {
           "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "pointer": "/archive/documents/iterations~101~1SETUP_IMPLEMENTATION.md/content",
-          "sha256": "05ce021321f0254353bc9c243f8d8d1d71e2138b38fddca19b2d131471d01efc",
           "original_path": "SETUP_IMPLEMENTATION.md"
         }
       ],
-      "corrected_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
-      "resolution_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "corrected_candidate": "candidate-04",
+      "resolution_candidate": "candidate-04",
       "resolution": "Corrected production paths and meaningful regression oracles verified by current applicable focused reviews; historical confirmed disposition retained.",
       "verification_run_ids": [
         "data-sol-04",
@@ -344,32 +321,28 @@
           "run_id": "security-sol-01",
           "report_path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-security-sol.md",
-          "report_pointer": "/archive/reports/security-sol-01/content",
-          "report_sha256": "1fa636fa5ac704c3bd9d136c5bf3cf2ffe6e9bb89a4e9cc3a35115f0cb148899"
+          "report_pointer": "/archive/reports/security-sol-01/content"
         }
       ],
       "correction_evidence": [
         {
           "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "pointer": "/archive/documents/iterations~101~1IMPLEMENTATION.md/content",
-          "sha256": "0f84fd58ecbfe5fa631cddc8c4619f9cfcaef0f75d5bd4ca80745d3a24e06f5a",
           "original_path": "IMPLEMENTATION.md"
         },
         {
           "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "pointer": "/archive/documents/iterations~101~1TEST_REPORT.md/content",
-          "sha256": "504049442707221ebf253aa429463244d23b19002587111841c24c35de2ceed1",
           "original_path": "TEST_REPORT.md"
         },
         {
           "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "pointer": "/archive/documents/iterations~101~1SETUP_IMPLEMENTATION.md/content",
-          "sha256": "05ce021321f0254353bc9c243f8d8d1d71e2138b38fddca19b2d131471d01efc",
           "original_path": "SETUP_IMPLEMENTATION.md"
         }
       ],
-      "corrected_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
-      "resolution_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "corrected_candidate": "candidate-04",
+      "resolution_candidate": "candidate-04",
       "resolution": "Corrected production paths and meaningful regression oracles verified by current applicable focused reviews; historical confirmed disposition retained.",
       "verification_run_ids": [
         "architecture-sol-04",
@@ -403,32 +376,28 @@
           "run_id": "security-sol-01",
           "report_path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-security-sol.md",
-          "report_pointer": "/archive/reports/security-sol-01/content",
-          "report_sha256": "1fa636fa5ac704c3bd9d136c5bf3cf2ffe6e9bb89a4e9cc3a35115f0cb148899"
+          "report_pointer": "/archive/reports/security-sol-01/content"
         }
       ],
       "correction_evidence": [
         {
           "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "pointer": "/archive/documents/iterations~101~1IMPLEMENTATION.md/content",
-          "sha256": "0f84fd58ecbfe5fa631cddc8c4619f9cfcaef0f75d5bd4ca80745d3a24e06f5a",
           "original_path": "IMPLEMENTATION.md"
         },
         {
           "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "pointer": "/archive/documents/iterations~101~1TEST_REPORT.md/content",
-          "sha256": "504049442707221ebf253aa429463244d23b19002587111841c24c35de2ceed1",
           "original_path": "TEST_REPORT.md"
         },
         {
           "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "pointer": "/archive/documents/iterations~101~1SETUP_IMPLEMENTATION.md/content",
-          "sha256": "05ce021321f0254353bc9c243f8d8d1d71e2138b38fddca19b2d131471d01efc",
           "original_path": "SETUP_IMPLEMENTATION.md"
         }
       ],
-      "corrected_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
-      "resolution_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "corrected_candidate": "candidate-04",
+      "resolution_candidate": "candidate-04",
       "resolution": "Corrected production paths and meaningful regression oracles verified by current applicable focused reviews; historical confirmed disposition retained.",
       "verification_run_ids": [
         "architecture-sol-04",
@@ -462,32 +431,28 @@
           "run_id": "release-sol-01",
           "report_path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-release-sol.md",
-          "report_pointer": "/archive/reports/release-sol-01/content",
-          "report_sha256": "2a562399ebb9a852e0577c065110f56223c3d494afd08767d437878ed65b6148"
+          "report_pointer": "/archive/reports/release-sol-01/content"
         }
       ],
       "correction_evidence": [
         {
           "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "pointer": "/archive/documents/iterations~101~1IMPLEMENTATION.md/content",
-          "sha256": "0f84fd58ecbfe5fa631cddc8c4619f9cfcaef0f75d5bd4ca80745d3a24e06f5a",
           "original_path": "IMPLEMENTATION.md"
         },
         {
           "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "pointer": "/archive/documents/iterations~101~1TEST_REPORT.md/content",
-          "sha256": "504049442707221ebf253aa429463244d23b19002587111841c24c35de2ceed1",
           "original_path": "TEST_REPORT.md"
         },
         {
           "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "pointer": "/archive/documents/iterations~101~1SETUP_IMPLEMENTATION.md/content",
-          "sha256": "05ce021321f0254353bc9c243f8d8d1d71e2138b38fddca19b2d131471d01efc",
           "original_path": "SETUP_IMPLEMENTATION.md"
         }
       ],
-      "corrected_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
-      "resolution_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "corrected_candidate": "candidate-04",
+      "resolution_candidate": "candidate-04",
       "resolution": "Corrected production paths and meaningful regression oracles verified by current applicable focused reviews; historical confirmed disposition retained.",
       "verification_run_ids": [
         "tests-sol-04",
@@ -520,39 +485,34 @@
           "run_id": "release-sol-01",
           "report_path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-release-sol.md",
-          "report_pointer": "/archive/reports/release-sol-01/content",
-          "report_sha256": "2a562399ebb9a852e0577c065110f56223c3d494afd08767d437878ed65b6148"
+          "report_pointer": "/archive/reports/release-sol-01/content"
         },
         {
           "run_id": "release-luna-01",
           "report_path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-release-luna.md",
-          "report_pointer": "/archive/reports/release-luna-01/content",
-          "report_sha256": "febcb602ca8bac43673182a91f6de5055b9a85ae8b577bceef8f66f3ff05b457"
+          "report_pointer": "/archive/reports/release-luna-01/content"
         }
       ],
       "correction_evidence": [
         {
           "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "pointer": "/archive/documents/iterations~101~1IMPLEMENTATION.md/content",
-          "sha256": "0f84fd58ecbfe5fa631cddc8c4619f9cfcaef0f75d5bd4ca80745d3a24e06f5a",
           "original_path": "IMPLEMENTATION.md"
         },
         {
           "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "pointer": "/archive/documents/iterations~101~1TEST_REPORT.md/content",
-          "sha256": "504049442707221ebf253aa429463244d23b19002587111841c24c35de2ceed1",
           "original_path": "TEST_REPORT.md"
         },
         {
           "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "pointer": "/archive/documents/iterations~101~1SETUP_IMPLEMENTATION.md/content",
-          "sha256": "05ce021321f0254353bc9c243f8d8d1d71e2138b38fddca19b2d131471d01efc",
           "original_path": "SETUP_IMPLEMENTATION.md"
         }
       ],
-      "corrected_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
-      "resolution_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "corrected_candidate": "candidate-04",
+      "resolution_candidate": "candidate-04",
       "resolution": "Corrected production paths and meaningful regression oracles verified by current applicable focused reviews; historical confirmed disposition retained.",
       "verification_run_ids": [
         "release-sol-04",
@@ -582,32 +542,28 @@
           "run_id": "data-luna-01",
           "report_path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-data-luna.md",
-          "report_pointer": "/archive/reports/data-luna-01/content",
-          "report_sha256": "928915fb0083af8639e3d13c02be9415540fbe739c55798ddd59cbef6a5fa636"
+          "report_pointer": "/archive/reports/data-luna-01/content"
         }
       ],
       "correction_evidence": [
         {
           "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "pointer": "/archive/documents/iterations~101~1IMPLEMENTATION.md/content",
-          "sha256": "0f84fd58ecbfe5fa631cddc8c4619f9cfcaef0f75d5bd4ca80745d3a24e06f5a",
           "original_path": "IMPLEMENTATION.md"
         },
         {
           "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "pointer": "/archive/documents/iterations~101~1TEST_REPORT.md/content",
-          "sha256": "504049442707221ebf253aa429463244d23b19002587111841c24c35de2ceed1",
           "original_path": "TEST_REPORT.md"
         },
         {
           "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "pointer": "/archive/documents/iterations~101~1SETUP_IMPLEMENTATION.md/content",
-          "sha256": "05ce021321f0254353bc9c243f8d8d1d71e2138b38fddca19b2d131471d01efc",
           "original_path": "SETUP_IMPLEMENTATION.md"
         }
       ],
-      "corrected_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
-      "resolution_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "corrected_candidate": "candidate-04",
+      "resolution_candidate": "candidate-04",
       "resolution": "Corrected production paths and meaningful regression oracles verified by current applicable focused reviews; historical confirmed disposition retained.",
       "verification_run_ids": [
         "data-sol-04",
@@ -641,32 +597,28 @@
           "run_id": "behavior-luna-01",
           "report_path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-behavior-luna.md",
-          "report_pointer": "/archive/reports/behavior-luna-01/content",
-          "report_sha256": "8c9be45c958bac7b6673f294e117e0b26792d474de8975b92ae9e6dd69b4bae9"
+          "report_pointer": "/archive/reports/behavior-luna-01/content"
         }
       ],
       "correction_evidence": [
         {
           "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "pointer": "/archive/documents/iterations~101~1IMPLEMENTATION.md/content",
-          "sha256": "0f84fd58ecbfe5fa631cddc8c4619f9cfcaef0f75d5bd4ca80745d3a24e06f5a",
           "original_path": "IMPLEMENTATION.md"
         },
         {
           "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "pointer": "/archive/documents/iterations~101~1TEST_REPORT.md/content",
-          "sha256": "504049442707221ebf253aa429463244d23b19002587111841c24c35de2ceed1",
           "original_path": "TEST_REPORT.md"
         },
         {
           "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "pointer": "/archive/documents/iterations~101~1SETUP_IMPLEMENTATION.md/content",
-          "sha256": "05ce021321f0254353bc9c243f8d8d1d71e2138b38fddca19b2d131471d01efc",
           "original_path": "SETUP_IMPLEMENTATION.md"
         }
       ],
-      "corrected_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
-      "resolution_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "corrected_candidate": "candidate-04",
+      "resolution_candidate": "candidate-04",
       "resolution": "Corrected production paths and meaningful regression oracles verified by current applicable focused reviews; historical confirmed disposition retained.",
       "verification_run_ids": [
         "behavior-sol-04",
@@ -705,25 +657,22 @@
           "run_id": "behavior-sol-02",
           "report_path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-behavior-sol-02.md",
-          "report_pointer": "/archive/reports/behavior-sol-02/content",
-          "report_sha256": "e5fba0631d67034493027bfc2956a5b6d31747afc5ae9c8fef4f5ef8d38ca7cd"
+          "report_pointer": "/archive/reports/behavior-sol-02/content"
         },
         {
           "run_id": "data-sol-02",
           "report_path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-data-sol-02.md",
-          "report_pointer": "/archive/reports/data-sol-02/content",
-          "report_sha256": "5e1171ef56b7cd2cc882298c65a5169009d15715822121cc072bf55f28ec5a22"
+          "report_pointer": "/archive/reports/data-sol-02/content"
         },
         {
           "run_id": "architecture-sol-02",
           "report_path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
           "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-architecture-sol-02.md",
-          "report_pointer": "/archive/reports/architecture-sol-02/content",
-          "report_sha256": "3d672102e91ce4a346d179e2b7196e69cb470dfaefdfbb87f94558d7b4f935b9"
+          "report_pointer": "/archive/reports/architecture-sol-02/content"
         }
       ],
-      "corrected_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "corrected_candidate": "candidate-04",
       "remaining_trigger": "Candidate03 fixed prefix rotation but failed-stop queue starves start-only discovery and recovery bytes starve valid owner refresh; source-proven native counterexamples in data/architecture Sol03 reports.",
       "observations": [
         {
@@ -735,7 +684,7 @@
           "trigger": "1024-byte malformed recovery entry consumes all bytes before valid509-byte owner refresh for8 passes; refresh-only control advances."
         }
       ],
-      "resolution_candidate": "c34cc949278608f4c777f7428a620e2ae29542e7fe33875d5b13ae9f0d17e6ec",
+      "resolution_candidate": "candidate-04",
       "resolution": "Corrected production paths and meaningful regression oracles verified by current applicable focused reviews; historical confirmed disposition retained.",
       "verification_run_ids": [
         "behavior-sol-04",
