@@ -9,18 +9,18 @@ Verification: baseline make passed; after committing audit deliverables and fetc
 Telemetry expectation: local Codex rollout metadata identifies root 01a19432-3529-73a0-a201-d8b1dbf00473 in this exact worktree. No children launched and no prior GEN-14 ledger or other-harness sessions to preserve. Final extraction uses source codex and ticket type chore. Snapshot covers through generate; later ledger verification, commit and PR delivery are outside that snapshot.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 12
-- **Active Agent Duration:** 2h 10m (excludes user wait time)
+- **Software Development Life Cycle Iterations:** 18
+- **Active Agent Duration:** 2h 21m (excludes user wait time)
 - **Context Window Health:** BLOATED — Root agent peak 245.7k tokens (123% of 200k healthy ceiling, 5 compactions) | Subagents peak 248.6k (Reviewer)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
-- **Subagent Turn Velocity & Thrashing:** 1.2 avg turns/run (peak: 2 turns) | Planner 1.0, Coder 1.3, Tester 1.0, Reviewer 1.0, Review_eval_original 2.0, Review_eval_revised 2.0
+- **Subagent Turn Velocity & Thrashing:** 1.2 avg turns/run (peak: 2 turns) | Planner 1.0, Coder 1.3, Tester 1.0, Reviewer 1.0, Parallel_protocol_exercise 1.0, Review_eval_original 2.0, Review_eval_revised 2.0
 - **Test-to-Production Code Ratio:** 2.3:1 (+650 test lines / +280 prod lines)
 - **Code Delivered:** +930 / -2,550 lines across 53 code files (excluding docs)
-- **Reasoning Effort:** 60,362 reasoning tokens (18.5% of generated output)
-- **Tool Health & Self-Correction:** 787 tool calls (40 self-corrections, 94.9% success rate)
+- **Reasoning Effort:** 62,300 reasoning tokens (17.9% of generated output)
+- **Tool Health & Self-Correction:** 838 tool calls (44 self-corrections, 94.7% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 23 execution anomalies detected (13 CRITICAL, 10 WARNING).
+- **Status:** 24 execution anomalies detected (13 CRITICAL, 11 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+116.0k tokens) — Context tokens surged by 116.0k to 116.0k tokens.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+138.3k tokens) — Context tokens surged by 138.3k to 138.3k tokens.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+140.9k tokens) — Context tokens surged by 140.9k to 140.9k tokens.
@@ -43,6 +43,7 @@ Telemetry expectation: local Codex rollout metadata identifies root 01a19432-352
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (162.4k tokens) — Context tokens reached 162.4k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (166.7k tokens) — Context tokens reached 166.7k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.9k tokens) — Context tokens reached 161.9k, breaching the 160k warning ceiling.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer <-> parallel_protocol_exercise (4 cycles) — Subagent roles 'reviewer' and 'parallel_protocol_exercise' alternated for 4 consecutive cycles.
 - [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: command (3 consecutive errors) — Tool 'command' encountered 3 consecutive execution failures.
 
 ### Agentic Execution Metrics
@@ -55,17 +56,18 @@ Telemetry expectation: local Codex rollout metadata identifies root 01a19432-352
 | **planner** | 3 | 268,346 | 7,695 | 1,442,432 | 84.3% | 148.2k | ELEVATED | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
 | **coder** | 7 | 693,476 | 58,843 | 21,748,480 | 96.9% | 184.5k | ELEVATED | Unavailable (0 observed, 0 partial, 7 unavailable / 7 invocations) |
 | **tester** | 3 | 185,217 | 11,530 | 5,664,000 | 96.8% | 174.6k | ELEVATED | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
-| **reviewer** | 7 | 1,675,060 | 82,011 | 34,901,760 | 95.4% | 248.6k | BLOATED (124%) | Unavailable (0 observed, 0 partial, 7 unavailable / 7 invocations) |
+| **reviewer** | 8 | 1,715,967 | 85,479 | 35,289,728 | 95.4% | 248.6k | BLOATED (124%) | Unavailable (0 observed, 0 partial, 8 unavailable / 8 invocations) |
+| **parallel_protocol_exercise** | 1 | 34,071 | 3,638 | 176,128 | 83.8% | 36.4k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **review_eval_original** | 1 | 38,836 | 2,525 | 126,848 | 76.6% | 40.5k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **review_eval_revised** | 1 | 15,805 | 3,212 | 168,192 | 91.4% | 37.1k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **rootagent** | 1 | 597,962 | 99,672 | 37,936,128 | 98.4% | 245.7k | BLOATED (123%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **23** | **3,474,702** | **265,488** | **101,987,840** | **96.7%** | **248.6k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 23 unavailable / 23 invocations)** |
+| **rootagent** | 1 | 623,800 | 112,992 | 42,645,888 | 98.6% | 245.7k | BLOATED (123%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **25** | **3,575,518** | **285,914** | **107,261,696** | **96.8%** | **248.6k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 25 unavailable / 25 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-astra** | 23 | 3,474,702 | 265,488 | 101,987,840 | 96.7% | Unavailable (0 observed, 0 partial, 23 unavailable / 23 invocations) |
-| **Total** | **23** | **3,474,702** | **265,488** | **101,987,840** | **96.7%** | **Unavailable (0 observed, 0 partial, 23 unavailable / 23 invocations)** |
+| **gpt-6-astra** | 25 | 3,575,518 | 285,914 | 107,261,696 | 96.8% | Unavailable (0 observed, 0 partial, 25 unavailable / 25 invocations) |
+| **Total** | **25** | **3,575,518** | **285,914** | **107,261,696** | **96.8%** | **Unavailable (0 observed, 0 partial, 25 unavailable / 25 invocations)** |
 
 ## Iteration 02: REV-5 reclassification and remediation
 
@@ -208,3 +210,7 @@ Baseline a44000d; initial tree clean. User authorized designing the multi-review
 User specified separate persona files and a dedicated shared context. Added reviewer-behavior, reviewer-data, reviewer-architecture and reviewer-tests Markdown personas with thin Codex registrations; all load .agents/agent/references/review-context.md directly. Generic reviewer remains a narrow/specialist entry point. Coordinator protocol owns selection/consolidation; first-pass children do not load sibling personas/conclusions.
 
 Both skills validated; YAML/TOML, persona pointers and local links passed. Independent consistency reviewer approved. Parent aligned phase-order shorthand with the canonical verification-before-final-approval rule. Forward exercise preserved all core/specialist coverage across limited-capacity waves, narrowed low-risk documentation review, and retained confirmed blockers plus missing evidence. This was an instruction exercise, not actual specialized product reviews or a detection-quality benchmark. Native role discovery requires harness support/reload; documented explicit-persona fallback preserves role scope. Application/runtime code unchanged; prior make evidence reused.
+
+## Iteration 06 delivery and telemetry
+
+Guidance commit 65fe5e0 already includes origin/main. Final skill validators, frontmatter/TOML checks and local references passed; no application/runtime source changed, so prior full make evidence is reused. Schema-v5 REV-5/fix ledger verified against all 25 expected Codex source identities and parent links, preserving previous 23 plus the forward exercise and consistency review. No other-harness sessions existed to preserve. Snapshot ends at generation; later verification/commit/push calls are outside it.
