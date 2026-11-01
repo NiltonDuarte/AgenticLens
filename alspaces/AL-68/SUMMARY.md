@@ -29,25 +29,25 @@ The development/review skills and owning contributor guidance now require privat
 The final snapshot must retain the 38 known Codex sessions and four OpenCode sessions, their source parent/model evidence and the excluded unassigned session boundary. REVIEW_RUNS.json holds the archived source inventory and latest verification; capture_report.json is a separate coverage artifact bound to the ledger digest. Costs unavailable from source remain unavailable.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 49
-- **Active Agent Duration:** 7h 43m (excludes user wait time)
-- **Context Window Health:** BLOATED — Root agent peak 378.3k tokens (189% of 200k healthy ceiling, 0 compactions) | Subagents peak 336.6k (Coder)
+- **Software Development Life Cycle Iterations:** 53
+- **Active Agent Duration:** 8h 38m (excludes user wait time)
+- **Context Window Health:** CRITICAL — Root agent peak 454.1k tokens (227% of 200k healthy ceiling, 1 compactions) | Subagents peak 336.6k (Coder)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 1.5 avg turns/run (peak: 6 turns) | Planner 1.0, Coder 3.5, Tester 6.0, Reviewer 1.0, Capture_child 1.0, General 3.0, Reviewer-architecture 1.0, Reviewer-behavior 1.0, Reviewer-data 1.0, Reviewer-tests 1.0
 - **Test-to-Production Code Ratio:** 0.8:1 (+2,035 test lines / +2,640 prod lines)
 - **Code Delivered:** +4,725 / -11 lines across 23 code files (excluding docs)
-- **Reasoning Effort:** 230,837 reasoning tokens (27.7% of generated output)
-- **Tool Health & Self-Correction:** 1,183 tool calls (46 self-corrections, 96.1% success rate)
+- **Reasoning Effort:** 267,630 reasoning tokens (28.8% of generated output)
+- **Tool Health & Self-Correction:** 1,219 tool calls (50 self-corrections, 95.9% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 14 execution anomalies detected (7 CRITICAL, 7 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (207.2k tokens) — Context tokens reached 207.2k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (203.6k tokens) — Context tokens reached 203.6k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.5k tokens) — Context tokens reached 200.5k, breaching the 200k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (378.3k tokens) — Context tokens reached 378.3k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (454.1k tokens) — Context tokens reached 454.1k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (336.6k tokens) — Context tokens reached 336.6k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (303.6k tokens) — Context tokens reached 303.6k, breaching the 200k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (378.3k tokens) — Context tokens reached 378.3k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (454.1k tokens) — Context tokens reached 454.1k, breaching the 200k critical ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.3k tokens) — Context tokens reached 160.3k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.1k tokens) — Context tokens reached 161.1k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (163.4k tokens) — Context tokens reached 163.4k, breaching the 160k warning ceiling.
@@ -74,13 +74,13 @@ The final snapshot must retain the 38 known Codex sessions and four OpenCode ses
 | **reviewer-behavior** | 4 | 476,895 | 27,453 | 4,110,976 | 89.6% | 98.6k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
 | **reviewer-data** | 4 | 383,552 | 32,720 | 4,905,856 | 92.7% | 99.3k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
 | **reviewer-tests** | 2 | 236,275 | 13,714 | 2,179,328 | 90.2% | 103.7k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **rootagent** | 15 | 1,841,059 | 235,275 | 63,647,360 | 97.2% | 378.3k | BLOATED (189%) | Unavailable (0 observed, 0 partial, 15 unavailable / 15 invocations) |
-| **Total** | **42** | **5,692,344** | **603,560** | **166,983,424** | **96.7%** | **378.3k** | **BLOATED** | **$0.00 known subtotal (partial; 4 observed, 0 partial, 38 unavailable / 42 invocations)** |
+| **rootagent** | 15 | 2,053,903 | 292,634 | 72,048,000 | 97.2% | 454.1k | CRITICAL (227%) | Unavailable (0 observed, 0 partial, 15 unavailable / 15 invocations) |
+| **Total** | **42** | **5,905,188** | **660,919** | **175,384,064** | **96.7%** | **454.1k** | **CRITICAL** | **$0.00 known subtotal (partial; 4 observed, 0 partial, 38 unavailable / 42 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
 | **gpt-5.6-luna** | 4 | 35,652 | 270 | 17,280 | 32.6% | $0.00 |
 | **gpt-6-luna** | 12 | 973,658 | 61,706 | 6,380,800 | 86.8% | Unavailable (0 observed, 0 partial, 12 unavailable / 12 invocations) |
-| **gpt-6.1-sol** | 26 | 4,683,034 | 541,584 | 160,585,344 | 97.2% | Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations) |
-| **Total** | **42** | **5,692,344** | **603,560** | **166,983,424** | **96.7%** | **$0.00 known subtotal (partial; 4 observed, 0 partial, 38 unavailable / 42 invocations)** |
+| **gpt-6.1-sol** | 26 | 4,895,878 | 598,943 | 168,985,984 | 97.2% | Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations) |
+| **Total** | **42** | **5,905,188** | **660,919** | **175,384,064** | **96.7%** | **$0.00 known subtotal (partial; 4 observed, 0 partial, 38 unavailable / 42 invocations)** |

@@ -1,5 +1,5 @@
 {
-  "started_at": "2026-11-01T22:00:23.565981109Z",
+  "started_at": "2026-11-01T23:09:56.913214183Z",
   "cutoff_semantics": "cutoff is reconciliation completion, not a common as-of source time; refreshed_at is each owner's successful read completion",
   "source_bytes_reserved": 427875,
   "source_attempts": 3,
@@ -7,7 +7,7 @@
   "pending_children": 0,
   "unresolved_parent_links": 0,
   "protocol": 1,
-  "cutoff": "2026-11-01T22:00:23.612336695Z",
+  "cutoff": "2026-11-01T23:09:56.953369096Z",
   "ticket_id": "AL-68",
   "registrations": [
     {
@@ -23,7 +23,7 @@
       "event": "",
       "state": "current",
       "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
-      "refreshed_at": "2026-11-01T22:00:23.599126482Z",
+      "refreshed_at": "2026-11-01T23:09:56.945579772Z",
       "updated_at": "2026-11-01T21:26:41.529Z",
       "revision": 157040
     },
@@ -39,7 +39,7 @@
       "event": "SessionEnd",
       "state": "current",
       "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
-      "refreshed_at": "2026-11-01T22:00:23.581685678Z",
+      "refreshed_at": "2026-11-01T23:09:56.924046505Z",
       "updated_at": "2026-11-01T21:26:43.302Z",
       "revision": 133000
     },
@@ -55,7 +55,7 @@
       "event": "SessionEnd",
       "state": "current",
       "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
-      "refreshed_at": "2026-11-01T22:00:23.590565867Z",
+      "refreshed_at": "2026-11-01T23:09:56.936298966Z",
       "updated_at": "2026-11-01T21:30:32.610Z",
       "revision": 137835
     }
@@ -64,8 +64,7 @@
     "Only registered, explicitly bound or source-proven inherited sessions are selected. Sessions that never delivered a hook cannot be counted as covered.",
     "Hook installation is not proof of harness trust, agent response or complete source availability.",
     "Explicit source refresh had unordered/older checkpoints; retained canonical source facts and ownerless auxiliary rows.",
-    "Codex0.166 exec: SubagentStart was not observed; running/interrupted child coverage before Stop remains degraded/unverified.",
     "Ticket completed_at remains unknown while the source orchestration is active; legacy generator invocation/publication-time inference was removed from ticket metadata only."
   ],
-  "ledger_sha256": "8bfe48cac09e2bda6b0373df0bcc99b0611eee730e8895e3f1922b2beb3a55c7"
+  "ledger_sha256": "277927dcb61554d282887cf96b329e5159e1455cbba245bb3c5a5ce525baa641"
 }

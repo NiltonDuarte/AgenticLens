@@ -3286,5 +3286,37 @@
       "git diff --check: passed after normalizing summary EOF"
     ],
     "scope": "Documentation-only consolidation relative to c54787abfd666e9400e34da43886e9fcd2343cc4; prior integrated make remains valid for unchanged application code."
+  },
+  "latest_telemetry_verification": {
+    "source": "Codex native source and preserved OpenCode sessions",
+    "root_session_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+    "captured_codex_sessions": 38,
+    "captured_opencode_sessions": 4,
+    "all_expected_sessions_present": true,
+    "source_parent_links_verified": true,
+    "nonroot_codex_source_records_verified": 37,
+    "independent_roots_have_no_fabricated_parent": true,
+    "smoke_model_usage_effort_match_source_evidence": true,
+    "opencode_facts_preserved": true,
+    "unassigned_work_excluded": true,
+    "source_facts_unchanged_by_metadata_correction": true,
+    "generated_completion_inference_removed": "2026-11-01T23:09:56.867Z",
+    "ticket_completed_at": null,
+    "ledger_sha256": "277927dcb61554d282887cf96b329e5159e1455cbba245bb3c5a5ce525baa641",
+    "report_digest_matches": true,
+    "schema_version": 5,
+    "root_session_active_at_snapshot": true,
+    "generation_warnings": [],
+    "coverage_limits": [
+      "Only registered, explicitly bound or source-proven inherited sessions are selected. Sessions that never delivered a hook cannot be counted as covered.",
+      "Hook installation is not proof of harness trust, agent response or complete source availability.",
+      "Explicit source refresh had unordered/older checkpoints; retained canonical source facts and ownerless auxiliary rows.",
+      "Ticket completed_at remains unknown while the source orchestration is active; legacy generator invocation/publication-time inference was removed from ticket metadata only."
+    ],
+    "code_ref": "148207a",
+    "privacy_checks": "No raw payload fields or active local binding challenges in committed workspace artifacts; original review bodies preserved verbatim.",
+    "challenge_values_checked": 8,
+    "persisted_cli_render": "passed: ./bin/agentic-lens-linux-amd64 --workspaces alspaces --ticket-id AL-68 --append alspaces/AL-68/SUMMARY.md",
+    "final_archive_validation": "passed after telemetry: all 47 removed bodies and hashes, 48 original provenance records, 12 finding credits/verification links, all archived references, exactly nine files; git diff --check passed"
   }
 }
