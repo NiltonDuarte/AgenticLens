@@ -28,22 +28,24 @@ Prompt your agent:
 Read the instructions at https://raw.githubusercontent.com/NiltonDuarte/AgenticLens/main/.agents/skills/agentic-lens-setup/SKILL.md and set up AgenticLens in this repository.
 ```
 
-#### Step 2: Install the Wrapper and Native Binary
+#### Step 2: Install Both Skills and the Native Binary
 
-Follow [manual installation](#12-pathway-b-manual-developer-installation-via-github-releases), using `.agents/skills/agentic-lens-setup/bin` as the destination. The POSIX wrapper detects Linux, macOS, or Windows shell environments and amd64/arm64, selects `agentic-lens-${OS}-${ARCH}` (`.exe` on Windows), and downloads missing platform binaries. See [container/host operation](#66-container-sandbox-vs-host-machine-execution-multi-platform-wrapper).
+Follow the [complete setup manifest](../.agents/skills/agentic-lens-setup/SKILL.md), section 1, to install setup/repair scripts alongside the operator skill from one selected official release tag. The bundle includes a launcher at `.agents/skills/agentic-lens-operator/scripts/agentic-lens.sh`, outside binary storage. Choose a release containing the installer and all manifest files; older releases may not include them. The installer refuses differing existing files, so review local edits before upgrading a skill bundle.
 
-If the setup downloader is available:
+After approving the binary download, run:
 
 ```bash
-./.agents/skills/agentic-lens-setup/scripts/download.sh
+bash .agents/skills/agentic-lens-setup/scripts/download.sh
 # Optional: pre-download the host binary from a Linux container.
-./.agents/skills/agentic-lens-setup/scripts/download.sh --include-host darwin-arm64
+bash .agents/skills/agentic-lens-setup/scripts/download.sh --include-host darwin-arm64
 ```
+
+The downloader uses the recorded release tag and defaults to `operator/bin`. The launcher selects a local native binary without fetching it. Missing binaries require explicit repair. Git tracking and ignore choices belong to the repository owner; installation does not create ignore rules or stage files. See [worktree recovery](#66-worktrees-and-containerhost-platforms).
 
 #### Step 3: Verify Binary Execution
 The agent validates that the executable operates cleanly on the host system:
 ```bash
-./.agents/skills/agentic-lens-setup/bin/agentic-lens version --json
+bash .agents/skills/agentic-lens-operator/scripts/agentic-lens.sh version --json
 ```
 Expected output:
 ```json
@@ -63,7 +65,7 @@ The agent queries the developer or inspects the codebase to determine:
 
 The agent runs `init` to write shared `.agenticlens-config.yaml` and machine-local `.agenticlens-config.local.yaml`:
 ```bash
-./.agents/skills/agentic-lens-setup/bin/agentic-lens init \
+bash .agents/skills/agentic-lens-operator/scripts/agentic-lens.sh init \
   --project-name "BillingService" \
   --ticket-prefixes "BILL,PAY,GEN" \
   --src-folders "services,pkg,cmd" \
@@ -89,11 +91,7 @@ Download via `curl`:
 ```bash
 mkdir -p ./bin
 
-# Write protective .gitignore
-cat <<'EOF' > ./bin/.gitignore
-*
-!.gitignore
-EOF
+# Decide whether to track or ignore installed files under your repository policy.
 
 # Install multi-platform wrapper script
 curl -fsSL -o ./bin/agentic-lens "https://raw.githubusercontent.com/NiltonDuarte/AgenticLens/main/scripts/agentic-lens-wrapper.sh"
@@ -108,10 +106,7 @@ curl -fsSL -o ./bin/agentic-lens-darwin-arm64 "https://github.com/NiltonDuarte/A
 chmod +x ./bin/agentic-lens-darwin-arm64
 ```
 
-Alternatively, use the automated downloader script:
-```bash
-curl -fsSL https://raw.githubusercontent.com/NiltonDuarte/AgenticLens/main/scripts/download-agentic-lens.sh | bash -s -- --dest ./bin
-```
+For automated installation, use the complete setup bootstrap in section 1.1, then run its installed downloader with `--dest ./bin` if desired. The contributor entrypoint `scripts/download-agentic-lens.sh` delegates to that bundled downloader and requires its checkout dependencies; it is not a standalone script to pipe from the web.
 
 On Windows (PowerShell):
 ```powershell
@@ -544,7 +539,7 @@ When installing precompiled binaries manually on Unix systems (Linux and macOS):
   ```bash
   xattr -d com.apple.quarantine ./bin/agentic-lens
   ```
-- Store the binary in a dedicated directory (such as `./bin/` or `.agents/skills/agentic-lens-setup/bin/`) and ensure a protective `.gitignore` contains `*` and `!/.gitignore` to prevent tracking compiled binaries in git.
+- Store the binary in the selected installation directory (such as `./bin/` or `.agents/skills/agentic-lens-operator/bin/`). The repository owner decides what to track or ignore; installation/repair preserves that policy.
 
 ### 6.4 Git Upstream Base Branch Inference and Fallback Probing
 
@@ -571,14 +566,16 @@ AgenticLens resolves workspace directories relative to the current working direc
   ```
 - Always verify that the configured `workspaces.dir` in `.agenticlens-config.yaml` matches the directory used in CLI commands and agent prompts.
 
-### 6.6 Container Sandbox vs Host Machine Execution (Multi-Platform Wrapper)
+### 6.6 Worktrees and Container/Host Platforms
 
-A very common configuration in OpenCode development is running the autonomous agent inside a Linux sandbox (such as Docker, Dev Containers, or a remote container) while the engineer interacts from a macOS host workstation:
-- **The Problem**: If setup installs a single platform executable (e.g. Linux ELF binary) to `./bin/agentic-lens`, running `./bin/agentic-lens server` on macOS fails with binary execution errors (`cannot execute binary file`). Conversely, installing only a macOS binary prevents the containerized agent from executing `./bin/agentic-lens generate` or `./bin/agentic-lens version`.
-- **The Solution**: AgenticLens resolves this by installing a lightweight dispatcher wrapper script at `bin/agentic-lens` alongside native platform executables (`agentic-lens-${OS}-${ARCH}`).
-- **Self-Healing Download**: If an engineer runs `./bin/agentic-lens server` on their macOS workstation after the setup skill ran inside the Linux container, the wrapper detects that `agentic-lens-darwin-arm64` is missing locally and downloads it automatically from GitHub Releases before executing.
-- **Background Update Notification**: The wrapper checks for newer versions in a background subshell (throttled to at most once per 24 hours) without blocking CLI commands. If an update is detected, a notice is displayed on stderr. The check can be disabled by setting `AGENTIC_LENS_NO_UPDATE_CHECK=1`.
-- **Upgrading**: Run `./bin/agentic-lens update` to upgrade all installed platform binaries to the latest release tag.
+Each worktree has its own installation paths. Git carries only files tracked in that worktree's revision; the owner chooses whether to track skills, scripts, native binaries, or none of them. AgenticLens does not impose that choice.
+
+- If scripts exist but the current host binary is absent, explicitly run `bash .agents/skills/agentic-lens-setup/scripts/download.sh`. The recorded release tag controls the download. If `RELEASE_VERSION` is absent or empty, pass the intended `--version <RELEASE_TAG>` explicitly; installed repair refuses to assume `latest`. Use `--local-bin <native-prebuilt-path>` for offline repair when a local executable is available; this requires no remote release selection. Explicit repair also restores execute permission on an existing native file without replacing its contents or downloading it.
+- If setup or launcher files are absent too, follow the complete bootstrap in [the setup manifest](../.agents/skills/agentic-lens-setup/SKILL.md), section 1.2. If that manifest is missing locally, read its public URL from section 1.1. Do not borrow binaries or machine settings from another worktree.
+- Run `bash .agents/skills/agentic-lens-operator/scripts/agentic-lens.sh` for normal operation. It chooses Linux/macOS amd64/arm64 or Windows amd64 (Git Bash), preserves the caller's current directory, and does not download or check for updates. Native PowerShell can directly invoke `operator/bin/agentic-lens-windows-amd64.exe`.
+- A Linux container and a macOS host need separate native artifacts. Explicitly use `--include-host darwin-arm64` during download when both are needed. No Go or Node toolchain is required.
+- Diagnose missing `.agenticlens-config.local.yaml` separately. Keep shared configuration intact, select the harness with `--source`, and specify this machine's `--codex-home` or `--db-path` where appropriate. Binary repair must not rerun `init` over an existing project.
+- The legacy `bin/agentic-lens` wrapper remains supported and retains its automatic missing-binary download and background version-check behavior. `AGENTIC_LENS_NO_UPDATE_CHECK=1` disables those background checks. Its `update` command remains available for legacy callers. With the new launcher, authorize an upgrade explicitly using setup `download.sh --version <RELEASE_TAG> --force`.
 
 ---
 
