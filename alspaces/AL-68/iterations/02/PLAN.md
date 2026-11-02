@@ -133,7 +133,7 @@ Every selected focus runs both configured profiles: `sol_6_1_high` (gpt-6.1-sol/
 | Security | Source/project proof, path/alias/output escape, request binding and payload privacy | iter02-security-sol; iter02-security-luna |
 | Release/setup | Native scheduling lifecycle, compatibility/rollback, packaged copies and nonintrusive installation | iter02-release-sol; iter02-release-luna |
 
-Parent assigns each run a unique private temporary report path outside the tracked workspace, retains compact reviewer/model/finding outcomes in REVIEW.md, and maintains FINDINGS.json and consolidated REVIEW.md only when produced. No placeholders, per-run committed reports or persistent review hashes. Parent validates relevant counterexamples and obtains revision-aware affected re-review under both profiles; missing required runtime or review evidence is INCOMPLETE.
+Parent assigns each run a unique private temporary report path outside the tracked workspace, retains compact reviewer/model/finding outcomes in REVIEW.md, and maintains consolidated REVIEW.md only when produced. No placeholders, per-run committed reports or persistent review hashes. Parent validates relevant counterexamples and obtains revision-aware affected re-review under both profiles; missing required runtime or review evidence is INCOMPLETE.
 
 ## Decisions to resolve for implementation approval
 

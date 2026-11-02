@@ -76,7 +76,7 @@ Preserved guarantees: bounded durable hook handoff, exact source identities, no 
 
 ## Documentation steering: 2026-11-02
 
-Source: user requested fewer committed workspace files without losing findings or reviewer/model identity, then instructed “do it, update the skill instructions”. This is artifact maintenance in iteration 01. The committed layout is nine files: five root deliverables and PLAN.md, REVIEW.md, FINDINGS.json, REVIEW.md. Compact finding/model credit, candidate references and verification outcomes are retained in REVIEW.md before removing loose files.
+Source: user requested fewer committed workspace files without losing findings or reviewer/model identity, then instructed “do it, update the skill instructions”. This is artifact maintenance in iteration 01. The retained layout uses root deliverables plus iteration plans and consolidated reviews. Compact finding/model credit, candidate references and verification outcomes are retained in REVIEW.md before removing loose files.
 
 Acceptance delta: verify lossless archival, resolvable current references, all finding IDs/discovery and verification credits, all 48 run outcomes and requested/acknowledged/observed model/effort metadata. Preserved guarantees: accepted runtime scope, source facts, schema v5, digest-bound capture report, independent review privacy and both configured review models. Superseded decision: separate committed files for reviewer and supporting evidence; reviewers retain separate private temporary writable outputs. Verification impact: deterministic archive/provenance and skill validation; existing unchanged-code test evidence carries forward. No application implementation or renewed scope approval is required.
 

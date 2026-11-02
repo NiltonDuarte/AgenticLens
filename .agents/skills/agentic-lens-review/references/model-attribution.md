@@ -22,7 +22,7 @@ Working run records identify run/persona/focus, requested/acknowledged/observed 
 
 ## Compact retained evidence
 
-At completion retain readable findings, discovering reviewer/model/effort, shared discovery credit, separate verification credit, original disposition, final correction status, tested revision, initial/final review outcomes and remaining limitations. SUMMARY.md and consolidated REVIEW.md provide this account; a small FINDINGS.json may retain structured details. Requested settings must remain distinguishable from source-observed settings. Retain cancelled/incomplete/no-findings outcomes in a compact roster or counts sufficient to describe actual coverage; never present them as approvals.
+At completion retain readable findings, discovering reviewer/model/effort, shared discovery credit, separate verification credit, original disposition, final correction status, tested revision, initial/final review outcomes and remaining limitations. SUMMARY.md and consolidated REVIEW.md provide this account; do not duplicate finding details or actor metadata into committed JSON files. Requested settings must remain distinguishable from source-observed settings. Retain cancelled/incomplete/no-findings outcomes in a compact roster or counts sufficient to describe actual coverage; never present them as approvals.
 
 Do not embed complete report bodies, repeated source manifests, prior artifact copies or raw command logs into committed JSON. Resolve substantive evidence into a concise trigger, violated expectation, consequence, source location and verification result. Refutations and accepted debt remain explicit. Preserve each contributing reviewer and phase when deduplicating a finding.
 

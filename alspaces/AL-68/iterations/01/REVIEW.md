@@ -4,7 +4,7 @@ Current scoped outcome: APPROVED. Historical changes-requested, incomplete, canc
 
 ## Findings and reviewer credit
 
-[FINDINGS.json](FINDINGS.json) retains each original finding, validity, correction, discovery credit and verification. Its reviewer records distinguish requested, acknowledged and source-observed settings.
+This review retains findings, validity, correction status and reviewer/model discovery and verification credit. The execution roster distinguishes requested from source-observed settings; detailed historical dispatch records remain in Git history.
 
 | Finding | Issue | Disposition / lifecycle | Discovering reviewer and model/effort | Verifying reviewer and model/effort |
 | --- | --- | --- | --- | --- |
@@ -20,6 +20,128 @@ Current scoped outcome: APPROVED. Historical changes-requested, incomplete, canc
 | CAP-10 | Reported snapshot cutoff precedes source reads and can misstate captured boundary | confirmed / fixed | data / gpt-6-luna/medium | data / gpt-6.1-sol/high; data / gpt-6-luna/medium; architecture / gpt-6.1-sol/high; architecture / gpt-6-luna/medium; tests / gpt-6.1-sol/high; tests / gpt-6-luna/medium |
 | CAP-11 | Unrelated unassigned sessions consume ticket refresh budget and leak into ticket report | confirmed / fixed | behavior / gpt-6-luna/medium | behavior / gpt-6.1-sol/high; behavior / gpt-6-luna/medium; data / gpt-6.1-sol/high; data / gpt-6-luna/medium; architecture / gpt-6.1-sol/high; architecture / gpt-6-luna/medium; tests / gpt-6.1-sol/high; tests / gpt-6-luna/medium |
 | CAP-12 | Child recovery lacks fair bounded continuation for known OpenCode pages and failed Codex metadata queues | confirmed / fixed | behavior / gpt-6.1-sol/high; data / gpt-6.1-sol/high; architecture / gpt-6.1-sol/high | behavior / gpt-6.1-sol/high; behavior / gpt-6-luna/medium; data / gpt-6.1-sol/high; data / gpt-6-luna/medium; architecture / gpt-6.1-sol/high; architecture / gpt-6-luna/medium; tests / gpt-6.1-sol/high; tests / gpt-6-luna/medium |
+
+## Finding evidence and resolutions
+
+### CAP-01
+
+Severity: P1; classification: introduced; disposition: confirmed; lifecycle: fixed. Location: backend/cmd/agentic-lens/main.go:312.
+
+Disposition evidence: Source trace and isolated native production-path reproduction documented in assigned reports; public manual gap verified against approved installation scope.
+
+Resolution: Corrected production paths and meaningful regression oracles verified by current applicable focused reviews; historical confirmed disposition retained.
+
+Verified candidate: candidate-04.
+
+### CAP-02
+
+Severity: P1; classification: introduced; disposition: confirmed; lifecycle: fixed. Location: backend/cmd/agentic-lens/main.go.
+
+Disposition evidence: Source trace and isolated native production-path reproduction documented in assigned reports; public manual gap verified against approved installation scope.
+
+Resolution: Corrected production paths and meaningful regression oracles verified by current applicable focused reviews; historical confirmed disposition retained.
+
+Verified candidate: candidate-04.
+
+### CAP-03
+
+Severity: P1; classification: introduced; disposition: confirmed; lifecycle: fixed. Location: backend/cmd/agentic-lens/main.go:201.
+
+Disposition evidence: Source trace and isolated native production-path reproduction documented in assigned reports; public manual gap verified against approved installation scope.
+
+Resolution: Corrected production paths and meaningful regression oracles verified by current applicable focused reviews; historical confirmed disposition retained.
+
+Verified candidate: candidate-04.
+
+### CAP-04
+
+Severity: P2; classification: introduced; disposition: confirmed; lifecycle: fixed. Location: backend/internal/adapters/capture/hooks.go:75.
+
+Disposition evidence: Source trace and isolated native production-path reproduction documented in assigned reports; public manual gap verified against approved installation scope.
+
+Resolution: Corrected production paths and meaningful regression oracles verified by current applicable focused reviews; historical confirmed disposition retained.
+
+Verified candidate: candidate-04.
+
+### CAP-05
+
+Severity: P2; classification: introduced; disposition: confirmed; lifecycle: fixed. Location: backend/internal/adapters/capture/reconcile.go:133.
+
+Disposition evidence: Source trace and isolated native production-path reproduction documented in assigned reports; public manual gap verified against approved installation scope.
+
+Resolution: Corrected production paths and meaningful regression oracles verified by current applicable focused reviews; historical confirmed disposition retained.
+
+Verified candidate: candidate-04.
+
+### CAP-06
+
+Severity: P2; classification: introduced; disposition: confirmed; lifecycle: fixed. Location: backend/internal/adapters/capture/install.go:284.
+
+Disposition evidence: Source trace and isolated native production-path reproduction documented in assigned reports; public manual gap verified against approved installation scope.
+
+Resolution: Corrected production paths and meaningful regression oracles verified by current applicable focused reviews; historical confirmed disposition retained.
+
+Verified candidate: candidate-04.
+
+### CAP-07
+
+Severity: P2; classification: introduced; disposition: confirmed; lifecycle: fixed. Location: backend/internal/adapters/capture/hooks.go:31.
+
+Disposition evidence: Source trace and isolated native production-path reproduction documented in assigned reports; public manual gap verified against approved installation scope.
+
+Resolution: Corrected production paths and meaningful regression oracles verified by current applicable focused reviews; historical confirmed disposition retained.
+
+Verified candidate: candidate-04.
+
+### CAP-08
+
+Severity: P1; classification: introduced; disposition: confirmed; lifecycle: fixed. Location: scripts/download-agentic-lens.sh.
+
+Disposition evidence: Source trace and isolated native production-path reproduction documented in assigned reports; public manual gap verified against approved installation scope.
+
+Resolution: Corrected production paths and meaningful regression oracles verified by current applicable focused reviews; historical confirmed disposition retained.
+
+Verified candidate: candidate-04.
+
+### CAP-09
+
+Severity: P2; classification: required_scope_gap; disposition: confirmed; lifecycle: fixed. Location: docs/SETUP_MANUAL.md:81.
+
+Disposition evidence: Source trace and isolated native production-path reproduction documented in assigned reports; public manual gap verified against approved installation scope.
+
+Resolution: Corrected production paths and meaningful regression oracles verified by current applicable focused reviews; historical confirmed disposition retained.
+
+Verified candidate: candidate-04.
+
+### CAP-10
+
+Severity: P2; classification: introduced; disposition: confirmed; lifecycle: fixed. Location: backend/internal/adapters/capture/reconcile.go:90.
+
+Disposition evidence: Source-level trace establishes cutoff assigned before later independent source reads; no common as-of snapshot is enforced. Define truthful completion/per-owner checkpoint semantics.
+
+Resolution: Corrected production paths and meaningful regression oracles verified by current applicable focused reviews; historical confirmed disposition retained.
+
+Verified candidate: candidate-04.
+
+### CAP-11
+
+Severity: P2; classification: introduced; disposition: confirmed; lifecycle: fixed. Location: backend/internal/adapters/capture/reconcile.go:109.
+
+Disposition evidence: Selection/extraction and final report include every empty-ticket registration; keep local discovery but scope ticket work and publication to proven owners.
+
+Resolution: Corrected production paths and meaningful regression oracles verified by current applicable focused reviews; historical confirmed disposition retained.
+
+Verified candidate: candidate-04.
+
+### CAP-12
+
+Severity: P2; classification: correction_introduced; disposition: confirmed; lifecycle: fixed. Location: backend/internal/adapters/capture/children.go.
+
+Disposition evidence: Three independent reviewer probes reproduce permanent first-page starvation; report-specific native/overlay evidence retained.
+
+Resolution: Corrected production paths and meaningful regression oracles verified by current applicable focused reviews; historical confirmed disposition retained.
+
+Verified candidate: candidate-04.
 
 ## Verification and remaining limits
 
@@ -89,3 +211,5 @@ Every original roster cell is retained in this compact table, including cancelle
 ## Evidence retention
 
 The two large report/log archives were removed from the current tree under the revised retention requirement. This iteration retains 12 findings and all 48 review outcomes with shared reviewer/model discovery and separate verification credit. Full original reports, candidate manifests and raw build logs remain available in [historical committed evidence](https://github.com/NiltonDuarte/AgenticLens/blob/0e9cb88c24f8a10eb1f35840c1ce23223efdd444/alspaces/AL-68/iterations/01/REVIEW_RUNS.json); they are no longer replicated in active workspace files. Original harness transcripts remain outside Git.
+
+The structured finding files were subsequently removed after transferring their substantive finding evidence and resolutions into this review. Reviewer/model credit and original execution outcomes remain above; detailed original metadata remains available in Git history before this cleanup.
