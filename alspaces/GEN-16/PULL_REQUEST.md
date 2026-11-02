@@ -4,4 +4,4 @@ Completed reviews currently retain findings only in prose. Require a permanent p
 
 Preserve shared discovery credit, refuted candidates, identity uncertainty and the existing approval gate. Link the compact file from SUMMARY.md and align contributor/development/attribution guidance. Documentation only; historical audit records are unchanged.
 
-Validation: skill metadata, JSON example, reference checks and integrated make; final results and telemetry limitations are recorded in SUMMARY.md.
+Validation: both edited skills pass metadata validation; JSON example parses; changed-document local links and git diff --check pass. Integrated make passed, including Go race tests, 781 frontend tests, lint/typecheck, release/installation checks and four platform binary builds. Parent documentation review found no issues; no delegated or behavioral forward tests. Telemetry facts and snapshot limits are recorded in SUMMARY.md.
