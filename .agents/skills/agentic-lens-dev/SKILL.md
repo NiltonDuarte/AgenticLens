@@ -35,7 +35,7 @@ Follow the repository [testing policy](../../../TECHNICAL_GUIDELINES.md#test-pur
    - `CONTRACT.md`: Immutable baseline authored by the developer (problem statement, FCIS architectural invariants, Go/TS scope boundaries).
    - `SUMMARY.md` & `agentic_metrics.json`: Unified summary of everything developed for the ticket grouped by layer (`domain`, `adapters`, `presentation`), plus AgenticLens-rendered metrics table.
    - `PULL_REQUEST.md`: Conventional PR draft (max 3000 chars, pointers to `CONTRACT.md` & `SUMMARY.md`, summary of changes; no test evidence).
-   - `iterations/<NN>/`: `PLAN.md` and working review artifacts per iteration. After corrections and consolidated approval, retain the compact findings/actor/model/approval summary in `SUMMARY.md` and delete detailed review files under the [review lifecycle](../agentic-lens-review/references/parallel-review.md#completed-review-retention).
+   - `iterations/<NN>/`: `PLAN.md` and working review artifacts per iteration. After corrections and consolidated approval, retain `iterations/<NN>/REVIEW_SUMMARY.json` with severity, brief issue and every reporting persona/model/effort; link it and record approval/verification in `SUMMARY.md`, then delete detailed review files under the [review lifecycle](../agentic-lens-review/references/parallel-review.md#completed-review-retention).
 
 ---
 
