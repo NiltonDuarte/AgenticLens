@@ -2,6 +2,16 @@
 
 PR: https://github.com/NiltonDuarte/AgenticLens/pull/93
 
+## Current follow-up: iteration 02 proposed
+
+The user requested a follow-up iteration after clarifying that the plugin must keep the canonical agentic_metrics.json updated automatically, without the running agent invoking generate. The agent supplies explicitly known ticket/context through the integration. [Iteration 02](iterations/02/PLAN.md) records the proposed acceptance delta; implementation approval is still required. Iteration 01 implementation/test/review evidence remains historical evidence for its delivered registration plus explicit-generation behavior, not approval of automatic publication.
+
+The isolation boundary is the configured project directory and output destination. Multiple root/child/reviewer sessions in one directory may contribute to one ticket ledger with serialized read-refresh-merge-publication. Separate project directories remain independent even for the same ticket and harness source store; no worktree detection, cross-checkout registry sharing, reconciliation or Git-conflict resolution is in scope. Exact project ownership must be established before importing source sessions, caches or children.
+
+Latest user steering also clarifies that completed_at represents observability snapshot completion, not PR merge or ticket completion. The root remaining active is expected and does not justify clearing it. Earlier null-completion artifact corrections below are historical and superseded by this semantic clarification; iteration 02 must correct the publication behavior and affected artifacts using evidenced extraction times while preserving source-session facts. Fresh available source data must be included; the small tail after publication is accepted, while silently omitting 40 minutes of already available activity is a defect.
+
+YAML capture configuration, storage location/retention and optional detailed coverage reporting are planning decisions. The user has not approved mandatory permanent home-directory state, automatic removal of capture_report.json, an external daemon or intrusive project merge/CI gates. Optional Git integration must be explicitly chosen. No application, tests, runtime configuration, source facts or existing telemetry were changed by this planning step.
+
 ## Scope and delivered behavior
 
 Baseline `7bc670a7f5c9e93a220f3596f3d0e05cb6007332`; initial Git status clean. Configured workspace root: alspaces. The user approved iteration 01 on 2026-11-01 and required real hook-to-agent interaction for correct binding information without guessing. CONTRACT.md and iterations/01/PLAN.md preserve the accepted boundaries.
