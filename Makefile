@@ -56,10 +56,13 @@ install-frontend:
 		(cd $(WEB_DIR) && npm install); \
 	fi
 
-check: vet lint test-release-workflow test-capture-distribution
+check: vet lint test-release-workflow test-installation test-capture-distribution
 	@git diff --check
 
-.PHONY: test-release-workflow test-capture-distribution
+.PHONY: test-release-workflow test-installation test-capture-distribution
+test-installation:
+	python3 scripts/tests/test_installation.py
+
 test-release-workflow:
 	python3 scripts/tests/test_release_revision.py
 

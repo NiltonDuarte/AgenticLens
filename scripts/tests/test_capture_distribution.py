@@ -55,7 +55,7 @@ class CaptureDistributionTest(unittest.TestCase):
         self.env.update(PATH=str(self.network) + os.pathsep + self.env["PATH"], CAPTURE_TEST_NETWORK=str(self.network_log))
 
     def run_download(self, script, *options, **env):
-        return subprocess.run(["bash", str(script), "--dest", str(self.dest), "--local-bin", str(self.release), *options],
+        return subprocess.run(["bash", str(script), "--dest", str(self.dest), "--local-bin", str(self.release), "--version", "v-fixture", *options],
                               cwd=self.repo, env=dict(self.env, **env), text=True, capture_output=True, timeout=10)
 
     def test_both_downloaders_install_and_delegate_exact_arguments_to_native_handler(self):
@@ -70,6 +70,40 @@ class CaptureDistributionTest(unittest.TestCase):
                 self.assertFalse((self.repo / "INJECTED").exists())
                 self.assertFalse(self.network_log.exists())
                 self.assertIn("runtime trust, agent binding", result.stdout)
+
+    def test_installed_skill_bundle_delegates_capture_without_repair_side_effects(self):
+        setup = Path(".agents/skills/agentic-lens-setup")
+        operator = Path(".agents/skills/agentic-lens-operator")
+        installed = subprocess.run(
+            ["bash", str(ROOT / setup / "scripts/install.sh"), "--source-dir", str(ROOT),
+             "--version", "v-fixture", "--dest", str(self.repo)],
+            cwd=self.repo, env=self.env, text=True, capture_output=True, timeout=10)
+        self.assertEqual(installed.returncode, 0, installed.stderr)
+        config = self.repo / ".agenticlens-config.yaml"
+        config.write_text("project_name: Fixture\n")
+        ignore = self.repo / ".gitignore"
+        ignore.write_text("# Owner policy\n")
+        state = self.root / "explicit state outside repository"
+        result = subprocess.run(
+            ["bash", str(self.repo / setup / "scripts/download.sh"), "--local-bin", str(self.release),
+             "--capture-source", "codex", "--capture-store", str(self.store),
+             "--capture-state-dir", str(state)],
+            cwd=self.repo, env=self.env, text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(self.log.read_text()),
+                         ["capture", "install", "--source", "codex", "--repo", str(self.repo),
+                          "--store", str(self.store), "--state-dir", str(state)])
+        self.assertTrue((self.repo / operator / "bin" / native_name()).is_file())
+        self.assertFalse((self.repo / operator / "bin/.gitignore").exists())
+        self.assertEqual(config.read_text(), "project_name: Fixture\n")
+        self.assertEqual(ignore.read_text(), "# Owner policy\n")
+        self.log.unlink()
+        launched = subprocess.run(["sh", str(self.repo / operator / "scripts/agentic-lens.sh"),
+                                   "capture", "status", "--repo", str(self.repo)],
+                                  cwd=self.repo, env=self.env, text=True, capture_output=True, timeout=10)
+        self.assertEqual(launched.returncode, 0, launched.stderr)
+        self.assertEqual(json.loads(self.log.read_text()), ["capture", "status", "--repo", str(self.repo)])
+        self.assertFalse(self.network_log.exists())
 
     def test_binary_only_and_invalid_capture_options_never_install_hooks(self):
         for script in DOWNLOADERS:
