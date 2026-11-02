@@ -15,6 +15,11 @@ export function formatSkillStatus(success: boolean): 'Success' | 'Failed' {
   return success ? 'Success' : 'Failed';
 }
 
+// Preserve persona spelling while making unavailable source roles visible.
+export function formatRoleLabel(role: string): string {
+  return role.trim() || 'Unknown';
+}
+
 export function formatSubagentRole(role: string): string {
   switch (role) {
     case 'orchestrator': return 'Orchestrator';

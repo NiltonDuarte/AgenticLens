@@ -1,6 +1,6 @@
 import React from 'react';
 import type { ContextWindowHealth } from '../domain/types';
-import { formatTokensK, HEALTHY_CEILING_TOKENS } from '../domain/formatters';
+import { formatRoleLabel, formatTokensK, HEALTHY_CEILING_TOKENS } from '../domain/formatters';
 import { getHealthStatusColor, getRoleColor, THEME_COLORS } from '../utils/theme';
 import { InfoTooltip } from './InfoTooltip';
 
@@ -59,7 +59,7 @@ export const SaturationBar: React.FC<SaturationBarProps> = ({
           <span className="metric-label">Subagents Peak Role</span>
           <span className="metric-val">
             {contextHealth.subagents_peak_role !== 'none'
-              ? `${contextHealth.subagents_peak_role} (${formatTokensK(contextHealth.subagents_peak_tokens)})`
+              ? `${formatRoleLabel(contextHealth.subagents_peak_role)} (${formatTokensK(contextHealth.subagents_peak_tokens)})`
               : 'None'}
           </span>
           <span className="metric-sub">Compactions: {contextHealth.compactions}</span>
@@ -111,7 +111,7 @@ export const SaturationBar: React.FC<SaturationBarProps> = ({
                         }}
                         aria-hidden="true"
                       />
-                      <span className="role-name">{role}</span>
+                      <span className="role-name">{formatRoleLabel(role)}</span>
                     </div>
                     <span className="role-tokens">{formatTokensK(tokens)}</span>
                   </div>

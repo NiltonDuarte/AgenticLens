@@ -334,7 +334,7 @@ func TestChildRolloutPreservesIdentityAndSkipsInheritedReplay(t *testing.T) {
 			t.Fatalf("inherited model counted: %+v", transcript.Invocations)
 		}
 		inv := transcript.Invocations[0]
-		if inv.Role != domain.RoleUnassignedSubAgent || inv.Model != "child-model" {
+		if inv.Role != "" || inv.Model != "child-model" {
 			t.Fatalf("incorrect child invocation attribution: %+v", inv)
 		}
 		if inv.Turns != 1 || inv.ActiveDurationSeconds != 2 || inv.Compactions != 0 || inv.Tokens.Input != 20 || inv.Tokens.CacheRead != 10 || inv.Tokens.Output != 2 {
@@ -380,6 +380,34 @@ func TestCodexExtractionPreservesRawPersonaAndExplicitRole(t *testing.T) {
 	if explicit.Invocations[0].Role != domain.AgentRole("reviewer") {
 		t.Fatalf("explicit role lost precedence: %s", explicit.Invocations[0].Role)
 	}
+
+	for _, tc := range []struct{ name, metadata, want, parent string }{
+		{"root path", `"agent_path":"/private/agents/planner"`, "planner", ""},
+		{"root explicit overrides path", `"agent_path":"/private/agents/planner","agent_role":" reviewer "`, "reviewer", ""},
+		{"root missing", `"agent_role":"   "`, "", ""},
+		{"child missing", `"parent_thread_id":"parent","agent_role":"  "`, "", "parent"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			input := `{"type":"session_meta","payload":{"id":"role-session",` + tc.metadata + `}}` + "\n" +
+				`{"timestamp":"2026-01-01T00:00:01Z","type":"turn_context","payload":{"model":"fixture-model"}}` + "\n" +
+				`{"timestamp":"2026-01-01T00:00:02Z","type":"token_usage_record","payload":{"usage":{"input_tokens":7}}}` + "\n" +
+				`{"timestamp":"2026-01-01T00:00:03Z","type":"event_msg","payload":{"type":"exec_command_end","call_id":"call-role","exit_code":0}}` + "\n"
+			transcript, err := codex.ParseRollout(strings.NewReader(input))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(transcript.Invocations) != 1 || string(transcript.Invocations[0].Role) != tc.want || transcript.Invocations[0].Tokens.Input != 7 {
+				t.Fatalf("wrong persona or tokens: %+v", transcript.Invocations)
+			}
+			if len(transcript.Events) != 1 || string(transcript.Events[0].Role) != tc.want {
+				t.Fatalf("event persona not propagated: %+v", transcript.Events)
+			}
+			if transcript.ParentThread != tc.parent {
+				t.Fatalf("parent changed: %q", transcript.ParentThread)
+			}
+		})
+	}
+
 }
 
 func TestCodexUserIterationsAttribution(t *testing.T) {

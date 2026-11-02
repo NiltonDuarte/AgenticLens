@@ -176,7 +176,7 @@ func TestGenerateCodexPreservesChildIdentityAndExcludesInheritedUsage(t *testing
 		if !rootFound || !childFound {
 			t.Fatalf("missing distinct root/child identity: %#v", byID)
 		}
-		if rootSession.ParentID != nil || len(rootSession.Invocations) == 0 || rootSession.Invocations[0].Role != domain.RoleRootAgent || rootSession.Invocations[0].Tokens.Input != 80 {
+		if rootSession.ParentID != nil || len(rootSession.Invocations) == 0 || rootSession.Invocations[0].Role != "" || rootSession.Invocations[0].Tokens.Input != 80 {
 			t.Fatalf("incorrect root facts: %#v", rootSession)
 		}
 		if childSession.ParentID == nil || *childSession.ParentID != "root-fixture" || len(childSession.Invocations) == 0 || childSession.Invocations[0].Role != domain.AgentRole("coder") {

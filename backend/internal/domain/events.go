@@ -44,6 +44,19 @@ func occurrenceOf(event EventFact) eventOccurrence {
 // Stable IDs take precedence; missing IDs require a unique occurrence on both sides.
 // Inputs represent independent occurrences, not an already reconciled response.
 func ReconcileEvents(baseline, enrichment []EventFact) []EventFact {
+	return reconcileEvents(baseline, enrichment, false)
+}
+
+// ReconcileSourceEvents projects personas from successfully read authoritative
+// source events, including an unknown persona, onto matched recorded events.
+// Callers must validate source ownership before supplying enrichment. Matching,
+// occurrence preservation and payload enrichment follow ReconcileEvents.
+// This is a read projection; neither input is mutated or persisted.
+func ReconcileSourceEvents(baseline, enrichment []EventFact) []EventFact {
+	return reconcileEvents(baseline, enrichment, true)
+}
+
+func reconcileEvents(baseline, enrichment []EventFact, sourcePersonas bool) []EventFact {
 	result := append([]EventFact{}, baseline...)
 	baselineUsed := make([]bool, len(baseline))
 	enrichmentUsed := make([]bool, len(enrichment))
@@ -72,7 +85,7 @@ func ReconcileEvents(baseline, enrichment []EventFact) []EventFact {
 		matched := candidates[0]
 		byID[key] = candidates[1:]
 		baselineUsed[matched], enrichmentUsed[index] = true, true
-		result[matched] = enrichEvent(baseline[matched], event)
+		result[matched] = enrichEvent(baseline[matched], event, sourcePersonas)
 	}
 
 	// Count before matching so consuming one row cannot resolve an ambiguous group.
@@ -103,7 +116,7 @@ func ReconcileEvents(baseline, enrichment []EventFact) []EventFact {
 	for index, matched := range candidate {
 		if matched >= 0 && baselineMatches[matched] == 1 {
 			baselineUsed[matched], enrichmentUsed[index] = true, true
-			result[matched] = enrichEvent(baseline[matched], enrichment[index])
+			result[matched] = enrichEvent(baseline[matched], enrichment[index], sourcePersonas)
 		}
 	}
 
@@ -115,7 +128,10 @@ func ReconcileEvents(baseline, enrichment []EventFact) []EventFact {
 	return SortEvents(result)
 }
 
-func enrichEvent(recorded, local EventFact) EventFact {
+func enrichEvent(recorded, local EventFact, sourcePersona bool) EventFact {
+	if sourcePersona {
+		recorded.Role = local.Role
+	}
 	if recorded.EventID == "" {
 		recorded.EventID = local.EventID
 	}

@@ -60,6 +60,25 @@ describe('Skills and subagents autopsy', () => {
         vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockRejectedValue(new Error('Optional source unavailable'));
     });
 
+
+    it('shows unknown role metrics and turn groups when optional hydration is unavailable', async () => {
+        const detail = makeDetail();
+        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: {
+            ...detail,
+            ledger: {
+                ...detail.ledger,
+                roles: [{ ...detail.ledger.roles[0]!, role: '' }],
+                workflow_efficiency: {
+                    ...detail.ledger.workflow_efficiency,
+                    subagent_turn_velocity: { ...detail.ledger.workflow_efficiency.subagent_turn_velocity, by_role: { '': 7 } },
+                },
+            },
+        } });
+        render(<TicketDeepDive selectedTicketId="AL-1" />);
+        await screen.findByText('7.0 turns/inv');
+        expect(screen.getAllByText('Unknown').length).toBeGreaterThanOrEqual(2);
+    });
+
     it('uses compact cost presentation for the selected ticket with full evidence in the tooltip', async () => {
         const detail = makeDetail();
         vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: { ...detail, ledger: { ...detail.ledger, totals: {

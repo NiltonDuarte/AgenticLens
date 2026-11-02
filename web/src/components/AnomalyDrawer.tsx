@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import type { Anomaly, EventFact } from '../types/telemetry';
+import { formatRoleLabel } from '../domain/formatters';
 import { AnomalyBadge } from './AnomalyBadge';
 import { formatAnomaly } from '../domain/anomalies';
 import { copyTextToClipboard } from '../utils/clipboard';
@@ -228,16 +229,16 @@ export const AnomalyDrawer: React.FC<AnomalyDrawerProps> = ({
                   <span className="drawer-val mono">{toolName}</span>
                 </div>
               )}
-              {role && (
+              {role !== undefined && (
                 <div className="drawer-meta-item">
                   <span className="drawer-label">Subagent Role</span>
-                  <span className="drawer-val">{role}</span>
+                  <span className="drawer-val">{formatRoleLabel(role)}</span>
                 </div>
               )}
-              {secondaryRole && (
+              {secondaryRole !== undefined && secondaryRole !== null && (
                 <div className="drawer-meta-item">
                   <span className="drawer-label">Secondary Role</span>
-                  <span className="drawer-val">{secondaryRole}</span>
+                  <span className="drawer-val">{formatRoleLabel(secondaryRole)}</span>
                 </div>
               )}
               {count !== undefined && (

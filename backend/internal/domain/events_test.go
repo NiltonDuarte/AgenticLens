@@ -562,6 +562,25 @@ func TestReconcileEventsEnrichesPartialTraceWithoutLoss(t *testing.T) {
 	if !reflect.DeepEqual(baseline, beforeBaseline) || !reflect.DeepEqual(enrichment, beforeEnrichment) {
 		t.Fatal("reconciliation mutated an input")
 	}
+
+	t.Run("authoritative source projection differs from ordinary enrichment", func(t *testing.T) {
+		for _, role := range []domain.AgentRole{"", "Build"} {
+			source := local
+			source.Role = role
+			ordinary := domain.ReconcileEvents([]domain.EventFact{first}, []domain.EventFact{source})
+			authoritative := domain.ReconcileSourceEvents([]domain.EventFact{first}, []domain.EventFact{source})
+			if len(ordinary) != 1 || ordinary[0].Role != "coder" {
+				t.Fatalf("ordinary enrichment changed baseline persona: %+v", ordinary)
+			}
+			if len(authoritative) != 1 || authoritative[0].Role != role || authoritative[0].ToolOutput == nil {
+				t.Fatalf("source projection lost persona or payload: %+v", authoritative)
+			}
+			if first.Role != "coder" || source.Role != role {
+				t.Fatal("projection mutated source or baseline")
+			}
+		}
+	})
+
 }
 
 func TestReconcileEventsIdentityAndAmbiguity(t *testing.T) {
@@ -599,6 +618,10 @@ func TestReconcileEventsIdentityAndAmbiguity(t *testing.T) {
 			merged := domain.ReconcileEvents(tc.baseline, tc.enrichment)
 			if merged == nil || len(merged) != tc.count {
 				t.Fatalf("expected %d distinct events, got %#v", tc.count, merged)
+			}
+			sourceMerged := domain.ReconcileSourceEvents(tc.baseline, tc.enrichment)
+			if sourceMerged == nil || len(sourceMerged) != tc.count {
+				t.Fatalf("source projection changed occurrence matching: %#v", sourceMerged)
 			}
 		})
 	}

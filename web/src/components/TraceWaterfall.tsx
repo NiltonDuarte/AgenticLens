@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useId } from 'react';
 import type { EventFact, Anomaly, DataSource } from '../types/telemetry';
-import { formatTokensK, formatLocalTimeWithMs, formatLocalDateTimeTooltip } from '../domain/formatters';
+import { formatRoleLabel, formatTokensK, formatLocalTimeWithMs, formatLocalDateTimeTooltip } from '../domain/formatters';
 import { rebindEvent, sortEvents } from '../domain/events';
 import type { SkillFact, TaskLinkFact } from '../domain/types';
 import { traceBadgeMetadata } from '../domain/traceBadges';
@@ -183,9 +183,7 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
     if (!events || events.length === 0) return [];
     const roleSet = new Set<string>();
     for (const e of events) {
-      if (e.role && e.role.trim().length > 0) {
-        roleSet.add(e.role.trim());
-      }
+      roleSet.add(e.role.trim());
     }
     return Array.from(roleSet).sort((a, b) => a.localeCompare(b));
   }, [events]);
@@ -193,7 +191,7 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
   const roleOptions: readonly MultiSelectOption[] = useMemo(() => {
     return availableRoles.map((role) => ({
       value: role,
-      label: role,
+      label: formatRoleLabel(role),
     }));
   }, [availableRoles]);
 
@@ -256,7 +254,7 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
 
       // 2. Multi-role filter
       if (isRoleFilterActive) {
-        if (!ev.role || !selectedRoles.includes(ev.role.trim())) {
+        if (!selectedRoles.includes(ev.role.trim())) {
           return false;
         }
       }
@@ -542,7 +540,7 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
                     handleItemSelect(ev, matchingAnomaly);
                   }
                 }}
-                aria-label={`Event Turn ${ev.turn} ${ev.role} ${ev.event_type}`}
+                aria-label={`Event Turn ${ev.turn} ${formatRoleLabel(ev.role)} ${ev.event_type}`}
               >
                 <div className="timeline-rail">
                   <div className={`timeline-node ${hasError ? 'node-error' : ''}`} />
@@ -552,7 +550,7 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
                 <div className="timeline-content">
                   <div className="timeline-top-row">
                     <span className="turn-pill">Turn {ev.turn}</span>
-                    <span className={roleClass}>{ev.role}</span>
+                    <span className={roleClass}>{formatRoleLabel(ev.role)}</span>
                     <span className="event-type-badge">
                       {formatEventTypeLabel(ev.event_type)}
                     </span>
