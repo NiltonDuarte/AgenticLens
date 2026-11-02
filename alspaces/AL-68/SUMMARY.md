@@ -23,7 +23,7 @@ Final telemetry will use exact verified same-project source sessions. Historical
 
 Strict-scope final telemetry preparation verified89 actual Codex sessions in this physical project. The prior35 same-project owners must be retained;7 prior cross-directory smoke owners (including4OpenCode sessions) remain verbatim in the archive instead of being relabelled into this ledger. Source metadata was available for every prior owner.
 
-Final source proof validates65independent roots and24native children, including all35prior same-project owners. Metrics match authoritative source prefixes and the report matches the v5 ledger. Conservative pending coverage states remain visible for full-snapshot precedence; source metric verification is not a universal completeness claim. Active-session work after the final snapshot is outside that snapshot.
+Final source proof validates65independent roots and24native children, including all35prior same-project owners. Metrics match authoritative source prefixes; ledger/report pairing was verified before the optional report was removed. Conservative pending coverage states remain visible for full-snapshot precedence; source metric verification is not a universal completeness claim. Active-session work after the final snapshot is outside that snapshot.
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 224
@@ -86,4 +86,4 @@ Final source proof validates65independent roots and24native children, including 
 | **gpt-6.1-sol** | 59 | 10,537,314 | 1,329,989 | 296,184,192 | 96.6% | Unavailable (0 observed, 0 partial, 59 unavailable / 59 invocations) |
 | **Total** | **89** | **12,936,878** | **1,484,425** | **313,959,424** | **96.0%** | **Unavailable (0 observed, 0 partial, 89 unavailable / 89 invocations)** |
 
-Capture reconciliation completed: 2026-11-02T18:01:57.132909212Z (per-owner refreshed_at checkpoints; no common as-of snapshot). Current: 33; pending: 56; failed: 0; unassigned: 0. See [capture_report.json](capture_report.json) for explicit coverage limits. Hook installation alone does not prove complete capture.
+Capture reconciliation completed: 2026-11-02T18:01:57.132909212Z (per-owner refreshed_at checkpoints; no common as-of snapshot). Current: 33; pending: 56; failed: 0; unassigned: 0. Detailed report generation is disabled; the standalone report was removed at the user's request. Hook installation alone does not prove complete capture.

@@ -6,6 +6,10 @@
 # Human-readable name of the project.
 project_name: AgenticLens
 
+telemetry:
+  capture:
+    detailed_report: false
+
 # Automated anomaly detection rules governing offline generation and live stream monitoring.
 anomaly_thresholds:
   # Time in seconds without session turn activity before flagging a stall anomaly.
