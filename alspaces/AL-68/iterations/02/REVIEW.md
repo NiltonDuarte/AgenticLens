@@ -1,6 +1,6 @@
 # AL-68 iteration02 consolidated review
 
-Current scope verdict: **APPROVED**. All required persona/profile cells are complete or explicitly carried from candidate06 to candidate07. No confirmed blocking finding remains. The current integrated make passed. Final native telemetry and PR publication remain; merging is not authorized by this verdict.
+Current scope verdict: **APPROVED**. All required persona/profile cells are complete or explicitly carried from candidate06 to candidate07. No confirmed blocking finding remains. The current integrated make passed. Native telemetry contains89 source-verified owners; final snapshot commit and PR publication follow. Merging is not authorized by this verdict.
 
 Candidate: candidate-02-07, based on de31cb1. All58 frozen source/test/docs paths match the reviewed snapshot. Candidate06->07 changes only installer store canonicalization, raw source-prefix expansion and the native AUTO21 oracle. Behavior/data/architecture/security approvals carry forward because their actual source guards, physical resolver, scheduler, state ownership, locks, journal, writers and schema are unchanged; paired release/test reviews verify the changed integration.
 
@@ -133,3 +133,9 @@ Every row links by run ID to the full report/archive record. Cancelled not-dispa
 | iter02-tests-luna-07 | tests/L | re_review | candidate-02-07 | completed / APPROVED |
 | iter02-release-sol-07 | release/S | re_review | candidate-02-07 | completed / APPROVED |
 | iter02-release-luna-07 | release/L | re_review | candidate-02-07 | completed / APPROVED |
+
+## Final source verification
+
+The native ledger contains89same-project Codex owners (65independent roots,24native children), retaining all35prior same-project owners. Seven prior cross-directory smoke owners remain verbatim in the archive. Independent raw JSONL comparison uses per-response usage when available, otherwise native cumulative usage, and the exact source revision prefix. Usage, model, ID/project, native parents, schema5, observability completion and report/ledger pairing pass. No source facts are hand-edited.
+
+Coverage remains conservative: some accepted owner snapshots retain pending markers because differing full snapshots at equal/unordered checkpoints preserve accepted persisted evidence. The independent check verifies published metrics, not universal or complete lifecycle coverage. Pending details remain unchanged in capture_report.json. Manual backfill registration-path recovery and the checker are archived; the actual integrations normally receive paths through hooks.

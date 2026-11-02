@@ -1,71 +1,1736 @@
 {
-  "started_at": "2026-11-01T23:26:54.147773141Z",
+  "started_at": "2026-11-02T18:01:56.247719832Z",
   "cutoff_semantics": "cutoff is reconciliation completion, not a common as-of source time; refreshed_at is each owner's successful read completion",
-  "source_bytes_reserved": 427875,
-  "source_attempts": 3,
+  "source_bytes_reserved": 16670478,
+  "source_attempts": 89,
   "child_discovery_pending": false,
   "pending_children": 0,
   "unresolved_parent_links": 0,
   "protocol": 1,
-  "cutoff": "2026-11-01T23:26:54.185680675Z",
+  "cutoff": "2026-11-02T18:01:57.132909212Z",
   "ticket_id": "AL-68",
   "registrations": [
     {
+      "source_fingerprint": "1267218:1793633690184033841",
       "identity": {
         "source": "codex",
         "store": "[local source store]",
-        "session_id": "01a19901-dda1-7460-a51f-24423a5d19e8"
+        "session_id": "01a19cdc-11b8-71c2-884a-eb44f01314af"
       },
       "ticket_id": "AL-68",
-      "binding": "source_parent",
-      "request": "",
-      "parent_id": "01a19901-c38e-7f22-b224-a334910e4d8b",
-      "event": "",
-      "state": "current",
-      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
-      "refreshed_at": "2026-11-01T23:26:54.180631668Z",
-      "updated_at": "2026-11-01T21:26:41.529Z",
-      "revision": 157040
-    },
-    {
-      "identity": {
-        "source": "codex",
-        "store": "[local source store]",
-        "session_id": "01a19901-c38e-7f22-b224-a334910e4d8b"
-      },
-      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
       "binding": "explicit_agent_response",
       "request": "",
-      "event": "SessionEnd",
-      "state": "current",
+      "event": "manual_source_recovery",
+      "state": "pending",
       "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
-      "refreshed_at": "2026-11-01T23:26:54.162859959Z",
-      "updated_at": "2026-11-01T21:26:43.302Z",
-      "revision": 133000
+      "refreshed_at": "2026-11-02T17:47:10.706365654Z",
+      "updated_at": "2026-11-02T15:34:50.187Z",
+      "revision": 1267218
     },
     {
+      "source_fingerprint": "1001138:1793639297398564914",
       "identity": {
         "source": "codex",
         "store": "[local source store]",
-        "session_id": "01a19901-011a-7402-bb1e-c4febe37e7e1"
+        "session_id": "01a19d37-ffca-75b3-98e2-0f1910131d0b"
       },
       "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
       "binding": "explicit_agent_response",
       "request": "",
-      "event": "SessionEnd",
+      "event": "manual_source_recovery",
       "state": "current",
       "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
-      "refreshed_at": "2026-11-01T23:26:54.171996935Z",
-      "updated_at": "2026-11-01T21:30:32.610Z",
-      "revision": 137835
+      "refreshed_at": "2026-11-02T17:47:27.556272946Z",
+      "updated_at": "2026-11-02T17:08:17.403Z",
+      "revision": 1001138
+    },
+    {
+      "source_fingerprint": "1027163:1793638671998717040",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19d2f-e920-7853-87ee-a74af51865fe"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "current",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:47:27.587480959Z",
+      "updated_at": "2026-11-02T16:57:52.001Z",
+      "revision": 1027163
+    },
+    {
+      "source_fingerprint": "910925:1793558278163969549",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19866-1ebf-7be3-aa0d-47262ddfccc5"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:41:54.107958394Z",
+      "updated_at": "2026-11-01T18:37:58.167Z",
+      "revision": 910925
+    },
+    {
+      "source_fingerprint": "1091318:1793558532937534123",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19869-c33d-70e1-8337-a34812486051"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:42:48.817318587Z",
+      "updated_at": "2026-11-01T18:42:12.941Z",
+      "revision": 1091318
+    },
+    {
+      "source_fingerprint": "969370:1793561947206573019",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a1989a-866e-7a10-8345-14e09454b715"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "parent_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:41:39.614450466Z",
+      "updated_at": "2026-11-01T19:39:07.209Z",
+      "revision": 969370
+    },
+    {
+      "source_fingerprint": "932855:1793632202462873682",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19ccd-8b24-7690-94de-3ff167b15442"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:46:46.015035868Z",
+      "updated_at": "2026-11-02T15:10:02.466Z",
+      "revision": 932855
+    },
+    {
+      "source_fingerprint": "929690:1793563414139606466",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a198b3-a8e7-7411-a8a6-46df93652e58"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:43:13.868480171Z",
+      "updated_at": "2026-11-01T20:03:34.142Z",
+      "revision": 929690
+    },
+    {
+      "source_fingerprint": "823542:1793636750758884365",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19d11-a9aa-7c90-bb2d-4fe5b418a80f"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "current",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:47:27.624029271Z",
+      "updated_at": "2026-11-02T16:25:50.763Z",
+      "revision": 823542
+    },
+    {
+      "source_fingerprint": "4069481:1793569112078692018",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a1983d-683d-7381-97c2-c6693df34f94"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "parent_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Selected source checkpoint could not establish newer canonical facts; accepted baseline preserved",
+      "refreshed_at": "2026-11-02T17:41:40.219499275Z",
+      "updated_at": "2026-11-01T21:38:32.081Z",
+      "revision": 4069481
+    },
+    {
+      "source_fingerprint": "648899:1793563573820582084",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a198b7-9f3d-7653-b12d-4c98aff72591"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:44:04.97171496Z",
+      "updated_at": "2026-11-01T20:06:13.827Z",
+      "revision": 648899
+    },
+    {
+      "source_fingerprint": "924519:1793563347639196239",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a198b3-aac9-7fb1-b18d-b88d97da881a"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:43:28.612291426Z",
+      "updated_at": "2026-11-01T20:02:27.642Z",
+      "revision": 924519
+    },
+    {
+      "source_fingerprint": "716010:1793563422251655905",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a198b5-320a-70a2-a0e4-af1ce78adfbf"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:43:53.363148383Z",
+      "updated_at": "2026-11-01T20:03:42.252Z",
+      "revision": 716010
+    },
+    {
+      "source_fingerprint": "1129684:1793637338734506151",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19d1a-fe15-70b3-aa3c-a91e4019bf16"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "current",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:47:27.670490371Z",
+      "updated_at": "2026-11-02T16:35:38.739Z",
+      "revision": 1129684
+    },
+    {
+      "source_fingerprint": "1132003:1793637420595011264",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19d1a-fb73-74c2-a67e-66e09d391c6f"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "current",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:47:27.704168822Z",
+      "updated_at": "2026-11-02T16:37:00.599Z",
+      "revision": 1132003
+    },
+    {
+      "source_fingerprint": "715551:1793562788675750910",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a198a8-e6ca-72d3-a504-6c3e8cc2a6f2"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "parent_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:41:41.295784842Z",
+      "updated_at": "2026-11-01T19:53:08.677Z",
+      "revision": 715551
+    },
+    {
+      "source_fingerprint": "1099279:1793632107386291929",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19cc9-80ac-7f63-b972-78e619b297d6"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:46:20.932391969Z",
+      "updated_at": "2026-11-02T15:08:27.389Z",
+      "revision": 1099279
+    },
+    {
+      "source_fingerprint": "1878317:1793559212301729934",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19843-e243-79b3-b074-9d8b3d4f42dd"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "parent_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Selected source checkpoint could not establish newer canonical facts; accepted baseline preserved",
+      "refreshed_at": "2026-11-02T17:41:41.551884489Z",
+      "updated_at": "2026-11-01T18:53:32.307Z",
+      "revision": 1878317
+    },
+    {
+      "source_fingerprint": "957310:1793631144992363292",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19cbe-210f-7ec1-9e38-203e3d4d5e67"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:45:33.054787408Z",
+      "updated_at": "2026-11-02T14:52:24.995Z",
+      "revision": 957310
+    },
+    {
+      "source_fingerprint": "861829:1793636792399143968",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19d14-aaa5-71b0-baa7-545063ba2a4e"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "current",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:47:27.746736515Z",
+      "updated_at": "2026-11-02T16:26:32.402Z",
+      "revision": 861829
+    },
+    {
+      "source_fingerprint": "909517:1793633432510452930",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19cdc-0f71-7070-a824-e0a0e1b5bc26"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:47:03.927321142Z",
+      "updated_at": "2026-11-02T15:30:32.513Z",
+      "revision": 909517
+    },
+    {
+      "source_fingerprint": "3453701:1793562475721823150",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a1983d-df67-7351-8d61-32baf7337faa"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "parent_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Selected source checkpoint could not establish newer canonical facts; accepted baseline preserved",
+      "refreshed_at": "2026-11-02T17:41:42.247195239Z",
+      "updated_at": "2026-11-01T19:47:55.725Z",
+      "revision": 3453701
+    },
+    {
+      "source_fingerprint": "608982:1793639087585281249",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19d37-0cfa-7111-870d-d8639d13f833"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "current",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:47:27.77137064Z",
+      "updated_at": "2026-11-02T17:04:47.591Z",
+      "revision": 608982
+    },
+    {
+      "source_fingerprint": "829280:1793630684061528304",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19cb7-0073-7752-9478-76b81d6d74d3"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:45:02.840897898Z",
+      "updated_at": "2026-11-02T14:44:44.067Z",
+      "revision": 829280
+    },
+    {
+      "source_fingerprint": "672731:1793558474649181014",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19869-c529-77e1-8712-042ac9e8c578"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:43:04.417099258Z",
+      "updated_at": "2026-11-01T18:41:14.653Z",
+      "revision": 672731
+    },
+    {
+      "source_fingerprint": "853774:1793562854932155700",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a198a9-ee93-79f1-881c-0c4114c303d2"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "parent_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:41:42.854424262Z",
+      "updated_at": "2026-11-01T19:54:14.935Z",
+      "revision": 853774
+    },
+    {
+      "source_fingerprint": "1103500:1793631678711645281",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19cc3-a7cb-7d72-93d3-7115e7ba72ed"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:46:03.275515645Z",
+      "updated_at": "2026-11-02T15:01:18.714Z",
+      "revision": 1103500
+    },
+    {
+      "source_fingerprint": "1188455:1793636326680283660",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19d0a-374d-7181-b878-4c503275927e"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:47:20.010788793Z",
+      "updated_at": "2026-11-02T16:18:46.683Z",
+      "revision": 1188455
+    },
+    {
+      "source_fingerprint": "1081988:1793636225587653238",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19d0a-3c69-7b21-a54e-7c49c4c92c09"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "current",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:47:27.819702922Z",
+      "updated_at": "2026-11-02T16:17:05.588Z",
+      "revision": 1081988
+    },
+    {
+      "source_fingerprint": "869943:1793555111940472709",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19830-d8d6-7642-a636-ff0567d42504"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "parent_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:41:43.452194146Z",
+      "updated_at": "2026-11-01T17:45:11.944Z",
+      "revision": 869943
+    },
+    {
+      "source_fingerprint": "1006908:1793557639032035749",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19857-366e-7951-b105-4dd4444c6073"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "parent_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:41:43.482572424Z",
+      "updated_at": "2026-11-01T18:27:19.035Z",
+      "revision": 1006908
+    },
+    {
+      "source_fingerprint": "1509706:1793633685828008650",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19cdc-0d66-71b3-824a-dcba37ff05c1"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:46:56.531195097Z",
+      "updated_at": "2026-11-02T15:34:45.830Z",
+      "revision": 1509706
+    },
+    {
+      "source_fingerprint": "1646904:1793627335816905143",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19c80-e992-74d2-8f39-7e4f41e4be94"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "parent_id": "01a19c6f-1d14-7442-9474-b8a3ec537a2b",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Selected source checkpoint could not establish newer canonical facts; accepted baseline preserved",
+      "refreshed_at": "2026-11-02T17:41:17.005503499Z",
+      "updated_at": "2026-11-02T13:48:55.824Z",
+      "revision": 1646904
+    },
+    {
+      "source_fingerprint": "722641:1793563318979021358",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a198b3-ac96-7b52-8b37-49d16e55586b"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:43:43.846712965Z",
+      "updated_at": "2026-11-01T20:01:58.983Z",
+      "revision": 722641
+    },
+    {
+      "source_fingerprint": "1240400:1793638676930746666",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19d2f-f0a9-71c1-a3af-9199492b196f"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "current",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:47:27.872425531Z",
+      "updated_at": "2026-11-02T16:57:56.933Z",
+      "revision": 1240400
+    },
+    {
+      "source_fingerprint": "1112273:1793636354504454752",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19d0d-2388-7af3-9d47-59706feacefc"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "current",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:47:27.906686304Z",
+      "updated_at": "2026-11-02T16:19:14.504Z",
+      "revision": 1112273
+    },
+    {
+      "source_fingerprint": "1056111:1793558065698667651",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a1985d-ba8e-7e93-8f29-a3cc14b0566d"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "parent_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:41:44.316478746Z",
+      "updated_at": "2026-11-01T18:34:25.702Z",
+      "revision": 1056111
+    },
+    {
+      "source_fingerprint": "803525:1793558258811849540",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19866-2289-7612-8920-6e4a269e8aea"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:42:25.228918483Z",
+      "updated_at": "2026-11-01T18:37:38.816Z",
+      "revision": 803525
+    },
+    {
+      "source_fingerprint": "924671:1793560239192050156",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a1987e-de1a-7513-80bb-6ee144988d7f"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "parent_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:41:44.547763421Z",
+      "updated_at": "2026-11-01T19:10:39.194Z",
+      "revision": 924671
+    },
+    {
+      "source_fingerprint": "1037812:1793561982242781036",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a1989a-4489-7ce2-8337-97d2590d0593"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "parent_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:41:44.580268981Z",
+      "updated_at": "2026-11-01T19:39:42.244Z",
+      "revision": 1037812
+    },
+    {
+      "source_fingerprint": "1908970:1793635849893331555",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19c9d-f80b-7b10-987d-0fc70a605881"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "parent_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Selected source checkpoint could not establish newer canonical facts; accepted baseline preserved",
+      "refreshed_at": "2026-11-02T17:41:44.617331427Z",
+      "updated_at": "2026-11-02T16:10:49.899Z",
+      "revision": 1908970
+    },
+    {
+      "source_fingerprint": "1099152:1793638703898911702",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19d2f-ecfa-7a10-8a79-ce80f1fd8a8d"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "current",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:47:27.959389714Z",
+      "updated_at": "2026-11-02T16:58:23.900Z",
+      "revision": 1099152
+    },
+    {
+      "source_fingerprint": "1484631:1793630127802099821",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19ca4-e2cd-7ce3-8d0c-4ce0a0dc904d"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:44:53.099178573Z",
+      "updated_at": "2026-11-02T14:35:27.806Z",
+      "revision": 1484631
+    },
+    {
+      "source_fingerprint": "1035965:1793638944784395126",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19d33-8f63-7031-9a95-c3b6a5e73649"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "current",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:47:27.998648125Z",
+      "updated_at": "2026-11-02T17:02:24.786Z",
+      "revision": 1035965
+    },
+    {
+      "source_fingerprint": "1117846:1793631767556191966",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19cc3-a397-70a2-a6e7-4125d92e02a6"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:45:45.253249678Z",
+      "updated_at": "2026-11-02T15:02:47.556Z",
+      "revision": 1117846
+    },
+    {
+      "source_fingerprint": "900950:1793563155654011302",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a198ad-6aac-7ab2-8248-f7ed86c19eb0"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "parent_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:41:45.357959145Z",
+      "updated_at": "2026-11-01T19:59:15.660Z",
+      "revision": 900950
+    },
+    {
+      "source_fingerprint": "823481:1793636718246685641",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19d13-2103-7232-b884-598ee19b23f5"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "current",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:47:28.032608355Z",
+      "updated_at": "2026-11-02T16:25:18.251Z",
+      "revision": 823481
+    },
+    {
+      "source_fingerprint": "572713:1793639943126542546",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19d44-9257-7da3-89ac-cbbcdd117449"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "current",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:47:28.054207873Z",
+      "updated_at": "2026-11-02T17:19:03.130Z",
+      "revision": 572713
+    },
+    {
+      "source_fingerprint": "1054139:1793637945902236310",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19d23-ca9a-7542-9769-0889a5fb78fd"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "current",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:47:28.084661975Z",
+      "updated_at": "2026-11-02T16:45:45.906Z",
+      "revision": 1054139
+    },
+    {
+      "source_fingerprint": "11125424:1793637367926687144",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19830-6b3f-7f63-964f-a7521381d0fb"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Selected source checkpoint could not establish newer canonical facts; accepted baseline preserved",
+      "refreshed_at": "2026-11-02T17:41:46.12582039Z",
+      "updated_at": "2026-11-02T16:36:07.932Z",
+      "revision": 11125424
+    },
+    {
+      "source_fingerprint": "792537:1793638845679788590",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19d33-8a3a-7fc3-98bd-dbffc88536f3"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "current",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:47:28.111809396Z",
+      "updated_at": "2026-11-02T17:00:45.681Z",
+      "revision": 792537
+    },
+    {
+      "source_fingerprint": "1007407:1793630927455019338",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19cb7-031c-7710-bc1d-5adb5f2ce251"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:45:15.705180079Z",
+      "updated_at": "2026-11-02T14:48:47.460Z",
+      "revision": 1007407
+    },
+    {
+      "source_fingerprint": "916911:1793638127239366145",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19d27-72f8-7b00-a417-2aa58acb1868"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "current",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:47:28.145475957Z",
+      "updated_at": "2026-11-02T16:48:47.243Z",
+      "revision": 916911
+    },
+    {
+      "source_fingerprint": "663058:1793631919917132901",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19cc9-8222-70b3-af6e-b587f4b3b4c2"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:46:32.740165239Z",
+      "updated_at": "2026-11-02T15:05:19.923Z",
+      "revision": 663058
+    },
+    {
+      "source_fingerprint": "716950:1793558396580705370",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19868-7528-7b03-b4dd-2c3c7e123e46"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:42:42.777345595Z",
+      "updated_at": "2026-11-01T18:39:56.585Z",
+      "revision": 716950
+    },
+    {
+      "source_fingerprint": "1136062:1793632334507691152",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19ccd-892d-7882-9bd2-e4f8053ceaaf"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:46:41.600008968Z",
+      "updated_at": "2026-11-02T15:12:14.510Z",
+      "revision": 1136062
+    },
+    {
+      "source_fingerprint": "1230640:1793637990610524123",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19d23-c79d-76f2-95f0-5c02ee66b3cc"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "current",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:47:28.192122255Z",
+      "updated_at": "2026-11-02T16:46:30.612Z",
+      "revision": 1230640
+    },
+    {
+      "source_fingerprint": "10837774:1793642516122397016",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19c6f-1d14-7442-9474-b8a3ec537a2b"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "current",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T18:01:56.933122105Z",
+      "updated_at": "2026-11-02T18:01:56.125Z",
+      "revision": 10837774
+    },
+    {
+      "source_fingerprint": "1026281:1793639011684810755",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19d34-73dc-7fb1-8d5f-00516b76c8f9"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "current",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:47:28.424169594Z",
+      "updated_at": "2026-11-02T17:03:31.690Z",
+      "revision": 1026281
+    },
+    {
+      "source_fingerprint": "1062635:1793639859302022244",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19d41-c3ed-77a2-a14d-6bdf077cd49c"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "current",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:47:28.455672229Z",
+      "updated_at": "2026-11-02T17:17:39.305Z",
+      "revision": 1062635
+    },
+    {
+      "source_fingerprint": "945260:1793637374610728489",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19d1a-f94b-76b1-af3e-90fc60c46c85"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "current",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:47:28.481390654Z",
+      "updated_at": "2026-11-02T16:36:14.615Z",
+      "revision": 945260
+    },
+    {
+      "source_fingerprint": "579926:1793631522162679691",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19cc3-a5a1-7eb2-86bb-44b81342607f"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:45:57.739200523Z",
+      "updated_at": "2026-11-02T14:58:42.165Z",
+      "revision": 579926
+    },
+    {
+      "source_fingerprint": "757359:1793558258483847608",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19866-20dd-7520-be15-5c9e88f77c9f"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:42:15.68478926Z",
+      "updated_at": "2026-11-01T18:37:38.486Z",
+      "revision": 757359
+    },
+    {
+      "source_fingerprint": "1796555:1793629186552301066",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19c8d-656f-71f0-b8af-cd67dab59a39"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:44:34.363819771Z",
+      "updated_at": "2026-11-02T14:19:46.554Z",
+      "revision": 1796555
+    },
+    {
+      "source_fingerprint": "1018549:1793639247134257478",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19d37-0f58-77a1-b766-bb4bae56fe08"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "current",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:47:28.52514039Z",
+      "updated_at": "2026-11-02T17:07:27.138Z",
+      "revision": 1018549
+    },
+    {
+      "source_fingerprint": "1029621:1793557712208493928",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19858-b2dc-7f71-9244-02c7471ae4d7"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "parent_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:41:49.160386106Z",
+      "updated_at": "2026-11-01T18:28:32.213Z",
+      "revision": 1029621
+    },
+    {
+      "source_fingerprint": "832391:1793639769085472695",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19d41-c692-7cd3-a098-5aa8193e5b73"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "current",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:47:28.555440571Z",
+      "updated_at": "2026-11-02T17:16:09.088Z",
+      "revision": 832391
+    },
+    {
+      "source_fingerprint": "1044040:1793563124749820422",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a198ac-997c-7083-b238-be54e298893b"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "parent_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:41:49.382012751Z",
+      "updated_at": "2026-11-01T19:58:44.754Z",
+      "revision": 1044040
+    },
+    {
+      "source_fingerprint": "1006522:1793561960938654221",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a1989a-13c4-7103-aa2f-9d4638bdf064"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "parent_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:41:49.416153877Z",
+      "updated_at": "2026-11-01T19:39:20.942Z",
+      "revision": 1006522
+    },
+    {
+      "source_fingerprint": "885601:1793560050694888067",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a1987e-1807-76b0-8627-d5a9b44e8a7e"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "parent_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:41:49.438446094Z",
+      "updated_at": "2026-11-01T19:07:30.700Z",
+      "revision": 885601
+    },
+    {
+      "source_fingerprint": "992554:1793558026242418042",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a1985e-1b0e-7e52-99d4-d6de3e368b1d"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "parent_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:41:49.466348469Z",
+      "updated_at": "2026-11-01T18:33:46.245Z",
+      "revision": 992554
+    },
+    {
+      "source_fingerprint": "979228:1793562888368364715",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a198a9-1789-76d2-a37f-165e8d0c3be5"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "parent_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:41:49.491468856Z",
+      "updated_at": "2026-11-01T19:54:48.371Z",
+      "revision": 979228
+    },
+    {
+      "source_fingerprint": "834543:1793639244478241279",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19d38-f3b8-75a1-b61f-4928d0fd9880"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "current",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:47:28.593952423Z",
+      "updated_at": "2026-11-02T17:07:24.483Z",
+      "revision": 834543
+    },
+    {
+      "source_fingerprint": "743919:1793636600829963153",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19d11-ac0b-7f63-ac63-0f062ef29f8c"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "current",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:47:28.614763473Z",
+      "updated_at": "2026-11-02T16:23:20.835Z",
+      "revision": 743919
+    },
+    {
+      "source_fingerprint": "1141230:1793558101278879124",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a1985e-dd3a-7260-9a74-4fd0e88db4df"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "parent_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:41:49.945285181Z",
+      "updated_at": "2026-11-01T18:35:01.282Z",
+      "revision": 1141230
+    },
+    {
+      "source_fingerprint": "774696:1793563144281942465",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a198ae-2e70-71a3-ac73-5d54fe90c186"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "parent_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:41:49.965791646Z",
+      "updated_at": "2026-11-01T19:59:04.285Z",
+      "revision": 774696
+    },
+    {
+      "source_fingerprint": "780044:1793639851945983682",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19d41-ca08-7123-aae3-90eccacdcc51"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "current",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:47:28.645469281Z",
+      "updated_at": "2026-11-02T17:17:31.951Z",
+      "revision": 780044
+    },
+    {
+      "source_fingerprint": "1032356:1793630886570773682",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19cb7-0587-7b73-be98-8617fbb64d97"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:45:29.184922348Z",
+      "updated_at": "2026-11-02T14:48:06.572Z",
+      "revision": 1032356
+    },
+    {
+      "source_fingerprint": "1350717:1793630326359327706",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19ca4-e0d5-7b01-b0e6-4edb6c605f3a"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:44:46.729047227Z",
+      "updated_at": "2026-11-02T14:38:46.360Z",
+      "revision": 1350717
+    },
+    {
+      "source_fingerprint": "783714:1793563588384676029",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a198b7-a1ba-78d2-bbd3-7adc5e79a0c7"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:44:24.064159082Z",
+      "updated_at": "2026-11-01T20:06:28.390Z",
+      "revision": 783714
+    },
+    {
+      "source_fingerprint": "1040719:1793636310156171801",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19d0c-7a56-7a60-b4e6-5fe4d9a1d8d4"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "current",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:47:28.680215786Z",
+      "updated_at": "2026-11-02T16:18:30.158Z",
+      "revision": 1040719
+    },
+    {
+      "source_fingerprint": "991442:1793560176487657836",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a1987d-d0c9-7782-8e45-66206bf75e0c"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "parent_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:41:51.067841035Z",
+      "updated_at": "2026-11-01T19:09:36.490Z",
+      "revision": 991442
+    },
+    {
+      "source_fingerprint": "990257:1793636152763205144",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19d0a-39b2-7990-9528-881a465fabe2"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "current",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:47:28.707931967Z",
+      "updated_at": "2026-11-02T16:15:52.767Z",
+      "revision": 990257
+    },
+    {
+      "source_fingerprint": "1129381:1793637877413824554",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19d23-cdb7-7700-ad21-fbef8ae13458"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "current",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:47:28.736348048Z",
+      "updated_at": "2026-11-02T16:44:37.418Z",
+      "revision": 1129381
+    },
+    {
+      "source_fingerprint": "760310:1793638772207334590",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19d32-a9bb-7c30-bcf8-705b04a267f5"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "current",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:47:28.75606225Z",
+      "updated_at": "2026-11-02T16:59:32.209Z",
+      "revision": 760310
+    },
+    {
+      "source_fingerprint": "960889:1793557660044164282",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19857-1005-7980-8c08-3d69e249e33c"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "parent_id": "01a19830-6b3f-7f63-964f-a7521381d0fb",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:41:51.70316519Z",
+      "updated_at": "2026-11-01T18:27:40.044Z",
+      "revision": 960889
+    },
+    {
+      "source_fingerprint": "793936:1793636759282944467",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19d11-af69-78a3-8e97-76df581dfca2"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "current",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:47:28.778884084Z",
+      "updated_at": "2026-11-02T16:25:59.286Z",
+      "revision": 793936
+    },
+    {
+      "source_fingerprint": "1304601:1793638082983080064",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19d26-8609-79a3-bb35-425c03cf0caf"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "current",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:47:28.810656975Z",
+      "updated_at": "2026-11-02T16:48:02.987Z",
+      "revision": 1304601
+    },
+    {
+      "source_fingerprint": "585743:1793631712795858753",
+      "identity": {
+        "source": "codex",
+        "store": "[local source store]",
+        "session_id": "01a19cc7-1a50-7f42-8e42-419cdc73fa45"
+      },
+      "ticket_id": "AL-68",
+      "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+      "ticket_type": "feat",
+      "binding": "explicit_agent_response",
+      "request": "",
+      "event": "manual_source_recovery",
+      "state": "pending",
+      "detail": "Source snapshot reconciled; checkpoint does not establish ticket completion",
+      "refreshed_at": "2026-11-02T17:46:18.564720981Z",
+      "updated_at": "2026-11-02T15:01:52.799Z",
+      "revision": 585743
     }
   ],
   "limits": [
     "Only registered, explicitly bound or source-proven inherited sessions are selected. Sessions that never delivered a hook cannot be counted as covered.",
     "Hook installation is not proof of harness trust, agent response or complete source availability.",
-    "Explicit source refresh had unordered/older checkpoints; retained canonical source facts and ownerless auxiliary rows.",
-    "Ticket completed_at remains unknown while the source orchestration is active; legacy generator invocation/publication-time inference was removed from ticket metadata only.",
-    "Codex0.166 exec: SubagentStart was not observed; running/interrupted child coverage before Stop remains degraded/unverified."
+    "Some successful source rereads did not establish precedence over canonical owner checkpoints; preserved canonical facts and left coverage pending.",
+    "Explicit source refresh had unordered/older checkpoints; retained canonical source facts and ownerless auxiliary rows."
   ],
-  "ledger_sha256": "6de7a3af4c15ec0e3dcf8dbae973f39f7fab7d58432711a54616eaa9e8a6d764"
+  "ledger_sha256": "c575eca97b8a178c96f60ec2e93aa1f9f5aaafd628a5d3cb9da4423dcf284aa9"
 }
