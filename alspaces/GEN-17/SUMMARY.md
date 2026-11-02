@@ -1,31 +1,41 @@
-# GEN-17: Preserve root session roles
+# GEN-17: Preserve source session personas
 
-## Status
+## Delivered behavior
 
-Implementation in progress under the explicitly approved iteration 02 delta. The user approved applying Unknown to missing roles for both roots and children; this supersedes the proposed child fallback in the frozen baseline contract and iteration 01.
+- Domain: retain the unknown role bucket in ordering, role/thread totals, effort and peaks; structural root/child calculations continue to use parent_id. Shared pure persona evidence preserves explicit metadata and rejects conflicting assistant candidates.
+- Adapters: Codex supports root agent_path fallback; OpenCode v1/v2 recover only unambiguous assistant personas. New facts synthesize neither RootAgent nor UnassignedSubAgent. Successful source hydration projects recovered roles onto matched events through an explicit source-only reconciler. Failed metadata reads preserve committed OpenCode facts and independent Codex enrichment. Live trace and persona evidence share one immutable cached snapshot.
+- Presentation: missing roles display Unknown in dashboard, trace filters, metrics and CLI summaries. Existing known ledger personas remain when optional live evidence adds no persona; explicit source evidence overrides them. Historical labels remain readable. No new persisted root field, schema bump or bulk ledger rewrite.
 
-## Allocation and baseline
+## Scope, ownership and ticket correction
 
-- User requested the next generic ticket and preservation of root session roles, asking whether the RootAgent label should move to a new field or be removed.
-- Configuration: workspace root alspaces; GEN tickets use conventional type chore.
-- Checked existing workspaces, ticket index, local branches and origin branch references. GEN-1 through GEN-15 are allocated, including GEN-14 on origin. GEN-16 is available.
-- Initial working tree clean at 99fbcd7be0d0ed05639e4a0cb3be8744a3d5371e. Starting branch GEN-13/root-session-role was a generated name, not an available ticket identifier.
-- Allocated branch chore/GEN-17-preserve-root-session-role. No matching specification or ticket index entry; this is an ad hoc ticket.
+User approval: "apply this recommendation" approved Unknown for missing roles in roots and children, expanding the proposed baseline's child fallback. [Iteration 02](iterations/02/PLAN.md) controls that delta; CONTRACT.md retains the proposed baseline. Planner authored the plans, coder owned production implementation, tester owned regression changes, independent reviewers owned scoped investigation, and the parent owned integration and delivery.
 
-## Proposed direction
+Initial Git status was clean at 99fbcd7be0d0ed05639e4a0cb3be8744a3d5371e on generated branch GEN-13/root-session-role. Initial local workspace/index/reference checks allocated GEN-16. User later explicitly corrected this: "GEN-16 was taken. change the workspace to GEN-17 and merge main into the branch". The same work moved to alspaces/GEN-17 and chore/GEN-17-preserve-root-session-role; no application/test changes were required for relocation. Historical finding IDs retain GEN16 as provenance. Checkpoint b8c087a committed owned work; merge 124419d integrated origin/main 8f0fd4f cleanly. Incoming independent GEN-16 artifacts were preserved. No matching GEN-17 planning specification or index entry required lifecycle updates.
 
-Preserve source-provided persona roles independently of session ancestry. Derive root presentation from existing parent relationships where they establish root status; avoid redundant persisted root flags. The contract and iteration plan define missing-role and legacy-data handling for approval.
+## Consolidated review: APPROVED
 
-## Workflow
+Reviewed final content: integrated 124419da3aadd170b9fe6e15e0d7bdcc1ebef200 plus backend/web diff fingerprint 3b083d30617cefbe537a8838c4fc441881988aff7f2588fcbaa5d60916260f60. The fingerprint is SHA-256 of git diff HEAD --binary restricted to backend/web followed by sorted untracked source path, NUL and bytes. Application/test content was frozen through the final reviews. Integration changed guidance only. Sol behavior/architecture correction approvals carry forward across the final failclosed metadata branch; final data/test investigations and targeted controls cover that branch.
 
-The planner authored CONTRACT.md and iterations/01 and 02 plans. A coder owns application implementation; a separate tester and independent focused reviewers follow. The parent owns integration, remaining artifacts, telemetry and publication. User approval source: "apply this recommendation" after the recommendation to use Unknown for missing personas in both roots and children, with ancestry separate. No further scope confirmation is required. Telemetry extraction is deferred until the final delivery step; no ledger has been generated yet.
+[Compact findings and every reporting persona/model/effort tuple](iterations/02/REVIEW_SUMMARY.json) permanently retain all six candidates, including shared discovery, refutation and accepted debt. Model/effort attribution below is dispatch-acknowledged configuration, not independently source-verified identity.
 
-Planning verification: parent reviewed both artifacts and ran git diff --check successfully. Local bin/agentic-lens is absent (generate --help could not run); build the canonical binary before delivery telemetry. No implementation, review approval, integration checks, commit or PR is claimed at this checkpoint.
+| Finding | Discovering responsibility and model/effort | Disposition and verification |
+| --- | --- | --- |
+| GEN16-01 | Behavior, data/failure and test-effectiveness reviewers, each gpt-6.1-sol/high | Matched events discarded recovered persona. Coder gpt-6.1-sol/high added explicit source reconciliation; tester gpt-6.1-sol/high added stable-ID, unique legacy and appended controls. Independent pre-fix probes failed; parent and reviewers verified corrected behavior. |
+| GEN16-02 | Architecture reviewer, gpt-6.1-sol/high | Split cache reads could lose a stable persona. Coder gpt-6.1-sol/high paired trace/evidence snapshots; tester gpt-6.1-sol/high added deterministic real-SQLite invalidation guard. Parent bounded concurrent race probe and focused reviewers verified correction. |
+| GEN16-03 | Data/failure reviewer, gpt-6-luna/medium | Confirmed pre-existing global invalidation cost. Parent verified identical baseline behavior; accepted debt owned by live-service maintenance for future per-session invalidation work. No new history query introduced. |
+| GEN16-04 | Test-effectiveness reviewer, gpt-6-luna/medium | Test gap only. Tester gpt-6.1-sol/high extended the existing orphan builder test to assert original parent_id and input ancestry. Focused reviewers verified the oracle; no production defect claimed. |
+| GEN17-05 | Data/failure re-reviewer, gpt-6.1-sol/high | Failed metadata lookup erased an event-only recorded role. Coder gpt-6.1-sol/high now fails closed for OpenCode; tester gpt-6.1-sol/high added partial-failure and mixed-source controls. Pre-fix overlay failed three cases; corrected races and final data/test reviews passed. This distinct defect was discovered during re-review. |
+| GEN17-06 | Data/failure re-reviewer, gpt-6-luna/medium | Refuted interpretation: absent optional persona evidence does not prove a known recorded role stale. Existing persisted-planner control and baseline-preservation contract support retention; final test review agreed. No product change. |
 
-## Ticket reassignment and integration checkpoint
+Initial eight discovery runs completed: all four Sol scopes requested changes; Luna behavior/architecture approved, data raised existing performance debt, tests identified the ancestry assertion gap. Re-review verified corrections under both profiles. Final behavior, architecture and test scopes approve under both profiles; final Sol data approves. Luna data's completed dissent is retained and independently refuted as above. Parent consolidated APPROVED only after integrated make and standalone checks passed; this does not authorize merging the PR. Verification actors are separate from discovering reporters; no supplied-finding verification is counted as independent discovery.
 
-User steering: "GEN-16 was taken. change the workspace to GEN-17 and merge main into the branch". This is an identifier correction for the same approved work, not a second task. All task-owned artifacts moved from alspaces/GEN-16 to alspaces/GEN-17; application and test files were not changed for relocation. Historical reviewer findings retain GEN16 identifiers and reviewed fingerprints as provenance. Active artifact paths and branch references now point to GEN-17. Original allocation evidence above describes the earlier local view; the user's correction supersedes that assignment. GEN-17 workspace/index/local and remote references were checked before relocation.
+## Verification
 
-The latest origin/main contains a separate GEN-16 documentation ticket (8f0fd4f, PR95). Preserve those incoming artifacts. Reviews paused for integration; no consolidated approval or PR delivery is claimed. Implementation will be checkpoint-committed with open review evidence, then main merged, as explicitly requested. Telemetry remains deferred until final delivery.
+- Integrated make passed on the final reviewed content: all 12 Go packages under the race detector; frontend 35 files / 783 tests; typecheck and ESLint; Python release and installation checks; canonical frontend build and Linux/macOS amd64/arm64 builds. Log: /tmp/gen17-make.log (local evidence, not a committed transcript).
+- Parent verified frontend and Go embed output trees byte-for-byte, then ran the Linux/amd64 standalone binary with Node absent from PATH in a disposable workspace. Current index, JavaScript and CSS served byte-identically; server terminated. Generated assets remain ignored per policy.
+- Targeted regression and before/after evidence: [TEST_REPORT.md](iterations/02/TEST_REPORT.md). Final metadata-failure and mixed-source controls preserve ledger bytes, accepted facts and other-source multiplicity. Legacy labels remain readable with enrichment unavailable. git diff --check passed.
+- The original 2000-poll race/count3 stress attempt timed out after 40 seconds and is not a pass. A bounded 20-poll race/count1 copy passed in 1.889 seconds; the durable snapshot test uses deterministic interleaving. Browser geometry and actual external-session persona recovery were not exercised.
 
-Open correction: data/failure re-review (gpt-6.1-sol/high) independently reproduced a new partial metadata-read failure: source trace lookup can succeed while session.agent query fails; matched persisted event-only session personas then become blank through authoritative reconciliation. Recorded as D-SOL-R1, with failing overlay and passing generic/healthy-source controls. This still blocks delivery. Behavior, architecture and test Sol re-reviews approved the prior two corrections at fingerprint 7b720b47; Luna correction re-reviews have not run yet.
+## Remaining limits and telemetry
+
+Database-wide invalidation can reread histories of unchanged active sessions after unrelated writes; idle polls reuse snapshots. This is existing accepted performance debt, not changed-session-only polling. Pricing, cost, source identity and session completeness must come from final extraction, not reviewer assignments. Final telemetry is generated after all review/integration work; extraction facts and limits are recorded below when available.

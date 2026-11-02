@@ -1116,6 +1116,61 @@ func TestHydrateWorkspaceEventsMixedSourcesPreserveSQLiteDetailsOverCommittedEch
 			if string(after) != string(before) {
 				t.Fatal("source enrichment mutated the committed input")
 			}
+
+			t.Run("failed persona lookup retains baseline and independent source", func(t *testing.T) {
+				// An accepted event-only session has no invocation role to mask
+				// the distinction between unavailable metadata and Unknown.
+				ledger.Facts.Sessions[0].Invocations = nil
+				ledger.Facts.Sessions[0].Events[0].Role = "reviewer"
+				accepted, err := json.Marshal(ledger)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := db.Exec(`ALTER TABLE session DROP COLUMN agent`); err != nil {
+					t.Fatal(err)
+				}
+				messages, _, err := hook.FetchSessionTraceMulti([]string{"sqlite-session"})
+				if err != nil || len(messages) != 1 {
+					t.Fatalf("trace unavailable instead of persona-only failure: %v %v", messages, err)
+				}
+				degraded, err := service.HydrateWorkspaceEvents(context.Background(), "FIX-12", ledger)
+				if err != nil {
+					t.Fatal(err)
+				}
+				wantSource := domain.DataSourceCommittedLedger
+				if tc.includeCodex {
+					wantSource = domain.DataSourceLocalCodex
+				}
+				if degraded.IsHydrated != tc.includeCodex || degraded.DataSource != wantSource || !degraded.IncludesBaseline {
+					t.Fatalf("incorrect partial-source provenance: %+v", degraded)
+				}
+				var sqliteEvents []domain.EventFact
+				codexCount := 0
+				for _, event := range degraded.Events {
+					if event.SessionID == "sqlite-session" {
+						sqliteEvents = append(sqliteEvents, event)
+					} else if event.SessionID == "codex-session" {
+						codexCount++
+					} else {
+						t.Errorf("unexpected source owner: %+v", event)
+					}
+				}
+				wantSQLite := domain.SortEvents(domain.AgenticFactLedger{Sessions: ledger.Facts.Sessions[:1]}.EventFacts())
+				if !reflect.DeepEqual(sqliteEvents, wantSQLite) {
+					t.Fatalf("failed metadata read rewrote recorded SQLite events: got=%+v want=%+v", sqliteEvents, wantSQLite)
+				}
+				if (tc.includeCodex && codexCount != 1) || (!tc.includeCodex && codexCount != 0) {
+					t.Fatalf("independent Codex source lost or duplicated: %+v", degraded.Events)
+				}
+				unchanged, err := json.Marshal(ledger)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if string(unchanged) != string(accepted) {
+					t.Fatal("metadata failure mutated accepted input")
+				}
+			})
+
 		})
 	}
 }
@@ -1466,7 +1521,7 @@ func TestHydrateWorkspaceEvents_SourceLessLedgerStaysUnhydrated(t *testing.T) {
 }
 
 func TestHydrationFailuresRetainRecordedEventsAndLedgerBytes(t *testing.T) {
-	for _, mode := range []string{"nil service", "nil hook", "missing session", "closed database", "missing tables", "empty SQLite session", "missing Codex home", "missing Codex rollout", "empty Codex rollout"} {
+	for _, mode := range []string{"nil service", "nil hook", "missing session", "closed database", "missing tables", "missing persona column", "empty SQLite session", "missing Codex home", "missing Codex rollout", "empty Codex rollout"} {
 		t.Run(mode, func(t *testing.T) {
 			root := t.TempDir()
 			cfg := testProjectConfig()
@@ -1483,6 +1538,9 @@ func TestHydrationFailuresRetainRecordedEventsAndLedgerBytes(t *testing.T) {
 				},
 				Anomalies: []domain.Anomaly{{RuleID: domain.RuleToolRetryStreak, Severity: domain.SeverityWarning}},
 			}}}
+			if mode == "missing persona column" {
+				facts.Sessions[0].Events[1] = domain.SessionEventFact{EventID: "opencode:message:recorded-message", Timestamp: "2026-10-29T10:00:00.000000+00:00", Turn: 1, Role: "reviewer", EventType: domain.EventTypeTurnMessage, Status: "completed", ContextTokens: 1200}
+			}
 			ledger := domain.AgenticMetricsLedger{Facts: facts}
 			before, err := json.Marshal(facts)
 			if err != nil {
@@ -1513,7 +1571,7 @@ func TestHydrationFailuresRetainRecordedEventsAndLedgerBytes(t *testing.T) {
 				service = live.NewLiveServiceWithCodexHome(nil, cfg, home)
 			default:
 				dbPath := createTestDBFile(t)
-				if mode == "missing tables" || mode == "empty SQLite session" {
+				if mode == "missing tables" || mode == "missing persona column" || mode == "empty SQLite session" {
 					db, err := sql.Open("sqlite", dbPath)
 					if err != nil {
 						t.Fatal(err)
@@ -1521,6 +1579,11 @@ func TestHydrationFailuresRetainRecordedEventsAndLedgerBytes(t *testing.T) {
 					statement := "DROP TABLE message; DROP TABLE part;"
 					if mode == "empty SQLite session" {
 						statement = `INSERT INTO session (id, parent_id, agent, model, title, time_created, time_updated) VALUES ('recorded-session', NULL, 'coder', 'test-model', 'FIX-12', 1, 1)`
+					}
+					if mode == "missing persona column" {
+						statement = `INSERT INTO session(id,agent,time_created,time_updated) VALUES('recorded-session','planner',1,1);
+INSERT INTO message VALUES('recorded-message','recorded-session',1793268000000,1793268000000,'{"role":"assistant","content":"available trace"}');
+ALTER TABLE session DROP COLUMN agent;`
 					}
 					if _, err := db.Exec(statement); err != nil {
 						t.Fatal(err)
@@ -1543,6 +1606,12 @@ func TestHydrationFailuresRetainRecordedEventsAndLedgerBytes(t *testing.T) {
 							t.Error(err)
 						}
 					})
+				}
+				if mode == "missing persona column" {
+					messages, _, err := hook.FetchSessionTraceMulti([]string{"recorded-session"})
+					if err != nil || len(messages) != 1 {
+						t.Fatalf("fixture did not reach persona-only failure: messages=%v err=%v", messages, err)
+					}
 				}
 				service = live.NewLiveService(hook, cfg)
 			}

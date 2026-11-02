@@ -940,9 +940,12 @@ func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID strin
 	sessionAgents := make(map[string]string)
 	for _, sid := range verifiedSessions {
 		var agent sql.NullString
-		if err := s.hook.DB().QueryRow("SELECT agent FROM session WHERE id = ?", sid).Scan(&agent); err == nil {
-			sessionAgents[sid] = agent.String
+		if err := s.hook.DB().QueryRowContext(ctx, "SELECT agent FROM session WHERE id = ?", sid).Scan(&agent); err != nil {
+			// A failed metadata read cannot establish an unknown persona. Keep
+			// the OpenCode baseline while retaining independent Codex evidence.
+			return withLocalEvents(codexEvents, domain.DataSourceLocalCodex), nil
 		}
+		sessionAgents[sid] = agent.String
 	}
 
 	// 5. Fetch all messages and parts ordered by time_created ASC
