@@ -77,8 +77,41 @@ Stop when this gate is satisfied for the requested scope. Do not add endless spe
 
 ## Completed review retention
 
-Review reports and structured run/finding files support the active investigation, correction loop and approval gate. Once findings are addressed and consolidated approval is issued, keep a concise summary in the ticket's `SUMMARY.md` and delete individual review reports, consolidated `REVIEW.md`, `REVIEW_RUNS.json`, and `FINDINGS.json` for that completed review. Remove stale links to deleted files. Keep plans, regression tests, telemetry and other required deliverables.
+Review reports and structured run/finding files support the active investigation, correction loop and approval gate. Once findings are addressed and consolidated approval is issued, the parent compacts them into `iterations/<NN>/REVIEW_SUMMARY.json` before deleting any source reports. Keep this small structured file permanently and link it from the ticket's `SUMMARY.md`. Then delete individual review reports, consolidated `REVIEW.md`, `REVIEW_RUNS.json`, and `FINDINGS.json` for that completed review; remove stale links. Keep plans, regression tests, telemetry and other required deliverables. Historical audits in unrelated tickets remain outside this cleanup scope.
 
-The retained summary records reviewed revision/scope and final approval; each distinct finding and its disposition/fix; discovering actor/role and exact model/effort, preserving shared credit; verification actors separately; compact run outcomes including no-findings/incomplete runs where relevant; actual verification and remaining limits. Distinguish requested settings from source-observed identity. Do not retain verbose resolved-finding reports merely as duplicate evidence. Do not delete unresolved findings, accepted-debt ownership or material evidence gaps; resolve or summarize them explicitly before claiming completion. Historical audits in unrelated tickets remain outside a ticket's cleanup scope.
+### Compact findings format
 
-Write the retained findings as self-contained rows: reviewer responsibility, exact model name, reasoning effort, concrete defect, and fix/disposition with verification. Use readable roles such as "installation/distribution reviewer"; do not use internal run IDs or agent namespace paths as actor labels or pointers to deleted evidence. Put the model beside every finding rather than requiring a separate lookup. Summarize initial and final review outcomes in plain language; retain shared discovery and separate verification credit without an internal-ID roster.
+Use `schema_version: 1`, the reviewed revision (commit or immutable fingerprint), and a `findings` array. Each entry contains:
+
+- `finding_id`: the stable canonical finding ID.
+- `severity`: the reconciled review severity, preserving the review's severity scale.
+- `issue`: one very brief, self-contained sentence describing the defect.
+- `reporters`: every distinct reporting persona/model/effort tuple, including shared discovery across models and later reports of the same issue. Use the actual persona name and exact model identifier, not internal run IDs or agent namespace paths. Deduplicate repeated reports from the same tuple; never keep only the first reporter.
+- `disposition`: a brief outcome/fix, including refutation or accepted debt and its owner/follow-up where applicable. Preserve every canonical candidate, including refuted claims; do not make them look like confirmed defects.
+
+For example (illustrative values, not session evidence):
+
+```json
+{
+  "schema_version": 1,
+  "reviewed_revision": "<commit or immutable fingerprint>",
+  "findings": [
+    {
+      "finding_id": "DATA-01",
+      "severity": "high",
+      "issue": "Failed hydration hides persisted ledger rows.",
+      "reporters": [
+        {"persona": "reviewer-data", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "acknowledged"},
+        {"persona": "reviewer-behavior", "model": "gpt-6-luna", "effort": "medium", "identity_basis": "observed"}
+      ],
+      "disposition": "Fixed: retain persisted rows when enrichment fails."
+    }
+  ]
+}
+```
+
+Resolve reporters from the canonical findings' observations and run records before removing those records. Prefer source-observed model/effort, otherwise dispatch-acknowledged settings; label `identity_basis` as `observed`, `acknowledged`, or `requested`. When execution identity is unavailable, use `null` for unknown model/effort and a short `identity_note`; requested settings may be recorded only as requested, never as proof of execution. A verifier confirming a supplied issue belongs in the verification summary, not in `reporters` as a discoverer. If a verifier reports a new distinct issue, retain its persona/model/effort with that finding and state its verification-phase origin in the disposition. With no candidates, write `"findings": []`; do not invent a placeholder issue.
+
+Before cleanup, check that every canonical finding and all its reporting tuples survived compaction, including shared credit and refuted candidates; parse the JSON and confirm `SUMMARY.md` links to it. Keep issue/disposition text short; do not copy raw evidence, transcripts or run rosters into the compact file.
+
+The ticket's `SUMMARY.md` retains reviewed scope/revision and final approval, a link to the compact file, verification actors separately from reporters, initial/final review outcomes including no-findings/incomplete runs where relevant, actual verification and remaining limits. Use readable reviewer responsibilities with exact model/effort for any findings or fixes mentioned there. Do not delete unresolved findings, accepted-debt ownership or material evidence gaps; cleanup cannot convert an incomplete review into approval. Do not retain verbose resolved-finding reports as duplicate evidence.
