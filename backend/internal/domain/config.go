@@ -52,6 +52,7 @@ func DefaultAnomalyThresholdsConfig() AnomalyThresholdsConfig {
 // DefaultProjectConfig returns a baseline ProjectConfig with pure defaults.
 func DefaultProjectConfig() ProjectConfig {
 	return ProjectConfig{
+		Telemetry:   TelemetryConfig{Capture: DefaultCaptureConfig()},
 		ProjectName: "",
 		Ticket: TicketConfig{
 			Prefixes:        []TicketPrefix{},
@@ -184,6 +185,7 @@ type DatabaseConfig struct {
 
 // TelemetryConfig contains optional machine-local telemetry source preferences.
 type TelemetryConfig struct {
+	Capture       CaptureConfig        `json:"capture" yaml:"capture"`
 	DefaultSource string               `json:"default_source,omitempty" yaml:"default_source,omitempty"`
 	Sources       TelemetrySourcePaths `json:"sources,omitempty" yaml:"sources,omitempty"`
 }

@@ -46,6 +46,7 @@ type Manifest struct {
 	Active         bool         `json:"active"`
 	HarnessVersion string       `json:"harness_version"`
 	Capability     string       `json:"capability"`
+	StateDir       string       `json:"state_dir,omitempty"`
 }
 type PlannedChange struct {
 	Path   string `json:"path"`
@@ -133,7 +134,7 @@ func Install(ctx context.Context, options InstallOptions) (InstallResult, error)
 	if options.Source != "codex" && options.Source != "opencode" {
 		return result, errors.New("install source must be codex or opencode")
 	}
-	repo, err := absolute(options.Repository)
+	repo, err := ProjectDirectory(options.Repository)
 	if err != nil {
 		return result, err
 	}
@@ -145,7 +146,14 @@ func Install(ctx context.Context, options InstallOptions) (InstallResult, error)
 	if loadErr != nil && !errors.Is(loadErr, os.ErrNotExist) {
 		return result, loadErr
 	}
-	if loadErr == nil && previous.Repository != repo {
+	previousRepo := ""
+	if loadErr == nil {
+		previousRepo, err = ProjectDirectory(previous.Repository)
+		if err != nil {
+			return result, err
+		}
+	}
+	if loadErr == nil && previousRepo != repo {
 		return result, errors.New("capture manifest belongs to another repository")
 	}
 	if options.Remove && errors.Is(loadErr, os.ErrNotExist) {
@@ -155,7 +163,10 @@ func Install(ctx context.Context, options InstallOptions) (InstallResult, error)
 	if err != nil {
 		return result, err
 	}
-	store, err := absolute(options.SourceStore)
+	if options.SourceStore == "" {
+		return result, errors.New("empty path")
+	}
+	store, err := CanonicalStore(options.SourceStore)
 	if err != nil {
 		return result, err
 	}
@@ -171,7 +182,7 @@ func Install(ctx context.Context, options InstallOptions) (InstallResult, error)
 			return result, errors.New("installed native handler does not support capture protocol 1")
 		}
 	}
-	m := Manifest{Protocol: ProtocolVersion, Source: options.Source, Repository: repo, Binary: binary, Active: !options.Remove}
+	m := Manifest{Protocol: ProtocolVersion, Source: options.Source, Repository: repo, Binary: binary, StateDir: dir, Active: !options.Remove}
 	if !options.Remove {
 		probeCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 		m.HarnessVersion, m.Capability = probe(probeCtx, options.Source)
@@ -228,7 +239,7 @@ func Install(ctx context.Context, options InstallOptions) (InstallResult, error)
 					}
 				}
 			}
-			args := []string{binary, "capture", "receive", "--source", "codex", "--store", store, "--state-dir", dir}
+			args := []string{binary, "capture", "receive", "--source", "codex", "--store", store, "--state-dir", dir, "--repo", repo}
 			command, e := staticCommand(args, false)
 			if e != nil {
 				return result, e
@@ -282,7 +293,7 @@ func Install(ctx context.Context, options InstallOptions) (InstallResult, error)
 			return result, errors.New("plugin contains conflicting local edits; preserved")
 		}
 		replacements := []string{}
-		for _, item := range [][2]string{{"__BINARY__", binary}, {"__STATE__", dir}, {"__STORE__", store}} {
+		for _, item := range [][2]string{{"__BINARY__", binary}, {"__STATE__", dir}, {"__STORE__", store}, {"__PROJECT__", repo}} {
 			raw, e := json.Marshal(item[1])
 			if e != nil {
 				return result, e
@@ -335,6 +346,23 @@ func Install(ctx context.Context, options InstallOptions) (InstallResult, error)
 		return result, oldErr
 	}
 	changes = append(changes, fileChange{path: manifestFile, content: body, before: old, existed: oldErr == nil})
+
+	anchor := filepath.Join(repo, "."+options.Source, "agenticlens-installation.json")
+	anchorBefore, anchorErr := os.ReadFile(anchor)
+	if anchorErr != nil && !errors.Is(anchorErr, os.ErrNotExist) {
+		return result, anchorErr
+	}
+	if anchorErr == nil {
+		var prior Manifest
+		if err := json.Unmarshal(anchorBefore, &prior); err != nil {
+			return result, err
+		}
+		priorRepo, err := ProjectDirectory(prior.Repository)
+		if err != nil || priorRepo != repo || prior.Protocol != ProtocolVersion {
+			return result, errors.New("installation discovery file ownership conflict")
+		}
+	}
+	changes = append(changes, fileChange{path: anchor, content: body, before: anchorBefore, existed: anchorErr == nil})
 	for _, c := range changes {
 		action := "write"
 		if c.remove {

@@ -155,3 +155,69 @@ func CaptureChildPage(ctx context.Context, db *sql.DB, parent, after string, lim
 	}
 	return ids, more, nil
 }
+
+// CaptureProjectDirectory reads authoritative per-session directory metadata.
+// Older layouts without it remain unresolved rather than borrowing caller cwd.
+func CaptureProjectDirectory(ctx context.Context, db *sql.DB, id string) (string, error) {
+	family, err := captureSchemaFamily(ctx, db, id)
+	if err != nil {
+		return "", err
+	}
+	table := "session"
+	if family == schemaFamilyV2 {
+		table = "session_v2"
+	}
+	columns, err := tableColumns(db)
+	if err != nil {
+		return "", err
+	}
+	if !columns[table]["directory"] {
+		return "", errors.New("source schema has no authoritative session directory")
+	}
+	var directory string
+	err = db.QueryRowContext(ctx, `SELECT directory FROM `+table+` WHERE id=?`, id).Scan(&directory)
+	return directory, err
+}
+
+// CaptureSourceFingerprint probes cumulative source revision without decoding bodies.
+func CaptureSourceFingerprint(ctx context.Context, db *sql.DB, id string) (string, error) {
+	family, err := captureSchemaFamily(ctx, db, id)
+	if err != nil {
+		return "", err
+	}
+	table := "session"
+	if family == schemaFamilyV2 {
+		table = "session_v2"
+	}
+	var updated int64
+	if err = db.QueryRowContext(ctx, `SELECT time_updated FROM `+table+` WHERE id=?`, id).Scan(&updated); err != nil {
+		return "", err
+	}
+	result := fmt.Sprint(updated)
+	tables := []string{"message", "part"}
+	if family == schemaFamilyV2 {
+		tables = []string{"session_message"}
+	}
+	for _, table := range tables {
+		var count, size, stamp int64
+		if err = db.QueryRowContext(ctx, `SELECT count(*),coalesce(sum(length(data)),0),coalesce(max(time_updated),0) FROM `+table+` WHERE session_id=?`, id).Scan(&count, &size, &stamp); err != nil {
+			return "", err
+		}
+		result += fmt.Sprintf(":%d:%d:%d", count, size, stamp)
+	}
+	return result, nil
+}
+
+// CaptureChildFinished reads source-owned native task completion for worker
+// liveness. A completed assistant message alone never establishes idle activity.
+// The bounded latest-part window may miss older tasks; missing proof stays active.
+func CaptureChildFinished(ctx context.Context, db *sql.DB, parent, child string) (bool, error) {
+	var finished int
+	err := db.QueryRowContext(ctx, `SELECT count(*) FROM (SELECT data FROM (
+ SELECT data,time_updated FROM part WHERE session_id=? AND length(data)<=65536 ORDER BY time_updated DESC LIMIT 64
+ ) WHERE json_valid(data) AND json_extract(data,'$.tool')='task'
+ AND json_extract(data,'$.state.metadata.sessionId')=?
+ ORDER BY time_updated DESC LIMIT 1) WHERE json_extract(data,'$.state.status')='completed'
+ AND EXISTS (SELECT 1 FROM session WHERE id=? AND parent_id=?)`, parent, child, child, parent).Scan(&finished)
+	return finished > 0, err
+}

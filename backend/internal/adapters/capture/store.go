@@ -22,7 +22,10 @@ const ProtocolVersion = 1
 const DefaultDirectory = ".agenticlens-capture"
 const MaxPayloadBytes = 64 * 1024
 
-type Store struct{ db *sql.DB }
+type Store struct {
+	db      *sql.DB
+	project string
+}
 type storedRegistration struct {
 	Registration domain.CaptureRegistration `json:"registration"`
 	Path         string                     `json:"path"`

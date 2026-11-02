@@ -224,7 +224,7 @@ handle_update() {
   echo "$latest_tag" > "$LATEST_FILE" 2>/dev/null || true
   date +%s > "$CHECK_FILE" 2>/dev/null || true
   echo "Successfully updated ${updated_count} binary(ies) to ${latest_tag}."
-  echo "For lifecycle capture, inspect native capture status and preview capture install with the original source/store paths before applying owned template changes."
+  echo "For automatic publication, inspect native capture status --repo PROJECT and preview capture install with the original source/store paths before applying owned template changes. Native callbacks launch the publisher; agents only supply explicit binding context."
   exit 0
 }
 

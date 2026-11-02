@@ -168,7 +168,7 @@ On macOS use the downloaded `agentic-lens-darwin-arm64` or `agentic-lens-darwin-
 
 The installer preserves unrelated hooks and records ownership for reinstall/removal. It does not grant harness trust. Review Codex hooks using its own trust controls and verify OpenCode plugin loading without bypassing trust or overwriting user settings. The agent must receive a session-specific request and answer with the ticket explicitly provided by the user: Codex supplies an exact native binding command and challenge; OpenCode exposes a binding tool whose session identity comes from the runtime. Missing ticket context remains unassigned and requires a question to the user, not a guess. A callback exit code or installed configuration alone is insufficient verification.
 
-Use the canonical [capture CLI and binding instructions](../.agents/skills/agentic-lens-operator/references/cli.md#capture-native-release-handler), [local state/support limits](../.agents/skills/agentic-lens-operator/references/configuration.md#lifecycle-capture-state-and-support) and [setup approval flow](../.agents/skills/agentic-lens-setup/SKILL.md#step-25-additive-lifecycle-setup-and-agent-binding). These cover the actual agent round trip, parent/independent roots, degraded states, bounded reconciliation, crash recovery and owned disable/uninstall. No additional Go/Node runtime is installed in the adopting repository; OpenCode glue uses the existing harness runtime. Keep state and raw transcripts out of Git. Final generation deliberately publishes the ledger/summary and digest-bound coverage report with cutoff/limits; callbacks do not rewrite committed artifacts.
+Use the canonical [capture CLI and binding instructions](../.agents/skills/agentic-lens-operator/references/cli.md#capture-native-release-handler), [local state/support limits](../.agents/skills/agentic-lens-operator/references/configuration.md#lifecycle-capture-state-and-support) and [setup approval flow](../.agents/skills/agentic-lens-setup/SKILL.md#step-25-additive-lifecycle-setup-and-agent-binding). These cover the actual agent round trip, parent/independent roots, degraded states, bounded reconciliation, crash recovery and owned disable/uninstall. No additional Go/Node runtime is installed in the adopting repository; OpenCode glue uses the existing harness runtime. Keep state and raw transcripts out of Git. After explicit binding, callbacks schedule native automatic ledger/summary publication. When detailed reports are enabled, publication also writes a digest-bound coverage report with cutoff/limits. Manual generation is a recovery fallback; publication does not commit files.
 
 ##### Lifecycle upgrade and recovery
 
@@ -359,15 +359,15 @@ Maps raw agent persona strings recorded in OpenCode traces to canonical role cat
 
 ## 4. OpenCode Agent Workflow Integration Guide
 
-Integrating AgenticLens into your repository requires zero changes to agent reasoning loops, model selection, or coding styles. Integration is achieved through a single command invocation at the conclusion of each task.
+Integrating AgenticLens into your repository requires zero changes to agent reasoning loops, model selection, or coding styles. Installed native lifecycle capture publishes automatically after explicit session-ticket binding. Agents answer the binding request; manual generation below is a recovery fallback.
 
-### 4.1 The Delayed Telemetry Ingestion Mandate
+### 4.1 Automatic publication and manual recovery
 
-Complete implementation, testing, and review before generating telemetry. Generate immediately before the final commit, then stage the task-owned deliverables and metrics together. Earlier extraction omits later turns, tool calls, compactions, and subagent handoffs.
+Verify automatic publication and visible coverage before staging task-owned deliverables and telemetry. If native publication is unavailable, recover with manual generation after implementation, testing and review, close to the final commit so the snapshot includes the available work.
 
 ### 4.2 Nonce Generation and Ingestion Command (`generate`)
 
-To guarantee deterministic session resolution across concurrent agents or subagent delegations, pass a unique execution nonce directly to the `generate` command:
+For manual recovery, select the actual harness and exact root session ID or pass a unique execution nonce directly to `generate`:
 
 ```bash
 ./bin/agentic-lens generate \
@@ -418,16 +418,12 @@ Below is the standard policy block that can be added to your repository's OpenCo
    - Store task documentation and metrics in `workspaces/<TICKET_ID>/`.
    - Maintain `CONTRACT.md` (scope boundaries) and `SUMMARY.md` (execution log) as required by the project's artifact list.
 
-4. Delayed Telemetry Ingestion:
-   - Ingest telemetry as the very final command before committing code.
-   - The agent must generate a unique random nonce directly (e.g. an 8 to 16 character alphanumeric or hex string) and pass the literal token. Do not use shell variables (`$NONCE`) because OpenCode records tool inputs into SQLite before subshell expansion occurs:
-     ./bin/agentic-lens generate \
-       --nonce <GENERATED_NONCE> \
-       --ticket-id "<TICKET_ID>" \
-       --ticket-type "<CONVENTIONAL_TYPE>" \
-       --json-output "workspaces/<TICKET_ID>/agentic_metrics.json" \
-       --append "workspaces/<TICKET_ID>/SUMMARY.md"
-   - Stage deliverables and telemetry together: `git add -A && git commit -m "<message>"`.
+4. Automatic Telemetry Publication:
+   - Answer the native lifecycle session-specific binding request with the explicitly supplied ticket and title; never infer ticket ownership.
+   - Verify automatic ledger/summary publication and coverage before committing. Manual `generate` is a recovery fallback, using the selected harness and an exact session ID or literal nonce.
+   - When detailed reports are enabled, verify `capture_report.json` against the ledger digest. When disabled, use compact summary coverage; retain old reports as stale and do not delete them automatically.
+   - Stage only reviewed task-owned deliverables and telemetry together. Keep raw transcripts and local capture state out of Git.
+
 ```
 
 ---
@@ -676,3 +672,34 @@ Context saturation severely impacts model reasoning quality, instruction adheren
 - **ELEVATED** (50% to 75% utilization): Normal working range for complex implementations. The agent operates effectively, but monitoring is recommended.
 - **BLOATED** (75% to 85% utilization): High context saturation. Model reasoning degradation and prompt compaction risks increase significantly.
 - **CRITICAL** (85% to 100% utilization): Severe exhaustion. Immediate session compaction or subagent delegation is advised to avoid catastrophic forgetting or dropped instructions.
+
+
+### Automatic publication policy
+
+Installed lifecycle callbacks hand off to a bounded native worker; contributing agents only answer the explicit session-ticket binding request, including the user-supplied human-readable title (`--ticket-title`) and optional conventional type (`--ticket-type`). Missing titles remain pending because schema v5 requires them. No contributing agent needs to run `generate`. The command remains available for manual recovery. Automatic publication uses the same canonical-output lock as manual generation, before reading baseline or source facts.
+
+Settings under `telemetry.capture` resolve CLI state override, then `.agenticlens-config.local.yaml`, then portable `.agenticlens-config.yaml`, then defaults. Relative state paths resolve against `--repo`, not callback cwd. Source paths retain their existing resolver. Native callbacks capture absolute project/state/source/binary paths; review and reinstall owned hooks if those paths change. No Git hooks, CI settings or harness trust changes are installed.
+
+```yaml
+telemetry:
+  capture:
+    enabled: true
+    state_dir: .agenticlens-capture
+    refresh_ms: 15000
+    debounce_ms: 500
+    idle_ms: 120000
+    max_lifetime_ms: 1800000
+    pass_timeout_ms: 30000
+    max_sessions: 256
+    max_source_bytes: 67108864
+    detailed_report: true
+    summary: true
+```
+
+External/home state is opt-in. State is namespaced by the canonical exact project directory under `state_dir/projects/<location-key>`; symlink aliases coordinate. Distinct directories with the same ticket and source store remain separate. Unscoped legacy state is retained for explicit source-verified recovery. Copying state never transfers project ownership. Removing local state loses explicit associations, so preserve it until recovery is complete. No automatic retention cleanup removes pending associations or accepted facts.
+
+The worker uses durable request generations and acknowledges only the generation observed before its pass. Kernel process locks release on crashes. Later callbacks restart workers; workers periodically refresh active sessions, debounce bursts, back off after failed publication, and exit after idle terminal sessions. A finite maximum lifetime transfers active/pending work to a fresh native worker. Check `capture status --repo PROJECT` and local `worker.log` for failures. This is native child-process scheduling, with no separately installed service, model recursion or callback network/self-update work.
+
+The ledger remains schema v5 at `<workspaces.dir>/<ticket>/agentic_metrics.json`. Top-level `completed_at` is the observability snapshot finalization boundary, equal to artifact `updated_at`; it does not assert source-session termination or ticket merge. Source invocation completion timestamps remain unchanged. Each owner has its own source-read checkpoint; there is no simultaneous source-read guarantee. Source failures preserve accepted facts and visibly degrade coverage.
+
+`detailed_report: false` suppresses new report production and removes the summary link. Existing reports are retained and explicitly stale. When enabled, `capture_report.json` includes the ledger digest; verify it before relying on a stored report. Compact summary counts remain available. Native/runtime support requires actual hook/plugin smoke evidence; configuration and synthetic probes alone do not establish it.

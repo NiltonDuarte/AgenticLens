@@ -460,6 +460,9 @@ func FindConfigFile(startDir string) (string, error) {
 				return cfgPath, nil
 			}
 		}
+		if _, err := os.Lstat(filepath.Join(curr, ".git")); err == nil {
+			break
+		}
 		parent := filepath.Dir(curr)
 		if parent == curr {
 			break
@@ -497,6 +500,14 @@ func LoadFromFile(filePath string) (domain.ProjectConfig, error) {
 	}
 
 	cfg := mergeConfig(dto)
+	capturePolicy, captureErr := decodeCapturePolicy(data, domain.DefaultCaptureConfig())
+	if captureErr != nil {
+		return domain.ProjectConfig{}, captureErr
+	}
+	cfg.Telemetry.Capture = capturePolicy
+	if err := capturePolicy.Validate(); err != nil {
+		return domain.ProjectConfig{}, err
+	}
 	if err := ValidateConfig(cfg); err != nil {
 		return domain.ProjectConfig{}, fmt.Errorf("validating configuration %s: %w", filePath, err)
 	}
@@ -532,6 +543,14 @@ func Load(repoRoot string) (domain.ProjectConfig, error) {
 	if local.Telemetry == nil {
 		return cfg, nil
 	}
+	capturePolicy, captureErr := decodeCapturePolicy(data, cfg.Telemetry.Capture)
+	if captureErr != nil {
+		return domain.ProjectConfig{}, captureErr
+	}
+	cfg.Telemetry.Capture = capturePolicy
+	if err := capturePolicy.Validate(); err != nil {
+		return domain.ProjectConfig{}, err
+	}
 	telemetry := local.Telemetry
 	if telemetry.DefaultSource != nil {
 		value := strings.ToLower(strings.TrimSpace(*telemetry.DefaultSource))
@@ -557,4 +576,23 @@ func Load(repoRoot string) (domain.ProjectConfig, error) {
 		}
 	}
 	return cfg, nil
+}
+
+// ProjectRoot resolves the owning configuration directory without crossing a nearer Git boundary.
+func ProjectRoot(start string) (string, error) {
+	path, err := FindConfigFile(start)
+	if err != nil {
+		return "", err
+	}
+	if path != "" {
+		return filepath.EvalSymlinks(filepath.Dir(path))
+	}
+	if start == "" {
+		start = "."
+	}
+	path, err = filepath.Abs(start)
+	if err != nil {
+		return "", err
+	}
+	return filepath.EvalSymlinks(path)
 }

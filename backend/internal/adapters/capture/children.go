@@ -117,6 +117,9 @@ func readMetadata(ctx context.Context, path string, budget *workBudget) (codex.T
 }
 func (s *Store) inheritChild(ctx context.Context, parent domain.CaptureRegistration, id, path string) error {
 	identity := domain.CaptureIdentity{Source: parent.Identity.Source, Store: parent.Identity.Store, SessionID: id}
+	if err := s.validateOwner(ctx, domain.CaptureRegistration{Identity: identity, TranscriptPath: path}); err != nil {
+		return nil
+	}
 	_, err := s.Change(ctx, identity, func(r domain.CaptureRegistration) (domain.CaptureRegistration, error) {
 		bound, e := domain.CaptureBinding(r.TicketID, "", parent.TicketID)
 		if e != nil {

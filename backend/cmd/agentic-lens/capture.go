@@ -16,6 +16,7 @@ import (
 
 	"agenticlens/internal/adapters"
 	"agenticlens/internal/adapters/capture"
+	"agenticlens/internal/adapters/codex"
 	adaptersconfig "agenticlens/internal/adapters/config"
 	"agenticlens/internal/adapters/git"
 	"agenticlens/internal/adapters/opencode"
@@ -28,7 +29,7 @@ func runCapture(args []string) {
 		os.Exit(1)
 	}
 }
-func captureCommand(args []string, input io.Reader, output io.Writer) error {
+func captureCommand(args []string, input io.Reader, output io.Writer) (returnErr error) {
 	if len(args) == 0 {
 		return errors.New("usage: capture install|status|receive|request|bind|reconcile|disable|uninstall|protocol")
 	}
@@ -41,10 +42,12 @@ func captureCommand(args []string, input io.Reader, output io.Writer) error {
 	flags.SetOutput(output)
 	source := flags.String("source", "", "Harness: codex or opencode")
 	sourceStore := flags.String("store", "", "Exact source store (Codex home or OpenCode database)")
-	state := flags.String("state-dir", capture.DefaultDirectory, "Local ignored capture state directory")
+	state := flags.String("state-dir", "", "Capture state base (configuration default when omitted)")
 	repo := flags.String("repo", ".", "Repository root for additive local hook installation")
 	binary := flags.String("binary", "", "Native release binary for installed hooks (defaults to current executable)")
 	sessionID := flags.String("session-id", "", "Exact harness session identity")
+	ticketTitle := flags.String("ticket-title", "", "Explicit human-readable ticket title for automatic publication")
+	ticketType := flags.String("ticket-type", "", "Explicit conventional ticket type")
 	ticket := flags.String("ticket-id", "", "Explicit ticket binding or reconciliation target")
 	request := flags.String("request", "", "Exact binding request token delivered by hook feedback")
 	dryRun := flags.Bool("dry-run", false, "Show owned installation changes without writing")
@@ -65,8 +68,30 @@ func captureCommand(args []string, input io.Reader, output io.Writer) error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
 	defer cancel()
-	absState, err := filepath.Abs(*state)
+	project, err := adaptersconfig.ProjectRoot(*repo)
 	if err != nil {
+		return err
+	}
+	policy, err := adaptersconfig.ResolveCapture(project, *state)
+	if err != nil {
+		return err
+	}
+	if _, legacyErr := os.Stat(filepath.Join(policy.StateDir, "registry.db")); legacyErr == nil && filepath.Base(filepath.Dir(policy.StateDir)) != "projects" {
+		fmt.Fprintln(os.Stderr, "Legacy unscoped capture registry preserved; source-verified explicit recovery required. New registrations use project-scoped state.")
+	}
+	provided := map[string]bool{}
+	flags.Visit(func(f *flag.Flag) { provided[f.Name] = true })
+	if !provided["max-sessions"] {
+		*sessionBudget = policy.MaxSessions
+	}
+	if !provided["max-source-bytes"] {
+		*byteBudget = policy.MaxSourceBytes
+	}
+	absState, err := capture.ProjectState(policy.StateDir, project)
+	if err != nil {
+		return err
+	}
+	if err := checkCaptureInstallation(project, absState, *state != ""); err != nil {
 		return err
 	}
 	if *source != "" && *source != "codex" && *source != "opencode" {
@@ -80,12 +105,12 @@ func captureCommand(args []string, input io.Reader, output io.Writer) error {
 			}
 		}
 		if *sourceStore == "" {
-			*sourceStore, err = captureSourceStore(*source)
+			*sourceStore, err = captureSourceStore(*source, project)
 			if err != nil {
 				return err
 			}
 		}
-		result, e := capture.Install(ctx, capture.InstallOptions{Repository: *repo, StateDir: absState, Binary: *binary, Source: *source, SourceStore: *sourceStore, DryRun: *dryRun, Remove: command != "install"})
+		result, e := capture.Install(ctx, capture.InstallOptions{Repository: project, StateDir: absState, Binary: *binary, Source: *source, SourceStore: *sourceStore, DryRun: *dryRun, Remove: command != "install"})
 		if e != nil {
 			return e
 		}
@@ -100,7 +125,7 @@ func captureCommand(args []string, input io.Reader, output io.Writer) error {
 			}{"degraded", "No lifecycle registrations. Install hooks, review harness trust, then verify an actual agent binding response."})
 		}
 	}
-	s, err := capture.Open(absState)
+	s, err := capture.OpenProject(absState, project)
 	if err != nil {
 		return err
 	}
@@ -109,6 +134,30 @@ func captureCommand(args []string, input io.Reader, output io.Writer) error {
 			fmt.Fprintln(os.Stderr, "capture registry close:", e)
 		}
 	}()
+	if command == "worker" {
+		return captureWorker(s, project, absState, policy)
+	}
+	if command == "receive" || command == "bind" || command == "request" || command == "reconcile" {
+		defer func() {
+			if returnErr == nil {
+				enabled, e := automaticCaptureEnabled(project, absState)
+				if e != nil {
+					returnErr = e
+					return
+				}
+				if !enabled {
+					return
+				}
+				if e := s.RequestPublication(context.Background()); e != nil {
+					returnErr = fmt.Errorf("publication request: %w", e)
+					return
+				}
+				if e := capture.LaunchWorker(*binaryOrSelf(binary), project, absState); e != nil {
+					returnErr = fmt.Errorf("worker launch: %w", e)
+				}
+			}
+		}()
+	}
 	if command == "status" {
 		registrations, e := s.List(ctx)
 		if e != nil {
@@ -123,11 +172,21 @@ func captureCommand(args []string, input io.Reader, output io.Writer) error {
 				return e
 			}
 		}
+		progress, e := capture.WorkerStatus(absState)
+		if e != nil {
+			return e
+		}
+		publication, e := s.PublicationRequest(ctx)
+		if e != nil {
+			return e
+		}
 		return json.NewEncoder(output).Encode(struct {
+			Publication   capture.PublicationRequest   `json:"publication"`
+			Worker        capture.WorkerProgress       `json:"worker"`
 			Registrations []domain.CaptureRegistration `json:"registrations"`
 			Installation  []capture.Manifest           `json:"installation"`
 			Trust         string                       `json:"trust"`
-		}{registrations, manifests, "Trust and current enablement are harness-controlled; installation alone is unverified. Review /hooks for Codex; verify OpenCode plugin loading and the agent response."})
+		}{publication, progress, registrations, manifests, "Trust and current enablement are harness-controlled; installation alone is unverified. Review /hooks for Codex; verify OpenCode plugin loading and the agent response."})
 	}
 	if command == "reconcile" {
 		if *ticket == "" {
@@ -170,6 +229,21 @@ func captureCommand(args []string, input io.Reader, output io.Writer) error {
 		if e != nil {
 			return e
 		}
+		registration, e = s.Change(ctx, identity, func(r domain.CaptureRegistration) (domain.CaptureRegistration, error) {
+			if value.Event == "session.created" {
+				r.Activity = "busy"
+			}
+			if value.Event == "session.idle" || value.Event == "session.error" {
+				r.Activity = "idle"
+			}
+			if value.Activity == "busy" || value.Activity == "idle" || value.Activity == "retry" {
+				r.Activity = value.Activity
+			}
+			return r, nil
+		})
+		if e != nil {
+			return e
+		}
 		return json.NewEncoder(output).Encode(registration)
 	case "request":
 		r, e := s.Register(ctx, identity, "", "agent_context_request")
@@ -178,9 +252,29 @@ func captureCommand(args []string, input io.Reader, output io.Writer) error {
 		}
 		return json.NewEncoder(output).Encode(r)
 	case "bind":
+		if *ticketType != "" {
+			if _, ok := domain.NormalizeTicketType(*ticketType); !ok {
+				return errors.New("invalid ticket type")
+			}
+		}
 		r, e := s.Bind(ctx, identity, *ticket, *request)
 		if e != nil {
 			return e
+		}
+		if strings.TrimSpace(*ticketTitle) != "" || *ticketType != "" {
+			r, e = s.Change(ctx, identity, func(current domain.CaptureRegistration) (domain.CaptureRegistration, error) {
+				if strings.TrimSpace(*ticketTitle) != "" {
+					current.TicketTitle = strings.TrimSpace(*ticketTitle)
+				}
+				if *ticketType != "" {
+					normalized, _ := domain.NormalizeTicketType(*ticketType)
+					current.TicketType = string(normalized)
+				}
+				return current, nil
+			})
+			if e != nil {
+				return e
+			}
 		}
 		return json.NewEncoder(output).Encode(r)
 	default:
@@ -195,8 +289,8 @@ func binaryOrSelf(value *string) *string {
 	}
 	return value
 }
-func captureSourceStore(source string) (string, error) {
-	cfg, err := adaptersconfig.Load("")
+func captureSourceStore(source, project string) (string, error) {
+	cfg, err := adaptersconfig.Load(project)
 	if err != nil && !errors.Is(err, adaptersconfig.ErrConfigNotFound) {
 		return "", err
 	}
@@ -207,33 +301,37 @@ func captureSourceStore(source string) (string, error) {
 		}
 		configured := ""
 		if err == nil {
-			configured = cfg.Telemetry.Sources.CodexHome
+			configured = adaptersconfig.ProjectSourcePath(project, cfg.Telemetry.Sources.CodexHome)
 		}
 		return adaptersconfig.ResolveCodexHome("", configured, os.Getenv("CODEX_HOME"), filepath.Join(home, ".codex")), nil
 	}
 	if source == "opencode" {
 		if err == nil {
-			return adaptersconfig.ResolveOpenCodePath("", cfg.Telemetry.Sources.OpenCodeDatabasePath, cfg.Database.Path), nil
+			return adaptersconfig.ResolveOpenCodePath("", adaptersconfig.ProjectSourcePath(project, cfg.Telemetry.Sources.OpenCodeDatabasePath), adaptersconfig.ProjectSourcePath(project, cfg.Database.Path)), nil
 		}
 		return opencode.DefaultDBPath()
 	}
 	return "", errors.New("install requires --source codex or opencode")
 }
 
-func reconcileCaptureGeneration(dir, ticket string) (*capture.ReconcileResult, error) {
+func reconcileCaptureGeneration(project, dir, ticket string) (*capture.ReconcileResult, error) {
 	if _, err := os.Stat(filepath.Join(dir, "registry.db")); errors.Is(err, os.ErrNotExist) {
 		return nil, nil
 	} else if err != nil {
 		return nil, err
 	}
-	s, err := capture.Open(dir)
+	s, err := capture.OpenProject(dir, project)
 	if err != nil {
 		return nil, err
 	}
 	defer s.Close()
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	result, err := s.Reconcile(ctx, ticket, git.GetGitUser(), capture.DefaultSessionBudget, capture.DefaultByteBudget)
+	policy, err := adaptersconfig.ResolveCapture(project, "")
+	if err != nil {
+		return nil, err
+	}
+	result, err := s.Reconcile(ctx, ticket, git.GetGitUser(), policy.MaxSessions, policy.MaxSourceBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -249,7 +347,13 @@ func publishCaptureReport(path string, result capture.ReconcileResult) error {
 	if err != nil {
 		return err
 	}
-	report := filepath.Join(filepath.Dir(path), "capture_report.json")
+	report, err := capture.ProjectDirectory(filepath.Join(filepath.Dir(path), "capture_report.json"))
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(report), 0755); err != nil {
+		return err
+	}
 	temp, err := os.CreateTemp(filepath.Dir(report), ".capture-report-")
 	if err != nil {
 		return err
@@ -324,13 +428,15 @@ func fillMissingCaptureSessions(existing, fallback []domain.SessionFact) []domai
 	}
 	return result
 }
-func validateCaptureSelection(dir, ticket string, source domain.SourceHarness, store string, selected []domain.SessionFact) error {
-	if _, err := os.Stat(filepath.Join(dir, "registry.db")); errors.Is(err, os.ErrNotExist) {
-		return nil
-	} else if err != nil {
-		return err
+func validateCaptureSelection(project, dir, ticket string, source domain.SourceHarness, store string, selected []domain.SessionFact) error {
+	var err error
+	for _, owner := range selected {
+		if err = capture.ValidateOwner(context.Background(), project, domain.CaptureRegistration{Identity: domain.CaptureIdentity{Source: source, Store: store, SessionID: owner.ID}}); err != nil {
+			return fmt.Errorf("selected source owner %s: %w", owner.ID, err)
+		}
 	}
-	s, err := capture.Open(dir)
+
+	s, err := capture.OpenProject(dir, project)
 	if err != nil {
 		return err
 	}
@@ -359,6 +465,30 @@ func validateCaptureSelection(dir, ticket string, source domain.SourceHarness, s
 			return fmt.Errorf("exact session %s is bound to ticket %s, refusing selection for %s", owner.Identity.SessionID, owner.TicketID, ticket)
 		}
 	}
+	for _, owner := range selected {
+		id := domain.CaptureIdentity{Source: source, Store: absoluteStore, SessionID: owner.ID}
+		_, e := s.Change(context.Background(), id, func(r domain.CaptureRegistration) (domain.CaptureRegistration, error) {
+			if r.TicketID != "" && r.TicketID != ticket {
+				return r, errors.New("selected owner has conflicting ticket binding")
+			}
+			r.TicketID = ticket
+			r.ProjectDirectory = project
+			if r.Binding == "" {
+				r.Binding = "explicit_manual_selection"
+			}
+			if source == domain.SourceCodex && r.TranscriptPath == "" {
+				path, err := codex.DiscoverExactRolloutPath(absoluteStore, owner.ID)
+				if err != nil {
+					return r, err
+				}
+				r.TranscriptPath = path
+			}
+			return r, nil
+		})
+		if e != nil {
+			return e
+		}
+	}
 	return nil
 }
 
@@ -366,10 +496,11 @@ func validateCaptureSelection(dir, ticket string, source domain.SourceHarness, s
 // interrupted during serialization/write. The outer publication lock covers
 // this rename and subsequent digest-bound report/summary updates.
 func saveGenerationLedger(path string, ledger domain.AgenticFactLedger) error {
-	target := path
-	if resolved, err := filepath.EvalSymlinks(path); err == nil {
-		target = resolved
-	} else if !errors.Is(err, os.ErrNotExist) {
+	target, err := capture.ProjectDirectory(path)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
 		return err
 	}
 	file, err := os.CreateTemp(filepath.Dir(target), ".agenticlens-ledger-")
@@ -504,4 +635,22 @@ func rejectOlderExplicitOwners(baseline, fresh []domain.SessionFact) ([]domain.S
 		accepted = append(accepted, owner)
 	}
 	return accepted, nil
+}
+
+func checkCaptureInstallation(project, selected string, explicit bool) error {
+	policy, err := adaptersconfig.ResolveCapture(project, "")
+	if err != nil {
+		return err
+	}
+	configured, err := capture.ProjectState(policy.StateDir, project)
+	if err != nil {
+		return err
+	}
+	if err = capture.CheckInstalledState(project, configured, explicit); err != nil {
+		return err
+	}
+	if selected != configured {
+		return capture.CheckInstalledState(project, selected, explicit)
+	}
+	return nil
 }

@@ -16,7 +16,7 @@ This skill follows the autonomous agentic distribution model: it is completely s
 - Operator Skill and Binary Placement: Install the AgenticLens operator skill under `.agents/skills/agentic-lens-operator/` and place the multi-platform wrapper and precompiled platform binaries in its `bin/` subdirectory. Keep a protective `.gitignore` in that binary directory containing `*` and `!/.gitignore`.
 - Mandatory User Confirmation Gate: Inspect existing agent instructions and hook/plugin configuration. Present the exact additive setup changes before modifying target repository files; affirmative approval already covering those changes satisfies the gate. Never modify third-party skills or personas to obtain telemetry.
 - Lifecycle Capture: Use the native release binary to install AgenticLens-owned callbacks, request explicit session-specific ticket binding from the agent and reconcile authoritative source records. Never infer ownership, parents, model, effort or usage from checkout proximity or an agent assertion. Preserve unrelated hooks, trust settings and conflicting local edits. Installation alone does not prove runtime capture.
-- Local State: Keep capture registry, pending snapshots, source paths and request tokens local and ignored. Only final generation publishes the ticket ledger, summary and digest-bound coverage report.
+- Local State: Keep capture registry, pending snapshots, source paths and request tokens local and ignored. Native callbacks schedule automatic ledger/summary publication after explicit session binding. Manual generate remains recovery.
 - Zero Emojis Mandate: Zero emojis permitted across all prompts, CLI output, generated files, configurations, and documentation.
 
 ---
@@ -218,7 +218,7 @@ Codex start/prompt callbacks return a session-specific binding request as model 
 
 Inspect `capture status --state-dir "<ABSOLUTE_LOCAL_STATE_PATH>"` after a real session and agent response. Review Codex hook trust using the harness's own controls; never auto-approve, bypass trust or enable disabled hooks. OpenCode must actually load the plugin. Compare registered session IDs and source facts against real harness records before claiming support. Version/protocol inspection alone, a fixture and a successful callback exit do not establish a working agent interaction. Unsupported versions, unavailable source records, unanswered binding, unresolved parents and hook failures must remain visible as degraded/pending/unassigned outcomes. Coding remains available when collection fails.
 
-Use the operator [CLI](../agentic-lens-operator/references/cli.md) and [configuration](../agentic-lens-operator/references/configuration.md) references for bounded reconciliation, support limits, repair and owned removal. Retain final ledger/summary publication at workflow completion, with a documented snapshot cutoff and coverage report; callbacks must never rewrite committed artifacts.
+Use the operator [CLI](../agentic-lens-operator/references/cli.md) and [configuration](../agentic-lens-operator/references/configuration.md) references for bounded reconciliation, support limits, repair and owned removal. Native callbacks schedule automatic ledger/summary publication after explicit binding; verify its cutoff and coverage at handoff. Manual generate is a recovery fallback. Detailed reports are optional; when disabled use compact summary coverage and retain old reports as stale. Publication never commits files.
 
 ---
 
@@ -285,7 +285,7 @@ Keep the approved block small. Replace `<WORKSPACES_DIR>` with the configured wo
 ## AgenticLens session binding and publication
 
 - Respond to the AgenticLens hook's session-specific binding request with the ticket explicitly supplied by the user. Use the supplied native command or runtime binding tool and exact request token. If the ticket is unknown, ask; never infer ownership from checkout, branch, role or timing.
-- At workflow completion, deliberately generate the final ledger and summary under `<WORKSPACES_DIR>/<TICKET_ID>/` using the correct source and `<CAPTURE_STATE_DIR>`. Review `capture_report.json`, its ledger digest/cutoff and unresolved coverage before publishing. Keep raw transcripts and intermediate capture state out of Git.
+- Verify automatic native publication under `<WORKSPACES_DIR>/<TICKET_ID>/` after explicit binding. Use manual generate only for recovery. When detailed reports are enabled, review `capture_report.json`, its ledger digest/cutoff and unresolved coverage before committing. When disabled, use compact summary coverage and leave existing reports retained as stale. Keep raw transcripts and intermediate capture state out of Git.
 ```
 
 ---
@@ -301,3 +301,5 @@ Keep the approved block small. Replace `<WORKSPACES_DIR>` with the configured wo
 - Capture state ignored; current harness trust/plugin loading, exact session binding and source reconciliation verified by actual runtime evidence, or explicitly reported degraded/unverified.
 - Disable/uninstall and recovery instructions identify only owned changes; final report cutoff and ledger digest remain inspectable.
 - Zero emojis in all artifacts and outputs.
+
+Capture policy, defaults, local/external state and report behavior: [operator configuration](../agentic-lens-operator/references/configuration.md#automatic-publication-policy).

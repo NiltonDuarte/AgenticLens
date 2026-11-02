@@ -8,10 +8,12 @@ import (
 	"io"
 	"path/filepath"
 
+	"agenticlens/internal/adapters/codex"
 	"agenticlens/internal/domain"
 )
 
 type HookInput struct {
+	Activity            string `json:"activity,omitempty"`
 	SessionID           string `json:"session_id"`
 	Event               string `json:"hook_event_name"`
 	TranscriptPath      string `json:"transcript_path"`
@@ -81,7 +83,7 @@ func replaceQuotes(s string) string {
 }
 
 func BindingPrompt(r domain.CaptureRegistration, binary, directory string) string {
-	return fmt.Sprintf("AgenticLens requires explicit ticket information for this exact %s session %s. Do not infer a ticket from directory, branch, role or timing. If the user has explicitly identified the active ticket, respond now by executing: %s capture bind --state-dir %s --source %s --store %s --session-id %s --request %s --ticket-id <EXPLICIT_TICKET_ID>. If no ticket was explicitly supplied, ask the user for it; leave capture unassigned. Do not invent source, parent, model or usage fields.", r.Identity.Source, r.Identity.SessionID, QuoteArgument(binary), QuoteArgument(directory), r.Identity.Source, QuoteArgument(r.Identity.Store), QuoteArgument(r.Identity.SessionID), QuoteArgument(r.Request))
+	return fmt.Sprintf("AgenticLens requires explicit ticket information for this exact %s session %s. Do not infer a ticket from directory, branch, role or timing. If the user has explicitly identified the active ticket, respond now by executing: %s capture bind --state-dir %s --source %s --store %s --session-id %s --request %s --ticket-id <EXPLICIT_TICKET_ID> --ticket-title <EXPLICIT_TICKET_TITLE> [--ticket-type <EXPLICIT_TYPE>]. If no ticket was explicitly supplied, ask the user for it; leave capture unassigned. Do not invent source, parent, model or usage fields.", r.Identity.Source, r.Identity.SessionID, QuoteArgument(binary), QuoteArgument(directory), r.Identity.Source, QuoteArgument(r.Identity.Store), QuoteArgument(r.Identity.SessionID), QuoteArgument(r.Request))
 }
 
 func ReceiveCodex(ctx context.Context, s *Store, input HookInput, sourceStore, binary, directory string) (HookOutput, error) {
@@ -98,6 +100,11 @@ func ReceiveCodex(ctx context.Context, s *Store, input HookInput, sourceStore, b
 		return HookOutput{}, normalizeErr
 	}
 	sourceStore = canonicalStore
+	if input.TranscriptPath != "" {
+		if err := codex.ValidateRolloutStore(sourceStore, input.TranscriptPath); err != nil {
+			return HookOutput{}, err
+		}
+	}
 	r, err := s.Register(ctx, domain.CaptureIdentity{Source: domain.SourceCodex, Store: sourceStore, SessionID: input.SessionID}, input.TranscriptPath, input.Event)
 	if err != nil {
 		return HookOutput{}, err
@@ -115,8 +122,15 @@ func ReceiveCodex(ctx context.Context, s *Store, input HookInput, sourceStore, b
 			return HookOutput{}, err
 		}
 	}
-	if r.TicketID == "" && (input.Event == "SessionStart" || input.Event == "UserPromptSubmit") {
-		return HookOutput{Context: &HookContext{Event: input.Event, Context: BindingPrompt(r, binary, directory)}}, nil
+	if (r.TicketID == "" || r.TicketTitle == "") && (input.Event == "SessionStart" || input.Event == "UserPromptSubmit") {
+		return HookOutput{Context: &HookContext{Event: input.Event, Context: BindingPrompt(r, binary, directory) + projectBindingArgument(s)}}, nil
 	}
 	return HookOutput{}, nil
+}
+
+func projectBindingArgument(s *Store) string {
+	if s.project == "" {
+		return ""
+	}
+	return " Use --repo " + QuoteArgument(s.project) + " on that binding command to preserve the installed project context."
 }

@@ -112,7 +112,6 @@ if [[ -n "$CAPTURE_SOURCE" ]]; then
         *) echo "Error: --capture-store requires the explicit absolute source path" >&2; exit 1 ;;
     esac
     CAPTURE_REPO="$(cd "${CAPTURE_REPO:-.}" && pwd -P)"
-    CAPTURE_STATE_DIR="${CAPTURE_STATE_DIR:-${CAPTURE_REPO}/.agenticlens-capture}"
 elif [[ -n "$CAPTURE_STORE" || -n "$CAPTURE_REPO" || -n "$CAPTURE_STATE_DIR" ]]; then
     echo "Error: capture options require --capture-source" >&2
     exit 1
@@ -293,7 +292,8 @@ configure_capture() {
     fi
     local native="${DEST_DIR}/${PRIMARY_BIN}"
     local args=(capture install --source "$CAPTURE_SOURCE" --repo "$CAPTURE_REPO"
-        --state-dir "$CAPTURE_STATE_DIR" --store "$CAPTURE_STORE")
+        --store "$CAPTURE_STORE")
+    if [[ -n "$CAPTURE_STATE_DIR" ]]; then args+=(--state-dir "$CAPTURE_STATE_DIR"); fi
     if [[ $DRY_RUN -eq 1 ]]; then
         args+=(--dry-run)
         # An explicitly supplied local release can preview hooks before installation.

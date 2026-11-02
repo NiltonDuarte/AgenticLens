@@ -81,7 +81,7 @@ Do not replace the entire configuration with this excerpt. Keep machine-local fi
 
 ## Lifecycle Capture State and Support
 
-Lifecycle installation is separate from binary availability and shared telemetry configuration. `capture install` uses the native release handler and records owned hook/plugin entries and handler protocol under the selected local state directory. Pass the selected harness's exact `--store` and explicit `--state-dir` when setup uses non-default paths. Do not invent a shared YAML `capture` key; use installed command flags. Source paths and native executable paths are machine-local and must be reviewed before sharing generated hook/plugin configuration.
+Lifecycle installation is separate from binary availability and shared telemetry configuration. `capture install` uses the native release handler and records owned hook/plugin entries and handler protocol under the selected local state directory. Pass the selected harness's exact `--store` and explicit `--state-dir` when setup uses non-default paths. Automatic publication settings use `telemetry.capture`; see the policy below. Source paths and native executable paths are machine-local and must be reviewed before sharing generated hook/plugin configuration.
 
 The default state directory is `.agenticlens-capture`, ignored in the adopting repository by additive setup. It holds a local SQLite registry, binding requests, pending/accepted snapshots and ownership manifests. Keep it out of Git and avoid copying status output with request tokens into ticket artifacts. Raw transcripts remain in the harness source store; callbacks retain normalized registration data rather than prompt/tool payloads. Collection is local and hook commands do not fetch releases or invoke a model.
 
@@ -101,6 +101,41 @@ Codex exec roots verified startup context, UserPromptSubmit binding acknowledgme
 
 `capture status` and `capture reconcile` expose registration and extraction outcomes separately from installation. Check unassigned registrations, pending writes/source flush, source access/parse failures, unsupported capabilities and unresolved parent evidence individually. None means measured zero activity. If callbacks never ran or a source record is unavailable, do not claim complete coverage. Stop/idle is a checkpoint, not ticket completion.
 
-At deliberate final generation, use the exact `--capture-dir` and inspect `capture_report.json` alongside `agentic_metrics.json`. The separate versioned report records the snapshot cutoff and source/binding coverage limits and is tied to the ledger by digest, preserving canonical ledger schema v5. Verify the digest before relying on a previously stored report; if final report publication fails after ledger writing, keep the failure visible and regenerate against the same registry to recover. Existing other-source facts and unavailable sessions must survive refresh failures. Final publication remains a workflow completion step rather than a callback side effect.
+Automatic native publication normally updates the ledger and summary. For manual recovery, use the installation's exact `--capture-dir`. When detailed reports are enabled, inspect `capture_report.json` alongside `agentic_metrics.json`; otherwise inspect compact summary coverage and treat retained reports as stale. The separate versioned report records the snapshot cutoff and source/binding coverage limits and is tied to the ledger by digest, preserving canonical ledger schema v5. Verify the digest before relying on a previously stored report; if final report publication fails after ledger writing, keep the failure visible and regenerate against the same registry to recover. Existing other-source facts and unavailable sessions must survive refresh failures. Installed native callbacks schedule automatic publication; manual generate remains a recovery path.
 
 `capture disable` and `capture uninstall` remove owned activation entries/files and retain local state for recovery. Review dry-run changes, preserve edited owned files until conflicts are resolved and keep unrelated hooks intact. Reinstall/upgrade uses the ownership manifest; never erase or recreate the whole harness configuration as a repair. Restore a missing compatible native binary explicitly, then verify its protocol, installation and a real callback/agent binding exchange. Binary wrapper updates stage candidates, preserve the installed host handler's capture protocol and reject incompatible replacements before changing the native file. Downloader setup failures restore prior native binary/wrapper changes as well as the installer's owned configuration rollback. Existing foreign-platform binaries remain unchanged when their compatibility cannot be probed here. These updates do not automatically migrate hooks or trust them.
+
+
+### Automatic publication policy
+
+Installed lifecycle callbacks hand off to a bounded native worker; contributing agents only answer the explicit session-ticket binding request, including the user-supplied human-readable title (`--ticket-title`) and optional conventional type (`--ticket-type`). Missing titles remain pending because schema v5 requires them. No contributing agent needs to run `generate`. The command remains available for manual recovery. Automatic publication uses the same canonical-output lock as manual generation, before reading baseline or source facts.
+
+Settings under `telemetry.capture` resolve CLI state override, then `.agenticlens-config.local.yaml`, then portable `.agenticlens-config.yaml`, then defaults. Relative state paths resolve against `--repo`, not callback cwd. Source paths retain their existing resolver. Native callbacks capture absolute project/state/source/binary paths; review and reinstall owned hooks if those paths change. No Git hooks, CI settings or harness trust changes are installed.
+
+```yaml
+telemetry:
+  capture:
+    enabled: true
+    state_dir: .agenticlens-capture
+    refresh_ms: 15000
+    debounce_ms: 500
+    idle_ms: 120000
+    max_lifetime_ms: 1800000
+    pass_timeout_ms: 30000
+    max_sessions: 256
+    max_source_bytes: 67108864
+    detailed_report: true
+    summary: true
+```
+
+External/home state is opt-in. State is namespaced by the canonical exact project directory under `state_dir/projects/<location-key>`; symlink aliases coordinate. Distinct directories with the same ticket and source store remain separate. Unscoped legacy state is retained for explicit source-verified recovery. Copying state never transfers project ownership. Removing local state loses explicit associations, so preserve it until recovery is complete. No automatic retention cleanup removes pending associations or accepted facts.
+
+The worker uses durable request generations and acknowledges only the generation observed before its pass. Kernel process locks release on crashes. Later callbacks restart workers; workers periodically refresh active sessions, debounce bursts, back off after failed publication, and exit after idle terminal sessions. A finite maximum lifetime transfers healthy active work to a fresh native worker. Failed publication stops at that deadline with pending work retained for the next lifecycle or reconcile event, avoiding an endless failure process chain. Check `capture status --repo PROJECT` and local `worker.log` for failures. This is native child-process scheduling, with no separately installed service, model recursion or callback network/self-update work.
+
+The ledger remains schema v5 at `<workspaces.dir>/<ticket>/agentic_metrics.json`. Top-level `completed_at` is the observability snapshot finalization boundary, equal to artifact `updated_at`; it does not assert source-session termination or ticket merge. Source invocation completion timestamps remain unchanged. Each owner has its own source-read checkpoint; there is no simultaneous source-read guarantee. Source failures preserve accepted facts and visibly degrade coverage.
+
+`detailed_report: false` suppresses new report production and removes the summary link. Existing reports are retained and explicitly stale. When enabled, `capture_report.json` includes the ledger digest; verify it before relying on a stored report. Compact summary counts remain available. Native/runtime support requires actual hook/plugin smoke evidence; configuration and synthetic probes alone do not establish it.
+
+Disable semantics: YAML `enabled: false` is reloaded at worker entry, before each pass/ticket and before automatic publication commit/handoff. Owned disable/uninstall marks only that source inactive; another active source integration remains usable. A sleeping worker observes disablement on its next `refresh_ms` check. An already committing pass may finish within `pass_timeout_ms`; no new pass or worker chain follows deactivation. Dry-run never deactivates, and manual generate remains available. Accepted associations and facts are retained.
+
+Installed state discovery uses owned project-local `.codex/agenticlens-installation.json` and `.opencode/agenticlens-installation.json` manifest mirrors plus legacy owned hook/plugin paths. These mirrors are updated transactionally with owned installation changes; preserve them with the installed configuration. A changed YAML state path is diagnosed even when callbacks retain explicit frozen paths. Default status/publication fails with the old state path rather than silently opening a new registry. Use the diagnosed `--state-dir` for status/recovery/removal or restore the configured base to the installed one and reinstall owned hooks. Explicit CLI state overrides retain precedence with a drift diagnostic. Do not copy/import registries or reset associations as a repair.

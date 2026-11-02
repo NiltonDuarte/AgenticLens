@@ -65,7 +65,7 @@ class CaptureDistributionTest(unittest.TestCase):
                 result = self.run_download(script, "--capture-source", "codex", "--capture-store", str(self.store))
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertEqual(json.loads(self.log.read_text()), ["capture", "install", "--source", "codex", "--repo", str(self.repo),
-                                 "--state-dir", str(self.repo / ".agenticlens-capture"), "--store", str(self.store)])
+                                 "--store", str(self.store)])
                 self.assertTrue((self.dest / native_name()).is_file())
                 self.assertFalse((self.repo / "INJECTED").exists())
                 self.assertFalse(self.network_log.exists())

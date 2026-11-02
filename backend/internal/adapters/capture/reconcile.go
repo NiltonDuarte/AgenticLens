@@ -30,6 +30,9 @@ func (s *Store) QueueChild(ctx context.Context, store, path, parent string) erro
 		return normalizeErr
 	}
 	store = canonicalStore
+	if err := codex.ValidateRolloutStore(store, path); err != nil {
+		return err
+	}
 	_, err := s.db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS pending_children(store TEXT,path TEXT,parent TEXT,PRIMARY KEY(store,path)); INSERT OR IGNORE INTO pending_children VALUES(?,?,?)`, store, path, parent)
 	return err
 }
@@ -193,7 +196,7 @@ func (s *Store) Reconcile(ctx context.Context, ticket, user string, sessionBudge
 			}
 			result.Registrations = append(result.Registrations, r)
 		}
-		if r.TicketID == ticket {
+		if r.TicketID == ticket && (s.project == "" || r.ProjectDirectory == s.project) {
 			for _, session := range r.Snapshot {
 				key := IdentityKey(r.Identity)
 				if previous, ok := owners[session.ID]; ok && previous != key {
@@ -225,6 +228,9 @@ func extractExact(ctx context.Context, r domain.CaptureRegistration, budget int6
 		path := r.TranscriptPath
 		if path == "" {
 			return nil, 0, "", errors.New("exact Codex transcript path not registered; wait for an authoritative hook")
+		}
+		if err := codex.ValidateRolloutStore(r.Identity.Store, path); err != nil {
+			return nil, 0, "", err
 		}
 		file, err := os.Open(path)
 		if err != nil {
@@ -290,6 +296,7 @@ func redactedRegistrations(input []domain.CaptureRegistration) []domain.CaptureR
 	output := append([]domain.CaptureRegistration{}, input...)
 	for i := range output {
 		output[i].Request = ""
+		output[i].ProjectDirectory = ""
 		output[i].Identity.Store = "[local source store]"
 		output[i].Detail = strings.TrimSpace(output[i].Detail)
 	}
@@ -352,7 +359,43 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 		used++
 		budget.sessions--
 		budget.attempts++
-		fresh, revision, updatedAt, extractErr := extractExact(ctx, r, budget.bytes, user)
+		var fresh []domain.SessionFact
+		var revision int64
+		var updatedAt string
+		var extractErr error
+		if s.project != "" {
+			reservation := int64(256)
+			if r.Identity.Source == domain.SourceCodex {
+				reservation = MaxPayloadBytes
+				if info, e := os.Stat(r.TranscriptPath); e == nil {
+					reservation = min(reservation, info.Size())
+				}
+			}
+			if budget.bytes < reservation {
+				extractErr = opencode.ErrCaptureBudget
+			} else {
+				budget.charge(reservation)
+				extractErr = s.validateOwner(ctx, r)
+			}
+		}
+		if extractErr == nil && r.Identity.Source == domain.SourceCodex {
+			extractErr = codex.ValidateRolloutStore(r.Identity.Store, r.TranscriptPath)
+		}
+		fingerprint, fingerprintErr := sourceFingerprint(ctx, r)
+		if extractErr == nil && fingerprintErr == nil && fingerprint != "" && fingerprint == r.SourceFingerprint && len(r.Snapshot) > 0 && (s.project == "" || r.ProjectDirectory == s.project) {
+			projected := r
+			projected.State = domain.CaptureCurrent
+			projected.RefreshedAt = time.Now().UTC().Format(time.RFC3339Nano)
+			registrations[i] = projected
+			refreshed[IdentityKey(r.Identity)] = true
+			if _, err = s.db.ExecContext(ctx, `INSERT INTO reconcile_cursor VALUES(?,?) ON CONFLICT(ticket) DO UPDATE SET identity=excluded.identity`, ticket, IdentityKey(r.Identity)); err != nil {
+				return nil, nil, err
+			}
+			continue
+		}
+		if extractErr == nil {
+			fresh, revision, updatedAt, extractErr = extractExact(ctx, r, budget.bytes, user)
+		}
 		budget.charge(revision)
 		updated, updateErr := s.Change(ctx, r.Identity, func(current domain.CaptureRegistration) (domain.CaptureRegistration, error) {
 			if extractErr != nil {
@@ -387,6 +430,10 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 				return current, compactErr
 			}
 			current.Snapshot = compact.Sessions
+			current.ProjectDirectory = s.project
+			if fingerprintErr == nil {
+				current.SourceFingerprint = fingerprint
+			}
 			current.Revision = revision
 			current.UpdatedAt = updatedAt
 			current.State = domain.CaptureCurrent

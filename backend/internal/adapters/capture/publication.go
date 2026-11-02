@@ -18,23 +18,12 @@ import (
 type PublicationLock struct{ file *os.File }
 
 func AcquirePublication(ctx context.Context, path string) (*PublicationLock, error) {
-	absolute, err := filepath.Abs(path)
+	target, err := ProjectDirectory(path)
 	if err != nil {
 		return nil, err
 	}
-	parent := filepath.Dir(absolute)
-	if err = os.MkdirAll(parent, 0755); err != nil {
+	if err = os.MkdirAll(filepath.Dir(target), 0755); err != nil {
 		return nil, err
-	}
-	resolved, err := filepath.EvalSymlinks(parent)
-	if err != nil {
-		return nil, err
-	}
-	target := filepath.Join(resolved, filepath.Base(absolute))
-	if leaf, e := filepath.EvalSymlinks(target); e == nil {
-		target = leaf
-	} else if !errors.Is(e, os.ErrNotExist) {
-		return nil, e
 	}
 	cache, err := os.UserCacheDir()
 	if err != nil {

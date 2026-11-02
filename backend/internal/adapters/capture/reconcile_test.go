@@ -49,7 +49,10 @@ func TestReconcilePreservesAcceptedSnapshotsThroughResumeTruncationAndMissingSou
 	ctx := context.Background()
 	s := openStore(t, t.TempDir())
 	store := t.TempDir()
-	path := filepath.Join(store, "root.jsonl")
+	if err := os.MkdirAll(filepath.Join(store, "sessions"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(store, "sessions", "root.jsonl")
 	original := writeRollout(t, path, "root", "", 10)
 	row := registerBound(t, s, store, path, "root", "TEST-100")
 	reconcile := func() capture.ReconcileResult {
@@ -101,17 +104,20 @@ func TestReconcileVerifiesChildSourceAndIsolatesIndependentTickets(t *testing.T)
 	ctx := context.Background()
 	s := openStore(t, t.TempDir())
 	store := t.TempDir()
-	rootPath, childPath := filepath.Join(store, "root.jsonl"), filepath.Join(store, "child.jsonl")
+	if err := os.MkdirAll(filepath.Join(store, "sessions"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	rootPath, childPath := filepath.Join(store, "sessions", "root.jsonl"), filepath.Join(store, "sessions", "child.jsonl")
 	writeRollout(t, rootPath, "root", "", 10)
 	writeRollout(t, childPath, "source-child", "root", 3)
 	registerBound(t, s, store, rootPath, "root", "TEST-100")
 	if err := s.QueueChild(ctx, store, childPath, "root"); err != nil {
 		t.Fatal(err)
 	}
-	otherPath := filepath.Join(store, "other.jsonl")
+	otherPath := filepath.Join(store, "sessions", "other.jsonl")
 	writeRollout(t, otherPath, "other", "", 7)
 	registerBound(t, s, store, otherPath, "other", "TEST-200")
-	unboundPath := filepath.Join(store, "unbound.jsonl")
+	unboundPath := filepath.Join(store, "sessions", "unbound.jsonl")
 	writeRollout(t, unboundPath, "unbound", "", 9)
 	if _, err := s.Register(ctx, domain.CaptureIdentity{Source: domain.SourceCodex, Store: store, SessionID: "unbound"}, unboundPath, "SessionStart"); err != nil {
 		t.Fatal(err)
@@ -177,7 +183,10 @@ func TestReconcileChargesEachSourceOnceAndContinuesBudgetedWork(t *testing.T) {
 	ctx := context.Background()
 	s := openStore(t, t.TempDir())
 	store := t.TempDir()
-	path := filepath.Join(store, "root.jsonl")
+	if err := os.MkdirAll(filepath.Join(store, "sessions"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(store, "sessions", "root.jsonl")
 	contents := writeRollout(t, path, "root", "", 10)
 	registerBound(t, s, store, path, "root", "TEST-100")
 	result, err := s.Reconcile(ctx, "TEST-100", "tester", 1, int64(len(contents)))
@@ -188,7 +197,7 @@ func TestReconcileChargesEachSourceOnceAndContinuesBudgetedWork(t *testing.T) {
 		t.Fatalf("exact one-source budget was charged again: %+v", result)
 	}
 	for _, id := range []string{"second", "third"} {
-		path := filepath.Join(store, id+".jsonl")
+		path := filepath.Join(store, "sessions", id+".jsonl")
 		writeRollout(t, path, id, "", 3)
 		registerBound(t, s, store, path, id, "TEST-100")
 	}
@@ -212,7 +221,10 @@ func TestReconcileRejectsCanonicalIdentityCollisionAcrossStores(t *testing.T) {
 	s := openStore(t, t.TempDir())
 	for _, tokens := range []int{10, 20} {
 		store := t.TempDir()
-		path := filepath.Join(store, "same-session.jsonl")
+		if err := os.MkdirAll(filepath.Join(store, "sessions"), 0700); err != nil {
+			t.Fatal(err)
+		}
+		path := filepath.Join(store, "sessions", "same-session.jsonl")
 		writeRollout(t, path, "same-session", "", tokens)
 		registerBound(t, s, store, path, "same-session", "TEST-100")
 	}
@@ -225,7 +237,10 @@ func TestReconcilePreservesFactsWhenSourceParsingIsPartial(t *testing.T) {
 	ctx := context.Background()
 	s := openStore(t, t.TempDir())
 	store := t.TempDir()
-	path := filepath.Join(store, "root.jsonl")
+	if err := os.MkdirAll(filepath.Join(store, "sessions"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(store, "sessions", "root.jsonl")
 	original := writeRollout(t, path, "root", "", 10)
 	registerBound(t, s, store, path, "root", "TEST-100")
 	before, err := s.Reconcile(ctx, "TEST-100", "tester", 10, capture.DefaultByteBudget)
@@ -249,9 +264,12 @@ func TestReconcilePreservesFactsWhenSourceParsingIsPartial(t *testing.T) {
 func TestReconcileFailedReadsConsumeSharedByteBudget(t *testing.T) {
 	s := openStore(t, t.TempDir())
 	store := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(store, "sessions"), 0700); err != nil {
+		t.Fatal(err)
+	}
 	var size int64
 	for _, id := range []string{"owner-a", "owner-b"} {
-		path := filepath.Join(store, id+".jsonl")
+		path := filepath.Join(store, "sessions", id+".jsonl")
 		contents := append(writeRollout(t, path, id, "", 10), []byte("{\"type\":\n")...)
 		if err := os.WriteFile(path, contents, 0600); err != nil {
 			t.Fatal(err)
@@ -284,6 +302,9 @@ func TestReconcileRecoversSourceProvenChildAfterStartWithoutStop(t *testing.T) {
 	ctx := context.Background()
 	s := openStore(t, t.TempDir())
 	store := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(store, "sessions"), 0700); err != nil {
+		t.Fatal(err)
+	}
 	sessions := filepath.Join(store, "sessions")
 	if err := os.MkdirAll(sessions, 0700); err != nil {
 		t.Fatal(err)
@@ -320,6 +341,9 @@ func TestReconcileUnassignedRootsDoNotConsumeTicketWorkOrPublishIdentities(t *te
 	ctx := context.Background()
 	s := openStore(t, t.TempDir())
 	store := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(store, "sessions"), 0700); err != nil {
+		t.Fatal(err)
+	}
 	boundID := domain.CaptureIdentity{Source: domain.SourceCodex, Store: store}
 	for n := 0; ; n++ {
 		boundID.SessionID = fmt.Sprintf("bound-%d", n)
@@ -327,7 +351,7 @@ func TestReconcileUnassignedRootsDoNotConsumeTicketWorkOrPublishIdentities(t *te
 			break
 		}
 	}
-	path := filepath.Join(store, "bound.jsonl")
+	path := filepath.Join(store, "sessions", "bound.jsonl")
 	contents := writeRollout(t, path, boundID.SessionID, "", 10)
 	registerBound(t, s, store, path, boundID.SessionID, "TEST-100")
 	unassigned := []string{}
@@ -336,7 +360,7 @@ func TestReconcileUnassignedRootsDoNotConsumeTicketWorkOrPublishIdentities(t *te
 		if capture.IdentityKey(id) >= capture.IdentityKey(boundID) {
 			continue
 		}
-		path := filepath.Join(store, id.SessionID+".jsonl")
+		path := filepath.Join(store, "sessions", id.SessionID+".jsonl")
 		writeRollout(t, path, id.SessionID, "", 99)
 		if _, err := s.Register(ctx, id, path, "SessionStart"); err != nil {
 			t.Fatal(err)
@@ -368,7 +392,10 @@ func TestReconcileUnassignedRootsDoNotConsumeTicketWorkOrPublishIdentities(t *te
 func TestReconcileReportsCompletionAfterOwnerCheckpoint(t *testing.T) {
 	s := openStore(t, t.TempDir())
 	store := t.TempDir()
-	path := filepath.Join(store, "root.jsonl")
+	if err := os.MkdirAll(filepath.Join(store, "sessions"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(store, "sessions", "root.jsonl")
 	writeRollout(t, path, "root", "", 10)
 	registerBound(t, s, store, path, "root", "TEST-100")
 	start := time.Now().UTC()
@@ -408,7 +435,10 @@ func TestQueuedCodexChildRecoveryContinuesPastMalformedAndMismatchedMetadata(t *
 	ctx := context.Background()
 	s := openStore(t, t.TempDir())
 	store := t.TempDir()
-	rootPath := filepath.Join(store, "root.jsonl")
+	if err := os.MkdirAll(filepath.Join(store, "sessions"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	rootPath := filepath.Join(store, "sessions", "root.jsonl")
 	writeRollout(t, rootPath, "root", "", 10)
 	registerBound(t, s, store, rootPath, "root", "TEST-100")
 	baseline, err := s.Reconcile(ctx, "TEST-100", "tester", 10, capture.DefaultByteBudget)
@@ -418,7 +448,7 @@ func TestQueuedCodexChildRecoveryContinuesPastMalformedAndMismatchedMetadata(t *
 	if len(baseline.Sessions) != 1 {
 		t.Fatal("fixture did not establish accepted root")
 	}
-	paths := []string{filepath.Join(store, "a-malformed.jsonl"), filepath.Join(store, "b-malformed.jsonl"), filepath.Join(store, "y-unrelated.jsonl"), filepath.Join(store, "z-valid.jsonl")}
+	paths := []string{filepath.Join(store, "sessions", "a-malformed.jsonl"), filepath.Join(store, "sessions", "b-malformed.jsonl"), filepath.Join(store, "sessions", "y-unrelated.jsonl"), filepath.Join(store, "sessions", "z-valid.jsonl")}
 	for _, path := range paths[:2] {
 		if err := os.WriteFile(path, []byte("{\"type\":\n"), 0600); err != nil {
 			t.Fatal(err)
@@ -468,7 +498,10 @@ func TestReconcileSchedulerEventuallyRefreshesOwnerWhenFailedMetadataConsumesByt
 	ctx := context.Background()
 	s := openStore(t, t.TempDir())
 	store := t.TempDir()
-	rootPath := filepath.Join(store, "root.jsonl")
+	if err := os.MkdirAll(filepath.Join(store, "sessions"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	rootPath := filepath.Join(store, "sessions", "root.jsonl")
 	old := []byte(`{"type":"session_meta","payload":{"id":"root","timestamp":"2026-01-01T00:00:00Z"}}
 {"timestamp":"2026-01-01T00:00:01Z","type":"turn_context","payload":{"model":"source-model","turn_id":"one"}}
 {"timestamp":"2026-01-01T00:00:02Z","type":"token_usage_record","payload":{"thread_id":"root","turn_id":"one","usage":{"input_tokens":10,"output_tokens":2}}}
@@ -484,7 +517,7 @@ func TestReconcileSchedulerEventuallyRefreshesOwnerWhenFailedMetadataConsumesByt
 	if len(before.Sessions) != 1 || before.Sessions[0].Invocations[0].Tokens.Input != 10 {
 		t.Fatal("fixture did not establish the old owner snapshot")
 	}
-	bad := filepath.Join(store, "a-malformed.jsonl")
+	bad := filepath.Join(store, "sessions", "a-malformed.jsonl")
 	if err := os.WriteFile(bad, []byte("{"+strings.Repeat("x", 1023)), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -533,6 +566,9 @@ func TestReconcileSchedulerEventuallyDiscoversStartOnlyChildWithPersistentFailed
 			ctx := context.Background()
 			s := openStore(t, t.TempDir())
 			store := t.TempDir()
+			if err := os.MkdirAll(filepath.Join(store, "sessions"), 0700); err != nil {
+				t.Fatal(err)
+			}
 			sessions := filepath.Join(store, "sessions")
 			if err := os.MkdirAll(sessions, 0700); err != nil {
 				t.Fatal(err)

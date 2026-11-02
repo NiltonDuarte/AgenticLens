@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"agenticlens/internal/adapters/capture"
+	"agenticlens/internal/domain"
 )
 
 func TestCodexHookFeedbackBindsOnlyAnExplicitResponse(t *testing.T) {
@@ -45,6 +46,12 @@ func TestCodexHookFeedbackBindsOnlyAnExplicitResponse(t *testing.T) {
 	}
 	if bound.TicketID != "TEST-100" {
 		t.Fatalf("explicit response not accepted: %+v", bound)
+	}
+	if _, err = s.Change(ctx, rows[0].Identity, func(r domain.CaptureRegistration) (domain.CaptureRegistration, error) {
+		r.TicketTitle = "Explicit response title"
+		return r, nil
+	}); err != nil {
+		t.Fatal(err)
 	}
 	repeated, err := capture.ReceiveCodex(ctx, s, input, store, "/release binary/agentic-lens", "/local state")
 	if err != nil {

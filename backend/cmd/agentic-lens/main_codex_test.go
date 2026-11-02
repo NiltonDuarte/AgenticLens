@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -48,11 +49,12 @@ func testCodexRefresh(t *testing.T, ticketID, prefix, workspaceDir string) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	fixture = []byte(strings.ReplaceAll(string(fixture), `"cwd":"/repo/example"`, `"cwd":`+strconv.Quote(project)))
 	rollout := filepath.Join(sessions, "rollout-thread-01.jsonl")
 	if err := os.WriteFile(rollout, fixture, 0600); err != nil {
 		t.Fatal(err)
 	}
-	output := filepath.Join(home, "agentic_metrics.json")
+	output := filepath.Join(project, "agentic_metrics.json")
 	generate := func() domain.AgenticFactLedger {
 		t.Helper()
 		cmd := exec.Command(cliBinaryPath, "generate",
@@ -143,7 +145,7 @@ func TestGenerateCodexPreservesChildIdentityAndExcludesInheritedUsage(t *testing
 {"timestamp":"2026-01-01T10:01:04Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"child-turn"}}
 `
 	for name, contents := range map[string]string{"root.jsonl": root, "child.jsonl": child} {
-		if err := os.WriteFile(filepath.Join(sessions, name), []byte(contents), 0600); err != nil {
+		if err := os.WriteFile(filepath.Join(sessions, name), []byte(strings.ReplaceAll(contents, `"type":"session_meta","payload":{`, `"type":"session_meta","payload":{"cwd":`+strconv.Quote(project)+`,`)), 0600); err != nil {
 			t.Fatal(err)
 		}
 	}

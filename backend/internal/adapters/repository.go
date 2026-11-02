@@ -91,7 +91,7 @@ func ScanWorkspaces(basePath string) domain.ScanReport {
 	}
 
 	for _, metricFile := range metricFiles {
-		content, err := os.ReadFile(metricFile)
+		content, err := readPublishedLedger(metricFile)
 		if err != nil {
 			addDiagnostic(metricFile, err)
 			continue
@@ -270,7 +270,7 @@ func LoadTicketWorkspace(ticketID, basePath string) (*domain.AgenticMetricsLedge
 	}
 
 	metricFile := filepath.Join(absTicketDir, "agentic_metrics.json")
-	content, err := os.ReadFile(metricFile)
+	content, err := readPublishedLedger(metricFile)
 	if err != nil {
 		return nil, fmt.Errorf("reading metrics file for ticket %s: %w", cleanID, err)
 	}
@@ -410,16 +410,32 @@ type rawExistingLedger struct {
 
 // LoadExistingFactLedger loads raw facts from an existing agentic_metrics.json ledger on disk.
 func LoadExistingFactLedger(path string) (*ExistingLedgerFacts, error) {
+	return loadExistingFactLedger(path, false)
+}
+
+// LoadOwnedFactLedger requires the caller to hold the canonical publication lock.
+func LoadOwnedFactLedger(path string) (*ExistingLedgerFacts, error) {
+	return loadExistingFactLedger(path, true)
+}
+func loadExistingFactLedger(path string, owned bool) (*ExistingLedgerFacts, error) {
 	if strings.TrimSpace(path) == "" {
 		return nil, nil
 	}
 
+	if err := CheckPublication(path); err != nil {
+		return nil, err
+	}
 	fi, err := os.Stat(path)
 	if err != nil || fi.IsDir() {
 		return nil, nil
 	}
 
-	data, err := os.ReadFile(path)
+	var data []byte
+	if owned {
+		data, err = readOwnedLedger(path)
+	} else {
+		data, err = readPublishedLedger(path)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("reading existing ledger at %s: %w", path, err)
 	}

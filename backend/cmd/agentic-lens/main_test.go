@@ -325,6 +325,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 			"--anomalies",
 			"--allow-empty",
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -359,6 +360,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 			"--anomalies",
 			"--allow-empty",
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -946,6 +948,7 @@ func TestCLIGenerateCommand(t *testing.T) {
 		"--json-output", outJSON,
 		"--append", summaryMD,
 	)
+	prepareLegacyGenerateFixture(t, cmd)
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -1006,6 +1009,7 @@ func TestCLIGenerateCommand(t *testing.T) {
 		"--json-output", outJSON,
 		"--append", summaryMD,
 	)
+	prepareLegacyGenerateFixture(t, cmd2)
 	if out, err := cmd2.CombinedOutput(); err != nil {
 		t.Fatalf("second generate invocation failed: %v, out: %s", err, string(out))
 	}
@@ -1090,6 +1094,7 @@ func TestCLIGenerate_SparseAnomalyEvidenceAndZeroErrorMessage(t *testing.T) {
 		"--json-output", outJSON,
 		"--append", summaryMD,
 	)
+	prepareLegacyGenerateFixture(t, cmd)
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -1189,6 +1194,7 @@ func TestCLIGenerate_HighFailureAggregateKeepsSummaryWithoutEventRows(t *testing
 		t.Fatal(err)
 	}
 	cmd := exec.Command(cliBinaryPath, "generate", "--db-path", setupIsolatedEmptyDB(t), "--ticket-id", "AL-GEN-EVIDENCE", "--json-output", outJSON, "--allow-empty")
+	prepareLegacyGenerateFixture(t, cmd)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	if err := cmd.Run(); err != nil {
@@ -1239,6 +1245,7 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 			"--json-output", outJSON,
 			"--allow-empty",
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -1283,6 +1290,7 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 			"--json-output", outJSON,
 			"--allow-empty",
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -1332,6 +1340,7 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 			"--session-id", "ses_zero",
 			"--append", summaryMD,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -1386,6 +1395,7 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 			"--session-id", "ses_comp",
 			"--json-output", outJSON,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -1410,7 +1420,7 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 		}
 	})
 
-	t.Run("generate respects explicit valid completed_at flag and sanitizes whitespace", func(t *testing.T) {
+	t.Run("generate finalizes observability despite explicit historical completed_at or whitespace", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
 		dbPath := filepath.Join(tempDir, "explicit_completed.db")
@@ -1444,6 +1454,7 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 			"--completed-at", explicitTS,
 			"--json-output", outJSON,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
@@ -1459,8 +1470,8 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 		if err := json.Unmarshal(data, &fact); err != nil {
 			t.Fatal(err)
 		}
-		if fact.CompletedAt == nil || *fact.CompletedAt != explicitTS {
-			t.Errorf("expected completed_at %s, got %v", explicitTS, fact.CompletedAt)
+		if fact.CompletedAt == nil || *fact.CompletedAt != fact.UpdatedAt || *fact.CompletedAt == explicitTS {
+			t.Errorf("snapshot must finalize at updated_at, got completed=%v updated=%s", fact.CompletedAt, fact.UpdatedAt)
 		}
 
 		// Also verify whitespace-only completed-at falls back to non-zero ISO timestamp
@@ -1469,12 +1480,13 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 			cliBinaryPath,
 			"generate",
 			"--db-path", dbPath,
-			"--ticket-id", "AL-WS-COMPLETED",
+			"--ticket-id", "AL-EXPLICIT-COMPLETED",
 			"--ticket-title", "WS Title",
 			"--session-id", "ses_explicit",
 			"--completed-at", "   ",
 			"--json-output", outJSONWhitespace,
 		)
+		prepareLegacyGenerateFixture(t, cmdWS)
 		var stderrWS bytes.Buffer
 		cmdWS.Stderr = &stderrWS
 		if err := cmdWS.Run(); err != nil {
@@ -1558,6 +1570,7 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 			"--code-ref", "invalid-nonexistent-git-branch-xyz-999",
 			"--json-output", outJSON,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -1620,6 +1633,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"--json-output", targetJSON,
 			"--append", targetMD,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -1684,6 +1698,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"--ticket-title", "Test Fixture Ticket",
 			"--append", summaryMD,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -1714,6 +1729,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"--json-output", outJSON,
 			"--allow-empty",
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -1767,6 +1783,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"--json-output", outJSON,
 			"--append", summaryMD,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -1791,6 +1808,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"generate",
 			"--db-path", filepath.Join(tempDir, "missing.db"),
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -1883,6 +1901,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"--json-output", cachedJSON,
 			"--append", summaryMD,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -1946,6 +1965,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"--ticket-title", "Test Fixture Ticket",
 			"--json-output", cachedJSON,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -2018,6 +2038,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"--json-output", cachedJSON,
 			"--allow-empty",
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -2070,6 +2091,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"--ticket-title", "Test Fixture Ticket",
 			"--json-output", targetJSON,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3078,6 +3100,7 @@ func TestGenerate_JSONRawVsMarkdownMappedSeparation(t *testing.T) {
 		"--json-output", outJSON,
 		"--append", summaryMD,
 	)
+	prepareLegacyGenerateFixture(t, cmd)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -3135,6 +3158,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3176,6 +3200,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3218,6 +3243,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3258,6 +3284,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3298,6 +3325,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3346,6 +3374,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3407,6 +3436,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3464,6 +3494,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 					"--allow-empty",
 					"--json-output", outJSON,
 				)
+				prepareLegacyGenerateFixture(t, cmd)
 				var stdout, stderr bytes.Buffer
 				cmd.Stdout = &stdout
 				cmd.Stderr = &stderr
@@ -3507,6 +3538,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3549,6 +3581,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--allow-empty",
 			"--json-output", strictJSON,
 		)
+		prepareLegacyGenerateFixture(t, strictCmd)
 		var strictOut, strictErr bytes.Buffer
 		strictCmd.Stdout = &strictOut
 		strictCmd.Stderr = &strictErr
@@ -3588,6 +3621,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3630,6 +3664,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--allow-empty",
 			"--json-output", strictJSON,
 		)
+		prepareLegacyGenerateFixture(t, strictCmd)
 		var strictOut, strictErr bytes.Buffer
 		strictCmd.Stdout = &strictOut
 		strictCmd.Stderr = &strictErr
@@ -3663,6 +3698,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--strict-type",
 			"--allow-empty",
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3699,6 +3735,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--strict-type",
 			"--allow-empty",
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3739,6 +3776,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3769,6 +3807,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"generate",
 			"--completely-unknown-adversarial-flag",
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3798,6 +3837,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--json-output", outJSON,
 		)
 		cmd.Dir = tempDir
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3843,6 +3883,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--json-output", outJSON,
 		)
 		cmd.Dir = tempDir
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3889,6 +3930,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--json-output", outJSON,
 		)
 		cmd.Dir = tempDir
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3935,6 +3977,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--json-output", outJSON,
 		)
 		cmd.Dir = tempDir
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -4001,6 +4044,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--json-output", outJSON,
 		)
 		cmd.Dir = tempDir
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -4066,6 +4110,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--json-output", outJSON,
 		)
 		cmd.Dir = tempDir
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -4135,6 +4180,7 @@ anomaly_thresholds:
 			"--json-output", outJSON,
 		)
 		genCmd.Dir = tempDir
+		prepareLegacyGenerateFixture(t, genCmd)
 		setIsolatedHome(t, genCmd)
 		var genStdout, genStderr bytes.Buffer
 		genCmd.Stdout = &genStdout
@@ -4243,6 +4289,7 @@ anomaly_thresholds:
 			"--json-output", outJSON,
 		)
 		genCmd.Dir = tempDir
+		prepareLegacyGenerateFixture(t, genCmd)
 		setIsolatedHome(t, genCmd)
 		var genStdout, genStderr bytes.Buffer
 		genCmd.Stdout = &genStdout
@@ -4282,6 +4329,7 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 			"--ticket-title", "Test Fixture Ticket",
 			"--allow-empty",
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -4306,6 +4354,7 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 			"--ticket-title", "Test Fixture Ticket",
 			"--allow-empty",
 		)
+		prepareLegacyGenerateFixture(t, cmd2)
 		var stderr2 bytes.Buffer
 		cmd2.Stderr = &stderr2
 		err2 := cmd2.Run()
@@ -4332,6 +4381,7 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 			"--ticket-id", "AL-TITLE-REQ",
 			"--allow-empty",
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -4356,6 +4406,7 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 			"--ticket-title", "   \n\t",
 			"--allow-empty",
 		)
+		prepareLegacyGenerateFixture(t, cmd2)
 		var stderr2 bytes.Buffer
 		cmd2.Stderr = &stderr2
 		err2 := cmd2.Run()
@@ -4391,6 +4442,7 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 			"--json-output", outJSON,
 			"--allow-empty",
 		)
+		prepareLegacyGenerateFixture(t, cmd3)
 		var stderr3 bytes.Buffer
 		cmd3.Stderr = &stderr3
 		err3 := cmd3.Run()
@@ -4429,6 +4481,7 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 			"--json-output", outJSON,
 			"--allow-empty",
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -4458,6 +4511,7 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 			"--json-output", outJSON,
 			"--allow-empty",
 		)
+		prepareLegacyGenerateFixture(t, cmdOverride)
 		var stdoutO, stderrO bytes.Buffer
 		cmdOverride.Stdout = &stdoutO
 		cmdOverride.Stderr = &stderrO
@@ -4487,6 +4541,7 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 			"--ticket-title", "Test Fixture Ticket",
 			"--allow-empty",
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -4509,6 +4564,7 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 			"--ticket-title", "Test Fixture Ticket",
 			"--allow-empty",
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -4535,6 +4591,7 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -4569,6 +4626,7 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 			"--allow-empty",
 			"--json-output", outJSONLower,
 		)
+		prepareLegacyGenerateFixture(t, cmdLower)
 		var stdoutL, stderrL bytes.Buffer
 		cmdLower.Stdout = &stdoutL
 		cmdLower.Stderr = &stderrL
@@ -4628,6 +4686,7 @@ func TestCLI_Invariants(t *testing.T) {
 			"--json-output", outJSON,
 		)
 		cmd.Dir = tempDir
+		prepareLegacyGenerateFixture(t, cmd)
 		setIsolatedHome(t, cmd)
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
@@ -4679,6 +4738,7 @@ func TestCLI_Invariants(t *testing.T) {
 			"--json-output", outJSON,
 		)
 		cmd.Dir = tempDir
+		prepareLegacyGenerateFixture(t, cmd)
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
 
@@ -5415,6 +5475,7 @@ func TestInitCommand(t *testing.T) {
 		// Test generate command in dir with no config
 		cmdGenerate := exec.Command(cliBinaryPath, "generate", "--ticket-id", "TEST-1", "--allow-empty")
 		cmdGenerate.Dir = tempDir
+		prepareLegacyGenerateFixture(t, cmdGenerate)
 		var stderrGen bytes.Buffer
 		cmdGenerate.Stderr = &stderrGen
 		if err := cmdGenerate.Run(); err == nil {
@@ -6003,6 +6064,7 @@ anomaly_thresholds:
 		"--allow-empty",
 	)
 	cmd.Dir = tempDir
+	prepareLegacyGenerateFixture(t, cmd)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -6159,6 +6221,7 @@ anomaly_thresholds:
 		"--json-output", outJSON,
 	)
 	cmd.Dir = tempDir
+	prepareLegacyGenerateFixture(t, cmd)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -6214,6 +6277,7 @@ anomaly_thresholds:
 		"--json-output", outJSON,
 	)
 	cmd2.Dir = tempDir
+	prepareLegacyGenerateFixture(t, cmd2)
 	if out, err := cmd2.CombinedOutput(); err != nil {
 		t.Fatalf("second generate failed: %v, output: %s", err, string(out))
 	}
@@ -6257,6 +6321,7 @@ anomaly_thresholds:
 		"--allow-empty",
 	)
 	cmdLegacy.Dir = tempDir
+	prepareLegacyGenerateFixture(t, cmdLegacy)
 	var legacyStderr bytes.Buffer
 	cmdLegacy.Stderr = &legacyStderr
 	if err := cmdLegacy.Run(); err == nil {
@@ -6391,6 +6456,7 @@ anomaly_thresholds:
 		"--json-output", outJSON,
 	)
 	cmdB.Dir = tempDir
+	prepareLegacyGenerateFixture(t, cmdB)
 	if out, err := cmdB.CombinedOutput(); err != nil {
 		t.Fatalf("generate Device B failed: %v, out: %s", err, string(out))
 	}
@@ -6419,6 +6485,7 @@ anomaly_thresholds:
 		"--json-output", outJSON,
 	)
 	cmdC.Dir = tempDir
+	prepareLegacyGenerateFixture(t, cmdC)
 	if out, err := cmdC.CombinedOutput(); err != nil {
 		t.Fatalf("generate Device C failed: %v, out: %s", err, string(out))
 	}
@@ -6465,6 +6532,7 @@ anomaly_thresholds:
 		"--json-output", outJSON,
 	)
 	cmdC2.Dir = tempDir
+	prepareLegacyGenerateFixture(t, cmdC2)
 	if out, err := cmdC2.CombinedOutput(); err != nil {
 		t.Fatalf("repeated generate Device C failed: %v, out: %s", err, string(out))
 	}
@@ -6560,6 +6628,7 @@ anomaly_thresholds:
 		"--json-output", outJSON,
 	)
 	cmd1.Dir = tempDir
+	prepareLegacyGenerateFixture(t, cmd1)
 	if out, err := cmd1.CombinedOutput(); err != nil {
 		t.Fatalf("pass 1 failed: %v, out: %s", err, string(out))
 	}
@@ -6595,6 +6664,7 @@ anomaly_thresholds:
 		"--json-output", outJSON,
 	)
 	cmd2.Dir = tempDir
+	prepareLegacyGenerateFixture(t, cmd2)
 	if out, err := cmd2.CombinedOutput(); err != nil {
 		t.Fatalf("pass 2 failed: %v, out: %s", err, string(out))
 	}
@@ -6682,6 +6752,7 @@ anomaly_thresholds:
 				"--allow-empty",
 			)
 			cmd.Dir = tempDir
+			prepareLegacyGenerateFixture(t, cmd)
 			var stderr bytes.Buffer
 			cmd.Stderr = &stderr
 			if err := cmd.Run(); err == nil {
@@ -6715,6 +6786,7 @@ anomaly_thresholds:
 				SDLCIterations: 0,
 			},
 		}
+		acceptFixtureOwners(t, tempDir, filepath.Join(tempDir, ".agenticlens-capture"), *ledger.TicketID, ledger.Sessions)
 		if err := adapters.SaveFactLedger(outJSON, ledger); err != nil {
 			t.Fatalf("failed saving v4 ledger: %v", err)
 		}
@@ -6728,10 +6800,11 @@ anomaly_thresholds:
 			"--allow-empty",
 		)
 		cmd.Dir = tempDir
+		prepareLegacyGenerateFixture(t, cmd)
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
 		if err := cmd.Run(); err != nil {
-			t.Fatalf("generate v4 failed: %v", err)
+			t.Fatalf("generate v4 failed: %v: %s", err, stderr.String())
 		}
 
 		if strings.Contains(stderr.String(), "Existing fact ledger has schema version < 4") {

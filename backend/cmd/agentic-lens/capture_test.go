@@ -14,6 +14,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -69,6 +70,11 @@ func newCaptureGenerationFixture(t *testing.T) captureGenerationFixture {
 	t.Helper()
 	f := captureGenerationFixture{project: t.TempDir(), store: t.TempDir(), state: t.TempDir()}
 	f.output = filepath.Join(f.project, "ledger.json")
+	var err error
+	f.state, err = capture.ProjectState(f.state, f.project)
+	if err != nil {
+		t.Fatal(err)
+	}
 	config := "project_name: CaptureFixture\nticket:\n  prefixes: [TEST]\nworkspaces:\n  dir: records\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 	if err := os.WriteFile(filepath.Join(f.project, ".agenticlens-config.yaml"), []byte(config), 0600); err != nil {
 		t.Fatal(err)
@@ -86,10 +92,10 @@ func (f captureGenerationFixture) write(t *testing.T, tokens int) string {
 func (f captureGenerationFixture) writeAt(t *testing.T, tokens int, sourceTime string) string {
 	t.Helper()
 	path := filepath.Join(f.store, "sessions", "root.jsonl")
-	contents := fmt.Sprintf(`{"timestamp":"2026-01-01T00:00:00Z","type":"session_meta","payload":{"id":"root","timestamp":"2026-01-01T00:00:00Z"}}
+	contents := fmt.Sprintf(`{"timestamp":"2026-01-01T00:00:00Z","type":"session_meta","payload":{"id":"root","cwd":%q,"timestamp":"2026-01-01T00:00:00Z"}}
 {"timestamp":"2026-01-01T00:00:01Z","type":"turn_context","payload":{"model":"source-model","turn_id":"one"}}
 {"timestamp":%q,"type":"token_usage_record","payload":{"thread_id":"root","turn_id":"one","usage":{"input_tokens":%d,"output_tokens":2}}}
-`, sourceTime, tokens)
+`, f.project, sourceTime, tokens)
 	if err := os.WriteFile(path, []byte(contents), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -98,7 +104,7 @@ func (f captureGenerationFixture) writeAt(t *testing.T, tokens int, sourceTime s
 
 func (f captureGenerationFixture) bind(t *testing.T, path string) {
 	t.Helper()
-	store, err := capture.Open(f.state)
+	store, err := capture.OpenProject(f.state, f.project)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,13 +123,45 @@ func (f captureGenerationFixture) bind(t *testing.T, path string) {
 	}
 }
 
-func (f captureGenerationFixture) args(extra ...string) []string {
+func (f captureGenerationFixture) args(t *testing.T, extra ...string) []string {
+	for i, arg := range extra {
+		if arg == "--capture-dir" && i+1 < len(extra) {
+			dir, err := capture.ProjectState(extra[i+1], f.project)
+			if err != nil {
+				t.Fatal(err)
+			}
+			registry, err := capture.OpenProject(dir, f.project)
+			if err != nil {
+				t.Fatal(err)
+			}
+			r, err := registry.Register(context.Background(), domain.CaptureIdentity{Source: domain.SourceCodex, Store: f.store, SessionID: "root"}, "", "fixture explicit owner")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err = capture.ValidateOwner(context.Background(), f.project, r); err != nil {
+				t.Fatal(err)
+			}
+			if _, err = registry.Bind(context.Background(), r.Identity, "TEST-100", r.Request); err != nil {
+				t.Fatal(err)
+			}
+			_, err = registry.Change(context.Background(), r.Identity, func(row domain.CaptureRegistration) (domain.CaptureRegistration, error) {
+				row.ProjectDirectory = f.project
+				return row, nil
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err = registry.Close(); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
 	return append([]string{"generate", "--source", "codex", "--capture-dir", f.state, "--ticket-id", "TEST-100", "--ticket-title", "Capture regression", "--ticket-type", "feat", "--json-output", f.output}, extra...)
 }
 
 func (f captureGenerationFixture) generate(t *testing.T, extra ...string) domain.AgenticFactLedger {
 	t.Helper()
-	cmd := exec.Command(cliBinaryPath, f.args(extra...)...)
+	cmd := exec.Command(cliBinaryPath, f.args(t, extra...)...)
 	cmd.Dir = f.project
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("generate: %v %s", err, out)
@@ -155,6 +193,14 @@ func assertCaptureRootInput(t *testing.T, ledger domain.AgenticFactLedger, want 
 
 func captureCLI(t *testing.T, project, input string, args ...string) ([]byte, error) {
 	t.Helper()
+	// Registration/installer tests do not own detached automatic workers. Native
+	// worker tests supply their explicit enabled policy before invoking callbacks.
+	local := filepath.Join(project, ".agenticlens-config.local.yaml")
+	if _, err := os.Stat(local); os.IsNotExist(err) {
+		if err = os.WriteFile(local, []byte("telemetry:\n  capture:\n    enabled: false\n"), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
 	cmd := exec.Command(cliBinaryPath, append([]string{"capture"}, args...)...)
 	cmd.Dir = project
 	cmd.Stdin = strings.NewReader(input)
@@ -242,7 +288,11 @@ func TestCaptureCLIInstallerPreservesUserHooksDryRunAndRepeatedRemoval(t *testin
 	if before.Description != after.Description || len(after.Hooks) != 1 || len(after.Hooks["SessionStart"]) != 1 {
 		t.Fatalf("unrelated hook config changed: %s", remaining)
 	}
-	manifest, err := capture.ReadManifest(state, "codex")
+	scoped, err := capture.ProjectState(state, project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest, err := capture.ReadManifest(scoped, "codex")
 	if err != nil || manifest.Active {
 		t.Fatalf("removed installation reported active: %+v %v", manifest, err)
 	}
@@ -315,8 +365,11 @@ func TestCaptureCLIGenerateIncludesBoundIndependentSessionsAndDigestReport(t *te
 	var requestTokens []string
 	request := func(id string, tokens int, ticket string) {
 		t.Helper()
-		path := filepath.Join(store, id+".jsonl")
-		contents := `{"timestamp":"2026-01-01T00:00:00Z","type":"session_meta","payload":{"id":"` + id + `","timestamp":"2026-01-01T00:00:00Z"}}` + "\n" + `{"timestamp":"2026-01-01T00:00:01Z","type":"turn_context","payload":{"model":"source-model","turn_id":"turn-one"}}` + "\n"
+		if err := os.MkdirAll(filepath.Join(store, "sessions"), 0700); err != nil {
+			t.Fatal(err)
+		}
+		path := filepath.Join(store, "sessions", id+".jsonl")
+		contents := `{"timestamp":"2026-01-01T00:00:00Z","type":"session_meta","payload":{"id":"` + id + `","cwd":` + strconv.Quote(project) + `,"timestamp":"2026-01-01T00:00:00Z"}}` + "\n" + `{"timestamp":"2026-01-01T00:00:01Z","type":"turn_context","payload":{"model":"source-model","turn_id":"turn-one"}}` + "\n"
 		usage := fmt.Sprintf(`{"timestamp":"2026-01-01T00:00:02Z","type":"token_usage_record","payload":{"thread_id":%q,"turn_id":"turn-one","usage":{"input_tokens":%d,"output_tokens":2}}}`, id, tokens)
 		if err := os.WriteFile(path, []byte(contents+usage+"\n"), 0600); err != nil {
 			t.Fatal(err)
@@ -411,7 +464,7 @@ func TestCaptureCLIGenerateIncludesBoundIndependentSessionsAndDigestReport(t *te
 	if second := generate(); !reflect.DeepEqual(first.Sessions, second.Sessions) {
 		t.Fatal("repeated capture generation duplicated cumulative facts")
 	}
-	if err := os.Remove(filepath.Join(store, "independent-two.jsonl")); err != nil {
+	if err := os.Remove(filepath.Join(store, "sessions", "independent-two.jsonl")); err != nil {
 		t.Fatal(err)
 	}
 	if missing := generate(); !reflect.DeepEqual(first.Sessions, missing.Sessions) {
@@ -431,6 +484,7 @@ func TestCaptureGenerationRetainedRegistryCannotOverrideNewerCanonicalOrExplicit
 				newer := f.generate(t, "--capture-dir", filepath.Join(f.project, "absent-registry"), "--session-id", "root", "--codex-home", f.store)
 				assertCaptureRootInput(t, newer, 30)
 				newer.Sessions = append(newer.Sessions, domain.SessionFact{ID: "other-harness", Source: domain.SourceOpenCode, User: "stored-user", Invocations: []domain.InvocationFact{{Role: "reviewer", Model: "stored-model", Tokens: domain.InvocationTokens{Input: 77}}}})
+				acceptFixtureOwners(t, f.project, f.state, "TEST-100", newer.Sessions)
 				newer.Skills = []domain.SkillFact{{Name: "stored-skill"}, {Name: "stored-skill"}}
 				link := domain.TaskLinkFact{SubagentType: "reviewer", Description: "stored delegation", ChildSession: "stored-child", Timestamp: "2026-01-01T00:00:00Z", CostEvidence: domain.CostEvidence{State: domain.CostUnavailable}}
 				newer.TaskLinks = []domain.TaskLinkFact{link, link}
@@ -520,9 +574,9 @@ func TestCaptureGenerationPreservesDifferingSnapshotsWithoutProvenSourceOrder(t 
 				}
 			}
 			f.write(t, 30) // Different facts, deliberately no later source timestamp.
-			args := f.args()
+			args := f.args(t)
 			if tc.explicit {
-				args = f.args("--capture-dir", filepath.Join(f.project, "absent-registry"), "--session-id", "root", "--codex-home", f.store)
+				args = f.args(t, "--capture-dir", filepath.Join(f.project, "absent-registry"), "--session-id", "root", "--codex-home", f.store)
 			}
 			cmd := exec.Command(cliBinaryPath, args...)
 			cmd.Dir = f.project
@@ -556,7 +610,7 @@ func TestCaptureGenerationPreservesDifferingSnapshotsWithoutProvenSourceOrder(t 
 func TestCaptureGenerationRejectsExplicitSelectionOfAnotherTicketOwner(t *testing.T) {
 	f := newCaptureGenerationFixture(t)
 	f.bind(t, f.write(t, 10))
-	cmd := exec.Command(cliBinaryPath, f.args("--ticket-id", "TEST-200", "--session-id", "root", "--codex-home", f.store)...)
+	cmd := exec.Command(cliBinaryPath, f.args(t, "--ticket-id", "TEST-200", "--session-id", "root", "--codex-home", f.store)...)
 	cmd.Dir = f.project
 	if out, err := cmd.CombinedOutput(); err == nil {
 		t.Fatalf("explicit selector stole known TEST-100 owner: %s", out)
@@ -619,7 +673,7 @@ func TestCaptureGenerationResolvesStoreAliasesWithoutConflatingDistinctStores(t 
 					t.Fatal(err)
 				}
 			}
-			cmd := exec.Command(cliBinaryPath, f.args("--ticket-id", "TEST-200", "--session-id", "root", "--codex-home", selected)...)
+			cmd := exec.Command(cliBinaryPath, f.args(t, "--ticket-id", "TEST-200", "--session-id", "root", "--codex-home", selected)...)
 			cmd.Dir = f.project
 			if out, err := cmd.CombinedOutput(); err == nil {
 				t.Fatalf("actual-store alias bypassed known ticket owner: %s", out)
@@ -636,7 +690,7 @@ func TestCaptureGenerationResolvesStoreAliasesWithoutConflatingDistinctStores(t 
 			if err := os.WriteFile(filepath.Join(distinct, "sessions", "root.jsonl"), readCaptureFile(t, path), 0600); err != nil {
 				t.Fatal(err)
 			}
-			cmd = exec.Command(cliBinaryPath, f.args("--ticket-id", "TEST-200", "--session-id", "root", "--codex-home", distinct)...)
+			cmd = exec.Command(cliBinaryPath, f.args(t, "--ticket-id", "TEST-200", "--session-id", "root", "--codex-home", distinct)...)
 			cmd.Dir = f.project
 			if out, err := cmd.CombinedOutput(); err != nil {
 				t.Fatalf("truly distinct store was conflated with known owner: %v %s", err, out)
@@ -651,13 +705,20 @@ func TestCaptureGenerationResolvesStoreAliasesWithoutConflatingDistinctStores(t 
 }
 
 func TestCaptureGenerationOverlappingPublishersCannotRegressFinalSnapshot(t *testing.T) {
-	t.Run("registered newer publisher", func(t *testing.T) { testCaptureOverlappingPublishers(t, false) })
-	t.Run("explicit newer publisher without registry", func(t *testing.T) { testCaptureOverlappingPublishers(t, true) })
+	t.Run("registered newer publisher", func(t *testing.T) { testCaptureOverlappingPublishers(t, false, false) })
+	t.Run("explicit newer publisher without registry", func(t *testing.T) { testCaptureOverlappingPublishers(t, true, false) })
+	t.Run("automatic newer publisher", func(t *testing.T) { testCaptureOverlappingPublishers(t, false, true) })
 }
 
-func testCaptureOverlappingPublishers(t *testing.T, explicitNewer bool) {
+func testCaptureOverlappingPublishers(t *testing.T, explicitNewer, automatic bool) {
 	t.Helper()
 	f := newCaptureGenerationFixture(t)
+	if automatic {
+		f.output = filepath.Join(f.project, "records", "TEST-100", "agentic_metrics.json")
+		if err := os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte("telemetry:\n  capture:\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 10000\n"), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
 	f.bind(t, f.write(t, 10))
 	f.generate(t)
 	realGit, err := exec.LookPath("git")
@@ -683,7 +744,7 @@ func testCaptureOverlappingPublishers(t *testing.T, explicitNewer bool) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	older := exec.CommandContext(ctx, cliBinaryPath, f.args()...)
+	older := exec.CommandContext(ctx, cliBinaryPath, f.args(t)...)
 	older.Dir = f.project
 	older.Env = append(os.Environ(), "PATH="+shimDir+string(os.PathListSeparator)+os.Getenv("PATH"), "AL_CAPTURE_TEST_GIT_HELPER=1", "AL_CAPTURE_TEST_GATE_ADDRESS="+listener.Addr().String(), "AL_CAPTURE_TEST_REAL_GIT="+realGit)
 	var olderOutput bytes.Buffer
@@ -715,9 +776,33 @@ func testCaptureOverlappingPublishers(t *testing.T, explicitNewer bool) {
 	if err := os.WriteFile(path, laterSource, 0600); err != nil {
 		t.Fatal(err)
 	}
-	newerArgs := f.args()
+	newerArgs := f.args(t)
 	if explicitNewer {
-		newerArgs = f.args("--capture-dir", filepath.Join(f.project, "absent-registry"), "--session-id", "root", "--codex-home", f.store)
+		newerArgs = f.args(t, "--capture-dir", filepath.Join(f.project, "absent-registry"), "--session-id", "root", "--codex-home", f.store)
+	}
+	if automatic {
+		registry, err := capture.OpenProject(f.state, f.project)
+		if err != nil {
+			t.Fatal(err)
+		}
+		id := domain.CaptureIdentity{Source: domain.SourceCodex, Store: f.store, SessionID: "root"}
+		if _, err = registry.Change(context.Background(), id, func(r domain.CaptureRegistration) (domain.CaptureRegistration, error) {
+			r.TicketTitle = "Capture regression"
+			r.TicketType = "feat"
+			r.Activity = "idle"
+			return r, nil
+		}); err != nil {
+			registry.Close()
+			t.Fatal(err)
+		}
+		if err = registry.RequestPublication(context.Background()); err != nil {
+			registry.Close()
+			t.Fatal(err)
+		}
+		if err = registry.Close(); err != nil {
+			t.Fatal(err)
+		}
+		newerArgs = []string{"capture", "worker", "--repo", f.project, "--state-dir", f.state}
 	}
 	newer := exec.CommandContext(ctx, cliBinaryPath, newerArgs...)
 	newer.Dir = f.project
@@ -756,7 +841,7 @@ func testCaptureOverlappingPublishers(t *testing.T, explicitNewer bool) {
 	var report struct {
 		Digest string `json:"ledger_sha256"`
 	}
-	if err := json.Unmarshal(readCaptureFile(t, filepath.Join(f.project, "capture_report.json")), &report); err != nil {
+	if err := json.Unmarshal(readCaptureFile(t, filepath.Join(filepath.Dir(f.output), "capture_report.json")), &report); err != nil {
 		t.Fatal(err)
 	}
 	if !explicitNewer && report.Digest != hex.EncodeToString(hash[:]) {
@@ -815,7 +900,11 @@ func TestCaptureInstallerRendersMarkerBearingPathsOnceAndRollsBackMidWrite(t *te
 			t.Fatalf("install literal paths: %v %s", err, out)
 		}
 		plugin := string(readCaptureFile(t, filepath.Join(project, ".opencode", "plugins", "agenticlens-capture.ts")))
-		for name, want := range map[string]string{"binary": binary, "stateDir": state, "sourceStore": store} {
+		scoped, scopeErr := capture.ProjectState(state, project)
+		if scopeErr != nil {
+			t.Fatal(scopeErr)
+		}
+		for name, want := range map[string]string{"binary": binary, "stateDir": scoped, "sourceStore": store} {
 			prefix := "const " + name + " = "
 			found := false
 			for _, line := range strings.Split(plugin, "\n") {
@@ -852,4 +941,146 @@ func TestCaptureInstallerRendersMarkerBearingPathsOnceAndRollsBackMidWrite(t *te
 			t.Fatalf("mid-write failure left new active config: %v", err)
 		}
 	})
+}
+
+// This launches the real native handler/worker, but uses source fixtures. It is
+// intentionally separate from the real harness support evidence.
+func TestCaptureNativeWorkerPublishesMultipleRootsAndRefreshesWithoutGenerate(t *testing.T) {
+	f := newCaptureGenerationFixture(t)
+	for _, args := range [][]string{{"init", "-b", "main"}, {"config", "user.name", "Probe"}, {"config", "user.email", "probe@example.invalid"}, {"commit", "--allow-empty", "-m", "probe"}, {"update-ref", "refs/remotes/origin/main", "HEAD"}} {
+		cmd := exec.Command("git", args...)
+		cmd.Dir = f.project
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git: %v %s", err, out)
+		}
+	}
+	local := []byte("telemetry:\n  capture:\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 1000\n    detailed_report: false\n")
+	if err := os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), local, 0600); err != nil {
+		t.Fatal(err)
+	}
+	state := filepath.Join(f.project, ".agenticlens-capture")
+	receive := func(id, event string) {
+		t.Helper()
+		payload, _ := json.Marshal(capture.HookInput{SessionID: id, Event: event, TranscriptPath: filepath.Join(f.store, "sessions", id+".jsonl")})
+		if out, err := captureCLI(t, f.project, string(payload), "receive", "--source", "codex", "--store", f.store, "--state-dir", state); err != nil {
+			t.Fatalf("receive: %v %s", err, out)
+		}
+	}
+	write := func(id string, tokens int, stamp string) {
+		t.Helper()
+		body := fmt.Sprintf(`{"timestamp":"2026-01-01T00:00:00Z","type":"session_meta","payload":{"id":%q,"cwd":%q}}
+{"timestamp":"2026-01-01T00:00:01Z","type":"turn_context","payload":{"model":"source-model","turn_id":"one"}}
+{"timestamp":%q,"type":"token_usage_record","payload":{"thread_id":%q,"turn_id":"one","usage":{"input_tokens":%d,"output_tokens":2}}}
+`, id, f.project, stamp, id, tokens)
+		if err := os.WriteFile(filepath.Join(f.store, "sessions", id+".jsonl"), []byte(body), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, id := range []string{"one", "two"} {
+		write(id, 10, "2026-01-01T00:00:02Z")
+		receive(id, "SessionStart")
+		out, err := captureCLI(t, f.project, "", "request", "--source", "codex", "--store", f.store, "--state-dir", state, "--session-id", id)
+		if err != nil {
+			t.Fatalf("request %v %s", err, out)
+		}
+		var row domain.CaptureRegistration
+		if err = json.Unmarshal(out, &row); err != nil {
+			t.Fatal(err)
+		}
+		if out, err = captureCLI(t, f.project, "", "bind", "--source", "codex", "--store", f.store, "--state-dir", state, "--session-id", id, "--ticket-id", "TEST-100", "--ticket-title", "Explicit context", "--ticket-type", "feat", "--request", row.Request); err != nil {
+			t.Fatalf("bind %v %s", err, out)
+		}
+	}
+	defer func() {
+		receive("one", "SessionEnd")
+		receive("two", "SessionEnd")
+		scoped, err := capture.ProjectState(state, f.project)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		store, err := capture.OpenProject(scoped, f.project)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		defer store.Close()
+		deadline := time.Now().Add(5 * time.Second)
+		for time.Now().Before(deadline) {
+			req, e := store.PublicationRequest(context.Background())
+			if e != nil {
+				t.Error(e)
+				return
+			}
+			if req.Generation == req.Acknowledged {
+				lock, e := capture.AcquireWorker(scoped)
+				if e != nil {
+					t.Error(e)
+					return
+				}
+				if lock != nil {
+					if e = lock.Close(); e != nil {
+						t.Error(e)
+					}
+					return
+				}
+			}
+			time.Sleep(40 * time.Millisecond)
+		}
+		t.Error("native worker did not finish terminal idle shutdown before fixture cleanup")
+	}()
+	output := filepath.Join(f.project, "records", "TEST-100", "agentic_metrics.json")
+	wait := func(want int64) domain.AgenticFactLedger {
+		t.Helper()
+		deadline := time.Now().Add(8 * time.Second)
+		for time.Now().Before(deadline) {
+			body, err := os.ReadFile(output)
+			if err == nil {
+				var ledger domain.AgenticFactLedger
+				if json.Unmarshal(body, &ledger) == nil && len(ledger.Sessions) == 2 {
+					var total int64
+					for _, s := range ledger.Sessions {
+						for _, i := range s.Invocations {
+							total += i.Tokens.Input
+						}
+					}
+					if total == want {
+						return ledger
+					}
+				}
+			}
+			time.Sleep(40 * time.Millisecond)
+		}
+		t.Fatalf("automatic publication did not reach %d; output %s", want, output)
+		return domain.AgenticFactLedger{}
+	}
+	first := wait(20)
+	if first.CompletedAt == nil || *first.CompletedAt != first.UpdatedAt {
+		t.Fatalf("snapshot completion not finalized: %+v", first)
+	}
+	write("one", 50, "2026-01-01T00:40:02Z")
+	// No callback and no manual generate: active periodic refresh must see growth.
+	next := wait(60)
+	for _, session := range next.Sessions {
+		want := "2026-01-01T00:00:02Z"
+		if session.ID == "one" {
+			want = "2026-01-01T00:40:02Z"
+		}
+		if len(session.Invocations) != 1 || session.Invocations[0].CompletedAt == nil || *session.Invocations[0].CompletedAt != want {
+			t.Fatalf("source invocation time changed: %+v want %s", session, want)
+		}
+	}
+	if next.CompletedAt == nil || *next.CompletedAt != next.UpdatedAt {
+		t.Fatalf("active publication did not finalize: %+v", next)
+	}
+	summary, err := os.ReadFile(filepath.Join(filepath.Dir(output), "SUMMARY.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(summary), "](capture_report.json)") {
+		t.Fatal("disabled report has dangling link")
+	}
+	if _, err = os.Stat(filepath.Join(filepath.Dir(output), "capture_report.json")); !os.IsNotExist(err) {
+		t.Fatalf("disabled report produced: %v", err)
+	}
 }

@@ -63,21 +63,26 @@ const (
 
 // CaptureRegistration contains local correlation metadata, never transcript content.
 type CaptureRegistration struct {
-	Identity       CaptureIdentity `json:"identity"`
-	TicketID       string          `json:"ticket_id"`
-	Binding        string          `json:"binding,omitempty"`
-	Request        string          `json:"request"`
-	TranscriptPath string          `json:"-"`
-	ParentID       string          `json:"parent_id,omitempty"`
-	Event          string          `json:"event"`
-	State          CaptureState    `json:"state"`
-	Detail         string          `json:"detail,omitempty"`
-	RefreshedAt    string          `json:"refreshed_at,omitempty"`
-	UpdatedAt      string          `json:"updated_at"`
-	Revision       int64           `json:"revision"`
-	Snapshot       []SessionFact   `json:"-"`
-	Skills         []SkillFact     `json:"-"`
-	TaskLinks      []TaskLinkFact  `json:"-"`
+	ProjectDirectory  string          `json:"project_directory,omitempty"`
+	SourceFingerprint string          `json:"source_fingerprint,omitempty"`
+	Identity          CaptureIdentity `json:"identity"`
+	TicketID          string          `json:"ticket_id"`
+	TicketTitle       string          `json:"ticket_title,omitempty"`
+	TicketType        string          `json:"ticket_type,omitempty"`
+	Binding           string          `json:"binding,omitempty"`
+	Request           string          `json:"request"`
+	TranscriptPath    string          `json:"-"`
+	ParentID          string          `json:"parent_id,omitempty"`
+	Activity          string          `json:"activity,omitempty"`
+	Event             string          `json:"event"`
+	State             CaptureState    `json:"state"`
+	Detail            string          `json:"detail,omitempty"`
+	RefreshedAt       string          `json:"refreshed_at,omitempty"`
+	UpdatedAt         string          `json:"updated_at"`
+	Revision          int64           `json:"revision"`
+	Snapshot          []SessionFact   `json:"-"`
+	Skills            []SkillFact     `json:"-"`
+	TaskLinks         []TaskLinkFact  `json:"-"`
 }
 
 // CaptureSnapshotAccept rejects a truncated or older cumulative source snapshot.
