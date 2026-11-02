@@ -62,15 +62,15 @@ Both runtime regression tests fail against the earlier candidate d7a07eb and pas
 Source: the user requested keeping a summary of findings with the model and actor that found each, then deleting review files once corrections are addressed and review is approved. This supersedes permanent detailed-review retention; it preserves active-review evidence, approval gates, discovery attribution, verification and known limits. Updated AGENTS and canonical review/development guidance; removed seven completed GEN-15 review files after consolidation. Other tickets' historical audits are untouched. This is authorized documentation/artifact maintenance with no runtime changes or new reviewer dispatch. The previously passed application checks remain valid for the unchanged runtime; documentation checks and current delivery verification are recorded in iterations/02/PLAN.md.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 9
-- **Active Agent Duration:** 44m 40s (excludes user wait time)
-- **Context Window Health:** ELEVATED — Root agent peak 177.1k tokens (89% of 200k healthy ceiling, 0 compactions) | Subagents peak 110.7k (Tester)
+- **Software Development Life Cycle Iterations:** 12
+- **Active Agent Duration:** 46m 44s (excludes user wait time)
+- **Context Window Health:** ELEVATED — Root agent peak 180.1k tokens (90% of 200k healthy ceiling, 0 compactions) | Subagents peak 110.7k (Tester)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 1.3 avg turns/run (peak: 2 turns) | Planner 1.0, Coder 2.0, Tester 2.0, Reviewer 1.0
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 22,305 reasoning tokens (19.5% of generated output)
-- **Tool Health & Self-Correction:** 206 tool calls (4 self-corrections, 98.1% success rate)
+- **Reasoning Effort:** 22,944 reasoning tokens (19.6% of generated output)
+- **Tool Health & Self-Correction:** 209 tool calls (4 self-corrections, 98.1% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 4 execution anomalies detected (1 CRITICAL, 3 WARNING).
@@ -90,16 +90,16 @@ Source: the user requested keeping a summary of findings with the model and acto
 | **coder** | 1 | 98,084 | 13,198 | 2,165,120 | 95.7% | 107.1k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **tester** | 1 | 47,330 | 13,823 | 2,324,224 | 98.0% | 110.7k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **reviewer** | 4 | 208,121 | 19,471 | 2,195,072 | 91.3% | 77.1k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
-| **rootagent** | 1 | 293,397 | 41,964 | 13,529,984 | 97.9% | 177.1k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **8** | **695,295** | **92,031** | **20,591,104** | **96.7%** | **177.1k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 8 unavailable / 8 invocations)** |
+| **rootagent** | 1 | 297,937 | 43,929 | 15,133,952 | 98.1% | 180.1k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **8** | **699,835** | **93,996** | **22,195,072** | **96.9%** | **180.1k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 8 unavailable / 8 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
 | **gpt-6-luna** | 2 | 83,320 | 7,998 | 854,272 | 91.1% | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **gpt-6.1-sol** | 6 | 611,975 | 84,033 | 19,736,832 | 97.0% | Unavailable (0 observed, 0 partial, 6 unavailable / 6 invocations) |
-| **Total** | **8** | **695,295** | **92,031** | **20,591,104** | **96.7%** | **Unavailable (0 observed, 0 partial, 8 unavailable / 8 invocations)** |
+| **gpt-6.1-sol** | 6 | 616,515 | 85,998 | 21,340,800 | 97.2% | Unavailable (0 observed, 0 partial, 6 unavailable / 6 invocations) |
+| **Total** | **8** | **699,835** | **93,996** | **22,195,072** | **96.9%** | **Unavailable (0 observed, 0 partial, 8 unavailable / 8 invocations)** |
 
 ## Final telemetry verification
 
-Refreshed using explicit Codex source, root session `01a19c78-4515-7170-93d3-178ecba3b8d1`, literal nonce `257707ff931b7fbe`, and type chore. All eight existing session IDs, source labels and parent links match the previous ledger: root plus seven children, with non-empty invocation facts. No source errors or missing children were reported; no other-harness sessions existed. Raw rollouts remain outside Git. The self-contained findings summary remains intact and detailed review files remain deleted. Post-extraction verification/commit/push calls are outside this snapshot.
+Refreshed at the user's request using explicit Codex source, root session `01a19c78-4515-7170-93d3-178ecba3b8d1`, literal nonce `a45c15eaba41a67c`, and type chore. Verified all eight ledger session IDs and parent links against actual source metadata: root plus seven children, each labeled Codex with non-empty invocation facts. All existing sessions are preserved. No source errors or missing children were reported; no other-harness sessions existed. Raw rollouts remain outside Git. The findings summary remains intact and detailed review files remain deleted. Post-extraction verification/commit/push calls are outside this snapshot.
