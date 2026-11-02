@@ -43,6 +43,10 @@ Finding details are now retained directly in the iteration reviews; both structu
 
 Finding-file removal checks pass: all 34 substantive findings, reviewer/model discovery and verification credit, and 122 execution-history rows remain in the reviews; no dangling current references remain. Runtime source is unchanged, so existing integrated application verification carries forward. Final native source verification preserves all 93 sessions with matching project, parent, model and usage facts.
 
+## Follow-up backlog
+
+AL-76 defines compact ledger JSON serialization and a source-independent format command with all-workspace, single-ticket and ticket-set selection, dry-run/check modes, value preservation and safe concurrent publication. The definition is under plan/to-do and marked Ready in the shared index. This is an AL-68 handoff task; AL-76 implementation requires its own dedicated session and developer workspace. No formatting command or application change is implemented here.
+
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 242
 - **Active Agent Duration:** 16h 59m (excludes user wait time)
