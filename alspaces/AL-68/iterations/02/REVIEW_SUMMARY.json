@@ -1,0 +1,212 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "AUTO-01",
+      "severity": 8,
+      "issue": "Retained baseline owners are not checked against the requested ticket.",
+      "reporters": [
+        {"persona": "reviewer-behavior", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "observed"},
+        {"persona": "reviewer-data", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "observed"},
+        {"persona": "reviewer", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "observed"}
+      ],
+      "disposition": "Fixed: validate retained owners against the requested ticket as well as project/source/store; pre-existing defect."
+    },
+    {
+      "finding_id": "AUTO-02",
+      "severity": 7,
+      "issue": "Continuous callbacks indefinitely reset publication debounce.",
+      "reporters": [
+        {"persona": "reviewer-behavior", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "observed"}
+      ],
+      "disposition": "Fixed: bound publication delay from the first outstanding request despite continuing callbacks."
+    },
+    {
+      "finding_id": "AUTO-03",
+      "severity": 6,
+      "issue": "Existing automatic worker continues writing after disable.",
+      "reporters": [
+        {"persona": "reviewer-behavior", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "observed"},
+        {"persona": "reviewer-behavior", "model": "gpt-6-luna", "effort": "medium", "identity_basis": "observed"},
+        {"persona": "reviewer-architecture", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "observed"},
+        {"persona": "reviewer", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "observed"},
+        {"persona": "reviewer", "model": "gpt-6-luna", "effort": "medium", "identity_basis": "observed"}
+      ],
+      "disposition": "Fixed: recheck configuration/installation before automatic writes; retain pending work on disable."
+    },
+    {
+      "finding_id": "AUTO-04",
+      "severity": 4,
+      "issue": "Status fails for a valid registry without publication_request table.",
+      "reporters": [
+        {"persona": "reviewer-behavior", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "observed"},
+        {"persona": "reviewer-architecture", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "observed"}
+      ],
+      "disposition": "Fixed: status treats a missing publication-request table as valid empty state."
+    },
+    {
+      "finding_id": "AUTO-05",
+      "severity": 0,
+      "issue": "Automatic path publishes first ledger with missing explicit title.",
+      "reporters": [
+        {"persona": "reviewer-behavior", "model": "gpt-6-luna", "effort": "medium", "identity_basis": "observed"}
+      ],
+      "disposition": "Refuted: the downstream required-title guard prevents the claimed successful publication."
+    },
+    {
+      "finding_id": "AUTO-06",
+      "severity": 8,
+      "issue": "Missing-leaf aliases allow ledger and summary destinations to overlap.",
+      "reporters": [
+        {"persona": "reviewer-data", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "observed"}
+      ],
+      "disposition": "Fixed: resolve existing physical ancestors before rejecting overlapping ledger/summary destinations."
+    },
+    {
+      "finding_id": "AUTO-07",
+      "severity": 5,
+      "issue": "In-flight regression accepts acknowledgement of unseen work.",
+      "reporters": [
+        {"persona": "reviewer-tests", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "observed"}
+      ],
+      "disposition": "Fixed test oracle: assert later work remains pending until processed; reject acknowledgement of unseen work."
+    },
+    {
+      "finding_id": "AUTO-08",
+      "severity": 6,
+      "issue": "Installed state paths silently diverge after YAML path changes.",
+      "reporters": [
+        {"persona": "reviewer-architecture", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "observed"}
+      ],
+      "disposition": "Fixed: discover installed state through owned anchors and diagnose configured-path drift."
+    },
+    {
+      "finding_id": "AUTO-09",
+      "severity": 5,
+      "issue": "Subdirectory generation selects process cwd instead of owning configuration root.",
+      "reporters": [
+        {"persona": "reviewer-architecture", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "observed"}
+      ],
+      "disposition": "Fixed: resolve generation from the owning configuration root when invoked in a subdirectory."
+    },
+    {
+      "finding_id": "AUTO-10",
+      "severity": 0,
+      "issue": "Configurable work budgets have no practical upper ceilings.",
+      "reporters": [
+        {"persona": "reviewer-architecture", "model": "gpt-6-luna", "effort": "medium", "identity_basis": "observed"}
+      ],
+      "disposition": "Refuted: finite caller-selected budgets and a subprocess deadline already bound work; no supported-load failure established."
+    },
+    {
+      "finding_id": "AUTO-11",
+      "severity": 8,
+      "issue": "Publication recovery trusts arbitrary journal artifact destinations.",
+      "reporters": [
+        {"persona": "reviewer", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "observed"},
+        {"persona": "reviewer", "model": "gpt-6-luna", "effort": "medium", "identity_basis": "observed"}
+      ],
+      "disposition": "Fixed: restrict journal recovery to caller-authorized artifacts and validate physical destinations."
+    },
+    {
+      "finding_id": "AUTO-12",
+      "severity": 7,
+      "issue": "Direct callback transcript path bypasses selected Codex source-store proof.",
+      "reporters": [
+        {"persona": "reviewer", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "observed"}
+      ],
+      "disposition": "Fixed: verify callback transcript membership in the selected source store."
+    },
+    {
+      "finding_id": "AUTO-13",
+      "severity": 3,
+      "issue": "Setup guidance contradicts automatic publication and optional reports.",
+      "reporters": [
+        {"persona": "reviewer", "model": "gpt-6-luna", "effort": "medium", "identity_basis": "observed"}
+      ],
+      "disposition": "Fixed: align setup guidance with automatic publication and optional detailed reports."
+    },
+    {
+      "finding_id": "AUTO-14",
+      "severity": 5,
+      "issue": "True project aliases cannot reinstall or remove owned installation.",
+      "reporters": [
+        {"persona": "reviewer", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "observed"}
+      ],
+      "disposition": "Fixed: use physical project identity consistently for reinstall/removal through aliases."
+    },
+    {
+      "finding_id": "AUTO-15",
+      "severity": 6,
+      "issue": "Installer resolves omitted source store from caller cwd instead of selected project.",
+      "reporters": [
+        {"persona": "reviewer", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "observed"}
+      ],
+      "disposition": "Fixed: resolve omitted source stores from the selected project configuration."
+    },
+    {
+      "finding_id": "AUTO-16",
+      "severity": 8,
+      "issue": "Dangling output symlink bypasses project destination containment.",
+      "reporters": [
+        {"persona": "reviewer", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "observed"}
+      ],
+      "disposition": "Fixed: reject dangling output aliases escaping physical project containment. Discovered during re-review."
+    },
+    {
+      "finding_id": "AUTO-17",
+      "severity": 7,
+      "issue": "Lexical cleaning precedes physical symlink traversal.",
+      "reporters": [
+        {"persona": "reviewer", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "observed"}
+      ],
+      "disposition": "Fixed: preserve physical symlink/parent traversal semantics before canonicalization. Discovered during re-review."
+    },
+    {
+      "finding_id": "AUTO-18",
+      "severity": 8,
+      "issue": "Dangling ledger leaf alias acquires independent publication lock.",
+      "reporters": [
+        {"persona": "reviewer-data", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "observed"}
+      ],
+      "disposition": "Fixed: derive publication locks from physical target identity for dangling aliases. Discovered during re-review."
+    },
+    {
+      "finding_id": "AUTO-19",
+      "severity": 7,
+      "issue": "Atomic artifact writers replace dangling aliases and strand publication identity.",
+      "reporters": [
+        {"persona": "reviewer", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "observed"},
+        {"persona": "reviewer-data", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "observed"}
+      ],
+      "disposition": "Fixed: preserve the resolved target identity during atomic writes through dangling aliases. Discovered during re-review."
+    },
+    {
+      "finding_id": "AUTO-20",
+      "severity": 7,
+      "issue": "Raw source symlink-dotdot traversal bypasses selected Codex store membership.",
+      "reporters": [
+        {"persona": "reviewer", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "observed"}
+      ],
+      "disposition": "Fixed: prove store membership after physical source traversal, including symlink/parent segments. Discovered during re-review."
+    },
+    {
+      "finding_id": "AUTO-21",
+      "severity": 6,
+      "issue": "Installer changes physical source-home semantics before emitting hooks.",
+      "reporters": [
+        {"persona": "reviewer", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "observed"}
+      ],
+      "disposition": "Fixed: preserve physical source-home semantics in installer-generated hook commands. Discovered during re-review."
+    },
+    {
+      "finding_id": "MERGE-01",
+      "severity": 6,
+      "issue": "Installation and binary repair reject release-candidate tags emitted by the repository workflow.",
+      "reporters": [
+        {"persona": "reviewer", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "observed"}
+      ],
+      "disposition": "Fixed: allow workflow RC tags containing + while rejecting unsafe tags; verify installed bundle and repair. Discovered during integration re-review."
+    }
+  ]
+}

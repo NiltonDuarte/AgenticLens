@@ -1,51 +1,67 @@
 # AL-68 automatic session capture and publication
 
-Implemented iteration02: installed Codex/OpenCode lifecycle integrations ask the agent for explicit ticket/title/type and schedule bounded native publication. Contributing agents no longer need to run generate. Manual generation remains recovery.
-
-## Integration with main
-
-Main commit99fbcd7 is merged through698aa45; corrected integration is7e09f41. Worktree-recoverable skill bootstrap and explicit binary repair coexist with additive automatic capture and protocol-aware rollback. The draft iteration03 requirements were preserved without implementing the user-PATH/version-pin proposal.
-
-Installation/distribution review by gpt-6.1-sol/high identified MERGE-01: setup rejected workflow-generated RC tags containing +. The fix retains unsafe-tag guards and adds installed-bundle/repair regression coverage. Final verification by gpt-6.1-sol/high and gpt-6-luna/medium approves; initial outcomes and reviewer/model attribution remain retained. Corrected full make passes, including14installation and15capture-distribution checks. No backend/frontend source changed; existing supported runtime boundaries carry forward.
-
-Final integration snapshot verifies 93 same-project Codex owners (67 independent roots and 26 native children), preserving all 89 prior owners. Raw source-prefix usage, model, parent and project comparisons pass; historical foreign-directory facts remain in Git history. Capture states remain conservative ({'pending': 55, 'current': 38}); verified published metrics do not imply universal callback coverage. Observability completion is the publication boundary; detailed report remains disabled and absent.
+Implemented iteration 02: additive Codex/OpenCode lifecycle integrations ask the agent for explicit ticket/title/type, then schedule bounded native publication. Contributing agents need no generate call; manual generation remains recovery. Ledger schema v5 is preserved.
 
 ## Delivered behavior
 
-- Domain: validated capture policy, deterministic metadata conflicts and cumulative exact-owner replacement preserve schema v5 and unknown source/cost facts. Completion records observability snapshot finalization independently of ticket or active-session completion.
-- Adapters: durable request generations, per-ticket/source cursors, source-proven independent children, exact physical project/store identity and publication locking coordinate concurrent sessions in one project. Different configured directories remain isolated even with the same ticket/store. Source errors preserve accepted facts and remain failed/pending.
-- CLI/process: native periodic/coalesced worker, idle/lifetime bounds, crash/supported-event restart, disable/uninstall checks, state-drift diagnosis and manual recovery. Authorized journal recovery preserves a prior accepted ledger/report/summary set across interruption; it does not promise simultaneous visibility or physical power-loss durability.
-- Setup/configuration: additive owned Codex/OpenCode installation, compatible native handler checks, rollback, true-alias support and preserved user hooks. Shared/local YAML plus CLI resolve one policy. Minimal project-local state is default; an explicitly selected external state base is project-scoped. Detailed report is retained by default and may be disabled without deleting prior reports. No mandatory Git/CI hooks or external daemon/runtime.
+- Domain: validated capture policy, deterministic metadata conflicts and cumulative exact-owner replacement preserve unknown source/cost facts. Completion records observability snapshot finalization independently of ticket or active-session completion.
+- Adapters: durable request generations, per-ticket/source cursors, source-proven children, exact physical project/store identity and publication locking coordinate concurrent sessions. Different configured directories remain isolated even with the same ticket/store. Source errors preserve accepted facts and remain failed/pending.
+- CLI/process: a periodic/coalesced native worker has idle/lifetime bounds, supported-event restart, disable/uninstall checks, state-drift diagnostics and manual recovery. Authorized journal recovery preserves accepted artifacts across interruption; it does not promise simultaneous visibility or physical power-loss durability.
+- Setup/configuration: additive owned installation preserves user hooks and checks handler compatibility with rollback. Shared/local YAML and CLI resolve one policy. Minimal project-local state is default; an explicitly selected external base is project-scoped. Runtime detailed-report support remains optional; this repository disables it and its capture_report.json is absent. No mandatory Git/CI hooks or external daemon/runtime.
+
+## Integration with main
+
+Main 99fbcd7 was integrated through 698aa45 and corrected at 7e09f41. Worktree skill bootstrap and explicit binary repair coexist with automatic capture and protocol-aware rollback. Installation/distribution reviewer gpt-6.1-sol/high discovered MERGE-01: setup rejected workflow RC tags containing +. Both gpt-6.1-sol/high and gpt-6-luna/medium verified the correction, installed-bundle/repair oracle and unsafe-tag rejection. The initial Luna approval and Sol changes-requested outcome remain historical, separate from later verification.
+
+Main 8f0fd4f (GEN-16 compact review retention) was merged through 6a6b3cc. Its REVIEW_SUMMARY.json format replaces this branch's interim Markdown-only retention policy. Guidance preserves private working evidence, explicit model attribution and readable candidate revisions without mandatory report/prompt/policy hashes. This latest merge and adaptation change documentation only; existing integrated application verification carries forward.
 
 ## Review and verification
 
-Nineteen confirmed iteration02 defects/oracle gaps were corrected; two claims were refuted with evidence. Findings, shared reviewer/model credit, cancelled outcomes and source-observation distinctions remain in iteration02 REVIEW.md. Detailed report bodies and logs remain in Git history. Candidate07 is approved by paired affected reviewers, with explicit candidate06 carry-forward for unchanged boundaries. Final integrated `make` passed after implementation commit55b4dd4 and upstream integration with all58 reviewed source paths unchanged: Go race/vet,14distribution checks,781frontend tests across35files, embedded frontend build and four platform builds. Final native telemetry contains89 independently verified same-project owners; PR delivery follows.
+Iteration 01: all 12 confirmed CAP findings fixed on candidate-04. Paired behavior, data, architecture, tests, security and release reviewers (gpt-6.1-sol/high and gpt-6-luna/medium) verified their assigned corrections. Their final overall INCOMPLETE verdicts reflected missing real Codex evidence; the parent subsequently closed the required observed-path gate with the user's normal trust review and real exec/resume smoke. Final scoped outcome: APPROVED. Integrated make passed at 9db4672 and ba0b50a, including Go vet/race, frontend typecheck/lint/build, 781 tests / 35 files, 14 distribution checks and native builds.
 
-Real runtime evidence is bounded to Linux Codex0.166 and OpenCode1.19.5. Corrected source comparisons establish independent roots/native children, same-ticket/store directory separation, automatic publication, exact source usage/parents/models and report pairing. Codex trust was reviewed by the user. SubagentStart observation, interrupted children before Stop, other native platforms, a real forty-minute run and physical power-loss behavior remain unverified. Synthetic source growth/crash fixtures are identified separately.
+Iteration 02: 19 confirmed AUTO defects/oracle gaps fixed and AUTO-05/AUTO-10 refuted. Final scoped outcome: APPROVED on candidate-02-07 (de31cb1), implementation 55b4dd4. Behavior/data/architecture/security paired approvals carry from candidate 06 over unchanged boundaries; release/tests paired approvals cover candidate 07. Verification actors are the dedicated reviewer-behavior/data/architecture/tests personas and generic reviewer with security or release responsibility, each on gpt-6.1-sol/high and gpt-6-luna/medium. These verification assignments do not grant discovery credit. Final integrated make at 7e09f41 passed backend race/vet, frontend typecheck/lint/build and 781 tests / 35 files, 14 installation checks, 15 capture-distribution checks, 6 release-workflow checks and Linux/Darwin builds.
 
-## Workspace and history
+Real runtime evidence is bounded to Linux Codex 0.166.0 and OpenCode 1.19.5. Iteration 01 verified Codex callback/context/request/agent-bind exchanges, independent roots and a completed native child after human trust review. Corrected iteration 02 evidence includes three Codex roots/two completed children and two OpenCode same-ticket/store directories with disjoint 12/3 owners. Source project/session/parent/model/usage and available costs were compared; contributing agents did not run generate. No trust bypass was used.
 
-Original CONTRACT and iteration01 evidence remain frozen. The unapproved iteration03 draft is preserved separately and excluded from this implementation. Current scope is approved iteration02; no report removal or Git-hook proposal from iteration03 was implemented.
-
-Final telemetry will use exact verified same-project source sessions. Historical cross-directory smoke facts remain in Git history and must not be relabeled into this project's strict ledger. Raw transcripts remain outside Git.
-
-Strict-scope final telemetry preparation verified89 actual Codex sessions in this physical project. The prior35 same-project owners must be retained;7 prior cross-directory smoke owners (including4OpenCode sessions) remain in historical committed evidence instead of being relabelled into this ledger. Source metadata was available for every prior owner.
-
-Final source proof validates65independent roots and24native children, including all35prior same-project owners. Metrics match authoritative source prefixes; ledger/report pairing was verified before the optional report was removed. Conservative pending coverage states remain visible for full-snapshot precedence; source metric verification is not a universal completeness claim. Active-session work after the final snapshot is outside that snapshot.
+Codex SubagentStart delivery, active/interrupted children before Stop, other versions/interfaces/platforms (including OpenCode v2), actual forty-minute elapsed operation and physical power-loss behavior remain unverified. Synthetic growth/crash fixtures and cross-builds do not establish those runtime claims. Supported scope does not promise universal harness capture or protection from hostile concurrent filesystem mutation.
 
 ## Compact review retention
 
-Removed both large review-run archives from the current tree. Iteration01 retains 12 findings and 48 run outcomes; iteration02 retains 22 findings and 74 run outcomes, including the main-integration review. REVIEW.md carries direct reviewer/model discovery and verification credit so no deleted archive lookup is needed. Detailed report bodies/logs remain in Git history at 0e9cb88. Raw logs and full reports are no longer required committed deliverables. This documentation-only change preserves application source, model coverage, findings, dispositions and verification limits.
+Permanent findings: [iteration 01 REVIEW_SUMMARY.json](iterations/01/REVIEW_SUMMARY.json) and [iteration 02 REVIEW_SUMMARY.json](iterations/02/REVIEW_SUMMARY.json). Together they retain 34 candidates, all 49 distinct reporting persona/model/effort tuples, shared discovery and the two explicit refutations. All discovery identities are source-observed; specialist annotations resolve to the actual generic reviewer persona. CAP-12, AUTO-16–21 and MERGE-01 retain their re-review/integration discovery origin. Verification actors remain above, separate from discovery.
 
-Cleanup verification preserves all 34 findings and 122 original review-run outcomes, including requested/acknowledged/observed reviewer settings and separate discovery/verification credit. Skill validation, current references and whitespace checks pass. Existing integrated application checks carry forward because runtime source is unchanged. Final native telemetry verifies all 93 sessions and preserves all 93 prior owners; source usage/model/project/parent comparisons pass. No detailed report or review-run archive was recreated.
+Severity was individually reassessed from documented supported impact and reachable triggers, not translated mechanically from P1/P2. Scores describe the historical defect before correction, not remaining risk: data corruption/ownership or unsafe writes score 8; capture loss, store-boundary violations or identity failures score 7; operational/configuration disruption scores 4–6; contradictory guidance scores 3. AUTO-05 and AUTO-10 score 0 because the claimed defect was refuted, not because a confirmed defect was fixed. No unsupported remote-exploit or catastrophic-loss claim was used to inflate scores.
 
-Finding details are now retained directly in the iteration reviews; both structured finding files were removed. All 34 finding IDs, original validity/correction status, locations, recorded triggers/consequences, disposition evidence and resolutions remain alongside discovery/verification credit and all 122 review outcomes.
+The following compact history accounts for all 122 runs, including no-new-findings approvals and cancelled/incomplete work. Cancellation is no approval; requested settings for unobserved cancelled runs remain unverified. Detailed per-run identities/evidence and original outcomes remain in Git history at b56e5a0 (consolidated reviews), 0360839 (finding actors) and 0e9cb88 (original full reports). These are historical references, not required runtime files.
 
-Finding-file removal checks pass: all 34 substantive findings, reviewer/model discovery and verification credit, and 122 execution-history rows remain in the reviews; no dangling current references remain. Runtime source is unchanged, so existing integrated application verification carries forward. Final native source verification preserves all 93 sessions with matching project, parent, model and usage facts.
+| Reviewed candidate | Changes requested | Approved | Completed incomplete | Cancelled |
+| --- | ---: | ---: | ---: | ---: |
+| iteration 01 candidate-01 | 9 | 0 | 3 | 0 |
+| iteration 01 candidate-02 | 3 | 0 | 0 | 9 |
+| iteration 01 candidate-03 | 2 | 0 | 1 | 9 |
+| iteration 01 candidate-04 | 0 | 0 | 12 | 0 |
+| candidate-02-01 | 10 | 2 | 0 | 0 |
+| candidate-02-02 | 1 | 3 | 0 | 8 |
+| candidate-02-03 | 2 | 2 | 0 | 6 |
+| candidate-02-04 | 2 | 1 | 0 | 7 |
+| candidate-02-05 | 1 | 3 | 0 | 6 |
+| candidate-02-06 | 1 | 10 | 0 | 1 |
+| candidate-02-07 | 0 | 4 | 0 | 0 |
+| 698aa45 | 1 | 1 | 0 | 0 |
+| 7e09f41 | 0 | 2 | 0 | 0 |
+
+Completed verbose REVIEW.md files and bulk archives are removed after validating compact findings and attribution. Historical unrelated ticket artifacts remain untouched. Parent verification checks exact finding IDs, all reporter tuples, refutations, numeric severity range, JSON parsing, references and skill validity. Runtime source is unchanged, so the integrated make evidence above is reused.
+
+Post-GEN-16 integration verification: full `make` passed on 6a6b3cc plus this documentation maintenance diff: backend race/vet, frontend typecheck/lint/build, 781 tests in 35 files, 6 release-workflow, 14 installation and 15 capture-distribution checks, and all four Linux/Darwin builds. Both skill validators, exact finding/reporter preservation checks and whitespace/current-link checks pass. No application source changed.
+
+## Telemetry and remaining scope
+
+The latest verified snapshot contains 93 same-project Codex owners (67 roots/26 native children), preserving all 93 prior owners. Direct source-prefix model/usage/project/parent comparisons pass. Seven prior foreign-directory smoke owners remain historical; they are not relabelled into this project's ledger. Coverage states remain conservative (55 pending / 38 current), with no failed/unassigned registrations. Pending alone does not prove missing published metrics. Work after the final snapshot is outside its boundary; raw transcripts remain outside Git.
+
+Original CONTRACT remains frozen. Iteration 03 is an unapproved draft: shared user-PATH wrapper, YAML version pin, user-level native cache, summary-only runtime output, YAML state defaults/local path overrides, optional warning-only Git hook and early registration/setup verification are not implemented here. This branch's local detailed-report opt-out/removal does not claim the broader iteration 03 runtime removal is delivered.
 
 ## Follow-up backlog
 
-AL-76 defines compact ledger JSON serialization and a source-independent format command with all-workspace, single-ticket and ticket-set selection, dry-run/check modes, value preservation and safe concurrent publication. The definition is under plan/to-do and marked Ready in the shared index. This is an AL-68 handoff task; AL-76 implementation requires its own dedicated session and developer workspace. No formatting command or application change is implemented here.
+AL-76 defines compact ledger JSON serialization and a source-independent format command with all-workspace, single-ticket and ticket-set selection, dry-run/check modes, value preservation and safe concurrent publication. Its specification is Ready under plan/to-do. Implementation requires its own dedicated session; no format command is implemented in AL-68.
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 242

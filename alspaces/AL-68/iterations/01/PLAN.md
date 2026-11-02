@@ -34,7 +34,7 @@ Both downloader help commands were executed. Binary help could not run because b
 
 ## Ownership and boundaries
 
-Planner owns CONTRACT.md and this PLAN.md only. Parent owns SUMMARY.md, PULL_REQUEST.md, consolidated REVIEW.md, index/spec lifecycle, telemetry, commits/integration and PR. Coder owns application/runtime/setup documentation paths above plus new capture domain/adapters/command/glue files, with exact paths recorded before dispatch. Tester owns assigned relevant test files and a private temporary report, coordinates shared files with coder and never fixes product code or publishes. Reviewers own only private temporary reports. The parent alone owns the committed archive; the roster below identifies the historical archived outputs. All agents share the checkout and must preserve unrelated work. Each brief includes baseline, contract, plan and current diff; no reviewer may edit production or tests.
+Planner owns CONTRACT.md and this PLAN.md only. Parent owns SUMMARY.md, PULL_REQUEST.md, consolidated REVIEW.md, index/spec lifecycle, telemetry, commits/integration and PR. Coder owns application/runtime/setup documentation paths above plus new capture domain/adapters/command/glue files, with exact paths recorded before dispatch. Tester owns assigned relevant test files and a private temporary report, coordinates shared files with coder and never fixes product code or publishes. Reviewers own only private temporary reports. The parent owns compact retained findings and the summary; the roster below records historical review assignments. All agents share the checkout and must preserve unrelated work. Each brief includes baseline, contract, plan and current diff; no reviewer may edit production or tests.
 
 ## Verification by regression and current coverage owner
 
@@ -45,7 +45,7 @@ Planner owns CONTRACT.md and this PLAN.md only. Parent owns SUMMARY.md, PULL_REQ
 - Destructive setup: use actual Go install/remove commands against self-contained temporary repositories with existing user hooks. Exercise dry-run/no writes, fresh/repeated install, compatible upgrade, user edits, rollback, disabling/removal, missing handlers, configured paths/spaces and unsupported/untrusted capabilities. Exercise both downloader entrypoints with local prebuilt artifacts and wrapper update compatibility; use advertised platform fixture cases and record unavailable native executions explicitly.
 - Real smoke: on every claimed harness/interface path, launch a native root/child and two independent roots including reviewer sessions without skill edits. Explicitly bind independent sessions, verify a concurrent unbound/other-ticket root stays separate, resume and trigger checkpoints. Compare exact IDs, model/effort where available, usage, costs/unknowns, preserved other-source owners and unresolved links against real source records. Test each claimed OpenCode family separately. A config file, fixture or zero-exit callback cannot substitute for this evidence. Current T3/native-child behavior and secondary platform/version environments are unverified.
 
-Run focused Go packages with race checks after preparing embedded assets using the canonical build. Run relevant installer/plugin verification in existing harness runtime; TypeScript glue receives strict typechecking without requiring tooling in adopting repositories. Required final gate is make, which installs dependencies, checks/lints, tests and builds. Frontend product code is outside scope; generated embedded assets remain ignored under current policy. Reuse valid unchanged checks; rerun affected checks after fixes and make after integration. Record tested revision/fingerprint, environment and exact skips in the temporary tester report; the parent archives it and records current results in consolidated REVIEW.md.
+Run focused Go packages with race checks after preparing embedded assets using the canonical build. Run relevant installer/plugin verification in existing harness runtime; TypeScript glue receives strict typechecking without requiring tooling in adopting repositories. Required final gate is make, which installs dependencies, checks/lints, tests and builds. Frontend product code is outside scope; generated embedded assets remain ignored under current policy. Reuse valid unchanged checks; rerun affected checks after fixes and make after integration. Record tested revision/fingerprint, environment and exact skips in the temporary tester report; the parent records current results in the working review, then retains verification in SUMMARY.md.
 
 ## Independent review roster
 
@@ -53,14 +53,14 @@ All runs use the same frozen base/head or content fingerprint, contract and test
 
 | Persona | Risk and inspect boundary | Archived first-pass run IDs |
 | --- | --- | --- |
-| reviewer-behavior | Install through receive/bind/reconcile/generate, independent roots and supported callback paths | `behavior-sol-01` in REVIEW.md; `behavior-luna-01` in REVIEW.md |
-| reviewer-data | Exact ownership, snapshot precedence, preservation, crash recovery and publication consistency | `data-sol-01` in REVIEW.md; `data-luna-01` in REVIEW.md |
-| reviewer-architecture | FCIS, embedded version compatibility, source reuse and bounded work | `architecture-sol-01` in REVIEW.md; `architecture-luna-01` in REVIEW.md |
-| reviewer-tests | Regression oracles, both source families, installer fixtures and honest smoke limits | `tests-sol-01` in REVIEW.md; `tests-luna-01` in REVIEW.md |
-| reviewer with security focus | Hook stdin/process trust boundary, no secrets/transcript persistence, safe executable/path handling and trust preservation | `security-sol-01` in REVIEW.md; `security-luna-01` in REVIEW.md |
-| reviewer with build/release focus | Packaged copies/direct setup paths, native handler availability, upgrade rollback and standalone distribution | `release-sol-01` in REVIEW.md; `release-luna-01` in REVIEW.md |
+| reviewer-behavior | Install through receive/bind/reconcile/generate, independent roots and supported callback paths | gpt-6.1-sol/high and gpt-6-luna/medium; outcomes in SUMMARY.md |
+| reviewer-data | Exact ownership, snapshot precedence, preservation, crash recovery and publication consistency | gpt-6.1-sol/high and gpt-6-luna/medium; outcomes in SUMMARY.md |
+| reviewer-architecture | FCIS, embedded version compatibility, source reuse and bounded work | gpt-6.1-sol/high and gpt-6-luna/medium; outcomes in SUMMARY.md |
+| reviewer-tests | Regression oracles, both source families, installer fixtures and honest smoke limits | gpt-6.1-sol/high and gpt-6-luna/medium; outcomes in SUMMARY.md |
+| reviewer with security focus | Hook stdin/process trust boundary, no secrets/transcript persistence, safe executable/path handling and trust preservation | gpt-6.1-sol/high and gpt-6-luna/medium; outcomes in SUMMARY.md |
+| reviewer with build/release focus | Packaged copies/direct setup paths, native handler availability, upgrade rollback and standalone distribution | gpt-6.1-sol/high and gpt-6-luna/medium; outcomes in SUMMARY.md |
 
-Parent owns iterations/01/REVIEW.md, finding attribution, deduplication, dispositions and final verdict. Specialist briefs load only their dedicated focus/common rules, not sibling conclusions. Every report identifies its model/effort and reviewed revision. Product changes remain frozen during each review wave.
+Parent owns the working consolidated review, permanent REVIEW_SUMMARY.json, finding attribution, deduplication, dispositions and final verdict. Specialist briefs load only their dedicated focus/common rules, not sibling conclusions. Every report identifies its model/effort and reviewed revision. Product changes remain frozen during each review wave.
 
 ## Stop conditions and approval
 
@@ -83,3 +83,7 @@ Acceptance delta: verify lossless archival, resolvable current references, all f
 ## Documentation steering: simplify review metadata
 
 Source: the user accepted the recommendation to remove review hash bookkeeping while retaining the runtime ledger/report pairing. This is a correction within iteration 01. Current records use readable candidate labels linked to exact archived manifests; report references use paths and JSON pointers. Original archived bodies and source commit references remain intact. Superseded decision: mandatory persistent hashes for every report, policy, persona and prompt. Preserved guarantees: all findings, reviewer/model/effort/phase credit, run outcomes, reviewed candidate associations, byte-identical historical evidence, runtime digest and schema v5. Verification impact: direct byte and provenance/reference comparisons plus skill validation; unchanged product checks carry forward.
+
+## Current retention acceptance delta
+
+Source: the user requested main's compact structured review policy and individual severity reassessment. Follow [completed review retention](../../../../.agents/skills/agentic-lens-review/references/parallel-review.md#completed-review-retention): retain REVIEW_SUMMARY.json and root [approval/verification history](../../SUMMARY.md#compact-review-retention), then remove completed detailed reviews. This supersedes earlier Markdown-only/full-archive rules. Verify all candidate IDs, reporter tuples, refutations, JSON and references; preserve runtime acceptance and implementation approval boundaries.
