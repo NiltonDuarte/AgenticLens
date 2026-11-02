@@ -1116,6 +1116,61 @@ func TestHydrateWorkspaceEventsMixedSourcesPreserveSQLiteDetailsOverCommittedEch
 			if string(after) != string(before) {
 				t.Fatal("source enrichment mutated the committed input")
 			}
+
+			t.Run("failed persona lookup retains baseline and independent source", func(t *testing.T) {
+				// An accepted event-only session has no invocation role to mask
+				// the distinction between unavailable metadata and Unknown.
+				ledger.Facts.Sessions[0].Invocations = nil
+				ledger.Facts.Sessions[0].Events[0].Role = "reviewer"
+				accepted, err := json.Marshal(ledger)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := db.Exec(`ALTER TABLE session DROP COLUMN agent`); err != nil {
+					t.Fatal(err)
+				}
+				messages, _, err := hook.FetchSessionTraceMulti([]string{"sqlite-session"})
+				if err != nil || len(messages) != 1 {
+					t.Fatalf("trace unavailable instead of persona-only failure: %v %v", messages, err)
+				}
+				degraded, err := service.HydrateWorkspaceEvents(context.Background(), "FIX-12", ledger)
+				if err != nil {
+					t.Fatal(err)
+				}
+				wantSource := domain.DataSourceCommittedLedger
+				if tc.includeCodex {
+					wantSource = domain.DataSourceLocalCodex
+				}
+				if degraded.IsHydrated != tc.includeCodex || degraded.DataSource != wantSource || !degraded.IncludesBaseline {
+					t.Fatalf("incorrect partial-source provenance: %+v", degraded)
+				}
+				var sqliteEvents []domain.EventFact
+				codexCount := 0
+				for _, event := range degraded.Events {
+					if event.SessionID == "sqlite-session" {
+						sqliteEvents = append(sqliteEvents, event)
+					} else if event.SessionID == "codex-session" {
+						codexCount++
+					} else {
+						t.Errorf("unexpected source owner: %+v", event)
+					}
+				}
+				wantSQLite := domain.SortEvents(domain.AgenticFactLedger{Sessions: ledger.Facts.Sessions[:1]}.EventFacts())
+				if !reflect.DeepEqual(sqliteEvents, wantSQLite) {
+					t.Fatalf("failed metadata read rewrote recorded SQLite events: got=%+v want=%+v", sqliteEvents, wantSQLite)
+				}
+				if (tc.includeCodex && codexCount != 1) || (!tc.includeCodex && codexCount != 0) {
+					t.Fatalf("independent Codex source lost or duplicated: %+v", degraded.Events)
+				}
+				unchanged, err := json.Marshal(ledger)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if string(unchanged) != string(accepted) {
+					t.Fatal("metadata failure mutated accepted input")
+				}
+			})
+
 		})
 	}
 }
@@ -1268,6 +1323,95 @@ func TestHydrateWorkspaceEvents_SessionRoleMapUsesSessionID(t *testing.T) {
 	if resp.Events[0].Role != "planner" {
 		t.Errorf("expected role 'planner' from sessionRoleMap, got %q", resp.Events[0].Role)
 	}
+
+	writer, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer writer.Close()
+
+	for _, tc := range []struct{ name, stored, sessionAgent, first, second, want string }{
+		{"unknown recovered from assistant", "", "", "tester", "tester", "tester"},
+		{"legacy root resolved from assistant", "RootAgent", "", "reviewer", "reviewer", "reviewer"},
+		{"legacy child resolved from assistant", "UnassignedSubAgent", "", "coder", "", "coder"},
+		{"stale named persona recovered", "planner", "", "reviewer", "reviewer", "reviewer"},
+		{"explicit raw source wins mapping", "RootAgent", "Build", "reviewer", "coder", "Build"},
+		{"conflicting assistants remain unknown", "planner", "", "planner", "coder", ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ledger.Facts.Sessions[0].Invocations[0].Role = domain.AgentRole(tc.stored)
+			if _, err := writer.Exec(`UPDATE session SET agent=? WHERE id='s_custom'`, tc.sessionAgent); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := writer.Exec(`UPDATE message SET data=? WHERE id='m_custom'`, fmt.Sprintf(`{"role":"assistant","agent":%q,"content":"msg"}`, tc.first)); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := writer.Exec(`INSERT OR REPLACE INTO message(id,session_id,time_created,time_updated,data) VALUES('m_custom_second','s_custom',?,?,?)`, now+1, now+1, fmt.Sprintf(`{"role":"assistant","agent":%q,"content":"msg2"}`, tc.second)); err != nil {
+				t.Fatal(err)
+			}
+			for _, match := range []string{"stable source ID", "unique legacy occurrence", "new source occurrence"} {
+				t.Run(match, func(t *testing.T) {
+					ledger.Facts.Sessions[0].Events = []domain.SessionEventFact{{EventID: "committed-only", Timestamp: time.UnixMilli(now - 1).UTC().Format("2006-01-02T15:04:05.000000+00:00"), Turn: 0, Role: domain.RoleRootAgent, EventType: domain.EventTypeCompaction, Status: "completed"}}
+					if match != "new source occurrence" {
+						id := ""
+						if match == "stable source ID" {
+							id = "opencode:message:m_custom"
+						}
+						ledger.Facts.Sessions[0].Events = append(ledger.Facts.Sessions[0].Events, domain.SessionEventFact{EventID: id, Timestamp: time.UnixMilli(now).UTC().Format("2006-01-02T15:04:05.000000+00:00"), Turn: 1, Role: domain.AgentRole(tc.stored), EventType: domain.EventTypeTurnMessage, Status: "completed"})
+					}
+					before, err := json.Marshal(ledger)
+					if err != nil {
+						t.Fatal(err)
+					}
+					result, err := service.HydrateWorkspaceEvents(context.Background(), "AL-CUSTOM", ledger)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if !result.IsHydrated || !result.IncludesBaseline || len(result.Events) != 3 {
+						t.Fatalf("hydration lost or duplicated occurrences: %+v", result)
+					}
+					matched, appended, retained := 0, 0, 0
+					for _, event := range result.Events {
+						if event.EventID == "committed-only" {
+							retained++
+							if event.Role != domain.RoleRootAgent {
+								t.Errorf("unmatched baseline persona changed: %+v", event)
+							}
+							continue
+						}
+						if event.EventID == "opencode:message:m_custom" {
+							matched++
+						} else if event.EventID == "opencode:message:m_custom_second" {
+							appended++
+						} else {
+							t.Errorf("unexpected source identity: %+v", event)
+						}
+						if string(event.Role) != tc.want || event.PromptContent == nil {
+							t.Errorf("hydrated source role/payload=%+v want role=%q", event, tc.want)
+						}
+					}
+					if matched != 1 || appended != 1 || retained != 1 {
+						t.Fatalf("occurrence ownership changed: %+v", result.Events)
+					}
+					after, err := json.Marshal(ledger)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if string(before) != string(after) {
+						t.Fatal("read projection mutated stored facts")
+					}
+					var unavailable *live.LiveService
+					fallback, err := unavailable.HydrateWorkspaceEvents(context.Background(), "AL-CUSTOM", ledger)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if fallback.IsHydrated || !reflect.DeepEqual(fallback.Events, domain.SortEvents(ledger.Facts.EventFacts())) {
+						t.Fatalf("unavailable source rewrote baseline: %+v", fallback)
+					}
+				})
+			}
+		})
+	}
 }
 
 func TestHydrateWorkspaceEvents_CodexFailsClosedWhenAnyRootIsMissing(t *testing.T) {
@@ -1377,7 +1521,7 @@ func TestHydrateWorkspaceEvents_SourceLessLedgerStaysUnhydrated(t *testing.T) {
 }
 
 func TestHydrationFailuresRetainRecordedEventsAndLedgerBytes(t *testing.T) {
-	for _, mode := range []string{"nil service", "nil hook", "missing session", "closed database", "missing tables", "empty SQLite session", "missing Codex home", "missing Codex rollout", "empty Codex rollout"} {
+	for _, mode := range []string{"nil service", "nil hook", "missing session", "closed database", "missing tables", "missing persona column", "empty SQLite session", "missing Codex home", "missing Codex rollout", "empty Codex rollout"} {
 		t.Run(mode, func(t *testing.T) {
 			root := t.TempDir()
 			cfg := testProjectConfig()
@@ -1394,6 +1538,9 @@ func TestHydrationFailuresRetainRecordedEventsAndLedgerBytes(t *testing.T) {
 				},
 				Anomalies: []domain.Anomaly{{RuleID: domain.RuleToolRetryStreak, Severity: domain.SeverityWarning}},
 			}}}
+			if mode == "missing persona column" {
+				facts.Sessions[0].Events[1] = domain.SessionEventFact{EventID: "opencode:message:recorded-message", Timestamp: "2026-10-29T10:00:00.000000+00:00", Turn: 1, Role: "reviewer", EventType: domain.EventTypeTurnMessage, Status: "completed", ContextTokens: 1200}
+			}
 			ledger := domain.AgenticMetricsLedger{Facts: facts}
 			before, err := json.Marshal(facts)
 			if err != nil {
@@ -1424,7 +1571,7 @@ func TestHydrationFailuresRetainRecordedEventsAndLedgerBytes(t *testing.T) {
 				service = live.NewLiveServiceWithCodexHome(nil, cfg, home)
 			default:
 				dbPath := createTestDBFile(t)
-				if mode == "missing tables" || mode == "empty SQLite session" {
+				if mode == "missing tables" || mode == "missing persona column" || mode == "empty SQLite session" {
 					db, err := sql.Open("sqlite", dbPath)
 					if err != nil {
 						t.Fatal(err)
@@ -1432,6 +1579,11 @@ func TestHydrationFailuresRetainRecordedEventsAndLedgerBytes(t *testing.T) {
 					statement := "DROP TABLE message; DROP TABLE part;"
 					if mode == "empty SQLite session" {
 						statement = `INSERT INTO session (id, parent_id, agent, model, title, time_created, time_updated) VALUES ('recorded-session', NULL, 'coder', 'test-model', 'FIX-12', 1, 1)`
+					}
+					if mode == "missing persona column" {
+						statement = `INSERT INTO session(id,agent,time_created,time_updated) VALUES('recorded-session','planner',1,1);
+INSERT INTO message VALUES('recorded-message','recorded-session',1793268000000,1793268000000,'{"role":"assistant","content":"available trace"}');
+ALTER TABLE session DROP COLUMN agent;`
 					}
 					if _, err := db.Exec(statement); err != nil {
 						t.Fatal(err)
@@ -1454,6 +1606,12 @@ func TestHydrationFailuresRetainRecordedEventsAndLedgerBytes(t *testing.T) {
 							t.Error(err)
 						}
 					})
+				}
+				if mode == "missing persona column" {
+					messages, _, err := hook.FetchSessionTraceMulti([]string{"recorded-session"})
+					if err != nil || len(messages) != 1 {
+						t.Fatalf("fixture did not reach persona-only failure: messages=%v err=%v", messages, err)
+					}
 				}
 				service = live.NewLiveService(hook, cfg)
 			}
@@ -1541,6 +1699,27 @@ func TestHydrateWorkspaceEvents_FallbackWhenSessionNotFound(t *testing.T) {
 	if !reflect.DeepEqual(resp.Events, ledger.Facts.EventFacts()) {
 		t.Fatalf("missing local session discarded recorded facts: %#v", resp.Events)
 	}
+
+	for _, legacy := range []domain.AgentRole{domain.RoleRootAgent, domain.RoleUnassignedSubAgent} {
+		t.Run(string(legacy), func(t *testing.T) {
+			for i := range ledger.Facts.Sessions {
+				for j := range ledger.Facts.Sessions[i].Invocations {
+					ledger.Facts.Sessions[i].Invocations[j].Role = legacy
+				}
+				for j := range ledger.Facts.Sessions[i].Events {
+					ledger.Facts.Sessions[i].Events[j].Role = legacy
+				}
+			}
+			fallback, err := service.HydrateWorkspaceEvents(ctx, "LEGACY-UNKNOWN", ledger)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if fallback.IsHydrated || !reflect.DeepEqual(fallback.Events, ledger.Facts.EventFacts()) {
+				t.Fatalf("unavailable source rewrote legacy persona: %+v", fallback)
+			}
+		})
+	}
+
 }
 
 func TestHydrateWorkspaceEvents_HostileDegradationAndFailureModes(t *testing.T) {
@@ -2496,20 +2675,20 @@ func TestHydrateWorkspaceEvents_FallbackRoleBehaviorForNamelessSessions(t *testi
 		sessionRoles[ev.SessionID] = ev.Role
 	}
 
-	// Root nameless sessions must resolve to RoleRootAgent ("RootAgent")
-	if r, ok := sessionRoles["s_root_null"]; !ok || r != domain.RoleRootAgent {
-		t.Errorf("s_root_null: expected %q, got %q (found=%v)", domain.RoleRootAgent, r, ok)
+	// Unknown root and child personas remain blank regardless of ancestry.
+	if r, ok := sessionRoles["s_root_null"]; !ok || r != domain.AgentRole("") {
+		t.Errorf("s_root_null: expected %q, got %q (found=%v)", domain.AgentRole(""), r, ok)
 	}
-	if r, ok := sessionRoles["s_root_ws"]; !ok || r != domain.RoleRootAgent {
-		t.Errorf("s_root_ws: expected %q, got %q (found=%v)", domain.RoleRootAgent, r, ok)
+	if r, ok := sessionRoles["s_root_ws"]; !ok || r != domain.AgentRole("") {
+		t.Errorf("s_root_ws: expected %q, got %q (found=%v)", domain.AgentRole(""), r, ok)
 	}
 
-	// Child nameless sessions must resolve to RoleUnassignedSubAgent ("UnassignedSubAgent")
-	if r, ok := sessionRoles["s_child_null"]; !ok || r != domain.RoleUnassignedSubAgent {
-		t.Errorf("s_child_null: expected %q, got %q (found=%v)", domain.RoleUnassignedSubAgent, r, ok)
+	// Child ancestry does not manufacture a persona.
+	if r, ok := sessionRoles["s_child_null"]; !ok || r != domain.AgentRole("") {
+		t.Errorf("s_child_null: expected %q, got %q (found=%v)", domain.AgentRole(""), r, ok)
 	}
-	if r, ok := sessionRoles["s_child_ws"]; !ok || r != domain.RoleUnassignedSubAgent {
-		t.Errorf("s_child_ws: expected %q, got %q (found=%v)", domain.RoleUnassignedSubAgent, r, ok)
+	if r, ok := sessionRoles["s_child_ws"]; !ok || r != domain.AgentRole("") {
+		t.Errorf("s_child_ws: expected %q, got %q (found=%v)", domain.AgentRole(""), r, ok)
 	}
 }
 
@@ -2522,7 +2701,7 @@ func TestLiveTraceSnapshotReuseAndInPlaceInvalidation(t *testing.T) {
 	defer writer.Close()
 	now := time.Now().UnixMilli()
 	if _, err := writer.Exec(`INSERT INTO session (id, title, time_created, time_updated) VALUES ('live', 'live', ?, ?);
- INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('turn', 'live', ?, ?, '{"role":"assistant","content":"before","tokens":{"input":10}}');`, now, now, now, now); err != nil {
+ INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('turn', 'live', ?, ?, '{"role":"assistant","content":"before","agent":"planner","tokens":{"input":10}}');`, now, now, now, now); err != nil {
 		t.Fatal(err)
 	}
 	hook, err := live.OpenReadOnlyHook(dbPath, 1000)
@@ -2532,8 +2711,12 @@ func TestLiveTraceSnapshotReuseAndInPlaceInvalidation(t *testing.T) {
 	service := live.NewLiveService(hook, testProjectConfig())
 	defer service.Close()
 	ctx := context.Background()
-	if _, err := service.GetSessionTree(ctx); err != nil {
+	tree, err := service.GetSessionTree(ctx)
+	if err != nil {
 		t.Fatal(err)
+	}
+	if len(tree.RootSessions) != 1 || tree.RootSessions[0].Role != "planner" {
+		t.Fatalf("assistant persona missing from tree: %+v", tree)
 	}
 	first, err := service.GetSessionTrace(ctx, "live")
 	if err != nil {
@@ -2549,7 +2732,7 @@ func TestLiveTraceSnapshotReuseAndInPlaceInvalidation(t *testing.T) {
 	if &first.Messages[0] != &second.Messages[0] {
 		t.Fatal("unchanged source reconstructed trace history")
 	}
-	if _, err := writer.Exec(`UPDATE message SET data = '{"role":"assistant","content":"after","reasoning":"thinking","tokens":{"input":20}}' WHERE id = 'turn'`); err != nil {
+	if _, err := writer.Exec(`UPDATE message SET data = '{"role":"assistant","content":"after","agent":"coder","reasoning":"thinking","tokens":{"input":20}}' WHERE id = 'turn'`); err != nil {
 		t.Fatal(err)
 	}
 	changed, err := service.GetSessionTrace(ctx, "live")
@@ -2558,6 +2741,13 @@ func TestLiveTraceSnapshotReuseAndInPlaceInvalidation(t *testing.T) {
 	}
 	if changed.Messages[0].Content != "after" || changed.Messages[0].InputTokens != 20 || changed.Messages[0].ReasoningContent == nil {
 		t.Fatalf("in-place update did not invalidate snapshot: %+v", changed.Messages[0])
+	}
+	updatedTree, err := service.GetSessionTree(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(updatedTree.RootSessions) != 1 || updatedTree.RootSessions[0].Role != "coder" {
+		t.Fatalf("persona cache failed invalidation: %+v", updatedTree)
 	}
 	if first.Messages[0].Content != "before" {
 		t.Fatal("new snapshot mutated earlier accepted data")

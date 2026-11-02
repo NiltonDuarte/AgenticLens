@@ -2,6 +2,7 @@ package opencode_test
 
 import (
 	"database/sql"
+	"fmt"
 	"testing"
 
 	"agenticlens/internal/adapters/opencode"
@@ -306,4 +307,63 @@ func TestSchemaV2CostEvidenceCoalescesReportedAndMissingRecords(t *testing.T) {
 		})
 	}
 
+}
+
+func TestSchemaV2SourcePersonaPrecedenceAndUnknownChildren(t *testing.T) {
+	for _, tc := range []struct{ name, sessionAgent, first, second, want string }{
+		{"assistant agreement", "", " custom-role ", "custom-role", "custom-role"},
+		{"assistant conflict", "", "planner", "coder", ""},
+		{"explicit wins conflict", " supervisor ", "planner", "coder", "supervisor"},
+		{"no evidence", "  ", "", "", ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			db, err := sql.Open("sqlite", ":memory:")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer db.Close()
+			createSchemaV2TestDB(t, db)
+			if _, err := db.Exec(`UPDATE session_v2 SET agent=? WHERE id='ses_root';INSERT INTO session_v2 VALUES('child','ses_root','  ','model-child','child',1793231971000,1793231972000)`, tc.sessionAgent); err != nil {
+				t.Fatal(err)
+			}
+			for id, agent := range map[string]string{"a1": tc.first, "a2": tc.second} {
+				payload := fmt.Sprintf(`{"agent":%q,"model":{"id":"mock-model"},"tokens":{"input":7,"output":2},"content":[]}`, agent)
+				if _, err := db.Exec(`UPDATE session_message SET data=? WHERE id=?`, payload, id); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if _, err := db.Exec(`UPDATE session_message SET data='{"agent":"not-a-persona","text":"user transport"}' WHERE id='u';INSERT INTO session_message VALUES('child-assistant','child','assistant',1,1793231971000,1793231972000,'{"model":{"id":"model-child"},"tokens":{"input":3},"content":[]}')`); err != nil {
+				t.Fatal(err)
+			}
+			sessions, _, _, err := opencode.ExtractSessions(db, []string{"ses_root"}, "tester", nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(sessions) != 2 {
+				t.Fatalf("lost source sessions: %+v", sessions)
+			}
+			for _, session := range sessions {
+				want := tc.want
+				input := int64(14)
+				if session.ID == "child" {
+					want = ""
+					input = 3
+					if session.ParentID == nil || *session.ParentID != "ses_root" {
+						t.Fatalf("lost child ancestry: %+v", session)
+					}
+				}
+				if len(session.Invocations) != 1 || string(session.Invocations[0].Role) != want || session.Invocations[0].Tokens.Input != input {
+					t.Errorf("unexpected invocation in %s: %+v want role=%q input=%d", session.ID, session.Invocations, want, input)
+				}
+				if len(session.Events) == 0 {
+					t.Fatalf("missing source events: %s", session.ID)
+				}
+				for _, event := range session.Events {
+					if string(event.Role) != want {
+						t.Errorf("event persona mismatch: %+v want=%q", event, want)
+					}
+				}
+			}
+		})
+	}
 }

@@ -48,8 +48,8 @@ func FormatNumber(val int64) string {
 // titleCase converts lowercase role strings to Title Case (e.g., "orchestrator" -> "Orchestrator").
 func titleCase[T ~string](s T) string {
 	str := string(s)
-	if str == "" {
-		return ""
+	if strings.TrimSpace(str) == "" {
+		return "Unknown"
 	}
 	return strings.ToUpper(str[:1]) + strings.ToLower(str[1:])
 }
@@ -233,7 +233,7 @@ func FormatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, roleOrder ..
 	for _, r := range ledger.Roles {
 		lines = append(lines, fmt.Sprintf(
 			"| **%s** | %d | %s | %s | %s | %.1f%% | %s | %s | %s |",
-			r.Role,
+			roleLabel(r.Role),
 			r.Invocations,
 			FormatNumber(r.InputTokens),
 			FormatNumber(r.OutputTokens),
@@ -321,4 +321,12 @@ func FormatCostSummary(summary domain.CostSummary) string {
 		return fmt.Sprintf("$%.2f known subtotal (partial; %s)", *summary.KnownSubtotalUSD, coverage)
 	}
 	return "Unavailable (" + coverage + ")"
+}
+
+// roleLabel keeps source persona spelling while making unavailable roles visible.
+func roleLabel(role domain.AgentRole) string {
+	if strings.TrimSpace(string(role)) == "" {
+		return "Unknown"
+	}
+	return string(role)
 }

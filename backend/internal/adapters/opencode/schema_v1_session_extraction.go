@@ -35,6 +35,7 @@ type schemaV1ModelJSON struct {
 type schemaV1MessageData struct {
 	ModelID *string             `json:"modelID"`
 	Role    *string             `json:"role"`
+	Agent   string              `json:"agent"`
 	Time    *schemaV1TimeInfo   `json:"time"`
 	Tokens  *schemaV1TokensInfo `json:"tokens"`
 	Cost    *float64            `json:"cost"`
@@ -157,16 +158,9 @@ func extractSchemaV1Sessions(
 
 	// 3. Process messages per session
 	for _, s := range sessions {
-		cleanAgent := strings.TrimSpace(s.agent)
-		var role domain.AgentRole
-		if cleanAgent != "" {
-			role = domain.AgentRole(cleanAgent)
-		} else if s.parentID == nil {
-			role = domain.RoleRootAgent
-		} else {
-			role = domain.RoleUnassignedSubAgent
-		}
-		sessionRoleMap[s.id] = role
+		role := domain.AgentRole(strings.TrimSpace(s.agent))
+		var persona domain.PersonaEvidence
+		eventStart := len(events)
 
 		qMsgs := `
 			SELECT m.id, m.time_created, m.time_updated, m.data
@@ -221,6 +215,7 @@ func extractSchemaV1Sessions(
 				continue
 			}
 
+			persona = persona.WithCandidate(rawMD.Agent)
 			sessionAssistantTurn++
 			turn := sessionAssistantTurn
 
@@ -345,6 +340,12 @@ func extractSchemaV1Sessions(
 			return nil, nil, nil, fmt.Errorf("OpenCode schema family v1: closing messages in session %s: %w", s.id, err)
 		}
 
+		role = persona.Resolve(s.agent)
+		sessionRoleMap[s.id] = role
+		for i := eventStart; i < len(events); i++ {
+			events[i].Role = role
+		}
+
 		if len(byModel) == 0 {
 			fallbackModel := "default"
 			if strings.TrimSpace(s.model) != "" {
@@ -436,10 +437,7 @@ func extractSchemaV1Sessions(
 			partID = sourceEventID("part", pid.String)
 		}
 
-		role := domain.RoleRootAgent
-		if r, ok := sessionRoleMap[sID]; ok {
-			role = r
-		}
+		role := sessionRoleMap[sID]
 
 		turn := int64(1)
 		var ctxTokens int64

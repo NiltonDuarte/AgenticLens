@@ -14,6 +14,7 @@ import {
   fetchWorkspaceLedgers,
 } from '../api/client';
 import {
+  formatRoleLabel,
   formatCostUSD,
   formatDurationSeconds,
   formatIsoDateTimeShort,
@@ -415,7 +416,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
                       }}
                       aria-hidden="true"
                     />
-                    <span className="turn-role-label">{role}</span>
+                    <span className="turn-role-label">{formatRoleLabel(role)}</span>
                   </div>
                   <div className="turn-track">
                     <div
@@ -522,7 +523,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
                             }}
                             aria-hidden="true"
                           />
-                          <span>{r.role}</span>
+                          <span>{formatRoleLabel(r.role)}</span>
                         </div>
                       </td>
                       <td className="num-col">{r.invocations}</td>

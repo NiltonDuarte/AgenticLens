@@ -179,13 +179,14 @@ func ComputeWorkflowEfficiencyWithCeiling(ledger AgenticFactLedger, ceiling int6
 	for _, session := range ledger.Sessions {
 		isRoot := session.ParentID == nil || strings.TrimSpace(*session.ParentID) == ""
 		for _, inv := range session.Invocations {
+			role := AgentRole(strings.TrimSpace(string(inv.Role)))
 			activeDurationSeconds += inv.ActiveDurationSeconds
 			totReasoning += inv.Tokens.Reasoning
 			totOutput += inv.Tokens.Output
 			totCompactions += inv.Compactions
 
-			if curr, exists := rolePeaks[inv.Role]; !exists || inv.Tokens.PeakContext > curr {
-				rolePeaks[inv.Role] = inv.Tokens.PeakContext
+			if curr, exists := rolePeaks[role]; !exists || inv.Tokens.PeakContext > curr {
+				rolePeaks[role] = inv.Tokens.PeakContext
 			}
 
 			if isRoot {
@@ -194,10 +195,6 @@ func ComputeWorkflowEfficiencyWithCeiling(ledger AgenticFactLedger, ceiling int6
 				}
 				hasRoot = true
 			} else {
-				role := inv.Role
-				if strings.TrimSpace(string(role)) == "" {
-					role = RoleUnassignedSubAgent
-				}
 				amount := SummaryForCost(inv.CostUSD, inv.CostEvidence)
 				subCosts[string(role)] += amount.Subtotal()
 				totSubCost += amount.Subtotal()
@@ -430,7 +427,8 @@ func ComputeRoleMetricsWithCeiling(invocations []InvocationFact, ceiling int64, 
 
 	byRole := make(map[AgentRole][]InvocationFact)
 	for _, inv := range invocations {
-		byRole[inv.Role] = append(byRole[inv.Role], inv)
+		role := AgentRole(strings.TrimSpace(string(inv.Role)))
+		byRole[role] = append(byRole[role], inv)
 	}
 
 	var roles []AgentRole
@@ -579,7 +577,8 @@ func ComputeThreadSummariesWithCeiling(sessions []SessionFact, ceiling int64, ro
 		byRole := make(map[AgentRole][]InvocationFact)
 		for _, inv := range threadInvs {
 			compactions += inv.Compactions
-			byRole[inv.Role] = append(byRole[inv.Role], inv)
+			role := AgentRole(strings.TrimSpace(string(inv.Role)))
+			byRole[role] = append(byRole[role], inv)
 		}
 
 		var threadRoles []AgentRole

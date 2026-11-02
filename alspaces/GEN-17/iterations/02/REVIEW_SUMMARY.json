@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "GEN16-01",
+      "severity": 5,
+      "issue": "Matched hydration events discarded recovered source personas.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: explicit source reconciliation projects recovered roles onto matched events; shared discovery by three reviewers."
+    },
+    {
+      "finding_id": "GEN16-02",
+      "severity": 4,
+      "issue": "Concurrent cache invalidation could turn known live personas into Unknown.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: trace and persona evidence are returned together in one immutable cached snapshot."
+    },
+    {
+      "finding_id": "GEN16-03",
+      "severity": 3,
+      "issue": "Existing database-wide invalidation can rebuild unchanged active-session traces.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Accepted pre-existing debt: database-wide invalidation may reread unchanged histories. Owner: live-service maintenance; follow-up per-session invalidation."
+    },
+    {
+      "finding_id": "GEN16-04",
+      "severity": 2,
+      "issue": "Orphan promotion lacked an explicit parent-link retention assertion.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed test gap: existing orphan-tree builder test now asserts retained parent_id and input ancestry; no production defect demonstrated."
+    },
+    {
+      "finding_id": "GEN17-05",
+      "severity": 6,
+      "issue": "Failed metadata reads could erase a matched committed persona.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: failed metadata reads retain the OpenCode baseline and independent Codex enrichment. Distinct defect discovered during data re-review."
+    },
+    {
+      "finding_id": "GEN17-06",
+      "severity": 4,
+      "issue": "Reviewer proposed erasing known ledger roles when optional live persona evidence is absent.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Refuted: absent optional live evidence does not invalidate a known accepted ledger persona; explicit source evidence still overrides. No code change."
+    }
+  ]
+}

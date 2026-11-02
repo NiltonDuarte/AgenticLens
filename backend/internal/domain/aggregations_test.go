@@ -1743,6 +1743,8 @@ func TestComputeRoleMetrics_DynamicOrdering(t *testing.T) {
 	t.Parallel()
 	invs := []domain.InvocationFact{
 		{Role: "advisor", CostUSD: 1.0},
+		{Role: "", CostUSD: 6.0, Tokens: domain.InvocationTokens{Input: 7}},
+		{Role: "  ", CostUSD: 1.0, Tokens: domain.InvocationTokens{Input: 3}},
 		{Role: "reviewer", CostUSD: 2.0},
 		{Role: "planner", CostUSD: 3.0},
 		{Role: "architect", CostUSD: 4.0},
@@ -1751,10 +1753,10 @@ func TestComputeRoleMetrics_DynamicOrdering(t *testing.T) {
 
 	// Default alphabetical ordering when no custom order provided
 	metricsAlpha := domain.ComputeRoleMetricsWithCeiling(invs, domain.ContextCeilingCriticalTokens)
-	if len(metricsAlpha) != 5 {
-		t.Fatalf("expected 5 roles, got %d", len(metricsAlpha))
+	if len(metricsAlpha) != 6 {
+		t.Fatalf("expected 6 roles, got %d", len(metricsAlpha))
 	}
-	expectedAlpha := []domain.AgentRole{"advisor", "architect", "orchestrator", "planner", "reviewer"}
+	expectedAlpha := []domain.AgentRole{"", "advisor", "architect", "orchestrator", "planner", "reviewer"}
 	for i, exp := range expectedAlpha {
 		if metricsAlpha[i].Role != exp {
 			t.Errorf("default at index %d: expected %s, got %s", i, exp, metricsAlpha[i].Role)
@@ -1764,15 +1766,19 @@ func TestComputeRoleMetrics_DynamicOrdering(t *testing.T) {
 	// Custom order priority followed by alphabetical remainder
 	customOrder := []string{"orchestrator", "planner", "reviewer"}
 	metricsCustom := domain.ComputeRoleMetricsWithCeiling(invs, domain.ContextCeilingCriticalTokens, customOrder)
-	if len(metricsCustom) != 5 {
-		t.Fatalf("expected 5 roles, got %d", len(metricsCustom))
+	if len(metricsCustom) != 6 {
+		t.Fatalf("expected 6 roles, got %d", len(metricsCustom))
 	}
-	expectedCustom := []domain.AgentRole{"orchestrator", "planner", "reviewer", "advisor", "architect"}
+	expectedCustom := []domain.AgentRole{"orchestrator", "planner", "reviewer", "", "advisor", "architect"}
 	for i, exp := range expectedCustom {
 		if metricsCustom[i].Role != exp {
 			t.Errorf("custom at index %d: expected %s, got %s", i, exp, metricsCustom[i].Role)
 		}
 	}
+	if metricsAlpha[0].Invocations != 2 || metricsAlpha[0].InputTokens != 10 || metricsAlpha[0].CostUSD != 7 {
+		t.Fatalf("unknown role rows lost numerical facts: %+v", metricsAlpha[0])
+	}
+
 }
 
 func TestComputeThreadSummaries_DynamicOrderingAndTieBreaking(t *testing.T) {
@@ -1848,6 +1854,20 @@ func TestComputeThreadSummaries_DynamicOrderingAndTieBreaking(t *testing.T) {
 	if advisorRole.Models[1].Model != "model-z" {
 		t.Errorf("expected model-z second, got %s", advisorRole.Models[1].Model)
 	}
+
+	t.Run("unknown personas retain all per-model thread facts", func(t *testing.T) {
+		sessions[1].Invocations[0].Role = "  "
+		sessions[2].Invocations[0].Role = ""
+		unknownThreads := domain.ComputeThreadSummariesWithCeiling(sessions, domain.ContextCeilingCriticalTokens, customOrder)
+		if len(unknownThreads) != 1 || len(unknownThreads[0].Roles) != 3 {
+			t.Fatalf("lost unknown thread grouping: %+v", unknownThreads)
+		}
+		unknown := unknownThreads[0].Roles[2]
+		if unknown.Role != "" || len(unknown.Models) != 2 || unknown.Models[0].Model != "model-a" || unknown.Models[1].Model != "model-z" {
+			t.Fatalf("unknown role lost model multiplicity/order: %+v", unknown)
+		}
+	})
+
 }
 
 func TestWorkflowEfficiency_AdversarialEdgeCases(t *testing.T) {
@@ -5028,13 +5048,15 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 			}
 		})
 
-		t.Run("child invocation with whitespace role normalizes to unassigned", func(t *testing.T) {
+		t.Run("unknown root and child preserve structural metric isolation", func(t *testing.T) {
 			t.Parallel()
 			ledger := domain.AgenticFactLedger{Sessions: sessionFactsWithInvs([]testInvFact{
 				{
 					SessionID: rootID,
 					ParentID:  nil,
-					Role:      "general",
+					Role:      "",
+					CostUSD:   10,
+					Turns:     99,
 					Tokens:    domain.InvocationTokens{PeakContext: 25000},
 				},
 				{
@@ -5049,17 +5071,21 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 			}
 
 			eff := domain.ComputeWorkflowEfficiency(ledger)
+			if eff.ContextWindowHealth.RootPeakTokens != 25000 || eff.SubagentTurnVelocity.AvgTurnsPerInvocation != 6 {
+				t.Fatalf("unknown persona conflated ancestry: %+v", eff)
+			}
+
 			if eff.ContextWindowHealth.SubagentsPeakTokens != 45000 {
 				t.Errorf("expected SubagentsPeakTokens 45000, got %d", eff.ContextWindowHealth.SubagentsPeakTokens)
 			}
-			if eff.ContextWindowHealth.SubagentsPeakRole != domain.RoleUnassignedSubAgent {
-				t.Errorf("expected SubagentsPeakRole %q, got %s", domain.RoleUnassignedSubAgent, eff.ContextWindowHealth.SubagentsPeakRole)
+			if eff.ContextWindowHealth.SubagentsPeakRole != domain.AgentRole("") {
+				t.Errorf("expected SubagentsPeakRole %q, got %s", domain.AgentRole(""), eff.ContextWindowHealth.SubagentsPeakRole)
 			}
-			if eff.RoleEffortDistributionPct[string(domain.RoleUnassignedSubAgent)] != 100.0 {
-				t.Errorf("expected unassigned effort 100.0%%, got %f", eff.RoleEffortDistributionPct[string(domain.RoleUnassignedSubAgent)])
+			if eff.RoleEffortDistributionPct[string(domain.AgentRole(""))] != 100.0 {
+				t.Errorf("expected unassigned effort 100.0%%, got %f", eff.RoleEffortDistributionPct[string(domain.AgentRole(""))])
 			}
-			if eff.SubagentTurnVelocity.ByRole[domain.RoleUnassignedSubAgent] != 6.0 {
-				t.Errorf("expected unassigned turn velocity 6.0, got %f", eff.SubagentTurnVelocity.ByRole[domain.RoleUnassignedSubAgent])
+			if eff.SubagentTurnVelocity.ByRole[domain.AgentRole("")] != 6.0 {
+				t.Errorf("expected unassigned turn velocity 6.0, got %f", eff.SubagentTurnVelocity.ByRole[domain.AgentRole("")])
 			}
 		})
 
@@ -5373,18 +5399,18 @@ func TestComputeWorkflowEfficiency_AdversarialStructuralHierarchy(t *testing.T) 
 
 		eff := domain.ComputeWorkflowEfficiency(ledger)
 
-		// Both children are combined under role "UnassignedSubAgent"
+		// Both children are combined under unknown role
 		if eff.ContextWindowHealth.SubagentsPeakTokens != 70000 {
 			t.Errorf("expected SubagentsPeakTokens 70000, got %d", eff.ContextWindowHealth.SubagentsPeakTokens)
 		}
-		if eff.ContextWindowHealth.SubagentsPeakRole != domain.RoleUnassignedSubAgent {
-			t.Errorf("expected SubagentsPeakRole %q, got %s", domain.RoleUnassignedSubAgent, eff.ContextWindowHealth.SubagentsPeakRole)
+		if eff.ContextWindowHealth.SubagentsPeakRole != domain.AgentRole("") {
+			t.Errorf("expected SubagentsPeakRole %q, got %s", domain.AgentRole(""), eff.ContextWindowHealth.SubagentsPeakRole)
 		}
-		if eff.RoleEffortDistributionPct[string(domain.RoleUnassignedSubAgent)] != 100.0 {
-			t.Errorf("expected unassigned effort 100.0%%, got %f", eff.RoleEffortDistributionPct[string(domain.RoleUnassignedSubAgent)])
+		if eff.RoleEffortDistributionPct[string(domain.AgentRole(""))] != 100.0 {
+			t.Errorf("expected unassigned effort 100.0%%, got %f", eff.RoleEffortDistributionPct[string(domain.AgentRole(""))])
 		}
-		if eff.SubagentTurnVelocity.ByRole[domain.RoleUnassignedSubAgent] != 5.0 {
-			t.Errorf("expected unassigned turn velocity 5.0, got %f", eff.SubagentTurnVelocity.ByRole[domain.RoleUnassignedSubAgent])
+		if eff.SubagentTurnVelocity.ByRole[domain.AgentRole("")] != 5.0 {
+			t.Errorf("expected unassigned turn velocity 5.0, got %f", eff.SubagentTurnVelocity.ByRole[domain.AgentRole("")])
 		}
 		if eff.SubagentTurnVelocity.PeakTurns != 6 {
 			t.Errorf("expected PeakTurns 6, got %d", eff.SubagentTurnVelocity.PeakTurns)
@@ -5495,17 +5521,17 @@ func TestComputeWorkflowEfficiency_AdversarialTieBreaking(t *testing.T) {
 		}, nil, nil),
 		}
 
-		// Alphabetical default: UnassignedSubAgent < advisor ('U' < 'a')
+		// Alphabetical default: blank < advisor
 		effAlpha := domain.ComputeWorkflowEfficiency(ledger)
 		if effAlpha.ContextWindowHealth.SubagentsPeakTokens != 85000 {
 			t.Errorf("expected SubagentsPeakTokens 85000, got %d", effAlpha.ContextWindowHealth.SubagentsPeakTokens)
 		}
-		if effAlpha.ContextWindowHealth.SubagentsPeakRole != domain.RoleUnassignedSubAgent {
-			t.Errorf("expected %q via alphabetical tie-break, got %q", domain.RoleUnassignedSubAgent, effAlpha.ContextWindowHealth.SubagentsPeakRole)
+		if effAlpha.ContextWindowHealth.SubagentsPeakRole != domain.AgentRole("") {
+			t.Errorf("expected %q via alphabetical tie-break, got %q", domain.AgentRole(""), effAlpha.ContextWindowHealth.SubagentsPeakRole)
 		}
 
 		// Custom order prioritizing advisor
-		effAdvisor := domain.ComputeWorkflowEfficiency(ledger, []string{"advisor", string(domain.RoleUnassignedSubAgent)})
+		effAdvisor := domain.ComputeWorkflowEfficiency(ledger, []string{"advisor", string(domain.AgentRole(""))})
 		if effAdvisor.ContextWindowHealth.SubagentsPeakRole != "advisor" {
 			t.Errorf("expected 'advisor' via custom tie-break, got %q", effAdvisor.ContextWindowHealth.SubagentsPeakRole)
 		}

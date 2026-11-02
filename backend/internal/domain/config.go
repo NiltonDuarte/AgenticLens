@@ -238,7 +238,7 @@ type RoleMappings map[string]string
 func (m RoleMappings) ResolveRole(rawAgent string) AgentRole {
 	cleaned := strings.ToLower(strings.TrimSpace(rawAgent))
 	if cleaned == "" {
-		return RoleUnassignedSubAgent
+		return ""
 	}
 
 	if m != nil {

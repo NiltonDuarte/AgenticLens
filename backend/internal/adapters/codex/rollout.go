@@ -107,7 +107,7 @@ type sessionMetadata struct {
 	Provider   string          `json:"model_provider"`
 	ParentID   string          `json:"parent_thread_id"`
 	AgentRole  string          `json:"agent_role"`
-	AgentPath  string          `json:"-"`
+	AgentPath  string          `json:"agent_path"`
 }
 
 // decodeSessionMetadata accepts both interactive source labels and structured
@@ -135,7 +135,9 @@ func decodeSessionMetadata(payload json.RawMessage) (sessionMetadata, error) {
 			if metadata.AgentRole == "" {
 				metadata.AgentRole = source.Subagent.ThreadSpawn.AgentRole
 			}
-			metadata.AgentPath = source.Subagent.ThreadSpawn.AgentPath
+			if strings.TrimSpace(metadata.AgentPath) == "" {
+				metadata.AgentPath = source.Subagent.ThreadSpawn.AgentPath
+			}
 		}
 	}
 	return metadata, nil
@@ -208,7 +210,6 @@ func ParseRollout(reader io.Reader) (Transcript, error) {
 		turnNumbers:  make(map[string]int64),
 		toolIDs:      make(map[string]struct{}),
 		currentModel: "default",
-		role:         domain.RoleRootAgent,
 	}
 	usageRecordSeen := false
 	inheritedHistory := false
@@ -348,15 +349,16 @@ func readSessionMetadata(payload json.RawMessage, transcript *Transcript) error 
 	transcript.CodexVersion = metadata.CLIVersion
 	transcript.Provider = metadata.Provider
 	transcript.ParentThread = metadata.ParentID
-	if metadata.ParentID != "" {
-		transcript.role = domain.RoleUnassignedSubAgent
-	}
+	transcript.role = ""
 	if strings.TrimSpace(metadata.AgentRole) != "" {
 		transcript.role = domain.AgentRole(strings.TrimSpace(metadata.AgentRole))
-	} else if metadata.AgentPath != "" && metadata.ParentID != "" {
+	} else if strings.TrimSpace(metadata.AgentPath) != "" {
 		// Codex exposes the raw persona in agent_path even when agent_role is
 		// unset. Store only the basename, matching OpenCode's raw session.agent.
-		transcript.role = domain.AgentRole(filepath.Base(filepath.ToSlash(metadata.AgentPath)))
+		persona := filepath.Base(filepath.ToSlash(strings.TrimSpace(metadata.AgentPath)))
+		if persona != "." && persona != "/" {
+			transcript.role = domain.AgentRole(persona)
+		}
 	}
 	return nil
 }

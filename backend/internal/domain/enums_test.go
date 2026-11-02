@@ -152,10 +152,10 @@ func TestOrderSubagentRoles_OrderingAndPreservation(t *testing.T) {
 			expected:    nil,
 		},
 		{
-			name:        "slice with only whitespace and empty strings",
+			name:        "slice with only whitespace and empty strings retains unknown bucket",
 			input:       []string{"", "   ", "\t\n"},
 			customOrder: nil,
-			expected:    nil,
+			expected:    []string{""},
 		},
 		{
 			name:        "alphabetical order when no custom order provided",
@@ -187,6 +187,12 @@ func TestOrderSubagentRoles_OrderingAndPreservation(t *testing.T) {
 			input:       []string{"zebra", "alpha", "beta"},
 			customOrder: nil,
 			expected:    []string{"alpha", "beta", "zebra"},
+		},
+		{
+			name:        "known and unknown roles survive custom ordering",
+			input:       []string{"", " coder ", "  ", "reviewer"},
+			customOrder: []string{"reviewer"},
+			expected:    []string{"reviewer", "", "coder"},
 		},
 		{
 			name:        "unassigned role included among roles",
@@ -288,10 +294,10 @@ func TestOrderRoles_And_OrderSubagentRoles_AdversarialComprehensive(t *testing.T
 			expected:    nil,
 		},
 		{
-			name:        "whitespace-only input elements return nil",
+			name:        "whitespace-only input elements retain unknown bucket",
 			input:       []string{"", "  ", "\t", "\n", "\r\n"},
 			customOrder: nil,
-			expected:    nil,
+			expected:    []string{""},
 		},
 		{
 			name:        "omitted customOrder sorts strictly alphabetically",
