@@ -45,24 +45,17 @@ Dependency preparation: `make install` passed. npm reported existing dependency 
 
 ## Completed review summary
 
-Runtime review approved for `2d540946c01851face786f15894b1e00b2451b19` against baseline `7bc670a7f5c9e93a220f3596f3d0e05cb6007332`. All confirmed findings are fixed; no unresolved candidates, refuted claims, incomplete runs or accepted debt remain in this review. Role for all actors below: reviewer. The parent verified each model/effort against actual Codex session metadata and turn context; these are observed identities, not merely requested settings.
+The installation/distribution review is approved for commit `2d540946c01851face786f15894b1e00b2451b19`. All findings below are fixed. There are no unresolved findings or incomplete reviews.
 
-| Finding | Discovering actor / model | Resolution |
-| --- | --- | --- |
-| GEN15-01, P2: repair falsely succeeded for an existing non-executable binary | SOL-01, `/root/review_sol`, gpt-6.1-sol / high | Explicit repair restores and checks execute permission without replacing bytes; failure is surfaced. Exact recommended-command regression and injected chmod-failure probe passed. |
-| GEN15-02, P2: a worktree missing RELEASE_VERSION silently selected latest | SOL-01, `/root/review_sol`, gpt-6.1-sol / high | Remote repair requires an explicit release when its marker is absent/empty; offline supplied-prebuilt repair remains available. Real markerless-worktree and override-precedence probes passed. |
-| GEN15-DOC1, low: stale pending-approval wording contradicted explicit approval | LUNA-01, `/root/review_luna`, gpt-6-luna / medium | Parent corrected the plan to reference the subsequent approval. |
+| Reviewer role | Model | Reasoning effort | What the reviewer found | Fix and verification |
+| --- | --- | --- | --- | --- |
+| Installation/distribution reviewer | gpt-6.1-sol | High | Repair reported success when an existing binary lacked execute permission, but the launcher still could not run it. | Repair now restores and checks execute permission without replacing the binary. The exact repair command and a failed-permission-change probe verified success and failure behavior. |
+| Installation/distribution reviewer | gpt-6.1-sol | High | When a new worktree lacked the release marker, repair silently downloaded latest alongside skill scripts from a previously selected release. | Remote repair now requires an explicit release when the marker is missing. A real worktree regression verified no implicit download; explicit release selection and offline supplied-prebuilt repair work. |
+| Installation/distribution reviewer | gpt-6-luna | Medium | The plan still said approval was pending even though the user had approved implementation. | The plan now records the user's approval consistently. Both reviewers checked the correction. |
 
-Both runtime regressions failed against initial candidate d7a07eb in disposable bundles and passed after correction. Verification credit is separate from discovery: SOL-02 (`/root/review_sol_r2`, gpt-6.1-sol/high) and LUNA-02 (`/root/review_luna_r2`, gpt-6-luna/medium) verified the fixes and approved the corrected candidate. No shared discoveries were reported.
+In the initial review, the reviewer using gpt-6.1-sol/high requested the two runtime fixes above. The reviewer using gpt-6-luna/medium approved the runtime scope and identified the plan wording correction. After fixes, two fresh installation/distribution reviewers using those same models and efforts independently verified the corrections and approved the final runtime revision. Neither found additional defects. These four review passes are complete; verification credit is distinct from original discovery. The parent confirmed all model/effort values against actual Codex session metadata.
 
-| Run / actor | Model / effort | Phase / revision | Outcome |
-| --- | --- | --- | --- |
-| SOL-01 / `/root/review_sol` | gpt-6.1-sol / high | Discovery / d7a07eb | Changes requested; two runtime findings |
-| LUNA-01 / `/root/review_luna` | gpt-6-luna / medium | Discovery / d7a07eb | Scoped approval; one plan correction |
-| SOL-02 / `/root/review_sol_r2` | gpt-6.1-sol / high | Re-review / 2d54094 | Approved; fixes verified, no new finding |
-| LUNA-02 / `/root/review_luna_r2` | gpt-6-luna / medium | Re-review / 2d54094 | Approved; fixes verified, no new finding |
-
-Verification and platform/release limits are recorded above. Detailed reports and run/finding JSON were working evidence and were deleted only after corrections, consolidated approval and this summary. Regression tests, plans, test evidence and session telemetry remain. No model quality ranking or per-run cost is inferred.
+Both runtime regression tests fail against the earlier candidate d7a07eb and pass after correction. Final make passed: 12 installation tests, six release tests, Go vet/race suites and 781 frontend tests. Native Linux installation/launch smoke also passed. macOS/Windows execution and live release availability remain unverified. Detailed review working files were deleted after approval; regression tests, plans, test evidence and telemetry remain.
 
 ## Iteration 02: completed-review retention
 
