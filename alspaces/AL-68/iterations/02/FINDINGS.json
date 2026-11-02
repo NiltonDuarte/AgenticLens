@@ -22,16 +22,16 @@
         {
           "run_id": "iter02-behavior-sol-01",
           "local_candidate_id": "B1",
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/reports/iter02-behavior-sol-01/content",
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "raw_claim": "B1 \u2014 P1: Baseline validation does not enforce ticket ownership",
           "raw_severity": "P1"
         },
         {
           "run_id": "iter02-data-sol-01",
           "local_candidate_id": "DATA-01",
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/reports/iter02-data-sol-01/content",
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "raw_claim": "DATA-01 \u2014 P1: Baseline ownership validation omits the ticket and republishes another ticket's owners",
           "raw_severity": "P1"
         },
@@ -40,8 +40,8 @@
           "local_candidate_id": "S-02",
           "raw_claim": "baseline validation omits exact ticket ownership",
           "raw_severity": "Medium/P2",
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/reports/iter02-security-sol-01/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         }
       ],
       "verification_run_ids": [
@@ -57,16 +57,314 @@
       "implementation_status": "Fixed, paired affected review verified, final integrated make passed.",
       "correction_evidence": [
         {
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/documents/core-fixes-03/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         },
         {
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/documents/tester-fixes-03/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         }
       ],
       "resolution_candidate": "candidate-02-07",
-      "resolution": "Corrected production/test behavior verified by native/component controls and paired affected reviewers, with explicit unchanged dependency carry-forward. Final integrated make passed on unchanged reviewed source; final native telemetry/PR delivery are parent-owned."
+      "resolution": "Corrected production/test behavior verified by native/component controls and paired affected reviewers, with explicit unchanged dependency carry-forward. Final integrated make passed on unchanged reviewed source; final native telemetry/PR delivery are parent-owned.",
+      "discovery_reviewers": [
+        {
+          "run_id": "iter02-behavior-sol-01",
+          "reviewer": "behavior",
+          "persona": "reviewer-behavior",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "discovery",
+          "candidate": "candidate-02-01",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        },
+        {
+          "run_id": "iter02-data-sol-01",
+          "reviewer": "data",
+          "persona": "reviewer-data",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "discovery",
+          "candidate": "candidate-02-01",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        },
+        {
+          "run_id": "iter02-security-sol-01",
+          "reviewer": "security",
+          "persona": "reviewer",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "discovery",
+          "candidate": "candidate-02-01",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        }
+      ],
+      "verification_reviewers": [
+        {
+          "run_id": "iter02-behavior-sol-06",
+          "reviewer": "behavior",
+          "persona": "reviewer-behavior",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-behavior-luna-06",
+          "reviewer": "behavior",
+          "persona": "reviewer-behavior",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-data-sol-06",
+          "reviewer": "data",
+          "persona": "reviewer-data",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-data-luna-06",
+          "reviewer": "data",
+          "persona": "reviewer-data",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-security-sol-06",
+          "reviewer": "security",
+          "persona": "reviewer (specialist security)",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-security-luna-06",
+          "reviewer": "security",
+          "persona": "reviewer (specialist security)",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        }
+      ]
     },
     {
       "finding_id": "AUTO-02",
@@ -87,8 +385,8 @@
         {
           "run_id": "iter02-behavior-sol-01",
           "local_candidate_id": "B2",
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/reports/iter02-behavior-sol-01/content",
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "raw_claim": "B2 \u2014 P1: Continuous callbacks can indefinitely postpone the periodic publication pass",
           "raw_severity": "P1"
         }
@@ -101,16 +399,118 @@
       "implementation_status": "Fixed, paired affected review verified, final integrated make passed.",
       "correction_evidence": [
         {
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/documents/core-fixes-03/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         },
         {
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/documents/tester-fixes-03/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         }
       ],
       "resolution_candidate": "candidate-02-07",
-      "resolution": "Corrected production/test behavior verified by native/component controls and paired affected reviewers, with explicit unchanged dependency carry-forward. Final integrated make passed on unchanged reviewed source; final native telemetry/PR delivery are parent-owned."
+      "resolution": "Corrected production/test behavior verified by native/component controls and paired affected reviewers, with explicit unchanged dependency carry-forward. Final integrated make passed on unchanged reviewed source; final native telemetry/PR delivery are parent-owned.",
+      "discovery_reviewers": [
+        {
+          "run_id": "iter02-behavior-sol-01",
+          "reviewer": "behavior",
+          "persona": "reviewer-behavior",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "discovery",
+          "candidate": "candidate-02-01",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        }
+      ],
+      "verification_reviewers": [
+        {
+          "run_id": "iter02-behavior-sol-06",
+          "reviewer": "behavior",
+          "persona": "reviewer-behavior",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-behavior-luna-06",
+          "reviewer": "behavior",
+          "persona": "reviewer-behavior",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        }
+      ]
     },
     {
       "finding_id": "AUTO-03",
@@ -135,16 +535,16 @@
         {
           "run_id": "iter02-behavior-sol-01",
           "local_candidate_id": "B3",
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/reports/iter02-behavior-sol-01/content",
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "raw_claim": "B3 \u2014 P2: Automatic publication ignores disablement once a worker exists",
           "raw_severity": "P2"
         },
         {
           "run_id": "iter02-behavior-luna-01",
           "local_candidate_id": "B-02",
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/reports/iter02-behavior-luna-01/content",
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "raw_claim": "B-02 \u2014 Disabling/removing hooks does not stop an already-running publication worker",
           "raw_severity": "Major"
         },
@@ -153,24 +553,24 @@
           "local_candidate_id": "ARCH-01",
           "raw_claim": "Disabled capture does not stop a worker or its replacement chain",
           "raw_severity": "P2",
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/reports/iter02-architecture-sol-01/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         },
         {
           "run_id": "iter02-release-sol-01",
           "local_candidate_id": "RELEASE-01",
           "raw_claim": "disable/uninstall leave the native publisher active",
           "raw_severity": "P1/high",
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/reports/iter02-release-sol-01/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         },
         {
           "run_id": "iter02-release-luna-01",
           "local_candidate_id": "REL-01",
           "raw_claim": "Uninstall leaves an unbounded automatic publisher alive",
           "raw_severity": "P2",
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/reports/iter02-release-luna-01/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         }
       ],
       "verification_run_ids": [
@@ -185,16 +585,374 @@
       "implementation_status": "Fixed, paired affected review verified, final integrated make passed.",
       "correction_evidence": [
         {
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/documents/core-fixes-03/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         },
         {
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/documents/tester-fixes-03/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         }
       ],
       "resolution_candidate": "candidate-02-07",
-      "resolution": "Corrected production/test behavior verified by native/component controls and paired affected reviewers, with explicit unchanged dependency carry-forward. Final integrated make passed on unchanged reviewed source; final native telemetry/PR delivery are parent-owned."
+      "resolution": "Corrected production/test behavior verified by native/component controls and paired affected reviewers, with explicit unchanged dependency carry-forward. Final integrated make passed on unchanged reviewed source; final native telemetry/PR delivery are parent-owned.",
+      "discovery_reviewers": [
+        {
+          "run_id": "iter02-behavior-sol-01",
+          "reviewer": "behavior",
+          "persona": "reviewer-behavior",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "discovery",
+          "candidate": "candidate-02-01",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        },
+        {
+          "run_id": "iter02-behavior-luna-01",
+          "reviewer": "behavior",
+          "persona": "reviewer-behavior",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "discovery",
+          "candidate": "candidate-02-01",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        },
+        {
+          "run_id": "iter02-architecture-sol-01",
+          "reviewer": "architecture",
+          "persona": "reviewer-architecture",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "discovery",
+          "candidate": "candidate-02-01",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        },
+        {
+          "run_id": "iter02-release-sol-01",
+          "reviewer": "release",
+          "persona": "reviewer",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "discovery",
+          "candidate": "candidate-02-01",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        },
+        {
+          "run_id": "iter02-release-luna-01",
+          "reviewer": "release",
+          "persona": "reviewer",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "discovery",
+          "candidate": "candidate-02-01",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        }
+      ],
+      "verification_reviewers": [
+        {
+          "run_id": "iter02-behavior-sol-06",
+          "reviewer": "behavior",
+          "persona": "reviewer-behavior",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-behavior-luna-06",
+          "reviewer": "behavior",
+          "persona": "reviewer-behavior",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-architecture-sol-06",
+          "reviewer": "architecture",
+          "persona": "reviewer-architecture",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-architecture-luna-06",
+          "reviewer": "architecture",
+          "persona": "reviewer-architecture",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-release-sol-07",
+          "reviewer": "release",
+          "persona": "reviewer (release/setup specialist)",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-07",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-release-luna-07",
+          "reviewer": "release",
+          "persona": "reviewer (release/setup specialist)",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-07",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        }
+      ]
     },
     {
       "finding_id": "AUTO-04",
@@ -216,8 +974,8 @@
         {
           "run_id": "iter02-behavior-sol-01",
           "local_candidate_id": "B4",
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/reports/iter02-behavior-sol-01/content",
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "raw_claim": "B4 \u2014 P2: Status errors for a valid registry without an automatic request table",
           "raw_severity": "P2"
         },
@@ -226,8 +984,8 @@
           "local_candidate_id": "ARCH-04",
           "raw_claim": "Status cannot inspect a valid registry before its first publication request",
           "raw_severity": "P2",
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/reports/iter02-architecture-sol-01/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         }
       ],
       "verification_run_ids": [
@@ -240,16 +998,216 @@
       "implementation_status": "Fixed, paired affected review verified, final integrated make passed.",
       "correction_evidence": [
         {
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/documents/core-fixes-03/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         },
         {
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/documents/tester-fixes-03/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         }
       ],
       "resolution_candidate": "candidate-02-07",
-      "resolution": "Corrected production/test behavior verified by native/component controls and paired affected reviewers, with explicit unchanged dependency carry-forward. Final integrated make passed on unchanged reviewed source; final native telemetry/PR delivery are parent-owned."
+      "resolution": "Corrected production/test behavior verified by native/component controls and paired affected reviewers, with explicit unchanged dependency carry-forward. Final integrated make passed on unchanged reviewed source; final native telemetry/PR delivery are parent-owned.",
+      "discovery_reviewers": [
+        {
+          "run_id": "iter02-behavior-sol-01",
+          "reviewer": "behavior",
+          "persona": "reviewer-behavior",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "discovery",
+          "candidate": "candidate-02-01",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        },
+        {
+          "run_id": "iter02-architecture-sol-01",
+          "reviewer": "architecture",
+          "persona": "reviewer-architecture",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "discovery",
+          "candidate": "candidate-02-01",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        }
+      ],
+      "verification_reviewers": [
+        {
+          "run_id": "iter02-behavior-sol-06",
+          "reviewer": "behavior",
+          "persona": "reviewer-behavior",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-behavior-luna-06",
+          "reviewer": "behavior",
+          "persona": "reviewer-behavior",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-architecture-sol-06",
+          "reviewer": "architecture",
+          "persona": "reviewer-architecture",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-architecture-luna-06",
+          "reviewer": "architecture",
+          "persona": "reviewer-architecture",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        }
+      ]
     },
     {
       "finding_id": "AUTO-05",
@@ -270,8 +1228,8 @@
         {
           "run_id": "iter02-behavior-luna-01",
           "local_candidate_id": "B-01",
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/reports/iter02-behavior-luna-01/content",
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "raw_claim": "B-01 \u2014 Automatic publication permits a bound ticket with no explicit title",
           "raw_severity": "Major"
         }
@@ -295,7 +1253,105 @@
         "location": "backend/internal/adapters/repository.go:538",
         "method": "Parent source trace through saveGenerationLedger/SaveFactLedger; no changed code and no extra reviewer required."
       },
-      "resolution": "Refutation retained with original observations and contrary source evidence; not counted as fixed or deleted."
+      "resolution": "Refutation retained with original observations and contrary source evidence; not counted as fixed or deleted.",
+      "discovery_reviewers": [
+        {
+          "run_id": "iter02-behavior-luna-01",
+          "reviewer": "behavior",
+          "persona": "reviewer-behavior",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "discovery",
+          "candidate": "candidate-02-01",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        }
+      ],
+      "verification_reviewers": [
+        {
+          "run_id": "iter02-behavior-sol-06",
+          "reviewer": "behavior",
+          "persona": "reviewer-behavior",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-behavior-luna-06",
+          "reviewer": "behavior",
+          "persona": "reviewer-behavior",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        }
+      ]
     },
     {
       "finding_id": "AUTO-06",
@@ -316,8 +1372,8 @@
         {
           "run_id": "iter02-data-sol-01",
           "local_candidate_id": "DATA-02",
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/reports/iter02-data-sol-01/content",
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "raw_claim": "DATA-02 \u2014 P2: First-publication aliases bypass overlap rejection and commit an invalid ledger",
           "raw_severity": "P2"
         }
@@ -333,16 +1389,182 @@
       "implementation_status": "Fixed, paired affected review verified, final integrated make passed.",
       "correction_evidence": [
         {
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/documents/publication-fixes-03/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         },
         {
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/documents/tester-fixes-03/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         }
       ],
       "resolution_candidate": "candidate-02-07",
-      "resolution": "Corrected production/test behavior verified by native/component controls and paired affected reviewers, with explicit unchanged dependency carry-forward. Final integrated make passed on unchanged reviewed source; final native telemetry/PR delivery are parent-owned."
+      "resolution": "Corrected production/test behavior verified by native/component controls and paired affected reviewers, with explicit unchanged dependency carry-forward. Final integrated make passed on unchanged reviewed source; final native telemetry/PR delivery are parent-owned.",
+      "discovery_reviewers": [
+        {
+          "run_id": "iter02-data-sol-01",
+          "reviewer": "data",
+          "persona": "reviewer-data",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "discovery",
+          "candidate": "candidate-02-01",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        }
+      ],
+      "verification_reviewers": [
+        {
+          "run_id": "iter02-data-sol-06",
+          "reviewer": "data",
+          "persona": "reviewer-data",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-data-luna-06",
+          "reviewer": "data",
+          "persona": "reviewer-data",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-tests-sol-07",
+          "reviewer": "tests",
+          "persona": "reviewer-tests",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-07",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-tests-luna-07",
+          "reviewer": "tests",
+          "persona": "reviewer-tests",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-07",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        }
+      ]
     },
     {
       "finding_id": "AUTO-07",
@@ -365,8 +1587,8 @@
           "local_candidate_id": "TST-SOL-01",
           "raw_claim": "in-flight integration test accepts acknowledgment of unseen work",
           "raw_severity": "P2",
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/reports/iter02-tests-sol-01/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         }
       ],
       "verification_run_ids": [
@@ -379,11 +1601,113 @@
       "resolution": "Corrected production/test behavior verified by native/component controls and paired affected reviewers, with explicit unchanged dependency carry-forward. Final integrated make passed on unchanged reviewed source; final native telemetry/PR delivery are parent-owned.",
       "correction_evidence": [
         {
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/documents/tester-fixes-03/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         }
       ],
-      "implementation_status": "Fixed, paired affected review verified, final integrated make passed."
+      "implementation_status": "Fixed, paired affected review verified, final integrated make passed.",
+      "discovery_reviewers": [
+        {
+          "run_id": "iter02-tests-sol-01",
+          "reviewer": "tests",
+          "persona": "reviewer-tests",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "discovery",
+          "candidate": "candidate-02-01",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        }
+      ],
+      "verification_reviewers": [
+        {
+          "run_id": "iter02-tests-sol-07",
+          "reviewer": "tests",
+          "persona": "reviewer-tests",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-07",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-tests-luna-07",
+          "reviewer": "tests",
+          "persona": "reviewer-tests",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-07",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        }
+      ]
     },
     {
       "finding_id": "AUTO-08",
@@ -407,8 +1731,8 @@
           "report_section": "ARCH-02",
           "raw_claim": "Installed state paths silently diverge after YAML path changes",
           "raw_severity": "P2",
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/reports/iter02-architecture-sol-01/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         }
       ],
       "verification_run_ids": [
@@ -421,16 +1745,182 @@
       "implementation_status": "Fixed, paired affected review verified, final integrated make passed.",
       "correction_evidence": [
         {
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/documents/core-fixes-03/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         },
         {
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/documents/tester-fixes-03/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         }
       ],
       "resolution_candidate": "candidate-02-07",
-      "resolution": "Corrected production/test behavior verified by native/component controls and paired affected reviewers, with explicit unchanged dependency carry-forward. Final integrated make passed on unchanged reviewed source; final native telemetry/PR delivery are parent-owned."
+      "resolution": "Corrected production/test behavior verified by native/component controls and paired affected reviewers, with explicit unchanged dependency carry-forward. Final integrated make passed on unchanged reviewed source; final native telemetry/PR delivery are parent-owned.",
+      "discovery_reviewers": [
+        {
+          "run_id": "iter02-architecture-sol-01",
+          "reviewer": "architecture",
+          "persona": "reviewer-architecture",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "discovery",
+          "candidate": "candidate-02-01",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        }
+      ],
+      "verification_reviewers": [
+        {
+          "run_id": "iter02-architecture-sol-06",
+          "reviewer": "architecture",
+          "persona": "reviewer-architecture",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-architecture-luna-06",
+          "reviewer": "architecture",
+          "persona": "reviewer-architecture",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-release-sol-07",
+          "reviewer": "release",
+          "persona": "reviewer (release/setup specialist)",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-07",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-release-luna-07",
+          "reviewer": "release",
+          "persona": "reviewer (release/setup specialist)",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-07",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        }
+      ]
     },
     {
       "finding_id": "AUTO-09",
@@ -454,8 +1944,8 @@
           "report_section": "ARCH-03",
           "raw_claim": "Subdirectory generation selects process cwd instead of owning configuration root",
           "raw_severity": "P2",
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/reports/iter02-architecture-sol-01/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         }
       ],
       "verification_run_ids": [
@@ -466,16 +1956,118 @@
       "implementation_status": "Fixed, paired affected review verified, final integrated make passed.",
       "correction_evidence": [
         {
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/documents/core-fixes-03/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         },
         {
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/documents/tester-fixes-03/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         }
       ],
       "resolution_candidate": "candidate-02-07",
-      "resolution": "Corrected production/test behavior verified by native/component controls and paired affected reviewers, with explicit unchanged dependency carry-forward. Final integrated make passed on unchanged reviewed source; final native telemetry/PR delivery are parent-owned."
+      "resolution": "Corrected production/test behavior verified by native/component controls and paired affected reviewers, with explicit unchanged dependency carry-forward. Final integrated make passed on unchanged reviewed source; final native telemetry/PR delivery are parent-owned.",
+      "discovery_reviewers": [
+        {
+          "run_id": "iter02-architecture-sol-01",
+          "reviewer": "architecture",
+          "persona": "reviewer-architecture",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "discovery",
+          "candidate": "candidate-02-01",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        }
+      ],
+      "verification_reviewers": [
+        {
+          "run_id": "iter02-architecture-sol-06",
+          "reviewer": "architecture",
+          "persona": "reviewer-architecture",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-architecture-luna-06",
+          "reviewer": "architecture",
+          "persona": "reviewer-architecture",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        }
+      ]
     },
     {
       "finding_id": "AUTO-10",
@@ -499,8 +2091,8 @@
           "report_section": "P2 \u2014 Configurable source work is not actually bounded",
           "raw_claim": "Configurable work budgets have no practical upper ceilings",
           "raw_severity": "P2",
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/reports/iter02-architecture-luna-01/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         }
       ],
       "verification_run_ids": [
@@ -518,7 +2110,105 @@
           "basis": "The specific unbounded-work claim conflates a very large explicitly chosen finite budget with absence of a bound. Keep optional cap recommendation separate from a confirmed correctness blocker."
         }
       ],
-      "resolution": "Refutation retained with original observations and contrary source evidence; not counted as fixed or deleted."
+      "resolution": "Refutation retained with original observations and contrary source evidence; not counted as fixed or deleted.",
+      "discovery_reviewers": [
+        {
+          "run_id": "iter02-architecture-luna-01",
+          "reviewer": "architecture",
+          "persona": "reviewer-architecture",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "discovery",
+          "candidate": "candidate-02-01",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        }
+      ],
+      "verification_reviewers": [
+        {
+          "run_id": "iter02-architecture-sol-06",
+          "reviewer": "architecture",
+          "persona": "reviewer-architecture",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-architecture-luna-06",
+          "reviewer": "architecture",
+          "persona": "reviewer-architecture",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        }
+      ]
     },
     {
       "finding_id": "AUTO-11",
@@ -542,16 +2232,16 @@
           "local_candidate_id": "S-01",
           "raw_claim": "journal recovery accepts arbitrary out-of-project destinations",
           "raw_severity": "High/P1",
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/reports/iter02-security-sol-01/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         },
         {
           "run_id": "iter02-security-luna-01",
           "local_candidate_id": "SEC-01",
           "raw_claim": "Recovery journal can overwrite arbitrary absolute paths",
           "raw_severity": "High",
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/reports/iter02-security-luna-01/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         }
       ],
       "verification_run_ids": [
@@ -564,16 +2254,212 @@
       "implementation_status": "Fixed, paired affected review verified, final integrated make passed.",
       "correction_evidence": [
         {
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/documents/publication-fixes-03/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         },
         {
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/documents/tester-fixes-03/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         }
       ],
       "resolution_candidate": "candidate-02-07",
-      "resolution": "Corrected production/test behavior verified by native/component controls and paired affected reviewers, with explicit unchanged dependency carry-forward. Final integrated make passed on unchanged reviewed source; final native telemetry/PR delivery are parent-owned."
+      "resolution": "Corrected production/test behavior verified by native/component controls and paired affected reviewers, with explicit unchanged dependency carry-forward. Final integrated make passed on unchanged reviewed source; final native telemetry/PR delivery are parent-owned.",
+      "discovery_reviewers": [
+        {
+          "run_id": "iter02-security-sol-01",
+          "reviewer": "security",
+          "persona": "reviewer",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "discovery",
+          "candidate": "candidate-02-01",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        },
+        {
+          "run_id": "iter02-security-luna-01",
+          "reviewer": "security",
+          "persona": "reviewer",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "discovery",
+          "candidate": "candidate-02-01",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        }
+      ],
+      "verification_reviewers": [
+        {
+          "run_id": "iter02-data-sol-06",
+          "reviewer": "data",
+          "persona": "reviewer-data",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-data-luna-06",
+          "reviewer": "data",
+          "persona": "reviewer-data",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-security-sol-06",
+          "reviewer": "security",
+          "persona": "reviewer (specialist security)",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-security-luna-06",
+          "reviewer": "security",
+          "persona": "reviewer (specialist security)",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        }
+      ]
     },
     {
       "finding_id": "AUTO-12",
@@ -597,8 +2483,8 @@
           "local_candidate_id": "S-03",
           "raw_claim": "supplied Codex transcript bypasses source-store proof",
           "raw_severity": "Medium/P2",
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/reports/iter02-security-sol-01/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         }
       ],
       "verification_run_ids": [
@@ -609,16 +2495,118 @@
       "implementation_status": "Fixed, paired affected review verified, final integrated make passed.",
       "correction_evidence": [
         {
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/documents/core-fixes-03/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         },
         {
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/documents/tester-fixes-03/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         }
       ],
       "resolution_candidate": "candidate-02-07",
-      "resolution": "Corrected production/test behavior verified by native/component controls and paired affected reviewers, with explicit unchanged dependency carry-forward. Final integrated make passed on unchanged reviewed source; final native telemetry/PR delivery are parent-owned."
+      "resolution": "Corrected production/test behavior verified by native/component controls and paired affected reviewers, with explicit unchanged dependency carry-forward. Final integrated make passed on unchanged reviewed source; final native telemetry/PR delivery are parent-owned.",
+      "discovery_reviewers": [
+        {
+          "run_id": "iter02-security-sol-01",
+          "reviewer": "security",
+          "persona": "reviewer",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "discovery",
+          "candidate": "candidate-02-01",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        }
+      ],
+      "verification_reviewers": [
+        {
+          "run_id": "iter02-security-sol-06",
+          "reviewer": "security",
+          "persona": "reviewer (specialist security)",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-security-luna-06",
+          "reviewer": "security",
+          "persona": "reviewer (specialist security)",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        }
+      ]
     },
     {
       "finding_id": "AUTO-13",
@@ -642,8 +2630,8 @@
           "local_candidate_id": "REL-02",
           "raw_claim": "Setup guidance contradicts automatic publication and optional reports",
           "raw_severity": "P2",
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/reports/iter02-release-luna-01/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         }
       ],
       "verification_run_ids": [
@@ -654,16 +2642,114 @@
       "implementation_status": "Fixed, paired affected review verified, final integrated make passed.",
       "correction_evidence": [
         {
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/documents/core-fixes-03/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         },
         {
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/documents/tester-fixes-03/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         }
       ],
       "resolution_candidate": "candidate-02-07",
-      "resolution": "Corrected production/test behavior verified by native/component controls and paired affected reviewers, with explicit unchanged dependency carry-forward. Final integrated make passed on unchanged reviewed source; final native telemetry/PR delivery are parent-owned."
+      "resolution": "Corrected production/test behavior verified by native/component controls and paired affected reviewers, with explicit unchanged dependency carry-forward. Final integrated make passed on unchanged reviewed source; final native telemetry/PR delivery are parent-owned.",
+      "discovery_reviewers": [
+        {
+          "run_id": "iter02-release-luna-01",
+          "reviewer": "release",
+          "persona": "reviewer",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "discovery",
+          "candidate": "candidate-02-01",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        }
+      ],
+      "verification_reviewers": [
+        {
+          "run_id": "iter02-release-sol-07",
+          "reviewer": "release",
+          "persona": "reviewer (release/setup specialist)",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-07",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-release-luna-07",
+          "reviewer": "release",
+          "persona": "reviewer (release/setup specialist)",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-07",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        }
+      ]
     },
     {
       "finding_id": "AUTO-14",
@@ -687,8 +2773,8 @@
           "local_candidate_id": "RELEASE-02",
           "raw_claim": "True project aliases cannot reinstall or remove owned installation",
           "raw_severity": "P2",
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/reports/iter02-release-sol-01/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         }
       ],
       "verification_run_ids": [
@@ -699,16 +2785,118 @@
       "implementation_status": "Fixed, paired affected review verified, final integrated make passed.",
       "correction_evidence": [
         {
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/documents/core-fixes-03/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         },
         {
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/documents/tester-fixes-03/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         }
       ],
       "resolution_candidate": "candidate-02-07",
-      "resolution": "Corrected production/test behavior verified by native/component controls and paired affected reviewers, with explicit unchanged dependency carry-forward. Final integrated make passed on unchanged reviewed source; final native telemetry/PR delivery are parent-owned."
+      "resolution": "Corrected production/test behavior verified by native/component controls and paired affected reviewers, with explicit unchanged dependency carry-forward. Final integrated make passed on unchanged reviewed source; final native telemetry/PR delivery are parent-owned.",
+      "discovery_reviewers": [
+        {
+          "run_id": "iter02-release-sol-01",
+          "reviewer": "release",
+          "persona": "reviewer",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "discovery",
+          "candidate": "candidate-02-01",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        }
+      ],
+      "verification_reviewers": [
+        {
+          "run_id": "iter02-release-sol-07",
+          "reviewer": "release",
+          "persona": "reviewer (release/setup specialist)",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-07",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-release-luna-07",
+          "reviewer": "release",
+          "persona": "reviewer (release/setup specialist)",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-07",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        }
+      ]
     },
     {
       "finding_id": "AUTO-15",
@@ -732,8 +2920,8 @@
           "local_candidate_id": "RELEASE-03",
           "raw_claim": "Installer resolves omitted source store from caller cwd instead of selected project",
           "raw_severity": "P2",
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/reports/iter02-release-sol-01/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         }
       ],
       "verification_run_ids": [
@@ -744,16 +2932,118 @@
       "implementation_status": "Fixed, paired affected review verified, final integrated make passed.",
       "correction_evidence": [
         {
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/documents/core-fixes-03/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         },
         {
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/documents/tester-fixes-03/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         }
       ],
       "resolution_candidate": "candidate-02-07",
-      "resolution": "Corrected production/test behavior verified by native/component controls and paired affected reviewers, with explicit unchanged dependency carry-forward. Final integrated make passed on unchanged reviewed source; final native telemetry/PR delivery are parent-owned."
+      "resolution": "Corrected production/test behavior verified by native/component controls and paired affected reviewers, with explicit unchanged dependency carry-forward. Final integrated make passed on unchanged reviewed source; final native telemetry/PR delivery are parent-owned.",
+      "discovery_reviewers": [
+        {
+          "run_id": "iter02-release-sol-01",
+          "reviewer": "release",
+          "persona": "reviewer",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "discovery",
+          "candidate": "candidate-02-01",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        }
+      ],
+      "verification_reviewers": [
+        {
+          "run_id": "iter02-release-sol-07",
+          "reviewer": "release",
+          "persona": "reviewer (release/setup specialist)",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-07",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-release-luna-07",
+          "reviewer": "release",
+          "persona": "reviewer (release/setup specialist)",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-07",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        }
+      ]
     },
     {
       "finding_id": "AUTO-16",
@@ -778,8 +3068,8 @@
           "local_candidate_id": "S02-01",
           "raw_claim": "P1 dangling output symlink poisons journal destination authorization",
           "raw_severity": "P1",
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/reports/iter02-security-sol-02/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         }
       ],
       "verification_run_ids": [
@@ -792,7 +3082,237 @@
       ],
       "resolution_candidate": "candidate-02-07",
       "resolution": "Corrected production/test behavior verified by native/component controls and paired affected reviewers, with explicit unchanged dependency carry-forward. Final integrated make passed on unchanged reviewed source; final native telemetry/PR delivery are parent-owned.",
-      "implementation_status": "Fixed, paired affected review verified, final integrated make passed."
+      "implementation_status": "Fixed, paired affected review verified, final integrated make passed.",
+      "discovery_reviewers": [
+        {
+          "run_id": "iter02-security-sol-02",
+          "reviewer": "security",
+          "persona": "reviewer (specialist security)",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-02",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        }
+      ],
+      "verification_reviewers": [
+        {
+          "run_id": "iter02-data-sol-06",
+          "reviewer": "data",
+          "persona": "reviewer-data",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-data-luna-06",
+          "reviewer": "data",
+          "persona": "reviewer-data",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-tests-sol-07",
+          "reviewer": "tests",
+          "persona": "reviewer-tests",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-07",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-tests-luna-07",
+          "reviewer": "tests",
+          "persona": "reviewer-tests",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-07",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-security-sol-06",
+          "reviewer": "security",
+          "persona": "reviewer (specialist security)",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-security-luna-06",
+          "reviewer": "security",
+          "persona": "reviewer (specialist security)",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        }
+      ]
     },
     {
       "finding_id": "AUTO-17",
@@ -817,8 +3337,8 @@
           "local_candidate_id": "S03-01",
           "raw_claim": "Lexical cleaning precedes physical symlink traversal",
           "raw_severity": "P1",
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/reports/iter02-security-sol-03/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         }
       ],
       "verification_run_ids": [
@@ -829,7 +3349,173 @@
       ],
       "resolution_candidate": "candidate-02-07",
       "resolution": "Corrected production/test behavior verified by native/component controls and paired affected reviewers, with explicit unchanged dependency carry-forward. Final integrated make passed on unchanged reviewed source; final native telemetry/PR delivery are parent-owned.",
-      "implementation_status": "Fixed, paired affected review verified, final integrated make passed."
+      "implementation_status": "Fixed, paired affected review verified, final integrated make passed.",
+      "discovery_reviewers": [
+        {
+          "run_id": "iter02-security-sol-03",
+          "reviewer": "security",
+          "persona": "reviewer (specialist security)",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-03",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        }
+      ],
+      "verification_reviewers": [
+        {
+          "run_id": "iter02-tests-sol-07",
+          "reviewer": "tests",
+          "persona": "reviewer-tests",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-07",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-tests-luna-07",
+          "reviewer": "tests",
+          "persona": "reviewer-tests",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-07",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-security-sol-06",
+          "reviewer": "security",
+          "persona": "reviewer (specialist security)",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-security-luna-06",
+          "reviewer": "security",
+          "persona": "reviewer (specialist security)",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        }
+      ]
     },
     {
       "finding_id": "AUTO-18",
@@ -854,8 +3540,8 @@
           "local_candidate_id": "D03-01",
           "raw_claim": "Dangling ledger leaf alias acquires independent publication lock",
           "raw_severity": "P2",
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/reports/iter02-data-sol-03/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         }
       ],
       "verification_run_ids": [
@@ -866,7 +3552,173 @@
       ],
       "resolution_candidate": "candidate-02-07",
       "resolution": "Corrected production/test behavior verified by native/component controls and paired affected reviewers, with explicit unchanged dependency carry-forward. Final integrated make passed on unchanged reviewed source; final native telemetry/PR delivery are parent-owned.",
-      "implementation_status": "Fixed, paired affected review verified, final integrated make passed."
+      "implementation_status": "Fixed, paired affected review verified, final integrated make passed.",
+      "discovery_reviewers": [
+        {
+          "run_id": "iter02-data-sol-03",
+          "reviewer": "data",
+          "persona": "reviewer-data",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-03",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        }
+      ],
+      "verification_reviewers": [
+        {
+          "run_id": "iter02-data-sol-06",
+          "reviewer": "data",
+          "persona": "reviewer-data",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-data-luna-06",
+          "reviewer": "data",
+          "persona": "reviewer-data",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-tests-sol-07",
+          "reviewer": "tests",
+          "persona": "reviewer-tests",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-07",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-tests-luna-07",
+          "reviewer": "tests",
+          "persona": "reviewer-tests",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-07",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        }
+      ]
     },
     {
       "finding_id": "AUTO-19",
@@ -892,16 +3744,16 @@
           "local_candidate_id": "S04-01",
           "raw_claim": "Dangling ledger alias replaced and canonical publication journal stranded",
           "raw_severity": "P2",
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/reports/iter02-security-sol-04/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         },
         {
           "run_id": "iter02-data-sol-04",
           "local_candidate_id": "D04-01",
           "raw_claim": "Dangling ledger alias replaced and canonical publication journal stranded",
           "raw_severity": "P2",
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/reports/iter02-data-sol-04/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         }
       ],
       "verification_run_ids": [
@@ -915,7 +3767,271 @@
       "resolution_candidate": "candidate-02-07",
       "resolution": "Corrected production/test behavior verified by native/component controls and paired affected reviewers, with explicit unchanged dependency carry-forward. Final integrated make passed on unchanged reviewed source; final native telemetry/PR delivery are parent-owned.",
       "parent_verification": "Same writer consistency boundary also exposed report alias replacement and summary missing-parent failure; native regression covers ledger/report/summary separately and together, missing/existing/missing-parent targets. No extra blind discovery credit assigned.",
-      "implementation_status": "Fixed, paired affected review verified, final integrated make passed."
+      "implementation_status": "Fixed, paired affected review verified, final integrated make passed.",
+      "discovery_reviewers": [
+        {
+          "run_id": "iter02-security-sol-04",
+          "reviewer": "security",
+          "persona": "reviewer (specialist security)",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-04",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        },
+        {
+          "run_id": "iter02-data-sol-04",
+          "reviewer": "data",
+          "persona": "reviewer-data",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-04",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        }
+      ],
+      "verification_reviewers": [
+        {
+          "run_id": "iter02-data-sol-06",
+          "reviewer": "data",
+          "persona": "reviewer-data",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-data-luna-06",
+          "reviewer": "data",
+          "persona": "reviewer-data",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-tests-sol-07",
+          "reviewer": "tests",
+          "persona": "reviewer-tests",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-07",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-tests-luna-07",
+          "reviewer": "tests",
+          "persona": "reviewer-tests",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-07",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-security-sol-06",
+          "reviewer": "security",
+          "persona": "reviewer (specialist security)",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-security-luna-06",
+          "reviewer": "security",
+          "persona": "reviewer (specialist security)",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        }
+      ]
     },
     {
       "finding_id": "AUTO-20",
@@ -940,8 +4056,8 @@
           "local_candidate_id": "S05-01",
           "raw_claim": "Source membership cleans symlink-dotdot before actual source read",
           "raw_severity": "P2",
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/reports/iter02-security-sol-05/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         }
       ],
       "verification_run_ids": [
@@ -956,7 +4072,301 @@
       ],
       "resolution_candidate": "candidate-02-07",
       "resolution": "Corrected production/test behavior verified by native/component controls and paired affected reviewers, with explicit unchanged dependency carry-forward. Final integrated make passed on unchanged reviewed source; final native telemetry/PR delivery are parent-owned.",
-      "implementation_status": "Fixed, paired affected review verified, final integrated make passed."
+      "implementation_status": "Fixed, paired affected review verified, final integrated make passed.",
+      "discovery_reviewers": [
+        {
+          "run_id": "iter02-security-sol-05",
+          "reviewer": "security",
+          "persona": "reviewer (specialist security)",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-05",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        }
+      ],
+      "verification_reviewers": [
+        {
+          "run_id": "iter02-behavior-sol-06",
+          "reviewer": "behavior",
+          "persona": "reviewer-behavior",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-behavior-luna-06",
+          "reviewer": "behavior",
+          "persona": "reviewer-behavior",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-data-sol-06",
+          "reviewer": "data",
+          "persona": "reviewer-data",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-data-luna-06",
+          "reviewer": "data",
+          "persona": "reviewer-data",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-tests-sol-07",
+          "reviewer": "tests",
+          "persona": "reviewer-tests",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-07",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-tests-luna-07",
+          "reviewer": "tests",
+          "persona": "reviewer-tests",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-07",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-security-sol-06",
+          "reviewer": "security",
+          "persona": "reviewer (specialist security)",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-security-luna-06",
+          "reviewer": "security",
+          "persona": "reviewer (specialist security)",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        }
+      ]
     },
     {
       "finding_id": "AUTO-21",
@@ -981,8 +4391,8 @@
           "local_candidate_id": "R06-01",
           "raw_claim": "Installer lexically cleans physically valid selected source-home alias",
           "raw_severity": "P2",
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/reports/iter02-release-sol-06/content"
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history."
         }
       ],
       "verification_run_ids": [
@@ -993,7 +4403,173 @@
       ],
       "resolution_candidate": "candidate-02-07",
       "resolution": "Corrected production/test behavior verified by native/component controls and paired affected reviewers, with explicit unchanged dependency carry-forward. Final integrated make passed on unchanged reviewed source; final native telemetry/PR delivery are parent-owned.",
-      "implementation_status": "Fixed, paired affected review verified, final integrated make passed."
+      "implementation_status": "Fixed, paired affected review verified, final integrated make passed.",
+      "discovery_reviewers": [
+        {
+          "run_id": "iter02-release-sol-06",
+          "reviewer": "release",
+          "persona": "reviewer (specialist release)",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-06",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        }
+      ],
+      "verification_reviewers": [
+        {
+          "run_id": "iter02-tests-sol-07",
+          "reviewer": "tests",
+          "persona": "reviewer-tests",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-07",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-tests-luna-07",
+          "reviewer": "tests",
+          "persona": "reviewer-tests",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-07",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-release-sol-07",
+          "reviewer": "release",
+          "persona": "reviewer (release/setup specialist)",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "high"
+              },
+              {
+                "id": "serviceTier",
+                "value": "default"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-07",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "iter02-release-luna-07",
+          "reviewer": "release",
+          "persona": "reviewer (release/setup specialist)",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02-07",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        }
+      ]
     },
     {
       "finding_id": "MERGE-01",
@@ -1014,8 +4590,8 @@
         {
           "run_id": "main-integration-release-sol-01",
           "local_candidate_id": "AL68-MERGE-REL-S01",
-          "report_path": "alspaces/AL-68/iterations/02/REVIEW_RUNS.json",
-          "report_pointer": "/archive/reports/main-integration-release-sol-01/content",
+          "report_path": "alspaces/AL-68/iterations/02/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "raw_claim": "Both setup entrypoints reject every release-candidate tag generated by this repository.",
           "raw_severity": "P2"
         }
@@ -1025,7 +4601,83 @@
         "main-integration-release-luna-02"
       ],
       "resolution_candidate": "7e09f417af8e5e681a14b18fbc1c827fa26cc3ec",
-      "resolution": "Permit + in the narrow allowlist, explicitly reject standalone . and .., and retain traversal/whitespace/shell-payload rejection. Actual source-bundle RC identity and implicit/explicit repair regression tests pass; full make passes."
+      "resolution": "Permit + in the narrow allowlist, explicitly reject standalone . and .., and retain traversal/whitespace/shell-payload rejection. Actual source-bundle RC identity and implicit/explicit repair regression tests pass; full make passes.",
+      "discovery_reviewers": [
+        {
+          "run_id": "main-integration-release-sol-01",
+          "reviewer": "installation/distribution integration",
+          "persona": "reviewer",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "698aa45e747ce18b5f8f0360fe4229d6dfb8bf07",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        }
+      ],
+      "verification_reviewers": [
+        {
+          "run_id": "main-integration-release-sol-02",
+          "reviewer": "installation/distribution integration",
+          "persona": "reviewer",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "verification",
+          "candidate": "7e09f417af8e5e681a14b18fbc1c827fa26cc3ec",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        },
+        {
+          "run_id": "main-integration-release-luna-02",
+          "reviewer": "installation/distribution integration",
+          "persona": "reviewer",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "verification",
+          "candidate": "7e09f417af8e5e681a14b18fbc1c827fa26cc3ec",
+          "execution_status": "completed",
+          "verdict": "APPROVED"
+        }
+      ]
     }
-  ]
+  ],
+  "evidence_retention": {
+    "policy": "Compact findings, reviewer/model credit and outcomes retained; full report bodies and logs removed from current tree.",
+    "historical_revision": "0e9cb88c24f8a10eb1f35840c1ce23223efdd444",
+    "historical_archive_url": "https://github.com/NiltonDuarte/AgenticLens/blob/0e9cb88c24f8a10eb1f35840c1ce23223efdd444/alspaces/AL-68/iterations/02/REVIEW_RUNS.json"
+  }
 }

@@ -6,9 +6,9 @@ Implemented iteration02: installed Codex/OpenCode lifecycle integrations ask the
 
 Main commit99fbcd7 is merged through698aa45; corrected integration is7e09f41. Worktree-recoverable skill bootstrap and explicit binary repair coexist with additive automatic capture and protocol-aware rollback. The draft iteration03 requirements were preserved without implementing the user-PATH/version-pin proposal.
 
-Installation/distribution review by gpt-6.1-sol/high identified MERGE-01: setup rejected workflow-generated RC tags containing +. The fix retains unsafe-tag guards and adds installed-bundle/repair regression coverage. Final verification by gpt-6.1-sol/high and gpt-6-luna/medium approves; both initial reports and full attribution remain archived. Corrected full make passes, including14installation and15capture-distribution checks. No backend/frontend source changed; existing supported runtime boundaries carry forward.
+Installation/distribution review by gpt-6.1-sol/high identified MERGE-01: setup rejected workflow-generated RC tags containing +. The fix retains unsafe-tag guards and adds installed-bundle/repair regression coverage. Final verification by gpt-6.1-sol/high and gpt-6-luna/medium approves; initial outcomes and reviewer/model attribution remain retained. Corrected full make passes, including14installation and15capture-distribution checks. No backend/frontend source changed; existing supported runtime boundaries carry forward.
 
-Final integration snapshot verifies 93 same-project Codex owners (67 independent roots and 26 native children), preserving all 89 prior owners. Raw source-prefix usage, model, parent and project comparisons pass; historical foreign-directory facts remain archived. Capture states remain conservative ({'pending': 55, 'current': 38}); verified published metrics do not imply universal callback coverage. Observability completion is the publication boundary; detailed report remains disabled and absent.
+Final integration snapshot verifies 93 same-project Codex owners (67 independent roots and 26 native children), preserving all 89 prior owners. Raw source-prefix usage, model, parent and project comparisons pass; historical foreign-directory facts remain in Git history. Capture states remain conservative ({'pending': 55, 'current': 38}); verified published metrics do not imply universal callback coverage. Observability completion is the publication boundary; detailed report remains disabled and absent.
 
 ## Delivered behavior
 
@@ -19,7 +19,7 @@ Final integration snapshot verifies 93 same-project Codex owners (67 independent
 
 ## Review and verification
 
-Nineteen confirmed iteration02 defects/oracle gaps were corrected; two claims were refuted with evidence. Complete original reports, shared reviewer/model credit, cancelled history and source observations remain in iteration02 FINDINGS.json/REVIEW_RUNS.json. Candidate07 is approved by paired affected reviewers, with explicit candidate06 carry-forward for unchanged boundaries. Final integrated `make` passed after implementation commit55b4dd4 and upstream integration with all58 reviewed source paths unchanged: Go race/vet,14distribution checks,781frontend tests across35files, embedded frontend build and four platform builds. Final native telemetry contains89 independently verified same-project owners; PR delivery follows.
+Nineteen confirmed iteration02 defects/oracle gaps were corrected; two claims were refuted with evidence. Findings, shared reviewer/model credit, cancelled outcomes and source-observation distinctions remain in iteration02 FINDINGS.json and REVIEW.md. Detailed report bodies and logs remain in Git history. Candidate07 is approved by paired affected reviewers, with explicit candidate06 carry-forward for unchanged boundaries. Final integrated `make` passed after implementation commit55b4dd4 and upstream integration with all58 reviewed source paths unchanged: Go race/vet,14distribution checks,781frontend tests across35files, embedded frontend build and four platform builds. Final native telemetry contains89 independently verified same-project owners; PR delivery follows.
 
 Real runtime evidence is bounded to Linux Codex0.166 and OpenCode1.19.5. Corrected source comparisons establish independent roots/native children, same-ticket/store directory separation, automatic publication, exact source usage/parents/models and report pairing. Codex trust was reviewed by the user. SubagentStart observation, interrupted children before Stop, other native platforms, a real forty-minute run and physical power-loss behavior remain unverified. Synthetic source growth/crash fixtures are identified separately.
 
@@ -27,11 +27,15 @@ Real runtime evidence is bounded to Linux Codex0.166 and OpenCode1.19.5. Correct
 
 Original CONTRACT and iteration01 evidence remain frozen. The unapproved iteration03 draft is preserved separately and excluded from this implementation. Current scope is approved iteration02; no report removal or Git-hook proposal from iteration03 was implemented.
 
-Final telemetry will use exact verified same-project source sessions. Historical cross-directory smoke facts must remain in the lossless archive rather than being relabeled into this project's strict ledger. Raw transcripts remain outside Git.
+Final telemetry will use exact verified same-project source sessions. Historical cross-directory smoke facts remain in Git history and must not be relabeled into this project's strict ledger. Raw transcripts remain outside Git.
 
-Strict-scope final telemetry preparation verified89 actual Codex sessions in this physical project. The prior35 same-project owners must be retained;7 prior cross-directory smoke owners (including4OpenCode sessions) remain verbatim in the archive instead of being relabelled into this ledger. Source metadata was available for every prior owner.
+Strict-scope final telemetry preparation verified89 actual Codex sessions in this physical project. The prior35 same-project owners must be retained;7 prior cross-directory smoke owners (including4OpenCode sessions) remain in historical committed evidence instead of being relabelled into this ledger. Source metadata was available for every prior owner.
 
 Final source proof validates65independent roots and24native children, including all35prior same-project owners. Metrics match authoritative source prefixes; ledger/report pairing was verified before the optional report was removed. Conservative pending coverage states remain visible for full-snapshot precedence; source metric verification is not a universal completeness claim. Active-session work after the final snapshot is outside that snapshot.
+
+## Compact review retention
+
+Removed both large review-run archives from the current tree. Iteration01 retains 12 findings and 48 run outcomes; iteration02 retains 22 findings and 74 run outcomes, including the main-integration review. FINDINGS.json carries direct reviewer/model discovery and verification credit so no deleted archive lookup is needed. Detailed report bodies/logs remain in Git history at 0e9cb88. Raw logs and full reports are no longer required committed deliverables. This documentation-only change preserves application source, model coverage, findings, dispositions and verification limits.
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 240

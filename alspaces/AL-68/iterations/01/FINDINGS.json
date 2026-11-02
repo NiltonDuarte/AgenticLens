@@ -20,43 +20,43 @@
       "evidence": [
         {
           "run_id": "behavior-sol-01",
-          "report_path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-behavior-sol.md",
-          "report_pointer": "/archive/reports/behavior-sol-01/content"
+          "report_path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
+          "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-behavior-sol.md"
         },
         {
           "run_id": "data-sol-01",
-          "report_path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-data-sol.md",
-          "report_pointer": "/archive/reports/data-sol-01/content"
+          "report_path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
+          "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-data-sol.md"
         },
         {
           "run_id": "architecture-sol-01",
-          "report_path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-architecture-sol.md",
-          "report_pointer": "/archive/reports/architecture-sol-01/content"
+          "report_path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
+          "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-architecture-sol.md"
         },
         {
           "run_id": "tests-sol-01",
-          "report_path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-tests-sol.md",
-          "report_pointer": "/archive/reports/tests-sol-01/content"
+          "report_path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
+          "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-tests-sol.md"
         }
       ],
       "correction_evidence": [
         {
-          "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "pointer": "/archive/documents/iterations~101~1IMPLEMENTATION.md/content",
+          "path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "original_path": "IMPLEMENTATION.md"
         },
         {
-          "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "pointer": "/archive/documents/iterations~101~1TEST_REPORT.md/content",
+          "path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "original_path": "TEST_REPORT.md"
         },
         {
-          "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "pointer": "/archive/documents/iterations~101~1SETUP_IMPLEMENTATION.md/content",
+          "path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "original_path": "SETUP_IMPLEMENTATION.md"
         }
       ],
@@ -78,6 +78,298 @@
         "IMPLEMENTATION.md",
         "TEST_REPORT.md",
         "SETUP_IMPLEMENTATION.md"
+      ],
+      "discovery_reviewers": [
+        {
+          "run_id": "behavior-sol-01",
+          "reviewer": "behavior",
+          "persona": "reviewer-behavior",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "discovery",
+          "candidate": "candidate-01",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        },
+        {
+          "run_id": "data-sol-01",
+          "reviewer": "data",
+          "persona": "reviewer-data",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "discovery",
+          "candidate": "candidate-01",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        },
+        {
+          "run_id": "architecture-sol-01",
+          "reviewer": "architecture",
+          "persona": "reviewer-architecture",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "discovery",
+          "candidate": "candidate-01",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        },
+        {
+          "run_id": "tests-sol-01",
+          "reviewer": "tests",
+          "persona": "reviewer-tests",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "discovery",
+          "candidate": "candidate-01",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        }
+      ],
+      "verification_reviewers": [
+        {
+          "run_id": "behavior-sol-04",
+          "reviewer": "behavior",
+          "persona": "reviewer-behavior",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "behavior-luna-04",
+          "reviewer": "behavior",
+          "persona": "reviewer-behavior",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "data-sol-04",
+          "reviewer": "data",
+          "persona": "reviewer-data",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "data-luna-04",
+          "reviewer": "data",
+          "persona": "reviewer-data",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "architecture-sol-04",
+          "reviewer": "architecture",
+          "persona": "reviewer-architecture",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "architecture-luna-04",
+          "reviewer": "architecture",
+          "persona": "reviewer-architecture",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "tests-sol-04",
+          "reviewer": "tests",
+          "persona": "reviewer-tests",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "tests-luna-04",
+          "reviewer": "tests",
+          "persona": "reviewer-tests",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        }
       ]
     },
     {
@@ -96,25 +388,25 @@
       "evidence": [
         {
           "run_id": "data-sol-01",
-          "report_path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-data-sol.md",
-          "report_pointer": "/archive/reports/data-sol-01/content"
+          "report_path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
+          "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-data-sol.md"
         }
       ],
       "correction_evidence": [
         {
-          "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "pointer": "/archive/documents/iterations~101~1IMPLEMENTATION.md/content",
+          "path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "original_path": "IMPLEMENTATION.md"
         },
         {
-          "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "pointer": "/archive/documents/iterations~101~1TEST_REPORT.md/content",
+          "path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "original_path": "TEST_REPORT.md"
         },
         {
-          "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "pointer": "/archive/documents/iterations~101~1SETUP_IMPLEMENTATION.md/content",
+          "path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "original_path": "SETUP_IMPLEMENTATION.md"
         }
       ],
@@ -133,6 +425,184 @@
         "IMPLEMENTATION.md",
         "TEST_REPORT.md",
         "SETUP_IMPLEMENTATION.md"
+      ],
+      "discovery_reviewers": [
+        {
+          "run_id": "data-sol-01",
+          "reviewer": "data",
+          "persona": "reviewer-data",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "discovery",
+          "candidate": "candidate-01",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        }
+      ],
+      "verification_reviewers": [
+        {
+          "run_id": "data-sol-04",
+          "reviewer": "data",
+          "persona": "reviewer-data",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "data-luna-04",
+          "reviewer": "data",
+          "persona": "reviewer-data",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "architecture-sol-04",
+          "reviewer": "architecture",
+          "persona": "reviewer-architecture",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "architecture-luna-04",
+          "reviewer": "architecture",
+          "persona": "reviewer-architecture",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "tests-sol-04",
+          "reviewer": "tests",
+          "persona": "reviewer-tests",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "tests-luna-04",
+          "reviewer": "tests",
+          "persona": "reviewer-tests",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        }
       ]
     },
     {
@@ -151,25 +621,25 @@
       "evidence": [
         {
           "run_id": "data-sol-01",
-          "report_path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-data-sol.md",
-          "report_pointer": "/archive/reports/data-sol-01/content"
+          "report_path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
+          "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-data-sol.md"
         }
       ],
       "correction_evidence": [
         {
-          "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "pointer": "/archive/documents/iterations~101~1IMPLEMENTATION.md/content",
+          "path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "original_path": "IMPLEMENTATION.md"
         },
         {
-          "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "pointer": "/archive/documents/iterations~101~1TEST_REPORT.md/content",
+          "path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "original_path": "TEST_REPORT.md"
         },
         {
-          "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "pointer": "/archive/documents/iterations~101~1SETUP_IMPLEMENTATION.md/content",
+          "path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "original_path": "SETUP_IMPLEMENTATION.md"
         }
       ],
@@ -191,6 +661,235 @@
         "IMPLEMENTATION.md",
         "TEST_REPORT.md",
         "SETUP_IMPLEMENTATION.md"
+      ],
+      "discovery_reviewers": [
+        {
+          "run_id": "data-sol-01",
+          "reviewer": "data",
+          "persona": "reviewer-data",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "discovery",
+          "candidate": "candidate-01",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        }
+      ],
+      "verification_reviewers": [
+        {
+          "run_id": "behavior-sol-04",
+          "reviewer": "behavior",
+          "persona": "reviewer-behavior",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "behavior-luna-04",
+          "reviewer": "behavior",
+          "persona": "reviewer-behavior",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "data-sol-04",
+          "reviewer": "data",
+          "persona": "reviewer-data",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "data-luna-04",
+          "reviewer": "data",
+          "persona": "reviewer-data",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "tests-sol-04",
+          "reviewer": "tests",
+          "persona": "reviewer-tests",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "tests-luna-04",
+          "reviewer": "tests",
+          "persona": "reviewer-tests",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "security-sol-04",
+          "reviewer": "security",
+          "persona": "reviewer",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "security-luna-04",
+          "reviewer": "security",
+          "persona": "reviewer",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        }
       ]
     },
     {
@@ -209,25 +908,25 @@
       "evidence": [
         {
           "run_id": "behavior-sol-01",
-          "report_path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-behavior-sol.md",
-          "report_pointer": "/archive/reports/behavior-sol-01/content"
+          "report_path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
+          "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-behavior-sol.md"
         }
       ],
       "correction_evidence": [
         {
-          "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "pointer": "/archive/documents/iterations~101~1IMPLEMENTATION.md/content",
+          "path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "original_path": "IMPLEMENTATION.md"
         },
         {
-          "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "pointer": "/archive/documents/iterations~101~1TEST_REPORT.md/content",
+          "path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "original_path": "TEST_REPORT.md"
         },
         {
-          "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "pointer": "/archive/documents/iterations~101~1SETUP_IMPLEMENTATION.md/content",
+          "path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "original_path": "SETUP_IMPLEMENTATION.md"
         }
       ],
@@ -246,6 +945,184 @@
         "IMPLEMENTATION.md",
         "TEST_REPORT.md",
         "SETUP_IMPLEMENTATION.md"
+      ],
+      "discovery_reviewers": [
+        {
+          "run_id": "behavior-sol-01",
+          "reviewer": "behavior",
+          "persona": "reviewer-behavior",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "discovery",
+          "candidate": "candidate-01",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        }
+      ],
+      "verification_reviewers": [
+        {
+          "run_id": "behavior-sol-04",
+          "reviewer": "behavior",
+          "persona": "reviewer-behavior",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "behavior-luna-04",
+          "reviewer": "behavior",
+          "persona": "reviewer-behavior",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "architecture-sol-04",
+          "reviewer": "architecture",
+          "persona": "reviewer-architecture",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "architecture-luna-04",
+          "reviewer": "architecture",
+          "persona": "reviewer-architecture",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "tests-sol-04",
+          "reviewer": "tests",
+          "persona": "reviewer-tests",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "tests-luna-04",
+          "reviewer": "tests",
+          "persona": "reviewer-tests",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        }
       ]
     },
     {
@@ -264,25 +1141,25 @@
       "evidence": [
         {
           "run_id": "architecture-sol-01",
-          "report_path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-architecture-sol.md",
-          "report_pointer": "/archive/reports/architecture-sol-01/content"
+          "report_path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
+          "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-architecture-sol.md"
         }
       ],
       "correction_evidence": [
         {
-          "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "pointer": "/archive/documents/iterations~101~1IMPLEMENTATION.md/content",
+          "path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "original_path": "IMPLEMENTATION.md"
         },
         {
-          "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "pointer": "/archive/documents/iterations~101~1TEST_REPORT.md/content",
+          "path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "original_path": "TEST_REPORT.md"
         },
         {
-          "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "pointer": "/archive/documents/iterations~101~1SETUP_IMPLEMENTATION.md/content",
+          "path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "original_path": "SETUP_IMPLEMENTATION.md"
         }
       ],
@@ -301,6 +1178,184 @@
         "IMPLEMENTATION.md",
         "TEST_REPORT.md",
         "SETUP_IMPLEMENTATION.md"
+      ],
+      "discovery_reviewers": [
+        {
+          "run_id": "architecture-sol-01",
+          "reviewer": "architecture",
+          "persona": "reviewer-architecture",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "discovery",
+          "candidate": "candidate-01",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        }
+      ],
+      "verification_reviewers": [
+        {
+          "run_id": "data-sol-04",
+          "reviewer": "data",
+          "persona": "reviewer-data",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "data-luna-04",
+          "reviewer": "data",
+          "persona": "reviewer-data",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "architecture-sol-04",
+          "reviewer": "architecture",
+          "persona": "reviewer-architecture",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "architecture-luna-04",
+          "reviewer": "architecture",
+          "persona": "reviewer-architecture",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "tests-sol-04",
+          "reviewer": "tests",
+          "persona": "reviewer-tests",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "tests-luna-04",
+          "reviewer": "tests",
+          "persona": "reviewer-tests",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        }
       ]
     },
     {
@@ -319,25 +1374,25 @@
       "evidence": [
         {
           "run_id": "security-sol-01",
-          "report_path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-security-sol.md",
-          "report_pointer": "/archive/reports/security-sol-01/content"
+          "report_path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
+          "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-security-sol.md"
         }
       ],
       "correction_evidence": [
         {
-          "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "pointer": "/archive/documents/iterations~101~1IMPLEMENTATION.md/content",
+          "path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "original_path": "IMPLEMENTATION.md"
         },
         {
-          "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "pointer": "/archive/documents/iterations~101~1TEST_REPORT.md/content",
+          "path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "original_path": "TEST_REPORT.md"
         },
         {
-          "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "pointer": "/archive/documents/iterations~101~1SETUP_IMPLEMENTATION.md/content",
+          "path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "original_path": "SETUP_IMPLEMENTATION.md"
         }
       ],
@@ -356,6 +1411,184 @@
         "IMPLEMENTATION.md",
         "TEST_REPORT.md",
         "SETUP_IMPLEMENTATION.md"
+      ],
+      "discovery_reviewers": [
+        {
+          "run_id": "security-sol-01",
+          "reviewer": "security",
+          "persona": "reviewer",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "discovery",
+          "candidate": "candidate-01",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        }
+      ],
+      "verification_reviewers": [
+        {
+          "run_id": "architecture-sol-04",
+          "reviewer": "architecture",
+          "persona": "reviewer-architecture",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "architecture-luna-04",
+          "reviewer": "architecture",
+          "persona": "reviewer-architecture",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "tests-sol-04",
+          "reviewer": "tests",
+          "persona": "reviewer-tests",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "tests-luna-04",
+          "reviewer": "tests",
+          "persona": "reviewer-tests",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "security-sol-04",
+          "reviewer": "security",
+          "persona": "reviewer",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "security-luna-04",
+          "reviewer": "security",
+          "persona": "reviewer",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        }
       ]
     },
     {
@@ -374,25 +1607,25 @@
       "evidence": [
         {
           "run_id": "security-sol-01",
-          "report_path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-security-sol.md",
-          "report_pointer": "/archive/reports/security-sol-01/content"
+          "report_path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
+          "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-security-sol.md"
         }
       ],
       "correction_evidence": [
         {
-          "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "pointer": "/archive/documents/iterations~101~1IMPLEMENTATION.md/content",
+          "path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "original_path": "IMPLEMENTATION.md"
         },
         {
-          "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "pointer": "/archive/documents/iterations~101~1TEST_REPORT.md/content",
+          "path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "original_path": "TEST_REPORT.md"
         },
         {
-          "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "pointer": "/archive/documents/iterations~101~1SETUP_IMPLEMENTATION.md/content",
+          "path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "original_path": "SETUP_IMPLEMENTATION.md"
         }
       ],
@@ -411,6 +1644,184 @@
         "IMPLEMENTATION.md",
         "TEST_REPORT.md",
         "SETUP_IMPLEMENTATION.md"
+      ],
+      "discovery_reviewers": [
+        {
+          "run_id": "security-sol-01",
+          "reviewer": "security",
+          "persona": "reviewer",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "discovery",
+          "candidate": "candidate-01",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        }
+      ],
+      "verification_reviewers": [
+        {
+          "run_id": "architecture-sol-04",
+          "reviewer": "architecture",
+          "persona": "reviewer-architecture",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "architecture-luna-04",
+          "reviewer": "architecture",
+          "persona": "reviewer-architecture",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "tests-sol-04",
+          "reviewer": "tests",
+          "persona": "reviewer-tests",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "tests-luna-04",
+          "reviewer": "tests",
+          "persona": "reviewer-tests",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "security-sol-04",
+          "reviewer": "security",
+          "persona": "reviewer",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "security-luna-04",
+          "reviewer": "security",
+          "persona": "reviewer",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        }
       ]
     },
     {
@@ -429,25 +1840,25 @@
       "evidence": [
         {
           "run_id": "release-sol-01",
-          "report_path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-release-sol.md",
-          "report_pointer": "/archive/reports/release-sol-01/content"
+          "report_path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
+          "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-release-sol.md"
         }
       ],
       "correction_evidence": [
         {
-          "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "pointer": "/archive/documents/iterations~101~1IMPLEMENTATION.md/content",
+          "path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "original_path": "IMPLEMENTATION.md"
         },
         {
-          "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "pointer": "/archive/documents/iterations~101~1TEST_REPORT.md/content",
+          "path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "original_path": "TEST_REPORT.md"
         },
         {
-          "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "pointer": "/archive/documents/iterations~101~1SETUP_IMPLEMENTATION.md/content",
+          "path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "original_path": "SETUP_IMPLEMENTATION.md"
         }
       ],
@@ -464,6 +1875,133 @@
         "IMPLEMENTATION.md",
         "TEST_REPORT.md",
         "SETUP_IMPLEMENTATION.md"
+      ],
+      "discovery_reviewers": [
+        {
+          "run_id": "release-sol-01",
+          "reviewer": "release",
+          "persona": "reviewer",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "discovery",
+          "candidate": "candidate-01",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        }
+      ],
+      "verification_reviewers": [
+        {
+          "run_id": "tests-sol-04",
+          "reviewer": "tests",
+          "persona": "reviewer-tests",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "tests-luna-04",
+          "reviewer": "tests",
+          "persona": "reviewer-tests",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "release-sol-04",
+          "reviewer": "release",
+          "persona": "reviewer",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "release-luna-04",
+          "reviewer": "release",
+          "persona": "reviewer",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        }
       ]
     },
     {
@@ -483,31 +2021,31 @@
       "evidence": [
         {
           "run_id": "release-sol-01",
-          "report_path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-release-sol.md",
-          "report_pointer": "/archive/reports/release-sol-01/content"
+          "report_path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
+          "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-release-sol.md"
         },
         {
           "run_id": "release-luna-01",
-          "report_path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-release-luna.md",
-          "report_pointer": "/archive/reports/release-luna-01/content"
+          "report_path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
+          "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-release-luna.md"
         }
       ],
       "correction_evidence": [
         {
-          "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "pointer": "/archive/documents/iterations~101~1IMPLEMENTATION.md/content",
+          "path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "original_path": "IMPLEMENTATION.md"
         },
         {
-          "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "pointer": "/archive/documents/iterations~101~1TEST_REPORT.md/content",
+          "path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "original_path": "TEST_REPORT.md"
         },
         {
-          "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "pointer": "/archive/documents/iterations~101~1SETUP_IMPLEMENTATION.md/content",
+          "path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "original_path": "SETUP_IMPLEMENTATION.md"
         }
       ],
@@ -522,6 +2060,112 @@
         "IMPLEMENTATION.md",
         "TEST_REPORT.md",
         "SETUP_IMPLEMENTATION.md"
+      ],
+      "discovery_reviewers": [
+        {
+          "run_id": "release-sol-01",
+          "reviewer": "release",
+          "persona": "reviewer",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "discovery",
+          "candidate": "candidate-01",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        },
+        {
+          "run_id": "release-luna-01",
+          "reviewer": "release",
+          "persona": "reviewer",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "discovery",
+          "candidate": "candidate-01",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        }
+      ],
+      "verification_reviewers": [
+        {
+          "run_id": "release-sol-04",
+          "reviewer": "release",
+          "persona": "reviewer",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "release-luna-04",
+          "reviewer": "release",
+          "persona": "reviewer",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        }
       ]
     },
     {
@@ -540,25 +2184,25 @@
       "evidence": [
         {
           "run_id": "data-luna-01",
-          "report_path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-data-luna.md",
-          "report_pointer": "/archive/reports/data-luna-01/content"
+          "report_path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
+          "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-data-luna.md"
         }
       ],
       "correction_evidence": [
         {
-          "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "pointer": "/archive/documents/iterations~101~1IMPLEMENTATION.md/content",
+          "path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "original_path": "IMPLEMENTATION.md"
         },
         {
-          "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "pointer": "/archive/documents/iterations~101~1TEST_REPORT.md/content",
+          "path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "original_path": "TEST_REPORT.md"
         },
         {
-          "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "pointer": "/archive/documents/iterations~101~1SETUP_IMPLEMENTATION.md/content",
+          "path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "original_path": "SETUP_IMPLEMENTATION.md"
         }
       ],
@@ -577,6 +2221,193 @@
         "IMPLEMENTATION.md",
         "TEST_REPORT.md",
         "SETUP_IMPLEMENTATION.md"
+      ],
+      "discovery_reviewers": [
+        {
+          "run_id": "data-luna-01",
+          "reviewer": "data",
+          "persona": "reviewer-data",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "discovery",
+          "candidate": "candidate-01",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        }
+      ],
+      "verification_reviewers": [
+        {
+          "run_id": "data-sol-04",
+          "reviewer": "data",
+          "persona": "reviewer-data",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "data-luna-04",
+          "reviewer": "data",
+          "persona": "reviewer-data",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "architecture-sol-04",
+          "reviewer": "architecture",
+          "persona": "reviewer-architecture",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "architecture-luna-04",
+          "reviewer": "architecture",
+          "persona": "reviewer-architecture",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "tests-sol-04",
+          "reviewer": "tests",
+          "persona": "reviewer-tests",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "tests-luna-04",
+          "reviewer": "tests",
+          "persona": "reviewer-tests",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        }
       ]
     },
     {
@@ -595,25 +2426,25 @@
       "evidence": [
         {
           "run_id": "behavior-luna-01",
-          "report_path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-behavior-luna.md",
-          "report_pointer": "/archive/reports/behavior-luna-01/content"
+          "report_path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
+          "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-behavior-luna.md"
         }
       ],
       "correction_evidence": [
         {
-          "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "pointer": "/archive/documents/iterations~101~1IMPLEMENTATION.md/content",
+          "path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "original_path": "IMPLEMENTATION.md"
         },
         {
-          "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "pointer": "/archive/documents/iterations~101~1TEST_REPORT.md/content",
+          "path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "original_path": "TEST_REPORT.md"
         },
         {
-          "path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "pointer": "/archive/documents/iterations~101~1SETUP_IMPLEMENTATION.md/content",
+          "path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
           "original_path": "SETUP_IMPLEMENTATION.md"
         }
       ],
@@ -634,6 +2465,244 @@
         "IMPLEMENTATION.md",
         "TEST_REPORT.md",
         "SETUP_IMPLEMENTATION.md"
+      ],
+      "discovery_reviewers": [
+        {
+          "run_id": "behavior-luna-01",
+          "reviewer": "behavior",
+          "persona": "reviewer-behavior",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "discovery",
+          "candidate": "candidate-01",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        }
+      ],
+      "verification_reviewers": [
+        {
+          "run_id": "behavior-sol-04",
+          "reviewer": "behavior",
+          "persona": "reviewer-behavior",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "behavior-luna-04",
+          "reviewer": "behavior",
+          "persona": "reviewer-behavior",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "data-sol-04",
+          "reviewer": "data",
+          "persona": "reviewer-data",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "data-luna-04",
+          "reviewer": "data",
+          "persona": "reviewer-data",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "architecture-sol-04",
+          "reviewer": "architecture",
+          "persona": "reviewer-architecture",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "architecture-luna-04",
+          "reviewer": "architecture",
+          "persona": "reviewer-architecture",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "tests-sol-04",
+          "reviewer": "tests",
+          "persona": "reviewer-tests",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "tests-luna-04",
+          "reviewer": "tests",
+          "persona": "reviewer-tests",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        }
       ]
     },
     {
@@ -655,21 +2724,21 @@
       "evidence": [
         {
           "run_id": "behavior-sol-02",
-          "report_path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-behavior-sol-02.md",
-          "report_pointer": "/archive/reports/behavior-sol-02/content"
+          "report_path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
+          "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-behavior-sol-02.md"
         },
         {
           "run_id": "data-sol-02",
-          "report_path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-data-sol-02.md",
-          "report_pointer": "/archive/reports/data-sol-02/content"
+          "report_path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
+          "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-data-sol-02.md"
         },
         {
           "run_id": "architecture-sol-02",
-          "report_path": "alspaces/AL-68/iterations/01/REVIEW_RUNS.json",
-          "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-architecture-sol-02.md",
-          "report_pointer": "/archive/reports/architecture-sol-02/content"
+          "report_path": "alspaces/AL-68/iterations/01/REVIEW.md",
+          "evidence_retention": "Compact findings and outcomes retained; detailed historical evidence is in Git history.",
+          "original_report_path": "alspaces/AL-68/iterations/01/REVIEW-architecture-sol-02.md"
         }
       ],
       "corrected_candidate": "candidate-04",
@@ -697,7 +2766,325 @@
         "tests-luna-04"
       ],
       "original_correction_evidence": [],
-      "correction_evidence": []
+      "correction_evidence": [],
+      "discovery_reviewers": [
+        {
+          "run_id": "behavior-sol-02",
+          "reviewer": "behavior",
+          "persona": "reviewer-behavior",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        },
+        {
+          "run_id": "data-sol-02",
+          "reviewer": "data",
+          "persona": "reviewer-data",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        },
+        {
+          "run_id": "architecture-sol-02",
+          "reviewer": "architecture",
+          "persona": "reviewer-architecture",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-02",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        },
+        {
+          "run_id": "data-sol-03",
+          "reviewer": "data",
+          "persona": "reviewer-data",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-03",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        },
+        {
+          "run_id": "architecture-sol-03",
+          "reviewer": "architecture",
+          "persona": "reviewer-architecture",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-03",
+          "execution_status": "completed",
+          "verdict": "CHANGES_REQUESTED"
+        }
+      ],
+      "verification_reviewers": [
+        {
+          "run_id": "behavior-sol-04",
+          "reviewer": "behavior",
+          "persona": "reviewer-behavior",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "behavior-luna-04",
+          "reviewer": "behavior",
+          "persona": "reviewer-behavior",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "data-sol-04",
+          "reviewer": "data",
+          "persona": "reviewer-data",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "data-luna-04",
+          "reviewer": "data",
+          "persona": "reviewer-data",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "architecture-sol-04",
+          "reviewer": "architecture",
+          "persona": "reviewer-architecture",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "architecture-luna-04",
+          "reviewer": "architecture",
+          "persona": "reviewer-architecture",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "tests-sol-04",
+          "reviewer": "tests",
+          "persona": "reviewer-tests",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6.1-sol",
+            "reasoning_effort": "high"
+          },
+          "acknowledged": null,
+          "observed_settings": [
+            {
+              "model": "gpt-6.1-sol",
+              "reasoning_effort": "high"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "run_id": "tests-luna-04",
+          "reviewer": "tests",
+          "persona": "reviewer-tests",
+          "requested": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "reasoning_effort": "medium"
+          },
+          "acknowledged": {
+            "provider_instance_id": "codex",
+            "model": "gpt-6-luna",
+            "options": [
+              {
+                "id": "reasoningEffort",
+                "value": "medium"
+              }
+            ]
+          },
+          "observed_settings": [
+            {
+              "model": "gpt-6-luna",
+              "reasoning_effort": "medium"
+            }
+          ],
+          "phase": "re_review",
+          "candidate": "candidate-04",
+          "execution_status": "completed",
+          "verdict": "INCOMPLETE"
+        }
+      ]
     }
-  ]
+  ],
+  "evidence_retention": {
+    "policy": "Compact findings, reviewer/model credit and outcomes retained; full report bodies and logs removed from current tree.",
+    "historical_revision": "0e9cb88c24f8a10eb1f35840c1ce23223efdd444",
+    "historical_archive_url": "https://github.com/NiltonDuarte/AgenticLens/blob/0e9cb88c24f8a10eb1f35840c1ce23223efdd444/alspaces/AL-68/iterations/01/REVIEW_RUNS.json"
+  }
 }

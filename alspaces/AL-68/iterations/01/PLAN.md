@@ -53,12 +53,12 @@ All runs use the same frozen base/head or content fingerprint, contract and test
 
 | Persona | Risk and inspect boundary | Archived first-pass run IDs |
 | --- | --- | --- |
-| reviewer-behavior | Install through receive/bind/reconcile/generate, independent roots and supported callback paths | `behavior-sol-01` in REVIEW_RUNS.json; `behavior-luna-01` in REVIEW_RUNS.json |
-| reviewer-data | Exact ownership, snapshot precedence, preservation, crash recovery and publication consistency | `data-sol-01` in REVIEW_RUNS.json; `data-luna-01` in REVIEW_RUNS.json |
-| reviewer-architecture | FCIS, embedded version compatibility, source reuse and bounded work | `architecture-sol-01` in REVIEW_RUNS.json; `architecture-luna-01` in REVIEW_RUNS.json |
-| reviewer-tests | Regression oracles, both source families, installer fixtures and honest smoke limits | `tests-sol-01` in REVIEW_RUNS.json; `tests-luna-01` in REVIEW_RUNS.json |
-| reviewer with security focus | Hook stdin/process trust boundary, no secrets/transcript persistence, safe executable/path handling and trust preservation | `security-sol-01` in REVIEW_RUNS.json; `security-luna-01` in REVIEW_RUNS.json |
-| reviewer with build/release focus | Packaged copies/direct setup paths, native handler availability, upgrade rollback and standalone distribution | `release-sol-01` in REVIEW_RUNS.json; `release-luna-01` in REVIEW_RUNS.json |
+| reviewer-behavior | Install through receive/bind/reconcile/generate, independent roots and supported callback paths | `behavior-sol-01` in REVIEW.md; `behavior-luna-01` in REVIEW.md |
+| reviewer-data | Exact ownership, snapshot precedence, preservation, crash recovery and publication consistency | `data-sol-01` in REVIEW.md; `data-luna-01` in REVIEW.md |
+| reviewer-architecture | FCIS, embedded version compatibility, source reuse and bounded work | `architecture-sol-01` in REVIEW.md; `architecture-luna-01` in REVIEW.md |
+| reviewer-tests | Regression oracles, both source families, installer fixtures and honest smoke limits | `tests-sol-01` in REVIEW.md; `tests-luna-01` in REVIEW.md |
+| reviewer with security focus | Hook stdin/process trust boundary, no secrets/transcript persistence, safe executable/path handling and trust preservation | `security-sol-01` in REVIEW.md; `security-luna-01` in REVIEW.md |
+| reviewer with build/release focus | Packaged copies/direct setup paths, native handler availability, upgrade rollback and standalone distribution | `release-sol-01` in REVIEW.md; `release-luna-01` in REVIEW.md |
 
 Parent owns iterations/01/REVIEW.md, finding attribution, deduplication, dispositions and final verdict. Specialist briefs load only their dedicated focus/common rules, not sibling conclusions. Every report identifies its model/effort and reviewed revision. Product changes remain frozen during each review wave.
 
@@ -76,7 +76,7 @@ Preserved guarantees: bounded durable hook handoff, exact source identities, no 
 
 ## Documentation steering: 2026-11-02
 
-Source: user requested fewer committed workspace files without losing findings or reviewer/model identity, then instructed “do it, update the skill instructions”. This is artifact maintenance in iteration 01. The committed layout is nine files: five root deliverables and PLAN.md, REVIEW.md, FINDINGS.json, REVIEW_RUNS.json. Complete original report/support text, hashes, candidate definitions and historical consolidated records are archived in REVIEW_RUNS.json before removing loose files.
+Source: user requested fewer committed workspace files without losing findings or reviewer/model identity, then instructed “do it, update the skill instructions”. This is artifact maintenance in iteration 01. The committed layout is nine files: five root deliverables and PLAN.md, REVIEW.md, FINDINGS.json, REVIEW.md. Compact finding/model credit, candidate references and verification outcomes are retained in REVIEW.md before removing loose files.
 
 Acceptance delta: verify lossless archival, resolvable current references, all finding IDs/discovery and verification credits, all 48 run outcomes and requested/acknowledged/observed model/effort metadata. Preserved guarantees: accepted runtime scope, source facts, schema v5, digest-bound capture report, independent review privacy and both configured review models. Superseded decision: separate committed files for reviewer and supporting evidence; reviewers retain separate private temporary writable outputs. Verification impact: deterministic archive/provenance and skill validation; existing unchanged-code test evidence carries forward. No application implementation or renewed scope approval is required.
 
