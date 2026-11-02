@@ -3,6 +3,8 @@ import json
 import os
 from pathlib import Path
 import platform
+import shlex
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -250,6 +252,78 @@ sys.exit(int(os.environ.get("FIXTURE_EXIT", "0")))
         self.assertFalse(self.native().exists())
         self.assertFalse(list(self.repo.rglob(".gitignore")))
         self.assertEqual(self.requests(), [])
+
+    def test_recommended_repair_restores_native_execute_permission_without_replacement(self):
+        self.install()
+        self.succeeds(self.repair(None, "--local-bin", self.binary))
+        before = self.native().read_bytes()
+        for local_override in [False, True]:
+            with self.subTest(local_override=local_override):
+                self.native().chmod(0o644)
+                denied = self.run_script(self.repo / LAUNCH, "permission-check")
+                self.assertNotEqual(denied.returncode, 0)
+                self.assertIn("not executable", denied.stderr)
+                command = next(line.strip() for line in denied.stderr.splitlines()
+                               if line.startswith("  bash "))
+                args = shlex.split(command)
+                if local_override:
+                    args.extend(["--local-bin", str(self.binary)])
+                repaired = subprocess.run(args, cwd=self.repo, env=self.env,
+                                          capture_output=True, text=True, timeout=20)
+                self.succeeds(repaired)
+                self.assertTrue(os.access(self.native(), os.X_OK), repaired.stdout + repaired.stderr)
+                self.assertEqual(self.native().read_bytes(), before)
+                launched = self.succeeds(self.run_script(self.repo / LAUNCH, "permission-check"))
+                self.assertEqual(json.loads(launched.stdout)["args"], ["permission-check"])
+                self.assertEqual(self.requests(), [])
+
+    def test_worktree_without_release_marker_requires_explicit_version_before_fetch(self):
+        policy = str(SETUP / "RELEASE_VERSION") + "\n" + str(OPERATOR / "bin") + "/\n"
+        (self.repo / ".gitignore").write_text(policy)
+        self.install()
+        self.git("add", ".agents", ".gitignore")
+        self.git("commit", "-qm", "owner omits generated release marker and binaries")
+        worktree = self.root / "worktree without release marker"
+        self.git("worktree", "add", "-qb", "without-release-marker", str(worktree))
+        self.assertTrue((worktree / DOWNLOAD).is_file())
+        self.assertFalse((worktree / SETUP / "RELEASE_VERSION").exists())
+        for args in [[], ["--dry-run"]]:
+            with self.subTest(args=args):
+                unpinned = self.repair(worktree, *args, FETCH_MODE="online")
+                self.assertNotEqual(unpinned.returncode, 0, unpinned.stdout)
+                self.assertIn("--version", unpinned.stderr)
+                self.assertEqual(self.requests(), [])
+                self.assertFalse(self.native(worktree).parent.exists())
+        offline_destination = self.root / "unversioned offline prebuilt"
+        self.succeeds(self.repair(worktree, "--dest", offline_destination,
+                                 "--local-bin", self.binary))
+        self.assertTrue((offline_destination / self.native_name).is_file())
+        self.assertEqual(self.requests(), [])
+        self.succeeds(self.repair(worktree, "--version", "v9.8.7", FETCH_MODE="online"))
+        self.assertEqual([request["url"] for request in self.requests()], [
+            "https://github.com/NiltonDuarte/AgenticLens/releases/download/v9.8.7/" + self.native_name
+        ])
+        self.assertEqual(self.git("status", "--porcelain", cwd=worktree), "")
+        self.assertFalse((worktree / SETUP / "RELEASE_VERSION").exists())
+        self.assertEqual((worktree / ".agenticlens-config.yaml").read_bytes(), self.config.read_bytes())
+
+    def test_contributor_entrypoint_preserves_explicit_latest_default_without_marker(self):
+        destination = self.repo / "contributor binary directory"
+        source = self.root / "contributor source without installed marker"
+        for relative in [DOWNLOAD, SETUP / "scripts/agentic-lens-wrapper.sh",
+                         Path("scripts/download-agentic-lens.sh")]:
+            target = source / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(SOURCE / relative, target)
+        entrypoint = source / "scripts/download-agentic-lens.sh"
+        dry_run = self.succeeds(self.run_script(entrypoint, "--dest", destination, "--dry-run"))
+        self.assertIn("Version: latest", dry_run.stdout)
+        self.assertEqual(self.requests(), [])
+        self.succeeds(self.run_script(entrypoint, "--dest", destination, FETCH_MODE="online"))
+        self.assertEqual([request["url"] for request in self.requests()], [
+            "https://github.com/NiltonDuarte/AgenticLens/releases/latest/download/" + self.native_name
+        ])
+        self.assertTrue((destination / self.native_name).is_file())
 
     def test_dry_run_platform_artifacts_and_missing_option_values_do_not_write(self):
         self.install()

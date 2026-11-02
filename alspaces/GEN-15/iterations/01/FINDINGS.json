@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "GEN15-01",
+      "location": ".agents/skills/agentic-lens-setup/scripts/download.sh existing-file skip branches",
+      "trigger": "Native binary exists without execute permission; run launcher then recommended repair",
+      "violated_expectation": "Repair must either restore usable installation or report failure",
+      "consequence": "Repair exits zero but launcher still fails",
+      "classification": "introduced",
+      "severity": "P2",
+      "evidence": "REVIEW_SOL.md SOL-01-F1 disposable production-script reproduction",
+      "disposition": "confirmed",
+      "disposition_reason": "Parent traced launcher -x rejection and both downloader -f skip branches; reviewer reproduced false success",
+      "discovery_run_ids": [
+        "SOL-01"
+      ],
+      "observations": [
+        {
+          "run_id": "SOL-01",
+          "local_candidate_id": "SOL-01-F1",
+          "claim": "Recommended repair falsely succeeds for non-executable binary",
+          "severity": "P2",
+          "evidence": "REVIEW_SOL.md"
+        }
+      ],
+      "lifecycle_status": "open",
+      "verification_run_ids": []
+    },
+    {
+      "finding_id": "GEN15-02",
+      "location": ".agents/skills/agentic-lens-setup/scripts/download.sh RELEASE_VERSION fallback",
+      "trigger": "Owner omits release marker from tracked scripts; fresh worktree contains scripts without marker",
+      "violated_expectation": "Repair must not silently unpin installation dependencies",
+      "consequence": "Pinned skill scripts are paired with an unspecified latest release executable",
+      "classification": "introduced",
+      "severity": "P2",
+      "evidence": "REVIEW_SOL.md SOL-01-F2 actual worktree and controlled URL reproduction",
+      "disposition": "confirmed",
+      "disposition_reason": "Parent confirmed missing marker selects latest default; reviewer exercised actual worktree",
+      "discovery_run_ids": [
+        "SOL-01"
+      ],
+      "observations": [
+        {
+          "run_id": "SOL-01",
+          "local_candidate_id": "SOL-01-F2",
+          "claim": "Missing release metadata silently unpins worktree repair",
+          "severity": "P2",
+          "evidence": "REVIEW_SOL.md"
+        }
+      ],
+      "lifecycle_status": "open",
+      "verification_run_ids": []
+    },
+    {
+      "finding_id": "GEN15-DOC1",
+      "location": "alspaces/GEN-15/iterations/01/PLAN.md clarification paragraph",
+      "trigger": "Read stale pending-approval sentence after explicit approval",
+      "violated_expectation": "Plan must consistently record active approval",
+      "consequence": "Misleading handoff state",
+      "classification": "introduced",
+      "severity": "low",
+      "evidence": "REVIEW_LUNA.md plan record correction",
+      "disposition": "confirmed",
+      "disposition_reason": "Parent read contradictory sentence and replaced it with subsequent approval reference",
+      "discovery_run_ids": [
+        "LUNA-01"
+      ],
+      "observations": [
+        {
+          "run_id": "LUNA-01",
+          "local_candidate_id": "LUNA-01-plan-correction",
+          "claim": "Clarification paragraph conflicts with current approval section",
+          "severity": "non-blocking",
+          "evidence": "REVIEW_LUNA.md"
+        }
+      ],
+      "lifecycle_status": "fixed",
+      "verification_run_ids": []
+    }
+  ]
+}

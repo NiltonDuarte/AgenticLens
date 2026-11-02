@@ -15,7 +15,7 @@ SKILL_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 REPO="${AGENTIC_LENS_REPO:-NiltonDuarte/AgenticLens}"
 DEST_DIR="${AGENTIC_LENS_BIN_DIR:-${SKILL_ROOT}/../agentic-lens-operator/bin}"
-INSTALLED_VERSION="latest"
+INSTALLED_VERSION=""
 if [[ -f "$SKILL_ROOT/RELEASE_VERSION" ]]; then
     INSTALLED_VERSION="$(cat "$SKILL_ROOT/RELEASE_VERSION")"
 fi
@@ -31,7 +31,7 @@ usage() {
 Usage: download.sh [OPTIONS]
 
 Options:
-  --version <version>       Release version to download (default: installed RELEASE_VERSION, otherwise latest)
+  --version <version>       Release version to download (default: installed RELEASE_VERSION; required if unavailable)
   --dest <dir>              Destination binary directory (default: sibling agentic-lens-operator/bin)
   --include-host <target>   Pre-download additional host binary (e.g. darwin-arm64, darwin-amd64, linux-amd64)
   --all-platforms           Download binaries for all supported platforms
@@ -87,6 +87,16 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+# An untracked release marker may be absent in a new worktree. Never infer
+# latest for an installed bundle whose original release is unknown.
+if [[ -z "$VERSION" && ( -z "$LOCAL_BIN" || $DRY_RUN -eq 1 ) ]]; then
+    echo "Error: Installed release identity is unavailable (missing/empty $SKILL_ROOT/RELEASE_VERSION). Select the intended release explicitly with --version <RELEASE_TAG> or AGENTIC_LENS_VERSION; no download performed." >&2
+    exit 1
+fi
+case "$VERSION" in
+    *[!A-Za-z0-9._-]*) echo "Error: Invalid release tag: $VERSION" >&2; exit 1 ;;
+esac
 
 # Detect Operating System
 OS_RAW="$(uname -s)"
@@ -220,6 +230,18 @@ if [[ ! -f "$TARGET_WRAPPER" || $FORCE -eq 1 ]]; then
     install_wrapper
 fi
 
+# Explicit repair restores execute permission without replacing stored bytes.
+retain_binary() {
+    local target="$1"
+    if [[ ! -x "$target" ]]; then
+        if ! chmod +x "$target" || [[ ! -x "$target" ]]; then
+            echo "Error: Could not restore executable permission: $target. Repair filesystem permissions before retrying." >&2
+            return 1
+        fi
+    fi
+    echo "Binary already exists at ${target} (retained; use --force to replace)."
+}
+
 # If a local binary override is specified, install it for current platform
 if [[ -n "$LOCAL_BIN" ]]; then
     if [[ ! -f "$LOCAL_BIN" ]]; then
@@ -228,7 +250,7 @@ if [[ -n "$LOCAL_BIN" ]]; then
     fi
     LOCAL_TARGET="${DEST_DIR}/${PRIMARY_BIN}"
     if [[ -f "$LOCAL_TARGET" && $FORCE -eq 0 ]]; then
-        echo "Binary already exists at ${LOCAL_TARGET} (skipping; use --force to replace)."
+        retain_binary "$LOCAL_TARGET"
         exit 0
     fi
     echo "Installing local prebuilt binary from ${LOCAL_BIN} to ${LOCAL_TARGET}..."
@@ -247,8 +269,8 @@ download_binary() {
     local b_dest="${DEST_DIR}/${b_name}"
 
     if [[ -f "$b_dest" && $FORCE -eq 0 ]]; then
-        echo "Binary ${b_name} already exists at ${b_dest} (skipping)."
-        return 0
+        retain_binary "$b_dest"
+        return $?
     fi
 
     local d_url

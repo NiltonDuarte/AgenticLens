@@ -24,8 +24,13 @@ if [ ! -x "$binary" ]; then
     echo "Error: AgenticLens platform executable is missing or not executable: $binary" >&2
     repair="$SCRIPT_DIR/../../agentic-lens-setup/scripts/download.sh"
     if [ -f "$repair" ]; then
-        echo "Install/repair explicitly (downloads a release binary; leaves configuration and Git policy unchanged):" >&2
-        printf '  bash "%s" --dest "%s"\n' "$repair" "$BIN_DIR" >&2
+        echo "Install/repair explicitly (restores execute permission or downloads a missing release binary; leaves configuration and Git policy unchanged):" >&2
+        if [ -s "$SCRIPT_DIR/../../agentic-lens-setup/RELEASE_VERSION" ] || [ -n "${AGENTIC_LENS_VERSION:-}" ]; then
+            printf '  bash "%s" --dest "%s"\n' "$repair" "$BIN_DIR" >&2
+        else
+            echo 'Release identity is also unavailable. Select the intended release tag explicitly; repair will not assume latest:' >&2
+            printf '  bash "%s" --dest "%s" --version "<RELEASE_TAG>"\n' "$repair" "$BIN_DIR" >&2
+        fi
     else
         echo 'Setup repair scripts are also missing. Follow the bootstrap instructions in agentic-lens-setup/SKILL.md or:' >&2
         echo '  https://github.com/NiltonDuarte/AgenticLens/blob/main/.agents/skills/agentic-lens-setup/SKILL.md' >&2
