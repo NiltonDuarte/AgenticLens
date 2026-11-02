@@ -1,6 +1,6 @@
 # AL-68 iteration02 consolidated review
 
-Current scope verdict: **APPROVED; final integration gate pending**. All required persona/profile cells are complete or explicitly carried from candidate06 to candidate07. No confirmed blocking finding remains. This does not yet approve delivery or merge.
+Current scope verdict: **APPROVED**. All required persona/profile cells are complete or explicitly carried from candidate06 to candidate07. No confirmed blocking finding remains. The current integrated make passed. Final native telemetry and PR publication remain; merging is not authorized by this verdict.
 
 Candidate: candidate-02-07, based on de31cb1. All58 frozen source/test/docs paths match the reviewed snapshot. Candidate06->07 changes only installer store canonicalization, raw source-prefix expansion and the native AUTO21 oracle. Behavior/data/architecture/security approvals carry forward because their actual source guards, physical resolver, scheduler, state ownership, locks, journal, writers and schema are unchanged; paired release/test reviews verify the changed integration.
 
@@ -51,7 +51,7 @@ Nonblocking suggestion from test L candidate07: AUTO21 does not separately asser
 
 ## Verification and runtime boundary
 
-Candidate06 full `go test -race ./...` and `go vet ./...` passed; candidate07 targeted installer/config/capture race checks and independent old-installer/old-config overlays pass/fail as expected. The final integrated `make` must run after the implementation commit and upstream integration. Earlier make01-04 outputs are retained as evidence of their own candidates, not current delivery approval.
+Candidate06 full `go test -race ./...` and `go vet ./...` passed; candidate07 targeted installer/config/capture race checks and independent old-installer/old-config overlays pass/fail as expected. Final integrated `make` passed after implementation commit55b4dd4 and upstream integration with all58 reviewed paths unchanged; full output is archived at `archive.documents[final-integrated-make].content`. Earlier make01-04 outputs are retained as evidence of their own candidates, not current delivery approval.
 
 Corrected-handler real runtime evidence: Linux Codex0.166, three independent roots and two completed native children; Linux OpenCode1.19.5, two same-ticket/store directories with disjoint12/3owners, including five children in the first. Exact source project/session/native-parent/model/usage and available costs were compared; automatic publication required no contributing-agent generate. Human Codex trust was approved by the user; hook definition bytes were not bypassed. Current path/source changes are covered by native synthetic regressions and bounded unchanged existing-directory carry-forward.
 

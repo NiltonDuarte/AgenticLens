@@ -11,7 +11,7 @@ Implemented iteration02: installed Codex/OpenCode lifecycle integrations ask the
 
 ## Review and verification
 
-Nineteen confirmed iteration02 defects/oracle gaps were corrected; two claims were refuted with evidence. Complete original reports, shared reviewer/model credit, cancelled history and source observations remain in iteration02 FINDINGS.json/REVIEW_RUNS.json. Candidate07 is approved by paired affected reviewers, with explicit candidate06 carry-forward for unchanged boundaries. Final integrated make, telemetry and PR delivery are pending at this implementation checkpoint.
+Nineteen confirmed iteration02 defects/oracle gaps were corrected; two claims were refuted with evidence. Complete original reports, shared reviewer/model credit, cancelled history and source observations remain in iteration02 FINDINGS.json/REVIEW_RUNS.json. Candidate07 is approved by paired affected reviewers, with explicit candidate06 carry-forward for unchanged boundaries. Final integrated `make` passed after implementation commit55b4dd4 and upstream integration with all58 reviewed source paths unchanged: Go race/vet,14distribution checks,781frontend tests across35files, embedded frontend build and four platform builds. Final native telemetry and PR delivery follow.
 
 Real runtime evidence is bounded to Linux Codex0.166 and OpenCode1.19.5. Corrected source comparisons establish independent roots/native children, same-ticket/store directory separation, automatic publication, exact source usage/parents/models and report pairing. Codex trust was reviewed by the user. SubagentStart observation, interrupted children before Stop, other native platforms, a real forty-minute run and physical power-loss behavior remain unverified. Synthetic source growth/crash fixtures are identified separately.
 
@@ -20,3 +20,5 @@ Real runtime evidence is bounded to Linux Codex0.166 and OpenCode1.19.5. Correct
 Original CONTRACT and iteration01 evidence remain frozen. The unapproved iteration03 draft is preserved separately and excluded from this implementation. Current scope is approved iteration02; no report removal or Git-hook proposal from iteration03 was implemented.
 
 Final telemetry will use exact verified same-project source sessions. Historical cross-directory smoke facts must remain in the lossless archive rather than being relabeled into this project's strict ledger. Raw transcripts remain outside Git.
+
+Strict-scope final telemetry preparation verified89 actual Codex sessions in this physical project. The prior35 same-project owners must be retained;7 prior cross-directory smoke owners (including4OpenCode sessions) remain verbatim in the archive instead of being relabelled into this ledger. Source metadata was available for every prior owner.
