@@ -319,6 +319,20 @@ func TestFormatMarkdownMetricsTable_DynamicSubagentRoles(t *testing.T) {
 	if !strings.Contains(tableMD, "- **Subagent Turn Velocity & Thrashing:** 6.0 avg turns/run (peak: 8 turns) | Advisor 4.0, Po 8.0") {
 		t.Errorf("expected custom subagents in turn velocity, got:\n%s", tableMD)
 	}
+
+	t.Run("unknown persona retains role row effort and velocity", func(t *testing.T) {
+		ledger.WorkflowEfficiency.RoleEffortDistributionPct = map[string]float64{"advisor": 50, "": 50}
+		ledger.WorkflowEfficiency.SubagentTurnVelocity.ByRole = map[domain.AgentRole]float64{"advisor": 4, "": 8}
+		ledger.WorkflowEfficiency.ContextWindowHealth.SubagentsPeakRole = ""
+		ledger.Roles = []domain.RoleMetric{{Role: "", Invocations: 2, InputTokens: 55, OutputTokens: 8}}
+		rendered := adapters.FormatMarkdownMetricsTable(ledger)
+		for _, want := range []string{"Unknown 50.0%, Advisor 50.0%", "Unknown 8.0, Advisor 4.0", "| **Unknown** | 2 | 55 | 8 |"} {
+			if !strings.Contains(rendered, want) {
+				t.Errorf("missing unknown persona metric %q in:\n%s", want, rendered)
+			}
+		}
+	})
+
 }
 
 func TestFormatMarkdownMetricsTable_MixedCanonicalAndCustomSubagentsPrecedence(t *testing.T) {

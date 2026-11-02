@@ -461,6 +461,13 @@ func TestBuildSessionTree_OrphanWithoutParentBecomesRoot(t *testing.T) {
 	if roots[0].ID != "ses_isolated" {
 		t.Errorf("expected ses_isolated to be promoted to root, got %s", roots[0].ID)
 	}
+	if roots[0].ParentID == nil || *roots[0].ParentID != nonExistentParent {
+		t.Fatalf("display promotion erased source ancestry: %+v", roots[0])
+	}
+	if nodes[0].ParentID == nil || *nodes[0].ParentID != nonExistentParent {
+		t.Fatal("builder mutated input ancestry")
+	}
+
 }
 
 func TestBuildSessionTree_AdversarialEdgeCases(t *testing.T) {

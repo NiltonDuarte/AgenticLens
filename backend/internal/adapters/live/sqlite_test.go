@@ -1268,6 +1268,95 @@ func TestHydrateWorkspaceEvents_SessionRoleMapUsesSessionID(t *testing.T) {
 	if resp.Events[0].Role != "planner" {
 		t.Errorf("expected role 'planner' from sessionRoleMap, got %q", resp.Events[0].Role)
 	}
+
+	writer, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer writer.Close()
+
+	for _, tc := range []struct{ name, stored, sessionAgent, first, second, want string }{
+		{"unknown recovered from assistant", "", "", "tester", "tester", "tester"},
+		{"legacy root resolved from assistant", "RootAgent", "", "reviewer", "reviewer", "reviewer"},
+		{"legacy child resolved from assistant", "UnassignedSubAgent", "", "coder", "", "coder"},
+		{"stale named persona recovered", "planner", "", "reviewer", "reviewer", "reviewer"},
+		{"explicit raw source wins mapping", "RootAgent", "Build", "reviewer", "coder", "Build"},
+		{"conflicting assistants remain unknown", "planner", "", "planner", "coder", ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ledger.Facts.Sessions[0].Invocations[0].Role = domain.AgentRole(tc.stored)
+			if _, err := writer.Exec(`UPDATE session SET agent=? WHERE id='s_custom'`, tc.sessionAgent); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := writer.Exec(`UPDATE message SET data=? WHERE id='m_custom'`, fmt.Sprintf(`{"role":"assistant","agent":%q,"content":"msg"}`, tc.first)); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := writer.Exec(`INSERT OR REPLACE INTO message(id,session_id,time_created,time_updated,data) VALUES('m_custom_second','s_custom',?,?,?)`, now+1, now+1, fmt.Sprintf(`{"role":"assistant","agent":%q,"content":"msg2"}`, tc.second)); err != nil {
+				t.Fatal(err)
+			}
+			for _, match := range []string{"stable source ID", "unique legacy occurrence", "new source occurrence"} {
+				t.Run(match, func(t *testing.T) {
+					ledger.Facts.Sessions[0].Events = []domain.SessionEventFact{{EventID: "committed-only", Timestamp: time.UnixMilli(now - 1).UTC().Format("2006-01-02T15:04:05.000000+00:00"), Turn: 0, Role: domain.RoleRootAgent, EventType: domain.EventTypeCompaction, Status: "completed"}}
+					if match != "new source occurrence" {
+						id := ""
+						if match == "stable source ID" {
+							id = "opencode:message:m_custom"
+						}
+						ledger.Facts.Sessions[0].Events = append(ledger.Facts.Sessions[0].Events, domain.SessionEventFact{EventID: id, Timestamp: time.UnixMilli(now).UTC().Format("2006-01-02T15:04:05.000000+00:00"), Turn: 1, Role: domain.AgentRole(tc.stored), EventType: domain.EventTypeTurnMessage, Status: "completed"})
+					}
+					before, err := json.Marshal(ledger)
+					if err != nil {
+						t.Fatal(err)
+					}
+					result, err := service.HydrateWorkspaceEvents(context.Background(), "AL-CUSTOM", ledger)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if !result.IsHydrated || !result.IncludesBaseline || len(result.Events) != 3 {
+						t.Fatalf("hydration lost or duplicated occurrences: %+v", result)
+					}
+					matched, appended, retained := 0, 0, 0
+					for _, event := range result.Events {
+						if event.EventID == "committed-only" {
+							retained++
+							if event.Role != domain.RoleRootAgent {
+								t.Errorf("unmatched baseline persona changed: %+v", event)
+							}
+							continue
+						}
+						if event.EventID == "opencode:message:m_custom" {
+							matched++
+						} else if event.EventID == "opencode:message:m_custom_second" {
+							appended++
+						} else {
+							t.Errorf("unexpected source identity: %+v", event)
+						}
+						if string(event.Role) != tc.want || event.PromptContent == nil {
+							t.Errorf("hydrated source role/payload=%+v want role=%q", event, tc.want)
+						}
+					}
+					if matched != 1 || appended != 1 || retained != 1 {
+						t.Fatalf("occurrence ownership changed: %+v", result.Events)
+					}
+					after, err := json.Marshal(ledger)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if string(before) != string(after) {
+						t.Fatal("read projection mutated stored facts")
+					}
+					var unavailable *live.LiveService
+					fallback, err := unavailable.HydrateWorkspaceEvents(context.Background(), "AL-CUSTOM", ledger)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if fallback.IsHydrated || !reflect.DeepEqual(fallback.Events, domain.SortEvents(ledger.Facts.EventFacts())) {
+						t.Fatalf("unavailable source rewrote baseline: %+v", fallback)
+					}
+				})
+			}
+		})
+	}
 }
 
 func TestHydrateWorkspaceEvents_CodexFailsClosedWhenAnyRootIsMissing(t *testing.T) {
@@ -1541,6 +1630,27 @@ func TestHydrateWorkspaceEvents_FallbackWhenSessionNotFound(t *testing.T) {
 	if !reflect.DeepEqual(resp.Events, ledger.Facts.EventFacts()) {
 		t.Fatalf("missing local session discarded recorded facts: %#v", resp.Events)
 	}
+
+	for _, legacy := range []domain.AgentRole{domain.RoleRootAgent, domain.RoleUnassignedSubAgent} {
+		t.Run(string(legacy), func(t *testing.T) {
+			for i := range ledger.Facts.Sessions {
+				for j := range ledger.Facts.Sessions[i].Invocations {
+					ledger.Facts.Sessions[i].Invocations[j].Role = legacy
+				}
+				for j := range ledger.Facts.Sessions[i].Events {
+					ledger.Facts.Sessions[i].Events[j].Role = legacy
+				}
+			}
+			fallback, err := service.HydrateWorkspaceEvents(ctx, "LEGACY-UNKNOWN", ledger)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if fallback.IsHydrated || !reflect.DeepEqual(fallback.Events, ledger.Facts.EventFacts()) {
+				t.Fatalf("unavailable source rewrote legacy persona: %+v", fallback)
+			}
+		})
+	}
+
 }
 
 func TestHydrateWorkspaceEvents_HostileDegradationAndFailureModes(t *testing.T) {
@@ -2496,20 +2606,20 @@ func TestHydrateWorkspaceEvents_FallbackRoleBehaviorForNamelessSessions(t *testi
 		sessionRoles[ev.SessionID] = ev.Role
 	}
 
-	// Root nameless sessions must resolve to RoleRootAgent ("RootAgent")
-	if r, ok := sessionRoles["s_root_null"]; !ok || r != domain.RoleRootAgent {
-		t.Errorf("s_root_null: expected %q, got %q (found=%v)", domain.RoleRootAgent, r, ok)
+	// Unknown root and child personas remain blank regardless of ancestry.
+	if r, ok := sessionRoles["s_root_null"]; !ok || r != domain.AgentRole("") {
+		t.Errorf("s_root_null: expected %q, got %q (found=%v)", domain.AgentRole(""), r, ok)
 	}
-	if r, ok := sessionRoles["s_root_ws"]; !ok || r != domain.RoleRootAgent {
-		t.Errorf("s_root_ws: expected %q, got %q (found=%v)", domain.RoleRootAgent, r, ok)
+	if r, ok := sessionRoles["s_root_ws"]; !ok || r != domain.AgentRole("") {
+		t.Errorf("s_root_ws: expected %q, got %q (found=%v)", domain.AgentRole(""), r, ok)
 	}
 
-	// Child nameless sessions must resolve to RoleUnassignedSubAgent ("UnassignedSubAgent")
-	if r, ok := sessionRoles["s_child_null"]; !ok || r != domain.RoleUnassignedSubAgent {
-		t.Errorf("s_child_null: expected %q, got %q (found=%v)", domain.RoleUnassignedSubAgent, r, ok)
+	// Child ancestry does not manufacture a persona.
+	if r, ok := sessionRoles["s_child_null"]; !ok || r != domain.AgentRole("") {
+		t.Errorf("s_child_null: expected %q, got %q (found=%v)", domain.AgentRole(""), r, ok)
 	}
-	if r, ok := sessionRoles["s_child_ws"]; !ok || r != domain.RoleUnassignedSubAgent {
-		t.Errorf("s_child_ws: expected %q, got %q (found=%v)", domain.RoleUnassignedSubAgent, r, ok)
+	if r, ok := sessionRoles["s_child_ws"]; !ok || r != domain.AgentRole("") {
+		t.Errorf("s_child_ws: expected %q, got %q (found=%v)", domain.AgentRole(""), r, ok)
 	}
 }
 
@@ -2522,7 +2632,7 @@ func TestLiveTraceSnapshotReuseAndInPlaceInvalidation(t *testing.T) {
 	defer writer.Close()
 	now := time.Now().UnixMilli()
 	if _, err := writer.Exec(`INSERT INTO session (id, title, time_created, time_updated) VALUES ('live', 'live', ?, ?);
- INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('turn', 'live', ?, ?, '{"role":"assistant","content":"before","tokens":{"input":10}}');`, now, now, now, now); err != nil {
+ INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('turn', 'live', ?, ?, '{"role":"assistant","content":"before","agent":"planner","tokens":{"input":10}}');`, now, now, now, now); err != nil {
 		t.Fatal(err)
 	}
 	hook, err := live.OpenReadOnlyHook(dbPath, 1000)
@@ -2532,8 +2642,12 @@ func TestLiveTraceSnapshotReuseAndInPlaceInvalidation(t *testing.T) {
 	service := live.NewLiveService(hook, testProjectConfig())
 	defer service.Close()
 	ctx := context.Background()
-	if _, err := service.GetSessionTree(ctx); err != nil {
+	tree, err := service.GetSessionTree(ctx)
+	if err != nil {
 		t.Fatal(err)
+	}
+	if len(tree.RootSessions) != 1 || tree.RootSessions[0].Role != "planner" {
+		t.Fatalf("assistant persona missing from tree: %+v", tree)
 	}
 	first, err := service.GetSessionTrace(ctx, "live")
 	if err != nil {
@@ -2549,7 +2663,7 @@ func TestLiveTraceSnapshotReuseAndInPlaceInvalidation(t *testing.T) {
 	if &first.Messages[0] != &second.Messages[0] {
 		t.Fatal("unchanged source reconstructed trace history")
 	}
-	if _, err := writer.Exec(`UPDATE message SET data = '{"role":"assistant","content":"after","reasoning":"thinking","tokens":{"input":20}}' WHERE id = 'turn'`); err != nil {
+	if _, err := writer.Exec(`UPDATE message SET data = '{"role":"assistant","content":"after","agent":"coder","reasoning":"thinking","tokens":{"input":20}}' WHERE id = 'turn'`); err != nil {
 		t.Fatal(err)
 	}
 	changed, err := service.GetSessionTrace(ctx, "live")
@@ -2558,6 +2672,13 @@ func TestLiveTraceSnapshotReuseAndInPlaceInvalidation(t *testing.T) {
 	}
 	if changed.Messages[0].Content != "after" || changed.Messages[0].InputTokens != 20 || changed.Messages[0].ReasoningContent == nil {
 		t.Fatalf("in-place update did not invalidate snapshot: %+v", changed.Messages[0])
+	}
+	updatedTree, err := service.GetSessionTree(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(updatedTree.RootSessions) != 1 || updatedTree.RootSessions[0].Role != "coder" {
+		t.Fatalf("persona cache failed invalidation: %+v", updatedTree)
 	}
 	if first.Messages[0].Content != "before" {
 		t.Fatal("new snapshot mutated earlier accepted data")

@@ -82,6 +82,8 @@ const (
 // AgentRole defines the role of an agent invocation.
 type AgentRole string
 
+// Legacy role placeholders remain readable in historical ledgers. New source
+// extraction represents unavailable personas with an empty AgentRole.
 const (
 	RoleRootAgent          AgentRole = "RootAgent"
 	RoleUnassignedSubAgent AgentRole = "UnassignedSubAgent"
@@ -126,9 +128,7 @@ func orderRolesHelper[T ~string](roles []T, customOrder ...[]T) []T {
 	present := make(map[T]struct{})
 	for _, r := range roles {
 		trimmed := T(strings.TrimSpace(string(r)))
-		if trimmed != "" {
-			present[trimmed] = struct{}{}
-		}
+		present[trimmed] = struct{}{}
 	}
 	if len(present) == 0 {
 		return nil
@@ -181,14 +181,14 @@ func orderRolesHelper[T ~string](roles []T, customOrder ...[]T) []T {
 	return append(ordered, remaining...)
 }
 
-// OrderRoles deduplicates and orders roles by custom order first (if provided and non-empty),
+// OrderRoles retains the blank unknown role and orders deduplicated roles by custom order first (if provided and non-empty),
 // followed by remaining roles sorted in ascending alphabetical order.
 // If custom order is omitted or empty, all roles are sorted alphabetically.
 func OrderRoles[T ~string](roles []T, customOrder ...[]T) []T {
 	return orderRolesHelper(roles, customOrder...)
 }
 
-// OrderSubagentRoles deduplicates non-empty trimmed candidate roles, sorts roles defined by
+// OrderSubagentRoles retains the blank unknown role, deduplicates trimmed roles, and sorts roles defined by
 // custom order first (if provided and non-empty), followed by remaining candidate roles sorted
 // in ascending alphabetical order. If custom order is omitted or empty, all candidate roles
 // are sorted alphabetically.

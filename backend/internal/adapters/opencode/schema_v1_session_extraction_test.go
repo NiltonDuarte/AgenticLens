@@ -4,6 +4,7 @@ import (
 	"agenticlens/internal/adapters/opencode"
 	"agenticlens/internal/domain"
 	"database/sql"
+	"fmt"
 	_ "modernc.org/sqlite"
 	"os"
 	"path/filepath"
@@ -1067,22 +1068,74 @@ func TestSchemaV1ExtractSessions_RawPersonaPreservation(t *testing.T) {
 			}
 		}
 
-		if rootInv == nil || rootInv.Role != domain.RoleRootAgent {
-			t.Fatalf("expected root invocation fallback role %q, got: %+v", domain.RoleRootAgent, rootInv)
+		if rootInv == nil || rootInv.Role != domain.AgentRole("") {
+			t.Fatalf("expected root invocation fallback role %q, got: %+v", domain.AgentRole(""), rootInv)
 		}
-		if childInv == nil || childInv.Role != domain.RoleUnassignedSubAgent {
-			t.Fatalf("expected child invocation fallback role %q, got: %+v", domain.RoleUnassignedSubAgent, childInv)
+		if childInv == nil || childInv.Role != domain.AgentRole("") {
+			t.Fatalf("expected child invocation fallback role %q, got: %+v", domain.AgentRole(""), childInv)
 		}
 
 		for _, ev := range events {
-			if ev.SessionID == "ses_root_empty" && ev.Role != domain.RoleRootAgent {
-				t.Errorf("expected root event role %q, got: %s", domain.RoleRootAgent, ev.Role)
+			if ev.SessionID == "ses_root_empty" && ev.Role != domain.AgentRole("") {
+				t.Errorf("expected root event role %q, got: %s", domain.AgentRole(""), ev.Role)
 			}
-			if ev.SessionID == "ses_child_empty" && ev.Role != domain.RoleUnassignedSubAgent {
-				t.Errorf("expected child event role %q, got: %s", domain.RoleUnassignedSubAgent, ev.Role)
+			if ev.SessionID == "ses_child_empty" && ev.Role != domain.AgentRole("") {
+				t.Errorf("expected child event role %q, got: %s", domain.AgentRole(""), ev.Role)
 			}
 		}
 	})
+
+	t.Run("assistant persona evidence is session scoped and unambiguous", func(t *testing.T) {
+		for _, tc := range []struct{ name, sessionAgent, first, second, want string }{
+			{"agreed", "", " custom-planner ", "custom-planner", "custom-planner"},
+			{"conflicting", "", "planner", "coder", ""},
+			{"explicit session wins", " supervisor ", "planner", "coder", "supervisor"},
+			{"user transport agent ignored", "", "", "", ""},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				if _, err := db.Exec(`UPDATE session SET agent=? WHERE id='ses_root_empty'`, tc.sessionAgent); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := db.Exec(`UPDATE message SET data=? WHERE id='m_rt_empty'`, fmt.Sprintf(`{"role":"assistant","agent":%q,"tokens":{"input":50,"output":10}}`, tc.first)); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := db.Exec(`INSERT OR REPLACE INTO message VALUES ('m_role_second','ses_root_empty',3070,3070,?)`, fmt.Sprintf(`{"role":"assistant","agent":%q,"tokens":{"input":5}}`, tc.second)); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := db.Exec(`INSERT OR REPLACE INTO message VALUES ('m_role_repeat','ses_root_empty',3080,3080,?)`, fmt.Sprintf(`{"role":"assistant","agent":%q}`, tc.first)); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := db.Exec(`INSERT OR REPLACE INTO message VALUES ('m_role_user','ses_root_empty',3040,3040,'{"role":"user","agent":"not-a-persona"}')`); err != nil {
+					t.Fatal(err)
+				}
+				sessions, _, _, err := opencode.ExtractSessions(db, []string{"ses_root_empty"}, "test-user", nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+				for _, session := range sessions {
+					want := tc.want
+					if session.ID == "ses_child_empty" {
+						want = ""
+						if session.ParentID == nil || *session.ParentID != "ses_root_empty" {
+							t.Fatalf("child ancestry lost: %+v", session)
+						}
+					}
+					if len(session.Invocations) != 1 {
+						t.Fatalf("unexpected invocations %+v", session)
+					}
+					if string(session.Invocations[0].Role) != want {
+						t.Errorf("session %s role=%q want=%q", session.ID, session.Invocations[0].Role, want)
+					}
+					for _, event := range session.Events {
+						if string(event.Role) != want {
+							t.Errorf("event persona differs: %+v want=%q", event, want)
+						}
+					}
+				}
+			})
+		}
+	})
+
 }
 
 func TestSchemaV1ExtractSessions_AdversarialPersonaPreservationAndWhitespace(t *testing.T) {

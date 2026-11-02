@@ -1291,6 +1291,29 @@ describe('TraceWaterfall Component', () => {
     });
 
     describe('Multi-Filter Composition Engine', () => {
+      it('selects unknown personas without losing their events and recovers all roles', () => {
+        const events: EventFact[] = [
+          { timestamp: '2026-10-29T10:00:00Z', session_id: 'root', turn: 1, role: '', event_type: 'turn_message', status: 'completed', context_tokens: 0 },
+          { timestamp: '2026-10-29T10:01:00Z', session_id: 'child', turn: 2, role: '  ', event_type: 'turn_message', status: 'completed', context_tokens: 0 },
+          { timestamp: '2026-10-29T10:02:00Z', session_id: 'named', turn: 3, role: 'coder', event_type: 'turn_message', status: 'completed', context_tokens: 0 },
+        ];
+        render(<TraceWaterfall events={events} isHydrated={false} />);
+        fireEvent.click(screen.getByTestId('waterfall-expand-btn'));
+        fireEvent.click(screen.getByRole('button', { name: 'All Events' }));
+        const roleSelect = screen.getByRole('combobox', { name: 'Filter by subagent role' });
+        const roleContainer = roleSelect.closest('.multiselect-container') as HTMLElement;
+        fireEvent.click(roleSelect);
+        fireEvent.click(within(roleContainer).getByRole('checkbox', { name: 'Unknown' }));
+        fireEvent.click(roleSelect);
+        expect(screen.getByTestId('timeline-item-1')).toHaveAccessibleName('Event Turn 1 Unknown turn_message');
+        expect(screen.getByTestId('timeline-item-2')).toHaveAccessibleName('Event Turn 2 Unknown turn_message');
+        expect(screen.queryByTestId('timeline-item-3')).not.toBeInTheDocument();
+        fireEvent.click(roleSelect);
+        fireEvent.click(within(roleContainer).getByRole('checkbox', { name: 'No filter' }));
+        fireEvent.click(roleSelect);
+        expect(screen.getByTestId('timeline-item-3')).toBeInTheDocument();
+      });
+
       it('simultaneously composes filterMode, roleFilter, toolFilter, and anomalyFilter across positive and negative permutations', () => {
         render(
           <TraceWaterfall

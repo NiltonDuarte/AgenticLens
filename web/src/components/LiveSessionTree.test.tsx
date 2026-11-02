@@ -53,7 +53,7 @@ describe('LiveSessionTree Component', () => {
           id: 'root-1',
           parent_id: null,
           agent: 'orchestrator',
-          role: 'orchestrator',
+          role: '',
           model: 'claude-3-opus',
           title: 'Orchestrator Root Session',
           time_created: '2026-10-20T10:00:00Z',
@@ -66,7 +66,7 @@ describe('LiveSessionTree Component', () => {
               id: 'child-level-1',
               parent_id: 'root-1',
               agent: 'coder',
-              role: 'coder',
+              role: '   ',
               model: 'gemini-3.8-flash',
               title: 'Child Coder Session',
               time_created: '2026-10-20T10:05:00Z',
@@ -111,6 +111,7 @@ describe('LiveSessionTree Component', () => {
     const childWrapper = screen.getByTestId('session-node-child-level-1');
     const grandchildWrapper = screen.getByTestId('session-node-grandchild-level-2');
 
+    expect(screen.getAllByText('Unknown')).toHaveLength(2);
     expect(rootWrapper).toHaveClass('depth-0');
     expect(childWrapper).toHaveClass('depth-1');
     expect(grandchildWrapper).toHaveClass('depth-2');

@@ -2,6 +2,7 @@ import React, { useLayoutEffect, useRef, useState } from 'react';
 import type { LiveMessageFact, LiveSessionNode, LiveTraceView, LivePartFact, LiveAnomalyAlert } from '../domain/live';
 import {
   formatTokensK,
+  formatRoleLabel,
   truncateMiddle,
   formatLocalTimeWithMs,
   formatLocalDateTimeTooltip,
@@ -371,7 +372,7 @@ export const LiveTraceInspector: React.FC<LiveTraceInspectorProps> = ({
               {isSessionCopied ? 'Copied' : 'Copy Prompt'}
             </button>
             <span className={`node-role-badge role-${sessionNode.role.toLowerCase()}`}>
-              {sessionNode.role}
+              {formatRoleLabel(sessionNode.role)}
             </span>
             <span className="inspector-model-badge">{sessionNode.model}</span>
           </div>

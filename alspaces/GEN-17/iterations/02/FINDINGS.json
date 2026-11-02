@@ -1,0 +1,129 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "GEN16-01",
+      "location": "backend/internal/domain/events.go:enrichEvent via live/service.go:HydrateWorkspaceEvents",
+      "trigger": "Persisted event matches successfully hydrated source event whose source persona differs",
+      "violated_expectation": "Available authoritative source persona must be reflected in hydrated response",
+      "consequence": "Unknown/legacy/stale role survives while payload enrichment succeeds",
+      "classification": "required-contract gap through unchanged dependency",
+      "severity": "P2",
+      "evidence": "Behavior and data reviewers independently reproduced using temporary SQLite and Go overlays",
+      "disposition": "confirmed",
+      "disposition_reason": "Matching event reconciliation enriches payload but never projects role",
+      "discovery_run_ids": [
+        "behavior_sol_6_1_high",
+        "data_sol_6_1_high",
+        "tests_sol_6_1_high"
+      ],
+      "observations": [
+        {
+          "local_id": "BEH-SOL-01",
+          "run": "behavior_sol_6_1_high"
+        },
+        {
+          "local_id": "D-SOL-01",
+          "run": "data_sol_6_1_high"
+        },
+        {
+          "local_id": "test-focus matched-event coverage",
+          "run": "tests_sol_6_1_high"
+        }
+      ],
+      "lifecycle_status": "fixed",
+      "verification": "Coder focused domain/live/http tests pass; tester targeted live/domain race and before-fix hydration overlay prove guard. Parent original data overlay now passes; original2000-poll race3 stress timed out40s, bounded20-poll race1 variant passes1.889s. New fingerprint 7b720b474b53e3fecc292b8c7de0ea4575dd00282c12da63ea8d2c3b08f06b06"
+    },
+    {
+      "finding_id": "GEN16-02",
+      "location": "backend/internal/adapters/live/service.go:GetSessionTree/sessionTraceSnapshot",
+      "trigger": "Concurrent source commit and another session trace read invalidate cache after target trace returns, before persona lookup",
+      "violated_expectation": "Live trace and persona must refer to the same immutable source snapshot",
+      "consequence": "Stable known persona intermittently displays Unknown",
+      "classification": "introduced",
+      "severity": "P2",
+      "evidence": "Architecture reviewer real temporary SQLite overlay: three race-enabled failures and unchanged-source control pass",
+      "disposition": "confirmed",
+      "disposition_reason": "Separate locked reads allow tracePersonas revision reset between target trace and persona reads",
+      "discovery_run_ids": [
+        "architecture_sol_6_1_high"
+      ],
+      "observations": [
+        {
+          "local_id": "A-SOL-01",
+          "run": "architecture_sol_6_1_high"
+        }
+      ],
+      "lifecycle_status": "fixed",
+      "verification": "Coder focused domain/live/http tests pass; tester targeted live/domain race and before-fix hydration overlay prove guard. Parent original data overlay now passes; original2000-poll race3 stress timed out40s, bounded20-poll race1 variant passes1.889s. New fingerprint 7b720b474b53e3fecc292b8c7de0ea4575dd00282c12da63ea8d2c3b08f06b06"
+    },
+    {
+      "finding_id": "GEN16-03",
+      "location": "live/service.go:sessionTraceSnapshot and live/sqlite.go:SourceRevision",
+      "trigger": "Any database write invalidates all active-session traces",
+      "violated_expectation": "Reviewer recommends per-session invalidation for changed-source polling",
+      "consequence": "Existing active-source polls can reread histories of unchanged sessions",
+      "classification": "pre_existing",
+      "severity": "P2 in reviewer report",
+      "evidence": "Luna data static trace; parent verified identical global traceCache invalidation in git show HEAD:backend/internal/adapters/live/service.go lines395-396",
+      "disposition": "confirmed",
+      "disposition_reason": "Valid existing performance limitation; no new history fetch introduced by persona evidence, which reuses existing trace slice and revision. O(sum active messages+parts) per changed database revision, O(active sessions) unchanged polls. Per-session invalidation redesign outside approved role-resolution scope; retained as explicit limitation, not current correctness blocker.",
+      "discovery_run_ids": [
+        "data_luna_6_medium"
+      ],
+      "observations": [
+        {
+          "local_id": "D1",
+          "run": "data_luna_6_medium"
+        }
+      ],
+      "lifecycle_status": "accepted_debt",
+      "owner": "Live service maintenance; future per-session cache invalidation work"
+    },
+    {
+      "finding_id": "GEN16-04",
+      "location": "domain/live.go:BuildSessionTree and related tests",
+      "trigger": "Child whose parent is missing is promoted to displayed roots",
+      "violated_expectation": "Explicit ancestry retention guarantee needs production-boundary regression oracle",
+      "consequence": "Potential future parent clearing regression not demonstrated by reviewer test selection",
+      "classification": "test_gap_only",
+      "severity": "test effectiveness required correction",
+      "evidence": "Luna test reviewer static inspection; no production defect demonstrated; tester to check existing backend coverage before adding",
+      "disposition": "confirmed",
+      "disposition_reason": "Check existing coherent test coverage and add missing parent assertion if absent",
+      "discovery_run_ids": [
+        "tests_luna_6_medium"
+      ],
+      "observations": [
+        {
+          "local_id": "TEST-01",
+          "run": "tests_luna_6_medium"
+        }
+      ],
+      "lifecycle_status": "fixed",
+      "verification": "Coder focused domain/live/http tests pass; tester targeted live/domain race and before-fix hydration overlay prove guard. Parent original data overlay now passes; original2000-poll race3 stress timed out40s, bounded20-poll race1 variant passes1.889s. New fingerprint 7b720b474b53e3fecc292b8c7de0ea4575dd00282c12da63ea8d2c3b08f06b06"
+    },
+    {
+      "finding_id": "GEN17-05",
+      "location": "live/service.go:metadata lookup and ReconcileSourceEvents projection",
+      "trigger": "Metadata lookup fails while source trace succeeds for event-only persisted session",
+      "violated_expectation": "Optional metadata failure must preserve supported baseline role",
+      "consequence": "Matched committed reviewer role becomes blank",
+      "classification": "introduced",
+      "severity": "P2",
+      "evidence": "Data Sol re-review overlay /tmp/gen16-data-recheck-f7p4_ffx/overlay.json fails; generic reconciliation and healthy-source controls pass",
+      "disposition": "confirmed",
+      "disposition_reason": "Successful trace access does not establish persona metadata lookup success",
+      "discovery_run_ids": [
+        "data_sol_6_1_high_recheck"
+      ],
+      "observations": [
+        {
+          "local_id": "D-SOL-R1",
+          "run": "data_sol_6_1_high_recheck"
+        }
+      ],
+      "lifecycle_status": "open"
+    }
+  ]
+}

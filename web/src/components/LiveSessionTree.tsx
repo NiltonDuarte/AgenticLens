@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { LiveSessionNode, LiveSessionTree as LiveSessionTreeType } from '../domain/live';
-import { formatDurationSeconds } from '../domain/formatters';
+import { formatDurationSeconds, formatRoleLabel } from '../domain/formatters';
 
 export interface LiveSessionTreeProps {
   readonly tree: LiveSessionTreeType;
@@ -63,7 +63,7 @@ const LiveSessionNodeItem: React.FC<NodeItemProps> = ({
           <div className="node-title-group">
             <span className="node-agent-name">{node.agent}</span>
             <span className={`node-role-badge role-${node.role.toLowerCase()}`}>
-              {node.role}
+              {formatRoleLabel(node.role)}
             </span>
             <span className="node-model-name">{node.model}</span>
           </div>

@@ -106,13 +106,8 @@ func extractSchemaV2Sessions(db *sql.DB, roots []string, defaultUser string, use
 	var events []domain.EventFact
 	for _, s := range sessions {
 		role := domain.AgentRole(strings.TrimSpace(s.agent.String))
-		if role == "" {
-			if s.parent.Valid {
-				role = domain.RoleUnassignedSubAgent
-			} else {
-				role = domain.RoleRootAgent
-			}
-		}
+		var persona domain.PersonaEvidence
+		eventStart := len(events)
 		mr, e := db.Query(`SELECT id,type,seq,time_created,time_updated,data FROM session_message WHERE session_id=? ORDER BY seq,time_created,id`, s.id)
 		if e != nil {
 			return nil, nil, nil, fmt.Errorf("querying OpenCode schema family v2 messages for session %s: %w", s.id, e)
@@ -158,6 +153,7 @@ func extractSchemaV2Sessions(db *sql.DB, roots []string, defaultUser string, use
 			case "idle":
 				continue
 			case "assistant":
+				persona = persona.WithCandidate(p.Agent)
 				if p.Model.ID == "" {
 					return nil, nil, nil, fmt.Errorf("OpenCode schema family v2: assistant message %s in session %s is missing model.id", m.id, s.id)
 				}
@@ -293,6 +289,10 @@ func extractSchemaV2Sessions(db *sql.DB, roots []string, defaultUser string, use
 			default:
 				return nil, nil, nil, fmt.Errorf("OpenCode schema family v2: unsupported message type %q for message %s in session %s", m.kind, m.id, s.id)
 			}
+		}
+		role = persona.Resolve(s.agent.String)
+		for i := eventStart; i < len(events); i++ {
+			events[i].Role = role
 		}
 		model := strings.TrimSpace(s.model.String)
 		if len(models) == 0 {

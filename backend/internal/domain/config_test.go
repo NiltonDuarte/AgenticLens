@@ -446,11 +446,11 @@ func TestRoleMappings_ResolveRole(t *testing.T) {
 	}
 
 	// Empty string safety
-	if mappings.ResolveRole("") != domain.RoleUnassignedSubAgent {
-		t.Errorf("expected RoleUnassignedSubAgent for empty string, got %s", mappings.ResolveRole(""))
+	if mappings.ResolveRole("") != domain.AgentRole("") {
+		t.Errorf("expected unknown role for empty string, got %s", mappings.ResolveRole(""))
 	}
-	if mappings.ResolveRole("   ") != domain.RoleUnassignedSubAgent {
-		t.Errorf("expected RoleUnassignedSubAgent for whitespace, got %s", mappings.ResolveRole("   "))
+	if mappings.ResolveRole("   ") != domain.AgentRole("") {
+		t.Errorf("expected unknown role for whitespace, got %s", mappings.ResolveRole("   "))
 	}
 
 	// Custom mapping
@@ -795,8 +795,8 @@ func TestRoleMappings_AdversarialEdgeCases(t *testing.T) {
 		emptyInputs := []string{"", " ", "   ", "\t", "\n", "\r\n"}
 		for _, input := range emptyInputs {
 			got := mappings.ResolveRole(input)
-			if got != domain.RoleUnassignedSubAgent {
-				t.Errorf("ResolveRole(%q) = %s, expected RoleUnassignedSubAgent", input, got)
+			if got != domain.AgentRole("") {
+				t.Errorf("ResolveRole(%q) = %s, expected unknown role", input, got)
 			}
 		}
 	})
@@ -836,8 +836,8 @@ func TestRoleMappings_AdversarialEdgeCases(t *testing.T) {
 		if nilMap.ResolveRole("coder") != domain.AgentRole("coder") {
 			t.Errorf("expected RoleCoder, got %s", nilMap.ResolveRole("coder"))
 		}
-		if nilMap.ResolveRole("") != domain.RoleUnassignedSubAgent {
-			t.Errorf("expected RoleUnassignedSubAgent for empty string, got %s", nilMap.ResolveRole(""))
+		if nilMap.ResolveRole("") != domain.AgentRole("") {
+			t.Errorf("expected unknown role for empty string, got %s", nilMap.ResolveRole(""))
 		}
 		if nilMap.ResolveRole("arbitrary") != domain.AgentRole("arbitrary") {
 			t.Errorf("expected arbitrary cast, got %s", nilMap.ResolveRole("arbitrary"))
@@ -847,8 +847,8 @@ func TestRoleMappings_AdversarialEdgeCases(t *testing.T) {
 		if emptyMap.ResolveRole("reviewer") != domain.AgentRole("reviewer") {
 			t.Errorf("expected RoleReviewer, got %s", emptyMap.ResolveRole("reviewer"))
 		}
-		if emptyMap.ResolveRole("") != domain.RoleUnassignedSubAgent {
-			t.Errorf("expected RoleUnassignedSubAgent for empty string, got %s", emptyMap.ResolveRole(""))
+		if emptyMap.ResolveRole("") != domain.AgentRole("") {
+			t.Errorf("expected unknown role for empty string, got %s", emptyMap.ResolveRole(""))
 		}
 	})
 }
@@ -1166,7 +1166,7 @@ func TestRoleMappings_ResolveRole_AdversarialUnmappedAndWhitespace(t *testing.T)
 		}
 	})
 
-	t.Run("empty and whitespace variations across mappings instances resolve to RoleUnassignedSubAgent", func(t *testing.T) {
+	t.Run("empty and whitespace variations across mappings instances resolve to unknown role", func(t *testing.T) {
 		t.Parallel()
 
 		whitespaceInputs := []string{
@@ -1194,8 +1194,8 @@ func TestRoleMappings_ResolveRole_AdversarialUnmappedAndWhitespace(t *testing.T)
 		for _, mi := range mappingInstances {
 			for _, input := range whitespaceInputs {
 				got := mi.mappings.ResolveRole(input)
-				if got != domain.RoleUnassignedSubAgent {
-					t.Errorf("%s: ResolveRole(%q) = %q, expected RoleUnassignedSubAgent (%q)", mi.name, input, got, domain.RoleUnassignedSubAgent)
+				if got != domain.AgentRole("") {
+					t.Errorf("%s: ResolveRole(%q) = %q, expected unknown role (%q)", mi.name, input, got, domain.AgentRole(""))
 				}
 			}
 		}

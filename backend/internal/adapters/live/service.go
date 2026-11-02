@@ -54,7 +54,7 @@ type LiveService struct {
 	lastTraces      map[string]*domain.LiveTraceView
 	traceMu         sync.Mutex
 	traceRevision   SourceRevision
-	traceCache      map[string]*domain.LiveTraceView
+	traceCache      map[string]*traceSnapshot
 	discovered      map[string]struct{}
 	selectedLookup  string
 	lastTraceMu     sync.Mutex
@@ -83,7 +83,7 @@ func NewLiveServiceWithCodexHome(hook *SQLiteHook, cfg domain.ProjectConfig, cod
 		subscribers:   make(map[chan LiveEvent]struct{}),
 		stopCh:        make(chan struct{}),
 		lastTraces:    make(map[string]*domain.LiveTraceView),
-		traceCache:    make(map[string]*domain.LiveTraceView),
+		traceCache:    make(map[string]*traceSnapshot),
 		discovered:    make(map[string]struct{}),
 		seenAnomalies: make(map[string]bool),
 	}
@@ -201,8 +201,9 @@ func (s *LiveService) broadcastTraceUpdates(ctx context.Context, tree domain.Liv
 				continue
 			}
 			current[node.ID] = struct{}{}
-			trace, err := s.sessionTraceSnapshot(ctx, node.ID)
+			snapshot, err := s.sessionTraceSnapshot(ctx, node.ID)
 			if err == nil {
+				trace := &snapshot.Trace
 				s.lastTraceMu.Lock()
 				previous := s.lastTraces[node.ID]
 				changed := previous != trace && (previous == nil || !domain.LiveTracesEqual(*previous, *trace))
@@ -329,9 +330,14 @@ func (s *LiveService) GetSessionTree(ctx context.Context) (domain.LiveSessionTre
 		}
 
 		sessionAnomalies := []domain.LiveAnomalyAlert{}
-		trace, err := s.GetSessionTrace(ctx, rec.ID)
-		if err == nil && len(trace.Anomalies) > 0 {
-			sessionAnomalies = trace.Anomalies
+		snapshot, err := s.sessionTraceSnapshot(ctx, rec.ID)
+		if err == nil && len(snapshot.Trace.Anomalies) > 0 {
+			sessionAnomalies = snapshot.Trace.Anomalies
+		}
+		if err == nil {
+			persona := snapshot.Persona.Resolve(rec.Agent)
+			rec.Agent = string(persona)
+			role = s.cfg.RoleMappings.ResolveRole(rec.Agent)
 		}
 
 		node := &domain.LiveSessionNode{
@@ -376,10 +382,18 @@ func (s *LiveService) GetSessionTrace(ctx context.Context, sessionID string) (do
 	if err != nil {
 		return domain.LiveTraceView{}, err
 	}
-	return *trace, nil
+	return trace.Trace, nil
 }
 
-func (s *LiveService) sessionTraceSnapshot(ctx context.Context, sessionID string) (*domain.LiveTraceView, error) {
+// traceSnapshot binds persona evidence to the exact trace read that produced it.
+// Entries are immutable after construction and survive cache invalidation for
+// readers already holding a snapshot.
+type traceSnapshot struct {
+	Trace   domain.LiveTraceView
+	Persona domain.PersonaEvidence
+}
+
+func (s *LiveService) sessionTraceSnapshot(ctx context.Context, sessionID string) (*traceSnapshot, error) {
 	if err := validateSessionID(sessionID); err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrInvalidSessionID, err.Error())
 	}
@@ -394,7 +408,7 @@ func (s *LiveService) sessionTraceSnapshot(ctx context.Context, sessionID string
 		return nil, err
 	}
 	if revision != s.traceRevision {
-		s.traceCache = make(map[string]*domain.LiveTraceView)
+		s.traceCache = make(map[string]*traceSnapshot)
 		s.traceRevision = revision
 	}
 	if _, visible := s.discovered[sessionID]; !visible {
@@ -425,18 +439,18 @@ func (s *LiveService) sessionTraceSnapshot(ctx context.Context, sessionID string
 	return &trace, nil
 }
 
-func (s *LiveService) readSessionTrace(ctx context.Context, sessionID string) (domain.LiveTraceView, error) {
+func (s *LiveService) readSessionTrace(ctx context.Context, sessionID string) (traceSnapshot, error) {
 	exists, err := s.hook.SessionExists(sessionID)
 	if err != nil {
-		return domain.LiveTraceView{}, fmt.Errorf("verifying session existence: %w", err)
+		return traceSnapshot{}, fmt.Errorf("verifying session existence: %w", err)
 	}
 	if !exists {
-		return domain.LiveTraceView{}, fmt.Errorf("%w: %s", ErrSessionNotFound, sessionID)
+		return traceSnapshot{}, fmt.Errorf("%w: %s", ErrSessionNotFound, sessionID)
 	}
 
 	rawMsgs, rawParts, err := s.hook.FetchSessionTrace(sessionID)
 	if err != nil {
-		return domain.LiveTraceView{}, fmt.Errorf("fetching session trace for %s: %w", sessionID, err)
+		return traceSnapshot{}, fmt.Errorf("fetching session trace for %s: %w", sessionID, err)
 	}
 	childIDs, childErr := s.hook.ResolveChildSessionIDs([]string{sessionID})
 	knownChildren := make(map[string]struct{}, len(childIDs))
@@ -574,7 +588,21 @@ func (s *LiveService) readSessionTrace(ctx context.Context, sessionID string) (d
 		trace.Anomalies = []domain.LiveAnomalyAlert{}
 	}
 
-	return trace, nil
+	return traceSnapshot{Trace: trace, Persona: assistantPersonaEvidence(rawMsgs)}, nil
+}
+
+func assistantPersonaEvidence(messages []RawMessageRecord) domain.PersonaEvidence {
+	var evidence domain.PersonaEvidence
+	for _, message := range messages {
+		var metadata struct {
+			Role  string `json:"role"`
+			Agent string `json:"agent"`
+		}
+		if err := json.Unmarshal([]byte(message.Data), &metadata); err == nil && metadata.Role == "assistant" {
+			evidence = evidence.WithCandidate(metadata.Agent)
+		}
+	}
+	return evidence
 }
 
 func parsePartRecord(rp RawPartRecord, consecutiveErrors *int) domain.LivePartFact {
@@ -810,7 +838,7 @@ func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID strin
 		if len(events) == 0 {
 			return fallbackResp
 		}
-		reconciled := domain.ReconcileEvents(fallbackResp.Events, events)
+		reconciled := domain.ReconcileSourceEvents(fallbackResp.Events, events)
 		return domain.WorkspaceEventsResponse{
 			TicketID:         ticketID,
 			IsHydrated:       true,
@@ -907,20 +935,13 @@ func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID strin
 			}
 		}
 	}
+	// Source metadata takes precedence over stored role projections. Keep
+	// known persisted personas when optional source evidence is unavailable.
+	sessionAgents := make(map[string]string)
 	for _, sid := range verifiedSessions {
-		if _, exists := sessionRoleMap[sid]; !exists {
-			var agent, parentID sql.NullString
-			if err := s.hook.DB().QueryRow("SELECT agent, parent_id FROM session WHERE id = ?", sid).Scan(&agent, &parentID); err == nil {
-				if agent.Valid && strings.TrimSpace(agent.String) != "" {
-					sessionRoleMap[sid] = s.cfg.RoleMappings.ResolveRole(strings.TrimSpace(agent.String))
-				} else if !parentID.Valid || strings.TrimSpace(parentID.String) == "" {
-					sessionRoleMap[sid] = domain.RoleRootAgent
-				} else {
-					sessionRoleMap[sid] = domain.RoleUnassignedSubAgent
-				}
-			} else {
-				sessionRoleMap[sid] = domain.RoleUnassignedSubAgent
-			}
+		var agent sql.NullString
+		if err := s.hook.DB().QueryRow("SELECT agent FROM session WHERE id = ?", sid).Scan(&agent); err == nil {
+			sessionAgents[sid] = agent.String
 		}
 	}
 
@@ -932,6 +953,19 @@ func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID strin
 
 	if len(rawMsgs) == 0 && len(rawParts) == 0 {
 		return withLocalEvents(codexEvents, domain.DataSourceLocalCodex), nil
+	}
+
+	messagesBySession := make(map[string][]RawMessageRecord)
+	for _, message := range rawMsgs {
+		messagesBySession[message.SessionID] = append(messagesBySession[message.SessionID], message)
+	}
+	for sid, agent := range sessionAgents {
+		evidence := assistantPersonaEvidence(messagesBySession[sid])
+		resolved := evidence.Resolve(agent)
+		stored := sessionRoleMap[sid]
+		if resolved != "" || evidence.Conflicting || stored == domain.RoleRootAgent || stored == domain.RoleUnassignedSubAgent || stored == "" {
+			sessionRoleMap[sid] = resolved
+		}
 	}
 
 	// Group parts by message ID
@@ -953,9 +987,6 @@ func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID strin
 	// Process messages per session
 	for _, rm := range rawMsgs {
 		role := sessionRoleMap[rm.SessionID]
-		if role == "" {
-			role = domain.RoleUnassignedSubAgent
-		}
 
 		var msgRole string
 		var contentStr string
@@ -1087,9 +1118,6 @@ func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID strin
 	// Append any orphan parts that weren't tied to a specific message ID
 	for sid, parts := range orphanParts {
 		role := sessionRoleMap[sid]
-		if role == "" {
-			role = domain.RoleUnassignedSubAgent
-		}
 		turn := sessionTurns[sid]
 		if turn == 0 {
 			turn = 1
