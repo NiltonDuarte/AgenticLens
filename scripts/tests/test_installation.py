@@ -325,6 +325,38 @@ sys.exit(int(os.environ.get("FIXTURE_EXIT", "0")))
         ])
         self.assertTrue((destination / self.native_name).is_file())
 
+    def test_release_candidate_build_metadata_survives_install_and_download_resolution(self):
+        release = "v0.1.0-rc.42+abc1234"
+        self.succeeds(self.run_script(SOURCE / INSTALL, "--source-dir", SOURCE,
+                                     "--version", release, "--dest", self.repo))
+        self.assertEqual((self.repo / SETUP / "RELEASE_VERSION").read_text(), release + "\n")
+        for options in [[], ["--version", release]]:
+            with self.subTest(options=options):
+                plan = self.succeeds(self.repair(None, *options, "--dry-run"))
+                self.assertIn("Version: " + release, plan.stdout)
+                self.assertIn("/releases/download/" + release + "/" + self.native_name, plan.stdout)
+                self.assertFalse(self.native().parent.exists())
+        self.assertEqual(self.requests(), [])
+
+    def test_release_validation_rejects_path_and_shell_characters_before_fetch(self):
+        invalid = ["../v9.8.7", ".", "..", "v9.8.7/rc", "v9.8.7 rc",
+                   "v9.8.7;touch INJECTED", "v9.8.7+$(touch INJECTED)"]
+        for script in [INSTALL, DOWNLOAD]:
+            for release in invalid:
+                with self.subTest(script=script, release=release):
+                    destination = self.root / "rejected destination"
+                    options = ["--version", release, "--dest", destination]
+                    if script == INSTALL:
+                        options += ["--source-dir", SOURCE]
+                    else:
+                        options += ["--dry-run"]
+                    result = self.run_script(SOURCE / script, *options, FETCH_MODE="online")
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn("Invalid release tag", result.stderr)
+                    self.assertFalse(destination.exists())
+                    self.assertFalse((self.repo / "INJECTED").exists())
+                    self.assertEqual(self.requests(), [])
+
     def test_dry_run_platform_artifacts_and_missing_option_values_do_not_write(self):
         self.install()
         result = self.succeeds(self.repair(None, "--all-platforms", "--dry-run"))

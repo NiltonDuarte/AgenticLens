@@ -13,7 +13,7 @@ This skill follows the autonomous agentic distribution model: it is completely s
 
 ## Operational Mandates
 - Strict Release-Only Mandate: Never compile binaries from Go/TypeScript source or request Go/Node.js toolchain installation in target repositories. Retrieve official precompiled release artifacts from GitHub Releases: https://github.com/NiltonDuarte/AgenticLens/releases.
-- Complete Local Installation: Install this setup skill and all its scripts alongside `.agents/skills/agentic-lens-operator/`. Use the operator `scripts/agentic-lens.sh` launcher and keep platform executables under its `bin/` directory. Git tracking and ignore choices for scripts and executables belong to the adopting repository owner; do not stage files, commit them, or create/modify ignore rules during setup or repair.
+- Complete Local Installation: Install this setup skill and all its scripts alongside `.agents/skills/agentic-lens-operator/`. Use the operator `scripts/agentic-lens.sh` launcher and keep platform executables under its `bin/` directory. Git tracking and ignore choices for scripts and executables belong to the adopting repository owner; do not stage files, commit them, or create/modify ignore rules during binary/skill installation or repair.
 - Lifecycle Capture: Install reviewed additive callbacks through the native release handler. Exact source/project/session proof and an explicit agent binding response establish collection scope; never infer ownership from branch, role or timing. A bounded native worker publishes automatically after binding. Preserve unrelated hooks, edited files and user-controlled trust.
 - Mandatory User Confirmation Gate: Inspect existing OpenCode agent instructions (`AGENTS.md` or `.agents/agent/*.md`) and propose operational policies. Never modify target repository files without presenting the exact text and receiving affirmative user confirmation.
 - Zero Emojis Mandate: Zero emojis permitted across all prompts, CLI output, generated files, configurations, and documentation.
@@ -24,7 +24,7 @@ This skill follows the autonomous agentic distribution model: it is completely s
 
 ### Step 1: Install Complete Skills and Precompiled Binaries
 
-Before modifying the adopting repository, present the exact proposed files, source release URLs, destinations and any existing-file diffs. Obtain affirmative approval, or use approval already granted for that scope. Preserve locally edited files. Installation/repair must not run `init`, change existing configuration, stage files, or impose Git ignore rules.
+Before modifying the adopting repository, present the exact proposed files, source release URLs, destinations and any existing-file diffs. Obtain affirmative approval, or use approval already granted for that scope. Preserve locally edited files. Binary/skill installation and repair must not run `init`, change existing configuration, stage files, or impose Git ignore rules. Reviewed native lifecycle setup in Step 2.5 is a separate opt-in operation.
 
 #### 1.1 Complete Installation Manifest
 
@@ -261,7 +261,7 @@ Keep the approved block small. Replace `<WORKSPACES_DIR>` with the configured wo
 - Operator skill exists at `.agents/skills/agentic-lens-operator/` with its CLI, dashboard, and configuration references.
 - Setup skill exists with every script in section 1.1 and the selected `RELEASE_VERSION`.
 - Operator launcher exists outside binary storage; the native binary for this host exists and executes.
-- Git index and ignore policy are unchanged; the repository owner decides which installed files to track.
+- Git index is unchanged. Binary/skill installation and repair preserve ignore policy; separately approved native capture setup may add its exact local-state ignore entry. The owner decides which installed files to track.
 - Root `.agenticlens-config.yaml` is present, valid YAML, and non-empty.
 - Verification command reports valid JSON metadata.
 - Agent guidelines updated only after explicit user confirmation.

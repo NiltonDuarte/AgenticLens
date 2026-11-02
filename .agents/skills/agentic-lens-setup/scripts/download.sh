@@ -133,7 +133,7 @@ if [[ -z "$VERSION" && ( -z "$LOCAL_BIN" || $DRY_RUN -eq 1 ) ]]; then
     exit 1
 fi
 case "$VERSION" in
-    *[!A-Za-z0-9._-]*) echo "Error: Invalid release tag: $VERSION" >&2; exit 1 ;;
+    *[!A-Za-z0-9._+-]*|.|..) echo "Error: Invalid release tag: $VERSION" >&2; exit 1 ;;
 esac
 
 # Detect Operating System
