@@ -34,3 +34,5 @@ Use per-worktree binary storage for this slice. A shared user cache could reduce
 ## Completion gate
 
 The parent presents this contract and iterations/01/PLAN.md for explicit scope approval before dispatching implementation. Completion requires focused runtime regression evidence, independent review, the required integrated make gate, and parent-owned telemetry and PR delivery. A plan alone does not establish that the defect is fixed.
+
+Subsequent approved retention instruction: once review findings are addressed and consolidated review is approved, retain concise findings with discovering actor/model, verification and approval in SUMMARY.md, and delete the detailed review working files. Iteration 02 records this user-requested lifecycle change; runtime acceptance boundaries and completed verification remain unchanged.

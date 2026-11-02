@@ -59,7 +59,7 @@ Validate candidates against actual callers and guards. For disputed or consequen
 
 ## Corrections and revision-aware re-review
 
-After the first pass, route confirmed fixes to the coder and missing regression coverage to the tester. Freeze a new candidate revision after corrections. Preserve earlier reports as evidence of their own revisions; append/revise with an explicit revision marker rather than erasing prior findings.
+After the first pass, route confirmed fixes to the coder and missing regression coverage to the tester. Freeze a new candidate revision after corrections. While review is open, preserve earlier reports as evidence of their own revisions; append/revise with an explicit revision marker rather than erasing prior findings. Completed-review cleanup follows the retention rule below.
 
 Map each fix to affected focus owners and dependencies. Re-review the corrected behavior, regression tests and affected interactions; re-run affected checks. Retain approvals for unchanged scopes only with an explicit dependency/diff rationale in the consolidated report. For a new cross-cutting change or uncertain impact, re-run all affected focuses; a new head alone is neither proof of validity nor a reason to repeat every unchanged test. If the source keeps changing, stop and obtain a stable candidate rather than loop on stale approvals.
 
@@ -74,3 +74,9 @@ The parent records a compact roster (focus, model/effort, run ID/phase, reviewed
 - APPROVED only when all applicable focus/model cells have current or justified carried-forward evidence, no blocking finding/material gap remains, and required integrated checks pass. Local approval is scoped and does not authorize a remote merge. Hosting/CI or runtime stages not exercised must be stated explicitly.
 
 Stop when this gate is satisfied for the requested scope. Do not add endless speculative passes, demand unanimous style preferences, or claim bug-free software. Measure usefulness through confirmed defects, escaped regressions and false positives with honest sampling limits, not number of agents or approval rate.
+
+## Completed review retention
+
+Review reports and structured run/finding files support the active investigation, correction loop and approval gate. Once findings are addressed and consolidated approval is issued, keep a concise summary in the ticket's `SUMMARY.md` and delete individual review reports, consolidated `REVIEW.md`, `REVIEW_RUNS.json`, and `FINDINGS.json` for that completed review. Remove stale links to deleted files. Keep plans, regression tests, telemetry and other required deliverables.
+
+The retained summary records reviewed revision/scope and final approval; each distinct finding and its disposition/fix; discovering actor/role and exact model/effort, preserving shared credit; verification actors separately; compact run outcomes including no-findings/incomplete runs where relevant; actual verification and remaining limits. Distinguish requested settings from source-observed identity. Do not retain verbose resolved-finding reports merely as duplicate evidence. Do not delete unresolved findings, accepted-debt ownership or material evidence gaps; resolve or summarize them explicitly before claiming completion. Historical audits in unrelated tickets remain outside a ticket's cleanup scope.

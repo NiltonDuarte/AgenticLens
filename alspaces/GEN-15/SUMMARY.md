@@ -38,10 +38,35 @@ Dependency preparation: `make install` passed. npm reported existing dependency 
 - Restoring the baseline downloader in a disposable bundle makes the Git-policy preservation test fail on its unwanted ignore-file creation.
 - Parent `make backend-check` passed, including Go vet, race tests and canonical frontend embedding preparation.
 - Integrated `make` passed candidate d7a07eb: six release tests, nine installation tests, Go vet/race tests, frontend typechecking and 35 test files / 781 tests, canonical embedded assets and platform builds.
-- First-pass review: Sol 6.1/high found two confirmed P2 recovery defects (non-executable retained files and missing release markers); Luna 6/medium found a stale approval sentence. Both runtime defects and the sentence were corrected. Both profiles approved corrected candidate 2d540946c01851face786f15894b1e00b2451b19. Detailed attribution remains in iterations/01/REVIEW_RUNS.json and FINDINGS.json.
+- First-pass review: Sol 6.1/high found two confirmed P2 recovery defects (non-executable retained files and missing release markers); Luna 6/medium found a stale approval sentence. Both runtime defects and the sentence were corrected. Both profiles approved corrected candidate 2d540946c01851face786f15894b1e00b2451b19. The retained findings and actor/model attribution are summarized below; detailed review working files were removed after approval at the user's request.
 - Final integrated `make` passed candidate 2d54094: twelve installation tests, six release tests, Go vet/race suites, frontend typechecking/lint, 35 test files / 781 tests, canonical assets and Make platform builds. No skipped test stages.
 - Actual freshly compiled Linux amd64 binary installed and launched successfully in a separate consumer path containing spaces, returning commit 2d54094. No config/ignore files were created. This local-build smoke does not establish availability of an official release asset.
 - Host evidence is Linux amd64. macOS/Windows native execution and live release asset availability were not verified. Skill bootstrap requires a release containing the new installer; publication of this PR does not itself publish such a release.
+
+## Completed review summary
+
+Runtime review approved for `2d540946c01851face786f15894b1e00b2451b19` against baseline `7bc670a7f5c9e93a220f3596f3d0e05cb6007332`. All confirmed findings are fixed; no unresolved candidates, refuted claims, incomplete runs or accepted debt remain in this review. Role for all actors below: reviewer. The parent verified each model/effort against actual Codex session metadata and turn context; these are observed identities, not merely requested settings.
+
+| Finding | Discovering actor / model | Resolution |
+| --- | --- | --- |
+| GEN15-01, P2: repair falsely succeeded for an existing non-executable binary | SOL-01, `/root/review_sol`, gpt-6.1-sol / high | Explicit repair restores and checks execute permission without replacing bytes; failure is surfaced. Exact recommended-command regression and injected chmod-failure probe passed. |
+| GEN15-02, P2: a worktree missing RELEASE_VERSION silently selected latest | SOL-01, `/root/review_sol`, gpt-6.1-sol / high | Remote repair requires an explicit release when its marker is absent/empty; offline supplied-prebuilt repair remains available. Real markerless-worktree and override-precedence probes passed. |
+| GEN15-DOC1, low: stale pending-approval wording contradicted explicit approval | LUNA-01, `/root/review_luna`, gpt-6-luna / medium | Parent corrected the plan to reference the subsequent approval. |
+
+Both runtime regressions failed against initial candidate d7a07eb in disposable bundles and passed after correction. Verification credit is separate from discovery: SOL-02 (`/root/review_sol_r2`, gpt-6.1-sol/high) and LUNA-02 (`/root/review_luna_r2`, gpt-6-luna/medium) verified the fixes and approved the corrected candidate. No shared discoveries were reported.
+
+| Run / actor | Model / effort | Phase / revision | Outcome |
+| --- | --- | --- | --- |
+| SOL-01 / `/root/review_sol` | gpt-6.1-sol / high | Discovery / d7a07eb | Changes requested; two runtime findings |
+| LUNA-01 / `/root/review_luna` | gpt-6-luna / medium | Discovery / d7a07eb | Scoped approval; one plan correction |
+| SOL-02 / `/root/review_sol_r2` | gpt-6.1-sol / high | Re-review / 2d54094 | Approved; fixes verified, no new finding |
+| LUNA-02 / `/root/review_luna_r2` | gpt-6-luna / medium | Re-review / 2d54094 | Approved; fixes verified, no new finding |
+
+Verification and platform/release limits are recorded above. Detailed reports and run/finding JSON were working evidence and were deleted only after corrections, consolidated approval and this summary. Regression tests, plans, test evidence and session telemetry remain. No model quality ranking or per-run cost is inferred.
+
+## Iteration 02: completed-review retention
+
+Source: the user requested keeping a summary of findings with the model and actor that found each, then deleting review files once corrections are addressed and review is approved. This supersedes permanent detailed-review retention; it preserves active-review evidence, approval gates, discovery attribution, verification and known limits. Updated AGENTS and canonical review/development guidance; removed seven completed GEN-15 review files after consolidation. Other tickets' historical audits are untouched. This is authorized documentation/artifact maintenance with no runtime changes or new reviewer dispatch. The previously passed application checks remain valid for the unchanged runtime; documentation checks and current delivery verification are recorded in iterations/02/PLAN.md.
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 5

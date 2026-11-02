@@ -4,4 +4,6 @@ Fresh worktrees can lack installed skills, launchers, or binaries depending on t
 
 The bundle installer retrieves dependencies from one selected release and preserves conflicting local files. Installation leaves configuration, Git staging, and ignore rules to the repository owner. Operator guidance distinguishes missing binaries, missing setup scripts, and missing machine-local settings. Existing binary wrappers remain supported.
 
+After completed review approval, retain a concise findings summary with discovering actor/model and verification credit, and remove detailed review working files. Align repository and skill guidance with that lifecycle.
+
 Scope and delivery status: [CONTRACT.md](CONTRACT.md), [SUMMARY.md](SUMMARY.md), and [iteration plan](iterations/01/PLAN.md).
