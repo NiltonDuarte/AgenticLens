@@ -41,19 +41,20 @@ Initial eight discovery runs completed: all four Sol scopes requested changes; L
 Database-wide invalidation can reread histories of unchanged active sessions after unrelated writes; idle polls reuse snapshots. This is existing accepted performance debt, not changed-session-only polling. Pricing, cost, source identity and session completeness must come from final extraction, not reviewer assignments. Final telemetry is generated after all review/integration work; extraction facts and limits are recorded below when available.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 10
-- **Active Agent Duration:** 1h 28m (excludes user wait time)
-- **Context Window Health:** BLOATED — Root agent peak 194.8k tokens (97% of 200k healthy ceiling, 0 compactions) | Subagents peak 207.6k (Tester)
+- **Software Development Life Cycle Iterations:** 13
+- **Active Agent Duration:** 1h 33m (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 208.2k tokens (104% of 200k healthy ceiling, 0 compactions) | Subagents peak 207.6k (Tester)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
-- **Subagent Turn Velocity & Thrashing:** 1.5 avg turns/run (peak: 4 turns) | Planner 2.0, Coder 3.0, Tester 4.0, Reviewer-architecture 1.0, Reviewer-behavior 1.0, Reviewer-data 1.0, Reviewer-tests 1.0
+- **Subagent Turn Velocity & Thrashing:** 1.5 avg turns/run (peak: 4 turns) | Planner 2.0, Coder 4.0, Tester 4.0, Reviewer-architecture 1.0, Reviewer-behavior 1.0, Reviewer-data 1.0, Reviewer-tests 1.0
 - **Test-to-Production Code Ratio:** 3.1:1 (+622 test lines / +202 prod lines)
 - **Code Delivered:** +824 / -176 lines across 34 code files (excluding docs)
-- **Reasoning Effort:** 35,895 reasoning tokens (18.4% of generated output)
-- **Tool Health & Self-Correction:** 502 tool calls (33 self-corrections, 93.4% success rate)
+- **Reasoning Effort:** 39,985 reasoning tokens (19.3% of generated output)
+- **Tool Health & Self-Correction:** 521 tool calls (35 self-corrections, 93.3% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 11 execution anomalies detected (5 CRITICAL, 6 WARNING).
+- **Status:** 12 execution anomalies detected (6 CRITICAL, 6 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.5k tokens) — Context tokens reached 200.5k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.3k tokens) — Context tokens reached 200.3k, breaching the 200k critical ceiling.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (8 cycles) — Subagent roles 'coder' and 'tester' alternated for 8 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (6 cycles) — Subagent roles 'coder' and 'tester' alternated for 6 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (5 cycles) — Subagent roles 'coder' and 'tester' alternated for 5 consecutive cycles.
@@ -73,20 +74,20 @@ Database-wide invalidation can reread histories of unchanged active sessions aft
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
 | **planner** | 1 | 70,102 | 6,506 | 1,125,120 | 94.1% | 73.4k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **coder** | 1 | 169,489 | 16,420 | 7,324,288 | 97.7% | 177.0k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **coder** | 1 | 170,459 | 16,619 | 7,678,336 | 97.8% | 177.8k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **tester** | 1 | 142,308 | 32,229 | 11,555,072 | 98.8% | 207.6k | BLOATED (104%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Unknown** | 1 | 173,017 | 51,160 | 21,886,208 | 99.2% | 194.8k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Unknown** | 1 | 183,041 | 59,031 | 26,954,240 | 99.3% | 208.2k | BLOATED (104%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **reviewer-architecture** | 2 | 127,728 | 10,404 | 1,957,120 | 93.9% | 95.6k | HEALTHY | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
 | **reviewer-behavior** | 2 | 207,494 | 10,717 | 1,886,592 | 90.1% | 102.9k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
 | **reviewer-data** | 3 | 227,499 | 18,100 | 3,101,696 | 93.2% | 91.3k | HEALTHY | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
 | **reviewer-tests** | 3 | 187,194 | 13,542 | 2,163,200 | 92.0% | 88.1k | HEALTHY | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
-| **Total** | **14** | **1,304,831** | **159,078** | **50,999,296** | **97.5%** | **207.6k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations)** |
+| **Total** | **14** | **1,315,825** | **167,148** | **56,421,376** | **97.7%** | **208.2k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 14 | 1,304,831 | 159,078 | 50,999,296 | 97.5% | Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations) |
-| **Total** | **14** | **1,304,831** | **159,078** | **50,999,296** | **97.5%** | **Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations)** |
+| **gpt-6.1-sol** | 14 | 1,315,825 | 167,148 | 56,421,376 | 97.7% | Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations) |
+| **Total** | **14** | **1,315,825** | **167,148** | **56,421,376** | **97.7%** | **Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations)** |
 
 ## Final telemetry validation and delivery revision
 
@@ -99,3 +100,7 @@ Telemetry is explicitly incomplete for the eight T3-delegated Luna runs: their T
 ## Naming follow-up
 
 User steering: "I prefer role_resolution" after the filename recommendation. Renamed backend/internal/domain/persona.go to role_resolution.go only; file bytes, symbols, resolution rules and accepted runtime boundaries are unchanged. This is a mechanical follow-up within iteration 02, explicitly approved by the user; no new plan or tests are needed. Coder gpt-6.1-sol/high performed the rename, and the parent verified byte identity against HEAD (SHA-256 ea8b18276da992e90478e46f16c7a4a8d7bd9d1aab882313d9d126e814f02609). Prior substantive review approvals carry forward because no implementation bytes or call paths changed. No new reviewer focus/profile runs are selected for this filename-only exception; parent rename verification and the required integrated make gate cover this follow-up. Final telemetry will refresh the existing ledger, preserving prior sessions and explicit delegated-run/cost limits.
+
+Rename verification completed at369e9e3: latest origin/main already up to date; full make passed (12 Go race packages, frontend35files783tests, static/Python checks, frontend and four-platform builds). Log /tmp/gen17-rename-make.log. The prior standalone asset proof remains valid for unchanged implementation/frontend bytes. PR96 remained OPEN before follow-up delivery. This follow-up changes the filename only; no new review finding or acceptance boundary was introduced. Telemetry refreshed with literal nonce6d27469e29b514a2 after these checks; the prior ledger is retained outside Git for session-preservation comparison.
+
+Rename telemetry validation: all14existingCodex sessions retained, same verified root and13nativechildren. The eight delegated Luna runs remain excluded and costs remain unavailable; prior telemetry limitations still apply.
