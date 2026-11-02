@@ -24,8 +24,13 @@
           "evidence": "REVIEW_SOL.md"
         }
       ],
-      "lifecycle_status": "open",
-      "verification_run_ids": []
+      "lifecycle_status": "fixed",
+      "verification_run_ids": [
+        "SOL-02",
+        "LUNA-02"
+      ],
+      "fix_revision": "2d540946c01851face786f15894b1e00b2451b19",
+      "fix_evidence": "retain_binary restores and checks execute permission; exact printed-repair regression and independent chmod-failure probe pass"
     },
     {
       "finding_id": "GEN15-02",
@@ -50,8 +55,13 @@
           "evidence": "REVIEW_SOL.md"
         }
       ],
-      "lifecycle_status": "open",
-      "verification_run_ids": []
+      "lifecycle_status": "fixed",
+      "verification_run_ids": [
+        "SOL-02",
+        "LUNA-02"
+      ],
+      "fix_revision": "2d540946c01851face786f15894b1e00b2451b19",
+      "fix_evidence": "Missing/empty pin requires explicit remote release before writes/network; actual markerless-worktree and override precedence probes pass"
     },
     {
       "finding_id": "GEN15-DOC1",
@@ -77,7 +87,12 @@
         }
       ],
       "lifecycle_status": "fixed",
-      "verification_run_ids": []
+      "verification_run_ids": [
+        "SOL-02",
+        "LUNA-02"
+      ],
+      "fix_revision": "2d540946c01851face786f15894b1e00b2451b19",
+      "fix_evidence": "Plan clarification now explicitly refers to subsequent user approval"
     }
   ]
 }

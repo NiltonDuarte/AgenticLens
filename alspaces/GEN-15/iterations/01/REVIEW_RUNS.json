@@ -22,7 +22,7 @@
     ],
     "reviewer_overrides": {}
   },
-  "source_revision": "d7a07eb40f1a66b98da7f6bd9252e5a8c434f1ad",
+  "source_revision": "2d540946c01851face786f15894b1e00b2451b19",
   "runs": [
     {
       "run_id": "SOL-01",
@@ -104,6 +104,92 @@
       "ended_at": null,
       "usage": null,
       "usage_note": "Run end time and per-run usage not inferred; final telemetry is separate."
+    },
+    {
+      "run_id": "SOL-02",
+      "persona": "reviewer",
+      "focus": "Narrow installation/distribution: behavior, failure preservation, dependency architecture, test effectiveness",
+      "profile_id": "sol_6_1_high",
+      "phase": "re_review",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high"
+      },
+      "acknowledged": {
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "evidence": "Native spawn_agent accepted explicit model/effort request; call call_755d4d0d34204a89ac674a03ecac8186"
+      },
+      "observed": {
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "evidence": "rollout-2026-11-02T15-03-12-01a19c92-3df2-7c02-9aab-a4b144f76adf.jsonl session_meta/turn_context"
+      },
+      "session_id": "01a19c92-3df2-7c02-9aab-a4b144f76adf",
+      "task_name": "/root/review_sol_r2",
+      "report_path": "alspaces/GEN-15/iterations/01/REVIEW_SOL_R2.md",
+      "candidate_revision": "2d540946c01851face786f15894b1e00b2451b19",
+      "base_revision": "7bc670a7f5c9e93a220f3596f3d0e05cb6007332",
+      "prompt_sha256": "869066ab5f56f8c91f008b41fe0a857a45f5ffcb402108de2fc5c5dbec32c80c",
+      "persona_sha256": "15d5ff6e1032aa3aa0b246bd29b44cf1bcd4a08a7454f1d7ceefc12fb8bef1a3",
+      "shared_rules_sha256": "9a9344361d6fb64a69fdac55017424624f4676f73c306d28f7b4b5d151367e90",
+      "execution_status": "completed",
+      "verdict": "APPROVED",
+      "candidate_ids": [],
+      "completeness": "Scoped Linux/source/disposable-fixture investigation; no live release or native macOS/Windows execution",
+      "started_at": "2026-11-02T14:03:12.227Z",
+      "ended_at": null,
+      "usage": null,
+      "usage_note": "Run end time and per-run usage not inferred; final telemetry is separate.",
+      "verification_candidate_ids": [
+        "GEN15-01",
+        "GEN15-02",
+        "GEN15-DOC1"
+      ]
+    },
+    {
+      "run_id": "LUNA-02",
+      "persona": "reviewer",
+      "focus": "Narrow installation/distribution: behavior, failure preservation, dependency architecture, test effectiveness",
+      "profile_id": "luna_6_medium",
+      "phase": "re_review",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium"
+      },
+      "acknowledged": {
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium",
+        "evidence": "Native spawn_agent accepted explicit model/effort request; call call_12f4ef02d06d40fbb8c7895f86cd7e67"
+      },
+      "observed": {
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium",
+        "evidence": "rollout-2026-11-02T15-03-19-01a19c92-58c6-7222-8652-dabe6b34336b.jsonl session_meta/turn_context"
+      },
+      "session_id": "01a19c92-58c6-7222-8652-dabe6b34336b",
+      "task_name": "/root/review_luna_r2",
+      "report_path": "alspaces/GEN-15/iterations/01/REVIEW_LUNA_R2.md",
+      "candidate_revision": "2d540946c01851face786f15894b1e00b2451b19",
+      "base_revision": "7bc670a7f5c9e93a220f3596f3d0e05cb6007332",
+      "prompt_sha256": "2eca63236d81813c8f2eee23c4a30651b3c69485e08dd6ac5d871c4ca95c2e4e",
+      "persona_sha256": "15d5ff6e1032aa3aa0b246bd29b44cf1bcd4a08a7454f1d7ceefc12fb8bef1a3",
+      "shared_rules_sha256": "9a9344361d6fb64a69fdac55017424624f4676f73c306d28f7b4b5d151367e90",
+      "execution_status": "completed",
+      "verdict": "APPROVED",
+      "candidate_ids": [],
+      "completeness": "Scoped Linux/source/disposable-fixture investigation; no live release or native macOS/Windows execution",
+      "started_at": "2026-11-02T14:03:19.096Z",
+      "ended_at": null,
+      "usage": null,
+      "usage_note": "Run end time and per-run usage not inferred; final telemetry is separate.",
+      "verification_candidate_ids": [
+        "GEN15-01",
+        "GEN15-02",
+        "GEN15-DOC1"
+      ]
     }
   ]
 }

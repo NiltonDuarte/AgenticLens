@@ -19,7 +19,7 @@
 
 User clarification incorporated into CONTRACT.md and iterations/01/PLAN.md: the adopting repository owner decides whether to track or ignore any installed files. Superseded the tracked-launcher and mandatory-ignored-binary proposal. The launcher remains outside binary storage; setup/repair must preserve Git policy and diagnose missing setup assets as well as binaries. Regression planning now covers owner-selected tracking policies and a worktree without inherited repair scripts. This clarification does not establish implementation approval.
 
-The user explicitly approved the corrected contract and plan with "approved, follow with the implementation." Implementation is in progress through coder and tester roles. No telemetry generated: ingestion remains deferred to final delivery.
+The user explicitly approved the corrected contract and plan with "approved, follow with the implementation." Implementation, correction tests, independent re-review and integrated verification are complete. Final telemetry and PR publication follow below.
 
 Dependency preparation: `make install` passed. npm reported existing dependency audit advisories; dependency versions and lockfile were not changed by this ticket. Runtime, review, and integrated verification evidence will be recorded below before delivery.
 
@@ -38,5 +38,49 @@ Dependency preparation: `make install` passed. npm reported existing dependency 
 - Restoring the baseline downloader in a disposable bundle makes the Git-policy preservation test fail on its unwanted ignore-file creation.
 - Parent `make backend-check` passed, including Go vet, race tests and canonical frontend embedding preparation.
 - Integrated `make` passed candidate d7a07eb: six release tests, nine installation tests, Go vet/race tests, frontend typechecking and 35 test files / 781 tests, canonical embedded assets and platform builds.
-- First-pass review: Sol 6.1/high found two confirmed P2 recovery defects (non-executable retained files and missing release markers); Luna 6/medium found a stale approval sentence. Both runtime defects and the sentence were corrected. Twelve installation tests now pass; final integrated verification and two-profile re-review target the corrected candidate. Detailed attribution remains in iterations/01/REVIEW_RUNS.json and FINDINGS.json.
+- First-pass review: Sol 6.1/high found two confirmed P2 recovery defects (non-executable retained files and missing release markers); Luna 6/medium found a stale approval sentence. Both runtime defects and the sentence were corrected. Both profiles approved corrected candidate 2d540946c01851face786f15894b1e00b2451b19. Detailed attribution remains in iterations/01/REVIEW_RUNS.json and FINDINGS.json.
+- Final integrated `make` passed candidate 2d54094: twelve installation tests, six release tests, Go vet/race suites, frontend typechecking/lint, 35 test files / 781 tests, canonical assets and Make platform builds. No skipped test stages.
+- Actual freshly compiled Linux amd64 binary installed and launched successfully in a separate consumer path containing spaces, returning commit 2d54094. No config/ignore files were created. This local-build smoke does not establish availability of an official release asset.
 - Host evidence is Linux amd64. macOS/Windows native execution and live release asset availability were not verified. Skill bootstrap requires a release containing the new installer; publication of this PR does not itself publish such a release.
+
+### Workflow Efficiency
+- **Software Development Life Cycle Iterations:** 5
+- **Active Agent Duration:** 25m 34s (excludes user wait time)
+- **Context Window Health:** ELEVATED — Root agent peak 134.5k tokens (67% of 200k healthy ceiling, 0 compactions) | Subagents peak 110.7k (Tester)
+- **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
+- **Subagent Turn Velocity & Thrashing:** 1.3 avg turns/run (peak: 2 turns) | Planner 1.0, Coder 2.0, Tester 2.0, Reviewer 1.0
+- **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
+- **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
+- **Reasoning Effort:** 17,211 reasoning tokens (18.3% of generated output)
+- **Tool Health & Self-Correction:** 184 tool calls (3 self-corrections, 98.4% success rate)
+
+### Anomalies & Health Flags
+- **Status:** 3 execution anomalies detected (1 CRITICAL, 2 WARNING).
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (6 cycles) — Subagent roles 'coder' and 'tester' alternated for 6 consecutive cycles.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+72.9k tokens) — Context tokens surged by 72.9k to 72.9k tokens.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (3 cycles) — Subagent roles 'coder' and 'tester' alternated for 3 consecutive cycles.
+
+### Agentic Execution Metrics
+
+**Contributors:** Nilton Duarte
+
+#### By Subagent Role
+| Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
+|---|---|---|---|---|---|---|---|---|
+| **planner** | 1 | 48,363 | 3,575 | 376,704 | 88.6% | 58.1k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **coder** | 1 | 98,084 | 13,198 | 2,165,120 | 95.7% | 107.1k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **tester** | 1 | 47,330 | 13,823 | 2,324,224 | 98.0% | 110.7k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **reviewer** | 4 | 208,121 | 19,471 | 2,195,072 | 91.3% | 77.1k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
+| **rootagent** | 1 | 123,628 | 26,849 | 8,527,872 | 98.6% | 134.5k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **8** | **525,526** | **76,916** | **15,588,992** | **96.7%** | **134.5k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 8 unavailable / 8 invocations)** |
+
+#### By Model
+| Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
+|---|---|---|---|---|---|---|
+| **gpt-6-luna** | 2 | 83,320 | 7,998 | 854,272 | 91.1% | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **gpt-6.1-sol** | 6 | 442,206 | 68,918 | 14,734,720 | 97.1% | Unavailable (0 observed, 0 partial, 6 unavailable / 6 invocations) |
+| **Total** | **8** | **525,526** | **76,916** | **15,588,992** | **96.7%** | **Unavailable (0 observed, 0 partial, 8 unavailable / 8 invocations)** |
+
+## Final telemetry verification
+
+Generated with explicit Codex source, root session `01a19c78-4515-7170-93d3-178ecba3b8d1`, literal nonce `54cd975390ae9c09`, and conventional type `chore`. CLI discovered eight actual rollouts. Compared ledger session IDs and parent links against real source session metadata: root plus all seven children (planner, coder, tester, two discovery reviewers and two re-reviewers) are present, each labeled Codex with non-empty invocation facts. No unavailable child or source error was reported. No pre-existing GEN-15 ledger or other-harness sessions existed to preserve; no other-harness facts were added. Raw rollouts remain outside Git. This final extraction precedes the final telemetry commit; post-extraction verification/commit/publication calls are outside the snapshot.
