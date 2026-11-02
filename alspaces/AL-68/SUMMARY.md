@@ -2,6 +2,12 @@
 
 Implemented iteration02: installed Codex/OpenCode lifecycle integrations ask the agent for explicit ticket/title/type and schedule bounded native publication. Contributing agents no longer need to run generate. Manual generation remains recovery.
 
+## Integration with main
+
+Main commit99fbcd7 is merged through698aa45; corrected integration is7e09f41. Worktree-recoverable skill bootstrap and explicit binary repair coexist with additive automatic capture and protocol-aware rollback. The draft iteration03 requirements were preserved without implementing the user-PATH/version-pin proposal.
+
+Installation/distribution review by gpt-6.1-sol/high identified MERGE-01: setup rejected workflow-generated RC tags containing +. The fix retains unsafe-tag guards and adds installed-bundle/repair regression coverage. Final verification by gpt-6.1-sol/high and gpt-6-luna/medium approves; both initial reports and full attribution remain archived. Corrected full make passes, including14installation and15capture-distribution checks. No backend/frontend source changed; existing supported runtime boundaries carry forward.
+
 ## Delivered behavior
 
 - Domain: validated capture policy, deterministic metadata conflicts and cumulative exact-owner replacement preserve schema v5 and unknown source/cost facts. Completion records observability snapshot finalization independently of ticket or active-session completion.
