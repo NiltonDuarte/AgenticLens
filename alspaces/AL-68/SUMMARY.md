@@ -37,16 +37,18 @@ Final source proof validates65independent roots and24native children, including 
 
 Removed both large review-run archives from the current tree. Iteration01 retains 12 findings and 48 run outcomes; iteration02 retains 22 findings and 74 run outcomes, including the main-integration review. FINDINGS.json carries direct reviewer/model discovery and verification credit so no deleted archive lookup is needed. Detailed report bodies/logs remain in Git history at 0e9cb88. Raw logs and full reports are no longer required committed deliverables. This documentation-only change preserves application source, model coverage, findings, dispositions and verification limits.
 
+Cleanup verification preserves all 34 findings and 122 original review-run outcomes, including requested/acknowledged/observed reviewer settings and separate discovery/verification credit. Skill validation, current references and whitespace checks pass. Existing integrated application checks carry forward because runtime source is unchanged. Final native telemetry verifies all 93 sessions and preserves all 93 prior owners; source usage/model/project/parent comparisons pass. No detailed report or review-run archive was recreated.
+
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 240
-- **Active Agent Duration:** 16h 32m (excludes user wait time)
+- **Software Development Life Cycle Iterations:** 241
+- **Active Agent Duration:** 16h 51m (excludes user wait time)
 - **Context Window Health:** CRITICAL — Root agent peak 454.1k tokens (227% of 200k healthy ceiling, 2 compactions) | Subagents peak 348.1k (Coder)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 1.5 avg turns/run (peak: 6 turns) | Planner 1.3, Coder 3.0, Tester 6.0, Reviewer 1.2, Reviewer-architecture 1.0, Reviewer-behavior 1.0, Reviewer-data 1.0, Reviewer-tests 1.0
 - **Test-to-Production Code Ratio:** 1.1:1 (+5,291 test lines / +4,684 prod lines)
 - **Code Delivered:** +10,026 / -49 lines across 56 code files (excluding docs)
-- **Reasoning Effort:** 586,008 reasoning tokens (27.3% of generated output)
-- **Tool Health & Self-Correction:** 2,973 tool calls (149 self-corrections, 95.0% success rate)
+- **Reasoning Effort:** 595,004 reasoning tokens (27.4% of generated output)
+- **Tool Health & Self-Correction:** 2,988 tool calls (149 self-corrections, 95.0% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 31 execution anomalies detected (16 CRITICAL, 15 WARNING).
@@ -97,14 +99,14 @@ Removed both large review-run archives from the current tree. Iteration01 retain
 | **reviewer-behavior** | 4 | 476,895 | 27,453 | 4,110,976 | 89.6% | 98.6k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
 | **reviewer-data** | 4 | 383,552 | 32,720 | 4,905,856 | 92.7% | 99.3k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
 | **reviewer-tests** | 2 | 236,275 | 13,714 | 2,179,328 | 90.2% | 103.7k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **rootagent** | 67 | 9,401,863 | 1,153,606 | 236,631,680 | 96.2% | 454.1k | CRITICAL (227%) | Unavailable (0 observed, 0 partial, 67 unavailable / 67 invocations) |
-| **Total** | **93** | **14,299,974** | **1,559,335** | **351,850,880** | **96.1%** | **454.1k** | **CRITICAL** | **Unavailable (0 observed, 0 partial, 93 unavailable / 93 invocations)** |
+| **rootagent** | 67 | 9,420,192 | 1,171,974 | 242,171,648 | 96.3% | 454.1k | CRITICAL (227%) | Unavailable (0 observed, 0 partial, 67 unavailable / 67 invocations) |
+| **Total** | **93** | **14,318,303** | **1,577,703** | **357,390,848** | **96.1%** | **454.1k** | **CRITICAL** | **Unavailable (0 observed, 0 partial, 93 unavailable / 93 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
 | **gpt-6-luna** | 32 | 2,557,710 | 162,470 | 18,918,272 | 88.1% | Unavailable (0 observed, 0 partial, 32 unavailable / 32 invocations) |
-| **gpt-6.1-sol** | 61 | 11,742,264 | 1,396,865 | 332,932,608 | 96.6% | Unavailable (0 observed, 0 partial, 61 unavailable / 61 invocations) |
-| **Total** | **93** | **14,299,974** | **1,559,335** | **351,850,880** | **96.1%** | **Unavailable (0 observed, 0 partial, 93 unavailable / 93 invocations)** |
+| **gpt-6.1-sol** | 61 | 11,760,593 | 1,415,233 | 338,472,576 | 96.6% | Unavailable (0 observed, 0 partial, 61 unavailable / 61 invocations) |
+| **Total** | **93** | **14,318,303** | **1,577,703** | **357,390,848** | **96.1%** | **Unavailable (0 observed, 0 partial, 93 unavailable / 93 invocations)** |
 
-Capture reconciliation completed: 2026-11-02T21:06:18.274056697Z (per-owner refreshed_at checkpoints; no common as-of snapshot). Current: 36; pending: 57; failed: 0; unassigned: 0. Detailed report disabled; any existing report is stale. Source failures preserve prior facts; coverage is limited to registered owners. Hook installation alone does not prove complete capture.
+Capture reconciliation completed: 2026-11-02T21:15:09.287073793Z (per-owner refreshed_at checkpoints; no common as-of snapshot). Current: 36; pending: 57; failed: 0; unassigned: 0. Detailed report disabled; any existing report is stale. Source failures preserve prior facts; coverage is limited to registered owners. Hook installation alone does not prove complete capture.
