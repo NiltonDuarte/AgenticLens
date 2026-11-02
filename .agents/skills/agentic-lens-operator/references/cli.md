@@ -1,7 +1,17 @@
 # CLI Reference
 
-Use the canonical executable path `.agents/skills/agentic-lens-operator/bin/agentic-lens` (or `agentic-lens.exe` on Windows) for every command. This is the path installed by the setup skill. If it is missing, explain that setup is needed rather than searching other directories or silently downloading or updating it. Quote the path if the repository path contains spaces.
+Use `bash .agents/skills/agentic-lens-operator/scripts/agentic-lens.sh` from the current worktree. This portable launcher lives outside binary storage and invokes the local native executable without downloading or checking for updates. On native Windows PowerShell, invoke `.agents/skills/agentic-lens-operator/bin/agentic-lens-windows-amd64.exe` directly. Quote paths containing spaces. `AGENTIC_LENS_BIN_DIR` can explicitly select a custom binary directory; relative overrides resolve against the caller's directory.
 
+### Missing installation in a worktree
+
+Inspect files before invoking commands. Git tracking and ignore policy belong to the repository owner; do not stage installed files or create ignore rules. A new worktree may lack binaries, scripts, or both depending on those choices.
+
+- **Launcher/setup present, binary absent:** explain the download and local file effects, then use existing repair authorization or obtain it. Run `bash .agents/skills/agentic-lens-setup/scripts/download.sh`. It uses the recorded `RELEASE_VERSION` and preserves existing binaries unless `--force` was authorized. Offline repair can use `--local-bin <native-prebuilt-path>`. Never compile AgenticLens in an adopting repository.
+- **Setup or launcher absent:** follow the complete bootstrap manifest and commands in [the setup skill](../../agentic-lens-setup/SKILL.md), section 1.2. If that local manifest is absent too, read the [public setup manifest](https://github.com/NiltonDuarte/AgenticLens/blob/main/.agents/skills/agentic-lens-setup/SKILL.md) to discover the installation procedure, then retrieve all installation files from one selected official release tag. Do not silently download files from moving `main` to repair a pinned release.
+- **Machine-local configuration absent:** treat this separately from a missing executable. Preserve shared configuration; use explicit `--source` and this machine's `--codex-home`/`--db-path` as needed. Do not copy settings from another worktree or run `init --force` as binary repair.
+- **Offline and no local prebuilt binary:** report repair as incomplete with the missing artifact and retry command. An already installed native executable works offline through the launcher.
+
+Existing installations can still use their legacy `bin/agentic-lens` wrapper, which has automatic missing-binary downloads and background update checks. Use the launcher for operations where fetching must remain an explicit action. The new launcher directly invokes the CLI, so the legacy wrapper's `update` command is not dispatched through it: authorize upgrades explicitly with setup `download.sh --version <RELEASE_TAG> --force`.
 Examples below use `agentic-lens` as shorthand for the executable path you resolved. To confirm syntax for the installed version, run `<binary> help`, `<binary> help <command>`, or `<binary> <command> --help` where supported. CLI behavior can evolve; prefer installed help over this reference when it differs, and inspect matching release source only as a last resort.
 
 ## Command Map
@@ -15,7 +25,7 @@ Examples below use `agentic-lens` as shorthand for the executable path you resol
 | `migrate` | Apply stepwise schema changes to existing workspace ledgers. |
 | `server` | Run the embedded dashboard and live observability service. |
 | `version` | Identify the installed build and schema version. |
-| `update` | Replace installed platform binaries with a selected public release. |
+| setup `download.sh --version TAG --force` | Explicitly replace platform binaries with an authorized selected release. |
 
 ## Root Scan and Ticket Inspection
 
@@ -161,10 +171,10 @@ agentic-lens version [--json|--short]
 
 No config or ledger mutation occurs.
 
-## `update` (wrapper)
+## `update` (legacy wrapper only)
 
 ```bash
-agentic-lens update [--version TAG]
+.agents/skills/agentic-lens-operator/bin/agentic-lens update [--version TAG]
 ```
 
 - no argument: resolve and install the latest public release.

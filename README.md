@@ -10,7 +10,7 @@ Ask your coding agent to install and configure AgenticLens in the repository. Fo
 Read https://raw.githubusercontent.com/NiltonDuarte/AgenticLens/main/.agents/skills/agentic-lens-setup/SKILL.md and follow it to install and configure AgenticLens in this repository. Explain the proposed changes and ask before modifying agent policy files.
 ```
 
-The setup skill guides the agent through downloading the platform binaries, configuring the repository, and integrating the AgenticLens operator skill. Review the [Platform Setup Manual](docs/SETUP_MANUAL.md) for the complete setup process and manual installation options.
+The setup skill guides the agent through downloading the platform binaries, configuring the repository, and installing both setup/repair and operator skills. Each worktree can explicitly install missing platform binaries using the local setup scripts; if the scripts are also absent, follow the complete bootstrap in the setup manifest. Git tracking and ignore choices for all installed files belong to the repository owner. Review the [Platform Setup Manual](docs/SETUP_MANUAL.md) for the complete setup process and manual installation options.
 
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: agentic-lens-setup
-description: Autonomous setup skill to bootstrap AgenticLens in OpenCode repositories, downloading precompiled release binaries, configuring project parameters, explaining telemetry features, and reviewing agent guidelines with mandatory user confirmation.
+description: Autonomous setup skill to bootstrap AgenticLens in OpenCode and Codex repositories, downloading precompiled release binaries, configuring project parameters, explaining telemetry features, and reviewing agent guidelines with mandatory user confirmation.
 ---
 
 # AgenticLens Cross-Project Autonomous Setup Skill
@@ -13,7 +13,7 @@ This skill follows the autonomous agentic distribution model: it is completely s
 
 ## Operational Mandates
 - Strict Release-Only Mandate: Never compile binaries from Go/TypeScript source or request Go/Node.js toolchain installation in target repositories. Retrieve official precompiled release artifacts from GitHub Releases: https://github.com/NiltonDuarte/AgenticLens/releases.
-- Operator Skill and Binary Placement: Install the AgenticLens operator skill under `.agents/skills/agentic-lens-operator/` and place the multi-platform wrapper and precompiled platform binaries in its `bin/` subdirectory. Keep a protective `.gitignore` in that binary directory containing `*` and `!/.gitignore`.
+- Complete Local Installation: Install this setup skill and all its scripts alongside `.agents/skills/agentic-lens-operator/`. Use the operator `scripts/agentic-lens.sh` launcher and keep platform executables under its `bin/` directory. Git tracking and ignore choices for scripts and executables belong to the adopting repository owner; do not stage files, commit them, or create/modify ignore rules during setup or repair.
 - Mandatory User Confirmation Gate: Inspect existing OpenCode agent instructions (`AGENTS.md` or `.agents/agent/*.md`) and propose operational policies. Never modify target repository files without presenting the exact text and receiving affirmative user confirmation.
 - Zero Emojis Mandate: Zero emojis permitted across all prompts, CLI output, generated files, configurations, and documentation.
 
@@ -21,121 +21,88 @@ This skill follows the autonomous agentic distribution model: it is completely s
 
 ## Step-by-Step Setup Workflow
 
-### Step 1: Precompiled Release Retrieval and Verification
+### Step 1: Install Complete Skills and Precompiled Binaries
 
-An autonomous agent executing this skill must perform host platform detection, download the appropriate official release archive, unpack the executable, and verify its integrity.
+Before modifying the adopting repository, present the exact proposed files, source release URLs, destinations and any existing-file diffs. Obtain affirmative approval, or use approval already granted for that scope. Preserve locally edited files. Installation/repair must not run `init`, change existing configuration, stage files, or impose Git ignore rules.
 
-#### 1.1 Host Platform and Architecture Detection
-Run the following shell commands to determine the target OS and CPU architecture:
+#### 1.1 Complete Installation Manifest
 
-```bash
-OS_RAW=$(uname -s)
-ARCH_RAW=$(uname -m)
+Install both skills, not only the operator. All paths below are relative to `.agents/skills/`:
 
-case "$OS_RAW" in
-  Linux) OS="linux" ;;
-  Darwin) OS="darwin" ;;
-  MINGW*|MSYS*|CYGWIN*|Windows_NT) OS="windows" ;;
-  *) echo "Error: Unsupported OS $OS_RAW" >&2; exit 1 ;;
-esac
+| File | Purpose |
+| --- | --- |
+| `agentic-lens-setup/SKILL.md` | Setup and repair instructions |
+| `agentic-lens-setup/scripts/install.sh` | Complete skill bundle installer |
+| `agentic-lens-setup/scripts/download.sh` | Explicit platform binary installation/repair |
+| `agentic-lens-setup/scripts/agentic-lens-wrapper.sh` | Legacy binary command compatibility |
+| `agentic-lens-operator/SKILL.md` | Day-to-day operation |
+| `agentic-lens-operator/references/cli.md` | CLI and worktree recovery |
+| `agentic-lens-operator/references/configuration.md` | Configuration reference |
+| `agentic-lens-operator/references/dashboard.md` | Dashboard reference |
+| `agentic-lens-operator/scripts/agentic-lens.sh` | Launcher outside binary storage |
 
-case "$ARCH_RAW" in
-  x86_64|amd64) ARCH="amd64" ;;
-  arm64|aarch64) ARCH="arm64" ;;
-  *) echo "Error: Unsupported architecture $ARCH_RAW" >&2; exit 1 ;;
-esac
-```
+The installer also writes `agentic-lens-setup/RELEASE_VERSION`, containing the selected release tag. That same tag is the default for later binary repair. It preflights the full bundle and refuses differing existing files, including the version record, before copying any skill files. Review and reconcile conflicts explicitly; do not delete edited files to make installation pass.
 
-#### 1.2 Operator Skill and Binary Destination
-The operator skill is the day-to-day interface for using the installed platform. Before writing files, present the exact operator skill files to be installed (the entrypoint and each reference), their source URLs, and the destination `.agents/skills/agentic-lens-operator/`; include the binary destination under its `bin/` directory. Obtain affirmative authorization for these repository changes. Do not write the skill files or binaries before approval. If an operator skill already exists, inspect it and present the exact diff; preserve local edits and ask before replacing or updating conflicting files.
+#### 1.2 Bootstrap When Setup Scripts Are Missing
 
-Install the operator skill files from the public AgenticLens repository:
+Choose an official release tag from https://github.com/NiltonDuarte/AgenticLens/releases that contains this complete skill bundle. Replace `<RELEASE_TAG>` below with that tag. Read and review the selected release's manifest and installer before running it; download the installer into a temporary location, not into an existing installed skill. Do not pipe an unreviewed script into a shell.
 
 ```bash
-OPERATOR_SKILL_DIR=".agents/skills/agentic-lens-operator"
-BIN_DIR="$OPERATOR_SKILL_DIR/bin"
-RAW_SKILL_URL="https://raw.githubusercontent.com/NiltonDuarte/AgenticLens/main/.agents/skills/agentic-lens-operator"
-mkdir -p "$OPERATOR_SKILL_DIR/references" "$BIN_DIR"
-
-curl -fsSL -o "$OPERATOR_SKILL_DIR/SKILL.md" "$RAW_SKILL_URL/SKILL.md"
-curl -fsSL -o "$OPERATOR_SKILL_DIR/references/cli.md" "$RAW_SKILL_URL/references/cli.md"
-curl -fsSL -o "$OPERATOR_SKILL_DIR/references/dashboard.md" "$RAW_SKILL_URL/references/dashboard.md"
-curl -fsSL -o "$OPERATOR_SKILL_DIR/references/configuration.md" "$RAW_SKILL_URL/references/configuration.md"
-
-if [ ! -f "$BIN_DIR/.gitignore" ]; then
-  cat <<'EOF' > "$BIN_DIR/.gitignore"
-# Prevent accidental git tracking of precompiled binaries
-*
-!.gitignore
-EOF
-fi
+# Run from the adopting repository root, after reviewing/approving the files.
+AGENTIC_LENS_RELEASE="<RELEASE_TAG>"
+AGENTIC_LENS_BOOTSTRAP="$(mktemp -d)"
+curl -fsSL -o "$AGENTIC_LENS_BOOTSTRAP/install.sh" \
+  "https://raw.githubusercontent.com/NiltonDuarte/AgenticLens/$AGENTIC_LENS_RELEASE/.agents/skills/agentic-lens-setup/scripts/install.sh"
+# Inspect the downloaded installer before execution.
+bash "$AGENTIC_LENS_BOOTSTRAP/install.sh" --version "$AGENTIC_LENS_RELEASE" --dest .
+rm -rf "$AGENTIC_LENS_BOOTSTRAP"
 ```
 
-For Windows (PowerShell), fetch the same files before installing the binary:
+Alternatively, an already available installer can use `--version latest`: it resolves the official latest release once and pins every skill file to that tag. Never mix skill scripts from moving `main` with a selected binary release. A release lacking these files fails explicitly; do not silently substitute another revision.
+
+On Windows, these shell commands require Git Bash. For native PowerShell without Bash, retrieve the same manifest files from one selected release tag and save `RELEASE_VERSION` with that tag, preserving local edits; this is a manual installation, not a PowerShell automation provided by this skill. Fetch the Windows amd64 binary from that same release and invoke it directly as described below. Native Windows arm64 release artifacts are not provided.
+
+#### 1.3 Explicit Binary Installation or Worktree Repair
+
+From the adopting repository root, after authorization for the binary download:
+
+```bash
+bash .agents/skills/agentic-lens-setup/scripts/download.sh
+# Optional: also install a macOS Apple Silicon host binary from a Linux container.
+bash .agents/skills/agentic-lens-setup/scripts/download.sh --include-host darwin-arm64
+```
+
+The downloader defaults to the sibling operator `bin/` directory and uses `RELEASE_VERSION` unless `--version` or `AGENTIC_LENS_VERSION` explicitly selects another release. Existing binaries are retained unless replacement was explicitly authorized with `--force`. `--dest` or `AGENTIC_LENS_BIN_DIR` selects another directory; use that same environment variable with the launcher. `--dry-run` prints destination/artifact URLs without writing or downloading. `--local-bin` installs an already available native prebuilt executable for offline repair. No Go/Node compilation is involved.
+
+The ordinary launcher does not download or check for updates. It detects the current OS/architecture and executes the native file in `operator/bin`, preserving the current directory, arguments and exit status. It reports an explicit repair command when that file is missing. The legacy `bin/agentic-lens` wrapper is retained for existing callers and keeps its established automatic-download/update-check behavior; use the new launcher for explicit-download operation.
+
+For native Windows PowerShell, with `$release` set to the same selected release tag, download to a temporary file and replace only after success. Confirm replacement authorization if a destination already exists:
 
 ```powershell
-$OPERATOR_SKILL_DIR = ".agents/skills/agentic-lens-operator"
-$BIN_DIR = "$OPERATOR_SKILL_DIR/bin"
-$RAW_SKILL_URL = "https://raw.githubusercontent.com/NiltonDuarte/AgenticLens/main/.agents/skills/agentic-lens-operator"
-New-Item -ItemType Directory -Force -Path "$OPERATOR_SKILL_DIR/references", $BIN_DIR | Out-Null
-Invoke-WebRequest -Uri "$RAW_SKILL_URL/SKILL.md" -OutFile "$OPERATOR_SKILL_DIR/SKILL.md"
-Invoke-WebRequest -Uri "$RAW_SKILL_URL/references/cli.md" -OutFile "$OPERATOR_SKILL_DIR/references/cli.md"
-Invoke-WebRequest -Uri "$RAW_SKILL_URL/references/dashboard.md" -OutFile "$OPERATOR_SKILL_DIR/references/dashboard.md"
-Invoke-WebRequest -Uri "$RAW_SKILL_URL/references/configuration.md" -OutFile "$OPERATOR_SKILL_DIR/references/configuration.md"
-if (-not (Test-Path "$BIN_DIR/.gitignore")) {
-  Set-Content -Path "$BIN_DIR/.gitignore" -Value "*`n!.gitignore`n" -NoNewline
-}
+$binDir = ".agents/skills/agentic-lens-operator/bin"
+New-Item -ItemType Directory -Force -Path $binDir | Out-Null
+Invoke-WebRequest -Uri "https://github.com/NiltonDuarte/AgenticLens/releases/download/$release/agentic-lens-windows-amd64.exe" -OutFile "$binDir/agentic-lens-windows-amd64.exe.tmp"
+Move-Item -Path "$binDir/agentic-lens-windows-amd64.exe.tmp" -Destination "$binDir/agentic-lens-windows-amd64.exe"
+& "$binDir/agentic-lens-windows-amd64.exe" version --json
 ```
 
-#### 1.3 Multi-Platform Wrapper and Binary Installation
-Autonomous agents frequently execute inside containerized Linux sandboxes (such as devcontainers or Docker) while developers interact from macOS or Windows host workstations. Install the portable wrapper at `.agents/skills/agentic-lens-operator/bin/agentic-lens`; it dispatches to native platform executables (`agentic-lens-${OS}-${ARCH}`) in the same directory and can download a missing host binary from GitHub Releases on demand.
+#### 1.4 Worktree Diagnosis and Verification
 
-If a local downloader script exists at `./.agents/skills/agentic-lens-setup/scripts/download.sh`, execute it:
-```bash
-# Basic setup for current execution environment (e.g. Linux container)
-./.agents/skills/agentic-lens-setup/scripts/download.sh --dest "$BIN_DIR"
+A worktree receives only files tracked in its checked-out revision. The repository owner decides whether to track or ignore installed skills, launchers, binaries, and local configuration. Explain these choices; do not change Git policy for them.
 
-# Optional: Pre-download host workstation binary (e.g. macOS Apple Silicon)
-# ./.agents/skills/agentic-lens-setup/scripts/download.sh --dest "$BIN_DIR" --include-host darwin-arm64
-```
+- If the launcher and setup scripts exist but the native binary does not, use the explicit local binary repair command above.
+- If setup/launcher files are also absent, use the complete bootstrap in section 1.2. Do not invoke a nonexistent local repair script or search another worktree for executables.
+- If `.agenticlens-config.local.yaml` is absent, diagnose it separately. Select the actual harness explicitly with `--source codex` or `--source opencode`, and use this machine's `--codex-home` or `--db-path` where needed. Do not copy another worktree's machine settings or rerun `init` over the existing shared configuration.
+- If repair is offline and no local prebuilt executable is available, report the missing artifact and retry command; do not claim setup succeeded.
 
-Otherwise, install the wrapper script and platform binary directly from GitHub:
-
-For Linux or macOS, use the operator skill binary destination set above:
-```bash
-# 1. Install multi-platform wrapper script
-WRAPPER_URL="https://raw.githubusercontent.com/NiltonDuarte/AgenticLens/main/scripts/agentic-lens-wrapper.sh"
-curl -fsSL -o "$BIN_DIR/agentic-lens" "$WRAPPER_URL"
-chmod +x "$BIN_DIR/agentic-lens"
-
-# 2. Download native binary for current execution platform
-BIN_NAME="agentic-lens-${OS}-${ARCH}"
-DOWNLOAD_URL="https://github.com/NiltonDuarte/AgenticLens/releases/latest/download/${BIN_NAME}"
-
-echo "Downloading ${DOWNLOAD_URL}..."
-curl -fsSL -o "$BIN_DIR/${BIN_NAME}" "$DOWNLOAD_URL"
-chmod +x "$BIN_DIR/${BIN_NAME}"
-```
-
-For Windows (PowerShell), set `$BIN_DIR` to `.agents/skills/agentic-lens-operator/bin` first:
-```powershell
-$binName = "agentic-lens-windows-amd64.exe"
-$downloadUrl = "https://github.com/NiltonDuarte/AgenticLens/releases/latest/download/$binName"
-Invoke-WebRequest -Uri $downloadUrl -OutFile "$BIN_DIR\$binName"
-Copy-Item "$BIN_DIR\$binName" "$BIN_DIR\agentic-lens.exe"
-```
-
-#### 1.4 Verification
-Validate that the downloaded binary executes properly and outputs valid build metadata:
+Verify installed binary metadata from the current worktree:
 
 ```bash
-"$BIN_DIR/agentic-lens" version --json
+AGENTIC_LENS=".agents/skills/agentic-lens-operator/scripts/agentic-lens.sh"
+bash "$AGENTIC_LENS" version --json
 ```
 
-Verify that valid JSON is returned containing:
-- `version`: semantic release version string
-- `commit`: git SHA hash of the build
-- `build_date`: build timestamp in RFC3339 format
+Check the returned `version`, `commit`, and `build_date`. Download success and executable metadata do not establish cryptographic integrity; verify against the selected release's `SHA256SUMS` when available before executing newly downloaded artifacts.
 
 ---
 
@@ -163,7 +130,7 @@ Inspect the repository and collect configuration parameters from the developer o
 Run the CLI `init` command using the collected parameters:
 
 ```bash
-"$BIN_DIR/agentic-lens" init \
+bash "$AGENTIC_LENS" init \
   --project-name "<PROJECT_NAME>" \
   --ticket-prefixes "<TICKET_PREFIXES>" \
   --workspaces "<WORKSPACES_DIR>" \
@@ -174,7 +141,7 @@ Run the CLI `init` command using the collected parameters:
 Alternatively, review generated YAML with `--dry-run` before writing:
 
 ```bash
-"$BIN_DIR/agentic-lens" init \
+bash "$AGENTIC_LENS" init \
   --project-name "<PROJECT_NAME>" \
   --ticket-prefixes "<TICKET_PREFIXES>" \
   --src-folders "<SRC_FOLDERS>" \
@@ -193,7 +160,7 @@ Present an overview of AgenticLens features to the user:
 - `init`: Scaffold shared `.agenticlens-config.yaml` and ignored machine-local `.agenticlens-config.local.yaml` configuration files.
 - `generate`: Ingest session telemetry from the selected harness and git history into `agentic_metrics.json`, and idempotently update markdown summary tables. `--source` wins over local `telemetry.default_source`; otherwise the local default is used, then OpenCode. Missing sources fail without switching harness. The executing agent generates a unique random nonce directly (e.g. an 8 to 16 character alphanumeric or hex string) and passes the literal token to `--nonce <GENERATED_NONCE>`.
   ```bash
-  "$BIN_DIR/agentic-lens" generate \
+  bash "$AGENTIC_LENS" generate \
     --nonce <GENERATED_NONCE> \
     --ticket-id <TICKET_ID> \
     --ticket-type <CONVENTIONAL_TYPE> \
@@ -202,18 +169,15 @@ Present an overview of AgenticLens features to the user:
   ```
 - `scan`: Scan workspace ledgers, reporting active sessions, iteration counts, context window health, and token costs:
   ```bash
-  "$BIN_DIR/agentic-lens" --list
+  bash "$AGENTIC_LENS" --list
   ```
 - `server`: Start embedded web dashboard and real-time streaming API service:
   ```bash
-  "$BIN_DIR/agentic-lens" server --port 8080
+  bash "$AGENTIC_LENS" server --port 8080
   ```
 - `backfill`: Batch telemetry backfill, git diff fact recomputation, and schema upgrades.
 - `migrate`: Stepwise schema migration engine across ledger versions.
-- `update`: Check GitHub Releases and upgrade installed platform binaries synchronously:
-  ```bash
-  "$BIN_DIR/agentic-lens" update
-  ```
+- Binary upgrades: explicitly select the intended release and authorize replacement, then run the setup downloader with `--version <RELEASE_TAG> --force`. Skill bundle updates require reviewing/reconciling differing installed files separately; do not silently upgrade scripts during binary repair. The legacy wrapper also supports its existing `update` command.
 - `version`: Print binary version, git commit, build date, and schema information.
 
 #### Real-Time Observability and Live Monitoring
@@ -263,7 +227,7 @@ When approved by the user, append the following standardized operational policie
 - Telemetry generation must be executed as the very final turn before git commit.
 - Generate a unique random nonce directly (e.g. an 8 to 16 character alphanumeric or hex string) and pass the literal token directly to `--nonce <GENERATED_NONCE>`. Shell variables (`$NONCE`) must not be used because OpenCode records tool inputs into SQLite before subshell expansion occurs:
   ```bash
-  .agents/skills/agentic-lens-operator/bin/agentic-lens generate \
+  bash .agents/skills/agentic-lens-operator/scripts/agentic-lens.sh generate \
     --nonce <GENERATED_NONCE> \
     --ticket-id <TICKET_ID> \
     --ticket-type <CONVENTIONAL_TYPE> \
@@ -277,8 +241,9 @@ When approved by the user, append the following standardized operational policie
 
 ## Completion Verification Checklist
 - Operator skill exists at `.agents/skills/agentic-lens-operator/` with its CLI, dashboard, and configuration references.
-- Binary exists at `.agents/skills/agentic-lens-operator/bin/agentic-lens` (or `agentic-lens.exe` on Windows) and is executable.
-- Protective `.gitignore` exists at binary destination directory.
+- Setup skill exists with every script in section 1.1 and the selected `RELEASE_VERSION`.
+- Operator launcher exists outside binary storage; the native binary for this host exists and executes.
+- Git index and ignore policy are unchanged; the repository owner decides which installed files to track.
 - Root `.agenticlens-config.yaml` is present, valid YAML, and non-empty.
 - Verification command reports valid JSON metadata.
 - Agent guidelines updated only after explicit user confirmation.
