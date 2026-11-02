@@ -35,8 +35,7 @@ Follow the repository [testing policy](../../../TECHNICAL_GUIDELINES.md#test-pur
    - `CONTRACT.md`: Immutable baseline authored by the developer (problem statement, FCIS architectural invariants, Go/TS scope boundaries).
    - `SUMMARY.md` & `agentic_metrics.json`: Unified summary of everything developed for the ticket grouped by layer (`domain`, `adapters`, `presentation`), plus AgenticLens-rendered metrics table.
    - `PULL_REQUEST.md`: Conventional PR draft (max 3000 chars, pointers to `CONTRACT.md` & `SUMMARY.md`, summary of changes; no test evidence).
-   - `iterations/<NN>/`: commit `PLAN.md`, consolidated `REVIEW.md`. Keep `capture_report.json` at the ticket root when generated; respect additional configured required artifacts, without creating empty placeholders.
-   - Follow the [compact retained evidence](../agentic-lens-review/references/model-attribution.md#compact-retained-evidence): reviewer/tester/implementation scratch reports stay outside the tracked workspace. Before committing, retain concise evidence, finding/model attribution and review outcomes in `REVIEW.md`/`SUMMARY.md`; update references and remove scratch files. Do not embed full reports or logs in committed run archives. Do not commit per-run reports, candidate-manifest copies, state logs or separate evidence files when their contents belong in these canonical records.
+   - `iterations/<NN>/`: `PLAN.md` and working review artifacts per iteration. After corrections and consolidated approval, retain `iterations/<NN>/REVIEW_SUMMARY.json` with severity, brief issue and every reporting persona/model/effort; link it and record approval/verification in `SUMMARY.md`, then delete detailed review files under the [review lifecycle](../agentic-lens-review/references/parallel-review.md#completed-review-retention).
 
 ---
 
@@ -64,7 +63,7 @@ Follow the repository [testing policy](../../../TECHNICAL_GUIDELINES.md#test-pur
 Present planning artifacts. Wait for explicit user confirmation via `question` tool before touching code. If changes requested, re-dispatch `planner`.
 
 ### Phase 2: Implementation, Testing & Audit Loop
-Use the [specialized parallel review protocol](../agentic-lens-review/references/parallel-review.md). Record dedicated persona names, focus owners and unique private temporary report paths in the plan. The coordinator alone loads the role matrix; each child gets its own persona and shared rules. Substantive changes default to separate behavior, data/failure, architecture and test-effectiveness reviewers, with risk-selected specialists; capacity limits require waves, not omitted coverage. Narrow low-risk exceptions need a rationale. Give each reviewer the same frozen revision/requirements and a fresh context where supported. Load the review model policy and expand each selected persona into all configured profiles before dispatch. Preserve per-run model/effort evidence and finding attribution under the review protocol. The parent owns the consolidated verdict.
+Use the [specialized parallel review protocol](../agentic-lens-review/references/parallel-review.md). Record dedicated persona names, focus owners and unique report paths in the plan. The coordinator alone loads the role matrix; each child gets its own persona and shared rules. Substantive changes default to separate behavior, data/failure, architecture and test-effectiveness reviewers, with risk-selected specialists; capacity limits require waves, not omitted coverage. Narrow low-risk exceptions need a rationale. Give each reviewer the same frozen revision/requirements and a fresh context where supported. Load the review model policy and expand each selected persona into all configured profiles before dispatch. Preserve per-run model/effort evidence and finding attribution under the review protocol. The parent owns the consolidated verdict.
 
 Run `coder` -> `tester` -> independent focused reviewers -> verified findings/consolidation on `<WORKSPACES_DIR>/<TICKET_ID>/iterations/<NN>/`:
 
@@ -85,7 +84,7 @@ Run `coder` -> `tester` -> independent focused reviewers -> verified findings/co
    )
    ```
 3. **Focused audit (`reviewer`)**:
-   Dispatch the applicable focus assignments using the brief in the parallel review protocol, concurrently within harness capacity. Each reviewer follows the canonical review skill, inspects relevant unchanged dependencies and owns a separate temporary report or returns its full report to the parent. The parent alone consolidates findings and actor/model credit; children never write shared review records. Do not have children overwrite a shared REVIEW.md. Parent verifies/deduplicates candidates, preserves dissent supported by evidence and writes the consolidated REVIEW.md. Corrections return to coder/tester, followed by revision-aware re-review of affected focuses.
+   Dispatch the applicable focus assignments using the brief in the parallel review protocol, concurrently within harness capacity. Each reviewer follows the canonical review skill, inspects relevant unchanged dependencies and owns a separate report. Do not have children overwrite a shared REVIEW.md. Parent verifies/deduplicates candidates, preserves dissent supported by evidence and writes the consolidated REVIEW.md. Corrections return to coder/tester, followed by revision-aware re-review of affected focuses.
 
 **Loop Control**:
 After focused review is ready (no unresolved blockers/material review gaps), perform Phase 3 commit/integration/checks. Final consolidated approval gates publication, not the ability to run those checks; integration changes require affected re-review.
@@ -97,7 +96,6 @@ After focused review is ready (no unresolved blockers/material review gaps), per
 
 ### Phase 3: Delivery Sync (Every Iteration)
 1. **Commit Implementation**:
-   First consolidate temporary review/test/candidate evidence using the compact evidence-retention checks; preserve every finding, reviewer/model credit and original review outcome before removing bulky files; keep full reports private during investigation. Record verification in `REVIEW.md` and durable progress in `SUMMARY.md` rather than adding handoff logs.
    Commit all implementation files and test changes on the feature branch first to ensure a clean working tree:
    ```bash
    git add -A
