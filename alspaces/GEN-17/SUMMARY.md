@@ -41,15 +41,15 @@ Initial eight discovery runs completed: all four Sol scopes requested changes; L
 Database-wide invalidation can reread histories of unchanged active sessions after unrelated writes; idle polls reuse snapshots. This is existing accepted performance debt, not changed-session-only polling. Pricing, cost, source identity and session completeness must come from final extraction, not reviewer assignments. Final telemetry is generated after all review/integration work; extraction facts and limits are recorded below when available.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 13
-- **Active Agent Duration:** 1h 33m (excludes user wait time)
-- **Context Window Health:** BLOATED — Root agent peak 208.2k tokens (104% of 200k healthy ceiling, 0 compactions) | Subagents peak 207.6k (Tester)
+- **Software Development Life Cycle Iterations:** 18
+- **Active Agent Duration:** 1h 38m (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 212.3k tokens (106% of 200k healthy ceiling, 0 compactions) | Subagents peak 207.6k (Tester)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 1.5 avg turns/run (peak: 4 turns) | Planner 2.0, Coder 4.0, Tester 4.0, Reviewer-architecture 1.0, Reviewer-behavior 1.0, Reviewer-data 1.0, Reviewer-tests 1.0
 - **Test-to-Production Code Ratio:** 3.1:1 (+622 test lines / +202 prod lines)
 - **Code Delivered:** +824 / -176 lines across 34 code files (excluding docs)
-- **Reasoning Effort:** 39,985 reasoning tokens (19.3% of generated output)
-- **Tool Health & Self-Correction:** 521 tool calls (35 self-corrections, 93.3% success rate)
+- **Reasoning Effort:** 41,527 reasoning tokens (19.6% of generated output)
+- **Tool Health & Self-Correction:** 524 tool calls (35 self-corrections, 93.3% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 12 execution anomalies detected (6 CRITICAL, 6 WARNING).
@@ -76,18 +76,18 @@ Database-wide invalidation can reread histories of unchanged active sessions aft
 | **planner** | 1 | 70,102 | 6,506 | 1,125,120 | 94.1% | 73.4k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **coder** | 1 | 170,459 | 16,619 | 7,678,336 | 97.8% | 177.8k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **tester** | 1 | 142,308 | 32,229 | 11,555,072 | 98.8% | 207.6k | BLOATED (104%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Unknown** | 1 | 183,041 | 59,031 | 26,954,240 | 99.3% | 208.2k | BLOATED (104%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Unknown** | 1 | 185,333 | 61,990 | 28,846,848 | 99.4% | 212.3k | BLOATED (106%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **reviewer-architecture** | 2 | 127,728 | 10,404 | 1,957,120 | 93.9% | 95.6k | HEALTHY | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
 | **reviewer-behavior** | 2 | 207,494 | 10,717 | 1,886,592 | 90.1% | 102.9k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
 | **reviewer-data** | 3 | 227,499 | 18,100 | 3,101,696 | 93.2% | 91.3k | HEALTHY | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
 | **reviewer-tests** | 3 | 187,194 | 13,542 | 2,163,200 | 92.0% | 88.1k | HEALTHY | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
-| **Total** | **14** | **1,315,825** | **167,148** | **56,421,376** | **97.7%** | **208.2k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations)** |
+| **Total** | **14** | **1,318,117** | **170,107** | **58,313,984** | **97.8%** | **212.3k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 14 | 1,315,825 | 167,148 | 56,421,376 | 97.7% | Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations) |
-| **Total** | **14** | **1,315,825** | **167,148** | **56,421,376** | **97.7%** | **Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations)** |
+| **gpt-6.1-sol** | 14 | 1,318,117 | 170,107 | 58,313,984 | 97.8% | Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations) |
+| **Total** | **14** | **1,318,117** | **170,107** | **58,313,984** | **97.8%** | **Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations)** |
 
 ## Final telemetry validation and delivery revision
 
@@ -104,3 +104,9 @@ User steering: "I prefer role_resolution" after the filename recommendation. Ren
 Rename verification completed at369e9e3: latest origin/main already up to date; full make passed (12 Go race packages, frontend35files783tests, static/Python checks, frontend and four-platform builds). Log /tmp/gen17-rename-make.log. The prior standalone asset proof remains valid for unchanged implementation/frontend bytes. PR96 remained OPEN before follow-up delivery. This follow-up changes the filename only; no new review finding or acceptance boundary was introduced. Telemetry refreshed with literal nonce6d27469e29b514a2 after these checks; the prior ledger is retained outside Git for session-preservation comparison.
 
 Rename telemetry validation: all14existingCodex sessions retained, same verified root and13nativechildren. The eight delegated Luna runs remain excluded and costs remain unavailable; prior telemetry limitations still apply.
+
+## Final session refresh
+
+User accepted the current role-resolution behavior ("ok, its fine") and requested metrics generation, commit and push. No application changes or new acceptance boundaries were introduced by the explanatory discussion. Refreshing the existing Codex ledger with literal nonce17d240a0483436fa and conventional type chore, preserving prior captured sessions. Prior integrated make and standalone verification remain applicable to unchanged application content. Existing delegated-run coverage and unavailable-cost limits remain explicit.
+
+Final refresh validation: same verified Codex root and13nativechildren; all14previous sessions retained. The eight T3-delegated Luna runs remain outside this source parent tree, and captured cost evidence remains unavailable. No application/test changes or additional verification claims.
