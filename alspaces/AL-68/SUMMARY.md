@@ -70,15 +70,15 @@ Original CONTRACT remains frozen. Iteration 03 is an unapproved draft: shared us
 AL-76 defines compact ledger JSON serialization and a source-independent format command with all-workspace, single-ticket and ticket-set selection, dry-run/check modes, value preservation and safe concurrent publication. Its specification is Ready under plan/to-do. Implementation requires its own dedicated session; no format command is implemented in AL-68.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 246
-- **Active Agent Duration:** 17h 17m (excludes user wait time)
+- **Software Development Life Cycle Iterations:** 249
+- **Active Agent Duration:** 17h 31m (excludes user wait time)
 - **Context Window Health:** CRITICAL — Root agent peak 454.1k tokens (227% of 200k healthy ceiling, 3 compactions) | Subagents peak 348.1k (Coder)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 1.5 avg turns/run (peak: 6 turns) | Planner 1.3, Coder 3.0, Tester 6.0, Reviewer 1.2, Reviewer-architecture 1.0, Reviewer-behavior 1.0, Reviewer-data 1.0, Reviewer-tests 1.0
 - **Test-to-Production Code Ratio:** 1.1:1 (+5,291 test lines / +4,684 prod lines)
 - **Code Delivered:** +10,026 / -49 lines across 56 code files (excluding docs)
-- **Reasoning Effort:** 612,235 reasoning tokens (27.4% of generated output)
-- **Tool Health & Self-Correction:** 3,043 tool calls (150 self-corrections, 95.1% success rate)
+- **Reasoning Effort:** 624,696 reasoning tokens (27.6% of generated output)
+- **Tool Health & Self-Correction:** 3,085 tool calls (150 self-corrections, 95.1% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 31 execution anomalies detected (16 CRITICAL, 15 WARNING).
@@ -125,18 +125,19 @@ AL-76 defines compact ledger JSON serialization and a source-independent format 
 | **coder** | 3 | 1,306,732 | 155,437 | 54,191,872 | 97.6% | 348.1k | BLOATED (174%) | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
 | **tester** | 1 | 692,408 | 81,990 | 35,824,384 | 98.1% | 303.6k | BLOATED (152%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **reviewer** | 5 | 463,052 | 36,239 | 5,253,760 | 91.9% | 105.5k | ELEVATED | Unavailable (0 observed, 0 partial, 5 unavailable / 5 invocations) |
+| **Unknown** | 1 | 2,688,102 | 394,577 | 119,759,744 | 97.8% | 454.1k | CRITICAL (227%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **reviewer-architecture** | 4 | 524,799 | 31,831 | 4,718,080 | 90.0% | 106.1k | ELEVATED | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
 | **reviewer-behavior** | 4 | 476,895 | 27,453 | 4,110,976 | 89.6% | 98.6k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
 | **reviewer-data** | 4 | 383,552 | 32,720 | 4,905,856 | 92.7% | 99.3k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
 | **reviewer-tests** | 2 | 236,275 | 13,714 | 2,179,328 | 90.2% | 103.7k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **rootagent** | 67 | 9,948,517 | 1,214,038 | 255,486,336 | 96.3% | 454.1k | CRITICAL (227%) | Unavailable (0 observed, 0 partial, 67 unavailable / 67 invocations) |
-| **Total** | **93** | **14,846,628** | **1,619,767** | **370,705,536** | **96.1%** | **454.1k** | **CRITICAL** | **Unavailable (0 observed, 0 partial, 93 unavailable / 93 invocations)** |
+| **rootagent** | 66 | 7,336,451 | 841,164 | 141,539,968 | 95.1% | 453.9k | CRITICAL (227%) | Unavailable (0 observed, 0 partial, 66 unavailable / 66 invocations) |
+| **Total** | **93** | **14,922,664** | **1,641,470** | **376,518,912** | **96.2%** | **454.1k** | **CRITICAL** | **Unavailable (0 observed, 0 partial, 93 unavailable / 93 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
 | **gpt-6-luna** | 32 | 2,557,710 | 162,470 | 18,918,272 | 88.1% | Unavailable (0 observed, 0 partial, 32 unavailable / 32 invocations) |
-| **gpt-6.1-sol** | 61 | 12,288,918 | 1,457,297 | 351,787,264 | 96.6% | Unavailable (0 observed, 0 partial, 61 unavailable / 61 invocations) |
-| **Total** | **93** | **14,846,628** | **1,619,767** | **370,705,536** | **96.1%** | **Unavailable (0 observed, 0 partial, 93 unavailable / 93 invocations)** |
+| **gpt-6.1-sol** | 61 | 12,364,954 | 1,479,000 | 357,600,640 | 96.7% | Unavailable (0 observed, 0 partial, 61 unavailable / 61 invocations) |
+| **Total** | **93** | **14,922,664** | **1,641,470** | **376,518,912** | **96.2%** | **Unavailable (0 observed, 0 partial, 93 unavailable / 93 invocations)** |
 
-Capture reconciliation completed: 2026-11-02T22:22:36.676329638Z (per-owner refreshed_at checkpoints; no common as-of snapshot). Current: 36; pending: 57; failed: 0; unassigned: 0. Detailed report disabled; any existing report is stale. Source failures preserve prior facts; coverage is limited to registered owners. Hook installation alone does not prove complete capture.
+Capture reconciliation completed: 2026-11-02T23:16:34.858242478Z (per-owner refreshed_at checkpoints; no common as-of snapshot). Current: 36; pending: 57; failed: 0; unassigned: 0. Detailed report disabled; any existing report is stale. Source failures preserve prior facts; coverage is limited to registered owners. Hook installation alone does not prove complete capture.
