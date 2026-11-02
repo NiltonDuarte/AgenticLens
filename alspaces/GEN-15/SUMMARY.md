@@ -69,20 +69,21 @@ Verification and platform/release limits are recorded above. Detailed reports an
 Source: the user requested keeping a summary of findings with the model and actor that found each, then deleting review files once corrections are addressed and review is approved. This supersedes permanent detailed-review retention; it preserves active-review evidence, approval gates, discovery attribution, verification and known limits. Updated AGENTS and canonical review/development guidance; removed seven completed GEN-15 review files after consolidation. Other tickets' historical audits are untouched. This is authorized documentation/artifact maintenance with no runtime changes or new reviewer dispatch. The previously passed application checks remain valid for the unchanged runtime; documentation checks and current delivery verification are recorded in iterations/02/PLAN.md.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 5
-- **Active Agent Duration:** 25m 34s (excludes user wait time)
-- **Context Window Health:** ELEVATED — Root agent peak 134.5k tokens (67% of 200k healthy ceiling, 0 compactions) | Subagents peak 110.7k (Tester)
+- **Software Development Life Cycle Iterations:** 6
+- **Active Agent Duration:** 39m 29s (excludes user wait time)
+- **Context Window Health:** ELEVATED — Root agent peak 161.4k tokens (81% of 200k healthy ceiling, 0 compactions) | Subagents peak 110.7k (Tester)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 1.3 avg turns/run (peak: 2 turns) | Planner 1.0, Coder 2.0, Tester 2.0, Reviewer 1.0
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 17,211 reasoning tokens (18.3% of generated output)
-- **Tool Health & Self-Correction:** 184 tool calls (3 self-corrections, 98.4% success rate)
+- **Reasoning Effort:** 20,255 reasoning tokens (19.0% of generated output)
+- **Tool Health & Self-Correction:** 197 tool calls (4 self-corrections, 98.0% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 3 execution anomalies detected (1 CRITICAL, 2 WARNING).
+- **Status:** 4 execution anomalies detected (1 CRITICAL, 3 WARNING).
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (6 cycles) — Subagent roles 'coder' and 'tester' alternated for 6 consecutive cycles.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+72.9k tokens) — Context tokens surged by 72.9k to 72.9k tokens.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.1k tokens) — Context tokens reached 160.1k, breaching the 160k warning ceiling.
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (3 cycles) — Subagent roles 'coder' and 'tester' alternated for 3 consecutive cycles.
 
 ### Agentic Execution Metrics
@@ -96,16 +97,18 @@ Source: the user requested keeping a summary of findings with the model and acto
 | **coder** | 1 | 98,084 | 13,198 | 2,165,120 | 95.7% | 107.1k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **tester** | 1 | 47,330 | 13,823 | 2,324,224 | 98.0% | 110.7k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **reviewer** | 4 | 208,121 | 19,471 | 2,195,072 | 91.3% | 77.1k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
-| **rootagent** | 1 | 123,628 | 26,849 | 8,527,872 | 98.6% | 134.5k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **8** | **525,526** | **76,916** | **15,588,992** | **96.7%** | **134.5k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 8 unavailable / 8 invocations)** |
+| **rootagent** | 1 | 275,600 | 36,502 | 11,031,808 | 97.6% | 161.4k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **8** | **677,498** | **86,569** | **18,092,928** | **96.4%** | **161.4k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 8 unavailable / 8 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
 | **gpt-6-luna** | 2 | 83,320 | 7,998 | 854,272 | 91.1% | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **gpt-6.1-sol** | 6 | 442,206 | 68,918 | 14,734,720 | 97.1% | Unavailable (0 observed, 0 partial, 6 unavailable / 6 invocations) |
-| **Total** | **8** | **525,526** | **76,916** | **15,588,992** | **96.7%** | **Unavailable (0 observed, 0 partial, 8 unavailable / 8 invocations)** |
+| **gpt-6.1-sol** | 6 | 594,178 | 78,571 | 17,238,656 | 96.7% | Unavailable (0 observed, 0 partial, 6 unavailable / 6 invocations) |
+| **Total** | **8** | **677,498** | **86,569** | **18,092,928** | **96.4%** | **Unavailable (0 observed, 0 partial, 8 unavailable / 8 invocations)** |
 
 ## Final telemetry verification
 
 Generated with explicit Codex source, root session `01a19c78-4515-7170-93d3-178ecba3b8d1`, literal nonce `54cd975390ae9c09`, and conventional type `chore`. CLI discovered eight actual rollouts. Compared ledger session IDs and parent links against real source session metadata: root plus all seven children (planner, coder, tester, two discovery reviewers and two re-reviewers) are present, each labeled Codex with non-empty invocation facts. No unavailable child or source error was reported. No pre-existing GEN-15 ledger or other-harness sessions existed to preserve; no other-harness facts were added. Raw rollouts remain outside Git. This final extraction precedes the final telemetry commit; post-extraction verification/commit/publication calls are outside the snapshot.
+
+Iteration 02 telemetry refresh: explicit Codex source, root `01a19c78-4515-7170-93d3-178ecba3b8d1`, literal nonce `b44ae9aa742a0747`, type chore. Discovered the same eight real rollouts; compared refreshed ledger IDs, sources and parent links with the pre-refresh ledger and preserved all eight sessions. All seven children retain their root parent and non-empty facts. No other-harness sessions existed; no source errors reported. Detailed review files remain deleted, while the completed-review summary above is preserved. Post-extraction verification/commit/push calls are outside this snapshot.
