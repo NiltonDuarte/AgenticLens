@@ -53,7 +53,7 @@ The focus is a responsibility, not a source-read boundary. Give enough context t
 
 Keep one finding record per distinct root cause/observable failure, retaining all contributing reviewers' evidence and disagreement. Do not merge unrelated failures merely because they affect the same file. Use stable IDs such as BEH-01 or DATA-01, then reference those IDs from the consolidated report.
 
-Each candidate records location, introduced/pre-existing/suggestion classification, supported expectation, reachable trigger, observed or inferred consequence, evidence/command, severity and verification owner. The parent assigns a disposition: confirmed, refuted with evidence, or unresolved. A disagreement or majority approval does not refute a demonstrated failure. One confirmed blocker is sufficient to prevent delivery. Deduplication must preserve distinct regression assertions.
+Each candidate records location, introduced/pre-existing/suggestion classification, supported expectation, reachable trigger, observed or inferred consequence, evidence/command, numeric severity score from 0 (low) to 10 (high), and verification owner. The parent assigns a disposition: confirmed, refuted with evidence, or unresolved. A disagreement or majority approval does not refute a demonstrated failure. One confirmed blocker is sufficient to prevent delivery. Deduplication must preserve distinct regression assertions.
 
 Validate candidates against actual callers and guards. For disputed or consequential findings, the parent or a separately assigned verifier checks the counterexample using raw source and relevant requirements; a fresh verifier may see the candidate because its task is validation, not blind discovery. Do not launch a mandatory extra reviewer when the existing reproduction/source proof settles the issue. Unresolved material hypotheses are evidence gaps, not silently discarded findings. Existing out-of-scope debt remains visible with an owner/follow-up; it blocks this delivery only if it defeats the accepted behavior or a required invariant.
 
@@ -81,10 +81,10 @@ Review reports and structured run/finding files support the active investigation
 
 ### Compact findings format
 
-Use `schema_version: 1`, the reviewed revision (commit or immutable fingerprint), and a `findings` array. Each entry contains:
+Use `schema_version: 1` and a `findings` array. Omit `reviewed_revision` from this compact file; revision evidence remains in the ticket's `SUMMARY.md` and active-review records. Each entry contains:
 
 - `finding_id`: the stable canonical finding ID.
-- `severity`: the reconciled review severity, preserving the review's severity scale.
+- `severity`: a JSON number from 0 (low) to 10 (high), inclusive, reconciled against the supported impact. Do not use severity labels such as `"low"` or `"high"`.
 - `issue`: one very brief, self-contained sentence describing the defect.
 - `reporters`: every distinct reporting persona/model/effort tuple, including shared discovery across models and later reports of the same issue. Use the actual persona name and exact model identifier, not internal run IDs or agent namespace paths. Deduplicate repeated reports from the same tuple; never keep only the first reporter.
 - `disposition`: a brief outcome/fix, including refutation or accepted debt and its owner/follow-up where applicable. Preserve every canonical candidate, including refuted claims; do not make them look like confirmed defects.
@@ -94,11 +94,10 @@ For example (illustrative values, not session evidence):
 ```json
 {
   "schema_version": 1,
-  "reviewed_revision": "<commit or immutable fingerprint>",
   "findings": [
     {
       "finding_id": "DATA-01",
-      "severity": "high",
+      "severity": 8,
       "issue": "Failed hydration hides persisted ledger rows.",
       "reporters": [
         {"persona": "reviewer-data", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "acknowledged"},
