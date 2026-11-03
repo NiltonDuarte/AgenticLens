@@ -1027,3 +1027,25 @@ func TestMigrationRunner_MissingWorkspacesDir(t *testing.T) {
 		t.Errorf("expected ErrWorkspacesDirNotFound, got %v", err)
 	}
 }
+
+func TestMigrationRunnerRejectsExistingInvalidStateConfigWithoutMutation(t *testing.T) {
+	ws := setupMigrationTestWorkspaces(t)
+	root := filepath.Dir(ws)
+	invalid := []byte("project_name: Example\nticket:\n  prefixes: [AL]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n")
+	if err := os.WriteFile(filepath.Join(root, ".agenticlens-config.yaml"), invalid, 0600); err != nil {
+		t.Fatal(err)
+	}
+	ledgerPath := filepath.Join(ws, "AL-1", "agentic_metrics.json")
+	before, err := os.ReadFile(ledgerPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{WorkspacesDir: ws, TargetVersion: 2})
+	if err == nil || !strings.Contains(err.Error(), "telemetry.capture.state_dir") || report != nil {
+		t.Fatalf("invalid target config fell back to caller config: %+v %v", report, err)
+	}
+	after, err := os.ReadFile(ledgerPath)
+	if err != nil || string(before) != string(after) {
+		t.Fatalf("rejected migration changed ledger: %v", err)
+	}
+}

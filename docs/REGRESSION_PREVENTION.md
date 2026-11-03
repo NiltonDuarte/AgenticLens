@@ -39,6 +39,8 @@ Exercise supported ledger facts with enrichment unavailable, pending, failed, em
 
 Exercise a custom workspace directory, custom ticket prefixes, source roots, thresholds, and explicit overrides. Missing required configuration must fail clearly; pre-existing container/parent directories must not silently select a project. Verify the effective value through the API and UI as well as the loader. Renaming ticket artifacts must not affect tests: use self-contained fixtures. Production clients must surface request failures; synthetic fixtures belong to tests.
 
+Installer and entrypoint fixtures must explicitly isolate every writable cache, wrapper, state and configuration destination and assert that resolved targets stay under the fixture directory before applying changes. A temporary HOME alone is insufficient: native Windows profile APIs can resolve the real user profile independently. Use temporary shared/local install-root and destination settings through the production resolver. If a fixture escapes isolation, identify its exact generated artifact before cleanup; preserve unrelated or uncertain files and record the correction.
+
 ### Classification, anomalies, and exported prompts
 
 Test the same source facts through live and retrospective paths. Successful inspection of text containing errors must not become a failed tool call. Keep failure streaks within their owning session across turns and bind displayed counts to the matching rule. Use existing domain enums. Derive prompt provenance from its actual source and apply configured identifier/sanitization rules rather than assuming AgenticLens ticket prefixes.
@@ -86,6 +88,8 @@ Run affected checks and the required integrated gate; report actual passed, fail
 Use the [canonical review procedure](../.agents/skills/agentic-lens-review/SKILL.md) for correctness investigation and evidence outcomes, and its [parallel protocol](../.agents/skills/agentic-lens-review/references/parallel-review.md) for focus coverage, findings consolidation and revision-aware re-review. Reusing test runs does not replace inspecting the affected behavior. For consequential fixes, seek evidence that the regression is detected (before/after or a narrowly targeted disposable mutation); explain unavailable proof. Keep durable regressions in self-contained tests, never live ticket artifacts.
 
 ## Before handoff
+
+For workspace consolidation, follow [completed review retention](../.agents/skills/agentic-lens-review/references/parallel-review.md#completed-review-retention). Verify that REVIEW_SUMMARY.json preserves every canonical candidate, numeric severity, disposition and all distinct reporting persona/model/effort tuples, including shared discovery and refutations. Retain scope/revision, initial/final outcomes (including no-findings, cancelled and incomplete work), separate verification actors, checks and limits in SUMMARY.md. Resolve current references before deleting completed detailed reports and run/finding archives. Do not turn incomplete evidence into approval; historical full evidence may remain in Git history.
 
 Record the tested commit/diff, command, result, skipped stages, and environment limits. Reference valid prior results for unchanged code. For each review finding, state fixed, still open, or out of scope with an evidence link; approval does not erase an untested branch. Keep final PR text aligned with delivered scope, and check whether a previous PR has already merged before attaching later work to it.
 

@@ -42,7 +42,7 @@ Every task, feature, bugfix, or refactoring in this repository must have a ticke
    - **Literal Nonce Generation**: The agent must generate a unique random nonce directly (by any means, e.g. an 8 to 16 character alphanumeric or hex string) and supply the literal token directly in the command. Shell variables (`$NONCE`) or command substitutions (`$(...)`) must not be used because OpenCode records tool inputs into SQLite before subshell expansion occurs, which causes database searches for the expanded token to fail.
    - Execute AgenticLens CLI with an explicit conventional commit `type` immediately before final commit:
      ```bash
-     ./bin/agentic-lens generate --nonce <GENERATED_NONCE> --ticket-id <TICKET_ID> --ticket-type <CONVENTIONAL_TYPE> --json-output <WORKSPACES_DIR>/<TICKET_ID>/agentic_metrics.json --append <WORKSPACES_DIR>/<TICKET_ID>/SUMMARY.md
+     agentic-lens --al-offline --al-project . generate --nonce <GENERATED_NONCE> --ticket-id <TICKET_ID> --ticket-type <CONVENTIONAL_TYPE> --json-output <WORKSPACES_DIR>/<TICKET_ID>/agentic_metrics.json --append <WORKSPACES_DIR>/<TICKET_ID>/SUMMARY.md
      ```
    - Select the actual harness explicitly when defaults are ambiguous. For a Codex session, add `--source codex`; use `--codex-home` only when its session store is outside the normal configured location. Confirm supported options with the built CLI.
    - Before committing telemetry, verify the root session, source, expected child sessions, and preservation of existing sessions from other harnesses. A successful exit alone does not establish complete extraction. Record unavailable facts or source errors; never manufacture a successful or empty ledger.

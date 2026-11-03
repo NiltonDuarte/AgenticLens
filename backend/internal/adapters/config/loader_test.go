@@ -13,13 +13,14 @@ import (
 )
 
 const (
-	testValidSuffixYAML = "\nticket:\n  prefixes:\n    - prefix: AL\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
-	testValidSuffixJSON = `,"ticket":{"prefixes":[{"prefix":"AL"}]},"code_metrics":{"source_roots":["src"]},"anomaly_thresholds":{"context_ceiling_warning_tokens":160000,"context_ceiling_critical_tokens":200000}}`
+	testValidSuffixYAML = "\ntelemetry:\n  capture:\n    state_dir: capture-state\nticket:\n  prefixes:\n    - prefix: AL\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+	testValidSuffixJSON = `,"telemetry":{"capture":{"state_dir":"capture-state"}},"ticket":{"prefixes":[{"prefix":"AL"}]},"code_metrics":{"source_roots":["src"]},"anomaly_thresholds":{"context_ceiling_warning_tokens":160000,"context_ceiling_critical_tokens":200000}}`
 )
 
 func testProjectConfig() domain.ProjectConfig {
 	return domain.ProjectConfig{
 		ProjectName: "AgenticLens",
+		Telemetry:   domain.TelemetryConfig{Capture: domain.DefaultCaptureConfig()},
 		Ticket: domain.TicketConfig{
 			Prefixes: []domain.TicketPrefix{
 				{
@@ -89,7 +90,7 @@ func testProjectConfig() domain.ProjectConfig {
 
 func TestLoad_LocalTelemetrySourcesMergeAndValidate(t *testing.T) {
 	root := t.TempDir()
-	shared := "project_name: Shared\nticket:\n  prefixes: [AL]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+	shared := "project_name: Shared\nticket:\n  prefixes: [AL]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n\ntelemetry:\n  capture:\n    state_dir: capture-state\n"
 	if err := os.WriteFile(filepath.Join(root, ".agenticlens-config.yaml"), []byte(shared), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -126,7 +127,7 @@ func TestLoad_LocalTelemetrySourcesMergeAndValidate(t *testing.T) {
 }
 
 func TestLoad_LocalTelemetrySourceCombinations(t *testing.T) {
-	shared := "project_name: Shared\nticket:\n  prefixes: [AL]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+	shared := "project_name: Shared\nticket:\n  prefixes: [AL]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n\ntelemetry:\n  capture:\n    state_dir: capture-state\n"
 	for _, tc := range []struct {
 		name       string
 		local      string
@@ -207,6 +208,10 @@ role_order:
   - tester
   - planner
   - coder
+
+telemetry:
+  capture:
+    state_dir: capture-state
 `
 	if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
 		t.Fatal(err)
@@ -364,7 +369,7 @@ func TestLoad_LegacyJSONRejected(t *testing.T) {
 		"ticket_prefix": "LEG",
 		"workspaces_dir": "custom_workspaces_dir",
 		"src_folders": ["api", "ui"]
-	}`
+	,"telemetry":{"capture":{"state_dir":"capture-state"}}}`
 	if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.json"), []byte(legacyJSON), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -407,6 +412,10 @@ database:
 anomaly_thresholds:
   context_ceiling_warning_tokens: 160000
   context_ceiling_critical_tokens: 200000
+
+telemetry:
+  capture:
+    state_dir: capture-state
 `
 	if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(partialYAML), 0644); err != nil {
 		t.Fatal(err)
@@ -451,6 +460,10 @@ func TestLoad_MalformedFileErrorHandling(t *testing.T) {
 	malformedYAML := `
 project_name: [invalid yaml unclosed
   test: {
+
+telemetry:
+  capture:
+    state_dir: capture-state
 `
 	if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(malformedYAML), 0644); err != nil {
 		t.Fatal(err)
@@ -649,7 +662,7 @@ func TestLoad_AdversarialPartialConfigs(t *testing.T) {
 
 	t.Run("missing prefixes returns validation error", func(t *testing.T) {
 		tempDir := t.TempDir()
-		yamlContent := "project_name: TestProject\ncode_metrics:\n  source_roots:\n    - src\n"
+		yamlContent := "project_name: TestProject\ncode_metrics:\n  source_roots:\n    - src\n\ntelemetry:\n  capture:\n    state_dir: capture-state\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -665,7 +678,7 @@ func TestLoad_AdversarialPartialConfigs(t *testing.T) {
 
 	t.Run("missing source_roots returns validation error", func(t *testing.T) {
 		tempDir := t.TempDir()
-		yamlContent := "project_name: TestProject\nticket:\n  prefixes:\n    - prefix: AL\n"
+		yamlContent := "project_name: TestProject\nticket:\n  prefixes:\n    - prefix: AL\n\ntelemetry:\n  capture:\n    state_dir: capture-state\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -701,6 +714,10 @@ anomaly_thresholds:
   stall_threshold_seconds: 45
   context_ceiling_warning_tokens: 160000
   context_ceiling_critical_tokens: 200000
+
+telemetry:
+  capture:
+    state_dir: capture-state
 `
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(partialContent), 0644); err != nil {
 			t.Fatal(err)
@@ -759,12 +776,12 @@ func TestLoad_LegacyWorkspaceSourceFoldersDoNotSatisfySourceRoots(t *testing.T) 
 		{
 			name: "yaml",
 			file: ".agenticlens-config.yaml",
-			body: "project_name: Legacy\nticket:\n  prefixes: [AL]\nworkspaces:\n  src_folders: [src]\n",
+			body: "project_name: Legacy\nticket:\n  prefixes: [AL]\nworkspaces:\n  src_folders: [src]\n\ntelemetry:\n  capture:\n    state_dir: capture-state\n",
 		},
 		{
 			name: "json",
 			file: ".agenticlens-config.json",
-			body: `{"project_name":"Legacy","ticket":{"prefixes":["AL"]},"workspaces":{"src_folders":["src"]}}`,
+			body: `{"project_name":"Legacy","ticket":{"prefixes":["AL"]},"workspaces":{"src_folders":["src"]},"telemetry":{"capture":{"state_dir":"capture-state"}}}`,
 		},
 	}
 	for _, tt := range tests {
@@ -831,7 +848,7 @@ func TestLoad_AdversarialLegacyJSONAndCanonicalPriority(t *testing.T) {
 				"context_ceiling_warning_tokens": 160000,
 				"context_ceiling_critical_tokens": 200000
 			}
-		}`
+		,"telemetry":{"capture":{"state_dir":"capture-state"}}}`
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.json"), []byte(mixedJSON), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -942,6 +959,10 @@ code_metrics:
 anomaly_thresholds:
   context_ceiling_warning_tokens: 160000
   context_ceiling_critical_tokens: 200000
+
+telemetry:
+  capture:
+    state_dir: capture-state
 `
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
 			t.Fatal(err)
@@ -987,6 +1008,10 @@ code_metrics:
 anomaly_thresholds:
   context_ceiling_warning_tokens: 160000
   context_ceiling_critical_tokens: 200000
+
+telemetry:
+  capture:
+    state_dir: capture-state
 `
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
 			t.Fatal(err)
@@ -1033,6 +1058,10 @@ code_metrics:
 anomaly_thresholds:
   context_ceiling_warning_tokens: 160000
   context_ceiling_critical_tokens: 200000
+
+telemetry:
+  capture:
+    state_dir: capture-state
 `
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
 			t.Fatal(err)
@@ -1075,7 +1104,7 @@ anomaly_thresholds:
 					{"prefix": "PO", "description": "Product Owner"}
 				]
 			}
-		}`
+		,"telemetry":{"capture":{"state_dir":"capture-state"}}}`
 		scalarJSON := `{
 			"project_name": "PrefixApp",
 			"code_metrics": {"source_roots": ["src"]},
@@ -1086,7 +1115,7 @@ anomaly_thresholds:
 			"ticket": {
 				"prefixes": ["AL", "PO"]
 			}
-		}`
+		,"telemetry":{"capture":{"state_dir":"capture-state"}}}`
 
 		if err := os.WriteFile(structuredPath, []byte(structuredJSON), 0644); err != nil {
 			t.Fatal(err)
@@ -1124,7 +1153,7 @@ anomaly_thresholds:
 	t.Run("legacy flat JSON with PO prefix rejected", func(t *testing.T) {
 		tempDir := t.TempDir()
 
-		legacyJSON := `{"project_name": "LegacyPO", "code_metrics": {"source_roots": ["src"]}, "ticket_prefix": "PO"}`
+		legacyJSON := `{"project_name": "LegacyPO", "code_metrics": {"source_roots": ["src"]}, "ticket_prefix": "PO","telemetry":{"capture":{"state_dir":"capture-state"}}}`
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.json"), []byte(legacyJSON), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -1243,6 +1272,10 @@ code_metrics:
 anomaly_thresholds:
   context_ceiling_warning_tokens: 160000
   context_ceiling_critical_tokens: 200000
+
+telemetry:
+  capture:
+    state_dir: capture-state
 `
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
 			t.Fatal(err)
@@ -1290,7 +1323,7 @@ anomaly_thresholds:
 					"SCALAR"
 				]
 			}
-		}`
+		,"telemetry":{"capture":{"state_dir":"capture-state"}}}`
 		if err := os.WriteFile(jsonPath, []byte(jsonContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -1336,7 +1369,7 @@ func TestLoad_RoleOrderParsingAndFallback(t *testing.T) {
 			},
 			"ticket": {"prefixes": [{"prefix": "AL"}]},
 			"role_order": ["tester", "researcher", "developer", "coder"]
-		}`
+		,"telemetry":{"capture":{"state_dir":"capture-state"}}}`
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.json"), []byte(jsonContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -1377,6 +1410,10 @@ role_order:
   - lead-qa
   - architect
   - researcher
+
+telemetry:
+  capture:
+    state_dir: capture-state
 `
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
 			t.Fatal(err)
@@ -1477,6 +1514,10 @@ role_order:
   - ""
   - "  RESEARCHER\t"
   - "DeVeLoPeR"
+
+telemetry:
+  capture:
+    state_dir: capture-state
 `
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
 			t.Fatal(err)
@@ -1511,7 +1552,7 @@ role_order:
 			},
 			"ticket": {"prefixes": [{"prefix": "AL"}]},
 			"role_order": ["  LEAD-QA  ", "  \n  ", "", "ArChItEcT"]
-		}`
+		,"telemetry":{"capture":{"state_dir":"capture-state"}}}`
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.json"), []byte(jsonContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -1552,6 +1593,10 @@ role_order:
   - "   "
   - "\t"
   - "\n"
+
+telemetry:
+  capture:
+    state_dir: capture-state
 `
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
 			t.Fatal(err)
@@ -1621,6 +1666,10 @@ role_order:
   - orchestrator
   - planner
   - coder
+
+telemetry:
+  capture:
+    state_dir: capture-state
 `
 	if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
 		t.Fatal(err)
@@ -2025,7 +2074,7 @@ func TestLoad_BoundaryAndCorruptedConfigs(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
 		cfgPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
-		if err := os.WriteFile(cfgPath, []byte("project_name: [unclosed_mapping:\n"), 0644); err != nil {
+		if err := os.WriteFile(cfgPath, []byte("project_name: [unclosed_mapping:\n\ntelemetry:\n  capture:\n    state_dir: capture-state\n"), 0644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -2111,7 +2160,7 @@ ticket:
 			"ticket_prefix": "LEGACYPREFIX",
 			"workspaces_dir": "legacy_workspaces_dir",
 			"src_folders": ["src_legacy_1", "src_legacy_2"]
-		}`
+		,"telemetry":{"capture":{"state_dir":"capture-state"}}}`
 		if err := os.WriteFile(cfgPath, []byte(content), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -2209,6 +2258,10 @@ code_metrics:
 anomaly_thresholds:
   context_ceiling_warning_tokens: 160000
   context_ceiling_critical_tokens: 200000
+
+telemetry:
+  capture:
+    state_dir: capture-state
 `
 		if err := os.WriteFile(cfgFile, []byte(content), 0644); err != nil {
 			t.Fatal(err)
@@ -2294,6 +2347,10 @@ code_metrics:
 anomaly_thresholds:
   context_ceiling_warning_tokens: 160000
   context_ceiling_critical_tokens: 200000
+
+telemetry:
+  capture:
+    state_dir: capture-state
 `
 		if err := os.WriteFile(cfgFile, []byte(content), 0644); err != nil {
 			t.Fatal(err)
@@ -2320,6 +2377,10 @@ workspaces:
 code_metrics:
   source_roots:
     - src
+
+telemetry:
+  capture:
+    state_dir: capture-state
 `
 
 	t.Run("missing context_ceiling_critical_tokens returns validation error", func(t *testing.T) {

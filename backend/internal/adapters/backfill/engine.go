@@ -3,6 +3,7 @@ package backfill
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -67,8 +68,11 @@ func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) 
 	}
 
 	cfg, err := config.Load(targetDir)
-	if err != nil {
-		cfg, _ = config.Load("")
+	if errors.Is(err, config.ErrConfigNotFound) {
+		cfg, err = config.Load("")
+	}
+	if err != nil && !errors.Is(err, config.ErrConfigNotFound) {
+		return nil, fmt.Errorf("loading backfill configuration: %w", err)
 	}
 
 	report := &BackfillReport{

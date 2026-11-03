@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "CAP-01",
+      "severity": 8,
+      "issue": "Stale registry snapshots override newer canonical or freshly extracted facts.",
+      "reporters": [
+        {"persona": "reviewer-behavior", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "observed"},
+        {"persona": "reviewer-data", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "observed"},
+        {"persona": "reviewer-architecture", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "observed"},
+        {"persona": "reviewer-tests", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "observed"}
+      ],
+      "disposition": "Fixed: compare source checkpoints; use retained snapshots only as fallback."
+    },
+    {
+      "finding_id": "CAP-02",
+      "severity": 8,
+      "issue": "Concurrent generation publishes older snapshots after newer ones.",
+      "reporters": [
+        {"persona": "reviewer-data", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "observed"}
+      ],
+      "disposition": "Fixed: lock publication before baseline/source reads and staged writes."
+    },
+    {
+      "finding_id": "CAP-03",
+      "severity": 8,
+      "issue": "Explicit generation bypasses known conflicting ticket binding.",
+      "reporters": [
+        {"persona": "reviewer-data", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "observed"}
+      ],
+      "disposition": "Fixed: enforce exact ticket/store ownership for explicit selectors and aliases."
+    },
+    {
+      "finding_id": "CAP-04",
+      "severity": 7,
+      "issue": "Codex child start evidence is discarded until stop callback.",
+      "reporters": [
+        {"persona": "reviewer-behavior", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "observed"}
+      ],
+      "disposition": "Fixed: persist child-start recovery work with native parent identity before stop."
+    },
+    {
+      "finding_id": "CAP-05",
+      "severity": 5,
+      "issue": "Failed source reads evade per-pass byte budget.",
+      "reporters": [
+        {"persona": "reviewer-architecture", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "observed"}
+      ],
+      "disposition": "Fixed: charge failed source attempts against bounded reconciliation work."
+    },
+    {
+      "finding_id": "CAP-06",
+      "severity": 5,
+      "issue": "Repeated placeholder substitution corrupts valid escaped plugin paths.",
+      "reporters": [
+        {"persona": "reviewer", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "observed"}
+      ],
+      "disposition": "Fixed: substitute template placeholders once, preserving escaped paths."
+    },
+    {
+      "finding_id": "CAP-07",
+      "severity": 6,
+      "issue": "Native receive timeout does not bound blocked stdin.",
+      "reporters": [
+        {"persona": "reviewer", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "observed"}
+      ],
+      "disposition": "Fixed: bound stdin reads and close blocked input on cancellation."
+    },
+    {
+      "finding_id": "CAP-08",
+      "severity": 7,
+      "issue": "Incompatible binary replacement strands active lifecycle hooks.",
+      "reporters": [
+        {"persona": "reviewer", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "observed"}
+      ],
+      "disposition": "Fixed: preflight native protocol compatibility and roll back partial replacement."
+    },
+    {
+      "finding_id": "CAP-09",
+      "severity": 4,
+      "issue": "Public manual direct and PowerShell setup lacks lifecycle integration.",
+      "reporters": [
+        {"persona": "reviewer", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "observed"},
+        {"persona": "reviewer", "model": "gpt-6-luna", "effort": "medium", "identity_basis": "observed"}
+      ],
+      "disposition": "Fixed: connect manual Unix/PowerShell setup to lifecycle installation and binding checks."
+    },
+    {
+      "finding_id": "CAP-10",
+      "severity": 5,
+      "issue": "Reported snapshot cutoff precedes source reads and can misstate captured boundary.",
+      "reporters": [
+        {"persona": "reviewer-data", "model": "gpt-6-luna", "effort": "medium", "identity_basis": "observed"}
+      ],
+      "disposition": "Fixed: report reconciliation completion and successful owner-read checkpoints without a common as-of claim."
+    },
+    {
+      "finding_id": "CAP-11",
+      "severity": 6,
+      "issue": "Unrelated unassigned sessions consume ticket refresh budget and leak into ticket report.",
+      "reporters": [
+        {"persona": "reviewer-behavior", "model": "gpt-6-luna", "effort": "medium", "identity_basis": "observed"}
+      ],
+      "disposition": "Fixed: scope ticket work/budgets to proven owners and redact unrelated session IDs."
+    },
+    {
+      "finding_id": "CAP-12",
+      "severity": 7,
+      "issue": "Child recovery lacks fair bounded continuation for known OpenCode pages and failed Codex metadata queues.",
+      "reporters": [
+        {"persona": "reviewer-behavior", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "observed"},
+        {"persona": "reviewer-data", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "observed"},
+        {"persona": "reviewer-architecture", "model": "gpt-6.1-sol", "effort": "high", "identity_basis": "observed"}
+      ],
+      "disposition": "Fixed: persist recovery cursors, rotate work fairly and retain failures. Discovered during re-review."
+    }
+  ]
+}

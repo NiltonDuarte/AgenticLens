@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strings"
 
@@ -28,6 +29,9 @@ func ResolveWorkspacesDir(overridePath string) (string, error) {
 	cfg, err := config.Load("")
 	if err == nil && strings.TrimSpace(cfg.Workspaces.Dir) != "" {
 		return strings.TrimSpace(cfg.Workspaces.Dir), nil
+	}
+	if err != nil && !errors.Is(err, config.ErrConfigNotFound) {
+		return "", errors.Join(ErrWorkspacesDirNotFound, fmt.Errorf("loading workspace configuration: %w", err))
 	}
 	return "", ErrWorkspacesDirNotFound
 }
@@ -72,7 +76,10 @@ func ScanWorkspaces(basePath string) domain.ScanReport {
 
 	sort.Strings(metricFiles)
 
-	cfg, _ := config.Load(basePath)
+	cfg, configErr := config.Load(basePath)
+	if configErr != nil && !errors.Is(configErr, config.ErrConfigNotFound) {
+		return domain.ScanReport{Ledgers: []domain.AgenticMetricsLedger{}, Errors: []string{configErr.Error()}, FatalError: configErr.Error()}
+	}
 
 	var ledgers []domain.AgenticMetricsLedger
 	var scanErrors []string
@@ -91,7 +98,7 @@ func ScanWorkspaces(basePath string) domain.ScanReport {
 	}
 
 	for _, metricFile := range metricFiles {
-		content, err := os.ReadFile(metricFile)
+		content, err := readPublishedLedger(metricFile)
 		if err != nil {
 			addDiagnostic(metricFile, err)
 			continue
@@ -175,6 +182,9 @@ func ReadTicketArtifacts(ticketID string, basePath string, configuredArtifacts .
 		// Try to load configured artifacts from project config
 		if projCfg, err := config.Load(basePath); err == nil && len(projCfg.Workspaces.Artifacts) > 0 {
 			configs = projCfg.Workspaces.Artifacts
+		} else if err != nil && !errors.Is(err, config.ErrConfigNotFound) {
+			fmt.Fprintf(os.Stderr, "Cannot read ticket artifacts with invalid project configuration: %v\n", err)
+			return domain.TicketArtifacts{TicketID: ticketID, Items: []domain.TicketArtifactItem{}}
 		}
 	}
 
@@ -270,7 +280,7 @@ func LoadTicketWorkspace(ticketID, basePath string) (*domain.AgenticMetricsLedge
 	}
 
 	metricFile := filepath.Join(absTicketDir, "agentic_metrics.json")
-	content, err := os.ReadFile(metricFile)
+	content, err := readPublishedLedger(metricFile)
 	if err != nil {
 		return nil, fmt.Errorf("reading metrics file for ticket %s: %w", cleanID, err)
 	}
@@ -295,7 +305,10 @@ func LoadTicketWorkspace(ticketID, basePath string) (*domain.AgenticMetricsLedge
 		factLedger.TicketID = &cleanID
 	}
 
-	cfg, _ := config.Load(basePath)
+	cfg, configErr := config.Load(basePath)
+	if configErr != nil && !errors.Is(configErr, config.ErrConfigNotFound) {
+		return nil, fmt.Errorf("loading ticket configuration: %w", configErr)
+	}
 	ledger := domain.DeriveMetricsLedger(factLedger, cfg)
 	return &ledger, nil
 }
@@ -357,18 +370,19 @@ func UpdateSummaryFile(destPath string, tableMD string) error {
 
 // ExistingLedgerFacts encapsulates raw facts extracted from an existing on-disk ledger.
 type ExistingLedgerFacts struct {
-	SchemaVersion *int
-	Migration     *domain.MigrationInfo
-	TicketID      *string
-	TicketTitle   *string
-	TicketType    *domain.ConventionalTicketType
-	StartedAt     *string
-	CompletedAt   *string
-	RootThreadIDs []string
-	Code          *domain.CodeFacts
-	Sessions      []domain.SessionFact
-	Skills        []domain.SkillFact
-	TaskLinks     []domain.TaskLinkFact
+	SchemaVersion     *int
+	Migration         *domain.MigrationInfo
+	TicketID          *string
+	TicketTitle       *string
+	TicketType        *domain.ConventionalTicketType
+	StartedAt         *string
+	CompletedAt       *string
+	RootThreadIDs     []string
+	Code              *domain.CodeFacts
+	Sessions          []domain.SessionFact
+	PersistedSessions []SessionFactDTO
+	Skills            []domain.SkillFact
+	TaskLinks         []domain.TaskLinkFact
 }
 
 type legacyThreadItem struct {
@@ -410,36 +424,61 @@ type rawExistingLedger struct {
 
 // LoadExistingFactLedger loads raw facts from an existing agentic_metrics.json ledger on disk.
 func LoadExistingFactLedger(path string) (*ExistingLedgerFacts, error) {
+	return loadExistingFactLedger(path, false)
+}
+
+// LoadOwnedFactLedger requires the caller to hold the canonical publication lock.
+func LoadOwnedFactLedger(path string) (*ExistingLedgerFacts, error) {
+	return loadExistingFactLedger(path, true)
+}
+func loadExistingFactLedger(path string, owned bool) (*ExistingLedgerFacts, error) {
 	if strings.TrimSpace(path) == "" {
 		return nil, nil
 	}
 
+	if err := CheckPublication(path); err != nil {
+		return nil, err
+	}
 	fi, err := os.Stat(path)
 	if err != nil || fi.IsDir() {
 		return nil, nil
 	}
 
-	data, err := os.ReadFile(path)
+	var data []byte
+	if owned {
+		data, err = readOwnedLedger(path)
+	} else {
+		data, err = readPublishedLedger(path)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("reading existing ledger at %s: %w", path, err)
 	}
-	if err := ValidateRuntimeFactLedger(data); err != nil {
+	result, err := DecodeExistingFactLedger(data)
+	if err != nil {
 		return nil, fmt.Errorf("loading existing ledger at %s: %w", path, err)
+	}
+	return result, nil
+}
+
+// DecodeExistingFactLedger applies the canonical persisted-ledger boundary to an immutable blob.
+func DecodeExistingFactLedger(data []byte) (*ExistingLedgerFacts, error) {
+	if err := ValidateRuntimeFactLedger(data); err != nil {
+		return nil, fmt.Errorf("validating ledger blob: %w", err)
 	}
 
 	var raw rawExistingLedger
 	if err := json.Unmarshal(data, &raw); err != nil {
-		return nil, fmt.Errorf("decoding existing ledger at %s: %w", path, err)
+		return nil, fmt.Errorf("decoding ledger blob: %w", err)
 	}
 	var rootFields map[string]json.RawMessage
 	if err := json.Unmarshal(data, &rootFields); err != nil {
-		return nil, fmt.Errorf("decoding existing ledger shape at %s: %w", path, err)
+		return nil, fmt.Errorf("decoding ledger blob shape: %w", err)
 	}
 	_, hasSessions := rootFields["sessions"]
 	if hasSessions {
 		for _, key := range []string{"invocations", "tools", "events"} {
 			if _, hasLegacy := rootFields[key]; hasLegacy {
-				return nil, fmt.Errorf("loading existing ledger at %s: mixed ledger shape: sessions cannot coexist with root-level legacy %s", path, key)
+				return nil, fmt.Errorf("mixed ledger shape: sessions cannot coexist with root-level legacy %s", key)
 			}
 		}
 	}
@@ -452,22 +491,23 @@ func LoadExistingFactLedger(path string) (*ExistingLedgerFacts, error) {
 
 	dto := AgenticFactLedgerDTO{Sessions: raw.Sessions, Skills: raw.Skills, TaskLinks: raw.TaskLinks}
 	if err := dto.Validate(); err != nil {
-		return nil, fmt.Errorf("loading existing ledger at %s: %w", path, err)
+		return nil, fmt.Errorf("validating ledger blob: %w", err)
 	}
 	normalized := dto.ToDomain()
 	sessions := normalized.Sessions
 
 	result := &ExistingLedgerFacts{
-		SchemaVersion: raw.SchemaVersion,
-		Migration:     mig,
-		TicketID:      raw.TicketID,
-		TicketTitle:   raw.TicketTitle,
-		TicketType:    toDomainTicketType(raw.TicketType),
-		StartedAt:     raw.StartedAt,
-		CompletedAt:   raw.CompletedAt,
-		Sessions:      sessions,
-		Skills:        normalized.Skills,
-		TaskLinks:     normalized.TaskLinks,
+		SchemaVersion:     raw.SchemaVersion,
+		Migration:         mig,
+		TicketID:          raw.TicketID,
+		TicketTitle:       raw.TicketTitle,
+		TicketType:        toDomainTicketType(raw.TicketType),
+		StartedAt:         raw.StartedAt,
+		CompletedAt:       raw.CompletedAt,
+		Sessions:          sessions,
+		PersistedSessions: raw.Sessions,
+		Skills:            normalized.Skills,
+		TaskLinks:         normalized.TaskLinks,
 	}
 
 	// Schema 1: Direct atomic fact schema
@@ -516,17 +556,95 @@ func LoadExistingFactLedger(path string) (*ExistingLedgerFacts, error) {
 
 // SaveFactLedger writes an AgenticFactLedger to the specified file path, creating parent directories if needed.
 func SaveFactLedger(path string, ledger domain.AgenticFactLedger) error {
+	return SaveFactLedgerPreservingHistory(path, ledger, nil)
+}
+
+// NormalizeHistorySessionForPublication applies only the supported legacy cost
+// representation mapping. Authorization still uses the original committed fact;
+// source events, anomaly evidence/order and every non-cost value stay intact.
+func NormalizeHistorySessionForPublication(owner SessionFactDTO, schemaVersion int) (SessionFactDTO, error) {
+	if schemaVersion != 4 && schemaVersion != domain.CurrentSchemaVersion {
+		return SessionFactDTO{}, fmt.Errorf("unsupported historical schema version %d", schemaVersion)
+	}
+	body, err := json.Marshal(owner)
+	if err != nil {
+		return SessionFactDTO{}, fmt.Errorf("cloning historical fact: %w", err)
+	}
+	var normalized SessionFactDTO
+	if err = json.Unmarshal(body, &normalized); err != nil {
+		return SessionFactDTO{}, fmt.Errorf("validating historical fact: %w", err)
+	}
+	if schemaVersion == 4 {
+		for i, invocation := range normalized.Invocations {
+			if invocation.CostEvidence != nil {
+				continue
+			}
+			// Reuse the same v4 nullable-amount mapping as ordinary persisted
+			// reads and writes, including a present numeric zero as observed.
+			cost := InvocationFactDTOFromDomain(invocation.ToDomain())
+			normalized.Invocations[i].CostUSD = cost.CostUSD
+			normalized.Invocations[i].CostEvidence = cost.CostEvidence
+		}
+	}
+	version := domain.CurrentSchemaVersion
+	if err = (AgenticFactLedgerDTO{SchemaVersion: &version, Sessions: []SessionFactDTO{normalized}}).validateCostFields(true); err != nil {
+		return SessionFactDTO{}, fmt.Errorf("historical fact cannot publish under the current cost contract: %w", err)
+	}
+	return normalized, nil
+}
+
+// SaveFactLedgerPreservingHistory compacts current owners and serializes
+// previously authorized immutable historical DTOs through the same canonical
+// validation and writer. Supported sparse events, evidence, order and nullable
+// values in retained rows never pass through source persistence transforms.
+func SaveFactLedgerPreservingHistory(path string, ledger domain.AgenticFactLedger, history []SessionFactDTO) error {
 	if ledger.TicketID == nil || strings.TrimSpace(*ledger.TicketID) == "" {
 		return fmt.Errorf("cannot save fact ledger: TicketID is required and cannot be empty")
 	}
 	if ledger.TicketTitle == nil || strings.TrimSpace(*ledger.TicketTitle) == "" {
 		return fmt.Errorf("cannot save fact ledger: TicketTitle is required and cannot be empty")
 	}
-	ledger, err := domain.PersistAnomalySummaries(ledger)
+	historical := make(map[string]SessionFactDTO, len(history))
+	for _, owner := range history {
+		if _, exists := historical[owner.ID]; exists {
+			return fmt.Errorf("duplicate retained history owner %s", owner.ID)
+		}
+		historical[owner.ID] = owner
+	}
+	current := ledger
+	current.Sessions = nil
+	matched := make(map[string]bool, len(history))
+	for _, owner := range ledger.Sessions {
+		prior, retained := historical[owner.ID]
+		if !retained {
+			current.Sessions = append(current.Sessions, owner)
+			continue
+		}
+		if matched[owner.ID] {
+			return fmt.Errorf("duplicate publication history owner %s", owner.ID)
+		}
+		if !reflect.DeepEqual(prior.ToDomain(), owner) {
+			return fmt.Errorf("retained history owner %s changed before serialization", owner.ID)
+		}
+		matched[owner.ID] = true
+	}
+	if len(matched) != len(history) {
+		return errors.New("retained history owner missing from publication")
+	}
+	ledger, err := domain.PersistAnomalySummaries(current)
 	if err != nil {
 		return fmt.Errorf("cannot prepare sparse anomaly evidence: %w", err)
 	}
 	dto := AgenticFactLedgerDTOFromDomain(ledger)
+	// Classification already authorized and normalized historical facts. Validate
+	// their current representation again without compacting their evidence.
+	for _, owner := range history {
+		cloned, err := NormalizeHistorySessionForPublication(owner, domain.CurrentSchemaVersion)
+		if err != nil {
+			return err
+		}
+		dto.Sessions = append(dto.Sessions, cloned)
+	}
 	if err := dto.Validate(); err != nil {
 		return fmt.Errorf("cannot save fact ledger: %w", err)
 	}

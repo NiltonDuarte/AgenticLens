@@ -1,6 +1,7 @@
 package codex
 
 import (
+	"agenticlens/internal/adapters/filesystem"
 	"bufio"
 	"compress/gzip"
 	"encoding/json"
@@ -152,6 +153,12 @@ func ParseRolloutPath(path string) (Transcript, error) {
 }
 
 func listRolloutPaths(home string) ([]string, error) {
+	var err error
+	home, err = physicalRolloutPath(home)
+	if err != nil {
+		return nil, err
+	}
+
 	var paths []string
 	for _, directory := range []string{"sessions", "archived_sessions"} {
 		root := filepath.Join(home, directory)
@@ -305,4 +312,65 @@ func cleanPath(path string) string {
 		return filepath.Clean(path)
 	}
 	return clean
+}
+
+// DiscoverExactRolloutPath selects one owner rather than its complete native
+// family. Family discovery remains separate so children validate their own cwd.
+func DiscoverExactRolloutPath(home, sessionID string) (string, error) {
+	paths, err := listRolloutPaths(home)
+	if err != nil {
+		return "", err
+	}
+	selected := ""
+	for _, path := range paths {
+		candidate, e := inspectRollout(path, "")
+		if e != nil {
+			continue
+		}
+		if candidate.threadID != sessionID {
+			continue
+		}
+		if selected != "" {
+			return "", fmt.Errorf("exact Codex owner %s has ambiguous rollout paths", sessionID)
+		}
+		selected = path
+	}
+	if selected == "" {
+		return "", fmt.Errorf("exact Codex owner %s unavailable", sessionID)
+	}
+	return selected, nil
+}
+
+// ValidateRolloutStore proves physical membership in the selected live or archive
+// store without rescanning every transcript for each callback. Session identity
+// is validated separately from the authoritative metadata by the caller.
+func ValidateRolloutStore(home, path string) error {
+	var err error
+	home, err = physicalRolloutPath(home)
+	if err != nil {
+		return err
+	}
+
+	actual, err := physicalRolloutPath(path)
+	if err != nil {
+		return err
+	}
+	for _, name := range []string{"sessions", "archived_sessions"} {
+		root, err := physicalRolloutPath(filepath.Join(home, name))
+		if errors.Is(err, os.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(root, actual)
+		if err == nil && rel != "." && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) && !filepath.IsAbs(rel) {
+			return nil
+		}
+	}
+	return fmt.Errorf("Codex transcript does not belong to selected source store %s", home)
+}
+
+func physicalRolloutPath(path string) (string, error) {
+	return filesystem.PhysicalPath(path)
 }

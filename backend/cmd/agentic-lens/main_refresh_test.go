@@ -8,6 +8,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -18,7 +20,7 @@ func TestCLIGenerate_SessionRefreshMatchesFreshExtraction(t *testing.T) {
 	for _, source := range []domain.SourceHarness{domain.SourceCodex, domain.SourceOpenCode} {
 		t.Run(string(source), func(t *testing.T) {
 			project := t.TempDir()
-			config := "project_name: RefreshFixture\nticket:\n  prefixes: [FIX]\nworkspaces:\n  dir: records\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+			config := "project_name: RefreshFixture\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes: [FIX]\nworkspaces:\n  dir: records\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 			if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), []byte(config), 0600); err != nil {
 				t.Fatal(err)
 			}
@@ -50,7 +52,7 @@ func TestCLIGenerate_SessionRefreshMatchesFreshExtraction(t *testing.T) {
 					if err != nil {
 						t.Fatal(err)
 					}
-					_, writeErr := file.WriteString(chunks[stage])
+					_, writeErr := file.WriteString(strings.ReplaceAll(chunks[stage], `"type":"session_meta","payload":{`, `"type":"session_meta","payload":{"cwd":`+strconv.Quote(project)+`,`))
 					closeErr := file.Close()
 					if writeErr != nil || closeErr != nil {
 						t.Fatalf("append rollout: write=%v close=%v", writeErr, closeErr)
@@ -69,6 +71,7 @@ func TestCLIGenerate_SessionRefreshMatchesFreshExtraction(t *testing.T) {
 						t.Error(err)
 					}
 				})
+				setOpenCodeFixtureProject(t, dbPath, project)
 				start := time.Date(2026, 10, 25, 9, 0, 0, 0, time.UTC).UnixMilli()
 				if _, err := db.Exec(`INSERT INTO session (id, agent, model, time_created, time_updated) VALUES ('thread-01', 'root', 'gpt-example', ?, ?)`, start, start); err != nil {
 					t.Fatal(err)
@@ -100,6 +103,7 @@ func TestCLIGenerate_SessionRefreshMatchesFreshExtraction(t *testing.T) {
 					"--ticket-id", "FIX-10", "--ticket-title", "Snapshot refresh regression", "--ticket-type", "fix", "--json-output", output}
 				cmd := exec.Command(cliBinaryPath, append(args, sourceArgs...)...)
 				cmd.Dir = project
+				setOpenCodeFixtureProjectIfSelected(t, cmd, project)
 				if result, err := cmd.CombinedOutput(); err != nil {
 					t.Fatalf("generate failed: %v\n%s", err, result)
 				}

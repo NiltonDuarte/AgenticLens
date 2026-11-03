@@ -54,3 +54,9 @@ Thumbs.db
 *.log
 coverage.out
 coverage.html
+
+# Local lifecycle registration, binding requests and reconciliation snapshots
+.agenticlens-capture/
+
+# Kernel-owned ledger publication coordination (not ticket artifacts)
+*.agenticlens-lock

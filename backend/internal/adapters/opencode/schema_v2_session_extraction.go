@@ -62,12 +62,16 @@ type schemaV2ModelJSON struct {
 	ID *string `json:"id"`
 }
 
-func extractSchemaV2Sessions(db *sql.DB, roots []string, defaultUser string, userBySession map[string]string) ([]domain.SessionFact, *string, *string, error) {
+func extractSchemaV2Sessions(db *sql.DB, roots []string, defaultUser string, userBySession map[string]string, exact ...bool) ([]domain.SessionFact, *string, *string, error) {
 	ids, err := buildQuotedIDList(roots)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("validating thread ids: %w", err)
 	}
-	rows, err := db.Query(fmt.Sprintf(`SELECT id,parent_id,agent,model,time_created,time_updated FROM session_v2 WHERE id IN (%s) OR parent_id IN (%s) ORDER BY time_created,id`, ids, ids))
+	parentIDs := ids
+	if len(exact) > 0 && exact[0] {
+		parentIDs = "NULL"
+	}
+	rows, err := db.Query(fmt.Sprintf(`SELECT id,parent_id,agent,model,time_created,time_updated FROM session_v2 WHERE id IN (%s) OR parent_id IN (%s) ORDER BY time_created,id`, ids, parentIDs))
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("querying OpenCode schema family v2 sessions: %w", err)
 	}

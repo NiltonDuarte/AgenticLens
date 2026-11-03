@@ -61,7 +61,7 @@ make build
 
 # Launch production server
 make server
-# Or directly: ./bin/agentic-lens server --port 8085
+# Or directly on POSIX: ./bin/agentic-lens-$(go env GOHOSTOS)-$(go env GOHOSTARCH) server --port 8085
 ```
 
 Open `http://localhost:8085` to view the standalone dashboard.
@@ -167,3 +167,7 @@ For material scope changes, write a short delta in the next iteration plan:
 - **Delivery status:** state proposed, approved, implemented, or verified using actual evidence. Approval persists within its accepted scope; a plan file or iteration number is not approval evidence.
 
 Keep status questions, review corrections, and routine synchronization in the current iteration unless acceptance changes. Consolidate plans when explicitly requested, preserving accepted decisions and verification in the surviving artifacts. A missing plan is not evidence of no steering, and iteration-directory counts are not SDLC telemetry.
+
+### Installed release entrypoints
+
+The contributor build produces explicit native bin/agentic-lens-<os>-<arch> files (Windows adds .exe). make server and make verify-build execute that current host native directly; they never install into or select from the user release cache. Adopting repositories use the user-level shared-YAML-pinned common wrapper; see the [setup manual](docs/SETUP_MANUAL.md#1-quick-start-and-setup-pathways). Ordinary commands/hooks are offline and require explicit cache installation. Both developer download entrypoints share exact-pin/checksum/version/protocol validation and rollback. Tests use isolated HOME/cache/project fixtures; native Windows distribution runs real PowerShell/PE cases separately from POSIX fixtures.

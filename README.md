@@ -7,10 +7,10 @@ AgenticLens records multi-agent development telemetry, detects execution anomali
 Ask your coding agent to install and configure AgenticLens in the repository. For an OpenCode agent, use this prompt:
 
 ```text
-Resolve the latest stable AgenticLens release at https://api.github.com/repos/NiltonDuarte/AgenticLens/releases/latest and use its tag_name as <RELEASE_TAG>. Read https://raw.githubusercontent.com/NiltonDuarte/AgenticLens/<RELEASE_TAG>/.agents/skills/agentic-lens-setup/SKILL.md and follow it to install and configure AgenticLens in this repository. Keep all skill files, scripts, and binaries pinned to that same tag, replacing any main or latest download references in older manifests. If a required file is absent, report it instead of falling back to main. Explain the proposed changes and ask before modifying agent policy files.
+For an existing repository, use its approved shared agenticlens.version pin as <RELEASE_TAG>; otherwise resolve the latest stable AgenticLens release at https://api.github.com/repos/NiltonDuarte/AgenticLens/releases/latest and use its tag_name as <RELEASE_TAG>. Read https://raw.githubusercontent.com/NiltonDuarte/AgenticLens/<RELEASE_TAG>/.agents/skills/agentic-lens-setup/SKILL.md and follow it to install and configure AgenticLens in this repository. Keep all skill files, scripts, and binaries pinned to that same tag, replacing any main or latest download references in older manifests. If a required file is absent, report it instead of falling back to main. Explain the proposed changes and ask before modifying agent policy files.
 ```
 
-The `main` branch contains development for future releases. Always resolve the [latest stable release](https://github.com/NiltonDuarte/AgenticLens/releases/latest) before installation; do not use `main` or a prerelease.
+The `main` branch contains development for future releases. Fresh installations without an approved pin default to the [latest stable release](https://github.com/NiltonDuarte/AgenticLens/releases/latest). Repairs honor the existing shared pin; upgrades require explicit approval. Retrieve every installation file from the selected exact tag, including when a prerelease pin was explicitly approved.
 
 The setup skill guides the agent through downloading the platform binaries, configuring the repository, and installing the skills available in that release. For releases containing the complete setup bundle, each worktree can explicitly install missing platform binaries using the local setup scripts; if the scripts are also absent, follow the complete bootstrap in the setup manifest. Git tracking and ignore choices for all installed files belong to the repository owner. Review the [Platform Setup Manual](docs/SETUP_MANUAL.md) for the complete setup process and manual installation options.
 
@@ -64,29 +64,29 @@ Comparative matrix ranking tickets by active duration, turnaround lead time, ite
 
 ## CLI Overview
 
-AgenticLens provides a unified CLI for automation and local workflows:
+AgenticLens provides a unified CLI for automation and local workflows. Installed releases use the user-level `agentic-lens` entrypoint and the project's exact YAML pin. For a source checkout, `make verify-build` checks the newly built host native and `make server` launches it directly without installing or selecting a cached release:
 
 ```bash
 # Start the web server and dashboard (default port: 8085)
-./bin/agentic-lens server --port 8085
+agentic-lens server --port 8085
 
 # Ingest active session telemetry and generate summary markdown block
-./bin/agentic-lens generate --ticket-id AL-15 --ticket-type feat --json-output alspaces/AL-15/agentic_metrics.json --append alspaces/AL-15/SUMMARY.md
+agentic-lens generate --ticket-id AL-15 --ticket-type feat --json-output alspaces/AL-15/agentic_metrics.json --append alspaces/AL-15/SUMMARY.md
 
 # Replace ses_abc123 with the Codex root session ID; child threads are discovered from it
-./bin/agentic-lens generate --source codex --session-id ses_abc123 --code-ref HEAD --ticket-id AL-56 --ticket-title "Codex metrics research" --ticket-type chore --json-output alspaces/AL-56/agentic_metrics.json --append alspaces/AL-56/SUMMARY.md
+agentic-lens generate --source codex --session-id ses_abc123 --code-ref HEAD --ticket-id AL-56 --ticket-title "Codex metrics research" --ticket-type chore --json-output alspaces/AL-56/agentic_metrics.json --append alspaces/AL-56/SUMMARY.md
 
 # List all tracked workspaces with detected anomaly counts
-./bin/agentic-lens --list
+agentic-lens --list
 
 # Inspect detailed anomaly diagnostics for a specific ticket
-./bin/agentic-lens --ticket-id AL-15 --anomalies
+agentic-lens --ticket-id AL-15 --anomalies
 
 # Batch reconcile git facts and database telemetry across historical workspaces
-./bin/agentic-lens backfill --source opencode --recompute-git --code-ref HEAD --recompute-db --migrate-schema --update-summaries
+agentic-lens backfill --source opencode --recompute-git --code-ref HEAD --recompute-db --migrate-schema --update-summaries
 
 # Run stepwise schema migrations across workspace ledgers
-./bin/agentic-lens migrate --backup --update-summaries
+agentic-lens migrate --backup --update-summaries
 ```
 
 For source selection, exact session identity, committed Git refs, and session ownership semantics, see [telemetry source and session selection](docs/SETUP_MANUAL.md#telemetry-source-and-session-selection). For older ledgers, follow [unscoped tool recovery](docs/SETUP_MANUAL.md#recovering-unscoped-tool-totals). Configure file classification using the [code metrics reference](docs/SETUP_MANUAL.md#code-classification-and-interpretation).

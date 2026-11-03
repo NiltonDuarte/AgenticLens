@@ -57,12 +57,15 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL-67 review telemetry repository interfaces and dependency injection.md`
 
-- **AL-68**: Install harness lifecycle hooks for automatic session capture
-  - **Subsystem**: Installation / Setup / Domain / Codex and OpenCode Adapters / CLI / Persistence / Tests
+
+### Ledger readability: Ready
+
+- **AL-76**: Compact ledger JSON formatting and add a selective format command
+  - **Subsystem**: Ledger serialization / filesystem adapters / CLI / tests
   - **Status**: Ready
   - **Blocked by**: None
   - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-68 install harness lifecycle hooks for automatic session capture.md`
+  - **File**: `alspaces/plan/to-do/AL-76 compact ledger json formatting and format command.md`
 
 ### REV-5 audit remediation: Ready
 

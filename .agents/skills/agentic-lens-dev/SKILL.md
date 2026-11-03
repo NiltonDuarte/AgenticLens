@@ -26,7 +26,7 @@ Follow the repository [testing policy](../../../TECHNICAL_GUIDELINES.md#test-pur
 - **Orchestrator Coordinates Only**: Never write application code, edit manifests/schemas/views, or execute manual fixes directly.
 - **Mandatory User Gate**: STOP after planning. Present `<WORKSPACES_DIR>/<TICKET_ID>/CONTRACT.md` and `iterations/<NN>/PLAN.md` to the user via the `question` tool. NEVER dispatch `coder` without explicit user confirmation.
 - **Context Pointers Over Bloat**: Pass file pointers to subagents (`CONTRACT.md`, `iterations/<NN>/PLAN.md`, `git diff`), not long duplicated prompt instructions.
-- **Self-Reflexive Telemetry via AgenticLens**: Use the native AgenticLens CLI command (`./bin/agentic-lens generate ...`) to ingest the extracted fact ledger, validate schemas, calculate domain aggregations, update `SUMMARY.md`, and render development metrics.
+- **Self-Reflexive Telemetry via AgenticLens**: Use the native AgenticLens CLI command (`agentic-lens --al-offline --al-project . generate ...`) to ingest the extracted fact ledger, validate schemas, calculate domain aggregations, update `SUMMARY.md`, and render development metrics.
 
 ## Setup & Workspace Structure
 1. Require `<TICKET_ID>` (prefixed with configured ticket prefix, e.g. `AL-#`, `GEN-#`, or `PO-#`). Pick up specification from `<WORKSPACES_DIR>/plan/to-do/<TICKET_ID>*.md` and update ticket status to `In Progress` in `<WORKSPACES_DIR>/plan/TICKETS.md`.
@@ -118,7 +118,7 @@ After focused review is ready (no unresolved blockers/material review gaps), per
    Generate a unique random nonce directly (e.g. an 8 to 16 character alphanumeric or hex string) and supply the literal token directly to `--nonce <GENERATED_NONCE>`. Shell variables (`$NONCE`) must not be used because OpenCode records tool inputs into SQLite before subshell expansion occurs.
    Run AgenticLens Go CLI to query OpenCode SQLite and Git, construct the fact ledger, validate boundary schemas, derive domain metrics, update `SUMMARY.md`, and output KPIs. Pass explicit `--ticket-type` matching the conventional commit classification (`feat`, `fix`, `chore`, `refactor`, `test`, `ci`, `perf`, `build`):
    ```bash
-   ./bin/agentic-lens generate --nonce <GENERATED_NONCE> --ticket-id <TICKET_ID> --ticket-type <CONVENTIONAL_TYPE> --json-output <WORKSPACES_DIR>/<TICKET_ID>/agentic_metrics.json --append <WORKSPACES_DIR>/<TICKET_ID>/SUMMARY.md
+   agentic-lens --al-offline --al-project . generate --nonce <GENERATED_NONCE> --ticket-id <TICKET_ID> --ticket-type <CONVENTIONAL_TYPE> --json-output <WORKSPACES_DIR>/<TICKET_ID>/agentic_metrics.json --append <WORKSPACES_DIR>/<TICKET_ID>/SUMMARY.md
    ```
 7. **Commit, Push & Open Pull Request**:
    Extract title from the first line of `PULL_REQUEST.md`, commit final workspace and telemetry files, push upstream, and open a GitHub Pull Request:

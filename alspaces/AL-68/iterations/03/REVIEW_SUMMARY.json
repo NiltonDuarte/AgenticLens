@@ -1,0 +1,517 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "PLAN3-01",
+      "severity": 5,
+      "issue": "Implementation phase 1 names a pre-integration commit as its starting baseline.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed plan starting baseline before later explicit iteration03 implementation approval."
+    },
+    {
+      "finding_id": "PLAN3-02",
+      "severity": 2,
+      "issue": "The final baseline telemetry paragraph presents an older snapshot as current.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed plan: distinguish historical snapshots and reference SUMMARY.md for current verified counts."
+    },
+    {
+      "finding_id": "I3-01",
+      "severity": 6,
+      "issue": "Logical shell cd selected another project pin for symlink/parent traversal.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed during implementation: resolve physical paths before parent traversal."
+    },
+    {
+      "finding_id": "I3-02",
+      "severity": 6,
+      "issue": "Terminating PowerShell could leave its native advisory child holding the Git hook output pipe open.",
+      "reporters": [
+        {
+          "persona": "coder",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed during implementation: verify the owned MSYS-to-Windows PID and terminate its process tree."
+    },
+    {
+      "finding_id": "I3-03",
+      "severity": 6,
+      "issue": "New wrapper-based hook templates accepted a legacy native capability that rejected their arguments.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed during implementation: require handler capability2 for new glue; preserve protocol1 and legacy binary-only use."
+    },
+    {
+      "finding_id": "I3-04",
+      "severity": 7,
+      "issue": "A running worker could retain ownership and process later requests after a project version switch.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed during implementation: fence captured generations and validate selected-native takeover."
+    },
+    {
+      "finding_id": "I3-05",
+      "severity": 6,
+      "issue": "Native Git advisories were written to stdout and discarded by the installed hook.",
+      "reporters": [
+        {
+          "persona": "tester",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed during tester verification: emit the advisory on stderr."
+    },
+    {
+      "finding_id": "I3-06",
+      "severity": 7,
+      "issue": "A compatible shared-wrapper update for one repository invalidated another repository’s unchanged installation.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed during implementation: validate current owned wrapper compatibility separately from historical project hashes."
+    },
+    {
+      "finding_id": "I3-07",
+      "severity": 4,
+      "issue": "A stale installation still emitted a Git advisory after valid local disablement.",
+      "reporters": [
+        {
+          "persona": "tester",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed during tester verification: honor valid local disablement before inspection."
+    },
+    {
+      "finding_id": "I3-08",
+      "severity": 6,
+      "issue": "Culture-sensitive BOM detection removed the first character of an ordinary Windows YAML configuration.",
+      "reporters": [
+        {
+          "persona": "coder",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed during implementation: detect BOM by ordinal codepoint."
+    },
+    {
+      "finding_id": "I3-09",
+      "severity": 6,
+      "issue": "Known asynchronous publication failure was silent on later working agent callback and request channels.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed during implementation: deliver sanitized collection-scoped confirmed failure feedback on later callbacks."
+    },
+    {
+      "finding_id": "I3-10",
+      "severity": 6,
+      "issue": "Windows callback deadlines did not allow normal PowerShell startup plus the native handoff budget.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "coder",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed during implementation: allow Windows startup plus handoff within bounded five-second transport and owned cleanup."
+    },
+    {
+      "finding_id": "I3-11",
+      "severity": 8,
+      "issue": "Legacy recovery grants an outside-project report symlink authority to overwrite unrelated files.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed after independent data/security discovery: validate physical project containment before legacy recovery authorization."
+    },
+    {
+      "finding_id": "I3-12",
+      "severity": 6,
+      "issue": "Unrelated ticket failures prune an unresolved terminal publication failure during its pending retry.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: retain current terminal failures separately from pending observations and bounded recent history."
+    },
+    {
+      "finding_id": "I3-13",
+      "severity": 4,
+      "issue": "Published-owner diagnostics borrow provenance from a newer rejected registry snapshot.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: use matching published-snapshot association or explicit unknown; preserve accepted equal-checkpoint facts."
+    },
+    {
+      "finding_id": "I3-14",
+      "severity": 7,
+      "issue": "Stale installation preflight blocks the commands required to repair, remove or diagnose it.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: owned repair/removal and read-only diagnostics remain reachable through stale provenance."
+    },
+    {
+      "finding_id": "I3-15",
+      "severity": 5,
+      "issue": "Missing owned lifecycle definitions remain silently healthy after a previously successful exchange.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: inspect owned hook groups/plugin without treating unrelated edits as drift; preserve historical exchange."
+    },
+    {
+      "finding_id": "I3-16",
+      "severity": 4,
+      "issue": "Advisory inspection loads all historical diagnostic rows despite its bounded inspection budget.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed through re-review: indexed exact-owner heads precede payload budgets; legacy backfill is explicit and bounded."
+    },
+    {
+      "finding_id": "I3-17",
+      "severity": 2,
+      "issue": "Review proposed a global diagnostic storage cap across all retained ticket histories.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Refuted global eviction requirement: preserve required per-ticket facts; bounded inspection is addressed by I3-16."
+    },
+    {
+      "finding_id": "I3-18",
+      "severity": 6,
+      "issue": "An identical same-pin installation replaces the shared native file and invalidates another project worker.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: preserve identical native identity, including force-identical installs and permission repair."
+    },
+    {
+      "finding_id": "I3-19",
+      "severity": 4,
+      "issue": "The actual Windows Git watchdog ownership regression is omitted from automated CI execution.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: run the existing actual Windows Git watchdog oracle in CI."
+    },
+    {
+      "finding_id": "I3-20",
+      "severity": 7,
+      "issue": "Source-build commands and CI invoke a cache wrapper that ignores the freshly compiled binary.",
+      "reporters": [
+        {
+          "persona": "reviewer",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: source-build commands run the current native; installed entrypoints retain authoritative YAML selection."
+    },
+    {
+      "finding_id": "I3-21",
+      "severity": 7,
+      "issue": "Printed bootstrap completion can modify the caller project instead of the selected project.",
+      "reporters": [
+        {
+          "persona": "reviewer",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: printed completion executes inside the selected project and restores caller location."
+    },
+    {
+      "finding_id": "I3-22",
+      "severity": 8,
+      "issue": "Windows setup waits before draining output, then can remove executables referenced by installed hooks.",
+      "reporters": [
+        {
+          "persona": "reviewer",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed after independent security/release discovery: drain bounded streams concurrently; uncertain apply retains validated handlers and recovery backups."
+    },
+    {
+      "finding_id": "I3-23",
+      "severity": 6,
+      "issue": "Native version handoff drops periodic refresh for an already-acknowledged active session.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed during integration: hand off acknowledged active work so periodic refresh continues without a new callback."
+    },
+    {
+      "finding_id": "I3-24",
+      "severity": 6,
+      "issue": "PowerShell coerces File.Replace null backup paths to empty strings and breaks explicit repair.",
+      "reporters": [
+        {
+          "persona": "coder",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed during correction verification: use the native null-string sentinel for File.Replace."
+    },
+    {
+      "finding_id": "I3-25",
+      "severity": 4,
+      "issue": "A Windows fixture wrote its synthetic native into the real profile cache despite temporary HOME.",
+      "reporters": [
+        {
+          "persona": "coder",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed test isolation: explicit temporary install_root; removed identified fixture artifact. Exact cleanup hash evidence was unavailable."
+    },
+    {
+      "finding_id": "I3-26",
+      "severity": 3,
+      "issue": "Explicit ad hoc state selection without an owned installation produced a false drift advisory.",
+      "reporters": [
+        {
+          "persona": "coder",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed during correction verification: unowned ad hoc state is informational rather than installation drift."
+    },
+    {
+      "finding_id": "I3-27",
+      "severity": 5,
+      "issue": "Pending source retries hide unresolved failures from current health and commit advisories.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed in re-review: share terminal-failure semantics across feedback, health and advisory; pending cannot acknowledge failure."
+    },
+    {
+      "finding_id": "I3-28",
+      "severity": 6,
+      "issue": "Read-before-write diagnostic transactions fail under concurrent callbacks.",
+      "reporters": [
+        {
+          "persona": "coder",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed during stress verification: reserve the writer before diagnostic metadata reads."
+    },
+    {
+      "finding_id": "I3-29",
+      "severity": 4,
+      "issue": "An oversized first history record advances continuation past an unread diagnostic.",
+      "reporters": [
+        {
+          "persona": "coder",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed during correction verification: retain the cursor when an oversized first record was not decoded."
+    },
+    {
+      "finding_id": "I3-30",
+      "severity": 4,
+      "issue": "Fatal reconciliation with successful owner reads can report healthy and emit no failure feedback.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed in re-review: persist failed/completed/partial whole-attempt outcomes independently of owner reads; legacy stays unknown."
+    },
+    {
+      "finding_id": "I3-31",
+      "severity": 5,
+      "issue": "Adding an index column breaks older native positional initialization during version coexistence.",
+      "reporters": [
+        {
+          "persona": "coder",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed before delivery: keep the five-column schema and use a reserved head watermark for compatibility and old-writer gaps."
+    },
+    {
+      "finding_id": "I3-32",
+      "severity": 4,
+      "issue": "Successful-read normalization erases a later source-proven parent-ticket binding failure.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed in re-review: normalize pending lifecycle state only; preserve later validation failures and require final current owners."
+    }
+  ]
+}
