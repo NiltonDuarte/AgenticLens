@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "BEH-01",
+      "severity": 5,
+      "issue": "Arbitrary configured roots under worktrees are misclassified as coordination aliases.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: Require projects/<name>/worktrees/<token> namespace shape before coordination classification."
+    },
+    {
+      "finding_id": "TEST-01",
+      "severity": 3,
+      "issue": "Git-derived naming assertion accepts randomized substitute.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: Existing concurrency test now observes administrative basename via Git and asserts it plus hexadecimal qualification."
+    }
+  ]
+}

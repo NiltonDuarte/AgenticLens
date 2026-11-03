@@ -34,3 +34,7 @@ Tester executed git diff --check successfully. A targeted search found no remain
 ## Limits and handoff
 
 No production edits by tester. Both new acceptance files are frozen, and no further test edits are pending. No unrelated domain/frontend tests were added. The tester did not rerun unchanged expensive suites or claim the required full make gate; the parent will execute it after integration. Independent review and publication remain pending. Tests use disposable repositories and state only, with no silent skips introduced.
+
+## Final coordinator verification
+
+Corrected revision: 13a6ff38c97e9c9d3019d76a0944ce46afe1814e. Coordinator: gpt-6.1-sol/high. New TestCoordinationStateBaseUnderWorktreesRemainsAStateBase failed on the reviewed source for both direct roots and physical aliases before the fix. After correction, from backend, go test -race ./internal/adapters/capture ./cmd/agentic-lens -run 'TestCoordination|TestCoordinateAllocation|TestNamespace|TestSharedNamedRegistry|TestCaptureInstallReportsPendingAllocationUntilCommittedManifest|TestRelocation' -count=1 passed. The test-reviewer's isolated randomized-Git-token overlay now fails the strengthened existing concurrency test as intended. Final make passed after integration: backend races, 790 frontend tests, static and Python checks, embedded assets and configured platform builds. Raw build/probe logs remain outside Git.
