@@ -1,0 +1,17 @@
+=== RUN   TestInstallWindowsInspectionOwnsLauncherTree
+=== RUN   TestInstallWindowsInspectionOwnsLauncherTree/launcher-exit
+=== RUN   TestInstallWindowsInspectionOwnsLauncherTree/launcher-cancel
+--- PASS: TestInstallWindowsInspectionOwnsLauncherTree (0.37s)
+    --- PASS: TestInstallWindowsInspectionOwnsLauncherTree/launcher-exit (0.25s)
+    --- PASS: TestInstallWindowsInspectionOwnsLauncherTree/launcher-cancel (0.12s)
+=== RUN   TestInstallerCompletedRecoveryRetainsExpiredAcceptance
+=== RUN   TestInstallerCompletedRecoveryRetainsExpiredAcceptance/codex/canceled
+=== RUN   TestInstallerCompletedRecoveryRetainsExpiredAcceptance/codex/deadline
+=== RUN   TestInstallerCompletedRecoveryRetainsExpiredAcceptance/opencode/canceled
+=== RUN   TestInstallerCompletedRecoveryRetainsExpiredAcceptance/opencode/deadline
+--- PASS: TestInstallerCompletedRecoveryRetainsExpiredAcceptance (0.31s)
+    --- PASS: TestInstallerCompletedRecoveryRetainsExpiredAcceptance/codex/canceled (0.09s)
+    --- PASS: TestInstallerCompletedRecoveryRetainsExpiredAcceptance/codex/deadline (0.07s)
+    --- PASS: TestInstallerCompletedRecoveryRetainsExpiredAcceptance/opencode/canceled (0.07s)
+    --- PASS: TestInstallerCompletedRecoveryRetainsExpiredAcceptance/opencode/deadline (0.08s)
+PASS

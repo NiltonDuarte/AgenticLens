@@ -1,55 +1,74 @@
-# AL-60 Work Summary
+# AL-60 Delivery Summary
 
-User pre-approved the specification on 2026-11-03. Initial working tree clean at 122e983f8c365a2aa248b1b6d492252555e922ae. Work is isolated on feat/AL-60-search-tickets. MGT-2 owns merging; this thread publishes the reviewed head only.
+Delivered the approved search slice and the explicitly authorized shared capture repair. Initial checkout was clean at 122e983f8c365a2aa248b1b6d492252555e922ae. Iteration 02 resumed checkpoint 7b00cc1 after the user approved “Authorize AL-60 shared capture repair”, superseding the historical read-only hold. MGT-2 owns merging; later owners integrate only after the real merge.
 
 ## Delivered behavior
 
-Presentation: visibly and accessibly labeled Search tickets input narrows exclusion choices by case-insensitive ID/title matching. Query state is independent of exclusions and chart derivation. Hidden selections survive searching and clearing; explicit Clear search and no-match copy retain recovery. Native keyboard controls, point activation, chart defaults, axes, scales and tooltips remain available.
+Presentation: Search tickets matches IDs/titles case-insensitively inside comparison exclusion choices. Query changes preserve exclusions, counts, chart points/geometry and hidden selections; clear/no-match recovery and keyboard interactions remain available. Search source is unchanged from reviewed application revision 7a50a5e.
 
-Domain and adapters: existing identity/title contracts reused unchanged; no API, extraction or metric additions. AL-55 telemetry preserved. Generated frontend assets remain ignored under the existing tracking policy.
+Adapters/CLI: optional harness inspection has its own allowance, separate from required installation phases. Explicit caller cancellation remains authoritative. Native timeout/cancellation and execution failures are distinguished from observed identity mismatches. Installer subprocesses own Unix groups or Windows jobs, bound pipe draining, and clean descendants on supported cancellation/completion paths. SIGTERM cancels installer work. Final-write and completed-recovery cancellation preserve rollback/recoverability instead of reporting success.
 
-## Review
+Tests: disposable harnesses replace host-dependent inspection, including hostile inherited-flag controls. Successful publication fixtures use a distinct bounded policy; deliberate expiry retains pending generation, accepted output, acknowledgement and ownership/recovery assertions. Production worker policy, domain/API/ledger schemas and global timeout defaults are unchanged. AL-55 telemetry is preserved.
 
-Reviewed source: 7a50a5e99927928995a72e13128d597c1317e9d3, source diff SHA256 8703b8f22f375420ebd76f8e7a62f22e2a8b6902563133ea837fac91c4294914. Origin/main merge was already up to date; no integration code delta. Later changes concern delivery artifacts only.
+## Review and attribution
 
-Behavior/integration, data/failure handling, architecture/maintainability and test-effectiveness reviewers each ran independently under gpt-6.1-sol/high and gpt-6-luna/medium. Settings are dispatcher-acknowledged. No defect candidates or confirmed issues were reported. Seven scoped initial verdicts were APPROVED; architecture gpt-6-luna/medium was initially INCOMPLETE solely because build/asset evidence had not been supplied. Parent resolved that exact gap with successful canonical build, byte-equal generated/embed trees and isolated standalone HTTP asset verification. No discrepancy or product correction required another discovery pass.
+Final consolidated result: APPROVED for this scope, with one explicitly accepted nonblocking test-coverage recommendation below. Hosted CI is not claimed as locally executed.
 
-The planner authored the contract/plan; coder implemented the control/styles; tester extended coherent interaction cases. These verification actors ran under inherited gpt-6.1-sol/high. Parent owns integration, independent evidence reconciliation, final approval and publication.
+Iteration 01: all four responsibilities under gpt-6.1-sol/high and gpt-6-luna/medium approved the unchanged search source. Its original integrated gate failures remained incomplete until the authorized capture repair passed integration. [Search compact review](iterations/01/REVIEW_SUMMARY.json).
 
-Final consolidated verdict: INCOMPLETE. Search source review has no findings; required integrated make remains failed in unchanged shared capture code. No publication/merge approval is asserted. Detailed review evidence remains open pending the gate; do not compact it as approved.
+Iteration 02: 19 executed review runs across first discovery, an intermediate correction wave and final review. Five queued intermediate cells were superseded before dispatch after a new recovery finding; no task or approval was fabricated. Every final responsibility/profile cell completed APPROVED. Dispatcher settings were acknowledged; no source-observed identity or cost is inferred from prose. Behavior/integration, data/failure, architecture/maintainability and test-effectiveness each ran under both configured profiles. [Capture compact findings](iterations/02/REVIEW_SUMMARY.json).
+
+| Finding | Severity | Discovering responsibility/model/effort | Disposition and fixing actor |
+| --- | --- | --- | --- |
+| ARCH-01: inherited-pipe wait | 6 | Architecture, gpt-6.1-sol/high | Fixed owned subprocess cleanup/draining; coder gpt-6.1-sol/high. |
+| ARCH-02: SIGTERM child lifetime | 4 | Architecture, gpt-6-luna/medium | Fixed installer signal cancellation; coder gpt-6.1-sol/high. |
+| DATA-01: final-write cancellation | 5 | Data/failure, gpt-6-luna/medium | Fixed rollback/acceptance checkpoints; coder gpt-6.1-sol/high. |
+| TEST-01: inherited fixture guard | 4 | Test effectiveness, gpt-6.1-sol/high and gpt-6-luna/medium | Fixed disposable setup and hostile controls; tester gpt-6.1-sol/high. |
+| DATA-02: completed recovery cancellation | 4 | Architecture, gpt-6.1-sol/high and gpt-6-luna/medium, new discovery during re-review | Fixed retained-journal checkpoint/retry guard; coder gpt-6.1-sol/high. |
+| TEST-02: Unix descendant oracle | 2 | Test effectiveness, gpt-6.1-sol/high, final re-review | Accepted nonblocking coverage recommendation; AL-60 maintainer owns follow-up synchronized descendant-death/reachability fixture. No current leak demonstrated. |
+
+Discovery and verification are distinct: test-effectiveness gpt-6.1-sol/high reproduced ARCH-01 after seeing the active-plan mention, so that contribution is retained as verification rather than blind discovery. The tester and parent integrator, both gpt-6.1-sol/high, verified the focused oracles and actual platform behavior. Initial manifest variability was a hypothesis; controlled fixtures reproduced only optional HarnessVersion/Capability differences, not the specific field behind the unretained historical failure.
+
+Reviewed capture fingerprint: 5e332cad1bfb0d1b25af2d9a8def5bfbdcd8e2b8364c3023131733041d4c8493 against checkpoint 7b00cc1. The integrated gate exposed a vet limitation around a closure capturing reassigned cancel functions. Coder gpt-6.1-sol/high replaced it with explicit first/second defers; parent gpt-6.1-sol/high verified observational equivalence: same contexts, timers, handoff and final cancellation; the first cancellation already occurs before the probe and the extra deferred call is idempotent. All scoped approvals carry through that mechanical change, with vet and focused race guards passing. Final integrated source fingerprint: 3251b53bc2bfdbd9c7e6ea47d5b8e793fc22f4f9e6103ee268d9fbc622a005db. Main integration added only AL-68 workspace documentation, with no application dependency delta.
 
 ## Verification
 
-- Tester: TicketScatterPlot focused suite 6/6 passed; typecheck/lint and diff check passed.
-- Tester initial frontend full suite: 784 passed and two existing 5-second timeouts in TicketComparisons and TicketDeepDive. Both affected files passed serially, 83/83. No timeout or test configuration changes.
-- Parent initial make: static/frontend/script checks passed; unchanged capture suites failed publication/version timeouts and manifest identity checks under parallel load. Bounded full make also failed (exit 2), with two-CPU affinity, GOMAXPROCS=2 and GOFLAGS=-p=1: TestCaptureLaterAgentChannelReportsBoundPublicationFailure (native lifetime exhausted; signal killed) and TestCaptureAutomaticSharedStoreAndTicketStayInExactProjects (worker cleanup deadline). Capture adapter package passed on this rerun; all remaining packages passed/cached. Make stopped before frontend tests/build, which were exercised separately.
-- Parent canonical make build passed, including frontend build/sync and all configured platform binaries. Compared every web/dist asset byte-for-byte with backend/internal/adapters/web/dist. Started the standalone host binary against a disposable workspace, fetched index and its JS over HTTP, and confirmed both search and empty-state strings; server terminated afterward. No Node runtime used to serve the app.
+Tested integrated revision: 057d410253aecd734551995ff1bedb38e94a1f19. Final delivery artifacts change documentation, lifecycle and telemetry only; application/test/CI source equality is verified at handoff.
 
-Limits: real-browser viewport geometry and hosted CI have not been exercised. Existing Vite chunk-size and React act warnings are not AL-60 changes. Hosted CI not run; no PR published while delivery gate is incomplete.
+- Full make passed with four-CPU affinity, GOMAXPROCS=2 and GOFLAGS=-p=1: install, vet, frontend typecheck/lint, script checks, every Go package with race detection, all 786 frontend tests in 36 files, canonical frontend build/sync and five platform binaries. [Verbatim gate output](iterations/02/evidence/MAKE_VERIFIED.txt).
+- Fresh host binary reports commit 057d410. Parent compared every generated/frontend embed file byte-for-byte, then fetched standalone HTTP index and referenced assets against a disposable workspace. Exact bytes matched and JS contains Search tickets/no-match copy. Server terminated afterward; no Node runtime served production assets. Ignored build assets remain untracked under the existing policy.
+- Actual Windows PE tests ran on the Windows host via WSLInterop after cross-compilation. Integrated launcher-exit/cancel ownership and Codex/OpenCode canceled/deadline recovery cases all passed. [Integrated Windows output](iterations/02/evidence/WINDOWS_INTEGRATED.txt).
+- Deterministic baseline red/green, cancellation, native diagnostics, final-write/recovery, hostile fixture and worker expiry/recovery evidence remain in [implementation](iterations/02/IMPLEMENTATION.md), [testing](iterations/02/TESTING.md), [verification](iterations/02/VERIFICATION.md) and their evidence directory.
+- Historical failures remain verbatim: [initial make](iterations/01/evidence/MAKE_INITIAL.txt), [bounded make](iterations/01/evidence/MAKE_BOUNDED.txt), [integrated vet failure](iterations/02/evidence/MAKE_INTEGRATED_VET_FAILURE.txt). External AL-61/MGT-2 baseline corroboration is reported evidence, distinct from local runs; see [read-only diagnosis](iterations/01/CAPTURE_DIAGNOSIS.md).
 
-## Telemetry
+Limits: Unix pipe timing is not a direct descendant-death oracle; source group cleanup and Linux direct-helper/Windows stable-handle assertions provide separate evidence. Hosted CI, external real-harness callback compatibility and browser viewport geometry were not exercised. Existing Vite chunk-size/React act warnings do not invalidate the passing gate. Operator CLI guidance now documents installation phase budgets; active setup/operator guidance was searched and callback/reconcile timeout guidance remains applicable.
 
-Checkpoint ingestion verified all 13 exact Codex sessions: primary root 01a1a27e-f9db-75b3-8e95-f6b1bbbe7f05, four structurally linked native children (planner, coder, tester, read-only explorer), and eight explicitly selected T3 review roots. Every refresh preserved prior session IDs; all source labels are codex. No prior other-harness ledger existed for AL-60. Built CLI help confirms generate --source/--session-id/--nonce; legacy --al-offline and --al-project flags are unsupported in the current native CLI. Commands run from the repository root using the built binary. T3 review sessions have source=vscode and no parent linkage; Their exact source IDs were ingested separately, preserving the recorded hierarchy. Review roots have no parent/role evidence in source, so aggregate root/role counts reflect that harness limitation. Do not invent parent links or reviewer roles in source facts.
+## Telemetry and delivery
 
-## Blocked checkpoint evidence
-
-Full serial frontend suite independently passed 786/786 across 36 files (113.94s), using npm test -- --maxWorkers=1 --minWorkers=1. The two failing bounded CLI tests passed in a targeted rerun without CPU affinity: GOMAXPROCS=2 go test -race -p=1 ./cmd/agentic-lens -run 'TestCaptureLaterAgentChannelReportsBoundPublicationFailure|TestCaptureAutomaticSharedStoreAndTicketStayInExactProjects' -count=1 (8.291s). This supports resource sensitivity, not a passing full gate.
-
-User reports AL-61 failures on unchanged main 122e983 in LaterAgentChannelReportsBoundPublicationFailure, CLIOpenCodePluginOwnershipAndMissingHandler and NativeWorkerPublishesMultipleRootsAndRefreshesWithoutGenerate; manager baseline corroborates native version/capability and worker timeout failures. These are reported external observations, not locally rerun baseline results. Capture repair expansion is explicitly unapproved. Read-only diagnosis and minimal boundary: [CAPTURE_DIAGNOSIS.md](iterations/01/CAPTURE_DIAGNOSIS.md).
+Final source-grounded refresh follows all verification and review work and preserves existing session facts. Verified source coverage is 36 sessions: the original root, seven structurally linked native children, 27 delegated review roots across both iterations, and one unparented host continuation root containing replayed historical context. Parent/role and steering interpretation of that replay remain source limitations; no links or synthetic successful/empty facts are invented. T3 delegated reviews are recorded as independent Codex roots without source parent/role linkage, so exact session selection preserves that limitation rather than inventing relationships. All36 exact IDs and the original13 baseline IDs were preserved through each refresh; source labels are Codex and the seven declared child links match source metadata. No other-harness baseline existed for AL-60. Raw transcripts remain outside Git. Metrics below are generated by the built native CLI; legacy wrapper-only flags are not passed to it.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 22
-- **Active Agent Duration:** 15m 30s (excludes user wait time)
-- **Context Window Health:** ELEVATED — Root agent peak 126.8k tokens (63% of 200k healthy ceiling, 0 compactions) | Subagents peak 139.9k (Explorer)
+- **Software Development Life Cycle Iterations:** 69
+- **Active Agent Duration:** 1h 51m (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 300.8k tokens (150% of 200k healthy ceiling, 0 compactions) | Subagents peak 250.7k (Coder)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
-- **Subagent Turn Velocity & Thrashing:** 1.0 avg turns/run (peak: 1 turns) | Planner 1.0, Coder 1.0, Tester 1.0, Explorer 1.0
-- **Test-to-Production Code Ratio:** 4.8:1 (+77 test lines / +16 prod lines)
-- **Code Delivered:** +93 / -1 lines across 3 code files (excluding docs)
-- **Reasoning Effort:** 9,670 reasoning tokens (15.5% of generated output)
-- **Tool Health & Self-Correction:** 203 tool calls (16 self-corrections, 92.1% success rate)
+- **Subagent Turn Velocity & Thrashing:** 1.7 avg turns/run (peak: 4 turns) | Planner 1.0, Coder 2.5, Tester 2.0, Explorer 1.0
+- **Test-to-Production Code Ratio:** 4.3:1 (+1,042 test lines / +245 prod lines)
+- **Code Delivered:** +1,287 / -35 lines across 23 code files (excluding docs)
+- **Reasoning Effort:** 141,121 reasoning tokens (30.4% of generated output)
+- **Tool Health & Self-Correction:** 712 tool calls (53 self-corrections, 92.6% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** No execution anomalies detected (clean session).
+- **Status:** 9 execution anomalies detected (5 CRITICAL, 4 WARNING).
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+155.8k tokens) — Context tokens surged by 155.8k to 155.8k tokens.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+156.4k tokens) — Context tokens surged by 156.4k to 156.4k tokens.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (203.6k tokens) — Context tokens reached 203.6k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.2k tokens) — Context tokens reached 200.2k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.4k tokens) — Context tokens reached 200.4k, breaching the 200k critical ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (162.6k tokens) — Context tokens reached 162.6k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (163.1k tokens) — Context tokens reached 163.1k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.5k tokens) — Context tokens reached 160.5k, breaching the 160k warning ceiling.
+- [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: command (3 consecutive errors) — Tool 'command' encountered 3 consecutive execution failures.
 
 ### Agentic Execution Metrics
 
@@ -58,35 +77,35 @@ User reports AL-61 failures on unchanged main 122e983 in LaterAgentChannelReport
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **planner** | 1 | 50,552 | 2,423 | 270,080 | 84.2% | 52.0k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **coder** | 1 | 105,174 | 1,265 | 341,760 | 76.5% | 65.8k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **tester** | 1 | 55,548 | 3,343 | 1,513,472 | 96.5% | 80.0k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Unknown** | 9 | 603,103 | 42,980 | 11,389,952 | 95.0% | 126.8k | ELEVATED | Unavailable (0 observed, 0 partial, 9 unavailable / 9 invocations) |
+| **planner** | 2 | 100,079 | 6,821 | 1,456,512 | 93.6% | 160.5k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **coder** | 2 | 188,417 | 51,582 | 21,042,176 | 99.1% | 250.7k | BLOATED (125%) | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **tester** | 2 | 130,631 | 27,202 | 12,625,792 | 99.0% | 224.8k | BLOATED (112%) | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **Unknown** | 29 | 1,938,299 | 235,041 | 59,274,112 | 96.8% | 300.8k | BLOATED (150%) | Unavailable (0 observed, 0 partial, 29 unavailable / 29 invocations) |
 | **explorer** | 1 | 115,406 | 2,546 | 1,165,568 | 91.0% | 139.9k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **13** | **929,783** | **52,557** | **14,680,832** | **94.0%** | **139.9k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 13 unavailable / 13 invocations)** |
+| **Total** | **36** | **2,472,832** | **323,192** | **95,564,160** | **97.5%** | **300.8k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 36 unavailable / 36 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-luna** | 4 | 158,984 | 10,472 | 998,272 | 86.3% | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
-| **gpt-6.1-sol** | 9 | 770,799 | 42,085 | 13,682,560 | 94.7% | Unavailable (0 observed, 0 partial, 9 unavailable / 9 invocations) |
-| **Total** | **13** | **929,783** | **52,557** | **14,680,832** | **94.0%** | **Unavailable (0 observed, 0 partial, 13 unavailable / 13 invocations)** |
+| **gpt-6-luna** | 14 | 682,892 | 57,432 | 4,885,760 | 87.7% | Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations) |
+| **gpt-6.1-sol** | 22 | 1,789,940 | 265,760 | 90,678,400 | 98.1% | Unavailable (0 observed, 0 partial, 22 unavailable / 22 invocations) |
+| **Total** | **36** | **2,472,832** | **323,192** | **95,564,160** | **97.5%** | **Unavailable (0 observed, 0 partial, 36 unavailable / 36 invocations)** |
 
-Capture observation finalized: 2026-11-03T18:03:58.021271402Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 13; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 13; reserved bytes: 2885147. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
-Owner codex/01a1a285-a7e2-7083-aad5-781dfee72767: current; last successful source read 2026-11-03T18:03:57.883975073Z; accepted source checkpoint 2026-11-03T17:47:46.391Z.
-Owner codex/01a1a280-9d93-7471-9927-ea58a45f6e99: current; last successful source read 2026-11-03T18:03:57.890639719Z; accepted source checkpoint 2026-11-03T17:42:54.585Z.
-Owner codex/01a1a285-f25d-79f1-bef1-db5606c7ef63: current; last successful source read 2026-11-03T18:03:57.897207161Z; accepted source checkpoint 2026-11-03T17:48:17.873Z.
-Owner codex/01a1a27f-2156-7d82-951e-0831e5c48114: current; last successful source read 2026-11-03T18:03:57.903568027Z; accepted source checkpoint 2026-11-03T17:41:34.612Z.
-Owner codex/01a1a287-55e9-73b0-91a6-30c361793268: current; last successful source read 2026-11-03T18:03:57.909564704Z; accepted source checkpoint 2026-11-03T17:49:46.235Z.
-Owner codex/01a1a285-48ae-7673-8991-f4f6890125ff: current; last successful source read 2026-11-03T18:03:57.916401928Z; accepted source checkpoint 2026-11-03T17:47:56.345Z.
-Owner codex/01a1a284-6527-77b0-8445-85af9362f511: current; last successful source read 2026-11-03T18:03:57.92488152Z; accepted source checkpoint 2026-11-03T17:47:07.76Z.
-Owner codex/01a1a292-1334-7753-b1c2-a03b6db06572: current; last successful source read 2026-11-03T18:03:57.933154325Z; accepted source checkpoint 2026-11-03T18:02:25.425Z.
-Owner codex/01a1a286-a6ba-7ea0-9f57-9998f53aea35: current; last successful source read 2026-11-03T18:03:57.940820664Z; accepted source checkpoint 2026-11-03T17:49:52.526Z.
-Owner codex/01a1a281-c2de-7ec3-9541-aa8d191c94b0: current; last successful source read 2026-11-03T18:03:57.947384817Z; accepted source checkpoint 2026-11-03T17:46:02.873Z.
-Owner codex/01a1a287-ec4f-7e73-997b-f887745b5d9e: current; last successful source read 2026-11-03T18:03:57.962027929Z; accepted source checkpoint 2026-11-03T17:50:22.308Z.
-Owner codex/01a1a283-3ddc-7f31-8a32-01e8bbacbf87: current; last successful source read 2026-11-03T18:03:57.968975279Z; accepted source checkpoint 2026-11-03T17:45:45.018Z.
-Owner codex/01a1a27e-f9db-75b3-8e95-f6b1bbbe7f05: current; last successful source read 2026-11-03T18:03:58.012981226Z; accepted source checkpoint 2026-11-03T18:03:57.584Z.
-
-## Iteration 02 authorized continuation
-
-User explicitly approved “Authorize AL-60 shared capture repair”. [Iteration 02 contract](iterations/02/CONTRACT.md) and [plan](iterations/02/PLAN.md) supersede the earlier repair hold while preserving the historical failed-gate evidence above. Scope adds deterministic capture deadline/diagnostic repair and fixture isolation; reviewed search source remains unchanged. Publication still requires new capture reviews and passing full integrated verification. MGT-2 retains merge ownership.
+Capture observation finalized: 2026-11-03T19:17:15.899810593Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 34; retained older facts: 2; pending: 2; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 36; reserved bytes: 7786583. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
+Owner codex/01a1a2be-ff93-7cf1-9cd4-b03867a02717: current; last successful source read 2026-11-03T19:17:15.532027916Z; accepted source checkpoint 2026-11-03T18:51:43.233Z.
+Owner codex/01a1a2a4-80f0-7693-8a56-af32baa4f8d3: current; last successful source read 2026-11-03T19:17:15.537132888Z; accepted source checkpoint 2026-11-03T18:22:23.269Z.
+Owner codex/01a1a2c1-b051-7e42-9a91-b0ac50729fbe: current; last successful source read 2026-11-03T19:17:15.543182404Z; accepted source checkpoint 2026-11-03T18:53:46.76Z.
+Owner codex/01a1a2c5-a775-7232-b859-d3f26c37dea0: current; last successful source read 2026-11-03T19:17:15.55556416Z; accepted source checkpoint 2026-11-03T18:57:51.764Z.
+Owner codex/01a1a285-a7e2-7083-aad5-781dfee72767: current; last successful source read 2026-11-03T19:17:15.562485234Z; accepted source checkpoint 2026-11-03T17:47:46.391Z.
+Owner codex/01a1a280-9d93-7471-9927-ea58a45f6e99: current; last successful source read 2026-11-03T19:17:15.568734931Z; accepted source checkpoint 2026-11-03T17:42:54.585Z.
+Owner codex/01a1a2bf-d677-7fe1-947c-2598194c95d5: current; last successful source read 2026-11-03T19:17:15.575421178Z; accepted source checkpoint 2026-11-03T18:51:27.725Z.
+Owner codex/01a1a2a8-baa7-7f73-a867-947232170d28: current; last successful source read 2026-11-03T19:17:15.583050368Z; accepted source checkpoint 2026-11-03T18:28:06.704Z.
+Owner codex/01a1a2c0-a935-7380-bf48-3f2bbc717073: current; last successful source read 2026-11-03T19:17:15.590925451Z; accepted source checkpoint 2026-11-03T18:53:42.27Z.
+Owner codex/01a1a2be-400d-7b21-a540-b929fb017e00: current; last successful source read 2026-11-03T19:17:15.597547233Z; accepted source checkpoint 2026-11-03T18:50:40.693Z.
+Owner codex/01a1a285-f25d-79f1-bef1-db5606c7ef63: current; last successful source read 2026-11-03T19:17:15.604051342Z; accepted source checkpoint 2026-11-03T17:48:17.873Z.
+Owner codex/01a1a2b5-ceed-7cb2-be8f-70fef3a60fa6: current; last successful source read 2026-11-03T19:17:15.611324597Z; accepted source checkpoint 2026-11-03T18:42:02.412Z.
+Owner codex/01a1a27f-2156-7d82-951e-0831e5c48114: current; last successful source read 2026-11-03T19:17:15.617752241Z; accepted source checkpoint 2026-11-03T17:41:34.612Z.
+Owner codex/01a1a287-55e9-73b0-91a6-30c361793268: current; last successful source read 2026-11-03T19:17:15.625207461Z; accepted source checkpoint 2026-11-03T17:49:46.235Z.
+Owner codex/01a1a297-164e-74c2-a754-1471bec17453: current; last successful source read 2026-11-03T19:17:15.631586641Z; accepted source checkpoint 2026-11-03T18:08:29.38Z.
+Owner codex/01a1a2b7-f1b1-79a1-853a-a5d46d4a9681: current; last successful source read 2026-11-03T19:17:15.638200135Z; accepted source checkpoint 2026-11-03T18:43:02.748Z.
+Additional owner freshness details remain in local capture diagnostics.

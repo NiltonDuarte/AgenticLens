@@ -1,0 +1,323 @@
+Full make on057d410253aecd734551995ff1bedb38e94a1f19; affinity [0, 1, 2, 3], GOMAXPROCS=2, GOFLAGS=-p=1
+Installing backend dependencies...
+(cd backend && go mod download)
+Installing frontend dependencies...
+
+up to date, audited 631 packages in 3s
+
+230 packages are looking for funding
+  run `npm fund` for details
+
+21 vulnerabilities (18 moderate, 1 high, 2 critical)
+
+To address all issues possible (including breaking changes), run:
+  npm audit fix --force
+
+Some issues need review, and may require choosing
+a different dependency.
+
+Run `npm audit` for details.
+npm warn install-scripts 1 package has install scripts not yet covered by allowScripts:
+npm warn install-scripts   esbuild@0.21.5 (postinstall: node install.js)
+npm warn install-scripts
+npm warn install-scripts Run `npm install-scripts ls` to review, or `npm install-scripts approve <pkg>` to allow.
+Building frontend assets required by Go embed...
+(cd web && npm run build)
+
+> agenticlens-web@2.0.0 build
+> tsc --noEmit && vite build && node scripts/sync-assets.mjs
+
+vite v5.4.21 building for production...
+transforming...
+✓ 339 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.64 kB │ gzip:   0.42 kB
+dist/assets/index-RxF3R1DP.css   82.83 kB │ gzip:  12.71 kB
+dist/assets/index-CyhIuPZb.js   505.58 kB │ gzip: 146.57 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 2.35s
+(cd backend && go vet ./...)
+Linting frontend...
+
+> agenticlens-web@2.0.0 typecheck
+> tsc --noEmit
+
+
+> agenticlens-web@2.0.0 lint
+> eslint "src/**/*.{ts,tsx}" --max-warnings 0
+
+python3 scripts/tests/test_release_revision.py
+..............
+----------------------------------------------------------------------
+Ran 14 tests in 2.693s
+
+OK
+python3 scripts/tests/test_installation.py
+..........
+----------------------------------------------------------------------
+Ran 10 tests in 8.297s
+
+OK
+python3 scripts/tests/test_capture_distribution.py
+...............
+----------------------------------------------------------------------
+Ran 15 tests in 5.658s
+
+OK
+(cd backend && go test -race ./...)
+ok  	agenticlens/cmd/agentic-lens	103.790s
+ok  	agenticlens/internal/adapters	2.329s
+ok  	agenticlens/internal/adapters/backfill	(cached)
+ok  	agenticlens/internal/adapters/capture	59.589s
+ok  	agenticlens/internal/adapters/codex	(cached)
+ok  	agenticlens/internal/adapters/config	(cached)
+?   	agenticlens/internal/adapters/filesystem	[no test files]
+ok  	agenticlens/internal/adapters/git	3.568s
+ok  	agenticlens/internal/adapters/http	2.578s
+ok  	agenticlens/internal/adapters/live	(cached)
+ok  	agenticlens/internal/adapters/opencode	(cached)
+ok  	agenticlens/internal/adapters/web	(cached)
+ok  	agenticlens/internal/domain	(cached)
+ok  	agenticlens/internal/domain/migration	(cached)
+Testing frontend...
+
+> agenticlens-web@2.0.0 test
+> vitest run
+
+
+ RUN  v2.1.9 /home/niltonduarte/.t3/worktrees/AgenticLens/t3-abd10bd3/web
+
+ ✓ src/api/client.test.ts (110 tests) 130ms
+ ✓ src/components/LiveTraceInspector.test.tsx (27 tests) 1701ms
+   ✓ LiveTraceInspector Component > keeps completed task navigation, output copy and execution expansion beside rich invocations 462ms
+ ✓ src/components/Components.test.tsx (36 tests) 1437ms
+ ✓ src/components/TraceWaterfall.test.tsx (84 tests) 7487ms
+   ✓ TraceWaterfall Component > Adversarial Multi-dimensional Filtering > Tool Filter Invariants & Resilience > filters events by specific tool name across task, bash, read, edit and restores on all 372ms
+   ✓ TraceWaterfall Component > Adversarial Multi-dimensional Filtering > Anomaly Filter Invariants & Resilience > filters events matching specific anomaly rule_id across tool, turn, and role correlation rules 383ms
+   ✓ TraceWaterfall Component > Adversarial Multi-dimensional Filtering > Multi-Filter Composition Engine > simultaneously composes filterMode, roleFilter, toolFilter, and anomalyFilter across positive and negative permutations 446ms
+   ✓ TraceWaterfall Component > Adversarial Multi-dimensional Filtering > Multi-Select & "No filter" Enhancements > evaluates full 4-dimensional conjunction across filterMode, multi-role, multi-tool, and multi-anomaly 339ms
+   ✓ TraceWaterfall Component > FIX-3 Verification: Collapsibility, Anomaly Matching, and Debug Identifiers > expanding reveals filters and timeline; collapsing preserves filters, selection, and payload expansion 308ms
+ ✓ src/components/ArtifactViewer.test.tsx (20 tests) 2173ms
+   ✓ ArtifactViewer Component > renders large multiline documents and tables with high node counts and preserves copy fidelity 671ms
+ ✓ src/views/LiveObservability.test.tsx (24 tests) 2187ms
+   ✓ LiveObservability View Integration > opens a delegated child and hides the parent stream until the child trace arrives 316ms
+   ✓ LiveObservability View Integration > invalidates in-flight work on pause and close, permits paused manual refresh, and reconciles on resume 337ms
+ ✓ src/views/TicketComparisons.test.tsx (17 tests) 4208ms
+   ✓ TicketComparisons View Component > matches literal skill names with OR semantics, composes filters, and recovers from empty results 1115ms
+   ✓ TicketComparisons View Component > replaces eligible cost populations when filter refetches return changed ledgers 321ms
+   ✓ TicketComparisons View Component > filters comparison rows by ticket type and workspace prefix dropdowns 556ms
+   ✓ TicketComparisons View Component > allows interactive recovery from empty filter selection in TicketComparisons 315ms
+ ✓ src/views/LandingPage.test.tsx (20 tests) 2177ms
+   ✓ LandingPage View Component > renders all four feature navigation cards with titles and action buttons 362ms
+   ✓ LandingPage View Component > sorts quick-launch workspaces naturally by ticket ID and supports column header toggles 408ms
+ ✓ src/api/liveApi.test.ts (29 tests) 46ms
+stderr | src/views/MetricProgression.test.tsx > MetricProgression View Component > filters data when selecting time window presets
+Warning: An update to MetricProgression inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at MetricProgression (/home/niltonduarte/.t3/worktrees/AgenticLens/t3-abd10bd3/web/src/views/MetricProgression.tsx:39:3)
+Warning: An update to MetricProgression inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at MetricProgression (/home/niltonduarte/.t3/worktrees/AgenticLens/t3-abd10bd3/web/src/views/MetricProgression.tsx:39:3)
+Warning: An update to MetricProgression inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at MetricProgression (/home/niltonduarte/.t3/worktrees/AgenticLens/t3-abd10bd3/web/src/views/MetricProgression.tsx:39:3)
+Warning: An update to MetricProgression inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at MetricProgression (/home/niltonduarte/.t3/worktrees/AgenticLens/t3-abd10bd3/web/src/views/MetricProgression.tsx:39:3)
+Warning: An update to MetricProgression inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at MetricProgression (/home/niltonduarte/.t3/worktrees/AgenticLens/t3-abd10bd3/web/src/views/MetricProgression.tsx:39:3)
+Warning: An update to MetricProgression inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at MetricProgression (/home/niltonduarte/.t3/worktrees/AgenticLens/t3-abd10bd3/web/src/views/MetricProgression.tsx:39:3)
+Warning: An update to MetricProgression inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at MetricProgression (/home/niltonduarte/.t3/worktrees/AgenticLens/t3-abd10bd3/web/src/views/MetricProgression.tsx:39:3)
+Warning: An update to MetricProgression inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at MetricProgression (/home/niltonduarte/.t3/worktrees/AgenticLens/t3-abd10bd3/web/src/views/MetricProgression.tsx:39:3)
+Warning: An update to MetricProgression inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at MetricProgression (/home/niltonduarte/.t3/worktrees/AgenticLens/t3-abd10bd3/web/src/views/MetricProgression.tsx:39:3)
+Warning: An update to MetricProgression inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at MetricProgression (/home/niltonduarte/.t3/worktrees/AgenticLens/t3-abd10bd3/web/src/views/MetricProgression.tsx:39:3)
+Warning: An update to MetricProgression inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at MetricProgression (/home/niltonduarte/.t3/worktrees/AgenticLens/t3-abd10bd3/web/src/views/MetricProgression.tsx:39:3)
+
+ ✓ src/components/AnomalyDrawer.test.tsx (19 tests) 621ms
+ ✓ src/views/MetricProgression.test.tsx (16 tests) 2666ms
+   ✓ MetricProgression View Component > keeps period subtotal currency compact for the selected invocation buckets 373ms
+   ✓ MetricProgression View Component > renders loading state initially and then displays progression KPIs and trend charts 320ms
+ ✓ src/views/TicketDeepDive.test.tsx (66 tests) 19199ms
+   ✓ Skills and subagents autopsy > shows unknown role metrics and turn groups when optional hydration is unavailable 305ms
+   ✓ Skills and subagents autopsy > shows delegations without skills, distinguishes missing metrics, and jumps repeatedly to the exact child by keyboard 552ms
+   ✓ FIX-12 committed trace and enrichment lifecycle > keeps baseline facts after rejected enrichment 557ms
+   ✓ FIX-12 committed trace and enrichment lifecycle > keeps baseline facts after empty offline enrichment 578ms
+   ✓ FIX-12 committed trace and enrichment lifecycle > keeps baseline facts after empty hydrated enrichment 419ms
+   ✓ FIX-12 committed trace and enrichment lifecycle > shares exact repeatable child navigation between task badges and the panel and resets it on ticket change 1759ms
+   ✓ FIX-12 committed trace and enrichment lifecycle > rebinds the selected stable ID row and open inspector when pending enrichment completes 437ms
+   ✓ FIX-12 committed trace and enrichment lifecycle > rebinds the selected no IDs row and open inspector when pending enrichment completes 423ms
+   ✓ FIX-12 committed trace and enrichment lifecycle > rebinds the selected new local ID row and open inspector when pending enrichment completes 410ms
+   ✓ FIX-12 committed trace and enrichment lifecycle > rebinds an inspected summary to updated anomaly context while enrichment remains event-free 398ms
+   ✓ FIX-12 committed trace and enrichment lifecycle > preserves expanded=false when an event-free summary receives event enrichment 331ms
+   ✓ FIX-12 committed trace and enrichment lifecycle > preserves expanded=true when an event-free summary receives event enrichment 597ms
+   ✓ FIX-12 committed trace and enrichment lifecycle > never creates a summary list for an event-bearing trace with zero filter matches (hydrated=false) 740ms
+   ✓ FIX-12 committed trace and enrichment lifecycle > never creates a summary list for an event-bearing trace with zero filter matches (hydrated=true) 625ms
+   ✓ FIX-12 committed trace and enrichment lifecycle > adds partial local_sqlite payloads without losing unmatched facts 330ms
+   ✓ FIX-12 committed trace and enrichment lifecycle > adds partial local_codex payloads without losing unmatched facts 453ms
+   ✓ FIX-12 committed trace and enrichment lifecycle > keeps current summary-only anomalies, threads, and artifacts with omitted events 800ms
+   ✓ FIX-12 committed trace and enrichment lifecycle > keeps current summary-only anomalies, threads, and artifacts with empty events 828ms
+   ✓ FIX-12 committed trace and enrichment lifecycle > ignores ticket A summary-only enrichment after selecting ticket B and resets the drawer and disclosure 310ms
+   ✓ FIX-12 committed trace and enrichment lifecycle > ignores an older refresh response after a newer request completes 584ms
+   ✓ TicketDeepDive View Component > renders information tooltips on velocity, table headers, and refined KPI tooltips 532ms
+   ✓ TicketDeepDive View Component > Waterfall, Legacy Fallback, and AnomalyDrawer Integration > opens the view-owned aggregate inspector by click inside an expanded empty trace 603ms
+   ✓ TicketDeepDive View Component > Waterfall, Legacy Fallback, and AnomalyDrawer Integration > opens the view-owned aggregate inspector by Enter inside an expanded empty trace 482ms
+   ✓ TicketDeepDive View Component > Waterfall, Legacy Fallback, and AnomalyDrawer Integration > opens the view-owned aggregate inspector by Space inside an expanded empty trace 482ms
+ ✓ src/components/MultiSelectDropdown.test.tsx (26 tests) 682ms
+ ✓ src/domain/anomalies.test.ts (33 tests) 27ms
+ ✓ src/components/LiveSessionTree.test.tsx (11 tests) 382ms
+ ✓ src/components/Navbar.test.tsx (17 tests) 557ms
+ ✓ src/components/TicketTable.test.tsx (13 tests) 742ms
+ ✓ src/components/FailedToolAlertCard.test.tsx (13 tests) 477ms
+ ✓ src/views/FleetOverview.test.tsx (13 tests) 2039ms
+   ✓ FleetOverview View Component > keeps the fleet cost primary compact and the partial scope in secondary and tooltip 406ms
+ ✓ src/components/TrendChart.test.tsx (5 tests) 218ms
+ ✓ src/components/TicketScatterPlot.test.tsx (6 tests) 1511ms
+   ✓ TicketScatterPlot > searches IDs and titles case-insensitively and recovers from no matches without changing the chart 606ms
+   ✓ TicketScatterPlot > preserves hidden exclusions and supports keyboard toggling, restoration and point navigation while searching 387ms
+ ✓ src/utils/debugPrompt.test.ts (9 tests) 8ms
+ ✓ src/components/LiveAnomalyBanner.test.tsx (8 tests) 290ms
+ ✓ src/components/FleetAnomalyCard.test.tsx (9 tests) 222ms
+ ✓ src/domain/ticket_scatter.test.ts (7 tests) 16ms
+ ✓ src/domain/invocation_rows.test.ts (3 tests) 10ms
+ ✓ src/components/AnomalyBadge.test.tsx (4 tests) 174ms
+ ✓ src/components/WorkspaceLoadWarning.test.tsx (3 tests) 104ms
+ ✓ src/domain/liveMessageOrdering.test.ts (2 tests) 5ms
+ ✓ src/domain/tools.test.ts (2 tests) 13ms
+ ✓ src/domain/progression.test.ts (29 tests) 31ms
+ ✓ src/domain/formatters.test.ts (71 tests) 58ms
+ ✓ src/domain/events.test.ts (24 tests) 16ms
+ ✓ src/utils/theme.test.ts (7 tests) 11ms
+ ✓ src/domain/aggregations.test.ts (2 tests) 4ms
+ ✓ src/test/sync-assets.test.ts (1 test) 86ms
+
+ Test Files  36 passed (36)
+      Tests  786 passed (786)
+   Start at  20:06:46
+   Duration  30.14s (transform 2.00s, setup 2.87s, collect 7.15s, tests 51.72s, environment 17.01s, prepare 3.51s)
+
+Building frontend bundle...
+
+> agenticlens-web@2.0.0 build
+> tsc --noEmit && vite build && node scripts/sync-assets.mjs
+
+vite v5.4.21 building for production...
+transforming...
+✓ 339 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.64 kB │ gzip:   0.42 kB
+dist/assets/index-RxF3R1DP.css   82.83 kB │ gzip:  12.71 kB
+dist/assets/index-CyhIuPZb.js   505.58 kB │ gzip: 146.57 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 2.21s
+Building multi-platform binaries...

@@ -2,7 +2,7 @@ h3. Title: AL-60: Add Search tickets to the comparison exclusion panel
 
 *TARGET*: AgenticLens (Dashboard comparisons)
 
-*Status*: Ready
+*Status*: Complete
 *Work type*: feat
 *Blocked by*: None
 *Blocks*: None
@@ -42,3 +42,5 @@ As an analyst, I want to find tickets by ID or title inside the selection panel 
 * Deliver reviewed implementation and meaningful regression tests through agentic-lens-dev in a separate dedicated session with approved scope.
 * Pass required make verification; frontend changes include the canonical build and verification of embedded standalone assets.
 * Maintain ticket summary/review/PR artifacts and source-grounded telemetry; publish a reviewable PR. Completion requires evidence, not just a plan.
+
+*Approved delivery addendum*: User-authorized shared capture deadline/diagnostic and deterministic-fixture repair is recorded in alspaces/AL-60/iterations/02/CONTRACT.md. Original search acceptance remains preserved.

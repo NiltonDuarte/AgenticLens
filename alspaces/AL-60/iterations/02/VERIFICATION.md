@@ -1,6 +1,6 @@
 # AL-60 final-candidate verification
 
-Current source/test/CI fingerprint: 5e332cad1bfb0d1b25af2d9a8def5bfbdcd8e2b8364c3023131733041d4c8493 against checkpoint 7b00cc1. Source is frozen during final review. Parent owns integrated verification and approval; source-specific focused results below do not replace full make.
+Integrated source/test/CI fingerprint: 3251b53bc2bfdbd9c7e6ea47d5b8e793fc22f4f9e6103ee268d9fbc622a005db against checkpoint 7b00cc1. Source is frozen during final review. Parent owns integrated verification and approval; source-specific focused results below do not replace full make.
 
 ## Actual Windows execution
 
@@ -18,4 +18,4 @@ Retained INSTALL_RED/GREEN, CORRECTIONS_ADAPTER_RED/GREEN, CORRECTIONS_SIGTERM_R
 
 ## Integrated gate
 
-Pending final focus/model review completion, implementation commit, origin/main integration and required full make. Standalone embedded assets and AL-55/search preservation will be checked on the integrated candidate. No final approval or publication is asserted yet.
+APPROVED after all final focus/model reviews and full make passed on057d410253aecd734551995ff1bedb38e94a1f19. Four-CPU affinity, GOMAXPROCS=2 and GOFLAGS=-p=1 bounded concurrency without changing product/test timeout defaults. Verbatim output: evidence/MAKE_VERIFIED.txt. Every Go package passed race checks; all786frontend tests passed; five platform binaries built. Parent verified standalone index/assets against the embed tree and search/no-match strings. Integrated Windows binary ownership and recovery cases passed: evidence/WINDOWS_INTEGRATED.txt. Main added only AL-68workspace prose; later explicit defer transformation is observationally equivalent and carries source approvals with vet/focused guards. Search and AL-55 remain unchanged. Hosted CI and browser geometry are not claimed.
