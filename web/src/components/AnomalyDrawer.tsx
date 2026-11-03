@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import type { Anomaly, EventFact } from '../types/telemetry';
-import { formatRoleLabel } from '../domain/formatters';
+import { formatRoleLabel, formatLocalDateTime, formatHistoricalDateTimeTooltip, getHistoricalTimestampDateTime } from '../domain/formatters';
 import { AnomalyBadge } from './AnomalyBadge';
 import { formatAnomaly } from '../domain/anomalies';
 import { copyTextToClipboard } from '../utils/clipboard';
@@ -286,7 +286,8 @@ export const AnomalyDrawer: React.FC<AnomalyDrawerProps> = ({
               {timestamp && (
                 <div className="drawer-meta-item">
                   <span className="drawer-label">Timestamp</span>
-                  <span className="drawer-val mono">{timestamp}</span>
+                  <time className="drawer-val mono historical-timestamp" dateTime={getHistoricalTimestampDateTime(timestamp)}
+                    title={formatHistoricalDateTimeTooltip(timestamp)}>{formatLocalDateTime(timestamp)}</time>
                 </div>
               )}
             </div>

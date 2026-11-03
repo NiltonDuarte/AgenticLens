@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest';
-import { formatTokensK, formatCurrencyUSD, formatPercentage, formatDurationSeconds, formatLeadTime, computeLeadTimeSeconds, deriveTicketComparisonRows, formatIsoDateTimeShort, compareTicketIds, getEffectiveCompletionDateMs, compareTicketCompletionDate, canonicalTicketType, extractTicketPrefix, combineDistinctPrefixes, filterLedgersByTicketTypes, filterLedgersByPrefixes, formatChartAxisTimestamp, formatCompactCount, formatLinesCompact, truncateMiddle, formatLocalTimeWithMs, formatLocalDateTimeTooltip, getClientTimezoneBadge, } from './formatters';
+import { formatTokensK, formatCurrencyUSD, formatPercentage, formatDurationSeconds, formatLeadTime, computeLeadTimeSeconds, deriveTicketComparisonRows, formatIsoDateTimeShort, compareTicketIds, getEffectiveCompletionDateMs, compareTicketCompletionDate, canonicalTicketType, extractTicketPrefix, combineDistinctPrefixes, filterLedgersByTicketTypes, filterLedgersByPrefixes, formatChartAxisTimestamp, formatCompactCount, formatLinesCompact, truncateMiddle, formatLocalTimeWithMs, formatLocalDateTimeTooltip, getClientTimezoneBadge, formatLocalDateTime, formatHistoricalDateTimeTooltip, } from './formatters';
 import { mockAgenticMetricsLedgers } from '../test/fixtures/mockData';
 import type { AgenticMetricsLedger, ContextHealthStatus, ConventionalTicketType, } from './types';
 describe('Domain Pure Formatters', () => {
@@ -23,6 +23,42 @@ describe('Domain Pure Formatters', () => {
         });
     });
     describe('localized timestamps', () => {
+        it('shows local calendar rollover and DST clock changes without fractional seconds', () => {
+            const previousTimezone = process.env.TZ;
+            process.env.TZ = 'America/New_York';
+            try {
+                // Locale punctuation/order may vary; both dates and clocks must remain visible.
+                const rollover = formatLocalDateTime('2026-01-01T02:03:04.987Z');
+                expect(rollover).toContain('2025');
+                expect(rollover).toMatch(/12.*31|31.*12/);
+                expect(rollover).toContain('21:03:04');
+                const before = formatLocalDateTime('2026-03-08T06:59:59.123Z');
+                const after = formatLocalDateTime('2026-03-08T07:00:00.456Z');
+                expect(before).toContain('01:59:59');
+                expect(after).toContain('03:00:00');
+                expect(before).toContain('2026');
+                expect(after).toContain('2026');
+                for (const value of [rollover, before, after]) expect(value).not.toMatch(/:\d{2}\.\d/);
+                expect(formatLocalDateTimeTooltip('2026-03-08T06:59:59.123Z')).toContain('[UTC-05:00]');
+                expect(formatLocalDateTimeTooltip('2026-03-08T07:00:00.456Z')).toContain('[UTC-04:00]');
+                expect(formatLocalTimeWithMs('2026-01-01T02:03:04.987Z')).toBe('21:03:04.987');
+                const leapDay = formatLocalDateTime('2024-02-29T10:15:30.000Z');
+                expect(leapDay).toContain('2024');
+                expect(leapDay).toMatch(/02.*29|29.*02/);
+                expect(leapDay).toContain('05:15:30');
+                expect(formatLocalDateTime('2024-02-29T05:15:30.000-05:00')).toBe(leapDay);
+            } finally {
+                if (previousTimezone === undefined) delete process.env.TZ;
+                else process.env.TZ = previousTimezone;
+            }
+        });
+        it('uses explicit missing states and preserves malformed historical evidence', () => {
+            for (const missing of ['', null, undefined]) expect(formatLocalDateTime(missing)).toBe('N/A');
+            for (const invalid of ['not-a-date', '2026-02-30T10:15:30Z', '2025-02-29T10:15:30Z', '2026-04-31T10:15:30+02:00']) {
+                expect(formatLocalDateTime(invalid)).toBe(invalid);
+                expect(formatHistoricalDateTimeTooltip(invalid)).toBe(invalid);
+            }
+        });
         it('formats local clock time with zero padded milliseconds', () => {
             expect(formatLocalTimeWithMs('2026-10-22T14:32:10.007Z')).toMatch(/^\d{2}:\d{2}:\d{2}\.007$/);
         });

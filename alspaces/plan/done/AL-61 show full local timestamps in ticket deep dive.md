@@ -2,7 +2,7 @@ h3. Title: AL-61: Show full local historical timestamps in Ticket Deep Dive
 
 *TARGET*: AgenticLens (Dashboard historical timestamps)
 
-*Status*: Ready
+*Status*: Done
 *Work type*: feat
 *Blocked by*: None
 *Blocks*: None

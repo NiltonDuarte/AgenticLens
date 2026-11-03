@@ -714,6 +714,8 @@ body {
 
 .timestamp-item {
   font-family: var(--font-mono);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .timestamp-label {
@@ -1126,6 +1128,16 @@ body {
 
 .skills-subagents-table {
   margin-top: 16px;
+}
+
+.skills-subagents-table time {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.historical-timestamp {
+  overflow-wrap: anywhere;
+  min-width: 0;
 }
 
 .skills-subagents-table caption {
@@ -2912,6 +2924,8 @@ body {
 }
 
 .timeline-timestamp {
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-size: 0.75rem;
   color: var(--text-muted);
   margin-left: auto;

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useId } from 'react';
 import type { EventFact, Anomaly, DataSource } from '../types/telemetry';
-import { formatRoleLabel, formatTokensK, formatLocalTimeWithMs, formatLocalDateTimeTooltip } from '../domain/formatters';
+import { formatRoleLabel, formatTokensK, formatLocalDateTime, formatHistoricalDateTimeTooltip, getHistoricalTimestampDateTime } from '../domain/formatters';
 import { rebindEvent, sortEvents } from '../domain/events';
 import type { SkillFact, TaskLinkFact } from '../domain/types';
 import { traceBadgeMetadata } from '../domain/traceBadges';
@@ -554,7 +554,7 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
                     <span className="event-type-badge">
                       {formatEventTypeLabel(ev.event_type)}
                     </span>
-                    <span className="timeline-timestamp mono" title={formatLocalDateTimeTooltip(ev.timestamp)}>{formatLocalTimeWithMs(ev.timestamp)}</span>
+                    <time className="timeline-timestamp mono" dateTime={getHistoricalTimestampDateTime(ev.timestamp)} title={formatHistoricalDateTimeTooltip(ev.timestamp)}>{formatLocalDateTime(ev.timestamp)}</time>
 
                     {/* Concrete Debug Identifier Badge with Copy Button */}
                     <div className="timeline-id-badge" onClick={(e) => e.stopPropagation()}>

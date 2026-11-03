@@ -62,6 +62,28 @@ describe('AnomalyDrawer Component', () => {
     expect(screen.getByText('WARNING')).toBeInTheDocument();
   });
 
+  it('shows a historical local date with source instant and preserves invalid evidence', () => {
+    const timestamp = '2026-10-18T10:15:30.987Z';
+    const { container, rerender } = render(<AnomalyDrawer isOpen={true} onClose={vi.fn()} event={{ ...sampleEvent, timestamp }} />);
+    const time = container.querySelector('time');
+    expect(time).toHaveTextContent('2026');
+    expect(time).toHaveTextContent(/\d{2}:\d{2}:\d{2}/);
+    expect(time?.textContent).not.toMatch(/:\d{2}\.\d/);
+    expect(time).toHaveAttribute('datetime', timestamp);
+    expect(time).toHaveAttribute('title', expect.stringContaining('.987 [UTC'));
+    for (const invalid of ['not-a-date', '2026-02-30T10:15:30Z']) {
+      rerender(<AnomalyDrawer isOpen={true} onClose={vi.fn()} event={{ ...sampleEvent, timestamp: invalid }} />);
+      expect(container.querySelector('time')).toHaveTextContent(invalid);
+      expect(container.querySelector('time')).toHaveAttribute('title', invalid);
+      expect(container.querySelector('time')).not.toHaveAttribute('datetime');
+    }
+    const leapTimestamp = '2024-02-29T05:15:30-05:00';
+    rerender(<AnomalyDrawer isOpen={true} onClose={vi.fn()} event={{ ...sampleEvent, timestamp: leapTimestamp }} />);
+    expect(container.querySelector('time')).toHaveAttribute('datetime', leapTimestamp);
+    expect(container.querySelector('time')).toHaveTextContent('2024');
+    expect(container.querySelector('time')?.textContent).not.toBe(leapTimestamp);
+  });
+
   it('renders diagnostic context fields: turn number, session ID, tool name, threshold, and token delta', () => {
     render(
       <AnomalyDrawer

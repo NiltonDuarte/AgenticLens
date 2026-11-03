@@ -7,6 +7,7 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 ## In Progress
 
 
+
 ---
 
 ## Ready
@@ -14,12 +15,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 ### Post-v2.0 review: Ready
 
 
-- **AL-61**: Show full local historical timestamps in Ticket Deep Dive
-  - **Subsystem**: Dashboard historical timestamps
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-61 show full local timestamps in ticket deep dive.md`
 
 - **AL-62**: Fix Codex skill and delegation facts with granular source ownership
   - **Subsystem**: Domain / Codex and OpenCode Adapters / Schema Migration / Backfill / CLI / API / Dashboard / Tests
