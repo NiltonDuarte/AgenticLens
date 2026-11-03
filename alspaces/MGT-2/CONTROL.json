@@ -123,8 +123,9 @@
       "reviewed_application_head": "29ee4a802000c1d3302c515e001f7692d3d7fe8f",
       "product_fingerprint": "f300879df36eee4cbdc69b6de66999dbf469ddcd3eb6f65f8a65b71279332c8a",
       "blockers": [
-        "Implement approved portability correction and focused independent A/B/shorter-empty/partial/migration-recovery verification",
-        "Affected review and required full integrated gate/finalization/new-head CI pending"
+        "Finish approved portability/lossless migration correction and focused separate-state verification",
+        "Demonstrate exact unscoped-aggregate retention plus durable portable migration progress, or report exact representation blocker",
+        "Affected review/full integrated gate/finalization/new-head CI pending"
       ],
       "publication_status": "open draft; exact head verified",
       "ci_failure": {
@@ -205,6 +206,15 @@
         "pending_edge": null,
         "decision": "User chose complete local session replacement; preserve all other sessions",
         "release": "mgt2-al62-release-portability-correction-complete-local-replacement"
+      },
+      "lossless_migration_finding": {
+        "status": "Source-confirmed pre-existing data loss; bounded correction active, not yet final verified",
+        "discovery": "Planner gpt-6.1-sol/high",
+        "issue": "Legacy tool aggregates without SessionID are dropped during normalization, retaining only count note; default migrate/backfill can overwrite original without backup",
+        "routing": "Very closely related to explicitly approved lossless compatible migration correction; remains AL-62-owned, no duplicate FIX",
+        "acceptance": "Preserve exact original tuples with no invented identity or backup opt-in; verify migrate/backfill and portable durable pending state/copied continuation. Error-only file preservation is not proof of durable mid-migration progress. Report representation blocker before schema/checkpoint expansion.",
+        "instruction": "mgt2-al62-confirm-lossless-unscoped-migration-boundary",
+        "runId": "run:thread:24185901-0a4e-4d21-8c44-a64117fb80bc:ordinal:7"
       }
     },
     {
