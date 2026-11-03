@@ -1,5 +1,7 @@
 # MGT-2 supervision log
 
+AL-60 cleanup gate satisfied at eb3d515d85493372aab099d7cda82390e3c63fb3. Manager fetched the actual PR head, verified only AL-60 artifacts changed, application/test/CI/scripts remain equal to tested 057d410, current main is included, both compact finding files and all 17 retained raw outputs are byte-identical, all 36 ledger IDs/source/parent fields are preserved, and no empty AL-60 artifacts remain. Contracts/summary/ledger/findings and useful historical/red-green/integrated evidence remain. No product review or full-suite repeat required for unchanged source. Cleanup removed empty/superseded files and consolidated notes/references; accepted TEST-02 remains visible. PR is open/non-draft/non-release with no review objections or unresolved threads. Earlier head's four green checks do not pass this new head; refreshed CI is running. Merge remains held only for fresh exact-head hosted checks and final race-safe readiness verification.
+
 AL-60 PR delivery verified: https://github.com/NiltonDuarte/AgenticLens/pull/101 at 2a99b422bd24c674e3c4d5e787738b5238c2e3d7, non-release, open/non-draft, includes current main 733e367. Manager verified exact compact review dispositions and retained full make output at tested 057d410; final delta changes only guidance and ticket artifacts. All eight final responsibility/model cells approved, with five confirmed findings fixed and one accepted severity 2 Unix test-oracle recommendation (owner AL-60 maintainer, no demonstrated leak). Full integrated make/race, 786 frontend tests, embedded assets, five builds and actual Windows runtime passed. No GitHub review objections or unresolved threads; hosted Frontend passed while Backend/Windows were still running.
 
 User then requested pre-merge branch cleanup. Existing AL-60 owner resumed in run 3 with task-artifact cleanup ownership, preserving required telemetry, compact findings/credit, useful deterministic/historical evidence and tested application/test/CI source. Manager observed an empty phase-vet output and potentially redundant artifacts for the owner's audit. No rewrite/force push or product changes requested. Merge remains held for the cleaned exact head and refreshed hosted checks. No predecessor integration notification has been sent.
@@ -47,18 +49,19 @@ GitHub reports main has no branch protection (protection endpoint HTTP 404). Thi
 Telemetry: PATH has no installed wrapper and the shared installation directory is empty. Use the existing local source-built native binary with supported native options, explicit Codex source, ticket and root session. Native generate has no --al-offline/--al-project options; invoke from this checkout. Root source rollout found at ~/.codex/sessions/2026/11/03/rollout-2026-11-03T18-47-43-01a1a286-27c9-7c50-9f2e-70f0a332c763.jsonl. This manager has no native children; the five independently created T3 roots are not children. T3 MCP tool counts are a known decoder completeness limit. This is an active-session checkpoint, not complete end-of-supervision telemetry; regenerate at later delivery. Independent ticket telemetry is not part of the manager's ledger.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 17
-- **Active Agent Duration:** 20m 38s (excludes user wait time)
-- **Context Window Health:** ELEVATED — Root agent peak 190.5k tokens (95% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Software Development Life Cycle Iterations:** 21
+- **Active Agent Duration:** 24m 31s (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 207.1k tokens (104% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 8,080 reasoning tokens (17.8% of generated output)
-- **Tool Health & Self-Correction:** 61 tool calls (8 self-corrections, 86.9% success rate)
+- **Reasoning Effort:** 10,046 reasoning tokens (19.3% of generated output)
+- **Tool Health & Self-Correction:** 67 tool calls (8 self-corrections, 88.1% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 1 execution anomaly detected (1 WARNING).
+- **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (201.1k tokens) — Context tokens reached 201.1k, breaching the 200k critical ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.6k tokens) — Context tokens reached 160.6k, breaching the 160k warning ceiling.
 
 ### Agentic Execution Metrics
@@ -68,11 +71,11 @@ Telemetry: PATH has no installed wrapper and the shared installation directory i
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 174,101 | 37,379 | 10,235,776 | 98.3% | 190.5k | ELEVATED | $0.00 |
-| **Total** | **1** | **174,101** | **37,379** | **10,235,776** | **98.3%** | **190.5k** | **ELEVATED** | **$0.00** |
+| **rootagent** | 1 | 187,541 | 42,069 | 12,387,840 | 98.5% | 207.1k | BLOATED (104%) | $0.00 |
+| **Total** | **1** | **187,541** | **42,069** | **12,387,840** | **98.5%** | **207.1k** | **BLOATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 1 | 174,101 | 37,379 | 10,235,776 | 98.3% | $0.00 |
-| **Total** | **1** | **174,101** | **37,379** | **10,235,776** | **98.3%** | **$0.00** |
+| **gpt-6.1-sol** | 1 | 187,541 | 42,069 | 12,387,840 | 98.5% | $0.00 |
+| **Total** | **1** | **187,541** | **42,069** | **12,387,840** | **98.5%** | **$0.00** |
