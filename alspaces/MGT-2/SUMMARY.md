@@ -1,5 +1,7 @@
 # MGT-2 supervision log
 
+User explicitly resolves complete-local-snapshot edge: replace that session from complete local source; preserve all other sessions. Complete successful extraction can therefore replace fewer/zero invocations; missing/failed/partial reads are not authoritative empty results. Management read the concrete six-part AL-62 assessment and approved the bounded portability correction, lifting implementation/delivery hold and starting existing owner run7. Remove private originating-machine/receipt/fingerprint admission and dependent producer bridges; retain structural/identity/native-parent/path validation, live operational isolation/ACK/cursors and file locking/preflight/atomic recovery. Verify truly separate A/B repositories/stores, supported copies, shorter/empty versus failed/partial sources, whole-ledger totals/idempotence and portable migration/resume. No destructive local-table migration or fact-ledger schema redesign. Prior approvals do not silently cover changed behavior; historical findings/credit remain. Canonical guidelines, checklist and operator guidance now state the scoped replacement exception. PR103 stays draft until full readiness; MGT retains merge ownership.
+
 User explicitly defines the platform vision: committed ledgers are trusted and preserved; per-session local harness database/session store is authoritative when locally available, otherwise existing ledger history supplies facts; backfill leaves unavailable sessions untouched; platform runtime aggregates the entire resulting ledger; migration is best-effort with durable explicit mid-migration progress another developer/machine can resume; commands must not duplicate/discard history. Canonical contract, README, operator guidance and regression scenarios refined in iteration05, preserving schema/identity/path/source-error checks and exact refresh ownership. AL-62 active assessment received this delta without restarting. One narrower row-removal edge is asked asynchronously: complete local session with fewer invocations than saved snapshot, retain stored-only rows versus replace from complete source. Neither choice inferred; broader explicit vision needs no renewed approval.
 
 Iteration 05 documents the original portable-ledger principle at TECHNICAL_GUIDELINES.md#portable-ledger-contract: shared Git records survive developer/machine/harness/path/source changes; extraction of new facts differs from preservation/aggregation of recorded facts. Local capture state/fingerprints cannot gate otherwise valid persisted history, while schema/identity/path validation, honest unknowns, scoped successful refresh and publication integrity remain. README/architecture, AGENTS/contributor docs, six relevant skills, shared reviewer/tester context, PO template and setup manual link to the canonical rule. Operator migration wording distinguishes pending enrichment from declaring history untrusted. REGRESSION_PREVENTION.md adds isolated A-to-B clone/read/partial-refresh/format/migrate acceptance scenarios including same-harness unavailable owners. All six modified skills validate; 21 added relative links/anchors resolve; git diff --check passes. Documentation-only maintenance used direct review; no application tests or multi-agent development cycle. Runtime correction is still AL-62-owned/pending, not fixed by this documentation. PR100 remains draft/external merge.
@@ -119,15 +121,15 @@ GitHub reports main has no branch protection (protection endpoint HTTP 404). Thi
 Telemetry: PATH has no installed wrapper and the shared installation directory is empty. Use the existing local source-built native binary with supported native options, explicit Codex source, ticket and root session. Native generate has no --al-offline/--al-project options; invoke from this checkout. Root source rollout found at ~/.codex/sessions/2026/11/03/rollout-2026-11-03T18-47-43-01a1a286-27c9-7c50-9f2e-70f0a332c763.jsonl. This manager has no native children; the five independently created T3 roots are not children. T3 MCP tool counts are a known decoder completeness limit. This is an active-session checkpoint, not complete end-of-supervision telemetry; regenerate at later delivery. Independent ticket telemetry is not part of the manager's ledger.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 61
-- **Active Agent Duration:** 1h 27m (excludes user wait time)
+- **Software Development Life Cycle Iterations:** 63
+- **Active Agent Duration:** 1h 30m (excludes user wait time)
 - **Context Window Health:** CRITICAL — Root agent peak 451.3k tokens (226% of 200k healthy ceiling, 1 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 62,193 reasoning tokens (26.4% of generated output)
-- **Tool Health & Self-Correction:** 215 tool calls (15 self-corrections, 93.0% success rate)
+- **Reasoning Effort:** 63,265 reasoning tokens (26.2% of generated output)
+- **Tool Health & Self-Correction:** 220 tool calls (15 self-corrections, 93.2% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
@@ -141,11 +143,11 @@ Telemetry: PATH has no installed wrapper and the shared installation directory i
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 1,367,169 | 173,694 | 68,861,440 | 98.1% | 451.3k | CRITICAL (226%) | $0.00 |
-| **Total** | **1** | **1,367,169** | **173,694** | **68,861,440** | **98.1%** | **451.3k** | **CRITICAL** | **$0.00** |
+| **rootagent** | 1 | 1,375,963 | 177,816 | 70,109,184 | 98.1% | 451.3k | CRITICAL (226%) | $0.00 |
+| **Total** | **1** | **1,375,963** | **177,816** | **70,109,184** | **98.1%** | **451.3k** | **CRITICAL** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 1 | 1,367,169 | 173,694 | 68,861,440 | 98.1% | $0.00 |
-| **Total** | **1** | **1,367,169** | **173,694** | **68,861,440** | **98.1%** | **$0.00** |
+| **gpt-6.1-sol** | 1 | 1,375,963 | 177,816 | 70,109,184 | 98.1% | $0.00 |
+| **Total** | **1** | **1,375,963** | **177,816** | **70,109,184** | **98.1%** | **$0.00** |

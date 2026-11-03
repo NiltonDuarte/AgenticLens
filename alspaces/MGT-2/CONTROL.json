@@ -111,20 +111,20 @@
       "head": "1247b7e948014c3dffb3cc052bf29dbf8cbcb7ab",
       "base": "main",
       "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/103",
-      "status": "blocked",
+      "status": "preparing",
       "order": 4,
       "last_instruction": {
-        "clientRequestId": "mgt2-al62-integrate-after-8d494d2",
-        "runId": "run:thread:24185901-0a4e-4d21-8c44-a64117fb80bc:ordinal:6"
+        "clientRequestId": "mgt2-al62-release-portability-correction-complete-local-replacement",
+        "runId": "run:thread:24185901-0a4e-4d21-8c44-a64117fb80bc:ordinal:7"
       },
       "verified_checks": "All four hosted checks SUCCESS only at pre-integration 1247b7e. Local integration/producer corrections are in progress and need final exact-head gates.",
-      "next_action": "Return concrete correction proposal; portability is established acceptance, not an unresolved user choice. Keep implementation/publication held while assessing removal of receipt-dependent persisted-fact gates.",
+      "next_action": "Owner run7 implements approved simplification, completes final gates and publishes exact-head readiness; manager merges after fresh hosted gates",
       "notification_request": "mgt2-handoff-notification-62",
       "reviewed_application_head": "29ee4a802000c1d3302c515e001f7692d3d7fe8f",
       "product_fingerprint": "f300879df36eee4cbdc69b6de66999dbf469ddcd3eb6f65f8a65b71279332c8a",
       "blockers": [
-        "Concrete simplification proposal restoring established portable persisted-ledger behavior pending",
-        "Implementation correction/affected review/integrated verification/new-head CI pending"
+        "Implement approved portability correction and focused independent A/B/shorter-empty/partial/migration-recovery verification",
+        "Affected review and required full integrated gate/finalization/new-head CI pending"
       ],
       "publication_status": "open draft; exact head verified",
       "ci_failure": {
@@ -195,14 +195,16 @@
         "management_reassessment": "Earlier bounded-repair disposition is superseded where it entrenches local receipt/fingerprint prerequisites for portable persisted ledgers; preserve finding history and verification, reassess necessity under original product contract."
       },
       "portability_trust_assessment": {
-        "status": "Existing portable-ledger requirement reaffirmed; read-only simplification proposal pending",
+        "status": "Concrete six-part correction assessed and approved; implementation/delivery hold lifted",
         "source": "User explicitly states AgenticLens is multi-developer/machine by original design; Git stores shared metrics and original historical tickets came from another harness/machine",
         "instruction": "mgt2-al62-restore-established-portable-ledger-contract",
         "runId": "run:thread:24185901-0a4e-4d21-8c44-a64117fb80bc:ordinal:6",
         "cases": "A source-generates; B gets Git or copied workspace without A private capture/source data; read/format/migrate/generate with B-only sources. Distinguish actual supported Git/copy behavior, owner/schema validation, imported recorded facts and fresh source-verification claims.",
-        "boundary": "No new portability approval needed. Hold implementation/publication until concrete correction assessed. Remove machine-local proof/fingerprint prerequisites from proposed persisted-ledger design; retain extraction accuracy, schema/identity checks, scoped refresh and history/other-harness preservation.",
+        "boundary": "No originating-machine proof admission for supported persisted history; complete-source replacement per exact owner; preserve runtime capture isolation/writer safety; no destructive state-table migration or fact-schema redesign.",
         "vision_instruction": "mgt2-al62-user-source-precedence-and-resumable-migration",
-        "pending_edge": "If a successfully read complete local session contains fewer invocations than its stored ledger snapshot, retain stored-only rows or replace that session from the complete local source?"
+        "pending_edge": null,
+        "decision": "User chose complete local session replacement; preserve all other sessions",
+        "release": "mgt2-al62-release-portability-correction-complete-local-replacement"
       }
     },
     {
@@ -319,12 +321,12 @@
   ],
   "completion_requirements": "Complete product merge queue, then create queued REV test-performance review ticket before final management handoff; own MGT PR remains external merge",
   "pending_user_decision": {
-    "status": "Asked asynchronously; no assumed choice",
-    "question": "If a successfully read complete local session contains fewer invocations than its stored ledger snapshot, retain stored-only rows or replace that session from the complete local source?",
-    "scope": "Clarifies local-source authority versus no-deletion guarantee; no implementation of this edge before answer. General portability/source precedence/resumable migration are explicit user requirements, not pending approval."
+    "status": "Resolved by explicit user answer",
+    "decision": "Replace that session from complete local source; preserve all other sessions",
+    "scope": "Complete successful local snapshot replaces its exact owner including fewer/zero invocations; unavailable/failed/partial source is not an authoritative empty result."
   },
   "portable_ledger_guidance": {
-    "status": "User source-precedence/migration/aggregation clarification incorporated; pending one narrower row-removal edge",
+    "status": "Complete-local replacement edge resolved explicitly; canonical rule and acceptance scenarios updated",
     "source": "User asks to clarify recurring portable-ledger principle across platform/repository",
     "canonical": "TECHNICAL_GUIDELINES.md#portable-ledger-contract",
     "acceptance": "docs/REGRESSION_PREVENTION.md#portable-ledgers-across-developers-and-machines",
