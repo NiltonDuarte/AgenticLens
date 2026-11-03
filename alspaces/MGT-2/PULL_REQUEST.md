@@ -4,6 +4,8 @@ Records authorized supervision of AL-60, AL-61, AL-76 and AL-62, their owning th
 
 The user approved expanding AL-60 into a minimal shared capture repair after failed baseline and bounded integration gates. Iteration 02 records the approval, sole repair ownership and preserved guarantees; later owners wait for actual predecessor merges. Product delivery remains incomplete.
 
+The management skill now requires a separate FIX ticket and isolated thread for newly discovered bugs unless they directly concern an existing ticket's approved behavior or contract. It includes proactive launch authority during authorized supervision and preserves ownership, scope and merge gates. Skill validation and documentation checks pass.
+
 Management workflow remains active. This draft PR requires external review and merge; its owning manager cannot merge it. No application implementation is included.
 
 Validation: remote and thread ownership discovery, source approvals read, clean initial status recorded. Exact-head product checks and merge evidence are recorded in the control ledger as work progresses. Telemetry limitations are recorded in SUMMARY.md.

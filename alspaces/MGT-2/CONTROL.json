@@ -13,20 +13,18 @@
       "head": "64d1e3d5ad36b1db1e764c48ddc57298f60a4d3f",
       "base": "main",
       "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/104",
-      "status": "blocked",
+      "status": "preparing",
       "order": 2,
       "last_instruction": {
-        "clientRequestId": "mgt2-al61-integrate-after-6244585",
-        "runId": "run:thread:641425d3-403a-4a11-8d21-2c8bae2ca609:ordinal:5",
-        "delivery": "started"
+        "clientRequestId": "mgt2-al61-integrate-after-3fbecd2",
+        "runId": "run:thread:641425d3-403a-4a11-8d21-2c8bae2ca609:ordinal:6"
       },
       "verified_checks": "Manager verified current main included, final delta only ticket artifacts, source/tests/scripts/CI equal tested 3c0e4cd; compact SOL-1 fixed disposition and both Sol/high/Luna/medium integrated approvals retained. Owner full make passes all Go race packages, 790 frontend tests, checks, five builds, standalone/embed equality. Fresh hosted checks running; no GitHub objections/unresolved threads.",
-      "next_action": "Await AL-60 capture cleanup follow-up merge; then notify AL-61 for affected integration/reverification; do not merge current red head",
+      "next_action": "Existing owner run6 carries valid unchanged timestamp approval, integrates actual 3fbecd2 repair, completes affected full gate and readiness for #104",
       "notification_request": "mgt2-handoff-notification-61",
       "reviewed_application_head": "3c0e4cd59979309a14ad785882d609b62d40ad03",
       "blockers": [
-        "Hosted Backend failed shared capture TempDir teardown at 64d1e3d",
-        "AL-60 owner must deliver follow-up correction, then integrated exact-head verification must pass"
+        "Integrate delivered #105 and complete affected verification/new-head CI"
       ],
       "publication_status": "open non-draft; local final approval complete",
       "corrected_timestamp_revision": "2e4762d0e94109f9b91c2dc5edae2a939ab94008",
@@ -86,20 +84,22 @@
       "merge_commit": "6244585dc5cc41ef012cd3e1fb3b964ccd910a95",
       "merged_at": "2026-11-03T19:49:15Z",
       "followup": {
-        "status": "waiting_checks",
+        "status": "merged",
         "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/105",
         "base": "6244585dc5cc41ef012cd3e1fb3b964ccd910a95",
         "instruction": "mgt2-al60-followup-tempdir-cleanup",
         "runId": "run:thread:5dbc6729-7bc5-4bc2-84c8-1433f289f5f6:ordinal:7",
         "scope": "Diagnose shared capture fixture teardown race and minimally correct deterministic cleanup without weakening isolation/pending/ACK ownership or inflating timeouts",
         "delivery": "New PR required; merged #101 cannot deliver later fixes",
-        "next_action": "Fresh exact head/base/review/check verification on CI wake; guarded merge #105, verify merge SHA, then notify AL-61 to integrate actual repair",
+        "next_action": "Delivered; obsolete watch removed; no pending AL-60 follow-up",
         "progress": "Owner controlled late-start reproduction identified lock/ACK insufficient before native config admission; test-only four-file descriptor/log-handle shutdown barrier passes 20 race repetitions and focused delayed-start/early-return guards. Windows helper/native-successor handle probes pass, not full Windows capture. Four focus/model approvals so far; remaining reviews pending. No follow-up PR published yet.",
         "head": "c0315764105c467858652ecd9955a2b75adf3488",
         "branch": "fix/AL-60-capture-fixture-teardown",
         "reviewed_tested_source": "7c97677dacbdb71466bb0d041704c2cc2b2619e2",
-        "verified_checks": "Manager verified current main included, only four Go test files changed vs main, final source equality outside AL-60 artifacts to reviewed/tested 7c97677, compact DATA-03 fixed/TEST-03 refuted dispositions and concise passing make evidence. All focus/profile approvals complete; full make/Go race/786 frontend/five binaries pass locally. Hosted Windows/Backend/Frontend in progress; no GitHub reviews/unresolved threads.",
-        "limits": "Windows actual helper/native/successor probes and CLI cross-compile pass; full Windows capture unavailable locally. Fatal/Goexit and persistent broken observer source-inspected. Prior TEST-02 debt retained."
+        "verified_checks": "All four hosted checks SUCCESS at c031576; fresh correct head/base/reviews/non-release state, guarded squash, GitHub MERGED and fetched main verified",
+        "limits": "Windows actual helper/native/successor probes and CLI cross-compile pass; full Windows capture unavailable locally. Fatal/Goexit and persistent broken observer source-inspected. Prior TEST-02 debt retained.",
+        "merge_commit": "3fbecd2576270772462fe37235d90c5f33e2164c",
+        "merged_at": "2026-11-03T20:49:59Z"
       }
     },
     {
@@ -232,15 +232,16 @@
   ],
   "own_pr_url": "https://github.com/NiltonDuarte/AgenticLens/pull/100",
   "manager_verification": "make failed on unchanged capture CLI native version/capability and worker timeout tests; other Go packages passed; frontend suite and final build not reached",
-  "active_iteration": "02",
+  "active_iteration": "03",
   "capture_repair_approval": {
     "source": "Explicit user answer: Authorize AL-60 shared capture repair (Recommended)",
     "owner": "AL-60",
     "status": "approved",
     "preserved": "No waived gates, weakened tests, global timeout inflation, or duplicate capture ownership"
   },
-  "observed_main": "6244585dc5cc41ef012cd3e1fb3b964ccd910a95",
+  "observed_main": "3fbecd2576270772462fe37235d90c5f33e2164c",
   "publication_steering": "User requested all open owners create PRs now; remaining AL-61/AL-76/AL-62 instructed to publish draft checkpoints without waiving integration or merge gates",
   "al60_latest_hosted_checks": "At f153df2: Backend and Frontend SUCCESS; Windows and binary/version in progress. No merge yet.",
-  "order": "Delivered #101; next #105 capture fixture follow-up, #104, #102, #103"
+  "order": "Delivered #101 and #105; next #104, #102, #103",
+  "defect_routing_authorization": "User explicitly authorizes new FIX tickets/isolated threads for discovered bugs unless very closely related to an existing approved contract; proactive routine launches, no unrelated roadmap dispatch or product-scope waiver"
 }

@@ -2,11 +2,13 @@
 
 User authorization, 2026-11-03: supervise ongoing AgenticLens threads, guide owners, choose merge order, report progress, and continue until eligible changes are merged. Routine owner instructions and gated non-release merges are authorized. Product scope changes still require a user decision.
 
-In scope: current independent owners of AL-60, AL-61, AL-62, AL-76, and reporting the AL-68 release-marker work. Rediscover late-arriving PRs and verify ownership before including them. No new ticket threads requested.
+In scope: current independent owners of AL-60, AL-61, AL-62, AL-76, and reporting the AL-68 release-marker work. Rediscover late-arriving PRs and verify ownership before including them. Unrequested roadmap work remains outside dispatch. The later standing authorization below permits separate FIX threads for newly discovered unrelated bugs.
 
 Iteration 02 scope approval, 2026-11-03: the user answered “Authorize AL-60 shared capture repair (Recommended)” to the explicit proposal to expand AL-60 into a diagnosed shared capture repair before remaining merges. AL-60 owns the minimal capture repair and related deterministic regression coverage; no duplicate capture repairs by other owners. This supersedes the previous read-only repair hold. All review, integration, preservation and release exclusions remain in force.
 
 Existing-scope disposition: AL-62's approved preservation contract covers unavailable sources and legacy/canonical capture publication. Confirmed receipt-proof loss across file recovery violates that guarantee. Management released only its minimum bounded receipt-generation preservation repair to the existing AL-62 owner; broader generic journal/runtime redesign or fact-ledger schema changes remain outside this release. This applies existing scope authorization, not a new user approval. Proof provenance/multiplicity and explicit legacy-compatible scoped receipt migration remain required; missing historical proof must not be invented.
+
+Iteration 03 authorization: user explicitly requires newly discovered bugs to receive a new FIX ticket and independent thread unless very closely related to an existing ticket, and encourages proactive launches under that rule. This is standing permission for routine FIX allocation/launch during authorized supervision; it does not release unrelated roadmap work, replace missing existing owners, waive scope decisions or change release/management merge exclusions. Existing assigned repairs and valid approval/verification remain preserved. The canonical routing and launch rules live in .agents/skills/agentic-lens-management/SKILL.md.
 
 Release PRs, including the explicitly release-only AL-68 marker and Release Please #55, are human_only. This manager's own PR requires external review and merge. No self-merge, auto-merge, protection bypass or application implementation by this manager.
 

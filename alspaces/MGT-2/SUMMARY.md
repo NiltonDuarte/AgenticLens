@@ -1,5 +1,9 @@
 # MGT-2 supervision log
 
+Active iteration 03: user requested and authorized a management routing rule for future discovered bugs. Updated canonical management skill: unless very closely related to an existing approved behavior/contract, create a separate FIX ticket and isolated independent thread proactively. Same files/suite or a merge blocker alone do not justify expanding an existing feature. Reuse actual FIX owners, preserve existing work and apply normal ownership/launch/dependency gates. Reconciled older thread-launch wording; no duplicate instruction copies added. Skill-creator guidance and quick validator passed; documentation diff check passed. No application changes or full suite rerun. Existing assigned repairs stay assigned. See iterations/03/PLAN.md for source, changed acceptance, preserved guarantees and behavioral checks.
+
+AL-60 follow-up #105 actually merged at 3fbecd2576270772462fe37235d90c5f33e2164c on 2026-11-03T20:49:59Z using squash with expected head c031576. Fresh checks were all successful; correct current base, non-release/non-draft and no review blockers verified. GitHub MERGED/mergeCommit and fetched main corroborate delivery. Obsolete #105 watch removed. Only then AL-61 run 6 was released to integrate the test-only repair and complete #104's affected gate, carrying valid timestamp approval forward. Remaining order: #104, #102, #103. #101/#105 are delivered separately; release #55 remains human_only and management #100 remains draft for external review/merge.
+
 AL-60 follow-up published: https://github.com/NiltonDuarte/AgenticLens/pull/105 at c0315764105c467858652ecd9955a2b75adf3488, open/non-draft/non-release. Manager fetched and verified current main 6244585 is included, exactly four Go test files differ from main, final changes from reviewed/tested 7c97677 outside AL-60 artifacts are empty, and GitHub has no review objections/unresolved threads. Test-only log completion barrier retains cleanup diagnostics while awaiting real writer exit; production/CI/policy remain unchanged. Fifteen review runs reconcile all focus/profile approvals, fixed DATA-03 severity 5 (data reviewer gpt-6-luna/medium) and refuted TEST-03 severity 0 (test reviewer gpt-6-luna/medium) with verification attribution retained. Full integrated make/Go race/786 frontend cases/five binaries pass; corrected three-case race repetition passes. Windows helper-level actual probes/cross-compilation pass; full Windows capture, executed Fatal/Goexit and persistent observer failure remain explicit limits. Prior TEST-02 debt retained. New hosted checks are running; #104 remains held until actual #105 merge, then affected integration/verification. Order: #105, #104, #102, #103; #101 remains delivered separately. No raw logs or archive links were added.
 
 CI-PUB-01 triage confirmed severity 5 for canonical and compatible legacy facts: L0/R0 publication followed by changed exact-row L1/R1 leaves only R1; file journal recovery restores readable byte-identical L0 but no authorizing R0 remains, so unavailable-source generation fails closed. Old row must differ or be absent in R1; a superset alone is insufficient. Probes reconstruct a crash-equivalent state, not actual power loss. Receipt UPSERT and file rollback are separate durability boundaries; writer lock is not atomicity. No fact erasure was observed and strict canonical authorization remains correct.
@@ -85,15 +89,15 @@ GitHub reports main has no branch protection (protection endpoint HTTP 404). Thi
 Telemetry: PATH has no installed wrapper and the shared installation directory is empty. Use the existing local source-built native binary with supported native options, explicit Codex source, ticket and root session. Native generate has no --al-offline/--al-project options; invoke from this checkout. Root source rollout found at ~/.codex/sessions/2026/11/03/rollout-2026-11-03T18-47-43-01a1a286-27c9-7c50-9f2e-70f0a332c763.jsonl. This manager has no native children; the five independently created T3 roots are not children. T3 MCP tool counts are a known decoder completeness limit. This is an active-session checkpoint, not complete end-of-supervision telemetry; regenerate at later delivery. Independent ticket telemetry is not part of the manager's ledger.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 40
-- **Active Agent Duration:** 48m 7s (excludes user wait time)
-- **Context Window Health:** BLOATED — Root agent peak 350.0k tokens (175% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Software Development Life Cycle Iterations:** 43
+- **Active Agent Duration:** 51m 4s (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 379.3k tokens (190% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 28,759 reasoning tokens (24.2% of generated output)
-- **Tool Health & Self-Correction:** 125 tool calls (10 self-corrections, 92.0% success rate)
+- **Reasoning Effort:** 35,424 reasoning tokens (25.7% of generated output)
+- **Tool Health & Self-Correction:** 136 tool calls (12 self-corrections, 91.2% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
@@ -107,11 +111,11 @@ Telemetry: PATH has no installed wrapper and the shared installation directory i
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 298,055 | 90,161 | 38,270,592 | 99.2% | 350.0k | BLOATED (175%) | $0.00 |
-| **Total** | **1** | **298,055** | **90,161** | **38,270,592** | **99.2%** | **350.0k** | **BLOATED** | **$0.00** |
+| **rootagent** | 1 | 316,519 | 102,320 | 43,663,104 | 99.3% | 379.3k | BLOATED (190%) | $0.00 |
+| **Total** | **1** | **316,519** | **102,320** | **43,663,104** | **99.3%** | **379.3k** | **BLOATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 1 | 298,055 | 90,161 | 38,270,592 | 99.2% | $0.00 |
-| **Total** | **1** | **298,055** | **90,161** | **38,270,592** | **99.2%** | **$0.00** |
+| **gpt-6.1-sol** | 1 | 316,519 | 102,320 | 43,663,104 | 99.3% | $0.00 |
+| **Total** | **1** | **316,519** | **102,320** | **43,663,104** | **99.3%** | **$0.00** |
