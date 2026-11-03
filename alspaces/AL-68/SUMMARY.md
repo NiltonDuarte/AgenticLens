@@ -303,3 +303,8 @@ Owner codex/01a19efe-cc11-7521-86fc-b0d1283f1a41: current; last successful sourc
 Owner codex/01a19f6d-bf3d-7b33-b46e-43207debfa50: current; last successful source read 2026-11-03T16:07:21.757735499Z; accepted source checkpoint 2026-11-03T03:26:43.131Z.
 Owner codex/01a198b3-a8e7-7411-a8a6-46df93652e58: pending; last successful source read 2026-11-03T16:07:21.764625473Z; accepted source checkpoint 2026-11-01T20:03:34.142Z.
 Additional owner freshness details remain in local capture diagnostics.
+
+
+## Iteration 05: major release declaration
+
+User requested a dummy PR declaring a major change pointing to AL-68. Baseline 122e983; initial working tree clean on AL-68/major-version-change. Merged PR #93 remains historical implementation delivery; this new documentation-only follow-up corrects its missing breaking-change release classification. The PR title uses chore(release)! and its body includes BREAKING CHANGE describing the mandatory telemetry.capture.state_dir key and explicit configuration repair/migration. Release Please retains ownership of version/changelog generation; no application or workflow changes are included. See [iteration 05 plan](iterations/05/PLAN.md).
