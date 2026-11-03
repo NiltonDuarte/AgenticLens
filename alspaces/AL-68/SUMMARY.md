@@ -131,28 +131,28 @@ Discovery and fixes (IDs link to the compact record; all implementation and test
 
 Parent verification, gpt-6.1-sol/high: full make exit0 after clean implementation commit/main synchronization, backend vet/race, frontend typecheck/lint/build and783 tests/35files, release6/installation10/distribution15 checks, and five Linux/Darwin/Windows native builds. Actual Linux source-grounded harness/home/worktree checks and bounded native Windows components are distinguished above from unverified platform/harness guarantees. Final source extraction and preservation checks are recorded with the final telemetry snapshot.
 
-Final source-grounded snapshot:182 same-project Codex owners,90 roots/92 native children, preserving all141 prior owners and adding all41 iteration04 agents. Direct owning-source prefix comparisons passed for source project, native ancestry, models and usage, including every retained owner; historical foreign owners and disposable runtime smoke projects are excluded. Two bounded reconciliation passes recorded source checkpoints for all selected owners. No failed or unassigned registrations remain. The67 conservative pending freshness states retain accepted facts; they do not indicate missing published usage in this independently verified snapshot. Raw transcripts and detailed operational diagnostics remain outside Git. Later root-session activity is the accepted publication tail, not a ticket-completion claim.
+Final source-grounded snapshot:185 same-project Codex owners,90 roots/95 native children, preserving all182 previously verified owners and adding the CI correction coder and both release reviewers. Direct owning-source prefix comparisons passed for source project, native ancestry, models and usage, including every retained owner; historical foreign owners and disposable runtime smoke projects are excluded. Bounded reconciliation passes recorded source checkpoints for all selected owners. No failed or unassigned registrations remain. The67 conservative pending freshness states retain accepted facts; they do not indicate missing published usage in this independently verified snapshot. Raw transcripts and detailed operational diagnostics remain outside Git. Later root-session activity is the accepted publication tail, not a ticket-completion claim.
 
 ### Hosted Windows build correction
 
 Hosted CI41650143311 failed before native Windows tests: the canonical npm build completed TypeScript/Vite and then invoked Unix mkdir/rm/cp through Windows cmd. The parent, gpt-6.1-sol/high, traced the failed log after the user reported CI. A build coder, gpt-6.1-sol/high, replaced that copy step with a development-only Node filesystem helper whose fixed source/destination resolve from the helper location. Production retains its single-binary/no-Node boundary. A strict-typechecked regression exercises repeated complete tree replacement, nested files, dotfiles, stale removal and unrelated caller directories.
 
-Actual checksum-verified Windows Node20.19.5/npm/default-cmd reproduction failed with the original script and passed with the correction, including exact source/embedded tree equality. Final relocated typecheck/regression passed on Windows; Linux build/typecheck/lint/regression and exact asset equality passed. Release/setup specialists gpt-6.1-sol/high and gpt-6-luna/medium approved the frozen mechanical correction, preserving prior application reviews for unchanged capture/storage/schema/ownership paths. The required integrated make and hosted CI rerun remain pending at this correction checkpoint.
+Actual checksum-verified Windows Node20.19.5/npm/default-cmd reproduction failed with the original script and passed with the correction, including exact source/embedded tree equality. Final relocated typecheck/regression passed on Windows; Linux build/typecheck/lint/regression and exact asset equality passed. Release/setup specialists gpt-6.1-sol/high and gpt-6-luna/medium approved the frozen mechanical correction, preserving prior application reviews for unchanged capture/storage/schema/ownership paths. Parent consolidated local correction outcome: APPROVED at45bfd52 after main synchronization (already current) and full make exit0: backend vet/race,784 frontend tests/36files, release6/installation10/distribution15 checks and five native builds. Canonical and embedded asset trees match, and the standalone host binary contains the exact index/CSS/JS bytes and paths. [Compact findings](iterations/04/REVIEW_SUMMARY.json) retain I4-24 with parent diagnosis/model attribution; paired release reviewers independently verified the fix. Hosted CI rerun remains a separate pending remote gate.
 
 ## Follow-up backlog
 
 AL-76 defines compact ledger JSON serialization and a source-independent format command with all-workspace, single-ticket and ticket-set selection, dry-run/check modes, value preservation and safe concurrent publication. Its specification is Ready under plan/to-do. Implementation requires its own dedicated session; no format command is implemented in AL-68.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 309
-- **Active Agent Duration:** 39h 53m (excludes user wait time)
+- **Software Development Life Cycle Iterations:** 310
+- **Active Agent Duration:** 43h 57m (excludes user wait time)
 - **Context Window Health:** CRITICAL — Root agent peak 454.1k tokens (227% of 200k healthy ceiling, 9 compactions) | Subagents peak 451.4k (Coder)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
-- **Subagent Turn Velocity & Thrashing:** 1.5 avg turns/run (peak: 8 turns) | Planner 1.8, Coder 3.8, Tester 4.3, Reviewer 1.1, Reviewer-architecture 1.0, Reviewer-behavior 1.0, Reviewer-data 1.0, Reviewer-tests 1.0
-- **Test-to-Production Code Ratio:** 1.2:1 (+15,104 test lines / +12,638 prod lines)
-- **Code Delivered:** +27,882 / -189 lines across 130 code files (excluding docs)
-- **Reasoning Effort:** 2,024,816 reasoning tokens (32.1% of generated output)
-- **Tool Health & Self-Correction:** 7,384 tool calls (426 self-corrections, 94.2% success rate)
+- **Subagent Turn Velocity & Thrashing:** 1.5 avg turns/run (peak: 8 turns) | Planner 1.8, Coder 3.6, Tester 4.3, Reviewer 1.0, Reviewer-architecture 1.0, Reviewer-behavior 1.0, Reviewer-data 1.0, Reviewer-tests 1.0
+- **Test-to-Production Code Ratio:** 1.2:1 (+15,146 test lines / +12,638 prod lines)
+- **Code Delivered:** +27,932 / -190 lines across 133 code files (excluding docs)
+- **Reasoning Effort:** 2,048,018 reasoning tokens (32.1% of generated output)
+- **Tool Health & Self-Correction:** 7,471 tool calls (432 self-corrections, 94.2% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 75 execution anomalies detected (45 CRITICAL, 30 WARNING).
@@ -240,39 +240,39 @@ AL-76 defines compact ledger JSON serialization and a source-independent format 
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
 | **planner** | 4 | 1,100,156 | 45,391 | 10,905,856 | 90.8% | 236.5k | BLOATED (118%) | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
-| **coder** | 11 | 6,541,095 | 1,298,027 | 379,213,056 | 98.3% | 451.4k | CRITICAL (226%) | Unavailable (0 observed, 0 partial, 11 unavailable / 11 invocations) |
+| **coder** | 12 | 6,581,720 | 1,309,653 | 380,827,008 | 98.3% | 451.4k | CRITICAL (226%) | Unavailable (0 observed, 0 partial, 12 unavailable / 12 invocations) |
 | **tester** | 3 | 2,318,063 | 260,161 | 120,392,320 | 98.1% | 388.9k | BLOATED (194%) | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
-| **reviewer** | 19 | 1,755,373 | 135,988 | 27,108,224 | 93.9% | 145.8k | ELEVATED | Unavailable (0 observed, 0 partial, 19 unavailable / 19 invocations) |
-| **Unknown** | 24 | 7,876,340 | 1,296,817 | 376,614,912 | 98.0% | 454.1k | CRITICAL (227%) | Unavailable (0 observed, 0 partial, 24 unavailable / 24 invocations) |
+| **reviewer** | 21 | 1,807,671 | 142,062 | 27,517,440 | 93.8% | 145.8k | ELEVATED | Unavailable (0 observed, 0 partial, 21 unavailable / 21 invocations) |
+| **Unknown** | 24 | 8,165,356 | 1,323,561 | 388,531,456 | 97.9% | 454.1k | CRITICAL (227%) | Unavailable (0 observed, 0 partial, 24 unavailable / 24 invocations) |
 | **reviewer-architecture** | 14 | 1,544,287 | 99,833 | 17,053,952 | 91.7% | 164.2k | ELEVATED | Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations) |
 | **reviewer-behavior** | 15 | 1,600,123 | 108,360 | 18,735,232 | 92.1% | 155.7k | ELEVATED | Unavailable (0 observed, 0 partial, 15 unavailable / 15 invocations) |
 | **reviewer-data** | 17 | 1,562,596 | 138,626 | 24,578,432 | 94.0% | 161.4k | ELEVATED | Unavailable (0 observed, 0 partial, 17 unavailable / 17 invocations) |
 | **reviewer-tests** | 9 | 896,173 | 62,428 | 11,472,896 | 92.8% | 139.7k | ELEVATED | Unavailable (0 observed, 0 partial, 9 unavailable / 9 invocations) |
 | **rootagent** | 66 | 7,336,451 | 841,164 | 141,539,968 | 95.1% | 453.9k | CRITICAL (227%) | Unavailable (0 observed, 0 partial, 66 unavailable / 66 invocations) |
-| **Total** | **182** | **32,530,657** | **4,286,795** | **1,127,614,848** | **97.2%** | **454.1k** | **CRITICAL** | **Unavailable (0 observed, 0 partial, 182 unavailable / 182 invocations)** |
+| **Total** | **185** | **32,912,596** | **4,331,239** | **1,141,554,560** | **97.2%** | **454.1k** | **CRITICAL** | **Unavailable (0 observed, 0 partial, 185 unavailable / 185 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-luna** | 71 | 5,341,901 | 323,068 | 39,447,168 | 88.1% | Unavailable (0 observed, 0 partial, 71 unavailable / 71 invocations) |
-| **gpt-6.1-sol** | 111 | 27,188,756 | 3,963,727 | 1,088,167,680 | 97.6% | Unavailable (0 observed, 0 partial, 111 unavailable / 111 invocations) |
-| **Total** | **182** | **32,530,657** | **4,286,795** | **1,127,614,848** | **97.2%** | **Unavailable (0 observed, 0 partial, 182 unavailable / 182 invocations)** |
+| **gpt-6-luna** | 72 | 5,360,285 | 325,710 | 39,668,736 | 88.1% | Unavailable (0 observed, 0 partial, 72 unavailable / 72 invocations) |
+| **gpt-6.1-sol** | 113 | 27,552,311 | 4,005,529 | 1,101,885,824 | 97.6% | Unavailable (0 observed, 0 partial, 113 unavailable / 113 invocations) |
+| **Total** | **185** | **32,912,596** | **4,331,239** | **1,141,554,560** | **97.2%** | **Unavailable (0 observed, 0 partial, 185 unavailable / 185 invocations)** |
 
-Capture observation finalized: 2026-11-03T14:02:37.232070116Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 100; retained older facts: 82; pending: 82; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 182; reserved bytes: 52146134. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
-Owner codex/01a19cdc-11b8-71c2-884a-eb44f01314af: pending; last successful source read 2026-11-03T14:02:35.649691152Z; accepted source checkpoint 2026-11-02T15:34:50.187Z.
-Owner codex/01a1a163-a41b-7801-87e6-da31df0b8f94: current; last successful source read 2026-11-03T14:02:35.653588104Z; accepted source checkpoint 2026-11-03T12:31:59.996Z.
-Owner codex/01a1a0d3-b974-7e01-8f96-7cf6a03d0776: pending; last successful source read 2026-11-03T14:02:35.658662256Z; accepted source checkpoint 2026-11-03T11:29:02.076Z.
-Owner codex/01a19d37-ffca-75b3-98e2-0f1910131d0b: current; last successful source read 2026-11-03T14:02:35.665289066Z; accepted source checkpoint 2026-11-02T17:08:17.403Z.
-Owner codex/01a19d2f-e920-7853-87ee-a74af51865fe: current; last successful source read 2026-11-03T14:02:35.670282065Z; accepted source checkpoint 2026-11-02T16:57:52.001Z.
-Owner codex/01a19866-1ebf-7be3-aa0d-47262ddfccc5: pending; last successful source read 2026-11-03T14:02:35.67641732Z; accepted source checkpoint 2026-11-01T18:37:58.167Z.
-Owner codex/01a19869-c33d-70e1-8337-a34812486051: pending; last successful source read 2026-11-03T14:02:35.681272Z; accepted source checkpoint 2026-11-01T18:42:12.941Z.
-Owner codex/01a1989a-866e-7a10-8345-14e09454b715: pending; last successful source read 2026-11-03T14:02:35.685693764Z; accepted source checkpoint 2026-11-01T19:39:07.209Z.
-Owner codex/01a1a0f5-2ae1-7391-b5c6-aa84bd474189: pending; last successful source read 2026-11-03T14:02:35.691661089Z; accepted source checkpoint 2026-11-03T13:35:29.035Z.
-Owner codex/01a19f64-c34a-7b40-954d-5d2b2ab0d8e1: current; last successful source read 2026-11-03T14:02:35.697823036Z; accepted source checkpoint 2026-11-03T03:16:46.778Z.
-Owner codex/01a19ccd-8b24-7690-94de-3ff167b15442: pending; last successful source read 2026-11-03T14:02:35.702307225Z; accepted source checkpoint 2026-11-02T15:10:02.466Z.
-Owner codex/01a19f72-4c53-7d83-aa54-8cd4d680f03a: current; last successful source read 2026-11-03T14:02:35.707132048Z; accepted source checkpoint 2026-11-03T03:29:09.385Z.
-Owner codex/01a19efe-cc11-7521-86fc-b0d1283f1a41: current; last successful source read 2026-11-03T14:02:35.712628579Z; accepted source checkpoint 2026-11-03T01:26:42.249Z.
-Owner codex/01a19f6d-bf3d-7b33-b46e-43207debfa50: current; last successful source read 2026-11-03T14:02:35.71696372Z; accepted source checkpoint 2026-11-03T03:26:43.131Z.
-Owner codex/01a198b3-a8e7-7411-a8a6-46df93652e58: pending; last successful source read 2026-11-03T14:02:35.721182771Z; accepted source checkpoint 2026-11-01T20:03:34.142Z.
-Owner codex/01a19d11-a9aa-7c90-bb2d-4fe5b418a80f: current; last successful source read 2026-11-03T14:02:35.729212635Z; accepted source checkpoint 2026-11-02T16:25:50.763Z.
+Capture observation finalized: 2026-11-03T14:28:05.905331726Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 103; retained older facts: 82; pending: 82; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 185; reserved bytes: 53041576. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
+Owner codex/01a19cdc-11b8-71c2-884a-eb44f01314af: pending; last successful source read 2026-11-03T14:28:04.282758181Z; accepted source checkpoint 2026-11-02T15:34:50.187Z.
+Owner codex/01a1a163-a41b-7801-87e6-da31df0b8f94: current; last successful source read 2026-11-03T14:28:04.288566525Z; accepted source checkpoint 2026-11-03T12:31:59.996Z.
+Owner codex/01a1a0d3-b974-7e01-8f96-7cf6a03d0776: pending; last successful source read 2026-11-03T14:28:04.295075838Z; accepted source checkpoint 2026-11-03T11:29:02.076Z.
+Owner codex/01a19d37-ffca-75b3-98e2-0f1910131d0b: current; last successful source read 2026-11-03T14:28:04.299999892Z; accepted source checkpoint 2026-11-02T17:08:17.403Z.
+Owner codex/01a19d2f-e920-7853-87ee-a74af51865fe: current; last successful source read 2026-11-03T14:28:04.306666541Z; accepted source checkpoint 2026-11-02T16:57:52.001Z.
+Owner codex/01a19866-1ebf-7be3-aa0d-47262ddfccc5: pending; last successful source read 2026-11-03T14:28:04.315432557Z; accepted source checkpoint 2026-11-01T18:37:58.167Z.
+Owner codex/01a19869-c33d-70e1-8337-a34812486051: pending; last successful source read 2026-11-03T14:28:04.321161234Z; accepted source checkpoint 2026-11-01T18:42:12.941Z.
+Owner codex/01a1989a-866e-7a10-8345-14e09454b715: pending; last successful source read 2026-11-03T14:28:04.327661157Z; accepted source checkpoint 2026-11-01T19:39:07.209Z.
+Owner codex/01a1a0f5-2ae1-7391-b5c6-aa84bd474189: pending; last successful source read 2026-11-03T14:28:04.334847991Z; accepted source checkpoint 2026-11-03T13:35:29.035Z.
+Owner codex/01a19f64-c34a-7b40-954d-5d2b2ab0d8e1: current; last successful source read 2026-11-03T14:28:04.34303245Z; accepted source checkpoint 2026-11-03T03:16:46.778Z.
+Owner codex/01a19ccd-8b24-7690-94de-3ff167b15442: pending; last successful source read 2026-11-03T14:28:04.348632548Z; accepted source checkpoint 2026-11-02T15:10:02.466Z.
+Owner codex/01a19f72-4c53-7d83-aa54-8cd4d680f03a: current; last successful source read 2026-11-03T14:28:04.355313956Z; accepted source checkpoint 2026-11-03T03:29:09.385Z.
+Owner codex/01a19efe-cc11-7521-86fc-b0d1283f1a41: current; last successful source read 2026-11-03T14:28:04.361585148Z; accepted source checkpoint 2026-11-03T01:26:42.249Z.
+Owner codex/01a19f6d-bf3d-7b33-b46e-43207debfa50: current; last successful source read 2026-11-03T14:28:04.369264375Z; accepted source checkpoint 2026-11-03T03:26:43.131Z.
+Owner codex/01a198b3-a8e7-7411-a8a6-46df93652e58: pending; last successful source read 2026-11-03T14:28:04.376973889Z; accepted source checkpoint 2026-11-01T20:03:34.142Z.
+Owner codex/01a19d11-a9aa-7c90-bb2d-4fe5b418a80f: current; last successful source read 2026-11-03T14:28:04.38384063Z; accepted source checkpoint 2026-11-02T16:25:50.763Z.
 Additional owner freshness details remain in local capture diagnostics.

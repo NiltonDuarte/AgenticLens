@@ -322,6 +322,20 @@
         }
       ],
       "disposition": "Fixed test synchronization with a new durable generation, acknowledgement and actual worker lease; failure, recovery and privacy assertions retained."
+    },
+    {
+      "finding_id": "I4-24",
+      "severity": 5,
+      "issue": "The canonical frontend build invoked Unix copy commands under Windows cmd and failed before native verification.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed with module-relative Node filesystem synchronization; real Windows original/fixed canonical builds and strict regression verify exact asset replacement."
     }
   ]
 }
