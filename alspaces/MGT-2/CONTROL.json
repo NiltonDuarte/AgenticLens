@@ -118,14 +118,15 @@
         "runId": "run:thread:24185901-0a4e-4d21-8c44-a64117fb80bc:ordinal:5",
         "purpose": "Release minimal in-scope proof-preservation correction; no generic redesign or predecessor/full-gate release"
       },
-      "verified_checks": "Owner bounded receipt repair and all eight scope/profile correction reviews approve fingerprint cec8ce3ace37d7fcc300ea1089663ef21153502037a8548ad1da946b81651b8f. Focused real CLI canonical/legacy and both crash windows, empty/absence/recovery, migration/lost-proof, SQLite scope/fences, independent rebind, journal and prior strict guards pass; changed-package vet passes. Race covers adapter/test process, plain CLI subprocess excluded. New hosted CI running; Frontend green.",
+      "verified_checks": "All four hosted checks SUCCESS at 1247b7e; independent bounded repair scoped approvals/focused checks preserved. Remains draft pending actual AL-76 merge, integration/full gate and finalization.",
       "next_action": "Keep draft; await actual predecessors, then integrate preserving receipt protocol, capture fixtures, timestamps and AL-76 serialization/writer locks; finish full gate",
       "notification_request": "mgt2-handoff-notification-62",
       "reviewed_application_head": "29ee4a802000c1d3302c515e001f7692d3d7fe8f",
       "product_fingerprint": "f300879df36eee4cbdc69b6de66999dbf469ddcd3eb6f65f8a65b71279332c8a",
       "blockers": [
-        "Actual AL-76 merge pending; AL-60 and AL-61 delivered",
-        "Full integrated make/race/build/standalone/finalization pending"
+        "Actual AL-76 merge pending",
+        "SkillsSubagentsPanel.tsx import conflict to resolve at later integration",
+        "Integrated full make/build/standalone and finalization pending"
       ],
       "publication_status": "open draft; exact head verified",
       "ci_failure": {
@@ -156,7 +157,17 @@
           "reason": "AL-62 receipt selects by artifact digest; AL-76 intentionally changes bytes while preserving every token/fact. Determine safe compatibility without weakening bound-mismatch/tamper/multiplicity guards or source-independent format.",
           "owner": "AL-62 as later integrator; do not release early integration or implementation for a hypothesis"
         }
-      ]
+      ],
+      "pending_conflict_resolution": {
+        "owner": "AL-62 as later integrator",
+        "main": "8b1de5f761ebb92f78b2b462c1ff583724ecbdb5",
+        "head": "1247b7e948014c3dffb3cc052bf29dbf8cbcb7ab",
+        "simulation": "Immutable-head git merge-tree confirmed one current textual conflict; no branch/worktree mutation",
+        "path": "web/src/components/SkillsSubagentsPanel.tsx",
+        "conflict": "AL-61 historical date/time formatter, tooltip and datetime-validation imports versus AL-62 old local millisecond/tooltip imports",
+        "guarantees": "Preserve AL-61 full local historical seconds, invalid-date/raw evidence and timezone/machine-readable handling plus AL-62 canonical source ownership, outcomes and offline evidence; verify both features together",
+        "next_action": "Recompute against real post-AL-76 main at release; resolve once as part of AL-62 integration, never choose a side blindly"
+      }
     },
     {
       "ticket": "AL-76",

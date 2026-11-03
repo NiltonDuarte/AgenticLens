@@ -1,5 +1,7 @@
 # MGT-2 supervision log
 
+#103 1247b7e now has all four hosted checks successful and remains draft. Immutable-head merge-tree against main 8b1de5f confirms one textual conflict in web/src/components/SkillsSubagentsPanel.tsx, around historical timestamp/tooltip/datetime formatter imports versus AL-62's prior local-millisecond imports. No product branch or checkout was changed. AL-62 is the later resolution owner after actual #102 merge; preserve full local historical seconds/invalid-input evidence/tooltips/datetime behavior and canonical source ownership/outcomes/offline evidence together. Recompute on the actual post-AL-76 base before resolving. Current green CI does not validate that future integration. Existing owner/full-gate hold remains; no premature restart or independent FIX ticket for ordinary integration work.
+
 AL-61 delivered: https://github.com/NiltonDuarte/AgenticLens/pull/104 merged at 8b1de5f761ebb92f78b2b462c1ff583724ecbdb5, 2026-11-03T21:02:02Z. Fresh gate verified approved c6fc4c3, all four CI jobs successful, base 3fbecd2 included, correct non-release/non-draft state and no review blockers. Expected-head squash succeeded; GitHub MERGED/mergeCommit and fetched main corroborate delivery. Removed obsolete #104 watch. Only afterward resumed existing AL-76 owner run 3 to integrate current main and finish #102's gates, preserving capture repairs, timestamps, assets, ticket-index completion and lossless writer ownership. #103 remains held for actual #102 delivery. Remaining order: #102 then #103; create queued REV test-performance ticket after both merge. Release #55 remains human_only; #100 remains external-review work.
 
 Later-integration check retained for AL-62: an unconfirmed compatibility risk connects its new artifact-digest-bound receipts to AL-76's source-independent whitespace formatter. After actual #102 merge, exercise trusted L0/R0 with sources unavailable, format whitespace, then regenerate without sources; preserve accepted facts and strict tamper/multiplicity/bound-mismatch guards. Do not assume the digest mismatch is safe or a proven defect, relax receipt authorization, or start integration early. This is the later integrator's cross-feature preservation assessment, not a new unrelated bug assignment.
@@ -99,15 +101,15 @@ GitHub reports main has no branch protection (protection endpoint HTTP 404). Thi
 Telemetry: PATH has no installed wrapper and the shared installation directory is empty. Use the existing local source-built native binary with supported native options, explicit Codex source, ticket and root session. Native generate has no --al-offline/--al-project options; invoke from this checkout. Root source rollout found at ~/.codex/sessions/2026/11/03/rollout-2026-11-03T18-47-43-01a1a286-27c9-7c50-9f2e-70f0a332c763.jsonl. This manager has no native children; the five independently created T3 roots are not children. T3 MCP tool counts are a known decoder completeness limit. This is an active-session checkpoint, not complete end-of-supervision telemetry; regenerate at later delivery. Independent ticket telemetry is not part of the manager's ledger.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 47
-- **Active Agent Duration:** 1h 0m (excludes user wait time)
-- **Context Window Health:** CRITICAL — Root agent peak 408.8k tokens (204% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Software Development Life Cycle Iterations:** 48
+- **Active Agent Duration:** 1h 3m (excludes user wait time)
+- **Context Window Health:** CRITICAL — Root agent peak 417.5k tokens (209% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 43,735 reasoning tokens (27.1% of generated output)
-- **Tool Health & Self-Correction:** 149 tool calls (12 self-corrections, 91.9% success rate)
+- **Reasoning Effort:** 45,315 reasoning tokens (27.3% of generated output)
+- **Tool Health & Self-Correction:** 154 tool calls (12 self-corrections, 92.2% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
@@ -121,11 +123,11 @@ Telemetry: PATH has no installed wrapper and the shared installation directory i
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 725,541 | 117,463 | 50,761,856 | 98.6% | 408.8k | CRITICAL (204%) | $0.00 |
-| **Total** | **1** | **725,541** | **117,463** | **50,761,856** | **98.6%** | **408.8k** | **CRITICAL** | **$0.00** |
+| **rootagent** | 1 | 728,649 | 120,885 | 53,657,856 | 98.7% | 417.5k | CRITICAL (209%) | $0.00 |
+| **Total** | **1** | **728,649** | **120,885** | **53,657,856** | **98.7%** | **417.5k** | **CRITICAL** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 1 | 725,541 | 117,463 | 50,761,856 | 98.6% | $0.00 |
-| **Total** | **1** | **725,541** | **117,463** | **50,761,856** | **98.6%** | **$0.00** |
+| **gpt-6.1-sol** | 1 | 728,649 | 120,885 | 53,657,856 | 98.7% | $0.00 |
+| **Total** | **1** | **728,649** | **120,885** | **53,657,856** | **98.7%** | **$0.00** |
