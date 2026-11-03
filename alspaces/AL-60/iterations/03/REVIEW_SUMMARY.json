@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "DATA-03",
+      "severity": 5,
+      "issue": "Completion timeout allowed fixture removal while a native writer remained live.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: retain diagnostic failure and drain actual completion; observer failure retains fixtures until suite timeout."
+    },
+    {
+      "finding_id": "TEST-03",
+      "severity": 0,
+      "issue": "Claim: canceled initial context makes the fallback signal unreachable.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Refuted: the same wrapper runs again with Background and signals fallback; focused race execution passed. No code change."
+    }
+  ]
+}

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -14,6 +15,7 @@ import (
 
 	"agenticlens/internal/adapters"
 	"agenticlens/internal/adapters/capture"
+	adaptersconfig "agenticlens/internal/adapters/config"
 	"agenticlens/internal/domain"
 )
 
@@ -185,6 +187,18 @@ func TestCaptureAutomaticSharedStoreAndTicketStayInExactProjects(t *testing.T) {
 	fixtures := []captureGenerationFixture{first, second}
 	for index, f := range fixtures {
 		writeCaptureSuccessfulPublicationPolicy(t, f.project, base, false)
+		scoped, err := capture.ProjectState(base, f.project)
+		if err != nil {
+			t.Fatal(err)
+		}
+		store, err := capture.OpenProject(scoped, f.project)
+		if err != nil {
+			t.Fatal(err)
+		}
+		completion := captureWorkerCompletion(t, store.CoordinationDirectory())
+		if err := store.Close(); err != nil {
+			t.Fatal(err)
+		}
 		id := fmt.Sprintf("project-%d", index)
 		path := filepath.Join(f.store, "sessions", id+".jsonl")
 		body := fmt.Sprintf(`{"type":"session_meta","payload":{"id":%q,"cwd":%q}}
@@ -203,6 +217,13 @@ func TestCaptureAutomaticSharedStoreAndTicketStayInExactProjects(t *testing.T) {
 		}
 		// Register teardown before the first callback can launch a worker.
 		t.Cleanup(func() {
+			defer func() {
+				// Stop future passes/handoffs even if a callback or assertion failed.
+				if err := os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte("telemetry:\n  capture:\n    enabled: false\n"), 0600); err != nil {
+					t.Error(err)
+				}
+				captureCleanupWorkers(t, completion)
+			}()
 			callback("SessionEnd")
 			scoped, err := capture.ProjectState(base, f.project)
 			if err != nil {
@@ -229,7 +250,9 @@ func TestCaptureAutomaticSharedStoreAndTicketStayInExactProjects(t *testing.T) {
 						return
 					}
 					if lock != nil {
-						lock.Close()
+						if err := lock.Close(); err != nil {
+							t.Error(err)
+						}
 						return
 					}
 				}
@@ -268,6 +291,104 @@ func TestCaptureAutomaticSharedStoreAndTicketStayInExactProjects(t *testing.T) {
 		}
 		if !ready {
 			t.Fatalf("automatic publication missing for project %d", index)
+		}
+	}
+}
+
+func TestCaptureWorkerCompletionIncludesDelayedNativeStartup(t *testing.T) {
+	f := newCaptureGenerationFixture(t)
+	if err := os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte("telemetry:\n  capture:\n    enabled: false\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	store, err := capture.OpenProject(f.state, f.project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scoped := store.CoordinationDirectory()
+	completion := captureWorkerCompletion(t, scoped)
+	defer func() {
+		if err := store.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
+	// Existing production admission holds the native before registry/lease
+	// acquisition, without altering its executable or adding runtime test hooks.
+	admission, err := adaptersconfig.AcquireCaptureAdmission(context.Background(), f.project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := admission.Close(); err != nil {
+			t.Error(err)
+		}
+		captureCleanupWorkers(t, completion)
+	})
+	if err := capture.LaunchWorker(cliBinaryPath, f.project, scoped); err != nil {
+		t.Fatal(err)
+	}
+	request, err := store.PublicationRequest(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	owner, err := capture.AcquireWorker(scoped)
+	if err != nil || owner == nil {
+		t.Fatalf("delayed native should not yet own worker lease: %v", err)
+	}
+	if err := owner.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if request.Generation != request.Acknowledged {
+		t.Fatalf("unexpected pending publication: %+v", request)
+	}
+	// The former ACK/lease oracle passes here, but a known native still holds
+	// the log and will create worker.lock after admission is released.
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := completion(ctx); !errors.Is(err, context.Canceled) {
+		t.Fatalf("completion accepted a native blocked before startup: %v", err)
+	}
+	if err := os.Remove(filepath.Join(scoped, "worker.lock")); err != nil {
+		t.Fatal(err)
+	}
+	if err := admission.Close(); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := completion(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(scoped, "worker.lock")); err != nil {
+		t.Fatalf("native did not reach lease allocation after delayed startup: %v", err)
+	}
+}
+
+// A failed diagnostic deadline must not allow TempDir cleanup to overtake a
+// native writer. The suite timeout remains the final stuck-process diagnosis.
+func captureDrainWorkerCompletion(ctx context.Context, completion func(context.Context) error) error {
+	err := completion(ctx)
+	if err == nil {
+		return nil
+	}
+	return errors.Join(err, completion(context.Background()))
+}
+
+func captureCleanupWorkers(t *testing.T, completion func(context.Context) error) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := captureDrainWorkerCompletion(ctx, func(waitCtx context.Context) error {
+		err := completion(waitCtx)
+		if err != nil {
+			t.Logf("native writer completion failed: %v; waiting before fixture removal", err)
+		}
+		return err
+	}); err != nil {
+		t.Errorf("native writer cleanup exceeded its diagnostic deadline: %v", err)
+		if finalErr := completion(context.Background()); finalErr != nil {
+			t.Errorf("native completion observer failed: %v; retaining fixtures until suite timeout", finalErr)
+			// An unavailable observer cannot authorize removal beneath a writer.
+			select {}
 		}
 	}
 }
