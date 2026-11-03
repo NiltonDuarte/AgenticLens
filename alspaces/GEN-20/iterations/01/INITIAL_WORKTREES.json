@@ -1,0 +1,200 @@
+[
+  {
+    "path": "/home/niltonduarte/workspace/projects/agenticlens/AgenticLens",
+    "branch": "refs/heads/main",
+    "status": "",
+    "error": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/GEN-11-worktree",
+    "branch": "refs/heads/GEN-11/ignore-web-dist",
+    "status": "",
+    "error": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-07615527",
+    "branch": "refs/heads/GEN-1/guide-post-v2-release-changes",
+    "status": " M alspaces/AL-55/agentic_metrics.json\n",
+    "error": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-0b7eca79",
+    "branch": "refs/heads/MGT-2/watch-agenticlens-threads-until-merged",
+    "status": "",
+    "error": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-0d966f6b",
+    "branch": "refs/heads/chore/GEN-18-stable-installation",
+    "status": "",
+    "error": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-0e962721",
+    "branch": "refs/heads/docs/GEN-10-documentation-review-fixes",
+    "status": "",
+    "error": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-16a70bd4",
+    "branch": "refs/heads/feat/AL-68-automatic-session-capture-hooks",
+    "status": "",
+    "error": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-19f29886",
+    "branch": "refs/heads/chore/MGT-1-ticket-management",
+    "status": "",
+    "error": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-1a8b1784",
+    "branch": "refs/heads/fix/FIX-8-codex-session-tree-refresh",
+    "status": "",
+    "error": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-3f89bda8",
+    "branch": "refs/heads/chore/AL-43-revert-content-classification",
+    "status": "",
+    "error": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-4c0ab916",
+    "branch": "refs/heads/feat/AL-76-compact-ledger-format",
+    "status": "",
+    "error": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-60bfc94f",
+    "branch": "refs/heads/AL-62/fix-codex-skill-delegation-facts-granular-ownership",
+    "status": " M .agents/skills/agentic-lens-operator/SKILL.md\n M .agents/skills/agentic-lens-operator/references/cli.md\n M .agents/skills/agentic-lens-operator/references/configuration.md\n M alspaces/AL-62/CONTRACT.md\n M alspaces/AL-62/SUMMARY.md\n M alspaces/AL-62/iterations/01/PLAN.md\n M alspaces/AL-62/iterations/01/REVIEW.md\n M backend/cmd/agentic-lens/capture.go\n M backend/cmd/agentic-lens/capture_history.go\n D backend/cmd/agentic-lens/capture_receipt_recovery_test.go\n M backend/cmd/agentic-lens/main.go\n M backend/internal/adapters/backfill/engine.go\n M backend/internal/adapters/backfill/migration_runner.go\n M backend/internal/adapters/backfill/recovery.go\n M backend/internal/adapters/capture/history.go\n M backend/internal/adapters/capture/receipt_generation.go\n M backend/internal/adapters/capture/reconcile.go\n M backend/internal/adapters/codex/rollout.go\n M backend/internal/adapters/ledger_format_test.go\n M backend/internal/adapters/opencode/schema_v1_session_extraction.go\n M backend/internal/adapters/opencode/schema_v2_session_extraction.go\n M backend/internal/adapters/repository.go\n M backend/internal/domain/migration/engine.go\n M backend/internal/domain/migration/types.go\n M docs/SETUP_MANUAL.md\n?? alspaces/AL-62/iterations/01/INTEGRATION_IMPLEMENTATION.md\n?? alspaces/AL-62/iterations/01/INTEGRATION_VERIFICATION.md\n?? alspaces/AL-62/iterations/01/PORTABILITY_PLAN.md\n?? alspaces/AL-62/iterations/01/PORTABILITY_VERIFICATION.md\n?? backend/cmd/agentic-lens/portable_history_test.go\n?? backend/cmd/agentic-lens/portable_source_fixture_test.go\n?? backend/internal/adapters/backfill/migration_pending_test.go\n?? backend/internal/adapters/backfill/pending_legacy.go\n",
+    "error": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-6773030a",
+    "branch": "refs/heads/docs/PO-15-ledger-signing-spike",
+    "status": "",
+    "error": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-7aa56ddb",
+    "branch": "refs/heads/AL-57/cost-semantics",
+    "status": "",
+    "error": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-919693ec",
+    "branch": "refs/heads/fix/FIX-10-backfill-root-sessions-and-explicit-fallbacks",
+    "status": "",
+    "error": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-93abd6d8",
+    "branch": "refs/heads/chore/GEN-17-preserve-root-session-role",
+    "status": "",
+    "error": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-93cf91e3",
+    "branch": "refs/heads/fix/FIX-15-go-vet-embed-assets",
+    "status": "",
+    "error": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-9d8912a5",
+    "branch": "refs/heads/fix/AL-57-cost-semantics",
+    "status": "",
+    "error": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-a28be3d1",
+    "branch": "refs/heads/feat/AL-61-full-local-timestamps",
+    "status": "",
+    "error": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-abd10bd3",
+    "branch": "refs/heads/fix/AL-60-capture-fixture-teardown",
+    "status": "",
+    "error": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-adb209ca",
+    "branch": "refs/heads/fix/FIX-12-waterfall-without-hydration",
+    "status": "",
+    "error": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-b382f710",
+    "branch": "refs/heads/GEN-1/cleanup-worktrees-thread-deletion",
+    "status": "",
+    "error": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-b8308118",
+    "branch": "refs/heads/fix/FIX-11-configurable-ceilings-and-metrics-cleanup",
+    "status": "",
+    "error": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-b90172a5",
+    "branch": "refs/heads/chore/GEN-12-session-instructions",
+    "status": "",
+    "error": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-ba9f42de",
+    "branch": "refs/heads/fix/FIX-13-go-vet-embed-dist",
+    "status": "",
+    "error": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-c2c30b95",
+    "branch": "refs/heads/chore/GEN-19-rc-target-version",
+    "status": "",
+    "error": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-c91385eb",
+    "branch": "refs/heads/fix/AL-47-sse-startup-subscription",
+    "status": "",
+    "error": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-cb5a14f4",
+    "branch": "refs/heads/chore/GEN-16-compact-review-findings",
+    "status": "",
+    "error": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-df109adc",
+    "branch": "refs/heads/t3/release-v2-0-0",
+    "status": " D backend/internal/adapters/web/dist/assets/index-D8Ui7q3I.js\n D backend/internal/adapters/web/dist/assets/index-Dao0IdTN.css\n M backend/internal/adapters/web/dist/index.html\n?? backend/internal/adapters/web/dist/assets/index-CsZzwnYh.js\n?? backend/internal/adapters/web/dist/assets/index-DKFe6BM8.css\n",
+    "error": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-e0c34009",
+    "branch": "refs/heads/chore/GEN-15-worktree-installation",
+    "status": "",
+    "error": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-e22934e5",
+    "branch": "refs/heads/fix/FIX-14-ci-single-binary-build",
+    "status": "",
+    "error": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-e9812ef7",
+    "branch": "refs/heads/fix/REV-5-code-smell-cleanup",
+    "status": "",
+    "error": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-f5afe0e5",
+    "branch": "refs/heads/feat/GEN-9-agentic-lens-operator",
+    "status": "",
+    "error": ""
+  }
+]

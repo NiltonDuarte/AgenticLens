@@ -1,0 +1,164 @@
+[
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/GEN-11-worktree",
+    "branch": "refs/heads/GEN-11/ignore-web-dist",
+    "removed": true,
+    "detail": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-0d966f6b",
+    "branch": "refs/heads/chore/GEN-18-stable-installation",
+    "removed": true,
+    "detail": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-0e962721",
+    "branch": "refs/heads/docs/GEN-10-documentation-review-fixes",
+    "removed": true,
+    "detail": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-16a70bd4",
+    "branch": "refs/heads/feat/AL-68-automatic-session-capture-hooks",
+    "removed": true,
+    "detail": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-19f29886",
+    "branch": "refs/heads/chore/MGT-1-ticket-management",
+    "removed": true,
+    "detail": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-1a8b1784",
+    "branch": "refs/heads/fix/FIX-8-codex-session-tree-refresh",
+    "removed": true,
+    "detail": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-3f89bda8",
+    "branch": "refs/heads/chore/AL-43-revert-content-classification",
+    "removed": true,
+    "detail": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-4c0ab916",
+    "branch": "refs/heads/feat/AL-76-compact-ledger-format",
+    "removed": true,
+    "detail": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-6773030a",
+    "branch": "refs/heads/docs/PO-15-ledger-signing-spike",
+    "removed": true,
+    "detail": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-7aa56ddb",
+    "branch": "refs/heads/AL-57/cost-semantics",
+    "removed": true,
+    "detail": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-919693ec",
+    "branch": "refs/heads/fix/FIX-10-backfill-root-sessions-and-explicit-fallbacks",
+    "removed": true,
+    "detail": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-93abd6d8",
+    "branch": "refs/heads/chore/GEN-17-preserve-root-session-role",
+    "removed": true,
+    "detail": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-93cf91e3",
+    "branch": "refs/heads/fix/FIX-15-go-vet-embed-assets",
+    "removed": true,
+    "detail": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-9d8912a5",
+    "branch": "refs/heads/fix/AL-57-cost-semantics",
+    "removed": true,
+    "detail": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-a28be3d1",
+    "branch": "refs/heads/feat/AL-61-full-local-timestamps",
+    "removed": true,
+    "detail": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-abd10bd3",
+    "branch": "refs/heads/fix/AL-60-capture-fixture-teardown",
+    "removed": true,
+    "detail": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-adb209ca",
+    "branch": "refs/heads/fix/FIX-12-waterfall-without-hydration",
+    "removed": true,
+    "detail": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-b8308118",
+    "branch": "refs/heads/fix/FIX-11-configurable-ceilings-and-metrics-cleanup",
+    "removed": true,
+    "detail": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-b90172a5",
+    "branch": "refs/heads/chore/GEN-12-session-instructions",
+    "removed": true,
+    "detail": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-ba9f42de",
+    "branch": "refs/heads/fix/FIX-13-go-vet-embed-dist",
+    "removed": true,
+    "detail": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-c2c30b95",
+    "branch": "refs/heads/chore/GEN-19-rc-target-version",
+    "removed": true,
+    "detail": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-c91385eb",
+    "branch": "refs/heads/fix/AL-47-sse-startup-subscription",
+    "removed": true,
+    "detail": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-cb5a14f4",
+    "branch": "refs/heads/chore/GEN-16-compact-review-findings",
+    "removed": true,
+    "detail": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-e0c34009",
+    "branch": "refs/heads/chore/GEN-15-worktree-installation",
+    "removed": true,
+    "detail": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-e22934e5",
+    "branch": "refs/heads/fix/FIX-14-ci-single-binary-build",
+    "removed": true,
+    "detail": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-e9812ef7",
+    "branch": "refs/heads/fix/REV-5-code-smell-cleanup",
+    "removed": true,
+    "detail": ""
+  },
+  {
+    "path": "/home/niltonduarte/.t3/worktrees/AgenticLens/t3-f5afe0e5",
+    "branch": "refs/heads/feat/GEN-9-agentic-lens-operator",
+    "removed": true,
+    "detail": ""
+  }
+]
