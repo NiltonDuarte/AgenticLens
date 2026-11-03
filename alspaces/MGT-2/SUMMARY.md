@@ -1,5 +1,11 @@
 # MGT-2 supervision log
 
+CI-PUB-01 triage confirmed severity 5 for canonical and compatible legacy facts: L0/R0 publication followed by changed exact-row L1/R1 leaves only R1; file journal recovery restores readable byte-identical L0 but no authorizing R0 remains, so unavailable-source generation fails closed. Old row must differ or be absent in R1; a superset alone is insufficient. Probes reconstruct a crash-equivalent state, not actual power loss. Receipt UPSERT and file rollback are separate durability boundaries; writer lock is not atomicity. No fact erasure was observed and strict canonical authorization remains correct.
+
+Management disposition: minimum proof preservation fits AL-62's existing approved unavailable-source/capture preservation guarantee. Existing owner resumed in run 5 to retain bounded trusted prior/pending or versioned receipts tied to worktree/ticket/destination/publication generation, coordinating both rollback and completed-file windows. Preserve provenance/multiplicity, legacy-readable scoped metadata migration and file recovery. No trusting ledger/journal bytes, row-union permission inflation, moved-UPSERT-only workaround, invented old proof, fact-ledger schema change or generic runtime/journal redesign. Previous triage-only hold is lifted only for this repair. Finding remains unresolved until relevant review and verification pass; predecessor integration/full-make holds remain. All four CI jobs passed at b4e3c6a before this new repair; new code needs fresh evidence.
+
+AL-60 follow-up progress observed: controlled delayed-start reproduction shows ACK/free-lock can pass before a late native worker reopens state. Test-only teardown now waits for worker log EOF on Unix/exclusive handles on Windows. Twenty race-enabled isolation repetitions and focused delay/early-return guards pass; Windows helper handle probes passed with full Windows capture/Fatal-Goexit limits explicit. Four focus/model reviews approved so far; remaining reviews and new follow-up PR delivery pending. No intervention or production-policy expansion needed; #104 remains held.
+
 AL-62 CI correction received and remote head verified at b4e3c6a6bd4738536514f4d1502b53644fb31847, still draft. Stale tests expected schema5/root auxiliary slices although approved schema6 owns facts per session; usage-only roots legitimately have empty auxiliary facts. Corrected assertions exposed a real canonical-fact authorization bypass when sources are unavailable. Candidate/committed evidence, receipt recording and snapshot evidence now project owner-derived facts while preserving strict row/provenance/multiplicity authorization. Owner reports four affected cases, broader capture/history cases, focused independent race and SQLite checks pass; all eight scope/profile correction reviews approved. Failing-before overlay proved the old product accepted an unproven canonical skill while the corrected oracle rejects it. CLI subprocess is plain-built, so test-process race instrumentation does not imply instrumented subprocess coverage. New hosted CI is running; no integration/full-make hold released.
 
 Separate unresolved durability finding (severity 5, discovering data reviewer gpt-6.1-sol/high, per owner): sole auxiliary receipt replacement before file commit can discard authorizing proof for an accepted ledger restored by journal recovery; unavailable-source regeneration then fails closed. No fact erasure observed; the old canonical bypass is not acceptable preservation. Manager inspected ownership: receipt storage/validation are AL-62 paths; AL-76 preserves the journal contract and excludes runtime capture changes. AL-62 resumed in run 4 for read-only reproduction/minimum repair/compatibility/scope triage before management disposition. No receipt/journal implementation change or debt acceptance authorized yet. This remains open for final AL-62 readiness, without blocking independent AL-60 teardown repair or AL-61/AL-76 progress. Refuted overlap/multiplicity hypothesis remains refuted; legacy aggregation unchanged.
@@ -77,15 +83,15 @@ GitHub reports main has no branch protection (protection endpoint HTTP 404). Thi
 Telemetry: PATH has no installed wrapper and the shared installation directory is empty. Use the existing local source-built native binary with supported native options, explicit Codex source, ticket and root session. Native generate has no --al-offline/--al-project options; invoke from this checkout. Root source rollout found at ~/.codex/sessions/2026/11/03/rollout-2026-11-03T18-47-43-01a1a286-27c9-7c50-9f2e-70f0a332c763.jsonl. This manager has no native children; the five independently created T3 roots are not children. T3 MCP tool counts are a known decoder completeness limit. This is an active-session checkpoint, not complete end-of-supervision telemetry; regenerate at later delivery. Independent ticket telemetry is not part of the manager's ledger.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 37
-- **Active Agent Duration:** 42m 35s (excludes user wait time)
-- **Context Window Health:** BLOATED — Root agent peak 319.9k tokens (160% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Software Development Life Cycle Iterations:** 39
+- **Active Agent Duration:** 46m 3s (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 335.2k tokens (168% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 24,914 reasoning tokens (23.5% of generated output)
-- **Tool Health & Self-Correction:** 117 tool calls (10 self-corrections, 91.5% success rate)
+- **Reasoning Effort:** 27,364 reasoning tokens (24.0% of generated output)
+- **Tool Health & Self-Correction:** 121 tool calls (10 self-corrections, 91.7% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
@@ -99,11 +105,11 @@ Telemetry: PATH has no installed wrapper and the shared installation directory i
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 275,092 | 81,054 | 33,631,616 | 99.2% | 319.9k | BLOATED (160%) | $0.00 |
-| **Total** | **1** | **275,092** | **81,054** | **33,631,616** | **99.2%** | **319.9k** | **BLOATED** | **$0.00** |
+| **rootagent** | 1 | 286,085 | 86,636 | 36,230,784 | 99.2% | 335.2k | BLOATED (168%) | $0.00 |
+| **Total** | **1** | **286,085** | **86,636** | **36,230,784** | **99.2%** | **335.2k** | **BLOATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 1 | 275,092 | 81,054 | 33,631,616 | 99.2% | $0.00 |
-| **Total** | **1** | **275,092** | **81,054** | **33,631,616** | **99.2%** | **$0.00** |
+| **gpt-6.1-sol** | 1 | 286,085 | 86,636 | 36,230,784 | 99.2% | $0.00 |
+| **Total** | **1** | **286,085** | **86,636** | **36,230,784** | **99.2%** | **$0.00** |

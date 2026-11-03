@@ -93,7 +93,8 @@
         "runId": "run:thread:5dbc6729-7bc5-4bc2-84c8-1433f289f5f6:ordinal:7",
         "scope": "Diagnose shared capture fixture teardown race and minimally correct deterministic cleanup without weakening isolation/pending/ACK ownership or inflating timeouts",
         "delivery": "New PR required; merged #101 cannot deliver later fixes",
-        "next_action": "Owner returns new PR/head and review/verification; merge before #104"
+        "next_action": "Owner returns new PR/head and review/verification; merge before #104",
+        "progress": "Owner controlled late-start reproduction identified lock/ACK insufficient before native config admission; test-only four-file descriptor/log-handle shutdown barrier passes 20 race repetitions and focused delayed-start/early-return guards. Windows helper/native-successor handle probes pass, not full Windows capture. Four focus/model approvals so far; remaining reviews pending. No follow-up PR published yet."
       }
     },
     {
@@ -107,12 +108,12 @@
       "status": "preparing",
       "order": 4,
       "last_instruction": {
-        "clientRequestId": "mgt2-al62-receipt-durability-triage",
-        "runId": "run:thread:24185901-0a4e-4d21-8c44-a64117fb80bc:ordinal:4",
-        "purpose": "Read-only minimal repair/compatibility/scope assessment; existing integration/full gate hold retained"
+        "clientRequestId": "mgt2-al62-release-minimal-receipt-repair",
+        "runId": "run:thread:24185901-0a4e-4d21-8c44-a64117fb80bc:ordinal:5",
+        "purpose": "Release minimal in-scope proof-preservation correction; no generic redesign or predecessor/full-gate release"
       },
-      "verified_checks": "Owner reproduced four hosted failures incl five v4 variants; corrected stale schema5/root-slice assertions for approved schema6/session ownership. Meaningful tamper oracle exposed canonical-fact authorization bypass; owner-derived candidate/committed/receipt/snapshot projections fix it. Four tests, broader CLI/adapters, independent focused race checks and all eight correction reviews pass. CLI subprocess plain-built: race scope explicitly limited to test process. New hosted CI running.",
-      "next_action": "Read-only receipt/recovery durability triage under existing AL-62 receipt ownership; no new implementation or integration/full-gate release before disposition",
+      "verified_checks": "All four hosted checks SUCCESS at b4e3c6a and previous focused correction reviews/tests pass. Receipt durability remains unresolved; newly released repair will require its own focused checks/review and new-head CI. Original CLI subprocess race instrumentation limit remains explicit.",
+      "next_action": "Owner run5 implements bounded receipt-proof repair; existing integration/full-make holds remain; manager assesses any requested expansion",
       "notification_request": "mgt2-handoff-notification-62",
       "reviewed_application_head": "29ee4a802000c1d3302c515e001f7692d3d7fe8f",
       "product_fingerprint": "f300879df36eee4cbdc69b6de66999dbf469ddcd3eb6f65f8a65b71279332c8a",
@@ -132,12 +133,14 @@
         "severity": 5,
         "issue": "Sole receipt replacement before ledger file commit can leave recovered accepted ledger bytes without old auxiliary authorizing proof; source-unavailable regeneration fails closed",
         "reporter": "Data reviewer gpt-6.1-sol/high, reported by AL-62 owner",
-        "status": "Unresolved, read-only triage; not accepted debt and no guard waiver",
+        "status": "Confirmed unresolved; minimum repair released within original preservation contract",
         "limits": "No fact erasure demonstrated; pre-existing root validator bypass is not valid preservation behavior",
         "owner": "AL-62 receipt/validation owner; shared journal boundary must be assessed",
         "scope_boundary": "AL-76 preserves journal semantics and excludes runtime capture changes",
-        "instruction": "mgt2-al62-receipt-durability-triage",
-        "runId": "run:thread:24185901-0a4e-4d21-8c44-a64117fb80bc:ordinal:4"
+        "instruction": "mgt2-al62-release-minimal-receipt-repair",
+        "runId": "run:thread:24185901-0a4e-4d21-8c44-a64117fb80bc:ordinal:5",
+        "reproduction": "Trusted L0/R0 then newer L1/R1 with changed exact old row; file-only rollback restores readable L0 but sole SQLite receipt remains R1, old source/snapshot/Git alternatives unavailable; strict retry rejects. Canonical and legacy probes confirmed; reconstructed crash state, not power-loss test.",
+        "scope": "Bounded prior/pending or versioned receipt proof tied to worktree/ticket/destination/generation; both rollback and commit windows; additive legacy-readable receipt metadata and explicit scoped migration; no fact-ledger schema change or broad journal/runtime redesign"
       }
     },
     {
