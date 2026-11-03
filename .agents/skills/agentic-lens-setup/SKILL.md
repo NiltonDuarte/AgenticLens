@@ -45,7 +45,9 @@ The installer also writes `agentic-lens-setup/RELEASE_VERSION`, containing the s
 
 #### 1.2 Bootstrap When Setup Scripts Are Missing
 
-Choose an official release tag from https://github.com/NiltonDuarte/AgenticLens/releases that contains this complete skill bundle. Replace `<RELEASE_TAG>` below with that tag. Read and review the selected release's manifest and installer before running it; download the installer into a temporary location, not into an existing installed skill. Do not pipe an unreviewed script into a shell.
+For a fresh installation, resolve the latest stable release at https://github.com/NiltonDuarte/AgenticLens/releases/latest (automation: read `tag_name` from `https://api.github.com/repos/NiltonDuarte/AgenticLens/releases/latest`). For repair, retain the installed release tag unless an upgrade is explicitly authorized. Retrieve this manifest and every installation file from the selected tag, never from `main`. If an older tagged manifest contains `main` or moving `latest` download references, substitute the selected tag. This bundle workflow requires a release containing every file in section 1.1; if the selected stable release lacks the bundle, report that limitation and follow its tagged manifest or the manual binary installation in the setup manual instead of downloading missing files from another revision.
+
+Replace `<RELEASE_TAG>` below with that tag. Read and review the selected release's manifest and installer before running it; download the installer into a temporary location, not into an existing installed skill. Do not pipe an unreviewed script into a shell.
 
 ```bash
 # Run from the adopting repository root, after reviewing/approving the files.

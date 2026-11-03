@@ -18,19 +18,18 @@ AgenticLens offers two primary setup pathways: an autonomous agentic setup via a
 ### 1.1 Pathway A: Agentic Distribution and Setup via SKILL.md
 
 #### Step 1: Share Skill Reference with Your Agent
-Provide your autonomous coding agent in OpenCode with the reference to the AgenticLens setup skill. You can either:
-- Point the agent directly to the canonical remote URL:
-  `https://raw.githubusercontent.com/NiltonDuarte/AgenticLens/main/.agents/skills/agentic-lens-setup/SKILL.md`
-- Or copy `.agents/skills/agentic-lens-setup/SKILL.md` into your repository.
+Resolve the [latest stable release](https://github.com/NiltonDuarte/AgenticLens/releases/latest) before downloading installation files. The `main` branch contains development for future releases. For automation, read `tag_name` from `https://api.github.com/repos/NiltonDuarte/AgenticLens/releases/latest`; this endpoint excludes drafts and prereleases. Keep the selected tag for the entire installation.
 
 Prompt your agent:
+```text
+Resolve the latest stable AgenticLens release at https://api.github.com/repos/NiltonDuarte/AgenticLens/releases/latest and use its tag_name as <RELEASE_TAG>. Read https://raw.githubusercontent.com/NiltonDuarte/AgenticLens/<RELEASE_TAG>/.agents/skills/agentic-lens-setup/SKILL.md and follow it to install and configure AgenticLens in this repository. Keep all skill files, scripts, and binaries pinned to that same tag, replacing any main or latest download references in older manifests. If a required file is absent, report it instead of falling back to main. Explain the proposed changes and ask before modifying agent policy files.
 ```
-Read the instructions at https://raw.githubusercontent.com/NiltonDuarte/AgenticLens/main/.agents/skills/agentic-lens-setup/SKILL.md and set up AgenticLens in this repository.
-```
+
+For a local copy, retrieve the manifest from that same tag rather than copying it from a development checkout.
 
 #### Step 2: Install Both Skills and the Native Binary
 
-Follow the [complete setup manifest](../.agents/skills/agentic-lens-setup/SKILL.md), section 1, to install setup/repair scripts alongside the operator skill from one selected official release tag. The bundle includes a launcher at `.agents/skills/agentic-lens-operator/scripts/agentic-lens.sh`, outside binary storage. Choose a release containing the installer and all manifest files; older releases may not include them. The installer refuses differing existing files, so review local edits before upgrading a skill bundle.
+Follow the selected release's setup manifest. The following bundle workflow applies only to releases containing the installer and all manifest files; see the [complete setup manifest](../.agents/skills/agentic-lens-setup/SKILL.md), section 1. It installs setup/repair scripts alongside the operator skill from the selected release tag. The bundle includes a launcher at `.agents/skills/agentic-lens-operator/scripts/agentic-lens.sh`, outside binary storage. If the latest stable release lacks the bundle, follow its tagged manifest or the manual binary installation below; do not fetch missing bundle files from `main`. For example, v2.0.0 has a setup manifest but no bundle installer. The installer refuses differing existing files, so review local edits before upgrading a skill bundle.
 
 After approving the binary download, run:
 
@@ -83,35 +82,37 @@ Developers who prefer direct manual installation without an agent setup skill ca
 
 #### Step 1: Install Wrapper and Platform Binary
 Navigate to official GitHub Releases:
-`https://github.com/NiltonDuarte/AgenticLens/releases`
+[latest stable release](https://github.com/NiltonDuarte/AgenticLens/releases/latest). Copy its exact tag and replace `<RELEASE_TAG>` below. Resolve it once so the wrapper and every platform binary come from the same release.
 
 Standalone precompiled binaries are distributed directly with embedded frontend assets and runtime dependencies. No archive extraction tools (`tar`, `unzip`) or compilation toolchains are required.
 
 Download via `curl`:
 ```bash
+AGENTIC_LENS_RELEASE="<RELEASE_TAG>"
 mkdir -p ./bin
 
 # Decide whether to track or ignore installed files under your repository policy.
 
 # Install multi-platform wrapper script
-curl -fsSL -o ./bin/agentic-lens "https://raw.githubusercontent.com/NiltonDuarte/AgenticLens/main/scripts/agentic-lens-wrapper.sh"
+curl -fsSL -o ./bin/agentic-lens "https://raw.githubusercontent.com/NiltonDuarte/AgenticLens/$AGENTIC_LENS_RELEASE/scripts/agentic-lens-wrapper.sh"
 chmod +x ./bin/agentic-lens
 
 # Example for Linux amd64
-curl -fsSL -o ./bin/agentic-lens-linux-amd64 "https://github.com/NiltonDuarte/AgenticLens/releases/latest/download/agentic-lens-linux-amd64"
+curl -fsSL -o ./bin/agentic-lens-linux-amd64 "https://github.com/NiltonDuarte/AgenticLens/releases/download/$AGENTIC_LENS_RELEASE/agentic-lens-linux-amd64"
 chmod +x ./bin/agentic-lens-linux-amd64
 
 # Example for macOS Apple Silicon
-curl -fsSL -o ./bin/agentic-lens-darwin-arm64 "https://github.com/NiltonDuarte/AgenticLens/releases/latest/download/agentic-lens-darwin-arm64"
+curl -fsSL -o ./bin/agentic-lens-darwin-arm64 "https://github.com/NiltonDuarte/AgenticLens/releases/download/$AGENTIC_LENS_RELEASE/agentic-lens-darwin-arm64"
 chmod +x ./bin/agentic-lens-darwin-arm64
 ```
 
-For automated installation, use the complete setup bootstrap in section 1.1, then run its installed downloader with `--dest ./bin` if desired. The contributor entrypoint `scripts/download-agentic-lens.sh` delegates to that bundled downloader and requires its checkout dependencies; it is not a standalone script to pipe from the web.
+For releases containing the complete setup bundle, use the bootstrap in section 1.1, then run its installed downloader with `--dest ./bin` if desired. The contributor entrypoint `scripts/download-agentic-lens.sh` delegates to that bundled downloader and requires its checkout dependencies; it is not a standalone script to pipe from the web.
 
 On Windows (PowerShell):
 ```powershell
+$release = "<RELEASE_TAG>" # Same selected stable release tag.
 New-Item -ItemType Directory -Force -Path .\bin
-Invoke-WebRequest -Uri "https://github.com/NiltonDuarte/AgenticLens/releases/latest/download/agentic-lens-windows-amd64.exe" -OutFile ".\bin\agentic-lens-windows-amd64.exe"
+Invoke-WebRequest -Uri "https://github.com/NiltonDuarte/AgenticLens/releases/download/$release/agentic-lens-windows-amd64.exe" -OutFile ".\bin\agentic-lens-windows-amd64.exe"
 Copy-Item ".\bin\agentic-lens-windows-amd64.exe" ".\bin\agentic-lens.exe"
 ```
 
