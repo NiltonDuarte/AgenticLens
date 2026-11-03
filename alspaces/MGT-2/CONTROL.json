@@ -101,18 +101,18 @@
       "thread_link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/24185901-0a4e-4d21-8c44-a64117fb80bc>",
       "thread_id": "24185901-0a4e-4d21-8c44-a64117fb80bc",
       "branch": "AL-62/fix-codex-skill-delegation-facts-granular-ownership",
-      "head": "22f571ae649d5dc53071fc6410f187816905aa9e",
+      "head": "b4e3c6a6bd4738536514f4d1502b53644fb31847",
       "base": "main",
       "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/103",
       "status": "preparing",
       "order": 4,
       "last_instruction": {
-        "clientRequestId": "mgt2-al62-ci-source-schema-failures",
-        "purpose": "Independent existing-scope defect/fixture correction; preserve integration hold",
-        "runId": "run:thread:24185901-0a4e-4d21-8c44-a64117fb80bc:ordinal:3"
+        "clientRequestId": "mgt2-al62-receipt-durability-triage",
+        "runId": "run:thread:24185901-0a4e-4d21-8c44-a64117fb80bc:ordinal:4",
+        "purpose": "Read-only minimal repair/compatibility/scope assessment; existing integration/full gate hold retained"
       },
-      "verified_checks": "Owner: all eight behavior/data/architecture/test reviews under gpt-6.1-sol/high and gpt-6-luna/medium approved candidate03; focused backend, actual CLI save/reload/preservation and upgrade controls, frontend typecheck/lint/focused tests/build pass; embed trees match. Full make/integrated race/standalone final checks deferred.",
-      "next_action": "Owner investigates CI source-fact/schema failures with focused tests; no premature predecessor integration or full gate; retain draft",
+      "verified_checks": "Owner reproduced four hosted failures incl five v4 variants; corrected stale schema5/root-slice assertions for approved schema6/session ownership. Meaningful tamper oracle exposed canonical-fact authorization bypass; owner-derived candidate/committed/receipt/snapshot projections fix it. Four tests, broader CLI/adapters, independent focused race checks and all eight correction reviews pass. CLI subprocess plain-built: race scope explicitly limited to test process. New hosted CI running.",
+      "next_action": "Read-only receipt/recovery durability triage under existing AL-62 receipt ownership; no new implementation or integration/full-gate release before disposition",
       "notification_request": "mgt2-handoff-notification-62",
       "reviewed_application_head": "29ee4a802000c1d3302c515e001f7692d3d7fe8f",
       "product_fingerprint": "f300879df36eee4cbdc69b6de66999dbf469ddcd3eb6f65f8a65b71279332c8a",
@@ -125,7 +125,19 @@
         "head": "22f571ae649d5dc53071fc6410f187816905aa9e",
         "job": "https://github.com/NiltonDuarte/AgenticLens/actions/runs/41705995778/job/126161340901",
         "result": "Backend failed auxiliary fact and canonical schema/history/generate assertions; other Go packages passed, Windows/Frontend passed, binary skipped",
-        "classification": "Needs owner diagnosis; not established as old capture deadline/worker baseline"
+        "classification": "Needs owner diagnosis; not established as old capture deadline/worker baseline",
+        "status": "Original four failures corrected locally; fresh hosted run 41710181608 pending at b4e3c6a"
+      },
+      "durability_finding": {
+        "severity": 5,
+        "issue": "Sole receipt replacement before ledger file commit can leave recovered accepted ledger bytes without old auxiliary authorizing proof; source-unavailable regeneration fails closed",
+        "reporter": "Data reviewer gpt-6.1-sol/high, reported by AL-62 owner",
+        "status": "Unresolved, read-only triage; not accepted debt and no guard waiver",
+        "limits": "No fact erasure demonstrated; pre-existing root validator bypass is not valid preservation behavior",
+        "owner": "AL-62 receipt/validation owner; shared journal boundary must be assessed",
+        "scope_boundary": "AL-76 preserves journal semantics and excludes runtime capture changes",
+        "instruction": "mgt2-al62-receipt-durability-triage",
+        "runId": "run:thread:24185901-0a4e-4d21-8c44-a64117fb80bc:ordinal:4"
       }
     },
     {

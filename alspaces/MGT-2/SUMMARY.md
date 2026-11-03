@@ -1,5 +1,9 @@
 # MGT-2 supervision log
 
+AL-62 CI correction received and remote head verified at b4e3c6a6bd4738536514f4d1502b53644fb31847, still draft. Stale tests expected schema5/root auxiliary slices although approved schema6 owns facts per session; usage-only roots legitimately have empty auxiliary facts. Corrected assertions exposed a real canonical-fact authorization bypass when sources are unavailable. Candidate/committed evidence, receipt recording and snapshot evidence now project owner-derived facts while preserving strict row/provenance/multiplicity authorization. Owner reports four affected cases, broader capture/history cases, focused independent race and SQLite checks pass; all eight scope/profile correction reviews approved. Failing-before overlay proved the old product accepted an unproven canonical skill while the corrected oracle rejects it. CLI subprocess is plain-built, so test-process race instrumentation does not imply instrumented subprocess coverage. New hosted CI is running; no integration/full-make hold released.
+
+Separate unresolved durability finding (severity 5, discovering data reviewer gpt-6.1-sol/high, per owner): sole auxiliary receipt replacement before file commit can discard authorizing proof for an accepted ledger restored by journal recovery; unavailable-source regeneration then fails closed. No fact erasure observed; the old canonical bypass is not acceptable preservation. Manager inspected ownership: receipt storage/validation are AL-62 paths; AL-76 preserves the journal contract and excludes runtime capture changes. AL-62 resumed in run 4 for read-only reproduction/minimum repair/compatibility/scope triage before management disposition. No receipt/journal implementation change or debt acceptance authorized yet. This remains open for final AL-62 readiness, without blocking independent AL-60 teardown repair or AL-61/AL-76 progress. Refuted overlap/multiplicity hypothesis remains refuted; legacy aggregation unchanged.
+
 AL-61 hosted gate failed at 64d1e3d. Job-specific logs identify one failure: TestCaptureAutomaticSharedStoreAndTicketStayInExactProjects, TempDir RemoveAll cleanup reports directory not empty. Other Go packages passed; Frontend passed and binary/version skipped after Backend failure. Manager verified backend/CI bytes equal delivered current main, so the capture owner retains repair responsibility; actual surviving process/writer remains to be diagnosed. [Failed job](https://github.com/NiltonDuarte/AgenticLens/actions/runs/41708008246/job/126168359349). CLI log retrieval initially refused while the overall workflow ran; completed-job logs API supplied the actual failure. Raw logs stayed outside Git.
 
 AL-60 existing owner resumed in run 7 for minimal shared capture teardown correction under the approved repair scope. It must preserve meaningful isolation/pending/ACK/ownership guarantees and avoid timeout inflation. Since #101 is merged, a new follow-up PR is required; #101's delivered merge is not reclassified or treated as delivering later fixes. Order now: AL-60 follow-up, AL-61 #104, AL-76 #102, AL-62 #103. #104 remains blocked until the follow-up is delivered and integrated exact-head checks pass. No duplicate capture repair assigned to AL-61 and no automatic rerun or gate waiver requested.
@@ -73,15 +77,15 @@ GitHub reports main has no branch protection (protection endpoint HTTP 404). Thi
 Telemetry: PATH has no installed wrapper and the shared installation directory is empty. Use the existing local source-built native binary with supported native options, explicit Codex source, ticket and root session. Native generate has no --al-offline/--al-project options; invoke from this checkout. Root source rollout found at ~/.codex/sessions/2026/11/03/rollout-2026-11-03T18-47-43-01a1a286-27c9-7c50-9f2e-70f0a332c763.jsonl. This manager has no native children; the five independently created T3 roots are not children. T3 MCP tool counts are a known decoder completeness limit. This is an active-session checkpoint, not complete end-of-supervision telemetry; regenerate at later delivery. Independent ticket telemetry is not part of the manager's ledger.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 36
-- **Active Agent Duration:** 40m 27s (excludes user wait time)
-- **Context Window Health:** BLOATED — Root agent peak 300.4k tokens (150% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Software Development Life Cycle Iterations:** 37
+- **Active Agent Duration:** 42m 35s (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 319.9k tokens (160% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 22,393 reasoning tokens (22.9% of generated output)
-- **Tool Health & Self-Correction:** 110 tool calls (9 self-corrections, 91.8% success rate)
+- **Reasoning Effort:** 24,914 reasoning tokens (23.5% of generated output)
+- **Tool Health & Self-Correction:** 117 tool calls (10 self-corrections, 91.5% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
@@ -95,11 +99,11 @@ Telemetry: PATH has no installed wrapper and the shared installation directory i
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 259,854 | 75,605 | 31,172,736 | 99.2% | 300.4k | BLOATED (150%) | $0.00 |
-| **Total** | **1** | **259,854** | **75,605** | **31,172,736** | **99.2%** | **300.4k** | **BLOATED** | **$0.00** |
+| **rootagent** | 1 | 275,092 | 81,054 | 33,631,616 | 99.2% | 319.9k | BLOATED (160%) | $0.00 |
+| **Total** | **1** | **275,092** | **81,054** | **33,631,616** | **99.2%** | **319.9k** | **BLOATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 1 | 259,854 | 75,605 | 31,172,736 | 99.2% | $0.00 |
-| **Total** | **1** | **259,854** | **75,605** | **31,172,736** | **99.2%** | **$0.00** |
+| **gpt-6.1-sol** | 1 | 275,092 | 81,054 | 33,631,616 | 99.2% | $0.00 |
+| **Total** | **1** | **275,092** | **81,054** | **33,631,616** | **99.2%** | **$0.00** |
