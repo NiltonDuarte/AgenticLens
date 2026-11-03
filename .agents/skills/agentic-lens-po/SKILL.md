@@ -7,6 +7,8 @@ description: Use when acting as the Product / Project Owner for AgenticLens to e
 
 Acts as the Project Owner and Product Manager for the **AgenticLens** telemetry and visualization platform. Elicits requirements, scopes initiatives, creates structured product specifications, and decomposes work into tracer-bullet vertical slices ready for implementation in Go (backend/CLI) and TypeScript (frontend) via `agentic-lens-dev`.
 
+Preserve the existing [portable ledger contract](../../../TECHNICAL_GUIDELINES.md#portable-ledger-contract) in specifications and acceptance criteria. Multi-developer/machine/harness history shared through Git is a baseline capability, not an optional feature requiring renewed approval. Changes to that boundary need an explicit product decision.
+
 ---
 
 ## Configuration & Parametrization (`.agenticlens-config.yaml`)

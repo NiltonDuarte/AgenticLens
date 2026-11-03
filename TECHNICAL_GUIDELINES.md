@@ -39,6 +39,18 @@ Dependencies flow strictly inward across layers:
 - The shell handles filesystem traversal, directory scanning, JSON deserialization, HTTP routing, and UI rendering.
 - Errors from the shell must be caught, wrapped with descriptive context (`fmt.Errorf("...: %w", err)`), and handled gracefully.
 
+### Portable Ledger Contract
+
+AgenticLens is multi-developer, multi-machine and multi-harness by design. Versioned ledgers in the configured workspace are durable project records intended to be committed, shared and reviewed through Git. A supported, valid ledger remains usable when the developer, machine, harness, checkout path or availability of its original sources changes.
+
+- **Persisted records and extraction have different responsibilities.** Original session logs are needed to extract new facts or recover missing details. Preserving, aggregating and presenting already recorded facts does not require re-extracting or independently re-verifying their original sources. Keep recorded source/owner identity and uncertainty; do not claim a fresh verification occurred merely because a ledger was loaded.
+- **Local state is operational state.** Capture databases, caches, receipts, installation identities and absolute source paths must not become prerequisites for accepting otherwise valid historical ledger facts. A receiving developer does not need to copy the producing machine's private database. Git transports the recorded facts; it does not recreate missing traces or prove a new source observation.
+- **Refresh has an owner boundary.** Replace only the owners successfully refreshed from their selected sources. Preserve unavailable owners, other developers' sessions, other harnesses, unresolved legacy history and legitimate multiplicity, including when a local extraction succeeds only partially. Missing sources are not measured zero or permission to delete history.
+- **Representation is not authority.** Whitespace formatting, supported schema migration and moving a supported ledger between checkouts must not invalidate recorded facts merely by changing file bytes or paths. Checksums may protect downloads, detect corruption, coordinate writes or select recovery artifacts; an exact file fingerprint must not become a machine-local provenance gate for portable persisted facts.
+- **Validation still applies.** Validate supported schema, required fields, identities, ownership consistency and safe file access. Report malformed/unsupported data and unavailable enrichment explicitly. Preserve supported recorded fields when an enrichment step is pending; do not invent missing values, attribute ambiguous history to an owner, bypass required schema transitions or advertise unsupported runtime ingestion.
+
+Apply the [portable-ledger acceptance scenarios](docs/REGRESSION_PREVENTION.md#portable-ledgers-across-developers-and-machines) to changes affecting persistence or refresh. Before introducing an additional rejection or authenticity rule, identify its approved product requirement and assess those scenarios. An existing implementation or test assertion alone does not establish such a requirement. A proposed change to this contract requires an explicit product decision; routine hardening or a review finding cannot silently supersede it.
+
 ### Fact Fidelity and Refresh Boundaries
 
 - Required identity and metadata are validated before persistence. Optional or unknown values remain explicit; do not invent completion dates from started/updated dates, assign feature types to unclassified tickets, or represent unavailable measurements as measured zero.

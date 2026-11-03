@@ -9,6 +9,8 @@ Guides autonomous bootstrapping and adoption of AgenticLens in Codex and OpenCod
 
 AgenticLens is an observability and developer telemetry platform for OpenCode and Codex workflows. OpenCode traces come from its local SQLite database; Codex traces come from rollout files under the Codex home directory.
 
+Ledgers are portable project records shared through Git across developers, machines and harnesses. Setup configures local collection; it must not require copying another developer's private capture/source database to preserve valid historical metrics. The repository's [portable ledger contract](../../../TECHNICAL_GUIDELINES.md#portable-ledger-contract) owns this compatibility rule.
+
 This skill follows the autonomous agentic distribution model: it is completely self-contained and executable by any autonomous coding agent reading this manifest directly via shared repository URL or local path.
 
 ## Operational Mandates

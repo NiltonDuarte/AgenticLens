@@ -35,6 +35,17 @@ Use the actual harness and a literal nonce in the final telemetry invocation. Su
 
 Exercise supported ledger facts with enrichment unavailable, pending, failed, empty, partial, and successful. Available baseline facts must remain visible. Read projections must not reuse compact write transforms that remove accepted facts. GET requests must not rewrite ledgers. Ignore responses for obsolete ticket selections; reconcile by established ownership/identity and preserve ambiguous repeated occurrences. Empty events do not establish a legacy schema.
 
+### Portable ledgers across developers and machines
+
+Apply the [canonical portable ledger contract](../TECHNICAL_GUIDELINES.md#portable-ledger-contract). Use isolated fixtures for two developers/machines with separate local state; never require real historical ticket files or another developer's private data. Select the cases relevant to the changed boundary:
+
+- Developer A generates and commits a ledger. Developer B clones it into a different path with no A session logs, capture database, cache or receipts. Supported historical facts remain readable and available to CLI/API/dashboard projections without claiming new source verification.
+- B generates with only B's source sessions available. A's recorded owners/facts and unrelated harness history survive save/reload; only successfully refreshed owners change. Also exercise unavailable owners from the same harness, not just a different harness.
+- Perform actual byte-changing formatting and a supported legacy migration, then refresh with the original sources unavailable. Preserve recorded facts, explicit unresolved ownership and legitimate multiplicity. Keep required pending enrichment/schema state honest; do not require a local fingerprint to authorize preserved history. Exercise an explicitly copied valid workspace where the affected operation supports it, rather than assuming a pinned Git copy is its only persisted input.
+- Keep negative coverage for malformed/unsupported schema, conflicting identities, unsafe paths and invented extraction outcomes. Distinguish those failures from a valid record merely lacking local source corroboration. Hashes used for transport integrity or concurrent-write/recovery checks must be tested for that stated purpose, not used to impose an unapproved ledger authenticity policy.
+
+These are acceptance scenarios for affected application work, not a claim that documentation alone implements or verifies them. If existing tests encode a conflicting requirement, trace its product authority before preserving the assertion; report the conflict instead of adding machinery to satisfy an unsupported rule.
+
 ### Configuration and project portability
 
 Exercise a custom workspace directory, custom ticket prefixes, source roots, thresholds, and explicit overrides. Missing required configuration must fail clearly; pre-existing container/parent directories must not silently select a project. Verify the effective value through the API and UI as well as the loader. Renaming ticket artifacts must not affect tests: use self-contained fixtures. Production clients must surface request failures; synthetic fixtures belong to tests.

@@ -21,7 +21,9 @@ Help users operate an installed AgenticLens release from the repository where th
 
 ## Migration and Backfill Coordination
 
-- `agentic-lens migrate` changes schema shape in workspace ledgers. A shape-only migration may leave `migration.status: partial` with `source_backfill` in `migration.steps_pending`; it is not complete for runtime ingestion.
+Ledgers are shared project records across developers, machines and harnesses. Preserving supported recorded facts does not require the producing machine's private database or logs; local sources are needed for new extraction or missing enrichment. Follow the [portable ledger contract](../../../TECHNICAL_GUIDELINES.md#portable-ledger-contract); report an installed release's conflicting behavior as a compatibility gap rather than inventing receipts or declaring existing history untrusted.
+
+- `agentic-lens migrate` changes schema shape in workspace ledgers. A shape-only migration may leave `migration.status: partial` with `source_backfill` in `migration.steps_pending`. Report pending source enrichment and the installed release's actual runtime-ingestion limits; preserve supported recorded fields without treating missing enrichment as evidence that history is untrusted.
 - Source-backed completion uses `agentic-lens backfill` on a machine that has the original agent sessions. Select the correct harness and source path. For OpenCode, `--recompute-db` reads that machine's local SQLite database. For Codex, choose Codex as the source and point `--codex-home` to the session files.
 - Use recorded session user names to identify developers whose source sessions may be needed. Ask the team directly to coordinate who has run their part. The skill cannot distinguish remotely between another developer's work being pending, blocked, or failed.
 - If the source session cannot be found or its original data is unavailable, preserve the metrics JSON in partial migration state. Explain the pending step; do not mark it complete or remove migration metadata manually.

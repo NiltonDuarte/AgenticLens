@@ -6,6 +6,8 @@ Read the Independent correctness review and Evidence and outcomes sections of th
 
 ## Assigned focus
 
+For persisted telemetry, the [portable ledger contract](../../../TECHNICAL_GUIDELINES.md#portable-ledger-contract) remains an acceptance boundary across every focus. A private capture database or exact-byte receipt must not be required to preserve valid Git-shared history; assess the approved requirement before calling its absence an authorization defect.
+
 When a focus persona is assigned, load that persona, this shared context and its linked common procedure; do not load the coordinator's role matrix or sibling personas/reports during the first pass. The parent selects roles and supplies the revision, requirements and unique output path. The generic reviewer remains available for narrow reviews or an explicitly assigned specialist focus. Investigate independently and report concrete serious cross-focus defects rather than omit them. Your outcome covers your assignment only; the parent owns consolidation and delivery.
 
 ## Role and tools

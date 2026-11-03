@@ -18,6 +18,7 @@
 - **Visual Presentation**: <TypeScript dashboard layout, charts, KPI cards, table formatting, or Go CLI commands>
 
 ## Non-Functional & Architectural Invariants
+- **Portable Ledgers**: Preserve the [portable ledger contract](../../../../TECHNICAL_GUIDELINES.md#portable-ledger-contract); include relevant [cross-machine acceptance scenarios](../../../../docs/REGRESSION_PREVENTION.md#portable-ledgers-across-developers-and-machines) when persistence/refresh is affected.
 - **Layer Flow**: Go domain remains pure; Go adapters isolate filesystem/schemas; TypeScript/CLI handles presentation.
 - **Language Standards**: Go 1.23+ value semantics, TypeScript 5.x+ strict mode, zero any across both.
 - **Performance**: Zero redundant recomputation, memory-efficient data structures.

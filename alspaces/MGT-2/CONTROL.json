@@ -281,7 +281,7 @@
   ],
   "own_pr_url": "https://github.com/NiltonDuarte/AgenticLens/pull/100",
   "manager_verification": "make failed on unchanged capture CLI native version/capability and worker timeout tests; other Go packages passed; frontend suite and final build not reached",
-  "active_iteration": "04",
+  "active_iteration": "05",
   "capture_repair_approval": {
     "source": "Explicit user answer: Authorize AL-60 shared capture repair (Recommended)",
     "owner": "AL-60",
@@ -320,5 +320,14 @@
     "status": "Earlier config choice superseded by original portability requirement clarified by user",
     "question": null,
     "scope": "No portability decision required. Concrete simplification/correction proposal pending owner read-only assessment; no broad guard removal authorized yet."
+  },
+  "portable_ledger_guidance": {
+    "status": "Validated documentation/skill update prepared for PR100 publication",
+    "source": "User asks to clarify recurring portable-ledger principle across platform/repository",
+    "canonical": "TECHNICAL_GUIDELINES.md#portable-ledger-contract",
+    "acceptance": "docs/REGRESSION_PREVENTION.md#portable-ledgers-across-developers-and-machines",
+    "scope": "Documentation/skills only; no application changes or completed-runtime claims",
+    "verification": "All six modified skills validate; 21 added relative links/anchors resolve; diff whitespace check passes. Documentation only; no runtime compatibility claim.",
+    "owner_notification": "Forward canonical rule and acceptance scenarios to active AL-62 after publication without starting a new workflow."
   }
 }

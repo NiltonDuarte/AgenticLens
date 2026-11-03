@@ -84,6 +84,8 @@ Ask the user through the question tool when priorities, overlapping acceptance c
 
 ## Integration and merge gate
 
+Preserve the [portable ledger contract](../../../TECHNICAL_GUIDELINES.md#portable-ledger-contract) when disposing findings and coordinating fixes. Establish a rejection rule's product authority before expanding a ticket to preserve it. Do not turn local capture evidence, fingerprints or existing test assertions into a new authenticity policy for Git-shared history. Select the [cross-machine scenarios](../../../docs/REGRESSION_PREVENTION.md#portable-ledgers-across-developers-and-machines) for affected integration; route a genuine contract change to an explicit product decision.
+
 Reconcile cross-PR behavior, not just textual conflicts. Use fetched immutable heads for merge-tree simulations; keep speculative conflict trees outside product branches. Assign each shared production-file resolution to the later owner, with adjacent guarantees and tests from both features. Do not resolve by discarding one side. Reconcile planning dependencies against what is actually on main.
 
 Before each non-release merge, freshly verify:
