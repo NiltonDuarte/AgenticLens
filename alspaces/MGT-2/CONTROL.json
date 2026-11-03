@@ -10,9 +10,9 @@
       "thread_link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/641425d3-403a-4a11-8d21-2c8bae2ca609>",
       "thread_id": "641425d3-403a-4a11-8d21-2c8bae2ca609",
       "branch": "feat/AL-61-full-local-timestamps",
-      "head": "434f03b9606b973ec9510766cb79616c15acf75e",
+      "head": "c40e0022aca6c5ae40633b260ce93c379e2ee1c7",
       "base": "main",
-      "pr": null,
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/104",
       "status": "blocked",
       "order": 2,
       "last_instruction": {
@@ -25,14 +25,14 @@
         "delivery": "started"
       },
       "verified_checks": "Owner: 244 focused tests, typecheck/lint, five-platform build, byte-identical standalone HTTP JS/CSS and embedded assets pass. Sol/high and Luna/medium approve correction. make fails unchanged capture CLI tests; artifact-only checkpoint pushed.",
-      "next_action": "Publish draft checkpoint PR now and hand back exact URL/head; predecessor integration and full gate remain pending",
+      "next_action": "Remain draft until actual predecessor merges; notify existing owner only when next integration is released; full integration/verification/finalization gates remain pending",
       "notification_request": "mgt2-handoff-notification-61",
       "reviewed_application_head": "2e4762d0e94109f9b91c2dc5edae2a939ab94008",
       "blockers": [
         "Required make failed capture worker lifetime, native-version and idle shutdown tests",
         "AL-60 predecessor not merged"
       ],
-      "publication_status": "preparing draft PR; user superseded publication hold"
+      "publication_status": "open draft; exact head verified"
     },
     {
       "ticket": "AL-60",
@@ -88,9 +88,9 @@
       "thread_link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/24185901-0a4e-4d21-8c44-a64117fb80bc>",
       "thread_id": "24185901-0a4e-4d21-8c44-a64117fb80bc",
       "branch": "AL-62/fix-codex-skill-delegation-facts-granular-ownership",
-      "head": "29ee4a802000c1d3302c515e001f7692d3d7fe8f",
+      "head": "22f571ae649d5dc53071fc6410f187816905aa9e",
       "base": "main",
-      "pr": null,
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/103",
       "status": "blocked",
       "order": 4,
       "last_instruction": {
@@ -103,7 +103,7 @@
         "delivery": "started"
       },
       "verified_checks": "Owner: all eight behavior/data/architecture/test reviews under gpt-6.1-sol/high and gpt-6-luna/medium approved candidate03; focused backend, actual CLI save/reload/preservation and upgrade controls, frontend typecheck/lint/focused tests/build pass; embed trees match. Full make/integrated race/standalone final checks deferred.",
-      "next_action": "Publish draft checkpoint PR now and hand back exact URL/head; predecessor integration and full gate remain pending",
+      "next_action": "Remain draft until actual predecessor merges; notify existing owner only when next integration is released; full integration/verification/finalization gates remain pending",
       "notification_request": "mgt2-handoff-notification-62",
       "reviewed_application_head": "29ee4a802000c1d3302c515e001f7692d3d7fe8f",
       "product_fingerprint": "f300879df36eee4cbdc69b6de66999dbf469ddcd3eb6f65f8a65b71279332c8a",
@@ -111,16 +111,16 @@
         "Actual AL-60/AL-61/AL-76 merges pending",
         "Integrated full gate deliberately not run"
       ],
-      "publication_status": "preparing draft PR; user superseded publication hold"
+      "publication_status": "open draft; exact head verified"
     },
     {
       "ticket": "AL-76",
       "thread_link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/3513d383-221d-427c-91b4-7c9ed8fd9af8>",
       "thread_id": "3513d383-221d-427c-91b4-7c9ed8fd9af8",
       "branch": "feat/AL-76-compact-ledger-format",
-      "head": "02dcb11c2a757074a9cd0826692b11ecc3fa4817",
+      "head": "746c965cf72ede8636c952ad56f5d661d5be3219",
       "base": "main",
-      "pr": null,
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/102",
       "status": "blocked",
       "order": 3,
       "last_instruction": {
@@ -133,7 +133,7 @@
         "delivery": "started"
       },
       "verified_checks": "Owner reports all four focuses x Sol/high and Luna/medium complete/approved, affected Sol re-reviews approved; focused race suites, source binary and disposable CLI dry/check/write/idempotence/lexeme probes pass. Full integrated make not started by coordination deferral.",
-      "next_action": "Publish draft checkpoint PR now and hand back exact URL/head; predecessor integration and full gate remain pending",
+      "next_action": "Remain draft until actual predecessor merges; notify existing owner only when next integration is released; full integration/verification/finalization gates remain pending",
       "notification_request": "mgt2-handoff-notification-76",
       "blockers": [
         "Actual AL-60 repair merge and AL-61 merge pending",
@@ -157,7 +157,7 @@
           "disposition": "Owner reports corrected and test-effectiveness reviews approve"
         }
       ],
-      "publication_status": "preparing draft PR; user superseded publication hold"
+      "publication_status": "open draft; exact head verified"
     },
     {
       "ticket": "AL-68",
@@ -204,5 +204,6 @@
     "preserved": "No waived gates, weakened tests, global timeout inflation, or duplicate capture ownership"
   },
   "observed_main": "733e367ee12b9828cd340759eab855f4d809279c",
-  "publication_steering": "User requested all open owners create PRs now; remaining AL-61/AL-76/AL-62 instructed to publish draft checkpoints without waiving integration or merge gates"
+  "publication_steering": "User requested all open owners create PRs now; remaining AL-61/AL-76/AL-62 instructed to publish draft checkpoints without waiving integration or merge gates",
+  "al60_latest_hosted_checks": "At f153df2: Backend and Frontend SUCCESS; Windows and binary/version in progress. No merge yet."
 }
