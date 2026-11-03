@@ -1,10 +1,14 @@
 name: Release Candidate
 
 on:
-  push:
-    branches:
-      - main
+  workflow_run:
+    workflows: [Release Please]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
+
+env:
+  EXPECTED_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
 
 concurrency:
   group: release-candidate
@@ -12,6 +16,7 @@ concurrency:
 
 jobs:
   detect-changes:
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_repository.full_name == github.repository)
     name: Detect Source Changes
     runs-on: ubuntu-latest
     outputs:
@@ -21,13 +26,16 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ env.EXPECTED_SHA }}
 
       - name: Check for Source Changes
         id: check
         env:
-          COMMIT_MSG: ${{ github.event.head_commit.message }}
           EVENT_NAME: ${{ github.event_name }}
         run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          COMMIT_MSG=$(git log -1 --format=%B)
           if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
             echo "Workflow triggered manually via workflow_dispatch. Forcing build."
             echo "should_build=true" >> "$GITHUB_OUTPUT"
@@ -73,6 +81,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ env.EXPECTED_SHA }}
 
       - name: Fetch all git tags
         run: git fetch --tags --force
@@ -91,15 +100,60 @@ jobs:
           cache: 'npm'
           cache-dependency-path: web/package-lock.json
 
-      - name: Install release version tooling
-        run: npm ci --prefix scripts/release --ignore-scripts
-
       - name: Compute Release Candidate Metadata
         id: candidate
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          EXPECTED_SHA: ${{ github.sha }}
-        run: node scripts/release/rc-version.cjs resolve
+        run: |
+          set -euo pipefail
+          skip_candidate() {
+            echo "Skipping release candidate: $1"
+            echo "should_publish=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          }
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          MAIN_SHA=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')
+          [[ "$MAIN_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "Invalid main SHA" >&2; exit 1; }
+          [ "$MAIN_SHA" = "$EXPECTED_SHA" ] || skip_candidate "main has superseded this commit"
+
+          RELEASE_BRANCH=release-please--branches--main--components--agentic-lens
+          PR_DATA=$(gh api --method GET --paginate "repos/$GITHUB_REPOSITORY/pulls" \
+            -f state=open -f base=main -f "head=${GITHUB_REPOSITORY%/*}:$RELEASE_BRANCH" \
+            --jq '.[] | select(.head.repo.full_name == env.GITHUB_REPOSITORY and .head.ref == "release-please--branches--main--components--agentic-lens" and .base.ref == "main" and any(.labels[]; .name == "autorelease: pending")) | [.number, .head.sha] | @tsv')
+          [ -n "$PR_DATA" ] || skip_candidate "no pending Release Please PR"
+          [[ "$PR_DATA" != *$'\n'* ]] || { echo "Ambiguous Release Please PRs" >&2; exit 1; }
+          IFS=$'\t' read -r PR_NUMBER PR_HEAD <<< "$PR_DATA"
+          [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ && "$PR_HEAD" =~ ^[0-9a-f]{40}$ ]] || { echo "Invalid release PR identity" >&2; exit 1; }
+          SOURCE_SHA=$(gh api "repos/$GITHUB_REPOSITORY/commits/$PR_HEAD" --jq '.parents | map(.sha) | join(" ")')
+          [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "Unsupported release PR commit provenance" >&2; exit 1; }
+          [ "$SOURCE_SHA" = "$EXPECTED_SHA" ] || skip_candidate "release PR has not been updated for this commit"
+
+          TARGET=$(gh api --method GET "repos/$GITHUB_REPOSITORY/contents/.release-please-manifest.json" \
+            -f "ref=$PR_HEAD" --jq '.content | @base64d | fromjson | .["."] | select(type == "string" and test("^(0|[1-9][0-9]*)[.](0|[1-9][0-9]*)[.](0|[1-9][0-9]*)\\z"))')
+          [[ "$TARGET" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || { echo "Invalid root release version" >&2; exit 1; }
+          STABLE_TAGS=$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases" --jq '.[] | select(.draft == false and .prerelease == false) | .tag_name')
+          while IFS= read -r tag; do
+            [[ "$tag" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || continue
+            stable=${tag#v}
+            newest=$(printf '%s\n' "$TARGET" "$stable" | sort -V | tail -n 1)
+            [ "$TARGET" != "$stable" ] && [ "$newest" = "$TARGET" ] || { echo "Target must exceed published stable $tag" >&2; exit 1; }
+          done <<< "$STABLE_TAGS"
+          MAIN_SHA=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')
+          [[ "$MAIN_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "Invalid main SHA" >&2; exit 1; }
+          [ "$MAIN_SHA" = "$EXPECTED_SHA" ] || skip_candidate "main advanced during version selection"
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          [[ "$GITHUB_RUN_NUMBER" =~ ^[1-9][0-9]*$ ]] || { echo "Invalid run number" >&2; exit 1; }
+          RC_VERSION="v${TARGET}-rc.${GITHUB_RUN_NUMBER}+${SHORT_SHA}"
+          {
+            echo "RC_PR_NUMBER=$PR_NUMBER"
+            echo "RC_PR_HEAD=$PR_HEAD"
+            echo "RC_TARGET=$TARGET"
+            echo "VERSION=$RC_VERSION"
+            echo "GIT_COMMIT=$SHORT_SHA"
+            echo "BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          } >> "$GITHUB_ENV"
+          echo "should_publish=true" >> "$GITHUB_OUTPUT"
+          echo "Release candidate version: $RC_VERSION"
 
       - name: Install web dependencies
         if: steps.candidate.outputs.should_publish == 'true'
@@ -131,8 +185,29 @@ jobs:
         if: steps.candidate.outputs.should_publish == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          EXPECTED_SHA: ${{ github.sha }}
-        run: node scripts/release/rc-version.cjs verify
+        run: |
+          set -euo pipefail
+          skip_candidate() {
+            echo "Skipping release candidate: $1"
+            echo "should_publish=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          }
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          MAIN_SHA=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')
+          [[ "$MAIN_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "Invalid main SHA" >&2; exit 1; }
+          [ "$MAIN_SHA" = "$EXPECTED_SHA" ] || skip_candidate "main advanced before publication"
+          PR_STATE=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$RC_PR_NUMBER" \
+            --jq '[.state, .head.sha, .head.repo.full_name, .base.ref, .head.ref, any(.labels[]; .name == "autorelease: pending")] | @tsv')
+          EXPECTED_STATE=$(printf 'open\t%s\t%s\tmain\trelease-please--branches--main--components--agentic-lens\ttrue' "$RC_PR_HEAD" "$GITHUB_REPOSITORY")
+          [ "$PR_STATE" = "$EXPECTED_STATE" ] || skip_candidate "release PR changed before publication"
+          STABLE_TAGS=$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases" --jq '.[] | select(.draft == false and .prerelease == false) | .tag_name')
+          while IFS= read -r tag; do
+            [[ "$tag" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || continue
+            stable=${tag#v}
+            newest=$(printf '%s\n' "$RC_TARGET" "$stable" | sort -V | tail -n 1)
+            [ "$RC_TARGET" != "$stable" ] && [ "$newest" = "$RC_TARGET" ] || { echo "Target must exceed published stable $tag" >&2; exit 1; }
+          done <<< "$STABLE_TAGS"
+          echo "should_publish=true" >> "$GITHUB_OUTPUT"
 
       - name: Publish GitHub Pre-release
         if: steps.eligibility.outputs.should_publish == 'true'

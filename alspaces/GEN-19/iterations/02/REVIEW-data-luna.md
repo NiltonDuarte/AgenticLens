@@ -1,0 +1,15 @@
+# Data and failure-handling review — GEN-19 iteration 02
+
+**Run:** reviewer-data, requested profile `gpt-6-luna` / medium (runtime identity and run ID not independently available). **Revision:** frozen candidate fingerprint `903c512467c9100cbb6b80756e501280efb9a3ab08f3466c0f4890cae92ece1e`, base `e639f3303c9d92236edce85befccda66617d7cb8`. **Scope:** candidate Release Candidate workflow, release workflow/configuration and their source/manifest/publication guards; data integrity and failure behavior only.
+
+## Findings
+
+No blocking data-integrity or failure-handling finding in the scoped change. **Scoped outcome: APPROVED.** This is not a whole-change or hosted-release approval.
+
+## Hypotheses and evidence
+
+- **Stale or ambiguous PR selection could publish the wrong target.** The workflow first requires the event SHA to equal current `main`, queries only open same-repository Release Please PRs based on `main` with the expected head branch and pending label, and rejects multiple results. It validates the selected head SHA and requires its sole parent to equal the event SHA. The root manifest is read at that captured immutable PR head. The final guard repeats current-main identity, PR state/head/repository/base/branch/label, and stable-target eligibility. Thus changes to PR identity or current `main` block publication; an unchanged PR head preserves the already-validated manifest bytes. Located in `.github/workflows/release-candidate.yml`, metadata selection and final eligibility steps.
+- **Missing inputs might be mistaken for an empty result, or API errors silently skipped.** A genuinely absent pending PR and superseded source are explicit skips. Failed `gh api` calls propagate under `set -e`; malformed SHAs, unsupported parent count, malformed/missing manifest version, and already-stable/equal-or-newer stable targets fail closed. Final recheck applies the same distinction: changed eligibility skips, lookup failures fail. No empty or guessed version is emitted before those checks complete.
+- **Existing stable version or final race could pass a guard.** The selection and final checks enumerate published non-draft, non-prerelease releases and reject any stable version equal to or newer than the target. GitHub reads and publication are not atomic, as the brief explicitly allows; no finding is based on eliminating that acknowledged race.
+
+The brief reports `make test-release-workflow` passed 13 Python tests with zero skips, including shell execution against disposable fixtures, skip/error distinctions, immutable-ref query arguments, and a wrong-version mutation caught by the oracle. I reused that result; I did not run additional tests. The fixture does not execute real jq filters or hosted scheduling/upload. The brief's read-only API evidence reports a successful Release Please run on main `036d808`, PR 55 with sole parent `036d808`, and immutable manifest target `2.1.0`; I did not independently query GitHub. Full integrated `make` remains pending, and hosted workflow/artifact behavior is unverified. These are explicit integration evidence limits, not a scoped data defect.

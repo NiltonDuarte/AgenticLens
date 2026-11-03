@@ -1,5 +1,9 @@
 # GEN-19: Align release candidate versions with the upcoming release
 
+## Current iteration 02 status
+
+The user explicitly approved the simpler approach. The replacement consumes the generated release PR's immutable manifest after successful Release Please completion; the standalone engine and dependency tree are removed. Four review responsibilities under both configured profiles completed discovery, followed by paired test correction rechecks. Three test-oracle findings were fixed; final focused tests pass 14/14 with no skips and both final rechecks approve. Full integrated make is the remaining delivery gate. Earlier implementation and telemetry details below are iteration 01 history and will be consolidated at final delivery.
+
 ## Request, approval and baseline
 
 The user reported v2.0.0-rc candidates after stable v2.0.0 and requested the next GEN ticket. GEN-19 was free in the workspace, index, remote workspace tree and branch search. Initial working tree was clean at 036d808; the generated original branch name was not used as ticket allocation evidence. Dedicated branch: chore/GEN-19-rc-target-version. Configured workspace root: alspaces; conventional type: chore.
@@ -38,6 +42,8 @@ Data/failure reviewers and the four gpt-6-luna/medium reviewers reported no addi
 Hosted Actions execution, release publication/upload/download and retention deletion were not exercised. The final GitHub read and publication are separate operations and cannot be made atomic by these guards. No releases were published, renamed, retagged or deleted. The open stable release PR was not merged. API or resolver errors stop publication; there is no guessed-version fallback.
 
 ## Delivery and telemetry
+
+Iteration 02 steering: the user questioned the duplicate calculation and requested reuse of the open Release Please PR's existing result. The [replacement plan](iterations/02/PLAN.md) proposes reading the immutable PR-head manifest after Release Please completes and removing the independent engine/dependency tree. Fresh GitHub evidence confirms PR #55's manifest is 2.1.0 and its generated head's parent is main/036d808. Revised authority and trigger await renewed scope approval; no replacement workflow/code changes have been made. Iteration 01 verification applies to the existing PR #98 implementation only.
 
 No GEN-19 planning specification or index entry exists, so no lifecycle move or downstream promotion is required. Parent owns commits, integration, push and PR delivery. Telemetry is generated from Codex only at the final iteration step; expected source tree is one root plus eleven children (planner, coder, tester and eight reviews). This is a new ledger with no prior other-harness sessions to preserve. Raw transcripts and probe/build logs remain outside Git.
 

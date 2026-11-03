@@ -1,0 +1,20 @@
+{
+  "base": "e639f3303c9d92236edce85befccda66617d7cb8",
+  "fingerprint": "2f9057a71a4cbbb703600b4268758894363152ead629189a08c54925d3da3ab0",
+  "files": {
+    ".github/workflows/release-candidate.yml": "969d38a4bb70302f407277d2308f4a5bae79c7e218d616b51b0dd515028f5658",
+    "CONTRIBUTING.md": "164a61f8977ba95595be0b41ccfd0b9d3b672a1e894e7936e447bdf0073fdc8d",
+    "Makefile": "2a7d227846dfb1d528ec89bba6231acca93dff64486c219cda8a0dea897d2030",
+    "scripts/release/.gitignore": null,
+    "scripts/release/README.md": null,
+    "scripts/release/package-lock.json": null,
+    "scripts/release/package.json": null,
+    "scripts/release/rc-version.cjs": null,
+    "scripts/release/rc-version.test.cjs": null,
+    "scripts/tests/test_release_revision.py": "36f6c6e1b2e3fe7d2ada181c46e1996e13894c67cfdacc15d022158a2041dc5b"
+  },
+  "previous_fingerprint": "5f3e75fa12623018b5ec253083e9c25ee44dd923cd79f7abd9ad8ea7498f8ee1",
+  "changed_since_previous": [
+    "scripts/tests/test_release_revision.py"
+  ]
+}

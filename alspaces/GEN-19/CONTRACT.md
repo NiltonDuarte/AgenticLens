@@ -1,5 +1,9 @@
 # GEN-19: Release candidates target the upcoming release
 
+## Accepted iteration 02 supersession
+
+On 2026-11-03 the user explicitly approved the simpler approach in iterations/02/PLAN.md: read the version already calculated in the open Release Please PR, sequence automatic RC execution after Release Please finishes, and remove the independent engine and its dependencies. This supersedes the iteration 01 requirements to calculate via a pinned library and never consult a PR. The version source is the root manifest at the immutable head of the same-repository generated release PR; freshness/provenance, stable-target rejection, metadata and publication guards remain required. Stable publishing workflows and historical releases remain outside scope. The original contract below records the approved baseline; the explicit accepted delta governs the replacement.
+
 Status: Approved by the user's explicit "Approve this scope" response on 2026-11-03. Implementation is authorized within these boundaries.
 
 ## Problem and evidence

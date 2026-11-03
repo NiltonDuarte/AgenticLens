@@ -1,0 +1,16 @@
+{
+  "base": "e639f3303c9d92236edce85befccda66617d7cb8",
+  "fingerprint": "903c512467c9100cbb6b80756e501280efb9a3ab08f3466c0f4890cae92ece1e",
+  "files": {
+    ".github/workflows/release-candidate.yml": "969d38a4bb70302f407277d2308f4a5bae79c7e218d616b51b0dd515028f5658",
+    "CONTRIBUTING.md": "8f1fe784fe17b7cc4feb1c2a82519945eff144bfaa105a7abd55d561eb2dc6b6",
+    "Makefile": "2a7d227846dfb1d528ec89bba6231acca93dff64486c219cda8a0dea897d2030",
+    "scripts/release/.gitignore": null,
+    "scripts/release/README.md": null,
+    "scripts/release/package-lock.json": null,
+    "scripts/release/package.json": null,
+    "scripts/release/rc-version.cjs": null,
+    "scripts/release/rc-version.test.cjs": null,
+    "scripts/tests/test_release_revision.py": "9cf21a55e52dba0dcf58ad9e3aee36243a400663332c2ec3b7cfddff2413286a"
+  }
+}

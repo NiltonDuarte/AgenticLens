@@ -1,0 +1,21 @@
+{
+  "base": "e639f3303c9d92236edce85befccda66617d7cb8",
+  "fingerprint": "5f3e75fa12623018b5ec253083e9c25ee44dd923cd79f7abd9ad8ea7498f8ee1",
+  "files": {
+    ".github/workflows/release-candidate.yml": "969d38a4bb70302f407277d2308f4a5bae79c7e218d616b51b0dd515028f5658",
+    "CONTRIBUTING.md": "164a61f8977ba95595be0b41ccfd0b9d3b672a1e894e7936e447bdf0073fdc8d",
+    "Makefile": "2a7d227846dfb1d528ec89bba6231acca93dff64486c219cda8a0dea897d2030",
+    "scripts/release/.gitignore": null,
+    "scripts/release/README.md": null,
+    "scripts/release/package-lock.json": null,
+    "scripts/release/package.json": null,
+    "scripts/release/rc-version.cjs": null,
+    "scripts/release/rc-version.test.cjs": null,
+    "scripts/tests/test_release_revision.py": "00e86585c5fc3570371871596450efd82efd247984be322b92a033d108754348"
+  },
+  "previous_fingerprint": "903c512467c9100cbb6b80756e501280efb9a3ab08f3466c0f4890cae92ece1e",
+  "changed_since_discovery": [
+    "CONTRIBUTING.md",
+    "scripts/tests/test_release_revision.py"
+  ]
+}

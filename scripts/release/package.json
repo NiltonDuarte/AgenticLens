@@ -1,9 +1,0 @@
-{
-  "name": "agenticlens-release-tooling",
-  "private": true,
-  "version": "1.0.0",
-  "description": "CI-only version resolution using the stable release engine",
-  "dependencies": {
-    "release-please": "17.3.0"
-  }
-}

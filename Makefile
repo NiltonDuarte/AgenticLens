@@ -64,9 +64,7 @@ test-installation:
 	python3 scripts/tests/test_installation.py
 
 test-release-workflow:
-	npm ci --prefix scripts/release --ignore-scripts --no-audit --no-fund
 	python3 scripts/tests/test_release_revision.py
-	node --test scripts/release/*.test.cjs
 
 backend-check: vet test-backend
 
