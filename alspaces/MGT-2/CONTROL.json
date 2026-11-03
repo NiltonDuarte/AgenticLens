@@ -13,7 +13,7 @@
       "head": "64d1e3d5ad36b1db1e764c48ddc57298f60a4d3f",
       "base": "main",
       "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/104",
-      "status": "waiting_checks",
+      "status": "blocked",
       "order": 2,
       "last_instruction": {
         "clientRequestId": "mgt2-al61-integrate-after-6244585",
@@ -21,14 +21,21 @@
         "delivery": "started"
       },
       "verified_checks": "Manager verified current main included, final delta only ticket artifacts, source/tests/scripts/CI equal tested 3c0e4cd; compact SOL-1 fixed disposition and both Sol/high/Luna/medium integrated approvals retained. Owner full make passes all Go race packages, 790 frontend tests, checks, five builds, standalone/embed equality. Fresh hosted checks running; no GitHub objections/unresolved threads.",
-      "next_action": "On CI wake verify current head/base/review/checks; expected-head squash merge then verify merge SHA and release AL-76 integration",
+      "next_action": "Await AL-60 capture cleanup follow-up merge; then notify AL-61 for affected integration/reverification; do not merge current red head",
       "notification_request": "mgt2-handoff-notification-61",
       "reviewed_application_head": "3c0e4cd59979309a14ad785882d609b62d40ad03",
       "blockers": [
-        "Fresh exact-head hosted checks pending at 64d1e3d"
+        "Hosted Backend failed shared capture TempDir teardown at 64d1e3d",
+        "AL-60 owner must deliver follow-up correction, then integrated exact-head verification must pass"
       ],
       "publication_status": "open non-draft; local final approval complete",
-      "corrected_timestamp_revision": "2e4762d0e94109f9b91c2dc5edae2a939ab94008"
+      "corrected_timestamp_revision": "2e4762d0e94109f9b91c2dc5edae2a939ab94008",
+      "ci_failure": {
+        "head": "64d1e3d5ad36b1db1e764c48ddc57298f60a4d3f",
+        "job": "https://github.com/NiltonDuarte/AgenticLens/actions/runs/41708008246/job/126168359349",
+        "failure": "TestCaptureAutomaticSharedStoreAndTicketStayInExactProjects TempDir RemoveAll cleanup: directory not empty",
+        "classification": "Shared backend/CI bytes equal delivered main; no AL-61 backend delta. Underlying surviving process/writer cause unconfirmed."
+      }
     },
     {
       "ticket": "AL-60",
@@ -77,7 +84,17 @@
       },
       "cleanup": "Complete: final owner run6 removed archive links and leaves brief explanations only; 10 ticket files. Manager verified source equal to tested 057d410, unchanged required contracts/PR/ledger/compact findings, current main included and no unresolved review threads.",
       "merge_commit": "6244585dc5cc41ef012cd3e1fb3b964ccd910a95",
-      "merged_at": "2026-11-03T19:49:15Z"
+      "merged_at": "2026-11-03T19:49:15Z",
+      "followup": {
+        "status": "preparing",
+        "pr": null,
+        "base": "6244585dc5cc41ef012cd3e1fb3b964ccd910a95",
+        "instruction": "mgt2-al60-followup-tempdir-cleanup",
+        "runId": "run:thread:5dbc6729-7bc5-4bc2-84c8-1433f289f5f6:ordinal:7",
+        "scope": "Diagnose shared capture fixture teardown race and minimally correct deterministic cleanup without weakening isolation/pending/ACK ownership or inflating timeouts",
+        "delivery": "New PR required; merged #101 cannot deliver later fixes",
+        "next_action": "Owner returns new PR/head and review/verification; merge before #104"
+      }
     },
     {
       "ticket": "AL-62",
@@ -204,5 +221,6 @@
   },
   "observed_main": "6244585dc5cc41ef012cd3e1fb3b964ccd910a95",
   "publication_steering": "User requested all open owners create PRs now; remaining AL-61/AL-76/AL-62 instructed to publish draft checkpoints without waiving integration or merge gates",
-  "al60_latest_hosted_checks": "At f153df2: Backend and Frontend SUCCESS; Windows and binary/version in progress. No merge yet."
+  "al60_latest_hosted_checks": "At f153df2: Backend and Frontend SUCCESS; Windows and binary/version in progress. No merge yet.",
+  "order": "Delivered #101; next AL-60 cleanup follow-up (PR pending), #104, #102, #103"
 }
