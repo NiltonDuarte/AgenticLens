@@ -1,5 +1,7 @@
 # MGT-2 supervision log
 
+Latest AL-60 head: f153df286f8e048d0da65780ff181e85c6ededc6. User directly requested removing archive links and keeping only a brief explanation; owner run 6 completed it. Final verification has four concise paragraphs; earlier archive-retention descriptions below are historical and superseded. Manager verified tested application/test/scripts/CI equality to 057d410, unchanged required contracts/PR/ledger/compact findings, current main included, open/non-draft/non-release status and no GitHub objections/unresolved threads. New Windows/Backend/Frontend checks are running; final binary/version gate follows dependencies. Only this exact head's completed checks can release merge. No merge or AL-61 integration notification yet; existing PR watch continues.
+
 Final AL-60 evidence cleanup completed at 65458ed7fb4cc0d45e883126fe1b0d9ae9e8656c. User directly resumed owner run 5 with summary-only cleanup and no development workflow, superseding the interrupted hold; manager only observed that existing run. Owner handoff is complete. Final tree has 10 ticket files and no raw evidence outputs/indexes; short VERIFICATION.md preserves meaningful commands, revision/outcomes, failure history and limits with immutable history links. Manager verified product/test/scripts/CI source equals tested 057d410; required contracts, PR draft, ledger and both compact findings equal pre-cleanup bytes. Discovery credit and accepted TEST-02 debt remain. User instructed manager to watch progress and take ownership after completion; MGT-2 now owns final readiness/merge coordination. New-head CI is running and older statuses are not reused. Next: exact-head/base/review/check refresh, guarded merge, actual merge-SHA verification, then AL-61 integration notification.
 
 Additional cleanup paused: AL-60 run 4 was interrupted before completion. Host activity positions 820-821 explicitly report “Stopped by user” at 2026-11-03T19:34:52Z. Manager left the owner stopped, did not bypass it by editing its checkout, and asked whether to resume cleanup or hold. PR #101 remains unmerged at eb3d515; evidence-file consolidation is not complete. Earlier cleanup/verification remains valid for that head, but the user's additional cleanup requirement remains open.
@@ -55,15 +57,15 @@ GitHub reports main has no branch protection (protection endpoint HTTP 404). Thi
 Telemetry: PATH has no installed wrapper and the shared installation directory is empty. Use the existing local source-built native binary with supported native options, explicit Codex source, ticket and root session. Native generate has no --al-offline/--al-project options; invoke from this checkout. Root source rollout found at ~/.codex/sessions/2026/11/03/rollout-2026-11-03T18-47-43-01a1a286-27c9-7c50-9f2e-70f0a332c763.jsonl. This manager has no native children; the five independently created T3 roots are not children. T3 MCP tool counts are a known decoder completeness limit. This is an active-session checkpoint, not complete end-of-supervision telemetry; regenerate at later delivery. Independent ticket telemetry is not part of the manager's ledger.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 24
-- **Active Agent Duration:** 28m 5s (excludes user wait time)
-- **Context Window Health:** BLOATED — Root agent peak 227.1k tokens (114% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Software Development Life Cycle Iterations:** 25
+- **Active Agent Duration:** 29m 46s (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 233.7k tokens (117% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 13,006 reasoning tokens (20.7% of generated output)
-- **Tool Health & Self-Correction:** 76 tool calls (8 self-corrections, 89.5% success rate)
+- **Reasoning Effort:** 13,501 reasoning tokens (20.6% of generated output)
+- **Tool Health & Self-Correction:** 80 tool calls (8 self-corrections, 90.0% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
@@ -77,11 +79,11 @@ Telemetry: PATH has no installed wrapper and the shared installation directory i
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 201,409 | 49,725 | 16,282,112 | 98.8% | 227.1k | BLOATED (114%) | $0.00 |
-| **Total** | **1** | **201,409** | **49,725** | **16,282,112** | **98.8%** | **227.1k** | **BLOATED** | **$0.00** |
+| **rootagent** | 1 | 207,511 | 52,041 | 17,651,072 | 98.8% | 233.7k | BLOATED (117%) | $0.00 |
+| **Total** | **1** | **207,511** | **52,041** | **17,651,072** | **98.8%** | **233.7k** | **BLOATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 1 | 201,409 | 49,725 | 16,282,112 | 98.8% | $0.00 |
-| **Total** | **1** | **201,409** | **49,725** | **16,282,112** | **98.8%** | **$0.00** |
+| **gpt-6.1-sol** | 1 | 207,511 | 52,041 | 17,651,072 | 98.8% | $0.00 |
+| **Total** | **1** | **207,511** | **52,041** | **17,651,072** | **98.8%** | **$0.00** |
