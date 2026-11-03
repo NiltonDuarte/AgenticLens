@@ -7,10 +7,12 @@ AgenticLens records multi-agent development telemetry, detects execution anomali
 Ask your coding agent to install and configure AgenticLens in the repository. For an OpenCode agent, use this prompt:
 
 ```text
-Read https://raw.githubusercontent.com/NiltonDuarte/AgenticLens/main/.agents/skills/agentic-lens-setup/SKILL.md and follow it to install and configure AgenticLens in this repository. Explain the proposed changes and ask before modifying agent policy files.
+Resolve the latest stable AgenticLens release at https://api.github.com/repos/NiltonDuarte/AgenticLens/releases/latest and use its tag_name as <RELEASE_TAG>. Read https://raw.githubusercontent.com/NiltonDuarte/AgenticLens/<RELEASE_TAG>/.agents/skills/agentic-lens-setup/SKILL.md and follow it to install and configure AgenticLens in this repository. Keep all skill files, scripts, and binaries pinned to that same tag, replacing any main or latest download references in older manifests. If a required file is absent, report it instead of falling back to main. Explain the proposed changes and ask before modifying agent policy files.
 ```
 
-The setup skill guides the agent through downloading the platform binaries, configuring the repository, and installing both setup/repair and operator skills. Each worktree can explicitly install missing platform binaries using the local setup scripts; if the scripts are also absent, follow the complete bootstrap in the setup manifest. Git tracking and ignore choices for all installed files belong to the repository owner. Review the [Platform Setup Manual](docs/SETUP_MANUAL.md) for the complete setup process and manual installation options.
+The `main` branch contains development for future releases. Always resolve the [latest stable release](https://github.com/NiltonDuarte/AgenticLens/releases/latest) before installation; do not use `main` or a prerelease.
+
+The setup skill guides the agent through downloading the platform binaries, configuring the repository, and installing the skills available in that release. For releases containing the complete setup bundle, each worktree can explicitly install missing platform binaries using the local setup scripts; if the scripts are also absent, follow the complete bootstrap in the setup manifest. Git tracking and ignore choices for all installed files belong to the repository owner. Review the [Platform Setup Manual](docs/SETUP_MANUAL.md) for the complete setup process and manual installation options.
 
 ---
 
