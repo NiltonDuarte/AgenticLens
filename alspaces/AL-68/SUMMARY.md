@@ -93,6 +93,10 @@ The final source-verified snapshot contains 141 same-project Codex owners (90 ro
 
 Original CONTRACT remains frozen. Iteration 03 implementation, scoped code reviews, main integration, make and required observed Codex/OpenCode exchanges are complete. Parent consolidated outcome: APPROVED within the documented runtime limits. Final root telemetry is verified below; smoke sessions from different physical directories are excluded. Source-build Make/CI/server commands execute their freshly built native directly; the installed public entrypoint always enforces the authoritative shared YAML pin. The user explicitly confirmed that separation after the review correction; this clarification changes no product code or tested boundary.
 
+## Iteration 04 planning checkpoint
+
+The user requested a new persistence/configuration delta after reviewing PR93: write a home-state base during configuration creation/update, use configured project_name for the project namespace, and require telemetry.capture.state_dir during configuration reads without an implicit loader fallback. [Iteration 04 plan](iterations/04/PLAN.md) translates this into writer, validation, shared-name/exact-worktree isolation and migration requirements. This supersedes iteration03's project-local default for the proposed next implementation only; current shipped behavior, prior acceptance evidence, immutable contract and compact review findings remain unchanged. Planning authorization does not authorize implementation. The existing telemetry remains the completed iteration03 snapshot; the active iteration04 workflow defers final ingestion until its final step.
+
 ## Follow-up backlog
 
 AL-76 defines compact ledger JSON serialization and a source-independent format command with all-workspace, single-ticket and ticket-set selection, dry-run/check modes, value preservation and safe concurrent publication. Its specification is Ready under plan/to-do. Implementation requires its own dedicated session; no format command is implemented in AL-68.
