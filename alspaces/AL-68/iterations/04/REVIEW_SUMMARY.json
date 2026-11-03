@@ -378,6 +378,34 @@
         }
       ],
       "disposition": "Fixed test-only startup and owned-tree oracles; controlled delay reproduces the old assumption, native repeats and negative controls pass. Hosted timing cause remains unproven."
+    },
+    {
+      "finding_id": "I4-28",
+      "severity": 4,
+      "issue": "Windows Python text-mode fixture input translated LF to CRLF before a byte-preservation assertion.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed test transport with explicit UTF-8 bytes and exact newline/Unicode/empty payload oracles; native Python and WSL suites pass, normalizing wrapper mutation rejected."
+    },
+    {
+      "finding_id": "I4-29",
+      "severity": 4,
+      "issue": "Native Windows Python text-mode payload-file creation changed LF before the plugin transport byte oracle.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed fixture file creation with explicit UTF-8 bytes; original native failure reproduced and all six native plugin cases pass with exact assertions unchanged."
     }
   ]
 }
