@@ -33,3 +33,13 @@ CI-PUB-01 (5): data reviewer gpt-6.1-sol/high found an existing receipt/journal 
 CI-OVERLAP-01 (5): parent/coder suspected capture-tree overlap; independent tester refuted it using exact-ID capture extraction and duplicate-owner reconciliation guard. Original legacy aggregation remains unchanged.
 
 All four user-reported CI failures reproduced and now pass, including all five v4 cost variants. Current output schema assertions use current schema; explicit v4 inputs, native parent, source facts and immutable history oracles remain. Full integrated approval is still INCOMPLETE pending held predecessor integration/full make/standalone gates. Prior review evidence and findings remain preserved; no completed-review cleanup or final telemetry while iteration01 remains open.
+
+## CI-PUB-01 bounded repair checkpoint
+
+Management explicitly released this AL-62-owned repair; previous triage-only/unresolved disposition is superseded by the verified correction. Base b4e3c6a6bd4738536514f4d1502b53644fb31847; source/test fingerprint cec8ce3ace37d7fcc300ea1089663ef21153502037a8548ad1da946b81651b8f. CI-PUB-01 remains severity5 with original discovery credit reviewer-data gpt-6.1-sol/high; coder gpt-6.1-sol/high implemented the fix, tester gpt-6.1-sol/high independently verified it. These verification actors do not gain discovery credit.
+
+All behavior/data/architecture/test focuses APPROVED under both gpt-6.1-sol/high and gpt-6-luna/medium, with no new findings. Sol profile inherited/requested; Luna exact settings acknowledged by T3; serving metadata not independently verified. Private reports/roster/canonical finding: /tmp/al62-receipt-review. Prior unrelated AL-62 approvals and history remain preserved.
+
+Trusted active/pending receipt generations are bounded per worktree/ticket/destination, with exact artifact/generation selection, explicit scoped migration and independently proved rebind. Both interruption windows, repeated source-unavailable generation, canonical/legacy/empty/absent cases, strict tamper/multiplicity, metadata/scope/fence and old journal guards pass. Changed-package go vet exited0. Detailed commands and limited instrumentation are in RECEIPT_VERIFICATION.md; reconstructed crashes are not power-loss certification, and no fault was injected inside the atomic SQLite finalization transaction.
+
+Parent consolidated verdict for this independently authorized durability correction: APPROVED. Overall ticket merge/delivery verdict remains INCOMPLETE: predecessor integration and expensive full make are explicitly held. No generic file-journal, ledger schema or broader runtime redesign; no ticket completion, final telemetry or completed-review cleanup while iteration01 remains open. MGT-2 owns merging PR103, which stays draft.

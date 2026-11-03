@@ -563,25 +563,36 @@ func TestCaptureGenerationRetainedRegistryCannotOverrideNewerCanonicalOrExplicit
 				newer.Skills = []domain.SkillFact{{Name: "stored-skill"}, {Name: "stored-skill"}}
 				link := domain.TaskLinkFact{SubagentType: "reviewer", Description: "stored delegation", ChildSession: "stored-child", Timestamp: "2026-01-01T00:00:00Z", CostEvidence: domain.CostEvidence{State: domain.CostUnavailable}}
 				newer.TaskLinks = []domain.TaskLinkFact{link, link}
-				// This fixture represents an already accepted native publication. Persist
-				// the exact auxiliary receipt produced by generate before removing source.
+				// Model an accepted native publication through the same bounded receipt
+				// stage/file-commit/finalize protocol before making source unavailable.
 				accepted, err := capture.OpenProject(f.state, f.project)
 				if err != nil {
 					t.Fatal(err)
 				}
-				if err = accepted.RecordAuxiliaryReceipt(context.Background(), "TEST-100", capture.AuxiliaryFacts{Skills: newer.Skills, TaskLinks: newer.TaskLinks}); err != nil {
-					t.Fatal(err)
-				}
-				if err = accepted.Close(); err != nil {
+				if err = adapters.BeginPublication(f.output, []string{f.output}); err != nil {
 					t.Fatal(err)
 				}
 				body, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(newer))
 				if err != nil {
 					t.Fatal(err)
 				}
-				if err := os.WriteFile(f.output, body, 0600); err != nil {
+				if err = os.WriteFile(f.output, body, 0600); err != nil {
 					t.Fatal(err)
 				}
+				generation, err := accepted.StagePublicationAuxiliary(context.Background(), "TEST-100", f.output, capture.AuxiliaryFacts{Skills: newer.SkillFacts(), TaskLinks: newer.TaskLinkFacts()})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err = adapters.CommitPublication(f.output, []string{f.output}); err != nil {
+					t.Fatal(err)
+				}
+				if err = accepted.FinalizePublicationAuxiliary(context.Background(), "TEST-100", f.output, generation.ID); err != nil {
+					t.Fatal(err)
+				}
+				if err = accepted.Close(); err != nil {
+					t.Fatal(err)
+				}
+
 				if err := os.Remove(path); err != nil {
 					t.Fatal(err)
 				}

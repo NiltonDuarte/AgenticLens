@@ -313,6 +313,17 @@ func runGenerate(args []string) {
 		fmt.Fprintln(os.Stderr, "Baseline authorization:", baselineErr)
 		os.Exit(1)
 	}
+	if cachedFacts != nil && *jsonOutputFlag != "" {
+		prior := domain.AgenticFactLedger{Sessions: cachedFacts.Sessions, Skills: cachedFacts.Skills, TaskLinks: cachedFacts.TaskLinks}
+		own, e := ownPublicationAuxiliary(capture.AuxiliaryFacts{Skills: prior.SkillFacts(), TaskLinks: prior.TaskLinkFacts()}, baseline.CommittedAuxiliary)
+		if e == nil {
+			e = migrateGenerationAuxiliary(project, *captureDirFlag, activeTicketID, *jsonOutputFlag, own, baseline.ReceiptRebind)
+		}
+		if e != nil {
+			fmt.Fprintln(os.Stderr, "Cannot migrate validated publication evidence:", e)
+			os.Exit(1)
+		}
+	}
 	if err := recordGenerationHistory(project, *captureDirFlag, activeTicketID, baseline); err != nil {
 		fmt.Fprintln(os.Stderr, "Cannot record retained history diagnostic:", err)
 		os.Exit(1)
@@ -708,12 +719,17 @@ func runGenerate(args []string) {
 			fmt.Fprintln(os.Stderr, "Cannot prepare scoped publication evidence:", auxiliaryErr)
 			os.Exit(1)
 		}
-		if e := recordGenerationAuxiliary(project, *captureDirFlag, activeTicketID, ownAuxiliary); e != nil {
-			fmt.Fprintln(os.Stderr, "Cannot persist scoped publication evidence:", e)
+		generation, stageErr := stageGenerationAuxiliary(project, *captureDirFlag, activeTicketID, *jsonOutputFlag, ownAuxiliary)
+		if stageErr != nil {
+			fmt.Fprintln(os.Stderr, "Cannot stage scoped publication evidence:", stageErr)
 			os.Exit(1)
 		}
 		if e := adapters.CommitPublication(*jsonOutputFlag, publicationPaths); e != nil {
 			fmt.Fprintln(os.Stderr, "Publication remains interrupted; regenerate to restore prior accepted set:", e)
+			os.Exit(1)
+		}
+		if e := finalizeGenerationAuxiliary(project, *captureDirFlag, activeTicketID, *jsonOutputFlag, generation.ID); e != nil {
+			fmt.Fprintln(os.Stderr, "Artifacts committed but receipt finalization failed; regenerate to recover trusted pending proof:", e)
 			os.Exit(1)
 		}
 		if e := recordGenerationPublication(project, *captureDirFlag, activeTicketID, "committed", *jsonOutputFlag, *appendFlag, sessionsWithoutHistory(factLedger.Sessions, baseline.History), "Ledger and requested summary replacement committed."); e != nil {

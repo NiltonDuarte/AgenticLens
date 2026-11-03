@@ -21,4 +21,4 @@ CREATE TABLE IF NOT EXISTS publication_request(worktree_id INTEGER NOT NULL,sing
 CREATE TABLE IF NOT EXISTS publication_cursor(worktree_id INTEGER NOT NULL,singleton INTEGER NOT NULL CHECK(singleton=1),ticket TEXT NOT NULL,PRIMARY KEY(worktree_id,singleton));
 CREATE TABLE IF NOT EXISTS recovery_phase(worktree_id INTEGER NOT NULL,ticket TEXT,phase INTEGER NOT NULL,PRIMARY KEY(worktree_id,ticket));
 CREATE TABLE IF NOT EXISTS reconcile_cursor(worktree_id INTEGER NOT NULL,ticket TEXT,identity TEXT NOT NULL,PRIMARY KEY(worktree_id,ticket));
-` + diagnosticSchema
+` + publicationAuxiliarySchema + diagnosticSchema

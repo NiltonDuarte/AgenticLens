@@ -31,6 +31,7 @@ func historyAuthorityFixture(t *testing.T) (captureGenerationFixture, captureGen
 		historyGit(t, f.project, "commit", "-qm", "isolated authority fixture")
 		historyBind(t, f, []string{"actual-root", "foreign-root"}[i])
 		f.generate(t, "--append", filepath.Join(f.project, "SUMMARY.md"))
+		modelUnboundLegacyReceipt(t, f)
 	}
 	return actual, foreign
 }

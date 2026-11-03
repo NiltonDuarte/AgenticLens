@@ -852,9 +852,9 @@ func validateRelocationIdentity(db *sql.DB, scope int64, id string) error {
 // Auxiliary receipts were introduced with schema2. They never belong to a
 // schema1 import, but are operational destination writes and must be fenced.
 func relocationDestinationTables() []legacyTable {
-	tables := make([]legacyTable, 0, len(relocationTables)+1)
+	tables := make([]legacyTable, 0, len(relocationTables)+2)
 	tables = append(tables, relocationTables...)
-	return append(tables, legacyTable{name: "capture_auxiliary_receipts"})
+	return append(tables, legacyTable{name: "capture_auxiliary_receipts"}, legacyTable{name: "capture_auxiliary_publications"})
 }
 
 // reserveRelocationScopeTx is part of scope/ownership allocation's immediate

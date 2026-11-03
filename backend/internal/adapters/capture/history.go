@@ -223,6 +223,15 @@ func (s *Store) RecordAuxiliaryReceipt(ctx context.Context, ticket string, facts
 }
 
 func (s *Store) AuxiliaryEvidence(ctx context.Context, ticket string) ([]AuxiliaryFacts, error) {
+	registered, err := s.RegisteredAuxiliaryEvidence(ctx, ticket)
+	if err != nil {
+		return nil, err
+	}
+	legacy, err := s.legacyAuxiliaryEvidence(ctx, ticket)
+	return append(registered, legacy...), err
+}
+
+func (s *Store) RegisteredAuxiliaryEvidence(ctx context.Context, ticket string) ([]AuxiliaryFacts, error) {
 	rows, err := s.List(ctx)
 	if err != nil {
 		return nil, err
@@ -237,17 +246,22 @@ func (s *Store) AuxiliaryEvidence(ctx context.Context, ticket string) ([]Auxilia
 		}
 	}
 	result = append(result, accepted)
+	return result, nil
+}
+
+func (s *Store) legacyAuxiliaryEvidence(ctx context.Context, ticket string) ([]AuxiliaryFacts, error) {
+	var err error
 	var exists int
 	if err = s.db.QueryRowContext(ctx, "SELECT count(*) FROM sqlite_master WHERE name='capture_auxiliary_receipts'").Scan(&exists); err != nil {
 		return nil, err
 	}
 	if exists == 0 {
-		return result, nil
+		return nil, nil
 	}
 	var body []byte
 	err = s.db.QueryRowContext(ctx, "SELECT record FROM capture_auxiliary_receipts WHERE worktree_id=? AND ticket=? AND length(record)<=?", s.worktreeID, ticket, 32*1024*1024).Scan(&body)
 	if errors.Is(err, sql.ErrNoRows) {
-		return result, nil
+		return nil, nil
 	}
 	if err != nil {
 		return nil, err
@@ -256,5 +270,5 @@ func (s *Store) AuxiliaryEvidence(ctx context.Context, ticket string) ([]Auxilia
 	if err = json.Unmarshal(body, &receipt); err != nil {
 		return nil, err
 	}
-	return append(result, receipt), nil
+	return []AuxiliaryFacts{receipt}, nil
 }

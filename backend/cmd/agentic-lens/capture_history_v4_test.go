@@ -20,6 +20,7 @@ func TestCaptureCommittedV4HistoryNormalizesLikeCurrentUnavailableSource(t *test
 			t.Setenv("HOME", t.TempDir())
 			t.Setenv("XDG_CACHE_HOME", t.TempDir())
 			a, b, _ := newCommittedHistoryFixture(t)
+			modelUnboundLegacyReceipt(t, a)
 			original := adapters.AgenticFactLedgerDTOFromDomain(a.ledger(t))
 			version := 4
 			original.SchemaVersion = &version

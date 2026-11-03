@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"strings"
 	"time"
 
 	"agenticlens/internal/adapters"
@@ -23,14 +22,12 @@ type generationBaseline struct {
 	HistoryDTOs        []adapters.SessionFactDTO
 	CommittedAuxiliary capture.AuxiliaryFacts
 	Evidence           []capture.HistoryEvidence
+	ReceiptRebind      bool
 }
 
 func classifyGenerationBaseline(project, state, destination, ticket string, facts *adapters.ExistingLedgerFacts) (generationBaseline, error) {
 	var result generationBaseline
-	if facts == nil {
-		return result, nil
-	}
-	if facts.TicketID == nil || *facts.TicketID != ticket {
+	if facts != nil && (facts.TicketID == nil || *facts.TicketID != ticket) {
 		return result, errors.New("baseline ticket conflicts with publication")
 	}
 	s, err := capture.OpenProject(state, project)
@@ -44,6 +41,22 @@ func classifyGenerationBaseline(project, state, destination, ticket string, fact
 	}()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+	receiptEvidence := []capture.AuxiliaryFacts{}
+	if destination != "" {
+		var selectionErr error
+		receiptEvidence, _, selectionErr = s.SelectPublicationAuxiliary(ctx, ticket, destination)
+		if errors.Is(selectionErr, capture.ErrAuxiliaryArtifactMismatch) {
+			// A changed artifact cannot borrow either bound or legacy receipt proof.
+			// Continue only through the independent registered/committed checks below.
+			receiptEvidence = nil
+			result.ReceiptRebind = true
+		} else if selectionErr != nil {
+			return result, selectionErr
+		}
+	}
+	if facts == nil {
+		return result, nil
+	}
 	rows, err := s.List(ctx)
 	if err != nil {
 		return result, err
@@ -75,10 +88,11 @@ func classifyGenerationBaseline(project, state, destination, ticket string, fact
 	if len(result.History) == 0 && len(aux.Skills) == 0 && len(aux.TaskLinks) == 0 {
 		return result, nil
 	}
-	auxiliary, err := s.AuxiliaryEvidence(ctx, ticket)
+	auxiliary, err := s.RegisteredAuxiliaryEvidence(ctx, ticket)
 	if err != nil {
 		return result, err
 	}
+	auxiliary = append(auxiliary, receiptEvidence...)
 	// Git is needed only to authorize imported facts, never to hydrate current
 	// capture. A missing committed ledger is harmless when scoped evidence covers
 	// the entire baseline, including ownerless rows.
@@ -288,17 +302,41 @@ func recordGenerationHistory(project, state, ticket string, baseline generationB
 	return errors.Join(s.RecordDiagnostic(context.Background(), d), s.Close())
 }
 
-func recordGenerationAuxiliary(project, state, ticket string, facts capture.AuxiliaryFacts) error {
-	if len(facts.Skills) == 0 && len(facts.TaskLinks) == 0 {
-		return nil
-	}
+func migrateGenerationAuxiliary(project, state, ticket, destination string, facts capture.AuxiliaryFacts, rebind bool) error {
 	s, err := capture.OpenProject(state, project)
 	if err != nil {
 		return err
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	return errors.Join(s.RecordAuxiliaryReceipt(ctx, strings.TrimSpace(ticket), facts), s.Close())
+	_, bound, err := s.SelectPublicationAuxiliary(ctx, ticket, destination)
+	if rebind && errors.Is(err, capture.ErrAuxiliaryArtifactMismatch) {
+		_, err = s.RebindPublicationAuxiliary(ctx, ticket, destination, facts)
+	} else if err == nil && !bound {
+		_, err = s.MigratePublicationAuxiliary(ctx, ticket, destination, facts)
+	}
+	return errors.Join(err, s.Close())
+}
+
+func stageGenerationAuxiliary(project, state, ticket, destination string, facts capture.AuxiliaryFacts) (capture.AuxiliaryGeneration, error) {
+	s, err := capture.OpenProject(state, project)
+	if err != nil {
+		return capture.AuxiliaryGeneration{}, err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	generation, err := s.StagePublicationAuxiliary(ctx, ticket, destination, facts)
+	return generation, errors.Join(err, s.Close())
+}
+
+func finalizeGenerationAuxiliary(project, state, ticket, destination, generation string) error {
+	s, err := capture.OpenProject(state, project)
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	return errors.Join(s.FinalizePublicationAuxiliary(ctx, ticket, destination, generation), s.Close())
 }
 
 func ownPublicationAuxiliary(all, committed capture.AuxiliaryFacts) (capture.AuxiliaryFacts, error) {

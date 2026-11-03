@@ -79,6 +79,23 @@ func newCommittedHistoryFixture(t *testing.T) (captureGenerationFixture, capture
 	historyBind(t, b, "current-root")
 	return a, b, base.project
 }
+
+// modelUnboundLegacyReceipt represents a scope written before destination-bound
+// receipt metadata existed. It is fixture setup, never an operational recovery.
+func modelUnboundLegacyReceipt(t *testing.T, f captureGenerationFixture) {
+	t.Helper()
+	db, err := sql.Open("sqlite", filepath.Join(f.state, "registry.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = db.Exec("DELETE FROM capture_auxiliary_publications WHERE worktree_id=(SELECT id FROM worktrees WHERE directory=?) AND ticket=? AND destination=?", f.project, "TEST-100", f.output); err != nil {
+		t.Fatal(err)
+	}
+	if err = db.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func foreignHistoryState(t *testing.T, f captureGenerationFixture) string {
 	t.Helper()
 	db, err := sql.Open("sqlite", filepath.Join(f.state, "registry.db"))
