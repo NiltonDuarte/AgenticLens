@@ -4,4 +4,4 @@ Installation prompts previously loaded setup instructions and the wrapper from m
 
 Preserve installed tags for repairs and explicitly pin moving references in older manifests. The current stable v2.0.0 lacks the newer bundle installer; document its tagged-manifest/manual path without falling back to main.
 
-Validation: checked stable release metadata, tagged source availability and published platform asset names; searched active documentation for moving installation URLs. Full make and integration results are recorded in the ticket summary.
+Validation: checked stable release metadata, tagged source availability and published platform asset names; searched active documentation for moving installation URLs. `make` passed (Go race suite, 783 frontend tests, static checks, installation/release tests and platform builds). Integration with origin/main was already up to date. Bash installation syntax and README/manual prompt consistency passed. PowerShell was inspected only.
