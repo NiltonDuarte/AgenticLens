@@ -18,6 +18,9 @@ export type ConventionalTicketType =
   | 'build';
 
 export interface EventFact {
+  /** Transient timeline projection from compact canonical facts, never persisted. */
+  readonly fact_projection?: 'skill' | 'task' | undefined;
+  readonly source_invocation_id?: string | null | undefined;
   readonly event_id?: string | null | undefined;
   readonly timestamp: string;
   readonly session_id: string;

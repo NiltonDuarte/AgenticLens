@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -1226,8 +1227,8 @@ func TestEngineMigrate(t *testing.T) {
 	})
 
 	t.Run("missing migration step returns ErrMissingStep", func(t *testing.T) {
-		// Default engine has steps through v5. Asking for v6 must fail with a missing step.
-		_, err := engine.Migrate([]byte(unversionedJSON), 6)
+		// Asking beyond the built-in chain must fail with a missing step.
+		_, err := engine.Migrate([]byte(unversionedJSON), domain.CurrentSchemaVersion+1)
 		if !errors.Is(err, migration.ErrMissingStep) {
 			t.Errorf("expected ErrMissingStep when chain has gap, got %v", err)
 		}
@@ -1963,5 +1964,28 @@ func TestCostEvidenceMigrationPreservesObservedHistoryAndMissingPresence(t *test
 	summary := domain.ComputeTotals(rows).CostSummary
 	if summary.KnownSubtotalUSD == nil || *summary.KnownSubtotalUSD != 7 || summary.CompleteAmount() != nil || summary.FullyObserved != 2 || summary.Unavailable != 2 {
 		t.Fatalf("unexpected migrated coverage: %+v", summary)
+	}
+}
+
+func TestV6MigrationPreservesAmbiguousHistoryAndExplicitOwners(t *testing.T) {
+	input := `{"schema_version":5,"sessions":[{"id":"root","source":"codex","user":"tester","invocations":[],"tools":[],"anomalies":[]},{"id":"other","source":"opencode","user":"tester","invocations":[],"tools":[],"anomalies":[]}],"skills":[{"name":"owned","session_id":"root","source_invocation_id":"read","source_event_id":"read-event","source_message_id":"message","evidence":"skill_file_read","success":false,"outcome":"unavailable","turn_index":2,"message_index":4,"caller_role":"coder","timestamp":"2026-01-01T01:00:00Z","error":"recorded detail"},{"name":"legacy","success":true},{"name":"legacy","success":true}],"task_links":[{"session_id":"root","source_invocation_id":"spawn","source_event_id":"spawn-event","source_message_id":"message","child_session_id":"unavailable","child_reference":"/root/child","description":"spawn","subagent_type":"tester","parent_turn":3,"timestamp":"2026-01-01T01:00:01Z","duration_ms":57,"cost_usd":0.125,"cost_evidence":{"state":"observed","known_subtotal_usd":0.125}},{"description":"unresolved","cost_usd":null,"cost_evidence":{"state":"unavailable"}}]}`
+	ledger, err := migration.NewEngine(nil).Migrate([]byte(input), 6)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ledger.Sessions[0].Skills) != 1 || len(ledger.Sessions[0].TaskLinks) != 1 || len(ledger.Skills) != 2 || len(ledger.TaskLinks) != 1 || len(ledger.OwnershipDiagnostics) == 0 {
+		t.Fatalf("migration lost ownership or ambiguous history: %+v", ledger)
+	}
+	if ledger.Sessions[0].Skills[0].SourceInvocationID != "read" || ledger.Sessions[0].TaskLinks[0].ChildSession != "unavailable" {
+		t.Fatalf("source identity lost: %+v", ledger.Sessions[0])
+	}
+	wantSkill := domain.SkillFact{FactProvenance: domain.FactProvenance{SourceInvocationID: "read", SourceEventID: "read-event", SourceMessageID: "message"}, Name: "owned", Evidence: "skill_file_read", Outcome: "unavailable", TurnIndex: 2, MessageIndex: 4, CallerRole: "coder", Timestamp: "2026-01-01T01:00:00Z", Error: "recorded detail"}
+	cost := 0.125
+	wantTask := domain.TaskLinkFact{FactProvenance: domain.FactProvenance{SourceInvocationID: "spawn", SourceEventID: "spawn-event", SourceMessageID: "message"}, ChildSession: "unavailable", ChildReference: "/root/child", Description: "spawn", SubagentType: "tester", ParentTurn: 3, Timestamp: "2026-01-01T01:00:01Z", DurationMs: 57, CostUSD: cost, CostEvidence: domain.CostEvidence{State: domain.CostObserved, KnownSubtotalUSD: &cost}}
+	if !reflect.DeepEqual(ledger.Sessions[0].Skills[0], wantSkill) || !reflect.DeepEqual(ledger.Sessions[0].TaskLinks[0], wantTask) {
+		t.Fatalf("migration changed rich source facts: skill=%+v task=%+v", ledger.Sessions[0].Skills, ledger.Sessions[0].TaskLinks)
+	}
+	if len(ledger.SkillFacts()) != 3 || len(ledger.TaskLinkFacts()) != 2 {
+		t.Fatal("migration changed recorded totals")
 	}
 }

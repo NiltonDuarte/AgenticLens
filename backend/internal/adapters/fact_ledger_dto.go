@@ -86,20 +86,21 @@ func MigrationInfoDTOFromDomain(info *domain.MigrationInfo) *MigrationInfoDTO {
 
 // AgenticFactLedgerDTO represents the complete raw agentic_metrics.json schema.
 type AgenticFactLedgerDTO struct {
-	SchemaVersion *int               `json:"schema_version,omitempty"`
-	Source        string             `json:"source,omitempty"`
-	Migration     *MigrationInfoDTO  `json:"migration,omitempty"`
-	TicketID      *string            `json:"ticket_id"`
-	TicketTitle   *string            `json:"ticket_title"`
-	TicketType    *string            `json:"ticket_type"`
-	StartedAt     *string            `json:"started_at"`
-	CompletedAt   *string            `json:"completed_at"`
-	UpdatedAt     string             `json:"updated_at"`
-	Code          CodeFactsDTO       `json:"code"`
-	Sessions      []SessionFactDTO   `json:"sessions"`
-	Anomalies     []AnomalyDTO       `json:"anomalies"`
-	Skills        []domain.SkillFact `json:"skills,omitempty"`
-	TaskLinks     []TaskLinkFactDTO  `json:"task_links,omitempty"`
+	OwnershipDiagnostics []string           `json:"ownership_diagnostics,omitempty"`
+	SchemaVersion        *int               `json:"schema_version,omitempty"`
+	Source               string             `json:"source,omitempty"`
+	Migration            *MigrationInfoDTO  `json:"migration,omitempty"`
+	TicketID             *string            `json:"ticket_id"`
+	TicketTitle          *string            `json:"ticket_title"`
+	TicketType           *string            `json:"ticket_type"`
+	StartedAt            *string            `json:"started_at"`
+	CompletedAt          *string            `json:"completed_at"`
+	UpdatedAt            string             `json:"updated_at"`
+	Code                 CodeFactsDTO       `json:"code"`
+	Sessions             []SessionFactDTO   `json:"sessions"`
+	Anomalies            []AnomalyDTO       `json:"anomalies"`
+	Skills               []domain.SkillFact `json:"skills,omitempty"`
+	TaskLinks            []TaskLinkFactDTO  `json:"task_links,omitempty"`
 }
 
 // UnmarshalJSON rejects legacy root fact collections at the current schema boundary.
@@ -111,7 +112,7 @@ func (dto *AgenticFactLedgerDTO) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &version); err != nil {
 		return err
 	}
-	if version.SchemaVersion != nil && (*version.SchemaVersion < 1 || *version.SchemaVersion > 5) {
+	if version.SchemaVersion != nil && (*version.SchemaVersion < 1 || *version.SchemaVersion > 6) {
 		return fmt.Errorf("unsupported canonical fact schema version %d", *version.SchemaVersion)
 	}
 	var fields map[string]json.RawMessage
@@ -125,7 +126,7 @@ func (dto *AgenticFactLedgerDTO) UnmarshalJSON(data []byte) error {
 	}
 	var decoded AgenticFactLedgerDTO
 	var err error
-	if version.SchemaVersion != nil && *version.SchemaVersion == 5 {
+	if version.SchemaVersion != nil && *version.SchemaVersion >= 5 {
 		decoded, err = decodeSchemaV5FactLedger(data)
 	} else {
 		// Older canonical shapes can be decoded by explicit migration tooling. The
@@ -162,7 +163,7 @@ func (dto AgenticFactLedgerDTO) ToDomain() domain.AgenticFactLedger {
 	if taskLinks == nil {
 		taskLinks = []domain.TaskLinkFact{}
 	}
-	return domain.AgenticFactLedger{
+	return domain.AgenticFactLedger{OwnershipDiagnostics: dto.OwnershipDiagnostics,
 		SchemaVersion: dto.SchemaVersion,
 		Migration:     mig,
 		TicketID:      dto.TicketID,
@@ -261,12 +262,13 @@ func (dto AgenticFactLedgerDTO) ValidatePersistedEvidence() error {
 
 // AgenticFactLedgerDTOFromDomain converts a domain AgenticFactLedger to its DTO for serialization.
 func AgenticFactLedgerDTOFromDomain(ledger domain.AgenticFactLedger) AgenticFactLedgerDTO {
+	ledger = domain.NormalizeAuxiliaryOwnership(ledger)
 	sessions := make([]SessionFactDTO, len(ledger.Sessions))
 	for i, session := range ledger.Sessions {
 		sessions[i] = SessionFactDTOFromDomain(session)
 	}
 
-	return AgenticFactLedgerDTO{
+	return AgenticFactLedgerDTO{OwnershipDiagnostics: ledger.OwnershipDiagnostics,
 		SchemaVersion: ledger.SchemaVersion,
 		Migration:     MigrationInfoDTOFromDomain(ledger.Migration),
 		TicketID:      ledger.TicketID,
@@ -294,6 +296,14 @@ func AgenticFactLedgerDTOFromDomain(ledger domain.AgenticFactLedger) AgenticFact
 
 func (dto AgenticFactLedgerDTO) validateCostFields(required bool) error {
 	for si, session := range dto.Sessions {
+		for ti, task := range session.TaskLinks {
+			if required && task.decodedCost && (!task.costPresent || !task.evidencePresent) {
+				return fmt.Errorf("sessions[%d].task_links[%d] requires cost_usd and cost_evidence", si, ti)
+			}
+			if err := domain.ValidateCostEvidence(task.CostUSD, task.CostEvidence, required); err != nil {
+				return fmt.Errorf("sessions[%d].task_links[%d]: %w", si, ti, err)
+			}
+		}
 		for ii, inv := range session.Invocations {
 			if required && inv.decodedCost && (!inv.costPresent || !inv.evidencePresent) {
 				return fmt.Errorf("sessions[%d].invocations[%d] requires cost_usd and cost_evidence", si, ii)
@@ -335,7 +345,7 @@ func ValidateRuntimeFactLedger(data []byte) error {
 	if metadata.SchemaVersion == nil {
 		return errors.New("ledger schema version is missing; run `agentic-lens migrate --target-version 5` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>`")
 	}
-	if *metadata.SchemaVersion != 4 && *metadata.SchemaVersion != domain.CurrentSchemaVersion {
+	if *metadata.SchemaVersion != 4 && *metadata.SchemaVersion != 5 && *metadata.SchemaVersion != domain.CurrentSchemaVersion {
 		return fmt.Errorf("ledger schema version %d is not runtime-ingestible; run `agentic-lens migrate --target-version 5` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>`", *metadata.SchemaVersion)
 	}
 	for _, key := range []string{"invocations", "tools", "events"} {

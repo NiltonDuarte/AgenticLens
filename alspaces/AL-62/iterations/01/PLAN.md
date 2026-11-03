@@ -1,0 +1,53 @@
+# AL-62 iteration 01 implementation plan
+
+## Authorization, revision and roles
+
+Scope is the full ticket and frozen CONTRACT.md. User pre-approval: “its pre-approved. full send it”. Baseline 122e983f8c365a2aa248b1b6d492252555e922ae; clean initial checkout. This is implementation, not investigation-only. No material steering delta has occurred.
+
+The orchestrator owns workspace summary/PR/review records, ticket lifecycle, integration, telemetry and publication. Planner owns only CONTRACT.md and this PLAN.md. Implementation owner A owns all backend application and existing backend tests, avoiding cross-package schema races. Implementation owner B owns all web source/tests and frontend build configuration only after A publishes the stable wire interface. Tester owns additional regression cases in explicitly assigned test files after implementation; no simultaneous test ownership. Every agent shares the checkout and must preserve others’ work. A may build frontend assets but must coordinate source/build timing with B. Generated ignored assets are not committed.
+
+## Work sequence and concrete paths
+
+1. Backend owner investigates the raw source read/result and spawn/output examples recorded in CONTRACT.md, preserving privacy and inherited-history guards. Trace ParseRollout/readResponseItem, SessionFacts and CombineTranscripts in backend/internal/adapters/codex/rollout.go, discovery.go and their retention/invocation ownership tests. Add deterministic minimal sanitized or synthetic source-format fixtures with declared provenance. Codex response items carry tool input today only in source, not EventFact; extract needed fact data before it is lost. Do not parse arbitrary code mentions as executed tool calls.
+2. Backend owner expands domain/models.go SessionFact, SkillFact and TaskLinkFact and adds pure owned-fact projection/normalization helpers. Preserve source occurrence identity separately from InvocationFact metric rows. Update domain aggregation skill statistics/SkillNames and comparison/fleet consumers. Add schema 5-to-6 through domain/migration engine, registry and validator; update DTO version checks and session DTOs, task_link_fact_dto.go, fact_ledger_decode.go, repository normalization/publication and schema tests. Retain unresolved legacy facts explicitly and avoid value-based deduplication. Communicate exact stable JSON fields and projection semantics to frontend owner before parallel frontend edits.
+3. Backend owner carries canonical facts through OpenCode schema_v1_session_extraction.go, schema_v2_session_extraction.go and skills_tasks.go; Codex extraction; capture/reconcile.go, store.go and history.go; CLI main.go generation/publication; backfill/engine.go and migration_runner.go; live and optional hydration adapters. Search every Skills/TaskLinks read/write and compact/clone transform. Replace only successfully refreshed owners. Cover partial local source with cached remote facts, missing roots, mixed harnesses, complete owner deletion, growing snapshots and unchanged repeat. Preserve all actual costs and unknown cost evidence.
+4. Backend owner updates adapters/http/workspace_dto.go, workspace/events routes and CLI rendering to expose owner-derived facts and explicit unknown/legacy diagnostics without rewriting GET. Keep baseline facts available with hydration unavailable.
+5. Frontend owner updates web/src/domain/types.ts ledgerSkills/ledgerTaskLinks and actual boundary validators, SkillsSubagentsPanel.tsx, timeline/thread consumers, fleet and TicketComparisons filters. Expose owner/source call identity and unavailable child links. Unknown outcomes must not display as successful/failed execution. Reuse projections rather than create a second canonical store. Maintain keyboard behavior and empty-filter recovery. Extend existing coherent tests for persisted data without live enrichment and shared turn positions across sessions.
+6. Tester inspects existing coverage before additions, targets missing acceptance guards, runs affected Go race tests and frontend checks, then reports commands/revision/results. Parent runs integrated make after main integration. Frontend build must populate backend/internal/adapters/web/dist; verify standalone embed behavior without Node runtime dependency.
+
+## Verification selected from the regression checklist
+
+Use existing domain/skills_tasks_test.go, aggregations_test.go and migration/engine_test.go for owned flattening, repeated occurrences, ambiguous migration, transitional identity deduplication and recorded totals without session attribution. Adapter DTO/repository tests prove actual save/reload including legacy populated, empty, omitted and granular collections. Codex rollout/discovery/retention tests prove supported actual load/delegation records and copied parent-history exclusion, explicit IDs and unsupported evidence. OpenCode extraction tests cover both schema families. Extend CLI main_codex_test.go, capture tests and backfill/engine_test.go for end-to-end generation/backfill refresh preservation, including REV-5 CC-02 partial local/remote regression and legitimate deletion only after authoritative owner coverage. HTTP server tests prove baseline facts with failed hydration and GET file immutability. Existing frontend domain/ThreadViewer/comparison tests protect owner-specific badges, counts, filters and unavailable navigation. No live AL-55 files are test inputs.
+
+Record source family/version and privacy-safe record identities separately from fixture evidence. Show at least one missing-fact regression fails before the fix or via a targeted disposable mutation, then passes through extraction, generation/save/reload, API and frontend projections. Tests need independent expected values, no copied implementation or mere struct roundtrips.
+
+## Independent review roster
+
+Freeze one candidate commit or content fingerprint, requirements and raw test evidence before dispatch; no product/test edits during discovery. Each role runs both configured profiles: codex gpt-6.1-sol/high and codex gpt-6-luna/medium. Use fresh independent contexts and capacity waves. Eight required discovery cells, each with a unique report in private temporary review storage; parent records exact requested/acknowledged/observed identity and keeps unavailable cells INCOMPLETE.
+
+| Persona | Risk question | Paths and report stems |
+| --- | --- | --- |
+| reviewer-behavior | Do recorded facts reach generation, CLI/API, session views, timeline and fleet filters exactly once without live sources? | Entire source-to-consumer path; behavior-sol and behavior-luna |
+| reviewer-data | Can partial refresh, capture, migration or identity ambiguity drop/misattribute history or fabricate outcomes? | Domain ownership, schema/DTO/repository, Codex/OpenCode, capture, backfill and CLI; data-sol and data-luna |
+| reviewer-architecture | Are ownership/projections canonical, compatible, FCIS-pure and coherent across schema and consumers? | Domain models/helpers, migration, adapters and TypeScript types; architecture-sol and architecture-luna |
+| reviewer-tests | Do regressions exercise actual production paths, multiplicity, inherited history, unknown outcomes and partial save/reload? | Changed and relevant unchanged tests plus fixtures and build evidence; tests-sol and tests-luna |
+
+The coordinator alone loads the focus matrix. Each reviewer gets its own persona, shared context, canonical review skill, contract/plan, baseline/candidate and unique writable report path only. Reviewers cannot modify product or tests. Parent verifies findings, assigns coder/tester corrections and performs both-model affected re-review. Final approval requires all cells, no material gaps and integrated make. Preserve attribution in compact REVIEW_SUMMARY.json only after final approval; never compact incomplete reviews into approval.
+
+## Completion and limitations
+
+Parent commits reviewed task-owned implementation before fetch/merge origin/main, runs make, updates SUMMARY.md and PULL_REQUEST.md and synchronizes the existing specification/index including AL-63 readiness. Generate telemetry as the final step immediately before the final commit using a built CLI if installed command is absent, explicit source codex, conventional fix and literal nonce. Verify root/children/source coverage and preserve prior harness sessions; unknown source facts remain explicitly incomplete. Push and create/link PR; no merge authority is implied. Record executed and skipped stages honestly. This plan does not claim extraction, tests or review have already passed.
+
+## Delivery steering: MGT-2 supervision
+
+Source: user follow-up authorizes continued approved work and assigns eligible non-release merges to MGT-2. Proposed predecessors are AL-60, AL-61 and AL-76; notification of their actual merges will trigger integration. Preserve AL-61 historical timestamps and AL-76 lossless ledger serialization across shared paths. Acceptance remains unchanged; this is integration coordination in iteration 01, not a new scope or approval gate. Parent publishes the reviewed PR; MGT-2 owns merging. Verification impact: inspect predecessor changes during integration, rerun affected checks and required make, and refresh affected review evidence.
+
+Tester now owns backend/cmd/agentic-lens/main_codex_test.go and backend/internal/domain/skills_tasks_test.go by explicit backend-owner transfer; backend owner must preserve those edits.
+
+## Explicit manager handoff and baseline evidence
+
+User requests direct final/blocker handoff via t3_thread_send to MGT-2 thread cce1ea90-2513-466c-a078-58b2765dfbb6, including PR URL, reviewed head and verification state. This explicitly authorizes that message. Manager reports unchanged baseline make failures in capture native-version/capability and worker timeout tests. Preserve this baseline evidence; do not weaken tests or broaden product scope. Any matching local failures must remain explicit limitations rather than be silently called passed.
+
+## Predecessor repair ownership
+
+User confirms AL-60 owns the approved shared capture repair and AL-76 owns formatter/migration/backfill stale-write race repair with shared publication ownership. AL-62 remains focused on current extraction/ownership review and corrections. Preserve AL-76 writer-lock guarantees on integration. Independent review and focused checks continue; defer expensive full make until notified actual predecessor merges. No AL-62 scope expansion or new iteration.

@@ -5930,8 +5930,8 @@ func TestComputeSkillAdoption(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := []domain.SkillAdoptionFact{
-		{Name: "alpha", TotalInvocations: 3, TicketsCount: 2, FailureCount: 1, FailureRate: 1.0 / 3},
-		{Name: "beta", TotalInvocations: 3, TicketsCount: 2, FailureCount: 1, FailureRate: 1.0 / 3},
+		{Name: "alpha", TotalInvocations: 3, TicketsCount: 2, FailureCount: 1, KnownOutcomes: 3, FailureRate: float64Ptr(1.0 / 3)},
+		{Name: "beta", TotalInvocations: 3, TicketsCount: 2, FailureCount: 1, KnownOutcomes: 3, FailureRate: float64Ptr(1.0 / 3)},
 	}
 	if got := domain.ComputeSkillAdoption(facts); !reflect.DeepEqual(got, want) {
 		t.Fatalf("adoption = %#v, want %#v", got, want)
@@ -5969,7 +5969,7 @@ func TestSkillAdoptionOrderingAndEmptyProjections(t *testing.T) {
 	if got[0].Name != "b" || got[1].Name != "a" || got[2].Name != "c" {
 		t.Fatalf("ranked skills = %#v", got)
 	}
-	if got[0].FailureRate != 1 {
+	if got[0].FailureRate == nil || *got[0].FailureRate != 1 {
 		t.Fatalf("all-failure rate = %v", got[0].FailureRate)
 	}
 	if names := domain.SkillNames(domain.AgenticFactLedger{Skills: []domain.SkillFact{{Name: "\U00010000"}, {Name: "\uE000"}}}); !reflect.DeepEqual(names, []string{"\uE000", "\U00010000"}) {

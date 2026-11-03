@@ -59,18 +59,22 @@ func ThreadExecutionRecordDTOsFromDomain(values []domain.ThreadExecutionRecord) 
 
 // SessionFactResponseDTO is the concrete nullable cost projection of SessionFact.
 type SessionFactResponseDTO struct {
-	ID          string                       `json:"id"`
-	ParentID    *string                      `json:"parent_id,omitempty"`
-	Source      domain.SourceHarness         `json:"source,omitempty"`
-	User        string                       `json:"user,omitempty"`
-	Invocations []adapters.InvocationFactDTO `json:"invocations"`
-	Tools       []domain.SessionToolFact     `json:"tools"`
-	Events      []domain.SessionEventFact    `json:"events,omitempty"`
-	Anomalies   []domain.Anomaly             `json:"anomalies"`
+	AuxiliaryExtractionVersion int                          `json:"auxiliary_extraction_version,omitempty"`
+	Skills                     []domain.SkillFact           `json:"skills,omitempty"`
+	TaskLinks                  []adapters.TaskLinkFactDTO   `json:"task_links,omitempty"`
+	ID                         string                       `json:"id"`
+	ParentID                   *string                      `json:"parent_id,omitempty"`
+	Source                     domain.SourceHarness         `json:"source,omitempty"`
+	User                       string                       `json:"user,omitempty"`
+	Invocations                []adapters.InvocationFactDTO `json:"invocations"`
+	Tools                      []domain.SessionToolFact     `json:"tools"`
+	Events                     []domain.SessionEventFact    `json:"events,omitempty"`
+	Anomalies                  []domain.Anomaly             `json:"anomalies"`
 }
 
 func SessionFactResponseDTOFromDomain(value domain.SessionFact) SessionFactResponseDTO {
-	return SessionFactResponseDTO{
+	return SessionFactResponseDTO{AuxiliaryExtractionVersion: value.AuxiliaryExtractionVersion,
+		Skills: value.Skills, TaskLinks: adapters.TaskLinkFactDTOsFromDomain(value.TaskLinks),
 		ID:          value.ID,
 		ParentID:    value.ParentID,
 		Source:      value.Source,
@@ -95,23 +99,24 @@ func SessionFactResponseDTOsFromDomain(values []domain.SessionFact) []SessionFac
 
 // FactLedgerResponseDTO is the concrete nullable cost projection of AgenticFactLedger.
 type FactLedgerResponseDTO struct {
-	SchemaVersion *int                           `json:"schema_version,omitempty"`
-	Migration     *domain.MigrationInfo          `json:"migration,omitempty"`
-	TicketID      *string                        `json:"ticket_id"`
-	TicketTitle   *string                        `json:"ticket_title"`
-	TicketType    *domain.ConventionalTicketType `json:"ticket_type"`
-	StartedAt     *string                        `json:"started_at"`
-	CompletedAt   *string                        `json:"completed_at"`
-	UpdatedAt     string                         `json:"updated_at"`
-	Code          domain.CodeFacts               `json:"code"`
-	Sessions      []SessionFactResponseDTO       `json:"sessions"`
-	Anomalies     []domain.Anomaly               `json:"anomalies"`
-	Skills        []domain.SkillFact             `json:"skills,omitempty"`
-	TaskLinks     []adapters.TaskLinkFactDTO     `json:"task_links,omitempty"`
+	OwnershipDiagnostics []string                       `json:"ownership_diagnostics,omitempty"`
+	SchemaVersion        *int                           `json:"schema_version,omitempty"`
+	Migration            *domain.MigrationInfo          `json:"migration,omitempty"`
+	TicketID             *string                        `json:"ticket_id"`
+	TicketTitle          *string                        `json:"ticket_title"`
+	TicketType           *domain.ConventionalTicketType `json:"ticket_type"`
+	StartedAt            *string                        `json:"started_at"`
+	CompletedAt          *string                        `json:"completed_at"`
+	UpdatedAt            string                         `json:"updated_at"`
+	Code                 domain.CodeFacts               `json:"code"`
+	Sessions             []SessionFactResponseDTO       `json:"sessions"`
+	Anomalies            []domain.Anomaly               `json:"anomalies"`
+	Skills               []domain.SkillFact             `json:"skills,omitempty"`
+	TaskLinks            []adapters.TaskLinkFactDTO     `json:"task_links,omitempty"`
 }
 
 func FactLedgerResponseDTOFromDomain(value domain.AgenticFactLedger) FactLedgerResponseDTO {
-	return FactLedgerResponseDTO{
+	return FactLedgerResponseDTO{OwnershipDiagnostics: value.OwnershipDiagnostics,
 		SchemaVersion: value.SchemaVersion,
 		Migration:     value.Migration,
 		TicketID:      value.TicketID,

@@ -41,26 +41,40 @@ type ToolFact struct {
 
 // EventFact captures a single discrete, ordered lifecycle occurrence in an agent session.
 type EventFact struct {
-	EventID          string    `json:"event_id"`
-	Timestamp        string    `json:"timestamp"`
-	SessionID        string    `json:"session_id"`
-	MessageID        *string   `json:"message_id,omitempty"`
-	Turn             int64     `json:"turn"`
-	Role             AgentRole `json:"role"`
-	EventType        EventType `json:"event_type"`
-	ToolName         *string   `json:"tool_name,omitempty"`
-	Status           string    `json:"status"`
-	ErrorMessage     *string   `json:"error_message,omitempty"`
-	DurationMs       *int64    `json:"duration_ms,omitempty"`
-	ContextTokens    int64     `json:"context_tokens"`
-	PromptContent    *string   `json:"prompt_content,omitempty"`
-	ReasoningContent *string   `json:"reasoning_content,omitempty"`
-	ToolInput        *string   `json:"tool_input,omitempty"`
-	ToolOutput       *string   `json:"tool_output,omitempty"`
+	RecordedStatus     *string   `json:"-"`
+	SourceInvocationID string    `json:"source_invocation_id,omitempty"`
+	EventID            string    `json:"event_id"`
+	Timestamp          string    `json:"timestamp"`
+	SessionID          string    `json:"session_id"`
+	MessageID          *string   `json:"message_id,omitempty"`
+	Turn               int64     `json:"turn"`
+	Role               AgentRole `json:"role"`
+	EventType          EventType `json:"event_type"`
+	ToolName           *string   `json:"tool_name,omitempty"`
+	Status             string    `json:"status"`
+	ErrorMessage       *string   `json:"error_message,omitempty"`
+	DurationMs         *int64    `json:"duration_ms,omitempty"`
+	ContextTokens      int64     `json:"context_tokens"`
+	PromptContent      *string   `json:"prompt_content,omitempty"`
+	ReasoningContent   *string   `json:"reasoning_content,omitempty"`
+	ToolInput          *string   `json:"tool_input,omitempty"`
+	ToolOutput         *string   `json:"tool_output,omitempty"`
 }
 
-// SkillFact records one OpenCode skill invocation.
+// FactProvenance identifies the recorded source occurrence, independently of metric rows.
+type FactProvenance struct {
+	SessionID          string        `json:"session_id,omitempty"`
+	Source             SourceHarness `json:"source,omitempty"`
+	SourceEventID      string        `json:"source_event_id,omitempty"`
+	SourceMessageID    string        `json:"source_message_id,omitempty"`
+	SourceInvocationID string        `json:"source_invocation_id,omitempty"`
+}
+
+// SkillFact records a source-backed skill load or tool occurrence.
 type SkillFact struct {
+	FactProvenance
+	Evidence     string `json:"evidence,omitempty"`
+	Outcome      string `json:"outcome,omitempty"`
 	Name         string `json:"name"`
 	TurnIndex    int    `json:"turn_index"`
 	MessageIndex int    `json:"message_index"`
@@ -72,14 +86,16 @@ type SkillFact struct {
 
 // TaskLinkFact records one OpenCode task delegation and any explicit child-session link.
 type TaskLinkFact struct {
-	SubagentType string       `json:"subagent_type"`
-	Description  string       `json:"description"`
-	ParentTurn   int          `json:"parent_turn"`
-	ChildSession string       `json:"child_session_id,omitempty"`
-	Timestamp    string       `json:"timestamp"`
-	DurationMs   int64        `json:"duration_ms,omitempty"`
-	CostUSD      float64      `json:"cost_usd"`
-	CostEvidence CostEvidence `json:"cost_evidence"`
+	FactProvenance
+	ChildReference string       `json:"child_reference,omitempty"`
+	SubagentType   string       `json:"subagent_type"`
+	Description    string       `json:"description"`
+	ParentTurn     int          `json:"parent_turn"`
+	ChildSession   string       `json:"child_session_id,omitempty"`
+	Timestamp      string       `json:"timestamp"`
+	DurationMs     int64        `json:"duration_ms,omitempty"`
+	CostUSD        float64      `json:"cost_usd"`
+	CostEvidence   CostEvidence `json:"cost_evidence"`
 }
 
 // SessionToolFact stores tool totals owned by one session. Session identity is
@@ -92,33 +108,38 @@ type SessionToolFact struct {
 
 // SessionEventFact is a persisted event whose identity is inherited from its session.
 type SessionEventFact struct {
-	EventID          string    `json:"event_id"`
-	Timestamp        string    `json:"timestamp"`
-	MessageID        *string   `json:"message_id,omitempty"`
-	Turn             int64     `json:"turn"`
-	Role             AgentRole `json:"role"`
-	EventType        EventType `json:"event_type"`
-	ToolName         *string   `json:"tool_name,omitempty"`
-	Status           string    `json:"status"`
-	ErrorMessage     *string   `json:"error_message,omitempty"`
-	DurationMs       *int64    `json:"duration_ms,omitempty"`
-	ContextTokens    int64     `json:"context_tokens"`
-	PromptContent    *string   `json:"prompt_content,omitempty"`
-	ReasoningContent *string   `json:"reasoning_content,omitempty"`
-	ToolInput        *string   `json:"tool_input,omitempty"`
-	ToolOutput       *string   `json:"tool_output,omitempty"`
+	RecordedStatus     *string   `json:"-"`
+	SourceInvocationID string    `json:"source_invocation_id,omitempty"`
+	EventID            string    `json:"event_id"`
+	Timestamp          string    `json:"timestamp"`
+	MessageID          *string   `json:"message_id,omitempty"`
+	Turn               int64     `json:"turn"`
+	Role               AgentRole `json:"role"`
+	EventType          EventType `json:"event_type"`
+	ToolName           *string   `json:"tool_name,omitempty"`
+	Status             string    `json:"status"`
+	ErrorMessage       *string   `json:"error_message,omitempty"`
+	DurationMs         *int64    `json:"duration_ms,omitempty"`
+	ContextTokens      int64     `json:"context_tokens"`
+	PromptContent      *string   `json:"prompt_content,omitempty"`
+	ReasoningContent   *string   `json:"reasoning_content,omitempty"`
+	ToolInput          *string   `json:"tool_input,omitempty"`
+	ToolOutput         *string   `json:"tool_output,omitempty"`
 }
 
 // SessionFact owns all raw telemetry attributed to a single agent session.
 type SessionFact struct {
-	ID          string             `json:"id"`
-	ParentID    *string            `json:"parent_id,omitempty"`
-	Source      SourceHarness      `json:"source,omitempty"`
-	User        string             `json:"user,omitempty"`
-	Invocations []InvocationFact   `json:"invocations"`
-	Tools       []SessionToolFact  `json:"tools"`
-	Events      []SessionEventFact `json:"events,omitempty"`
-	Anomalies   []Anomaly          `json:"anomalies"`
+	AuxiliaryExtractionVersion int                `json:"auxiliary_extraction_version,omitempty"`
+	Skills                     []SkillFact        `json:"skills,omitempty"`
+	TaskLinks                  []TaskLinkFact     `json:"task_links,omitempty"`
+	ID                         string             `json:"id"`
+	ParentID                   *string            `json:"parent_id,omitempty"`
+	Source                     SourceHarness      `json:"source,omitempty"`
+	User                       string             `json:"user,omitempty"`
+	Invocations                []InvocationFact   `json:"invocations"`
+	Tools                      []SessionToolFact  `json:"tools"`
+	Events                     []SessionEventFact `json:"events,omitempty"`
+	Anomalies                  []Anomaly          `json:"anomalies"`
 }
 
 // WorkspaceEventsResponse wraps execution events for a ticket workspace with hydration status and data source provenance.
@@ -157,19 +178,20 @@ type MigrationInfo struct {
 
 // AgenticFactLedger is the root raw session facts ledger extracted for a ticket workspace.
 type AgenticFactLedger struct {
-	SchemaVersion *int                    `json:"schema_version,omitempty"`
-	Migration     *MigrationInfo          `json:"migration,omitempty"`
-	TicketID      *string                 `json:"ticket_id"`
-	TicketTitle   *string                 `json:"ticket_title"`
-	TicketType    *ConventionalTicketType `json:"ticket_type"`
-	StartedAt     *string                 `json:"started_at"`
-	CompletedAt   *string                 `json:"completed_at"`
-	UpdatedAt     string                  `json:"updated_at"`
-	Code          CodeFacts               `json:"code"`
-	Sessions      []SessionFact           `json:"sessions"`
-	Anomalies     []Anomaly               `json:"anomalies"`
-	Skills        []SkillFact             `json:"skills,omitempty"`
-	TaskLinks     []TaskLinkFact          `json:"task_links,omitempty"`
+	OwnershipDiagnostics []string                `json:"ownership_diagnostics,omitempty"`
+	SchemaVersion        *int                    `json:"schema_version,omitempty"`
+	Migration            *MigrationInfo          `json:"migration,omitempty"`
+	TicketID             *string                 `json:"ticket_id"`
+	TicketTitle          *string                 `json:"ticket_title"`
+	TicketType           *ConventionalTicketType `json:"ticket_type"`
+	StartedAt            *string                 `json:"started_at"`
+	CompletedAt          *string                 `json:"completed_at"`
+	UpdatedAt            string                  `json:"updated_at"`
+	Code                 CodeFacts               `json:"code"`
+	Sessions             []SessionFact           `json:"sessions"`
+	Anomalies            []Anomaly               `json:"anomalies"`
+	Skills               []SkillFact             `json:"skills,omitempty"`
+	TaskLinks            []TaskLinkFact          `json:"task_links,omitempty"`
 }
 
 // AnomalyFacts returns persisted anomaly summaries with their owning session restored.
@@ -218,7 +240,7 @@ func (ledger AgenticFactLedger) EventFacts() []EventFact {
 		}
 		for _, event := range session.Events {
 			result = append(result, EventFact{
-				EventID: event.EventID, Timestamp: event.Timestamp, SessionID: session.ID, MessageID: event.MessageID, Turn: event.Turn,
+				RecordedStatus: event.RecordedStatus, SourceInvocationID: event.SourceInvocationID, EventID: event.EventID, Timestamp: event.Timestamp, SessionID: session.ID, MessageID: event.MessageID, Turn: event.Turn,
 				Role: event.Role, EventType: event.EventType, ToolName: event.ToolName, Status: event.Status,
 				ErrorMessage: event.ErrorMessage, DurationMs: event.DurationMs, ContextTokens: event.ContextTokens,
 				PromptContent: event.PromptContent, ReasoningContent: event.ReasoningContent,
@@ -276,7 +298,10 @@ func SessionsFromFacts(invocationSessions []SessionFact, tools []ToolFact, event
 		if owned.User != "" {
 			session.User = owned.User
 		}
+		session.AuxiliaryExtractionVersion = owned.AuxiliaryExtractionVersion
 		session.Invocations = append(session.Invocations, owned.Invocations...)
+		session.Skills = append(session.Skills, owned.Skills...)
+		session.TaskLinks = append(session.TaskLinks, owned.TaskLinks...)
 		session.Anomalies = append(session.Anomalies, owned.Anomalies...)
 	}
 	for _, tool := range tools {
@@ -303,7 +328,7 @@ func SessionsFromFacts(invocationSessions []SessionFact, tools []ToolFact, event
 			return nil, err
 		}
 		session.Events = append(session.Events, SessionEventFact{
-			EventID: event.EventID, Timestamp: event.Timestamp, MessageID: event.MessageID, Turn: event.Turn, Role: event.Role,
+			RecordedStatus: event.RecordedStatus, SourceInvocationID: event.SourceInvocationID, EventID: event.EventID, Timestamp: event.Timestamp, MessageID: event.MessageID, Turn: event.Turn, Role: event.Role,
 			EventType: event.EventType, ToolName: event.ToolName, Status: event.Status,
 			ErrorMessage: event.ErrorMessage, DurationMs: event.DurationMs, ContextTokens: event.ContextTokens,
 			PromptContent: event.PromptContent, ReasoningContent: event.ReasoningContent,
@@ -519,11 +544,12 @@ type FleetAnomalySummary struct {
 
 // SkillAdoptionFact summarizes recorded skill invocations across tickets.
 type SkillAdoptionFact struct {
-	Name             string  `json:"name"`
-	TotalInvocations int64   `json:"total_invocations"`
-	TicketsCount     int64   `json:"tickets_count"`
-	FailureCount     int64   `json:"failure_count"`
-	FailureRate      float64 `json:"failure_rate"`
+	Name             string   `json:"name"`
+	TotalInvocations int64    `json:"total_invocations"`
+	TicketsCount     int64    `json:"tickets_count"`
+	FailureCount     int64    `json:"failure_count"`
+	KnownOutcomes    int64    `json:"known_outcomes"`
+	FailureRate      *float64 `json:"failure_rate"`
 }
 
 // FleetSummary aggregates high-level metrics across multiple tickets.

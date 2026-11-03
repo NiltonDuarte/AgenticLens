@@ -48,9 +48,10 @@ type schemaV1PartState struct {
 }
 
 type schemaV1PartData struct {
-	Type  *string            `json:"type"`
-	Tool  *string            `json:"tool"`
-	State *schemaV1PartState `json:"state"`
+	CallID string             `json:"callID"`
+	Type   *string            `json:"type"`
+	Tool   *string            `json:"tool"`
+	State  *schemaV1PartState `json:"state"`
 }
 
 func extractSchemaV1Sessions(
@@ -464,7 +465,7 @@ func extractSchemaV1Sessions(
 		if *rawPD.Type == "compaction" {
 			compMap[sID]++
 			events = append(events, domain.EventFact{
-				EventID:       partID,
+				SourceInvocationID: rawPD.CallID, EventID: partID,
 				Timestamp:     ts,
 				SessionID:     sID,
 				MessageID:     msgIDPtr,
@@ -539,7 +540,7 @@ func extractSchemaV1Sessions(
 
 			tName := toolName
 			events = append(events, domain.EventFact{
-				EventID:       partID,
+				RecordedStatus: &stat, SourceInvocationID: rawPD.CallID, EventID: partID,
 				Timestamp:     ts,
 				SessionID:     sID,
 				MessageID:     msgIDPtr,
@@ -583,7 +584,7 @@ func extractSchemaV1Sessions(
 	eventsBySession := make(map[string][]domain.SessionEventFact)
 	for _, ev := range events {
 		eventsBySession[ev.SessionID] = append(eventsBySession[ev.SessionID], domain.SessionEventFact{
-			EventID:          ev.EventID,
+			RecordedStatus: ev.RecordedStatus, SourceInvocationID: ev.SourceInvocationID, EventID: ev.EventID,
 			Timestamp:        ev.Timestamp,
 			MessageID:        ev.MessageID,
 			Turn:             ev.Turn,
@@ -712,7 +713,7 @@ func extractSchemaV1Sessions(
 		completedAtISO = maxCompleted
 	}
 
-	return sessionFacts, startedAtISO, completedAtISO, nil
+	return WithSkillTaskFacts(sessionFacts), startedAtISO, completedAtISO, nil
 }
 
 // countSchemaV1SteeringTurns calculates human steering turns from message records for given root threads.

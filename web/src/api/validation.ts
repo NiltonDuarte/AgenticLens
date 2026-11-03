@@ -21,7 +21,7 @@ const health = (value: unknown): boolean => value === 'HEALTHY' || value === 'EL
 function eventFields(value: Record<string, unknown>): boolean {
   return fields(value, ['timestamp', 'role', 'status'], string) && fields(value, ['turn', 'context_tokens'], number) &&
     (value.event_type === 'tool_call' || value.event_type === 'turn_message' || value.event_type === 'compaction') &&
-    fields(value, ['event_id', 'message_id', 'tool_name', 'error_message', 'prompt_content', 'reasoning_content', 'tool_input', 'tool_output'], optionalString) &&
+    fields(value, ['event_id', 'source_invocation_id', 'message_id', 'tool_name', 'error_message', 'prompt_content', 'reasoning_content', 'tool_input', 'tool_output'], optionalString) &&
     (value.duration_ms === null || optionalNumber(value.duration_ms));
 }
 export function isEventFact(value: unknown): value is EventFact {
@@ -46,11 +46,28 @@ function invocation(value: unknown): boolean {
     fields(value, ['active_duration_seconds', 'turns', 'compactions'], number) && (value.cost_usd === undefined || nullableNumber(value.cost_usd)) && optionalNumber(value.user_iterations) &&
     isRecord(value.tokens) && fields(value.tokens, ['input', 'output', 'cache_read', 'reasoning', 'peak_context'], number);
 }
+function occurrence(value: Record<string, unknown>): boolean {
+  return fields(value, ['session_id', 'source_event_id', 'source_message_id', 'source_invocation_id'], (v) => v === undefined || string(v)) &&
+    (value.source === undefined || value.source === 'unknown' || value.source === 'opencode' || value.source === 'codex');
+}
+function skill(value: unknown): boolean {
+  return isRecord(value) && occurrence(value) && fields(value, ['name', 'caller_role', 'timestamp'], string) &&
+    fields(value, ['turn_index', 'message_index'], number) && typeof value.success === 'boolean' &&
+    (value.error === undefined || string(value.error)) &&
+    (value.evidence === undefined || value.evidence === 'skill_tool' || value.evidence === 'skill_file_read') &&
+    (value.outcome === undefined || value.outcome === 'succeeded' || value.outcome === 'failed' || value.outcome === 'unavailable');
+}
+function task(value: unknown): boolean {
+  return isRecord(value) && occurrence(value) && fields(value, ['subagent_type', 'description', 'timestamp'], string) &&
+    number(value.parent_turn) && fields(value, ['child_session_id', 'child_reference'], (v) => v === undefined || string(v)) &&
+    optionalNumber(value.duration_ms) && (value.cost_usd === undefined || nullableNumber(value.cost_usd));
+}
 function session(value: unknown): boolean {
-  return isRecord(value) && string(value.id) && optionalString(value.parent_id) &&
+  return isRecord(value) && string(value.id) && optionalNumber(value.auxiliary_extraction_version) && optionalString(value.parent_id) &&
     (value.source === undefined || value.source === 'unknown' || value.source === 'opencode' || value.source === 'codex') &&
     (value.user === undefined || string(value.user)) && array(value.invocations, invocation) &&
     array(value.tools, (v) => isRecord(v) && string(v.name) && fields(v, ['calls', 'errors'], number)) &&
+    optionalArray(value.skills, skill) && optionalArray(value.task_links, task) &&
     optionalArray(value.events, (v) => isRecord(v) && eventFields(v)) && optionalArray(value.anomalies, isAnomaly);
 }
 function ticketMetadata(value: Record<string, unknown>): boolean {
@@ -66,8 +83,8 @@ function facts(value: unknown): boolean {
     (value.migration === undefined || migration(value.migration)) && isRecord(value.code) &&
     fields(value.code, ['lines_added', 'lines_deleted', 'test_lines_added', 'test_lines_deleted', 'prod_lines_added', 'prod_lines_deleted', 'files_changed', 'sdlc_iterations'], number) &&
     array(value.sessions, session) && optionalArray(value.anomalies, isAnomaly) &&
-    optionalArray(value.skills, (v) => isRecord(v) && fields(v, ['name', 'caller_role', 'timestamp'], string) && fields(v, ['turn_index', 'message_index'], number) && typeof v.success === 'boolean' && (v.error === undefined || string(v.error))) &&
-    optionalArray(value.task_links, (v) => isRecord(v) && fields(v, ['subagent_type', 'description', 'timestamp'], string) && number(v.parent_turn) && (v.child_session_id === undefined || string(v.child_session_id)) && optionalNumber(v.duration_ms) && (v.cost_usd === undefined || nullableNumber(v.cost_usd)));
+    optionalArray(value.skills, skill) && optionalArray(value.task_links, task) &&
+    (value.ownership_diagnostics === undefined || strings(value.ownership_diagnostics));
 }
 function workflow(value: unknown): boolean {
   if (!isRecord(value)) return false;
@@ -98,9 +115,9 @@ function collections(value: unknown, arrays: readonly string[] = [], maps: reado
 function prepareLedger(value: unknown): unknown {
   const result = collections(value, ['threads', 'roles', 'models', 'anomalies']);
   if (!isRecord(result)) return result;
-  const rawFacts = collections(result.facts, ['sessions', 'anomalies', 'skills', 'task_links']);
+  const rawFacts = collections(result.facts, ['sessions', 'anomalies', 'skills', 'task_links', 'ownership_diagnostics']);
   if (isRecord(rawFacts)) {
-    if (Array.isArray(rawFacts.sessions)) rawFacts.sessions = rawFacts.sessions.map((s: unknown) => collections(s, ['invocations', 'tools', 'events', 'anomalies']));
+    if (Array.isArray(rawFacts.sessions)) rawFacts.sessions = rawFacts.sessions.map((s: unknown) => collections(s, ['invocations', 'tools', 'events', 'anomalies', 'skills', 'task_links']));
     if (rawFacts.migration !== undefined) rawFacts.migration = collections(rawFacts.migration, ['steps_completed', 'steps_pending']);
     result.facts = rawFacts;
   }
@@ -133,7 +150,7 @@ function isFleet(value: unknown): value is FleetSummary {
     nullableNumber(value.total_cost_usd) && string(value.formatted_total_duration) && nullableNumericMap(value.role_costs) && nullableNumericMap(value.model_costs) &&
     fields(anomaly, ['total_anomalies', 'warning_count', 'critical_count', 'total_tickets', 'tickets_with_anomalies', 'anomaly_rate_per_ticket'], number) && numericMap(anomaly.severity_counts) && numericMap(anomaly.rule_counts) &&
     array(anomaly.brittle_tools, (v) => isRecord(v) && string(v.tool_name) && fields(v, ['anomaly_count', 'total_calls', 'error_count', 'failure_rate_pct'], number)) &&
-    optionalArray(value.skill_adoption, (v) => isRecord(v) && string(v.name) && fields(v, ['total_invocations', 'tickets_count', 'failure_count', 'failure_rate'], number));
+    optionalArray(value.skill_adoption, (v) => isRecord(v) && string(v.name) && fields(v, ['total_invocations', 'tickets_count', 'failure_count'], number) && nullableNumber(v.failure_rate) && optionalNumber(v.known_outcomes));
 }
 export function decodeFleet(value: unknown): FleetSummary {
   const result = collections(value, ['skill_adoption'], ['role_costs', 'model_costs']);

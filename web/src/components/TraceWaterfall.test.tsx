@@ -2669,13 +2669,13 @@ describe('rich invocation badges', () => {
     timestamp: '2026-10-30T10:00:00Z', session_id: 'parent', turn: 1, role: 'coder',
     event_type: 'tool_call', tool_name: 'task', status: 'completed', context_tokens: 100,
   };
-  const task = { timestamp: event.timestamp, parent_turn: 1, subagent_type: 'tester', description: 'Verify', child_session_id: 'child' };
+  const task = { session_id: 'parent', timestamp: event.timestamp, parent_turn: 1, subagent_type: 'tester', description: 'Verify', child_session_id: 'child' };
 
   it('renders committed badges and activates a child without selecting the parent event', async () => {
     const selectChild = vi.fn();
     const selectEvent = vi.fn();
     render(<TraceWaterfall events={[event, { ...event, turn: 2, tool_name: 'skill' }]}
-      skills={[{ name: 'review', turn_index: 2, message_index: 0, caller_role: 'coder', timestamp: event.timestamp, success: true }]}
+      skills={[{ session_id: 'parent', name: 'review', turn_index: 2, message_index: 0, caller_role: 'coder', timestamp: event.timestamp, success: true }]}
       taskLinks={[task]} availableSessionIds={['child']} onSelectSession={selectChild}
       onSelectEvent={selectEvent} defaultExpanded />);
     fireEvent.click(screen.getByRole('button', { name: 'All Events' }));
@@ -2687,9 +2687,31 @@ describe('rich invocation badges', () => {
     expect(selectEvent).not.toHaveBeenCalled();
   });
 
+  it('matches source calls only within their owner even when parent and child positions overlap', () => {
+    render(<TraceWaterfall events={[
+      { ...event, event_id: 'call', tool_name: 'spawn_agent' },
+      { ...event, event_id: 'call', session_id: 'other', tool_name: 'exec_command' },
+    ]} skills={[{ name: 'child-load', session_id: 'other', source_invocation_id: 'call',
+      turn_index: 1, message_index: 0, caller_role: 'coder', timestamp: event.timestamp, success: false, outcome: 'unavailable' }]}
+      taskLinks={[{ ...task, source_invocation_id: 'call' }]} availableSessionIds={['child']} onSelectSession={vi.fn()} defaultExpanded />);
+    fireEvent.click(screen.getByRole('button', { name: 'All Events' }));
+    expect(screen.getAllByRole('button', { name: 'Inspect child session child' })).toHaveLength(1);
+    expect(screen.getAllByText('[skill: child-load]')).toHaveLength(1);
+  });
+
+  it('renders every distinct proven skill from one source call', () => {
+    const fact = { session_id: 'parent', source_event_id: 'call', source_invocation_id: 'raw-call',
+      turn_index: 1, message_index: 0, caller_role: 'coder', timestamp: event.timestamp, success: false, outcome: 'unavailable' as const };
+    render(<TraceWaterfall events={[{ ...event, event_id: 'hydrated-event', source_invocation_id: 'raw-call', tool_name: 'exec_command' }]}
+      skills={[{ ...fact, name: 'dev' }, { ...fact, name: 'review' }]} defaultExpanded />);
+    fireEvent.click(screen.getByRole('button', { name: 'All Events' }));
+    expect(screen.getByText('[skill: dev]')).toBeVisible();
+    expect(screen.getByText('[skill: review]')).toBeVisible();
+  });
+
   it('does not attribute an ambiguous task link across sessions and retains input-only badges', () => {
     render(<TraceWaterfall events={[event, { ...event, session_id: 'other', tool_input: '{"subagent_type":"planner"}' }]}
-      taskLinks={[task]} availableSessionIds={['child']} onSelectSession={vi.fn()} defaultExpanded />);
+      taskLinks={[{ ...task, session_id: '' }]} availableSessionIds={['child']} onSelectSession={vi.fn()} defaultExpanded />);
     fireEvent.click(screen.getByRole('button', { name: 'All Events' }));
     expect(screen.queryByRole('button', { name: 'Inspect child session child' })).not.toBeInTheDocument();
     expect(screen.getByText('[task -> planner]')).toBeInTheDocument();
@@ -2701,13 +2723,13 @@ describe('rich invocation badges', () => {
 describe('retrospective invocation metadata safety', () => {
   const event: EventFact = { timestamp: '2026-10-30T10:00:00Z', session_id: 'parent', turn: 4,
     role: 'coder', event_type: 'tool_call', tool_name: 'task', status: 'completed', context_tokens: 100 };
-  const task = { timestamp: event.timestamp, parent_turn: 4, subagent_type: 'tester', description: 'Verify', child_session_id: 'child' };
+  const task = { session_id: 'parent', timestamp: event.timestamp, parent_turn: 4, subagent_type: 'tester', description: 'Verify', child_session_id: 'child' };
 
-  it.each(['duplicate facts', 'conflicting input', 'different timestamp'])('rejects an unsafe child link for %s', (mode) => {
+  it.each(['duplicate facts', 'duplicate events', 'conflicting input', 'different timestamp'])('rejects an unsafe child link for %s', (mode) => {
     const input = mode === 'conflicting input' ? '{"subagent_type":"planner"}' : '{broken-json';
     const tasks = mode === 'duplicate facts' ? [task, { ...task, child_session_id: 'other-child' }]
       : mode === 'different timestamp' ? [{ ...task, timestamp: '2026-10-30T11:00:00Z' }] : [task];
-    render(<TraceWaterfall events={[{ ...event, tool_input: input }]} taskLinks={tasks}
+    render(<TraceWaterfall events={mode === 'duplicate events' ? [event, { ...event }] : [{ ...event, tool_input: input }]} taskLinks={tasks}
       availableSessionIds={['child', 'other-child']} onSelectSession={vi.fn()} defaultExpanded />);
     fireEvent.click(screen.getByRole('button', { name: 'All Events' }));
     expect(screen.queryByRole('button', { name: /Inspect child session/ })).not.toBeInTheDocument();

@@ -34,3 +34,29 @@ func CaptureOwnerFactsEqual(a, b SessionFact) (bool, error) {
 	}
 	return string(first) == string(second), nil
 }
+
+// CaptureAuxiliaryUpgrade permits only a source-backed expansion into previously
+// unsupported empty auxiliary fields. It does not order changed metric snapshots.
+func CaptureAuxiliaryUpgrade(before, after SessionFact) (bool, error) {
+	if before.AuxiliaryExtractionVersion != 0 || after.AuxiliaryExtractionVersion != CurrentAuxiliaryExtractionVersion || len(before.Skills) != 0 || len(before.TaskLinks) != 0 || before.ID != after.ID || before.User != after.User || before.Source == "" || before.Source != after.Source {
+		return false, nil
+	}
+	// Optional source hydration may add events, but accepted persisted event facts
+	// must never be replaced by differing evidence under an extraction upgrade.
+	if len(before.Events) > 0 {
+		a, err := json.Marshal(before.Events)
+		if err != nil {
+			return false, err
+		}
+		b, err := json.Marshal(after.Events)
+		if err != nil {
+			return false, err
+		}
+		if string(a) != string(b) {
+			return false, nil
+		}
+	}
+	after.Skills, after.TaskLinks = before.Skills, before.TaskLinks
+	after.AuxiliaryExtractionVersion = before.AuxiliaryExtractionVersion
+	return CaptureOwnerFactsEqual(before, after)
+}

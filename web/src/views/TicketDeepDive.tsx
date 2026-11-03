@@ -7,7 +7,7 @@ import type {
   WorkspaceDetail,
 } from '../domain/types';
 import { ledgerSkills, ledgerTaskLinks, sessionTools } from '../domain/types';
-import { rebindEvent, sessionEvents, selectWorkspaceEvents } from '../domain/events';
+import { rebindEvent, ledgerTimelineEvents, selectWorkspaceEvents } from '../domain/events';
 import {
   fetchWorkspaceById,
   fetchWorkspaceEvents,
@@ -110,7 +110,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
       if (targetId) {
         const detailRes = await fetchWorkspaceById(targetId);
         if (!isCurrentRequest()) return;
-        const baseline = sessionEvents(detailRes.data.ledger?.facts?.sessions);
+        const baseline = ledgerTimelineEvents(detailRes.data.ledger?.facts);
         setDetail(detailRes.data);
         setEvents(baseline);
         setTraceAnomalies(detailRes.data.anomalies ?? []);
@@ -123,12 +123,13 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
           if (eventsRes.data.ticket_id !== targetId) return;
           const selected = selectWorkspaceEvents(baseline, eventsRes.data);
           const anomalies = eventsRes.data.anomalies ?? detailRes.data.anomalies ?? [];
-          setEvents(selected.events);
+          const projectedEvents = ledgerTimelineEvents(detailRes.data.ledger?.facts, selected.events);
+          setEvents(projectedEvents);
           setIsHydrated(selected.is_hydrated);
           setDataSource(selected.data_source);
           setTraceAnomalies(anomalies);
           setSelection((current) => {
-            const event = rebindEvent(current.event, baseline, selected.events);
+            const event = rebindEvent(current.event, baseline, projectedEvents);
             const sameRule = current.anomaly
               ? anomalies.filter((anomaly) => anomaly.rule_id === current.anomaly?.rule_id)
               : anomalies;
@@ -663,6 +664,9 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
       />
 
       {/* Row 7: Session Thread Logs */}
+      {(ledger.facts.ownership_diagnostics ?? []).map((diagnostic, index) => (
+        <p key={index} className="empty-threads-note">{diagnostic}</p>
+      ))}
       <SkillsSubagentsPanel
         key={ledger.ticket_id}
         skills={ledgerSkills(ledger.facts)}

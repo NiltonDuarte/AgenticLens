@@ -288,7 +288,7 @@ func extractSchemaV2Sessions(db *sql.DB, roots []string, defaultUser string, use
 					}
 					output := strings.Join(outputParts, "\n")
 					input := normalizeToolInput(part.State.Input)
-					events = append(events, domain.EventFact{EventID: sourceEventID("tool", part.ID), Timestamp: stamp, SessionID: s.id, MessageID: mid, Turn: assistantTurns, Role: role, EventType: domain.EventTypeToolCall, ToolName: &toolName, Status: status, DurationMs: duration, ContextTokens: ctx, ToolInput: input, ToolOutput: schemaV2StringPointer(output)})
+					events = append(events, domain.EventFact{SourceInvocationID: part.ID, EventID: sourceEventID("tool", part.ID), Timestamp: stamp, SessionID: s.id, MessageID: mid, Turn: assistantTurns, Role: role, EventType: domain.EventTypeToolCall, ToolName: &toolName, Status: status, DurationMs: duration, ContextTokens: ctx, ToolInput: input, ToolOutput: schemaV2StringPointer(output)})
 				}
 			default:
 				return nil, nil, nil, fmt.Errorf("OpenCode schema family v2: unsupported message type %q for message %s in session %s", m.kind, m.id, s.id)
@@ -359,7 +359,7 @@ func extractSchemaV2Sessions(db *sql.DB, roots []string, defaultUser string, use
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("grouping OpenCode schema family v2 facts into sessions: %w", err)
 	}
-	return result, start, end, nil
+	return WithSkillTaskFacts(result), start, end, nil
 }
 
 func schemaV2StringPointer(s string) *string { return &s }

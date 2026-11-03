@@ -7,6 +7,8 @@ import (
 // TaskLinkFactDTO retains the presence of the optional task cost independently
 // of its value. Task links never contribute to invocation aggregates.
 type TaskLinkFactDTO struct {
+	domain.FactProvenance
+	ChildReference  string               `json:"child_reference,omitempty"`
 	SubagentType    string               `json:"subagent_type"`
 	Description     string               `json:"description"`
 	ParentTurn      int                  `json:"parent_turn"`
@@ -43,7 +45,7 @@ func (dto *TaskLinkFactDTO) UnmarshalJSON(data []byte) error {
 
 func (dto TaskLinkFactDTO) ToDomain() domain.TaskLinkFact {
 	evidence := costFactEvidence(dto.CostUSD, dto.CostEvidence)
-	return domain.TaskLinkFact{SubagentType: dto.SubagentType, Description: dto.Description, ParentTurn: dto.ParentTurn, ChildSession: dto.ChildSession, Timestamp: dto.Timestamp, DurationMs: dto.DurationMs, CostUSD: costFactAccumulator(dto.CostUSD, evidence), CostEvidence: evidence}
+	return domain.TaskLinkFact{FactProvenance: dto.FactProvenance, ChildReference: dto.ChildReference, SubagentType: dto.SubagentType, Description: dto.Description, ParentTurn: dto.ParentTurn, ChildSession: dto.ChildSession, Timestamp: dto.Timestamp, DurationMs: dto.DurationMs, CostUSD: costFactAccumulator(dto.CostUSD, evidence), CostEvidence: evidence}
 }
 
 func TaskLinkFactDTOFromDomain(value domain.TaskLinkFact) TaskLinkFactDTO {
@@ -54,7 +56,7 @@ func TaskLinkFactDTOFromDomain(value domain.TaskLinkFact) TaskLinkFactDTO {
 			evidence = domain.ObservedCost(value.CostUSD)
 		}
 	}
-	return TaskLinkFactDTO{SubagentType: value.SubagentType, Description: value.Description, ParentTurn: value.ParentTurn, ChildSession: value.ChildSession, Timestamp: value.Timestamp, DurationMs: value.DurationMs, CostUSD: factCostAmount(value.CostUSD, evidence), CostEvidence: costEvidencePointer(evidence)}
+	return TaskLinkFactDTO{FactProvenance: value.FactProvenance, ChildReference: value.ChildReference, SubagentType: value.SubagentType, Description: value.Description, ParentTurn: value.ParentTurn, ChildSession: value.ChildSession, Timestamp: value.Timestamp, DurationMs: value.DurationMs, CostUSD: factCostAmount(value.CostUSD, evidence), CostEvidence: costEvidencePointer(evidence)}
 }
 
 func TaskLinkFactDTOsFromDomain(values []domain.TaskLinkFact) []TaskLinkFactDTO {

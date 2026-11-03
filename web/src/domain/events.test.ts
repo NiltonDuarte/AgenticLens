@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest';
-import { rebindEvent, reconcileEvents, selectWorkspaceEvents, sessionEvents } from './events';
+import { rebindEvent, reconcileEvents, selectWorkspaceEvents, sessionEvents, ledgerTimelineEvents } from './events';
 import {
     sessionTools,
     sessionInvocations,
@@ -48,6 +48,23 @@ describe('Event Telemetry and Schema Evolution Contracts', () => {
             expect(ledgerSkills(payload)).toHaveLength(1);
             expect(ledgerTaskLinks(payload)[0]?.child_session_id).toBe('child-1');
         });
+        it('projects owned facts, preserves repeated unresolved history and removes only explicit transitional echoes', () => {
+            const skill = { name: 'inspect', turn_index: 1, message_index: 0, caller_role: 'coder', timestamp: '', success: true };
+            const task = { subagent_type: 'tester', description: 'Check', parent_turn: 1, timestamp: '' };
+            const root = { id: 'root', source: 'codex' as const, tools: [], invocations: [],
+                skills: [{ ...skill, source_invocation_id: 'call-1' }, { ...skill, source_invocation_id: 'call-2' }],
+                task_links: [{ ...task, source_event_id: 'event-1', child_session_id: 'child' }] };
+            const child = { ...root, id: 'child', skills: [{ ...skill, source_invocation_id: 'call-1' }], task_links: [] };
+            const ledger = { sessions: [root, child], skills: [skill, { ...skill },
+                { ...skill, session_id: 'root', source_invocation_id: 'call-1' }],
+                task_links: [{ ...task, session_id: 'root', source_event_id: 'event-1' }, task] };
+            const before = JSON.stringify(ledger);
+            expect(ledgerSkills(ledger).map((fact) => fact.session_id)).toEqual(['root', 'root', 'child', undefined, undefined]);
+            expect(ledgerSkills(ledger).map((fact) => fact.source_invocation_id)).toEqual(['call-1', 'call-2', 'call-1', undefined, undefined]);
+            expect(ledgerTaskLinks(ledger).map((fact) => fact.session_id)).toEqual(['root', undefined]);
+            expect(ledgerTaskLinks(ledger)[0]?.child_session_id).toBe('child');
+            expect(JSON.stringify(ledger)).toBe(before);
+        });
         it('handles undefined tools and invocations in session helpers without throwing', () => {
             const sessionsWithoutArrays = [
                 { id: 'ses-1' } as unknown as SessionFact,
@@ -65,6 +82,46 @@ describe('Recorded event projection and optional enrichment', () => {
         event_id: 'call-1', timestamp: '2026-10-29T10:00:00Z', session_id: 'session-a',
         message_id: 'message-1', turn: 2, role: 'coder', event_type: 'tool_call',
         tool_name: 'bash', status: 'error', duration_ms: 12, context_tokens: 3400,
+    });
+
+    it('projects compact source evidence once per owner and joins hydrated events by original call identity', () => {
+        const skill = { name: 'dev', turn_index: 2, message_index: 1, caller_role: 'coder', timestamp: recorded.timestamp,
+            success: false, evidence: 'skill_file_read' as const, outcome: 'unavailable' as const, source_invocation_id: 'raw-call' };
+        const task = { subagent_type: 'tester', description: 'Check', parent_turn: 3, timestamp: recorded.timestamp,
+            source_event_id: 'recorded-spawn', child_session_id: 'unavailable-child' };
+        const ledger = { sessions: [
+            { id: 'parent', invocations: [], tools: [], skills: [skill, { ...skill, name: 'review' }], task_links: [task] },
+            { id: 'child', invocations: [], tools: [], skills: [skill] },
+        ] };
+        // Use a truly omitted identity for unresolved legacy history.
+        const { source_invocation_id: ignored, ...unresolved } = skill;
+        void ignored;
+        const compact = { ...ledger, skills: [unresolved] };
+        const before = JSON.stringify(compact);
+        const projected = ledgerTimelineEvents(compact);
+        expect(projected).toHaveLength(3);
+        expect(projected.map((event) => event.session_id)).toEqual(['parent', 'child', 'parent']);
+        expect(projected.map((event) => event.event_id)).toEqual([undefined, undefined, 'recorded-spawn']);
+        expect(projected[0]?.source_invocation_id).toBe('raw-call');
+        expect(projected.every((event) => event.status === 'unavailable')).toBe(true);
+        const actual: EventFact = { ...recorded, event_id: 'actual-event', session_id: 'parent', source_invocation_id: 'raw-call',
+            tool_name: 'exec_command', status: 'completed', tool_output: 'recorded source result' };
+        const enriched = ledgerTimelineEvents(compact, reconcileEvents(projected, [actual]));
+        expect(enriched).toHaveLength(3);
+        expect(enriched.find((event) => event.event_id === 'actual-event')).toEqual(actual);
+        expect(enriched.find((event) => event.event_id === 'actual-event')?.fact_projection).toBeUndefined();
+        expect(ledgerTimelineEvents(compact, enriched)).toEqual(enriched);
+        for (const includes_baseline of [false, true]) {
+            const selected = selectWorkspaceEvents(projected, { ticket_id: 'TICKET', is_hydrated: true,
+                data_source: 'local_codex', includes_baseline, events: [actual] });
+            const refreshed = ledgerTimelineEvents(compact, selected.events);
+            expect(refreshed).toHaveLength(3);
+            expect(refreshed.filter((event) => event.session_id === 'parent' && event.source_invocation_id === 'raw-call')).toEqual([actual]);
+        }
+        expect(selectWorkspaceEvents(projected, { ticket_id: 'TICKET', is_hydrated: false,
+            data_source: 'committed_ledger', events: [] }).events).toEqual(projected);
+
+        expect(JSON.stringify(compact)).toBe(before);
     });
 
     it('projects every nested field with its owner and stable chronological ordering without mutation', () => {
@@ -103,7 +160,7 @@ describe('Recorded event projection and optional enrichment', () => {
 
     it('enriches matching IDs, retains unmatched facts, adds local rows, and is idempotent', () => {
         const unmatched = Object.freeze({ ...recorded, event_id: 'unmatched', turn: 3 });
-        const local = Object.freeze({ ...recorded, message_id: 'local-message', duration_ms: 0,
+        const local = Object.freeze({ ...recorded, source_invocation_id: 'source-call', message_id: 'local-message', duration_ms: 0,
             prompt_content: 'Run checks', reasoning_content: 'Inspect failures', tool_input: 'make', tool_output: 'failed', error_message: 'exit 1' });
         const added = Object.freeze({ ...local, event_id: 'local-only', session_id: 'session-b', turn: 1 });
         const baseline = Object.freeze([unmatched, recorded]);

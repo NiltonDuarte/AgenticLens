@@ -1,13 +1,21 @@
 import React, { useId, useState } from 'react';
-import type { SkillFact, TaskLinkFact } from '../domain/types';
+import { skillOutcome, type SourceOccurrence, type SkillFact, type TaskLinkFact } from '../domain/types';
 import {
   formatFactCostUSD,
   formatDurationSeconds,
   formatLocalDateTimeTooltip,
   formatLocalTimeWithMs,
-  formatSkillStatus,
   formatSubagentRole,
 } from '../domain/formatters';
+
+const FactOwner: React.FC<{ readonly fact: SourceOccurrence }> = ({ fact }) => (
+  <td className="source-text">
+    <span>{fact.session_id ?? 'Unresolved ownership'}</span>
+    {fact.source && <div>{fact.source}</div>}
+    {(fact.source_invocation_id || fact.source_event_id) && <div>{fact.source_invocation_id ?? fact.source_event_id}</div>}
+    {fact.source_message_id && <div>{fact.source_message_id}</div>}
+  </td>
+);
 
 export interface SkillsSubagentsPanelProps {
   readonly skills: readonly SkillFact[];
@@ -41,7 +49,7 @@ export const SkillsSubagentsPanel: React.FC<SkillsSubagentsPanelProps> = ({
               <caption>Modular skills</caption>
               <thead><tr>
                 <th scope="col">Skill Name</th><th scope="col">Loaded At (Turn / Time)</th>
-                <th scope="col">Invoking Role</th><th scope="col">Execution Status</th><th scope="col">Error Details</th>
+                <th scope="col">Invoking Role</th><th scope="col">Execution Status</th><th scope="col">Owner / Source Occurrence</th><th scope="col">Error Details</th>
               </tr></thead>
               <tbody>{skills.map((skill, index) => (
                 <tr key={index} tabIndex={0}>
@@ -49,7 +57,8 @@ export const SkillsSubagentsPanel: React.FC<SkillsSubagentsPanelProps> = ({
                   <td>Turn {skill.turn_index} / <time dateTime={skill.timestamp}
                     title={formatLocalDateTimeTooltip(skill.timestamp)}>{formatLocalTimeWithMs(skill.timestamp)}</time></td>
                   <td>{formatSubagentRole(skill.caller_role)}</td>
-                  <td><span className={`skill-status ${skill.success ? 'success' : 'failed'}`}>{formatSkillStatus(skill.success)}</span></td>
+                  <td><span className={`skill-status ${skillOutcome(skill) === 'succeeded' ? 'success' : skillOutcome(skill) === 'failed' ? 'failed' : ''}`}>{skillOutcome(skill) === 'unavailable' ? 'Unavailable' : skillOutcome(skill) === 'succeeded' ? 'Success' : 'Failed'}</span>{skill.evidence === 'skill_file_read' && <div>Skill file read; execution outcome unavailable</div>}</td>
+                  <FactOwner fact={skill} />
                   <td className="source-text">{skill.error ?? 'None recorded'}</td>
                 </tr>
               ))}</tbody>
@@ -63,7 +72,7 @@ export const SkillsSubagentsPanel: React.FC<SkillsSubagentsPanelProps> = ({
               <thead><tr>
                 <th scope="col">Subagent Type</th><th scope="col">Description / Task</th>
                 <th scope="col">Parent Turn</th><th scope="col">Duration</th><th scope="col">Cost (USD)</th>
-                <th scope="col">Child Session</th>
+                <th scope="col">Child Session</th><th scope="col">Owner / Source Occurrence</th>
               </tr></thead>
               <tbody>{delegations.map((task, index) => (
                 <tr key={index} tabIndex={0}>
@@ -80,7 +89,8 @@ export const SkillsSubagentsPanel: React.FC<SkillsSubagentsPanelProps> = ({
                         {task.child_session_id}
                       </button>
                     ) : <><span>{task.child_session_id}</span><span className="session-unavailable">Thread unavailable</span></>
-                  ) : 'Not recorded'}</td>
+                  ) : task.child_reference ? <><span>{task.child_reference}</span><span className="session-unavailable">Child session identity unavailable</span></> : 'Not recorded'}</td>
+                  <FactOwner fact={task} />
                 </tr>
               ))}</tbody>
             </table>

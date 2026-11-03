@@ -34,16 +34,17 @@ func (dto *SessionToolFactDTO) UnmarshalJSON(data []byte) error {
 }
 
 type SessionEventFactDTO struct {
-	EventID       string  `json:"event_id"`
-	Timestamp     string  `json:"timestamp"`
-	MessageID     *string `json:"message_id,omitempty"`
-	Turn          int64   `json:"turn"`
-	Role          string  `json:"role"`
-	EventType     string  `json:"event_type"`
-	ToolName      *string `json:"tool_name,omitempty"`
-	Status        string  `json:"status"`
-	DurationMs    *int64  `json:"duration_ms,omitempty"`
-	ContextTokens int64   `json:"context_tokens"`
+	SourceInvocationID string  `json:"source_invocation_id,omitempty"`
+	EventID            string  `json:"event_id"`
+	Timestamp          string  `json:"timestamp"`
+	MessageID          *string `json:"message_id,omitempty"`
+	Turn               int64   `json:"turn"`
+	Role               string  `json:"role"`
+	EventType          string  `json:"event_type"`
+	ToolName           *string `json:"tool_name,omitempty"`
+	Status             string  `json:"status"`
+	DurationMs         *int64  `json:"duration_ms,omitempty"`
+	ContextTokens      int64   `json:"context_tokens"`
 }
 
 // UnmarshalJSON discards retired content diagnostics while retaining strict
@@ -68,14 +69,17 @@ func (dto *SessionEventFactDTO) UnmarshalJSON(data []byte) error {
 }
 
 type SessionFactDTO struct {
-	ID          string                `json:"id"`
-	ParentID    *string               `json:"parent_id,omitempty"`
-	Source      string                `json:"source,omitempty"`
-	User        string                `json:"user,omitempty"`
-	Invocations []InvocationFactDTO   `json:"invocations"`
-	Tools       []SessionToolFactDTO  `json:"tools"`
-	Events      []SessionEventFactDTO `json:"events,omitempty"`
-	Anomalies   []AnomalyDTO          `json:"anomalies"`
+	AuxiliaryExtractionVersion int                   `json:"auxiliary_extraction_version,omitempty"`
+	Skills                     []domain.SkillFact    `json:"skills,omitempty"`
+	TaskLinks                  []TaskLinkFactDTO     `json:"task_links,omitempty"`
+	ID                         string                `json:"id"`
+	ParentID                   *string               `json:"parent_id,omitempty"`
+	Source                     string                `json:"source,omitempty"`
+	User                       string                `json:"user,omitempty"`
+	Invocations                []InvocationFactDTO   `json:"invocations"`
+	Tools                      []SessionToolFactDTO  `json:"tools"`
+	Events                     []SessionEventFactDTO `json:"events,omitempty"`
+	Anomalies                  []AnomalyDTO          `json:"anomalies"`
 }
 
 // ErrToolSessionIDRequired identifies a fact ledger that has tool aggregates
@@ -86,7 +90,8 @@ func (session SessionFactDTO) ToDomain() domain.SessionFact {
 	sessionSource := domain.SourceHarness(strings.TrimSpace(session.Source))
 	user := strings.TrimSpace(session.User)
 	parentID := session.ParentID
-	result := domain.SessionFact{
+	result := domain.SessionFact{AuxiliaryExtractionVersion: session.AuxiliaryExtractionVersion,
+		Skills: session.Skills, TaskLinks: TaskLinkFactDTOsToDomain(session.TaskLinks),
 		ID:       session.ID,
 		ParentID: parentID,
 		Source:   sessionSource,
@@ -107,7 +112,7 @@ func (session SessionFactDTO) ToDomain() domain.SessionFact {
 	}
 	for _, event := range session.Events {
 		result.Events = append(result.Events, domain.SessionEventFact{
-			EventID: event.EventID, Timestamp: event.Timestamp, MessageID: event.MessageID, Turn: event.Turn,
+			SourceInvocationID: event.SourceInvocationID, EventID: event.EventID, Timestamp: event.Timestamp, MessageID: event.MessageID, Turn: event.Turn,
 			Role: domain.AgentRole(event.Role), EventType: domain.EventType(event.EventType), ToolName: event.ToolName,
 			Status: event.Status, DurationMs: event.DurationMs, ContextTokens: event.ContextTokens,
 		})
@@ -122,7 +127,8 @@ func (session SessionFactDTO) ToDomain() domain.SessionFact {
 
 func SessionFactDTOFromDomain(session domain.SessionFact) SessionFactDTO {
 	sessionSource := strings.TrimSpace(string(session.Source))
-	result := SessionFactDTO{
+	result := SessionFactDTO{AuxiliaryExtractionVersion: session.AuxiliaryExtractionVersion,
+		Skills: session.Skills, TaskLinks: TaskLinkFactDTOsFromDomain(session.TaskLinks),
 		ID:          session.ID,
 		ParentID:    session.ParentID,
 		Source:      sessionSource,

@@ -54,11 +54,12 @@ func ExtractSkillTaskFacts(sessions []domain.SessionFact) ([]domain.SkillFact, [
 					messageIndex = messageIndexes[*event.MessageID]
 				}
 				skill := domain.SkillFact{
+					FactProvenance: eventProvenance(session, event), Evidence: "skill_tool", Outcome: recordedSkillOutcome(event),
 					Name: name, TurnIndex: int(event.Turn), MessageIndex: messageIndex,
 					CallerRole: string(event.Role), Timestamp: event.Timestamp,
-					Success: strings.EqualFold(event.Status, "completed"),
+					Success: recordedSkillOutcome(event) == "succeeded",
 				}
-				if !skill.Success {
+				if skill.Outcome == "failed" {
 					if event.ErrorMessage != nil {
 						skill.Error = strings.TrimSpace(*event.ErrorMessage)
 					}
@@ -69,17 +70,18 @@ func ExtractSkillTaskFacts(sessions []domain.SessionFact) ([]domain.SkillFact, [
 				skills = append(skills, skill)
 			case "task":
 				link := domain.TaskLinkFact{
-					CostEvidence: domain.UnavailableCost(),
-					SubagentType: rawString(input["subagent_type"]),
-					Description:  rawString(input["description"]),
-					ParentTurn:   int(event.Turn), Timestamp: event.Timestamp,
+					FactProvenance: eventProvenance(session, event),
+					CostEvidence:   domain.UnavailableCost(),
+					SubagentType:   rawString(input["subagent_type"]),
+					Description:    rawString(input["description"]),
+					ParentTurn:     int(event.Turn), Timestamp: event.Timestamp,
 				}
 				if event.DurationMs != nil && *event.DurationMs > 0 {
 					link.DurationMs = *event.DurationMs
 				}
 				if event.ToolOutput != nil {
 					childID := outputSessionID(*event.ToolOutput)
-					if _, exists := childrenByParent[session.ID][childID]; exists && childID != "" {
+					if childID != "" {
 						link.ChildSession = childID
 					}
 				}
@@ -101,6 +103,17 @@ func rawString(raw json.RawMessage) string {
 func outputSessionID(output string) string {
 	var fields map[string]json.RawMessage
 	if json.Unmarshal([]byte(output), &fields) != nil {
+		// The native task tool also returns an explicit metadata envelope.
+		if metadata, ok := strings.CutPrefix(strings.TrimSpace(output), "<task_metadata>"); ok {
+			metadata, _, closed := strings.Cut(metadata, "</task_metadata>")
+			if closed {
+				for _, line := range strings.Split(metadata, "\n") {
+					if key, value, found := strings.Cut(strings.TrimSpace(line), ":"); found && key == "session_id" {
+						return strings.TrimSpace(value)
+					}
+				}
+			}
+		}
 		return ""
 	}
 	for _, key := range []string{"child_session_id", "session_id", "sessionID"} {
@@ -109,4 +122,38 @@ func outputSessionID(output string) string {
 		}
 	}
 	return ""
+}
+
+func eventProvenance(session domain.SessionFact, event domain.SessionEventFact) domain.FactProvenance {
+	p := domain.FactProvenance{SessionID: session.ID, Source: session.Source, SourceEventID: event.EventID, SourceInvocationID: event.SourceInvocationID}
+	if event.MessageID != nil {
+		p.SourceMessageID = *event.MessageID
+	}
+	return p
+}
+func recordedSkillOutcome(event domain.SessionEventFact) string {
+	if event.RecordedStatus != nil {
+		return skillOutcome(*event.RecordedStatus)
+	}
+	return skillOutcome(event.Status)
+}
+func skillOutcome(status string) string {
+	switch strings.ToLower(status) {
+	case "completed", "success":
+		return "succeeded"
+	case "error", "failed":
+		return "failed"
+	default:
+		return "unavailable"
+	}
+}
+
+// WithSkillTaskFacts attaches extracted occurrences to their proven owners.
+func WithSkillTaskFacts(sessions []domain.SessionFact) []domain.SessionFact {
+	skills, links := ExtractSkillTaskFacts(sessions)
+	ledger := domain.NormalizeAuxiliaryOwnership(domain.AgenticFactLedger{Sessions: sessions, Skills: skills, TaskLinks: links})
+	for i := range ledger.Sessions {
+		ledger.Sessions[i].AuxiliaryExtractionVersion = domain.CurrentAuxiliaryExtractionVersion
+	}
+	return ledger.Sessions
 }

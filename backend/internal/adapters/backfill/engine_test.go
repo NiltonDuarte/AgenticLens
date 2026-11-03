@@ -1491,9 +1491,17 @@ func TestBackfillEngine_SkillTaskRecoverySnapshots(t *testing.T) {
 				{ID: "root-b", Source: domain.SourceOpenCode, Invocations: []domain.InvocationFact{{Role: "tester", Model: "stale-b"}}},
 				{ID: "codex-untouched", Source: domain.SourceCodex, Invocations: []domain.InvocationFact{{Role: "reviewer", Model: "other-source"}}},
 			}}
+			seedOwner := func(owner *domain.SessionFact) {
+				owner.Skills = []domain.SkillFact{{FactProvenance: domain.FactProvenance{SourceEventID: owner.ID + "-event", SourceMessageID: owner.ID + "-message", SourceInvocationID: owner.ID + "-read"}, Name: owner.ID + "-skill", Evidence: "skill_tool", Outcome: "failed", TurnIndex: 2, MessageIndex: 3, Timestamp: "2026-01-01T00:00:00Z", CallerRole: "tester", Error: "stored failure"}}
+				owner.TaskLinks = []domain.TaskLinkFact{{FactProvenance: domain.FactProvenance{SourceEventID: owner.ID + "-spawn-event", SourceMessageID: owner.ID + "-message", SourceInvocationID: owner.ID + "-spawn"}, SubagentType: "tester", Description: owner.ID + "-task", ParentTurn: 2, Timestamp: "2026-01-01T00:00:01Z", DurationMs: 42, ChildSession: owner.ID + "-unavailable-child", CostEvidence: domain.UnavailableCost()}}
+			}
+			for i := range ledger.Sessions {
+				seedOwner(&ledger.Sessions[i])
+			}
 			if tc.missingChild {
 				parent := "root-b"
 				ledger.Sessions = append(ledger.Sessions, domain.SessionFact{ID: "child-b", ParentID: &parent, Source: domain.SourceOpenCode, Invocations: []domain.InvocationFact{{Role: "coder", Model: "stored-child"}}})
+				seedOwner(&ledger.Sessions[len(ledger.Sessions)-1])
 			}
 			if tc.emptyOwners {
 				ledger.Sessions = ledger.Sessions[2:]
@@ -1584,27 +1592,49 @@ func TestBackfillEngine_SkillTaskRecoverySnapshots(t *testing.T) {
 			if err := adapters.ValidateRuntimeFactLedger(after); err != nil {
 				t.Fatal(err)
 			}
-			wantSkill, wantTask := "fresh", "fresh"
-			wantRows := 2
-			if incomplete {
-				wantSkill, wantTask = "historical", "historical"
-			}
-			if tc.emptyObservations {
-				wantRows = 0
-			}
-			if len(updated.Skills) != wantRows || len(updated.TaskLinks) != wantRows {
-				t.Fatalf("collection multiplicity/replacement wrong: %+v %+v", updated.Skills, updated.TaskLinks)
+
+			// Ownerless history is unresolved, even when every local tree refreshes.
+			if len(updated.Skills) != 2 || len(updated.TaskLinks) != 2 {
+				t.Fatalf("ambiguous history lost: %+v %+v", updated.Skills, updated.TaskLinks)
 			}
 			for _, skill := range updated.Skills {
-				if skill.Name != wantSkill {
-					t.Fatalf("skill snapshot changed incorrectly: %+v", updated.Skills)
+				if skill.Name != "historical" {
+					t.Fatalf("legacy history replaced: %+v", updated.Skills)
 				}
 			}
 			for _, task := range updated.TaskLinks {
-				if task.Description != wantTask {
-					t.Fatalf("task snapshot changed incorrectly: %+v", updated.TaskLinks)
+				if task.Description != "historical" {
+					t.Fatalf("legacy history replaced: %+v", updated.TaskLinks)
 				}
 			}
+			owners := map[string]domain.SessionFact{}
+			for _, owner := range updated.Sessions {
+				owners[owner.ID] = owner.ToDomain()
+			}
+			for _, previous := range ledger.Sessions {
+				preserved := previous.ID == "codex-untouched" || previous.ID == "child-b" || (previous.ID == "root-b" && (tc.missingRoot || tc.missingChild || tc.malformed))
+				if preserved {
+					after := owners[previous.ID]
+					if !reflect.DeepEqual(after.Skills, previous.Skills) || !reflect.DeepEqual(after.TaskLinks, previous.TaskLinks) {
+						t.Fatalf("unavailable/other owner %s lost rich facts: before=%+v after=%+v", previous.ID, previous, after)
+					}
+				} else if previous.ID == "root-a" || previous.ID == "root-b" {
+					owner := owners[previous.ID]
+					want := 0
+					if previous.ID == "root-a" && !tc.emptyObservations {
+						want = 2
+					}
+					if len(owner.Skills) != want || len(owner.TaskLinks) != want {
+						t.Fatalf("refreshed owner %s facts were not replaced/cleared: %+v", previous.ID, owner)
+					}
+					for _, fact := range owner.Skills {
+						if fact.Name != "fresh" || fact.SourceEventID == "" || fact.SourceMessageID != "m-1" {
+							t.Fatalf("fresh source provenance lost: %+v", fact)
+						}
+					}
+				}
+			}
+
 			models := map[string]string{}
 			for _, session := range updated.Sessions {
 				if len(session.Invocations) > 0 {
@@ -1636,7 +1666,12 @@ func TestBackfillEngine_SkillTaskRecoverySnapshots(t *testing.T) {
 						t.Fatalf("repeat failed: %+v %v", again, err)
 					}
 					snapshot, _ := readRecoveryLedger(t, workspace)
-					if len(snapshot.Skills) != 3 || len(snapshot.TaskLinks) != 2 {
+					ownedSkills, ownedTasks := 0, 0
+					for _, owner := range snapshot.Sessions {
+						ownedSkills += len(owner.Skills)
+						ownedTasks += len(owner.TaskLinks)
+					}
+					if len(snapshot.Skills) != 2 || len(snapshot.TaskLinks) != 2 || ownedSkills != 4 || ownedTasks != 3 {
 						t.Fatalf("cumulative refresh duplicated/dropped observations: %+v %+v", snapshot.Skills, snapshot.TaskLinks)
 					}
 				}
@@ -1791,8 +1826,8 @@ func TestBackfillEngine_SchemaV2RecoversKnownGrandchildren(t *testing.T) {
 					t.Fatalf("late malformed descendant partially replaced tree: %+v %+v", report.Results, updated)
 				}
 			} else {
-				if report.Results[0].RefreshIncomplete || len(updated.Skills) != 0 {
-					t.Fatalf("complete empty recovery did not clear stale producer snapshot: %+v %+v", report.Results, updated.Skills)
+				if report.Results[0].RefreshIncomplete || len(updated.Skills) != 1 {
+					t.Fatalf("complete recovery lost unresolved historical fact: %+v %+v", report.Results, updated.Skills)
 				}
 				for _, session := range updated.Sessions {
 					if len(session.Invocations) != 1 || session.Invocations[0].Tokens.Input != 17 {

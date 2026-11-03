@@ -51,3 +51,43 @@ func TestCaptureSnapshotPrecedenceRejectsTruncationAndOlderSource(t *testing.T) 
 		})
 	}
 }
+
+func TestAuxiliaryExtractionUpgradeOnlyExpandsUnrepresentedFields(t *testing.T) {
+	stamp := "2026-01-01T00:00:01Z"
+	base := domain.SessionFact{ID: "owner", Source: domain.SourceCodex, User: "recorded", Invocations: []domain.InvocationFact{{Model: "recorded-model", CompletedAt: &stamp, CostUSD: 0, CostEvidence: domain.ObservedCost(0)}}}
+	next := base
+	next.AuxiliaryExtractionVersion = domain.CurrentAuxiliaryExtractionVersion
+	next.Skills = []domain.SkillFact{{Name: "loaded", Evidence: "skill_file_read", Outcome: "unavailable"}}
+	for _, tc := range []struct {
+		name   string
+		change func(*domain.SessionFact, *domain.SessionFact)
+		want   bool
+	}{
+		{"source backed representation expansion", func(a, b *domain.SessionFact) {}, true},
+		{"metric conflict", func(a, b *domain.SessionFact) {
+			b.Invocations = append([]domain.InvocationFact{}, b.Invocations...)
+			b.Invocations[0].Model = "changed"
+		}, false},
+		{"unknown versus observed zero cost", func(a, b *domain.SessionFact) {
+			b.Invocations = append([]domain.InvocationFact{}, b.Invocations...)
+			b.Invocations[0].CostEvidence = domain.UnavailableCost()
+		}, false},
+		{"different attribution", func(a, b *domain.SessionFact) { b.User = "other" }, false},
+		{"different harness", func(a, b *domain.SessionFact) { b.Source = domain.SourceOpenCode }, false},
+		{"unavailable source identity", func(a, b *domain.SessionFact) { a.Source = "" }, false},
+		{"existing known occurrence", func(a, b *domain.SessionFact) { a.Skills = []domain.SkillFact{{Name: "accepted"}} }, false},
+		{"current extractor cannot replace facts equally", func(a, b *domain.SessionFact) {
+			a.AuxiliaryExtractionVersion = domain.CurrentAuxiliaryExtractionVersion
+		}, false},
+		{"accepted persisted events must survive", func(a, b *domain.SessionFact) { a.Events = []domain.SessionEventFact{{EventID: "recorded-event"}} }, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			a, b := base, next
+			tc.change(&a, &b)
+			got, err := domain.CaptureAuxiliaryUpgrade(a, b)
+			if err != nil || got != tc.want {
+				t.Fatalf("upgrade=%v err=%v want=%v", got, err, tc.want)
+			}
+		})
+	}
+}

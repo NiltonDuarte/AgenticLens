@@ -6,7 +6,7 @@ import (
 )
 
 // CurrentSchemaVersion defines the active telemetry schema version.
-const CurrentSchemaVersion int = 5
+const CurrentSchemaVersion int = 6
 
 // Migration step identifiers.
 const (
@@ -74,3 +74,6 @@ func GetHealthLabel(toks int64, ceiling int64) string {
 	}
 	return string(ContextHealthHealthy)
 }
+
+// CurrentAuxiliaryExtractionVersion identifies supported skill/delegation extraction, independently of source completeness.
+const CurrentAuxiliaryExtractionVersion = 1

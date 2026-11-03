@@ -23,6 +23,9 @@ const maxRolloutLineBytes = 8 * 1024 * 1024
 // fields such as prompts, assistant text, command arguments, and tool results
 // are intentionally not retained.
 type Transcript struct {
+	Skills         []domain.SkillFact    `json:"-"`
+	TaskLinks      []domain.TaskLinkFact `json:"-"`
+	auxiliaryCalls map[string]auxiliaryCall
 	ThreadID       string                  `json:"thread_id,omitempty"`
 	SessionID      string                  `json:"session_id,omitempty"`
 	WorkingDir     string                  `json:"-"`
@@ -332,6 +335,15 @@ func ParseRollout(reader io.Reader) (Transcript, error) {
 	if count := transcript.EventKinds["user_message"]; count > 0 {
 		transcript.SteeringTurns = count
 	}
+	// Retain recorded delegation calls even when a still-running source lacks output.
+	pending := make([]string, 0, len(transcript.auxiliaryCalls))
+	for id := range transcript.auxiliaryCalls {
+		pending = append(pending, id)
+	}
+	sort.Strings(pending)
+	for _, id := range pending {
+		transcript.finishAuxiliary(id, "")
+	}
 	transcript.finalizeFacts()
 	return transcript, nil
 }
@@ -621,12 +633,14 @@ func (transcript *Transcript) readToolEvent(kind string, payload json.RawMessage
 
 func (transcript *Transcript) readResponseItem(payload json.RawMessage, timestamp, sourceID string) {
 	var item struct {
-		Type   string          `json:"type"`
-		Role   string          `json:"role"`
-		CallID string          `json:"call_id"`
-		Name   string          `json:"name"`
-		Status string          `json:"status"`
-		Output json.RawMessage `json:"output"`
+		Arguments string          `json:"arguments"`
+		Input     string          `json:"input"`
+		Type      string          `json:"type"`
+		Role      string          `json:"role"`
+		CallID    string          `json:"call_id"`
+		Name      string          `json:"name"`
+		Status    string          `json:"status"`
+		Output    json.RawMessage `json:"output"`
 	}
 	if err := json.Unmarshal(payload, &item); err != nil {
 		return
@@ -639,6 +653,11 @@ func (transcript *Transcript) readResponseItem(payload json.RawMessage, timestam
 	}
 	switch item.Type {
 	case "custom_tool_call", "function_call":
+		input := item.Arguments
+		if input == "" {
+			input = item.Input
+		}
+		transcript.beginAuxiliary(item.CallID, item.Name, input, "codex-call:"+item.CallID, timestamp)
 		name := strings.TrimSpace(item.Name)
 		if name == "" || strings.EqualFold(name, "exec") {
 			// Codex exec wrappers are represented more accurately by their
@@ -664,6 +683,7 @@ func (transcript *Transcript) readResponseItem(payload json.RawMessage, timestam
 			Status: "running", ContextTokens: transcript.currentContext,
 		})
 	case "custom_tool_call_output", "function_call_output":
+		transcript.finishAuxiliary(item.CallID, codexToolOutput(item.Output))
 		if index, exists := transcript.pendingTools[item.CallID]; exists {
 			transcript.Events[index].Status = "completed"
 			output := codexToolOutput(item.Output)
@@ -882,7 +902,7 @@ func (transcript *Transcript) finalizeFacts() {
 func (transcript Transcript) SessionFacts() ([]domain.SessionFact, error) {
 	owned := transcript.sessions
 	if owned == nil {
-		session := domain.SessionFact{ID: transcript.sessionIDOrThread(), Source: domain.SourceCodex, Invocations: transcript.Invocations}
+		session := domain.SessionFact{AuxiliaryExtractionVersion: domain.CurrentAuxiliaryExtractionVersion, ID: transcript.sessionIDOrThread(), Source: domain.SourceCodex, Invocations: transcript.Invocations, Skills: transcript.Skills, TaskLinks: transcript.TaskLinks}
 		if transcript.ParentThread != "" {
 			parent := transcript.ParentThread
 			session.ParentID = &parent

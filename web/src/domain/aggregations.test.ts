@@ -13,12 +13,18 @@ describe('recorded skill analytics', () => {
     expect(JSON.stringify(skills)).toBe(before);
     expect(skillNames({})).toEqual([]);
     expect(skillNames({ skills: [] })).toEqual([]);
+    expect(skillNames({ sessions: [{ id: 'child', invocations: [], tools: [], skills: [skill('nested')] }] })).toEqual(['nested']);
   });
   it('weights success by invocation count rather than averaging skill rates', () => {
     expect(skillSuccessRate([
       { name: 'alpha', total_invocations: 3, tickets_count: 2, failure_count: 1, failure_rate: 1 / 3 },
       { name: 'beta', total_invocations: 1, tickets_count: 1, failure_count: 1, failure_rate: 1 },
     ])).toBe(50);
+    expect(skillSuccessRate([
+      { name: 'load', total_invocations: 8, known_outcomes: 0, tickets_count: 1, failure_count: 0, failure_rate: null },
+      { name: 'run', total_invocations: 3, known_outcomes: 2, tickets_count: 1, failure_count: 1, failure_rate: 0.5 },
+    ])).toBe(50);
+    expect(skillSuccessRate([{ name: 'load', total_invocations: 8, known_outcomes: 0, tickets_count: 1, failure_count: 0, failure_rate: null }])).toBeNull();
     expect(skillSuccessRate([])).toBeNull();
     expect(skillSuccessRate([{ name: 'empty', total_invocations: 0, tickets_count: 0, failure_count: 0, failure_rate: 0 }])).toBeNull();
   });

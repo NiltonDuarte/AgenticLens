@@ -23,7 +23,7 @@ describe('TicketComparisons View Component', () => {
           : { state: 'complete' as const, known_subtotal_usd: amount, fully_observed: 1, partial: 0, unavailable: 0, total: 1 };
       return { ...ledger, totals: { ...ledger.totals, cost_usd: amount, cost_summary },
         workflow_efficiency: { ...ledger.workflow_efficiency, active_duration_seconds: [60, 120, 900, 300][index]!, sdlc_iterations: [2, 4, 12, 20][index]! },
-        facts: { ...ledger.facts, skills: index === 0 ? [fact('all'), fact('all')] : index === 1 ? [fact('ALL')] : index === 3 ? [fact('all')] : [] } };
+        facts: { ...ledger.facts, skills: [], sessions: [{ id: `owner-${index}`, invocations: [], tools: [], skills: index === 0 ? [fact('all'), fact('all')] : index === 1 ? [fact('ALL')] : index === 3 ? [fact('all')] : [] }] } };
     });
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({ data: ledgers });
     const { container } = render(<TicketComparisons />);

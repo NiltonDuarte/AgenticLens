@@ -281,14 +281,17 @@ func PersistAnomalySummaries(ledger AgenticFactLedger, thresholds ...AnomalyThre
 	sessions := make([]SessionFact, len(ledger.Sessions))
 	for i, orig := range ledger.Sessions {
 		cloned := SessionFact{
-			ID:          orig.ID,
-			ParentID:    orig.ParentID,
-			Source:      orig.Source,
-			User:        orig.User,
-			Invocations: append([]InvocationFact(nil), orig.Invocations...),
-			Tools:       append([]SessionToolFact(nil), orig.Tools...),
-			Events:      nil,
-			Anomalies:   bySession[orig.ID],
+			AuxiliaryExtractionVersion: orig.AuxiliaryExtractionVersion,
+			Skills:                     append([]SkillFact(nil), orig.Skills...),
+			TaskLinks:                  append([]TaskLinkFact(nil), orig.TaskLinks...),
+			ID:                         orig.ID,
+			ParentID:                   orig.ParentID,
+			Source:                     orig.Source,
+			User:                       orig.User,
+			Invocations:                append([]InvocationFact(nil), orig.Invocations...),
+			Tools:                      append([]SessionToolFact(nil), orig.Tools...),
+			Events:                     nil,
+			Anomalies:                  bySession[orig.ID],
 		}
 		if cloned.Anomalies == nil {
 			cloned.Anomalies = []Anomaly{}

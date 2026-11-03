@@ -29,6 +29,9 @@ export const TraceInvocationBadge: React.FC<TraceInvocationBadgeProps> = ({
       ) : (
         <span className={`trace-invocation-badge badge-${metadata.kind}`} title={label}>{label}</span>
       )}
+      {metadata.kind === 'task' && !childId && metadata.childReference && (
+        <span className="trace-child-unavailable">Child reference: {metadata.childReference} (session identity unavailable)</span>
+      )}
       {childId && !canNavigate && (
         <span className="trace-child-unavailable" title={`Child session ${childId} is pending or unavailable in this view`}>
           <span className="trace-child-id">Child: {childId}</span>

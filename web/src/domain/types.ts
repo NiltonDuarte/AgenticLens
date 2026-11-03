@@ -113,7 +113,17 @@ export interface CodeFacts {
   readonly sdlc_iterations: number;
 }
 
-export interface SkillFact {
+export interface SourceOccurrence {
+  readonly session_id?: string;
+  readonly source?: SourceHarness;
+  readonly source_event_id?: string;
+  readonly source_message_id?: string;
+  readonly source_invocation_id?: string;
+}
+
+export interface SkillFact extends SourceOccurrence {
+  readonly evidence?: 'skill_tool' | 'skill_file_read';
+  readonly outcome?: 'succeeded' | 'failed' | 'unavailable';
   readonly name: string;
   readonly turn_index: number;
   readonly message_index: number;
@@ -123,7 +133,8 @@ export interface SkillFact {
   readonly error?: string;
 }
 
-export interface TaskLinkFact {
+export interface TaskLinkFact extends SourceOccurrence {
+  readonly child_reference?: string;
   readonly subagent_type: string;
   readonly description: string;
   readonly parent_turn: number;
@@ -137,6 +148,7 @@ export interface TaskLinkFact {
 export interface AgenticFactLedger {
   readonly schema_version?: number;
   readonly migration?: MigrationInfo;
+  readonly ownership_diagnostics?: readonly string[];
   readonly ticket_id: string | null;
   readonly ticket_title: string | null;
   readonly ticket_type: TicketType | null;
@@ -150,12 +162,36 @@ export interface AgenticFactLedger {
   readonly task_links?: readonly TaskLinkFact[];
 }
 
-export function ledgerSkills(ledger: Pick<AgenticFactLedger, 'skills'> | undefined): readonly SkillFact[] {
-  return ledger?.skills ?? [];
+type OwnedLedger = Partial<Pick<AgenticFactLedger, 'sessions' | 'skills' | 'task_links'>>;
+
+function sameOccurrence(left: SourceOccurrence, right: SourceOccurrence): boolean {
+  if (!left.session_id || left.session_id !== right.session_id) return false;
+  if (left.source && right.source && left.source !== right.source) return false;
+  return Boolean((left.source_invocation_id && left.source_invocation_id === right.source_invocation_id) ||
+    (left.source_event_id && left.source_event_id === right.source_event_id));
 }
 
-export function ledgerTaskLinks(ledger: Pick<AgenticFactLedger, 'task_links'> | undefined): readonly TaskLinkFact[] {
-  return ledger?.task_links ?? [];
+/** Legacy rows without proven identity stay unresolved; equal values are distinct facts. */
+function withLegacy<T extends SourceOccurrence>(owned: readonly T[], legacy: readonly T[], sameKind: (left: T, right: T) => boolean): readonly T[] {
+  return [...owned, ...legacy.filter((fact) => !owned.some((candidate) => sameOccurrence(fact, candidate) && sameKind(fact, candidate)))];
+}
+
+export function ledgerSkills(ledger: OwnedLedger | undefined): readonly SkillFact[] {
+  const owned = ledger?.sessions?.flatMap((session) => (session.skills ?? []).map((fact) => ({
+    ...fact, session_id: session.id, ...(session.source ? { source: session.source } : {}),
+  }))) ?? [];
+  return withLegacy(owned, ledger?.skills ?? [], (left, right) => left.name === right.name);
+}
+
+export function ledgerTaskLinks(ledger: OwnedLedger | undefined): readonly TaskLinkFact[] {
+  const owned = ledger?.sessions?.flatMap((session) => (session.task_links ?? []).map((fact) => ({
+    ...fact, session_id: session.id, ...(session.source ? { source: session.source } : {}),
+  }))) ?? [];
+  return withLegacy(owned, ledger?.task_links ?? [], () => true);
+}
+
+export function skillOutcome(skill: SkillFact): 'succeeded' | 'failed' | 'unavailable' {
+  return skill.outcome ?? (skill.success ? 'succeeded' : 'failed');
 }
 
 export type WorkspaceDiagnostic = {
@@ -169,6 +205,7 @@ export type WorkspaceDiagnostic = {
 };
 
 export interface SessionFact {
+  readonly auxiliary_extraction_version?: number;
   readonly id: string;
   readonly parent_id?: string | null;
   readonly source?: SourceHarness;
@@ -176,11 +213,14 @@ export interface SessionFact {
   readonly invocations: readonly InvocationFact[];
   readonly tools: readonly Omit<ToolFact, 'session_id'>[];
   readonly events?: readonly SessionEventFact[];
+  readonly skills?: readonly SkillFact[];
+  readonly task_links?: readonly TaskLinkFact[];
   readonly anomalies?: readonly Anomaly[];
 }
 
 export type SessionEventFact = Pick<EventFact,
   | 'event_id'
+  | 'source_invocation_id'
   | 'timestamp'
   | 'message_id'
   | 'turn'
@@ -321,7 +361,8 @@ export interface SkillAdoptionFact {
   readonly total_invocations: number;
   readonly tickets_count: number;
   readonly failure_count: number;
-  readonly failure_rate: number;
+  readonly failure_rate: number | null;
+  readonly known_outcomes?: number;
 }
 
 export interface FleetSummary {

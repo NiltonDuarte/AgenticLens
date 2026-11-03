@@ -32,6 +32,35 @@ func writeRollout(t *testing.T, path, id, parent string, tokens int) []byte {
 	return []byte(contents)
 }
 
+// appendAuxiliaryRollout uses synthetic native tool records; no live history.
+func appendAuxiliaryRollout(t *testing.T, path string, original []byte, id string) []byte {
+	t.Helper()
+	calls := fmt.Sprintf(`{"timestamp":"2026-01-01T00:00:04Z","type":"response_item","payload":{"type":"function_call","name":"exec_command","call_id":%q,"arguments":"{\"cmd\":\"cat .agents/skills/captured/SKILL.md\"}"}}
+{"timestamp":"2026-01-01T00:00:05Z","type":"response_item","payload":{"type":"function_call_output","call_id":%q,"output":"Exit code: 0\nOutput:\nfixture"}}
+{"timestamp":"2026-01-01T00:00:06Z","type":"response_item","payload":{"type":"function_call","name":"spawn_agent","call_id":%q,"arguments":"{\"agent_type\":\"tester\",\"task_name\":\"checks\"}"}}
+{"timestamp":"2026-01-01T00:00:07Z","type":"response_item","payload":{"type":"function_call_output","call_id":%q,"output":"{\"child_session_id\":\"unavailable-child\"}"}}
+`, id+"-read", id+"-read", id+"-spawn", id+"-spawn")
+	contents := append(append([]byte{}, original...), []byte(calls)...)
+	if err := os.WriteFile(path, contents, 0600); err != nil {
+		t.Fatal(err)
+	}
+	return contents
+}
+
+func assertCapturedAuxiliary(t *testing.T, owner domain.SessionFact, id string) {
+	t.Helper()
+	if len(owner.Skills) != 1 || len(owner.TaskLinks) != 1 {
+		t.Fatalf("capture lost owned facts: %+v", owner)
+	}
+	skill, task := owner.Skills[0], owner.TaskLinks[0]
+	if skill.Name != "captured" || skill.SourceInvocationID != id+"-read" || skill.SourceEventID != "codex-call:"+id+"-read" || skill.Outcome != "unavailable" || skill.Evidence != "skill_file_read" || skill.Timestamp != "2026-01-01T00:00:04Z" {
+		t.Fatalf("capture changed source skill: %+v", skill)
+	}
+	if task.SourceInvocationID != id+"-spawn" || task.SourceEventID != "codex-call:"+id+"-spawn" || task.ChildSession != "unavailable-child" || task.Timestamp != "2026-01-01T00:00:06Z" || task.CostEvidence.State != domain.CostUnavailable {
+		t.Fatalf("capture changed source task: %+v", task)
+	}
+}
+
 func registerBound(t *testing.T, s *capture.Store, store, path, id, ticket string) domain.CaptureRegistration {
 	t.Helper()
 	row, err := s.Register(context.Background(), domain.CaptureIdentity{Source: domain.SourceCodex, Store: store, SessionID: id}, path, "SessionStart")
@@ -47,13 +76,14 @@ func registerBound(t *testing.T, s *capture.Store, store, path, id, ticket strin
 
 func TestReconcilePreservesAcceptedSnapshotsThroughResumeTruncationAndMissingSource(t *testing.T) {
 	ctx := context.Background()
-	s := openStore(t, t.TempDir())
+	state := t.TempDir()
+	s := openStore(t, state)
 	store := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(store, "sessions"), 0700); err != nil {
 		t.Fatal(err)
 	}
 	path := filepath.Join(store, "sessions", "root.jsonl")
-	original := writeRollout(t, path, "root", "", 10)
+	original := appendAuxiliaryRollout(t, path, writeRollout(t, path, "root", "", 10), "root")
 	row := registerBound(t, s, store, path, "root", "TEST-100")
 	reconcile := func() capture.ReconcileResult {
 		t.Helper()
@@ -67,13 +97,23 @@ func TestReconcilePreservesAcceptedSnapshotsThroughResumeTruncationAndMissingSou
 	if len(first.Sessions) != 1 || len(first.Sessions[0].Invocations) != 1 || first.Sessions[0].Invocations[0].Tokens.Input != 10 {
 		t.Fatalf("source not captured: %+v", first)
 	}
+	assertCapturedAuxiliary(t, first.Sessions[0], "root")
+	reader := openStore(t, state)
+	persisted, err := reader.List(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(persisted) != 1 || !reflect.DeepEqual(persisted[0].Snapshot, first.Sessions) {
+		t.Fatalf("registry reload changed owned snapshot: %+v", persisted)
+	}
+	assertCapturedAuxiliary(t, persisted[0].Snapshot[0], "root")
 	if first.Sessions[0].Invocations[0].CostEvidence.State != domain.CostUnavailable {
 		t.Fatal("missing cost became known zero")
 	}
 	if second := reconcile(); !reflect.DeepEqual(first.Sessions, second.Sessions) {
 		t.Fatal("unchanged source duplicated facts")
 	}
-	growth := append(append([]byte{}, original...), []byte(`{"timestamp":"2026-01-01T00:00:03Z","type":"token_usage_record","payload":{"thread_id":"root","turn_id":"turn-two","usage":{"input_tokens":20,"output_tokens":3}}}`+"\n")...)
+	growth := append(append([]byte{}, original...), []byte(`{"timestamp":"2026-01-01T00:00:08Z","type":"token_usage_record","payload":{"thread_id":"root","turn_id":"turn-two","usage":{"input_tokens":20,"output_tokens":3}}}`+"\n")...)
 	if err := os.WriteFile(path, growth, 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -238,12 +278,13 @@ func TestReconcilePreservesFactsWhenSourceParsingIsPartial(t *testing.T) {
 		t.Fatal(err)
 	}
 	path := filepath.Join(store, "sessions", "root.jsonl")
-	original := writeRollout(t, path, "root", "", 10)
+	original := appendAuxiliaryRollout(t, path, writeRollout(t, path, "root", "", 10), "root")
 	registerBound(t, s, store, path, "root", "TEST-100")
 	before, err := s.Reconcile(ctx, "TEST-100", "tester", 10, capture.DefaultByteBudget)
 	if err != nil {
 		t.Fatal(err)
 	}
+	assertCapturedAuxiliary(t, before.Sessions[0], "root")
 	partial := writeRollout(t, path, "root", "", 1)
 	partial = append(partial, []byte(strings.Repeat(" ", len(original))+"{\"type\":\n")...)
 	if err := os.WriteFile(path, partial, 0600); err != nil {
@@ -253,6 +294,12 @@ func TestReconcilePreservesFactsWhenSourceParsingIsPartial(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	assertCapturedAuxiliary(t, after.Sessions[0], "root")
+	rows, err := s.List(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertCapturedAuxiliary(t, rows[0].Snapshot[0], "root")
 	if !reflect.DeepEqual(before.Sessions, after.Sessions) || after.Registrations[0].State == domain.CaptureCurrent {
 		t.Fatalf("partial parse replaced authoritative snapshot or claimed current: %+v", after)
 	}
@@ -863,5 +910,68 @@ func TestReconcileSuccessfulReadPreservesParentConflictAndNormalPendingRecovery(
 	t.Logf("result state=%s detail=%q; stored state=%s; diagnostic outcome=%s attempt=%s owner state=%s; health=%+v feedback=%q advisory=%v", result.Registrations[0].State, result.Registrations[0].Detail, selected.State, latest.Outcome, latest.Reconciliation.Attempt, latest.Reconciliation.Owners[0].State, h, feedback, issues)
 	if latest.Reconciliation.Attempt == domain.CaptureAttemptCompleted || latest.Reconciliation.Owners[0].State != domain.CaptureFailed || h.State != "degraded" || feedback == "" || len(issues) == 0 {
 		t.Fatalf("parent binding conflict rewritten to successful completion: health=%+v feedback=%q advisory=%v", h, feedback, issues)
+	}
+}
+
+func TestReconcileUpgradesAuxiliaryCoverageOfUnchangedCachedSource(t *testing.T) {
+	for _, unavailable := range []bool{false, true} {
+		t.Run(fmt.Sprintf("source-unavailable-%t", unavailable), func(t *testing.T) {
+			ctx := context.Background()
+			state, source := t.TempDir(), t.TempDir()
+			s := openStore(t, state)
+			if err := os.MkdirAll(filepath.Join(source, "sessions"), 0700); err != nil {
+				t.Fatal(err)
+			}
+			path := filepath.Join(source, "sessions", "root.jsonl")
+			appendAuxiliaryRollout(t, path, writeRollout(t, path, "root", "", 10), "root")
+			row := registerBound(t, s, source, path, "root", "TEST-100")
+			first, err := s.Reconcile(ctx, "TEST-100", "tester", 10, capture.DefaultByteBudget)
+			if err != nil {
+				t.Fatal(err)
+			}
+			assertCapturedAuxiliary(t, first.Sessions[0], "root")
+			// Simulate a successfully cached snapshot written by the old extractor:
+			// raw bytes/fingerprint/checkpoint stay unchanged, but no auxiliary facts
+			// were extracted and no new coverage revision was recorded.
+			prior, err := s.Change(ctx, row.Identity, func(current domain.CaptureRegistration) (domain.CaptureRegistration, error) {
+				current.ExtractionVersion = 0
+				current.Snapshot[0].AuxiliaryExtractionVersion = 0
+				current.Snapshot[0].Skills, current.Snapshot[0].TaskLinks = nil, nil
+				return current, nil
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if unavailable {
+				if err := os.Remove(path); err != nil {
+					t.Fatal(err)
+				}
+			}
+			result, err := s.Reconcile(ctx, "TEST-100", "tester", 10, capture.DefaultByteBudget)
+			if err != nil {
+				t.Fatal(err)
+			}
+			reader := openStore(t, state)
+			rows, err := reader.List(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(rows) != 1 || len(result.Sessions) != 1 {
+				t.Fatalf("cached owner disappeared: %+v", result)
+			}
+			if unavailable {
+				if !reflect.DeepEqual(rows[0].Snapshot, prior.Snapshot) || rows[0].ExtractionVersion != 0 || rows[0].State == domain.CaptureCurrent {
+					t.Fatalf("missing source claimed upgraded coverage or lost cache: %+v", rows[0])
+				}
+			} else {
+				assertCapturedAuxiliary(t, rows[0].Snapshot[0], "root")
+				if rows[0].ExtractionVersion != domain.CurrentAuxiliaryExtractionVersion || rows[0].Snapshot[0].AuxiliaryExtractionVersion != domain.CurrentAuxiliaryExtractionVersion {
+					t.Fatalf("new extraction revision not persisted: %+v", rows[0])
+				}
+				if !reflect.DeepEqual(rows[0].Snapshot[0].Invocations, prior.Snapshot[0].Invocations) || rows[0].SourceFingerprint != prior.SourceFingerprint {
+					t.Fatal("coverage upgrade rewrote metric history or source identity")
+				}
+			}
+		})
 	}
 }

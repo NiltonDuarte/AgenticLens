@@ -380,8 +380,12 @@ func runGenerate(args []string) {
 			fmt.Fprintf(os.Stderr, "Error combining Codex session facts: %v\n", combineErr)
 			os.Exit(1)
 		}
-		for _, warning := range combined.Warnings {
-			fmt.Fprintf(os.Stderr, "Warning: Codex rollout: %s\n", warning)
+		if len(combined.Warnings) > 0 {
+			for _, warning := range combined.Warnings {
+				fmt.Fprintf(os.Stderr, "Warning: Codex rollout: %s\n", warning)
+			}
+			fmt.Fprintln(os.Stderr, "Partial Codex source parse; previous ledger preserved, publication not completed.")
+			os.Exit(1)
 		}
 		freshCodex, factErr := combined.SessionFacts()
 		if factErr != nil {
@@ -452,17 +456,7 @@ func runGenerate(args []string) {
 						os.Exit(1)
 					}
 					freshSessions = extractedSessions
-					freshSkills, freshLinks := opencode.ExtractSkillTaskFacts(extractedSessions)
-					skills, err = mergeCaptureRows(skills, freshSkills)
-					if err != nil {
-						fmt.Fprintln(os.Stderr, err)
-						os.Exit(1)
-					}
-					taskLinks, err = mergeCaptureRows(taskLinks, freshLinks)
-					if err != nil {
-						fmt.Fprintln(os.Stderr, err)
-						os.Exit(1)
-					}
+					freshSessions = opencode.WithSkillTaskFacts(extractedSessions)
 					if strings.TrimSpace(*startedAtFlag) == "" && dbStarted != nil {
 						activeStartedAt = dbStarted
 					}
@@ -638,6 +632,16 @@ func runGenerate(args []string) {
 		TaskLinks:     taskLinks,
 	}
 
+	factLedger = domain.NormalizeAuxiliaryOwnership(factLedger)
+	refreshedIDs := map[string]bool{}
+	for _, owner := range freshSessions {
+		refreshedIDs[owner.ID] = true
+	}
+	for _, owner := range sessions {
+		if !refreshedIDs[owner.ID] {
+			factLedger.OwnershipDiagnostics = append(factLedger.OwnershipDiagnostics, "Stored owner "+owner.ID+" was not refreshed from the selected source; accepted facts retained with potentially different source age.")
+		}
+	}
 	metricsLedger := domain.DeriveMetricsLedger(factLedger, projCfg)
 	tableMD := adapters.FormatMarkdownMetricsTable(metricsLedger, projCfg.RoleOrder)
 	if captureResult != nil {

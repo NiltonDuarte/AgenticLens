@@ -70,6 +70,7 @@ const (
 
 // CaptureRegistration contains local correlation metadata, never transcript content.
 type CaptureRegistration struct {
+	ExtractionVersion     int                 `json:"extraction_version,omitempty"`
 	BindingInstallationID string              `json:"binding_installation_id,omitempty"`
 	SourceInstallationID  string              `json:"source_installation_id,omitempty"`
 	InstallationID        string              `json:"installation_id,omitempty"`

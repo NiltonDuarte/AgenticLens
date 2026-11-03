@@ -651,7 +651,11 @@ func filterCapturePrecedence(baseline []domain.SessionFact, result *capture.Reco
 		if e != nil {
 			return e
 		}
-		if equal || (previousKnown && nextKnown && nextTime.After(previousTime)) {
+		upgrade, e := domain.CaptureAuxiliaryUpgrade(previous, owner)
+		if e != nil {
+			return e
+		}
+		if equal || upgrade || (previousKnown && nextKnown && nextTime.After(previousTime)) {
 			accepted = append(accepted, owner)
 			continue
 		}
@@ -695,7 +699,11 @@ func rejectOlderExplicitOwners(baseline, fresh []domain.SessionFact) ([]domain.S
 			}
 			oldTime, oldKnown := domain.CaptureOwnerCheckpoint(old)
 			nextTime, nextKnown := domain.CaptureOwnerCheckpoint(owner)
-			if !equal && !(oldKnown && nextKnown && nextTime.After(oldTime)) {
+			upgrade, err := domain.CaptureAuxiliaryUpgrade(old, owner)
+			if err != nil {
+				return nil, err
+			}
+			if !equal && !upgrade && !(oldKnown && nextKnown && nextTime.After(oldTime)) {
 				fmt.Fprintf(os.Stderr, "Capture owner %s source checkpoint does not establish newer facts; preserved canonical owner and left refresh unresolved\n", owner.ID)
 				continue
 			}

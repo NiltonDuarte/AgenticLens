@@ -2416,7 +2416,7 @@ func TestRecordedV4FactsSurviveDetailEventsAndOptionalHydration(t *testing.T) {
 		t.Fatal(err)
 	}
 	ledgerJSON := `{"schema_version":4,"ticket_id":"FIX-12","sessions":[
-		{"id":"session-a","source":"opencode","user":"tester","invocations":[],"tools":[{"name":"bash","calls":6,"errors":3}],"events":[
+		{"id":"session-a","source":"opencode","user":"tester","invocations":[],"skills":[{"name":"persisted-load","source_event_id":"read-event","source_message_id":"message","source_invocation_id":"read-call","timestamp":"2026-10-29T10:00:00Z","turn_index":1,"message_index":2,"caller_role":"coder","success":false,"outcome":"unavailable","evidence":"skill_file_read"}],"task_links":[{"subagent_type":"tester","description":"persisted delegation","source_event_id":"spawn-event","source_message_id":"message","source_invocation_id":"spawn-call","child_session_id":"missing-child","child_reference":"/root/checks","parent_turn":1,"timestamp":"2026-10-29T10:00:01Z","duration_ms":42,"cost_usd":0.25,"cost_evidence":{"state":"observed","known_subtotal_usd":0.25}}],"tools":[{"name":"bash","calls":6,"errors":3}],"events":[
 			{"event_id":"late","timestamp":"2026-10-29T11:00:00Z","turn":3,"role":"coder","event_type":"tool_call","tool_name":"bash","status":"error","context_tokens":2400},
 			{"event_id":"early","timestamp":"2026-10-29T10:00:00Z","message_id":"message","turn":1,"role":"coder","event_type":"tool_call","tool_name":"bash","status":"error","duration_ms":0,"context_tokens":1200},
 			{"timestamp":"2026-10-29T10:00:00Z","turn":2,"role":"coder","event_type":"tool_call","tool_name":"bash","status":"error","context_tokens":1300}],"anomalies":[]},
@@ -2465,6 +2465,19 @@ func TestRecordedV4FactsSurviveDetailEventsAndOptionalHydration(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &detail); err != nil {
 		t.Fatal(err)
 	}
+	wantSkill := domain.SkillFact{FactProvenance: domain.FactProvenance{SourceEventID: "read-event", SourceMessageID: "message", SourceInvocationID: "read-call"}, Name: "persisted-load", Timestamp: "2026-10-29T10:00:00Z", TurnIndex: 1, MessageIndex: 2, CallerRole: "coder", Outcome: "unavailable", Evidence: "skill_file_read"}
+	cost := 0.25
+	wantTask := domain.TaskLinkFact{FactProvenance: domain.FactProvenance{SourceEventID: "spawn-event", SourceMessageID: "message", SourceInvocationID: "spawn-call"}, SubagentType: "tester", Description: "persisted delegation", ChildSession: "missing-child", ChildReference: "/root/checks", ParentTurn: 1, Timestamp: "2026-10-29T10:00:01Z", DurationMs: 42, CostUSD: cost, CostEvidence: domain.CostEvidence{State: domain.CostObserved, KnownSubtotalUSD: &cost}}
+	assertDetailFacts := func(response domain.AgenticMetricsLedger) {
+		t.Helper()
+		if len(response.Facts.Sessions) != 2 || !reflect.DeepEqual(response.Facts.Sessions[0].Skills, []domain.SkillFact{wantSkill}) || !reflect.DeepEqual(response.Facts.Sessions[0].TaskLinks, []domain.TaskLinkFact{wantTask}) {
+			t.Fatalf("actual repository/HTTP DTO lost granular baseline facts: %+v", response.Facts.Sessions)
+		}
+		if response.Facts.SkillFacts()[0].SessionID != "session-a" || response.Facts.TaskLinkFacts()[0].SessionID != "session-a" {
+			t.Fatal("detail projection lost parent owner")
+		}
+	}
+	assertDetailFacts(detail.Ledger)
 	baseline := detail.Ledger.Facts.EventFacts()
 	if len(baseline) != 4 || len(detail.Anomalies) == 0 {
 		t.Fatalf("detail lost recorded events/summaries: %#v", detail)
@@ -2524,6 +2537,20 @@ func TestRecordedV4FactsSurviveDetailEventsAndOptionalHydration(t *testing.T) {
 			if !reflect.DeepEqual(response.Anomalies, detail.Anomalies) {
 				t.Fatalf("response lost detail summaries: %#v", response.Anomalies)
 			}
+			request := httptest.NewRequest(http.MethodGet, "/api/workspaces/FIX-12", nil)
+			request.SetPathValue("ticketId", ticket)
+			fresh := httptest.NewRecorder()
+			adaptershttp.WorkspaceDetailHandler(root).ServeHTTP(fresh, request)
+			if fresh.Code != http.StatusOK {
+				t.Fatalf("detail after optional hydration: %d %s", fresh.Code, fresh.Body.String())
+			}
+			var latest struct {
+				Ledger domain.AgenticMetricsLedger `json:"ledger"`
+			}
+			if err := json.Unmarshal(fresh.Body.Bytes(), &latest); err != nil {
+				t.Fatal(err)
+			}
+			assertDetailFacts(latest.Ledger)
 			if !reflect.DeepEqual(snapshot(), before) {
 				t.Fatal("GET rewrote ledger bytes or workspace contents")
 			}

@@ -11,17 +11,18 @@ import (
 // collections are decoded separately so nullable amounts never become zero
 // before their evidence has been validated.
 type ledgerMetadataInput struct {
-	SchemaVersion *int                           `json:"schema_version"`
-	Migration     *domain.MigrationInfo          `json:"migration"`
-	TicketID      *string                        `json:"ticket_id"`
-	TicketTitle   *string                        `json:"ticket_title"`
-	TicketType    *domain.ConventionalTicketType `json:"ticket_type"`
-	StartedAt     *string                        `json:"started_at"`
-	CompletedAt   *string                        `json:"completed_at"`
-	UpdatedAt     string                         `json:"updated_at"`
-	Code          domain.CodeFacts               `json:"code"`
-	Anomalies     []domain.Anomaly               `json:"anomalies"`
-	Skills        []domain.SkillFact             `json:"skills"`
+	OwnershipDiagnostics []string                       `json:"ownership_diagnostics"`
+	SchemaVersion        *int                           `json:"schema_version"`
+	Migration            *domain.MigrationInfo          `json:"migration"`
+	TicketID             *string                        `json:"ticket_id"`
+	TicketTitle          *string                        `json:"ticket_title"`
+	TicketType           *domain.ConventionalTicketType `json:"ticket_type"`
+	StartedAt            *string                        `json:"started_at"`
+	CompletedAt          *string                        `json:"completed_at"`
+	UpdatedAt            string                         `json:"updated_at"`
+	Code                 domain.CodeFacts               `json:"code"`
+	Anomalies            []domain.Anomaly               `json:"anomalies"`
+	Skills               []domain.SkillFact             `json:"skills"`
 }
 
 type schemaV1ToV4LedgerInput struct {
@@ -55,14 +56,17 @@ func (present *memberPresence) UnmarshalJSON(_ []byte) error {
 }
 
 type sessionInput struct {
-	ID          string                    `json:"id"`
-	ParentID    *string                   `json:"parent_id"`
-	Source      domain.SourceHarness      `json:"source"`
-	User        string                    `json:"user"`
-	Invocations []invocationInput         `json:"invocations"`
-	Tools       []domain.SessionToolFact  `json:"tools"`
-	Events      []domain.SessionEventFact `json:"events"`
-	Anomalies   []domain.Anomaly          `json:"anomalies"`
+	AuxiliaryExtractionVersion int                       `json:"auxiliary_extraction_version"`
+	Skills                     []domain.SkillFact        `json:"skills"`
+	TaskLinks                  []taskLinkInput           `json:"task_links"`
+	ID                         string                    `json:"id"`
+	ParentID                   *string                   `json:"parent_id"`
+	Source                     domain.SourceHarness      `json:"source"`
+	User                       string                    `json:"user"`
+	Invocations                []invocationInput         `json:"invocations"`
+	Tools                      []domain.SessionToolFact  `json:"tools"`
+	Events                     []domain.SessionEventFact `json:"events"`
+	Anomalies                  []domain.Anomaly          `json:"anomalies"`
 }
 
 type invocationInput struct {
@@ -89,14 +93,16 @@ type legacyInvocationInput struct {
 }
 
 type taskLinkInput struct {
-	SubagentType string               `json:"subagent_type"`
-	Description  string               `json:"description"`
-	ParentTurn   int                  `json:"parent_turn"`
-	ChildSession string               `json:"child_session_id"`
-	Timestamp    string               `json:"timestamp"`
-	DurationMs   int64                `json:"duration_ms"`
-	CostUSD      json.RawMessage      `json:"cost_usd"`
-	CostEvidence *domain.CostEvidence `json:"cost_evidence"`
+	domain.FactProvenance
+	ChildReference string               `json:"child_reference"`
+	SubagentType   string               `json:"subagent_type"`
+	Description    string               `json:"description"`
+	ParentTurn     int                  `json:"parent_turn"`
+	ChildSession   string               `json:"child_session_id"`
+	Timestamp      string               `json:"timestamp"`
+	DurationMs     int64                `json:"duration_ms"`
+	CostUSD        json.RawMessage      `json:"cost_usd"`
+	CostEvidence   *domain.CostEvidence `json:"cost_evidence"`
 }
 
 type legacyFactCollections struct {
@@ -182,15 +188,15 @@ func (input ledgerCollectionsInput) toDomain(metadata ledgerMetadataInput, requi
 		SchemaVersion: metadata.SchemaVersion, Migration: metadata.Migration,
 		TicketID: metadata.TicketID, TicketTitle: metadata.TicketTitle, TicketType: metadata.TicketType,
 		StartedAt: metadata.StartedAt, CompletedAt: metadata.CompletedAt, UpdatedAt: metadata.UpdatedAt,
-		Code: metadata.Code, Anomalies: metadata.Anomalies, Skills: metadata.Skills,
+		OwnershipDiagnostics: metadata.OwnershipDiagnostics, Code: metadata.Code, Anomalies: metadata.Anomalies, Skills: metadata.Skills,
 	}
 	if input.Sessions != nil {
 		ledger.Sessions = make([]domain.SessionFact, len(input.Sessions))
 	}
 	for si, session := range input.Sessions {
-		owner := domain.SessionFact{
+		owner := domain.SessionFact{AuxiliaryExtractionVersion: session.AuxiliaryExtractionVersion,
 			ID: session.ID, ParentID: session.ParentID, Source: session.Source, User: session.User,
-			Tools: session.Tools, Events: session.Events, Anomalies: session.Anomalies,
+			Tools: session.Tools, Events: session.Events, Anomalies: session.Anomalies, Skills: session.Skills,
 		}
 		if session.Invocations != nil {
 			owner.Invocations = make([]domain.InvocationFact, len(session.Invocations))
@@ -201,6 +207,13 @@ func (input ledgerCollectionsInput) toDomain(metadata ledgerMetadataInput, requi
 				return domain.AgenticFactLedger{}, legacyFactCollections{}, fmt.Errorf("sessions[%d].invocations[%d]: %w", si, ii, err)
 			}
 			owner.Invocations[ii] = invocation
+		}
+		for ti, task := range session.TaskLinks {
+			amount, evidence, err := decodeKnownCost(task.CostUSD, task.CostEvidence, required)
+			if err != nil {
+				return domain.AgenticFactLedger{}, legacyFactCollections{}, fmt.Errorf("sessions[%d].task_links[%d]: %w", si, ti, err)
+			}
+			owner.TaskLinks = append(owner.TaskLinks, domain.TaskLinkFact{FactProvenance: task.FactProvenance, ChildReference: task.ChildReference, SubagentType: task.SubagentType, Description: task.Description, ParentTurn: task.ParentTurn, ChildSession: task.ChildSession, Timestamp: task.Timestamp, DurationMs: task.DurationMs, CostUSD: amount, CostEvidence: evidence})
 		}
 		ledger.Sessions[si] = owner
 	}
@@ -213,7 +226,7 @@ func (input ledgerCollectionsInput) toDomain(metadata ledgerMetadataInput, requi
 			return domain.AgenticFactLedger{}, legacyFactCollections{}, fmt.Errorf("task_links[%d]: %w", i, err)
 		}
 		ledger.TaskLinks[i] = domain.TaskLinkFact{
-			SubagentType: task.SubagentType, Description: task.Description, ParentTurn: task.ParentTurn,
+			FactProvenance: task.FactProvenance, ChildReference: task.ChildReference, SubagentType: task.SubagentType, Description: task.Description, ParentTurn: task.ParentTurn,
 			ChildSession: task.ChildSession, Timestamp: task.Timestamp, DurationMs: task.DurationMs,
 			CostUSD: amount, CostEvidence: evidence,
 		}

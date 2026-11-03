@@ -563,7 +563,7 @@ func SaveFactLedger(path string, ledger domain.AgenticFactLedger) error {
 // representation mapping. Authorization still uses the original committed fact;
 // source events, anomaly evidence/order and every non-cost value stay intact.
 func NormalizeHistorySessionForPublication(owner SessionFactDTO, schemaVersion int) (SessionFactDTO, error) {
-	if schemaVersion != 4 && schemaVersion != domain.CurrentSchemaVersion {
+	if schemaVersion != 4 && schemaVersion != 5 && schemaVersion != domain.CurrentSchemaVersion {
 		return SessionFactDTO{}, fmt.Errorf("unsupported historical schema version %d", schemaVersion)
 	}
 	body, err := json.Marshal(owner)

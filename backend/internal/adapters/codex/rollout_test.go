@@ -550,3 +550,68 @@ func TestCodexMCPOutputEnvelopeRespectsExecutionStatus(t *testing.T) {
 		})
 	}
 }
+
+func TestRecordedAuxiliaryFactsRequireOwnedCompletedReadEvidence(t *testing.T) {
+	// Minimal synthetic records mirror Codex 0.166.0 custom exec and native calls.
+	for _, tc := range []struct {
+		name, input, output string
+		want                int
+	}{
+		{"native read", `{"cmd":"cat .agents/skills/example/SKILL.md"}`, "Exit code: 0\nOutput:\ninstructions", 1},
+		{"bare JSON wrapper is not execution", `{"cmd":"cat .agents/skills/example/SKILL.md"}`, "Exit code: 0\nOutput:\ninstructions", 0},
+		{"wrapped read", `text(await tools.exec_command({cmd:"pwd && cat .agents/skills/example/SKILL.md"}));`, `[{"type":"input_text","text":"Script completed"},{"type":"input_text","text":"{\"exit_code\":0,\"output\":\"instructions\"}"}]`, 1},
+		{"skipped wrapper branch", `if(false){await tools.exec_command({cmd:"cat .agents/skills/missing/SKILL.md"});} text(await tools.exec_command({cmd:"pwd"}));`, `[{"type":"input_text","text":"{\"exit_code\":0}"}]`, 0},
+		{"unexecuted wrapper function", `const never=()=>tools.exec_command({cmd:"cat .agents/skills/missing/SKILL.md"}); text(await tools.exec_command({cmd:"pwd"}));`, `[{"type":"input_text","text":"{\"exit_code\":0}"}]`, 0},
+		{"failed read unrelated successful result", `text(await tools.exec_command({cmd:"cat .agents/skills/missing/SKILL.md"})); text(await tools.exec_command({cmd:"pwd"}));`, `[{"type":"input_text","text":"{\"exit_code\":1}"},{"type":"input_text","text":"{\"exit_code\":0}"}]`, 0},
+		{"single wrapper multiple result statuses", `text(await tools.exec_command({cmd:"cat .agents/skills/example/SKILL.md"}));`, `[{"type":"input_text","text":"{\"exit_code\":1}"},{"type":"input_text","text":"{\"exit_code\":0}"}]`, 0},
+		{"unsupported shell environment mutation", `{"cmd":"source ./redefines-cat && cat .agents/skills/example/SKILL.md"}`, "Exit code: 0\nOutput:\nnot a read", 0},
+		{"cat help", `{"cmd":"cat --help .agents/skills/example/SKILL.md"}`, "Exit code: 0\nOutput:\nhelp", 0},
+		{"cat version", `{"cmd":"cat --version .agents/skills/example/SKILL.md"}`, "Exit code: 0\nOutput:\nversion", 0},
+		{"native shell comment is not a read", `{"cmd":"cat /dev/null # .agents/skills/never-loaded/SKILL.md"}`, `{"exit_code":0,"output":""}`, 0},
+		{"wrapped shell comment is not a read", `text(await tools.exec_command({cmd:"cat /dev/null # .agents/skills/never-loaded/SKILL.md"}));`, `[{"type":"input_text","text":"{\"exit_code\":0,\"output\":\"\"}"}]`, 0},
+		{"quoted cat help", `{"cmd":"cat '--help' .agents/skills/example/SKILL.md"}`, "Exit code: 0\nOutput:\nhelp", 0},
+		{"actual single wrapper with pure catalog print", `text(await tools.exec_command({cmd:"pwd && cat .agents/skills/example/SKILL.md","max_output_tokens":11000}));
+text(ALL_TOOLS.filter(x=>/t3_thread_read|t3_thread_send/.test(x.name)));`, `[{"type":"input_text","text":"Script completed"},{"type":"input_text","text":"{\"exit_code\":0}"}]`, 1},
+
+		{"failed command quotes success", `{"cmd":"cat .agents/skills/example/SKILL.md"}`, `{"exit_code":1,"output":"Process exited with code 0"}`, 0},
+		{"mentioned file", `{"cmd":"echo .agents/skills/example/SKILL.md"}`, "Exit code: 0\nOutput:\npath", 0},
+		{"pipeline output ambiguous", `{"cmd":"cat .agents/skills/example/SKILL.md | head"}`, "Exit code: 0\nOutput:\ninstructions", 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			name := "exec"
+			callType, outputType, inputKey := "custom_tool_call", "custom_tool_call_output", "input"
+			if strings.HasPrefix(tc.input, "{") && tc.name != "bare JSON wrapper is not execution" {
+				name = "exec_command"
+				callType, outputType, inputKey = "function_call", "function_call_output", "arguments"
+			}
+			input, _ := json.Marshal(tc.input)
+			output, _ := json.Marshal(tc.output)
+			lines := `{"timestamp":"2026-11-01T10:00:00Z","type":"session_meta","payload":{"id":"root","cli_version":"0.166.0"}}` + "\n" +
+				`{"timestamp":"2026-11-01T10:00:01Z","type":"response_item","payload":{"type":"` + callType + `","call_id":"read","name":"` + name + `","` + inputKey + `":` + string(input) + `}}` + "\n" +
+				`{"timestamp":"2026-11-01T10:00:02Z","type":"response_item","payload":{"type":"` + outputType + `","call_id":"read","output":` + string(output) + `}}` + "\n" +
+				`{"timestamp":"2026-11-01T10:00:03Z","type":"response_item","payload":{"type":"function_call","call_id":"spawn","name":"spawn_agent","arguments":"{\"agent_type\":\"coder\",\"task_name\":\"build\"}"}}` + "\n" +
+				`{"timestamp":"2026-11-01T10:00:04Z","type":"response_item","payload":{"type":"function_call_output","call_id":"spawn","output":"{\"task_name\":\"/root/coder\"}"}}`
+			transcript, err := codex.ParseRollout(strings.NewReader(lines))
+			if err != nil {
+				t.Fatal(err)
+			}
+			owners, err := transcript.SessionFacts()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(owners) != 1 || len(owners[0].Skills) != tc.want || len(owners[0].TaskLinks) != 1 {
+				t.Fatalf("recorded facts missing or fabricated: %+v", owners)
+			}
+			if tc.want == 1 {
+				fact := owners[0].Skills[0]
+				if fact.Name != "example" || fact.SourceInvocationID != "read" || fact.Evidence != "skill_file_read" || fact.KnownOutcome() {
+					t.Fatalf("load provenance/outcome: %+v", fact)
+				}
+			}
+			task := owners[0].TaskLinks[0]
+			if task.SourceInvocationID != "spawn" || task.ChildReference != "/root/coder" || task.ChildSession != "" {
+				t.Fatalf("namespace became invented UUID: %+v", task)
+			}
+		})
+	}
+}

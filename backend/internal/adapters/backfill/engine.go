@@ -366,13 +366,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 		result.DBUpdated = recovery.updated
 		result.Diagnostics = append(result.Diagnostics, recovery.diagnostics...)
 		if recovery.complete {
-			factLedger.Skills, factLedger.TaskLinks = opencode.ExtractSkillTaskFacts(openCodeSessions)
-			if factLedger.Skills == nil {
-				factLedger.Skills = []domain.SkillFact{}
-			}
-			if factLedger.TaskLinks == nil {
-				factLedger.TaskLinks = []domain.TaskLinkFact{}
-			}
+			openCodeSessions = opencode.WithSkillTaskFacts(openCodeSessions)
 			if opts.RecomputeGit && db != nil {
 				var ids []string
 				for _, session := range openCodeSessions {

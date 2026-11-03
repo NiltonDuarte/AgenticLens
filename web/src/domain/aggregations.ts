@@ -10,12 +10,12 @@ export function compareSkillNames(a: string, b: string): number {
   return left.length - right.length;
 }
 
-export function skillNames(ledger: Pick<AgenticFactLedger, 'skills'>): string[] {
+export function skillNames(ledger: Partial<Pick<AgenticFactLedger, 'skills' | 'sessions'>>): string[] {
   return [...new Set(ledgerSkills(ledger).map((skill) => skill.name))].sort(compareSkillNames);
 }
 
 export function skillSuccessRate(adoption: readonly SkillAdoptionFact[]): number | null {
-  const invocations = adoption.reduce((total, skill) => total + skill.total_invocations, 0);
+  const invocations = adoption.reduce((total, skill) => total + (skill.known_outcomes ?? (skill.failure_rate === null ? 0 : skill.total_invocations)), 0);
   const failures = adoption.reduce((total, skill) => total + skill.failure_count, 0);
   return invocations === 0 ? null : (invocations - failures) / invocations * 100;
 }

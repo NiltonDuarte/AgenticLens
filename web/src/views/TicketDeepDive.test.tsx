@@ -116,6 +116,41 @@ describe('Skills and subagents autopsy', () => {
         expect(errors).not.toHaveBeenCalled();
     });
 
+    it('keeps granular facts visible with failed enrichment and distinguishes loading from execution', async () => {
+        const detail = makeDetail();
+        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: { ...detail, ledger: { ...detail.ledger, threads: [{ ...detail.ledger.threads[0]!, session_id: 'offline-child' }], facts: {
+            ...detail.ledger.facts, schema_version: 6, ownership_diagnostics: ['Historical fact ownership unresolved'],
+            sessions: [{ id: 'parent-source', source: 'codex', invocations: [], tools: [],
+                skills: [{ ...skill, evidence: 'skill_file_read', outcome: 'unavailable', source_invocation_id: 'load-call' },
+                    { ...skill, name: 'review-source', evidence: 'skill_file_read', outcome: 'unavailable', source_invocation_id: 'load-call' }],
+                task_links: [{ ...delegation, source_invocation_id: 'spawn-call', child_reference: '/root/coder' },
+                    { ...delegation, source_invocation_id: 'linked-call', child_session_id: 'offline-child' },
+                    { ...delegation, source_invocation_id: 'missing-call', child_session_id: 'offline-missing' }] }],
+        } } } });
+        render(<TicketDeepDive selectedTicketId="AL-1" />);
+        const skills = await screen.findByRole('table', { name: 'Modular skills' });
+        expect(within(skills).getAllByText('Unavailable')).toHaveLength(2);
+        expect(within(skills).queryByText('Success')).not.toBeInTheDocument();
+        expect(within(skills).getAllByText('Skill file read; execution outcome unavailable')).toHaveLength(2);
+        expect(within(skills).getAllByText('parent-source')).toHaveLength(2);
+        expect(within(skills).getAllByText('load-call')).toHaveLength(2);
+        const tasks = screen.getByRole('table', { name: 'Subagent delegations' });
+        expect(within(tasks).getByText('/root/coder')).toBeVisible();
+        expect(within(tasks).getByText('Child session identity unavailable')).toBeVisible();
+        expect(screen.getByText('Historical fact ownership unresolved')).toBeVisible();
+        fireEvent.click(screen.getByTestId('waterfall-expand-btn'));
+        fireEvent.click(screen.getByRole('button', { name: 'All Events' }));
+        expect(screen.getByText('[skill: inspect-source]')).toBeVisible();
+        expect(screen.getByText('[skill: review-source]')).toBeVisible();
+        expect(screen.getByText('Showing 4 of 4 events')).toBeVisible();
+        expect(screen.getAllByText('Outcome unavailable')).toHaveLength(4);
+        expect(screen.getAllByText('Context unavailable')).toHaveLength(4);
+        expect(screen.getByRole('button', { name: 'Copy child session ID offline-missing' })).toBeVisible();
+        fireEvent.click(screen.getByRole('button', { name: 'Inspect child session offline-child' }));
+        expect(screen.getByRole('button', { name: /^offline-child User:/ })).toHaveAttribute('aria-expanded', 'true');
+
+    });
+
     it('preserves repeated skill invocations, recorded status, roles, timestamps and complete diagnostics', async () => {
         const error = 'Source error: validation failed\n' + 'Detailed diagnostic context '.repeat(12);
         vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: makeDetail([
@@ -300,8 +335,12 @@ describe('FIX-12 committed trace and enrichment lifecycle', () => {
             ...detail, ledger: { ...detail.ledger,
                 threads: [{ ...baseThread, session_id: 'parent-thread' },
                     { ...baseThread, session_id: `${childId}-sibling` }, { ...baseThread, session_id: childId }],
-                facts: { ...detail.ledger.facts, task_links: [{ subagent_type: 'tester', description: 'Verify',
-                    parent_turn: event.turn, timestamp: event.timestamp, child_session_id: childId }] },
+                facts: { ...detail.ledger.facts, task_links: [], sessions: detail.ledger.facts.sessions.map((session) => ({
+                    ...session, task_links: session.id === event.session_id ? [{ subagent_type: 'tester', description: 'Verify',
+                        parent_turn: event.turn, timestamp: event.timestamp, child_session_id: childId,
+                        ...(event.event_id ? { source_event_id: event.event_id } : {}),
+                    }] : [],
+                })) },
             },
         };
         const nextEvent: EventFact = { ...recorded[1]!, session_id: 'next-parent', turn: 42 };

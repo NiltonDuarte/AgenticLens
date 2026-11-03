@@ -36,6 +36,33 @@ describe('Boundary API Client', () => {
             vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => payload }));
             await expect(request()).rejects.toThrow(/Invalid .* response/);
         });
+        it('validates granular v6 source facts and their cost evidence at the HTTP boundary', async () => {
+            const skill = { name: 'inspect', caller_role: 'coder', timestamp: '', turn_index: 1, message_index: 0,
+                success: false, outcome: 'unavailable', evidence: 'skill_file_read', source_invocation_id: 'call-load' };
+            const task = { subagent_type: 'tester', description: 'Check', timestamp: '', parent_turn: 1,
+                child_reference: '/root/tester', cost_usd: null, cost_evidence: { state: 'unavailable', known_subtotal_usd: null } };
+            const payload = { ...detail, ledger: { ...detail.ledger, facts: { ...detail.ledger.facts,
+                schema_version: 6, ownership_diagnostics: ['Unresolved historical ownership'], skills: [], task_links: [],
+                sessions: [{ id: 'owner', source: 'codex', invocations: [], tools: [], skills: [skill], task_links: [task] }],
+            } } };
+            const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => payload });
+            vi.stubGlobal('fetch', fetchMock);
+            const facts = (await fetchWorkspaceById('AL-1')).data.ledger.facts;
+            expect(facts.sessions[0]?.skills).toEqual([skill]);
+            expect(facts.sessions[0]?.task_links?.[0]?.child_reference).toBe('/root/tester');
+            for (const malformed of [
+                { ...skill, source_invocation_id: 3 }, { ...skill, outcome: 'unknown' }, { ...skill, evidence: 'mentioned' },
+            ]) {
+                fetchMock.mockResolvedValue({ ok: true, json: async () => ({ ...payload, ledger: { ...payload.ledger, facts: {
+                    ...payload.ledger.facts, sessions: [{ ...payload.ledger.facts.sessions[0], skills: [malformed] }],
+                } } }) });
+                await expect(fetchWorkspaceById('AL-1')).rejects.toThrow('Invalid workspace detail response');
+            }
+            fetchMock.mockResolvedValue({ ok: true, json: async () => ({ ...payload, ledger: { ...payload.ledger, facts: {
+                ...payload.ledger.facts, sessions: [{ ...payload.ledger.facts.sessions[0], task_links: [{ ...task, cost_usd: 0 }] }],
+            } } }) });
+            await expect(fetchWorkspaceById('AL-1')).rejects.toThrow('Invalid cost payload');
+        });
         it('accepts additive fields and Go nil collections without mutating the response', async () => {
             const payload = { ...ledger, extra_future_field: true, roles: null, models: null, threads: null,
                 anomalies: null, facts: { ...ledger.facts, sessions: [{ id: 's', invocations: null, tools: null, anomalies: null }], skills: null, task_links: null, anomalies: null },

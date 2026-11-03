@@ -411,12 +411,12 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 			extractErr = codex.ValidateRolloutStore(r.Identity.Store, r.TranscriptPath)
 		}
 		fingerprint, fingerprintErr := sourceFingerprint(ctx, r)
-		if extractErr == nil && fingerprintErr == nil && fingerprint != "" && fingerprint == r.SourceFingerprint && len(r.Snapshot) > 0 && (s.project == "" || r.ProjectDirectory == s.project) {
+		if r.ExtractionVersion == domain.CurrentAuxiliaryExtractionVersion && auxiliaryRepresentationCurrent(r.Snapshot) && extractErr == nil && fingerprintErr == nil && fingerprint != "" && fingerprint == r.SourceFingerprint && len(r.Snapshot) > 0 && (s.project == "" || r.ProjectDirectory == s.project) {
 			projected := r
 			projected.State = domain.CaptureCurrent
 			projected.RefreshedAt = time.Now().UTC().Format(time.RFC3339Nano)
 			if _, err := s.Change(ctx, r.Identity, func(current domain.CaptureRegistration) (domain.CaptureRegistration, error) {
-				if current.SourceFingerprint == fingerprint {
+				if current.ExtractionVersion == domain.CurrentAuxiliaryExtractionVersion && auxiliaryRepresentationCurrent(current.Snapshot) && current.SourceFingerprint == fingerprint {
 					current.SourceInstallationID = current.InstallationID
 					current.RefreshedAt = projected.RefreshedAt
 				}
@@ -462,13 +462,15 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 				current.ParentID = *owner.ParentID
 			}
 			if r.Identity.Source == domain.SourceOpenCode {
-				current.Skills, current.TaskLinks = opencode.ExtractSkillTaskFacts(fresh)
+				fresh = opencode.WithSkillTaskFacts(fresh)
+				current.Skills, current.TaskLinks = nil, nil
 			}
 			compact, compactErr := domain.PersistAnomalySummaries(domain.AgenticFactLedger{Sessions: fresh})
 			if compactErr != nil {
 				return current, compactErr
 			}
 			current.Snapshot = compact.Sessions
+			current.ExtractionVersion = domain.CurrentAuxiliaryExtractionVersion
 			current.ProjectDirectory = s.project
 			current.ProjectProof = domain.CaptureProjectVerified
 			if fingerprintErr == nil {
@@ -496,4 +498,18 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 		}
 	}
 	return registrations, refreshed, nil
+}
+
+// Both registry and owned representation must cover the current extractor before
+// a source fingerprint can stand in for a reread.
+func auxiliaryRepresentationCurrent(snapshot []domain.SessionFact) bool {
+	if len(snapshot) == 0 {
+		return false
+	}
+	for _, owner := range snapshot {
+		if owner.AuxiliaryExtractionVersion != domain.CurrentAuxiliaryExtractionVersion {
+			return false
+		}
+	}
+	return true
 }

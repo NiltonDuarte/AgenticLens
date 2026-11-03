@@ -589,13 +589,13 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
                   <div className="timeline-details-row">
                     {ev.event_type === 'tool_call' && (
                       <div className="tool-details-group">
-                        <span className="tool-label">Tool:</span>
-                        <span className="tool-name mono">{ev.tool_name ?? 'unknown'}</span>
-                        <TraceInvocationBadge metadata={badges.get(ev)} availableSessionIds={availableSessionIds} onSelectSession={onSelectSession} />
+                        <span className="tool-label">{ev.fact_projection ? 'Evidence:' : 'Tool:'}</span>
+                        <span className="tool-name mono">{ev.fact_projection ? 'Recorded invocation' : ev.tool_name ?? 'unknown'}</span>
+                        {(badges.get(ev) ?? []).map((metadata, index) => <TraceInvocationBadge key={index} metadata={metadata} availableSessionIds={availableSessionIds} onSelectSession={onSelectSession} />)}
                         <span
-                          className={`status-pill ${hasError ? 'status-error' : 'status-success'}`}
+                          className={`status-pill ${ev.fact_projection && ev.status === 'unavailable' ? '' : hasError ? 'status-error' : 'status-success'}`}
                         >
-                          {hasError ? 'Error' : 'Success'}
+                          {ev.fact_projection && ev.status === 'unavailable' ? 'Outcome unavailable' : hasError ? 'Error' : 'Success'}
                         </span>
                         {ev.duration_ms !== undefined && ev.duration_ms !== null && (
                           <span className="tool-duration mono">{formatDurationMs(ev.duration_ms)}</span>
@@ -640,7 +640,7 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
 
                     <div className="timeline-context-tokens">
                       <span className="context-tokens-tag mono">
-                        {formatTokensK(ev.context_tokens)} tokens
+                        {ev.fact_projection ? 'Context unavailable' : `${formatTokensK(ev.context_tokens)} tokens`}
                       </span>
                     </div>
 

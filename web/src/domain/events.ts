@@ -1,4 +1,4 @@
-import type { SessionFact } from './types';
+import { ledgerSkills, ledgerTaskLinks, skillOutcome, type AgenticFactLedger, type SessionFact, type SourceOccurrence } from './types';
 import type { EventFact, WorkspaceEventsResponse } from '../types/telemetry';
 
 export function sortEvents(events: readonly EventFact[]): readonly EventFact[] {
@@ -14,6 +14,32 @@ export function sessionEvents(sessions: readonly SessionFact[] | undefined): rea
   ) ?? []);
 }
 
+/** Read-only compact evidence projection; identifiers and times are recorded, never synthesized. */
+export function ledgerTimelineEvents(ledger: Pick<AgenticFactLedger, 'sessions' | 'skills' | 'task_links'> | undefined, events: readonly EventFact[] = sessionEvents(ledger?.sessions)): readonly EventFact[] {
+  const result = [...events];
+  const project = (fact: SourceOccurrence, timestamp: string, turn: number, role: string,
+    kind: 'skill' | 'task', status: string, duration?: number): void => {
+    if (!fact.session_id || !timestamp || !(fact.source_event_id || fact.source_invocation_id)) return;
+    const present = result.some((event) => event.session_id === fact.session_id && (
+      (fact.source_event_id && fact.source_event_id === event.event_id) ||
+      (fact.source_invocation_id && (fact.source_invocation_id === event.source_invocation_id || fact.source_invocation_id === event.event_id))
+    ));
+    if (present) return;
+    result.push({ event_id: fact.source_event_id, source_invocation_id: fact.source_invocation_id,
+      message_id: fact.source_message_id, timestamp, session_id: fact.session_id, turn, role,
+      event_type: 'tool_call', tool_name: kind, status, duration_ms: duration,
+      // Required EventFact placeholder is displayed as unavailable for a projection.
+      context_tokens: 0, fact_projection: kind });
+  };
+  for (const skill of ledgerSkills(ledger)) {
+    const outcome = skillOutcome(skill);
+    project(skill, skill.timestamp, skill.turn_index, skill.caller_role, 'skill',
+      outcome === 'unavailable' ? 'unavailable' : outcome === 'failed' ? 'error' : 'completed');
+  }
+  for (const task of ledgerTaskLinks(ledger)) project(task, task.timestamp, task.parent_turn, '', 'task', 'unavailable', task.duration_ms);
+  return sortEvents(result);
+}
+
 function occurrenceOf(event: EventFact): string {
   return JSON.stringify([
     event.session_id, event.timestamp, event.turn, event.event_type, event.tool_name ?? '',
@@ -21,9 +47,14 @@ function occurrenceOf(event: EventFact): string {
 }
 
 function enrichEvent(recorded: EventFact, local: EventFact): EventFact {
+  if (recorded.fact_projection && !local.fact_projection) {
+    return { ...local, event_id: local.event_id || recorded.event_id,
+      source_invocation_id: local.source_invocation_id || recorded.source_invocation_id };
+  }
   return {
     ...recorded,
     event_id: recorded.event_id || local.event_id,
+    ...(local.source_invocation_id ? { source_invocation_id: local.source_invocation_id } : {}),
     message_id: local.message_id || recorded.message_id,
     error_message: local.error_message || recorded.error_message,
     duration_ms: local.duration_ms ?? recorded.duration_ms,
@@ -42,6 +73,7 @@ function matchEventIndexes(
   const matches = new Map<number, number>();
   const enrichmentUsed = new Set<number>();
   const byID = new Map<string, number[]>();
+  const byCall = new Map<string, number[]>();
   const byOccurrence = new Map<string, number[]>();
   baseline.forEach((event, index) => {
     if (!event.session_id) return;
@@ -50,6 +82,12 @@ function matchEventIndexes(
       const indexes = byID.get(key) ?? [];
       indexes.push(index);
       byID.set(key, indexes);
+    }
+    if (event.source_invocation_id) {
+      const callKey = JSON.stringify([event.session_id, event.source_invocation_id]);
+      const callIndexes = byCall.get(callKey) ?? [];
+      callIndexes.push(index);
+      byCall.set(callKey, callIndexes);
     }
     const key = occurrenceOf(event);
     const indexes = byOccurrence.get(key) ?? [];
@@ -64,6 +102,20 @@ function matchEventIndexes(
     if (matched === undefined || !recorded) return;
     matches.set(matched, index);
     enrichmentUsed.add(index);
+  });
+
+  // Raw call identity can join compact projections to a source event with a different event ID.
+  enrichment.forEach((event, index) => {
+    if (enrichmentUsed.has(index) || !event.session_id) return;
+    const candidates = [...new Set([
+      ...(event.source_invocation_id ? byCall.get(JSON.stringify([event.session_id, event.source_invocation_id])) ?? [] : []),
+      ...(event.source_invocation_id ? byID.get(JSON.stringify([event.session_id, event.source_invocation_id])) ?? [] : []),
+      ...(event.event_id ? byCall.get(JSON.stringify([event.session_id, event.event_id])) ?? [] : []),
+    ])].filter((recordedIndex) => !matches.has(recordedIndex));
+    if (candidates.length === 1) {
+      matches.set(candidates[0]!, index);
+      enrichmentUsed.add(index);
+    }
   });
 
   // Count before matching so consuming one row cannot resolve an ambiguous group.

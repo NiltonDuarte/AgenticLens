@@ -93,13 +93,17 @@ function validateFactCost(value: unknown, requireEvidence: boolean, path: string
 function validateFactLedger(value: unknown, path: string): void {
   const facts = requireRecord(value, path);
   const version = facts.schema_version;
-  if (version !== undefined && version !== 4 && version !== 5) invalid(`${path}.schema_version`);
-  const strictFacts = version === 5;
+  if (version !== undefined && version !== 4 && version !== 5 && version !== 6) invalid(`${path}.schema_version`);
+  const strictFacts = version === 5 || version === 6;
   if (!Array.isArray(facts.sessions)) invalid(`${path}.sessions`);
   facts.sessions.forEach((value: unknown, index) => {
     const session = requireRecord(value, `${path}.sessions[${index}]`);
     if (!Array.isArray(session.invocations)) invalid(`${path}.sessions[${index}].invocations`);
     session.invocations.forEach((invocation: unknown, row) => validateFactCost(invocation, strictFacts, `${path}.sessions[${index}].invocations[${row}]`));
+    if (session.task_links != null) {
+      if (!Array.isArray(session.task_links)) invalid(`${path}.sessions[${index}].task_links`);
+      session.task_links.forEach((task: unknown, row) => validateFactCost(task, strictFacts, `${path}.sessions[${index}].task_links[${row}]`));
+    }
   });
   if (facts.task_links != null) {
     if (!Array.isArray(facts.task_links)) invalid(`${path}.task_links`);
