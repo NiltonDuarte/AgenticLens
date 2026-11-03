@@ -8,7 +8,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 
 
-
 ---
 
 ## To Do
@@ -24,19 +23,7 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 ### Post-v2.0 review: Ready
 
-- **AL-60**: Add Search tickets to the comparison exclusion panel
-  - **Subsystem**: Dashboard comparisons
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-60 search tickets in comparison exclusion panel.md`
 
-- **AL-61**: Show full local historical timestamps in Ticket Deep Dive
-  - **Subsystem**: Dashboard historical timestamps
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-61 show full local timestamps in ticket deep dive.md`
 
 - **AL-62**: Fix Codex skill and delegation facts with granular source ownership
   - **Subsystem**: Domain / Codex and OpenCode Adapters / Schema Migration / Backfill / CLI / API / Dashboard / Tests
@@ -67,14 +54,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **File**: `alspaces/plan/to-do/AL-67 review telemetry repository interfaces and dependency injection.md`
 
 
-### Ledger readability: Ready
-
-- **AL-76**: Compact ledger JSON formatting and add a selective format command
-  - **Subsystem**: Ledger serialization / filesystem adapters / CLI / tests
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-76 compact ledger json formatting and format command.md`
 
 ### REV-5 audit remediation: Ready
 

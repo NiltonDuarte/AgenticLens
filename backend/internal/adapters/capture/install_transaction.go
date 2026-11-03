@@ -8,10 +8,8 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
-	"strings"
 
 	adaptersconfig "agenticlens/internal/adapters/config"
 )
@@ -86,13 +84,11 @@ func currentInstallIdentity(ctx context.Context, options InstallOptions, repo, s
 		if err = validateNativeHeader(native); err != nil {
 			return installIdentity{}, err
 		}
-		version, e := exec.CommandContext(ctx, native, "version", "--short").Output()
-		if e != nil || strings.TrimSpace(string(version)) != m.Version {
-			return installIdentity{}, errors.New("pending installer native version is unavailable or changed")
+		if err := validateInstallNativeOutput(ctx, native, m.Version, "pending installer native version", "version", "--short"); err != nil {
+			return installIdentity{}, err
 		}
-		protocol, e := exec.CommandContext(ctx, native, "capture", "protocol").Output()
-		if e != nil || strings.TrimSpace(string(protocol)) != strconv.Itoa(HandlerProtocolVersion) {
-			return installIdentity{}, errors.New("pending installer native lifecycle capability is unavailable or changed")
+		if err := validateInstallNativeOutput(ctx, native, strconv.Itoa(HandlerProtocolVersion), "pending installer native protocol", "capture", "protocol"); err != nil {
+			return installIdentity{}, err
 		}
 
 		if options.Binary != "" {
@@ -369,6 +365,9 @@ func recoverInstallTransaction(ctx context.Context, options InstallOptions, repo
 			return nil, err
 		}
 		if complete {
+			if err := ctx.Err(); err != nil {
+				return nil, fmt.Errorf("required installation recovery expired; recovery journal retained: %w", err)
+			}
 			if err = removeInstallJournal(path, raw); err != nil {
 				return nil, err
 			}
@@ -447,6 +446,9 @@ func applyInstallTransactionWithWriter(ctx context.Context, options InstallOptio
 				err = write(c)
 			}
 		}
+		if err == nil {
+			err = ctx.Err()
+		}
 		if err != nil {
 			cause := err
 			j.Phase = "rollback"
@@ -470,6 +472,9 @@ func applyInstallTransactionWithWriter(ctx context.Context, options InstallOptio
 	}
 	if !complete {
 		return errors.New("installer outputs changed before completion; recovery journal retained")
+	}
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("required installation completion expired; recovery journal retained: %w", err)
 	}
 	return removeInstallJournal(path, raw)
 }

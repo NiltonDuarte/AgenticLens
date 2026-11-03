@@ -178,6 +178,9 @@ func TestBackfillEngine_ExplicitRecomputeDBDoesNotSkipCompletedLedger(t *testing
 					t.Fatalf("explicit refresh failed/skipped: %+v", report.Results)
 				}
 				updated, data := readRecoveryLedger(t, workspace)
+				if !strings.Contains(string(data), `"tokens": {"input":`) {
+					t.Fatalf("backfill writer expanded compact token record: %s", data)
+				}
 				if updated.Migration != nil {
 					t.Fatalf("optional refresh created migration requirement: %+v", updated.Migration)
 				}

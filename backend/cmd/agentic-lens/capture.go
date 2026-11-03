@@ -9,8 +9,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"agenticlens/internal/adapters"
@@ -89,7 +91,7 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 	byteBudget := flags.Int64("max-source-bytes", capture.DefaultByteBudget, "Source or diagnostic payload bytes per bounded pass")
 	sessionBudget := flags.Int("max-sessions", capture.DefaultSessionBudget, "Session work budget per reconciliation or inspection pass")
 	beforeDiagnostic := flags.Int64("before-diagnostic", 0, "Read retained diagnostic history before this sequence (status/diagnostics only)")
-	timeout := flags.Duration("timeout", 2*time.Second, "Bound handler or registry work duration")
+	timeout := flags.Duration("timeout", 2*time.Second, "Bound handler/registry work or each required installation phase; optional harness inspection has a separate budget")
 	if err := flags.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return nil
@@ -105,7 +107,13 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 	if *timeout <= 0 || *timeout > 5*time.Minute {
 		return errors.New("capture timeout must be positive and at most five minutes")
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
+	callerCtx := context.Background()
+	if command == "install" {
+		var stop context.CancelFunc
+		callerCtx, stop = signal.NotifyContext(callerCtx, os.Interrupt, syscall.SIGTERM)
+		defer stop()
+	}
+	ctx, cancel := context.WithTimeout(callerCtx, *timeout)
 	defer cancel()
 	project, err := adaptersconfig.ProjectRoot(*repo)
 	if err != nil {
@@ -211,7 +219,15 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 				return e
 			}
 		}
-		result, e := capture.Install(ctx, capture.InstallOptions{Repository: project, StateDir: location.CoordinationDirectory, Binary: *binary, Wrapper: *wrapper, Source: *source, SourceStore: *sourceStore, DryRun: *dryRun, Remove: command != "install"})
+		installCtx := ctx
+		if command == "install" {
+			if err := ctx.Err(); err != nil {
+				return fmt.Errorf("required installation setup: %w", err)
+			}
+			cancel()
+			installCtx = callerCtx
+		}
+		result, e := capture.Install(installCtx, capture.InstallOptions{Repository: project, StateDir: location.CoordinationDirectory, Binary: *binary, Wrapper: *wrapper, Source: *source, SourceStore: *sourceStore, DryRun: *dryRun, Remove: command != "install", RequiredTimeout: *timeout})
 		if e != nil {
 			return e
 		}

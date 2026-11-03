@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -35,6 +34,9 @@ type InstallOptions struct {
 	Remove              bool
 	AllowLegacyManifest bool
 	LegacyStateDir      string
+	// RequiredTimeout bounds each required installation phase. The optional
+	// harness probe has its own allowance; the caller context still bounds all work.
+	RequiredTimeout time.Duration
 }
 type OwnedGroup struct {
 	Event string          `json:"event"`
@@ -101,8 +103,7 @@ func jsonEqual(a, b []byte) bool {
 }
 
 func probe(ctx context.Context, source string) (string, string) {
-	cmd := exec.CommandContext(ctx, source, "--version")
-	b, err := cmd.Output()
+	b, err := installCommandOutput(ctx, source, "--version")
 	if err != nil {
 		return "unavailable", "Harness unavailable; install it and run capture status"
 	}
@@ -115,7 +116,7 @@ func probe(ctx context.Context, source string) (string, string) {
 		return version, "Unsupported/unverified harness version; no runtime capture compatibility claim"
 	}
 	if source == "codex" {
-		features, e := exec.CommandContext(ctx, source, "features", "list").Output()
+		features, e := installCommandOutput(ctx, source, "features", "list")
 		if e != nil || !strings.Contains(string(features), "hooks") {
 			return version, "Hooks unavailable; inspect codex features list"
 		}
@@ -145,6 +146,19 @@ func Install(ctx context.Context, options InstallOptions) (InstallResult, error)
 
 func installWithWriter(ctx context.Context, options InstallOptions, write func(fileChange) error) (result InstallResult, returnErr error) {
 	result = InstallResult{DryRun: options.DryRun, Changes: []PlannedChange{}}
+	requiredTimeout := options.RequiredTimeout
+	if requiredTimeout == 0 {
+		requiredTimeout = 2 * time.Second
+	}
+	if requiredTimeout < 0 || requiredTimeout > 5*time.Minute {
+		return result, errors.New("required installation timeout must be positive and at most five minutes")
+	}
+	callerCtx := ctx
+	if err := callerCtx.Err(); err != nil {
+		return result, fmt.Errorf("required installation setup: %w", err)
+	}
+	ctx, phaseCancel := context.WithTimeout(callerCtx, requiredTimeout)
+	defer phaseCancel()
 	if options.Source != "codex" && options.Source != "opencode" {
 		return result, errors.New("install source must be codex or opencode")
 	}
@@ -273,15 +287,11 @@ func installWithWriter(ctx context.Context, options InstallOptions, write func(f
 		if e != nil || info.IsDir() {
 			return result, errors.New("native capture handler missing")
 		}
-		checkCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
-		defer cancel()
-		out, e := exec.CommandContext(checkCtx, binary, "capture", "protocol").Output()
-		if e != nil || strings.TrimSpace(string(out)) != "3" {
-			return result, errors.New("installed native handler does not support hook protocol 3")
+		if e := validateInstallNativeOutput(ctx, binary, "3", "native capture handler protocol", "capture", "protocol"); e != nil {
+			return result, e
 		}
-		versionOutput, e := exec.CommandContext(checkCtx, binary, "version", "--short").Output()
-		if e != nil || strings.TrimSpace(string(versionOutput)) != version {
-			return result, errors.New("native capture handler version differs from shared pin")
+		if e := validateInstallNativeOutput(ctx, binary, version, "native capture handler version", "version", "--short"); e != nil {
+			return result, e
 		}
 	} else {
 		binary = previous.Binary
@@ -297,9 +307,18 @@ func installWithWriter(ctx context.Context, options InstallOptions, write func(f
 		m.WrapperHash = previous.WrapperHash
 	}
 	if !options.Remove {
-		probeCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+		if err := ctx.Err(); err != nil {
+			return result, fmt.Errorf("required installation planning: %w", err)
+		}
+		phaseCancel()
+		probeCtx, cancel := context.WithTimeout(callerCtx, 3*time.Second)
 		m.HarnessVersion, m.Capability = probe(probeCtx, options.Source)
 		cancel()
+		if err := callerCtx.Err(); err != nil {
+			return result, fmt.Errorf("installation canceled during optional harness inspection: %w", err)
+		}
+		ctx, phaseCancel = context.WithTimeout(callerCtx, requiredTimeout)
+		defer phaseCancel()
 	} else {
 		m.HarnessVersion = previous.HarnessVersion
 		m.Capability = "Disabled; existing local registrations retained"
@@ -479,6 +498,9 @@ func installWithWriter(ctx context.Context, options InstallOptions, write func(f
 		result.Changes = append(result.Changes, PlannedChange{c.path, action})
 	}
 	result.Manifest = m
+	if err := ctx.Err(); err != nil {
+		return result, fmt.Errorf("required installation planning: %w", err)
+	}
 	if options.DryRun {
 		return result, nil
 	}

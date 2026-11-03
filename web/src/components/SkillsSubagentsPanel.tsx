@@ -3,8 +3,8 @@ import type { SkillFact, TaskLinkFact } from '../domain/types';
 import {
   formatFactCostUSD,
   formatDurationSeconds,
-  formatLocalDateTimeTooltip,
-  formatLocalTimeWithMs,
+  formatHistoricalDateTimeTooltip, getHistoricalTimestampDateTime,
+  formatLocalDateTime,
   formatSkillStatus,
   formatSubagentRole,
 } from '../domain/formatters';
@@ -46,8 +46,8 @@ export const SkillsSubagentsPanel: React.FC<SkillsSubagentsPanelProps> = ({
               <tbody>{skills.map((skill, index) => (
                 <tr key={index} tabIndex={0}>
                   <th scope="row">{skill.name}</th>
-                  <td>Turn {skill.turn_index} / <time dateTime={skill.timestamp}
-                    title={formatLocalDateTimeTooltip(skill.timestamp)}>{formatLocalTimeWithMs(skill.timestamp)}</time></td>
+                  <td>Turn {skill.turn_index} / <time dateTime={getHistoricalTimestampDateTime(skill.timestamp)}
+                    title={formatHistoricalDateTimeTooltip(skill.timestamp)}>{formatLocalDateTime(skill.timestamp)}</time></td>
                   <td>{formatSubagentRole(skill.caller_role)}</td>
                   <td><span className={`skill-status ${skill.success ? 'success' : 'failed'}`}>{formatSkillStatus(skill.success)}</span></td>
                   <td className="source-text">{skill.error ?? 'None recorded'}</td>

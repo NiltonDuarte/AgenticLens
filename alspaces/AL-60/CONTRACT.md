@@ -1,0 +1,13 @@
+# AL-60 Technical Contract
+
+Frozen search baseline; the approved capture extension is in [iteration 02](iterations/02/CONTRACT.md). The specification path below is its completed archive location.
+
+Source: `alspaces/plan/done/AL-60 search tickets in comparison exclusion panel.md`. The user explicitly pre-approved this scope and requested full delivery on 2026-11-03. Initial checkout was clean at `122e983f8c365a2aa248b1b6d492252555e922ae`, on `AL-60/search-tickets-comparison-exclusion-panel`. Delivery branch is `feat/AL-60-search-tickets`. Workspace root is configured as `alspaces`.
+
+Add a visibly and accessibly labeled Search tickets text input inside Comparisons > Exclude tickets. Match ticket IDs or titles case-insensitively and filter only displayed checkbox choices. Clearing restores choices. Search never changes exclusions, exclusion count, chart points, chart metrics, scales, navigation or tooltips. Hidden exclusions remain excluded; visible choices remain independently toggleable and restorable. No-match copy must explain the result while retaining the input and a usable clearing path. Native keyboard access remains available.
+
+The presentation owner is `web/src/components/TicketScatterPlot.tsx`. Keep query state independent of the existing exclusion set. Continue deriving scatter data from the original rows and exclusion set through `deriveScatterPlotData` in `web/src/domain/ticket_scatter.ts`; never pass searched rows to chart derivation. `TicketComparisonRow` already supplies string `ticket_id` and `ticket_title`; `web/src/api/client.ts` decodes persisted ledgers and `deriveTicketComparisonRows` in `web/src/domain/formatters.ts` supplies titles. No Go, API, schema, extraction, metrics or persisted-data changes are required.
+
+Follow `TECHNICAL_GUIDELINES.md` and `docs/REGRESSION_PREVENTION.md`: strict TypeScript, no any, no emojis, pure domain boundaries and no new production runtime dependency. Tests use self-contained frontend fixtures, never ticket workspaces. Preserve `alspaces/AL-55/agentic_metrics.json`.
+
+Acceptance requires focused interaction coverage, the integrated `make` gate, canonical frontend build/sync, inspection of embedded assets and standalone binary asset verification. Preserve existing defaults, axis behavior, logarithmic rendering, tooltip content and point activation. Publish a reviewed PR with workspace artifacts and source-grounded final telemetry. Approval authorizes scope execution and PR publication, not merging.

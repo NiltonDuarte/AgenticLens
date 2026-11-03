@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "PUB-01",
+      "severity": 8,
+      "issue": "Formatting could overwrite newer manual ledger publications.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed canonical ownership before backfill/migration reads through publication and computed output writes; deterministic race regressions pass."
+    },
+    {
+      "finding_id": "TEST-01",
+      "severity": 4,
+      "issue": "Late replacement failure and partial results lacked a regression oracle.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Added deterministic filesystem staging failure, partial successes and preserved-original assertions."
+    },
+    {
+      "finding_id": "TEST-02",
+      "severity": 3,
+      "issue": "Computed export tests missed compact anomaly layout regressions.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Added exact compact nested anomaly, semantic and idempotence assertions."
+    },
+    {
+      "finding_id": "PATH-01",
+      "severity": 3,
+      "issue": "Unknown JSON keys containing slashes could match compact record paths.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Caught before formal review; escaped structural path segments and added unknown-key regression."
+    }
+  ]
+}

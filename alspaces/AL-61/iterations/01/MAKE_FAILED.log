@@ -1,0 +1,117 @@
+Installing backend dependencies...
+(cd backend && go mod download)
+Installing frontend dependencies...
+
+up to date, audited 631 packages in 7s
+
+230 packages are looking for funding
+  run `npm fund` for details
+
+21 vulnerabilities (18 moderate, 1 high, 2 critical)
+
+To address all issues possible (including breaking changes), run:
+  npm audit fix --force
+
+Some issues need review, and may require choosing
+a different dependency.
+
+Run `npm audit` for details.
+npm warn install-scripts 1 package has install scripts not yet covered by allowScripts:
+npm warn install-scripts   esbuild@0.21.5 (postinstall: node install.js)
+npm warn install-scripts
+npm warn install-scripts Run `npm install-scripts ls` to review, or `npm install-scripts approve <pkg>` to allow.
+Building frontend assets required by Go embed...
+(cd web && npm run build)
+
+> agenticlens-web@2.0.0 build
+> tsc --noEmit && vite build && node scripts/sync-assets.mjs
+
+vite v5.4.21 building for production...
+transforming...
+✓ 339 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.64 kB │ gzip:   0.42 kB
+dist/assets/index-BRuwNy88.css   82.81 kB │ gzip:  12.73 kB
+dist/assets/index-Gy8Y2ypg.js   505.88 kB │ gzip: 146.68 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 5.84s
+(cd backend && go vet ./...)
+Linting frontend...
+
+> agenticlens-web@2.0.0 typecheck
+> tsc --noEmit
+
+
+> agenticlens-web@2.0.0 lint
+> eslint "src/**/*.{ts,tsx}" --max-warnings 0
+
+python3 scripts/tests/test_release_revision.py
+..............
+----------------------------------------------------------------------
+Ran 14 tests in 8.287s
+
+OK
+python3 scripts/tests/test_installation.py
+..........
+----------------------------------------------------------------------
+Ran 10 tests in 21.926s
+
+OK
+python3 scripts/tests/test_capture_distribution.py
+...............
+----------------------------------------------------------------------
+Ran 15 tests in 12.203s
+
+OK
+(cd backend && go test -race ./...)
+# Preview: /tmp/TestCaptureConfigUpdatePreviewAndApplyPreserveLocalSettings3999058829/001/.agenticlens-config.yaml
+# Keep project policy
+project_name: Example
+custom_policy: retained
+telemetry:
+  capture:
+    state_dir: ~/.agenticlens/state
+Updated telemetry.capture.state_dir in /tmp/TestCaptureConfigUpdatePreviewAndApplyPreserveLocalSettings3999058829/001/.agenticlens-config.yaml; unrelated settings and explicit local overrides preserved.
+--- FAIL: TestCaptureLaterAgentChannelReportsBoundPublicationFailure (4.10s)
+    capture_failure_feedback_test.go:218: available retained facts publication failed: exit status 1 WARNING: code_metrics.test_patterns is empty or unconfigured: configure 'code_metrics.test_patterns' in .agenticlens-config.yaml
+        WARNING: code_metrics.prod_patterns is empty or unconfigured: configure 'code_metrics.prod_patterns' in .agenticlens-config.yaml
+        Structured metrics ledger written to /tmp/TestCaptureLaterAgentChannelReportsBoundPublicationFailure3170986571/001/records/TEST-200/agentic_metrics.json
+        Metrics table successfully updated in /tmp/TestCaptureLaterAgentChannelReportsBoundPublicationFailure3170986571/001/records/TEST-200/SUMMARY.md
+        WARNING: code_metrics.test_patterns is empty or unconfigured: configure 'code_metrics.test_patterns' in .agenticlens-config.yaml
+        WARNING: code_metrics.prod_patterns is empty or unconfigured: configure 'code_metrics.prod_patterns' in .agenticlens-config.yaml
+        Structured metrics ledger written to /tmp/TestCaptureLaterAgentChannelReportsBoundPublicationFailure3170986571/001/records/TEST-100/agentic_metrics.json
+        Metrics table successfully updated in /tmp/TestCaptureLaterAgentChannelReportsBoundPublicationFailure3170986571/001/records/TEST-100/SUMMARY.md
+        WARNING: code_metrics.test_patterns is empty or unconfigured: configure 'code_metrics.test_patterns' in .agenticlens-config.yaml
+        WARNING: code_metrics.prod_patterns is empty or unconfigured: configure 'code_metrics.prod_patterns' in .agenticlens-config.yaml
+        Structured metrics ledger written to /tmp/TestCaptureLaterAgentChannelReportsBoundPublicationFailure3170986571/001/records/TEST-200/agentic_metrics.json
+        Metrics table successfully updated in /tmp/TestCaptureLaterAgentChannelReportsBoundPublicationFailure3170986571/001/records/TEST-200/SUMMARY.md
+        WARNING: code_metrics.test_patterns is empty or unconfigured: configure 'code_metrics.test_patterns' in .agenticlens-config.yaml
+        WARNING: code_metrics.prod_patterns is empty or unconfigured: configure 'code_metrics.prod_patterns' in .agenticlens-config.yaml
+        automatic publication pending: signal: killed
+        Capture: native worker lifetime exhausted; pending generation retained for next integration event: signal: killed
+--- FAIL: TestCaptureCLIOpenCodePluginOwnershipAndMissingHandler (2.11s)
+    capture_test.go:366: install: exit status 1 Capture: pending installer native version is unavailable or changed
+--- FAIL: TestCaptureNativeWorkerPublishesMultipleRootsAndRefreshesWithoutGenerate (6.30s)
+    capture_test.go:1146: native worker did not finish terminal idle shutdown before fixture cleanup
+FAIL
+FAIL	agenticlens/cmd/agentic-lens	204.209s
+ok  	agenticlens/internal/adapters	9.813s
+ok  	agenticlens/internal/adapters/backfill	33.368s
+ok  	agenticlens/internal/adapters/capture	136.278s
+ok  	agenticlens/internal/adapters/codex	1.743s
+ok  	agenticlens/internal/adapters/config	4.219s
+?   	agenticlens/internal/adapters/filesystem	[no test files]
+ok  	agenticlens/internal/adapters/git	11.030s
+ok  	agenticlens/internal/adapters/http	8.024s
+ok  	agenticlens/internal/adapters/live	18.494s
+ok  	agenticlens/internal/adapters/opencode	5.658s
+ok  	agenticlens/internal/adapters/web	1.072s
+ok  	agenticlens/internal/domain	1.733s
+ok  	agenticlens/internal/domain/migration	1.304s
+FAIL
+make: *** [Makefile:98: test-backend] Error 1

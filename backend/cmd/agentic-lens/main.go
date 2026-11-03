@@ -1238,6 +1238,7 @@ func printRootUsage() {
 	fmt.Fprintln(out, "  capture   Install hooks, bind exact sessions, reconcile local snapshots and diagnose coverage")
 	fmt.Fprintln(out, "  backfill  Batch telemetry backfill, Git code facts recomputation, and schema upgrades")
 	fmt.Fprintln(out, "  migrate   Universal stepwise schema migration engine for telemetry ledgers")
+	fmt.Fprintln(out, "  format    Reformat selected persisted ledgers without changing facts")
 	fmt.Fprintln(out, "  version   Print version and build information")
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "Root Workspace Inspection Flags:")
@@ -1633,6 +1634,9 @@ func main() {
 				case "backfill":
 					runBackfill([]string{"--help"})
 					return
+				case "format":
+					runFormat([]string{"--help"})
+					return
 				case "migrate":
 					runMigrate([]string{"--help"})
 					return
@@ -1667,6 +1671,9 @@ func main() {
 			return
 		case "backfill":
 			runBackfill(os.Args[2:])
+			return
+		case "format":
+			runFormat(os.Args[2:])
 			return
 		case "migrate":
 			runMigrate(os.Args[2:])
