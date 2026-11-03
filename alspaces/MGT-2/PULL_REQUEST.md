@@ -8,6 +8,8 @@ The management skill now requires a separate FIX ticket and isolated thread for 
 
 Codifies the existing portable-ledger contract: trusted Git-shared records remain usable across developers, machines and harnesses without the originating machine's private source/capture state. Defines local-source-then-existing-ledger precedence per session, preservation of unavailable owners, idempotent updates, runtime whole-ledger aggregation and best-effort resumable migration. Adds cross-machine acceptance scenarios and aligns contributor, development/review/management/PO and setup/operator guidance. Documentation does not claim the pending AL-62 runtime correction is delivered.
 
+Clarifies native session ID as stable identity and the explicit consequence of local authority: a complete local snapshot may reduce its session's totals. Adds queued AL-77 for a frontend warning about sessions appearing in multiple tickets; users decide how to correct attribution, with no automatic repair or data removal. No AL-77 implementation/thread is started.
+
 After the current product batch merges, create the requested REV ticket to review test cost and propose fast unit checks followed by a separate integration layer. This deferred review is recorded without starting test refactoring during delivery.
 
 Management workflow remains active. This draft PR requires external review and merge; its owning manager cannot merge it. No application implementation is included.
