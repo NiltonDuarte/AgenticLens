@@ -15,7 +15,11 @@ Use this guide to install, configure, and operate AgenticLens in an adopting rep
 
 Use the canonical [setup skill](../.agents/skills/agentic-lens-setup/SKILL.md) for complete bundle installation, approval boundaries, full configuration, normal harness trust and actual callback/binding/source verification. Install official precompiled releases only; adopting projects need no Go/Node/Python/yq runtime.
 
+For a fresh project without an approved release pin, resolve the latest stable release at https://github.com/NiltonDuarte/AgenticLens/releases/latest (automation: read tag_name from https://api.github.com/repos/NiltonDuarte/AgenticLens/releases/latest), then retain its exact tag throughout installation. For an existing project, honor its shared agenticlens.version; repair retains that pin and upgrades require explicit approval. Retrieve the manifest, scripts and binaries from that selected tag, never from main. Replace moving main/latest download references in older manifests with the selected tag. If the tag lacks required bundle files, report the limitation and follow its tagged manifest or legacy manual binary instructions; never combine files from different revisions. Legacy installation does not establish support for this versioned-wrapper or lifecycle protocol.
+
 Select one exact published release. Shared `.agenticlens-config.yaml` owns `agenticlens.version`; the user-level PATH wrapper resolves that pin from the project/subdirectory and detects the executing platform. Local `agenticlens.install_root` customizes cache placement independently of telemetry.capture.state_dir. Ordinary commands and integrations are offline and never install a missing release.
+
+The commands below require a selected release containing the complete setup bundle. Review and retrieve its installer before running it.
 
 ```sh
 bash .agents/skills/agentic-lens-setup/scripts/install.sh --version <EXACT_TAG> --dest <PROJECT>
@@ -24,7 +28,7 @@ bash .agents/skills/agentic-lens-setup/scripts/download.sh --project <PROJECT>
 agentic-lens --al-project <PROJECT> version --short
 ```
 
-The first command bootstraps both setup/operator skills from the selected tag. Restore missing setup scripts from that tag after reviewing them. Existing configurations/files are preserved; do not fetch moving-main wrappers or use latest URLs. For a new project use explicit --init-config --version only as a bootstrap scaffold; complete full native init with project/source roots/ticket prefixes before claiming publication readiness. Never overwrite arbitrary project/local config using --force.
+The first command bootstraps both setup/operator skills from the selected tag. Restore missing setup scripts from that tag after reviewing them. Existing configurations/files are preserved; do not fetch moving-main wrappers or moving latest artifact URLs. For a new project use explicit --init-config --version only as a bootstrap scaffold; complete full native init with project/source roots/ticket prefixes before claiming publication readiness. Never overwrite arbitrary project/local config using --force.
 
 The POSIX stable wrapper defaults to ~/.local/bin/agentic-lens. Native Windows uses ~/.agenticlens/agentic-lens.ps1 and the shipped native installer:
 
