@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "REL-01",
+      "location": "scripts/release/package-lock.json; .github/workflows/release-candidate.yml",
+      "trigger": "Install locked git-file-utils 3.2.1 on the declared Node20 runner",
+      "violated_expectation": "Declared transitive support should align with the runner",
+      "consequence": "Declared support discrepancy; Node20 fixture suite and live API resolution succeed, no runtime defect established",
+      "classification": "suggestion",
+      "severity": 2,
+      "evidence": "Behavior and architecture Sol reports; live Node20 calculation and tests pass",
+      "disposition": "confirmed",
+      "disposition_reason": "Accept nonblocking support discrepancy for this version fix; release tooling maintainers own dependency/runtime alignment on next pin update, documented maintenance requirement in README",
+      "discovery_run_ids": [
+        "behavior-sol",
+        "architecture-sol"
+      ],
+      "lifecycle_status": "accepted_debt",
+      "observations": [
+        {
+          "run_id": "behavior-sol",
+          "local_id": "Nonblocking observation",
+          "severity": 2
+        },
+        {
+          "run_id": "architecture-sol",
+          "local_id": "A-SOL-1",
+          "severity": 2
+        }
+      ]
+    },
+    {
+      "finding_id": "TEST-01",
+      "location": "scripts/release/rc-version.test.cjs; scripts/tests/test_release_revision.py",
+      "trigger": "Remove the successful CLI GITHUB_ENV append",
+      "violated_expectation": "Current suites do not guard that output handoff mutation",
+      "consequence": "Regression oracle gap; successful actual read-only CLI handoff verified independently for this revision",
+      "classification": "suggestion",
+      "severity": 3,
+      "evidence": "Tests Sol disposable mutation survives both suites; four core version/guard mutations killed; actual CLI output verified",
+      "disposition": "confirmed",
+      "disposition_reason": "Accept bounded test coverage limit; current CLI behavior verified live, release tooling maintainers own durable success-path handoff coverage in a future CI tooling revision",
+      "discovery_run_ids": [
+        "tests-sol"
+      ],
+      "lifecycle_status": "accepted_debt",
+      "observations": [
+        {
+          "run_id": "tests-sol",
+          "local_id": "Nonblocking improvement",
+          "severity": 3
+        }
+      ]
+    }
+  ]
+}

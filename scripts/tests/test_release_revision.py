@@ -7,14 +7,16 @@ import unittest
 
 
 WORKFLOW = Path(__file__).resolve().parents[2] / ".github/workflows/release-please.yml"
+RC_WORKFLOW = WORKFLOW.with_name("release-candidate.yml")
+RC_RESOLVER = WORKFLOW.parents[2] / "scripts/release/rc-version.cjs"
 
 
-def steps():
+def steps(workflow=WORKFLOW):
     # Read this workflow's named steps and literal run blocks without a YAML
     # dependency. Fail if the relevant block format changes instead of skipping.
     result = {}
     current = None
-    for line in WORKFLOW.read_text().splitlines():
+    for line in workflow.read_text().splitlines():
         if line.startswith("      - name: "):
             current = line.removeprefix("      - name: ")
             result[current] = []
@@ -115,6 +117,42 @@ class ReleaseRevisionTest(unittest.TestCase):
         self.assertIn("        if: ${{ inputs.force_tag != '' }}", workflow["Verify forced release exists"])
         self.assertIn('        run: gh release view "$RELEASE_TAG" > /dev/null', workflow["Verify forced release exists"])
         self.assertIn("          tag_name: ${{ env.RELEASE_TAG }}", workflow["Upload Release Artifacts"])
+
+    def test_candidate_build_and_publication_require_resolver_and_final_eligibility(self):
+        workflow = steps(RC_WORKFLOW)
+        names = list(workflow)
+        compute = names.index("Compute Release Candidate Metadata")
+        recheck = names.index("Recheck Release Candidate Eligibility")
+        self.assertLess(names.index("Install release version tooling"), compute)
+        self.assertIn("        run: node scripts/release/rc-version.cjs resolve", workflow["Compute Release Candidate Metadata"])
+        self.assertIn("        run: node scripts/release/rc-version.cjs verify", workflow["Recheck Release Candidate Eligibility"])
+        for name in ["Install web dependencies", "Static Analysis", "Run Test Suite", "Cross-Compile Release Binaries", "Package Release Archives", "Verify Release Artifacts", "Recheck Release Candidate Eligibility"]:
+            self.assertLess(compute, names.index(name))
+            self.assertIn("        if: steps.candidate.outputs.should_publish == 'true'", workflow[name])
+        self.assertLess(names.index("Verify Release Artifacts"), recheck)
+        for name in ["Publish GitHub Pre-release", "Prune Older Release Candidates"]:
+            self.assertLess(recheck, names.index(name))
+            self.assertIn("        if: steps.eligibility.outputs.should_publish == 'true'", workflow[name])
+        self.assertIn('        run: make release-build VERSION="${VERSION}" GIT_COMMIT="${GIT_COMMIT}" BUILD_DATE="${BUILD_DATE}"', workflow["Cross-Compile Release Binaries"])
+        self.assertIn("          tag_name: ${{ env.VERSION }}", workflow["Publish GitHub Pre-release"])
+
+    def test_candidate_cli_failure_leaves_no_publish_permission_or_metadata(self):
+        for expected, token, error in [
+            (self.older, "fixture-token", "Checkout does not match"),
+            (self.newer, "", "GH_TOKEN is required"),
+        ]:
+            with self.subTest(error=error):
+                output = self.repo / "github-output"
+                result = subprocess.run(
+                    ["node", str(RC_RESOLVER), "resolve"], cwd=self.repo,
+                    env=dict(self.env, EXPECTED_SHA=expected, GH_TOKEN=token,
+                             GITHUB_REPOSITORY="fixture/repository", GITHUB_OUTPUT=str(output)),
+                    capture_output=True, text=True,
+                )
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(error, result.stderr)
+                self.assertFalse(output.exists())
+                self.assertFalse((self.repo / "github-env").exists())
 
 
 if __name__ == "__main__":

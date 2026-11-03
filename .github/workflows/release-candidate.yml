@@ -67,6 +67,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: read
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -90,41 +91,51 @@ jobs:
           cache: 'npm'
           cache-dependency-path: web/package-lock.json
 
+      - name: Install release version tooling
+        run: npm ci --prefix scripts/release --ignore-scripts
+
+      - name: Compute Release Candidate Metadata
+        id: candidate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EXPECTED_SHA: ${{ github.sha }}
+        run: node scripts/release/rc-version.cjs resolve
+
       - name: Install web dependencies
+        if: steps.candidate.outputs.should_publish == 'true'
         working-directory: web
         run: npm ci
 
       - name: Static Analysis
+        if: steps.candidate.outputs.should_publish == 'true'
         run: make check
 
       - name: Run Test Suite
+        if: steps.candidate.outputs.should_publish == 'true'
         run: make test
 
-      - name: Compute Release Candidate Metadata
-        run: |
-          BASE_TAG=$(git describe --tags --abbrev=0 --match "v[0-9]*.[0-9]*.[0-9]*" 2>/dev/null || echo "v0.1.0")
-          BASE_TAG=$(echo "$BASE_TAG" | sed -E 's/(-|\+).*//')
-          if [[ ! "$BASE_TAG" =~ ^v ]]; then
-            BASE_TAG="v${BASE_TAG}"
-          fi
-          SHORT_SHA=$(git rev-parse --short HEAD)
-          RC_VERSION="${BASE_TAG}-rc.${{ github.run_number }}+${SHORT_SHA}"
-          BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          echo "VERSION=${RC_VERSION}" >> $GITHUB_ENV
-          echo "GIT_COMMIT=${SHORT_SHA}" >> $GITHUB_ENV
-          echo "BUILD_DATE=${BUILD_DATE}" >> $GITHUB_ENV
-          echo "Release candidate version: ${RC_VERSION}"
-
       - name: Cross-Compile Release Binaries
+        if: steps.candidate.outputs.should_publish == 'true'
         run: make release-build VERSION="${VERSION}" GIT_COMMIT="${GIT_COMMIT}" BUILD_DATE="${BUILD_DATE}"
 
       - name: Package Release Archives
+        if: steps.candidate.outputs.should_publish == 'true'
         run: make release-package VERSION="${VERSION}"
 
       - name: Verify Release Artifacts
+        if: steps.candidate.outputs.should_publish == 'true'
         run: make release-verify
 
+      - name: Recheck Release Candidate Eligibility
+        id: eligibility
+        if: steps.candidate.outputs.should_publish == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EXPECTED_SHA: ${{ github.sha }}
+        run: node scripts/release/rc-version.cjs verify
+
       - name: Publish GitHub Pre-release
+        if: steps.eligibility.outputs.should_publish == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.VERSION }}
@@ -138,6 +149,7 @@ jobs:
             dist/SHA256SUMS
 
       - name: Prune Older Release Candidates
+        if: steps.eligibility.outputs.should_publish == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
