@@ -24,7 +24,7 @@
         "delivery": "steered"
       },
       "verified_checks": "Owner: 244 focused tests, typecheck/lint, five-platform build, byte-identical standalone HTTP JS/CSS and embedded assets pass. Sol/high and Luna/medium approve correction. make fails unchanged capture CLI tests; artifact-only checkpoint pushed.",
-      "next_action": "Hold full-suite retry pending AL-60 handoff; integrate only after actual predecessor merge. No PR yet; telemetry deferred to publication.",
+      "next_action": "Hold full-suite retry pending scope decision or real predecessor merge notification; diagnostic AL-60 handoff alone does not release retry",
       "notification_request": "mgt2-handoff-notification-61",
       "reviewed_application_head": "2e4762d0e94109f9b91c2dc5edae2a939ab94008",
       "blockers": [
@@ -50,12 +50,20 @@
         "status": "running",
         "delivery": "steered"
       },
-      "verified_checks": "Owner: eight reviews Sol/high and Luna/medium no defects; focused 6/6, typecheck/lint, build and standalone assets pass. Initial and bounded make fail unchanged capture tests; remaining stages finishing.",
-      "next_action": "Read-only shared-capture diagnosis; user approval pending for scope expansion; no merge",
+      "verified_checks": "Owner: eight no-defect scoped reviews; full serial frontend 786/786, focused 6/6, typecheck/lint, build and standalone assets pass. Initial and bounded make failed capture tests; two bounded failures pass targeted without affinity in 8.291s. Full gate remains incomplete.",
+      "next_action": "Await explicit user scope approval; owner checkpoints evidence and telemetry; no repair or repeated full gate yet",
       "notification_request": "mgt2-handoff-notification-60",
       "blockers": [
         "Full integrated gate incomplete; bounded rerun still fails publication lifetime and worker cleanup tests"
-      ]
+      ],
+      "diagnosis": {
+        "status": "read-only, owner reported",
+        "record": "alspaces/AL-60/iterations/01/CAPTURE_DIAGNOSIS.md on owner branch",
+        "installer": "2s parent command deadline includes optional harness probe up to 3s, then required native validation under consumed context; timeout and mismatch share diagnostics",
+        "worker": "fixtures use 1000ms lifetime and 500ms pass budget; exhaustion kills generate and preserves pending",
+        "unconfirmed": "Manifest HarnessVersion/Capability variability plausible; failed before/after manifest was not retained",
+        "proposed_scope": "Separate optional/required deadline ownership and diagnostics; deterministic disposable harness probes; distinguish successful publication from deliberate expiry while preserving pending/ownership guarantees; no blanket timeout increase"
+      }
     },
     {
       "ticket": "AL-62",

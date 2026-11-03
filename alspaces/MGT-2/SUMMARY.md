@@ -1,5 +1,9 @@
 # MGT-2 supervision log
 
+Read-only capture diagnosis checkpoint: AL-60 reports full serial frontend 786/786 passing; both bounded-run failing worker tests passed targeted without affinity in 8.291s. Full gate remains incomplete. Owner traced a 2s capture-install parent deadline containing an optional harness probe with up to 3s budget, followed by required native validation under the same consumed context; timeout/exec failure and mismatch share the error. Worker fixture budgets (1000ms lifetime, 500ms pass) match pending-preserving exhaustion seen in logs. Live unloaded harness probes measured OpenCode 0.934s and Codex 0.011s. Manifest variability remains an unconfirmed hypothesis because no failed before/after manifest was retained. Durable owner record: alspaces/AL-60/iterations/01/CAPTURE_DIAGNOSIS.md on feat/AL-60-search-tickets.
+
+Proposed conditional repair: separate optional probe and required validation deadline ownership, precise diagnostics, deterministic disposable harness fixtures, and distinct success versus intentional worker-expiry tests that preserve pending publication and ownership guarantees. No blanket global timeout increase. Explicit user scope approval is still pending; no capture repair has occurred. AL-61 was told this diagnostic handoff does not release another full-suite retry. Existing failed gate evidence remains valid and unwaived.
+
 Latest blocker checkpoint: AL-60 and AL-61 are blocked by failed integrated capture tests; AL-60's bounded rerun also failed, so concurrency is not established as the sole cause. AL-61 evidence-only head 434f03b retains reviewed application 2e4762d; 244 focused cases and corrected build/standalone assets pass. No product PR or merge yet. Owner telemetry remains deferred to actual publication.
 
 AL-76 has an unresolved severity 8 formatter stale-write race at f9d6752, independently reported by behavior/data/architecture reviewers (Sol, high). A real migration probe confirmed schema downgrade. The owner is fixing writer coordination and regression coverage; approval is pending. Full gate remains deferred. These active review findings stay with their ticket and are not consolidated as approved.
@@ -27,15 +31,15 @@ GitHub reports main has no branch protection (protection endpoint HTTP 404). Thi
 Telemetry: PATH has no installed wrapper and the shared installation directory is empty. Use the existing local source-built native binary with supported native options, explicit Codex source, ticket and root session. Native generate has no --al-offline/--al-project options; invoke from this checkout. Root source rollout found at ~/.codex/sessions/2026/11/03/rollout-2026-11-03T18-47-43-01a1a286-27c9-7c50-9f2e-70f0a332c763.jsonl. This manager has no native children; the five independently created T3 roots are not children. T3 MCP tool counts are a known decoder completeness limit. This is an active-session checkpoint, not complete end-of-supervision telemetry; regenerate at later delivery. Independent ticket telemetry is not part of the manager's ledger.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 7
-- **Active Agent Duration:** 10m 42s (excludes user wait time)
-- **Context Window Health:** ELEVATED — Root agent peak 119.3k tokens (60% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Software Development Life Cycle Iterations:** 8
+- **Active Agent Duration:** 13m 14s (excludes user wait time)
+- **Context Window Health:** ELEVATED — Root agent peak 125.6k tokens (63% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 3,440 reasoning tokens (17.4% of generated output)
-- **Tool Health & Self-Correction:** 39 tool calls (5 self-corrections, 87.2% success rate)
+- **Reasoning Effort:** 3,756 reasoning tokens (16.8% of generated output)
+- **Tool Health & Self-Correction:** 42 tool calls (5 self-corrections, 88.1% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** No execution anomalies detected (clean session).
@@ -47,11 +51,11 @@ Telemetry: PATH has no installed wrapper and the shared installation directory i
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 112,550 | 16,278 | 4,044,288 | 97.3% | 119.3k | ELEVATED | $0.00 |
-| **Total** | **1** | **112,550** | **16,278** | **4,044,288** | **97.3%** | **119.3k** | **ELEVATED** | **$0.00** |
+| **rootagent** | 1 | 118,349 | 18,588 | 4,768,128 | 97.6% | 125.6k | ELEVATED | $0.00 |
+| **Total** | **1** | **118,349** | **18,588** | **4,768,128** | **97.6%** | **125.6k** | **ELEVATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 1 | 112,550 | 16,278 | 4,044,288 | 97.3% | $0.00 |
-| **Total** | **1** | **112,550** | **16,278** | **4,044,288** | **97.3%** | **$0.00** |
+| **gpt-6.1-sol** | 1 | 118,349 | 18,588 | 4,768,128 | 97.6% | $0.00 |
+| **Total** | **1** | **118,349** | **18,588** | **4,768,128** | **97.6%** | **$0.00** |
