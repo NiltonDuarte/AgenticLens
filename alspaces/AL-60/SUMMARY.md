@@ -38,25 +38,31 @@ Tested integrated revision: 057d410253aecd734551995ff1bedb38e94a1f19. Final deli
 - Full make passed with four-CPU affinity, GOMAXPROCS=2 and GOFLAGS=-p=1: install, vet, frontend typecheck/lint, script checks, every Go package with race detection, all 786 frontend tests in 36 files, canonical frontend build/sync and five platform binaries. [Verbatim gate output](iterations/02/evidence/MAKE_VERIFIED.txt).
 - Fresh host binary reports commit 057d410. Parent compared every generated/frontend embed file byte-for-byte, then fetched standalone HTTP index and referenced assets against a disposable workspace. Exact bytes matched and JS contains Search tickets/no-match copy. Server terminated afterward; no Node runtime served production assets. Ignored build assets remain untracked under the existing policy.
 - Actual Windows PE tests ran on the Windows host via WSLInterop after cross-compilation. Integrated launcher-exit/cancel ownership and Codex/OpenCode canceled/deadline recovery cases all passed. [Integrated Windows output](iterations/02/evidence/WINDOWS_INTEGRATED.txt).
-- Deterministic baseline red/green, cancellation, native diagnostics, final-write/recovery, hostile fixture and worker expiry/recovery evidence remain in [implementation](iterations/02/IMPLEMENTATION.md), [testing](iterations/02/TESTING.md), [verification](iterations/02/VERIFICATION.md) and their evidence directory.
+- Deterministic baseline red/green, cancellation, native diagnostics, final-write/recovery, hostile fixture and worker expiry/recovery evidence remain in the consolidated [verification record](iterations/02/VERIFICATION.md) and its evidence directory.
 - Historical failures remain verbatim: [initial make](iterations/01/evidence/MAKE_INITIAL.txt), [bounded make](iterations/01/evidence/MAKE_BOUNDED.txt), [integrated vet failure](iterations/02/evidence/MAKE_INTEGRATED_VET_FAILURE.txt). External AL-61/MGT-2 baseline corroboration is reported evidence, distinct from local runs; see [read-only diagnosis](iterations/01/CAPTURE_DIAGNOSIS.md).
 
-Limits: Unix pipe timing is not a direct descendant-death oracle; source group cleanup and Linux direct-helper/Windows stable-handle assertions provide separate evidence. Hosted CI, external real-harness callback compatibility and browser viewport geometry were not exercised. Existing Vite chunk-size/React act warnings do not invalidate the passing gate. Operator CLI guidance now documents installation phase budgets; active setup/operator guidance was searched and callback/reconcile timeout guidance remains applicable.
+Limits: Unix pipe timing is not a direct descendant-death oracle; source group cleanup and Linux direct-helper/Windows stable-handle assertions provide separate evidence. Hosted CI was not executed locally; the pre-cleanup hosted results and exact-head distinction are recorded below. External real-harness callback compatibility and browser viewport geometry were not exercised. Existing Vite chunk-size/React act warnings do not invalidate the passing gate. Operator CLI guidance now documents installation phase budgets; active setup/operator guidance was searched and callback/reconcile timeout guidance remains applicable.
+
+## Pre-merge artifact cleanup
+
+User requested “clean the AL-60 branch before merge”. Audit baseline: clean head 2a99b422bd24c674e3c4d5e787738b5238c2e3d7, PR #101 OPEN. Ticket artifacts reduced from 35 files to 30: implementation/testing notes consolidated into VERIFICATION.md; one empty vet-output file removed (exit 0 is documented); two earlier Windows success snapshots superseded by the integrated runtime output. Plans are concise historical records, the archived specification pointer is current, and temporary/report references are replaced by retained evidence links.
+
+Both compact finding files remain byte-identical: five fixed findings, all shared discovery credit and verification distinctions, and accepted TEST-02 debt/owner are preserved. All 17 remaining raw verification/failure outputs are byte-identical. Contracts, PR description, summary and ledger remain; no unresolved evidence is discarded. Application/test/CI source remains exactly equal to tested 057d410. Artifact-only link/JSON/hash/source checks replace unnecessary product-suite reruns; refreshed remote exact-head checks and merging belong to MGT-2. No history rewrite or force push. Before cleanup publication, PR #101 remained OPEN at 2a99b422bd24c674e3c4d5e787738b5238c2e3d7 and all four hosted checks were SUCCESS ([recorded run](https://github.com/NiltonDuarte/AgenticLens/actions/runs/41702443672)); those results belong to that head, not the upcoming cleanup commit.
 
 ## Telemetry and delivery
 
 Final source-grounded refresh follows all verification and review work and preserves existing session facts. Verified source coverage is 36 sessions: the original root, seven structurally linked native children, 27 delegated review roots across both iterations, and one unparented host continuation root containing replayed historical context. Parent/role and steering interpretation of that replay remain source limitations; no links or synthetic successful/empty facts are invented. T3 delegated reviews are recorded as independent Codex roots without source parent/role linkage, so exact session selection preserves that limitation rather than inventing relationships. All36 exact IDs and the original13 baseline IDs were preserved through each refresh; source labels are Codex and the seven declared child links match source metadata. No other-harness baseline existed for AL-60. Raw transcripts remain outside Git. Metrics below are generated by the built native CLI; legacy wrapper-only flags are not passed to it.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 69
-- **Active Agent Duration:** 1h 51m (excludes user wait time)
-- **Context Window Health:** BLOATED — Root agent peak 300.8k tokens (150% of 200k healthy ceiling, 0 compactions) | Subagents peak 250.7k (Coder)
+- **Software Development Life Cycle Iterations:** 71
+- **Active Agent Duration:** 3h 8m (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 354.9k tokens (177% of 200k healthy ceiling, 0 compactions) | Subagents peak 250.7k (Coder)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 1.7 avg turns/run (peak: 4 turns) | Planner 1.0, Coder 2.5, Tester 2.0, Explorer 1.0
 - **Test-to-Production Code Ratio:** 4.3:1 (+1,042 test lines / +245 prod lines)
 - **Code Delivered:** +1,287 / -35 lines across 23 code files (excluding docs)
-- **Reasoning Effort:** 141,121 reasoning tokens (30.4% of generated output)
-- **Tool Health & Self-Correction:** 712 tool calls (53 self-corrections, 92.6% success rate)
+- **Reasoning Effort:** 154,774 reasoning tokens (30.9% of generated output)
+- **Tool Health & Self-Correction:** 731 tool calls (55 self-corrections, 92.5% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 9 execution anomalies detected (5 CRITICAL, 4 WARNING).
@@ -80,32 +86,32 @@ Final source-grounded refresh follows all verification and review work and prese
 | **planner** | 2 | 100,079 | 6,821 | 1,456,512 | 93.6% | 160.5k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
 | **coder** | 2 | 188,417 | 51,582 | 21,042,176 | 99.1% | 250.7k | BLOATED (125%) | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
 | **tester** | 2 | 130,631 | 27,202 | 12,625,792 | 99.0% | 224.8k | BLOATED (112%) | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **Unknown** | 29 | 1,938,299 | 235,041 | 59,274,112 | 96.8% | 300.8k | BLOATED (150%) | Unavailable (0 observed, 0 partial, 29 unavailable / 29 invocations) |
+| **Unknown** | 29 | 1,972,180 | 258,265 | 66,350,336 | 97.1% | 354.9k | BLOATED (177%) | Unavailable (0 observed, 0 partial, 29 unavailable / 29 invocations) |
 | **explorer** | 1 | 115,406 | 2,546 | 1,165,568 | 91.0% | 139.9k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **36** | **2,472,832** | **323,192** | **95,564,160** | **97.5%** | **300.8k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 36 unavailable / 36 invocations)** |
+| **Total** | **36** | **2,506,713** | **346,416** | **102,640,384** | **97.6%** | **354.9k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 36 unavailable / 36 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
 | **gpt-6-luna** | 14 | 682,892 | 57,432 | 4,885,760 | 87.7% | Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations) |
-| **gpt-6.1-sol** | 22 | 1,789,940 | 265,760 | 90,678,400 | 98.1% | Unavailable (0 observed, 0 partial, 22 unavailable / 22 invocations) |
-| **Total** | **36** | **2,472,832** | **323,192** | **95,564,160** | **97.5%** | **Unavailable (0 observed, 0 partial, 36 unavailable / 36 invocations)** |
+| **gpt-6.1-sol** | 22 | 1,823,821 | 288,984 | 97,754,624 | 98.2% | Unavailable (0 observed, 0 partial, 22 unavailable / 22 invocations) |
+| **Total** | **36** | **2,506,713** | **346,416** | **102,640,384** | **97.6%** | **Unavailable (0 observed, 0 partial, 36 unavailable / 36 invocations)** |
 
-Capture observation finalized: 2026-11-03T19:17:15.899810593Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 34; retained older facts: 2; pending: 2; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 36; reserved bytes: 7786583. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
-Owner codex/01a1a2be-ff93-7cf1-9cd4-b03867a02717: current; last successful source read 2026-11-03T19:17:15.532027916Z; accepted source checkpoint 2026-11-03T18:51:43.233Z.
-Owner codex/01a1a2a4-80f0-7693-8a56-af32baa4f8d3: current; last successful source read 2026-11-03T19:17:15.537132888Z; accepted source checkpoint 2026-11-03T18:22:23.269Z.
-Owner codex/01a1a2c1-b051-7e42-9a91-b0ac50729fbe: current; last successful source read 2026-11-03T19:17:15.543182404Z; accepted source checkpoint 2026-11-03T18:53:46.76Z.
-Owner codex/01a1a2c5-a775-7232-b859-d3f26c37dea0: current; last successful source read 2026-11-03T19:17:15.55556416Z; accepted source checkpoint 2026-11-03T18:57:51.764Z.
-Owner codex/01a1a285-a7e2-7083-aad5-781dfee72767: current; last successful source read 2026-11-03T19:17:15.562485234Z; accepted source checkpoint 2026-11-03T17:47:46.391Z.
-Owner codex/01a1a280-9d93-7471-9927-ea58a45f6e99: current; last successful source read 2026-11-03T19:17:15.568734931Z; accepted source checkpoint 2026-11-03T17:42:54.585Z.
-Owner codex/01a1a2bf-d677-7fe1-947c-2598194c95d5: current; last successful source read 2026-11-03T19:17:15.575421178Z; accepted source checkpoint 2026-11-03T18:51:27.725Z.
-Owner codex/01a1a2a8-baa7-7f73-a867-947232170d28: current; last successful source read 2026-11-03T19:17:15.583050368Z; accepted source checkpoint 2026-11-03T18:28:06.704Z.
-Owner codex/01a1a2c0-a935-7380-bf48-3f2bbc717073: current; last successful source read 2026-11-03T19:17:15.590925451Z; accepted source checkpoint 2026-11-03T18:53:42.27Z.
-Owner codex/01a1a2be-400d-7b21-a540-b929fb017e00: current; last successful source read 2026-11-03T19:17:15.597547233Z; accepted source checkpoint 2026-11-03T18:50:40.693Z.
-Owner codex/01a1a285-f25d-79f1-bef1-db5606c7ef63: current; last successful source read 2026-11-03T19:17:15.604051342Z; accepted source checkpoint 2026-11-03T17:48:17.873Z.
-Owner codex/01a1a2b5-ceed-7cb2-be8f-70fef3a60fa6: current; last successful source read 2026-11-03T19:17:15.611324597Z; accepted source checkpoint 2026-11-03T18:42:02.412Z.
-Owner codex/01a1a27f-2156-7d82-951e-0831e5c48114: current; last successful source read 2026-11-03T19:17:15.617752241Z; accepted source checkpoint 2026-11-03T17:41:34.612Z.
-Owner codex/01a1a287-55e9-73b0-91a6-30c361793268: current; last successful source read 2026-11-03T19:17:15.625207461Z; accepted source checkpoint 2026-11-03T17:49:46.235Z.
-Owner codex/01a1a297-164e-74c2-a754-1471bec17453: current; last successful source read 2026-11-03T19:17:15.631586641Z; accepted source checkpoint 2026-11-03T18:08:29.38Z.
-Owner codex/01a1a2b7-f1b1-79a1-853a-a5d46d4a9681: current; last successful source read 2026-11-03T19:17:15.638200135Z; accepted source checkpoint 2026-11-03T18:43:02.748Z.
+Capture observation finalized: 2026-11-03T19:30:22.907784803Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 34; retained older facts: 2; pending: 2; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 36; reserved bytes: 8084319. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
+Owner codex/01a1a2be-ff93-7cf1-9cd4-b03867a02717: current; last successful source read 2026-11-03T19:30:22.48495063Z; accepted source checkpoint 2026-11-03T18:51:43.233Z.
+Owner codex/01a1a2a4-80f0-7693-8a56-af32baa4f8d3: current; last successful source read 2026-11-03T19:30:22.492366133Z; accepted source checkpoint 2026-11-03T18:22:23.269Z.
+Owner codex/01a1a2c1-b051-7e42-9a91-b0ac50729fbe: current; last successful source read 2026-11-03T19:30:22.500007958Z; accepted source checkpoint 2026-11-03T18:53:46.76Z.
+Owner codex/01a1a2c5-a775-7232-b859-d3f26c37dea0: current; last successful source read 2026-11-03T19:30:22.507847514Z; accepted source checkpoint 2026-11-03T18:57:51.764Z.
+Owner codex/01a1a285-a7e2-7083-aad5-781dfee72767: current; last successful source read 2026-11-03T19:30:22.516068661Z; accepted source checkpoint 2026-11-03T17:47:46.391Z.
+Owner codex/01a1a280-9d93-7471-9927-ea58a45f6e99: current; last successful source read 2026-11-03T19:30:22.525402093Z; accepted source checkpoint 2026-11-03T17:42:54.585Z.
+Owner codex/01a1a2bf-d677-7fe1-947c-2598194c95d5: current; last successful source read 2026-11-03T19:30:22.535512772Z; accepted source checkpoint 2026-11-03T18:51:27.725Z.
+Owner codex/01a1a2a8-baa7-7f73-a867-947232170d28: current; last successful source read 2026-11-03T19:30:22.546060617Z; accepted source checkpoint 2026-11-03T18:28:06.704Z.
+Owner codex/01a1a2c0-a935-7380-bf48-3f2bbc717073: current; last successful source read 2026-11-03T19:30:22.55636424Z; accepted source checkpoint 2026-11-03T18:53:42.27Z.
+Owner codex/01a1a2be-400d-7b21-a540-b929fb017e00: current; last successful source read 2026-11-03T19:30:22.566837832Z; accepted source checkpoint 2026-11-03T18:50:40.693Z.
+Owner codex/01a1a285-f25d-79f1-bef1-db5606c7ef63: current; last successful source read 2026-11-03T19:30:22.58059761Z; accepted source checkpoint 2026-11-03T17:48:17.873Z.
+Owner codex/01a1a2b5-ceed-7cb2-be8f-70fef3a60fa6: current; last successful source read 2026-11-03T19:30:22.588636152Z; accepted source checkpoint 2026-11-03T18:42:02.412Z.
+Owner codex/01a1a27f-2156-7d82-951e-0831e5c48114: current; last successful source read 2026-11-03T19:30:22.597175057Z; accepted source checkpoint 2026-11-03T17:41:34.612Z.
+Owner codex/01a1a287-55e9-73b0-91a6-30c361793268: current; last successful source read 2026-11-03T19:30:22.604731604Z; accepted source checkpoint 2026-11-03T17:49:46.235Z.
+Owner codex/01a1a297-164e-74c2-a754-1471bec17453: current; last successful source read 2026-11-03T19:30:22.613215054Z; accepted source checkpoint 2026-11-03T18:08:29.38Z.
+Owner codex/01a1a2b7-f1b1-79a1-853a-a5d46d4a9681: current; last successful source read 2026-11-03T19:30:22.622311174Z; accepted source checkpoint 2026-11-03T18:43:02.748Z.
 Additional owner freshness details remain in local capture diagnostics.
