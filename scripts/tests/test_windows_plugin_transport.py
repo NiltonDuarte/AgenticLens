@@ -33,7 +33,7 @@ class WindowsPluginTransportTest(unittest.TestCase):
         self.pid_file = self.root / 'transport-native.pid'
         self.parent_file = self.root / 'transport-powershell.pid'
         self.payload_file = self.root / 'payload.txt'
-        self.payload_file.write_text('café payload\n', encoding='utf-8')
+        self.payload_file.write_bytes('café payload\n'.encode('utf-8'))
         self.env.update(AL_PROBE_PID=windows_boundary.win(self.pid_file), AL_PROBE_PARENT_PID=windows_boundary.win(self.parent_file))
         self.module = self.root / 'transport.mjs'
         source = (ROOT / 'backend/internal/adapters/capture/plugin.ts').read_text().split('const base =', 1)[0]
