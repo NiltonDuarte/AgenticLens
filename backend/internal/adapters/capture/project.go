@@ -302,7 +302,7 @@ func ValidateDestination(project, path string) error {
 }
 
 // PreviewStateLocation performs no allocation. Unallocated scopes have no
-// coordination path until OpenProject commits their unique token.
+// coordination path until OpenProject commits their unique directory name.
 func PreviewStateLocation(directory, project string) (StateLocation, error) {
 	cfg, err := adaptersconfig.Load(project)
 	if err != nil {
@@ -384,7 +384,7 @@ func isCoordinationPath(state string) bool {
 	if filepath.Base(filepath.Dir(state)) != "worktrees" || filepath.Base(filepath.Dir(registry)) != "projects" {
 		return false
 	}
-	return validCoordinateToken(filepath.Base(state))
+	return validDirectoryName(filepath.Base(state))
 }
 
 func validateStatePlacement(project, registry string) (string, error) {

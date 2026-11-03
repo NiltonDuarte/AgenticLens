@@ -314,7 +314,7 @@ func TestCaptureSQLiteURIUsesPathAndEscapesFilenameForRealReadOnlyOpen(t *testin
 	}
 }
 
-func TestCoordinationTokensConcurrentFirstOpenAndStableReopen(t *testing.T) {
+func TestCoordinationDirectoryNamesConcurrentFirstOpenAndStableReopen(t *testing.T) {
 	a, b, base := sharedWorktrees(t)
 	other, _, _ := sharedWorktrees(t)
 	type opened struct {
@@ -358,12 +358,12 @@ func TestCoordinationTokensConcurrentFirstOpenAndStableReopen(t *testing.T) {
 		if old := byPath[got.path]; old != "" && old != got.project {
 			t.Fatal("distinct worktrees share coordinates")
 		}
-		token, prefix := filepath.Base(got.path), gitPrefixes[got.project]
-		if !strings.HasPrefix(token, prefix) {
+		directoryName, prefix := filepath.Base(got.path), gitPrefixes[got.project]
+		if !strings.HasPrefix(directoryName, prefix) {
 			t.Fatalf("Git identifier missing: %s", got.path)
 		}
-		if qualification, err := hex.DecodeString(strings.TrimPrefix(token, prefix)); err != nil || len(qualification) != 8 {
-			t.Fatalf("Git identity qualification missing: %s", token)
+		if qualification, err := hex.DecodeString(strings.TrimPrefix(directoryName, prefix)); err != nil || len(qualification) != 8 {
+			t.Fatalf("Git identity qualification missing: %s", directoryName)
 		}
 		byProject[got.project] = got.path
 		byPath[got.path] = got.project
@@ -419,7 +419,7 @@ func TestCoordinationUUIDFallbackPersistsAcrossGitEnrichment(t *testing.T) {
 		t.Fatal(err)
 	}
 	if s.CoordinationDirectory() != path {
-		t.Fatal("Git enrichment changed persisted token")
+		t.Fatal("Git enrichment changed persisted directory name")
 	}
 	if err = s.Close(); err != nil {
 		t.Fatal(err)

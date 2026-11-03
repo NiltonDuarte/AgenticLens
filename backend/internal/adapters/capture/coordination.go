@@ -14,7 +14,7 @@ import (
 	"strings"
 )
 
-const coordinationSchema = `CREATE TABLE IF NOT EXISTS worktree_coordinates(worktree_id INTEGER PRIMARY KEY,token TEXT NOT NULL UNIQUE);`
+const coordinationSchema = `CREATE TABLE IF NOT EXISTS worktree_coordinates(worktree_id INTEGER PRIMARY KEY,directory_name TEXT NOT NULL UNIQUE);`
 
 // Existing unreleased layouts without coordinate mappings are unsupported.
 // Never manufacture paths for them or change the database during admission.
@@ -37,11 +37,11 @@ func validateCoordinateSchema(ctx context.Context, db *sql.DB) error {
 	return nil
 }
 
-func validCoordinateToken(token string) bool {
-	if len(token) == 0 || len(token) > 120 || token == "." || token == ".." {
+func validDirectoryName(directoryName string) bool {
+	if len(directoryName) == 0 || len(directoryName) > 120 || directoryName == "." || directoryName == ".." {
 		return false
 	}
-	for _, c := range token {
+	for _, c := range directoryName {
 		if !(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '-' || c == '_') {
 			return false
 		}
@@ -50,18 +50,18 @@ func validCoordinateToken(token string) bool {
 }
 
 // coordinatePath rejects symlinked coordination directories even for registered
-// scopes; a persisted token is authority for a name, not for a redirected target.
-func coordinatePath(registry, token string) (string, error) {
-	if !validCoordinateToken(token) {
-		return "", errors.New("invalid capture worktree coordination token")
+// scopes. A persisted directory name does not authorize a redirected target.
+func coordinatePath(registry, directoryName string) (string, error) {
+	if !validDirectoryName(directoryName) {
+		return "", errors.New("invalid capture worktree directory name")
 	}
 	root := filepath.Join(registry, "worktrees")
-	for _, path := range []string{root, filepath.Join(root, token)} {
+	for _, path := range []string{root, filepath.Join(root, directoryName)} {
 		if err := validateCoordinateDirectory(path); err != nil {
 			return "", err
 		}
 	}
-	return filepath.Join(root, token), nil
+	return filepath.Join(root, directoryName), nil
 }
 
 func validateCoordinateDirectory(path string) error {
@@ -78,7 +78,7 @@ func validateCoordinateDirectory(path string) error {
 	return nil
 }
 
-func coordinateTokenTx(ctx context.Context, tx *sql.Tx, id int64) (string, error) {
+func coordinateDirectoryNameTx(ctx context.Context, tx *sql.Tx, id int64) (string, error) {
 	var version int
 	if err := tx.QueryRowContext(ctx, "SELECT version FROM capture_meta").Scan(&version); err != nil {
 		return "", err
@@ -86,12 +86,12 @@ func coordinateTokenTx(ctx context.Context, tx *sql.Tx, id int64) (string, error
 	if version != RegistryProtocolVersion {
 		return "", fmt.Errorf("unsupported capture registry protocol %d", version)
 	}
-	var token string
-	err := tx.QueryRowContext(ctx, "SELECT token FROM worktree_coordinates WHERE worktree_id=?", id).Scan(&token)
+	var directoryName string
+	err := tx.QueryRowContext(ctx, "SELECT directory_name FROM worktree_coordinates WHERE worktree_id=?", id).Scan(&directoryName)
 	if err != nil {
 		return "", fmt.Errorf("unsupported capture coordinate layout for worktree %d; preserve this state and reset or reinstall capture into a new state directory: %w", id, err)
 	}
-	return token, nil
+	return directoryName, nil
 }
 
 func readCoordinatePath(ctx context.Context, db *sql.DB, registry string, id int64) (path string, returnErr error) {
@@ -104,14 +104,14 @@ func readCoordinatePath(ctx context.Context, db *sql.DB, registry string, id int
 			returnErr = errors.Join(returnErr, err)
 		}
 	}()
-	token, err := coordinateTokenTx(ctx, tx, id)
+	directoryName, err := coordinateDirectoryNameTx(ctx, tx, id)
 	if err != nil {
 		return "", err
 	}
-	return coordinatePath(registry, token)
+	return coordinatePath(registry, directoryName)
 }
 
-func preferredCoordinateToken(ownership string) (string, error) {
+func preferredDirectoryName(ownership string) (string, error) {
 	var owner worktreeOwnership
 	if err := json.Unmarshal([]byte(ownership), &owner); err != nil {
 		return "", err
@@ -137,8 +137,8 @@ func preferredCoordinateToken(ownership string) (string, error) {
 
 // allocateCoordinate reserves a directory exclusively before publishing its
 // mapping. A crash can leave an unclaimed directory, which future opens skip.
-func allocateCoordinate(ctx context.Context, tx *sql.Tx, registry string, id int64, ownership string, randomToken func() (string, error)) (string, error) {
-	preferred, err := preferredCoordinateToken(ownership)
+func allocateCoordinate(ctx context.Context, tx *sql.Tx, registry string, id int64, ownership string, generateDirectoryName func() (string, error)) (string, error) {
+	preferred, err := preferredDirectoryName(ownership)
 	if err != nil {
 		return "", err
 	}
@@ -150,24 +150,24 @@ func allocateCoordinate(ctx context.Context, tx *sql.Tx, registry string, id int
 		return "", err
 	}
 	for attempt := 0; attempt < 16; attempt++ {
-		token := preferred
-		if token == "" || attempt > 0 {
-			token, err = randomToken()
+		directoryName := preferred
+		if directoryName == "" || attempt > 0 {
+			directoryName, err = generateDirectoryName()
 			if err != nil {
-				return "", fmt.Errorf("generate capture coordination token: %w", err)
+				return "", fmt.Errorf("generate capture worktree directory name: %w", err)
 			}
 		}
-		path, err := coordinatePath(registry, token)
+		path, err := coordinatePath(registry, directoryName)
 		if err != nil { // Reserved non-directory entries are collisions too.
-			if validCoordinateToken(token) {
-				if _, statErr := os.Lstat(filepath.Join(root, token)); statErr == nil {
+			if validDirectoryName(directoryName) {
+				if _, statErr := os.Lstat(filepath.Join(root, directoryName)); statErr == nil {
 					continue
 				}
 			}
 			return "", err
 		}
 		var used int
-		if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM worktree_coordinates WHERE token=?", token).Scan(&used); err != nil {
+		if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM worktree_coordinates WHERE directory_name=?", directoryName).Scan(&used); err != nil {
 			return "", err
 		}
 		if used > 0 {
@@ -178,15 +178,15 @@ func allocateCoordinate(ctx context.Context, tx *sql.Tx, registry string, id int
 		} else if err != nil {
 			return "", err
 		}
-		if _, err = tx.ExecContext(ctx, "INSERT INTO worktree_coordinates(worktree_id,token)VALUES(?,?)", id, token); err != nil {
+		if _, err = tx.ExecContext(ctx, "INSERT INTO worktree_coordinates(worktree_id,directory_name)VALUES(?,?)", id, directoryName); err != nil {
 			return "", errors.Join(err, os.Remove(path))
 		}
 		return path, nil
 	}
-	return "", errors.New("capture coordination token allocation exhausted after 16 collisions")
+	return "", errors.New("capture worktree directory name allocation exhausted after 16 collisions")
 }
 
-func randomCoordinateToken() (string, error) {
+func randomDirectoryName() (string, error) {
 	var value [8]byte
 	if _, err := rand.Read(value[:]); err != nil {
 		return "", err

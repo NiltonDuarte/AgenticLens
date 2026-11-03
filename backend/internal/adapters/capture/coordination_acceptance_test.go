@@ -49,7 +49,7 @@ func TestCoordinationStateBaseUnderWorktreesRemainsAStateBase(t *testing.T) {
 	}
 }
 
-func TestCoordinationTokenAliasesRejectUnknownAndRedirectedState(t *testing.T) {
+func TestCoordinationDirectoryNameAliasesRejectUnknownAndRedirectedState(t *testing.T) {
 	project, _, base := sharedWorktrees(t)
 	store, err := OpenProject(base, project)
 	if err != nil {
@@ -61,18 +61,18 @@ func TestCoordinationTokenAliasesRejectUnknownAndRedirectedState(t *testing.T) {
 	}
 	preview, err := PreviewStateLocation(coordinate, project)
 	if err != nil || preview.Provisional || preview.CoordinationDirectory != coordinate {
-		t.Fatalf("persisted token alias: %+v %v", preview, err)
+		t.Fatalf("persisted directory name alias: %+v %v", preview, err)
 	}
-	unknown := filepath.Join(registry, "worktrees", "unknown-token")
+	unknown := filepath.Join(registry, "worktrees", "unknown-directory-name")
 	if _, err = PreviewStateLocation(unknown, project); err == nil {
-		t.Fatal("unknown token preview accepted")
+		t.Fatal("unknown directory name preview accepted")
 	}
 	if opened, e := OpenProject(unknown, project); e == nil {
 		opened.Close()
-		t.Fatal("unknown token allocated another scope")
+		t.Fatal("unknown directory name allocated another scope")
 	}
 	if _, err = os.Stat(unknown); !os.IsNotExist(err) {
-		t.Fatalf("unknown token was created: %v", err)
+		t.Fatalf("unknown directory name was created: %v", err)
 	}
 	retained := coordinate + "-retained"
 	if err = os.Rename(coordinate, retained); err != nil {
@@ -84,7 +84,7 @@ func TestCoordinationTokenAliasesRejectUnknownAndRedirectedState(t *testing.T) {
 	}
 	if opened, e := OpenReadOnlyProject(base, project); e == nil {
 		opened.Close()
-		t.Fatal("persisted token followed a redirected coordination path")
+		t.Fatal("persisted directory name followed a redirected coordination path")
 	}
 	entries, err := os.ReadDir(outside)
 	if err != nil || len(entries) != 0 {

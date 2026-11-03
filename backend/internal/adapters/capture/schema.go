@@ -3,7 +3,7 @@ package capture
 // Registry protocol 2 stores logical projects once and explicitly scopes every
 // operational row by its exact worktree. Diagnostic sequences are global IDs;
 // every lookup and retention operation also requires worktree_id. Persisted
-// coordinate tokens name local worktree directories independently of SQL IDs.
+// directory names identify local worktree directories independently of SQL IDs.
 const registrySchema = `CREATE TABLE IF NOT EXISTS capture_meta(version INTEGER NOT NULL);
 INSERT INTO capture_meta SELECT 2 WHERE NOT EXISTS(SELECT 1 FROM capture_meta);
 CREATE TABLE IF NOT EXISTS project_identity(singleton INTEGER PRIMARY KEY CHECK(singleton=1),name TEXT NOT NULL);

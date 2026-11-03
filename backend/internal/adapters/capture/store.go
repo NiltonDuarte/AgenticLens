@@ -246,13 +246,13 @@ func openRegistryAttemptContext(ctx context.Context, directory, name, project st
 		}
 		if project != "" {
 			if scopeExisted {
-				var token string
-				token, e = coordinateTokenTx(ctx, tx, id)
+				var directoryName string
+				directoryName, e = coordinateDirectoryNameTx(ctx, tx, id)
 				if e == nil {
-					coord, e = coordinatePath(directory, token)
+					coord, e = coordinatePath(directory, directoryName)
 				}
 			} else {
-				coord, e = allocateCoordinate(ctx, tx, directory, id, ownership, randomCoordinateToken)
+				coord, e = allocateCoordinate(ctx, tx, directory, id, ownership, randomDirectoryName)
 			}
 			if e != nil {
 				return rollback(e)

@@ -33,3 +33,9 @@ The four-focus/two-profile review policy from iteration 01 remains applicable. U
 ## Completion
 
 Implemented and verified on 13a6ff38c97e9c9d3019d76a0944ce46afe1814e. All eight discovery cells completed; the coordinator corrected one shared defect and one optional test-oracle gap, verified before/after behavior and rejected mutation, and approved the consolidated review after final make passed. See SUMMARY.md and REVIEW_SUMMARY.json for attribution and limits. Telemetry and PR delivery follow as the final workflow steps.
+
+## Review terminology correction
+
+Source: the user asked to replace ambiguous token terminology in the table and source, then explicitly instructed "update it". This authorizes a mechanical correction within iteration 02: rename the worktree_coordinates column to directory_name, use directoryName in Go, and rename the associated validation, lookup, preferred-name and random-name helpers, tests and diagnostics consistently. Keep genuine session/request tokens unchanged. Allocation, persisted name values, path validation and SQL row IDs retain the accepted behavior; no compatibility migration is required for the unreleased schema.
+
+Verification impact: existing fixture-based allocation, reopen, collision, alias and installation tests exercise the renamed SQL column. No new test declaration is needed for the rename. Run affected checks and the integrated make gate. A narrow behavior/integration review under both configured model profiles is proportionate: changes are identifier/string substitutions, so the previous data, architecture and test investigations carry forward for unchanged behavior. Each reviewer owns a unique REVIEW_NAMING_SOL.md or REVIEW_NAMING_LUNA.md report; parent owns consolidation and telemetry.
