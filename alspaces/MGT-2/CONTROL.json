@@ -118,13 +118,13 @@
         "runId": "run:thread:24185901-0a4e-4d21-8c44-a64117fb80bc:ordinal:6"
       },
       "verified_checks": "All four hosted checks SUCCESS only at pre-integration 1247b7e. Local integration/producer corrections are in progress and need final exact-head gates.",
-      "next_action": "Finish bounded format/backfill receipt coordination; keep unusable-config WRITE policy held pending explicit user decision; then integrated final gates and manager merge",
+      "next_action": "Finish bounded migration bridge and affected format/backfill/migration review; keep unusable-config WRITE and final publication held pending explicit decision",
       "notification_request": "mgt2-handoff-notification-62",
       "reviewed_application_head": "29ee4a802000c1d3302c515e001f7692d3d7fe8f",
       "product_fingerprint": "f300879df36eee4cbdc69b6de66999dbf469ddcd3eb6f65f8a65b71279332c8a",
       "blockers": [
         "Unusable-config WRITE product-policy decision pending",
-        "Complete bounded backfill receipt coordination and affected reviews",
+        "Complete exact-same-fact migration receipt coordination and affected producer reviews",
         "Full integrated verification/finalization/new-head CI pending"
       ],
       "publication_status": "open draft; exact head verified",
@@ -177,11 +177,19 @@
         "instruction": "mgt2-al62-hold-unusable-config-policy"
       },
       "backfill_receipt_integration": {
-        "status": "Confirmed in-scope defect; bounded repair authorized and active",
+        "status": "Owner reports focused metadata-only, refreshed-source, authoritative-empty and raw-edit rejection regressions pass; final reviews/gates pending",
         "discovery": "Independent tester gpt-6.1-sol/high, requested writer assessment",
         "reproduction": "Trusted source-backed L0/R0; original source and matching registered/Git alternatives unavailable; successful forced backfill from missing opencode database changes metadata bytes, preserves auxiliary facts, then strict generation rejects old proof",
         "scope": "Reuse matching trusted R0 only for exact preserved facts; refreshed facts require successful exact source-owner snapshots; retain unchanged proof for unrefreshed owners/unresolved legacy; stage before atomic rewrite/finalize after; no generic writer hook or broader source/migration policy",
         "instruction": "mgt2-al62-confirm-backfill-proof-coordination",
+        "runId": "run:thread:24185901-0a4e-4d21-8c44-a64117fb80bc:ordinal:6"
+      },
+      "migration_receipt_integration": {
+        "status": "Supported same-fact migration defect confirmed; bounded correction released",
+        "discovery": "Independent tester gpt-6.1-sol/high, requested repository/migration assessment",
+        "reproduction": "Source-derived supported legacy5 root with trusted R0 and valid explicit receipt binding; source/snapshot/pinnedGit unavailable. Actual migrate reports v5-to6 success and preserves exact auxiliary facts but changes bytes; subsequent strict generation rejects old receipt digest. No historical binary execution claimed. Current6 UpToDate case does not change bytes and remains usable.",
+        "scope": "Reuse matching trusted R0 only for exactly preserved candidate auxiliary tuples; stage before existing atomic rename/finalize after. No generic writer hook, ledger schema change or expanded source authority. Changed transitional ownership/source tuples require separate disposition.",
+        "instruction": "mgt2-al62-release-same-proof-migration-bridge",
         "runId": "run:thread:24185901-0a4e-4d21-8c44-a64117fb80bc:ordinal:6"
       }
     },
