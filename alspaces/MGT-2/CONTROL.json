@@ -200,7 +200,9 @@
         "instruction": "mgt2-al62-restore-established-portable-ledger-contract",
         "runId": "run:thread:24185901-0a4e-4d21-8c44-a64117fb80bc:ordinal:6",
         "cases": "A source-generates; B gets Git or copied workspace without A private capture/source data; read/format/migrate/generate with B-only sources. Distinguish actual supported Git/copy behavior, owner/schema validation, imported recorded facts and fresh source-verification claims.",
-        "boundary": "No new portability approval needed. Hold implementation/publication until concrete correction assessed. Remove machine-local proof/fingerprint prerequisites from proposed persisted-ledger design; retain extraction accuracy, schema/identity checks, scoped refresh and history/other-harness preservation."
+        "boundary": "No new portability approval needed. Hold implementation/publication until concrete correction assessed. Remove machine-local proof/fingerprint prerequisites from proposed persisted-ledger design; retain extraction accuracy, schema/identity checks, scoped refresh and history/other-harness preservation.",
+        "vision_instruction": "mgt2-al62-user-source-precedence-and-resumable-migration",
+        "pending_edge": "If a successfully read complete local session contains fewer invocations than its stored ledger snapshot, retain stored-only rows or replace that session from the complete local source?"
       }
     },
     {
@@ -317,17 +319,18 @@
   ],
   "completion_requirements": "Complete product merge queue, then create queued REV test-performance review ticket before final management handoff; own MGT PR remains external merge",
   "pending_user_decision": {
-    "status": "Earlier config choice superseded by original portability requirement clarified by user",
-    "question": null,
-    "scope": "No portability decision required. Concrete simplification/correction proposal pending owner read-only assessment; no broad guard removal authorized yet."
+    "status": "Asked asynchronously; no assumed choice",
+    "question": "If a successfully read complete local session contains fewer invocations than its stored ledger snapshot, retain stored-only rows or replace that session from the complete local source?",
+    "scope": "Clarifies local-source authority versus no-deletion guarantee; no implementation of this edge before answer. General portability/source precedence/resumable migration are explicit user requirements, not pending approval."
   },
   "portable_ledger_guidance": {
-    "status": "Validated documentation/skill update prepared for PR100 publication",
+    "status": "User source-precedence/migration/aggregation clarification incorporated; pending one narrower row-removal edge",
     "source": "User asks to clarify recurring portable-ledger principle across platform/repository",
     "canonical": "TECHNICAL_GUIDELINES.md#portable-ledger-contract",
     "acceptance": "docs/REGRESSION_PREVENTION.md#portable-ledgers-across-developers-and-machines",
     "scope": "Documentation/skills only; no application changes or completed-runtime claims",
-    "verification": "All six modified skills validate; 21 added relative links/anchors resolve; diff whitespace check passes. Documentation only; no runtime compatibility claim.",
-    "owner_notification": "Forward canonical rule and acceptance scenarios to active AL-62 after publication without starting a new workflow."
+    "verification": "Operator skill validates; updated relative link/anchor resolves; documentation diff and whitespace check pass. No application changes/tests. Complete-local-source/fewer-row edge remains pending user answer.",
+    "owner_notification": "Forward canonical rule and acceptance scenarios to active AL-62 after publication without starting a new workflow.",
+    "vision": "Committed ledgers are trusted/preserved; per-session local harness source takes precedence over existing ledger for available successfully extracted values; unavailable sessions untouched; runtime aggregates full resulting ledger; best-effort migration persists resumable blocked progress; no duplicate/data-loss side effects"
   }
 }

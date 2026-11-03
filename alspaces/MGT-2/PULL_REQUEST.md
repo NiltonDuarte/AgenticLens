@@ -6,7 +6,7 @@ The user approved expanding AL-60 into a minimal shared capture repair after fai
 
 The management skill now requires a separate FIX ticket and isolated thread for newly discovered bugs unless they directly concern an existing ticket's approved behavior or contract. It includes proactive launch authority during authorized supervision and preserves ownership, scope and merge gates. Skill validation and documentation checks pass.
 
-Codifies the existing portable-ledger contract: Git-shared records remain usable across developers, machines and harnesses without the originating machine's private source/capture state. Defines owner-scoped refresh and validation boundaries, adds cross-machine acceptance scenarios, and aligns contributor, development/review/management/PO and setup/operator guidance. Documentation does not claim the pending AL-62 runtime correction is delivered.
+Codifies the existing portable-ledger contract: trusted Git-shared records remain usable across developers, machines and harnesses without the originating machine's private source/capture state. Defines local-source-then-existing-ledger precedence per session, preservation of unavailable owners, idempotent updates, runtime whole-ledger aggregation and best-effort resumable migration. Adds cross-machine acceptance scenarios and aligns contributor, development/review/management/PO and setup/operator guidance. Documentation does not claim the pending AL-62 runtime correction is delivered.
 
 After the current product batch merges, create the requested REV ticket to review test cost and propose fast unit checks followed by a separate integration layer. This deferred review is recorded without starting test refactoring during delivery.
 

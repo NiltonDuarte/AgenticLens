@@ -2,7 +2,7 @@
 
 AgenticLens records multi-agent development telemetry, detects execution anomalies, and provides a local dashboard. It supports live OpenCode monitoring and offline OpenCode/Codex session ledgers.
 
-Ledgers are durable project records designed to be committed and shared through Git across developers, machines and harnesses. Reading and preserving valid recorded history does not require the producing machine's session logs or capture database. See the [portable ledger contract](TECHNICAL_GUIDELINES.md#portable-ledger-contract) for refresh and compatibility guarantees.
+Ledgers are trusted, durable project records designed to be committed and shared through Git across developers, machines and harnesses. Local source sessions take precedence when refreshed; unavailable sessions remain preserved in the ledger, and the runtime aggregates the full result. Migration is best-effort and resumable across machines. See the [portable ledger contract](TECHNICAL_GUIDELINES.md#portable-ledger-contract) for preservation, refresh and compatibility guarantees.
 
 ## Install AgenticLens with Your Coding Agent
 

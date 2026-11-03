@@ -1,5 +1,7 @@
 # MGT-2 supervision log
 
+User explicitly defines the platform vision: committed ledgers are trusted and preserved; per-session local harness database/session store is authoritative when locally available, otherwise existing ledger history supplies facts; backfill leaves unavailable sessions untouched; platform runtime aggregates the entire resulting ledger; migration is best-effort with durable explicit mid-migration progress another developer/machine can resume; commands must not duplicate/discard history. Canonical contract, README, operator guidance and regression scenarios refined in iteration05, preserving schema/identity/path/source-error checks and exact refresh ownership. AL-62 active assessment received this delta without restarting. One narrower row-removal edge is asked asynchronously: complete local session with fewer invocations than saved snapshot, retain stored-only rows versus replace from complete source. Neither choice inferred; broader explicit vision needs no renewed approval.
+
 Iteration 05 documents the original portable-ledger principle at TECHNICAL_GUIDELINES.md#portable-ledger-contract: shared Git records survive developer/machine/harness/path/source changes; extraction of new facts differs from preservation/aggregation of recorded facts. Local capture state/fingerprints cannot gate otherwise valid persisted history, while schema/identity/path validation, honest unknowns, scoped successful refresh and publication integrity remain. README/architecture, AGENTS/contributor docs, six relevant skills, shared reviewer/tester context, PO template and setup manual link to the canonical rule. Operator migration wording distinguishes pending enrichment from declaring history untrusted. REGRESSION_PREVENTION.md adds isolated A-to-B clone/read/partial-refresh/format/migrate acceptance scenarios including same-harness unavailable owners. All six modified skills validate; 21 added relative links/anchors resolve; git diff --check passes. Documentation-only maintenance used direct review; no application tests or multi-agent development cycle. Runtime correction is still AL-62-owned/pending, not fixed by this documentation. PR100 remains draft/external merge.
 
 User reaffirms original architecture: AgenticLens is multi-developer/machine/harness; Git-stored metrics and historical tickets produced elsewhere are core behavior. Manager acknowledges scope error: a capture validation/durability mechanism was treated as a mandatory trust contract, leading to whole-file digest binding and bridges for normal writers without first reconciling portability. Earlier bounded receipt dispositions are superseded wherever they impose private originating-machine proof on persisted ledgers. Existing portability is not a new feature needing approval. Owner run 6 now owes a concrete read-only simplification proposal preserving schema/identity validation, accurate extraction/provenance, successful-owner-only refresh, unavailable/other-harness/history retention and publication safety. No implementation/publication yet. Earlier invalid-config WRITE question is withdrawn as the decision to pursue; preserve accepted explicit formatter availability. Retain historical findings/review attribution honestly rather than rewriting their discovery.
@@ -117,15 +119,15 @@ GitHub reports main has no branch protection (protection endpoint HTTP 404). Thi
 Telemetry: PATH has no installed wrapper and the shared installation directory is empty. Use the existing local source-built native binary with supported native options, explicit Codex source, ticket and root session. Native generate has no --al-offline/--al-project options; invoke from this checkout. Root source rollout found at ~/.codex/sessions/2026/11/03/rollout-2026-11-03T18-47-43-01a1a286-27c9-7c50-9f2e-70f0a332c763.jsonl. This manager has no native children; the five independently created T3 roots are not children. T3 MCP tool counts are a known decoder completeness limit. This is an active-session checkpoint, not complete end-of-supervision telemetry; regenerate at later delivery. Independent ticket telemetry is not part of the manager's ledger.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 60
-- **Active Agent Duration:** 1h 22m (excludes user wait time)
+- **Software Development Life Cycle Iterations:** 61
+- **Active Agent Duration:** 1h 27m (excludes user wait time)
 - **Context Window Health:** CRITICAL — Root agent peak 451.3k tokens (226% of 200k healthy ceiling, 1 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 60,368 reasoning tokens (26.6% of generated output)
-- **Tool Health & Self-Correction:** 206 tool calls (15 self-corrections, 92.7% success rate)
+- **Reasoning Effort:** 62,193 reasoning tokens (26.4% of generated output)
+- **Tool Health & Self-Correction:** 215 tool calls (15 self-corrections, 93.0% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
@@ -139,11 +141,11 @@ Telemetry: PATH has no installed wrapper and the shared installation directory i
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 1,356,402 | 166,712 | 67,448,320 | 98.0% | 451.3k | CRITICAL (226%) | $0.00 |
-| **Total** | **1** | **1,356,402** | **166,712** | **67,448,320** | **98.0%** | **451.3k** | **CRITICAL** | **$0.00** |
+| **rootagent** | 1 | 1,367,169 | 173,694 | 68,861,440 | 98.1% | 451.3k | CRITICAL (226%) | $0.00 |
+| **Total** | **1** | **1,367,169** | **173,694** | **68,861,440** | **98.1%** | **451.3k** | **CRITICAL** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 1 | 1,356,402 | 166,712 | 67,448,320 | 98.0% | $0.00 |
-| **Total** | **1** | **1,356,402** | **166,712** | **67,448,320** | **98.0%** | **$0.00** |
+| **gpt-6.1-sol** | 1 | 1,367,169 | 173,694 | 68,861,440 | 98.1% | $0.00 |
+| **Total** | **1** | **1,367,169** | **173,694** | **68,861,440** | **98.1%** | **$0.00** |
