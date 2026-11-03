@@ -9,11 +9,11 @@
       "ticket": "AL-61",
       "thread_link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/641425d3-403a-4a11-8d21-2c8bae2ca609>",
       "thread_id": "641425d3-403a-4a11-8d21-2c8bae2ca609",
-      "branch": "AL-61/show-full-local-timestamps-in-ticket-deep-dive",
-      "head": null,
+      "branch": "feat/AL-61-full-local-timestamps",
+      "head": "434f03b9606b973ec9510766cb79616c15acf75e",
       "base": "main",
       "pr": null,
-      "status": "preparing",
+      "status": "blocked",
       "order": 2,
       "last_instruction": {
         "threadId": "641425d3-403a-4a11-8d21-2c8bae2ca609",
@@ -23,19 +23,24 @@
         "status": "running",
         "delivery": "steered"
       },
-      "verified_checks": "Owner work in progress; final gate pending",
-      "next_action": "Owner explicitly sends MGT-2 handoff on ready PR or blocker; manager verifies current head and gates",
-      "notification_request": "mgt2-handoff-notification-61"
+      "verified_checks": "Owner: 244 focused tests, typecheck/lint, five-platform build, byte-identical standalone HTTP JS/CSS and embedded assets pass. Sol/high and Luna/medium approve correction. make fails unchanged capture CLI tests; artifact-only checkpoint pushed.",
+      "next_action": "Hold full-suite retry pending AL-60 handoff; integrate only after actual predecessor merge. No PR yet; telemetry deferred to publication.",
+      "notification_request": "mgt2-handoff-notification-61",
+      "reviewed_application_head": "2e4762d0e94109f9b91c2dc5edae2a939ab94008",
+      "blockers": [
+        "Required make failed capture worker lifetime, native-version and idle shutdown tests",
+        "AL-60 predecessor not merged"
+      ]
     },
     {
       "ticket": "AL-60",
       "thread_link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/5dbc6729-7bc5-4bc2-84c8-1433f289f5f6>",
       "thread_id": "5dbc6729-7bc5-4bc2-84c8-1433f289f5f6",
-      "branch": "AL-60/search-tickets-comparison-exclusion-panel",
-      "head": null,
+      "branch": "feat/AL-60-search-tickets",
+      "head": "7a50a5e99927928995a72e13128d597c1317e9d3",
       "base": "main",
       "pr": null,
-      "status": "preparing",
+      "status": "blocked",
       "order": 1,
       "last_instruction": {
         "threadId": "5dbc6729-7bc5-4bc2-84c8-1433f289f5f6",
@@ -45,9 +50,12 @@
         "status": "running",
         "delivery": "steered"
       },
-      "verified_checks": "Owner work in progress; final gate pending",
-      "next_action": "Owner explicitly sends MGT-2 handoff on ready PR or blocker; manager verifies current head and gates",
-      "notification_request": "mgt2-handoff-notification-60"
+      "verified_checks": "Owner: eight reviews Sol/high and Luna/medium no defects; focused 6/6, typecheck/lint, build and standalone assets pass. Initial and bounded make fail unchanged capture tests; remaining stages finishing.",
+      "next_action": "Read-only shared-capture diagnosis; user approval pending for scope expansion; no merge",
+      "notification_request": "mgt2-handoff-notification-60",
+      "blockers": [
+        "Full integrated gate incomplete; bounded rerun still fails publication lifetime and worker cleanup tests"
+      ]
     },
     {
       "ticket": "AL-62",
@@ -76,10 +84,10 @@
       "thread_link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/3513d383-221d-427c-91b4-7c9ed8fd9af8>",
       "thread_id": "3513d383-221d-427c-91b4-7c9ed8fd9af8",
       "branch": "AL-76/compact-ledger-json-formatting-and-format-command",
-      "head": null,
+      "head": "f9d6752f31912eb289046615361715894960f8c4",
       "base": "main",
       "pr": null,
-      "status": "preparing",
+      "status": "blocked",
       "order": 3,
       "last_instruction": {
         "threadId": "3513d383-221d-427c-91b4-7c9ed8fd9af8",
@@ -89,9 +97,13 @@
         "status": "running",
         "delivery": "steered"
       },
-      "verified_checks": "Owner work in progress; final gate pending",
-      "next_action": "Owner explicitly sends MGT-2 handoff on ready PR or blocker; manager verifies current head and gates",
-      "notification_request": "mgt2-handoff-notification-76"
+      "verified_checks": "Focused race tests pass; review remains open. Behavior/data/architecture Sol high independently confirm severity8 stale overwrite; deterministic migration probe confirms schema downgrade. Isolated installer rerun passed; full make deferred.",
+      "next_action": "Owner repairs shared writer synchronization with deterministic regression and re-review; full gate remains queued",
+      "notification_request": "mgt2-handoff-notification-76",
+      "blockers": [
+        "Confirmed formatter/migration/backfill stale-write data-loss race under correction",
+        "Remaining focus/profile reviews pending"
+      ]
     },
     {
       "ticket": "AL-68",
@@ -126,5 +138,6 @@
     }
   ],
   "own_pr_url": "https://github.com/NiltonDuarte/AgenticLens/pull/100",
-  "manager_verification": "make failed on unchanged capture CLI native version/capability and worker timeout tests; other Go packages passed; frontend suite and final build not reached"
+  "manager_verification": "make failed on unchanged capture CLI native version/capability and worker timeout tests; other Go packages passed; frontend suite and final build not reached",
+  "pending_user_decision": "Authorize AL-60 scope expansion for shared capture repair if read-only diagnosis confirms a defect; no dependent implementation authorized yet"
 }

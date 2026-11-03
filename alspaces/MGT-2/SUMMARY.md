@@ -1,5 +1,11 @@
 # MGT-2 supervision log
 
+Latest blocker checkpoint: AL-60 and AL-61 are blocked by failed integrated capture tests; AL-60's bounded rerun also failed, so concurrency is not established as the sole cause. AL-61 evidence-only head 434f03b retains reviewed application 2e4762d; 244 focused cases and corrected build/standalone assets pass. No product PR or merge yet. Owner telemetry remains deferred to actual publication.
+
+AL-76 has an unresolved severity 8 formatter stale-write race at f9d6752, independently reported by behavior/data/architecture reviewers (Sol, high). A real migration probe confirmed schema downgrade. The owner is fixing writer coordination and regression coverage; approval is pending. Full gate remains deferred. These active review findings stay with their ticket and are not consolidated as approved.
+
+User decision pending: permit AL-60 to expand into a shared capture repair if diagnosis confirms a defect. Read-only diagnosis assigned to AL-60; no capture code/test changes authorized yet. Keep all product merge gates closed until applicable verification passes.
+
 2026-11-03: Supervision started under explicit user authorization. Clean baseline 122e983f8c365a2aa248b1b6d492252555e922ae. Five independent active ticket owners read and instructed. Only open PR at discovery: Release Please #55, human_only, changes requested, no checks reported. Product owners have not yet published PRs.
 
 Proposed order: AL-60, AL-61, AL-76, AL-62. AL-68 is a release-only marker requiring human merge. MGT-2's own management PR requires external review. All owners retain their existing approval and completed verification. No product scope changes requested.
@@ -21,15 +27,15 @@ GitHub reports main has no branch protection (protection endpoint HTTP 404). Thi
 Telemetry: PATH has no installed wrapper and the shared installation directory is empty. Use the existing local source-built native binary with supported native options, explicit Codex source, ticket and root session. Native generate has no --al-offline/--al-project options; invoke from this checkout. Root source rollout found at ~/.codex/sessions/2026/11/03/rollout-2026-11-03T18-47-43-01a1a286-27c9-7c50-9f2e-70f0a332c763.jsonl. This manager has no native children; the five independently created T3 roots are not children. T3 MCP tool counts are a known decoder completeness limit. This is an active-session checkpoint, not complete end-of-supervision telemetry; regenerate at later delivery. Independent ticket telemetry is not part of the manager's ledger.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 3
-- **Active Agent Duration:** 0m 0s (excludes user wait time)
-- **Context Window Health:** ELEVATED — Root agent peak 100.6k tokens (50% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Software Development Life Cycle Iterations:** 7
+- **Active Agent Duration:** 10m 42s (excludes user wait time)
+- **Context Window Health:** ELEVATED — Root agent peak 119.3k tokens (60% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 2,448 reasoning tokens (17.8% of generated output)
-- **Tool Health & Self-Correction:** 34 tool calls (5 self-corrections, 85.3% success rate)
+- **Reasoning Effort:** 3,440 reasoning tokens (17.4% of generated output)
+- **Tool Health & Self-Correction:** 39 tool calls (5 self-corrections, 87.2% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** No execution anomalies detected (clean session).
@@ -41,11 +47,11 @@ Telemetry: PATH has no installed wrapper and the shared installation directory i
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 96,309 | 11,315 | 2,622,720 | 96.5% | 100.6k | ELEVATED | $0.00 |
-| **Total** | **1** | **96,309** | **11,315** | **2,622,720** | **96.5%** | **100.6k** | **ELEVATED** | **$0.00** |
+| **rootagent** | 1 | 112,550 | 16,278 | 4,044,288 | 97.3% | 119.3k | ELEVATED | $0.00 |
+| **Total** | **1** | **112,550** | **16,278** | **4,044,288** | **97.3%** | **119.3k** | **ELEVATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 1 | 96,309 | 11,315 | 2,622,720 | 96.5% | $0.00 |
-| **Total** | **1** | **96,309** | **11,315** | **2,622,720** | **96.5%** | **$0.00** |
+| **gpt-6.1-sol** | 1 | 112,550 | 16,278 | 4,044,288 | 97.3% | $0.00 |
+| **Total** | **1** | **112,550** | **16,278** | **4,044,288** | **97.3%** | **$0.00** |
