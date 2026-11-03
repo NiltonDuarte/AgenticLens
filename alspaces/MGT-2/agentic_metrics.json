@@ -1,0 +1,67 @@
+{
+  "schema_version": 4,
+  "ticket_id": "MGT-2",
+  "ticket_title": "Supervise ongoing AgenticLens ticket delivery",
+  "ticket_type": "chore",
+  "started_at": "2026-11-03T17:47:43.525Z",
+  "completed_at": "2026-11-03T17:52:03.779Z",
+  "updated_at": "2026-11-03T17:52:08.781375+00:00",
+  "code": {
+    "lines_added": 0,
+    "lines_deleted": 0,
+    "test_lines_added": 0,
+    "test_lines_deleted": 0,
+    "prod_lines_added": 0,
+    "prod_lines_deleted": 0,
+    "files_changed": 0,
+    "sdlc_iterations": 3
+  },
+  "sessions": [
+    {
+      "id": "01a1a286-27c9-7c50-9f2e-70f0a332c763",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "RootAgent",
+          "model": "gpt-6.1-sol",
+          "started_at": "2026-11-03T17:47:48.740Z",
+          "completed_at": "2026-11-03T17:52:03.779Z",
+          "active_duration_seconds": 0,
+          "turns": 1,
+          "tokens": {
+            "input": 75341,
+            "output": 5826,
+            "cache_read": 999552,
+            "reasoning": 985,
+            "peak_context": 77889
+          },
+          "cost_usd": 0,
+          "compactions": 0,
+          "user_iterations": 3
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 18,
+          "errors": 4
+        }
+      ],
+      "anomalies": []
+    }
+  ],
+  "anomalies": [
+    {
+      "rule_id": "TOOL_HIGH_FAILURE_RATE",
+      "severity": "WARNING",
+      "context": {
+        "tool_name": "command",
+        "count": 4,
+        "total_calls": 18,
+        "threshold": "\u003e20%",
+        "failure_rate_pct": 22.2
+      }
+    }
+  ]
+}
