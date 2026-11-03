@@ -6,6 +6,8 @@ The user approved expanding AL-60 into a minimal shared capture repair after fai
 
 The management skill now requires a separate FIX ticket and isolated thread for newly discovered bugs unless they directly concern an existing ticket's approved behavior or contract. It includes proactive launch authority during authorized supervision and preserves ownership, scope and merge gates. Skill validation and documentation checks pass.
 
+After the current product batch merges, create the requested REV ticket to review test cost and propose fast unit checks followed by a separate integration layer. This deferred review is recorded without starting test refactoring during delivery.
+
 Management workflow remains active. This draft PR requires external review and merge; its owning manager cannot merge it. No application implementation is included.
 
 Validation: remote and thread ownership discovery, source approvals read, clean initial status recorded. Exact-head product checks and merge evidence are recorded in the control ledger as work progresses. Telemetry limitations are recorded in SUMMARY.md.

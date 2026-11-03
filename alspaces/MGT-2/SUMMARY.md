@@ -1,5 +1,11 @@
 # MGT-2 supervision log
 
+Active iteration 04: queued the user's post-batch REV test-performance review ticket. Trigger: verified merges of #104, #102 and #103, then allocate an unused REV ID and create the review ticket before management final handoff. It will measure capture/per-test/package/build/process/wait cost, classify fast unit versus slower boundary integration coverage, preserve useful assertions, and propose unit-first commands/CI gating. Review/test redesign has not started and no REV number/thread was allocated. Human release #55 and external MGT #100 are separate gates. See iterations/04/PLAN.md and CONTROL.json; this supersedes product-merge-only completion, with existing scopes preserved.
+
+AL-61 refreshed delivery verified at #104 c6fc4c35ed1d99fa0e59adff558f92d1e2a3d8fb: current main 3fbecd2 included, tested merge 8c5e3568 full make passes (all race packages, CLI 96.194s, 790 frontend tests, checks/five binaries/standalone assets). Manager verified final source/tests/scripts/CI equality and artifact-only delta, no GitHub blockers, open/non-draft status; prior timestamp approvals validly carry through incoming four test files. New hosted CI runs on c6fc4c3; Frontend passed, other gates pending at inspection. Old head CI is not reused.
+
+AL-62 receipt correction verified as published at draft #103 1247b7e948014c3dffb3cc052bf29dbf8cbcb7ab. CI-PUB-01 severity 5 fixed for the independent bounded repair: active/pending exact trusted snapshots, scoped generation/digest, stage/commit/finalize/recovery selection and marker barriers; proven compatible legacy migration/rebind, lost-proof rejection and relocation fences. Ledger schema6 and v1 file rollback remain intact. Owner reports all eight scope/profile approvals and focused real CLI/SQLite/both-window/empty/absence/migration/rebind/journal/strict guards pass, with plain CLI subprocess race and reconstructed-crash limits explicit. Original discovery remains data reviewer gpt-6.1-sol/high. New remote CI running; Frontend green at inspection. Overall merge still waits for #104/#102 and full integrated gate/finalization. No raw logs added by manager.
+
 Active iteration 03: user requested and authorized a management routing rule for future discovered bugs. Updated canonical management skill: unless very closely related to an existing approved behavior/contract, create a separate FIX ticket and isolated independent thread proactively. Same files/suite or a merge blocker alone do not justify expanding an existing feature. Reuse actual FIX owners, preserve existing work and apply normal ownership/launch/dependency gates. Reconciled older thread-launch wording; no duplicate instruction copies added. Skill-creator guidance and quick validator passed; documentation diff check passed. No application changes or full suite rerun. Existing assigned repairs stay assigned. See iterations/03/PLAN.md for source, changed acceptance, preserved guarantees and behavioral checks.
 
 AL-60 follow-up #105 actually merged at 3fbecd2576270772462fe37235d90c5f33e2164c on 2026-11-03T20:49:59Z using squash with expected head c031576. Fresh checks were all successful; correct current base, non-release/non-draft and no review blockers verified. GitHub MERGED/mergeCommit and fetched main corroborate delivery. Obsolete #105 watch removed. Only then AL-61 run 6 was released to integrate the test-only repair and complete #104's affected gate, carrying valid timestamp approval forward. Remaining order: #104, #102, #103. #101/#105 are delivered separately; release #55 remains human_only and management #100 remains draft for external review/merge.
@@ -89,15 +95,15 @@ GitHub reports main has no branch protection (protection endpoint HTTP 404). Thi
 Telemetry: PATH has no installed wrapper and the shared installation directory is empty. Use the existing local source-built native binary with supported native options, explicit Codex source, ticket and root session. Native generate has no --al-offline/--al-project options; invoke from this checkout. Root source rollout found at ~/.codex/sessions/2026/11/03/rollout-2026-11-03T18-47-43-01a1a286-27c9-7c50-9f2e-70f0a332c763.jsonl. This manager has no native children; the five independently created T3 roots are not children. T3 MCP tool counts are a known decoder completeness limit. This is an active-session checkpoint, not complete end-of-supervision telemetry; regenerate at later delivery. Independent ticket telemetry is not part of the manager's ledger.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 43
-- **Active Agent Duration:** 51m 4s (excludes user wait time)
-- **Context Window Health:** BLOATED — Root agent peak 379.3k tokens (190% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Software Development Life Cycle Iterations:** 46
+- **Active Agent Duration:** 56m 8s (excludes user wait time)
+- **Context Window Health:** CRITICAL — Root agent peak 401.0k tokens (201% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 35,424 reasoning tokens (25.7% of generated output)
-- **Tool Health & Self-Correction:** 136 tool calls (12 self-corrections, 91.2% success rate)
+- **Reasoning Effort:** 41,071 reasoning tokens (26.8% of generated output)
+- **Tool Health & Self-Correction:** 143 tool calls (12 self-corrections, 91.6% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
@@ -111,11 +117,11 @@ Telemetry: PATH has no installed wrapper and the shared installation directory i
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 316,519 | 102,320 | 43,663,104 | 99.3% | 379.3k | BLOATED (190%) | $0.00 |
-| **Total** | **1** | **316,519** | **102,320** | **43,663,104** | **99.3%** | **379.3k** | **BLOATED** | **$0.00** |
+| **rootagent** | 1 | 330,084 | 111,948 | 47,515,904 | 99.3% | 401.0k | CRITICAL (201%) | $0.00 |
+| **Total** | **1** | **330,084** | **111,948** | **47,515,904** | **99.3%** | **401.0k** | **CRITICAL** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 1 | 316,519 | 102,320 | 43,663,104 | 99.3% | $0.00 |
-| **Total** | **1** | **316,519** | **102,320** | **43,663,104** | **99.3%** | **$0.00** |
+| **gpt-6.1-sol** | 1 | 330,084 | 111,948 | 47,515,904 | 99.3% | $0.00 |
+| **Total** | **1** | **330,084** | **111,948** | **47,515,904** | **99.3%** | **$0.00** |

@@ -1,0 +1,13 @@
+# MGT-2 iteration 04: finish batch and queue test-performance review
+
+Source: user requests a REV test review ticket after the current batch, citing slow capture tests and requiring fast, cheap unit tests before slower integration tests.
+
+Changed acceptance: management must create the queued REV ticket after product PRs #104, #102 and #103 are verified merged, before final handoff. Do not start the review or test redesign early. Human-only release #55 and externally merged management #100 are separate. Check then-current ticket usage before assigning the REV ID; none reserved or launched now.
+
+Review scope: measure actual per-test/package/build/process/wait cost, beginning with capture. Distinguish a 43-second package from a 43-second single test. Classify by exercised boundary and dependencies; optimize costly unit work or move genuine process/filesystem/database/hook coverage into an integration layer. Preserve useful assertions, source fidelity and failure diagnostics. Recommend practical budgets, local commands and CI dependencies: integration starts only after fast unit checks pass. Avoid cosmetic relabeling, indiscriminate deletion or blanket timeout increases. Follow canonical test-purpose/proportionality guidance and propose bounded implementation follow-ups.
+
+Preserved guarantees: current accepted product scopes, owner isolation, new FIX routing policy, source-grounded telemetry, exact reviewed/tested revision checks and release/management merge exclusions. Superseded completion boundary: delivering the current product queue alone is insufficient; the deferred review ticket must also be created. This is a new explicit management deliverable, not permission to add test refactoring to existing tickets.
+
+Current readiness: #104 c6fc4c3 includes actual #105 repair/current main 3fbecd2; full make passes at 8c5e3568, and final source/tests/scripts/CI are equal. Timestamp source and valid prior reviews unchanged, 790 frontend cases/five builds/standalone assets pass. Fresh hosted checks pending. #103 1247b7e remains draft: bounded receipt-proof correction has eight approved scoped reviews and focused CLI/SQLite/journal/rebind regressions, but predecessor integration/full gate/finalization are pending. No new owner instruction is needed until dependencies actually merge.
+
+Verification: manager fetched both heads, checked #104 current-base ancestry, artifact-only final delta and no remote review blockers; read #103 bounded protocol/verification evidence. Documentation-only management updates require diff checks, not repeated application suites. Existing watches continue. Next action remains #104 fresh CI/guarded merge, release #102, then #103; only afterward create the REV ticket.
