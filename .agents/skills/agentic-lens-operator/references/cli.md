@@ -229,3 +229,15 @@ Read-only inspection is paginated without evicting stored history. `capture stat
 `diagnostic_metadata_complete: false` means current lookup metadata is missing, partial or behind recorded diagnostics. Historical records remain available, but current health cannot be certified. Run `capture reconcile --repo PROJECT --ticket-id TICKET` for bounded mutable maintenance; repeat if its progress remains partial, increasing `--max-sessions`, `--max-source-bytes` or `--timeout` when needed. Inspection and initial registration never backfill old payloads. New facts retain their sequence order while maintenance resumes. If a history page decodes no rows because its first record exceeds the byte budget, increase the budget and retry the same cursor.
 
 Older reconciliation records can also lack a whole-attempt outcome. Their recorded owner reads remain facts, while current collection health stays unknown until a complete reconciliation. A fatal whole-attempt failure is independent of successful individual reads and remains visible through partial retries. Use a completed reconciliation to establish recovery; the ledger's accepted numeric facts remain preserved throughout.
+
+## `format`
+
+Opt-in whitespace formatting using the policy shipped by the invoked installed/pinned release. It neither downloads a release nor changes the pin, installs a Git hook, or mandates a CI check. No source stores, capture registry, hydration or network are needed. Facts, unknown members, scalar lexemes, schema and timestamps inside the ledger remain unchanged; summaries and retired capture reports remain untouched. Interrupted publication journals must be recovered with the original authorized generator before formatting.
+
+Exactly one selector is required:
+
+- `agentic-lens format --all`: all discovered ticket ledgers. An empty root succeeds with an explicit zero-ledger result.
+- `agentic-lens format --ticket-id AL-42`: one existing ticket ledger.
+- `agentic-lens format --ticket-ids AL-42,AL-43`: an explicit set; trims comma-separated items, rejects empty items and deduplicates IDs.
+
+Add `--workspaces DIR` to override the configured root. `--dry-run` reports differences without writing. `--check` also writes nothing and exits 1 for formatting differences, 2 for selection/input/I/O failures, or 0 when every selected ledger already matches. These two modes are mutually exclusive. Default writes only changed files, preserves permissions and reports per-target results and totals. All selected inputs are validated before any replacement; later I/O failures return a nonzero partial result. Symbolic aliases within the workspace are coordinated; escaping aliases and unsafe hard-linked replacements fail explicitly. Only expected agentic_metrics.json files are selected; use disposable fixtures when evaluating the command instead of mass-formatting committed history.

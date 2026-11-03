@@ -1602,6 +1602,9 @@ func TestSaveFactLedger(t *testing.T) {
 		}
 
 		assertFactJSONFieldOrder(t, data)
+		if !bytes.Contains(data, []byte(`"tokens": {"input":`)) {
+			t.Fatalf("fact writer expanded compact token record: %s", data)
+		}
 		if err := adapters.SaveFactLedger(outPath, ledger); err != nil {
 			t.Fatal(err)
 		}
@@ -1776,9 +1779,12 @@ func TestSaveMetricsLedger(t *testing.T) {
 
 		tid := "AL-METRICS-1"
 		title := "Test Metrics Persistence"
+		toolName := "read"
+		count := int64(3)
 		ledger := domain.AgenticMetricsLedger{
 			TicketID:    &tid,
 			TicketTitle: &title,
+			Anomalies:   []domain.Anomaly{{RuleID: domain.RuleToolRetryStreak, Severity: domain.SeverityWarning, Context: domain.AnomalyContext{ToolName: &toolName, Count: &count}}},
 			Totals: domain.GroupedMetric{
 				Invocations: 3,
 				InputTokens: 5000,
@@ -1807,6 +1813,17 @@ func TestSaveMetricsLedger(t *testing.T) {
 			t.Errorf("expected 2-space indented JSON, got:\n%s", content)
 		}
 
+		if !strings.Contains(content, "\"anomalies\": [\n    {\"rule_id\": \"TOOL_RETRY_STREAK\", \"severity\": \"WARNING\", \"context\": {\"tool_name\": \"read\", \"count\": 3}}\n  ]") {
+			t.Fatalf("computed writer expanded anomaly/context record: %s", data)
+		}
+		if err := adapters.SaveMetricsLedger(outPath, ledger); err != nil {
+			t.Fatal(err)
+		}
+		repeated, err := os.ReadFile(outPath)
+		if err != nil || !bytes.Equal(data, repeated) {
+			t.Fatalf("computed anomaly persistence not idempotent: %v", err)
+		}
+
 		// DTO deserialization check
 		var parsed adapters.AgenticMetricsLedgerDTO
 		if err := json.Unmarshal(data, &parsed); err != nil {
@@ -1814,6 +1831,9 @@ func TestSaveMetricsLedger(t *testing.T) {
 		}
 		if parsed.TicketID == nil || *parsed.TicketID != "AL-METRICS-1" {
 			t.Errorf("expected ticket_id AL-METRICS-1, got %v", parsed.TicketID)
+		}
+		if len(parsed.Anomalies) != 1 || parsed.Anomalies[0].Context.Count == nil || *parsed.Anomalies[0].Context.Count != count {
+			t.Fatalf("computed anomaly changed: %+v", parsed.Anomalies)
 		}
 		if parsed.Totals.Invocations != 3 {
 			t.Errorf("expected 3 invocations, got %d", parsed.Totals.Invocations)

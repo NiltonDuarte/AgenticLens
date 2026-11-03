@@ -130,6 +130,9 @@ func TestMigrationRunner_Batch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if !strings.Contains(string(al1Data), `"tokens": {"input":`) {
+		t.Fatalf("migration writer expanded compact token record: %s", al1Data)
+	}
 	var al1DTO adapters.AgenticFactLedgerDTO
 	if err := json.Unmarshal(al1Data, &al1DTO); err != nil {
 		t.Fatalf("failed unmarshaling AL-1: %v", err)

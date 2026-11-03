@@ -2,7 +2,7 @@ h3. Title: AL-76: Compact ledger JSON formatting and add a selective format comm
 
 *TARGET*: AgenticLens (Ledger Serialization / Filesystem Adapters / CLI / Tests)
 
-*Status*: Ready
+*Status*: Done
 *Work type*: feat
 *Blocked by*: None
 *Blocks*: None
