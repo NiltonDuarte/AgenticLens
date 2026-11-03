@@ -13,24 +13,19 @@
       "head": "c40e0022aca6c5ae40633b260ce93c379e2ee1c7",
       "base": "main",
       "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/104",
-      "status": "blocked",
+      "status": "preparing",
       "order": 2,
       "last_instruction": {
-        "ticket": "AL-61",
-        "threadId": "641425d3-403a-4a11-8d21-2c8bae2ca609",
-        "link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/641425d3-403a-4a11-8d21-2c8bae2ca609>",
-        "messageId": "message:mcp:54c6beb0-3af1-47e7-a32e-216eebcecca1:thread-send:mgt2-draft-publication-al-61",
-        "runId": "run:thread:641425d3-403a-4a11-8d21-2c8bae2ca609:ordinal:4",
-        "status": "starting",
+        "clientRequestId": "mgt2-al61-integrate-after-6244585",
+        "runId": "run:thread:641425d3-403a-4a11-8d21-2c8bae2ca609:ordinal:5",
         "delivery": "started"
       },
       "verified_checks": "Owner: 244 focused tests, typecheck/lint, five-platform build, byte-identical standalone HTTP JS/CSS and embedded assets pass. Sol/high and Luna/medium approve correction. make fails unchanged capture CLI tests; artifact-only checkpoint pushed.",
-      "next_action": "Remain draft until actual predecessor merges; notify existing owner only when next integration is released; full integration/verification/finalization gates remain pending",
+      "next_action": "Existing owner run5 integrates current main once, preserving capture/search/timestamps/assets/index; finish gates for draft #104 before merge",
       "notification_request": "mgt2-handoff-notification-61",
       "reviewed_application_head": "2e4762d0e94109f9b91c2dc5edae2a939ab94008",
       "blockers": [
-        "Required make failed capture worker lifetime, native-version and idle shutdown tests",
-        "AL-60 predecessor not merged"
+        "Integration of actual AL-60 merge and final verification/review/finalization remain pending"
       ],
       "publication_status": "open draft; exact head verified"
     },
@@ -42,7 +37,7 @@
       "head": "f153df286f8e048d0da65780ff181e85c6ededc6",
       "base": "main",
       "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/101",
-      "status": "waiting_checks",
+      "status": "merged",
       "order": 1,
       "last_instruction": {
         "threadId": "5dbc6729-7bc5-4bc2-84c8-1433f289f5f6",
@@ -53,12 +48,10 @@
         "status": "starting",
         "delivery": "started"
       },
-      "verified_checks": "Manager verified current main is ancestor, final delta from tested 057d410 contains guidance/workspace/lifecycle/telemetry only, compact findings and make evidence retained, no GitHub reviews or unresolved discussions. All eight final responsibility/profile approvals in owner summary. Full integrated make with bounded CPU, all race packages, 786 frontend cases, build/embed and actual Windows runtime pass. Hosted Frontend passed; Backend/Windows in progress at inspection.",
-      "next_action": "On watch wake freshly verify current exact head/base/review/checks, expected-head squash merge, actual merge SHA, then notify AL-61",
+      "verified_checks": "All four hosted checks SUCCESS on approved f153df2; fresh exact head/base/non-release/open/non-draft and no review blockers verified before guarded squash merge. GitHub MERGED/mergeCommit and fetched main corroborate delivery.",
+      "next_action": "Delivered; obsolete PR watch removed. Accepted TEST-02 debt remains owned by AL-60 maintainer.",
       "notification_request": "mgt2-handoff-notification-60",
-      "blockers": [
-        "Fresh hosted checks pending at f153df2; no previous-head CI reused"
-      ],
+      "blockers": [],
       "diagnosis": {
         "status": "read-only, owner reported",
         "record": "alspaces/AL-60/iterations/01/CAPTURE_DIAGNOSIS.md on owner branch",
@@ -81,7 +74,9 @@
         "runId": "run:thread:5dbc6729-7bc5-4bc2-84c8-1433f289f5f6:ordinal:4",
         "result": "User directly resumed run5; cleanup handoff completed at 65458ed; prior interrupted hold superseded"
       },
-      "cleanup": "Complete: final owner run6 removed archive links and leaves brief explanations only; 10 ticket files. Manager verified source equal to tested 057d410, unchanged required contracts/PR/ledger/compact findings, current main included and no unresolved review threads."
+      "cleanup": "Complete: final owner run6 removed archive links and leaves brief explanations only; 10 ticket files. Manager verified source equal to tested 057d410, unchanged required contracts/PR/ledger/compact findings, current main included and no unresolved review threads.",
+      "merge_commit": "6244585dc5cc41ef012cd3e1fb3b964ccd910a95",
+      "merged_at": "2026-11-03T19:49:15Z"
     },
     {
       "ticket": "AL-62",
@@ -108,8 +103,8 @@
       "reviewed_application_head": "29ee4a802000c1d3302c515e001f7692d3d7fe8f",
       "product_fingerprint": "f300879df36eee4cbdc69b6de66999dbf469ddcd3eb6f65f8a65b71279332c8a",
       "blockers": [
-        "Actual AL-60/AL-61/AL-76 merges pending",
-        "Integrated full gate deliberately not run"
+        "Actual AL-61/AL-76 merges pending; AL-60 prerequisite is now delivered",
+        "Integrated full gate and finalization pending"
       ],
       "publication_status": "open draft; exact head verified"
     },
@@ -136,8 +131,8 @@
       "next_action": "Remain draft until actual predecessor merges; notify existing owner only when next integration is released; full integration/verification/finalization gates remain pending",
       "notification_request": "mgt2-handoff-notification-76",
       "blockers": [
-        "Actual AL-60 repair merge and AL-61 merge pending",
-        "Integration and full make not started"
+        "Actual AL-61 merge pending; AL-60 prerequisite is now delivered",
+        "Integrated full make and finalization pending"
       ],
       "reviewed_application_head": "c32c8937d8897179a6772c6aa75300eafe94351f",
       "reviewed_test_head": "0dedb33110bafe2fc290ec99b86d3635b07c81b5",
@@ -188,10 +183,11 @@
     {
       "pr": 55,
       "url": "https://github.com/NiltonDuarte/AgenticLens/pull/55",
-      "head": "8f67bc693cdfbaf3ca727a4d082a25b85185afdd",
+      "head": "f9c501a488dff68311937a155429a7d817a7ecee",
       "status": "human_only",
-      "review": "CHANGES_REQUESTED",
-      "checks": []
+      "review": "Not reassessed on this new release head; human controlled",
+      "checks": [],
+      "title": "chore(main): release 3.0.0"
     }
   ],
   "own_pr_url": "https://github.com/NiltonDuarte/AgenticLens/pull/100",
@@ -203,7 +199,7 @@
     "status": "approved",
     "preserved": "No waived gates, weakened tests, global timeout inflation, or duplicate capture ownership"
   },
-  "observed_main": "733e367ee12b9828cd340759eab855f4d809279c",
+  "observed_main": "6244585dc5cc41ef012cd3e1fb3b964ccd910a95",
   "publication_steering": "User requested all open owners create PRs now; remaining AL-61/AL-76/AL-62 instructed to publish draft checkpoints without waiving integration or merge gates",
   "al60_latest_hosted_checks": "At f153df2: Backend and Frontend SUCCESS; Windows and binary/version in progress. No merge yet."
 }

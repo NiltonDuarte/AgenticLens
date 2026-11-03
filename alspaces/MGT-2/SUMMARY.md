@@ -1,5 +1,9 @@
 # MGT-2 supervision log
 
+AL-60 delivered: https://github.com/NiltonDuarte/AgenticLens/pull/101 merged by MGT-2 with squash and expected head f153df286f8e048d0da65780ff181e85c6ededc6. Fresh checks confirmed all four CI jobs successful, current main included, open/non-draft/non-release, no review objections or unresolved threads. GitHub reports MERGED at 2026-11-03T19:49:15Z with commit 6244585dc5cc41ef012cd3e1fb3b964ccd910a95; fetched origin/main corroborates it. Removed obsolete #101 watch. Cleanup and scoped application approval were already accepted; accepted severity 2 TEST-02 coverage debt remains visible and owned by AL-60 maintainer.
+
+AL-61 existing owner resumed in run 5 after actual merge confirmation to integrate main once and finish #104's existing verification/review gates while preserving AL-60 capture/search/index/assets and the timestamp correction. #104 remains draft pending readiness. AL-76 #102 and AL-62 #103 remain held for their actual remaining predecessors. Open inventory refreshed; no new owner/PR to dispatch. Release Please #55 remains human_only at f9c501a (3.0.0). Management #100 remains external-review work. Supervision continues; one of four in-scope product PRs is delivered.
+
 All remaining owners published drafts, verified on GitHub and matched to their existing roots: AL-61 #104 at c40e0022aca6c5ae40633b260ce93c379e2ee1c7; AL-76 #102 at 746c965cf72ede8636c952ad56f5d661d5be3219; AL-62 #103 at 22f571ae649d5dc53071fc6410f187816905aa9e. Fetched heads show only ticket artifacts successors relative to reviewed implementation/final-test checkpoints. Local scoped approvals carry forward for unchanged source, but all three remain draft with integration/full make/final approval/telemetry/lifecycle pending. No predecessor integration was released prematurely. Order: #101, #104, #102, #103. AL-60 #101 f153df2 has Backend/Frontend successful; Windows and binary/version still running at the latest fresh check. No GitHub objection/unresolved thread, current base included. User has approved its cleaned state and merge after CI. Management #100 stays external-review/draft; release #55 stays human_only.
 
 Publication steering: user requested all open owners create pull requests. Manager refreshed the complete project thread inventory and actual open PRs, then read/resumed the three existing owners without PRs: AL-61, AL-76 and AL-62. Each received a concise assignment to publish its reviewed checkpoint as a draft now, explicitly marking predecessor integration/full gates pending and returning URL/exact head. This supersedes the earlier publication hold, not the merge/integration gates. AL-60 already has #101; MGT-2 already has draft #100; merged tickets were not restarted. Merge order remains AL-60, AL-61, AL-76, AL-62. User approval of AL-60's cleaned state and merge-after-CI remains effective. No new threads or product scope requested. Release Please #55 now proposes 3.0.0 and remains human_only.
@@ -61,15 +65,15 @@ GitHub reports main has no branch protection (protection endpoint HTTP 404). Thi
 Telemetry: PATH has no installed wrapper and the shared installation directory is empty. Use the existing local source-built native binary with supported native options, explicit Codex source, ticket and root session. Native generate has no --al-offline/--al-project options; invoke from this checkout. Root source rollout found at ~/.codex/sessions/2026/11/03/rollout-2026-11-03T18-47-43-01a1a286-27c9-7c50-9f2e-70f0a332c763.jsonl. This manager has no native children; the five independently created T3 roots are not children. T3 MCP tool counts are a known decoder completeness limit. This is an active-session checkpoint, not complete end-of-supervision telemetry; regenerate at later delivery. Independent ticket telemetry is not part of the manager's ledger.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 30
-- **Active Agent Duration:** 32m 33s (excludes user wait time)
-- **Context Window Health:** BLOATED — Root agent peak 260.6k tokens (130% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Software Development Life Cycle Iterations:** 31
+- **Active Agent Duration:** 35m 2s (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 268.4k tokens (134% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 16,388 reasoning tokens (21.5% of generated output)
-- **Tool Health & Self-Correction:** 89 tool calls (8 self-corrections, 91.0% success rate)
+- **Reasoning Effort:** 17,986 reasoning tokens (21.9% of generated output)
+- **Tool Health & Self-Correction:** 95 tool calls (8 self-corrections, 91.6% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
@@ -83,11 +87,11 @@ Telemetry: PATH has no installed wrapper and the shared installation directory i
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 229,504 | 59,725 | 22,572,672 | 99.0% | 260.6k | BLOATED (130%) | $0.00 |
-| **Total** | **1** | **229,504** | **59,725** | **22,572,672** | **99.0%** | **260.6k** | **BLOATED** | **$0.00** |
+| **rootagent** | 1 | 235,912 | 64,072 | 24,941,696 | 99.1% | 268.4k | BLOATED (134%) | $0.00 |
+| **Total** | **1** | **235,912** | **64,072** | **24,941,696** | **99.1%** | **268.4k** | **BLOATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 1 | 229,504 | 59,725 | 22,572,672 | 99.0% | $0.00 |
-| **Total** | **1** | **229,504** | **59,725** | **22,572,672** | **99.0%** | **$0.00** |
+| **gpt-6.1-sol** | 1 | 235,912 | 64,072 | 24,941,696 | 99.1% | $0.00 |
+| **Total** | **1** | **235,912** | **64,072** | **24,941,696** | **99.1%** | **$0.00** |
