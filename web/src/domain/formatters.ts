@@ -55,6 +55,39 @@ export function formatLocalTimeWithMs(iso: string): string {
   return `${new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' }).format(date)}.${String(date.getMilliseconds()).padStart(3, '0')}`;
 }
 
+/** Returns a source instant only when its RFC 3339 calendar and clock fields are valid. */
+export function getHistoricalTimestampDateTime(iso: string | null | undefined): string | undefined {
+  if (!iso) return undefined;
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/i.exec(iso);
+  if (!match) return undefined;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const leapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const daysInMonth = [31, leapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  const maxDay = daysInMonth[month - 1];
+  if (maxDay === undefined || day < 1 || day > maxDay ||
+    Number(match[4]) > 23 || Number(match[5]) > 59 || Number(match[6]) > 59 ||
+    Number.isNaN(Date.parse(iso))) return undefined;
+  return iso;
+}
+
+/** Retains malformed historical source text instead of normalizing it in a tooltip. */
+export function formatHistoricalDateTimeTooltip(iso: string): string {
+  return getHistoricalTimestampDateTime(iso) ? formatLocalDateTimeTooltip(iso) : iso;
+}
+
+/** Formats historical instants in the viewer timezone with visible calendar context. */
+export function formatLocalDateTime(iso: string | null | undefined): string {
+  if (!iso) return 'N/A';
+  if (!getHistoricalTimestampDateTime(iso)) return iso;
+  const date = new Date(iso);
+  return new Intl.DateTimeFormat(undefined, {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
+  }).format(date);
+}
+
 export function getClientTimezoneBadge(): string {
   try {
     return `TZ: ${Intl.DateTimeFormat().resolvedOptions().timeZone || 'Local'}`;

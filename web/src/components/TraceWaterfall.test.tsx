@@ -142,11 +142,15 @@ describe('TraceWaterfall Component', () => {
     const timestampEvent: EventFact = { ...sampleEvents[0]!, event_type: 'tool_call', tool_name: 'bash', status: 'error' };
     const { rerender } = render(<TraceWaterfall events={[timestampEvent]} defaultExpanded={true} />);
     const time = screen.getByTestId('timeline-item-1').querySelector('.timeline-timestamp');
-    expect(time).toHaveTextContent(/\d{2}:\d{2}:\d{2}\.\d{3}/);
+    expect(time).toHaveTextContent(/2026/);
+    expect(time).toHaveTextContent(/\d{2}:\d{2}:\d{2}/);
+    expect(time?.textContent).not.toMatch(/:\d{2}\.\d/);
+    expect(time).toHaveAttribute('datetime', timestampEvent.timestamp);
     expect(time).toHaveAttribute('title', expect.stringMatching(/\d{4}/));
 
     rerender(<TraceWaterfall events={[{ ...timestampEvent, timestamp: 'not-a-date' }]} defaultExpanded={true} />);
     expect(screen.getByTestId('timeline-item-1').querySelector('.timeline-timestamp')).toHaveTextContent('not-a-date');
+    expect(screen.getByTestId('timeline-item-1').querySelector('.timeline-timestamp')).not.toHaveAttribute('datetime');
   });
 
   it.each([undefined, []])('renders an immediately visible empty card without anomalies (%s)', (anomalies) => {

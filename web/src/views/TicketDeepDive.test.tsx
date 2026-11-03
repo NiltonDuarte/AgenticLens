@@ -142,7 +142,9 @@ describe('Skills and subagents autopsy', () => {
         const time = rows[0]!.querySelector('time');
         expect(time).toHaveAttribute('datetime', timestamp);
         expect(time).toHaveAttribute('title', expect.stringMatching(/2026.*\.007 \[UTC[+-]\d{2}:\d{2}\]/));
-        expect(time).toHaveTextContent(/\d{2}:\d{2}:\d{2}\.007/);
+        expect(time).toHaveTextContent(/2026/);
+        expect(time).toHaveTextContent(/\d{2}:\d{2}:\d{2}/);
+        expect(time?.textContent).not.toMatch(/:\d{2}\.\d/);
         expect(within(rows[1]!).getByText('Failed')).toBeVisible();
         expect(within(rows[1]!).getByText('custom-investigator')).toBeVisible();
         expect(rows[1]).toHaveTextContent('Turn 9 /');
@@ -273,7 +275,9 @@ describe('FIX-12 committed trace and enrichment lifecycle', () => {
         await waitFor(() => expect(screen.getByTestId('waterfall-event-count')).toHaveTextContent('2 Events Recorded'));
         const headerTimes = document.querySelectorAll('time[title]');
         expect(headerTimes.length).toBeGreaterThan(0);
-        expect(headerTimes[0]).toHaveTextContent(/\d{2}:\d{2}:\d{2}\.\d{3}/);
+        expect(headerTimes[0]).toHaveTextContent(/2026/);
+        expect(headerTimes[0]).toHaveTextContent(/\d{2}:\d{2}:\d{2}/);
+        expect(headerTimes[0]?.textContent).not.toMatch(/:\d{2}\.\d/);
         expect(headerTimes[0]).toHaveAttribute('title', expect.stringMatching(/\d{4}/));
         expect(screen.getByTestId('waterfall-source-badge')).toHaveTextContent('Source: Committed Ledger');
         expect(screen.queryByTestId('legacy-fallback-banner')).not.toBeInTheDocument();
@@ -367,6 +371,35 @@ describe('FIX-12 committed trace and enrichment lifecycle', () => {
         expect(screen.queryByRole('button', { name: `Inspect child session ${childId}` })).not.toBeInTheDocument();
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
         expect(nextHeader).toHaveAttribute('aria-expanded', 'false');
+    });
+
+    it('renders full workspace dates visibly and preserves missing lifecycle states', async () => {
+        const detail = makeDetail();
+        const started = '2026-10-29T12:34:56.007Z';
+        const completed = '2026-10-30T12:34:56.123Z';
+        const updated = '2026-10-31T12:34:56.456Z';
+        vi.mocked(apiClient.fetchWorkspaceById).mockResolvedValue({ data: {
+            ...detail, ledger: { ...detail.ledger, started_at: started, completed_at: completed, updated_at: updated },
+        } });
+        const { container, rerender } = render(<TicketDeepDive selectedTicketId="AL-1" />);
+        await screen.findByText('Started:');
+        const times = container.querySelectorAll('.timestamp-group time');
+        expect(times).toHaveLength(3);
+        [started, completed, updated].forEach((instant, index) => {
+            expect(times[index]).toHaveAttribute('datetime', instant);
+            expect(times[index]).toHaveTextContent('2026');
+            expect(times[index]).toHaveTextContent(/\d{2}:\d{2}:\d{2}/);
+            expect(times[index]?.textContent).not.toMatch(/:\d{2}\.\d/);
+            expect(times[index]).toHaveAttribute('title', expect.stringContaining('[UTC'));
+        });
+        expect(new Set(Array.from(times, (time) => time.textContent)).size).toBe(3);
+        vi.mocked(apiClient.fetchWorkspaceById).mockResolvedValue({ data: {
+            ...detail, ledger: { ...detail.ledger, started_at: '', completed_at: '', updated_at: '' },
+        } });
+        rerender(<TicketDeepDive selectedTicketId="AL-2" />);
+        await waitFor(() => expect(container.querySelector('.timestamp-group')).toHaveTextContent('Completed: In Progress'));
+        expect(container.querySelector('.timestamp-group')).toHaveTextContent('Started: N/A');
+        expect(container.querySelector('.timestamp-group')).toHaveTextContent('Updated: N/A');
     });
 
     it('preserves malformed workspace timestamps as the visible time and tooltip fallback', async () => {
