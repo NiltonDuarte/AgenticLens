@@ -16,6 +16,11 @@ export const TicketScatterPlot: React.FC<TicketScatterPlotProps> = ({ rows, onSe
   const [yMetric, setYMetric] = useState<ScatterMetricKey>('net_lines_added');
   const [scale, setScale] = useState<ScatterScale>('linear');
   const [excluded, setExcluded] = useState<ReadonlySet<string>>(() => new Set());
+  const [searchQuery, setSearchQuery] = useState('');
+  const visibleRows = useMemo(() => {
+    const query = searchQuery.toLowerCase();
+    return rows.filter((row) => row.ticket_id.toLowerCase().includes(query) || row.ticket_title.toLowerCase().includes(query));
+  }, [rows, searchQuery]);
   const data = useMemo(() => deriveScatterPlotData(rows, xMetric, yMetric, scale, excluded), [rows, xMetric, yMetric, scale, excluded]);
   const xMeta = SCATTER_METRICS.find((metric) => metric.key === xMetric)!;
   const yMeta = SCATTER_METRICS.find((metric) => metric.key === yMetric)!;
@@ -59,14 +64,21 @@ export const TicketScatterPlot: React.FC<TicketScatterPlotProps> = ({ rows, onSe
       </div>
       <details className="ticket-scatter-exclusions">
         <summary>Exclude tickets ({excluded.size} excluded)</summary>
+        <div className="ticket-scatter-search">
+          <label>Search tickets
+            <input type="search" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} />
+          </label>
+          <button type="button" disabled={searchQuery.length === 0} onClick={() => setSearchQuery('')}>Clear search</button>
+        </div>
         <fieldset>
           <legend>Tickets included in the chart</legend>
-          {rows.map((row) => (
+          {visibleRows.map((row) => (
             <label key={row.ticket_id}>
               <input type="checkbox" checked={!excluded.has(row.ticket_id)} onChange={() => toggleExcluded(row.ticket_id)} />
               {row.ticket_id} — {row.ticket_title}
             </label>
           ))}
+          {visibleRows.length === 0 && <p role="status">No tickets match your search.</p>}
         </fieldset>
       </details>
       {data.unavailableCount > 0 && <p>{data.unavailableCount} tickets omitted: a selected metric is unavailable.</p>}

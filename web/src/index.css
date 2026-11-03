@@ -5196,6 +5196,9 @@ th.num-col .th-content {
 .ticket-scatter-exclusions { margin: 0.8rem 0; }
 .ticket-scatter-exclusions fieldset { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 0.4rem; max-height: 10rem; overflow: auto; border: 1px solid var(--border-color, #263044); }
 .ticket-scatter-exclusions label { display: flex; align-items: center; gap: 0.45rem; font-size: 0.8rem; }
+.ticket-scatter-search { display: flex; flex-wrap: wrap; align-items: end; gap: 0.75rem; margin: 0.75rem 0; }
+.ticket-scatter-search label { display: grid; gap: 0.35rem; }
+.ticket-scatter-search input { min-width: 0; max-width: 100%; padding: 0.45rem; }
 .ticket-scatter-chart { position: relative; width: 100%; overflow: hidden; }
 .ticket-scatter-chart svg { display: block; width: 100%; min-height: 16rem; }
 .ticket-scatter-axis { stroke: #657085; stroke-width: 1; }

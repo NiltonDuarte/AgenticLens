@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "ARCH-01",
+      "severity": 6,
+      "issue": "Optional subprocess inspection can wait past cancellation on inherited output pipes.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: owned Unix groups/Windows jobs and bounded pipe draining."
+    },
+    {
+      "finding_id": "ARCH-02",
+      "severity": 4,
+      "issue": "SIGTERM to the installer can leave its subprocess alive without the parent timer.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: installer SIGTERM cancels owned subprocess work."
+    },
+    {
+      "finding_id": "DATA-01",
+      "severity": 5,
+      "issue": "Cancellation during the final installer write can still return success and discard its journal.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: final-write/validation cancellation triggers rollback or retained recovery."
+    },
+    {
+      "finding_id": "TEST-01",
+      "severity": 4,
+      "issue": "Inherited harness dispatch guard bypasses disposable fixture provisioning.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: disposable setup no longer trusts inherited dispatch intent."
+    },
+    {
+      "finding_id": "DATA-02",
+      "severity": 4,
+      "issue": "Completed installation recovery can accept cancellation and discard its journal.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: completed recovery preserves journal on cancellation; shared re-review discovery by both architecture profiles."
+    },
+    {
+      "finding_id": "TEST-02",
+      "severity": 2,
+      "issue": "Unix inherited-pipe tests lack a direct descendant-death and reachability oracle.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Accepted nonblocking coverage suggestion; owner AL-60 maintainer for Unix descendant-death/reachability fixture follow-up; no current leak demonstrated."
+    }
+  ]
+}

@@ -39,6 +39,106 @@ func writeCapturePolicy(t *testing.T, f captureGenerationFixture, enabled bool, 
 		t.Fatal(err)
 	}
 }
+
+// Successful integration cases exercise real generation, not a deliberately
+// exhausted worker budget. Expiry tests configure their short policy explicitly.
+func writeCaptureSuccessfulPublicationPolicy(t *testing.T, project, state string, detailed bool) {
+	t.Helper()
+	body := fmt.Sprintf("telemetry:\n  capture:\n    enabled: true\n    state_dir: %q\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 10000\n    pass_timeout_ms: 5000\n", state)
+	if detailed {
+		body += "    detailed_report: true\n"
+	}
+	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.local.yaml"), []byte(body), 0600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestCapturePublicationBudgetExpiryRetainsPendingAndRecovers(t *testing.T) {
+	t.Setenv("XDG_CACHE_HOME", t.TempDir())
+	f := newCaptureGenerationFixture(t)
+	f.output = filepath.Join(f.project, "records", "TEST-100", "agentic_metrics.json")
+	prepareCaptureOwner(t, f, "root", "TEST-100", 11)
+	f.generate(t)
+	before := readCaptureFile(t, f.output)
+	f.writeAt(t, 29, "2026-01-01T00:00:03Z")
+	store, err := capture.OpenProject(f.state, f.project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := store.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
+	if err = store.RequestPublication(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	requested, err := store.PublicationRequest(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Holding actual publication ownership makes generation unable to commit,
+	// regardless of how quickly the machine starts the generator subprocess.
+	publication, err := capture.AcquirePublication(context.Background(), f.output)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if publication != nil {
+			if err := publication.Close(); err != nil {
+				t.Error(err)
+			}
+		}
+	}()
+	policy := fmt.Sprintf("telemetry:\n  capture:\n    enabled: true\n    state_dir: %q\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 1000\n    pass_timeout_ms: 100\n", f.state)
+	if err = os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte(policy), 0600); err != nil {
+		t.Fatal(err)
+	}
+	out, err := runCaptureNative(t, f.project, "", "capture", "worker", "--repo", f.project, "--state-dir", f.state)
+	if err == nil || !bytes.Contains(out, []byte("native worker lifetime exhausted")) {
+		t.Fatalf("blocked publication did not exhaust its intentional budget: %v %s", err, out)
+	}
+	if !bytes.Equal(before, readCaptureFile(t, f.output)) {
+		t.Fatal("budget expiry replaced the accepted ledger")
+	}
+	pending, err := store.PublicationRequest(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pending.Generation < requested.Generation || pending.Acknowledged != requested.Acknowledged || pending.Generation <= pending.Acknowledged {
+		t.Fatalf("expired pass swallowed or acknowledged pending work: before=%+v after=%+v", requested, pending)
+	}
+	worker, err := capture.AcquireWorker(f.coordination(t))
+	if err != nil || worker == nil {
+		t.Fatalf("expired worker retained ownership: %v", err)
+	}
+	if err = worker.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err = publication.Close(); err != nil {
+		t.Fatal(err)
+	}
+	publication = nil
+	writeCaptureSuccessfulPublicationPolicy(t, f.project, f.state, false)
+	if out, err = runCaptureNative(t, f.project, "", "capture", "worker", "--repo", f.project, "--state-dir", f.state); err != nil {
+		t.Fatalf("pending generation recovery failed: %v %s", err, out)
+	}
+	recovered, err := store.PublicationRequest(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if recovered.Generation != recovered.Acknowledged || recovered.Acknowledged < pending.Generation {
+		t.Fatalf("successful recovery did not acknowledge retained generation: %+v", recovered)
+	}
+	assertCaptureRootInput(t, f.ledger(t), 29)
+	worker, err = capture.AcquireWorker(f.coordination(t))
+	if err != nil || worker == nil {
+		t.Fatalf("recovery worker retained ownership after idle shutdown: %v", err)
+	}
+	if err = worker.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
 func prepareCaptureOwner(t *testing.T, f captureGenerationFixture, id, ticket string, tokens int) string {
 	t.Helper()
 	path := filepath.Join(f.store, "sessions", id+".jsonl")

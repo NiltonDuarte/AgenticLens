@@ -184,10 +184,7 @@ func TestCaptureAutomaticSharedStoreAndTicketStayInExactProjects(t *testing.T) {
 	base := t.TempDir()
 	fixtures := []captureGenerationFixture{first, second}
 	for index, f := range fixtures {
-		local := []byte("telemetry:\n  capture:\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 200\n    max_lifetime_ms: 1000\n")
-		if err := os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), local, 0600); err != nil {
-			t.Fatal(err)
-		}
+		writeCaptureSuccessfulPublicationPolicy(t, f.project, base, false)
 		id := fmt.Sprintf("project-%d", index)
 		path := filepath.Join(f.store, "sessions", id+".jsonl")
 		body := fmt.Sprintf(`{"type":"session_meta","payload":{"id":%q,"cwd":%q}}

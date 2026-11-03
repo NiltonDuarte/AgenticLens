@@ -186,6 +186,9 @@ func TestCaptureLaterAgentChannelReportsBoundPublicationFailure(t *testing.T) {
 
 	// A confirmed source failure remains visible even when publishing retained
 	// available facts succeeds, and a budget-pending retry cannot clear it.
+	// This phase must complete real generation, unlike the earlier intentionally
+	// failing publication phase with its short lifetime/pass policy.
+	writeCaptureSuccessfulPublicationPolicy(t, f.project, f.state, false)
 	sourceBody := readCaptureFile(t, path)
 	if err = os.Remove(path); err != nil {
 		t.Fatal(err)
