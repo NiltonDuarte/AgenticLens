@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "SOL-1",
+      "severity": 5,
+      "issue": "Impossible calendar timestamps were normalized into fabricated dates.",
+      "reporters": [
+        {
+          "persona": "reviewer",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: shared historical validation preserves invalid raw text and omits invalid datetime; regression tests and both profiles verified."
+    }
+  ]
+}

@@ -1,0 +1,477 @@
+{
+  "schema_version": 5,
+  "ticket_id": "AL-61",
+  "ticket_title": "Show full local historical timestamps in Ticket Deep Dive",
+  "ticket_type": "feat",
+  "started_at": "2026-11-03T17:40:07.424Z",
+  "completed_at": "2026-11-03T19:56:23.958092+00:00",
+  "updated_at": "2026-11-03T19:56:23.958092+00:00",
+  "code": {
+    "lines_added": 160,
+    "lines_deleted": 17,
+    "test_lines_added": 99,
+    "test_lines_deleted": 4,
+    "prod_lines_added": 61,
+    "prod_lines_deleted": 13,
+    "files_changed": 10,
+    "sdlc_iterations": 13
+  },
+  "sessions": [
+    {
+      "id": "01a1a27f-326c-79b1-bb26-5c71de3375b1",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "",
+          "model": "gpt-6.1-sol",
+          "started_at": "2026-11-03T17:40:08.242Z",
+          "completed_at": "2026-11-03T19:56:14.741Z",
+          "active_duration_seconds": 1312,
+          "turns": 5,
+          "tokens": {
+            "input": 298531,
+            "output": 28005,
+            "cache_read": 13588480,
+            "reasoning": 5391,
+            "peak_context": 141643
+          },
+          "cost_usd": null,
+          "cost_evidence": {
+            "state": "unavailable",
+            "known_subtotal_usd": null
+          },
+          "compactions": 0,
+          "user_iterations": 13
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 85,
+          "errors": 7
+        },
+        {
+          "name": "followup_task",
+          "calls": 3,
+          "errors": 0
+        },
+        {
+          "name": "send_message",
+          "calls": 10,
+          "errors": 0
+        },
+        {
+          "name": "sleep",
+          "calls": 10,
+          "errors": 0
+        },
+        {
+          "name": "spawn_agent",
+          "calls": 9,
+          "errors": 0
+        },
+        {
+          "name": "wait_agent",
+          "calls": 22,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
+    },
+    {
+      "id": "01a1a27f-5e46-7410-b31a-be93ba0401ac",
+      "parent_id": "01a1a27f-326c-79b1-bb26-5c71de3375b1",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "planner",
+          "model": "gpt-6.1-sol",
+          "started_at": "2026-11-03T17:40:18.689Z",
+          "completed_at": "2026-11-03T17:41:36.094Z",
+          "active_duration_seconds": 77,
+          "turns": 1,
+          "tokens": {
+            "input": 59593,
+            "output": 2675,
+            "cache_read": 360192,
+            "reasoning": 33,
+            "peak_context": 61200
+          },
+          "cost_usd": null,
+          "cost_evidence": {
+            "state": "unavailable",
+            "known_subtotal_usd": null
+          },
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 7,
+          "errors": 1
+        }
+      ],
+      "anomalies": []
+    },
+    {
+      "id": "01a1a280-bd1e-7340-929a-59edc79a5430",
+      "parent_id": "01a1a27f-326c-79b1-bb26-5c71de3375b1",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "coder",
+          "model": "gpt-6.1-sol",
+          "started_at": "2026-11-03T17:41:48.508Z",
+          "completed_at": "2026-11-03T17:48:22.431Z",
+          "active_duration_seconds": 158,
+          "turns": 2,
+          "tokens": {
+            "input": 107633,
+            "output": 4773,
+            "cache_read": 1608704,
+            "reasoning": 778,
+            "peak_context": 82412
+          },
+          "cost_usd": null,
+          "cost_evidence": {
+            "state": "unavailable",
+            "known_subtotal_usd": null
+          },
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 11,
+          "errors": 0
+        },
+        {
+          "name": "send_message",
+          "calls": 7,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
+    },
+    {
+      "id": "01a1a281-613f-7fd1-8918-2d7847fc3f1a",
+      "parent_id": "01a1a27f-326c-79b1-bb26-5c71de3375b1",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "tester",
+          "model": "gpt-6.1-sol",
+          "started_at": "2026-11-03T17:42:30.695Z",
+          "completed_at": "2026-11-03T17:48:52.427Z",
+          "active_duration_seconds": 282,
+          "turns": 2,
+          "tokens": {
+            "input": 133651,
+            "output": 5973,
+            "cache_read": 2389760,
+            "reasoning": 785,
+            "peak_context": 85588
+          },
+          "cost_usd": null,
+          "cost_evidence": {
+            "state": "unavailable",
+            "known_subtotal_usd": null
+          },
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 13,
+          "errors": 1
+        },
+        {
+          "name": "send_message",
+          "calls": 9,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
+    },
+    {
+      "id": "01a1a283-9c15-74c1-be26-747e97958030",
+      "parent_id": "01a1a27f-326c-79b1-bb26-5c71de3375b1",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "reviewer",
+          "model": "gpt-6.1-sol",
+          "started_at": "2026-11-03T17:44:56.745Z",
+          "completed_at": "2026-11-03T17:47:53.186Z",
+          "active_duration_seconds": 176,
+          "turns": 1,
+          "tokens": {
+            "input": 70383,
+            "output": 5516,
+            "cache_read": 721280,
+            "reasoning": 1457,
+            "peak_context": 73007
+          },
+          "cost_usd": null,
+          "cost_evidence": {
+            "state": "unavailable",
+            "known_subtotal_usd": null
+          },
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 12,
+          "errors": 1
+        },
+        {
+          "name": "send_message",
+          "calls": 2,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
+    },
+    {
+      "id": "01a1a283-af6c-7162-a103-9548bdbdfac0",
+      "parent_id": "01a1a27f-326c-79b1-bb26-5c71de3375b1",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "reviewer",
+          "model": "gpt-6-luna",
+          "started_at": "2026-11-03T17:45:01.607Z",
+          "completed_at": "2026-11-03T17:45:54.888Z",
+          "active_duration_seconds": 53,
+          "turns": 1,
+          "tokens": {
+            "input": 42925,
+            "output": 3146,
+            "cache_read": 404352,
+            "reasoning": 219,
+            "peak_context": 40735
+          },
+          "cost_usd": null,
+          "cost_evidence": {
+            "state": "unavailable",
+            "known_subtotal_usd": null
+          },
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 11,
+          "errors": 0
+        },
+        {
+          "name": "send_message",
+          "calls": 1,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
+    },
+    {
+      "id": "01a1a286-ea21-7a93-bd0d-68d3b710ecd1",
+      "parent_id": "01a1a27f-326c-79b1-bb26-5c71de3375b1",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "reviewer",
+          "model": "gpt-6.1-sol",
+          "started_at": "2026-11-03T17:48:33.263Z",
+          "completed_at": "2026-11-03T17:50:33.779Z",
+          "active_duration_seconds": 121,
+          "turns": 1,
+          "tokens": {
+            "input": 34135,
+            "output": 4312,
+            "cache_read": 462592,
+            "reasoning": 804,
+            "peak_context": 55930
+          },
+          "cost_usd": null,
+          "cost_evidence": {
+            "state": "unavailable",
+            "known_subtotal_usd": null
+          },
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 10,
+          "errors": 0
+        },
+        {
+          "name": "send_message",
+          "calls": 2,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
+    },
+    {
+      "id": "01a1a287-0eb8-7692-925d-df396eaa7fa3",
+      "parent_id": "01a1a27f-326c-79b1-bb26-5c71de3375b1",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "reviewer",
+          "model": "gpt-6-luna",
+          "started_at": "2026-11-03T17:48:42.677Z",
+          "completed_at": "2026-11-03T17:51:22.099Z",
+          "active_duration_seconds": 159,
+          "turns": 1,
+          "tokens": {
+            "input": 55920,
+            "output": 3940,
+            "cache_read": 563072,
+            "reasoning": 1196,
+            "peak_context": 49379
+          },
+          "cost_usd": null,
+          "cost_evidence": {
+            "state": "unavailable",
+            "known_subtotal_usd": null
+          },
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 9,
+          "errors": 0
+        },
+        {
+          "name": "send_message",
+          "calls": 1,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
+    },
+    {
+      "id": "01a1a2f6-46fd-7db0-8868-88e1e6163abd",
+      "parent_id": "01a1a27f-326c-79b1-bb26-5c71de3375b1",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "reviewer",
+          "model": "gpt-6.1-sol",
+          "started_at": "2026-11-03T19:50:11.497Z",
+          "completed_at": "2026-11-03T19:51:49.885Z",
+          "active_duration_seconds": 98,
+          "turns": 1,
+          "tokens": {
+            "input": 67930,
+            "output": 4708,
+            "cache_read": 507648,
+            "reasoning": 483,
+            "peak_context": 70587
+          },
+          "cost_usd": null,
+          "cost_evidence": {
+            "state": "unavailable",
+            "known_subtotal_usd": null
+          },
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 12,
+          "errors": 0
+        },
+        {
+          "name": "send_message",
+          "calls": 2,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
+    },
+    {
+      "id": "01a1a2f6-5912-7890-ad62-caf9bf7887d6",
+      "parent_id": "01a1a27f-326c-79b1-bb26-5c71de3375b1",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "reviewer",
+          "model": "gpt-6-luna",
+          "started_at": "2026-11-03T19:50:16.126Z",
+          "completed_at": "2026-11-03T19:54:58.997Z",
+          "active_duration_seconds": 76,
+          "turns": 2,
+          "tokens": {
+            "input": 50921,
+            "output": 3963,
+            "cache_read": 579328,
+            "reasoning": 839,
+            "peak_context": 48423
+          },
+          "cost_usd": null,
+          "cost_evidence": {
+            "state": "unavailable",
+            "known_subtotal_usd": null
+          },
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {
+          "name": "command",
+          "calls": 10,
+          "errors": 0
+        },
+        {
+          "name": "send_message",
+          "calls": 2,
+          "errors": 0
+        }
+      ],
+      "anomalies": []
+    }
+  ],
+  "anomalies": [
+    {
+      "rule_id": "SUBAGENT_REWORK_LOOP",
+      "severity": "WARNING",
+      "context": {
+        "role": "coder",
+        "secondary_role": "tester",
+        "count": 4,
+        "threshold": "3"
+      }
+    }
+  ]
+}
