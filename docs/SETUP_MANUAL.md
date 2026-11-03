@@ -13,165 +13,42 @@ Use this guide to install, configure, and operate AgenticLens in an adopting rep
 
 ## 1. Quick Start and Setup Pathways
 
-AgenticLens offers two primary setup pathways: an autonomous agentic setup via a shared skill manifest, and a direct manual developer installation using official precompiled release archives. Target repositories never need to compile code from source or install Go, Node.js, npm, or C compiler toolchains.
+Use the canonical [setup skill](../.agents/skills/agentic-lens-setup/SKILL.md) for complete bundle installation, approval boundaries, full configuration, normal harness trust and actual callback/binding/source verification. Install official precompiled releases only; adopting projects need no Go/Node/Python/yq runtime.
 
-### 1.1 Pathway A: Agentic Distribution and Setup via SKILL.md
+Select one exact published release. Shared `.agenticlens-config.yaml` owns `agenticlens.version`; the user-level PATH wrapper resolves that pin from the project/subdirectory and detects the executing platform. Local `agenticlens.install_root` customizes cache placement independently of telemetry.capture.state_dir. Ordinary commands and integrations are offline and never install a missing release.
 
-#### Step 1: Share Skill Reference with Your Agent
-Provide your autonomous coding agent in Codex or OpenCode with the reference to the AgenticLens setup skill. You can either:
-- Point the agent directly to the canonical remote URL:
-  `https://raw.githubusercontent.com/NiltonDuarte/AgenticLens/main/.agents/skills/agentic-lens-setup/SKILL.md`
-- Or copy `.agents/skills/agentic-lens-setup/SKILL.md` into your repository.
-
-Prompt your agent:
-```
-Read the instructions at https://raw.githubusercontent.com/NiltonDuarte/AgenticLens/main/.agents/skills/agentic-lens-setup/SKILL.md and set up AgenticLens in this repository.
+```sh
+bash .agents/skills/agentic-lens-setup/scripts/install.sh --version <EXACT_TAG> --dest <PROJECT>
+bash .agents/skills/agentic-lens-setup/scripts/download.sh --project <PROJECT> --dry-run
+bash .agents/skills/agentic-lens-setup/scripts/download.sh --project <PROJECT>
+agentic-lens --al-project <PROJECT> version --short
 ```
 
-#### Step 2: Install Both Skills and the Native Binary
+The first command bootstraps both setup/operator skills from the selected tag. Restore missing setup scripts from that tag after reviewing them. Existing configurations/files are preserved; do not fetch moving-main wrappers or use latest URLs. For a new project use explicit --init-config --version only as a bootstrap scaffold; complete full native init with project/source roots/ticket prefixes before claiming publication readiness. Never overwrite arbitrary project/local config using --force.
 
-Follow the [complete setup manifest](../.agents/skills/agentic-lens-setup/SKILL.md), section 1, to install setup/repair scripts alongside the operator skill from one selected official release tag. The bundle includes a launcher at `.agents/skills/agentic-lens-operator/scripts/agentic-lens.sh`, outside binary storage. Choose a release containing the installer and all manifest files; older releases may not include them. The installer refuses differing existing files, so review local edits before upgrading a skill bundle.
-
-After approving the binary download, run:
-
-```bash
-bash .agents/skills/agentic-lens-setup/scripts/download.sh
-# Optional: pre-download the host binary from a Linux container.
-bash .agents/skills/agentic-lens-setup/scripts/download.sh --include-host darwin-arm64
-```
-
-The downloader uses the recorded release tag and defaults to `operator/bin`. The launcher selects a local native binary without fetching it. Missing binaries require explicit repair. Git tracking and ignore choices belong to the repository owner; installation does not create ignore rules or stage files. See [worktree recovery](#66-worktrees-and-containerhost-platforms).
-
-#### Step 3: Verify Binary Execution
-The agent validates that the executable operates cleanly on the host system:
-```bash
-bash .agents/skills/agentic-lens-operator/scripts/agentic-lens.sh version --json
-```
-Expected output:
-```json
-{
-  "version": "v1.0.0",
-  "commit": "a1b2c3d",
-  "build_date": "2026-10-22T12:00:00Z"
-}
-```
-
-#### Step 4: Project Scaffolding
-The agent queries the developer or inspects the codebase to determine:
-- Project Name (e.g. `BillingService`)
-- Ticket prefixes (e.g. `BILL,PAY,GEN`)
-- Monitored source code folders (e.g. `services,pkg,cmd`)
-- Workspaces directory (default: `workspaces`)
-
-The agent runs `init` to write shared `.agenticlens-config.yaml` and machine-local `.agenticlens-config.local.yaml`:
-```bash
-bash .agents/skills/agentic-lens-operator/scripts/agentic-lens.sh init \
-  --project-name "BillingService" \
-  --ticket-prefixes "BILL,PAY,GEN" \
-  --src-folders "services,pkg,cmd" \
-  --workspaces "workspaces"
-```
-
-#### Step 5: Reviewed Lifecycle Setup and Agent Binding
-
-Binary retrieval and configuration are binary-only readiness; they do not install lifecycle capture. Follow the [lifecycle installation step](#step-3-install-lifecycle-capture-and-verify-agent-binding) below using the selected harness's exact source store and native executable. Present the additive hook/plugin changes and the small binding/publication block before writing them; explicit approval already covering those exact changes satisfies the gate. Do not modify third-party skills/personas or require reviewers to read instructions to register. Harness trust remains user-controlled.
-
----
-
-### 1.2 Pathway B: Manual Developer Installation via GitHub Releases
-
-Developers who prefer direct manual installation can install the binary, configure the project, then separately enable and verify lifecycle capture.
-
-#### Step 1: Install Wrapper and Platform Binary
-Navigate to official GitHub Releases:
-`https://github.com/NiltonDuarte/AgenticLens/releases`
-
-Standalone precompiled binaries are distributed directly with embedded frontend assets and runtime dependencies. No archive extraction tools (`tar`, `unzip`) or compilation toolchains are required.
-
-The direct retrieval examples below are for a fresh installation. For upgrades of an existing capture-aware handler, use the guarded downloader or wrapper update described in [upgrade and recovery](#lifecycle-upgrade-and-recovery); do not overwrite the working native binary with an unchecked download.
-
-Download via `curl`:
-```bash
-mkdir -p ./bin
-
-# Decide whether to track or ignore installed files under your repository policy.
-
-# Install multi-platform wrapper script
-curl -fsSL -o ./bin/agentic-lens "https://raw.githubusercontent.com/NiltonDuarte/AgenticLens/main/scripts/agentic-lens-wrapper.sh"
-chmod +x ./bin/agentic-lens
-
-# Example for Linux amd64
-curl -fsSL -o ./bin/agentic-lens-linux-amd64 "https://github.com/NiltonDuarte/AgenticLens/releases/latest/download/agentic-lens-linux-amd64"
-chmod +x ./bin/agentic-lens-linux-amd64
-
-# Example for macOS Apple Silicon
-curl -fsSL -o ./bin/agentic-lens-darwin-arm64 "https://github.com/NiltonDuarte/AgenticLens/releases/latest/download/agentic-lens-darwin-arm64"
-chmod +x ./bin/agentic-lens-darwin-arm64
-```
-
-For automated installation, use the complete setup bootstrap in section 1.1, then run its installed downloader with `--dest ./bin` if desired. The contributor entrypoint `scripts/download-agentic-lens.sh` delegates to that bundled downloader and requires its checkout dependencies; it is not a standalone script to pipe from the web.
-
-On Windows (PowerShell):
-```powershell
-New-Item -ItemType Directory -Force -Path .\bin
-Invoke-WebRequest -Uri "https://github.com/NiltonDuarte/AgenticLens/releases/latest/download/agentic-lens-windows-amd64.exe" -OutFile ".\bin\agentic-lens-windows-amd64.exe"
-Copy-Item ".\bin\agentic-lens-windows-amd64.exe" ".\bin\agentic-lens.exe"
-```
-
-#### Step 2: Scaffold Configuration and Launch Dashboard
-Verify the binary:
-```bash
-./bin/agentic-lens version --short
-```
-
-Initialize your repository configuration:
-```bash
-./bin/agentic-lens init \
-  --project-name "MyProject" \
-  --ticket-prefixes "PROJ,GEN" \
-  --src-folders "src,pkg" \
-  --workspaces "workspaces"
-```
-
-Start the embedded dashboard:
-```bash
-./bin/agentic-lens server --port 8085
-```
-Open `http://localhost:8085` in your browser to view the Fleet Overview and Live Observability feeds.
-
-#### Step 3: Install Lifecycle Capture and Verify Agent Binding
-
-A running dashboard or a successful binary/version command does not establish automatic capture. Select Codex or OpenCode explicitly, verify that harness's source path from its actual configuration, and choose a local ignored state directory. `--store` is an absolute Codex home or OpenCode SQLite database path; the placeholders below must be replaced with verified values. Never infer session ownership or ticket context from a checkout, branch, role or nearby timestamps.
-
-Use the host-native release executable, not the updating wrapper. For Linux amd64:
-
-```bash
-./bin/agentic-lens-linux-amd64 capture install --source "<codex-or-opencode>" \
-  --store "<ABSOLUTE_SOURCE_PATH>" --repo "<ABSOLUTE_REPOSITORY_PATH>" \
-  --state-dir "<ABSOLUTE_LOCAL_CAPTURE_STATE_PATH>" --dry-run
-# Review the exact additive changes; after approval repeat without --dry-run.
-./bin/agentic-lens-linux-amd64 capture status --state-dir "<ABSOLUTE_LOCAL_CAPTURE_STATE_PATH>"
-```
-
-On macOS use the downloaded `agentic-lens-darwin-arm64` or `agentic-lens-darwin-amd64` native executable. On Windows PowerShell, use the same native implementation:
+The POSIX stable wrapper defaults to ~/.local/bin/agentic-lens. Native Windows uses ~/.agenticlens/agentic-lens.ps1 and the shipped native installer:
 
 ```powershell
-& ".\bin\agentic-lens-windows-amd64.exe" capture install --source "<codex-or-opencode>" --store "<ABSOLUTE_SOURCE_PATH>" --repo "<ABSOLUTE_REPOSITORY_PATH>" --state-dir "<ABSOLUTE_LOCAL_CAPTURE_STATE_PATH>" --dry-run
-# Review the exact additive changes; after approval repeat without --dry-run.
-& ".\bin\agentic-lens-windows-amd64.exe" capture status --state-dir "<ABSOLUTE_LOCAL_CAPTURE_STATE_PATH>"
+powershell.exe -NoLogo -NoProfile -NonInteractive -File .\.agents\skills\agentic-lens-setup\scripts\download.ps1 -Project <PROJECT> -DryRun
+powershell.exe -NoLogo -NoProfile -NonInteractive -File .\.agents\skills\agentic-lens-setup\scripts\download.ps1 -Project <PROJECT>
+powershell.exe -NoLogo -NoProfile -NonInteractive -File <STABLE_WRAPPER> --al-project <PROJECT> version --short
 ```
 
-The installer preserves unrelated hooks and records ownership for reinstall/removal. It does not grant harness trust. Review Codex hooks using its own trust controls and verify OpenCode plugin loading without bypassing trust or overwriting user settings. The agent must receive a session-specific request and answer with the ticket explicitly provided by the user: Codex supplies an exact native binding command and challenge; OpenCode exposes a binding tool whose session identity comes from the runtime. Missing ticket context remains unassigned and requires a question to the user, not a guess. A callback exit code or installed configuration alone is insufficient verification.
+Native binaries coexist in ~/.agenticlens/bin/<version>/<os-arch>/<artifact>. Explicit installation verifies checksum/version and required hook capability, stages and rolls back changes; it preserves other versions and edited wrappers. Offline local installation requires the expected SHA256. Installers report the required user PATH entry without changing profiles. Authorize permanent PATH changes separately. Windows local PS5.1/PE invocation is demonstrated; UNC script authorization, generic console cancellation and untested platforms remain limitations. No trust/policy bypass is allowed.
 
-Use the canonical [capture CLI and binding instructions](../.agents/skills/agentic-lens-operator/references/cli.md#capture-native-release-handler), [local state/support limits](../.agents/skills/agentic-lens-operator/references/configuration.md#lifecycle-capture-state-and-support) and [setup approval flow](../.agents/skills/agentic-lens-setup/SKILL.md#step-25-additive-lifecycle-setup-and-agent-binding). These cover the actual agent round trip, parent/independent roots, degraded states, bounded reconciliation, crash recovery and owned disable/uninstall. No additional Go/Node runtime is installed in the adopting repository; OpenCode glue uses the existing harness runtime. Keep state and raw transcripts out of Git. After explicit binding, callbacks schedule native automatic ledger/summary publication. When detailed reports are enabled, publication also writes a digest-bound coverage report with cutoff/limits. Manual generation is a recovery fallback; publication does not commit files.
+### Reviewed lifecycle installation and verification
 
-##### Lifecycle upgrade and recovery
+```sh
+agentic-lens --al-offline --al-project <PROJECT> capture install --repo <PROJECT> --source <codex-or-opencode> --store <ABSOLUTE_SOURCE_STORE> --dry-run
+```
 
-The shipped downloader (`--force --version TAG`, including `--local-bin`) stages the native candidate and retains the working handler's capture protocol before replacement. Opt-in first capture setup requires the matching handler protocol too. If later native setup fails, the downloader restores its prior native binary/wrapper while native setup rolls back owned configuration. Wrapper `update --version TAG` stages candidates and rejects an incompatible native handler before modifying working binaries. Neither path changes harness trust. In capture-aware installations, existing foreign-platform binaries are preserved with a diagnostic; verify and upgrade each on its native host instead of claiming compatibility from this machine.
+Review exact additive hooks/plugin/state-ignore changes, then repeat without --dry-run under existing applicable approval. Every installed lifecycle/Git callback uses the stable common wrapper with explicit project context. Internal workers retain their selected native executable/version for a pass. Capture install, version output and files prove installation only: verify actual normal harness trust, callback, exact session/request, explicit agent response and available source extraction through status/diagnostics/verify. Independent roots require independent bindings; unknown ownership remains unassigned.
 
-For direct PowerShell upgrades without the POSIX wrapper, keep the existing native executable, download the candidate under a different path, compare successful `capture protocol` output with the existing handler and only then replace it. Preserve a backup until any reviewed `capture install` upgrade succeeds; restore that backup if setup fails. Do not use the initial-install `Invoke-WebRequest -OutFile` example to overwrite an active handler. After every upgrade inspect native `capture status`, preview owned installation changes with the original source/state paths and verify an actual callback/agent binding exchange. Unsupported or unavailable runtime evidence remains degraded, not complete capture.
+After a shared pin change, explicitly install the release, preview owned setup refresh with the original store/state and repeat live verification. Old in-flight workers may finish; other cache versions remain intact. No automatic template/trust changes, repository updater or direct-native callback bypass is supported. The optional install-check/uninstall-check integration is separately opt-in and advisory; it honors hooksPath, derives the committing worktree and refuses arbitrary-hook overwrites. No adopting-project CI/global Git settings are changed.
 
----
+Publication produces ledger plus SUMMARY.md, preserving available facts and explaining coverage/freshness/failure. Detailed reconciliation/publication evidence stays in local database diagnostics; old detailed_report keys are deprecated/no-effect and old sidecars remain obsolete, never automatically deleted. Local state deletion can lose bindings and pending observations; the native home cache does not move the capture database.
+
+See [CLI operations](../.agents/skills/agentic-lens-operator/references/cli.md) and [release/configuration profile](../.agents/skills/agentic-lens-operator/references/configuration.md#shared-release-authority-and-user-entrypoint).
 
 ## 2. Agnostic Adoption for OpenCode Projects
 
@@ -223,6 +100,14 @@ Interpret ratios using the configured classification and counting basis. Test he
 ```yaml
 # AgenticLens Global Configuration Reference
 project_name: PaymentGateway
+
+agenticlens:
+  version: v1.2.3 # example; replace with the selected published release
+
+telemetry:
+  capture:
+    state_dir: .agenticlens-capture
+    commit_warning: true
 
 ticket:
   prefixes:
@@ -365,7 +250,7 @@ Verify automatic publication and visible coverage before staging task-owned deli
 For manual recovery, select the actual harness and exact root session ID or pass a unique execution nonce directly to `generate`:
 
 ```bash
-./bin/agentic-lens generate \
+agentic-lens generate \
   --nonce <GENERATED_NONCE> \
   --ticket-id "<TICKET_ID>" \
   --ticket-type "<CONVENTIONAL_TYPE>" \
@@ -416,7 +301,7 @@ Below is the standard policy block that can be added to your repository's OpenCo
 4. Automatic Telemetry Publication:
    - Answer the native lifecycle session-specific binding request with the explicitly supplied ticket and title; never infer ticket ownership.
    - Verify automatic ledger/summary publication and coverage before committing. Manual `generate` is a recovery fallback, using the selected harness and an exact session ID or literal nonce.
-   - When detailed reports are enabled, verify `capture_report.json` against the ledger digest. When disabled, use compact summary coverage; retain old reports as stale and do not delete them automatically.
+   - Verify SUMMARY.md coverage and local capture diagnostics. No sidecar is produced; retained older reports are obsolete and require explicit owner removal.
    - Stage only reviewed task-owned deliverables and telemetry together. Keep raw transcripts and local capture state out of Git.
 
 ```
@@ -479,13 +364,9 @@ Prints binary version, build metadata, and schema version.
   - `--json` (Optional): Output metadata formatted as JSON.
   - `--short` (Optional): Output version string only.
 
-#### `agentic-lens update`
-Upgrades installed platform binaries to the latest (or specified) official release from GitHub Releases.
-- Flags:
-  - `--version <tag>` (Optional, Default: `latest`): Target release tag to install (e.g. `v1.0.1`).
-- Notes:
-  - Executed directly by the multi-platform wrapper script (`bin/agentic-lens`).
-  - Synchronously refreshes all installed platform binaries (`agentic-lens-*`) in the binary directory and updates the version sentinel.
+#### Explicit release installation
+
+Change the shared exact pin as an authorized project change, then use setup download.sh --project PROJECT (native Windows download.ps1 -Project PROJECT). Runtime update performs no installation. Explicit --force repairs only the selected version/platform leaf; native checksum/version/protocol checks and rollback preserve existing working files. Preview owned capture refresh after a pin/template switch; binary installation alone does not establish health.
 
 #### `agentic-lens backfill`
 Batch recomputes git diff metrics, recalculates token costs against updated model pricing, or upgrades schema across historical workspace ledgers.
@@ -565,10 +446,10 @@ AgenticLens automatically performs tilde expansion (`~`) on Linux and macOS, res
 ### 6.3 Executable Permissions and macOS Quarantine Flags
 
 When installing precompiled binaries manually on Unix systems (Linux and macOS):
-- Ensure the executable bit is set: `chmod +x ./bin/agentic-lens`.
+- Ensure the executable bit is set: `chmod +x agentic-lens`.
 - If Gatekeeper blocks execution on macOS, clear quarantine flags:
   ```bash
-  xattr -d com.apple.quarantine ./bin/agentic-lens
+  xattr -d com.apple.quarantine agentic-lens
   ```
 - Store the binary in the selected installation directory (such as `./bin/` or `.agents/skills/agentic-lens-operator/bin/`). The repository owner decides what to track or ignore; installation/repair preserves that policy.
 
@@ -593,22 +474,13 @@ When extracting commit diff metrics, AgenticLens compares the active branch agai
 AgenticLens resolves workspace directories relative to the current working directory or git repository root:
 - Paths with spaces (e.g. `my workspaces/ticket 1`) are fully supported by wrapping arguments in quotes:
   ```bash
-  ./bin/agentic-lens --workspaces "my workspaces"
+  agentic-lens --workspaces "my workspaces"
   ```
 - Always verify that the configured `workspaces.dir` in `.agenticlens-config.yaml` matches the directory used in CLI commands and agent prompts.
 
 ### 6.6 Worktrees and Container/Host Platforms
 
-Each worktree has its own installation paths. Git carries only files tracked in that worktree's revision; the owner chooses whether to track skills, scripts, native binaries, or none of them. AgenticLens does not impose that choice.
-
-- If scripts exist but the current host binary is absent, explicitly run `bash .agents/skills/agentic-lens-setup/scripts/download.sh`. The recorded release tag controls the download. If `RELEASE_VERSION` is absent or empty, pass the intended `--version <RELEASE_TAG>` explicitly; installed repair refuses to assume `latest`. Use `--local-bin <native-prebuilt-path>` for offline repair when a local executable is available; this requires no remote release selection. Explicit repair also restores execute permission on an existing native file without replacing its contents or downloading it.
-- If setup or launcher files are absent too, follow the complete bootstrap in [the setup manifest](../.agents/skills/agentic-lens-setup/SKILL.md), section 1.2. If that manifest is missing locally, read its public URL from section 1.1. Do not borrow binaries or machine settings from another worktree.
-- Run `bash .agents/skills/agentic-lens-operator/scripts/agentic-lens.sh` for normal operation. It chooses Linux/macOS amd64/arm64 or Windows amd64 (Git Bash), preserves the caller's current directory, and does not download or check for updates. Native PowerShell can directly invoke `operator/bin/agentic-lens-windows-amd64.exe`.
-- A Linux container and a macOS host need separate native artifacts. Explicitly use `--include-host darwin-arm64` during download when both are needed. No Go or Node toolchain is required.
-- Diagnose missing `.agenticlens-config.local.yaml` separately. Keep shared configuration intact, select the harness with `--source`, and specify this machine's `--codex-home` or `--db-path` where appropriate. Binary repair must not rerun `init` over an existing project.
-- The legacy `bin/agentic-lens` wrapper remains supported and retains its automatic missing-binary download and background version-check behavior. `AGENTIC_LENS_NO_UPDATE_CHECK=1` disables those background checks. Its `update` command remains available for legacy callers. With the new launcher, authorize an upgrade explicitly using setup `download.sh --version <RELEASE_TAG> --force`.
-
----
+The stable user wrapper is shared; each physical configured project/worktree selects its own pin. No repository executable is required. Missing files in another worktree do not justify init --force. Resolve the nearest shared YAML without crossing .git and use explicit --al-project when cwd differs from native --repo. Install missing leaves explicitly; ordinary dispatch/hooks never fetch. Containers and hosts select their executing platform and may cache separate artifacts. Existing repository binaries/wrappers are preserved during owned migration. Git tracking and ignore policy stay with the owner.
 
 ## Appendix: Platform Architecture and Core Concepts
 
@@ -634,8 +506,8 @@ Preserve the old ledger first. Run `generate` for each known root session ID wit
 
 ```bash
 cp workspaces/<TICKET_ID>/agentic_metrics.json workspaces/<TICKET_ID>/agentic_metrics.unscoped-backup.json
-./bin/agentic-lens generate --source codex --session-id <ROOT_THREAD_ID_1> --ticket-id <TICKET_ID> --ticket-title "<TICKET_TITLE>" --ticket-type chore --json-output workspaces/<TICKET_ID>/agentic_metrics.recovered.json
-./bin/agentic-lens generate --source codex --session-id <ROOT_THREAD_ID_2> --ticket-id <TICKET_ID> --ticket-title "<TICKET_TITLE>" --ticket-type chore --json-output workspaces/<TICKET_ID>/agentic_metrics.recovered.json
+agentic-lens generate --source codex --session-id <ROOT_THREAD_ID_1> --ticket-id <TICKET_ID> --ticket-title "<TICKET_TITLE>" --ticket-type chore --json-output workspaces/<TICKET_ID>/agentic_metrics.recovered.json
+agentic-lens generate --source codex --session-id <ROOT_THREAD_ID_2> --ticket-id <TICKET_ID> --ticket-title "<TICKET_TITLE>" --ticket-type chore --json-output workspaces/<TICKET_ID>/agentic_metrics.recovered.json
 
 # Compare the IDs and per-session tool rows with the sessions you intended to recover.
 jq -r '.sessions[].id' workspaces/<TICKET_ID>/agentic_metrics.recovered.json | sort -u
@@ -689,7 +561,7 @@ telemetry:
     pass_timeout_ms: 30000
     max_sessions: 256
     max_source_bytes: 67108864
-    detailed_report: true
+    commit_warning: true
     summary: true
 ```
 
@@ -699,4 +571,10 @@ The worker uses durable request generations and acknowledges only the generation
 
 The ledger remains schema v5 at `<workspaces.dir>/<ticket>/agentic_metrics.json`. Top-level `completed_at` is the observability snapshot finalization boundary, equal to artifact `updated_at`; it does not assert source-session termination or ticket merge. Source invocation completion timestamps remain unchanged. Each owner has its own source-read checkpoint; there is no simultaneous source-read guarantee. Source failures preserve accepted facts and visibly degrade coverage.
 
-`detailed_report: false` suppresses new report production and removes the summary link. Existing reports are retained and explicitly stale. When enabled, `capture_report.json` includes the ledger digest; verify it before relying on a stored report. Compact summary counts remain available. Native/runtime support requires actual hook/plugin smoke evidence; configuration and synthetic probes alone do not establish it.
+`detailed_report` is deprecated/no-effect. Publication writes ledger/SUMMARY.md; durable local database diagnostics retain reconciliation/publication evidence. Old sidecars remain obsolete until explicitly removed.
+
+### Explicit installation consistency and completion scope
+
+Validated byte-identical native cache leaves retain their filesystem identity, including force-identical installation and in-place permission repair, so another project's admitted worker is not retired. A changed-content repair remains explicit. Pre-apply validation/activation failures roll back owned changes. Once external capture apply may have committed, an incomplete result, output-limit or timeout failure retains validated native/wrapper files and recoverable prior backups; it reports incomplete setup and directs status/owned reinstall recovery rather than claiming complete rollback or removing handlers referenced by hooks. Resolve those diagnostics before declaring setup healthy.
+
+Printed scaffold completion runs inside the selected project and restores the caller's location. The common wrapper's --al-project selects release authority; it does not change ordinary native working-directory semantics. Keep the printed scoped command when supplying project facts, so shared and local configuration writes cannot target another same-version scaffold in the caller's directory.

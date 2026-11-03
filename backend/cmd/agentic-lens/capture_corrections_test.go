@@ -3,13 +3,13 @@ package main_test
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -23,6 +23,9 @@ func runCaptureNative(t *testing.T, cwd, input string, args ...string) ([]byte, 
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
 	defer cancel()
+	if len(args) > 1 && args[0] == "capture" {
+		args = append([]string{"capture"}, prepareCaptureInstall(t, cwd, args[1:])...)
+	}
 	cmd := exec.CommandContext(ctx, cliBinaryPath, args...)
 	cmd.Dir = cwd
 	cmd.Stdin = strings.NewReader(input)
@@ -115,6 +118,9 @@ func TestCaptureStatusBeforeFirstPublicationRequest(t *testing.T) {
 				if _, err = db.Exec("DROP TABLE IF EXISTS publication_request"); err != nil {
 					t.Fatal(err)
 				}
+				if _, err = db.Exec("DROP TABLE IF EXISTS capture_diagnostics"); err != nil {
+					t.Fatal(err)
+				}
 				db.Close()
 			}
 			out, err := runCaptureNative(t, f.project, "", "capture", "status", "--repo", f.project, "--state-dir", f.state)
@@ -124,12 +130,65 @@ func TestCaptureStatusBeforeFirstPublicationRequest(t *testing.T) {
 			var status struct {
 				Registrations []domain.CaptureRegistration `json:"registrations"`
 				Publication   capture.PublicationRequest   `json:"publication"`
+				Available     bool                         `json:"diagnostics_available"`
+				Limits        []string                     `json:"limits"`
 			}
 			if err = json.Unmarshal(out, &status); err != nil {
 				t.Fatal(err)
 			}
 			if len(status.Registrations) != 1 || status.Registrations[0].TicketID != "TEST-100" || status.Publication.Generation != 0 {
 				t.Fatalf("lost registration or invented publication: %s", out)
+			}
+			if legacy && (status.Available || !strings.Contains(strings.Join(status.Limits, " "), "unavailable, not measured empty")) {
+				t.Fatalf("legacy diagnostic absence was manufactured as empty success: %s", out)
+			}
+			if !legacy && !status.Available {
+				t.Fatalf("existing diagnostic capability reported unavailable: %s", out)
+			}
+			if legacy {
+				db, err := sql.Open("sqlite", "file:"+filepath.ToSlash(filepath.Join(f.state, "registry.db"))+"?mode=ro")
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer db.Close()
+				var count int
+				if err := db.QueryRow("SELECT count(*) FROM sqlite_master WHERE type='table' AND name IN ('publication_request','capture_diagnostics')").Scan(&count); err != nil {
+					t.Fatal(err)
+				}
+				if count != 0 {
+					t.Fatal("read-only status migrated the legacy registry")
+				}
+			}
+		})
+	}
+}
+
+func TestCaptureInspectionWithoutStateDoesNotInitialize(t *testing.T) {
+	f := newCaptureGenerationFixture(t)
+	writeCapturePolicy(t, f, false, 0)
+	configuration := readCaptureFile(t, filepath.Join(f.project, ".agenticlens-config.yaml"))
+	for _, command := range []string{"status", "diagnostics", "verify", "check"} {
+		t.Run(command, func(t *testing.T) {
+			out, err := runCaptureNative(t, f.project, "", "capture", command, "--repo", f.project, "--state-dir", f.state)
+			if err != nil {
+				t.Fatalf("inspection without observations: %v %s", err, out)
+			}
+			if command == "check" {
+				if len(bytes.TrimSpace(out)) != 0 {
+					t.Fatalf("missing caller/state alone generated advisory: %s", out)
+				}
+			} else if !json.Valid(out) {
+				t.Fatalf("inspection did not return clean JSON: %s", out)
+			}
+			if _, err := os.Lstat(filepath.Dir(f.state)); !os.IsNotExist(err) {
+				t.Fatalf("read-only %s created capture namespace/database/lock state: %v", command, err)
+			}
+			entries, err := os.ReadDir(f.project)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(entries) != 2 || !bytes.Equal(configuration, readCaptureFile(t, filepath.Join(f.project, ".agenticlens-config.yaml"))) {
+				t.Fatalf("inspection changed project files: %+v", entries)
 			}
 		})
 	}
@@ -243,7 +302,10 @@ func TestCaptureRejectsDanglingOutsideSummaryBeforePublicationOrRecovery(t *test
 			f.generate(t)
 			before := readCaptureFile(t, f.output)
 			report := filepath.Join(f.project, "capture_report.json")
-			beforeReport := readCaptureFile(t, report)
+			beforeReport := []byte("retired report preserved for explicit removal")
+			if err := os.WriteFile(report, beforeReport, 0600); err != nil {
+				t.Fatal(err)
+			}
 			victim := filepath.Join(t.TempDir(), "absent-summary.md")
 			summary := filepath.Join(f.project, "SUMMARY.md")
 			if err := os.Symlink(victim, summary); err != nil {
@@ -304,7 +366,10 @@ func TestCaptureRejectsSymlinkDotDotOutsideSummary(t *testing.T) {
 				f.generate(t)
 				before := readCaptureFile(t, f.output)
 				report := filepath.Join(f.project, "capture_report.json")
-				beforeReport := readCaptureFile(t, report)
+				beforeReport := []byte("retired report preserved for explicit removal")
+				if err := os.WriteFile(report, beforeReport, 0600); err != nil {
+					t.Fatal(err)
+				}
 				outside := t.TempDir()
 				child := filepath.Join(outside, "child")
 				if err := os.Mkdir(child, 0700); err != nil {
@@ -359,8 +424,12 @@ func TestCapturePublishesThroughPhysicalArtifactAliases(t *testing.T) {
 				f.bind(t, f.write(t, 19))
 				summary := filepath.Join(f.project, "SUMMARY.md")
 				report := filepath.Join(f.project, "capture_report.json")
+				retiredReport := []byte("retired report must remain unchanged")
 				if state == "existing" {
 					f.generate(t, "--append", summary)
+					if err := os.WriteFile(report, retiredReport, 0600); err != nil {
+						t.Fatal(err)
+					}
 				}
 				aliases := map[string]string{}
 				for name, path := range map[string]string{"ledger": f.output, "report": report, "summary": summary} {
@@ -394,6 +463,16 @@ func TestCapturePublishesThroughPhysicalArtifactAliases(t *testing.T) {
 						if err != nil || info.Mode()&os.ModeSymlink == 0 {
 							t.Fatalf("artifact alias replaced: %s %v", alias, err)
 						}
+						if alias == report {
+							if state == "existing" {
+								if !bytes.Equal(readCaptureFile(t, target), retiredReport) {
+									t.Error("retired report alias was rewritten")
+								}
+							} else if _, err := os.Stat(target); !os.IsNotExist(err) {
+								t.Errorf("retired report alias target created: %v", err)
+							}
+							continue
+						}
 						if len(readCaptureFile(t, target)) == 0 {
 							t.Errorf("physical artifact absent: %s", target)
 						}
@@ -407,13 +486,13 @@ func TestCapturePublishesThroughPhysicalArtifactAliases(t *testing.T) {
 							t.Errorf("orphaned journal for %s: %v", path, err)
 						}
 					}
-					digest := fmt.Sprintf("%x", sha256.Sum256(readCaptureFile(t, f.output)))
-					if !bytes.Contains(readCaptureFile(t, report), []byte(digest)) {
-						t.Error("report does not match physical ledger")
-					}
 					if !bytes.Contains(readCaptureFile(t, summary), []byte("### Workflow Efficiency")) {
 						t.Error("physical summary not updated")
 					}
+					if bytes.Contains(readCaptureFile(t, summary), []byte("](capture_report.json)")) {
+						t.Error("physical summary linked retired report")
+					}
+					assertCapturePublishedOwners(t, captureDiagnostics(t, f.project, f.state), f.output, summary, f.ledger(t).Sessions)
 				}
 			})
 		}
@@ -710,10 +789,10 @@ func TestCaptureRejectsRawStoreTraversalAndPreservesAcceptedOwner(t *testing.T) 
 	f := newCaptureGenerationFixture(t)
 	root := f.write(t, 31)
 	f.bind(t, root)
-	f.generate(t)
+	summary := filepath.Join(f.project, "SUMMARY.md")
+	f.generate(t, "--append", summary)
 	acceptedLedger := readCaptureFile(t, f.output)
-	report := filepath.Join(f.project, "capture_report.json")
-	acceptedReport := readCaptureFile(t, report)
+	acceptedSummary := readCaptureFile(t, summary)
 	writeCapturePolicy(t, f, false, 0)
 	outside := t.TempDir()
 	if err := os.Mkdir(filepath.Join(outside, "child"), 0700); err != nil {
@@ -740,7 +819,7 @@ func TestCaptureRejectsRawStoreTraversalAndPreservesAcceptedOwner(t *testing.T) 
 		}
 	}
 	// Model a previously persisted row reaching reconciliation without a fresh
-	// receive guard. Explicit binding itself does not assert source validity.
+	// receive guard. Rebinding must also reject the newly invalid source path.
 	s, err := capture.OpenProject(f.state, f.project)
 	if err != nil {
 		t.Fatal(err)
@@ -757,8 +836,8 @@ func TestCaptureRejectsRawStoreTraversalAndPreservesAcceptedOwner(t *testing.T) 
 		t.Fatal(err)
 	}
 	out, err := runCaptureNative(t, f.project, "", "capture", "bind", "--repo", f.project, "--source", "codex", "--store", f.store, "--state-dir", f.state, "--session-id", "root", "--ticket-id", "TEST-100", "--request", row.Request)
-	if err != nil {
-		t.Fatalf("explicit binding: %v %s", err, out)
+	if err == nil || !bytes.Contains(out, []byte("source store")) || !bytes.Contains(out, []byte("minimal registration retained")) {
+		t.Errorf("explicit binding accepted invalid source: %v %s", err, out)
 	}
 	out, err = runCaptureNative(t, f.project, "", "capture", "reconcile", "--repo", f.project, "--ticket-id", "TEST-100", "--state-dir", f.state)
 	if err != nil || !bytes.Contains(out, []byte(`"state":"failed"`)) || !bytes.Contains(out, []byte("previous facts preserved")) {
@@ -769,7 +848,7 @@ func TestCaptureRejectsRawStoreTraversalAndPreservesAcceptedOwner(t *testing.T) 
 		t.Errorf("baseline accepted outside-store association: %v %s", err, out)
 	}
 	assertCaptureRootInput(t, f.ledger(t), 31)
-	if !bytes.Equal(acceptedLedger, readCaptureFile(t, f.output)) || !bytes.Equal(acceptedReport, readCaptureFile(t, report)) {
+	if !bytes.Equal(acceptedLedger, readCaptureFile(t, f.output)) || !bytes.Equal(acceptedSummary, readCaptureFile(t, summary)) {
 		t.Error("rejected source changed accepted publication")
 	}
 }
@@ -871,7 +950,7 @@ func TestCaptureInstalledStateDriftIsDiagnosedAndRecoveryPreservesOldRegistry(t 
 	hooks := readCaptureFile(t, filepath.Join(f.project, ".codex", "hooks.json"))
 	set("new-state")
 	out, err = runCaptureNative(t, f.project, "", "capture", "status", "--repo", f.project)
-	if err == nil || !bytes.Contains(out, []byte("installed")) || !bytes.Contains(out, []byte("state")) {
+	if err != nil || !bytes.Contains(out, []byte("installed")) || !bytes.Contains(out, []byte("state")) {
 		t.Errorf("default status concealed drift: %v %s", err, out)
 	}
 	out, err = runCaptureNative(t, f.project, "", "capture", "status", "--repo", f.project, "--state-dir", old)
@@ -996,4 +1075,228 @@ func TestCaptureDisablingOneIntegrationKeepsOtherSourceAutomatic(t *testing.T) {
 	writeCapturePolicy(t, f, true, 0)
 	startCorrectionWorker(t, f)
 	waitCorrectionLedger(t, filepath.Join(f.project, "records", "TEST-200", "agentic_metrics.json"), "enabled-root", 43)
+}
+
+func TestCaptureCheckUsesPublishedFactsWithoutSourceOrMutation(t *testing.T) {
+	f := newCaptureGenerationFixture(t)
+	path := f.write(t, 23)
+	f.bind(t, path)
+	f.generate(t)
+	store, err := capture.OpenProject(f.state, f.project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := domain.CaptureIdentity{Source: domain.SourceCodex, Store: f.store, SessionID: "root"}
+	if _, err = store.Register(context.Background(), id, path, "UserPromptSubmit"); err != nil {
+		t.Fatal(err)
+	}
+	if err = store.Close(); err != nil {
+		t.Fatal(err)
+	}
+	before := readCaptureFile(t, filepath.Join(f.state, "registry.db"))
+	// Optional source access is unavailable at commit time. Persisted publication
+	// evidence must still quiet a generic pending active root without caller IDs.
+	if err = os.Rename(f.store, f.store+"-offline"); err != nil {
+		t.Fatal(err)
+	}
+	cache := t.TempDir()
+	check := func() []byte {
+		t.Helper()
+		command := exec.Command(cliBinaryPath, "capture", "check", "--repo", f.project, "--state-dir", f.state)
+		command.Dir = f.project
+		command.Env = append(os.Environ(), "XDG_CACHE_HOME="+cache)
+		out, err := command.CombinedOutput()
+		if err != nil {
+			t.Fatalf("advisory blocked: %v %s", err, out)
+		}
+		return out
+	}
+	if out := check(); len(out) != 0 {
+		t.Fatalf("pending/caller absence became warning: %s", out)
+	}
+	if !bytes.Equal(before, readCaptureFile(t, filepath.Join(f.state, "registry.db"))) {
+		t.Fatal("read-only check changed accepted registry facts")
+	}
+	if entries, err := os.ReadDir(cache); err != nil || len(entries) != 0 {
+		t.Fatalf("check created publication ownership/cache files: %+v %v", entries, err)
+	}
+	if _, err = os.Stat(filepath.Join(f.state, "worker.lock")); !os.IsNotExist(err) {
+		t.Fatalf("check created/probed worker lock: %v", err)
+	}
+	if err = os.Remove(f.output); err != nil {
+		t.Fatal(err)
+	}
+	if out := check(); !bytes.Contains(out, []byte("no readable metrics")) || bytes.Count(out, []byte("AgenticLens capture advisory:")) != 1 {
+		t.Fatalf("missing metrics not one bounded warning: %s", out)
+	}
+	if err = os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte("telemetry:\n  capture:\n    commit_warning: false\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if out := check(); len(out) != 0 {
+		t.Fatalf("explicit local disable ignored: %s", out)
+	}
+}
+
+func TestCaptureCallbackProofFailurePreservesAcceptedProjectBaseline(t *testing.T) {
+	f := newCaptureGenerationFixture(t)
+	path := f.write(t, 31)
+	f.bind(t, path)
+	f.generate(t)
+	baseline := f.ledger(t)
+	writeCapturePolicy(t, f, false, 0)
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+	payload, err := json.Marshal(capture.HookInput{SessionID: "root", Event: "Stop", TranscriptPath: path})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out, err := runCaptureNative(t, f.project, string(payload), "capture", "receive", "--repo", f.project, "--state-dir", f.state, "--source", "codex", "--store", f.store); err != nil {
+		t.Fatalf("minimal callback handoff failed: %v %s", err, out)
+	}
+	f.generate(t)
+	after := f.ledger(t)
+	if !reflect.DeepEqual(baseline.Sessions, after.Sessions) {
+		t.Fatalf("optional source proof failure hid accepted facts: before=%+v after=%+v", baseline.Sessions, after.Sessions)
+	}
+	diagnostics := captureDiagnostics(t, f.project, f.state)
+	var latest domain.CaptureDiagnostic
+	for _, diagnostic := range diagnostics {
+		if diagnostic.Phase == "reconciliation" && diagnostic.Sequence > latest.Sequence {
+			latest = diagnostic
+		}
+	}
+	found := false
+	if latest.Reconciliation != nil {
+		for _, owner := range latest.Reconciliation.Owners {
+			if owner.Identity.SessionID == "root" {
+				found = true
+				if owner.ProjectDirectory != f.project || owner.State != domain.CaptureFailed {
+					t.Fatalf("lost prior ownership or latest failure truth: %+v", owner)
+				}
+			}
+		}
+	}
+	if !found {
+		t.Fatal("source failure was not durably diagnosed")
+	}
+}
+
+func TestCaptureLegacyReportPhysicalEscapePreservesOutsideAndAcceptedArtifacts(t *testing.T) {
+	for _, present := range []bool{true, false} {
+		t.Run(fmt.Sprintf("prior-present=%t", present), func(t *testing.T) {
+			f := newCaptureGenerationFixture(t)
+			f.bind(t, f.write(t, 10))
+			f.generate(t)
+			before := readCaptureFile(t, f.output)
+			victim := filepath.Join(t.TempDir(), "outside-file")
+			accepted := []byte("outside accepted")
+			if err := os.WriteFile(victim, accepted, 0600); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Symlink(victim, filepath.Join(filepath.Dir(f.output), "capture_report.json")); err != nil {
+				t.Fatal(err)
+			}
+			type member struct {
+				Path    string `json:"path"`
+				Present bool   `json:"present"`
+				Data    []byte `json:"data"`
+			}
+			type journal struct {
+				Version   int      `json:"version"`
+				Ledger    string   `json:"ledger"`
+				Count     int      `json:"member_count"`
+				Artifacts []member `json:"artifacts"`
+			}
+			data := []byte(nil)
+			if present {
+				data = []byte("forged replacement")
+			}
+			body, err := json.Marshal(journal{1, f.output, 2, []member{{f.output, true, []byte("forged ledger")}, {victim, present, data}}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			marker := f.output + ".publication-pending"
+			if err = os.WriteFile(marker, body, 0600); err != nil {
+				t.Fatal(err)
+			}
+			out, err := runCaptureNative(t, f.project, "", f.args(t)...)
+			if err == nil || !bytes.Contains(out, []byte("outside exact project")) {
+				t.Fatalf("native legacy recovery granted outside authority: %v %s", err, out)
+			}
+			for path, want := range map[string][]byte{f.output: before, victim: accepted, marker: body} {
+				if got := readCaptureFile(t, path); !bytes.Equal(got, want) {
+					t.Fatalf("native rejected legacy recovery changed %s: %q", path, got)
+				}
+			}
+		})
+	}
+}
+
+func TestCaptureInspectionBoundsHistoryButKeepsCurrentFailureActionable(t *testing.T) {
+	f := newCaptureGenerationFixture(t)
+	f.bind(t, f.write(t, 10))
+	f.generate(t)
+	registry, err := capture.OpenProject(f.state, f.project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = registry.RecordDiagnostic(context.Background(), domain.CaptureDiagnostic{TicketID: "TEST-100", Phase: "publication", Outcome: "failed"}); err != nil {
+		t.Fatal(err)
+	}
+	if err = registry.RecordDiagnostic(context.Background(), domain.CaptureDiagnostic{TicketID: "TEST-100", Phase: "publication", Outcome: "preparing"}); err != nil {
+		t.Fatal(err)
+	}
+	for index := 0; index < 50; index++ {
+		if err = registry.RecordDiagnostic(context.Background(), domain.CaptureDiagnostic{TicketID: fmt.Sprintf("HISTORY-%d", index), Phase: "publication", Outcome: "committed"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err = registry.Close(); err != nil {
+		t.Fatal(err)
+	}
+	before := readCaptureFile(t, filepath.Join(f.state, "registry.db"))
+	inspect := func(cursor int64) []byte {
+		t.Helper()
+		args := []string{"diagnostics", "--repo", f.project, "--state-dir", f.state, "--max-sessions", "1"}
+		if cursor > 0 {
+			args = append(args, "--before-diagnostic", fmt.Sprint(cursor))
+		}
+		out, err := captureCLI(t, f.project, "", args...)
+		if err != nil {
+			t.Fatalf("bounded diagnostics: %v %s", err, out)
+		}
+		return out
+	}
+	var first, second struct {
+		Diagnostics []domain.CaptureDiagnostic `json:"diagnostics"`
+		More        bool                       `json:"diagnostics_continuation"`
+		Before      int64                      `json:"diagnostics_before"`
+		Bytes       int64                      `json:"diagnostic_bytes_read"`
+	}
+	if err = json.Unmarshal(inspect(0), &first); err != nil {
+		t.Fatal(err)
+	}
+	if err = json.Unmarshal(inspect(first.Before), &second); err != nil {
+		t.Fatal(err)
+	}
+	if !first.More || !second.More || first.Before <= second.Before || len(first.Diagnostics) > 19 || len(second.Diagnostics) > 19 {
+		t.Fatalf("history bounds/continuation missing: first=%+v second=%+v", first, second)
+	}
+	found := false
+	for _, diagnostic := range first.Diagnostics {
+		if diagnostic.TicketID == "TEST-100" && diagnostic.Outcome == "failed" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("bounded history hid current unresolved failure: %+v", first)
+	}
+	out, err := captureCLI(t, f.project, "", "check", "--repo", f.project, "--state-dir", f.state, "--max-sessions", "1")
+	if err != nil || !bytes.Contains(out, []byte("unresolved operational")) {
+		t.Fatalf("bounded advisory hid actionable current failure: %v %s", err, out)
+	}
+	if !bytes.Equal(before, readCaptureFile(t, filepath.Join(f.state, "registry.db"))) {
+		t.Fatal("bounded history/advisory mutated retained ticket facts")
+	}
 }

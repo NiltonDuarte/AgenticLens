@@ -1,19 +1,10 @@
 # CLI Reference
 
-Use `bash .agents/skills/agentic-lens-operator/scripts/agentic-lens.sh` from the current worktree. This portable launcher lives outside binary storage and invokes the local native executable without downloading or checking for updates. On native Windows PowerShell, invoke `.agents/skills/agentic-lens-operator/bin/agentic-lens-windows-amd64.exe` directly. Quote paths containing spaces. `AGENTIC_LENS_BIN_DIR` can explicitly select a custom binary directory; relative overrides resolve against the caller's directory.
+Use `agentic-lens --al-project <PROJECT>` through the stable user PATH wrapper, including from project subdirectories. Ordinary dispatch is offline; `--al-offline` explicitly marks integration use. Both controls precede native arguments and are stripped. Native `capture --repo` must belong to the same selected project; use the explicit prefix when cwd belongs elsewhere. Arguments, stdin, JSON stdout and native exit codes are preserved. POSIX dispatch uses exec.
 
-### Missing installation in a worktree
+The default stable path is `~/.local/bin/agentic-lens`; native Windows uses `~/.agenticlens/agentic-lens.ps1` via `powershell.exe -NoLogo -NoProfile -NonInteractive -File <WRAPPER>`. Installed integrations use its absolute path and their exact project context. They never depend on a repository binary or an interactive PATH. See [release authority](configuration.md#shared-release-authority-and-user-entrypoint).
 
-Inspect files before invoking commands. Git tracking and ignore policy belong to the repository owner; do not stage installed files or create ignore rules. A new worktree may lack binaries, scripts, or both depending on those choices.
-
-- **Launcher/setup present, binary absent:** explain the download and local file effects, then use existing repair authorization or obtain it. Run `bash .agents/skills/agentic-lens-setup/scripts/download.sh`. It uses the recorded `RELEASE_VERSION` and preserves existing binary contents unless `--force` was authorized. Explicit repair restores execute permission on an existing native file without fetching or replacing it. Offline repair can use `--local-bin <native-prebuilt-path>`. Never compile AgenticLens in an adopting repository.
-- **Release marker absent/empty:** the owner may choose not to track `agentic-lens-setup/RELEASE_VERSION`. Select the intended release explicitly with `download.sh --version <RELEASE_TAG>` or `AGENTIC_LENS_VERSION`. The installed downloader refuses remote repair without a known release instead of defaulting to `latest`. Offline `--local-bin` repair can operate without this marker.
-- **Setup or launcher absent:** follow the complete bootstrap manifest and commands in [the setup skill](../../agentic-lens-setup/SKILL.md), section 1.2. If that local manifest is absent too, read the [public setup manifest](https://github.com/NiltonDuarte/AgenticLens/blob/main/.agents/skills/agentic-lens-setup/SKILL.md) to discover the installation procedure, then retrieve all installation files from one selected official release tag. Do not silently download files from moving `main` to repair a pinned release.
-- **Machine-local configuration absent:** treat this separately from a missing executable. Preserve shared configuration; use explicit `--source` and this machine's `--codex-home`/`--db-path` as needed. Do not copy settings from another worktree or run `init --force` as binary repair.
-- **Offline and no local prebuilt binary:** report repair as incomplete with the missing artifact and retry command. An already installed native executable works offline through the launcher.
-
-Existing installations can still use their legacy `bin/agentic-lens` wrapper, which has automatic missing-binary downloads and background update checks. Use the launcher for operations where fetching must remain an explicit action. The new launcher directly invokes the CLI, so the legacy wrapper's `update` command is not dispatched through it: authorize upgrades explicitly with setup `download.sh --version <RELEASE_TAG> --force`.
-Examples below use `agentic-lens` as shorthand for the executable path you resolved. To confirm syntax for the installed version, run `<binary> help`, `<binary> help <command>`, or `<binary> <command> --help` where supported. CLI behavior can evolve; prefer installed help over this reference when it differs, and inspect matching release source only as a last resort.
+Missing/invalid pins, unsupported platforms and missing exact cache leaves fail visibly without downloads, cache writes, latest selection or environment fallback. Repair explicitly with setup `download.sh --project <PROJECT>` or native `download.ps1 -Project <PROJECT>`, after authorization already covers those effects. The installer verifies checksums/native identity/protocol with rollback and preserves edited files/other versions. Local native repair requires an explicit expected SHA256. No Go/Node/Python/yq runtime is needed. Missing scripts require restoring the complete setup/operator bundle at one selected tag; do not reinitialize existing shared/local configuration.
 
 ## Command Map
 
@@ -27,7 +18,7 @@ Examples below use `agentic-lens` as shorthand for the executable path you resol
 | `migrate` | Apply stepwise schema changes to existing workspace ledgers. |
 | `server` | Run the embedded dashboard and live observability service. |
 | `version` | Identify the installed build and schema version. |
-| setup `download.sh --version TAG --force` | Explicitly replace platform binaries with an authorized selected release. |
+| setup `download.sh --project PROJECT --force` | Explicitly repair the exact shared-pin cache leaf with rollback. |
 
 ## Root Scan and Ticket Inspection
 
@@ -56,9 +47,11 @@ Scanning requires a valid project configuration and an existing workspace direct
 ## `init`
 
 ```bash
-agentic-lens init --project-name NAME --ticket-prefixes LIST --src-folders LIST [--workspaces DIR] [--db-path PATH] [--output FILE] [--force] [--dry-run]
+agentic-lens --al-project PROJECT init --agenticlens-version EXACT_TAG --project-name NAME --ticket-prefixes LIST --src-folders LIST [--workspaces DIR] [--db-path PATH] [--output FILE] [--force] [--dry-run]
 ```
 
+- `--agenticlens-version EXACT_TAG`: explicitly selected release for generated shared YAML; required for development/unknown build identity. Never substitute latest.
+- `--complete-scaffold`: replace only the exact unchanged owned bootstrap scaffold for that explicit pin, preserving existing local YAML. Rejects arbitrary shared files and combination with --force.
 - `--project-name NAME` (required): dashboard/project display name.
 - `--ticket-prefixes LIST` (required): comma-separated identifiers, for example `PAY,OPS`. Prefixes are normalized to uppercase.
 - `--src-folders LIST` (required): comma-separated Git source roots, for example `backend,web/src`.
@@ -90,7 +83,7 @@ agentic-lens generate --ticket-id ID --ticket-title TITLE --ticket-type TYPE [op
 - `--append FILE`: idempotently update the Markdown metrics table.
 - `--db-path PATH`: explicit OpenCode SQLite source path.
 - `--codex-home PATH`: explicit Codex home/rollout directory; defaults to `$CODEX_HOME` or `~/.codex`.
-- `--capture-dir DIR` (default `telemetry.capture.state_dir`, then `.agenticlens-capture`): local lifecycle registry to reconcile before final generation. Use the installation's exact state directory. Registered sessions bound to the ticket are refreshed from their actual source, including independent roots and both harnesses; no ownership is inferred from the directory. When a registry exists and `telemetry.capture.detailed_report` is enabled (the default), publication writes `capture_report.json` beside the ledger with snapshot cutoff, outcomes and ledger digest. Disabling it removes new summary links without deleting existing reports; retained reports are stale.
+- `--capture-dir DIR` (default `telemetry.capture.state_dir`, then `.agenticlens-capture`): reconcile the installation's exact local state before manual recovery publication. Registered bound roots from either harness retain their explicit identity; unavailable accepted facts survive failed refreshes. Publication writes only the ledger and SUMMARY.md coverage. Detailed reconciliation/publication diagnostics remain in the local database; `detailed_report` is deprecated/no-effect and old sidecars are obsolete, never automatically deleted.
 - `--anomalies`: print and record anomaly results for the target ticket.
 - `--allow-empty`: permits empty generation with no root session/invocations; intended as an exceptional/testing escape hatch, not normal recovery.
 
@@ -104,19 +97,13 @@ Generation writes the requested ledger and/or summary. Confirm those destination
 
 ## `capture` (native release handler)
 
-Resolve the native executable beside the wrapper, for example `agentic-lens-linux-amd64`, `agentic-lens-darwin-arm64` or `agentic-lens-windows-amd64.exe`. Installed callbacks call it directly. A manual `capture` invocation through the wrapper also bypasses missing-binary downloads and all update checks; absent native handlers fail visibly. Never put the updating wrapper in hook configuration.
+Every lifecycle entrypoint uses the stable common wrapper in offline mode with matching `--al-project PROJECT` and native `--repo PROJECT`. The selected native worker and publication children retain their current executable for the pass; future wrapper calls observe the current shared pin. Never install a repository updater or a version-specific native path as a callback.
 
-```bash
-agentic-lens capture install --source codex --store "/absolute/Codex home" --repo "/absolute/repo" --state-dir "/absolute/repo/.agenticlens-capture" --dry-run
-agentic-lens capture status --state-dir "/absolute/repo/.agenticlens-capture"
-agentic-lens capture reconcile --ticket-id PAY-42 --state-dir "/absolute/repo/.agenticlens-capture" --timeout 30s
-```
-
-Capture commands return JSON by default; `capture protocol` prints the handler protocol number. `capture <command> --help` lists supported flags. `install` creates additive owned Codex hooks or an OpenCode plugin, an ownership manifest and an ignored local registry destination. Source is required. `--store` is the exact Codex home or OpenCode database; supply it explicitly after checking harness configuration. Direct install may resolve the selected harness's configured local path when omitted; review the resolved value before applying. `--binary PATH` selects a compatible native handler; the default is the running executable. `--repo` defaults to the current directory and `--state-dir` to `.agenticlens-capture`. Dry run previews owned file changes without writing; repeat without it only after setup changes are authorized.
+Capture commands return JSON by default; `capture protocol` prints native hook capability 2, distinct from persisted registry/manifest schema 1. Older capabilities cannot consume the new --wrapper glue. `capture <command> --help` lists supported flags. `install` creates additive owned Codex hooks or an OpenCode plugin, an ownership manifest and an ignored local registry destination. Source is required. `--store` is the exact Codex home or OpenCode database; supply it explicitly after checking harness configuration. Direct install may resolve the selected harness's configured local path when omitted; review the resolved value before applying. `--binary PATH` must identify the exact shared-pin native cache leaf. `--wrapper PATH` selects the stable common entrypoint (default user location). `--repo` defaults to the current directory and `--state-dir` to `.agenticlens-capture`. Dry run previews owned file changes without writing; repeat without it only after setup changes are authorized.
 
 Agent interaction and binding:
 
-- Codex lifecycle feedback supplies a binding request with exact source, session, state directory and a per-session challenge. The agent responds with the supplied native `capture bind` command, adding the ticket explicitly supplied by the user. It must not guess the session or ticket. Start/prompt callbacks can deliver context; shutdown callbacks alone cannot request missing information.
+- Codex lifecycle feedback supplies a binding request with exact source, session, state directory and a per-session challenge. The agent responds with the supplied common-wrapper `capture bind` command, adding the ticket explicitly supplied by the user. It must not guess the session or ticket. Start/prompt callbacks can deliver context; shutdown callbacks alone cannot request missing information.
 - OpenCode's per-session system transform supplies the request. The `agenticlens_bind` tool accepts `ticket` and `request`; its execution context supplies the authoritative session identity. The agent cannot replace the runtime identity through tool arguments.
 - When ticket context is missing, ask the user and retain an unassigned registration. A proven parent may supply inherited binding. Independent roots need their own explicit response. Model, effort, usage and cost still come from authoritative harness records; an agent assertion cannot manufacture them.
 
@@ -130,7 +117,7 @@ Do not publish request tokens or local status dumps. Wrong/missing request token
 
 Reconciliation is explicit and bounded. `--max-sessions` defaults to 256 and `--max-source-bytes` to 64 MiB per pass; `--timeout` defaults to 2s and can be increased up to 5m for an operator pass. Pending work/source flush is distinct from failed, unsupported, unassigned and unresolved parent evidence. Preserve previous accepted facts on source failure; repeated cumulative snapshots must not be added twice. Use `generate --capture-dir` for manual recovery publication; successful `capture reconcile` refreshes local snapshots, prints outcomes and schedules native publication when enabled.
 
-After a crash, restore the native handler/source access if needed and rerun reconciliation against the same local state. Do not delete accepted registrations to conceal a gap. After `update`, inspect native protocol/status, preview `capture install` with the original source/store/destinations, resolve conflicting local edits and apply the reviewed upgrade. Installation alone does not trust hooks or prove actual callbacks; review harness trust/plugin loading and verify real session IDs, the agent response and source facts. See [support and local state limits](configuration.md#lifecycle-capture-state-and-support).
+After a crash, restore the native handler/source access if needed and rerun reconciliation against the same local state. Do not delete accepted registrations to conceal a gap. After an explicit pin change and installation, inspect protocol/status, preview `capture install` with the original source/store/destinations, resolve conflicting local edits and apply the reviewed upgrade. Installation alone does not trust hooks or prove actual callbacks; review harness trust/plugin loading and verify real session IDs, the agent response and source facts. See [support and local state limits](configuration.md#lifecycle-capture-state-and-support).
 
 Disable or remove only the owned activation entries/files:
 
@@ -213,23 +200,24 @@ agentic-lens version [--json|--short]
 
 No config or ledger mutation occurs.
 
-## `update` (legacy wrapper only)
+## Explicit upgrades and diagnostics
 
-```bash
-.agents/skills/agentic-lens-operator/bin/agentic-lens update [--version TAG]
-```
+Runtime `update` does not install or choose a release. Change shared `agenticlens.version` explicitly, install that exact release through setup and preview an owned `capture install` refresh. Preserve source/state paths and human trust. Changed project template/version/source provenance or an incompatible/unowned wrapper invalidates live setup verification until a new actual callback/binding/source exchange is observed. Other version/platform cache leaves and in-flight native workers remain intact.
 
-- no argument: resolve and install the latest public release.
-- `--version TAG`: install that release tag, such as `v1.2.3`.
+`capture diagnostics --repo PROJECT` reports durable owner refresh/publication evidence; `capture verify` reports actual installation-specific callback/agent/source verification. Status/check are read only and do not create state or start extraction/workers. `capture check` is an advisory bounded observer; unknown caller identity, conservative pending markers and normal accepted-snapshot activity tails alone do not warn. Missing bindings/metrics and genuine refresh/publication failures remain actionable.
 
-The wrapper stages release candidates before replacement. If the installed host handler exposes a capture protocol, the candidate must return that same protocol or the update fails with the old binary and active hooks preserved. Existing foreign-platform binaries remain unchanged in that case until upgraded/verified on their native host. Successful replacements retain backups until the transaction completes; failed replacement restores owned binary changes. It does not migrate ledgers or modify project YAML. For existing lifecycle installations, inspect native `capture protocol`/`capture status` and review `capture install --dry-run` with the original source/store/destinations before applying any needed owned-hook upgrade; binary update alone does not verify capture compatibility. Updating is an external network and filesystem mutation. Require direct user authorization unless already specifically requested, then verify with `agentic-lens version --json`. For source inspection, use the tag matching the installed version, not the latest tag by default.
+Explicit `capture install-check --repo PROJECT --wrapper ENTRYPOINT --dry-run` previews the optional Git pre-commit warning. `uninstall-check` removes unchanged owned content. Existing arbitrary hooks cause safe refusal/manual composition guidance; effective hooksPath is honored without changes. Runtime Git scope comes from the committing worktree. Local `telemetry.capture.commit_warning: false` disables its output. AgenticLens's own check never blocks the commit.
 
-The downloader's `--force --version TAG` and `--local-bin` upgrade paths apply the same host-handler preflight. When opt-in capture setup is requested, it additionally requires the supported capture protocol before first activation and restores the previous native binary/wrapper if subsequent native setup fails. The native installer separately rolls back owned configuration writes; it must not overwrite conflicting user changes. These checks preserve protocol compatibility, not a claim that an untested harness/version or foreign-platform executable ran successfully.
+Publication retains canonical output locks and recoverable journals. Existing authorized ledger/report/summary transactions can be recovered before publishing the supported ledger/summary set; no new report/digest claim is produced. Preserve interrupted journals for explicit recovery instead of deleting failure evidence. Deleting local capture state can lose bindings and pending observations; the native cache location does not change state retention.
 
-Automatic lifecycle publication and exact project-directory isolation are documented in [configuration](configuration.md#automatic-publication-policy). Use `--repo PROJECT` consistently for capture commands.
+### Explicit installation consistency and completion scope
 
-Automatic publication recovery: generation holds the canonical per-output lock before baseline/source reads. A bounded prior-artifact journal (`<ledger>.publication-pending`, up to 128 MiB of prior contents) covers the ledger, optional report and requested summary. Interrupted output is diagnosed by native ledger readers; the next generation under that lock restores the prior set before reading sources. Do not remove this marker to suppress the diagnostic. This is recoverable multi-file publication, with a visible interrupted interval; it does not promise portable atomic multi-file rename. Recovery failures retain the journal for explicit repair. Ledger/report runtime digests remain the pairing check.
+Validated byte-identical native cache leaves retain their filesystem identity, including force-identical installation and in-place permission repair, so another project's admitted worker is not retired. A changed-content repair remains explicit. Pre-apply validation/activation failures roll back owned changes. Once external capture apply may have committed, an incomplete result, output-limit or timeout failure retains validated native/wrapper files and recoverable prior backups; it reports incomplete setup and directs status/owned reinstall recovery rather than claiming complete rollback or removing handlers referenced by hooks. Resolve those diagnostics before declaring setup healthy.
 
-`capture status` includes publication generation/acknowledgement and local worker PID, observed lock liveness, heartbeat, lifetime deadline, retry time, budget and last failure context. These are local operational diagnostics, not harness telemetry. Successful receive/request/bind/reconcile paths durably request work and launch a bounded native owner; a killed owner releases its kernel lock and a later supported integration event restarts pending work. No always-running watchdog is installed. Conflicting explicit ticket titles or types leave automatic publication pending with a diagnostic; rebind the conflicting registrations with the explicitly resolved context. OpenCode's binding tool accepts an optional conventional `type`.
+Printed scaffold completion runs inside the selected project and restores the caller's location. The common wrapper's --al-project selects release authority; it does not change ordinary native working-directory semantics. Keep the printed scoped command when supplying project facts, so shared and local configuration writes cannot target another same-version scaffold in the caller's directory.
 
-Source-reported descendant directories normalize to the configured canonical project only when no nearer `.agenticlens-config.yaml` or `.git` project marker intervenes. Source flags cannot authorize a sibling directory or a conflicting nested project.
+Read-only inspection is paginated without evicting stored history. `capture status`/`diagnostics` expose diagnostics_continuation, current_diagnostics_continuation and diagnostic_bytes_read when work remains; continue history with --before-diagnostic <diagnostics_before>. --max-sessions bounds registration/history work and --max-source-bytes also bounds decoded diagnostic payload. Check/verify inspect relevant current ticket/owner heads; use diagnostic continuations to investigate older failures rather than clearing history or treating an incomplete page as healthy.
+
+`diagnostic_metadata_complete: false` means current lookup metadata is missing, partial or behind recorded diagnostics. Historical records remain available, but current health cannot be certified. Run `capture reconcile --repo PROJECT --ticket-id TICKET` for bounded mutable maintenance; repeat if its progress remains partial, increasing `--max-sessions`, `--max-source-bytes` or `--timeout` when needed. Inspection and initial registration never backfill old payloads. New facts retain their sequence order while maintenance resumes. If a history page decodes no rows because its first record exceeds the byte budget, increase the budget and retry the same cursor.
+
+Older reconciliation records can also lack a whole-attempt outcome. Their recorded owner reads remain facts, while current collection health stays unknown until a complete reconciliation. A fatal whole-attempt failure is independent of successful individual reads and remains visible through partial retries. Use a completed reconciliation to establish recovery; the ledger's accepted numeric facts remain preserved throughout.

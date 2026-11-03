@@ -132,15 +132,16 @@ func WorkerStatus(directory string) (WorkerProgress, error) {
 			return p, err
 		}
 	}
-	lock, err := AcquireWorker(directory)
-	if err != nil {
-		return p, err
+	// Report recorded evidence only. Probing ownership would create/acquire a lock.
+	if p.State == "" {
+		p.State = "unobserved"
+	} else if p.Deadline > 0 && time.Now().UnixMilli() >= p.Deadline {
+		p.State = "expired"
+	} else if p.State == "running" {
+		p.State = "recorded_running"
+		p.Detail += " Recorded heartbeat only; live process ownership is unverified by read-only status."
 	}
-	if lock != nil {
-		p.State = "stopped"
-		return p, lock.Close()
-	}
-	p.State = "running"
+
 	return p, nil
 }
 

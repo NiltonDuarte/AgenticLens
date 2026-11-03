@@ -3,9 +3,7 @@ package main_test
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
 	"database/sql"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -201,6 +199,7 @@ func captureCLI(t *testing.T, project, input string, args ...string) ([]byte, er
 			t.Fatal(err)
 		}
 	}
+	args = prepareCaptureInstall(t, project, args)
 	cmd := exec.Command(cliBinaryPath, append([]string{"capture"}, args...)...)
 	cmd.Dir = project
 	cmd.Stdin = strings.NewReader(input)
@@ -214,6 +213,53 @@ func readCaptureFile(t *testing.T, path string) []byte {
 		t.Fatal(err)
 	}
 	return b
+}
+
+func captureDiagnostics(t *testing.T, project, state string) []domain.CaptureDiagnostic {
+	t.Helper()
+	out, err := runCaptureNative(t, project, "", "capture", "diagnostics", "--repo", project, "--state-dir", state)
+	if err != nil {
+		t.Fatalf("capture diagnostics: %v %s", err, out)
+	}
+	var status struct {
+		Diagnostics []domain.CaptureDiagnostic `json:"diagnostics"`
+	}
+	if err := json.Unmarshal(out, &status); err != nil {
+		t.Fatalf("diagnostic JSON: %v %s", err, out)
+	}
+	return status.Diagnostics
+}
+
+func assertCapturePublishedOwners(t *testing.T, diagnostics []domain.CaptureDiagnostic, output, summary string, sessions []domain.SessionFact) {
+	t.Helper()
+	var committed *domain.CaptureDiagnostic
+	for i := range diagnostics {
+		d := &diagnostics[i]
+		if d.Phase == "publication" && (committed == nil || d.Sequence > committed.Sequence) {
+			committed = d
+		}
+	}
+	if committed == nil || committed.Outcome != "committed" || committed.ObservedAt == "" || committed.Destination != output || committed.Summary != summary {
+		t.Fatalf("publication not durably committed at requested destinations: %+v", committed)
+	}
+	if len(committed.Owners) != len(sessions) {
+		t.Fatalf("published owner count=%d want %d", len(committed.Owners), len(sessions))
+	}
+	for _, session := range sessions {
+		found := false
+		for _, owner := range committed.Owners {
+			if owner.Source != session.Source || owner.SessionID != session.ID {
+				continue
+			}
+			found = true
+			if checkpoint, known := domain.CaptureOwnerCheckpoint(session); known && owner.Checkpoint != checkpoint.UTC().Format(time.RFC3339Nano) {
+				t.Fatalf("published checkpoint for %s=%s want %s", session.ID, owner.Checkpoint, checkpoint)
+			}
+		}
+		if !found {
+			t.Fatalf("committed diagnostic omitted owner %s/%s", session.Source, session.ID)
+		}
+	}
 }
 
 func TestCaptureCLIInstallerPreservesUserHooksDryRunAndRepeatedRemoval(t *testing.T) {
@@ -355,7 +401,7 @@ func TestCaptureCLIRequestExposesUnassignedTicketToPlugin(t *testing.T) {
 	}
 }
 
-func TestCaptureCLIGenerateIncludesBoundIndependentSessionsAndDigestReport(t *testing.T) {
+func TestCaptureCLIGenerateIncludesBoundIndependentSessionsAndSummaryDiagnostics(t *testing.T) {
 	project := t.TempDir()
 	configuration := "project_name: CaptureFixture\nticket:\n  prefixes: [TEST]\nworkspaces:\n  dir: custom records\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), []byte(configuration), 0600); err != nil {
@@ -427,25 +473,19 @@ func TestCaptureCLIGenerateIncludesBoundIndependentSessionsAndDigestReport(t *te
 		if err := json.Unmarshal(b, &ledger); err != nil {
 			t.Fatal(err)
 		}
-		var report struct {
-			LedgerSHA256  string                       `json:"ledger_sha256"`
-			Cutoff        string                       `json:"cutoff"`
-			Registrations []domain.CaptureRegistration `json:"registrations"`
-		}
-		reportBytes := readCaptureFile(t, filepath.Join(project, "capture_report.json"))
-		if err := json.Unmarshal(reportBytes, &report); err != nil {
-			t.Fatal(err)
-		}
-		for _, public := range [][]byte{reportBytes, readCaptureFile(t, summary)} {
+		summaryBytes := readCaptureFile(t, summary)
+		for _, public := range [][]byte{summaryBytes} {
 			for _, forbidden := range append(append([]string{store, state}, requestTokens...), "\"transcript_path\"", "\"snapshot\"") {
 				if forbidden != "" && bytes.Contains(public, []byte(forbidden)) {
 					t.Fatalf("publication leaked private capture data %q", forbidden)
 				}
 			}
 		}
-		digest := sha256.Sum256(b)
-		if report.LedgerSHA256 != hex.EncodeToString(digest[:]) || report.Cutoff == "" {
-			t.Fatalf("inconsistent report: %+v", report)
+		if bytes.Contains(summaryBytes, []byte("capture_report.json")) || !bytes.Contains(summaryBytes, []byte("Capture observation finalized:")) {
+			t.Fatalf("summary lacks current capture coverage or links retired report: %s", summaryBytes)
+		}
+		if _, err := os.Stat(filepath.Join(project, "capture_report.json")); !os.IsNotExist(err) {
+			t.Fatalf("summary-only publication created report: %v", err)
 		}
 		if ledger.SchemaVersion == nil || *ledger.SchemaVersion != 5 || len(ledger.Sessions) != 2 {
 			t.Fatalf("wrong canonical result: %+v", ledger)
@@ -458,6 +498,7 @@ func TestCaptureCLIGenerateIncludesBoundIndependentSessionsAndDigestReport(t *te
 		if got := ledger.InvocationFacts()[0].Tokens.Input + ledger.InvocationFacts()[1].Tokens.Input; got != 30 {
 			t.Fatalf("usage=%d want 30", got)
 		}
+		assertCapturePublishedOwners(t, captureDiagnostics(t, project, state), output, summary, ledger.Sessions)
 		return ledger
 	}
 	first := generate()
@@ -469,6 +510,24 @@ func TestCaptureCLIGenerateIncludesBoundIndependentSessionsAndDigestReport(t *te
 	}
 	if missing := generate(); !reflect.DeepEqual(first.Sessions, missing.Sessions) {
 		t.Fatal("unavailable registered source hid accepted facts")
+	}
+	for _, want := range []string{"retained older facts: 1", "failed: 1"} {
+		if !bytes.Contains(readCaptureFile(t, summary), []byte(want)) {
+			t.Fatalf("summary hid unavailable-source coverage %q", want)
+		}
+	}
+	failedSource := false
+	for _, d := range captureDiagnostics(t, project, state) {
+		if d.Phase == "reconciliation" && d.Outcome == "failed" && d.Reconciliation != nil && d.Reconciliation.Cutoff != "" {
+			for _, row := range d.Reconciliation.Owners {
+				if row.Identity.SessionID == "independent-two" && row.State == domain.CaptureFailed && row.RefreshedAt != "" {
+					failedSource = true
+				}
+			}
+		}
+	}
+	if !failedSource {
+		t.Fatal("successful partial publication hid durable source failure/retained snapshot")
 	}
 }
 
@@ -574,9 +633,10 @@ func TestCaptureGenerationPreservesDifferingSnapshotsWithoutProvenSourceOrder(t 
 				}
 			}
 			f.write(t, 30) // Different facts, deliberately no later source timestamp.
-			args := f.args(t)
+			summary := filepath.Join(f.project, "SUMMARY.md")
+			args := f.args(t, "--append", summary)
 			if tc.explicit {
-				args = f.args(t, "--capture-dir", filepath.Join(f.project, "absent-registry"), "--session-id", "root", "--codex-home", f.store)
+				args = f.args(t, "--append", summary, "--capture-dir", filepath.Join(f.project, "absent-registry"), "--session-id", "root", "--codex-home", f.store)
 			}
 			cmd := exec.Command(cliBinaryPath, args...)
 			cmd.Dir = f.project
@@ -588,19 +648,44 @@ func TestCaptureGenerationPreservesDifferingSnapshotsWithoutProvenSourceOrder(t 
 			if !reflect.DeepEqual(result.Sessions, baseline.Sessions) {
 				t.Fatalf("unordered source facts replaced accepted whole owner: before=%+v after=%+v", baseline.Sessions, result.Sessions)
 			}
+			state := f.state
+			if tc.explicit {
+				var err error
+				state, err = capture.ProjectState(filepath.Join(f.project, "absent-registry"), f.project)
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+			var published domain.CapturePublishedOwner
+			for _, diagnostic := range captureDiagnostics(t, f.project, state) {
+				if diagnostic.Phase == "publication" && diagnostic.Outcome == "committed" && len(diagnostic.Owners) == 1 {
+					published = diagnostic.Owners[0]
+				}
+			}
+			if published.Association != "unknown" || published.SourceFingerprint != "" || published.InstallationID != "" || published.Store != "" {
+				t.Fatalf("retained canonical snapshot borrowed rejected registry association: %+v", published)
+			}
+			if !tc.explicit {
+				registry, err := capture.OpenReadOnlyProject(f.state, f.project)
+				if err != nil {
+					t.Fatal(err)
+				}
+				rows, err := registry.List(context.Background())
+				closeErr := registry.Close()
+				if err != nil || closeErr != nil {
+					t.Fatalf("current registry: %v %v", err, closeErr)
+				}
+				if len(rows) != 1 || len(rows[0].Snapshot) != 1 || rows[0].Snapshot[0].Invocations[0].Tokens.Input != 30 || rows[0].SourceFingerprint == "" {
+					t.Fatalf("rejected newer source observation was hidden: %+v", rows)
+				}
+			}
 			if tc.explicit {
 				if !bytes.Contains(out, []byte("unresolved")) || !bytes.Contains(out, []byte("checkpoint")) {
 					t.Fatalf("unordered explicit source did not report unresolved precedence: %s", out)
 				}
 			} else {
-				var report struct {
-					Registrations []domain.CaptureRegistration `json:"registrations"`
-				}
-				if err := json.Unmarshal(readCaptureFile(t, filepath.Join(f.project, "capture_report.json")), &report); err != nil {
-					t.Fatal(err)
-				}
-				if len(report.Registrations) != 1 || report.Registrations[0].State != domain.CapturePending {
-					t.Fatalf("unordered registered refresh claimed current coverage: %+v", report)
+				if body := readCaptureFile(t, summary); !bytes.Contains(body, []byte("pending: 1")) || !bytes.Contains(body, []byte("retained older facts: 1")) {
+					t.Fatalf("unordered registered refresh claimed current coverage: %s", body)
 				}
 			}
 		})
@@ -836,16 +921,15 @@ func testCaptureOverlappingPublishers(t *testing.T, explicitNewer, automatic boo
 		}
 	}
 	assertCaptureRootInput(t, f.ledger(t), 50)
-	ledgerBytes := readCaptureFile(t, f.output)
-	hash := sha256.Sum256(ledgerBytes)
-	var report struct {
-		Digest string `json:"ledger_sha256"`
+	if _, err := os.Stat(filepath.Join(filepath.Dir(f.output), "capture_report.json")); !os.IsNotExist(err) {
+		t.Fatalf("overlapping publisher produced retired report: %v", err)
 	}
-	if err := json.Unmarshal(readCaptureFile(t, filepath.Join(filepath.Dir(f.output), "capture_report.json")), &report); err != nil {
-		t.Fatal(err)
-	}
-	if !explicitNewer && report.Digest != hex.EncodeToString(hash[:]) {
-		t.Fatal("overlapping publication left a mismatched ledger/report pair")
+	if !explicitNewer {
+		summary := ""
+		if automatic {
+			summary = filepath.Join(filepath.Dir(f.output), "SUMMARY.md")
+		}
+		assertCapturePublishedOwners(t, captureDiagnostics(t, f.project, f.state), f.output, summary, f.ledger(t).Sessions)
 	}
 }
 
@@ -904,7 +988,7 @@ func TestCaptureInstallerRendersMarkerBearingPathsOnceAndRollsBackMidWrite(t *te
 		if scopeErr != nil {
 			t.Fatal(scopeErr)
 		}
-		for name, want := range map[string]string{"binary": binary, "stateDir": scoped, "sourceStore": store} {
+		for name, want := range map[string]string{"wrapper": fixtureWrapperFromHook(t, project), "stateDir": scoped, "sourceStore": store} {
 			prefix := "const " + name + " = "
 			found := false
 			for _, line := range strings.Split(plugin, "\n") {
@@ -954,7 +1038,7 @@ func TestCaptureNativeWorkerPublishesMultipleRootsAndRefreshesWithoutGenerate(t 
 			t.Fatalf("git: %v %s", err, out)
 		}
 	}
-	local := []byte("telemetry:\n  capture:\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 1000\n    detailed_report: false\n")
+	local := []byte("telemetry:\n  capture:\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 1000\n    detailed_report: true\n")
 	if err := os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), local, 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -962,7 +1046,7 @@ func TestCaptureNativeWorkerPublishesMultipleRootsAndRefreshesWithoutGenerate(t 
 	receive := func(id, event string) {
 		t.Helper()
 		payload, _ := json.Marshal(capture.HookInput{SessionID: id, Event: event, TranscriptPath: filepath.Join(f.store, "sessions", id+".jsonl")})
-		if out, err := captureCLI(t, f.project, string(payload), "receive", "--source", "codex", "--store", f.store, "--state-dir", state); err != nil {
+		if out, err := captureCLI(t, f.project, string(payload), "receive", "--source", "codex", "--store", f.store, "--state-dir", state, "--binary", filepath.Join(f.project, "not-a-native-wrapper")); err != nil {
 			t.Fatalf("receive: %v %s", err, out)
 		}
 	}
@@ -979,9 +1063,16 @@ func TestCaptureNativeWorkerPublishesMultipleRootsAndRefreshesWithoutGenerate(t 
 	for _, id := range []string{"one", "two"} {
 		write(id, 10, "2026-01-01T00:00:02Z")
 		receive(id, "SessionStart")
-		out, err := captureCLI(t, f.project, "", "request", "--source", "codex", "--store", f.store, "--state-dir", state, "--session-id", id)
+		requestCommand := exec.Command(cliBinaryPath, "capture", "request", "--source", "codex", "--store", f.store, "--state-dir", state, "--session-id", id)
+		requestCommand.Dir = f.project
+		var requestError bytes.Buffer
+		requestCommand.Stderr = &requestError
+		out, err := requestCommand.Output()
 		if err != nil {
-			t.Fatalf("request %v %s", err, out)
+			t.Fatalf("request %v %s", err, requestError.String())
+		}
+		if !strings.Contains(requestError.String(), "detailed_report is deprecated") {
+			t.Fatalf("legacy option diagnosis missing from stderr: %s", requestError.String())
 		}
 		var row domain.CaptureRegistration
 		if err = json.Unmarshal(out, &row); err != nil {
@@ -1078,9 +1169,9 @@ func TestCaptureNativeWorkerPublishesMultipleRootsAndRefreshesWithoutGenerate(t 
 		t.Fatal(err)
 	}
 	if strings.Contains(string(summary), "](capture_report.json)") {
-		t.Fatal("disabled report has dangling link")
+		t.Fatal("deprecated detailed_report produced dangling link")
 	}
 	if _, err = os.Stat(filepath.Join(filepath.Dir(output), "capture_report.json")); !os.IsNotExist(err) {
-		t.Fatalf("disabled report produced: %v", err)
+		t.Fatalf("deprecated detailed_report produced sidecar: %v", err)
 	}
 }

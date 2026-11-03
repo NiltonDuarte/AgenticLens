@@ -35,6 +35,19 @@ func ResolveCapture(project, stateOverride string) (domain.CaptureConfig, error)
 		if err != nil {
 			return cfg, err
 		}
+		selector := struct {
+			AgenticLens *domain.EntrypointConfig `yaml:"agenticlens"`
+		}{}
+		if !bytes.HasPrefix(bytes.TrimSpace(data), []byte("{")) {
+			if err := yaml.Unmarshal(data, &selector); err != nil {
+				return cfg, err
+			}
+			if selector.AgenticLens != nil {
+				if _, err := parseEntrypoint(data, name != shared); err != nil {
+					return cfg, fmt.Errorf("entrypoint configuration %s: %w", name, err)
+				}
+			}
+		}
 		cfg, err = decodeCapturePolicy(data, cfg)
 		if err != nil {
 			return cfg, fmt.Errorf("capture configuration %s: %w", name, err)
@@ -66,6 +79,24 @@ func decodeCapturePolicy(data []byte, previous domain.CaptureConfig) (domain.Cap
 		err = json.Unmarshal(data, &overlay)
 	} else {
 		err = yaml.Unmarshal(data, &overlay)
+	}
+	if err == nil {
+		deprecated := struct {
+			Telemetry struct {
+				Capture struct {
+					DetailedReport *bool `yaml:"detailed_report" json:"detailed_report"`
+				} `yaml:"capture" json:"capture"`
+			} `yaml:"telemetry" json:"telemetry"`
+		}{}
+		if bytes.HasPrefix(bytes.TrimSpace(data), []byte("{")) {
+			err = json.Unmarshal(data, &deprecated)
+		} else {
+			err = yaml.Unmarshal(data, &deprecated)
+		}
+		if deprecated.Telemetry.Capture.DetailedReport != nil {
+			overlay.Telemetry.Capture.DeprecatedDetailedReport = true
+		}
+		overlay.Telemetry.Capture.DetailedReport = false
 	}
 	return overlay.Telemetry.Capture, err
 }

@@ -10,6 +10,9 @@ import (
 
 	"agenticlens/internal/adapters/codex"
 	"agenticlens/internal/domain"
+	"os"
+	"runtime"
+	"strings"
 )
 
 type HookInput struct {
@@ -26,8 +29,9 @@ type HookContext struct {
 	Context string `json:"additionalContext"`
 }
 type HookOutput struct {
-	Context *HookContext `json:"hookSpecificOutput,omitempty"`
-	Message string       `json:"systemMessage,omitempty"`
+	Registered bool         `json:"-"`
+	Context    *HookContext `json:"hookSpecificOutput,omitempty"`
+	Message    string       `json:"systemMessage,omitempty"`
 }
 
 func ReadHook(input io.Reader) (HookInput, error) {
@@ -86,7 +90,7 @@ func BindingPrompt(r domain.CaptureRegistration, binary, directory string) strin
 	return fmt.Sprintf("AgenticLens requires explicit ticket information for this exact %s session %s. Do not infer a ticket from directory, branch, role or timing. If the user has explicitly identified the active ticket, respond now by executing: %s capture bind --state-dir %s --source %s --store %s --session-id %s --request %s --ticket-id <EXPLICIT_TICKET_ID> --ticket-title <EXPLICIT_TICKET_TITLE> [--ticket-type <EXPLICIT_TYPE>]. If no ticket was explicitly supplied, ask the user for it; leave capture unassigned. Do not invent source, parent, model or usage fields.", r.Identity.Source, r.Identity.SessionID, QuoteArgument(binary), QuoteArgument(directory), r.Identity.Source, QuoteArgument(r.Identity.Store), QuoteArgument(r.Identity.SessionID), QuoteArgument(r.Request))
 }
 
-func ReceiveCodex(ctx context.Context, s *Store, input HookInput, sourceStore, binary, directory string) (HookOutput, error) {
+func ReceiveCodex(ctx context.Context, s *Store, input HookInput, sourceStore, binary, directory string, wrappers ...string) (result HookOutput, returnErr error) {
 	switch input.Event {
 	case "SessionStart", "SubagentStart", "SubagentStop", "Stop", "SessionEnd", "UserPromptSubmit":
 	default:
@@ -100,15 +104,34 @@ func ReceiveCodex(ctx context.Context, s *Store, input HookInput, sourceStore, b
 		return HookOutput{}, normalizeErr
 	}
 	sourceStore = canonicalStore
+	// Commit identity and its unverified source pointer before metadata inspection.
+	r, err := s.Register(ctx, domain.CaptureIdentity{Source: domain.SourceCodex, Store: sourceStore, SessionID: input.SessionID}, input.TranscriptPath, input.Event)
+	if err != nil {
+		var accepted *AcceptedRegistrationError
+		if errors.As(err, &accepted) {
+			return HookOutput{Registered: true}, err
+		}
+		if input.TranscriptPath != "" {
+			err = errors.Join(err, codex.ValidateRolloutStore(sourceStore, input.TranscriptPath))
+		}
+		return HookOutput{}, fmt.Errorf("durable lifecycle registration failed; verify configured capture state permissions: %w", err)
+	}
+	defer func() {
+		result.Registered = true
+		if r.ProjectProof == domain.CaptureProjectUnverified {
+			result.Message = "AgenticLens accepted this lifecycle handoff, but exact source project metadata is not yet verified. Run capture diagnostics for this project and retry capture reconcile after source flush; do not infer ticket ownership or complete capture."
+		}
+	}()
 	if input.TranscriptPath != "" {
 		if err := codex.ValidateRolloutStore(sourceStore, input.TranscriptPath); err != nil {
 			return HookOutput{}, err
 		}
 	}
-	r, err := s.Register(ctx, domain.CaptureIdentity{Source: domain.SourceCodex, Store: sourceStore, SessionID: input.SessionID}, input.TranscriptPath, input.Event)
+	r, err = s.ProveRegistration(ctx, r)
 	if err != nil {
-		return HookOutput{}, err
+		return HookOutput{}, fmt.Errorf("registration accepted but source project proof could not be persisted: %w", err)
 	}
+
 	// Subagent callbacks carry the parent's session_id. Never attribute that ID to the child.
 	if input.Event == "SubagentStart" {
 		if err = s.QueueChildStart(ctx, sourceStore, input.SessionID, input.AgentID); err != nil {
@@ -122,8 +145,20 @@ func ReceiveCodex(ctx context.Context, s *Store, input HookInput, sourceStore, b
 			return HookOutput{}, err
 		}
 	}
-	if (r.TicketID == "" || r.TicketTitle == "") && (input.Event == "SessionStart" || input.Event == "UserPromptSubmit") {
-		return HookOutput{Context: &HookContext{Event: input.Event, Context: BindingPrompt(r, binary, directory) + projectBindingArgument(s)}}, nil
+	if (r.TicketID == "" || r.TicketTitle == "" || (r.InstallationID != "" && r.BindingInstallationID != r.InstallationID)) && (input.Event == "SessionStart" || input.Event == "UserPromptSubmit") {
+		prompt := BindingPrompt(r, binary, directory)
+		if len(wrappers) > 0 && wrappers[0] != "" {
+			prompt = WrapperBindingPrompt(r, wrappers[0], s.project, directory)
+		} else if wrapper, e := installedWrapper(directory, "codex"); e == nil {
+			if wrapper == "" {
+				prompt = "AgenticLens recorded this session but the installed integration predates the common version-pinned wrapper. Refresh capture setup before binding; inspect capture diagnostics. No ticket has been inferred."
+			} else {
+				prompt = WrapperBindingPrompt(r, wrapper, s.project, directory)
+			}
+		} else if !errors.Is(e, os.ErrNotExist) {
+			return HookOutput{}, e
+		}
+		return HookOutput{Context: &HookContext{Event: input.Event, Context: prompt + projectBindingArgument(s)}}, nil
 	}
 	return HookOutput{}, nil
 }
@@ -133,4 +168,31 @@ func projectBindingArgument(s *Store) string {
 		return ""
 	}
 	return " Use --repo " + QuoteArgument(s.project) + " on that binding command to preserve the installed project context."
+}
+
+func installedWrapper(directory, source string) (string, error) {
+	body, err := os.ReadFile(manifestPath(directory, source))
+	if err != nil {
+		return "", err
+	}
+	var value struct {
+		Wrapper string `json:"wrapper"`
+	}
+	err = json.Unmarshal(body, &value)
+	return value.Wrapper, err
+}
+
+// WrapperBindingPrompt routes a future agent response through the same offline
+// project pin. The already-running worker continues to use its native binary.
+func WrapperBindingPrompt(r domain.CaptureRegistration, wrapper, project, directory string) string {
+	quote := QuoteArgument
+	if runtime.GOOS == "windows" {
+		quote = func(value string) string { return "'" + strings.ReplaceAll(value, "'", "''") + "'" }
+	}
+	command := quote(wrapper)
+	if runtime.GOOS == "windows" {
+		command = "powershell.exe -NoLogo -NoProfile -NonInteractive -File " + command
+	}
+	command += " --al-offline --al-project " + quote(project)
+	return fmt.Sprintf("AgenticLens requires explicit ticket information for this exact %s session %s. Do not infer a ticket from directory, branch, role or timing. If the user explicitly identified the active ticket, respond by executing: %s capture bind --repo %s --state-dir %s --source %s --store %s --session-id %s --request %s --ticket-id <EXPLICIT_TICKET_ID> --ticket-title <EXPLICIT_TICKET_TITLE> [--ticket-type <EXPLICIT_TYPE>]. Otherwise ask the user for the ticket and leave capture unassigned. Do not invent source, parent, model or usage fields.", r.Identity.Source, r.Identity.SessionID, command, quote(project), quote(directory), r.Identity.Source, quote(r.Identity.Store), quote(r.Identity.SessionID), quote(r.Request))
 }

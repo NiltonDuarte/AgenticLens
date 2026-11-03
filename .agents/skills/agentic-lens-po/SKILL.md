@@ -86,7 +86,7 @@ PO session-specific deliverables live under `<WORKSPACES_DIR>/PO-#/`:
 
 Generate PO session metrics via:
 ```bash
-./bin/agentic-lens generate --nonce <GENERATED_NONCE> --ticket-id PO-# --ticket-type docs --ticket-title <TICKET_TITLE> --json-output <WORKSPACES_DIR>/PO-#/agentic_metrics.json --append <WORKSPACES_DIR>/PO-#/SUMMARY.md
+agentic-lens --al-offline --al-project . generate --nonce <GENERATED_NONCE> --ticket-id PO-# --ticket-type docs --ticket-title <TICKET_TITLE> --json-output <WORKSPACES_DIR>/PO-#/agentic_metrics.json --append <WORKSPACES_DIR>/PO-#/SUMMARY.md
 ```
 The agent must generate a unique random nonce directly (e.g. an 8 to 16 character alphanumeric or hex string) and pass the literal token to `--nonce <GENERATED_NONCE>`. Shell variables (`$NONCE`) must not be used because OpenCode records tool inputs to SQLite before subshell expansion occurs.
 

@@ -307,6 +307,12 @@ func TestPublicationUntrustedJournalCannotMutateAnyMember(t *testing.T) {
 			if !recovered || err == nil {
 				t.Fatalf("untrusted journal accepted: %v %v", recovered, err)
 			}
+			// The compatibility retry must preserve the same full prevalidation:
+			// recognizing a retired report never authorizes a journal's other paths.
+			recovered, err = RecoverPublicationWithLegacyReport(filepath.Dir(recoveryLedger), recoveryLedger, allowed)
+			if !recovered || err == nil {
+				t.Fatalf("legacy recovery retry accepted untrusted journal: %v %v", recovered, err)
+			}
 			for _, path := range paths {
 				b, err := os.ReadFile(path)
 				if err != nil || string(b) != "current" {
@@ -410,5 +416,46 @@ func TestPublicationPartialRecoveryCanRetry(t *testing.T) {
 	}
 	if recovered, err := RecoverPublication(ledger, paths); recovered || err != nil {
 		t.Fatalf("retry not idempotent: %v %v", recovered, err)
+	}
+}
+
+func TestPublicationLegacyRecoveryRejectsPhysicalReportEscapeBeforeMutation(t *testing.T) {
+	for _, present := range []bool{true, false} {
+		t.Run(map[bool]string{true: "restore", false: "remove"}[present], func(t *testing.T) {
+			project := t.TempDir()
+			ledger := filepath.Join(project, "ledger.json")
+			victim := filepath.Join(t.TempDir(), "outside")
+			if err := os.WriteFile(ledger, []byte("accepted ledger"), 0600); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(victim, []byte("accepted outside"), 0600); err != nil {
+				t.Fatal(err)
+			}
+			report := filepath.Join(project, "capture_report.json")
+			if err := os.Symlink(victim, report); err != nil {
+				t.Fatal(err)
+			}
+			data := []byte(nil)
+			if present {
+				data = []byte("forged replacement")
+			}
+			journal := publicationJournal{Version: 1, Ledger: ledger, MemberCount: 2, Artifacts: []priorArtifact{{Path: ledger, Present: true, Data: []byte("forged ledger")}, {Path: victim, Present: present, Data: data}}}
+			body, err := json.Marshal(journal)
+			if err != nil {
+				t.Fatal(err)
+			}
+			marker := journalPath(ledger)
+			if err = os.WriteFile(marker, body, 0600); err != nil {
+				t.Fatal(err)
+			}
+			if recovered, err := RecoverPublicationWithLegacyReport(project, ledger, []string{ledger}); !recovered || err == nil {
+				t.Fatalf("outside legacy authority accepted: %v %v", recovered, err)
+			}
+			for path, want := range map[string][]byte{ledger: []byte("accepted ledger"), victim: []byte("accepted outside"), marker: body} {
+				if got, err := os.ReadFile(path); err != nil || !bytes.Equal(got, want) {
+					t.Fatalf("unsafe journal mutated %s: %q %v", path, got, err)
+				}
+			}
+		})
 	}
 }

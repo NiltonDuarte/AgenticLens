@@ -8,7 +8,7 @@ import (
 
 func TestCapturePolicyPrecedenceAndProjectRelativeState(t *testing.T) {
 	project := t.TempDir()
-	for name, body := range map[string]string{".agenticlens-config.yaml": "telemetry:\n  capture:\n    refresh_ms: 800\n    state_dir: portable\n    detailed_report: false\n", ".agenticlens-config.local.yaml": "telemetry:\n  capture:\n    state_dir: local\n    max_sessions: 7\n"} {
+	for name, body := range map[string]string{".agenticlens-config.yaml": "telemetry:\n  capture:\n    refresh_ms: 800\n    state_dir: portable\n    detailed_report: true\n", ".agenticlens-config.local.yaml": "telemetry:\n  capture:\n    state_dir: local\n    max_sessions: 7\n"} {
 		if err := os.WriteFile(filepath.Join(project, name), []byte(body), 0600); err != nil {
 			t.Fatal(err)
 		}
@@ -17,7 +17,7 @@ func TestCapturePolicyPrecedenceAndProjectRelativeState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.RefreshMS != 800 || cfg.MaxSessions != 7 || cfg.DetailedReport || cfg.StateDir != filepath.Join(project, "local") {
+	if cfg.RefreshMS != 800 || cfg.MaxSessions != 7 || cfg.DetailedReport || !cfg.DeprecatedDetailedReport || cfg.StateDir != filepath.Join(project, "local") {
 		t.Fatalf("wrong overlay: %+v", cfg)
 	}
 	override, err := ResolveCapture(project, "explicit")

@@ -15,6 +15,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	adaptersconfig "agenticlens/internal/adapters/config"
 )
 
 //go:embed plugin.ts
@@ -26,6 +28,7 @@ type InstallOptions struct {
 	Repository  string
 	StateDir    string
 	Binary      string
+	Wrapper     string
 	Source      string
 	SourceStore string
 	DryRun      bool
@@ -36,17 +39,22 @@ type OwnedGroup struct {
 	Value json.RawMessage `json:"value"`
 }
 type Manifest struct {
-	Protocol       int          `json:"protocol"`
-	Source         string       `json:"source"`
-	Repository     string       `json:"repository"`
-	Binary         string       `json:"binary"`
-	ConfigPath     string       `json:"config_path"`
-	Groups         []OwnedGroup `json:"groups,omitempty"`
-	PluginHash     string       `json:"plugin_hash,omitempty"`
-	Active         bool         `json:"active"`
-	HarnessVersion string       `json:"harness_version"`
-	Capability     string       `json:"capability"`
-	StateDir       string       `json:"state_dir,omitempty"`
+	Protocol        int          `json:"protocol"`
+	Source          string       `json:"source"`
+	Repository      string       `json:"repository"`
+	Binary          string       `json:"binary"`
+	Wrapper         string       `json:"wrapper,omitempty"`
+	WrapperHash     string       `json:"wrapper_hash,omitempty"`
+	Version         string       `json:"version,omitempty"`
+	SourceStore     string       `json:"source_store,omitempty"`
+	TemplateVersion string       `json:"template_version,omitempty"`
+	ConfigPath      string       `json:"config_path"`
+	Groups          []OwnedGroup `json:"groups,omitempty"`
+	PluginHash      string       `json:"plugin_hash,omitempty"`
+	Active          bool         `json:"active"`
+	HarnessVersion  string       `json:"harness_version"`
+	Capability      string       `json:"capability"`
+	StateDir        string       `json:"state_dir,omitempty"`
 }
 type PlannedChange struct {
 	Path   string `json:"path"`
@@ -69,7 +77,7 @@ func absolute(path string) (string, error) {
 	if path == "" {
 		return "", errors.New("empty path")
 	}
-	return filepath.Abs(path)
+	return ProjectDirectory(path)
 }
 func hash(b []byte) string                   { h := sha256.Sum256(b); return hex.EncodeToString(h[:]) }
 func manifestPath(dir, source string) string { return filepath.Join(dir, "install-"+source+".json") }
@@ -159,10 +167,8 @@ func Install(ctx context.Context, options InstallOptions) (InstallResult, error)
 	if options.Remove && errors.Is(loadErr, os.ErrNotExist) {
 		return result, errors.New("no owned installation manifest; refusing removal")
 	}
-	binary, err := absolute(options.Binary)
-	if err != nil {
-		return result, err
-	}
+	binary := options.Binary
+	wrapper, version := previous.Wrapper, previous.Version
 	if options.SourceStore == "" {
 		return result, errors.New("empty path")
 	}
@@ -171,6 +177,43 @@ func Install(ctx context.Context, options InstallOptions) (InstallResult, error)
 		return result, err
 	}
 	if !options.Remove {
+		entry, e := adaptersconfig.ResolveEntrypoint(repo)
+		if e != nil {
+			return result, e
+		}
+		selected, e := entry.NativePath()
+		if e != nil {
+			return result, e
+		}
+		if binary == "" {
+			binary = selected
+		}
+		binary, e = ProjectDirectory(binary)
+		if e != nil {
+			return result, fmt.Errorf("selected native capture handler: %w", e)
+		}
+		selected, e = ProjectDirectory(selected)
+		if e != nil || binary != selected {
+			return result, errors.New("--binary must identify the exact shared-pin native cache leaf; explicitly install the release first")
+		}
+		if e = validateNativeHeader(binary); e != nil {
+			return result, e
+		}
+		wrapper = options.Wrapper
+		if wrapper == "" {
+			wrapper, e = adaptersconfig.UserWrapperPath()
+			if e != nil {
+				return result, e
+			}
+		}
+		wrapper, e = ProjectDirectory(wrapper)
+		if e != nil {
+			return result, e
+		}
+		if e = validateCommonWrapper(ctx, wrapper, entry); e != nil {
+			return result, e
+		}
+		version = entry.Version
 		info, e := os.Stat(binary)
 		if e != nil || info.IsDir() {
 			return result, errors.New("native capture handler missing")
@@ -178,11 +221,26 @@ func Install(ctx context.Context, options InstallOptions) (InstallResult, error)
 		checkCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
 		defer cancel()
 		out, e := exec.CommandContext(checkCtx, binary, "capture", "protocol").Output()
-		if e != nil || strings.TrimSpace(string(out)) != "1" {
-			return result, errors.New("installed native handler does not support capture protocol 1")
+		if e != nil || strings.TrimSpace(string(out)) != "2" {
+			return result, errors.New("installed native handler does not support hook protocol 2")
 		}
+		versionOutput, e := exec.CommandContext(checkCtx, binary, "version", "--short").Output()
+		if e != nil || strings.TrimSpace(string(versionOutput)) != version {
+			return result, errors.New("native capture handler version differs from shared pin")
+		}
+	} else {
+		binary = previous.Binary
 	}
-	m := Manifest{Protocol: ProtocolVersion, Source: options.Source, Repository: repo, Binary: binary, StateDir: dir, Active: !options.Remove}
+	m := Manifest{Protocol: ProtocolVersion, Source: options.Source, Repository: repo, Binary: binary, Wrapper: wrapper, Version: version, SourceStore: store, TemplateVersion: installationTemplateVersion(), StateDir: dir, Active: !options.Remove}
+	if !options.Remove {
+		wrapperBody, e := readEntrypointFile(wrapper, 128*1024)
+		if e != nil {
+			return result, e
+		}
+		m.WrapperHash = hash(wrapperBody)
+	} else {
+		m.WrapperHash = previous.WrapperHash
+	}
 	if !options.Remove {
 		probeCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 		m.HarnessVersion, m.Capability = probe(probeCtx, options.Source)
@@ -239,30 +297,20 @@ func Install(ctx context.Context, options InstallOptions) (InstallResult, error)
 					}
 				}
 			}
-			args := []string{binary, "capture", "receive", "--source", "codex", "--store", store, "--state-dir", dir, "--repo", repo}
+			args := WrapperCommand(wrapper, "--al-offline", "--al-project", repo, "capture", "receive", "--source", "codex", "--store", store, "--state-dir", dir, "--repo", repo, "--wrapper", wrapper)
 			command, e := staticCommand(args, false)
 			if e != nil {
 				return result, e
 			}
-			windows, e := staticCommand(args, true)
+			windows := ""
+			if runtime.GOOS == "windows" {
+				windows, e = staticCommand(args, true)
+			}
 			if e != nil && runtime.GOOS == "windows" {
 				return result, e
 			}
 			for _, event := range []string{"SessionStart", "UserPromptSubmit", "SubagentStart", "SubagentStop", "Stop", "SessionEnd"} {
-				handler := struct {
-					Type           string `json:"type"`
-					Command        string `json:"command"`
-					CommandWindows string `json:"commandWindows,omitempty"`
-					Timeout        int    `json:"timeout"`
-					Status         string `json:"statusMessage"`
-					Limit          int    `json:"additionalContextLimit,omitempty"`
-				}{"command", command, windows, 2, marker, 0}
-				if event == "SessionStart" || event == "UserPromptSubmit" || event == "SubagentStart" {
-					handler.Limit = 1000
-				}
-				group, e := json.Marshal(struct {
-					Hooks []typeofHandler `json:"hooks"`
-				}{[]typeofHandler{handler}})
+				group, e := codexHookGroup(event, command, windows, runtime.GOOS == "windows")
 				if e != nil {
 					return result, e
 				}
@@ -293,7 +341,7 @@ func Install(ctx context.Context, options InstallOptions) (InstallResult, error)
 			return result, errors.New("plugin contains conflicting local edits; preserved")
 		}
 		replacements := []string{}
-		for _, item := range [][2]string{{"__BINARY__", binary}, {"__STATE__", dir}, {"__STORE__", store}, {"__PROJECT__", repo}} {
+		for _, item := range [][2]string{{"__WRAPPER__", wrapper}, {"__STATE__", dir}, {"__STORE__", store}, {"__PROJECT__", repo}} {
 			raw, e := json.Marshal(item[1])
 			if e != nil {
 				return result, e
@@ -389,6 +437,22 @@ func Install(ctx context.Context, options InstallOptions) (InstallResult, error)
 		}
 	}
 	return result, nil
+}
+
+// The native handoff remains two seconds. Native Windows additionally needs
+// bounded PowerShell startup time before that handoff begins.
+func codexHookGroup(event, command, windowsCommand string, windows bool) (json.RawMessage, error) {
+	timeout := 2
+	if windows {
+		timeout = 5
+	}
+	handler := typeofHandler{"command", command, windowsCommand, timeout, marker, 0}
+	if event == "SessionStart" || event == "UserPromptSubmit" || event == "SubagentStart" {
+		handler.Limit = 1000
+	}
+	return json.Marshal(struct {
+		Hooks []typeofHandler `json:"hooks"`
+	}{[]typeofHandler{handler}})
 }
 
 type typeofHandler = struct {

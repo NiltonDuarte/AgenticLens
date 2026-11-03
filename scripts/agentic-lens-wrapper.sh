@@ -1,314 +1,196 @@
 #!/bin/sh
-#
-# agentic-lens-wrapper.sh - Multi-platform binary dispatcher and updater for AgenticLens
-#
-# Resolves the host OS and architecture at execution time, delegates to the appropriate
-# platform-specific binary (e.g. agentic-lens-darwin-arm64, agentic-lens-linux-amd64),
-# self-heals by downloading missing binaries from GitHub Releases on demand, and
-# performs non-blocking background update checks.
-#
-# Zero emojis permitted.
-
-set -e
-
-DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO="${AGENTIC_LENS_REPO:-NiltonDuarte/AgenticLens}"
-VERSION="${AGENTIC_LENS_VERSION:-latest}"
-
-# Detect OS
-OS_RAW="$(uname -s)"
-case "$OS_RAW" in
-  Darwin)
-    OS="darwin"
-    ;;
-  Linux)
-    OS="linux"
-    ;;
-  MINGW*|MSYS*|CYGWIN*|Windows_NT)
-    OS="windows"
-    ;;
-  *)
-    echo "Error: unsupported operating system: $OS_RAW" >&2
-    exit 1
-    ;;
-esac
-
-# Detect Architecture
-ARCH_RAW="$(uname -m)"
-case "$ARCH_RAW" in
-  x86_64|amd64)
-    ARCH="amd64"
-    ;;
-  arm64|aarch64)
-    ARCH="arm64"
-    ;;
-  *)
-    echo "Error: unsupported architecture: $ARCH_RAW" >&2
-    exit 1
-    ;;
-esac
-
-BIN_EXT=""
-if [ "$OS" = "windows" ]; then
-  BIN_EXT=".exe"
-fi
-
-BIN_NAME="agentic-lens-${OS}-${ARCH}${BIN_EXT}"
-TARGET_BIN="${DIR}/${BIN_NAME}"
-# A wrapper mistakenly installed as a native artifact would dispatch to itself.
-# Fail before updates or delegation instead of recursively starting the wrapper.
-case "$(basename "$0")" in
-  "$BIN_NAME"|"$BIN_NAME".candidate.*|"$BIN_NAME".previous.*)
-    echo "Error: Wrapper installed at native binary path ${TARGET_BIN}; install the native release executable." >&2
-    exit 1
-    ;;
-esac
-CHECK_FILE="${DIR}/.last_update_check"
-LATEST_FILE="${DIR}/.latest_version"
-
-download_artifact() {
-  target_file="$1"
-  remote_name="$2"
-  ver="${3:-latest}"
-  temp_file="${target_file}.tmp.$$"
-
-  if [ "$ver" = "latest" ]; then
-    download_url="https://github.com/${REPO}/releases/latest/download/${remote_name}"
-  else
-    download_url="https://github.com/${REPO}/releases/download/${ver}/${remote_name}"
-  fi
-
-  ok=0
-  if command -v curl >/dev/null 2>&1; then
-    if curl -fsSL -o "$temp_file" "$download_url"; then
-      ok=1
-    fi
-  elif command -v wget >/dev/null 2>&1; then
-    if wget -q -O "$temp_file" "$download_url"; then
-      ok=1
-    fi
-  fi
-
-  if [ "$ok" -eq 1 ] && [ -f "$temp_file" ]; then
-    mv "$temp_file" "$target_file"
-    chmod +x "$target_file"
-    return 0
-  else
-    rm -f "$temp_file"
-    return 1
-  fi
+# AgenticLens common entrypoint v1: offline shared-YAML release selection.
+set -eu
+fail() { printf '%s\n' "$*" >&2; exit 2; }
+read_bootstrap() {
+  input=$1; mode=$2; field=$3
+  [ -f "$input" ] || fail "Configuration must be a regular file: $input"
+  input_size=$(dd if="$input" bs=1048577 count=1 2>/dev/null | wc -c)
+  [ "$input_size" -le 1048576 ] || fail 'bootstrap configuration exceeds 1 MiB'
+  dd if="$input" bs=1048577 count=1 2>/dev/null | LC_ALL=C awk -v mode="$mode" -v field="$field" '
+# Disposable prototype: supported bootstrap YAML, not a general YAML parser.
+function fail(message) { print FILENAME ":" FNR ": " message > "/dev/stderr"; bad=1; exit 2 }
+function trim(value) { sub(/^[ \t]+/, "", value); sub(/[ \t]+$/, "", value); return value }
+function lex(line,    i,c,q,out) {
+    q=""; out=""
+    for(i=1;i<=length(line);i++) {
+        c=substr(line,i,1)
+        if(q!="") {
+            if(c=="\\" && q=="\"") fail("escaped double-quoted scalars are unsupported")
+            if(c==q) q=""
+            out=out c
+        } else {
+            if(c=="#" && (i==1 || substr(line,i-1,1) ~ /[ \t]/)) break
+            if((c=="\"" || c==sprintf("%c",39)) && (i==1 || substr(line,i-1,1) ~ /[ \t:\[,]/)) q=c
+            if(c ~ /[&*!|>]/) fail("anchors, aliases, tags and block scalars are unsupported")
+            out=out c
+        }
+    }
+    if(q!="") fail("unclosed quoted scalar")
+    return out
+}
+function scalar(value,    q) {
+    value=trim(value); q=substr(value,1,1)
+    if(q=="\"" || q==sprintf("%c",39)) {
+        if(substr(value,length(value),1)!=q || length(value)<2) fail("unsupported quoted scalar")
+        value=substr(value,2,length(value)-2)
+        if(index(value,q)) fail("embedded quotes are unsupported")
+    } else if(value ~ /[ \t#"\047]/) fail("quote values containing spaces or comments")
+    if(value=="" || value ~ /[\r\n]/) fail("empty or multiline scalar")
+    return value
+}
+{
+    line=$0; sub(/\r$/, "", line)
+    if(FNR==1) sub(/^\357\273\277/, "", line)
+    if(line ~ /^ *\t/) fail("tab indentation is unsupported")
+    line=lex(line)
+    if(line ~ /^[ \t]*$/) next
+    if(line ~ /^(---|\.\.\.|%)/) fail("YAML document markers/directives are unsupported")
+    if(line ~ /^[^ ]/) {
+        if(line !~ /^[A-Za-z_][A-Za-z0-9_-]*:([ \t]+.*)?$/) fail("use plain top-level mapping keys")
+        key=line; sub(/:.*/, "", key)
+        if(roots[key]++) fail("duplicate top-level mapping key")
+        active=(key=="agenticlens")
+        if(active && trim(substr(line,length(key)+2))!="") fail("agenticlens must be a block mapping")
+        next
+    }
+    if(line ~ /^[ ]*<<:/) fail("YAML merges are unsupported")
+    if(!active) next
+    if(line !~ /^  [A-Za-z_][A-Za-z0-9_-]*:([ \t]+.*)?$/) fail("agenticlens children require exactly two spaces and plain keys")
+    key=substr(line,3); sub(/:.*/, "", key)
+    if(children[key]++) fail("duplicate agenticlens key")
+    if(key!="version" && key!="install_root") fail("unknown agenticlens key")
+    value=scalar(substr(line,length(key)+4))
+    if(key=="version") {
+        if(mode=="local") fail("local version overrides are prohibited; edit shared YAML")
+        if(length(value)>128 || value !~ /^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?(\+[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?$/) fail("version must be an exact vMAJOR.MINOR.PATCH release tag")
+        version=value
+    } else {
+        if(length(value)>4096 || value !~ /^(\/|~\/|[A-Za-z]:[\\\/]|\\\\[^\\]+\\[^\\]+)/ || value ~ /[<>|?*]/) fail("install_root must be an absolute path or ~/path")
+        install_root=value
+    }
+}
+END {
+    if(bad) exit 2
+    if(mode!="local" && version=="") { print FILENAME ": missing agenticlens.version" > "/dev/stderr"; exit 2 }
+    if(field=="version") print version
+    else if(field=="install_root") print install_root
+    else { print "version:" version; print "install_root:" install_root }
 }
 
-resolve_latest_tag() {
-  tag=""
-  if command -v curl >/dev/null 2>&1; then
-    eff_url="$(curl -fsSLI -o /dev/null -w "%{url_effective}" --max-time 5 "https://github.com/${REPO}/releases/latest" 2>/dev/null || true)"
-    tag="$(basename "$eff_url" 2>/dev/null || true)"
-  elif command -v wget >/dev/null 2>&1; then
-    loc="$(wget --spider -S --timeout=5 "https://github.com/${REPO}/releases/latest" 2>&1 | grep -i "Location:" | tail -n 1 | awk '{print $2}' | tr -d '\r')"
-    tag="$(basename "$loc" 2>/dev/null || true)"
-  fi
-
-  case "$tag" in
-    ""|latest|releases)
-      echo ""
-      ;;
-    *)
-      echo "$tag"
-      ;;
+'
+}
+project=.
+resolve=0
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --al-offline) shift ;;
+    --al-project) [ "$#" -ge 2 ] || fail '--al-project requires a directory'; project=$2; shift 2 ;;
+    --al-resolve) resolve=1; shift ;;
+    *) break ;;
   esac
-}
-
-capture_protocol() {
-  if [ ! -x "$1" ]; then return 1; fi
-  protocol_value="$("$1" capture protocol 2>/dev/null)" || return 1
-  case "$protocol_value" in ""|*[!0-9]*) return 1 ;; esac
-  printf '%s' "$protocol_value"
-}
-
-finish_update_transaction() {
-  update_result="$1"
-  trap - EXIT HUP INT TERM
-  if [ "$update_result" -ne 0 ] && [ -f "$BINARY_UPDATE_DIR/replaced" ]; then
-    while IFS= read -r update_name; do
-      if [ -f "$BINARY_UPDATE_DIR/previous/$update_name" ]; then
-        if ! mv -f "$BINARY_UPDATE_DIR/previous/$update_name" "$DIR/$update_name"; then
-          echo "Error: Restore the prior binary from $BINARY_UPDATE_DIR/previous/$update_name" >&2
-          # Keep recoverable backups if a restoration itself fails.
-          exit "$update_result"
-        fi
-      else
-        rm -f "$DIR/$update_name"
-      fi
-    done < "$BINARY_UPDATE_DIR/replaced"
-  fi
-  rm -rf "$BINARY_UPDATE_DIR"
-  exit "$update_result"
-}
-
-handle_update() {
-  shift
-  target_ver="latest"
-  while [ $# -gt 0 ]; do
-    case "$1" in
-      --version)
-        if [ $# -lt 2 ] || [ -z "$2" ]; then
-          echo "Error: --version requires a release tag" >&2
-          exit 1
-        fi
-        target_ver="$2"
-        shift 2
-        ;;
-      *) echo "Error: Unknown update argument $1" >&2; exit 1 ;;
+done
+root=$(CDPATH= cd -P -- "$project" && pwd -P) || fail 'cannot resolve project directory'
+while :; do
+  config=
+  for suffix in yaml yml json; do
+    [ ! -d "$root/.agenticlens-config.$suffix" ] || continue
+    if [ -e "$root/.agenticlens-config.$suffix" ] || [ -L "$root/.agenticlens-config.$suffix" ]; then
+      [ -f "$root/.agenticlens-config.$suffix" ] || fail "Configuration must be a regular file: $root/.agenticlens-config.$suffix"
+      config=$root/.agenticlens-config.$suffix; break
+    fi
+  done
+  [ -z "$config" ] || break
+  [ ! -e "$root/.git" ] && [ ! -L "$root/.git" ] || break
+  parent=${root%/*}; [ -n "$parent" ] || parent=/
+  [ "$parent" != "$root" ] || break
+  root=$parent
+done
+[ -n "$config" ] || fail 'shared project YAML missing; explicit setup must write a version pin'
+case "$config" in *.json) fail 'JSON bootstrap is unsupported; migrate shared configuration to .agenticlens-config.yaml' ;; esac
+# Parse capture flag arity without interpreting values as flags. A --repo value
+# must belong to the selected project; explicit cross-project use supplies the
+# matching --al-project prefix. Native argv is never reconstructed.
+if [ "${1:-}" = capture ]; then
+  native_index=0; pending_value=0; repo_value=''
+  for native_arg in "$@"; do
+    native_index=$((native_index+1))
+    [ "$native_index" -gt 2 ] || continue
+    if [ "$pending_value" -ne 0 ]; then
+      [ "$pending_value" -ne 2 ] || repo_value=$native_arg
+      pending_value=0; continue
+    fi
+    case "$native_arg" in
+      --repo|-repo) pending_value=2 ;;
+      --repo=*|-repo=*) repo_value=${native_arg#*=} ;;
+      --dry-run|-dry-run|--dry-run=*|-dry-run=*) ;;
+      --) break ;;
+      -*=*) ;;
+      -*) pending_value=1 ;;
+      *) break ;;
     esac
   done
-
-  echo "Checking for AgenticLens updates..."
-  if [ "$target_ver" = "latest" ]; then
-    latest_tag="$(resolve_latest_tag)"
-    if [ -z "$latest_tag" ]; then
-      echo "Error: Failed to resolve latest release from https://github.com/${REPO}/releases" >&2
-      exit 1
-    fi
-  else
-    latest_tag="$target_ver"
+  if [ -n "$repo_value" ]; then
+    requested_root=$(CDPATH= cd -P -- "$repo_value" && pwd -P) || fail 'cannot resolve native --repo'
+    while :; do
+      found=0
+      for suffix in yaml yml json; do
+        [ ! -f "$requested_root/.agenticlens-config.$suffix" ] || found=1
+      done
+      [ "$found" -eq 0 ] || break
+      [ ! -e "$requested_root/.git" ] && [ ! -L "$requested_root/.git" ] || break
+      requested_parent=${requested_root%/*}; [ -n "$requested_parent" ] || requested_parent=/
+      [ "$requested_parent" != "$requested_root" ] || break
+      requested_root=$requested_parent
+    done
+    [ "$requested_root" = "$root" ] || fail 'Native --repo differs from selected project; supply matching --al-project DIR before capture'
   fi
-  current_ver="unknown"
-  if [ -x "$TARGET_BIN" ]; then
-    current_ver="$("$TARGET_BIN" version --short 2>/dev/null || echo "unknown")"
-  fi
-  echo "Target release: ${latest_tag} (current: ${current_ver})"
-  required_protocol="$(capture_protocol "$TARGET_BIN" || true)"
-  BINARY_UPDATE_DIR="$(mktemp -d "$DIR/.agenticlens-update.XXXXXX")"
-  mkdir "$BINARY_UPDATE_DIR/previous"
-  : > "$BINARY_UPDATE_DIR/ready"
-  : > "$BINARY_UPDATE_DIR/replaced"
-  trap 'finish_update_transaction "$?"' EXIT
-  trap 'exit 1' HUP INT TERM
-
-  # Stage every candidate before replacing any working executable. A running
-  # capture-aware handler's protocol is a compatibility requirement, regardless
-  # of where the repository keeps its installation manifests.
-  for fname in agentic-lens-linux-amd64 agentic-lens-linux-arm64 agentic-lens-darwin-amd64 agentic-lens-darwin-arm64 agentic-lens-windows-amd64.exe; do
-    if [ "$fname" != "$BIN_NAME" ] && [ ! -f "$DIR/$fname" ]; then continue; fi
-    if [ "$fname" != "$BIN_NAME" ] && [ -n "$required_protocol" ]; then
-      echo "Preserving ${fname}: verify capture compatibility and upgrade on its native host."
-      continue
-    fi
-    candidate="$BINARY_UPDATE_DIR/$fname"
-    echo "Staging ${fname} (${latest_tag})..."
-    if ! download_artifact "$candidate" "$fname" "$latest_tag"; then
-      echo "Error: Failed to stage ${fname}; existing binaries and hooks preserved." >&2
-      exit 1
-    fi
-    if [ "$fname" = "$BIN_NAME" ] && [ -n "$required_protocol" ]; then
-      observed_protocol="$(capture_protocol "$candidate" || true)"
-      if [ "$observed_protocol" != "$required_protocol" ]; then
-        echo "Error: Candidate capture protocol incompatible (required ${required_protocol}); existing binaries and hooks preserved." >&2
-        exit 1
-      fi
-    fi
-    printf '%s\n' "$fname" >> "$BINARY_UPDATE_DIR/ready"
-  done
-
-  updated_count=0
-  while IFS= read -r fname; do
-    if [ -f "$DIR/$fname" ]; then
-      cp -p "$DIR/$fname" "$BINARY_UPDATE_DIR/previous/$fname"
-    fi
-    # Record before the atomic move so even an interrupted replacement recovers.
-    printf '%s\n' "$fname" >> "$BINARY_UPDATE_DIR/replaced"
-    mv -f "$BINARY_UPDATE_DIR/$fname" "$DIR/$fname"
-    updated_count=$((updated_count + 1))
-  done < "$BINARY_UPDATE_DIR/ready"
-  echo "$latest_tag" > "$LATEST_FILE" 2>/dev/null || true
-  date +%s > "$CHECK_FILE" 2>/dev/null || true
-  echo "Successfully updated ${updated_count} binary(ies) to ${latest_tag}."
-  echo "For automatic publication, inspect native capture status --repo PROJECT and preview capture install with the original source/store paths before applying owned template changes. Native callbacks launch the publisher; agents only supply explicit binding context."
-  exit 0
-}
-
-trigger_background_update_check() {
-  if [ "${AGENTIC_LENS_NO_UPDATE_CHECK:-0}" = "1" ]; then
-    return 0
-  fi
-
-  last_check=0
-  if [ -f "$CHECK_FILE" ]; then
-    last_check="$(cat "$CHECK_FILE" 2>/dev/null || echo 0)"
-  fi
-
-  now="$(date +%s 2>/dev/null || echo 0)"
-  elapsed=$(( now - last_check ))
-
-  if [ "$elapsed" -ge 86400 ]; then
-    echo "$now" > "$CHECK_FILE" 2>/dev/null || true
-    (
-      resolved_tag="$(resolve_latest_tag)"
-      if [ -n "$resolved_tag" ]; then
-        echo "$resolved_tag" > "$LATEST_FILE" 2>/dev/null || true
-      fi
-    ) >/dev/null 2>&1 &
-  fi
-}
-
-notify_if_update_available() {
-  if [ "${AGENTIC_LENS_NO_UPDATE_CHECK:-0}" = "1" ]; then
-    return 0
-  fi
-
-  if [ -f "$LATEST_FILE" ] && [ -x "$TARGET_BIN" ]; then
-    latest_tag="$(cat "$LATEST_FILE" 2>/dev/null || true)"
-    if [ -n "$latest_tag" ]; then
-      current_ver="$("$TARGET_BIN" version --short 2>/dev/null || true)"
-      case "$current_ver" in
-        *"-dirty"*|*"-dev"*|*"-g"*|"unknown"|"")
-          ;;
-        *)
-          if [ "$current_ver" != "$latest_tag" ]; then
-            echo "Notice: AgenticLens update available: ${latest_tag} (current: ${current_ver}). Run '$0 update' to upgrade." >&2
-          fi
-          ;;
-      esac
-    fi
-  fi
-}
-
-# Lifecycle handlers are local and bounded. Even a manual capture invocation must
-# never trigger an updater, missing-binary download, or background network check.
-if [ "${1:-}" = "capture" ]; then
-  if [ ! -x "$TARGET_BIN" ]; then
-    echo "Error: Native capture handler missing or not executable at ${TARGET_BIN}; reinstall the release binary explicitly." >&2
-    exit 1
-  fi
-  exec "$TARGET_BIN" "$@"
 fi
-
-if [ "${1:-}" = "update" ]; then
-  handle_update "$@"
+newline='
+'
+shared_values=$(read_bootstrap "$config" shared all) || exit 2
+version=${shared_values%%"$newline"*}; version=${version#version:}
+install_root=${shared_values#*"$newline"}; install_root=${install_root#install_root:}
+local_file=$root/.agenticlens-config.local.yaml
+if [ -e "$local_file" ] || [ -L "$local_file" ]; then
+  [ -f "$local_file" ] || fail "Local configuration must be a regular file: $local_file"
+  overlay=$(read_bootstrap "$local_file" local install_root) || exit 2
+  [ -z "$overlay" ] || install_root=$overlay
 fi
-
-if [ ! -f "$TARGET_BIN" ]; then
-  echo "Notice: AgenticLens binary for ${OS}/${ARCH} not found locally at ${TARGET_BIN}." >&2
-  echo "Attempting automatic download from GitHub Releases..." >&2
-  if download_artifact "$TARGET_BIN" "$BIN_NAME" "$VERSION"; then
-    echo "Successfully downloaded and verified ${BIN_NAME}." >&2
-  else
-    echo "Error: Binary for ${OS}/${ARCH} not found at ${TARGET_BIN} and automatic download failed." >&2
-    if [ -f "${DIR}/../Makefile" ] || [ -f "${DIR}/Makefile" ]; then
-      echo "Development environment detected. Run 'make build' to compile binaries." >&2
+if [ -n "${AGENTIC_LENS_VERSION:-}" ] && [ "$AGENTIC_LENS_VERSION" != "$version" ]; then fail 'AGENTIC_LENS_VERSION conflicts with authoritative shared pin'; fi
+# Traverse symlinks before later .. components, including uncreated suffixes.
+physical_install_root() {
+  pending=$1; current=/; links=0
+  case "$pending" in /*) ;; *) fail 'install_root must be absolute on the executing POSIX platform' ;; esac
+  while [ -n "$pending" ]; do
+    case "$pending" in */*) part=${pending%%/*}; pending=${pending#*/} ;; *) part=$pending; pending='' ;; esac
+    case "$part" in ''|.) continue ;; ..) current=${current%/*}; [ -n "$current" ] || current=/; continue ;; esac
+    next=${current%/}/$part
+    if [ -L "$next" ]; then
+      links=$((links+1)); [ "$links" -le 255 ] || fail 'excessive installation-root symlink traversal'
+      link=$(readlink "$next") || fail 'cannot read installation-root symlink'
+      case "$link" in /*) current=/ ;; esac
+      pending=$link/$pending
     else
-      echo "Please check network connectivity or visit https://github.com/${REPO}/releases" >&2
+      [ ! -e "$next" ] || [ -d "$next" ] || fail 'install_root crosses a non-directory'
+      current=$next
     fi
-    exit 1
-  fi
+  done
+  printf '%s\n' "$current"
+}
+install_root=${install_root:-$HOME/.agenticlens}
+case "$install_root" in '~/'*) install_root=$HOME/${install_root#\~/} ;; esac
+case "$install_root" in /*) install_root=$(physical_install_root "$install_root") ;; *) fail "install_root must be absolute on this executing shell platform" ;; esac
+case "$(uname -s)" in Linux) os=linux ;; Darwin) os=darwin ;; MINGW*|MSYS*|CYGWIN*|Windows_NT) os=windows ;; *) fail 'unsupported executing OS' ;; esac
+case "$(uname -m)" in x86_64|amd64) arch=amd64 ;; arm64|aarch64) arch=arm64 ;; *) fail 'unsupported executing architecture' ;; esac
+ext=
+if [ "$os" = windows ]; then [ "$arch" = amd64 ] || fail 'windows-arm64 artifacts unavailable'; ext=.exe; fi
+native=$install_root/bin/$version/$os-$arch/agentic-lens-$os-$arch$ext
+if [ "$resolve" -eq 1 ]; then
+  printf '%s\n' "$version" "$root" "$install_root" "$native"
+  exit 0
 fi
-
-if [ ! -x "$TARGET_BIN" ]; then
-  chmod +x "$TARGET_BIN" 2>/dev/null || true
-fi
-
-notify_if_update_available
-trigger_background_update_check
-
-exec "$TARGET_BIN" "$@"
+[ -x "$native" ] || fail "Missing pinned native $native for $root; run explicit setup download.sh --project PROJECT"
+magic=$(LC_ALL=C od -An -tx1 -N4 "$native" | tr -d ' \n')
+case "$os:$magic" in linux:7f454c46|darwin:cffaedfe|darwin:cefaedfe|darwin:feedfacf|darwin:feedface|darwin:cafebabe|windows:4d5a*) ;; *) fail 'cache artifact is not a native executable; explicit repair required' ;; esac
+exec "$native" "$@"

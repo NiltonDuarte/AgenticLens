@@ -1,368 +1,236 @@
-"""Exercise shipped shell entrypoints and their native capture command boundary."""
-
+"""Exercise shipped common entrypoints and transactional native capture installation."""
 import json
 import os
 from pathlib import Path
-import platform
 import shutil
+import signal
 import subprocess
-import sys
-import tempfile
 import unittest
 
-
-ROOT = Path(__file__).resolve().parents[2]
-DOWNLOADERS = [ROOT / "scripts/download-agentic-lens.sh", ROOT / ".agents/skills/agentic-lens-setup/scripts/download.sh"]
-WRAPPERS = [ROOT / "scripts/agentic-lens-wrapper.sh", ROOT / ".agents/skills/agentic-lens-setup/scripts/agentic-lens-wrapper.sh"]
+from distribution_fixture import DistributionFixture, ROOT, SETUP, build_probe, digest
 
 
-def native_name():
-    operating_system = {"Linux": "linux", "Darwin": "darwin", "Windows": "windows"}[platform.system()]
-    arch = {"x86_64": "amd64", "AMD64": "amd64", "arm64": "arm64", "aarch64": "arm64"}[platform.machine()]
-    return f"agentic-lens-{operating_system}-{arch}" + (".exe" if operating_system == "windows" else "")
-
-
-class CaptureDistributionTest(unittest.TestCase):
-    def setUp(self):
-        self.temp = tempfile.TemporaryDirectory(prefix="capture distribution ")
-        self.addCleanup(self.temp.cleanup)
-        self.root = Path(self.temp.name)
-        self.repo = self.root / "adopting repo"
-        self.repo.mkdir()
-        self.dest = self.repo / "bin space"
-        self.store = self.root / "source $(touch INJECTED)"
-        self.store.mkdir()
-        self.log = self.root / "native-args.json"
-        self.release = self.root / "local release"
-        self.release.write_text(
-            f"#!{sys.executable}\n"
-            "import json, os, sys\n"
-            "from pathlib import Path\n"
-            "if sys.argv[1:] == ['capture', 'protocol']: print(1); sys.exit(0)\n"
-            "Path(os.environ['CAPTURE_TEST_LOG']).write_text(json.dumps(sys.argv[1:]))\n"
-            "sys.exit(int(os.environ.get('CAPTURE_TEST_EXIT', '0')))\n"
-        )
-        self.release.chmod(0o755)
-        self.env = dict(os.environ, CAPTURE_TEST_LOG=str(self.log), AGENTIC_LENS_NO_UPDATE_CHECK="0")
-        # A network invocation is always observable; these tests never need network.
-        self.network = self.root / "commands"
-        self.network.mkdir()
-        self.network_log = self.root / "network-called"
-        for command in ["curl", "wget"]:
-            path = self.network / command
-            path.write_text("#!/bin/sh\nprintf called > \"$CAPTURE_TEST_NETWORK\"\nexit 1\n")
-            path.chmod(0o755)
-        self.env.update(PATH=str(self.network) + os.pathsep + self.env["PATH"], CAPTURE_TEST_NETWORK=str(self.network_log))
-
-    def run_download(self, script, *options, **env):
-        return subprocess.run(["bash", str(script), "--dest", str(self.dest), "--local-bin", str(self.release), "--version", "v-fixture", *options],
-                              cwd=self.repo, env=dict(self.env, **env), text=True, capture_output=True, timeout=10)
-
-    def test_both_downloaders_install_and_delegate_exact_arguments_to_native_handler(self):
-        for script in DOWNLOADERS:
-            with self.subTest(script=script):
-                self.log.unlink(missing_ok=True)
-                result = self.run_download(script, "--capture-source", "codex", "--capture-store", str(self.store))
-                self.assertEqual(result.returncode, 0, result.stderr)
-                self.assertEqual(json.loads(self.log.read_text()), ["capture", "install", "--source", "codex", "--repo", str(self.repo),
-                                 "--store", str(self.store)])
-                self.assertTrue((self.dest / native_name()).is_file())
-                self.assertFalse((self.repo / "INJECTED").exists())
-                self.assertFalse(self.network_log.exists())
-                self.assertIn("runtime trust, agent binding", result.stdout)
-
-    def test_installed_skill_bundle_delegates_capture_without_repair_side_effects(self):
-        setup = Path(".agents/skills/agentic-lens-setup")
-        operator = Path(".agents/skills/agentic-lens-operator")
-        installed = subprocess.run(
-            ["bash", str(ROOT / setup / "scripts/install.sh"), "--source-dir", str(ROOT),
-             "--version", "v-fixture", "--dest", str(self.repo)],
-            cwd=self.repo, env=self.env, text=True, capture_output=True, timeout=10)
-        self.assertEqual(installed.returncode, 0, installed.stderr)
-        config = self.repo / ".agenticlens-config.yaml"
-        config.write_text("project_name: Fixture\n")
-        ignore = self.repo / ".gitignore"
-        ignore.write_text("# Owner policy\n")
-        state = self.root / "explicit state outside repository"
-        result = subprocess.run(
-            ["bash", str(self.repo / setup / "scripts/download.sh"), "--local-bin", str(self.release),
-             "--capture-source", "codex", "--capture-store", str(self.store),
-             "--capture-state-dir", str(state)],
-            cwd=self.repo, env=self.env, text=True, capture_output=True, timeout=10)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(json.loads(self.log.read_text()),
-                         ["capture", "install", "--source", "codex", "--repo", str(self.repo),
-                          "--store", str(self.store), "--state-dir", str(state)])
-        self.assertTrue((self.repo / operator / "bin" / native_name()).is_file())
-        self.assertFalse((self.repo / operator / "bin/.gitignore").exists())
-        self.assertEqual(config.read_text(), "project_name: Fixture\n")
-        self.assertEqual(ignore.read_text(), "# Owner policy\n")
-        self.log.unlink()
-        launched = subprocess.run(["sh", str(self.repo / operator / "scripts/agentic-lens.sh"),
-                                   "capture", "status", "--repo", str(self.repo)],
-                                  cwd=self.repo, env=self.env, text=True, capture_output=True, timeout=10)
-        self.assertEqual(launched.returncode, 0, launched.stderr)
-        self.assertEqual(json.loads(self.log.read_text()), ["capture", "status", "--repo", str(self.repo)])
-        self.assertFalse(self.network_log.exists())
-
-    def test_binary_only_and_invalid_capture_options_never_install_hooks(self):
-        for script in DOWNLOADERS:
-            with self.subTest(script=script):
-                result = self.run_download(script)
-                self.assertEqual(result.returncode, 0, result.stderr)
-                self.assertIn("Binary installation only", result.stdout)
-                self.assertFalse(self.log.exists())
-                for options in [("--capture-source", "codex"), ("--capture-source", "other", "--capture-store", str(self.store)),
-                                ("--capture-store", str(self.store)), ("--capture-source", "opencode", "--capture-store", "relative.db"),
-                                ("--capture-source",)]:
-                    rejected = self.run_download(script, *options)
-                    self.assertNotEqual(rejected.returncode, 0, options)
-                    self.assertFalse(self.log.exists())
-
-    def test_dry_run_previews_native_capture_and_preserves_destination(self):
-        for script in DOWNLOADERS:
-            with self.subTest(script=script):
-                self.log.unlink(missing_ok=True)
-                state = self.root / "custom local state"
-                result = self.run_download(script, "--capture-source", "opencode", "--capture-store", str(self.store),
-                                           "--capture-state-dir", str(state), "--capture-repo", str(self.repo), "--dry-run")
-                self.assertEqual(result.returncode, 0, result.stderr)
-                args = json.loads(self.log.read_text())
-                self.assertEqual(args[-1], "--dry-run")
-                self.assertEqual(args[args.index("--state-dir") + 1], str(state))
-                self.assertFalse(self.dest.exists())
-                self.assertFalse(state.exists())
-                self.assertFalse(self.network_log.exists())
-
-    def test_native_setup_failure_is_reported_without_claiming_lifecycle_success(self):
-        for script in DOWNLOADERS:
-            with self.subTest(script=script):
-                result = self.run_download(script, "--capture-source", "codex", "--capture-store", str(self.store), CAPTURE_TEST_EXIT="17")
-                self.assertNotEqual(result.returncode, 0)
-                self.assertIn("Capture setup failed", result.stderr)
-                self.assertNotIn("Lifecycle configuration installed", result.stdout)
-                self.assertFalse((self.dest / native_name()).exists())
-
-    def install_active_fixture(self):
-        self.dest.mkdir(exist_ok=True)
-        native = self.dest / native_name()
-        shutil.copyfile(self.release, native)
-        native.chmod(0o755)
-        hook = self.repo / ".codex/hooks.json"
-        hook.parent.mkdir(exist_ok=True)
-        hook.write_text(json.dumps({"hooks": {"SessionStart": [{"hooks": [{"command": str(native), "type": "command"}]}]}}))
-        state = self.repo / ".agenticlens-capture"
-        state.mkdir(exist_ok=True)
-        (state / "install-codex.json").write_text(json.dumps({"active": True, "binary": str(native), "protocol": 1}))
-        return native, hook
-
-    def candidate(self, compatible=True, fail_install=False):
-        candidate = self.root / "replacement release"
-        candidate.write_text(
-            f"#!{sys.executable}\nimport sys\n"
-            f"if sys.argv[1:] == ['capture', 'protocol']: print({1 if compatible else 2}); sys.exit(0)\n"
-            "if sys.argv[1:2] == ['version']: print('v-fixture'); sys.exit(0)\n"
-            f"sys.exit({17 if fail_install else 0})\n"
-        )
-        candidate.chmod(0o755)
-        return candidate
-
-    def transport_candidate(self, candidate):
-        curl = self.network / "curl"
-        curl.write_text(
-            f"#!{sys.executable}\nimport os, shutil, sys\n"
-            "from pathlib import Path\n"
-            "Path(os.environ['CAPTURE_TEST_NETWORK']).write_text(sys.argv[-1])\n"
-            "shutil.copyfile(os.environ['CAPTURE_TEST_CANDIDATE'], sys.argv[sys.argv.index('-o') + 1])\n"
-        )
-        curl.chmod(0o755)
-        return dict(self.env, CAPTURE_TEST_CANDIDATE=str(candidate), AGENTIC_LENS_LOCAL_BINARY="")
-
-    def test_capture_upgrade_rejects_incompatible_local_and_downloaded_candidates_before_replacement(self):
-        for script in DOWNLOADERS:
-            for downloaded in [False, True]:
-                for configure in [False, True]:
-                    with self.subTest(script=script, downloaded=downloaded, configure=configure):
-                        native, hook = self.install_active_fixture()
-                        old_binary, old_hook = native.read_bytes(), hook.read_bytes()
-                        replacement = self.candidate(compatible=False)
-                        args = ["bash", str(script), "--dest", str(self.dest), "--force", "--version", "v-fixture"]
-                        if not downloaded:
-                            args += ["--local-bin", str(replacement)]
-                        if configure:
-                            args += ["--capture-source", "codex", "--capture-store", str(self.store)]
-                        result = subprocess.run(args, cwd=self.repo, env=self.transport_candidate(replacement), text=True, capture_output=True, timeout=10)
-                        self.assertNotEqual(result.returncode, 0)
-                        self.assertIn("Candidate capture protocol incompatible", result.stderr)
-                        self.assertEqual(native.read_bytes(), old_binary)
-                        self.assertEqual(hook.read_bytes(), old_hook)
-                        self.assertTrue(json.loads((self.repo / ".agenticlens-capture/install-codex.json").read_text())["active"])
-                        self.assertFalse(list(self.dest.glob("*.previous.*")))
-                        self.assertFalse(list(self.dest.glob("*.candidate.*")))
-
-    def test_later_capture_setup_failure_restores_previous_native_for_both_replacement_paths(self):
-        for script in DOWNLOADERS:
-            for downloaded in [False, True]:
-                with self.subTest(script=script, downloaded=downloaded):
-                    native, hook = self.install_active_fixture()
-                    old_binary, old_hook = native.read_bytes(), hook.read_bytes()
-                    old_wrapper = self.dest / "agentic-lens"
-                    old_wrapper.write_text("#!/bin/sh\necho original-user-wrapper\n")
-                    wrapper_bytes = old_wrapper.read_bytes()
-                    replacement = self.candidate(fail_install=True)
-                    args = ["bash", str(script), "--dest", str(self.dest), "--force", "--version", "v-fixture",
-                            "--capture-source", "codex", "--capture-store", str(self.store)]
-                    if not downloaded:
-                        args += ["--local-bin", str(replacement)]
-                    result = subprocess.run(args, cwd=self.repo, env=self.transport_candidate(replacement), text=True, capture_output=True, timeout=10)
-                    self.assertNotEqual(result.returncode, 0)
-                    self.assertIn("Capture setup failed", result.stderr)
-                    self.assertEqual(old_wrapper.read_bytes(), wrapper_bytes)
-                    self.assertEqual(native.read_bytes(), old_binary)
-                    self.assertEqual(hook.read_bytes(), old_hook)
-                    self.assertFalse(list(self.dest.glob("*.previous.*")))
-                    self.assertFalse(list(self.dest.glob("*.candidate.*")))
-
-    def test_wrapper_upgrade_preflights_protocol_and_preserves_active_hooks(self):
-        for script in WRAPPERS:
-            for compatible in [False, True]:
-                with self.subTest(script=script, compatible=compatible):
-                    native, hook = self.install_active_fixture()
-                    wrapper = self.dest / "agentic-lens"
-                    shutil.copyfile(script, wrapper)
-                    old_binary, old_hook = native.read_bytes(), hook.read_bytes()
-                    replacement = self.candidate(compatible=compatible)
-                    result = subprocess.run(["sh", str(wrapper), "update", "--version", "v-fixture"], cwd=self.repo,
-                                            env=self.transport_candidate(replacement), text=True, capture_output=True, timeout=10)
-                    self.assertEqual(result.returncode, 0 if compatible else 1, result.stderr)
-                    self.assertEqual(native.read_bytes(), replacement.read_bytes() if compatible else old_binary)
-                    self.assertEqual(hook.read_bytes(), old_hook)
-                    if not compatible:
-                        self.assertIn("Candidate capture protocol incompatible", result.stderr)
-                        self.assertNotIn("Successfully updated", result.stdout)
-                    self.assertFalse(list(self.dest.glob(".agenticlens-update.*")))
-
-    def test_activation_failure_restores_owned_binary_transaction(self):
-        real_mv = shutil.which("mv")
-        mv = self.network / "mv"
-        mv.write_text(
-            f"#!{sys.executable}\nimport os, sys\n"
-            "if sys.argv[-1] == os.environ['CAPTURE_TEST_FAIL_TARGET'] and '/previous/' not in sys.argv[-2] and '.previous.' not in sys.argv[-2]: sys.exit(23)\n"
-            f"os.execv({real_mv!r}, [{real_mv!r}, *sys.argv[1:]])\n"
-        )
-        mv.chmod(0o755)
-        for script in [*DOWNLOADERS, *WRAPPERS]:
-            with self.subTest(script=script):
-                native, hook = self.install_active_fixture()
-                before, hook_before = native.read_bytes(), hook.read_bytes()
-                replacement = self.candidate()
-                if script in DOWNLOADERS:
-                    args = ["bash", str(script), "--dest", str(self.dest), "--force", "--version", "v-fixture"]
-                else:
-                    wrapper = self.dest / "agentic-lens"
-                    shutil.copyfile(script, wrapper)
-                    args = ["sh", str(wrapper), "update", "--version", "v-fixture"]
-                env = dict(self.transport_candidate(replacement), CAPTURE_TEST_FAIL_TARGET=str(native))
-                result = subprocess.run(args, cwd=self.repo, env=env, text=True, capture_output=True, timeout=10)
-                self.assertNotEqual(result.returncode, 0)
+class CaptureDistributionTest(DistributionFixture):
+    def test_same_pin_second_project_force_and_permission_repair_preserve_native_identity(self):
+        self.succeeds(self.install_local())
+        native = self.native(); admitted = native.stat(); before = native.read_bytes()
+        other = self.root / 'same pin project B'; other.mkdir()
+        (other / '.agenticlens-config.yaml').write_bytes(self.config.read_bytes())
+        for force, repair in [(False, False), (True, False), (True, True)]:
+            with self.subTest(force=force, repair=repair):
+                if repair: native.chmod(0o600)
+                args = ['bash', str(SETUP / 'download.sh'), '--project', str(other), '--dest', str(self.dest),
+                        '--local-bin', str(self.probe), '--sha256', digest(self.probe)]
+                if force: args.append('--force')
+                result = subprocess.run(args, cwd=other, env=self.env, input='', text=True, capture_output=True, timeout=20)
+                self.succeeds(result)
+                self.assertTrue(os.path.samestat(admitted, native.stat()), 'same release install retired admitted native identity')
                 self.assertEqual(native.read_bytes(), before)
-                self.assertEqual(hook.read_bytes(), hook_before)
-                self.assertFalse(list(self.dest.glob("*.previous.*")))
-                self.assertFalse(list(self.dest.glob(".agenticlens-update.*")))
+                self.assertEqual(self.launch('version', '--short').stdout.strip(), self.pin)
+        self.assertEqual(self.requests(), [])
 
-    def test_capture_aware_upgrade_preserves_unverifiable_foreign_platform_binary(self):
-        for script in [*DOWNLOADERS, *WRAPPERS]:
-            with self.subTest(script=script):
-                native, _ = self.install_active_fixture()
-                foreign = self.dest / ("agentic-lens-darwin-arm64" if "darwin" not in native_name() else "agentic-lens-linux-amd64")
-                foreign.write_bytes(b"foreign-host-handler")
-                foreign.chmod(0o755)
-                replacement = self.candidate()
-                if script in DOWNLOADERS:
-                    args = ["bash", str(script), "--dest", str(self.dest), "--force", "--all-platforms", "--version", "v-fixture"]
-                else:
-                    wrapper = self.dest / "agentic-lens"
-                    shutil.copyfile(script, wrapper)
-                    args = ["sh", str(wrapper), "update", "--version", "v-fixture"]
-                result = subprocess.run(args, cwd=self.repo, env=self.transport_candidate(replacement), text=True, capture_output=True, timeout=10)
-                self.assertEqual(result.returncode, 0, result.stderr)
-                self.assertEqual(foreign.read_bytes(), b"foreign-host-handler")
-                self.assertIn("native host", result.stdout)
-                for other in self.dest.glob("agentic-lens-*"):
-                    if other != native:
-                        other.unlink()
+    def test_binary_only_legacy_pin_is_preserved_but_new_capture_capability_is_required(self):
+        environment = dict(self.env, AL_PROBE_PROTOCOL='1')
+        result = self.succeeds(self.install_local(env=environment))
+        self.assertIn('hook protocol 2 and guarded init unavailable', result.stdout)
+        self.assertEqual(self.launch('version', '--short', env=environment).stdout.strip(), self.pin)
+        before = self.native().read_bytes()
+        store = self.root / 'store'; store.mkdir()
+        result = self.install_local('--capture-source', 'codex', '--capture-store', store, env=environment)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('required 2', result.stderr)
+        self.assertEqual(self.native().read_bytes(), before)
+        self.assertFalse((self.repo / '.codex').exists())
 
-    def test_download_failure_never_attempts_hook_installation(self):
-        for script in DOWNLOADERS:
+    def test_both_installers_route_exact_capture_arguments_through_common_wrapper(self):
+        store = self.root / "source $(touch INJECTED)"
+        store.mkdir()
+        log = self.root / 'native-args.json'
+        environment = dict(self.env, AL_PROBE_LOG=str(log))
+        for script in [ROOT / 'scripts/download-agentic-lens.sh', SETUP / 'download.sh']:
             with self.subTest(script=script):
-                result = subprocess.run(["bash", str(script), "--dest", str(self.dest), "--capture-source", "codex",
-                                         "--capture-store", str(self.store), "--version", "v-fixture"],
-                                        cwd=self.repo, env=dict(self.env, AGENTIC_LENS_LOCAL_BINARY=""),
-                                        text=True, capture_output=True, timeout=10)
+                result = self.succeeds(self.install_local('--capture-source', 'codex', '--capture-store', store, script=script, env=environment))
+                self.assertEqual(json.loads(log.read_text())['args'], ['capture', 'install', '--source', 'codex', '--store', str(store),
+                    '--repo', str(self.repo), '--binary', str(self.native()), '--wrapper', str(self.dest / 'agentic-lens')])
+                self.assertIn('Runtime trust, binding and source extraction', result.stdout)
+                self.assertFalse((self.repo / 'INJECTED').exists())
+                self.assertEqual(self.requests(), [])
+
+    def test_wrapper_preserves_arguments_stdin_stdout_cwd_exit_and_exec_signal(self):
+        self.succeeds(self.install_local())
+        nested = self.repo / 'nested directory'
+        nested.mkdir()
+        args = ['capture', 'receive', '--ticket-title', '--repo', '--request', "quote'\"", '--store', 'literal $(touch INJECTED)', '--session-id', '']
+        result = self.launch('--al-offline', '--al-project', self.repo, *args, cwd=nested, env=dict(self.env, AL_PROBE_EXIT='23'))
+        self.assertEqual(result.returncode, 23, result.stderr)
+        self.assertEqual(json.loads(result.stdout), {'version': self.pin, 'args': args, 'stdin': 'payload\n', 'cwd': str(nested)})
+        self.assertEqual(result.stderr, '')
+        # Native reads stdin until EOF; live pipe holds it without arbitrary sleeps.
+        process = subprocess.Popen([str(self.dest / 'agentic-lens'), 'capture', 'receive'], cwd=self.repo, env=self.env,
+                                   stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        try:
+            if Path('/proc').is_dir():
+                for attempt in range(10000):
+                    if Path(f'/proc/{process.pid}/exe').resolve() == self.native(): break
+                else: self.fail('POSIX wrapper did not exec selected native')
+            process.terminate()
+            self.assertEqual(process.wait(timeout=5), -signal.SIGTERM)
+        finally:
+            if process.poll() is None: process.kill(); process.wait()
+            process.stdin.close(); process.stdout.close(); process.stderr.close()
+        self.assertEqual(self.requests(), [])
+
+    def test_two_projects_and_exact_versions_coexist_without_repository_executables(self):
+        self.succeeds(self.install_local())
+        original = self.native().read_bytes()
+        repo_b = self.root / 'project B'; repo_b.mkdir()
+        pin_b = 'v2.0.0-rc.42+abc1234'
+        (repo_b / '.agenticlens-config.yaml').write_text(f"agenticlens:\n  version: {pin_b}\n  install_root: '{self.cache}'\n")
+        bundle = self.root / 'new compatible setup bundle'; bundle.mkdir()
+        for filename in ['download.sh', 'agentic-lens-wrapper.sh', 'agentic-lens-wrapper.ps1']:
+            target = bundle / filename
+            shutil.copyfile(SETUP / filename, target)
+            if filename != 'download.sh':
+                target.write_text(target.read_text() + '\n# Compatible common entrypoint update\n')
+        probe_b = build_probe(pin_b)
+        result = subprocess.run(['bash', str(bundle / 'download.sh'), '--project', str(repo_b), '--dest', str(self.dest),
+                                 '--local-bin', str(probe_b), '--sha256', digest(probe_b)],
+                                cwd=repo_b, env=self.env, input='', text=True, capture_output=True, timeout=20)
+        self.succeeds(result)
+        self.assertEqual(json.loads(self.launch(cwd=repo_b).stdout)['version'], pin_b)
+        self.assertEqual(json.loads(self.launch().stdout)['version'], self.pin)
+        path_result = subprocess.run(['agentic-lens', 'version', '--short'], cwd=repo_b,
+                                     env=dict(self.env, PATH=str(self.dest) + os.pathsep + self.env['PATH']),
+                                     text=True, capture_output=True, timeout=5)
+        self.assertEqual(self.succeeds(path_result).stdout.strip(), pin_b)
+        self.assertEqual(self.native().read_bytes(), original)
+        self.assertFalse((repo_b / 'bin').exists())
+        self.assertFalse((self.repo / 'bin').exists())
+
+    def test_missing_native_never_downloads_updates_or_mutates_cache(self):
+        self.succeeds(self.install_local())
+        self.native().unlink()
+        before = sorted(str(path.relative_to(self.cache)) for path in self.cache.rglob('*'))
+        for args in [[], ['--al-offline', 'capture', 'receive'], ['update']]:
+            with self.subTest(args=args):
+                result = self.launch(*args)
                 self.assertNotEqual(result.returncode, 0)
-                self.assertIn("Failed to download", result.stderr)
-                self.assertFalse(self.log.exists())
-                self.assertFalse((self.repo / ".codex/hooks.json").exists())
-                self.assertNotIn("Lifecycle configuration installed", result.stdout)
+                self.assertIn('explicit', result.stderr)
+        self.assertEqual(self.requests(), [])
+        self.assertEqual(before, sorted(str(path.relative_to(self.cache)) for path in self.cache.rglob('*')))
 
-    def test_advertised_platform_download_plans_use_correct_native_artifact_names(self):
-        uname = self.network / "uname"
-        uname.write_text('#!/bin/sh\nif [ "$1" = "-s" ]; then printf "%s\\n" "$CAPTURE_TEST_OS"; else printf "%s\\n" "$CAPTURE_TEST_ARCH"; fi\n')
-        uname.chmod(0o755)
-        for script in DOWNLOADERS:
-            for os_name, arch, expected in [("Linux", "x86_64", "linux-amd64"), ("Linux", "aarch64", "linux-arm64"),
-                                           ("Darwin", "x86_64", "darwin-amd64"), ("Darwin", "arm64", "darwin-arm64"),
-                                           ("MINGW64_NT", "x86_64", "windows-amd64.exe")]:
-                with self.subTest(script=script, target=expected):
-                    result = self.run_download(script, "--dry-run", CAPTURE_TEST_OS=os_name, CAPTURE_TEST_ARCH=arch)
-                    self.assertEqual(result.returncode, 0, result.stderr)
-                    self.assertIn("agentic-lens-" + expected, result.stdout)
-                    self.assertFalse(self.dest.exists())
-                    self.assertFalse(self.network_log.exists())
-
-    def test_a_wrapper_supplied_as_local_native_artifact_fails_without_recursion(self):
-        self.release = WRAPPERS[0]
-        for script in DOWNLOADERS:
-            with self.subTest(script=script):
-                result = self.run_download(script, "--capture-source", "codex", "--capture-store", str(self.store))
+    def test_unsupported_duplicate_and_unsafe_yaml_reject_before_native(self):
+        self.succeeds(self.install_local())
+        for document in ['agenticlens: {version: v9.8.7}\n', 'agenticlens:\n  version: latest\n',
+                         'agenticlens:\n  version: v9.8.7\n  version: v9.8.7\n',
+                         'agenticlens:\n  version: "v9.8.7+$(touch INJECTED)"\n',
+                         '"agenticlens":\n  version: v9.8.7\n',
+                         'agenticlens:\n  version: v9.8.7\n---\nproject_name: Other\n',
+                         'agenticlens:\n  version: &pin v9.8.7\n', 'agenticlens:\n  version: |\n    v9.8.7\n']:
+            with self.subTest(document=document):
+                self.config.write_text(document)
+                result = self.launch('capture', 'receive')
                 self.assertNotEqual(result.returncode, 0)
-                self.assertIn("Candidate capture protocol incompatible", result.stderr)
-                self.assertFalse((self.repo / ".codex/hooks.json").exists())
-                self.assertFalse(self.network_log.exists())
+                self.assertEqual(result.stdout, '')
+        self.assertFalse((self.repo / 'INJECTED').exists())
+        self.assertEqual(self.requests(), [])
 
-    def test_wrapper_candidate_cannot_probe_through_working_native_and_replace_it(self):
-        for script in DOWNLOADERS:
-            with self.subTest(script=script):
-                native, hook = self.install_active_fixture()
-                before, hook_before = native.read_bytes(), hook.read_bytes()
-                result = subprocess.run(["bash", str(script), "--dest", str(self.dest), "--local-bin", str(WRAPPERS[0]), "--force"],
-                                        cwd=self.repo, env=self.env, text=True, capture_output=True, timeout=10)
-                self.assertNotEqual(result.returncode, 0)
-                self.assertIn("Candidate capture protocol incompatible", result.stderr)
-                self.assertEqual(native.read_bytes(), before)
-                self.assertEqual(hook.read_bytes(), hook_before)
-                self.assertFalse(self.network_log.exists())
+    def test_quotes_comments_crlf_local_overlay_and_version_authority(self):
+        self.succeeds(self.install_local())
+        for quote in ['', "'", '"']:
+            self.config.write_text(f"agenticlens: # authority\r\n  version: {quote}{self.pin}{quote} # release\r\n  install_root: /missing\r\n")
+            local = self.repo / '.agenticlens-config.local.yaml'
+            local.write_text(f"agenticlens:\n  install_root: '{self.cache}'\ntelemetry:\n  capture:\n    state_dir: /local/state\n")
+            self.succeeds(self.launch())
+        local.write_text(f'agenticlens:\n  version: {self.pin}\n')
+        self.assertIn('local version', self.launch().stderr.lower())
+        local.unlink(); self.write_config()
+        self.assertIn('conflicts', self.launch(env=dict(self.env, AGENTIC_LENS_VERSION='v1.0.0')).stderr)
 
-    def test_wrapper_capture_is_network_free_with_and_without_native_handler(self):
-        self.dest.mkdir()
-        for script in WRAPPERS:
-            with self.subTest(script=script):
-                wrapper = self.dest / "agentic-lens"
-                shutil.copyfile(script, wrapper)
-                native = self.dest / native_name()
-                native.unlink(missing_ok=True)
-                missing = subprocess.run(["sh", str(wrapper), "capture", "status"], cwd=self.repo, env=self.env, text=True, capture_output=True)
-                self.assertNotEqual(missing.returncode, 0)
-                self.assertIn("Native capture handler missing", missing.stderr)
-                self.assertFalse(self.network_log.exists())
-                shutil.copyfile(self.release, native)
-                native.chmod(0o755)
-                installed = subprocess.run(["sh", str(wrapper), "capture", "status"], cwd=self.repo, env=self.env, text=True, capture_output=True)
-                self.assertEqual(installed.returncode, 0, installed.stderr)
-                self.assertEqual(json.loads(self.log.read_text()), ["capture", "status"])
-                self.assertFalse(self.network_log.exists())
-                self.assertFalse((self.dest / ".last_update_check").exists())
+    def test_nearer_json_git_boundary_and_native_repo_mismatch_cannot_select_parent(self):
+        self.succeeds(self.install_local())
+        child = self.repo / 'child'; child.mkdir()
+        (child / '.agenticlens-config.json').write_text('{"agenticlens":{"version":"v9.8.7"}}')
+        self.assertIn('migrate', self.launch(cwd=child).stderr)
+        (child / '.agenticlens-config.json').unlink(); (child / '.git').write_text('gitdir: somewhere\n')
+        self.assertNotEqual(self.launch(cwd=child).returncode, 0)
+        other = self.root / 'other'; other.mkdir()
+        (other / '.agenticlens-config.yaml').write_bytes(self.config.read_bytes())
+        self.assertIn('--al-project', self.launch('capture', 'status', '--repo', other).stderr)
+        self.succeeds(self.launch('--al-project', other, 'capture', 'status', '--repo', other))
+
+    def test_legacy_yml_suffix_ignores_a_directory_at_yaml_filename(self):
+        self.succeeds(self.install_local())
+        self.config.rename(self.repo / '.agenticlens-config.yml')
+        self.config.mkdir()
+        self.assertEqual(json.loads(self.succeeds(self.launch()).stdout)['version'], self.pin)
+
+    def test_physical_project_and_cache_symlink_dotdot_resolution(self):
+        self.succeeds(self.install_local())
+        outside = self.root / 'outside'; outside.mkdir()
+        target = outside / 'child'; target.mkdir()
+        link = self.repo / 'link'; link.symlink_to(target, target_is_directory=True)
+        # link/.. means outside, not the lexical repo parent.
+        pin_b = 'v1.2.3'
+        (outside / '.agenticlens-config.yaml').write_text(f"agenticlens:\n  version: {pin_b}\n  install_root: '{self.cache}'\n")
+        native_b = self.native(pin_b); native_b.parent.mkdir(parents=True)
+        shutil.copyfile(build_probe(pin_b), native_b); native_b.chmod(0o700)
+        self.assertEqual(json.loads(self.launch('--al-project', str(link) + '/..').stdout)['version'], pin_b)
+        self.assertIn('--al-project', self.launch('capture', 'status', '--repo', str(link) + '/..').stderr)
+        cache_link = self.root / 'cache-link'; cache_link.symlink_to(self.cache / 'bin', target_is_directory=True)
+        self.config.write_text(f"agenticlens:\n  version: {self.pin}\n  install_root: '{cache_link}/..'\n")
+        self.succeeds(self.launch())
+
+    def test_nonregular_and_oversized_config_reject_boundedly(self):
+        self.succeeds(self.install_local())
+        self.config.unlink(); os.mkfifo(self.config)
+        self.assertIn('regular file', self.launch().stderr)
+        self.config.unlink(); self.config.write_text('#' + 'x' * (1024 * 1024 + 1))
+        self.assertIn('1 MiB', self.launch().stderr)
+
+    def test_native_wrapper_recursion_and_bad_candidate_protocol_are_rejected(self):
+        self.succeeds(self.install_local())
+        before = self.native().read_bytes()
+        result = self.install_local('--force', probe=build_probe(protocol='1'))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.native().read_bytes(), before)
+        result = self.install_local('--force', probe=ROOT / 'scripts/agentic-lens-wrapper.sh')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.native().read_bytes(), before)
+        self.native().write_bytes((ROOT / 'scripts/agentic-lens-wrapper.sh').read_bytes())
+        self.assertIn('not a native', self.launch().stderr)
+
+    def test_release_integrity_install_failure_and_capture_failure_restore_working_set(self):
+        self.succeeds(self.install_local())
+        before = self.native().read_bytes(); wrapper_before = (self.dest / 'agentic-lens').read_bytes()
+        for overrides in [{'AL_FETCH_BAD_CHECKSUM': '1'}, {'AL_FETCH_FAIL': self.native().name}]:
+            result = self.install('--force', env=dict(self.env, **overrides))
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(self.native().read_bytes(), before)
+            self.assertEqual((self.dest / 'agentic-lens').read_bytes(), wrapper_before)
+        store = self.root / 'store'; store.mkdir()
+        result = self.install_local('--force', '--capture-source', 'codex', '--capture-store', store,
+                                    env=dict(self.env, AL_PROBE_EXIT='17'))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.native().read_bytes(), before)
+        self.succeeds(self.launch())
+
+    def test_install_preview_validation_and_concurrent_lock_preserve_owner_files(self):
+        for option in ['--version', '--dest', '--project', '--sha256', '--local-bin']:
+            self.assertNotEqual(self.install(option).returncode, 0)
+        preview = self.succeeds(self.install('--all-platforms', '--dry-run'))
+        for artifact in ['linux-amd64', 'linux-arm64', 'darwin-amd64', 'darwin-arm64', 'windows-amd64.exe']:
+            self.assertIn(f'/releases/download/{self.pin}/agentic-lens-{artifact}', preview.stdout)
+        self.assertIn('agentic-lens-darwin-arm64', self.succeeds(self.install('--include-host', 'm1', '--dry-run')).stdout)
+        self.assertFalse(self.dest.exists()); self.assertFalse(self.cache.exists()); self.assertEqual(self.requests(), [])
+        self.cache.mkdir(); lock = self.cache / f'.install-{self.pin}.lock'; lock.mkdir()
+        self.assertNotEqual(self.install_local().returncode, 0)
+        self.assertTrue(lock.exists())
+        lock.rmdir(); self.succeeds(self.install_local())
+        edited = b'#!/bin/sh\necho owner script\n'; (self.dest / 'agentic-lens').write_bytes(edited)
+        self.assertNotEqual(self.install_local('--force').returncode, 0)
+        self.assertEqual((self.dest / 'agentic-lens').read_bytes(), edited)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

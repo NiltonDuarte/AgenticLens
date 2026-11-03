@@ -11,6 +11,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"agenticlens/internal/adapters/filesystem"
 	"agenticlens/internal/domain"
 )
 
@@ -228,6 +229,7 @@ type rawCodeMetricsConfig struct {
 }
 
 type rawProjectConfigDTO struct {
+	AgenticLens       *domain.EntrypointConfig    `json:"agenticlens" yaml:"agenticlens"`
 	ProjectName       *string                     `json:"project_name" yaml:"project_name"`
 	Ticket            *rawTicketConfig            `json:"ticket" yaml:"ticket"`
 	Workspaces        *rawWorkspacesConfig        `json:"workspaces" yaml:"workspaces"`
@@ -242,6 +244,9 @@ type rawProjectConfigDTO struct {
 
 func mergeConfig(dto rawProjectConfigDTO) domain.ProjectConfig {
 	cfg := domain.DefaultProjectConfig()
+	if dto.AgenticLens != nil {
+		cfg.AgenticLens = *dto.AgenticLens
+	}
 	cfg.AnomalyThresholds.ContextCeilingWarningTokens = 0
 	cfg.AnomalyThresholds.ContextCeilingCriticalTokens = 0
 
@@ -434,7 +439,7 @@ func mergeConfig(dto rawProjectConfigDTO) domain.ProjectConfig {
 // 2. .agenticlens-config.yml (root)
 // 3. .agenticlens-config.json (root)
 func FindConfigFile(startDir string) (string, error) {
-	curr := strings.TrimSpace(startDir)
+	curr := startDir
 	if curr == "" {
 		cwd, err := os.Getwd()
 		if err != nil {
@@ -443,7 +448,7 @@ func FindConfigFile(startDir string) (string, error) {
 		curr = cwd
 	}
 
-	absDir, err := filepath.Abs(curr)
+	absDir, err := filesystem.PhysicalPath(curr)
 	if err != nil {
 		return "", fmt.Errorf("resolving absolute path for %s: %w", curr, err)
 	}
@@ -456,12 +461,24 @@ func FindConfigFile(startDir string) (string, error) {
 			filepath.Join(curr, ".agenticlens-config.json"),
 		}
 		for _, cfgPath := range candidates {
-			if fi, err := os.Stat(cfgPath); err == nil && !fi.IsDir() {
+			if fi, err := os.Stat(cfgPath); err == nil {
+				if fi.IsDir() {
+					continue
+				}
+				if !fi.Mode().IsRegular() {
+					return "", fmt.Errorf("configuration must be a regular file: %s", cfgPath)
+				}
 				return cfgPath, nil
+			} else if !errors.Is(err, os.ErrNotExist) {
+				return "", fmt.Errorf("configuration path %s: %w", cfgPath, err)
+			} else if _, linkErr := os.Lstat(cfgPath); linkErr == nil {
+				return "", fmt.Errorf("configuration exists but is unavailable: %s", cfgPath)
 			}
 		}
 		if _, err := os.Lstat(filepath.Join(curr, ".git")); err == nil {
 			break
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return "", fmt.Errorf("Git project boundary: %w", err)
 		}
 		parent := filepath.Dir(curr)
 		if parent == curr {
@@ -500,6 +517,11 @@ func LoadFromFile(filePath string) (domain.ProjectConfig, error) {
 	}
 
 	cfg := mergeConfig(dto)
+	if dto.AgenticLens != nil && ext != ".json" {
+		if _, err := parseEntrypoint(data, false); err != nil {
+			return domain.ProjectConfig{}, fmt.Errorf("bootstrap configuration %s: %w", filePath, err)
+		}
+	}
 	capturePolicy, captureErr := decodeCapturePolicy(data, domain.DefaultCaptureConfig())
 	if captureErr != nil {
 		return domain.ProjectConfig{}, captureErr
@@ -539,6 +561,15 @@ func Load(repoRoot string) (domain.ProjectConfig, error) {
 	var local rawProjectConfigDTO
 	if err := yaml.Unmarshal(data, &local); err != nil {
 		return domain.ProjectConfig{}, fmt.Errorf("decoding local configuration %s: %w", localPath, err)
+	}
+	if local.AgenticLens != nil {
+		entry, err := parseEntrypoint(data, true)
+		if err != nil {
+			return domain.ProjectConfig{}, fmt.Errorf("local entrypoint configuration: %w", err)
+		}
+		if entry.InstallRoot != "" {
+			cfg.AgenticLens.InstallRoot = entry.InstallRoot
+		}
 	}
 	if local.Telemetry == nil {
 		return cfg, nil
@@ -590,7 +621,7 @@ func ProjectRoot(start string) (string, error) {
 	if start == "" {
 		start = "."
 	}
-	path, err = filepath.Abs(start)
+	path, err = filesystem.PhysicalPath(start)
 	if err != nil {
 		return "", err
 	}

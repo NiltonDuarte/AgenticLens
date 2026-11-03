@@ -159,23 +159,20 @@ func TestReconcileVerifiesChildSourceAndIsolatesIndependentTickets(t *testing.T)
 	}
 }
 
-func TestReportDoesNotPublishLocalPathsOrBindingToken(t *testing.T) {
+func TestCoverageSummaryDoesNotPublishLocalPathsOrBindingToken(t *testing.T) {
 	registration := domain.CaptureRegistration{Identity: domain.CaptureIdentity{Source: domain.SourceCodex, Store: "/private-source-store", SessionID: "root"}, TicketID: "TEST-100", Request: "private-binding-token", TranscriptPath: "/private-transcript", Snapshot: []domain.SessionFact{{ID: "root"}}}
 	result := capture.ReconcileResult{Protocol: 1, Cutoff: "2026-01-01T00:00:00Z", TicketID: "TEST-100", Registrations: []domain.CaptureRegistration{registration}}
-	b, err := capture.ReportJSON(result, "ledger-digest")
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, forbidden := range []string{"private-source-store", "private-binding-token", "private-transcript", "snapshot"} {
-		if strings.Contains(string(b), forbidden) {
-			t.Fatalf("report leaked %q: %s", forbidden, b)
+	summary := capture.CoverageSummary(result)
+	for _, forbidden := range []string{"private-source-store", "private-binding-token", "private-transcript", `"snapshot"`, "capture_report.json"} {
+		if strings.Contains(summary, forbidden) {
+			t.Fatalf("summary leaked obsolete/private detail %q: %s", forbidden, summary)
 		}
 	}
-	if !strings.Contains(string(b), `"ledger_sha256": "ledger-digest"`) || !strings.Contains(string(b), `"session_id": "root"`) {
-		t.Fatalf("missing digest/identity: %s", b)
+	if !strings.Contains(summary, "codex/root") || !strings.Contains(summary, "unobserved sessions") || !strings.Contains(summary, "checkpoint unknown") {
+		t.Fatalf("summary omitted owner/coverage/freshness uncertainty: %s", summary)
 	}
 	if result.Registrations[0].Identity.Store != "/private-source-store" || result.Registrations[0].Request != "private-binding-token" {
-		t.Fatal("report redaction mutated local registration")
+		t.Fatal("summary mutated private registration")
 	}
 }
 
@@ -374,13 +371,10 @@ func TestReconcileUnassignedRootsDoNotConsumeTicketWorkOrPublishIdentities(t *te
 	if len(result.Sessions) != 1 || result.Sessions[0].ID != boundID.SessionID || len(result.Registrations) != 1 || result.Registrations[0].State != domain.CaptureCurrent {
 		t.Fatalf("unassigned roots starved ticket: %+v", result)
 	}
-	report, err := capture.ReportJSON(result, "digest")
-	if err != nil {
-		t.Fatal(err)
-	}
+	summary := capture.CoverageSummary(result)
 	for _, id := range unassigned {
-		if strings.Contains(string(report), id) {
-			t.Fatalf("ticket report disclosed unrelated unassigned session %q", id)
+		if strings.Contains(summary, id) {
+			t.Fatalf("ticket summary disclosed unrelated unassigned session %q", id)
 		}
 	}
 	local, err := s.List(ctx)
@@ -623,5 +617,249 @@ func TestReconcileSchedulerEventuallyDiscoversStartOnlyChildWithPersistentFailed
 				t.Fatal("persistent stop work permanently starved source-proven start-only child discovery")
 			}
 		})
+	}
+}
+
+func TestReconcileFatalCollisionRetainsCollectionFailureUntilCompletedRecovery(t *testing.T) {
+	ctx := context.Background()
+	project := t.TempDir()
+	s, openErr := capture.OpenProject(t.TempDir(), project)
+	if openErr != nil {
+		t.Fatal(openErr)
+	}
+	t.Cleanup(func() {
+		if e := s.Close(); e != nil {
+			t.Error(e)
+		}
+	})
+	writeProjectRollout := func(path string, tokens int) {
+		body := writeRollout(t, path, "root", "", tokens)
+		body = []byte(strings.Replace(string(body), `"id":"root"`, fmt.Sprintf(`"id":"root","cwd":%q`, project), 1))
+		if e := os.WriteFile(path, body, 0600); e != nil {
+			t.Fatal(e)
+		}
+	}
+	firstStore := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(firstStore, "sessions"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	firstPath := filepath.Join(firstStore, "sessions", "root.jsonl")
+	writeProjectRollout(firstPath, 10)
+	first := registerBound(t, s, firstStore, firstPath, "root", "TEST-100")
+	_, err := s.Change(ctx, first.Identity, func(r domain.CaptureRegistration) (domain.CaptureRegistration, error) {
+		r.InstallationID = "install"
+		r.BindingInstallationID = "install"
+		return r, nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	baseline, err := s.Reconcile(ctx, "TEST-100", "reviewer", 20, capture.DefaultByteBudget)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = s.RecordPublication(ctx, "TEST-100", "committed", "metrics.json", "", baseline.Sessions, ""); err != nil {
+		t.Fatal(err)
+	}
+	secondStore := t.TempDir()
+	if err = os.MkdirAll(filepath.Join(secondStore, "sessions"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	secondPath := filepath.Join(secondStore, "sessions", "root.jsonl")
+	writeProjectRollout(secondPath, 30)
+	second := registerBound(t, s, secondStore, secondPath, "root", "TEST-100")
+	result, err := s.Reconcile(ctx, "TEST-100", "reviewer", 20, capture.DefaultByteBudget)
+	if err == nil || !strings.Contains(err.Error(), "identity collision") {
+		t.Fatalf("collision not reached: %+v %v", result, err)
+	}
+	t.Logf("actual rejected reconciliation: %v; result owners=%d", err, len(result.Registrations))
+	rows, err := s.List(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ds, err := s.Diagnostics(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var selected domain.CaptureRegistration
+	for _, r := range rows {
+		if r.Identity == first.Identity {
+			selected = r
+		}
+	}
+	page, err := s.ReadDiagnostics(ctx, capture.DiagnosticReadOptions{Current: true, Tickets: []string{"TEST-100"}, ExactOwners: []capture.DiagnosticOwner{{TicketID: "TEST-100", Identity: first.Identity}}, Limit: 18, MaxBytes: capture.DefaultByteBudget})
+	if err != nil || !page.MetadataComplete || page.More {
+		t.Fatalf("current evidence incomplete: %+v %v", page, err)
+	}
+	h := domain.CaptureVerification([]domain.CaptureRegistration{selected}, page.Records)
+	issues := domain.CaptureAdvisoryIssues(domain.CaptureAdvisoryEvidence{Registrations: []domain.CaptureRegistration{selected}, Diagnostics: page.Records, Publications: []domain.CapturePublicationEvidence{{TicketID: "TEST-100", Available: true, Sessions: baseline.Sessions, PublishedAt: baseline.Cutoff}}, Caller: &first.Identity})
+	t.Logf("current complete=%t more=%t advisory=%v", page.MetadataComplete, page.More, issues)
+	feedback, err := s.SessionFailureFeedback(ctx, first.Identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	failures := domain.CaptureCurrentFailures(selected, ds)
+	t.Logf("health=%+v feedback=%q failures=%+v latest=%+v", h, feedback, failures, ds[len(ds)-1])
+	if h.State != "degraded" || !h.CallbackObserved || !h.BindingAccepted || !h.SourceAccepted || !h.PublicationAccepted || !failures.Collection || failures.Source || !strings.Contains(feedback, "whole-collection reconciliation failed") || len(issues) == 0 {
+		t.Fatalf("fatal collection evidence lost or individual success mislabeled: %+v %q %+v %v", h, feedback, failures, issues)
+	}
+	assertCollection := func(wantFailed bool) {
+		t.Helper()
+		current, e := s.ReadDiagnostics(ctx, capture.DiagnosticReadOptions{Current: true, Tickets: []string{"TEST-100"}, ExactOwners: []capture.DiagnosticOwner{{TicketID: "TEST-100", Identity: first.Identity}}, Limit: 24, MaxBytes: capture.DefaultByteBudget})
+		if e != nil || !current.MetadataComplete || current.More {
+			t.Fatalf("current collection evidence unavailable: %+v %v", current, e)
+		}
+		f := domain.CaptureCurrentFailures(selected, current.Records)
+		message, e := s.SessionFailureFeedback(ctx, first.Identity)
+		health := domain.CaptureVerification([]domain.CaptureRegistration{selected}, current.Records)
+		if e != nil || f.Collection != wantFailed || (health.State == "degraded") != wantFailed || strings.Contains(message, "whole-collection reconciliation failed") != wantFailed {
+			t.Fatalf("collection recovery wrong: %+v %+v %q %v", f, health, message, e)
+		}
+	}
+	// Individual successful reads and pending/partial passes cannot acknowledge
+	// aggregate validation failure, even after recent-history churn.
+	for i := 0; i < 40; i++ {
+		if e := s.RecordDiagnostic(ctx, domain.CaptureDiagnostic{TicketID: "TEST-100", Phase: "reconciliation", Outcome: "accepted", Reconciliation: &domain.CaptureReconciliationDiagnostic{Attempt: domain.CaptureAttemptPartial, Owners: []domain.CaptureRegistration{selected}}}); e != nil {
+			t.Fatal(e)
+		}
+		if e := s.RecordDiagnostic(ctx, domain.CaptureDiagnostic{TicketID: "OTHER-1", Phase: "publication", Outcome: "failed"}); e != nil {
+			t.Fatal(e)
+		}
+	}
+	assertCollection(true)
+	// Repair the fixture's explicit collection assignment; preserve both stored
+	// owners/facts. This trusted Store mutation models operator state repair,
+	// and does not add or claim a public session-rebinding command.
+	if _, e := s.Change(ctx, second.Identity, func(r domain.CaptureRegistration) (domain.CaptureRegistration, error) {
+		r.TicketID = "TEST-200"
+		return r, nil
+	}); e != nil {
+		t.Fatal(e)
+	}
+	if _, e := s.Reconcile(ctx, "TEST-100", "reviewer", 1, 1); e != nil {
+		t.Fatal(e)
+	}
+	assertCollection(true)
+	recovered, e := s.Reconcile(ctx, "TEST-100", "reviewer", 20, capture.DefaultByteBudget)
+	if e != nil || len(recovered.Sessions) != 1 || recovered.Sessions[0].ID != "root" {
+		t.Fatalf("whole collection repair did not complete: %+v %v", recovered, e)
+	}
+	assertCollection(false)
+}
+
+func TestReconcileSuccessfulReadPreservesParentConflictAndNormalPendingRecovery(t *testing.T) {
+	ctx := context.Background()
+	project := t.TempDir()
+	s, err := capture.OpenProject(t.TempDir(), project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := s.Close(); err != nil {
+			t.Error(err)
+		}
+	})
+	store := t.TempDir()
+	if err = os.MkdirAll(filepath.Join(store, "sessions"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	write := func(id, parent string) string {
+		path := filepath.Join(store, "sessions", id+".jsonl")
+		body := writeRollout(t, path, id, parent, 10)
+		body = []byte(strings.Replace(string(body), fmt.Sprintf(`"id":%q`, id), fmt.Sprintf(`"id":%q,"cwd":%q`, id, project), 1))
+		if err := os.WriteFile(path, body, 0600); err != nil {
+			t.Fatal(err)
+		}
+		return path
+	}
+	// Positive control: an unchanged successful read may normalize retained
+	// lifecycle Pending, without changing accepted source facts or registration.
+	normal := registerBound(t, s, store, write("normal", ""), "normal", "TEST-300")
+	original, e := s.Reconcile(ctx, "TEST-300", "reviewer", 20, capture.DefaultByteBudget)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if _, e = s.Register(ctx, normal.Identity, normal.TranscriptPath, "UserPromptSubmit"); e != nil {
+		t.Fatal(e)
+	}
+	normalRead, e := s.Reconcile(ctx, "TEST-300", "reviewer", 20, capture.DefaultByteBudget)
+	if e != nil || len(normalRead.Registrations) != 1 || normalRead.Registrations[0].State != domain.CapturePending || normalRead.SourceAttempts < 1 {
+		t.Fatalf("pending unchanged-read control not reached: %+v %v", normalRead, e)
+	}
+	normalDiagnostics, e := s.Diagnostics(ctx)
+	if e != nil {
+		t.Fatal(e)
+	}
+	normalLast := normalDiagnostics[len(normalDiagnostics)-1]
+	if normalLast.Reconciliation.Attempt != domain.CaptureAttemptCompleted || normalLast.Reconciliation.Owners[0].State != domain.CaptureCurrent || !reflect.DeepEqual(original.Sessions, normalRead.Sessions) {
+		t.Fatalf("safe pending normalization regressed: %+v", normalLast)
+	}
+	child := registerBound(t, s, store, write("child", "parent"), "child", "TEST-200")
+	if _, err = s.Change(ctx, child.Identity, func(r domain.CaptureRegistration) (domain.CaptureRegistration, error) {
+		r.InstallationID = "install"
+		r.BindingInstallationID = "install"
+		return r, nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	baseline, err := s.Reconcile(ctx, "TEST-200", "reviewer", 20, capture.DefaultByteBudget)
+	if err != nil || len(baseline.Registrations) != 1 || baseline.Registrations[0].State == domain.CaptureFailed {
+		t.Fatalf("baseline unavailable: %+v %v", baseline, err)
+	}
+	if err = s.RecordPublication(ctx, "TEST-200", "committed", "metrics.json", "", baseline.Sessions, ""); err != nil {
+		t.Fatal(err)
+	}
+	registerBound(t, s, store, write("parent", ""), "parent", "TEST-100")
+	if _, err = s.Reconcile(ctx, "TEST-100", "reviewer", 20, capture.DefaultByteBudget); err != nil {
+		t.Fatal(err)
+	}
+	result, err := s.Reconcile(ctx, "TEST-200", "reviewer", 20, capture.DefaultByteBudget)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Registrations) != 1 || result.Registrations[0].State != domain.CaptureFailed || !strings.Contains(result.Registrations[0].Detail, "Conflicting source-proven parent") {
+		t.Fatalf("did not reach supported parent conflict: %+v", result)
+	}
+	rows, err := s.List(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var selected domain.CaptureRegistration
+	for _, r := range rows {
+		if r.Identity == child.Identity {
+			selected = r
+		}
+	}
+	page, err := s.ReadDiagnostics(ctx, capture.DiagnosticReadOptions{Current: true, Tickets: []string{"TEST-200"}, ExactOwners: []capture.DiagnosticOwner{{TicketID: "TEST-200", Identity: child.Identity}}, Limit: 24, MaxBytes: capture.DefaultByteBudget})
+	if err != nil || !page.MetadataComplete || page.More {
+		t.Fatalf("metadata incomplete: %+v %v", page, err)
+	}
+	h := domain.CaptureVerification([]domain.CaptureRegistration{selected}, page.Records)
+	feedback, err := s.SessionFailureFeedback(ctx, child.Identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ds, err := s.Diagnostics(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	latest := ds[len(ds)-1]
+	issues := domain.CaptureAdvisoryIssues(domain.CaptureAdvisoryEvidence{Registrations: []domain.CaptureRegistration{selected}, Diagnostics: page.Records, Publications: []domain.CapturePublicationEvidence{{TicketID: "TEST-200", Available: true, Sessions: baseline.Sessions, PublishedAt: baseline.Cutoff}}, Caller: &child.Identity})
+	if !reflect.DeepEqual(baseline.Sessions, result.Sessions) {
+		t.Fatal("numeric/source facts changed")
+	}
+	if result.SourceAttempts < 1 || selected.RefreshedAt == baseline.Registrations[0].RefreshedAt || selected.SourceFingerprint != baseline.Registrations[0].SourceFingerprint {
+		t.Fatal("conflict did not follow a successful unchanged read")
+	}
+	if latest.Outcome != "failed" || latest.Reconciliation.Attempt != domain.CaptureAttemptPartial || !strings.Contains(latest.Reconciliation.Owners[0].Detail, "Conflicting source-proven parent") {
+		t.Fatalf("post-read validation was normalized or acknowledged: %+v", latest)
+	}
+	if !h.CallbackObserved || !h.BindingAccepted || !h.SourceAccepted || !h.PublicationAccepted {
+		t.Fatalf("historical exchange flags lost: %+v", h)
+	}
+
+	t.Logf("result state=%s detail=%q; stored state=%s; diagnostic outcome=%s attempt=%s owner state=%s; health=%+v feedback=%q advisory=%v", result.Registrations[0].State, result.Registrations[0].Detail, selected.State, latest.Outcome, latest.Reconciliation.Attempt, latest.Reconciliation.Owners[0].State, h, feedback, issues)
+	if latest.Reconciliation.Attempt == domain.CaptureAttemptCompleted || latest.Reconciliation.Owners[0].State != domain.CaptureFailed || h.State != "degraded" || feedback == "" || len(issues) == 0 {
+		t.Fatalf("parent binding conflict rewritten to successful completion: health=%+v feedback=%q advisory=%v", h, feedback, issues)
 	}
 }

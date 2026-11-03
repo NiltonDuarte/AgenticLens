@@ -82,6 +82,13 @@ func readMetadata(ctx context.Context, path string, budget *workBudget) (codex.T
 	}
 	budget.sessions--
 	budget.attempts++
+	initialInfo, err := os.Stat(path)
+	if err != nil {
+		return codex.Transcript{}, err
+	}
+	if !initialInfo.Mode().IsRegular() {
+		return codex.Transcript{}, errors.New("metadata source is not regular")
+	}
 	file, err := os.Open(path)
 	if err != nil {
 		return codex.Transcript{}, err
@@ -132,6 +139,8 @@ func (s *Store) inheritChild(ctx context.Context, parent domain.CaptureRegistrat
 			r.TranscriptPath = path
 		}
 		r.ParentID = parent.Identity.SessionID
+		r.ProjectDirectory = s.project
+		r.ProjectProof = domain.CaptureProjectVerified
 		r.TicketID = bound
 		if r.Binding == "" {
 			r.Binding = "source_parent"

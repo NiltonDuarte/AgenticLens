@@ -1,7 +1,10 @@
 .DEFAULT_GOAL := all
 
 BIN_DIR := bin
-BINARY := $(BIN_DIR)/agentic-lens
+HOST_OS := $(shell go env GOHOSTOS)
+HOST_ARCH := $(shell go env GOHOSTARCH)
+HOST_EXT := $(if $(filter windows,$(HOST_OS)),.exe,)
+BINARY := $(BIN_DIR)/agentic-lens-$(HOST_OS)-$(HOST_ARCH)$(HOST_EXT)
 WEB_DIR := web
 BACKEND_DIR := backend
 PORT ?= 8085
@@ -16,7 +19,7 @@ LDFLAGS := -X 'agenticlens/internal/domain.Version=$(VERSION)' \
            -X 'agenticlens/internal/domain.GitCommit=$(GIT_COMMIT)' \
            -X 'agenticlens/internal/domain.BuildDate=$(BUILD_DATE)'
 
-.PHONY: all install install-backend install-frontend check backend-check test test-backend test-frontend lint vet web-assets build clean help server serve release-build release-package release-verify release-clean opencode-compat-v1 opencode-compat-v2 opencode-compat
+.PHONY: all install install-backend install-frontend check backend-check test test-backend test-frontend lint vet web-assets build verify-build clean help server serve release-build release-package release-verify release-clean opencode-compat-v1 opencode-compat-v2 opencode-compat
 
 all: install check test build
 
@@ -32,7 +35,8 @@ help:
 	@echo "  test-frontend       - Run frontend test suite (if web directory exists)"
 	@echo "  vet                 - Run go vet on all Go packages"
 	@echo "  lint                - Run Go vet and frontend linting"
-	@echo "  build               - Build backend executable (and web bundle if present)"
+	@echo "  build               - Build source natives (and web bundle if present)"
+	@echo "  verify-build        - Build and execute the current host native directly"
 	@echo "  release-build       - Cross-compile binaries for all supported platforms"
 	@echo "  release-package     - Package release archives and generate SHA256SUMS"
 	@echo "  release-verify      - Verify release checksums and host binary execution"
@@ -113,17 +117,26 @@ build:
 		echo "Building frontend bundle..."; \
 		(cd $(WEB_DIR) && npm run build); \
 	fi
-	@mkdir -p $(BIN_DIR)
+	@mkdir -p "$(BIN_DIR)"
 	@echo "Building multi-platform binaries..."
-	(cd $(BACKEND_DIR) && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o ../$(BIN_DIR)/agentic-lens-linux-amd64 ./cmd/agentic-lens)
-	(cd $(BACKEND_DIR) && CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -o ../$(BIN_DIR)/agentic-lens-linux-arm64 ./cmd/agentic-lens)
-	(cd $(BACKEND_DIR) && CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -o ../$(BIN_DIR)/agentic-lens-darwin-arm64 ./cmd/agentic-lens)
-	(cd $(BACKEND_DIR) && CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o ../$(BIN_DIR)/agentic-lens-darwin-amd64 ./cmd/agentic-lens)
-	@cp scripts/agentic-lens-wrapper.sh $(BINARY)
-	@chmod +x $(BINARY)
+	@build_dir=$$(CDPATH= cd -P -- "$(BIN_DIR)" && pwd -P) || exit 1; \
+	for platform in $(PLATFORMS); do \
+		os=$${platform%/*}; arch=$${platform#*/}; ext=""; \
+		if [ "$$os" = windows ]; then ext=".exe"; fi; \
+		output="$$build_dir/agentic-lens-$$os-$$arch$$ext"; \
+		(cd $(BACKEND_DIR) && CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build -ldflags "$(LDFLAGS)" -o "$$output" ./cmd/agentic-lens) || exit 1; \
+	done
+
+# Source development must exercise this build, never a shared-pin installed release.
+verify-build: build
+	"$(BINARY)" version
+	"$(BINARY)" version --short
+	"$(BINARY)" version --json
+	"$(BINARY)" -v
+	"$(BINARY)" --version
 
 server: build
-	./$(BINARY) server --port $(PORT)
+	"$(BINARY)" server --port $(PORT)
 
 serve: server
 

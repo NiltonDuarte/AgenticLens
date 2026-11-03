@@ -1,488 +1,209 @@
 #!/usr/bin/env bash
-#
-# download.sh - Cross-platform artifact downloader for AgenticLens setup skill
-#
-# Detects host/container platform and architecture, installs the multi-platform
-# wrapper script into the destination directory, downloads the precompiled binary
-# from GitHub Releases. Git tracking/ignore policy belongs to the repository owner.
-#
-# Zero compilation required. Zero Go/Node toolchain dependency. Zero emojis.
-
+# Explicit installation only; runtime dispatch is always offline.
 set -euo pipefail
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SKILL_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-
-REPO="${AGENTIC_LENS_REPO:-NiltonDuarte/AgenticLens}"
-DEST_DIR="${AGENTIC_LENS_BIN_DIR:-${SKILL_ROOT}/../agentic-lens-operator/bin}"
-INSTALLED_VERSION=""
-if [[ -f "$SKILL_ROOT/RELEASE_VERSION" ]]; then
-    INSTALLED_VERSION="$(cat "$SKILL_ROOT/RELEASE_VERSION")"
-fi
-VERSION="${AGENTIC_LENS_VERSION:-$INSTALLED_VERSION}"
-LOCAL_BIN="${AGENTIC_LENS_LOCAL_BINARY:-}"
-INCLUDE_HOST=""
-ALL_PLATFORMS=0
-FORCE=0
-DRY_RUN=0
-CAPTURE_SOURCE=""
-CAPTURE_STORE=""
-CAPTURE_REPO=""
-CAPTURE_STATE_DIR=""
-
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+PROJECT=. VERSION_REQUEST='' DEST="$HOME/.local/bin" LOCAL_BIN='' LOCAL_SHA=''
+CAPTURE_SOURCE='' CAPTURE_STORE='' CAPTURE_STATE='' INCLUDE=''
+ALL=0 FORCE=0 DRY=0 INIT=0
+fail() { printf 'Error: %s\n' "$*" >&2; exit 1; }
 usage() {
-    cat <<EOF
-Usage: download.sh [OPTIONS]
-
-Options:
-  --version <version>       Release version to download (default: installed RELEASE_VERSION; required if unavailable)
-  --dest <dir>              Destination binary directory (default: sibling agentic-lens-operator/bin)
-  --include-host <target>   Pre-download additional host binary (e.g. darwin-arm64, darwin-amd64, linux-amd64)
-  --all-platforms           Download binaries for all supported platforms
-  --local-bin <path>        Use local prebuilt binary instead of downloading (testing escape hatch)
-  --force                   Overwrite existing binaries if present
-  --capture-source <source> Configure lifecycle capture for codex or opencode after binary installation
-  --capture-store <path>    Explicit absolute Codex home or OpenCode database path (required with --capture-source)
-  --capture-repo <dir>      Repository for additive hook installation (default: current directory)
-  --capture-state-dir <dir> Local ignored capture state (default: <capture-repo>/.agenticlens-capture)
-  --dry-run                 Preview downloads and capture setup without writing
-  --help                    Show this help message
-EOF
-    exit 0
+ cat <<'USAGE'
+Usage: download.sh --project DIR [--version EXACT_TAG] [--dest USER_WRAPPER_DIR]
+  --init-config             Explicitly create missing shared YAML with --version
+  --local-bin PATH --sha256 HASH  Verify/install a local native release offline
+  --all-platforms | --include-host OS-ARCH  Additional native cache leaves
+  --capture-source codex|opencode --capture-store ABSOLUTE_PATH
+  --capture-state-dir PATH  Explicit capture state selection
+  --force                   Repair an existing release leaf with rollback
+  --dry-run                 Preview without writes or network
+Shared YAML is authoritative. --version must agree. --dest selects only the user
+wrapper directory; local agenticlens.install_root selects the native cache root.
+No latest selection, PATH/profile changes, or implicit trust changes.
+USAGE
 }
-
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        --version|--dest|--include-host|--local-bin)
-            [[ $# -ge 2 && -n "$2" && "$2" != --* ]] || { echo "Error: $1 requires a value" >&2; exit 1; }
-            ;;
-    esac
-    case "$1" in
-        --version)
-            VERSION="$2"
-            shift 2
-            ;;
-        --dest)
-            DEST_DIR="$2"
-            shift 2
-            ;;
-        --include-host)
-            INCLUDE_HOST="$2"
-            shift 2
-            ;;
-        --all-platforms)
-            ALL_PLATFORMS=1
-            shift
-            ;;
-        --local-bin)
-            LOCAL_BIN="$2"
-            shift 2
-            ;;
-        --capture-source|--capture-store|--capture-repo|--capture-state-dir)
-            if [[ $# -lt 2 || -z "$2" || "$2" == --* ]]; then
-                echo "Error: $1 requires a value" >&2
-                exit 1
-            fi
-            case "$1" in
-                --capture-source) CAPTURE_SOURCE="$2" ;;
-                --capture-store) CAPTURE_STORE="$2" ;;
-                --capture-repo) CAPTURE_REPO="$2" ;;
-                --capture-state-dir) CAPTURE_STATE_DIR="$2" ;;
-            esac
-            shift 2
-            ;;
-        --force)
-            FORCE=1
-            shift
-            ;;
-        --dry-run)
-            DRY_RUN=1
-            shift
-            ;;
-        --help|-h)
-            usage
-            ;;
-        *)
-            echo "Error: Unknown argument $1" >&2
-            exit 1
-            ;;
-    esac
+while (($#)); do
+ case "$1" in
+  --project|--capture-repo|--version|--dest|--local-bin|--sha256|--include-host|--capture-source|--capture-store|--capture-state-dir)
+   (($#>=2)) && [[ -n "$2" && "$2" != --* ]] || fail "$1 requires a value"
+   case "$1" in
+    --project|--capture-repo) PROJECT=$2 ;; --version) VERSION_REQUEST=$2 ;; --dest) DEST=$2 ;;
+    --local-bin) LOCAL_BIN=$2 ;; --sha256) LOCAL_SHA=$2 ;; --include-host) INCLUDE=$2 ;;
+    --capture-source) CAPTURE_SOURCE=$2 ;; --capture-store) CAPTURE_STORE=$2 ;; --capture-state-dir) CAPTURE_STATE=$2 ;;
+   esac; shift 2 ;;
+  --all-platforms) ALL=1; shift ;; --force) FORCE=1; shift ;; --dry-run) DRY=1; shift ;;
+  --init-config) INIT=1; shift ;; --help|-h) usage; exit 0 ;; *) fail "Unknown argument $1" ;;
+ esac
 done
-
-# Hook ownership is explicit. Never infer the harness or source store from a ticket,
-# branch, directory name, or the existence of a different harness's records.
+[[ -z "${AGENTIC_LENS_BIN_DIR:-}" ]] || fail 'AGENTIC_LENS_BIN_DIR retired; use local agenticlens.install_root and --dest'
+PROJECT="$(CDPATH= cd -P -- "$PROJECT" && pwd -P)"
+[[ -z "$CAPTURE_SOURCE" || "$CAPTURE_SOURCE" == codex || "$CAPTURE_SOURCE" == opencode ]] || fail 'capture source must be codex or opencode'
 if [[ -n "$CAPTURE_SOURCE" ]]; then
-    case "$CAPTURE_SOURCE" in
-        codex|opencode) ;;
-        *) echo "Error: --capture-source must be codex or opencode" >&2; exit 1 ;;
-    esac
-    case "$CAPTURE_STORE" in
-        /*|[A-Za-z]:\\*|[A-Za-z]:/*) ;;
-        *) echo "Error: --capture-store requires the explicit absolute source path" >&2; exit 1 ;;
-    esac
-    CAPTURE_REPO="$(cd "${CAPTURE_REPO:-.}" && pwd -P)"
-elif [[ -n "$CAPTURE_STORE" || -n "$CAPTURE_REPO" || -n "$CAPTURE_STATE_DIR" ]]; then
-    echo "Error: capture options require --capture-source" >&2
-    exit 1
-fi
-
-# An untracked release marker may be absent in a new worktree. Never infer
-# latest for an installed bundle whose original release is unknown.
-if [[ -z "$VERSION" && ( -z "$LOCAL_BIN" || $DRY_RUN -eq 1 ) ]]; then
-    echo "Error: Installed release identity is unavailable (missing/empty $SKILL_ROOT/RELEASE_VERSION). Select the intended release explicitly with --version <RELEASE_TAG> or AGENTIC_LENS_VERSION; no download performed." >&2
-    exit 1
-fi
-case "$VERSION" in
-    *[!A-Za-z0-9._+-]*|.|..) echo "Error: Invalid release tag: $VERSION" >&2; exit 1 ;;
-esac
-
-# Detect Operating System
-OS_RAW="$(uname -s)"
-case "$OS_RAW" in
-    Darwin)
-        OS="darwin"
-        ;;
-    Linux)
-        OS="linux"
-        ;;
-    MINGW*|MSYS*|CYGWIN*|Windows_NT)
-        OS="windows"
-        ;;
-    *)
-        echo "Error: Unsupported operating system: $OS_RAW" >&2
-        exit 1
-        ;;
-esac
-
-# Detect Architecture
-ARCH_RAW="$(uname -m)"
-case "$ARCH_RAW" in
-    x86_64|amd64)
-        ARCH="amd64"
-        ;;
-    arm64|aarch64)
-        ARCH="arm64"
-        ;;
-    *)
-        echo "Error: Unsupported architecture: $ARCH_RAW" >&2
-        exit 1
-        ;;
-esac
-
-BIN_EXT=""
-if [[ "$OS" == "windows" ]]; then
-    BIN_EXT=".exe"
-fi
-
-if [[ "$OS" == windows && "$ARCH" != amd64 ]]; then
-    echo "Error: Windows arm64 artifacts are unavailable." >&2
-    exit 1
-fi
-PRIMARY_BIN="agentic-lens-${OS}-${ARCH}${BIN_EXT}"
-BIN_LIST=("$PRIMARY_BIN")
-
-if [[ $ALL_PLATFORMS -eq 1 ]]; then
-    BIN_LIST=(
-        "agentic-lens-linux-amd64"
-        "agentic-lens-linux-arm64"
-        "agentic-lens-darwin-amd64"
-        "agentic-lens-darwin-arm64"
-        "agentic-lens-windows-amd64.exe"
-    )
-elif [[ -n "$INCLUDE_HOST" ]]; then
-    # Normalize include-host input (e.g. darwin/arm64 -> darwin-arm64)
-    HOST_NORM="$(echo "$INCLUDE_HOST" | tr '/' '-' | tr '[:upper:]' '[:lower:]')"
-    case "$HOST_NORM" in
-        darwin-arm64|macos-arm64|mac-arm64|m1|m2|m3|apple-silicon)
-            ADDITIONAL_BIN="agentic-lens-darwin-arm64"
-            ;;
-        darwin-amd64|macos-amd64|mac-amd64|mac-intel)
-            ADDITIONAL_BIN="agentic-lens-darwin-amd64"
-            ;;
-        linux-amd64)
-            ADDITIONAL_BIN="agentic-lens-linux-amd64"
-            ;;
-        linux-arm64)
-            ADDITIONAL_BIN="agentic-lens-linux-arm64"
-            ;;
-        windows-amd64)
-            ADDITIONAL_BIN="agentic-lens-windows-amd64.exe"
-            ;;
-        *)
-            echo "Error: Unsupported host target: $INCLUDE_HOST" >&2
-            exit 1
-            ;;
-    esac
-
-    # Add if not already present
-    FOUND=0
-    for b in "${BIN_LIST[@]}"; do
-        if [[ "$b" == "$ADDITIONAL_BIN" ]]; then
-            FOUND=1
-            break
-        fi
-    done
-    if [[ $FOUND -eq 0 ]]; then
-        BIN_LIST+=("$ADDITIONAL_BIN")
+ [[ "$CAPTURE_STORE" == /* || "$CAPTURE_STORE" =~ ^[A-Za-z]:[\\/] ]] || fail 'capture requires an explicit absolute source store'
+elif [[ -n "$CAPTURE_STORE$CAPTURE_STATE" ]]; then fail 'capture options require --capture-source'; fi
+SOURCE_WRAPPER="$SCRIPT_DIR/agentic-lens-wrapper.sh"
+PS_WRAPPER="$SCRIPT_DIR/agentic-lens-wrapper.ps1"
+[[ -f "$SOURCE_WRAPPER" && -f "$PS_WRAPPER" ]] || fail 'Restore complete setup skill: wrapper assets missing'
+STAGE='' CACHE_LOCK='' WRAPPER_LOCK='' CAPTURE_APPLY_STARTED=0
+TARGETS=() BACKUPS=()
+cleanup() {
+ local status=$? i
+ trap - EXIT HUP INT TERM
+ if ((status!=0 && CAPTURE_APPLY_STARTED)); then
+  printf 'Capture apply incomplete; validated native/wrapper retained. Prior backups: %s. Inspect capture status and preview owned capture install before recovery; no complete rollback is claimed.\n' "$STAGE" >&2
+  STAGE=''
+ elif ((status!=0)); then
+  for ((i=${#TARGETS[@]}-1;i>=0;i--)); do
+   if [[ -n "${BACKUPS[$i]}" ]]; then
+    if ! mv -f -- "${BACKUPS[$i]}" "${TARGETS[$i]}"; then
+     printf 'Restore prior installation manually from %s\n' "${BACKUPS[$i]}" >&2; STAGE=''
     fi
-fi
-
-TARGET_WRAPPER="${DEST_DIR}/agentic-lens"
-
-# Capture-aware binaries retain their handler protocol across upgrades, even when
-# their installation manifests live outside this repository or use custom paths.
-read_capture_protocol() {
-    local value
-    if [[ ! -x "$1" ]] || ! value="$("$1" capture protocol 2>/dev/null)"; then
-        return 1
-    fi
-    case "$value" in
-        ""|*[!0-9]*) return 1 ;;
-    esac
-    printf '%s' "$value"
+   else rm -f -- "${TARGETS[$i]}"; fi
+  done
+ fi
+ [[ -z "$STAGE" ]] || rm -rf -- "$STAGE"
+ [[ -z "$CACHE_LOCK" ]] || rmdir -- "$CACHE_LOCK"
+ [[ -z "$WRAPPER_LOCK" ]] || rmdir -- "$WRAPPER_LOCK"
+ exit "$status"
 }
-
-REPLACED_TARGETS=()
-PREVIOUS_BINARIES=()
-STAGED_BINARIES=()
-finish_binary_transaction() {
-    local result=$? i backup
-    trap - EXIT HUP INT TERM
-    if [[ $result -ne 0 ]]; then
-        for ((i=${#REPLACED_TARGETS[@]}-1; i>=0; i--)); do
-            backup="${PREVIOUS_BINARIES[$i]}"
-            if [[ -n "$backup" ]]; then
-                if ! mv -f "$backup" "${REPLACED_TARGETS[$i]}"; then
-                    echo "Error: Restore native binary manually from $backup" >&2
-                    PREVIOUS_BINARIES[$i]=""
-                fi
-            else
-                rm -f "${REPLACED_TARGETS[$i]}"
-            fi
-        done
-    fi
-    for backup in "${PREVIOUS_BINARIES[@]-}" "${STAGED_BINARIES[@]-}"; do
-        if [[ -n "$backup" ]]; then rm -f "$backup"; fi
-    done
-    exit "$result"
-}
-trap finish_binary_transaction EXIT
+trap cleanup EXIT
 trap 'exit 1' HUP INT TERM
-
-HOST_CAPTURE_PROTOCOL=""
-if [[ $DRY_RUN -eq 0 && -x "${DEST_DIR}/${PRIMARY_BIN}" ]]; then
-    HOST_CAPTURE_PROTOCOL="$(read_capture_protocol "${DEST_DIR}/${PRIMARY_BIN}" || true)"
+if ((INIT)); then
+ [[ "$VERSION_REQUEST" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?(\+[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?$ && ${#VERSION_REQUEST} -le 128 ]] || fail '--init-config requires an exact --version'
+ for suffix in yaml yml json; do [[ ! -e "$PROJECT/.agenticlens-config.$suffix" ]] || fail 'Shared config exists; edit its pin explicitly'; done
+ if ((DRY)); then
+  STAGE="$(mktemp -d)"
+  printf 'agenticlens:\n  version: %s\n' "$VERSION_REQUEST" > "$STAGE/.agenticlens-config.yaml"
+  CONTEXT="$(sh "$SOURCE_WRAPPER" --al-project "$STAGE" --al-resolve)"
+ else
+  pin="$PROJECT/.agenticlens-config.yaml"
+  (set -o noclobber; printf '# AgenticLens bootstrap scaffold v1: incomplete project configuration\nagenticlens:\n  version: %s\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\n    commit_warning: true\n' "$VERSION_REQUEST" > "$pin") || fail 'Could not create explicit shared pin'
+  TARGETS+=("$pin"); BACKUPS+=('')
+  CONTEXT="$(sh "$SOURCE_WRAPPER" --al-project "$PROJECT" --al-resolve)"
+ fi
+else CONTEXT="$(sh "$SOURCE_WRAPPER" --al-project "$PROJECT" --al-resolve)"; fi
+VALUES=(); while IFS= read -r value; do VALUES+=("$value"); done <<< "$CONTEXT"
+VERSION=${VALUES[0]}
+if ((!INIT)); then PROJECT=${VALUES[1]}; fi
+INSTALL_ROOT=${VALUES[2]} PRIMARY=${VALUES[3]}
+[[ -z "$VERSION_REQUEST" || "$VERSION_REQUEST" == "$VERSION" ]] || fail '--version conflicts with shared YAML pin'
+[[ -z "${AGENTIC_LENS_VERSION:-}" || "$AGENTIC_LENS_VERSION" == "$VERSION" ]] || fail 'AGENTIC_LENS_VERSION conflicts with shared YAML pin'
+PRIMARY_NAME=${PRIMARY##*/}; PRIMARY_PLATFORM=${PRIMARY_NAME#agentic-lens-}; PRIMARY_PLATFORM=${PRIMARY_PLATFORM%.exe}
+[[ "$PRIMARY_PLATFORM" != windows-* || "$DEST" != "$HOME/.local/bin" ]] || DEST="$HOME/.agenticlens"
+# Preserve documented/legacy host aliases while cache keys stay canonical.
+if [[ -n "$INCLUDE" ]]; then
+ INCLUDE="$(printf '%s' "${INCLUDE//\//-}" | tr '[:upper:]' '[:lower:]')"
+ case "$INCLUDE" in
+  macos-arm64|mac-arm64|m1|m2|m3|apple-silicon) INCLUDE=darwin-arm64 ;;
+  macos-amd64|mac-amd64|mac-intel) INCLUDE=darwin-amd64 ;;
+ esac
 fi
-
-activate_candidate() {
-    local candidate="$1" target="$2" name="$3" required="" observed=""
-    if [[ "$name" != "$PRIMARY_BIN" ]]; then
-        if [[ -f "$target" && ( -n "$HOST_CAPTURE_PROTOCOL" || -n "$CAPTURE_SOURCE" ) ]]; then
-            echo "Preserving existing ${name}: verify capture compatibility and upgrade on its native host."
-            return 0
-        fi
-    else
-        required="$HOST_CAPTURE_PROTOCOL"
-        if [[ -n "$CAPTURE_SOURCE" ]]; then required="1"; fi
-        if [[ -n "$required" ]]; then
-            observed="$(read_capture_protocol "$candidate" || true)"
-            if [[ "$observed" != "$required" ]]; then
-                echo "Error: Candidate capture protocol incompatible (required ${required}); existing native handler and hooks preserved." >&2
-                return 1
-            fi
-        fi
-    fi
-    replace_owned_file "$candidate" "$target"
-}
-
-replace_owned_file() {
-    local candidate="$1" target="$2" backup=""
-    if [[ -f "$target" ]]; then
-        backup="$(mktemp "${target}.previous.XXXXXX")" || return 1
-        if ! cp -p "$target" "$backup"; then rm -f "$backup"; return 1; fi
-    fi
-    REPLACED_TARGETS+=("$target")
-    PREVIOUS_BINARIES+=("$backup")
-    mv -f "$candidate" "$target"
-}
-
-configure_capture() {
-    if [[ -z "$CAPTURE_SOURCE" ]]; then
-        echo "Binary installation only; lifecycle capture is not configured by this invocation."
-        return 0
-    fi
-    local native="${DEST_DIR}/${PRIMARY_BIN}"
-    local args=(capture install --source "$CAPTURE_SOURCE" --repo "$CAPTURE_REPO"
-        --store "$CAPTURE_STORE")
-    if [[ -n "$CAPTURE_STATE_DIR" ]]; then args+=(--state-dir "$CAPTURE_STATE_DIR"); fi
-    if [[ $DRY_RUN -eq 1 ]]; then
-        args+=(--dry-run)
-        # An explicitly supplied local release can preview hooks before installation.
-        if [[ -n "$LOCAL_BIN" && -x "$LOCAL_BIN" ]]; then
-            native="$LOCAL_BIN"
-        fi
-        printf 'Capture setup command:'
-        printf ' %q' "$native" "${args[@]}"
-        printf '\n'
-        if [[ ! -x "$native" ]]; then
-            echo "Capture file preview unavailable until the native release binary is installed; no hooks changed."
-            return 0
-        fi
-    elif [[ ! -x "$native" ]]; then
-        echo "Error: Native capture handler unavailable at $native; no hook setup attempted." >&2
-        return 1
-    fi
-    # Use the native handler directly: hook setup must never self-update via a wrapper.
-    if ! "$native" "${args[@]}"; then
-        echo "Error: Capture setup failed; inspect native capture diagnostics. Binary installation remains available." >&2
-        return 1
-    fi
-    if [[ $DRY_RUN -eq 0 ]]; then
-        echo "Lifecycle configuration installed; runtime trust, agent binding and source reconciliation still require verification."
-    fi
-}
-
-if [[ $DRY_RUN -eq 1 ]]; then
-    echo "Platform: ${OS}"
-    echo "Architecture: ${ARCH}"
-    echo "Version: ${VERSION}"
-    echo "Destination: ${DEST_DIR}"
-    echo "Target Wrapper: ${TARGET_WRAPPER}"
-    echo "Binaries to install:"
-    for b in "${BIN_LIST[@]}"; do
-        if [[ "$VERSION" == "latest" ]]; then
-            u="https://github.com/${REPO}/releases/latest/download/${b}"
-        else
-            u="https://github.com/${REPO}/releases/download/${VERSION}/${b}"
-        fi
-        echo "  - ${b} -> ${u}"
-    done
-    configure_capture
-    exit 0
-fi
-
-# Ensure destination directory exists
-mkdir -p "$DEST_DIR"
-
-# Only use the bundled wrapper from the selected setup release. Recovery must
-# not mix a moving-main wrapper with an installed release's native binary.
-install_wrapper() {
-    local wrapper_src="${SCRIPT_DIR}/agentic-lens-wrapper.sh"
-    if [[ ! -f "$wrapper_src" ]]; then
-        echo "Error: Setup wrapper is missing: $wrapper_src. Restore the setup skill with scripts/install.sh before repair." >&2
-        return 1
-    fi
-    local candidate
-    candidate="$(mktemp "${TARGET_WRAPPER}.candidate.XXXXXX")"
-    STAGED_BINARIES+=("$candidate")
-    cp "$wrapper_src" "$candidate"
-    chmod +x "$candidate"
-    replace_owned_file "$candidate" "$TARGET_WRAPPER"
-}
-
-if [[ ! -f "$TARGET_WRAPPER" || $FORCE -eq 1 ]]; then
-    install_wrapper
-fi
-
-# Explicit repair restores execute permission without replacing stored bytes.
-retain_binary() {
-    local target="$1"
-    if [[ ! -x "$target" ]]; then
-        if ! chmod +x "$target" || [[ ! -x "$target" ]]; then
-            echo "Error: Could not restore executable permission: $target. Repair filesystem permissions before retrying." >&2
-            return 1
-        fi
-    fi
-    echo "Binary already exists at ${target} (retained; use --force to replace)."
-}
-
-# If a local binary override is specified, install it for current platform
-if [[ -n "$LOCAL_BIN" ]]; then
-    if [[ ! -f "$LOCAL_BIN" ]]; then
-        echo "Error: Specified local binary does not exist: $LOCAL_BIN" >&2
-        exit 1
-    fi
-    LOCAL_TARGET="${DEST_DIR}/${PRIMARY_BIN}"
-    if [[ -f "$LOCAL_TARGET" && $FORCE -eq 0 ]]; then
-        retain_binary "$LOCAL_TARGET"
-        configure_capture
-        exit 0
-    fi
-    echo "Installing local prebuilt binary from ${LOCAL_BIN} to ${LOCAL_TARGET}..."
-    LOCAL_CANDIDATE="$(mktemp "${LOCAL_TARGET}.candidate.XXXXXX")"
-    STAGED_BINARIES+=("$LOCAL_CANDIDATE")
-    cp "$LOCAL_BIN" "$LOCAL_CANDIDATE"
-    chmod +x "$LOCAL_CANDIDATE"
-    activate_candidate "$LOCAL_CANDIDATE" "$LOCAL_TARGET" "$PRIMARY_BIN"
-    echo "Successfully installed AgenticLens wrapper at ${TARGET_WRAPPER} and local binary at ${LOCAL_TARGET}"
-    configure_capture
-    exit 0
-fi
-
-# Download binaries
-download_binary() {
-    local b_name="$1"
-    local b_dest="${DEST_DIR}/${b_name}"
-    if [[ "$b_name" != "$PRIMARY_BIN" && -f "$b_dest" && ( -n "$HOST_CAPTURE_PROTOCOL" || -n "$CAPTURE_SOURCE" ) ]]; then
-        echo "Preserving existing ${b_name}: verify capture compatibility and upgrade on its native host."
-        return 0
-    fi
-
-    if [[ -f "$b_dest" && $FORCE -eq 0 ]]; then
-        retain_binary "$b_dest"
-        return $?
-    fi
-
-    local d_url
-    if [[ "$VERSION" == "latest" ]]; then
-        d_url="https://github.com/${REPO}/releases/latest/download/${b_name}"
-    else
-        d_url="https://github.com/${REPO}/releases/download/${VERSION}/${b_name}"
-    fi
-
-    echo "Downloading ${b_name} (${VERSION})..."
-    local temp_bin
-    temp_bin="$(mktemp "${b_dest}.candidate.XXXXXX")" || return 1
-    STAGED_BINARIES+=("$temp_bin")
-    local success=0
-
-    if command -v curl >/dev/null 2>&1; then
-        if curl -fsSL -o "$temp_bin" "$d_url"; then
-            success=1
-        fi
-    fi
-
-    if [[ $success -eq 0 ]] && command -v wget >/dev/null 2>&1; then
-        if wget -q -O "$temp_bin" "$d_url"; then
-            success=1
-        fi
-    fi
-
-    if [[ $success -eq 0 || ! -f "$temp_bin" ]]; then
-        rm -f "$temp_bin"
-        echo "Error: Failed to download ${b_name} from ${d_url}" >&2
-        return 1
-    fi
-
-    if ! chmod +x "$temp_bin"; then return 1; fi
-    if ! activate_candidate "$temp_bin" "$b_dest" "$b_name"; then
-        return 1
-    fi
-    echo "Installed ${b_name} at ${b_dest}"
-    return 0
-}
-
-FAILURES=0
-for b in "${BIN_LIST[@]}"; do
-    if ! download_binary "$b"; then
-        FAILURES=$((FAILURES + 1))
-    fi
+PLATFORMS=("$PRIMARY_PLATFORM")
+if ((ALL)); then PLATFORMS=(linux-amd64 linux-arm64 darwin-amd64 darwin-arm64 windows-amd64)
+elif [[ -n "$INCLUDE" && "$INCLUDE" != "$PRIMARY_PLATFORM" ]]; then PLATFORMS+=("${INCLUDE//\//-}"); fi
+for platform in "${PLATFORMS[@]}"; do
+ case "$platform" in linux-amd64|linux-arm64|darwin-amd64|darwin-arm64|windows-amd64) ;; *) fail "Unsupported platform $platform" ;; esac
 done
-
-if [[ $FAILURES -gt 0 ]]; then
-    echo "Error: Failed to download ${FAILURES} binary artifact(s). Retry: bash \"${SCRIPT_DIR}/download.sh\" --dest \"${DEST_DIR}\" --version \"${VERSION}\"" >&2
-    exit 1
+[[ "$DEST" == /* ]] || DEST="$PWD/$DEST"
+WRAPPER="${DEST%/}/agentic-lens"
+if ((DRY)); then
+ printf 'Project: %s\nVersion: %s\nWrapper: %s\nNative cache: %s/bin/%s\n' "$PROJECT" "$VERSION" "$WRAPPER" "$INSTALL_ROOT" "$VERSION"
+ for platform in "${PLATFORMS[@]}"; do
+  ext=''; [[ "$platform" != windows-* ]] || ext=.exe
+  printf 'https://github.com/%s/releases/download/%s/agentic-lens-%s%s\n' "${AGENTIC_LENS_REPO:-NiltonDuarte/AgenticLens}" "$VERSION" "$platform" "$ext"
+ done
+ printf 'Required PATH entry: %s; no profile changed. Runtime verification pending.\n' "$DEST"
+ exit 0
 fi
-
-echo "Successfully installed AgenticLens wrapper at ${TARGET_WRAPPER}"
-configure_capture
+mkdir -p -- "$INSTALL_ROOT" "$DEST"
+lock="$INSTALL_ROOT/.install-$VERSION.lock"; mkdir -- "$lock" 2>/dev/null || fail "Installation busy/interrupted: $lock; inspect before retrying"; CACHE_LOCK=$lock
+lock="$DEST/.agenticlens-wrapper-install.lock"; mkdir -- "$lock" 2>/dev/null || fail "Wrapper installation busy/interrupted: $lock"; WRAPPER_LOCK=$lock
+STAGE="$(mktemp -d "$INSTALL_ROOT/.install-stage.XXXXXXXX")"
+digest() {
+ if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | awk '{print $1}'
+ elif command -v shasum >/dev/null 2>&1; then shasum -a 256 "$1" | awk '{print $1}'
+ else fail 'Explicit installation requires sha256sum or shasum'; fi
+}
+fetch() {
+ if command -v curl >/dev/null 2>&1; then curl -fsSL --connect-timeout 10 --max-time 120 -o "$2" "$1"
+ elif command -v wget >/dev/null 2>&1; then wget -q --timeout=120 -O "$2" "$1"
+ else fail 'Explicit download requires curl or wget'; fi
+}
+replace() {
+ local candidate=$1 target=$2 backup='' near
+ mkdir -p -- "$(dirname -- "$target")"
+ if [[ -e "$target" ]]; then backup="$(mktemp "$STAGE/previous.XXXXXXXX")"; cp -p -- "$target" "$backup"; fi
+ TARGETS+=("$target"); BACKUPS+=("$backup")
+ near="$(mktemp "${target}.candidate.XXXXXXXX")"
+ if ! cp -p -- "$candidate" "$near" || ! mv -f -- "$near" "$target"; then rm -f -- "$near"; return 1; fi
+}
+for source in "$SOURCE_WRAPPER" "$PS_WRAPPER"; do
+ target="$WRAPPER"; [[ "$source" != "$PS_WRAPPER" ]] || target="$DEST/agentic-lens.ps1"
+ if [[ -e "$target" ]] && ! cmp -s -- "$source" "$target"; then
+  [[ -f "$target.sha256" && "$(cat "$target.sha256")" == "$(digest "$target")" ]] || fail "User-edited/unowned wrapper preserved: $target"
+ fi
+done
+if [[ -n "$LOCAL_BIN" ]]; then
+ [[ -f "$LOCAL_BIN" && "$LOCAL_SHA" =~ ^[a-fA-F0-9]{64}$ ]] || fail '--local-bin requires explicit expected --sha256 digest'
+ [[ "$(digest "$LOCAL_BIN")" == "$(printf %s "$LOCAL_SHA" | tr A-F a-f)" ]] || fail 'Local native checksum mismatch'
+ ((${#PLATFORMS[@]}==1)) || fail '--local-bin cannot install foreign platforms'
+else fetch "https://github.com/${AGENTIC_LENS_REPO:-NiltonDuarte/AgenticLens}/releases/download/$VERSION/SHA256SUMS" "$STAGE/SHA256SUMS"; fi
+for platform in "${PLATFORMS[@]}"; do
+ ext=''; [[ "$platform" != windows-* ]] || ext=.exe
+ name="agentic-lens-$platform$ext"; candidate="$STAGE/$name"
+ if [[ -n "$LOCAL_BIN" ]]; then cp -- "$LOCAL_BIN" "$candidate"
+ else
+  fetch "https://github.com/${AGENTIC_LENS_REPO:-NiltonDuarte/AgenticLens}/releases/download/$VERSION/$name" "$candidate"
+  expected="$(awk -v name="$name" '$2==name || $2=="*"name || $2=="bin/"name || $2=="*bin/"name {count++; value=$1} END {if(count!=1) exit 1; print value}' "$STAGE/SHA256SUMS")" || fail "Missing/ambiguous checksum for $name"
+  [[ "$expected" =~ ^[a-fA-F0-9]{64}$ && "$(digest "$candidate")" == "$(printf %s "$expected" | tr A-F a-f)" ]] || fail "Release checksum mismatch: $name"
+ fi
+ magic="$(od -An -tx1 -N4 "$candidate" | tr -d ' \n')"
+ case "$platform:$magic" in linux-*:7f454c46|darwin-*:cffaedfe|darwin-*:cefaedfe|darwin-*:feedfacf|darwin-*:feedface|darwin-*:cafebabe|windows-*:4d5a*) ;; *) fail "Not a native release executable: $name" ;; esac
+ chmod 700 -- "$candidate"
+ if [[ "$platform" == "$PRIMARY_PLATFORM" ]]; then
+  [[ "$("$candidate" version --short)" == "$VERSION" ]] || fail 'Native version does not match shared pin'
+  required=''
+  [[ -z "$CAPTURE_SOURCE" ]] || required=2
+  if [[ -x "$PRIMARY" ]]; then
+   existing_magic="$(od -An -tx1 -N4 "$PRIMARY" | tr -d ' \n')"
+   case "$existing_magic" in 7f454c46|cffaedfe|cefaedfe|feedfacf|feedface|cafebabe|4d5a*)
+    existing_protocol="$("$PRIMARY" capture protocol 2>/dev/null || true)"
+    [[ "$existing_protocol" != 2 ]] || required=2 ;;
+   esac
+  fi
+  observed_protocol="$("$candidate" capture protocol 2>/dev/null || true)"
+  [[ -z "$required" || "$observed_protocol" == "$required" ]] || fail 'Native hook protocol incompatible (required 2); prior installation preserved'
+ fi
+done
+for platform in "${PLATFORMS[@]}"; do
+ ext=''; [[ "$platform" != windows-* ]] || ext=.exe
+ name="agentic-lens-$platform$ext"; target="$INSTALL_ROOT/bin/$VERSION/$platform/$name"
+ if [[ -f "$target" ]] && cmp -s -- "$STAGE/$name" "$target"; then
+  # Repair permissions in place; equal content must retain admitted worker identity.
+  [[ -x "$target" ]] || chmod 700 -- "$target"
+  continue
+ fi
+ if [[ -f "$target" ]] && ((!FORCE)); then fail "Immutable cache leaf exists: $target; --force explicitly repairs this release"; fi
+ replace "$STAGE/$name" "$target"
+done
+for source in "$SOURCE_WRAPPER" "$PS_WRAPPER"; do
+ target="$WRAPPER"; [[ "$source" != "$PS_WRAPPER" ]] || target="$DEST/agentic-lens.ps1"
+ cp -- "$source" "$STAGE/wrapper"; chmod 700 "$STAGE/wrapper"; replace "$STAGE/wrapper" "$target"
+ digest "$source" > "$STAGE/wrapper.sha256"; replace "$STAGE/wrapper.sha256" "$target.sha256"
+done
+if ((INIT)); then
+ printf 'Configuration incomplete: bootstrap scaffold defines no project/ticket/code roots.\n'
+ if [[ "${observed_protocol:-}" == 2 ]]; then
+  printf 'Complete only this unchanged owned scaffold, preserving local settings:\n  (cd -P -- %q && %q --al-project %q init --complete-scaffold --agenticlens-version %q --project-name NAME --src-folders DIRS --ticket-prefixes PREFIXES)\n' "$PROJECT" "$WRAPPER" "$PROJECT" "$VERSION"
+ else printf 'Selected legacy release lacks guarded init/capture capability. Ordinary CLI is installed; review an exact supported release pin before adopting new setup/capture features.\n'; fi
+fi
+if [[ -n "$CAPTURE_SOURCE" ]]; then
+ ((INIT==0)) || fail 'Complete project configuration first, then explicitly install capture'
+ args=(capture install --source "$CAPTURE_SOURCE" --store "$CAPTURE_STORE" --repo "$PROJECT" --binary "$PRIMARY" --wrapper "$WRAPPER")
+ [[ -z "$CAPTURE_STATE" ]] || args+=(--state-dir "$CAPTURE_STATE")
+ CAPTURE_APPLY_STARTED=1
+ "$WRAPPER" --al-offline --al-project "$PROJECT" "${args[@]}"
+else printf 'Binary installation only; lifecycle capture not configured.\n'; fi
+if [[ "${observed_protocol:-}" != 2 ]]; then
+ printf 'Selected legacy release %s: hook protocol 2 and guarded init unavailable; ordinary CLI installed. New capture setup requires a reviewed exact supported pin.\n' "$VERSION"
+fi
+printf 'Installed wrapper: %s\nNative: %s\nRequired PATH entry: %s\nNo profile changed. Runtime trust, binding and source extraction require verification.\n' "$WRAPPER" "$PRIMARY" "$DEST"

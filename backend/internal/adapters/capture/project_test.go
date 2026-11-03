@@ -253,7 +253,15 @@ func TestPublicationGenerationAcknowledgesOnlyObservedWork(t *testing.T) {
 	}
 	defer sb.Close()
 	id := domain.CaptureIdentity{Source: domain.SourceCodex, Store: t.TempDir(), SessionID: "root"}
-	row, err := sa.Register(ctx, id, "", "SessionStart")
+	sourcePath := filepath.Join(id.Store, "sessions", "root.jsonl")
+	if err := os.MkdirAll(filepath.Dir(sourcePath), 0700); err != nil {
+		t.Fatal(err)
+	}
+	metadata := fmt.Sprintf(`{"type":"session_meta","payload":{"id":"root","cwd":%q,"timestamp":"2026-01-01T00:00:00Z"}}`+"\n", a)
+	if err := os.WriteFile(sourcePath, []byte(metadata), 0600); err != nil {
+		t.Fatal(err)
+	}
+	row, err := sa.Register(ctx, id, sourcePath, "SessionStart")
 	if err != nil {
 		t.Fatal(err)
 	}

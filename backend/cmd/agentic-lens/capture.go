@@ -1,9 +1,8 @@
 package main
 
 import (
+	"bytes"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -24,18 +23,47 @@ import (
 )
 
 func runCapture(args []string) {
-	if err := captureCommand(args, os.Stdin, os.Stdout); err != nil {
+	output := io.Writer(os.Stdout)
+	if len(args) > 0 && args[0] == "check" {
+		output = os.Stderr
+	}
+	if err := captureCommand(args, os.Stdin, output); err != nil {
 		fmt.Fprintln(os.Stderr, "Capture:", err)
 		os.Exit(1)
 	}
 }
-func captureCommand(args []string, input io.Reader, output io.Writer) (returnErr error) {
+func captureCommand(args []string, input io.Reader, output io.Writer) error {
+	var err error
+	if len(args) > 0 && args[0] == "receive" {
+		var buffered bytes.Buffer
+		err = captureCommandAction(args, input, &buffered)
+		if err != nil {
+			feedback := capture.HookOutput{Message: "AgenticLens capture failed. The session may remain unassigned or pending; run capture diagnostics for this exact project, check configured state/source paths and retry capture reconcile. CLI stderr contains the failure."}
+			if encodeErr := json.NewEncoder(output).Encode(feedback); encodeErr != nil {
+				err = errors.Join(err, encodeErr)
+			}
+		} else {
+			_, err = output.Write(buffered.Bytes())
+		}
+	} else {
+		err = captureCommandAction(args, input, output)
+	}
+	if len(args) > 0 && args[0] == "check" && err != nil {
+		// This optional health observer must never block its owner's Git operation.
+		if _, writeErr := fmt.Fprintln(output, "AgenticLens capture advisory: capture health unavailable; run capture diagnostics to inspect configuration/state and refresh setup if needed."); writeErr != nil {
+			fmt.Fprintln(os.Stderr, "capture advisory output unavailable:", writeErr)
+		}
+		return nil
+	}
+	return err
+}
+func captureCommandAction(args []string, input io.Reader, output io.Writer) (returnErr error) {
 	if len(args) == 0 {
-		return errors.New("usage: capture install|status|receive|request|bind|reconcile|disable|uninstall|protocol")
+		return errors.New("usage: capture install|install-check|uninstall-check|status|diagnostics|verify|check|receive|request|bind|reconcile|disable|uninstall|protocol")
 	}
 	command := args[0]
 	if command == "protocol" {
-		_, err := fmt.Fprintln(output, capture.ProtocolVersion)
+		_, err := fmt.Fprintln(output, capture.HandlerProtocolVersion)
 		return err
 	}
 	flags := flag.NewFlagSet("capture "+command, flag.ContinueOnError)
@@ -44,15 +72,17 @@ func captureCommand(args []string, input io.Reader, output io.Writer) (returnErr
 	sourceStore := flags.String("store", "", "Exact source store (Codex home or OpenCode database)")
 	state := flags.String("state-dir", "", "Capture state base (configuration default when omitted)")
 	repo := flags.String("repo", ".", "Repository root for additive local hook installation")
-	binary := flags.String("binary", "", "Native release binary for installed hooks (defaults to current executable)")
+	binary := flags.String("binary", "", "Selected native release binary (defaults to current executable; workers retain this executable)")
+	wrapper := flags.String("wrapper", "", "Owned common version-pinned wrapper for installed integrations and agent binding feedback")
 	sessionID := flags.String("session-id", "", "Exact harness session identity")
 	ticketTitle := flags.String("ticket-title", "", "Explicit human-readable ticket title for automatic publication")
 	ticketType := flags.String("ticket-type", "", "Explicit conventional ticket type")
 	ticket := flags.String("ticket-id", "", "Explicit ticket binding or reconciliation target")
 	request := flags.String("request", "", "Exact binding request token delivered by hook feedback")
 	dryRun := flags.Bool("dry-run", false, "Show owned installation changes without writing")
-	byteBudget := flags.Int64("max-source-bytes", capture.DefaultByteBudget, "Source bytes per reconciliation pass")
-	sessionBudget := flags.Int("max-sessions", capture.DefaultSessionBudget, "Session work budget per reconciliation pass")
+	byteBudget := flags.Int64("max-source-bytes", capture.DefaultByteBudget, "Source or diagnostic payload bytes per bounded pass")
+	sessionBudget := flags.Int("max-sessions", capture.DefaultSessionBudget, "Session work budget per reconciliation or inspection pass")
+	beforeDiagnostic := flags.Int64("before-diagnostic", 0, "Read retained diagnostic history before this sequence (status/diagnostics only)")
 	timeout := flags.Duration("timeout", 2*time.Second, "Bound handler or registry work duration")
 	if err := flags.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -62,6 +92,9 @@ func captureCommand(args []string, input io.Reader, output io.Writer) (returnErr
 	}
 	if flags.NArg() != 0 {
 		return errors.New("unexpected capture arguments")
+	}
+	if *beforeDiagnostic < 0 || (*beforeDiagnostic > 0 && command != "status" && command != "diagnostics") {
+		return errors.New("--before-diagnostic requires status/diagnostics and a nonnegative sequence")
 	}
 	if *timeout <= 0 || *timeout > 5*time.Minute {
 		return errors.New("capture timeout must be positive and at most five minutes")
@@ -75,6 +108,14 @@ func captureCommand(args []string, input io.Reader, output io.Writer) (returnErr
 	policy, err := adaptersconfig.ResolveCapture(project, *state)
 	if err != nil {
 		return err
+	}
+	// A valid explicit local disable is authoritative before inspecting state
+	// or installation health. Diagnostics for other commands remain visible.
+	if command == "check" && !policy.CommitWarning {
+		return nil
+	}
+	if command != "check" && policy.DeprecatedDetailedReport {
+		fmt.Fprintln(os.Stderr, "telemetry.capture.detailed_report is deprecated and has no effect; remove it and use capture diagnostics. Publication writes ledger and summary only.")
 	}
 	if _, legacyErr := os.Stat(filepath.Join(policy.StateDir, "registry.db")); legacyErr == nil && filepath.Base(filepath.Dir(policy.StateDir)) != "projects" {
 		fmt.Fprintln(os.Stderr, "Legacy unscoped capture registry preserved; source-verified explicit recovery required. New registrations use project-scoped state.")
@@ -91,11 +132,22 @@ func captureCommand(args []string, input io.Reader, output io.Writer) (returnErr
 	if err != nil {
 		return err
 	}
-	if err := checkCaptureInstallation(project, absState, *state != ""); err != nil {
-		return err
+	inspection := command == "status" || command == "diagnostics" || command == "verify" || command == "check"
+	repair := command == "install" || command == "disable" || command == "uninstall" || command == "install-check" || command == "uninstall-check"
+	if !inspection && !repair {
+		if err := checkCaptureInstallation(project, absState, *state != ""); err != nil {
+			return err
+		}
 	}
 	if *source != "" && *source != "codex" && *source != "opencode" {
 		return errors.New("capture source must be codex or opencode")
+	}
+	if command == "install-check" || command == "uninstall-check" {
+		result, e := capture.InstallCheck(ctx, capture.CheckInstallOptions{Repository: project, Wrapper: *wrapper, DryRun: *dryRun, Remove: command == "uninstall-check"})
+		if e != nil {
+			return e
+		}
+		return json.NewEncoder(output).Encode(result)
 	}
 	if command == "install" || command == "disable" || command == "uninstall" {
 		if *binary == "" {
@@ -110,21 +162,19 @@ func captureCommand(args []string, input io.Reader, output io.Writer) (returnErr
 				return err
 			}
 		}
-		result, e := capture.Install(ctx, capture.InstallOptions{Repository: project, StateDir: absState, Binary: *binary, Source: *source, SourceStore: *sourceStore, DryRun: *dryRun, Remove: command != "install"})
+		result, e := capture.Install(ctx, capture.InstallOptions{Repository: project, StateDir: absState, Binary: *binary, Wrapper: *wrapper, Source: *source, SourceStore: *sourceStore, DryRun: *dryRun, Remove: command != "install"})
 		if e != nil {
 			return e
 		}
 		return json.NewEncoder(output).Encode(result)
 	}
-	if command == "status" {
-		// Status is read-only when no capture state exists.
-		if _, e := os.Stat(filepath.Join(absState, "registry.db")); errors.Is(e, os.ErrNotExist) {
-			return json.NewEncoder(output).Encode(struct {
-				State  string `json:"state"`
-				Detail string `json:"detail"`
-			}{"degraded", "No lifecycle registrations. Install hooks, review harness trust, then verify an actual agent binding response."})
-		}
+	if command == "status" || command == "diagnostics" || command == "verify" || command == "check" {
+		inspectionPolicy := policy
+		inspectionPolicy.MaxSessions = *sessionBudget
+		inspectionPolicy.MaxSourceBytes = *byteBudget
+		return inspectCapture(ctx, command, absState, project, inspectionPolicy, domain.CaptureIdentity{Source: domain.SourceHarness(*source), Store: *sourceStore, SessionID: *sessionID}, *beforeDiagnostic, output)
 	}
+
 	s, err := capture.OpenProject(absState, project)
 	if err != nil {
 		return err
@@ -137,64 +187,49 @@ func captureCommand(args []string, input io.Reader, output io.Writer) (returnErr
 	if command == "worker" {
 		return captureWorker(s, project, absState, policy)
 	}
+	handoffAccepted := false
 	if command == "receive" || command == "bind" || command == "request" || command == "reconcile" {
 		defer func() {
-			if returnErr == nil {
+			if returnErr == nil || handoffAccepted {
 				enabled, e := automaticCaptureEnabled(project, absState)
 				if e != nil {
-					returnErr = e
+					returnErr = errors.Join(returnErr, e)
 					return
 				}
 				if !enabled {
 					return
 				}
 				if e := s.RequestPublication(context.Background()); e != nil {
-					returnErr = fmt.Errorf("publication request: %w", e)
+					returnErr = errors.Join(returnErr, fmt.Errorf("publication request failed; durable handoff retained; verify capture state permissions: %w", e))
 					return
 				}
-				if e := capture.LaunchWorker(*binaryOrSelf(binary), project, absState); e != nil {
-					returnErr = fmt.Errorf("worker launch: %w", e)
+				native, nativeErr := os.Executable()
+				if nativeErr != nil {
+					returnErr = errors.Join(returnErr, fmt.Errorf("selected native executable unavailable; durable work retained: %w", nativeErr))
+					return
+				}
+				if e := capture.LaunchWorker(native, project, absState); e != nil {
+					diagnosticErr := s.RecordDiagnostic(context.Background(), domain.CaptureDiagnostic{Phase: "worker", Outcome: "failed", Detail: "Native worker launch failed. Verify the selected executable and capture state permissions; retry capture reconcile."})
+					returnErr = errors.Join(returnErr, fmt.Errorf("worker launch failed; durable registration retained; inspect capture diagnostics: %w", e), diagnosticErr)
 				}
 			}
 		}()
-	}
-	if command == "status" {
-		registrations, e := s.List(ctx)
-		if e != nil {
-			return e
-		}
-		manifests := []capture.Manifest{}
-		for _, h := range []string{"codex", "opencode"} {
-			m, e := capture.ReadManifest(absState, h)
-			if e == nil {
-				manifests = append(manifests, m)
-			} else if !errors.Is(e, os.ErrNotExist) {
-				return e
-			}
-		}
-		progress, e := capture.WorkerStatus(absState)
-		if e != nil {
-			return e
-		}
-		publication, e := s.PublicationRequest(ctx)
-		if e != nil {
-			return e
-		}
-		return json.NewEncoder(output).Encode(struct {
-			Publication   capture.PublicationRequest   `json:"publication"`
-			Worker        capture.WorkerProgress       `json:"worker"`
-			Registrations []domain.CaptureRegistration `json:"registrations"`
-			Installation  []capture.Manifest           `json:"installation"`
-			Trust         string                       `json:"trust"`
-		}{publication, progress, registrations, manifests, "Trust and current enablement are harness-controlled; installation alone is unverified. Review /hooks for Codex; verify OpenCode plugin loading and the agent response."})
 	}
 	if command == "reconcile" {
 		if *ticket == "" {
 			return errors.New("reconcile requires --ticket-id")
 		}
+		indexProgress, e := s.BackfillDiagnosticIndex(ctx, *sessionBudget, *byteBudget)
+		if e != nil {
+			return fmt.Errorf("bounded capture diagnostic maintenance failed: %w", e)
+		}
 		result, e := s.Reconcile(ctx, *ticket, git.GetGitUser(), *sessionBudget, *byteBudget)
 		if e != nil {
 			return e
+		}
+		result.DiagnosticIndex = &indexProgress
+		if !indexProgress.Complete {
+			result.Limits = append(result.Limits, "Diagnostic head metadata maintenance is partial; repeat explicit capture reconcile with sufficient max-sessions/max-source-bytes. Current health remains unverified until indexing completes.")
 		}
 		return json.NewEncoder(output).Encode(result)
 	}
@@ -213,9 +248,32 @@ func captureCommand(args []string, input io.Reader, output io.Writer) (returnErr
 			return e
 		}
 		if *source == "codex" {
-			response, e := capture.ReceiveCodex(ctx, s, value, absoluteStore, *binaryOrSelf(binary), absState)
+			native, e := os.Executable()
 			if e != nil {
 				return e
+			}
+			response, e := capture.ReceiveCodex(ctx, s, value, absoluteStore, native, absState, *wrapper)
+			handoffAccepted = response.Registered
+			if e != nil {
+				return e
+			}
+			if value.Event == "SessionStart" || value.Event == "UserPromptSubmit" {
+				exact := domain.CaptureIdentity{Source: domain.SourceCodex, Store: absoluteStore, SessionID: value.SessionID}
+				feedback, e := captureSessionFailureFeedback(ctx, s, exact, policy, absState)
+				if e != nil {
+					return fmt.Errorf("durable handoff accepted but failure feedback unavailable; inspect capture diagnostics: %w", e)
+				}
+				if feedback != "" {
+					if response.Context == nil {
+						response.Context = &capture.HookContext{Event: value.Event, Context: feedback}
+					} else {
+						response.Context.Context += "\n" + feedback
+					}
+					if response.Message != "" {
+						response.Message += " "
+					}
+					response.Message += feedback
+				}
 			}
 			return json.NewEncoder(output).Encode(response)
 		}
@@ -226,6 +284,13 @@ func captureCommand(args []string, input io.Reader, output io.Writer) (returnErr
 		}
 		identity.SessionID = value.SessionID
 		registration, e := s.Register(ctx, identity, "", value.Event)
+		if e != nil {
+			var accepted *capture.AcceptedRegistrationError
+			handoffAccepted = errors.As(e, &accepted)
+			return e
+		}
+		handoffAccepted = true
+		registration, e = s.ProveRegistration(ctx, registration)
 		if e != nil {
 			return e
 		}
@@ -250,7 +315,12 @@ func captureCommand(args []string, input io.Reader, output io.Writer) (returnErr
 		if e != nil {
 			return e
 		}
-		return json.NewEncoder(output).Encode(r)
+		handoffAccepted = true
+		feedback, e := captureSessionFailureFeedback(ctx, s, r.Identity, policy, absState)
+		if e != nil {
+			return fmt.Errorf("durable request accepted but failure feedback unavailable; inspect capture diagnostics: %w", e)
+		}
+		return json.NewEncoder(output).Encode(captureAgentResponse{CaptureRegistration: r, CaptureFeedback: feedback})
 	case "bind":
 		if *ticketType != "" {
 			if _, ok := domain.NormalizeTicketType(*ticketType); !ok {
@@ -280,14 +350,6 @@ func captureCommand(args []string, input io.Reader, output io.Writer) (returnErr
 	default:
 		return fmt.Errorf("unknown capture command %q", command)
 	}
-}
-func binaryOrSelf(value *string) *string {
-	if *value == "" {
-		if path, e := os.Executable(); e == nil {
-			*value = path
-		}
-	}
-	return value
 }
 func captureSourceStore(source, project string) (string, error) {
 	cfg, err := adaptersconfig.Load(project)
@@ -337,43 +399,14 @@ func reconcileCaptureGeneration(project, dir, ticket string) (*capture.Reconcile
 	}
 	return &result, nil
 }
-func publishCaptureReport(path string, result capture.ReconcileResult) error {
-	bytes, err := os.ReadFile(path)
+func recordGenerationPublication(project, directory, ticket, outcome, destination, summary string, owners []domain.SessionFact, detail string) error {
+	s, err := capture.OpenProject(directory, project)
 	if err != nil {
 		return err
 	}
-	digest := sha256.Sum256(bytes)
-	body, err := capture.ReportJSON(result, hex.EncodeToString(digest[:]))
-	if err != nil {
-		return err
-	}
-	report, err := capture.ProjectDirectory(filepath.Join(filepath.Dir(path), "capture_report.json"))
-	if err != nil {
-		return err
-	}
-	if err := os.MkdirAll(filepath.Dir(report), 0755); err != nil {
-		return err
-	}
-	temp, err := os.CreateTemp(filepath.Dir(report), ".capture-report-")
-	if err != nil {
-		return err
-	}
-	name := temp.Name()
-	defer func() {
-		if e := os.Remove(name); e != nil && !errors.Is(e, os.ErrNotExist) {
-			fmt.Fprintln(os.Stderr, "capture report cleanup:", e)
-		}
-	}()
-	if _, err = temp.Write(body); err != nil {
-		return errors.Join(err, temp.Close())
-	}
-	if err = temp.Sync(); err != nil {
-		return errors.Join(err, temp.Close())
-	}
-	if err = temp.Close(); err != nil {
-		return err
-	}
-	return os.Rename(name, report)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	return errors.Join(s.RecordPublication(ctx, ticket, outcome, destination, summary, owners, detail), s.Close())
 }
 func hasBoundRegistrations(result *capture.ReconcileResult) bool {
 	if result == nil {
@@ -473,6 +506,7 @@ func validateCaptureSelection(project, dir, ticket string, source domain.SourceH
 			}
 			r.TicketID = ticket
 			r.ProjectDirectory = project
+			r.ProjectProof = domain.CaptureProjectVerified
 			if r.Binding == "" {
 				r.Binding = "explicit_manual_selection"
 			}
@@ -580,33 +614,7 @@ func filterCapturePrecedence(baseline []domain.SessionFact, result *capture.Reco
 	return nil
 }
 func sameCaptureOwner(a, b domain.SessionFact) (bool, error) {
-	// User identity is separate attribution metadata; compare whole compact source
-	// facts rather than selecting fields by numerical maximum.
-	a.User = ""
-	b.User = ""
-	a.Events = nil
-	b.Events = nil
-	if a.Source == "" {
-		a.Source = b.Source
-	}
-	if b.Source == "" {
-		b.Source = a.Source
-	}
-	a.Invocations = append([]domain.InvocationFact{}, a.Invocations...)
-	b.Invocations = append([]domain.InvocationFact{}, b.Invocations...)
-	a.Tools = append([]domain.SessionToolFact{}, a.Tools...)
-	b.Tools = append([]domain.SessionToolFact{}, b.Tools...)
-	a.Anomalies = append([]domain.Anomaly{}, a.Anomalies...)
-	b.Anomalies = append([]domain.Anomaly{}, b.Anomalies...)
-	first, err := json.Marshal(a)
-	if err != nil {
-		return false, err
-	}
-	second, err := json.Marshal(b)
-	if err != nil {
-		return false, err
-	}
-	return string(first) == string(second), nil
+	return domain.CaptureOwnerFactsEqual(a, b)
 }
 
 // Explicit selection and registered refresh share the same source-evidence

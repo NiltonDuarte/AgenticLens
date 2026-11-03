@@ -108,46 +108,72 @@ func TestCaptureCopiedCanonicalBaselineCannotCrossProjects(t *testing.T) {
 // The journal is the actual production recovery API; partial writes represent
 // process death after each externally visible member, with no in-memory recovery.
 func TestCaptureCLIRestartsInterruptedArtifactPublication(t *testing.T) {
-	for _, writes := range []int{1, 2, 3} {
-		t.Run(fmt.Sprint(writes), func(t *testing.T) {
-			f := newCaptureGenerationFixture(t)
-			f.bind(t, f.write(t, 19))
-			before := f.generate(t)
-			paths := []string{f.output, filepath.Join(f.project, "capture_report.json"), filepath.Join(f.project, "SUMMARY.md")}
-			if err := os.WriteFile(paths[2], []byte("# Preserved user introduction\n"), 0600); err != nil {
-				t.Fatal(err)
-			}
-			lock, err := capture.AcquirePublication(context.Background(), f.output)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if err = adapters.BeginPublication(f.output, paths); err != nil {
-				lock.Close()
-				t.Fatal(err)
-			}
-			for _, path := range paths[:writes] {
-				if err = os.WriteFile(path, []byte("interrupted replacement"), 0600); err != nil {
+	for _, legacy := range []bool{false, true} {
+		pathsCount := 2
+		if legacy {
+			pathsCount = 3
+		}
+		for writes := 0; writes <= pathsCount; writes++ {
+			t.Run(fmt.Sprintf("legacy=%t/writes=%d", legacy, writes), func(t *testing.T) {
+				f := newCaptureGenerationFixture(t)
+				f.bind(t, f.write(t, 19))
+				before := f.generate(t)
+				summary := filepath.Join(f.project, "SUMMARY.md")
+				report := filepath.Join(f.project, "capture_report.json")
+				retired := []byte("historical report retained for explicit user removal")
+				paths := []string{f.output, summary}
+				if legacy {
+					if err := os.WriteFile(report, retired, 0600); err != nil {
+						t.Fatal(err)
+					}
+					paths = []string{f.output, report, summary}
+				}
+				if err := os.WriteFile(summary, []byte("# Preserved user introduction\n"), 0600); err != nil {
+					t.Fatal(err)
+				}
+				lock, err := capture.AcquirePublication(context.Background(), f.output)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err = adapters.BeginPublication(f.output, paths); err != nil {
 					lock.Close()
 					t.Fatal(err)
 				}
-			}
-			if err = lock.Close(); err != nil {
-				t.Fatal(err)
-			}
-			if err = adapters.CheckPublication(f.output); err == nil {
-				t.Fatal("interrupted set claimed complete")
-			}
-			after := f.generate(t, "--append", paths[2])
-			if !reflect.DeepEqual(before.Sessions, after.Sessions) {
-				t.Fatalf("restart lost accepted source: %+v", after.Sessions)
-			}
-			if !bytes.Contains(readCaptureFile(t, paths[2]), []byte("# Preserved user introduction")) {
-				t.Fatal("restart lost user summary")
-			}
-			if err = adapters.CheckPublication(f.output); err != nil {
-				t.Fatalf("restart did not commit: %v", err)
-			}
-		})
+				for _, path := range paths[:writes] {
+					if err = os.WriteFile(path, []byte("interrupted replacement"), 0600); err != nil {
+						lock.Close()
+						t.Fatal(err)
+					}
+				}
+				if err = lock.Close(); err != nil {
+					t.Fatal(err)
+				}
+				if err = adapters.CheckPublication(f.output); err == nil {
+					t.Fatal("interrupted set claimed complete")
+				}
+				after := f.generate(t, "--append", summary)
+				if !reflect.DeepEqual(before.Sessions, after.Sessions) {
+					t.Fatalf("restart lost accepted source: %+v", after.Sessions)
+				}
+				if !bytes.Contains(readCaptureFile(t, summary), []byte("# Preserved user introduction")) {
+					t.Fatal("restart lost user summary")
+				}
+				if err = adapters.CheckPublication(f.output); err != nil {
+					t.Fatalf("restart did not commit: %v", err)
+				}
+				if bytes.Contains(readCaptureFile(t, summary), []byte("](capture_report.json)")) {
+					t.Fatal("recovered summary linked retired report")
+				}
+				if legacy {
+					if !bytes.Equal(readCaptureFile(t, report), retired) {
+						t.Fatal("legacy recovery failed to restore historical report unchanged")
+					}
+				} else if _, err := os.Stat(report); !os.IsNotExist(err) {
+					t.Fatalf("modern publication created report: %v", err)
+				}
+				assertCapturePublishedOwners(t, captureDiagnostics(t, f.project, f.state), f.output, summary, after.Sessions)
+			})
+		}
 	}
 }
 
@@ -331,9 +357,9 @@ func TestCaptureInstallerUsesSharedLocalAndExplicitStatePolicy(t *testing.T) {
 			if !bytes.Contains(plugin, append([]byte("const stateDir = "), quoted...)) {
 				t.Fatalf("installed path did not honor %s policy: expected %s\n%s", level, expected, plugin)
 			}
-			quoted, _ = json.Marshal(cliBinaryPath)
-			if !bytes.Contains(plugin, append([]byte("const binary = "), quoted...)) {
-				t.Fatal("installed callback did not freeze native binary")
+			quoted, _ = json.Marshal(fixtureWrapperFromHook(t, f.project))
+			if !bytes.Contains(plugin, append([]byte("const wrapper = "), quoted...)) {
+				t.Fatal("installed callback did not retain the common project-pinned wrapper")
 			}
 		})
 	}

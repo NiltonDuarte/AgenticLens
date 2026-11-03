@@ -9,6 +9,7 @@ import (
 
 // ProjectConfig holds the complete configuration settings for AgenticLens.
 type ProjectConfig struct {
+	AgenticLens       EntrypointConfig        `json:"agenticlens,omitempty" yaml:"agenticlens,omitempty"`
 	ProjectName       string                  `json:"project_name" yaml:"project_name"`
 	Ticket            TicketConfig            `json:"ticket" yaml:"ticket"`
 	Workspaces        WorkspacesConfig        `json:"workspaces" yaml:"workspaces"`
@@ -19,6 +20,12 @@ type ProjectConfig struct {
 	CodeMetrics       CodeMetricsConfig       `json:"code_metrics" yaml:"code_metrics"`
 	RoleMappings      RoleMappings            `json:"role_mappings" yaml:"role_mappings"`
 	RoleOrder         []string                `json:"role_order" yaml:"role_order"`
+}
+
+// EntrypointConfig separates shared release authority from machine-local installation paths.
+type EntrypointConfig struct {
+	Version     string `json:"version" yaml:"version"`
+	InstallRoot string `json:"install_root,omitempty" yaml:"install_root,omitempty"`
 }
 
 // EffectiveHealthyCeiling returns the configured context ceiling critical tokens,

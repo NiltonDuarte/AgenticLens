@@ -13,18 +13,25 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"time"
 
+	"agenticlens/internal/adapters/codex"
 	"agenticlens/internal/domain"
 	_ "modernc.org/sqlite"
 )
 
 const ProtocolVersion = 1
+
+// HandlerProtocolVersion identifies native lifecycle flags independently of the
+// persisted registry/manifest schema. Protocol 2 adds common-wrapper context.
+const HandlerProtocolVersion = 2
 const DefaultDirectory = ".agenticlens-capture"
 const MaxPayloadBytes = 64 * 1024
 
 type Store struct {
-	db      *sql.DB
-	project string
+	db        *sql.DB
+	project   string
+	directory string
 }
 type storedRegistration struct {
 	Registration domain.CaptureRegistration `json:"registration"`
@@ -51,11 +58,16 @@ func Open(directory string) (*Store, error) {
 	if _, err = db.Exec(`CREATE TABLE IF NOT EXISTS registrations (identity TEXT PRIMARY KEY, source TEXT NOT NULL, store TEXT NOT NULL, session_id TEXT NOT NULL, ticket TEXT NOT NULL, record BLOB NOT NULL); CREATE TABLE IF NOT EXISTS capture_meta (version INTEGER NOT NULL); INSERT INTO capture_meta SELECT 1 WHERE NOT EXISTS(SELECT 1 FROM capture_meta);`); err != nil {
 		return nil, errors.Join(err, db.Close())
 	}
+
 	var version int
 	if err = db.QueryRow(`SELECT version FROM capture_meta`).Scan(&version); err != nil || version != ProtocolVersion {
 		return nil, errors.Join(fmt.Errorf("unsupported capture registry protocol %d: %w", version, err), db.Close())
 	}
-	return &Store{db: db}, nil
+	if err = initializeDiagnosticIndex(db); err != nil {
+		return nil, errors.Join(fmt.Errorf("initializing capture diagnostics: %w", err), db.Close())
+	}
+
+	return &Store{db: db, directory: directory}, nil
 }
 func (s *Store) Close() error { return s.db.Close() }
 func IdentityKey(id domain.CaptureIdentity) string {
@@ -82,7 +94,32 @@ func decode(b []byte) (domain.CaptureRegistration, error) {
 	return r, nil
 }
 func (s *Store) List(ctx context.Context) ([]domain.CaptureRegistration, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT record FROM registrations ORDER BY identity`)
+	return s.list(ctx, 0)
+}
+
+// ListBounded limits inspection output while preserving explicit continuation.
+func (s *Store) ListBounded(ctx context.Context, limit int) ([]domain.CaptureRegistration, bool, error) {
+	if limit < 1 {
+		return nil, false, errors.New("capture inspection requires a positive session limit")
+	}
+	rows, err := s.list(ctx, limit+1)
+	if err != nil {
+		return nil, false, err
+	}
+	more := len(rows) > limit
+	if more {
+		rows = rows[:limit]
+	}
+	return rows, more, nil
+}
+func (s *Store) list(ctx context.Context, limit int) ([]domain.CaptureRegistration, error) {
+	var rows *sql.Rows
+	var err error
+	if limit > 0 {
+		rows, err = s.db.QueryContext(ctx, `SELECT record FROM registrations ORDER BY identity LIMIT ?`, limit)
+	} else {
+		rows, err = s.db.QueryContext(ctx, `SELECT record FROM registrations ORDER BY identity`)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -197,13 +234,33 @@ func (s *Store) Change(ctx context.Context, id domain.CaptureIdentity, change fu
 	committed = true
 	return r, nil
 }
+
+// AcceptedRegistrationError reports a post-handoff failure without pretending
+// the durable identity was rolled back. Callers may still schedule recovery.
+type AcceptedRegistrationError struct{ Err error }
+
+func (err *AcceptedRegistrationError) Error() string {
+	return "registration accepted but installation verification unavailable: " + err.Err.Error()
+}
+func (err *AcceptedRegistrationError) Unwrap() error { return err.Err }
+
 func (s *Store) Register(ctx context.Context, id domain.CaptureIdentity, path, event string) (domain.CaptureRegistration, error) {
-	return s.Change(ctx, id, func(r domain.CaptureRegistration) (domain.CaptureRegistration, error) {
+	observedCallback := false
+	row, err := s.Change(ctx, id, func(r domain.CaptureRegistration) (domain.CaptureRegistration, error) {
 		if path != "" {
 			if r.TranscriptPath != "" && r.TranscriptPath != path {
 				return r, errors.New("conflicting transcript path for registered identity")
 			}
 			r.TranscriptPath = path
+		}
+		now := time.Now().UTC().Format(time.RFC3339Nano)
+		if r.FirstObservedAt == "" {
+			r.FirstObservedAt = now
+		}
+		switch event {
+		case "SessionStart", "SubagentStart", "SubagentStop", "Stop", "SessionEnd", "UserPromptSubmit", "session.created", "session.updated", "session.status", "session.idle", "session.error":
+			r.CallbackObservedAt = now
+			observedCallback = true
 		}
 		r.Event = event
 		if r.TicketID != "" {
@@ -211,6 +268,26 @@ func (s *Store) Register(ctx context.Context, id domain.CaptureIdentity, path, e
 		}
 		return r, nil
 	})
+	if err != nil || !observedCallback {
+		return row, err
+	}
+	// Installation inspection follows the durable minimal handoff. Failure to
+	// inspect cannot erase an observed session or fabricate verified installation.
+	installation, _, inspectErr := InstallationIdentity(s.directory, string(id.Source))
+	if errors.Is(inspectErr, os.ErrNotExist) {
+		return row, nil
+	}
+	if inspectErr != nil {
+		return row, &AcceptedRegistrationError{Err: inspectErr}
+	}
+	updated, err := s.Change(ctx, id, func(current domain.CaptureRegistration) (domain.CaptureRegistration, error) {
+		current.InstallationID = installation
+		return current, nil
+	})
+	if err != nil {
+		return row, &AcceptedRegistrationError{Err: err}
+	}
+	return updated, nil
 }
 func (s *Store) Bind(ctx context.Context, id domain.CaptureIdentity, ticket, request string) (domain.CaptureRegistration, error) {
 	return s.Change(ctx, id, func(r domain.CaptureRegistration) (domain.CaptureRegistration, error) {
@@ -224,8 +301,22 @@ func (s *Store) Bind(ctx context.Context, id domain.CaptureIdentity, ticket, req
 		if bound == "" {
 			return r, errors.New("binding requires explicit ticket ID")
 		}
+		if s.project != "" && r.Identity.Source == domain.SourceCodex && r.TranscriptPath == "" {
+			path, err := codex.DiscoverExactRolloutPath(r.Identity.Store, r.Identity.SessionID)
+			if err != nil {
+				return r, fmt.Errorf("binding source identity unavailable; minimal registration retained: %w", err)
+			}
+			r.TranscriptPath = path
+		}
+		if err := s.validateOwner(ctx, r); err != nil {
+			return r, fmt.Errorf("binding source/project verification failed; minimal registration retained: %w", err)
+		}
+		r.ProjectDirectory = s.project
+		r.ProjectProof = domain.CaptureProjectVerified
 		r.TicketID = bound
 		r.Binding = "explicit_agent_response"
+		r.BindingInstallationID = r.InstallationID
+		r.BindingAcceptedAt = time.Now().UTC().Format(time.RFC3339Nano)
 		r.State = domain.CapturePending
 		return r, nil
 	})

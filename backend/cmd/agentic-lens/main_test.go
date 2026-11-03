@@ -4754,11 +4754,104 @@ func TestCLI_Invariants(t *testing.T) {
 	})
 }
 func TestInitCommand(t *testing.T) {
+	t.Run("complete only canonical scaffold and preserve local overlay", func(t *testing.T) {
+		for _, scenario := range []string{"new local", "existing local", "edited scaffold", "different pin", "dry run"} {
+			t.Run(scenario, func(t *testing.T) {
+				project := t.TempDir()
+				shared := filepath.Join(project, ".agenticlens-config.yaml")
+				local := filepath.Join(project, ".agenticlens-config.local.yaml")
+				original, err := adaptersconfig.BootstrapScaffold("v9.8.7")
+				if err != nil {
+					t.Fatal(err)
+				}
+				if scenario == "edited scaffold" {
+					original = append(original, []byte("# user customization\n")...)
+				}
+				if err = os.WriteFile(shared, original, 0600); err != nil {
+					t.Fatal(err)
+				}
+				localBody := []byte("# user overlay\ntelemetry:\n  default_source: codex\n  capture:\n    commit_warning: false\n")
+				if scenario != "new local" {
+					if err = os.WriteFile(local, localBody, 0600); err != nil {
+						t.Fatal(err)
+					}
+				}
+				pin := "v9.8.7"
+				if scenario == "different pin" {
+					pin = "v9.8.8"
+				}
+				args := []string{"init", "--complete-scaffold", "--agenticlens-version", pin, "--project-name", "Scaffold fixture", "--src-folders", "app", "--ticket-prefixes", "TEST"}
+				if scenario == "dry run" {
+					args = append(args, "--dry-run")
+				}
+				cmd := exec.Command(cliBinaryPath, args...)
+				cmd.Dir = project
+				out, runErr := cmd.CombinedOutput()
+				after, err := os.ReadFile(shared)
+				if err != nil {
+					t.Fatal(err)
+				}
+				rejected := scenario == "edited scaffold" || scenario == "different pin"
+				if rejected {
+					if runErr == nil || !bytes.Contains(out, []byte("existing configuration preserved")) {
+						t.Fatalf("unsafe scaffold overwritten: %v %s", runErr, out)
+					}
+					if !bytes.Equal(after, original) {
+						t.Fatal("rejected scaffold changed")
+					}
+				} else if runErr != nil {
+					t.Fatalf("owned scaffold completion failed: %v %s", runErr, out)
+				} else if scenario == "dry run" {
+					if !bytes.Equal(after, original) {
+						t.Fatal("dry run changed scaffold")
+					}
+				} else {
+					loaded, err := adaptersconfig.Load(project)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if loaded.AgenticLens.Version != "v9.8.7" || loaded.ProjectName != "Scaffold fixture" {
+						t.Fatalf("full pinned config missing: %+v", loaded)
+					}
+					if bytes.Contains(after, []byte("bootstrap scaffold")) {
+						t.Fatal("full config still claims incomplete scaffold")
+					}
+				}
+				if scenario != "new local" {
+					if got, err := os.ReadFile(local); err != nil || !bytes.Equal(got, localBody) {
+						t.Fatalf("existing local overlay changed: %s %v", got, err)
+					}
+				} else if _, err := os.Stat(local); err != nil {
+					t.Fatalf("new local default missing: %v", err)
+				}
+			})
+		}
+	})
+
+	t.Run("development native requires explicit shared release pin", func(t *testing.T) {
+		for _, pin := range []string{"", "latest", "v1.2.3/../../escape"} {
+			project := t.TempDir()
+			args := []string{"init", "--project-name", "Fixture", "--src-folders", "src", "--ticket-prefixes", "TEST"}
+			if pin != "" {
+				args = append(args, "--agenticlens-version", pin)
+			}
+			cmd := exec.Command(cliBinaryPath, args...)
+			cmd.Dir = project
+			out, err := cmd.CombinedOutput()
+			if err == nil || !bytes.Contains(out, []byte("version")) {
+				t.Fatalf("invalid/implicit pin %q accepted: %v %s", pin, err, out)
+			}
+			if _, err := os.Stat(filepath.Join(project, ".agenticlens-config.yaml")); !os.IsNotExist(err) {
+				t.Fatalf("rejected pin wrote shared configuration: %v", err)
+			}
+		}
+	})
+
 	t.Run("missing required flag --project-name fails with exit code 1", func(t *testing.T) {
 		variations := [][]string{
-			{"init", "--src-folders", "src", "--ticket-prefixes", "AL"},
-			{"init", "--project-name", "", "--src-folders", "src", "--ticket-prefixes", "AL"},
-			{"init", "--project-name", "   ", "--src-folders", "src", "--ticket-prefixes", "AL"},
+			{"init", "--agenticlens-version", "v9.8.7", "--src-folders", "src", "--ticket-prefixes", "AL"},
+			{"init", "--agenticlens-version", "v9.8.7", "--project-name", "", "--src-folders", "src", "--ticket-prefixes", "AL"},
+			{"init", "--agenticlens-version", "v9.8.7", "--project-name", "   ", "--src-folders", "src", "--ticket-prefixes", "AL"},
 		}
 
 		for _, args := range variations {
@@ -4787,9 +4880,9 @@ func TestInitCommand(t *testing.T) {
 
 	t.Run("missing required flag --src-folders fails with exit code 1", func(t *testing.T) {
 		variations := [][]string{
-			{"init", "--project-name", "Acme", "--ticket-prefixes", "AL"},
-			{"init", "--project-name", "Acme", "--src-folders", "", "--ticket-prefixes", "AL"},
-			{"init", "--project-name", "Acme", "--src-folders", "   ,  ", "--ticket-prefixes", "AL"},
+			{"init", "--agenticlens-version", "v9.8.7", "--project-name", "Acme", "--ticket-prefixes", "AL"},
+			{"init", "--agenticlens-version", "v9.8.7", "--project-name", "Acme", "--src-folders", "", "--ticket-prefixes", "AL"},
+			{"init", "--agenticlens-version", "v9.8.7", "--project-name", "Acme", "--src-folders", "   ,  ", "--ticket-prefixes", "AL"},
 		}
 
 		for _, args := range variations {
@@ -4818,9 +4911,9 @@ func TestInitCommand(t *testing.T) {
 
 	t.Run("missing required flag --ticket-prefixes fails with exit code 1", func(t *testing.T) {
 		variations := [][]string{
-			{"init", "--project-name", "Acme", "--src-folders", "src"},
-			{"init", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefixes", ""},
-			{"init", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefixes", "   "},
+			{"init", "--agenticlens-version", "v9.8.7", "--project-name", "Acme", "--src-folders", "src"},
+			{"init", "--agenticlens-version", "v9.8.7", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefixes", ""},
+			{"init", "--agenticlens-version", "v9.8.7", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefixes", "   "},
 		}
 
 		for _, args := range variations {
@@ -4849,14 +4942,14 @@ func TestInitCommand(t *testing.T) {
 
 	t.Run("missing all required flags fails with exit code 1", func(t *testing.T) {
 		tempDir := t.TempDir()
-		cmd := exec.Command(cliBinaryPath, "init")
+		cmd := exec.Command(cliBinaryPath, "init", "--agenticlens-version", "v9.8.7")
 		cmd.Dir = tempDir
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
 
 		err := cmd.Run()
 		if err == nil {
-			t.Fatalf("expected init without any flags to fail, got nil error")
+			t.Fatalf("expected init without project flags to fail, got nil error")
 		}
 		var exitErr *exec.ExitError
 		if !errors.As(err, &exitErr) {
@@ -4875,7 +4968,7 @@ func TestInitCommand(t *testing.T) {
 
 		cmd := exec.Command(
 			cliBinaryPath,
-			"init",
+			"init", "--agenticlens-version", "v9.8.7",
 			"--project-name", "AcmeApp",
 			"--src-folders", "web,backend",
 			"--ticket-prefixes", "ACME",
@@ -4914,6 +5007,12 @@ func TestInitCommand(t *testing.T) {
 		if loaded.ProjectName != "AcmeApp" {
 			t.Errorf("expected ProjectName 'AcmeApp', got %q", loaded.ProjectName)
 		}
+		if loaded.AgenticLens.Version != "v9.8.7" {
+			t.Errorf("generated shared config lost explicit release pin: %q", loaded.AgenticLens.Version)
+		}
+		if strings.Contains(localContent, "agenticlens:") {
+			t.Fatal("generated local settings override shared version authority")
+		}
 		if loaded.Workspaces.Dir != "workspaces" {
 			t.Errorf("expected workspaces.dir 'workspaces', got %q", loaded.Workspaces.Dir)
 		}
@@ -4945,7 +5044,7 @@ func TestInitCommand(t *testing.T) {
 
 		cmd := exec.Command(
 			cliBinaryPath,
-			"init",
+			"init", "--agenticlens-version", "v9.8.7",
 			"--project-name", "AcmePlatform",
 			"--workspaces", "team_workspaces",
 			"--db-path", "/opt/opencode/data.db",
@@ -4999,7 +5098,7 @@ func TestInitCommand(t *testing.T) {
 
 		cmd := exec.Command(
 			cliBinaryPath,
-			"init",
+			"init", "--agenticlens-version", "v9.8.7",
 			"--project-name", "PeerTest",
 			"--src-folders", "core,cli",
 			"--ticket-prefixes", "ALPHA,BETA,GAMMA",
@@ -5034,7 +5133,7 @@ func TestInitCommand(t *testing.T) {
 		tempDir := t.TempDir()
 		cmd := exec.Command(
 			cliBinaryPath,
-			"init",
+			"init", "--agenticlens-version", "v9.8.7",
 			"--project-name", "PeerTest",
 			"--src-folders", "core",
 			"--ticket-prefixes", " , , ",
@@ -5057,7 +5156,7 @@ func TestInitCommand(t *testing.T) {
 		tempDir := t.TempDir()
 		cmd := exec.Command(
 			cliBinaryPath,
-			"init",
+			"init", "--agenticlens-version", "v9.8.7",
 			"--project-name", "PeerTest",
 			"--src-folders", " , , ",
 			"--ticket-prefixes", "ALPHA",
@@ -5085,7 +5184,7 @@ func TestInitCommand(t *testing.T) {
 
 		cmd := exec.Command(
 			cliBinaryPath,
-			"init",
+			"init", "--agenticlens-version", "v9.8.7",
 			"--project-name", "Original",
 			"--src-folders", "src",
 			"--ticket-prefixes", "AL",
@@ -5120,7 +5219,7 @@ func TestInitCommand(t *testing.T) {
 
 		cmd := exec.Command(
 			cliBinaryPath,
-			"init",
+			"init", "--agenticlens-version", "v9.8.7",
 			"--project-name", "Overwritten",
 			"--src-folders", "src",
 			"--ticket-prefixes", "AL",
@@ -5149,7 +5248,7 @@ func TestInitCommand(t *testing.T) {
 
 		cmd := exec.Command(
 			cliBinaryPath,
-			"init",
+			"init", "--agenticlens-version", "v9.8.7",
 			"--dry-run",
 			"--project-name", "DryRunTest",
 			"--src-folders", "src",
@@ -5165,6 +5264,9 @@ func TestInitCommand(t *testing.T) {
 		}
 
 		outStr := stdout.String()
+		if !strings.Contains(outStr, "version: v9.8.7") {
+			t.Errorf("dry run omitted exact release pin: %s", outStr)
+		}
 		if !strings.Contains(outStr, "project_name: DryRunTest") {
 			t.Errorf("expected stdout to contain 'project_name: DryRunTest', got: %s", outStr)
 		}
@@ -5184,7 +5286,7 @@ func TestInitCommand(t *testing.T) {
 
 	t.Run("local output collision is rejected", func(t *testing.T) {
 		tempDir := t.TempDir()
-		cmd := exec.Command(cliBinaryPath, "init", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefixes", "AL", "--output", ".agenticlens-config.local.yaml")
+		cmd := exec.Command(cliBinaryPath, "init", "--agenticlens-version", "v9.8.7", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefixes", "AL", "--output", ".agenticlens-config.local.yaml")
 		cmd.Dir = tempDir
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
@@ -5203,7 +5305,7 @@ func TestInitCommand(t *testing.T) {
 		if err := os.WriteFile(localPath, []byte(original), 0600); err != nil {
 			t.Fatal(err)
 		}
-		cmd := exec.Command(cliBinaryPath, "init", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefixes", "AL")
+		cmd := exec.Command(cliBinaryPath, "init", "--agenticlens-version", "v9.8.7", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefixes", "AL")
 		cmd.Dir = tempDir
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
@@ -5233,7 +5335,7 @@ func TestInitCommand(t *testing.T) {
 				if err := os.Mkdir(filepath.Join(tempDir, ".agenticlens-config.local.yaml"), 0700); err != nil {
 					t.Fatal(err)
 				}
-				cmd := exec.Command(cliBinaryPath, "init", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefixes", "AL", "--force")
+				cmd := exec.Command(cliBinaryPath, "init", "--agenticlens-version", "v9.8.7", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefixes", "AL", "--force")
 				cmd.Dir = tempDir
 				var stdout, stderr bytes.Buffer
 				cmd.Stdout, cmd.Stderr = &stdout, &stderr
@@ -5275,7 +5377,7 @@ func TestInitCommand(t *testing.T) {
 
 		cmd := exec.Command(
 			cliBinaryPath,
-			"init",
+			"init", "--agenticlens-version", "v9.8.7",
 			"--project-name", projName,
 			"--workspaces", "team workspaces",
 			"--src-folders", "my web,my backend",
@@ -5305,7 +5407,7 @@ func TestInitCommand(t *testing.T) {
 
 	t.Run("invalid or unknown flag returns error and exits non-zero", func(t *testing.T) {
 		tempDir := t.TempDir()
-		cmd := exec.Command(cliBinaryPath, "init", "--invalid-nonexistent-flag=true")
+		cmd := exec.Command(cliBinaryPath, "init", "--agenticlens-version", "v9.8.7", "--invalid-nonexistent-flag=true")
 		cmd.Dir = tempDir
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -5322,7 +5424,7 @@ func TestInitCommand(t *testing.T) {
 
 	t.Run("passing deprecated or unknown --ticket-prefix flag fails as unknown flag", func(t *testing.T) {
 		tempDir := t.TempDir()
-		cmd := exec.Command(cliBinaryPath, "init", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefix", "AL")
+		cmd := exec.Command(cliBinaryPath, "init", "--agenticlens-version", "v9.8.7", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefix", "AL")
 		cmd.Dir = tempDir
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -5347,7 +5449,7 @@ func TestInitCommand(t *testing.T) {
 
 		cmd := exec.Command(
 			cliBinaryPath,
-			"init",
+			"init", "--agenticlens-version", "v9.8.7",
 			"--project-name", "AttemptedOverwrite",
 			"--src-folders", "src",
 			"--ticket-prefixes", "AL",
@@ -5389,7 +5491,7 @@ func TestInitCommand(t *testing.T) {
 		target := filepath.Join(roDir, "config.yaml")
 		cmd := exec.Command(
 			cliBinaryPath,
-			"init",
+			"init", "--agenticlens-version", "v9.8.7",
 			"--project-name", "Protected",
 			"--src-folders", "src",
 			"--ticket-prefixes", "AL",

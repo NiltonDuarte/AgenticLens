@@ -6,9 +6,14 @@
 # Human-readable name of the project.
 project_name: AgenticLens
 
+# Exact shared release authority. Install explicitly; dispatch never downloads.
+agenticlens:
+  version: v2.0.0-rc.111+99fbcd7
+
 telemetry:
   capture:
-    detailed_report: false
+    state_dir: .agenticlens-capture
+    commit_warning: true
 
 # Automated anomaly detection rules governing offline generation and live stream monitoring.
 anomaly_thresholds:

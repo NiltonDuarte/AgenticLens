@@ -62,29 +62,29 @@ Comparative matrix ranking tickets by active duration, turnaround lead time, ite
 
 ## CLI Overview
 
-AgenticLens provides a unified CLI for automation and local workflows:
+AgenticLens provides a unified CLI for automation and local workflows. Installed releases use the user-level `agentic-lens` entrypoint and the project's exact YAML pin. For a source checkout, `make verify-build` checks the newly built host native and `make server` launches it directly without installing or selecting a cached release:
 
 ```bash
 # Start the web server and dashboard (default port: 8085)
-./bin/agentic-lens server --port 8085
+agentic-lens server --port 8085
 
 # Ingest active session telemetry and generate summary markdown block
-./bin/agentic-lens generate --ticket-id AL-15 --ticket-type feat --json-output alspaces/AL-15/agentic_metrics.json --append alspaces/AL-15/SUMMARY.md
+agentic-lens generate --ticket-id AL-15 --ticket-type feat --json-output alspaces/AL-15/agentic_metrics.json --append alspaces/AL-15/SUMMARY.md
 
 # Replace ses_abc123 with the Codex root session ID; child threads are discovered from it
-./bin/agentic-lens generate --source codex --session-id ses_abc123 --code-ref HEAD --ticket-id AL-56 --ticket-title "Codex metrics research" --ticket-type chore --json-output alspaces/AL-56/agentic_metrics.json --append alspaces/AL-56/SUMMARY.md
+agentic-lens generate --source codex --session-id ses_abc123 --code-ref HEAD --ticket-id AL-56 --ticket-title "Codex metrics research" --ticket-type chore --json-output alspaces/AL-56/agentic_metrics.json --append alspaces/AL-56/SUMMARY.md
 
 # List all tracked workspaces with detected anomaly counts
-./bin/agentic-lens --list
+agentic-lens --list
 
 # Inspect detailed anomaly diagnostics for a specific ticket
-./bin/agentic-lens --ticket-id AL-15 --anomalies
+agentic-lens --ticket-id AL-15 --anomalies
 
 # Batch reconcile git facts and database telemetry across historical workspaces
-./bin/agentic-lens backfill --source opencode --recompute-git --code-ref HEAD --recompute-db --migrate-schema --update-summaries
+agentic-lens backfill --source opencode --recompute-git --code-ref HEAD --recompute-db --migrate-schema --update-summaries
 
 # Run stepwise schema migrations across workspace ledgers
-./bin/agentic-lens migrate --backup --update-summaries
+agentic-lens migrate --backup --update-summaries
 ```
 
 For source selection, exact session identity, committed Git refs, and session ownership semantics, see [telemetry source and session selection](docs/SETUP_MANUAL.md#telemetry-source-and-session-selection). For older ledgers, follow [unscoped tool recovery](docs/SETUP_MANUAL.md#recovering-unscoped-tool-totals). Configure file classification using the [code metrics reference](docs/SETUP_MANUAL.md#code-classification-and-interpretation).

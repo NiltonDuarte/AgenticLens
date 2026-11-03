@@ -39,6 +39,8 @@ Exercise supported ledger facts with enrichment unavailable, pending, failed, em
 
 Exercise a custom workspace directory, custom ticket prefixes, source roots, thresholds, and explicit overrides. Missing required configuration must fail clearly; pre-existing container/parent directories must not silently select a project. Verify the effective value through the API and UI as well as the loader. Renaming ticket artifacts must not affect tests: use self-contained fixtures. Production clients must surface request failures; synthetic fixtures belong to tests.
 
+Installer and entrypoint fixtures must explicitly isolate every writable cache, wrapper, state and configuration destination and assert that resolved targets stay under the fixture directory before applying changes. A temporary HOME alone is insufficient: native Windows profile APIs can resolve the real user profile independently. Use temporary shared/local install-root and destination settings through the production resolver. If a fixture escapes isolation, identify its exact generated artifact before cleanup; preserve unrelated or uncertain files and record the correction.
+
 ### Classification, anomalies, and exported prompts
 
 Test the same source facts through live and retrospective paths. Successful inspection of text containing errors must not become a failed tool call. Keep failure streaks within their owning session across turns and bind displayed counts to the matching rule. Use existing domain enums. Derive prompt provenance from its actual source and apply configured identifier/sanitization rules rather than assuming AgenticLens ticket prefixes.

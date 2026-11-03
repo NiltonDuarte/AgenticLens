@@ -3,13 +3,11 @@ package capture
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"agenticlens/internal/adapters/codex"
@@ -38,6 +36,7 @@ func (s *Store) QueueChild(ctx context.Context, store, path, parent string) erro
 }
 
 type ReconcileResult struct {
+	DiagnosticIndex       *DiagnosticIndexProgress     `json:"diagnostic_index,omitempty"`
 	StartedAt             string                       `json:"started_at"`
 	CutoffSemantics       string                       `json:"cutoff_semantics"`
 	SourceBytes           int64                        `json:"source_bytes_reserved"`
@@ -64,10 +63,43 @@ func (s *Store) Reconcile(ctx context.Context, ticket, user string, sessionBudge
 		return result, errors.New("capture budgets must be positive")
 	}
 	budget := &workBudget{bytes: byteBudget, sessions: sessionBudget}
+	refreshed := map[string]bool{}
 	defer func() {
 		result.Cutoff = time.Now().UTC().Format(time.RFC3339Nano)
 		result.SourceBytes = budget.readBytes
 		result.SourceAttempts = budget.attempts
+		diagnostic := domain.CaptureDiagnostic{TicketID: ticket, Phase: "reconciliation", Outcome: "accepted", Reconciliation: &domain.CaptureReconciliationDiagnostic{Attempt: domain.CaptureAttemptCompleted, StartedAt: result.StartedAt, Cutoff: result.Cutoff, SourceBytes: result.SourceBytes, SourceAttempts: result.SourceAttempts, DiscoveryPending: result.DiscoveryPending, PendingChildren: result.PendingChildren, UnresolvedParentLinks: result.UnresolvedParentLinks, Owners: append([]domain.CaptureRegistration(nil), result.Registrations...)}}
+		if result.DiscoveryPending || result.PendingChildren > 0 || result.UnresolvedParentLinks > 0 {
+			diagnostic.Reconciliation.Attempt = domain.CaptureAttemptPartial
+		}
+		if returnErr != nil {
+			diagnostic.Reconciliation.Attempt = domain.CaptureAttemptFailed
+			diagnostic.Outcome = "failed"
+			diagnostic.Detail = "Reconciliation interrupted or failed; accepted source facts and pending recovery remain local. Retry capture reconcile."
+		}
+		for i, row := range diagnostic.Reconciliation.Owners {
+			// Only retained lifecycle pending state can be normalized. Later source
+			// parent/binding validation remains authoritative after a successful read.
+			if refreshed[IdentityKey(row.Identity)] && row.State == domain.CapturePending {
+				row.State = domain.CaptureCurrent
+				diagnostic.Reconciliation.Owners[i].State = domain.CaptureCurrent
+				diagnostic.Reconciliation.Owners[i].Detail = "Source read accepted during this reconciliation pass; prior numeric facts remain separately preserved."
+			}
+			if returnErr == nil && (row.State != domain.CaptureCurrent || !refreshed[IdentityKey(row.Identity)]) {
+				diagnostic.Reconciliation.Attempt = domain.CaptureAttemptPartial
+			}
+			if row.State == domain.CaptureFailed {
+				diagnostic.Outcome = "failed"
+				if returnErr == nil {
+					diagnostic.Detail = "One or more source snapshots unavailable; prior accepted facts preserved. Inspect source configuration and retry capture reconcile."
+				}
+			}
+		}
+		diagnosticCtx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		if err := s.RecordDiagnostic(diagnosticCtx, diagnostic); err != nil {
+			returnErr = errors.Join(returnErr, fmt.Errorf("persisting reconciliation diagnostics: %w", err))
+		}
 	}()
 	// All work classes rotate priority durably. The first eligible class can
 	// use the full session AND byte budget; leftovers are shared in that order.
@@ -84,7 +116,6 @@ func (s *Store) Reconcile(ctx context.Context, ticket, user string, sessionBudge
 	if _, err := s.db.ExecContext(ctx, `INSERT INTO recovery_phase VALUES(?,?)ON CONFLICT(ticket) DO UPDATE SET phase=excluded.phase`, ticket, (phase+1)%int(workClassCount)); err != nil {
 		return result, err
 	}
-	refreshed := map[string]bool{}
 	attempted := map[string]bool{}
 	refreshProjection := map[string]domain.CaptureRegistration{}
 	for offset := 0; offset < int(workClassCount); offset++ {
@@ -289,31 +320,29 @@ func CoverageSummary(result ReconcileResult) string {
 	for _, r := range result.Registrations {
 		counts[r.State]++
 	}
-	return fmt.Sprintf("\nCapture reconciliation completed: %s (per-owner refreshed_at checkpoints; no common as-of snapshot). Current: %d; pending: %d; failed: %d; unassigned: %d. See [capture_report.json](capture_report.json) for explicit coverage limits. Hook installation alone does not prove complete capture.\n", result.Cutoff, counts[domain.CaptureCurrent], counts[domain.CapturePending], counts[domain.CaptureFailed], counts[domain.CaptureUnassigned])
-}
-
-func redactedRegistrations(input []domain.CaptureRegistration) []domain.CaptureRegistration {
-	output := append([]domain.CaptureRegistration{}, input...)
-	for i := range output {
-		output[i].Request = ""
-		output[i].ProjectDirectory = ""
-		output[i].Identity.Store = "[local source store]"
-		output[i].Detail = strings.TrimSpace(output[i].Detail)
-	}
-	return output
-}
-func ReportJSON(result ReconcileResult, digest string) ([]byte, error) {
-	owned := []domain.CaptureRegistration{}
+	retained := 0
 	for _, r := range result.Registrations {
-		if r.TicketID == result.TicketID {
-			owned = append(owned, r)
+		if r.State != domain.CaptureCurrent && len(r.Snapshot) > 0 {
+			retained++
 		}
 	}
-	result.Registrations = redactedRegistrations(owned)
-	return json.MarshalIndent(struct {
-		ReconcileResult
-		LedgerSHA256 string `json:"ledger_sha256"`
-	}{result, digest}, "", "  ")
+	summary := fmt.Sprintf("\nCapture observation finalized: %s (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: %d; retained older facts: %d; pending: %d; failed: %d; unassigned within this collection: %d. Unresolved child evidence: %d; parent links: %d; discovery continuation: %t. Source attempts: %d; reserved bytes: %d. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.\n", result.Cutoff, counts[domain.CaptureCurrent], retained, counts[domain.CapturePending], counts[domain.CaptureFailed], counts[domain.CaptureUnassigned], result.PendingChildren, result.UnresolvedParentLinks, result.DiscoveryPending, result.SourceAttempts, result.SourceBytes)
+	for index, row := range result.Registrations {
+		if index >= 16 {
+			summary += "Additional owner freshness details remain in local capture diagnostics.\n"
+			break
+		}
+		refreshed := "unavailable"
+		if value, err := time.Parse(time.RFC3339Nano, row.RefreshedAt); err == nil {
+			refreshed = value.UTC().Format(time.RFC3339Nano)
+		}
+		checkpoint := "unknown"
+		if value, err := time.Parse(time.RFC3339Nano, row.UpdatedAt); err == nil {
+			checkpoint = value.UTC().Format(time.RFC3339Nano)
+		}
+		summary += fmt.Sprintf("Owner %s/%s: %s; last successful source read %s; accepted source checkpoint %s.\n", row.Identity.Source, row.Identity.SessionID, row.State, refreshed, checkpoint)
+	}
+	return summary
 }
 
 // refreshTicketOwners is one scheduler work class; source acceptance and the
@@ -386,6 +415,16 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 			projected := r
 			projected.State = domain.CaptureCurrent
 			projected.RefreshedAt = time.Now().UTC().Format(time.RFC3339Nano)
+			if _, err := s.Change(ctx, r.Identity, func(current domain.CaptureRegistration) (domain.CaptureRegistration, error) {
+				if current.SourceFingerprint == fingerprint {
+					current.SourceInstallationID = current.InstallationID
+					current.RefreshedAt = projected.RefreshedAt
+				}
+				return current, nil
+			}); err != nil {
+				return nil, nil, err
+			}
+			projected.SourceInstallationID = projected.InstallationID
 			registrations[i] = projected
 			refreshed[IdentityKey(r.Identity)] = true
 			if _, err = s.db.ExecContext(ctx, `INSERT INTO reconcile_cursor VALUES(?,?) ON CONFLICT(ticket) DO UPDATE SET identity=excluded.identity`, ticket, IdentityKey(r.Identity)); err != nil {
@@ -431,12 +470,14 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 			}
 			current.Snapshot = compact.Sessions
 			current.ProjectDirectory = s.project
+			current.ProjectProof = domain.CaptureProjectVerified
 			if fingerprintErr == nil {
 				current.SourceFingerprint = fingerprint
 			}
 			current.Revision = revision
 			current.UpdatedAt = updatedAt
 			current.State = domain.CaptureCurrent
+			current.SourceInstallationID = current.InstallationID
 			current.RefreshedAt = time.Now().UTC().Format(time.RFC3339Nano)
 			refreshed[IdentityKey(current.Identity)] = true
 			current.Detail = "Source snapshot reconciled; checkpoint does not establish ticket completion"

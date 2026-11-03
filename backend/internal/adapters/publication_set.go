@@ -404,3 +404,72 @@ func readOwnedLedger(path string) ([]byte, error) {
 	}
 	return body, nil
 }
+
+// RecoverPublicationWithLegacyReport preserves recovery authority for an older
+// ledger/report/summary journal. New publication sets omit the retired report.
+// Each candidate set still passes the exact member/alias/path validation before
+// any output changes; metadata never grants itself restoration authority.
+func RecoverPublicationWithLegacyReport(project, ledger string, paths []string) (bool, error) {
+	_, markerErr := os.Lstat(journalPath(ledger))
+	present := markerErr == nil
+	if markerErr != nil && !errors.Is(markerErr, os.ErrNotExist) {
+		return false, markerErr
+	}
+	for _, path := range append([]string{ledger}, paths...) {
+		if err := capture.ValidateDestination(project, path); err != nil {
+			return present, fmt.Errorf("publication recovery outside exact project: %w", err)
+		}
+	}
+	recovered, err := RecoverPublication(ledger, paths)
+	if err == nil {
+		return recovered, nil
+	}
+	report, resolveErr := capture.ProjectDirectory(filepath.Join(filepath.Dir(ledger), "capture_report.json"))
+	if resolveErr != nil {
+		return recovered, errors.Join(err, resolveErr)
+	}
+	if scopeErr := capture.ValidateDestination(project, report); scopeErr != nil {
+		return recovered, errors.Join(err, fmt.Errorf("retired report recovery outside exact project; artifacts and journal preserved: %w", scopeErr))
+	}
+	legacy := append(append([]string{}, paths...), report)
+	legacyRecovered, legacyErr := RecoverPublication(ledger, legacy)
+	if legacyErr == nil {
+		return legacyRecovered, nil
+	}
+	return recovered, errors.Join(err, legacyErr)
+}
+
+// LoadObservedFactLedger performs a bounded advisory observation without taking
+// publication ownership or creating lock files. It reuses canonical ledger
+// validation and detects a journal or replacement racing the read. Callers must
+// report unavailable observations; this is not authority to refresh or publish.
+func LoadObservedFactLedger(path string) (*ExistingLedgerFacts, error) {
+	if err := CheckPublication(path); err != nil {
+		return nil, err
+	}
+	before, err := os.Stat(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if !before.Mode().IsRegular() || before.Size() > publicationLimit {
+		return nil, errors.New("metrics publication is not a bounded regular file")
+	}
+	facts, err := loadExistingFactLedger(path, true)
+	if err != nil {
+		return nil, err
+	}
+	after, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+	if !os.SameFile(before, after) || before.Size() != after.Size() || !before.ModTime().Equal(after.ModTime()) {
+		return nil, errors.New("metrics publication changed during read-only inspection; retry capture check")
+	}
+	if err := CheckPublication(path); err != nil {
+		return nil, err
+	}
+	return facts, nil
+}
