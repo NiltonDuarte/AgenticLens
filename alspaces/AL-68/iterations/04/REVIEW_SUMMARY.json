@@ -336,6 +336,34 @@
         }
       ],
       "disposition": "Fixed with module-relative Node filesystem synchronization; real Windows original/fixed canonical builds and strict regression verify exact asset replacement."
+    },
+    {
+      "finding_id": "I4-25",
+      "severity": 5,
+      "issue": "Windows installation required an unavailable Get-FileHash cmdlet and failed before artifact activation.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed with streaming .NET SHA-256; native unavailable-cmdlet, valid/invalid checksum, retention and complete distribution/transport checks pass."
+    },
+    {
+      "finding_id": "I4-26",
+      "severity": 4,
+      "issue": "The initial cryptography replacement resolved relative files against process cwd instead of PowerShell location.",
+      "reporters": [
+        {
+          "persona": "coder",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Corrected before publication using literal PowerShell provider resolution; native Set-Location and independent digest regressions pass."
     }
   ]
 }
