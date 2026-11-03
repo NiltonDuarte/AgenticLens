@@ -12,6 +12,13 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 ## To Do
 
+- **REV-6**: Review test performance and unit/integration boundaries
+  - **Subsystem**: Test architecture / capture CLI and adapters / CI sequencing
+  - **Status**: To Do
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/REV-6 review test performance and unit integration boundaries.md`
+
 - **AL-77**: Warn when a session appears in multiple tickets
   - **Subsystem**: Dashboard / read-only session-to-ticket projection
   - **Status**: To Do
