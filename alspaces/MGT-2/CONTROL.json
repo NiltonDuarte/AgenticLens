@@ -166,6 +166,15 @@
         "conflict": "AL-61 historical date/time formatter, tooltip and datetime-validation imports versus AL-62 old local millisecond/tooltip imports",
         "guarantees": "Preserve AL-61 full local historical seconds, invalid-date/raw evidence and timezone/machine-readable handling plus AL-62 canonical source ownership, outcomes and offline evidence; verify both features together",
         "next_action": "Released to owner run6 against actual predecessor base"
+      },
+      "format_receipt_integration": {
+        "status": "Confirmed integration defect; bounded exact-byte bridge in progress",
+        "integrated_main": "8d494d2e7bd3705ee400b4bdecad256470f65f73",
+        "local_merge": "02ebcda64b2c6777688baf2aa060e194f14be2c8",
+        "verified": "UI conflict resolved; 228 focused frontend cases pass. Real byte-changing format invalidates bound receipt before bridge; owner keeps exact digest, verifies unchanged nonwhitespace lexemes, stages matching facts before rename/finalizes after under existing lock and all-target preflight.",
+        "pending_policy": "Existing malformed/unreadable nearby config blocks locating configured capture store. Explicit format previously writes without config; rejecting WRITE protects possible proof but changes availability. User decision required; check/dry-run remain independent.",
+        "allowed_work": "Valid config, absent config, no existing state paths and focused checks only for currently authorized bridge; policy branch held",
+        "instruction": "mgt2-al62-hold-unusable-config-policy"
       }
     },
     {
@@ -280,5 +289,10 @@
       }
     }
   ],
-  "completion_requirements": "Complete product merge queue, then create queued REV test-performance review ticket before final management handoff; own MGT PR remains external merge"
+  "completion_requirements": "Complete product merge queue, then create queued REV test-performance review ticket before final management handoff; own MGT PR remains external merge",
+  "pending_user_decision": {
+    "question": "Unusable nearby project config during explicit format --workspaces: reject writes safely while keeping check/dry-run, or preserve config-independent writes and assess another receipt-discovery design?",
+    "recommendation": "Reject actual writes with clear scope-resolution diagnostic; keep check/dry-run available",
+    "scope": "AL-62 format/receipt integration only; no assumed consent, wider journal redesign or early final merge"
+  }
 }
