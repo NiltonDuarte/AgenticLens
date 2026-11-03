@@ -111,21 +111,21 @@
       "head": "1247b7e948014c3dffb3cc052bf29dbf8cbcb7ab",
       "base": "main",
       "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/103",
-      "status": "preparing",
+      "status": "blocked",
       "order": 4,
       "last_instruction": {
         "clientRequestId": "mgt2-al62-integrate-after-8d494d2",
         "runId": "run:thread:24185901-0a4e-4d21-8c44-a64117fb80bc:ordinal:6"
       },
       "verified_checks": "All four hosted checks SUCCESS only at pre-integration 1247b7e. Local integration/producer corrections are in progress and need final exact-head gates.",
-      "next_action": "Finish bounded migration bridge and affected format/backfill/migration review; keep unusable-config WRITE and final publication held pending explicit decision",
+      "next_action": "Report actual cross-machine Git/copy paths and smallest portability-compatible design; hold receipt implementation/publication pending disposition",
       "notification_request": "mgt2-handoff-notification-62",
       "reviewed_application_head": "29ee4a802000c1d3302c515e001f7692d3d7fe8f",
       "product_fingerprint": "f300879df36eee4cbdc69b6de66999dbf469ddcd3eb6f65f8a65b71279332c8a",
       "blockers": [
-        "Unusable-config WRITE product-policy decision pending",
-        "Complete exact-same-fact migration receipt coordination and affected producer reviews",
-        "Full integrated verification/finalization/new-head CI pending"
+        "Portable-ledger trust model needs read-only assessment and user disposition before further receipt work",
+        "Unusable-config WRITE decision remains unresolved and subordinate to trust-model decision",
+        "Final affected review/integrated verification/new-head CI pending"
       ],
       "publication_status": "open draft; exact head verified",
       "ci_failure": {
@@ -191,6 +191,14 @@
         "scope": "Reuse matching trusted R0 only for exactly preserved candidate auxiliary tuples; stage before existing atomic rename/finalize after. No generic writer hook, ledger schema change or expanded source authority. Changed transitional ownership/source tuples require separate disposition.",
         "instruction": "mgt2-al62-release-same-proof-migration-bridge",
         "runId": "run:thread:24185901-0a4e-4d21-8c44-a64117fb80bc:ordinal:6"
+      },
+      "portability_trust_assessment": {
+        "status": "Read-only assessment released; further receipt-dependent implementation held",
+        "source": "User challenges need for local evidence/fingerprints because ledgers are shared across developers and machines",
+        "instruction": "mgt2-al62-hold-receipts-review-portable-ledger-trust",
+        "runId": "run:thread:24185901-0a4e-4d21-8c44-a64117fb80bc:ordinal:6",
+        "cases": "A source-generates; B gets Git or copied workspace without A private capture/source data; read/format/migrate/generate with B-only sources. Distinguish actual supported Git/copy behavior, owner/schema validation, imported recorded facts and fresh source-verification claims.",
+        "boundary": "Preserve completed work and running checks; no guard removal, new trust policy, storage redesign or final publication before disposition"
       }
     },
     {
@@ -309,6 +317,7 @@
   "pending_user_decision": {
     "question": "Unusable nearby project config during explicit format --workspaces: reject writes safely while keeping check/dry-run, or preserve config-independent writes and assess another receipt-discovery design?",
     "recommendation": "Reject actual writes with clear scope-resolution diagnostic; keep check/dry-run available",
-    "scope": "AL-62 format/receipt integration only; no assumed consent, wider journal redesign or early final merge"
+    "scope": "AL-62 format/receipt integration only; no assumed consent, wider journal redesign or early final merge",
+    "broader_context": "User now challenges necessity of machine-local proof for shared ledgers; assess portability/trust model before disposing narrower config WRITE choice. No approval to remove guards inferred."
   }
 }

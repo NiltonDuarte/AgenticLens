@@ -1,5 +1,7 @@
 # MGT-2 supervision log
 
+User challenges the receipt trust model: ledgers are shared across developers/machines, so why require local original-source evidence? Manager holds further receipt-dependent implementation/publication and requests read-only actual Git-versus-copied-workspace behavior for read/format/migrate/generate without origin capture/source records. Assess schema/owner validation separately from imported recorded facts and claims of newly source-verified facts; propose the smallest portability-compatible design and identify unnecessary receipt bridges. Preserve completed changes and in-flight checks; no unilateral guard removal or redesign. This supersedes the earlier instruction to continue receipt implementation while waiting only for invalid-config WRITE disposition. That narrower question remains unresolved, subordinate to the trust-model discussion. No new product trust policy approved yet.
+
 Supported legacy5-to6 migration also confirms same-fact receipt-proof loss: independently trusted/bound R0, unavailable original/alternative evidence, actual migration preserves exact auxiliary tuples but changes bytes, then strict generation rejects the old digest. Current6 UpToDate remains byte-identical and usable; no old-binary run claimed. Independent tester gpt-6.1-sol/high discovery retained. Management released the minimum same-proof migration writer coordination to active AL-62 run 6: matching trusted R0 only for exact preserved tuples, stage before existing atomic rename/finalize after. Changed ownership/source tuples require separate policy disposition; no generic hook, ledger schema change or broader authority. This meets existing compatible-migration preservation scope, without a new ticket or scope expansion. Owner also reports focused formatter/backfill regressions pass. Invalid-config WRITE choice and final publication remain held.
 
 Confirmed backfill integration defect stays with AL-62: successful source-unavailable forced backfill preserves exact auxiliary facts but changes ledger metadata bytes, invalidating bound receipt proof. Independent tester gpt-6.1-sol/high confirmed the actual CLI reproduction; discovery credit retained. User explicitly authorized bounded producer coordination, and manager forwarded it to active owner run 6: trusted matching prior proof only for preserved facts, refreshed proof only from successful exact source-owner snapshots, stage before atomic rewrite/finalize afterward. No ledger-as-authority, generic writer hook or broader source/migration policy. Owner reports whitespace bridge/config-free/mode/all-target preflight checks pass. Invalid/unreadable-config WRITE choice remains unanswered and held; no final readiness or publication claim.
@@ -111,15 +113,15 @@ GitHub reports main has no branch protection (protection endpoint HTTP 404). Thi
 Telemetry: PATH has no installed wrapper and the shared installation directory is empty. Use the existing local source-built native binary with supported native options, explicit Codex source, ticket and root session. Native generate has no --al-offline/--al-project options; invoke from this checkout. Root source rollout found at ~/.codex/sessions/2026/11/03/rollout-2026-11-03T18-47-43-01a1a286-27c9-7c50-9f2e-70f0a332c763.jsonl. This manager has no native children; the five independently created T3 roots are not children. T3 MCP tool counts are a known decoder completeness limit. This is an active-session checkpoint, not complete end-of-supervision telemetry; regenerate at later delivery. Independent ticket telemetry is not part of the manager's ledger.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 55
-- **Active Agent Duration:** 1h 18m (excludes user wait time)
+- **Software Development Life Cycle Iterations:** 58
+- **Active Agent Duration:** 1h 19m (excludes user wait time)
 - **Context Window Health:** CRITICAL — Root agent peak 451.3k tokens (226% of 200k healthy ceiling, 1 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 55,992 reasoning tokens (27.2% of generated output)
-- **Tool Health & Self-Correction:** 179 tool calls (12 self-corrections, 93.3% success rate)
+- **Reasoning Effort:** 56,913 reasoning tokens (27.1% of generated output)
+- **Tool Health & Self-Correction:** 185 tool calls (13 self-corrections, 93.0% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
@@ -133,11 +135,11 @@ Telemetry: PATH has no installed wrapper and the shared installation directory i
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 1,297,367 | 149,899 | 64,646,784 | 98.0% | 451.3k | CRITICAL (226%) | $0.00 |
-| **Total** | **1** | **1,297,367** | **149,899** | **64,646,784** | **98.0%** | **451.3k** | **CRITICAL** | **$0.00** |
+| **rootagent** | 1 | 1,308,741 | 153,281 | 65,333,376 | 98.0% | 451.3k | CRITICAL (226%) | $0.00 |
+| **Total** | **1** | **1,308,741** | **153,281** | **65,333,376** | **98.0%** | **451.3k** | **CRITICAL** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 1 | 1,297,367 | 149,899 | 64,646,784 | 98.0% | $0.00 |
-| **Total** | **1** | **1,297,367** | **149,899** | **64,646,784** | **98.0%** | **$0.00** |
+| **gpt-6.1-sol** | 1 | 1,308,741 | 153,281 | 65,333,376 | 98.0% | $0.00 |
+| **Total** | **1** | **1,308,741** | **153,281** | **65,333,376** | **98.0%** | **$0.00** |
