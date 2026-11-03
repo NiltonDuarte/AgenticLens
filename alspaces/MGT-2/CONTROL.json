@@ -16,22 +16,23 @@
       "status": "blocked",
       "order": 2,
       "last_instruction": {
+        "ticket": "AL-61",
         "threadId": "641425d3-403a-4a11-8d21-2c8bae2ca609",
-        "clientRequestId": "mgt2-capture-owner-approved-61",
         "link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/641425d3-403a-4a11-8d21-2c8bae2ca609>",
-        "messageId": "message:mcp:54c6beb0-3af1-47e7-a32e-216eebcecca1:thread-send:mgt2-capture-owner-approved-61",
-        "runId": "run:thread:641425d3-403a-4a11-8d21-2c8bae2ca609:ordinal:3",
+        "messageId": "message:mcp:54c6beb0-3af1-47e7-a32e-216eebcecca1:thread-send:mgt2-draft-publication-al-61",
+        "runId": "run:thread:641425d3-403a-4a11-8d21-2c8bae2ca609:ordinal:4",
         "status": "starting",
         "delivery": "started"
       },
       "verified_checks": "Owner: 244 focused tests, typecheck/lint, five-platform build, byte-identical standalone HTTP JS/CSS and embedded assets pass. Sol/high and Luna/medium approve correction. make fails unchanged capture CLI tests; artifact-only checkpoint pushed.",
-      "next_action": "Hold until actual repaired AL-60 merge notification; then integrate once and verify",
+      "next_action": "Publish draft checkpoint PR now and hand back exact URL/head; predecessor integration and full gate remain pending",
       "notification_request": "mgt2-handoff-notification-61",
       "reviewed_application_head": "2e4762d0e94109f9b91c2dc5edae2a939ab94008",
       "blockers": [
         "Required make failed capture worker lifetime, native-version and idle shutdown tests",
         "AL-60 predecessor not merged"
-      ]
+      ],
+      "publication_status": "preparing draft PR; user superseded publication hold"
     },
     {
       "ticket": "AL-60",
@@ -93,23 +94,24 @@
       "status": "blocked",
       "order": 4,
       "last_instruction": {
+        "ticket": "AL-62",
         "threadId": "24185901-0a4e-4d21-8c44-a64117fb80bc",
-        "clientRequestId": "mgt2-capture-owner-approved-62",
         "link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/24185901-0a4e-4d21-8c44-a64117fb80bc>",
-        "messageId": "message:mcp:54c6beb0-3af1-47e7-a32e-216eebcecca1:thread-send:mgt2-capture-owner-approved-62",
-        "runId": "run:thread:24185901-0a4e-4d21-8c44-a64117fb80bc:ordinal:1",
-        "status": "running",
-        "delivery": "steered"
+        "messageId": "message:mcp:54c6beb0-3af1-47e7-a32e-216eebcecca1:thread-send:mgt2-draft-publication-al-62",
+        "runId": "run:thread:24185901-0a4e-4d21-8c44-a64117fb80bc:ordinal:2",
+        "status": "starting",
+        "delivery": "started"
       },
       "verified_checks": "Owner: all eight behavior/data/architecture/test reviews under gpt-6.1-sol/high and gpt-6-luna/medium approved candidate03; focused backend, actual CLI save/reload/preservation and upgrade controls, frontend typecheck/lint/focused tests/build pass; embed trees match. Full make/integrated race/standalone final checks deferred.",
-      "next_action": "Notify existing owner only after verified predecessor merges; preserve capture repair, timestamps, lossless serialization and writer locks; AL-63 stays blocked",
+      "next_action": "Publish draft checkpoint PR now and hand back exact URL/head; predecessor integration and full gate remain pending",
       "notification_request": "mgt2-handoff-notification-62",
       "reviewed_application_head": "29ee4a802000c1d3302c515e001f7692d3d7fe8f",
       "product_fingerprint": "f300879df36eee4cbdc69b6de66999dbf469ddcd3eb6f65f8a65b71279332c8a",
       "blockers": [
         "Actual AL-60/AL-61/AL-76 merges pending",
         "Integrated full gate deliberately not run"
-      ]
+      ],
+      "publication_status": "preparing draft PR; user superseded publication hold"
     },
     {
       "ticket": "AL-76",
@@ -122,16 +124,16 @@
       "status": "blocked",
       "order": 3,
       "last_instruction": {
+        "ticket": "AL-76",
         "threadId": "3513d383-221d-427c-91b4-7c9ed8fd9af8",
-        "clientRequestId": "mgt2-capture-owner-approved-76",
         "link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/3513d383-221d-427c-91b4-7c9ed8fd9af8>",
-        "messageId": "message:mcp:54c6beb0-3af1-47e7-a32e-216eebcecca1:thread-send:mgt2-capture-owner-approved-76",
-        "runId": "run:thread:3513d383-221d-427c-91b4-7c9ed8fd9af8:ordinal:1",
-        "status": "running",
-        "delivery": "steered"
+        "messageId": "message:mcp:54c6beb0-3af1-47e7-a32e-216eebcecca1:thread-send:mgt2-draft-publication-al-76",
+        "runId": "run:thread:3513d383-221d-427c-91b4-7c9ed8fd9af8:ordinal:2",
+        "status": "starting",
+        "delivery": "started"
       },
       "verified_checks": "Owner reports all four focuses x Sol/high and Luna/medium complete/approved, affected Sol re-reviews approved; focused race suites, source binary and disposable CLI dry/check/write/idempotence/lexeme probes pass. Full integrated make not started by coordination deferral.",
-      "next_action": "Notify owner after verified predecessor merges for one integration pass preserving ticket index; no PR/push yet; telemetry deferred",
+      "next_action": "Publish draft checkpoint PR now and hand back exact URL/head; predecessor integration and full gate remain pending",
       "notification_request": "mgt2-handoff-notification-76",
       "blockers": [
         "Actual AL-60 repair merge and AL-61 merge pending",
@@ -154,7 +156,8 @@
           "issue": "Two missing test oracles",
           "disposition": "Owner reports corrected and test-effectiveness reviews approve"
         }
-      ]
+      ],
+      "publication_status": "preparing draft PR; user superseded publication hold"
     },
     {
       "ticket": "AL-68",
@@ -200,5 +203,6 @@
     "status": "approved",
     "preserved": "No waived gates, weakened tests, global timeout inflation, or duplicate capture ownership"
   },
-  "observed_main": "733e367ee12b9828cd340759eab855f4d809279c"
+  "observed_main": "733e367ee12b9828cd340759eab855f4d809279c",
+  "publication_steering": "User requested all open owners create PRs now; remaining AL-61/AL-76/AL-62 instructed to publish draft checkpoints without waiving integration or merge gates"
 }

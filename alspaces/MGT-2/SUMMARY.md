@@ -1,5 +1,7 @@
 # MGT-2 supervision log
 
+Publication steering: user requested all open owners create pull requests. Manager refreshed the complete project thread inventory and actual open PRs, then read/resumed the three existing owners without PRs: AL-61, AL-76 and AL-62. Each received a concise assignment to publish its reviewed checkpoint as a draft now, explicitly marking predecessor integration/full gates pending and returning URL/exact head. This supersedes the earlier publication hold, not the merge/integration gates. AL-60 already has #101; MGT-2 already has draft #100; merged tickets were not restarted. Merge order remains AL-60, AL-61, AL-76, AL-62. User approval of AL-60's cleaned state and merge-after-CI remains effective. No new threads or product scope requested. Release Please #55 now proposes 3.0.0 and remains human_only.
+
 Latest AL-60 head: f153df286f8e048d0da65780ff181e85c6ededc6. User directly requested removing archive links and keeping only a brief explanation; owner run 6 completed it. Final verification has four concise paragraphs; earlier archive-retention descriptions below are historical and superseded. Manager verified tested application/test/scripts/CI equality to 057d410, unchanged required contracts/PR/ledger/compact findings, current main included, open/non-draft/non-release status and no GitHub objections/unresolved threads. New Windows/Backend/Frontend checks are running; final binary/version gate follows dependencies. Only this exact head's completed checks can release merge. No merge or AL-61 integration notification yet; existing PR watch continues.
 
 Final AL-60 evidence cleanup completed at 65458ed7fb4cc0d45e883126fe1b0d9ae9e8656c. User directly resumed owner run 5 with summary-only cleanup and no development workflow, superseding the interrupted hold; manager only observed that existing run. Owner handoff is complete. Final tree has 10 ticket files and no raw evidence outputs/indexes; short VERIFICATION.md preserves meaningful commands, revision/outcomes, failure history and limits with immutable history links. Manager verified product/test/scripts/CI source equals tested 057d410; required contracts, PR draft, ledger and both compact findings equal pre-cleanup bytes. Discovery credit and accepted TEST-02 debt remain. User instructed manager to watch progress and take ownership after completion; MGT-2 now owns final readiness/merge coordination. New-head CI is running and older statuses are not reused. Next: exact-head/base/review/check refresh, guarded merge, actual merge-SHA verification, then AL-61 integration notification.
@@ -57,15 +59,15 @@ GitHub reports main has no branch protection (protection endpoint HTTP 404). Thi
 Telemetry: PATH has no installed wrapper and the shared installation directory is empty. Use the existing local source-built native binary with supported native options, explicit Codex source, ticket and root session. Native generate has no --al-offline/--al-project options; invoke from this checkout. Root source rollout found at ~/.codex/sessions/2026/11/03/rollout-2026-11-03T18-47-43-01a1a286-27c9-7c50-9f2e-70f0a332c763.jsonl. This manager has no native children; the five independently created T3 roots are not children. T3 MCP tool counts are a known decoder completeness limit. This is an active-session checkpoint, not complete end-of-supervision telemetry; regenerate at later delivery. Independent ticket telemetry is not part of the manager's ledger.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 25
-- **Active Agent Duration:** 29m 46s (excludes user wait time)
-- **Context Window Health:** BLOATED — Root agent peak 233.7k tokens (117% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Software Development Life Cycle Iterations:** 27
+- **Active Agent Duration:** 31m 4s (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 247.1k tokens (124% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 13,501 reasoning tokens (20.6% of generated output)
-- **Tool Health & Self-Correction:** 80 tool calls (8 self-corrections, 90.0% success rate)
+- **Reasoning Effort:** 14,864 reasoning tokens (21.1% of generated output)
+- **Tool Health & Self-Correction:** 84 tool calls (8 self-corrections, 90.5% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
@@ -79,11 +81,11 @@ Telemetry: PATH has no installed wrapper and the shared installation directory i
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 207,511 | 52,041 | 17,651,072 | 98.8% | 233.7k | BLOATED (117%) | $0.00 |
-| **Total** | **1** | **207,511** | **52,041** | **17,651,072** | **98.8%** | **233.7k** | **BLOATED** | **$0.00** |
+| **rootagent** | 1 | 218,876 | 55,485 | 19,545,344 | 98.9% | 247.1k | BLOATED (124%) | $0.00 |
+| **Total** | **1** | **218,876** | **55,485** | **19,545,344** | **98.9%** | **247.1k** | **BLOATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 1 | 207,511 | 52,041 | 17,651,072 | 98.8% | $0.00 |
-| **Total** | **1** | **207,511** | **52,041** | **17,651,072** | **98.8%** | **$0.00** |
+| **gpt-6.1-sol** | 1 | 218,876 | 55,485 | 19,545,344 | 98.9% | $0.00 |
+| **Total** | **1** | **218,876** | **55,485** | **19,545,344** | **98.9%** | **$0.00** |
