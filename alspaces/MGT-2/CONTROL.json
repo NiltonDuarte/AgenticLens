@@ -17,14 +17,15 @@
       "order": 2,
       "last_instruction": {
         "threadId": "641425d3-403a-4a11-8d21-2c8bae2ca609",
+        "clientRequestId": "mgt2-capture-owner-approved-61",
         "link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/641425d3-403a-4a11-8d21-2c8bae2ca609>",
-        "messageId": "message:mcp:54c6beb0-3af1-47e7-a32e-216eebcecca1:thread-send:mgt-2-initial-al-61-20261103",
-        "runId": "run:thread:641425d3-403a-4a11-8d21-2c8bae2ca609:ordinal:1",
-        "status": "running",
-        "delivery": "steered"
+        "messageId": "message:mcp:54c6beb0-3af1-47e7-a32e-216eebcecca1:thread-send:mgt2-capture-owner-approved-61",
+        "runId": "run:thread:641425d3-403a-4a11-8d21-2c8bae2ca609:ordinal:3",
+        "status": "starting",
+        "delivery": "started"
       },
       "verified_checks": "Owner: 244 focused tests, typecheck/lint, five-platform build, byte-identical standalone HTTP JS/CSS and embedded assets pass. Sol/high and Luna/medium approve correction. make fails unchanged capture CLI tests; artifact-only checkpoint pushed.",
-      "next_action": "Hold full-suite retry pending scope decision or real predecessor merge notification; diagnostic AL-60 handoff alone does not release retry",
+      "next_action": "Hold until actual repaired AL-60 merge notification; then integrate once and verify",
       "notification_request": "mgt2-handoff-notification-61",
       "reviewed_application_head": "2e4762d0e94109f9b91c2dc5edae2a939ab94008",
       "blockers": [
@@ -37,21 +38,22 @@
       "thread_link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/5dbc6729-7bc5-4bc2-84c8-1433f289f5f6>",
       "thread_id": "5dbc6729-7bc5-4bc2-84c8-1433f289f5f6",
       "branch": "feat/AL-60-search-tickets",
-      "head": "7a50a5e99927928995a72e13128d597c1317e9d3",
+      "head": "7b00cc1ac7fb5cd8afa2d93f7c65931c8ab2fa30",
       "base": "main",
       "pr": null,
-      "status": "blocked",
+      "status": "preparing",
       "order": 1,
       "last_instruction": {
         "threadId": "5dbc6729-7bc5-4bc2-84c8-1433f289f5f6",
+        "clientRequestId": "mgt2-approved-capture-repair",
         "link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/5dbc6729-7bc5-4bc2-84c8-1433f289f5f6>",
-        "messageId": "message:mcp:54c6beb0-3af1-47e7-a32e-216eebcecca1:thread-send:mgt-2-initial-al-60-20261103",
-        "runId": "run:thread:5dbc6729-7bc5-4bc2-84c8-1433f289f5f6:ordinal:1",
-        "status": "running",
-        "delivery": "steered"
+        "messageId": "message:mcp:54c6beb0-3af1-47e7-a32e-216eebcecca1:thread-send:mgt2-approved-capture-repair",
+        "runId": "run:thread:5dbc6729-7bc5-4bc2-84c8-1433f289f5f6:ordinal:2",
+        "status": "starting",
+        "delivery": "started"
       },
       "verified_checks": "Owner: eight no-defect scoped reviews; full serial frontend 786/786, focused 6/6, typecheck/lint, build and standalone assets pass. Initial and bounded make failed capture tests; two bounded failures pass targeted without affinity in 8.291s. Full gate remains incomplete.",
-      "next_action": "Await explicit user scope approval; owner checkpoints evidence and telemetry; no repair or repeated full gate yet",
+      "next_action": "Resume approved shared capture repair in next scope iteration; reviewed search unchanged; full gate and capture review required",
       "notification_request": "mgt2-handoff-notification-60",
       "blockers": [
         "Full integrated gate incomplete; bounded rerun still fails publication lifetime and worker cleanup tests"
@@ -63,7 +65,8 @@
         "worker": "fixtures use 1000ms lifetime and 500ms pass budget; exhaustion kills generate and preserves pending",
         "unconfirmed": "Manifest HarnessVersion/Capability variability plausible; failed before/after manifest was not retained",
         "proposed_scope": "Separate optional/required deadline ownership and diagnostics; deterministic disposable harness probes; distinguish successful publication from deliberate expiry while preserving pending/ownership guarantees; no blanket timeout increase"
-      }
+      },
+      "reviewed_application_head": "7a50a5e99927928995a72e13128d597c1317e9d3"
     },
     {
       "ticket": "AL-62",
@@ -77,14 +80,15 @@
       "order": 4,
       "last_instruction": {
         "threadId": "24185901-0a4e-4d21-8c44-a64117fb80bc",
+        "clientRequestId": "mgt2-capture-owner-approved-62",
         "link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/24185901-0a4e-4d21-8c44-a64117fb80bc>",
-        "messageId": "message:mcp:54c6beb0-3af1-47e7-a32e-216eebcecca1:thread-send:mgt-2-initial-al-62-20261103",
+        "messageId": "message:mcp:54c6beb0-3af1-47e7-a32e-216eebcecca1:thread-send:mgt2-capture-owner-approved-62",
         "runId": "run:thread:24185901-0a4e-4d21-8c44-a64117fb80bc:ordinal:1",
         "status": "running",
         "delivery": "steered"
       },
-      "verified_checks": "Owner work in progress; final gate pending",
-      "next_action": "Owner explicitly sends MGT-2 handoff on ready PR or blocker; manager verifies current head and gates",
+      "verified_checks": "Owner reports focused backend/CLI save-reload and frontend checks pass; eight scoped reviews in progress. Earlier suspected unchanged-timestamp growth defect was refuted as a fixture error; preservation guard retained.",
+      "next_action": "Continue review and corrections; preserve AL-76 writer ownership on eventual integration; full gate deferred until predecessors",
       "notification_request": "mgt2-handoff-notification-62"
     },
     {
@@ -99,8 +103,9 @@
       "order": 3,
       "last_instruction": {
         "threadId": "3513d383-221d-427c-91b4-7c9ed8fd9af8",
+        "clientRequestId": "mgt2-capture-owner-approved-76",
         "link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/3513d383-221d-427c-91b4-7c9ed8fd9af8>",
-        "messageId": "message:mcp:54c6beb0-3af1-47e7-a32e-216eebcecca1:thread-send:mgt-2-initial-al-76-20261103",
+        "messageId": "message:mcp:54c6beb0-3af1-47e7-a32e-216eebcecca1:thread-send:mgt2-capture-owner-approved-76",
         "runId": "run:thread:3513d383-221d-427c-91b4-7c9ed8fd9af8:ordinal:1",
         "status": "running",
         "delivery": "steered"
@@ -147,5 +152,11 @@
   ],
   "own_pr_url": "https://github.com/NiltonDuarte/AgenticLens/pull/100",
   "manager_verification": "make failed on unchanged capture CLI native version/capability and worker timeout tests; other Go packages passed; frontend suite and final build not reached",
-  "pending_user_decision": "Authorize AL-60 scope expansion for shared capture repair if read-only diagnosis confirms a defect; no dependent implementation authorized yet"
+  "active_iteration": "02",
+  "capture_repair_approval": {
+    "source": "Explicit user answer: Authorize AL-60 shared capture repair (Recommended)",
+    "owner": "AL-60",
+    "status": "approved",
+    "preserved": "No waived gates, weakened tests, global timeout inflation, or duplicate capture ownership"
+  }
 }
