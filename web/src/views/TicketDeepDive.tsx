@@ -22,8 +22,8 @@ import {
   formatPercentage,
   formatTokensK,
   computeLeadTimeSeconds,
-  formatLocalTimeWithMs,
-  formatLocalDateTimeTooltip,
+  formatLocalDateTime,
+  formatHistoricalDateTimeTooltip, getHistoricalTimestampDateTime,
 } from '../domain/formatters';
 import { aggregateToolUsage } from '../domain/tools';
 import { KPICard } from '../components/KPICard';
@@ -259,15 +259,15 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
             <div className="timestamp-group">
               <span className="timestamp-item">
                 <span className="timestamp-label">Started:</span>{' '}
-                {ledger.started_at ? <time title={formatLocalDateTimeTooltip(ledger.started_at)}>{formatLocalTimeWithMs(ledger.started_at)}</time> : formatIsoDateTimeShort(ledger.started_at)}
+                {ledger.started_at ? <time dateTime={getHistoricalTimestampDateTime(ledger.started_at)} title={formatHistoricalDateTimeTooltip(ledger.started_at)}>{formatLocalDateTime(ledger.started_at)}</time> : formatIsoDateTimeShort(ledger.started_at)}
               </span>
               <span className="timestamp-item">
                 <span className="timestamp-label">Completed:</span>{' '}
-                {ledger.completed_at ? <time title={formatLocalDateTimeTooltip(ledger.completed_at)}>{formatLocalTimeWithMs(ledger.completed_at)}</time> : 'In Progress'}
+                {ledger.completed_at ? <time dateTime={getHistoricalTimestampDateTime(ledger.completed_at)} title={formatHistoricalDateTimeTooltip(ledger.completed_at)}>{formatLocalDateTime(ledger.completed_at)}</time> : 'In Progress'}
               </span>
               <span className="timestamp-item">
                 <span className="timestamp-label">Updated:</span>{' '}
-                <time title={formatLocalDateTimeTooltip(ledger.updated_at)}>{formatLocalTimeWithMs(ledger.updated_at)}</time>
+                <time dateTime={getHistoricalTimestampDateTime(ledger.updated_at)} title={formatHistoricalDateTimeTooltip(ledger.updated_at)}>{formatLocalDateTime(ledger.updated_at)}</time>
               </span>
             </div>
           </div>

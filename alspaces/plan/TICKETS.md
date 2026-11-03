@@ -8,26 +8,13 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 
 
-
 ---
 
 ## Ready
 
 ### Post-v2.0 review: Ready
 
-- **AL-60**: Add Search tickets to the comparison exclusion panel
-  - **Subsystem**: Dashboard comparisons
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-60 search tickets in comparison exclusion panel.md`
 
-- **AL-61**: Show full local historical timestamps in Ticket Deep Dive
-  - **Subsystem**: Dashboard historical timestamps
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-61 show full local timestamps in ticket deep dive.md`
 
 - **AL-62**: Fix Codex skill and delegation facts with granular source ownership
   - **Subsystem**: Domain / Codex and OpenCode Adapters / Schema Migration / Backfill / CLI / API / Dashboard / Tests

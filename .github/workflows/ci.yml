@@ -40,6 +40,9 @@ jobs:
       - name: Verify owned Git for Windows process-tree watchdog
         working-directory: backend
         run: go test ./internal/adapters/capture -run '^TestGitCheckWindowsWatchdogKillsOwnedTree$' -count=1 -timeout=60s
+      - name: Verify installer inspection process ownership on Windows
+        working-directory: backend
+        run: go test ./internal/adapters/capture -run '^TestInstallWindowsInspectionOwnsLauncherTree$' -count=1 -timeout=60s
       - name: Exercise real PowerShell and native Windows releases
         env:
           PYTHONUTF8: '1'

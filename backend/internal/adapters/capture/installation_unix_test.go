@@ -311,6 +311,16 @@ func installFixture(t *testing.T, project string) (string, string) {
 	t.Helper()
 	t.Setenv("AL_CAPTURE_INSTALL_FIXTURE", "1")
 	t.Setenv("GORACE", "atexit_sleep_ms=0")
+	harnessDir := t.TempDir()
+	for source, body := range map[string]string{
+		"opencode": "#!/bin/sh\n[ \"$*\" = \"--version\" ] || exit 2\nprintf '1.19.5\\n'\n",
+		"codex":    "#!/bin/sh\ncase \"$*\" in\n  --version) printf 'codex-cli 0.166.0\\n';;\n  'features list') printf 'hooks enabled\\n';;\n  *) exit 2;;\nesac\n",
+	} {
+		if err := os.WriteFile(filepath.Join(harnessDir, source), []byte(body), 0700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Setenv("PATH", harnessDir+string(os.PathListSeparator)+os.Getenv("PATH"))
 	cache := t.TempDir()
 	captureProjectConfig(t, project, "InstallationFixture")
 	originalConfig, err := os.ReadFile(filepath.Join(project, ".agenticlens-config.yaml"))
@@ -470,6 +480,40 @@ func TestInstallationManifestStableAndPinSwitchRequiresRefresh(t *testing.T) {
 	if err := capture.CheckInstalledState(project, state, false); err == nil {
 		t.Fatal("wrapper drift hidden")
 	}
+}
+
+func TestInstallationManifestRecordsChangedOptionalProbeOnly(t *testing.T) {
+	project, state := t.TempDir(), t.TempDir()
+	binary, wrapper := installFixture(t, project)
+	options := capture.InstallOptions{Repository: project, StateDir: state, Binary: binary, Wrapper: wrapper, Source: "opencode", SourceStore: filepath.Join(t.TempDir(), "source.db")}
+	first, err := capture.Install(context.Background(), options)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first.Manifest.HarnessVersion != "1.19.5" {
+		t.Fatalf("controlled successful probe unavailable: %+v", first.Manifest)
+	}
+	harness, err := exec.LookPath("opencode")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = os.WriteFile(harness, []byte("#!/bin/sh\nexit 42\n"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	second, err := capture.Install(context.Background(), options)
+	if err != nil {
+		t.Fatalf("optional probe failure rejected the valid native installation: %v", err)
+	}
+	if second.Manifest.HarnessVersion != "unavailable" || !strings.Contains(second.Manifest.Capability, "Harness unavailable") {
+		t.Fatalf("controlled probe failure not recorded: %+v", second.Manifest)
+	}
+	beforeIdentity, afterIdentity := first.Manifest, second.Manifest
+	beforeIdentity.HarnessVersion, afterIdentity.HarnessVersion = "", ""
+	beforeIdentity.Capability, afterIdentity.Capability = "", ""
+	if !reflect.DeepEqual(beforeIdentity, afterIdentity) {
+		t.Fatalf("optional probe changed required identity: before=%+v after=%+v", beforeIdentity, afterIdentity)
+	}
+	t.Logf("controlled manifest delta: HarnessVersion %q -> %q; Capability %q -> %q", first.Manifest.HarnessVersion, second.Manifest.HarnessVersion, first.Manifest.Capability, second.Manifest.Capability)
 }
 
 func TestCompatibleGlobalWrapperUpdatePreservesOtherPinnedProject(t *testing.T) {
