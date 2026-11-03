@@ -6,6 +6,49 @@ import (
 	"testing"
 )
 
+func TestCoordinationStateBaseUnderWorktreesRemainsAStateBase(t *testing.T) {
+	project, _, _ := sharedWorktrees(t)
+	for _, alias := range []bool{false, true} {
+		name := "direct"
+		if alias {
+			name = "physical-alias"
+		}
+		t.Run(name, func(t *testing.T) {
+			physical := filepath.Join(t.TempDir(), "worktrees", "capture-state")
+			base := physical
+			if alias {
+				if err := os.MkdirAll(physical, 0700); err != nil {
+					t.Fatal(err)
+				}
+				base = filepath.Join(t.TempDir(), "state-alias")
+				if err := os.Symlink(physical, base); err != nil {
+					t.Fatal(err)
+				}
+			}
+			registry := filepath.Join(physical, "projects", "SharedProject")
+			preview, err := PreviewStateLocation(base, project)
+			if err != nil || !preview.Provisional || preview.RegistryDirectory != registry {
+				t.Fatalf("configured base was treated as a coordinate: %+v %v", preview, err)
+			}
+			if _, err := os.Stat(registry); !os.IsNotExist(err) {
+				t.Fatalf("preview initialized state: %v", err)
+			}
+			store, err := OpenProject(base, project)
+			if err != nil {
+				t.Fatal(err)
+			}
+			coordinate := store.CoordinationDirectory()
+			if err := store.Close(); err != nil {
+				t.Fatal(err)
+			}
+			preview, err = PreviewStateLocation(base, project)
+			if err != nil || preview.Provisional || preview.CoordinationDirectory != coordinate {
+				t.Fatalf("configured base did not reopen its committed scope: %+v %v", preview, err)
+			}
+		})
+	}
+}
+
 func TestCoordinationTokenAliasesRejectUnknownAndRedirectedState(t *testing.T) {
 	project, _, base := sharedWorktrees(t)
 	store, err := OpenProject(base, project)

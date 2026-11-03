@@ -380,7 +380,8 @@ func validateScopeActivationContext(ctx context.Context, db *sql.DB, id int64) e
 }
 
 func isCoordinationPath(state string) bool {
-	if filepath.Base(filepath.Dir(state)) != "worktrees" {
+	registry := filepath.Dir(filepath.Dir(state))
+	if filepath.Base(filepath.Dir(state)) != "worktrees" || filepath.Base(filepath.Dir(registry)) != "projects" {
 		return false
 	}
 	return validCoordinateToken(filepath.Base(state))

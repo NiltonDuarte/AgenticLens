@@ -324,6 +324,14 @@ func TestCoordinationTokensConcurrentFirstOpenAndStableReopen(t *testing.T) {
 	results := make(chan opened, 8)
 	start := make(chan struct{})
 	projects := []string{a, a, b, b, other, other, a, b}
+	gitPrefixes := map[string]string{}
+	for _, project := range []string{a, b, other} {
+		output, err := exec.Command("git", "-C", project, "rev-parse", "--absolute-git-dir").CombinedOutput()
+		if err != nil {
+			t.Fatalf("observe fixture administrative directory: %s %v", output, err)
+		}
+		gitPrefixes[project] = "wt-" + filepath.Base(strings.TrimSpace(string(output))) + "-"
+	}
 	for _, project := range projects {
 		go func(project string) {
 			<-start
@@ -350,8 +358,12 @@ func TestCoordinationTokensConcurrentFirstOpenAndStableReopen(t *testing.T) {
 		if old := byPath[got.path]; old != "" && old != got.project {
 			t.Fatal("distinct worktrees share coordinates")
 		}
-		if !strings.HasPrefix(filepath.Base(got.path), "wt-") {
+		token, prefix := filepath.Base(got.path), gitPrefixes[got.project]
+		if !strings.HasPrefix(token, prefix) {
 			t.Fatalf("Git identifier missing: %s", got.path)
+		}
+		if qualification, err := hex.DecodeString(strings.TrimPrefix(token, prefix)); err != nil || len(qualification) != 8 {
+			t.Fatalf("Git identity qualification missing: %s", token)
 		}
 		byProject[got.project] = got.path
 		byPath[got.path] = got.project
