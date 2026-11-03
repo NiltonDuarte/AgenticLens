@@ -1,5 +1,9 @@
 # MGT-2 supervision log
 
+AL-61 delivered: https://github.com/NiltonDuarte/AgenticLens/pull/104 merged at 8b1de5f761ebb92f78b2b462c1ff583724ecbdb5, 2026-11-03T21:02:02Z. Fresh gate verified approved c6fc4c3, all four CI jobs successful, base 3fbecd2 included, correct non-release/non-draft state and no review blockers. Expected-head squash succeeded; GitHub MERGED/mergeCommit and fetched main corroborate delivery. Removed obsolete #104 watch. Only afterward resumed existing AL-76 owner run 3 to integrate current main and finish #102's gates, preserving capture repairs, timestamps, assets, ticket-index completion and lossless writer ownership. #103 remains held for actual #102 delivery. Remaining order: #102 then #103; create queued REV test-performance ticket after both merge. Release #55 remains human_only; #100 remains external-review work.
+
+Later-integration check retained for AL-62: an unconfirmed compatibility risk connects its new artifact-digest-bound receipts to AL-76's source-independent whitespace formatter. After actual #102 merge, exercise trusted L0/R0 with sources unavailable, format whitespace, then regenerate without sources; preserve accepted facts and strict tamper/multiplicity/bound-mismatch guards. Do not assume the digest mismatch is safe or a proven defect, relax receipt authorization, or start integration early. This is the later integrator's cross-feature preservation assessment, not a new unrelated bug assignment.
+
 Active iteration 04: queued the user's post-batch REV test-performance review ticket. Trigger: verified merges of #104, #102 and #103, then allocate an unused REV ID and create the review ticket before management final handoff. It will measure capture/per-test/package/build/process/wait cost, classify fast unit versus slower boundary integration coverage, preserve useful assertions, and propose unit-first commands/CI gating. Review/test redesign has not started and no REV number/thread was allocated. Human release #55 and external MGT #100 are separate gates. See iterations/04/PLAN.md and CONTROL.json; this supersedes product-merge-only completion, with existing scopes preserved.
 
 AL-61 refreshed delivery verified at #104 c6fc4c35ed1d99fa0e59adff558f92d1e2a3d8fb: current main 3fbecd2 included, tested merge 8c5e3568 full make passes (all race packages, CLI 96.194s, 790 frontend tests, checks/five binaries/standalone assets). Manager verified final source/tests/scripts/CI equality and artifact-only delta, no GitHub blockers, open/non-draft status; prior timestamp approvals validly carry through incoming four test files. New hosted CI runs on c6fc4c3; Frontend passed, other gates pending at inspection. Old head CI is not reused.
@@ -95,15 +99,15 @@ GitHub reports main has no branch protection (protection endpoint HTTP 404). Thi
 Telemetry: PATH has no installed wrapper and the shared installation directory is empty. Use the existing local source-built native binary with supported native options, explicit Codex source, ticket and root session. Native generate has no --al-offline/--al-project options; invoke from this checkout. Root source rollout found at ~/.codex/sessions/2026/11/03/rollout-2026-11-03T18-47-43-01a1a286-27c9-7c50-9f2e-70f0a332c763.jsonl. This manager has no native children; the five independently created T3 roots are not children. T3 MCP tool counts are a known decoder completeness limit. This is an active-session checkpoint, not complete end-of-supervision telemetry; regenerate at later delivery. Independent ticket telemetry is not part of the manager's ledger.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 46
-- **Active Agent Duration:** 56m 8s (excludes user wait time)
-- **Context Window Health:** CRITICAL — Root agent peak 401.0k tokens (201% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Software Development Life Cycle Iterations:** 47
+- **Active Agent Duration:** 1h 0m (excludes user wait time)
+- **Context Window Health:** CRITICAL — Root agent peak 408.8k tokens (204% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 41,071 reasoning tokens (26.8% of generated output)
-- **Tool Health & Self-Correction:** 143 tool calls (12 self-corrections, 91.6% success rate)
+- **Reasoning Effort:** 43,735 reasoning tokens (27.1% of generated output)
+- **Tool Health & Self-Correction:** 149 tool calls (12 self-corrections, 91.9% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
@@ -117,11 +121,11 @@ Telemetry: PATH has no installed wrapper and the shared installation directory i
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 330,084 | 111,948 | 47,515,904 | 99.3% | 401.0k | CRITICAL (201%) | $0.00 |
-| **Total** | **1** | **330,084** | **111,948** | **47,515,904** | **99.3%** | **401.0k** | **CRITICAL** | **$0.00** |
+| **rootagent** | 1 | 725,541 | 117,463 | 50,761,856 | 98.6% | 408.8k | CRITICAL (204%) | $0.00 |
+| **Total** | **1** | **725,541** | **117,463** | **50,761,856** | **98.6%** | **408.8k** | **CRITICAL** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 1 | 330,084 | 111,948 | 47,515,904 | 99.3% | $0.00 |
-| **Total** | **1** | **330,084** | **111,948** | **47,515,904** | **99.3%** | **$0.00** |
+| **gpt-6.1-sol** | 1 | 725,541 | 117,463 | 50,761,856 | 98.6% | $0.00 |
+| **Total** | **1** | **725,541** | **117,463** | **50,761,856** | **98.6%** | **$0.00** |

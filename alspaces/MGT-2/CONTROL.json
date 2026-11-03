@@ -13,19 +13,17 @@
       "head": "c6fc4c35ed1d99fa0e59adff558f92d1e2a3d8fb",
       "base": "main",
       "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/104",
-      "status": "waiting_checks",
+      "status": "merged",
       "order": 2,
       "last_instruction": {
         "clientRequestId": "mgt2-al61-integrate-after-3fbecd2",
         "runId": "run:thread:641425d3-403a-4a11-8d21-2c8bae2ca609:ordinal:6"
       },
-      "verified_checks": "Manager verified current main 3fbecd2 included and final source/tests/scripts/CI equal tested 8c5e3568; artifact-only final delta. Owner full make passes all Go race packages incl CLI 96.194s, 790 frontend cases, checks and five binaries; standalone assets equal. Prior timestamp approvals validly carry through test-only repair; no new findings. New hosted CI running, Frontend green; no review objections/unresolved threads.",
-      "next_action": "On CI wake freshly verify current head/base/reviews/checks; guarded merge #104 then actual merge-SHA notification to AL-76",
+      "verified_checks": "All four hosted checks SUCCESS at c6fc4c3; current base 3fbecd2 included, correct non-release/non-draft and no review objections/unresolved threads freshly verified. Guarded squash succeeded; GitHub MERGED/mergeCommit and fetched main confirm delivery.",
+      "next_action": "Delivered; obsolete watch removed",
       "notification_request": "mgt2-handoff-notification-61",
       "reviewed_application_head": "8c5e3568a53ce357d4d6870ddaec9289ed089985",
-      "blockers": [
-        "Fresh hosted checks pending at c6fc4c3"
-      ],
+      "blockers": [],
       "publication_status": "open non-draft; local final approval complete",
       "corrected_timestamp_revision": "2e4762d0e94109f9b91c2dc5edae2a939ab94008",
       "ci_failure": {
@@ -34,7 +32,9 @@
         "failure": "TestCaptureAutomaticSharedStoreAndTicketStayInExactProjects TempDir RemoveAll cleanup: directory not empty",
         "classification": "Shared backend/CI bytes equal delivered main; no AL-61 backend delta. Underlying surviving process/writer cause unconfirmed.",
         "status": "Earlier shared fixture failure repaired through delivered #105; integrated full gate passed; old failed hosted head retained historically"
-      }
+      },
+      "merge_commit": "8b1de5f761ebb92f78b2b462c1ff583724ecbdb5",
+      "merged_at": "2026-11-03T21:02:02Z"
     },
     {
       "ticket": "AL-60",
@@ -124,7 +124,7 @@
       "reviewed_application_head": "29ee4a802000c1d3302c515e001f7692d3d7fe8f",
       "product_fingerprint": "f300879df36eee4cbdc69b6de66999dbf469ddcd3eb6f65f8a65b71279332c8a",
       "blockers": [
-        "Actual AL-61 and AL-76 merges pending",
+        "Actual AL-76 merge pending; AL-60 and AL-61 delivered",
         "Full integrated make/race/build/standalone/finalization pending"
       ],
       "publication_status": "open draft; exact head verified",
@@ -148,7 +148,15 @@
         "reproduction": "Trusted L0/R0 then newer L1/R1 with changed exact old row; file-only rollback restores readable L0 but sole SQLite receipt remains R1, old source/snapshot/Git alternatives unavailable; strict retry rejects. Canonical and legacy probes confirmed; reconstructed crash state, not power-loss test.",
         "scope": "Bounded prior/pending or versioned receipt proof tied to worktree/ticket/destination/generation; both rollback and commit windows; additive legacy-readable receipt metadata and explicit scoped migration; no fact-ledger schema change or broad journal/runtime redesign",
         "repair": "Additive receipt metadata version1 retains active/pending exact snapshots with generation/digest/scope; stage before file commit/finalize afterward, marker barriers; explicit proven legacy migration/rebind, lost proof remains unavailable and bound mismatch refuses fallback"
-      }
+      },
+      "integration_risks": [
+        {
+          "status": "Unconfirmed cross-PR compatibility hypothesis; assess after actual AL-76 merge",
+          "case": "Source-backed L0/R0 -> make sources unavailable -> AL-76 whitespace-only format -> source-unavailable generate must preserve accepted source facts under approved contracts",
+          "reason": "AL-62 receipt selects by artifact digest; AL-76 intentionally changes bytes while preserving every token/fact. Determine safe compatibility without weakening bound-mismatch/tamper/multiplicity guards or source-independent format.",
+          "owner": "AL-62 as later integrator; do not release early integration or implementation for a hypothesis"
+        }
+      ]
     },
     {
       "ticket": "AL-76",
@@ -158,23 +166,17 @@
       "head": "746c965cf72ede8636c952ad56f5d661d5be3219",
       "base": "main",
       "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/102",
-      "status": "blocked",
+      "status": "preparing",
       "order": 3,
       "last_instruction": {
-        "ticket": "AL-76",
-        "threadId": "3513d383-221d-427c-91b4-7c9ed8fd9af8",
-        "link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/3513d383-221d-427c-91b4-7c9ed8fd9af8>",
-        "messageId": "message:mcp:54c6beb0-3af1-47e7-a32e-216eebcecca1:thread-send:mgt2-draft-publication-al-76",
-        "runId": "run:thread:3513d383-221d-427c-91b4-7c9ed8fd9af8:ordinal:2",
-        "status": "starting",
-        "delivery": "started"
+        "clientRequestId": "mgt2-al76-integrate-after-8b1de5f",
+        "runId": "run:thread:3513d383-221d-427c-91b4-7c9ed8fd9af8:ordinal:3"
       },
       "verified_checks": "Owner reports all four focuses x Sol/high and Luna/medium complete/approved, affected Sol re-reviews approved; focused race suites, source binary and disposable CLI dry/check/write/idempotence/lexeme probes pass. Full integrated make not started by coordination deferral.",
-      "next_action": "Remain draft until actual predecessor merges; notify existing owner only when next integration is released; full integration/verification/finalization gates remain pending",
+      "next_action": "Existing owner run3 integrates current main once preserving capture/timestamps/assets/index and lossless writer guarantees; final readiness for draft #102",
       "notification_request": "mgt2-handoff-notification-76",
       "blockers": [
-        "Actual AL-61 merge pending; AL-60 prerequisite is now delivered",
-        "Integrated full make and finalization pending"
+        "Integrate delivered predecessors and complete full verification/finalization/new-head CI"
       ],
       "reviewed_application_head": "c32c8937d8897179a6772c6aa75300eafe94351f",
       "reviewed_test_head": "0dedb33110bafe2fc290ec99b86d3635b07c81b5",
@@ -241,10 +243,10 @@
     "status": "approved",
     "preserved": "No waived gates, weakened tests, global timeout inflation, or duplicate capture ownership"
   },
-  "observed_main": "3fbecd2576270772462fe37235d90c5f33e2164c",
+  "observed_main": "8b1de5f761ebb92f78b2b462c1ff583724ecbdb5",
   "publication_steering": "User requested all open owners create PRs now; remaining AL-61/AL-76/AL-62 instructed to publish draft checkpoints without waiving integration or merge gates",
   "al60_latest_hosted_checks": "At f153df2: Backend and Frontend SUCCESS; Windows and binary/version in progress. No merge yet.",
-  "order": "Delivered #101 and #105; next #104, #102, #103",
+  "order": "Delivered #101, #105 and #104; next #102, #103; afterward create queued REV test review ticket",
   "defect_routing_authorization": "User explicitly authorizes new FIX tickets/isolated threads for discovered bugs unless very closely related to an existing approved contract; proactive routine launches, no unrelated roadmap dispatch or product-scope waiver",
   "deferred_actions": [
     {
@@ -260,7 +262,12 @@
         "Recommend optimizing costly cases or moving genuine integration coverage to a separate layer, preserving meaningful assertions",
         "Propose commands and CI dependencies that run integration only after the fast unit suite succeeds",
         "Produce actionable separate follow-up tickets for unrelated findings under the new defect-routing rule; no blanket timeout increase or coverage deletion"
-      ]
+      ],
+      "verified_trigger_progress": {
+        "104": "8b1de5f761ebb92f78b2b462c1ff583724ecbdb5",
+        "102": "pending",
+        "103": "pending"
+      }
     }
   ],
   "completion_requirements": "Complete product merge queue, then create queued REV test-performance review ticket before final management handoff; own MGT PR remains external merge"
