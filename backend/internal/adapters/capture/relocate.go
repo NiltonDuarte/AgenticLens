@@ -106,7 +106,7 @@ func CheckStateRelocation(project, oldBase, newBase string) error {
 			if readErr != nil || closeErr != nil {
 				return errors.Join(readErr, closeErr)
 			}
-			if version == 2 {
+			if version == RegistryProtocolVersion {
 				return errors.New("changing a populated protocol-2 shared state location is unsupported; existing configuration and registry are preserved")
 			}
 			return errors.New("capture state exists at the previous location; use capture relocate-state for supported protocol-1 state before changing telemetry.capture.state_dir")
@@ -182,6 +182,9 @@ func InspectRetainedState(ctx context.Context, registry, name, project string) (
 	if version != RegistryProtocolVersion {
 		return result, errors.New("unsupported retained registry protocol")
 	}
+	if err = validateCoordinateSchema(ctx, db); err != nil {
+		return result, err
+	}
 	var actualName string
 	if err = db.QueryRowContext(ctx, "SELECT name FROM project_identity WHERE singleton=1").Scan(&actualName); err != nil {
 		return result, err
@@ -193,7 +196,11 @@ func InspectRetainedState(ctx context.Context, registry, name, project string) (
 	if err = db.QueryRowContext(ctx, "SELECT id FROM worktrees WHERE directory=?", project).Scan(&id); err != nil {
 		return result, err
 	}
-	store := &Store{db: db, project: project, registry: registry, directory: filepath.Join(registry, "worktrees", fmt.Sprint(id)), worktreeID: id}
+	coord, err := readCoordinatePath(ctx, db, registry, id)
+	if err != nil {
+		return result, err
+	}
+	store := &Store{db: db, project: project, registry: registry, directory: coord, worktreeID: id}
 	result.Project = project
 	result.ProjectName = name
 	result.WorktreeID = id
@@ -511,7 +518,7 @@ func validateLegacyRegistry(ctx context.Context, db *sql.DB, project string) (in
 	if err := db.QueryRowContext(ctx, "SELECT version FROM capture_meta").Scan(&version); err != nil {
 		return 0, err
 	}
-	if version == 2 {
+	if version == RegistryProtocolVersion {
 		return 0, errors.New("protocol-2 shared state relocation is unsupported; existing registry is preserved")
 	}
 	if version != 1 && version != -1 {
@@ -715,6 +722,9 @@ func previewRelocationDestination(ctx context.Context, path, name, project, id s
 	}
 	if version != RegistryProtocolVersion {
 		return errors.New("destination registry protocol is incompatible")
+	}
+	if err = validateCoordinateSchema(ctx, db); err != nil {
+		return err
 	}
 	var actual string
 	if err = db.QueryRowContext(ctx, "SELECT name FROM project_identity WHERE singleton=1").Scan(&actual); err != nil {

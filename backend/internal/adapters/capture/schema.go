@@ -2,7 +2,8 @@ package capture
 
 // Registry protocol 2 stores logical projects once and explicitly scopes every
 // operational row by its exact worktree. Diagnostic sequences are global IDs;
-// every lookup and retention operation also requires worktree_id.
+// every lookup and retention operation also requires worktree_id. Persisted
+// directory names identify local worktree directories independently of SQL IDs.
 const registrySchema = `CREATE TABLE IF NOT EXISTS capture_meta(version INTEGER NOT NULL);
 INSERT INTO capture_meta SELECT 2 WHERE NOT EXISTS(SELECT 1 FROM capture_meta);
 CREATE TABLE IF NOT EXISTS project_identity(singleton INTEGER PRIMARY KEY CHECK(singleton=1),name TEXT NOT NULL);
@@ -21,4 +22,4 @@ CREATE TABLE IF NOT EXISTS publication_request(worktree_id INTEGER NOT NULL,sing
 CREATE TABLE IF NOT EXISTS publication_cursor(worktree_id INTEGER NOT NULL,singleton INTEGER NOT NULL CHECK(singleton=1),ticket TEXT NOT NULL,PRIMARY KEY(worktree_id,singleton));
 CREATE TABLE IF NOT EXISTS recovery_phase(worktree_id INTEGER NOT NULL,ticket TEXT,phase INTEGER NOT NULL,PRIMARY KEY(worktree_id,ticket));
 CREATE TABLE IF NOT EXISTS reconcile_cursor(worktree_id INTEGER NOT NULL,ticket TEXT,identity TEXT NOT NULL,PRIMARY KEY(worktree_id,ticket));
-` + diagnosticSchema
+` + coordinationSchema + diagnosticSchema

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"encoding/hex"
 	"net/url"
 	"os"
 	"os/exec"
@@ -310,5 +311,224 @@ func TestCaptureSQLiteURIUsesPathAndEscapesFilenameForRealReadOnlyOpen(t *testin
 	closeErr := reader.Close()
 	if readErr != nil || closeErr != nil || version != ProtocolVersion {
 		t.Fatalf("read-only open did not reach exact existing capture file: version=%d read=%v close=%v", version, readErr, closeErr)
+	}
+}
+
+func TestCoordinationDirectoryNamesConcurrentFirstOpenAndStableReopen(t *testing.T) {
+	a, b, base := sharedWorktrees(t)
+	other, _, _ := sharedWorktrees(t)
+	type opened struct {
+		project, path string
+		err           error
+	}
+	results := make(chan opened, 8)
+	start := make(chan struct{})
+	projects := []string{a, a, b, b, other, other, a, b}
+	gitPrefixes := map[string]string{}
+	for _, project := range []string{a, b, other} {
+		output, err := exec.Command("git", "-C", project, "rev-parse", "--absolute-git-dir").CombinedOutput()
+		if err != nil {
+			t.Fatalf("observe fixture administrative directory: %s %v", output, err)
+		}
+		gitPrefixes[project] = "wt-" + filepath.Base(strings.TrimSpace(string(output))) + "-"
+	}
+	for _, project := range projects {
+		go func(project string) {
+			<-start
+			s, err := OpenProject(base, project)
+			path := ""
+			if err == nil {
+				path = s.CoordinationDirectory()
+				err = s.Close()
+			}
+			results <- opened{project, path, err}
+		}(project)
+	}
+	close(start)
+	byProject := map[string]string{}
+	byPath := map[string]string{}
+	for range projects {
+		got := <-results
+		if got.err != nil {
+			t.Fatal(got.err)
+		}
+		if old := byProject[got.project]; old != "" && old != got.path {
+			t.Fatalf("scope allocated twice: %s %s", old, got.path)
+		}
+		if old := byPath[got.path]; old != "" && old != got.project {
+			t.Fatal("distinct worktrees share coordinates")
+		}
+		directoryName, prefix := filepath.Base(got.path), gitPrefixes[got.project]
+		if !strings.HasPrefix(directoryName, prefix) {
+			t.Fatalf("Git identifier missing: %s", got.path)
+		}
+		if qualification, err := hex.DecodeString(strings.TrimPrefix(directoryName, prefix)); err != nil || len(qualification) != 8 {
+			t.Fatalf("Git identity qualification missing: %s", directoryName)
+		}
+		byProject[got.project] = got.path
+		byPath[got.path] = got.project
+	}
+	for project, path := range byProject {
+		s, err := OpenReadOnlyProject(base, project)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if s.CoordinationDirectory() != path {
+			t.Fatalf("reopen changed coordinate: %s", s.CoordinationDirectory())
+		}
+		if err = s.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func TestCoordinationUUIDFallbackPersistsAcrossGitEnrichment(t *testing.T) {
+	a, _, base := sharedWorktrees(t)
+	cfg, err := os.ReadFile(filepath.Join(a, ".agenticlens-config.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	project := t.TempDir()
+	if err = os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), cfg, 0600); err != nil {
+		t.Fatal(err)
+	}
+	preview, err := PreviewStateLocation(base, project)
+	if err != nil || !preview.Provisional || preview.CoordinationDirectory != "" || preview.WorktreeID != 0 {
+		t.Fatalf("invented preview: %+v %v", preview, err)
+	}
+	if _, err = os.Stat(base); !os.IsNotExist(err) {
+		t.Fatalf("preview allocated state: %v", err)
+	}
+	s, err := OpenProject(base, project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := s.CoordinationDirectory()
+	if raw, e := hex.DecodeString(filepath.Base(path)); e != nil || len(raw) != 8 {
+		t.Fatalf("not a short UUID: %s", path)
+	}
+	if err = s.Close(); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command("git", "init", "-q", project)
+	if out, e := cmd.CombinedOutput(); e != nil {
+		t.Fatalf("git init: %s %v", out, e)
+	}
+	s, err = OpenProject(base, project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.CoordinationDirectory() != path {
+		t.Fatal("Git enrichment changed persisted directory name")
+	}
+	if err = s.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestCoordinateAllocationSkipsReservedNamesAndBoundsCollisions(t *testing.T) {
+	project := t.TempDir()
+	registry := t.TempDir()
+	s, err := Open(registry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	owner, err := currentWorktreeOwnership(project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := s.db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback()
+	root := filepath.Join(registry, "worktrees")
+	if err = os.MkdirAll(root, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err = os.WriteFile(filepath.Join(root, "reserved"), []byte("unowned"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	calls := 0
+	path, err := allocateCoordinate(context.Background(), tx, registry, 123, owner, func() (string, error) {
+		calls++
+		if calls == 1 {
+			return "reserved", nil
+		}
+		return "fresh", nil
+	})
+	if err != nil || filepath.Base(path) != "fresh" || calls != 2 {
+		t.Fatalf("reserved collision: %s %d %v", path, calls, err)
+	}
+	_, err = allocateCoordinate(context.Background(), tx, registry, 124, owner, func() (string, error) { return "fresh", nil })
+	if err == nil || !strings.Contains(err.Error(), "16 collisions") {
+		t.Fatalf("unbounded collision: %v", err)
+	}
+	body, err := os.ReadFile(filepath.Join(root, "reserved"))
+	if err != nil || string(body) != "unowned" {
+		t.Fatal("reserved state overwritten")
+	}
+}
+
+func TestUnsupportedCoordinateLayoutFailsWithoutChangingState(t *testing.T) {
+	for _, missing := range []string{"table", "mapping"} {
+		t.Run(missing, func(t *testing.T) {
+			project, _, base := sharedWorktrees(t)
+			store, err := OpenProject(base, project)
+			if err != nil {
+				t.Fatal(err)
+			}
+			registry, coordinate := store.RegistryDirectory(), store.CoordinationDirectory()
+			if err = store.Close(); err != nil {
+				t.Fatal(err)
+			}
+			sentinel := filepath.Join(coordinate, "unreleased-local-state")
+			if err = os.WriteFile(sentinel, []byte("preserve"), 0600); err != nil {
+				t.Fatal(err)
+			}
+			path := filepath.Join(registry, "registry.db")
+			db, err := sql.Open("sqlite", path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			statement := "DELETE FROM worktree_coordinates"
+			if missing == "table" {
+				statement = "DROP TABLE worktree_coordinates"
+			}
+			if _, err = db.Exec(statement); err != nil {
+				t.Fatal(err)
+			}
+			if err = db.Close(); err != nil {
+				t.Fatal(err)
+			}
+			before, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, readOnly := range []bool{true, false} {
+				opened, e := openRegistry(registry, "SharedProject", project, readOnly)
+				if opened != nil {
+					if closeErr := opened.Close(); closeErr != nil {
+						t.Fatal(closeErr)
+					}
+					t.Fatal("unsupported layout accepted")
+				}
+				if e == nil || !strings.Contains(e.Error(), "unsupported capture coordinate layout") || !strings.Contains(e.Error(), "reinstall") {
+					t.Fatalf("readOnly=%t: missing recovery context: %v", readOnly, e)
+				}
+			}
+			if _, err = PreviewStateLocation(base, project); err == nil || !strings.Contains(err.Error(), "unsupported capture coordinate layout") {
+				t.Fatalf("preview manufactured an unallocated scope: %v", err)
+			}
+			after, err := os.ReadFile(path)
+			if err != nil || !bytes.Equal(before, after) {
+				t.Fatalf("unsupported database changed: %v", err)
+			}
+			body, err := os.ReadFile(sentinel)
+			if err != nil || string(body) != "preserve" {
+				t.Fatal("unsupported local state was overwritten")
+			}
+		})
 	}
 }

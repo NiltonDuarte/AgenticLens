@@ -45,7 +45,7 @@ func newInstallTransactionFixture(t *testing.T, source string) installTransactio
 		before = []byte("// previously owned plugin\n")
 		after = nil
 	}
-	m := Manifest{Protocol: ProtocolVersion, Repository: repo, StateDir: state, Source: source, SourceStore: store, ConfigPath: config, Version: "v9.8.7", Active: false}
+	m := Manifest{Protocol: ManifestProtocolVersion, Repository: repo, StateDir: state, Source: source, SourceStore: store, ConfigPath: config, Version: "v9.8.7", Active: false}
 	encoded, err := json.Marshal(m)
 	if err != nil {
 		t.Fatal(err)

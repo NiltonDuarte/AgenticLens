@@ -306,7 +306,15 @@ func TestRelocationResumesPendingCutoverAndRetainsDeletedWorktreeDiagnostics(t *
 	if err != nil {
 		t.Fatal(err)
 	}
-	blocker := filepath.Join(target, "worktrees", "1", "prior-worker.log")
+	allocated, err := OpenProject(target, project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	coord := allocated.CoordinationDirectory()
+	if err = allocated.Close(); err != nil {
+		t.Fatal(err)
+	}
+	blocker := filepath.Join(coord, "prior-worker.log")
 	if err = os.MkdirAll(blocker, 0700); err != nil {
 		t.Fatal(err)
 	}
@@ -507,7 +515,15 @@ func TestRelocationPreservesDisabledLegacyInstallationAndRefreshesOwnedAnchor(t 
 			if scenario == "manifest-written-anchor-old" {
 				// Model the durable checkpoint after data import and manifest replacement,
 				// before the project anchor changes. The original anchor is never edited.
-				targetManifest := manifestPath(filepath.Join(target, "worktrees", "1"), "codex")
+				allocated, e := OpenProject(target, project)
+				if e != nil {
+					t.Fatal(e)
+				}
+				coord := allocated.CoordinationDirectory()
+				if e = allocated.Close(); e != nil {
+					t.Fatal(e)
+				}
+				targetManifest := manifestPath(coord, "codex")
 				if err = os.MkdirAll(targetManifest, 0700); err != nil {
 					t.Fatal(err)
 				}

@@ -365,5 +365,8 @@ func automaticCaptureEnabled(project, state string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	if location.Provisional {
+		return false, nil
+	}
 	return capture.AutomaticEnabled(location.CoordinationDirectory)
 }
