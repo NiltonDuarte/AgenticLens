@@ -1063,11 +1063,8 @@ func TestCaptureNativeWorkerPublishesMultipleRootsAndRefreshesWithoutGenerate(t 
 			t.Fatalf("git: %v %s", err, out)
 		}
 	}
-	local := []byte("telemetry:\n  capture:\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 1000\n    detailed_report: true\n")
-	if err := os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), local, 0600); err != nil {
-		t.Fatal(err)
-	}
 	state := filepath.Join(f.project, ".agenticlens-capture")
+	writeCaptureSuccessfulPublicationPolicy(t, f.project, state, true)
 	receive := func(id, event string) {
 		t.Helper()
 		payload, _ := json.Marshal(capture.HookInput{SessionID: id, Event: event, TranscriptPath: filepath.Join(f.store, "sessions", id+".jsonl")})

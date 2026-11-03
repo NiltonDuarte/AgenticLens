@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { mockTicketComparisonRows } from '../test/fixtures/mockData';
 import { TicketScatterPlot } from './TicketScatterPlot';
 
@@ -28,6 +29,82 @@ describe('TicketScatterPlot', () => {
     expect(point).toHaveAttribute('aria-label', expect.stringContaining('Total Cost (USD)'));
     fireEvent.click(point);
     expect(onSelectTicket).toHaveBeenCalledWith('AL-2');
+  });
+
+  it('searches IDs and titles case-insensitively and recovers from no matches without changing the chart', async () => {
+    const user = userEvent.setup();
+    render(<TicketScatterPlot rows={mockTicketComparisonRows} />);
+    await user.click(screen.getByText(/Exclude tickets/));
+    const search = screen.getByRole('searchbox', { name: 'Search tickets' });
+    const chartBeforeSearch = screen.getByRole('img').innerHTML;
+    const clear = screen.getByRole('button', { name: 'Clear search' });
+    expect(clear).toBeDisabled();
+
+    for (const [query, expectedId] of [['aL-2', 'AL-2'], ['dAsHbOaRd', 'AL-3']] as const) {
+      await user.clear(search);
+      await user.type(search, query);
+      expect(screen.getAllByRole('checkbox')).toHaveLength(1);
+      expect(screen.getByRole('checkbox', { name: new RegExp(expectedId) })).toBeChecked();
+      expect(screen.getByText('Exclude tickets (0 excluded)')).toBeInTheDocument();
+      expect(screen.getByRole('img').innerHTML).toBe(chartBeforeSearch);
+    }
+
+    await user.clear(search);
+    await user.type(search, 'no-such-ticket');
+    expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
+    expect(screen.getByRole('status')).toHaveTextContent('No tickets match');
+    expect(search).toHaveValue('no-such-ticket');
+    expect(screen.getByRole('img').innerHTML).toBe(chartBeforeSearch);
+    await user.tab();
+    expect(clear).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(search).toHaveValue('');
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('checkbox')).toHaveLength(mockTicketComparisonRows.length);
+    expect(screen.getByRole('img').innerHTML).toBe(chartBeforeSearch);
+    expect(screen.getByText('Exclude tickets (0 excluded)')).toBeInTheDocument();
+  });
+
+  it('preserves hidden exclusions and supports keyboard toggling, restoration and point navigation while searching', async () => {
+    const user = userEvent.setup();
+    const onSelectTicket = vi.fn();
+    render(<TicketScatterPlot rows={mockTicketComparisonRows} onSelectTicket={onSelectTicket} />);
+    await user.click(screen.getByText(/Exclude tickets/));
+    await user.click(screen.getByRole('checkbox', { name: /AL-1/ }));
+    const search = screen.getByRole('searchbox', { name: 'Search tickets' });
+    const chartAfterExclusion = screen.getByRole('img').innerHTML;
+    await user.type(search, 'al-2');
+    expect(screen.queryByRole('checkbox', { name: /AL-1/ })).not.toBeInTheDocument();
+    expect(screen.getByText('Exclude tickets (1 excluded)')).toBeInTheDocument();
+    expect(screen.getByRole('img').innerHTML).toBe(chartAfterExclusion);
+    await user.tab();
+    await user.tab();
+    expect(screen.getByRole('checkbox', { name: /AL-2/ })).toHaveFocus();
+    await user.keyboard(' ');
+    expect(screen.getByRole('checkbox', { name: /AL-2/ })).not.toBeChecked();
+    expect(screen.getByText('Exclude tickets (2 excluded)')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /AL-[12]:/ })).not.toBeInTheDocument();
+
+    const point = screen.getByRole('button', { name: /AL-3:/ });
+    point.focus();
+    await user.keyboard('{Enter} ');
+    expect(onSelectTicket.mock.calls).toEqual([['AL-3'], ['AL-3']]);
+
+    await user.clear(search);
+    await user.type(search, 'al-1');
+    expect(screen.getByRole('checkbox', { name: /AL-1/ })).not.toBeChecked();
+    await user.tab();
+    await user.tab();
+    await user.keyboard(' ');
+    expect(screen.getByRole('checkbox', { name: /AL-1/ })).toBeChecked();
+    expect(screen.getByRole('button', { name: /AL-1:/ })).toBeInTheDocument();
+    expect(screen.getByText('Exclude tickets (1 excluded)')).toBeInTheDocument();
+    const chartAfterRestoration = screen.getByRole('img').innerHTML;
+    await user.click(screen.getByRole('button', { name: 'Clear search' }));
+    expect(screen.getByRole('checkbox', { name: /AL-1/ })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: /AL-2/ })).not.toBeChecked();
+    expect(screen.getByRole('img').innerHTML).toBe(chartAfterRestoration);
+    expect(screen.queryByRole('button', { name: /AL-2:/ })).not.toBeInTheDocument();
   });
 
   it('includes recorded skills and explicit missing-data copy in accessible point tooltips', () => {
