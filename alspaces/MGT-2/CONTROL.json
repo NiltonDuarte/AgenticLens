@@ -1,0 +1,124 @@
+{
+  "ticket": "MGT-2",
+  "baseline": "122e983f8c365a2aa248b1b6d492252555e922ae",
+  "authorization": "User requested supervision, guidance and eligible merges until delivery",
+  "updated": "2026-11-03",
+  "own_pr_status": "preparing",
+  "queue": [
+    {
+      "ticket": "AL-61",
+      "thread_link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/641425d3-403a-4a11-8d21-2c8bae2ca609>",
+      "thread_id": "641425d3-403a-4a11-8d21-2c8bae2ca609",
+      "branch": "AL-61/show-full-local-timestamps-in-ticket-deep-dive",
+      "head": null,
+      "base": "main",
+      "pr": null,
+      "status": "preparing",
+      "order": 2,
+      "last_instruction": {
+        "threadId": "641425d3-403a-4a11-8d21-2c8bae2ca609",
+        "link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/641425d3-403a-4a11-8d21-2c8bae2ca609>",
+        "messageId": "message:mcp:54c6beb0-3af1-47e7-a32e-216eebcecca1:thread-send:mgt-2-initial-al-61-20261103",
+        "runId": "run:thread:641425d3-403a-4a11-8d21-2c8bae2ca609:ordinal:1",
+        "status": "running",
+        "delivery": "steered"
+      },
+      "verified_checks": "Owner work in progress; final gate pending",
+      "next_action": "Await owner completion, then verify published head and integration"
+    },
+    {
+      "ticket": "AL-60",
+      "thread_link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/5dbc6729-7bc5-4bc2-84c8-1433f289f5f6>",
+      "thread_id": "5dbc6729-7bc5-4bc2-84c8-1433f289f5f6",
+      "branch": "AL-60/search-tickets-comparison-exclusion-panel",
+      "head": null,
+      "base": "main",
+      "pr": null,
+      "status": "preparing",
+      "order": 1,
+      "last_instruction": {
+        "threadId": "5dbc6729-7bc5-4bc2-84c8-1433f289f5f6",
+        "link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/5dbc6729-7bc5-4bc2-84c8-1433f289f5f6>",
+        "messageId": "message:mcp:54c6beb0-3af1-47e7-a32e-216eebcecca1:thread-send:mgt-2-initial-al-60-20261103",
+        "runId": "run:thread:5dbc6729-7bc5-4bc2-84c8-1433f289f5f6:ordinal:1",
+        "status": "running",
+        "delivery": "steered"
+      },
+      "verified_checks": "Owner work in progress; final gate pending",
+      "next_action": "Await owner completion, then verify published head and integration"
+    },
+    {
+      "ticket": "AL-62",
+      "thread_link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/24185901-0a4e-4d21-8c44-a64117fb80bc>",
+      "thread_id": "24185901-0a4e-4d21-8c44-a64117fb80bc",
+      "branch": "AL-62/fix-codex-skill-delegation-facts-granular-ownership",
+      "head": null,
+      "base": "main",
+      "pr": null,
+      "status": "preparing",
+      "order": 4,
+      "last_instruction": {
+        "threadId": "24185901-0a4e-4d21-8c44-a64117fb80bc",
+        "link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/24185901-0a4e-4d21-8c44-a64117fb80bc>",
+        "messageId": "message:mcp:54c6beb0-3af1-47e7-a32e-216eebcecca1:thread-send:mgt-2-initial-al-62-20261103",
+        "runId": "run:thread:24185901-0a4e-4d21-8c44-a64117fb80bc:ordinal:1",
+        "status": "running",
+        "delivery": "steered"
+      },
+      "verified_checks": "Owner work in progress; final gate pending",
+      "next_action": "Await owner completion, then verify published head and integration"
+    },
+    {
+      "ticket": "AL-76",
+      "thread_link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/3513d383-221d-427c-91b4-7c9ed8fd9af8>",
+      "thread_id": "3513d383-221d-427c-91b4-7c9ed8fd9af8",
+      "branch": "AL-76/compact-ledger-json-formatting-and-format-command",
+      "head": null,
+      "base": "main",
+      "pr": null,
+      "status": "preparing",
+      "order": 3,
+      "last_instruction": {
+        "threadId": "3513d383-221d-427c-91b4-7c9ed8fd9af8",
+        "link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/3513d383-221d-427c-91b4-7c9ed8fd9af8>",
+        "messageId": "message:mcp:54c6beb0-3af1-47e7-a32e-216eebcecca1:thread-send:mgt-2-initial-al-76-20261103",
+        "runId": "run:thread:3513d383-221d-427c-91b4-7c9ed8fd9af8:ordinal:1",
+        "status": "running",
+        "delivery": "steered"
+      },
+      "verified_checks": "Owner work in progress; final gate pending",
+      "next_action": "Await owner completion, then verify published head and integration"
+    },
+    {
+      "ticket": "AL-68",
+      "thread_link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/82173b76-9565-4ef0-bd8c-e24cff83c37b>",
+      "thread_id": "82173b76-9565-4ef0-bd8c-e24cff83c37b",
+      "branch": "AL-68/major-version-change",
+      "head": null,
+      "base": "main",
+      "pr": null,
+      "status": "human_only",
+      "order": null,
+      "last_instruction": {
+        "threadId": "82173b76-9565-4ef0-bd8c-e24cff83c37b",
+        "link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/82173b76-9565-4ef0-bd8c-e24cff83c37b>",
+        "messageId": "message:mcp:54c6beb0-3af1-47e7-a32e-216eebcecca1:thread-send:mgt-2-initial-al-68-20261103",
+        "runId": "run:thread:82173b76-9565-4ef0-bd8c-e24cff83c37b:ordinal:2",
+        "status": "running",
+        "delivery": "steered"
+      },
+      "verified_checks": "Owner work in progress; final gate pending",
+      "next_action": "Report release-only PR for human merge"
+    }
+  ],
+  "releases": [
+    {
+      "pr": 55,
+      "url": "https://github.com/NiltonDuarte/AgenticLens/pull/55",
+      "head": "8f67bc693cdfbaf3ca727a4d082a25b85185afdd",
+      "status": "human_only",
+      "review": "CHANGES_REQUESTED",
+      "checks": []
+    }
+  ]
+}
