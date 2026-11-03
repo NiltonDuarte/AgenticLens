@@ -63,15 +63,19 @@ class WindowsDistributionTest(unittest.TestCase):
         if not IS_WINDOWS:
             forwarded = [key for key in environment if key.startswith(('AL_PROBE_', 'AGENTIC_LENS_'))]
             environment['WSLENV'] = ':'.join(filter(None, [environment.get('WSLENV', ''), *forwarded]))
-        return subprocess.run([POWERSHELL, '-NoLogo', '-NoProfile', '-NonInteractive', '-File', win(script), *args],
-                              env=environment, input=input, text=True, encoding='utf-8', capture_output=True, timeout=20)
+        # Text-mode pipes translate LF to CRLF in native Windows Python before
+        # the wrapper receives stdin. Send exact UTF-8 bytes and decode only output.
+        result = subprocess.run([POWERSHELL, '-NoLogo', '-NoProfile', '-NonInteractive', '-File', win(script), *args],
+                                env=environment, input=input.encode('utf-8'), capture_output=True, timeout=20)
+        return subprocess.CompletedProcess(result.args, result.returncode,
+                                           result.stdout.decode('utf-8'), result.stderr.decode('utf-8'))
 
     def install(self, *extra, env=None):
         return self.call(self.scripts / 'download.ps1', ['-Project', win(self.repo), '-Dest', win(self.dest),
             '-LocalBin', win(self.probe), '-Sha256', digest(self.probe), *extra], env=env)
 
-    def launch(self, *args, env=None):
-        return self.call(self.dest / 'agentic-lens.ps1', ['--al-offline', '--al-project', win(self.repo), *args], env=env)
+    def launch(self, *args, env=None, input='payload\n'):
+        return self.call(self.dest / 'agentic-lens.ps1', ['--al-offline', '--al-project', win(self.repo), *args], env=env, input=input)
 
     def succeeds(self, result):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
@@ -162,15 +166,17 @@ class WindowsDistributionTest(unittest.TestCase):
                                      env=self.env, input='', text=True, encoding='utf-8', capture_output=True, timeout=10)
         self.assertEqual(self.succeeds(path_result).stdout.strip(), self.pin)
         arguments = ['capture', 'receive', '--ticket-title', '--repo', '--request', "quote'\"", '--store', 'literal$()', '--session-id', '', '--wrapper', 'tail\\']
-        for form in [self.pin, '"' + self.pin + '"', "'" + self.pin + "'"]:
-            self.write_config(form)
-            result = self.launch(*arguments, env=dict(self.env, AL_PROBE_EXIT='23'))
-            self.assertEqual(result.returncode, 23, result.stderr)
-            output = json.loads(result.stdout)
-            self.assertEqual(output['args'], arguments)
-            self.assertEqual(output['stdin'], 'payload\n')
-            self.assertEqual(output['version'], self.pin)
-            self.assertEqual(result.stderr, '')
+        for form, payload in [(self.pin, 'payload\n'), ('"' + self.pin + '"', 'payload ü\r\n'),
+                              ("'" + self.pin + "'", 'first ü\nsecond\r\nthird\rlast'), (self.pin, '')]:
+            with self.subTest(form=form, payload=payload):
+                self.write_config(form)
+                result = self.launch(*arguments, env=dict(self.env, AL_PROBE_EXIT='23'), input=payload)
+                self.assertEqual(result.returncode, 23, result.stderr)
+                output = json.loads(result.stdout)
+                self.assertEqual(output['args'], arguments)
+                self.assertEqual(output['stdin'], payload)
+                self.assertEqual(output['version'], self.pin)
+                self.assertEqual(result.stderr, '')
         self.write_config()
         plain = self.config.read_bytes()
         self.config.write_bytes(b'\xef\xbb\xbf' + plain)
