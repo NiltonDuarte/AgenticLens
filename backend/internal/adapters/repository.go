@@ -657,11 +657,14 @@ func SaveFactLedgerPreservingHistory(path string, ledger domain.AgenticFactLedge
 		return fmt.Errorf("failed to create directory %s: %w", parentDir, err)
 	}
 
-	data, err := json.MarshalIndent(dto, "", "  ")
+	data, err := json.Marshal(dto)
 	if err != nil {
 		return fmt.Errorf("failed to marshal fact ledger: %w", err)
 	}
-	data = append(data, '\n')
+	data, err = FormatLedgerJSON(data)
+	if err != nil {
+		return fmt.Errorf("formatting ledger: %w", err)
+	}
 
 	if err := os.WriteFile(path, data, 0644); err != nil {
 		return fmt.Errorf("failed to write fact ledger to %s: %w", path, err)
@@ -678,12 +681,15 @@ func SaveMetricsLedger(path string, ledger domain.AgenticMetricsLedger) error {
 	}
 
 	serialized := SerializeLedger(ledger)
-	data, err := json.MarshalIndent(serialized, "", "  ")
+	data, err := json.Marshal(serialized)
 
 	if err != nil {
 		return fmt.Errorf("failed to marshal metrics ledger: %w", err)
 	}
-	data = append(data, '\n')
+	data, err = FormatLedgerJSON(data)
+	if err != nil {
+		return fmt.Errorf("formatting ledger: %w", err)
+	}
 
 	if err := os.WriteFile(path, data, 0644); err != nil {
 		return fmt.Errorf("failed to write metrics ledger to %s: %w", path, err)

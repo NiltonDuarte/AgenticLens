@@ -185,7 +185,7 @@ func (r *MigrationRunner) Run(opts MigrationOptions) (*SchemaMigrationReport, er
 			report.Results = append(report.Results, res)
 			continue
 		}
-		data, err := json.MarshalIndent(dto, "", "  ")
+		data, err := json.Marshal(dto)
 		if err != nil {
 			res.Status = "error"
 			res.Error = fmt.Errorf("marshaling migrated JSON: %w", err)
@@ -193,7 +193,14 @@ func (r *MigrationRunner) Run(opts MigrationOptions) (*SchemaMigrationReport, er
 			report.Results = append(report.Results, res)
 			continue
 		}
-		data = append(data, '\n')
+		data, err = adapters.FormatLedgerJSON(data)
+		if err != nil {
+			res.Status = "error"
+			res.Error = err
+			report.Errors = append(report.Errors, err.Error())
+			report.Results = append(report.Results, res)
+			continue
+		}
 
 		tempPath := metricPath + ".tmp"
 		if err := os.WriteFile(tempPath, data, 0644); err != nil {

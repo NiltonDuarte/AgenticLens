@@ -1602,6 +1602,9 @@ func TestSaveFactLedger(t *testing.T) {
 		}
 
 		assertFactJSONFieldOrder(t, data)
+		if !bytes.Contains(data, []byte(`"tokens": {"input":`)) {
+			t.Fatalf("fact writer expanded compact token record: %s", data)
+		}
 		if err := adapters.SaveFactLedger(outPath, ledger); err != nil {
 			t.Fatal(err)
 		}

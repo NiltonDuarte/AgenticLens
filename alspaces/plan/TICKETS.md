@@ -62,7 +62,7 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 - **AL-76**: Compact ledger JSON formatting and add a selective format command
   - **Subsystem**: Ledger serialization / filesystem adapters / CLI / tests
-  - **Status**: Ready
+  - **Status**: In Progress
   - **Blocked by**: None
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL-76 compact ledger json formatting and format command.md`

@@ -504,12 +504,16 @@ func (e *BackfillEngine) processSingleWorkspace(
 	if opts.DryRun {
 		return result
 	}
-	data, err := json.MarshalIndent(dtoToSave, "", "  ")
+	data, err := json.Marshal(dtoToSave)
 	if err != nil {
 		result.Error = fmt.Errorf("marshaling updated JSON: %w", err)
 		return result
 	}
-	data = append(data, '\n')
+	data, err = adapters.FormatLedgerJSON(data)
+	if err != nil {
+		result.Error = fmt.Errorf("formatting updated ledger: %w", err)
+		return result
+	}
 
 	tempPath := metricPath + ".tmp"
 	if err := os.WriteFile(tempPath, data, 0644); err != nil {
