@@ -1,5 +1,7 @@
 # MGT-2 supervision log
 
+Confirmed backfill integration defect stays with AL-62: successful source-unavailable forced backfill preserves exact auxiliary facts but changes ledger metadata bytes, invalidating bound receipt proof. Independent tester gpt-6.1-sol/high confirmed the actual CLI reproduction; discovery credit retained. User explicitly authorized bounded producer coordination, and manager forwarded it to active owner run 6: trusted matching prior proof only for preserved facts, refreshed proof only from successful exact source-owner snapshots, stage before atomic rewrite/finalize afterward. No ledger-as-authority, generic writer hook or broader source/migration policy. Owner reports whitespace bridge/config-free/mode/all-target preflight checks pass. Invalid/unreadable-config WRITE choice remains unanswered and held; no final readiness or publication claim.
+
 AL-62 integrated main 8d494d2 at local merge 02ebcda6; UI conflict resolved with 228 focused cases passing. Requested real-whitespace/unavailable-source probe confirms the receipt compatibility defect. Bounded bridge preserves exact bytes/trusted facts under formatter ownership/preflight, stages prospective digest before rename and finalizes after; valid/absent/no-state paths continue. A genuine product choice is held: explicit format previously writes despite existing malformed/unreadable nearby config, but configured capture-store discovery is then impossible. Rejecting writes protects possible bound proof but changes accepted availability; silently skipping could break proof after config repair. User question asks fail-closed writes with check/dry-run retained versus preserving config-independent writes through another discovery design. No decision inferred. Owner told to hold only this policy branch; current #103 remote head remains old draft 1247b7e and no merge clearance exists.
 
 AL-76 delivered: https://github.com/NiltonDuarte/AgenticLens/pull/102 merged at 8d494d2e7bd3705ee400b4bdecad256470f65f73 on 2026-11-03T21:18:14Z. Fresh gate confirmed approved 6929db7/all four CI jobs successful/current base included/non-release/non-draft/no objections. Guarded squash succeeded; GitHub MERGED/mergeCommit and fetched main corroborate it. Removed obsolete #102 watch. Recomputed immutable merge-tree for #103 against this actual base: one SkillsSubagentsPanel.tsx conflict, with main.go/backfill/repository auto-merges needing semantic assessment. Existing AL-62 owner resumed in run 6 only after merge confirmation to integrate, preserve timestamp/source facts, writer ownership/lossless formatting/receipt guarantees, and complete final gates. The specific source-unavailable real-whitespace-format/receipt check is included; it remains a hypothesis to test, not a finding assumed fixed. #103 is the last product PR; after it merges, create the queued REV test-performance ticket. #55 remains human_only and #100 external review.
@@ -107,15 +109,15 @@ GitHub reports main has no branch protection (protection endpoint HTTP 404). Thi
 Telemetry: PATH has no installed wrapper and the shared installation directory is empty. Use the existing local source-built native binary with supported native options, explicit Codex source, ticket and root session. Native generate has no --al-offline/--al-project options; invoke from this checkout. Root source rollout found at ~/.codex/sessions/2026/11/03/rollout-2026-11-03T18-47-43-01a1a286-27c9-7c50-9f2e-70f0a332c763.jsonl. This manager has no native children; the five independently created T3 roots are not children. T3 MCP tool counts are a known decoder completeness limit. This is an active-session checkpoint, not complete end-of-supervision telemetry; regenerate at later delivery. Independent ticket telemetry is not part of the manager's ledger.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 52
-- **Active Agent Duration:** 1h 11m (excludes user wait time)
-- **Context Window Health:** CRITICAL — Root agent peak 445.0k tokens (223% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Software Development Life Cycle Iterations:** 54
+- **Active Agent Duration:** 1h 14m (excludes user wait time)
+- **Context Window Health:** CRITICAL — Root agent peak 451.3k tokens (226% of 200k healthy ceiling, 1 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 53,394 reasoning tokens (28.2% of generated output)
-- **Tool Health & Self-Correction:** 168 tool calls (12 self-corrections, 92.9% success rate)
+- **Reasoning Effort:** 55,948 reasoning tokens (27.4% of generated output)
+- **Tool Health & Self-Correction:** 174 tool calls (12 self-corrections, 93.1% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
@@ -129,11 +131,11 @@ Telemetry: PATH has no installed wrapper and the shared installation directory i
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 782,297 | 135,883 | 62,227,584 | 98.8% | 445.0k | CRITICAL (222%) | $0.00 |
-| **Total** | **1** | **782,297** | **135,883** | **62,227,584** | **98.8%** | **445.0k** | **CRITICAL** | **$0.00** |
+| **rootagent** | 1 | 1,289,991 | 147,977 | 64,227,328 | 98.0% | 451.3k | CRITICAL (226%) | $0.00 |
+| **Total** | **1** | **1,289,991** | **147,977** | **64,227,328** | **98.0%** | **451.3k** | **CRITICAL** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 1 | 782,297 | 135,883 | 62,227,584 | 98.8% | $0.00 |
-| **Total** | **1** | **782,297** | **135,883** | **62,227,584** | **98.8%** | **$0.00** |
+| **gpt-6.1-sol** | 1 | 1,289,991 | 147,977 | 64,227,328 | 98.0% | $0.00 |
+| **Total** | **1** | **1,289,991** | **147,977** | **64,227,328** | **98.0%** | **$0.00** |
