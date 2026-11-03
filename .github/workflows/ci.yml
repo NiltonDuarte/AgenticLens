@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   windows-entrypoint:
-    name: Native Windows Entrypoint
+    name: Windows installation and hook integration
     runs-on: windows-latest
     steps:
       - name: Check out repository
