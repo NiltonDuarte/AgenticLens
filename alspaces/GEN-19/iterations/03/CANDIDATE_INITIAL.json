@@ -1,9 +1,0 @@
-{
-  "base": "d29d8347245b357e0a64c3fee2c3bbed4276e3c9",
-  "fingerprint": "d90808b9ff798488c7d5d05a4c33edd2af49008c4788bfb4b530bfc7c38f49a6",
-  "files": {
-    ".github/workflows/release-candidate.yml": "e3b33e0563377783b9950f3627cd6137f4d6d7f8df0db1b9723a5be3a77882a0",
-    "CONTRIBUTING.md": "d15dc44bd5b79dab28a3eb19928749838a3cdc920eb7fc07350e4e01ec19e34d",
-    "scripts/tests/test_release_revision.py": "83189a108981b9a6d4d1e7e914b683504c406cc518d1f0f6f8a87407a9f76d0f"
-  }
-}

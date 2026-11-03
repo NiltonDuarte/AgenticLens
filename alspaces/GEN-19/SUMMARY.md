@@ -1,79 +1,72 @@
-# GEN-19: Release candidates reuse Release Please's next version
+# GEN-19: Release candidates reuse Release Please's version
 
-## Current iteration 03 status
+## Current delivered behavior
 
-The user explicitly requested the proposed further reduction. Captured PR metadata now remains valid when main or the PR advances; parent/provenance/history scans and repeated identity checks are removed. One exact stable-tag lookup remains before publication. Review also found a pre-existing tag identity issue, fixed with the action's captured-SHA target input and an assertion. All focus/model cells and affected behavior rechecks approve; 14 focused tests pass. Full integrated make is pending; the earlier iteration 02 evidence below is historical until final consolidation.
+RCs run after Release Please succeeds on main, or by manual dispatch. The workflow captures the pending same-repository release PR's immutable head, reads its root manifest version, validates it, and appends the existing run/commit suffix. Missing PRs skip; API, ambiguous-selection and invalid-version failures stop the job.
 
-## Request and accepted steering
+Before publication, one exact stable-tag lookup remains: HTTP 200 skips, 404 permits publication, other statuses or transport failures stop it. The RC tag is explicitly pinned to EXPECTED_SHA, matching the checked-out source and binary metadata. Existing build, artifact verification, prerelease and retention steps remain.
 
-The user reported v2.0.0-rc candidates after stable v2.0.0, although the next release was 2.1.0, and requested the next GEN ticket. GEN-19 was free across workspaces, index, remote workspace tree and branch search. Initial working tree was clean at 036d808. Branch: chore/GEN-19-rc-target-version; configured root: alspaces; conventional type: chore. The generated initial GEN-13 branch name was not used as ticket allocation evidence.
+The user's explicit "make it simplier" instruction approved the immediately preceding proposal. It supersedes iteration 02's generated-parent assumption, repeated latest-main/PR checks and historical release scans. Later main or PR updates no longer invalidate a captured candidate. These are intentional accepted guarantees, not unresolved review findings. No standalone calculator or extra package dependency remains. CONTRACT.md records each accepted supersession; [iteration 03 plan](iterations/03/PLAN.md) records this delta.
 
-Iteration 01 implemented a second read-only Release Please calculation. The user then asked to reuse the already calculated version in the open release PR and explicitly approved the simpler approach on 2026-11-03. CONTRACT.md records that accepted supersession; [iteration 02 plan](iterations/02/PLAN.md) records changed authority/trigger, preserved guarantees and verification impact. The current implementation below supersedes the independent engine; iteration 01 approval and evidence do not certify the replacement.
+## Baseline and integration
 
-## Delivered behavior
+GEN-19 was allocated after checking the configured alspaces root, ticket index, remote workspace tree and branch names. Initial working tree was clean at 036d808. Branch chore/GEN-19-rc-target-version and type chore persist across all steering. Iteration03 began clean at d29d834; its implementation commit is a9d220e.
 
-Automatic RC builds now follow successful Release Please runs on main. Both jobs check out the upstream run's head SHA, rather than workflow_run's default-branch GITHUB_SHA; manual dispatch remains available with main-commit eligibility checks. Source detection reads the actual checked-out commit message.
+Reviewed integration/tested revision: c787a9669abc64014b87696b39af7bee82ad9630. Main advanced during delivery; origin/main was merged without conflicts. RC workflow, release tests, stable workflow, release configuration and manifest were unchanged by integration. CONTRIBUTING merged unrelated installed-entrypoint guidance. Shared source build/asset/capture tooling changed upstream, but release metadata variables and release-build/package/verify consumers stayed compatible. Required integrated make exercised the updated code; no ticket-owned feature changes were added to those upstream modules.
 
-The RC workflow discovers the same-repository pending generated release PR, verifies its one-parent source commit, reads the root version from the manifest at its immutable head, and appends the existing run/SHA suffix. Missing/stale PRs and superseded source commits skip explicitly; API errors, ambiguous/invalid data and already stable targets fail before publication. Main/PR/stable eligibility is checked again before publish/prune.
+## Verification and review
 
-The standalone resolver, pinned engine, lockfile and engine tests are removed. The final diff against origin/main adds no scripts/release directory or Makefile dependency changes. Existing gh, Bash, Git and runner tools perform selection; release version calculation remains entirely with Release Please. CONTRIBUTING.md describes sequencing and local fixture-test prerequisites. No Go domain/adapters, schemas, frontend behavior, stable publishing or historical releases changed.
+- Full make passed after integration: Go vet and race suite, frontend type/lint checks, 36 frontend files / 784 tests, 14 release tests, 10 installation tests, 15 capture-distribution tests, frontend embedding and five-platform native builds. Valid cached results for unchanged packages are retained; no conditional stage was silently skipped.
+- The 14 release tests preserve six stable revision tests. Actual workflow shell checks immutable manifest version/output, no-PR/API/ambiguity/malformed failures and publication wiring. Actual gh/gojq evaluates raw local JSON; actual curl hits local HTTP fixtures and validates exact tag URL, 200/404/403/500 and transport behavior. Wrong-version, allow-existing-tag and wrong-URL mutations fail. Removed assertions correspond only to explicitly retired guarantees; exact-tag coverage replaces historical-release checks.
+- Coder gpt-6.1-sol/high performed live read-only complete metadata and exact-tag probes, producing v2.1.0-rc.114+d29d834 and eligibility=true for missing stable v2.1.0. No release command was invoked. Parent standalone host native version --json identifies the integrated commit, and web/dist matches backend/internal/adapters/web/dist exactly. Development binaries use git describe; RC builds receive validated VERSION explicitly.
+- Final consolidated verdict APPROVED after integrated make. All four responsibilities (behavior/integration, data/failure, architecture/maintenance, test effectiveness) ran under gpt-6.1-sol/high and gpt-6-luna/medium. Exact profiles were verified in Codex source records. Both behavior profiles rechecked the publication binding fix; unchanged data/failure evidence carried forward on its unchanged query/guard boundary. Other discovery cells reviewed the corrected source. All cells approved, with no unresolved finding.
 
-Coder gpt-6.1-sol/high implemented the workflow/removal; tester gpt-6.1-sol/high owned executable release tests and corrections. Parent owns integration, evidence, telemetry and PR delivery.
+[Iteration03 compact finding](iterations/03/REVIEW_SUMMARY.json): REL-02 severity 5 was discovered by behavior/integration reviewer gpt-6.1-sol/high. Existing omission of target_commitish could make GitHub create a tag at newer default-branch HEAD while the binaries retain captured SHA. Parent gpt-6.1-sol/high added the action's built-in EXPECTED_SHA target and one assertion. Behavior reviewers gpt-6.1-sol/high and gpt-6-luna/medium verified the fix; test reviewer gpt-6.1-sol/high confirmed a target_commitish=main mutation fails. Discovery is distinct from verification. The [action input](https://github.com/softprops/action-gh-release/blob/v2/action.yml) and [GitHub release API](https://docs.github.com/en/rest/releases/releases#create-a-release) support the binding. The [reference API](https://docs.github.com/en/rest/git/refs#get-a-reference) provides exact tag lookup rather than prefix matching.
 
-## Verification
+Detailed working reviews and records were compacted after retaining every finding, reporting tuple, disposition, verification actor and reviewed revision. Upstream guidance now prefers private scratch evidence; no detailed reports or persistent content-hash bookkeeping remain in the delivered tree.
 
-Reviewed/tested implementation revision: 6fb6318c34fc5847375863cddf99a755b03c3960. Final source/deletion fingerprint: 2f9057a71a4cbbb703600b4268758894363152ead629189a08c54925d3da3ab0. Frozen production/test hashes remained unchanged through integration. Fetch/merge origin/main reported already up to date.
+## Earlier iterations
 
-- Parent full make passed after integration: Go vet/race tests (valid cached results retained for unchanged packages), frontend type/lint checks, 35 frontend files / 783 tests, 14 Python release tests, 12 installation tests, frontend embedding and standalone builds. No conditional stage was silently skipped.
-- Tester and final test reviewers independently ran make test-release-workflow:14passed, zero skips. Six stable tests are preserved. RC tests execute actual shell on disposable Git/API fixtures and assert successful environment/output handoff, immutable manifest refs, source parent, explicit skips/errors, stable rejection, event/checkout wiring and final publication gates.
-- Actual captured production gh/gojq filters execute against raw local API JSON using installed gh and a local HTTP fixture, without GitHub login. Disposable wrong-version, wrong PR filter, wrong manifest root, missing pagination and metadata-only filter mutations fail. Deleted engine calculations map to manifest-target consumption; version calculation policy belongs to the existing Release Please workflow.
-- Behavior/data/architecture reviewers gpt-6.1-sol/high independently ran read-only production shell against real GitHub APIs in disposable checkouts of main/036d808. PR #55 at head 1300741296d069b1282d89a6192219bf13fbb4f9 had sole parent 036d808 and manifest version 2.1.0. Complete metadata and eligibility steps returned should_publish=true; VERSION was v2.1.0-rc.114+036d808 for run 114, with correct commit/date/PR fields. No publish/prune command was invoked. Data reviewer also verified API-route failure probes block publication.
-- Parent git diff --check passed, standalone version --json ran, and web/dist exactly matched backend/internal/adapters/web/dist. Generated assets remain ignored. The development make build uses git describe by design; RC builds receive the explicit validated VERSION from workflow metadata.
+Iteration 01 used an independent engine. Iteration 02 removed it after the user's explicit approval and consumed the existing release PR. Their code is superseded by accepted iteration 03 behavior; their evidence does not automatically certify its relaxed guards.
 
-## Review, fixes and attribution
+[Iteration 01 findings](iterations/01/REVIEW_SUMMARY.json): REL-01 severity 2 was shared discovery by behavior and architecture reviewers gpt-6.1-sol/high; coder gpt-6.1-sol/high resolved the dependency support discrepancy by removing the engine. TEST-01 severity 3 was discovery by test reviewer gpt-6.1-sol/high; tester gpt-6.1-sol/high resolved successful-output coverage with executable metadata/mutation assertions.
 
-Final consolidated verdict: APPROVED after required integrated make. Initial discovery covered behavior/integration, data/failure, architecture/maintenance and test effectiveness under both gpt-6.1-sol/high and gpt-6-luna/medium. All requested identities were verified in Codex turn_context records. Initial test-effectiveness Luna requested changes; the other seven initial cells approved, including one nonblocking Sol test observation. Paired test rechecks verified corrections; Sol recheck found one additional nonblocking oracle issue, which was also fixed and verified by a final pair. Production-focused approvals carry forward on unchanged workflow/deletion/Makefile hashes; corrections affected tests and two contributor prerequisite/target lines only. No blockers or unresolved findings remain.
+[Iteration 02 findings](iterations/02/REVIEW_SUMMARY.json): TEST-02 severity 4 was discovery by test reviewer gpt-6-luna/medium (real-filter oracle bypass); TEST-03 severity 3 by test reviewer gpt-6.1-sol/high (omitted pagination undetected); TEST-04 severity 3 by test reviewer gpt-6.1-sol/high during re-review (earlier query overwritten). Tester gpt-6.1-sol/high fixed them, with both test profiles verifying. Current tests retain meaningful output/filter coverage; historical stable-pagination requirements and their tests are explicitly retired by iteration 03. No accepted debt remains from those findings.
 
-[Iteration 02 compact findings](iterations/02/REVIEW_SUMMARY.json) retains every candidate and discovering tuple:
+## Limits and delivery
 
-- TEST-02 severity 4: test-effectiveness reviewer gpt-6-luna/medium discovered that canned post-filter API values bypassed the real response-filter oracle. Tester gpt-6.1-sol/high fixed this with actual captured gh/gojq evaluation over raw local JSON.
-- TEST-03 severity 3: test-effectiveness reviewer gpt-6.1-sol/high discovered that omitted stable pagination survived tests. Tester gpt-6.1-sol/high added required-pagination argument coverage; the mutation now fails.
-- TEST-04 severity 3: test-effectiveness reviewer gpt-6.1-sol/high discovered during re-review that route-keyed collection overwrote an earlier metadata query. Tester gpt-6.1-sol/high retained/evaluated every distinct query; a metadata-only mutation now fails.
+Hosted workflow scheduling, tag creation, upload/download and retention deletion were not exercised. A final tag read and release creation are not atomic. Release packaging was not rerun; an earlier Windows ZIP probe lacked zip and is not claimed successful. Current Linux make does not establish native Windows runner behavior. No releases were published/renamed/deleted and the stable release PR was not merged.
 
-Verification is separate from discovery: final test reviewers gpt-6.1-sol/high and gpt-6-luna/medium approved all three corrections and 14/14 tests. Other responsibilities/profiles found no additional defects. Parent validated revision continuity, integrated checks and final disposition. Completed detailed working reports/run records were compacted only after all findings and reporter tuples were retained.
+No matching GEN-19 plan specification/index entry exists, so no lifecycle move or downstream promotion is needed. Parent owns commits, integration, push and PR #98 update. Source ownership for workflow/guidance and main tests remained coder/tester gpt-6.1-sol/high; parent made the single small integration correction above.
 
-[Iteration 01 compact findings](iterations/01/REVIEW_SUMMARY.json) remains historical evidence: REL-01 severity 2 was shared discovery by behavior and architecture reviewers gpt-6.1-sol/high; its Node-support discrepancy is resolved by removing the independent dependency tree. TEST-01 severity 3 was discovery by test reviewer gpt-6.1-sol/high; its successful-output oracle gap is resolved by the replacement shell success/mutation assertions. Coder/tester gpt-6.1-sol/high implemented those resolutions; current test reviewers verified the replacement. No accepted debt from that mechanism remains.
+Telemetry is refreshed only at the final step using explicit Codex source and chore type. Previous 24 session IDs must be preserved; current source tree contains 34 sessions. The installed shared agentic-lens command is unavailable on PATH, so the freshly built current host native is used directly, as supported for source-development execution; its generate help confirms the manual flags. No shared release cache or pin is changed. Raw transcripts/probe logs stay outside Git; final ledger validation follows extraction.
 
-## Remaining limits and delivery
-
-Local shell/filter evidence does not establish hosted workflow_run scheduling, action checkout execution, artifact upload/download or retention deletion. A required-pagination flag oracle is not a hosted Link-header pagination test. Release packaging was not exercised in iteration 02; the iteration 01 Windows ZIP probe was blocked by unavailable zip and is not claimed successful. GitHub reads and publication are separate operations; final checks are best effort, not an atomic transaction.
-
-No releases were published, renamed, retagged or deleted, and the stable release PR was not merged. No GEN-19 planning specification/index entry exists, so no lifecycle move or downstream promotion is required. PR #98 is updated with the replacement; future eligible RCs use the PR's version after merge. Raw transcripts and probe/build logs remain outside Git.
-
-Telemetry is refreshed only at the final iteration step with source codex and ticket type chore. Previous twelve Codex sessions must be preserved; the complete source tree now contains 24 sessions (root, planner/coder/tester and 20 review sessions across both iterations). Existing ledger has no other-harness sessions. Final ledger validation follows extraction.
+Telemetry recovery: the first current-native generation correctly refused legacy ledger owners without capture provenance. Exact source metadata verified all 34 sessions belong to this physical project. Supported capture request/bind commands established those source-verified GEN-19 associations using native challenge tokens, without printing tokens, installing hooks, deleting facts or bypassing authorization. A final fresh-nonce extraction follows this recovery.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 6
-- **Active Agent Duration:** 1h 24m (excludes user wait time)
-- **Context Window Health:** BLOATED — Root agent peak 206.9k tokens (103% of 200k healthy ceiling, 0 compactions) | Subagents peak 132.5k (Tester)
+- **Software Development Life Cycle Iterations:** 8
+- **Active Agent Duration:** 2h 14m (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 316.7k tokens (158% of 200k healthy ceiling, 0 compactions) | Subagents peak 153.5k (Tester)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
-- **Subagent Turn Velocity & Thrashing:** 1.2 avg turns/run (peak: 4 turns) | Planner 2.0, Coder 2.0, Tester 4.0, Reviewer-architecture 1.0, Reviewer-behavior 1.0, Reviewer-data 1.0, Reviewer-tests 1.0
+- **Subagent Turn Velocity & Thrashing:** 1.2 avg turns/run (peak: 5 turns) | Planner 3.0, Coder 3.0, Tester 5.0, Reviewer-architecture 1.0, Reviewer-behavior 1.0, Reviewer-data 1.0, Reviewer-tests 1.0
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 75,229 reasoning tokens (27.8% of generated output)
-- **Tool Health & Self-Correction:** 447 tool calls (19 self-corrections, 95.7% success rate)
+- **Reasoning Effort:** 117,977 reasoning tokens (29.8% of generated output)
+- **Tool Health & Self-Correction:** 591 tool calls (27 self-corrections, 95.4% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 9 execution anomalies detected (6 CRITICAL, 3 WARNING).
+- **Status:** 11 execution anomalies detected (7 CRITICAL, 4 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.9k tokens) — Context tokens reached 200.9k, breaching the 200k critical ceiling.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (15 cycles) — Subagent roles 'coder' and 'tester' alternated for 15 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-behavior <-> reviewer-data (10 cycles) — Subagent roles 'reviewer-behavior' and 'reviewer-data' alternated for 10 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-architecture <-> reviewer-tests (7 cycles) — Subagent roles 'reviewer-architecture' and 'reviewer-tests' alternated for 7 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (6 cycles) — Subagent roles 'coder' and 'tester' alternated for 6 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-behavior <-> reviewer-data (6 cycles) — Subagent roles 'reviewer-behavior' and 'reviewer-data' alternated for 6 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-behavior <-> reviewer-tests (7 cycles) — Subagent roles 'reviewer-behavior' and 'reviewer-tests' alternated for 7 consecutive cycles.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+60.3k tokens) — Context tokens surged by 60.3k to 60.3k tokens.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.2k tokens) — Context tokens reached 160.2k, breaching the 160k warning ceiling.
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-architecture <-> reviewer-tests (4 cycles) — Subagent roles 'reviewer-architecture' and 'reviewer-tests' alternated for 4 consecutive cycles.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-behavior <-> reviewer-data (4 cycles) — Subagent roles 'reviewer-behavior' and 'reviewer-data' alternated for 4 consecutive cycles.
 
 ### Agentic Execution Metrics
 
@@ -82,23 +75,40 @@ Telemetry is refreshed only at the final iteration step with source codex and ti
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **planner** | 1 | 149,464 | 5,448 | 872,576 | 85.4% | 81.8k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **coder** | 1 | 88,700 | 15,324 | 4,328,832 | 98.0% | 117.2k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **tester** | 1 | 67,285 | 24,334 | 5,796,992 | 98.9% | 132.5k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Unknown** | 1 | 160,627 | 83,699 | 21,167,232 | 99.2% | 206.9k | BLOATED (103%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **reviewer-architecture** | 4 | 248,639 | 12,082 | 1,272,064 | 83.6% | 69.2k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
-| **reviewer-behavior** | 4 | 198,093 | 15,412 | 1,652,480 | 89.3% | 67.6k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
-| **reviewer-data** | 4 | 173,280 | 13,984 | 1,452,160 | 89.3% | 63.1k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
-| **reviewer-tests** | 8 | 336,573 | 24,724 | 2,672,640 | 88.8% | 60.3k | HEALTHY | Unavailable (0 observed, 0 partial, 8 unavailable / 8 invocations) |
-| **Total** | **24** | **1,422,661** | **195,007** | **39,214,976** | **96.5%** | **206.9k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 24 unavailable / 24 invocations)** |
+| **planner** | 1 | 150,115 | 6,023 | 1,037,056 | 87.4% | 82.8k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **coder** | 1 | 96,309 | 18,254 | 5,313,280 | 98.2% | 126.5k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **tester** | 1 | 84,531 | 30,094 | 7,246,208 | 98.8% | 153.5k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Unknown** | 1 | 670,235 | 137,931 | 39,180,800 | 98.3% | 316.7k | BLOATED (158%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **reviewer-architecture** | 6 | 317,122 | 15,482 | 1,709,824 | 84.4% | 69.2k | HEALTHY | Unavailable (0 observed, 0 partial, 6 unavailable / 6 invocations) |
+| **reviewer-behavior** | 8 | 384,868 | 23,588 | 2,905,088 | 88.3% | 71.7k | HEALTHY | Unavailable (0 observed, 0 partial, 8 unavailable / 8 invocations) |
+| **reviewer-data** | 6 | 225,865 | 17,304 | 1,794,816 | 88.8% | 63.1k | HEALTHY | Unavailable (0 observed, 0 partial, 6 unavailable / 6 invocations) |
+| **reviewer-tests** | 10 | 406,341 | 28,905 | 3,198,848 | 88.7% | 60.3k | HEALTHY | Unavailable (0 observed, 0 partial, 10 unavailable / 10 invocations) |
+| **Total** | **34** | **2,335,386** | **277,581** | **62,385,920** | **96.4%** | **316.7k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 34 unavailable / 34 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-luna** | 10 | 481,818 | 23,978 | 2,185,856 | 81.9% | Unavailable (0 observed, 0 partial, 10 unavailable / 10 invocations) |
-| **gpt-6.1-sol** | 14 | 940,843 | 171,029 | 37,029,120 | 97.5% | Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations) |
-| **Total** | **24** | **1,422,661** | **195,007** | **39,214,976** | **96.5%** | **Unavailable (0 observed, 0 partial, 24 unavailable / 24 invocations)** |
+| **gpt-6-luna** | 15 | 659,710 | 32,195 | 3,131,264 | 82.6% | Unavailable (0 observed, 0 partial, 15 unavailable / 15 invocations) |
+| **gpt-6.1-sol** | 19 | 1,675,676 | 245,386 | 59,254,656 | 97.2% | Unavailable (0 observed, 0 partial, 19 unavailable / 19 invocations) |
+| **Total** | **34** | **2,335,386** | **277,581** | **62,385,920** | **96.4%** | **Unavailable (0 observed, 0 partial, 34 unavailable / 34 invocations)** |
 
-Final telemetry validation: exactly 24 source-verified Codex sessions extracted: root 01a1a138-f579-7481-80b2-39db0205af01 plus 23 expected children. All twelve prior session IDs are preserved; all ledger/source IDs match exactly and source is codex throughout. No extraction errors were reported. No other-harness facts existed to preserve. Ticket type is chore. Raw transcripts remain outside Git.
+Capture observation finalized: 2026-11-03T17:08:09.423237482Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 34; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 34; reserved bytes: 24330580. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
+Owner codex/01a1a251-a16b-7630-8071-f5c22cc48f29: current; last successful source read 2026-11-03T17:08:08.848899105Z; accepted source checkpoint 2026-11-03T16:51:16.477Z.
+Owner codex/01a1a1bc-e5cd-7c62-80b0-51635e7c67e1: current; last successful source read 2026-11-03T17:08:08.862635847Z; accepted source checkpoint 2026-11-03T14:08:46.278Z.
+Owner codex/01a1a1ca-dabc-72b0-82c0-6663c485bb90: current; last successful source read 2026-11-03T17:08:08.874577686Z; accepted source checkpoint 2026-11-03T14:23:55.606Z.
+Owner codex/01a1a1bd-f847-7661-9dfa-80701e61365a: current; last successful source read 2026-11-03T17:08:08.887008565Z; accepted source checkpoint 2026-11-03T14:09:43.748Z.
+Owner codex/01a1a24d-b56f-7fd2-a56a-ddb618ec4f3d: current; last successful source read 2026-11-03T17:08:08.904684039Z; accepted source checkpoint 2026-11-03T16:47:38.524Z.
+Owner codex/01a1a13c-ef28-7633-b940-b47542ad139e: current; last successful source read 2026-11-03T17:08:08.936971896Z; accepted source checkpoint 2026-11-03T16:43:41.958Z.
+Owner codex/01a1a1bf-64e6-7852-adc1-6fb9caf3f701: current; last successful source read 2026-11-03T17:08:08.95217366Z; accepted source checkpoint 2026-11-03T14:11:15.107Z.
+Owner codex/01a1a144-0a54-7973-bad8-f10a9a0d6dcc: current; last successful source read 2026-11-03T17:08:08.970704834Z; accepted source checkpoint 2026-11-03T11:58:04.378Z.
+Owner codex/01a1a138-f579-7481-80b2-39db0205af01: current; last successful source read 2026-11-03T17:08:09.053952946Z; accepted source checkpoint 2026-11-03T17:08:08.855Z.
+Owner codex/01a1a1bf-89cd-75f0-b26c-6f49abd60cc4: current; last successful source read 2026-11-03T17:08:09.071713679Z; accepted source checkpoint 2026-11-03T14:12:52.538Z.
+Owner codex/01a1a142-58bc-7e80-bce8-5a4f4d43624b: current; last successful source read 2026-11-03T17:08:09.083802627Z; accepted source checkpoint 2026-11-03T11:54:45.777Z.
+Owner codex/01a1a1c6-8f97-7e60-948e-8282f19a1435: current; last successful source read 2026-11-03T17:08:09.097614548Z; accepted source checkpoint 2026-11-03T14:19:16.98Z.
+Owner codex/01a1a252-67fc-7ff1-b0f5-e8257f0e1611: current; last successful source read 2026-11-03T17:08:09.111563045Z; accepted source checkpoint 2026-11-03T16:52:23.804Z.
+Owner codex/01a1a1bc-fd71-7600-93a8-9f170ad45874: current; last successful source read 2026-11-03T17:08:09.123370454Z; accepted source checkpoint 2026-11-03T14:10:14.033Z.
+Owner codex/01a1a143-2cb5-7b43-9fed-c40661119149: current; last successful source read 2026-11-03T17:08:09.134498409Z; accepted source checkpoint 2026-11-03T11:55:37.601Z.
+Owner codex/01a1a145-7c41-7961-bea4-deb640ee8225: current; last successful source read 2026-11-03T17:08:09.14927247Z; accepted source checkpoint 2026-11-03T12:00:42.321Z.
+Additional owner freshness details remain in local capture diagnostics.
 
-Telemetry interpretation: cost evidence is unavailable. Configured production/test roots exclude CI tooling, so zero rendered code-line counts do not mean no implementation was delivered. Raw anomaly flags are retained; interleaved role activity and legitimate correction/re-review rounds do not establish the analyzer's reported number of product rework cycles. Telemetry analyzer behavior is outside this ticket.
+Final telemetry validation: all 34 expected Codex session IDs exactly match source metadata, including root 01a1a138-f579-7481-80b2-39db0205af01 and 33 children. All 24 previous IDs are retained; no other-harness sessions existed to preserve. The post-recovery extraction completed without source errors, ticket type chore. Cost evidence remains unavailable. Configured code roots exclude this CI tooling, so rendered zero code-line counts are not a no-change claim. Raw anomaly flags remain visible; they do not establish the reported number of actual product rework cycles. Raw transcripts remain outside Git.
