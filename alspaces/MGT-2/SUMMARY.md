@@ -1,5 +1,7 @@
 # MGT-2 supervision log
 
+AL-76 local approval checkpoint: clean committed head 02dcb11c2a757074a9cd0826692b11ecc3fa4817, documentation-only successor to reviewed product c32c8937d8897179a6772c6aa75300eafe94351f and final tests 0dedb33110bafe2fc290ec99b86d3635b07c81b5. Behavior/data/architecture reviewers (gpt-6.1-sol, high) independently discovered the severity 8 stale overwrite; owner reports canonical writer-ownership fix with approved affected re-reviews. All four focus reviews under gpt-6.1-sol/high and gpt-6-luna/medium approved, including corrected test oracles. Focused race tests, source binary and disposable CLI dry/check/write/idempotence/lexeme checks pass. Integration/full make remain deliberately unstarted, so delivery is still INCOMPLETE. No PR/push; owner telemetry deferred. Manager must notify the existing owner after actual AL-60 then AL-61 merges. Earlier descriptions of AL-76's open local findings below are historical; the integration gate remains open.
+
 Active iteration 02: user explicitly approved AL-60 shared capture repair. The read-only hold below is superseded. Existing AL-60 owner resumed with the minimal repair boundary and new review/full-verification requirement; other owners retain their scopes and wait for actual predecessor merge notifications. No product PR or merge yet. AL-60 remote checkpoint confirmed at 7b00cc1; reviewed search remains 7a50a5e. See iterations/02/PLAN.md for approval source, changed acceptance, preserved guarantees and verification impact.
 
 AL-62 status correction: owner refuted the previously suspected unchanged-timestamp growth defect as a test-fixture error. Source freshness protection remains intact. Current review hypotheses are unresolved and must not be reported as confirmed defects. AL-76's writer synchronization correction passes focused race checks, with coverage corrections and final review still pending.
@@ -35,15 +37,15 @@ GitHub reports main has no branch protection (protection endpoint HTTP 404). Thi
 Telemetry: PATH has no installed wrapper and the shared installation directory is empty. Use the existing local source-built native binary with supported native options, explicit Codex source, ticket and root session. Native generate has no --al-offline/--al-project options; invoke from this checkout. Root source rollout found at ~/.codex/sessions/2026/11/03/rollout-2026-11-03T18-47-43-01a1a286-27c9-7c50-9f2e-70f0a332c763.jsonl. This manager has no native children; the five independently created T3 roots are not children. T3 MCP tool counts are a known decoder completeness limit. This is an active-session checkpoint, not complete end-of-supervision telemetry; regenerate at later delivery. Independent ticket telemetry is not part of the manager's ledger.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 10
-- **Active Agent Duration:** 14m 19s (excludes user wait time)
-- **Context Window Health:** ELEVATED — Root agent peak 139.9k tokens (70% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Software Development Life Cycle Iterations:** 11
+- **Active Agent Duration:** 16m 35s (excludes user wait time)
+- **Context Window Health:** ELEVATED — Root agent peak 146.9k tokens (74% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 4,629 reasoning tokens (16.7% of generated output)
-- **Tool Health & Self-Correction:** 45 tool calls (5 self-corrections, 88.9% success rate)
+- **Reasoning Effort:** 4,944 reasoning tokens (16.4% of generated output)
+- **Tool Health & Self-Correction:** 49 tool calls (6 self-corrections, 87.8% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** No execution anomalies detected (clean session).
@@ -55,11 +57,11 @@ Telemetry: PATH has no installed wrapper and the shared installation directory i
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 128,946 | 23,013 | 5,803,776 | 97.8% | 139.9k | ELEVATED | $0.00 |
-| **Total** | **1** | **128,946** | **23,013** | **5,803,776** | **97.8%** | **139.9k** | **ELEVATED** | **$0.00** |
+| **rootagent** | 1 | 135,257 | 25,220 | 6,652,800 | 98.0% | 146.9k | ELEVATED | $0.00 |
+| **Total** | **1** | **135,257** | **25,220** | **6,652,800** | **98.0%** | **146.9k** | **ELEVATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 1 | 128,946 | 23,013 | 5,803,776 | 97.8% | $0.00 |
-| **Total** | **1** | **128,946** | **23,013** | **5,803,776** | **97.8%** | **$0.00** |
+| **gpt-6.1-sol** | 1 | 135,257 | 25,220 | 6,652,800 | 98.0% | $0.00 |
+| **Total** | **1** | **135,257** | **25,220** | **6,652,800** | **98.0%** | **$0.00** |

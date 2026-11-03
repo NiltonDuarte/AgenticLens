@@ -95,8 +95,8 @@
       "ticket": "AL-76",
       "thread_link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/3513d383-221d-427c-91b4-7c9ed8fd9af8>",
       "thread_id": "3513d383-221d-427c-91b4-7c9ed8fd9af8",
-      "branch": "AL-76/compact-ledger-json-formatting-and-format-command",
-      "head": "f9d6752f31912eb289046615361715894960f8c4",
+      "branch": "feat/AL-76-compact-ledger-format",
+      "head": "02dcb11c2a757074a9cd0826692b11ecc3fa4817",
       "base": "main",
       "pr": null,
       "status": "blocked",
@@ -110,12 +110,30 @@
         "status": "running",
         "delivery": "steered"
       },
-      "verified_checks": "Focused race tests pass; review remains open. Behavior/data/architecture Sol high independently confirm severity8 stale overwrite; deterministic migration probe confirms schema downgrade. Isolated installer rerun passed; full make deferred.",
-      "next_action": "Owner repairs shared writer synchronization with deterministic regression and re-review; full gate remains queued",
+      "verified_checks": "Owner reports all four focuses x Sol/high and Luna/medium complete/approved, affected Sol re-reviews approved; focused race suites, source binary and disposable CLI dry/check/write/idempotence/lexeme probes pass. Full integrated make not started by coordination deferral.",
+      "next_action": "Notify owner after verified predecessor merges for one integration pass preserving ticket index; no PR/push yet; telemetry deferred",
       "notification_request": "mgt2-handoff-notification-76",
       "blockers": [
-        "Confirmed formatter/migration/backfill stale-write data-loss race under correction",
-        "Remaining focus/profile reviews pending"
+        "Actual AL-60 repair merge and AL-61 merge pending",
+        "Integration and full make not started"
+      ],
+      "reviewed_application_head": "c32c8937d8897179a6772c6aa75300eafe94351f",
+      "reviewed_test_head": "0dedb33110bafe2fc290ec99b86d3635b07c81b5",
+      "local_findings": [
+        {
+          "severity": 8,
+          "issue": "Formatter/manual-writer stale overwrite",
+          "reporters": [
+            "behavior gpt-6.1-sol/high",
+            "data gpt-6.1-sol/high",
+            "architecture gpt-6.1-sol/high"
+          ],
+          "disposition": "Owner reports fixed by canonical publication ownership in migration/backfill/computed export; affected reviews approve"
+        },
+        {
+          "issue": "Two missing test oracles",
+          "disposition": "Owner reports corrected and test-effectiveness reviews approve"
+        }
       ]
     },
     {
