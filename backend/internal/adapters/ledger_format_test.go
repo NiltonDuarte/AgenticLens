@@ -285,3 +285,85 @@ func TestFormatLedgerFilesHardLinkRefusalPreservesBothTargets(t *testing.T) {
 		}
 	}
 }
+
+func TestFormatLedgerFilesReportsPartialLatePublicationFailure(t *testing.T) {
+	root := t.TempDir()
+	paths := []string{
+		putFormatLedger(t, root, "A", formatFixture),
+		putFormatLedger(t, root, "B", formatFixture),
+		putFormatLedger(t, root, "C", formatFixture),
+	}
+	owner, err := capture.AcquirePublication(context.Background(), paths[2])
+	if err != nil {
+		t.Fatal(err)
+	}
+	locked := true
+	defer func() {
+		if locked {
+			if err := owner.Close(); err != nil {
+				t.Error(err)
+			}
+		}
+	}()
+	deadline, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	ctx := &waitingFormatContext{Context: deadline, waiting: make(chan struct{})}
+	type outcome struct {
+		results []LedgerFormatResult
+		err     error
+	}
+	finished := make(chan outcome, 1)
+	go func() {
+		results, err := FormatLedgerFiles(ctx, LedgerFormatOptions{Workspaces: root, All: true})
+		finished <- outcome{results, err}
+	}()
+	select {
+	case <-ctx.waiting: // Sorted ownership proves A/B already passed their preflight.
+	case result := <-finished:
+		t.Fatalf("formatter bypassed held C ownership: %+v", result)
+	case <-deadline.Done():
+		t.Fatal("formatter did not reach C ownership")
+	}
+	preserved := filepath.Join(t.TempDir(), "preserved-B")
+	if err := os.Rename(filepath.Dir(paths[1]), preserved); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Dir(paths[1]), []byte("staging blocked by regular file"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := owner.Close(); err != nil {
+		t.Fatal(err)
+	}
+	locked = false
+	var actual outcome
+	select {
+	case actual = <-finished:
+	case <-deadline.Done():
+		t.Fatal("formatter did not finish after C ownership released")
+	}
+	if actual.err == nil || !strings.Contains(actual.err.Error(), paths[1]) || len(actual.results) != 3 {
+		t.Fatalf("missing late publication failure: %+v %v", actual.results, actual.err)
+	}
+	for i, result := range actual.results {
+		if result.Path != paths[i] || !result.Changed {
+			t.Fatalf("nondeterministic result %d: %+v", i, result)
+		}
+		if i == 1 {
+			if result.Error == nil || result.Written {
+				t.Fatalf("failed B reported as written: %+v", result)
+			}
+			continue
+		}
+		if result.Error != nil || !result.Written {
+			t.Fatalf("successful sibling %d lost: %+v", i, result)
+		}
+		body, err := os.ReadFile(result.Path)
+		if err != nil || string(body) == formatFixture || !json.Valid(body) {
+			t.Fatalf("sibling %d not published: %s %v", i, body, err)
+		}
+	}
+	body, err := os.ReadFile(filepath.Join(preserved, "agentic_metrics.json"))
+	if err != nil || string(body) != formatFixture {
+		t.Fatalf("failed B original damaged: %s %v", body, err)
+	}
+}

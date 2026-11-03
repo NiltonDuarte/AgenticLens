@@ -20,4 +20,15 @@ All three packages passed. `git diff --check` passed. Tests use disposable ledge
 
 ## Limits
 
-No deterministic end-to-end late replacement I/O-failure injection was added: the production adapter has no fault hook, and filesystem permission denial is not a reliable oracle when run with elevated privileges. Preflight failure preserves valid siblings, pending journal refusal, permissions, no-write modes and unchanged-file idempotence are covered. Partial-write reporting and platform-specific directory fsync/rename behavior remain explicit focused-review boundaries. This report does not certify the integrated upstream revision or hosting CI.
+The first pass omitted deterministic late-I/O failure injection. Independent test-effectiveness review identified a real-filesystem synchronization fixture that reaches the branch without product hooks; the correction below closes that gap. Platform-specific directory fsync/rename behavior remains an explicit review/runtime limit. This report does not certify the integrated upstream revision or hosting CI.
+
+## Test-review corrections on product revision c32c893
+
+Test-effectiveness reviewer gpt-6.1-sol / high reported TS-1 (late replacement failure coverage, severity 4) and TS-2 (computed-export compact anomaly coverage, severity 3). The tester read the supplied report and implemented test-only corrections; this is verification/correction work, not independent rediscovery.
+
+- TS-1: A/B/C fixtures are preflighted in canonical order while C ownership is held. The existing contention-signaling context establishes A/B finished preflight; the test moves B's directory to a preserved path and places a regular file at its old directory location, then releases C. It requires A/C successful Written flags, B failure with Written false, a nonnil overall error naming B, stable target order and unchanged preserved B bytes. No sleeps, production hooks or permission-based assumptions are used.
+- TS-2: The existing computed-writer persistence test now serializes a nonempty anomaly with nested tool/count context, asserts its exact one-line representation inside an expanded array, checks semantic values and repeats persistence for byte idempotence. Reverting only SaveMetricsLedger to the expanded printer would fail this assertion.
+
+Parent-reported full CLI-suite limits from the coder: TestCaptureAutomaticSharedStoreAndTicketStayInExactProjects shared-store shutdown timeout; TestCaptureInstallerUsesSharedLocalAndExplicitStatePolicy shared/local/cli and TestCaptureCLIOpenCodePluginOwnershipAndMissingHandler pending-installer native-version unavailable/changed failures; TestCaptureNativeWorkerPublishesMultipleRootsAndRefreshesWithoutGenerate idle shutdown timeout. These are recorded as reported failures, not reproduced or waived by this focused pass. The parent owns integrated make and upstream coordination.
+
+Correction verification passed from `backend/`: `go test -race ./internal/adapters -run 'TestFormatLedger|TestSaveMetricsLedger' -count=1`. `git diff --check` passed. Only `ledger_format_test.go`, `repository_test.go` and this report changed in the correction pass; no product code, full make run or publication.
