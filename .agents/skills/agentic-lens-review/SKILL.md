@@ -13,6 +13,8 @@ When coordinating substantive application changes or broad audits, use [speciali
 
 ## Independent correctness review
 
+For ledger, capture, refresh or migration changes, assess the [portable ledger contract](../../../TECHNICAL_GUIDELINES.md#portable-ledger-contract) using the [cross-machine scenarios](../../../docs/REGRESSION_PREVENTION.md#portable-ledgers-across-developers-and-machines). Distinguish preserving recorded facts from claiming a new source observation. Before treating an anti-edit rejection as required behavior, establish its approved product basis; existing code/tests alone cannot override portability.
+
 1. Establish the requested boundary, base/head revision (or diff hash), supported deployment assumptions, and requirements. For a fix review distinguish verifying the supplied fix from discovering additional defects. Whole-repository claims require a reconciled file inventory; a diff review makes no such claim.
 2. Read source and the diff, then identify plausible failure hypotheses before relying on the author's explanation or prior approval. Prefer a fresh reviewer context containing requirements and raw evidence over the implementation conversation. Do not withhold requirements or useful test evidence; reconcile reports after forming the initial assessment. Independence of context is not proof of independence of reasoning.
 3. Follow the consequential execution paths through callers, producers, transformations, persistence and consumers as applicable. Inspect unchanged dependencies when needed. Implementation scope limits do not prohibit relevant read-only investigation. Challenge whether the plan itself preserves required behavior; report conflicts rather than silently changing scope.

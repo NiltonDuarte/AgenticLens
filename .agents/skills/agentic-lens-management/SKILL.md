@@ -20,7 +20,15 @@ Record the user's actual authorization to supervise, send instructions, fix revi
 1. Capture all open PRs from the actual Git remote: URL, head SHA, base, title, author, labels, draft state, mergeability, checks, reviews and unresolved discussions. Rediscover after merges; cached heads and earlier audit findings may be stale.
 2. Match each non-release PR to an existing independent ticket thread using linked PR URL first, then corroborated repository, ticket and branch. Read the thread before describing or sending to it. A thread label may lag a renamed Git branch; verify the actual PR head. Search/list with pagination when needed. Never treat a native Codex session ID as a T3 thread ID.
 3. Record a small control ledger in the management workspace: PR/ticket, thread link, current head/base, dependency/order, owner, last instruction/run, verified checks, blockers, and next action. Distinguish `preparing`, `ready`, `waiting_checks`, `blocked`, `merged`, `closed_unmerged`, `unmapped`, and `human_only`. Capture actual merge SHAs, not just owner reports.
-4. If the original thread is unavailable, record the exact lookup failure. Do not impersonate it or invent a successful mapping. Continue independent work. Manage a verified documentation-only PR directly if authorized; application repairs require an available ticket owner. Create a new top-level thread only when the user requested one; otherwise ask for the missing owner when necessary.
+4. If the original thread is unavailable, record the exact lookup failure. Do not impersonate it or invent a successful mapping. Continue independent work. Manage a verified documentation-only PR directly if authorized; application repairs require an available ticket owner. A replacement root for that existing ticket requires a user request; do not bypass missing ownership by allocating a duplicate ticket. Newly discovered defects follow the routing rule below.
+
+## Route newly discovered defects
+
+During authorized management supervision, every newly discovered issue or bug must get a separate `FIX-#` ticket and a new independent thread unless it is **very closely related** to an existing ticket. Keep a defect with an existing owner only when it directly regresses that ticket's approved behavior or must be corrected to meet the same accepted contract. Sharing files, failing the same test suite or blocking the same PR is not sufficient; do not expand or repeatedly reopen a feature ticket to absorb unrelated bugs.
+
+Proactively create the required FIX ticket and launch its isolated owner using the launch protocol below. The user's authorization to supervise and fix discovered bugs includes these routine FIX launches; do not ask again merely to allocate the ticket or thread. Review-only authority does not authorize execution, and material product decisions still require approval. Reuse an already owning FIX thread instead of creating a duplicate.
+
+Record the defect, concrete reproduction/expected behavior, relevance decision, FIX identifier, owner/thread and dependencies in the management ledger. Check existing ticket usage and ownership before allocating an unused `FIX-#`; the new owner maintains its own configured ticket workspace, implementation, verification and telemetry. Keep the original tickets' acceptance boundaries and completed work intact. Independent fixes may run in parallel; serialize dependent integration and merges after actual predecessor delivery.
 
 ## Instruct the owning thread
 
@@ -64,9 +72,9 @@ Allow independent defect fixes in parallel. Serialize upstream integration and m
 
 Use the invoked skill’s handoff evidence to assess readiness. Ask only for a missing fact needed by the merge gate; do not resend the entire workflow. Do not equate a completed thread turn with a delivered ticket.
 
-## Dispatch unblocked backlog work
+## Launch ticket owners
 
-When the user explicitly requests new ticket threads, inspect the current roadmap/dependency graph and existing PR, thread, branch and worktree ownership before every launch. Match complete ticket IDs, not substring references in another ticket's conversation. Reuse a live or paused owning thread instead of duplicating it. A Ready label alone does not settle superseded scope or contradict an explicit planning hold.
+Before each launch for requested backlog work or a newly discovered FIX under the routing rule above, inspect the current roadmap/dependency graph, ticket usage and existing PR, thread, branch and worktree ownership. Match complete ticket IDs, not substring references in another ticket's conversation. Reuse a live or paused owning thread instead of duplicating it. A Ready label alone does not settle superseded scope or contradict an explicit planning hold. This FIX authorization does not release unrelated roadmap work.
 
 Create independent top-level threads with the host launch tool and an explicit isolated worktree strategy bound before the first message; do not create checkouts in the shell or prompt the new agent to make its own worktree. Inherit provider/model/settings unless the user requested otherwise. Use a stable client request ID, retry only with that ID after an uncertain response, then read the created thread and record its exact link/run/ticket ownership. Before the owner writes files, require it to verify its actual cwd and Git toplevel against the assigned host worktree. Corroborate T3 workspace metadata with a distinct Git worktree path/gitdir, not just a different branch label. If a mismatch is observed, stop that root, preserve files and repair the host binding; do not move files or create shell worktrees to conceal the mismatch. Explicit user stop instructions take precedence over pending dispatch.
 
@@ -75,6 +83,8 @@ Invoke `$agentic-lens-dev` for development owners in their own ticket workspace,
 Ask the user through the question tool when priorities, overlapping acceptance criteria, ticket-series scope, or schema/cost semantics need a product decision. Continue independent grounding while waiting, but do not treat elapsed time or absent answers as approval for dependent implementation. Publish the decision and its source before releasing affected developers. Recheck dependencies and ownership after each relevant merge and dispatch only newly unblocked, accepted work; do not launch every backlog item merely because its label says Ready. Preserve release exclusion throughout expanded supervision.
 
 ## Integration and merge gate
+
+Preserve the [portable ledger contract](../../../TECHNICAL_GUIDELINES.md#portable-ledger-contract) when disposing findings and coordinating fixes. Establish a rejection rule's product authority before expanding a ticket to preserve it. Do not turn local capture evidence, fingerprints or existing test assertions into a new authenticity policy for Git-shared history. Select the [cross-machine scenarios](../../../docs/REGRESSION_PREVENTION.md#portable-ledgers-across-developers-and-machines) for affected integration; route a genuine contract change to an explicit product decision.
 
 Reconcile cross-PR behavior, not just textual conflicts. Use fetched immutable heads for merge-tree simulations; keep speculative conflict trees outside product branches. Assign each shared production-file resolution to the later owner, with adjacent guarantees and tests from both features. Do not resolve by discarding one side. Reconcile planning dependencies against what is actually on main.
 

@@ -22,6 +22,7 @@ Throughout this workflow:
 Follow the repository [testing policy](../../../TECHNICAL_GUIDELINES.md#test-purpose-and-proportionality) and [test review checklist](../../../docs/REGRESSION_PREVENTION.md#adding-reviewing-or-reducing-tests) when planning additions, consolidation, or removal.
 
 ## Core Invariants
+- **Portable Ledgers**: Apply the [canonical portable ledger contract](../../../TECHNICAL_GUIDELINES.md#portable-ledger-contract) and select its [cross-machine acceptance cases](../../../docs/REGRESSION_PREVENTION.md#portable-ledgers-across-developers-and-machines) when changing persisted facts or refresh. Local receipts/fingerprints and existing test assertions cannot silently impose a new authenticity requirement on shared history.
 - **Single-Ticket Exclusivity**: Never work on more than one ticket at a time. Refuse any switch to another ticket. Treat all subsequent prompts as steering for the active ticket, creating new iterations as needed.
 - **Orchestrator Coordinates Only**: Never write application code, edit manifests/schemas/views, or execute manual fixes directly.
 - **Mandatory User Gate**: STOP after planning. Present `<WORKSPACES_DIR>/<TICKET_ID>/CONTRACT.md` and `iterations/<NN>/PLAN.md` to the user via the `question` tool. NEVER dispatch `coder` without explicit user confirmation.

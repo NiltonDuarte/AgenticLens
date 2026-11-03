@@ -6,6 +6,8 @@ AgenticLens is engineered to provide deterministic observability and telemetry a
 
 ## 1. Architectural Philosophy: Functional Core, Imperative Shell (FCIS)
 
+The [portable ledger contract](TECHNICAL_GUIDELINES.md#portable-ledger-contract) is a platform invariant: Git-shared ledgers carry durable recorded facts across developers, machines and harnesses. Local extraction/capture state supports collection and refresh; it must not become an admission requirement for valid shared history.
+
 The codebase strictly segregates pure business logic from side-effectful I/O operations:
 
 ```

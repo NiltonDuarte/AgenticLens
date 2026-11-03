@@ -99,6 +99,8 @@ Open `http://localhost:8085` to view the standalone dashboard.
 
 ## 5. Quality Standards and Invariants
 
+Preserve the [portable ledger contract](TECHNICAL_GUIDELINES.md#portable-ledger-contract). For persistence, capture, refresh or migration changes, select the [cross-developer/machine scenarios](docs/REGRESSION_PREVENTION.md#portable-ledgers-across-developers-and-machines); a passing test that requires private originating-machine proof does not establish a valid product requirement.
+
 Select the applicable cases in the [regression prevention checklist](docs/REGRESSION_PREVENTION.md) before changing extraction, configuration, hydration, live polling, or distribution. Record evidence in the active iteration review.
 
 After `make install`, use `make backend-check` for backend-only work or `make` for the full gate. Both prepare assets before Go loads embed-dependent packages. Before direct `go vet`, `go test`, or `go run`, run `make web-assets`. Build/CI changes require verification with generated assets absent and on a repeated build; frontend source checks alone do not validate the standalone bundle.

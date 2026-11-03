@@ -1,0 +1,113 @@
+{
+  "ticket": "MGT-2",
+  "status": "closed_at_user_request",
+  "active_iteration": "07",
+  "closure_source": "User will restart AL-62 separately, requests removal of intermediate files and completion of management session",
+  "baseline": "122e983f8c365a2aa248b1b6d492252555e922ae",
+  "integrated_verification_revision": "fc402caeb4af9e967a674144b6858d75751a5004",
+  "main": "8d494d2e7bd3705ee400b4bdecad256470f65f73",
+  "own_pr": {
+    "url": "https://github.com/NiltonDuarte/AgenticLens/pull/100",
+    "status": "ready_for_external_review_after_final_push",
+    "merge_owner": "human or separately authorized independent controller; never self-merge"
+  },
+  "queue": [
+    {
+      "ticket": "AL-61",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/104",
+      "status": "merged",
+      "head": "c6fc4c35ed1d99fa0e59adff558f92d1e2a3d8fb",
+      "merge_commit": "8b1de5f761ebb92f78b2b462c1ff583724ecbdb5",
+      "merged_at": "2026-11-03T21:02:02Z"
+    },
+    {
+      "ticket": "AL-60",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/101",
+      "status": "merged",
+      "head": "f153df286f8e048d0da65780ff181e85c6ededc6",
+      "merge_commit": "6244585dc5cc41ef012cd3e1fb3b964ccd910a95",
+      "merged_at": "2026-11-03T19:49:15Z",
+      "followup": {
+        "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/105",
+        "head": "c0315764105c467858652ecd9955a2b75adf3488",
+        "status": "merged",
+        "merge_commit": "3fbecd2576270772462fe37235d90c5f33e2164c",
+        "merged_at": "2026-11-03T20:49:59Z"
+      }
+    },
+    {
+      "ticket": "AL-62",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/103",
+      "status": "closed_unmerged",
+      "head": "1247b7e948014c3dffb3cc052bf29dbf8cbcb7ab",
+      "disposition": "Closed unmerged; stopped owner unavailable. User will restart from a clean slate. No reopen/replacement/restart by manager."
+    },
+    {
+      "ticket": "AL-76",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/102",
+      "status": "merged",
+      "head": "6929db7c1aa1c0417de20779f93617e104c8ade3",
+      "merge_commit": "8d494d2e7bd3705ee400b4bdecad256470f65f73",
+      "merged_at": "2026-11-03T21:18:14Z"
+    },
+    {
+      "ticket": "AL-68",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/99",
+      "status": "merged",
+      "head": "3e88d8bbed979eaa376f055df9a5919f474aea4d",
+      "merge_commit": "733e367ee12b9828cd340759eab855f4d809279c",
+      "merged_at": "2026-11-03T18:28:14Z"
+    }
+  ],
+  "platform_contract": "TECHNICAL_GUIDELINES.md#portable-ledger-contract",
+  "accepted_debt": {
+    "ticket": "AL-60",
+    "severity": 2,
+    "issue": "TEST-02 Unix descendant-death/reachability oracle coverage recommendation; no leak demonstrated",
+    "owner": "AL-60 maintainer"
+  },
+  "unresolved_restart_items": [
+    "AL-62 portability correction and revised complete-local-source semantics are not delivered; old #103 checks do not approve a fresh restart",
+    "Lossless migration of unresolved tool aggregates must retain original tuples and explicit pending work; old implementation discarded them",
+    "Old receipt/digest guards conflict with the portable-ledger contract and need reassessment under that contract, not further automatic proof machinery"
+  ],
+  "queued_tickets": [
+    {
+      "ticket": "AL-77",
+      "status": "To Do",
+      "spec": "alspaces/plan/to-do/AL-77 warn when a session appears in multiple tickets.md",
+      "execution": "Not started"
+    },
+    {
+      "ticket": "REV-6",
+      "status": "To Do",
+      "spec": "alspaces/plan/to-do/REV-6 review test performance and unit integration boundaries.md",
+      "execution": "Not started; fulfills the earlier deferred review-ticket request as this batch ends"
+    }
+  ],
+  "release": {
+    "pr": 55,
+    "status": "human_only",
+    "url": "https://github.com/NiltonDuarte/AgenticLens/pull/55"
+  },
+  "watches": [],
+  "verification": {
+    "make": "PASS at integrated fc402caeb4af9e967a674144b6858d75751a5004: Go race packages, vet/typecheck/lint, script checks, 790 frontend tests/36 files, frontend/embed and five-platform build",
+    "environment": "Four CPU affinity, GOMAXPROCS=2, GOFLAGS=-p=1; no timeout inflation",
+    "source_equality": "Application/test/runtime sources match origin/main; subsequent final edits are documentation/planning/telemetry only",
+    "documentation": "All six edited skills valid; 29 added relative links/anchors resolved before final metadata update; unique AL-77/REV-6 index entries; JSON/whitespace checks pass",
+    "hosted": "Final pushed-head hosted CI is separate; not claimed passed by local results"
+  },
+  "cleanup": {
+    "management": "Six retained files: contract, control, PR, summary, manager telemetry and one closing plan; superseded plans/notification roster removed",
+    "AL62": "Old T3 root unavailable and user reports deleted worktree. A stale on-disk checkout is still registered; manager did not recreate, restore, reset or modify its source. Removed disposable outside-checkout reports only.",
+    "history": "Committed historical work and review credit remain in Git and owning ticket summaries; no bulk cleanup of delivered tickets",
+    "temporary_artifacts": "84 owned disposable report/probe/API artifacts removed; final verification log removed after summary extraction"
+  },
+  "telemetry": {
+    "root": "01a1a286-27c9-7c50-9f2e-70f0a332c763",
+    "source": "codex",
+    "children": "No native manager children; independent ticket roots excluded",
+    "limits": "T3 tool-count omissions and unavailable pricing; rendered zero cost does not establish measured spend"
+  }
+}
