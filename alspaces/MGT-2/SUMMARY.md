@@ -1,6 +1,6 @@
 # MGT-2 supervision log
 
-All remaining owners published drafts, verified on GitHub and matched to their existing roots: AL-61 #104 at c40e0022aca6c5ae40633b260ce93c379e2ee1c7; AL-76 #102 at 746c965cf72ede8636c952ad56f5d661d5be3219; AL-62 #103 at 22f571ae649d5dc53071fc6410f187816905aa9e. Fetched heads show only ticket Markdown successors relative to reviewed implementation/final-test checkpoints. Local scoped approvals carry forward for unchanged source, but all three remain draft with integration/full make/final approval/telemetry/lifecycle pending. No predecessor integration was released prematurely. Order: #101, #104, #102, #103. AL-60 #101 f153df2 has Backend/Frontend successful; Windows and binary/version still running at the latest fresh check. No GitHub objection/unresolved thread, current base included. User has approved its cleaned state and merge after CI. Management #100 stays external-review/draft; release #55 stays human_only.
+All remaining owners published drafts, verified on GitHub and matched to their existing roots: AL-61 #104 at c40e0022aca6c5ae40633b260ce93c379e2ee1c7; AL-76 #102 at 746c965cf72ede8636c952ad56f5d661d5be3219; AL-62 #103 at 22f571ae649d5dc53071fc6410f187816905aa9e. Fetched heads show only ticket artifacts successors relative to reviewed implementation/final-test checkpoints. Local scoped approvals carry forward for unchanged source, but all three remain draft with integration/full make/final approval/telemetry/lifecycle pending. No predecessor integration was released prematurely. Order: #101, #104, #102, #103. AL-60 #101 f153df2 has Backend/Frontend successful; Windows and binary/version still running at the latest fresh check. No GitHub objection/unresolved thread, current base included. User has approved its cleaned state and merge after CI. Management #100 stays external-review/draft; release #55 stays human_only.
 
 Publication steering: user requested all open owners create pull requests. Manager refreshed the complete project thread inventory and actual open PRs, then read/resumed the three existing owners without PRs: AL-61, AL-76 and AL-62. Each received a concise assignment to publish its reviewed checkpoint as a draft now, explicitly marking predecessor integration/full gates pending and returning URL/exact head. This supersedes the earlier publication hold, not the merge/integration gates. AL-60 already has #101; MGT-2 already has draft #100; merged tickets were not restarted. Merge order remains AL-60, AL-61, AL-76, AL-62. User approval of AL-60's cleaned state and merge-after-CI remains effective. No new threads or product scope requested. Release Please #55 now proposes 3.0.0 and remains human_only.
 
@@ -63,13 +63,13 @@ Telemetry: PATH has no installed wrapper and the shared installation directory i
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 30
 - **Active Agent Duration:** 32m 33s (excludes user wait time)
-- **Context Window Health:** BLOATED — Root agent peak 257.6k tokens (129% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Context Window Health:** BLOATED — Root agent peak 260.6k tokens (130% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 16,153 reasoning tokens (21.5% of generated output)
-- **Tool Health & Self-Correction:** 88 tool calls (8 self-corrections, 90.9% success rate)
+- **Reasoning Effort:** 16,388 reasoning tokens (21.5% of generated output)
+- **Tool Health & Self-Correction:** 89 tool calls (8 self-corrections, 91.0% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
@@ -83,11 +83,11 @@ Telemetry: PATH has no installed wrapper and the shared installation directory i
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 228,235 | 59,075 | 21,793,024 | 99.0% | 257.6k | BLOATED (129%) | $0.00 |
-| **Total** | **1** | **228,235** | **59,075** | **21,793,024** | **99.0%** | **257.6k** | **BLOATED** | **$0.00** |
+| **rootagent** | 1 | 229,504 | 59,725 | 22,572,672 | 99.0% | 260.6k | BLOATED (130%) | $0.00 |
+| **Total** | **1** | **229,504** | **59,725** | **22,572,672** | **99.0%** | **260.6k** | **BLOATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 1 | 228,235 | 59,075 | 21,793,024 | 99.0% | $0.00 |
-| **Total** | **1** | **228,235** | **59,075** | **21,793,024** | **99.0%** | **$0.00** |
+| **gpt-6.1-sol** | 1 | 229,504 | 59,725 | 22,572,672 | 99.0% | $0.00 |
+| **Total** | **1** | **229,504** | **59,725** | **22,572,672** | **99.0%** | **$0.00** |
