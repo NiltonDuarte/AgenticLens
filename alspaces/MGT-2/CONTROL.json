@@ -38,9 +38,9 @@
       "thread_link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/5dbc6729-7bc5-4bc2-84c8-1433f289f5f6>",
       "thread_id": "5dbc6729-7bc5-4bc2-84c8-1433f289f5f6",
       "branch": "feat/AL-60-search-tickets",
-      "head": "7b00cc1ac7fb5cd8afa2d93f7c65931c8ab2fa30",
+      "head": "2a99b422bd24c674e3c4d5e787738b5238c2e3d7",
       "base": "main",
-      "pr": null,
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/101",
       "status": "preparing",
       "order": 1,
       "last_instruction": {
@@ -52,12 +52,12 @@
         "status": "starting",
         "delivery": "started"
       },
-      "verified_checks": "Owner reports deterministic slow-harness red/green regression and diagnostic tests pass; installer/worker cases and pending-preserving expiry/recovery probe pass. Independent review underway; architecture confirmed child-held output pipes can delay cancellation.",
-      "next_action": "Correct confirmed cancellation finding inside approved capture scope; preserve review/evidence, then integrate current main and pass gate before PR",
+      "verified_checks": "Manager verified current main is ancestor, final delta from tested 057d410 contains guidance/workspace/lifecycle/telemetry only, compact findings and make evidence retained, no GitHub reviews or unresolved discussions. All eight final responsibility/profile approvals in owner summary. Full integrated make with bounded CPU, all race packages, 786 frontend cases, build/embed and actual Windows runtime pass. Hosted Frontend passed; Backend/Windows in progress at inspection.",
+      "next_action": "Await cleanup handoff, verify new exact head and retained evidence; then all hosted checks before expected-head merge",
       "notification_request": "mgt2-handoff-notification-60",
       "blockers": [
-        "Launcher child retaining output pipes exceeds cancellation deadline; review correction pending",
-        "Full integrated gate and final review incomplete"
+        "User requested pre-merge artifact cleanup; owner run3 started",
+        "Refreshed hosted CI required at cleaned final head"
       ],
       "diagnosis": {
         "status": "read-only, owner reported",
@@ -67,7 +67,19 @@
         "unconfirmed": "Manifest HarnessVersion/Capability variability plausible; failed before/after manifest was not retained",
         "proposed_scope": "Separate optional/required deadline ownership and diagnostics; deterministic disposable harness probes; distinguish successful publication from deliberate expiry while preserving pending/ownership guarantees; no blanket timeout increase"
       },
-      "reviewed_application_head": "7a50a5e99927928995a72e13128d597c1317e9d3"
+      "reviewed_application_head": "057d410253aecd734551995ff1bedb38e94a1f19",
+      "base_head": "733e367ee12b9828cd340759eab855f4d809279c",
+      "accepted_debt": {
+        "severity": 2,
+        "issue": "Unix inherited-pipe tests lack direct descendant-death/reachability oracle",
+        "owner": "AL-60 maintainer",
+        "disposition": "Accepted nonblocking recommendation; no leak demonstrated"
+      },
+      "cleanup_instruction": {
+        "request": "User: clean the AL-60 branch before merge",
+        "clientRequestId": "mgt2-al60-premerge-cleanup",
+        "runId": "run:thread:5dbc6729-7bc5-4bc2-84c8-1433f289f5f6:ordinal:3"
+      }
     },
     {
       "ticket": "AL-62",
