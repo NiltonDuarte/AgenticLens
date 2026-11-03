@@ -118,7 +118,7 @@
         "runId": "run:thread:24185901-0a4e-4d21-8c44-a64117fb80bc:ordinal:7"
       },
       "verified_checks": "All four hosted checks SUCCESS only at pre-integration 1247b7e. Local integration/producer corrections are in progress and need final exact-head gates.",
-      "next_action": "Owner run7 implements approved simplification, completes final gates and publishes exact-head readiness; manager merges after fresh hosted gates",
+      "next_action": "Owner implements approved portability correction plus existing-field migration pending writer handling, verifies actual boundary, then final reviews/full gate/new-head CI",
       "notification_request": "mgt2-handoff-notification-62",
       "reviewed_application_head": "29ee4a802000c1d3302c515e001f7692d3d7fe8f",
       "product_fingerprint": "f300879df36eee4cbdc69b6de66999dbf469ddcd3eb6f65f8a65b71279332c8a",
@@ -208,13 +208,18 @@
         "release": "mgt2-al62-release-portability-correction-complete-local-replacement"
       },
       "lossless_migration_finding": {
-        "status": "Source-confirmed pre-existing data loss; bounded correction active, not yet final verified",
+        "status": "Existing-field pending representation confirmed; narrow writer/internal API handling approved and active",
         "discovery": "Planner gpt-6.1-sol/high",
         "issue": "Legacy tool aggregates without SessionID are dropped during normalization, retaining only count note; default migrate/backfill can overwrite original without backup",
         "routing": "Very closely related to explicitly approved lossless compatible migration correction; remains AL-62-owned, no duplicate FIX",
         "acceptance": "Preserve exact original tuples with no invented identity or backup opt-in; verify migrate/backfill and portable durable pending state/copied continuation. Error-only file preservation is not proof of durable mid-migration progress. Report representation blocker before schema/checkpoint expansion.",
         "instruction": "mgt2-al62-confirm-lossless-unscoped-migration-boundary",
-        "runId": "run:thread:24185901-0a4e-4d21-8c44-a64117fb80bc:ordinal:7"
+        "runId": "run:thread:24185901-0a4e-4d21-8c44-a64117fb80bc:ordinal:7",
+        "approved_representation": "Preserve entire legacy raw payload at original schema_version and all original tuples/other fields; update existing MigrationInfo to partial with source_backfill pending and precise unresolved-owner diagnostic. No canonical sessions mixed with root arrays.",
+        "writer_release": "mgt2-al62-approve-existing-field-pending-migration-writer",
+        "verification_boundary": "Data retention, durable copied pending-state discovery/idempotent retry and runtime unsupported-pending rejection must be checked separately; ownership resolution/completion is not implied. Dry-run nonwriting, backup=false safe, no duplicate notes/steps.",
+        "exclusions": "No new fact schema, sidecar protocol, generic migration redesign or automatic pre-normalization source attribution. Earlier broader source-recovery proposal not released.",
+        "global_completion_limit": "A-only then B-only fact updates can persist, but existing global step names cannot prove cumulative full-source coverage; preserve honest source_backfill pending without new per-owner metadata."
       }
     },
     {

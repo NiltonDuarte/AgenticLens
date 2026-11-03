@@ -1,5 +1,7 @@
 # MGT-2 supervision log
 
+AL-62 refined the migration boundary: existing legacy raw JSON can carry original tuples plus existing MigrationInfo partial/source_backfill state, so no schema/sidecar redesign is needed. Management approves minimum classified-blocker runner/backfill writer handling and necessary internal API adaptation: retain original schema/payload/tuples, atomically annotate only existing migration metadata under current lock, never mix canonical sessions/root arrays or claim target migration complete. Verify backup=false preservation, nonwriting dry-run, copied pending-state discovery/retry and idempotent steps/notes separately from actual ownership recovery. Runtime still rejects unsupported pending legacy ingestion. Automatic pre-normalization source attribution and generic/per-owner checkpoint machinery are not released. Existing global migration steps cannot prove completion when A/B sources never coexist; retain source_backfill pending honestly while preserving fact progress. This implements existing approved resumability, not a new product boundary or global hold; planner source-discovery/tester runtime-verification roles remain distinct.
+
 AL-62 planner gpt-6.1-sol/high source-confirmed a pre-existing lossless migration violation: legacy tools without SessionID are discarded with only a count note, and default CLI/backfill migration can overwrite original bytes without a backup. Existing test expects that loss; it is not product authority over the approved preservation contract. Bounded correction stays with AL-62 because it directly violates its accepted compatible/lossless migration boundary, rather than merely sharing files. Manager confirms exact tuple retention, no invented ownership and no backup opt-in dependency. Verification must distinguish retaining original bytes with an error from durable portable mid-migration progress/copied continuation; report an exact representation blocker before introducing schema/checkpoint machinery. Owner run7 continues, no new hold. Finding remains unverified at final runtime boundary; PR103 remains draft and final merge gates pending.
 
 User explicitly resolves complete-local-snapshot edge: replace that session from complete local source; preserve all other sessions. Complete successful extraction can therefore replace fewer/zero invocations; missing/failed/partial reads are not authoritative empty results. Management read the concrete six-part AL-62 assessment and approved the bounded portability correction, lifting implementation/delivery hold and starting existing owner run7. Remove private originating-machine/receipt/fingerprint admission and dependent producer bridges; retain structural/identity/native-parent/path validation, live operational isolation/ACK/cursors and file locking/preflight/atomic recovery. Verify truly separate A/B repositories/stores, supported copies, shorter/empty versus failed/partial sources, whole-ledger totals/idempotence and portable migration/resume. No destructive local-table migration or fact-ledger schema redesign. Prior approvals do not silently cover changed behavior; historical findings/credit remain. Canonical guidelines, checklist and operator guidance now state the scoped replacement exception. PR103 stays draft until full readiness; MGT retains merge ownership.
@@ -123,15 +125,15 @@ GitHub reports main has no branch protection (protection endpoint HTTP 404). Thi
 Telemetry: PATH has no installed wrapper and the shared installation directory is empty. Use the existing local source-built native binary with supported native options, explicit Codex source, ticket and root session. Native generate has no --al-offline/--al-project options; invoke from this checkout. Root source rollout found at ~/.codex/sessions/2026/11/03/rollout-2026-11-03T18-47-43-01a1a286-27c9-7c50-9f2e-70f0a332c763.jsonl. This manager has no native children; the five independently created T3 roots are not children. T3 MCP tool counts are a known decoder completeness limit. This is an active-session checkpoint, not complete end-of-supervision telemetry; regenerate at later delivery. Independent ticket telemetry is not part of the manager's ledger.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 65
-- **Active Agent Duration:** 1h 33m (excludes user wait time)
+- **Software Development Life Cycle Iterations:** 67
+- **Active Agent Duration:** 1h 34m (excludes user wait time)
 - **Context Window Health:** CRITICAL — Root agent peak 451.3k tokens (226% of 200k healthy ceiling, 1 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 64,681 reasoning tokens (26.3% of generated output)
-- **Tool Health & Self-Correction:** 227 tool calls (16 self-corrections, 93.0% success rate)
+- **Reasoning Effort:** 66,016 reasoning tokens (26.3% of generated output)
+- **Tool Health & Self-Correction:** 232 tool calls (16 self-corrections, 93.1% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
@@ -145,11 +147,11 @@ Telemetry: PATH has no installed wrapper and the shared installation directory i
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 1,386,429 | 181,627 | 71,463,680 | 98.1% | 451.3k | CRITICAL (226%) | $0.00 |
-| **Total** | **1** | **1,386,429** | **181,627** | **71,463,680** | **98.1%** | **451.3k** | **CRITICAL** | **$0.00** |
+| **rootagent** | 1 | 1,395,725 | 185,325 | 72,908,160 | 98.1% | 451.3k | CRITICAL (226%) | $0.00 |
+| **Total** | **1** | **1,395,725** | **185,325** | **72,908,160** | **98.1%** | **451.3k** | **CRITICAL** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 1 | 1,386,429 | 181,627 | 71,463,680 | 98.1% | $0.00 |
-| **Total** | **1** | **1,386,429** | **181,627** | **71,463,680** | **98.1%** | **$0.00** |
+| **gpt-6.1-sol** | 1 | 1,395,725 | 185,325 | 72,908,160 | 98.1% | $0.00 |
+| **Total** | **1** | **1,395,725** | **185,325** | **72,908,160** | **98.1%** | **$0.00** |
