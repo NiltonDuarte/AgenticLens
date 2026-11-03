@@ -118,14 +118,13 @@
         "runId": "run:thread:24185901-0a4e-4d21-8c44-a64117fb80bc:ordinal:6"
       },
       "verified_checks": "All four hosted checks SUCCESS only at pre-integration 1247b7e. Local integration/producer corrections are in progress and need final exact-head gates.",
-      "next_action": "Report actual cross-machine Git/copy paths and smallest portability-compatible design; hold receipt implementation/publication pending disposition",
+      "next_action": "Return concrete correction proposal; portability is established acceptance, not an unresolved user choice. Keep implementation/publication held while assessing removal of receipt-dependent persisted-fact gates.",
       "notification_request": "mgt2-handoff-notification-62",
       "reviewed_application_head": "29ee4a802000c1d3302c515e001f7692d3d7fe8f",
       "product_fingerprint": "f300879df36eee4cbdc69b6de66999dbf469ddcd3eb6f65f8a65b71279332c8a",
       "blockers": [
-        "Portable-ledger trust model needs read-only assessment and user disposition before further receipt work",
-        "Unusable-config WRITE decision remains unresolved and subordinate to trust-model decision",
-        "Final affected review/integrated verification/new-head CI pending"
+        "Concrete simplification proposal restoring established portable persisted-ledger behavior pending",
+        "Implementation correction/affected review/integrated verification/new-head CI pending"
       ],
       "publication_status": "open draft; exact head verified",
       "ci_failure": {
@@ -147,7 +146,8 @@
         "runId": "run:thread:24185901-0a4e-4d21-8c44-a64117fb80bc:ordinal:5",
         "reproduction": "Trusted L0/R0 then newer L1/R1 with changed exact old row; file-only rollback restores readable L0 but sole SQLite receipt remains R1, old source/snapshot/Git alternatives unavailable; strict retry rejects. Canonical and legacy probes confirmed; reconstructed crash state, not power-loss test.",
         "scope": "Bounded prior/pending or versioned receipt proof tied to worktree/ticket/destination/generation; both rollback and commit windows; additive legacy-readable receipt metadata and explicit scoped migration; no fact-ledger schema change or broad journal/runtime redesign",
-        "repair": "Additive receipt metadata version1 retains active/pending exact snapshots with generation/digest/scope; stage before file commit/finalize afterward, marker barriers; explicit proven legacy migration/rebind, lost proof remains unavailable and bound mismatch refuses fallback"
+        "repair": "Additive receipt metadata version1 retains active/pending exact snapshots with generation/digest/scope; stage before file commit/finalize afterward, marker barriers; explicit proven legacy migration/rebind, lost proof remains unavailable and bound mismatch refuses fallback",
+        "management_reassessment": "Earlier bounded-repair disposition is superseded where it entrenches local receipt/fingerprint prerequisites for portable persisted ledgers; preserve finding history and verification, reassess necessity under original product contract."
       },
       "integration_risks": [
         {
@@ -172,7 +172,7 @@
         "integrated_main": "8d494d2e7bd3705ee400b4bdecad256470f65f73",
         "local_merge": "02ebcda64b2c6777688baf2aa060e194f14be2c8",
         "verified": "Owner reports requested whitespace bridge regression and mode/config-free/all-target preflight checks pass; integrated UI 228 focused cases pass. Final scoped reviews/full gate still pending.",
-        "pending_policy": "Existing malformed/unreadable nearby config blocks locating configured capture store. Explicit format previously writes without config; rejecting WRITE protects possible proof but changes availability. User decision required; check/dry-run remain independent.",
+        "pending_policy": "Earlier unusable-config WRITE question withdrawn as the decision to pursue: preserve accepted explicit formatter availability; reassess unnecessary receipt discovery under established portability contract.",
         "allowed_work": "Valid config, absent config, no existing state paths and focused checks only for currently authorized bridge; policy branch held",
         "instruction": "mgt2-al62-hold-unusable-config-policy"
       },
@@ -182,7 +182,8 @@
         "reproduction": "Trusted source-backed L0/R0; original source and matching registered/Git alternatives unavailable; successful forced backfill from missing opencode database changes metadata bytes, preserves auxiliary facts, then strict generation rejects old proof",
         "scope": "Reuse matching trusted R0 only for exact preserved facts; refreshed facts require successful exact source-owner snapshots; retain unchanged proof for unrefreshed owners/unresolved legacy; stage before atomic rewrite/finalize after; no generic writer hook or broader source/migration policy",
         "instruction": "mgt2-al62-confirm-backfill-proof-coordination",
-        "runId": "run:thread:24185901-0a4e-4d21-8c44-a64117fb80bc:ordinal:6"
+        "runId": "run:thread:24185901-0a4e-4d21-8c44-a64117fb80bc:ordinal:6",
+        "management_reassessment": "Earlier bounded-repair disposition is superseded where it entrenches local receipt/fingerprint prerequisites for portable persisted ledgers; preserve finding history and verification, reassess necessity under original product contract."
       },
       "migration_receipt_integration": {
         "status": "Supported same-fact migration defect confirmed; bounded correction released",
@@ -190,15 +191,16 @@
         "reproduction": "Source-derived supported legacy5 root with trusted R0 and valid explicit receipt binding; source/snapshot/pinnedGit unavailable. Actual migrate reports v5-to6 success and preserves exact auxiliary facts but changes bytes; subsequent strict generation rejects old receipt digest. No historical binary execution claimed. Current6 UpToDate case does not change bytes and remains usable.",
         "scope": "Reuse matching trusted R0 only for exactly preserved candidate auxiliary tuples; stage before existing atomic rename/finalize after. No generic writer hook, ledger schema change or expanded source authority. Changed transitional ownership/source tuples require separate disposition.",
         "instruction": "mgt2-al62-release-same-proof-migration-bridge",
-        "runId": "run:thread:24185901-0a4e-4d21-8c44-a64117fb80bc:ordinal:6"
+        "runId": "run:thread:24185901-0a4e-4d21-8c44-a64117fb80bc:ordinal:6",
+        "management_reassessment": "Earlier bounded-repair disposition is superseded where it entrenches local receipt/fingerprint prerequisites for portable persisted ledgers; preserve finding history and verification, reassess necessity under original product contract."
       },
       "portability_trust_assessment": {
-        "status": "Read-only assessment released; further receipt-dependent implementation held",
-        "source": "User challenges need for local evidence/fingerprints because ledgers are shared across developers and machines",
-        "instruction": "mgt2-al62-hold-receipts-review-portable-ledger-trust",
+        "status": "Existing portable-ledger requirement reaffirmed; read-only simplification proposal pending",
+        "source": "User explicitly states AgenticLens is multi-developer/machine by original design; Git stores shared metrics and original historical tickets came from another harness/machine",
+        "instruction": "mgt2-al62-restore-established-portable-ledger-contract",
         "runId": "run:thread:24185901-0a4e-4d21-8c44-a64117fb80bc:ordinal:6",
         "cases": "A source-generates; B gets Git or copied workspace without A private capture/source data; read/format/migrate/generate with B-only sources. Distinguish actual supported Git/copy behavior, owner/schema validation, imported recorded facts and fresh source-verification claims.",
-        "boundary": "Preserve completed work and running checks; no guard removal, new trust policy, storage redesign or final publication before disposition"
+        "boundary": "No new portability approval needed. Hold implementation/publication until concrete correction assessed. Remove machine-local proof/fingerprint prerequisites from proposed persisted-ledger design; retain extraction accuracy, schema/identity checks, scoped refresh and history/other-harness preservation."
       }
     },
     {
@@ -315,9 +317,8 @@
   ],
   "completion_requirements": "Complete product merge queue, then create queued REV test-performance review ticket before final management handoff; own MGT PR remains external merge",
   "pending_user_decision": {
-    "question": "Unusable nearby project config during explicit format --workspaces: reject writes safely while keeping check/dry-run, or preserve config-independent writes and assess another receipt-discovery design?",
-    "recommendation": "Reject actual writes with clear scope-resolution diagnostic; keep check/dry-run available",
-    "scope": "AL-62 format/receipt integration only; no assumed consent, wider journal redesign or early final merge",
-    "broader_context": "User now challenges necessity of machine-local proof for shared ledgers; assess portability/trust model before disposing narrower config WRITE choice. No approval to remove guards inferred."
+    "status": "Earlier config choice superseded by original portability requirement clarified by user",
+    "question": null,
+    "scope": "No portability decision required. Concrete simplification/correction proposal pending owner read-only assessment; no broad guard removal authorized yet."
   }
 }
