@@ -1,0 +1,327 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "I4-01",
+      "severity": 6,
+      "issue": "Concurrent registry initialization could fail durable callback registration with SQLite BUSY.",
+      "reporters": [
+        {
+          "persona": "tester",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed by reserving immediate SQLite write transactions before initialization; native concurrent callback and publication regressions pass."
+    },
+    {
+      "finding_id": "I4-02",
+      "severity": 5,
+      "issue": "State allocation could create an owned hooks-file path as a directory before installer validation.",
+      "reporters": [
+        {
+          "persona": "tester",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed placement preflight before allocation; original installer rollback oracle preserved and passes."
+    },
+    {
+      "finding_id": "I4-03",
+      "severity": 6,
+      "issue": "Configuration updates emitted four-space YAML indentation and invalidated the strict shared version pin.",
+      "reporters": [
+        {
+          "persona": "coder",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed by the storage coder with two-space YAML encoding and a full config/entrypoint roundtrip oracle; discovered by relocation coder during migration testing."
+    },
+    {
+      "finding_id": "I4-04",
+      "severity": 3,
+      "issue": "Missing configuration produced a state-field error instead of the established initialization guidance.",
+      "reporters": [
+        {
+          "persona": "tester",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed absent-file classification without relaxing required-field validation for existing files."
+    },
+    {
+      "finding_id": "I4-05",
+      "severity": 5,
+      "issue": "Adding Git to an already captured directory was rejected as changed ownership.",
+      "reporters": [
+        {
+          "persona": "tester",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed monotonic Git ownership enrichment only for the unchanged directory; read-only access does not persist enrichment and replacements remain rejected."
+    },
+    {
+      "finding_id": "I4-06",
+      "severity": 6,
+      "issue": "Adding the required state setting could abandon pending legacy state at its implicit local location.",
+      "reporters": [
+        {
+          "persona": "coder",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Storage coder discovered and reproduced the administrative upgrade case; relocation coder added preservation guard and the original native CLI regression now passes."
+    },
+    {
+      "finding_id": "I4-07",
+      "severity": 6,
+      "issue": "Shared registry file URIs treated a Windows drive as a URI authority and blocked capture installation.",
+      "reporters": [
+        {
+          "persona": "coder",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed typed SQLite file URIs; actual native Windows capture installation passed after the correction (1test36.962s)."
+    },
+    {
+      "finding_id": "I4-08",
+      "severity": 6,
+      "issue": "Legacy installation discovery anchors prevented relocation from completing after source fencing.",
+      "reporters": [
+        {
+          "persona": "coder",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed explicit legacy-anchor authorization using validated old state, repository and source; disabled installation, interrupted manifest2/anchor1 resume and foreign-anchor preservation races pass."
+    },
+    {
+      "finding_id": "I4-09",
+      "severity": 6,
+      "issue": "Repo-local capture installation ignored only coordination files and left the shared database and SQLite sidecars visible to Git.",
+      "reporters": [
+        {
+          "persona": "reviewer",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: ignore the entire logical registry including peer coordination and SQLite sidecars; real Git-ignore oracle passes."
+    },
+    {
+      "finding_id": "I4-10",
+      "severity": 6,
+      "issue": "Windows home state on another volume was rejected as an invalid placement instead of disjoint external state.",
+      "reporters": [
+        {
+          "persona": "reviewer",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: classify Windows different-volume paths as disjoint while preserving same-volume containment and unsafe-path errors; native Windows component passes."
+    },
+    {
+      "finding_id": "I4-11",
+      "severity": 7,
+      "issue": "Interrupted configuration replacement could remove the active path and leave a permanent update lock.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: atomic old/new replacement with crash-released OS coordination and CAS; actual process-death and retry controls pass."
+    },
+    {
+      "finding_id": "I4-12",
+      "severity": 6,
+      "issue": "A relocation destination accepted callbacks before its pending fence was installed.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: reserve ownership and pending fences atomically before retiring source; ordinary and already-open writes remain blocked until activation."
+    },
+    {
+      "finding_id": "I4-13",
+      "severity": 7,
+      "issue": "An interrupted hooks-before-manifest write stranded migration retries.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: durable typed owned before/after-prefix installation journal recovers exact partial writes while preserving foreign edits."
+    },
+    {
+      "finding_id": "I4-14",
+      "severity": 6,
+      "issue": "Relocation bypassed changed physical ownership of an existing destination.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: validate existing destination identity before source retirement and throughout allocation, import and activation."
+    },
+    {
+      "finding_id": "I4-15",
+      "severity": 5,
+      "issue": "Retained foreign history lost supported event and evidence fields during publication compaction.",
+      "reporters": [
+        {
+          "persona": "coder",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: preserve authorized typed historical sessions after own-session compaction; strict fidelity and private-body rejection controls pass."
+    },
+    {
+      "finding_id": "I4-16",
+      "severity": 6,
+      "issue": "Administrative state-move checks used an unnormalized project name and missed existing populated state.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: administrative decoding uses the operational raw DTO conversion; native spaced, aliased, numeric and case controls pass."
+    },
+    {
+      "finding_id": "I4-17",
+      "severity": 7,
+      "issue": "Concurrent configuration updates could strand a successfully registered callback at the old state path.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: shared effective-configuration admission covers resolution and first allocation within the existing deadline; updater rechecks movement under the same leases."
+    },
+    {
+      "finding_id": "I4-18",
+      "severity": 5,
+      "issue": "Supported committed schema4 sessions without cost evidence failed publication under schema5.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: apply the existing narrow legacy cost mapping before history publication, preserving other facts and explicit evidence; original oracle and repeated v4 controls pass."
+    },
+    {
+      "finding_id": "I4-19",
+      "severity": 3,
+      "issue": "Registry and installation manifest compatibility shared one version constant.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: separate registry and installation manifest constants and responsibility-specific production consumers; current numeric protocols unchanged."
+    },
+    {
+      "finding_id": "I4-20",
+      "severity": 4,
+      "issue": "Migration tests did not detect omission of six populated continuation and recovery tables.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Closed verification gap: exact populated six-table, accepted-snapshot and real publication-journal oracles pass; each omission mutant now fails."
+    },
+    {
+      "finding_id": "I4-21",
+      "severity": 6,
+      "issue": "Inherited Git repository overrides could authorize auxiliary-only committed facts from a foreign repository.",
+      "reporters": [
+        {
+          "persona": "reviewer",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: environment-isolated bounded history Git commands and physical repository proof for all committed authority, including auxiliary-only facts."
+    },
+    {
+      "finding_id": "I4-22",
+      "severity": 7,
+      "issue": "A namespace symlink let relocation retire the source and activate a destination that normal capture could not reopen.",
+      "reporters": [
+        {
+          "persona": "reviewer",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: completed namespaces must be physically contained and idempotent before allocation or source retirement; valid base/coordination aliases remain supported."
+    },
+    {
+      "finding_id": "I4-23",
+      "severity": 3,
+      "issue": "A feedback test raced a detached worker and mistook a legitimate competing-worker success for failure.",
+      "reporters": [
+        {
+          "persona": "coder",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed test synchronization with a new durable generation, acknowledgement and actual worker lease; failure, recovery and privacy assertions retained."
+    }
+  ]
+}

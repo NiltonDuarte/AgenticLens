@@ -95,7 +95,7 @@ Original CONTRACT remains frozen. Iteration 03 implementation, scoped code revie
 
 ## Iteration 04: shared home state and committed history
 
-The user approved the [iteration04 plan](iterations/04/PLAN.md), including preservation of verified same-repository committed history with isolated new capture and worker state. Implementation began from clean96d1ebf. The historical contract and completed iteration01–03 evidence remain intact; final iteration04 review/integration and telemetry are still in progress at this implementation checkpoint.
+The user approved the [iteration04 plan](iterations/04/PLAN.md), including preservation of verified same-repository committed history with isolated new capture and worker state. Implementation began from clean96d1ebf. The historical contract and completed iteration01–03 evidence remain intact; iteration04 implementation, paired correction reviews, live source checks and integrated make are complete. Final telemetry is recorded below after the last ingestion step.
 
 New and explicitly updated configuration writes telemetry.capture.state_dir: ~/.agenticlens/state. Operational loading requires an effective explicit valid value before CLI overrides; reads create neither configuration nor state. The narrow init --update-capture-config command preserves other policy and custom paths. Configured project_name selects the shared registry; worktree-qualified ownership, bindings, diagnostics, cursors, publication generations and coordination isolate concurrent same-ticket work. Registry2, manifest2, handler3 and ledger5 have separate responsibilities.
 
@@ -109,35 +109,68 @@ Normal-permission Linux OpenCode1.19.5 evidence covers two actual Git worktrees 
 
 The user reviewed normal project trust and all six Codex definitions for the iteration04 smoke. Codex0.166.0 callback, agent response and background publication match the owning136475-byte source prefix:5103 uncached input,45056 cache-read,348 output and0 reasoning tokens;3 command calls/1 source-visible error, unavailable cost retained as null. This C04 observed-path proof carries across the narrowly tested C05 namespace/Git-authority corrections: its normal paths and bridge/extraction code are unchanged, and all six definitions remain byte-identical after the compatible native4 update. No fresh native4 Codex callback or trust bypass is claimed.
 
-Independent review corrected storage, configuration, recovery, history-authorization and test-oracle findings. Focused checks include real native callback/update races, process-death configuration recovery, partial owned-installation recovery, populated cursor/snapshot preservation, and actual public publication-journal recovery. Removing any of six continuation imports or the accepted snapshot now fails its regression oracle. Paired final reviews and the required integrated make gate precede consolidated approval; detailed working reports remain private until compact retention. The native Windows current application installer/transport test passed40.259s; the prior C04 initial timeout19.734s and identical successful retry38.798s remain recorded. Native Windows components and cross-builds do not establish live Windows harness delivery.
+Independent review corrected storage, configuration, recovery, history-authorization and test-oracle findings. Focused checks include real native callback/update races, process-death configuration recovery, partial owned-installation recovery, populated cursor/snapshot preservation, and actual public publication-journal recovery. Removing any of six continuation imports or the accepted snapshot now fails its regression oracle. All twelve final focus/model reviews approved the same candidate; parent consolidated outcome is APPROVED after make passed on94705a4. The branch already contains origin/main036d808, with no integration source changes. [Compact findings](iterations/04/REVIEW_SUMMARY.json) retain all23 candidates, numeric severities, every source-observed reporter tuple and disposition; detailed working reports remain outside Git. The native Windows current application installer/transport test passed40.259s; the prior C04 initial timeout19.734s and identical successful retry38.798s remain recorded. Native Windows components and cross-builds do not establish live Windows harness delivery.
 
-Limits remain explicit: arbitrary schema2 moves, arbitrary malformed namespace aliases, unobserved callbacks, unavailable deleted source records, active/interrupted child tails, physical power loss and hostile concurrent filesystem replacement are not certified. Snapshot completion describes observability at publication, independently of ticket merge. The existing telemetry below is still the completed iteration03 snapshot; iteration04 ingestion is deferred until the final workflow step.
+Limits remain explicit: arbitrary schema2 moves, arbitrary malformed namespace aliases, unobserved callbacks, unavailable deleted source records, active/interrupted child tails, physical power loss and hostile concurrent filesystem replacement are not certified. Snapshot completion describes observability at publication, independently of ticket merge. Telemetry below is the final available observability snapshot; subsequent agent activity remains outside its checkpoint.
+
+### Iteration04 review and verification attribution
+
+Reviewed source:94705a4, equivalent to the final frozen candidate. Both gpt-6.1-sol/high and gpt-6-luna/medium completed behavior, data/failure, architecture, test-effectiveness, security and release/setup reviews. Source metadata verifies all34 review runs and41 new iteration04 agent identities. Earlier CHANGES_REQUESTED and INCOMPLETE outcomes led to corrections and the final paired APPROVED rechecks; missing runtime/integration evidence was closed by the parent. All23 retained candidates are resolved, including the explicitly classified test/maintenance concerns. No unresolved debt was removed through cleanup.
+
+Discovery and fixes (IDs link to the compact record; all implementation and test correction actors below used gpt-6.1-sol/high):
+
+- Tester, gpt-6.1-sol/high: I4-01/02/04/05 identified SQLite admission contention, allocation under an integration file, missing initialization guidance and valid non-Git-to-Git ownership enrichment. Storage/configuration coders, gpt-6.1-sol/high, fixed them with the original behavioral oracles preserved.
+- Relocation/storage/bootstrap/history coders, each gpt-6.1-sol/high: I4-03/06/07/08/15/23 identified YAML-pin roundtrip, missing-key legacy-state abandonment, native Windows SQLite URI, legacy anchor/resume, historical fact fidelity and queued-worker test synchronization. The corresponding configuration/storage/history coder or tester, gpt-6.1-sol/high, corrected and tested each responsibility; I4-23 concerns a test race, not a product loss finding.
+- Release/setup reviewer, gpt-6.1-sol/high: I4-09/10 found incomplete logical-registry ignore coverage and Windows different-volume containment. Storage coder, gpt-6.1-sol/high, fixed both; paired release reviewers verified the corrections.
+- Architecture reviewer, gpt-6.1-sol/high: I4-11/12/19 found interrupted config activation, destination exposure before its pending fence, and shared registry/manifest naming. Configuration/storage/relocation coders, gpt-6.1-sol/high, fixed them; paired architecture reviewers verified the boundaries. I4-19 was a nonblocking maintenance observation.
+- Data/failure reviewer, gpt-6.1-sol/high: I4-13/14/18 found hook-before-manifest recovery, destination physical-owner bypass and supported schema4 cost-evidence publication. Storage/relocation/history coders, gpt-6.1-sol/high, corrected them and paired data reviewers verified the results.
+- Behavior reviewer, gpt-6.1-sol/high: I4-16/17 found administrative name normalization and concurrent callback/config-update state abandonment. Relocation/configuration/storage coders, gpt-6.1-sol/high, fixed the shared admission and remaining-deadline boundaries; paired behavior reviewers verified real native controls.
+- Test-effectiveness reviewer, gpt-6.1-sol/high: I4-20 found a missing populated-cursor import oracle. Tester, gpt-6.1-sol/high, added decisive continuation/snapshot/publication-recovery coverage; paired test reviewers verified original and mutation outcomes. No current product loss was inferred from that gap.
+- Security reviewer, gpt-6-luna/medium: I4-21 found Git-environment redirection of auxiliary-only committed authority. History coder, gpt-6.1-sol/high, fixed and reproduced the complete original native flow; paired security reviewers verified it.
+- Security reviewer, gpt-6.1-sol/high: I4-22 found namespace symlinks allowing a completed migration that normal capture could not reopen. Storage coder, gpt-6.1-sol/high, fixed containment/idempotence before retirement; paired security reviewers verified the correction.
+
+Parent verification, gpt-6.1-sol/high: full make exit0 after clean implementation commit/main synchronization, backend vet/race, frontend typecheck/lint/build and783 tests/35files, release6/installation10/distribution15 checks, and five Linux/Darwin/Windows native builds. Actual Linux source-grounded harness/home/worktree checks and bounded native Windows components are distinguished above from unverified platform/harness guarantees. Final source extraction and preservation checks are recorded with the final telemetry snapshot.
+
+Final source-grounded snapshot:182 same-project Codex owners,90 roots/92 native children, preserving all141 prior owners and adding all41 iteration04 agents. Direct owning-source prefix comparisons passed for source project, native ancestry, models and usage, including every retained owner; historical foreign owners and disposable runtime smoke projects are excluded. Two bounded reconciliation passes recorded source checkpoints for all selected owners. No failed or unassigned registrations remain. The67 conservative pending freshness states retain accepted facts; they do not indicate missing published usage in this independently verified snapshot. Raw transcripts and detailed operational diagnostics remain outside Git. Later root-session activity is the accepted publication tail, not a ticket-completion claim.
 
 ## Follow-up backlog
 
 AL-76 defines compact ledger JSON serialization and a source-independent format command with all-workspace, single-ticket and ticket-set selection, dry-run/check modes, value preservation and safe concurrent publication. Its specification is Ready under plan/to-do. Implementation requires its own dedicated session; no format command is implemented in AL-68.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 301
-- **Active Agent Duration:** 32h 10m (excludes user wait time)
-- **Context Window Health:** CRITICAL — Root agent peak 454.1k tokens (227% of 200k healthy ceiling, 7 compactions) | Subagents peak 451.4k (Coder)
+- **Software Development Life Cycle Iterations:** 309
+- **Active Agent Duration:** 39h 53m (excludes user wait time)
+- **Context Window Health:** CRITICAL — Root agent peak 454.1k tokens (227% of 200k healthy ceiling, 9 compactions) | Subagents peak 451.4k (Coder)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
-- **Subagent Turn Velocity & Thrashing:** 1.6 avg turns/run (peak: 8 turns) | Planner 1.3, Coder 4.2, Tester 5.0, Reviewer 1.1, Reviewer-architecture 1.0, Reviewer-behavior 1.0, Reviewer-data 1.0, Reviewer-tests 1.0
-- **Test-to-Production Code Ratio:** 1.2:1 (+10,014 test lines / +8,218 prod lines)
-- **Code Delivered:** +18,372 / -99 lines across 86 code files (excluding docs)
-- **Reasoning Effort:** 1,444,836 reasoning tokens (31.3% of generated output)
-- **Tool Health & Self-Correction:** 5,500 tool calls (306 self-corrections, 94.4% success rate)
+- **Subagent Turn Velocity & Thrashing:** 1.5 avg turns/run (peak: 8 turns) | Planner 1.8, Coder 3.8, Tester 4.3, Reviewer 1.1, Reviewer-architecture 1.0, Reviewer-behavior 1.0, Reviewer-data 1.0, Reviewer-tests 1.0
+- **Test-to-Production Code Ratio:** 1.2:1 (+15,104 test lines / +12,638 prod lines)
+- **Code Delivered:** +27,882 / -189 lines across 130 code files (excluding docs)
+- **Reasoning Effort:** 2,024,816 reasoning tokens (32.1% of generated output)
+- **Tool Health & Self-Correction:** 7,384 tool calls (426 self-corrections, 94.2% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 49 execution anomalies detected (27 CRITICAL, 22 WARNING).
+- **Status:** 75 execution anomalies detected (45 CRITICAL, 30 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (203.5k tokens) — Context tokens reached 203.5k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (207.3k tokens) — Context tokens reached 207.3k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+300.5k tokens) — Context tokens surged by 300.5k to 300.5k tokens.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (300.5k tokens) — Context tokens reached 300.5k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (202.3k tokens) — Context tokens reached 202.3k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+144.4k tokens) — Context tokens surged by 144.4k to 144.4k tokens.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+166.8k tokens) — Context tokens surged by 166.8k to 166.8k tokens.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (203.2k tokens) — Context tokens reached 203.2k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+172.4k tokens) — Context tokens surged by 172.4k to 172.4k tokens.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (206.2k tokens) — Context tokens reached 206.2k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+180.6k tokens) — Context tokens surged by 180.6k to 180.6k tokens.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.9k tokens) — Context tokens reached 200.9k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+196.5k tokens) — Context tokens surged by 196.5k to 196.5k tokens.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (205.6k tokens) — Context tokens reached 205.6k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+206.2k tokens) — Context tokens surged by 206.2k to 206.2k tokens.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (206.2k tokens) — Context tokens reached 206.2k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (207.2k tokens) — Context tokens reached 207.2k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (205.8k tokens) — Context tokens reached 205.8k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.4k tokens) — Context tokens reached 200.4k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.4k tokens) — Context tokens reached 200.4k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (203.1k tokens) — Context tokens reached 203.1k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (203.6k tokens) — Context tokens reached 203.6k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.4k tokens) — Context tokens reached 200.4k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.5k tokens) — Context tokens reached 200.5k, breaching the 200k critical ceiling.
@@ -156,12 +189,24 @@ AL-76 defines compact ledger JSON serialization and a source-independent format 
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-architecture <-> reviewer-tests (16 cycles) — Subagent roles 'reviewer-architecture' and 'reviewer-tests' alternated for 16 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-behavior <-> reviewer-data (13 cycles) — Subagent roles 'reviewer-behavior' and 'reviewer-data' alternated for 13 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-tests <-> reviewer (14 cycles) — Subagent roles 'reviewer-tests' and 'reviewer' alternated for 14 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-data <-> reviewer-behavior (38 cycles) — Subagent roles 'reviewer-data' and 'reviewer-behavior' alternated for 38 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-architecture <-> reviewer-tests (5 cycles) — Subagent roles 'reviewer-architecture' and 'reviewer-tests' alternated for 5 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer <-> reviewer-tests (20 cycles) — Subagent roles 'reviewer' and 'reviewer-tests' alternated for 20 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-architecture <-> reviewer-tests (6 cycles) — Subagent roles 'reviewer-architecture' and 'reviewer-tests' alternated for 6 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-data <-> reviewer-behavior (13 cycles) — Subagent roles 'reviewer-data' and 'reviewer-behavior' alternated for 13 consecutive cycles.
 - [CRITICAL] **TOOL_RETRY_STREAK**: Tool retry streak: command (5 consecutive errors) — Tool 'command' encountered 5 consecutive execution failures.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.3k tokens) — Context tokens reached 160.3k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (174.0k tokens) — Context tokens reached 174.0k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (190.7k tokens) — Context tokens reached 190.7k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (199.1k tokens) — Context tokens reached 199.1k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (164.4k tokens) — Context tokens reached 164.4k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.4k tokens) — Context tokens reached 160.4k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (166.8k tokens) — Context tokens reached 166.8k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (172.4k tokens) — Context tokens reached 172.4k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (180.6k tokens) — Context tokens reached 180.6k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (196.5k tokens) — Context tokens reached 196.5k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.3k tokens) — Context tokens reached 160.3k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.8k tokens) — Context tokens reached 160.8k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.1k tokens) — Context tokens reached 161.1k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (163.4k tokens) — Context tokens reached 163.4k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.4k tokens) — Context tokens reached 160.4k, breaching the 160k warning ceiling.
@@ -174,6 +219,7 @@ AL-76 defines compact ledger JSON serialization and a source-independent format 
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-data <-> reviewer-architecture (3 cycles) — Subagent roles 'reviewer-data' and 'reviewer-architecture' alternated for 3 consecutive cycles.
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-architecture <-> reviewer-data (3 cycles) — Subagent roles 'reviewer-architecture' and 'reviewer-data' alternated for 3 consecutive cycles.
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-data <-> reviewer-architecture (4 cycles) — Subagent roles 'reviewer-data' and 'reviewer-architecture' alternated for 4 consecutive cycles.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-architecture <-> reviewer-behavior (4 cycles) — Subagent roles 'reviewer-architecture' and 'reviewer-behavior' alternated for 4 consecutive cycles.
 - [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: command (3 consecutive errors) — Tool 'command' encountered 3 consecutive execution failures.
 - [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: command (3 consecutive errors) — Tool 'command' encountered 3 consecutive execution failures.
 - [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: command (3 consecutive errors) — Tool 'command' encountered 3 consecutive execution failures.
@@ -187,40 +233,40 @@ AL-76 defines compact ledger JSON serialization and a source-independent format 
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **planner** | 3 | 814,398 | 26,345 | 4,034,944 | 83.2% | 236.5k | BLOATED (118%) | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
-| **coder** | 6 | 3,805,775 | 795,905 | 202,287,744 | 98.2% | 451.4k | CRITICAL (226%) | Unavailable (0 observed, 0 partial, 6 unavailable / 6 invocations) |
-| **tester** | 2 | 1,783,463 | 194,116 | 80,044,416 | 97.8% | 353.3k | BLOATED (177%) | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **reviewer** | 9 | 931,168 | 76,582 | 15,821,184 | 94.4% | 145.8k | ELEVATED | Unavailable (0 observed, 0 partial, 9 unavailable / 9 invocations) |
-| **Unknown** | 24 | 6,491,130 | 978,713 | 268,271,232 | 97.6% | 454.1k | CRITICAL (227%) | Unavailable (0 observed, 0 partial, 24 unavailable / 24 invocations) |
-| **reviewer-architecture** | 8 | 957,851 | 64,600 | 11,772,032 | 92.5% | 157.4k | ELEVATED | Unavailable (0 observed, 0 partial, 8 unavailable / 8 invocations) |
-| **reviewer-behavior** | 9 | 1,015,723 | 68,626 | 11,391,616 | 91.8% | 142.7k | ELEVATED | Unavailable (0 observed, 0 partial, 9 unavailable / 9 invocations) |
-| **reviewer-data** | 9 | 802,305 | 83,331 | 13,168,768 | 94.3% | 149.1k | ELEVATED | Unavailable (0 observed, 0 partial, 9 unavailable / 9 invocations) |
-| **reviewer-tests** | 5 | 544,710 | 39,192 | 6,437,760 | 92.2% | 126.8k | ELEVATED | Unavailable (0 observed, 0 partial, 5 unavailable / 5 invocations) |
+| **planner** | 4 | 1,100,156 | 45,391 | 10,905,856 | 90.8% | 236.5k | BLOATED (118%) | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
+| **coder** | 11 | 6,541,095 | 1,298,027 | 379,213,056 | 98.3% | 451.4k | CRITICAL (226%) | Unavailable (0 observed, 0 partial, 11 unavailable / 11 invocations) |
+| **tester** | 3 | 2,318,063 | 260,161 | 120,392,320 | 98.1% | 388.9k | BLOATED (194%) | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
+| **reviewer** | 19 | 1,755,373 | 135,988 | 27,108,224 | 93.9% | 145.8k | ELEVATED | Unavailable (0 observed, 0 partial, 19 unavailable / 19 invocations) |
+| **Unknown** | 24 | 7,876,340 | 1,296,817 | 376,614,912 | 98.0% | 454.1k | CRITICAL (227%) | Unavailable (0 observed, 0 partial, 24 unavailable / 24 invocations) |
+| **reviewer-architecture** | 14 | 1,544,287 | 99,833 | 17,053,952 | 91.7% | 164.2k | ELEVATED | Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations) |
+| **reviewer-behavior** | 15 | 1,600,123 | 108,360 | 18,735,232 | 92.1% | 155.7k | ELEVATED | Unavailable (0 observed, 0 partial, 15 unavailable / 15 invocations) |
+| **reviewer-data** | 17 | 1,562,596 | 138,626 | 24,578,432 | 94.0% | 161.4k | ELEVATED | Unavailable (0 observed, 0 partial, 17 unavailable / 17 invocations) |
+| **reviewer-tests** | 9 | 896,173 | 62,428 | 11,472,896 | 92.8% | 139.7k | ELEVATED | Unavailable (0 observed, 0 partial, 9 unavailable / 9 invocations) |
 | **rootagent** | 66 | 7,336,451 | 841,164 | 141,539,968 | 95.1% | 453.9k | CRITICAL (227%) | Unavailable (0 observed, 0 partial, 66 unavailable / 66 invocations) |
-| **Total** | **141** | **24,482,974** | **3,168,574** | **754,769,664** | **96.9%** | **454.1k** | **CRITICAL** | **Unavailable (0 observed, 0 partial, 141 unavailable / 141 invocations)** |
+| **Total** | **182** | **32,530,657** | **4,286,795** | **1,127,614,848** | **97.2%** | **454.1k** | **CRITICAL** | **Unavailable (0 observed, 0 partial, 182 unavailable / 182 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-luna** | 54 | 4,104,094 | 253,670 | 29,518,976 | 87.8% | Unavailable (0 observed, 0 partial, 54 unavailable / 54 invocations) |
-| **gpt-6.1-sol** | 87 | 20,378,880 | 2,914,904 | 725,250,688 | 97.3% | Unavailable (0 observed, 0 partial, 87 unavailable / 87 invocations) |
-| **Total** | **141** | **24,482,974** | **3,168,574** | **754,769,664** | **96.9%** | **Unavailable (0 observed, 0 partial, 141 unavailable / 141 invocations)** |
+| **gpt-6-luna** | 71 | 5,341,901 | 323,068 | 39,447,168 | 88.1% | Unavailable (0 observed, 0 partial, 71 unavailable / 71 invocations) |
+| **gpt-6.1-sol** | 111 | 27,188,756 | 3,963,727 | 1,088,167,680 | 97.6% | Unavailable (0 observed, 0 partial, 111 unavailable / 111 invocations) |
+| **Total** | **182** | **32,530,657** | **4,286,795** | **1,127,614,848** | **97.2%** | **Unavailable (0 observed, 0 partial, 182 unavailable / 182 invocations)** |
 
-Capture observation finalized: 2026-11-03T09:46:53.771525519Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 67; retained older facts: 74; pending: 74; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 141; reserved bytes: 39923292. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
-Owner codex/01a19cdc-11b8-71c2-884a-eb44f01314af: pending; last successful source read 2026-11-03T09:46:52.260746003Z; accepted source checkpoint 2026-11-02T15:34:50.187Z.
-Owner codex/01a19d37-ffca-75b3-98e2-0f1910131d0b: current; last successful source read 2026-11-03T09:46:52.266989716Z; accepted source checkpoint 2026-11-02T17:08:17.403Z.
-Owner codex/01a19d2f-e920-7853-87ee-a74af51865fe: current; last successful source read 2026-11-03T09:46:52.27322357Z; accepted source checkpoint 2026-11-02T16:57:52.001Z.
-Owner codex/01a19866-1ebf-7be3-aa0d-47262ddfccc5: pending; last successful source read 2026-11-03T09:46:52.278618464Z; accepted source checkpoint 2026-11-01T18:37:58.167Z.
-Owner codex/01a19869-c33d-70e1-8337-a34812486051: pending; last successful source read 2026-11-03T09:46:52.284286433Z; accepted source checkpoint 2026-11-01T18:42:12.941Z.
-Owner codex/01a1989a-866e-7a10-8345-14e09454b715: pending; last successful source read 2026-11-03T09:46:52.29378506Z; accepted source checkpoint 2026-11-01T19:39:07.209Z.
-Owner codex/01a19f64-c34a-7b40-954d-5d2b2ab0d8e1: current; last successful source read 2026-11-03T09:46:52.302457087Z; accepted source checkpoint 2026-11-03T03:16:46.778Z.
-Owner codex/01a19ccd-8b24-7690-94de-3ff167b15442: pending; last successful source read 2026-11-03T09:46:52.308077791Z; accepted source checkpoint 2026-11-02T15:10:02.466Z.
-Owner codex/01a19f72-4c53-7d83-aa54-8cd4d680f03a: current; last successful source read 2026-11-03T09:46:52.313702341Z; accepted source checkpoint 2026-11-03T03:29:09.385Z.
-Owner codex/01a19efe-cc11-7521-86fc-b0d1283f1a41: current; last successful source read 2026-11-03T09:46:52.32065806Z; accepted source checkpoint 2026-11-03T01:26:42.249Z.
-Owner codex/01a19f6d-bf3d-7b33-b46e-43207debfa50: current; last successful source read 2026-11-03T09:46:52.327771943Z; accepted source checkpoint 2026-11-03T03:26:43.131Z.
-Owner codex/01a198b3-a8e7-7411-a8a6-46df93652e58: pending; last successful source read 2026-11-03T09:46:52.332906966Z; accepted source checkpoint 2026-11-01T20:03:34.142Z.
-Owner codex/01a19d11-a9aa-7c90-bb2d-4fe5b418a80f: current; last successful source read 2026-11-03T09:46:52.338602788Z; accepted source checkpoint 2026-11-02T16:25:50.763Z.
-Owner codex/01a1983d-683d-7381-97c2-c6693df34f94: pending; last successful source read 2026-11-03T09:46:52.343848516Z; accepted source checkpoint 2026-11-01T21:38:32.081Z.
-Owner codex/01a198b7-9f3d-7653-b12d-4c98aff72591: pending; last successful source read 2026-11-03T09:46:52.349961937Z; accepted source checkpoint 2026-11-01T20:06:13.827Z.
-Owner codex/01a198b3-aac9-7fb1-b18d-b88d97da881a: pending; last successful source read 2026-11-03T09:46:52.35589453Z; accepted source checkpoint 2026-11-01T20:02:27.642Z.
+Capture observation finalized: 2026-11-03T14:02:37.232070116Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 100; retained older facts: 82; pending: 82; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 182; reserved bytes: 52146134. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
+Owner codex/01a19cdc-11b8-71c2-884a-eb44f01314af: pending; last successful source read 2026-11-03T14:02:35.649691152Z; accepted source checkpoint 2026-11-02T15:34:50.187Z.
+Owner codex/01a1a163-a41b-7801-87e6-da31df0b8f94: current; last successful source read 2026-11-03T14:02:35.653588104Z; accepted source checkpoint 2026-11-03T12:31:59.996Z.
+Owner codex/01a1a0d3-b974-7e01-8f96-7cf6a03d0776: pending; last successful source read 2026-11-03T14:02:35.658662256Z; accepted source checkpoint 2026-11-03T11:29:02.076Z.
+Owner codex/01a19d37-ffca-75b3-98e2-0f1910131d0b: current; last successful source read 2026-11-03T14:02:35.665289066Z; accepted source checkpoint 2026-11-02T17:08:17.403Z.
+Owner codex/01a19d2f-e920-7853-87ee-a74af51865fe: current; last successful source read 2026-11-03T14:02:35.670282065Z; accepted source checkpoint 2026-11-02T16:57:52.001Z.
+Owner codex/01a19866-1ebf-7be3-aa0d-47262ddfccc5: pending; last successful source read 2026-11-03T14:02:35.67641732Z; accepted source checkpoint 2026-11-01T18:37:58.167Z.
+Owner codex/01a19869-c33d-70e1-8337-a34812486051: pending; last successful source read 2026-11-03T14:02:35.681272Z; accepted source checkpoint 2026-11-01T18:42:12.941Z.
+Owner codex/01a1989a-866e-7a10-8345-14e09454b715: pending; last successful source read 2026-11-03T14:02:35.685693764Z; accepted source checkpoint 2026-11-01T19:39:07.209Z.
+Owner codex/01a1a0f5-2ae1-7391-b5c6-aa84bd474189: pending; last successful source read 2026-11-03T14:02:35.691661089Z; accepted source checkpoint 2026-11-03T13:35:29.035Z.
+Owner codex/01a19f64-c34a-7b40-954d-5d2b2ab0d8e1: current; last successful source read 2026-11-03T14:02:35.697823036Z; accepted source checkpoint 2026-11-03T03:16:46.778Z.
+Owner codex/01a19ccd-8b24-7690-94de-3ff167b15442: pending; last successful source read 2026-11-03T14:02:35.702307225Z; accepted source checkpoint 2026-11-02T15:10:02.466Z.
+Owner codex/01a19f72-4c53-7d83-aa54-8cd4d680f03a: current; last successful source read 2026-11-03T14:02:35.707132048Z; accepted source checkpoint 2026-11-03T03:29:09.385Z.
+Owner codex/01a19efe-cc11-7521-86fc-b0d1283f1a41: current; last successful source read 2026-11-03T14:02:35.712628579Z; accepted source checkpoint 2026-11-03T01:26:42.249Z.
+Owner codex/01a19f6d-bf3d-7b33-b46e-43207debfa50: current; last successful source read 2026-11-03T14:02:35.71696372Z; accepted source checkpoint 2026-11-03T03:26:43.131Z.
+Owner codex/01a198b3-a8e7-7411-a8a6-46df93652e58: pending; last successful source read 2026-11-03T14:02:35.721182771Z; accepted source checkpoint 2026-11-01T20:03:34.142Z.
+Owner codex/01a19d11-a9aa-7c90-bb2d-4fe5b418a80f: current; last successful source read 2026-11-03T14:02:35.729212635Z; accepted source checkpoint 2026-11-02T16:25:50.763Z.
 Additional owner freshness details remain in local capture diagnostics.
