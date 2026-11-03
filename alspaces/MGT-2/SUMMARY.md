@@ -1,5 +1,9 @@
 # MGT-2 supervision log
 
+Additional cleanup paused: AL-60 run 4 was interrupted before completion. Host activity positions 820-821 explicitly report “Stopped by user” at 2026-11-03T19:34:52Z. Manager left the owner stopped, did not bypass it by editing its checkout, and asked whether to resume cleanup or hold. PR #101 remains unmerged at eb3d515; evidence-file consolidation is not complete. Earlier cleanup/verification remains valid for that head, but the user's additional cleanup requirement remains open.
+
+Cleanup correction: user reported too many AL-60 evidence files remained. Manager's retain-all-17-raw-files interpretation was too conservative and is superseded. Existing owner resumed in run 4 to consolidate meaningful commands/results/failure history/limits into VERIFICATION.md and remove raw evidence outputs/redundant indexes from the final tree, linking immutable committed versions where detailed output remains useful. Compact findings/credit/accepted debt, required telemetry/contracts and tested source remain preserved. Merge returns to preparation until this handoff and refreshed exact-head checks. This is artifact-maintenance correction, not application scope expansion.
+
 AL-60 cleanup gate satisfied at eb3d515d85493372aab099d7cda82390e3c63fb3. Manager fetched the actual PR head, verified only AL-60 artifacts changed, application/test/CI/scripts remain equal to tested 057d410, current main is included, both compact finding files and all 17 retained raw outputs are byte-identical, all 36 ledger IDs/source/parent fields are preserved, and no empty AL-60 artifacts remain. Contracts/summary/ledger/findings and useful historical/red-green/integrated evidence remain. No product review or full-suite repeat required for unchanged source. Cleanup removed empty/superseded files and consolidated notes/references; accepted TEST-02 remains visible. PR is open/non-draft/non-release with no review objections or unresolved threads. Earlier head's four green checks do not pass this new head; refreshed CI is running. Merge remains held only for fresh exact-head hosted checks and final race-safe readiness verification.
 
 AL-60 PR delivery verified: https://github.com/NiltonDuarte/AgenticLens/pull/101 at 2a99b422bd24c674e3c4d5e787738b5238c2e3d7, non-release, open/non-draft, includes current main 733e367. Manager verified exact compact review dispositions and retained full make output at tested 057d410; final delta changes only guidance and ticket artifacts. All eight final responsibility/model cells approved, with five confirmed findings fixed and one accepted severity 2 Unix test-oracle recommendation (owner AL-60 maintainer, no demonstrated leak). Full integrated make/race, 786 frontend tests, embedded assets, five builds and actual Windows runtime passed. No GitHub review objections or unresolved threads; hosted Frontend passed while Backend/Windows were still running.
@@ -49,15 +53,15 @@ GitHub reports main has no branch protection (protection endpoint HTTP 404). Thi
 Telemetry: PATH has no installed wrapper and the shared installation directory is empty. Use the existing local source-built native binary with supported native options, explicit Codex source, ticket and root session. Native generate has no --al-offline/--al-project options; invoke from this checkout. Root source rollout found at ~/.codex/sessions/2026/11/03/rollout-2026-11-03T18-47-43-01a1a286-27c9-7c50-9f2e-70f0a332c763.jsonl. This manager has no native children; the five independently created T3 roots are not children. T3 MCP tool counts are a known decoder completeness limit. This is an active-session checkpoint, not complete end-of-supervision telemetry; regenerate at later delivery. Independent ticket telemetry is not part of the manager's ledger.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 21
-- **Active Agent Duration:** 24m 31s (excludes user wait time)
-- **Context Window Health:** BLOATED — Root agent peak 207.1k tokens (104% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Software Development Life Cycle Iterations:** 22
+- **Active Agent Duration:** 25m 51s (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 217.8k tokens (109% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 10,046 reasoning tokens (19.3% of generated output)
-- **Tool Health & Self-Correction:** 67 tool calls (8 self-corrections, 88.1% success rate)
+- **Reasoning Effort:** 11,816 reasoning tokens (20.3% of generated output)
+- **Tool Health & Self-Correction:** 72 tool calls (8 self-corrections, 88.9% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
@@ -71,11 +75,11 @@ Telemetry: PATH has no installed wrapper and the shared installation directory i
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 187,541 | 42,069 | 12,387,840 | 98.5% | 207.1k | BLOATED (104%) | $0.00 |
-| **Total** | **1** | **187,541** | **42,069** | **12,387,840** | **98.5%** | **207.1k** | **BLOATED** | **$0.00** |
+| **rootagent** | 1 | 194,576 | 46,417 | 14,292,352 | 98.7% | 217.8k | BLOATED (109%) | $0.00 |
+| **Total** | **1** | **194,576** | **46,417** | **14,292,352** | **98.7%** | **217.8k** | **BLOATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 1 | 187,541 | 42,069 | 12,387,840 | 98.5% | $0.00 |
-| **Total** | **1** | **187,541** | **42,069** | **12,387,840** | **98.5%** | **$0.00** |
+| **gpt-6.1-sol** | 1 | 194,576 | 46,417 | 14,292,352 | 98.7% | $0.00 |
+| **Total** | **1** | **194,576** | **46,417** | **14,292,352** | **98.7%** | **$0.00** |

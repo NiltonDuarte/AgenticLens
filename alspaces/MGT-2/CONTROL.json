@@ -41,7 +41,7 @@
       "head": "eb3d515d85493372aab099d7cda82390e3c63fb3",
       "base": "main",
       "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/101",
-      "status": "waiting_checks",
+      "status": "blocked",
       "order": 1,
       "last_instruction": {
         "threadId": "5dbc6729-7bc5-4bc2-84c8-1433f289f5f6",
@@ -53,10 +53,11 @@
         "delivery": "started"
       },
       "verified_checks": "Manager verified current main is ancestor, final delta from tested 057d410 contains guidance/workspace/lifecycle/telemetry only, compact findings and make evidence retained, no GitHub reviews or unresolved discussions. All eight final responsibility/profile approvals in owner summary. Full integrated make with bounded CPU, all race packages, 786 frontend cases, build/embed and actual Windows runtime pass. Hosted Frontend passed; Backend/Windows in progress at inspection.",
-      "next_action": "On CI wake freshly verify exact head/base/reviews/checks, then expected-head squash merge and actual merge-SHA verification; notify AL-61 only afterward",
+      "next_action": "Await clarification whether user wants the stopped cleanup owner resumed; do not restart or bypass the stop",
       "notification_request": "mgt2-handoff-notification-60",
       "blockers": [
-        "Refreshed hosted Windows, Backend, Frontend and dependent binary/version gates pending at eb3d515"
+        "Additional evidence consolidation interrupted: host activity explicitly says Stopped by user",
+        "Cleanup completion and final exact-head gates required before merge"
       ],
       "diagnosis": {
         "status": "read-only, owner reported",
@@ -75,9 +76,10 @@
         "disposition": "Accepted nonblocking recommendation; no leak demonstrated"
       },
       "cleanup_instruction": {
-        "request": "User: clean the AL-60 branch before merge",
-        "clientRequestId": "mgt2-al60-premerge-cleanup",
-        "runId": "run:thread:5dbc6729-7bc5-4bc2-84c8-1433f289f5f6:ordinal:3"
+        "request": "Further reduce evidence files; prior retain-all-17-files interpretation superseded",
+        "clientRequestId": "mgt2-al60-consolidate-evidence",
+        "runId": "run:thread:5dbc6729-7bc5-4bc2-84c8-1433f289f5f6:ordinal:4",
+        "result": "run4 interrupted by user before completion; activity positions 820-821 record Stopped by user"
       },
       "cleanup": "Complete; manager verified product/test/CI/scripts equality with tested 057d410, byte-identical compact findings and 17 retained evidence outputs, preserved 36 ledger identities/source/parent fields; artifacts only"
     },
@@ -199,5 +201,6 @@
     "status": "approved",
     "preserved": "No waived gates, weakened tests, global timeout inflation, or duplicate capture ownership"
   },
-  "observed_main": "733e367ee12b9828cd340759eab855f4d809279c"
+  "observed_main": "733e367ee12b9828cd340759eab855f4d809279c",
+  "pending_user_decision": "Resume stopped AL-60 cleanup owner or leave cleanup/merge on hold"
 }
