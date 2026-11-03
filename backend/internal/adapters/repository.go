@@ -1,6 +1,7 @@
 package adapters
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,7 +11,9 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"time"
 
+	"agenticlens/internal/adapters/capture"
 	"agenticlens/internal/adapters/config"
 	"agenticlens/internal/domain"
 )
@@ -675,9 +678,30 @@ func SaveFactLedgerPreservingHistory(path string, ledger domain.AgenticFactLedge
 // SaveMetricsLedger writes an AgenticMetricsLedger to the specified file path after serializing to external DTO format,
 // creating parent directories if needed.
 func SaveMetricsLedger(path string, ledger domain.AgenticMetricsLedger) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	return saveMetricsLedger(ctx, path, ledger)
+}
+
+func saveMetricsLedger(ctx context.Context, path string, ledger domain.AgenticMetricsLedger) (err error) {
 	parentDir := filepath.Dir(path)
 	if err := os.MkdirAll(parentDir, 0755); err != nil {
 		return fmt.Errorf("failed to create directory %s: %w", parentDir, err)
+	}
+
+	// Computed export is an explicit snapshot, not a baseline merge. Own the
+	// output here without taking source scanner locks recursively.
+	path, err = capture.ProjectDirectory(path)
+	if err != nil {
+		return fmt.Errorf("resolving metrics output: %w", err)
+	}
+	owner, err := capture.AcquirePublication(ctx, path)
+	if err != nil {
+		return fmt.Errorf("acquiring metrics publication ownership: %w", err)
+	}
+	defer func() { err = errors.Join(err, owner.Close()) }()
+	if err := CheckPublication(path); err != nil {
+		return err
 	}
 
 	serialized := SerializeLedger(ledger)

@@ -1,6 +1,7 @@
 package backfill
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"agenticlens/internal/adapters"
+	"agenticlens/internal/adapters/capture"
 	"agenticlens/internal/adapters/codex"
 	"agenticlens/internal/adapters/config"
 	"agenticlens/internal/adapters/git"
@@ -156,8 +158,9 @@ func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) 
 
 	// 2. Iterate each discovered workspace with per-ticket error isolation
 	for _, metricPath := range targetFiles {
+		lockCtx, lockCancel := context.WithTimeout(context.Background(), 5*time.Minute)
 		ticketResult := e.processSingleWorkspace(
-			metricPath,
+			lockCtx, metricPath,
 			opts,
 			opencodeDB,
 			gitUser,
@@ -165,6 +168,8 @@ func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) 
 			nowISO,
 			cfg,
 		)
+
+		lockCancel()
 
 		if ticketResult.Error != nil {
 			report.Warnings = append(report.Warnings, fmt.Sprintf("Workspace %s: %v", metricPath, ticketResult.Error))
@@ -197,6 +202,7 @@ func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) 
 }
 
 func (e *BackfillEngine) processSingleWorkspace(
+	ctx context.Context,
 	metricPath string,
 	opts BackfillOptions,
 	opencodeDB *opencode.OpenCodeDB,
@@ -204,13 +210,33 @@ func (e *BackfillEngine) processSingleWorkspace(
 	classificationCfg *git.ClassificationConfig,
 	nowISO string,
 	cfg domain.ProjectConfig,
-) TicketMigrationResult {
+) (result TicketMigrationResult) {
 	workspaceDir := filepath.Dir(metricPath)
 	workspaceName := filepath.Base(workspaceDir)
 
-	result := TicketMigrationResult{
+	result = TicketMigrationResult{
 		TicketID:      workspaceName,
 		WorkspacePath: workspaceDir,
+	}
+
+	// One target is owned at a time, before any baseline read and through the
+	// ledger/summary writes. Batch callers never retain a lock while taking the
+	// next, so they cannot invert the formatter's canonical multi-lock order.
+	canonicalPath, err := capture.ProjectDirectory(metricPath)
+	if err != nil {
+		result.Error = fmt.Errorf("resolving ledger publication: %w", err)
+		return result
+	}
+	owner, err := capture.AcquirePublication(ctx, canonicalPath)
+	if err != nil {
+		result.Error = fmt.Errorf("acquiring ledger publication ownership: %w", err)
+		return result
+	}
+	defer func() { result.Error = errors.Join(result.Error, owner.Close()) }()
+	metricPath = canonicalPath
+	if err := adapters.CheckPublication(metricPath); err != nil {
+		result.Error = err
+		return result
 	}
 
 	// Read raw content to check file validity

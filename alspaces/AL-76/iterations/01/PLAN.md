@@ -42,3 +42,5 @@ Parent updates SUMMARY.md and PULL_REQUEST.md, moves the existing specification 
 ## Delivery steering
 
 User message: MGT-2 supervises delivery with authorization to merge eligible non-release PRs; proposed order AL-60 and AL-61 before AL-76, then AL-62. Continue approved scope and wait for notification that predecessors actually merged before one integration pass. Preserve predecessor ticket-index updates. MGT-2 owns merging. This changes delivery coordination only, preserves the approved product contract and completed verification, and does not require a new iteration. Parent must integrate the notified upstream revision and assess affected review evidence before publication/handoff.
+
+User delivery follow-up: send final handoff or concrete blocker directly to MGT-2 via t3_thread_send, thread cce1ea90-2513-466c-a078-58b2765dfbb6, including PR URL, reviewed head and verification state. Manager's unchanged baseline make also failed capture native-version/capability and worker timeout tests; preserve evidence without weakening tests or broadening scope. Defer expensive full gate until AL-60 and AL-61 finish current gates; reviews/focused checks continue.

@@ -1,6 +1,7 @@
 package backfill
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,8 +11,10 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"time"
 
 	"agenticlens/internal/adapters"
+	"agenticlens/internal/adapters/capture"
 	"agenticlens/internal/adapters/config"
 	"agenticlens/internal/domain"
 	"agenticlens/internal/domain/migration"
@@ -94,147 +97,177 @@ func (r *MigrationRunner) Run(opts MigrationOptions) (*SchemaMigrationReport, er
 	}
 
 	for _, metricPath := range targetFiles {
-		wsDir := filepath.Dir(metricPath)
-		wsName := filepath.Base(wsDir)
-
-		res := TicketSchemaMigrationResult{
-			TicketID:      wsName,
-			WorkspacePath: wsDir,
-			TargetVersion: targetVer,
-		}
-
-		content, err := os.ReadFile(metricPath)
-		if err != nil {
-			res.Status = "error"
-			res.Error = fmt.Errorf("reading file: %w", err)
-			report.Errors = append(report.Errors, fmt.Sprintf("Workspace %s: %v", metricPath, res.Error))
-			report.Results = append(report.Results, res)
-			continue
-		}
-
-		sourceVer, err := r.engine.DetectVersion(content)
-		if err != nil {
-			res.Status = "error"
-			res.Error = fmt.Errorf("detecting schema version: %w", err)
-			report.Errors = append(report.Errors, fmt.Sprintf("Workspace %s: %v", metricPath, res.Error))
-			report.Results = append(report.Results, res)
-			continue
-		}
-		res.SourceVersion = sourceVer
-		hasLegacyFacts := hasLegacyFactCollections(content)
-		missingSource := hasMissingSessionSource(content)
-		needsSanitization := sourceVer >= 4 && sourceVer <= domain.CurrentSchemaVersion && (needsEventSanitization(content) || missingSource)
-		if sourceVer >= 4 && sourceVer <= domain.CurrentSchemaVersion && !hasLegacyFacts {
-			if err := validateCurrentLedger(content); err != nil {
-				res.Status = "error"
-				res.Error = fmt.Errorf("validating current schema ledger: %w", err)
-				report.Errors = append(report.Errors, fmt.Sprintf("Workspace %s: %v", metricPath, res.Error))
-				report.Results = append(report.Results, res)
-				continue
-			}
-		}
-		if sourceVer >= targetVer && !(sourceVer >= 4 && sourceVer <= domain.CurrentSchemaVersion && (hasLegacyFacts || needsSanitization)) {
-			res.Status = "up-to-date"
-			res.DiffSummary = fmt.Sprintf("Schema version %d is already up-to-date", sourceVer)
-			report.UpToDate++
-			report.Results = append(report.Results, res)
-			continue
-		}
-
-		migrated, err := r.engine.Migrate(content, targetVer)
-		if err != nil {
-			res.Status = "error"
-			res.Error = fmt.Errorf("migrating schema: %w", err)
-			report.Errors = append(report.Errors, fmt.Sprintf("Workspace %s: %v", metricPath, res.Error))
-			report.Results = append(report.Results, res)
-			continue
-		}
-
-		if migrated.TicketID != nil && strings.TrimSpace(*migrated.TicketID) != "" {
-			res.TicketID = strings.TrimSpace(*migrated.TicketID)
-		}
-		res.DiffSummary = fmt.Sprintf("Upgraded schema v%d -> v%d", sourceVer, targetVer)
-		if migrated.Migration != nil && strings.TrimSpace(migrated.Migration.Notes) != "" {
-			res.DiffSummary += "; " + strings.TrimSpace(migrated.Migration.Notes)
-		}
-
-		if opts.DryRun {
-			res.Status = "migrated (dry-run)"
-			report.Migrated++
-			report.Results = append(report.Results, res)
-			continue
-		}
-
-		if opts.Backup {
-			backupPath := metricPath + ".bak"
-			if err := os.WriteFile(backupPath, content, 0644); err != nil {
-				res.Status = "error"
-				res.Error = fmt.Errorf("creating backup file %s: %w", backupPath, err)
-				report.Errors = append(report.Errors, fmt.Sprintf("Workspace %s: %v", metricPath, res.Error))
-				report.Results = append(report.Results, res)
-				continue
-			}
-			res.BackupCreated = true
-		}
-
-		dto := adapters.AgenticFactLedgerDTOFromDomain(migrated)
-		if err := dto.Validate(); err != nil {
-			res.Status = "error"
-			res.Error = fmt.Errorf("validating migrated schema: %w", err)
-			report.Errors = append(report.Errors, fmt.Sprintf("Workspace %s: %v", metricPath, res.Error))
-			report.Results = append(report.Results, res)
-			continue
-		}
-		data, err := json.Marshal(dto)
-		if err != nil {
-			res.Status = "error"
-			res.Error = fmt.Errorf("marshaling migrated JSON: %w", err)
-			report.Errors = append(report.Errors, fmt.Sprintf("Workspace %s: %v", metricPath, res.Error))
-			report.Results = append(report.Results, res)
-			continue
-		}
-		data, err = adapters.FormatLedgerJSON(data)
-		if err != nil {
-			res.Status = "error"
-			res.Error = err
-			report.Errors = append(report.Errors, err.Error())
-			report.Results = append(report.Results, res)
-			continue
-		}
-
-		tempPath := metricPath + ".tmp"
-		if err := os.WriteFile(tempPath, data, 0644); err != nil {
-			res.Status = "error"
-			res.Error = fmt.Errorf("writing temporary file %s: %w", tempPath, err)
-			report.Errors = append(report.Errors, fmt.Sprintf("Workspace %s: %v", metricPath, res.Error))
-			report.Results = append(report.Results, res)
-			continue
-		}
-
-		if err := os.Rename(tempPath, metricPath); err != nil {
-			_ = os.Remove(tempPath)
-			res.Status = "error"
-			res.Error = fmt.Errorf("atomic rename to %s: %w", metricPath, err)
-			report.Errors = append(report.Errors, fmt.Sprintf("Workspace %s: %v", metricPath, res.Error))
-			report.Results = append(report.Results, res)
-			continue
-		}
-
-		if opts.UpdateSummaries {
-			summaryPath := filepath.Join(wsDir, "SUMMARY.md")
-			derivedLedger := domain.DeriveMetricsLedger(migrated, cfg)
-			tableMD := adapters.FormatMarkdownMetricsTable(derivedLedger, cfg.RoleOrder)
-			if err := adapters.UpdateSummaryFile(summaryPath, tableMD); err != nil {
-				report.Errors = append(report.Errors, fmt.Sprintf("Workspace %s: updating summary: %v", metricPath, err))
-			}
-		}
-
-		res.Status = "migrated"
-		report.Migrated++
+		// Release each target before the next acquisition; no batch lock order
+		// can conflict with format's sorted canonical ownership.
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+		res, issues := r.migrateWorkspace(ctx, metricPath, opts, targetVer, cfg)
+		cancel()
+		report.Errors = append(report.Errors, issues...)
 		report.Results = append(report.Results, res)
+		switch res.Status {
+		case "up-to-date":
+			report.UpToDate++
+		case "migrated", "migrated (dry-run)":
+			report.Migrated++
+		}
 	}
 
 	return report, nil
+}
+
+// migrateWorkspace owns the canonical output before observing its baseline.
+// Generation, format and backfill take this same lock through publication.
+func (r *MigrationRunner) migrateWorkspace(ctx context.Context, metricPath string, opts MigrationOptions, targetVer int, cfg domain.ProjectConfig) (res TicketSchemaMigrationResult, issues []string) {
+
+	wsDir := filepath.Dir(metricPath)
+	wsName := filepath.Base(wsDir)
+
+	res = TicketSchemaMigrationResult{
+		TicketID:      wsName,
+		WorkspacePath: wsDir,
+		TargetVersion: targetVer,
+	}
+
+	canonicalPath, err := capture.ProjectDirectory(metricPath)
+	if err != nil {
+		res.Status = "error"
+		res.Error = fmt.Errorf("resolving ledger publication: %w", err)
+		return res, []string{res.Error.Error()}
+	}
+	owner, err := capture.AcquirePublication(ctx, canonicalPath)
+	if err != nil {
+		res.Status = "error"
+		res.Error = fmt.Errorf("acquiring ledger publication ownership: %w", err)
+		return res, []string{res.Error.Error()}
+	}
+	defer func() {
+		if err := owner.Close(); err != nil {
+			res.Status = "error"
+			res.Error = errors.Join(res.Error, err)
+			issues = append(issues, fmt.Sprintf("Workspace %s: publication unlock: %v", metricPath, err))
+		}
+	}()
+	metricPath = canonicalPath
+	if err := adapters.CheckPublication(metricPath); err != nil {
+		res.Status = "error"
+		res.Error = err
+		return res, []string{err.Error()}
+	}
+
+	content, err := os.ReadFile(metricPath)
+	if err != nil {
+		res.Status = "error"
+		res.Error = fmt.Errorf("reading file: %w", err)
+		issues = append(issues, fmt.Sprintf("Workspace %s: %v", metricPath, res.Error))
+		return res, issues
+	}
+
+	sourceVer, err := r.engine.DetectVersion(content)
+	if err != nil {
+		res.Status = "error"
+		res.Error = fmt.Errorf("detecting schema version: %w", err)
+		issues = append(issues, fmt.Sprintf("Workspace %s: %v", metricPath, res.Error))
+		return res, issues
+	}
+	res.SourceVersion = sourceVer
+	hasLegacyFacts := hasLegacyFactCollections(content)
+	missingSource := hasMissingSessionSource(content)
+	needsSanitization := sourceVer >= 4 && sourceVer <= domain.CurrentSchemaVersion && (needsEventSanitization(content) || missingSource)
+	if sourceVer >= 4 && sourceVer <= domain.CurrentSchemaVersion && !hasLegacyFacts {
+		if err := validateCurrentLedger(content); err != nil {
+			res.Status = "error"
+			res.Error = fmt.Errorf("validating current schema ledger: %w", err)
+			issues = append(issues, fmt.Sprintf("Workspace %s: %v", metricPath, res.Error))
+			return res, issues
+		}
+	}
+	if sourceVer >= targetVer && !(sourceVer >= 4 && sourceVer <= domain.CurrentSchemaVersion && (hasLegacyFacts || needsSanitization)) {
+		res.Status = "up-to-date"
+		res.DiffSummary = fmt.Sprintf("Schema version %d is already up-to-date", sourceVer)
+		return res, issues
+	}
+
+	migrated, err := r.engine.Migrate(content, targetVer)
+	if err != nil {
+		res.Status = "error"
+		res.Error = fmt.Errorf("migrating schema: %w", err)
+		issues = append(issues, fmt.Sprintf("Workspace %s: %v", metricPath, res.Error))
+		return res, issues
+	}
+
+	if migrated.TicketID != nil && strings.TrimSpace(*migrated.TicketID) != "" {
+		res.TicketID = strings.TrimSpace(*migrated.TicketID)
+	}
+	res.DiffSummary = fmt.Sprintf("Upgraded schema v%d -> v%d", sourceVer, targetVer)
+	if migrated.Migration != nil && strings.TrimSpace(migrated.Migration.Notes) != "" {
+		res.DiffSummary += "; " + strings.TrimSpace(migrated.Migration.Notes)
+	}
+
+	if opts.DryRun {
+		res.Status = "migrated (dry-run)"
+		return res, issues
+	}
+
+	if opts.Backup {
+		backupPath := metricPath + ".bak"
+		if err := os.WriteFile(backupPath, content, 0644); err != nil {
+			res.Status = "error"
+			res.Error = fmt.Errorf("creating backup file %s: %w", backupPath, err)
+			issues = append(issues, fmt.Sprintf("Workspace %s: %v", metricPath, res.Error))
+			return res, issues
+		}
+		res.BackupCreated = true
+	}
+
+	dto := adapters.AgenticFactLedgerDTOFromDomain(migrated)
+	if err := dto.Validate(); err != nil {
+		res.Status = "error"
+		res.Error = fmt.Errorf("validating migrated schema: %w", err)
+		issues = append(issues, fmt.Sprintf("Workspace %s: %v", metricPath, res.Error))
+		return res, issues
+	}
+	data, err := json.Marshal(dto)
+	if err != nil {
+		res.Status = "error"
+		res.Error = fmt.Errorf("marshaling migrated JSON: %w", err)
+		issues = append(issues, fmt.Sprintf("Workspace %s: %v", metricPath, res.Error))
+		return res, issues
+	}
+	data, err = adapters.FormatLedgerJSON(data)
+	if err != nil {
+		res.Status = "error"
+		res.Error = err
+		issues = append(issues, err.Error())
+		return res, issues
+	}
+
+	tempPath := metricPath + ".tmp"
+	if err := os.WriteFile(tempPath, data, 0644); err != nil {
+		res.Status = "error"
+		res.Error = fmt.Errorf("writing temporary file %s: %w", tempPath, err)
+		issues = append(issues, fmt.Sprintf("Workspace %s: %v", metricPath, res.Error))
+		return res, issues
+	}
+
+	if err := os.Rename(tempPath, metricPath); err != nil {
+		_ = os.Remove(tempPath)
+		res.Status = "error"
+		res.Error = fmt.Errorf("atomic rename to %s: %w", metricPath, err)
+		issues = append(issues, fmt.Sprintf("Workspace %s: %v", metricPath, res.Error))
+		return res, issues
+	}
+
+	if opts.UpdateSummaries {
+		summaryPath := filepath.Join(wsDir, "SUMMARY.md")
+		derivedLedger := domain.DeriveMetricsLedger(migrated, cfg)
+		tableMD := adapters.FormatMarkdownMetricsTable(derivedLedger, cfg.RoleOrder)
+		if err := adapters.UpdateSummaryFile(summaryPath, tableMD); err != nil {
+			issues = append(issues, fmt.Sprintf("Workspace %s: updating summary: %v", metricPath, err))
+		}
+	}
+
+	res.Status = "migrated"
+	return res, issues
 }
 
 func needsEventSanitization(content []byte) bool {
