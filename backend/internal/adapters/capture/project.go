@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -31,6 +30,8 @@ type StateLocation struct {
 	RegistryDirectory     string
 	CoordinationDirectory string
 	WorktreeID            int64
+	// Provisional means no scope has been allocated; CoordinationDirectory is empty.
+	Provisional bool
 }
 
 func ProjectNameSegment(name string) (string, error) {
@@ -204,7 +205,7 @@ func ExistingLocation(directory, project string) (StateLocation, error) {
 	if err != nil {
 		return StateLocation{}, err
 	}
-	location := StateLocation{s.RegistryDirectory(), s.CoordinationDirectory(), s.worktreeID}
+	location := StateLocation{RegistryDirectory: s.RegistryDirectory(), CoordinationDirectory: s.CoordinationDirectory(), WorktreeID: s.worktreeID}
 	return location, s.Close()
 }
 
@@ -300,8 +301,8 @@ func ValidateDestination(project, path string) error {
 	return nil
 }
 
-// PreviewStateLocation performs no allocation. A new worktree's coordination
-// number is provisional until OpenProject commits its unique worktree row.
+// PreviewStateLocation performs no allocation. Unallocated scopes have no
+// coordination path until OpenProject commits their unique token.
 func PreviewStateLocation(directory, project string) (StateLocation, error) {
 	cfg, err := adaptersconfig.Load(project)
 	if err != nil {
@@ -315,9 +316,10 @@ func PreviewStateLocation(directory, project string) (StateLocation, error) {
 	if err != nil {
 		return StateLocation{}, err
 	}
-	location := StateLocation{RegistryDirectory: directory, WorktreeID: 1}
+	location := StateLocation{RegistryDirectory: directory, Provisional: true}
 	s, err := openRegistry(directory, cfg.ProjectName, project, true)
 	if err == nil {
+		location.Provisional = false
 		location.CoordinationDirectory = s.directory
 		location.WorktreeID = s.worktreeID
 		return location, s.Close()
@@ -325,24 +327,7 @@ func PreviewStateLocation(directory, project string) (StateLocation, error) {
 	if !errors.Is(err, os.ErrNotExist) {
 		return location, err
 	}
-	// Existing database, absent worktree: inspect only the allocation sequence.
-	p := filepath.Join(directory, "registry.db")
-	if _, e := os.Stat(p); e == nil {
-		db, e := openReadOnlyDB(p)
-		if e != nil {
-			return location, e
-		}
-		var id int64
-		e = db.QueryRow("SELECT coalesce(max(id),0)+1 FROM worktrees").Scan(&id)
-		closeErr := db.Close()
-		if e != nil || closeErr != nil {
-			return location, errors.Join(e, closeErr)
-		}
-		location.WorktreeID = id
-	} else if !errors.Is(e, os.ErrNotExist) {
-		return location, e
-	}
-	location.CoordinationDirectory = filepath.Join(directory, "worktrees", fmt.Sprint(location.WorktreeID))
+
 	return location, nil
 }
 
@@ -398,8 +383,7 @@ func isCoordinationPath(state string) bool {
 	if filepath.Base(filepath.Dir(state)) != "worktrees" {
 		return false
 	}
-	id, err := strconv.ParseInt(filepath.Base(state), 10, 64)
-	return err == nil && id > 0
+	return validCoordinateToken(filepath.Base(state))
 }
 
 func validateStatePlacement(project, registry string) (string, error) {

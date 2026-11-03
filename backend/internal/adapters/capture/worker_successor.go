@@ -31,7 +31,7 @@ func WorkerSuccessor(ctx context.Context, project, state string) (string, error)
 	if err != nil {
 		return "", err
 	}
-	if !sameEntrypointPath(configured.CoordinationDirectory, state) {
+	if configured.Provisional || !sameEntrypointPath(configured.CoordinationDirectory, state) {
 		return "", errors.New("capture state directory changed; pending work retained in its original namespace for explicit recovery")
 	}
 	native, err := entry.NativePath()
@@ -105,7 +105,7 @@ func WorkerSuccessor(ctx context.Context, project, state string) (string, error)
 	if err != nil {
 		return "", err
 	}
-	if !currentPolicy.Enabled || !sameEntrypointPath(currentState.CoordinationDirectory, state) {
+	if !currentPolicy.Enabled || currentState.Provisional || !sameEntrypointPath(currentState.CoordinationDirectory, state) {
 		return "", errors.New("capture policy/state changed during native takeover; pending work retained")
 	}
 	remaining := false

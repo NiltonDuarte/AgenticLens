@@ -45,6 +45,9 @@ func inspectCapture(ctx context.Context, command, directory, project string, pol
 		return err
 	}
 	directory = location.CoordinationDirectory
+	if location.Provisional {
+		directory = location.RegistryDirectory
+	}
 	issues, err := capture.InstallationIssues(project, directory)
 	if err != nil {
 		return err
@@ -59,6 +62,9 @@ func inspectCapture(ctx context.Context, command, directory, project string, pol
 		return err
 	}
 	configured := configuredLocation.CoordinationDirectory
+	if configuredLocation.Provisional {
+		configured = configuredLocation.RegistryDirectory
+	}
 	if configured != directory {
 		configuredIssues, err := capture.InstallationIssues(project, configured)
 		if err != nil {
@@ -74,6 +80,9 @@ func inspectCapture(ctx context.Context, command, directory, project string, pol
 	store, err := capture.OpenReadOnlyProject(directory, project)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("read-only capture inspection failed: %w", err)
+	}
+	if errors.Is(err, os.ErrNotExist) {
+		err = nil
 	}
 	if store != nil {
 		defer func() { returnErr = errors.Join(returnErr, store.Close()) }()
@@ -142,16 +151,18 @@ func inspectCapture(ctx context.Context, command, directory, project string, pol
 			return err
 		}
 	}
-	view.Worker, err = capture.WorkerStatus(directory)
-	if err != nil {
-		return err
-	}
-	for _, source := range []string{"codex", "opencode"} {
-		manifest, e := capture.ReadManifest(directory, source)
-		if e == nil {
-			view.Installation = append(view.Installation, manifest)
-		} else if !errors.Is(e, os.ErrNotExist) {
-			return e
+	if !location.Provisional {
+		view.Worker, err = capture.WorkerStatus(directory)
+		if err != nil {
+			return err
+		}
+		for _, source := range []string{"codex", "opencode"} {
+			manifest, e := capture.ReadManifest(directory, source)
+			if e == nil {
+				view.Installation = append(view.Installation, manifest)
+			} else if !errors.Is(e, os.ErrNotExist) {
+				return e
+			}
 		}
 	}
 	if view.DiagnosticsContinuation {

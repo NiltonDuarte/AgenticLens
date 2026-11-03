@@ -52,7 +52,7 @@ func TestAutomaticDeactivationRetainsOtherIntegration(t *testing.T) {
 	dir := t.TempDir()
 	save := func(source string, active bool) {
 		t.Helper()
-		b, err := json.Marshal(capture.Manifest{Protocol: capture.ProtocolVersion, Source: source, Active: active})
+		b, err := json.Marshal(capture.Manifest{Protocol: capture.ManifestProtocolVersion, Source: source, Active: active})
 		if err != nil {
 			t.Fatal(err)
 		}

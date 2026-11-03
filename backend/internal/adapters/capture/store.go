@@ -16,7 +16,7 @@ import (
 
 	"agenticlens/internal/adapters/codex"
 	"agenticlens/internal/domain"
-	_ "modernc.org/sqlite"
+	"modernc.org/sqlite"
 )
 
 const RegistryProtocolVersion = 2
@@ -72,7 +72,28 @@ func openRegistryContext(ctx context.Context, directory, name, project string, r
 	return openRegistryModeContext(ctx, directory, name, project, readOnly, "")
 }
 
+// Concurrent first opens can contend while SQLite switches the new database to
+// WAL, before ordinary transaction busy handling applies. Retry only lock errors
+// within the constructor's bounded allowance; all other errors remain explicit.
 func openRegistryModeContext(ctx context.Context, directory, name, project string, readOnly bool, migrationID string) (*Store, error) {
+	retryUntil := time.Now().Add(time.Second)
+	for {
+		store, err := openRegistryAttemptContext(ctx, directory, name, project, readOnly, migrationID)
+		var sqliteErr *sqlite.Error
+		if err == nil || readOnly || !errors.As(err, &sqliteErr) || sqliteErr.Code()&255 != 5 && sqliteErr.Code()&255 != 6 || !time.Now().Before(retryUntil) {
+			return store, err
+		}
+		timer := time.NewTimer(10 * time.Millisecond)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return nil, errors.Join(ctx.Err(), err)
+		case <-timer.C:
+		}
+	}
+}
+
+func openRegistryAttemptContext(ctx context.Context, directory, name, project string, readOnly bool, migrationID string) (*Store, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -141,6 +162,9 @@ func openRegistryModeContext(ctx context.Context, directory, name, project strin
 		if version != RegistryProtocolVersion {
 			return fail(fmt.Errorf("unsupported capture registry protocol %d; explicitly relocate legacy state", version))
 		}
+		if err = validateCoordinateSchema(ctx, db); err != nil {
+			return fail(err)
+		}
 		var owner string
 		if err = db.QueryRowContext(ctx, "SELECT name FROM project_identity WHERE singleton=1").Scan(&owner); err != nil {
 			return fail(err)
@@ -167,6 +191,7 @@ func openRegistryModeContext(ctx context.Context, directory, name, project strin
 		}
 	}
 	var id int64
+	coord := directory
 	if readOnly {
 		if err = db.QueryRowContext(ctx, "SELECT id FROM worktrees WHERE directory=?", project).Scan(&id); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
@@ -219,6 +244,20 @@ func openRegistryModeContext(ctx context.Context, directory, name, project strin
 		if e = tx.QueryRowContext(ctx, "SELECT id FROM worktrees WHERE directory=?", project).Scan(&id); e != nil {
 			return rollback(e)
 		}
+		if project != "" {
+			if scopeExisted {
+				var token string
+				token, e = coordinateTokenTx(ctx, tx, id)
+				if e == nil {
+					coord, e = coordinatePath(directory, token)
+				}
+			} else {
+				coord, e = allocateCoordinate(ctx, tx, directory, id, ownership, randomCoordinateToken)
+			}
+			if e != nil {
+				return rollback(e)
+			}
+		}
 		if !scopeExisted {
 			if _, e = tx.ExecContext(ctx, "INSERT INTO worktree_ownership(worktree_id,ownership)VALUES(?,?)", id, ownership); e != nil {
 				return rollback(e)
@@ -242,7 +281,6 @@ func openRegistryModeContext(ctx context.Context, directory, name, project strin
 				}
 			}
 			if allowPending {
-				coord := filepath.Join(directory, "worktrees", fmt.Sprint(id))
 				if e = os.MkdirAll(coord, 0700); e != nil {
 					return rollback(e)
 				}
@@ -277,9 +315,11 @@ func openRegistryModeContext(ctx context.Context, directory, name, project strin
 			return fail(e)
 		}
 	}
-	coord := directory
-	if project != "" {
-		coord = filepath.Join(directory, "worktrees", fmt.Sprint(id))
+	if readOnly && project != "" {
+		coord, err = readCoordinatePath(ctx, db, directory, id)
+		if err != nil {
+			return fail(err)
+		}
 	}
 	if !readOnly {
 		if err = ctx.Err(); err != nil {

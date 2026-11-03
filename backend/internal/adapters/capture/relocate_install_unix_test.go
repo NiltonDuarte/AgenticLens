@@ -123,7 +123,18 @@ func TestRelocationResumesInterruptedOwnedHookAndPluginBeforeManifest(t *testing
 			if err != nil {
 				t.Fatal(err)
 			}
-			coord := filepath.Join(target, "worktrees", "1")
+			db, e := openReadOnlyDB(filepath.Join(target, "registry.db"))
+			if e != nil {
+				t.Fatal(e)
+			}
+			var scope int64
+			if e = db.QueryRow("SELECT id FROM worktrees WHERE directory=?", project).Scan(&scope); e != nil {
+				t.Fatal(e)
+			}
+			coord, e := readCoordinatePath(ctx, db, target, scope)
+			if closeErr := db.Close(); e != nil || closeErr != nil {
+				t.Fatalf("pending coordinate: %v %v", e, closeErr)
+			}
 			pendingManifest, err := os.ReadFile(manifestPath(coord, sourceKind))
 			if err != nil || !bytes.Equal(pendingManifest, legacyBody) {
 				t.Fatalf("interruption passed the manifest checkpoint: %v", err)
@@ -166,7 +177,7 @@ func TestRelocationResumesInterruptedOwnedHookAndPluginBeforeManifest(t *testing
 				t.Fatalf("retry changed publication acknowledgement: %+v %v", request, err)
 			}
 			final, err := ReadManifest(coord, sourceKind)
-			if err != nil || !final.Active || final.Protocol != ProtocolVersion || final.StateDir != coord {
+			if err != nil || !final.Active || final.Protocol != ManifestProtocolVersion || final.StateDir != coord {
 				t.Fatalf("retry did not finish the owned installation: %+v %v", final, err)
 			}
 			if err = checkOwnedIntegration(project, sourceKind, final); err != nil {

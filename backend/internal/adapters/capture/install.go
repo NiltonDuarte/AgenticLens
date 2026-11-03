@@ -65,9 +65,10 @@ type PlannedChange struct {
 	Action string `json:"action"`
 }
 type InstallResult struct {
-	Manifest Manifest        `json:"manifest"`
-	Changes  []PlannedChange `json:"changes"`
-	DryRun   bool            `json:"dry_run"`
+	Manifest               Manifest        `json:"manifest"`
+	Changes                []PlannedChange `json:"changes"`
+	DryRun                 bool            `json:"dry_run"`
+	StateAllocationPending bool            `json:"state_allocation_pending,omitempty"`
 }
 type fileChange struct {
 	path    string

@@ -219,6 +219,10 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 				return e
 			}
 		}
+		provisional := *dryRun && location.Provisional
+		if provisional {
+			location.CoordinationDirectory = filepath.Join(location.RegistryDirectory, "worktrees", "allocation-pending")
+		}
 		installCtx := ctx
 		if command == "install" {
 			if err := ctx.Err(); err != nil {
@@ -231,6 +235,7 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 		if e != nil {
 			return e
 		}
+		result.StateAllocationPending = provisional
 		return json.NewEncoder(output).Encode(result)
 	}
 	if command == "status" || command == "diagnostics" || command == "verify" || command == "check" {
@@ -731,11 +736,17 @@ func checkCaptureInstallation(project, selected string, explicit bool) error {
 		return err
 	}
 	configured := configuredLocation.CoordinationDirectory
+	if configuredLocation.Provisional {
+		configured = configuredLocation.RegistryDirectory
+	}
 	selectedLocation, err := capture.PreviewStateLocation(selected, project)
 	if err != nil {
 		return err
 	}
 	selected = selectedLocation.CoordinationDirectory
+	if selectedLocation.Provisional {
+		selected = selectedLocation.RegistryDirectory
+	}
 	if err = capture.CheckInstalledState(project, configured, explicit); err != nil {
 		return err
 	}
