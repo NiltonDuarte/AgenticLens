@@ -1,5 +1,11 @@
 # MGT-2 supervision log
 
+External release-marker merge verified: PR #99 is MERGED at 733e367ee12b9828cd340759eab855f4d809279c on 2026-11-03T18:28:14Z; fetched origin/main confirms the squash subject retains chore(release)!. User subsequently confirmed “merged”. Manager did not perform it. Release Please #55 remains human_only; no product predecessor has merged. PR #100 remains open/draft and externally owned for merge; four checks at 45b16c6 passed, with no reviews. Current management checkout was clean before this update; no application changes or new tests were needed for these records.
+
+AL-62 locally approved checkpoint: 29ee4a802000c1d3302c515e001f7692d3d7fe8f corroborated against the remote owner branch. All eight focus/profile correction reviews (behavior/data/architecture/tests under gpt-6.1-sol/high and gpt-6-luna/medium) approved candidate03; owner reports all confirmed findings fixed. Focused backend suites, actual CLI save/reload/preservation and extraction-upgrade controls, frontend checks/build and embedded asset matching pass. Integrated make/race/standalone final verification remain unrun by coordination deferral, so no PR/merge eligibility exists. Owner retains active review artifacts, final telemetry and lifecycle transitions; AL-63 remains blocked. Notify existing AL-62 owner after actual AL-60, AL-61 and AL-76 merges.
+
+AL-60 progress: owner reports deterministic deadline regression red before repair and green after, targeted installer/worker cases and pending-preserving expiry/recovery tests pass. Architecture review confirmed another cancellation case: a launcher child holds output pipes beyond the parent's deadline (100ms deadline returned near 2s). This remains a blocking review correction inside the approved capture scope; the full gate and final approval are pending.
+
 AL-76 local approval checkpoint: clean committed head 02dcb11c2a757074a9cd0826692b11ecc3fa4817, documentation-only successor to reviewed product c32c8937d8897179a6772c6aa75300eafe94351f and final tests 0dedb33110bafe2fc290ec99b86d3635b07c81b5. Behavior/data/architecture reviewers (gpt-6.1-sol, high) independently discovered the severity 8 stale overwrite; owner reports canonical writer-ownership fix with approved affected re-reviews. All four focus reviews under gpt-6.1-sol/high and gpt-6-luna/medium approved, including corrected test oracles. Focused race tests, source binary and disposable CLI dry/check/write/idempotence/lexeme checks pass. Integration/full make remain deliberately unstarted, so delivery is still INCOMPLETE. No PR/push; owner telemetry deferred. Manager must notify the existing owner after actual AL-60 then AL-61 merges. Earlier descriptions of AL-76's open local findings below are historical; the integration gate remains open.
 
 Active iteration 02: user explicitly approved AL-60 shared capture repair. The read-only hold below is superseded. Existing AL-60 owner resumed with the minimal repair boundary and new review/full-verification requirement; other owners retain their scopes and wait for actual predecessor merge notifications. No product PR or merge yet. AL-60 remote checkpoint confirmed at 7b00cc1; reviewed search remains 7a50a5e. See iterations/02/PLAN.md for approval source, changed acceptance, preserved guarantees and verification impact.
@@ -37,18 +43,19 @@ GitHub reports main has no branch protection (protection endpoint HTTP 404). Thi
 Telemetry: PATH has no installed wrapper and the shared installation directory is empty. Use the existing local source-built native binary with supported native options, explicit Codex source, ticket and root session. Native generate has no --al-offline/--al-project options; invoke from this checkout. Root source rollout found at ~/.codex/sessions/2026/11/03/rollout-2026-11-03T18-47-43-01a1a286-27c9-7c50-9f2e-70f0a332c763.jsonl. This manager has no native children; the five independently created T3 roots are not children. T3 MCP tool counts are a known decoder completeness limit. This is an active-session checkpoint, not complete end-of-supervision telemetry; regenerate at later delivery. Independent ticket telemetry is not part of the manager's ledger.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 11
-- **Active Agent Duration:** 16m 35s (excludes user wait time)
-- **Context Window Health:** ELEVATED — Root agent peak 146.9k tokens (74% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Software Development Life Cycle Iterations:** 15
+- **Active Agent Duration:** 18m 34s (excludes user wait time)
+- **Context Window Health:** ELEVATED — Root agent peak 165.6k tokens (83% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 4,944 reasoning tokens (16.4% of generated output)
-- **Tool Health & Self-Correction:** 49 tool calls (6 self-corrections, 87.8% success rate)
+- **Reasoning Effort:** 6,565 reasoning tokens (17.1% of generated output)
+- **Tool Health & Self-Correction:** 55 tool calls (6 self-corrections, 89.1% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** No execution anomalies detected (clean session).
+- **Status:** 1 execution anomaly detected (1 WARNING).
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.6k tokens) — Context tokens reached 160.6k, breaching the 160k warning ceiling.
 
 ### Agentic Execution Metrics
 
@@ -57,11 +64,11 @@ Telemetry: PATH has no installed wrapper and the shared installation directory i
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 135,257 | 25,220 | 6,652,800 | 98.0% | 146.9k | ELEVATED | $0.00 |
-| **Total** | **1** | **135,257** | **25,220** | **6,652,800** | **98.0%** | **146.9k** | **ELEVATED** | **$0.00** |
+| **rootagent** | 1 | 152,252 | 31,768 | 8,667,136 | 98.3% | 165.6k | ELEVATED | $0.00 |
+| **Total** | **1** | **152,252** | **31,768** | **8,667,136** | **98.3%** | **165.6k** | **ELEVATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 1 | 135,257 | 25,220 | 6,652,800 | 98.0% | $0.00 |
-| **Total** | **1** | **135,257** | **25,220** | **6,652,800** | **98.0%** | **$0.00** |
+| **gpt-6.1-sol** | 1 | 152,252 | 31,768 | 8,667,136 | 98.3% | $0.00 |
+| **Total** | **1** | **152,252** | **31,768** | **8,667,136** | **98.3%** | **$0.00** |

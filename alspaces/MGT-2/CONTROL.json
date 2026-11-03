@@ -52,11 +52,12 @@
         "status": "starting",
         "delivery": "started"
       },
-      "verified_checks": "Owner: eight no-defect scoped reviews; full serial frontend 786/786, focused 6/6, typecheck/lint, build and standalone assets pass. Initial and bounded make failed capture tests; two bounded failures pass targeted without affinity in 8.291s. Full gate remains incomplete.",
-      "next_action": "Resume approved shared capture repair in next scope iteration; reviewed search unchanged; full gate and capture review required",
+      "verified_checks": "Owner reports deterministic slow-harness red/green regression and diagnostic tests pass; installer/worker cases and pending-preserving expiry/recovery probe pass. Independent review underway; architecture confirmed child-held output pipes can delay cancellation.",
+      "next_action": "Correct confirmed cancellation finding inside approved capture scope; preserve review/evidence, then integrate current main and pass gate before PR",
       "notification_request": "mgt2-handoff-notification-60",
       "blockers": [
-        "Full integrated gate incomplete; bounded rerun still fails publication lifetime and worker cleanup tests"
+        "Launcher child retaining output pipes exceeds cancellation deadline; review correction pending",
+        "Full integrated gate and final review incomplete"
       ],
       "diagnosis": {
         "status": "read-only, owner reported",
@@ -73,10 +74,10 @@
       "thread_link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/24185901-0a4e-4d21-8c44-a64117fb80bc>",
       "thread_id": "24185901-0a4e-4d21-8c44-a64117fb80bc",
       "branch": "AL-62/fix-codex-skill-delegation-facts-granular-ownership",
-      "head": null,
+      "head": "29ee4a802000c1d3302c515e001f7692d3d7fe8f",
       "base": "main",
       "pr": null,
-      "status": "preparing",
+      "status": "blocked",
       "order": 4,
       "last_instruction": {
         "threadId": "24185901-0a4e-4d21-8c44-a64117fb80bc",
@@ -87,9 +88,15 @@
         "status": "running",
         "delivery": "steered"
       },
-      "verified_checks": "Owner reports focused backend/CLI save-reload and frontend checks pass; eight scoped reviews in progress. Earlier suspected unchanged-timestamp growth defect was refuted as a fixture error; preservation guard retained.",
-      "next_action": "Continue review and corrections; preserve AL-76 writer ownership on eventual integration; full gate deferred until predecessors",
-      "notification_request": "mgt2-handoff-notification-62"
+      "verified_checks": "Owner: all eight behavior/data/architecture/test reviews under gpt-6.1-sol/high and gpt-6-luna/medium approved candidate03; focused backend, actual CLI save/reload/preservation and upgrade controls, frontend typecheck/lint/focused tests/build pass; embed trees match. Full make/integrated race/standalone final checks deferred.",
+      "next_action": "Notify existing owner only after verified predecessor merges; preserve capture repair, timestamps, lossless serialization and writer locks; AL-63 stays blocked",
+      "notification_request": "mgt2-handoff-notification-62",
+      "reviewed_application_head": "29ee4a802000c1d3302c515e001f7692d3d7fe8f",
+      "product_fingerprint": "f300879df36eee4cbdc69b6de66999dbf469ddcd3eb6f65f8a65b71279332c8a",
+      "blockers": [
+        "Actual AL-60/AL-61/AL-76 merges pending",
+        "Integrated full gate deliberately not run"
+      ]
     },
     {
       "ticket": "AL-76",
@@ -144,7 +151,7 @@
       "head": "3e88d8bbed979eaa376f055df9a5919f474aea4d",
       "base": "main",
       "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/99",
-      "status": "human_only",
+      "status": "merged",
       "order": null,
       "last_instruction": {
         "threadId": "82173b76-9565-4ef0-bd8c-e24cff83c37b",
@@ -155,7 +162,10 @@
         "delivery": "steered"
       },
       "verified_checks": "Owner reports builds passed; make failed on frontend timeout also reproduced in isolation; CI pending at publication",
-      "next_action": "Human review and merge only"
+      "next_action": "No agent action; Release Please #55 remains human_only",
+      "merge_authority": "human_only; externally merged",
+      "merge_commit": "733e367ee12b9828cd340759eab855f4d809279c",
+      "merged_at": "2026-11-03T18:28:14Z"
     }
   ],
   "releases": [
@@ -176,5 +186,6 @@
     "owner": "AL-60",
     "status": "approved",
     "preserved": "No waived gates, weakened tests, global timeout inflation, or duplicate capture ownership"
-  }
+  },
+  "observed_main": "733e367ee12b9828cd340759eab855f4d809279c"
 }
