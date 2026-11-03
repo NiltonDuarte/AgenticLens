@@ -364,6 +364,20 @@
         }
       ],
       "disposition": "Corrected before publication using literal PowerShell provider resolution; native Set-Location and independent digest regressions pass."
+    },
+    {
+      "finding_id": "I4-27",
+      "severity": 4,
+      "issue": "The Windows watchdog test assumed the PowerShell body wrote PID records before its bounded startup deadline.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed test-only startup and owned-tree oracles; controlled delay reproduces the old assumption, native repeats and negative controls pass. Hosted timing cause remains unproven."
     }
   ]
 }
