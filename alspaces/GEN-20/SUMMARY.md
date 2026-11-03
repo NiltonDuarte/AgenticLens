@@ -30,25 +30,34 @@ Eight independent first-pass reviews covered behavior, data/failure handling, ar
 
 The host requires small review corrections to be fixed locally without further delegates. The coordinator therefore verified these narrow corrections directly and carried forward the unaffected independent review evidence. No reviewer is claimed to have reviewed 13a6ff3; final consolidated approval is APPROVED after the corrected revision passed make. Compact findings and every discovery attribution are retained in [REVIEW_SUMMARY.json](iterations/02/REVIEW_SUMMARY.json). Earlier implementation self-review also corrected an arbitrary probe-child check in root validation; focused tests passed after that correction.
 
+## Directory-name terminology correction
+
+The user explicitly requested replacing ambiguous worktree token terminology in the table and source. The initial follow-up working tree was clean at e2df9649de644f7dde1406757a85e9441a9a14d6. Commit 46cb6e84860e9cdb0e686559c2d502efab8e8788 renames the SQL column to directory_name, Go locals to directoryName, and associated helpers, tests, diagnostics and comments consistently. Genuine request tokens and directory allocation behavior are unchanged. This is a review correction within iteration 02; no compatibility migration is introduced.
+
+The coder and tester (gpt-6.1-sol/high) verified complete SQL/caller consistency and preserved test reachability. Focused capture and CLI race tests passed. Narrow behavior reviewers under acknowledged gpt-6.1-sol/high and gpt-6-luna/medium both approved the six-file correction without findings. Prior data, architecture and test coverage carries forward for unchanged behavior. The integrated source revision is 29811ad56e8f4fc128ce788ede8687a3cae4b713, merged with official main 33ddada05c64cb8fa41701fd9fce3376ff83ff10; that integration changes no backend file. Final make passed on this revision, including backend races, all 790 frontend tests, static/Python checks, embedding and platform builds. Consolidated naming review: APPROVED with no new findings; the existing compact review summary retains the earlier resolved findings and all discovery credit.
+
 ## Telemetry and limits
+
+For the naming follow-up, incremental ingestion into isolated scratch state rejected the existing ledger because scratch state has no historical ownership receipts. The follow-up therefore re-extracts the original Codex sources into fresh staged artifacts and verifies that every existing session identity and parent link is preserved before replacing generated artifacts. No receipt or provenance is fabricated, and the original ledger remains intact if fresh extraction or verification fails.
 
 Final ingestion succeeded with an explicit source codex, ticket type chore and ticket title. The configured local registry uses the unsupported earlier layout; isolated scratch capture state was used, the temporary local configuration was removed, and a byte hash confirmed the original database was unchanged. The built native CLI takes generate flags directly; dispatcher-only --al-offline/--al-project flags are not supported by the native executable.
 
-Source inspection identifies root 01a1a395-ebd9-7820-8931-b7c6a91a5906 and native planner, coder and tester child sessions. Eight T3 reviewer sessions are recorded by Codex as separate roots without native parent lineage. Ledger membership was verified against real Codex metadata: exactly the root and three expected native children are present, all source codex with the correct parent links. The eight separately rooted T3 reviewer sessions are omitted because their source metadata lacks native parent lineage; their usage is not included. Pricing is unavailable for the four included invocations, so cost remains unavailable. The ledger is explicitly incomplete for total ticket usage. No prior GEN-20 ledger or other-harness sessions existed at baseline. Raw rollouts and detailed working run/finding records remain outside Git.
+Source inspection identifies root 01a1a395-ebd9-7820-8931-b7c6a91a5906 and native planner, coder and tester child sessions. Ten T3 reviewer sessions are recorded by Codex as separate roots without native parent lineage. Ledger membership was verified against real Codex metadata: exactly the root and three expected native children are present, all source codex with the correct parent links. The ten separately rooted T3 reviewer sessions are omitted because their source metadata lacks native parent lineage; their usage is not included. Pricing is unavailable for the four included invocations, so cost remains unavailable. The ledger is explicitly incomplete for total ticket usage. No prior GEN-20 ledger or other-harness sessions existed at baseline. Raw rollouts and detailed working run/finding records remain outside Git.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 15
-- **Active Agent Duration:** 40m 18s (excludes user wait time)
-- **Context Window Health:** ELEVATED — Root agent peak 160.0k tokens (80% of 200k healthy ceiling, 0 compactions) | Subagents peak 131.9k (Coder)
+- **Software Development Life Cycle Iterations:** 20
+- **Active Agent Duration:** 57m 40s (excludes user wait time)
+- **Context Window Health:** ELEVATED — Root agent peak 196.0k tokens (98% of 200k healthy ceiling, 0 compactions) | Subagents peak 148.2k (Coder)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
-- **Subagent Turn Velocity & Thrashing:** 2.3 avg turns/run (peak: 3 turns) | Planner 2.0, Coder 2.0, Tester 3.0
+- **Subagent Turn Velocity & Thrashing:** 3.0 avg turns/run (peak: 4 turns) | Planner 2.0, Coder 3.0, Tester 4.0
 - **Test-to-Production Code Ratio:** 1.3:1 (+410 test lines / +308 prod lines)
 - **Code Delivered:** +718 / -57 lines across 17 code files (excluding docs)
-- **Reasoning Effort:** 22,518 reasoning tokens (23.2% of generated output)
-- **Tool Health & Self-Correction:** 206 tool calls (15 self-corrections, 92.7% success rate)
+- **Reasoning Effort:** 31,103 reasoning tokens (24.6% of generated output)
+- **Tool Health & Self-Correction:** 252 tool calls (19 self-corrections, 92.5% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 1 execution anomaly detected (1 WARNING).
+- **Status:** 2 execution anomalies detected (2 WARNING).
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.7k tokens) — Context tokens reached 160.7k, breaching the 160k warning ceiling.
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (4 cycles) — Subagent roles 'coder' and 'tester' alternated for 4 consecutive cycles.
 
 ### Agentic Execution Metrics
@@ -59,15 +68,15 @@ Source inspection identifies root 01a1a395-ebd9-7820-8931-b7c6a91a5906 and nativ
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
 | **planner** | 1 | 134,214 | 6,216 | 795,904 | 85.6% | 81.2k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **coder** | 1 | 94,051 | 21,073 | 4,431,872 | 97.9% | 131.9k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **tester** | 1 | 73,139 | 7,921 | 2,708,224 | 97.4% | 126.2k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Unknown** | 1 | 142,644 | 39,271 | 13,368,448 | 98.9% | 160.0k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **4** | **444,048** | **74,481** | **21,304,448** | **98.0%** | **160.0k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations)** |
+| **coder** | 1 | 240,708 | 24,173 | 5,870,464 | 96.1% | 148.2k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **tester** | 1 | 82,971 | 9,319 | 3,637,504 | 97.8% | 136.3k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Unknown** | 1 | 169,767 | 55,430 | 21,152,896 | 99.2% | 196.0k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **4** | **627,660** | **95,138** | **31,456,768** | **98.0%** | **196.0k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 4 | 444,048 | 74,481 | 21,304,448 | 98.0% | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
-| **Total** | **4** | **444,048** | **74,481** | **21,304,448** | **98.0%** | **Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations)** |
+| **gpt-6.1-sol** | 4 | 627,660 | 95,138 | 31,456,768 | 98.0% | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
+| **Total** | **4** | **627,660** | **95,138** | **31,456,768** | **98.0%** | **Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations)** |
 
-Capture observation finalized: 2026-11-03T23:18:55.625649578Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 0; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 0; reserved bytes: 0. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
+Capture observation finalized: 2026-11-03T23:43:02.706110585Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 0; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 0; reserved bytes: 0. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
