@@ -1,6 +1,6 @@
 # AL-60 iteration 02 focused verification
 
-Baseline: 7b00cc1ac7fb5cd8afa2d93f7c65931c8ab2fa30. Search source at 7a50a5e is untouched. Coder retained deterministic baseline red evidence in INSTALL_RED.log before production repair; tester independently inspected marker, explicit-cancellation/no-manifest and typed native diagnostic oracles.
+Baseline: 7b00cc1ac7fb5cd8afa2d93f7c65931c8ab2fa30. Search source at 7a50a5e is untouched. Coder retained deterministic baseline red evidence in evidence/INSTALL_RED.txt before production repair; tester independently inspected marker, explicit-cancellation/no-manifest and typed native diagnostic oracles.
 
 ## Fixture and coverage changes
 

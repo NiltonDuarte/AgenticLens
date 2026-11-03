@@ -1,0 +1,15 @@
+=== RUN   TestCaptureHarnessFixtureOwnsInheritedDispatchGuard
+=== RUN   TestCaptureHarnessFixtureOwnsInheritedDispatchGuard/guard=0/codex
+=== RUN   TestCaptureHarnessFixtureOwnsInheritedDispatchGuard/guard=0/opencode
+=== RUN   TestCaptureHarnessFixtureOwnsInheritedDispatchGuard/guard=1/codex
+    capture_harness_fixture_test.go:130: inherited dispatch guard bypassed disposable harness provisioning: <nil>
+=== RUN   TestCaptureHarnessFixtureOwnsInheritedDispatchGuard/guard=1/opencode
+    capture_harness_fixture_test.go:130: inherited dispatch guard bypassed disposable harness provisioning: <nil>
+--- FAIL: TestCaptureHarnessFixtureOwnsInheritedDispatchGuard (0.43s)
+    --- PASS: TestCaptureHarnessFixtureOwnsInheritedDispatchGuard/guard=0/codex (0.12s)
+    --- PASS: TestCaptureHarnessFixtureOwnsInheritedDispatchGuard/guard=0/opencode (0.10s)
+    --- FAIL: TestCaptureHarnessFixtureOwnsInheritedDispatchGuard/guard=1/codex (0.10s)
+    --- FAIL: TestCaptureHarnessFixtureOwnsInheritedDispatchGuard/guard=1/opencode (0.10s)
+FAIL
+FAIL	agenticlens/cmd/agentic-lens	1.239s
+FAIL

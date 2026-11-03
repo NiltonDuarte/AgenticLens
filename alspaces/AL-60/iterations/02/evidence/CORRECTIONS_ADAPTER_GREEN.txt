@@ -1,0 +1,1 @@
+ok  	agenticlens/internal/adapters/capture	1.516s

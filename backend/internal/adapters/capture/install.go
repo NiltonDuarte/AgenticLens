@@ -158,7 +158,7 @@ func installWithWriter(ctx context.Context, options InstallOptions, write func(f
 		return result, fmt.Errorf("required installation setup: %w", err)
 	}
 	ctx, phaseCancel := context.WithTimeout(callerCtx, requiredTimeout)
-	defer func() { phaseCancel() }()
+	defer phaseCancel()
 	if options.Source != "codex" && options.Source != "opencode" {
 		return result, errors.New("install source must be codex or opencode")
 	}
@@ -318,6 +318,7 @@ func installWithWriter(ctx context.Context, options InstallOptions, write func(f
 			return result, fmt.Errorf("installation canceled during optional harness inspection: %w", err)
 		}
 		ctx, phaseCancel = context.WithTimeout(callerCtx, requiredTimeout)
+		defer phaseCancel()
 	} else {
 		m.HarnessVersion = previous.HarnessVersion
 		m.Capability = "Disabled; existing local registrations retained"

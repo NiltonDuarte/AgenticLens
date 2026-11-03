@@ -1,0 +1,6 @@
+=== RUN   TestCaptureInstallSIGTERMCancelsProbeChild
+    capture_install_deadline_unix_test.go:121: SIGTERM exited CLI but optional child 3078184 remains: <nil>
+--- FAIL: TestCaptureInstallSIGTERMCancelsProbeChild (0.08s)
+FAIL
+FAIL	agenticlens/cmd/agentic-lens	1.037s
+FAIL

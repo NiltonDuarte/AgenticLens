@@ -10,7 +10,7 @@ From backend, GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go test -c -o /tmp/al60-co
 
 `/tmp/al60-corrections/capture-final-windows.test.exe -test.run '^(TestInstallWindowsInspectionOwnsLauncherTree|TestInstallerCompletedRecoveryRetainsExpiredAcceptance)$' -test.v -test.count=1 -test.timeout=60s`
 
-Exit 0. Ownership launcher-exit/cancel passed0.43s; recovery Codex/OpenCode canceled/deadline subcases passed0.38s. Raw result: WINDOWS_FINAL_RUNTIME.log. Prior Windows ownership runtime proof is retained in WINDOWS_RUNTIME.log. These are parent-executed runtime observations, distinct from coder cross-compilation and hosted CI. Windows race instrumentation and hosted CI were not exercised locally.
+Exit 0. Ownership launcher-exit/cancel passed0.43s; recovery Codex/OpenCode canceled/deadline subcases passed0.38s. Raw result: evidence/WINDOWS_FINAL_RUNTIME.txt. Prior Windows ownership runtime proof is retained in evidence/WINDOWS_RUNTIME.txt. These are parent-executed runtime observations, distinct from coder cross-compilation and hosted CI. Windows race instrumentation and hosted CI were not exercised locally.
 
 ## Focused deterministic correction evidence
 

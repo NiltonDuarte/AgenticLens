@@ -1,0 +1,5 @@
+--- FAIL: TestCaptureInstallOptionalProbeCannotConsumeRequiredValidation (2.01s)
+    capture_install_deadline_unix_test.go:59: optional probe exhausted required installation validation: exit status 1; Capture: pending installer native version is unavailable or changed
+FAIL
+FAIL	agenticlens/cmd/agentic-lens	2.887s
+FAIL

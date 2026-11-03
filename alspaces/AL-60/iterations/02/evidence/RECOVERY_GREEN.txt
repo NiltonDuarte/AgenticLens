@@ -1,0 +1,36 @@
+=== RUN   TestInstallerFinalWriteCancellationRollsBack
+=== RUN   TestInstallerFinalWriteCancellationRollsBack/codex
+=== RUN   TestInstallerFinalWriteCancellationRollsBack/opencode
+--- PASS: TestInstallerFinalWriteCancellationRollsBack (0.10s)
+    --- PASS: TestInstallerFinalWriteCancellationRollsBack/codex (0.05s)
+    --- PASS: TestInstallerFinalWriteCancellationRollsBack/opencode (0.04s)
+=== RUN   TestInstallerCompletedRecoveryRetainsExpiredAcceptance
+=== RUN   TestInstallerCompletedRecoveryRetainsExpiredAcceptance/codex/canceled
+=== RUN   TestInstallerCompletedRecoveryRetainsExpiredAcceptance/codex/deadline
+=== RUN   TestInstallerCompletedRecoveryRetainsExpiredAcceptance/opencode/canceled
+=== RUN   TestInstallerCompletedRecoveryRetainsExpiredAcceptance/opencode/deadline
+--- PASS: TestInstallerCompletedRecoveryRetainsExpiredAcceptance (0.12s)
+    --- PASS: TestInstallerCompletedRecoveryRetainsExpiredAcceptance/codex/canceled (0.03s)
+    --- PASS: TestInstallerCompletedRecoveryRetainsExpiredAcceptance/codex/deadline (0.03s)
+    --- PASS: TestInstallerCompletedRecoveryRetainsExpiredAcceptance/opencode/canceled (0.03s)
+    --- PASS: TestInstallerCompletedRecoveryRetainsExpiredAcceptance/opencode/deadline (0.03s)
+=== RUN   TestInstallerDurablePrefixRecoversHookPluginAndManifestCheckpoints
+=== RUN   TestInstallerDurablePrefixRecoversHookPluginAndManifestCheckpoints/codex/prefix1
+=== RUN   TestInstallerDurablePrefixRecoversHookPluginAndManifestCheckpoints/codex/prefix2
+=== RUN   TestInstallerDurablePrefixRecoversHookPluginAndManifestCheckpoints/codex/prefix3
+=== RUN   TestInstallerDurablePrefixRecoversHookPluginAndManifestCheckpoints/codex/prefix4
+=== RUN   TestInstallerDurablePrefixRecoversHookPluginAndManifestCheckpoints/opencode/prefix1
+=== RUN   TestInstallerDurablePrefixRecoversHookPluginAndManifestCheckpoints/opencode/prefix2
+=== RUN   TestInstallerDurablePrefixRecoversHookPluginAndManifestCheckpoints/opencode/prefix3
+=== RUN   TestInstallerDurablePrefixRecoversHookPluginAndManifestCheckpoints/opencode/prefix4
+--- PASS: TestInstallerDurablePrefixRecoversHookPluginAndManifestCheckpoints (0.30s)
+    --- PASS: TestInstallerDurablePrefixRecoversHookPluginAndManifestCheckpoints/codex/prefix1 (0.04s)
+    --- PASS: TestInstallerDurablePrefixRecoversHookPluginAndManifestCheckpoints/codex/prefix2 (0.04s)
+    --- PASS: TestInstallerDurablePrefixRecoversHookPluginAndManifestCheckpoints/codex/prefix3 (0.05s)
+    --- PASS: TestInstallerDurablePrefixRecoversHookPluginAndManifestCheckpoints/codex/prefix4 (0.03s)
+    --- PASS: TestInstallerDurablePrefixRecoversHookPluginAndManifestCheckpoints/opencode/prefix1 (0.03s)
+    --- PASS: TestInstallerDurablePrefixRecoversHookPluginAndManifestCheckpoints/opencode/prefix2 (0.04s)
+    --- PASS: TestInstallerDurablePrefixRecoversHookPluginAndManifestCheckpoints/opencode/prefix3 (0.05s)
+    --- PASS: TestInstallerDurablePrefixRecoversHookPluginAndManifestCheckpoints/opencode/prefix4 (0.03s)
+PASS
+ok  	agenticlens/internal/adapters/capture	1.561s

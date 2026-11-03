@@ -1,0 +1,7 @@
+=== RUN   TestInstallWindowsInspectionOwnsLauncherTree
+=== RUN   TestInstallWindowsInspectionOwnsLauncherTree/launcher-exit
+=== RUN   TestInstallWindowsInspectionOwnsLauncherTree/launcher-cancel
+--- PASS: TestInstallWindowsInspectionOwnsLauncherTree (0.42s)
+    --- PASS: TestInstallWindowsInspectionOwnsLauncherTree/launcher-exit (0.27s)
+    --- PASS: TestInstallWindowsInspectionOwnsLauncherTree/launcher-cancel (0.16s)
+PASS
