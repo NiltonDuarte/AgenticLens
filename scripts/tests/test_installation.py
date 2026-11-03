@@ -22,21 +22,30 @@ class InstallationTest(DistributionFixture):
         host_arch = subprocess.check_output(['go', 'env', 'GOHOSTARCH'], text=True).strip()
         environment = dict(self.env, GOCACHE=subprocess.check_output(['go', 'env', 'GOCACHE'], text=True).strip(),
                            GOMODCACHE=subprocess.check_output(['go', 'env', 'GOMODCACHE'], text=True).strip())
-        result = subprocess.run(['make', 'verify-build', 'BIN_DIR=' + str(destination),
-                                 'WEB_DIR=' + str(self.root / 'no web dependency scan'), 'PLATFORMS=' + host_os + '/' + host_arch],
-                                cwd=ROOT, env=environment, text=True, capture_output=True, timeout=180)
-        self.succeeds(result)
+        for key in ('VERSION', 'GIT_COMMIT', 'BUILD_DATE'):
+            environment.pop(key, None)
         native = destination / f'agentic-lens-{host_os}-{host_arch}'
         if host_os == 'windows': native = native.with_suffix('.exe')
-        actual = subprocess.check_output([str(native), 'version', '--short'], env=environment, text=True).strip()
-        expected = subprocess.check_output(['git', 'describe', '--tags', '--always', '--dirty'], cwd=ROOT, text=True).strip()
-        self.assertEqual(actual, expected)
-        self.assertNotEqual(actual, self.pin)
-        self.assertIn(expected, result.stdout)
-        self.assertTrue(os.path.samestat(before, cached.stat()))
-        self.assertEqual(cached.read_bytes(), cached_bytes)
-        self.assertEqual(self.launch('version', '--short').stdout.strip(), self.pin)
-        self.assertFalse((destination / 'agentic-lens').exists(), 'source build copied a release-cache wrapper')
+        source_version = subprocess.check_output(['git', 'describe', '--tags', '--always', '--dirty'], cwd=ROOT, text=True).strip()
+        candidate = {'VERSION': 'v9.8.8-rc.1+abcdef0', 'GIT_COMMIT': 'abcdef0', 'BUILD_DATE': '2026-01-02T03:04:05Z'}
+        for name, metadata, expected in [('default', {}, source_version), ('candidate', candidate, candidate['VERSION'])]:
+            with self.subTest(metadata=name):
+                build_environment = dict(environment, **metadata)
+                result = subprocess.run(['make', 'verify-build', 'BIN_DIR=' + str(destination),
+                                         'WEB_DIR=' + str(self.root / 'no web dependency scan'), 'PLATFORMS=' + host_os + '/' + host_arch],
+                                        cwd=ROOT, env=build_environment, text=True, capture_output=True, timeout=180)
+                self.succeeds(result)
+                actual = subprocess.check_output([str(native), 'version', '--short'], env=build_environment, text=True).strip()
+                self.assertEqual(actual, expected)
+                self.assertNotEqual(actual, self.pin)
+                self.assertIn(expected, result.stdout)
+                if metadata:
+                    info = json.loads(subprocess.check_output([str(native), 'version', '--json'], env=build_environment, text=True))
+                    self.assertEqual(info, {'version': expected, 'commit': metadata['GIT_COMMIT'], 'build_date': metadata['BUILD_DATE']})
+                self.assertTrue(os.path.samestat(before, cached.stat()))
+                self.assertEqual(cached.read_bytes(), cached_bytes)
+                self.assertEqual(self.launch('version', '--short').stdout.strip(), self.pin)
+                self.assertFalse((destination / 'agentic-lens').exists(), 'source build copied a release-cache wrapper')
 
     def test_printed_completion_scopes_both_files_to_selected_project_from_another_scaffold(self):
         self.config.unlink()
