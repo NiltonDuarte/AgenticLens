@@ -19,6 +19,7 @@ func prepareCaptureInstall(t *testing.T, cwd string, args []string) []string {
 	if len(args) == 0 || args[0] != "install" {
 		return args
 	}
+	prepareCaptureHarnessFixture(t)
 	project, binary := cwd, cliBinaryPath
 	for i := 0; i+1 < len(args); i++ {
 		switch args[i] {

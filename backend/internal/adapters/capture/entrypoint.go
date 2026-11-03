@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -129,7 +128,7 @@ func validateCommonWrapper(ctx context.Context, wrapper string, entry adaptersco
 	command := WrapperCommand(wrapper, "--al-offline", "--al-project", entry.Project, "--al-resolve")
 	probeCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
-	output, err := exec.CommandContext(probeCtx, command[0], command[1:]...).Output()
+	output, err := installCommandOutput(probeCtx, command[0], command[1:]...)
 	if err != nil {
 		return fmt.Errorf("common wrapper cannot resolve project pin; refresh setup: %w", err)
 	}

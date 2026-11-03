@@ -86,3 +86,7 @@ Owner codex/01a1a281-c2de-7ec3-9541-aa8d191c94b0: current; last successful sourc
 Owner codex/01a1a287-ec4f-7e73-997b-f887745b5d9e: current; last successful source read 2026-11-03T18:03:57.962027929Z; accepted source checkpoint 2026-11-03T17:50:22.308Z.
 Owner codex/01a1a283-3ddc-7f31-8a32-01e8bbacbf87: current; last successful source read 2026-11-03T18:03:57.968975279Z; accepted source checkpoint 2026-11-03T17:45:45.018Z.
 Owner codex/01a1a27e-f9db-75b3-8e95-f6b1bbbe7f05: current; last successful source read 2026-11-03T18:03:58.012981226Z; accepted source checkpoint 2026-11-03T18:03:57.584Z.
+
+## Iteration 02 authorized continuation
+
+User explicitly approved “Authorize AL-60 shared capture repair”. [Iteration 02 contract](iterations/02/CONTRACT.md) and [plan](iterations/02/PLAN.md) supersede the earlier repair hold while preserving the historical failed-gate evidence above. Scope adds deterministic capture deadline/diagnostic repair and fixture isolation; reviewed search source remains unchanged. Publication still requires new capture reviews and passing full integrated verification. MGT-2 retains merge ownership.
