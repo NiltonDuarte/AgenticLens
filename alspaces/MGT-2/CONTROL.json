@@ -3,7 +3,7 @@
   "baseline": "122e983f8c365a2aa248b1b6d492252555e922ae",
   "authorization": "User requested supervision, guidance and eligible merges until delivery",
   "updated": "2026-11-03",
-  "own_pr_status": "preparing",
+  "own_pr_status": "external_review",
   "queue": [
     {
       "ticket": "AL-61",
@@ -24,7 +24,8 @@
         "delivery": "steered"
       },
       "verified_checks": "Owner work in progress; final gate pending",
-      "next_action": "Await owner completion, then verify published head and integration"
+      "next_action": "Owner explicitly sends MGT-2 handoff on ready PR or blocker; manager verifies current head and gates",
+      "notification_request": "mgt2-handoff-notification-61"
     },
     {
       "ticket": "AL-60",
@@ -45,7 +46,8 @@
         "delivery": "steered"
       },
       "verified_checks": "Owner work in progress; final gate pending",
-      "next_action": "Await owner completion, then verify published head and integration"
+      "next_action": "Owner explicitly sends MGT-2 handoff on ready PR or blocker; manager verifies current head and gates",
+      "notification_request": "mgt2-handoff-notification-60"
     },
     {
       "ticket": "AL-62",
@@ -66,7 +68,8 @@
         "delivery": "steered"
       },
       "verified_checks": "Owner work in progress; final gate pending",
-      "next_action": "Await owner completion, then verify published head and integration"
+      "next_action": "Owner explicitly sends MGT-2 handoff on ready PR or blocker; manager verifies current head and gates",
+      "notification_request": "mgt2-handoff-notification-62"
     },
     {
       "ticket": "AL-76",
@@ -87,16 +90,17 @@
         "delivery": "steered"
       },
       "verified_checks": "Owner work in progress; final gate pending",
-      "next_action": "Await owner completion, then verify published head and integration"
+      "next_action": "Owner explicitly sends MGT-2 handoff on ready PR or blocker; manager verifies current head and gates",
+      "notification_request": "mgt2-handoff-notification-76"
     },
     {
       "ticket": "AL-68",
       "thread_link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/82173b76-9565-4ef0-bd8c-e24cff83c37b>",
       "thread_id": "82173b76-9565-4ef0-bd8c-e24cff83c37b",
       "branch": "AL-68/major-version-change",
-      "head": null,
+      "head": "3e88d8bbed979eaa376f055df9a5919f474aea4d",
       "base": "main",
-      "pr": null,
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/99",
       "status": "human_only",
       "order": null,
       "last_instruction": {
@@ -107,8 +111,8 @@
         "status": "running",
         "delivery": "steered"
       },
-      "verified_checks": "Owner work in progress; final gate pending",
-      "next_action": "Report release-only PR for human merge"
+      "verified_checks": "Owner reports builds passed; make failed on frontend timeout also reproduced in isolation; CI pending at publication",
+      "next_action": "Human review and merge only"
     }
   ],
   "releases": [
@@ -120,5 +124,7 @@
       "review": "CHANGES_REQUESTED",
       "checks": []
     }
-  ]
+  ],
+  "own_pr_url": "https://github.com/NiltonDuarte/AgenticLens/pull/100",
+  "manager_verification": "make failed on unchanged capture CLI native version/capability and worker timeout tests; other Go packages passed; frontend suite and final build not reached"
 }
