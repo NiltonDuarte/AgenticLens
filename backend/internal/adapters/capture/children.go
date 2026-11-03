@@ -26,7 +26,7 @@ func (s *Store) QueueChildStart(ctx context.Context, store, parent, agent string
 		return normalizeErr
 	}
 	store = canonicalStore
-	_, err := s.db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS pending_starts(store TEXT,parent TEXT,agent TEXT,PRIMARY KEY(store,parent,agent)); INSERT OR IGNORE INTO pending_starts VALUES(?,?,?)`, store, parent, agent)
+	_, err := s.db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS pending_starts(worktree_id INTEGER NOT NULL,store TEXT,parent TEXT,agent TEXT,PRIMARY KEY(worktree_id,store,parent,agent)); INSERT OR IGNORE INTO pending_starts VALUES(?,?,?,?)`, s.worktreeID, store, parent, agent)
 	return err
 }
 
@@ -154,7 +154,7 @@ func (s *Store) inheritChild(ctx context.Context, parent domain.CaptureRegistrat
 // recoverChildren acts only for proven ticket parents. Unassigned roots are not
 // extraction candidates and do not spend this ticket's source budget.
 func (s *Store) recoverChildren(ctx context.Context, ticket string, budget *workBudget, class workClass) (int, error) {
-	_, err := s.db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS pending_children(store TEXT,path TEXT,parent TEXT,PRIMARY KEY(store,path)); CREATE TABLE IF NOT EXISTS pending_starts(store TEXT,parent TEXT,agent TEXT,PRIMARY KEY(store,parent,agent)); CREATE TABLE IF NOT EXISTS discovery_cursor(parent TEXT PRIMARY KEY,path TEXT NOT NULL); CREATE TABLE IF NOT EXISTS child_cursor(kind TEXT,parent TEXT,key TEXT,more INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(kind,parent))`)
+	_, err := s.db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS pending_children(worktree_id INTEGER NOT NULL,store TEXT,path TEXT,parent TEXT,PRIMARY KEY(worktree_id,store,path)); CREATE TABLE IF NOT EXISTS pending_starts(worktree_id INTEGER NOT NULL,store TEXT,parent TEXT,agent TEXT,PRIMARY KEY(worktree_id,store,parent,agent)); CREATE TABLE IF NOT EXISTS discovery_cursor(worktree_id INTEGER NOT NULL,parent TEXT,path TEXT NOT NULL,PRIMARY KEY(worktree_id,parent)); CREATE TABLE IF NOT EXISTS child_cursor(worktree_id INTEGER NOT NULL,kind TEXT,parent TEXT,key TEXT,more INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(worktree_id,kind,parent))`)
 	if err != nil {
 		return 0, err
 	}
@@ -186,7 +186,7 @@ func (s *Store) recoverChildren(ctx context.Context, ticket string, budget *work
 			table = "pending_starts"
 		}
 		var count int
-		if err = s.db.QueryRowContext(ctx, `SELECT count(*) FROM `+table+` WHERE store=? AND parent=?`, parent.Identity.Store, parent.Identity.SessionID).Scan(&count); err != nil {
+		if err = s.db.QueryRowContext(ctx, `SELECT count(*) FROM `+table+` WHERE worktree_id=? AND store=? AND parent=?`, s.worktreeID, parent.Identity.Store, parent.Identity.SessionID).Scan(&count); err != nil {
 			return 0, err
 		}
 		if count > 0 {
@@ -270,7 +270,7 @@ func (s *Store) recoverChildren(ctx context.Context, ticket string, budget *work
 			if e != nil {
 				return 0, e
 			}
-			rows, e := s.db.QueryContext(ctx, `SELECT path FROM pending_children WHERE store=? AND parent=? ORDER BY CASE WHEN path>? THEN 0 ELSE 1 END,path LIMIT ?`, parent.Identity.Store, parent.Identity.SessionID, queuedCursor, budget.sessions)
+			rows, e := s.db.QueryContext(ctx, `SELECT path FROM pending_children WHERE worktree_id=? AND store=? AND parent=? ORDER BY CASE WHEN path>? THEN 0 ELSE 1 END,path LIMIT ?`, s.worktreeID, parent.Identity.Store, parent.Identity.SessionID, queuedCursor, budget.sessions)
 			if e != nil {
 				return 0, e
 			}
@@ -299,7 +299,7 @@ func (s *Store) recoverChildren(ctx context.Context, ticket string, budget *work
 				if e = s.inheritChild(ctx, parent, transcript.ThreadID, path); e != nil {
 					return 0, e
 				}
-				if _, e = s.db.ExecContext(ctx, `DELETE FROM pending_children WHERE store=? AND path=?`, parent.Identity.Store, path); e != nil {
+				if _, e = s.db.ExecContext(ctx, `DELETE FROM pending_children WHERE worktree_id=? AND store=? AND path=?`, s.worktreeID, parent.Identity.Store, path); e != nil {
 					return 0, e
 				}
 			}
@@ -307,14 +307,14 @@ func (s *Store) recoverChildren(ctx context.Context, ticket string, budget *work
 		}
 
 		var starts int
-		if e = s.db.QueryRowContext(ctx, `SELECT count(*) FROM pending_starts WHERE store=? AND parent=?`, parent.Identity.Store, parent.Identity.SessionID).Scan(&starts); e != nil {
+		if e = s.db.QueryRowContext(ctx, `SELECT count(*) FROM pending_starts WHERE worktree_id=? AND store=? AND parent=?`, s.worktreeID, parent.Identity.Store, parent.Identity.SessionID).Scan(&starts); e != nil {
 			return 0, e
 		}
 		if starts == 0 || budget.sessions < 1 || budget.bytes < 1 {
 			continue
 		}
 		cursor := ""
-		e = s.db.QueryRowContext(ctx, `SELECT path FROM discovery_cursor WHERE parent=?`, IdentityKey(parent.Identity)).Scan(&cursor)
+		e = s.db.QueryRowContext(ctx, `SELECT path FROM discovery_cursor WHERE worktree_id=? AND parent=?`, s.worktreeID, IdentityKey(parent.Identity)).Scan(&cursor)
 		if e != nil && !errors.Is(e, sql.ErrNoRows) {
 			return 0, e
 		}
@@ -354,7 +354,7 @@ func (s *Store) recoverChildren(ctx context.Context, ticket string, budget *work
 				return e
 			}
 			// Equality is checked against authoritative metadata, never assumed from agent_id.
-			_, e = s.db.ExecContext(ctx, `DELETE FROM pending_starts WHERE store=? AND parent=? AND agent=?`, parent.Identity.Store, parent.Identity.SessionID, transcript.ThreadID)
+			_, e = s.db.ExecContext(ctx, `DELETE FROM pending_starts WHERE worktree_id=? AND store=? AND parent=? AND agent=?`, s.worktreeID, parent.Identity.Store, parent.Identity.SessionID, transcript.ThreadID)
 			return e
 		})
 		if walkErr != nil {
@@ -364,7 +364,7 @@ func (s *Store) recoverChildren(ctx context.Context, ticket string, budget *work
 		if visited <= maxEntries && budget.sessions > 0 && budget.bytes > 0 {
 			last = ""
 		}
-		if _, e = s.db.ExecContext(ctx, `INSERT INTO discovery_cursor VALUES(?,?) ON CONFLICT(parent) DO UPDATE SET path=excluded.path`, IdentityKey(parent.Identity), last); e != nil {
+		if _, e = s.db.ExecContext(ctx, `INSERT INTO discovery_cursor VALUES(?,?,?) ON CONFLICT(worktree_id,parent) DO UPDATE SET path=excluded.path`, s.worktreeID, IdentityKey(parent.Identity), last); e != nil {
 			return 0, e
 		}
 	}
@@ -380,12 +380,12 @@ func (s *Store) pendingChildWork(ctx context.Context, ticket string, parents []d
 			continue
 		}
 		var count int
-		if err := s.db.QueryRowContext(ctx, `SELECT (SELECT count(*) FROM pending_children WHERE store=? AND parent=?)+(SELECT count(*) FROM pending_starts WHERE store=? AND parent=?)`, parent.Identity.Store, parent.Identity.SessionID, parent.Identity.Store, parent.Identity.SessionID).Scan(&count); err != nil {
+		if err := s.db.QueryRowContext(ctx, `SELECT (SELECT count(*) FROM pending_children WHERE worktree_id=? AND store=? AND parent=?)+(SELECT count(*) FROM pending_starts WHERE worktree_id=? AND store=? AND parent=?)`, s.worktreeID, parent.Identity.Store, parent.Identity.SessionID, s.worktreeID, parent.Identity.Store, parent.Identity.SessionID).Scan(&count); err != nil {
 			return 0, false, err
 		}
 		pending += count
 		var unfinished int
-		if err := s.db.QueryRowContext(ctx, `SELECT count(*) FROM child_cursor WHERE parent=? AND more<>0 AND kind='opencode'`, IdentityKey(parent.Identity)).Scan(&unfinished); err != nil {
+		if err := s.db.QueryRowContext(ctx, `SELECT count(*) FROM child_cursor WHERE worktree_id=? AND parent=? AND more<>0 AND kind='opencode'`, s.worktreeID, IdentityKey(parent.Identity)).Scan(&unfinished); err != nil {
 			return 0, false, err
 		}
 		more = more || unfinished > 0
@@ -395,13 +395,13 @@ func (s *Store) pendingChildWork(ctx context.Context, ticket string, parents []d
 
 func (s *Store) childCursor(ctx context.Context, kind, parent string) (string, error) {
 	var key string
-	err := s.db.QueryRowContext(ctx, `SELECT key FROM child_cursor WHERE kind=? AND parent=?`, kind, parent).Scan(&key)
+	err := s.db.QueryRowContext(ctx, `SELECT key FROM child_cursor WHERE worktree_id=? AND kind=? AND parent=?`, s.worktreeID, kind, parent).Scan(&key)
 	if errors.Is(err, sql.ErrNoRows) {
 		return "", nil
 	}
 	return key, err
 }
 func (s *Store) saveChildCursor(ctx context.Context, kind, parent, key string, more bool) error {
-	_, err := s.db.ExecContext(ctx, `INSERT INTO child_cursor(kind,parent,key,more)VALUES(?,?,?,?) ON CONFLICT(kind,parent) DO UPDATE SET key=excluded.key,more=excluded.more`, kind, parent, key, more)
+	_, err := s.db.ExecContext(ctx, `INSERT INTO child_cursor(worktree_id,kind,parent,key,more)VALUES(?,?,?,?,?) ON CONFLICT(worktree_id,kind,parent) DO UPDATE SET key=excluded.key,more=excluded.more`, s.worktreeID, kind, parent, key, more)
 	return err
 }

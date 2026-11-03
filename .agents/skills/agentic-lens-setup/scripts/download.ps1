@@ -173,7 +173,7 @@ try {
         if ($DryRun) { Write-SetupLine ("Would create shared pin $Version and explicitly install Windows amd64; runtime verification pending."); exit 0 }
         $pin = [IO.Path]::Combine($projectPath, '.agenticlens-config.yaml')
         $stream = [IO.File]::Open($pin, [IO.FileMode]::CreateNew)
-        try { $bytes = [Text.Encoding]::UTF8.GetBytes("# AgenticLens bootstrap scaffold v1: incomplete project configuration`nagenticlens:`n  version: $Version`ntelemetry:`n  capture:`n    state_dir: .agenticlens-capture`n    commit_warning: true`n"); $stream.Write($bytes, 0, $bytes.Length) } finally { $stream.Dispose() }
+        try { $bytes = [Text.Encoding]::UTF8.GetBytes("# AgenticLens bootstrap scaffold v1: incomplete project configuration`nagenticlens:`n  version: $Version`ntelemetry:`n  capture:`n    state_dir: ~/.agenticlens/state`n    commit_warning: true`n"); $stream.Write($bytes, 0, $bytes.Length) } finally { $stream.Dispose() }
         $targets.Add($pin); $backups.Add('')
     }
     $context = (Run-Probe $shell @('-NoLogo', '-NoProfile', '-NonInteractive', '-File', $source, '--al-project', $projectPath, '--al-resolve')) -split '\r?\n'
@@ -208,14 +208,14 @@ try {
     $stream = [IO.File]::OpenRead($candidate)
     try { if ($stream.ReadByte() -ne 77 -or $stream.ReadByte() -ne 90) { throw 'Candidate is not a native Windows executable' } } finally { $stream.Dispose() }
     if ((Run-Probe $candidate @('version', '--short')) -cne $pinVersion) { throw 'Native version differs from shared pin' }
-    $required = ''; if ($CaptureSource) { $required = '2' }
+    $required = ''; if ($CaptureSource) { $required = '3' }
     if ([IO.File]::Exists($native)) {
         $existingStream = [IO.File]::OpenRead($native)
         try { $existingNative = $existingStream.ReadByte() -eq 77 -and $existingStream.ReadByte() -eq 90 } finally { $existingStream.Dispose() }
-        if ($existingNative) { try { if ((Run-Probe $native @('capture', 'protocol')) -ceq '2') { $required = '2' } } catch { } }
+        if ($existingNative) { try { $existingProtocol = Run-Probe $native @('capture', 'protocol'); if ($existingProtocol -ceq '3') { $required = '3' } elseif ($existingProtocol -ceq '2' -and -not $required) { $required = '2' } } catch { } }
     }
     $observedProtocol = ''; try { $observedProtocol = Run-Probe $candidate @('capture', 'protocol') } catch { }
-    if ($required -and $observedProtocol -cne $required) { throw 'Native hook protocol incompatible (required 2)' }
+    if ($required -and $observedProtocol -cne $required) { throw "Native hook protocol incompatible (required $required)" }
     if ([IO.File]::Exists($native) -and (Hash-File $native) -cne (Hash-File $candidate) -and -not $Force) { throw 'Immutable cache leaf exists; -Force explicitly repairs only this version' }
     # Identical leaves retain the exact file object, including explicit repair.
     if (-not [IO.File]::Exists($native) -or (Hash-File $native) -cne (Hash-File $candidate)) { Activate $candidate $native }
@@ -224,7 +224,7 @@ try {
     Activate $hashFile ($wrapper + '.sha256')
     if ($InitConfig) {
         Write-SetupLine ('Configuration incomplete: scaffold defines no project/ticket/code roots.')
-        if ($observedProtocol -ceq '2') {
+        if ($observedProtocol -ceq '3') {
             $wrapperLiteral = "'" + $wrapper.Replace("'", "''") + "'"
             $projectLiteral = "'" + $projectPath.Replace("'", "''") + "'"
             Write-SetupLine ("Complete unchanged owned scaffold: & { Push-Location -LiteralPath $projectLiteral; try { powershell.exe -NoLogo -NoProfile -NonInteractive -File $wrapperLiteral --al-project $projectLiteral init --complete-scaffold --agenticlens-version $pinVersion --project-name NAME --src-folders DIRS --ticket-prefixes PREFIXES } finally { Pop-Location } }")
@@ -238,7 +238,7 @@ try {
         $captureApplyStarted = $true
         Write-SetupLine ((Run-Probe $native $captureArgs))
     }
-    if ($observedProtocol -cne '2') { Write-SetupLine ("Selected legacy release $pinVersion`: hook protocol 2 and guarded init unavailable; ordinary CLI installed. New capture setup requires a reviewed exact supported pin.") }
+    if ($observedProtocol -cne '3') { Write-SetupLine ("Selected legacy release $pinVersion`: hook protocol 3 and guarded init unavailable; ordinary CLI installed. New capture setup requires a reviewed exact supported pin.") }
     Write-SetupLine ("Installed wrapper: $wrapper`nNative: $native`nRequired PATH entry: $Dest`nNo profile changed. Runtime trust, binding and source extraction require verification.")
 } catch {
     $failureMessage = $_.Exception.Message

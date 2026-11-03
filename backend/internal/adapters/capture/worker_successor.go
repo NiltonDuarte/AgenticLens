@@ -27,11 +27,11 @@ func WorkerSuccessor(ctx context.Context, project, state string) (string, error)
 	if !policy.Enabled {
 		return "", errors.New("automatic capture disabled; pending work retained")
 	}
-	configured, err := ProjectState(policy.StateDir, project)
+	configured, err := PreviewStateLocation(policy.StateDir, project)
 	if err != nil {
 		return "", err
 	}
-	if !sameEntrypointPath(configured, state) {
+	if !sameEntrypointPath(configured.CoordinationDirectory, state) {
 		return "", errors.New("capture state directory changed; pending work retained in its original namespace for explicit recovery")
 	}
 	native, err := entry.NativePath()
@@ -60,7 +60,7 @@ func WorkerSuccessor(ctx context.Context, project, state string) (string, error)
 			return "", err
 		}
 		installations[source] = identity
-		if manifest.Protocol != ProtocolVersion || manifest.Version != entry.Version || !sameEntrypointPath(manifest.Binary, native) || !sameEntrypointPath(manifest.Repository, project) || !sameEntrypointPath(manifest.StateDir, state) || manifest.TemplateVersion != installationTemplateVersion() || manifest.Wrapper == "" || manifest.SourceStore == "" {
+		if manifest.Protocol != ManifestProtocolVersion || manifest.Version != entry.Version || !sameEntrypointPath(manifest.Binary, native) || !sameEntrypointPath(manifest.Repository, project) || !sameEntrypointPath(manifest.StateDir, state) || manifest.TemplateVersion != installationTemplateVersion() || manifest.Wrapper == "" || manifest.SourceStore == "" {
 			return "", errors.New("selected worker installation is incompatible; explicitly refresh setup and recover pending work")
 		}
 		if err := CheckWrapperCompatibility(manifest.Wrapper, manifest.WrapperHash); err != nil {
@@ -101,11 +101,11 @@ func WorkerSuccessor(ctx context.Context, project, state string) (string, error)
 	if err != nil {
 		return "", err
 	}
-	currentState, err := ProjectState(currentPolicy.StateDir, project)
+	currentState, err := PreviewStateLocation(currentPolicy.StateDir, project)
 	if err != nil {
 		return "", err
 	}
-	if !currentPolicy.Enabled || !sameEntrypointPath(currentState, state) {
+	if !currentPolicy.Enabled || !sameEntrypointPath(currentState.CoordinationDirectory, state) {
 		return "", errors.New("capture policy/state changed during native takeover; pending work retained")
 	}
 	remaining := false

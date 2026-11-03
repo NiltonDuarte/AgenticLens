@@ -35,7 +35,7 @@ def local(path):
 
 class WindowsDistributionTest(unittest.TestCase):
     def setUp(self):
-        name = 'al68-iter03-bootstrap-' + uuid.uuid4().hex
+        name = 'al68-iter04-bootstrap-' + uuid.uuid4().hex
         code = "$p = [IO.Path]::Combine([IO.Path]::GetTempPath(), '" + name + "'); [IO.Directory]::CreateDirectory($p) | Out-Null; [Console]::WriteLine($p)"
         created = subprocess.check_output([POWERSHELL, '-NoLogo', '-NoProfile', '-NonInteractive', '-Command', code], text=True).strip()
         self.root = local(created)
@@ -81,7 +81,7 @@ class WindowsDistributionTest(unittest.TestCase):
         application = self.root / 'actual application.exe'
         shutil.copyfile(build_app(self.pin, 'windows', 'amd64'), application)
         shutil.copyfile(application, self.probe)
-        self.config.write_text(f"project_name: Fixture\nagenticlens:\n  version: {self.pin}\n  install_root: '{win(self.cache)}'\nticket:\n  prefixes: [FX]\nworkspaces:\n  dir: workspaces\ncode_metrics:\n  source_roots: [src]\n", encoding='utf-8')
+        self.config.write_text(f"project_name: Fixture\nagenticlens:\n  version: {self.pin}\n  install_root: '{win(self.cache)}'\nticket:\n  prefixes: [FX]\nworkspaces:\n  dir: workspaces\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\ntelemetry:\n  capture:\n    state_dir: '{win(self.root / 'capture state')}'\n", encoding='utf-8')
         return application
 
     def test_same_pin_second_project_and_force_retain_native_file_identity(self):
@@ -190,11 +190,15 @@ class WindowsDistributionTest(unittest.TestCase):
         self.succeeds(self.install())
         before = self.native().read_bytes(); wrapper = self.dest / 'agentic-lens.ps1'; wrapper_before = wrapper.read_bytes()
         original_probe = self.probe.read_bytes()
-        shutil.copyfile(build_probe(self.pin, 'windows', 'amd64', protocol='1'), self.probe)
-        result = self.install('-Force')
-        self.probe.write_bytes(original_probe)
-        self.assertNotEqual(result.returncode, 0)
-        self.assertEqual(self.native().read_bytes(), before); self.assertEqual(wrapper.read_bytes(), wrapper_before)
+        for protocol in ['1', '2']:
+            with self.subTest(protocol=protocol):
+                shutil.copyfile(build_probe(self.pin, 'windows', 'amd64', protocol=protocol), self.probe)
+                result = self.install('-Force')
+                self.probe.write_bytes(original_probe)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn('required 3', result.stderr)
+                self.assertEqual(self.native().read_bytes(), before)
+                self.assertEqual(wrapper.read_bytes(), wrapper_before)
         self.probe.write_bytes(b'not native')
         self.assertNotEqual(self.install('-Force').returncode, 0)
         self.assertEqual(self.native().read_bytes(), before)
@@ -205,12 +209,12 @@ class WindowsDistributionTest(unittest.TestCase):
     def test_legacy_binary_only_install_reports_missing_new_capability(self):
         shutil.copyfile(build_probe(self.pin, 'windows', 'amd64', protocol='none'), self.probe)
         result = self.succeeds(self.install())
-        self.assertIn('hook protocol 2 and guarded init unavailable', result.stdout)
+        self.assertIn('hook protocol 3 and guarded init unavailable', result.stdout)
         self.assertEqual(self.launch('version', '--short').stdout.strip(), self.pin)
         store = self.root / 'source store'; store.mkdir()
         result = self.install('-CaptureSource', 'codex', '-CaptureStore', win(store))
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn('required 2', result.stderr)
+        self.assertIn('required 3', result.stderr)
         self.assertFalse((self.repo / '.codex').exists())
 
     def test_duplicate_unsafe_json_mismatch_and_missing_native_reject_without_dispatch(self):

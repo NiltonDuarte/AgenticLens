@@ -120,7 +120,7 @@ func TestGeneratedPinnedConfigRoundTripsWithoutRetiredReportKey(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.AgenticLens.Version != "v9.8.7" || cfg.Workspaces.Dir != "custom-work" || cfg.Telemetry.Capture.StateDir != ".agenticlens-capture" || !cfg.Telemetry.Capture.CommitWarning {
+	if cfg.AgenticLens.Version != "v9.8.7" || cfg.Workspaces.Dir != "custom-work" || cfg.Telemetry.Capture.StateDir != "~/.agenticlens/state" || !cfg.Telemetry.Capture.CommitWarning {
 		t.Fatalf("configuration %+v", cfg)
 	}
 	entry, err := ResolveEntrypoint(root)

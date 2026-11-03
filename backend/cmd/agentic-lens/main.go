@@ -70,9 +70,31 @@ func runGenerate(args []string) {
 		fmt.Fprintln(os.Stderr, projectErr)
 		os.Exit(1)
 	}
-	policy, policyErr := adaptersconfig.ResolveCapture(project, *captureDirFlag)
+	admissionCtx, admissionCancel := context.WithTimeout(context.Background(), 2*time.Second)
+	admission, admissionErr := adaptersconfig.AcquireCaptureAdmission(admissionCtx, project)
+	defer admissionCancel()
+	if admissionErr != nil {
+		if errors.Is(admissionErr, adaptersconfig.ErrConfigNotFound) {
+			fmt.Fprintln(os.Stderr, "Project configuration not found. Please run 'agentic-lens init' to initialize the project.")
+		} else {
+			fmt.Fprintln(os.Stderr, "Capture configuration admission:", admissionErr)
+		}
+		os.Exit(1)
+	}
+	defer func() {
+		if admission != nil {
+			if err := admission.Close(); err != nil {
+				fmt.Fprintln(os.Stderr, "Capture configuration unlock:", err)
+			}
+		}
+	}()
+	policy, policyErr := admission.ResolveCapture(*captureDirFlag)
 	if policyErr != nil {
-		fmt.Fprintln(os.Stderr, policyErr)
+		if errors.Is(policyErr, adaptersconfig.ErrConfigNotFound) {
+			fmt.Fprintln(os.Stderr, "Project configuration not found. Please run 'agentic-lens init' to initialize the project.")
+		} else {
+			fmt.Fprintln(os.Stderr, policyErr)
+		}
 		os.Exit(1)
 	}
 	resolvedState, stateErr := capture.ProjectState(policy.StateDir, project)
@@ -92,6 +114,21 @@ func runGenerate(args []string) {
 		}
 	}
 
+	// Materialize the selected scope while configuration admission is held.
+	// Subsequent path-only maintenance must observe this database and refuse
+	// detaching it, so no global config lease spans source parsing/publication.
+	admissionStore, admissionStoreErr := capture.OpenProjectContext(admissionCtx, resolvedState, project)
+	if admissionStoreErr != nil {
+		fmt.Fprintln(os.Stderr, "Capture state admission:", admissionStoreErr)
+		os.Exit(1)
+	}
+	admissionCloseErr := errors.Join(admissionStore.Close(), admission.Close())
+	admission = nil
+	admissionCancel()
+	if admissionCloseErr != nil {
+		fmt.Fprintln(os.Stderr, "Capture state admission:", admissionCloseErr)
+		os.Exit(1)
+	}
 	*captureDirFlag = resolvedState
 	destinations := []string{*jsonOutputFlag, *appendFlag}
 	if policy.DeprecatedDetailedReport {
@@ -271,19 +308,24 @@ func runGenerate(args []string) {
 	var taskLinks []domain.TaskLinkFact
 	var fallbackCode *domain.CodeFacts
 
+	baseline, baselineErr := classifyGenerationBaseline(project, *captureDirFlag, *jsonOutputFlag, activeTicketID, cachedFacts)
+	if baselineErr != nil {
+		fmt.Fprintln(os.Stderr, "Baseline authorization:", baselineErr)
+		os.Exit(1)
+	}
+	if err := recordGenerationHistory(project, *captureDirFlag, activeTicketID, baseline); err != nil {
+		fmt.Fprintln(os.Stderr, "Cannot record retained history diagnostic:", err)
+		os.Exit(1)
+	}
 	if cachedFacts != nil {
-		if len(cachedFacts.Sessions) > 0 {
-			if e := validateGenerationProject(project, *captureDirFlag, cachedFacts.Sessions, activeTicketID); e != nil {
-				fmt.Fprintln(os.Stderr, e)
-				os.Exit(1)
-			}
-		}
-		knownThreadIDs = append(knownThreadIDs, cachedFacts.RootThreadIDs...)
-		sessions = append(sessions, cachedFacts.Sessions...)
+		sessions = append(sessions, baseline.Current...)
 		skills = append(skills, cachedFacts.Skills...)
 		taskLinks = append(taskLinks, cachedFacts.TaskLinks...)
-		for _, s := range cachedFacts.Sessions {
-			userBySessionID[s.ID] = s.User
+		for _, owner := range baseline.Current {
+			if owner.ParentID == nil && (owner.Source == domain.SourceOpenCode || owner.Source == "") {
+				knownThreadIDs = append(knownThreadIDs, owner.ID)
+			}
+			userBySessionID[owner.ID] = owner.User
 		}
 		fallbackCode = cachedFacts.Code
 		if cachedFacts.Migration != nil && strings.Contains(cachedFacts.Migration.Notes, "Removed ") {
@@ -346,6 +388,10 @@ func runGenerate(args []string) {
 			fmt.Fprintf(os.Stderr, "Error grouping Codex session facts: %v\n", factErr)
 			os.Exit(1)
 		}
+		if collisionErr := validateFreshGenerationOwners(project, *captureDirFlag, baseline.History, freshCodex); collisionErr != nil {
+			fmt.Fprintln(os.Stderr, collisionErr)
+			os.Exit(1)
+		}
 		if ownerErr := validateCaptureSelection(project, *captureDirFlag, activeTicketID, domain.SourceCodex, codexHome, freshCodex); ownerErr != nil {
 			fmt.Fprintln(os.Stderr, "Capture ownership conflict:", ownerErr)
 			os.Exit(1)
@@ -397,12 +443,26 @@ func runGenerate(args []string) {
 					os.Exit(1)
 				}
 				if len(extractedSessions) > 0 {
+					if collisionErr := validateFreshGenerationOwners(project, *captureDirFlag, baseline.History, extractedSessions); collisionErr != nil {
+						fmt.Fprintln(os.Stderr, collisionErr)
+						os.Exit(1)
+					}
 					if ownerErr := validateCaptureSelection(project, *captureDirFlag, activeTicketID, domain.SourceOpenCode, dbPath, extractedSessions); ownerErr != nil {
 						fmt.Fprintln(os.Stderr, "Capture ownership conflict:", ownerErr)
 						os.Exit(1)
 					}
 					freshSessions = extractedSessions
-					skills, taskLinks = opencode.ExtractSkillTaskFacts(extractedSessions)
+					freshSkills, freshLinks := opencode.ExtractSkillTaskFacts(extractedSessions)
+					skills, err = mergeCaptureRows(skills, freshSkills)
+					if err != nil {
+						fmt.Fprintln(os.Stderr, err)
+						os.Exit(1)
+					}
+					taskLinks, err = mergeCaptureRows(taskLinks, freshLinks)
+					if err != nil {
+						fmt.Fprintln(os.Stderr, err)
+						os.Exit(1)
+					}
 					if strings.TrimSpace(*startedAtFlag) == "" && dbStarted != nil {
 						activeStartedAt = dbStarted
 					}
@@ -418,6 +478,10 @@ func runGenerate(args []string) {
 	}
 
 	if captureResult != nil {
+		if err := validateFreshGenerationOwners(project, *captureDirFlag, baseline.History, captureResult.Sessions); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
 		if err := capture.ValidateSessionMerge(sessions, captureResult.Sessions); err != nil {
 			fmt.Fprintln(os.Stderr, "Capture identity collision:", err)
 			os.Exit(1)
@@ -474,6 +538,8 @@ func runGenerate(args []string) {
 		}
 		sessions = mergeSessions(sessions, freshSessions)
 	}
+	// Retained facts join only after owned extraction and checkpoint decisions.
+	sessions = append(sessions, baseline.History...)
 	invocations := (domain.AgenticFactLedger{Sessions: sessions}).InvocationFacts()
 
 	if len(knownThreadIDs) == 0 && len(invocations) == 0 && !*allowEmptyFlag {
@@ -577,6 +643,7 @@ func runGenerate(args []string) {
 	if captureResult != nil {
 		tableMD += capture.CoverageSummary(*captureResult)
 	}
+	tableMD += historySummary(baseline)
 
 	if *autoFlag {
 		enabled, e := automaticCaptureEnabled(project, *captureDirFlag)
@@ -592,7 +659,7 @@ func runGenerate(args []string) {
 		if *appendFlag != "" {
 			publicationPaths = append(publicationPaths, *appendFlag)
 		}
-		if e := recordGenerationPublication(project, *captureDirFlag, activeTicketID, "staging", *jsonOutputFlag, *appendFlag, factLedger.Sessions, "Artifact replacement started; success is unconfirmed until journal commit and diagnostic acknowledgement. If interrupted, rerun generate to recover the prior accepted set."); e != nil {
+		if e := recordGenerationPublication(project, *captureDirFlag, activeTicketID, "staging", *jsonOutputFlag, *appendFlag, sessionsWithoutHistory(factLedger.Sessions, baseline.History), "Artifact replacement started; success is unconfirmed until journal commit and diagnostic acknowledgement. If interrupted, rerun generate to recover the prior accepted set."); e != nil {
 			fmt.Fprintln(os.Stderr, "Cannot persist publication diagnostic:", e)
 			os.Exit(1)
 		}
@@ -602,12 +669,7 @@ func runGenerate(args []string) {
 		}
 	}
 	if *jsonOutputFlag != "" {
-		persistedFactLedger, pruneErr := domain.PersistAnomalySummaries(factLedger)
-		if pruneErr != nil {
-			fmt.Fprintf(os.Stderr, "Error preparing session-owned telemetry: %v\n", pruneErr)
-			os.Exit(1)
-		}
-		if err := saveGenerationLedger(*jsonOutputFlag, persistedFactLedger); err != nil {
+		if err := saveGenerationLedgerPreservingHistory(*jsonOutputFlag, factLedger, baseline.HistoryDTOs); err != nil {
 			fmt.Fprintf(os.Stderr, "Error writing JSON to %s: %v\n", *jsonOutputFlag, err)
 			os.Exit(1)
 		}
@@ -637,11 +699,20 @@ func runGenerate(args []string) {
 		fmt.Println(tableMD)
 	}
 	if *jsonOutputFlag != "" {
+		ownAuxiliary, auxiliaryErr := ownPublicationAuxiliary(capture.AuxiliaryFacts{Skills: factLedger.Skills, TaskLinks: factLedger.TaskLinks}, baseline.CommittedAuxiliary)
+		if auxiliaryErr != nil {
+			fmt.Fprintln(os.Stderr, "Cannot prepare scoped publication evidence:", auxiliaryErr)
+			os.Exit(1)
+		}
+		if e := recordGenerationAuxiliary(project, *captureDirFlag, activeTicketID, ownAuxiliary); e != nil {
+			fmt.Fprintln(os.Stderr, "Cannot persist scoped publication evidence:", e)
+			os.Exit(1)
+		}
 		if e := adapters.CommitPublication(*jsonOutputFlag, publicationPaths); e != nil {
 			fmt.Fprintln(os.Stderr, "Publication remains interrupted; regenerate to restore prior accepted set:", e)
 			os.Exit(1)
 		}
-		if e := recordGenerationPublication(project, *captureDirFlag, activeTicketID, "committed", *jsonOutputFlag, *appendFlag, factLedger.Sessions, "Ledger and requested summary replacement committed."); e != nil {
+		if e := recordGenerationPublication(project, *captureDirFlag, activeTicketID, "committed", *jsonOutputFlag, *appendFlag, sessionsWithoutHistory(factLedger.Sessions, baseline.History), "Ledger and requested summary replacement committed."); e != nil {
 			fmt.Fprintln(os.Stderr, "Artifacts committed but diagnostic acknowledgement failed; publication verification remains incomplete:", e)
 			os.Exit(1)
 		}
@@ -1191,6 +1262,8 @@ func runInit(args []string) {
 	outputFlag := initFlags.String("output", ".agenticlens-config.yaml", "Destination path for generated configuration file")
 	forceFlag := initFlags.Bool("force", false, "Overwrite existing configuration file without prompting")
 	completeScaffoldFlag := initFlags.Bool("complete-scaffold", false, "Complete only the exact owned bootstrap scaffold for an explicit release; preserve existing local settings")
+	updateCaptureFlag := initFlags.Bool("update-capture-config", false, "Insert a missing capture state setting in an existing config without reinitializing it")
+	captureStateFlag := initFlags.String("capture-state-dir", "", "Explicit capture state replacement with --update-capture-config; populated state requires relocation")
 	dryRunFlag := initFlags.Bool("dry-run", false, "Print generated configuration YAML to stdout without writing")
 
 	if len(args) > 0 && (args[0] == "help" || args[0] == "-h" || args[0] == "--help") {
@@ -1200,6 +1273,30 @@ func runInit(args []string) {
 
 	if err := initFlags.Parse(args); err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing init flags: %v\n", err)
+		os.Exit(1)
+	}
+
+	if *updateCaptureFlag {
+		invalidFlag := ""
+		initFlags.Visit(func(value *flag.Flag) {
+			switch value.Name {
+			case "update-capture-config", "capture-state-dir", "output", "dry-run":
+			default:
+				invalidFlag = value.Name
+			}
+		})
+		if invalidFlag != "" {
+			fmt.Fprintln(os.Stderr, "Error: --update-capture-config cannot be combined with --"+invalidFlag)
+			os.Exit(1)
+		}
+		if err := runCaptureConfigUpdate(*outputFlag, *captureStateFlag, *dryRunFlag); err != nil {
+			fmt.Fprintln(os.Stderr, "Error updating capture configuration:", err)
+			os.Exit(1)
+		}
+		return
+	}
+	if *captureStateFlag != "" {
+		fmt.Fprintln(os.Stderr, "Error: --capture-state-dir requires --update-capture-config")
 		os.Exit(1)
 	}
 	sharedDestination, sharedPathErr := filepath.Abs(filepath.Clean(*outputFlag))

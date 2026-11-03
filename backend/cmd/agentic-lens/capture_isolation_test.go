@@ -329,7 +329,13 @@ func TestCaptureInstallerUsesSharedLocalAndExplicitStatePolicy(t *testing.T) {
 		t.Run(level, func(t *testing.T) {
 			f := newCaptureGenerationFixture(t)
 			config := filepath.Join(f.project, ".agenticlens-config.yaml")
-			body := append(readCaptureFile(t, config), []byte("telemetry:\n  capture:\n    state_dir: shared-state\n")...)
+			lines := bytes.Split(readCaptureFile(t, config), []byte("\n"))
+			for i, line := range lines {
+				if bytes.HasPrefix(line, []byte("    state_dir:")) {
+					lines[i] = []byte("    state_dir: shared-state")
+				}
+			}
+			body := bytes.Join(lines, []byte("\n"))
 			if err := os.WriteFile(config, body, 0600); err != nil {
 				t.Fatal(err)
 			}

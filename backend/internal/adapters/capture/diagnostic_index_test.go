@@ -29,7 +29,7 @@ func legacyDiagnostic(t *testing.T, s *Store, d domain.CaptureDiagnostic) int64 
 	if err != nil {
 		t.Fatal(err)
 	}
-	r, err := s.db.Exec(`INSERT INTO capture_diagnostics(ticket,phase,outcome,record)VALUES(?,?,?,?)`, d.TicketID, d.Phase, d.Outcome, body)
+	r, err := s.db.Exec(`INSERT INTO capture_diagnostics(worktree_id,ticket,phase,outcome,record)VALUES(?,?,?,?,?)`, s.worktreeID, d.TicketID, d.Phase, d.Outcome, body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,7 +128,7 @@ func TestDiagnosticHeadLookupWorkIndependentOfRotatingOwnerHistory(t *testing.T)
 			if err != nil || !page.MetadataComplete || !page.More || page.Bytes != 0 || len(page.Records) != 0 || page.HeadLookups != 8 {
 				t.Fatalf("bounded complete-index work: %+v %v", page, err)
 			}
-			rows, err := s.db.QueryContext(ctx, "EXPLAIN QUERY PLAN "+diagnosticHeadQuery, "T-1", "reconciliation", IdentityKey(owners[0].Identity))
+			rows, err := s.db.QueryContext(ctx, "EXPLAIN QUERY PLAN "+diagnosticHeadQuery, s.worktreeID, "T-1", "reconciliation", IdentityKey(owners[0].Identity))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -187,7 +187,7 @@ func TestDiagnosticLegacyPayloadDoesNotDelayDurableRegistration(t *testing.T) {
 	}
 	// Old private rows are deliberately undecodable. Opening and registering must
 	// not parse them or perform a historical backfill before the durable handoff.
-	if _, err = s.db.Exec(`INSERT INTO capture_diagnostics(ticket,phase,outcome,record)VALUES('T-1','reconciliation','failed',?)`, strings.Repeat("invalid", 1024*1024)); err != nil {
+	if _, err = s.db.Exec(`INSERT INTO capture_diagnostics(worktree_id,ticket,phase,outcome,record)VALUES(?,'T-1','reconciliation','failed',?)`, s.worktreeID, strings.Repeat("invalid", 1024*1024)); err != nil {
 		t.Fatal(err)
 	}
 	for _, table := range []string{"capture_diagnostic_index", "capture_diagnostic_heads", "capture_diagnostic_failures"} {
@@ -290,11 +290,11 @@ func TestDiagnosticAttemptMetadataLegacyAndOlderWriterStayUnknown(t *testing.T) 
 	if err != nil || !complete.Complete {
 		t.Fatalf("upgrade resume: %+v %v", complete, err)
 	}
-	if _, err = s.db.Exec(`INSERT OR IGNORE INTO capture_diagnostic_index SELECT 1,0,coalesce(max(sequence),0),coalesce(max(sequence),0),CASE WHEN count(*)=0 THEN 1 ELSE 0 END FROM (SELECT sequence FROM capture_diagnostics ORDER BY sequence DESC LIMIT 1)`); err != nil {
-		t.Fatalf("older native initialization became incompatible: %v", err)
+	if _, err = s.db.Exec(`INSERT OR IGNORE INTO capture_diagnostic_index SELECT 1,0,coalesce(max(sequence),0),coalesce(max(sequence),0),CASE WHEN count(*)=0 THEN 1 ELSE 0 END FROM (SELECT sequence FROM capture_diagnostics ORDER BY sequence DESC LIMIT 1)`); err == nil {
+		t.Fatal("unscoped schema1 initialization was accepted by schema2")
 	}
-	// The previous native understands known_max but not the attempt watermark. Its
-	// diagnostic append must invalidate freshness even when it claims complete.
+	// An explicitly scoped direct writer can still bypass the attempt watermark.
+	// Its append must invalidate freshness even when it claims complete.
 	legacy := fatal
 	legacy.Reconciliation = &domain.CaptureReconciliationDiagnostic{Owners: []domain.CaptureRegistration{owner}}
 	seq := legacyDiagnostic(t, s, legacy)
@@ -328,5 +328,50 @@ func TestDiagnosticAttemptMetadataLegacyAndOlderWriterStayUnknown(t *testing.T) 
 	failures = domain.CaptureCurrentFailures(owner, page.Records)
 	if err != nil || failures.Collection || failures.AttemptUnknown {
 		t.Fatalf("completed recovery remains unresolved: %+v %v", failures, err)
+	}
+}
+
+func TestDiagnosticIndexScopeDoesNotScanOrCertifyAnotherWorktree(t *testing.T) {
+	directory := t.TempDir()
+	first, err := openRegistry(directory, "Shared diagnostic project", t.TempDir(), false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer first.Close()
+	second, err := openRegistry(directory, "Shared diagnostic project", t.TempDir(), false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer second.Close()
+	ctx := context.Background()
+	id := domain.CaptureIdentity{Source: domain.SourceCodex, Store: "/store", SessionID: "same-owner"}
+	diagnostic := domain.CaptureDiagnostic{TicketID: "TEST-1", Phase: "reconciliation", Outcome: "failed", Reconciliation: &domain.CaptureReconciliationDiagnostic{Attempt: domain.CaptureAttemptFailed, Owners: []domain.CaptureRegistration{{Identity: id, TicketID: "TEST-1", State: domain.CaptureFailed}}}}
+	if err = first.RecordDiagnostic(ctx, diagnostic); err != nil {
+		t.Fatal(err)
+	}
+	// A corrupt direct write belongs only to the second worktree. Inspection of
+	// the first scope must neither decode it nor claim to have indexed it.
+	if _, err = second.db.Exec(`INSERT INTO capture_diagnostics(worktree_id,ticket,phase,outcome,record) VALUES(?,'TEST-1','reconciliation','failed',?)`, second.worktreeID, strings.Repeat("not-json", 1024)); err != nil {
+		t.Fatal(err)
+	}
+	options := DiagnosticReadOptions{Current: true, Tickets: []string{"TEST-1"}, Owners: []domain.CaptureIdentity{id}, Limit: 18, MaxBytes: 1024 * 1024}
+	own, err := first.ReadDiagnostics(ctx, options)
+	if err != nil || !own.MetadataComplete || own.More || len(own.Records) != 1 {
+		t.Fatalf("foreign history poisoned first scope: %+v %v", own, err)
+	}
+	progress, err := first.BackfillDiagnosticIndex(ctx, 1, 1)
+	if err != nil || !progress.Complete || progress.Rows != 0 {
+		t.Fatalf("first scope consumed foreign maintenance work: %+v %v", progress, err)
+	}
+	foreign, err := second.ReadDiagnostics(ctx, options)
+	if err != nil || foreign.MetadataComplete || !foreign.More {
+		t.Fatalf("foreign gap silently acknowledged: %+v %v", foreign, err)
+	}
+	if _, err = second.BackfillDiagnosticIndex(ctx, 1, 1024*1024); err == nil {
+		t.Fatal("own corrupt history was certified as indexed")
+	}
+	own, err = first.ReadDiagnostics(ctx, options)
+	if err != nil || !own.MetadataComplete || len(own.Records) != 1 {
+		t.Fatalf("foreign failed maintenance changed first scope: %+v %v", own, err)
 	}
 }

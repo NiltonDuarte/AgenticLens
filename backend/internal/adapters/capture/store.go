@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/url"
 	"os"
 	"path/filepath"
 	"time"
@@ -20,18 +19,30 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-const ProtocolVersion = 1
+const RegistryProtocolVersion = 2
+const ManifestProtocolVersion = 2
+
+// ProtocolVersion is the compatibility name for the persisted registry protocol.
+// Installation manifest readers use ManifestProtocolVersion independently.
+const ProtocolVersion = RegistryProtocolVersion
 
 // HandlerProtocolVersion identifies native lifecycle flags independently of the
-// persisted registry/manifest schema. Protocol 2 adds common-wrapper context.
-const HandlerProtocolVersion = 2
+// persisted registry/manifest schema. Protocol 3 requires named shared storage
+// with exact-worktree scope; protocol 2 used one directory per registry.
+const HandlerProtocolVersion = 3
+
+// DefaultDirectory names the legacy local base for explicit recovery callers.
+// Operational configuration loading never supplies it as a fallback.
 const DefaultDirectory = ".agenticlens-capture"
 const MaxPayloadBytes = 64 * 1024
 
 type Store struct {
-	db        *sql.DB
-	project   string
-	directory string
+	db               *sql.DB
+	project          string
+	directory        string
+	registry         string
+	worktreeID       int64
+	relocationWorker *PublicationLock
 }
 type storedRegistration struct {
 	Registration domain.CaptureRegistration `json:"registration"`
@@ -41,35 +52,261 @@ type storedRegistration struct {
 	TaskLinks    []domain.TaskLinkFact      `json:"task_links,omitempty"`
 }
 
-func Open(directory string) (*Store, error) {
-	if err := os.MkdirAll(directory, 0700); err != nil {
-		return nil, fmt.Errorf("creating local capture directory: %w", err)
+// Open creates an isolated unassociated registry for adapter callers. Production
+// lifecycle commands use OpenProject and require configured project ownership.
+func Open(directory string) (*Store, error) { return openRegistry(directory, "", "", false) }
+
+func openRegistry(directory, name, project string, readOnly bool) (*Store, error) {
+	return openRegistryMode(directory, name, project, readOnly, "")
+}
+func openRegistryForRelocation(directory, name, project, migrationID string) (*Store, error) {
+	if migrationID == "" {
+		return nil, errors.New("relocation requires an explicit recorded migration identity")
 	}
-	p, err := filepath.Abs(filepath.Join(directory, "registry.db"))
+	return openRegistryMode(directory, name, project, false, migrationID)
+}
+func openRegistryMode(directory, name, project string, readOnly bool, migrationID string) (*Store, error) {
+	return openRegistryModeContext(context.Background(), directory, name, project, readOnly, migrationID)
+}
+func openRegistryContext(ctx context.Context, directory, name, project string, readOnly bool) (*Store, error) {
+	return openRegistryModeContext(ctx, directory, name, project, readOnly, "")
+}
+
+func openRegistryModeContext(ctx context.Context, directory, name, project string, readOnly bool, migrationID string) (*Store, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	allowPending := migrationID != ""
+	path, err := filepath.Abs(filepath.Join(directory, "registry.db"))
 	if err != nil {
 		return nil, err
 	}
-	u := url.URL{Scheme: "file", Path: filepath.ToSlash(p)}
-	db, err := sql.Open("sqlite", u.String()+"?_pragma=busy_timeout(1000)&_pragma=journal_mode(WAL)")
+	uri, err := sqliteFileURI(path)
+	if err != nil {
+		return nil, err
+	}
+	if !readOnly {
+		if err = ctx.Err(); err != nil {
+			return nil, err
+		}
+		if err = os.MkdirAll(directory, 0700); err != nil {
+			return nil, err
+		}
+	}
+	if readOnly {
+		info, e := os.Stat(path)
+		if e != nil {
+			return nil, e
+		}
+		if !info.Mode().IsRegular() {
+			return nil, errors.New("capture registry is not a regular file")
+		}
+	}
+	busyMillis := constructorBusyMillis(ctx, 1000)
+	options := fmt.Sprintf("?_pragma=busy_timeout(%d)&_txlock=immediate", busyMillis)
+	if readOnly {
+		options = fmt.Sprintf("?mode=ro&_pragma=query_only(1)&_pragma=busy_timeout(%d)", constructorBusyMillis(ctx, 250))
+	}
+	db, err := sql.Open("sqlite", uri+options)
 	if err != nil {
 		return nil, err
 	}
 	db.SetMaxOpenConns(1)
-	if _, err = db.Exec(`CREATE TABLE IF NOT EXISTS registrations (identity TEXT PRIMARY KEY, source TEXT NOT NULL, store TEXT NOT NULL, session_id TEXT NOT NULL, ticket TEXT NOT NULL, record BLOB NOT NULL); CREATE TABLE IF NOT EXISTS capture_meta (version INTEGER NOT NULL); INSERT INTO capture_meta SELECT 1 WHERE NOT EXISTS(SELECT 1 FROM capture_meta);`); err != nil {
-		return nil, errors.Join(err, db.Close())
+	var relocationWorker *PublicationLock
+	fail := func(e error) (*Store, error) {
+		if relocationWorker != nil {
+			e = errors.Join(e, relocationWorker.Close())
+			relocationWorker = nil
+		}
+		return nil, errors.Join(e, db.Close())
 	}
+	var existing int
+	if err = db.QueryRowContext(ctx, "SELECT count(*) FROM sqlite_master WHERE name='capture_meta'").Scan(&existing); err != nil {
+		return fail(err)
+	}
+	if existing == 0 {
+		var tables int
+		if err = db.QueryRowContext(ctx, "SELECT count(*) FROM sqlite_master WHERE type='table'").Scan(&tables); err != nil {
+			return fail(err)
+		}
+		if tables > 0 {
+			return fail(errors.New("unrecognized capture database; explicit recovery required"))
+		}
+	}
+	if existing > 0 {
+		var version int
+		if err = db.QueryRowContext(ctx, "SELECT version FROM capture_meta").Scan(&version); err != nil {
+			return fail(err)
+		}
+		if version != RegistryProtocolVersion {
+			return fail(fmt.Errorf("unsupported capture registry protocol %d; explicitly relocate legacy state", version))
+		}
+		var owner string
+		if err = db.QueryRowContext(ctx, "SELECT name FROM project_identity WHERE singleton=1").Scan(&owner); err != nil {
+			return fail(err)
+		}
+		if owner != name {
+			return fail(errors.New("capture namespace belongs to a different configured project name"))
+		}
+		var scope int64
+		e := db.QueryRowContext(ctx, "SELECT id FROM worktrees WHERE directory=?", project).Scan(&scope)
+		if e != nil && !errors.Is(e, sql.ErrNoRows) {
+			return fail(e)
+		}
+		if e == nil {
+			if e = validateWorktreeOwnershipContext(ctx, db, scope, project); e != nil {
+				return fail(e)
+			}
+			if !allowPending {
+				if e = validateScopeActivationContext(ctx, db, scope); e != nil {
+					return fail(e)
+				}
+			} else if e = validateRelocationIdentity(db, scope, migrationID); e != nil {
+				return fail(e)
+			}
+		}
+	}
+	var id int64
+	if readOnly {
+		if err = db.QueryRowContext(ctx, "SELECT id FROM worktrees WHERE directory=?", project).Scan(&id); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				err = os.ErrNotExist
+			}
+			return fail(err)
+		}
+	} else {
+		if err = setConstructorBusyTimeout(ctx, db, 1000); err != nil {
+			return fail(err)
+		}
+		if _, err = db.ExecContext(ctx, "PRAGMA journal_mode=WAL"); err != nil {
+			return fail(err)
+		}
 
-	var version int
-	if err = db.QueryRow(`SELECT version FROM capture_meta`).Scan(&version); err != nil || version != ProtocolVersion {
-		return nil, errors.Join(fmt.Errorf("unsupported capture registry protocol %d: %w", version, err), db.Close())
+		if err = setConstructorBusyTimeout(ctx, db, 1000); err != nil {
+			return fail(err)
+		}
+		tx, e := db.BeginTx(ctx, nil)
+		if e != nil {
+			return fail(e)
+		}
+		rollback := func(e error) (*Store, error) { return fail(errors.Join(e, tx.Rollback())) }
+		ownership, e := currentWorktreeOwnership(project)
+		if e != nil {
+			return rollback(e)
+		}
+		if _, e = tx.ExecContext(ctx, registrySchema); e != nil {
+			return rollback(e)
+		}
+		if _, e = tx.ExecContext(ctx, "INSERT OR IGNORE INTO project_identity VALUES(1,?)", name); e != nil {
+			return rollback(e)
+		}
+		var owner string
+		if e = tx.QueryRowContext(ctx, "SELECT name FROM project_identity WHERE singleton=1").Scan(&owner); e != nil {
+			return rollback(e)
+		}
+		if owner != name {
+			return rollback(errors.New("capture namespace belongs to a different configured project name"))
+		}
+		var previousScope int64
+		scopeErr := tx.QueryRowContext(ctx, "SELECT id FROM worktrees WHERE directory=?", project).Scan(&previousScope)
+		scopeExisted := scopeErr == nil
+		if scopeErr != nil && !errors.Is(scopeErr, sql.ErrNoRows) {
+			return rollback(scopeErr)
+		}
+		if _, e = tx.ExecContext(ctx, "INSERT OR IGNORE INTO worktrees(directory)VALUES(?)", project); e != nil {
+			return rollback(e)
+		}
+		if e = tx.QueryRowContext(ctx, "SELECT id FROM worktrees WHERE directory=?", project).Scan(&id); e != nil {
+			return rollback(e)
+		}
+		if !scopeExisted {
+			if _, e = tx.ExecContext(ctx, "INSERT INTO worktree_ownership(worktree_id,ownership)VALUES(?,?)", id, ownership); e != nil {
+				return rollback(e)
+			}
+		}
+		{
+			var recorded string
+			if e = tx.QueryRowContext(ctx, "SELECT ownership FROM worktree_ownership WHERE worktree_id=?", id).Scan(&recorded); e != nil {
+				return rollback(e)
+			}
+			same, e := sameWorktreeOwnership(recorded, ownership)
+			if e != nil {
+				return rollback(e)
+			}
+			if !same {
+				return rollback(errors.New("physical worktree or Git ownership changed; explicit recovery required"))
+			}
+			if recorded != ownership {
+				if _, e = tx.ExecContext(ctx, "UPDATE worktree_ownership SET ownership=? WHERE worktree_id=? AND ownership=?", ownership, id, recorded); e != nil {
+					return rollback(e)
+				}
+			}
+			if allowPending {
+				coord := filepath.Join(directory, "worktrees", fmt.Sprint(id))
+				if e = os.MkdirAll(coord, 0700); e != nil {
+					return rollback(e)
+				}
+				relocationWorker, e = AcquireWorker(coord)
+				if e != nil {
+					return rollback(e)
+				}
+				if relocationWorker == nil {
+					return rollback(errors.New("destination worktree worker is active; retry relocation after its bounded pass finishes"))
+				}
+				if e = reserveRelocationScopeTx(tx, id, migrationID); e != nil {
+					return rollback(e)
+				}
+			} else {
+				var table int
+				if e = tx.QueryRowContext(ctx, "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='worktree_relocations'").Scan(&table); e != nil {
+					return rollback(e)
+				}
+				if table > 0 {
+					var state string
+					e = tx.QueryRowContext(ctx, "SELECT state FROM worktree_relocations WHERE worktree_id=?", id).Scan(&state)
+					if e != nil && !errors.Is(e, sql.ErrNoRows) {
+						return rollback(e)
+					}
+					if e == nil && state != "active" {
+						return rollback(errors.New("capture worktree relocation incomplete; resume explicit relocation"))
+					}
+				}
+			}
+		}
+		if e = tx.Commit(); e != nil {
+			return fail(e)
+		}
 	}
-	if err = initializeDiagnosticIndex(db); err != nil {
-		return nil, errors.Join(fmt.Errorf("initializing capture diagnostics: %w", err), db.Close())
+	coord := directory
+	if project != "" {
+		coord = filepath.Join(directory, "worktrees", fmt.Sprint(id))
 	}
-
-	return &Store{db: db, directory: directory}, nil
+	if !readOnly {
+		if err = ctx.Err(); err != nil {
+			return fail(err)
+		}
+		if err = os.MkdirAll(coord, 0700); err != nil {
+			return fail(err)
+		}
+	}
+	store := &Store{db: db, project: project, directory: coord, registry: directory, worktreeID: id, relocationWorker: relocationWorker}
+	if !readOnly && !allowPending {
+		if err = store.initializeDiagnosticIndexContext(ctx); err != nil {
+			return fail(err)
+		}
+	}
+	return store, nil
 }
-func (s *Store) Close() error { return s.db.Close() }
+func (s *Store) CoordinationDirectory() string { return s.directory }
+func (s *Store) RegistryDirectory() string     { return s.registry }
+func (s *Store) Close() error {
+	err := s.db.Close()
+	if s.relocationWorker != nil {
+		err = errors.Join(err, s.relocationWorker.Close())
+		s.relocationWorker = nil
+	}
+	return err
+}
 func IdentityKey(id domain.CaptureIdentity) string {
 	b, err := json.Marshal(id)
 	if err != nil {
@@ -116,9 +353,9 @@ func (s *Store) list(ctx context.Context, limit int) ([]domain.CaptureRegistrati
 	var rows *sql.Rows
 	var err error
 	if limit > 0 {
-		rows, err = s.db.QueryContext(ctx, `SELECT record FROM registrations ORDER BY identity LIMIT ?`, limit)
+		rows, err = s.db.QueryContext(ctx, `SELECT record FROM registrations WHERE worktree_id=? ORDER BY identity LIMIT ?`, s.worktreeID, limit)
 	} else {
-		rows, err = s.db.QueryContext(ctx, `SELECT record FROM registrations ORDER BY identity`)
+		rows, err = s.db.QueryContext(ctx, `SELECT record FROM registrations WHERE worktree_id=? ORDER BY identity`, s.worktreeID)
 	}
 	if err != nil {
 		return nil, err
@@ -170,7 +407,7 @@ func (s *Store) Change(ctx context.Context, id domain.CaptureIdentity, change fu
 	r := domain.CaptureRegistration{Identity: id, State: domain.CaptureUnassigned}
 	// Existing rows may predate path normalization. Resolve them inside the same
 	// write transaction so an alias cannot create a second binding for one owner.
-	rows, err := conn.QueryContext(ctx, `SELECT identity,record FROM registrations WHERE source=? AND session_id=?`, id.Source, id.SessionID)
+	rows, err := conn.QueryContext(ctx, `SELECT identity,record FROM registrations WHERE worktree_id=? AND source=? AND session_id=?`, s.worktreeID, id.Source, id.SessionID)
 	if err != nil {
 		return r, err
 	}
@@ -219,12 +456,12 @@ func (s *Store) Change(ctx context.Context, id domain.CaptureIdentity, change fu
 	}
 	for _, oldKey := range matched {
 		if oldKey != IdentityKey(id) {
-			if _, err = conn.ExecContext(ctx, `DELETE FROM registrations WHERE identity=?`, oldKey); err != nil {
+			if _, err = conn.ExecContext(ctx, `DELETE FROM registrations WHERE worktree_id=? AND identity=?`, s.worktreeID, oldKey); err != nil {
 				return r, err
 			}
 		}
 	}
-	_, err = conn.ExecContext(ctx, `INSERT INTO registrations(identity,source,store,session_id,ticket,record) VALUES(?,?,?,?,?,?) ON CONFLICT(identity) DO UPDATE SET ticket=excluded.ticket,record=excluded.record`, IdentityKey(id), id.Source, id.Store, id.SessionID, r.TicketID, b)
+	_, err = conn.ExecContext(ctx, `INSERT INTO registrations(worktree_id,identity,source,store,session_id,ticket,record) VALUES(?,?,?,?,?,?,?) ON CONFLICT(worktree_id,identity) DO UPDATE SET ticket=excluded.ticket,record=excluded.record`, s.worktreeID, IdentityKey(id), id.Source, id.Store, id.SessionID, r.TicketID, b)
 	if err != nil {
 		return r, err
 	}
@@ -320,4 +557,24 @@ func (s *Store) Bind(ctx context.Context, id domain.CaptureIdentity, ticket, req
 		r.State = domain.CapturePending
 		return r, nil
 	})
+}
+
+func constructorBusyMillis(ctx context.Context, maximum int64) int64 {
+	if deadline, ok := ctx.Deadline(); ok {
+		remaining := time.Until(deadline).Milliseconds()
+		if remaining < 0 {
+			return 0
+		}
+		if remaining < maximum {
+			return remaining
+		}
+	}
+	return maximum
+}
+func setConstructorBusyTimeout(ctx context.Context, db *sql.DB, maximum int64) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	_, err := db.ExecContext(ctx, fmt.Sprintf("PRAGMA busy_timeout=%d", constructorBusyMillis(ctx, maximum)))
+	return err
 }

@@ -13,7 +13,7 @@ PROBE = ROOT / 'scripts/tests/fixtures/entrypoint_probe.go'
 COMPILED = tempfile.TemporaryDirectory(prefix='agenticlens native fixtures ')
 
 
-def build_probe(version='v9.8.7', operating_system=None, arch=None, protocol='2'):
+def build_probe(version='v9.8.7', operating_system=None, arch=None, protocol='3'):
     operating_system = operating_system or {'Linux': 'linux', 'Darwin': 'darwin', 'Windows': 'windows'}[platform.system()]
     arch = arch or {'x86_64': 'amd64', 'amd64': 'amd64', 'aarch64': 'arm64', 'arm64': 'arm64'}[platform.machine().lower()]
     target = Path(COMPILED.name) / (version + '-p' + protocol + '-' + operating_system + '-' + arch + ('.exe' if operating_system == 'windows' else ''))
@@ -83,7 +83,7 @@ else: shutil.copyfile(os.environ['AL_FIXTURE_RELEASE'], target)
 
     def write_config(self, pin=None):
         self.pin = pin or self.pin
-        self.config.write_text(f"project_name: Fixture\nagenticlens:\n  version: {self.pin}\n  install_root: '{self.cache}'\n")
+        self.config.write_text(f"project_name: Fixture\nagenticlens:\n  version: {self.pin}\n  install_root: '{self.cache}'\ntelemetry:\n  capture:\n    state_dir: '{self.root / 'capture state'}'\n")
 
     def native(self, pin=None):
         operating_system = {'Linux': 'linux', 'Darwin': 'darwin', 'Windows': 'windows'}[platform.system()]

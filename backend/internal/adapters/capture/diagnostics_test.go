@@ -54,6 +54,7 @@ func TestCaptureReadOnlyDiagnosticsPreserveSettledFilesAndReadCommittedWAL(t *te
 		t.Run(map[bool]string{false: "settled", true: "active-wal"}[active], func(t *testing.T) {
 			ctx := context.Background()
 			project := t.TempDir()
+			captureProjectConfig(t, project, "DiagnosticsFixture")
 			state := t.TempDir()
 			writer, err := capture.OpenProject(state, project)
 			if err != nil {
@@ -110,7 +111,9 @@ func TestCaptureReadOnlyDiagnosticsPreserveSettledFilesAndReadCommittedWAL(t *te
 		})
 	}
 	absent := filepath.Join(t.TempDir(), "absent")
-	if _, err := capture.OpenReadOnlyProject(absent, t.TempDir()); !errors.Is(err, os.ErrNotExist) {
+	absentProject := t.TempDir()
+	captureProjectConfig(t, absentProject, "AbsentFixture")
+	if _, err := capture.OpenReadOnlyProject(absent, absentProject); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("missing registry: %v", err)
 	}
 	if _, err := os.Stat(absent); !errors.Is(err, os.ErrNotExist) {
@@ -160,6 +163,7 @@ func TestCallbackProjectProofRetainsUnflushedAndForeignHandoffs(t *testing.T) {
 		t.Run(relation, func(t *testing.T) {
 			ctx := context.Background()
 			project := t.TempDir()
+			captureProjectConfig(t, project, "DiagnosticsFixture")
 			state := t.TempDir()
 			home := t.TempDir()
 			store, err := capture.OpenProject(state, project)
@@ -247,6 +251,7 @@ func TestInitialCaptureHandoffInterruptionBeforeAndAfterCommit(t *testing.T) {
 	for _, phase := range []string{"before", "after"} {
 		t.Run(phase, func(t *testing.T) {
 			project, state, home := t.TempDir(), t.TempDir(), t.TempDir()
+			captureProjectConfig(t, project, "InterruptedFixture")
 			sourcePath := filepath.Join(home, "sessions", "root.jsonl")
 			executable, err := os.Executable()
 			if err != nil {

@@ -15,7 +15,7 @@ import (
 // RequestPublication commits a generation before native worker launch. A worker
 // acknowledges only the generation captured before its source/publication pass.
 func (s *Store) RequestPublication(ctx context.Context) error {
-	_, err := s.db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS publication_request (singleton INTEGER PRIMARY KEY CHECK(singleton=1), generation INTEGER NOT NULL, acknowledged INTEGER NOT NULL, requested_at INTEGER NOT NULL); INSERT INTO publication_request VALUES(1,1,0,?) ON CONFLICT(singleton) DO UPDATE SET generation=generation+1,requested_at=excluded.requested_at`, time.Now().UnixMilli())
+	_, err := s.db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS publication_request (worktree_id INTEGER NOT NULL,singleton INTEGER NOT NULL CHECK(singleton=1), generation INTEGER NOT NULL, acknowledged INTEGER NOT NULL, requested_at INTEGER NOT NULL,PRIMARY KEY(worktree_id,singleton)); INSERT INTO publication_request VALUES(?,1,1,0,?) ON CONFLICT(worktree_id,singleton) DO UPDATE SET generation=generation+1,requested_at=excluded.requested_at`, s.worktreeID, time.Now().UnixMilli())
 	return err
 }
 
@@ -34,14 +34,14 @@ func (s *Store) PublicationRequest(ctx context.Context) (PublicationRequest, err
 	if exists == 0 {
 		return r, nil
 	}
-	err := s.db.QueryRowContext(ctx, `SELECT generation,acknowledged,requested_at FROM publication_request WHERE singleton=1`).Scan(&r.Generation, &r.Acknowledged, &r.RequestedAt)
+	err := s.db.QueryRowContext(ctx, `SELECT generation,acknowledged,requested_at FROM publication_request WHERE worktree_id=? AND singleton=1`, s.worktreeID).Scan(&r.Generation, &r.Acknowledged, &r.RequestedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return r, nil
 	}
 	return r, err
 }
 func (s *Store) AcknowledgePublication(ctx context.Context, generation int64) error {
-	_, err := s.db.ExecContext(ctx, `UPDATE publication_request SET acknowledged=? WHERE singleton=1 AND acknowledged<?`, generation, generation)
+	_, err := s.db.ExecContext(ctx, `UPDATE publication_request SET acknowledged=? WHERE worktree_id=? AND singleton=1 AND acknowledged<?`, generation, s.worktreeID, generation)
 	return err
 }
 
@@ -169,11 +169,11 @@ func AutomaticEnabled(directory string) (bool, error) {
 // Persisting the attempted ticket prevents an expensive early ticket from
 // consuming every lifetime before another ticket receives an attempt.
 func (s *Store) PublicationTickets(ctx context.Context, tickets []string) ([]string, error) {
-	if _, err := s.db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS publication_cursor(singleton INTEGER PRIMARY KEY CHECK(singleton=1), ticket TEXT NOT NULL)`); err != nil {
+	if _, err := s.db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS publication_cursor(worktree_id INTEGER NOT NULL,singleton INTEGER NOT NULL CHECK(singleton=1),ticket TEXT NOT NULL,PRIMARY KEY(worktree_id,singleton))`); err != nil {
 		return nil, err
 	}
 	var cursor string
-	err := s.db.QueryRowContext(ctx, `SELECT ticket FROM publication_cursor WHERE singleton=1`).Scan(&cursor)
+	err := s.db.QueryRowContext(ctx, `SELECT ticket FROM publication_cursor WHERE worktree_id=? AND singleton=1`, s.worktreeID).Scan(&cursor)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
 	}
@@ -184,6 +184,6 @@ func (s *Store) PublicationTickets(ctx context.Context, tickets []string) ([]str
 	return append(append([]string{}, tickets[split:]...), tickets[:split]...), nil
 }
 func (s *Store) AttemptPublicationTicket(ctx context.Context, ticket string) error {
-	_, err := s.db.ExecContext(ctx, `INSERT INTO publication_cursor VALUES(1,?) ON CONFLICT(singleton) DO UPDATE SET ticket=excluded.ticket`, ticket)
+	_, err := s.db.ExecContext(ctx, `INSERT INTO publication_cursor VALUES(?,1,?) ON CONFLICT(worktree_id,singleton) DO UPDATE SET ticket=excluded.ticket`, s.worktreeID, ticket)
 	return err
 }

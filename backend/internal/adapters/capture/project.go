@@ -1,14 +1,17 @@
 package capture
 
 import (
+	adaptersconfig "agenticlens/internal/adapters/config"
 	"context"
-	"crypto/sha256"
+	"database/sql"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"agenticlens/internal/adapters/codex"
 	"agenticlens/internal/adapters/filesystem"
@@ -23,48 +26,186 @@ func ProjectDirectory(path string) (string, error) {
 	return filesystem.PhysicalPath(path)
 }
 
-// ProjectState isolates external and project-local state by exact physical directory.
-// Legacy unscoped registries remain untouched for explicit recovery.
-func ProjectState(base, project string) (string, error) {
-	project, err := ProjectDirectory(project)
-	if err != nil {
-		return "", err
-	}
-	base, err = ProjectDirectory(base)
-	if err != nil {
-		return "", err
-	}
-	sum := sha256.Sum256([]byte(project))
-	key := hex.EncodeToString(sum[:])
-	if filepath.Base(filepath.Dir(base)) == "projects" {
-		if filepath.Base(base) != key {
-			return "", errors.New("state namespace belongs to another project")
-		}
-		return base, nil
-	}
-	return filepath.Join(base, "projects", key), nil
+// StateLocation separates shared persistence from exact-worktree coordination.
+type StateLocation struct {
+	RegistryDirectory     string
+	CoordinationDirectory string
+	WorktreeID            int64
 }
+
+func ProjectNameSegment(name string) (string, error) {
+	if name == "" || !utf8.ValidString(name) || len(name) > 120 || name == "." || name == ".." || strings.ContainsAny(name, "/\\\x00") {
+		return "", errors.New("project_name must be a nonempty portable namespace name of at most 120 UTF-8 bytes")
+	}
+	literal := true
+	for _, r := range name {
+		if !(r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || r == '.' || r == '_' || r == '-') {
+			literal = false
+		}
+	}
+	stem := strings.ToUpper(strings.Split(name, ".")[0])
+	if strings.HasSuffix(name, ".") || stem == "CON" || stem == "PRN" || stem == "AUX" || stem == "NUL" || len(stem) == 4 && (strings.HasPrefix(stem, "COM") || strings.HasPrefix(stem, "LPT")) && stem[3] >= '1' && stem[3] <= '9' {
+		literal = false
+	}
+	if literal {
+		return name, nil
+	}
+	return "~" + hex.EncodeToString([]byte(name)), nil
+}
+
+// ProjectState requires the configured project label; physical worktree identity
+// never substitutes for it. An explicit coordination path must already belong to
+// this exact worktree before it can resolve the shared registry.
+func ProjectState(base, project string) (string, error) {
+	cfg, err := adaptersconfig.Load(project)
+	if err != nil {
+		return "", err
+	}
+	project, err = ProjectDirectory(project)
+	if err != nil {
+		return "", err
+	}
+	return namedProjectState(base, cfg.ProjectName, project)
+}
+func namedProjectState(base, name, project string) (string, error) {
+	return namedProjectStateContext(context.Background(), base, name, project)
+}
+func namedProjectStateContext(ctx context.Context, base, name, project string) (string, error) {
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+	segment, err := ProjectNameSegment(name)
+	if err != nil {
+		return "", err
+	}
+	lexical, err := filepath.Abs(base)
+	if err != nil {
+		return "", err
+	}
+	lexical = filepath.Clean(lexical)
+	physical, err := ProjectDirectory(base)
+	if err != nil {
+		return "", err
+	}
+	// Preserve lexical namespace context until the full target has been checked.
+	// Otherwise an escaping namespace symlink could be reinterpreted as a base.
+	if isCoordinationPath(lexical) {
+		return resolveCoordinationNamespace(ctx, lexical, physical, segment, name, project)
+	}
+	if filepath.Base(filepath.Dir(lexical)) == "projects" {
+		if filepath.Base(lexical) != segment {
+			return "", errors.New("state namespace differs from configured project_name")
+		}
+		return resolveContainedNamespace(project, filepath.Dir(filepath.Dir(lexical)), lexical, segment)
+	}
+	// An explicitly selected base/coordinate alias may itself resolve to an
+	// already-completed namespace; its exact physical scope remains validated.
+	if isCoordinationPath(physical) {
+		return resolveCoordinationNamespace(ctx, lexical, physical, segment, name, project)
+	}
+	if filepath.Base(filepath.Dir(physical)) == "projects" {
+		return resolveContainedNamespace(project, filepath.Dir(filepath.Dir(physical)), physical, segment)
+	}
+	if _, e := os.Stat(filepath.Join(physical, "registry.db")); e == nil {
+		return "", errors.New("state base contains an unscoped registry; explicitly relocate legacy state before operational access")
+	} else if !errors.Is(e, os.ErrNotExist) {
+		return "", e
+	}
+	return resolveContainedNamespace(project, physical, filepath.Join(physical, "projects", segment), segment)
+}
+
+func resolveContainedNamespace(project, base, namespace, segment string) (string, error) {
+	base, err := ProjectDirectory(base)
+	if err != nil {
+		return "", err
+	}
+	namespace, err = ProjectDirectory(namespace)
+	if err != nil {
+		return "", err
+	}
+	_, contained, err := relativeContainedPath(base, namespace)
+	if err != nil {
+		return "", err
+	}
+	if !contained {
+		return "", errors.New("capture project namespace escapes the selected state base; configure the intended base explicitly")
+	}
+	if filepath.Base(filepath.Dir(namespace)) != "projects" || filepath.Base(namespace) != segment {
+		return "", errors.New("capture namespace alias must preserve projects/<configured-project-name>; configure the intended base explicitly")
+	}
+	return validateStatePlacement(project, namespace)
+}
+
+func resolveCoordinationNamespace(ctx context.Context, lexical, physical, segment, name, project string) (string, error) {
+	if !isCoordinationPath(physical) {
+		return "", errors.New("coordination alias does not resolve to a recorded worktree directory")
+	}
+	registry := filepath.Dir(filepath.Dir(physical))
+	if isCoordinationPath(lexical) {
+		logicalRegistry := filepath.Dir(filepath.Dir(lexical))
+		if filepath.Base(filepath.Dir(logicalRegistry)) == "projects" {
+			if filepath.Base(logicalRegistry) != segment {
+				return "", errors.New("state namespace differs from configured project_name")
+			}
+			expected, err := resolveContainedNamespace(project, filepath.Dir(filepath.Dir(logicalRegistry)), logicalRegistry, segment)
+			if err != nil {
+				return "", err
+			}
+			if expected != registry {
+				return "", errors.New("coordination alias differs from its validated project namespace")
+			}
+		}
+	}
+	registry, err := resolveContainedNamespace(project, filepath.Dir(filepath.Dir(registry)), registry, segment)
+	if err != nil {
+		return "", err
+	}
+	store, err := openRegistryContext(ctx, registry, name, project, true)
+	if err != nil {
+		return "", err
+	}
+	coord := store.CoordinationDirectory()
+	err = store.Close()
+	if err != nil {
+		return "", err
+	}
+	if coord != physical {
+		return "", errors.New("coordination path belongs to another worktree")
+	}
+	return registry, nil
+}
+
 func OpenProject(directory, project string) (*Store, error) {
-	project, err := ProjectDirectory(project)
+	return OpenProjectContext(context.Background(), directory, project)
+}
+
+// OpenProjectContext shares the caller's admission/handoff deadline through the
+// same registry initializer. An expired caller cannot allocate a new scope.
+func OpenProjectContext(ctx context.Context, directory, project string) (*Store, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	cfg, err := adaptersconfig.Load(project)
 	if err != nil {
 		return nil, err
 	}
-	s, err := Open(directory)
+	project, err = ProjectDirectory(project)
 	if err != nil {
 		return nil, err
 	}
-	if _, err = s.db.Exec(`CREATE TABLE IF NOT EXISTS project_owner (singleton INTEGER PRIMARY KEY CHECK(singleton=1), directory TEXT NOT NULL); INSERT OR IGNORE INTO project_owner VALUES(1,?)`, project); err != nil {
-		return nil, errors.Join(err, s.Close())
+	directory, err = namedProjectStateContext(ctx, directory, cfg.ProjectName, project)
+	if err != nil {
+		return nil, err
 	}
-	var owner string
-	if err = s.db.QueryRow(`SELECT directory FROM project_owner WHERE singleton=1`).Scan(&owner); err != nil {
-		return nil, errors.Join(err, s.Close())
+	return openRegistryContext(ctx, directory, cfg.ProjectName, project, false)
+}
+func ExistingLocation(directory, project string) (StateLocation, error) {
+	s, err := OpenReadOnlyProject(directory, project)
+	if err != nil {
+		return StateLocation{}, err
 	}
-	if owner != project {
-		return nil, errors.Join(errors.New("copied capture state belongs to another project; explicit recovery required"), s.Close())
-	}
-	s.project = project
-	return s, nil
+	location := StateLocation{s.RegistryDirectory(), s.CoordinationDirectory(), s.worktreeID}
+	return location, s.Close()
 }
 
 // ValidateProject accepts contained source directories unless a nearer project owns them.
@@ -157,4 +298,120 @@ func ValidateDestination(project, path string) error {
 		return errors.New("publication destination escapes project directory")
 	}
 	return nil
+}
+
+// PreviewStateLocation performs no allocation. A new worktree's coordination
+// number is provisional until OpenProject commits its unique worktree row.
+func PreviewStateLocation(directory, project string) (StateLocation, error) {
+	cfg, err := adaptersconfig.Load(project)
+	if err != nil {
+		return StateLocation{}, err
+	}
+	project, err = ProjectDirectory(project)
+	if err != nil {
+		return StateLocation{}, err
+	}
+	directory, err = namedProjectState(directory, cfg.ProjectName, project)
+	if err != nil {
+		return StateLocation{}, err
+	}
+	location := StateLocation{RegistryDirectory: directory, WorktreeID: 1}
+	s, err := openRegistry(directory, cfg.ProjectName, project, true)
+	if err == nil {
+		location.CoordinationDirectory = s.directory
+		location.WorktreeID = s.worktreeID
+		return location, s.Close()
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		return location, err
+	}
+	// Existing database, absent worktree: inspect only the allocation sequence.
+	p := filepath.Join(directory, "registry.db")
+	if _, e := os.Stat(p); e == nil {
+		db, e := openReadOnlyDB(p)
+		if e != nil {
+			return location, e
+		}
+		var id int64
+		e = db.QueryRow("SELECT coalesce(max(id),0)+1 FROM worktrees").Scan(&id)
+		closeErr := db.Close()
+		if e != nil || closeErr != nil {
+			return location, errors.Join(e, closeErr)
+		}
+		location.WorktreeID = id
+	} else if !errors.Is(e, os.ErrNotExist) {
+		return location, e
+	}
+	location.CoordinationDirectory = filepath.Join(directory, "worktrees", fmt.Sprint(location.WorktreeID))
+	return location, nil
+}
+
+func openReadOnlyDB(path string) (*sql.DB, error) {
+	uri, err := sqliteFileURI(path)
+	if err != nil {
+		return nil, err
+	}
+	db, err := sql.Open("sqlite", uri+"?mode=ro&_pragma=query_only(1)&_pragma=busy_timeout(250)")
+	if err != nil {
+		return nil, err
+	}
+	db.SetMaxOpenConns(1)
+	return db, nil
+}
+func logicalRegistryDirectory(state string) string {
+	if isCoordinationPath(state) {
+		return filepath.Dir(filepath.Dir(state))
+	}
+	return state
+}
+
+// RegistryPathDirectory separates a validated coordination path from its logical
+// registry for filesystem presence checks. OpenProject still validates metadata.
+func RegistryPathDirectory(state string) string { return logicalRegistryDirectory(state) }
+
+func validateScopeActivation(db *sql.DB, id int64) error {
+	return validateScopeActivationContext(context.Background(), db, id)
+}
+func validateScopeActivationContext(ctx context.Context, db *sql.DB, id int64) error {
+	var exists int
+	if err := db.QueryRowContext(ctx, "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='worktree_relocations'").Scan(&exists); err != nil {
+		return err
+	}
+	if exists == 0 {
+		return nil
+	}
+	var state string
+	err := db.QueryRowContext(ctx, "SELECT state FROM worktree_relocations WHERE worktree_id=?", id).Scan(&state)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if state != "active" {
+		return errors.New("capture worktree relocation is incomplete; resume explicit relocation before operational access")
+	}
+	return nil
+}
+
+func isCoordinationPath(state string) bool {
+	if filepath.Base(filepath.Dir(state)) != "worktrees" {
+		return false
+	}
+	id, err := strconv.ParseInt(filepath.Base(state), 10, 64)
+	return err == nil && id > 0
+}
+
+func validateStatePlacement(project, registry string) (string, error) {
+	for _, file := range []string{".codex/hooks.json", ".codex/agenticlens-installation.json", ".opencode/plugins/agenticlens-capture.ts", ".opencode/agenticlens-installation.json", ".agenticlens-config.yaml", ".agenticlens-config.yml", ".agenticlens-config.json", ".agenticlens-config.local.yaml"} {
+		target := filepath.Join(project, filepath.FromSlash(file))
+		_, contained, err := relativeContainedPath(target, registry)
+		if err != nil {
+			return "", err
+		}
+		if contained {
+			return "", errors.New("capture state cannot occupy an integration/configuration file or its descendants")
+		}
+	}
+	return registry, nil
 }

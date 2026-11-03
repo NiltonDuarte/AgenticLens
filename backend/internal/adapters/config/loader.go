@@ -70,6 +70,10 @@ func ValidateConfig(cfg domain.ProjectConfig) error {
 		missing = append(missing, "code_metrics.source_roots")
 	}
 
+	if strings.TrimSpace(cfg.Telemetry.Capture.StateDir) == "" {
+		missing = append(missing, "telemetry.capture.state_dir")
+	}
+
 	if cfg.AnomalyThresholds.ContextCeilingCriticalTokens <= 0 {
 		missing = append(missing, "anomaly_thresholds.context_ceiling_critical_tokens")
 	}
@@ -492,6 +496,16 @@ func FindConfigFile(startDir string) (string, error) {
 
 // LoadFromFile unmarshals a configuration file by path, merging values over domain defaults.
 func LoadFromFile(filePath string) (domain.ProjectConfig, error) {
+	cfg, err := loadFromFile(filePath)
+	if err != nil {
+		return domain.ProjectConfig{}, err
+	}
+	return validateLoadedConfig(cfg, filePath)
+}
+
+// loadFromFile decodes without operational validation so local settings can supply
+// required values before the effective configuration is checked.
+func loadFromFile(filePath string) (domain.ProjectConfig, error) {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return domain.ProjectConfig{}, fmt.Errorf("reading configuration file %s: %w", filePath, err)
@@ -522,15 +536,19 @@ func LoadFromFile(filePath string) (domain.ProjectConfig, error) {
 			return domain.ProjectConfig{}, fmt.Errorf("bootstrap configuration %s: %w", filePath, err)
 		}
 	}
-	capturePolicy, captureErr := decodeCapturePolicy(data, domain.DefaultCaptureConfig())
+	capturePolicy, captureErr := decodeCapturePolicy(data, captureReadPolicy())
 	if captureErr != nil {
 		return domain.ProjectConfig{}, captureErr
 	}
 	cfg.Telemetry.Capture = capturePolicy
-	if err := capturePolicy.Validate(); err != nil {
-		return domain.ProjectConfig{}, err
-	}
+	return cfg, nil
+}
+
+func validateLoadedConfig(cfg domain.ProjectConfig, filePath string) (domain.ProjectConfig, error) {
 	if err := ValidateConfig(cfg); err != nil {
+		return domain.ProjectConfig{}, fmt.Errorf("validating configuration %s: %w", filePath, err)
+	}
+	if err := cfg.Telemetry.Capture.Validate(); err != nil {
 		return domain.ProjectConfig{}, fmt.Errorf("validating configuration %s: %w", filePath, err)
 	}
 	return cfg, nil
@@ -546,14 +564,14 @@ func Load(repoRoot string) (domain.ProjectConfig, error) {
 	if cfgFile == "" {
 		return domain.ProjectConfig{}, ErrConfigNotFound
 	}
-	cfg, err := LoadFromFile(cfgFile)
+	cfg, err := loadFromFile(cfgFile)
 	if err != nil {
 		return domain.ProjectConfig{}, err
 	}
 	localPath := filepath.Join(filepath.Dir(cfgFile), ".agenticlens-config.local.yaml")
 	data, err := os.ReadFile(localPath)
 	if errors.Is(err, os.ErrNotExist) {
-		return cfg, nil
+		return validateLoadedConfig(cfg, cfgFile)
 	}
 	if err != nil {
 		return domain.ProjectConfig{}, fmt.Errorf("reading local configuration %s: %w", localPath, err)
@@ -571,16 +589,13 @@ func Load(repoRoot string) (domain.ProjectConfig, error) {
 			cfg.AgenticLens.InstallRoot = entry.InstallRoot
 		}
 	}
-	if local.Telemetry == nil {
-		return cfg, nil
-	}
 	capturePolicy, captureErr := decodeCapturePolicy(data, cfg.Telemetry.Capture)
 	if captureErr != nil {
 		return domain.ProjectConfig{}, captureErr
 	}
 	cfg.Telemetry.Capture = capturePolicy
-	if err := capturePolicy.Validate(); err != nil {
-		return domain.ProjectConfig{}, err
+	if local.Telemetry == nil {
+		return validateLoadedConfig(cfg, cfgFile+" with "+localPath)
 	}
 	telemetry := local.Telemetry
 	if telemetry.DefaultSource != nil {
@@ -606,7 +621,7 @@ func Load(repoRoot string) (domain.ProjectConfig, error) {
 			cfg.Telemetry.Sources.CodexHome = value
 		}
 	}
-	return cfg, nil
+	return validateLoadedConfig(cfg, cfgFile+" with "+localPath)
 }
 
 // ProjectRoot resolves the owning configuration directory without crossing a nearer Git boundary.

@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -111,7 +112,7 @@ func TestCaptureStatusBeforeFirstPublicationRequest(t *testing.T) {
 			f.bind(t, f.write(t, 19))
 			writeCapturePolicy(t, f, false, 0)
 			if legacy {
-				db, err := sql.Open("sqlite", filepath.Join(f.state, "registry.db"))
+				db, err := sql.Open("sqlite", filepath.Join(capture.RegistryPathDirectory(f.state), "registry.db"))
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -146,7 +147,7 @@ func TestCaptureStatusBeforeFirstPublicationRequest(t *testing.T) {
 				t.Fatalf("existing diagnostic capability reported unavailable: %s", out)
 			}
 			if legacy {
-				db, err := sql.Open("sqlite", "file:"+filepath.ToSlash(filepath.Join(f.state, "registry.db"))+"?mode=ro")
+				db, err := sql.Open("sqlite", "file:"+filepath.ToSlash(filepath.Join(capture.RegistryPathDirectory(f.state), "registry.db"))+"?mode=ro")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -201,7 +202,7 @@ func TestCaptureGenerateUsesOwningConfigurationRoot(t *testing.T) {
 			old := filepath.Join(f.project, ".agenticlens-config.yaml")
 			body := readCaptureFile(t, old)
 			if format == "json" {
-				body = []byte(`{"project_name":"CaptureFixture","ticket":{"prefixes":["TEST"]},"workspaces":{"dir":"records"},"code_metrics":{"source_roots":["src"]},"anomaly_thresholds":{"context_ceiling_warning_tokens":160000,"context_ceiling_critical_tokens":200000}}`)
+				body = []byte(`{"project_name":"CaptureFixture","telemetry":{"capture":{"state_dir":` + strconv.Quote(f.state) + `}},"ticket":{"prefixes":["TEST"]},"workspaces":{"dir":"records"},"code_metrics":{"source_roots":["src"]},"anomaly_thresholds":{"context_ceiling_warning_tokens":160000,"context_ceiling_critical_tokens":200000}}`)
 			}
 			if format != "yaml" {
 				if err := os.Remove(old); err != nil {
@@ -568,7 +569,7 @@ func startCorrectionWorker(t *testing.T, f captureGenerationFixture) {
 		log.Close()
 		deadline := time.Now().Add(3 * time.Second)
 		for time.Now().Before(deadline) {
-			lock, err := capture.AcquireWorker(f.state)
+			lock, err := capture.AcquireWorker(f.coordination(t))
 			if err != nil {
 				t.Error(err)
 				return
@@ -671,7 +672,7 @@ func TestCaptureLiveDisableStopsWritesAndManualRecoverySurvives(t *testing.T) {
 			if !bytes.Equal(before, readCaptureFile(t, output)) {
 				t.Error("disabled capture continued writing or renewing")
 			}
-			lock, err := capture.AcquireWorker(f.state)
+			lock, err := capture.AcquireWorker(f.coordination(t))
 			if err != nil || lock == nil {
 				t.Fatalf("disabled worker retained ownership: %v", err)
 			}
@@ -1093,7 +1094,7 @@ func TestCaptureCheckUsesPublishedFactsWithoutSourceOrMutation(t *testing.T) {
 	if err = store.Close(); err != nil {
 		t.Fatal(err)
 	}
-	before := readCaptureFile(t, filepath.Join(f.state, "registry.db"))
+	before := readCaptureFile(t, filepath.Join(capture.RegistryPathDirectory(f.state), "registry.db"))
 	// Optional source access is unavailable at commit time. Persisted publication
 	// evidence must still quiet a generic pending active root without caller IDs.
 	if err = os.Rename(f.store, f.store+"-offline"); err != nil {
@@ -1114,13 +1115,13 @@ func TestCaptureCheckUsesPublishedFactsWithoutSourceOrMutation(t *testing.T) {
 	if out := check(); len(out) != 0 {
 		t.Fatalf("pending/caller absence became warning: %s", out)
 	}
-	if !bytes.Equal(before, readCaptureFile(t, filepath.Join(f.state, "registry.db"))) {
+	if !bytes.Equal(before, readCaptureFile(t, filepath.Join(capture.RegistryPathDirectory(f.state), "registry.db"))) {
 		t.Fatal("read-only check changed accepted registry facts")
 	}
 	if entries, err := os.ReadDir(cache); err != nil || len(entries) != 0 {
 		t.Fatalf("check created publication ownership/cache files: %+v %v", entries, err)
 	}
-	if _, err = os.Stat(filepath.Join(f.state, "worker.lock")); !os.IsNotExist(err) {
+	if _, err = os.Stat(filepath.Join(f.coordination(t), "worker.lock")); !os.IsNotExist(err) {
 		t.Fatalf("check created/probed worker lock: %v", err)
 	}
 	if err = os.Remove(f.output); err != nil {
@@ -1255,7 +1256,7 @@ func TestCaptureInspectionBoundsHistoryButKeepsCurrentFailureActionable(t *testi
 	if err = registry.Close(); err != nil {
 		t.Fatal(err)
 	}
-	before := readCaptureFile(t, filepath.Join(f.state, "registry.db"))
+	before := readCaptureFile(t, filepath.Join(capture.RegistryPathDirectory(f.state), "registry.db"))
 	inspect := func(cursor int64) []byte {
 		t.Helper()
 		args := []string{"diagnostics", "--repo", f.project, "--state-dir", f.state, "--max-sessions", "1"}
@@ -1296,7 +1297,7 @@ func TestCaptureInspectionBoundsHistoryButKeepsCurrentFailureActionable(t *testi
 	if err != nil || !bytes.Contains(out, []byte("unresolved operational")) {
 		t.Fatalf("bounded advisory hid actionable current failure: %v %s", err, out)
 	}
-	if !bytes.Equal(before, readCaptureFile(t, filepath.Join(f.state, "registry.db"))) {
+	if !bytes.Equal(before, readCaptureFile(t, filepath.Join(capture.RegistryPathDirectory(f.state), "registry.db"))) {
 		t.Fatal("bounded history/advisory mutated retained ticket facts")
 	}
 }

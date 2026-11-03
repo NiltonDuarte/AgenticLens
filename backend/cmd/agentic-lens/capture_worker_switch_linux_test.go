@@ -119,7 +119,7 @@ func testCaptureWorkerReleaseSwitch(t *testing.T, queueNext bool) {
 		t.Helper()
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		if _, err := capture.Install(ctx, capture.InstallOptions{Repository: f.project, StateDir: f.state, Binary: binary, Wrapper: wrapper, Source: "codex", SourceStore: f.store}); err != nil {
+		if _, err := capture.Install(ctx, capture.InstallOptions{Repository: f.project, StateDir: f.coordination(t), Binary: binary, Wrapper: wrapper, Source: "codex", SourceStore: f.store}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -230,7 +230,7 @@ func testCaptureWorkerReleaseSwitch(t *testing.T, queueNext bool) {
 	if identity != first {
 		t.Fatalf("first pass used %s instead of %s", identity, first)
 	}
-	progress, err := capture.WorkerStatus(f.state)
+	progress, err := capture.WorkerStatus(f.coordination(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -280,7 +280,7 @@ func testCaptureWorkerReleaseSwitch(t *testing.T, queueNext bool) {
 	if request.Generation != wanted || request.Acknowledged != 1 {
 		t.Fatalf("old native consumed post-switch request: %+v", request)
 	}
-	progress, err = capture.WorkerStatus(f.state)
+	progress, err = capture.WorkerStatus(f.coordination(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -329,7 +329,7 @@ func testCaptureWorkerReleaseSwitch(t *testing.T, queueNext bool) {
 			t.Fatal(err)
 		}
 		if request.Generation == wanted && request.Acknowledged == wanted {
-			lock, err := capture.AcquireWorker(f.state)
+			lock, err := capture.AcquireWorker(f.coordination(t))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -344,6 +344,6 @@ func testCaptureWorkerReleaseSwitch(t *testing.T, queueNext bool) {
 		time.Sleep(10 * time.Millisecond)
 	}
 	if !finished {
-		t.Fatalf("selected successor did not drain/finish pending work: %+v; worker log=%s", request, readCaptureFile(t, filepath.Join(f.state, "worker.log")))
+		t.Fatalf("selected successor did not drain/finish pending work: %+v; worker log=%s", request, readCaptureFile(t, filepath.Join(f.coordination(t), "worker.log")))
 	}
 }

@@ -31,7 +31,7 @@ func (s *Store) QueueChild(ctx context.Context, store, path, parent string) erro
 	if err := codex.ValidateRolloutStore(store, path); err != nil {
 		return err
 	}
-	_, err := s.db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS pending_children(store TEXT,path TEXT,parent TEXT,PRIMARY KEY(store,path)); INSERT OR IGNORE INTO pending_children VALUES(?,?,?)`, store, path, parent)
+	_, err := s.db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS pending_children(worktree_id INTEGER NOT NULL,store TEXT,path TEXT,parent TEXT,PRIMARY KEY(worktree_id,store,path)); INSERT OR IGNORE INTO pending_children VALUES(?,?,?,?)`, s.worktreeID, store, path, parent)
 	return err
 }
 
@@ -58,7 +58,7 @@ type ReconcileResult struct {
 }
 
 func (s *Store) Reconcile(ctx context.Context, ticket, user string, sessionBudget int, byteBudget int64) (result ReconcileResult, returnErr error) {
-	result = ReconcileResult{Protocol: ProtocolVersion, StartedAt: time.Now().UTC().Format(time.RFC3339Nano), CutoffSemantics: "cutoff is reconciliation completion, not a common as-of source time; refreshed_at is each owner's successful read completion", TicketID: ticket, Limits: []string{"Only registered, explicitly bound or source-proven inherited sessions are selected. Sessions that never delivered a hook cannot be counted as covered.", "Hook installation is not proof of harness trust, agent response or complete source availability."}}
+	result = ReconcileResult{Protocol: RegistryProtocolVersion, StartedAt: time.Now().UTC().Format(time.RFC3339Nano), CutoffSemantics: "cutoff is reconciliation completion, not a common as-of source time; refreshed_at is each owner's successful read completion", TicketID: ticket, Limits: []string{"Only registered, explicitly bound or source-proven inherited sessions are selected. Sessions that never delivered a hook cannot be counted as covered.", "Hook installation is not proof of harness trust, agent response or complete source availability."}}
 	if sessionBudget < 1 || byteBudget < 1 {
 		return result, errors.New("capture budgets must be positive")
 	}
@@ -104,16 +104,16 @@ func (s *Store) Reconcile(ctx context.Context, ticket, user string, sessionBudge
 	// All work classes rotate priority durably. The first eligible class can
 	// use the full session AND byte budget; leftovers are shared in that order.
 	// Thus no persistent failure can monopolize either resource across passes.
-	if _, err := s.db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS recovery_phase(ticket TEXT PRIMARY KEY,phase INTEGER NOT NULL)`); err != nil {
+	if _, err := s.db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS recovery_phase(worktree_id INTEGER NOT NULL,ticket TEXT,phase INTEGER NOT NULL,PRIMARY KEY(worktree_id,ticket))`); err != nil {
 		return result, err
 	}
 	phase := 0
-	phaseErr := s.db.QueryRowContext(ctx, `SELECT phase FROM recovery_phase WHERE ticket=?`, ticket).Scan(&phase)
+	phaseErr := s.db.QueryRowContext(ctx, `SELECT phase FROM recovery_phase WHERE worktree_id=? AND ticket=?`, s.worktreeID, ticket).Scan(&phase)
 	if phaseErr != nil && !errors.Is(phaseErr, sql.ErrNoRows) {
 		return result, phaseErr
 	}
 	phase = phase % int(workClassCount)
-	if _, err := s.db.ExecContext(ctx, `INSERT INTO recovery_phase VALUES(?,?)ON CONFLICT(ticket) DO UPDATE SET phase=excluded.phase`, ticket, (phase+1)%int(workClassCount)); err != nil {
+	if _, err := s.db.ExecContext(ctx, `INSERT INTO recovery_phase VALUES(?,?,?)ON CONFLICT(worktree_id,ticket) DO UPDATE SET phase=excluded.phase`, s.worktreeID, ticket, (phase+1)%int(workClassCount)); err != nil {
 		return result, err
 	}
 	attempted := map[string]bool{}
@@ -352,11 +352,11 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 	if err != nil {
 		return nil, nil, err
 	}
-	if _, err = s.db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS reconcile_cursor(ticket TEXT PRIMARY KEY,identity TEXT NOT NULL)`); err != nil {
+	if _, err = s.db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS reconcile_cursor(worktree_id INTEGER NOT NULL,ticket TEXT,identity TEXT NOT NULL,PRIMARY KEY(worktree_id,ticket))`); err != nil {
 		return nil, nil, err
 	}
 	cursor := ""
-	cursorErr := s.db.QueryRowContext(ctx, `SELECT identity FROM reconcile_cursor WHERE ticket=?`, ticket).Scan(&cursor)
+	cursorErr := s.db.QueryRowContext(ctx, `SELECT identity FROM reconcile_cursor WHERE worktree_id=? AND ticket=?`, s.worktreeID, ticket).Scan(&cursor)
 	if cursorErr != nil && !errors.Is(cursorErr, sql.ErrNoRows) {
 		return nil, nil, cursorErr
 	}
@@ -427,7 +427,7 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 			projected.SourceInstallationID = projected.InstallationID
 			registrations[i] = projected
 			refreshed[IdentityKey(r.Identity)] = true
-			if _, err = s.db.ExecContext(ctx, `INSERT INTO reconcile_cursor VALUES(?,?) ON CONFLICT(ticket) DO UPDATE SET identity=excluded.identity`, ticket, IdentityKey(r.Identity)); err != nil {
+			if _, err = s.db.ExecContext(ctx, `INSERT INTO reconcile_cursor VALUES(?,?,?) ON CONFLICT(worktree_id,ticket) DO UPDATE SET identity=excluded.identity`, s.worktreeID, ticket, IdentityKey(r.Identity)); err != nil {
 				return nil, nil, err
 			}
 			continue
@@ -491,7 +491,7 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 			return nil, nil, updateErr
 		}
 		registrations[i] = updated
-		if _, err = s.db.ExecContext(ctx, `INSERT INTO reconcile_cursor VALUES(?,?) ON CONFLICT(ticket) DO UPDATE SET identity=excluded.identity`, ticket, IdentityKey(r.Identity)); err != nil {
+		if _, err = s.db.ExecContext(ctx, `INSERT INTO reconcile_cursor VALUES(?,?,?) ON CONFLICT(worktree_id,ticket) DO UPDATE SET identity=excluded.identity`, s.worktreeID, ticket, IdentityKey(r.Identity)); err != nil {
 			return nil, nil, err
 		}
 	}

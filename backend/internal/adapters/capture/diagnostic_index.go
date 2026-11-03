@@ -18,16 +18,30 @@ type diagnosticIndexState struct {
 // Existing head kinds index aggregate failure/completion and ambiguous history.
 const CollectionAttemptOwner = ":collection-attempt"
 
-// This independent semantic watermark uses an existing metadata head, keeping
-// the five-column index table compatible with older natives' positional INSERT.
-// Old writers advance known_max but cannot advance this attempt-index watermark.
+// This semantic watermark separates whole-attempt outcomes from owner reads.
+// Imported history without it remains unknown until explicit bounded backfill.
 const attemptIndexOwner = ":attempt-index"
 
-func initializeDiagnosticIndex(db *sql.DB) error {
-	if _, err := db.Exec(diagnosticSchema); err != nil {
+func (s *Store) initializeDiagnosticIndex() error {
+	return s.initializeDiagnosticIndexContext(context.Background())
+}
+func (s *Store) initializeDiagnosticIndexContext(ctx context.Context) error {
+	if err := setConstructorBusyTimeout(ctx, s.db, 1000); err != nil {
 		return err
 	}
-	_, err := db.Exec(`INSERT OR IGNORE INTO capture_diagnostic_heads(ticket,phase,owner,kind,sequence) SELECT '','index',?,'latest',0 WHERE NOT EXISTS(SELECT 1 FROM capture_diagnostics LIMIT 1)`, attemptIndexOwner)
+	if _, err := s.db.ExecContext(ctx, diagnosticSchema); err != nil {
+		return err
+	}
+	if err := setConstructorBusyTimeout(ctx, s.db, 1000); err != nil {
+		return err
+	}
+	if _, err := s.db.ExecContext(ctx, `INSERT OR IGNORE INTO capture_diagnostic_index(worktree_id,singleton,cursor,upper_sequence,known_max,complete) SELECT ?,1,0,coalesce(max(sequence),0),coalesce(max(sequence),0),CASE WHEN count(*)=0 THEN 1 ELSE 0 END FROM (SELECT sequence FROM capture_diagnostics WHERE worktree_id=? ORDER BY sequence DESC LIMIT 1)`, s.worktreeID, s.worktreeID); err != nil {
+		return err
+	}
+	if err := setConstructorBusyTimeout(ctx, s.db, 1000); err != nil {
+		return err
+	}
+	_, err := s.db.ExecContext(ctx, `INSERT OR IGNORE INTO capture_diagnostic_heads(worktree_id,ticket,phase,owner,kind,sequence) SELECT ?,'','index',?,'latest',0 WHERE NOT EXISTS(SELECT 1 FROM capture_diagnostics WHERE worktree_id=? LIMIT 1)`, s.worktreeID, attemptIndexOwner, s.worktreeID)
 	return err
 }
 
@@ -39,21 +53,21 @@ func (s *Store) beginDiagnosticWrite(ctx context.Context) (*sql.Tx, error) {
 	if err != nil {
 		return nil, err
 	}
-	if _, err = tx.ExecContext(ctx, `UPDATE capture_diagnostic_index SET known_max=known_max WHERE singleton=1`); err != nil {
+	if _, err = tx.ExecContext(ctx, `UPDATE capture_diagnostic_index SET known_max=known_max WHERE worktree_id=? AND singleton=1`, s.worktreeID); err != nil {
 		return nil, errors.Join(err, tx.Rollback())
 	}
 	return tx, nil
 }
 
-func readDiagnosticIndexTx(ctx context.Context, tx *sql.Tx) (state diagnosticIndexState, err error) {
+func (s *Store) readDiagnosticIndexTx(ctx context.Context, tx *sql.Tx) (state diagnosticIndexState, err error) {
 	var complete int
-	err = tx.QueryRowContext(ctx, `SELECT cursor,upper_sequence,known_max,complete,coalesce((SELECT sequence FROM capture_diagnostic_heads WHERE ticket='' AND phase='index' AND owner=? AND kind='latest'),-1) FROM capture_diagnostic_index WHERE singleton=1`, attemptIndexOwner).Scan(&state.cursor, &state.upper, &state.known, &complete, &state.attemptKnown)
+	err = tx.QueryRowContext(ctx, `SELECT cursor,upper_sequence,known_max,complete,coalesce((SELECT sequence FROM capture_diagnostic_heads WHERE worktree_id=? AND ticket='' AND phase='index' AND owner=? AND kind='latest'),-1) FROM capture_diagnostic_index WHERE worktree_id=? AND singleton=1`, s.worktreeID, attemptIndexOwner, s.worktreeID).Scan(&state.cursor, &state.upper, &state.known, &complete, &state.attemptKnown)
 	state.complete = complete == 1
 	return state, err
 }
-func detectDiagnosticIndexGap(ctx context.Context, tx *sql.Tx, state *diagnosticIndexState) error {
+func (s *Store) detectDiagnosticIndexGap(ctx context.Context, tx *sql.Tx, state *diagnosticIndexState) error {
 	var actual int64
-	if err := tx.QueryRowContext(ctx, `SELECT coalesce(max(sequence),0) FROM capture_diagnostics`).Scan(&actual); err != nil {
+	if err := tx.QueryRowContext(ctx, `SELECT coalesce(max(sequence),0) FROM capture_diagnostics WHERE worktree_id=?`, s.worktreeID).Scan(&actual); err != nil {
 		return err
 	}
 	if actual == state.known && actual == state.attemptKnown {
@@ -73,20 +87,20 @@ func detectDiagnosticIndexGap(ctx context.Context, tx *sql.Tx, state *diagnostic
 	state.complete = false
 	return nil
 }
-func writeDiagnosticIndex(ctx context.Context, tx *sql.Tx, state diagnosticIndexState) error {
+func (s *Store) writeDiagnosticIndex(ctx context.Context, tx *sql.Tx, state diagnosticIndexState) error {
 	complete := 0
 	if state.complete {
 		complete = 1
 	}
-	if _, err := tx.ExecContext(ctx, `UPDATE capture_diagnostic_index SET cursor=?,upper_sequence=?,known_max=?,complete=? WHERE singleton=1`, state.cursor, state.upper, state.known, complete); err != nil {
+	if _, err := tx.ExecContext(ctx, `UPDATE capture_diagnostic_index SET cursor=?,upper_sequence=?,known_max=?,complete=? WHERE worktree_id=? AND singleton=1`, state.cursor, state.upper, state.known, complete, s.worktreeID); err != nil {
 		return err
 	}
-	_, err := tx.ExecContext(ctx, `INSERT INTO capture_diagnostic_heads(ticket,phase,owner,kind,sequence) VALUES('','index',?,'latest',?) ON CONFLICT(ticket,phase,owner,kind) DO UPDATE SET sequence=excluded.sequence`, attemptIndexOwner, state.attemptKnown)
+	_, err := tx.ExecContext(ctx, `INSERT INTO capture_diagnostic_heads(worktree_id,ticket,phase,owner,kind,sequence) VALUES(?,'','index',?,'latest',?) ON CONFLICT(worktree_id,ticket,phase,owner,kind) DO UPDATE SET sequence=excluded.sequence`, s.worktreeID, attemptIndexOwner, state.attemptKnown)
 	return err
 }
-func indexDiagnostic(ctx context.Context, tx *sql.Tx, d domain.CaptureDiagnostic) error {
+func (s *Store) indexDiagnostic(ctx context.Context, tx *sql.Tx, d domain.CaptureDiagnostic) error {
 	head := func(owner, kind string) error {
-		_, err := tx.ExecContext(ctx, `INSERT INTO capture_diagnostic_heads(ticket,phase,owner,kind,sequence)VALUES(?,?,?,?,?) ON CONFLICT(ticket,phase,owner,kind) DO UPDATE SET sequence=excluded.sequence WHERE sequence<excluded.sequence`, d.TicketID, d.Phase, owner, kind, d.Sequence)
+		_, err := tx.ExecContext(ctx, `INSERT INTO capture_diagnostic_heads(worktree_id,ticket,phase,owner,kind,sequence)VALUES(?,?,?,?,?,?) ON CONFLICT(worktree_id,ticket,phase,owner,kind) DO UPDATE SET sequence=excluded.sequence WHERE sequence<excluded.sequence`, s.worktreeID, d.TicketID, d.Phase, owner, kind, d.Sequence)
 		return err
 	}
 	if err := head("", "latest"); err != nil {
@@ -99,10 +113,10 @@ func indexDiagnostic(ctx context.Context, tx *sql.Tx, d domain.CaptureDiagnostic
 		}
 	}
 	if d.Outcome == "failed" {
-		if _, err := tx.ExecContext(ctx, `INSERT OR IGNORE INTO capture_diagnostic_failures VALUES(?)`, d.Sequence); err != nil {
+		if _, err := tx.ExecContext(ctx, `INSERT OR IGNORE INTO capture_diagnostic_failures VALUES(?,?)`, s.worktreeID, d.Sequence); err != nil {
 			return err
 		}
-		if _, err := tx.ExecContext(ctx, `DELETE FROM capture_diagnostic_failures WHERE sequence NOT IN(SELECT sequence FROM capture_diagnostic_failures ORDER BY sequence DESC LIMIT 32)`); err != nil {
+		if _, err := tx.ExecContext(ctx, `DELETE FROM capture_diagnostic_failures WHERE worktree_id=? AND sequence NOT IN(SELECT sequence FROM capture_diagnostic_failures WHERE worktree_id=? ORDER BY sequence DESC LIMIT 32)`, s.worktreeID, s.worktreeID); err != nil {
 			return err
 		}
 	}
@@ -147,9 +161,9 @@ func indexDiagnostic(ctx context.Context, tx *sql.Tx, d domain.CaptureDiagnostic
 	}
 	return nil
 }
-func pruneIndexedDiagnostics(ctx context.Context, tx *sql.Tx) error {
+func (s *Store) pruneIndexedDiagnostics(ctx context.Context, tx *sql.Tx) error {
 	// Current/terminal rows remain referenced independently of recent history.
-	_, err := tx.ExecContext(ctx, `DELETE FROM capture_diagnostics WHERE sequence NOT IN(SELECT sequence FROM capture_diagnostic_heads UNION SELECT sequence FROM capture_diagnostic_failures)`)
+	_, err := tx.ExecContext(ctx, `DELETE FROM capture_diagnostics WHERE worktree_id=? AND sequence NOT IN(SELECT sequence FROM capture_diagnostic_heads WHERE worktree_id=? UNION SELECT sequence FROM capture_diagnostic_failures WHERE worktree_id=?)`, s.worktreeID, s.worktreeID, s.worktreeID)
 	return err
 }
 
@@ -173,11 +187,11 @@ func (s *Store) BackfillDiagnosticIndex(ctx context.Context, maxRows int, maxByt
 		if err != nil {
 			return progress, err
 		}
-		state, err := readDiagnosticIndexTx(ctx, tx)
+		state, err := s.readDiagnosticIndexTx(ctx, tx)
 		if err != nil {
 			return progress, errors.Join(err, tx.Rollback())
 		}
-		if err = detectDiagnosticIndexGap(ctx, tx, &state); err != nil {
+		if err = s.detectDiagnosticIndexGap(ctx, tx, &state); err != nil {
 			return progress, errors.Join(err, tx.Rollback())
 		}
 		progress.Cursor, progress.Upper, progress.Complete = state.cursor, state.upper, state.complete
@@ -185,17 +199,17 @@ func (s *Store) BackfillDiagnosticIndex(ctx context.Context, maxRows int, maxByt
 			return progress, tx.Rollback()
 		}
 		var sequence, size int64
-		err = tx.QueryRowContext(ctx, `SELECT sequence,length(record) FROM capture_diagnostics WHERE sequence>? AND sequence<=? ORDER BY sequence LIMIT 1`, state.cursor, state.upper).Scan(&sequence, &size)
+		err = tx.QueryRowContext(ctx, `SELECT sequence,length(record) FROM capture_diagnostics WHERE worktree_id=? AND sequence>? AND sequence<=? ORDER BY sequence LIMIT 1`, s.worktreeID, state.cursor, state.upper).Scan(&sequence, &size)
 		if errors.Is(err, sql.ErrNoRows) {
 			state.cursor = state.upper
 			state.complete = true
-			if _, err = tx.ExecContext(ctx, `DELETE FROM capture_diagnostic_heads WHERE NOT(ticket='' AND phase='index' AND owner=':attempt-index' AND kind='latest') AND sequence NOT IN(SELECT sequence FROM capture_diagnostics)`); err != nil {
+			if _, err = tx.ExecContext(ctx, `DELETE FROM capture_diagnostic_heads WHERE worktree_id=? AND NOT(ticket='' AND phase='index' AND owner=':attempt-index' AND kind='latest') AND sequence NOT IN(SELECT sequence FROM capture_diagnostics WHERE worktree_id=?)`, s.worktreeID, s.worktreeID); err != nil {
 				return progress, errors.Join(err, tx.Rollback())
 			}
-			if err = writeDiagnosticIndex(ctx, tx, state); err != nil {
+			if err = s.writeDiagnosticIndex(ctx, tx, state); err != nil {
 				return progress, errors.Join(err, tx.Rollback())
 			}
-			if err = pruneIndexedDiagnostics(ctx, tx); err != nil {
+			if err = s.pruneIndexedDiagnostics(ctx, tx); err != nil {
 				return progress, errors.Join(err, tx.Rollback())
 			}
 			if err = tx.Commit(); err != nil {
@@ -211,7 +225,7 @@ func (s *Store) BackfillDiagnosticIndex(ctx context.Context, maxRows int, maxByt
 			return progress, tx.Rollback()
 		}
 		var body []byte
-		if err = tx.QueryRowContext(ctx, `SELECT record FROM capture_diagnostics WHERE sequence=? AND length(record)<=?`, sequence, maxBytes-progress.Bytes).Scan(&body); err != nil {
+		if err = tx.QueryRowContext(ctx, `SELECT record FROM capture_diagnostics WHERE worktree_id=? AND sequence=? AND length(record)<=?`, s.worktreeID, sequence, maxBytes-progress.Bytes).Scan(&body); err != nil {
 			return progress, errors.Join(err, tx.Rollback())
 		}
 		var diagnostic domain.CaptureDiagnostic
@@ -219,18 +233,18 @@ func (s *Store) BackfillDiagnosticIndex(ctx context.Context, maxRows int, maxByt
 			return progress, errors.Join(err, tx.Rollback())
 		}
 		diagnostic.Sequence = sequence
-		if err = indexDiagnostic(ctx, tx, diagnostic); err != nil {
+		if err = s.indexDiagnostic(ctx, tx, diagnostic); err != nil {
 			return progress, errors.Join(err, tx.Rollback())
 		}
 		state.cursor = sequence
 		if sequence == state.upper {
 			state.complete = true
 		}
-		if err = writeDiagnosticIndex(ctx, tx, state); err != nil {
+		if err = s.writeDiagnosticIndex(ctx, tx, state); err != nil {
 			return progress, errors.Join(err, tx.Rollback())
 		}
 		if state.complete {
-			if err = pruneIndexedDiagnostics(ctx, tx); err != nil {
+			if err = s.pruneIndexedDiagnostics(ctx, tx); err != nil {
 				return progress, errors.Join(err, tx.Rollback())
 			}
 		}

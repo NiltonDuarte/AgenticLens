@@ -331,10 +331,16 @@ func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
 	}
 
 	capturePolicy := cfg.Telemetry.Capture
-	if capturePolicy.StateDir == "" {
+	if capturePolicy == (domain.CaptureConfig{}) {
 		capturePolicy = domain.DefaultCaptureConfig()
 	}
+	if capturePolicy.StateDir == "" {
+		capturePolicy.StateDir = domain.DefaultCaptureConfig().StateDir
+	}
 	capturePolicy.DetailedReport = false
+	if err := capturePolicy.Validate(); err != nil {
+		return nil, fmt.Errorf("encoding capture configuration: %w", err)
+	}
 	captureBytes, err := yaml.Marshal(struct {
 		Telemetry struct {
 			Capture domain.CaptureConfig `yaml:"capture"`

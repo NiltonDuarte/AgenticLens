@@ -24,7 +24,7 @@ import (
 func TestMain(m *testing.M) {
 	if os.Getenv("AL_CAPTURE_INSTALL_FIXTURE") == "1" {
 		if len(os.Args) == 3 && os.Args[1] == "capture" && os.Args[2] == "protocol" {
-			fmt.Println(2)
+			fmt.Println(capture.HandlerProtocolVersion)
 			os.Exit(0)
 		}
 		if len(os.Args) == 3 && os.Args[1] == "version" && os.Args[2] == "--short" {
@@ -312,7 +312,12 @@ func installFixture(t *testing.T, project string) (string, string) {
 	t.Setenv("AL_CAPTURE_INSTALL_FIXTURE", "1")
 	t.Setenv("GORACE", "atexit_sleep_ms=0")
 	cache := t.TempDir()
-	config := "agenticlens:\n  version: v9.8.7\n  install_root: '" + cache + "'\n"
+	captureProjectConfig(t, project, "InstallationFixture")
+	originalConfig, err := os.ReadFile(filepath.Join(project, ".agenticlens-config.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	config := "agenticlens:\n  version: v9.8.7\n  install_root: '" + cache + "'\n" + string(originalConfig)
 	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), []byte(config), 0600); err != nil {
 		t.Fatal(err)
 	}

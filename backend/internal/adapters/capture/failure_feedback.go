@@ -22,7 +22,7 @@ func (s *Store) SessionFailureFeedback(ctx context.Context, identity domain.Capt
 		return "", err
 	}
 	var body []byte
-	if err = s.db.QueryRowContext(ctx, `SELECT record FROM registrations WHERE identity=?`, IdentityKey(identity)).Scan(&body); errors.Is(err, sql.ErrNoRows) {
+	if err = s.db.QueryRowContext(ctx, `SELECT record FROM registrations WHERE worktree_id=? AND identity=?`, s.worktreeID, IdentityKey(identity)).Scan(&body); errors.Is(err, sql.ErrNoRows) {
 		return "", nil
 	} else if err != nil {
 		return "", err
@@ -44,7 +44,7 @@ func (s *Store) SessionFailureFeedback(ctx context.Context, identity domain.Capt
 	}
 	terminal := func(phase, owner, kind1, kind2 string) (int64, error) {
 		var sequence int64
-		err := s.db.QueryRowContext(ctx, `SELECT sequence FROM capture_diagnostic_heads WHERE ticket=? AND phase=? AND owner=? AND kind IN(?,?) ORDER BY sequence DESC LIMIT 1`, registration.TicketID, phase, owner, kind1, kind2).Scan(&sequence)
+		err := s.db.QueryRowContext(ctx, `SELECT sequence FROM capture_diagnostic_heads WHERE worktree_id=? AND ticket=? AND phase=? AND owner=? AND kind IN(?,?) ORDER BY sequence DESC LIMIT 1`, s.worktreeID, registration.TicketID, phase, owner, kind1, kind2).Scan(&sequence)
 		if errors.Is(err, sql.ErrNoRows) {
 			return 0, nil
 		}
@@ -82,7 +82,7 @@ func (s *Store) SessionFailureFeedback(ctx context.Context, identity domain.Capt
 		}
 		seen[sequence] = true
 		var size int64
-		if err = s.db.QueryRowContext(ctx, `SELECT length(record) FROM capture_diagnostics WHERE sequence=?`, sequence).Scan(&size); errors.Is(err, sql.ErrNoRows) {
+		if err = s.db.QueryRowContext(ctx, `SELECT length(record) FROM capture_diagnostics WHERE worktree_id=? AND sequence=?`, s.worktreeID, sequence).Scan(&size); errors.Is(err, sql.ErrNoRows) {
 			return incomplete, nil
 		} else if err != nil {
 			return "", err
@@ -91,7 +91,7 @@ func (s *Store) SessionFailureFeedback(ctx context.Context, identity domain.Capt
 			return incomplete, nil
 		}
 		var record []byte
-		if err = s.db.QueryRowContext(ctx, `SELECT record FROM capture_diagnostics WHERE sequence=? AND length(record)<=?`, sequence, remaining).Scan(&record); errors.Is(err, sql.ErrNoRows) {
+		if err = s.db.QueryRowContext(ctx, `SELECT record FROM capture_diagnostics WHERE worktree_id=? AND sequence=? AND length(record)<=?`, s.worktreeID, sequence, remaining).Scan(&record); errors.Is(err, sql.ErrNoRows) {
 			return incomplete, nil
 		} else if err != nil {
 			return "", err

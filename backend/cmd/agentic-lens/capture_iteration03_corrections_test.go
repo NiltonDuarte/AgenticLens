@@ -137,7 +137,7 @@ func TestCaptureStaleProvenanceAllowsPublicInspectionAndOwnedRepair(t *testing.T
 						t.Fatal(err)
 					}
 					var previous capture.Manifest
-					if err := json.Unmarshal(readCaptureFile(t, filepath.Join(f.state, "install-codex.json")), &previous); err != nil {
+					if err := json.Unmarshal(readCaptureFile(t, filepath.Join(f.coordination(t), "install-codex.json")), &previous); err != nil {
 						t.Fatal(err)
 					}
 					if previous.Version == newVersion || previous.Binary == newNative {
@@ -148,7 +148,7 @@ func TestCaptureStaleProvenanceAllowsPublicInspectionAndOwnedRepair(t *testing.T
 						t.Fatalf("current wrapper did not execute actual native B: %v %s", err, out)
 					}
 				} else {
-					for _, path := range []string{filepath.Join(f.project, ".codex", "agenticlens-installation.json"), filepath.Join(f.state, "install-codex.json")} {
+					for _, path := range []string{filepath.Join(f.project, ".codex", "agenticlens-installation.json"), filepath.Join(f.coordination(t), "install-codex.json")} {
 						var manifest capture.Manifest
 						if err := json.Unmarshal(readCaptureFile(t, path), &manifest); err != nil {
 							t.Fatal(err)
@@ -164,14 +164,14 @@ func TestCaptureStaleProvenanceAllowsPublicInspectionAndOwnedRepair(t *testing.T
 					}
 				}
 				ledger := readCaptureFile(t, f.output)
-				registry := readCaptureFile(t, filepath.Join(f.state, "registry.db"))
+				registry := readCaptureFile(t, filepath.Join(capture.RegistryPathDirectory(f.state), "registry.db"))
 				for _, command := range []string{"status", "diagnostics", "verify"} {
 					status := correctionInspection(t, f, command)
 					if status.Verification.State != "degraded" || (command != "verify" && len(status.InstallationIssues) == 0) {
 						t.Fatalf("%s hid stale provenance: %+v", command, status)
 					}
 				}
-				if !bytes.Equal(ledger, readCaptureFile(t, f.output)) || !bytes.Equal(registry, readCaptureFile(t, filepath.Join(f.state, "registry.db"))) {
+				if !bytes.Equal(ledger, readCaptureFile(t, f.output)) || !bytes.Equal(registry, readCaptureFile(t, filepath.Join(capture.RegistryPathDirectory(f.state), "registry.db"))) {
 					t.Fatal("stale read-only inspection changed accepted facts")
 				}
 				if out, err := correctionSelectedCLI(t, f, "request", "--repo", f.project, "--state-dir", f.state, "--source", "codex", "--store", f.store, "--session-id", "root"); err == nil || !bytes.Contains(out, []byte("provenance")) {
@@ -196,7 +196,7 @@ func TestCaptureStaleProvenanceAllowsPublicInspectionAndOwnedRepair(t *testing.T
 						t.Fatalf("owned refresh did not repair provenance: %+v", status.InstallationIssues)
 					}
 					if drift == "actual release switch" {
-						manifest, err := capture.ReadManifest(f.state, "codex")
+						manifest, err := capture.ReadManifest(f.coordination(t), "codex")
 						if err != nil || manifest.Version != newVersion || manifest.Binary != newNative || status.Verification.State == "verified" {
 							t.Fatalf("new installation identity/runtime verification conflated: %+v %+v %v", manifest, status.Verification, err)
 						}
@@ -214,7 +214,7 @@ func TestCaptureMissingIntegrationDiagnosesDriftWithoutErasingHistoricalExchange
 		t.Fatalf("historical native exchange was not established: %+v", before)
 	}
 	ledger := readCaptureFile(t, f.output)
-	registry := readCaptureFile(t, filepath.Join(f.state, "registry.db"))
+	registry := readCaptureFile(t, filepath.Join(capture.RegistryPathDirectory(f.state), "registry.db"))
 	config := filepath.Join(f.project, ".codex", "hooks.json")
 	if err := os.Remove(config); err != nil {
 		t.Fatal(err)
@@ -232,7 +232,7 @@ func TestCaptureMissingIntegrationDiagnosesDriftWithoutErasingHistoricalExchange
 	if _, err := os.Stat(config); !os.IsNotExist(err) {
 		t.Fatalf("inspection recreated missing integration: %v", err)
 	}
-	if !bytes.Equal(ledger, readCaptureFile(t, f.output)) || !bytes.Equal(registry, readCaptureFile(t, filepath.Join(f.state, "registry.db"))) {
+	if !bytes.Equal(ledger, readCaptureFile(t, f.output)) || !bytes.Equal(registry, readCaptureFile(t, filepath.Join(capture.RegistryPathDirectory(f.state), "registry.db"))) {
 		t.Fatal("missing-integration diagnosis rewrote accepted facts")
 	}
 	// Removing callback configuration can be a user's deliberate edit. Public
@@ -466,7 +466,7 @@ func TestCaptureSamePinOtherProjectInstallPreservesAcknowledgedActiveWorker(t *t
 	// No callback or new generation: the already acknowledged active owner must
 	// keep refreshing after another project installs that exact cached release.
 	waitCorrectionLedger(t, f.output, "root", 31)
-	progress, err := capture.WorkerStatus(f.state)
+	progress, err := capture.WorkerStatus(f.coordination(t))
 	if err != nil || progress.PID != worker.Process.Pid {
 		t.Fatalf("other project's identical install retired active owner: %+v %v", progress, err)
 	}

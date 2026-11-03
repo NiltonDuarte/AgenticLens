@@ -3,24 +3,21 @@ package capture
 import (
 	"context"
 	"crypto/sha256"
-	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"net/url"
 	"os"
-	"path/filepath"
 	"time"
 
+	adaptersconfig "agenticlens/internal/adapters/config"
 	"agenticlens/internal/domain"
 )
 
-const diagnosticSchema = `CREATE TABLE IF NOT EXISTS capture_diagnostics(sequence INTEGER PRIMARY KEY AUTOINCREMENT,ticket TEXT NOT NULL,phase TEXT NOT NULL,outcome TEXT NOT NULL,record BLOB NOT NULL);
-CREATE TABLE IF NOT EXISTS capture_diagnostic_heads(ticket TEXT NOT NULL,phase TEXT NOT NULL,owner TEXT NOT NULL,kind TEXT NOT NULL CHECK(kind IN('latest','committed','failed','accepted','completed','current','generic_failed')),sequence INTEGER NOT NULL,PRIMARY KEY(ticket,phase,owner,kind));
-CREATE TABLE IF NOT EXISTS capture_diagnostic_failures(sequence INTEGER PRIMARY KEY);
-CREATE TABLE IF NOT EXISTS capture_diagnostic_index(singleton INTEGER PRIMARY KEY CHECK(singleton=1),cursor INTEGER NOT NULL,upper_sequence INTEGER NOT NULL,known_max INTEGER NOT NULL,complete INTEGER NOT NULL);
-INSERT OR IGNORE INTO capture_diagnostic_index SELECT 1,0,coalesce(max(sequence),0),coalesce(max(sequence),0),CASE WHEN count(*)=0 THEN 1 ELSE 0 END FROM (SELECT sequence FROM capture_diagnostics ORDER BY sequence DESC LIMIT 1);`
+const diagnosticSchema = `CREATE TABLE IF NOT EXISTS capture_diagnostics(sequence INTEGER PRIMARY KEY AUTOINCREMENT,worktree_id INTEGER NOT NULL,ticket TEXT NOT NULL,phase TEXT NOT NULL,outcome TEXT NOT NULL,record BLOB NOT NULL);
+CREATE TABLE IF NOT EXISTS capture_diagnostic_heads(worktree_id INTEGER NOT NULL,ticket TEXT NOT NULL,phase TEXT NOT NULL,owner TEXT NOT NULL,kind TEXT NOT NULL CHECK(kind IN('latest','committed','failed','accepted','completed','current','generic_failed')),sequence INTEGER NOT NULL,PRIMARY KEY(worktree_id,ticket,phase,owner,kind));
+CREATE TABLE IF NOT EXISTS capture_diagnostic_failures(worktree_id INTEGER NOT NULL,sequence INTEGER NOT NULL,PRIMARY KEY(worktree_id,sequence));
+CREATE TABLE IF NOT EXISTS capture_diagnostic_index(worktree_id INTEGER NOT NULL,singleton INTEGER NOT NULL CHECK(singleton=1),cursor INTEGER NOT NULL,upper_sequence INTEGER NOT NULL,known_max INTEGER NOT NULL,complete INTEGER NOT NULL,PRIMARY KEY(worktree_id,singleton));
+CREATE INDEX IF NOT EXISTS capture_diagnostics_scope_sequence ON capture_diagnostics(worktree_id,sequence);`
 
 // RecordDiagnostic retains current observation and terminal success/failure per
 // ticket/phase and exact source owner, plus 32 recent failures. Pending retries
@@ -38,14 +35,14 @@ func (s *Store) RecordDiagnostic(ctx context.Context, d domain.CaptureDiagnostic
 	if err != nil {
 		return err
 	}
-	state, err := readDiagnosticIndexTx(ctx, tx)
+	state, err := s.readDiagnosticIndexTx(ctx, tx)
 	if err != nil {
 		return errors.Join(err, tx.Rollback())
 	}
-	if err = detectDiagnosticIndexGap(ctx, tx, &state); err != nil {
+	if err = s.detectDiagnosticIndexGap(ctx, tx, &state); err != nil {
 		return errors.Join(err, tx.Rollback())
 	}
-	result, err := tx.ExecContext(ctx, `INSERT INTO capture_diagnostics(ticket,phase,outcome,record)VALUES(?,?,?,?)`, d.TicketID, d.Phase, d.Outcome, body)
+	result, err := tx.ExecContext(ctx, `INSERT INTO capture_diagnostics(worktree_id,ticket,phase,outcome,record)VALUES(?,?,?,?,?)`, s.worktreeID, d.TicketID, d.Phase, d.Outcome, body)
 	if err != nil {
 		return errors.Join(err, tx.Rollback())
 	}
@@ -53,16 +50,16 @@ func (s *Store) RecordDiagnostic(ctx context.Context, d domain.CaptureDiagnostic
 	if err != nil {
 		return errors.Join(err, tx.Rollback())
 	}
-	if err = indexDiagnostic(ctx, tx, d); err != nil {
+	if err = s.indexDiagnostic(ctx, tx, d); err != nil {
 		return errors.Join(err, tx.Rollback())
 	}
 	state.known = d.Sequence
 	state.attemptKnown = d.Sequence
-	if err = writeDiagnosticIndex(ctx, tx, state); err != nil {
+	if err = s.writeDiagnosticIndex(ctx, tx, state); err != nil {
 		return errors.Join(err, tx.Rollback())
 	}
 	if state.complete {
-		if err = pruneIndexedDiagnostics(ctx, tx); err != nil {
+		if err = s.pruneIndexedDiagnostics(ctx, tx); err != nil {
 			return errors.Join(err, tx.Rollback())
 		}
 	}
@@ -78,7 +75,7 @@ func (s *Store) Diagnostics(ctx context.Context) ([]domain.CaptureDiagnostic, er
 	if exists == 0 {
 		return result, nil
 	}
-	rows, err := s.db.QueryContext(ctx, `SELECT sequence,record FROM capture_diagnostics ORDER BY sequence`)
+	rows, err := s.db.QueryContext(ctx, `SELECT sequence,record FROM capture_diagnostics WHERE worktree_id=? ORDER BY sequence`, s.worktreeID)
 	if err != nil {
 		return nil, err
 	}
@@ -103,43 +100,19 @@ func (s *Store) Diagnostics(ctx context.Context) ([]domain.CaptureDiagnostic, er
 // writes domain facts. Standard SQLite read transactions may maintain ordinary
 // WAL/SHM coordination metadata; no AgenticLens lock/status files are created.
 func OpenReadOnlyProject(directory, project string) (*Store, error) {
-	p, err := filepath.Abs(filepath.Join(directory, "registry.db"))
+	cfg, err := adaptersconfig.Load(project)
 	if err != nil {
 		return nil, err
-	}
-	info, err := os.Stat(p)
-	if err != nil {
-		return nil, err
-	}
-	if !info.Mode().IsRegular() {
-		return nil, errors.New("capture registry is not a regular file")
 	}
 	project, err = ProjectDirectory(project)
 	if err != nil {
 		return nil, err
 	}
-	u := url.URL{Scheme: "file", Path: filepath.ToSlash(p)}
-	db, err := sql.Open("sqlite", u.String()+"?mode=ro&_pragma=query_only(1)&_pragma=busy_timeout(250)")
+	directory, err = namedProjectState(directory, cfg.ProjectName, project)
 	if err != nil {
 		return nil, err
 	}
-	db.SetMaxOpenConns(1)
-	store := &Store{db: db, project: project, directory: directory}
-	var version int
-	if err = db.QueryRow(`SELECT version FROM capture_meta`).Scan(&version); err != nil {
-		return nil, errors.Join(fmt.Errorf("reading capture protocol: %w", err), store.Close())
-	}
-	if version != ProtocolVersion {
-		return nil, errors.Join(fmt.Errorf("unsupported capture registry protocol %d; refresh setup explicitly", version), store.Close())
-	}
-	var owner string
-	if err = db.QueryRow(`SELECT directory FROM project_owner WHERE singleton=1`).Scan(&owner); err != nil {
-		return nil, errors.Join(fmt.Errorf("capture project association unavailable: %w", err), store.Close())
-	}
-	if owner != project {
-		return nil, errors.Join(errors.New("capture registry belongs to another project"), store.Close())
-	}
-	return store, nil
+	return openRegistry(directory, cfg.ProjectName, project, true)
 }
 
 func (s *Store) RecordPublication(ctx context.Context, ticket, outcome, destination, summary string, owners []domain.SessionFact, detail string) error {

@@ -1,7 +1,9 @@
 package git
 
 import (
+	"agenticlens/internal/adapters/config"
 	"bytes"
+	"errors"
 	"fmt"
 	"os/exec"
 	"path"
@@ -190,6 +192,8 @@ func ComputeCodeFactsAtRef(codeRef string, cfg *ClassificationConfig) (domain.Co
 		loaded, err := LoadConfig("")
 		if err == nil {
 			cfg = loaded
+		} else if !errors.Is(err, config.ErrConfigNotFound) {
+			return domain.CodeFacts{}, fmt.Errorf("loading Git classification configuration: %w", err)
 		}
 	}
 	if cfg == nil {

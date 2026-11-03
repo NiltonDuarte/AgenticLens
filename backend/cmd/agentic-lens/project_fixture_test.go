@@ -65,7 +65,7 @@ func prepareLegacyGenerateFixture(t *testing.T, cmd *exec.Cmd) {
 		}
 		config := filepath.Join(cmd.Dir, ".agenticlens-config.yaml")
 		if _, err := os.Stat(config); os.IsNotExist(err) {
-			data := "project_name: CLIFixture\nworkspaces:\n  dir: records\nticket:\n  prefixes:\n    - prefix: AL\n    - prefix: GEN\n      ticket_type: chore\n    - prefix: PO\n      ticket_type: docs\n    - prefix: FIX\n      ticket_type: fix\nrole_mappings:\n  build: orchestrator\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+			data := "project_name: CLIFixture\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nworkspaces:\n  dir: records\nticket:\n  prefixes:\n    - prefix: AL\n    - prefix: GEN\n      ticket_type: chore\n    - prefix: PO\n      ticket_type: docs\n    - prefix: FIX\n      ticket_type: fix\nrole_mappings:\n  build: orchestrator\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 			if err := os.WriteFile(config, []byte(data), 0600); err != nil {
 				t.Fatal(err)
 			}

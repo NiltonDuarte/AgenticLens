@@ -55,6 +55,15 @@ class InstallationTest(DistributionFixture):
         self.assertIn('project_name: Selected', self.config.read_text())
         self.assertEqual(selected_local.read_bytes(), local_before)
         self.assertEqual((caller_shared.read_bytes(), caller_local.read_bytes()), before)
+        completed = self.config.read_bytes()
+        self.config.write_text(''.join(line for line in completed.decode().splitlines(keepends=True)
+                                       if not line.lstrip().startswith('state_dir:')))
+        missing = self.launch('capture', 'status', '--repo', self.repo, '--state-dir', self.root / 'CLI rescue')
+        self.assertNotEqual(missing.returncode, 0)
+        self.assertIn('telemetry.capture.state_dir', missing.stderr)
+        self.assertFalse((self.root / 'CLI rescue').exists())
+        self.assertFalse((self.home / '.agenticlens/state').exists())
+        self.config.write_bytes(completed)
 
     def test_compatibility_launcher_missing_bootstrap_and_default_user_entrypoint(self):
         launcher = ROOT / '.agents/skills/agentic-lens-operator/scripts/agentic-lens.sh'
@@ -135,7 +144,7 @@ class InstallationTest(DistributionFixture):
         self.assertNotEqual(result.returncode, 0); self.assertFalse(self.config.exists())
         self.succeeds(self.install_local('--init-config', '--version', self.pin))
         self.assertIn('version: ' + self.pin, self.config.read_text())
-        self.assertIn('state_dir: .agenticlens-capture', self.config.read_text())
+        self.assertIn('state_dir: ~/.agenticlens/state', self.config.read_text())
 
     def test_invalid_or_conflicting_versions_and_missing_values_fail_before_fetch(self):
         for version in ['latest', '../v9.8.7', 'v9.8.7/rc', 'v9.8.7 rc', 'v9.8.7+$(touch INJECTED)', 'v1.0.0']:

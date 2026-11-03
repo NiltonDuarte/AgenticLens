@@ -13,7 +13,7 @@ import (
 )
 
 var version = "v9.8.7"
-var protocol = "2"
+var protocol = "3"
 
 func main() {
 	if len(os.Args) == 3 && os.Args[1] == "version" && os.Args[2] == "--short" {

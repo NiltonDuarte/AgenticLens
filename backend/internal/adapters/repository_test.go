@@ -28,7 +28,7 @@ func TestResolveWorkspacesDir(t *testing.T) {
 
 	t.Run("empty configuration returns empty string without defaulting", func(t *testing.T) {
 		tempDir := t.TempDir()
-		cfgContent := `{"project_name": "Test", "ticket": {"prefixes": [{"prefix": "TEST"}]}}`
+		cfgContent := `{"project_name": "Test", "ticket": {"prefixes": [{"prefix": "TEST"}]},"telemetry":{"capture":{"state_dir":"capture-state"}}}`
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.json"), []byte(cfgContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -67,7 +67,7 @@ func TestResolveWorkspacesDir(t *testing.T) {
 
 	t.Run("empty override with config missing workspaces.dir returns empty string", func(t *testing.T) {
 		tempDir := t.TempDir()
-		cfgContent := "project_name: Test\nticket:\n  prefixes:\n    - prefix: TEST\ncode_metrics:\n  source_roots:\n    - src\n"
+		cfgContent := "project_name: Test\nticket:\n  prefixes:\n    - prefix: TEST\ncode_metrics:\n  source_roots:\n    - src\n\ntelemetry:\n  capture:\n    state_dir: capture-state\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -112,7 +112,7 @@ func TestResolveWorkspacesDir(t *testing.T) {
 		}
 
 		// 2. With config file but missing workspaces.dir
-		cfgContent := "project_name: Test\nticket:\n  prefixes:\n    - prefix: TEST\ncode_metrics:\n  source_roots:\n    - src\n"
+		cfgContent := "project_name: Test\nticket:\n  prefixes:\n    - prefix: TEST\ncode_metrics:\n  source_roots:\n    - src\n\ntelemetry:\n  capture:\n    state_dir: capture-state\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -131,7 +131,7 @@ func TestResolveWorkspacesDir(t *testing.T) {
 		if err := os.MkdirAll(wsDir, 0755); err != nil {
 			t.Fatal(err)
 		}
-		cfgContent := "project_name: Test\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  dir: root_yaml_workspaces\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+		cfgContent := "project_name: Test\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  dir: root_yaml_workspaces\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n\ntelemetry:\n  capture:\n    state_dir: capture-state\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -157,7 +157,7 @@ func TestResolveWorkspacesDir(t *testing.T) {
 		if err := os.MkdirAll(wsDir, 0755); err != nil {
 			t.Fatal(err)
 		}
-		cfgContent := "project_name: Test\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  dir: root_yml_workspaces\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+		cfgContent := "project_name: Test\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  dir: root_yml_workspaces\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n\ntelemetry:\n  capture:\n    state_dir: capture-state\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -183,7 +183,7 @@ func TestResolveWorkspacesDir(t *testing.T) {
 		if err := os.MkdirAll(wsDir, 0755); err != nil {
 			t.Fatal(err)
 		}
-		cfgContent := `{"project_name": "Test", "ticket": {"prefixes": [{"prefix": "TEST"}]}, "workspaces": {"dir": "root_json_workspaces"}, "code_metrics": {"source_roots": ["src"]}, "anomaly_thresholds": {"context_ceiling_warning_tokens": 160000, "context_ceiling_critical_tokens": 200000}}`
+		cfgContent := `{"project_name": "Test", "ticket": {"prefixes": [{"prefix": "TEST"}]}, "workspaces": {"dir": "root_json_workspaces"}, "code_metrics": {"source_roots": ["src"]}, "anomaly_thresholds": {"context_ceiling_warning_tokens": 160000, "context_ceiling_critical_tokens": 200000},"telemetry":{"capture":{"state_dir":"capture-state"}}}`
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.json"), []byte(cfgContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -209,7 +209,7 @@ func TestResolveWorkspacesDir(t *testing.T) {
 		if err := os.MkdirAll(wsDir, 0755); err != nil {
 			t.Fatal(err)
 		}
-		cfgContent := "project_name: Test\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  dir: deep_root_ws\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+		cfgContent := "project_name: Test\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  dir: deep_root_ws\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n\ntelemetry:\n  capture:\n    state_dir: capture-state\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -245,7 +245,7 @@ func TestResolveWorkspacesDir(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		cfgContent := "project_name: TestPrecedence\nticket:\n  prefixes:\n    - prefix: PREC\nworkspaces:\n  dir: precedence_workspaces\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+		cfgContent := "project_name: TestPrecedence\nticket:\n  prefixes:\n    - prefix: PREC\nworkspaces:\n  dir: precedence_workspaces\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n\ntelemetry:\n  capture:\n    state_dir: capture-state\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -300,7 +300,7 @@ func TestResolveWorkspacesDir(t *testing.T) {
 
 	t.Run("fails fast when config exists but workspaces dir is empty", func(t *testing.T) {
 		tempDir := t.TempDir()
-		cfgContent := "project_name: TestEmptyWS\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  dir: \"\"\ncode_metrics:\n  source_roots:\n    - src\n"
+		cfgContent := "project_name: TestEmptyWS\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  dir: \"\"\ncode_metrics:\n  source_roots:\n    - src\n\ntelemetry:\n  capture:\n    state_dir: capture-state\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -787,7 +787,7 @@ func TestReadTicketArtifacts(t *testing.T) {
 func TestScanWorkspacesResilience(t *testing.T) {
 	t.Run("unconfigured workspaces directory returns clear error", func(t *testing.T) {
 		tempDir := t.TempDir()
-		cfgContent := `{"project_name": "Test", "ticket": {"prefixes": [{"prefix": "TEST"}]}}`
+		cfgContent := `{"project_name": "Test", "ticket": {"prefixes": [{"prefix": "TEST"}]},"telemetry":{"capture":{"state_dir":"capture-state"}}}`
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.json"), []byte(cfgContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -1393,7 +1393,7 @@ func TestLoadTicketWorkspace(t *testing.T) {
 
 	t.Run("unconfigured workspaces directory returns error", func(t *testing.T) {
 		noCfgDir := t.TempDir()
-		cfgContent := `{"project_name": "Test", "ticket": {"prefixes": [{"prefix": "TEST"}]}}`
+		cfgContent := `{"project_name": "Test", "ticket": {"prefixes": [{"prefix": "TEST"}]},"telemetry":{"capture":{"state_dir":"capture-state"}}}`
 		if err := os.WriteFile(filepath.Join(noCfgDir, ".agenticlens-config.json"), []byte(cfgContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -2017,6 +2017,10 @@ anomaly_thresholds:
 role_mappings:
   build: orchestrator
   qa-bot: tester
+
+telemetry:
+  capture:
+    state_dir: capture-state
 `
 	if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 		t.Fatal(err)
@@ -2186,6 +2190,10 @@ anomaly_thresholds:
 role_mappings:
   sys-engineer: coder
   lead-tester: tester
+
+telemetry:
+  capture:
+    state_dir: capture-state
 `
 	if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 		t.Fatal(err)
@@ -2499,5 +2507,26 @@ func TestLedgerFileReadsNormalizeOptionalSkillTaskCollections(t *testing.T) {
 				t.Fatal("read normalization rewrote optional wire fields")
 			}
 		})
+	}
+}
+
+func TestScanWorkspacesRejectsInvalidStateConfiguration(t *testing.T) {
+	root := t.TempDir()
+	workspaces := filepath.Join(root, "workspaces")
+	if err := os.Mkdir(workspaces, 0700); err != nil {
+		t.Fatal(err)
+	}
+	invalid := []byte("project_name: Example\nticket:\n  prefixes: [AL]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n")
+	path := filepath.Join(root, ".agenticlens-config.yaml")
+	if err := os.WriteFile(path, invalid, 0600); err != nil {
+		t.Fatal(err)
+	}
+	report := adapters.ScanWorkspaces(workspaces)
+	if !strings.Contains(report.FatalError, "telemetry.capture.state_dir") {
+		t.Fatalf("invalid configured state silently ignored: %+v", report)
+	}
+	actual, err := os.ReadFile(path)
+	if err != nil || !bytes.Equal(actual, invalid) {
+		t.Fatalf("scan repaired config without authorization: %v", err)
 	}
 }

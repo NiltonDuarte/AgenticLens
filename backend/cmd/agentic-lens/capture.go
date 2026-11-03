@@ -59,9 +59,15 @@ func captureCommand(args []string, input io.Reader, output io.Writer) error {
 }
 func captureCommandAction(args []string, input io.Reader, output io.Writer) (returnErr error) {
 	if len(args) == 0 {
-		return errors.New("usage: capture install|install-check|uninstall-check|status|diagnostics|verify|check|receive|request|bind|reconcile|disable|uninstall|protocol")
+		return errors.New("usage: capture install|install-check|uninstall-check|status|diagnostics|inspect-state|verify|check|receive|request|bind|reconcile|relocate-state|disable|uninstall|protocol")
 	}
 	command := args[0]
+	if command == "relocate-state" {
+		return relocateCaptureCommand(args[1:], output)
+	}
+	if command == "inspect-state" {
+		return inspectCaptureStateCommand(args[1:], output)
+	}
 	if command == "protocol" {
 		_, err := fmt.Fprintln(output, capture.HandlerProtocolVersion)
 		return err
@@ -70,7 +76,7 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 	flags.SetOutput(output)
 	source := flags.String("source", "", "Harness: codex or opencode")
 	sourceStore := flags.String("store", "", "Exact source store (Codex home or OpenCode database)")
-	state := flags.String("state-dir", "", "Capture state base (configuration default when omitted)")
+	state := flags.String("state-dir", "", "Capture state override (configured telemetry.capture.state_dir is required)")
 	repo := flags.String("repo", ".", "Repository root for additive local hook installation")
 	binary := flags.String("binary", "", "Selected native release binary (defaults to current executable; workers retain this executable)")
 	wrapper := flags.String("wrapper", "", "Owned common version-pinned wrapper for installed integrations and agent binding feedback")
@@ -105,7 +111,34 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 	if err != nil {
 		return err
 	}
-	policy, err := adaptersconfig.ResolveCapture(project, *state)
+	inspection := command == "status" || command == "diagnostics" || command == "verify" || command == "check"
+	gitOnly := command == "install-check" || command == "uninstall-check"
+	repair := command == "install" || command == "disable" || command == "uninstall" || gitOnly
+	if *dryRun && !repair {
+		return errors.New("--dry-run only supports installation changes")
+	}
+	var admission *adaptersconfig.CaptureAdmission
+	releaseAdmission := func() error {
+		if admission == nil {
+			return nil
+		}
+		err := admission.Close()
+		admission = nil
+		return err
+	}
+	if !inspection && !gitOnly && !*dryRun {
+		admission, err = adaptersconfig.AcquireCaptureAdmission(ctx, project)
+		if err != nil {
+			return err
+		}
+		defer func() { returnErr = errors.Join(returnErr, releaseAdmission()) }()
+	}
+	var policy domain.CaptureConfig
+	if admission != nil {
+		policy, err = admission.ResolveCapture(*state)
+	} else {
+		policy, err = adaptersconfig.ResolveCapture(project, *state)
+	}
 	if err != nil {
 		return err
 	}
@@ -132,8 +165,6 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 	if err != nil {
 		return err
 	}
-	inspection := command == "status" || command == "diagnostics" || command == "verify" || command == "check"
-	repair := command == "install" || command == "disable" || command == "uninstall" || command == "install-check" || command == "uninstall-check"
 	if !inspection && !repair {
 		if err := checkCaptureInstallation(project, absState, *state != ""); err != nil {
 			return err
@@ -162,7 +193,25 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 				return err
 			}
 		}
-		result, e := capture.Install(ctx, capture.InstallOptions{Repository: project, StateDir: absState, Binary: *binary, Wrapper: *wrapper, Source: *source, SourceStore: *sourceStore, DryRun: *dryRun, Remove: command != "install"})
+
+		location, e := capture.PreviewStateLocation(absState, project)
+		if e != nil {
+			return e
+		}
+		if !*dryRun {
+			if e := ctx.Err(); e != nil {
+				return e
+			}
+			store, e := capture.OpenProjectContext(ctx, absState, project)
+			if e != nil {
+				return e
+			}
+			location.CoordinationDirectory = store.CoordinationDirectory()
+			if e = errors.Join(store.Close(), releaseAdmission()); e != nil {
+				return e
+			}
+		}
+		result, e := capture.Install(ctx, capture.InstallOptions{Repository: project, StateDir: location.CoordinationDirectory, Binary: *binary, Wrapper: *wrapper, Source: *source, SourceStore: *sourceStore, DryRun: *dryRun, Remove: command != "install"})
 		if e != nil {
 			return e
 		}
@@ -175,9 +224,15 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 		return inspectCapture(ctx, command, absState, project, inspectionPolicy, domain.CaptureIdentity{Source: domain.SourceHarness(*source), Store: *sourceStore, SessionID: *sessionID}, *beforeDiagnostic, output)
 	}
 
-	s, err := capture.OpenProject(absState, project)
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	s, err := capture.OpenProjectContext(ctx, absState, project)
 	if err != nil {
 		return err
+	}
+	if err = releaseAdmission(); err != nil {
+		return errors.Join(err, s.Close())
 	}
 	defer func() {
 		if e := s.Close(); e != nil {
@@ -185,8 +240,9 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 		}
 	}()
 	if command == "worker" {
-		return captureWorker(s, project, absState, policy)
+		return captureWorker(s, project, s.CoordinationDirectory(), policy)
 	}
+	absState = s.CoordinationDirectory()
 	handoffAccepted := false
 	if command == "receive" || command == "bind" || command == "request" || command == "reconcile" {
 		defer func() {
@@ -377,7 +433,7 @@ func captureSourceStore(source, project string) (string, error) {
 }
 
 func reconcileCaptureGeneration(project, dir, ticket string) (*capture.ReconcileResult, error) {
-	if _, err := os.Stat(filepath.Join(dir, "registry.db")); errors.Is(err, os.ErrNotExist) {
+	if _, err := os.Stat(filepath.Join(capture.RegistryPathDirectory(dir), "registry.db")); errors.Is(err, os.ErrNotExist) {
 		return nil, nil
 	} else if err != nil {
 		return nil, err
@@ -530,6 +586,10 @@ func validateCaptureSelection(project, dir, ticket string, source domain.SourceH
 // interrupted during serialization/write. The outer publication lock covers
 // this rename and subsequent digest-bound report/summary updates.
 func saveGenerationLedger(path string, ledger domain.AgenticFactLedger) error {
+	return saveGenerationLedgerPreservingHistory(path, ledger, nil)
+}
+
+func saveGenerationLedgerPreservingHistory(path string, ledger domain.AgenticFactLedger, history []adapters.SessionFactDTO) error {
 	target, err := capture.ProjectDirectory(path)
 	if err != nil {
 		return err
@@ -550,7 +610,7 @@ func saveGenerationLedger(path string, ledger domain.AgenticFactLedger) error {
 			fmt.Fprintln(os.Stderr, "Generation staging cleanup:", removeErr)
 		}
 	}()
-	if err = adapters.SaveFactLedger(temp, ledger); err != nil {
+	if err = adapters.SaveFactLedgerPreservingHistory(temp, ledger, history); err != nil {
 		return err
 	}
 	file, err = os.OpenFile(temp, os.O_RDWR, 0)
@@ -650,10 +710,16 @@ func checkCaptureInstallation(project, selected string, explicit bool) error {
 	if err != nil {
 		return err
 	}
-	configured, err := capture.ProjectState(policy.StateDir, project)
+	configuredLocation, err := capture.PreviewStateLocation(policy.StateDir, project)
 	if err != nil {
 		return err
 	}
+	configured := configuredLocation.CoordinationDirectory
+	selectedLocation, err := capture.PreviewStateLocation(selected, project)
+	if err != nil {
+		return err
+	}
+	selected = selectedLocation.CoordinationDirectory
 	if err = capture.CheckInstalledState(project, configured, explicit); err != nil {
 		return err
 	}

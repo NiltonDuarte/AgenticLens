@@ -68,19 +68,28 @@ func newCaptureGenerationFixture(t *testing.T) captureGenerationFixture {
 	t.Helper()
 	f := captureGenerationFixture{project: t.TempDir(), store: t.TempDir(), state: t.TempDir()}
 	f.output = filepath.Join(f.project, "ledger.json")
+	config := "project_name: CaptureFixture\ntelemetry:\n  capture:\n    state_dir: " + strconv.Quote(f.state) + "\nticket:\n  prefixes: [TEST]\nworkspaces:\n  dir: records\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+	if err := os.WriteFile(filepath.Join(f.project, ".agenticlens-config.yaml"), []byte(config), 0600); err != nil {
+		t.Fatal(err)
+	}
 	var err error
 	f.state, err = capture.ProjectState(f.state, f.project)
 	if err != nil {
-		t.Fatal(err)
-	}
-	config := "project_name: CaptureFixture\nticket:\n  prefixes: [TEST]\nworkspaces:\n  dir: records\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
-	if err := os.WriteFile(filepath.Join(f.project, ".agenticlens-config.yaml"), []byte(config), 0600); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.MkdirAll(filepath.Join(f.store, "sessions"), 0700); err != nil {
 		t.Fatal(err)
 	}
 	return f
+}
+
+func (f captureGenerationFixture) coordination(t *testing.T) string {
+	t.Helper()
+	location, err := capture.ExistingLocation(f.state, f.project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return location.CoordinationDirectory
 }
 
 func (f captureGenerationFixture) write(t *testing.T, tokens int) string {
@@ -338,7 +347,11 @@ func TestCaptureCLIInstallerPreservesUserHooksDryRunAndRepeatedRemoval(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	manifest, err := capture.ReadManifest(scoped, "codex")
+	location, err := capture.ExistingLocation(scoped, project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest, err := capture.ReadManifest(location.CoordinationDirectory, "codex")
 	if err != nil || manifest.Active {
 		t.Fatalf("removed installation reported active: %+v %v", manifest, err)
 	}
@@ -383,7 +396,7 @@ func TestCaptureCLIOpenCodePluginOwnershipAndMissingHandler(t *testing.T) {
 }
 
 func TestCaptureCLIRequestExposesUnassignedTicketToPlugin(t *testing.T) {
-	project := t.TempDir()
+	project := newCaptureGenerationFixture(t).project
 	out, err := captureCLI(t, project, "", "request", "--source", "opencode", "--store", filepath.Join(project, "source.db"), "--state-dir", filepath.Join(project, "state"), "--session-id", "runtime-session")
 	if err != nil {
 		t.Fatalf("request: %v %s", err, out)
@@ -403,7 +416,7 @@ func TestCaptureCLIRequestExposesUnassignedTicketToPlugin(t *testing.T) {
 
 func TestCaptureCLIGenerateIncludesBoundIndependentSessionsAndSummaryDiagnostics(t *testing.T) {
 	project := t.TempDir()
-	configuration := "project_name: CaptureFixture\nticket:\n  prefixes: [TEST]\nworkspaces:\n  dir: custom records\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+	configuration := "project_name: CaptureFixture\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes: [TEST]\nworkspaces:\n  dir: custom records\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), []byte(configuration), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -547,6 +560,18 @@ func TestCaptureGenerationRetainedRegistryCannotOverrideNewerCanonicalOrExplicit
 				newer.Skills = []domain.SkillFact{{Name: "stored-skill"}, {Name: "stored-skill"}}
 				link := domain.TaskLinkFact{SubagentType: "reviewer", Description: "stored delegation", ChildSession: "stored-child", Timestamp: "2026-01-01T00:00:00Z", CostEvidence: domain.CostEvidence{State: domain.CostUnavailable}}
 				newer.TaskLinks = []domain.TaskLinkFact{link, link}
+				// This fixture represents an already accepted native publication. Persist
+				// the exact auxiliary receipt produced by generate before removing source.
+				accepted, err := capture.OpenProject(f.state, f.project)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err = accepted.RecordAuxiliaryReceipt(context.Background(), "TEST-100", capture.AuxiliaryFacts{Skills: newer.Skills, TaskLinks: newer.TaskLinks}); err != nil {
+					t.Fatal(err)
+				}
+				if err = accepted.Close(); err != nil {
+					t.Fatal(err)
+				}
 				body, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(newer))
 				if err != nil {
 					t.Fatal(err)
@@ -724,7 +749,7 @@ func TestCaptureGenerationResolvesStoreAliasesWithoutConflatingDistinctStores(t 
 			if bindingUsesAlias {
 				// Seed an actual pre-normalization registry row. Current Register
 				// canonicalizes aliases, which alone would miss the legacy guard.
-				db, err := sql.Open("sqlite", filepath.Join(f.state, "registry.db"))
+				db, err := sql.Open("sqlite", filepath.Join(capture.RegistryPathDirectory(f.state), "registry.db"))
 				if err != nil {
 					t.Fatal(err)
 				}

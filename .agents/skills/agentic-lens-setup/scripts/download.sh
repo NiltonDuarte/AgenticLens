@@ -76,7 +76,7 @@ if ((INIT)); then
   CONTEXT="$(sh "$SOURCE_WRAPPER" --al-project "$STAGE" --al-resolve)"
  else
   pin="$PROJECT/.agenticlens-config.yaml"
-  (set -o noclobber; printf '# AgenticLens bootstrap scaffold v1: incomplete project configuration\nagenticlens:\n  version: %s\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\n    commit_warning: true\n' "$VERSION_REQUEST" > "$pin") || fail 'Could not create explicit shared pin'
+  (set -o noclobber; printf '# AgenticLens bootstrap scaffold v1: incomplete project configuration\nagenticlens:\n  version: %s\ntelemetry:\n  capture:\n    state_dir: ~/.agenticlens/state\n    commit_warning: true\n' "$VERSION_REQUEST" > "$pin") || fail 'Could not create explicit shared pin'
   TARGETS+=("$pin"); BACKUPS+=('')
   CONTEXT="$(sh "$SOURCE_WRAPPER" --al-project "$PROJECT" --al-resolve)"
  fi
@@ -162,16 +162,17 @@ for platform in "${PLATFORMS[@]}"; do
  if [[ "$platform" == "$PRIMARY_PLATFORM" ]]; then
   [[ "$("$candidate" version --short)" == "$VERSION" ]] || fail 'Native version does not match shared pin'
   required=''
-  [[ -z "$CAPTURE_SOURCE" ]] || required=2
+  [[ -z "$CAPTURE_SOURCE" ]] || required=3
   if [[ -x "$PRIMARY" ]]; then
    existing_magic="$(od -An -tx1 -N4 "$PRIMARY" | tr -d ' \n')"
    case "$existing_magic" in 7f454c46|cffaedfe|cefaedfe|feedfacf|feedface|cafebabe|4d5a*)
     existing_protocol="$("$PRIMARY" capture protocol 2>/dev/null || true)"
-    [[ "$existing_protocol" != 2 ]] || required=2 ;;
+    [[ "$existing_protocol" != 3 ]] || required=3
+    if [[ "$existing_protocol" == 2 && -z "$required" ]]; then required=2; fi ;;
    esac
   fi
   observed_protocol="$("$candidate" capture protocol 2>/dev/null || true)"
-  [[ -z "$required" || "$observed_protocol" == "$required" ]] || fail 'Native hook protocol incompatible (required 2); prior installation preserved'
+  [[ -z "$required" || "$observed_protocol" == "$required" ]] || fail "Native hook protocol incompatible (required $required); prior installation preserved"
  fi
 done
 for platform in "${PLATFORMS[@]}"; do
@@ -192,7 +193,7 @@ for source in "$SOURCE_WRAPPER" "$PS_WRAPPER"; do
 done
 if ((INIT)); then
  printf 'Configuration incomplete: bootstrap scaffold defines no project/ticket/code roots.\n'
- if [[ "${observed_protocol:-}" == 2 ]]; then
+ if [[ "${observed_protocol:-}" == 3 ]]; then
   printf 'Complete only this unchanged owned scaffold, preserving local settings:\n  (cd -P -- %q && %q --al-project %q init --complete-scaffold --agenticlens-version %q --project-name NAME --src-folders DIRS --ticket-prefixes PREFIXES)\n' "$PROJECT" "$WRAPPER" "$PROJECT" "$VERSION"
  else printf 'Selected legacy release lacks guarded init/capture capability. Ordinary CLI is installed; review an exact supported release pin before adopting new setup/capture features.\n'; fi
 fi
@@ -203,7 +204,7 @@ if [[ -n "$CAPTURE_SOURCE" ]]; then
  CAPTURE_APPLY_STARTED=1
  "$WRAPPER" --al-offline --al-project "$PROJECT" "${args[@]}"
 else printf 'Binary installation only; lifecycle capture not configured.\n'; fi
-if [[ "${observed_protocol:-}" != 2 ]]; then
- printf 'Selected legacy release %s: hook protocol 2 and guarded init unavailable; ordinary CLI installed. New capture setup requires a reviewed exact supported pin.\n' "$VERSION"
+if [[ "${observed_protocol:-}" != 3 ]]; then
+ printf 'Selected legacy release %s: hook protocol 3 and guarded init unavailable; ordinary CLI installed. New capture setup requires a reviewed exact supported pin.\n' "$VERSION"
 fi
 printf 'Installed wrapper: %s\nNative: %s\nRequired PATH entry: %s\nNo profile changed. Runtime trust, binding and source extraction require verification.\n' "$WRAPPER" "$PRIMARY" "$DEST"

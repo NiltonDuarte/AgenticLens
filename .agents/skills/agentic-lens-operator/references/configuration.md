@@ -123,13 +123,13 @@ Automatic publication updates the canonical v5 ledger and SUMMARY.md coverage. N
 
 Installed lifecycle callbacks hand off to a bounded native worker; contributing agents only answer the explicit session-ticket binding request, including the user-supplied human-readable title (`--ticket-title`) and optional conventional type (`--ticket-type`). Missing titles remain pending because schema v5 requires them. No contributing agent needs to run `generate`. The command remains available for manual recovery. Automatic publication uses the same canonical-output lock as manual generation, before reading baseline or source facts.
 
-Settings under `telemetry.capture` resolve CLI state override, then `.agenticlens-config.local.yaml`, then portable `.agenticlens-config.yaml`, then defaults. Relative state paths resolve against `--repo`, not callback cwd. Source paths retain their existing resolver. Native callbacks capture absolute project/state/source/binary paths; review and reinstall owned hooks if those paths change. No Git hooks, CI settings or harness trust changes are installed.
+Settings under `telemetry.capture` merge portable `.agenticlens-config.yaml` with `.agenticlens-config.local.yaml` overrides. Numeric policy fields retain their defaults; `state_dir` must be explicitly configured and valid before a CLI state override can apply. Relative state paths resolve against `--repo`, not callback cwd. Source paths retain their existing resolver. Native callbacks capture absolute project/state/source/binary paths; review and reinstall owned hooks if those paths change. No Git hooks, CI settings or harness trust changes are installed.
 
 ```yaml
 telemetry:
   capture:
     enabled: true
-    state_dir: .agenticlens-capture
+    state_dir: ~/.agenticlens/state
     refresh_ms: 15000
     debounce_ms: 500
     idle_ms: 120000
@@ -141,7 +141,15 @@ telemetry:
     summary: true
 ```
 
-External/home state is opt-in. State is namespaced by the canonical exact project directory under `state_dir/projects/<location-key>`; symlink aliases coordinate. Distinct directories with the same ticket and source store remain separate. Unscoped legacy state is retained for explicit source-verified recovery. Copying state never transfers project ownership. Removing local state loses explicit associations, so preserve it until recovery is complete. No automatic retention cleanup removes pending associations or accepted facts.
+Configuration creation writes `telemetry.capture.state_dir: ~/.agenticlens/state`. Operational loading requires an explicit nonblank path after shared/local overlays; missing or invalid configuration fails even if a CLI path override is supplied. Loading never inserts a fallback, creates directories or relocates state. The directory need not exist before the first authorized write. Relative explicit paths belong to the configuration root; `~` expands using the executing user's home.
+
+The shared database is `state_dir/projects/<configured-project-name>/registry.db`. The namespace comes from required `project_name`; unsafe literal names use the supported reversible representation, never a checkout-derived project hash. Exact name metadata rejects filesystem aliases/collisions. Worktrees sharing that name concurrently use separate exact-worktree records, bindings, source ownership, publication requests/cursors and worker coordination. For the same ticket, publication may retain unchanged committed history from a verified worktree of the same actual Git repository. New capture and workers remain isolated and never acknowledge another worktree's pending work. A shared project name alone grants no history access.
+
+Aliases for the configured state base are supported. An alias inside its project namespace must stay within that physical base and preserve the `projects/<configured-project-name>` suffix; escaping or differently shaped targets are rejected. Configure the intended base explicitly when using another layout.
+
+Home state survives worktree deletion, but missing sources or publication destinations still require explicit recovery. No deleted checkout is recreated or rebound by name. Existing explicit project-local/external paths remain unchanged on narrow configuration update; relocation is explicit, preserves pending/failed work and retained original data, and refuses unsupported layouts or active owned workers. Copying a live database or changing a YAML path alone is not a migration. No automatic cleanup removes registrations or pending observations.
+
+The relocation command supports only the inspected legacy registry protocol1 family into schema2 named state. Moving or renaming populated schema2 state is currently unsupported and fails without retiring the source or modifying configuration; preserve it and report the limitation rather than inventing a copy/rename repair.
 
 The worker uses durable request generations and acknowledges only the generation observed before its pass. Kernel process locks release on crashes. Later callbacks restart workers; workers periodically refresh active sessions, debounce bursts, back off after failed publication, and exit after idle terminal sessions. A finite maximum lifetime transfers healthy active work to a fresh native worker. Failed publication stops at that deadline with pending work retained for the next lifecycle or reconcile event, avoiding an endless failure process chain. Check `capture status --repo PROJECT` and durable `capture diagnostics` for failures; logs alone are insufficient evidence. This is native child-process scheduling, with no separately installed service, model recursion or callback network/self-update work.
 

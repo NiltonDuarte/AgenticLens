@@ -20,7 +20,7 @@ func TestCaptureLaterAgentChannelReportsBoundPublicationFailure(t *testing.T) {
 	f.output = filepath.Join(f.project, "records", "TEST-100", "agentic_metrics.json")
 	path := f.write(t, 10)
 	f.bind(t, path)
-	held, err := capture.AcquireWorker(f.state)
+	held, err := capture.AcquireWorker(f.coordination(t))
 	if err != nil || held == nil {
 		t.Fatalf("fixture worker ownership: %v", err)
 	}
@@ -89,7 +89,7 @@ func TestCaptureLaterAgentChannelReportsBoundPublicationFailure(t *testing.T) {
 	if !failed {
 		t.Fatal("real worker failure was not durably diagnosed")
 	}
-	held, err = capture.AcquireWorker(f.state)
+	held, err = capture.AcquireWorker(f.coordination(t))
 	if err != nil || held == nil {
 		t.Fatalf("failed worker ownership not released: %v", err)
 	}
@@ -200,6 +200,16 @@ func TestCaptureLaterAgentChannelReportsBoundPublicationFailure(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
+	// Queue a pass after removing the source. Earlier callbacks may have
+	// detached a worker that has not yet tried the lease held by this fixture.
+	// Either that child or the explicit worker can drain this generation.
+	if err = registry.RequestPublication(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	partialRequest, err := registry.PublicationRequest(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err = held.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -207,9 +217,33 @@ func TestCaptureLaterAgentChannelReportsBoundPublicationFailure(t *testing.T) {
 	if out, err := runCaptureNative(t, f.project, "", "capture", "worker", "--repo", f.project, "--state-dir", f.state); err != nil {
 		t.Fatalf("available retained facts publication failed: %v %s", err, out)
 	}
-	held, err = capture.AcquireWorker(f.state)
-	if err != nil || held == nil {
-		t.Fatalf("partial-source worker did not finish: %v", err)
+	// A successful competing invocation can return without owning the lease.
+	// Observe the actual generation acknowledgement, then hold the released
+	// lease so subsequent feedback controls cannot race another source pass.
+	completion := time.NewTimer(5 * time.Second)
+	defer completion.Stop()
+	poll := time.NewTicker(10 * time.Millisecond)
+	defer poll.Stop()
+	for held == nil {
+		request, err := registry.PublicationRequest(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if request.Acknowledged >= partialRequest.Generation && request.Generation == request.Acknowledged {
+			held, err = capture.AcquireWorker(f.coordination(t))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if held != nil {
+				break
+			}
+		}
+		select {
+		case <-completion.C:
+			progress, progressErr := capture.WorkerStatus(f.coordination(t))
+			t.Fatalf("partial-source generation %d did not finish: request=%+v worker=%+v err=%v log=%s", partialRequest.Generation, request, progress, progressErr, readCaptureFile(t, filepath.Join(f.coordination(t), "worker.log")))
+		case <-poll.C:
+		}
 	}
 	sourceResponse := query("root", f.store)
 	var sourceFeedback struct {
@@ -270,7 +304,7 @@ func TestCaptureLaterAgentChannelReportsBoundPublicationFailure(t *testing.T) {
 			t.Fatalf("drain request: %v %v", err, closeErr)
 		}
 		if request.Generation == request.Acknowledged {
-			lock, err := capture.AcquireWorker(f.state)
+			lock, err := capture.AcquireWorker(f.coordination(t))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -283,5 +317,5 @@ func TestCaptureLaterAgentChannelReportsBoundPublicationFailure(t *testing.T) {
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	t.Fatalf("native feedback callback workers did not finish: %s", readCaptureFile(t, filepath.Join(f.state, "worker.log")))
+	t.Fatalf("native feedback callback workers did not finish: %s", readCaptureFile(t, filepath.Join(f.coordination(t), "worker.log")))
 }

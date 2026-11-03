@@ -23,6 +23,14 @@ func TestWorkerSuccessorRequiresExactReadyInstallationAndOriginalState(t *testin
 			if err != nil {
 				t.Fatal(err)
 			}
+			registry, err := capture.OpenProject(state, project)
+			if err != nil {
+				t.Fatal(err)
+			}
+			state = registry.CoordinationDirectory()
+			if err = registry.Close(); err != nil {
+				t.Fatal(err)
+			}
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 			if _, err = capture.Install(ctx, capture.InstallOptions{Repository: project, StateDir: state, Binary: binary, Wrapper: wrapper, Source: "codex", SourceStore: t.TempDir()}); err != nil {

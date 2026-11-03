@@ -13,8 +13,18 @@ import (
 	"agenticlens/internal/domain"
 )
 
+func captureProjectConfig(t *testing.T, project, name string) {
+	t.Helper()
+	data := fmt.Sprintf("project_name: %q\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes: [TEST]\nworkspaces:\n  dir: records\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n", name)
+	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), []byte(data), 0600); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestProjectStateAliasesIsolationAndCopiedOwnership(t *testing.T) {
 	a, b, base := t.TempDir(), t.TempDir(), t.TempDir()
+	captureProjectConfig(t, a, "ProjectA")
+	captureProjectConfig(t, b, "ProjectB")
 	one, err := capture.ProjectState(base, a)
 	if err != nil {
 		t.Fatal(err)
@@ -240,6 +250,8 @@ func TestPublicationGenerationAcknowledgesOnlyObservedWork(t *testing.T) {
 	}
 	// Same ticket and source store cannot bridge project namespaces.
 	base, a, b := t.TempDir(), t.TempDir(), t.TempDir()
+	captureProjectConfig(t, a, "SharedProject")
+	captureProjectConfig(t, b, "SharedProject")
 	one, _ := capture.ProjectState(base, a)
 	two, _ := capture.ProjectState(base, b)
 	sa, err := capture.OpenProject(one, a)

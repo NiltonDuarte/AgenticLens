@@ -50,11 +50,11 @@ func (s *Store) RefreshProjectProofs(ctx context.Context, maxSessions int, maxBy
 	if err != nil {
 		return err
 	}
-	if _, err = s.db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS project_proof_cursor(singleton INTEGER PRIMARY KEY CHECK(singleton=1),identity TEXT NOT NULL)`); err != nil {
+	if _, err = s.db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS project_proof_cursor(worktree_id INTEGER NOT NULL,singleton INTEGER NOT NULL CHECK(singleton=1),identity TEXT NOT NULL,PRIMARY KEY(worktree_id,singleton))`); err != nil {
 		return err
 	}
 	var cursor string
-	err = s.db.QueryRowContext(ctx, `SELECT identity FROM project_proof_cursor WHERE singleton=1`).Scan(&cursor)
+	err = s.db.QueryRowContext(ctx, `SELECT identity FROM project_proof_cursor WHERE worktree_id=? AND singleton=1`, s.worktreeID).Scan(&cursor)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return err
 	}
@@ -84,7 +84,7 @@ func (s *Store) RefreshProjectProofs(ctx context.Context, maxSessions int, maxBy
 			}
 			return err
 		}
-		if _, err = s.db.ExecContext(ctx, `INSERT INTO project_proof_cursor VALUES(1,?)ON CONFLICT(singleton)DO UPDATE SET identity=excluded.identity`, IdentityKey(row.Identity)); err != nil {
+		if _, err = s.db.ExecContext(ctx, `INSERT INTO project_proof_cursor VALUES(?,1,?)ON CONFLICT(worktree_id,singleton)DO UPDATE SET identity=excluded.identity`, s.worktreeID, IdentityKey(row.Identity)); err != nil {
 			return err
 		}
 	}

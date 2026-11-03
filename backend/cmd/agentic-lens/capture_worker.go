@@ -311,6 +311,10 @@ func validateGenerationProject(project, state string, sessions []domain.SessionF
 	if err != nil {
 		return err
 	}
+	return validateGenerationOwners(project, rows, sessions, ticket)
+}
+
+func validateGenerationOwners(project string, rows []domain.CaptureRegistration, sessions []domain.SessionFact, ticket string) error {
 	byID := map[string][]domain.CaptureRegistration{}
 	for _, r := range rows {
 		byID[r.Identity.SessionID] = append(byID[r.Identity.SessionID], r)
@@ -342,7 +346,7 @@ func validateGenerationProject(project, state string, sessions []domain.SessionF
 			return errors.New("baseline source conflicts with project registration")
 		}
 		if r.ProjectDirectory != project {
-			if err = capture.ValidateOwner(context.Background(), project, r); err != nil {
+			if err := capture.ValidateOwner(context.Background(), project, r); err != nil {
 				return fmt.Errorf("baseline owner %s project unresolved: %w", owner.ID, err)
 			}
 		}
@@ -357,5 +361,9 @@ func automaticCaptureEnabled(project, state string) (bool, error) {
 	if err != nil || !policy.Enabled {
 		return false, err
 	}
-	return capture.AutomaticEnabled(state)
+	location, err := capture.PreviewStateLocation(state, project)
+	if err != nil {
+		return false, err
+	}
+	return capture.AutomaticEnabled(location.CoordinationDirectory)
 }

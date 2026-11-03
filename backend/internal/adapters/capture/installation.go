@@ -37,7 +37,7 @@ func InstalledStates(project string) ([]string, error) {
 			if owner != project || m.Source != source {
 				return nil, fmt.Errorf("%w: discovery project/source differs", errInstallationOwnership)
 			}
-			if m.Protocol != ProtocolVersion {
+			if m.Protocol != ManifestProtocolVersion {
 				return nil, errors.New("installed integration protocol differs; refresh owned setup")
 			}
 			state = m.StateDir
@@ -96,7 +96,7 @@ func InstalledStates(project string) ([]string, error) {
 		if err == nil {
 			err = json.Unmarshal(manifestBody, &m)
 		}
-		if err == nil && m.Protocol != ProtocolVersion {
+		if err == nil && m.Protocol != ManifestProtocolVersion {
 			err = errors.New("unsupported install manifest protocol")
 		}
 		if err != nil {
@@ -215,7 +215,7 @@ func installedHealthManifest(project, state, source string, states []string) (Ma
 		if owner != project || manifest.Source != source {
 			return Manifest{}, false, fmt.Errorf("%w: integration manifest project/source differs", errInstallationOwnership)
 		}
-		if manifest.Protocol != ProtocolVersion {
+		if manifest.Protocol != ManifestProtocolVersion {
 			return Manifest{}, false, errors.New("installed integration manifest protocol differs; refresh owned setup")
 		}
 		return manifest, true, nil

@@ -71,7 +71,7 @@ func TestCaptureVerifyNativeExchangeBelongsToCurrentInstallationAndSelector(t *t
 			t.Fatalf("unrelated selector inherited another session's health: %+v", h)
 		}
 	}
-	manifest := filepath.Join(f.state, "install-codex.json")
+	manifest := filepath.Join(f.coordination(t), "install-codex.json")
 	var current map[string]json.RawMessage
 	if err := json.Unmarshal(readCaptureFile(t, manifest), &current); err != nil {
 		t.Fatal(err)

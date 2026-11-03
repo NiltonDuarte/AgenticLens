@@ -36,7 +36,7 @@ type DiagnosticPage struct {
 	Bytes            int64
 }
 
-const diagnosticHeadQuery = `SELECT kind,sequence FROM capture_diagnostic_heads WHERE ticket=? AND phase=? AND owner=? ORDER BY kind LIMIT 7`
+const diagnosticHeadQuery = `SELECT kind,sequence FROM capture_diagnostic_heads WHERE worktree_id=? AND ticket=? AND phase=? AND owner=? ORDER BY kind LIMIT 7`
 
 // diagnosticMetadataComplete uses only schema metadata and primary-key extrema.
 // Legacy/direct writer gaps never certify stale heads as current evidence.
@@ -50,7 +50,7 @@ func (s *Store) diagnosticMetadataComplete(ctx context.Context) (bool, bool, err
 	}
 	var complete int
 	var known, actual, attemptKnown int64
-	err := s.db.QueryRowContext(ctx, `SELECT complete,known_max,coalesce((SELECT sequence FROM capture_diagnostic_heads WHERE ticket='' AND phase='index' AND owner=? AND kind='latest'),-1),(SELECT coalesce(max(sequence),0) FROM capture_diagnostics) FROM capture_diagnostic_index WHERE singleton=1`, attemptIndexOwner).Scan(&complete, &known, &attemptKnown, &actual)
+	err := s.db.QueryRowContext(ctx, `SELECT complete,known_max,coalesce((SELECT sequence FROM capture_diagnostic_heads WHERE worktree_id=? AND ticket='' AND phase='index' AND owner=? AND kind='latest'),-1),(SELECT coalesce(max(sequence),0) FROM capture_diagnostics WHERE worktree_id=?) FROM capture_diagnostic_index WHERE worktree_id=? AND singleton=1`, s.worktreeID, attemptIndexOwner, s.worktreeID, s.worktreeID).Scan(&complete, &known, &attemptKnown, &actual)
 	if errors.Is(err, sql.ErrNoRows) {
 		return true, false, nil
 	}
@@ -99,7 +99,7 @@ func (s *Store) ReadDiagnostics(ctx context.Context, options DiagnosticReadOptio
 				return nil
 			}
 			page.HeadLookups++
-			rows, e := s.db.QueryContext(ctx, diagnosticHeadQuery, ticket, phase, owner)
+			rows, e := s.db.QueryContext(ctx, diagnosticHeadQuery, s.worktreeID, ticket, phase, owner)
 			if e != nil {
 				return e
 			}
@@ -175,7 +175,7 @@ func (s *Store) ReadDiagnostics(ctx context.Context, options DiagnosticReadOptio
 		}
 		for _, sequence := range sequences {
 			var size int64
-			if err = s.db.QueryRowContext(ctx, `SELECT length(record) FROM capture_diagnostics WHERE sequence=?`, sequence).Scan(&size); errors.Is(err, sql.ErrNoRows) {
+			if err = s.db.QueryRowContext(ctx, `SELECT length(record) FROM capture_diagnostics WHERE worktree_id=? AND sequence=?`, s.worktreeID, sequence).Scan(&size); errors.Is(err, sql.ErrNoRows) {
 				page.More = true
 				page.MetadataComplete = false
 				continue
@@ -186,7 +186,7 @@ func (s *Store) ReadDiagnostics(ctx context.Context, options DiagnosticReadOptio
 		}
 	} else {
 		page.NextBefore = options.Before
-		rows, e := s.db.QueryContext(ctx, `SELECT sequence,length(record) FROM capture_diagnostics WHERE sequence<? ORDER BY sequence DESC LIMIT ?`, func() int64 {
+		rows, e := s.db.QueryContext(ctx, `SELECT sequence,length(record) FROM capture_diagnostics WHERE worktree_id=? AND sequence<? ORDER BY sequence DESC LIMIT ?`, s.worktreeID, func() int64 {
 			if options.Before == 0 {
 				return int64(^uint64(0) >> 1)
 			}
@@ -216,7 +216,7 @@ func (s *Store) ReadDiagnostics(ctx context.Context, options DiagnosticReadOptio
 			break
 		}
 		var body []byte
-		if err = s.db.QueryRowContext(ctx, `SELECT record FROM capture_diagnostics WHERE sequence=? AND length(record)<=?`, item.sequence, options.MaxBytes-page.Bytes).Scan(&body); errors.Is(err, sql.ErrNoRows) {
+		if err = s.db.QueryRowContext(ctx, `SELECT record FROM capture_diagnostics WHERE worktree_id=? AND sequence=? AND length(record)<=?`, s.worktreeID, item.sequence, options.MaxBytes-page.Bytes).Scan(&body); errors.Is(err, sql.ErrNoRows) {
 			page.More = true
 			break
 		} else if err != nil {

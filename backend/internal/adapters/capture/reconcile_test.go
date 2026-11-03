@@ -623,6 +623,7 @@ func TestReconcileSchedulerEventuallyDiscoversStartOnlyChildWithPersistentFailed
 func TestReconcileFatalCollisionRetainsCollectionFailureUntilCompletedRecovery(t *testing.T) {
 	ctx := context.Background()
 	project := t.TempDir()
+	captureProjectConfig(t, project, "ReconcileFixture")
 	s, openErr := capture.OpenProject(t.TempDir(), project)
 	if openErr != nil {
 		t.Fatal(openErr)
@@ -750,6 +751,7 @@ func TestReconcileFatalCollisionRetainsCollectionFailureUntilCompletedRecovery(t
 func TestReconcileSuccessfulReadPreservesParentConflictAndNormalPendingRecovery(t *testing.T) {
 	ctx := context.Background()
 	project := t.TempDir()
+	captureProjectConfig(t, project, "ReconcileFixture")
 	s, err := capture.OpenProject(t.TempDir(), project)
 	if err != nil {
 		t.Fatal(err)

@@ -54,7 +54,7 @@ agentic-lens --al-project PROJECT init --agenticlens-version EXACT_TAG --project
 
 - `--agenticlens-version EXACT_TAG`: explicitly selected release for generated shared YAML; required for development/unknown build identity. Never substitute latest.
 - `--complete-scaffold`: replace only the exact unchanged owned bootstrap scaffold for that explicit pin, preserving existing local YAML. Rejects arbitrary shared files and combination with --force.
-- `--project-name NAME` (required): dashboard/project display name.
+- `--project-name NAME` (required): project display name and shared capture namespace; changing it requires explicit state migration.
 - `--ticket-prefixes LIST` (required): comma-separated identifiers, for example `PAY,OPS`. Prefixes are normalized to uppercase.
 - `--src-folders LIST` (required): comma-separated Git source roots, for example `backend,web/src`.
 - `--workspaces DIR` (default `workspaces`): workspace root.
@@ -63,7 +63,9 @@ agentic-lens --al-project PROJECT init --agenticlens-version EXACT_TAG --project
 - `--dry-run`: print both generated YAML files without writing.
 - `--force`: overwrite existing shared and local config files. This replaces both outputs and can erase local path settings; inspect both files first and obtain authorization.
 
-`init` creates `.agenticlens-config.yaml` and `.agenticlens-config.local.yaml`. It does not edit `.gitignore`; ensure the machine-local file is ignored according to repository policy. Prefer a surgical edit for an existing installation rather than `init --force`.
+`init` creates `.agenticlens-config.yaml` and `.agenticlens-config.local.yaml`. It writes the home capture path explicitly; operational readers never supply a state-path fallback. It does not edit `.gitignore`; ensure the machine-local file is ignored according to repository policy. Prefer a surgical edit for an existing installation rather than `init --force`.
+
+For an existing configuration, run `init --update-capture-config --dry-run` from its project to preview insertion of a missing capture state path without requiring new-project flags. Omitted state uses the write-time value `~/.agenticlens/state`; an existing explicit path is preserved. `--capture-state-dir PATH` explicitly requests replacement, subject to populated-state relocation validation. This mode preserves unrelated shared fields and machine-local settings, rejects blank/null/invalid existing values and applies only if the inspected shared file has not changed.
 
 ## `generate`
 
@@ -85,7 +87,7 @@ agentic-lens generate --ticket-id ID --ticket-title TITLE --ticket-type TYPE [op
 - `--append FILE`: idempotently update the Markdown metrics table.
 - `--db-path PATH`: explicit OpenCode SQLite source path.
 - `--codex-home PATH`: explicit Codex home/rollout directory; defaults to `$CODEX_HOME` or `~/.codex`.
-- `--capture-dir DIR` (default `telemetry.capture.state_dir`, then `.agenticlens-capture`): reconcile the installation's exact local state before manual recovery publication. Registered bound roots from either harness retain their explicit identity; unavailable accepted facts survive failed refreshes. Publication writes only the ledger and SUMMARY.md coverage. Detailed reconciliation/publication diagnostics remain in the local database; `detailed_report` is deprecated/no-effect and old sidecars are obsolete, never automatically deleted.
+- `--capture-dir DIR` (configured `telemetry.capture.state_dir` when omitted; no read-time fallback): reconcile the installation's exact local state before manual recovery publication. Registered bound roots from either harness retain their explicit identity; unavailable accepted facts survive failed refreshes. Publication writes only the ledger and SUMMARY.md coverage. Detailed reconciliation/publication diagnostics remain in the local database; `detailed_report` is deprecated/no-effect and old sidecars are obsolete, never automatically deleted.
 - `--anomalies`: print and record anomaly results for the target ticket.
 - `--allow-empty`: permits empty generation with no root session/invocations; intended as an exceptional/testing escape hatch, not normal recovery.
 
@@ -101,7 +103,7 @@ Generation writes the requested ledger and/or summary. Confirm those destination
 
 Every lifecycle entrypoint uses the stable common wrapper in offline mode with matching `--al-project PROJECT` and native `--repo PROJECT`. The selected native worker and publication children retain their current executable for the pass; future wrapper calls observe the current shared pin. Never install a repository updater or a version-specific native path as a callback.
 
-Capture commands return JSON by default; `capture protocol` prints native hook capability 2, distinct from persisted registry/manifest schema 1. Older capabilities cannot consume the new --wrapper glue. `capture <command> --help` lists supported flags. `install` creates additive owned Codex hooks or an OpenCode plugin, an ownership manifest and an ignored local registry destination. Source is required. `--store` is the exact Codex home or OpenCode database; supply it explicitly after checking harness configuration. Direct install may resolve the selected harness's configured local path when omitted; review the resolved value before applying. `--binary PATH` must identify the exact shared-pin native cache leaf. `--wrapper PATH` selects the stable common entrypoint (default user location). `--repo` defaults to the current directory and `--state-dir` to `.agenticlens-capture`. Dry run previews owned file changes without writing; repeat without it only after setup changes are authorized.
+Capture commands return JSON by default; `capture protocol` prints native hook capability 3, distinct from persisted registry/manifest schema 2. Older capabilities cannot consume the shared named-state contract. `capture <command> --help` lists supported flags. `install` creates additive owned Codex hooks or an OpenCode plugin, an ownership manifest and a configured-name registry with exact-worktree coordination. Source is required. `--store` is the exact Codex home or OpenCode database; supply it explicitly after checking harness configuration. Direct install may resolve the selected harness's configured local path when omitted; review the resolved value before applying. `--binary PATH` must identify the exact shared-pin native cache leaf. `--wrapper PATH` selects the stable common entrypoint (default user location). `--repo` defaults to the current directory and `--state-dir` uses the required configured state location. Dry run previews owned file changes without writing; repeat without it only after setup changes are authorized.
 
 Agent interaction and binding:
 
@@ -112,7 +114,7 @@ Agent interaction and binding:
 For an explicitly authorized operator repair, inspect the local request with `capture status`, verify the exact source/session identity, then bind it:
 
 ```bash
-agentic-lens capture bind --source codex --store "/absolute/Codex home" --state-dir "/absolute/repo/.agenticlens-capture" --session-id "<EXACT_SOURCE_SESSION_ID>" --ticket-id PAY-42 --request "<EXACT_SESSION_REQUEST_TOKEN>"
+agentic-lens capture bind --source codex --store "/absolute/Codex home" --session-id "<EXACT_SOURCE_SESSION_ID>" --ticket-id PAY-42 --request "<EXACT_SESSION_REQUEST_TOKEN>"
 ```
 
 Do not publish request tokens or local status dumps. Wrong/missing request tokens and conflicting ticket assignments fail. `capture request` is the native session-specific feedback primitive used by the OpenCode plugin, not a heuristic discovery command. `capture receive` accepts bounded hook JSON on stdin; event handlers hand off durable local work and do not perform a full extraction or publish ticket artifacts.
@@ -121,11 +123,13 @@ Reconciliation is explicit and bounded. `--max-sessions` defaults to 256 and `--
 
 After a crash, restore the native handler/source access if needed and rerun reconciliation against the same local state. Do not delete accepted registrations to conceal a gap. After an explicit pin change and installation, inspect protocol/status, preview `capture install` with the original source/store/destinations, resolve conflicting local edits and apply the reviewed upgrade. Installation alone does not trust hooks or prove actual callbacks; review harness trust/plugin loading and verify real session IDs, the agent response and source facts. See [support and local state limits](configuration.md#lifecycle-capture-state-and-support).
 
+For explicit state relocation, preview `capture relocate-state --repo PROJECT --from-state-dir EXACT_OLD_DIRECTORY --to-state-dir NEW_BASE --dry-run`. The source is an exact existing registry directory; the target is the selected state base. Relocation preserves this worktree's bindings, accepted snapshots, pending generations and diagnostics, refuses live owned worker locks/unknown layouts, and retains source backups plus cutover recovery evidence. Review the reported configuration/integration actions before applying; copying a live SQLite main file or editing state_dir alone is insufficient. Schema2 scopes each worktree inside the configured-name database; the ledger remains v5. The relocation command supports only the inspected legacy registry protocol1 family into schema2 named state. Moving or renaming populated schema2 state is currently unsupported and fails without retiring the source or modifying configuration; preserve it and report the limitation rather than inventing a copy/rename repair. See [state ownership and recovery](configuration.md#lifecycle-capture-state-and-support).
+
 Disable or remove only the owned activation entries/files:
 
 ```bash
-agentic-lens capture disable --source codex --store "/absolute/Codex home" --repo "/absolute/repo" --state-dir "/absolute/repo/.agenticlens-capture" --dry-run
-agentic-lens capture uninstall --source codex --store "/absolute/Codex home" --repo "/absolute/repo" --state-dir "/absolute/repo/.agenticlens-capture" --dry-run
+agentic-lens capture disable --source codex --store "/absolute/Codex home" --repo "/absolute/repo" --dry-run
+agentic-lens capture uninstall --source codex --store "/absolute/Codex home" --repo "/absolute/repo" --dry-run
 ```
 
 Repeat the selected command without `--dry-run` when authorized. Both commands deactivate owned callbacks while retaining local registrations/manifests for recovery; they do not purge source data or final ledgers. Unrelated configuration and conflicting local edits are preserved. A handler/configuration failure leaves coding available but capture degraded. Never auto-approve or bypass harness trust to repair capture.

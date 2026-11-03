@@ -25,14 +25,16 @@ var pluginTemplate string
 const marker = "AgenticLens capture v1"
 
 type InstallOptions struct {
-	Repository  string
-	StateDir    string
-	Binary      string
-	Wrapper     string
-	Source      string
-	SourceStore string
-	DryRun      bool
-	Remove      bool
+	Repository          string
+	StateDir            string
+	Binary              string
+	Wrapper             string
+	Source              string
+	SourceStore         string
+	DryRun              bool
+	Remove              bool
+	AllowLegacyManifest bool
+	LegacyStateDir      string
 }
 type OwnedGroup struct {
 	Event string          `json:"event"`
@@ -88,7 +90,7 @@ func ReadManifest(dir, source string) (Manifest, error) {
 		return m, err
 	}
 	err = json.Unmarshal(b, &m)
-	if err == nil && m.Protocol != ProtocolVersion {
+	if err == nil && m.Protocol != ManifestProtocolVersion {
 		err = errors.New("unsupported install manifest protocol")
 	}
 	return m, err
@@ -138,7 +140,11 @@ func staticCommand(args []string, windows bool) (string, error) {
 	return strings.Join(quoted, " "), nil
 }
 func Install(ctx context.Context, options InstallOptions) (InstallResult, error) {
-	result := InstallResult{DryRun: options.DryRun, Changes: []PlannedChange{}}
+	return installWithWriter(ctx, options, apply)
+}
+
+func installWithWriter(ctx context.Context, options InstallOptions, write func(fileChange) error) (result InstallResult, returnErr error) {
+	result = InstallResult{DryRun: options.DryRun, Changes: []PlannedChange{}}
 	if options.Source != "codex" && options.Source != "opencode" {
 		return result, errors.New("install source must be codex or opencode")
 	}
@@ -150,7 +156,56 @@ func Install(ctx context.Context, options InstallOptions) (InstallResult, error)
 	if err != nil {
 		return result, err
 	}
+	if options.SourceStore == "" {
+		return result, errors.New("empty source store")
+	}
+	if _, err = validateStatePlacement(repo, logicalRegistryDirectory(dir)); err != nil {
+		return result, err
+	}
+	if !options.DryRun {
+		lock, e := acquireInstallLock(dir)
+		if e != nil {
+			return result, e
+		}
+		defer func() { returnErr = errors.Join(returnErr, lock.Close()) }()
+	}
+	recovered, e := recoverInstallTransaction(ctx, options, repo, dir)
+	if e != nil {
+		return result, e
+	}
+	if recovered != nil {
+		return *recovered, nil
+	}
+	expectedLegacyState := ""
+	if options.AllowLegacyManifest && options.LegacyStateDir != "" {
+		expectedLegacyState, err = ProjectDirectory(options.LegacyStateDir)
+		if err != nil {
+			return result, err
+		}
+	}
+	legacyStateMatches := func(state string) bool {
+		if expectedLegacyState == "" || state == "" {
+			return false
+		}
+		actual, e := ProjectDirectory(state)
+		return e == nil && actual == expectedLegacyState
+	}
 	previous, loadErr := ReadManifest(dir, options.Source)
+	if options.AllowLegacyManifest && loadErr != nil && previous.Protocol == 1 {
+		body, e := os.ReadFile(manifestPath(dir, options.Source))
+		if e != nil {
+			return result, e
+		}
+		var legacy Manifest
+		if e = json.Unmarshal(body, &legacy); e != nil {
+			return result, e
+		}
+		if legacy.Protocol != 1 || !legacyStateMatches(legacy.StateDir) {
+			return result, errors.New("legacy manifest does not match explicitly validated relocation state")
+		}
+		previous = legacy
+		loadErr = nil
+	}
 	if loadErr != nil && !errors.Is(loadErr, os.ErrNotExist) {
 		return result, loadErr
 	}
@@ -161,7 +216,7 @@ func Install(ctx context.Context, options InstallOptions) (InstallResult, error)
 			return result, err
 		}
 	}
-	if loadErr == nil && previousRepo != repo {
+	if loadErr == nil && (previousRepo != repo || previous.Source != options.Source) {
 		return result, errors.New("capture manifest belongs to another repository")
 	}
 	if options.Remove && errors.Is(loadErr, os.ErrNotExist) {
@@ -221,8 +276,8 @@ func Install(ctx context.Context, options InstallOptions) (InstallResult, error)
 		checkCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
 		defer cancel()
 		out, e := exec.CommandContext(checkCtx, binary, "capture", "protocol").Output()
-		if e != nil || strings.TrimSpace(string(out)) != "2" {
-			return result, errors.New("installed native handler does not support hook protocol 2")
+		if e != nil || strings.TrimSpace(string(out)) != "3" {
+			return result, errors.New("installed native handler does not support hook protocol 3")
 		}
 		versionOutput, e := exec.CommandContext(checkCtx, binary, "version", "--short").Output()
 		if e != nil || strings.TrimSpace(string(versionOutput)) != version {
@@ -231,7 +286,7 @@ func Install(ctx context.Context, options InstallOptions) (InstallResult, error)
 	} else {
 		binary = previous.Binary
 	}
-	m := Manifest{Protocol: ProtocolVersion, Source: options.Source, Repository: repo, Binary: binary, Wrapper: wrapper, Version: version, SourceStore: store, TemplateVersion: installationTemplateVersion(), StateDir: dir, Active: !options.Remove}
+	m := Manifest{Protocol: ManifestProtocolVersion, Source: options.Source, Repository: repo, Binary: binary, Wrapper: wrapper, Version: version, SourceStore: store, TemplateVersion: installationTemplateVersion(), StateDir: dir, Active: !options.Remove}
 	if !options.Remove {
 		wrapperBody, e := readEntrypointFile(wrapper, 128*1024)
 		if e != nil {
@@ -297,7 +352,7 @@ func Install(ctx context.Context, options InstallOptions) (InstallResult, error)
 					}
 				}
 			}
-			args := WrapperCommand(wrapper, "--al-offline", "--al-project", repo, "capture", "receive", "--source", "codex", "--store", store, "--state-dir", dir, "--repo", repo, "--wrapper", wrapper)
+			args := WrapperCommand(wrapper, "--al-offline", "--al-project", repo, "capture", "receive", "--source", "codex", "--store", store, "--state-dir", logicalRegistryDirectory(dir), "--repo", repo, "--wrapper", wrapper)
 			command, e := staticCommand(args, false)
 			if e != nil {
 				return result, e
@@ -341,7 +396,7 @@ func Install(ctx context.Context, options InstallOptions) (InstallResult, error)
 			return result, errors.New("plugin contains conflicting local edits; preserved")
 		}
 		replacements := []string{}
-		for _, item := range [][2]string{{"__WRAPPER__", wrapper}, {"__STATE__", dir}, {"__STORE__", store}, {"__PROJECT__", repo}} {
+		for _, item := range [][2]string{{"__WRAPPER__", wrapper}, {"__STATE__", logicalRegistryDirectory(dir)}, {"__STORE__", store}, {"__PROJECT__", repo}} {
 			raw, e := json.Marshal(item[1])
 			if e != nil {
 				return result, e
@@ -355,12 +410,13 @@ func Install(ctx context.Context, options InstallOptions) (InstallResult, error)
 		}
 		changes = append(changes, fileChange{path: path, content: content, remove: options.Remove, before: before, existed: exists})
 	}
-	// The state directory must be local and ignored. Add an exact relative ignore entry; preserve user content.
-	rel, e := filepath.Rel(repo, dir)
+	// Repository-local logical state includes registry.db, SQLite sidecars and
+	// every coordination leaf. External state does not need a project ignore.
+	rel, contained, e := relativeContainedPath(repo, logicalRegistryDirectory(dir))
 	if e != nil {
 		return result, e
 	}
-	if !strings.HasPrefix(rel, ".."+string(filepath.Separator)) && rel != ".." {
+	if contained {
 		if rel == "." {
 			return result, errors.New("capture state cannot be the repository root")
 		}
@@ -406,7 +462,11 @@ func Install(ctx context.Context, options InstallOptions) (InstallResult, error)
 			return result, err
 		}
 		priorRepo, err := ProjectDirectory(prior.Repository)
-		if err != nil || priorRepo != repo || prior.Protocol != ProtocolVersion {
+		protocolMatches := prior.Protocol == ManifestProtocolVersion
+		if options.AllowLegacyManifest && prior.Protocol == 1 && legacyStateMatches(prior.StateDir) {
+			protocolMatches = true
+		}
+		if err != nil || priorRepo != repo || prior.Source != options.Source || !protocolMatches {
 			return result, errors.New("installation discovery file ownership conflict")
 		}
 	}
@@ -422,19 +482,8 @@ func Install(ctx context.Context, options InstallOptions) (InstallResult, error)
 	if options.DryRun {
 		return result, nil
 	}
-	// Roll back only files this transaction changed; a failed hook setup must leave unrelated settings intact.
-	for i, c := range changes {
-		e := apply(c)
-		if e != nil {
-			rollbackErrors := []error{e}
-			for j := i - 1; j >= 0; j-- {
-				prior := changes[j]
-				prior.content = prior.before
-				prior.remove = !prior.existed
-				rollbackErrors = append(rollbackErrors, apply(prior))
-			}
-			return result, errors.Join(rollbackErrors...)
-		}
+	if err = applyInstallTransactionWithWriter(ctx, options, repo, dir, m, changes, write); err != nil {
+		return result, err
 	}
 	return result, nil
 }

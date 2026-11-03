@@ -85,7 +85,7 @@ func testNativePendingGeneration(t *testing.T, crash bool) {
 	deadline := time.Now().Add(3 * time.Second)
 	observed := false
 	for time.Now().Before(deadline) {
-		owner, e := capture.AcquireWorker(f.state)
+		owner, e := capture.AcquireWorker(f.coordination(t))
 		if e != nil {
 			t.Fatal(e)
 		}
@@ -103,7 +103,7 @@ func testNativePendingGeneration(t *testing.T, crash bool) {
 	// output lock prevents acknowledgement while this observed generation is in flight.
 	observed = false
 	for time.Now().Before(deadline) {
-		progress, e := capture.WorkerStatus(f.state)
+		progress, e := capture.WorkerStatus(f.coordination(t))
 		if e != nil {
 			t.Fatal(e)
 		}
@@ -129,7 +129,7 @@ func testNativePendingGeneration(t *testing.T, crash bool) {
 		if req.Generation <= req.Acknowledged {
 			t.Fatalf("crashed pass swallowed request: %+v", req)
 		}
-		owner, err := capture.AcquireWorker(f.state)
+		owner, err := capture.AcquireWorker(f.coordination(t))
 		if err != nil || owner == nil {
 			t.Fatalf("kernel ownership not released: %v", err)
 		}
@@ -243,7 +243,7 @@ func TestCaptureLateTicketMustPublishBeforeIdle(t *testing.T) {
 	if _, err = io.ReadFull(c, make([]byte, 1)); err != nil {
 		t.Fatal(err)
 	}
-	progress, err := capture.WorkerStatus(f.state)
+	progress, err := capture.WorkerStatus(f.coordination(t))
 	if err != nil {
 		t.Fatal(err)
 	}

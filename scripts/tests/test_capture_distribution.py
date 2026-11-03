@@ -32,13 +32,13 @@ class CaptureDistributionTest(DistributionFixture):
     def test_binary_only_legacy_pin_is_preserved_but_new_capture_capability_is_required(self):
         environment = dict(self.env, AL_PROBE_PROTOCOL='1')
         result = self.succeeds(self.install_local(env=environment))
-        self.assertIn('hook protocol 2 and guarded init unavailable', result.stdout)
+        self.assertIn('hook protocol 3 and guarded init unavailable', result.stdout)
         self.assertEqual(self.launch('version', '--short', env=environment).stdout.strip(), self.pin)
         before = self.native().read_bytes()
         store = self.root / 'store'; store.mkdir()
         result = self.install_local('--capture-source', 'codex', '--capture-store', store, env=environment)
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn('required 2', result.stderr)
+        self.assertIn('required 3', result.stderr)
         self.assertEqual(self.native().read_bytes(), before)
         self.assertFalse((self.repo / '.codex').exists())
 
@@ -191,9 +191,12 @@ class CaptureDistributionTest(DistributionFixture):
     def test_native_wrapper_recursion_and_bad_candidate_protocol_are_rejected(self):
         self.succeeds(self.install_local())
         before = self.native().read_bytes()
-        result = self.install_local('--force', probe=build_probe(protocol='1'))
-        self.assertNotEqual(result.returncode, 0)
-        self.assertEqual(self.native().read_bytes(), before)
+        for protocol in ['1', '2']:
+            with self.subTest(protocol=protocol):
+                result = self.install_local('--force', probe=build_probe(protocol=protocol))
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn('required 3', result.stderr)
+                self.assertEqual(self.native().read_bytes(), before)
         result = self.install_local('--force', probe=ROOT / 'scripts/agentic-lens-wrapper.sh')
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(self.native().read_bytes(), before)
