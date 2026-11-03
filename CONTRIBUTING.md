@@ -13,6 +13,7 @@ Ensure the following tools are installed on your workstation or development cont
 - **npm**: Version 10 or newer
 - **Git**: For version control and diff calculations
 - **Make**: Standard GNU Make
+- **Python 3, GitHub CLI (`gh`) and curl**: For release workflow tests. API tests use local fixtures and require no GitHub login.
 
 ---
 
@@ -81,6 +82,7 @@ Open `http://localhost:8085` to view the standalone dashboard.
 | `make test` | Run full test suite across Go backend (with race detector) and TypeScript frontend |
 | `make test-backend` | Run Go test suite with data race detector enabled (`go test -race ./...`) |
 | `make test-frontend` | Run frontend test suite via Vitest (`npm test` in `web/`) |
+| `make test-release-workflow` | Run release revision, RC metadata/guard and GitHub response-filter tests against local fixtures |
 | `make vet` | Run `go vet` across all Go packages |
 | `make lint` | Run Go vet, TypeScript typecheck, and ESLint |
 | `make build` | Compile frontend bundle and build multi-platform binaries in `bin/` |
@@ -118,7 +120,7 @@ Artifacts are built as self-contained standalone executables embedding all web d
 ### 6.1 Release Tiers
 
 - **Release Candidates (Pre-release)**:
-  Triggered automatically on every merge to the `main` branch. Artifacts are published as pre-releases on GitHub with the version format `vMAJOR.MINOR.PATCH-rc.RUN_NUMBER+SHORT_SHA` (for example, `v0.1.0-rc.42+a1b2c3d`).
+  Triggered after the Release Please workflow succeeds on `main`, or manually through workflow dispatch. The version is captured from the root manifest at the immutable head of the pending Release Please PR. A missing release PR skips the candidate; API errors and invalid versions fail the job. Later changes to `main` or the release PR do not invalidate the captured version. Before publication, an exact `vMAJOR.MINOR.PATCH` tag check skips an already reserved stable target. Artifacts use `vMAJOR.MINOR.PATCH-rc.RUN_NUMBER+SHORT_SHA` (for example, `v2.1.0-rc.42+a1b2c3d`), reusing Release Please's version decision without another calculator.
 - **Stable Releases**:
   Triggered when a semantic version tag matching `vMAJOR.MINOR.PATCH` (for example, `v1.0.0`) is pushed to the repository.
 - **Floating Latest Tag**:
