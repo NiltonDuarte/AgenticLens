@@ -10,24 +10,25 @@
       "thread_link": "<t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/641425d3-403a-4a11-8d21-2c8bae2ca609>",
       "thread_id": "641425d3-403a-4a11-8d21-2c8bae2ca609",
       "branch": "feat/AL-61-full-local-timestamps",
-      "head": "c40e0022aca6c5ae40633b260ce93c379e2ee1c7",
+      "head": "64d1e3d5ad36b1db1e764c48ddc57298f60a4d3f",
       "base": "main",
       "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/104",
-      "status": "preparing",
+      "status": "waiting_checks",
       "order": 2,
       "last_instruction": {
         "clientRequestId": "mgt2-al61-integrate-after-6244585",
         "runId": "run:thread:641425d3-403a-4a11-8d21-2c8bae2ca609:ordinal:5",
         "delivery": "started"
       },
-      "verified_checks": "Owner: 244 focused tests, typecheck/lint, five-platform build, byte-identical standalone HTTP JS/CSS and embedded assets pass. Sol/high and Luna/medium approve correction. make fails unchanged capture CLI tests; artifact-only checkpoint pushed.",
-      "next_action": "Existing owner run5 integrates current main once, preserving capture/search/timestamps/assets/index; finish gates for draft #104 before merge",
+      "verified_checks": "Manager verified current main included, final delta only ticket artifacts, source/tests/scripts/CI equal tested 3c0e4cd; compact SOL-1 fixed disposition and both Sol/high/Luna/medium integrated approvals retained. Owner full make passes all Go race packages, 790 frontend tests, checks, five builds, standalone/embed equality. Fresh hosted checks running; no GitHub objections/unresolved threads.",
+      "next_action": "On CI wake verify current head/base/review/checks; expected-head squash merge then verify merge SHA and release AL-76 integration",
       "notification_request": "mgt2-handoff-notification-61",
-      "reviewed_application_head": "2e4762d0e94109f9b91c2dc5edae2a939ab94008",
+      "reviewed_application_head": "3c0e4cd59979309a14ad785882d609b62d40ad03",
       "blockers": [
-        "Integration of actual AL-60 merge and final verification/review/finalization remain pending"
+        "Fresh exact-head hosted checks pending at 64d1e3d"
       ],
-      "publication_status": "open draft; exact head verified"
+      "publication_status": "open non-draft; local final approval complete",
+      "corrected_timestamp_revision": "2e4762d0e94109f9b91c2dc5edae2a939ab94008"
     },
     {
       "ticket": "AL-60",
