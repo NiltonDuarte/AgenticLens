@@ -1,5 +1,9 @@
 # GEN-19: Release candidates target the upcoming release
 
+## Accepted iteration 03 supersession
+
+The user's "make it simplier" instruction explicitly approves the immediately preceding proposal: retain successful Release Please sequencing, immutable release-PR manifest capture, validated version/suffix metadata and one exact stable-target check before publication. Remove generated-commit-parent assumptions, repeated main-head freshness checks, historical stable-release scans and the second PR identity comparison. A newer main commit or release-PR update after capture no longer invalidates the built candidate. These explicit relaxed guarantees supersede iteration 02's freshness/provenance/history requirements. Exact candidate SHA checkout, ordinary API/invalid-version failure handling, build verification and prerelease/retention behavior remain. See iterations/03/PLAN.md. No renewed permission is needed for this already approved reduction.
+
 ## Accepted iteration 02 supersession
 
 On 2026-11-03 the user explicitly approved the simpler approach in iterations/02/PLAN.md: read the version already calculated in the open Release Please PR, sequence automatic RC execution after Release Please finishes, and remove the independent engine and its dependencies. This supersedes the iteration 01 requirements to calculate via a pinned library and never consult a PR. The version source is the root manifest at the immutable head of the same-repository generated release PR; freshness/provenance, stable-target rejection, metadata and publication guards remain required. Stable publishing workflows and historical releases remain outside scope. The original contract below records the approved baseline; the explicit accepted delta governs the replacement.

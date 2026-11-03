@@ -13,7 +13,7 @@ Ensure the following tools are installed on your workstation or development cont
 - **npm**: Version 10 or newer
 - **Git**: For version control and diff calculations
 - **Make**: Standard GNU Make
-- **Python 3 and GitHub CLI (`gh`)**: For release workflow tests. API filter tests use local fixtures and require no GitHub login.
+- **Python 3, GitHub CLI (`gh`) and curl**: For release workflow tests. API tests use local fixtures and require no GitHub login.
 
 ---
 
@@ -120,7 +120,7 @@ Artifacts are built as self-contained standalone executables embedding all web d
 ### 6.1 Release Tiers
 
 - **Release Candidates (Pre-release)**:
-  Triggered after the Release Please workflow succeeds on `main`, or manually through workflow dispatch. The version comes from the root manifest at the immutable head of the pending Release Please PR, whose generated commit must directly follow the source commit being built. Superseded commits and missing or stale release PRs skip publication; API errors and invalid or already released targets fail the job. The PR identity and current `main` are checked again before publishing. Artifacts use `vMAJOR.MINOR.PATCH-rc.RUN_NUMBER+SHORT_SHA` (for example, `v2.1.0-rc.42+a1b2c3d`), preserving Release Please's patch, minor, major and explicit version decisions without a second version calculator.
+  Triggered after the Release Please workflow succeeds on `main`, or manually through workflow dispatch. The version is captured from the root manifest at the immutable head of the pending Release Please PR. A missing release PR skips the candidate; API errors and invalid versions fail the job. Later changes to `main` or the release PR do not invalidate the captured version. Before publication, an exact `vMAJOR.MINOR.PATCH` tag check skips an already reserved stable target. Artifacts use `vMAJOR.MINOR.PATCH-rc.RUN_NUMBER+SHORT_SHA` (for example, `v2.1.0-rc.42+a1b2c3d`), reusing Release Please's version decision without another calculator.
 - **Stable Releases**:
   Triggered when a semantic version tag matching `vMAJOR.MINOR.PATCH` (for example, `v1.0.0`) is pushed to the repository.
 - **Floating Latest Tag**:

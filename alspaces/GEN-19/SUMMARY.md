@@ -1,5 +1,9 @@
 # GEN-19: Release candidates reuse Release Please's next version
 
+## Current iteration 03 status
+
+The user explicitly requested the proposed further reduction. Captured PR metadata now remains valid when main or the PR advances; parent/provenance/history scans and repeated identity checks are removed. One exact stable-tag lookup remains before publication. Review also found a pre-existing tag identity issue, fixed with the action's captured-SHA target input and an assertion. All focus/model cells and affected behavior rechecks approve; 14 focused tests pass. Full integrated make is pending; the earlier iteration 02 evidence below is historical until final consolidation.
+
 ## Request and accepted steering
 
 The user reported v2.0.0-rc candidates after stable v2.0.0, although the next release was 2.1.0, and requested the next GEN ticket. GEN-19 was free across workspaces, index, remote workspace tree and branch search. Initial working tree was clean at 036d808. Branch: chore/GEN-19-rc-target-version; configured root: alspaces; conventional type: chore. The generated initial GEN-13 branch name was not used as ticket allocation evidence.

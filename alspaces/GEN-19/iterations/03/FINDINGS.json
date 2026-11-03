@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "REL-02",
+      "severity": 5,
+      "location": ".github/workflows/release-candidate.yml Publish GitHub Pre-release",
+      "trigger": "main advances after checkout before creation of a new RC tag",
+      "violated_expectation": "Published RC tag and archives must identify the same captured commit as binaries",
+      "consequence": "Default release target can point to newer main while binaries retain EXPECTED_SHA",
+      "classification": "pre_existing",
+      "disposition": "confirmed",
+      "lifecycle_status": "fixed",
+      "discovery_run_ids": [
+        "behavior-sol"
+      ],
+      "observations": [
+        {
+          "run_id": "behavior-sol",
+          "local_id": "existing publication debt",
+          "severity": 5
+        }
+      ],
+      "evidence": "Action v2 source forwards optional target_commitish; GitHub create-release API defaults to default branch",
+      "fix": "Parent added target_commitish EXPECTED_SHA and existing workflow wiring assertion; no new guard/script",
+      "verification_owner": "parent primary-source trace and both configured behavior rechecks",
+      "verification_run_ids": [
+        "behavior-sol-recheck",
+        "behavior-luna-recheck"
+      ]
+    }
+  ]
+}

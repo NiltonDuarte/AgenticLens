@@ -1,0 +1,11 @@
+{
+  "base": "d29d8347245b357e0a64c3fee2c3bbed4276e3c9",
+  "fingerprint": "7655ae2f7e75ee3c9615525029fa65a95bc356d2156dc8a6832ea30e4dab26e2",
+  "files": {
+    ".github/workflows/release-candidate.yml": "57a0545baa5c4c20db01474f8f44221e2fff6dee1a446d536dbe71e97c17d386",
+    "CONTRIBUTING.md": "d15dc44bd5b79dab28a3eb19928749838a3cdc920eb7fc07350e4e01ec19e34d",
+    "scripts/tests/test_release_revision.py": "9257aa883ed18e0133a9356caaef8c178c2d2068f2c2e534272863fefff94939"
+  },
+  "previous_fingerprint": "d90808b9ff798488c7d5d05a4c33edd2af49008c4788bfb4b530bfc7c38f49a6",
+  "change": "Pin release tag to captured EXPECTED_SHA and assert action input"
+}

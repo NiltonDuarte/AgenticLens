@@ -106,47 +106,24 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          skip_candidate() {
-            echo "Skipping release candidate: $1"
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          RELEASE_BRANCH=release-please--branches--main--components--agentic-lens
+          PR_HEAD=$(gh api --method GET --paginate "repos/$GITHUB_REPOSITORY/pulls" \
+            -f state=open -f base=main -f "head=${GITHUB_REPOSITORY%/*}:$RELEASE_BRANCH" \
+            --jq '.[] | select(.head.repo.full_name == env.GITHUB_REPOSITORY and .head.ref == "release-please--branches--main--components--agentic-lens" and .base.ref == "main" and any(.labels[]; .name == "autorelease: pending")) | .head.sha')
+          if [ -z "$PR_HEAD" ]; then
+            echo "No pending Release Please PR; skipping candidate."
             echo "should_publish=false" >> "$GITHUB_OUTPUT"
             exit 0
-          }
-          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
-          MAIN_SHA=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')
-          [[ "$MAIN_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "Invalid main SHA" >&2; exit 1; }
-          [ "$MAIN_SHA" = "$EXPECTED_SHA" ] || skip_candidate "main has superseded this commit"
-
-          RELEASE_BRANCH=release-please--branches--main--components--agentic-lens
-          PR_DATA=$(gh api --method GET --paginate "repos/$GITHUB_REPOSITORY/pulls" \
-            -f state=open -f base=main -f "head=${GITHUB_REPOSITORY%/*}:$RELEASE_BRANCH" \
-            --jq '.[] | select(.head.repo.full_name == env.GITHUB_REPOSITORY and .head.ref == "release-please--branches--main--components--agentic-lens" and .base.ref == "main" and any(.labels[]; .name == "autorelease: pending")) | [.number, .head.sha] | @tsv')
-          [ -n "$PR_DATA" ] || skip_candidate "no pending Release Please PR"
-          [[ "$PR_DATA" != *$'\n'* ]] || { echo "Ambiguous Release Please PRs" >&2; exit 1; }
-          IFS=$'\t' read -r PR_NUMBER PR_HEAD <<< "$PR_DATA"
-          [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ && "$PR_HEAD" =~ ^[0-9a-f]{40}$ ]] || { echo "Invalid release PR identity" >&2; exit 1; }
-          SOURCE_SHA=$(gh api "repos/$GITHUB_REPOSITORY/commits/$PR_HEAD" --jq '.parents | map(.sha) | join(" ")')
-          [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "Unsupported release PR commit provenance" >&2; exit 1; }
-          [ "$SOURCE_SHA" = "$EXPECTED_SHA" ] || skip_candidate "release PR has not been updated for this commit"
-
+          fi
+          [[ "$PR_HEAD" =~ ^[0-9a-f]{40}$ ]] || { echo "Invalid or ambiguous release PR head" >&2; exit 1; }
           TARGET=$(gh api --method GET "repos/$GITHUB_REPOSITORY/contents/.release-please-manifest.json" \
             -f "ref=$PR_HEAD" --jq '.content | @base64d | fromjson | .["."] | select(type == "string" and test("^(0|[1-9][0-9]*)[.](0|[1-9][0-9]*)[.](0|[1-9][0-9]*)\\z"))')
           [[ "$TARGET" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || { echo "Invalid root release version" >&2; exit 1; }
-          STABLE_TAGS=$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases" --jq '.[] | select(.draft == false and .prerelease == false) | .tag_name')
-          while IFS= read -r tag; do
-            [[ "$tag" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || continue
-            stable=${tag#v}
-            newest=$(printf '%s\n' "$TARGET" "$stable" | sort -V | tail -n 1)
-            [ "$TARGET" != "$stable" ] && [ "$newest" = "$TARGET" ] || { echo "Target must exceed published stable $tag" >&2; exit 1; }
-          done <<< "$STABLE_TAGS"
-          MAIN_SHA=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')
-          [[ "$MAIN_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "Invalid main SHA" >&2; exit 1; }
-          [ "$MAIN_SHA" = "$EXPECTED_SHA" ] || skip_candidate "main advanced during version selection"
-          SHORT_SHA=$(git rev-parse --short HEAD)
           [[ "$GITHUB_RUN_NUMBER" =~ ^[1-9][0-9]*$ ]] || { echo "Invalid run number" >&2; exit 1; }
+          SHORT_SHA=$(git rev-parse --short HEAD)
           RC_VERSION="v${TARGET}-rc.${GITHUB_RUN_NUMBER}+${SHORT_SHA}"
           {
-            echo "RC_PR_NUMBER=$PR_NUMBER"
-            echo "RC_PR_HEAD=$PR_HEAD"
             echo "RC_TARGET=$TARGET"
             echo "VERSION=$RC_VERSION"
             echo "GIT_COMMIT=$SHORT_SHA"
@@ -187,33 +164,22 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          skip_candidate() {
-            echo "Skipping release candidate: $1"
-            echo "should_publish=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          }
-          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
-          MAIN_SHA=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')
-          [[ "$MAIN_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "Invalid main SHA" >&2; exit 1; }
-          [ "$MAIN_SHA" = "$EXPECTED_SHA" ] || skip_candidate "main advanced before publication"
-          PR_STATE=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$RC_PR_NUMBER" \
-            --jq '[.state, .head.sha, .head.repo.full_name, .base.ref, .head.ref, any(.labels[]; .name == "autorelease: pending")] | @tsv')
-          EXPECTED_STATE=$(printf 'open\t%s\t%s\tmain\trelease-please--branches--main--components--agentic-lens\ttrue' "$RC_PR_HEAD" "$GITHUB_REPOSITORY")
-          [ "$PR_STATE" = "$EXPECTED_STATE" ] || skip_candidate "release PR changed before publication"
-          STABLE_TAGS=$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases" --jq '.[] | select(.draft == false and .prerelease == false) | .tag_name')
-          while IFS= read -r tag; do
-            [[ "$tag" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || continue
-            stable=${tag#v}
-            newest=$(printf '%s\n' "$RC_TARGET" "$stable" | sort -V | tail -n 1)
-            [ "$RC_TARGET" != "$stable" ] && [ "$newest" = "$RC_TARGET" ] || { echo "Target must exceed published stable $tag" >&2; exit 1; }
-          done <<< "$STABLE_TAGS"
-          echo "should_publish=true" >> "$GITHUB_OUTPUT"
+          STATUS=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+            --header "Authorization: Bearer $GH_TOKEN" --header "Accept: application/vnd.github+json" \
+            "${GITHUB_API_URL:-https://api.github.com}/repos/$GITHUB_REPOSITORY/git/ref/tags/v$RC_TARGET")
+          case "$STATUS" in
+            200) echo "Stable target v$RC_TARGET already exists; skipping candidate."
+                 echo "should_publish=false" >> "$GITHUB_OUTPUT" ;;
+            404) echo "should_publish=true" >> "$GITHUB_OUTPUT" ;;
+            *) echo "Stable target check failed: HTTP $STATUS" >&2; exit 1 ;;
+          esac
 
       - name: Publish GitHub Pre-release
         if: steps.eligibility.outputs.should_publish == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.VERSION }}
+          target_commitish: ${{ env.EXPECTED_SHA }}
           name: ${{ env.VERSION }}
           prerelease: true
           generate_release_notes: true

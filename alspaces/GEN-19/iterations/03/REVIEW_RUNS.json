@@ -1,0 +1,360 @@
+{
+  "schema_version": 1,
+  "policy_path": ".agents/skills/agentic-lens-review/references/model-policy.yaml",
+  "policy_sha256": "dea95689c3dcbc650c79b148e97ebf54957d54c707c888870774df7a6a078e51",
+  "resolved_policy": {
+    "profiles": [
+      {
+        "id": "sol_6_1_high",
+        "provider_instance_id": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high"
+      },
+      {
+        "id": "luna_6_medium",
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium"
+      }
+    ],
+    "selected_focuses": [
+      "behavior",
+      "data",
+      "architecture",
+      "tests"
+    ]
+  },
+  "candidate_revision": "d90808b9ff798488c7d5d05a4c33edd2af49008c4788bfb4b530bfc7c38f49a6",
+  "runs": [
+    {
+      "run_id": "behavior-sol",
+      "persona": "reviewer-behavior",
+      "focus": "behavior",
+      "profile_id": "sol_6_1_high",
+      "phase": "discovery",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high"
+      },
+      "execution_status": "completed",
+      "verdict": "APPROVED",
+      "report_path": "alspaces/GEN-19/iterations/03/REVIEW-behavior-sol.md",
+      "candidate_revision": "d90808b9ff798488c7d5d05a4c33edd2af49008c4788bfb4b530bfc7c38f49a6",
+      "candidate_ids": [
+        "REL-02"
+      ],
+      "task_name": "/root/rc3_behavior_sol",
+      "acknowledged": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "identity_basis": "acknowledged",
+        "evidence": "Native spawn_agent accepted explicit model/reasoning_effort."
+      },
+      "observed": {
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "identity_basis": "observed",
+        "session_id": "01a1a24d-b56f-7fd2-a56a-ddb618ec4f3d",
+        "source_path": "/home/niltonduarte/.codex/sessions/2026/11/03/rollout-2026-11-03T17-46-04-01a1a24d-b56f-7fd2-a56a-ddb618ec4f3d.jsonl"
+      }
+    },
+    {
+      "run_id": "behavior-luna",
+      "persona": "reviewer-behavior",
+      "focus": "behavior",
+      "profile_id": "luna_6_medium",
+      "phase": "discovery",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium"
+      },
+      "execution_status": "completed",
+      "verdict": "APPROVED",
+      "report_path": "alspaces/GEN-19/iterations/03/REVIEW-behavior-luna.md",
+      "candidate_revision": "d90808b9ff798488c7d5d05a4c33edd2af49008c4788bfb4b530bfc7c38f49a6",
+      "candidate_ids": [],
+      "task_name": "/root/rc3_behavior_luna",
+      "acknowledged": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium",
+        "identity_basis": "acknowledged",
+        "evidence": "Native spawn_agent accepted explicit model/reasoning_effort."
+      },
+      "observed": {
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium",
+        "identity_basis": "observed",
+        "session_id": "01a1a24d-c92f-7251-9b0d-5d6125535d98",
+        "source_path": "/home/niltonduarte/.codex/sessions/2026/11/03/rollout-2026-11-03T17-46-09-01a1a24d-c92f-7251-9b0d-5d6125535d98.jsonl"
+      }
+    },
+    {
+      "run_id": "data-sol",
+      "persona": "reviewer-data",
+      "focus": "data",
+      "profile_id": "sol_6_1_high",
+      "phase": "discovery",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high"
+      },
+      "execution_status": "completed",
+      "verdict": "APPROVED",
+      "report_path": "alspaces/GEN-19/iterations/03/REVIEW-data-sol.md",
+      "candidate_revision": "d90808b9ff798488c7d5d05a4c33edd2af49008c4788bfb4b530bfc7c38f49a6",
+      "candidate_ids": [],
+      "task_name": "/root/rc3_data_sol",
+      "acknowledged": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "identity_basis": "acknowledged",
+        "evidence": "Native spawn_agent accepted explicit model/reasoning_effort."
+      },
+      "carry_forward_to": "7655ae2f7e75ee3c9615525029fa65a95bc356d2156dc8a6832ea30e4dab26e2",
+      "carry_forward_rationale": "Data/failure query, version/output and exact-tag status logic unchanged; only release-action commit binding and its source assertion added.",
+      "observed": {
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "identity_basis": "observed",
+        "session_id": "01a1a24d-e245-7e72-8790-277a73481505",
+        "source_path": "/home/niltonduarte/.codex/sessions/2026/11/03/rollout-2026-11-03T17-46-15-01a1a24d-e245-7e72-8790-277a73481505.jsonl"
+      }
+    },
+    {
+      "run_id": "data-luna",
+      "persona": "reviewer-data",
+      "focus": "data",
+      "profile_id": "luna_6_medium",
+      "phase": "discovery",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium"
+      },
+      "execution_status": "completed",
+      "verdict": "APPROVED",
+      "report_path": "alspaces/GEN-19/iterations/03/REVIEW-data-luna.md",
+      "candidate_revision": "7655ae2f7e75ee3c9615525029fa65a95bc356d2156dc8a6832ea30e4dab26e2",
+      "candidate_ids": [],
+      "task_name": "/root/rc3_data_luna",
+      "acknowledged": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium",
+        "identity_basis": "acknowledged",
+        "evidence": "Native spawn_agent accepted explicit model/reasoning_effort."
+      },
+      "observed": {
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium",
+        "identity_basis": "observed",
+        "session_id": "01a1a251-85e3-7192-baa1-2295ab2e3643",
+        "source_path": "/home/niltonduarte/.codex/sessions/2026/11/03/rollout-2026-11-03T17-50-14-01a1a251-85e3-7192-baa1-2295ab2e3643.jsonl"
+      }
+    },
+    {
+      "run_id": "architecture-sol",
+      "persona": "reviewer-architecture",
+      "focus": "architecture",
+      "profile_id": "sol_6_1_high",
+      "phase": "discovery",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high"
+      },
+      "execution_status": "completed",
+      "verdict": "APPROVED",
+      "report_path": "alspaces/GEN-19/iterations/03/REVIEW-architecture-sol.md",
+      "candidate_revision": "7655ae2f7e75ee3c9615525029fa65a95bc356d2156dc8a6832ea30e4dab26e2",
+      "candidate_ids": [],
+      "task_name": "/root/rc3_architecture_sol",
+      "acknowledged": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "identity_basis": "acknowledged",
+        "evidence": "Native spawn_agent accepted explicit model/reasoning_effort."
+      },
+      "observed": {
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "identity_basis": "observed",
+        "session_id": "01a1a251-a16b-7630-8071-f5c22cc48f29",
+        "source_path": "/home/niltonduarte/.codex/sessions/2026/11/03/rollout-2026-11-03T17-50-21-01a1a251-a16b-7630-8071-f5c22cc48f29.jsonl"
+      }
+    },
+    {
+      "run_id": "architecture-luna",
+      "persona": "reviewer-architecture",
+      "focus": "architecture",
+      "profile_id": "luna_6_medium",
+      "phase": "discovery",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium"
+      },
+      "execution_status": "completed",
+      "verdict": "APPROVED",
+      "report_path": "alspaces/GEN-19/iterations/03/REVIEW-architecture-luna.md",
+      "candidate_revision": "7655ae2f7e75ee3c9615525029fa65a95bc356d2156dc8a6832ea30e4dab26e2",
+      "candidate_ids": [],
+      "task_name": "/root/rc3_architecture_luna",
+      "acknowledged": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium",
+        "identity_basis": "acknowledged",
+        "evidence": "Native spawn_agent accepted explicit model/reasoning_effort."
+      },
+      "observed": {
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium",
+        "identity_basis": "observed",
+        "session_id": "01a1a251-bbbe-7821-9e73-9f3575e80229",
+        "source_path": "/home/niltonduarte/.codex/sessions/2026/11/03/rollout-2026-11-03T17-50-27-01a1a251-bbbe-7821-9e73-9f3575e80229.jsonl"
+      }
+    },
+    {
+      "run_id": "tests-sol",
+      "persona": "reviewer-tests",
+      "focus": "tests",
+      "profile_id": "sol_6_1_high",
+      "phase": "discovery",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high"
+      },
+      "execution_status": "completed",
+      "verdict": "APPROVED",
+      "report_path": "alspaces/GEN-19/iterations/03/REVIEW-tests-sol.md",
+      "candidate_revision": "7655ae2f7e75ee3c9615525029fa65a95bc356d2156dc8a6832ea30e4dab26e2",
+      "candidate_ids": [],
+      "task_name": "/root/rc3_tests_sol",
+      "acknowledged": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "identity_basis": "acknowledged",
+        "evidence": "Native spawn_agent accepted explicit model/reasoning_effort."
+      },
+      "observed": {
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "identity_basis": "observed",
+        "session_id": "01a1a252-9e5c-7dc1-9a5b-52b763acb2b9",
+        "source_path": "/home/niltonduarte/.codex/sessions/2026/11/03/rollout-2026-11-03T17-51-25-01a1a252-9e5c-7dc1-9a5b-52b763acb2b9.jsonl"
+      }
+    },
+    {
+      "run_id": "tests-luna",
+      "persona": "reviewer-tests",
+      "focus": "tests",
+      "profile_id": "luna_6_medium",
+      "phase": "discovery",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium"
+      },
+      "execution_status": "completed",
+      "verdict": "APPROVED",
+      "report_path": "alspaces/GEN-19/iterations/03/REVIEW-tests-luna.md",
+      "candidate_revision": "7655ae2f7e75ee3c9615525029fa65a95bc356d2156dc8a6832ea30e4dab26e2",
+      "candidate_ids": [],
+      "task_name": "/root/rc3_tests_luna",
+      "acknowledged": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium",
+        "identity_basis": "acknowledged",
+        "evidence": "Native spawn_agent accepted explicit model/reasoning_effort."
+      },
+      "observed": {
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium",
+        "identity_basis": "observed",
+        "session_id": "01a1a253-83d9-73a3-a930-dfd540589c8e",
+        "source_path": "/home/niltonduarte/.codex/sessions/2026/11/03/rollout-2026-11-03T17-52-24-01a1a253-83d9-73a3-a930-dfd540589c8e.jsonl"
+      }
+    },
+    {
+      "run_id": "behavior-sol-recheck",
+      "persona": "reviewer-behavior",
+      "focus": "behavior",
+      "profile_id": "sol_6_1_high",
+      "phase": "re_review",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high"
+      },
+      "execution_status": "completed",
+      "verdict": "APPROVED",
+      "report_path": "alspaces/GEN-19/iterations/03/REVIEW-behavior-sol-recheck.md",
+      "candidate_revision": "7655ae2f7e75ee3c9615525029fa65a95bc356d2156dc8a6832ea30e4dab26e2",
+      "candidate_ids": [],
+      "task_name": "/root/rc3_behavior_sol_recheck",
+      "acknowledged": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "identity_basis": "acknowledged",
+        "evidence": "Native spawn_agent accepted explicit model/reasoning_effort."
+      },
+      "observed": {
+        "model": "gpt-6.1-sol",
+        "reasoning_effort": "high",
+        "identity_basis": "observed",
+        "session_id": "01a1a252-67fc-7ff1-b0f5-e8257f0e1611",
+        "source_path": "/home/niltonduarte/.codex/sessions/2026/11/03/rollout-2026-11-03T17-51-12-01a1a252-67fc-7ff1-b0f5-e8257f0e1611.jsonl"
+      },
+      "verified_candidate_ids": [
+        "REL-02"
+      ]
+    },
+    {
+      "run_id": "behavior-luna-recheck",
+      "persona": "reviewer-behavior",
+      "focus": "behavior",
+      "profile_id": "luna_6_medium",
+      "phase": "re_review",
+      "requested": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium"
+      },
+      "execution_status": "completed",
+      "verdict": "APPROVED",
+      "report_path": "alspaces/GEN-19/iterations/03/REVIEW-behavior-luna-recheck.md",
+      "candidate_revision": "7655ae2f7e75ee3c9615525029fa65a95bc356d2156dc8a6832ea30e4dab26e2",
+      "candidate_ids": [],
+      "task_name": "/root/rc3_behavior_luna_recheck",
+      "acknowledged": {
+        "provider_instance_id": "codex",
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium",
+        "identity_basis": "acknowledged",
+        "evidence": "Native spawn_agent accepted explicit model/reasoning_effort."
+      },
+      "observed": {
+        "model": "gpt-6-luna",
+        "reasoning_effort": "medium",
+        "identity_basis": "observed",
+        "session_id": "01a1a252-7ee9-7940-8db9-843333124bd2",
+        "source_path": "/home/niltonduarte/.codex/sessions/2026/11/03/rollout-2026-11-03T17-51-17-01a1a252-7ee9-7940-8db9-843333124bd2.jsonl"
+      },
+      "verified_candidate_ids": [
+        "REL-02"
+      ]
+    }
+  ]
+}
