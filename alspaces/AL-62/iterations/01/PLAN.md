@@ -51,3 +51,7 @@ User requests direct final/blocker handoff via t3_thread_send to MGT-2 thread cc
 ## Predecessor repair ownership
 
 User confirms AL-60 owns the approved shared capture repair and AL-76 owns formatter/migration/backfill stale-write race repair with shared publication ownership. AL-62 remains focused on current extraction/ownership review and corrections. Preserve AL-76 writer-lock guarantees on integration. Independent review and focused checks continue; defer expensive full make until notified actual predecessor merges. No AL-62 scope expansion or new iteration.
+
+## Draft publication steering
+
+Source: explicit user follow-up authorizes publishing the current reviewed checkpoint as a draft PR now, superseding only the publication hold. Existing implementation, approvals and verification remain preserved. Predecessor integration stays on hold until MGT-2's actual merge notification. Draft publication does not establish merge readiness; full integrated verification, final telemetry/review retention and lifecycle completion remain pending. Send draft URL, exact published head and pending gates directly to the manager. This is delivery coordination within iteration01, with no application scope change.
