@@ -1,5 +1,7 @@
 # MGT-2 supervision log
 
+AL-60 follow-up published: https://github.com/NiltonDuarte/AgenticLens/pull/105 at c0315764105c467858652ecd9955a2b75adf3488, open/non-draft/non-release. Manager fetched and verified current main 6244585 is included, exactly four Go test files differ from main, final changes from reviewed/tested 7c97677 outside AL-60 artifacts are empty, and GitHub has no review objections/unresolved threads. Test-only log completion barrier retains cleanup diagnostics while awaiting real writer exit; production/CI/policy remain unchanged. Fifteen review runs reconcile all focus/profile approvals, fixed DATA-03 severity 5 (data reviewer gpt-6-luna/medium) and refuted TEST-03 severity 0 (test reviewer gpt-6-luna/medium) with verification attribution retained. Full integrated make/Go race/786 frontend cases/five binaries pass; corrected three-case race repetition passes. Windows helper-level actual probes/cross-compilation pass; full Windows capture, executed Fatal/Goexit and persistent observer failure remain explicit limits. Prior TEST-02 debt retained. New hosted checks are running; #104 remains held until actual #105 merge, then affected integration/verification. Order: #105, #104, #102, #103; #101 remains delivered separately. No raw logs or archive links were added.
+
 CI-PUB-01 triage confirmed severity 5 for canonical and compatible legacy facts: L0/R0 publication followed by changed exact-row L1/R1 leaves only R1; file journal recovery restores readable byte-identical L0 but no authorizing R0 remains, so unavailable-source generation fails closed. Old row must differ or be absent in R1; a superset alone is insufficient. Probes reconstruct a crash-equivalent state, not actual power loss. Receipt UPSERT and file rollback are separate durability boundaries; writer lock is not atomicity. No fact erasure was observed and strict canonical authorization remains correct.
 
 Management disposition: minimum proof preservation fits AL-62's existing approved unavailable-source/capture preservation guarantee. Existing owner resumed in run 5 to retain bounded trusted prior/pending or versioned receipts tied to worktree/ticket/destination/publication generation, coordinating both rollback and completed-file windows. Preserve provenance/multiplicity, legacy-readable scoped metadata migration and file recovery. No trusting ledger/journal bytes, row-union permission inflation, moved-UPSERT-only workaround, invented old proof, fact-ledger schema change or generic runtime/journal redesign. Previous triage-only hold is lifted only for this repair. Finding remains unresolved until relevant review and verification pass; predecessor integration/full-make holds remain. All four CI jobs passed at b4e3c6a before this new repair; new code needs fresh evidence.
@@ -83,15 +85,15 @@ GitHub reports main has no branch protection (protection endpoint HTTP 404). Thi
 Telemetry: PATH has no installed wrapper and the shared installation directory is empty. Use the existing local source-built native binary with supported native options, explicit Codex source, ticket and root session. Native generate has no --al-offline/--al-project options; invoke from this checkout. Root source rollout found at ~/.codex/sessions/2026/11/03/rollout-2026-11-03T18-47-43-01a1a286-27c9-7c50-9f2e-70f0a332c763.jsonl. This manager has no native children; the five independently created T3 roots are not children. T3 MCP tool counts are a known decoder completeness limit. This is an active-session checkpoint, not complete end-of-supervision telemetry; regenerate at later delivery. Independent ticket telemetry is not part of the manager's ledger.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 39
-- **Active Agent Duration:** 46m 3s (excludes user wait time)
-- **Context Window Health:** BLOATED — Root agent peak 335.2k tokens (168% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Software Development Life Cycle Iterations:** 40
+- **Active Agent Duration:** 48m 7s (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 350.0k tokens (175% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** N/A
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 27,364 reasoning tokens (24.0% of generated output)
-- **Tool Health & Self-Correction:** 121 tool calls (10 self-corrections, 91.7% success rate)
+- **Reasoning Effort:** 28,759 reasoning tokens (24.2% of generated output)
+- **Tool Health & Self-Correction:** 125 tool calls (10 self-corrections, 92.0% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
@@ -105,11 +107,11 @@ Telemetry: PATH has no installed wrapper and the shared installation directory i
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 286,085 | 86,636 | 36,230,784 | 99.2% | 335.2k | BLOATED (168%) | $0.00 |
-| **Total** | **1** | **286,085** | **86,636** | **36,230,784** | **99.2%** | **335.2k** | **BLOATED** | **$0.00** |
+| **rootagent** | 1 | 298,055 | 90,161 | 38,270,592 | 99.2% | 350.0k | BLOATED (175%) | $0.00 |
+| **Total** | **1** | **298,055** | **90,161** | **38,270,592** | **99.2%** | **350.0k** | **BLOATED** | **$0.00** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 1 | 286,085 | 86,636 | 36,230,784 | 99.2% | $0.00 |
-| **Total** | **1** | **286,085** | **86,636** | **36,230,784** | **99.2%** | **$0.00** |
+| **gpt-6.1-sol** | 1 | 298,055 | 90,161 | 38,270,592 | 99.2% | $0.00 |
+| **Total** | **1** | **298,055** | **90,161** | **38,270,592** | **99.2%** | **$0.00** |
