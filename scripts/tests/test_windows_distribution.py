@@ -206,6 +206,84 @@ class WindowsDistributionTest(unittest.TestCase):
         self.assertNotEqual(self.install('-Force').returncode, 0)
         self.assertEqual(wrapper.read_text(), 'owner custom script\n')
 
+    def test_checksum_without_utility_autoload_preserves_verified_install(self):
+        # Keep the real filesystem cmdlets, but leave Get-FileHash unavailable.
+        # This process-local control does not alter PSModulePath or user profiles.
+        literal = lambda value: "'" + value.replace("'", "''") + "'"
+        driver = self.root / 'checksum driver.ps1'
+        driver.write_text("$ErrorActionPreference = 'Stop'\n"
+                          "$PSModuleAutoLoadingPreference = 'None'\n"
+                          "Import-Module Microsoft.PowerShell.Management\n"
+                          "if (Get-Command Get-FileHash -ErrorAction SilentlyContinue) { throw 'Hash cmdlet must be unavailable' }\n"
+                          "& " + literal(win(self.scripts / 'download.ps1')) + " @args\n"
+                          "exit $LASTEXITCODE\n", encoding='utf-8-sig')
+        original = self.probe
+        self.probe = self.root / 'native release ü [literal].exe'
+        original.rename(self.probe)
+        arguments = ['-Project', win(self.repo), '-Dest', win(self.dest), '-LocalBin', win(self.probe)]
+        expected = digest(self.probe)
+        self.succeeds(self.call(driver, [*arguments, '-Sha256', expected.upper()]))
+        native = self.native(); admitted = native.stat(); before = native.read_bytes()
+        wrapper = self.dest / 'agentic-lens.ps1'; wrapper_before = wrapper.read_bytes()
+        sidecar = self.dest / 'agentic-lens.ps1.sha256'
+        self.assertEqual(sidecar.read_text(), digest(self.scripts / 'agentic-lens-wrapper.ps1'))
+        self.assertRegex(sidecar.read_text(), r'^[0-9a-f]{64}$')
+        # Replacing a checksum failure with unchecked acceptance must fail here.
+        rejected = self.call(driver, [*arguments, '-Sha256', '0' * 64, '-Force'])
+        self.assertNotEqual(rejected.returncode, 0)
+        self.assertIn('matching explicit expected -Sha256', rejected.stderr)
+        missing_arguments = [*arguments[:-1], win(self.root / 'missing ü [literal].exe'), '-Sha256', expected]
+        missing = self.call(driver, missing_arguments)
+        self.assertNotEqual(missing.returncode, 0)
+        self.assertEqual(native.read_bytes(), before)
+        self.assertTrue(os.path.samestat(admitted, native.stat()))
+        self.assertEqual(wrapper.read_bytes(), wrapper_before)
+        self.assertEqual(sidecar.read_text(), digest(self.scripts / 'agentic-lens-wrapper.ps1'))
+        self.assertFalse(list(self.cache.glob('.install-stage.*')))
+        self.assertFalse(list(self.cache.glob('.install-*.lock')))
+        self.assertFalse((self.dest / '.agenticlens-wrapper-install.lock').exists())
+        self.succeeds(self.call(driver, [*arguments, '-Sha256', expected, '-Force']))
+        self.assertTrue(os.path.samestat(admitted, native.stat()))
+        self.assertEqual(self.succeeds(self.launch('version', '--short')).stdout.strip(), self.pin)
+
+    def test_hash_stream_closes_for_literal_paths_and_open_failures(self):
+        # Load the shipped function through PowerShell's parser, without running
+        # the installer, so an undisposed handle cannot hide behind process exit.
+        fixture = self.root / 'hash bytes ü [literal].bin'
+        fixture.write_bytes(bytes(range(256)) * 8192)
+        literal = lambda value: "'" + value.replace("'", "''") + "'"
+        driver = self.root / 'hash stream driver.ps1'
+        driver.write_text("$ErrorActionPreference = 'Stop'\n"
+                          "$PSModuleAutoLoadingPreference = 'None'\n"
+                          "$tokens = $null; $errors = $null\n"
+                          "$ast = [Management.Automation.Language.Parser]::ParseFile(" + literal(win(self.scripts / 'download.ps1')) + ", [ref]$tokens, [ref]$errors)\n"
+                          "if ($errors.Count) { throw 'Installer parse failed' }\n"
+                          "$definition = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -ceq 'Hash-File' }, $true)\n"
+                          "if ($null -eq $definition) { throw 'Missing shipped hash function' }\n"
+                          ". ([ScriptBlock]::Create($definition.Extent.Text))\n"
+                          "$path = " + literal(win(fixture)) + "\n"
+                          "$value = Hash-File $path\n"
+                          "if ($value -isnot [string] -or $value -cnotmatch '^[0-9a-f]{64}$') { throw 'Unexpected hash output' }\n"
+                          "[Console]::WriteLine($value)\n"
+                          "[void]$ExecutionContext.SessionState.Path.SetLocation(" + literal(win(self.root)) + ")\n"
+                          "try { $relative = Hash-File " + literal(fixture.name) + " } catch { throw 'Relative PowerShell path hash failed' }\n"
+                          "if ($relative -cne $value) { throw 'Relative PowerShell path hash differs' }\n"
+                          "$exclusive = [IO.File]::Open($path, [IO.FileMode]::Open, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)\n"
+                          "try {\n"
+                          "  $failed = $false\n"
+                          "  try { Hash-File $path } catch { $failed = $true }\n"
+                          "  if (-not $failed) { throw 'Locked file hash was accepted' }\n"
+                          "} finally { $exclusive.Dispose() }\n"
+                          "$exclusive = [IO.File]::Open($path, [IO.FileMode]::Open, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)\n"
+                          "$exclusive.Dispose()\n"
+                          "$missing = $path + '.missing'; $failed = $false\n"
+                          "try { Hash-File $missing } catch { $failed = $true }\n"
+                          "if (-not $failed -or [IO.File]::Exists($missing)) { throw 'Missing file hash was accepted or created' }\n",
+                          encoding='utf-8-sig')
+        result = self.succeeds(self.call(driver, []))
+        self.assertEqual(result.stdout.strip(), digest(fixture))
+        self.assertEqual(result.stderr, '')
+
     def test_legacy_binary_only_install_reports_missing_new_capability(self):
         shutil.copyfile(build_probe(self.pin, 'windows', 'amd64', protocol='none'), self.probe)
         result = self.succeeds(self.install())

@@ -60,7 +60,19 @@ function Write-SetupError([string]$Text) {
     $bytes = [Text.Encoding]::UTF8.GetBytes($Text + "`n")
     $stream = [Console]::OpenStandardError(); $stream.Write($bytes, 0, $bytes.Length); $stream.Flush()
 }
-function Hash-File([string]$Path) { return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant() }
+function Hash-File([string]$Path) {
+    $stream = $null; $sha256 = $null
+    try {
+        # Preserve literal PowerShell paths, including its current directory.
+        $literalPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path)
+        $stream = [IO.File]::OpenRead($literalPath)
+        $sha256 = [Security.Cryptography.SHA256]::Create()
+        return [BitConverter]::ToString($sha256.ComputeHash($stream)).Replace('-', '').ToLowerInvariant()
+    } finally {
+        if ($null -ne $sha256) { $sha256.Dispose() }
+        if ($null -ne $stream) { $stream.Dispose() }
+    }
+}
 # Read both redirected streams concurrently; neither child pipe can fill while
 # waiting for the other or for exit. Bounds apply to bytes before UTF-8 decoding.
 function Read-ProbeResult([Diagnostics.Process]$Process, [int]$TimeoutMS, [int]$Limit, [bool]$CleanupTree) {
