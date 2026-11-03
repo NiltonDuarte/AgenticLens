@@ -19,6 +19,12 @@ func TestDiscoverRolloutPathsMatchesNonceAndIncludesChildThreads(t *testing.T) {
 	childPath := writeDiscoveryRollout(t, home, "archived_sessions/rollout-child.jsonl.gz", "child", "root", "/repo", "TEST-101 subagent")
 	writeDiscoveryRollout(t, home, "sessions/2026/10/24/rollout-other.jsonl", "other", "", "/other", "working on OTHER-202")
 
+	for id, expected := range map[string]string{"root": rootPath, "child": childPath} {
+		exact, err := codex.DiscoverExactRolloutPath(home, id)
+		if err != nil || exact != expected {
+			t.Fatalf("exact owner %s resolved %s: %v", id, exact, err)
+		}
+	}
 	paths, err := codex.DiscoverRolloutPaths(codex.DiscoveryOptions{CodexHome: home, Nonce: "working on TEST-101"})
 	if err != nil {
 		t.Fatalf("DiscoverRolloutPaths returned an error: %v", err)

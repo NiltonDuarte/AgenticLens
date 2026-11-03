@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -31,7 +32,7 @@ func testCodexRefresh(t *testing.T, ticketID, prefix, workspaceDir string) {
 	// Run outside the checkout so configuration, Git history, and ticket
 	// directories cannot be inherited from the development repository.
 	project := t.TempDir()
-	config := "project_name: FixtureProject\nticket:\n  prefixes:\n    - prefix: " + prefix + "\nworkspaces:\n  dir: " + workspaceDir + "\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+	config := "project_name: FixtureProject\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes:\n    - prefix: " + prefix + "\nworkspaces:\n  dir: " + workspaceDir + "\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), []byte(config), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -48,11 +49,12 @@ func testCodexRefresh(t *testing.T, ticketID, prefix, workspaceDir string) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	fixture = []byte(strings.ReplaceAll(string(fixture), `"cwd":"/repo/example"`, `"cwd":`+strconv.Quote(project)))
 	rollout := filepath.Join(sessions, "rollout-thread-01.jsonl")
 	if err := os.WriteFile(rollout, fixture, 0600); err != nil {
 		t.Fatal(err)
 	}
-	output := filepath.Join(home, "agentic_metrics.json")
+	output := filepath.Join(project, "agentic_metrics.json")
 	generate := func() domain.AgenticFactLedger {
 		t.Helper()
 		cmd := exec.Command(cliBinaryPath, "generate",
@@ -111,7 +113,7 @@ func testCodexRefresh(t *testing.T, ticketID, prefix, workspaceDir string) {
 
 func TestGenerateCodexPreservesChildIdentityAndExcludesInheritedUsage(t *testing.T) {
 	project := t.TempDir()
-	config := "project_name: ChildFixture\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  dir: records\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\nrole_mappings:\n  coder: tester\n"
+	config := "project_name: ChildFixture\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  dir: records\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\nrole_mappings:\n  coder: tester\n"
 	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), []byte(config), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -143,7 +145,7 @@ func TestGenerateCodexPreservesChildIdentityAndExcludesInheritedUsage(t *testing
 {"timestamp":"2026-01-01T10:01:04Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"child-turn"}}
 `
 	for name, contents := range map[string]string{"root.jsonl": root, "child.jsonl": child} {
-		if err := os.WriteFile(filepath.Join(sessions, name), []byte(contents), 0600); err != nil {
+		if err := os.WriteFile(filepath.Join(sessions, name), []byte(strings.ReplaceAll(contents, `"type":"session_meta","payload":{`, `"type":"session_meta","payload":{"cwd":`+strconv.Quote(project)+`,`)), 0600); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -200,7 +202,7 @@ func TestGenerateCodexPreservesChildIdentityAndExcludesInheritedUsage(t *testing
 }
 
 func TestGenerateSelectedSourceDoesNotFallback(t *testing.T) {
-	sharedConfig := "project_name: SourceFixture\nticket:\n  prefixes: [TEST]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\ndatabase:\n  path: ./legacy-opencode.db\n"
+	sharedConfig := "project_name: SourceFixture\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes: [TEST]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\ndatabase:\n  path: ./legacy-opencode.db\n"
 	for _, tc := range []struct {
 		name        string
 		local       string

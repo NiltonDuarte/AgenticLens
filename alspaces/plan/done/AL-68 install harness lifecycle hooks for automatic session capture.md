@@ -2,7 +2,7 @@ h3. Title: AL-68: Install harness lifecycle hooks for automatic session capture
 
 *TARGET*: AgenticLens (Installation / Setup / Domain / Codex and OpenCode Adapters / CLI / Persistence / Tests)
 
-*Status*: Ready
+*Status*: Done
 *Work type*: feat
 *Blocked by*: None
 *Blocks*: None

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -65,5 +66,41 @@ func TestWriteConfigPairCleansStagedFilesAfterTargetBecomesDirectory(t *testing.
 				t.Fatalf("staged or backup file leaked in %s: %s", path, entry.Name())
 			}
 		}
+	}
+}
+
+func TestCaptureConfigUpdatePreviewAndApplyPreserveLocalSettings(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, ".agenticlens-config.yaml")
+	localPath := filepath.Join(root, ".agenticlens-config.local.yaml")
+	shared := []byte("# Keep project policy\nproject_name: Example\ncustom_policy: retained\n")
+	local := []byte("telemetry:\n  capture:\n    state_dir: private-local-state\n")
+	if err := os.WriteFile(path, shared, 0640); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(localPath, local, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := runCaptureConfigUpdate(path, "", true); err != nil {
+		t.Fatal(err)
+	}
+	original, err := os.ReadFile(path)
+	if err != nil || string(original) != string(shared) {
+		t.Fatalf("dry run wrote config: %v", err)
+	}
+	if err := runCaptureConfigUpdate(path, "", false); err != nil {
+		t.Fatal(err)
+	}
+	changed, err := os.ReadFile(path)
+	if err != nil || !strings.Contains(string(changed), "state_dir: ~/.agenticlens/state") || !strings.Contains(string(changed), "custom_policy: retained") {
+		t.Fatalf("unexpected update %s %v", changed, err)
+	}
+	currentLocal, err := os.ReadFile(localPath)
+	if err != nil || string(currentLocal) != string(local) {
+		t.Fatalf("local config changed: %v", err)
+	}
+	entries, err := os.ReadDir(root)
+	if err != nil || len(entries) != 2 {
+		t.Fatalf("update leaked artifacts: %v %v", entries, err)
 	}
 }

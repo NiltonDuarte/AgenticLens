@@ -3,7 +3,7 @@
 set -euo pipefail
 
 REPO="${AGENTIC_LENS_REPO:-NiltonDuarte/AgenticLens}"
-VERSION="${AGENTIC_LENS_VERSION:-latest}"
+VERSION="${AGENTIC_LENS_VERSION:-}"
 DEST="."
 SOURCE_DIR=""
 usage() {
@@ -44,15 +44,9 @@ fetch() {
     fi
 }
 
-# Resolve latest once, so every manifest/script and later binary repair use one release.
-if [[ -z "$SOURCE_DIR" && "$VERSION" == latest ]]; then
-    command -v curl >/dev/null 2>&1 || { echo "Error: Resolving latest requires curl; alternatively pass --version <release-tag>." >&2; exit 1; }
-    latest_url="$(curl -fsSLI --connect-timeout 10 --max-time 30 -o /dev/null -w '%{url_effective}' "https://github.com/${REPO}/releases/latest")"
-    VERSION="${latest_url##*/}"
-    [[ -n "$VERSION" && "$VERSION" != latest && "$VERSION" != releases ]] || { echo "Error: Could not resolve latest release tag." >&2; exit 1; }
-fi
+[[ "$VERSION" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?(\+[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?$ && ${#VERSION} -le 128 ]] || { echo 'Error: Select an exact --version release; latest is not a project pin.' >&2; exit 1; }
 case "$VERSION" in
-    *[!A-Za-z0-9._-]*|"") echo "Error: Invalid release tag: $VERSION" >&2; exit 1 ;;
+    *[!A-Za-z0-9._+-]*|.|..|"") echo "Error: Invalid release tag: $VERSION" >&2; exit 1 ;;
 esac
 
 FILES=(
@@ -60,6 +54,8 @@ FILES=(
     agentic-lens-setup/scripts/install.sh
     agentic-lens-setup/scripts/download.sh
     agentic-lens-setup/scripts/agentic-lens-wrapper.sh
+    agentic-lens-setup/scripts/agentic-lens-wrapper.ps1
+    agentic-lens-setup/scripts/download.ps1
     agentic-lens-operator/SKILL.md
     agentic-lens-operator/references/cli.md
     agentic-lens-operator/references/configuration.md

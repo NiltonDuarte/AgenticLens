@@ -73,6 +73,19 @@ func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
 	}
 	b.WriteString("# Human-readable name of the project.\n")
 	b.WriteString(fmt.Sprintf("project_name: %s\n\n", projName))
+	if cfg.AgenticLens.Version != "" {
+		if err := ValidateReleaseVersion(cfg.AgenticLens.Version); err != nil {
+			return nil, err
+		}
+		b.WriteString("# Exact shared release authority; dispatch is offline.\nagenticlens:\n  version: " + cfg.AgenticLens.Version + "\n")
+		if cfg.AgenticLens.InstallRoot != "" {
+			if strings.ContainsAny(cfg.AgenticLens.InstallRoot, "'\r\n\x00") {
+				return nil, errors.New("install_root contains unsupported bootstrap characters")
+			}
+			b.WriteString("  install_root: '" + cfg.AgenticLens.InstallRoot + "'\n")
+		}
+		b.WriteString("\n")
+	}
 
 	// Ticket Settings
 	var cleanPrefixes []domain.TicketPrefix
@@ -317,6 +330,28 @@ func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
 		}
 	}
 
+	capturePolicy := cfg.Telemetry.Capture
+	if capturePolicy == (domain.CaptureConfig{}) {
+		capturePolicy = domain.DefaultCaptureConfig()
+	}
+	if capturePolicy.StateDir == "" {
+		capturePolicy.StateDir = domain.DefaultCaptureConfig().StateDir
+	}
+	capturePolicy.DetailedReport = false
+	if err := capturePolicy.Validate(); err != nil {
+		return nil, fmt.Errorf("encoding capture configuration: %w", err)
+	}
+	captureBytes, err := yaml.Marshal(struct {
+		Telemetry struct {
+			Capture domain.CaptureConfig `yaml:"capture"`
+		} `yaml:"telemetry"`
+	}{Telemetry: struct {
+		Capture domain.CaptureConfig `yaml:"capture"`
+	}{Capture: capturePolicy}})
+	if err != nil {
+		return nil, fmt.Errorf("encoding capture configuration: %w", err)
+	}
+	b.Write(captureBytes)
 	result := []byte(b.String())
 
 	// Validate output syntax with yaml parser
@@ -324,7 +359,29 @@ func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
 	if err := yaml.Unmarshal(result, &validationNode); err != nil {
 		return nil, fmt.Errorf("validating generated yaml syntax: %w", err)
 	}
+	if cfg.AgenticLens.Version != "" {
+		if _, err := parseEntrypoint(result, false); err != nil {
+			return nil, fmt.Errorf("generated bootstrap syntax: %w", err)
+		}
+	}
 
+	return result, nil
+}
+
+// GenerateDefaultYAMLForVersion pins generated setup to the explicitly selected release.
+// Legacy direct callers may still use GenerateDefaultYAML without claiming wrapper readiness.
+func GenerateDefaultYAMLForVersion(version, projectName, workspacesDir, dbPath string, srcFolders []string, prefixes []domain.TicketPrefix, customArtifacts ...[]domain.WorkspaceArtifactConfig) ([]byte, error) {
+	if err := ValidateReleaseVersion(version); err != nil {
+		return nil, err
+	}
+	data, err := GenerateDefaultYAML(projectName, workspacesDir, dbPath, srcFolders, prefixes, customArtifacts...)
+	if err != nil {
+		return nil, err
+	}
+	result := append([]byte("# Exact shared release authority; dispatch is offline.\nagenticlens:\n  version: "+version+"\n\n"), data...)
+	if _, err := parseEntrypoint(result, false); err != nil {
+		return nil, fmt.Errorf("generated bootstrap syntax: %w", err)
+	}
 	return result, nil
 }
 

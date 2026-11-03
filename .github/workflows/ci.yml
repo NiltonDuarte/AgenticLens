@@ -13,6 +13,42 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
+  windows-entrypoint:
+    name: Windows installation and hook integration
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Go 1.23
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: false
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Set up Node.js for transport verification
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install development transpiler dependencies
+        run: npm ci --prefix web --ignore-scripts
+      - name: Build canonical embedded web assets for actual application fixtures
+        working-directory: web
+        run: npm run build
+      - name: Verify owned Git for Windows process-tree watchdog
+        working-directory: backend
+        run: go test ./internal/adapters/capture -run '^TestGitCheckWindowsWatchdogKillsOwnedTree$' -count=1 -timeout=60s
+      - name: Exercise real PowerShell and native Windows releases
+        env:
+          PYTHONUTF8: '1'
+        run: python scripts/tests/test_windows_distribution.py
+      - name: Exercise shipped plugin process transport
+        env:
+          PYTHONUTF8: '1'
+        run: python scripts/tests/test_windows_plugin_transport.py
+
   backend-check:
     name: Backend Check
     runs-on: ubuntu-latest
@@ -102,13 +138,7 @@ jobs:
         working-directory: web
         run: npm ci
 
-      - name: Build Single Binary
-        run: make build
-
-      - name: Verify CLI Version Command
-        run: |
-          ./bin/agentic-lens version
-          ./bin/agentic-lens version --short
-          ./bin/agentic-lens version --json
-          ./bin/agentic-lens -v
-          ./bin/agentic-lens --version
+      - name: Build and verify the current source native
+        # verify-build executes the host binary produced by this build directly.
+        # The installed common wrapper remains a separate exact-YAML-pin entrypoint.
+        run: make verify-build

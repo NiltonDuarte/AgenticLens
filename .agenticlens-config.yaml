@@ -5,7 +5,13 @@
 
 # Human-readable name of the project.
 project_name: AgenticLens
-
+# Exact shared release authority. Install explicitly; dispatch never downloads.
+agenticlens:
+  version: v2.0.0-rc.111+99fbcd7
+telemetry:
+  capture:
+    state_dir: ~/.agenticlens/state
+    commit_warning: true
 # Automated anomaly detection rules governing offline generation and live stream monitoring.
 anomaly_thresholds:
   # Time in seconds without session turn activity before flagging a stall anomaly.
@@ -28,7 +34,6 @@ anomaly_thresholds:
   # Tool thrashing minimum and critical failure frequencies.
   tool_thrashing_min_failures: 3
   tool_thrashing_critical_failures: 5
-
 # Ticket identification and normalization settings.
 ticket:
   # Supported ticket prefix identifiers for this repository.
@@ -54,7 +59,6 @@ ticket:
   case_insensitive: true
   # Additional regex patterns to match unconventional ticket naming formats.
   custom_patterns: []
-
 # Workspace storage and ticket artifact definitions.
 workspaces:
   # Directory where ticket artifacts and session telemetry ledgers are stored.
@@ -67,7 +71,6 @@ workspaces:
     - path: SUMMARY.md
       title: Work Summary
       description: Implementation summary log and verification records
-
 # OpenCode SQLite database connectivity and timeout parameters.
 database:
   # Path to local OpenCode SQLite database file.
@@ -78,7 +81,6 @@ database:
   busy_timeout_ms: 5000
   # Enforce read-only connection to prevent unintended database mutations.
   read_only: true
-
 # Live session observability and real-time streaming engine configuration.
 live:
   # Window in seconds within which a session is considered actively running.
@@ -87,7 +89,6 @@ live:
   poll_interval_ms: 2000
   # Legacy compatibility setting; full live trace responses are not truncated.
   max_trace_buffer_messages: 500
-
 # Git commit diff analysis and code classification glob patterns.
 code_metrics:
   # Monitored source code folders for project telemetry and change tracking.
@@ -117,7 +118,6 @@ code_metrics:
     - "web/src/**/*.tsx"
     - "web/src/**/*.css"
     - "web/index.html"
-
 # Bridge definitions mapping agent persona names to canonical AgentRole enums.
 # Canonical domain roles: orchestrator, planner, coder, tester, reviewer.
 role_mappings:
@@ -127,7 +127,6 @@ role_mappings:
   coder: coder
   tester: tester
   reviewer: reviewer
-
 # Configurable sequence for sorting agent roles in CLI tables and metric cards.
 # Roles appearing here are sorted first in this exact order; unlisted roles follow alphabetically.
 role_order:

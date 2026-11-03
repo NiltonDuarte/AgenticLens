@@ -46,8 +46,22 @@ func ResolveCodexHome(explicit, local, environment, builtin string) string {
 func ExpandHomePath(path string) string {
 	if strings.HasPrefix(path, "~/") {
 		if home, err := os.UserHomeDir(); err == nil {
-			return filepath.Join(home, path[2:])
+			return home + string(filepath.Separator) + path[2:]
 		}
+	}
+	return path
+}
+
+// ProjectSourcePath anchors configured relative source locations to their owning
+// project. Explicit CLI paths retain the caller's normal path semantics.
+func ProjectSourcePath(project, configured string) string {
+	if strings.TrimSpace(configured) == "" {
+		return ""
+	}
+	path := ExpandHomePath(configured)
+	if !filepath.IsAbs(path) {
+		// Preserve raw symlink/.. traversal until the physical source boundary.
+		return project + string(filepath.Separator) + path
 	}
 	return path
 }

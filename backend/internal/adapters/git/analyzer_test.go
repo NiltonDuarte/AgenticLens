@@ -216,6 +216,10 @@ code_metrics:
 anomaly_thresholds:
   context_ceiling_warning_tokens: 160000
   context_ceiling_critical_tokens: 200000
+
+telemetry:
+  capture:
+    state_dir: capture-state
 `
 	if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
 		t.Fatal(err)

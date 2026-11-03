@@ -325,6 +325,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 			"--anomalies",
 			"--allow-empty",
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -359,6 +360,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 			"--anomalies",
 			"--allow-empty",
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -608,7 +610,7 @@ func TestCLIServerSubcommandEdgeCases(t *testing.T) {
 
 func TestServer_FailsWithoutWorkspacesConfig(t *testing.T) {
 	tempDir := t.TempDir()
-	cfgContent := "project_name: Test\nticket:\n  prefixes:\n    - prefix: TEST\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+	cfgContent := "project_name: Test\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes:\n    - prefix: TEST\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 	if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -946,6 +948,7 @@ func TestCLIGenerateCommand(t *testing.T) {
 		"--json-output", outJSON,
 		"--append", summaryMD,
 	)
+	prepareLegacyGenerateFixture(t, cmd)
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -1006,6 +1009,7 @@ func TestCLIGenerateCommand(t *testing.T) {
 		"--json-output", outJSON,
 		"--append", summaryMD,
 	)
+	prepareLegacyGenerateFixture(t, cmd2)
 	if out, err := cmd2.CombinedOutput(); err != nil {
 		t.Fatalf("second generate invocation failed: %v, out: %s", err, string(out))
 	}
@@ -1090,6 +1094,7 @@ func TestCLIGenerate_SparseAnomalyEvidenceAndZeroErrorMessage(t *testing.T) {
 		"--json-output", outJSON,
 		"--append", summaryMD,
 	)
+	prepareLegacyGenerateFixture(t, cmd)
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -1189,6 +1194,7 @@ func TestCLIGenerate_HighFailureAggregateKeepsSummaryWithoutEventRows(t *testing
 		t.Fatal(err)
 	}
 	cmd := exec.Command(cliBinaryPath, "generate", "--db-path", setupIsolatedEmptyDB(t), "--ticket-id", "AL-GEN-EVIDENCE", "--json-output", outJSON, "--allow-empty")
+	prepareLegacyGenerateFixture(t, cmd)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	if err := cmd.Run(); err != nil {
@@ -1239,6 +1245,7 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 			"--json-output", outJSON,
 			"--allow-empty",
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -1283,6 +1290,7 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 			"--json-output", outJSON,
 			"--allow-empty",
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -1332,6 +1340,7 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 			"--session-id", "ses_zero",
 			"--append", summaryMD,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -1386,6 +1395,7 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 			"--session-id", "ses_comp",
 			"--json-output", outJSON,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -1410,7 +1420,7 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 		}
 	})
 
-	t.Run("generate respects explicit valid completed_at flag and sanitizes whitespace", func(t *testing.T) {
+	t.Run("generate finalizes observability despite explicit historical completed_at or whitespace", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
 		dbPath := filepath.Join(tempDir, "explicit_completed.db")
@@ -1444,6 +1454,7 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 			"--completed-at", explicitTS,
 			"--json-output", outJSON,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
@@ -1459,8 +1470,8 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 		if err := json.Unmarshal(data, &fact); err != nil {
 			t.Fatal(err)
 		}
-		if fact.CompletedAt == nil || *fact.CompletedAt != explicitTS {
-			t.Errorf("expected completed_at %s, got %v", explicitTS, fact.CompletedAt)
+		if fact.CompletedAt == nil || *fact.CompletedAt != fact.UpdatedAt || *fact.CompletedAt == explicitTS {
+			t.Errorf("snapshot must finalize at updated_at, got completed=%v updated=%s", fact.CompletedAt, fact.UpdatedAt)
 		}
 
 		// Also verify whitespace-only completed-at falls back to non-zero ISO timestamp
@@ -1469,12 +1480,13 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 			cliBinaryPath,
 			"generate",
 			"--db-path", dbPath,
-			"--ticket-id", "AL-WS-COMPLETED",
+			"--ticket-id", "AL-EXPLICIT-COMPLETED",
 			"--ticket-title", "WS Title",
 			"--session-id", "ses_explicit",
 			"--completed-at", "   ",
 			"--json-output", outJSONWhitespace,
 		)
+		prepareLegacyGenerateFixture(t, cmdWS)
 		var stderrWS bytes.Buffer
 		cmdWS.Stderr = &stderrWS
 		if err := cmdWS.Run(); err != nil {
@@ -1558,6 +1570,7 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 			"--code-ref", "invalid-nonexistent-git-branch-xyz-999",
 			"--json-output", outJSON,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -1620,6 +1633,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"--json-output", targetJSON,
 			"--append", targetMD,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -1684,6 +1698,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"--ticket-title", "Test Fixture Ticket",
 			"--append", summaryMD,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -1714,6 +1729,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"--json-output", outJSON,
 			"--allow-empty",
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -1767,6 +1783,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"--json-output", outJSON,
 			"--append", summaryMD,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -1791,6 +1808,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"generate",
 			"--db-path", filepath.Join(tempDir, "missing.db"),
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -1883,6 +1901,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"--json-output", cachedJSON,
 			"--append", summaryMD,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -1946,6 +1965,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"--ticket-title", "Test Fixture Ticket",
 			"--json-output", cachedJSON,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -2018,6 +2038,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"--json-output", cachedJSON,
 			"--allow-empty",
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -2070,6 +2091,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"--ticket-title", "Test Fixture Ticket",
 			"--json-output", targetJSON,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -2105,7 +2127,7 @@ func TestCLIBackfillCommand(t *testing.T) {
 	t.Run("malformed local config is reported before backfill dispatch", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
-		cfgContent := "project_name: Test\nticket:\n  prefixes:\n    - prefix: TEST\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+		cfgContent := "project_name: Test\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes:\n    - prefix: TEST\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -3078,6 +3100,7 @@ func TestGenerate_JSONRawVsMarkdownMappedSeparation(t *testing.T) {
 		"--json-output", outJSON,
 		"--append", summaryMD,
 	)
+	prepareLegacyGenerateFixture(t, cmd)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -3135,6 +3158,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3176,6 +3200,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3218,6 +3243,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3258,6 +3284,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3298,6 +3325,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3346,6 +3374,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3407,6 +3436,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3464,6 +3494,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 					"--allow-empty",
 					"--json-output", outJSON,
 				)
+				prepareLegacyGenerateFixture(t, cmd)
 				var stdout, stderr bytes.Buffer
 				cmd.Stdout = &stdout
 				cmd.Stderr = &stderr
@@ -3507,6 +3538,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3549,6 +3581,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--allow-empty",
 			"--json-output", strictJSON,
 		)
+		prepareLegacyGenerateFixture(t, strictCmd)
 		var strictOut, strictErr bytes.Buffer
 		strictCmd.Stdout = &strictOut
 		strictCmd.Stderr = &strictErr
@@ -3588,6 +3621,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3630,6 +3664,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--allow-empty",
 			"--json-output", strictJSON,
 		)
+		prepareLegacyGenerateFixture(t, strictCmd)
 		var strictOut, strictErr bytes.Buffer
 		strictCmd.Stdout = &strictOut
 		strictCmd.Stderr = &strictErr
@@ -3663,6 +3698,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--strict-type",
 			"--allow-empty",
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3699,6 +3735,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--strict-type",
 			"--allow-empty",
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3739,6 +3776,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3769,6 +3807,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"generate",
 			"--completely-unknown-adversarial-flag",
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3782,7 +3821,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 	t.Run("custom prefix resolves automatically from project config", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
-		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"CUSTOM\"\n      ticket_type: \"fix\"\ncode_metrics:\n  source_roots:\n    - \"src\"\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+		cfgContent := "project_name: \"TestProject\"\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes:\n    - prefix: \"CUSTOM\"\n      ticket_type: \"fix\"\ncode_metrics:\n  source_roots:\n    - \"src\"\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing .agenticlens-config.yaml: %v", err)
 		}
@@ -3798,6 +3837,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--json-output", outJSON,
 		)
 		cmd.Dir = tempDir
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3827,7 +3867,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 	t.Run("configured prefix overrides default prefix mapping", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
-		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"PO\"\n      ticket_type: \"feat\"\ncode_metrics:\n  source_roots:\n    - \"src\"\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+		cfgContent := "project_name: \"TestProject\"\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes:\n    - prefix: \"PO\"\n      ticket_type: \"feat\"\ncode_metrics:\n  source_roots:\n    - \"src\"\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing .agenticlens-config.yaml: %v", err)
 		}
@@ -3843,6 +3883,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--json-output", outJSON,
 		)
 		cmd.Dir = tempDir
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3872,7 +3913,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 	t.Run("explicit CLI ticket-type flag overrides configured prefix", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
-		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"CUSTOM\"\n      ticket_type: \"fix\"\ncode_metrics:\n  source_roots:\n    - \"src\"\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+		cfgContent := "project_name: \"TestProject\"\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes:\n    - prefix: \"CUSTOM\"\n      ticket_type: \"fix\"\ncode_metrics:\n  source_roots:\n    - \"src\"\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing .agenticlens-config.yaml: %v", err)
 		}
@@ -3889,6 +3930,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--json-output", outJSON,
 		)
 		cmd.Dir = tempDir
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3918,7 +3960,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 	t.Run("strict-type succeeds when custom prefix matches in project config", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
-		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"HOTFIX\"\n      ticket_type: \"fix\"\ncode_metrics:\n  source_roots:\n    - \"src\"\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+		cfgContent := "project_name: \"TestProject\"\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes:\n    - prefix: \"HOTFIX\"\n      ticket_type: \"fix\"\ncode_metrics:\n  source_roots:\n    - \"src\"\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing .agenticlens-config.yaml: %v", err)
 		}
@@ -3935,6 +3977,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--json-output", outJSON,
 		)
 		cmd.Dir = tempDir
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3982,7 +4025,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			t.Fatalf("git checkout -b failed: %v", err)
 		}
 
-		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"AL\"\n      ticket_type: \"docs\"\ncode_metrics:\n  source_roots:\n    - \"src\"\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+		cfgContent := "project_name: \"TestProject\"\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes:\n    - prefix: \"AL\"\n      ticket_type: \"docs\"\ncode_metrics:\n  source_roots:\n    - \"src\"\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing .agenticlens-config.yaml: %v", err)
 		}
@@ -4001,6 +4044,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--json-output", outJSON,
 		)
 		cmd.Dir = tempDir
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -4049,7 +4093,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		}
 
 		// Configure AL to map to docs in .agenticlens-config.yaml
-		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"AL\"\n      ticket_type: \"docs\"\ncode_metrics:\n  source_roots:\n    - \"src\"\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+		cfgContent := "project_name: \"TestProject\"\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes:\n    - prefix: \"AL\"\n      ticket_type: \"docs\"\ncode_metrics:\n  source_roots:\n    - \"src\"\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing .agenticlens-config.yaml: %v", err)
 		}
@@ -4066,6 +4110,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--json-output", outJSON,
 		)
 		cmd.Dir = tempDir
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -4107,6 +4152,9 @@ func TestCLI_RootConfigurationDiscovery(t *testing.T) {
 
 		cfgContent := `
 project_name: CustomRootTest
+telemetry:
+  capture:
+    state_dir: .agenticlens-capture
 ticket:
   prefixes:
     - prefix: "MYROOT"
@@ -4135,6 +4183,7 @@ anomaly_thresholds:
 			"--json-output", outJSON,
 		)
 		genCmd.Dir = tempDir
+		prepareLegacyGenerateFixture(t, genCmd)
 		setIsolatedHome(t, genCmd)
 		var genStdout, genStderr bytes.Buffer
 		genCmd.Stdout = &genStdout
@@ -4196,6 +4245,9 @@ anomaly_thresholds:
 		// Root config maps ROOTPRIO to "feat" and dir to "root_ws"
 		rootCfg := `
 project_name: RootPriorityTest
+telemetry:
+  capture:
+    state_dir: .agenticlens-capture
 ticket:
   prefixes:
     - prefix: "ROOTPRIO"
@@ -4212,6 +4264,9 @@ anomaly_thresholds:
 		// Legacy config maps ROOTPRIO to "chore" and dir to "legacy_ws"
 		legacyCfg := `
 project_name: LegacyPriorityTest
+telemetry:
+  capture:
+    state_dir: .agenticlens-capture
 ticket:
   prefixes:
     - prefix: "ROOTPRIO"
@@ -4243,6 +4298,7 @@ anomaly_thresholds:
 			"--json-output", outJSON,
 		)
 		genCmd.Dir = tempDir
+		prepareLegacyGenerateFixture(t, genCmd)
 		setIsolatedHome(t, genCmd)
 		var genStdout, genStderr bytes.Buffer
 		genCmd.Stdout = &genStdout
@@ -4282,6 +4338,7 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 			"--ticket-title", "Test Fixture Ticket",
 			"--allow-empty",
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -4306,6 +4363,7 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 			"--ticket-title", "Test Fixture Ticket",
 			"--allow-empty",
 		)
+		prepareLegacyGenerateFixture(t, cmd2)
 		var stderr2 bytes.Buffer
 		cmd2.Stderr = &stderr2
 		err2 := cmd2.Run()
@@ -4332,6 +4390,7 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 			"--ticket-id", "AL-TITLE-REQ",
 			"--allow-empty",
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -4356,6 +4415,7 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 			"--ticket-title", "   \n\t",
 			"--allow-empty",
 		)
+		prepareLegacyGenerateFixture(t, cmd2)
 		var stderr2 bytes.Buffer
 		cmd2.Stderr = &stderr2
 		err2 := cmd2.Run()
@@ -4391,6 +4451,7 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 			"--json-output", outJSON,
 			"--allow-empty",
 		)
+		prepareLegacyGenerateFixture(t, cmd3)
 		var stderr3 bytes.Buffer
 		cmd3.Stderr = &stderr3
 		err3 := cmd3.Run()
@@ -4429,6 +4490,7 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 			"--json-output", outJSON,
 			"--allow-empty",
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -4458,6 +4520,7 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 			"--json-output", outJSON,
 			"--allow-empty",
 		)
+		prepareLegacyGenerateFixture(t, cmdOverride)
 		var stdoutO, stderrO bytes.Buffer
 		cmdOverride.Stdout = &stdoutO
 		cmdOverride.Stderr = &stderrO
@@ -4487,6 +4550,7 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 			"--ticket-title", "Test Fixture Ticket",
 			"--allow-empty",
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -4509,6 +4573,7 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 			"--ticket-title", "Test Fixture Ticket",
 			"--allow-empty",
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -4535,6 +4600,7 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 			"--allow-empty",
 			"--json-output", outJSON,
 		)
+		prepareLegacyGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -4569,6 +4635,7 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 			"--allow-empty",
 			"--json-output", outJSONLower,
 		)
+		prepareLegacyGenerateFixture(t, cmdLower)
 		var stdoutL, stderrL bytes.Buffer
 		cmdLower.Stdout = &stdoutL
 		cmdLower.Stderr = &stderrL
@@ -4612,7 +4679,7 @@ func TestCLI_Invariants(t *testing.T) {
 		runCmd("add", "README.md")
 		runCmd("commit", "-m", "initial commit")
 
-		cfgContent := "project_name: \"TestProject\"\nticket:\n  prefixes:\n    - prefix: \"DEV\"\ncode_metrics:\n  source_roots:\n    - \"src\"\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+		cfgContent := "project_name: \"TestProject\"\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes:\n    - prefix: \"DEV\"\ncode_metrics:\n  source_roots:\n    - \"src\"\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -4628,6 +4695,7 @@ func TestCLI_Invariants(t *testing.T) {
 			"--json-output", outJSON,
 		)
 		cmd.Dir = tempDir
+		prepareLegacyGenerateFixture(t, cmd)
 		setIsolatedHome(t, cmd)
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
@@ -4664,7 +4732,7 @@ func TestCLI_Invariants(t *testing.T) {
 		runCmd("add", "README.md")
 		runCmd("commit", "-m", "initial commit")
 
-		cfgContent := "code_metrics:\n  source_roots: []\n"
+		cfgContent := "project_name: MissingRootsFixture\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes: [DEV]\ncode_metrics:\n  source_roots: []\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -4679,6 +4747,7 @@ func TestCLI_Invariants(t *testing.T) {
 			"--json-output", outJSON,
 		)
 		cmd.Dir = tempDir
+		prepareLegacyGenerateFixture(t, cmd)
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
 
@@ -4687,18 +4756,111 @@ func TestCLI_Invariants(t *testing.T) {
 			t.Fatal("expected generate command to fail with missing source roots, got exit code 0")
 		}
 
-		expectedPrompt := "source roots are empty or unconfigured: configure required 'code_metrics.source_roots' in .agenticlens-config.yaml"
+		expectedPrompt := "invalid configuration: missing required fields: code_metrics.source_roots"
 		if !strings.Contains(stderr.String(), expectedPrompt) {
 			t.Errorf("expected stderr to contain %q, got %q", expectedPrompt, stderr.String())
 		}
 	})
 }
 func TestInitCommand(t *testing.T) {
+	t.Run("complete only canonical scaffold and preserve local overlay", func(t *testing.T) {
+		for _, scenario := range []string{"new local", "existing local", "edited scaffold", "different pin", "dry run"} {
+			t.Run(scenario, func(t *testing.T) {
+				project := t.TempDir()
+				shared := filepath.Join(project, ".agenticlens-config.yaml")
+				local := filepath.Join(project, ".agenticlens-config.local.yaml")
+				original, err := adaptersconfig.BootstrapScaffold("v9.8.7")
+				if err != nil {
+					t.Fatal(err)
+				}
+				if scenario == "edited scaffold" {
+					original = append(original, []byte("# user customization\n")...)
+				}
+				if err = os.WriteFile(shared, original, 0600); err != nil {
+					t.Fatal(err)
+				}
+				localBody := []byte("# user overlay\ntelemetry:\n  default_source: codex\n  capture:\n    commit_warning: false\n")
+				if scenario != "new local" {
+					if err = os.WriteFile(local, localBody, 0600); err != nil {
+						t.Fatal(err)
+					}
+				}
+				pin := "v9.8.7"
+				if scenario == "different pin" {
+					pin = "v9.8.8"
+				}
+				args := []string{"init", "--complete-scaffold", "--agenticlens-version", pin, "--project-name", "Scaffold fixture", "--src-folders", "app", "--ticket-prefixes", "TEST"}
+				if scenario == "dry run" {
+					args = append(args, "--dry-run")
+				}
+				cmd := exec.Command(cliBinaryPath, args...)
+				cmd.Dir = project
+				out, runErr := cmd.CombinedOutput()
+				after, err := os.ReadFile(shared)
+				if err != nil {
+					t.Fatal(err)
+				}
+				rejected := scenario == "edited scaffold" || scenario == "different pin"
+				if rejected {
+					if runErr == nil || !bytes.Contains(out, []byte("existing configuration preserved")) {
+						t.Fatalf("unsafe scaffold overwritten: %v %s", runErr, out)
+					}
+					if !bytes.Equal(after, original) {
+						t.Fatal("rejected scaffold changed")
+					}
+				} else if runErr != nil {
+					t.Fatalf("owned scaffold completion failed: %v %s", runErr, out)
+				} else if scenario == "dry run" {
+					if !bytes.Equal(after, original) {
+						t.Fatal("dry run changed scaffold")
+					}
+				} else {
+					loaded, err := adaptersconfig.Load(project)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if loaded.AgenticLens.Version != "v9.8.7" || loaded.ProjectName != "Scaffold fixture" {
+						t.Fatalf("full pinned config missing: %+v", loaded)
+					}
+					if bytes.Contains(after, []byte("bootstrap scaffold")) {
+						t.Fatal("full config still claims incomplete scaffold")
+					}
+				}
+				if scenario != "new local" {
+					if got, err := os.ReadFile(local); err != nil || !bytes.Equal(got, localBody) {
+						t.Fatalf("existing local overlay changed: %s %v", got, err)
+					}
+				} else if _, err := os.Stat(local); err != nil {
+					t.Fatalf("new local default missing: %v", err)
+				}
+			})
+		}
+	})
+
+	t.Run("development native requires explicit shared release pin", func(t *testing.T) {
+		for _, pin := range []string{"", "latest", "v1.2.3/../../escape"} {
+			project := t.TempDir()
+			args := []string{"init", "--project-name", "Fixture", "--src-folders", "src", "--ticket-prefixes", "TEST"}
+			if pin != "" {
+				args = append(args, "--agenticlens-version", pin)
+			}
+			cmd := exec.Command(cliBinaryPath, args...)
+			cmd.Dir = project
+			out, err := cmd.CombinedOutput()
+			if err == nil || !bytes.Contains(out, []byte("version")) {
+				t.Fatalf("invalid/implicit pin %q accepted: %v %s", pin, err, out)
+			}
+			if _, err := os.Stat(filepath.Join(project, ".agenticlens-config.yaml")); !os.IsNotExist(err) {
+				t.Fatalf("rejected pin wrote shared configuration: %v", err)
+			}
+		}
+	})
+
 	t.Run("missing required flag --project-name fails with exit code 1", func(t *testing.T) {
 		variations := [][]string{
-			{"init", "--src-folders", "src", "--ticket-prefixes", "AL"},
-			{"init", "--project-name", "", "--src-folders", "src", "--ticket-prefixes", "AL"},
-			{"init", "--project-name", "   ", "--src-folders", "src", "--ticket-prefixes", "AL"},
+			{"init", "--agenticlens-version", "v9.8.7", "--src-folders", "src", "--ticket-prefixes", "AL"},
+			{"init", "--agenticlens-version", "v9.8.7", "--project-name", "", "--src-folders", "src", "--ticket-prefixes", "AL"},
+			{"init", "--agenticlens-version", "v9.8.7", "--project-name", "   ", "--src-folders", "src", "--ticket-prefixes", "AL"},
 		}
 
 		for _, args := range variations {
@@ -4727,9 +4889,9 @@ func TestInitCommand(t *testing.T) {
 
 	t.Run("missing required flag --src-folders fails with exit code 1", func(t *testing.T) {
 		variations := [][]string{
-			{"init", "--project-name", "Acme", "--ticket-prefixes", "AL"},
-			{"init", "--project-name", "Acme", "--src-folders", "", "--ticket-prefixes", "AL"},
-			{"init", "--project-name", "Acme", "--src-folders", "   ,  ", "--ticket-prefixes", "AL"},
+			{"init", "--agenticlens-version", "v9.8.7", "--project-name", "Acme", "--ticket-prefixes", "AL"},
+			{"init", "--agenticlens-version", "v9.8.7", "--project-name", "Acme", "--src-folders", "", "--ticket-prefixes", "AL"},
+			{"init", "--agenticlens-version", "v9.8.7", "--project-name", "Acme", "--src-folders", "   ,  ", "--ticket-prefixes", "AL"},
 		}
 
 		for _, args := range variations {
@@ -4758,9 +4920,9 @@ func TestInitCommand(t *testing.T) {
 
 	t.Run("missing required flag --ticket-prefixes fails with exit code 1", func(t *testing.T) {
 		variations := [][]string{
-			{"init", "--project-name", "Acme", "--src-folders", "src"},
-			{"init", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefixes", ""},
-			{"init", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefixes", "   "},
+			{"init", "--agenticlens-version", "v9.8.7", "--project-name", "Acme", "--src-folders", "src"},
+			{"init", "--agenticlens-version", "v9.8.7", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefixes", ""},
+			{"init", "--agenticlens-version", "v9.8.7", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefixes", "   "},
 		}
 
 		for _, args := range variations {
@@ -4789,14 +4951,14 @@ func TestInitCommand(t *testing.T) {
 
 	t.Run("missing all required flags fails with exit code 1", func(t *testing.T) {
 		tempDir := t.TempDir()
-		cmd := exec.Command(cliBinaryPath, "init")
+		cmd := exec.Command(cliBinaryPath, "init", "--agenticlens-version", "v9.8.7")
 		cmd.Dir = tempDir
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
 
 		err := cmd.Run()
 		if err == nil {
-			t.Fatalf("expected init without any flags to fail, got nil error")
+			t.Fatalf("expected init without project flags to fail, got nil error")
 		}
 		var exitErr *exec.ExitError
 		if !errors.As(err, &exitErr) {
@@ -4815,7 +4977,7 @@ func TestInitCommand(t *testing.T) {
 
 		cmd := exec.Command(
 			cliBinaryPath,
-			"init",
+			"init", "--agenticlens-version", "v9.8.7",
 			"--project-name", "AcmeApp",
 			"--src-folders", "web,backend",
 			"--ticket-prefixes", "ACME",
@@ -4854,6 +5016,12 @@ func TestInitCommand(t *testing.T) {
 		if loaded.ProjectName != "AcmeApp" {
 			t.Errorf("expected ProjectName 'AcmeApp', got %q", loaded.ProjectName)
 		}
+		if loaded.AgenticLens.Version != "v9.8.7" {
+			t.Errorf("generated shared config lost explicit release pin: %q", loaded.AgenticLens.Version)
+		}
+		if strings.Contains(localContent, "agenticlens:") {
+			t.Fatal("generated local settings override shared version authority")
+		}
 		if loaded.Workspaces.Dir != "workspaces" {
 			t.Errorf("expected workspaces.dir 'workspaces', got %q", loaded.Workspaces.Dir)
 		}
@@ -4885,7 +5053,7 @@ func TestInitCommand(t *testing.T) {
 
 		cmd := exec.Command(
 			cliBinaryPath,
-			"init",
+			"init", "--agenticlens-version", "v9.8.7",
 			"--project-name", "AcmePlatform",
 			"--workspaces", "team_workspaces",
 			"--db-path", "/opt/opencode/data.db",
@@ -4939,7 +5107,7 @@ func TestInitCommand(t *testing.T) {
 
 		cmd := exec.Command(
 			cliBinaryPath,
-			"init",
+			"init", "--agenticlens-version", "v9.8.7",
 			"--project-name", "PeerTest",
 			"--src-folders", "core,cli",
 			"--ticket-prefixes", "ALPHA,BETA,GAMMA",
@@ -4974,7 +5142,7 @@ func TestInitCommand(t *testing.T) {
 		tempDir := t.TempDir()
 		cmd := exec.Command(
 			cliBinaryPath,
-			"init",
+			"init", "--agenticlens-version", "v9.8.7",
 			"--project-name", "PeerTest",
 			"--src-folders", "core",
 			"--ticket-prefixes", " , , ",
@@ -4997,7 +5165,7 @@ func TestInitCommand(t *testing.T) {
 		tempDir := t.TempDir()
 		cmd := exec.Command(
 			cliBinaryPath,
-			"init",
+			"init", "--agenticlens-version", "v9.8.7",
 			"--project-name", "PeerTest",
 			"--src-folders", " , , ",
 			"--ticket-prefixes", "ALPHA",
@@ -5025,7 +5193,7 @@ func TestInitCommand(t *testing.T) {
 
 		cmd := exec.Command(
 			cliBinaryPath,
-			"init",
+			"init", "--agenticlens-version", "v9.8.7",
 			"--project-name", "Original",
 			"--src-folders", "src",
 			"--ticket-prefixes", "AL",
@@ -5060,7 +5228,7 @@ func TestInitCommand(t *testing.T) {
 
 		cmd := exec.Command(
 			cliBinaryPath,
-			"init",
+			"init", "--agenticlens-version", "v9.8.7",
 			"--project-name", "Overwritten",
 			"--src-folders", "src",
 			"--ticket-prefixes", "AL",
@@ -5089,7 +5257,7 @@ func TestInitCommand(t *testing.T) {
 
 		cmd := exec.Command(
 			cliBinaryPath,
-			"init",
+			"init", "--agenticlens-version", "v9.8.7",
 			"--dry-run",
 			"--project-name", "DryRunTest",
 			"--src-folders", "src",
@@ -5105,6 +5273,9 @@ func TestInitCommand(t *testing.T) {
 		}
 
 		outStr := stdout.String()
+		if !strings.Contains(outStr, "version: v9.8.7") {
+			t.Errorf("dry run omitted exact release pin: %s", outStr)
+		}
 		if !strings.Contains(outStr, "project_name: DryRunTest") {
 			t.Errorf("expected stdout to contain 'project_name: DryRunTest', got: %s", outStr)
 		}
@@ -5124,7 +5295,7 @@ func TestInitCommand(t *testing.T) {
 
 	t.Run("local output collision is rejected", func(t *testing.T) {
 		tempDir := t.TempDir()
-		cmd := exec.Command(cliBinaryPath, "init", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefixes", "AL", "--output", ".agenticlens-config.local.yaml")
+		cmd := exec.Command(cliBinaryPath, "init", "--agenticlens-version", "v9.8.7", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefixes", "AL", "--output", ".agenticlens-config.local.yaml")
 		cmd.Dir = tempDir
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
@@ -5143,7 +5314,7 @@ func TestInitCommand(t *testing.T) {
 		if err := os.WriteFile(localPath, []byte(original), 0600); err != nil {
 			t.Fatal(err)
 		}
-		cmd := exec.Command(cliBinaryPath, "init", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefixes", "AL")
+		cmd := exec.Command(cliBinaryPath, "init", "--agenticlens-version", "v9.8.7", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefixes", "AL")
 		cmd.Dir = tempDir
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
@@ -5173,7 +5344,7 @@ func TestInitCommand(t *testing.T) {
 				if err := os.Mkdir(filepath.Join(tempDir, ".agenticlens-config.local.yaml"), 0700); err != nil {
 					t.Fatal(err)
 				}
-				cmd := exec.Command(cliBinaryPath, "init", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefixes", "AL", "--force")
+				cmd := exec.Command(cliBinaryPath, "init", "--agenticlens-version", "v9.8.7", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefixes", "AL", "--force")
 				cmd.Dir = tempDir
 				var stdout, stderr bytes.Buffer
 				cmd.Stdout, cmd.Stderr = &stdout, &stderr
@@ -5215,7 +5386,7 @@ func TestInitCommand(t *testing.T) {
 
 		cmd := exec.Command(
 			cliBinaryPath,
-			"init",
+			"init", "--agenticlens-version", "v9.8.7",
 			"--project-name", projName,
 			"--workspaces", "team workspaces",
 			"--src-folders", "my web,my backend",
@@ -5245,7 +5416,7 @@ func TestInitCommand(t *testing.T) {
 
 	t.Run("invalid or unknown flag returns error and exits non-zero", func(t *testing.T) {
 		tempDir := t.TempDir()
-		cmd := exec.Command(cliBinaryPath, "init", "--invalid-nonexistent-flag=true")
+		cmd := exec.Command(cliBinaryPath, "init", "--agenticlens-version", "v9.8.7", "--invalid-nonexistent-flag=true")
 		cmd.Dir = tempDir
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -5262,7 +5433,7 @@ func TestInitCommand(t *testing.T) {
 
 	t.Run("passing deprecated or unknown --ticket-prefix flag fails as unknown flag", func(t *testing.T) {
 		tempDir := t.TempDir()
-		cmd := exec.Command(cliBinaryPath, "init", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefix", "AL")
+		cmd := exec.Command(cliBinaryPath, "init", "--agenticlens-version", "v9.8.7", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefix", "AL")
 		cmd.Dir = tempDir
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -5287,7 +5458,7 @@ func TestInitCommand(t *testing.T) {
 
 		cmd := exec.Command(
 			cliBinaryPath,
-			"init",
+			"init", "--agenticlens-version", "v9.8.7",
 			"--project-name", "AttemptedOverwrite",
 			"--src-folders", "src",
 			"--ticket-prefixes", "AL",
@@ -5329,7 +5500,7 @@ func TestInitCommand(t *testing.T) {
 		target := filepath.Join(roDir, "config.yaml")
 		cmd := exec.Command(
 			cliBinaryPath,
-			"init",
+			"init", "--agenticlens-version", "v9.8.7",
 			"--project-name", "Protected",
 			"--src-folders", "src",
 			"--ticket-prefixes", "AL",
@@ -5415,6 +5586,7 @@ func TestInitCommand(t *testing.T) {
 		// Test generate command in dir with no config
 		cmdGenerate := exec.Command(cliBinaryPath, "generate", "--ticket-id", "TEST-1", "--allow-empty")
 		cmdGenerate.Dir = tempDir
+		prepareLegacyGenerateFixture(t, cmdGenerate)
 		var stderrGen bytes.Buffer
 		cmdGenerate.Stderr = &stderrGen
 		if err := cmdGenerate.Run(); err == nil {
@@ -5665,6 +5837,9 @@ func TestCLIServerConfigurationResolution(t *testing.T) {
 	tempDir := t.TempDir()
 
 	cfgContent := `project_name: ConfigTest
+telemetry:
+  capture:
+    state_dir: .agenticlens-capture
 ticket:
   prefixes:
     - prefix: TST
@@ -5807,6 +5982,9 @@ anomaly_thresholds:
 	t.Run("fails server startup when workspaces.dir is unconfigured and flag omitted", func(t *testing.T) {
 		emptyWsDir := t.TempDir()
 		cfgWithoutWs := `project_name: NoWsTest
+telemetry:
+  capture:
+    state_dir: .agenticlens-capture
 ticket:
   prefixes:
     - prefix: TST
@@ -5846,6 +6024,9 @@ anomaly_thresholds:
 	t.Run("fails root execution when workspaces.dir is unconfigured and flag omitted", func(t *testing.T) {
 		emptyWsDir := t.TempDir()
 		cfgWithoutWs := `project_name: NoWsTest
+telemetry:
+  capture:
+    state_dir: .agenticlens-capture
 ticket:
   prefixes:
     - prefix: TST
@@ -5885,6 +6066,9 @@ anomaly_thresholds:
 	t.Run("starts server when workspaces.dir unconfigured in config but --workspaces flag provided", func(t *testing.T) {
 		emptyWsDir := t.TempDir()
 		cfgWithoutWs := `project_name: FlagSuppliedTest
+telemetry:
+  capture:
+    state_dir: .agenticlens-capture
 ticket:
   prefixes:
     - prefix: TST
@@ -5967,6 +6151,9 @@ func TestCLIGenerate_UnconfiguredPatternWarnings(t *testing.T) {
 	_ = setGitName.Run()
 
 	cfgContent := `project_name: "Test Patterns Warn"
+telemetry:
+  capture:
+    state_dir: .agenticlens-capture
 ticket:
   prefixes:
     - prefix: "AL"
@@ -6003,6 +6190,7 @@ anomaly_thresholds:
 		"--allow-empty",
 	)
 	cmd.Dir = tempDir
+	prepareLegacyGenerateFixture(t, cmd)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -6033,6 +6221,9 @@ func TestCLIGenerate_MultiDeviceInvocationsMergeAndSDLC(t *testing.T) {
 	_ = exec.Command("git", "-C", tempDir, "config", "user.name", "Test User").Run()
 
 	cfgContent := `project_name: "Test Multi Device"
+telemetry:
+  capture:
+    state_dir: .agenticlens-capture
 ticket:
   prefixes:
     - prefix: "AL"
@@ -6159,6 +6350,7 @@ anomaly_thresholds:
 		"--json-output", outJSON,
 	)
 	cmd.Dir = tempDir
+	prepareLegacyGenerateFixture(t, cmd)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -6214,6 +6406,7 @@ anomaly_thresholds:
 		"--json-output", outJSON,
 	)
 	cmd2.Dir = tempDir
+	prepareLegacyGenerateFixture(t, cmd2)
 	if out, err := cmd2.CombinedOutput(); err != nil {
 		t.Fatalf("second generate failed: %v, output: %s", err, string(out))
 	}
@@ -6257,6 +6450,7 @@ anomaly_thresholds:
 		"--allow-empty",
 	)
 	cmdLegacy.Dir = tempDir
+	prepareLegacyGenerateFixture(t, cmdLegacy)
 	var legacyStderr bytes.Buffer
 	cmdLegacy.Stderr = &legacyStderr
 	if err := cmdLegacy.Run(); err == nil {
@@ -6276,6 +6470,9 @@ func TestCLIGenerate_ThreeDeviceHandoffAccumulation(t *testing.T) {
 	_ = exec.Command("git", "-C", tempDir, "config", "user.name", "Test User").Run()
 
 	cfgContent := `project_name: "Test Three Device Handoff"
+telemetry:
+  capture:
+    state_dir: .agenticlens-capture
 ticket:
   prefixes: ["AL"]
 workspaces:
@@ -6391,6 +6588,7 @@ anomaly_thresholds:
 		"--json-output", outJSON,
 	)
 	cmdB.Dir = tempDir
+	prepareLegacyGenerateFixture(t, cmdB)
 	if out, err := cmdB.CombinedOutput(); err != nil {
 		t.Fatalf("generate Device B failed: %v, out: %s", err, string(out))
 	}
@@ -6419,6 +6617,7 @@ anomaly_thresholds:
 		"--json-output", outJSON,
 	)
 	cmdC.Dir = tempDir
+	prepareLegacyGenerateFixture(t, cmdC)
 	if out, err := cmdC.CombinedOutput(); err != nil {
 		t.Fatalf("generate Device C failed: %v, out: %s", err, string(out))
 	}
@@ -6465,6 +6664,7 @@ anomaly_thresholds:
 		"--json-output", outJSON,
 	)
 	cmdC2.Dir = tempDir
+	prepareLegacyGenerateFixture(t, cmdC2)
 	if out, err := cmdC2.CombinedOutput(); err != nil {
 		t.Fatalf("repeated generate Device C failed: %v, out: %s", err, string(out))
 	}
@@ -6490,6 +6690,9 @@ func TestCLIGenerate_InvocationsUpdateInPlaceOnSameDevice(t *testing.T) {
 	_ = exec.Command("git", "-C", tempDir, "config", "user.name", "Test User").Run()
 
 	cfgContent := `project_name: "Test Update In Place"
+telemetry:
+  capture:
+    state_dir: .agenticlens-capture
 ticket:
   prefixes: ["AL"]
 workspaces:
@@ -6549,7 +6752,7 @@ anomaly_thresholds:
 
 	// First pass: 1 user message, 1 assistant message
 	_, _ = db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('m1', 'ses_dev', ?, ?, '{"role": "user"}')`, now, now)
-	_, _ = db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('m2', 'ses_dev', ?, ?, '{"role": "assistant", "modelID": "gpt-4o", "tokens": {"input": 100, "output": 50}}')`, now+50, now+50)
+	_, _ = db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('m2', 'ses_dev', ?, ?, ?)`, now+50, now+50, fmt.Sprintf(`{"role":"assistant","modelID":"gpt-4o","time":{"created":%d,"completed":%d},"tokens":{"input":100,"output":50}}`, now+50, now+50))
 
 	cmd1 := exec.Command(
 		cliBinaryPath, "generate",
@@ -6560,6 +6763,7 @@ anomaly_thresholds:
 		"--json-output", outJSON,
 	)
 	cmd1.Dir = tempDir
+	prepareLegacyGenerateFixture(t, cmd1)
 	if out, err := cmd1.CombinedOutput(); err != nil {
 		t.Fatalf("pass 1 failed: %v, out: %s", err, string(out))
 	}
@@ -6579,9 +6783,9 @@ anomaly_thresholds:
 
 	// Second pass: 2 more user messages, 2 more assistant messages with more tokens, and a compaction
 	_, _ = db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('m3', 'ses_dev', ?, ?, '{"role": "user"}')`, now+100, now+100)
-	_, _ = db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('m4', 'ses_dev', ?, ?, '{"role": "assistant", "modelID": "gpt-4o", "tokens": {"input": 200, "output": 80}}')`, now+150, now+150)
+	_, _ = db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('m4', 'ses_dev', ?, ?, ?)`, now+150, now+150, fmt.Sprintf(`{"role":"assistant","modelID":"gpt-4o","time":{"created":%d,"completed":%d},"tokens":{"input":200,"output":80}}`, now+150, now+150))
 	_, _ = db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('m5', 'ses_dev', ?, ?, '{"role": "user"}')`, now+200, now+200)
-	_, _ = db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('m6', 'ses_dev', ?, ?, '{"role": "assistant", "modelID": "gpt-4o", "tokens": {"input": 300, "output": 120}}')`, now+250, now+250)
+	_, _ = db.Exec(`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('m6', 'ses_dev', ?, ?, ?)`, now+250, now+250, fmt.Sprintf(`{"role":"assistant","modelID":"gpt-4o","time":{"created":%d,"completed":%d},"tokens":{"input":300,"output":120}}`, now+250, now+250))
 	// Add a compaction part
 	compactionJSON := `{"type":"compaction"}`
 	_, _ = db.Exec(`INSERT INTO part (id, session_id, message_id, time_created, time_updated, data) VALUES ('p_comp', 'ses_dev', 'm4', ?, ?, ?)`, now+160, now+160, compactionJSON)
@@ -6595,6 +6799,7 @@ anomaly_thresholds:
 		"--json-output", outJSON,
 	)
 	cmd2.Dir = tempDir
+	prepareLegacyGenerateFixture(t, cmd2)
 	if out, err := cmd2.CombinedOutput(); err != nil {
 		t.Fatalf("pass 2 failed: %v, out: %s", err, string(out))
 	}
@@ -6630,6 +6835,9 @@ func TestCLIGenerate_StrictZeroFallback(t *testing.T) {
 	_ = exec.Command("git", "-C", tempDir, "config", "user.name", "Test User").Run()
 
 	cfgContent := `project_name: "Test Zero Fallback"
+telemetry:
+  capture:
+    state_dir: .agenticlens-capture
 ticket:
   prefixes: ["AL"]
 workspaces:
@@ -6682,6 +6890,7 @@ anomaly_thresholds:
 				"--allow-empty",
 			)
 			cmd.Dir = tempDir
+			prepareLegacyGenerateFixture(t, cmd)
 			var stderr bytes.Buffer
 			cmd.Stderr = &stderr
 			if err := cmd.Run(); err == nil {
@@ -6715,6 +6924,7 @@ anomaly_thresholds:
 				SDLCIterations: 0,
 			},
 		}
+		acceptFixtureOwners(t, tempDir, filepath.Join(tempDir, ".agenticlens-capture"), *ledger.TicketID, ledger.Sessions)
 		if err := adapters.SaveFactLedger(outJSON, ledger); err != nil {
 			t.Fatalf("failed saving v4 ledger: %v", err)
 		}
@@ -6728,10 +6938,11 @@ anomaly_thresholds:
 			"--allow-empty",
 		)
 		cmd.Dir = tempDir
+		prepareLegacyGenerateFixture(t, cmd)
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
 		if err := cmd.Run(); err != nil {
-			t.Fatalf("generate v4 failed: %v", err)
+			t.Fatalf("generate v4 failed: %v: %s", err, stderr.String())
 		}
 
 		if strings.Contains(stderr.String(), "Existing fact ledger has schema version < 4") {
