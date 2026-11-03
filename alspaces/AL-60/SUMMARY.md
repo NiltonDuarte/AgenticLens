@@ -33,7 +33,7 @@ Reviewed capture fingerprint: 5e332cad1bfb0d1b25af2d9a8def5bfbdcd8e2b8364c302313
 
 ## Verification
 
-Application/test/CI source matches tested revision `057d410253aecd734551995ff1bedb38e94a1f19`. Full make, Go race checks, 786 frontend tests, five platform builds, standalone assets and actual Windows ownership/recovery checks passed. Meaningful commands, outcomes, historical failures and limits are consolidated in [VERIFICATION.md](iterations/02/VERIFICATION.md); detailed output is linked to immutable committed versions there.
+Application/test/CI source matches tested revision `057d410253aecd734551995ff1bedb38e94a1f19`. Full make, Go race checks, 786 frontend tests, five platform builds, standalone assets and actual Windows ownership/recovery checks passed. Meaningful commands, outcomes, historical failures and limits are consolidated in [VERIFICATION.md](iterations/02/VERIFICATION.md).
 
 ## Evidence cleanup
 
