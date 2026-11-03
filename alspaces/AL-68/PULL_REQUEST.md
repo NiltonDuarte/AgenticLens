@@ -2,7 +2,7 @@
 
 Install additive Codex/OpenCode lifecycle integrations that durably register observed sessions, ask the agent for explicit ticket/title/type, and schedule bounded native publication. Independent roots and source-proven children contribute to the same ticket without agent-run generate. Manual generation remains a recovery path.
 
-One user-level wrapper resolves the authoritative repository YAML version and executing platform. Native versions coexist in a shared user cache; machine-local YAML can override paths. Missing binaries require explicit installation, and ordinary commands and installed hooks remain offline. Native workers keep their selected executable for an accepted pass and validate version/installation handoff.
+One user-level wrapper resolves the authoritative repository YAML version and executing platform. Native versions coexist in a shared user cache; machine-local YAML can override paths. Missing binaries require explicit installation, and ordinary commands and installed hooks remain offline. Native workers keep their selected executable for an accepted pass and validate version/installation handoff. Source builds synchronize embedded assets portably on Windows and Unix.
 
 Publication writes the schema-v5 ledger and rendered summary. Detailed attempts, accepted snapshots and publication outcomes remain in a user-level database for diagnostics; capture_report.json is retired, with authorized legacy journal recovery preserved. Available accepted facts survive source failures and limitations remain visible. Snapshot completion describes observability independently of ticket completion.
 

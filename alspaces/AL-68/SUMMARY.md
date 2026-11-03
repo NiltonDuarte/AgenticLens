@@ -133,6 +133,12 @@ Parent verification, gpt-6.1-sol/high: full make exit0 after clean implementatio
 
 Final source-grounded snapshot:182 same-project Codex owners,90 roots/92 native children, preserving all141 prior owners and adding all41 iteration04 agents. Direct owning-source prefix comparisons passed for source project, native ancestry, models and usage, including every retained owner; historical foreign owners and disposable runtime smoke projects are excluded. Two bounded reconciliation passes recorded source checkpoints for all selected owners. No failed or unassigned registrations remain. The67 conservative pending freshness states retain accepted facts; they do not indicate missing published usage in this independently verified snapshot. Raw transcripts and detailed operational diagnostics remain outside Git. Later root-session activity is the accepted publication tail, not a ticket-completion claim.
 
+### Hosted Windows build correction
+
+Hosted CI41650143311 failed before native Windows tests: the canonical npm build completed TypeScript/Vite and then invoked Unix mkdir/rm/cp through Windows cmd. The parent, gpt-6.1-sol/high, traced the failed log after the user reported CI. A build coder, gpt-6.1-sol/high, replaced that copy step with a development-only Node filesystem helper whose fixed source/destination resolve from the helper location. Production retains its single-binary/no-Node boundary. A strict-typechecked regression exercises repeated complete tree replacement, nested files, dotfiles, stale removal and unrelated caller directories.
+
+Actual checksum-verified Windows Node20.19.5/npm/default-cmd reproduction failed with the original script and passed with the correction, including exact source/embedded tree equality. Final relocated typecheck/regression passed on Windows; Linux build/typecheck/lint/regression and exact asset equality passed. Release/setup specialists gpt-6.1-sol/high and gpt-6-luna/medium approved the frozen mechanical correction, preserving prior application reviews for unchanged capture/storage/schema/ownership paths. The required integrated make and hosted CI rerun remain pending at this correction checkpoint.
+
 ## Follow-up backlog
 
 AL-76 defines compact ledger JSON serialization and a source-independent format command with all-workspace, single-ticket and ticket-set selection, dry-run/check modes, value preservation and safe concurrent publication. Its specification is Ready under plan/to-do. Implementation requires its own dedicated session; no format command is implemented in AL-68.
