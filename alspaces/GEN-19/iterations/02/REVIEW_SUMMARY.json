@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "TEST-02",
+      "severity": 4,
+      "issue": "Canned API values bypassed the production GitHub response-filter test oracle.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: evaluate captured production gh/gojq filters on raw local API JSON; paired test reviewers verified filter mutations fail."
+    },
+    {
+      "finding_id": "TEST-03",
+      "severity": 3,
+      "issue": "Removing stable-release pagination was not detected by the replacement tests.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: require --paginate in stable-release fixtures; paired test reviewers verified omitted-flag mutation fails."
+    },
+    {
+      "finding_id": "TEST-04",
+      "severity": 3,
+      "issue": "Route-keyed filter collection overwrote an earlier metadata query.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Found during re-review; fixed: retain and test every distinct query per route, including metadata-only filter mutations."
+    }
+  ]
+}

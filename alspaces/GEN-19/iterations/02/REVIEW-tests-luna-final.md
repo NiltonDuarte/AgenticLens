@@ -1,9 +1,0 @@
-# GEN-19 final test-only correction recheck
-
-**Verdict: APPROVED** within the assigned test-effectiveness scope. Requested run `rc2_tests_luna_final`, profile gpt-6-luna/medium; runtime model metadata was not independently verified. Reviewed base `e639f3303c9d92236edce85befccda66617d7cb8` and candidate fingerprint `2f9057a71a4cbbb703600b4268758894363152ead629189a08c54925d3da3ab0`. Candidate manifest's test-file hash matches the current file. The supplied correction changes only `scripts/tests/test_release_revision.py` relative to the prior candidate; production workflow hashes and the earlier accepted behavior are unchanged.
-
-The TEST-04 correction addresses the observed overwrite: captured `--jq` expressions are accumulated in a set for each API route, then every distinct expression is evaluated against the route's raw JSON fixtures. This includes the metadata and final-recheck release queries, plus malformed-base64 rejection. Thus the reported metadata-only stable-release predicate mutation now reaches the oracle; mutation failure was demonstrated in the supplied recheck evidence. I confirmed the collection and evaluation loop are present in this candidate.
-
-TEST-02 remains covered by execution of captured production gojq filters against raw valid, invalid and malformed API responses. TEST-03 remains covered by the fixture's required `--paginate` argument for stable-release queries. These are filter-semantic/argument checks, not proof of hosted GitHub pagination behavior. No distinct new finding.
-
-**Verification:** `make test-release-workflow` — 14 passed, zero skips. Product and test files were read-only; no source mutations performed. Limits: this scoped recheck does not repeat the integrated `make` gate or establish hosted workflow scheduling, GitHub pagination, release upload, or binary metadata; parent-owned checks remain necessary.

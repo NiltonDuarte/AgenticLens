@@ -31,3 +31,7 @@ GitHub's workflow_run documentation confirms completion triggers and event-speci
 ## Review roster and frozen evidence
 
 Base e639f3303c9d92236edce85befccda66617d7cb8; frozen source/deletion fingerprint 903c512467c9100cbb6b80756e501280efb9a3ab08f3466c0f4890cae92ece1e. Four responsibility owners independently review under both configured gpt-6.1-sol/high and gpt-6-luna/medium profiles, in capacity-limited waves: behavior/integration owns event/SHA/version-to-artifact wiring; data/failure owns stale/error/stable-target rejection; architecture owns simplicity/dependency removal and maintenance; test effectiveness owns the regression oracles and removed assertion mapping. Reports use unique REVIEW-<focus>-<sol|luna>.md paths in this iteration; parent alone owns run/finding/consolidated records. Product/test edits remain frozen during the pass. Detailed records are working artifacts until consolidated approval and compaction.
+
+## Completion evidence
+
+Accepted replacement implemented and consolidated review APPROVED after full make passed at 6fb6318c34fc5847375863cddf99a755b03c3960. See ../../SUMMARY.md for actors, exact model/effort attribution, reviewed fingerprints, fixes, carried-forward guarantees and remaining limits; REVIEW_SUMMARY.json retains all three findings. The dependency tree is removed and all 14 release tests pass. No scope delta beyond the approved replacement; correction rounds addressed test oracles only. Final telemetry and PR update follow.

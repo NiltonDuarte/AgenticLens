@@ -19,7 +19,7 @@
           "identity_basis": "observed"
         }
       ],
-      "disposition": "Accept nonblocking support discrepancy for this version fix; release tooling maintainers own dependency/runtime alignment on next pin update, documented maintenance requirement in README"
+      "disposition": "Initially accepted in iteration01; resolved by approved iteration02 removal of the independent engine and dependency tree."
     },
     {
       "finding_id": "TEST-01",
@@ -33,7 +33,7 @@
           "identity_basis": "observed"
         }
       ],
-      "disposition": "Accept bounded test coverage limit; current CLI behavior verified live, release tooling maintainers own durable success-path handoff coverage in a future CI tooling revision"
+      "disposition": "Initially accepted in iteration01; resolved in iteration02 by executable successful metadata/output assertions and wrong-version mutation coverage."
     }
   ]
 }
