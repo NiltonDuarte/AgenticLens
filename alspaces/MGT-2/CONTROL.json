@@ -111,22 +111,21 @@
       "head": "1247b7e948014c3dffb3cc052bf29dbf8cbcb7ab",
       "base": "main",
       "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/103",
-      "status": "blocked",
+      "status": "preparing",
       "order": 4,
       "last_instruction": {
-        "clientRequestId": "mgt2-al62-release-minimal-receipt-repair",
-        "runId": "run:thread:24185901-0a4e-4d21-8c44-a64117fb80bc:ordinal:5",
-        "purpose": "Release minimal in-scope proof-preservation correction; no generic redesign or predecessor/full-gate release"
+        "clientRequestId": "mgt2-al62-integrate-after-8d494d2",
+        "runId": "run:thread:24185901-0a4e-4d21-8c44-a64117fb80bc:ordinal:6"
       },
       "verified_checks": "All four hosted checks SUCCESS at 1247b7e; independent bounded repair scoped approvals/focused checks preserved. Remains draft pending actual AL-76 merge, integration/full gate and finalization.",
-      "next_action": "Keep draft; await actual predecessors, then integrate preserving receipt protocol, capture fixtures, timestamps and AL-76 serialization/writer locks; finish full gate",
+      "next_action": "Owner run6 integrates actual main 8d494d2, resolves UI conflict preserving both features, verifies concrete format/proof oracle and full final gates; manager owns eventual merge",
       "notification_request": "mgt2-handoff-notification-62",
       "reviewed_application_head": "29ee4a802000c1d3302c515e001f7692d3d7fe8f",
       "product_fingerprint": "f300879df36eee4cbdc69b6de66999dbf469ddcd3eb6f65f8a65b71279332c8a",
       "blockers": [
-        "Actual AL-76 merge pending",
-        "SkillsSubagentsPanel.tsx import conflict to resolve at later integration",
-        "Integrated full make/build/standalone and finalization pending"
+        "Resolve SkillsSubagentsPanel.tsx integration conflict and verify auto-merges",
+        "Assess source-unavailable whitespace-format versus receipt proof compatibility",
+        "Full integrated verification/review/finalization/new-head CI pending"
       ],
       "publication_status": "open draft; exact head verified",
       "ci_failure": {
@@ -152,7 +151,7 @@
       },
       "integration_risks": [
         {
-          "status": "Unconfirmed cross-PR compatibility hypothesis; assess after actual AL-76 merge",
+          "status": "Explicitly assigned concrete verification to later integrator in run6 after actual AL-76 merge",
           "case": "Source-backed L0/R0 -> make sources unavailable -> AL-76 whitespace-only format -> source-unavailable generate must preserve accepted source facts under approved contracts",
           "reason": "AL-62 receipt selects by artifact digest; AL-76 intentionally changes bytes while preserving every token/fact. Determine safe compatibility without weakening bound-mismatch/tamper/multiplicity guards or source-independent format.",
           "owner": "AL-62 as later integrator; do not release early integration or implementation for a hypothesis"
@@ -160,13 +159,13 @@
       ],
       "pending_conflict_resolution": {
         "owner": "AL-62 as later integrator",
-        "main": "8b1de5f761ebb92f78b2b462c1ff583724ecbdb5",
+        "main": "8d494d2e7bd3705ee400b4bdecad256470f65f73",
         "head": "1247b7e948014c3dffb3cc052bf29dbf8cbcb7ab",
-        "simulation": "Immutable-head git merge-tree confirmed one current textual conflict; no branch/worktree mutation",
+        "simulation": "Recomputed immutable merge-tree after #102 merge: one textual conflict in SkillsSubagentsPanel.tsx; auto-merges include main.go/backfill/repository and require semantic assessment",
         "path": "web/src/components/SkillsSubagentsPanel.tsx",
         "conflict": "AL-61 historical date/time formatter, tooltip and datetime-validation imports versus AL-62 old local millisecond/tooltip imports",
         "guarantees": "Preserve AL-61 full local historical seconds, invalid-date/raw evidence and timezone/machine-readable handling plus AL-62 canonical source ownership, outcomes and offline evidence; verify both features together",
-        "next_action": "Recompute against real post-AL-76 main at release; resolve once as part of AL-62 integration, never choose a side blindly"
+        "next_action": "Released to owner run6 against actual predecessor base"
       }
     },
     {
@@ -177,18 +176,16 @@
       "head": "6929db7c1aa1c0417de20779f93617e104c8ade3",
       "base": "main",
       "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/102",
-      "status": "waiting_checks",
+      "status": "merged",
       "order": 3,
       "last_instruction": {
         "clientRequestId": "mgt2-al76-integrate-after-8b1de5f",
         "runId": "run:thread:3513d383-221d-427c-91b4-7c9ed8fd9af8:ordinal:3"
       },
-      "verified_checks": "Manager verified current main 8b1de5f included; final product/test/scripts/CI equal tested merge 3bccb9a and final delta only ticket/lifecycle/telemetry artifacts. Scoped approvals carry with unchanged physical-path/lock/journal dependencies; compact shared discovery/fixed dispositions retained. Full integrated make passes Go race, 790 frontend, checks/build/assets/five platforms. Fresh hosted Frontend passed; Backend/Windows pending; no review objections/unresolved threads.",
-      "next_action": "On CI wake fresh head/base/review/check verification; guarded merge #102 then verify actual merge SHA and release AL-62 with recorded conflict/proof-format compatibility cases",
+      "verified_checks": "Fresh approved 6929db7 all four hosted jobs SUCCESS; current base included, non-release/non-draft and no review blockers. Expected-head squash succeeded; GitHub MERGED/mergeCommit and fetched main confirm delivery.",
+      "next_action": "Delivered; obsolete watch removed",
       "notification_request": "mgt2-handoff-notification-76",
-      "blockers": [
-        "Fresh exact-head hosted checks pending at 6929db7"
-      ],
+      "blockers": [],
       "reviewed_application_head": "3bccb9af8f4af6ee0a7c570ec94cbf1d05344f70",
       "reviewed_test_head": "0dedb33110bafe2fc290ec99b86d3635b07c81b5",
       "local_findings": [
@@ -207,7 +204,9 @@
           "disposition": "Owner reports corrected and test-effectiveness reviews approve"
         }
       ],
-      "publication_status": "open non-draft; local consolidated approval complete"
+      "publication_status": "open non-draft; local consolidated approval complete",
+      "merge_commit": "8d494d2e7bd3705ee400b4bdecad256470f65f73",
+      "merged_at": "2026-11-03T21:18:14Z"
     },
     {
       "ticket": "AL-68",
@@ -254,10 +253,10 @@
     "status": "approved",
     "preserved": "No waived gates, weakened tests, global timeout inflation, or duplicate capture ownership"
   },
-  "observed_main": "8b1de5f761ebb92f78b2b462c1ff583724ecbdb5",
+  "observed_main": "8d494d2e7bd3705ee400b4bdecad256470f65f73",
   "publication_steering": "User requested all open owners create PRs now; remaining AL-61/AL-76/AL-62 instructed to publish draft checkpoints without waiving integration or merge gates",
   "al60_latest_hosted_checks": "At f153df2: Backend and Frontend SUCCESS; Windows and binary/version in progress. No merge yet.",
-  "order": "Delivered #101, #105 and #104; next #102, #103; afterward create queued REV test review ticket",
+  "order": "Delivered #101/#105/#104/#102; last product PR #103; then create queued REV test review ticket",
   "defect_routing_authorization": "User explicitly authorizes new FIX tickets/isolated threads for discovered bugs unless very closely related to an existing approved contract; proactive routine launches, no unrelated roadmap dispatch or product-scope waiver",
   "deferred_actions": [
     {
@@ -276,7 +275,7 @@
       ],
       "verified_trigger_progress": {
         "104": "8b1de5f761ebb92f78b2b462c1ff583724ecbdb5",
-        "102": "pending",
+        "102": "8d494d2e7bd3705ee400b4bdecad256470f65f73",
         "103": "pending"
       }
     }
