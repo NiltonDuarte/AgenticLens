@@ -703,7 +703,7 @@ func runGenerate(args []string) {
 		fmt.Println(tableMD)
 	}
 	if *jsonOutputFlag != "" {
-		ownAuxiliary, auxiliaryErr := ownPublicationAuxiliary(capture.AuxiliaryFacts{Skills: factLedger.Skills, TaskLinks: factLedger.TaskLinks}, baseline.CommittedAuxiliary)
+		ownAuxiliary, auxiliaryErr := ownPublicationAuxiliary(capture.AuxiliaryFacts{Skills: factLedger.SkillFacts(), TaskLinks: factLedger.TaskLinkFacts()}, baseline.CommittedAuxiliary)
 		if auxiliaryErr != nil {
 			fmt.Fprintln(os.Stderr, "Cannot prepare scoped publication evidence:", auxiliaryErr)
 			os.Exit(1)

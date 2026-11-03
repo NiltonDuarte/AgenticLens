@@ -197,8 +197,9 @@ func (s *Store) requireHistoryIndex(ctx context.Context) error {
 	return nil
 }
 
-// AuxiliaryFacts contains ownerless schema5 rows. Receipts are exact scoped
-// accepted publication evidence, never inferred from role/time/child text.
+// AuxiliaryFacts contains owner-derived projections plus unresolved legacy rows.
+// Receipts retain exact source/session provenance and occurrence multiplicity;
+// accepted publication evidence is never inferred from role/time/child text.
 type AuxiliaryFacts struct {
 	Skills    []domain.SkillFact    `json:"skills"`
 	TaskLinks []domain.TaskLinkFact `json:"task_links"`
@@ -230,8 +231,9 @@ func (s *Store) AuxiliaryEvidence(ctx context.Context, ticket string) ([]Auxilia
 	accepted := AuxiliaryFacts{}
 	for _, row := range rows {
 		if acceptedHistoryAssociation(row, s.project, ticket) {
-			accepted.Skills = append(accepted.Skills, row.Skills...)
-			accepted.TaskLinks = append(accepted.TaskLinks, row.TaskLinks...)
+			ledger := domain.AgenticFactLedger{Sessions: row.Snapshot, Skills: row.Skills, TaskLinks: row.TaskLinks}
+			accepted.Skills = append(accepted.Skills, ledger.SkillFacts()...)
+			accepted.TaskLinks = append(accepted.TaskLinks, ledger.TaskLinkFacts()...)
 		}
 	}
 	result = append(result, accepted)

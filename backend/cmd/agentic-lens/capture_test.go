@@ -500,12 +500,15 @@ func TestCaptureCLIGenerateIncludesBoundIndependentSessionsAndSummaryDiagnostics
 		if _, err := os.Stat(filepath.Join(project, "capture_report.json")); !os.IsNotExist(err) {
 			t.Fatalf("summary-only publication created report: %v", err)
 		}
-		if ledger.SchemaVersion == nil || *ledger.SchemaVersion != 5 || len(ledger.Sessions) != 2 {
+		if ledger.SchemaVersion == nil || *ledger.SchemaVersion != domain.CurrentSchemaVersion || len(ledger.Sessions) != 2 {
 			t.Fatalf("wrong canonical result: %+v", ledger)
 		}
 		for _, session := range ledger.Sessions {
 			if session.ParentID != nil || (session.ID != "independent-one" && session.ID != "independent-two") {
 				t.Fatalf("guessed identity/parent: %+v", session)
+			}
+			if len(session.Skills) != 0 || len(session.TaskLinks) != 0 {
+				t.Fatalf("usage-only source fabricated auxiliary facts: %+v", session)
 			}
 		}
 		if got := ledger.InvocationFacts()[0].Tokens.Input + ledger.InvocationFacts()[1].Tokens.Input; got != 30 {

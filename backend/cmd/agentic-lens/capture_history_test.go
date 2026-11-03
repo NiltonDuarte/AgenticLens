@@ -241,8 +241,18 @@ func TestCaptureManualAuxiliaryPublicationSurvivesUnavailableSource(t *testing.T
 	}
 	setOpenCodeFixtureProject(t, path, f.project)
 	first := f.generate(t, "--source", "opencode", "--session-id", "manual-root", "--db-path", path)
-	if len(first.Skills) != 1 || len(first.TaskLinks) != 1 {
-		t.Fatalf("source did not produce auxiliary facts: %+v %+v", first.Skills, first.TaskLinks)
+	if len(first.Sessions) != 1 || first.Sessions[0].ID != "manual-root" || first.Sessions[0].Source != domain.SourceOpenCode {
+		t.Fatalf("source owner changed: %+v", first.Sessions)
+	}
+	if len(first.Sessions[0].Skills) != 1 || len(first.Sessions[0].TaskLinks) != 1 || len(first.Skills) != 0 || len(first.TaskLinks) != 0 {
+		t.Fatalf("source facts missing from canonical owner or duplicated at root: %+v", first)
+	}
+	skills, taskLinks := first.SkillFacts(), first.TaskLinkFacts()
+	if len(skills) != 1 || skills[0].Name != "fixture-skill" || skills[0].SessionID != "manual-root" || skills[0].Source != domain.SourceOpenCode || skills[0].SourceEventID != "opencode:part:skill" || skills[0].SourceMessageID != "m" || skills[0].Outcome != "succeeded" {
+		t.Fatalf("source skill evidence changed: %+v", skills)
+	}
+	if len(taskLinks) != 1 || taskLinks[0].Description != "manual work" || taskLinks[0].SessionID != "manual-root" || taskLinks[0].Source != domain.SourceOpenCode || taskLinks[0].SourceEventID != "opencode:part:task" || taskLinks[0].SourceMessageID != "m" || taskLinks[0].ChildSession != "descriptive-child" {
+		t.Fatalf("source delegation evidence changed: %+v", taskLinks)
 	}
 	if err = os.Remove(path); err != nil {
 		t.Fatal(err)
@@ -259,8 +269,15 @@ func TestCaptureManualAuxiliaryPublicationSurvivesUnavailableSource(t *testing.T
 	if out, err := withoutGit.CombinedOutput(); err != nil {
 		t.Fatalf("current-only stored data gained optional Git dependency: %v %s", err, out)
 	}
-	if !reflect.DeepEqual(first.Skills, second.Skills) || !reflect.DeepEqual(first.TaskLinks, second.TaskLinks) {
+	withoutGitLedger := f.ledger(t)
+	if !reflect.DeepEqual(first.SkillFacts(), withoutGitLedger.SkillFacts()) || !reflect.DeepEqual(first.TaskLinkFacts(), withoutGitLedger.TaskLinkFacts()) {
+		t.Fatal("own manual auxiliary rows lost without source or Git")
+	}
+	if !reflect.DeepEqual(first.SkillFacts(), second.SkillFacts()) || !reflect.DeepEqual(first.TaskLinkFacts(), second.TaskLinkFacts()) {
 		t.Fatal("own manual auxiliary rows lost without hydration")
+	}
+	if len(second.Sessions) != 1 || !reflect.DeepEqual(first.Sessions[0].Skills, second.Sessions[0].Skills) || !reflect.DeepEqual(first.Sessions[0].TaskLinks, second.Sessions[0].TaskLinks) {
+		t.Fatal("canonical owner auxiliary rows changed without hydration")
 	}
 	if len(second.Sessions) != 1 || second.Sessions[0].ParentID != nil {
 		t.Fatal("descriptive child link created native ancestry")
@@ -268,15 +285,29 @@ func TestCaptureManualAuxiliaryPublicationSurvivesUnavailableSource(t *testing.T
 	// A receipt attests exact rows and their multiplicity, not merely the fact
 	// that this worktree once published some auxiliary data.
 	accepted := readCaptureFile(t, f.output)
-	for _, edit := range []string{"skill name", "task description", "skill multiplicity"} {
+	for _, edit := range []string{"skill name", "task description", "skill multiplicity", "task multiplicity", "skill event identity", "skill message identity", "skill outcome", "task invocation identity", "task child identity", "owner source"} {
 		candidate := f.ledger(t)
 		switch edit {
 		case "skill name":
-			candidate.Skills[0].Name = "unproven-skill"
+			candidate.Sessions[0].Skills[0].Name = "unproven-skill"
 		case "task description":
-			candidate.TaskLinks[0].Description = "unproven description"
+			candidate.Sessions[0].TaskLinks[0].Description = "unproven description"
 		case "skill multiplicity":
-			candidate.Skills = append(candidate.Skills, candidate.Skills[0])
+			candidate.Sessions[0].Skills = append(candidate.Sessions[0].Skills, candidate.Sessions[0].Skills[0])
+		case "task multiplicity":
+			candidate.Sessions[0].TaskLinks = append(candidate.Sessions[0].TaskLinks, candidate.Sessions[0].TaskLinks[0])
+		case "skill event identity":
+			candidate.Sessions[0].Skills[0].SourceEventID = "unproven-event"
+		case "skill message identity":
+			candidate.Sessions[0].Skills[0].SourceMessageID = "unproven-message"
+		case "skill outcome":
+			candidate.Sessions[0].Skills[0].Outcome = "failed"
+		case "task invocation identity":
+			candidate.Sessions[0].TaskLinks[0].SourceInvocationID = "unproven-call"
+		case "task child identity":
+			candidate.Sessions[0].TaskLinks[0].ChildSession = "unproven-child"
+		case "owner source":
+			candidate.Sessions[0].Source = domain.SourceCodex
 		}
 		body, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(candidate))
 		if err != nil {
@@ -352,7 +383,7 @@ func TestCaptureCommittedHistoryPreservesNativeParent(t *testing.T) {
 		t.Fatal(err)
 	}
 	result := b.generate(t)
-	if result.SchemaVersion == nil || *result.SchemaVersion != 5 {
+	if result.SchemaVersion == nil || *result.SchemaVersion != domain.CurrentSchemaVersion {
 		t.Fatal("history changed canonical schema")
 	}
 	found := false

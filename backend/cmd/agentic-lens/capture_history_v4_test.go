@@ -96,8 +96,8 @@ func TestCaptureCommittedV4HistoryNormalizesLikeCurrentUnavailableSource(t *test
 				t.Fatal(err)
 			}
 			assertLegacyHistoryCost(t, kind, current.PersistedSessions[0].Invocations[0].CostUSD, current.PersistedSessions[0].Invocations[0].CostEvidence)
-			if current.SchemaVersion == nil || *current.SchemaVersion != 5 {
-				t.Fatal("supported current v4 did not publish schema5")
+			if current.SchemaVersion == nil || *current.SchemaVersion != domain.CurrentSchemaVersion {
+				t.Fatal("supported current v4 did not publish the current schema")
 			}
 			afterControl := foreignHistoryState(t, a)
 			// Native current-only generation must not be used as a source for foreign
@@ -108,8 +108,8 @@ func TestCaptureCommittedV4HistoryNormalizesLikeCurrentUnavailableSource(t *test
 				if err != nil {
 					t.Fatal(err)
 				}
-				if published.SchemaVersion == nil || *published.SchemaVersion != 5 {
-					t.Fatal("foreign v4 did not publish schema5")
+				if published.SchemaVersion == nil || *published.SchemaVersion != domain.CurrentSchemaVersion {
+					t.Fatal("foreign v4 did not publish the current schema")
 				}
 				var retained *adapters.SessionFactDTO
 				for i := range published.PersistedSessions {

@@ -70,7 +70,9 @@ func classifyGenerationBaseline(project, state, destination, ticket string, fact
 	if err = s.RejectForeignSessionCollisions(ctx, result.Current); err != nil {
 		return result, err
 	}
-	if len(result.History) == 0 && len(facts.Skills) == 0 && len(facts.TaskLinks) == 0 {
+	ledger := domain.AgenticFactLedger{Sessions: facts.Sessions, Skills: facts.Skills, TaskLinks: facts.TaskLinks}
+	aux := capture.AuxiliaryFacts{Skills: ledger.SkillFacts(), TaskLinks: ledger.TaskLinkFacts()}
+	if len(result.History) == 0 && len(aux.Skills) == 0 && len(aux.TaskLinks) == 0 {
 		return result, nil
 	}
 	auxiliary, err := s.AuxiliaryEvidence(ctx, ticket)
@@ -80,7 +82,6 @@ func classifyGenerationBaseline(project, state, destination, ticket string, fact
 	// Git is needed only to authorize imported facts, never to hydrate current
 	// capture. A missing committed ledger is harmless when scoped evidence covers
 	// the entire baseline, including ownerless rows.
-	aux := capture.AuxiliaryFacts{Skills: facts.Skills, TaskLinks: facts.TaskLinks}
 	auxiliaryErr := validateAuxiliaryFacts(aux, auxiliary)
 	needsCommitted := len(result.History) > 0 || auxiliaryErr != nil
 	if !needsCommitted {
@@ -151,7 +152,8 @@ func classifyGenerationBaseline(project, state, destination, ticket string, fact
 		}
 		result.HistoryDTOs = append(result.HistoryDTOs, immutable)
 	}
-	result.CommittedAuxiliary = capture.AuxiliaryFacts{Skills: committed.Skills, TaskLinks: committed.TaskLinks}
+	committedLedger := domain.AgenticFactLedger{Sessions: committed.Sessions, Skills: committed.Skills, TaskLinks: committed.TaskLinks}
+	result.CommittedAuxiliary = capture.AuxiliaryFacts{Skills: committedLedger.SkillFacts(), TaskLinks: committedLedger.TaskLinkFacts()}
 	auxiliary = append(auxiliary, result.CommittedAuxiliary)
 	if err = validateAuxiliaryFacts(aux, auxiliary); err != nil {
 		return result, err
@@ -230,7 +232,7 @@ func validateAuxiliaryRows[T domain.SkillFact | domain.TaskLinkFact](candidate [
 		}
 		key := string(body)
 		if allowed[key] == 0 {
-			return errors.New("unmatched or modified ownerless fact")
+			return errors.New("unmatched or modified auxiliary fact")
 		}
 		allowed[key]--
 	}

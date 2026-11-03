@@ -2,7 +2,7 @@
 
 Codex recorded skill loading and delegation evidence was discarded before reaching skill analytics. Preserve source occurrence identities under their owning sessions through generation, persistence, refresh and presentation.
 
-Migrate legacy history without guessing ownership, retain unavailable owners during partial refresh, distinguish loading evidence from unknown execution outcomes, and derive offline timeline evidence from canonical facts.
+Migrate legacy history without guessing ownership, retain unavailable owners during partial refresh, distinguish loading evidence from unknown execution outcomes, and derive offline timeline evidence from canonical facts. Publication receipt authorization uses owner-derived projections so canonical facts cannot bypass source proof.
 
 ## Draft checkpoint: pending delivery gates
 

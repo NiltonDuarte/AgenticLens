@@ -219,3 +219,63 @@ func TestWorktreeRepositoryProofEnrichesOnlyUnchangedOwnership(t *testing.T) {
 		t.Fatalf("replaced repository proof accepted: %v %v", same, err)
 	}
 }
+
+func TestAuxiliaryEvidencePreservesSnapshotOwnersAndRepeatedOccurrences(t *testing.T) {
+	s, err := openRegistry(t.TempDir(), "Fixture", t.TempDir(), false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := s.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
+	source := t.TempDir()
+	for _, id := range []string{"one", "two", "other-ticket"} {
+		ticket := "TEST-1"
+		if id == "other-ticket" {
+			ticket = "TEST-2"
+		}
+		persistHistoryAssociation(t, s, id, ticket, source)
+		identity := domain.CaptureIdentity{Source: domain.SourceCodex, Store: source, SessionID: id}
+		if _, err = s.Change(context.Background(), identity, func(row domain.CaptureRegistration) (domain.CaptureRegistration, error) {
+			skill := domain.SkillFact{FactProvenance: domain.FactProvenance{SourceInvocationID: "shared-call"}, Name: "shared-skill", Outcome: "unavailable"}
+			link := domain.TaskLinkFact{FactProvenance: domain.FactProvenance{SourceInvocationID: "shared-spawn"}, ChildSession: "unavailable-child", CostEvidence: domain.UnavailableCost()}
+			row.Snapshot = []domain.SessionFact{{ID: id, Source: domain.SourceCodex, Skills: []domain.SkillFact{skill, skill}, TaskLinks: []domain.TaskLinkFact{link}}}
+			if id == "one" {
+				row.Skills = []domain.SkillFact{{Name: "unresolved-legacy"}}
+			}
+			return row, nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	facts, err := s.AuxiliaryEvidence(context.Background(), "TEST-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(facts) != 1 || len(facts[0].Skills) != 5 || len(facts[0].TaskLinks) != 2 {
+		t.Fatalf("accepted snapshot facts missing, deduplicated or mixed across tickets: %+v", facts)
+	}
+	counts := map[string]int{}
+	for _, skill := range facts[0].Skills {
+		if skill.Name == "unresolved-legacy" {
+			if skill.SessionID != "" || skill.Source != "" {
+				t.Fatal("legacy row gained fabricated ownership")
+			}
+			continue
+		}
+		if skill.Source != domain.SourceCodex || skill.SourceInvocationID != "shared-call" || skill.Outcome != "unavailable" {
+			t.Fatalf("snapshot source evidence changed: %+v", skill)
+		}
+		counts[skill.SessionID]++
+	}
+	if counts["one"] != 2 || counts["two"] != 2 || len(counts) != 2 {
+		t.Fatalf("equal-looking calls crossed owners or lost multiplicity: %+v", counts)
+	}
+	for _, link := range facts[0].TaskLinks {
+		if (link.SessionID != "one" && link.SessionID != "two") || link.Source != domain.SourceCodex || link.SourceInvocationID != "shared-spawn" || link.ChildSession != "unavailable-child" {
+			t.Fatalf("snapshot delegation owner/source evidence changed: %+v", link)
+		}
+	}
+}
