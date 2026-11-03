@@ -1,6 +1,6 @@
 # AL-60 Delivery Summary
 
-Delivered the approved search slice and the explicitly authorized shared capture repair. Initial checkout was clean at 122e983f8c365a2aa248b1b6d492252555e922ae. Iteration 02 resumed checkpoint 7b00cc1 after the user approved “Authorize AL-60 shared capture repair”, superseding the historical read-only hold. MGT-2 owns merging; later owners integrate only after the real merge.
+Delivered the approved search slice and the explicitly authorized shared capture repair. Initial checkout was clean at 122e983f8c365a2aa248b1b6d492252555e922ae. Iteration 02 resumed checkpoint 7b00cc1 after the user approved “Authorize AL-60 shared capture repair”, superseding the historical read-only hold. PR #101 merged at 6244585dc5cc41ef012cd3e1fb3b964ccd910a95. Iteration 03 is a separate test-only cleanup repair before AL-61 PR #104; MGT-2 owns its merge.
 
 ## Delivered behavior
 
@@ -33,11 +33,17 @@ Reviewed capture fingerprint: 5e332cad1bfb0d1b25af2d9a8def5bfbdcd8e2b8364c302313
 
 ## Verification
 
-Application/test/CI source matches tested revision `057d410253aecd734551995ff1bedb38e94a1f19`. Full make, Go race checks, 786 frontend tests, five platform builds, standalone assets and actual Windows ownership/recovery checks passed. Meaningful commands, outcomes, historical failures and limits are consolidated in [VERIFICATION.md](iterations/02/VERIFICATION.md).
+The merged iteration 02 application/test/CI source matched tested revision `057d410253aecd734551995ff1bedb38e94a1f19`. Full make, Go race checks, 786 frontend tests, five platform builds, standalone assets and actual Windows ownership/recovery checks passed. Meaningful commands, outcomes, historical failures and limits are consolidated in [VERIFICATION.md](iterations/02/VERIFICATION.md).
 
 ## Evidence cleanup
 
-User direction supersedes retaining raw outputs in the final tree. From clean head eb3d515d85493372aab099d7cda82390e3c63fb3, removed 17 per-command outputs, two evidence indexes and the superseded standalone diagnosis: 30 ticket files become 10. Only the verification summary remains for evidence. Contracts, PR description, ledger and both compact findings remain unchanged; discovery credit, verification distinctions and accepted TEST-02 debt/owner are preserved. No application/test/CI change, history rewrite or force push. MGT-2 holds merging until this handoff and refreshed exact-head checks.
+User direction supersedes retaining raw outputs in the final tree. From clean head eb3d515d85493372aab099d7cda82390e3c63fb3, removed 17 per-command outputs, two evidence indexes and the superseded standalone diagnosis: 30 ticket files become 10. Only the verification summary remains for evidence. Contracts, PR description, ledger and both compact findings remain unchanged; discovery credit, verification distinctions and accepted TEST-02 debt/owner are preserved. No application/test/CI change, history rewrite or force push. That cleanup shipped in merged PR #101; it does not deliver iteration 03.
+
+## Iteration 03 follow-up
+
+The user authorized the minimal shared capture isolation-test teardown correction after PR #104's Backend job failed only with TempDir RemoveAll directory-not-empty. Backend and CI at its reported head 64d1e3d were byte-identical to main. A controlled native blocked at configuration admission passes the old ACK/free-lease oracle, then recreates worker.lock after release. This proves a reachable late writer; it does not identify the exact original CI file.
+
+The test-only barrier observes inherited worker.log handles through startup, generation, successor handoff and registry close. Automatic publication, exact session/token/project isolation, pending/ACK and exclusive ownership assertions remain. No production, CI or timeout policy change. Review, full integration verification and publication are in progress; the earlier accepted TEST-02 debt remains owned by the AL-60 maintainer. [Plan](iterations/03/PLAN.md) and [verification](iterations/03/VERIFICATION.md).
 
 ## Telemetry and delivery
 
