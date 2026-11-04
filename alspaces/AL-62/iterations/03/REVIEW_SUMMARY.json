@@ -54,6 +54,34 @@
         }
       ],
       "disposition": "Fixed: suppress child links contradicted by native parent metadata; retain delegations and unavailable explicit IDs."
+    },
+    {
+      "finding_id": "TEST-01",
+      "severity": 5,
+      "issue": "Fixture tests inherit live project configuration and fail on legitimate settings changes.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: real scanner/loader use complete temporary fixture projects with explicit historical policies; golden assertions unchanged."
+    },
+    {
+      "finding_id": "TEST-02",
+      "severity": 3,
+      "issue": "Parity oracle may omit expected fixture tickets after a partial scan.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Pre-existing test completeness gap; no change required for config isolation. Follow-up: test maintenance review REV-6."
     }
   ]
 }

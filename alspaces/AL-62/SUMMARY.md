@@ -68,15 +68,15 @@ Final ingestion first failed before extraction because the configured shared loc
 The per-command override retry also failed because installed-state preflight validates the configured default before the override. A temporary ignored .agenticlens-config.local.yaml now selects the same fresh state path; it was created exclusively with 0600 permissions while preserving the shared configuration SHA and old registry. No hooks exist for this checkout and none were changed. This operational override will be removed after final identity verification; source code/reviewed fingerprint remain unchanged.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 28
-- **Active Agent Duration:** 11h 17m (excludes user wait time)
+- **Software Development Life Cycle Iterations:** 30
+- **Active Agent Duration:** 11h 38m (excludes user wait time)
 - **Context Window Health:** BLOATED — Root agent peak 450.9k tokens (100% of 450k healthy ceiling, 2 compactions) | Subagents peak 449.8k (Tester)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
-- **Subagent Turn Velocity & Thrashing:** 2.2 avg turns/run (peak: 9 turns) | Planner 2.0, Coder 5.5, Tester 4.0, Reviewer-architecture 1.3, Reviewer-behavior 1.3, Reviewer-data 1.2, Reviewer-tests 1.3
-- **Test-to-Production Code Ratio:** 1.8:1 (+5,089 test lines / +2,824 prod lines)
-- **Code Delivered:** +8,269 / -7,607 lines across 140 code files (excluding docs)
-- **Reasoning Effort:** 428,639 reasoning tokens (28.8% of generated output)
-- **Tool Health & Self-Correction:** 2,508 tool calls (181 self-corrections, 92.8% success rate)
+- **Subagent Turn Velocity & Thrashing:** 2.4 avg turns/run (peak: 11 turns) | Planner 2.0, Coder 6.0, Tester 4.5, Reviewer-architecture 1.3, Reviewer-behavior 1.5, Reviewer-data 1.2, Reviewer-tests 1.5
+- **Test-to-Production Code Ratio:** 1.8:1 (+5,167 test lines / +2,824 prod lines)
+- **Code Delivered:** +8,347 / -7,614 lines across 142 code files (excluding docs)
+- **Reasoning Effort:** 451,343 reasoning tokens (29.0% of generated output)
+- **Tool Health & Self-Correction:** 2,641 tool calls (190 self-corrections, 92.8% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 25 execution anomalies detected (9 CRITICAL, 16 WARNING).
@@ -98,8 +98,8 @@ The per-command override retry also failed because installed-state preflight val
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (407.2k tokens) — Context tokens reached 407.2k, breaching the 250k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (286.2k tokens) — Context tokens reached 286.2k, breaching the 250k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (449.8k tokens) — Context tokens reached 449.8k, breaching the 250k warning ceiling.
-- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (369.8k tokens) — Context tokens reached 369.8k, breaching the 250k warning ceiling.
-- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (387.0k tokens) — Context tokens reached 387.0k, breaching the 250k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (406.5k tokens) — Context tokens reached 406.5k, breaching the 250k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (420.3k tokens) — Context tokens reached 420.3k, breaching the 250k warning ceiling.
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-architecture <-> reviewer-behavior (3 cycles) — Subagent roles 'reviewer-architecture' and 'reviewer-behavior' alternated for 3 consecutive cycles.
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (4 cycles) — Subagent roles 'coder' and 'tester' alternated for 4 consecutive cycles.
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-behavior <-> reviewer-data (3 cycles) — Subagent roles 'reviewer-behavior' and 'reviewer-data' alternated for 3 consecutive cycles.
@@ -114,22 +114,22 @@ The per-command override retry also failed because installed-state preflight val
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
 | **planner** | 2 | 178,358 | 22,508 | 2,278,144 | 92.7% | 90.7k | HEALTHY | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **coder** | 4 | 1,505,685 | 362,368 | 156,870,912 | 99.0% | 407.2k | ELEVATED | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
-| **tester** | 2 | 678,637 | 225,356 | 123,972,992 | 99.5% | 449.8k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **Unknown** | 1 | 1,351,277 | 296,472 | 140,768,768 | 99.0% | 450.9k | BLOATED (100%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **coder** | 4 | 1,536,083 | 370,047 | 163,611,776 | 99.1% | 407.2k | ELEVATED | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
+| **tester** | 2 | 704,923 | 235,279 | 130,530,944 | 99.5% | 449.8k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **Unknown** | 1 | 1,400,006 | 318,395 | 156,879,360 | 99.1% | 450.9k | BLOATED (100%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **reviewer-architecture** | 4 | 531,977 | 33,670 | 9,234,944 | 94.6% | 156.0k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
-| **reviewer-behavior** | 4 | 469,958 | 36,702 | 8,033,792 | 94.5% | 142.2k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
+| **reviewer-behavior** | 4 | 493,866 | 39,350 | 9,060,480 | 94.8% | 157.1k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
 | **reviewer-data** | 5 | 564,014 | 42,221 | 8,661,376 | 93.9% | 149.6k | HEALTHY | Unavailable (0 observed, 0 partial, 5 unavailable / 5 invocations) |
-| **reviewer-tests** | 4 | 458,166 | 38,300 | 7,259,136 | 94.1% | 132.9k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
-| **Total** | **26** | **5,738,072** | **1,057,597** | **457,080,064** | **98.8%** | **450.9k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations)** |
+| **reviewer-tests** | 4 | 480,495 | 43,049 | 8,571,776 | 94.7% | 156.4k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
+| **Total** | **26** | **5,889,722** | **1,104,519** | **488,828,800** | **98.8%** | **450.9k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 26 | 5,738,072 | 1,057,597 | 457,080,064 | 98.8% | Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations) |
-| **Total** | **26** | **5,738,072** | **1,057,597** | **457,080,064** | **98.8%** | **Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations)** |
+| **gpt-6.1-sol** | 26 | 5,889,722 | 1,104,519 | 488,828,800 | 98.8% | Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations) |
+| **Total** | **26** | **5,889,722** | **1,104,519** | **488,828,800** | **98.8%** | **Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations)** |
 
-Capture observation finalized: 2026-11-04T13:52:56.563168433Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 0; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 0; reserved bytes: 0. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
+Capture observation finalized: 2026-11-04T14:25:25.497525546Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 0; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 0; reserved bytes: 0. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
 
 ## Iteration 03: planning-only follow-up
 
@@ -239,3 +239,12 @@ CI run41842395611 failed at94e0844 after shared configuration changes. The loade
 
 
 CI isolation correction frozen fingerprint 119da09844b0c95efca77772a25cf128fe6247a23d3bffcb68c97cba13ae7682 (42 test/config/fixture paths), baseline94e0844. User identified the CI/config dependency symptom; orchestrator gpt-6.1-sol/high traced and reproduced the two live-config paths (TEST-01, severity5). Backend coder gpt-6.1-sol/high changed only two test files. Tester gpt-6.1-sol/high confirmed unchanged golden/assertion bodies, passing controls and failing missing-policy/wrong-ancestor probes. Behavior and test-effectiveness reviewers under both gpt-6.1-sol/high and gpt-6-luna/medium approved the bounded correction; models/effort dispatch-acknowledged rather than independently source-attested. Architecture/data results carry for zero production diff. Test-effectiveness reviewer gpt-6.1-sol/high separately reproduced the old failures and rejected ancestor-escape/live-policy mutations. A pre-existing partial-scan completeness weakness was identified by test-effectiveness reviewer gpt-6-luna/medium (TEST-02, severity3), outside config isolation and retained for test-maintenance follow-up REV-6; no existing assertion was weakened. Existing scanner publication locks still use the OS user-cache namespace with temporary fixture paths; isolation concerns configuration/data inputs, not a claim of zero cache I/O. Shared settings/fixtures remain byte-identical. CI-equivalent integrated make backend-check remains pending at this checkpoint.
+
+
+## CI isolation correction: final approval
+
+Consolidated APPROVED after integration and exact CI-equivalent make backend-check on337e20f. Fetch/merge of origin/main required no changes. The 42-path fingerprint119da09844b0c95efca77772a25cf128fe6247a23d3bffcb68c97cba13ae7682 matches after checks; current shared config SHA remains f19efbec6f8a9301667730ea55840b3ad0d9dbfb13c01f68d1ff13d8e7b368c1. Canonical frontend asset prerequisite and go vet passed; all 13 Go test packages passed under race detection, including CLI110.766s, adapters4.186s, config2.198s, capture69.814s, with unchanged package results reused by Go cache. No production/frontend change requires repeating their prior full review/build suites. Four focused behavior/test-effectiveness profile cells approved; tester controls and three reviewer mutations verify the real fixture-policy boundary, while identical golden/assertion blocks preserve the original metric oracle.
+
+Compact findings in iterations/03/REVIEW_SUMMARY.json now retain the original three findings/credit plus TEST-01 and pre-existing TEST-02; iteration02's16 findings are untouched. TEST-01 severity5 discovery is attributed to orchestrator gpt-6.1-sol/high, following the user's diagnostic question; backend coder gpt-6.1-sol/high fixed it, tester gpt-6.1-sol/high and behavior/test-effectiveness reviewers under gpt-6.1-sol/high and gpt-6-luna/medium verified it. TEST-02 severity3 discovery is test-effectiveness reviewer gpt-6-luna/medium; the unchanged partial-scan completeness gap remains visible for test maintenance REV-6. All model/effort attribution is dispatch-acknowledged. Production, source, schema, runtime config and raw fixture bytes remain unchanged. No new workspace handoff/log files are retained. GitHub checks will rerun after publication; no remote pass is claimed yet.
+
+Final correction telemetry used literal nonce f1474c3a9461b304 and explicit Codex/fix selection. Schema6 and all26 native owners/source/parent IDs,3 skills and25 delegations are preserved against the previous ledger. Native costs remain unavailable;22 T3 service review sessions lack native linkage and are excluded from measured usage. Exact temporary capture override/state were removed after device/inode/SHA checks; shared config and existing operational state/hooks were preserved. No new workspace report/log files remain. Local CI-equivalent check passed; GitHub checks remain to be verified on the pushed head.

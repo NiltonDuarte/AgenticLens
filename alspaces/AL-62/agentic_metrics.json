@@ -4,17 +4,17 @@
   "ticket_title": "Lean source-owned skill and delegation facts",
   "ticket_type": "fix",
   "started_at": "2026-11-04T00:01:20.437Z",
-  "completed_at": "2026-11-04T13:53:17.923058+00:00",
-  "updated_at": "2026-11-04T13:53:17.923058+00:00",
+  "completed_at": "2026-11-04T14:25:49.473020+00:00",
+  "updated_at": "2026-11-04T14:25:49.473020+00:00",
   "code": {
-    "lines_added": 8269,
-    "lines_deleted": 7607,
-    "test_lines_added": 5089,
-    "test_lines_deleted": 4856,
+    "lines_added": 8347,
+    "lines_deleted": 7614,
+    "test_lines_added": 5167,
+    "test_lines_deleted": 4863,
     "prod_lines_added": 2824,
     "prod_lines_deleted": 2751,
-    "files_changed": 140,
-    "sdlc_iterations": 28
+    "files_changed": 142,
+    "sdlc_iterations": 30
   },
   "sessions": [
     {
@@ -195,27 +195,27 @@
           "role": "",
           "model": "gpt-6.1-sol",
           "started_at": "2026-11-04T00:01:21.812Z",
-          "completed_at": "2026-11-04T13:52:56.525Z",
-          "active_duration_seconds": 16493,
-          "turns": 21,
-          "tokens": {"input": 1351277, "output": 296472, "cache_read": 140768768, "reasoning": 170521, "peak_context": 450913},
+          "completed_at": "2026-11-04T14:25:25.415Z",
+          "active_duration_seconds": 16838,
+          "turns": 23,
+          "tokens": {"input": 1400006, "output": 318395, "cache_read": 156879360, "reasoning": 182560, "peak_context": 450913},
           "cost_usd": null,
           "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 1,
-          "user_iterations": 28
+          "user_iterations": 30
         }
       ],
       "tools": [
-        {"name": "command", "calls": 362, "errors": 17},
-        {"name": "followup_task", "calls": 32, "errors": 0},
+        {"name": "command", "calls": 425, "errors": 20},
+        {"name": "followup_task", "calls": 37, "errors": 0},
         {"name": "interrupt_agent", "calls": 1, "errors": 0},
-        {"name": "list_agents", "calls": 4, "errors": 0},
+        {"name": "list_agents", "calls": 5, "errors": 0},
         {"name": "request_user_input_async", "calls": 2, "errors": 0},
-        {"name": "send_message", "calls": 112, "errors": 0},
+        {"name": "send_message", "calls": 114, "errors": 0},
         {"name": "sleep", "calls": 1, "errors": 0},
         {"name": "spawn_agent", "calls": 25, "errors": 0},
-        {"name": "wait", "calls": 52, "errors": 0},
-        {"name": "wait_agent", "calls": 151, "errors": 0}
+        {"name": "wait", "calls": 56, "errors": 0},
+        {"name": "wait_agent", "calls": 156, "errors": 0}
       ],
       "anomalies": [
         {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 0, "context_tokens": 450913, "threshold": "450000"}},
@@ -617,10 +617,10 @@
           "role": "coder",
           "model": "gpt-6.1-sol",
           "started_at": "2026-11-04T10:26:46.876Z",
-          "completed_at": "2026-11-04T13:52:47.307Z",
-          "active_duration_seconds": 3625,
-          "turns": 9,
-          "tokens": {"input": 528212, "output": 107343, "cache_read": 44861440, "reasoning": 43618, "peak_context": 369763},
+          "completed_at": "2026-11-04T14:24:57.873Z",
+          "active_duration_seconds": 3946,
+          "turns": 11,
+          "tokens": {"input": 558610, "output": 115022, "cache_read": 51602304, "reasoning": 47209, "peak_context": 406529},
           "cost_usd": null,
           "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
@@ -628,8 +628,8 @@
         }
       ],
       "tools": [
-        {"name": "command", "calls": 126, "errors": 21},
-        {"name": "send_message", "calls": 43, "errors": 0},
+        {"name": "command", "calls": 137, "errors": 22},
+        {"name": "send_message", "calls": 46, "errors": 0},
         {"name": "wait_agent", "calls": 4, "errors": 0}
       ],
       "anomalies": [
@@ -672,10 +672,10 @@
           "role": "tester",
           "model": "gpt-6.1-sol",
           "started_at": "2026-11-04T10:28:04.208Z",
-          "completed_at": "2026-11-04T12:01:55.343Z",
-          "active_duration_seconds": 3521,
-          "turns": 4,
-          "tokens": {"input": 318067, "output": 104742, "cache_read": 46712832, "reasoning": 36660, "peak_context": 386993},
+          "completed_at": "2026-11-04T14:20:05.496Z",
+          "active_duration_seconds": 3893,
+          "turns": 5,
+          "tokens": {"input": 344353, "output": 114665, "cache_read": 53270784, "reasoning": 42301, "peak_context": 420328},
           "cost_usd": null,
           "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
@@ -683,9 +683,9 @@
         }
       ],
       "tools": [
-        {"name": "command", "calls": 150, "errors": 37},
+        {"name": "command", "calls": 167, "errors": 42},
         {"name": "list_agents", "calls": 1, "errors": 0},
-        {"name": "send_message", "calls": 36, "errors": 0}
+        {"name": "send_message", "calls": 38, "errors": 0}
       ],
       "anomalies": [
         {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 2, "context_tokens": 252176, "threshold": "250000"}},
@@ -806,10 +806,10 @@
           "role": "reviewer-behavior",
           "model": "gpt-6.1-sol",
           "started_at": "2026-11-04T11:33:39.412Z",
-          "completed_at": "2026-11-04T12:03:27.870Z",
-          "active_duration_seconds": 296,
-          "turns": 2,
-          "tokens": {"input": 126590, "output": 9736, "cache_read": 2121216, "reasoning": 1219, "peak_context": 131662},
+          "completed_at": "2026-11-04T14:16:00.199Z",
+          "active_duration_seconds": 389,
+          "turns": 3,
+          "tokens": {"input": 150498, "output": 12384, "cache_read": 3147904, "reasoning": 1489, "peak_context": 157055},
           "cost_usd": null,
           "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
@@ -817,8 +817,8 @@
         }
       ],
       "tools": [
-        {"name": "command", "calls": 39, "errors": 1},
-        {"name": "send_message", "calls": 2, "errors": 0}
+        {"name": "command", "calls": 46, "errors": 1},
+        {"name": "send_message", "calls": 3, "errors": 0}
       ],
       "anomalies": []
     },
@@ -884,10 +884,10 @@
           "role": "reviewer-tests",
           "model": "gpt-6.1-sol",
           "started_at": "2026-11-04T11:35:45.345Z",
-          "completed_at": "2026-11-04T12:06:32.812Z",
-          "active_duration_seconds": 385,
-          "turns": 2,
-          "tokens": {"input": 101883, "output": 13635, "cache_read": 2002304, "reasoning": 3330, "peak_context": 130885},
+          "completed_at": "2026-11-04T14:17:06.175Z",
+          "active_duration_seconds": 534,
+          "turns": 3,
+          "tokens": {"input": 124212, "output": 18384, "cache_read": 3314944, "reasoning": 4493, "peak_context": 156368},
           "cost_usd": null,
           "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
@@ -895,7 +895,7 @@
         }
       ],
       "tools": [
-        {"name": "command", "calls": 42, "errors": 0},
+        {"name": "command", "calls": 54, "errors": 0},
         {"name": "send_message", "calls": 2, "errors": 0}
       ],
       "anomalies": []
