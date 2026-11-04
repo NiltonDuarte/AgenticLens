@@ -1,12 +1,12 @@
 # AL-77 iteration 02: Require recorded ticket IDs and remove path fallback
 
-Status: Authorized by explicit user steering; implementation may proceed within this delta without asking the same approval again.
+Status: Approved correction scope; implementation may proceed within this delta.
 
-## Steering authority and superseded decision
+## Required identity and superseded decision
 
-The user explicitly instructed: "Do not fill missing id from directory name. Ticket id is a required field on the data". This governs the correction and authorizes required-ticket validation and removal of fallback. It supersedes this iteration's earlier, still-proposed recorded_ticket_id metadata solution and the prior assumption that otherwise supported current ledgers with missing ticket IDs should remain accepted. No recorded_ticket_id field, provenance metadata, new endpoint or response shape is needed.
+Ticket identity was clarified as required recorded data during iteration 02 approval. Missing or blank ticket IDs must be rejected, and reads must not infer identity from a directory or requested path. It supersedes this iteration's earlier, still-proposed recorded_ticket_id metadata solution and the prior assumption that otherwise supported current ledgers with missing ticket IDs should remain accepted. No recorded_ticket_id field, provenance metadata, new endpoint or response shape is needed.
 
-The source issue was independently discovered by the behavior reviewer using gpt-6-luna/medium on candidate AL77-candidate-1-4a5906d5ba2f237a: directory fallback can turn missing recorded identity into apparent cross-ticket membership. Parent source tracing confirmed the path. Preserve the finding and its discovery credit while reviews remain open. This is the same correction iteration; the clarification does not create a third iteration or rewrite the frozen [CONTRACT.md](../../CONTRACT.md). The explicit user requirement takes precedence where the baseline or earlier plan assumed no rejection for missing ticket identity.
+The source issue was independently discovered by the behavior reviewer using gpt-6-luna/medium on candidate AL77-candidate-1-4a5906d5ba2f237a: directory fallback can turn missing recorded identity into apparent cross-ticket membership. Parent source tracing confirmed the path. Preserve the finding and its discovery credit while reviews remain open. This is the same correction iteration; the clarification does not create a third iteration or rewrite the frozen [CONTRACT.md](../../CONTRACT.md). The required-identity boundary supersedes the earlier assumption that missing ticket identity would remain accepted.
 
 ## Grounding and required data contract
 
@@ -22,7 +22,7 @@ Invalid records are excluded with explicit diagnostics; valid persisted records 
 
 ## Implementation ownership and minimal paths
 
-1. Coder owns backend/internal/adapters/fact_ledger_dto.go for one canonical required nonblank TicketID check, backend/internal/adapters/repository.go for deletion of the two fallback blocks, and docs/OWNED_OCCURRENCES.md for the concise required-root-field rule. Preserve current schema version, HTTP DTO shape, domain models, extraction, persistence layout and aggregate policy. The user instruction authorizes these focused backend changes.
+1. Coder owns backend/internal/adapters/fact_ledger_dto.go for one canonical required nonblank TicketID check, backend/internal/adapters/repository.go for deletion of the two fallback blocks, and docs/OWNED_OCCURRENCES.md for the concise required-root-field rule. Preserve current schema version, HTTP DTO shape, domain models, extraction, persistence layout and aggregate policy. These focused backend changes are within the approved correction scope.
 2. Tester owns focused updates in backend/internal/adapters/schemas_test.go, repository_test.go and http/server_test.go. Positive current-schema fixtures reaching validation need explicit synthetic ticket IDs. Replace the existing parent-directory-inference expectation with rejection/diagnostic evidence. Update additional self-contained positive fixtures in backend tests only where the stronger canonical validation exposes their omitted ticket field; preserve each test's original oracle and do not weaken unrelated error assertions. Historical legacy migration input and pure ToDomain/derivation fixtures do not need arbitrary changes unless they cross current-schema validation.
 3. Existing web/src/domain/sessionOverlaps.test.ts and web/src/views/FleetOverview.test.tsx may gain focused assertions for mixed valid/rejected project scope if missing. Preserve production frontend behavior: returned diagnostics already make the loaded scope partial. Do not implement the superseded metadata proposal or bulk-edit unrelated web fixtures.
 4. Parent owns contract/plan bookkeeping, review records, integration, telemetry, commits and PR delivery. Agents share the checkout, preserve others' changes and do not start unrelated work.
@@ -39,7 +39,7 @@ Invalid records are excluded with explicit diagnostics; valid persisted records 
 | Existing valid persisted records need private source state after validation tightens | Reuse/extend the existing source-unavailable repeated-GET fixture with explicit recorded IDs; shared sessions and mixed source labels remain returned, totals and bytes remain unchanged |
 | Positive tests fail before exercising their intended schema/session error | Add explicit ticket IDs to current-schema validated fixture setup; retain existing failure substring and behavior assertions so new validation does not mask their original oracle |
 
-No live ticket workspace or developer source database becomes a fixture. No automatic repair, migration or deletion is part of this correction. Required-field validation is authorized directly by the user; it is not a new authenticity condition inferred from tests or review opinion.
+No live ticket workspace or developer source database becomes a fixture. No automatic repair, migration or deletion is part of this correction. Required-field validation is an approved data requirement; it adds no source-authenticity condition.
 
 ## Evidence reuse and review continuity
 

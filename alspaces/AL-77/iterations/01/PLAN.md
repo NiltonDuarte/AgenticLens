@@ -1,6 +1,6 @@
 # AL-77 iteration 01: Persisted session overlap in Fleet Overview
 
-Status: Approved by explicit user response "Approve implementation" on 2026-11-04.
+Status: Approved for implementation on 2026-11-04.
 
 ## Baseline and grounding
 
@@ -65,4 +65,4 @@ Parent verifies/deduplicates findings, routes fixes to coder/tester, then rechec
 
 The proposed surface is Fleet Overview with navigation into existing ticket details; this meets the ticket/fleet-context requirement without adding a second fetch owner in TicketDeepDive. Existing read projections suffice, so production scope is frontend only. No product ambiguity currently blocks approval. If implementation discovers a need for API/schema changes or aggregate behavior changes, return to planning rather than silently expanding scope.
 
-User approved CONTRACT.md and this plan explicitly on 2026-11-04. Implementation may proceed within these boundaries; completed-ticket lifecycle and final telemetry remain deferred to delivery.
+CONTRACT.md and this plan were approved on 2026-11-04. Implementation may proceed within these boundaries; completed-ticket lifecycle and final telemetry remain deferred to delivery.

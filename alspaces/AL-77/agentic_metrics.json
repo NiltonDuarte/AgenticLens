@@ -4,8 +4,8 @@
   "ticket_title": "Warn when a session appears in multiple tickets",
   "ticket_type": "feat",
   "started_at": "2026-11-04T18:36:37.880Z",
-  "completed_at": "2026-11-04T20:29:31.434003+00:00",
-  "updated_at": "2026-11-04T20:29:31.434003+00:00",
+  "completed_at": "2026-11-04T20:31:22.259471+00:00",
+  "updated_at": "2026-11-04T20:31:22.259471+00:00",
   "code": {
     "lines_added": 627,
     "lines_deleted": 68,
@@ -14,7 +14,7 @@
     "prod_lines_added": 241,
     "prod_lines_deleted": 20,
     "files_changed": 11,
-    "sdlc_iterations": 43
+    "sdlc_iterations": 44
   },
   "sessions": [
     {
@@ -59,18 +59,18 @@
           "role": "",
           "model": "gpt-6.1-sol",
           "started_at": "2026-11-04T18:36:39.333Z",
-          "completed_at": "2026-11-04T20:29:26.783Z",
-          "active_duration_seconds": 2565,
-          "turns": 13,
-          "tokens": {"input": 191082, "output": 49835, "cache_read": 20547456, "reasoning": 14392, "peak_context": 219762},
+          "completed_at": "2026-11-04T20:31:18.059Z",
+          "active_duration_seconds": 2645,
+          "turns": 14,
+          "tokens": {"input": 197249, "output": 52460, "cache_read": 22098304, "reasoning": 15462, "peak_context": 227248},
           "cost_usd": null,
           "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
-          "user_iterations": 17
+          "user_iterations": 18
         }
       ],
       "tools": [
-        {"name": "command", "calls": 101, "errors": 4},
+        {"name": "command", "calls": 105, "errors": 4},
         {"name": "followup_task", "calls": 3, "errors": 0},
         {"name": "request_user_input_async", "calls": 2, "errors": 0},
         {"name": "send_message", "calls": 6, "errors": 0},
