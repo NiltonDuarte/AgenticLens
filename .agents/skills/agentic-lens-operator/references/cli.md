@@ -167,7 +167,7 @@ agentic-lens backfill --source codex --codex-home ~/.codex --ticket-id PAY-42 --
 agentic-lens backfill --source both --ticket-id PAY-42 --migrate-schema --dry-run
 ```
 
-The non-dry-run forms modify metrics JSON and may update summaries. The `--dry-run` preview does not complete migration.
+The non-dry-run forms modify metrics JSON and may update summaries. The `--dry-run` preview does not complete migration. Completed migration metadata is removed after its audit is copied to the command report and printed with the ledger path. Pending/partial state remains resumable. Backfill creates no backups; retain ledger originals in Git or another backup before execution. For a schema upgrade with rollback copies, run `migrate --backup` first.
 
 ## `migrate`
 
@@ -182,7 +182,7 @@ agentic-lens migrate [--workspaces DIR] [--ticket-id ID] [--target-version N] [-
 - `--backup`: save an original `.bak` copy before modifying a ledger.
 - `--update-summaries`: refresh workspace `SUMMARY.md` tables after migration.
 
-`migrate` changes ledger schema, not the source harness database or installed binary. A successful shape migration may intentionally leave `migration.status: partial` and `source_backfill` pending. Follow with source-backed `backfill` on machines containing original sessions. Treat the ledger as incomplete until pending migration steps clear. Use `--dry-run` to inspect first; actual migration writes JSON and optionally summaries/backups.
+`migrate` changes ledger schema, not the source harness database or installed binary. Completed migrations with no pending steps omit the `migration` object; running this command on an already current ledger also removes its completed metadata and leaves other recorded values intact. The command prints completed steps and loss accounting with each ledger path, including during cleanup. Save that console output when the audit is needed later. Ordinary reads never perform this cleanup. `--backup` prints the actual backup path after creation; restore that `.bak` file over the ledger to revert its changes. Without `--backup`, recovery requires Git or another retained original. Console accounting cannot reconstruct discarded payloads. Dry runs create no backups and change no ledgers. A successful shape migration may intentionally leave `migration.status: partial` and `source_backfill` pending. Follow with source-backed `backfill` on machines containing original sessions. Treat the ledger as incomplete until pending migration steps clear. Use `--dry-run` to inspect first; actual migration writes JSON and optionally summaries/backups.
 
 ## `server`
 

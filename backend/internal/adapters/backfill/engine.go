@@ -217,6 +217,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 	result = TicketMigrationResult{
 		TicketID:      workspaceName,
 		WorkspacePath: workspaceDir,
+		LedgerPath:    metricPath,
 	}
 
 	// One target is owned at a time, before any baseline read and through the
@@ -234,6 +235,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 	}
 	defer func() { result.Error = errors.Join(result.Error, owner.Close()) }()
 	metricPath = canonicalPath
+	result.LedgerPath = metricPath
 	if err := adapters.CheckPublication(metricPath); err != nil {
 		result.Error = err
 		return result
@@ -246,9 +248,52 @@ func (e *BackfillEngine) processSingleWorkspace(
 		return result
 	}
 
-	canonical, err := migration.NewEngine(nil).Migrate(content, domain.CurrentSchemaVersion)
+	sourceVersion, err := migration.NewEngine(nil).DetectVersion(content)
 	if err != nil {
-		result.Error = fmt.Errorf("normalizing ledger before backfill: %w", err)
+		result.Error = fmt.Errorf("detecting ledger schema: %w", err)
+		return result
+	}
+	var current *currentLedgerPreparation
+	var canonical domain.AgenticFactLedger
+	if sourceVersion == domain.CurrentSchemaVersion {
+		prepared, prepareErr := prepareCurrentLedger(content)
+		if prepareErr != nil {
+			result.Error = fmt.Errorf("validating current ledger before backfill: %w", prepareErr)
+			return result
+		}
+		current = &prepared
+		canonical = prepared.Ledger
+	} else {
+		canonical, err = migration.NewEngine(nil).Migrate(content, domain.CurrentSchemaVersion)
+		if err != nil {
+			result.Error = fmt.Errorf("normalizing ledger before backfill: %w", err)
+			return result
+		}
+	}
+	if current != nil && current.Completed && !opts.RecomputeGit && !opts.RecomputeDB {
+		// An explicit metadata-only cleanup is not a source refresh or a new
+		// observability snapshot. Preserve every other raw member unchanged.
+		if canonical.TicketID != nil && strings.TrimSpace(*canonical.TicketID) != "" {
+			result.TicketID = strings.TrimSpace(*canonical.TicketID)
+		}
+		result.PreviousStatus = string(domain.MigrationStatusCompleted)
+		result.NewStatus = string(domain.MigrationStatusCompleted)
+		result.Notes = migrationAuditSummary(canonical.Migration)
+		if opts.DryRun {
+			return result
+		}
+		if err := publishBackfillLedger(metricPath, current.WithoutMigration); err != nil {
+			result.Error = err
+			return result
+		}
+		if opts.UpdateSummaries {
+			summaryPath := filepath.Join(workspaceDir, "SUMMARY.md")
+			derivedLedger := domain.DeriveMetricsLedger(canonical, cfg)
+			tableMD := adapters.FormatMarkdownMetricsTable(derivedLedger, cfg.RoleOrder)
+			if err := adapters.UpdateSummaryFile(summaryPath, tableMD); err != nil {
+				result.Error = fmt.Errorf("updating summary file %s: %w", summaryPath, err)
+			}
+		}
 		return result
 	}
 	dto := adapters.AgenticFactLedgerDTOFromDomain(canonical)
@@ -258,6 +303,14 @@ func (e *BackfillEngine) processSingleWorkspace(
 	}
 
 	factLedger := dto.ToDomain()
+	if info := factLedger.Migration; info != nil {
+		completed := info.Status == domain.MigrationStatusCompleted
+		incomplete := info.Status == domain.MigrationStatusPartial || info.Status == domain.MigrationStatusPending
+		if completed && len(info.StepsPending) > 0 || incomplete && len(info.StepsPending) == 0 {
+			result.Error = fmt.Errorf("inconsistent migration status %q with %d pending steps; preserved ledger for explicit recovery", info.Status, len(info.StepsPending))
+			return result
+		}
+	}
 	for i := range factLedger.Sessions {
 		if factLedger.Sessions[i].Source == "" {
 			factLedger.Sessions[i].Source = domain.SourceOpenCode
@@ -285,7 +338,6 @@ func (e *BackfillEngine) processSingleWorkspace(
 		}
 	}
 
-	sourceVersion, _ := migration.NewEngine(nil).DetectVersion(content)
 	needsNormalization := sourceVersion < domain.CurrentSchemaVersion || hasLegacyFactCollections(content)
 	ticketID := workspaceName
 	if factLedger.TicketID != nil && strings.TrimSpace(*factLedger.TicketID) != "" {
@@ -483,7 +535,16 @@ func (e *BackfillEngine) processSingleWorkspace(
 	}
 	result.NewStatus = string(newMigration.Status)
 	result.PendingSteps = newMigration.StepsPending
-	result.Notes = newMigration.Notes
+	result.Notes = migrationAuditSummary(&newMigration)
+	if factLedger.Migration != nil {
+		previousNotes := strings.TrimSpace(factLedger.Migration.Notes)
+		if previousNotes != "" && !strings.Contains(result.Notes, previousNotes) {
+			if result.Notes != "" {
+				result.Notes += "; "
+			}
+			result.Notes += previousNotes
+		}
+	}
 	if len(result.Diagnostics) > 0 {
 		notes := append([]string(nil), result.Diagnostics...)
 		if result.Notes != "" {
@@ -494,7 +555,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 
 	version := domain.CurrentSchemaVersion
 	factLedger.SchemaVersion = &version
-	if newMigration.Status == domain.MigrationStatusCompleted && !hasOwnershipAudit {
+	if newMigration.Status == domain.MigrationStatusCompleted && len(newMigration.StepsPending) == 0 {
 		factLedger.Migration = nil
 	} else {
 		factLedger.Migration = &newMigration
@@ -527,18 +588,8 @@ func (e *BackfillEngine) processSingleWorkspace(
 		return result
 	}
 
-	tempPath := metricPath + ".tmp"
-	if err := os.WriteFile(tempPath, data, 0644); err != nil {
-		result.Error = fmt.Errorf("writing temporary ledger file: %w", err)
-		return result
-	}
-
-	if err := os.Rename(tempPath, metricPath); err != nil {
-		if cleanupErr := os.Remove(tempPath); cleanupErr != nil {
-			result.Error = fmt.Errorf("atomic rename to %s: %w; cleaning temporary file: %v", metricPath, err, cleanupErr)
-			return result
-		}
-		result.Error = fmt.Errorf("atomic rename to %s: %w", metricPath, err)
+	if err := publishBackfillLedger(metricPath, data); err != nil {
+		result.Error = err
 		return result
 	}
 
@@ -554,6 +605,21 @@ func (e *BackfillEngine) processSingleWorkspace(
 	}
 
 	return result
+}
+
+// publishBackfillLedger replaces one already-owned ledger atomically.
+func publishBackfillLedger(metricPath string, data []byte) error {
+	tempPath := metricPath + ".tmp"
+	if err := os.WriteFile(tempPath, data, 0644); err != nil {
+		return fmt.Errorf("writing temporary ledger file: %w", err)
+	}
+	if err := os.Rename(tempPath, metricPath); err != nil {
+		if cleanupErr := os.Remove(tempPath); cleanupErr != nil {
+			return fmt.Errorf("atomic rename to %s: %w; cleaning temporary file: %v", metricPath, err, cleanupErr)
+		}
+		return fmt.Errorf("atomic rename to %s: %w", metricPath, err)
+	}
+	return nil
 }
 
 func resolveCodexSessionUsers(fresh []domain.SessionFact, existing []domain.SessionFact, gitUser string) {

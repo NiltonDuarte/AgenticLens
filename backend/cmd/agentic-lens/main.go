@@ -1002,7 +1002,7 @@ func runBackfill(args []string) {
 			notes = strings.TrimSpace(fmt.Sprintf("%s; pending: [%s]", notes, strings.Join(res.PendingSteps, ", ")))
 		}
 		if res.Error != nil {
-			notes = fmt.Sprintf("error: %v", res.Error)
+			notes = strings.TrimSpace(fmt.Sprintf("%s; error: %v", notes, res.Error))
 		}
 
 		fmt.Printf("%-15s %-14s %-12s %-8s %-8s %-8s %s\n",
@@ -1014,6 +1014,7 @@ func runBackfill(args []string) {
 			skipStr,
 			notes,
 		)
+		fmt.Printf("  Ledger: %s\n", res.LedgerPath)
 	}
 
 	fmt.Println("--------------------------------------------------------------------------------")
@@ -1023,9 +1024,22 @@ func runBackfill(args []string) {
 
 	if report.SchemaMigration != nil {
 		fmt.Println("--------------------------------------------------------------------------------")
+		for _, res := range report.SchemaMigration.Results {
+			notes := res.DiffSummary
+			if res.Error != nil {
+				notes = strings.TrimSpace(fmt.Sprintf("%s; error: %v", notes, res.Error))
+			}
+			fmt.Printf("  Schema ledger: %s; %s; %s\n", res.LedgerPath, res.Status, notes)
+		}
 		fmt.Printf("Schema Migration: Migrated: %d | Up to date: %d | Skipped: %d | Errors: %d\n",
 			report.SchemaMigration.Migrated, report.SchemaMigration.UpToDate,
 			report.SchemaMigration.Skipped, len(report.SchemaMigration.Errors))
+	}
+
+	if opts.DryRun {
+		fmt.Println("Dry run: no ledgers or backups were written.")
+	} else {
+		fmt.Println("Rollback: backfill creates no backups; restore ledger originals from Git or another backup. Before schema changes, use migrate --backup to retain originals.")
 	}
 
 	if len(report.Warnings) > 0 {
@@ -1130,7 +1144,7 @@ func runMigrate(args []string) {
 
 		notes := res.DiffSummary
 		if res.Error != nil {
-			notes = fmt.Sprintf("error: %v", res.Error)
+			notes = strings.TrimSpace(fmt.Sprintf("%s; error: %v", notes, res.Error))
 		}
 
 		fmt.Printf("%-15s %-12s %-12s %-18s %s\n",
@@ -1140,11 +1154,24 @@ func runMigrate(args []string) {
 			res.Status,
 			notes,
 		)
+		fmt.Printf("  Ledger: %s\n", res.LedgerPath)
+		if res.BackupCreated {
+			fmt.Printf("  Backup: %s; restore this file over the ledger to revert it.\n", res.BackupPath)
+		}
 	}
 
 	fmt.Println("--------------------------------------------------------------------------------")
 	fmt.Printf("Summary: Scanned: %d | Migrated: %d | Up to date: %d | Skipped: %d | Errors: %d\n",
 		report.Scanned, report.Migrated, report.UpToDate, report.Skipped, len(report.Errors))
+
+	if opts.DryRun {
+		fmt.Println("Dry run: no ledgers or backups were written. Use --backup when executing to retain originals.")
+	} else {
+		fmt.Println("Rollback: restore the printed .bak file when available, or recover the original ledger from Git or another backup. Console audit cannot reconstruct discarded payloads.")
+		if !opts.Backup {
+			fmt.Println("No backups were requested. Use --backup before executing schema changes to retain originals.")
+		}
+	}
 
 	if len(report.Errors) > 0 {
 		fmt.Printf("\nWarnings / Errors (%d):\n", len(report.Errors))

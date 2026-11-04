@@ -9,3 +9,7 @@ Acceptance: every original ledger is schema 6; identity/session sets and recorde
 ## Iteration 02 authorized extension
 
 User subsequently requested "backfill codex ledgers". The current contract includes exact-ID Codex source refresh from this machine across existing ledgers, preserving unavailable/partial and other-harness owners. Successful complete local snapshots replace recorded snapshots even with lower totals. This supersedes the original no-backfill boundary and byte-identical-AL-62 requirement for the new iteration only. Original migration verification remains historical evidence. See iterations/02/PLAN.md.
+
+## Iteration 03 authorized extension
+
+The user subsequently requested removal of completed migration objects and console output so users can revert changes. This explicitly authorizes application changes limited to completed/no-pending migration metadata cleanup, console/report audit and rollback guidance, plus cleaning the existing migrated ledgers through the changed CLI. Pending/partial state remains persisted and resumable. Retain the pure migration audit as a transient result; omit completed metadata only at explicit persistence boundaries, never during ordinary reads. Preserve all other recorded ledger facts and existing explicit backup behavior. This supersedes the earlier requirement to retain completed migration audit inside canonical ledgers. See iterations/03/PLAN.md for acceptance, ownership, verification and review assignments.
