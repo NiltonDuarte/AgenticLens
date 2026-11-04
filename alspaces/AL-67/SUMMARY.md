@@ -54,7 +54,7 @@ No new tests, dynamic cancellation/duplicate-file mutation probe, browser sessio
 
 Native metadata inventory proves Codex root `01a1a7da-055d-7eb2-ade9-d3db0bf494ca` and planner child `01a1a7da-d618-7583-8183-863cae857761`, with the native parent link. The nine T3 service review runs have acknowledged model/effort settings but their native parent linkage is not proven by available session_meta. Service workflow coverage is therefore broader than the provable native source graph. Do not invent child IDs, parent facts or usage to close that gap. Raw native transcripts stay outside Git.
 
-The shared pinned release is not installed at its configured cache path. The final extraction uses the freshly built native CLI from this project directory, with explicit Codex source and docs type; wrapper-only --al-offline/--al-project flags cannot be passed to a direct native. Capture state is isolated via the supported explicit manual override, preserving existing shared operational state. Final extraction succeeded with literal nonce `6c90b8e2d571af34`, explicit exact root, `--source codex`, `--ticket-type docs`, and isolated `--capture-dir`. Independent metadata inventory matches both saved session IDs, Codex labels and parent relationships exactly. Schema is 6. No prior AL-67 ledger exists, so preservation of earlier harness owners is not applicable. The ledger and rendered metrics cover two native sessions; the nine service review runs remain excluded from native usage totals because linkage is unproven. Costs remain unavailable.
+The shared pinned release is not installed at its configured cache path. The final extraction uses the freshly built native CLI from this project directory, with explicit Codex source and docs type; wrapper-only --al-offline/--al-project flags cannot be passed to a direct native. Capture state is isolated via the supported explicit manual override, preserving existing shared operational state. Iteration 01 extraction succeeded with literal nonce `6c90b8e2d571af34`, explicit exact root, `--source codex`, `--ticket-type docs`, and isolated `--capture-dir`. Independent metadata inventory matches both saved session IDs, Codex labels and parent relationships exactly. Schema is 6. No prior AL-67 ledger exists, so preservation of earlier harness owners is not applicable. The ledger and rendered metrics cover two native sessions; the nine service review runs remain excluded from native usage totals because linkage is unproven. Costs remain unavailable.
 
 The CLI diagnosed unsupported configured capture coordinates (missing worktree mapping table); the supported explicit manual override used healthy isolated state and preserved the configured state. Capture-registry counters of zero describe that isolated registry, not an absence of manual source extraction. Manual discovery/read found two native rollouts. The CLI-rendered SDLC iteration count is a derived telemetry metric, separate from approved ticket iterations; this ticket now has two authorized documentation iterations. Root persona is not source-proven and remains Unknown in the rendered role table. No application fix or synthetic fact was used to alter those source results.
 
@@ -66,18 +66,18 @@ Created FIX-18 (F03 live capability), FIX-19 (F04 duplicate Codex snapshots), FI
 
 [Ownership map](iterations/02/FOLLOW_UP_TICKETS.md) links every finding to exactly one ticket. Compact finding IDs, numeric severities and all reporter tuples remain unchanged; dispositions now name tracking owners. The user request, changed acceptance, preserved guarantees and verification impact are recorded in [iteration 02 plan](iterations/02/PLAN.md).
 
-Verification: coordinator checked ticket numbering against existing plans/workspaces, existing ownership, all twelve mappings, specification/index titles/statuses/paths, links, whitespace and zero application/test/runtime/config changes. This narrow planning-prose follow-up does not need another multi-agent architecture audit. Earlier full make/embedded-binary results remain valid for the unchanged application; they are not relabeled as ticket-acceptance execution. Telemetry refresh and final publication are recorded at handoff.
+Verification: coordinator checked ticket numbering against existing plans/workspaces, existing ownership, all twelve mappings, specification/index titles/statuses/paths, links, whitespace and zero application/test/runtime/config changes. This narrow planning-prose follow-up does not need another multi-agent architecture audit. Earlier full make/embedded-binary results remain valid for the unchanged application; they are not relabeled as ticket-acceptance execution. Ticketing commit 991a4b1b integrated origin/main without changes. Application/build inputs are identical to the already verified audit baseline, so full make was not rerun for prose-only changes. Iteration 02 telemetry refresh succeeded with literal nonce `0e72dca4b8f63915`, explicit Codex source/docs type and isolated manual capture state. Both saved source/parent identities match the prior ledger exactly; the completed planner facts are unchanged. Native root facts were authoritatively refreshed. The nine service review runs still lack proven native parent links and costs remain unavailable. Publication updates the still-open PR112.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 13
-- **Active Agent Duration:** 10m 54s (excludes user wait time)
-- **Context Window Health:** HEALTHY — Root agent peak 172.9k tokens (38% of 450k healthy ceiling, 0 compactions) | Subagents peak 72.6k (Planner)
+- **Software Development Life Cycle Iterations:** 14
+- **Active Agent Duration:** 23m 8s (excludes user wait time)
+- **Context Window Health:** HEALTHY — Root agent peak 214.6k tokens (48% of 450k healthy ceiling, 0 compactions) | Subagents peak 72.6k (Planner)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 1.0 avg turns/run (peak: 1 turns) | Planner 1.0
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 6,614 reasoning tokens (13.9% of generated output)
-- **Tool Health & Self-Correction:** 76 tool calls (3 self-corrections, 96.1% success rate)
+- **Reasoning Effort:** 12,293 reasoning tokens (17.5% of generated output)
+- **Tool Health & Self-Correction:** 91 tool calls (3 self-corrections, 96.7% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** No execution anomalies detected (clean session).
@@ -90,13 +90,13 @@ Verification: coordinator checked ticket numbering against existing plans/worksp
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
 | **planner** | 1 | 69,169 | 4,670 | 425,728 | 86.0% | 72.6k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Unknown** | 1 | 152,854 | 36,196 | 7,437,696 | 98.0% | 172.9k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **2** | **222,023** | **40,866** | **7,863,424** | **97.3%** | **172.9k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations)** |
+| **Unknown** | 1 | 180,411 | 53,108 | 10,876,288 | 98.4% | 214.6k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **2** | **249,580** | **57,778** | **11,302,016** | **97.8%** | **214.6k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 2 | 222,023 | 40,866 | 7,863,424 | 97.3% | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **Total** | **2** | **222,023** | **40,866** | **7,863,424** | **97.3%** | **Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations)** |
+| **gpt-6.1-sol** | 2 | 249,580 | 57,778 | 11,302,016 | 97.8% | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **Total** | **2** | **249,580** | **57,778** | **11,302,016** | **97.8%** | **Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations)** |
 
-Capture observation finalized: 2026-11-04T19:13:44.993891359Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 0; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 0; reserved bytes: 0. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
+Capture observation finalized: 2026-11-04T19:47:34.425300379Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 0; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 0; reserved bytes: 0. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
