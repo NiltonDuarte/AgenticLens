@@ -48,7 +48,7 @@ Verification actors: tester and implementation coders (gpt-6.1-sol/high) ran dev
 
 - make: PASS on implementation commit above after main integration; Go vet/race across 13 packages, frontend typecheck/lint and 818 tests in 36 suites; Python distribution/installation/capture checks (14+10+15); canonical frontend build and five native platform binaries.
 - Standalone Linux binary version identifies commit 8ec7bca. Its actual HTTP index/JS/CSS exactly match web/dist and the embedded tree, with the source DB absent. JS index-mKcHXOp5.js SHA256 c95a2c84ef6b791e99ec90b79367ffc7479367278cd1922c19f8b711aae71bc9; CSS index-Bn43kjvY.css SHA256 586f9f4eb5f2b1cb7fe64ad5fd0f32a1eaccb14cb4cd36feaaee1105e7352541. Test server stopped.
-- Actual CLI regressions cover unregistered/copy-path history, remote/mixed-source preservation, growth/repeat/complete-empty refresh, complete parent with missing/malformed child, malformed native payload byte preservation, migration drop counts, current-only rejection, safe offline occurrence metadata/anomaly preservation and scoped source/ticket/store/project guards. [TESTING.md](iterations/02/TESTING.md) records commands/oracle transfers and bounded evidence.
+- Actual CLI regressions cover unregistered/copy-path history, remote/mixed-source preservation, growth/repeat/complete-empty refresh, complete parent with missing/malformed child, malformed native payload byte preservation, migration drop counts, current-only rejection, safe offline occurrence metadata/anomaly preservation and scoped source/ticket/store/project guards. Permanent commands, oracle transfers and bounded evidence are consolidated in the retained verification evidence below.
 - Initial standalone attempt incorrectly used installed-launcher --al-* flags against raw source binary; help confirmed unsupported flags and the corrected raw server command passed. Final telemetry uses the built source binary from project CWD, with explicit source codex/type fix; no wrapper installation is required.
 
 ## Remaining limits and delivery
@@ -68,15 +68,15 @@ Final ingestion first failed before extraction because the configured shared loc
 The per-command override retry also failed because installed-state preflight validates the configured default before the override. A temporary ignored .agenticlens-config.local.yaml now selects the same fresh state path; it was created exclusively with 0600 permissions while preserving the shared configuration SHA and old registry. No hooks exist for this checkout and none were changed. This operational override will be removed after final identity verification; source code/reviewed fingerprint remain unchanged.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 27
-- **Active Agent Duration:** 11h 13m (excludes user wait time)
+- **Software Development Life Cycle Iterations:** 28
+- **Active Agent Duration:** 11h 17m (excludes user wait time)
 - **Context Window Health:** BLOATED — Root agent peak 450.9k tokens (100% of 450k healthy ceiling, 2 compactions) | Subagents peak 449.8k (Tester)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
-- **Subagent Turn Velocity & Thrashing:** 2.2 avg turns/run (peak: 8 turns) | Planner 2.0, Coder 5.3, Tester 4.0, Reviewer-architecture 1.3, Reviewer-behavior 1.3, Reviewer-data 1.2, Reviewer-tests 1.3
+- **Subagent Turn Velocity & Thrashing:** 2.2 avg turns/run (peak: 9 turns) | Planner 2.0, Coder 5.5, Tester 4.0, Reviewer-architecture 1.3, Reviewer-behavior 1.3, Reviewer-data 1.2, Reviewer-tests 1.3
 - **Test-to-Production Code Ratio:** 1.8:1 (+5,089 test lines / +2,824 prod lines)
 - **Code Delivered:** +8,269 / -7,607 lines across 140 code files (excluding docs)
-- **Reasoning Effort:** 426,048 reasoning tokens (28.9% of generated output)
-- **Tool Health & Self-Correction:** 2,481 tool calls (180 self-corrections, 92.7% success rate)
+- **Reasoning Effort:** 428,639 reasoning tokens (28.8% of generated output)
+- **Tool Health & Self-Correction:** 2,508 tool calls (181 self-corrections, 92.8% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 25 execution anomalies detected (9 CRITICAL, 16 WARNING).
@@ -98,7 +98,7 @@ The per-command override retry also failed because installed-state preflight val
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (407.2k tokens) — Context tokens reached 407.2k, breaching the 250k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (286.2k tokens) — Context tokens reached 286.2k, breaching the 250k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (449.8k tokens) — Context tokens reached 449.8k, breaching the 250k warning ceiling.
-- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (368.1k tokens) — Context tokens reached 368.1k, breaching the 250k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (369.8k tokens) — Context tokens reached 369.8k, breaching the 250k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (387.0k tokens) — Context tokens reached 387.0k, breaching the 250k warning ceiling.
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-architecture <-> reviewer-behavior (3 cycles) — Subagent roles 'reviewer-architecture' and 'reviewer-behavior' alternated for 3 consecutive cycles.
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (4 cycles) — Subagent roles 'coder' and 'tester' alternated for 4 consecutive cycles.
@@ -114,22 +114,22 @@ The per-command override retry also failed because installed-state preflight val
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
 | **planner** | 2 | 178,358 | 22,508 | 2,278,144 | 92.7% | 90.7k | HEALTHY | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **coder** | 4 | 1,504,476 | 361,313 | 155,764,352 | 99.0% | 407.2k | ELEVATED | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
+| **coder** | 4 | 1,505,685 | 362,368 | 156,870,912 | 99.0% | 407.2k | ELEVATED | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
 | **tester** | 2 | 678,637 | 225,356 | 123,972,992 | 99.5% | 449.8k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **Unknown** | 1 | 1,109,688 | 290,146 | 137,785,088 | 99.2% | 450.9k | BLOATED (100%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Unknown** | 1 | 1,351,277 | 296,472 | 140,768,768 | 99.0% | 450.9k | BLOATED (100%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **reviewer-architecture** | 4 | 531,977 | 33,670 | 9,234,944 | 94.6% | 156.0k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
 | **reviewer-behavior** | 4 | 469,958 | 36,702 | 8,033,792 | 94.5% | 142.2k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
 | **reviewer-data** | 5 | 564,014 | 42,221 | 8,661,376 | 93.9% | 149.6k | HEALTHY | Unavailable (0 observed, 0 partial, 5 unavailable / 5 invocations) |
 | **reviewer-tests** | 4 | 458,166 | 38,300 | 7,259,136 | 94.1% | 132.9k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
-| **Total** | **26** | **5,495,274** | **1,050,216** | **452,989,824** | **98.8%** | **450.9k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations)** |
+| **Total** | **26** | **5,738,072** | **1,057,597** | **457,080,064** | **98.8%** | **450.9k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 26 | 5,495,274 | 1,050,216 | 452,989,824 | 98.8% | Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations) |
-| **Total** | **26** | **5,495,274** | **1,050,216** | **452,989,824** | **98.8%** | **Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations)** |
+| **gpt-6.1-sol** | 26 | 5,738,072 | 1,057,597 | 457,080,064 | 98.8% | Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations) |
+| **Total** | **26** | **5,738,072** | **1,057,597** | **457,080,064** | **98.8%** | **Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations)** |
 
-Capture observation finalized: 2026-11-04T12:43:33.139862742Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 0; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 0; reserved bytes: 0. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
+Capture observation finalized: 2026-11-04T13:52:56.563168433Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 0; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 0; reserved bytes: 0. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
 
 ## Iteration 03: planning-only follow-up
 
@@ -216,3 +216,18 @@ CLI configuration validation, source/owner/occurrence preservation and whitespac
 ## Subsequent configuration metrics refresh
 
 User requested generation again using their latest shared configuration: context warning 250,000 / critical 450,000; token velocity warning 60,000 / critical 120,000. Shared SHA256 f19efbec6f8a9301667730ea55840b3ad0d9dbfb13c01f68d1ff13d8e7b368c1 was verified before and after generation. Successful built-source CLI used literal nonce b677171ff27c0d92, explicit Codex source and fix ticket type. Validation passed; schema 6, all 26 session/source/parent identities and exact 3-skill/25-delegation arrays were preserved. No canonical event/retired occurrence fields returned. No application changes or repeated code suites were needed; the existing source verification still applies. Source cost and T3 service-session coverage limits remain unchanged. The exact private capture-only override was removed after device/inode/SHA checks, its newly owned state was removed, and existing shared operational state/hooks were preserved. Latest settings and regenerated ledger/summary are delivered together.
+
+
+## Retained verification evidence
+
+Completed implementation/test handoffs from iterations 01-03 are consolidated here; their temporary files and raw test logs are removed. Iteration 01 was preparation and superseded compatibility design, not an independent completed verification claim. Iteration 02's corrected source/ticket guard passed the actual CLI portability/store/project controls, then parent integrated make/race and independent review passed as recorded above. Iteration 03's final source 3b10af2 passed make, all 13 Go packages with race detection, 824 frontend tests, 39 installation/release/distribution checks, five platform builds and standalone embedded/API checks. No code changed for this cleanup; these results remain valid.
+
+The direct final migration/save-reload/current-schema regression recipients remain in backend/internal/domain/migration/{engine_test.go,invocation_ownership_regression_test.go,lean_v6_test.go}, adapter schema/repository tests and backend/cmd/agentic-lens/lean_migration_test.go. Final affected commands were go -C backend test ./internal/domain/migration ./internal/adapters ./internal/adapters/backfill -count=1 (PASS), and go -C backend test ./cmd/agentic-lens -run 'TestCLIMigrationUsesDirectV5ToFinalV6AndRejectsUnreleasedSchemas|TestCLIMigrateCommand|TestCLIBackfillMigrateSchemaFlag|TestCLIMigrateReportsDroppedUnscopedToolRows' -count=1 (PASS). They protect supported 1-5 migration inputs, direct 5-to-6 output, native overlap versus legitimate multiplicity, ownerless drop/audit, nullable values, unique/ambiguous/contradicted child proof, unchanged costs/tree/summaries, backup/idempotence and no-write rich6/future7 rejection. The final integrated make independently passed afterward.
+
+Native timestamp/null controls remain in OpenCode schema-family extraction tests; contradictory child proof in child_proof_test.go; opaque-cache/failed-source recovery in capture/lean_snapshot_test.go and cmd/agentic-lens/lean_cache_recovery_test.go. Frontend/HTTP tests retain current6 acceptance, retired-field/future7 rejection, source-only trace coverage, persisted facts without hydration and recorded-summary disclosure. Full original discovery/model/effort credit and dispositions remain in iterations/02/REVIEW_SUMMARY.json (16 findings) and iterations/03/REVIEW_SUMMARY.json (3 findings), with approval revisions and separate verification actors above. Synthetic regressions do not establish every deployed native variant; browser/manual visual checks, injected rename/power-loss failure and unmapped T3 source usage remain the previously recorded limits.
+
+## Workspace cleanup
+
+User requested removal of intermediate/temporary files. Removed nine completed BACKEND.md/FRONTEND.md/TESTING.md handoffs across iterations 01-03 and nine ignored iteration03 test logs. Retained the contract, PR description, all three approved/historical plans, both compact review summaries, unified summary and canonical metrics. Historical plan mentions of temporary handoffs describe execution-time ownership, not remaining deliverables. No unrelated ticket, application file, test fixture or external private source store is a cleanup target. Final checks verify retained plan/contract/review bytes, compact findings, removed-reference cleanup and metric-owner preservation; no application suites need repeating for artifact-only removal.
+
+Cleanup verification passed: exactly nine permanent workspace files remain; plan/contract/PR/compact-review bytes are unchanged, all 19 compact findings and discovery tuples remain, and no Markdown link targets a removed handoff. Final Codex generation with literal nonce c896e6a6cf6e7a65 preserved all 26 owners and exact 3-skill/25-delegation arrays. The private capture-only override/state was removed after identity/SHA checks; shared config and pre-existing state/hooks remain unchanged. Whitespace validation passed. Only AL-62 artifacts changed.
