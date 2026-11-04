@@ -18,9 +18,11 @@ describe('Boundary API Client', () => {
             ['fleet malformed tools', () => fetchFleetSummary(), { ...mockFleetSummary, anomaly_summary: { ...mockFleetSummary.anomaly_summary, brittle_tools: [{}] } }],
             ['ledger missing wrapper', () => fetchWorkspaceLedgers(), ledger],
             ['ledger invalid health', () => fetchWorkspaceLedgers(), [{ ...ledger, totals: { ...ledger.totals, context_health: 'UNKNOWN' } }]],
+            ['ledger malformed partial marker', () => fetchWorkspaceLedgers(), [{ ...ledger, facts: { ...ledger.facts, sessions: [{ id: 's', invocations: [], tools: [], events_are_partial: 'true' }] } }]],
+            ['ledger malformed native call ID', () => fetchWorkspaceLedgers(), [{ ...ledger, facts: { ...ledger.facts, sessions: [{ id: 's', invocations: [], tools: [], events: [{ event_id: 'event', call_id: 42, timestamp: '2026-01-01T00:00:00Z', turn: 0, role: 'coder', event_type: 'tool_call', status: 'unknown', context_tokens: 0 }] }] } }]],
             ['ledger malformed session', () => fetchWorkspaceLedgers(), [{ ...ledger, facts: { ...ledger.facts, sessions: [{ id: 's', tools: [], invocations: [{ role: 'coder' }] }] } }]],
             ['ledger nonfinite token', () => fetchWorkspaceLedgers(), [{ ...ledger, totals: { ...ledger.totals, input_tokens: NaN } }]],
-            ['ledger malformed task link', () => fetchWorkspaceLedgers(), [{ ...ledger, facts: { ...ledger.facts, task_links: [{ parent_turn: '1' }] } }]],
+            ['ledger malformed task link', () => fetchWorkspaceLedgers(), [{ ...ledger, facts: { ...ledger.facts, sessions: [{ id: 'owner', invocations: [], tools: [], task_links: [{ parent_turn: '1', cost_usd: null, cost_evidence: { state: 'unavailable', known_subtotal_usd: null } }] }] } }]],
             ['comparison malformed workflow', () => fetchWorkspaces(), [{ ...ledger, workflow_efficiency: { ...ledger.workflow_efficiency, context_window_health: null } }]],
             ['detail missing ledger', () => fetchWorkspaceById('AL-1'), { ...detail, ledger: null }],
             ['detail malformed artifact', () => fetchWorkspaceById('AL-1'), { ...detail, artifacts: { ticket_id: 'AL-1', items: [{ path: 'SUMMARY.md', content: 42 }] } }],
@@ -38,7 +40,7 @@ describe('Boundary API Client', () => {
         });
         it('accepts additive fields and Go nil collections without mutating the response', async () => {
             const payload = { ...ledger, extra_future_field: true, roles: null, models: null, threads: null,
-                anomalies: null, facts: { ...ledger.facts, sessions: [{ id: 's', invocations: null, tools: null, anomalies: null }], skills: null, task_links: null, anomalies: null },
+                anomalies: null, facts: { ...ledger.facts, sessions: [{ id: 's', invocations: null, tools: null, anomalies: null, skills: null, task_links: null }], anomalies: null },
                 workflow_efficiency: { ...ledger.workflow_efficiency, role_effort_distribution_pct: null,
                     subagent_turn_velocity: { ...ledger.workflow_efficiency.subagent_turn_velocity, by_role: null },
                     context_window_health: { ...ledger.workflow_efficiency.context_window_health, peak_by_role: null } },
@@ -46,8 +48,7 @@ describe('Boundary API Client', () => {
             const before = JSON.stringify(payload);
             vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => [payload] }));
             const result = (await fetchWorkspaceLedgers()).data[0]!;
-            expect(result.facts.sessions[0]).toEqual({ id: 's', invocations: [], tools: [], anomalies: [] });
-            expect(result.facts.skills).toEqual([]);
+            expect(result.facts.sessions[0]).toEqual({ id: 's', invocations: [], tools: [], anomalies: [], skills: [], task_links: [] });
             expect(result.threads).toEqual([]);
             expect(result.workflow_efficiency.role_effort_distribution_pct).toEqual({});
             expect(JSON.stringify(payload)).toBe(before);
@@ -67,13 +68,65 @@ describe('Boundary API Client', () => {
             [{ ticket_id: 'AL-1' }, { ticket_id: 'AL-1' }],
             [{ ticket_id: 'AL-1', items: [{ path: 'SUMMARY.md', title: 'Summary', content: null }] }, { ticket_id: 'AL-1', items: [{ path: 'SUMMARY.md', title: 'Summary', description: '', content: null }] }],
         ])('accepts omitted optional ledger facts and artifact fields: %j', async (artifacts, expectedArtifacts) => {
-            const { skills, task_links, anomalies, migration, ...facts } = ledger.facts;
-            void skills; void task_links; void anomalies; void migration;
+            const { anomalies, migration, ...facts } = ledger.facts;
+            void anomalies; void migration;
             const payload = { ...detail, ledger: { ...ledger, facts }, artifacts, anomalies: null };
             vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => payload }));
             expect((await fetchWorkspaceById('AL-1')).data.artifacts).toEqual(expectedArtifacts);
         });
     });
+    describe('v6 owned occurrence boundary', () => {
+        const detail = mockWorkspaceDetails['AL-1']!;
+        const skill = { name: 'selected-skill', caller_role: 'orchestrator', timestamp: '2026-01-01T00:00:00Z',
+            turn_index: 1, message_index: 0, success: false, outcome: 'unknown', evidence_kind: 'activation_request',
+            provenance: { message_id: 'native-message', item_id: 'native-item', source_ref: 'codex-rollout-line:2' },
+            evidence_references: [{ message_id: 'attachment-message', source_ref: 'codex-rollout-line:3' }] };
+        const task = { subagent_type: 'tester', outcome: 'unknown' as const, description: 'Verify', parent_turn: 2, timestamp: skill.timestamp,
+            provenance: { call_id: 'native-call' }, child_reference: '/root/tester', child_agent_id: 'opaque-agent', child_session_id: 'native-child-session', cost_usd: null,
+            cost_evidence: { state: 'unavailable', known_subtotal_usd: null } };
+        const payload = { ...detail, ledger: { ...detail.ledger, facts: { ...detail.ledger.facts, schema_version: 6,
+            sessions: [{ id: 'root', source: 'codex', invocations: [], tools: [], skills: [skill, skill], task_links: [task] }],
+        } } };
+        it('retains native provenance, unknown outcomes and repeated owned occurrences without mutating the response', async () => {
+            const before = JSON.stringify(payload);
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => payload }));
+            const facts = (await fetchWorkspaceById('AL-1')).data.ledger.facts;
+            expect(facts.sessions[0]?.skills).toEqual([skill, skill]);
+            expect(facts.sessions[0]?.task_links?.[0]).toEqual(task);
+            expect(JSON.stringify(payload)).toBe(before);
+        });
+        it.each(['provenance', 'outcome', 'missing-outcome', 'references', 'cost', 'child-link-diagnostic', 'missing-task-outcome', 'empty-task-outcome', 'agent-id'])('rejects malformed owned %s at the nested boundary', async (mode) => {
+            const malformedSkill = { ...skill, ...(mode === 'provenance' ? { provenance: { message_id: 42 } }
+                : mode === 'references' ? { evidence_references: [{ item_id: 42 }] }
+                : { outcome: mode === 'missing-outcome' ? undefined : 'finished' }) };
+            const malformedTask = mode === 'child-link-diagnostic' ? { ...task, child_link_diagnostic: 42 }
+                : mode === 'agent-id' ? { ...task, child_agent_id: 42 }
+                : mode === 'missing-task-outcome' ? { ...task, outcome: undefined }
+                : mode === 'empty-task-outcome' ? { ...task, outcome: '' }
+                : { ...task, cost_evidence: { state: 'observed', known_subtotal_usd: 1 } };
+            const malformedTaskCase = ['cost', 'child-link-diagnostic', 'missing-task-outcome', 'empty-task-outcome', 'agent-id'].includes(mode);
+            const facts = { ...payload.ledger.facts, sessions: [{ ...payload.ledger.facts.sessions[0]!,
+                skills: malformedTaskCase ? [skill] : [malformedSkill], task_links: malformedTaskCase ? [malformedTask] : [task],
+            }] };
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ...payload, ledger: { ...payload.ledger, facts } }) }));
+            await expect(fetchWorkspaceById('AL-1')).rejects.toThrow(/Invalid (cost payload|workspace detail response)/);
+        });
+        it.each([undefined, 1, 4, 5])('requires explicit migration for schema %s without converting the payload', async (schema_version) => {
+            const { schema_version: _version, ...facts } = payload.ledger.facts;
+            void _version;
+            const obsolete = { ...payload, ledger: { ...payload.ledger, facts: { ...facts, ...(schema_version === undefined ? {} : { schema_version }) } } };
+            const before = JSON.stringify(obsolete);
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => obsolete }));
+            await expect(fetchWorkspaceById('AL-1')).rejects.toThrow(/Migration required.*schema v6/);
+            expect(JSON.stringify(obsolete)).toBe(before);
+        });
+        it.each(['invocations', 'tools', 'events', 'skills', 'task_links', 'unresolved_facts'])('rejects retired root %s even when empty', async (key) => {
+            const facts = { ...payload.ledger.facts, [key]: key === 'unresolved_facts' ? { diagnostic: 'retired' } : [] };
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ...payload, ledger: { ...payload.ledger, facts } }) }));
+            await expect(fetchWorkspaceById('AL-1')).rejects.toThrow(/Invalid cost payload.*retired root/);
+        });
+    });
+
     describe('fetchFleetSummary', () => {
         it('returns live backend payload when HTTP call succeeds', async () => {
             const mockLiveSummary = {
@@ -158,6 +211,7 @@ describe('Boundary API Client', () => {
                     completed_at: '2026-10-15T11:00:00Z',
                     updated_at: '2026-10-15T11:00:00Z',
                     facts: {
+                        schema_version: 6,
                         ticket_id: 'TEST-1',
                         ticket_title: 'Test ticket',
                         ticket_type: 'feature',
@@ -262,13 +316,13 @@ describe('Boundary API Client', () => {
         });
     });
     describe('fetchWorkspaceById', () => {
-        it('accepts v5 observed zero, partial evidence and unavailable facts without numeric coercion', async () => {
+        it('accepts v6 observed zero, partial evidence and unavailable facts without numeric coercion', async () => {
             const detail = mockWorkspaceDetails['AL-1']!;
             const session = detail.ledger.facts.sessions[0]!;
             const invocation = session.invocations[0]!;
             const payload = {
                 ...detail,
-                ledger: { ...detail.ledger, facts: { ...detail.ledger.facts, schema_version: 5, sessions: [{
+                ledger: { ...detail.ledger, facts: { ...detail.ledger.facts, schema_version: 6, sessions: [{
                     ...session,
                     invocations: [
                         { ...invocation, cost_usd: 0, cost_evidence: { state: 'observed', known_subtotal_usd: 0 } },
@@ -288,7 +342,7 @@ describe('Boundary API Client', () => {
             { cost_usd: 0, cost_evidence: { state: 'unavailable', known_subtotal_usd: null } },
             { cost_usd: null, cost_evidence: { state: 'observed', known_subtotal_usd: 0 } },
             { cost_usd: null, cost_evidence: { state: 'partial', known_subtotal_usd: null } },
-        ])('rejects missing or contradictory v5 invocation evidence: %j', async (cost) => {
+        ])('rejects missing or contradictory v6 invocation evidence: %j', async (cost) => {
             const detail = mockWorkspaceDetails['AL-1']!;
             const session = detail.ledger.facts.sessions[0]!;
             const invocation: Record<string, unknown> = { ...session.invocations[0]! };
@@ -296,7 +350,7 @@ describe('Boundary API Client', () => {
             delete invocation.cost_evidence;
             const payload = {
                 ...detail,
-                ledger: { ...detail.ledger, facts: { ...detail.ledger.facts, schema_version: 5, sessions: [{
+                ledger: { ...detail.ledger, facts: { ...detail.ledger.facts, schema_version: 6, sessions: [{
                     ...session, invocations: [{ ...invocation, ...cost }],
                 }] } },
             };
@@ -310,43 +364,26 @@ describe('Boundary API Client', () => {
             { cost_evidence: { state: 'unavailable', known_subtotal_usd: null } },
             { cost_usd: null, cost_evidence: { state: 'observed', known_subtotal_usd: 0 } },
             { cost_usd: 0, cost_evidence: { state: 'unavailable', known_subtotal_usd: null } },
-        ])('rejects omitted or inconsistent v5 task cost members: %j', async (cost) => {
+        ])('rejects omitted or inconsistent v6 task cost members: %j', async (cost) => {
             const detail = mockWorkspaceDetails['AL-1']!;
             const payload = { ...detail, ledger: { ...detail.ledger, facts: { ...detail.ledger.facts,
-                schema_version: 5, sessions: [], task_links: [{ subagent_type: 'coder', description: 'task', parent_turn: 1, timestamp: '2026-01-01T00:00:00Z', ...cost }],
+                schema_version: 6, sessions: [{ id: 'owner', invocations: [], tools: [], task_links: [{ subagent_type: 'coder', outcome: 'unknown' as const, description: 'task', parent_turn: 1, timestamp: '2026-01-01T00:00:00Z', ...cost }] }],
             } } };
             vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => payload }));
             await expect(fetchWorkspaceById('AL-1')).rejects.toThrow('Invalid cost payload');
         });
-        it('accepts explicit v5 task evidence and preserves optional legacy cost presence', async () => {
+        it('accepts explicit current owned task costs without numeric coercion', async () => {
             const detail = mockWorkspaceDetails['AL-1']!;
-            const task = { subagent_type: 'coder', description: 'task', parent_turn: 1, timestamp: '2026-01-01T00:00:00Z' };
-            const payload = { ...detail, ledger: { ...detail.ledger, facts: { ...detail.ledger.facts, schema_version: 5, sessions: [], task_links: [
+            const task = { subagent_type: 'coder', outcome: 'unknown' as const, description: 'task', parent_turn: 1, timestamp: '2026-01-01T00:00:00Z' };
+            const payload = { ...detail, ledger: { ...detail.ledger, facts: { ...detail.ledger.facts, sessions: [{ id: 'owner', invocations: [], tools: [], task_links: [
                 { ...task, cost_usd: 0, cost_evidence: { state: 'observed', known_subtotal_usd: 0 } },
                 { ...task, cost_usd: null, cost_evidence: { state: 'partial', known_subtotal_usd: 2 } },
                 { ...task, cost_usd: null, cost_evidence: { state: 'unavailable', known_subtotal_usd: null } },
-            ] } } };
-            const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => payload });
-            vi.stubGlobal('fetch', fetchMock);
-            const tasks = (await fetchWorkspaceById('AL-1')).data.ledger.facts.task_links;
+            ] }] } } };
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => payload }));
+            const tasks = (await fetchWorkspaceById('AL-1')).data.ledger.facts.sessions[0]?.task_links;
             expect(tasks?.map((row) => row.cost_usd)).toEqual([0, null, null]);
             expect(tasks?.[1]?.cost_evidence).toEqual({ state: 'partial', known_subtotal_usd: 2 });
-            const invocation = detail.ledger.facts.sessions[0]!.invocations[0]!;
-            const missingInvocation: Record<string, unknown> = { ...invocation };
-            delete missingInvocation.cost_usd;
-            delete missingInvocation.cost_evidence;
-            const legacy = { ...detail, ledger: { ...detail.ledger, facts: { ...detail.ledger.facts, schema_version: 4,
-                sessions: [{ ...detail.ledger.facts.sessions[0]!, invocations: [
-                    { ...invocation, cost_usd: 0 }, { ...invocation, cost_usd: null }, missingInvocation,
-                ] }], task_links: [{ ...task, cost_usd: 0 }, { ...task, cost_usd: null }, task],
-            } } };
-            fetchMock.mockResolvedValue({ ok: true, json: async () => legacy });
-            const facts = (await fetchWorkspaceById('AL-1')).data.ledger.facts;
-            expect(facts.sessions[0]!.invocations.map((row) => row.cost_usd)).toEqual([0, null, undefined]);
-            expect(facts.sessions[0]!.invocations[2]).not.toHaveProperty('cost_usd');
-            expect(facts.task_links?.[0]?.cost_usd).toBe(0);
-            expect(facts.task_links?.[1]?.cost_usd).toBeNull();
-            expect(facts.task_links?.[2]).not.toHaveProperty('cost_usd');
         });
         it('leaves source event payloads and artifact metadata opaque', async () => {
             const detail = mockWorkspaceDetails['AL-1']!;

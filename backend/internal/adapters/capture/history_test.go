@@ -36,151 +36,42 @@ func runHistoryGit(t *testing.T, project string, args ...string) string {
 	}
 	return strings.TrimSpace(string(out))
 }
-func persistHistoryAssociation(t *testing.T, s *Store, id, ticket, store string) {
-	t.Helper()
-	identity := domain.CaptureIdentity{Source: domain.SourceCodex, Store: store, SessionID: id}
-	// This adapter fixture models metadata already verified by Bind; CLI tests use
-	// actual source-backed registration/binding and committed publication.
-	_, err := s.Change(context.Background(), identity, func(r domain.CaptureRegistration) (domain.CaptureRegistration, error) {
-		r.ProjectProof = domain.CaptureProjectVerified
-		r.ProjectDirectory = s.project
-		r.Binding = "explicit_agent_response"
-		r.TicketID = ticket
-		return r, nil
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-func TestHistoryProvenanceRequiresActualRepositoryAndUnambiguousBinding(t *testing.T) {
-	for _, kind := range []string{"deleted source and worktree", "latest source proof unavailable", "same remote unrelated repo", "copied Git objects", "missing proof after deletion", "wrong ticket", "competing store", "competing missing proof", "competing source", "unverified source", "current owner", "changed common identity", "replaced common directory"} {
-		t.Run(kind, func(t *testing.T) {
-			repo, a, b := historyRepository(t)
-			registry := t.TempDir()
-			source := t.TempDir()
-			foreign, err := openRegistry(registry, "Shared", a, false)
-			if err != nil {
-				t.Fatal(err)
-			}
-			persistHistoryAssociation(t, foreign, "prior", "TEST-1", source)
-			current, err := openRegistry(registry, "Shared", b, false)
+
+func TestSessionAssociationChecksActualConflictsWithoutPrivateHistoryGate(t *testing.T) {
+	for _, tc := range []struct {
+		name, ticket         string
+		source               domain.SourceHarness
+		registered, conflict bool
+	}{
+		{name: "portable owner has no private registration"},
+		{name: "same source and ticket", ticket: "TEST-1", source: domain.SourceCodex, registered: true},
+		{name: "wrong ticket", ticket: "TEST-2", source: domain.SourceCodex, registered: true, conflict: true},
+		{name: "different harness has an independent native identity", ticket: "TEST-1", source: domain.SourceOpenCode, registered: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			s, err := openRegistry(t.TempDir(), "Shared", t.TempDir(), false)
 			if err != nil {
 				t.Fatal(err)
 			}
 			defer func() {
-				if err := current.Close(); err != nil {
+				if err := s.Close(); err != nil {
 					t.Error(err)
 				}
 			}()
-			proof, err := current.RepositoryProof(context.Background())
-			if err != nil {
-				t.Fatal(err)
-			}
-			switch kind {
-			case "deleted source and worktree":
-				runHistoryGit(t, repo, "worktree", "remove", "--force", a)
-				if err = os.RemoveAll(source); err != nil {
-					t.Fatal(err)
-				}
-			case "same remote unrelated repo", "copied Git objects":
-				other := t.TempDir()
-				runHistoryGit(t, other, "init", "-qb", "main")
-				runHistoryGit(t, repo, "remote", "add", "origin", "https://example.invalid/same.git")
-				runHistoryGit(t, other, "remote", "add", "origin", "https://example.invalid/same.git")
-				if kind == "copied Git objects" {
-					runHistoryGit(t, other, "fetch", repo, "HEAD")
-					runHistoryGit(t, other, "reset", "--hard", "FETCH_HEAD")
-				}
-				// Replace only foreign provenance with a genuinely observed unrelated repo.
-				ownership, err := currentWorktreeOwnership(other)
-				if err != nil {
-					t.Fatal(err)
-				}
-				if _, err = foreign.db.Exec("UPDATE worktree_ownership SET ownership=? WHERE worktree_id=?", ownership, foreign.worktreeID); err != nil {
-					t.Fatal(err)
-				}
-			case "missing proof after deletion":
-				var body string
-				if err = foreign.db.QueryRow("SELECT ownership FROM worktree_ownership WHERE worktree_id=?", foreign.worktreeID).Scan(&body); err != nil {
-					t.Fatal(err)
-				}
-				var owner worktreeOwnership
-				if err = json.Unmarshal([]byte(body), &owner); err != nil {
-					t.Fatal(err)
-				}
-				owner.Repository = RepositoryProof{}
-				raw, err := json.Marshal(owner)
-				if err != nil {
-					t.Fatal(err)
-				}
-				if _, err = foreign.db.Exec("UPDATE worktree_ownership SET ownership=? WHERE worktree_id=?", raw, foreign.worktreeID); err != nil {
-					t.Fatal(err)
-				}
-				runHistoryGit(t, repo, "worktree", "remove", "--force", a)
-			case "wrong ticket":
-				persistHistoryAssociation(t, foreign, "prior", "TEST-2", source)
-			case "competing store":
-				persistHistoryAssociation(t, foreign, "prior", "TEST-1", t.TempDir())
-			case "competing missing proof":
-				extra := t.TempDir()
-				runHistoryGit(t, repo, "worktree", "add", "-qb", "extra", filepath.Join(extra, "worktree"))
-				unknown, err := openRegistry(registry, "Shared", filepath.Join(extra, "worktree"), false)
-				if err != nil {
-					t.Fatal(err)
-				}
-				persistHistoryAssociation(t, unknown, "prior", "TEST-1", t.TempDir())
-				if _, err = unknown.db.Exec("DELETE FROM worktree_ownership WHERE worktree_id=?", unknown.worktreeID); err != nil {
-					t.Fatal(err)
-				}
-				if err = unknown.Close(); err != nil {
-					t.Fatal(err)
-				}
-			case "competing source":
-				identity := domain.CaptureIdentity{Source: domain.SourceOpenCode, Store: source, SessionID: "prior"}
-				if _, err = foreign.Change(context.Background(), identity, func(r domain.CaptureRegistration) (domain.CaptureRegistration, error) {
-					r.TicketID = "TEST-1"
+			selectedStore := t.TempDir()
+			if tc.registered {
+				id := domain.CaptureIdentity{Source: tc.source, Store: selectedStore, SessionID: "owner"}
+				if _, err := s.Change(context.Background(), id, func(r domain.CaptureRegistration) (domain.CaptureRegistration, error) {
+					r.TicketID = tc.ticket
+					r.Binding = "explicit_manual_selection"
 					return r, nil
 				}); err != nil {
 					t.Fatal(err)
 				}
-			case "unverified source", "latest source proof unavailable":
-				identity := domain.CaptureIdentity{Source: domain.SourceCodex, Store: source, SessionID: "prior"}
-				if _, err = foreign.Change(context.Background(), identity, func(r domain.CaptureRegistration) (domain.CaptureRegistration, error) {
-					r.ProjectProof = domain.CaptureProjectUnverified
-					if kind == "unverified source" {
-						r.ProjectDirectory = ""
-					}
-					return r, nil
-				}); err != nil {
-					t.Fatal(err)
-				}
-			case "current owner":
-				persistHistoryAssociation(t, current, "prior", "TEST-1", source)
-			case "changed common identity":
-				proof.DirectoryIdentity = "replacement"
-			case "replaced common directory":
-				common := filepath.Join(repo, ".git")
-				if err = os.Rename(common, common+".old"); err != nil {
-					t.Fatal(err)
-				}
-				if err = os.Mkdir(common, 0700); err != nil {
-					t.Fatal(err)
-				}
-				// Preserve administrative-directory identity while replacing its common owner.
-				if err = os.Rename(filepath.Join(common+".old", "worktrees"), filepath.Join(common, "worktrees")); err != nil {
-					t.Fatal(err)
-				}
 			}
-			if err = foreign.Close(); err != nil {
-				t.Fatal(err)
-			}
-			owners, err := current.AuthorizeCommittedHistory(context.Background(), "TEST-1", []domain.SessionFact{{ID: "prior", Source: domain.SourceCodex}}, proof)
-			if kind == "deleted source and worktree" || kind == "latest source proof unavailable" {
-				if err != nil || len(owners) != 1 {
-					t.Fatalf("proven deleted history rejected: %+v %v", owners, err)
-				}
-			} else if err == nil {
-				t.Fatalf("unsafe %s history accepted: %+v", kind, owners)
+			err = s.RejectSessionAssociations(context.Background(), "TEST-1", selectedStore, []domain.SessionFact{{ID: "owner", Source: domain.SourceCodex}})
+			if (err != nil) != tc.conflict {
+				t.Fatalf("association conflict=%t err=%v", tc.conflict, err)
 			}
 		})
 	}

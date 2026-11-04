@@ -1,8 +1,10 @@
 package opencode_test
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 	"testing"
 
 	"agenticlens/internal/adapters/opencode"
@@ -100,6 +102,14 @@ func TestSchemaV2ExtractsSkillAndTaskFactsWithExplicitChildSession(t *testing.T)
 	if _, err := db.Exec(`UPDATE session_message SET data=? WHERE id='a1'`, payload); err != nil {
 		t.Fatal(err)
 	}
+	captured, _, _, captureErr := opencode.CaptureSessionSnapshot(context.Background(), db, "ses_root", "tester", 1_000_000)
+	if captureErr != nil {
+		t.Fatal(captureErr)
+	}
+	captureFacts := domain.AgenticFactLedger{Sessions: captured}
+	if len(captureFacts.SkillFacts()) != 1 || len(captureFacts.TaskLinkFacts()) != 1 {
+		t.Fatalf("BEH-05 exact capture snapshot omitted owned source occurrences: %+v", captured)
+	}
 	sessions, _, _, err := opencode.ExtractSessions(db, []string{"ses_root"}, "tester", nil)
 	if err != nil {
 		t.Fatal(err)
@@ -111,6 +121,22 @@ func TestSchemaV2ExtractsSkillAndTaskFactsWithExplicitChildSession(t *testing.T)
 	if len(tasks) != 1 || tasks[0].SubagentType != "coder" || tasks[0].Description != "Implement AL-51" || tasks[0].ParentTurn != 1 || tasks[0].ChildSession != "ses_child" {
 		t.Fatalf("unexpected task facts: %+v", tasks)
 	}
+	if skills[0].SessionID != "ses_root" || skills[0].Provenance.MessageID != "a1" || !strings.Contains(skills[0].Provenance.EventID, "skill-call") || tasks[0].SessionID != "ses_root" || !strings.Contains(tasks[0].Provenance.EventID, "task-call") {
+		t.Fatalf("native source owner/part/message identities lost: %+v %+v", skills, tasks)
+	}
+	if _, err := db.Exec("DELETE FROM session_v2 WHERE id=?", "ses_child"); err != nil {
+		t.Fatal(err)
+	}
+	unavailable, _, _, err := opencode.ExtractSessions(db, []string{"ses_root"}, "tester", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	owned := domain.AgenticFactLedger{Sessions: opencode.WithOwnedSkillTaskFacts(unavailable)}
+	links := owned.TaskLinkFacts()
+	if len(links) != 1 || links[0].SessionID != "ses_root" || links[0].ChildSession != "ses_child" {
+		t.Fatalf("explicit child reference disappeared without child source: %+v", links)
+	}
+
 }
 
 func TestSchemaV2MalformedOrIncompleteSkillTaskInputsPreserveOtherFacts(t *testing.T) {

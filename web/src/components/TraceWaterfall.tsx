@@ -31,6 +31,7 @@ export {
 };
 
 export interface TraceWaterfallProps extends ChildSessionNavigation {
+  readonly hasPartialSavedEvents?: boolean | undefined;
   readonly skills?: readonly SkillFact[] | undefined;
   readonly taskLinks?: readonly TaskLinkFact[] | undefined;
   readonly events: readonly EventFact[];
@@ -57,6 +58,8 @@ const formatEventTypeLabel = (type: string): string => {
   switch (type) {
     case 'tool_call':
       return 'Tool Call';
+    case 'skill_activation':
+      return 'Skill Activation';
     case 'turn_message':
       return 'Turn Message';
     case 'compaction':
@@ -75,6 +78,7 @@ const isSameEvent = (a?: EventFact | null, b?: EventFact | null): boolean => {
 
 export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
   events,
+  hasPartialSavedEvents = false,
   skills,
   taskLinks,
   availableSessionIds,
@@ -105,9 +109,9 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
     ? selectedEvent
     : localSelection ? rebindEvent(localSelection.event, localSelection.events, events) : null;
   const hasLocalSource = isHydrated && dataSource !== 'committed_ledger';
-  const sourceLabel = hasLocalSource
+  const sourceLabel = (hasLocalSource
     ? (dataSource === 'local_codex' ? 'Source: Local Codex' : 'Source: Local SQLite')
-    : 'Source: Committed Ledger';
+    : 'Source: Committed Ledger') + (hasPartialSavedEvents ? ' · Partial saved trace' : '');
 
   const handleCopyIdentifier = async (
     idText: string,
@@ -499,7 +503,9 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
             <span className="offline-indicator-badge">Committed Ledger Facts</span>
           </div>
           <p className="offline-banner-text">
-            Recorded event facts remain visible from the committed ledger. Additional payload details require a local session source.
+            {hasPartialSavedEvents
+              ? 'Some sessions include only saved occurrence events. Additional source events and payload details require a local session source.'
+              : 'Recorded event facts remain visible from the committed ledger. Additional payload details require a local session source.'}
           </p>
         </div>
       )}
@@ -587,6 +593,8 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
                   </div>
 
                   <div className="timeline-details-row">
+                    {ev.event_type === 'skill_activation' && <span className="status-pill">Outcome unavailable</span>}
+                    {ev.event_type !== 'tool_call' && <TraceInvocationBadge metadata={badges.get(ev)} availableSessionIds={availableSessionIds} onSelectSession={onSelectSession} />}
                     {ev.event_type === 'tool_call' && (
                       <div className="tool-details-group">
                         <span className="tool-label">Tool:</span>

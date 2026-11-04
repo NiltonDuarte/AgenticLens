@@ -48,8 +48,6 @@ type storedRegistration struct {
 	Registration domain.CaptureRegistration `json:"registration"`
 	Path         string                     `json:"path"`
 	Snapshot     []domain.SessionFact       `json:"snapshot,omitempty"`
-	Skills       []domain.SkillFact         `json:"skills,omitempty"`
-	TaskLinks    []domain.TaskLinkFact      `json:"task_links,omitempty"`
 }
 
 // Open creates an isolated unassociated registry for adapter callers. Production
@@ -356,7 +354,7 @@ func IdentityKey(id domain.CaptureIdentity) string {
 	return hex.EncodeToString(h[:])
 }
 func encode(r domain.CaptureRegistration) ([]byte, error) {
-	return json.Marshal(storedRegistration{r, r.TranscriptPath, r.Snapshot, r.Skills, r.TaskLinks})
+	return json.Marshal(storedRegistration{r, r.TranscriptPath, r.Snapshot})
 }
 func decode(b []byte) (domain.CaptureRegistration, error) {
 	var v storedRegistration
@@ -366,8 +364,6 @@ func decode(b []byte) (domain.CaptureRegistration, error) {
 	r := v.Registration
 	r.TranscriptPath = v.Path
 	r.Snapshot = v.Snapshot
-	r.Skills = v.Skills
-	r.TaskLinks = v.TaskLinks
 	return r, nil
 }
 func (s *Store) List(ctx context.Context) ([]domain.CaptureRegistration, error) {

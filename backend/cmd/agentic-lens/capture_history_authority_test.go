@@ -37,8 +37,8 @@ func historyAuthorityFixture(t *testing.T) (captureGenerationFixture, captureGen
 func historyAuthorityAuxiliary(t *testing.T, f captureGenerationFixture, label string) []byte {
 	t.Helper()
 	ledger := f.ledger(t)
-	ledger.Skills = []domain.SkillFact{{Name: label + "-skill", CallerRole: "coder"}}
-	ledger.TaskLinks = []domain.TaskLinkFact{{SubagentType: "tester", Description: label + "-task", ChildSession: "descriptive-only", CostEvidence: domain.CostEvidence{State: domain.CostUnavailable}}}
+	ledger.Sessions[0].Skills = []domain.SkillFact{{Name: label + "-skill", CallerRole: "coder", Outcome: domain.OutcomeUnknown}}
+	ledger.Sessions[0].TaskLinks = []domain.TaskLinkFact{{Outcome: domain.OutcomeUnknown, SubagentType: "tester", Description: label + "-task", ChildSession: "descriptive-only", CostEvidence: domain.CostEvidence{State: domain.CostUnavailable}}}
 	body, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(ledger))
 	if err != nil {
 		t.Fatal(err)
@@ -50,7 +50,8 @@ func historyAuthorityAuxiliary(t *testing.T, f captureGenerationFixture, label s
 }
 func runHistoryAuthorityGeneration(t *testing.T, f captureGenerationFixture) ([]byte, error) {
 	t.Helper()
-	cmd := exec.Command(cliBinaryPath, f.args(t, "--append", filepath.Join(f.project, "SUMMARY.md"))...)
+	owner := f.ledger(t).Sessions[0].ID
+	cmd := exec.Command(cliBinaryPath, f.args(t, "--append", filepath.Join(f.project, "SUMMARY.md"), "--session-id", owner, "--codex-home", f.store, "--capture-dir", filepath.Join(f.project, "explicit-state"))...)
 	cmd.Dir = f.project
 	return cmd.CombinedOutput()
 }
@@ -58,7 +59,7 @@ func runHistoryAuthorityGeneration(t *testing.T, f captureGenerationFixture) ([]
 // Security finding severity6, security specialist / gpt-6-luna / medium: matching
 // ownerless rows in another repository must not become committed authority via
 // the Git environment inherited by a native hook.
-func TestCaptureAuxiliaryOnlyHistoryUsesActualRepositoryDespiteHookEnvironment(t *testing.T) {
+func TestCaptureExactSourceRemainsAuthoritativeDespiteForeignGitEnvironment(t *testing.T) {
 	for _, mode := range []string{"foreign GIT_DIR", "hook override bundle"} {
 		t.Run(mode, func(t *testing.T) {
 			actual, foreign := historyAuthorityFixture(t)
@@ -77,12 +78,20 @@ func TestCaptureAuxiliaryOnlyHistoryUsesActualRepositoryDespiteHookEnvironment(t
 					t.Setenv(key, value)
 				}
 			}
-			if out, err := runHistoryAuthorityGeneration(t, actual); err == nil {
-				t.Fatalf("foreign auxiliary-only authority accepted: %s", out)
+			if out, err := runHistoryAuthorityGeneration(t, actual); err != nil {
+				t.Fatalf("exact local source was hidden by foreign Git environment: %v %s", err, out)
 			}
-			if !reflect.DeepEqual(forged, readCaptureFile(t, actual.output)) || !reflect.DeepEqual(summary, readCaptureFile(t, filepath.Join(actual.project, "SUMMARY.md"))) {
-				t.Fatal("rejected foreign authority changed output artifacts")
+			result := actual.ledger(t)
+			if len(result.SkillFacts()) != 0 || len(result.TaskLinkFacts()) != 0 {
+				t.Fatal("complete empty local snapshot retained manual auxiliary facts")
 			}
+			if reflect.DeepEqual(forged, readCaptureFile(t, actual.output)) {
+				t.Fatal("source authority failed to replace manual differences")
+			}
+			if len(summary) == 0 {
+				t.Fatal("fixture summary absent")
+			}
+
 			if err := adapters.CheckPublication(actual.output); err != nil {
 				t.Fatalf("foreign authority was rejected after staging: %v", err)
 			}
@@ -99,7 +108,7 @@ func TestCaptureAuxiliaryOnlyHistoryUsesActualRepositoryDespiteHookEnvironment(t
 					t.Fatalf("actual authority failed under %s: %v %s", mode, err, out)
 				}
 				ledger := actual.ledger(t)
-				if len(ledger.Sessions) != 1 || ledger.Sessions[0].ID != "actual-root" || len(ledger.Skills) != 1 || ledger.Skills[0].Name != "actual-committed-skill" || len(ledger.TaskLinks) != 1 || ledger.TaskLinks[0].Description != "actual-committed-task" {
+				if len(ledger.Sessions) != 1 || ledger.Sessions[0].ID != "actual-root" || len(ledger.SkillFacts()) != 0 || len(ledger.TaskLinkFacts()) != 0 {
 					t.Fatalf("wrong repository supplied evidence: %+v", ledger)
 				}
 				if foreignHistoryState(t, foreign) != foreignBefore {
@@ -110,7 +119,7 @@ func TestCaptureAuxiliaryOnlyHistoryUsesActualRepositoryDespiteHookEnvironment(t
 	}
 }
 
-func TestCaptureAuxiliaryOnlyHistoryRequiresRecordedPhysicalGitAuthority(t *testing.T) {
+func TestCaptureExactSourceDoesNotRequireAncestorGitAuthority(t *testing.T) {
 	actual, foreign := historyAuthorityFixture(t)
 	historyAuthorityAuxiliary(t, actual, "ancestor-committed")
 	historyGit(t, actual.project, "add", "ledger.json")
@@ -133,12 +142,13 @@ func TestCaptureAuxiliaryOnlyHistoryRequiresRecordedPhysicalGitAuthority(t *test
 	historyGit(t, actual.project, "add", "nested project/ledger.json")
 	historyGit(t, actual.project, "commit", "-qm", "nested scope committed auxiliary ledger")
 	foreignBefore := foreignHistoryState(t, foreign)
-	if out, err := runHistoryAuthorityGeneration(t, nested); err == nil {
-		t.Fatalf("unrecorded ancestor Git authority authorized ownerless rows: %s", out)
+	if out, err := runHistoryAuthorityGeneration(t, nested); err != nil {
+		t.Fatalf("exact source required ancestor Git authority: %v %s", err, out)
 	}
-	if !reflect.DeepEqual(candidate, readCaptureFile(t, nested.output)) {
-		t.Fatal("missing physical authority changed ledger")
+	if reflect.DeepEqual(candidate, readCaptureFile(t, nested.output)) || len(nested.ledger(t).SkillFacts()) != 0 {
+		t.Fatal("complete exact source did not replace manually supplied auxiliary facts")
 	}
+
 	if err := adapters.CheckPublication(nested.output); err != nil {
 		t.Fatalf("missing physical authority staged publication: %v", err)
 	}

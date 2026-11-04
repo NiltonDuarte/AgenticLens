@@ -34,6 +34,7 @@ func (dto *SessionToolFactDTO) UnmarshalJSON(data []byte) error {
 }
 
 type SessionEventFactDTO struct {
+	CallID        string  `json:"call_id,omitempty"`
 	EventID       string  `json:"event_id"`
 	Timestamp     string  `json:"timestamp"`
 	MessageID     *string `json:"message_id,omitempty"`
@@ -68,14 +69,18 @@ func (dto *SessionEventFactDTO) UnmarshalJSON(data []byte) error {
 }
 
 type SessionFactDTO struct {
-	ID          string                `json:"id"`
-	ParentID    *string               `json:"parent_id,omitempty"`
-	Source      string                `json:"source,omitempty"`
-	User        string                `json:"user,omitempty"`
-	Invocations []InvocationFactDTO   `json:"invocations"`
-	Tools       []SessionToolFactDTO  `json:"tools"`
-	Events      []SessionEventFactDTO `json:"events,omitempty"`
-	Anomalies   []AnomalyDTO          `json:"anomalies"`
+	EventsArePartial bool                  `json:"events_are_partial,omitempty"`
+	AgentPath        string                `json:"agent_path,omitempty"`
+	Skills           []domain.SkillFact    `json:"skills,omitempty"`
+	TaskLinks        []TaskLinkFactDTO     `json:"task_links,omitempty"`
+	ID               string                `json:"id"`
+	ParentID         *string               `json:"parent_id,omitempty"`
+	Source           string                `json:"source,omitempty"`
+	User             string                `json:"user,omitempty"`
+	Invocations      []InvocationFactDTO   `json:"invocations"`
+	Tools            []SessionToolFactDTO  `json:"tools"`
+	Events           []SessionEventFactDTO `json:"events,omitempty"`
+	Anomalies        []AnomalyDTO          `json:"anomalies"`
 }
 
 // ErrToolSessionIDRequired identifies a fact ledger that has tool aggregates
@@ -87,7 +92,8 @@ func (session SessionFactDTO) ToDomain() domain.SessionFact {
 	user := strings.TrimSpace(session.User)
 	parentID := session.ParentID
 	result := domain.SessionFact{
-		ID:       session.ID,
+		EventsArePartial: session.EventsArePartial, Skills: session.Skills, TaskLinks: TaskLinkFactDTOsToDomain(session.TaskLinks),
+		AgentPath: session.AgentPath, ID: session.ID,
 		ParentID: parentID,
 		Source:   sessionSource,
 		User:     user,
@@ -107,7 +113,7 @@ func (session SessionFactDTO) ToDomain() domain.SessionFact {
 	}
 	for _, event := range session.Events {
 		result.Events = append(result.Events, domain.SessionEventFact{
-			EventID: event.EventID, Timestamp: event.Timestamp, MessageID: event.MessageID, Turn: event.Turn,
+			CallID: event.CallID, EventID: event.EventID, Timestamp: event.Timestamp, MessageID: event.MessageID, Turn: event.Turn,
 			Role: domain.AgentRole(event.Role), EventType: domain.EventType(event.EventType), ToolName: event.ToolName,
 			Status: event.Status, DurationMs: event.DurationMs, ContextTokens: event.ContextTokens,
 		})
@@ -123,7 +129,8 @@ func (session SessionFactDTO) ToDomain() domain.SessionFact {
 func SessionFactDTOFromDomain(session domain.SessionFact) SessionFactDTO {
 	sessionSource := strings.TrimSpace(string(session.Source))
 	result := SessionFactDTO{
-		ID:          session.ID,
+		EventsArePartial: session.EventsArePartial, Skills: session.Skills, TaskLinks: TaskLinkFactDTOsFromDomain(session.TaskLinks),
+		AgentPath: session.AgentPath, ID: session.ID,
 		ParentID:    session.ParentID,
 		Source:      sessionSource,
 		User:        session.User,
@@ -137,6 +144,10 @@ func SessionFactDTOFromDomain(session domain.SessionFact) SessionFactDTO {
 	for _, tool := range session.Tools {
 		result.Tools = append(result.Tools, SessionToolFactDTO{Name: tool.Name, Calls: tool.Calls, Errors: tool.Errors})
 	}
+	for _, event := range domain.PersistedOccurrenceEvents(session) {
+		result.Events = append(result.Events, SessionEventFactDTO{CallID: event.CallID, EventID: event.EventID, Timestamp: event.Timestamp, MessageID: event.MessageID, Turn: event.Turn, Role: string(event.Role), EventType: string(event.EventType), ToolName: event.ToolName, Status: event.Status, DurationMs: event.DurationMs, ContextTokens: event.ContextTokens})
+	}
+	result.EventsArePartial = len(result.Events) > 0
 	for _, anomaly := range session.Anomalies {
 		anomaly.Context.SessionID = nil
 		result.Anomalies = append(result.Anomalies, AnomalyDTOFromDomain(anomaly))

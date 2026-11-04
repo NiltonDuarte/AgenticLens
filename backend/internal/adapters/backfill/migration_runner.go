@@ -41,6 +41,9 @@ func (r *MigrationRunner) Run(opts MigrationOptions) (*SchemaMigrationReport, er
 	if targetVer <= 0 {
 		targetVer = domain.CurrentSchemaVersion
 	}
+	if targetVer != domain.CurrentSchemaVersion {
+		return nil, fmt.Errorf("migration publication requires current target version %d; intermediate transformations are migration-engine internals", domain.CurrentSchemaVersion)
+	}
 
 	targetDir, err := adapters.ResolveWorkspacesDir(opts.WorkspacesDir)
 	if err != nil {
@@ -173,7 +176,7 @@ func (r *MigrationRunner) migrateWorkspace(ctx context.Context, metricPath strin
 	hasLegacyFacts := hasLegacyFactCollections(content)
 	missingSource := hasMissingSessionSource(content)
 	needsSanitization := sourceVer >= 4 && sourceVer <= domain.CurrentSchemaVersion && (needsEventSanitization(content) || missingSource)
-	if sourceVer >= 4 && sourceVer <= domain.CurrentSchemaVersion && !hasLegacyFacts {
+	if sourceVer == domain.CurrentSchemaVersion && !hasLegacyFacts {
 		if err := validateCurrentLedger(content); err != nil {
 			res.Status = "error"
 			res.Error = fmt.Errorf("validating current schema ledger: %w", err)

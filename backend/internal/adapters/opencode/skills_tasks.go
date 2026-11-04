@@ -8,20 +8,9 @@ import (
 )
 
 // ExtractSkillTaskFacts derives optional skill and task facts from normalized
-// OpenCode session events. Child links require an output identifier that matches
-// a direct child session's parent relationship.
+// OpenCode session events. Explicit output child references survive even when
+// the child session is unavailable locally.
 func ExtractSkillTaskFacts(sessions []domain.SessionFact) ([]domain.SkillFact, []domain.TaskLinkFact) {
-	childrenByParent := make(map[string]map[string]struct{})
-	for _, session := range sessions {
-		if session.ParentID == nil || strings.TrimSpace(*session.ParentID) == "" {
-			continue
-		}
-		parent := strings.TrimSpace(*session.ParentID)
-		if childrenByParent[parent] == nil {
-			childrenByParent[parent] = make(map[string]struct{})
-		}
-		childrenByParent[parent][session.ID] = struct{}{}
-	}
 
 	var skills []domain.SkillFact
 	var taskLinks []domain.TaskLinkFact
@@ -54,32 +43,37 @@ func ExtractSkillTaskFacts(sessions []domain.SessionFact) ([]domain.SkillFact, [
 					messageIndex = messageIndexes[*event.MessageID]
 				}
 				skill := domain.SkillFact{
+					SessionID: session.ID, Source: session.Source, Provenance: eventProvenance(event), EvidenceKind: "tool_call", Outcome: eventOutcome(event.Status),
 					Name: name, TurnIndex: int(event.Turn), MessageIndex: messageIndex,
 					CallerRole: string(event.Role), Timestamp: event.Timestamp,
 					Success: strings.EqualFold(event.Status, "completed"),
 				}
-				if !skill.Success {
+				if skill.Outcome == domain.OutcomeFailed {
 					if event.ErrorMessage != nil {
-						skill.Error = strings.TrimSpace(*event.ErrorMessage)
+						skill.Error = *event.ErrorMessage
 					}
 					if skill.Error == "" && event.ToolOutput != nil {
-						skill.Error = strings.TrimSpace(*event.ToolOutput)
+						skill.Error = *event.ToolOutput
 					}
 				}
 				skills = append(skills, skill)
 			case "task":
 				link := domain.TaskLinkFact{
+					SessionID: session.ID, Source: session.Source, Provenance: eventProvenance(event), Outcome: eventOutcome(event.Status),
 					CostEvidence: domain.UnavailableCost(),
 					SubagentType: rawString(input["subagent_type"]),
 					Description:  rawString(input["description"]),
 					ParentTurn:   int(event.Turn), Timestamp: event.Timestamp,
+				}
+				if link.Outcome == domain.OutcomeFailed && event.ErrorMessage != nil {
+					link.Error = *event.ErrorMessage
 				}
 				if event.DurationMs != nil && *event.DurationMs > 0 {
 					link.DurationMs = *event.DurationMs
 				}
 				if event.ToolOutput != nil {
 					childID := outputSessionID(*event.ToolOutput)
-					if _, exists := childrenByParent[session.ID][childID]; exists && childID != "" {
+					if childID != "" {
 						link.ChildSession = childID
 					}
 				}
@@ -109,4 +103,42 @@ func outputSessionID(output string) string {
 		}
 	}
 	return ""
+}
+
+func eventProvenance(event domain.SessionEventFact) domain.FactProvenance {
+	p := domain.FactProvenance{EventID: event.EventID}
+	if event.MessageID != nil {
+		p.MessageID = *event.MessageID
+	}
+	return p
+}
+func eventOutcome(status string) domain.FactOutcome {
+	switch strings.ToLower(status) {
+	case "completed":
+		return domain.OutcomeSucceeded
+	case "error", "failed":
+		return domain.OutcomeFailed
+	default:
+		return domain.OutcomeUnknown
+	}
+}
+
+// WithOwnedSkillTaskFacts derives a complete source snapshot before event payloads
+// are compacted. Other-source owners and their recorded snapshots are untouched.
+func WithOwnedSkillTaskFacts(sessions []domain.SessionFact) []domain.SessionFact {
+	result := append([]domain.SessionFact(nil), sessions...)
+	for i, session := range result {
+		if session.Source != "" && session.Source != domain.SourceOpenCode {
+			continue
+		}
+		skills, links := ExtractSkillTaskFacts([]domain.SessionFact{session})
+		for j := range skills {
+			skills[j].SessionID, skills[j].Source = "", ""
+		}
+		for j := range links {
+			links[j].SessionID, links[j].Source = "", ""
+		}
+		result[i].Skills, result[i].TaskLinks = skills, links
+	}
+	return result
 }

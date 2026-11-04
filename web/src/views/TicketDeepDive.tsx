@@ -639,17 +639,10 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
       </div>
 
       {/* Row 6: Recorded trace and independent schema metadata */}
-      {ledger.facts?.schema_version === 1 && (
-        <div className="legacy-fallback-banner" data-testid="legacy-fallback-banner">
-          <h4 className="legacy-banner-title">Legacy Telemetry Schema Notice</h4>
-          <p className="legacy-banner-text">
-            This telemetry identifies schema v1. Available recorded events, aggregate anomalies, and thread records are displayed below.
-          </p>
-        </div>
-      )}
       <TraceWaterfall
         key={`trace-${requestGenerationRef.current}`}
         events={events}
+        hasPartialSavedEvents={ledger.facts.sessions.some((session) => session.events_are_partial)}
         skills={ledgerSkills(ledger.facts)}
         taskLinks={ledgerTaskLinks(ledger.facts)}
         availableSessionIds={ledger.threads.map((thread) => thread.session_id)}

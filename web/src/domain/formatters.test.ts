@@ -201,8 +201,8 @@ describe('Domain Pure Formatters', () => {
     describe('deriveTicketComparisonRows boundary sorting and empty handling', () => {
         it('retains distinct sorted recorded skill names in browser rows', () => {
             const base = mockAgenticMetricsLedgers['AL-1']!;
-            const skill = (name: string) => ({ name, success: true, caller_role: 'coder', timestamp: '2026-01-01T00:00:00Z', turn_index: 0, message_index: 0 });
-            const rows = deriveTicketComparisonRows([{ ...base, facts: { ...base.facts, skills: [skill('beta'), skill('alpha'), skill('beta')] } }]);
+            const skill = (name: string) => ({ name, success: true, outcome: 'succeeded' as const, caller_role: 'coder', timestamp: '2026-01-01T00:00:00Z', turn_index: 0, message_index: 0 });
+            const rows = deriveTicketComparisonRows([{ ...base, facts: { ...base.facts, sessions: [{ ...base.facts.sessions[0]!, skills: [skill('beta'), skill('alpha'), skill('beta')] }] } }]);
             expect(rows[0]?.skills_used).toEqual(['alpha', 'beta']);
         });
         it('returns empty array when input is empty', () => {
@@ -217,6 +217,7 @@ describe('Domain Pure Formatters', () => {
                 completed_at: null,
                 updated_at: '2026-10-15T12:00:00Z',
                 facts: {
+                    schema_version: 6 as const,
                     ticket_id: null,
                     ticket_title: null,
                     ticket_type: null,
@@ -303,10 +304,10 @@ describe('Domain Pure Formatters', () => {
                 completed_at: '2026-10-17T11:00:00Z',
                 updated_at: '2026-10-17T11:00:00Z',
                 facts: {
-                    schema_version: 2,
+                    schema_version: 6 as const,
                     migration: {
-                        schema_version: 2,
-                        status: 'partial' as const,
+                        schema_version: 6,
+                            status: 'partial' as const,
                         steps_completed: ['git_code_facts'],
                         steps_pending: ['opencode_db'],
                         last_migrated_at: '2026-10-17T11:00:00Z',

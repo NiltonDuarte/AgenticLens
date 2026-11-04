@@ -83,28 +83,32 @@ function validateCostMap(amounts: unknown, summaries: unknown, path: string): vo
   }
 }
 
-function validateFactCost(value: unknown, requireEvidence: boolean, path: string): void {
+function validateFactCost(value: unknown, path: string): void {
   const fact = requireRecord(value, path);
-  if (requireEvidence && (!hasOwn(fact, 'cost_usd') || !hasOwn(fact, 'cost_evidence'))) invalid(path);
+  if (!hasOwn(fact, 'cost_usd') || !hasOwn(fact, 'cost_evidence')) invalid(path);
   if (hasOwn(fact, 'cost_usd') && !isNullableAmount(fact.cost_usd)) invalid(`${path}.cost_usd`);
   if (hasOwn(fact, 'cost_evidence')) validateEvidence(fact.cost_evidence, fact.cost_usd, `${path}.cost_evidence`);
+}
+
+function validateTasks(value: unknown, path: string): void {
+  if (value == null) return;
+  if (!Array.isArray(value)) invalid(path);
+  value.forEach((task: unknown, index) => validateFactCost(task, `${path}[${index}]`));
 }
 
 function validateFactLedger(value: unknown, path: string): void {
   const facts = requireRecord(value, path);
   const version = facts.schema_version;
-  if (version !== undefined && version !== 4 && version !== 5) invalid(`${path}.schema_version`);
-  const strictFacts = version === 5;
+  if (version !== 6) throw new Error(`Migration required: ${path} must use schema v6; migrate older ledgers explicitly.`);
+  if (['invocations', 'tools', 'events', 'skills', 'task_links', 'unresolved_facts'].some((key) => hasOwn(facts, key))) invalid(`${path}: retired root fact collections`);
   if (!Array.isArray(facts.sessions)) invalid(`${path}.sessions`);
   facts.sessions.forEach((value: unknown, index) => {
     const session = requireRecord(value, `${path}.sessions[${index}]`);
     if (!Array.isArray(session.invocations)) invalid(`${path}.sessions[${index}].invocations`);
-    session.invocations.forEach((invocation: unknown, row) => validateFactCost(invocation, strictFacts, `${path}.sessions[${index}].invocations[${row}]`));
+    session.invocations.forEach((invocation: unknown, row) => validateFactCost(invocation, `${path}.sessions[${index}].invocations[${row}]`));
+    validateTasks(session.task_links, `${path}.sessions[${index}].task_links`);
   });
-  if (facts.task_links != null) {
-    if (!Array.isArray(facts.task_links)) invalid(`${path}.task_links`);
-    facts.task_links.forEach((task: unknown, index) => validateFactCost(task, strictFacts, `${path}.task_links[${index}]`));
-  }
+
 }
 
 function validateMetric(value: unknown, path: string): void {

@@ -4,21 +4,25 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
 
 	"agenticlens/internal/adapters"
+	"agenticlens/internal/adapters/codex"
 	"agenticlens/internal/domain"
+	"agenticlens/internal/domain/migration"
 )
 
 func TestAgenticFactLedgerDTOPreservesSkillAndTaskFacts(t *testing.T) {
 	version := domain.CurrentSchemaVersion
-	want := domain.AgenticFactLedger{
-		SchemaVersion: &version,
-		Skills:        []domain.SkillFact{{Name: "agentic-lens-dev", TurnIndex: 1, MessageIndex: 0, CallerRole: "coder", Timestamp: "2026-10-31T10:00:00Z", Success: true}},
-		TaskLinks:     []domain.TaskLinkFact{{SubagentType: "tester", CostEvidence: domain.UnavailableCost(), Description: "Run tests", ParentTurn: 2, ChildSession: "child-1", Timestamp: "2026-10-31T10:01:00Z"}},
-	}
+	want := domain.AgenticFactLedger{SchemaVersion: &version, Sessions: []domain.SessionFact{{ID: "owner", Source: domain.SourceCodex, User: "tester",
+		Skills:    []domain.SkillFact{{Name: "agentic-lens-dev", Outcome: domain.OutcomeSucceeded, Success: true, TurnIndex: 1, CallerRole: "coder", Timestamp: "2026-10-31T10:00:00Z"}},
+		TaskLinks: []domain.TaskLinkFact{{Outcome: domain.OutcomeUnknown, SubagentType: "tester", CostEvidence: domain.UnavailableCost(), Description: "Run tests", ParentTurn: 2, ChildSession: "child-1", Timestamp: "2026-10-31T10:01:00Z"}},
+	}}}
+
 	encoded, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(want))
 	if err != nil {
 		t.Fatal(err)
@@ -28,8 +32,8 @@ func TestAgenticFactLedgerDTOPreservesSkillAndTaskFacts(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := decoded.ToDomain()
-	if len(got.Skills) != 1 || got.Skills[0] != want.Skills[0] || len(got.TaskLinks) != 1 || got.TaskLinks[0] != want.TaskLinks[0] {
-		t.Fatalf("DTO round trip got %+v, want %+v", got, want)
+	if !reflect.DeepEqual(got.SkillFacts(), want.SkillFacts()) || !reflect.DeepEqual(got.TaskLinkFacts(), want.TaskLinkFacts()) {
+		t.Fatalf("DTO owned facts round trip got %+v want %+v", got, want)
 	}
 }
 
@@ -41,7 +45,7 @@ func TestCanonicalV4NestedEventsReadCompatibilityAndMetadata(t *testing.T) {
 	eventJSON := `{"event_id":"call-1","timestamp":"2026-10-29T10:00:00Z","message_id":"message-1","turn":2,"role":"security-auditor","event_type":"tool_call","tool_name":"bash","status":"error","duration_ms":0,"context_tokens":1234}`
 	bareJSON := `{"timestamp":"2026-10-29T09:00:00Z","turn":1,"role":"coder","event_type":"turn_message","status":"completed","context_tokens":0}`
 	ledgerJSON := func(collection string) string {
-		return `{"schema_version":4,"ticket_id":"FIX-12","sessions":[{"id":"owner","source":"opencode","user":"tester","invocations":[],"tools":[],"anomalies":[]` + collection + `}]}`
+		return `{"schema_version":6,"ticket_id":"FIX-12","sessions":[{"id":"owner","source":"opencode","user":"tester","invocations":[],"tools":[],"anomalies":[]` + collection + `}]}`
 	}
 	for _, tc := range []struct {
 		name, collection string
@@ -91,7 +95,7 @@ func TestCanonicalV4NestedEventsReadCompatibilityAndMetadata(t *testing.T) {
 		})
 	}
 	for _, key := range []string{"events", "tools", "invocations"} {
-		data := []byte(strings.Replace(ledgerJSON(""), `"schema_version":4`, `"schema_version":4,"`+key+`":[]`, 1))
+		data := []byte(strings.Replace(ledgerJSON(""), `"schema_version":6`, `"schema_version":6,"`+key+`":[]`, 1))
 		if err := adapters.ValidateRuntimeFactLedger(data); err == nil {
 			t.Fatalf("accepted ambiguous root %s", key)
 		}
@@ -101,7 +105,7 @@ func TestCanonicalV4NestedEventsReadCompatibilityAndMetadata(t *testing.T) {
 func TestCanonicalRetiredContentFieldsReadCompatibility(t *testing.T) {
 	// This is a self-contained ledger in the shape emitted before content
 	// classification was removed. Reading it must not require source hydration.
-	const raw = `{"schema_version":4,"ticket_id":"TEST-101","sessions":[{"id":"owner","source":"codex","user":"tester","invocations":[],"anomalies":[],"tools":[{"name":"command","calls":2,"errors":1,"content_errors":1}],"events":[{"event_id":"call-1","timestamp":"2026-10-29T10:00:00Z","turn":1,"role":"coder","event_type":"tool_call","tool_name":"command","status":"completed","context_tokens":1234,"has_content_error":true,"content_severity":"medium","content_error_snippet":"syntax error: bad name"}]}]}`
+	const raw = `{"schema_version":6,"ticket_id":"TEST-101","sessions":[{"id":"owner","source":"codex","user":"tester","invocations":[],"anomalies":[],"tools":[{"name":"command","calls":2,"errors":1,"content_errors":1}],"events":[{"event_id":"call-1","timestamp":"2026-10-29T10:00:00Z","turn":1,"role":"coder","event_type":"tool_call","tool_name":"command","status":"completed","context_tokens":1234,"has_content_error":true,"content_severity":"medium","content_error_snippet":"syntax error: bad name"}]}]}`
 	if err := adapters.ValidateRuntimeFactLedger([]byte(raw)); err != nil {
 		t.Fatal(err)
 	}
@@ -155,14 +159,14 @@ func TestValidateRuntimeFactLedgerRejectsLegacyVersionsBeforeFacts(t *testing.T)
 }
 
 func TestValidateRuntimeFactLedgerRejectsIncompleteV4(t *testing.T) {
-	data := []byte(`{"schema_version":4,"sessions":[],"migration":{"status":"partial","steps_pending":["source_backfill"]}}`)
+	data := []byte(`{"schema_version":6,"sessions":[],"migration":{"status":"partial","steps_pending":["source_backfill"]}}`)
 	if err := adapters.ValidateRuntimeFactLedger(data); err == nil || !strings.Contains(err.Error(), "incomplete") {
 		t.Fatalf("expected incomplete v4 rejection, got %v", err)
 	}
 }
 
 func TestValidateRuntimeFactLedgerAcceptsCanonicalV4WithoutMigrationMetadata(t *testing.T) {
-	base := `{"schema_version":4,"sessions":[{"id":"s1","source":"opencode","user":"u","invocations":[{"role":"orchestrator","model":"m","started_at":null,"completed_at":null,"active_duration_seconds":0,"turns":0,"tokens":{"input":0,"output":0,"cache_read":0,"reasoning":0,"peak_context":0},"cost_usd":0,"compactions":0,"user_iterations":0}],"tools":[],"anomalies":[]}]}`
+	base := `{"schema_version":6,"sessions":[{"id":"s1","source":"opencode","user":"u","invocations":[{"role":"orchestrator","model":"m","started_at":null,"completed_at":null,"active_duration_seconds":0,"turns":0,"tokens":{"input":0,"output":0,"cache_read":0,"reasoning":0,"peak_context":0},"cost_usd":0,"compactions":0,"user_iterations":0,"cost_evidence":{"state":"observed","known_subtotal_usd":0}}],"tools":[],"anomalies":[]}]}`
 	if err := adapters.ValidateRuntimeFactLedger([]byte(base)); err != nil {
 		t.Fatalf("canonical v4 without workflow metadata should be accepted: %v", err)
 	}
@@ -176,7 +180,7 @@ func TestValidateRuntimeFactLedgerAcceptsCanonicalV4WithoutMigrationMetadata(t *
 			}
 		})
 	}
-	for _, value := range []string{`"obsolete"`, `""`, `null`, `0`, `{}`} {
+	for _, value := range []string{`"obsolete"`, `""`, `null`, `0`, `{"schema_version":6}`} {
 		t.Run("reject removed invocation key "+value, func(t *testing.T) {
 			data := strings.Replace(base, `"role":`, `"id":`+value+`,"role":`, 1)
 			if err := adapters.ValidateRuntimeFactLedger([]byte(data)); err == nil || !strings.Contains(err.Error(), "must not contain id") {
@@ -279,7 +283,7 @@ func TestAgenticFactLedgerDTOFromDomainPreservesTemporaryMigrationMetadata(t *te
 }
 
 func TestValidateRuntimeFactLedgerRejectsIntermediateMigrationState(t *testing.T) {
-	base := `{"schema_version":4,"migration":{"status":"partial","steps_completed":[],"steps_pending":["source_backfill"]},"sessions":[]}`
+	base := `{"schema_version":6,"migration":{"status":"partial","steps_completed":[],"steps_pending":["source_backfill"]},"sessions":[]}`
 	err := adapters.ValidateRuntimeFactLedger([]byte(base))
 	if err == nil || !strings.Contains(err.Error(), "resume") {
 		t.Fatalf("expected actionable incomplete migration rejection, got %v", err)
@@ -327,7 +331,7 @@ func TestAgenticFactLedgerDTO_OmitsEventsAndAnomalyEvidence(t *testing.T) {
 		t.Fatalf("compact DTO serialized transient rows or refs: %s", encoded)
 	}
 	var legacy adapters.AgenticFactLedgerDTO
-	if err := json.Unmarshal([]byte(`{"schema_version":4,"sessions":[{"id":"s1","invocations":[],"tools":[],"events":[{"event_id":"event-1","timestamp":"2026-10-26T10:00:00Z","role":"coder","event_type":"tool_call","tool_name":"bash","status":"error"}],"anomalies":[{"rule_id":"TOOL_RETRY_STREAK","severity":"WARNING","title":"retry","description":"retry","context":{},"evidence":[{"session_id":"s1","event_id":"event-1"}]}]}]}`), &legacy); err != nil {
+	if err := json.Unmarshal([]byte(`{"schema_version":6,"sessions":[{"id":"s1","invocations":[],"tools":[],"events":[{"event_id":"event-1","timestamp":"2026-10-26T10:00:00Z","role":"coder","event_type":"tool_call","tool_name":"bash","status":"error"}],"anomalies":[{"rule_id":"TOOL_RETRY_STREAK","severity":"WARNING","title":"retry","description":"retry","context":{},"evidence":[{"session_id":"s1","event_id":"event-1"}]}]}]}`), &legacy); err != nil {
 		t.Fatalf("legacy rows should decode for normalization: %v", err)
 	}
 	if len(legacy.Sessions[0].Events) != 1 || len(legacy.Sessions[0].Anomalies[0].Evidence) != 1 {
@@ -526,7 +530,7 @@ func TestAgenticMetricsLedgerDTO_AnomaliesSerialization(t *testing.T) {
 func TestSchemaMigrationDTOBoundaries(t *testing.T) {
 	t.Run("fact ledger rejects malformed anomaly collection", func(t *testing.T) {
 		var dto adapters.AgenticFactLedgerDTO
-		if err := json.Unmarshal([]byte(`{"schema_version":4,"sessions":[],"anomalies":"not_an_array"}`), &dto); err == nil {
+		if err := json.Unmarshal([]byte(`{"schema_version":6,"sessions":[],"anomalies":"not_an_array"}`), &dto); err == nil {
 			t.Fatal("fact input accepted malformed anomaly collection")
 		}
 	})
@@ -555,7 +559,7 @@ func TestSchemaMigrationDTOBoundaries(t *testing.T) {
 	})
 	t.Run("legacy event DTO decodes but output omits rows", func(t *testing.T) {
 		var decoded adapters.AgenticFactLedgerDTO
-		if err := json.Unmarshal([]byte(`{"schema_version":4,"sessions":[{"id":"s1","invocations":[],"tools":[],"events":[{"event_id":"e1","timestamp":"2026-10-18T10:00:00Z","role":"coder","event_type":"tool_call","status":"error"}]}]}`), &decoded); err != nil {
+		if err := json.Unmarshal([]byte(`{"schema_version":6,"sessions":[{"id":"s1","invocations":[],"tools":[],"events":[{"event_id":"e1","timestamp":"2026-10-18T10:00:00Z","role":"coder","event_type":"tool_call","status":"error"}],"anomalies":[]}]}`), &decoded); err != nil {
 			t.Fatalf("expected legacy event rows to be readable for compaction: %v", err)
 		}
 		data, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(decoded.ToDomain()))
@@ -612,9 +616,9 @@ func TestSchemaMigrationDTOBoundaries(t *testing.T) {
 			payload string
 		}{
 			{"schema_version string", `{"schema_version": "2"}`},
-			{"schema_version float", `{"schema_version": 2.5}`},
-			{"events not an array", `{"schema_version": 2, "events": true}`},
-			{"events array with invalid element", `{"schema_version": 2, "events": [123]}`},
+			{"schema_version float", `{"schema_version": 6.5}`},
+			{"events not an array", `{"schema_version": 6, "events": true}`},
+			{"events array with invalid element", `{"schema_version": 6, "events": [123]}`},
 			{"code not an object", `{"code": "not_an_object"}`},
 			{"invocations not an array", `{"invocations": {}}`},
 			{"migration not an object", `{"migration": ["git_code_facts"]}`},
@@ -633,13 +637,13 @@ func TestSchemaMigrationDTOBoundaries(t *testing.T) {
 
 	t.Run("empty json object ToDomain defaults safely without panic", func(t *testing.T) {
 		var dto adapters.AgenticFactLedgerDTO
-		if err := json.Unmarshal([]byte(`{}`), &dto); err != nil {
+		if err := json.Unmarshal([]byte(`{"schema_version":6}`), &dto); err != nil {
 			t.Fatalf("unexpected unmarshal error: %v", err)
 		}
 
 		dom := dto.ToDomain()
-		if dom.SchemaVersion != nil {
-			t.Errorf("expected nil schema_version for empty JSON")
+		if dom.SchemaVersion == nil || *dom.SchemaVersion != domain.CurrentSchemaVersion {
+			t.Errorf("expected current schema_version to be retained")
 		}
 		if dom.Code.SDLCIterations != 0 {
 			t.Errorf("expected zero SDLC iterations to remain zero, got %d", dom.Code.SDLCIterations)
@@ -657,6 +661,7 @@ func TestSchemaMigrationDTOBoundaries(t *testing.T) {
 }
 
 func TestToolSessionIDRequiredAtLedgerBoundary(t *testing.T) {
+	version := domain.CurrentSchemaVersion
 	cases := []struct {
 		name      string
 		sessionID string
@@ -670,7 +675,7 @@ func TestToolSessionIDRequiredAtLedgerBoundary(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			tools := []adapters.SessionToolFactDTO{{Name: "command", Calls: 1}}
-			dto := adapters.AgenticFactLedgerDTO{Sessions: []adapters.SessionFactDTO{{ID: tc.sessionID, Invocations: []adapters.InvocationFactDTO{}, Tools: tools, Events: []adapters.SessionEventFactDTO{}}}}
+			dto := adapters.AgenticFactLedgerDTO{SchemaVersion: &version, Sessions: []adapters.SessionFactDTO{{ID: tc.sessionID, Source: "codex", User: "tester", Invocations: []adapters.InvocationFactDTO{}, Tools: tools, Events: []adapters.SessionEventFactDTO{}}}}
 			err := dto.Validate()
 			if tc.valid && err != nil {
 				t.Fatalf("expected valid session identity, got %v", err)
@@ -680,7 +685,7 @@ func TestToolSessionIDRequiredAtLedgerBoundary(t *testing.T) {
 			}
 		})
 	}
-	if err := (adapters.AgenticFactLedgerDTO{Sessions: []adapters.SessionFactDTO{}}).Validate(); err != nil {
+	if err := (adapters.AgenticFactLedgerDTO{SchemaVersion: &version, Sessions: []adapters.SessionFactDTO{}}).Validate(); err != nil {
 		t.Fatalf("empty tools collection should be valid: %v", err)
 	}
 }
@@ -827,7 +832,7 @@ func TestTicketTypeBoundarySchemaAndSerialization(t *testing.T) {
 	t.Run("explicit ticket_type null preserves nil pointer across round-trip", func(t *testing.T) {
 		t.Parallel()
 		jsonBlob := `{
-			"schema_version": 2,
+			"schema_version": 6,
 			"ticket_id": "AL-29",
 			"ticket_type": null,
 			"code": {
@@ -865,7 +870,7 @@ func TestTicketTypeBoundarySchemaAndSerialization(t *testing.T) {
 	t.Run("omitted ticket_type defaults to nil pointer", func(t *testing.T) {
 		t.Parallel()
 		jsonBlob := `{
-			"schema_version": 2,
+			"schema_version": 6,
 			"ticket_id": "AL-29",
 			"code": {
 				"lines_added": 0,
@@ -938,19 +943,19 @@ func TestTicketTypeBoundarySchemaAndSerialization(t *testing.T) {
 		}{
 			{
 				name: "ticket_type as integer number",
-				json: `{"schema_version": 2, "ticket_id": "AL-29", "ticket_type": 123}`,
+				json: `{"schema_version": 6, "ticket_id": "AL-29", "ticket_type": 123}`,
 			},
 			{
 				name: "ticket_type as boolean",
-				json: `{"schema_version": 2, "ticket_id": "AL-29", "ticket_type": true}`,
+				json: `{"schema_version": 6, "ticket_id": "AL-29", "ticket_type": true}`,
 			},
 			{
 				name: "ticket_type as array",
-				json: `{"schema_version": 2, "ticket_id": "AL-29", "ticket_type": ["feat"]}`,
+				json: `{"schema_version": 6, "ticket_id": "AL-29", "ticket_type": ["feat"]}`,
 			},
 			{
 				name: "ticket_type as nested object",
-				json: `{"schema_version": 2, "ticket_id": "AL-29", "ticket_type": {"name": "feat"}}`,
+				json: `{"schema_version": 6, "ticket_id": "AL-29", "ticket_type": {"name": "feat"}}`,
 			},
 		}
 
@@ -1214,7 +1219,7 @@ func TestCostEvidenceBoundaryCompatibility(t *testing.T) {
 
 	legacyBase := `{"schema_version":4,"sessions":[{"id":"owner","source":"codex","user":"alice","invocations":[{"role":"coder","model":"model-a","started_at":null,"completed_at":null,"active_duration_seconds":0,"turns":1,"tokens":{"input":1,"output":0,"cache_read":0,"reasoning":0,"peak_context":1},COST"compactions":0,"user_iterations":0}],"tools":[],"anomalies":[]}]}`
 	t.Run("typed task presence and partial facts survive concrete roundtrip", func(t *testing.T) {
-		for _, version := range []int{4, 5} {
+		for _, version := range []int{6} {
 			for _, tc := range []struct {
 				name, fields string
 				state        domain.CostState
@@ -1227,9 +1232,9 @@ func TestCostEvidenceBoundaryCompatibility(t *testing.T) {
 			} {
 				t.Run(fmt.Sprintf("v%d/%s", version, tc.name), func(t *testing.T) {
 					fields := tc.fields
-					if version == 5 && tc.name == "absent" {
+					if version >= 5 && tc.name == "absent" {
 						fields = `"cost_evidence":{"state":"unavailable","known_subtotal_usd":null}`
-					} else if version == 5 && tc.state != domain.CostPartial {
+					} else if version >= 5 && tc.state != domain.CostPartial {
 						subtotal := "null"
 						if tc.state == domain.CostObserved {
 							subtotal = "0"
@@ -1238,13 +1243,13 @@ func TestCostEvidenceBoundaryCompatibility(t *testing.T) {
 					}
 					core := strings.Replace(legacyBase, `"schema_version":4`, fmt.Sprintf(`"schema_version":%d`, version), 1)
 					core = strings.Replace(core, "COST", `"cost_usd":null,"cost_evidence":{"state":"partial","known_subtotal_usd":1.25},`, 1)
-					task := `{"subagent_type":"coder","description":"Keep source task","parent_turn":8,"child_session_id":"child","timestamp":"2026-11-01T10:00:00Z","duration_ms":12`
+					task := `{"outcome":"unknown","subagent_type":"coder","description":"Keep source task","parent_turn":8,"child_session_id":"child","timestamp":"2026-11-01T10:00:00Z","duration_ms":12`
 					if fields != "" {
 						task += "," + fields
 					}
 					task += "}"
-					input := []byte(strings.TrimSuffix(core, "}") + `,"task_links":[` + task + `]}`)
-					if version == 5 && tc.name == "absent" {
+					input := []byte(strings.Replace(core, `"anomalies":[]`, `"anomalies":[],"task_links":[`+task+`]`, 1))
+					if version >= 5 && tc.name == "absent" {
 						if err := adapters.ValidateRuntimeFactLedger(input); err == nil {
 							t.Fatal("v5 runtime accepted task with omitted cost_usd")
 						}
@@ -1266,35 +1271,36 @@ func TestCostEvidenceBoundaryCompatibility(t *testing.T) {
 					if fact.CostUSD != 1.25 || fact.CostEvidence.State != domain.CostPartial || fact.CostEvidence.KnownSubtotalUSD == nil || *fact.CostEvidence.KnownSubtotalUSD != 1.25 {
 						t.Fatalf("partial accumulator lost: %+v", fact)
 					}
-					if len(facts.TaskLinks) != 1 || facts.TaskLinks[0].CostEvidence.State != tc.state || facts.TaskLinks[0].CostUSD != tc.amount || facts.TaskLinks[0].Description != "Keep source task" || facts.TaskLinks[0].ChildSession != "child" || facts.TaskLinks[0].ParentTurn != 8 || facts.TaskLinks[0].DurationMs != 12 {
-						t.Fatalf("task conversion lost presence/metadata: %+v", facts.TaskLinks)
+					if len(facts.TaskLinkFacts()) != 1 || facts.TaskLinkFacts()[0].CostEvidence.State != tc.state || facts.TaskLinkFacts()[0].CostUSD != tc.amount || facts.TaskLinkFacts()[0].Description != "Keep source task" || facts.TaskLinkFacts()[0].ChildSession != "child" || facts.TaskLinkFacts()[0].ParentTurn != 8 || facts.TaskLinkFacts()[0].DurationMs != 12 {
+						t.Fatalf("task conversion lost presence/metadata: %+v", facts.TaskLinkFacts())
 					}
 					encoded, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(facts))
 					if err != nil {
 						t.Fatal(err)
 					}
 					var wire struct {
-						TaskLinks []struct {
-							Cost     *float64            `json:"cost_usd"`
-							Evidence domain.CostEvidence `json:"cost_evidence"`
-						} `json:"task_links"`
 						Sessions []struct {
+							TaskLinks []struct {
+								Cost     *float64            `json:"cost_usd"`
+								Evidence domain.CostEvidence `json:"cost_evidence"`
+							} `json:"task_links"`
 							Invocations []struct {
 								Cost *float64 `json:"cost_usd"`
 							} `json:"invocations"`
 						} `json:"sessions"`
 					}
+
 					if err := json.Unmarshal(encoded, &wire); err != nil {
 						t.Fatal(err)
 					}
-					if wire.Sessions[0].Invocations[0].Cost != nil || wire.TaskLinks[0].Evidence.State != tc.state {
+					if wire.Sessions[0].Invocations[0].Cost != nil || wire.Sessions[0].TaskLinks[0].Evidence.State != tc.state {
 						t.Fatalf("partial complete amount leaked: %s", encoded)
 					}
 					if tc.state == domain.CostObserved {
-						if wire.TaskLinks[0].Cost == nil || *wire.TaskLinks[0].Cost != 0 {
+						if wire.Sessions[0].TaskLinks[0].Cost == nil || *wire.Sessions[0].TaskLinks[0].Cost != 0 {
 							t.Fatalf("explicit task zero lost: %s", encoded)
 						}
-					} else if wire.TaskLinks[0].Cost != nil {
+					} else if wire.Sessions[0].TaskLinks[0].Cost != nil {
 						t.Fatalf("incomplete task became numeric: %s", encoded)
 					}
 				})
@@ -1302,7 +1308,7 @@ func TestCostEvidenceBoundaryCompatibility(t *testing.T) {
 		}
 	})
 	t.Run("owning canonical decoders reject malformed trailing and unknown fields", func(t *testing.T) {
-		for _, version := range []int{4, 5} {
+		for _, version := range []int{6} {
 			base := strings.Replace(legacyBase, `"schema_version":4`, fmt.Sprintf(`"schema_version":%d`, version), 1)
 			base = strings.Replace(base, "COST", `"cost_usd":0,"cost_evidence":{"state":"observed","known_subtotal_usd":0},`, 1)
 			for _, input := range []string{
@@ -1336,17 +1342,12 @@ func TestCostEvidenceBoundaryCompatibility(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			data := []byte(strings.Replace(legacyBase, "COST", tc.field, 1))
-			if err := adapters.ValidateRuntimeFactLedger(data); err != nil {
+			migrated, err := migration.NewEngine(nil).Migrate(data, 6)
+			if err != nil {
 				t.Fatal(err)
 			}
-			var dto adapters.AgenticFactLedgerDTO
-			if err := json.Unmarshal(data, &dto); err != nil {
-				t.Fatal(err)
-			}
-			if err := dto.Validate(); err != nil {
-				t.Fatal(err)
-			}
-			inv := dto.ToDomain().Sessions[0].Invocations[0]
+			inv := migrated.Sessions[0].Invocations[0]
+
 			if inv.CostEvidence.State != tc.state || inv.CostUSD != tc.amount {
 				t.Fatalf("cost=%+v", inv)
 			}
@@ -1362,7 +1363,7 @@ func TestCostEvidenceBoundaryCompatibility(t *testing.T) {
 		`"cost_usd":-1,"cost_evidence":{"state":"observed","known_subtotal_usd":-1},`,
 	} {
 		t.Run("v5 rejects "+fields, func(t *testing.T) {
-			data := []byte(strings.Replace(strings.Replace(legacyBase, `"schema_version":4`, `"schema_version":5`, 1), "COST", fields, 1))
+			data := []byte(strings.Replace(strings.Replace(legacyBase, `"schema_version":4`, `"schema_version":6`, 1), "COST", fields, 1))
 			if err := adapters.ValidateRuntimeFactLedger(data); err == nil {
 				t.Fatal("runtime accepted contradictory/missing evidence")
 			}
@@ -1439,4 +1440,196 @@ func assertFactJSONFieldOrder(t *testing.T, data []byte) {
 	invocation := jsonFieldsInOrder(t, invocations[0], "role", "model", "started_at", "completed_at", "active_duration_seconds", "turns", "tokens", "cost_usd", "cost_evidence", "compactions", "user_iterations")
 	jsonFieldsInOrder(t, invocation["tokens"], "input", "output", "cache_read", "reasoning", "peak_context")
 	jsonFieldsInOrder(t, invocation["cost_evidence"], "state", "known_subtotal_usd")
+}
+
+func TestV6OwnedFactsSurviveMigrationSaveReloadAndRejectRetiredRuntimeShapes(t *testing.T) {
+	const old = `{"schema_version":5,"ticket_id":"TEST-OWNED","ticket_title":"Explicit migration","sessions":[{"id":"owner","source":"codex","user":"alice","invocations":[],"tools":[]}],"skills":[{"session_id":"owner","name":"kept","success":true,"provenance":{"message_id":"native-message"}},{"name":"discarded","success":true}],"task_links":[{"session_id":"owner","description":"kept","child_session_id":"unavailable","cost_usd":null,"cost_evidence":{"state":"unavailable","known_subtotal_usd":null}}]}`
+	if err := adapters.ValidateRuntimeFactLedger([]byte(old)); err == nil || !strings.Contains(strings.ToLower(err.Error()), "migrat") {
+		t.Fatalf("old runtime ingestion did not require migration: %v", err)
+	}
+	migrated, err := migration.NewEngine(nil).Migrate([]byte(old), 6)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "ledger.json")
+	if err := adapters.SaveFactLedger(path, migrated); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := adapters.ValidateRuntimeFactLedger(data); err != nil {
+		t.Fatal(err)
+	}
+	var dto adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal(data, &dto); err != nil {
+		t.Fatal(err)
+	}
+	got := dto.ToDomain()
+	if len(got.SkillFacts()) != 1 || len(got.TaskLinkFacts()) != 1 || got.SkillFacts()[0].SessionID != "owner" || got.SkillFacts()[0].Provenance.MessageID != "native-message" || got.SkillFacts()[0].Outcome != domain.OutcomeSucceeded || got.TaskLinkFacts()[0].ChildSession != "unavailable" {
+		t.Fatalf("owned migration facts lost after persistence: %+v", got)
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(data, &fields); err != nil {
+		t.Fatal(err)
+	}
+	for _, retired := range []string{"skills", "task_links", "unresolved_facts"} {
+		if _, ok := fields[retired]; ok {
+			t.Fatalf("retired root field persisted: %s", retired)
+		}
+		for _, value := range []string{"null", "[]", "{}"} {
+			bad := bytes.TrimSpace(data)
+			bad = append(append(append([]byte{}, bad[:len(bad)-1]...), []byte(fmt.Sprintf(",%q:%s}", retired, value))...), '\n')
+			if err := adapters.ValidateRuntimeFactLedger(bad); err == nil {
+				t.Fatalf("retired current field %s accepted with %s", retired, value)
+			}
+		}
+	}
+}
+
+func TestTaskNamespaceChildResolutionRemainsReadProjectionAcrossPersistence(t *testing.T) {
+	parentInput := `{"type":"session_meta","payload":{"id":"parent","source":"cli"}}` + "\n" + `{"timestamp":"2026-01-01T10:00:00Z","type":"response_item","payload":{"type":"message","id":"native-activation","role":"user","content":[{"type":"input_text","text":"$inspect-source"}]}}` + "\n" + `{"type":"response_item","payload":{"type":"function_call","call_id":"spawn","name":"spawn_agent","arguments":"{\"agent_type\":\"tester\"}"}}` + "\n" + `{"type":"response_item","payload":{"type":"function_call_output","call_id":"spawn","output":"{\"task_name\":\"/root/tester\"}"}}`
+	parentInput += "\n" + `{"type":"response_item","payload":{"type":"function_call","call_id":"unrelated-call","name":"exec_command","arguments":"{\"cmd\":\"private-event-body\"}"}}` + "\n" + `{"type":"response_item","payload":{"type":"function_call_output","call_id":"unrelated-call","output":"private-event-body"}}`
+	childInput := `{"type":"session_meta","payload":{"id":"child-a","source":{"subagent":{"thread_spawn":{"parent_thread_id":"parent","agent_path":"/root/tester"}}}}}`
+	parent, err := codex.ParseRollout(strings.NewReader(parentInput))
+	if err != nil {
+		t.Fatal(err)
+	}
+	child, err := codex.ParseRollout(strings.NewReader(childInput))
+	if err != nil {
+		t.Fatal(err)
+	}
+	combined, err := codex.CombineTranscripts([]codex.Transcript{parent, child})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sessions, err := combined.SessionFacts()
+	if err != nil {
+		t.Fatal(err)
+	}
+	version, ticket, title := 6, "TEST-PROJECTION", "Native namespace remains source evidence"
+	ledger := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticket, TicketTitle: &title, Sessions: sessions}
+	if got := ledger.TaskLinkFacts(); len(got) != 1 || got[0].ChildSession != "child-a" {
+		t.Fatalf("unique native namespace should resolve in read projection: %+v", got)
+	}
+	for _, owner := range sessions {
+		if owner.ID == "parent" && owner.TaskLinks[0].ChildSession != "" {
+			t.Fatalf("BEH-03 CombineTranscripts promoted derived namespace UUID into canonical facts: %+v", owner.TaskLinks)
+		}
+	}
+	path := filepath.Join(t.TempDir(), "ledger.json")
+	if err := adapters.SaveFactLedger(path, ledger); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(data, []byte("private-event-body")) {
+		t.Fatal("unrelated event content leaked through occurrence persistence")
+	}
+	var dto adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal(data, &dto); err != nil {
+		t.Fatal(err)
+	}
+	stored := dto.ToDomain()
+	for _, owner := range stored.Sessions {
+		if owner.ID == "parent" {
+			if len(owner.Events) != 2 {
+				t.Fatalf("BEH-06 source-owned activation/delegation timeline metadata disappeared after persistence: %+v", owner.Events)
+			}
+			kinds := map[domain.EventType]int{}
+			for _, event := range owner.Events {
+				kinds[event.EventType]++
+				if event.PromptContent != nil || event.ToolInput != nil || event.ToolOutput != nil || event.ErrorMessage != nil {
+					t.Fatalf("persistent occurrence event retained content-bearing payload: %+v", event)
+				}
+			}
+			if kinds[domain.EventType("skill_activation")] != 1 || kinds[domain.EventTypeToolCall] != 1 {
+				t.Fatalf("recorded occurrence kinds lost after persistence: %+v", owner.Events)
+			}
+		}
+	}
+
+	parentID := "parent"
+	stored.Sessions = append(stored.Sessions, domain.SessionFact{ID: "child-b", ParentID: &parentID, Source: domain.SourceCodex, User: "tester", AgentPath: "/root/tester"})
+	projected := stored.TaskLinkFacts()
+	if len(projected) != 1 || projected[0].ChildSession != "" || projected[0].ChildLinkDiagnostic == "" {
+		t.Fatalf("BEH-03 persisted derived UUID masked newly ambiguous native metadata: %+v", projected)
+	}
+}
+
+func TestCurrentTaskLinksRequireExplicitOutcome(t *testing.T) {
+	for _, tc := range []struct {
+		name, field string
+		valid       bool
+	}{
+		{"missing", "", false}, {"empty", `,"outcome":""`, false}, {"unknown", `,"outcome":"unknown"`, true}, {"succeeded", `,"outcome":"succeeded"`, true}, {"failed", `,"outcome":"failed"`, true}, {"unsupported", `,"outcome":"future"`, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			input := []byte(`{"schema_version":6,"sessions":[{"id":"owner","source":"codex","user":"tester","invocations":[],"tools":[],"anomalies":[],"task_links":[{"subagent_type":"tester","description":"task","parent_turn":0,"timestamp":"2026-01-01T00:00:00Z","cost_usd":null,"cost_evidence":{"state":"unavailable","known_subtotal_usd":null}` + tc.field + `}]}]}`)
+			err := adapters.ValidateRuntimeFactLedger(input)
+			if (err == nil) != tc.valid {
+				t.Fatalf("ARCH-01 task outcome boundary valid=%t err=%v", tc.valid, err)
+			}
+		})
+	}
+}
+
+func TestSparseOccurrenceEventsPreserveFullSourceAnomalySummariesAcrossReload(t *testing.T) {
+	version, ticket, title := 6, "TEST-SPARSE-EVENTS", "Sparse timeline keeps full source anomaly summaries"
+	owner := domain.SessionFact{ID: "owner", Source: domain.SourceCodex, User: "tester", Tools: []domain.SessionToolFact{{Name: "bash", Calls: 5, Errors: 3}, {Name: "load_skill", Calls: 3, Errors: 3}}}
+	private := "source-only-private-body"
+	event := func(id, name, status string, order int) domain.SessionEventFact {
+		return domain.SessionEventFact{CallID: id, EventID: "source-" + id, Timestamp: fmt.Sprintf("2026-01-01T10:00:%02dZ", order), Turn: int64(order), Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &name, Status: status, ToolInput: &private, ToolOutput: &private, ErrorMessage: &private}
+	}
+	for i := 0; i < 3; i++ {
+		owner.Events = append(owner.Events, event(fmt.Sprintf("generic-failure-%d", i), "bash", "error", i))
+	}
+	for i := 0; i < 3; i++ {
+		call := fmt.Sprintf("skill-failure-%d", i)
+		owner.Skills = append(owner.Skills, domain.SkillFact{Name: "inspect-source", Outcome: domain.OutcomeFailed, Provenance: domain.FactProvenance{CallID: call}})
+		owner.Events = append(owner.Events, event(call, "load_skill", "error", 3+i*2))
+		if i < 2 {
+			owner.Events = append(owner.Events, event(fmt.Sprintf("generic-success-%d", i), "bash", "completed", 4+i*2))
+		}
+	}
+	ledger := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticket, TicketTitle: &title, Sessions: []domain.SessionFact{owner}}
+	expected := domain.RefreshAnomalySummaries(ledger)
+	retryTools := func(anomalies []domain.Anomaly) []string {
+		var tools []string
+		for _, anomaly := range anomalies {
+			if anomaly.RuleID == domain.RuleToolRetryStreak && anomaly.Context.ToolName != nil {
+				tools = append(tools, *anomaly.Context.ToolName)
+			}
+		}
+		return tools
+	}
+	if !reflect.DeepEqual(retryTools(expected), []string{"bash"}) {
+		t.Fatalf("full source control must have real generic retry only, not interleaved skill retries: %+v", expected)
+	}
+	path := filepath.Join(t.TempDir(), "ledger.json")
+	if err := adapters.SaveFactLedger(path, ledger); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(data, []byte(private)) {
+		t.Fatal("sparse timeline persisted content-bearing source payload")
+	}
+	var dto adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal(data, &dto); err != nil {
+		t.Fatal(err)
+	}
+	stored := dto.ToDomain()
+	if len(stored.Sessions) != 1 || !stored.Sessions[0].EventsArePartial || len(stored.Sessions[0].Events) != 3 {
+		t.Fatalf("occurrence-only event stream not marked partial: %+v", stored.Sessions)
+	}
+	actual := domain.RefreshAnomalySummaries(stored)
+	if !reflect.DeepEqual(retryTools(actual), []string{"bash"}) || !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("sparse event recomputation discarded cached full-source anomalies or invented skill streak: actual=%+v expected=%+v", actual, expected)
+	}
 }

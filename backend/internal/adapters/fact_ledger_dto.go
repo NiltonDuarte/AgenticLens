@@ -86,24 +86,21 @@ func MigrationInfoDTOFromDomain(info *domain.MigrationInfo) *MigrationInfoDTO {
 
 // AgenticFactLedgerDTO represents the complete raw agentic_metrics.json schema.
 type AgenticFactLedgerDTO struct {
-	SchemaVersion *int               `json:"schema_version,omitempty"`
-	Source        string             `json:"source,omitempty"`
-	Migration     *MigrationInfoDTO  `json:"migration,omitempty"`
-	TicketID      *string            `json:"ticket_id"`
-	TicketTitle   *string            `json:"ticket_title"`
-	TicketType    *string            `json:"ticket_type"`
-	StartedAt     *string            `json:"started_at"`
-	CompletedAt   *string            `json:"completed_at"`
-	UpdatedAt     string             `json:"updated_at"`
-	Code          CodeFactsDTO       `json:"code"`
-	Sessions      []SessionFactDTO   `json:"sessions"`
-	Anomalies     []AnomalyDTO       `json:"anomalies"`
-	Skills        []domain.SkillFact `json:"skills,omitempty"`
-	TaskLinks     []TaskLinkFactDTO  `json:"task_links,omitempty"`
+	SchemaVersion *int              `json:"schema_version,omitempty"`
+	Migration     *MigrationInfoDTO `json:"migration,omitempty"`
+	TicketID      *string           `json:"ticket_id"`
+	TicketTitle   *string           `json:"ticket_title"`
+	TicketType    *string           `json:"ticket_type"`
+	StartedAt     *string           `json:"started_at"`
+	CompletedAt   *string           `json:"completed_at"`
+	UpdatedAt     string            `json:"updated_at"`
+	Code          CodeFactsDTO      `json:"code"`
+	Sessions      []SessionFactDTO  `json:"sessions"`
+	Anomalies     []AnomalyDTO      `json:"anomalies"`
 }
 
-// UnmarshalJSON rejects legacy root fact collections at the current schema boundary.
-// They must be passed through the versioned migration engine instead.
+// UnmarshalJSON accepts the current schema only; legacy input decoding belongs
+// to the explicitly invoked migration engine. Retired current root fields fail.
 func (dto *AgenticFactLedgerDTO) UnmarshalJSON(data []byte) error {
 	var version struct {
 		SchemaVersion *int `json:"schema_version"`
@@ -111,27 +108,19 @@ func (dto *AgenticFactLedgerDTO) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &version); err != nil {
 		return err
 	}
-	if version.SchemaVersion != nil && (*version.SchemaVersion < 1 || *version.SchemaVersion > 5) {
-		return fmt.Errorf("unsupported canonical fact schema version %d", *version.SchemaVersion)
+	if version.SchemaVersion == nil || *version.SchemaVersion != domain.CurrentSchemaVersion {
+		return fmt.Errorf("ledger schema is not current v%d; run explicit agentic-lens migrate --target-version %d", domain.CurrentSchemaVersion, domain.CurrentSchemaVersion)
 	}
 	var fields map[string]json.RawMessage
 	if err := json.Unmarshal(data, &fields); err != nil {
 		return err
 	}
-	for _, legacy := range []string{"invocations", "tools", "events"} {
+	for _, legacy := range []string{"invocations", "tools", "events", "skills", "task_links", "unresolved_facts"} {
 		if _, exists := fields[legacy]; exists {
-			return fmt.Errorf("legacy root-level %s is not valid in session-owned schema v4; run `agentic-lens migrate`", legacy)
+			return fmt.Errorf("retired root-level %s is not valid in session-owned schema v6", legacy)
 		}
 	}
-	var decoded AgenticFactLedgerDTO
-	var err error
-	if version.SchemaVersion != nil && *version.SchemaVersion == 5 {
-		decoded, err = decodeSchemaV5FactLedger(data)
-	} else {
-		// Older canonical shapes can be decoded by explicit migration tooling. The
-		// ordinary runtime gate accepts only canonical v4 and v5.
-		decoded, err = decodeSchemaV4FactLedger(data)
-	}
+	decoded, err := decodeCanonicalFactLedger(data, true)
 	if err != nil {
 		return err
 	}
@@ -143,9 +132,7 @@ func (dto AgenticFactLedgerDTO) ToDomain() domain.AgenticFactLedger {
 	sessions := make([]domain.SessionFact, len(dto.Sessions))
 	for i, session := range dto.Sessions {
 		sessions[i] = session.ToDomain()
-		if sessions[i].Source == "" && dto.Source != "" {
-			sessions[i].Source = domain.SourceHarness(strings.TrimSpace(dto.Source))
-		}
+
 	}
 
 	var mig *domain.MigrationInfo
@@ -154,14 +141,6 @@ func (dto AgenticFactLedgerDTO) ToDomain() domain.AgenticFactLedger {
 		mig = &domMig
 	}
 
-	skills := dto.Skills
-	if skills == nil {
-		skills = []domain.SkillFact{}
-	}
-	taskLinks := TaskLinkFactDTOsToDomain(dto.TaskLinks)
-	if taskLinks == nil {
-		taskLinks = []domain.TaskLinkFact{}
-	}
 	return domain.AgenticFactLedger{
 		SchemaVersion: dto.SchemaVersion,
 		Migration:     mig,
@@ -174,16 +153,17 @@ func (dto AgenticFactLedgerDTO) ToDomain() domain.AgenticFactLedger {
 		Code:          dto.Code.ToDomain(),
 		Sessions:      sessions,
 		Anomalies:     anomaliesToDomain(dto.Anomalies),
-		Skills:        skills,
-		TaskLinks:     taskLinks,
 	}
 }
 
 // Validate enforces required fields at the persisted telemetry boundary.
 func (dto AgenticFactLedgerDTO) Validate() error {
-	currentSchema := dto.SchemaVersion != nil && *dto.SchemaVersion >= 4
+	currentSchema := dto.SchemaVersion != nil && *dto.SchemaVersion == domain.CurrentSchemaVersion
+	if !currentSchema {
+		return fmt.Errorf("schema v%d required; run explicit agentic-lens migrate", domain.CurrentSchemaVersion)
+	}
 	if currentSchema && dto.Sessions == nil {
-		return errors.New("sessions collection is required in schema v4")
+		return errors.New("sessions collection is required in schema v6")
 	}
 	seen := make(map[string]bool, len(dto.Sessions))
 	for i, session := range dto.Sessions {
@@ -199,6 +179,9 @@ func (dto AgenticFactLedgerDTO) Validate() error {
 		seen[session.ID] = true
 	}
 	for i, session := range dto.Sessions {
+		if err := validateOwnedOccurrences(session); err != nil {
+			return fmt.Errorf("sessions[%d]: %w", i, err)
+		}
 		if currentSchema && strings.TrimSpace(session.Source) == "" {
 			return fmt.Errorf("sessions[%d].source is required", i)
 		}
@@ -287,8 +270,6 @@ func AgenticFactLedgerDTOFromDomain(ledger domain.AgenticFactLedger) AgenticFact
 		},
 		Sessions:  sessions,
 		Anomalies: anomaliesFromDomain(ledger.Anomalies),
-		Skills:    ledger.Skills,
-		TaskLinks: TaskLinkFactDTOsFromDomain(ledger.TaskLinks),
 	}
 }
 
@@ -303,12 +284,14 @@ func (dto AgenticFactLedgerDTO) validateCostFields(required bool) error {
 			}
 		}
 	}
-	for ti, task := range dto.TaskLinks {
-		if required && task.decodedCost && (!task.costPresent || !task.evidencePresent) {
-			return fmt.Errorf("task_links[%d] requires cost_usd and cost_evidence", ti)
-		}
-		if err := domain.ValidateCostEvidence(task.CostUSD, task.CostEvidence, required); err != nil {
-			return fmt.Errorf("task_links[%d]: %w", ti, err)
+	for si, session := range dto.Sessions {
+		for ti, task := range session.TaskLinks {
+			if required && task.decodedCost && (!task.costPresent || !task.evidencePresent) {
+				return fmt.Errorf("sessions[%d].task_links[%d] requires cost_usd and cost_evidence", si, ti)
+			}
+			if err := domain.ValidateCostEvidence(task.CostUSD, task.CostEvidence, required); err != nil {
+				return fmt.Errorf("sessions[%d].task_links[%d]: %w", si, ti, err)
+			}
 		}
 	}
 	return nil
@@ -333,89 +316,89 @@ func ValidateRuntimeFactLedger(data []byte) error {
 		return fmt.Errorf("decoding ledger metadata: %w", err)
 	}
 	if metadata.SchemaVersion == nil {
-		return errors.New("ledger schema version is missing; run `agentic-lens migrate --target-version 5` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>`")
+		return errors.New("ledger schema version is missing; run `agentic-lens migrate --target-version 6` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>`")
 	}
-	if *metadata.SchemaVersion != 4 && *metadata.SchemaVersion != domain.CurrentSchemaVersion {
-		return fmt.Errorf("ledger schema version %d is not runtime-ingestible; run `agentic-lens migrate --target-version 5` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>`", *metadata.SchemaVersion)
+	if *metadata.SchemaVersion != domain.CurrentSchemaVersion {
+		return fmt.Errorf("ledger schema version %d is not runtime-ingestible; run `agentic-lens migrate --target-version 6` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>`", *metadata.SchemaVersion)
 	}
-	for _, key := range []string{"invocations", "tools", "events"} {
+	for _, key := range []string{"invocations", "tools", "events", "skills", "task_links", "unresolved_facts"} {
 		if _, exists := fields[key]; exists {
-			return fmt.Errorf("schema v4 ledger contains ambiguous root-level %s; run `agentic-lens migrate --target-version 5` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>`", key)
+			return fmt.Errorf("schema v6 ledger contains ambiguous root-level %s; run `agentic-lens migrate --target-version 6` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>`", key)
 		}
 	}
 	sessionsJSON, sessionsExists := fields["sessions"]
 	if !sessionsExists || string(sessionsJSON) == "null" || !json.Valid(sessionsJSON) {
-		return errors.New("canonical schema v4/v5 ledger requires a sessions collection; run `agentic-lens migrate --target-version 5` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>`")
+		return errors.New("canonical schema v6 ledger requires a sessions collection; run `agentic-lens migrate --target-version 6` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>`")
 	}
 	if metadata.Migration != nil && (metadata.Migration.Status != string(domain.MigrationStatusCompleted) || len(metadata.Migration.StepsPending) > 0) {
-		return errors.New("schema v4/v5 ledger has incomplete migration metadata; resume the explicit migration and source-backed backfill workflow before runtime ingestion")
+		return errors.New("schema v6 ledger has incomplete migration metadata; resume the explicit migration and source-backed backfill workflow before runtime ingestion")
 	}
 	var canonical struct {
 		Sessions []json.RawMessage `json:"sessions"`
 	}
 	if err := json.Unmarshal(sessionsJSON, &canonical.Sessions); err != nil || canonical.Sessions == nil {
-		return errors.New("canonical schema v4/v5 sessions must be an array")
+		return errors.New("canonical schema v6 sessions must be an array")
 	}
 	for si, rawSession := range canonical.Sessions {
 		var session map[string]json.RawMessage
 		if err := json.Unmarshal(rawSession, &session); err != nil {
-			return fmt.Errorf("canonical schema v4/v5 session %d is invalid", si)
+			return fmt.Errorf("canonical schema v6 session %d is invalid", si)
 		}
 		for _, required := range []string{"id", "source", "user", "invocations", "tools", "anomalies"} {
 			if _, ok := session[required]; !ok {
-				return fmt.Errorf("canonical schema v4/v5 session %d is missing required %s", si, required)
+				return fmt.Errorf("canonical schema v6 session %d is missing required %s", si, required)
 			}
 		}
 		var sessionUser string
 		if err := json.Unmarshal(session["user"], &sessionUser); err != nil || strings.TrimSpace(sessionUser) == "" {
-			return fmt.Errorf("canonical schema v4/v5 session %d requires a non-empty user", si)
+			return fmt.Errorf("canonical schema v6 session %d requires a non-empty user", si)
 		}
 		for _, collection := range []string{"tools", "anomalies"} {
 			var values []json.RawMessage
 			if err := json.Unmarshal(session[collection], &values); err != nil || values == nil {
-				return fmt.Errorf("canonical schema v4/v5 session %d %s must be an array", si, collection)
+				return fmt.Errorf("canonical schema v6 session %d %s must be an array", si, collection)
 			}
 		}
 		var source string
 		if err := json.Unmarshal(session["source"], &source); err != nil || (source != string(domain.SourceOpenCode) && source != string(domain.SourceCodex)) {
-			return fmt.Errorf("canonical schema v4/v5 session %d requires a supported source (opencode or codex)", si)
+			return fmt.Errorf("canonical schema v6 session %d requires a supported source (opencode or codex)", si)
 		}
 		var invocations []json.RawMessage
 		if err := json.Unmarshal(session["invocations"], &invocations); err != nil || invocations == nil {
-			return fmt.Errorf("canonical schema v4/v5 session %d invocations must be an array", si)
+			return fmt.Errorf("canonical schema v6 session %d invocations must be an array", si)
 		}
 		for ii, rawInvocation := range invocations {
 			var invocation map[string]json.RawMessage
 			if err := json.Unmarshal(rawInvocation, &invocation); err != nil {
-				return fmt.Errorf("canonical schema v4/v5 invocation %d in session %d is invalid", ii, si)
+				return fmt.Errorf("canonical schema v6 invocation %d in session %d is invalid", ii, si)
 			}
 			if _, ok := invocation["id"]; ok {
-				return fmt.Errorf("canonical schema v4/v5 invocation %d in session %d must not contain id", ii, si)
+				return fmt.Errorf("canonical schema v6 invocation %d in session %d must not contain id", ii, si)
 			}
 			if _, ok := invocation["user"]; ok {
-				return fmt.Errorf("canonical schema v4/v5 invocation %d in session %d must not contain user", ii, si)
+				return fmt.Errorf("canonical schema v6 invocation %d in session %d must not contain user", ii, si)
 			}
 			if _, ok := invocation["parent_id"]; ok {
-				return fmt.Errorf("canonical schema v4/v5 invocation %d in session %d must not contain parent_id", ii, si)
+				return fmt.Errorf("canonical schema v6 invocation %d in session %d must not contain parent_id", ii, si)
 			}
 			for _, required := range []string{"role", "model", "started_at", "completed_at", "active_duration_seconds", "turns", "tokens", "compactions", "user_iterations"} {
 				if _, ok := invocation[required]; !ok {
-					return fmt.Errorf("canonical schema v4/v5 invocation %d in session %d is missing required %s", ii, si, required)
+					return fmt.Errorf("canonical schema v6 invocation %d in session %d is missing required %s", ii, si, required)
 				}
 			}
 			var tokens map[string]json.RawMessage
 			if err := json.Unmarshal(invocation["tokens"], &tokens); err != nil || tokens == nil {
-				return fmt.Errorf("canonical schema v4/v5 invocation %d in session %d requires token counts", ii, si)
+				return fmt.Errorf("canonical schema v6 invocation %d in session %d requires token counts", ii, si)
 			}
 			for _, required := range []string{"input", "output", "cache_read", "reasoning", "peak_context"} {
 				if _, ok := tokens[required]; !ok {
-					return fmt.Errorf("canonical schema v4/v5 invocation %d in session %d is missing token count %s", ii, si, required)
+					return fmt.Errorf("canonical schema v6 invocation %d in session %d is missing token count %s", ii, si, required)
 				}
 			}
 			value, ok := invocation["user_iterations"]
 			var count int64
 			if !ok || json.Unmarshal(value, &count) != nil || count < 0 {
-				return fmt.Errorf("canonical schema v4/v5 invocation %d in session %d requires a non-negative numeric user_iterations (zero is valid)", ii, si)
+				return fmt.Errorf("canonical schema v6 invocation %d in session %d requires a non-negative numeric user_iterations (zero is valid)", ii, si)
 			}
 		}
 	}
@@ -423,7 +406,7 @@ func ValidateRuntimeFactLedger(data []byte) error {
 	if err := json.Unmarshal(data, &decoded); err != nil {
 		return err
 	}
-	return decoded.validateCostFields(*metadata.SchemaVersion >= 5)
+	return decoded.Validate()
 }
 
 func toDomainTicketType(raw *string) *domain.ConventionalTicketType {

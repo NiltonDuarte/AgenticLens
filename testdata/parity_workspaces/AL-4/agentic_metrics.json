@@ -1,7 +1,7 @@
 {
-  "schema_version": 4,
+  "schema_version": 6,
   "migration": {
-    "schema_version": 4,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -49,7 +49,11 @@
           },
           "cost_usd": 4.168777,
           "compactions": 2,
-          "user_iterations": 2
+          "user_iterations": 2,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 4.168777
+          }
         }
       ],
       "tools": [
@@ -352,7 +356,11 @@
           },
           "cost_usd": 0.412475,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.412475
+          }
         }
       ],
       "tools": [],
@@ -392,7 +400,11 @@
           },
           "cost_usd": 2.282972,
           "compactions": 2,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 2.282972
+          }
         }
       ],
       "tools": [],
@@ -495,7 +507,11 @@
           },
           "cost_usd": 1.204117,
           "compactions": 1,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 1.204117
+          }
         }
       ],
       "tools": [],
@@ -561,7 +577,11 @@
           },
           "cost_usd": 0.541457,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.541457
+          }
         }
       ],
       "tools": [],
@@ -601,7 +621,11 @@
           },
           "cost_usd": 0.149023,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.149023
+          }
         }
       ],
       "tools": [],
@@ -630,7 +654,11 @@
           },
           "cost_usd": 0.62365,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.62365
+          }
         }
       ],
       "tools": [],
@@ -659,7 +687,11 @@
           },
           "cost_usd": 0.703428,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.703428
+          }
         }
       ],
       "tools": [],
@@ -699,7 +731,11 @@
           },
           "cost_usd": 0.317812,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.317812
+          }
         }
       ],
       "tools": [],
@@ -728,7 +764,11 @@
           },
           "cost_usd": 0.167744,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.167744
+          }
         }
       ],
       "tools": [],

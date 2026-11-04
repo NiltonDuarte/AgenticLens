@@ -1123,7 +1123,7 @@ func TestAdversarialDomainAggregations(t *testing.T) {
 
 func TestDeriveMetricsLedger_EventsPreservationAndInvariants(t *testing.T) {
 	t.Run("auxiliary partial task cost is excluded from invocation totals", func(t *testing.T) {
-		facts := domain.AgenticFactLedger{Sessions: []domain.SessionFact{{ID: "root", Invocations: []domain.InvocationFact{{Role: "coder", Model: "model-a", CostUSD: 1}}}}, TaskLinks: []domain.TaskLinkFact{{SubagentType: "tester", CostUSD: 2, CostEvidence: domain.PartialCost(2)}}}
+		facts := domain.AgenticFactLedger{Sessions: []domain.SessionFact{{ID: "root", Invocations: []domain.InvocationFact{{Role: "coder", Model: "model-a", CostUSD: 1}}}}, TaskLinks: []domain.TaskLinkFact{{Outcome: domain.OutcomeUnknown, SubagentType: "tester", CostUSD: 2, CostEvidence: domain.PartialCost(2)}}}
 		metrics := domain.DeriveMetricsLedger(facts, domain.ProjectConfig{})
 		if metrics.Totals.Invocations != 1 || metrics.Totals.CostSummary.FullyObserved != 1 || metrics.Totals.CostSummary.Partial != 0 || metrics.Totals.CostSummary.CompleteAmount() == nil || *metrics.Totals.CostSummary.CompleteAmount() != 1 {
 			t.Fatalf("task cost leaked into invocation totals: %+v", metrics.Totals)
@@ -5920,9 +5920,9 @@ func TestComputeSkillAdoption(t *testing.T) {
 	t.Parallel()
 	first, second := "T-1", "T-2"
 	facts := []domain.AgenticFactLedger{
-		{TicketID: &first, Skills: []domain.SkillFact{{Name: "beta", Success: true}, {Name: "alpha", Success: false}, {Name: "beta", Success: true, Error: "inspection text"}}},
-		{TicketID: &second, Skills: []domain.SkillFact{{Name: "beta", Success: false}, {Name: "alpha", Success: true}}},
-		{TicketID: &first, Skills: []domain.SkillFact{{Name: "alpha", Success: true}}},
+		{TicketID: &first, Sessions: []domain.SessionFact{{ID: "owner", Skills: []domain.SkillFact{{Name: "beta", Success: true, Outcome: domain.OutcomeSucceeded}, {Name: "alpha", Success: false, Outcome: domain.OutcomeFailed}, {Name: "beta", Success: true, Outcome: domain.OutcomeSucceeded, Error: "inspection text"}}}}},
+		{TicketID: &second, Sessions: []domain.SessionFact{{ID: "owner", Skills: []domain.SkillFact{{Name: "beta", Success: false, Outcome: domain.OutcomeFailed}, {Name: "alpha", Success: true, Outcome: domain.OutcomeSucceeded}}}}},
+		{TicketID: &first, Sessions: []domain.SessionFact{{ID: "owner", Skills: []domain.SkillFact{{Name: "alpha", Success: true, Outcome: domain.OutcomeSucceeded}}}}},
 		{},
 	}
 	before, err := json.Marshal(facts)
@@ -5930,8 +5930,8 @@ func TestComputeSkillAdoption(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := []domain.SkillAdoptionFact{
-		{Name: "alpha", TotalInvocations: 3, TicketsCount: 2, FailureCount: 1, FailureRate: 1.0 / 3},
-		{Name: "beta", TotalInvocations: 3, TicketsCount: 2, FailureCount: 1, FailureRate: 1.0 / 3},
+		{Name: "alpha", TotalInvocations: 3, TicketsCount: 2, FailureCount: 1, KnownOutcomes: 3, FailureRate: 1.0 / 3},
+		{Name: "beta", TotalInvocations: 3, TicketsCount: 2, FailureCount: 1, KnownOutcomes: 3, FailureRate: 1.0 / 3},
 	}
 	if got := domain.ComputeSkillAdoption(facts); !reflect.DeepEqual(got, want) {
 		t.Fatalf("adoption = %#v, want %#v", got, want)
@@ -5956,7 +5956,10 @@ func TestComputeSkillAdoption(t *testing.T) {
 	if string(before) != string(after) {
 		t.Fatal("skill aggregation mutated facts")
 	}
-	unidentified := []domain.AgenticFactLedger{{Skills: []domain.SkillFact{{Name: "x", Success: true}}}, {Skills: []domain.SkillFact{{Name: "x", Success: true}}}}
+	unidentified := []domain.AgenticFactLedger{
+		{Sessions: []domain.SessionFact{{ID: "owner", Skills: []domain.SkillFact{{Name: "x", Outcome: domain.OutcomeSucceeded, Success: true}}}}},
+		{Sessions: []domain.SessionFact{{ID: "owner", Skills: []domain.SkillFact{{Name: "x", Outcome: domain.OutcomeSucceeded, Success: true}}}}},
+	}
 	if got := domain.ComputeSkillAdoption(unidentified); got[0].TicketsCount != 2 {
 		t.Fatalf("unidentified tickets = %d", got[0].TicketsCount)
 	}
@@ -5964,7 +5967,7 @@ func TestComputeSkillAdoption(t *testing.T) {
 
 func TestSkillAdoptionOrderingAndEmptyProjections(t *testing.T) {
 	t.Parallel()
-	ledger := domain.AgenticFactLedger{Skills: []domain.SkillFact{{Name: "a"}, {Name: "b"}, {Name: "b"}, {Name: "c"}}}
+	ledger := domain.AgenticFactLedger{Sessions: []domain.SessionFact{{ID: "owner", Skills: []domain.SkillFact{{Name: "a", Outcome: domain.OutcomeFailed}, {Name: "b", Outcome: domain.OutcomeFailed}, {Name: "b", Outcome: domain.OutcomeFailed}, {Name: "c", Outcome: domain.OutcomeFailed}}}}}
 	got := domain.ComputeSkillAdoption([]domain.AgenticFactLedger{ledger})
 	if got[0].Name != "b" || got[1].Name != "a" || got[2].Name != "c" {
 		t.Fatalf("ranked skills = %#v", got)
@@ -5972,7 +5975,7 @@ func TestSkillAdoptionOrderingAndEmptyProjections(t *testing.T) {
 	if got[0].FailureRate != 1 {
 		t.Fatalf("all-failure rate = %v", got[0].FailureRate)
 	}
-	if names := domain.SkillNames(domain.AgenticFactLedger{Skills: []domain.SkillFact{{Name: "\U00010000"}, {Name: "\uE000"}}}); !reflect.DeepEqual(names, []string{"\uE000", "\U00010000"}) {
+	if names := domain.SkillNames(domain.AgenticFactLedger{Sessions: []domain.SessionFact{{ID: "owner", Skills: []domain.SkillFact{{Name: "\U00010000", Outcome: domain.OutcomeUnknown}, {Name: "\uE000", Outcome: domain.OutcomeUnknown}}}}}); !reflect.DeepEqual(names, []string{"\uE000", "\U00010000"}) {
 		t.Fatalf("Unicode name order = %#v", names)
 	}
 	if adoption := domain.CalculateFleetSummary(nil).SkillAdoption; adoption == nil || len(adoption) != 0 {

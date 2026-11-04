@@ -192,8 +192,8 @@ func TestGenerateCodexPreservesChildIdentityAndExcludesInheritedUsage(t *testing
 		if err != nil {
 			t.Fatal(err)
 		}
-		if strings.Contains(string(encodedLedger), "/private/agents/coder") {
-			t.Fatal("agent path leaked into exported ledger")
+		if childSession.AgentPath != "/private/agents/coder" || !strings.Contains(string(encodedLedger), `"agent_path"`) {
+			t.Fatal("recorded child agent path needed for exact child reference resolution was lost")
 		}
 		if ledger.Code.SDLCIterations != 1 {
 			t.Fatalf("child replay inflated root steering count: %d", ledger.Code.SDLCIterations)

@@ -384,45 +384,6 @@ type ExistingLedgerFacts struct {
 	Code              *domain.CodeFacts
 	Sessions          []domain.SessionFact
 	PersistedSessions []SessionFactDTO
-	Skills            []domain.SkillFact
-	TaskLinks         []domain.TaskLinkFact
-}
-
-type legacyThreadItem struct {
-	SessionID string `json:"session_id"`
-}
-
-type legacyCodeDelivered struct {
-	LinesAdded   int64 `json:"lines_added"`
-	LinesDeleted int64 `json:"lines_deleted"`
-	FilesChanged int64 `json:"files_changed"`
-}
-
-type legacyTestToProdRatio struct {
-	TestLinesAdded int64 `json:"test_lines_added"`
-	ProdLinesAdded int64 `json:"prod_lines_added"`
-}
-
-type legacyWorkflowEfficiency struct {
-	SDLCIterations        int64                 `json:"sdlc_iterations"`
-	CodeDelivered         legacyCodeDelivered   `json:"code_delivered"`
-	TestToProductionRatio legacyTestToProdRatio `json:"test_to_production_ratio"`
-}
-
-type rawExistingLedger struct {
-	SchemaVersion      *int                      `json:"schema_version,omitempty"`
-	Migration          *MigrationInfoDTO         `json:"migration,omitempty"`
-	TicketID           *string                   `json:"ticket_id"`
-	TicketTitle        *string                   `json:"ticket_title"`
-	TicketType         *string                   `json:"ticket_type"`
-	StartedAt          *string                   `json:"started_at"`
-	CompletedAt        *string                   `json:"completed_at"`
-	Code               *CodeFactsDTO             `json:"code"`
-	Sessions           []SessionFactDTO          `json:"sessions"`
-	Skills             []domain.SkillFact        `json:"skills,omitempty"`
-	TaskLinks          []TaskLinkFactDTO         `json:"task_links,omitempty"`
-	Threads            []legacyThreadItem        `json:"threads"`
-	WorkflowEfficiency *legacyWorkflowEfficiency `json:"workflow_efficiency"`
 }
 
 // LoadExistingFactLedger loads raw facts from an existing agentic_metrics.json ledger on disk.
@@ -468,93 +429,21 @@ func DecodeExistingFactLedger(data []byte) (*ExistingLedgerFacts, error) {
 	if err := ValidateRuntimeFactLedger(data); err != nil {
 		return nil, fmt.Errorf("validating ledger blob: %w", err)
 	}
-
-	var raw rawExistingLedger
-	if err := json.Unmarshal(data, &raw); err != nil {
+	var dto AgenticFactLedgerDTO
+	if err := json.Unmarshal(data, &dto); err != nil {
 		return nil, fmt.Errorf("decoding ledger blob: %w", err)
 	}
-	var rootFields map[string]json.RawMessage
-	if err := json.Unmarshal(data, &rootFields); err != nil {
-		return nil, fmt.Errorf("decoding ledger blob shape: %w", err)
-	}
-	_, hasSessions := rootFields["sessions"]
-	if hasSessions {
-		for _, key := range []string{"invocations", "tools", "events"} {
-			if _, hasLegacy := rootFields[key]; hasLegacy {
-				return nil, fmt.Errorf("mixed ledger shape: sessions cannot coexist with root-level legacy %s", key)
-			}
-		}
-	}
-
-	var mig *domain.MigrationInfo
-	if raw.Migration != nil {
-		domMig := raw.Migration.ToDomain()
-		mig = &domMig
-	}
-
-	dto := AgenticFactLedgerDTO{Sessions: raw.Sessions, Skills: raw.Skills, TaskLinks: raw.TaskLinks}
 	if err := dto.Validate(); err != nil {
 		return nil, fmt.Errorf("validating ledger blob: %w", err)
 	}
-	normalized := dto.ToDomain()
-	sessions := normalized.Sessions
-
-	result := &ExistingLedgerFacts{
-		SchemaVersion:     raw.SchemaVersion,
-		Migration:         mig,
-		TicketID:          raw.TicketID,
-		TicketTitle:       raw.TicketTitle,
-		TicketType:        toDomainTicketType(raw.TicketType),
-		StartedAt:         raw.StartedAt,
-		CompletedAt:       raw.CompletedAt,
-		Sessions:          sessions,
-		PersistedSessions: raw.Sessions,
-		Skills:            normalized.Skills,
-		TaskLinks:         normalized.TaskLinks,
-	}
-
-	// Schema 1: Direct atomic fact schema
-	if raw.Code != nil || len(raw.Sessions) > 0 || raw.SchemaVersion != nil {
-		var rootIDs []string
-		for _, session := range sessions {
-			if session.ParentID == nil {
-				rootIDs = append(rootIDs, session.ID)
-			}
-		}
-		result.RootThreadIDs = rootIDs
-
-		if raw.Code != nil {
-			c := raw.Code.ToDomain()
-			result.Code = &c
-		}
-
-		return result, nil
-	}
-
-	// Schema 2: Legacy schema with threads and workflow_efficiency
-	var rootIDs []string
-	for _, t := range raw.Threads {
-		if strings.TrimSpace(t.SessionID) != "" {
-			rootIDs = append(rootIDs, strings.TrimSpace(t.SessionID))
+	ledger := dto.ToDomain()
+	roots := []string{}
+	for _, session := range ledger.Sessions {
+		if session.ParentID == nil {
+			roots = append(roots, session.ID)
 		}
 	}
-	result.RootThreadIDs = rootIDs
-
-	if raw.WorkflowEfficiency != nil {
-		we := raw.WorkflowEfficiency
-		result.Code = &domain.CodeFacts{
-			LinesAdded:       we.CodeDelivered.LinesAdded,
-			LinesDeleted:     we.CodeDelivered.LinesDeleted,
-			TestLinesAdded:   we.TestToProductionRatio.TestLinesAdded,
-			TestLinesDeleted: 0,
-			ProdLinesAdded:   we.TestToProductionRatio.ProdLinesAdded,
-			ProdLinesDeleted: 0,
-			FilesChanged:     we.CodeDelivered.FilesChanged,
-			SDLCIterations:   we.SDLCIterations,
-		}
-	}
-
-	return result, nil
+	return &ExistingLedgerFacts{SchemaVersion: ledger.SchemaVersion, Migration: ledger.Migration, TicketID: ledger.TicketID, TicketTitle: ledger.TicketTitle, TicketType: ledger.TicketType, StartedAt: ledger.StartedAt, CompletedAt: ledger.CompletedAt, RootThreadIDs: roots, Code: &ledger.Code, Sessions: ledger.Sessions, PersistedSessions: dto.Sessions}, nil
 }
 
 // SaveFactLedger writes an AgenticFactLedger to the specified file path, creating parent directories if needed.
@@ -562,11 +451,10 @@ func SaveFactLedger(path string, ledger domain.AgenticFactLedger) error {
 	return SaveFactLedgerPreservingHistory(path, ledger, nil)
 }
 
-// NormalizeHistorySessionForPublication applies only the supported legacy cost
-// representation mapping. Authorization still uses the original committed fact;
-// source events, anomaly evidence/order and every non-cost value stay intact.
+// NormalizeHistorySessionForPublication clones and validates the current schema
+// representation without source hydration or legacy shape/cost conversion.
 func NormalizeHistorySessionForPublication(owner SessionFactDTO, schemaVersion int) (SessionFactDTO, error) {
-	if schemaVersion != 4 && schemaVersion != domain.CurrentSchemaVersion {
+	if schemaVersion != domain.CurrentSchemaVersion {
 		return SessionFactDTO{}, fmt.Errorf("unsupported historical schema version %d", schemaVersion)
 	}
 	body, err := json.Marshal(owner)
@@ -577,18 +465,7 @@ func NormalizeHistorySessionForPublication(owner SessionFactDTO, schemaVersion i
 	if err = json.Unmarshal(body, &normalized); err != nil {
 		return SessionFactDTO{}, fmt.Errorf("validating historical fact: %w", err)
 	}
-	if schemaVersion == 4 {
-		for i, invocation := range normalized.Invocations {
-			if invocation.CostEvidence != nil {
-				continue
-			}
-			// Reuse the same v4 nullable-amount mapping as ordinary persisted
-			// reads and writes, including a present numeric zero as observed.
-			cost := InvocationFactDTOFromDomain(invocation.ToDomain())
-			normalized.Invocations[i].CostUSD = cost.CostUSD
-			normalized.Invocations[i].CostEvidence = cost.CostEvidence
-		}
-	}
+
 	version := domain.CurrentSchemaVersion
 	if err = (AgenticFactLedgerDTO{SchemaVersion: &version, Sessions: []SessionFactDTO{normalized}}).validateCostFields(true); err != nil {
 		return SessionFactDTO{}, fmt.Errorf("historical fact cannot publish under the current cost contract: %w", err)
@@ -601,6 +478,9 @@ func NormalizeHistorySessionForPublication(owner SessionFactDTO, schemaVersion i
 // validation and writer. Supported sparse events, evidence, order and nullable
 // values in retained rows never pass through source persistence transforms.
 func SaveFactLedgerPreservingHistory(path string, ledger domain.AgenticFactLedger, history []SessionFactDTO) error {
+	if len(ledger.Skills)+len(ledger.TaskLinks) > 0 {
+		return errors.New("legacy root occurrences require explicit migration before publication")
+	}
 	if ledger.TicketID == nil || strings.TrimSpace(*ledger.TicketID) == "" {
 		return fmt.Errorf("cannot save fact ledger: TicketID is required and cannot be empty")
 	}
@@ -634,10 +514,17 @@ func SaveFactLedgerPreservingHistory(path string, ledger domain.AgenticFactLedge
 	if len(matched) != len(history) {
 		return errors.New("retained history owner missing from publication")
 	}
-	ledger, err := domain.PersistAnomalySummaries(current)
+	allSummaries, err := domain.PersistAnomalySummaries(ledger)
+	if err != nil {
+		return fmt.Errorf("cannot derive resulting ledger summaries: %w", err)
+	}
+	ledger, err = domain.PersistAnomalySummaries(current)
 	if err != nil {
 		return fmt.Errorf("cannot prepare sparse anomaly evidence: %w", err)
 	}
+	// Aggregate summaries cover refreshed and retained native owners together.
+	// The retained owner DTOs below remain independent immutable source records.
+	ledger.Anomalies = allSummaries.Anomalies
 	dto := AgenticFactLedgerDTOFromDomain(ledger)
 	// Classification already authorized and normalized historical facts. Validate
 	// their current representation again without compacting their evidence.

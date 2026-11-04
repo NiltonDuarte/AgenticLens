@@ -131,6 +131,12 @@ func (f captureGenerationFixture) bind(t *testing.T, path string) {
 }
 
 func (f captureGenerationFixture) args(t *testing.T, extra ...string) []string {
+	explicitOwner := "root"
+	for i, arg := range extra {
+		if arg == "--session-id" && i+1 < len(extra) {
+			explicitOwner = extra[i+1]
+		}
+	}
 	for i, arg := range extra {
 		if arg == "--capture-dir" && i+1 < len(extra) {
 			dir, err := capture.ProjectState(extra[i+1], f.project)
@@ -141,7 +147,7 @@ func (f captureGenerationFixture) args(t *testing.T, extra ...string) []string {
 			if err != nil {
 				t.Fatal(err)
 			}
-			r, err := registry.Register(context.Background(), domain.CaptureIdentity{Source: domain.SourceCodex, Store: f.store, SessionID: "root"}, "", "fixture explicit owner")
+			r, err := registry.Register(context.Background(), domain.CaptureIdentity{Source: domain.SourceCodex, Store: f.store, SessionID: explicitOwner}, "", "fixture explicit owner")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -500,7 +506,7 @@ func TestCaptureCLIGenerateIncludesBoundIndependentSessionsAndSummaryDiagnostics
 		if _, err := os.Stat(filepath.Join(project, "capture_report.json")); !os.IsNotExist(err) {
 			t.Fatalf("summary-only publication created report: %v", err)
 		}
-		if ledger.SchemaVersion == nil || *ledger.SchemaVersion != 5 || len(ledger.Sessions) != 2 {
+		if ledger.SchemaVersion == nil || *ledger.SchemaVersion != domain.CurrentSchemaVersion || len(ledger.Sessions) != 2 {
 			t.Fatalf("wrong canonical result: %+v", ledger)
 		}
 		for _, session := range ledger.Sessions {
@@ -556,19 +562,16 @@ func TestCaptureGenerationRetainedRegistryCannotOverrideNewerCanonicalOrExplicit
 				newer := f.generate(t, "--capture-dir", filepath.Join(f.project, "absent-registry"), "--session-id", "root", "--codex-home", f.store)
 				assertCaptureRootInput(t, newer, 30)
 				newer.Sessions = append(newer.Sessions, domain.SessionFact{ID: "other-harness", Source: domain.SourceOpenCode, User: "stored-user", Invocations: []domain.InvocationFact{{Role: "reviewer", Model: "stored-model", Tokens: domain.InvocationTokens{Input: 77}}}})
+				newer.Sessions[0].Skills = []domain.SkillFact{{Name: "stored-skill", Outcome: domain.OutcomeUnknown}, {Name: "stored-skill", Outcome: domain.OutcomeUnknown}}
+				link := domain.TaskLinkFact{Outcome: domain.OutcomeUnknown, SubagentType: "reviewer", Description: "stored delegation", ChildSession: "stored-child", Timestamp: "2026-01-01T00:00:00Z", CostEvidence: domain.CostEvidence{State: domain.CostUnavailable}}
+				newer.Sessions[0].TaskLinks = []domain.TaskLinkFact{link, link}
 				acceptFixtureOwners(t, f.project, f.state, "TEST-100", newer.Sessions)
-				newer.Skills = []domain.SkillFact{{Name: "stored-skill"}, {Name: "stored-skill"}}
-				link := domain.TaskLinkFact{SubagentType: "reviewer", Description: "stored delegation", ChildSession: "stored-child", Timestamp: "2026-01-01T00:00:00Z", CostEvidence: domain.CostEvidence{State: domain.CostUnavailable}}
-				newer.TaskLinks = []domain.TaskLinkFact{link, link}
-				// This fixture represents an already accepted native publication. Persist
-				// the exact auxiliary receipt produced by generate before removing source.
+				// The owned snapshot above represents an accepted native publication.
 				accepted, err := capture.OpenProject(f.state, f.project)
 				if err != nil {
 					t.Fatal(err)
 				}
-				if err = accepted.RecordAuxiliaryReceipt(context.Background(), "TEST-100", capture.AuxiliaryFacts{Skills: newer.Skills, TaskLinks: newer.TaskLinks}); err != nil {
-					t.Fatal(err)
-				}
+
 				if err = accepted.Close(); err != nil {
 					t.Fatal(err)
 				}
@@ -584,11 +587,11 @@ func TestCaptureGenerationRetainedRegistryCannotOverrideNewerCanonicalOrExplicit
 				}
 				result := f.generate(t)
 				assertCaptureRootInput(t, result, 30)
-				if !reflect.DeepEqual(result.Skills, newer.Skills) {
-					t.Fatalf("retained registry lost AL-62 row multiplicity: %+v", result.Skills)
+				if !reflect.DeepEqual(result.SkillFacts(), newer.SkillFacts()) {
+					t.Fatalf("retained registry lost AL-62 row multiplicity: %+v", result.SkillFacts())
 				}
-				if !reflect.DeepEqual(result.TaskLinks, newer.TaskLinks) {
-					t.Fatalf("retained registry lost AL-62 delegation multiplicity: %+v", result.TaskLinks)
+				if !reflect.DeepEqual(result.TaskLinkFacts(), newer.TaskLinkFacts()) {
+					t.Fatalf("retained registry lost AL-62 delegation multiplicity: %+v", result.TaskLinkFacts())
 				}
 				found := false
 				for _, row := range result.Sessions {
@@ -630,16 +633,17 @@ func TestCaptureGenerationRetainedRegistryCannotOverrideNewerCanonicalOrExplicit
 		if err := os.WriteFile(path, older, 0600); err != nil {
 			t.Fatal(err)
 		}
-		assertCaptureRootInput(t, f.generate(t), 30)
+		assertCaptureRootInput(t, f.generate(t), 10)
 	})
 }
 
-func TestCaptureGenerationPreservesDifferingSnapshotsWithoutProvenSourceOrder(t *testing.T) {
+func TestCaptureGenerationCompleteSnapshotsReplaceRegardlessOfSourceOrder(t *testing.T) {
 	for _, tc := range []struct {
 		name              string
 		explicit, unknown bool
 	}{
 		{"registered equal source checkpoint", false, false},
+		{"registered unknown canonical source checkpoint", false, true},
 		{"explicit equal source checkpoint", true, false},
 		{"explicit unknown canonical source checkpoint", true, true},
 	} {
@@ -670,49 +674,25 @@ func TestCaptureGenerationPreservesDifferingSnapshotsWithoutProvenSourceOrder(t 
 				t.Fatalf("unordered source refresh: %v %s", err, out)
 			}
 			result := f.ledger(t)
-			if !reflect.DeepEqual(result.Sessions, baseline.Sessions) {
-				t.Fatalf("unordered source facts replaced accepted whole owner: before=%+v after=%+v", baseline.Sessions, result.Sessions)
-			}
-			state := f.state
-			if tc.explicit {
-				var err error
-				state, err = capture.ProjectState(filepath.Join(f.project, "absent-registry"), f.project)
-				if err != nil {
-					t.Fatal(err)
-				}
-			}
-			var published domain.CapturePublishedOwner
-			for _, diagnostic := range captureDiagnostics(t, f.project, state) {
-				if diagnostic.Phase == "publication" && diagnostic.Outcome == "committed" && len(diagnostic.Owners) == 1 {
-					published = diagnostic.Owners[0]
-				}
-			}
-			if published.Association != "unknown" || published.SourceFingerprint != "" || published.InstallationID != "" || published.Store != "" {
-				t.Fatalf("retained canonical snapshot borrowed rejected registry association: %+v", published)
+			assertCaptureRootInput(t, result, 30)
+			if bytes.Contains(out, []byte("unresolved precedence")) {
+				t.Fatalf("BEH-02 complete exact source was treated as an unordered partial read: %s", out)
 			}
 			if !tc.explicit {
 				registry, err := capture.OpenReadOnlyProject(f.state, f.project)
 				if err != nil {
 					t.Fatal(err)
 				}
-				rows, err := registry.List(context.Background())
+				rows, listErr := registry.List(context.Background())
 				closeErr := registry.Close()
-				if err != nil || closeErr != nil {
-					t.Fatalf("current registry: %v %v", err, closeErr)
+				if listErr != nil || closeErr != nil {
+					t.Fatalf("read capture snapshot: %v %v", listErr, closeErr)
 				}
-				if len(rows) != 1 || len(rows[0].Snapshot) != 1 || rows[0].Snapshot[0].Invocations[0].Tokens.Input != 30 || rows[0].SourceFingerprint == "" {
-					t.Fatalf("rejected newer source observation was hidden: %+v", rows)
-				}
-			}
-			if tc.explicit {
-				if !bytes.Contains(out, []byte("unresolved")) || !bytes.Contains(out, []byte("checkpoint")) {
-					t.Fatalf("unordered explicit source did not report unresolved precedence: %s", out)
-				}
-			} else {
-				if body := readCaptureFile(t, summary); !bytes.Contains(body, []byte("pending: 1")) || !bytes.Contains(body, []byte("retained older facts: 1")) {
-					t.Fatalf("unordered registered refresh claimed current coverage: %s", body)
+				if len(rows) != 1 || len(rows[0].Snapshot) != 1 || rows[0].Snapshot[0].Invocations[0].Tokens.Input != 30 {
+					t.Fatalf("complete registered source did not become accepted snapshot: %+v", rows)
 				}
 			}
+
 		})
 	}
 }

@@ -756,11 +756,16 @@ func ComputeSkillAdoption(ledgers []AgenticFactLedger) []SkillAdoptionFact {
 		if ledger.TicketID != nil && *ledger.TicketID != "" {
 			identity = ticketIdentity{id: *ledger.TicketID, unidentifiedIndex: -1}
 		}
-		for _, skill := range ledger.Skills {
+		for _, skill := range ledger.SkillFacts() {
 			fact := totals[skill.Name]
 			fact.Name = skill.Name
 			fact.TotalInvocations++
-			if !skill.Success {
+			if skill.RecordedOutcome() == OutcomeUnknown {
+				fact.UnknownOutcomes++
+			} else {
+				fact.KnownOutcomes++
+			}
+			if skill.RecordedOutcome() == OutcomeFailed {
 				fact.FailureCount++
 			}
 			if tickets[skill.Name] == nil {
@@ -775,7 +780,9 @@ func ComputeSkillAdoption(ledgers []AgenticFactLedger) []SkillAdoptionFact {
 	}
 	result := make([]SkillAdoptionFact, 0, len(totals))
 	for _, fact := range totals {
-		fact.FailureRate = float64(fact.FailureCount) / float64(fact.TotalInvocations)
+		if fact.KnownOutcomes > 0 {
+			fact.FailureRate = float64(fact.FailureCount) / float64(fact.KnownOutcomes)
+		}
 		result = append(result, fact)
 	}
 	sort.Slice(result, func(i, j int) bool {
@@ -790,7 +797,7 @@ func ComputeSkillAdoption(ledgers []AgenticFactLedger) []SkillAdoptionFact {
 // SkillNames returns distinct recorded skill names in exact lexical order.
 func SkillNames(ledger AgenticFactLedger) []string {
 	names := make(map[string]bool)
-	for _, skill := range ledger.Skills {
+	for _, skill := range ledger.SkillFacts() {
 		names[skill.Name] = true
 	}
 	result := make([]string, 0, len(names))

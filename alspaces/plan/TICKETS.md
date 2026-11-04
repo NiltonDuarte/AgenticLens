@@ -6,6 +6,13 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 ## In Progress
 
+- **AL-62**: Fix Codex skill and delegation facts with granular source ownership
+  - **Subsystem**: Domain / Codex and OpenCode Adapters / Schema Migration / Backfill / CLI / API / Dashboard / Tests
+  - **Status**: In Progress
+  - **Blocked by**: None
+  - **Blocks**: AL-63
+  - **File**: `alspaces/plan/to-do/AL-62 fix codex skill and delegation facts with granular ownership.md`
+
 
 
 ---
@@ -32,12 +39,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 
 
-- **AL-62**: Fix Codex skill and delegation facts with granular source ownership
-  - **Subsystem**: Domain / Codex and OpenCode Adapters / Schema Migration / Backfill / CLI / API / Dashboard / Tests
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: AL-63
-  - **File**: `alspaces/plan/to-do/AL-62 fix codex skill and delegation facts with granular ownership.md`
 
 - **AL-64**: Investigate and fix active-turn duration across Codex and OpenCode v1/v2
   - **Subsystem**: Domain / Codex / OpenCode v1 and v2 / Generation / Backfill / Ledger / Presentation

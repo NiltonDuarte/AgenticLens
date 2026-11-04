@@ -1,4 +1,4 @@
-export type EventType = 'tool_call' | 'turn_message' | 'compaction';
+export type EventType = 'tool_call' | 'turn_message' | 'compaction' | 'skill_activation';
 
 export type DataSource = 'local_sqlite' | 'local_codex' | 'committed_ledger';
 
@@ -18,6 +18,7 @@ export type ConventionalTicketType =
   | 'build';
 
 export interface EventFact {
+  readonly call_id?: string;
   readonly event_id?: string | null | undefined;
   readonly timestamp: string;
   readonly session_id: string;

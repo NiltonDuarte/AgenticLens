@@ -59,19 +59,24 @@ func ThreadExecutionRecordDTOsFromDomain(values []domain.ThreadExecutionRecord) 
 
 // SessionFactResponseDTO is the concrete nullable cost projection of SessionFact.
 type SessionFactResponseDTO struct {
-	ID          string                       `json:"id"`
-	ParentID    *string                      `json:"parent_id,omitempty"`
-	Source      domain.SourceHarness         `json:"source,omitempty"`
-	User        string                       `json:"user,omitempty"`
-	Invocations []adapters.InvocationFactDTO `json:"invocations"`
-	Tools       []domain.SessionToolFact     `json:"tools"`
-	Events      []domain.SessionEventFact    `json:"events,omitempty"`
-	Anomalies   []domain.Anomaly             `json:"anomalies"`
+	EventsArePartial bool                         `json:"events_are_partial,omitempty"`
+	AgentPath        string                       `json:"agent_path,omitempty"`
+	Skills           []domain.SkillFact           `json:"skills,omitempty"`
+	TaskLinks        []adapters.TaskLinkFactDTO   `json:"task_links,omitempty"`
+	ID               string                       `json:"id"`
+	ParentID         *string                      `json:"parent_id,omitempty"`
+	Source           domain.SourceHarness         `json:"source,omitempty"`
+	User             string                       `json:"user,omitempty"`
+	Invocations      []adapters.InvocationFactDTO `json:"invocations"`
+	Tools            []domain.SessionToolFact     `json:"tools"`
+	Events           []domain.SessionEventFact    `json:"events,omitempty"`
+	Anomalies        []domain.Anomaly             `json:"anomalies"`
 }
 
 func SessionFactResponseDTOFromDomain(value domain.SessionFact) SessionFactResponseDTO {
 	return SessionFactResponseDTO{
-		ID:          value.ID,
+		EventsArePartial: value.EventsArePartial, Skills: value.Skills, TaskLinks: adapters.TaskLinkFactDTOsFromDomain(value.TaskLinks),
+		AgentPath: value.AgentPath, ID: value.ID,
 		ParentID:    value.ParentID,
 		Source:      value.Source,
 		User:        value.User,
@@ -106,11 +111,10 @@ type FactLedgerResponseDTO struct {
 	Code          domain.CodeFacts               `json:"code"`
 	Sessions      []SessionFactResponseDTO       `json:"sessions"`
 	Anomalies     []domain.Anomaly               `json:"anomalies"`
-	Skills        []domain.SkillFact             `json:"skills,omitempty"`
-	TaskLinks     []adapters.TaskLinkFactDTO     `json:"task_links,omitempty"`
 }
 
 func FactLedgerResponseDTOFromDomain(value domain.AgenticFactLedger) FactLedgerResponseDTO {
+	value.Sessions = domain.ResolveTaskChildren(value.Sessions)
 	return FactLedgerResponseDTO{
 		SchemaVersion: value.SchemaVersion,
 		Migration:     value.Migration,
@@ -123,8 +127,6 @@ func FactLedgerResponseDTOFromDomain(value domain.AgenticFactLedger) FactLedgerR
 		Code:          value.Code,
 		Sessions:      SessionFactResponseDTOsFromDomain(value.Sessions),
 		Anomalies:     value.Anomalies,
-		Skills:        value.Skills,
-		TaskLinks:     adapters.TaskLinkFactDTOsFromDomain(value.TaskLinks),
 	}
 }
 

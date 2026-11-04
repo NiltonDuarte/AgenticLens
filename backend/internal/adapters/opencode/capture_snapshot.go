@@ -64,6 +64,9 @@ func CaptureSessionSnapshot(ctx context.Context, db *sql.DB, id, user string, bu
 	} else {
 		sessions, _, _, err = extractSchemaV1Sessions(db, []string{id}, user, nil, true, true)
 	}
+	if err == nil {
+		sessions = WithOwnedSkillTaskFacts(sessions)
+	}
 	return
 }
 

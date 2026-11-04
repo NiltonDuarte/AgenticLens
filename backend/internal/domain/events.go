@@ -135,6 +135,9 @@ func enrichEvent(recorded, local EventFact, sourcePersona bool) EventFact {
 	if recorded.EventID == "" {
 		recorded.EventID = local.EventID
 	}
+	if recorded.CallID == "" {
+		recorded.CallID = local.CallID
+	}
 	recorded.MessageID = enrichedString(recorded.MessageID, local.MessageID)
 	recorded.ErrorMessage = enrichedString(recorded.ErrorMessage, local.ErrorMessage)
 	recorded.PromptContent = enrichedString(recorded.PromptContent, local.PromptContent)
@@ -184,17 +187,27 @@ func DetectAnomaliesWithEvidence(ledger AgenticFactLedger, thresholds ...Anomaly
 
 // RefreshAnomalySummaries recomputes summaries for available source events and
 // merged tool totals while retaining cached session summaries only for sessions
-// with no current event stream.
+// with no complete current event stream. Sparse occurrence projections do not
+// establish source-wide anomaly evidence.
 func RefreshAnomalySummaries(ledger AgenticFactLedger, thresholds ...AnomalyThresholdsConfig) []Anomaly {
 	cached := ledger.AnomalyFacts()
 	events := ledger.EventFacts()
 	currentSessions := make(map[string]bool)
+	partial := make(map[string]bool)
+	detectionLedger := ledger
+	detectionLedger.Sessions = append([]SessionFact(nil), ledger.Sessions...)
+	for i, session := range detectionLedger.Sessions {
+		if session.EventsArePartial {
+			partial[session.ID] = true
+			detectionLedger.Sessions[i].Events = nil
+		}
+	}
 	for _, event := range events {
-		if event.SessionID != "" {
+		if event.SessionID != "" && !partial[event.SessionID] {
 			currentSessions[event.SessionID] = true
 		}
 	}
-	detected := DetectAnomalies(ledger, thresholds...)
+	detected := DetectAnomalies(detectionLedger, thresholds...)
 	refreshed := make([]Anomaly, 0, len(cached)+len(detected))
 	for _, anomaly := range detected {
 		if anomaly.Context.SessionID == nil || *anomaly.Context.SessionID == "" {
@@ -263,7 +276,8 @@ func anomalyDeduplicationKey(a Anomaly) string {
 }
 
 // PersistAnomalySummaries derives summaries from complete in-memory facts, then
-// removes event rows and evidence references from the canonical ledger.
+// removes general event rows and evidence references from the canonical ledger.
+// Safe actual source events linked to owned occurrences remain for offline badges.
 func PersistAnomalySummaries(ledger AgenticFactLedger, thresholds ...AnomalyThresholdsConfig) (AgenticFactLedger, error) {
 	anomalies := RefreshAnomalySummaries(ledger, thresholds...)
 	bySession := make(map[string][]Anomaly)
@@ -281,7 +295,9 @@ func PersistAnomalySummaries(ledger AgenticFactLedger, thresholds ...AnomalyThre
 	sessions := make([]SessionFact, len(ledger.Sessions))
 	for i, orig := range ledger.Sessions {
 		cloned := SessionFact{
-			ID:          orig.ID,
+			Skills:    append([]SkillFact(nil), orig.Skills...),
+			TaskLinks: append([]TaskLinkFact(nil), orig.TaskLinks...),
+			AgentPath: orig.AgentPath, ID: orig.ID,
 			ParentID:    orig.ParentID,
 			Source:      orig.Source,
 			User:        orig.User,
@@ -290,6 +306,8 @@ func PersistAnomalySummaries(ledger AgenticFactLedger, thresholds ...AnomalyThre
 			Events:      nil,
 			Anomalies:   bySession[orig.ID],
 		}
+		cloned.Events = PersistedOccurrenceEvents(orig)
+		cloned.EventsArePartial = len(cloned.Events) > 0
 		if cloned.Anomalies == nil {
 			cloned.Anomalies = []Anomaly{}
 		}
@@ -310,6 +328,7 @@ func NormalizeLedgerForRead(ledger AgenticFactLedger, thresholds ...AnomalyThres
 	for index, session := range ledger.Sessions {
 		if session.Events != nil {
 			normalized.Sessions[index].Events = append([]SessionEventFact{}, session.Events...)
+			normalized.Sessions[index].EventsArePartial = session.EventsArePartial
 		}
 	}
 	return normalized, nil
@@ -554,4 +573,14 @@ func reworkRoleEvidence(ledger AgenticFactLedger, events []EventFact) []reworkEv
 		}
 	}
 	return evidence
+}
+
+func withoutPartialEvents(ledger AgenticFactLedger) AgenticFactLedger {
+	ledger.Sessions = append([]SessionFact(nil), ledger.Sessions...)
+	for i := range ledger.Sessions {
+		if ledger.Sessions[i].EventsArePartial {
+			ledger.Sessions[i].Events = nil
+		}
+	}
+	return ledger
 }

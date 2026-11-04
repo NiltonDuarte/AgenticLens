@@ -133,10 +133,17 @@ func extractSessions(db *sql.DB, threadIDs []string, defaultUser string, userByS
 	if len(threadIDs) == 0 {
 		return []domain.SessionFact{}, nil, nil, nil
 	}
+	var sessions []domain.SessionFact
+	var started, completed *string
 	if family == schemaFamilyV2 {
-		return extractSchemaV2Sessions(db, threadIDs, defaultUser, userBySessionID)
+		sessions, started, completed, err = extractSchemaV2Sessions(db, threadIDs, defaultUser, userBySessionID)
+	} else {
+		sessions, started, completed, err = extractSchemaV1Sessions(db, threadIDs, defaultUser, userBySessionID, strict)
 	}
-	return extractSchemaV1Sessions(db, threadIDs, defaultUser, userBySessionID, strict)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return WithOwnedSkillTaskFacts(sessions), started, completed, nil
 }
 
 // ExtractSteeringTurns calculates human steering turns from message records for given root threads.

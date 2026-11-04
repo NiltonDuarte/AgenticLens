@@ -1,7 +1,7 @@
 {
-  "schema_version": 4,
+  "schema_version": 6,
   "migration": {
-    "schema_version": 4,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -49,7 +49,11 @@
           },
           "cost_usd": 1.813991,
           "compactions": 0,
-          "user_iterations": 1
+          "user_iterations": 1,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 1.813991
+          }
         }
       ],
       "tools": [
@@ -150,7 +154,11 @@
           },
           "cost_usd": 0.176053,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.176053
+          }
         }
       ],
       "tools": [],
@@ -179,7 +187,11 @@
           },
           "cost_usd": 0.557333,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.557333
+          }
         }
       ],
       "tools": [],
@@ -229,7 +241,11 @@
           },
           "cost_usd": 0.314597,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.314597
+          }
         }
       ],
       "tools": [],
@@ -258,7 +274,11 @@
           },
           "cost_usd": 0.264129,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.264129
+          }
         }
       ],
       "tools": [],
@@ -287,7 +307,11 @@
           },
           "cost_usd": 0.091869,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.091869
+          }
         }
       ],
       "tools": [],
@@ -316,7 +340,11 @@
           },
           "cost_usd": 0.085714,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.085714
+          }
         }
       ],
       "tools": [],

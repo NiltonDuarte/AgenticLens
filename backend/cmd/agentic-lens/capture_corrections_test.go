@@ -945,13 +945,18 @@ func TestCaptureRejectsRawStoreTraversalAndPreservesAcceptedOwner(t *testing.T) 
 		t.Errorf("rejected refresh not visible in reconciliation: %v %s", err, out)
 	}
 	out, err = runCaptureNative(t, f.project, "", f.args(t)...)
-	if err == nil || !bytes.Contains(out, []byte("source store")) {
-		t.Errorf("baseline accepted outside-store association: %v %s", err, out)
+	if err != nil {
+		t.Fatalf("safe preserved baseline was hidden by unavailable/unsafe source: %v %s", err, out)
 	}
 	assertCaptureRootInput(t, f.ledger(t), 31)
-	if !bytes.Equal(acceptedLedger, readCaptureFile(t, f.output)) || !bytes.Equal(acceptedSummary, readCaptureFile(t, summary)) {
-		t.Error("rejected source changed accepted publication")
+	var accepted domain.AgenticFactLedger
+	if err := json.Unmarshal(acceptedLedger, &accepted); err != nil {
+		t.Fatal(err)
 	}
+	if !reflect.DeepEqual(accepted.Sessions, f.ledger(t).Sessions) || !bytes.Equal(acceptedSummary, readCaptureFile(t, summary)) {
+		t.Error("rejected unsafe source changed accepted owner facts/summary")
+	}
+
 }
 
 func TestCaptureInstalledRawSourceAliasesMatchNativeRead(t *testing.T) {

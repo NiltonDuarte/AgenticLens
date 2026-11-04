@@ -1226,8 +1226,8 @@ func TestEngineMigrate(t *testing.T) {
 	})
 
 	t.Run("missing migration step returns ErrMissingStep", func(t *testing.T) {
-		// Default engine has steps through v5. Asking for v6 must fail with a missing step.
-		_, err := engine.Migrate([]byte(unversionedJSON), 6)
+		// The first version beyond the supported chain must fail with a missing step.
+		_, err := engine.Migrate([]byte(unversionedJSON), domain.CurrentSchemaVersion+1)
 		if !errors.Is(err, migration.ErrMissingStep) {
 			t.Errorf("expected ErrMissingStep when chain has gap, got %v", err)
 		}
@@ -1963,5 +1963,51 @@ func TestCostEvidenceMigrationPreservesObservedHistoryAndMissingPresence(t *test
 	summary := domain.ComputeTotals(rows).CostSummary
 	if summary.KnownSubtotalUSD == nil || *summary.KnownSubtotalUSD != 7 || summary.CompleteAmount() != nil || summary.FullyObserved != 2 || summary.Unavailable != 2 {
 		t.Fatalf("unexpected migrated coverage: %+v", summary)
+	}
+}
+
+func TestV6MigrationDropsOnlyOwnerlessFactsAndPreservesNativeMultiplicity(t *testing.T) {
+	const input = `{"schema_version":5,"ticket_id":"TEST-MIGRATION","sessions":[
+{"id":"root","source":"codex","user":"alice","invocations":[],"tools":[],"skills":[{"name":"selected","success":true,"provenance":{"call_id":"shared-call"}}]},
+{"id":"child","parent_id":"root","source":"opencode","user":"bob","invocations":[],"tools":[],"skills":[{"name":"selected","success":true,"provenance":{"call_id":"shared-call"}}]}],
+"skills":[{"name":"lost","success":true},{"name":"lost","success":true},{"session_id":"root","source":"codex","name":"selected","success":true,"provenance":{"call_id":"shared-call"}},{"session_id":"root","name":"selected","success":false,"provenance":{"call_id":"new-call"}},{"session_id":"root","source":"opencode","name":"wrong-source","success":true},{"session_id":"missing","name":"missing-owner","success":true}],
+"task_links":[{"description":"lost","cost_usd":null,"cost_evidence":{"state":"unavailable","known_subtotal_usd":null}},{"description":"lost","cost_usd":null,"cost_evidence":{"state":"unavailable","known_subtotal_usd":null}},{"session_id":"root","description":"kept","child_session_id":"unavailable-child","provenance":{"call_id":"task-call"},"cost_usd":0,"cost_evidence":{"state":"observed","known_subtotal_usd":0}},{"session_id":"root","source":"opencode","description":"wrong-source","cost_usd":null,"cost_evidence":{"state":"unavailable","known_subtotal_usd":null}}]}`
+	engine := migration.NewEngine(nil)
+	got, err := engine.Migrate([]byte(input), 6)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Migration == nil || !strings.Contains(got.Migration.Notes, "skills=4 task_links=3") {
+		t.Fatalf("missing deterministic discarded row counts: %+v", got.Migration)
+	}
+	if len(got.Sessions[0].Skills) != 2 || len(got.Sessions[1].Skills) != 1 || len(got.SkillFacts()) != 3 || len(got.TaskLinkFacts()) != 1 {
+		t.Fatalf("known owners/native multiplicity lost or root projection doubled: %+v", got)
+	}
+	if got.Sessions[0].Skills[1].RecordedOutcome() != domain.OutcomeFailed || got.Sessions[1].Skills[0].RecordedOutcome() != domain.OutcomeSucceeded {
+		t.Fatalf("legacy success conversion did not remain migration-local: %+v", got.Sessions)
+	}
+	task := got.Sessions[0].TaskLinks[0]
+	if task.ChildSession != "unavailable-child" || task.CostEvidence.State != domain.CostObserved || task.CostEvidence.KnownSubtotalUSD == nil || *task.CostEvidence.KnownSubtotalUSD != 0 {
+		t.Fatalf("owned task reference/cost lost: %+v", task)
+	}
+	encoded, err := json.Marshal(got)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(encoded, &fields); err != nil {
+		t.Fatal(err)
+	}
+	for _, retired := range []string{"skills", "task_links", "unresolved_facts"} {
+		if _, ok := fields[retired]; ok {
+			t.Fatalf("migration emitted retired root field %s", retired)
+		}
+	}
+	again, err := engine.Migrate(encoded, 6)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(again.SkillFacts()) != 3 || len(again.TaskLinkFacts()) != 1 || again.Migration.Notes != got.Migration.Notes {
+		t.Fatalf("migration repeated rows or reported repeat deletion: %+v", again)
 	}
 }

@@ -3,6 +3,7 @@ package opencode_test
 import (
 	"agenticlens/internal/adapters/opencode"
 	"agenticlens/internal/domain"
+	"context"
 	"database/sql"
 	"fmt"
 	_ "modernc.org/sqlite"
@@ -221,6 +222,14 @@ func TestSchemaV1ExtractsSkillFailureAndTaskFact(t *testing.T) {
 		('task-ok','facts_root','facts_msg',1760000000400,1760000000500,'{"type":"tool","tool":"task","state":{"status":"completed","input":{"subagent_type":"tester","description":"Verify AL-51"},"output":"{\"session_id\":\"facts_child\"}"}}');`); err != nil {
 		t.Fatal(err)
 	}
+	captured, _, _, captureErr := opencode.CaptureSessionSnapshot(context.Background(), db, "facts_root", "tester", 1_000_000)
+	if captureErr != nil {
+		t.Fatal(captureErr)
+	}
+	captureFacts := domain.AgenticFactLedger{Sessions: captured}
+	if len(captureFacts.SkillFacts()) != 1 || len(captureFacts.TaskLinkFacts()) != 1 {
+		t.Fatalf("BEH-05 exact capture snapshot omitted owned source occurrences: %+v", captured)
+	}
 	sessions, _, _, err := opencode.ExtractSessions(db, []string{"facts_root"}, "tester", nil)
 	if err != nil {
 		t.Fatal(err)
@@ -232,6 +241,22 @@ func TestSchemaV1ExtractsSkillFailureAndTaskFact(t *testing.T) {
 	if len(tasks) != 1 || tasks[0].SubagentType != "tester" || tasks[0].Description != "Verify AL-51" || tasks[0].ChildSession != "facts_child" {
 		t.Fatalf("unexpected task facts: %+v sessions=%+v", tasks, sessions)
 	}
+	if skills[0].SessionID != "facts_root" || skills[0].Provenance.MessageID != "facts_msg" || !strings.Contains(skills[0].Provenance.EventID, "skill-fail") || tasks[0].SessionID != "facts_root" || !strings.Contains(tasks[0].Provenance.EventID, "task-ok") {
+		t.Fatalf("native source owner/part/message identities lost: %+v %+v", skills, tasks)
+	}
+	if _, err := db.Exec("DELETE FROM session WHERE id=?", "facts_child"); err != nil {
+		t.Fatal(err)
+	}
+	unavailable, _, _, err := opencode.ExtractSessions(db, []string{"facts_root"}, "tester", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	owned := domain.AgenticFactLedger{Sessions: opencode.WithOwnedSkillTaskFacts(unavailable)}
+	links := owned.TaskLinkFacts()
+	if len(links) != 1 || links[0].SessionID != "facts_root" || links[0].ChildSession != "facts_child" {
+		t.Fatalf("explicit child reference disappeared without child source: %+v", links)
+	}
+
 }
 
 func TestSchemaV1SkillFailureStatusesAreCaseInsensitive(t *testing.T) {

@@ -26,6 +26,7 @@ func NewEngine(registry *Registry) *Engine {
 			NewStepV2ToV3Sanitized(),
 			NewStepV3ToV4UserIterations(),
 			NewStepV4ToV5CostEvidence(),
+			NewStepV5ToV6OwnedOccurrences(),
 		} {
 			if err := registry.Register(step); err != nil {
 				// Built-in steps are static; failure indicates a programming error.

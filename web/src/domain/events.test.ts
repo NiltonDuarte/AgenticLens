@@ -11,12 +11,12 @@ import {
     ledgerTaskLinks,
 } from './types';
 describe('Event Telemetry and Schema Evolution Contracts', () => {
-    describe('Legacy and Backward Compatibility Boundaries', () => {
-        it('deserializes legacy JSON omitting sessions without error', () => {
+    describe('Owned collection boundaries', () => {
+        it('deserializes JSON with no session facts without error', () => {
             const legacyPayload = JSON.stringify({
-                schema_version: 2,
+                schema_version: 6,
                 ticket_id: 'AL-LEGACY',
-                ticket_title: 'Legacy ticket',
+                ticket_title: 'Empty ticket',
                 updated_at: '2026-10-18T10:00:00Z',
                 code: {
                     lines_added: 50,
@@ -32,18 +32,19 @@ describe('Event Telemetry and Schema Evolution Contracts', () => {
             expect(ledgerSkills(parsed)).toEqual([]);
             expect(ledgerTaskLinks(parsed)).toEqual([]);
         });
-        it('reads additive skill and task facts while keeping legacy omissions empty', () => {
+        it('reads session-owned skill and task facts', () => {
             const payload: AgenticFactLedger = {
-                schema_version: 4,
+                schema_version: 6,
                 ticket_id: 'AL-51', ticket_title: null, ticket_type: 'feat',
                 started_at: null, completed_at: null, updated_at: '',
                 code: { lines_added: 0, lines_deleted: 0, test_lines_added: 0, test_lines_deleted: 0,
                     prod_lines_added: 0, prod_lines_deleted: 0, files_changed: 0, sdlc_iterations: 0 },
-                sessions: [],
+                sessions: [{ id: 'owner', invocations: [], tools: [],
                 skills: [{ name: 'agentic-lens-dev', turn_index: 1, message_index: 0, caller_role: 'coder',
-                    timestamp: '2026-10-31T10:00:00Z', success: true }],
-                task_links: [{ subagent_type: 'tester', description: 'Run checks', parent_turn: 2,
+                    timestamp: '2026-10-31T10:00:00Z', success: true, outcome: 'succeeded' as const }],
+                task_links: [{ subagent_type: 'tester', outcome: 'unknown' as const, description: 'Run checks', parent_turn: 2,
                     child_session_id: 'child-1', timestamp: '2026-10-31T10:01:00Z' }],
+                }],
             };
             expect(ledgerSkills(payload)).toHaveLength(1);
             expect(ledgerTaskLinks(payload)[0]?.child_session_id).toBe('child-1');
@@ -103,7 +104,7 @@ describe('Recorded event projection and optional enrichment', () => {
 
     it('enriches matching IDs, retains unmatched facts, adds local rows, and is idempotent', () => {
         const unmatched = Object.freeze({ ...recorded, event_id: 'unmatched', turn: 3 });
-        const local = Object.freeze({ ...recorded, message_id: 'local-message', duration_ms: 0,
+        const local = Object.freeze({ ...recorded, call_id: 'native-call-1', message_id: 'local-message', duration_ms: 0,
             prompt_content: 'Run checks', reasoning_content: 'Inspect failures', tool_input: 'make', tool_output: 'failed', error_message: 'exit 1' });
         const added = Object.freeze({ ...local, event_id: 'local-only', session_id: 'session-b', turn: 1 });
         const baseline = Object.freeze([unmatched, recorded]);

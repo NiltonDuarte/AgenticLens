@@ -20,46 +20,52 @@ import (
 const maxRolloutLineBytes = 8 * 1024 * 1024
 
 // Transcript is a privacy-minimized summary of a Codex rollout. Content-bearing
-// fields such as prompts, assistant text, command arguments, and tool results
-// are intentionally not retained.
+// fields such as prompts and assistant text are not retained. Selected skill
+// names/paths and delegation metadata are retained as occurrence facts; source
+// event payloads remain transient and are compacted before persistence.
 type Transcript struct {
-	ThreadID       string                  `json:"thread_id,omitempty"`
-	SessionID      string                  `json:"session_id,omitempty"`
-	WorkingDir     string                  `json:"-"`
-	Source         string                  `json:"source,omitempty"`
-	CodexVersion   string                  `json:"codex_version,omitempty"`
-	StartedAt      string                  `json:"started_at,omitempty"`
-	Provider       string                  `json:"provider,omitempty"`
-	Model          string                  `json:"model,omitempty"`
-	Usage          Usage                   `json:"usage"`
-	ContextWindow  int64                   `json:"context_window,omitempty"`
-	RecordKinds    map[string]int64        `json:"record_kinds"`
-	EventKinds     map[string]int64        `json:"event_kinds"`
-	Warnings       []string                `json:"warnings,omitempty"`
-	SteeringTurns  int64                   `json:"steering_turns"`
-	Turns          int64                   `json:"turns"`
-	ToolCalls      int64                   `json:"tool_calls"`
-	ToolErrors     int64                   `json:"tool_errors"`
-	ActiveSeconds  int64                   `json:"active_seconds"`
-	Invocations    []domain.InvocationFact `json:"-"`
-	Tools          []domain.ToolFact       `json:"-"`
-	Events         []domain.EventFact      `json:"-"`
-	CompletedAt    string                  `json:"-"`
-	UpdatedAt      string                  `json:"updated_at"`
-	modelUsage     map[string]*modelUsage  `json:"-"`
-	toolUsage      map[string]*toolUsage   `json:"-"`
-	pendingTools   map[string]int          `json:"-"`
-	turnStarts     map[string]time.Time    `json:"-"`
-	turnModels     map[string]string       `json:"-"`
-	turnNumbers    map[string]int64        `json:"-"`
-	toolIDs        map[string]struct{}     `json:"-"`
-	compactions    int64                   `json:"-"`
-	currentModel   string                  `json:"-"`
-	currentContext int64                   `json:"-"`
-	role           domain.AgentRole        `json:"-"`
-	ParentThread   string                  `json:"parent_thread,omitempty"`
-	sessions       []domain.SessionFact    `json:"-"`
-	latestTime     string                  `json:"-"`
+	Skills           []domain.SkillFact    `json:"-"`
+	TaskLinks        []domain.TaskLinkFact `json:"-"`
+	AgentPath        string                `json:"-"`
+	pendingSelection int
+	messageCount     int
+	ThreadID         string                  `json:"thread_id,omitempty"`
+	SessionID        string                  `json:"session_id,omitempty"`
+	WorkingDir       string                  `json:"-"`
+	Source           string                  `json:"source,omitempty"`
+	CodexVersion     string                  `json:"codex_version,omitempty"`
+	StartedAt        string                  `json:"started_at,omitempty"`
+	Provider         string                  `json:"provider,omitempty"`
+	Model            string                  `json:"model,omitempty"`
+	Usage            Usage                   `json:"usage"`
+	ContextWindow    int64                   `json:"context_window,omitempty"`
+	RecordKinds      map[string]int64        `json:"record_kinds"`
+	EventKinds       map[string]int64        `json:"event_kinds"`
+	Warnings         []string                `json:"warnings,omitempty"`
+	SteeringTurns    int64                   `json:"steering_turns"`
+	Turns            int64                   `json:"turns"`
+	ToolCalls        int64                   `json:"tool_calls"`
+	ToolErrors       int64                   `json:"tool_errors"`
+	ActiveSeconds    int64                   `json:"active_seconds"`
+	Invocations      []domain.InvocationFact `json:"-"`
+	Tools            []domain.ToolFact       `json:"-"`
+	Events           []domain.EventFact      `json:"-"`
+	CompletedAt      string                  `json:"-"`
+	UpdatedAt        string                  `json:"updated_at"`
+	modelUsage       map[string]*modelUsage  `json:"-"`
+	toolUsage        map[string]*toolUsage   `json:"-"`
+	pendingTools     map[string]int          `json:"-"`
+	turnStarts       map[string]time.Time    `json:"-"`
+	turnModels       map[string]string       `json:"-"`
+	turnNumbers      map[string]int64        `json:"-"`
+	toolIDs          map[string]struct{}     `json:"-"`
+	compactions      int64                   `json:"-"`
+	currentModel     string                  `json:"-"`
+	currentContext   int64                   `json:"-"`
+	role             domain.AgentRole        `json:"-"`
+	ParentThread     string                  `json:"parent_thread,omitempty"`
+	sessions         []domain.SessionFact    `json:"-"`
+	latestTime       string                  `json:"-"`
 }
 
 // Usage contains Codex-reported token counts. Cost is deliberately omitted:
@@ -200,16 +206,17 @@ func ParseRollout(reader io.Reader) (Transcript, error) {
 	}
 
 	transcript := Transcript{
-		RecordKinds:  make(map[string]int64),
-		EventKinds:   make(map[string]int64),
-		modelUsage:   make(map[string]*modelUsage),
-		toolUsage:    make(map[string]*toolUsage),
-		pendingTools: make(map[string]int),
-		turnStarts:   make(map[string]time.Time),
-		turnModels:   make(map[string]string),
-		turnNumbers:  make(map[string]int64),
-		toolIDs:      make(map[string]struct{}),
-		currentModel: "default",
+		RecordKinds:      make(map[string]int64),
+		EventKinds:       make(map[string]int64),
+		modelUsage:       make(map[string]*modelUsage),
+		toolUsage:        make(map[string]*toolUsage),
+		pendingTools:     make(map[string]int),
+		turnStarts:       make(map[string]time.Time),
+		turnModels:       make(map[string]string),
+		turnNumbers:      make(map[string]int64),
+		toolIDs:          make(map[string]struct{}),
+		currentModel:     "default",
+		pendingSelection: -1,
 	}
 	usageRecordSeen := false
 	inheritedHistory := false
@@ -349,6 +356,7 @@ func readSessionMetadata(payload json.RawMessage, transcript *Transcript) error 
 	transcript.CodexVersion = metadata.CLIVersion
 	transcript.Provider = metadata.Provider
 	transcript.ParentThread = metadata.ParentID
+	transcript.AgentPath = metadata.AgentPath
 	transcript.role = ""
 	if strings.TrimSpace(metadata.AgentRole) != "" {
 		transcript.role = domain.AgentRole(strings.TrimSpace(metadata.AgentRole))
@@ -373,6 +381,7 @@ func readEvent(payload json.RawMessage, timestamp string, transcript *Transcript
 	transcript.EventKinds[event.Type]++
 	switch event.Type {
 	case "turn_started", "task_started":
+		transcript.pendingSelection = -1
 		var lifecycle struct {
 			TurnID string `json:"turn_id"`
 		}
@@ -620,6 +629,7 @@ func (transcript *Transcript) readToolEvent(kind string, payload json.RawMessage
 }
 
 func (transcript *Transcript) readResponseItem(payload json.RawMessage, timestamp, sourceID string) {
+	transcript.readOccurrence(payload, timestamp, sourceID)
 	var item struct {
 		Type   string          `json:"type"`
 		Role   string          `json:"role"`
@@ -629,6 +639,21 @@ func (transcript *Transcript) readResponseItem(payload json.RawMessage, timestam
 		Output json.RawMessage `json:"output"`
 	}
 	if err := json.Unmarshal(payload, &item); err != nil {
+		transcript.Warnings = append(transcript.Warnings, sourceID+": invalid response_item payload")
+		return
+	}
+	if strings.TrimSpace(item.Type) == "" {
+		transcript.Warnings = append(transcript.Warnings, sourceID+": response_item requires type")
+		return
+	}
+	nativeCall := item.Type == "function_call" || item.Type == "custom_tool_call"
+	nativeOutput := item.Type == "function_call_output" || item.Type == "custom_tool_call_output"
+	if (nativeCall || nativeOutput) && strings.TrimSpace(item.CallID) == "" {
+		transcript.Warnings = append(transcript.Warnings, sourceID+": response_item "+item.Type+" requires call_id")
+		return
+	}
+	if nativeCall && strings.TrimSpace(item.Name) == "" {
+		transcript.Warnings = append(transcript.Warnings, sourceID+": response_item "+item.Type+" requires name")
 		return
 	}
 	if item.Type == "message" && item.Role == "user" {
@@ -659,13 +684,16 @@ func (transcript *Transcript) readResponseItem(payload json.RawMessage, timestam
 		transcript.pendingTools[item.CallID] = len(transcript.Events)
 		toolName := name
 		transcript.Events = append(transcript.Events, domain.EventFact{
-			EventID: "codex-call:" + item.CallID, Timestamp: timestamp, SessionID: transcript.sessionIDOrThread(), Turn: transcript.Turns,
+			CallID: item.CallID, EventID: "codex-call:" + item.CallID, Timestamp: timestamp, SessionID: transcript.sessionIDOrThread(), Turn: transcript.Turns,
 			Role: transcript.role, EventType: domain.EventTypeToolCall, ToolName: &toolName,
 			Status: "running", ContextTokens: transcript.currentContext,
 		})
 	case "custom_tool_call_output", "function_call_output":
 		if index, exists := transcript.pendingTools[item.CallID]; exists {
 			transcript.Events[index].Status = "completed"
+			if item.Status == "error" || item.Status == "failed" {
+				transcript.Events[index].Status = item.Status
+			}
 			output := codexToolOutput(item.Output)
 			transcript.recordToolOutput(index, output)
 			if started, err := time.Parse(time.RFC3339Nano, transcript.Events[index].Timestamp); err == nil {
@@ -674,6 +702,9 @@ func (transcript *Transcript) readResponseItem(payload json.RawMessage, timestam
 					transcript.Events[index].DurationMs = &duration
 				}
 			}
+			occurrenceEvent := transcript.Events[index]
+			occurrenceEvent.Status = item.Status
+			transcript.completeOccurrence(item.CallID, output, occurrenceEvent)
 			delete(transcript.pendingTools, item.CallID)
 		}
 	}
@@ -882,7 +913,7 @@ func (transcript *Transcript) finalizeFacts() {
 func (transcript Transcript) SessionFacts() ([]domain.SessionFact, error) {
 	owned := transcript.sessions
 	if owned == nil {
-		session := domain.SessionFact{ID: transcript.sessionIDOrThread(), Source: domain.SourceCodex, Invocations: transcript.Invocations}
+		session := domain.SessionFact{ID: transcript.sessionIDOrThread(), Source: domain.SourceCodex, AgentPath: transcript.AgentPath, Invocations: transcript.Invocations, Skills: transcript.Skills, TaskLinks: transcript.TaskLinks}
 		if transcript.ParentThread != "" {
 			parent := transcript.ParentThread
 			session.ParentID = &parent

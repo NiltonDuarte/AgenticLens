@@ -23,10 +23,10 @@ describe('FleetOverview View Component', () => {
   it('shows ranked adoption and invocation-weighted success, then refreshes safely without skill facts', async () => {
     const fetchFleet = vi.spyOn(apiClient, 'fetchFleetSummary')
       .mockResolvedValueOnce({ data: { ...mockFleetSummary, skill_adoption: [
-        { name: 'alpha', total_invocations: 8, tickets_count: 2, failure_count: 2, failure_rate: 0.25 },
-        { name: 'beta', total_invocations: 1, tickets_count: 1, failure_count: 1, failure_rate: 1 },
-        { name: 'gamma', total_invocations: 1, tickets_count: 1, failure_count: 0, failure_rate: 0 },
-        { name: 'omega', total_invocations: 1, tickets_count: 1, failure_count: 0, failure_rate: 0 },
+        { name: 'alpha', total_invocations: 8, known_outcomes: 8, unknown_outcomes: 0, tickets_count: 2, failure_count: 2, failure_rate: 0.25 },
+        { name: 'beta', total_invocations: 1, known_outcomes: 1, unknown_outcomes: 0, tickets_count: 1, failure_count: 1, failure_rate: 1 },
+        { name: 'gamma', total_invocations: 1, known_outcomes: 1, unknown_outcomes: 0, tickets_count: 1, failure_count: 0, failure_rate: 0 },
+        { name: 'omega', total_invocations: 1, known_outcomes: 1, unknown_outcomes: 0, tickets_count: 1, failure_count: 0, failure_rate: 0 },
       ] } })
       .mockResolvedValue({ data: mockFleetSummary });
     vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({ data: [...mockTicketComparisonRows] });
@@ -43,6 +43,18 @@ describe('FleetOverview View Component', () => {
     expect(within(emptyCard).getByText('0 unique skills')).toBeInTheDocument();
     expect(within(emptyCard).getByText('No recorded skills')).toBeInTheDocument();
     expect(within(emptyCard).getByText('Overall skill success rate: Unavailable')).toBeInTheDocument();
+  });
+
+  it('keeps recorded requests visible while reporting unavailable success when no outcomes are known', async () => {
+    vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({ data: { ...mockFleetSummary, skill_adoption: [
+      { name: 'selected-skill', total_invocations: 3, known_outcomes: 0, unknown_outcomes: 3, tickets_count: 1, failure_count: 0, failure_rate: 0 },
+    ] } });
+    vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({ data: [...mockTicketComparisonRows] });
+    render(<FleetOverview />);
+    const card = await screen.findByRole('region', { name: 'Skill Adoption' });
+    expect(within(card).getByText('1 unique skills')).toBeVisible();
+    expect(within(card).getByText('selected-skill: 3 invocations')).toBeVisible();
+    expect(within(card).getByText('Overall skill success rate: Unavailable')).toBeVisible();
   });
 
   it('shows ticket-specific skipped-workspace diagnostics alongside valid workspace data', async () => {

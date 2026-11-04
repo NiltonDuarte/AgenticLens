@@ -432,7 +432,7 @@ func TestScanWorkspaces(t *testing.T) {
 	}
 
 	factJSON := `{
-  "schema_version": 4,
+  "schema_version": 6,
   "ticket_id": "TEST-1",
   "ticket_title": "Test Ticket",
   "updated_at": "2026-10-17T15:00:00Z",
@@ -468,7 +468,11 @@ func TestScanWorkspaces(t *testing.T) {
           },
           "cost_usd": 0.05,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.05
+          }
         }
       ],
       "tools": [
@@ -552,7 +556,7 @@ func TestScanWorkspaces_NaturalOrdering(t *testing.T) {
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			t.Fatal(err)
 		}
-		factJSON := `{"schema_version":4,"migration":{"schema_version":4,"status":"completed","steps_completed":["source_backfill"],"steps_pending":[]},"ticket_id":"` + tid + `","updated_at":"2026-10-18T10:00:00Z","sessions":[]}`
+		factJSON := `{"schema_version":6,"migration":{"schema_version":6,"status":"completed","steps_completed":["source_backfill"],"steps_pending":[]},"ticket_id":"` + tid + `","updated_at":"2026-10-18T10:00:00Z","sessions":[]}`
 		if err := os.WriteFile(filepath.Join(dir, "agentic_metrics.json"), []byte(factJSON), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -590,7 +594,7 @@ func TestScanWorkspaces_AdversarialResilienceAndOrdering(t *testing.T) {
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			t.Fatal(err)
 		}
-		factJSON := `{"schema_version":4,"migration":{"schema_version":4,"status":"completed","steps_completed":["source_backfill"],"steps_pending":[]},"ticket_id":"` + tid + `","updated_at":"2026-10-18T10:00:00Z","sessions":[]}`
+		factJSON := `{"schema_version":6,"migration":{"schema_version":6,"status":"completed","steps_completed":["source_backfill"],"steps_pending":[]},"ticket_id":"` + tid + `","updated_at":"2026-10-18T10:00:00Z","sessions":[]}`
 		if err := os.WriteFile(filepath.Join(dir, "agentic_metrics.json"), []byte(factJSON), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -837,7 +841,19 @@ func TestScanWorkspacesResilience(t *testing.T) {
 		if err := os.MkdirAll(ticketDir, 0755); err != nil {
 			t.Fatal(err)
 		}
-		factJSON := `{"schema_version":4,"migration":{"schema_version":4,"status":"completed","steps_completed":["source_backfill"],"steps_pending":[]},"updated_at":"2026-10-17T12:00:00Z","sessions":[]}`
+		factJSON := `{
+  "schema_version": 6,
+  "migration": {
+    "schema_version": 6,
+    "status": "completed",
+    "steps_completed": [
+      "source_backfill"
+    ],
+    "steps_pending": []
+  },
+  "updated_at": "2026-10-17T12:00:00Z",
+  "sessions": []
+}`
 		if err := os.WriteFile(filepath.Join(ticketDir, "agentic_metrics.json"), []byte(factJSON), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -854,7 +870,10 @@ func TestScanWorkspacesResilience(t *testing.T) {
 
 func TestBoundarySchemaParsingAndDefaults(t *testing.T) {
 	t.Run("minimal valid json with defaults", func(t *testing.T) {
-		raw := `{"updated_at": "2026-10-17T12:00:00Z"}`
+		raw := `{
+  "updated_at": "2026-10-17T12:00:00Z",
+  "schema_version": 6
+}`
 		var dto adapters.AgenticFactLedgerDTO
 		if err := json.Unmarshal([]byte(raw), &dto); err != nil {
 			t.Fatalf("unexpected unmarshal error: %v", err)
@@ -875,23 +894,32 @@ func TestBoundarySchemaParsingAndDefaults(t *testing.T) {
     {
       "id": "inv-1",
       "invocations": [
-        {}
+        {
+          "cost_usd": null,
+          "cost_evidence": {
+            "state": "unavailable",
+            "known_subtotal_usd": null
+          }
+        }
       ],
       "tools": [],
-      "events": []
+      "events": [],
+      "anomalies": []
     },
     {
       "id": "fixture-session",
       "invocations": [],
       "tools": [
         {
-            "name": "bash",
+          "name": "bash",
           "calls": 5
         }
       ],
-      "events": []
+      "events": [],
+      "anomalies": []
     }
-  ]
+  ],
+  "schema_version": 6
 }`
 		var dto adapters.AgenticFactLedgerDTO
 		if err := json.Unmarshal([]byte(raw), &dto); err != nil {
@@ -920,11 +948,11 @@ func TestBoundarySchemaParsingAndDefaults(t *testing.T) {
 
 	t.Run("migration metadata round-trip DTO serialization and unmarshaling", func(t *testing.T) {
 		raw := `{
-			"schema_version": 2,
+			"schema_version": 6,
 			"ticket_id": "AL-SCHEMA-TEST",
 			"updated_at": "2026-10-17T12:00:00Z",
 			"migration": {
-				"schema_version": 2,
+				"schema_version": 6,
 				"status": "partial",
 				"steps_completed": ["git_code_facts"],
 				"steps_pending": ["opencode_db"],
@@ -942,8 +970,8 @@ func TestBoundarySchemaParsingAndDefaults(t *testing.T) {
 		if err := json.Unmarshal([]byte(raw), &dto); err != nil {
 			t.Fatalf("unmarshal error: %v", err)
 		}
-		if dto.SchemaVersion == nil || *dto.SchemaVersion != 2 {
-			t.Fatalf("expected SchemaVersion 2, got %v", dto.SchemaVersion)
+		if dto.SchemaVersion == nil || *dto.SchemaVersion != domain.CurrentSchemaVersion {
+			t.Fatalf("expected current SchemaVersion, got %v", dto.SchemaVersion)
 		}
 		if dto.Migration == nil || dto.Migration.Status != "partial" {
 			t.Fatalf("expected migration status partial, got %v", dto.Migration)
@@ -1011,7 +1039,7 @@ func TestAdversarialBoundarySchemaAndRepository(t *testing.T) {
 			{"json array root", `[{"ticket_id": "T-1"}]`, true},
 			{"bad type for number", `{"ticket_id": "T-1", "code": {"lines_added": "not_a_number"}}`, true},
 			{"bad type for invocations", `{"invocations": "should_be_array"}`, true},
-			{"empty json object", `{}`, false},
+			{"empty json object requires migration", `{}`, true},
 			{"negative token counts", `{
   "updated_at": "2026-10-17T12:00:00Z",
   "sessions": [
@@ -1021,13 +1049,20 @@ func TestAdversarialBoundarySchemaAndRepository(t *testing.T) {
         {
           "tokens": {
             "input": -50
+          },
+          "cost_usd": null,
+          "cost_evidence": {
+            "state": "unavailable",
+            "known_subtotal_usd": null
           }
         }
       ],
       "tools": [],
-      "events": []
+      "events": [],
+      "anomalies": []
     }
-  ]
+  ],
+  "schema_version": 6
 }`, false},
 		}
 
@@ -1054,7 +1089,20 @@ func TestAdversarialBoundarySchemaAndRepository(t *testing.T) {
 		if err := os.MkdirAll(validDir, 0755); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.WriteFile(filepath.Join(validDir, "agentic_metrics.json"), []byte(`{"schema_version":4,"migration":{"schema_version":4,"status":"completed","steps_completed":["source_backfill"],"steps_pending":[]},"ticket_id":"VALID-1","updated_at":"2026-10-17T10:00:00Z","sessions":[]}`), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(validDir, "agentic_metrics.json"), []byte(`{
+  "schema_version": 6,
+  "migration": {
+    "schema_version": 6,
+    "status": "completed",
+    "steps_completed": [
+      "source_backfill"
+    ],
+    "steps_pending": []
+  },
+  "ticket_id": "VALID-1",
+  "updated_at": "2026-10-17T10:00:00Z",
+  "sessions": []
+}`), 0644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -1144,11 +1192,10 @@ func TestSessionEventPersistenceAndRepositoryHandling(t *testing.T) {
 	if err := os.MkdirAll(ws, 0700); err != nil {
 		t.Fatal(err)
 	}
-	content := `
-{
-  "schema_version": 4,
+	content := `{
+  "schema_version": 6,
   "migration": {
-    "schema_version": 4,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -1178,7 +1225,11 @@ func TestSessionEventPersistenceAndRepositoryHandling(t *testing.T) {
           "compactions": 0,
           "user_iterations": 0,
           "started_at": null,
-          "completed_at": null
+          "completed_at": null,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0
+          }
         }
       ],
       "tools": [
@@ -1202,8 +1253,7 @@ func TestSessionEventPersistenceAndRepositoryHandling(t *testing.T) {
       "anomalies": []
     }
   ]
-}
-`
+}`
 	if err := os.WriteFile(filepath.Join(ws, "agentic_metrics.json"), []byte(content), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -1259,11 +1309,10 @@ func TestLoadTicketWorkspace(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	factJSON := `
-{
-  "schema_version": 4,
+	factJSON := `{
+  "schema_version": 6,
   "migration": {
-    "schema_version": 4,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -1301,7 +1350,11 @@ func TestLoadTicketWorkspace(t *testing.T) {
           "compactions": 0,
           "started_at": null,
           "completed_at": null,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.08
+          }
         }
       ],
       "tools": [
@@ -1315,8 +1368,7 @@ func TestLoadTicketWorkspace(t *testing.T) {
       "anomalies": []
     }
   ]
-}
-`
+}`
 
 	if err := os.WriteFile(filepath.Join(ticketDir, "agentic_metrics.json"), []byte(factJSON), 0644); err != nil {
 		t.Fatal(err)
@@ -1346,7 +1398,16 @@ func TestLoadTicketWorkspace(t *testing.T) {
 		if err := os.MkdirAll(badDir, 0755); err != nil {
 			t.Fatal(err)
 		}
-		badLedger := `{"schema_version":4,"tools":[{"name":"edit","calls":1,"errors":0}]}`
+		badLedger := `{
+  "schema_version": 6,
+  "tools": [
+    {
+      "name": "edit",
+      "calls": 1,
+      "errors": 0
+    }
+  ]
+}`
 		if err := os.WriteFile(filepath.Join(badDir, "agentic_metrics.json"), []byte(badLedger), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -1368,7 +1429,19 @@ func TestLoadTicketWorkspace(t *testing.T) {
 		if err := os.MkdirAll(noIDDir, 0755); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.WriteFile(filepath.Join(noIDDir, "agentic_metrics.json"), []byte(`{"schema_version":4,"migration":{"schema_version":4,"status":"completed","steps_completed":["source_backfill"],"steps_pending":[]},"updated_at":"2026-10-18T12:00:00Z","sessions":[]}`), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(noIDDir, "agentic_metrics.json"), []byte(`{
+  "schema_version": 6,
+  "migration": {
+    "schema_version": 6,
+    "status": "completed",
+    "steps_completed": [
+      "source_backfill"
+    ],
+    "steps_pending": []
+  },
+  "updated_at": "2026-10-18T12:00:00Z",
+  "sessions": []
+}`), 0644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -1577,7 +1650,7 @@ func TestSaveFactLedger(t *testing.T) {
 
 		tid := "AL-PERSIST-1"
 		title := "Test Persistence"
-		schemaVer := 2
+		schemaVer := domain.CurrentSchemaVersion
 		ledger := domain.AgenticFactLedger{
 			SchemaVersion: &schemaVer,
 			TicketID:      &tid,
@@ -1653,8 +1726,9 @@ func TestSaveFactLedger(t *testing.T) {
 		tid := "AL-ERR-1"
 		title := "Test Error Dir"
 		ledger := domain.AgenticFactLedger{
-			TicketID:    &tid,
-			TicketTitle: &title,
+			SchemaVersion: func() *int { v := domain.CurrentSchemaVersion; return &v }(),
+			TicketID:      &tid,
+			TicketTitle:   &title,
 		}
 		err := adapters.SaveFactLedger(invalidPath, ledger)
 		if err == nil {
@@ -1873,8 +1947,9 @@ func TestSaveLedgers_AdversarialEdgeCases(t *testing.T) {
 		tid := "AL-ERR-DIR"
 		title := "Test Dir Failure"
 		err := adapters.SaveFactLedger(dirAsFile, domain.AgenticFactLedger{
-			TicketID:    &tid,
-			TicketTitle: &title,
+			SchemaVersion: func() *int { v := domain.CurrentSchemaVersion; return &v }(),
+			TicketID:      &tid,
+			TicketTitle:   &title,
 		})
 		if err == nil {
 			t.Fatal("expected error writing fact ledger to existing directory, got nil")
@@ -1910,8 +1985,9 @@ func TestSaveLedgers_AdversarialEdgeCases(t *testing.T) {
 		longTitle := strings.Repeat("Initial Large Payload Content ", 10)
 		tid := "AL-OVERWRITE-1"
 		firstLedger := domain.AgenticFactLedger{
-			TicketID:    &tid,
-			TicketTitle: &longTitle,
+			SchemaVersion: func() *int { v := domain.CurrentSchemaVersion; return &v }(),
+			TicketID:      &tid,
+			TicketTitle:   &longTitle,
 		}
 		if err := adapters.SaveFactLedger(filePath, firstLedger); err != nil {
 			t.Fatalf("first write failed: %v", err)
@@ -1920,8 +1996,9 @@ func TestSaveLedgers_AdversarialEdgeCases(t *testing.T) {
 		// Second write: tiny payload
 		shortTitle := "Short"
 		secondLedger := domain.AgenticFactLedger{
-			TicketID:    &tid,
-			TicketTitle: &shortTitle,
+			SchemaVersion: func() *int { v := domain.CurrentSchemaVersion; return &v }(),
+			TicketID:      &tid,
+			TicketTitle:   &shortTitle,
 		}
 		if err := adapters.SaveFactLedger(filePath, secondLedger); err != nil {
 			t.Fatalf("second write failed: %v", err)
@@ -1992,7 +2069,7 @@ func TestSaveLedgers_AdversarialEdgeCases(t *testing.T) {
 		factPath := filepath.Join(tempDir, "zero_facts.json")
 		tid := "AL-ZERO"
 		title := "Zero Facts"
-		if err := adapters.SaveFactLedger(factPath, domain.AgenticFactLedger{TicketID: &tid, TicketTitle: &title}); err != nil {
+		if err := adapters.SaveFactLedger(factPath, domain.AgenticFactLedger{SchemaVersion: func() *int { v := domain.CurrentSchemaVersion; return &v }(), TicketID: &tid, TicketTitle: &title}); err != nil {
 			t.Fatalf("saving zero fact ledger failed: %v", err)
 		}
 		factData, err := os.ReadFile(factPath)
@@ -2052,11 +2129,10 @@ telemetry:
 		t.Fatal(err)
 	}
 
-	factJSON := `
-{
-  "schema_version": 4,
+	factJSON := `{
+  "schema_version": 6,
   "migration": {
-    "schema_version": 4,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -2088,7 +2164,11 @@ telemetry:
             "peak_context": 0
           },
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 1.5
+          }
         }
       ],
       "tools": [],
@@ -2117,7 +2197,11 @@ telemetry:
             "peak_context": 0
           },
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.5
+          }
         }
       ],
       "tools": [],
@@ -2125,8 +2209,7 @@ telemetry:
       "anomalies": []
     }
   ]
-}
-`
+}`
 	if err := os.WriteFile(filepath.Join(wsDir, "agentic_metrics.json"), []byte(factJSON), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -2225,11 +2308,10 @@ telemetry:
 		t.Fatal(err)
 	}
 
-	factJSON := `
-{
-  "schema_version": 4,
+	factJSON := `{
+  "schema_version": 6,
   "migration": {
-    "schema_version": 4,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -2261,7 +2343,11 @@ telemetry:
             "peak_context": 0
           },
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 1.5
+          }
         }
       ],
       "tools": [],
@@ -2289,7 +2375,11 @@ telemetry:
             "peak_context": 0
           },
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.8
+          }
         }
       ],
       "tools": [],
@@ -2297,8 +2387,7 @@ telemetry:
       "anomalies": []
     }
   ]
-}
-`
+}`
 	if err := os.WriteFile(filepath.Join(wsDir, "agentic_metrics.json"), []byte(factJSON), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -2470,7 +2559,7 @@ func TestLoadTicketWorkspace_AdversarialResilience(t *testing.T) {
 	})
 }
 
-func TestLedgerFileReadsNormalizeOptionalSkillTaskCollections(t *testing.T) {
+func TestLedgerFileReadsOwnedOptionalSkillTaskCollections(t *testing.T) {
 	for _, tc := range []struct {
 		name     string
 		fields   string
@@ -2480,7 +2569,7 @@ func TestLedgerFileReadsNormalizeOptionalSkillTaskCollections(t *testing.T) {
 		{name: "omitted"},
 		{name: "null", fields: `,"skills":null,"task_links":null`},
 		{name: "empty", fields: `,"skills":[],"task_links":[]`},
-		{name: "repeated observations", fields: `,"skills":[{"name":"review","turn_index":1},{"name":"review","turn_index":1}],"task_links":[{"subagent_type":"coder","description":"same"},{"subagent_type":"coder","description":"same"}]`, wantRows: 2},
+		{name: "repeated observations", fields: `,"skills":[{"name":"review","turn_index":1,"outcome":"unknown","success":false},{"name":"review","turn_index":1,"outcome":"unknown","success":false}],"task_links":[{"outcome":"unknown","subagent_type":"coder","description":"same","cost_usd":null,"cost_evidence":{"state":"unavailable","known_subtotal_usd":null}},{"outcome":"unknown","subagent_type":"coder","description":"same","cost_usd":null,"cost_evidence":{"state":"unavailable","known_subtotal_usd":null}}]`, wantRows: 2},
 		{name: "malformed skills", fields: `,"skills":{}`, invalid: true},
 		{name: "malformed tasks", fields: `,"task_links":"unknown"`, invalid: true},
 	} {
@@ -2492,7 +2581,7 @@ func TestLedgerFileReadsNormalizeOptionalSkillTaskCollections(t *testing.T) {
 				t.Fatal(err)
 			}
 			path := filepath.Join(dir, "agentic_metrics.json")
-			data := []byte(`{"schema_version":4,"ticket_id":"CUSTOM-READ","sessions":[]` + tc.fields + `}`)
+			data := []byte(`{"schema_version":6,"ticket_id":"CUSTOM-READ","sessions":[{"id":"owner","source":"codex","user":"tester","invocations":[],"tools":[],"anomalies":[]` + tc.fields + `}]}`)
 			if err := os.WriteFile(path, data, 0644); err != nil {
 				t.Fatal(err)
 			}
@@ -2510,13 +2599,13 @@ func TestLedgerFileReadsNormalizeOptionalSkillTaskCollections(t *testing.T) {
 			if existing == nil || workspace == nil {
 				t.Fatal("file read returned no ledger")
 			}
-			if existing.Skills == nil || existing.TaskLinks == nil || workspace.Facts.Skills == nil || workspace.Facts.TaskLinks == nil {
+			if workspace.Facts.SkillFacts() == nil || workspace.Facts.TaskLinkFacts() == nil {
 				t.Fatalf("internal collections must be initialized after file read: existing=%+v workspace=%+v", existing, workspace.Facts)
 			}
-			if len(existing.Skills) != tc.wantRows || len(existing.TaskLinks) != tc.wantRows || len(workspace.Facts.Skills) != tc.wantRows || len(workspace.Facts.TaskLinks) != tc.wantRows {
-				t.Fatalf("file read changed row multiplicity: existing skills/tasks=%d/%d workspace=%d/%d", len(existing.Skills), len(existing.TaskLinks), len(workspace.Facts.Skills), len(workspace.Facts.TaskLinks))
+			if len(existing.Sessions[0].Skills) != tc.wantRows || len(existing.Sessions[0].TaskLinks) != tc.wantRows || len(workspace.Facts.SkillFacts()) != tc.wantRows || len(workspace.Facts.TaskLinkFacts()) != tc.wantRows {
+				t.Fatalf("file read changed row multiplicity: existing skills/tasks=%d/%d workspace=%d/%d", len(existing.Sessions[0].Skills), len(existing.Sessions[0].TaskLinks), len(workspace.Facts.SkillFacts()), len(workspace.Facts.TaskLinkFacts()))
 			}
-			if tc.wantRows > 0 && (existing.Skills[1].Name != "review" || workspace.Facts.TaskLinks[1].Description != "same") {
+			if tc.wantRows > 0 && (existing.Sessions[0].Skills[1].Name != "review" || workspace.Facts.TaskLinkFacts()[1].Description != "same") {
 				t.Fatal("populated observation payload changed")
 			}
 			after, err := os.ReadFile(path)

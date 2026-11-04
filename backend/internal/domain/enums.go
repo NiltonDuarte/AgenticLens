@@ -209,9 +209,10 @@ const (
 type EventType string
 
 const (
-	EventTypeToolCall    EventType = "tool_call"
-	EventTypeTurnMessage EventType = "turn_message"
-	EventTypeCompaction  EventType = "compaction"
+	EventTypeSkillActivation EventType = "skill_activation"
+	EventTypeToolCall        EventType = "tool_call"
+	EventTypeTurnMessage     EventType = "turn_message"
+	EventTypeCompaction      EventType = "compaction"
 )
 
 // SourceHarness identifies the agentic runtime harness (e.g. OpenCode, Codex).

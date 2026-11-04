@@ -575,6 +575,7 @@ func resolveAnomalyThresholds(thresholds ...AnomalyThresholdsConfig) AnomalyThre
 
 // DetectAnomalies evaluates deterministic operational rules against the fact ledger.
 func DetectAnomalies(ledger AgenticFactLedger, thresholds ...AnomalyThresholdsConfig) []Anomaly {
+	ledger = withoutPartialEvents(ledger)
 	cfg := resolveAnomalyThresholds(thresholds...)
 	var anomalies []Anomaly
 

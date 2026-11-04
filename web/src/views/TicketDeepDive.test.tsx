@@ -20,7 +20,7 @@ function withRecordedEvents(detail: WorkspaceDetail, events: readonly EventFact[
             status: event.status, duration_ms: event.duration_ms, context_tokens: event.context_tokens,
         })),
     }));
-    return { ...detail, ledger: { ...detail.ledger, facts: { ...detail.ledger.facts, schema_version: 4, sessions } } };
+    return { ...detail, ledger: { ...detail.ledger, facts: { ...detail.ledger.facts, schema_version: 6 as const, sessions } } };
 }
 
 function deferred<T>() {
@@ -37,20 +37,18 @@ describe('Skills and subagents autopsy', () => {
     const timestamp = '2026-10-30T12:34:56.007Z';
     const skill: SkillFact = {
         name: 'inspect-source', turn_index: 7, message_index: 2,
-        caller_role: 'orchestrator', timestamp, success: true,
+        caller_role: 'orchestrator', timestamp, success: true, outcome: 'succeeded' as const,
     };
     const delegation: TaskLinkFact = {
-        subagent_type: 'coder', description: 'Implement the agreed change', parent_turn: 8, timestamp,
+        subagent_type: 'coder', outcome: 'unknown' as const, description: 'Implement the agreed change', parent_turn: 8, timestamp,
     };
     const makeDetail = (skills?: readonly SkillFact[], taskLinks?: readonly TaskLinkFact[]): WorkspaceDetail => {
         const base = mockWorkspaceDetails['AL-1']!;
-        const facts = { ...base.ledger.facts, schema_version: 4 };
-        delete facts.skills;
-        delete facts.task_links;
-        return { ...base, ledger: { ...base.ledger, facts: {
-            ...facts,
-            ...(skills === undefined ? {} : { skills }),
-            ...(taskLinks === undefined ? {} : { task_links: taskLinks }),
+        const facts = { ...base.ledger.facts, schema_version: 6 as const };
+        return { ...base, ledger: { ...base.ledger, facts: { ...facts,
+            sessions: facts.sessions.map((session, index) => index === 0 ? { ...session,
+                ...(skills === undefined ? {} : { skills }), ...(taskLinks === undefined ? {} : { task_links: taskLinks }),
+            } : session),
         } } };
     };
 
@@ -92,7 +90,7 @@ describe('Skills and subagents autopsy', () => {
         expect(within(card).getByRole('tooltip')).toHaveTextContent('1 fully observed, 1 partial, 1 unavailable of 3 invocations');
     });
 
-    it.each(['omitted', 'empty'] as const)('renders a supported v4 ledger with %s optional collections and keyboard collapse', async (mode) => {
+    it.each(['omitted', 'empty'] as const)('renders a current v6 ledger with %s optional collections and keyboard collapse', async (mode) => {
         const errors = vi.spyOn(console, 'error');
         vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
             data: mode === 'omitted' ? makeDetail() : makeDetail([], []),
@@ -116,11 +114,47 @@ describe('Skills and subagents autopsy', () => {
         expect(errors).not.toHaveBeenCalled();
     });
 
+    it('shows v6 native owners and unknown requests, filters exactly by session and preserves unavailable owned facts after failed enrichment', async () => {
+        const detail = makeDetail();
+        const base = { ...skill, success: false, outcome: 'unknown' as const, evidence_kind: 'activation_request', provenance: { message_id: 'native-request' } };
+        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: { ...detail, ledger: { ...detail.ledger, facts: {
+            ...detail.ledger.facts, schema_version: 6,
+            sessions: [
+                { id: 'root', source: 'codex', events_are_partial: true, invocations: [], tools: [], skills: [base, base], task_links: [{ ...delegation, child_reference: '/root/tester', provenance: { call_id: 'spawn-parent' } }] },
+                { id: 'child', parent_id: 'root', source: 'opencode', invocations: [], tools: [], skills: [{ ...skill, name: 'child-only' }] },
+                { id: 'remote-owner', source: 'codex', invocations: [], tools: [], skills: [{ ...skill, name: 'historical' }] },
+            ],
+        } } } });
+        const user = userEvent.setup();
+        render(<TicketDeepDive selectedTicketId="AL-1" />);
+        const table = await screen.findByRole('table', { name: 'Modular skills' });
+        expect(within(table).getAllByRole('row').slice(1)).toHaveLength(4);
+        expect(within(table).getAllByText('Outcome unavailable')).toHaveLength(2);
+        expect(within(table).queryByText('Failed')).not.toBeInTheDocument();
+        expect(within(table).getAllByText('message: native-request')).toHaveLength(2);
+        expect(within(table).getByText('remote-owner')).toBeVisible();
+        expect(screen.getByTestId('waterfall-source-badge')).toHaveTextContent('Partial saved trace');
+        expect(screen.getByText('Thread unavailable')).toBeVisible();
+        expect(screen.getByText('/root/tester')).toBeVisible();
+        expect(screen.queryByRole('button', { name: /Jump to child session/ })).not.toBeInTheDocument();
+        const select = screen.getByRole('combobox', { name: 'Filter skills and delegations by session' });
+        await user.selectOptions(select, 'root');
+        expect(within(table).getAllByRole('row').slice(1)).toHaveLength(2);
+        expect(screen.queryByText('historical')).not.toBeInTheDocument();
+        await user.selectOptions(select, 'child');
+        expect(within(table).getAllByRole('row').slice(1)).toHaveLength(1);
+        expect(within(table).getByText('child-only')).toBeVisible();
+        expect(screen.queryByRole('table', { name: 'Subagent delegations' })).not.toBeInTheDocument();
+        await user.selectOptions(select, '');
+        expect(within(table).getByText('historical')).toBeVisible();
+        expect(within(table).getAllByRole('row').slice(1)).toHaveLength(4);
+    });
+
     it('preserves repeated skill invocations, recorded status, roles, timestamps and complete diagnostics', async () => {
         const error = 'Source error: validation failed\n' + 'Detailed diagnostic context '.repeat(12);
         vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: makeDetail([
             { ...skill, error: 'Inspection of error text completed successfully' },
-            { ...skill, success: false, caller_role: 'custom-investigator', turn_index: 9, error },
+            { ...skill, success: false, outcome: 'failed' as const, caller_role: 'custom-investigator', turn_index: 9, error },
             { ...skill, name: 'review-change', caller_role: '' },
         ]) });
         const user = userEvent.setup();
@@ -157,10 +191,12 @@ describe('Skills and subagents autopsy', () => {
     it('shows delegations without skills, distinguishes missing metrics, and jumps repeatedly to the exact child by keyboard', async () => {
         const longDescription = 'Preserve the whole task prompt: ' + 'task details '.repeat(30);
         const detail = makeDetail(undefined, [
-            { ...delegation, description: longDescription, child_session_id: 'child-a', duration_ms: 62500, cost_usd: 1.25 },
+            { ...delegation, description: longDescription, child_session_id: 'child-a', child_agent_id: 'opaque-agent-not-a-session', duration_ms: 62500, cost_usd: 1.25 },
             { ...delegation, description: 'Measured zero', duration_ms: 0, cost_usd: 0 },
             { ...delegation, description: 'Missing optional measurements', child_session_id: 'child-a-unavailable' },
             { ...delegation, description: 'Missing optional measurements', child_session_id: 'child-a-unavailable' },
+            { ...delegation, description: 'Opaque native agent only', child_agent_id: 'agent-only' },
+            { ...delegation, description: 'Conflicting recorded child relationship', child_session_id: 'child-a', child_reference: '/root/other', child_link_diagnostic: 'Recorded child UUID conflicts with parent/agent_path metadata.' },
         ]);
         const root = detail.ledger.threads[0]!;
         vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: {
@@ -173,12 +209,16 @@ describe('Skills and subagents autopsy', () => {
         const table = await screen.findByRole('table', { name: 'Subagent delegations' });
         expect(screen.queryByRole('table', { name: 'Modular skills' })).not.toBeInTheDocument();
         const rows = within(table).getAllByRole('row').slice(1);
-        expect(rows).toHaveLength(4);
+        expect(rows).toHaveLength(6);
         expect(rows[0]!.children[0]).toHaveTextContent('Coder');
         expect(rows[0]!.children[1]?.textContent).toBe(longDescription);
         expect(rows[0]!.children[2]).toHaveTextContent('8');
         expect(rows[0]!.children[3]).toHaveTextContent('1m 2s');
         expect(rows[0]!.children[4]).toHaveTextContent('$1.25');
+        expect(within(rows[0]!).getByText('Agent reference: opaque-agent-not-a-session')).toBeVisible();
+        expect(within(rows[4]!).getByText('Agent reference: agent-only')).toBeVisible();
+        expect(within(rows[4]!).getByText('Session identity unavailable')).toBeVisible();
+        expect(within(rows[4]!).queryByRole('button')).not.toBeInTheDocument();
         expect(rows[1]!.children[3]).toHaveTextContent('0m 0s');
         expect(rows[1]!.children[4]).toHaveTextContent('$0.00');
         expect(within(rows[1]!).getByText('Not recorded')).toBeVisible();
@@ -187,6 +227,11 @@ describe('Skills and subagents autopsy', () => {
         expect(within(rows[2]!).getByText('child-a-unavailable')).toBeVisible();
         expect(within(rows[2]!).getByText('Thread unavailable')).toBeVisible();
         expect(within(rows[2]!).queryByRole('button')).not.toBeInTheDocument();
+        expect(within(rows[5]!).getByRole('note')).toHaveTextContent('Recorded child UUID conflicts with parent/agent_path metadata.');
+        expect(within(rows[5]!).getByText('Child relationship unresolved')).toBeVisible();
+        expect(within(rows[5]!).getByText('child-a')).toBeVisible();
+        expect(within(rows[5]!).getByText('Source reference: /root/other')).toBeVisible();
+        expect(within(rows[5]!).queryByRole('button')).not.toBeInTheDocument();
         const child = screen.getByRole('button', { name: /^child-a User:/ });
         const sibling = screen.getByRole('button', { name: /^child-ab User:/ });
         const parent = screen.getByRole('button', { name: /^root User:/ });
@@ -215,7 +260,7 @@ describe('Skills and subagents autopsy', () => {
             cost_evidence: { state: 'partial', known_subtotal_usd: 2 },
         }]);
         vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: {
-            ...detail, ledger: { ...detail.ledger, facts: { ...detail.ledger.facts, schema_version: 5 } },
+            ...detail, ledger: { ...detail.ledger, facts: { ...detail.ledger.facts, schema_version: 6 as const } },
         } });
         render(<TicketDeepDive selectedTicketId="AL-1" />);
         const table = await screen.findByRole('table', { name: 'Subagent delegations' });
@@ -304,8 +349,8 @@ describe('FIX-12 committed trace and enrichment lifecycle', () => {
             ...detail, ledger: { ...detail.ledger,
                 threads: [{ ...baseThread, session_id: 'parent-thread' },
                     { ...baseThread, session_id: `${childId}-sibling` }, { ...baseThread, session_id: childId }],
-                facts: { ...detail.ledger.facts, task_links: [{ subagent_type: 'tester', description: 'Verify',
-                    parent_turn: event.turn, timestamp: event.timestamp, child_session_id: childId }] },
+                facts: { ...detail.ledger.facts, sessions: detail.ledger.facts.sessions.map((session) => session.id === event.session_id ? { ...session, task_links: [{ subagent_type: 'tester', outcome: 'unknown' as const, description: 'Verify',
+                    parent_turn: event.turn, timestamp: event.timestamp, child_session_id: childId }] } : session) },
             },
         };
         const nextEvent: EventFact = { ...recorded[1]!, session_id: 'next-parent', turn: 42 };
@@ -313,7 +358,7 @@ describe('FIX-12 committed trace and enrichment lifecycle', () => {
         vi.mocked(apiClient.fetchWorkspaceById).mockImplementation(async (id) => ({ data: id === 'AL-1' ? taskDetail : {
             ...nextDetail, ledger: { ...nextDetail.ledger,
                 threads: [{ ...baseThread, session_id: 'next-parent' }, { ...baseThread, session_id: childId }],
-                facts: { ...nextDetail.ledger.facts, task_links: [] },
+                facts: { ...nextDetail.ledger.facts, sessions: nextDetail.ledger.facts.sessions.map((session) => ({ ...session, task_links: [] })) },
             },
         } }));
         const user = userEvent.setup();
@@ -700,16 +745,13 @@ describe('FIX-12 committed trace and enrichment lifecycle', () => {
         expect(screen.getByText(/Summary: AL-1 Completed/i)).toBeInTheDocument();
     });
 
-    it.each([1, undefined])('schema metadata %s cannot hide supplied events or infer legacy', async (version) => {
+    it('current schema preserves supplied events independently of optional enrichment', async () => {
         const detail = makeDetail();
-        const { schema_version, ...facts } = detail.ledger.facts;
-        expect(schema_version).toBe(4);
-        vi.mocked(apiClient.fetchWorkspaceById).mockResolvedValue({ data: {
-            ...detail, ledger: { ...detail.ledger, facts: { ...facts, ...(version === undefined ? {} : { schema_version: version }) } },
-        } });
+        expect(detail.ledger.facts.schema_version).toBe(6);
+        vi.mocked(apiClient.fetchWorkspaceById).mockResolvedValue({ data: detail });
         render(<TicketDeepDive selectedTicketId="AL-1" />);
         await waitFor(() => expect(screen.getByTestId('waterfall-event-count')).toHaveTextContent('2 Events Recorded'));
-        expect(Boolean(screen.queryByTestId('legacy-fallback-banner'))).toBe(version === 1);
+        expect(screen.queryByTestId('legacy-fallback-banner')).not.toBeInTheDocument();
         fireEvent.click(screen.getByTestId('waterfall-expand-btn'));
         expect(screen.getByTestId('timeline-item-1')).toBeInTheDocument();
     });

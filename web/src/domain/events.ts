@@ -21,8 +21,10 @@ function occurrenceOf(event: EventFact): string {
 }
 
 function enrichEvent(recorded: EventFact, local: EventFact): EventFact {
+  const callId = recorded.call_id || local.call_id;
   return {
     ...recorded,
+    ...(callId ? { call_id: callId } : {}),
     event_id: recorded.event_id || local.event_id,
     message_id: local.message_id || recorded.message_id,
     error_message: local.error_message || recorded.error_message,

@@ -152,11 +152,11 @@ func TestCaptureCommittedHistorySurvivesDeletedWorktreeAndRepeatedOwnPublication
 		}
 	}
 	summary := string(readCaptureFile(t, filepath.Join(b.project, "SUMMARY.md")))
-	if !strings.Contains(summary, "Retained committed history: 1") || strings.Contains(summary, a.store) {
+	if !strings.Contains(summary, "Retained recorded history: 1") || strings.Contains(summary, a.store) {
 		t.Fatalf("history summary invalid: %s", summary)
 	}
 }
-func TestCaptureCommittedHistoryRejectsUncommittedForeignChanges(t *testing.T) {
+func TestGenerationPreservesValidCopiedHistoryAndRejectsMalformedOwnership(t *testing.T) {
 	for _, kind := range []string{"tokens", "model", "parent", "user", "source", "missing committed path", "symlink destination", "fresh collision", "uncommitted foreign addition"} {
 		t.Run(kind, func(t *testing.T) {
 			a, b, _ := newCommittedHistoryFixture(t)
@@ -206,12 +206,29 @@ func TestCaptureCommittedHistoryRejectsUncommittedForeignChanges(t *testing.T) {
 			accepted := readCaptureFile(t, b.output)
 			cmd := exec.Command(cliBinaryPath, b.args(t)...)
 			cmd.Dir = b.project
-			if out, err := cmd.CombinedOutput(); err == nil {
-				t.Fatalf("unauthorized %s publication accepted: %s", kind, out)
+			out, runErr := cmd.CombinedOutput()
+			if kind == "parent" {
+				if runErr == nil {
+					t.Fatalf("malformed parent identity accepted: %s", out)
+				}
+				if !reflect.DeepEqual(accepted, readCaptureFile(t, b.output)) {
+					t.Fatal("rejected malformed ownership changed baseline")
+				}
+			} else {
+				if runErr != nil {
+					t.Fatalf("valid portable %s baseline rejected: %v %s", kind, runErr, out)
+				}
+				owners := map[string]domain.SessionFact{}
+				for _, owner := range b.ledger(t).Sessions {
+					owners[owner.ID] = owner
+				}
+				for _, expected := range original.Sessions {
+					if !reflect.DeepEqual(owners[expected.ID], expected) {
+						t.Fatalf("unavailable supported history changed: owner=%s actual=%+v expected=%+v", expected.ID, owners[expected.ID], expected)
+					}
+				}
 			}
-			if !reflect.DeepEqual(accepted, readCaptureFile(t, b.output)) {
-				t.Fatal("failed authorization changed ledger")
-			}
+
 			if foreignHistoryState(t, a) != before {
 				t.Fatal("failed authorization mutated foreign state")
 			}
@@ -241,8 +258,12 @@ func TestCaptureManualAuxiliaryPublicationSurvivesUnavailableSource(t *testing.T
 	}
 	setOpenCodeFixtureProject(t, path, f.project)
 	first := f.generate(t, "--source", "opencode", "--session-id", "manual-root", "--db-path", path)
-	if len(first.Skills) != 1 || len(first.TaskLinks) != 1 {
-		t.Fatalf("source did not produce auxiliary facts: %+v %+v", first.Skills, first.TaskLinks)
+	if len(first.SkillFacts()) != 1 || len(first.TaskLinkFacts()) != 1 {
+		t.Fatalf("source did not produce auxiliary facts: %+v %+v", first.SkillFacts(), first.TaskLinkFacts())
+	}
+	registered := f.generate(t, "--source", "opencode", "--db-path", path)
+	if len(registered.SkillFacts()) != 1 || len(registered.TaskLinkFacts()) != 1 || registered.SkillFacts()[0].Provenance.EventID != first.SkillFacts()[0].Provenance.EventID || registered.TaskLinkFacts()[0].Provenance.EventID != first.TaskLinkFacts()[0].Provenance.EventID {
+		t.Fatalf("BEH-05 registered-only OpenCode capture omitted owned source facts: %+v", registered)
 	}
 	if err = os.Remove(path); err != nil {
 		t.Fatal(err)
@@ -259,24 +280,24 @@ func TestCaptureManualAuxiliaryPublicationSurvivesUnavailableSource(t *testing.T
 	if out, err := withoutGit.CombinedOutput(); err != nil {
 		t.Fatalf("current-only stored data gained optional Git dependency: %v %s", err, out)
 	}
-	if !reflect.DeepEqual(first.Skills, second.Skills) || !reflect.DeepEqual(first.TaskLinks, second.TaskLinks) {
+	if !reflect.DeepEqual(first.SkillFacts(), second.SkillFacts()) || !reflect.DeepEqual(first.TaskLinkFacts(), second.TaskLinkFacts()) {
 		t.Fatal("own manual auxiliary rows lost without hydration")
 	}
 	if len(second.Sessions) != 1 || second.Sessions[0].ParentID != nil {
 		t.Fatal("descriptive child link created native ancestry")
 	}
-	// A receipt attests exact rows and their multiplicity, not merely the fact
-	// that this worktree once published some auxiliary data.
+	// Valid owned history remains usable without local source/receipt evidence.
+	// Duplicate native identity is still rejected by the current schema boundary.
 	accepted := readCaptureFile(t, f.output)
 	for _, edit := range []string{"skill name", "task description", "skill multiplicity"} {
 		candidate := f.ledger(t)
 		switch edit {
 		case "skill name":
-			candidate.Skills[0].Name = "unproven-skill"
+			candidate.Sessions[0].Skills[0].Name = "unproven-skill"
 		case "task description":
-			candidate.TaskLinks[0].Description = "unproven description"
+			candidate.Sessions[0].TaskLinks[0].Description = "unproven description"
 		case "skill multiplicity":
-			candidate.Skills = append(candidate.Skills, candidate.Skills[0])
+			candidate.Sessions[0].Skills = append(candidate.Sessions[0].Skills, candidate.Sessions[0].Skills[0])
 		}
 		body, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(candidate))
 		if err != nil {
@@ -287,12 +308,24 @@ func TestCaptureManualAuxiliaryPublicationSurvivesUnavailableSource(t *testing.T
 		}
 		cmd := exec.Command(cliBinaryPath, f.args(t, "--source", "opencode", "--db-path", path)...)
 		cmd.Dir = f.project
-		if out, err := cmd.CombinedOutput(); err == nil {
-			t.Fatalf("unproven auxiliary %s accepted: %s", edit, out)
+		out, runErr := cmd.CombinedOutput()
+		if edit == "skill multiplicity" {
+			if runErr == nil {
+				t.Fatalf("duplicate native occurrence accepted: %s", out)
+			}
+			if !reflect.DeepEqual(readCaptureFile(t, f.output), body) {
+				t.Fatal("invalid native duplicate rewrote baseline")
+			}
+		} else {
+			if runErr != nil {
+				t.Fatalf("valid owned unavailable history rejected: %v %s", runErr, out)
+			}
+			preserved := f.ledger(t)
+			if !reflect.DeepEqual(preserved.SkillFacts(), candidate.SkillFacts()) || !reflect.DeepEqual(preserved.TaskLinkFacts(), candidate.TaskLinkFacts()) {
+				t.Fatal("unavailable valid owned facts were discarded")
+			}
 		}
-		if !reflect.DeepEqual(readCaptureFile(t, f.output), body) {
-			t.Fatal("failed auxiliary authorization changed baseline")
-		}
+
 		if err = os.WriteFile(f.output, accepted, 0600); err != nil {
 			t.Fatal(err)
 		}
@@ -352,7 +385,7 @@ func TestCaptureCommittedHistoryPreservesNativeParent(t *testing.T) {
 		t.Fatal(err)
 	}
 	result := b.generate(t)
-	if result.SchemaVersion == nil || *result.SchemaVersion != 5 {
+	if result.SchemaVersion == nil || *result.SchemaVersion != domain.CurrentSchemaVersion {
 		t.Fatal("history changed canonical schema")
 	}
 	found := false
@@ -445,12 +478,19 @@ func TestCaptureCommittedHistoryPreservesSupportedStoredEvidence(t *testing.T) {
 	}
 	cmd := exec.Command(cliBinaryPath, b.args(t)...)
 	cmd.Dir = b.project
-	if out, err := cmd.CombinedOutput(); err == nil {
-		t.Fatalf("foreign anomaly evidence edit accepted: %s", out)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("supported unavailable recorded evidence was hidden by missing private verification: %v %s", err, out)
 	}
-	if !reflect.DeepEqual(readCaptureFile(t, b.output), changed) {
-		t.Fatal("rejected evidence edit changed baseline")
+	var preserved adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal(readCaptureFile(t, b.output), &preserved); err != nil {
+		t.Fatal(err)
 	}
+	for _, owner := range preserved.Sessions {
+		if owner.ID == "prior-root" && owner.Anomalies[0].Evidence[0].EventID != "unproven-evidence" {
+			t.Fatal("supported unavailable recorded anomaly evidence changed")
+		}
+	}
+
 }
 
 func TestCaptureCommittedHistoryRejectsRawBodiesBeforeReplacement(t *testing.T) {
@@ -470,15 +510,12 @@ func TestCaptureCommittedHistoryRejectsRawBodiesBeforeReplacement(t *testing.T) 
 			historyGit(t, a.project, "add", "ledger.json")
 			historyGit(t, a.project, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "incompatible historical representation")
 			historyGit(t, b.project, "merge", "--ff-only", "history-a")
-			// The working baseline is supported and contains no raw bodies. Only
-			// the immutable committed authority has the incompatible representation.
-			supported, err := json.Marshal(dto)
-			if err != nil {
+			// Ordinary runtime reads reject unsupported raw payload fields in
+			// the actual working baseline; committed bytes are not an authority gate.
+			if err = os.WriteFile(b.output, body, 0600); err != nil {
 				t.Fatal(err)
 			}
-			if err = os.WriteFile(b.output, supported, 0600); err != nil {
-				t.Fatal(err)
-			}
+
 			accepted := readCaptureFile(t, b.output)
 			cmd := exec.Command(cliBinaryPath, b.args(t)...)
 			cmd.Dir = b.project
@@ -494,6 +531,76 @@ func TestCaptureCommittedHistoryRejectsRawBodiesBeforeReplacement(t *testing.T) 
 			}
 			if !reflect.DeepEqual(readCaptureFile(t, b.output), accepted) {
 				t.Fatal("privacy rejection changed accepted baseline")
+			}
+		})
+	}
+}
+
+func TestGeneratePreservesUnavailableOwnedAuxiliaryFactsAcrossMachines(t *testing.T) {
+	a, b, _ := newCommittedHistoryFixture(t)
+	remote := a.ledger(t)
+	remote.Sessions[0].Skills = []domain.SkillFact{{Name: "remote-skill", Outcome: domain.OutcomeUnknown, EvidenceKind: "activation_request", Provenance: domain.FactProvenance{MessageID: "remote-message"}}}
+	remote.Sessions[0].TaskLinks = []domain.TaskLinkFact{{SubagentType: "tester", Description: "remote-task", ChildSession: "remote-unavailable-child", Provenance: domain.FactProvenance{CallID: "remote-call"}, Outcome: domain.OutcomeSucceeded, CostEvidence: domain.UnavailableCost()}}
+	remote.Sessions = append(remote.Sessions, domain.SessionFact{ID: "other-source", Source: domain.SourceOpenCode, User: "remote-user", Skills: []domain.SkillFact{{Name: "other-skill", Outcome: domain.OutcomeSucceeded, Success: true}}, TaskLinks: []domain.TaskLinkFact{{Outcome: domain.OutcomeUnknown, Description: "other-task", CostEvidence: domain.UnavailableCost()}}})
+	if err := adapters.SaveFactLedger(a.output, remote); err != nil {
+		t.Fatal(err)
+	}
+	historyGit(t, a.project, "add", "ledger.json")
+	historyGit(t, a.project, "commit", "-qm", "owned remote facts")
+	historyGit(t, b.project, "merge", "--ff-only", "history-a")
+	if err := os.RemoveAll(a.store); err != nil {
+		t.Fatal(err)
+	}
+	localPath := filepath.Join(b.store, "sessions", "current-root.jsonl")
+	baseline := readCaptureFile(t, localPath)
+	one := `{"timestamp":"2026-01-01T00:00:03Z","type":"response_item","payload":{"type":"message","id":"local-one","role":"user","content":[{"type":"input_text","text":"$local-skill"}]}}
+{"timestamp":"2026-01-01T00:00:04Z","type":"response_item","payload":{"type":"function_call","call_id":"local-call","name":"spawn_agent","arguments":"{\"agent_type\":\"tester\",\"task_name\":\"local-task\"}"}}
+`
+	growth := `{"timestamp":"2026-01-01T00:00:05Z","type":"response_item","payload":{"type":"message","id":"local-two","role":"user","content":[{"type":"input_text","text":"$local-skill"}]}}
+`
+	for _, tc := range []struct {
+		name, suffix            string
+		localSkills, localTasks int
+	}{
+		{"partial local success", one, 1, 1},
+		{"growing source", one + growth, 2, 1},
+		{"unchanged repeat", one + growth, 2, 1},
+		{"complete empty deletion", "", 0, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			body := append(append([]byte{}, baseline...), []byte(tc.suffix)...)
+			if err := os.WriteFile(localPath, body, 0600); err != nil {
+				t.Fatal(err)
+			}
+			got := b.generate(t, "--session-id", "current-root", "--codex-home", b.store, "--capture-dir", filepath.Join(b.project, "explicit-local-state"))
+			owners := map[string]domain.SessionFact{}
+			for _, session := range got.Sessions {
+				owners[session.ID] = session
+			}
+			if len(owners) != 3 || len(owners["current-root"].Skills) != tc.localSkills || len(owners["current-root"].TaskLinks) != tc.localTasks {
+				t.Fatalf("wrong exact local replacement: %+v", owners)
+			}
+			for _, want := range remote.Sessions {
+				actual, ok := owners[want.ID]
+				if !ok || !reflect.DeepEqual(actual.Skills, want.Skills) || !reflect.DeepEqual(actual.TaskLinks, want.TaskLinks) {
+					t.Fatalf("unavailable owner facts changed: owner=%s actual=%+v expected=%+v", want.ID, actual, want)
+				}
+			}
+			if len(got.SkillFacts()) != tc.localSkills+2 || len(got.TaskLinkFacts()) != tc.localTasks+2 {
+				t.Fatalf("aggregate ignored remote facts or duplicated snapshot: %+v", got)
+			}
+			data := readCaptureFile(t, b.output)
+			if err := adapters.ValidateRuntimeFactLedger(data); err != nil {
+				t.Fatal(err)
+			}
+			var root map[string]json.RawMessage
+			if err := json.Unmarshal(data, &root); err != nil {
+				t.Fatal(err)
+			}
+			for _, retired := range []string{"skills", "task_links", "unresolved_facts"} {
+				if _, exists := root[retired]; exists {
+					t.Fatalf("retired root field persisted: %s", retired)
+				}
 			}
 		})
 	}

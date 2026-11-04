@@ -1204,7 +1204,7 @@ func hydrateAnomalyAssociations(facts domain.AgenticFactLedger, events []domain.
 		eventsBySession := make(map[string][]domain.SessionEventFact)
 		for _, ev := range events {
 			eventsBySession[ev.SessionID] = append(eventsBySession[ev.SessionID], domain.SessionEventFact{
-				EventID:          ev.EventID,
+				CallID: ev.CallID, EventID: ev.EventID,
 				Timestamp:        ev.Timestamp,
 				MessageID:        ev.MessageID,
 				Turn:             ev.Turn,

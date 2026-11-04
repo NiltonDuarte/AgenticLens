@@ -55,14 +55,18 @@ func (present *memberPresence) UnmarshalJSON(_ []byte) error {
 }
 
 type sessionInput struct {
-	ID          string                    `json:"id"`
-	ParentID    *string                   `json:"parent_id"`
-	Source      domain.SourceHarness      `json:"source"`
-	User        string                    `json:"user"`
-	Invocations []invocationInput         `json:"invocations"`
-	Tools       []domain.SessionToolFact  `json:"tools"`
-	Events      []domain.SessionEventFact `json:"events"`
-	Anomalies   []domain.Anomaly          `json:"anomalies"`
+	EventsArePartial bool                      `json:"events_are_partial,omitempty"`
+	AgentPath        string                    `json:"agent_path"`
+	Skills           []domain.SkillFact        `json:"skills"`
+	TaskLinks        []taskLinkInput           `json:"task_links"`
+	ID               string                    `json:"id"`
+	ParentID         *string                   `json:"parent_id"`
+	Source           domain.SourceHarness      `json:"source"`
+	User             string                    `json:"user"`
+	Invocations      []invocationInput         `json:"invocations"`
+	Tools            []domain.SessionToolFact  `json:"tools"`
+	Events           []domain.SessionEventFact `json:"events"`
+	Anomalies        []domain.Anomaly          `json:"anomalies"`
 }
 
 type invocationInput struct {
@@ -89,14 +93,22 @@ type legacyInvocationInput struct {
 }
 
 type taskLinkInput struct {
-	SubagentType string               `json:"subagent_type"`
-	Description  string               `json:"description"`
-	ParentTurn   int                  `json:"parent_turn"`
-	ChildSession string               `json:"child_session_id"`
-	Timestamp    string               `json:"timestamp"`
-	DurationMs   int64                `json:"duration_ms"`
-	CostUSD      json.RawMessage      `json:"cost_usd"`
-	CostEvidence *domain.CostEvidence `json:"cost_evidence"`
+	ChildAgentID        string                `json:"child_agent_id,omitempty"`
+	ChildLinkDiagnostic string                `json:"child_link_diagnostic,omitempty"`
+	ChildReference      string                `json:"child_reference"`
+	SessionID           string                `json:"session_id"`
+	Source              domain.SourceHarness  `json:"source"`
+	Provenance          domain.FactProvenance `json:"provenance"`
+	Outcome             domain.FactOutcome    `json:"outcome"`
+	Error               string                `json:"error"`
+	SubagentType        string                `json:"subagent_type"`
+	Description         string                `json:"description"`
+	ParentTurn          int                   `json:"parent_turn"`
+	ChildSession        string                `json:"child_session_id"`
+	Timestamp           string                `json:"timestamp"`
+	DurationMs          int64                 `json:"duration_ms"`
+	CostUSD             json.RawMessage       `json:"cost_usd"`
+	CostEvidence        *domain.CostEvidence  `json:"cost_evidence"`
 }
 
 type legacyFactCollections struct {
@@ -114,6 +126,17 @@ type legacySessionInvocation struct {
 }
 
 func decodeVersionedLedger(input []byte, version int) (domain.AgenticFactLedger, legacyFactCollections, bool, error) {
+	if version >= 6 {
+		var fields map[string]json.RawMessage
+		if err := json.Unmarshal(input, &fields); err != nil {
+			return domain.AgenticFactLedger{}, legacyFactCollections{}, false, err
+		}
+		for _, key := range []string{"skills", "task_links", "unresolved_facts"} {
+			if _, exists := fields[key]; exists {
+				return domain.AgenticFactLedger{}, legacyFactCollections{}, false, fmt.Errorf("current schema v6 rejects retired root %s", key)
+			}
+		}
+	}
 	var metadata ledgerMetadataInput
 	var collections ledgerCollectionsInput
 	if version < 5 {
@@ -189,8 +212,8 @@ func (input ledgerCollectionsInput) toDomain(metadata ledgerMetadataInput, requi
 	}
 	for si, session := range input.Sessions {
 		owner := domain.SessionFact{
-			ID: session.ID, ParentID: session.ParentID, Source: session.Source, User: session.User,
-			Tools: session.Tools, Events: session.Events, Anomalies: session.Anomalies,
+			EventsArePartial: session.EventsArePartial, AgentPath: session.AgentPath, ID: session.ID, ParentID: session.ParentID, Source: session.Source, User: session.User,
+			Tools: session.Tools, Events: session.Events, Anomalies: session.Anomalies, Skills: session.Skills,
 		}
 		if session.Invocations != nil {
 			owner.Invocations = make([]domain.InvocationFact, len(session.Invocations))
@@ -202,22 +225,19 @@ func (input ledgerCollectionsInput) toDomain(metadata ledgerMetadataInput, requi
 			}
 			owner.Invocations[ii] = invocation
 		}
+		tasks, err := decodeTaskLinks(session.TaskLinks, required)
+		if err != nil {
+			return domain.AgenticFactLedger{}, legacyFactCollections{}, fmt.Errorf("sessions[%d]: %w", si, err)
+		}
+		owner.TaskLinks = tasks
 		ledger.Sessions[si] = owner
 	}
-	if input.TaskLinks != nil {
-		ledger.TaskLinks = make([]domain.TaskLinkFact, len(input.TaskLinks))
+	tasks, err := decodeTaskLinks(input.TaskLinks, required)
+	if err != nil {
+		return domain.AgenticFactLedger{}, legacyFactCollections{}, err
 	}
-	for i, task := range input.TaskLinks {
-		amount, evidence, err := decodeKnownCost(task.CostUSD, task.CostEvidence, required)
-		if err != nil {
-			return domain.AgenticFactLedger{}, legacyFactCollections{}, fmt.Errorf("task_links[%d]: %w", i, err)
-		}
-		ledger.TaskLinks[i] = domain.TaskLinkFact{
-			SubagentType: task.SubagentType, Description: task.Description, ParentTurn: task.ParentTurn,
-			ChildSession: task.ChildSession, Timestamp: task.Timestamp, DurationMs: task.DurationMs,
-			CostUSD: amount, CostEvidence: evidence,
-		}
-	}
+	ledger.TaskLinks = tasks
+
 	legacy := legacyFactCollections{Source: input.Source, Tools: input.Tools, Events: input.Events}
 	if input.Invocations != nil {
 		legacy.Invocations = make([]legacySessionInvocation, len(input.Invocations))
@@ -275,4 +295,20 @@ func decodeKnownCost(raw json.RawMessage, evidence *domain.CostEvidence, require
 		return 0, *evidence, nil
 	}
 	return *evidence.KnownSubtotalUSD, *evidence, nil
+}
+
+func decodeTaskLinks(input []taskLinkInput, required bool) ([]domain.TaskLinkFact, error) {
+	if input == nil {
+		return nil, nil
+	}
+	result := make([]domain.TaskLinkFact, len(input))
+	for i, task := range input {
+		amount, evidence, err := decodeKnownCost(task.CostUSD, task.CostEvidence, required)
+		if err != nil {
+			return nil, fmt.Errorf("task_links[%d]: %w", i, err)
+		}
+		result[i] = domain.TaskLinkFact{ChildAgentID: task.ChildAgentID, ChildLinkDiagnostic: task.ChildLinkDiagnostic, ChildReference: task.ChildReference, SessionID: task.SessionID, Source: task.Source, Provenance: task.Provenance, Outcome: task.Outcome, Error: task.Error,
+			SubagentType: task.SubagentType, Description: task.Description, ParentTurn: task.ParentTurn, ChildSession: task.ChildSession, Timestamp: task.Timestamp, DurationMs: task.DurationMs, CostUSD: amount, CostEvidence: evidence}
+	}
+	return result, nil
 }

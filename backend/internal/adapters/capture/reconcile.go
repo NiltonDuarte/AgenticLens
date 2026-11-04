@@ -42,8 +42,6 @@ type ReconcileResult struct {
 	SourceBytes           int64                        `json:"source_bytes_reserved"`
 	SourceAttempts        int                          `json:"source_attempts"`
 	RefreshedSessions     []domain.SessionFact         `json:"-"`
-	RefreshedSkills       []domain.SkillFact           `json:"-"`
-	RefreshedTaskLinks    []domain.TaskLinkFact        `json:"-"`
 	DiscoveryPending      bool                         `json:"child_discovery_pending"`
 	PendingChildren       int                          `json:"pending_children"`
 	UnresolvedParentLinks int                          `json:"unresolved_parent_links"`
@@ -52,8 +50,6 @@ type ReconcileResult struct {
 	TicketID              string                       `json:"ticket_id"`
 	Registrations         []domain.CaptureRegistration `json:"registrations"`
 	Sessions              []domain.SessionFact         `json:"-"`
-	Skills                []domain.SkillFact           `json:"-"`
-	TaskLinks             []domain.TaskLinkFact        `json:"-"`
 	Limits                []string                     `json:"limits"`
 }
 
@@ -238,11 +234,7 @@ func (s *Store) Reconcile(ctx context.Context, ticket, user string, sessionBudge
 			result.Sessions = append(result.Sessions, r.Snapshot...)
 			if refreshed[IdentityKey(r.Identity)] {
 				result.RefreshedSessions = append(result.RefreshedSessions, r.Snapshot...)
-				result.RefreshedSkills = append(result.RefreshedSkills, r.Skills...)
-				result.RefreshedTaskLinks = append(result.RefreshedTaskLinks, r.TaskLinks...)
 			}
-			result.Skills = append(result.Skills, r.Skills...)
-			result.TaskLinks = append(result.TaskLinks, r.TaskLinks...)
 		}
 	}
 	return result, nil
@@ -411,27 +403,10 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 			extractErr = codex.ValidateRolloutStore(r.Identity.Store, r.TranscriptPath)
 		}
 		fingerprint, fingerprintErr := sourceFingerprint(ctx, r)
-		if extractErr == nil && fingerprintErr == nil && fingerprint != "" && fingerprint == r.SourceFingerprint && len(r.Snapshot) > 0 && (s.project == "" || r.ProjectDirectory == s.project) {
-			projected := r
-			projected.State = domain.CaptureCurrent
-			projected.RefreshedAt = time.Now().UTC().Format(time.RFC3339Nano)
-			if _, err := s.Change(ctx, r.Identity, func(current domain.CaptureRegistration) (domain.CaptureRegistration, error) {
-				if current.SourceFingerprint == fingerprint {
-					current.SourceInstallationID = current.InstallationID
-					current.RefreshedAt = projected.RefreshedAt
-				}
-				return current, nil
-			}); err != nil {
-				return nil, nil, err
-			}
-			projected.SourceInstallationID = projected.InstallationID
-			registrations[i] = projected
-			refreshed[IdentityKey(r.Identity)] = true
-			if _, err = s.db.ExecContext(ctx, `INSERT INTO reconcile_cursor VALUES(?,?,?) ON CONFLICT(worktree_id,ticket) DO UPDATE SET identity=excluded.identity`, s.worktreeID, ticket, IdentityKey(r.Identity)); err != nil {
-				return nil, nil, err
-			}
-			continue
-		}
+		// Size/count/timestamp fingerprints are operational hints, not proof
+		// that a restored complete source has identical recorded facts. Read
+		// the exact owner within the existing session/byte budgets.
+
 		if extractErr == nil {
 			fresh, revision, updatedAt, extractErr = extractExact(ctx, r, budget.bytes, user)
 		}
@@ -451,19 +426,13 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 				current.Detail = "Source session has not flushed; previous facts preserved"
 				return current, nil
 			}
-			if !domain.CaptureSnapshotAccept(current.Revision, revision, current.UpdatedAt, updatedAt) {
-				current.State = domain.CapturePending
-				current.Detail = "Older or truncated source snapshot rejected; previous facts preserved"
-				return current, nil
-			}
+
 			owner := fresh[0]
 			current.ParentID = ""
 			if owner.ParentID != nil {
 				current.ParentID = *owner.ParentID
 			}
-			if r.Identity.Source == domain.SourceOpenCode {
-				current.Skills, current.TaskLinks = opencode.ExtractSkillTaskFacts(fresh)
-			}
+			// v6 auxiliary facts belong to the exact owner snapshot.
 			compact, compactErr := domain.PersistAnomalySummaries(domain.AgenticFactLedger{Sessions: fresh})
 			if compactErr != nil {
 				return current, compactErr

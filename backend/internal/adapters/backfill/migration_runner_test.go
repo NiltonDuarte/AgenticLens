@@ -106,7 +106,7 @@ func TestMigrationRunner_Batch(t *testing.T) {
 
 	report, err := runner.Run(backfill.MigrationOptions{
 		WorkspacesDir: wsDir,
-		TargetVersion: 2,
+		TargetVersion: domain.CurrentSchemaVersion,
 	})
 	if err != nil {
 		t.Fatalf("unexpected runner error: %v", err)
@@ -115,11 +115,11 @@ func TestMigrationRunner_Batch(t *testing.T) {
 	if report.Scanned != 4 {
 		t.Errorf("expected 4 scanned workspaces, got %d", report.Scanned)
 	}
-	if report.Migrated != 2 {
-		t.Errorf("expected 2 migrated workspaces, got %d", report.Migrated)
+	if report.Migrated != 3 {
+		t.Errorf("expected 3 migrated workspaces, got %d", report.Migrated)
 	}
-	if report.UpToDate != 1 {
-		t.Errorf("expected 1 up-to-date workspace, got %d", report.UpToDate)
+	if report.UpToDate != 0 {
+		t.Errorf("expected no up-to-date workspace on initial current migration, got %d", report.UpToDate)
 	}
 	if len(report.Errors) != 1 {
 		t.Errorf("expected 1 non-fatal error for AL-4, got %d", len(report.Errors))
@@ -137,8 +137,8 @@ func TestMigrationRunner_Batch(t *testing.T) {
 	if err := json.Unmarshal(al1Data, &al1DTO); err != nil {
 		t.Fatalf("failed unmarshaling AL-1: %v", err)
 	}
-	if al1DTO.SchemaVersion == nil || *al1DTO.SchemaVersion != 2 {
-		t.Errorf("expected AL-1 schema version 2, got %v", al1DTO.SchemaVersion)
+	if al1DTO.SchemaVersion == nil || *al1DTO.SchemaVersion != domain.CurrentSchemaVersion {
+		t.Errorf("expected AL-1 current schema version, got %v", al1DTO.SchemaVersion)
 	}
 	if al1DTO.Sessions == nil {
 		t.Errorf("expected AL-1 sessions array initialized")
@@ -159,14 +159,14 @@ func TestMigrationRunner_Batch(t *testing.T) {
 	if err := json.Unmarshal(al2Data, &al2DTO); err != nil {
 		t.Fatal(err)
 	}
-	if al2DTO.SchemaVersion == nil || *al2DTO.SchemaVersion != 2 {
-		t.Errorf("expected AL-2 schema version 2, got %v", al2DTO.SchemaVersion)
+	if al2DTO.SchemaVersion == nil || *al2DTO.SchemaVersion != domain.CurrentSchemaVersion {
+		t.Errorf("expected AL-2 current schema version, got %v", al2DTO.SchemaVersion)
 	}
 
 	// Test idempotency: re-running produces zero migrations and all 3 valid workspaces are up-to-date
 	report2, err := runner.Run(backfill.MigrationOptions{
 		WorkspacesDir: wsDir,
-		TargetVersion: 2,
+		TargetVersion: domain.CurrentSchemaVersion,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -194,7 +194,7 @@ func TestMigrationRunner_DryRun(t *testing.T) {
 	runner := backfill.NewMigrationRunner(nil)
 	report, err := runner.Run(backfill.MigrationOptions{
 		WorkspacesDir: wsDir,
-		TargetVersion: 2,
+		TargetVersion: domain.CurrentSchemaVersion,
 		DryRun:        true,
 	})
 	if err != nil {
@@ -233,7 +233,7 @@ func TestMigrationRunner_Backup(t *testing.T) {
 	runner := backfill.NewMigrationRunner(nil)
 	report, err := runner.Run(backfill.MigrationOptions{
 		WorkspacesDir: wsDir,
-		TargetVersion: 2,
+		TargetVersion: domain.CurrentSchemaVersion,
 		Backup:        true,
 	})
 	if err != nil {
@@ -266,8 +266,8 @@ func TestMigrationRunner_Backup(t *testing.T) {
 	if err := json.Unmarshal(upgradedData, &dto); err != nil {
 		t.Fatal(err)
 	}
-	if dto.SchemaVersion == nil || *dto.SchemaVersion != 2 {
-		t.Errorf("expected upgraded schema_version 2, got %v", dto.SchemaVersion)
+	if dto.SchemaVersion == nil || *dto.SchemaVersion != domain.CurrentSchemaVersion {
+		t.Errorf("expected upgraded current schema_version, got %v", dto.SchemaVersion)
 	}
 }
 
@@ -278,7 +278,7 @@ func TestMigrationRunner_TicketFilter(t *testing.T) {
 	report, err := runner.Run(backfill.MigrationOptions{
 		WorkspacesDir: wsDir,
 		TicketID:      "AL-1",
-		TargetVersion: 2,
+		TargetVersion: domain.CurrentSchemaVersion,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -312,7 +312,7 @@ func TestMigrationRunner_UpdateSummaries(t *testing.T) {
 	runner := backfill.NewMigrationRunner(nil)
 	report, err := runner.Run(backfill.MigrationOptions{
 		WorkspacesDir:   wsDir,
-		TargetVersion:   2,
+		TargetVersion:   domain.CurrentSchemaVersion,
 		UpdateSummaries: true,
 	})
 	if err != nil {
@@ -361,7 +361,7 @@ func TestMigrationRunner_DirectoryEdgeCases(t *testing.T) {
 	t.Run("non-existent workspaces directory returns error", func(t *testing.T) {
 		_, err := runner.Run(backfill.MigrationOptions{
 			WorkspacesDir: "/non/existent/path/for/sure/migration",
-			TargetVersion: 2,
+			TargetVersion: domain.CurrentSchemaVersion,
 		})
 		if err == nil {
 			t.Fatal("expected error for non-existent directory, got nil")
@@ -375,7 +375,7 @@ func TestMigrationRunner_DirectoryEdgeCases(t *testing.T) {
 		emptyDir := t.TempDir()
 		report, err := runner.Run(backfill.MigrationOptions{
 			WorkspacesDir: emptyDir,
-			TargetVersion: 2,
+			TargetVersion: domain.CurrentSchemaVersion,
 		})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -393,7 +393,7 @@ func TestMigrationRunner_DirectoryEdgeCases(t *testing.T) {
 
 		report, err := runner.Run(backfill.MigrationOptions{
 			WorkspacesDir: root,
-			TargetVersion: 2,
+			TargetVersion: domain.CurrentSchemaVersion,
 		})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -432,13 +432,13 @@ func TestMigrationRunner_CorruptedAndDefectiveLedgerResilience(t *testing.T) {
 	// 5. Valid v2 ledger (up to date)
 	w5Dir := filepath.Join(wsDir, "AL-UPTODATE")
 	_ = os.MkdirAll(w5Dir, 0755)
-	v2JSON := `{"schema_version": 2, "ticket_id": "AL-UPTODATE", "updated_at": "2026-10-18T10:00:00Z", "events": []}`
+	v2JSON := `{"schema_version":6,"ticket_id":"AL-UPTODATE","updated_at":"2026-10-18T10:00:00Z","sessions":[],"anomalies":[]}`
 	_ = os.WriteFile(filepath.Join(w5Dir, "agentic_metrics.json"), []byte(v2JSON), 0644)
 
 	runner := backfill.NewMigrationRunner(nil)
 	report, err := runner.Run(backfill.MigrationOptions{
 		WorkspacesDir: wsDir,
-		TargetVersion: 2,
+		TargetVersion: domain.CurrentSchemaVersion,
 	})
 	if err != nil {
 		t.Fatalf("unexpected runner execution error: %v", err)
@@ -466,8 +466,8 @@ func TestMigrationRunner_CorruptedAndDefectiveLedgerResilience(t *testing.T) {
 	if err := json.Unmarshal(valData, &valDTO); err != nil {
 		t.Fatalf("failed unmarshaling upgraded file: %v", err)
 	}
-	if valDTO.SchemaVersion == nil || *valDTO.SchemaVersion != 2 {
-		t.Errorf("expected schema_version 2, got %v", valDTO.SchemaVersion)
+	if valDTO.SchemaVersion == nil || *valDTO.SchemaVersion != domain.CurrentSchemaVersion {
+		t.Errorf("expected current schema_version, got %v", valDTO.SchemaVersion)
 	}
 	if valDTO.Sessions == nil {
 		t.Errorf("expected initialized sessions array")
@@ -501,7 +501,7 @@ func TestMigrationRunner_DryRunImmutabilityStrict(t *testing.T) {
 	runner := backfill.NewMigrationRunner(nil)
 	report, err := runner.Run(backfill.MigrationOptions{
 		WorkspacesDir: wsDir,
-		TargetVersion: 2,
+		TargetVersion: domain.CurrentSchemaVersion,
 		DryRun:        true,
 	})
 	if err != nil {
@@ -545,7 +545,7 @@ func TestMigrationRunner_IdempotencyStrictAcrossRepeatedRuns(t *testing.T) {
 	// Pass 1: Migrates both to v2
 	r1, err := runner.Run(backfill.MigrationOptions{
 		WorkspacesDir: wsDir,
-		TargetVersion: 2,
+		TargetVersion: domain.CurrentSchemaVersion,
 	})
 	if err != nil {
 		t.Fatalf("pass 1 failed: %v", err)
@@ -561,7 +561,7 @@ func TestMigrationRunner_IdempotencyStrictAcrossRepeatedRuns(t *testing.T) {
 	// Pass 2: Strictly idempotent (all up-to-date, zero writes)
 	r2, err := runner.Run(backfill.MigrationOptions{
 		WorkspacesDir: wsDir,
-		TargetVersion: 2,
+		TargetVersion: domain.CurrentSchemaVersion,
 	})
 	if err != nil {
 		t.Fatalf("pass 2 failed: %v", err)
@@ -574,7 +574,7 @@ func TestMigrationRunner_IdempotencyStrictAcrossRepeatedRuns(t *testing.T) {
 	// Pass 3: Repeat again
 	r3, err := runner.Run(backfill.MigrationOptions{
 		WorkspacesDir: wsDir,
-		TargetVersion: 2,
+		TargetVersion: domain.CurrentSchemaVersion,
 	})
 	if err != nil {
 		t.Fatalf("pass 3 failed: %v", err)
@@ -607,7 +607,7 @@ func TestMigrationRunner_TicketFilterAdversarial(t *testing.T) {
 		report, err := runner.Run(backfill.MigrationOptions{
 			WorkspacesDir: wsDir,
 			TicketID:      "al-1", // lowercase
-			TargetVersion: 2,
+			TargetVersion: domain.CurrentSchemaVersion,
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -621,7 +621,7 @@ func TestMigrationRunner_TicketFilterAdversarial(t *testing.T) {
 		report, err := runner.Run(backfill.MigrationOptions{
 			WorkspacesDir: wsDir,
 			TicketID:      "   AL-2   ",
-			TargetVersion: 2,
+			TargetVersion: domain.CurrentSchemaVersion,
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -635,7 +635,7 @@ func TestMigrationRunner_TicketFilterAdversarial(t *testing.T) {
 		report, err := runner.Run(backfill.MigrationOptions{
 			WorkspacesDir: wsDir,
 			TicketID:      "DOES-NOT-EXIST",
-			TargetVersion: 2,
+			TargetVersion: domain.CurrentSchemaVersion,
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -646,14 +646,14 @@ func TestMigrationRunner_TicketFilterAdversarial(t *testing.T) {
 	})
 }
 
-func TestMigrationRunner_BatchV3(t *testing.T) {
+func TestMigrationRunner_BatchCurrentPrivacyBounds(t *testing.T) {
 	wsDir := setupMigrationTestWorkspaces(t)
 	runner := backfill.NewMigrationRunner(nil)
 
 	// Step 1: Dry run to v3 should not modify any files on disk
 	reportDry, err := runner.Run(backfill.MigrationOptions{
 		WorkspacesDir: wsDir,
-		TargetVersion: 3,
+		TargetVersion: domain.CurrentSchemaVersion,
 		DryRun:        true,
 	})
 	if err != nil {
@@ -681,7 +681,7 @@ func TestMigrationRunner_BatchV3(t *testing.T) {
 	// Step 2: Live migration to v3
 	report, err := runner.Run(backfill.MigrationOptions{
 		WorkspacesDir: wsDir,
-		TargetVersion: 3,
+		TargetVersion: domain.CurrentSchemaVersion,
 	})
 	if err != nil {
 		t.Fatalf("unexpected runner error: %v", err)
@@ -722,21 +722,21 @@ func TestMigrationRunner_BatchV3(t *testing.T) {
 			t.Fatalf("unmarshaling %s: %v", tid, err)
 		}
 
-		if dto.SchemaVersion == nil || *dto.SchemaVersion != 3 {
-			t.Errorf("expected schema version 3 for %s, got %v", tid, dto.SchemaVersion)
+		if dto.SchemaVersion == nil || *dto.SchemaVersion != domain.CurrentSchemaVersion {
+			t.Errorf("expected current schema version for %s, got %v", tid, dto.SchemaVersion)
 		}
 
 	}
 }
 
-func TestMigrationRunner_BatchV4(t *testing.T) {
+func TestMigrationRunner_BatchCurrentMigrationState(t *testing.T) {
 	wsDir := setupMigrationTestWorkspaces(t)
 	runner := backfill.NewMigrationRunner(nil)
 
 	// Live batch migration directly to schema version 4
 	report, err := runner.Run(backfill.MigrationOptions{
 		WorkspacesDir: wsDir,
-		TargetVersion: 4,
+		TargetVersion: domain.CurrentSchemaVersion,
 	})
 	if err != nil {
 		t.Fatalf("unexpected runner error: %v", err)
@@ -761,8 +761,8 @@ func TestMigrationRunner_BatchV4(t *testing.T) {
 			t.Fatalf("unmarshaling %s: %v", tid, err)
 		}
 
-		if dto.SchemaVersion == nil || *dto.SchemaVersion != 4 {
-			t.Errorf("expected schema version 4 for %s, got %v", tid, dto.SchemaVersion)
+		if dto.SchemaVersion == nil || *dto.SchemaVersion != domain.CurrentSchemaVersion {
+			t.Errorf("expected current schema version for %s, got %v", tid, dto.SchemaVersion)
 		}
 		if dto.Migration == nil {
 			t.Errorf("expected non-nil migration info for %s", tid)
@@ -814,7 +814,7 @@ func TestMigrationRunner_NormalizesInterimV4AndReportsDroppedUnscopedTools(t *te
 	runner := backfill.NewMigrationRunner(nil)
 	report, err := runner.Run(backfill.MigrationOptions{
 		WorkspacesDir: filepath.Dir(workspace),
-		TargetVersion: 4,
+		TargetVersion: domain.CurrentSchemaVersion,
 	})
 	if err != nil {
 		t.Fatalf("unexpected runner error: %v", err)
@@ -854,7 +854,7 @@ func TestMigrationRunner_RejectsMixedCanonicalAndLegacyCollectionsAtomically(t *
 	if err := os.WriteFile(path, original, 0600); err != nil {
 		t.Fatal(err)
 	}
-	report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{WorkspacesDir: filepath.Dir(workspace), TargetVersion: 4})
+	report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{WorkspacesDir: filepath.Dir(workspace), TargetVersion: domain.CurrentSchemaVersion})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -870,7 +870,7 @@ func TestMigrationRunner_RejectsMixedCanonicalAndLegacyCollectionsAtomically(t *
 	}
 }
 
-func TestMigrationRunner_ValidatesCanonicalV4BeforeUpToDateFastPath(t *testing.T) {
+func TestMigrationRunner_ValidatesCurrentBeforeUpToDateFastPath(t *testing.T) {
 	cases := []struct {
 		name     string
 		sessions string
@@ -885,35 +885,35 @@ func TestMigrationRunner_ValidatesCanonicalV4BeforeUpToDateFastPath(t *testing.T
 		},
 		{
 			name:     "padded session ID",
-			sessions: `[{"id":" s1 ","invocations":[],"tools":[],"events":[]}]`,
+			sessions: `[{"id":" s1 ","source":"opencode","user":"fixture","anomalies":[],"invocations":[],"tools":[],"events":[]}]`,
 		},
 		{
 			name:     "padded session parent ID",
-			sessions: `[{"id":"root","invocations":[],"tools":[],"events":[]},{"id":"child","parent_id":" root ","invocations":[],"tools":[],"events":[]}]`,
+			sessions: `[{"id":"root","source":"opencode","user":"fixture","anomalies":[],"invocations":[],"tools":[],"events":[]},{"id":"child","source":"opencode","user":"fixture","anomalies":[],"parent_id":" root ","invocations":[],"tools":[],"events":[]}]`,
 		},
 		{
 			name:     "padded invocation parent ID",
-			sessions: `[{"id":"root","invocations":[],"tools":[],"events":[]},{"id":"child","invocations":[{"parent_id":" root ","role":"coder","model":"m","user":"u","active_duration_seconds":0,"turns":0,"tokens":{},"cost_usd":0,"compactions":0,"user_iterations":0}],"tools":[],"events":[]}]`,
+			sessions: `[{"id":"root","source":"opencode","user":"fixture","anomalies":[],"invocations":[],"tools":[],"events":[]},{"id":"child","source":"opencode","user":"fixture","anomalies":[],"invocations":[{"parent_id":" root ","role":"coder","model":"m","user":"u","active_duration_seconds":0,"turns":0,"tokens":{},"cost_usd":0,"compactions":0,"user_iterations":0}],"tools":[],"events":[]}]`,
 		},
 		{
 			name:     "duplicate session IDs",
-			sessions: `[{"id":"s1","invocations":[],"tools":[],"events":[]},{"id":"s1","invocations":[],"tools":[],"events":[]}]`,
+			sessions: `[{"id":"s1","source":"opencode","user":"fixture","anomalies":[],"invocations":[],"tools":[],"events":[]},{"id":"s1","source":"opencode","user":"fixture","anomalies":[],"invocations":[],"tools":[],"events":[]}]`,
 		},
 		{
 			name:     "duplicate tool rows",
-			sessions: `[{"id":"s1","invocations":[],"tools":[{"name":"bash","calls":2,"errors":0},{"name":"bash","calls":1,"errors":0}],"events":[]}]`,
+			sessions: `[{"id":"s1","source":"opencode","user":"fixture","anomalies":[],"invocations":[],"tools":[{"name":"bash","calls":2,"errors":0},{"name":"bash","calls":1,"errors":0}],"events":[]}]`,
 		},
 		{
 			name:     "invalid tool counts",
-			sessions: `[{"id":"s1","invocations":[],"tools":[{"name":"bash","calls":1,"errors":2}],"events":[]}]`,
+			sessions: `[{"id":"s1","source":"opencode","user":"fixture","anomalies":[],"invocations":[],"tools":[{"name":"bash","calls":1,"errors":2}],"events":[]}]`,
 		},
 		{
 			name:     "dangling session parent",
-			sessions: `[{"id":"s1","parent_id":"missing","invocations":[],"tools":[],"events":[]}]`,
+			sessions: `[{"id":"s1","source":"opencode","user":"fixture","anomalies":[],"parent_id":"missing","invocations":[],"tools":[],"events":[]}]`,
 		},
 		{
 			name:     "dangling invocation parent",
-			sessions: `[{"id":"s1","invocations":[{"parent_id":"missing","role":"coder","model":"m","user":"u","active_duration_seconds":0,"turns":0,"tokens":{},"cost_usd":0,"compactions":0,"user_iterations":0}],"tools":[],"events":[]}]`,
+			sessions: `[{"id":"s1","source":"opencode","user":"fixture","anomalies":[],"invocations":[{"parent_id":"missing","role":"coder","model":"m","user":"u","active_duration_seconds":0,"turns":0,"tokens":{},"cost_usd":0,"compactions":0,"user_iterations":0}],"tools":[],"events":[]}]`,
 		},
 	}
 
@@ -924,17 +924,17 @@ func TestMigrationRunner_ValidatesCanonicalV4BeforeUpToDateFastPath(t *testing.T
 				t.Fatal(err)
 			}
 			path := filepath.Join(workspace, "agentic_metrics.json")
-			original := []byte(`{"schema_version":4,"ticket_id":"TEST-CURRENT","sessions":` + tc.sessions + `}`)
+			original := []byte(`{"schema_version":6,"ticket_id":"TEST-CURRENT","sessions":` + tc.sessions + `}`)
 			if err := os.WriteFile(path, original, 0600); err != nil {
 				t.Fatal(err)
 			}
 
-			report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{WorkspacesDir: filepath.Dir(workspace), TargetVersion: 4})
+			report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{WorkspacesDir: filepath.Dir(workspace), TargetVersion: domain.CurrentSchemaVersion})
 			if err != nil {
 				t.Fatalf("unexpected runner error: %v", err)
 			}
 			if report.UpToDate != 0 || len(report.Errors) != 1 {
-				t.Fatalf("expected current-v4 validation error, got %+v", report)
+				t.Fatalf("expected current-schema validation error, got %+v", report)
 			}
 			after, err := os.ReadFile(path)
 			if err != nil {
@@ -958,7 +958,7 @@ func TestMigrationRunner_NormalizesPreIterationV4AnomalySummaries(t *testing.T) 
 		t.Fatal(err)
 	}
 
-	report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{WorkspacesDir: filepath.Dir(workspace), TargetVersion: 4})
+	report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{WorkspacesDir: filepath.Dir(workspace), TargetVersion: domain.CurrentSchemaVersion})
 	if err != nil {
 		t.Fatalf("unexpected runner error: %v", err)
 	}
@@ -984,7 +984,7 @@ func TestMigrationRunner_SanitizesCanonicalV4EventPayloads(t *testing.T) {
 	if err := os.WriteFile(path, original, 0600); err != nil {
 		t.Fatal(err)
 	}
-	report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{WorkspacesDir: filepath.Dir(workspace), TargetVersion: 4})
+	report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{WorkspacesDir: filepath.Dir(workspace), TargetVersion: domain.CurrentSchemaVersion})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1018,7 +1018,7 @@ func TestMigrationRunner_MissingWorkspacesDir(t *testing.T) {
 	runner := backfill.NewMigrationRunner(nil)
 	report, err := runner.Run(backfill.MigrationOptions{
 		WorkspacesDir: "",
-		TargetVersion: 2,
+		TargetVersion: domain.CurrentSchemaVersion,
 	})
 	if report != nil {
 		t.Errorf("expected nil report, got %+v", report)
@@ -1043,12 +1043,29 @@ func TestMigrationRunnerRejectsExistingInvalidStateConfigWithoutMutation(t *test
 	if err != nil {
 		t.Fatal(err)
 	}
-	report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{WorkspacesDir: ws, TargetVersion: 2})
+	report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{WorkspacesDir: ws, TargetVersion: domain.CurrentSchemaVersion})
 	if err == nil || !strings.Contains(err.Error(), "telemetry.capture.state_dir") || report != nil {
 		t.Fatalf("invalid target config fell back to caller config: %+v %v", report, err)
 	}
 	after, err := os.ReadFile(ledgerPath)
 	if err != nil || string(before) != string(after) {
 		t.Fatalf("rejected migration changed ledger: %v", err)
+	}
+}
+
+func TestMigrationRunnerRejectsObsoletePublicationTarget(t *testing.T) {
+	ws := setupMigrationTestWorkspaces(t)
+	path := filepath.Join(ws, "AL-1", "agentic_metrics.json")
+	before, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{WorkspacesDir: ws, TargetVersion: 5, DryRun: true})
+	if err == nil || report != nil || !strings.Contains(err.Error(), "current target version 6") {
+		t.Fatalf("obsolete target not rejected: %+v %v", report, err)
+	}
+	after, err := os.ReadFile(path)
+	if err != nil || string(after) != string(before) {
+		t.Fatalf("obsolete publication target changed ledger: %v", err)
 	}
 }

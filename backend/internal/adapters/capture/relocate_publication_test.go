@@ -49,7 +49,7 @@ func TestRelocationPreservesActualRecoverablePublicationJournal(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	schema, ticket, title, ticketType := 5, "T-1", "Accepted publication before interruption", domain.ConventionalTicketType("feat")
+	schema, ticket, title, ticketType := domain.CurrentSchemaVersion, "T-1", "Accepted publication before interruption", domain.ConventionalTicketType("feat")
 	start, end := "2026-01-02T03:04:05Z", "2026-01-02T03:05:05Z"
 	owner := domain.SessionFact{ID: "accepted-publication-owner", Source: domain.SourceCodex, User: "migration-fixture",
 		Invocations: []domain.InvocationFact{{Role: "coder", Model: "recorded-model", StartedAt: &start, CompletedAt: &end, ActiveDurationSeconds: 60,

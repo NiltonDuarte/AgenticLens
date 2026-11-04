@@ -41,6 +41,7 @@ type ToolFact struct {
 
 // EventFact captures a single discrete, ordered lifecycle occurrence in an agent session.
 type EventFact struct {
+	CallID           string    `json:"call_id,omitempty"`
 	EventID          string    `json:"event_id"`
 	Timestamp        string    `json:"timestamp"`
 	SessionID        string    `json:"session_id"`
@@ -59,27 +60,63 @@ type EventFact struct {
 	ToolOutput       *string   `json:"tool_output,omitempty"`
 }
 
-// SkillFact records one OpenCode skill invocation.
-type SkillFact struct {
-	Name         string `json:"name"`
-	TurnIndex    int    `json:"turn_index"`
-	MessageIndex int    `json:"message_index"`
-	CallerRole   string `json:"caller_role"`
-	Timestamp    string `json:"timestamp"`
-	Success      bool   `json:"success"`
-	Error        string `json:"error,omitempty"`
+// FactProvenance retains native occurrence identity. Empty members are unknown,
+// never identities synthesized from ordering, model or timestamp proximity.
+type FactProvenance struct {
+	SourceRef string `json:"source_ref,omitempty"`
+	ItemID    string `json:"item_id,omitempty"`
+	EventID   string `json:"event_id,omitempty"`
+	MessageID string `json:"message_id,omitempty"`
+	CallID    string `json:"call_id,omitempty"`
+	TurnID    string `json:"turn_id,omitempty"`
 }
 
-// TaskLinkFact records one OpenCode task delegation and any explicit child-session link.
+type FactOutcome string
+
+const (
+	OutcomeUnknown   FactOutcome = "unknown"
+	OutcomeSucceeded FactOutcome = "succeeded"
+	OutcomeFailed    FactOutcome = "failed"
+)
+
+// SkillFact records a source skill occurrence. SessionID and Source are restored
+// only in flattened read projections; canonical facts inherit their session.
+
+type SkillFact struct {
+	EvidenceReferences []FactProvenance `json:"evidence_references,omitempty"`
+	SessionID          string           `json:"session_id,omitempty"`
+	Source             SourceHarness    `json:"source,omitempty"`
+	Provenance         FactProvenance   `json:"provenance,omitzero"`
+	EvidenceKind       string           `json:"evidence_kind,omitempty"`
+	Outcome            FactOutcome      `json:"outcome,omitempty"`
+	Path               string           `json:"path,omitempty"`
+	Name               string           `json:"name"`
+	TurnIndex          int              `json:"turn_index"`
+	MessageIndex       int              `json:"message_index"`
+	CallerRole         string           `json:"caller_role"`
+	Timestamp          string           `json:"timestamp"`
+	Success            bool             `json:"success"`
+	Error              string           `json:"error,omitempty"`
+}
+
+// TaskLinkFact records a parent delegation occurrence and its explicit child reference.
 type TaskLinkFact struct {
-	SubagentType string       `json:"subagent_type"`
-	Description  string       `json:"description"`
-	ParentTurn   int          `json:"parent_turn"`
-	ChildSession string       `json:"child_session_id,omitempty"`
-	Timestamp    string       `json:"timestamp"`
-	DurationMs   int64        `json:"duration_ms,omitempty"`
-	CostUSD      float64      `json:"cost_usd"`
-	CostEvidence CostEvidence `json:"cost_evidence"`
+	ChildAgentID        string         `json:"child_agent_id,omitempty"`
+	ChildLinkDiagnostic string         `json:"child_link_diagnostic,omitempty"`
+	ChildReference      string         `json:"child_reference,omitempty"`
+	SessionID           string         `json:"session_id,omitempty"`
+	Source              SourceHarness  `json:"source,omitempty"`
+	Provenance          FactProvenance `json:"provenance,omitzero"`
+	Outcome             FactOutcome    `json:"outcome,omitempty"`
+	Error               string         `json:"error,omitempty"`
+	SubagentType        string         `json:"subagent_type"`
+	Description         string         `json:"description"`
+	ParentTurn          int            `json:"parent_turn"`
+	ChildSession        string         `json:"child_session_id,omitempty"`
+	Timestamp           string         `json:"timestamp"`
+	DurationMs          int64          `json:"duration_ms,omitempty"`
+	CostUSD             float64        `json:"cost_usd"`
+	CostEvidence        CostEvidence   `json:"cost_evidence"`
 }
 
 // SessionToolFact stores tool totals owned by one session. Session identity is
@@ -92,6 +129,7 @@ type SessionToolFact struct {
 
 // SessionEventFact is a persisted event whose identity is inherited from its session.
 type SessionEventFact struct {
+	CallID           string    `json:"call_id,omitempty"`
 	EventID          string    `json:"event_id"`
 	Timestamp        string    `json:"timestamp"`
 	MessageID        *string   `json:"message_id,omitempty"`
@@ -111,14 +149,18 @@ type SessionEventFact struct {
 
 // SessionFact owns all raw telemetry attributed to a single agent session.
 type SessionFact struct {
-	ID          string             `json:"id"`
-	ParentID    *string            `json:"parent_id,omitempty"`
-	Source      SourceHarness      `json:"source,omitempty"`
-	User        string             `json:"user,omitempty"`
-	Invocations []InvocationFact   `json:"invocations"`
-	Tools       []SessionToolFact  `json:"tools"`
-	Events      []SessionEventFact `json:"events,omitempty"`
-	Anomalies   []Anomaly          `json:"anomalies"`
+	EventsArePartial bool               `json:"events_are_partial,omitempty"`
+	AgentPath        string             `json:"agent_path,omitempty"`
+	Skills           []SkillFact        `json:"skills,omitempty"`
+	TaskLinks        []TaskLinkFact     `json:"task_links,omitempty"`
+	ID               string             `json:"id"`
+	ParentID         *string            `json:"parent_id,omitempty"`
+	Source           SourceHarness      `json:"source,omitempty"`
+	User             string             `json:"user,omitempty"`
+	Invocations      []InvocationFact   `json:"invocations"`
+	Tools            []SessionToolFact  `json:"tools"`
+	Events           []SessionEventFact `json:"events,omitempty"`
+	Anomalies        []Anomaly          `json:"anomalies"`
 }
 
 // WorkspaceEventsResponse wraps execution events for a ticket workspace with hydration status and data source provenance.
@@ -168,8 +210,8 @@ type AgenticFactLedger struct {
 	Code          CodeFacts               `json:"code"`
 	Sessions      []SessionFact           `json:"sessions"`
 	Anomalies     []Anomaly               `json:"anomalies"`
-	Skills        []SkillFact             `json:"skills,omitempty"`
-	TaskLinks     []TaskLinkFact          `json:"task_links,omitempty"`
+	Skills        []SkillFact             `json:"-"`
+	TaskLinks     []TaskLinkFact          `json:"-"`
 }
 
 // AnomalyFacts returns persisted anomaly summaries with their owning session restored.
@@ -218,7 +260,7 @@ func (ledger AgenticFactLedger) EventFacts() []EventFact {
 		}
 		for _, event := range session.Events {
 			result = append(result, EventFact{
-				EventID: event.EventID, Timestamp: event.Timestamp, SessionID: session.ID, MessageID: event.MessageID, Turn: event.Turn,
+				CallID: event.CallID, EventID: event.EventID, Timestamp: event.Timestamp, SessionID: session.ID, MessageID: event.MessageID, Turn: event.Turn,
 				Role: event.Role, EventType: event.EventType, ToolName: event.ToolName, Status: event.Status,
 				ErrorMessage: event.ErrorMessage, DurationMs: event.DurationMs, ContextTokens: event.ContextTokens,
 				PromptContent: event.PromptContent, ReasoningContent: event.ReasoningContent,
@@ -276,8 +318,12 @@ func SessionsFromFacts(invocationSessions []SessionFact, tools []ToolFact, event
 		if owned.User != "" {
 			session.User = owned.User
 		}
+		session.EventsArePartial = owned.EventsArePartial
+		session.AgentPath = owned.AgentPath
 		session.Invocations = append(session.Invocations, owned.Invocations...)
 		session.Anomalies = append(session.Anomalies, owned.Anomalies...)
+		session.Skills = append(session.Skills, owned.Skills...)
+		session.TaskLinks = append(session.TaskLinks, owned.TaskLinks...)
 	}
 	for _, tool := range tools {
 		session, err := get(tool.SessionID, nil)
@@ -303,7 +349,7 @@ func SessionsFromFacts(invocationSessions []SessionFact, tools []ToolFact, event
 			return nil, err
 		}
 		session.Events = append(session.Events, SessionEventFact{
-			EventID: event.EventID, Timestamp: event.Timestamp, MessageID: event.MessageID, Turn: event.Turn, Role: event.Role,
+			CallID: event.CallID, EventID: event.EventID, Timestamp: event.Timestamp, MessageID: event.MessageID, Turn: event.Turn, Role: event.Role,
 			EventType: event.EventType, ToolName: event.ToolName, Status: event.Status,
 			ErrorMessage: event.ErrorMessage, DurationMs: event.DurationMs, ContextTokens: event.ContextTokens,
 			PromptContent: event.PromptContent, ReasoningContent: event.ReasoningContent,
@@ -519,6 +565,8 @@ type FleetAnomalySummary struct {
 
 // SkillAdoptionFact summarizes recorded skill invocations across tickets.
 type SkillAdoptionFact struct {
+	KnownOutcomes    int64   `json:"known_outcomes"`
+	UnknownOutcomes  int64   `json:"unknown_outcomes"`
 	Name             string  `json:"name"`
 	TotalInvocations int64   `json:"total_invocations"`
 	TicketsCount     int64   `json:"tickets_count"`

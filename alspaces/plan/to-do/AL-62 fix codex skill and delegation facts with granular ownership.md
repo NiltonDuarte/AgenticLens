@@ -2,7 +2,7 @@ h3. Title: AL-62: Fix Codex skill and delegation facts with granular source owne
 
 *TARGET*: AgenticLens (Domain / Codex and OpenCode Adapters / Schema Migration / Backfill / CLI / API / Dashboard / Tests)
 
-*Status*: Ready
+*Status*: In Progress
 *Work type*: fix
 *Blocked by*: None
 *Blocks*: AL-63
@@ -57,3 +57,7 @@ As an engineer, I want source-recorded Codex skill and delegation facts to survi
 * Deliver and review source-grounded diagnosis, actual missing-fact corrections, granular storage, safe migration, coherent consumers and regression tests as one integrated slice. Internal expand-contract stages remain under AL-62; do not publish a schema-only release that leaves consumers broken or loses accepted facts.
 * Follow TECHNICAL_GUIDELINES.md and docs/REGRESSION_PREVENTION.md: pure domain, strict Go/TypeScript, zero any/interface{}, zero emojis, no domain mocks, self-contained fixtures and canonical embedded-asset verification for frontend changes. Preserve the live AL-55 evidence.
 * Record tested diff/commands/results, source limits and any unverified paths; publish the reviewed implementation PR and source-grounded telemetry. Completion requires the implemented fix and integrated verification, not a recommendation to implement later.
+
+*EXECUTION STEERING: ITERATION 02*
+
+On 2026-11-04 the user explicitly directed: "Delete ownerless records on migration. Drop backward compatibility." This supersedes the original unresolved ownerless-history retention and compatible runtime/API requirements above. Current schema v6 persistence, runtime/API and frontend use session-owned skill/task collections only. Legacy decoding exists solely for explicit migration, which discards ownerless auxiliary records and reports counts. Current old-schema reads require migration and do not rewrite files. Preservation of unavailable owners' already-owned facts, native provenance, legitimate multiplicity, complete exact-owner snapshot authority, source-grounded fixes and all remaining verification guarantees remain required. Current acceptance: alspaces/AL-62/CONTRACT.md and iterations/02/PLAN.md.

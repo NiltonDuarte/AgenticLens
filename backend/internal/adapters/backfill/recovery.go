@@ -1,9 +1,11 @@
 package backfill
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 
 	"agenticlens/internal/adapters/codex"
@@ -35,92 +37,48 @@ func storedTreeRoots(sessions []domain.SessionFact) []domain.SessionFact {
 	return roots
 }
 
-func storedTree(sessions []domain.SessionFact, root string) []domain.SessionFact {
-	ids := map[string]bool{root: true}
-	for changed := true; changed; {
-		changed = false
-		for _, s := range sessions {
-			if s.ParentID != nil && ids[*s.ParentID] && !ids[s.ID] {
-				ids[s.ID] = true
-				changed = true
-			}
-		}
-	}
-	var tree []domain.SessionFact
-	for _, s := range sessions {
-		if ids[s.ID] {
-			tree = append(tree, s)
-		}
-	}
-	return tree
-}
-
-func verifyRecoveredTree(expected, fresh []domain.SessionFact, root string) error {
-	ids := make(map[string]domain.SessionFact, len(fresh))
-	for _, s := range fresh {
-		if _, ok := ids[s.ID]; ok {
-			return fmt.Errorf("duplicate recovered session %s", s.ID)
-		}
-		ids[s.ID] = s
-	}
-	if _, ok := ids[root]; !ok {
-		return fmt.Errorf("requested session %s absent from recovered tree", root)
-	}
-	for _, session := range fresh {
-		current := session.ID
-		seen := make(map[string]bool)
-		for current != root {
-			if seen[current] {
-				return fmt.Errorf("cyclic recovered ancestry at %s", current)
-			}
-			seen[current] = true
-			owner, ok := ids[current]
-			if !ok || owner.ParentID == nil {
-				return fmt.Errorf("session %s does not belong to requested tree %s", session.ID, root)
-			}
-			current = *owner.ParentID
-		}
-	}
-	for _, old := range expected {
-		got, ok := ids[old.ID]
-		if !ok {
-			return fmt.Errorf("stored child/session %s unavailable", old.ID)
-		}
-		if (old.ParentID == nil) != (got.ParentID == nil) || (old.ParentID != nil && got.ParentID != nil && *got.ParentID != *old.ParentID) {
-			return fmt.Errorf("stored parent linkage changed for %s", old.ID)
-		}
-	}
-	return nil
-}
-
 func (e *BackfillEngine) recoverCodex(stored []domain.SessionFact, home, user string) sourceRecovery {
 	out := sourceRecovery{sessions: append([]domain.SessionFact(nil), stored...), complete: len(stored) > 0}
-	roots := storedTreeRoots(stored)
+	roots := append(storedTreeRoots(stored), stored...)
 	covered := make(map[string]bool)
 	if len(roots) == 0 {
 		out.complete = false
 		out.diagnostics = append(out.diagnostics, "Codex owner tree unavailable or ambiguous")
 	}
 	for _, root := range roots {
-		fresh, err := e.readCodexTree(root.ID, home)
-		if err == nil {
-			// A child-only persisted selection keeps its known external parent link.
-			if root.ParentID != nil {
-				for i := range fresh {
-					if fresh[i].ID == root.ID && fresh[i].ParentID == nil {
-						fresh[i].ParentID = root.ParentID
-					}
-				}
-			}
-			err = verifyRecoveredTree(storedTree(stored, root.ID), fresh, root.ID)
+		if covered[root.ID] {
+			continue
 		}
+		fresh, diagnostics, err := e.readCodexOwners(root.ID, home)
+		if len(diagnostics) > 0 {
+			out.complete = false
+			out.diagnostics = append(out.diagnostics, diagnostics...)
+		}
+
 		if err != nil {
 			out.complete = false
 			out.diagnostics = append(out.diagnostics, fmt.Sprintf("Codex tree %s retained: %v", root.ID, err))
 			continue
 		}
+		accepted := []domain.SessionFact{}
+		previous := make(map[string]domain.SessionFact)
+		for _, owner := range stored {
+			previous[owner.ID] = owner
+		}
+		for _, owner := range fresh {
+			if old, known := previous[owner.ID]; known && ((old.ParentID == nil) != (owner.ParentID == nil) || old.ParentID != nil && owner.ParentID != nil && *old.ParentID != *owner.ParentID) {
+				out.complete = false
+				out.diagnostics = append(out.diagnostics, fmt.Sprintf("Codex owner %s retained: source parent linkage changed", owner.ID))
+				continue
+			}
+			accepted = append(accepted, owner)
+		}
+		fresh = accepted
+		if len(fresh) == 0 {
+			continue
+		}
 		resolveCodexSessionUsers(fresh, stored, user)
-		replaceCodexTree(&out.sessions, root.ID, fresh)
+		replaceRecoveredOwners(&out.sessions, fresh)
 		for _, session := range fresh {
 			covered[session.ID] = true
 		}
@@ -135,34 +93,40 @@ func (e *BackfillEngine) recoverCodex(stored []domain.SessionFact, home, user st
 	return out
 }
 
-func (e *BackfillEngine) readCodexTree(root, home string) ([]domain.SessionFact, error) {
+func (e *BackfillEngine) readCodexOwners(root, home string) ([]domain.SessionFact, []string, error) {
+	diagnostics := []string{}
 	paths, err := e.discoverCodexRollouts(codex.DiscoveryOptions{CodexHome: home, SessionID: root})
 	if err != nil {
-		return nil, fmt.Errorf("discovering source: %w", err)
+		return nil, diagnostics, fmt.Errorf("discovering source: %w", err)
 	}
 	if len(paths) == 0 {
-		return nil, fmt.Errorf("source rollout unavailable")
+		return nil, diagnostics, fmt.Errorf("source rollout unavailable")
 	}
 	transcripts := make([]codex.Transcript, 0, len(paths))
 	for _, p := range paths {
 		t, err := e.parseCodexRollout(p)
 		if err != nil {
-			return nil, fmt.Errorf("parsing source: %w", err)
+			diagnostics = append(diagnostics, fmt.Sprintf("Codex source owner retained after parse failure: %v", err))
+			continue
 		}
 		if len(t.Warnings) > 0 {
-			return nil, fmt.Errorf("source %s is incomplete; retry recovery after source repair or completion: %s", p, strings.Join(t.Warnings, "; "))
+			diagnostics = append(diagnostics, fmt.Sprintf("Codex owner %s is incomplete; previous snapshot retained: %s", t.ThreadID, strings.Join(t.Warnings, "; ")))
+			continue
 		}
 		transcripts = append(transcripts, t)
 	}
+	if len(transcripts) == 0 {
+		return nil, diagnostics, fmt.Errorf("no complete Codex owners available")
+	}
 	combined, err := e.combineCodex(transcripts)
 	if err != nil {
-		return nil, fmt.Errorf("grouping source: %w", err)
+		return nil, diagnostics, fmt.Errorf("grouping source: %w", err)
 	}
 	fresh, err := combined.SessionFacts()
 	if err != nil {
-		return nil, fmt.Errorf("extracting source: %w", err)
+		return nil, diagnostics, fmt.Errorf("extracting source: %w", err)
 	}
-	return fresh, nil
+	return fresh, diagnostics, nil
 }
 
 // openCodeSessionTable selects only known table names. Canonical extraction
@@ -176,24 +140,6 @@ func openCodeSessionTable(db *sql.DB) (string, error) {
 		return "session_v2", nil
 	}
 	return "session", nil
-}
-
-func exactOpenCodeRoot(db *sql.DB, table, id string) (string, error) {
-	seen := make(map[string]bool)
-	for {
-		if seen[id] {
-			return "", fmt.Errorf("cyclic source ancestry for %s", id)
-		}
-		seen[id] = true
-		var parent sql.NullString
-		if err := db.QueryRow("SELECT parent_id FROM "+table+" WHERE id=?", id).Scan(&parent); err != nil {
-			return "", fmt.Errorf("resolving exact session %s: %w", id, err)
-		}
-		if !parent.Valid || strings.TrimSpace(parent.String) == "" {
-			return id, nil
-		}
-		id = parent.String
-	}
 }
 
 func discoverOpenCodeTreeIDs(db *sql.DB, table, root string) (ids []string, resultErr error) {
@@ -252,48 +198,43 @@ func recoverOpenCode(db *sql.DB, stored []domain.SessionFact, user, ticket, work
 		out.diagnostics = append(out.diagnostics, fmt.Sprintf("OpenCode discovery failed: %v", err))
 		return out
 	}
-	roots := storedTreeRoots(stored)
-	if len(roots) == 0 {
+	if len(stored) == 0 {
 		out.complete = false
-		out.diagnostics = append(out.diagnostics, "OpenCode owner history unavailable or ambiguous; empty owner set is not recovered history")
+		out.diagnostics = append(out.diagnostics, "OpenCode owner history unavailable; no exact selected-source owners")
 	}
-	recovered := make(map[string]bool)
 	covered := make(map[string]bool)
-	for _, root := range roots {
-		sourceRoot, err := exactOpenCodeRoot(db, table, root.ID)
-		if err != nil {
+	attempted := make(map[string]bool)
+	previous := make(map[string]domain.SessionFact)
+	for _, owner := range stored {
+		previous[owner.ID] = owner
+	}
+	for _, root := range stored {
+		ids, discoveryErr := discoverOpenCodeTreeIDs(db, table, root.ID)
+		if discoveryErr != nil {
 			out.complete = false
-			out.diagnostics = append(out.diagnostics, fmt.Sprintf("OpenCode tree %s retained: %v", root.ID, err))
+			out.diagnostics = append(out.diagnostics, fmt.Sprintf("OpenCode owner %s retained: %v", root.ID, discoveryErr))
 			continue
 		}
-		if recovered[sourceRoot] {
-			continue
-		}
-		fresh, err := readOpenCodeTree(db, table, sourceRoot, user)
-		// Verify all stored rows the replacement would remove, including orphan
-		// siblings attached to source-discovered ancestors absent from the ledger.
-		var expected []domain.SessionFact
-		removeIDs := replacementSessionIDs(stored, sourceRoot, fresh)
-		for _, session := range stored {
-			if _, ok := removeIDs[session.ID]; ok {
-				expected = append(expected, session)
+		for _, id := range ids {
+			if attempted[id] {
+				continue
 			}
+			attempted[id] = true
+			fresh, _, _, readErr := opencode.CaptureSessionSnapshot(context.Background(), db, id, user, math.MaxInt64)
+			if readErr != nil || len(fresh) != 1 || fresh[0].ID != id {
+				out.complete = false
+				out.diagnostics = append(out.diagnostics, fmt.Sprintf("OpenCode owner %s previous snapshot retained after incomplete extraction: %v", id, readErr))
+				continue
+			}
+			if old, known := previous[id]; known && ((old.ParentID == nil) != (fresh[0].ParentID == nil) || old.ParentID != nil && fresh[0].ParentID != nil && *old.ParentID != *fresh[0].ParentID) {
+				out.complete = false
+				out.diagnostics = append(out.diagnostics, fmt.Sprintf("OpenCode owner %s retained: parent linkage changed", id))
+				continue
+			}
+			replaceRecoveredOwners(&out.sessions, fresh)
+			covered[id] = true
+			out.updated = true
 		}
-
-		if err == nil {
-			err = verifyRecoveredTree(expected, fresh, sourceRoot)
-		}
-		if err != nil {
-			out.complete = false
-			out.diagnostics = append(out.diagnostics, fmt.Sprintf("OpenCode tree %s retained: %v", root.ID, err))
-			continue
-		}
-		replaceCodexTree(&out.sessions, sourceRoot, fresh)
-		recovered[sourceRoot] = true
-		for _, session := range fresh {
-			covered[session.ID] = true
-		}
-		out.updated = true
 	}
 	for _, old := range stored {
 		if !covered[old.ID] {

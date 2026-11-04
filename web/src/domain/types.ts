@@ -113,7 +113,29 @@ export interface CodeFacts {
   readonly sdlc_iterations: number;
 }
 
-export interface SkillFact {
+export type FactOutcome = 'unknown' | 'succeeded' | 'failed';
+
+export interface FactProvenance {
+  readonly source_ref?: string;
+  readonly item_id?: string;
+  readonly event_id?: string;
+  readonly message_id?: string;
+  readonly call_id?: string;
+  readonly turn_id?: string;
+}
+
+interface OccurrenceFact {
+  readonly session_id?: string;
+  readonly source?: SourceHarness;
+  readonly provenance?: FactProvenance;
+  readonly outcome?: FactOutcome;
+}
+
+export interface SkillFact extends OccurrenceFact {
+  readonly outcome: FactOutcome;
+  readonly evidence_kind?: string;
+  readonly evidence_references?: readonly FactProvenance[];
+  readonly path?: string;
   readonly name: string;
   readonly turn_index: number;
   readonly message_index: number;
@@ -123,11 +145,16 @@ export interface SkillFact {
   readonly error?: string;
 }
 
-export interface TaskLinkFact {
+export interface TaskLinkFact extends OccurrenceFact {
+  readonly outcome: FactOutcome;
+  readonly child_agent_id?: string;
+  readonly error?: string;
   readonly subagent_type: string;
   readonly description: string;
   readonly parent_turn: number;
   readonly child_session_id?: string;
+  readonly child_reference?: string;
+  readonly child_link_diagnostic?: string;
   readonly timestamp: string;
   readonly duration_ms?: number;
   readonly cost_usd?: number | null;
@@ -135,7 +162,7 @@ export interface TaskLinkFact {
 }
 
 export interface AgenticFactLedger {
-  readonly schema_version?: number;
+  readonly schema_version: 6;
   readonly migration?: MigrationInfo;
   readonly ticket_id: string | null;
   readonly ticket_title: string | null;
@@ -146,16 +173,23 @@ export interface AgenticFactLedger {
   readonly code: CodeFacts;
   readonly sessions: readonly SessionFact[];
   readonly anomalies?: readonly Anomaly[];
-  readonly skills?: readonly SkillFact[];
-  readonly task_links?: readonly TaskLinkFact[];
 }
 
-export function ledgerSkills(ledger: Pick<AgenticFactLedger, 'skills'> | undefined): readonly SkillFact[] {
-  return ledger?.skills ?? [];
+type OwnedFactLedger = Pick<AgenticFactLedger, 'sessions'>;
+
+/** Each occurrence inherits its session owner; repeated source occurrences stay distinct. */
+export function ledgerSkills(ledger: OwnedFactLedger | undefined, sessionId?: string): readonly SkillFact[] {
+  return (ledger?.sessions ?? []).filter((session) => sessionId === undefined || session.id === sessionId)
+    .flatMap((session) => (session.skills ?? []).map((fact) => ({ ...fact, session_id: session.id, ...(session.source === undefined ? {} : { source: session.source }) })));
 }
 
-export function ledgerTaskLinks(ledger: Pick<AgenticFactLedger, 'task_links'> | undefined): readonly TaskLinkFact[] {
-  return ledger?.task_links ?? [];
+export function ledgerTaskLinks(ledger: OwnedFactLedger | undefined, sessionId?: string): readonly TaskLinkFact[] {
+  return (ledger?.sessions ?? []).filter((session) => sessionId === undefined || session.id === sessionId)
+    .flatMap((session) => (session.task_links ?? []).map((fact) => ({ ...fact, session_id: session.id, ...(session.source === undefined ? {} : { source: session.source }) })));
+}
+
+export function skillOutcome(skill: SkillFact): FactOutcome {
+  return skill.outcome;
 }
 
 export type WorkspaceDiagnostic = {
@@ -169,6 +203,10 @@ export type WorkspaceDiagnostic = {
 };
 
 export interface SessionFact {
+  readonly events_are_partial?: boolean;
+  readonly agent_path?: string;
+  readonly skills?: readonly SkillFact[];
+  readonly task_links?: readonly TaskLinkFact[];
   readonly id: string;
   readonly parent_id?: string | null;
   readonly source?: SourceHarness;
@@ -180,6 +218,7 @@ export interface SessionFact {
 }
 
 export type SessionEventFact = Pick<EventFact,
+  | 'call_id'
   | 'event_id'
   | 'timestamp'
   | 'message_id'
@@ -317,6 +356,8 @@ export interface AgenticMetricsLedger {
 }
 
 export interface SkillAdoptionFact {
+  readonly known_outcomes: number;
+  readonly unknown_outcomes: number;
   readonly name: string;
   readonly total_invocations: number;
   readonly tickets_count: number;
