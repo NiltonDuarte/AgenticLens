@@ -534,6 +534,7 @@ func SaveFactLedgerPreservingHistory(path string, ledger domain.AgenticFactLedge
 		}
 		dto.Sessions = append(dto.Sessions, cloned)
 	}
+	dto = ProjectGenerationDTO(dto)
 	if err := dto.Validate(); err != nil {
 		return fmt.Errorf("cannot save fact ledger: %w", err)
 	}

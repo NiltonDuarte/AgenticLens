@@ -110,6 +110,40 @@ describe('Skills and subagents autopsy', () => {
         expect(errors).not.toHaveBeenCalled();
     });
 
+    it('explains intentionally disabled categories when optional source hydration is unavailable', async () => {
+        const detail = makeDetail();
+        const policy = { skills: false, delegations: false, anomalies: false };
+        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: {
+            ...detail, ledger: { ...detail.ledger, facts: { ...detail.ledger.facts, generation_policy: policy } },
+        } });
+        render(<TicketDeepDive selectedTicketId="AL-1" />);
+        const panel = await screen.findByRole('region', { name: /Skills & Subagents/ });
+        expect(within(panel).getByText('Skills were disabled when this ledger was generated.')).toBeVisible();
+        expect(within(panel).getByText('Delegations were disabled when this ledger was generated.')).toBeVisible();
+        expect(within(panel).queryByText('No modular skills or subagent delegations recorded for this ticket.')).not.toBeInTheDocument();
+        expect(within(panel).queryByText(/0 Skills/)).not.toBeInTheDocument();
+        expect(await screen.findByText(/Recorded anomaly analysis was disabled when this ledger was generated/)).toBeVisible();
+    });
+
+    it('explains unavailable historical analysis while retaining supported skills after source hydration fails', async () => {
+        const detail = makeDetail([skill], [delegation]);
+        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: {
+            ...detail, ledger: { ...detail.ledger, facts: { ...detail.ledger.facts,
+                generation_policy: { skills: true, delegations: true, anomalies: true },
+                sessions: detail.ledger.facts.sessions.map((owner, index) => {
+                    if (index !== 0) return owner;
+                    const { anomalies, ...recorded } = owner;
+                    void anomalies;
+                    return { ...recorded, anomaly_availability: 'unavailable' as const };
+                }),
+            } },
+        } });
+        render(<TicketDeepDive selectedTicketId="AL-1" />);
+        expect(await screen.findByText(/Recorded anomaly analysis is unavailable for retained sessions/)).toBeVisible();
+        expect(await screen.findByRole('table', { name: 'Modular skills' })).toHaveTextContent('inspect-source');
+        expect(screen.queryByText('Recorded anomaly analysis was disabled when this ledger was generated. Source trace analysis is independent.')).not.toBeInTheDocument();
+    });
+
     it('shows lean native owners and nullable activations, filters exactly by session and preserves unavailable owned facts after failed enrichment', async () => {
         const detail = makeDetail();
         const base = { ...skill, caller_role: null, invoked_at: null };

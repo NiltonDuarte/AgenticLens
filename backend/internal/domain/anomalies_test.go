@@ -2433,3 +2433,38 @@ func fleetSessionFacts(invocations []domain.InvocationFact, tools []domain.ToolF
 	}
 	return sessionFacts(invocations, tools, events)
 }
+
+func TestComputeFleetAnomalies_DisabledAnalysisRetainsOrdinaryTools(t *testing.T) {
+	disabled := domain.GenerationPolicy{Skills: true, Delegations: true, Anomalies: false}
+	for _, allDisabled := range []bool{false, true} {
+		t.Run(fmt.Sprintf("all_disabled_%t", allDisabled), func(t *testing.T) {
+			ledgers := []domain.AgenticFactLedger{
+				{GenerationPolicy: &disabled, Sessions: []domain.SessionFact{{ID: "disabled", Tools: []domain.SessionToolFact{{Name: "bash", Calls: 12, Errors: 3}}}}},
+				{Sessions: []domain.SessionFact{{ID: "other", Tools: []domain.SessionToolFact{{Name: "bash", Calls: 8, Errors: 1}}}}},
+			}
+			if allDisabled {
+				ledgers[1].GenerationPolicy = &disabled
+			}
+			got := domain.ComputeFleetAnomalies(ledgers)
+			if got.TotalAnomalies != 0 || got.WarningCount != 0 || got.CriticalCount != 0 {
+				t.Fatalf("disabled analysis generated anomaly claims: %+v", got)
+			}
+			if len(got.BrittleTools) != 1 {
+				t.Fatalf("ordinary error evidence disappeared: %+v", got)
+			}
+			tool := got.BrittleTools[0]
+			if tool.ToolName != "bash" || tool.TotalCalls != 20 || tool.ErrorCount != 4 || tool.FailureRatePct != 20 || tool.AnomalyCount != 0 {
+				t.Fatalf("ordinary tool calls/errors corrupted by analysis policy: %+v", tool)
+			}
+			wantDisabled := int64(1)
+			wantAnalyzed := int64(1)
+			if allDisabled {
+				wantDisabled = 2
+				wantAnalyzed = 0
+			}
+			if got.DisabledTickets != wantDisabled || got.TotalTickets != wantAnalyzed {
+				t.Fatalf("analysis availability counts incorrect: %+v", got)
+			}
+		})
+	}
+}

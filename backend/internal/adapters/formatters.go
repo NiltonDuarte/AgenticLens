@@ -56,6 +56,8 @@ func titleCase[T ~string](s T) string {
 
 // FormatMarkdownMetricsTable reconstructs the exact markdown review table from domain ledger.
 func FormatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, roleOrder ...[]string) string {
+	anomaliesEnabled := ledger.Facts.EffectiveGenerationPolicy().Anomalies
+	unavailableSessions := ledger.Facts.UnavailableAnomalySessions()
 	we := ledger.WorkflowEfficiency
 	cwh := we.ContextWindowHealth
 	totals := ledger.Totals
@@ -182,7 +184,13 @@ func FormatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, roleOrder ..
 		"### Anomalies & Health Flags",
 	}
 
-	if len(ledger.Anomalies) == 0 {
+	if !anomaliesEnabled {
+		lines = lines[:len(lines)-1]
+		lines[3] = fmt.Sprintf("- **Context Window Usage:** Root peak %s tokens (%s of %s reference ceiling, %d compactions) | Subagents peak %s (%s)", rootTokStr, rootPctStr, domain.FormatTokensK(effectiveCeiling), cwh.Compactions, subTokStr, subPeakRoleStr)
+		lines = append(lines, "Optional anomaly analysis: disabled by generation policy.")
+	} else if len(ledger.Anomalies) == 0 && unavailableSessions > 0 {
+		lines = append(lines, "- **Status:** Anomaly analysis unavailable for retained sessions; no clean-session conclusion is available.")
+	} else if len(ledger.Anomalies) == 0 {
 		lines = append(lines, "- **Status:** No execution anomalies detected (clean session).")
 	} else {
 		var critCount, warnCount int
@@ -214,6 +222,10 @@ func FormatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, roleOrder ..
 		}
 	}
 
+	if anomaliesEnabled && unavailableSessions > 0 {
+		lines[3] = fmt.Sprintf("- **Context Window Usage:** Root peak %s tokens (%s of %s reference ceiling, %d compactions) | Subagents peak %s (%s)", rootTokStr, rootPctStr, domain.FormatTokensK(effectiveCeiling), cwh.Compactions, subTokStr, subPeakRoleStr)
+		lines = append(lines, fmt.Sprintf("Anomaly analysis is unavailable for %d retained session(s); recorded findings from other owners remain visible. A complete source-backed refresh is required for recovery.", unavailableSessions))
+	}
 	lines = append(lines,
 		"",
 		"### Agentic Execution Metrics",
@@ -231,6 +243,12 @@ func FormatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, roleOrder ..
 	)
 
 	for _, r := range ledger.Roles {
+		healthLabel := domain.GetHealthLabel(r.PeakContextTokens, effectiveCeiling)
+		if !anomaliesEnabled {
+			healthLabel = "Disabled"
+		} else if unavailableSessions > 0 {
+			healthLabel = "Unavailable"
+		}
 		lines = append(lines, fmt.Sprintf(
 			"| **%s** | %d | %s | %s | %s | %.1f%% | %s | %s | %s |",
 			roleLabel(r.Role),
@@ -240,11 +258,17 @@ func FormatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, roleOrder ..
 			FormatNumber(r.CacheReadTokens),
 			r.CacheHitRatePct,
 			domain.FormatTokensK(r.PeakContextTokens),
-			domain.GetHealthLabel(r.PeakContextTokens, effectiveCeiling),
+			healthLabel,
 			FormatCostSummary(domain.EffectiveCostSummary(r.CostSummary, r.CostUSD, r.Invocations)),
 		))
 	}
 
+	totalHealth := string(totals.ContextHealth)
+	if !anomaliesEnabled {
+		totalHealth = "Disabled"
+	} else if unavailableSessions > 0 {
+		totalHealth = "Unavailable"
+	}
 	lines = append(lines, fmt.Sprintf(
 		"| **Total** | **%d** | **%s** | **%s** | **%s** | **%.1f%%** | **%s** | **%s** | **%s** |",
 		totals.Invocations,
@@ -253,7 +277,7 @@ func FormatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, roleOrder ..
 		FormatNumber(totals.CacheReadTokens),
 		totals.CacheHitRatePct,
 		domain.FormatTokensK(totals.PeakContextTokens),
-		totals.ContextHealth,
+		totalHealth,
 		FormatCostSummary(domain.EffectiveCostSummary(totals.CostSummary, totals.CostUSD, totals.Invocations)),
 	))
 

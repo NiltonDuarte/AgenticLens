@@ -83,8 +83,11 @@ func WithOwnedSkillTaskFacts(sessions []domain.SessionFact, events []domain.Even
 	}
 	return result
 }
-func projectSourceFacts(sessions []domain.SessionFact, events []domain.EventFact, strict bool) ([]domain.SessionFact, error) {
+func projectSourceFacts(sessions []domain.SessionFact, events []domain.EventFact, strict bool, policy *domain.GenerationPolicy) ([]domain.SessionFact, error) {
 	for _, event := range events {
+		if policy != nil && event.ToolName != nil && ((*event.ToolName == "skill" && !policy.Skills) || (*event.ToolName == "task" && !policy.Delegations)) {
+			continue
+		}
 		if !strict || event.EventType != domain.EventTypeToolCall || event.ToolName == nil || (*event.ToolName != "skill" && *event.ToolName != "task") {
 			continue
 		}
@@ -101,7 +104,11 @@ func projectSourceFacts(sessions []domain.SessionFact, events []domain.EventFact
 	for _, owner := range sessions {
 		complete = append(complete, owner.ID)
 	}
-	facts, err := domain.PersistSourceAnomalySummaries(domain.AgenticFactLedger{Sessions: sessions}, domain.SourceEvents{Events: events, CompleteSessionIDs: complete})
+	ledger := domain.AgenticFactLedger{Sessions: sessions, GenerationPolicy: policy}
+	if policy != nil {
+		ledger = domain.ProjectGenerationFacts(ledger, *policy)
+	}
+	facts, err := domain.PersistSourceAnomalySummaries(ledger, domain.SourceEvents{Events: events, CompleteSessionIDs: complete})
 	if err != nil {
 		return nil, err
 	}

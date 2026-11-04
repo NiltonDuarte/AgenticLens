@@ -57,15 +57,11 @@ type schemaV1PartData struct {
 	State *schemaV1PartState `json:"state"`
 }
 
-func extractSchemaV1SessionsWithEvents(
-	db *sql.DB,
-	threadIDs []string,
-	defaultUser string,
-	userBySessionID map[string]string,
-	strict bool,
-	eventSink *[]domain.EventFact,
-	exact ...bool,
-) ([]domain.SessionFact, *string, *string, error) {
+func extractSchemaV1SessionsWithEvents(db *sql.DB, ids []string, user string, users map[string]string, strict bool, sink *[]domain.EventFact, exact ...bool) ([]domain.SessionFact, *string, *string, error) {
+	return extractSchemaV1SessionsWithPolicy(db, ids, user, users, strict, sink, nil, exact...)
+}
+
+func extractSchemaV1SessionsWithPolicy(db *sql.DB, threadIDs []string, defaultUser string, userBySessionID map[string]string, strict bool, eventSink *[]domain.EventFact, policy *domain.GenerationPolicy, exact ...bool) ([]domain.SessionFact, *string, *string, error) {
 
 	quotedList, err := buildQuotedIDList(threadIDs)
 	if err != nil {
@@ -746,7 +742,7 @@ func extractSchemaV1SessionsWithEvents(
 	if err := proveSourceChildLinks(db, "session", events); err != nil {
 		return nil, nil, nil, err
 	}
-	projected, err := projectSourceFacts(sessionFacts, events, strict)
+	projected, err := projectSourceFacts(sessionFacts, events, strict, policy)
 	if err != nil {
 		return nil, nil, nil, err
 	}

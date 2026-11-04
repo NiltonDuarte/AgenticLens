@@ -453,7 +453,7 @@ func captureSourceStore(source, project string) (string, error) {
 	return "", errors.New("install requires --source codex or opencode")
 }
 
-func reconcileCaptureGeneration(project, dir, ticket string) (*capture.ReconcileResult, error) {
+func reconcileCaptureGeneration(project, dir, ticket string, generationPolicies ...domain.GenerationPolicy) (*capture.ReconcileResult, error) {
 	if _, err := os.Stat(filepath.Join(capture.RegistryPathDirectory(dir), "registry.db")); errors.Is(err, os.ErrNotExist) {
 		return nil, nil
 	} else if err != nil {
@@ -470,7 +470,7 @@ func reconcileCaptureGeneration(project, dir, ticket string) (*capture.Reconcile
 	if err != nil {
 		return nil, err
 	}
-	result, err := s.Reconcile(ctx, ticket, git.GetGitUser(), policy.MaxSessions, policy.MaxSourceBytes)
+	result, err := s.Reconcile(ctx, ticket, git.GetGitUser(), policy.MaxSessions, policy.MaxSourceBytes, generationPolicies...)
 	if err != nil {
 		return nil, err
 	}

@@ -2158,3 +2158,144 @@ func TestBackfillCodexCompleteParentRefreshesWhileMissingChildFactsSurvive(t *te
 		}
 	}
 }
+
+func TestBackfillEngine_PreservesUnavailableAnalysisOutsideCompleteRefresh(t *testing.T) {
+	for _, tc := range []struct {
+		name                                        string
+		remoteSource                                domain.SourceHarness
+		freshParent, missingChild, recordedFindings bool
+	}{
+		{name: "disabled missing same source", remoteSource: domain.SourceCodex},
+		{name: "disabled other source and complete empty local owner", remoteSource: domain.SourceOpenCode, freshParent: true},
+		{name: "disabled partial tree and missing child", remoteSource: domain.SourceCodex, freshParent: true, missingChild: true},
+		{name: "already unavailable preserves known findings", remoteSource: domain.SourceCodex, recordedFindings: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root, home := t.TempDir(), t.TempDir()
+			ticket, title := "TEST-BACKFILL-AVAILABILITY", "Unavailable historical anomaly analysis"
+			version := domain.CurrentSchemaVersion
+			off := domain.GenerationPolicy{Skills: true, Delegations: true, Anomalies: false}
+			remote := domain.SessionFact{ID: "remote", Source: tc.remoteSource, User: "recorded-user",
+				Invocations: []domain.InvocationFact{{Role: "coder", Model: "recorded-model", Turns: 2, ActiveDurationSeconds: 9, Tokens: domain.InvocationTokens{Input: 37, Output: 3}, CostUSD: 0.125}},
+				Tools:       []domain.SessionToolFact{{Name: "bash", Calls: 6, Errors: 3}},
+				Skills:      []domain.SkillFact{{Name: "preserved"}, {Name: "preserved"}},
+				Delegations: []domain.DelegationFact{{Description: "preserved task", ChildSession: "known-child"}},
+			}
+			ledger := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticket, TicketTitle: &title, GenerationPolicy: &off, Sessions: []domain.SessionFact{remote}}
+			if tc.freshParent {
+				ledger.Sessions = append(ledger.Sessions, domain.SessionFact{ID: "local-parent", Source: domain.SourceCodex, User: "local-user", Invocations: []domain.InvocationFact{{Role: "coder", Model: "stale", Turns: 3}}, Tools: []domain.SessionToolFact{{Name: "stale", Calls: 4}}})
+				if tc.missingChild {
+					parent := "local-parent"
+					ledger.Sessions[0].ParentID = &parent
+				}
+				sessions := filepath.Join(home, "sessions")
+				if err := os.MkdirAll(sessions, 0700); err != nil {
+					t.Fatal(err)
+				}
+				// A readable native owner with no events establishes recorded-empty
+				// anomaly analysis; it must clear only its own unavailable marker.
+				source := `{"type":"session_meta","payload":{"id":"local-parent","source":"cli"}}` + "\n"
+				if err := os.WriteFile(filepath.Join(sessions, "local.jsonl"), []byte(source), 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if tc.recordedFindings {
+				ledger.GenerationPolicy = nil
+				ledger.Sessions[0].AnomalyAvailability = domain.AnomalyUnavailable
+				tool, count := "recorded-sequence", int64(3)
+				known := domain.SessionFact{ID: "known-other-source", Source: domain.SourceOpenCode, User: "known-user", Invocations: []domain.InvocationFact{}, Tools: []domain.SessionToolFact{}, Anomalies: []domain.Anomaly{{RuleID: domain.RuleToolRetryStreak, Severity: domain.SeverityWarning, Context: domain.AnomalyContext{ToolName: &tool, Count: &count}}}}
+				ledger.Sessions = append(ledger.Sessions, known)
+			}
+			workspace := createTestWorkspace(t, root, ticket, ledger)
+			baseline, _ := readRecoveryLedger(t, workspace)
+			expectedByID := map[string]domain.SessionFact{}
+			for _, owner := range baseline.ToDomain().Sessions {
+				expectedByID[owner.ID] = owner
+			}
+			opts := BackfillOptions{WorkspacesDir: root, TicketID: ticket, Source: "codex", CodexHome: home, RecomputeDB: true, UpdateSummaries: true}
+			for pass := 0; pass < 2; pass++ {
+				report, err := NewEngine().Execute(opts)
+				if err != nil || len(report.Results) != 1 || report.Results[0].Error != nil {
+					t.Fatalf("backfill failed: %+v %v", report, err)
+				}
+				if tc.remoteSource == domain.SourceCodex && !report.Results[0].RefreshIncomplete {
+					t.Fatal("missing source/partial tree claimed complete refresh")
+				}
+				loaded, raw := readRecoveryLedger(t, workspace)
+				if err := adapters.ValidateRuntimeFactLedger(raw); err != nil {
+					t.Fatalf("saved ledger rejected canonically: %v", err)
+				}
+				if _, err := adapters.LoadExistingFactLedger(filepath.Join(workspace, "agentic_metrics.json")); err != nil {
+					t.Fatalf("saved ledger cannot reload: %v", err)
+				}
+				facts := loaded.ToDomain()
+				if facts.GenerationPolicy != nil {
+					t.Fatal("explicit backfill retained a global generation policy")
+				}
+				owners := map[string]domain.SessionFact{}
+				for _, owner := range facts.Sessions {
+					owners[owner.ID] = owner
+				}
+				if len(owners) != len(expectedByID) {
+					t.Fatalf("backfill lost/duplicated owners: %+v", owners)
+				}
+				expected := expectedByID["remote"]
+				expected.AnomalyAvailability = domain.AnomalyUnavailable
+				if !reflect.DeepEqual(owners["remote"], expected) {
+					t.Fatalf("unrefreshed owner lost uncertainty or ordinary/history facts: got %+v want %+v", owners["remote"], expected)
+				}
+				if tc.freshParent {
+					local := owners["local-parent"]
+					if local.AnomalyAvailability != "" || local.Anomalies == nil || len(local.Anomalies) != 0 || len(local.Tools) != 0 {
+						t.Fatalf("complete source did not restore recorded-empty analysis for exactly its owner: %+v", local)
+					}
+					// Metadata-only Codex sessions retain a default invocation;
+					// its unavailable cost is not a successful measured zero.
+					if len(local.Invocations) != 1 || local.Invocations[0].Model != "default" || local.Invocations[0].Turns != 0 || local.Invocations[0].CostEvidence.State != domain.CostUnavailable {
+						t.Fatalf("complete native snapshot did not replace stale ordinary work: %+v", local.Invocations)
+					}
+				}
+				if tc.recordedFindings && !reflect.DeepEqual(owners["known-other-source"], expectedByID["known-other-source"]) {
+					t.Fatal("backfill changed recorded findings of an unrelated owner")
+				}
+				var wire struct {
+					GenerationPolicy json.RawMessage `json:"generation_policy"`
+					Sessions         []struct {
+						ID           string          `json:"id"`
+						Availability string          `json:"anomaly_availability"`
+						Anomalies    json.RawMessage `json:"anomalies"`
+					} `json:"sessions"`
+				}
+				if err := json.Unmarshal(raw, &wire); err != nil {
+					t.Fatal(err)
+				}
+				if len(wire.GenerationPolicy) != 0 {
+					t.Fatal("stale generation policy remains in output")
+				}
+				for _, owner := range wire.Sessions {
+					if owner.ID == "remote" && (owner.Availability != "unavailable" || len(owner.Anomalies) != 0) {
+						t.Fatalf("unavailable analysis serialized as a measurement: %+v", owner)
+					}
+					if tc.freshParent && owner.ID == "local-parent" && (owner.Availability != "" || string(owner.Anomalies) != "[]") {
+						t.Fatalf("complete empty analysis not recorded as an array: %+v", owner)
+					}
+				}
+				metrics := domain.DeriveMetricsLedger(facts, domain.DefaultProjectConfig())
+				if metrics.Totals.ContextHealth != domain.ContextHealthUnavailable {
+					t.Fatalf("incomplete analysis claimed aggregate health %s", metrics.Totals.ContextHealth)
+				}
+				summary, err := os.ReadFile(filepath.Join(workspace, "SUMMARY.md"))
+				if err != nil {
+					t.Fatal(err)
+				}
+				text := string(summary)
+				if !strings.Contains(text, "# Summary "+ticket) || !strings.Contains(strings.ToLower(text), "unavailable") || strings.Contains(strings.ToLower(text), "healthy") || strings.Contains(text, "clean session") {
+					t.Fatalf("summary lost prose or claimed measured clean analysis: %s", text)
+				}
+				if tc.recordedFindings && !strings.Contains(text, "TOOL_RETRY_STREAK") {
+					t.Fatal("known recorded finding hidden by another owner's unavailable analysis")
+				}
+			}
+		})
+	}
+}

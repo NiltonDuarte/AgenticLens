@@ -4847,3 +4847,65 @@ func TestServerWorkspaceDirConfigSynchronization(t *testing.T) {
 		}
 	})
 }
+
+func TestGeneratedPolicyHTTPReadPreservesOmissionWithoutWriting(t *testing.T) {
+	root := t.TempDir()
+	ticket := "TEST-POLICY"
+	dir := filepath.Join(root, ticket)
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	ledger := `{"schema_version":6,"ticket_id":"TEST-POLICY","generation_policy":{"skills":false,"delegations":false,"anomalies":false},"sessions":[{"id":"recorded-owner","source":"codex","user":"tester","invocations":[],"tools":[{"name":"bash","calls":3,"errors":2}]}]}`
+	path := filepath.Join(dir, "agentic_metrics.json")
+	if err := os.WriteFile(path, []byte(ledger), 0600); err != nil {
+		t.Fatal(err)
+	}
+	request := httptest.NewRequest(http.MethodGet, "/api/workspaces/"+ticket, nil)
+	request.SetPathValue("ticketId", ticket)
+	recorder := httptest.NewRecorder()
+	adaptershttp.WorkspaceDetailHandler(root).ServeHTTP(recorder, request)
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("disabled ledger unavailable without original source: %d %s", recorder.Code, recorder.Body.String())
+	}
+	var response struct {
+		Ledger struct {
+			Facts struct {
+				GenerationPolicy *domain.GenerationPolicy `json:"generation_policy"`
+				Anomalies        json.RawMessage          `json:"anomalies"`
+				Sessions         []struct {
+					ID          string                   `json:"id"`
+					Tools       []domain.SessionToolFact `json:"tools"`
+					Skills      json.RawMessage          `json:"skills"`
+					Delegations json.RawMessage          `json:"delegations"`
+					Anomalies   json.RawMessage          `json:"anomalies"`
+				} `json:"sessions"`
+			} `json:"facts"`
+			Totals struct {
+				ContextHealth string `json:"context_health"`
+			} `json:"totals"`
+		} `json:"ledger"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatal(err)
+	}
+	facts := response.Ledger.Facts
+	if facts.GenerationPolicy == nil || *facts.GenerationPolicy != (domain.GenerationPolicy{}) {
+		t.Fatalf("read lost disabled policy: %+v", facts.GenerationPolicy)
+	}
+	if len(facts.Sessions) != 1 || facts.Sessions[0].ID != "recorded-owner" || len(facts.Sessions[0].Tools) != 1 || facts.Sessions[0].Tools[0].Errors != 2 {
+		t.Fatalf("read lost ordinary persisted evidence: %+v", facts.Sessions)
+	}
+	if len(facts.Anomalies) != 0 || len(facts.Sessions[0].Anomalies) != 0 || len(facts.Sessions[0].Skills) != 0 || len(facts.Sessions[0].Delegations) != 0 {
+		t.Fatal("read restored disabled category fields")
+	}
+	if response.Ledger.Totals.ContextHealth != "DISABLED" {
+		t.Fatalf("disabled read claimed health %q", response.Ledger.Totals.ContextHealth)
+	}
+	after, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(after) != ledger {
+		t.Fatal("GET rewrote generation policy ledger")
+	}
+}

@@ -919,7 +919,7 @@ func (transcript *Transcript) finalizeFacts() {
 }
 
 // SessionFacts converts the transcript invocations, tools, and events into normalized SessionFacts.
-func (transcript Transcript) SessionFacts() ([]domain.SessionFact, error) {
+func (transcript Transcript) SessionFacts(policies ...domain.GenerationPolicy) ([]domain.SessionFact, error) {
 	owned := transcript.sessions
 	if owned == nil {
 		session := domain.SessionFact{ID: transcript.sessionIDOrThread(), Source: domain.SourceCodex, Invocations: transcript.Invocations, Skills: transcript.leanSkills(), Delegations: transcript.leanDelegations()}
@@ -933,7 +933,7 @@ func (transcript Transcript) SessionFacts() ([]domain.SessionFact, error) {
 	if err != nil {
 		return nil, fmt.Errorf("grouping Codex facts by session: %w", err)
 	}
-	facts, err := domain.PersistSourceAnomalySummaries(domain.AgenticFactLedger{Sessions: sessions}, domain.SourceEvents{Events: transcript.Events, CompleteSessionIDs: sessionIDs(sessions)})
+	facts, err := domain.PersistSourceAnomalySummaries(domain.AgenticFactLedger{Sessions: sessions, GenerationPolicy: optionalGenerationPolicy(policies)}, domain.SourceEvents{Events: transcript.Events, CompleteSessionIDs: sessionIDs(sessions)})
 	if err != nil {
 		return nil, err
 	}
@@ -943,13 +943,18 @@ func (transcript Transcript) SessionFacts() ([]domain.SessionFact, error) {
 // CombineTranscripts merges a discovered root thread and its child threads
 // while preserving per-thread invocation facts and aggregating tool summaries.
 func CombineTranscripts(transcripts []Transcript) (Transcript, error) {
+	return CombineTranscriptsWithPolicy(transcripts)
+}
+
+// CombineTranscriptsWithPolicy carries generate output policy through grouping.
+func CombineTranscriptsWithPolicy(transcripts []Transcript, policies ...domain.GenerationPolicy) (Transcript, error) {
 	if len(transcripts) == 0 {
 		return Transcript{}, errors.New("cannot combine an empty Codex transcript set")
 	}
 	transcripts = resolveSourceChildren(transcripts)
 	combined := Transcript{RecordKinds: make(map[string]int64), EventKinds: make(map[string]int64), sessions: []domain.SessionFact{}}
 	for index, transcript := range transcripts {
-		sessions, err := transcript.SessionFacts()
+		sessions, err := transcript.SessionFacts(policies...)
 		if err != nil {
 			return Transcript{}, fmt.Errorf("grouping Codex transcript %d: %w", index, err)
 		}
@@ -1012,4 +1017,12 @@ func addUsage(target *Usage, usage tokenUsage) {
 	target.CacheRead += usage.CachedInput
 	target.CacheWrite += usage.CacheWrite
 	target.Reasoning += usage.Reasoning
+}
+
+func optionalGenerationPolicy(policies []domain.GenerationPolicy) *domain.GenerationPolicy {
+	if len(policies) == 0 {
+		return nil
+	}
+	policy := policies[0]
+	return &policy
 }

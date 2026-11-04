@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { FleetAnomalyCard } from './FleetAnomalyCard';
 import type { FleetAnomalySummary } from '../domain/types';
 
@@ -68,6 +68,42 @@ describe('FleetAnomalyCard Component', () => {
     expect(screen.getByText('40.0%')).toBeInTheDocument();
     expect(screen.getByText('bash')).toBeInTheDocument();
     expect(screen.getByText('10.0%')).toBeInTheDocument();
+  });
+
+  it.each([0, 1])('retains ordinary tool calls/errors when %i selected ledgers have analysis enabled', (enabled) => {
+    const summary: FleetAnomalySummary = {
+      ...sampleSummary, disabled_tickets: 2 - enabled, total_tickets: enabled,
+      total_anomalies: 0, warning_count: 0, critical_count: 0,
+      severity_counts: {}, rule_counts: {}, tickets_with_anomalies: 0,
+      anomaly_rate_per_ticket: 0,
+      brittle_tools: [{ tool_name: 'bash', total_calls: 20, error_count: 4, failure_rate_pct: 20, anomaly_count: 0 }],
+    };
+    render(<FleetAnomalyCard summary={summary} />);
+    const row = screen.getByText('bash').closest('tr')!;
+    expect(within(row).getByRole('cell', { name: '20' })).toBeVisible();
+    expect(within(row).getByRole('cell', { name: '4' })).toBeVisible();
+    expect(within(row).getByRole('cell', { name: '20.0%' })).toBeVisible();
+    expect(screen.queryByText('Fleet Operating Cleanly - Zero Anomalies Detected')).not.toBeInTheDocument();
+    if (enabled === 0) {
+      expect(screen.queryByText('Total Anomalies')).not.toBeInTheDocument();
+      expect(screen.queryByText('Anomaly Rate')).not.toBeInTheDocument();
+      expect(screen.queryByText('Anomaly Rule Distribution')).not.toBeInTheDocument();
+    }
+  });
+
+  it.each([0, 1])('preserves recorded tool evidence and known findings while unavailable analysis has %i known anomalies', (known) => {
+    const summary: FleetAnomalySummary = {
+      ...sampleSummary, disabled_tickets: 0, unavailable_tickets: 1,
+      total_tickets: 1, total_anomalies: known, warning_count: known, critical_count: 0,
+      brittle_tools: [{ tool_name: 'bash', total_calls: 20, error_count: 4, failure_rate_pct: 20, anomaly_count: known }],
+    };
+    render(<FleetAnomalyCard summary={summary} />);
+    const row = screen.getByText('bash').closest('tr')!;
+    expect(within(row).getByRole('cell', { name: '20' })).toBeVisible();
+    expect(within(row).getByRole('cell', { name: '4' })).toBeVisible();
+    expect(screen.queryByText('Fleet Operating Cleanly - Zero Anomalies Detected')).not.toBeInTheDocument();
+    if (known === 0) expect(screen.getByText('Recorded anomaly analysis unavailable')).toBeVisible();
+    else expect(screen.getByText(/shown findings are incomplete/)).toBeVisible();
   });
 
   it('handles division by zero defensively when a brittle tool has zero calls', () => {

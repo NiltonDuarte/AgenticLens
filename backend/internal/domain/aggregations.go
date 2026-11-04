@@ -665,6 +665,9 @@ func ComputeThreadSummariesWithCeiling(sessions []SessionFact, ceiling int64, ro
 
 // DeriveMetricsLedger projects all aggregations from an atomic fact ledger using full project configuration.
 func DeriveMetricsLedger(factLedger AgenticFactLedger, cfg ProjectConfig) AgenticMetricsLedger {
+	if factLedger.GenerationPolicy != nil {
+		factLedger = ProjectGenerationFacts(factLedger, *factLedger.GenerationPolicy)
+	}
 	mappings := cfg.RoleMappings
 	if mappings == nil {
 		mappings = RoleMappings{}
@@ -708,6 +711,29 @@ func DeriveMetricsLedger(factLedger AgenticFactLedger, cfg ProjectConfig) Agenti
 		}
 	}
 
+	analysisStatus := ContextHealthStatus("")
+	if !factLedger.EffectiveGenerationPolicy().Anomalies {
+		analysisStatus = ContextHealthDisabled
+	} else if factLedger.UnavailableAnomalySessions() > 0 {
+		analysisStatus = ContextHealthUnavailable
+	}
+	if analysisStatus != "" {
+		totals.ContextHealth = analysisStatus
+		eff.ContextWindowHealth.Status = analysisStatus
+		for i := range roles {
+			roles[i].ContextHealth = analysisStatus
+		}
+		for i := range models {
+			models[i].ContextHealth = analysisStatus
+		}
+		for i := range threads {
+			for j := range threads[i].Roles {
+				for k := range threads[i].Roles[j].Models {
+					threads[i].Roles[j].Models[k].ContextHealth = analysisStatus
+				}
+			}
+		}
+	}
 	return AgenticMetricsLedger{
 		TicketID:           factLedger.TicketID,
 		TicketTitle:        factLedger.TicketTitle,
@@ -873,7 +899,14 @@ func CalculateFleetSummary(ledgers []AgenticMetricsLedger) FleetSummary {
 		overallReasoningRatioPct = math.Round(float64(totalReasoningTokens)/float64(genTotal)*1000.0) / 10.0
 	}
 
+	var skillsDisabled int64
+	for _, ledger := range ledgers {
+		if !ledger.Facts.EffectiveGenerationPolicy().Skills {
+			skillsDisabled++
+		}
+	}
 	return FleetSummary{
+		SkillsDisabledTickets:    skillsDisabled,
 		TotalTickets:             totalTickets,
 		TotalCostUSD:             math.Round(totalCostUSD*10000.0) / 10000.0,
 		CostSummary:              fleetCostSummary,
@@ -963,6 +996,7 @@ func BuildComparisonRows(ledgers []AgenticMetricsLedger) []TicketComparisonRow {
 		}
 
 		rows = append(rows, TicketComparisonRow{
+			GenerationPolicy:        ledger.Facts.GenerationPolicy,
 			TicketID:                tid,
 			SkillsUsed:              SkillNames(ledger.Facts),
 			UpdatedAt:               ledger.UpdatedAt,

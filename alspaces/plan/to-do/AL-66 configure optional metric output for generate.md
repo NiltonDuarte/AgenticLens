@@ -1,20 +1,20 @@
-h3. Title: AL-66: Configure optional skills, task_links and anomalies output for generate
+h3. Title: AL-66: Configure optional skills, delegations and anomalies output for generate
 
 *TARGET*: AgenticLens (Configuration / Domain / Source Adapters / CLI / Persistence / Summary / Dashboard Compatibility / Tests)
 
-*Status*: Ready
+*Status*: In Progress
 *Work type*: feat
 *Blocked by*: None
 *Blocks*: None
-*Origin*: PO-18 consolidated specification; user requests config toggles for generate features including task_links, skills and anomalies. Disabled metrics must not be written.
+*Origin*: PO-18 consolidated specification; user requests config toggles for generate features including delegations, skills and anomalies. Disabled metrics must not be written.
 
 *CONTEXT*
 
-Operators need control over optional telemetry emitted by generate. The current command gathers skills/task links, derives metrics and persists anomaly summaries; --anomalies is a diagnostic display flag, not a configuration toggle for persisted anomaly facts. Output policy must consistently apply across source extraction, retained facts, persistence and generated summaries, including the granular ownership planned in AL-62.
+Operators need control over optional telemetry emitted by generate. The current command gathers skills/delegations, derives metrics and persists anomaly summaries; --anomalies is a diagnostic display flag, not a configuration toggle for persisted anomaly facts. Output policy must consistently apply across source extraction, retained facts, persistence and generated summaries, including the granular ownership planned in AL-62.
 
 *GOAL*
 
-As an operator, I want independent configuration toggles for skills, task_links and anomalies so that generate writes only enabled metric categories. Keep existing output behavior when toggles are omitted, and distinguish disabled collection/output from measured zero or unsupported source evidence.
+As an operator, I want independent configuration toggles for skills, delegations and anomalies so that generate writes only enabled metric categories. Keep existing output behavior when toggles are omitted, and distinguish disabled collection/output from measured zero or unsupported source evidence.
 
 *VERTICAL SLICE SCOPE*
 
@@ -26,9 +26,9 @@ As an operator, I want independent configuration toggles for skills, task_links 
 
 *ACCEPTANCE CRITERIA*
 
-* Project configuration provides independent boolean enable/disable settings for skills, task_links and anomalies. Missing settings preserve current behavior (enabled); explicit false survives defaults/merging. Invalid values fail with an actionable configuration error before output files are modified. Document the exact keys and effective configuration precedence in the developer contract and user-facing config reference.
+* Project configuration provides independent boolean enable/disable settings for skills, delegations and anomalies. Missing settings preserve current behavior (enabled); explicit false survives defaults/merging. Invalid values fail with an actionable configuration error before output files are modified. Document the exact keys and effective configuration precedence in the developer contract and user-facing config reference.
 * Disabling a category makes generate omit its structured facts and category-specific derived metrics from written output, rather than writing empty arrays, null placeholders or zero counts as if measured. Apply this at every canonical owner and any compatibility projection, including session/invocation scope introduced by AL-62. Minimal explicit disabled-policy metadata/diagnostics may identify intentional omission without containing the suppressed metrics.
-* Each toggle works independently and all three can be off together. Enabled categories and core session/invocation identity, token/cost/duration/code metrics, source attribution and parent-child structure remain intact. Disabling task_links does not remove child sessions; disabling skills does not remove the ordinary invocation metrics for work that used a skill.
+* Each toggle works independently and all three can be off together. Enabled categories and core session/invocation identity, token/cost/duration/code metrics, source attribution and parent-child structure remain intact. Disabling delegations does not remove child sessions; disabling skills does not remove the ordinary invocation metrics for work that used a skill.
 * Anomalies disabled suppresses persisted anomaly facts at root/session scope and anomaly-derived generated counts, breakdowns and health claims. Do not replace absent anomaly analysis with healthy/zero-error assertions. Ordinary tool execution/error facts remain valid independent telemetry; toggles do not redact raw transcript text or unrelated tool evidence merely because it mentions a category name.
 * Regenerating an existing target output with a category disabled omits previously persisted facts of that category from the new output as an intentional policy choice; retained-session merging or optional hydration must not silently restore them during generate. Preserve existing safe-write/backup guarantees and all enabled/unrelated history. This deliberate configured omission is distinct from source-unavailable recovery, which must still retain enabled stored facts safely.
 * Generated Markdown metrics sections reflect the effective policy, including when --append replaces an earlier generated section; disabled metric values must not remain stale in that managed section. Preserve user-authored summary prose. Any category-specific console diagnostic requested while disabled reports that it is disabled; existing --anomalies does not silently re-enable persistence or analysis. No new CLI override flags are required by this ticket.

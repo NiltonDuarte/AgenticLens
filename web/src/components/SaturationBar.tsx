@@ -37,7 +37,7 @@ export const SaturationBar: React.FC<SaturationBarProps> = ({
           <InfoTooltip
             content={
               tooltip ??
-              'Context window utilization of the root agent and subagents evaluated against the 200,000 token healthy operating ceiling.'
+              (status === 'DISABLED' || status === 'UNAVAILABLE' ? 'Recorded context usage. Health classification is disabled or unavailable for this ledger.' : 'Context window utilization of the root agent and subagents evaluated against the 200,000 token healthy operating ceiling.')
             }
             ariaLabel="Information about Context Window Saturation"
           />

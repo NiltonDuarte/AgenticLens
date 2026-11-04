@@ -592,3 +592,25 @@ The ledger uses schema v6 at `<workspaces.dir>/<ticket>/agentic_metrics.json`. T
 Validated byte-identical native cache leaves retain their filesystem identity, including force-identical installation and in-place permission repair, so another project's admitted worker is not retired. A changed-content repair remains explicit. Pre-apply validation/activation failures roll back owned changes. Once external capture apply may have committed, an incomplete result, output-limit or timeout failure retains validated native/wrapper files and recoverable prior backups; it reports incomplete setup and directs status/owned reinstall recovery rather than claiming complete rollback or removing handlers referenced by hooks. Resolve those diagnostics before declaring setup healthy.
 
 Printed scaffold completion runs inside the selected project and restores the caller's location. The common wrapper's --al-project selects release authority; it does not change ordinary native working-directory semantics. Keep the printed scoped command when supplying project facts, so shared and local configuration writes cannot target another same-version scaffold in the caller's directory.
+
+### Optional metrics during generation
+
+Shared project settings independently control optional `generate` output:
+
+```yaml
+generation:
+  metrics:
+    skills: true
+    delegations: true
+    anomalies: true
+```
+
+Every omitted member defaults to true. Explicit false disables that category; values must be actual booleans, not null, strings or numbers. The public key is `delegations`; there is no `task_links` alias. Invalid settings fail before ledger or summary replacement.
+
+Configuration discovery searches upward within the project boundary and selects `.agenticlens-config.yaml`, `.agenticlens-config.yml`, then `.agenticlens-config.json` at each directory. These are alternatives, not merged files. The selected shared file overlays enabled defaults per member. `.agenticlens-config.local.yaml` retains its machine-source/capture override whitelist and cannot override these generation settings. No environment or CLI override exists for them.
+
+Disabled categories are absent from saved JSON, including retained sessions from unavailable or other harness sources. Schema 6 optionally records `generation_policy` with the three effective boolean settings; older supported ledgers without this metadata keep existing behavior. Ordinary execution, tool errors, child identities, tokens, costs and code metrics remain available. The managed Markdown section is replaced without stale disabled values or changes to user-authored prose. `generate --anomalies` reports disabled when `generation.metrics.anomalies` is false; it never re-enables analysis or persistence. Disabled anomaly analysis produces no healthy/zero-anomaly claim. Existing readers use each ledger's recorded policy, rather than today's project settings, to explain omitted data.
+
+Regeneration intentionally removes disabled categories from that target's retained history. Re-enabling can recover available source-backed facts; it cannot recover omitted facts after the original sources become unavailable. Enabled unavailable facts retain the normal portable-history guarantees. These settings apply to manual and automatic generate only: they do not rewrite other ledgers, suppress live trace collection, redact raw text, globally filter the dashboard, or change explicit backfill defaults. A source-recomputing backfill clears a stale generation marker before writing its independently refreshed facts.
+
+When anomaly output is re-enabled but an original owner remains unavailable, schema 6 records `anomaly_availability: "unavailable"` on that session and omits its anomaly array. This is unknown analysis, not a successful zero measurement. A later complete native-source refresh clears the marker. Readers keep findings from other enabled owners and report partial/unavailable coverage; ordinary tool calls/errors still cover all owners regardless of the anomaly policy. Fleet tool reliability remains visible even when every ticket omits anomaly analysis.

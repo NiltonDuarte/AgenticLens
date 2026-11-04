@@ -160,3 +160,7 @@ The ledger remains schema v5 at `<workspaces.dir>/<ticket>/agentic_metrics.json`
 ### Windows lifecycle transport budgets
 
 The native registration/request/binding handoff retains its two-second default. Native Windows Codex hook declarations allow five seconds for PowerShell startup plus that handoff; POSIX declarations retain two seconds. The OpenCode Windows transport owns a five-second deadline, limits each output stream to 64 KiB, closes owned pipes on failure and requests termination of only its spawned Windows process tree through SystemRoot taskkill. Cleanup has its own one-second bound and reports failure explicitly. POSIX OpenCode transport retains its existing 1.5-second bound. Process-transport fixtures establish these measured boundaries; actual Windows Codex/OpenCode callback delivery and generic console cancellation still require separate harness evidence. Existing OpenCode supplies its runtime; no adopting-project Node installation is introduced.
+
+## Optional generate output
+
+Use shared `generation.metrics.skills`, `generation.metrics.delegations` and `generation.metrics.anomalies` booleans. All default to true; explicit false intentionally omits that category, including retained target history. These settings are not machine-local overrides or global redaction. See the canonical [generation configuration reference](../../../../docs/SETUP_MANUAL.md#optional-metrics-during-generation) for precedence, disabled-policy metadata, `--anomalies`, safe replacement and restoration limits.

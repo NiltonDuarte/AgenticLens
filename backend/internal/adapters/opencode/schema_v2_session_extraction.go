@@ -63,6 +63,10 @@ type schemaV2ModelJSON struct {
 }
 
 func extractSchemaV2SessionsWithEvents(db *sql.DB, roots []string, defaultUser string, userBySession map[string]string, strict bool, eventSink *[]domain.EventFact, exact ...bool) ([]domain.SessionFact, *string, *string, error) {
+	return extractSchemaV2SessionsWithPolicy(db, roots, defaultUser, userBySession, strict, eventSink, nil, exact...)
+}
+
+func extractSchemaV2SessionsWithPolicy(db *sql.DB, roots []string, defaultUser string, userBySession map[string]string, strict bool, eventSink *[]domain.EventFact, policy *domain.GenerationPolicy, exact ...bool) ([]domain.SessionFact, *string, *string, error) {
 	ids, err := buildQuotedIDList(roots)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("validating thread ids: %w", err)
@@ -372,7 +376,7 @@ func extractSchemaV2SessionsWithEvents(db *sql.DB, roots []string, defaultUser s
 	if err := proveSourceChildLinks(db, "session_v2", events); err != nil {
 		return nil, nil, nil, err
 	}
-	projected, err := projectSourceFacts(result, events, strict)
+	projected, err := projectSourceFacts(result, events, strict, policy)
 	if err != nil {
 		return nil, nil, nil, err
 	}

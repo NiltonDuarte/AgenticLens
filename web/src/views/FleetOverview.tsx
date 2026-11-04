@@ -250,9 +250,9 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
           <section className="distribution-row" aria-label="Skill Adoption">
             <div className="kpi-card">
               <h2 className="kpi-title">Skill Adoption</h2>
-              <div className="kpi-value mono-number">{skillAdoption.length} unique skills</div>
-              <p>{skillAdoption.reduce((total, skill) => total + skill.total_invocations, 0)} activations</p>
-              {skillAdoption.length === 0 ? <p>No recorded skills</p> : (
+              <div className="kpi-value mono-number">{summary.skills_disabled_tickets === summary.total_tickets && summary.total_tickets > 0 ? 'Disabled' : `${skillAdoption.length} unique skills`}</div>
+              <p>{(summary.skills_disabled_tickets ?? 0) > 0 ? `${summary.skills_disabled_tickets} tickets omitted skill metrics during generation.` : `${skillAdoption.reduce((total, skill) => total + skill.total_invocations, 0)} activations`}</p>
+              {skillAdoption.length === 0 ? (summary.skills_disabled_tickets ?? 0) > 0 ? null : <p>No recorded skills</p> : (
                 <ol aria-label="Top skills">
                   {skillAdoption.slice(0, 3).map((skill) => (
                     <li key={skill.name}>{skill.name}: {skill.total_invocations} invocations</li>

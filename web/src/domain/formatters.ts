@@ -331,6 +331,7 @@ export function deriveTicketComparisonRows(
     return {
       ticket_id: tid,
       skills_used: skillNames(ledger.facts),
+      ...(ledger.facts.generation_policy ? { generation_policy: ledger.facts.generation_policy } : {}),
       ticket_type: ledger.ticket_type,
       updated_at: ledger.updated_at,
       sdlc_iterations: eff.sdlc_iterations,

@@ -1543,3 +1543,59 @@ func TestFullSourceAnomaliesSurviveLeanPersistenceAndPartialRefresh(t *testing.T
 		t.Fatalf("sparse event recomputation discarded cached full-source anomalies or invented skill streak: actual=%+v expected=%+v", actual, expected)
 	}
 }
+
+func TestCurrentLedgerGenerationPolicyReadBoundary(t *testing.T) {
+	for _, tc := range []struct {
+		name, policy string
+		valid        bool
+	}{
+		{"historical_absent", "", true},
+		{"all_enabled", `,"generation_policy":{"skills":true,"delegations":true,"anomalies":true}`, true},
+		{"all_disabled", `,"generation_policy":{"skills":false,"delegations":false,"anomalies":false}`, true},
+		{"null", `,"generation_policy":null`, false},
+		{"partial", `,"generation_policy":{"skills":false}`, false},
+		{"wrong_type", `,"generation_policy":{"skills":false,"delegations":"false","anomalies":false}`, false},
+		{"retired_spelling", `,"generation_policy":{"skills":false,"task_links":false,"anomalies":false}`, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			raw := `{"schema_version":6,"sessions":[{"id":"owner","source":"codex","user":"tester","invocations":[],"tools":[]}]` + tc.policy + `}`
+			if tc.name != "all_disabled" {
+				raw = strings.Replace(raw, `"tools":[]`, `"tools":[],"anomalies":[]`, 1)
+			}
+			existing, err := adapters.DecodeExistingFactLedger([]byte(raw))
+			if (err == nil) != tc.valid {
+				t.Fatalf("valid=%t, decode error=%v", tc.valid, err)
+			}
+			if tc.valid && existing == nil {
+				t.Fatal("valid portable ledger unavailable")
+			}
+		})
+	}
+}
+
+func TestCurrentLedgerUnavailableAnomalyBoundary(t *testing.T) {
+	for _, tc := range []struct {
+		name, fields string
+		valid        bool
+	}{
+		{"omitted_unavailable", `,"anomaly_availability":"unavailable"`, true},
+		{"unknown_marker", `,"anomaly_availability":"missing"`, false},
+		{"null_marker", `,"anomaly_availability":null`, false},
+		{"boolean_marker", `,"anomaly_availability":false`, false},
+		{"contradictory_empty", `,"anomaly_availability":"unavailable","anomalies":[]`, false},
+		{"contradictory_null", `,"anomaly_availability":"unavailable","anomalies":null`, false},
+		{"unmarked_null", `,"anomalies":null`, false},
+		{"unmarked_measured_empty", `,"anomalies":[]`, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			raw := `{"schema_version":6,"sessions":[{"id":"owner","source":"codex","user":"tester","invocations":[],"tools":[]` + tc.fields + `}]}`
+			existing, err := adapters.DecodeExistingFactLedger([]byte(raw))
+			if (err == nil) != tc.valid {
+				t.Fatalf("valid=%t error=%v", tc.valid, err)
+			}
+			if tc.valid && existing == nil {
+				t.Fatal("valid portable ledger unavailable")
+			}
+		})
+	}
+}

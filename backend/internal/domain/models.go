@@ -107,18 +107,24 @@ type SessionToolFact struct {
 	Errors int64  `json:"errors"`
 }
 
+// AnomalyAvailability distinguishes omitted historical analysis from a measured empty result.
+type AnomalyAvailability string
+
+const AnomalyUnavailable AnomalyAvailability = "unavailable"
+
 // SessionFact owns durable session metrics and lean occurrences. Source events
 // are request-local inputs and never travel through this persistence model.
 type SessionFact struct {
-	Skills      []SkillFact       `json:"skills,omitempty"`
-	Delegations []DelegationFact  `json:"delegations,omitempty"`
-	ID          string            `json:"id"`
-	ParentID    *string           `json:"parent_id,omitempty"`
-	Source      SourceHarness     `json:"source,omitempty"`
-	User        string            `json:"user,omitempty"`
-	Invocations []InvocationFact  `json:"invocations"`
-	Tools       []SessionToolFact `json:"tools"`
-	Anomalies   []Anomaly         `json:"anomalies"`
+	AnomalyAvailability AnomalyAvailability `json:"anomaly_availability,omitempty"`
+	Skills              []SkillFact         `json:"skills,omitempty"`
+	Delegations         []DelegationFact    `json:"delegations,omitempty"`
+	ID                  string              `json:"id"`
+	ParentID            *string             `json:"parent_id,omitempty"`
+	Source              SourceHarness       `json:"source,omitempty"`
+	User                string              `json:"user,omitempty"`
+	Invocations         []InvocationFact    `json:"invocations"`
+	Tools               []SessionToolFact   `json:"tools"`
+	Anomalies           []Anomaly           `json:"anomalies"`
 }
 
 type TraceAvailability string
@@ -176,17 +182,18 @@ type MigrationInfo struct {
 
 // AgenticFactLedger is the root raw session facts ledger extracted for a ticket workspace.
 type AgenticFactLedger struct {
-	SchemaVersion *int                    `json:"schema_version,omitempty"`
-	Migration     *MigrationInfo          `json:"migration,omitempty"`
-	TicketID      *string                 `json:"ticket_id"`
-	TicketTitle   *string                 `json:"ticket_title"`
-	TicketType    *ConventionalTicketType `json:"ticket_type"`
-	StartedAt     *string                 `json:"started_at"`
-	CompletedAt   *string                 `json:"completed_at"`
-	UpdatedAt     string                  `json:"updated_at"`
-	Code          CodeFacts               `json:"code"`
-	Sessions      []SessionFact           `json:"sessions"`
-	Anomalies     []Anomaly               `json:"anomalies"`
+	GenerationPolicy *GenerationPolicy       `json:"generation_policy,omitempty"`
+	SchemaVersion    *int                    `json:"schema_version,omitempty"`
+	Migration        *MigrationInfo          `json:"migration,omitempty"`
+	TicketID         *string                 `json:"ticket_id"`
+	TicketTitle      *string                 `json:"ticket_title"`
+	TicketType       *ConventionalTicketType `json:"ticket_type"`
+	StartedAt        *string                 `json:"started_at"`
+	CompletedAt      *string                 `json:"completed_at"`
+	UpdatedAt        string                  `json:"updated_at"`
+	Code             CodeFacts               `json:"code"`
+	Sessions         []SessionFact           `json:"sessions"`
+	Anomalies        []Anomaly               `json:"anomalies"`
 }
 
 // AnomalyFacts returns persisted anomaly summaries with their owning session restored.
@@ -485,6 +492,8 @@ type BrittleToolSummary struct {
 
 // FleetAnomalySummary aggregates anomaly patterns, severity counts, and brittle tools across the fleet.
 type FleetAnomalySummary struct {
+	UnavailableTickets   int64                `json:"unavailable_tickets,omitempty"`
+	DisabledTickets      int64                `json:"disabled_tickets,omitempty"`
 	TotalAnomalies       int64                `json:"total_anomalies"`
 	WarningCount         int64                `json:"warning_count"`
 	CriticalCount        int64                `json:"critical_count"`
@@ -505,6 +514,7 @@ type SkillAdoptionFact struct {
 
 // FleetSummary aggregates high-level metrics across multiple tickets.
 type FleetSummary struct {
+	SkillsDisabledTickets    int64                     `json:"skills_disabled_tickets,omitempty"`
 	SkillAdoption            []SkillAdoptionFact       `json:"skill_adoption"`
 	TotalTickets             int64                     `json:"total_tickets"`
 	TotalCostUSD             float64                   `json:"total_cost_usd"`
@@ -530,6 +540,7 @@ type FleetSummary struct {
 
 // TicketComparisonRow summarizes a single ticket for cross-ticket matrix presentation.
 type TicketComparisonRow struct {
+	GenerationPolicy        *GenerationPolicy       `json:"generation_policy,omitempty"`
 	SkillsUsed              []string                `json:"skills_used"`
 	TicketID                string                  `json:"ticket_id"`
 	UpdatedAt               string                  `json:"updated_at"`

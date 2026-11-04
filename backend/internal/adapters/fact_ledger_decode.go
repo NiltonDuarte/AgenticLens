@@ -5,6 +5,9 @@ package adapters
 type canonicalFactLedgerDTO AgenticFactLedgerDTO
 
 func decodeCanonicalFactLedger(data []byte, requiredCostEvidence bool) (AgenticFactLedgerDTO, error) {
+	if err := validateGenerationPolicyJSON(data); err != nil {
+		return AgenticFactLedgerDTO{}, err
+	}
 	var wire canonicalFactLedgerDTO
 	decoder := newStrictFactDecoder(data)
 	if err := decoder.Decode(&wire); err != nil {

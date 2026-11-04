@@ -12,13 +12,15 @@ function InvocationTime({ value }: { readonly value: string | null }): React.Rea
 
 export interface SkillsSubagentsPanelProps {
   readonly skills: readonly OwnedSkillFact[];
+  readonly skillsDisabled?: boolean;
+  readonly delegationsDisabled?: boolean;
   readonly delegations: readonly OwnedDelegationFact[];
   readonly availableSessionIds: readonly string[];
   readonly onJumpToSession: (sessionId: string) => void;
 }
 
 export const SkillsSubagentsPanel: React.FC<SkillsSubagentsPanelProps> = ({
-  skills, delegations, availableSessionIds, onJumpToSession,
+  skills, delegations, availableSessionIds, onJumpToSession, skillsDisabled = false, delegationsDisabled = false,
 }) => {
   const [expanded, setExpanded] = useState(true);
   const panelId = useId();
@@ -34,10 +36,12 @@ export const SkillsSubagentsPanel: React.FC<SkillsSubagentsPanelProps> = ({
         <button type="button" className="thread-header-btn" aria-expanded={expanded}
           aria-controls={panelId} onClick={() => setExpanded((value) => !value)}>
           <span>Skills &amp; Subagents</span>
-          <span className="thread-count-badge">{visibleSkills.length} Skills · {visibleDelegations.length} Delegations</span>
+          <span className="thread-count-badge">{skillsDisabled ? 'Skills disabled' : `${visibleSkills.length} Skills`} · {delegationsDisabled ? 'Delegations disabled' : `${visibleDelegations.length} Delegations`}</span>
         </button>
       </h4>
       <div id={panelId} hidden={!expanded}>
+        {skillsDisabled && <p>Skills were disabled when this ledger was generated.</p>}
+        {delegationsDisabled && <p>Delegations were disabled when this ledger was generated.</p>}
         {sessionIds.length > 0 && (skills.length > 0 || delegations.length > 0) && <label>Session <select aria-label="Filter skills and delegations by session"
           value={sessionId} onChange={(event) => setSessionId(event.target.value)}>
           <option value="">All sessions</option>
@@ -45,7 +49,7 @@ export const SkillsSubagentsPanel: React.FC<SkillsSubagentsPanelProps> = ({
         </select></label>}
         {sessionId && visibleSkills.length === 0 && visibleDelegations.length === 0 &&
           <p>No recorded skills or delegations for this session.</p>}
-        {skills.length === 0 && delegations.length === 0 && (
+        {!skillsDisabled && !delegationsDisabled && skills.length === 0 && delegations.length === 0 && (
           <p className="empty-threads-note">No modular skills or subagent delegations recorded for this ticket.</p>
         )}
         {visibleSkills.length > 0 && (

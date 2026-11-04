@@ -160,6 +160,8 @@ func enrichedString(recorded, local *string) *string {
 // DetectAnomaliesWithEvidence attaches request-local source references to summaries.
 // The references are intended only for local hydrated API responses.
 func DetectAnomaliesWithEvidence(ledger AgenticFactLedger, source SourceEvents, thresholds ...AnomalyThresholdsConfig) ([]Anomaly, error) {
+	// Explicit source trace analysis is independent of recorded generation output.
+	ledger.GenerationPolicy = nil
 	events := SortEvents(source.Events)
 	anomalies := RefreshAnomalySummariesFromSource(ledger, source, thresholds...)
 	complete := make(map[string]bool)
@@ -205,6 +207,9 @@ func RefreshAnomalySummaries(ledger AgenticFactLedger, thresholds ...AnomalyThre
 	return RefreshAnomalySummariesFromSource(ledger, SourceEvents{}, thresholds...)
 }
 func RefreshAnomalySummariesFromSource(ledger AgenticFactLedger, source SourceEvents, thresholds ...AnomalyThresholdsConfig) []Anomaly {
+	if !ledger.EffectiveGenerationPolicy().Anomalies {
+		return nil
+	}
 	cached := ledger.AnomalyFacts()
 	currentSessions := make(map[string]bool)
 	for _, id := range source.CompleteSessionIDs {
@@ -319,6 +324,11 @@ func PersistAnomalySummaries(ledger AgenticFactLedger, thresholds ...AnomalyThre
 	return PersistSourceAnomalySummaries(ledger, SourceEvents{}, thresholds...)
 }
 func PersistSourceAnomalySummaries(ledger AgenticFactLedger, source SourceEvents, thresholds ...AnomalyThresholdsConfig) (AgenticFactLedger, error) {
+	// Keep the original owner snapshots intact until retained-history validation.
+	// The publication projection suppresses disabled facts after that guard.
+	if !ledger.EffectiveGenerationPolicy().Anomalies {
+		return ledger, nil
+	}
 	anomalies := RefreshAnomalySummariesFromSource(ledger, source, thresholds...)
 	bySession := make(map[string][]Anomaly)
 	ticket := []Anomaly{}
@@ -342,6 +352,7 @@ func PersistSourceAnomalySummaries(ledger AgenticFactLedger, source SourceEvents
 			continue
 		}
 		ledger.Sessions[i].Anomalies = append([]Anomaly{}, bySession[ledger.Sessions[i].ID]...)
+		ledger.Sessions[i].AnomalyAvailability = ""
 	}
 	ledger.Anomalies = ticket
 	return ledger, nil

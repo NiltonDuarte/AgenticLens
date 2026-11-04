@@ -652,6 +652,9 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
       </div>
 
       {/* Row 6: Transient source trace and recorded summaries */}
+      {ledger.facts.generation_policy?.anomalies !== false && ledger.facts.sessions.some((session) => session.anomaly_availability === 'unavailable') &&
+        <p>Recorded anomaly analysis is unavailable for retained sessions. A complete source-backed refresh is required; recorded findings from other owners remain available.</p>}
+      {ledger.facts.generation_policy?.anomalies === false && <p>Recorded anomaly analysis was disabled when this ledger was generated. Source trace analysis is independent.</p>}
       <TraceWaterfall
         key={`trace-${requestGenerationRef.current}`}
         events={events}
@@ -688,6 +691,8 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
       <SkillsSubagentsPanel
         key={ledger.ticket_id}
         skills={ledgerSkills(ledger.facts)}
+        skillsDisabled={ledger.facts.generation_policy?.skills === false}
+        delegationsDisabled={ledger.facts.generation_policy?.delegations === false}
         delegations={ledgerDelegations(ledger.facts)}
         availableSessionIds={ledger.threads.map((thread) => thread.session_id)}
         onJumpToSession={handleSelectSession}

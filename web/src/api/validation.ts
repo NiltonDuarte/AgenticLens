@@ -16,7 +16,7 @@ const numericMap = (value: unknown): boolean => isRecord(value) && Object.values
 const fields = (value: Record<string, unknown>, keys: readonly string[], check: (item: unknown) => boolean): boolean => keys.every((key) => check(value[key]));
 const array = (value: unknown, check: (item: unknown) => boolean): boolean => Array.isArray(value) && value.every(check);
 const optionalArray = (value: unknown, check: (item: unknown) => boolean): boolean => value === undefined || array(value, check);
-const health = (value: unknown): boolean => value === 'HEALTHY' || value === 'ELEVATED' || value === 'BLOATED' || value === 'CRITICAL';
+const health = (value: unknown): boolean => value === 'UNAVAILABLE' || value === 'DISABLED' || value === 'HEALTHY' || value === 'ELEVATED' || value === 'BLOATED' || value === 'CRITICAL';
 
 function eventFields(value: Record<string, unknown>): boolean {
   return fields(value, ['timestamp', 'role', 'status'], string) && fields(value, ['turn', 'context_tokens'], number) &&
@@ -65,7 +65,8 @@ function delegation(value: unknown): boolean {
     (value.child_session_id === undefined || (typeof value.child_session_id === 'string' && value.child_session_id.trim().length > 0));
 }
 function session(value: unknown): boolean {
-  return isRecord(value) && string(value.id) && optionalString(value.parent_id) &&
+  return isRecord(value) && (value.anomaly_availability === undefined || value.anomaly_availability === 'unavailable') &&
+    (value.anomaly_availability !== 'unavailable' || value.anomalies === undefined) && string(value.id) && optionalString(value.parent_id) &&
     (value.source === undefined || value.source === 'unknown' || value.source === 'opencode' || value.source === 'codex') &&
     (value.user === undefined || string(value.user)) && array(value.invocations, invocation) &&
     array(value.tools, (v) => isRecord(v) && string(v.name) && fields(v, ['calls', 'errors'], number)) &&
@@ -82,7 +83,8 @@ function migration(value: unknown): boolean {
 }
 function facts(value: unknown): boolean {
   return isRecord(value) && ticketMetadata(value) && value.schema_version === 6 &&
-    (value.migration === undefined || migration(value.migration)) && isRecord(value.code) &&
+    (value.migration === undefined || migration(value.migration)) &&
+    (value.generation_policy === undefined || (isRecord(value.generation_policy) && fields(value.generation_policy, ['skills', 'delegations', 'anomalies'], (v) => typeof v === 'boolean'))) && isRecord(value.code) &&
     fields(value.code, ['lines_added', 'lines_deleted', 'test_lines_added', 'test_lines_deleted', 'prod_lines_added', 'prod_lines_deleted', 'files_changed', 'sdlc_iterations'], number) &&
     array(value.sessions, session) && optionalArray(value.anomalies, isAnomaly) &&
     !['invocations', 'tools', 'events', 'events_are_partial', 'skills', 'task_links', 'delegations', 'unresolved_facts'].some((key) => Object.hasOwn(value, key));
@@ -145,7 +147,7 @@ export function decodeLedgers(value: unknown): AgenticMetricsLedger[] {
   });
 }
 function isFleet(value: unknown): value is FleetSummary {
-  if (!isRecord(value) || !isRecord(value.anomaly_summary)) return false;
+  if (!isRecord(value) || !isRecord(value.anomaly_summary) || !optionalNumber(value.skills_disabled_tickets) || !optionalNumber(value.anomaly_summary.disabled_tickets) || !optionalNumber(value.anomaly_summary.unavailable_tickets)) return false;
   const anomaly = value.anomaly_summary;
   return fields(value, ['total_tickets', 'total_invocations', 'total_input_tokens', 'total_output_tokens', 'total_cache_read_tokens', 'overall_cache_hit_rate_pct', 'total_duration_seconds', 'total_lines_added', 'total_lines_deleted', 'total_files_changed', 'total_reasoning_tokens', 'overall_reasoning_ratio_pct'], number) &&
     nullableNumber(value.total_cost_usd) && string(value.formatted_total_duration) && nullableNumericMap(value.role_costs) && nullableNumericMap(value.model_costs) &&

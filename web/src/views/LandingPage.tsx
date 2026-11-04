@@ -403,7 +403,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </thead>
               <tbody>
                 {sortedWorkspaces.map((w) => {
-                  const statusClass = ['HEALTHY', 'ELEVATED', 'BLOATED', 'CRITICAL'].includes(
+                  const statusClass = ['HEALTHY', 'ELEVATED', 'BLOATED', 'CRITICAL', 'DISABLED', 'UNAVAILABLE'].includes(
                     w.context_health_status
                   )
                     ? w.context_health_status

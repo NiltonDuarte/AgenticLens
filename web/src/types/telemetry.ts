@@ -98,6 +98,8 @@ export interface BrittleToolSummary {
 }
 
 export interface FleetAnomalySummary {
+  readonly disabled_tickets?: number;
+  readonly unavailable_tickets?: number;
   readonly total_anomalies: number;
   readonly warning_count: number;
   readonly critical_count: number;

@@ -555,7 +555,7 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
                       <td className="ticket-title-cell" title={row.ticket_title}>
                         {row.ticket_title}
                       </td>
-                      <td title={row.skills_used?.join(', ')}>{row.skills_used?.length ? row.skills_used.join(', ') : 'No recorded skills'}</td>
+                      <td title={row.skills_used?.join(', ')}>{row.generation_policy?.skills === false ? 'Skills disabled' : row.skills_used?.length ? row.skills_used.join(', ') : 'No recorded skills'}</td>
                       <td>
                         <span className={`status-pill ${isCompleted ? 'live' : 'mock'}`}>
                           {isCompleted ? 'Completed' : 'In Progress'}
