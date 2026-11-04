@@ -68,32 +68,24 @@ Final ingestion first failed before extraction because the configured shared loc
 The per-command override retry also failed because installed-state preflight validates the configured default before the override. A temporary ignored .agenticlens-config.local.yaml now selects the same fresh state path; it was created exclusively with 0600 permissions while preserving the shared configuration SHA and old registry. No hooks exist for this checkout and none were changed. This operational override will be removed after final identity verification; source code/reviewed fingerprint remain unchanged.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 24
-- **Active Agent Duration:** 10h 35m (excludes user wait time)
-- **Context Window Health:** CRITICAL — Root agent peak 450.9k tokens (226% of 200k healthy ceiling, 2 compactions) | Subagents peak 449.8k (Tester)
+- **Software Development Life Cycle Iterations:** 26
+- **Active Agent Duration:** 11h 8m (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 450.9k tokens (113% of 400k healthy ceiling, 2 compactions) | Subagents peak 449.8k (Tester)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
-- **Subagent Turn Velocity & Thrashing:** 2.0 avg turns/run (peak: 6 turns) | Planner 2.0, Coder 4.5, Tester 4.0, Reviewer-architecture 1.3, Reviewer-behavior 1.3, Reviewer-data 1.2, Reviewer-tests 1.3
+- **Subagent Turn Velocity & Thrashing:** 2.1 avg turns/run (peak: 7 turns) | Planner 2.0, Coder 5.0, Tester 4.0, Reviewer-architecture 1.3, Reviewer-behavior 1.3, Reviewer-data 1.2, Reviewer-tests 1.3
 - **Test-to-Production Code Ratio:** 1.8:1 (+5,089 test lines / +2,824 prod lines)
 - **Code Delivered:** +8,269 / -7,607 lines across 140 code files (excluding docs)
-- **Reasoning Effort:** 416,219 reasoning tokens (28.8% of generated output)
-- **Tool Health & Self-Correction:** 2,411 tool calls (177 self-corrections, 92.7% success rate)
+- **Reasoning Effort:** 422,260 reasoning tokens (28.8% of generated output)
+- **Tool Health & Self-Correction:** 2,459 tool calls (180 self-corrections, 92.7% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 36 execution anomalies detected (22 CRITICAL, 14 WARNING).
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.1k tokens) — Context tokens reached 200.1k, breaching the 200k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.5k tokens) — Context tokens reached 200.5k, breaching the 200k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (201.5k tokens) — Context tokens reached 201.5k, breaching the 200k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (201.0k tokens) — Context tokens reached 201.0k, breaching the 200k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.9k tokens) — Context tokens reached 200.9k, breaching the 200k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (203.9k tokens) — Context tokens reached 203.9k, breaching the 200k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.2k tokens) — Context tokens reached 200.2k, breaching the 200k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (450.9k tokens) — Context tokens reached 450.9k, breaching the 200k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (407.2k tokens) — Context tokens reached 407.2k, breaching the 200k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (286.2k tokens) — Context tokens reached 286.2k, breaching the 200k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (449.8k tokens) — Context tokens reached 449.8k, breaching the 200k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (362.6k tokens) — Context tokens reached 362.6k, breaching the 200k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (243.7k tokens) — Context tokens reached 243.7k, breaching the 200k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (387.0k tokens) — Context tokens reached 387.0k, breaching the 200k critical ceiling.
+- **Status:** 30 execution anomalies detected (14 CRITICAL, 16 WARNING).
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (402.1k tokens) — Context tokens reached 402.1k, breaching the 400k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (400.1k tokens) — Context tokens reached 400.1k, breaching the 400k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (400.7k tokens) — Context tokens reached 400.7k, breaching the 400k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (450.9k tokens) — Context tokens reached 450.9k, breaching the 400k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (407.2k tokens) — Context tokens reached 407.2k, breaching the 400k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (449.8k tokens) — Context tokens reached 449.8k, breaching the 400k critical ceiling.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (25 cycles) — Subagent roles 'coder' and 'tester' alternated for 25 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (53 cycles) — Subagent roles 'coder' and 'tester' alternated for 53 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-behavior <-> reviewer-architecture (5 cycles) — Subagent roles 'reviewer-behavior' and 'reviewer-architecture' alternated for 5 consecutive cycles.
@@ -102,20 +94,22 @@ The per-command override retry also failed because installed-state preflight val
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (89 cycles) — Subagent roles 'coder' and 'tester' alternated for 89 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (21 cycles) — Subagent roles 'coder' and 'tester' alternated for 21 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (13 cycles) — Subagent roles 'coder' and 'tester' alternated for 13 consecutive cycles.
-- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.5k tokens) — Context tokens reached 160.5k, breaching the 160k warning ceiling.
-- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.9k tokens) — Context tokens reached 160.9k, breaching the 160k warning ceiling.
-- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.8k tokens) — Context tokens reached 161.8k, breaching the 160k warning ceiling.
-- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (165.4k tokens) — Context tokens reached 165.4k, breaching the 160k warning ceiling.
-- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.0k tokens) — Context tokens reached 160.0k, breaching the 160k warning ceiling.
-- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.5k tokens) — Context tokens reached 160.5k, breaching the 160k warning ceiling.
-- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.9k tokens) — Context tokens reached 160.9k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (220.4k tokens) — Context tokens reached 220.4k, breaching the 220k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (224.4k tokens) — Context tokens reached 224.4k, breaching the 220k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (220.1k tokens) — Context tokens reached 220.1k, breaching the 220k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (220.3k tokens) — Context tokens reached 220.3k, breaching the 220k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (221.5k tokens) — Context tokens reached 221.5k, breaching the 220k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (224.2k tokens) — Context tokens reached 224.2k, breaching the 220k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (221.4k tokens) — Context tokens reached 221.4k, breaching the 220k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (286.2k tokens) — Context tokens reached 286.2k, breaching the 220k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (366.1k tokens) — Context tokens reached 366.1k, breaching the 220k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (243.7k tokens) — Context tokens reached 243.7k, breaching the 220k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (387.0k tokens) — Context tokens reached 387.0k, breaching the 220k warning ceiling.
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-architecture <-> reviewer-behavior (3 cycles) — Subagent roles 'reviewer-architecture' and 'reviewer-behavior' alternated for 3 consecutive cycles.
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (4 cycles) — Subagent roles 'coder' and 'tester' alternated for 4 consecutive cycles.
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-behavior <-> reviewer-data (3 cycles) — Subagent roles 'reviewer-behavior' and 'reviewer-data' alternated for 3 consecutive cycles.
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-data <-> reviewer-architecture (3 cycles) — Subagent roles 'reviewer-data' and 'reviewer-architecture' alternated for 3 consecutive cycles.
-- [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: command (3 consecutive errors) — Tool 'command' encountered 3 consecutive execution failures.
 - [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: command (4 consecutive errors) — Tool 'command' encountered 4 consecutive execution failures.
-- [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: command (3 consecutive errors) — Tool 'command' encountered 3 consecutive execution failures.
 
 ### Agentic Execution Metrics
 
@@ -125,22 +119,22 @@ The per-command override retry also failed because installed-state preflight val
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
 | **planner** | 2 | 178,358 | 22,508 | 2,278,144 | 92.7% | 90.7k | HEALTHY | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **coder** | 4 | 1,500,684 | 357,727 | 152,112,768 | 99.0% | 407.2k | CRITICAL (204%) | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
-| **tester** | 2 | 678,637 | 225,356 | 123,972,992 | 99.5% | 449.8k | CRITICAL (225%) | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **Unknown** | 1 | 1,083,544 | 271,697 | 128,726,912 | 99.2% | 450.9k | CRITICAL (225%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **reviewer-architecture** | 4 | 531,977 | 33,670 | 9,234,944 | 94.6% | 156.0k | ELEVATED | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
-| **reviewer-behavior** | 4 | 469,958 | 36,702 | 8,033,792 | 94.5% | 142.2k | ELEVATED | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
-| **reviewer-data** | 5 | 564,014 | 42,221 | 8,661,376 | 93.9% | 149.6k | ELEVATED | Unavailable (0 observed, 0 partial, 5 unavailable / 5 invocations) |
-| **reviewer-tests** | 4 | 458,166 | 38,300 | 7,259,136 | 94.1% | 132.9k | ELEVATED | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
-| **Total** | **26** | **5,465,338** | **1,028,181** | **440,280,064** | **98.8%** | **450.9k** | **CRITICAL** | **Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations)** |
+| **coder** | 4 | 1,503,217 | 359,951 | 154,663,424 | 99.0% | 407.2k | BLOATED (102%) | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
+| **tester** | 2 | 678,637 | 225,356 | 123,972,992 | 99.5% | 449.8k | BLOATED (112%) | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **Unknown** | 1 | 1,103,369 | 283,695 | 134,519,936 | 99.2% | 450.9k | BLOATED (113%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **reviewer-architecture** | 4 | 531,977 | 33,670 | 9,234,944 | 94.6% | 156.0k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
+| **reviewer-behavior** | 4 | 469,958 | 36,702 | 8,033,792 | 94.5% | 142.2k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
+| **reviewer-data** | 5 | 564,014 | 42,221 | 8,661,376 | 93.9% | 149.6k | HEALTHY | Unavailable (0 observed, 0 partial, 5 unavailable / 5 invocations) |
+| **reviewer-tests** | 4 | 458,166 | 38,300 | 7,259,136 | 94.1% | 132.9k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
+| **Total** | **26** | **5,487,696** | **1,042,403** | **448,623,744** | **98.8%** | **450.9k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 26 | 5,465,338 | 1,028,181 | 440,280,064 | 98.8% | Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations) |
-| **Total** | **26** | **5,465,338** | **1,028,181** | **440,280,064** | **98.8%** | **Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations)** |
+| **gpt-6.1-sol** | 26 | 5,487,696 | 1,042,403 | 448,623,744 | 98.8% | Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations) |
+| **Total** | **26** | **5,487,696** | **1,042,403** | **448,623,744** | **98.8%** | **Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations)** |
 
-Capture observation finalized: 2026-11-04T12:15:39.835491131Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 0; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 0; reserved bytes: 0. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
+Capture observation finalized: 2026-11-04T12:35:02.245167379Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 0; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 0; reserved bytes: 0. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
 
 ## Iteration 03: planning-only follow-up
 
@@ -213,3 +207,12 @@ Final delivery preserves the approved lean fields, native time/null semantics, p
 Built-source generation used literal nonce d74527059c6e9322, explicit --source codex and --ticket-type fix. Independent native metadata inventory matches exactly: AL-62 root 01a1a3dc-3627-79c0-8b42-8c9cea2041f3 plus 25 children, 26 saved source/parent identities. All 14 earlier owners and all 26 intermediate-checkpoint owners survive; all previously verified lean occurrence arrays remain identical: 3 skills and 25 delegations. Every source is codex and every known child link agrees with native parent metadata. Current schema is 6 and recursive JSON inspection finds no canonical events, events_are_partial, agent_path, task_links or unresolved store. Every recorded invocation cost is unavailable; no estimates or measured zeros were manufactured.
 
 A second isolated standalone API run loaded this actual generated ledger with source DB absent: all 26 owners and exact occurrence arrays survive detail projection, fleet adoption is agentic-lens-dev/3 invocations/1 ticket with no outcome/rate fields, and GET preserves stored bytes. This is real native source -> generate -> save/reload -> API/fleet evidence, distinct from deterministic fixture tests. Server stopped. The exact temporary ignored config was removed after device/inode/SHA verification; only its newly owned private state directory was deleted. Shared configuration SHA remains 6271a7a0e1b8b6482df6ea0dabfef4aa7624f16ea396c6dbf1e780c5551a7339, with all pre-existing operational state/hooks untouched. Twenty T3 service review sessions still lack provable native IDs/parent linkage and are excluded from source usage; dispatch-profile verification evidence is separately recorded. No bulk workspace migration or changes to AL-55 were performed. Final review and make evidence apply to the unchanged implementation source 3b10af2; final artifact/telemetry commits contain no application changes.
+
+
+## Metrics refresh after configuration update
+
+The user requested refreshed session metrics after editing anomaly settings, then approved warning 220,000 and critical 400,000. The shared file already contained those approved values and was preserved exactly (SHA256 84746af152672f149595aeb259500f01a1b6b14eca9542e88f333454cf76e16e). Generation uses all updated shared thresholds, including error ratio 0.35, consecutive errors 4/8 and velocity deltas 80,000/120,000. The earlier attempt rejected warning 2,200,000 above critical 400,000 and preserved ledger/summary bytes.
+
+Successful built-source generation used literal nonce 509d568ffbf32222, explicit Codex source and fix ticket type. Schema 6 and all 26 native source/parent identities remain; the 3 skills and 25 delegations exactly match the previous verified arrays. No retired canonical event/occurrence fields returned. Rendered metrics now report 11h 8m aggregate agent activity, 98.8% cache hits and 450.9k peak context/BLOATED under the updated ceiling. All recorded costs remain unavailable, and the previously documented 20 unmapped T3 service sessions remain excluded from native usage.
+
+CLI configuration validation, source/owner/occurrence preservation and whitespace checks passed. No application code changed; prior source tests/build/review evidence remains valid without another implementation cycle. Updated shared settings and regenerated artifacts are committed together for reproducibility. The private capture-only override was removed after exact device/inode/SHA checks; shared config SHA remained unchanged and prior operational state/hooks were preserved.

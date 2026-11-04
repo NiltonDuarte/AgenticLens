@@ -17,20 +17,20 @@ anomaly_thresholds:
   # Time in seconds without session turn activity before flagging a stall anomaly.
   stall_threshold_seconds: 120
   # Ratio of tool errors to total invocations triggering a high failure anomaly.
-  error_rate_threshold: 0.25
+  error_rate_threshold: 0.35
   # Token context window utilization percentage triggering saturation warnings.
   context_exhaustion_pct: 0.85
   # Consecutive tool errors thresholds triggering warning and critical alerts.
-  consecutive_errors_streak_warning: 3
-  consecutive_errors_streak_critical: 5
+  consecutive_errors_streak_warning: 4
+  consecutive_errors_streak_critical: 8
   # Fixed context ceiling token thresholds triggering warning and critical alerts.
-  context_ceiling_warning_tokens: 160000
-  context_ceiling_critical_tokens: 200000
+  context_ceiling_warning_tokens: 220000
+  context_ceiling_critical_tokens: 400000
   # Absolute and differential token velocity thresholds.
   token_velocity_warning_tokens: 30000
   token_velocity_critical_tokens: 60000
-  token_velocity_warning_delta_tokens: 40000
-  token_velocity_critical_delta_tokens: 80000
+  token_velocity_warning_delta_tokens: 80000
+  token_velocity_critical_delta_tokens: 120000
   # Tool thrashing minimum and critical failure frequencies.
   tool_thrashing_min_failures: 3
   tool_thrashing_critical_failures: 5
