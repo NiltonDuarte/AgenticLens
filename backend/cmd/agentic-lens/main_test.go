@@ -203,6 +203,25 @@ func TestCLIListCommand(t *testing.T) {
 func TestCLIAnomaliesCommand(t *testing.T) {
 	t.Parallel()
 	wsDir := setupTestWorkspace(t)
+	// This control intentionally has complete recorded-empty root analysis;
+	// the ordinary reader must not infer it from an omitted root collection.
+	cleanPath := filepath.Join(wsDir, "TICKET-1", "agentic_metrics.json")
+	cleanRaw, err := os.ReadFile(cleanPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var clean map[string]json.RawMessage
+	if err := json.Unmarshal(cleanRaw, &clean); err != nil {
+		t.Fatal(err)
+	}
+	clean["anomalies"] = json.RawMessage(`[]`)
+	cleanRaw, err = json.Marshal(clean)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(cleanPath, cleanRaw, 0600); err != nil {
+		t.Fatal(err)
+	}
 
 	// Add a ticket with an anomaly
 	tanomDir := filepath.Join(wsDir, "AL-ANOMALY")
@@ -221,6 +240,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
   },
   "ticket_id": "AL-ANOMALY",
   "ticket_title": "Failing Feature",
+  "anomalies":[{"rule_id":"TOOL_HIGH_FAILURE_RATE","severity":"CRITICAL","context":{"tool_name":"bash","count":6,"total_calls":10,"failure_rate_pct":60}}],
   "updated_at": "2026-10-18T10:00:00Z",
   "sessions": [
     {
@@ -353,7 +373,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 		}
 	})
 
-	t.Run("generate subcommand with --anomalies flag on clean ticket", func(t *testing.T) {
+	t.Run("generate subcommand without a source does not claim clean analysis", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
 		outJSON := filepath.Join(tempDir, "clean_gen.json")
@@ -378,8 +398,8 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 		}
 
 		out := stdout.String()
-		if !strings.Contains(out, "No anomalies detected for ticket AL-GEN-CLEAN.") {
-			t.Errorf("expected no anomalies message, got: %s", out)
+		if !strings.Contains(out, "not recorded") || strings.Contains(out, "No anomalies detected") {
+			t.Errorf("missing source became successful clean analysis: %s", out)
 		}
 	})
 }
@@ -1181,7 +1201,7 @@ func TestCLIGenerate_HighFailureAggregateKeepsSummaryWithoutPersistedEvents(t *t
   },
   "ticket_id": "AL-GEN-EVIDENCE",
   "ticket_title": "Aggregate evidence fixture",
- "anomalies":[{"rule_id":"SUBAGENT_REWORK_LOOP","severity":"warning","context":{"role":"coder","secondary_role":"tester","count":3}}],
+ "anomalies":[{"rule_id":"SUBAGENT_REWORK_LOOP","severity":"warning","context":{"role":"coder","secondary_role":"tester","count":3}},{"rule_id":"TOOL_HIGH_FAILURE_RATE","severity":"CRITICAL","context":{"tool_name":"bash","count":6,"total_calls":8,"failure_rate_pct":75}}],
   "sessions": [
     {
       "id": "session-fixture",

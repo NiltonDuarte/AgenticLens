@@ -26,11 +26,61 @@ func TestGenerationProjectionPreservesExecutionAndInput(t *testing.T) {
 		if (len(got.Anomalies) > 0) != policy.Anomalies {
 			t.Fatal("root anomaly policy ignored")
 		}
-		if len(original.Sessions[0].Skills) != 1 || len(original.Sessions[1].Delegations) != 1 || len(original.Anomalies) != 1 || original.GenerationPolicy != nil {
+		if len(original.Sessions[0].Skills) != 1 || len(original.Sessions[1].Delegations) != 1 || len(original.Anomalies) != 1 {
 			t.Fatal("projection mutated original facts")
 		}
 	}
-	if got := (AgenticFactLedger{}).EffectiveGenerationPolicy(); !got.Skills || !got.Delegations || !got.Anomalies {
-		t.Fatalf("historical missing policy disabled categories: %+v", got)
+}
+
+func TestReadDerivationPreservesUnrecordedAndRecordedEmptyAnalysis(t *testing.T) {
+	for _, recorded := range []bool{false, true} {
+		ledger := AgenticFactLedger{Sessions: []SessionFact{{ID: "owner", Tools: []SessionToolFact{{Name: "bash", Calls: 6, Errors: 3}}, Invocations: []InvocationFact{{Role: "coder", Turns: 2, Tokens: InvocationTokens{Input: 31}}}}}}
+		if recorded {
+			ledger.Anomalies = []Anomaly{}
+			ledger.Sessions[0].Anomalies = []Anomaly{}
+		}
+		got := DeriveMetricsLedger(ledger, DefaultProjectConfig())
+		if len(got.Anomalies) != 0 {
+			t.Fatalf("ordinary read invented analysis from independent tool totals: %+v", got.Anomalies)
+		}
+		if got.Facts.Anomalies == nil != (!recorded) || got.Facts.Sessions[0].Anomalies == nil != (!recorded) {
+			t.Fatal("read changed recorded coverage")
+		}
+		if !recorded && got.Totals.ContextHealth != ContextHealthUnavailable {
+			t.Fatalf("unrecorded analysis claimed health %s", got.Totals.ContextHealth)
+		}
+		if got.WorkflowEfficiency.ToolExecution.TotalCalls != 6 || got.WorkflowEfficiency.ToolExecution.ErrorsAndCorrections != 3 {
+			t.Fatalf("read lost independent tool evidence: %+v", got.WorkflowEfficiency.ToolExecution)
+		}
+	}
+}
+
+func TestSourceAnomalyPreparationRequiresRootAndChildCoverage(t *testing.T) {
+	parent := "root"
+	original := AgenticFactLedger{Sessions: []SessionFact{{ID: parent}, {ID: "child", ParentID: &parent}}}
+	partial, err := PersistSourceAnomalySummaries(original, SourceEvents{CompleteSessionIDs: []string{parent}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if partial.Anomalies != nil || partial.Sessions[0].Anomalies != nil || partial.Sessions[1].Anomalies != nil {
+		t.Fatalf("complete parent fabricated root/child observation: %+v", partial)
+	}
+	complete, err := PersistSourceAnomalySummaries(original, SourceEvents{CompleteSessionIDs: []string{parent, "child"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if complete.Anomalies == nil || complete.Sessions[0].Anomalies == nil || complete.Sessions[1].Anomalies == nil || len(complete.Anomalies) != 0 {
+		t.Fatalf("complete empty source did not establish empty arrays: %+v", complete)
+	}
+	count := int64(3)
+	tool := "recorded-source-only"
+	known := Anomaly{RuleID: RuleToolRetryStreak, Severity: SeverityWarning, Context: AnomalyContext{ToolName: &tool, Count: &count}}
+	original.Anomalies = []Anomaly{known}
+	retained, err := PersistSourceAnomalySummaries(original, SourceEvents{CompleteSessionIDs: []string{parent}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(retained.Anomalies, original.Anomalies) {
+		t.Fatal("partial source coverage erased recorded root/group history")
 	}
 }

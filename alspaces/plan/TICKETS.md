@@ -6,6 +6,12 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 ## In Progress
 
+- **AL-66**: Configure optional skills, delegations and anomalies output for generate
+  - **Status**: In Progress (iteration 02: lean field-presence output)
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/AL-66 configure optional metric output for generate.md`
+
 
 
 

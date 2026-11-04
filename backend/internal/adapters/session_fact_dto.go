@@ -34,16 +34,15 @@ func (dto *SessionToolFactDTO) UnmarshalJSON(data []byte) error {
 }
 
 type SessionFactDTO struct {
-	AnomalyAvailability domain.AnomalyAvailability `json:"anomaly_availability,omitempty"`
-	Skills              []SkillFactDTO             `json:"skills,omitempty"`
-	Delegations         []DelegationFactDTO        `json:"delegations,omitempty"`
-	ID                  string                     `json:"id"`
-	ParentID            *string                    `json:"parent_id,omitempty"`
-	Source              string                     `json:"source,omitempty"`
-	User                string                     `json:"user,omitempty"`
-	Invocations         []InvocationFactDTO        `json:"invocations"`
-	Tools               []SessionToolFactDTO       `json:"tools"`
-	Anomalies           []AnomalyDTO               `json:"anomalies"`
+	Skills      []SkillFactDTO       `json:"skills,omitzero"`
+	Delegations []DelegationFactDTO  `json:"delegations,omitzero"`
+	ID          string               `json:"id"`
+	ParentID    *string              `json:"parent_id,omitempty"`
+	Source      string               `json:"source,omitempty"`
+	User        string               `json:"user,omitempty"`
+	Invocations []InvocationFactDTO  `json:"invocations"`
+	Tools       []SessionToolFactDTO `json:"tools"`
+	Anomalies   []AnomalyDTO         `json:"anomalies,omitzero"`
 }
 
 // ErrToolSessionIDRequired identifies a fact ledger that has tool aggregates
@@ -55,8 +54,7 @@ func (session SessionFactDTO) ToDomain() domain.SessionFact {
 	user := strings.TrimSpace(session.User)
 	parentID := session.ParentID
 	result := domain.SessionFact{
-		AnomalyAvailability: session.AnomalyAvailability,
-		Skills:              skillFactDTOsToDomain(session.Skills), Delegations: delegationFactDTOsToDomain(session.Delegations),
+		Skills: skillFactDTOsToDomain(session.Skills), Delegations: delegationFactDTOsToDomain(session.Delegations),
 		ID:       session.ID,
 		ParentID: parentID,
 		Source:   sessionSource,
@@ -86,15 +84,14 @@ func (session SessionFactDTO) ToDomain() domain.SessionFact {
 func SessionFactDTOFromDomain(session domain.SessionFact) SessionFactDTO {
 	sessionSource := strings.TrimSpace(string(session.Source))
 	result := SessionFactDTO{
-		AnomalyAvailability: session.AnomalyAvailability,
-		Skills:              skillFactDTOsFromDomain(session.Skills), Delegations: delegationFactDTOsFromDomain(session.Delegations),
+		Skills: skillFactDTOsFromDomain(session.Skills), Delegations: delegationFactDTOsFromDomain(session.Delegations),
 		ID:          session.ID,
 		ParentID:    session.ParentID,
 		Source:      sessionSource,
 		User:        session.User,
 		Invocations: []InvocationFactDTO{},
 		Tools:       []SessionToolFactDTO{},
-		Anomalies:   []AnomalyDTO{},
+		Anomalies:   nil,
 	}
 	for _, inv := range session.Invocations {
 		result.Invocations = append(result.Invocations, InvocationFactDTOFromDomain(inv))
@@ -102,12 +99,14 @@ func SessionFactDTOFromDomain(session domain.SessionFact) SessionFactDTO {
 	for _, tool := range session.Tools {
 		result.Tools = append(result.Tools, SessionToolFactDTO{Name: tool.Name, Calls: tool.Calls, Errors: tool.Errors})
 	}
-	if session.AnomalyAvailability == domain.AnomalyUnavailable {
-		result.Anomalies = nil
+
+	if session.Anomalies != nil {
+		result.Anomalies = []AnomalyDTO{}
 	}
 	for _, anomaly := range session.Anomalies {
 		anomaly.Context.SessionID = nil
 		result.Anomalies = append(result.Anomalies, AnomalyDTOFromDomain(anomaly))
 	}
+
 	return result
 }

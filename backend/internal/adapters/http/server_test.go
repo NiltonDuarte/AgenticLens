@@ -1583,13 +1583,14 @@ func TestResponseHelpersAndSerialization(t *testing.T) {
 
 	t.Run("WriteFleetResponse writes valid JSON", func(t *testing.T) {
 		rec := httptest.NewRecorder()
+		rate := 0.8
 		summary := domain.FleetSummary{
 			TotalTickets: 5, TotalCostUSD: 1.25,
 			AnomalySummary: domain.FleetAnomalySummary{
 				TotalAnomalies: 4, WarningCount: 3, CriticalCount: 1,
 				SeverityCounts: map[string]int64{"WARNING": 3, "CRITICAL": 1},
 				RuleCounts:     map[string]int64{"TOOL_RETRY_STREAK": 2, "TOOL_HIGH_FAILURE_RATE": 1, "CONTEXT_SATURATION_SPIKE": 1, "SUBAGENT_REWORK_LOOP": 0},
-				TotalTickets:   5, TicketsWithAnomalies: 2, AnomalyRatePerTicket: 0.8,
+				TotalTickets:   5, TicketsWithAnomalies: 2, AnomalyRatePerTicket: &rate,
 				BrittleTools: []domain.BrittleToolSummary{
 					{ToolName: "bash", AnomalyCount: 2, TotalCalls: 20, ErrorCount: 5, FailureRatePct: 25},
 					{ToolName: "git", AnomalyCount: 1, TotalCalls: 10, ErrorCount: 3, FailureRatePct: 30},
@@ -1608,7 +1609,7 @@ func TestResponseHelpersAndSerialization(t *testing.T) {
 			t.Fatalf("unexpected fleet summary: %+v", parsed)
 		}
 		anomaly := parsed.AnomalySummary
-		if anomaly.TotalAnomalies != 4 || anomaly.WarningCount != 3 || anomaly.CriticalCount != 1 || anomaly.TotalTickets != 5 || anomaly.TicketsWithAnomalies != 2 || anomaly.AnomalyRatePerTicket != 0.8 {
+		if anomaly.TotalAnomalies != 4 || anomaly.WarningCount != 3 || anomaly.CriticalCount != 1 || anomaly.TotalTickets != 5 || anomaly.TicketsWithAnomalies != 2 || anomaly.AnomalyRatePerTicket == nil || *anomaly.AnomalyRatePerTicket != 0.8 {
 			t.Fatalf("fleet anomaly scalar fields lost: %+v", anomaly)
 		}
 		if !reflect.DeepEqual(anomaly.SeverityCounts, map[string]int64{"WARNING": 3, "CRITICAL": 1}) || !reflect.DeepEqual(anomaly.RuleCounts, map[string]int64{"TOOL_RETRY_STREAK": 2, "TOOL_HIGH_FAILURE_RATE": 1, "CONTEXT_SATURATION_SPIKE": 1, "SUBAGENT_REWORK_LOOP": 0}) {
@@ -1637,7 +1638,7 @@ func TestResponseHelpersAndSerialization(t *testing.T) {
 			t.Fatal(err)
 		}
 		got := parsed.AnomalySummary
-		if got.TotalAnomalies != 0 || got.WarningCount != 0 || got.CriticalCount != 0 || got.TotalTickets != 0 || got.TicketsWithAnomalies != 0 || got.AnomalyRatePerTicket != 0 {
+		if got.TotalAnomalies != 0 || got.WarningCount != 0 || got.CriticalCount != 0 || got.TotalTickets != 0 || got.TicketsWithAnomalies != 0 || got.AnomalyRatePerTicket != nil {
 			t.Fatalf("empty anomaly scalar values changed: %+v", got)
 		}
 		if !reflect.DeepEqual(got.SeverityCounts, map[string]int64{"WARNING": 0, "CRITICAL": 0}) || !reflect.DeepEqual(got.RuleCounts, map[string]int64{"TOOL_RETRY_STREAK": 0}) || got.BrittleTools == nil || len(got.BrittleTools) != 0 {
@@ -2182,7 +2183,7 @@ func TestWorkspaceEventsAndAnomaliesHTTP(t *testing.T) {
 		}
 	})
 
-	t.Run("GET /api/workspaces/AL-LEGACY includes empty array for anomalies (never null)", func(t *testing.T) {
+	t.Run("GET /api/workspaces/AL-LEGACY keeps unrecorded anomalies absent", func(t *testing.T) {
 		resp, err := http.Get(ts.URL + "/api/workspaces/AL-LEGACY")
 		if err != nil {
 			t.Fatalf("HTTP get failed: %v", err)
@@ -2203,12 +2204,8 @@ func TestWorkspaceEventsAndAnomaliesHTTP(t *testing.T) {
 			t.Fatalf("failed parsing raw JSON: %v", err)
 		}
 
-		anomaliesJSON, exists := rawMap["anomalies"]
-		if !exists {
-			t.Fatal("anomalies key must exist in workspace detail JSON")
-		}
-		if string(anomaliesJSON) != "[]" {
-			t.Fatalf("expected anomalies to be [], got %s", string(anomaliesJSON))
+		if anomaliesJSON, exists := rawMap["anomalies"]; exists {
+			t.Fatalf("unrecorded legacy analysis became a measurement: %s", anomaliesJSON)
 		}
 	})
 
@@ -2583,7 +2580,7 @@ func TestLeanFactsSurviveSourceTraceAvailabilityWithoutGETWrites(t *testing.T) {
 		t.Fatal(err)
 	}
 	owners := detail.Ledger.Facts.Sessions
-	if len(owners) != 2 || len(owners[0].Skills) != 2 || len(owners[1].Skills) != 1 || len(owners[0].Delegations) != 1 || owners[0].Delegations[0].ChildSession != "unavailable-child" || len(detail.Anomalies) != 2 || owners[0].Tools[0].Calls != 6 {
+	if len(owners) != 2 || len(owners[0].Skills) != 2 || len(owners[1].Skills) != 1 || len(owners[0].Delegations) != 1 || owners[0].Delegations[0].ChildSession != "unavailable-child" || len(detail.Anomalies) != 1 || detail.Anomalies[0].RuleID != domain.RuleToolRetryStreak || owners[0].Tools[0].Calls != 6 {
 		t.Fatalf("lean facts, multiplicity, unavailable IDs or metrics lost: %#v", detail)
 	}
 	input, output := "make test", "failure details"
@@ -4870,8 +4867,8 @@ func TestGeneratedPolicyHTTPReadPreservesOmissionWithoutWriting(t *testing.T) {
 	var response struct {
 		Ledger struct {
 			Facts struct {
-				GenerationPolicy *domain.GenerationPolicy `json:"generation_policy"`
-				Anomalies        json.RawMessage          `json:"anomalies"`
+				GenerationPolicy json.RawMessage `json:"generation_policy"`
+				Anomalies        json.RawMessage `json:"anomalies"`
 				Sessions         []struct {
 					ID          string                   `json:"id"`
 					Tools       []domain.SessionToolFact `json:"tools"`
@@ -4889,7 +4886,7 @@ func TestGeneratedPolicyHTTPReadPreservesOmissionWithoutWriting(t *testing.T) {
 		t.Fatal(err)
 	}
 	facts := response.Ledger.Facts
-	if facts.GenerationPolicy == nil || *facts.GenerationPolicy != (domain.GenerationPolicy{}) {
+	if len(facts.GenerationPolicy) != 0 {
 		t.Fatalf("read lost disabled policy: %+v", facts.GenerationPolicy)
 	}
 	if len(facts.Sessions) != 1 || facts.Sessions[0].ID != "recorded-owner" || len(facts.Sessions[0].Tools) != 1 || facts.Sessions[0].Tools[0].Errors != 2 {
@@ -4898,7 +4895,7 @@ func TestGeneratedPolicyHTTPReadPreservesOmissionWithoutWriting(t *testing.T) {
 	if len(facts.Anomalies) != 0 || len(facts.Sessions[0].Anomalies) != 0 || len(facts.Sessions[0].Skills) != 0 || len(facts.Sessions[0].Delegations) != 0 {
 		t.Fatal("read restored disabled category fields")
 	}
-	if response.Ledger.Totals.ContextHealth != "DISABLED" {
+	if response.Ledger.Totals.ContextHealth != "UNAVAILABLE" {
 		t.Fatalf("disabled read claimed health %q", response.Ledger.Totals.ContextHealth)
 	}
 	after, err := os.ReadFile(path)

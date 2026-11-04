@@ -70,15 +70,16 @@ describe('FleetAnomalyCard Component', () => {
     expect(screen.getByText('10.0%')).toBeInTheDocument();
   });
 
-  it.each([0, 1])('retains ordinary tool calls/errors when %i selected ledgers have analysis enabled', (enabled) => {
+  it.each([0, 1])('retains ordinary tool calls/errors when %i selected ledgers have complete recorded analysis', (enabled) => {
     const summary: FleetAnomalySummary = {
-      ...sampleSummary, disabled_tickets: 2 - enabled, total_tickets: enabled,
+      ...sampleSummary, total_tickets: enabled,
       total_anomalies: 0, warning_count: 0, critical_count: 0,
       severity_counts: {}, rule_counts: {}, tickets_with_anomalies: 0,
-      anomaly_rate_per_ticket: 0,
       brittle_tools: [{ tool_name: 'bash', total_calls: 20, error_count: 4, failure_rate_pct: 20, anomaly_count: 0 }],
     };
-    render(<FleetAnomalyCard summary={summary} />);
+    const { anomaly_rate_per_ticket, ...partial } = summary;
+    void anomaly_rate_per_ticket;
+    render(<FleetAnomalyCard summary={partial} selectedTickets={2} />);
     const row = screen.getByText('bash').closest('tr')!;
     expect(within(row).getByRole('cell', { name: '20' })).toBeVisible();
     expect(within(row).getByRole('cell', { name: '4' })).toBeVisible();
@@ -93,17 +94,19 @@ describe('FleetAnomalyCard Component', () => {
 
   it.each([0, 1])('preserves recorded tool evidence and known findings while unavailable analysis has %i known anomalies', (known) => {
     const summary: FleetAnomalySummary = {
-      ...sampleSummary, disabled_tickets: 0, unavailable_tickets: 1,
-      total_tickets: 1, total_anomalies: known, warning_count: known, critical_count: 0,
+      ...sampleSummary,
+      total_tickets: 0, total_anomalies: known, warning_count: known, critical_count: 0,
       brittle_tools: [{ tool_name: 'bash', total_calls: 20, error_count: 4, failure_rate_pct: 20, anomaly_count: known }],
     };
-    render(<FleetAnomalyCard summary={summary} />);
+    const { anomaly_rate_per_ticket, ...partial } = summary;
+    void anomaly_rate_per_ticket;
+    render(<FleetAnomalyCard summary={partial} selectedTickets={2} />);
     const row = screen.getByText('bash').closest('tr')!;
     expect(within(row).getByRole('cell', { name: '20' })).toBeVisible();
     expect(within(row).getByRole('cell', { name: '4' })).toBeVisible();
     expect(screen.queryByText('Fleet Operating Cleanly - Zero Anomalies Detected')).not.toBeInTheDocument();
-    if (known === 0) expect(screen.getByText('Recorded anomaly analysis unavailable')).toBeVisible();
-    else expect(screen.getByText(/shown findings are incomplete/)).toBeVisible();
+    if (known === 0) expect(screen.getByText('Anomaly analysis not recorded')).toBeVisible();
+    else expect(screen.getByText(/counts reflect known findings only/)).toBeVisible();
   });
 
   it('handles division by zero defensively when a brittle tool has zero calls', () => {
@@ -133,23 +136,26 @@ describe('FleetAnomalyCard Component', () => {
     expect(screen.getAllByText('0.0%')).toHaveLength(2);
   });
 
-  it('handles division by zero defensively when total_tickets is 0', () => {
+  it('does not invent a population rate when recorded denominator is zero', () => {
+    const { anomaly_rate_per_ticket, ...recorded } = sampleSummary;
+    void anomaly_rate_per_ticket;
     const summaryZeroTickets: FleetAnomalySummary = {
-      ...sampleSummary,
+      ...recorded,
       total_tickets: 0,
       tickets_with_anomalies: 0,
     };
 
     render(<FleetAnomalyCard summary={summaryZeroTickets} />);
-    expect(screen.getByText('0% of fleet')).toBeInTheDocument();
+    expect(screen.getByText('Complete population rate not recorded')).toBeInTheDocument();
+    expect(screen.queryByText('0% of fleet')).not.toBeInTheDocument();
   });
 
-  it('renders clean state when summary prop is null or undefined', () => {
+  it('renders not-recorded state when summary prop is null or undefined', () => {
     const { rerender } = render(<FleetAnomalyCard summary={null} />);
-    expect(screen.getByText('Fleet Operating Cleanly - Zero Anomalies Detected')).toBeInTheDocument();
+    expect(screen.getByText('Anomaly analysis not recorded')).toBeInTheDocument();
 
     rerender(<FleetAnomalyCard summary={undefined} />);
-    expect(screen.getByText('Fleet Operating Cleanly - Zero Anomalies Detected')).toBeInTheDocument();
+    expect(screen.getByText('Anomaly analysis not recorded')).toBeInTheDocument();
   });
 
   it('displays positive clean state message when total_anomalies is zero', () => {

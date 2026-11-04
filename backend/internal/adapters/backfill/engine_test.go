@@ -1,6 +1,7 @@
 package backfill
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -14,6 +15,7 @@ import (
 
 	"agenticlens/internal/adapters"
 	"agenticlens/internal/adapters/codex"
+	adaptersconfig "agenticlens/internal/adapters/config"
 	"agenticlens/internal/domain"
 	_ "modernc.org/sqlite"
 )
@@ -2174,14 +2176,13 @@ func TestBackfillEngine_PreservesUnavailableAnalysisOutsideCompleteRefresh(t *te
 			root, home := t.TempDir(), t.TempDir()
 			ticket, title := "TEST-BACKFILL-AVAILABILITY", "Unavailable historical anomaly analysis"
 			version := domain.CurrentSchemaVersion
-			off := domain.GenerationPolicy{Skills: true, Delegations: true, Anomalies: false}
 			remote := domain.SessionFact{ID: "remote", Source: tc.remoteSource, User: "recorded-user",
 				Invocations: []domain.InvocationFact{{Role: "coder", Model: "recorded-model", Turns: 2, ActiveDurationSeconds: 9, Tokens: domain.InvocationTokens{Input: 37, Output: 3}, CostUSD: 0.125}},
 				Tools:       []domain.SessionToolFact{{Name: "bash", Calls: 6, Errors: 3}},
 				Skills:      []domain.SkillFact{{Name: "preserved"}, {Name: "preserved"}},
 				Delegations: []domain.DelegationFact{{Description: "preserved task", ChildSession: "known-child"}},
 			}
-			ledger := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticket, TicketTitle: &title, GenerationPolicy: &off, Sessions: []domain.SessionFact{remote}}
+			ledger := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticket, TicketTitle: &title, Sessions: []domain.SessionFact{remote}}
 			if tc.freshParent {
 				ledger.Sessions = append(ledger.Sessions, domain.SessionFact{ID: "local-parent", Source: domain.SourceCodex, User: "local-user", Invocations: []domain.InvocationFact{{Role: "coder", Model: "stale", Turns: 3}}, Tools: []domain.SessionToolFact{{Name: "stale", Calls: 4}}})
 				if tc.missingChild {
@@ -2200,12 +2201,11 @@ func TestBackfillEngine_PreservesUnavailableAnalysisOutsideCompleteRefresh(t *te
 				}
 			}
 			if tc.recordedFindings {
-				ledger.GenerationPolicy = nil
-				ledger.Sessions[0].AnomalyAvailability = domain.AnomalyUnavailable
 				tool, count := "recorded-sequence", int64(3)
 				known := domain.SessionFact{ID: "known-other-source", Source: domain.SourceOpenCode, User: "known-user", Invocations: []domain.InvocationFact{}, Tools: []domain.SessionToolFact{}, Anomalies: []domain.Anomaly{{RuleID: domain.RuleToolRetryStreak, Severity: domain.SeverityWarning, Context: domain.AnomalyContext{ToolName: &tool, Count: &count}}}}
 				ledger.Sessions = append(ledger.Sessions, known)
 			}
+			ledger.Sessions = append(ledger.Sessions, domain.SessionFact{ID: "recorded-empty-other-source", Source: domain.SourceOpenCode, User: "recorded-user", Invocations: []domain.InvocationFact{}, Tools: []domain.SessionToolFact{}, Skills: []domain.SkillFact{}, Delegations: []domain.DelegationFact{}, Anomalies: []domain.Anomaly{}})
 			workspace := createTestWorkspace(t, root, ticket, ledger)
 			baseline, _ := readRecoveryLedger(t, workspace)
 			expectedByID := map[string]domain.SessionFact{}
@@ -2229,9 +2229,6 @@ func TestBackfillEngine_PreservesUnavailableAnalysisOutsideCompleteRefresh(t *te
 					t.Fatalf("saved ledger cannot reload: %v", err)
 				}
 				facts := loaded.ToDomain()
-				if facts.GenerationPolicy != nil {
-					t.Fatal("explicit backfill retained a global generation policy")
-				}
 				owners := map[string]domain.SessionFact{}
 				for _, owner := range facts.Sessions {
 					owners[owner.ID] = owner
@@ -2240,13 +2237,12 @@ func TestBackfillEngine_PreservesUnavailableAnalysisOutsideCompleteRefresh(t *te
 					t.Fatalf("backfill lost/duplicated owners: %+v", owners)
 				}
 				expected := expectedByID["remote"]
-				expected.AnomalyAvailability = domain.AnomalyUnavailable
 				if !reflect.DeepEqual(owners["remote"], expected) {
 					t.Fatalf("unrefreshed owner lost uncertainty or ordinary/history facts: got %+v want %+v", owners["remote"], expected)
 				}
 				if tc.freshParent {
 					local := owners["local-parent"]
-					if local.AnomalyAvailability != "" || local.Anomalies == nil || len(local.Anomalies) != 0 || len(local.Tools) != 0 {
+					if (local.Anomalies == nil) != tc.missingChild || len(local.Anomalies) != 0 || len(local.Tools) != 0 {
 						t.Fatalf("complete source did not restore recorded-empty analysis for exactly its owner: %+v", local)
 					}
 					// Metadata-only Codex sessions retain a default invocation;
@@ -2254,6 +2250,9 @@ func TestBackfillEngine_PreservesUnavailableAnalysisOutsideCompleteRefresh(t *te
 					if len(local.Invocations) != 1 || local.Invocations[0].Model != "default" || local.Invocations[0].Turns != 0 || local.Invocations[0].CostEvidence.State != domain.CostUnavailable {
 						t.Fatalf("complete native snapshot did not replace stale ordinary work: %+v", local.Invocations)
 					}
+				}
+				if !reflect.DeepEqual(owners["recorded-empty-other-source"], expectedByID["recorded-empty-other-source"]) {
+					t.Fatal("unavailable source lost recorded-empty shape")
 				}
 				if tc.recordedFindings && !reflect.DeepEqual(owners["known-other-source"], expectedByID["known-other-source"]) {
 					t.Fatal("backfill changed recorded findings of an unrelated owner")
@@ -2263,6 +2262,8 @@ func TestBackfillEngine_PreservesUnavailableAnalysisOutsideCompleteRefresh(t *te
 					Sessions         []struct {
 						ID           string          `json:"id"`
 						Availability string          `json:"anomaly_availability"`
+						Skills       json.RawMessage `json:"skills"`
+						Delegations  json.RawMessage `json:"delegations"`
 						Anomalies    json.RawMessage `json:"anomalies"`
 					} `json:"sessions"`
 				}
@@ -2273,10 +2274,13 @@ func TestBackfillEngine_PreservesUnavailableAnalysisOutsideCompleteRefresh(t *te
 					t.Fatal("stale generation policy remains in output")
 				}
 				for _, owner := range wire.Sessions {
-					if owner.ID == "remote" && (owner.Availability != "unavailable" || len(owner.Anomalies) != 0) {
+					if owner.ID == "remote" && (len(owner.Anomalies) != 0 || owner.Availability != "") {
 						t.Fatalf("unavailable analysis serialized as a measurement: %+v", owner)
 					}
-					if tc.freshParent && owner.ID == "local-parent" && (owner.Availability != "" || string(owner.Anomalies) != "[]") {
+					if owner.Availability != "" {
+						t.Fatal("obsolete availability marker emitted")
+					}
+					if tc.freshParent && owner.ID == "local-parent" && ((tc.missingChild && len(owner.Anomalies) != 0) || (!tc.missingChild && string(owner.Anomalies) != "[]") || string(owner.Skills) != "[]" || string(owner.Delegations) != "[]") {
 						t.Fatalf("complete empty analysis not recorded as an array: %+v", owner)
 					}
 				}
@@ -2297,5 +2301,205 @@ func TestBackfillEngine_PreservesUnavailableAnalysisOutsideCompleteRefresh(t *te
 				}
 			}
 		})
+	}
+}
+
+func TestReplaceRecoveredOwnersPreservesUnrecordedNativeCategories(t *testing.T) {
+	for _, recordedEmpty := range []bool{false, true} {
+		t.Run(fmt.Sprintf("previous_empty_%t", recordedEmpty), func(t *testing.T) {
+			previous := domain.SessionFact{ID: "native", Source: domain.SourceCodex, Skills: []domain.SkillFact{{Name: "retained"}, {Name: "retained"}}, Delegations: []domain.DelegationFact{{Description: "retained"}, {Description: "retained"}}, Anomalies: []domain.Anomaly{{RuleID: domain.RuleToolRetryStreak, Severity: domain.SeverityWarning}}, Invocations: []domain.InvocationFact{{Role: "coder", Tokens: domain.InvocationTokens{Input: 3}}}}
+			if recordedEmpty {
+				previous.Skills = []domain.SkillFact{}
+				previous.Delegations = []domain.DelegationFact{}
+				previous.Anomalies = []domain.Anomaly{}
+			}
+			source := `{"type":"session_meta","payload":{"id":"native"}}` + "\n" + `{"type":"turn_context","payload":{"model":"fresh","turn_id":"one"}}` + "\n" + `{"type":"token_usage_record","payload":{"thread_id":"native","turn_id":"one","usage":{"input_tokens":41,"output_tokens":2}}}` + "\n"
+			partial, err := codex.ParseRollout(strings.NewReader(source + `{"type":`))
+			if err != nil || len(partial.Warnings) == 0 {
+				t.Fatalf("native partial source did not reach warning branch: %+v %v", partial.Warnings, err)
+			}
+			fresh, err := partial.SessionFacts()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(fresh) != 1 || fresh[0].Skills != nil || fresh[0].Delegations != nil || fresh[0].Anomalies != nil {
+				t.Fatalf("partial native snapshot claimed complete optional observation: %+v", fresh)
+			}
+			stored := []domain.SessionFact{previous}
+			replaceRecoveredOwners(&stored, fresh)
+			if len(stored) != 1 || !reflect.DeepEqual(stored[0].Skills, previous.Skills) || !reflect.DeepEqual(stored[0].Delegations, previous.Delegations) || !reflect.DeepEqual(stored[0].Anomalies, previous.Anomalies) {
+				t.Fatalf("nil optional refresh erased recorded facts/presence: %+v", stored)
+			}
+			if len(stored[0].Invocations) != 1 || stored[0].Invocations[0].Tokens.Input != 41 {
+				t.Fatal("optional preservation vetoed fresh ordinary snapshot")
+			}
+			complete, err := codex.ParseRollout(strings.NewReader(source))
+			if err != nil || len(complete.Warnings) != 0 {
+				t.Fatal(err)
+			}
+			fresh, err = complete.SessionFacts()
+			if err != nil {
+				t.Fatal(err)
+			}
+			replaceRecoveredOwners(&stored, fresh)
+			if stored[0].Skills == nil || len(stored[0].Skills) != 0 || stored[0].Delegations == nil || len(stored[0].Delegations) != 0 || stored[0].Anomalies == nil || len(stored[0].Anomalies) != 0 {
+				t.Fatalf("complete recorded-empty categories did not replace stale observations: %+v", stored)
+			}
+		})
+	}
+}
+
+func writePresenceRecoveryConfig(t *testing.T, root string) domain.ProjectConfig {
+	t.Helper()
+	input := fmt.Sprintf("project_name: PresenceRecoveryFixture\ntelemetry:\n  capture:\n    state_dir: %q\nticket:\n  prefixes: [TEST]\nworkspaces:\n  dir: records\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n", filepath.Join(root, "capture-state"))
+	if err := os.WriteFile(filepath.Join(root, ".agenticlens-config.yaml"), []byte(input), 0600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := adaptersconfig.Load(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return cfg
+}
+
+func TestBackfillRecoveredSummaryMatchesPublishedFactsOnFirstRun(t *testing.T) {
+	root, home := t.TempDir(), t.TempDir()
+	cfg := writePresenceRecoveryConfig(t, root)
+	ticket, title := "TEST-RECOVERED-SUMMARY", "Recovered analysis"
+	version := domain.CurrentSchemaVersion
+	workspace := createTestWorkspace(t, root, ticket, domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticket, TicketTitle: &title, Sessions: []domain.SessionFact{{ID: "local", Source: domain.SourceCodex, Invocations: []domain.InvocationFact{}, Tools: []domain.SessionToolFact{}}}})
+	sessions := filepath.Join(home, "sessions")
+	if err := os.MkdirAll(sessions, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(sessions, "local.jsonl"), []byte(`{"type":"session_meta","payload":{"id":"local","source":"cli"}}`+"\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	var firstSummary []byte
+	for pass := 0; pass < 2; pass++ {
+		report, err := NewEngine().Execute(BackfillOptions{WorkspacesDir: root, TicketID: ticket, Source: "codex", CodexHome: home, RecomputeDB: true, UpdateSummaries: true})
+		if err != nil || len(report.Results) != 1 || report.Results[0].Error != nil {
+			t.Fatalf("backfill failed: %+v %v", report, err)
+		}
+		dto, raw := readRecoveryLedger(t, workspace)
+		if err := adapters.ValidateRuntimeFactLedger(raw); err != nil {
+			t.Fatal(err)
+		}
+		facts := dto.ToDomain()
+		if !facts.CompleteAnomalyCoverage() || len(facts.Anomalies) != 0 {
+			t.Fatalf("native complete-empty source not published: %+v", facts)
+		}
+		summary, err := os.ReadFile(filepath.Join(workspace, "SUMMARY.md"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		expected := adapters.FormatMarkdownMetricsTable(domain.DeriveMetricsLedger(facts, cfg), cfg.RoleOrder)
+		if !strings.Contains(string(summary), strings.TrimSpace(expected)) {
+			t.Fatalf("pass %d summary differs from published facts:\nEXPECTED:\n%s\nACTUAL:\n%s", pass, expected, summary)
+		}
+		if strings.Contains(string(summary), "not recorded for the full ledger") || !strings.Contains(string(summary), "clean session") || !strings.Contains(string(summary), "# Summary "+ticket) {
+			t.Fatalf("recovered summary contradicts source or loses user prose: %s", summary)
+		}
+		if pass == 0 {
+			firstSummary = summary
+		} else if !reflect.DeepEqual(firstSummary, summary) {
+			t.Fatal("unchanged second backfill changed first-run managed summary")
+		}
+	}
+}
+
+func TestFormerGenerationMetadataRecoveryWorkflows(t *testing.T) {
+	for _, tc := range []struct {
+		name, owner, root string
+		invalid           bool
+	}{
+		{name: "marker-free control", owner: `,"skills":[],"delegations":[]`},
+		{name: "former root policy", root: `,"generation_policy":{"skills":false,"delegations":false,"anomalies":false}`},
+		{name: "former owner unavailable", owner: `,"skills":[],"delegations":[{"agent_type":null,"invoked_at":null}],"anomaly_availability":"unavailable"`},
+		{name: "contradictory root policy", owner: `,"anomalies":[]`, root: `,"generation_policy":{"skills":false,"delegations":false,"anomalies":false}`, invalid: true},
+		{name: "contradictory owner unavailable", owner: `,"anomalies":[],"anomaly_availability":"unavailable"`, invalid: true},
+		{name: "malformed former policy", root: `,"generation_policy":{"skills":"false","delegations":false,"anomalies":false}`, invalid: true},
+		{name: "duplicate former policy member", root: `,"generation_policy":{"skills":false,"skills":true,"delegations":false,"anomalies":false}`, invalid: true},
+	} {
+		for _, workflow := range []string{"backfill", "migration"} {
+			t.Run(tc.name+"/"+workflow, func(t *testing.T) {
+				root := t.TempDir()
+				cfg := writePresenceRecoveryConfig(t, root)
+				ticket := "TEST-COMPAT-CLEANUP"
+				workspace := filepath.Join(root, ticket)
+				if err := os.MkdirAll(workspace, 0700); err != nil {
+					t.Fatal(err)
+				}
+				raw := []byte(`{"schema_version":6,"ticket_id":"TEST-COMPAT-CLEANUP","ticket_title":"Portable compatibility","sessions":[{"id":"owner","source":"codex","user":"tester","invocations":[],"tools":[{"name":"bash","calls":5,"errors":2}]` + tc.owner + `}]` + tc.root + `,"migration":{"schema_version":6,"status":"completed","steps_completed":[],"steps_pending":[]}}`)
+				path := filepath.Join(workspace, "agentic_metrics.json")
+				if err := os.WriteFile(path, raw, 0600); err != nil {
+					t.Fatal(err)
+				}
+				summaryPath := filepath.Join(workspace, "SUMMARY.md")
+				summary := []byte("User-authored compatibility summary\n")
+				if err := os.WriteFile(summaryPath, summary, 0600); err != nil {
+					t.Fatal(err)
+				}
+				var baseline adapters.AgenticFactLedgerDTO
+				if !tc.invalid {
+					if err := json.Unmarshal(raw, &baseline); err != nil {
+						t.Fatalf("supported canonical compatibility control rejected: %v", err)
+					}
+				}
+				var runErr error
+				if workflow == "backfill" {
+					report, err := NewEngine().Execute(BackfillOptions{WorkspacesDir: root, TicketID: ticket})
+					runErr = err
+					if runErr == nil {
+						if len(report.Results) != 1 {
+							t.Fatalf("missing result: %+v", report)
+						}
+						runErr = report.Results[0].Error
+					}
+				} else {
+					result, _ := NewMigrationRunner(nil).migrateWorkspace(context.Background(), path, MigrationOptions{}, domain.CurrentSchemaVersion, cfg)
+					runErr = result.Error
+				}
+				written, err := os.ReadFile(path)
+				if err != nil {
+					t.Fatal(err)
+				}
+				afterSummary, err := os.ReadFile(summaryPath)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if tc.invalid {
+					if runErr == nil {
+						t.Fatal("malformed/contradictory transitional metadata was accepted")
+					}
+					if !reflect.DeepEqual(written, raw) || !reflect.DeepEqual(afterSummary, summary) {
+						t.Fatal("rejected transitional metadata changed accepted files")
+					}
+					return
+				}
+				if runErr != nil {
+					t.Fatalf("supported canonical ledger cannot complete %s: %v", workflow, runErr)
+				}
+				if strings.Contains(string(written), `"generation_policy"`) || strings.Contains(string(written), `"anomaly_availability"`) || strings.Contains(string(written), `"migration"`) {
+					t.Fatalf("completed cleanup re-emitted obsolete metadata: %s", written)
+				}
+				if err := adapters.ValidateRuntimeFactLedger(written); err != nil {
+					t.Fatalf("explicit workflow wrote unreadable data: %v", err)
+				}
+				if _, err := adapters.LoadExistingFactLedger(path); err != nil {
+					t.Fatal(err)
+				}
+				var canonical adapters.AgenticFactLedgerDTO
+				if err := json.Unmarshal(written, &canonical); err != nil {
+					t.Fatal(err)
+				}
+				if !reflect.DeepEqual(canonical.ToDomain().Sessions, baseline.ToDomain().Sessions) || !reflect.DeepEqual(canonical.ToDomain().Anomalies, baseline.ToDomain().Anomalies) {
+					t.Fatalf("cleanup fabricated presence or lost recorded facts: before=%+v after=%+v", baseline.ToDomain(), canonical.ToDomain())
+				}
+				if !reflect.DeepEqual(afterSummary, summary) {
+					t.Fatal("metadata-only cleanup changed user summary")
+				}
+			})
+		}
 	}
 }

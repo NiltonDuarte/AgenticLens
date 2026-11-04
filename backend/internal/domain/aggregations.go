@@ -665,9 +665,6 @@ func ComputeThreadSummariesWithCeiling(sessions []SessionFact, ceiling int64, ro
 
 // DeriveMetricsLedger projects all aggregations from an atomic fact ledger using full project configuration.
 func DeriveMetricsLedger(factLedger AgenticFactLedger, cfg ProjectConfig) AgenticMetricsLedger {
-	if factLedger.GenerationPolicy != nil {
-		factLedger = ProjectGenerationFacts(factLedger, *factLedger.GenerationPolicy)
-	}
 	mappings := cfg.RoleMappings
 	if mappings == nil {
 		mappings = RoleMappings{}
@@ -712,9 +709,7 @@ func DeriveMetricsLedger(factLedger AgenticFactLedger, cfg ProjectConfig) Agenti
 	}
 
 	analysisStatus := ContextHealthStatus("")
-	if !factLedger.EffectiveGenerationPolicy().Anomalies {
-		analysisStatus = ContextHealthDisabled
-	} else if factLedger.UnavailableAnomalySessions() > 0 {
+	if !factLedger.CompleteAnomalyCoverage() {
 		analysisStatus = ContextHealthUnavailable
 	}
 	if analysisStatus != "" {
@@ -779,7 +774,20 @@ func ComputeSkillAdoption(ledgers []AgenticFactLedger) []SkillAdoptionFact {
 			totals[skill.Name] = fact
 		}
 	}
-	result := make([]SkillAdoptionFact, 0, len(totals))
+	var result []SkillAdoptionFact
+	complete := true
+	observedOwners := 0
+	for _, ledger := range ledgers {
+		for _, owner := range ledger.Sessions {
+			observedOwners++
+			if owner.Skills == nil {
+				complete = false
+			}
+		}
+	}
+	if complete && observedOwners > 0 {
+		result = []SkillAdoptionFact{}
+	}
 	for _, fact := range totals {
 		result = append(result, fact)
 	}
@@ -798,7 +806,16 @@ func SkillNames(ledger AgenticFactLedger) []string {
 	for _, skill := range ledger.SkillFacts() {
 		names[skill.Name] = true
 	}
-	result := make([]string, 0, len(names))
+	var result []string
+	complete := len(ledger.Sessions) > 0
+	for _, owner := range ledger.Sessions {
+		if owner.Skills == nil {
+			complete = false
+		}
+	}
+	if complete {
+		result = []string{}
+	}
 	for name := range names {
 		result = append(result, name)
 	}
@@ -899,14 +916,7 @@ func CalculateFleetSummary(ledgers []AgenticMetricsLedger) FleetSummary {
 		overallReasoningRatioPct = math.Round(float64(totalReasoningTokens)/float64(genTotal)*1000.0) / 10.0
 	}
 
-	var skillsDisabled int64
-	for _, ledger := range ledgers {
-		if !ledger.Facts.EffectiveGenerationPolicy().Skills {
-			skillsDisabled++
-		}
-	}
 	return FleetSummary{
-		SkillsDisabledTickets:    skillsDisabled,
 		TotalTickets:             totalTickets,
 		TotalCostUSD:             math.Round(totalCostUSD*10000.0) / 10000.0,
 		CostSummary:              fleetCostSummary,
@@ -996,7 +1006,6 @@ func BuildComparisonRows(ledgers []AgenticMetricsLedger) []TicketComparisonRow {
 		}
 
 		rows = append(rows, TicketComparisonRow{
-			GenerationPolicy:        ledger.Facts.GenerationPolicy,
 			TicketID:                tid,
 			SkillsUsed:              SkillNames(ledger.Facts),
 			UpdatedAt:               ledger.UpdatedAt,

@@ -1,5 +1,19 @@
 # AL-66: Optional generation metric output
 
+Iteration 02 active: user approved lean field-presence output (omitted / recorded-empty / nonempty), removing generation_policy and anomaly_availability from new JSON. Iteration01 evidence below remains historical; current plan supersedes its persistence decisions. Initial iteration02 Git status clean; baseline3372830f0e891dbe8fd13a2568d9853bc1300d0a; PR115 remains open.
+
+All iteration02 discovery reviews complete: both test profiles approved (Sol additionally mutation-tested recorded-empty oracle); five scoped approvals do not refute the three independently reproduced issues. Coder and tester are assigned bounded production/test correction ownership. No new JSON metadata or schema is introduced; current user-approved field-presence scope remains unchanged.
+
+
+Iteration02 DATA-01 (severity6), discovered by data reviewer gpt-6.1-sol/high: actual backfill/migration reject supported former metadata before normalization; normalized cleanup bytes must also avoid re-emission. Parent independently reran both recovery workflows: marker-free control passes, root-policy and owner-marker cases fail (exit1). ARCH-01 (severity4), discovered by architecture reviewer gpt-6.1-sol/high: permissive v1 incomplete owner still returns recorded-empty anomalies; parent reran actual SQLite selected-malformed-part probe (exit1). Strict publication rejects that fixture, so no strict persisted loss is claimed. Data reviewer gpt-6-luna/medium approved inspected paths without probes; confirmed findings remain open.
+
+
+Iteration02 review BEH-01 (severity4), discovered by behavior reviewer gpt-6.1-sol/high: first source-backed backfill saves recovered root analysis but derives Markdown from the earlier ledger, so summary recovery lags one run. Parent gpt-6.1-sol/high independently reproduced with actual Execute/save/read/summary overlay; exit1 on first-run mismatch. This is a new root-presence transition, distinct from the iteration01 refuted owner-count hypothesis. Product remains frozen for independent discovery; correction pending.
+
+
+Iteration02 uses the existing Go1.26 omitzero capability for lean absent/empty/value serialization, without changing toolchain requirements. Tester baseline overlay reproduced fabricated root[] and lost empty skills; production build, typecheck/lint and257 focused frontend tests pass. Product frozen; final test evidence, review and integration pending. Historical iteration01 metrics below have not yet been refreshed. Iteration02 test handoff is complete: affected full CLI/domain/HTTP race passed, all initially green unchanged packages remain valid, corrected frontend cases passed87affected tests, and typecheck/lint/diff checks passed. Candidate262de9f2b527d548d6fb5a2251c44357b8e1d2cbe6579c0cdcfdc2f87efc4fa7 (58paths) frozen for eight independent reviews; no final approval yet.
+
+
 Implemented independent enabled-by-default settings: `generation.metrics.skills`, `generation.metrics.delegations` and `generation.metrics.anomalies`. Disabled categories are omitted from generated JSON and managed Markdown, including retained history. Core execution metrics, child relationships and enabled history survive. Invalid settings fail before output replacement.
 
 Schema 6 carries optional generation policy and per-owner unavailable-analysis metadata. Reads distinguish disabled, unavailable and recorded-empty evidence; complete source-backed refresh can recover omitted facts. Backfill preserves uncertainty without inheriting current generation settings. Missing original sources cannot recreate intentionally omitted facts. This is a generation output policy, not global source redaction.

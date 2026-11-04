@@ -107,24 +107,18 @@ type SessionToolFact struct {
 	Errors int64  `json:"errors"`
 }
 
-// AnomalyAvailability distinguishes omitted historical analysis from a measured empty result.
-type AnomalyAvailability string
-
-const AnomalyUnavailable AnomalyAvailability = "unavailable"
-
 // SessionFact owns durable session metrics and lean occurrences. Source events
 // are request-local inputs and never travel through this persistence model.
 type SessionFact struct {
-	AnomalyAvailability AnomalyAvailability `json:"anomaly_availability,omitempty"`
-	Skills              []SkillFact         `json:"skills,omitempty"`
-	Delegations         []DelegationFact    `json:"delegations,omitempty"`
-	ID                  string              `json:"id"`
-	ParentID            *string             `json:"parent_id,omitempty"`
-	Source              SourceHarness       `json:"source,omitempty"`
-	User                string              `json:"user,omitempty"`
-	Invocations         []InvocationFact    `json:"invocations"`
-	Tools               []SessionToolFact   `json:"tools"`
-	Anomalies           []Anomaly           `json:"anomalies"`
+	Skills      []SkillFact       `json:"skills,omitzero"`
+	Delegations []DelegationFact  `json:"delegations,omitzero"`
+	ID          string            `json:"id"`
+	ParentID    *string           `json:"parent_id,omitempty"`
+	Source      SourceHarness     `json:"source,omitempty"`
+	User        string            `json:"user,omitempty"`
+	Invocations []InvocationFact  `json:"invocations"`
+	Tools       []SessionToolFact `json:"tools"`
+	Anomalies   []Anomaly         `json:"anomalies,omitzero"`
 }
 
 type TraceAvailability string
@@ -152,7 +146,7 @@ type WorkspaceEventsResponse struct {
 	IsHydrated   bool              `json:"is_hydrated"`
 	Events       []EventFact       `json:"events"`
 	DataSource   DataSource        `json:"data_source"`
-	Anomalies    []Anomaly         `json:"anomalies"`
+	Anomalies    []Anomaly         `json:"anomalies,omitzero"`
 	Availability TraceAvailability `json:"availability"`
 	Coverage     TraceCoverage     `json:"coverage"`
 }
@@ -182,24 +176,29 @@ type MigrationInfo struct {
 
 // AgenticFactLedger is the root raw session facts ledger extracted for a ticket workspace.
 type AgenticFactLedger struct {
-	GenerationPolicy *GenerationPolicy       `json:"generation_policy,omitempty"`
-	SchemaVersion    *int                    `json:"schema_version,omitempty"`
-	Migration        *MigrationInfo          `json:"migration,omitempty"`
-	TicketID         *string                 `json:"ticket_id"`
-	TicketTitle      *string                 `json:"ticket_title"`
-	TicketType       *ConventionalTicketType `json:"ticket_type"`
-	StartedAt        *string                 `json:"started_at"`
-	CompletedAt      *string                 `json:"completed_at"`
-	UpdatedAt        string                  `json:"updated_at"`
-	Code             CodeFacts               `json:"code"`
-	Sessions         []SessionFact           `json:"sessions"`
-	Anomalies        []Anomaly               `json:"anomalies"`
+	SchemaVersion *int                    `json:"schema_version,omitempty"`
+	Migration     *MigrationInfo          `json:"migration,omitempty"`
+	TicketID      *string                 `json:"ticket_id"`
+	TicketTitle   *string                 `json:"ticket_title"`
+	TicketType    *ConventionalTicketType `json:"ticket_type"`
+	StartedAt     *string                 `json:"started_at"`
+	CompletedAt   *string                 `json:"completed_at"`
+	UpdatedAt     string                  `json:"updated_at"`
+	Code          CodeFacts               `json:"code"`
+	Sessions      []SessionFact           `json:"sessions"`
+	Anomalies     []Anomaly               `json:"anomalies,omitzero"`
 }
 
 // AnomalyFacts returns persisted anomaly summaries with their owning session restored.
 func (ledger AgenticFactLedger) AnomalyFacts() []Anomaly {
-	result := append([]Anomaly{}, ledger.Anomalies...)
+	var result []Anomaly
+	if ledger.Anomalies != nil {
+		result = append([]Anomaly{}, ledger.Anomalies...)
+	}
 	for _, session := range ledger.Sessions {
+		if session.Anomalies != nil && result == nil {
+			result = []Anomaly{}
+		}
 		for _, anomaly := range session.Anomalies {
 			if anomaly.Context.SessionID == nil {
 				sid := session.ID
@@ -274,8 +273,17 @@ func SessionsFromFacts(invocationSessions []SessionFact, tools []ToolFact, event
 			session.User = owned.User
 		}
 		session.Invocations = append(session.Invocations, owned.Invocations...)
+		if owned.Anomalies != nil && session.Anomalies == nil {
+			session.Anomalies = []Anomaly{}
+		}
 		session.Anomalies = append(session.Anomalies, owned.Anomalies...)
+		if owned.Skills != nil && session.Skills == nil {
+			session.Skills = []SkillFact{}
+		}
 		session.Skills = append(session.Skills, owned.Skills...)
+		if owned.Delegations != nil && session.Delegations == nil {
+			session.Delegations = []DelegationFact{}
+		}
 		session.Delegations = append(session.Delegations, owned.Delegations...)
 	}
 	for _, tool := range tools {
@@ -450,7 +458,7 @@ type AgenticMetricsLedger struct {
 	Totals             GroupedMetric           `json:"totals"`
 	Roles              []RoleMetric            `json:"roles"`
 	Models             []ModelMetric           `json:"models"`
-	Anomalies          []Anomaly               `json:"anomalies,omitempty"`
+	Anomalies          []Anomaly               `json:"anomalies,omitzero"`
 }
 
 // TimeBucketMetric captures telemetry aggregates for a chronological time bucket.
@@ -492,8 +500,6 @@ type BrittleToolSummary struct {
 
 // FleetAnomalySummary aggregates anomaly patterns, severity counts, and brittle tools across the fleet.
 type FleetAnomalySummary struct {
-	UnavailableTickets   int64                `json:"unavailable_tickets,omitempty"`
-	DisabledTickets      int64                `json:"disabled_tickets,omitempty"`
 	TotalAnomalies       int64                `json:"total_anomalies"`
 	WarningCount         int64                `json:"warning_count"`
 	CriticalCount        int64                `json:"critical_count"`
@@ -501,7 +507,7 @@ type FleetAnomalySummary struct {
 	RuleCounts           map[string]int64     `json:"rule_counts"`
 	TotalTickets         int64                `json:"total_tickets"`
 	TicketsWithAnomalies int64                `json:"tickets_with_anomalies"`
-	AnomalyRatePerTicket float64              `json:"anomaly_rate_per_ticket"`
+	AnomalyRatePerTicket *float64             `json:"anomaly_rate_per_ticket,omitempty"`
 	BrittleTools         []BrittleToolSummary `json:"brittle_tools"`
 }
 
@@ -514,8 +520,7 @@ type SkillAdoptionFact struct {
 
 // FleetSummary aggregates high-level metrics across multiple tickets.
 type FleetSummary struct {
-	SkillsDisabledTickets    int64                     `json:"skills_disabled_tickets,omitempty"`
-	SkillAdoption            []SkillAdoptionFact       `json:"skill_adoption"`
+	SkillAdoption            []SkillAdoptionFact       `json:"skill_adoption,omitzero"`
 	TotalTickets             int64                     `json:"total_tickets"`
 	TotalCostUSD             float64                   `json:"total_cost_usd"`
 	CostSummary              CostSummary               `json:"cost_summary"`
@@ -540,8 +545,7 @@ type FleetSummary struct {
 
 // TicketComparisonRow summarizes a single ticket for cross-ticket matrix presentation.
 type TicketComparisonRow struct {
-	GenerationPolicy        *GenerationPolicy       `json:"generation_policy,omitempty"`
-	SkillsUsed              []string                `json:"skills_used"`
+	SkillsUsed              []string                `json:"skills_used,omitzero"`
 	TicketID                string                  `json:"ticket_id"`
 	UpdatedAt               string                  `json:"updated_at"`
 	SDLCIterations          int64                   `json:"sdlc_iterations"`

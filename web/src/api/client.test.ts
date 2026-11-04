@@ -20,6 +20,11 @@ describe('Boundary API Client', () => {
             ['ledger invalid analysis availability', () => fetchWorkspaceLedgers(), [{ ...ledger, facts: { ...ledger.facts, sessions: [{ id: 'owner', invocations: [], tools: [], anomaly_availability: 'recorded' }] } }]],
             ['ledger null analysis availability', () => fetchWorkspaceLedgers(), [{ ...ledger, facts: { ...ledger.facts, sessions: [{ id: 'owner', invocations: [], tools: [], anomaly_availability: null }] } }]],
             ['ledger contradictory unavailable analysis', () => fetchWorkspaceLedgers(), [{ ...ledger, facts: { ...ledger.facts, sessions: [{ id: 'owner', invocations: [], tools: [], anomaly_availability: 'unavailable', anomalies: [] }] } }]],
+            ['ledger null skills', () => fetchWorkspaceLedgers(), [{ ...ledger, facts: { ...ledger.facts, sessions: [{ id: 'owner', invocations: [], tools: [], skills: null }] } }]],
+            ['ledger null delegations', () => fetchWorkspaceLedgers(), [{ ...ledger, facts: { ...ledger.facts, sessions: [{ id: 'owner', invocations: [], tools: [], delegations: null }] } }]],
+            ['ledger null recorded anomalies', () => fetchWorkspaceLedgers(), [{ ...ledger, facts: { ...ledger.facts, sessions: [{ id: 'owner', invocations: [], tools: [], anomalies: null }] } }]],
+            ['ledger null root anomalies', () => fetchWorkspaceLedgers(), [{ ...ledger, facts: { ...ledger.facts, anomalies: null } }]],
+            ['ledger obsolete valid policy', () => fetchWorkspaceLedgers(), [{ ...ledger, facts: { ...ledger.facts, generation_policy: { skills: true, delegations: true, anomalies: true } } }]],
             ['ledger invalid generation policy', () => fetchWorkspaceLedgers(), [{ ...ledger, facts: { ...ledger.facts, generation_policy: { skills: false, delegations: 'false', anomalies: false } } }]],
             ['ledger incomplete generation policy', () => fetchWorkspaceLedgers(), [{ ...ledger, facts: { ...ledger.facts, generation_policy: { skills: false } } }]],
             ['ledger invalid health', () => fetchWorkspaceLedgers(), [{ ...ledger, totals: { ...ledger.totals, context_health: 'UNKNOWN' } }]],
@@ -43,9 +48,9 @@ describe('Boundary API Client', () => {
             vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => payload }));
             await expect(request()).rejects.toThrow(/Invalid .* response/);
         });
-        it('accepts additive fields and Go nil collections without mutating the response', async () => {
+        it('accepts additive fields and nil ordinary collections without inventing optional observations', async () => {
             const payload = { ...ledger, extra_future_field: true, roles: null, models: null, threads: null,
-                anomalies: null, facts: { ...ledger.facts, sessions: [{ id: 's', invocations: null, tools: null, anomalies: null, skills: null, delegations: null }], anomalies: null },
+                facts: { ...ledger.facts, sessions: [{ id: 's', invocations: null, tools: null }] },
                 workflow_efficiency: { ...ledger.workflow_efficiency, role_effort_distribution_pct: null,
                     subagent_turn_velocity: { ...ledger.workflow_efficiency.subagent_turn_velocity, by_role: null },
                     context_window_health: { ...ledger.workflow_efficiency.context_window_health, peak_by_role: null } },
@@ -53,35 +58,31 @@ describe('Boundary API Client', () => {
             const before = JSON.stringify(payload);
             vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => [payload] }));
             const result = (await fetchWorkspaceLedgers()).data[0]!;
-            expect(result.facts.sessions[0]).toEqual({ id: 's', invocations: [], tools: [], anomalies: [], skills: [], delegations: [] });
+            expect(result.facts.sessions[0]).toEqual({ id: 's', invocations: [], tools: [] });
             expect(result.threads).toEqual([]);
             expect(result.workflow_efficiency.role_effort_distribution_pct).toEqual({});
             expect(JSON.stringify(payload)).toBe(before);
         });
-        it('preserves intentional omission metadata and absent disabled collections', async () => {
-            const policy = { skills: false, delegations: false, anomalies: false };
-            const payload = { ...ledger, facts: { ...ledger.facts, generation_policy: policy,
-                sessions: [{ id: 'root', source: 'codex', invocations: [], tools: [] }],
+        it.each(['absent', 'empty', 'values'])('preserves optional collection state %s through runtime API decoding', async (state) => {
+            const { anomalies, ...baseFacts } = ledger.facts;
+            void anomalies;
+            const known = { rule_id: 'TOOL_RETRY_STREAK', severity: 'WARNING', context: { tool_name: 'bash', count: 3 } };
+            const recorded = state === 'absent' ? {} : state === 'empty'
+                ? { skills: [], delegations: [], anomalies: [] }
+                : { skills: [{ name: 'inspect', caller_role: null, invoked_at: null }],
+                    delegations: [{ agent_type: null, invoked_at: null }], anomalies: [known] };
+            const owner = { id: 'root', source: 'codex', invocations: [], tools: [{ name: 'bash', calls: 6, errors: 3 }], ...recorded };
+            const payload = { ...ledger, facts: { ...baseFacts, sessions: [owner],
+                ...(state === 'absent' ? {} : { anomalies: state === 'empty' ? [] : [known] }),
             } };
             const before = JSON.stringify(payload);
             vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => [payload] }));
-            const result = (await fetchWorkspaceLedgers()).data[0]!;
-            expect(result.facts.generation_policy).toEqual(policy);
-            expect(result.facts.sessions[0]?.skills).toBeUndefined();
-            expect(result.facts.sessions[0]?.delegations).toBeUndefined();
+            const result = (await fetchWorkspaceLedgers()).data[0]!.facts;
+            expect(result.sessions[0]).toEqual(owner);
+            expect(Object.hasOwn(result, 'anomalies')).toBe(state !== 'absent');
+            expect(Object.hasOwn(result, 'generation_policy')).toBe(false);
+            expect(Object.hasOwn(result.sessions[0]!, 'anomaly_availability')).toBe(false);
             expect(JSON.stringify(payload)).toBe(before);
-        });
-        it('retains source-unavailable owner analysis without inventing a measured-empty collection', async () => {
-            const payload = { ...ledger, facts: { ...ledger.facts,
-                generation_policy: { skills: true, delegations: true, anomalies: true },
-                sessions: [{ id: 'retained-owner', source: 'codex', invocations: [],
-                    tools: [{ name: 'bash', calls: 6, errors: 3 }], anomaly_availability: 'unavailable' }],
-            } };
-            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => [payload] }));
-            const owner = (await fetchWorkspaceLedgers()).data[0]!.facts.sessions[0]!;
-            expect(owner.anomaly_availability).toBe('unavailable');
-            expect(owner.anomalies).toBeUndefined();
-            expect(owner.tools).toEqual([{ name: 'bash', calls: 6, errors: 3 }]);
         });
         it.each(['not json', '{}', '[null]', '[{"ticket_id":4,"message":"bad"}]'])('keeps valid data and reports an unreadable diagnostic header: %s', async (header) => {
             vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, headers: new Headers({ 'X-AgenticLens-Workspace-Diagnostics': header }), json: async () => [ledger] }));
@@ -100,7 +101,7 @@ describe('Boundary API Client', () => {
         ])('accepts omitted optional ledger facts and artifact fields: %j', async (artifacts, expectedArtifacts) => {
             const { anomalies, migration, ...facts } = ledger.facts;
             void anomalies; void migration;
-            const payload = { ...detail, ledger: { ...ledger, facts }, artifacts, anomalies: null };
+            const payload = { ...detail, ledger: { ...ledger, facts }, artifacts };
             vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => payload }));
             expect((await fetchWorkspaceById('AL-1')).data.artifacts).toEqual(expectedArtifacts);
         });

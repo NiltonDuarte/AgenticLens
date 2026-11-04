@@ -3,7 +3,6 @@ package http
 import (
 	"agenticlens/internal/adapters"
 	"agenticlens/internal/domain"
-	"encoding/json"
 )
 
 // ThreadRoleMetricDTO is the concrete nullable cost projection of ThreadRoleMetric.
@@ -60,22 +59,20 @@ func ThreadExecutionRecordDTOsFromDomain(values []domain.ThreadExecutionRecord) 
 
 // SessionFactResponseDTO is the concrete nullable cost projection of SessionFact.
 type SessionFactResponseDTO struct {
-	AnomalyAvailability domain.AnomalyAvailability   `json:"anomaly_availability,omitempty"`
-	Skills              []adapters.SkillFactDTO      `json:"skills,omitempty"`
-	Delegations         []adapters.DelegationFactDTO `json:"delegations,omitempty"`
-	ID                  string                       `json:"id"`
-	ParentID            *string                      `json:"parent_id,omitempty"`
-	Source              domain.SourceHarness         `json:"source,omitempty"`
-	User                string                       `json:"user,omitempty"`
-	Invocations         []adapters.InvocationFactDTO `json:"invocations"`
-	Tools               []domain.SessionToolFact     `json:"tools"`
-	Anomalies           []domain.Anomaly             `json:"anomalies"`
+	Skills      []adapters.SkillFactDTO      `json:"skills,omitzero"`
+	Delegations []adapters.DelegationFactDTO `json:"delegations,omitzero"`
+	ID          string                       `json:"id"`
+	ParentID    *string                      `json:"parent_id,omitempty"`
+	Source      domain.SourceHarness         `json:"source,omitempty"`
+	User        string                       `json:"user,omitempty"`
+	Invocations []adapters.InvocationFactDTO `json:"invocations"`
+	Tools       []domain.SessionToolFact     `json:"tools"`
+	Anomalies   []domain.Anomaly             `json:"anomalies,omitzero"`
 }
 
 func SessionFactResponseDTOFromDomain(value domain.SessionFact) SessionFactResponseDTO {
 	return SessionFactResponseDTO{
-		AnomalyAvailability: value.AnomalyAvailability,
-		Skills:              adapters.SessionFactDTOFromDomain(value).Skills, Delegations: adapters.SessionFactDTOFromDomain(value).Delegations,
+		Skills: adapters.SessionFactDTOFromDomain(value).Skills, Delegations: adapters.SessionFactDTOFromDomain(value).Delegations,
 		ID:          value.ID,
 		ParentID:    value.ParentID,
 		Source:      value.Source,
@@ -99,37 +96,33 @@ func SessionFactResponseDTOsFromDomain(values []domain.SessionFact) []SessionFac
 
 // FactLedgerResponseDTO is the concrete nullable cost projection of AgenticFactLedger.
 type FactLedgerResponseDTO struct {
-	GenerationPolicy *domain.GenerationPolicy       `json:"generation_policy,omitempty"`
-	SchemaVersion    *int                           `json:"schema_version,omitempty"`
-	Migration        *domain.MigrationInfo          `json:"migration,omitempty"`
-	TicketID         *string                        `json:"ticket_id"`
-	TicketTitle      *string                        `json:"ticket_title"`
-	TicketType       *domain.ConventionalTicketType `json:"ticket_type"`
-	StartedAt        *string                        `json:"started_at"`
-	CompletedAt      *string                        `json:"completed_at"`
-	UpdatedAt        string                         `json:"updated_at"`
-	Code             domain.CodeFacts               `json:"code"`
-	Sessions         []SessionFactResponseDTO       `json:"sessions"`
-	Anomalies        []domain.Anomaly               `json:"anomalies"`
+	SchemaVersion *int                           `json:"schema_version,omitempty"`
+	Migration     *domain.MigrationInfo          `json:"migration,omitempty"`
+	TicketID      *string                        `json:"ticket_id"`
+	TicketTitle   *string                        `json:"ticket_title"`
+	TicketType    *domain.ConventionalTicketType `json:"ticket_type"`
+	StartedAt     *string                        `json:"started_at"`
+	CompletedAt   *string                        `json:"completed_at"`
+	UpdatedAt     string                         `json:"updated_at"`
+	Code          domain.CodeFacts               `json:"code"`
+	Sessions      []SessionFactResponseDTO       `json:"sessions"`
+	Anomalies     []domain.Anomaly               `json:"anomalies,omitzero"`
 }
 
 func FactLedgerResponseDTOFromDomain(value domain.AgenticFactLedger) FactLedgerResponseDTO {
-	if value.GenerationPolicy != nil {
-		value = domain.ProjectGenerationFacts(value, *value.GenerationPolicy)
-	}
+
 	return FactLedgerResponseDTO{
-		GenerationPolicy: value.GenerationPolicy,
-		SchemaVersion:    value.SchemaVersion,
-		Migration:        value.Migration,
-		TicketID:         value.TicketID,
-		TicketTitle:      value.TicketTitle,
-		TicketType:       value.TicketType,
-		StartedAt:        value.StartedAt,
-		CompletedAt:      value.CompletedAt,
-		UpdatedAt:        value.UpdatedAt,
-		Code:             value.Code,
-		Sessions:         SessionFactResponseDTOsFromDomain(value.Sessions),
-		Anomalies:        value.Anomalies,
+		SchemaVersion: value.SchemaVersion,
+		Migration:     value.Migration,
+		TicketID:      value.TicketID,
+		TicketTitle:   value.TicketTitle,
+		TicketType:    value.TicketType,
+		StartedAt:     value.StartedAt,
+		CompletedAt:   value.CompletedAt,
+		UpdatedAt:     value.UpdatedAt,
+		Code:          value.Code,
+		Sessions:      SessionFactResponseDTOsFromDomain(value.Sessions),
+		Anomalies:     value.Anomalies,
 	}
 }
 
@@ -147,7 +140,7 @@ type MetricsLedgerResponseDTO struct {
 	Totals             adapters.GroupedMetricDTO      `json:"totals"`
 	Roles              []adapters.RoleMetricDTO       `json:"roles"`
 	Models             []adapters.ModelMetricDTO      `json:"models"`
-	Anomalies          []domain.Anomaly               `json:"anomalies,omitempty"`
+	Anomalies          []domain.Anomaly               `json:"anomalies,omitzero"`
 }
 
 func MetricsLedgerResponseDTOFromDomain(value domain.AgenticMetricsLedger) MetricsLedgerResponseDTO {
@@ -177,13 +170,4 @@ func MetricsLedgerResponseDTOsFromDomain(values []domain.AgenticMetricsLedger) [
 		result[i] = MetricsLedgerResponseDTOFromDomain(value)
 	}
 	return result
-}
-
-func (dto FactLedgerResponseDTO) MarshalJSON() ([]byte, error) {
-	type wire FactLedgerResponseDTO
-	data, err := json.Marshal(wire(dto))
-	if err != nil {
-		return nil, err
-	}
-	return adapters.OmitUnrecordedAnomaliesJSON(data, dto.GenerationPolicy)
 }

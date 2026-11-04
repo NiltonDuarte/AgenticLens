@@ -74,7 +74,6 @@ type ContextHealthStatus string
 
 const (
 	ContextHealthUnavailable ContextHealthStatus = "UNAVAILABLE"
-	ContextHealthDisabled    ContextHealthStatus = "DISABLED"
 	ContextHealthHealthy     ContextHealthStatus = "HEALTHY"
 	ContextHealthElevated    ContextHealthStatus = "ELEVATED"
 	ContextHealthBloated     ContextHealthStatus = "BLOATED"

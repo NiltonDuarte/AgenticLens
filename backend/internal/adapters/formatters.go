@@ -56,8 +56,18 @@ func titleCase[T ~string](s T) string {
 
 // FormatMarkdownMetricsTable reconstructs the exact markdown review table from domain ledger.
 func FormatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, roleOrder ...[]string) string {
-	anomaliesEnabled := ledger.Facts.EffectiveGenerationPolicy().Anomalies
-	unavailableSessions := ledger.Facts.UnavailableAnomalySessions()
+	return formatMarkdownMetricsTable(ledger, nil, roleOrder...)
+}
+
+// FormatMarkdownMetricsTableWithPolicy explains current generate settings only;
+// later readers cannot infer why facts were not recorded.
+func FormatMarkdownMetricsTableWithPolicy(ledger domain.AgenticMetricsLedger, policy domain.GenerationPolicy, roleOrder ...[]string) string {
+	return formatMarkdownMetricsTable(ledger, &policy, roleOrder...)
+}
+
+func formatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, policy *domain.GenerationPolicy, roleOrder ...[]string) string {
+	anomaliesEnabled := policy == nil || policy.Anomalies
+	incompleteAnalysis := !ledger.Facts.CompleteAnomalyCoverage()
 	we := ledger.WorkflowEfficiency
 	cwh := we.ContextWindowHealth
 	totals := ledger.Totals
@@ -188,8 +198,8 @@ func FormatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, roleOrder ..
 		lines = lines[:len(lines)-1]
 		lines[3] = fmt.Sprintf("- **Context Window Usage:** Root peak %s tokens (%s of %s reference ceiling, %d compactions) | Subagents peak %s (%s)", rootTokStr, rootPctStr, domain.FormatTokensK(effectiveCeiling), cwh.Compactions, subTokStr, subPeakRoleStr)
 		lines = append(lines, "Optional anomaly analysis: disabled by generation policy.")
-	} else if len(ledger.Anomalies) == 0 && unavailableSessions > 0 {
-		lines = append(lines, "- **Status:** Anomaly analysis unavailable for retained sessions; no clean-session conclusion is available.")
+	} else if len(ledger.Anomalies) == 0 && incompleteAnalysis {
+		lines = append(lines, "- **Status:** Anomaly analysis is not recorded for the full ledger; no clean-session conclusion is available.")
 	} else if len(ledger.Anomalies) == 0 {
 		lines = append(lines, "- **Status:** No execution anomalies detected (clean session).")
 	} else {
@@ -222,9 +232,9 @@ func FormatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, roleOrder ..
 		}
 	}
 
-	if anomaliesEnabled && unavailableSessions > 0 {
+	if anomaliesEnabled && incompleteAnalysis {
 		lines[3] = fmt.Sprintf("- **Context Window Usage:** Root peak %s tokens (%s of %s reference ceiling, %d compactions) | Subagents peak %s (%s)", rootTokStr, rootPctStr, domain.FormatTokensK(effectiveCeiling), cwh.Compactions, subTokStr, subPeakRoleStr)
-		lines = append(lines, fmt.Sprintf("Anomaly analysis is unavailable for %d retained session(s); recorded findings from other owners remain visible. A complete source-backed refresh is required for recovery.", unavailableSessions))
+		lines = append(lines, "Anomaly analysis is not recorded for every required owner/group; recorded findings remain visible. A complete source-backed refresh is required for recovery.")
 	}
 	lines = append(lines,
 		"",
@@ -246,8 +256,8 @@ func FormatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, roleOrder ..
 		healthLabel := domain.GetHealthLabel(r.PeakContextTokens, effectiveCeiling)
 		if !anomaliesEnabled {
 			healthLabel = "Disabled"
-		} else if unavailableSessions > 0 {
-			healthLabel = "Unavailable"
+		} else if incompleteAnalysis {
+			healthLabel = "Not recorded"
 		}
 		lines = append(lines, fmt.Sprintf(
 			"| **%s** | %d | %s | %s | %s | %.1f%% | %s | %s | %s |",
@@ -266,8 +276,8 @@ func FormatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, roleOrder ..
 	totalHealth := string(totals.ContextHealth)
 	if !anomaliesEnabled {
 		totalHealth = "Disabled"
-	} else if unavailableSessions > 0 {
-		totalHealth = "Unavailable"
+	} else if incompleteAnalysis {
+		totalHealth = "Not recorded"
 	}
 	lines = append(lines, fmt.Sprintf(
 		"| **Total** | **%d** | **%s** | **%s** | **%s** | **%.1f%%** | **%s** | **%s** | **%s** |",

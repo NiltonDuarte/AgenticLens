@@ -600,34 +600,33 @@ func runGenerate(args []string) {
 
 	schemaVer := domain.CurrentSchemaVersion
 	factLedger := domain.AgenticFactLedger{
-		GenerationPolicy: &generationPolicy,
-		SchemaVersion:    &schemaVer,
-		TicketID:         ticketIDPtr,
-		TicketTitle:      activeTicketTitle,
-		TicketType:       activeTicketType,
-		StartedAt:        activeStartedAt,
-		CompletedAt:      activeCompletedAt,
-		UpdatedAt:        updatedAtISO,
-		Code:             codeFacts,
-		Sessions:         sessions,
+		SchemaVersion: &schemaVer,
+		TicketID:      ticketIDPtr,
+		TicketTitle:   activeTicketTitle,
+		TicketType:    activeTicketType,
+		StartedAt:     activeStartedAt,
+		CompletedAt:   activeCompletedAt,
+		UpdatedAt:     updatedAtISO,
+		Code:          codeFacts,
+		Sessions:      sessions,
 	}
 
-	if cachedFacts != nil {
+	if cachedFacts != nil && cachedFacts.Anomalies != nil {
 		factLedger.Anomalies = append([]domain.Anomaly{}, cachedFacts.Anomalies...)
 	}
-	factLedger, summaryErr := domain.PersistSourceAnomalySummaries(factLedger, sourceEvents, projCfg.AnomalyThresholds)
+	factLedger, summaryErr := domain.PersistSourceAnomalySummariesWithPolicy(factLedger, sourceEvents, generationPolicy, projCfg.AnomalyThresholds)
 	if summaryErr != nil {
 		fmt.Fprintln(os.Stderr, "Cannot calculate source summaries:", summaryErr)
 		os.Exit(1)
 	}
-	metricsLedger := domain.DeriveMetricsLedger(factLedger, projCfg)
-	tableMD := adapters.FormatMarkdownMetricsTable(metricsLedger, projCfg.RoleOrder)
+	metricsLedger := domain.DeriveMetricsLedger(domain.ProjectGenerationFacts(factLedger, generationPolicy), projCfg)
+	tableMD := adapters.FormatMarkdownMetricsTableWithPolicy(metricsLedger, generationPolicy, projCfg.RoleOrder)
 	if captureResult != nil {
 		tableMD += capture.CoverageSummary(*captureResult)
 	}
 	tableMD += historySummary(baseline)
 	if !generationPolicy.Skills || !generationPolicy.Delegations || !generationPolicy.Anomalies {
-		tableMD = strings.ReplaceAll(tableMD, "unchanged because their sources were not refreshed", "outside the source refresh set; optional categories follow the recorded generation policy")
+		tableMD = strings.ReplaceAll(tableMD, "unchanged because their sources were not refreshed", "outside the source refresh set; optional categories follow the current generate settings")
 	}
 
 	if *autoFlag {
@@ -654,7 +653,7 @@ func runGenerate(args []string) {
 		}
 	}
 	if *jsonOutputFlag != "" {
-		if err := saveGenerationLedgerPreservingHistory(*jsonOutputFlag, factLedger, baseline.HistoryDTOs); err != nil {
+		if err := saveGenerationLedgerPreservingHistory(*jsonOutputFlag, factLedger, baseline.HistoryDTOs, generationPolicy); err != nil {
 			fmt.Fprintf(os.Stderr, "Error writing JSON to %s: %v\n", *jsonOutputFlag, err)
 			os.Exit(1)
 		}
@@ -669,7 +668,7 @@ func runGenerate(args []string) {
 		if !generationPolicy.Anomalies {
 			fmt.Printf("Anomaly analysis is disabled for %s by generation.metrics.anomalies=false.\n", tid)
 		} else {
-			printAnomalyDiagnostics(tid, metricsLedger.Anomalies, metricsLedger.Facts.UnavailableAnomalySessions())
+			printAnomalyDiagnostics(tid, metricsLedger.Anomalies, metricsLedger.Facts.UnrecordedAnomalyScopes())
 		}
 	}
 
@@ -1217,7 +1216,7 @@ func formatAnomalyListSummary(anomalies []domain.Anomaly) string {
 
 func printAnomalyDiagnostics(ticketID string, anomalies []domain.Anomaly, unavailableSessions ...int) {
 	if len(unavailableSessions) > 0 && unavailableSessions[0] > 0 {
-		fmt.Printf("Anomaly analysis is unavailable for %d retained session(s) in %s; complete source-backed refresh is required.\n", unavailableSessions[0], ticketID)
+		fmt.Printf("Anomaly analysis was not recorded for %d owner/group scope(s) in %s; complete source-backed refresh is required.\n", unavailableSessions[0], ticketID)
 		if len(anomalies) == 0 {
 			return
 		}
@@ -1810,11 +1809,7 @@ func main() {
 		if targetLedger.TicketID != nil && *targetLedger.TicketID != "" {
 			tid = *targetLedger.TicketID
 		}
-		if !targetLedger.Facts.EffectiveGenerationPolicy().Anomalies {
-			fmt.Printf("Anomaly analysis is disabled for %s by recorded generation policy.\n", tid)
-		} else {
-			printAnomalyDiagnostics(tid, targetLedger.Anomalies, targetLedger.Facts.UnavailableAnomalySessions())
-		}
+		printAnomalyDiagnostics(tid, targetLedger.Anomalies, targetLedger.Facts.UnrecordedAnomalyScopes())
 		return
 	}
 

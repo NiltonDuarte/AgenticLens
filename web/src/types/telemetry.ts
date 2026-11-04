@@ -98,8 +98,6 @@ export interface BrittleToolSummary {
 }
 
 export interface FleetAnomalySummary {
-  readonly disabled_tickets?: number;
-  readonly unavailable_tickets?: number;
   readonly total_anomalies: number;
   readonly warning_count: number;
   readonly critical_count: number;
@@ -107,6 +105,6 @@ export interface FleetAnomalySummary {
   readonly rule_counts: Readonly<Record<string, number>>;
   readonly total_tickets: number;
   readonly tickets_with_anomalies: number;
-  readonly anomaly_rate_per_ticket: number;
+  readonly anomaly_rate_per_ticket?: number;
   readonly brittle_tools: readonly BrittleToolSummary[];
 }

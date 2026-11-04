@@ -89,13 +89,14 @@ describe('Skills and subagents autopsy', () => {
     it.each(['omitted', 'empty'] as const)('renders a current v6 ledger with %s optional collections and keyboard collapse', async (mode) => {
         const errors = vi.spyOn(console, 'error');
         vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
-            data: mode === 'omitted' ? makeDetail() : makeDetail([], []),
+            data: mode === 'omitted' ? makeDetail() : (() => { const detail = makeDetail([], []); return { ...detail, ledger: { ...detail.ledger, facts: { ...detail.ledger.facts, sessions: detail.ledger.facts.sessions.map((owner) => ({ ...owner, skills: [], delegations: [] })) } } }; })(),
         });
         const user = userEvent.setup();
         render(<TicketDeepDive selectedTicketId="AL-1" />);
         const panel = await screen.findByRole('region', { name: /Skills & Subagents/ });
         const toggle = within(panel).getByRole('button', { name: /Skills & Subagents/ });
-        const empty = within(panel).getByText('No modular skills or subagent delegations recorded for this ticket.');
+        const empty = mode === 'empty' ? within(panel).getByText('No modular skills or subagent delegations recorded for this ticket.') : document.getElementById(toggle.getAttribute('aria-controls')!)!.querySelector('p')!;
+        if (mode === 'omitted') expect(panel).toHaveTextContent(/not recorded/i);
         expect(empty).toBeVisible();
         expect(within(panel).queryByRole('table')).not.toBeInTheDocument();
         expect(toggle).toHaveAttribute('aria-expanded', 'true');
@@ -110,38 +111,65 @@ describe('Skills and subagents autopsy', () => {
         expect(errors).not.toHaveBeenCalled();
     });
 
-    it('explains intentionally disabled categories when optional source hydration is unavailable', async () => {
+    it('explains unrecorded categories without guessing why source hydration is unavailable', async () => {
         const detail = makeDetail();
-        const policy = { skills: false, delegations: false, anomalies: false };
         vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: {
-            ...detail, ledger: { ...detail.ledger, facts: { ...detail.ledger.facts, generation_policy: policy } },
+            ...detail, ledger: { ...detail.ledger, facts: { ...detail.ledger.facts } },
         } });
         render(<TicketDeepDive selectedTicketId="AL-1" />);
         const panel = await screen.findByRole('region', { name: /Skills & Subagents/ });
-        expect(within(panel).getByText('Skills were disabled when this ledger was generated.')).toBeVisible();
-        expect(within(panel).getByText('Delegations were disabled when this ledger was generated.')).toBeVisible();
+        expect(panel).toHaveTextContent(/not recorded/i);
+        expect(panel).not.toHaveTextContent(/disabled/i);
         expect(within(panel).queryByText('No modular skills or subagent delegations recorded for this ticket.')).not.toBeInTheDocument();
         expect(within(panel).queryByText(/0 Skills/)).not.toBeInTheDocument();
-        expect(await screen.findByText(/Recorded anomaly analysis was disabled when this ledger was generated/)).toBeVisible();
+        expect(screen.queryByText(/were disabled|was disabled/i)).not.toBeInTheDocument();
     });
 
     it('explains unavailable historical analysis while retaining supported skills after source hydration fails', async () => {
         const detail = makeDetail([skill], [delegation]);
         vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: {
             ...detail, ledger: { ...detail.ledger, facts: { ...detail.ledger.facts,
-                generation_policy: { skills: true, delegations: true, anomalies: true },
                 sessions: detail.ledger.facts.sessions.map((owner, index) => {
                     if (index !== 0) return owner;
                     const { anomalies, ...recorded } = owner;
                     void anomalies;
-                    return { ...recorded, anomaly_availability: 'unavailable' as const };
+                    return recorded;
                 }),
             } },
         } });
         render(<TicketDeepDive selectedTicketId="AL-1" />);
-        expect(await screen.findByText(/Recorded anomaly analysis is unavailable for retained sessions/)).toBeVisible();
+        expect(await screen.findByText(/anomaly analysis.*not recorded|anomalies.*not recorded/i)).toBeVisible();
         expect(await screen.findByRole('table', { name: 'Modular skills' })).toHaveTextContent('inspect-source');
         expect(screen.queryByText('Recorded anomaly analysis was disabled when this ledger was generated. Source trace analysis is independent.')).not.toBeInTheDocument();
+    });
+
+    it('keeps missing, recorded-empty and known skill coverage distinct when filtering owners', async () => {
+        const detail = makeDetail();
+        const sessions: readonly SessionFact[] = [
+            { id: 'known', source: 'codex', invocations: [], tools: [], skills: [skill], delegations: [] },
+            { id: 'empty', source: 'codex', invocations: [], tools: [], skills: [], delegations: [] },
+            { id: 'missing', source: 'opencode', invocations: [], tools: [] },
+        ];
+        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: {
+            ...detail, ledger: { ...detail.ledger, facts: { ...detail.ledger.facts, sessions },
+                threads: sessions.map((owner) => ({ ...detail.ledger.threads[0]!, session_id: owner.id })),
+            },
+        } });
+        const user = userEvent.setup();
+        render(<TicketDeepDive selectedTicketId="AL-1" />);
+        const panel = await screen.findByRole('region', { name: /Skills & Subagents/ });
+        expect(panel).toHaveTextContent('1 recorded Skills');
+        expect(within(panel).getByRole('table', { name: 'Modular skills' })).toHaveTextContent('inspect-source');
+        const filter = within(panel).getByRole('combobox', { name: 'Filter skills and delegations by session' });
+        await user.selectOptions(filter, 'empty');
+        expect(panel).toHaveTextContent('0 Skills');
+        expect(within(panel).queryByRole('table', { name: 'Modular skills' })).not.toBeInTheDocument();
+        await user.selectOptions(filter, 'missing');
+        expect(panel).toHaveTextContent(/skills not recorded/i);
+        expect(panel).not.toHaveTextContent('0 Skills');
+        await user.selectOptions(filter, 'known');
+        expect(panel).toHaveTextContent('1 Skills');
+        expect(within(panel).getByRole('table', { name: 'Modular skills' })).toHaveTextContent('inspect-source');
     });
 
     it('shows lean native owners and nullable activations, filters exactly by session and preserves unavailable owned facts after failed enrichment', async () => {

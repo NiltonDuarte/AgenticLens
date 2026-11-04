@@ -86,18 +86,17 @@ func MigrationInfoDTOFromDomain(info *domain.MigrationInfo) *MigrationInfoDTO {
 
 // AgenticFactLedgerDTO represents the complete raw agentic_metrics.json schema.
 type AgenticFactLedgerDTO struct {
-	GenerationPolicy *domain.GenerationPolicy `json:"generation_policy,omitempty"`
-	SchemaVersion    *int                     `json:"schema_version,omitempty"`
-	Migration        *MigrationInfoDTO        `json:"migration,omitempty"`
-	TicketID         *string                  `json:"ticket_id"`
-	TicketTitle      *string                  `json:"ticket_title"`
-	TicketType       *string                  `json:"ticket_type"`
-	StartedAt        *string                  `json:"started_at"`
-	CompletedAt      *string                  `json:"completed_at"`
-	UpdatedAt        string                   `json:"updated_at"`
-	Code             CodeFactsDTO             `json:"code"`
-	Sessions         []SessionFactDTO         `json:"sessions"`
-	Anomalies        []AnomalyDTO             `json:"anomalies"`
+	SchemaVersion *int              `json:"schema_version,omitempty"`
+	Migration     *MigrationInfoDTO `json:"migration,omitempty"`
+	TicketID      *string           `json:"ticket_id"`
+	TicketTitle   *string           `json:"ticket_title"`
+	TicketType    *string           `json:"ticket_type"`
+	StartedAt     *string           `json:"started_at"`
+	CompletedAt   *string           `json:"completed_at"`
+	UpdatedAt     string            `json:"updated_at"`
+	Code          CodeFactsDTO      `json:"code"`
+	Sessions      []SessionFactDTO  `json:"sessions"`
+	Anomalies     []AnomalyDTO      `json:"anomalies,omitzero"`
 }
 
 // UnmarshalJSON accepts the current schema only; legacy input decoding belongs
@@ -146,18 +145,17 @@ func (dto AgenticFactLedgerDTO) ToDomain() domain.AgenticFactLedger {
 	}
 
 	return domain.AgenticFactLedger{
-		GenerationPolicy: dto.GenerationPolicy,
-		SchemaVersion:    dto.SchemaVersion,
-		Migration:        mig,
-		TicketID:         dto.TicketID,
-		TicketTitle:      dto.TicketTitle,
-		TicketType:       toDomainTicketType(dto.TicketType),
-		StartedAt:        dto.StartedAt,
-		CompletedAt:      dto.CompletedAt,
-		UpdatedAt:        dto.UpdatedAt,
-		Code:             dto.Code.ToDomain(),
-		Sessions:         sessions,
-		Anomalies:        anomaliesToDomain(dto.Anomalies),
+		SchemaVersion: dto.SchemaVersion,
+		Migration:     mig,
+		TicketID:      dto.TicketID,
+		TicketTitle:   dto.TicketTitle,
+		TicketType:    toDomainTicketType(dto.TicketType),
+		StartedAt:     dto.StartedAt,
+		CompletedAt:   dto.CompletedAt,
+		UpdatedAt:     dto.UpdatedAt,
+		Code:          dto.Code.ToDomain(),
+		Sessions:      sessions,
+		Anomalies:     anomaliesToDomain(dto.Anomalies),
 	}
 }
 
@@ -170,22 +168,7 @@ func (dto AgenticFactLedgerDTO) Validate() error {
 	if currentSchema && dto.Sessions == nil {
 		return errors.New("sessions collection is required in schema v6")
 	}
-	if policy := dto.GenerationPolicy; policy != nil {
-		if !policy.Anomalies && dto.Anomalies != nil {
-			return errors.New("generation_policy.anomalies=false requires root anomalies to be omitted")
-		}
-		for i, session := range dto.Sessions {
-			if !policy.Skills && session.Skills != nil {
-				return fmt.Errorf("generation_policy.skills=false requires sessions[%d].skills to be omitted", i)
-			}
-			if !policy.Delegations && session.Delegations != nil {
-				return fmt.Errorf("generation_policy.delegations=false requires sessions[%d].delegations to be omitted", i)
-			}
-			if !policy.Anomalies && session.Anomalies != nil {
-				return fmt.Errorf("generation_policy.anomalies=false requires sessions[%d].anomalies to be omitted", i)
-			}
-		}
-	}
+
 	seen := make(map[string]bool, len(dto.Sessions))
 	for i, session := range dto.Sessions {
 		if strings.TrimSpace(session.ID) == "" {
@@ -200,12 +183,7 @@ func (dto AgenticFactLedgerDTO) Validate() error {
 		seen[session.ID] = true
 	}
 	for i, session := range dto.Sessions {
-		if session.AnomalyAvailability != "" && session.AnomalyAvailability != domain.AnomalyUnavailable {
-			return fmt.Errorf("sessions[%d].anomaly_availability must be unavailable or absent", i)
-		}
-		if session.AnomalyAvailability == domain.AnomalyUnavailable && session.Anomalies != nil {
-			return fmt.Errorf("sessions[%d] unavailable analysis requires anomalies to be omitted", i)
-		}
+
 		if err := validateOwnedOccurrences(session); err != nil {
 			return fmt.Errorf("sessions[%d]: %w", i, err)
 		}
@@ -271,24 +249,21 @@ func (dto AgenticFactLedgerDTO) ValidatePersistedEvidence() error {
 
 // AgenticFactLedgerDTOFromDomain converts a domain AgenticFactLedger to its DTO for serialization.
 func AgenticFactLedgerDTOFromDomain(ledger domain.AgenticFactLedger) AgenticFactLedgerDTO {
-	if ledger.GenerationPolicy != nil {
-		ledger = domain.ProjectGenerationFacts(ledger, *ledger.GenerationPolicy)
-	}
+
 	sessions := make([]SessionFactDTO, len(ledger.Sessions))
 	for i, session := range ledger.Sessions {
 		sessions[i] = SessionFactDTOFromDomain(session)
 	}
 
 	return ProjectGenerationDTO(AgenticFactLedgerDTO{
-		GenerationPolicy: ledger.GenerationPolicy,
-		SchemaVersion:    ledger.SchemaVersion,
-		Migration:        MigrationInfoDTOFromDomain(ledger.Migration),
-		TicketID:         ledger.TicketID,
-		TicketTitle:      ledger.TicketTitle,
-		TicketType:       fromDomainTicketType(ledger.TicketType),
-		StartedAt:        ledger.StartedAt,
-		CompletedAt:      ledger.CompletedAt,
-		UpdatedAt:        ledger.UpdatedAt,
+		SchemaVersion: ledger.SchemaVersion,
+		Migration:     MigrationInfoDTOFromDomain(ledger.Migration),
+		TicketID:      ledger.TicketID,
+		TicketTitle:   ledger.TicketTitle,
+		TicketType:    fromDomainTicketType(ledger.TicketType),
+		StartedAt:     ledger.StartedAt,
+		CompletedAt:   ledger.CompletedAt,
+		UpdatedAt:     ledger.UpdatedAt,
 		Code: CodeFactsDTO{
 			LinesAdded:       ledger.Code.LinesAdded,
 			LinesDeleted:     ledger.Code.LinesDeleted,
@@ -321,14 +296,18 @@ func (dto AgenticFactLedgerDTO) validateCostFields(required bool) error {
 // ValidateRuntimeFactLedger rejects legacy or explicitly incomplete ledgers before
 // any fact collections are decoded by ordinary ingestion paths.
 func ValidateRuntimeFactLedger(data []byte) error {
+	normalized, err := normalizeFormerGenerationMetadata(data)
+	if err != nil {
+		return fmt.Errorf("decoding ledger metadata: %w", err)
+	}
+	data = normalized
 	var fields map[string]json.RawMessage
 	if err := json.Unmarshal(data, &fields); err != nil {
 		return fmt.Errorf("decoding ledger metadata: %w", err)
 	}
 	var metadata struct {
-		SchemaVersion    *int                     `json:"schema_version"`
-		GenerationPolicy *domain.GenerationPolicy `json:"generation_policy"`
-		Migration        *struct {
+		SchemaVersion *int `json:"schema_version"`
+		Migration     *struct {
 			Status         string   `json:"status"`
 			StepsCompleted []string `json:"steps_completed"`
 			StepsPending   []string `json:"steps_pending"`
@@ -351,11 +330,7 @@ func ValidateRuntimeFactLedger(data []byte) error {
 			return fmt.Errorf("schema v6 ledger contains ambiguous root-level %s; run `agentic-lens migrate --target-version 6` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>`", key)
 		}
 	}
-	if metadata.GenerationPolicy != nil && !metadata.GenerationPolicy.Anomalies {
-		if _, exists := fields["anomalies"]; exists {
-			return errors.New("disabled analysis requires root anomalies to be omitted")
-		}
-	}
+
 	sessionsJSON, sessionsExists := fields["sessions"]
 	if !sessionsExists || string(sessionsJSON) == "null" || !json.Valid(sessionsJSON) {
 		return errors.New("canonical schema v6 ledger requires a sessions collection; run `agentic-lens migrate --target-version 6` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>`")
@@ -379,26 +354,7 @@ func ValidateRuntimeFactLedger(data []byte) error {
 				return fmt.Errorf("schema v6 session %d rejects retired %s", si, retired)
 			}
 		}
-		unavailable := false
-		if raw, exists := session["anomaly_availability"]; exists {
-			var availability domain.AnomalyAvailability
-			if err := json.Unmarshal(raw, &availability); err != nil || availability != domain.AnomalyUnavailable {
-				return fmt.Errorf("canonical schema v6 session %d anomaly_availability must be unavailable or absent", si)
-			}
-			unavailable = true
-			if _, exists := session["anomalies"]; exists {
-				return fmt.Errorf("canonical schema v6 session %d unavailable analysis requires anomalies to be omitted", si)
-			}
-		}
-		if metadata.GenerationPolicy != nil && !metadata.GenerationPolicy.Anomalies {
-			if _, exists := session["anomalies"]; exists {
-				return fmt.Errorf("canonical schema v6 session %d disabled analysis requires anomalies to be omitted", si)
-			}
-		}
 		requiredFields := []string{"id", "source", "user", "invocations", "tools"}
-		if !unavailable && (metadata.GenerationPolicy == nil || metadata.GenerationPolicy.Anomalies) {
-			requiredFields = append(requiredFields, "anomalies")
-		}
 		for _, required := range requiredFields {
 			if _, ok := session[required]; !ok {
 				return fmt.Errorf("canonical schema v6 session %d is missing required %s", si, required)
@@ -409,9 +365,7 @@ func ValidateRuntimeFactLedger(data []byte) error {
 			return fmt.Errorf("canonical schema v6 session %d requires a non-empty user", si)
 		}
 		collections := []string{"tools"}
-		if !unavailable && (metadata.GenerationPolicy == nil || metadata.GenerationPolicy.Anomalies) {
-			collections = append(collections, "anomalies")
-		}
+
 		for _, collection := range collections {
 			var values []json.RawMessage
 			if err := json.Unmarshal(session[collection], &values); err != nil || values == nil {

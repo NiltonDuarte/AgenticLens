@@ -610,7 +610,7 @@ func saveGenerationLedger(path string, ledger domain.AgenticFactLedger) error {
 	return saveGenerationLedgerPreservingHistory(path, ledger, nil)
 }
 
-func saveGenerationLedgerPreservingHistory(path string, ledger domain.AgenticFactLedger, history []adapters.SessionFactDTO) error {
+func saveGenerationLedgerPreservingHistory(path string, ledger domain.AgenticFactLedger, history []adapters.SessionFactDTO, policies ...domain.GenerationPolicy) error {
 	target, err := capture.ProjectDirectory(path)
 	if err != nil {
 		return err
@@ -631,7 +631,7 @@ func saveGenerationLedgerPreservingHistory(path string, ledger domain.AgenticFac
 			fmt.Fprintln(os.Stderr, "Generation staging cleanup:", removeErr)
 		}
 	}()
-	if err = adapters.SaveFactLedgerPreservingHistory(temp, ledger, history); err != nil {
+	if err = adapters.SaveFactLedgerPreservingHistory(temp, ledger, history, policies...); err != nil {
 		return err
 	}
 	file, err = os.OpenFile(temp, os.O_RDWR, 0)

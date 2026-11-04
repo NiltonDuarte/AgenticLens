@@ -478,7 +478,7 @@ func NormalizeHistorySessionForPublication(owner SessionFactDTO, schemaVersion i
 // previously authorized immutable historical DTOs through the same canonical
 // validation and writer. Supported lean facts, summaries, order and nullable
 // values in retained rows never pass through source persistence transforms.
-func SaveFactLedgerPreservingHistory(path string, ledger domain.AgenticFactLedger, history []SessionFactDTO) error {
+func SaveFactLedgerPreservingHistory(path string, ledger domain.AgenticFactLedger, history []SessionFactDTO, policies ...domain.GenerationPolicy) error {
 
 	if ledger.TicketID == nil || strings.TrimSpace(*ledger.TicketID) == "" {
 		return fmt.Errorf("cannot save fact ledger: TicketID is required and cannot be empty")
@@ -534,7 +534,7 @@ func SaveFactLedgerPreservingHistory(path string, ledger domain.AgenticFactLedge
 		}
 		dto.Sessions = append(dto.Sessions, cloned)
 	}
-	dto = ProjectGenerationDTO(dto)
+	dto = ProjectGenerationDTO(dto, policies...)
 	if err := dto.Validate(); err != nil {
 		return fmt.Errorf("cannot save fact ledger: %w", err)
 	}

@@ -564,15 +564,6 @@ func (e *BackfillEngine) processSingleWorkspace(
 
 	// 4. Prepare and validate the entire candidate before dry-run or publication.
 
-	if opts.RecomputeDB {
-		if policy := factLedger.GenerationPolicy; policy != nil && !policy.Anomalies {
-			// Preserve prior omission as unavailable owner evidence before removing
-			// the generate-only policy. Complete source owners regain recorded
-			// analysis in PersistSourceAnomalySummaries below.
-			factLedger = domain.ProjectGenerationFacts(factLedger, domain.DefaultGenerationPolicy())
-		}
-		factLedger.GenerationPolicy = nil
-	}
 	persistedLedger, err := domain.PersistSourceAnomalySummaries(factLedger, sourceEvents)
 	if err != nil {
 		result.Error = fmt.Errorf("preparing session-owned facts: %w", err)
@@ -605,7 +596,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 	// 5. Update Markdown Summary if requested
 	if opts.UpdateSummaries {
 		summaryPath := filepath.Join(workspaceDir, "SUMMARY.md")
-		derivedLedger := domain.DeriveMetricsLedger(factLedger, cfg)
+		derivedLedger := domain.DeriveMetricsLedger(persistedLedger, cfg)
 		tableMD := adapters.FormatMarkdownMetricsTable(derivedLedger, cfg.RoleOrder)
 		if err := adapters.UpdateSummaryFile(summaryPath, tableMD); err != nil {
 			result.Error = fmt.Errorf("updating summary file %s: %w", summaryPath, err)

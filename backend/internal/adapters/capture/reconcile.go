@@ -461,7 +461,7 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 				current.ParentID = *owner.ParentID
 			}
 			// Lean auxiliary facts belong to the exact owner snapshot.
-			compact, compactErr := domain.PersistAnomalySummaries(domain.AgenticFactLedger{Sessions: fresh, GenerationPolicy: source.policy})
+			compact, compactErr := domain.PersistAnomalySummaries(domain.AgenticFactLedger{Sessions: fresh})
 			if compactErr != nil {
 				return current, compactErr
 			}
@@ -539,7 +539,11 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 			all = append(all, registration.Snapshot...)
 		}
 	}
-	summary, summaryErr := domain.PersistSourceAnomalySummaries(domain.AgenticFactLedger{Sessions: all, GenerationPolicy: source.policy}, source.events)
+	effectivePolicy := domain.DefaultGenerationPolicy()
+	if source.policy != nil {
+		effectivePolicy = *source.policy
+	}
+	summary, summaryErr := domain.PersistSourceAnomalySummariesWithPolicy(domain.AgenticFactLedger{Sessions: all}, source.events, effectivePolicy)
 	if summaryErr != nil {
 		return nil, nil, summaryErr
 	}

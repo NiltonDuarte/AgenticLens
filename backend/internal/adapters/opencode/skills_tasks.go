@@ -83,34 +83,64 @@ func WithOwnedSkillTaskFacts(sessions []domain.SessionFact, events []domain.Even
 	}
 	return result
 }
-func projectSourceFacts(sessions []domain.SessionFact, events []domain.EventFact, strict bool, policy *domain.GenerationPolicy) ([]domain.SessionFact, error) {
+func projectSourceFacts(sessions []domain.SessionFact, events []domain.EventFact, strict bool, policy *domain.GenerationPolicy, incomplete ...map[string]bool) ([]domain.SessionFact, error) {
+	partialOwners := make(map[string]bool)
+	if len(incomplete) > 0 {
+		for id, partial := range incomplete[0] {
+			partialOwners[id] = partial
+		}
+	}
 	for _, event := range events {
-		if policy != nil && event.ToolName != nil && ((*event.ToolName == "skill" && !policy.Skills) || (*event.ToolName == "task" && !policy.Delegations)) {
+		if event.EventType != domain.EventTypeToolCall || event.ToolName == nil || (*event.ToolName != "skill" && *event.ToolName != "task") {
 			continue
 		}
-		if !strict || event.EventType != domain.EventTypeToolCall || event.ToolName == nil || (*event.ToolName != "skill" && *event.ToolName != "task") {
+		if policy != nil && ((*event.ToolName == "skill" && !policy.Skills) || (*event.ToolName == "task" && !policy.Delegations)) {
 			continue
 		}
 		var fields map[string]json.RawMessage
-		if event.ToolInput == nil || json.Unmarshal([]byte(*event.ToolInput), &fields) != nil || fields == nil {
-			return nil, fmt.Errorf("incomplete %s source call in session %s", *event.ToolName, event.SessionID)
+		valid := event.ToolInput != nil && json.Unmarshal([]byte(*event.ToolInput), &fields) == nil && fields != nil
+		if valid && *event.ToolName == "skill" {
+			valid = rawString(fields["name"]) != ""
 		}
-		if *event.ToolName == "skill" && rawString(fields["name"]) == "" {
-			return nil, fmt.Errorf("skill call has no native name in session %s", event.SessionID)
+		if !valid {
+			if strict {
+				return nil, fmt.Errorf("incomplete %s source call in session %s", *event.ToolName, event.SessionID)
+			}
+			partialOwners[event.SessionID] = true
 		}
 	}
 	sessions = WithOwnedSkillTaskFacts(sessions, events)
 	complete := make([]string, 0, len(sessions))
 	for _, owner := range sessions {
-		complete = append(complete, owner.ID)
+		partial := partialOwners[owner.ID]
+		if !partial {
+			complete = append(complete, owner.ID)
+		}
 	}
-	ledger := domain.AgenticFactLedger{Sessions: sessions, GenerationPolicy: policy}
+	ledger := domain.AgenticFactLedger{Sessions: sessions}
 	if policy != nil {
 		ledger = domain.ProjectGenerationFacts(ledger, *policy)
 	}
-	facts, err := domain.PersistSourceAnomalySummaries(ledger, domain.SourceEvents{Events: events, CompleteSessionIDs: complete})
+	effective := domain.DefaultGenerationPolicy()
+	if policy != nil {
+		effective = *policy
+	}
+	facts, err := domain.PersistSourceAnomalySummariesWithPolicy(ledger, domain.SourceEvents{Events: events, CompleteSessionIDs: complete}, effective)
 	if err != nil {
 		return nil, err
+	}
+	for i, owner := range facts.Sessions {
+		if partialOwners[owner.ID] {
+			if len(owner.Skills) == 0 {
+				facts.Sessions[i].Skills = nil
+			}
+			if len(owner.Delegations) == 0 {
+				facts.Sessions[i].Delegations = nil
+			}
+			if len(owner.Anomalies) == 0 {
+				facts.Sessions[i].Anomalies = nil
+			}
+		}
 	}
 	return facts.Sessions, nil
 }

@@ -645,7 +645,7 @@ func ComputeFleetAnomalies(ledgers []AgenticFactLedger, thresholds ...AnomalyThr
 			RuleCounts:           ruleCounts,
 			TotalTickets:         0,
 			TicketsWithAnomalies: 0,
-			AnomalyRatePerTicket: 0.0,
+			AnomalyRatePerTicket: nil,
 			BrittleTools:         []BrittleToolSummary{},
 		}
 	}
@@ -665,7 +665,7 @@ func ComputeFleetAnomalies(ledgers []AgenticFactLedger, thresholds ...AnomalyThr
 		return st
 	}
 
-	var totalAnomalies, warningCount, criticalCount, ticketsWithAnomalies, disabledTickets, unavailableTickets int64
+	var totalAnomalies, warningCount, criticalCount, ticketsWithAnomalies, totalTickets int64
 
 	for _, ledger := range ledgers {
 		if len(ledger.ToolFacts()) > 0 {
@@ -678,12 +678,8 @@ func ComputeFleetAnomalies(ledgers []AgenticFactLedger, thresholds ...AnomalyThr
 			}
 		}
 
-		if !ledger.EffectiveGenerationPolicy().Anomalies {
-			disabledTickets++
-			continue
-		}
-		if ledger.UnavailableAnomalySessions() > 0 {
-			unavailableTickets++
+		if ledger.CompleteAnomalyCoverage() {
+			totalTickets++
 		}
 		ticketAnomalies := RefreshAnomalySummaries(ledger, thresholds...)
 		if len(ticketAnomalies) > 0 {
@@ -706,10 +702,10 @@ func ComputeFleetAnomalies(ledgers []AgenticFactLedger, thresholds ...AnomalyThr
 
 	}
 
-	totalTickets := int64(len(ledgers)) - disabledTickets
-	var anomalyRatePerTicket float64
-	if totalTickets > 0 {
-		anomalyRatePerTicket = math.Round((float64(totalAnomalies)/float64(totalTickets))*100.0) / 100.0
+	var anomalyRatePerTicket *float64
+	if totalTickets > 0 && totalTickets == int64(len(ledgers)) {
+		rate := math.Round((float64(totalAnomalies)/float64(totalTickets))*100.0) / 100.0
+		anomalyRatePerTicket = &rate
 	}
 
 	brittleTools := make([]BrittleToolSummary, 0)
@@ -743,8 +739,6 @@ func ComputeFleetAnomalies(ledgers []AgenticFactLedger, thresholds ...AnomalyThr
 	})
 
 	return FleetAnomalySummary{
-		UnavailableTickets:   unavailableTickets,
-		DisabledTickets:      disabledTickets,
 		TotalAnomalies:       totalAnomalies,
 		WarningCount:         warningCount,
 		CriticalCount:        criticalCount,

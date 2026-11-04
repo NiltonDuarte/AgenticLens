@@ -6,8 +6,7 @@ import (
 
 // FleetSummaryDTO is the concrete nullable cost projection of FleetSummary.
 type FleetSummaryDTO struct {
-	SkillsDisabledTickets    int64                                   `json:"skills_disabled_tickets,omitempty"`
-	SkillAdoption            []domain.SkillAdoptionFact              `json:"skill_adoption"`
+	SkillAdoption            []domain.SkillAdoptionFact              `json:"skill_adoption,omitzero"`
 	TotalTickets             int64                                   `json:"total_tickets"`
 	TotalCostUSD             *float64                                `json:"total_cost_usd"`
 	CostSummary              domain.CostSummary                      `json:"cost_summary"`
@@ -35,7 +34,6 @@ func FleetSummaryDTOFromDomain(value domain.FleetSummary) FleetSummaryDTO {
 	roles := effectiveRoleCostSummaries(value.RoleCostSummaries, value.RoleCosts)
 	models := effectiveModelCostSummaries(value.ModelCostSummaries, value.ModelCosts)
 	return FleetSummaryDTO{
-		SkillsDisabledTickets:    value.SkillsDisabledTickets,
 		SkillAdoption:            value.SkillAdoption,
 		TotalTickets:             value.TotalTickets,
 		TotalCostUSD:             summary.CompleteAmount(),

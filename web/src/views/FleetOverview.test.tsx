@@ -28,11 +28,12 @@ describe('FleetOverview View Component', () => {
         { name: 'gamma', total_invocations: 1, tickets_count: 1 },
         { name: 'omega', total_invocations: 1, tickets_count: 1 },
       ] } })
-      .mockResolvedValue({ data: mockFleetSummary });
+      .mockResolvedValueOnce({ data: mockFleetSummary })
+      .mockResolvedValue({ data: { ...mockFleetSummary, skill_adoption: [] } });
     vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({ data: [...mockTicketComparisonRows] });
     render(<FleetOverview />);
     const card = await screen.findByRole('region', { name: 'Skill Adoption' });
-    expect(within(card).getByText('4 unique skills')).toBeInTheDocument();
+    expect(within(card).getByText('4 recorded skills')).toBeInTheDocument();
     expect(within(card).getByText('11 activations')).toBeInTheDocument();
     expect(within(card).queryByText(/success rate/i)).not.toBeInTheDocument();
     expect(within(card).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
@@ -41,9 +42,14 @@ describe('FleetOverview View Component', () => {
     fireEvent.change(screen.getByLabelText('Date Range Preset'), { target: { value: '7d' } });
     await waitFor(() => expect(fetchFleet).toHaveBeenLastCalledWith('7d', undefined, undefined));
     const emptyCard = await screen.findByRole('region', { name: 'Skill Adoption' });
-    expect(within(emptyCard).getByText('0 unique skills')).toBeInTheDocument();
-    expect(within(emptyCard).getByText('No recorded skills')).toBeInTheDocument();
-    expect(within(emptyCard).getByText('0 activations')).toBeInTheDocument();
+    expect(await within(emptyCard).findByText('Not recorded')).toBeInTheDocument();
+    expect(within(emptyCard).queryByText('0 activations')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Date Range Preset'), { target: { value: '30d' } });
+    await waitFor(() => expect(fetchFleet).toHaveBeenLastCalledWith('30d', undefined, undefined));
+    expect(await screen.findByText('0 recorded skills')).toBeInTheDocument();
+    const recordedEmptyCard = screen.getByRole('region', { name: 'Skill Adoption' });
+    expect(within(recordedEmptyCard).getByText('No recorded skills')).toBeInTheDocument();
+    expect(within(recordedEmptyCard).getByText('0 activations')).toBeInTheDocument();
   });
 
   it('keeps recorded activations visible without outcome analytics', async () => {
@@ -53,7 +59,7 @@ describe('FleetOverview View Component', () => {
     vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({ data: [...mockTicketComparisonRows] });
     render(<FleetOverview />);
     const card = await screen.findByRole('region', { name: 'Skill Adoption' });
-    expect(within(card).getByText('1 unique skills')).toBeVisible();
+    expect(within(card).getByText('1 recorded skills')).toBeVisible();
     expect(within(card).getByText('selected-skill: 3 invocations')).toBeVisible();
     expect(within(card).getByText('3 activations')).toBeVisible();
     expect(within(card).queryByText(/success rate/i)).not.toBeInTheDocument();

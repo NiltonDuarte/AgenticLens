@@ -3,6 +3,7 @@ import type { FleetAnomalySummary } from '../types/telemetry';
 
 export interface FleetAnomalyCardProps {
   readonly summary?: FleetAnomalySummary | null | undefined;
+  readonly selectedTickets?: number;
   readonly onViewTicket?: ((ticketId: string) => void) | undefined;
 }
 
@@ -36,31 +37,18 @@ const RULES: readonly RuleMeta[] = [
 ];
 
 export const FleetAnomalyCard: React.FC<FleetAnomalyCardProps> = ({
-  summary,
+  summary, selectedTickets,
 }) => {
-  if (summary && (summary.disabled_tickets ?? 0) > 0 && summary.total_tickets === 0) {
+  const complete = summary?.anomaly_rate_per_ticket !== undefined &&
+    (selectedTickets === undefined || summary.total_tickets === selectedTickets);
+  if (!summary || (summary.total_anomalies === 0 && !complete)) {
     return <div className="fleet-anomaly-card" data-testid="fleet-anomaly-card">
-      <h3 className="card-section-title">Recorded anomaly analysis disabled</h3>
-      <p>All selected ledgers omitted anomaly analysis during generation.</p>
-      <ToolReliabilityTable brittleTools={summary.brittle_tools ?? []} showAnomalies={false} />
+      <h3 className="card-section-title">Anomaly analysis not recorded</h3>
+      <p>Complete analysis was not recorded for every selected owner and group. No clean-fleet conclusion is available.</p>
+      <ToolReliabilityTable brittleTools={summary?.brittle_tools ?? []} showAnomalies={false} />
     </div>;
   }
-  if (summary && (summary.unavailable_tickets ?? 0) > 0 && summary.total_anomalies === 0) {
-    return <div className="fleet-anomaly-card" data-testid="fleet-anomaly-card">
-      <h3 className="card-section-title">Recorded anomaly analysis unavailable</h3>
-      <p>{summary.unavailable_tickets} enabled tickets include sessions whose analysis requires source-backed recovery. No clean-fleet conclusion is available.</p>
-      {(summary.disabled_tickets ?? 0) > 0 && <p>{summary.disabled_tickets} tickets omitted anomaly analysis.</p>}
-      <ToolReliabilityTable brittleTools={summary.brittle_tools ?? []} showAnomalies={false} />
-    </div>;
-  }
-  if (summary && (summary.disabled_tickets ?? 0) > 0 && summary.total_anomalies === 0) {
-    return <div className="fleet-anomaly-card" data-testid="fleet-anomaly-card">
-      <h3 className="card-section-title">No recorded anomalies in enabled ledgers</h3>
-      <p>{summary.total_tickets} enabled tickets; {summary.disabled_tickets} tickets omitted anomaly analysis.</p>
-      <ToolReliabilityTable brittleTools={summary.brittle_tools ?? []} showAnomalies={false} />
-    </div>;
-  }
-  if (!summary || summary.total_anomalies === 0) {
+  if (summary.total_anomalies === 0) {
     return (
       <div className="fleet-anomaly-card clean-card" data-testid="fleet-anomaly-card">
         <div className="clean-card-header">
@@ -83,9 +71,8 @@ export const FleetAnomalyCard: React.FC<FleetAnomalyCardProps> = ({
         <div>
           <h3 className="card-section-title">Fleet Anomaly and Reliability Profile</h3>
           <p className="card-section-subtitle">
-            Anomaly counts cover enabled workspaces. Tool calls and errors cover all recorded workspaces.
-            {(summary.disabled_tickets ?? 0) > 0 && ` ${summary.disabled_tickets} tickets omitted recorded anomaly analysis.`}
-            {(summary.unavailable_tickets ?? 0) > 0 && ` ${summary.unavailable_tickets} enabled tickets have unavailable session analysis; shown findings are incomplete.`}
+            Recorded findings remain visible across selected workspaces. Tool calls and errors cover all recorded workspaces.
+            {!complete && ' Analysis is not recorded for the full population; counts reflect known findings only.'}
           </p>
         </div>
       </div>
@@ -103,19 +90,19 @@ export const FleetAnomalyCard: React.FC<FleetAnomalyCardProps> = ({
         <div className="anomaly-kpi-item">
           <span className="anomaly-kpi-label">Affected Tickets</span>
           <span className="anomaly-kpi-val mono">
-            {summary.tickets_with_anomalies} of {summary.total_tickets} tickets
+            {complete ? `${summary.tickets_with_anomalies} of ${summary.total_tickets} tickets` : `${summary.tickets_with_anomalies} tickets with recorded findings`}
           </span>
           <span className="anomaly-kpi-sub">
-            {summary.total_tickets > 0
+            {complete && summary.total_tickets > 0
               ? `${Math.round((summary.tickets_with_anomalies / summary.total_tickets) * 100)}% of analyzed tickets`
-              : '0% of fleet'}
+              : 'Complete population rate not recorded'}
           </span>
         </div>
 
         <div className="anomaly-kpi-item">
           <span className="anomaly-kpi-label">Anomaly Rate</span>
           <span className="anomaly-kpi-val mono">
-            {summary.anomaly_rate_per_ticket.toFixed(2)}
+            {summary.anomaly_rate_per_ticket === undefined ? 'Not recorded' : summary.anomaly_rate_per_ticket.toFixed(2)}
           </span>
           <span className="anomaly-kpi-sub">average per ticket</span>
         </div>

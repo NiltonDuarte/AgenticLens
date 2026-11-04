@@ -2020,8 +2020,8 @@ func TestComputeFleetAnomalies_EmptyInput(t *testing.T) {
 		if summary.TotalTickets != 0 || summary.TicketsWithAnomalies != 0 {
 			t.Errorf("expected 0 total tickets, got %d", summary.TotalTickets)
 		}
-		if summary.AnomalyRatePerTicket != 0.0 {
-			t.Errorf("expected 0.0 anomaly rate, got %f", summary.AnomalyRatePerTicket)
+		if summary.AnomalyRatePerTicket != nil {
+			t.Errorf("expected absent rate without analyzed population, got %v", summary.AnomalyRatePerTicket)
 		}
 		if summary.SeverityCounts == nil {
 			t.Fatal("expected non-nil SeverityCounts map")
@@ -2062,17 +2062,13 @@ func TestComputeFleetAnomalies_CleanLedgers(t *testing.T) {
 	tid2 := "AL-2"
 
 	ledgers := []domain.AgenticFactLedger{
-		{
-			TicketID: &tid1, Sessions: fleetSessionFacts(nil, nil, []domain.EventFact{
-				{SessionID: "s1", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolRead, Status: "completed", ContextTokens: 5000},
-				{SessionID: "s1", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolWrite, Status: "completed", ContextTokens: 10000},
-			}),
-		},
-		{
-			TicketID: &tid2, Sessions: fleetSessionFacts(nil, nil, []domain.EventFact{
-				{SessionID: "s2", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolRead, Status: "completed", ContextTokens: 8000},
-			}),
-		},
+		fleetRecordedLedger(t, &tid1, nil, nil, []domain.EventFact{
+			{SessionID: "s1", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolRead, Status: "completed", ContextTokens: 5000},
+			{SessionID: "s1", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolWrite, Status: "completed", ContextTokens: 10000},
+		}),
+		fleetRecordedLedger(t, &tid2, nil, nil, []domain.EventFact{
+			{SessionID: "s2", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolRead, Status: "completed", ContextTokens: 8000},
+		}),
 	}
 
 	summary := domain.ComputeFleetAnomalies(ledgers)
@@ -2085,8 +2081,8 @@ func TestComputeFleetAnomalies_CleanLedgers(t *testing.T) {
 	if summary.TicketsWithAnomalies != 0 {
 		t.Errorf("expected 0 tickets with anomalies, got %d", summary.TicketsWithAnomalies)
 	}
-	if summary.AnomalyRatePerTicket != 0.0 {
-		t.Errorf("expected 0.0 rate, got %f", summary.AnomalyRatePerTicket)
+	if summary.AnomalyRatePerTicket == nil || *summary.AnomalyRatePerTicket != 0.0 {
+		t.Errorf("expected 0.0 rate, got %v", summary.AnomalyRatePerTicket)
 	}
 	if len(summary.BrittleTools) != 0 {
 		t.Errorf("expected 0 brittle tools on clean runs, got %d", len(summary.BrittleTools))
@@ -2104,31 +2100,25 @@ func TestComputeFleetAnomalies_MultipleAnomaliesAndBrittleTools(t *testing.T) {
 
 	ledgers := []domain.AgenticFactLedger{
 		// Ticket 1: Tool retry streak (WARNING) on bash (3 errors)
-		{
-			TicketID: &tid1, Sessions: fleetSessionFacts(nil, nil, []domain.EventFact{
-				{SessionID: "s1", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error", ContextTokens: 10000},
-				{SessionID: "s1", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error", ContextTokens: 12000},
-				{SessionID: "s1", Turn: 3, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error", ContextTokens: 14000},
-				{SessionID: "s1", Turn: 4, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "completed", ContextTokens: 16000},
-			}),
-		},
+		fleetRecordedLedger(t, &tid1, nil, nil, []domain.EventFact{
+			{SessionID: "s1", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error", ContextTokens: 10000},
+			{SessionID: "s1", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error", ContextTokens: 12000},
+			{SessionID: "s1", Turn: 3, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error", ContextTokens: 14000},
+			{SessionID: "s1", Turn: 4, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "completed", ContextTokens: 16000},
+		}),
 		// Ticket 2: Context ceiling breach (CRITICAL >= 200k) + High failure rate on git (5 calls, 2 errors = 40.0% -> WARNING, non-consecutive so no retry streak)
-		{
-			TicketID: &tid2, Sessions: fleetSessionFacts(nil, nil, []domain.EventFact{
-				{SessionID: "s2", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolGit, Status: "error", ContextTokens: 200000},
-				{SessionID: "s2", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolGit, Status: "completed", ContextTokens: 201000},
-				{SessionID: "s2", Turn: 3, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolGit, Status: "error", ContextTokens: 202000},
-				{SessionID: "s2", Turn: 4, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolGit, Status: "completed", ContextTokens: 203000},
-				{SessionID: "s2", Turn: 5, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolGit, Status: "completed", ContextTokens: 204000},
-			}),
-		},
+		fleetRecordedLedger(t, &tid2, nil, nil, []domain.EventFact{
+			{SessionID: "s2", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolGit, Status: "error", ContextTokens: 200000},
+			{SessionID: "s2", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolGit, Status: "completed", ContextTokens: 201000},
+			{SessionID: "s2", Turn: 3, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolGit, Status: "error", ContextTokens: 202000},
+			{SessionID: "s2", Turn: 4, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolGit, Status: "completed", ContextTokens: 203000},
+			{SessionID: "s2", Turn: 5, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolGit, Status: "completed", ContextTokens: 204000},
+		}),
 		// Ticket 3: Clean ticket with python tool (2 calls, 1 error, 0 anomalies, error > 0 makes it brittle)
-		{
-			TicketID: &tid3, Sessions: fleetSessionFacts(nil, nil, []domain.EventFact{
-				{SessionID: "s3", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolPython, Status: "error", ContextTokens: 5000},
-				{SessionID: "s3", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolPython, Status: "completed", ContextTokens: 7000},
-			}),
-		},
+		fleetRecordedLedger(t, &tid3, nil, nil, []domain.EventFact{
+			{SessionID: "s3", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolPython, Status: "error", ContextTokens: 5000},
+			{SessionID: "s3", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolPython, Status: "completed", ContextTokens: 7000},
+		}),
 	}
 
 	summary := domain.ComputeFleetAnomalies(ledgers)
@@ -2174,8 +2164,8 @@ func TestComputeFleetAnomalies_MultipleAnomaliesAndBrittleTools(t *testing.T) {
 	}
 
 	// Anomaly rate per ticket: 3 anomalies / 3 tickets = 1.00
-	if summary.AnomalyRatePerTicket != 1.0 {
-		t.Errorf("expected 1.0 anomaly rate, got %f", summary.AnomalyRatePerTicket)
+	if summary.AnomalyRatePerTicket == nil || *summary.AnomalyRatePerTicket != 1.0 {
+		t.Errorf("expected 1.0 anomaly rate, got %v", summary.AnomalyRatePerTicket)
 	}
 
 	// Brittle tools:
@@ -2227,14 +2217,12 @@ func TestComputeFleetAnomalies_BrittleToolsSortingTieBreakers(t *testing.T) {
 		// toolB: 1 call, 1 error (100.0%)
 		// ErrorCount 2 > 1, so toolA must come before toolB despite lower failure rate
 		ledgers := []domain.AgenticFactLedger{
-			{
-				TicketID: &tid, Sessions: fleetSessionFacts(nil, nil, []domain.EventFact{
-					{SessionID: "s1", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolA, Status: "error"},
-					{SessionID: "s1", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolA, Status: "completed"},
-					{SessionID: "s1", Turn: 3, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolA, Status: "error"},
-					{SessionID: "s1", Turn: 4, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolB, Status: "error"},
-				}),
-			},
+			fleetRecordedLedger(t, &tid, nil, nil, []domain.EventFact{
+				{SessionID: "s1", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolA, Status: "error"},
+				{SessionID: "s1", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolA, Status: "completed"},
+				{SessionID: "s1", Turn: 3, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolA, Status: "error"},
+				{SessionID: "s1", Turn: 4, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolB, Status: "error"},
+			}),
 		}
 
 		summary := domain.ComputeFleetAnomalies(ledgers)
@@ -2259,17 +2247,15 @@ func TestComputeFleetAnomalies_BrittleToolsSortingTieBreakers(t *testing.T) {
 		// toolLowRate: 4 calls, 2 errors (interleaved) -> 50.0% failure rate
 		// Same anomaly count (0), same error count (2), but high_rate_tool (100%) > low_rate_tool (50%)
 		ledgers := []domain.AgenticFactLedger{
-			{
-				TicketID: &tid, Sessions: fleetSessionFacts(nil, nil, []domain.EventFact{
-					{SessionID: "s1", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolHighRate, Status: "error"},
-					{SessionID: "s1", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolHighRate, Status: "error"},
+			fleetRecordedLedger(t, &tid, nil, nil, []domain.EventFact{
+				{SessionID: "s1", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolHighRate, Status: "error"},
+				{SessionID: "s1", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolHighRate, Status: "error"},
 
-					{SessionID: "s1", Turn: 3, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolLowRate, Status: "error"},
-					{SessionID: "s1", Turn: 4, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolLowRate, Status: "completed"},
-					{SessionID: "s1", Turn: 5, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolLowRate, Status: "error"},
-					{SessionID: "s1", Turn: 6, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolLowRate, Status: "completed"},
-				}),
-			},
+				{SessionID: "s1", Turn: 3, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolLowRate, Status: "error"},
+				{SessionID: "s1", Turn: 4, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolLowRate, Status: "completed"},
+				{SessionID: "s1", Turn: 5, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolLowRate, Status: "error"},
+				{SessionID: "s1", Turn: 6, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolLowRate, Status: "completed"},
+			}),
 		}
 
 		summary := domain.ComputeFleetAnomalies(ledgers)
@@ -2290,12 +2276,10 @@ func TestComputeFleetAnomalies_BrittleToolsSortingTieBreakers(t *testing.T) {
 		tid := "T1"
 
 		ledgers := []domain.AgenticFactLedger{
-			{
-				TicketID: &tid, Sessions: fleetSessionFacts(nil, nil, []domain.EventFact{
-					{SessionID: "s1", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolZ, Status: "error"},
-					{SessionID: "s1", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolA, Status: "error"},
-				}),
-			},
+			fleetRecordedLedger(t, &tid, nil, nil, []domain.EventFact{
+				{SessionID: "s1", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolZ, Status: "error"},
+				{SessionID: "s1", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolA, Status: "error"},
+			}),
 		}
 
 		summary := domain.ComputeFleetAnomalies(ledgers)
@@ -2313,11 +2297,9 @@ func TestComputeFleetAnomalies_BrittleToolsSortingTieBreakers(t *testing.T) {
 	t.Run("zero calls with errors does not panic and reports 0.0 failure rate", func(t *testing.T) {
 		tid := "T-ZERO-CALLS"
 		ledgers := []domain.AgenticFactLedger{
-			{
-				TicketID: &tid, Sessions: fleetSessionFacts(nil, []domain.ToolFact{
-					{SessionID: "session-a", Name: "zero_call_tool", Calls: 0, Errors: 1},
-				}, nil),
-			},
+			fleetRecordedLedger(t, &tid, nil, []domain.ToolFact{
+				{SessionID: "session-a", Name: "zero_call_tool", Calls: 0, Errors: 1},
+			}, nil),
 		}
 
 		summary := domain.ComputeFleetAnomalies(ledgers)
@@ -2336,23 +2318,21 @@ func TestComputeFleetAnomalies_LegacyV1Fallback(t *testing.T) {
 	// Legacy v1 workspaces lack Events but provide Tools and Invocations
 	tidV1 := "AL-V1"
 	ledgers := []domain.AgenticFactLedger{
-		{
-			TicketID: &tidV1, Sessions: fleetSessionFacts(
+		fleetRecordedLedger(t, &tidV1,
 
-				// 40% failure rate > 20% -> WARNING anomaly
+			// 40% failure rate > 20% -> WARNING anomaly
 
-				[]domain.InvocationFact{
-					{
-						Role: "orchestrator",
-						Tokens: domain.InvocationTokens{
-							PeakContext: 170000, // CRITICAL ceiling breach in v1
-						},
+			[]domain.InvocationFact{
+				{
+					Role: "orchestrator",
+					Tokens: domain.InvocationTokens{
+						PeakContext: 170000, // CRITICAL ceiling breach in v1
 					},
-				}, []domain.ToolFact{
-					{SessionID: "session-a", Name: "bash", Calls: 10, Errors: 4},
-					{SessionID: "session-a", Name: "clean_tool", Calls: 5, Errors: 0},
-				}, nil),
-		},
+				},
+			}, []domain.ToolFact{
+				{SessionID: "session-a", Name: "bash", Calls: 10, Errors: 4},
+				{SessionID: "session-a", Name: "clean_tool", Calls: 5, Errors: 0},
+			}, nil),
 	}
 
 	summary := domain.ComputeFleetAnomalies(ledgers)
@@ -2380,13 +2360,11 @@ func TestCalculateFleetSummary_IncludesAnomalySummary(t *testing.T) {
 	ledgers := []domain.AgenticMetricsLedger{
 		{
 			TicketID: &tid,
-			Facts: domain.AgenticFactLedger{
-				TicketID: &tid, Sessions: fleetSessionFacts(nil, nil, []domain.EventFact{
-					{SessionID: "s1", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
-					{SessionID: "s1", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
-					{SessionID: "s1", Turn: 3, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
-				}),
-			},
+			Facts: fleetRecordedLedger(t, &tid, nil, nil, []domain.EventFact{
+				{SessionID: "s1", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				{SessionID: "s1", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				{SessionID: "s1", Turn: 3, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+			}),
 			Totals: domain.GroupedMetric{
 				Invocations: 1,
 				CostUSD:     0.1,
@@ -2408,7 +2386,8 @@ func TestCalculateFleetSummary_IncludesAnomalySummary(t *testing.T) {
 
 // Fleet consumes saved metrics/summaries rather than raw trace events. These
 // source-shaped fixture events are converted to the same durable inputs first.
-func fleetSessionFacts(invocations []domain.InvocationFact, tools []domain.ToolFact, events []domain.EventFact) []domain.SessionFact {
+func fleetRecordedLedger(t *testing.T, ticket *string, invocations []domain.InvocationFact, tools []domain.ToolFact, events []domain.EventFact) domain.AgenticFactLedger {
+	t.Helper()
 	if len(tools) == 0 {
 		for _, event := range events {
 			if event.EventType != domain.EventTypeToolCall || event.ToolName == nil {
@@ -2431,19 +2410,28 @@ func fleetSessionFacts(invocations []domain.InvocationFact, tools []domain.ToolF
 			}
 		}
 	}
-	return sessionFacts(invocations, tools, events)
+	sessions := sessionFacts(invocations, tools, events)
+	ids := make([]string, 0, len(sessions))
+	for _, owner := range sessions {
+		ids = append(ids, owner.ID)
+	}
+	ledger, err := domain.PersistSourceAnomalySummaries(domain.AgenticFactLedger{TicketID: ticket, Sessions: sessions}, domain.SourceEvents{Events: events, CompleteSessionIDs: ids})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return ledger
 }
 
-func TestComputeFleetAnomalies_DisabledAnalysisRetainsOrdinaryTools(t *testing.T) {
-	disabled := domain.GenerationPolicy{Skills: true, Delegations: true, Anomalies: false}
+func TestComputeFleetAnomalies_UnrecordedAnalysisRetainsOrdinaryTools(t *testing.T) {
 	for _, allDisabled := range []bool{false, true} {
 		t.Run(fmt.Sprintf("all_disabled_%t", allDisabled), func(t *testing.T) {
 			ledgers := []domain.AgenticFactLedger{
-				{GenerationPolicy: &disabled, Sessions: []domain.SessionFact{{ID: "disabled", Tools: []domain.SessionToolFact{{Name: "bash", Calls: 12, Errors: 3}}}}},
-				{Sessions: []domain.SessionFact{{ID: "other", Tools: []domain.SessionToolFact{{Name: "bash", Calls: 8, Errors: 1}}}}},
+				{Sessions: []domain.SessionFact{{ID: "disabled", Tools: []domain.SessionToolFact{{Name: "bash", Calls: 12, Errors: 3}}}}},
+				{Anomalies: []domain.Anomaly{}, Sessions: []domain.SessionFact{{ID: "other", Anomalies: []domain.Anomaly{}, Tools: []domain.SessionToolFact{{Name: "bash", Calls: 8, Errors: 1}}}}},
 			}
 			if allDisabled {
-				ledgers[1].GenerationPolicy = &disabled
+				ledgers[1].Anomalies = nil
+				ledgers[1].Sessions[0].Anomalies = nil
 			}
 			got := domain.ComputeFleetAnomalies(ledgers)
 			if got.TotalAnomalies != 0 || got.WarningCount != 0 || got.CriticalCount != 0 {
@@ -2456,13 +2444,11 @@ func TestComputeFleetAnomalies_DisabledAnalysisRetainsOrdinaryTools(t *testing.T
 			if tool.ToolName != "bash" || tool.TotalCalls != 20 || tool.ErrorCount != 4 || tool.FailureRatePct != 20 || tool.AnomalyCount != 0 {
 				t.Fatalf("ordinary tool calls/errors corrupted by analysis policy: %+v", tool)
 			}
-			wantDisabled := int64(1)
 			wantAnalyzed := int64(1)
 			if allDisabled {
-				wantDisabled = 2
 				wantAnalyzed = 0
 			}
-			if got.DisabledTickets != wantDisabled || got.TotalTickets != wantAnalyzed {
+			if got.TotalTickets != wantAnalyzed {
 				t.Fatalf("analysis availability counts incorrect: %+v", got)
 			}
 		})

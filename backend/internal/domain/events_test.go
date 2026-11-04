@@ -315,9 +315,11 @@ func TestPersistAnomalySummariesRefreshesNewSessionsAndAggregates(t *testing.T) 
 		{SessionID: "new-root", EventID: "new-2", Timestamp: "2026-10-26T10:00:02Z", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "error"},
 		{SessionID: "new-root", EventID: "new-3", Timestamp: "2026-10-26T10:00:03Z", Turn: 3, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "error"},
 	}
-	merged := domain.AgenticFactLedger{Sessions: []domain.SessionFact{
+	oldCalls, oldErrors, oldRate := int64(6), int64(5), 83.3
+	oldAggregate := domain.Anomaly{RuleID: domain.RuleToolHighFailureRate, Severity: domain.SeverityCritical, Context: domain.AnomalyContext{ToolName: &tool, TotalCalls: &oldCalls, Count: &oldErrors, FailureRatePct: &oldRate}}
+	merged := domain.AgenticFactLedger{Anomalies: []domain.Anomaly{oldAggregate}, Sessions: []domain.SessionFact{
 		{ID: "old-root", Invocations: []domain.InvocationFact{{Role: "orchestrator"}}, Tools: []domain.SessionToolFact{{Name: tool, Calls: 6, Errors: 5}}, Anomalies: []domain.Anomaly{oldSummary}},
-		{ID: "new-root", Invocations: []domain.InvocationFact{{Role: "orchestrator"}}, Tools: []domain.SessionToolFact{{Name: tool, Calls: 2, Errors: 1}}, Anomalies: []domain.Anomaly{}},
+		{ID: "new-root", Invocations: []domain.InvocationFact{{Role: "orchestrator"}}, Tools: []domain.SessionToolFact{{Name: tool, Calls: 3, Errors: 3}}, Anomalies: []domain.Anomaly{}},
 	}}
 	persisted, err := domain.PersistSourceAnomalySummaries(merged, domain.SourceEvents{Events: newEvents, CompleteSessionIDs: []string{"new-root"}})
 	if err != nil {
@@ -341,19 +343,33 @@ func TestPersistAnomalySummariesRefreshesNewSessionsAndAggregates(t *testing.T) 
 			aggregate = &persisted.Anomalies[i]
 		}
 	}
-	if aggregate == nil || aggregate.Context.TotalCalls == nil || *aggregate.Context.TotalCalls != 8 || aggregate.Context.Count == nil || *aggregate.Context.Count != 6 {
-		t.Fatalf("aggregate summary was not recomputed from merged tool facts: %#v", persisted.Anomalies)
+	if aggregate == nil || aggregate.Context.TotalCalls == nil || *aggregate.Context.TotalCalls != 6 || aggregate.Context.Count == nil || *aggregate.Context.Count != 5 {
+		t.Fatalf("partial source erased historical root/group summary: %#v", persisted.Anomalies)
 	}
 	projected := domain.DeriveMetricsLedger(persisted, domain.DefaultProjectConfig())
 	projectedOld, projectedRetry, projectedAggregate := false, false, false
 	for _, anomaly := range projected.Anomalies {
 		projectedOld = projectedOld || anomaly.RuleID == domain.RuleContextSaturationSpike
 		projectedRetry = projectedRetry || anomaly.RuleID == domain.RuleToolRetryStreak
-		projectedAggregate = projectedAggregate || (anomaly.RuleID == domain.RuleToolHighFailureRate && anomaly.Context.TotalCalls != nil && *anomaly.Context.TotalCalls == 8)
+		projectedAggregate = projectedAggregate || (anomaly.RuleID == domain.RuleToolHighFailureRate && anomaly.Context.TotalCalls != nil && *anomaly.Context.TotalCalls == 6)
 	}
 	if !projectedOld || !projectedRetry || !projectedAggregate {
 		t.Fatalf("projection lost cached/new/aggregate anomaly coverage: %#v", projected.Anomalies)
 	}
+	complete, err := domain.PersistSourceAnomalySummaries(persisted, domain.SourceEvents{Events: newEvents, CompleteSessionIDs: []string{"old-root", "new-root"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var completeAggregate *domain.Anomaly
+	for i := range complete.Anomalies {
+		if complete.Anomalies[i].RuleID == domain.RuleToolHighFailureRate {
+			completeAggregate = &complete.Anomalies[i]
+		}
+	}
+	if completeAggregate == nil || completeAggregate.Context.TotalCalls == nil || *completeAggregate.Context.TotalCalls != 9 || completeAggregate.Context.Count == nil || *completeAggregate.Context.Count != 8 {
+		t.Fatalf("complete source did not replace aggregate from whole owner population: %#v", complete.Anomalies)
+	}
+
 }
 
 func TestWorkspaceEventsResponseSerialization(t *testing.T) {
@@ -798,7 +814,11 @@ func TestSourceSummaryRefreshRequiresCompleteChildGroup(t *testing.T) {
 	if len(retained) != 1 || len(retained[0].Anomalies) != 1 || retained[0].Anomalies[0].RuleID != domain.RuleSubagentReworkLoop || len(fresh[0].Anomalies) != 0 {
 		t.Fatalf("per-owner refresh erased group summary or mutated fresh input: %+v", retained)
 	}
-	completeFresh := domain.RetainIncompleteGroupSummaries(facts.Sessions, []domain.SessionFact{{ID: parent}, {ID: "child", ParentID: &parent}})
+	unobserved := domain.RetainIncompleteGroupSummaries(facts.Sessions, []domain.SessionFact{{ID: parent}, {ID: "child", ParentID: &parent}})
+	if len(unobserved[0].Anomalies) != 1 {
+		t.Fatal("returned identities alone erased unobserved group history")
+	}
+	completeFresh := domain.RetainIncompleteGroupSummaries(facts.Sessions, []domain.SessionFact{{ID: parent, Anomalies: []domain.Anomaly{}}, {ID: "child", ParentID: &parent, Anomalies: []domain.Anomaly{}}})
 	if len(completeFresh[0].Anomalies) != 0 {
 		t.Fatalf("complete group kept obsolete summary: %+v", completeFresh)
 	}

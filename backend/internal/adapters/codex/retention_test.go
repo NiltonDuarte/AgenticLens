@@ -95,7 +95,14 @@ func TestCodexAndOpenCodeAdaptersPersistEquivalentCompactSummaries(t *testing.T)
 	ticketID := "TEST-101"
 	factsForMetrics := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticketID, Sessions: sessions}
 	codexLedger := domain.DeriveMetricsLedger(factsForMetrics, domain.DefaultProjectConfig())
-	codexLedger.Facts, err = domain.PersistAnomalySummaries(factsForMetrics)
+	unsourced, err := domain.PersistAnomalySummaries(factsForMetrics)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if unsourced.Anomalies != nil {
+		t.Fatalf("unsourced read invented root analysis: %#v", unsourced.Anomalies)
+	}
+	codexLedger.Facts, err = domain.PersistSourceAnomalySummaries(factsForMetrics, domain.SourceEvents{Events: transcript.Events, CompleteSessionIDs: []string{"shared-session"}})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -6,7 +6,7 @@ import type {
   EventFact,
   WorkspaceDetail,
 } from '../domain/types';
-import { ledgerSkills, ledgerDelegations, sessionTools } from '../domain/types';
+import { ledgerSkills, ledgerDelegations, sessionTools, ledgerMetricCoverage } from '../domain/types';
 import { rebindEvent, selectWorkspaceEvents, selectWorkspaceAnomalies } from '../domain/events';
 import {
   fetchWorkspaceById,
@@ -652,9 +652,8 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
       </div>
 
       {/* Row 6: Transient source trace and recorded summaries */}
-      {ledger.facts.generation_policy?.anomalies !== false && ledger.facts.sessions.some((session) => session.anomaly_availability === 'unavailable') &&
-        <p>Recorded anomaly analysis is unavailable for retained sessions. A complete source-backed refresh is required; recorded findings from other owners remain available.</p>}
-      {ledger.facts.generation_policy?.anomalies === false && <p>Recorded anomaly analysis was disabled when this ledger was generated. Source trace analysis is independent.</p>}
+      {ledgerMetricCoverage(ledger.facts, 'anomalies') !== 'recorded' &&
+        <p>Anomaly analysis not recorded for every required owner and group. Recorded findings remain visible; source trace analysis is independent.</p>}
       <TraceWaterfall
         key={`trace-${requestGenerationRef.current}`}
         events={events}
@@ -673,12 +672,12 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
       {(detail.anomalies?.length ?? 0) > 0 && <section className="thread-viewer-card" aria-label="Recorded anomaly summaries">
         <button type="button" className="thread-header-btn" aria-expanded={recordedSummariesExpanded}
           aria-controls={recordedSummaryId} onClick={() => setRecordedSummariesExpanded((expanded) => !expanded)}>
-          Recorded anomaly summaries ({detail.anomalies.length})
+          Recorded anomaly summaries ({detail.anomalies?.length})
         </button>
         <div id={recordedSummaryId} hidden={!recordedSummariesExpanded}>
           {recordedSummariesExpanded && <>
             <p>Recorded summaries remain available independently of current source coverage.</p>
-            {detail.anomalies.map((anomaly, index) => <button key={index} type="button" className="legacy-anomaly-item"
+            {detail.anomalies?.map((anomaly, index) => <button key={index} type="button" className="legacy-anomaly-item"
               aria-label={`Inspect recorded anomaly: ${formatAnomaly(anomaly).title}`}
               onClick={() => { setSelection({ event: null, anomaly, origin: 'recorded' }); setIsDrawerOpen(true); }}>
               {formatAnomaly(anomaly).title} · {anomaly.severity}
@@ -691,8 +690,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
       <SkillsSubagentsPanel
         key={ledger.ticket_id}
         skills={ledgerSkills(ledger.facts)}
-        skillsDisabled={ledger.facts.generation_policy?.skills === false}
-        delegationsDisabled={ledger.facts.generation_policy?.delegations === false}
+        sessions={ledger.facts.sessions}
         delegations={ledgerDelegations(ledger.facts)}
         availableSessionIds={ledger.threads.map((thread) => thread.session_id)}
         onJumpToSession={handleSelectSession}

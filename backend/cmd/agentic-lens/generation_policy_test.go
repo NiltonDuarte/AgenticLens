@@ -40,9 +40,8 @@ func assertWrittenPolicy(t *testing.T, path string, policy domain.GenerationPoli
 	if err := json.Unmarshal(readCaptureFile(t, path), &root); err != nil {
 		t.Fatal(err)
 	}
-	var marker domain.GenerationPolicy
-	if err := json.Unmarshal(root["generation_policy"], &marker); err != nil || marker != policy {
-		t.Fatalf("wrong written policy: %+v %v", marker, err)
+	if _, exists := root["generation_policy"]; exists {
+		t.Fatal("persisted generation policy reintroduced")
 	}
 	if _, exists := root["anomalies"]; exists != policy.Anomalies {
 		t.Fatalf("root anomalies presence %t, expected %t", exists, policy.Anomalies)
@@ -55,6 +54,9 @@ func assertWrittenPolicy(t *testing.T, path string, policy domain.GenerationPoli
 		t.Fatalf("policy removed session owners: got %d want %d", len(sessions), owners)
 	}
 	for _, session := range sessions {
+		if _, exists := session["anomaly_availability"]; exists {
+			t.Fatal("persisted availability reintroduced")
+		}
 		for name, enabled := range map[string]bool{"skills": policy.Skills, "delegations": policy.Delegations, "anomalies": policy.Anomalies} {
 			_, exists := session[name]
 			if !enabled && exists {
@@ -67,32 +69,35 @@ func assertWrittenPolicy(t *testing.T, path string, policy domain.GenerationPoli
 	}
 }
 
-// Unlike the fixture's permissive json.Unmarshal helper, exercise canonical
-// readers and the source-free API before accepting a regeneration result.
+// Exercise canonical readers and the source-free API before accepting a
+// regeneration; nil collections must remain absent throughout both boundaries.
 func canonicalPolicyLedger(t *testing.T, f captureGenerationFixture) domain.AgenticFactLedger {
 	t.Helper()
 	raw := readCaptureFile(t, f.output)
 	if err := adapters.ValidateRuntimeFactLedger(raw); err != nil {
-		t.Fatalf("successfully generated ledger rejected by runtime validator: %v", err)
+		t.Fatalf("generated ledger rejected canonically: %v", err)
 	}
 	if _, err := adapters.LoadExistingFactLedger(f.output); err != nil {
-		t.Fatalf("successfully generated ledger cannot be reloaded: %v", err)
+		t.Fatal(err)
 	}
 	request := httptest.NewRequest(http.MethodGet, "/api/workspaces/TEST-100", nil)
 	request.SetPathValue("ticketId", "TEST-100")
 	recorder := httptest.NewRecorder()
 	adaptershttp.WorkspaceDetailHandler(filepath.Join(f.project, "records")).ServeHTTP(recorder, request)
 	if recorder.Code != http.StatusOK {
-		t.Fatalf("successfully generated ledger unavailable through API: %d %s", recorder.Code, recorder.Body.String())
+		t.Fatalf("generated ledger unavailable through API: %d %s", recorder.Code, recorder.Body.String())
 	}
-	facts := f.ledger(t)
 	var detail struct {
 		Ledger struct {
 			Facts struct {
-				Sessions []struct {
+				GenerationPolicy json.RawMessage `json:"generation_policy"`
+				Anomalies        json.RawMessage `json:"anomalies"`
+				Sessions         []struct {
 					ID           string          `json:"id"`
-					Availability string          `json:"anomaly_availability"`
+					Skills       json.RawMessage `json:"skills"`
+					Delegations  json.RawMessage `json:"delegations"`
 					Anomalies    json.RawMessage `json:"anomalies"`
+					Availability json.RawMessage `json:"anomaly_availability"`
 				} `json:"sessions"`
 			} `json:"facts"`
 			Totals struct {
@@ -103,22 +108,27 @@ func canonicalPolicyLedger(t *testing.T, f captureGenerationFixture) domain.Agen
 	if err := json.Unmarshal(recorder.Body.Bytes(), &detail); err != nil {
 		t.Fatal(err)
 	}
-	expectedAvailability := map[string]string{}
-	unavailable := false
+	if len(detail.Ledger.Facts.GenerationPolicy) != 0 {
+		t.Fatal("API emitted obsolete policy")
+	}
+	facts := f.ledger(t)
+	owners := map[string]domain.SessionFact{}
+	incomplete := facts.Anomalies == nil
 	for _, owner := range facts.Sessions {
-		expectedAvailability[owner.ID] = string(owner.AnomalyAvailability)
-		unavailable = unavailable || owner.AnomalyAvailability == domain.AnomalyUnavailable
+		owners[owner.ID] = owner
+		incomplete = incomplete || owner.Anomalies == nil
 	}
 	for _, owner := range detail.Ledger.Facts.Sessions {
-		if owner.Availability != expectedAvailability[owner.ID] {
-			t.Fatalf("API changed availability for %s", owner.ID)
+		expected := owners[owner.ID]
+		if len(owner.Availability) != 0 {
+			t.Fatal("API emitted obsolete availability")
 		}
-		if owner.Availability == "unavailable" && len(owner.Anomalies) > 0 {
-			t.Fatalf("API fabricated measured anomaly state for %s: %s", owner.ID, owner.Anomalies)
+		if (len(owner.Skills) > 0) != (expected.Skills != nil) || (len(owner.Delegations) > 0) != (expected.Delegations != nil) || (len(owner.Anomalies) > 0) != (expected.Anomalies != nil) {
+			t.Fatalf("API changed absent/recorded shape for %s", owner.ID)
 		}
 	}
-	if unavailable && facts.EffectiveGenerationPolicy().Anomalies && detail.Ledger.Totals.ContextHealth != "UNAVAILABLE" {
-		t.Fatalf("partially unavailable analysis claimed health %s", detail.Ledger.Totals.ContextHealth)
+	if incomplete && detail.Ledger.Totals.ContextHealth != "UNAVAILABLE" {
+		t.Fatalf("incomplete recorded analysis claimed health %s", detail.Ledger.Totals.ContextHealth)
 	}
 	return facts
 }
@@ -228,7 +238,7 @@ func TestGenerateOptionalMetricsOmissionRetainedOwnersAndSummary(t *testing.T) {
 			}
 			assertWrittenPolicy(t, f.output, policy, 4)
 			second := f.ledger(t)
-			if !reflect.DeepEqual(first.Sessions, second.Sessions) || !reflect.DeepEqual(first.GenerationPolicy, second.GenerationPolicy) {
+			if !reflect.DeepEqual(first.Sessions, second.Sessions) {
 				t.Fatal("unchanged repeat changed owners/occurrences")
 			}
 			writeGenerationPolicy(t, f, base, domain.DefaultGenerationPolicy())
@@ -247,11 +257,11 @@ func TestGenerateOptionalMetricsOmissionRetainedOwnersAndSummary(t *testing.T) {
 				if owner.ID == "root" && (len(owner.Skills) != 1 || len(owner.Delegations) != 1 || len(owner.Anomalies) == 0) {
 					t.Fatalf("source-backed categories not recovered: %+v", owner)
 				}
-				if owner.ID == "root" && owner.AnomalyAvailability != "" {
+				if owner.ID == "root" && owner.Anomalies == nil {
 					t.Fatal("fresh source-backed root marked unavailable")
 				}
 				if owner.ID != "root" && !policy.Anomalies {
-					if owner.AnomalyAvailability != domain.AnomalyUnavailable || owner.Anomalies != nil {
+					if owner.Anomalies != nil {
 						t.Fatalf("unavailable historical analysis became measured-empty: %+v", owner)
 					}
 					for _, anomaly := range owner.Anomalies {
@@ -286,10 +296,10 @@ func TestGenerateOptionalMetricsOmissionRetainedOwnersAndSummary(t *testing.T) {
 				}
 				restored := canonicalPolicyLedger(t, f)
 				for _, owner := range restored.Sessions {
-					if owner.ID == restoredID && (owner.AnomalyAvailability != "" || len(owner.Anomalies) == 0 || len(owner.Skills) != 1 || len(owner.Delegations) != 1) {
+					if owner.ID == restoredID && (len(owner.Anomalies) == 0 || len(owner.Skills) != 1 || len(owner.Delegations) != 1) {
 						t.Fatalf("complete source refresh failed to restore recorded state: %+v", owner)
 					}
-					if (owner.ID == "unavailable-child" || owner.ID == "unavailable-other-source") && owner.AnomalyAvailability != domain.AnomalyUnavailable {
+					if (owner.ID == "unavailable-child" || owner.ID == "unavailable-other-source") && owner.Anomalies != nil {
 						t.Fatalf("restored another source changed unavailable owner's state: %+v", owner)
 					}
 				}
@@ -322,6 +332,31 @@ func TestGenerateInvalidPolicyLeavesLedgerAndSummaryUntouched(t *testing.T) {
 	}
 }
 
+func assertRecordedEmptyGeneration(t *testing.T, path string) {
+	t.Helper()
+	raw := readCaptureFile(t, path)
+	if err := adapters.ValidateRuntimeFactLedger(raw); err != nil {
+		t.Fatal(err)
+	}
+	var wire struct {
+		Anomalies json.RawMessage              `json:"anomalies"`
+		Sessions  []map[string]json.RawMessage `json:"sessions"`
+	}
+	if err := json.Unmarshal(raw, &wire); err != nil {
+		t.Fatal(err)
+	}
+	if string(wire.Anomalies) != "[]" {
+		t.Fatalf("complete empty root analysis not recorded: %s", wire.Anomalies)
+	}
+	for _, owner := range wire.Sessions {
+		for _, key := range []string{"skills", "delegations", "anomalies"} {
+			if string(owner[key]) != "[]" {
+				t.Fatalf("complete empty source %s not recorded: %s", key, owner[key])
+			}
+		}
+	}
+}
+
 func TestRegisteredGenerateHonorsDisabledAnomalies(t *testing.T) {
 	f := newCaptureGenerationFixture(t)
 	source := f.write(t, 300000)
@@ -349,6 +384,13 @@ func TestRegisteredGenerateHonorsDisabledAnomalies(t *testing.T) {
 	if len(written.Anomalies) != 0 || len(written.Sessions[0].Anomalies) != 0 {
 		t.Fatalf("registered path restored disabled anomaly facts: %s", raw)
 	}
+	writeGenerationPolicy(t, f, base, domain.GenerationPolicy{})
+	f.generate(t)
+	assertWrittenPolicy(t, f.output, domain.GenerationPolicy{}, 1)
+	f.write(t, 17)
+	writeGenerationPolicy(t, f, base, domain.DefaultGenerationPolicy())
+	f.generate(t)
+	assertRecordedEmptyGeneration(t, f.output)
 }
 
 func TestOpenCodeGenerationPolicyAcrossSchemaFamilies(t *testing.T) {
@@ -426,6 +468,23 @@ CREATE TABLE session_message(id TEXT PRIMARY KEY,session_id TEXT,type TEXT,seq I
 			if !reflect.DeepEqual(control.Sessions[0].Invocations, got.Sessions[0].Invocations) || !reflect.DeepEqual(control.Sessions[0].Tools, got.Sessions[0].Tools) {
 				t.Fatalf("%s suppression changed ordinary facts", family)
 			}
+			// Re-enable against a complete supported source with no optional
+			// occurrences; all three collections must now be explicit [].
+			if family == "v1" {
+				if _, err := db.Exec(`DELETE FROM part`); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := db.Exec(`UPDATE message SET data=replace(data,'300000','17')`); err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				if _, err := db.Exec(`UPDATE session_message SET data=?`, `{"time":{"created":1793231970000,"completed":1793231971000},"agent":"coder","model":{"id":"source-model"},"cost":0.1,"tokens":{"input":17,"output":2},"content":[]}`); err != nil {
+					t.Fatal(err)
+				}
+			}
+			writeGenerationPolicy(t, f, base, domain.DefaultGenerationPolicy())
+			generate()
+			assertRecordedEmptyGeneration(t, f.output)
 		})
 	}
 }
