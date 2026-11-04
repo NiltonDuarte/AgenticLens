@@ -1,0 +1,269 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "F01",
+      "severity": 6,
+      "issue": "Server hydration ignores the configured Codex home.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Accepted debt: CLI composition owner must resolve and inject the configured home; no fix in AL-67."
+    },
+    {
+      "finding_id": "F02",
+      "severity": 5,
+      "issue": "Configured relative source paths resolve differently across commands.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Accepted debt: composition owner should preserve project anchoring and explicit CLI semantics."
+    },
+    {
+      "finding_id": "F03",
+      "severity": 5,
+      "issue": "Server advertises a live hook whose queries cannot read OpenCode v2.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Accepted debt: live composition owner should report unsupported capability; historical v2 hydration remains supported."
+    },
+    {
+      "finding_id": "F04",
+      "severity": 6,
+      "issue": "Duplicate Codex owner files can inflate combined cumulative facts.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Confirmed by coordinator: grouping precedes unique-owner validation. Completion-phase co-discovery disputed impact; Codex adapter owner should reject ambiguous cumulative snapshots."
+    },
+    {
+      "finding_id": "F05",
+      "severity": 4,
+      "issue": "Live trace omits diagnostics when child lookup fails.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Accepted debt: live service/DTO owner should retain readable content and expose relationship availability; preserve unproven links as absent."
+    },
+    {
+      "finding_id": "F06",
+      "severity": 4,
+      "issue": "Caller cancellation does not reach expensive native source reads.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Accepted debt: source adapter owner should propagate context through actual reads; runtime latency unmeasured."
+    },
+    {
+      "finding_id": "F07",
+      "severity": 3,
+      "issue": "Recovery and hydration retain divergent native storage selection.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Accepted design debt: backfill/adapter owners should use narrow read capabilities and preserve operation-specific mixed-schema policy."
+    },
+    {
+      "finding_id": "F08",
+      "severity": 3,
+      "issue": "Source read completion does not define a common snapshot boundary.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Recommendation: native read contract owner should specify per-owner guarantees and verify concurrent writers; no observed torn read."
+    },
+    {
+      "finding_id": "F09",
+      "severity": 2,
+      "issue": "Source families have different ordering guarantees for tied rows.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Recommendation: adapter contract owner should define native sequence and deterministic tie behavior; no observed wrong anomaly."
+    },
+    {
+      "finding_id": "F10",
+      "severity": 3,
+      "issue": "Column-omission tests always reach the mixed-family rejection guard.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Confirmed test limitation: future test owner should isolate schema families; current production column validation is not shown broken."
+    },
+    {
+      "finding_id": "F11",
+      "severity": 2,
+      "issue": "No-fallback test does not create a usable competing source.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Confirmed coverage limit: future CLI test owner should supply an alternate fixture; no fallback defect found in code."
+    },
+    {
+      "finding_id": "F12",
+      "severity": 1,
+      "issue": "An oversized source repository would conflate distinct responsibilities.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Design caution only: architecture owner should separate ledger persistence, source reads, discovery and observation."
+    }
+  ]
+}

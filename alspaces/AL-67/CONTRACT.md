@@ -2,7 +2,7 @@
 
 ## Baseline and approval boundary
 
-Ticket: AL-67. Work type: docs. Baseline revision: a84adbe5be46c2ef52ede0987a417562715d38e1. Workspace: alspaces/AL-67. Source requirement: [ticket specification](../plan/to-do/AL-67%20review%20telemetry%20repository%20interfaces%20and%20dependency%20injection.md).
+Ticket: AL-67. Work type: docs. Baseline revision: a84adbe5be46c2ef52ede0987a417562715d38e1. Workspace: alspaces/AL-67. Source requirement: [ticket specification](../plan/done/AL-67%20review%20telemetry%20repository%20interfaces%20and%20dependency%20injection.md).
 
 This contract proposes a documentation-only architecture assessment of telemetry repository contracts and dependency wiring across OpenCode schema families v1 and v2 and Codex. Explicit user approval of this contract and iteration 01 plan is required before review execution. Invoking the development skill does not approve a repository refactor.
 
