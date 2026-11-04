@@ -128,15 +128,6 @@ func ScanWorkspaces(basePath string) domain.ScanReport {
 			continue
 		}
 
-		// Deduce ticket_id from parent directory if omitted
-		if factLedger.TicketID == nil || *factLedger.TicketID == "" {
-			parentDir := filepath.Dir(metricFile)
-			parentName := filepath.Base(parentDir)
-			if parentName != "workspaces" && parentName != "." {
-				factLedger.TicketID = &parentName
-			}
-		}
-
 		ledger := domain.DeriveMetricsLedger(factLedger, cfg)
 		ledgers = append(ledgers, ledger)
 	}
@@ -304,10 +295,6 @@ func LoadTicketWorkspace(ticketID, basePath string) (*domain.AgenticMetricsLedge
 	if err != nil {
 		return nil, fmt.Errorf("normalizing metrics for ticket %s: %w", cleanID, err)
 	}
-	if factLedger.TicketID == nil || *factLedger.TicketID == "" {
-		factLedger.TicketID = &cleanID
-	}
-
 	cfg, configErr := config.Load(basePath)
 	if configErr != nil && !errors.Is(configErr, config.ErrConfigNotFound) {
 		return nil, fmt.Errorf("loading ticket configuration: %w", configErr)

@@ -1,12 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within, act } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { FleetOverview } from './FleetOverview';
 import * as apiClient from '../api/client';
-import { mockFleetSummary, mockTicketComparisonRows } from '../test/fixtures/mockData';
+import { mockFleetSummary, mockTicketComparisonRows, mockAgenticMetricsLedgers } from '../test/fixtures/mockData';
 
 describe('FleetOverview View Component', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({ data: [] });
   });
 
   it('keeps the fleet cost primary compact and the partial scope in secondary and tooltip', async () => {
@@ -123,6 +125,124 @@ describe('FleetOverview View Component', () => {
     expect(screen.getByText('AL-2')).toBeInTheDocument();
     expect(screen.queryByText('AL-1')).not.toBeInTheDocument();
     expect(screen.queryByText('PO-1')).not.toBeInTheDocument();
+  });
+
+  describe('Shared recorded sessions', () => {
+    const sessionId = `stored-shared-native-session-${'long-native-id-'.repeat(24)}end`;
+    const base = mockAgenticMetricsLedgers['AL-1']!;
+    const ledgers = ['HIDDEN-1', 'HIDDEN-2'].map((ticketId) => ({
+      ...base, ticket_id: ticketId, ticket_title: `Recorded ${ticketId}`,
+      facts: { ...base.facts, ticket_id: ticketId, sessions: [{ id: sessionId, source: 'codex' as const, invocations: [], tools: [] }] },
+    }));
+
+    beforeEach(() => {
+      vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({ data: mockFleetSummary });
+      vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({ data: [...mockTicketComparisonRows] });
+    });
+
+    it('shows conflicts outside metric and table filters, navigates, and clears after corrected reload', async () => {
+      const inspect = vi.mocked(apiClient.fetchWorkspaceLedgers).mockResolvedValueOnce({ data: ledgers }).mockResolvedValue({ data: [ledgers[0]!] });
+      const onSelectTicket = vi.fn();
+      const user = userEvent.setup();
+      render(<FleetOverview onSelectTicket={onSelectTicket} />);
+      const region = await screen.findByRole('region', { name: 'Session overlap inspection' });
+      expect(within(region).getByText('1 shared session found across tickets.')).toBeVisible();
+      const disclosure = within(region).getByText('View shared sessions and affected tickets');
+      expect(disclosure.closest('details')).not.toHaveAttribute('open');
+      expect(within(region).getByText(sessionId)).not.toBeVisible();
+      for (let i = 0; i < 5; i++) await user.tab();
+      expect(disclosure).toHaveFocus();
+      // user-event/jsdom do not implement native summary keyboard activation.
+      await user.click(disclosure);
+      expect(disclosure.closest('details')).toHaveAttribute('open');
+      expect(within(region).getByText(sessionId)).toBeVisible();
+      await user.tab();
+      expect(within(region).getByRole('button', { name: 'View ticket HIDDEN-1' })).toHaveFocus();
+      await user.keyboard('{Enter}');
+      await user.tab();
+      expect(within(region).getByRole('button', { name: 'View ticket HIDDEN-2' })).toHaveFocus();
+      await user.keyboard(' ');
+      expect(onSelectTicket.mock.calls).toEqual([['HIDDEN-1'], ['HIDDEN-2']]);
+      expect(screen.getByText('$14.82')).toBeVisible();
+      fireEvent.change(screen.getByLabelText('Date Range Preset'), { target: { value: '7d' } });
+      await screen.findByLabelText(/filter tickets/i);
+      await user.click(screen.getByRole('combobox', { name: 'Ticket Type selector' }));
+      await user.click(screen.getByRole('checkbox', { name: 'Bug' }));
+      await waitFor(() => expect(apiClient.fetchWorkspaces).toHaveBeenLastCalledWith('7d', '', '', undefined, undefined, ['bug'], undefined));
+      await user.click(screen.getByRole('combobox', { name: 'Prefix selector' }));
+      await user.click(screen.getByRole('checkbox', { name: 'AL' }));
+      await waitFor(() => expect(apiClient.fetchWorkspaces).toHaveBeenLastCalledWith('7d', '', '', undefined, undefined, ['bug'], ['AL']));
+      await screen.findByLabelText(/filter tickets/i);
+      fireEvent.change(screen.getByLabelText(/filter tickets/i), { target: { value: 'AL-2' } });
+      expect(within(region).getByText(sessionId)).toBeVisible();
+      expect(screen.queryByText('AL-1')).not.toBeInTheDocument();
+      expect(inspect).toHaveBeenCalledTimes(1);
+      expect(inspect).toHaveBeenCalledWith();
+      fireEvent.click(screen.getByRole('button', { name: 'Refresh Data' }));
+      await waitFor(() => expect(screen.queryByRole('region', { name: 'Session overlap inspection' })).not.toBeInTheDocument());
+      expect(inspect).toHaveBeenCalledTimes(2);
+      expect(screen.getByText('$14.82')).toBeVisible();
+    });
+
+    it('keeps partial conflicts and metrics visible, then reports inspection failure without claiming absence', async () => {
+      vi.mocked(apiClient.fetchWorkspaceLedgers)
+        .mockResolvedValueOnce({ data: ledgers, diagnostics: [{ scope: 'response', message: 'Unreadable diagnostics' }] })
+        .mockRejectedValueOnce(new Error('Inspection offline'))
+        .mockResolvedValue({ data: ledgers });
+      render(<FleetOverview />);
+      const region = await screen.findByRole('region', { name: 'Session overlap inspection' });
+      expect(within(region).getByText(/Scope is partial/)).toBeVisible();
+      fireEvent.click(within(region).getByText('View shared sessions and affected tickets'));
+      expect(within(region).getByText(sessionId)).toBeVisible();
+      expect(within(region).queryByRole('button')).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Refresh Data' }));
+      expect(await screen.findByText('Session overlap inspection unavailable.')).toBeVisible();
+      expect(screen.getByText(/Inspection offline/)).toHaveTextContent('Overlap outside inspected records is unknown');
+      expect(screen.queryByText(sessionId)).not.toBeInTheDocument();
+      expect(screen.getByText('Total Cost')).toBeVisible();
+      fireEvent.click(screen.getByRole('button', { name: 'Refresh Data' }));
+      expect(await screen.findByText('1 shared session found across tickets.')).toBeVisible();
+      expect(screen.queryByText(/Inspection offline/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Scope is partial/)).not.toBeInTheDocument();
+    });
+
+    it.each([
+      { data: ledgers.slice(0, 1), diagnostics: [{ ticket_id: 'SKIPPED-1', message: 'Rejected ledger' }], reason: 'Rejected ledger' },
+      { data: ledgers.slice(0, 1), diagnostics: [{ scope: 'response' as const, message: 'Diagnostics unavailable' }], reason: 'Diagnostics unavailable' },
+      { data: [{ ...ledgers[0]!, facts: { ...ledgers[0]!.facts, sessions: [{ id: ' ', invocations: [], tools: [] }] } }], reason: '1 session records lacked usable IDs' },
+    ])('reports limited scope without conflicts: $reason', async ({ reason, ...response }) => {
+      vi.mocked(apiClient.fetchWorkspaceLedgers).mockResolvedValue(response);
+      render(<FleetOverview />);
+      const region = await screen.findByRole('region', { name: 'Session overlap inspection' });
+      expect(within(region).getByText('Session overlap inspection is partial.')).toBeVisible();
+      expect(region).toHaveTextContent(reason);
+      expect(region).toHaveTextContent('overlap in records not inspected is unknown');
+      expect(within(region).queryByText('View shared sessions and affected tickets')).not.toBeInTheDocument();
+      expect(await screen.findByText('Total Cost')).toBeVisible();
+    });
+
+    it.each(['success', 'error'])('ignores an obsolete initial inspection %s after a newer corrected reload', async (outcome) => {
+      let resolveInitial: ((value: apiClient.ApiResponse<readonly typeof base[]>) => void) | undefined;
+      let rejectInitial: ((reason: Error) => void) | undefined;
+      const initial = new Promise<apiClient.ApiResponse<readonly typeof base[]>>((resolve, reject) => { resolveInitial = resolve; rejectInitial = reject; });
+      vi.mocked(apiClient.fetchWorkspaceLedgers).mockReturnValueOnce(initial).mockResolvedValue({ data: [ledgers[0]!] });
+      render(<FleetOverview />);
+      await screen.findByText('Total Cost');
+      fireEvent.click(screen.getByRole('button', { name: 'Refresh Data' }));
+      await waitFor(() => expect(screen.queryByText(/Inspecting loaded project/)).not.toBeInTheDocument());
+      await act(async () => {
+        if (outcome === 'success') {
+          resolveInitial!({ data: ledgers });
+          await initial;
+        } else {
+          rejectInitial!(new Error('Stale inspection failure'));
+          await expect(initial).rejects.toThrow('Stale inspection failure');
+        }
+      });
+      expect(screen.queryByText(sessionId)).not.toBeInTheDocument();
+      expect(screen.queryByRole('region', { name: 'Session overlap inspection' })).not.toBeInTheDocument();
+    });
+
   });
 
   describe('Adversarial & Boundary Scenarios', () => {

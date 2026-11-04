@@ -834,7 +834,7 @@ func TestScanWorkspacesResilience(t *testing.T) {
 		}
 	})
 
-	t.Run("parent directory name inference for omitted ticket ID", func(t *testing.T) {
+	t.Run("rejects omitted ticket ID instead of inferring the parent directory", func(t *testing.T) {
 		tempDir := t.TempDir()
 		ticketDir := filepath.Join(tempDir, "INFERRED-42")
 		if err := os.MkdirAll(ticketDir, 0755); err != nil {
@@ -858,11 +858,8 @@ func TestScanWorkspacesResilience(t *testing.T) {
 		}
 
 		report := adapters.ScanWorkspaces(tempDir)
-		if len(report.Ledgers) != 1 {
-			t.Fatalf("expected 1 ledger, got %d", len(report.Ledgers))
-		}
-		if report.Ledgers[0].TicketID == nil || *report.Ledgers[0].TicketID != "INFERRED-42" {
-			t.Errorf("expected inferred ticket_id INFERRED-42, got %v", report.Ledgers[0].TicketID)
+		if len(report.Ledgers) != 0 || len(report.Diagnostics) != 1 || report.Diagnostics[0].TicketID != "INFERRED-42" || !strings.Contains(report.Diagnostics[0].Message, "ticket_id is required") {
+			t.Fatalf("expected missing identity rejection with directory diagnostic, got %+v", report)
 		}
 	})
 }
@@ -1394,35 +1391,32 @@ func TestLoadTicketWorkspace(t *testing.T) {
 		}
 	})
 
-	t.Run("fallback to parameter ticket ID when omitted in json", func(t *testing.T) {
-		noIDDir := filepath.Join(tempDir, "AL-OMITTED")
-		if err := os.MkdirAll(noIDDir, 0755); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(filepath.Join(noIDDir, "agentic_metrics.json"), []byte(`{
-  "schema_version": 6,
-  "migration": {
-    "schema_version": 6,
-    "status": "completed",
-    "steps_completed": [
-      "source_backfill"
-    ],
-    "steps_pending": []
-  },
-  "updated_at": "2026-10-18T12:00:00Z",
-  "sessions": []
-}`), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		ledger, err := adapters.LoadTicketWorkspace("AL-OMITTED", tempDir)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if ledger == nil || ledger.TicketID == nil || *ledger.TicketID != "AL-OMITTED" {
-			t.Errorf("expected fallback ticket ID AL-OMITTED, got %v", ledger)
-		}
-	})
+	for _, identity := range []struct{ name, field string }{
+		{"absent", ""}, {"null", `,"ticket_id":null`}, {"empty", `,"ticket_id":""`}, {"whitespace", `,"ticket_id":" \t"`},
+	} {
+		t.Run("rejects "+identity.name+" ticket ID instead of borrowing the requested path", func(t *testing.T) {
+			noIDDir := filepath.Join(t.TempDir(), "PATH-ONLY")
+			if err := os.MkdirAll(noIDDir, 0755); err != nil {
+				t.Fatal(err)
+			}
+			path := filepath.Join(noIDDir, "agentic_metrics.json")
+			payload := []byte(`{"schema_version":6,"sessions":[]` + identity.field + `}`)
+			if err := os.WriteFile(path, payload, 0644); err != nil {
+				t.Fatal(err)
+			}
+			ledger, err := adapters.LoadTicketWorkspace("PATH-ONLY", filepath.Dir(noIDDir))
+			if err == nil || !strings.Contains(err.Error(), "ticket_id is required") || ledger != nil {
+				t.Fatalf("expected missing identity error with no ledger, got ledger=%+v err=%v", ledger, err)
+			}
+			after, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(payload, after) {
+				t.Fatal("read repaired missing recorded identity")
+			}
+		})
+	}
 
 	t.Run("non-existent workspace returns error", func(t *testing.T) {
 		ledger, err := adapters.LoadTicketWorkspace("NON-EXISTENT", tempDir)

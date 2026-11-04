@@ -46,8 +46,8 @@ func TestCurrentLedgerRejectsRetiredEventsAtRootAndSession(t *testing.T) {
 		for _, value := range []string{"null", "[]", "false", `""`} {
 			t.Run(field+"/"+value, func(t *testing.T) {
 				session := `{"id":"owner","source":"codex","user":"tester","invocations":[],"tools":[],"anomalies":[],"` + field + `":` + value + `}`
-				root := `{"schema_version":6,"sessions":[],"` + field + `":` + value + `}`
-				for _, input := range []string{root, `{"schema_version":6,"sessions":[` + session + `]}`} {
+				root := `{"schema_version":6,"ticket_id":"TEST-VALIDATION","sessions":[],"` + field + `":` + value + `}`
+				for _, input := range []string{root, `{"schema_version":6,"ticket_id":"TEST-VALIDATION","sessions":[` + session + `]}`} {
 					if err := adapters.ValidateRuntimeFactLedger([]byte(input)); err == nil {
 						t.Fatalf("retired field accepted: %s", input)
 					}
@@ -118,7 +118,7 @@ func TestValidateRuntimeFactLedgerRejectsIncompleteV4(t *testing.T) {
 }
 
 func TestValidateRuntimeFactLedgerAcceptsCanonicalV4WithoutMigrationMetadata(t *testing.T) {
-	base := `{"schema_version":6,"sessions":[{"id":"s1","source":"opencode","user":"u","invocations":[{"role":"orchestrator","model":"m","started_at":null,"completed_at":null,"active_duration_seconds":0,"turns":0,"tokens":{"input":0,"output":0,"cache_read":0,"reasoning":0,"peak_context":0},"cost_usd":0,"compactions":0,"user_iterations":0,"cost_evidence":{"state":"observed","known_subtotal_usd":0}}],"tools":[],"anomalies":[]}]}`
+	base := `{"schema_version":6,"ticket_id":"TEST-VALIDATION","sessions":[{"id":"s1","source":"opencode","user":"u","invocations":[{"role":"orchestrator","model":"m","started_at":null,"completed_at":null,"active_duration_seconds":0,"turns":0,"tokens":{"input":0,"output":0,"cache_read":0,"reasoning":0,"peak_context":0},"cost_usd":0,"compactions":0,"user_iterations":0,"cost_evidence":{"state":"observed","known_subtotal_usd":0}}],"tools":[],"anomalies":[]}]}`
 	if err := adapters.ValidateRuntimeFactLedger([]byte(base)); err != nil {
 		t.Fatalf("canonical v4 without workflow metadata should be accepted: %v", err)
 	}
@@ -155,7 +155,7 @@ func TestInvocationSerializationPreservesRowsAndSessionOwnershipWithoutID(t *tes
 		{Role: "coder", Model: "model-a", StartedAt: &started, CompletedAt: &completed, Tokens: domain.InvocationTokens{Input: 20}, CostUSD: 0.50, CostEvidence: domain.ObservedCost(0.50)},
 		{Role: "reviewer", Model: "model-b", StartedAt: &started, CompletedAt: &completed, Tokens: domain.InvocationTokens{Input: 30}, CostUSD: 0.75, CostEvidence: domain.ObservedCost(0.75)},
 	}
-	facts := domain.AgenticFactLedger{SchemaVersion: &version, Sessions: []domain.SessionFact{
+	facts := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: strPtr("TEST-VALIDATION"), Sessions: []domain.SessionFact{
 		{ID: rootID, Source: domain.SourceCodex, User: "alice", Invocations: rows, Tools: []domain.SessionToolFact{}, Anomalies: []domain.Anomaly{}},
 		{ID: "opaque-child", ParentID: &rootID, Source: domain.SourceCodex, User: "alice", Invocations: rows[:1], Tools: []domain.SessionToolFact{}, Anomalies: []domain.Anomaly{}},
 	}, Anomalies: []domain.Anomaly{}}
@@ -204,7 +204,7 @@ func TestInvocationSerializationPreservesRowsAndSessionOwnershipWithoutID(t *tes
 
 func TestAgenticFactLedgerDTOFromDomainPreservesTemporaryMigrationMetadata(t *testing.T) {
 	version := domain.CurrentSchemaVersion
-	ledger := domain.AgenticFactLedger{SchemaVersion: &version}
+	ledger := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: strPtr("TEST-VALIDATION")}
 	encoded, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(ledger))
 	if err != nil {
 		t.Fatal(err)
@@ -593,6 +593,47 @@ func TestSchemaMigrationDTOBoundaries(t *testing.T) {
 	})
 }
 
+func TestTicketIDRequiredAtLedgerBoundary(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		field string
+		valid bool
+	}{
+		{"absent", "", false},
+		{"null", `,"ticket_id":null`, false},
+		{"empty", `,"ticket_id":""`, false},
+		{"whitespace", `,"ticket_id":" \t\n"`, false},
+		{"wrong type", `,"ticket_id":42`, false},
+		{"recorded", `,"ticket_id":"RECORDED-1"`, true},
+		{"preserved surrounding whitespace", `,"ticket_id":" RECORDED-1 "`, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			input := []byte(`{"schema_version":6,"sessions":[]` + tc.field + `}`)
+			runtimeErr := adapters.ValidateRuntimeFactLedger(input)
+			if (runtimeErr == nil) != tc.valid {
+				t.Fatalf("runtime valid=%t, got %v", tc.valid, runtimeErr)
+			}
+			if !tc.valid && tc.name != "wrong type" && !strings.Contains(runtimeErr.Error(), "ticket_id is required") {
+				t.Fatalf("runtime rejected for unrelated reason: %v", runtimeErr)
+			}
+			var dto adapters.AgenticFactLedgerDTO
+			err := json.Unmarshal(input, &dto)
+			if err == nil {
+				err = dto.Validate()
+			}
+			if (err == nil) != tc.valid {
+				t.Fatalf("typed valid=%t, got %v", tc.valid, err)
+			}
+			if !tc.valid && tc.name != "wrong type" && !strings.Contains(err.Error(), "ticket_id is required") {
+				t.Fatalf("typed validator rejected for unrelated reason: %v", err)
+			}
+			if tc.name == "preserved surrounding whitespace" && *dto.ToDomain().TicketID != " RECORDED-1 " {
+				t.Fatal("recorded identity changed during projection")
+			}
+		})
+	}
+}
+
 func TestToolSessionIDRequiredAtLedgerBoundary(t *testing.T) {
 	version := domain.CurrentSchemaVersion
 	cases := []struct {
@@ -608,7 +649,7 @@ func TestToolSessionIDRequiredAtLedgerBoundary(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			tools := []adapters.SessionToolFactDTO{{Name: "command", Calls: 1}}
-			dto := adapters.AgenticFactLedgerDTO{SchemaVersion: &version, Sessions: []adapters.SessionFactDTO{{ID: tc.sessionID, Source: "codex", User: "tester", Invocations: []adapters.InvocationFactDTO{}, Tools: tools}}}
+			dto := adapters.AgenticFactLedgerDTO{SchemaVersion: &version, TicketID: strPtr("TEST-VALIDATION"), Sessions: []adapters.SessionFactDTO{{ID: tc.sessionID, Source: "codex", User: "tester", Invocations: []adapters.InvocationFactDTO{}, Tools: tools}}}
 			err := dto.Validate()
 			if tc.valid && err != nil {
 				t.Fatalf("expected valid session identity, got %v", err)
@@ -618,7 +659,7 @@ func TestToolSessionIDRequiredAtLedgerBoundary(t *testing.T) {
 			}
 		})
 	}
-	if err := (adapters.AgenticFactLedgerDTO{SchemaVersion: &version, Sessions: []adapters.SessionFactDTO{}}).Validate(); err != nil {
+	if err := (adapters.AgenticFactLedgerDTO{SchemaVersion: &version, TicketID: strPtr("TEST-VALIDATION"), Sessions: []adapters.SessionFactDTO{}}).Validate(); err != nil {
 		t.Fatalf("empty tools collection should be valid: %v", err)
 	}
 }
@@ -1152,7 +1193,7 @@ func TestCostEvidenceBoundaryCompatibility(t *testing.T) {
 
 	legacyBase := `{"schema_version":4,"sessions":[{"id":"owner","source":"codex","user":"alice","invocations":[{"role":"coder","model":"model-a","started_at":null,"completed_at":null,"active_duration_seconds":0,"turns":1,"tokens":{"input":1,"output":0,"cache_read":0,"reasoning":0,"peak_context":1},COST"compactions":0,"user_iterations":0}],"tools":[],"anomalies":[]}]}`
 	t.Run("invocation partial facts survive lean delegation roundtrip", func(t *testing.T) {
-		input := []byte(`{"schema_version":6,"sessions":[{"id":"owner","source":"codex","user":"alice","invocations":[{"role":"coder","model":"fixture","started_at":null,"completed_at":null,"active_duration_seconds":0,"turns":0,"tokens":{"input":0,"output":0,"cache_read":0,"reasoning":0,"peak_context":0},"compactions":0,"user_iterations":0,"cost_usd":null,"cost_evidence":{"state":"partial","known_subtotal_usd":1.25}}],"tools":[],"anomalies":[],"delegations":[{"agent_type":"coder","invoked_at":null,"description":"Keep source task","child_session_id":"child"}]}]}`)
+		input := []byte(`{"schema_version":6,"ticket_id":"TEST-VALIDATION","sessions":[{"id":"owner","source":"codex","user":"alice","invocations":[{"role":"coder","model":"fixture","started_at":null,"completed_at":null,"active_duration_seconds":0,"turns":0,"tokens":{"input":0,"output":0,"cache_read":0,"reasoning":0,"peak_context":0},"compactions":0,"user_iterations":0,"cost_usd":null,"cost_evidence":{"state":"partial","known_subtotal_usd":1.25}}],"tools":[],"anomalies":[],"delegations":[{"agent_type":"coder","invoked_at":null,"description":"Keep source task","child_session_id":"child"}]}]}`)
 		if err := adapters.ValidateRuntimeFactLedger(input); err != nil {
 			t.Fatal(err)
 		}
@@ -1234,7 +1275,7 @@ func TestCostEvidenceBoundaryCompatibility(t *testing.T) {
 		`"cost_usd":-1,"cost_evidence":{"state":"observed","known_subtotal_usd":-1},`,
 	} {
 		t.Run("v5 rejects "+fields, func(t *testing.T) {
-			data := []byte(strings.Replace(strings.Replace(legacyBase, `"schema_version":4`, `"schema_version":6`, 1), "COST", fields, 1))
+			data := []byte(strings.Replace(strings.Replace(legacyBase, `"schema_version":4`, `"schema_version":6,"ticket_id":"TEST-COST"`, 1), "COST", fields, 1))
 			if err := adapters.ValidateRuntimeFactLedger(data); err == nil {
 				t.Fatal("runtime accepted contradictory/missing evidence")
 			}
@@ -1457,7 +1498,7 @@ func TestCurrentLeanOccurrencesRequireExactNullableShape(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			input := []byte(`{"schema_version":6,"sessions":[{"id":"owner","source":"codex","user":"tester","invocations":[],"tools":[],"anomalies":[],"` + tc.collection + `":[` + tc.row + `]}]}`)
+			input := []byte(`{"schema_version":6,"ticket_id":"TEST-VALIDATION","sessions":[{"id":"owner","source":"codex","user":"tester","invocations":[],"tools":[],"anomalies":[],"` + tc.collection + `":[` + tc.row + `]}]}`)
 			err := adapters.ValidateRuntimeFactLedger(input)
 			if (err == nil) != tc.valid {
 				t.Fatalf("valid=%t err=%v input=%s", tc.valid, err, input)
@@ -1472,7 +1513,7 @@ func TestCurrentLeanOccurrencesRequireExactNullableShape(t *testing.T) {
 		for _, field := range []string{"success", "outcome", "provenance", "evidence_kind", "path", "timestamp", "session_id", "source", "call_id", "child_reference", "child_agent_id", "child_link_diagnostic", "parent_turn", "duration_ms", "cost_usd", "cost_evidence", "error", "prompt"} {
 			t.Run(collection+"/reject "+field, func(t *testing.T) {
 				row := strings.TrimSuffix(base, "}") + `,"` + field + `":null}`
-				input := []byte(`{"schema_version":6,"sessions":[{"id":"owner","source":"codex","user":"tester","invocations":[],"tools":[],"anomalies":[],"` + collection + `":[` + row + `]}]}`)
+				input := []byte(`{"schema_version":6,"ticket_id":"TEST-VALIDATION","sessions":[{"id":"owner","source":"codex","user":"tester","invocations":[],"tools":[],"anomalies":[],"` + collection + `":[` + row + `]}]}`)
 				if err := adapters.ValidateRuntimeFactLedger(input); err == nil {
 					t.Fatalf("retired field accepted: %s", input)
 				}

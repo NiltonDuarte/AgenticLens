@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "NAV-01",
+      "severity": 4,
+      "issue": "Recorded ticket IDs differing from directory names may fail existing detail navigation.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Preexisting accepted debt: directory-based detail lookup may fail; repository maintainers own separate identity-to-location follow-up."
+    },
+    {
+      "finding_id": "ARCH-01",
+      "severity": 5,
+      "issue": "Claim: completed-migration cleanup bypasses required ticket-ID validation.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Refuted: runtime validation calls DTO.Validate before cleanup; parent probe rejected all missing-ID forms and accepted valid control."
+    },
+    {
+      "finding_id": "TEST-01",
+      "severity": 2,
+      "issue": "Existing nested-session rejection test returns an earlier schema error.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Preexisting accepted debt: unrelated nested-session fixture omits schema; repository maintainers own separate oracle maintenance."
+    }
+  ]
+}
