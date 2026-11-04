@@ -8,7 +8,7 @@ h3. Title: AL-70: Preserve configuration, paths and ticket identity
 *Blocked by*: None
 *Blocks*: None
 *Origin*: REV-5 iteration 03 audit; consolidated draft batch at the user's request in iteration 09.
-*Findings*: ADP-02, ADP-03, ADP-04, ADP-05, ADP-11, CC-05, CC-06, CC-07, D7, FE-01
+*Findings*: AL-67 F01, F02, F11; ADP-02, ADP-03, ADP-04, ADP-05, ADP-11, CC-05, CC-06, CC-07, D7, FE-01
 *Related*: AL-68 owns hook installation. Coordinate configuration changes while preserving its explicit session binding and local-only boundaries.
 
 *CONTEXT*
@@ -42,6 +42,18 @@ Nested-directory scans resolve workspace paths against the wrong directory; init
 * Retain config origin and resolve configured relative paths against it; document and preserve explicit CLI override semantics and absolute paths across scan, migration and server callers.
 * After init --db-path and custom --output, the next normal invocation resolves the requested database and the matching local configuration location. Assert effective behavior, not just generated shared YAML.
 * Pass configured workspace policy into v1/v2 fallback resolution; verify custom roots, separators, SQL LIKE wildcard escaping, title fallback and exact-ID/nonce precedence without repository-specific constants.
+
+h4. Use the same effective source settings across commands (AL-67 F01, F02, F11)
+
+Generate honors a configured local Codex home, but production server hydration currently derives it only from environment/home. Generate also anchors configured relative source paths to the project; server/backfill currently use the caller directory. The source is available, yet a different command can search the wrong place.
+
+Example: /repo/.agenticlens-config.local.yaml selects ./sources/codex. Generate from /repo finds it. Starting the server or backfill from /repo/backend must still use /repo/sources/codex, rather than /repo/backend/sources/codex or ~/.codex. Absolute CLI overrides must win, and explicit relative CLI paths retain caller-relative meaning.
+
+* Resolve and inject effective OpenCode/Codex settings consistently at generate, backfill and server/hydration composition boundaries. Preserve explicit/local/environment/builtin precedence where supported, shared legacy database.path and physical symlink/.. semantics.
+* Exercise real loaded local configuration with conflicting configured/environment stores, nested cwd, both harnesses and an explicitly targeted workspace belonging to another project. Do not silently mix cwd-project source settings with target-project workspace settings.
+* Fix the no-fallback test's evidence gap: construct a usable competing harness containing a matching owner and prove the selected source is not replaced by it. Retain selected-error/path and no-output assertions. No fallback bug is claimed from the old fixture alone.
+* Verify configured Codex hydration through production server wiring; calling NewLiveServiceWithCodexHome directly does not prove configuration reaches that constructor. Retain mixed-owner routing, unavailable history and ledger-backed visibility.
+* No new source-selection framework or live Codex/v2 capability is required. FIX-18 owns live capability reporting; REV-7 owns wider read-contract investigation.
 
 h4. Align ticket identity parsing and stable sorting across layers
 
@@ -81,3 +93,5 @@ The dashboard advertises localhost but binds all interfaces by default. The user
 * [REV-5 CORE_CLI_REPORT.md](../../REV-5/iterations/03/CORE_CLI_REPORT.md)
 * [REV-5 DELIVERY_REPORT.md](../../REV-5/iterations/03/DELIVERY_REPORT.md)
 * [REV-5 FRONTEND_REPORT.md](../../REV-5/iterations/03/FRONTEND_REPORT.md)
+
+* [AL-67 source configuration evidence](../../AL-67/ARCHITECTURE_ASSESSMENT.md), F01/F02/F11.

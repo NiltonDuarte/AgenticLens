@@ -37,7 +37,7 @@
           "identity_basis": "acknowledged"
         }
       ],
-      "disposition": "Accepted debt: CLI composition owner must resolve and inject the configured home; no fix in AL-67."
+      "disposition": "Accepted debt: CLI composition owner must resolve and inject the configured home; no fix in AL-67. Follow-up: AL-70 (planned, unimplemented)."
     },
     {
       "finding_id": "F02",
@@ -63,7 +63,7 @@
           "identity_basis": "acknowledged"
         }
       ],
-      "disposition": "Accepted debt: composition owner should preserve project anchoring and explicit CLI semantics."
+      "disposition": "Accepted debt: composition owner should preserve project anchoring and explicit CLI semantics. Follow-up: AL-70 (planned, unimplemented)."
     },
     {
       "finding_id": "F03",
@@ -95,7 +95,7 @@
           "identity_basis": "acknowledged"
         }
       ],
-      "disposition": "Accepted debt: live composition owner should report unsupported capability; historical v2 hydration remains supported."
+      "disposition": "Accepted debt: live composition owner should report unsupported capability; historical v2 hydration remains supported. Follow-up: FIX-18 (planned, unimplemented)."
     },
     {
       "finding_id": "F04",
@@ -115,7 +115,7 @@
           "identity_basis": "acknowledged"
         }
       ],
-      "disposition": "Confirmed by coordinator: grouping precedes unique-owner validation. Completion-phase co-discovery disputed impact; Codex adapter owner should reject ambiguous cumulative snapshots."
+      "disposition": "Confirmed by coordinator: grouping precedes unique-owner validation. Completion-phase co-discovery disputed impact; Codex adapter owner should reject ambiguous cumulative snapshots. Follow-up: FIX-19 (planned, unimplemented)."
     },
     {
       "finding_id": "F05",
@@ -141,7 +141,7 @@
           "identity_basis": "acknowledged"
         }
       ],
-      "disposition": "Accepted debt: live service/DTO owner should retain readable content and expose relationship availability; preserve unproven links as absent."
+      "disposition": "Accepted debt: live service/DTO owner should retain readable content and expose relationship availability; preserve unproven links as absent. Follow-up: AL-69 (planned, unimplemented)."
     },
     {
       "finding_id": "F06",
@@ -161,7 +161,7 @@
           "identity_basis": "acknowledged"
         }
       ],
-      "disposition": "Accepted debt: source adapter owner should propagate context through actual reads; runtime latency unmeasured."
+      "disposition": "Accepted debt: source adapter owner should propagate context through actual reads; runtime latency unmeasured. Follow-up: FIX-20 (planned, unimplemented)."
     },
     {
       "finding_id": "F07",
@@ -181,7 +181,7 @@
           "identity_basis": "acknowledged"
         }
       ],
-      "disposition": "Accepted design debt: backfill/adapter owners should use narrow read capabilities and preserve operation-specific mixed-schema policy."
+      "disposition": "Accepted design debt: backfill/adapter owners should use narrow read capabilities and preserve operation-specific mixed-schema policy. Follow-up: REV-7 (planned, unimplemented)."
     },
     {
       "finding_id": "F08",
@@ -195,7 +195,7 @@
           "identity_basis": "acknowledged"
         }
       ],
-      "disposition": "Recommendation: native read contract owner should specify per-owner guarantees and verify concurrent writers; no observed torn read."
+      "disposition": "Recommendation: native read contract owner should specify per-owner guarantees and verify concurrent writers; no observed torn read. Follow-up: REV-7 (planned, unimplemented)."
     },
     {
       "finding_id": "F09",
@@ -209,7 +209,7 @@
           "identity_basis": "acknowledged"
         }
       ],
-      "disposition": "Recommendation: adapter contract owner should define native sequence and deterministic tie behavior; no observed wrong anomaly."
+      "disposition": "Recommendation: adapter contract owner should define native sequence and deterministic tie behavior; no observed wrong anomaly. Follow-up: REV-7 (planned, unimplemented)."
     },
     {
       "finding_id": "F10",
@@ -229,7 +229,7 @@
           "identity_basis": "acknowledged"
         }
       ],
-      "disposition": "Confirmed test limitation: future test owner should isolate schema families; current production column validation is not shown broken."
+      "disposition": "Confirmed test limitation: future test owner should isolate schema families; current production column validation is not shown broken. Follow-up: AL-74 (planned, unimplemented)."
     },
     {
       "finding_id": "F11",
@@ -243,7 +243,7 @@
           "identity_basis": "acknowledged"
         }
       ],
-      "disposition": "Confirmed coverage limit: future CLI test owner should supply an alternate fixture; no fallback defect found in code."
+      "disposition": "Confirmed coverage limit: future CLI test owner should supply an alternate fixture; no fallback defect found in code. Follow-up: AL-70 (planned, unimplemented)."
     },
     {
       "finding_id": "F12",
@@ -263,7 +263,7 @@
           "identity_basis": "acknowledged"
         }
       ],
-      "disposition": "Design caution only: architecture owner should separate ledger persistence, source reads, discovery and observation."
+      "disposition": "Design caution only: architecture owner should separate ledger persistence, source reads, discovery and observation. Follow-up: REV-7 (planned, unimplemented)."
     }
   ]
 }

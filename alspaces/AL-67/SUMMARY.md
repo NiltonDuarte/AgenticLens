@@ -4,7 +4,7 @@ Documentation-only architecture assessment and recommendations. No application, 
 
 ## Baseline and approval
 
-Initial status was clean at `a84adbe5be46c2ef52ede0987a417562715d38e1`, on `AL-67/review-telemetry-repository-interfaces-and-dependency-injection`. Work uses `docs/AL-67-telemetry-repository-review` and the configured `alspaces/AL-67` workspace. Planner prepared the contract/plan; user explicitly approved the documentation-only audit on 2026-11-04. There was no implementation scope expansion, coder dispatch or new iteration. Unrelated history, including AL-55, remains untouched.
+Initial status was clean at `a84adbe5be46c2ef52ede0987a417562715d38e1`, on `AL-67/review-telemetry-repository-interfaces-and-dependency-injection`. Work uses `docs/AL-67-telemetry-repository-review` and the configured `alspaces/AL-67` workspace. Planner prepared the contract/plan; user explicitly approved the documentation-only audit on 2026-11-04. The initial audit had no implementation scope expansion or coder dispatch. A later user request explicitly authorized the documentation-only ticketing iteration described below. Unrelated history, including AL-55, remains untouched.
 
 ## Delivered scope by layer
 
@@ -12,7 +12,7 @@ Initial status was clean at `a84adbe5be46c2ef52ede0987a417562715d38e1`, on `AL-6
 - Adapters/composition: actual ledger/source/service contracts, constructors and dependency maps, OpenCode v1/v2/Codex operation matrix, generate/backfill/capture/server/hydration/live selection and lifecycle traces, source-grounded findings and staged target design.
 - Presentation: historical/live API and UI trace showing persisted baseline visibility, coverage validation and obsolete-selection guards. No UI change.
 
-There is no common native telemetry-source repository today. The target proposes small exact-owner/event capabilities, separate discovery and live observation, independent ledger persistence, and explicit composition. Historical v2 hydration is distinct from v1-only live SQL. All recommended corrections remain follow-up debt, with proposed responsibility and verification in the assessment; no downstream ticket was created or newly blocked.
+There is no common native telemetry-source repository today. The target proposes small exact-owner/event capabilities, separate discovery and live observation, independent ledger persistence, and explicit composition. Historical v2 hydration is distinct from v1-only live SQL. All recommended corrections remain follow-up debt, with proposed responsibility and verification in the assessment; follow-up tracking is recorded below; no downstream implementation was performed.
 
 ## Consolidated review
 
@@ -56,7 +56,17 @@ Native metadata inventory proves Codex root `01a1a7da-055d-7eb2-ade9-d3db0bf494c
 
 The shared pinned release is not installed at its configured cache path. The final extraction uses the freshly built native CLI from this project directory, with explicit Codex source and docs type; wrapper-only --al-offline/--al-project flags cannot be passed to a direct native. Capture state is isolated via the supported explicit manual override, preserving existing shared operational state. Final extraction succeeded with literal nonce `6c90b8e2d571af34`, explicit exact root, `--source codex`, `--ticket-type docs`, and isolated `--capture-dir`. Independent metadata inventory matches both saved session IDs, Codex labels and parent relationships exactly. Schema is 6. No prior AL-67 ledger exists, so preservation of earlier harness owners is not applicable. The ledger and rendered metrics cover two native sessions; the nine service review runs remain excluded from native usage totals because linkage is unproven. Costs remain unavailable.
 
-The CLI diagnosed unsupported configured capture coordinates (missing worktree mapping table); the supported explicit manual override used healthy isolated state and preserved the configured state. Capture-registry counters of zero describe that isolated registry, not an absence of manual source extraction. Manual discovery/read found two native rollouts. The rendered 13 SDLC iterations are the CLI-derived telemetry metric, not thirteen approved ticket iterations; this ticket has one approved iteration. Root persona is not source-proven and remains Unknown in the rendered role table. No application fix or synthetic fact was used to alter those source results.
+The CLI diagnosed unsupported configured capture coordinates (missing worktree mapping table); the supported explicit manual override used healthy isolated state and preserved the configured state. Capture-registry counters of zero describe that isolated registry, not an absence of manual source extraction. Manual discovery/read found two native rollouts. The CLI-rendered SDLC iteration count is a derived telemetry metric, separate from approved ticket iterations; this ticket now has two authorized documentation iterations. Root persona is not source-proven and remains Unknown in the rendered role table. No application fix or synthetic fact was used to alter those source results.
+
+## Iteration 02: actionable follow-up tickets
+
+User explicitly requested FIX tickets for well-described bugs and REV investigations for unresolved design questions, with related work grouped and readable examples. Initial status was clean at 74f6d985; this remains AL-67 follow-up documentation, not execution of the new tickets. Product-owner ticket formatting was reused without starting a separate PO ticket/session.
+
+Created FIX-18 (F03 live capability), FIX-19 (F04 duplicate Codex snapshots), FIX-20 (F06 cancellation) and REV-7 (F07/F08/F09/F12 shared read guarantees). Existing AL-70 owns F01/F02/F11, AL-69 owns F05 and AL-74 owns F10; their specifications gain current evidence/examples instead of duplicate tickets. AL-74's stale test-only accessor assumption is qualified because current historical hydration uses it in production. All new tickets are Ready with no invented dependencies. Specifications authorize future scoped planning/implementation, not changes in this session.
+
+[Ownership map](iterations/02/FOLLOW_UP_TICKETS.md) links every finding to exactly one ticket. Compact finding IDs, numeric severities and all reporter tuples remain unchanged; dispositions now name tracking owners. The user request, changed acceptance, preserved guarantees and verification impact are recorded in [iteration 02 plan](iterations/02/PLAN.md).
+
+Verification: coordinator checked ticket numbering against existing plans/workspaces, existing ownership, all twelve mappings, specification/index titles/statuses/paths, links, whitespace and zero application/test/runtime/config changes. This narrow planning-prose follow-up does not need another multi-agent architecture audit. Earlier full make/embedded-binary results remain valid for the unchanged application; they are not relabeled as ticket-acceptance execution. Telemetry refresh and final publication are recorded at handoff.
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 13

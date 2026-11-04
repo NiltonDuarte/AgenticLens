@@ -8,7 +8,7 @@ h3. Title: AL-74: Strengthen test reliability and remove unused code
 *Blocked by*: None
 *Blocks*: None
 *Origin*: REV-5 iteration 03 audit; consolidated draft batch at the user's request in iteration 09.
-*Findings*: ADP-07, ADP-08, ADP-09, ADP-13, CC-09, CC-10, CC-11, CC-12, D4, FE-D1
+*Findings*: AL-67 F10; ADP-07, ADP-08, ADP-09, ADP-13, CC-09, CC-10, CC-11, CC-12, D4, FE-D1
 *Related*: Coordinate pure aggregation changes with AL-69, UI cleanup with AL-72, and dependency/lockfile edits with AL-75. These are shared-file coordination needs, not speculative blocking dependencies.
 
 *CONTEXT*
@@ -44,13 +44,14 @@ Tests depend on live repository configuration/branch inventory. A fixed-port ser
 * Use isolated listeners and verify the launched process and expected fixture identity. Detect early child exit; give readiness requests and cleanup bounded lifetimes.
 * Exercise an occupied-port/foreign-service scenario and an accepting nonresponding listener. Prove parser and branch-precedence regressions remain detectable.
 
-h4. Repair adapter test oracles and remove test-only database accessor
+h4. Repair adapter test oracles and reassess database accessor
 
-Required-column omission tests reject an already mixed schema, no-write tests inspect absent or unrelated directories, and an exported production DB accessor exists only for test introspection.
+Required-column omission tests reject an already mixed schema and some no-write tests inspect absent or unrelated directories. A database accessor previously described as test-only also serves production hydration at the AL-67 baseline; reassess its real consumers before changing it.
 
 * Build each required-column omission from one valid schema family, assert the missing-structure cause, and keep mixed-family rejection separate. Disabling required-column checks in a disposable mutation must fail the repaired test.
 * Observe the exact configured populated workspace for no-write checks, fail traversal errors, and compare bytes. Preserve trace/hydration assertions when consolidating into existing effective tests; a write mutation must be detected.
-* Remove the exported test-only DB accessor while retaining read-only enforcement proof through a package-internal or real boundary test. Compile all consumers and avoid replacing it with another unnecessary production hook.
+* Revalidate the DB accessor's current consumers before removal: AL-67 found production historical hydration calls SQLiteHook.DB(), so it is no longer accurately described as test-only. Preserve that runtime path; remove or narrow the accessor only when its actual responsibility has a safe replacement in this approved scope. Coordinate broader source-boundary redesign with REV-7 rather than silently expanding this cleanup. Retain read-only enforcement proof and compile all consumers; do not replace it with another unnecessary production hook.
+* AL-67 F10 independently confirms why the omission oracle is weak: each case creates both complete table inventories before removing one column and expects mixed-family rejection. Even disabled column validation could leave that earlier guard green. Keep mixed-family cases, but prove each isolated family's required-column check is the reason its omission fails.
 
 h4. Remove unused frontend contracts, dependencies and props
 
@@ -82,3 +83,5 @@ Maintained compatibility targets depend on AL-58 historical evidence and fixed p
 * [REV-5 CORE_CLI_REPORT.md](../../REV-5/iterations/03/CORE_CLI_REPORT.md)
 * [REV-5 DELIVERY_REPORT.md](../../REV-5/iterations/03/DELIVERY_REPORT.md)
 * [REV-5 FRONTEND_REPORT.md](../../REV-5/iterations/03/FRONTEND_REPORT.md)
+
+* [AL-67 test and consumer evidence](../../AL-67/ARCHITECTURE_ASSESSMENT.md), F10 and F07 (production accessor use). Original REV-5 evidence remains historical.

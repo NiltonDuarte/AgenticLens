@@ -32,6 +32,42 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 ## Ready
 
+### AL-67 assessment follow-ups: Ready
+
+- **FIX-18**: Report unsupported live telemetry schemas accurately
+  - **Subsystem**: OpenCode / Live Service / HTTP SSE / Dashboard
+  - **Priority**: P2
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/FIX-18 report unsupported live telemetry schemas accurately.md`
+
+- **FIX-19**: Reject ambiguous Codex owner snapshots
+  - **Subsystem**: Codex / Generate / Backfill / Historical Hydration
+  - **Priority**: P2
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/FIX-19 reject ambiguous codex owner snapshots.md`
+
+- **FIX-20**: Cancel native source reads with their callers
+  - **Subsystem**: Source Adapters / Live and Historical HTTP / Backfill
+  - **Priority**: P2
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/FIX-20 cancel native source reads with their callers.md`
+
+- **REV-7**: Review shared source read guarantees
+  - **Subsystem**: Source Contracts / Snapshot and Ordering / Composition
+  - **Priority**: P3
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/REV-7 review shared source read guarantees.md`
+
+Related AL-67 corrections stay in existing tickets: AL-70 (F01/F02/F11), AL-69 (F05) and AL-74 (F10). REV-7 covers F07/F08/F09/F12; it does not block concrete fixes.
+
 - **AL-63**: Audit source capability parity across OpenCode v1, OpenCode v2, and Codex
   - **Subsystem**: Multi-source ingestion / hydration / recovery
   - **Status**: Ready
