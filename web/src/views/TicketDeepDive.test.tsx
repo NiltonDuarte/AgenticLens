@@ -73,6 +73,22 @@ describe('Skills and subagents autopsy', () => {
         expect(screen.getAllByText('Unknown').length).toBeGreaterThanOrEqual(2);
     });
 
+    it('keeps persisted provisional duration visible when source hydration is unavailable', async () => {
+        const detail = makeDetail();
+        const cutoff = '2026-11-01T12:00:00Z';
+        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: { ...detail, ledger: { ...detail.ledger,
+            workflow_efficiency: { ...detail.ledger.workflow_efficiency, active_duration_seconds: 10, active_duration_formatted: '10s',
+                duration_summary: { provisional_seconds: 7, provisional_invocations: 1, unknown_invocations: 1, cutoffs: [cutoff] },
+            },
+        } } });
+        render(<TicketDeepDive selectedTicketId="AL-1" />);
+        const card = (await screen.findByText('Active Compute Duration')).closest<HTMLElement>('.kpi-card')!;
+        expect(card.querySelector('.kpi-value')).toHaveTextContent('10s (coverage incomplete, provisional)');
+        expect(card.querySelector('.kpi-secondary')).toHaveTextContent('7s provisional');
+        expect(card.querySelector('.kpi-secondary')).toHaveTextContent(cutoff);
+        expect(card.querySelector('.kpi-secondary')).toHaveTextContent('unknown or unsupported');
+    });
+
     it('uses compact cost presentation for the selected ticket with full evidence in the tooltip', async () => {
         const detail = makeDetail();
         vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: { ...detail, ledger: { ...detail.ledger, totals: {

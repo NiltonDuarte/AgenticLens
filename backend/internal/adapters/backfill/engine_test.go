@@ -1410,6 +1410,17 @@ func TestBackfillEngine_ExplicitFallbackResolvesWhenAllowed(t *testing.T) {
 
 	dbPath := filepath.Join(tempDir, "opencode.db")
 	setupMockOpenCodeDB(t, dbPath, "ses-review-999", ticketID)
+	cutoff := time.Date(2026, 1, 1, 0, 0, 4, 0, time.UTC)
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if _, err := db.Exec(`UPDATE session SET time_created=1767225600000,time_updated=1767225601000;
+      UPDATE message SET time_created=1767225601000,time_updated=1767225601000,data='{"role":"assistant","modelID":"m","time":{"created":1767225601000}}' WHERE id='m1';
+      UPDATE part SET time_created=1767225601000,time_updated=1767225601000,data='{"type":"tool","tool":"bash","state":{"status":"running","time":{"start":1767225601000}}}' WHERE id='p1'`); err != nil {
+		t.Fatal(err)
+	}
 
 	report, err := NewEngine().Execute(BackfillOptions{
 		WorkspacesDir:  tempDir,
@@ -1419,6 +1430,7 @@ func TestBackfillEngine_ExplicitFallbackResolvesWhenAllowed(t *testing.T) {
 		Source:         "opencode",
 		Force:          true,
 		AllowFallbacks: true, // Explicitly enabled
+		SnapshotCutoff: cutoff,
 	})
 	if err != nil {
 		t.Fatalf("backfill failed: %v", err)
@@ -1446,6 +1458,15 @@ func TestBackfillEngine_ExplicitFallbackResolvesWhenAllowed(t *testing.T) {
 	ids := map[string]bool{}
 	for _, session := range parsed.Sessions {
 		ids[session.ID] = true
+		if session.ID == "ses-review-999" {
+			if len(session.Invocations) != 1 {
+				t.Fatalf("fallback lost active owner: %+v", session)
+			}
+			inv := session.Invocations[0]
+			if inv.ActiveDurationSeconds != 3 || inv.DurationEvidence == nil || inv.DurationEvidence.State != domain.DurationProvisional || inv.DurationEvidence.Cutoff != cutoff.Format(time.RFC3339Nano) {
+				t.Fatalf("fallback ignored operation cutoff: %+v want %s", inv, cutoff.Format(time.RFC3339Nano))
+			}
+		}
 	}
 	if len(parsed.Sessions) != 2 || !ids["ses-review-999"] || !ids["ses-missing-789"] {
 		t.Fatalf("fallback must enrich without erasing missing exact owner: %+v", parsed.Sessions)
@@ -2156,5 +2177,171 @@ func TestBackfillCodexCompleteParentRefreshesWhileMissingChildFactsSurvive(t *te
 		if len(owners) != 2 || len(owners[parentID].Skills) != 1 || owners[parentID].Skills[0].Name != "fresh-parent" || len(owners["missing-child"].Skills) != 1 || owners["missing-child"].Skills[0].Name != "remote-child" || len(owners["missing-child"].Delegations) != 1 || owners["missing-child"].Delegations[0].Description != "remote-task" {
 			t.Fatalf("DATA-03 complete parent vetoed or unavailable child facts discarded: %+v", owners)
 		}
+	}
+}
+
+// Fixed cutoffs exercise persisted replacement, rather than comparing two
+// independently growing wall-clock extractions. Each source uses real parsing.
+func TestBackfillActiveDurationReplacesSnapshotsAcrossSourceFamilies(t *testing.T) {
+	for _, family := range []string{"codex", "opencode-v1", "opencode-v2"} {
+		t.Run(family, func(t *testing.T) {
+			root, home := t.TempDir(), t.TempDir()
+			ticket, parent := "FIX-DURATION", "active-root"
+			version := domain.CurrentSchemaVersion
+			source, other := domain.SourceOpenCode, domain.SourceCodex
+			if family == "codex" {
+				source, other = domain.SourceCodex, domain.SourceOpenCode
+			}
+			storedCutoff := "2026-01-01T00:00:08Z"
+			baseline := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticket, Sessions: []domain.SessionFact{
+				{ID: parent, Source: source, User: "local"},
+				{ID: "child", Source: source, ParentID: &parent, User: "local"},
+				{ID: "unavailable-root", Source: source, User: "remote", Invocations: []domain.InvocationFact{{Role: "coder", Model: "m", ActiveDurationSeconds: 7, DurationEvidence: &domain.DurationEvidence{State: domain.DurationProvisional, ProvisionalSeconds: 7, Cutoff: storedCutoff, Basis: "native-open-interval"}}}},
+				{ID: "other-harness", Source: other, User: "remote", Invocations: []domain.InvocationFact{{Role: "coder", Model: "m", ActiveDurationSeconds: 17}}},
+			}}
+			workspace := createTestWorkspace(t, root, ticket, baseline)
+			previous, _ := readRecoveryLedger(t, workspace)
+			retained := map[string]domain.SessionFact{}
+			for _, s := range previous.ToDomain().Sessions {
+				if s.ID == "unavailable-root" || s.ID == "other-harness" {
+					retained[s.ID] = s
+				}
+			}
+			opts := BackfillOptions{WorkspacesDir: root, TicketID: ticket, Source: string(source), CodexHome: home, RecomputeDB: true, UpdateSummaries: true}
+			base := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+			var complete func()
+			if family == "codex" {
+				dir := filepath.Join(home, "sessions")
+				if err := os.MkdirAll(dir, 0700); err != nil {
+					t.Fatal(err)
+				}
+				path := filepath.Join(dir, "root.jsonl")
+				initial := `{"timestamp":"2026-01-01T00:00:00Z","type":"session_meta","payload":{"id":"active-root","source":"cli"}}` + "\n" +
+					`{"timestamp":"2026-01-01T00:00:00Z","type":"turn_context","payload":{"model":"m"}}` + "\n" +
+					`{"timestamp":"2026-01-01T00:00:01Z","type":"event_msg","payload":{"type":"task_started","turn_id":"open"}}` + "\n"
+				if err := os.WriteFile(path, []byte(initial), 0600); err != nil {
+					t.Fatal(err)
+				}
+				child := `{"timestamp":"2026-01-01T00:00:00Z","type":"session_meta","payload":{"id":"child","source":{"subagent":{"thread_spawn":{"parent_thread_id":"active-root"}}}}}` + "\n" +
+					`{"timestamp":"2026-01-01T00:00:00Z","type":"turn_context","payload":{"model":"m"}}` + "\n" +
+					`{"timestamp":"2026-01-01T00:00:01Z","type":"event_msg","payload":{"type":"task_started","turn_id":"child-turn"}}` + "\n" +
+					`{"timestamp":"2026-01-01T00:00:04Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"child-turn"}}` + "\n"
+				if err := os.WriteFile(filepath.Join(dir, "child.jsonl"), []byte(child), 0600); err != nil {
+					t.Fatal(err)
+				}
+				complete = func() {
+					if err := os.WriteFile(path, []byte(initial+`{"timestamp":"2026-01-01T00:00:31Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"open"}}`+"\n"), 0600); err != nil {
+						t.Fatal(err)
+					}
+				}
+			} else {
+				opts.DBPath = filepath.Join(home, "opencode.db")
+				db, err := sql.Open("sqlite", opts.DBPath)
+				if err != nil {
+					t.Fatal(err)
+				}
+				t.Cleanup(func() {
+					if err := db.Close(); err != nil {
+						t.Error(err)
+					}
+				})
+				if family == "opencode-v1" {
+					setupMockOpenCodeDB(t, opts.DBPath, parent, ticket)
+					if _, err := db.Exec(`UPDATE session SET time_created=1767225600000,time_updated=1767225601000; UPDATE message SET time_created=1767225601000,time_updated=1767225601000,data='{"role":"assistant","modelID":"m","time":{"created":1767225601000}}' WHERE id='m1';
+      UPDATE part SET time_created=1767225601000,time_updated=1767225601000,data='{"type":"tool","tool":"bash","state":{"status":"running","time":{"start":1767225601000}}}' WHERE id='p1';
+      INSERT INTO session VALUES('child','active-root','coder','m','child',1767225600000,1767225604000);
+      INSERT INTO message VALUES('child-msg','child','{"role":"assistant","modelID":"m","time":{"created":1767225601000,"completed":1767225604000}}',1767225601000,1767225604000);`); err != nil {
+						t.Fatal(err)
+					}
+					complete = func() {
+						if _, err := db.Exec(`UPDATE message SET data='{"role":"assistant","modelID":"m","time":{"created":1767225601000,"completed":1767225631000}}' WHERE id='m1'; UPDATE part SET data='{"type":"tool","tool":"bash","state":{"status":"completed","time":{"start":1767225601000,"end":1767225631000}}}' WHERE id='p1'`); err != nil {
+							t.Fatal(err)
+						}
+					}
+				} else {
+					if _, err := db.Exec(`CREATE TABLE session_v2(id TEXT PRIMARY KEY,parent_id TEXT,agent TEXT,model TEXT,title TEXT,time_created INTEGER,time_updated INTEGER);
+      CREATE TABLE session_message(id TEXT PRIMARY KEY,session_id TEXT,type TEXT,seq INTEGER,time_created INTEGER,time_updated INTEGER,data TEXT);
+      INSERT INTO session_v2 VALUES('active-root',NULL,'coder','m','root',1767225600000,1767225601000),('child','active-root','coder','m','child',1767225600000,1767225604000);
+      INSERT INTO session_message VALUES('m1','active-root','assistant',1,1767225601000,1767225601000,'{"time":{"created":1767225601000},"model":{"id":"m"},"content":[{"type":"tool","id":"tool","name":"bash","state":{"status":"running"},"time":{"created":1767225601000,"ran":1767225601000}}]}'),
+       ('child-msg','child','assistant',1,1767225601000,1767225604000,'{"time":{"created":1767225601000,"completed":1767225604000},"model":{"id":"m"},"content":[]}');`); err != nil {
+						t.Fatal(err)
+					}
+					complete = func() {
+						if _, err := db.Exec(`UPDATE session_message SET time_updated=1767225631000,data='{"time":{"created":1767225601000,"completed":1767225631000},"model":{"id":"m"},"content":[]}' WHERE id='m1'`); err != nil {
+							t.Fatal(err)
+						}
+					}
+				}
+			}
+			load := func() []domain.SessionFact {
+				dto, _ := readRecoveryLedger(t, workspace)
+				return dto.ToDomain().Sessions
+			}
+			var unchangedChild domain.SessionFact
+			var previousActive []domain.SessionFact
+			for i, seconds := range []int64{10, 20, 20, 30, 30} {
+				if i == 3 {
+					complete()
+				}
+				opts.SnapshotCutoff = base.Add(time.Duration(seconds+1) * time.Second)
+				if i >= 3 {
+					opts.SnapshotCutoff = base.Add(40 * time.Second)
+				}
+				report, err := NewEngine().Execute(opts)
+				if err != nil || len(report.Results) != 1 || report.Results[0].Error != nil {
+					t.Fatalf("source refresh failed: %+v %v", report, err)
+				}
+				sessions := load()
+				if len(sessions) != 4 {
+					t.Fatalf("owners duplicated/lost: %+v", sessions)
+				}
+				byID := map[string]domain.SessionFact{}
+				for _, s := range sessions {
+					byID[s.ID] = s
+				}
+				for id, old := range retained {
+					if !reflect.DeepEqual(byID[id], old) {
+						t.Errorf("unavailable/other harness %s changed: before=%+v after=%+v", id, old, byID[id])
+					}
+				}
+				if i == 0 {
+					unchangedChild = byID["child"]
+				} else if !reflect.DeepEqual(byID["child"], unchangedChild) {
+					t.Errorf("unchanged child changed: %+v", byID["child"])
+				}
+				if byID["child"].ParentID == nil || *byID["child"].ParentID != parent || len(byID["child"].Invocations) != 1 || byID["child"].Invocations[0].ActiveDurationSeconds != 3 {
+					t.Fatalf("child accounting/ancestry lost: %+v", byID["child"])
+				}
+				inv := byID[parent].Invocations
+				if len(inv) != 1 || inv[0].ActiveDurationSeconds != seconds || inv[0].DurationEvidence == nil {
+					t.Fatalf("snapshot %d root=%+v", i, inv)
+				}
+				if i < 3 {
+					if inv[0].DurationEvidence.State != domain.DurationProvisional || inv[0].DurationEvidence.ProvisionalSeconds != seconds || inv[0].DurationEvidence.Cutoff != opts.SnapshotCutoff.Format(time.RFC3339Nano) || inv[0].CompletedAt != nil {
+						t.Errorf("missing provisional cutoff/coverage: %+v", inv[0])
+					}
+				} else if inv[0].DurationEvidence.State != domain.DurationComplete || inv[0].DurationEvidence.ProvisionalSeconds != 0 || inv[0].DurationEvidence.Cutoff != "" {
+					t.Errorf("completion accumulated old provisional time: %+v", inv[0])
+				}
+				total := domain.ComputeWorkflowEfficiency(domain.AgenticFactLedger{Sessions: sessions})
+				if total.ActiveDurationSeconds != seconds+27 {
+					t.Errorf("rollup %d want %d", total.ActiveDurationSeconds, seconds+27)
+				}
+				if (i == 2 || i == 4) && !reflect.DeepEqual(previousActive, sessions) {
+					t.Errorf("fixed source/cutoff repeat changed facts")
+				}
+				previousActive = sessions
+			}
+			// Force rewrites existing facts; it must not masquerade as source refresh.
+			before := load()
+			opts.RecomputeDB, opts.Force = false, true
+			opts.SnapshotCutoff = base.Add(60 * time.Second)
+			if report, err := NewEngine().Execute(opts); err != nil || report.Results[0].Error != nil {
+				t.Fatalf("force rewrite: %+v %v", report, err)
+			}
+			if !reflect.DeepEqual(before, load()) {
+				t.Fatal("force-only rewrite changed source facts")
+			}
+		})
 	}
 }

@@ -72,17 +72,18 @@ type sessionInput struct {
 }
 
 type invocationInput struct {
-	Role                  domain.AgentRole        `json:"role"`
-	Model                 string                  `json:"model"`
-	StartedAt             *string                 `json:"started_at"`
-	CompletedAt           *string                 `json:"completed_at"`
-	ActiveDurationSeconds int64                   `json:"active_duration_seconds"`
-	Turns                 int64                   `json:"turns"`
-	Tokens                domain.InvocationTokens `json:"tokens"`
-	CostUSD               json.RawMessage         `json:"cost_usd"`
-	CostEvidence          *domain.CostEvidence    `json:"cost_evidence"`
-	Compactions           int64                   `json:"compactions"`
-	UserIterations        int64                   `json:"user_iterations"`
+	DurationEvidence      *domain.DurationEvidence `json:"duration_evidence,omitempty"`
+	Role                  domain.AgentRole         `json:"role"`
+	Model                 string                   `json:"model"`
+	StartedAt             *string                  `json:"started_at"`
+	CompletedAt           *string                  `json:"completed_at"`
+	ActiveDurationSeconds int64                    `json:"active_duration_seconds"`
+	Turns                 int64                    `json:"turns"`
+	Tokens                domain.InvocationTokens  `json:"tokens"`
+	CostUSD               json.RawMessage          `json:"cost_usd"`
+	CostEvidence          *domain.CostEvidence     `json:"cost_evidence"`
+	Compactions           int64                    `json:"compactions"`
+	UserIterations        int64                    `json:"user_iterations"`
 }
 
 // Legacy flat ledgers stored session metadata alongside each invocation row.
@@ -250,13 +251,16 @@ func (input ledgerCollectionsInput) toDomain(metadata ledgerMetadataInput, requi
 }
 
 func (input invocationInput) toDomain(required bool) (domain.InvocationFact, error) {
+	if err := domain.ValidateDuration(input.ActiveDurationSeconds, input.DurationEvidence); err != nil {
+		return domain.InvocationFact{}, err
+	}
 	amount, evidence, err := decodeKnownCost(input.CostUSD, input.CostEvidence, required)
 	if err != nil {
 		return domain.InvocationFact{}, err
 	}
 	return domain.InvocationFact{
 		Role: input.Role, Model: input.Model, StartedAt: input.StartedAt, CompletedAt: input.CompletedAt,
-		ActiveDurationSeconds: input.ActiveDurationSeconds, Turns: input.Turns, Tokens: input.Tokens,
+		ActiveDurationSeconds: input.ActiveDurationSeconds, DurationEvidence: input.DurationEvidence, Turns: input.Turns, Tokens: input.Tokens,
 		CostUSD: amount, CostEvidence: evidence, Compactions: input.Compactions, UserIterations: input.UserIterations,
 	}, nil
 }

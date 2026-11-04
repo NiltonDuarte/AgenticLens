@@ -161,6 +161,13 @@ func (dto AgenticFactLedgerDTO) ToDomain() domain.AgenticFactLedger {
 
 // Validate enforces required fields at the persisted telemetry boundary.
 func (dto AgenticFactLedgerDTO) Validate() error {
+	for _, session := range dto.Sessions {
+		for _, inv := range session.Invocations {
+			if err := domain.ValidateDuration(inv.ActiveDurationSeconds, inv.DurationEvidence); err != nil {
+				return err
+			}
+		}
+	}
 	currentSchema := dto.SchemaVersion != nil && *dto.SchemaVersion == domain.CurrentSchemaVersion
 	if !currentSchema {
 		return fmt.Errorf("schema v%d required; run explicit agentic-lens migrate", domain.CurrentSchemaVersion)

@@ -2,7 +2,7 @@ h3. Title: AL-64: Investigate and fix active-turn duration across Codex and Open
 
 *TARGET*: AgenticLens (Domain / Codex / OpenCode v1 and v2 / Generation / Backfill / Ledger / Presentation)
 
-*Status*: Ready
+*Status*: In Progress
 *Work type*: fix
 *Blocked by*: None
 *Blocks*: None

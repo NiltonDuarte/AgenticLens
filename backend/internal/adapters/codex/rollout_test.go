@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"agenticlens/internal/adapters/codex"
 	"agenticlens/internal/domain"
@@ -823,5 +824,57 @@ func TestCodexMissingRequestedTypeRoleAndTimeRemainNullableOccurrences(t *testin
 	skill, delegation := sessions[0].Skills[0], sessions[0].Delegations[0]
 	if skill.CallerRole != nil || skill.InvokedAt != nil || delegation.AgentType != nil || delegation.InvokedAt != nil || delegation.Description != "" || delegation.ChildSession != "" {
 		t.Fatalf("source defaults invented: %+v %+v", skill, delegation)
+	}
+}
+
+func TestRolloutActiveDurationCutoffAndTerminalBoundaries(t *testing.T) {
+	input := `{"timestamp":"2026-01-01T00:00:00Z","type":"session_meta","payload":{"id":"active-root","source":"cli"}}
+{"timestamp":"2026-01-01T00:00:01Z","type":"event_msg","payload":{"type":"task_started","turn_id":"a"}}
+{"timestamp":"2026-01-01T00:00:05Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"a"}}
+{"timestamp":"2026-01-01T00:00:10Z","type":"event_msg","payload":{"type":"task_started","turn_id":"b"}}
+`
+	for _, tc := range []struct {
+		name, tail                 string
+		cutoff, total, provisional int64
+		state                      domain.DurationState
+	}{
+		{"open", "", 20, 14, 10, "provisional"},
+		{"advance", "", 30, 24, 20, "provisional"},
+		{"future_completion", `{"timestamp":"2026-01-01T00:00:40Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"b"}}`, 20, 14, 10, "provisional"},
+		{"complete", `{"timestamp":"2026-01-01T00:00:40Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"b"}}`, 50, 34, 0, "complete"},
+		{"abort", `{"timestamp":"2026-01-01T00:00:15Z","type":"event_msg","payload":{"type":"turn_aborted","turn_id":"b"}}`, 20, 9, 0, "complete"},
+		{"reversed_completion", `{"timestamp":"2026-01-01T00:00:09Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"b"}}`, 20, 4, 0, "partial"},
+		{"malformed_completion", `{"timestamp":"not-a-date","type":"event_msg","payload":{"type":"task_complete","turn_id":"b"}}`, 20, 4, 0, "partial"},
+		{"malformed_start", `{"timestamp":"2026-01-01T00:00:15Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"b"}}`, 20, 4, 0, "partial"},
+		{"missing_start", `{"timestamp":"2026-01-01T00:00:15Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"b"}}`, 20, 4, 0, "partial"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cutoff := time.Date(2026, 1, 1, 0, 0, int(tc.cutoff), 0, time.UTC)
+			records := input
+			switch tc.name {
+			case "malformed_start":
+				records = strings.Replace(input, `"timestamp":"2026-01-01T00:00:10Z"`, `"timestamp":"not-a-date"`, 1)
+			case "missing_start":
+				records = strings.Replace(input, `"timestamp":"2026-01-01T00:00:10Z",`, "", 1)
+			}
+			for range 2 {
+				tr, err := codex.ParseRolloutAt(strings.NewReader(records+tc.tail), cutoff)
+				if err != nil {
+					t.Fatal(err)
+				}
+				inv := tr.Invocations[0]
+				if inv.ActiveDurationSeconds != tc.total || inv.DurationEvidence == nil || inv.DurationEvidence.ProvisionalSeconds != tc.provisional || inv.DurationEvidence.State != tc.state || tr.ActiveSeconds != tc.total {
+					t.Fatalf("duration %+v, transcript total %d", inv, tr.ActiveSeconds)
+				}
+				if tc.state == domain.DurationPartial {
+					if inv.DurationEvidence.Cutoff != "" || inv.CompletedAt == nil || *inv.CompletedAt != "2026-01-01T00:00:05Z" {
+						t.Fatalf("invalid lifecycle invented provisional/completed boundary: %+v", inv)
+					}
+					if inv.DurationEvidence.Limitation == "" || inv.DurationEvidence.CompletedSeconds != 4 || domain.DurationForInvocation(inv).UnknownInvocations != 1 {
+						t.Fatalf("invalid lifecycle falsely certified known subtotal: %+v", inv)
+					}
+				}
+			}
+		})
 	}
 }

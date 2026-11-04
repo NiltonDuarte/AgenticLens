@@ -8,6 +8,7 @@ import (
 	"math"
 	"sort"
 	"strings"
+	"time"
 
 	"agenticlens/internal/domain"
 )
@@ -57,13 +58,18 @@ type schemaV1PartData struct {
 	State *schemaV1PartState `json:"state"`
 }
 
-func extractSchemaV1SessionsWithEvents(
+func extractSchemaV1SessionsWithEvents(db *sql.DB, ids []string, user string, users map[string]string, strict bool, sink *[]domain.EventFact, exact ...bool) ([]domain.SessionFact, *string, *string, error) {
+	return extractSchemaV1SessionsWithEventsAt(db, ids, user, users, strict, sink, time.Now().UTC(), exact...)
+}
+
+func extractSchemaV1SessionsWithEventsAt(
 	db *sql.DB,
 	threadIDs []string,
 	defaultUser string,
 	userBySessionID map[string]string,
 	strict bool,
 	eventSink *[]domain.EventFact,
+	cutoff time.Time,
 	exact ...bool,
 ) ([]domain.SessionFact, *string, *string, error) {
 
@@ -182,6 +188,40 @@ func extractSchemaV1SessionsWithEvents(
 	sessionModelOrders := make(map[string][]string)
 	sessionTurns := make(map[string]int64)
 	sessionUserIterations := make(map[string]int64)
+
+	// Native running tools or open streaming-part timing establish an unfinished
+	// execution lifecycle. Native activity start (or record creation for older
+	// tool records without a native start) bounds that evidence; a generic
+	// progress update after cutoff does not erase an earlier open interval.
+	// Only a later message at or before cutoff can supersede that evidence.
+	runningMessages := map[string]bool{}
+	runningRows, runErr := db.Query(fmt.Sprintf(`SELECT DISTINCT p.message_id FROM part p
+      JOIN message m ON m.id=p.message_id AND m.session_id=p.session_id
+      WHERE (p.session_id IN (%s) OR p.session_id IN (SELECT id FROM session WHERE parent_id IN (%s)))
+      AND json_valid(p.data)
+      AND ((json_extract(p.data,'$.type')='tool' AND json_extract(p.data,'$.state.status')='running'
+            AND coalesce(json_extract(p.data,'$.state.time.start'),p.time_created)>0
+            AND coalesce(json_extract(p.data,'$.state.time.start'),p.time_created)<=?)
+        OR (json_extract(p.data,'$.type') IN ('text','reasoning') AND json_type(p.data,'$.time.start')='integer' AND json_extract(p.data,'$.time.start')<=? AND json_type(p.data,'$.time.end') IS NULL))
+      AND NOT EXISTS (SELECT 1 FROM message newer WHERE newer.session_id=m.session_id AND newer.time_created>m.time_created AND newer.time_created<=?)`, quotedList, parentList), cutoff.UnixMilli(), cutoff.UnixMilli(), cutoff.UnixMilli())
+	if runErr != nil {
+		return nil, nil, nil, fmt.Errorf("reading v1 activity evidence: %w", runErr)
+	}
+	for runningRows.Next() {
+		var id string
+		if err := runningRows.Scan(&id); err != nil {
+			runningRows.Close()
+			return nil, nil, nil, err
+		}
+		runningMessages[id] = true
+	}
+	if err := runningRows.Err(); err != nil {
+		runningRows.Close()
+		return nil, nil, nil, err
+	}
+	if err := runningRows.Close(); err != nil {
+		return nil, nil, nil, err
+	}
 
 	// 3. Process messages per session
 	for _, s := range sessions {
@@ -335,24 +375,28 @@ func extractSchemaV1SessionsWithEvents(
 			}
 			acc.asstMsgs++
 
-			if rawMD.Time != nil {
-				if rawMD.Time.Created != nil {
-					c := int64(*rawMD.Time.Created)
-					if acc.firstTS == nil || c < *acc.firstTS {
-						acc.firstTS = &c
-					}
-					if rawMD.Time.Completed != nil {
-						comp := int64(*rawMD.Time.Completed)
-						if acc.lastTS == nil || comp > *acc.lastTS {
-							acc.lastTS = &comp
-						}
-						if comp >= c {
-							acc.activeMS += comp - c
-						}
-					} else if acc.lastTS == nil || c > *acc.lastTS {
-						acc.lastTS = &c
-					}
+			if rawMD.Time != nil && rawMD.Time.Created != nil {
+				c := int64(*rawMD.Time.Created)
+				if acc.firstTS == nil || c < *acc.firstTS {
+					acc.firstTS = &c
 				}
+				var finish *int64
+				if rawMD.Time.Completed != nil {
+					v := int64(*rawMD.Time.Completed)
+					finish = &v
+				}
+				completed, provisional, pending, limitation := domain.DurationInterval(c, finish, cutoff.UnixMilli(), runningMessages[mid])
+				acc.activeMS += completed
+				acc.provisionalMS += provisional
+				acc.provisional = acc.provisional || pending
+				if limitation != "" {
+					acc.durationLimit = limitation
+				}
+				if finish != nil && *finish >= c && *finish <= cutoff.UnixMilli() && (acc.lastTS == nil || *finish > *acc.lastTS) {
+					acc.lastTS = finish
+				}
+			} else {
+				acc.durationLimit = "assistant message has no source activity start"
 			}
 
 			acc.input += inp
@@ -588,6 +632,10 @@ func extractSchemaV1SessionsWithEvents(
 				dur := tUpdated.Int64 - tCreated.Int64
 				durMs = &dur
 			}
+			if stat == "running" || stat == "pending" {
+				eventStatus = stat
+				durMs = nil
+			}
 			var toolInput, toolOutput *string
 			if rawPD.State != nil {
 				toolInput = normalizeToolInput(rawPD.State.Input)
@@ -689,14 +737,19 @@ func extractSchemaV1SessionsWithEvents(
 				}
 			}
 
-			activeSecs := int64(math.Round(float64(st.activeMS) / 1000.0))
+			activeSecs, durationEvidence := domain.MeasuredDuration(st.activeMS, st.provisionalMS, st.provisional, cutoff.UTC().Format(time.RFC3339Nano), "opencode:v1-assistant-message", st.durationLimit)
+			var completedAt *string
+			if st.lastTS != nil && !st.provisional && st.durationLimit == "" {
+				completedAt = &endISO
+			}
 
 			invocations = append(invocations, domain.InvocationFact{
 				Role:                  role,
 				Model:                 mName,
 				StartedAt:             &stISO,
-				CompletedAt:           &endISO,
+				CompletedAt:           completedAt,
 				ActiveDurationSeconds: activeSecs,
+				DurationEvidence:      durationEvidence,
 				Turns:                 turns,
 				Tokens: domain.InvocationTokens{
 					Input:       st.input,

@@ -335,6 +335,7 @@ export function deriveTicketComparisonRows(
       updated_at: ledger.updated_at,
       sdlc_iterations: eff.sdlc_iterations,
       active_duration_seconds: eff.active_duration_seconds,
+ ...(eff.duration_summary ? { duration_summary: eff.duration_summary } : {}),
       active_duration_formatted: eff.active_duration_formatted,
       cost_usd: tot.cost_usd,
       ...(tot.cost_summary ? { cost_summary: tot.cost_summary } : {}),

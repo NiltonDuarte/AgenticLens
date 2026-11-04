@@ -31,6 +31,7 @@ import (
 )
 
 func runGenerate(args []string) {
+	snapshotCutoff := time.Now().UTC()
 	genFlags := flag.NewFlagSet("generate", flag.ExitOnError)
 	if len(args) > 0 && args[0] == "help" {
 		genFlags.Usage()
@@ -330,7 +331,7 @@ func runGenerate(args []string) {
 
 	var freshSessions []domain.SessionFact
 	var sourceEvents domain.SourceEvents
-	captureResult, captureErr := reconcileCaptureGeneration(project, *captureDirFlag, activeTicketID)
+	captureResult, captureErr := reconcileCaptureGeneration(project, *captureDirFlag, activeTicketID, snapshotCutoff)
 	if captureErr != nil {
 		fmt.Fprintf(os.Stderr, "Error reconciling capture registry; publication not completed: %v\n", captureErr)
 		os.Exit(1)
@@ -372,7 +373,7 @@ func runGenerate(args []string) {
 		}
 		transcripts := make([]codex.Transcript, 0, len(rolloutPaths))
 		for _, path := range rolloutPaths {
-			transcript, parseErr := codex.ParseRolloutPath(path)
+			transcript, parseErr := codex.ParseRolloutPathAt(path, snapshotCutoff)
 			if parseErr != nil {
 				fmt.Fprintf(os.Stderr, "Error reading selected Codex source rollout %s: %v. Check telemetry.sources.codex.home or --codex-home.\n", path, parseErr)
 				os.Exit(1)
@@ -448,8 +449,8 @@ func runGenerate(args []string) {
 			}
 
 			if len(knownThreadIDs) > 0 {
-				extractedSessions, dbStarted, dbCompleted, extractErr := opencode.ExtractSessionsStrictWithSource(
-					dbClient.DB(), knownThreadIDs, currentUser, userBySessionID, &sourceEvents,
+				extractedSessions, dbStarted, dbCompleted, extractErr := opencode.ExtractSessionsStrictWithSourceAt(
+					dbClient.DB(), knownThreadIDs, currentUser, userBySessionID, &sourceEvents, snapshotCutoff,
 				)
 				if extractErr != nil {
 					fmt.Fprintf(os.Stderr, "Error reading selected OpenCode source at %s: %v. Check the database and telemetry.sources.opencode.database_path.\n", dbPath, extractErr)
@@ -1751,7 +1752,7 @@ func main() {
 			if ledger.TicketID != nil && *ledger.TicketID != "" {
 				tid = *ledger.TicketID
 			}
-			dur := ledger.WorkflowEfficiency.ActiveDurationFormatted
+			dur := ledger.WorkflowEfficiency.ActiveDurationFormatted + " (" + domain.DurationDescription(ledger.WorkflowEfficiency.DurationSummary) + ")"
 			cost := adapters.FormatCostSummary(domain.EffectiveCostSummary(ledger.Totals.CostSummary, ledger.Totals.CostUSD, ledger.Totals.Invocations))
 			health := ledger.WorkflowEfficiency.ContextWindowHealth.Status
 			iters := fmt.Sprintf("%d", ledger.WorkflowEfficiency.SDLCIterations)

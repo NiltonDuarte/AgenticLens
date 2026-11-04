@@ -1,3 +1,18 @@
+export interface DurationEvidence {
+ readonly state: 'complete' | 'provisional' | 'partial';
+ readonly completed_seconds: number;
+ readonly provisional_seconds: number;
+ readonly cutoff?: string;
+ readonly basis: string;
+ readonly limitation?: string;
+}
+export interface DurationSummary {
+ readonly provisional_seconds: number;
+ readonly provisional_invocations: number;
+ readonly unknown_invocations: number;
+ readonly cutoffs: readonly string[];
+}
+
 export type CostEvidence =
   | { readonly state: 'observed'; readonly known_subtotal_usd: number }
   | { readonly state: 'partial'; readonly known_subtotal_usd: number }
@@ -61,6 +76,7 @@ export interface InvocationTokens {
 }
 
 export interface InvocationFact {
+ readonly duration_evidence?: DurationEvidence;
   readonly role: AgentRole;
   readonly model: string;
   readonly started_at: string | null;
@@ -234,6 +250,7 @@ export interface ContextWindowHealth {
 }
 
 export interface WorkflowEfficiency {
+ readonly duration_summary?: DurationSummary;
   readonly sdlc_iterations: number;
   readonly active_duration_seconds: number;
   readonly active_duration_formatted: string;
@@ -309,6 +326,7 @@ export interface SkillAdoptionFact {
 }
 
 export interface FleetSummary {
+ readonly duration_summary?: DurationSummary;
   readonly skill_adoption?: readonly SkillAdoptionFact[];
   readonly total_tickets: number;
   readonly total_cost_usd: number | null;
@@ -333,6 +351,7 @@ export interface FleetSummary {
 }
 
 export interface TicketComparisonRow {
+ readonly duration_summary?: DurationSummary;
   readonly skills_used?: readonly string[];
   readonly ticket_id: string;
   readonly ticket_type: TicketType | null;
@@ -401,6 +420,7 @@ export type ComparisonSortField =
 export type ComparisonSortOrder = 'asc' | 'desc';
 
 export interface TimeBucketMetric {
+ readonly duration_summary?: DurationSummary;
   readonly bucket_key: string;
   readonly bucket_date: string;
   readonly invocations: number;

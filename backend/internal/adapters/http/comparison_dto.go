@@ -6,6 +6,7 @@ import (
 
 // TicketComparisonRowDTO is the concrete nullable cost projection of TicketComparisonRow.
 type TicketComparisonRowDTO struct {
+	DurationSummary         domain.DurationSummary         `json:"duration_summary"`
 	SkillsUsed              []string                       `json:"skills_used"`
 	TicketID                string                         `json:"ticket_id"`
 	UpdatedAt               string                         `json:"updated_at"`
@@ -34,6 +35,7 @@ type TicketComparisonRowDTO struct {
 func TicketComparisonRowDTOFromDomain(value domain.TicketComparisonRow) TicketComparisonRowDTO {
 	summary := domain.EffectiveCostSummary(value.CostSummary, value.CostUSD, int64(0))
 	return TicketComparisonRowDTO{
+		DurationSummary:         value.DurationSummary,
 		SkillsUsed:              value.SkillsUsed,
 		TicketID:                value.TicketID,
 		UpdatedAt:               value.UpdatedAt,

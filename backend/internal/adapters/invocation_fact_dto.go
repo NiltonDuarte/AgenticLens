@@ -25,15 +25,16 @@ func (dto InvocationTokensDTO) ToDomain() domain.InvocationTokens {
 
 // InvocationFactDTO represents a single invocation fact in JSON boundary serialization.
 type InvocationFactDTO struct {
-	Role                  string               `json:"role"`
-	Model                 string               `json:"model"`
-	StartedAt             *string              `json:"started_at"`
-	CompletedAt           *string              `json:"completed_at"`
-	ActiveDurationSeconds int64                `json:"active_duration_seconds"`
-	Turns                 int64                `json:"turns"`
-	Tokens                InvocationTokensDTO  `json:"tokens"`
-	CostUSD               *float64             `json:"cost_usd"`
-	CostEvidence          *domain.CostEvidence `json:"cost_evidence"`
+	DurationEvidence      *domain.DurationEvidence `json:"duration_evidence,omitempty"`
+	Role                  string                   `json:"role"`
+	Model                 string                   `json:"model"`
+	StartedAt             *string                  `json:"started_at"`
+	CompletedAt           *string                  `json:"completed_at"`
+	ActiveDurationSeconds int64                    `json:"active_duration_seconds"`
+	Turns                 int64                    `json:"turns"`
+	Tokens                InvocationTokensDTO      `json:"tokens"`
+	CostUSD               *float64                 `json:"cost_usd"`
+	CostEvidence          *domain.CostEvidence     `json:"cost_evidence"`
 	decodedCost           bool
 	costPresent           bool
 	evidencePresent       bool
@@ -49,6 +50,7 @@ func (dto InvocationFactDTO) ToDomain() domain.InvocationFact {
 		StartedAt:             dto.StartedAt,
 		CompletedAt:           dto.CompletedAt,
 		ActiveDurationSeconds: dto.ActiveDurationSeconds,
+		DurationEvidence:      dto.DurationEvidence,
 		Turns:                 dto.Turns,
 		Tokens:                dto.Tokens.ToDomain(),
 		CostUSD:               costFactAccumulator(dto.CostUSD, evidence),
@@ -67,6 +69,7 @@ func InvocationFactDTOFromDomain(inv domain.InvocationFact) InvocationFactDTO {
 		StartedAt:             inv.StartedAt,
 		CompletedAt:           inv.CompletedAt,
 		ActiveDurationSeconds: inv.ActiveDurationSeconds,
+		DurationEvidence:      inv.DurationEvidence,
 		Turns:                 inv.Turns,
 		Tokens: InvocationTokensDTO{
 			Input:       inv.Tokens.Input,
@@ -100,6 +103,9 @@ func (dto *InvocationFactDTO) UnmarshalJSON(data []byte) error {
 	dto.decodedCost = true
 	dto.costPresent = amountPresent
 	dto.evidencePresent = evidencePresent
+	if err := domain.ValidateDuration(dto.ActiveDurationSeconds, dto.DurationEvidence); err != nil {
+		return err
+	}
 	return domain.ValidateCostEvidence(dto.CostUSD, dto.CostEvidence, false)
 }
 

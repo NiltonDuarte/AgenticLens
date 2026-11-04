@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestSchemaV1ExtractSessions(t *testing.T) {
@@ -1711,4 +1712,62 @@ func TestSchemaV1CostEvidenceCoalescesReportedAndMissingRecords(t *testing.T) {
 		})
 	}
 
+}
+
+func TestSchemaV1ActiveDurationSnapshotAndCompletion(t *testing.T) {
+	for _, tc := range []struct {
+		name, part    string
+		updated       int64
+		futureMessage bool
+	}{
+		{"running", `{"type":"tool","tool":"bash","state":{"status":"running","time":{"start":1760000001000}}}`, 1760000002000, false},
+		{"running_later_progress_update", `{"type":"tool","tool":"bash","state":{"status":"running","time":{"start":1760000001000}}}`, 1760000031000, false},
+		{"future_newer_message", `{"type":"tool","tool":"bash","state":{"status":"running","time":{"start":1760000001000}}}`, 1760000002000, true},
+		{"streaming_text_without_tool", `{"type":"text","text":"streaming","time":{"start":1760000001000}}`, 1760000002000, false},
+		{"streaming_reasoning_without_tool", `{"type":"reasoning","text":"thinking","time":{"start":1760000001000}}`, 1760000002000, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			db := setupTestDB(t)
+			defer db.Close()
+			_, err := db.Exec(`INSERT INTO session(id,parent_id,agent,model,title,time_created,time_updated) VALUES('active',NULL,'build','m','fixture',1760000000000,1760000001000);
+ INSERT INTO message(id,session_id,time_created,time_updated,data) VALUES('a','active',1760000001000,1760000002000,'{"role":"assistant","modelID":"m","time":{"created":1760000001000}}');
+ INSERT INTO part(id,session_id,message_id,time_created,time_updated,data) VALUES('tool','active','a',1760000001000,1760000002000,'{"type":"tool","tool":"bash","state":{"status":"running"}}');`)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := db.Exec(`UPDATE part SET data=?,time_updated=? WHERE id='tool'`, tc.part, tc.updated); err != nil {
+				t.Fatal(err)
+			}
+			if tc.futureMessage {
+				if _, err := db.Exec(`INSERT INTO message(id,session_id,time_created,time_updated,data) VALUES('future','active',1760000091000,1760000091000,'{"role":"user","time":{"created":1760000091000}}')`); err != nil {
+					t.Fatal(err)
+				}
+			}
+			for _, seconds := range []int64{10, 20, 20} {
+				var source domain.SourceEvents
+				sessions, _, _, err := opencode.ExtractSessionsStrictWithSourceAt(db, []string{"active"}, "tester", nil, &source, time.UnixMilli(1760000001000+seconds*1000))
+				if err != nil {
+					t.Fatal(err)
+				}
+				inv := sessions[0].Invocations[0]
+				if inv.ActiveDurationSeconds != seconds || inv.DurationEvidence == nil || inv.DurationEvidence.State != "provisional" || inv.CompletedAt != nil {
+					t.Fatalf("snapshot %+v", inv)
+				}
+			}
+			if _, err = db.Exec(`UPDATE message SET data='{"role":"assistant","modelID":"m","time":{"created":1760000001000,"completed":1760000031000}}' WHERE id='a';UPDATE part SET data='{"type":"tool","tool":"bash","state":{"status":"completed"}}' WHERE id='tool'`); err != nil {
+				t.Fatal(err)
+			}
+			for range 2 {
+				var source domain.SourceEvents
+				sessions, _, _, err := opencode.ExtractSessionsStrictWithSourceAt(db, []string{"active"}, "tester", nil, &source, time.UnixMilli(1760000041000))
+				if err != nil {
+					t.Fatal(err)
+				}
+				inv := sessions[0].Invocations[0]
+				if inv.ActiveDurationSeconds != 30 || inv.DurationEvidence.State != "complete" {
+					t.Fatalf("completion %+v", inv)
+				}
+			}
+		})
+	}
 }

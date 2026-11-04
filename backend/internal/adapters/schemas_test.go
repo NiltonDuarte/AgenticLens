@@ -1543,3 +1543,69 @@ func TestFullSourceAnomaliesSurviveLeanPersistenceAndPartialRefresh(t *testing.T
 		t.Fatalf("sparse event recomputation discarded cached full-source anomalies or invented skill streak: actual=%+v expected=%+v", actual, expected)
 	}
 }
+
+func TestDurationEvidenceRoundTripLegacyAndValidation(t *testing.T) {
+	version := domain.CurrentSchemaVersion
+	cutoff := "2026-01-01T00:00:10Z"
+	want := domain.AgenticFactLedger{SchemaVersion: &version, Sessions: []domain.SessionFact{{ID: "owner", Source: domain.SourceCodex, User: "alice", Invocations: []domain.InvocationFact{{Role: "coder", Model: "m", ActiveDurationSeconds: 10, DurationEvidence: &domain.DurationEvidence{State: domain.DurationProvisional, CompletedSeconds: 3, ProvisionalSeconds: 7, Cutoff: cutoff, Basis: "codex:turn"}}}}}}
+	encoded, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(want))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := adapters.ValidateRuntimeFactLedger(encoded); err != nil {
+		t.Fatal(err)
+	}
+	var decoded adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal(encoded, &decoded); err != nil {
+		t.Fatal(err)
+	}
+	got := decoded.ToDomain()
+	if !reflect.DeepEqual(got.Sessions[0].Invocations[0].DurationEvidence, want.Sessions[0].Invocations[0].DurationEvidence) {
+		t.Fatalf("DTO lost evidence: %+v", got)
+	}
+	migrated, err := migration.NewEngine(nil).Migrate(encoded, version)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(migrated.Sessions[0].Invocations[0].DurationEvidence, want.Sessions[0].Invocations[0].DurationEvidence) {
+		t.Fatalf("migration decode/copy lost evidence: %+v", migrated)
+	}
+	legacy := want
+	legacy.Sessions = append([]domain.SessionFact(nil), want.Sessions...)
+	legacy.Sessions[0].Invocations = append([]domain.InvocationFact(nil), want.Sessions[0].Invocations...)
+	legacy.Sessions[0].Invocations[0].DurationEvidence = nil
+	oldJSON, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(legacy))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := adapters.ValidateRuntimeFactLedger(oldJSON); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(oldJSON, &decoded); err != nil {
+		t.Fatal(err)
+	}
+	summary := domain.ComputeWorkflowEfficiency(decoded.ToDomain()).DurationSummary
+	if summary.UnknownInvocations != 1 || summary.ProvisionalInvocations != 0 || decoded.ToDomain().Sessions[0].Invocations[0].ActiveDurationSeconds != 10 {
+		t.Fatalf("legacy known total misclassified: %+v", summary)
+	}
+	for name, replacements := range map[string][2]string{
+		"negative component":        {`"provisional_seconds":7`, `"provisional_seconds":-7`},
+		"mismatched sum":            {`"completed_seconds":3`, `"completed_seconds":4`},
+		"invalid cutoff":            {cutoff, "not-a-time"},
+		"missing cutoff":            {`"cutoff":"` + cutoff + `",`, ""},
+		"complete with provisional": {`"state":"provisional"`, `"state":"complete"`},
+		"unknown state":             {`"state":"provisional"`, `"state":"invented"`},
+		"missing basis":             {`"basis":"codex:turn"`, `"basis":""`},
+		"unknown member":            {`"basis":"codex:turn"`, `"basis":"codex:turn","invented":true`},
+	} {
+		t.Run(name, func(t *testing.T) {
+			malformed := strings.Replace(string(encoded), replacements[0], replacements[1], 1)
+			if malformed == string(encoded) {
+				t.Fatal("mutation did not reach evidence")
+			}
+			if err := adapters.ValidateRuntimeFactLedger([]byte(malformed)); err == nil {
+				t.Fatalf("invalid evidence accepted: %s", malformed)
+			}
+		})
+	}
+}

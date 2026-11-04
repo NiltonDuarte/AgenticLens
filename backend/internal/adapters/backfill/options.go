@@ -1,7 +1,11 @@
 package backfill
 
+import "time"
+
 // BackfillOptions specifies parameters and toggles for running the backfill engine.
 type BackfillOptions struct {
+	// SnapshotCutoff is optional for deterministic callers; zero selects the operation start.
+	SnapshotCutoff  time.Time
 	WorkspacesDir   string
 	TicketID        string
 	Source          string

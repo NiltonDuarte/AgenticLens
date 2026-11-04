@@ -6,6 +6,13 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 ## In Progress
 
+- **AL-64**: Investigate and fix active-turn duration across Codex and OpenCode v1/v2
+  - **Subsystem**: Domain / Codex / OpenCode v1 and v2 / Generation / Backfill / Ledger / Presentation
+  - **Status**: In Progress
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/AL-64 investigate and fix active turn duration across codex and opencode.md`
+
 
 
 
@@ -42,12 +49,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 
 
-- **AL-64**: Investigate and fix active-turn duration across Codex and OpenCode v1/v2
-  - **Subsystem**: Domain / Codex / OpenCode v1 and v2 / Generation / Backfill / Ledger / Presentation
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-64 investigate and fix active turn duration across codex and opencode.md`
 
 - **AL-66**: Configure optional skills, task_links and anomalies output for generate
   - **Subsystem**: Configuration / Domain / Source Adapters / CLI / Persistence / Summary / Dashboard Compatibility / Tests

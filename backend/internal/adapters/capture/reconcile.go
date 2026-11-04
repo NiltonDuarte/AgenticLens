@@ -54,8 +54,13 @@ type ReconcileResult struct {
 	Limits                []string                     `json:"limits"`
 }
 
-func (s *Store) Reconcile(ctx context.Context, ticket, user string, sessionBudget int, byteBudget int64) (result ReconcileResult, returnErr error) {
-	result = ReconcileResult{Protocol: RegistryProtocolVersion, StartedAt: time.Now().UTC().Format(time.RFC3339Nano), CutoffSemantics: "cutoff is reconciliation completion, not a common as-of source time; refreshed_at is each owner's successful read completion", TicketID: ticket, Limits: []string{"Only registered, explicitly bound or source-proven inherited sessions are selected. Sessions that never delivered a hook cannot be counted as covered.", "Hook installation is not proof of harness trust, agent response or complete source availability."}}
+func (s *Store) Reconcile(ctx context.Context, ticket, user string, sessionBudget int, byteBudget int64) (ReconcileResult, error) {
+	return s.ReconcileAt(ctx, ticket, user, sessionBudget, byteBudget, time.Now().UTC())
+}
+
+// ReconcileAt applies one duration cutoff across this source-read operation.
+func (s *Store) ReconcileAt(ctx context.Context, ticket, user string, sessionBudget int, byteBudget int64, cutoff time.Time) (result ReconcileResult, returnErr error) {
+	result = ReconcileResult{Protocol: RegistryProtocolVersion, StartedAt: cutoff.UTC().Format(time.RFC3339Nano), CutoffSemantics: "cutoff is reconciliation completion, not a common as-of source time; refreshed_at is each owner's successful read completion", TicketID: ticket, Limits: []string{"Only registered, explicitly bound or source-proven inherited sessions are selected. Sessions that never delivered a hook cannot be counted as covered.", "Hook installation is not proof of harness trust, agent response or complete source availability."}}
 	if sessionBudget < 1 || byteBudget < 1 {
 		return result, errors.New("capture budgets must be positive")
 	}
@@ -248,6 +253,10 @@ type sourceRead struct {
 }
 
 func extractExact(ctx context.Context, r domain.CaptureRegistration, budget int64, user string, source ...*sourceRead) ([]domain.SessionFact, int64, string, error) {
+	return extractExactAt(ctx, r, budget, user, time.Now().UTC(), source...)
+}
+
+func extractExactAt(ctx context.Context, r domain.CaptureRegistration, budget int64, user string, cutoff time.Time, source ...*sourceRead) ([]domain.SessionFact, int64, string, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, 0, "", err
 	}
@@ -274,7 +283,7 @@ func extractExact(ctx context.Context, r domain.CaptureRegistration, budget int6
 		if !info.Mode().IsRegular() || info.Size() > budget {
 			return nil, 0, "", opencode.ErrCaptureBudget
 		}
-		transcript, err := codex.ParseRollout(io.LimitReader(file, info.Size()))
+		transcript, err := codex.ParseRolloutAt(io.LimitReader(file, info.Size()), cutoff)
 		if err != nil {
 			return nil, info.Size(), "", err
 		}
@@ -302,7 +311,7 @@ func extractExact(ctx context.Context, r domain.CaptureRegistration, budget int6
 	}
 	defer db.Close()
 	var events domain.SourceEvents
-	sessions, bytes, updated, readErr := opencode.CaptureSessionSnapshot(ctx, db.DB(), r.Identity.SessionID, user, budget, &events)
+	sessions, bytes, updated, readErr := opencode.CaptureSessionSnapshotAt(ctx, db.DB(), r.Identity.SessionID, user, budget, cutoff, &events)
 	if readErr == nil && len(source) > 0 {
 		source[0].events = domain.MergeSourceEvents(source[0].events, events)
 	}
@@ -431,7 +440,11 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 		// the exact owner within the existing session/byte budgets.
 
 		if extractErr == nil {
-			fresh, revision, updatedAt, extractErr = extractExact(ctx, r, budget.bytes, user, &source)
+			cutoff, parseErr := time.Parse(time.RFC3339Nano, result.StartedAt)
+			if parseErr != nil {
+				return nil, nil, parseErr
+			}
+			fresh, revision, updatedAt, extractErr = extractExactAt(ctx, r, budget.bytes, user, cutoff, &source)
 		}
 		budget.charge(revision)
 		updated, updateErr := s.Change(ctx, r.Identity, func(current domain.CaptureRegistration) (domain.CaptureRegistration, error) {

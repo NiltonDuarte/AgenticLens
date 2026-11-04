@@ -1,3 +1,4 @@
+import { durationLabel, durationDescription } from '../domain/duration';
 import { compareCosts } from '../domain/cost';
 import React, { useState, useMemo } from 'react';
 import type { TicketComparisonRow } from '../domain/types';
@@ -211,7 +212,7 @@ export const TicketTable: React.FC<TicketTableProps> = ({
                         {r.context_health_status}
                       </span>
                     </td>
-                    <td className="mono-number">{r.active_duration_formatted}</td>
+                    <td className="mono-number" title={durationDescription(r.duration_summary)}>{durationLabel(r.active_duration_formatted, r.duration_summary)}</td>
                     <td className="mono-number">{formatCostUSD(r.cost_usd, r.cost_summary)}</td>
                     <td className="mono-number">{formatPercentage(r.cache_hit_rate_pct)}</td>
                     <td className="mono-number">

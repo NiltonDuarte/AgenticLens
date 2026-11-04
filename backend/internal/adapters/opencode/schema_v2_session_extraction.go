@@ -7,6 +7,7 @@ import (
 	"math"
 	"sort"
 	"strings"
+	"time"
 
 	"agenticlens/internal/domain"
 )
@@ -44,7 +45,8 @@ type schemaV2MessagePayload struct {
 	Outcome string   `json:"outcome"`
 	Content []struct {
 		Type, ID, Name string
-		Text           string `json:"text"`
+		Time           struct{ Created, Ran, Completed *int64 } `json:"time"`
+		Text           string                                   `json:"text"`
 		State          struct {
 			Status  string          `json:"status"`
 			Input   json.RawMessage `json:"input"`
@@ -63,6 +65,10 @@ type schemaV2ModelJSON struct {
 }
 
 func extractSchemaV2SessionsWithEvents(db *sql.DB, roots []string, defaultUser string, userBySession map[string]string, strict bool, eventSink *[]domain.EventFact, exact ...bool) ([]domain.SessionFact, *string, *string, error) {
+	return extractSchemaV2SessionsWithEventsAt(db, roots, defaultUser, userBySession, strict, eventSink, time.Now().UTC(), exact...)
+}
+
+func extractSchemaV2SessionsWithEventsAt(db *sql.DB, roots []string, defaultUser string, userBySession map[string]string, strict bool, eventSink *[]domain.EventFact, cutoff time.Time, exact ...bool) ([]domain.SessionFact, *string, *string, error) {
 	ids, err := buildQuotedIDList(roots)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("validating thread ids: %w", err)
@@ -70,6 +76,34 @@ func extractSchemaV2SessionsWithEvents(db *sql.DB, roots []string, defaultUser s
 	parentIDs := ids
 	if len(exact) > 0 && exact[0] {
 		parentIDs = "NULL"
+	}
+	// v2 explicitly records native idle lifecycle state. Streaming text has no
+	// per-item start/end fields, so message creation alone is insufficient.
+	activeSessions := map[string]bool{}
+	columns, columnErr := tableColumns(db)
+	if columnErr != nil {
+		return nil, nil, nil, columnErr
+	}
+	if columns["session_v2"]["time_idle"] {
+		activityRows, activityErr := db.Query(fmt.Sprintf(`SELECT id FROM session_v2 WHERE time_idle IS NULL AND (id IN (%s) OR parent_id IN (%s))`, ids, parentIDs))
+		if activityErr != nil {
+			return nil, nil, nil, activityErr
+		}
+		for activityRows.Next() {
+			var id string
+			if err := activityRows.Scan(&id); err != nil {
+				activityRows.Close()
+				return nil, nil, nil, err
+			}
+			activeSessions[id] = true
+		}
+		if err := activityRows.Err(); err != nil {
+			activityRows.Close()
+			return nil, nil, nil, err
+		}
+		if err := activityRows.Close(); err != nil {
+			return nil, nil, nil, err
+		}
 	}
 	rows, err := db.Query(fmt.Sprintf(`SELECT id,parent_id,agent,model,time_created,time_updated FROM session_v2 WHERE id IN (%s) OR parent_id IN (%s) ORDER BY time_created,id`, ids, parentIDs))
 	if err != nil {
@@ -140,7 +174,7 @@ func extractSchemaV2SessionsWithEvents(db *sql.DB, roots []string, defaultUser s
 		var userTurns, assistantTurns int64
 		lookup := map[string]int64{}
 		toolStats := map[string]*toolAccumulator{}
-		for _, m := range msgs {
+		for mi, m := range msgs {
 			var p schemaV2MessagePayload
 			if e := json.Unmarshal([]byte(m.data), &p); e != nil {
 				return nil, nil, nil, fmt.Errorf("OpenCode schema family v2: decoding %s message %s in session %s: %w", m.kind, m.id, s.id, e)
@@ -212,22 +246,40 @@ func extractSchemaV2SessionsWithEvents(db *sql.DB, roots []string, defaultUser s
 					v := ts
 					acc.firstTS = &v
 				}
-				completed := m.updated
-				if p.Time.Completed != nil {
-					completed = *p.Time.Completed
+				running := activeSessions[s.id]
+				for _, part := range p.Content {
+					if part.Type == "tool" && part.State.Status == "running" {
+						running = true
+					}
 				}
-				if completed >= ts {
-					acc.activeMS += completed - ts
+				// A later idle/user/assistant record terminates current execution evidence.
+				for _, later := range msgs[mi+1:] {
+					if later.created <= cutoff.UnixMilli() {
+						running = false
+						break
+					}
 				}
-				if acc.lastTS == nil || completed > *acc.lastTS {
-					v := completed
+				completedMS, provisionalMS, pending, limitation := domain.DurationInterval(ts, p.Time.Completed, cutoff.UnixMilli(), running)
+				acc.activeMS += completedMS
+				acc.provisionalMS += provisionalMS
+				acc.provisional = acc.provisional || pending
+				if limitation != "" {
+					acc.durationLimit = limitation
+				}
+				if p.Time.Completed != nil && *p.Time.Completed >= ts && *p.Time.Completed <= cutoff.UnixMilli() && (acc.lastTS == nil || *p.Time.Completed > *acc.lastTS) {
+					v := *p.Time.Completed
 					acc.lastTS = &v
 				}
-				d := completed - ts
 				var dp *int64
-				if d >= 0 {
+				status := "unsupported"
+				if p.Time.Completed != nil && *p.Time.Completed >= ts && *p.Time.Completed <= cutoff.UnixMilli() {
+					d := completedMS
 					dp = &d
+					status = "completed"
+				} else if pending {
+					status = "running"
 				}
+
 				var mid *string
 				v := m.id
 				mid = &v
@@ -241,7 +293,7 @@ func extractSchemaV2SessionsWithEvents(db *sql.DB, roots []string, defaultUser s
 				if len(messageText) > 0 {
 					assistantText = schemaV2StringPointer(strings.Join(messageText, "\n"))
 				}
-				events = append(events, domain.EventFact{EventID: sourceEventID("message", m.id), Timestamp: stamp, SessionID: s.id, MessageID: mid, Turn: assistantTurns, Role: role, EventType: domain.EventTypeTurnMessage, Status: "completed", DurationMs: dp, ContextTokens: ctx, PromptContent: assistantText})
+				events = append(events, domain.EventFact{EventID: sourceEventID("message", m.id), Timestamp: stamp, SessionID: s.id, MessageID: mid, Turn: assistantTurns, Role: role, EventType: domain.EventTypeTurnMessage, Status: status, DurationMs: dp, ContextTokens: ctx, PromptContent: assistantText})
 				for _, part := range p.Content {
 					if part.Type != "text" && part.Type != "tool" {
 						return nil, nil, nil, fmt.Errorf("unsupported OpenCode schema family v2: assistant content type %q in message %s session %s", part.Type, m.id, s.id)
@@ -260,6 +312,7 @@ func extractSchemaV2SessionsWithEvents(db *sql.DB, roots []string, defaultUser s
 					var failed bool
 					switch stat {
 					case "completed":
+					case "running", "pending":
 					case "error", "failed":
 						failed = true
 					default:
@@ -274,14 +327,20 @@ func extractSchemaV2SessionsWithEvents(db *sql.DB, roots []string, defaultUser s
 					if failed {
 						ta.errors++
 					}
-					status := "completed"
+					status := stat
 					if failed {
 						status = "error"
 					}
 					var toolName = name
+					// Native v2 stores timing on the content item; retain the
+					// older supported state.time form for imported snapshots.
+					timing := part.Time
+					if timing.Created == nil {
+						timing = part.State.Time
+					}
 					var duration *int64
-					if part.State.Time.Created != nil && part.State.Time.Completed != nil && *part.State.Time.Completed >= *part.State.Time.Created {
-						d := *part.State.Time.Completed - *part.State.Time.Created
+					if timing.Created != nil && timing.Completed != nil && *timing.Completed >= *timing.Created {
+						d := *timing.Completed - *timing.Created
 						duration = &d
 					}
 					outputParts := make([]string, 0, len(part.State.Content))
@@ -294,8 +353,8 @@ func extractSchemaV2SessionsWithEvents(db *sql.DB, roots []string, defaultUser s
 					output := strings.Join(outputParts, "\n")
 					input := normalizeToolInput(part.State.Input)
 					var invokedAt *string
-					if part.State.Time.Created != nil && *part.State.Time.Created > 0 {
-						value := formatEpochMilli(*part.State.Time.Created)
+					if timing.Created != nil && *timing.Created > 0 {
+						value := formatEpochMilli(*timing.Created)
 						invokedAt = &value
 					}
 					events = append(events, domain.EventFact{InvokedAt: invokedAt, EventID: sourceEventID("tool", part.ID), Timestamp: stamp, SessionID: s.id, MessageID: mid, Turn: assistantTurns, Role: role, EventType: domain.EventTypeToolCall, ToolName: &toolName, Status: status, DurationMs: duration, ContextTokens: ctx, ToolInput: input, ToolOutput: schemaV2StringPointer(output)})
@@ -344,7 +403,12 @@ func extractSchemaV2SessionsWithEvents(db *sql.DB, roots []string, defaultUser s
 			if i == 0 && !s.parent.Valid {
 				iterations = userTurns
 			}
-			invocations = append(invocations, domain.InvocationFact{Role: role, Model: name, StartedAt: schemaV2StringPointer(formatEpochMilli(first)), CompletedAt: schemaV2StringPointer(formatEpochMilli(last)), ActiveDurationSeconds: int64(math.Round(float64(a.activeMS) / 1000)), Turns: turns, Tokens: domain.InvocationTokens{Input: a.input, Output: a.output, CacheRead: a.cache, Reasoning: a.reasoning, PeakContext: a.peak}, CostUSD: math.Round(a.cost*1e6) / 1e6, CostEvidence: a.costEvidence(), UserIterations: iterations})
+			activeSeconds, durationEvidence := domain.MeasuredDuration(a.activeMS, a.provisionalMS, a.provisional, cutoff.UTC().Format(time.RFC3339Nano), "opencode:v2-assistant-message", a.durationLimit)
+			var completedAt *string
+			if a.lastTS != nil && !a.provisional && a.durationLimit == "" {
+				completedAt = schemaV2StringPointer(formatEpochMilli(last))
+			}
+			invocations = append(invocations, domain.InvocationFact{Role: role, Model: name, StartedAt: schemaV2StringPointer(formatEpochMilli(first)), CompletedAt: completedAt, ActiveDurationSeconds: activeSeconds, DurationEvidence: durationEvidence, Turns: turns, Tokens: domain.InvocationTokens{Input: a.input, Output: a.output, CacheRead: a.cache, Reasoning: a.reasoning, PeakContext: a.peak}, CostUSD: math.Round(a.cost*1e6) / 1e6, CostEvidence: a.costEvidence(), UserIterations: iterations})
 		}
 		var parent *string
 		if s.parent.Valid {

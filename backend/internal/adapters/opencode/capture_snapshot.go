@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"agenticlens/internal/domain"
 )
@@ -12,7 +13,12 @@ import (
 // CaptureSessionSnapshot reads one exact owner from the selected schema family.
 // The caller supplies a dedicated read-only DB. A single connection keeps the
 // preflight and extraction in one consistent SQLite read transaction.
-func CaptureSessionSnapshot(ctx context.Context, db *sql.DB, id, user string, budget int64, source ...*domain.SourceEvents) (sessions []domain.SessionFact, bytes int64, updated string, err error) {
+func CaptureSessionSnapshot(ctx context.Context, db *sql.DB, id, user string, budget int64, source ...*domain.SourceEvents) ([]domain.SessionFact, int64, string, error) {
+	return CaptureSessionSnapshotAt(ctx, db, id, user, budget, time.Now().UTC(), source...)
+}
+
+// CaptureSessionSnapshotAt preserves an explicit duration observation cutoff.
+func CaptureSessionSnapshotAt(ctx context.Context, db *sql.DB, id, user string, budget int64, cutoff time.Time, source ...*domain.SourceEvents) (sessions []domain.SessionFact, bytes int64, updated string, err error) {
 	if _, err = sanitizeSessionID(id); err != nil {
 		return
 	}
@@ -65,9 +71,9 @@ func CaptureSessionSnapshot(ctx context.Context, db *sql.DB, id, user string, bu
 		sink = &events
 	}
 	if family == schemaFamilyV2 {
-		sessions, _, _, err = extractSchemaV2SessionsWithEvents(db, []string{id}, user, nil, true, sink, true)
+		sessions, _, _, err = extractSchemaV2SessionsWithEventsAt(db, []string{id}, user, nil, true, sink, cutoff, true)
 	} else {
-		sessions, _, _, err = extractSchemaV1SessionsWithEvents(db, []string{id}, user, nil, true, sink, true)
+		sessions, _, _, err = extractSchemaV1SessionsWithEventsAt(db, []string{id}, user, nil, true, sink, cutoff, true)
 	}
 	if err == nil && len(source) > 0 {
 		fresh := domain.SourceEvents{Events: events}

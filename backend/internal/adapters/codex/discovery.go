@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 )
 
 const maxDiscoveryLineBytes = 8 * 1024 * 1024
@@ -131,6 +132,10 @@ func containsThread(candidates []rolloutCandidate, threadID string) bool {
 
 // ParseRolloutPath opens and parses an uncompressed or gzip-compressed Codex rollout.
 func ParseRolloutPath(path string) (Transcript, error) {
+	return ParseRolloutPathAt(path, time.Now().UTC())
+}
+
+func ParseRolloutPathAt(path string, cutoff time.Time) (Transcript, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return Transcript{}, err
@@ -145,7 +150,7 @@ func ParseRolloutPath(path string) (Transcript, error) {
 		defer compressed.Close()
 		reader = compressed
 	}
-	transcript, err := ParseRollout(reader)
+	transcript, err := ParseRolloutAt(reader, cutoff)
 	if err != nil {
 		return Transcript{}, fmt.Errorf("parsing Codex rollout %s: %w", path, err)
 	}

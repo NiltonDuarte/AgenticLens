@@ -116,6 +116,7 @@ func ModelMetricDTOsFromDomain(values []domain.ModelMetric) []ModelMetricDTO {
 
 // WorkflowEfficiencyDTO is the concrete nullable cost projection of WorkflowEfficiency.
 type WorkflowEfficiencyDTO struct {
+	DurationSummary             domain.DurationSummary      `json:"duration_summary"`
 	SDLCIterations              int64                       `json:"sdlc_iterations"`
 	ActiveDurationSeconds       int64                       `json:"active_duration_seconds"`
 	ActiveDurationFormatted     string                      `json:"active_duration_formatted"`
@@ -134,6 +135,7 @@ func WorkflowEfficiencyDTOFromDomain(value domain.WorkflowEfficiency) WorkflowEf
 	return WorkflowEfficiencyDTO{
 		SDLCIterations:              value.SDLCIterations,
 		ActiveDurationSeconds:       value.ActiveDurationSeconds,
+		DurationSummary:             value.DurationSummary,
 		ActiveDurationFormatted:     value.ActiveDurationFormatted,
 		RoleEffortDistributionPct:   roleEffortAmounts(value.RoleEffortDistributionPct, value.RoleEffortUnavailableReason),
 		RoleEffortUnavailableReason: value.RoleEffortUnavailableReason,

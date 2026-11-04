@@ -137,7 +137,7 @@ func FormatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, roleOrder ..
 	lines := []string{
 		"### Workflow Efficiency",
 		fmt.Sprintf("- **Software Development Life Cycle Iterations:** %d", we.SDLCIterations),
-		fmt.Sprintf("- **Active Agent Duration:** %s (excludes user wait time)", we.ActiveDurationFormatted),
+		fmt.Sprintf("- **Active Agent Duration:** %s (excludes user wait time; %s)", we.ActiveDurationFormatted, domain.DurationDescription(we.DurationSummary)),
 		fmt.Sprintf(
 			"- **Context Window Health:** %s — Root agent peak %s tokens (%s of %s healthy ceiling, %d compactions) | Subagents peak %s (%s)",
 			cwh.Status,
