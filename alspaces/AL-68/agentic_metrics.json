@@ -1,24 +1,5 @@
 {
-  "schema_version": 6,
-  "migration": {
-    "schema_version": 6,
-    "status": "completed",
-    "steps_completed": [
-      "git_code_facts",
-      "schema_v6_lean_occurrences",
-      "source_backfill"
-    ],
-    "steps_pending": null,
-    "last_migrated_at": "2026-11-04T15:13:36.926497395Z",
-    "last_migrated_by": "Nilton Duarte",
-    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
-  },
-  "ticket_id": "AL-68",
-  "ticket_title": "Install harness lifecycle hooks for automatic session capture",
-  "ticket_type": "feat",
-  "started_at": "2026-11-01T17:37:52.460Z",
-  "completed_at": "2026-11-03T16:07:49.541264+00:00",
-  "updated_at": "2026-11-04T15:13:36.926497395Z",
+  "anomalies": [],
   "code": {
     "lines_added": 28172,
     "lines_deleted": 190,
@@ -29,6 +10,8 @@
     "files_changed": 134,
     "sdlc_iterations": 316
   },
+  "completed_at": "2026-11-03T16:07:49.541264+00:00",
+  "schema_version": 6,
   "sessions": [
     {
       "skills": [
@@ -5812,5 +5795,9 @@
       "anomalies": []
     }
   ],
-  "anomalies": []
+  "started_at": "2026-11-01T17:37:52.460Z",
+  "ticket_id": "AL-68",
+  "ticket_title": "Install harness lifecycle hooks for automatic session capture",
+  "ticket_type": "feat",
+  "updated_at": "2026-11-04T15:13:36.926497395Z"
 }

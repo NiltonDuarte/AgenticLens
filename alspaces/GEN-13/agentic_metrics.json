@@ -1,24 +1,7 @@
 {
-  "schema_version": 6,
-  "migration": {
-    "schema_version": 6,
-    "status": "completed",
-    "steps_completed": [
-      "git_code_facts",
-      "schema_v6_lean_occurrences",
-      "source_backfill"
-    ],
-    "steps_pending": null,
-    "last_migrated_at": "2026-11-04T15:13:36.926497395Z",
-    "last_migrated_by": "Nilton Duarte",
-    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
-  },
-  "ticket_id": "GEN-13",
-  "ticket_title": "Concise project documentation",
-  "ticket_type": "chore",
-  "started_at": "2026-10-31T12:09:46.317Z",
-  "completed_at": "2026-10-31T12:14:15.852Z",
-  "updated_at": "2026-11-04T15:13:36.926497395Z",
+  "anomalies": [
+    {"rule_id": "TOOL_HIGH_FAILURE_RATE", "severity": "WARNING", "context": {"tool_name": "command", "count": 6, "total_calls": 26, "threshold": "\u003e20%", "failure_rate_pct": 23.1}}
+  ],
   "code": {
     "lines_added": 0,
     "lines_deleted": 0,
@@ -29,6 +12,8 @@
     "files_changed": 0,
     "sdlc_iterations": 2
   },
+  "completed_at": "2026-10-31T12:14:15.852Z",
+  "schema_version": 6,
   "sessions": [
     {
       "id": "01a191dd-ac31-7c20-8c67-9448774a8767",
@@ -55,7 +40,9 @@
       "anomalies": []
     }
   ],
-  "anomalies": [
-    {"rule_id": "TOOL_HIGH_FAILURE_RATE", "severity": "WARNING", "context": {"tool_name": "command", "count": 6, "total_calls": 26, "threshold": "\u003e20%", "failure_rate_pct": 23.1}}
-  ]
+  "started_at": "2026-10-31T12:09:46.317Z",
+  "ticket_id": "GEN-13",
+  "ticket_title": "Concise project documentation",
+  "ticket_type": "chore",
+  "updated_at": "2026-11-04T15:13:36.926497395Z"
 }

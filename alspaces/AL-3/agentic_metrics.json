@@ -1,22 +1,7 @@
 {
-  "schema_version": 6,
-  "migration": {
-    "schema_version": 6,
-    "status": "completed",
-    "steps_completed": [
-      "schema_v6_lean_occurrences"
-    ],
-    "steps_pending": [],
-    "last_migrated_at": "",
-    "last_migrated_by": "",
-    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
-  },
-  "ticket_id": "AL-3",
-  "ticket_title": "TypeScript SPA Shell, Fleet Overview Dashboard, and Single-Binary Integration",
-  "ticket_type": "feat",
-  "started_at": "2026-10-17T18:06:22.994000+00:00",
-  "completed_at": "2026-10-17T19:28:25.075000+00:00",
-  "updated_at": "2026-10-27T08:05:14.604111001Z",
+  "anomalies": [
+    {"rule_id": "TOOL_HIGH_FAILURE_RATE", "severity": "WARNING", "context": {"tool_name": "task", "count": 2, "total_calls": 8, "threshold": "\u003e20%", "failure_rate_pct": 25}}
+  ],
   "code": {
     "lines_added": 2980,
     "lines_deleted": 7,
@@ -27,6 +12,8 @@
     "files_changed": 26,
     "sdlc_iterations": 7
   },
+  "completed_at": "2026-10-17T19:28:25.075000+00:00",
+  "schema_version": 6,
   "sessions": [
     {
       "id": "ses_eb4c63fcdffe6HS77ySfmN3tWQ",
@@ -290,7 +277,9 @@
       ]
     }
   ],
-  "anomalies": [
-    {"rule_id": "TOOL_HIGH_FAILURE_RATE", "severity": "WARNING", "context": {"tool_name": "task", "count": 2, "total_calls": 8, "threshold": "\u003e20%", "failure_rate_pct": 25}}
-  ]
+  "started_at": "2026-10-17T18:06:22.994000+00:00",
+  "ticket_id": "AL-3",
+  "ticket_title": "TypeScript SPA Shell, Fleet Overview Dashboard, and Single-Binary Integration",
+  "ticket_type": "feat",
+  "updated_at": "2026-10-27T08:05:14.604111001Z"
 }

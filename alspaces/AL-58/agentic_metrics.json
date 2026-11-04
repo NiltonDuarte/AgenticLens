@@ -1,24 +1,5 @@
 {
-  "schema_version": 6,
-  "migration": {
-    "schema_version": 6,
-    "status": "completed",
-    "steps_completed": [
-      "git_code_facts",
-      "schema_v6_lean_occurrences",
-      "source_backfill"
-    ],
-    "steps_pending": null,
-    "last_migrated_at": "2026-11-04T15:13:36.926497395Z",
-    "last_migrated_by": "Nilton Duarte",
-    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
-  },
-  "ticket_id": "AL-58",
-  "ticket_title": "Support OpenCode v1 and v2 concurrently with dual version test environments",
-  "ticket_type": "feat",
-  "started_at": "2026-10-28T23:37:29.387Z",
-  "completed_at": "2026-10-30T23:15:43.361Z",
-  "updated_at": "2026-11-04T15:13:36.926497395Z",
+  "anomalies": [],
   "code": {
     "lines_added": 3593,
     "lines_deleted": 2392,
@@ -29,6 +10,8 @@
     "files_changed": 20,
     "sdlc_iterations": 33
   },
+  "completed_at": "2026-10-30T23:15:43.361Z",
+  "schema_version": 6,
   "sessions": [
     {
       "skills": [
@@ -407,5 +390,9 @@
       "anomalies": []
     }
   ],
-  "anomalies": []
+  "started_at": "2026-10-28T23:37:29.387Z",
+  "ticket_id": "AL-58",
+  "ticket_title": "Support OpenCode v1 and v2 concurrently with dual version test environments",
+  "ticket_type": "feat",
+  "updated_at": "2026-11-04T15:13:36.926497395Z"
 }

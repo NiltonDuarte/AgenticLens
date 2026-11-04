@@ -1,22 +1,5 @@
 {
-  "schema_version": 6,
-  "migration": {
-    "schema_version": 6,
-    "status": "completed",
-    "steps_completed": [
-      "schema_v6_lean_occurrences"
-    ],
-    "steps_pending": [],
-    "last_migrated_at": "",
-    "last_migrated_by": "",
-    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
-  },
-  "ticket_id": "GEN-7",
-  "ticket_title": "Multi-Platform Binary Selection and Host-Container Wrapper Support in Setup",
-  "ticket_type": "chore",
-  "started_at": "2026-10-23T14:15:20.857000+00:00",
-  "completed_at": "2026-10-26T09:21:45.698000+00:00",
-  "updated_at": "2026-10-27T08:05:14.604111001Z",
+  "anomalies": [],
   "code": {
     "lines_added": 1473,
     "lines_deleted": 159,
@@ -27,6 +10,8 @@
     "files_changed": 8,
     "sdlc_iterations": 6
   },
+  "completed_at": "2026-10-26T09:21:45.698000+00:00",
+  "schema_version": 6,
   "sessions": [
     {
       "id": "ses_e96e23be6ffecWBYCn5ZPxpixl",
@@ -64,5 +49,9 @@
       ]
     }
   ],
-  "anomalies": []
+  "started_at": "2026-10-23T14:15:20.857000+00:00",
+  "ticket_id": "GEN-7",
+  "ticket_title": "Multi-Platform Binary Selection and Host-Container Wrapper Support in Setup",
+  "ticket_type": "chore",
+  "updated_at": "2026-10-27T08:05:14.604111001Z"
 }

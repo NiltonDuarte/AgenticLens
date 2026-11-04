@@ -1,22 +1,5 @@
 {
-  "schema_version": 6,
-  "migration": {
-    "schema_version": 6,
-    "status": "completed",
-    "steps_completed": [
-      "schema_v6_lean_occurrences"
-    ],
-    "steps_pending": [],
-    "last_migrated_at": "",
-    "last_migrated_by": "",
-    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
-  },
-  "ticket_id": "AL-11",
-  "ticket_title": "Native Go Telemetry Extractor and Active Session Metric Generation",
-  "ticket_type": "feat",
-  "started_at": "2026-10-17T20:09:40.088000+00:00",
-  "completed_at": "2026-10-17T21:00:34.775000+00:00",
-  "updated_at": "2026-10-27T08:05:14.604111001Z",
+  "anomalies": [],
   "code": {
     "lines_added": 2717,
     "lines_deleted": 13,
@@ -27,6 +10,8 @@
     "files_changed": 14,
     "sdlc_iterations": 4
   },
+  "completed_at": "2026-10-17T21:00:34.775000+00:00",
+  "schema_version": 6,
   "sessions": [
     {
       "id": "ses_eb46b870bffe0Wjrbrh3WNxIUu",
@@ -185,5 +170,9 @@
       "anomalies": []
     }
   ],
-  "anomalies": []
+  "started_at": "2026-10-17T20:09:40.088000+00:00",
+  "ticket_id": "AL-11",
+  "ticket_title": "Native Go Telemetry Extractor and Active Session Metric Generation",
+  "ticket_type": "feat",
+  "updated_at": "2026-10-27T08:05:14.604111001Z"
 }

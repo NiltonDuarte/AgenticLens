@@ -1,22 +1,5 @@
 {
-  "schema_version": 6,
-  "migration": {
-    "schema_version": 6,
-    "status": "completed",
-    "steps_completed": [
-      "schema_v6_lean_occurrences"
-    ],
-    "steps_pending": [],
-    "last_migrated_at": "",
-    "last_migrated_by": "",
-    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
-  },
-  "ticket_id": "AL-21",
-  "ticket_title": "Ticket Migrate Configuration to YAML and Establish Agent-Backend Bridge Definitions",
-  "ticket_type": "feat",
-  "started_at": "2026-10-18T13:34:06.603000+00:00",
-  "completed_at": "2026-10-18T15:34:24.427000+00:00",
-  "updated_at": "2026-10-27T08:05:14.604111001Z",
+  "anomalies": [],
   "code": {
     "lines_added": 2502,
     "lines_deleted": 68,
@@ -27,6 +10,8 @@
     "files_changed": 10,
     "sdlc_iterations": 7
   },
+  "completed_at": "2026-10-18T15:34:24.427000+00:00",
+  "schema_version": 6,
   "sessions": [
     {
       "id": "ses_eb05b5a34ffenLXXGUrfo06jLR",
@@ -329,5 +314,9 @@
       ]
     }
   ],
-  "anomalies": []
+  "started_at": "2026-10-18T13:34:06.603000+00:00",
+  "ticket_id": "AL-21",
+  "ticket_title": "Ticket Migrate Configuration to YAML and Establish Agent-Backend Bridge Definitions",
+  "ticket_type": "feat",
+  "updated_at": "2026-10-27T08:05:14.604111001Z"
 }

@@ -1,22 +1,7 @@
 {
-  "schema_version": 6,
-  "migration": {
-    "schema_version": 6,
-    "status": "completed",
-    "steps_completed": [
-      "schema_v6_lean_occurrences"
-    ],
-    "steps_pending": [],
-    "last_migrated_at": "",
-    "last_migrated_by": "",
-    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
-  },
-  "ticket_id": "AL-24",
-  "ticket_title": "Ticket Dynamic Role and Model Aggregations and Presentation",
-  "ticket_type": "feat",
-  "started_at": "2026-10-18T18:51:52.816000+00:00",
-  "completed_at": "2026-10-18T23:41:23.992000+00:00",
-  "updated_at": "2026-10-27T08:05:14.604111001Z",
+  "anomalies": [
+    {"rule_id": "TOOL_HIGH_FAILURE_RATE", "severity": "CRITICAL", "context": {"tool_name": "mcp-gateway_mcp-exec", "count": 5, "total_calls": 5, "threshold": "\u003e=50%", "failure_rate_pct": 100}}
+  ],
   "code": {
     "lines_added": 2765,
     "lines_deleted": 2499,
@@ -27,6 +12,8 @@
     "files_changed": 40,
     "sdlc_iterations": 7
   },
+  "completed_at": "2026-10-18T23:41:23.992000+00:00",
+  "schema_version": 6,
   "sessions": [
     {
       "id": "ses_eaea55f78ffeCJ9Ag2l4YsjQSn",
@@ -369,7 +356,9 @@
       ]
     }
   ],
-  "anomalies": [
-    {"rule_id": "TOOL_HIGH_FAILURE_RATE", "severity": "CRITICAL", "context": {"tool_name": "mcp-gateway_mcp-exec", "count": 5, "total_calls": 5, "threshold": "\u003e=50%", "failure_rate_pct": 100}}
-  ]
+  "started_at": "2026-10-18T18:51:52.816000+00:00",
+  "ticket_id": "AL-24",
+  "ticket_title": "Ticket Dynamic Role and Model Aggregations and Presentation",
+  "ticket_type": "feat",
+  "updated_at": "2026-10-27T08:05:14.604111001Z"
 }

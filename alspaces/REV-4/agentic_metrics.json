@@ -1,24 +1,5 @@
 {
-  "schema_version": 6,
-  "migration": {
-    "schema_version": 6,
-    "status": "completed",
-    "steps_completed": [
-      "git_code_facts",
-      "schema_v6_lean_occurrences",
-      "source_backfill"
-    ],
-    "steps_pending": null,
-    "last_migrated_at": "2026-11-04T15:13:36.926497395Z",
-    "last_migrated_by": "Nilton Duarte",
-    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
-  },
-  "ticket_id": "REV-4",
-  "ticket_title": "Review and reduce low-value tests; document test selection guidance",
-  "ticket_type": "docs",
-  "started_at": "2026-10-31T02:17:54.850Z",
-  "completed_at": "2026-10-31T11:01:14.411Z",
-  "updated_at": "2026-11-04T15:13:36.926497395Z",
+  "anomalies": [],
   "code": {
     "lines_added": 243,
     "lines_deleted": 2673,
@@ -29,6 +10,8 @@
     "files_changed": 21,
     "sdlc_iterations": 11
   },
+  "completed_at": "2026-10-31T11:01:14.411Z",
+  "schema_version": 6,
   "sessions": [
     {
       "delegations": [
@@ -507,5 +490,9 @@
       "anomalies": []
     }
   ],
-  "anomalies": []
+  "started_at": "2026-10-31T02:17:54.850Z",
+  "ticket_id": "REV-4",
+  "ticket_title": "Review and reduce low-value tests; document test selection guidance",
+  "ticket_type": "docs",
+  "updated_at": "2026-11-04T15:13:36.926497395Z"
 }

@@ -1,0 +1,846 @@
+{
+  "implementation_commit": "42d82e6",
+  "ledgers": 119,
+  "completed_objects_removed": 118,
+  "already_absent_byte_identical": 1,
+  "sessions_preserved": 1098,
+  "invocations_preserved": 1100,
+  "other_values_unchanged": true,
+  "rollback_git_revision": "42d82e6",
+  "backup_root": "/tmp/agenticlens-GEN-21-review03/cli-backups/",
+  "results": [
+    {
+      "path": "alspaces/AL-1/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "84acb8e938738f9bb48c936572ca8d9328a16002d338c7aca4e4ee365409a324",
+      "after_sha256": "2e89488ec84e7558badbea157d4b28c59511b2fd25fdbf5ae257bd37d9dce221",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-1/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-10/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "ce29ff5927f7594cea5daa563f9f68eb0f03cd86d07c871c5fffff268a546b82",
+      "after_sha256": "ea99f64cd16bba9b0cab9528ab88e6bebcd2d0ca4af00aaa018c003fd9e81551",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-10/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-11/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "c6fbae3657831eb7409e3a70328c562661741e4ac427db859385708dada2b64e",
+      "after_sha256": "8e04c5f0b0a55ff9663888d237cfeec33010aa884a553806bab49de3293c9452",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-11/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-12/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "ba9fa68dcfe2bfacd6cd6159592d07104c67b32b5d4241fb10dd7de928ce39bf",
+      "after_sha256": "f42ccf92e22a3ed8e5afb98277edc0a8d103a330f748eeeb72be87fd0df7a9f6",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-12/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-13/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "a871606a18edf5dca727ca35952885f1eeb2f1410098195260cfd812ea1a0d15",
+      "after_sha256": "6d9db6dabfa9b1e7fb6baac36b05437b302ce64daa2b50f7966f7e62aa8c1413",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-13/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-14/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "b90149aeb15ed540e4bdef9089bcfa5756210fd6897bb9b01e3942654f90b23b",
+      "after_sha256": "252ecefa86301d76f8cae1fd4da8e16ee569627057a704a13cb3ca30cb2c0c17",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-14/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-15/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "d2464a5bdecc0a07818ad7c974c4cd66480c4cc8fa8e08bca56de535682928f8",
+      "after_sha256": "abb724a13b8000a2e80c85503e970c877bf1ec8e7292f4f6b647e6112c0570b4",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-15/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-16/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "6e4a9cb85c92546f175e453e6e5410116daba2b2fddbd7e8e0bd1bf86a8ef952",
+      "after_sha256": "bf74189037f677a703a3486ee96fd516a3036164743d99e6aaa75b3d04cd0d90",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-16/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-17/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "a729a70ce9a625b4f1ebbc9c727192d7fe7345c4249f5822efddd2d2338deb9c",
+      "after_sha256": "68dd0a851a833bbb7698efab9ea2ff0efaa1a806b4a4dda4ee258e6f225c3a5b",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-17/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-19/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "0708e7e28427e36dff1ebfba2b20b6021f2c13a366e1fdc0b9bf788ae7bb6469",
+      "after_sha256": "0f5059318174f8b6b3e3bf7f6b5b2738ef368d38dbb63cf7e4c18bb7479329e8",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-19/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-2/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "c8fdc0ad9070672911b3ae6fc6f8d988775d1af32a2fc6be97cbacf7fef08897",
+      "after_sha256": "dc032c44bddc1103d678eedeb9ea807bc00977a0904035fdcd938fffe1032969",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-2/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-20/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "4ed581fbf3d57c766ec33bc5e36d03bf56d5b5adbb6d328ff31bcad0ad5acc8f",
+      "after_sha256": "f6dc645bfbe42eace5c7ba0db620ce6eed7ab04846ddffa1e798ca4b97106bfa",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-20/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-21/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "d1c52445bcb4e2590552e454f24fdd33469c3e773b4bd6a083f1c111759b3fa6",
+      "after_sha256": "01a1b8c80aa57eb8ecc3e4d034fe3ce88a5de24b081e2c87e0d80fbc6c5a2d0f",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-21/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-22/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "a43700541f3572557c1bf4766d98b7d663f0d05c79f04fd56821a7e079cdde0e",
+      "after_sha256": "617d9dfc966bb11a7cd29aa221de9f299b209dfea9e3bbea6ea0fb22b4f28d3c",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-22/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-23/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "9540fb7d0bbc6245fbc2d37a985b9723774dea987b70ccc7617ebbdee50c7dc3",
+      "after_sha256": "3d44b6bc1edf597ac4c3e81f69ad667c6af2e80a365a97ea976a41149aaabb0d",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-23/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-24/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "03fc7a47c7447610a1f01352d807003c2d224e1327906152a8e7cc9c5cf2aff5",
+      "after_sha256": "ba8ffb6a9f7a883606b116c431ff498b8b2cc8cae699139856beee3a7362cc49",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-24/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-25/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "0c0c88a375f6c33590a4acd44cbe1854d9723d0e4de52f135f3eaf957793817f",
+      "after_sha256": "cb870046dbc63e203821fbc080cb2b39e426dbe35bff2207b3d0b0b6a668518d",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-25/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-26/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "e9ee4544f5e17094c5ad334c3d198c2973831adce8bbbf9ba247e6eb1849d47d",
+      "after_sha256": "6a5d5adb9841277fdae0cc28864eacecb41201007c6d581a7012a9ce0b1a87a9",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-26/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-27/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "254188d1decccae1a9ffd022319acaf694259cca52a05a8238655204a8c06f19",
+      "after_sha256": "65fc313ff5c622016374105ddce634a7ea942a01b3ca9010d724b086ed4e13a5",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-27/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-28/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "abdb711e5133f1f3c4bb3139c3dcc510f0fd012e0670d65a9d2be069ae61b355",
+      "after_sha256": "555183d717eb8c89bfb3be737e5647fbebea8e05ae7b12f2eda91a9c7eaeef84",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-28/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-29/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "d0680dc037fa27de72794b3d4e6e31e08d2f1d0249d00573038cbf019cb37c99",
+      "after_sha256": "32a8d82aa77361d62673271c7006548833de73cf65f6474315e5425234a4d850",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-29/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-3/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "c684246d9a09290e11f326cee27d8af22926aaac976894163d69f646797d0d0f",
+      "after_sha256": "060e00730b5f4966213dbbec0e897012cfcb89de47dea9aa2e13348160380576",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-3/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-30/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "ed8683201ceca473063b7d31b4e1d597ef7dec6b5e901c5cca58b6121c6bdd66",
+      "after_sha256": "465262a0ab7c742f2fcd5069ad8d37ba1b86abd964b5fd4c649d1fd8d808df0f",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-30/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-31/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "d29e3cbcfcb7c0573aa9df9f81db88039759f29019940f7e03e3eb421b9c73d5",
+      "after_sha256": "f507f04cdb5364d54ea87957d982dca66742ae62fa366e1c9237708a1829ed62",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-31/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-32/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "eb944a8c9d19020aec4a7c54bb1a25f041a5fbdff3873fec7ae8d60a7333d7ec",
+      "after_sha256": "e714bf257f251776f50385100fa10bf5214ce305ef65cf915befe8d519905f71",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-32/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-33/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "f9fd6b16d33cea98e789651ee64afcaff964fdbe4083d481b9907e1162ae1161",
+      "after_sha256": "14cee049744b8a32d395d51dc935ce3bdb946ad8c4c34fd903e7dd41d135ece0",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-33/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-34/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "a4b5322cb56cd981944e96c0c67522e1737335e96a0e5ac1e866b0e656c044ad",
+      "after_sha256": "ecf2ef177d1711cccd5de663a9cf1b348c1312faa3fd3e2a43c492a8daa6c9fa",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-34/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-35/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "efc8d96cd6efdf57220409446b377fb8e3d44f46629be117fe5e956cde22a594",
+      "after_sha256": "2c1f7a53d1faadd280cd711aba58ce5c6f561df2c2972fcb3bf51118568a4bae",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-35/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-36/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "53676433bce577745b0ba04f673f9e925f2829ab3a0cc4a12f584caa34ef5ea9",
+      "after_sha256": "e2c9b26b9a4860a36fa49cbf60a5d2c6806f52e97e6318476caba23e2bfcf401",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-36/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-37/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "e80cbf49e73b72ecd8acf7ca92ef2b3309c2392ddee400d306d4808df986cce6",
+      "after_sha256": "da45cdc93930205aae535653a652ff601b8f7c60e0debe23467f59995118a8df",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-37/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-38/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "2b091e2eb07df06600edefac421a569617095307ceb06aea3ad5c27a815a8314",
+      "after_sha256": "712a672993cff36cf54a3a4215973085e118d5bf8df05e95a8be8da22cec1434",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-38/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-39/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "acd46212d3caa57633a4ea230999107a089f72ac970a165ba14c7f95e1c802e6",
+      "after_sha256": "6d090c2336d67a9895bbee309e2b0d30fb63b6d9e847fa29d924409b719ee155",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-39/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-4/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "7891c05eff688fe307834aff06af41d85662ab8a5eb2693beead49e120f17e1c",
+      "after_sha256": "84fe4d6686222591bbc9e21b42f7c936edbb8c8266ec04e63ef05d51896a8a6a",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-4/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-40/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "d3e065378e63e25a3296f3537de7821b766bfb04be94bf656baa7ac978829ac6",
+      "after_sha256": "d14adad1adae86745911f0980b6cde72203a794ee08dd3ce7b2e6710b51a5867",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-40/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-41/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "61fd52b7ab3ae277eb3890447fe2fe60589c55f120fd458cdc6b181a7d6e4daf",
+      "after_sha256": "de2adc63f16d3226fc0fd74478cded8c0d7253c7e384c6d4389eaee0b540ee98",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-41/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-43/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "002c59f5d788c814d4a86c7d1f842f4796580f260ec338c153c445d62d715e24",
+      "after_sha256": "d653975582138e3cc177a4dca13425188dcd2845e112c7be489c1fe903e98a6c",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-43/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-45/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "cc74486c9b3af243adcb04d0df54134f21b023953ec254a45d170dd184a79291",
+      "after_sha256": "99b32ebf246ced0affb9015dded4127c36bde7d4125b5f362a5f8d6845ef8b50",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-45/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-46/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "281017b676986b35ace10b2ad803c17c201459c7ee1b8c1b6b5883aef0222077",
+      "after_sha256": "cdc583bcd5eb312f0749157ed6810f1e5495343664229b180190117b5cb65fc2",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-46/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-47/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "70f675b91c811e89a22ea64eed04161363ff0b58f4e807843015a3c600896a17",
+      "after_sha256": "b1367945be9d93a9c66b42b6e1364218b3cc66fd4bc3c1061631c3969bd7fb37",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-47/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-48/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "73ae4bd8446c0709ac494d4e4a89ae4da9105471481f7ff27697be231023c8ad",
+      "after_sha256": "17799f380fba9893a454aec092beee8475d0c9ac05a163da3bdff637dc2cb499",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-48/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-49/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "bf83733f3ffa185d9c286e396dd30f4c81d7f509b4902f4e5bb74ba75f7e50a6",
+      "after_sha256": "41c374c64548f81791cd54941d908524360830c7deff786329e158a5e018a6ff",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-49/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-5/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "fd6054785676ccbc51ebb9c73406fc551a3f535d965f560d2eb6f84f8808ed34",
+      "after_sha256": "eb2150152d1f2e48fe6b271309dfc5aeb64d1faf79c4df135d7aa6a6c750d4f4",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-5/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-50/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "dc05d42c8b9b138fab4ffd43a1efcdae2cab334aa0536ecb5a98a52d7947daba",
+      "after_sha256": "8607d9f67402f8c5990ecd742de3cb9ae7951f705309ca654d6a3bae01fbc0b2",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-50/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-51/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "ebe9d650f6bd8c806d8e24233791dfa2aa1c64dbfed72b02dfeaa20aca9d2da5",
+      "after_sha256": "dc2cc7d683a322dd0cb3d9e37be05294d81f64f15d8af87d56cc3000d806b171",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-51/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-52/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "5d5d1880c98305bd9408231e83847d66211fe7fb51e88b84147d5e05ea577a03",
+      "after_sha256": "ba7106670601cb9df951b14e315b32d4bb9aba64f9554d6f4a2a547ae78c179c",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-52/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-53/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "ff9e0c70e980ad5394c34a167b589027b85e2a72f20d10660f15ccbe3922cc32",
+      "after_sha256": "69fa7096ead8d4a608e88bd6d0d1422e68c7e287f4c139e82fad7f2ee20816b6",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-53/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-54/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "2754d019a018ea241dc1f89a9bcd119c4e811d1def1c0c796cf47b6f1042f91a",
+      "after_sha256": "6ee092f5d07d0aab86a5cdb79dea93afc20f77a42745ca439a2c2bf5fa1a5aa6",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-54/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-55/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "93b2014fa67167f6bb92d7ce000b5ec47c43a09eabdaeea9476e1f42a7cb8089",
+      "after_sha256": "77625de54c0125576bbf48240d9e41e16a2db1497e289283e52e99cf71d4b3b2",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-55/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-56/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "e29c0a826e664115ba7563bc62dfb3d258c338dd40a07d417cd094afbe786c01",
+      "after_sha256": "5625fe3ee7415854c9d84f1989f4b148894a6bcd086d578a06d1205c7ababdee",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-56/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-57/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "2d90db022610253561085e8e786899533ea9a5b02fa3f36316abfda42e209db6",
+      "after_sha256": "e0fca4a8b3c305649e68d7f5ff1f91eb6a09591567f55e8440043ef98ced597a",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-57/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-58/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "01ad014c10198ee67c4342f7e07eab6e7081c63c4ae6a5c63e7941eb88fc829e",
+      "after_sha256": "46614d786fdd980ccb56c3a0a5700d57ae924612fc5ad59795a2940f77031a5f",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-58/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-59/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "ac8531a314607d23ee03bb0bfde4fd89f20a4eb3a948984fa125f3d7582d4166",
+      "after_sha256": "a57d365b3d2825b6c3e6794ac946bc4b0518e73497c8b122be9d3dec26d76635",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-59/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-6/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "8f64c9ae9213939be7618c3609591fd0ed6fbc7f34d79ab3ed0ebbf422a8f52c",
+      "after_sha256": "291dbc3ae0e916602aa67b91a3b7aa8193fa3826632b51c65f8846a19a2cf469",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-6/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-60/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "de0cf3fc2b0e65492ebc9d4bbb8567e1865d49807fbe0468378aa286e6eb9500",
+      "after_sha256": "36142bc88877bf2f73a13abc06b3a759b92ff57734cbe31e6260e0ffbf94c29a",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-60/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-61/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "83396bfa92edf91bc2405a081c99418296ab95d688cfdfa37efd576c4fe774e2",
+      "after_sha256": "d93113eb7cd7d3d5601cdf947034e37f4b662cfac6a68731a7e636b535b55510",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-61/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-62/agentic_metrics.json",
+      "removed_completed_metadata": false,
+      "before_sha256": "6391077a4c528a3a027b0e61ab965a6995c3f30f34224dc0df63c2b1d0baa874",
+      "after_sha256": "6391077a4c528a3a027b0e61ab965a6995c3f30f34224dc0df63c2b1d0baa874",
+      "backup_path": null
+    },
+    {
+      "path": "alspaces/AL-68/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "ce4efd097fe457c161e885da1a99a5c5d227af9e1c26c25b6971445d44449e89",
+      "after_sha256": "703afad4dc6bb658f089b4cf6bced231b46880299dec25ac632098cafa273d9f",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-68/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-68/iterations/05/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "ed7ce78e13a8dabdfcd587ed2042422ec3d93bfa2626df6692995d7f6b936850",
+      "after_sha256": "f23733158271ef0931731647df148f3e1ce32f09207a4506fb305a4c612ca0f9",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-68/iterations/05/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-7/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "858e5db2802b8989c2bded0bd0ed9914c3b8a3fd8ba951d16a92e1ead03f04a8",
+      "after_sha256": "51f0fb38de021cc41ce060bdbfee6a583f4ad468f84d28d51c027b2ef2a494d4",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-7/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-76/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "35f86968b97ce57b4dd66c342fec4b22b5613b1e83d9172e2005eb537de1506a",
+      "after_sha256": "c48acf1eba3a6467f4f2404dab54d8616742bd261c3ecd584a4dc941c6013adc",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-76/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-8/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "2e4e35d2c6e50296fbc211df5a7283165a31533fa5375211dd4f5bdfa11a7c73",
+      "after_sha256": "1c4f7f0d17fe8417ae473d7c74eccd4deb21af922d81b2e93f624e8529412369",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-8/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/AL-9/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "07820061fb9736248daa0195ee27eabc1077a21490c55e03d65887a96ff0f258",
+      "after_sha256": "1c6cd966cdd1c33a34186abbb0558c0002eeaf6d48961cbd699a2624da2f2aa4",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/AL-9/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/FIX-1/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "858f9b568e4215aed22e438eee74b02b5aedb069d2f92e084b08033d29d7acf4",
+      "after_sha256": "4dc15d14a8fb132b3b1c5d6572a67cfab3ab2a6fb10223bc4c1b17b21f11b7fa",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/FIX-1/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/FIX-10/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "0ec8e41d05973b9f9f4cd3a8e3592ce757f48eca86dec8c0128e87ac53621809",
+      "after_sha256": "cc92249f19b155fe5639aefc6808e103e494fda2d7a7c438ef3f3a94fdd28e79",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/FIX-10/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/FIX-11/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "d6f43c7f2fed9c3bad2435e9ea1bb748c5e4b98b05294cdcb888bda235603553",
+      "after_sha256": "3bb4e7b59d2afd3c0fb11bc63b6063b72df663aad6430a8bc7a406f8f7a57c67",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/FIX-11/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/FIX-12/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "288371740fb3b60a7d3a41d8a19e1387a5918dd7762f7c1d23be89e08622312c",
+      "after_sha256": "a2f6b2ead962c12ac1bc6ec656af959cbc3a80e3c78e3951213992afdc878447",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/FIX-12/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/FIX-13/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "e41b5f917a6636d64d99789e070d03c44f6b269ae04e05dc42f9d53cdc23f6f1",
+      "after_sha256": "f0377f9ab278df5503f5c6b6217aaa6140db1d4858f5907d70714c6aff72961d",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/FIX-13/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/FIX-14/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "f2971d1d72c9ee63126cf9c8f2678a3f69b8b02d7aa88b81490c421fef1263ef",
+      "after_sha256": "c673040fce6e428e20012e8d79d2c8a2ed3f9fb17e6c1ce883633adba4a93dc6",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/FIX-14/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/FIX-16/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "d2fdbdcf34bfc339c3ec6f1e1d12d72fc4f9aad52fa43cfa9cc3e25c736f151c",
+      "after_sha256": "ed8fadbe223060ed65f6a041529e6230b4b1ba404b60547a19e6cc19dbc1395a",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/FIX-16/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/FIX-2/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "374eed2db5d5407321a85d1cd67ef7cba21dd1fc0b3d20ec8f83965d138f313c",
+      "after_sha256": "416427ff31453bc9f87f935ef7f67cd7323cbddeb2de2b6a9e0192cd5fa5ed73",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/FIX-2/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/FIX-3/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "bccfe938759bf75cb516af90fe621bb401fadf4c755d3119e89a9fb2ae2fb776",
+      "after_sha256": "90560f8c62aa6702a4b93a8425a02c65275c4a2cb64470ab6bd1bae36d6379a7",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/FIX-3/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/FIX-4/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "a4b45456ba60414a0c9e2ba4c913aaac7dbebde822429dd9578337b0c553209a",
+      "after_sha256": "1ab6de23cbe2def75ad02cd236d03276fc0bd98c9d861547dd3060306af3285b",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/FIX-4/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/FIX-5/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "19b6a77a448a2ac61c70ecb99229c0014408b8443c9ada7bb1b08f629bfa9085",
+      "after_sha256": "5e501269954d18787b6cabceaf75767506ce3f83546a714af3f37670c641e6c9",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/FIX-5/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/FIX-6/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "bc42bdedb4ab4c5689c63bf2001af82ff3b5353cc88431e3c0dffd420d45c1aa",
+      "after_sha256": "4fe5f5e53a6c881d549e3962fc3060459a1b3126377f5815122a863495aa497e",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/FIX-6/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/FIX-7/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "2a6bae5d34ff757879e257143cc65f7bc5eff6d8659b52bc57f675770d471df2",
+      "after_sha256": "3207d5fbe9586f3e428a1a84fcda72be64913cc14362a7bd63af053c33e91362",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/FIX-7/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/FIX-8/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "4b98dfb6553d34c6d044de66b3b1977728d56423f7a3f735d9e42346c31629be",
+      "after_sha256": "7649e591f2046bbd30025326194302f854276f7a0f60ec619ebc9c38f9fde4af",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/FIX-8/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/FIX-9/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "c9f0b4e6a2bb6359b5b853c5ea940201e5d77f590a4327e775c2bbd378baa4ff",
+      "after_sha256": "51a73b7d42f97139ad8902b2e6d67666f3b003c10a35fd847e4cea40c8aa8dae",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/FIX-9/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/GEN-1/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "c689381eefab0fdf9dc8a2ee394a1593a3b5205b5ce7a166e4787ad573a29b4e",
+      "after_sha256": "609570820ceb6efdeabe84a8a3ecac469c8e941edfb2abf8227d5b80a224a19a",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/GEN-1/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/GEN-10/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "2e4507adff0024caef7d6f37266296981d590ee921d7644959c79d1f72e3cc4c",
+      "after_sha256": "05f66302c646c2ba028ee9275d4931e733dac8d535a83f97b726e8230f1af0fc",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/GEN-10/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/GEN-11/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "89606422514b99cd6ad93286618e94fb960fedccb152a025d15d1eae25869a69",
+      "after_sha256": "508a73b279b56e20b8a08cbdbb94d0f43cb0d4313b233b3e5714d759f5f4ce11",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/GEN-11/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/GEN-12/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "f721ffd42b7332ad44df0fe32a33f37b53d6fd25839afd5f16d111b7ce883f19",
+      "after_sha256": "98a8cba784a38887bfbb751bde5b81a1c07d831eaf421e790fbbc677d04f86a7",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/GEN-12/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/GEN-13/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "d101f7aa34b26694ad9841fdf0fde3850b360da3e7edbb4f246bfd3693cfef52",
+      "after_sha256": "a9cc1f239a0afbbeb33785f8828379f1d0c3006b3ba9285de0aa97da63e19713",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/GEN-13/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/GEN-15/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "9f36f1e5ded343105e95d0852dcc4039f28754aa57e68f195088b2c1d5a2189b",
+      "after_sha256": "8d8ca4fce6104418bcf78f7d398980b03ae20ee5517650123060b9922d1e5fdf",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/GEN-15/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/GEN-16/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "5446c639fea8cdd58d7a160f3e23cfb56c4a76f2b556e13a3aab7f8569622980",
+      "after_sha256": "a7b029c998ec77ac760876ed7626206cf4536951b6591b80606634043e0498c2",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/GEN-16/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/GEN-17/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "852e49d15e7d1c10e2ceec100192182c73b43cb2fdcc622d89e38f9985e83bce",
+      "after_sha256": "56a9f93da022b00742364756c5db5b556b21502ea2e184b8f9e6c14c42df75af",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/GEN-17/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/GEN-18/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "4ed6fccd9d564c356cf1d64826c72c486142f4b77c9b9251c651edfb676e8b08",
+      "after_sha256": "5ade623e80fe034a5663b5912a4238d809853bbf99f497ac06385643e16bc0cc",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/GEN-18/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/GEN-19/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "ccfe4af9bf090fb94bb8596871c57b84f65e96311215ad7d571e1f32c26ca808",
+      "after_sha256": "4f0015e9da523d8756e02c8a5550b181fac79c49c08da0c14f9d2fd9d046c61c",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/GEN-19/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/GEN-2/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "16f9b48544cfbf683eea0212097fd3e575b4f9f53994b2c506f68a3b47a0fbe7",
+      "after_sha256": "c9dcd476aa6420761a5350ad96ec0b827c0d318988a7c58badc39aea80d87449",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/GEN-2/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/GEN-20/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "5d034a5ad436d8edb3e3e7275d1aebbc4ff9d05883798269350bab761576447f",
+      "after_sha256": "5bff3b0e6ecfea198c45f4bfcbdd1404ec5b59fbeae012918d1fe14ded4bace4",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/GEN-20/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/GEN-3/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "8202a1dbf1d77918099a2c93c6f7aaf480779335404d599160888ec10e90a486",
+      "after_sha256": "19a7cbe0c0e2e8dbab4e16747aef347ca57b60abbb57ca0b139110448c8c23ff",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/GEN-3/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/GEN-4/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "8fa10ffc234d5c5f44266fa377c338809a45a4086e7fad15135b66821b30d5b1",
+      "after_sha256": "209cc25115990a370c788d19b8e029cd8e481c98b29ba3381fd72cecb4846fea",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/GEN-4/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/GEN-5/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "f26f8e1625f0605cb7b2dbec5a094cb45f86aaab7a21b37e8099337efe2f1b6d",
+      "after_sha256": "65dc73d7758544d53baaa6fab4b5e8fa768a1cdd90fbab6cf547045b47b7f8f6",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/GEN-5/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/GEN-6/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "ebd86b697f996547a7c09be27ef1da624416c2e4ac17326b001c37336af90707",
+      "after_sha256": "a91458473aa96f47316538966f6f7e19e7da3dc8a1ce93dfb1c08e190f6be479",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/GEN-6/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/GEN-7/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "00e85a0ef45bc4e7111ab6ccb838c2f205b4dc6dd043583e5da867fac918eb5c",
+      "after_sha256": "3e3e6a76421ccd667831b0537ae0856aa7b38fde33e4bc5013390a9283798219",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/GEN-7/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/GEN-8/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "2318a97becbbb94acc40edaf157371bb0c1d598320b6951aada766577be97976",
+      "after_sha256": "bbf9d83b54cd825fc2a086c1525e78b5b35705ec058d1dce49519095aa03dad0",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/GEN-8/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/GEN-9/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "49578282a9c23fcec18a4f537bf51d03fbefbcd6d70b091177ab8a78bb486bf7",
+      "after_sha256": "db48f3f6d495342af96323b159f9ab76faf1abc11bd478899f5efca32d5cf129",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/GEN-9/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/MGT-1/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "64889d6643d4e79e3f8a0df981fffb31c7c5b1cf397ff0fde9acda3d5de210ab",
+      "after_sha256": "5ef152e45359c8db0c99329462a626696c108520c1a3f4670a222e972735b1c8",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/MGT-1/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/MGT-2/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "3415864517677b96132e76ecedeb496333bdfd92015937ebe94e8e28edef2e98",
+      "after_sha256": "dc6646850ed34ee721e54c15732b7bbcf2851a93ed1b604c041fdd501e632b5e",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/MGT-2/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/PO-1/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "1adb7da568fe957792d940d30fb84ceacb0e5ff55a64ce2145b9a47301ff0a14",
+      "after_sha256": "1612c99d7ab726cdd2384b61523a0018d9155761155328553b1a6aaee5f3a44c",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/PO-1/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/PO-10/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "67a8fb5728688676edefd56fa810b7f3ebd207140888eae6c70eea08e28413f1",
+      "after_sha256": "a0a4d4b4565fdda7fa24cacf6df4434aa7322e5200e4d457718b6d842a3d92f2",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/PO-10/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/PO-11/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "ee7138288db8c707b91800a9c16fe2d7f9180f08c6dfdedeedc8fb900db4f250",
+      "after_sha256": "61b84ef0611ee79d27adf22e64ed4f9ac7e286be92065a64507d9c4ea92efde5",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/PO-11/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/PO-12/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "f2c309e66328dd89489a67dfb2722bfce8d2e3f8880edc8cb172374b25124802",
+      "after_sha256": "14d4a4da31754ca776270e6aba53771e52f870cdb5a9c302a99ab54b74b99b29",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/PO-12/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/PO-13/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "5736ed9d608941de73e28f68487274c040fc4ffb6995c47784073d49ea623949",
+      "after_sha256": "ac8540b37bd5eb8ee046ffdec95b772efc2085fd50425fc04ce80e2fcb2ca29e",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/PO-13/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/PO-16/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "37bbd7d3634577ff662e8e072d38f144b8331d3244412d12b96150bc268f5141",
+      "after_sha256": "1afbb87aba2d2699885aa1506c9303ad36bdc6ed6db1280760857dff30d53bfa",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/PO-16/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/PO-17/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "77afa3e5a9331847c673c6860989465b24a8b27bd1071e6f080e8a3a34d21342",
+      "after_sha256": "6301dad000405735353636cba2863b680571d33b318c7898e5795cd2bc81a537",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/PO-17/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/PO-18/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "118a3cc0442e209cad55b04bd4ea05a15b1bfee7d36d541d3b594a28f4720832",
+      "after_sha256": "bb5644865531ea08067115bd608ae95ff01e66d46e886c8c8cdf8c35df1d3dc0",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/PO-18/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/PO-2/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "101cd68f817eac675aabe44f47e83ac39b1c25dc4c7c9c2c65d0a038ec16befa",
+      "after_sha256": "7a97ffa4a25e97a689c9e0435680c8b0d3cb8dd340f8b94285865b09a3127f37",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/PO-2/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/PO-3/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "8a4b05c881f6eca37ff3ea7495d6900cd85092370a02b8383ebb7849a30c8042",
+      "after_sha256": "048a46e92d7c773d6c99a4f52ebf8e238db85dd6c3cecf186657f3a037bcc406",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/PO-3/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/PO-4/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "2cbf2497cb351f1f5b067c98dc59580a8731d4430b02083ba5e603e13e0f17fa",
+      "after_sha256": "1f697f4f2c048bc1894b860937ec792f7503a592b759f1dad8d5161c1d08b32f",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/PO-4/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/PO-5/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "ea42b172c6f0002b5488016af97ce5859bf2005e37c56ca09254af3ef59a6353",
+      "after_sha256": "102455390fa7d6d68433d9554585628574e53a4ff7cf455dda17557a40194e6d",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/PO-5/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/PO-6/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "fcbf27ce6ff849382e112644f9206ee5f211ffe663efd6012d122ca8c7036250",
+      "after_sha256": "06c2302de6f45def6e994fd9b6c9450e0671e29e30a647c0786276a508a9c8dc",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/PO-6/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/PO-7/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "ef7e812c72da4b79cd454ebd771537eeaec9fdc929d46026ed285620616919c7",
+      "after_sha256": "d9ed39eb37408414379bf63ab8176425f04eed9d37c3c0b7f846f7098b65c2c0",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/PO-7/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/PO-8/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "24e3cb10861d1af03b3deef0e9ec3c1daad0b40553d52862a35088f87ef5cb9c",
+      "after_sha256": "b3ad1f3735660dcb9eb5c5df4bb48c8d13be7401a4bdcddaebad5058e35db1d7",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/PO-8/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/PO-9/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "6ba32ee4359cf0e554fd72fa5792509b3bf94e6fdfc3f024104f69f416abe121",
+      "after_sha256": "60b47a7b40869ac13ddde23d1815ff4ebad94a95c460e8df70aa0071e4b268e0",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/PO-9/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/REV-1/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "01e3007d968d5664d14d2ef0e316ce0f552a12ffc09bdf33ffb025b9f3682dcd",
+      "after_sha256": "16d8f0795485242a7d92f3d74f0a33d28663636fde6d970bfc6cddc185b3cf05",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/REV-1/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/REV-2/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "d17372fe7968e21a1065c6636ed65b55e8f5f63750324f38ad2132059fa8c443",
+      "after_sha256": "841594e001008332787127f07332aed59d6c7438ffd2544da046a3b44a1b38f9",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/REV-2/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/REV-3/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "d2c4e501e3f9b2d434564ed7f7a5ef881606f61c7e7fe7d60024c5310808d1d6",
+      "after_sha256": "35fcf7330a677d1e600777753e6ee2d28adf2ad346fe18a55f2b2841b7e4f4b1",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/REV-3/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/REV-4/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "08bb1c367f3bcaaa8667b7329bfb123d8ed102036714f493a169e1878413c86e",
+      "after_sha256": "d3a8127983fbea2bc66c90ba5c03851905ae504d840f44d9608f0d52ff231df5",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/REV-4/agentic_metrics.json.bak"
+    },
+    {
+      "path": "alspaces/REV-5/agentic_metrics.json",
+      "removed_completed_metadata": true,
+      "before_sha256": "7c51c7cea29b66122ebf213c6a00b8160833cba462efb76e8e44d97816f59441",
+      "after_sha256": "f7811789e7e322fd675ae40383c2916ce9f14dacf26f62f8f58656280e33ac8c",
+      "backup_path": "/tmp/agenticlens-GEN-21-review03/cli-backups/alspaces/REV-5/agentic_metrics.json.bak"
+    }
+  ]
+}

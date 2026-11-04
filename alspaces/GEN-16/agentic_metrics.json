@@ -1,24 +1,5 @@
 {
-  "schema_version": 6,
-  "migration": {
-    "schema_version": 6,
-    "status": "completed",
-    "steps_completed": [
-      "git_code_facts",
-      "schema_v6_lean_occurrences",
-      "source_backfill"
-    ],
-    "steps_pending": null,
-    "last_migrated_at": "2026-11-04T15:13:36.926497395Z",
-    "last_migrated_by": "Nilton Duarte",
-    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
-  },
-  "ticket_id": "GEN-16",
-  "ticket_title": "Compact completed review findings",
-  "ticket_type": "chore",
-  "started_at": "2026-11-02T21:16:45.502Z",
-  "completed_at": "2026-11-02T21:28:21.238Z",
-  "updated_at": "2026-11-04T15:13:36.926497395Z",
+  "anomalies": [],
   "code": {
     "lines_added": 0,
     "lines_deleted": 0,
@@ -29,6 +10,8 @@
     "files_changed": 0,
     "sdlc_iterations": 4
   },
+  "completed_at": "2026-11-02T21:28:21.238Z",
+  "schema_version": 6,
   "sessions": [
     {
       "id": "01a19e1f-2c2e-7682-b59e-cb439d5253b3",
@@ -55,5 +38,9 @@
       "anomalies": []
     }
   ],
-  "anomalies": []
+  "started_at": "2026-11-02T21:16:45.502Z",
+  "ticket_id": "GEN-16",
+  "ticket_title": "Compact completed review findings",
+  "ticket_type": "chore",
+  "updated_at": "2026-11-04T15:13:36.926497395Z"
 }

@@ -1,22 +1,7 @@
 {
-  "schema_version": 6,
-  "migration": {
-    "schema_version": 6,
-    "status": "completed",
-    "steps_completed": [
-      "schema_v6_lean_occurrences"
-    ],
-    "steps_pending": [],
-    "last_migrated_at": "",
-    "last_migrated_by": "",
-    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
-  },
-  "ticket_id": "FIX-11",
-  "ticket_title": "Configurable Ceilings, Enriched Anomaly Thresholds, and Source Roots Consolidation",
-  "ticket_type": "fix",
-  "started_at": "2026-10-28T18:37:07.355000+00:00",
-  "completed_at": "2026-10-28T23:52:32.866000+00:00",
-  "updated_at": "2026-10-29T00:26:46.660807574Z",
+  "anomalies": [
+    {"rule_id": "TOOL_HIGH_FAILURE_RATE", "severity": "WARNING", "context": {"tool_name": "task", "count": 3, "total_calls": 11, "threshold": "\u003e20%", "failure_rate_pct": 27.3}}
+  ],
   "code": {
     "lines_added": 1534,
     "lines_deleted": 544,
@@ -27,6 +12,8 @@
     "files_changed": 31,
     "sdlc_iterations": 6
   },
+  "completed_at": "2026-10-28T23:52:32.866000+00:00",
+  "schema_version": 6,
   "sessions": [
     {
       "id": "ses_e7b1219d2ffeLwvvRRZ0BpScvR",
@@ -335,7 +322,9 @@
       "anomalies": []
     }
   ],
-  "anomalies": [
-    {"rule_id": "TOOL_HIGH_FAILURE_RATE", "severity": "WARNING", "context": {"tool_name": "task", "count": 3, "total_calls": 11, "threshold": "\u003e20%", "failure_rate_pct": 27.3}}
-  ]
+  "started_at": "2026-10-28T18:37:07.355000+00:00",
+  "ticket_id": "FIX-11",
+  "ticket_title": "Configurable Ceilings, Enriched Anomaly Thresholds, and Source Roots Consolidation",
+  "ticket_type": "fix",
+  "updated_at": "2026-10-29T00:26:46.660807574Z"
 }

@@ -1,22 +1,5 @@
 {
-  "schema_version": 6,
-  "migration": {
-    "schema_version": 6,
-    "status": "completed",
-    "steps_completed": [
-      "schema_v6_lean_occurrences"
-    ],
-    "steps_pending": [],
-    "last_migrated_at": "",
-    "last_migrated_by": "",
-    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
-  },
-  "ticket_id": "PO-12",
-  "ticket_title": "Model API Pricing Configuration and Rate-Card Cost Approximation",
-  "ticket_type": "docs",
-  "started_at": "2026-10-28T20:22:47.960000+00:00",
-  "completed_at": "2026-10-28T22:58:03.789000+00:00",
-  "updated_at": "2026-10-28T22:58:12.491279+00:00",
+  "anomalies": [],
   "code": {
     "lines_added": 0,
     "lines_deleted": 0,
@@ -27,6 +10,8 @@
     "files_changed": 0,
     "sdlc_iterations": 10
   },
+  "completed_at": "2026-10-28T22:58:03.789000+00:00",
+  "schema_version": 6,
   "sessions": [
     {
       "id": "ses_e7bd20667ffeD9jgBkVayiieIA",
@@ -64,5 +49,9 @@
       ]
     }
   ],
-  "anomalies": []
+  "started_at": "2026-10-28T20:22:47.960000+00:00",
+  "ticket_id": "PO-12",
+  "ticket_title": "Model API Pricing Configuration and Rate-Card Cost Approximation",
+  "ticket_type": "docs",
+  "updated_at": "2026-10-28T22:58:12.491279+00:00"
 }

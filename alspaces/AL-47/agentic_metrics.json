@@ -1,24 +1,5 @@
 {
-  "schema_version": 6,
-  "migration": {
-    "schema_version": 6,
-    "status": "completed",
-    "steps_completed": [
-      "git_code_facts",
-      "schema_v6_lean_occurrences",
-      "source_backfill"
-    ],
-    "steps_pending": null,
-    "last_migrated_at": "2026-11-04T15:13:36.926497395Z",
-    "last_migrated_by": "Nilton Duarte",
-    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
-  },
-  "ticket_id": "AL-47",
-  "ticket_title": "Real-Time Live Trace Dynamic Refresh and Active Session Polling",
-  "ticket_type": "fix",
-  "started_at": "2026-10-31T12:35:31.798Z",
-  "completed_at": "2026-10-31T14:19:21.350Z",
-  "updated_at": "2026-11-04T15:13:36.926497395Z",
+  "anomalies": [],
   "code": {
     "lines_added": 164,
     "lines_deleted": 6,
@@ -29,6 +10,8 @@
     "files_changed": 2,
     "sdlc_iterations": 7
   },
+  "completed_at": "2026-10-31T14:19:21.350Z",
+  "schema_version": 6,
   "sessions": [
     {
       "skills": [
@@ -328,5 +311,9 @@
       "anomalies": []
     }
   ],
-  "anomalies": []
+  "started_at": "2026-10-31T12:35:31.798Z",
+  "ticket_id": "AL-47",
+  "ticket_title": "Real-Time Live Trace Dynamic Refresh and Active Session Polling",
+  "ticket_type": "fix",
+  "updated_at": "2026-11-04T15:13:36.926497395Z"
 }

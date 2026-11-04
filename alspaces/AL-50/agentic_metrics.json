@@ -1,24 +1,7 @@
 {
-  "schema_version": 6,
-  "migration": {
-    "schema_version": 6,
-    "status": "completed",
-    "steps_completed": [
-      "git_code_facts",
-      "schema_v6_lean_occurrences",
-      "source_backfill"
-    ],
-    "steps_pending": null,
-    "last_migrated_at": "2026-11-04T15:13:36.926497395Z",
-    "last_migrated_by": "Nilton Duarte",
-    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
-  },
-  "ticket_id": "AL-50",
-  "ticket_title": "Audit and Streamline Debug Prompt Generation and Sanitization Pipeline",
-  "ticket_type": "refactor",
-  "started_at": "2026-10-30T23:27:23.962Z",
-  "completed_at": "2026-10-30T23:41:40.699Z",
-  "updated_at": "2026-11-04T15:13:36.926497395Z",
+  "anomalies": [
+    {"rule_id": "TOOL_HIGH_FAILURE_RATE", "severity": "WARNING", "context": {"tool_name": "command", "count": 16, "total_calls": 77, "threshold": "\u003e20%", "failure_rate_pct": 20.8}}
+  ],
   "code": {
     "lines_added": 224,
     "lines_deleted": 1399,
@@ -29,6 +12,8 @@
     "files_changed": 8,
     "sdlc_iterations": 3
   },
+  "completed_at": "2026-10-30T23:41:40.699Z",
+  "schema_version": 6,
   "sessions": [
     {
       "skills": [
@@ -198,7 +183,9 @@
       "anomalies": []
     }
   ],
-  "anomalies": [
-    {"rule_id": "TOOL_HIGH_FAILURE_RATE", "severity": "WARNING", "context": {"tool_name": "command", "count": 16, "total_calls": 77, "threshold": "\u003e20%", "failure_rate_pct": 20.8}}
-  ]
+  "started_at": "2026-10-30T23:27:23.962Z",
+  "ticket_id": "AL-50",
+  "ticket_title": "Audit and Streamline Debug Prompt Generation and Sanitization Pipeline",
+  "ticket_type": "refactor",
+  "updated_at": "2026-11-04T15:13:36.926497395Z"
 }

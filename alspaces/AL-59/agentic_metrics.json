@@ -1,24 +1,5 @@
 {
-  "schema_version": 6,
-  "migration": {
-    "schema_version": 6,
-    "status": "completed",
-    "steps_completed": [
-      "git_code_facts",
-      "schema_v6_lean_occurrences",
-      "source_backfill"
-    ],
-    "steps_pending": null,
-    "last_migrated_at": "2026-11-04T15:13:36.926497395Z",
-    "last_migrated_by": "Nilton Duarte",
-    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
-  },
-  "ticket_id": "AL-59",
-  "ticket_title": "Local Developer Configuration and Explicit Multi-Harness Source Selection",
-  "ticket_type": "feat",
-  "started_at": "2026-10-29T00:23:01.972Z",
-  "completed_at": "2026-10-29T08:41:31.447Z",
-  "updated_at": "2026-11-04T15:13:36.926497395Z",
+  "anomalies": [],
   "code": {
     "lines_added": 592,
     "lines_deleted": 39,
@@ -29,6 +10,8 @@
     "files_changed": 8,
     "sdlc_iterations": 8
   },
+  "completed_at": "2026-10-29T08:41:31.447Z",
+  "schema_version": 6,
   "sessions": [
     {
       "skills": [
@@ -64,5 +47,9 @@
       "anomalies": []
     }
   ],
-  "anomalies": []
+  "started_at": "2026-10-29T00:23:01.972Z",
+  "ticket_id": "AL-59",
+  "ticket_title": "Local Developer Configuration and Explicit Multi-Harness Source Selection",
+  "ticket_type": "feat",
+  "updated_at": "2026-11-04T15:13:36.926497395Z"
 }

@@ -1,24 +1,5 @@
 {
-  "schema_version": 6,
-  "migration": {
-    "schema_version": 6,
-    "status": "completed",
-    "steps_completed": [
-      "git_code_facts",
-      "schema_v6_lean_occurrences",
-      "source_backfill"
-    ],
-    "steps_pending": null,
-    "last_migrated_at": "2026-11-04T15:13:36.926497395Z",
-    "last_migrated_by": "Nilton Duarte",
-    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
-  },
-  "ticket_id": "REV-5",
-  "ticket_title": "Code smell audit and remediation",
-  "ticket_type": "fix",
-  "started_at": "2026-10-31T23:01:20.845Z",
-  "completed_at": "2026-11-01T15:43:09.094Z",
-  "updated_at": "2026-11-04T15:13:36.926497395Z",
+  "anomalies": [],
   "code": {
     "lines_added": 930,
     "lines_deleted": 2550,
@@ -29,6 +10,8 @@
     "files_changed": 53,
     "sdlc_iterations": 38
   },
+  "completed_at": "2026-11-01T15:43:09.094Z",
+  "schema_version": 6,
   "sessions": [
     {
       "skills": [
@@ -916,5 +899,9 @@
       "anomalies": []
     }
   ],
-  "anomalies": []
+  "started_at": "2026-10-31T23:01:20.845Z",
+  "ticket_id": "REV-5",
+  "ticket_title": "Code smell audit and remediation",
+  "ticket_type": "fix",
+  "updated_at": "2026-11-04T15:13:36.926497395Z"
 }

@@ -1,22 +1,7 @@
 {
-  "schema_version": 6,
-  "migration": {
-    "schema_version": 6,
-    "status": "completed",
-    "steps_completed": [
-      "schema_v6_lean_occurrences"
-    ],
-    "steps_pending": [],
-    "last_migrated_at": "",
-    "last_migrated_by": "",
-    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
-  },
-  "ticket_id": "GEN-6",
-  "ticket_title": "Platform Visual Showcase in README with Real Telemetry Artifacts",
-  "ticket_type": "chore",
-  "started_at": "2026-10-23T11:02:23.520000+00:00",
-  "completed_at": "2026-10-23T11:41:15.815000+00:00",
-  "updated_at": "2026-10-27T08:05:14.604111001Z",
+  "anomalies": [
+    {"rule_id": "TOOL_HIGH_FAILURE_RATE", "severity": "WARNING", "context": {"tool_name": "t3-code_preview_navigate", "count": 2, "total_calls": 5, "threshold": "\u003e20%", "failure_rate_pct": 40}}
+  ],
   "code": {
     "lines_added": 36,
     "lines_deleted": 0,
@@ -27,6 +12,8 @@
     "files_changed": 1,
     "sdlc_iterations": 4
   },
+  "completed_at": "2026-10-23T11:41:15.815000+00:00",
+  "schema_version": 6,
   "sessions": [
     {
       "id": "ses_e9792e3dfffeQdAyICK0TWsQFU",
@@ -69,7 +56,9 @@
       ]
     }
   ],
-  "anomalies": [
-    {"rule_id": "TOOL_HIGH_FAILURE_RATE", "severity": "WARNING", "context": {"tool_name": "t3-code_preview_navigate", "count": 2, "total_calls": 5, "threshold": "\u003e20%", "failure_rate_pct": 40}}
-  ]
+  "started_at": "2026-10-23T11:02:23.520000+00:00",
+  "ticket_id": "GEN-6",
+  "ticket_title": "Platform Visual Showcase in README with Real Telemetry Artifacts",
+  "ticket_type": "chore",
+  "updated_at": "2026-10-27T08:05:14.604111001Z"
 }

@@ -1,24 +1,5 @@
 {
-  "schema_version": 6,
-  "migration": {
-    "schema_version": 6,
-    "status": "completed",
-    "steps_completed": [
-      "git_code_facts",
-      "schema_v6_lean_occurrences",
-      "source_backfill"
-    ],
-    "steps_pending": null,
-    "last_migrated_at": "2026-11-04T15:13:36.926497395Z",
-    "last_migrated_by": "Nilton Duarte",
-    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
-  },
-  "ticket_id": "GEN-17",
-  "ticket_title": "Preserve source session personas",
-  "ticket_type": "chore",
-  "started_at": "2026-11-02T21:06:08.218Z",
-  "completed_at": "2026-11-02T22:44:22.048Z",
-  "updated_at": "2026-11-04T15:13:36.926497395Z",
+  "anomalies": [],
   "code": {
     "lines_added": 824,
     "lines_deleted": 176,
@@ -29,6 +10,8 @@
     "files_changed": 34,
     "sdlc_iterations": 18
   },
+  "completed_at": "2026-11-02T22:44:22.048Z",
+  "schema_version": 6,
   "sessions": [
     {
       "skills": [
@@ -506,5 +489,9 @@
       "anomalies": []
     }
   ],
-  "anomalies": []
+  "started_at": "2026-11-02T21:06:08.218Z",
+  "ticket_id": "GEN-17",
+  "ticket_title": "Preserve source session personas",
+  "ticket_type": "chore",
+  "updated_at": "2026-11-04T15:13:36.926497395Z"
 }

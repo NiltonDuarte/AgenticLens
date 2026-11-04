@@ -1,24 +1,7 @@
 {
-  "schema_version": 6,
-  "migration": {
-    "schema_version": 6,
-    "status": "completed",
-    "steps_completed": [
-      "git_code_facts",
-      "schema_v6_lean_occurrences",
-      "source_backfill"
-    ],
-    "steps_pending": null,
-    "last_migrated_at": "2026-11-04T15:13:36.926497395Z",
-    "last_migrated_by": "Nilton Duarte",
-    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
-  },
-  "ticket_id": "AL-68",
-  "ticket_title": "AL-68 breaking-release marker follow-up",
-  "ticket_type": "chore",
-  "started_at": "2026-11-03T17:38:02.433Z",
-  "completed_at": "2026-11-03T17:49:52.259204+00:00",
-  "updated_at": "2026-11-04T15:13:36.926497395Z",
+  "anomalies": [
+    {"rule_id": "TOOL_HIGH_FAILURE_RATE", "severity": "WARNING", "context": {"tool_name": "command", "count": 11, "total_calls": 47, "threshold": "\u003e20%", "failure_rate_pct": 23.4}}
+  ],
   "code": {
     "lines_added": 0,
     "lines_deleted": 0,
@@ -29,6 +12,8 @@
     "files_changed": 0,
     "sdlc_iterations": 4
   },
+  "completed_at": "2026-11-03T17:49:52.259204+00:00",
+  "schema_version": 6,
   "sessions": [
     {
       "skills": [
@@ -63,7 +48,9 @@
       "anomalies": []
     }
   ],
-  "anomalies": [
-    {"rule_id": "TOOL_HIGH_FAILURE_RATE", "severity": "WARNING", "context": {"tool_name": "command", "count": 11, "total_calls": 47, "threshold": "\u003e20%", "failure_rate_pct": 23.4}}
-  ]
+  "started_at": "2026-11-03T17:38:02.433Z",
+  "ticket_id": "AL-68",
+  "ticket_title": "AL-68 breaking-release marker follow-up",
+  "ticket_type": "chore",
+  "updated_at": "2026-11-04T15:13:36.926497395Z"
 }
