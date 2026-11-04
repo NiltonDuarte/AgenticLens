@@ -6,4 +6,6 @@ Verified preservation of all 1,098 sessions and 1,100 invocations, original cost
 
 The release decoder also drops one unsupported legacy AL-55 tool-summary member, content_errors: 1; this exception is explicitly recorded in the verification report. No other recorded fields are removed from these inputs. Shared release pin remains unchanged and needs separate setup/upgrade for ordinary schema-6 operation.
 
-Validation: verified published rc.125 checksum/build identity; migration dry run and actual run; recursive persisted-record comparison; successful CLI scan; repeat migration changes zero files. Required make result recorded in SUMMARY.md.
+Validation: verified published rc.125 checksum/build identity; migration dry run and actual run; recursive persisted-record comparison; successful CLI scan; repeat migration changes zero files. Full make passed, including Go race tests, 824 frontend tests, static/distribution checks and builds.
+
+Final GEN-21 telemetry could not be generated because the local capture registry lacks the worktree mapping table; the explicit temporary --capture-dir attempt also failed. No empty ledger was fabricated or capture state reset. Migration is complete; capture repair and this operation's telemetry remain pending.

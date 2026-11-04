@@ -19,4 +19,15 @@ Installed common wrapper and native cache were missing. Shared pin v2.0.0-rc.111
 
 Private backup and command logs: /tmp/agenticlens-GEN-21.MNbqCGGx/ (machine-local, not portable or durable). CLI .bak files were checked byte-for-byte against originals and moved there. No raw transcripts or backup ledgers added to Git; committed baseline is the durable rollback source.
 
-Required repository make check and delivery: pending below.
+## Final verification and delivery
+
+Reviewed and tested migration commit: 61eb84a. origin/main was already identical to the initial baseline; git merge origin/main --no-edit reported already up to date after the implementation commit. Full make passed (exit 0): Go vet/race tests, release/installation/capture distribution checks, frontend checks and 824 tests across 36 files, frontend asset build and native build. Only the existing Vite bundle-size advisory was reported. Working tree remained clean after make. No application changes or additional tests were needed for this operator operation.
+
+Final session telemetry uses Codex native root 01a1a714-839f-76e2-b7c2-3ec19975a921, inspected directly in its source session_meta record (originator T3 Code, source vscode, exact worktree). No child agents were launched. Source session data is local to this machine; generation does not establish other developers' source availability. Native invocation uses the verified temporary release because the common wrapper is absent and the old configured release is unavailable.
+
+PR publication follows the final telemetry commit. All task-owned paths are committed; historical originals remain available from parent 86bea59.
+
+
+## Final telemetry limitation
+
+Final Codex generation was attempted after verification with explicit source, exact source-verified root ID, literal unique nonces and conventional type chore. Both the configured capture path and a separate explicit temporary --capture-dir failed with: "unsupported capture coordinate layout: worktree mapping table is missing; preserve this state and reset or reinstall capture into a new state directory". No GEN-21 agentic_metrics.json was produced. Existing native Codex session data is present; the installed release's capture admission/installation checks block extraction before a ledger can be published. Matching-revision inspection of backend/cmd/agentic-lens/main.go and capture.go confirms configured-state inspection remains part of this path. No source completeness, empty session ledger or successful telemetry extraction is claimed. No children were launched; historical migrated ledger hashes remained unchanged. Preserve the existing registry; capture repair and subsequent GEN-21 telemetry backfill remain pending on this machine. This does not affect the 119 historical schema migrations.
