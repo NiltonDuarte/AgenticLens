@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "BEH-01",
+      "severity": 6,
+      "issue": "Manual override bypassed a surviving configured-state installation manifest after both anchor and hooks disappeared.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed and reapproved: Retain configured validation when healthy; recover only typed unsupported coordinate layout, then selected installed checks."
+    },
+    {
+      "finding_id": "INST-02",
+      "severity": 6,
+      "issue": "Unsupported-coordinate recovery skipped a surviving manifest at an explicitly configured coordination directory.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed and reapproved: CheckInstalledState at literal configured directory before selected-state recovery; never infer unknown mappings."
+    }
+  ]
+}
