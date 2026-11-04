@@ -16,6 +16,10 @@ import (
 
 const coordinationSchema = `CREATE TABLE IF NOT EXISTS worktree_coordinates(worktree_id INTEGER PRIMARY KEY,directory_name TEXT NOT NULL UNIQUE);`
 
+// ErrUnsupportedCoordinateLayout identifies known unsupported mappings without
+// treating unrelated registry, ownership or database failures as recoverable.
+var ErrUnsupportedCoordinateLayout = errors.New("unsupported capture coordinate layout")
+
 // Existing unreleased layouts without coordinate mappings are unsupported.
 // Never manufacture paths for them or change the database during admission.
 func validateCoordinateSchema(ctx context.Context, db *sql.DB) error {
@@ -24,7 +28,7 @@ func validateCoordinateSchema(ctx context.Context, db *sql.DB) error {
 		return err
 	}
 	if present != 1 {
-		return errors.New("unsupported capture coordinate layout: worktree mapping table is missing; preserve this state and reset or reinstall capture into a new state directory")
+		return fmt.Errorf("%w: worktree mapping table is missing; preserve this state and reset or reinstall capture into a new state directory", ErrUnsupportedCoordinateLayout)
 	}
 	var missing int
 	err := db.QueryRowContext(ctx, `SELECT count(*) FROM (SELECT id FROM worktrees w WHERE directory<>'' AND NOT EXISTS(SELECT 1 FROM worktree_coordinates c WHERE c.worktree_id=w.id) LIMIT 1)`).Scan(&missing)
@@ -32,7 +36,7 @@ func validateCoordinateSchema(ctx context.Context, db *sql.DB) error {
 		return fmt.Errorf("unsupported capture coordinate layout; preserve this state and reset or reinstall capture into a new state directory: %w", err)
 	}
 	if missing != 0 {
-		return errors.New("unsupported capture coordinate layout: registered worktree mapping is missing; preserve this state and reset or reinstall capture into a new state directory")
+		return fmt.Errorf("%w: registered worktree mapping is missing; preserve this state and reset or reinstall capture into a new state directory", ErrUnsupportedCoordinateLayout)
 	}
 	return nil
 }

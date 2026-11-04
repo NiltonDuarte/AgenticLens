@@ -1,0 +1,50 @@
+{
+  "status": "passed",
+  "implementation_commit": "d4a9e6edb7b36247a5c35db15c2e0e64a050d775",
+  "native_version": "v3.0.0-rc.125+86bea59-1-gd4a9e6e",
+  "harness": "codex",
+  "root_session_id": "01a1a79f-d472-7483-a987-98e38cd2f817",
+  "expected_children": [
+    "01a1a7aa-4880-7281-bc24-deb4bcb32122",
+    "01a1a7a9-ae35-7be1-8faa-f718ae1d9bf2",
+    "01a1a7a6-d4ed-7e71-b5fe-c719ec14db8f",
+    "01a1a7b1-080e-7e81-865b-abf5955a9748",
+    "01a1a7b4-a6d9-7543-ac57-29ee08ab2b62",
+    "01a1a7b3-3e89-7bc2-8f7e-1f01fc5dd2b8",
+    "01a1a7ad-fafd-74f1-bb85-6b7a085cce89",
+    "01a1a7b3-16cd-7543-8312-b5ae84d803ad",
+    "01a1a7a0-7b3f-7d60-b901-5f0371bb6f0d",
+    "01a1a7ae-1ce6-7d60-ac3c-bab743327697",
+    "01a1a7af-9717-7f32-97da-a6cfd8c7f834"
+  ],
+  "ledger_sessions": 12,
+  "all_sessions_source": "codex",
+  "source_identity_match": true,
+  "generate_exit": 0,
+  "fresh_override": "/tmp/fix17-capture-c2d8f6b9154ae073",
+  "nonce": "c2d8f6b9154ae073",
+  "configured_layout_before": {
+    "capture_meta_version": 2,
+    "worktrees_present": true,
+    "worktree_coordinates_present": false
+  },
+  "registry_hashes_before": {
+    "/home/niltonduarte/.agenticlens/state/projects/AgenticLens/registry.db": "f5a40dcc567fc3b3063dcfcd86a4b75552d436cbc1fbf68c65f51c0b842cf87d",
+    "/home/niltonduarte/.agenticlens/state/projects/AgenticLens/registry.db-wal": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "registry_hashes_after": {
+    "/home/niltonduarte/.agenticlens/state/projects/AgenticLens/registry.db": "f5a40dcc567fc3b3063dcfcd86a4b75552d436cbc1fbf68c65f51c0b842cf87d",
+    "/home/niltonduarte/.agenticlens/state/projects/AgenticLens/registry.db-wal": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "old_database_and_wal_unchanged": true,
+  "initial_attempt": "Passed coordinate recovery admission but required explicit ticket-title; exit1, no ledger and unchanged old registry. Successful attempt used another fresh directory and explicit title.",
+  "integrated_make_exit": 0,
+  "limits": [
+    "This snapshot excludes subsequent verification/commit/publication/notification calls.",
+    "No prior FIX-17 other-harness owners existed; mixed-owner preservation verified by existing tests.",
+    "Configured automatic capture remains incompatible and is not certified healthy.",
+    "Costs remain unavailable for all12source invocations; root role remains Unknown as extracted.",
+    "New recovery registry has no bound owners; capture observation counts are distinct from12manual Codex extraction sessions.",
+    "GEN-21 generation remains exclusively its owner; no artifact changes made here."
+  ]
+}
