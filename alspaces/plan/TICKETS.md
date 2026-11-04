@@ -6,6 +6,13 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 ## In Progress
 
+- **AL-67**: Review shared telemetry repository interfaces and source injection
+  - **Subsystem**: Architecture / Domain Ports / Source Adapters / Composition / Backfill / Hydration / HTTP and Live Services / Tests
+  - **Status**: In Progress
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: `alspaces/plan/to-do/AL-67 review telemetry repository interfaces and dependency injection.md`
+
 
 
 
@@ -56,12 +63,7 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL-66 configure optional metric output for generate.md`
 
-- **AL-67**: Review shared telemetry repository interfaces and source injection
-  - **Subsystem**: Architecture / Domain Ports / Source Adapters / Composition / Backfill / Hydration / HTTP and Live Services / Tests
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-67 review telemetry repository interfaces and dependency injection.md`
+
 
 
 
