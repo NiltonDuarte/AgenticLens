@@ -49,12 +49,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL-64 investigate and fix active turn duration across codex and opencode.md`
 
-- **AL-66**: Configure optional skills, delegations and anomalies output for generate
-  - **Subsystem**: Configuration / Domain / Source Adapters / CLI / Persistence / Summary / Dashboard Compatibility / Tests
-  - **Status**: In Progress
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-66 configure optional metric output for generate.md`
 
 - **AL-67**: Review shared telemetry repository interfaces and source injection
   - **Subsystem**: Architecture / Domain Ports / Source Adapters / Composition / Backfill / Hydration / HTTP and Live Services / Tests

@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "BEH-01",
+      "severity": 5,
+      "issue": "Disabled anomaly analysis excludes independent tool calls/errors from fleet aggregation and hides their table.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: aggregate independent tool calls/errors before anomaly policy filtering and retain their fleet table."
+    },
+    {
+      "finding_id": "DATA-01",
+      "severity": 8,
+      "issue": "Re-enabling anomalies with an unavailable retained owner writes anomalies:null and produces an unreadable ledger.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: record omitted unrecoverable owner analysis as typed unavailable; canonical reload/repeat and complete-source recovery pass."
+    },
+    {
+      "finding_id": "TEST-01",
+      "severity": 3,
+      "issue": "Mixed-policy tests do not compare exact retained enabled-category values and multiplicity.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Nonblocking suggestion implemented: exact retained enabled values and multiplicity asserted."
+    },
+    {
+      "finding_id": "TEST-02",
+      "severity": 3,
+      "issue": "Off/on test lacks unavailable event-only anomaly and re-enabled managed-summary assertions.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Nonblocking suggestion implemented: event-only recovery limits, managed summary recovery and actual source restoration asserted."
+    },
+    {
+      "finding_id": "DATA-02",
+      "severity": 7,
+      "issue": "Backfill drops disabled policy before marking unrecovered analysis unavailable, writing measured-empty and HEALTHY.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: preserve unavailable owner analysis before backfill policy removal; complete-source authority and saved/read/summary/repeat regressions pass."
+    },
+    {
+      "finding_id": "DATA-03",
+      "severity": 4,
+      "issue": "Claim that backfill summary counts complete refreshed owners as unavailable.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Refuted: exact-count output probe passes and complete-source producers already return recorded arrays before projection; no product patch."
+    }
+  ]
+}

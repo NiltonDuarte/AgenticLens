@@ -2,7 +2,7 @@ h3. Title: AL-66: Configure optional skills, delegations and anomalies output fo
 
 *TARGET*: AgenticLens (Configuration / Domain / Source Adapters / CLI / Persistence / Summary / Dashboard Compatibility / Tests)
 
-*Status*: In Progress
+*Status*: Done
 *Work type*: feat
 *Blocked by*: None
 *Blocks*: None

@@ -1,54 +1,100 @@
-# AL-66 work summary
+# AL-66: Optional generation metric output
 
-## Baseline and authorization
+Implemented independent enabled-by-default settings: `generation.metrics.skills`, `generation.metrics.delegations` and `generation.metrics.anomalies`. Disabled categories are omitted from generated JSON and managed Markdown, including retained history. Core execution metrics, child relationships and enabled history survive. Invalid settings fail before output replacement.
 
-- Request: apply agentic-lens-dev to AL-66, configure optional skills, delegations and anomalies output for generate.
-- Baseline revision: a84adbe5be46c2ef52ede0987a417562715d38e1.
-- Initial Git status: clean; no unrelated changes.
-- Existing isolated ticket branch: AL-66/configure-optional-metric-output.
-- Workspace root: alspaces, from .agenticlens-config.yaml.
-- Phase: iteration 01 implementation authorized with the user-directed delegations naming correction.
+Schema 6 carries optional generation policy and per-owner unavailable-analysis metadata. Reads distinguish disabled, unavailable and recorded-empty evidence; complete source-backed refresh can recover omitted facts. Backfill preserves uncertainty without inheriting current generation settings. Missing original sources cannot recreate intentionally omitted facts. This is a generation output policy, not global source redaction.
+
+## Scope and revision
+
+User approved the contract/plan with the delegations naming correction; no task_links alias. See [contract](CONTRACT.md) and [iteration plan](iterations/01/PLAN.md). Initial Git status was clean. Baseline: a84adbe5be46c2ef52ede0987a417562715d38e1. Implementation commit: 047a98e46df67b8ef69f4afdbdc904500ba43c77. Final reviewed product/test/docs fingerprint: 094daa566b3bce8d327813bcb86a155e7395a96c5cc5a9a88e9e890f238d3683 (55 paths). origin/main integration introduced no changes.
+
+Domain owns typed defaults, immutable projection and availability-aware derivation. Adapters own strict configuration, source policy routing, post-validation retained-DTO omission and canonical serialization. CLI/Markdown/API/UI communicate effective policy and preserve independent tool evidence. Coder and tester: gpt-6.1-sol/high; identities confirmed in source sessions.
+
+## Review and corrections
+
+[Compact findings and dispositions](iterations/01/REVIEW_SUMMARY.json) retain every candidate and all reporting persona/model/effort tuples, including the refuted claim.
+
+| Finding | Severity | Discovering/reporting reviewer | Disposition and fix actor |
+| --- | --- | --- | --- |
+| BEH-01 | 5 | Behavior, gpt-6-luna/medium | Fixed by coder gpt-6.1-sol/high: fleet tool calls/errors and their table survive disabled anomaly analysis. |
+| DATA-01 | 8 | Data integrity, gpt-6.1-sol/high | Fixed by coder gpt-6.1-sol/high: off/on unavailable-owner output is canonical and explicitly unavailable, never null or invented empty. |
+| TEST-01 | 3 | Test effectiveness, gpt-6.1-sol/high | Nonblocking suggestion implemented by tester gpt-6.1-sol/high: exact enabled-history values and multiplicity. |
+| TEST-02 | 3 | Test effectiveness, gpt-6.1-sol/high | Nonblocking suggestion implemented by tester gpt-6.1-sol/high: event-only recovery limits, canonical reload, summary recovery and actual source restoration. |
+| DATA-02 | 7 | Data integrity and architecture, both gpt-6.1-sol/high | Shared independent discovery; fixed by coder gpt-6.1-sol/high: backfill preserves omitted-owner uncertainty before dropping policy. |
+| DATA-03 | 4 | Data integrity and architecture, both gpt-6-luna/medium | Refuted by parent gpt-6.1-sol/high exact-count output probe and complete-source producer trace; no product patch. |
+
+Initial eight discovery cells requested changes for BEH-01/DATA-01. Eight corrected-revision cells verified those fixes but found DATA-02. Final six data/architecture/test cells verified the narrow engine/test correction; behavior approvals under both models carry from the unchanged generate/domain/serialization/API/UI/fleet revision. Review profiles: gpt-6.1-sol/high and gpt-6-luna/medium. All 22 review session model/effort settings matched actual Codex source records.
+
+Verification credit is separate from discovery: parent gpt-6.1-sol/high independently reproduced DATA-01/DATA-02 and refuted DATA-03. Tester gpt-6.1-sol/high produced durable red-before/green-after regressions for all three confirmed defects. Final architecture gpt-6.1-sol/high and test reviewers under both profiles corroborated DATA-03 refutation. Architecture/test gpt-6-luna/medium confirmations of supplied DATA-02 are verification, not new discovery. The two final Luna change-request opinions are retained; their sole remaining DATA-03 hypothesis is refuted by concrete output/source evidence.
+
+Final consolidated verdict: APPROVED by parent gpt-6.1-sol/high after the required integrated gate on implementation commit 047a98e46df67b8ef69f4afdbdc904500ba43c77. No unresolved confirmed finding or material review hypothesis.
 
 ## Verification and limits
 
-No application changes or tests were executed during planning. The AgenticLens executable was unavailable on PATH. During implementation, the parent executed bin/agentic-lens-al66 generate --help successfully: source codex, codex-home, ticket-title and ticket-type options are supported; anomaly help states that disabled policy cannot be overridden by the diagnostic flag. Telemetry is intentionally deferred until the final delivery step.
+`make` passed (exit 0) after clean upstream integration: dependencies, Go vet, TypeScript typecheck/lint, release/installation/capture script checks, full backend race tests, 837 frontend tests in 36 files, canonical frontend build and all configured platform binaries. Parent executed the built host binary and verified each frontend file matches the embedded tree and occurs byte-for-byte in the executable. Git status remained clean after the gate.
 
-## Scope approval and naming correction
+Focused cases cover all eight toggle combinations; first creation and retained same/other-harness owners; v1/v2/Codex/registered generation; strict invalid config/metadata before output changes; actual JSON absence and managed-summary replacement; canonical off/on reload/API/repeat; exact retained facts and genuine missing-to-readable recovery; mixed/all-disabled fleet metrics; missing/partial backfill owners beside complete-empty and recorded nonempty findings.
 
-User approved the proposed implementation scope with delegations terminology. Updated the ticket, [contract](CONTRACT.md) and [plan](iterations/01/PLAN.md): generation.metrics.delegations and generation_policy.delegations replace the proposed task_links spelling. No alias or scope expansion is introduced. Behavior and verification boundaries are preserved.
+Prior full Go race and frontend suite (837 tests), typecheck/lint, canonical build and frontend=embed=standalone asset checks passed. Review probes and affected backfill race also passed. No manual browser geometry, remote CI or release execution is claimed. Raw source transcripts and detailed working review evidence stay outside Git; no historical ticket audit was modified.
 
-## Implementation candidate
+## Telemetry
 
-- Domain: typed enabled-by-default policy, nonmutating category projection and policy-aware anomaly derivation.
-- Adapters: strict shared-project boolean decoding; explicit generation policy through OpenCode v1/v2, Codex and registered capture; additive schema-6 metadata and final serialized omission after retained-owner validation.
-- Presentation: managed Markdown and diagnostic suppression; API/UI preserve per-ledger disabled state and ordinary metrics. Configuration/help/operator references use delegations.
+Final ingestion is intentionally last. Source audit identified the actual Codex root 01a1a7d7-b906-7f32-a4a9-56e8f9f1f176, three native child sessions and 22 T3 review sessions. T3 source metadata records those reviews as independent native roots with no parent ID; preserve that evidence rather than invent parent links. Explicit source IDs are required to include them, followed by the final literal-nonce root refresh. Extraction completeness and actual metrics are verified at finalization below. The built CLI rejects legacy wrapper flags --al-offline/--al-project; supported native generate flags are used from this project directory. Session extraction uses explicit source codex and conventional type feat; original source metadata/hierarchy are preserved. Configured capture coordinates are unsupported by this source build; explicit manual generation uses a fresh task-owned state directory while preserving the existing configured state. No source evidence is synthesized or treated as empty to bypass this operational incompatibility.
 
-Coder (gpt-6.1-sol/high, inherited harness settings) froze production at content fingerprint 625c511a31b60e0ee660756441a8a8b3945b66b3e313bbb4f41933fc37a119f0. Focused domain/adapter checks, frontend typecheck/lint, 824 existing frontend tests, canonical build and standalone execution passed. Parent inspected asset verification: frontend output, embedded tree and executable bytes match. Independent tester verification, eight focus/model review cells and integrated make are pending; no final approval or publication is claimed. Raw working logs remain outside Git under /tmp/AL-66-*; final telemetry remains deferred.
+Telemetry verification passed: schema 6, ticket AL-66, conventional type feat, exactly all 26 audited Codex session IDs, three native parent links, and all 22 T3 review roots retained. Every explicit import preserved all prior accepted sessions; the final nonce 291d579a6c7a selected the actual root plus its three native children. Canonical CLI read/export also passed. There was no ledger at baseline and therefore no pre-existing other-harness history to preserve. Source role metadata is unknown for the root and 22 T3 roots (23 Unknown roles); it is not rewritten to reviewer/orchestrator guesses. Review-role attribution is separately retained above with source-observed model/effort. All 26 invocation costs remain explicitly unavailable, never billed zero. Aggregate active-agent duration is 2h 40m; cache hit97.3%; context ELEVATED.
 
-Independent tester (gpt-6.1-sol/high, inherited harness settings) completed seven test-file updates. Focused Go race checks for CLI/adapters/HTTP/domain/config, 232 API/detail frontend tests, frontend typecheck/lint and diff checks passed. Coverage exercises all eight combinations, real OpenCode v1/v2/Codex and registered capture output, retained owners, strict metadata/config rejection, safe failure, summary replacement, repeat stability and disabled reader behavior. No production defect reported. Product/test candidate is frozen for independent reviews; integrated make remains pending.
+### Workflow Efficiency
+- **Software Development Life Cycle Iterations:** 70
+- **Active Agent Duration:** 2h 40m (excludes user wait time)
+- **Context Window Health:** ELEVATED — Root agent peak 257.0k tokens (57% of 450k healthy ceiling, 0 compactions) | Subagents peak 234.5k (Coder)
+- **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
+- **Subagent Turn Velocity & Thrashing:** 2.3 avg turns/run (peak: 3 turns) | Planner 1.0, Coder 3.0, Tester 3.0
+- **Test-to-Production Code Ratio:** 1.2:1 (+919 test lines / +756 prod lines)
+- **Code Delivered:** +1,675 / -195 lines across 51 code files (excluding docs)
+- **Reasoning Effort:** 70,708 reasoning tokens (20.4% of generated output)
+- **Tool Health & Self-Correction:** 767 tool calls (60 self-corrections, 92.2% success rate)
 
-First discovery review: behavior reviewer gpt-6-luna/medium requested changes (BEH-01, severity 5): disabled anomaly policy skips ordinary tool totals in fleet aggregation and hides the tool table. Parent gpt-6.1-sol/high confirmed the reachable branch ordering by source trace. Correction is pending; candidate remains frozen for all eight independent discovery cells. No consolidated approval.
+### Anomalies & Health Flags
+- **Status:** 3 execution anomalies detected (1 CRITICAL, 2 WARNING).
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (31 cycles) — Subagent roles 'coder' and 'tester' alternated for 31 consecutive cycles.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (251.4k tokens) — Context tokens reached 251.4k, breaching the 250k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (257.0k tokens) — Context tokens reached 257.0k, breaching the 250k warning ceiling.
 
-Data reviewer gpt-6.1-sol/high reported DATA-01 (severity 8): off/on regeneration with an unavailable retained owner successfully saves anomalies:null under enabled policy, then canonical runtime loading rejects it. Parent gpt-6.1-sol/high independently reran the supplied disposable overlay probe; the same rejection reproduced (exit 1). Correction must preserve honest unavailable semantics rather than inventing a successful empty analysis. Scope behavior approval from reviewer-behavior gpt-6.1-sol/high does not refute either confirmed counterexample.
+### Agentic Execution Metrics
 
-Both architecture discovery profiles (gpt-6.1-sol/high and gpt-6-luna/medium) approved their inspected scopes with no reported candidates. The gpt-6-luna/medium data review also approved its inspected paths. These scoped approvals are retained as first-pass evidence; confirmed BEH-01 and DATA-01 remain blocking. Test-effectiveness discovery reviews and corrections are still pending.
+**Contributors:** Nilton Duarte
 
-Test-effectiveness reviewer gpt-6.1-sol/high approved its scope with two severity-3 nonblocking oracle suggestions: TEST-01 exact mixed-policy enabled-history comparisons and TEST-02 unavailable event-only recovery/managed-summary assertions. Accepted for bounded hardening alongside confirmed defect corrections; no product defect is attributed to these suggestions. One discovery profile remains pending.
+#### By Subagent Role
+| Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
+|---|---|---|---|---|---|---|---|---|
+| **planner** | 1 | 88,993 | 7,454 | 1,006,080 | 91.9% | 94.1k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **coder** | 1 | 178,877 | 48,044 | 17,875,712 | 99.0% | 234.5k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **tester** | 1 | 157,421 | 44,308 | 16,560,896 | 99.1% | 231.2k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Unknown** | 23 | 1,910,357 | 176,193 | 47,361,536 | 96.1% | 257.0k | ELEVATED | Unavailable (0 observed, 0 partial, 23 unavailable / 23 invocations) |
+| **Total** | **26** | **2,335,648** | **275,999** | **82,804,224** | **97.3%** | **257.0k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations)** |
 
-All eight discovery profiles completed on the frozen revision. Both test-effectiveness profiles approved their scoped reviews; gpt-6-luna/medium additionally noted a source-restoration coverage limit. Consolidated outcome is CHANGES_REQUESTED due to BEH-01 and DATA-01. The parent reproduction establishes that the off/on terminal saved result was not protected by a canonical read assertion despite first-pass approval prose; correction tests must exercise the actual reader and subsequent generation. Coder and tester are assigned separate production/test ownership for correction within iteration 01. Detailed active evidence remains private at /tmp/AL-66-review-01/.
+#### By Model
+| Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
+|---|---|---|---|---|---|---|
+| **gpt-6-luna** | 11 | 791,883 | 49,017 | 5,371,520 | 87.2% | Unavailable (0 observed, 0 partial, 11 unavailable / 11 invocations) |
+| **gpt-6.1-sol** | 15 | 1,543,765 | 226,982 | 77,432,704 | 98.0% | Unavailable (0 observed, 0 partial, 15 unavailable / 15 invocations) |
+| **Total** | **26** | **2,335,648** | **275,999** | **82,804,224** | **97.3%** | **Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations)** |
 
-Coder gpt-6.1-sol/high corrected BEH-01 (discovered by behavior reviewer gpt-6-luna/medium) and DATA-01 (discovered by data reviewer gpt-6.1-sol/high). BEH-01 now aggregates ordinary tool evidence independently of analysis and retains its fleet table. DATA-01 uses typed owner unavailable metadata with omitted anomaly values, canonical validation, source-backed clearing and honest partial read/summary state. Tester gpt-6.1-sol/high produced durable failing-before evidence for both root causes and strengthened TEST-01/02 oracles. Production correction fingerprint: 30c39cea540d25e04e45bc1813f5ae9c743d5ed2b069b577d3dfb7461f04f7e7. Targeted probe/save/UI checks, typecheck/lint/build and rebuilt standalone embedded-asset matching passed; full tester results and revision-aware re-review remain pending.
-
-Corrected candidate fingerprint d8ceac5208edd21d0236d417a85d0f40a9f2600441d483fe132a8dd8fb4e1418 (54 product/test/docs paths) is frozen for re-review. Tester gpt-6.1-sol/high completed full backend go test -race ./... (all packages pass), full npm test (837 tests), final affected detail UI rerun (53 tests), frontend typecheck/lint and diff checks. Original reviewer DATA probe now passes. Durable before/after tests verify BEH-01 and DATA-01; TEST-01/02 exact-value, event-only recovery-limit and re-enabled summary assertions now pass, including actually missing then restored original source. Coder verified rebuilt frontend=embed=standalone binary assets. No consolidated final approval yet; corrected-revision reviews and integrated make remain pending.
-
-Corrected behavior reviewer gpt-6-luna/medium and data reviewer gpt-6-luna/medium approved BEH-01/DATA-01 corrections. Data reviewer gpt-6.1-sol/high verified both but discovered distinct DATA-02 (severity7) during re-review: explicit backfill recompute drops the generation marker with unavailable sources, serializes omitted owner analysis as recorded-empty and derives HEALTHY. Parent gpt-6.1-sol/high independently reran the isolated actual backfill Execute/save/reload probe and reproduced the failure (exit1). Candidate remains frozen for active re-reviews; DATA-02 is unresolved and blocks delivery.
-
-DATA-02 also independently reproduced by architecture reviewer gpt-6.1-sol/high (local ARCH-01, severity6); consolidated severity remains7 for durable uncertainty loss and false HEALTHY result. Shared discovery credit retains data reviewer gpt-6.1-sol/high and architecture reviewer gpt-6.1-sol/high. Architecture reviewer gpt-6-luna/medium read the supplied DATA-02 record and verified its reachable control flow; this is verification credit rather than discovery. Both architecture re-reviews request changes for that root cause while confirming earlier corrections.
-
-All corrected-01 reviews finished. Test reviewer gpt-6-luna/medium verified supplied DATA-02 and its missing durable regression (verification, not discovery); requested changes until resolved. Narrow production correction assigned only backfill/engine.go and regression ownership only backfill tests. Existing typed unavailable projection will preserve omission before root policy removal; complete refresh retains its authority. No scope change/new iteration.
-
-DATA-02 corrected by coder gpt-6.1-sol/high using the existing pure enabled projection before clearing disabled generation policy. Only backfill/engine.go production changed (six lines). Tester gpt-6.1-sol/high added actual Execute/save/reload/summary/repeat coverage; three cases fail with the old-engine overlay and pass after correction. Original reviewer probe now reports unavailable/UNAVAILABLE; full backfill race package passes14.859s. Final content fingerprint094daa566b3bce8d327813bcb86a155e7395a96c5cc5a9a88e9e890f238d3683 (55paths); exact delta from corrected-01 is engine.go and engine_test.go. Both behavior-profile approvals carry for unchanged generate/domain/serialization/API/UI/fleet content; targeted data/architecture/test re-reviews run under both configured profiles. Final integrated make remains pending.
-
-Final narrow data reviewer gpt-6.1-sol/high verified DATA-02 fixed and independently passed four targeted subcases. Data reviewer gpt-6-luna/medium verified persisted state but raised DATA-03 (severity4 candidate): summary supposedly counts refreshed complete owners unavailable. Parent gpt-6.1-sol/high refuted the reachable claim: disposable overlay strengthens the actual test with exactly one unavailable owner in refreshed fixture summaries; all four cases pass (0.117s). Codex SessionFacts and OpenCode projectSourceFacts prepare complete recorded anomaly arrays before backfill, so fresh owners do not gain unavailable markers at this projection. Preserve DATA-03 and its reporter as refuted; no speculative product patch is made. Remaining test reviewers receive probe/source evidence for verification.
-
-Final narrow architecture reviewer gpt-6.1-sol/high approved DATA-02 correction and independently traced the actual source producers before summary derivation, finding no summary mismatch: complete native owners already carry recorded arrays before projection. This corroborates the parent refutation of DATA-03. Architecture reviewer gpt-6-luna/medium reported the same DATA-03 hypothesis independently; preserve both reporting tuples in its refuted candidate. Only final test-effectiveness profile evidence and integrated make remain pending.
+Capture observation finalized: 2026-11-04T19:59:52.429066354Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 22; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 22; reserved bytes: 17511981. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
+Owner codex/01a1a7f9-7700-7622-b7be-5ee0deddf8cc: current; last successful source read 2026-11-04T19:59:51.801989368Z; accepted source checkpoint 2026-11-04T19:14:34.559Z.
+Owner codex/01a1a81b-8929-7850-a731-884d293f646c: current; last successful source read 2026-11-04T19:59:51.820531537Z; accepted source checkpoint 2026-11-04T19:50:04.032Z.
+Owner codex/01a1a80b-e82b-7381-97e3-90e20302b230: current; last successful source read 2026-11-04T19:59:51.849525919Z; accepted source checkpoint 2026-11-04T19:34:26.93Z.
+Owner codex/01a1a817-a03c-78f3-823e-68d4dc781bea: current; last successful source read 2026-11-04T19:59:51.869662342Z; accepted source checkpoint 2026-11-04T19:46:03.477Z.
+Owner codex/01a1a7fa-f39e-7d33-beea-3c50bd9d0f32: current; last successful source read 2026-11-04T19:59:51.895190798Z; accepted source checkpoint 2026-11-04T19:16:09.818Z.
+Owner codex/01a1a81a-dad9-7293-a4e8-fdda363e5a08: current; last successful source read 2026-11-04T19:59:51.915519843Z; accepted source checkpoint 2026-11-04T19:49:51.855Z.
+Owner codex/01a1a7fa-f009-75b3-a19e-d2b866405f88: current; last successful source read 2026-11-04T19:59:51.938947292Z; accepted source checkpoint 2026-11-04T19:15:30.974Z.
+Owner codex/01a1a817-9d74-7913-b128-995d1fde451f: current; last successful source read 2026-11-04T19:59:51.960389088Z; accepted source checkpoint 2026-11-04T19:46:03.098Z.
+Owner codex/01a1a7fc-8ee0-7a90-9cd9-1f15597d3852: current; last successful source read 2026-11-04T19:59:51.981929092Z; accepted source checkpoint 2026-11-04T19:17:09.842Z.
+Owner codex/01a1a80f-4c04-7ce1-8832-10d464c4f3df: current; last successful source read 2026-11-04T19:59:52.004231328Z; accepted source checkpoint 2026-11-04T19:37:51.383Z.
+Owner codex/01a1a80e-2a8b-7800-8bce-8056e15184da: current; last successful source read 2026-11-04T19:59:52.023506504Z; accepted source checkpoint 2026-11-04T19:36:23.924Z.
+Owner codex/01a1a817-a2ee-7140-bb51-08b783a346d3: current; last successful source read 2026-11-04T19:59:52.042451211Z; accepted source checkpoint 2026-11-04T19:46:52.6Z.
+Owner codex/01a1a819-5494-70f2-b182-f13dbcec3e8a: current; last successful source read 2026-11-04T19:59:52.063071766Z; accepted source checkpoint 2026-11-04T19:48:17.679Z.
+Owner codex/01a1a809-5dd8-7b03-a585-62023a2dfc47: current; last successful source read 2026-11-04T19:59:52.082595574Z; accepted source checkpoint 2026-11-04T19:30:56.636Z.
+Owner codex/01a1a809-5889-7500-881b-ab0cd989dd6e: current; last successful source read 2026-11-04T19:59:52.107767962Z; accepted source checkpoint 2026-11-04T19:31:50.995Z.
+Owner codex/01a1a809-5ae7-7de2-b05c-298d915ddf2f: current; last successful source read 2026-11-04T19:59:52.130987707Z; accepted source checkpoint 2026-11-04T19:30:58.515Z.
+Additional owner freshness details remain in local capture diagnostics.
