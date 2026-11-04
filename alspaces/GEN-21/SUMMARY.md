@@ -1,6 +1,6 @@
 # GEN-21: Update all existing ledgers to schema 6
 
-Current scope includes the user-authorized Codex backfill in iteration 02 and console-only completed migration audits in iteration 03, documented below. Earlier iteration hashes and unchanged-ledger assertions describe their historical checkpoints.
+Current scope includes Codex backfill (iteration 02), console-only completed migration audits (iteration 03), and verified manual capture recovery (iteration 04). GEN-21 telemetry now succeeds locally; earlier blocked-status records and manifests remain historical evidence.
 
 User directly authorized the operator migration on 2026-11-04. Initial Git status was clean at 86bea59 on generated placeholder branch GEN-<NUMBER>/update-ledgers-to-v6. Checked existing workspaces and ticket index; allocated unused GEN-21 and renamed the branch. No matching planning specification or ticket index entry existed.
 
@@ -89,4 +89,75 @@ User explicitly authorized controlling the existing fix thread, merging an eligi
 
 Owner thread: <t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/956094cc-6f16-46af-b1d3-8b38cf841b87>. Independent owner keeps application changes and its telemetry; GEN-21 owns integration and verification in this checkout. Native source session identities are distinct from T3 thread identifiers. Coordination remains part of active GEN-21, not a switch into FIX-17.
 
-Current state: FIX-17 implementation/review is authorized and running. Integration and successful local generation remain pending; the previously reported capture failure is not yet resolved. The source registry and all 119 historical ledgers are preserved. Host completion notification will resume coordination after the owner's run settles; a plan or owner report alone is not a success claim.
+Initial coordination state: FIX-17 implementation/review was authorized and running. Integration and successful local generation remain pending; the previously reported capture failure is not yet resolved. The source registry and all 119 historical ledgers are preserved. Host completion notification will resume coordination after the owner's run settles; a plan or owner report alone is not a success claim.
+
+
+### Reviewed dependency integration and verification
+
+Received and verified FIX-17 reviewed implementation d4a9e6edb7b36247a5c35db15c2e0e64a050d775 against its exact diff fingerprint 6cc147ec3e399a59e5589d7a19df5882cd98571b0e9db848c1cdc73772aeb439. Four capture/CLI/test paths changed. Merged without conflicts as 12048ab58a5066879762f4a321e0df4667d90ebb, preserving GEN-21 console audit and raw-ledger cleanup behavior. Final FIX-17 head 5c9d1458dac66e926b4c386318df0eca3ca9a22d adds only seven files under alspaces/FIX-17; verified zero backend/web/scripts difference from the implementation and merged it as 72e66739a9af4d5e0018c6e0b4987651b26d3f6d. The source-built native from 12048ab remains source-equivalent after this artifact-only merge.
+
+FIX-17 [PR #111](https://github.com/NiltonDuarte/AgenticLens/pull/111) is a non-release dependency. Its eight focused persona/model cells approved; [retained findings](../FIX-17/iterations/01/REVIEW_SUMMARY.json) preserve discovery credit: behavior reviewer gpt-6.1-sol/high found lost configured-manifest validation; architecture reviewer gpt-6.1-sol/high and data reviewer gpt-6-luna/medium jointly found the explicit coordination-path manifest case. Both severity-6 issues were fixed and reapproved. Independent owner source telemetry succeeded for its own root and eleven children, with the old registry unchanged. No FIX-17 sessions are treated as native children of GEN-21.
+
+GEN-21 combined verification: first make failed only the unchanged TestCoordinationDirectoryNamesConcurrentFirstOpenAndStableReopen at shared_state_test.go:353 with SQLITE_BUSY (1.95s). The test, project.go and registry.go are unchanged from 86bea59. Five isolated race-enabled repetitions passed (4.501s). The required full make recheck then passed with exit 0: all Go race packages, all 824 frontend tests, static/distribution/installation checks, synchronized assets and native builds. Both logs are retained privately; the initial failure is not hidden or claimed fixed. Concurrent-initialization contention remains an observed pre-existing test limitation, not a demonstrated regression in coordinate recovery. No production code or test was changed to obtain the recheck.
+
+Parent integration review confirms only the reviewed capture changes plus the earlier GEN-21 implementation; clean automatic merges made no manual product edits. Tests cover invalid/healthy/fresh selected state and preserved configured/selected/discoverable installation checks; native/default/automatic paths remain strict. All 119 historical cleaned ledgers still match their recorded hashes. Old capture database/WAL hashes were saved immediately before final local generation; a separate fresh recovery directory will be selected explicitly without resetting or changing shared config. Source metadata still proves exactly this root and its eleven native children.
+
+### Workflow Efficiency
+- **Software Development Life Cycle Iterations:** 11
+- **Active Agent Duration:** 2h 9m (excludes user wait time)
+- **Context Window Health:** ELEVATED — Root agent peak 276.4k tokens (61% of 450k healthy ceiling, 0 compactions) | Subagents peak 191.9k (Tester)
+- **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
+- **Subagent Turn Velocity & Thrashing:** 2.0 avg turns/run (peak: 3 turns) | Planner 1.0, Coder 3.0, Tester 2.0, Reviewer-architecture 2.0, Reviewer-behavior 2.0, Reviewer-data 2.0, Reviewer-tests 2.0
+- **Test-to-Production Code Ratio:** 1.9:1 (+540 test lines / +290 prod lines)
+- **Code Delivered:** +830 / -138 lines across 11 code files (excluding docs)
+- **Reasoning Effort:** 106,059 reasoning tokens (30.9% of generated output)
+- **Tool Health & Self-Correction:** 498 tool calls (35 self-corrections, 93.0% success rate)
+
+### Anomalies & Health Flags
+- **Status:** 9 execution anomalies detected (5 CRITICAL, 4 WARNING).
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (8 cycles) — Subagent roles 'coder' and 'tester' alternated for 8 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-behavior <-> reviewer-data (10 cycles) — Subagent roles 'reviewer-behavior' and 'reviewer-data' alternated for 10 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-architecture <-> reviewer-data (5 cycles) — Subagent roles 'reviewer-architecture' and 'reviewer-data' alternated for 5 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (13 cycles) — Subagent roles 'coder' and 'tester' alternated for 13 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-data <-> reviewer-architecture (5 cycles) — Subagent roles 'reviewer-data' and 'reviewer-architecture' alternated for 5 consecutive cycles.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+109.6k tokens) — Context tokens surged by 109.6k to 109.6k tokens.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+115.7k tokens) — Context tokens surged by 115.7k to 115.7k tokens.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (250.4k tokens) — Context tokens reached 250.4k, breaching the 250k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (276.4k tokens) — Context tokens reached 276.4k, breaching the 250k warning ceiling.
+
+### Agentic Execution Metrics
+
+**Contributors:** Nilton Duarte
+
+#### By Subagent Role
+| Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
+|---|---|---|---|---|---|---|---|---|
+| **planner** | 1 | 121,105 | 4,205 | 1,127,552 | 90.3% | 123.1k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **coder** | 1 | 82,110 | 22,215 | 7,900,544 | 99.0% | 184.7k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **tester** | 1 | 86,059 | 26,839 | 10,483,968 | 99.2% | 191.9k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Unknown** | 1 | 202,339 | 121,230 | 37,960,064 | 99.5% | 276.4k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **reviewer-architecture** | 2 | 251,135 | 16,065 | 2,778,880 | 91.7% | 121.2k | HEALTHY | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **reviewer-behavior** | 2 | 271,835 | 14,715 | 2,171,904 | 88.9% | 99.6k | HEALTHY | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **reviewer-data** | 2 | 182,672 | 17,283 | 2,899,328 | 94.1% | 102.2k | HEALTHY | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **reviewer-tests** | 2 | 148,667 | 14,667 | 2,424,064 | 94.2% | 102.1k | HEALTHY | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **Total** | **12** | **1,345,922** | **237,219** | **67,746,304** | **98.1%** | **276.4k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 12 unavailable / 12 invocations)** |
+
+#### By Model
+| Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
+|---|---|---|---|---|---|---|
+| **gpt-6-luna** | 4 | 411,148 | 23,391 | 3,203,968 | 88.6% | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
+| **gpt-6.1-sol** | 8 | 934,774 | 213,828 | 64,542,336 | 98.6% | Unavailable (0 observed, 0 partial, 8 unavailable / 8 invocations) |
+| **Total** | **12** | **1,345,922** | **237,219** | **67,746,304** | **98.1%** | **Unavailable (0 observed, 0 partial, 12 unavailable / 12 invocations)** |
+
+Capture observation finalized: 2026-11-04T18:12:43.008730443Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 0; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 0; reserved bytes: 0. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
+
+
+### Verified local recovery and final telemetry
+
+Manual generation passed with exit 0 using the integrated source-built native from 12048ab, explicit Codex source/root 01a1a714-839f-76e2-b7c2-3ec19975a921, literal nonce 8f06d3a1c79e542b and fresh capture directory /home/niltonduarte/.agenticlens/recovery/GEN-21-8f06d3a1c79e542b. An explicit title and conventional type chore were supplied. The command printed the known configured-coordinate warning, then discovered twelve rollouts and wrote the canonical GEN-21 ledger and rendered this summary's metrics table. Native wrapper-only --al-project/--al-offline flags were not passed to the direct executable.
+
+Persisted verification: schema 6, ticket GEN-21/chore, exactly twelve unique Codex sessions equal to this root and all eleven expected source-proven children, twelve source invocations, and no completed migration object. The independent FIX-17 root is not included. Configured registry database and WAL SHA256 hashes are identical before/after; all 119 historical cleanup hashes remain identical. The new FIX-17 ledger arrived through its owner's Git commits; the new GEN-21 ledger was extracted only by this root. [Current telemetry status](iterations/04/TELEMETRY_STATUS.json) records identities, directory, hashes, source/integration revisions, successful generation and remaining limits. Earlier iteration-03 blocked status remains an honest record of the original failure, not the current result.
+
+Source evidence preserves unavailable cost_evidence and the root's empty role value (Unknown). No successful cost reconstruction, callback binding or automatic capture health is claimed. The old configured registry remains incompatible, and the shared release pin still lacks this fix; recovery here uses the explicit healthy directory with the reviewed source-built native. The source-backed snapshot necessarily excludes subsequent verification and publication calls. No raw source transcripts or capture databases are added to Git.
+
+Integration acceptance is satisfied: reviewed fix imported without product edits, full combined make passed after a recorded unchanged-test contention failure, actual GEN-21 generation succeeded with exact source identities, old registry/history stayed unchanged. No release or upstream PR merge is implied by local branch integration. PR #111 hosting checks were still running at the last readiness inspection; its source was integrated into this branch using the user's authorized branch-integration alternative. Final GEN-21 delivery remains PR #110, updated with the resolved capture limitation.

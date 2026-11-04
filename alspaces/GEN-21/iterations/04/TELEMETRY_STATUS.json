@@ -1,0 +1,77 @@
+{
+  "status": "passed",
+  "source_fix_commit": "d4a9e6edb7b36247a5c35db15c2e0e64a050d775",
+  "source_fix_pr": "https://github.com/NiltonDuarte/AgenticLens/pull/111",
+  "source_fix_head": "5c9d1458dac66e926b4c386318df0eca3ca9a22d",
+  "tested_native_commit": "12048ab58a5066879762f4a321e0df4667d90ebb",
+  "artifact_only_integration_commit": "72e66739a9af4d5e0018c6e0b4987651b26d3f6d",
+  "harness": "codex",
+  "root_session_id": "01a1a714-839f-76e2-b7c2-3ec19975a921",
+  "expected_children": [
+    "01a1a72d-6861-7423-901a-62a3ace3b4c2",
+    "01a1a730-4fd9-7230-943b-ea8b407b3246",
+    "01a1a732-15f9-77d1-8735-7af4139bce3c",
+    "01a1a738-e711-7171-bfe1-98d66265bcbd",
+    "01a1a739-10a4-78e2-8cbb-94712f9e3210",
+    "01a1a739-3b4e-7363-acda-2c031518a7b3",
+    "01a1a73a-c0a4-7c21-ba76-9d089c2cadd6",
+    "01a1a73b-bcf0-7ba3-a76b-0804963fbbb0",
+    "01a1a73c-5eb2-74f3-be5c-f0867bc27ccc",
+    "01a1a73d-1a7a-7db3-98f8-e0bbd9451333",
+    "01a1a73e-997a-70a3-96f9-ea01156d9615"
+  ],
+  "actual_session_ids": [
+    "01a1a714-839f-76e2-b7c2-3ec19975a921",
+    "01a1a72d-6861-7423-901a-62a3ace3b4c2",
+    "01a1a730-4fd9-7230-943b-ea8b407b3246",
+    "01a1a732-15f9-77d1-8735-7af4139bce3c",
+    "01a1a738-e711-7171-bfe1-98d66265bcbd",
+    "01a1a739-10a4-78e2-8cbb-94712f9e3210",
+    "01a1a739-3b4e-7363-acda-2c031518a7b3",
+    "01a1a73a-c0a4-7c21-ba76-9d089c2cadd6",
+    "01a1a73b-bcf0-7ba3-a76b-0804963fbbb0",
+    "01a1a73c-5eb2-74f3-be5c-f0867bc27ccc",
+    "01a1a73d-1a7a-7db3-98f8-e0bbd9451333",
+    "01a1a73e-997a-70a3-96f9-ea01156d9615"
+  ],
+  "ledger_sessions": 12,
+  "source_identity_match": true,
+  "schema_version": 6,
+  "ticket_type": "chore",
+  "generate_exit_code": 0,
+  "capture_directory": "/home/niltonduarte/.agenticlens/recovery/GEN-21-8f06d3a1c79e542b",
+  "literal_nonce": "8f06d3a1c79e542b",
+  "registry_hashes_before": {
+    "/home/niltonduarte/.agenticlens/state/projects/AgenticLens/registry.db": "f5a40dcc567fc3b3063dcfcd86a4b75552d436cbc1fbf68c65f51c0b842cf87d",
+    "/home/niltonduarte/.agenticlens/state/projects/AgenticLens/registry.db-wal": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "registry_hashes_after": {
+    "/home/niltonduarte/.agenticlens/state/projects/AgenticLens/registry.db": "f5a40dcc567fc3b3063dcfcd86a4b75552d436cbc1fbf68c65f51c0b842cf87d",
+    "/home/niltonduarte/.agenticlens/state/projects/AgenticLens/registry.db-wal": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "old_registry_unchanged": true,
+  "historical_ledgers_preserved": 119,
+  "all_historical_hashes_match": true,
+  "local_make_recheck_exit_code": 0,
+  "initial_make_observation": {
+    "test": "TestCoordinationDirectoryNamesConcurrentFirstOpenAndStableReopen",
+    "error": "SQLITE_BUSY at shared_state_test.go:353",
+    "source_changed_by_fix": false,
+    "isolated_race_repetitions_passed": 5,
+    "fixed_by_this_ticket": false
+  },
+  "cost_evidence_states": [
+    "unavailable"
+  ],
+  "root_invocation_roles": [
+    ""
+  ],
+  "limits": [
+    "Source-backed manual snapshot excludes later verification/publication calls.",
+    "Configured registry retains unsupported coordinates; no reset or automatic-capture health is claimed.",
+    "Future manual generation here must use the explicit healthy recovery directory and a source-built native containing the fix; shared release pin is unchanged.",
+    "Costs remain unavailable as extracted; no rates, costs or root role were fabricated.",
+    "Fresh registry registration/callback counts are distinct from the twelve manually extracted source sessions.",
+    "Cross-platform builds do not establish remote OS runtime behavior."
+  ]
+}
