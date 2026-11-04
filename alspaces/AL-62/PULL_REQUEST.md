@@ -4,4 +4,4 @@ Codex extraction omitted skill and delegation facts, and ticket-level collection
 
 Current runtime requires v6. Explicit migration drops ownerless legacy skill/task records and reports counts; root compatibility arrays and unresolved-history storage are removed by explicit user request. Partial refresh preserves unavailable owners' already-owned facts. Child references remain explicit when the child is unavailable.
 
-Contract and accepted steering: [CONTRACT.md](CONTRACT.md). Delivery details and verification: [SUMMARY.md](SUMMARY.md).
+Contract and accepted steering: [CONTRACT.md](alspaces/AL-62/CONTRACT.md). Delivery details and verification: [SUMMARY.md](alspaces/AL-62/SUMMARY.md).

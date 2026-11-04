@@ -1,0 +1,253 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "DATA-01",
+      "severity": 8,
+      "issue": "Malformed recognized Codex skill arguments authorize deletion of stored facts.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: malformed native arguments/outer fields mark the owner incomplete; accepted ledger bytes survive."
+    },
+    {
+      "finding_id": "DATA-02",
+      "severity": 7,
+      "issue": "Private registration and pinned-file history gates block valid portable exact-owner refresh.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: valid history and complete exact refresh need no private receipt or pinned-file equality."
+    },
+    {
+      "finding_id": "DATA-03",
+      "severity": 6,
+      "issue": "Missing stored child prevents its complete parent snapshot from refreshing.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: refresh complete owners independently and retain unavailable or malformed children."
+    },
+    {
+      "finding_id": "BEH-01",
+      "severity": 6,
+      "issue": "Distinct native skill attachments collapse into one occurrence.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: merge only one adjacent selection/attachment envelope; retain distinct requests."
+    },
+    {
+      "finding_id": "BEH-02",
+      "severity": 8,
+      "issue": "Freshness guards reject successfully complete equal or older registered source snapshots.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: complete equal/older capture snapshots replace their owner; true partial reads preserve history."
+    },
+    {
+      "finding_id": "BEH-03",
+      "severity": 6,
+      "issue": "Persisted namespace-derived child UUID is later treated as explicit source identity.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: persist raw child references only; resolve namespace-derived UUIDs in read projections."
+    },
+    {
+      "finding_id": "BEH-04",
+      "severity": 5,
+      "issue": "Known child namespace contradiction is missed when the reported namespace has no matches.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: report explicit child namespace contradictions even when no namespace candidate matches."
+    },
+    {
+      "finding_id": "BEH-05",
+      "severity": 7,
+      "issue": "OpenCode capture bypasses owned skill and task fact extraction.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: exact OpenCode v1/v2 capture uses the shared owned occurrence producer."
+    },
+    {
+      "finding_id": "BEH-06",
+      "severity": 4,
+      "issue": "Native selected-skill requests have no produced timeline event despite the activation badge test.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: source-backed activation and occurrence metadata survive save/reload and drive native timeline badges."
+    },
+    {
+      "finding_id": "DATA-04",
+      "severity": 6,
+      "issue": "Opaque Codex tool outputs are promoted to known successful skill or delegation outcomes.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: opaque outputs and child references stay outcome-unknown without positive outcome evidence."
+    },
+    {
+      "finding_id": "BEH-07",
+      "severity": 6,
+      "issue": "Opaque Codex agent_id is preferred over explicit child session_id and used as a navigable session.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: retain opaque agent IDs separately and navigate using explicit or proven session identity."
+    },
+    {
+      "finding_id": "ARCH-01",
+      "severity": 3,
+      "issue": "Current v6 task links may omit explicit unknown/succeeded/failed outcome.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: current task outcomes are required; legacy defaulting is migration-only."
+    },
+    {
+      "finding_id": "BEH-08",
+      "severity": 4,
+      "issue": "Frontend skill badges omit supported load_skill events and native call_id matching after persistence.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: load_skill badges use native call_id independently of event ID representation."
+    },
+    {
+      "finding_id": "DATA-05",
+      "severity": 5,
+      "issue": "Sparse retained occurrence events can erase cached anomalies or fabricate consecutive-failure streaks.",
+      "reporters": [
+        {
+          "persona": "coder",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: mark sparse persisted events partial and preserve full-source anomaly summaries."
+    },
+    {
+      "finding_id": "DATA-06",
+      "severity": 5,
+      "issue": "Ticket anomaly aggregation excludes retained unavailable owners before publication.",
+      "reporters": [
+        {
+          "persona": "tester",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: ticket anomaly aggregation includes every retained owner without rewriting historical DTOs."
+    },
+    {
+      "finding_id": "DATA-07",
+      "severity": 6,
+      "issue": "Capture with no fresh owners bypasses an explicit local source-to-other-ticket association.",
+      "reporters": [
+        {
+          "persona": "tester",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: empty refresh still rejects positive same-store other-ticket bindings; absent receipts stay allowed."
+    }
+  ]
+}

@@ -1,5 +1,7 @@
 # AL-62 iteration 01 verification
 
+Historical iteration 01 working record. The accepted iteration 02 contract, implementation and final SUMMARY.md supersede unfinished progress and compatibility assumptions below.
+
 ## Status and ownership
 
 Test preparation only. Baseline: 19d70574d0e22b00f185c32d048baaf62792743e. The backend and frontend coders are actively editing product code and representation compatibility tests. This inventory is a read-only assessment of the evolving checkout, not a review approval or a stable tested revision.

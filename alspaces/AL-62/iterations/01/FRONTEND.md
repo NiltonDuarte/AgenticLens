@@ -1,5 +1,7 @@
 # AL-62 frontend implementation
 
+Historical iteration 01 working record. The accepted iteration 02 contract, implementation and final SUMMARY.md supersede unfinished progress and compatibility assumptions below.
+
 Baseline: 19d70574d0e22b00f185c32d048baaf62792743e. Scope approved in CONTRACT.md and PLAN.md. Frontend coder exclusively owns web/src and this report; backend implementation is concurrent and preserved.
 
 ## Progress

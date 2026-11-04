@@ -2,7 +2,7 @@ h3. Title: AL-62: Fix Codex skill and delegation facts with granular source owne
 
 *TARGET*: AgenticLens (Domain / Codex and OpenCode Adapters / Schema Migration / Backfill / CLI / API / Dashboard / Tests)
 
-*Status*: In Progress
+*Status*: Done
 *Work type*: fix
 *Blocked by*: None
 *Blocks*: AL-63

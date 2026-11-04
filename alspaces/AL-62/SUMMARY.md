@@ -1,77 +1,129 @@
-# AL-62: Granular skill and delegation facts
+# AL-62: Session-owned skill and delegation facts
 
-## Initial state and request
+## Delivered behavior
 
-- Baseline: 19d70574d0e22b00f185c32d048baaf62792743e.
-- Existing ticket branch: AL-62/fix-codex-skill-delegation-facts.
-- Initial Git status: clean. No unrelated changes observed.
-- Source: user request and AL-62 specification. Deliver granular source ownership and an evidence-backed Codex missing-fact fix together.
-- Planner owns CONTRACT.md and iterations/01/PLAN.md. Parent owns integration, ticket artifacts, approval recording and delivery. Application changes remain unstarted pending approval of the concrete plan.
+- Domain: schema 6 stores skill/task occurrences only in their owning sessions, retaining native item/message/call/turn provenance, repeated occurrences and explicit outcomes. Metrics invocation rows are not occurrence owners.
+- Adapters/CLI: Codex and OpenCode v1/v2 producers feed generate, capture, backfill, persistence and HTTP. Complete exact owners replace independently, including equal/older/empty snapshots; unavailable or malformed owners survive. Safe source-linked occurrence events remain available offline with explicit partial-event coverage.
+- Presentation: nested current API, owner/session filters, fleet/comparison analytics, native timeline badges and child navigation use owned facts. Unknown outcomes never become measured success/failure. Raw agent references remain separate from proven child sessions.
+- User-approved breaking behavior: current reads require schema 6. Explicit migration drops ownerless legacy skill/task records and audits counts. No root compatibility arrays/unresolved-history store remain. No bulk migration or change to live AL-55 data was performed.
 
-## Verification and limits
+## Scope, source evidence and approval
 
-Planning complete; [contract](CONTRACT.md) and [iteration plan](iterations/01/PLAN.md) await explicit user approval. git diff --check passed. No implementation tests or completed review claimed. Bare agentic-lens is unavailable on PATH; use the repository build for command grounding and final extraction. Telemetry is deferred to the final delivery step.
+Initial Git status was clean on AL-62/fix-codex-skill-delegation-facts at baseline 19d70574d0e22b00f185c32d048baaf62792743e. User explicitly approved the initial contract/plan, then directed on 2026-11-04: "Delete ownerless records on migration. Drop backward compatibility." [Current contract](CONTRACT.md) and [iteration 02 delta](iterations/02/PLAN.md) supersede the earlier compatibility proposal; preserve known unavailable-owned history and all remaining guarantees.
 
-## Planning findings
+Read-only real Codex 0.166.0 evidence: AL-55 root 01a19267-636b-7d61-85c6-db8d3d3eba77 and its four children exist; four explicit spawn calls join their outputs by native call ID. Outputs carry task_name references, resolved only by exact parent/agent-path metadata in read projections. Catalogue/path mentions are not skill activation. AL-62 root 01a1a3dc-3627-79c0-8b42-8c9cea2041f3 records direct selection (msg_01a1a3dc-3cc3-71f2-95e8-43f79fb7905f) plus attachment (msg_01a1a3dc-3cd7-7953-8be3-a7c4578f04f1), one activation request with unknown outcome. Detailed privacy-safe references remain in CONTRACT.md; raw transcripts stay outside Git.
 
-Planner (gpt-6.1-sol, high; inherited runtime configuration) reports that schema 5 already includes AL-57 changes, and proposes sequential schema 6 migration. Codex Transcript/ParseRollout currently produces neither SkillFact nor TaskLinkFact, readResponseItem discards function-call arguments, and CLI/capture auxiliary extraction is OpenCode-only. These are source inspection findings, not yet implemented or regression-tested.
+## Consolidated review: APPROVED
 
-Privacy-safe source inspection found the AL-55 root 01a19267-636b-7d61-85c6-db8d3d3eba77 and its four children locally available, recorded with Codex 0.166.0. Four explicit spawn_agent calls are present in the root; child rollouts replay parent history and must not own those inherited calls. Skill catalogue/path mentions do not establish activation; AL-55 skill activation remains unproven. Raw source logs stay outside Git.
+Reviewed source fingerprint 7bc5d7ef512cdc2a031f087c9e6ab1826a2ae6e7c4f25dc1eaccf1a3b7104168 (442 files), committed as 8ec7bca8ff935b4632f489d1da7900183d37aa89. Current origin/main 19d70574 was merged with no changes. Parent consolidated approval follows the passing integrated checks below; no unresolved finding or material evidence gap remains.
 
-Local command grounding: bare agentic-lens --help failed because the executable is absent from PATH. go run ./cmd/agentic-lens --help from backend failed because backend/internal/adapters/web/dist is absent. Implementation must prepare canonical embedded assets before invoking the local CLI.
+Eight initial discovery cells covered behavior, data/failure, architecture and test-effectiveness on BOTH gpt-6.1-sol/high and gpt-6-luna/medium: seven CHANGES_REQUESTED and Luna test-effectiveness APPROVED/no findings. All final required correction cells APPROVED. The data Sol recheck retained DATA-01 as open for malformed outer fields, then approved its corrected source 3 regression. Sol behavior/architecture source 2 approvals carry because source 3 changes only malformed outer/required-field warnings and tests; successful parsing, schema, ownership and UI paths are unchanged. Remaining final cells reviewed source 3 directly. Model/effort reflects accepted explicit/inherited dispatch configuration, not independently inspected source execution metadata.
 
-## Approval and execution
+Permanent compact evidence: [REVIEW_SUMMARY.json](iterations/02/REVIEW_SUMMARY.json). Sixteen canonical findings retain numeric severity and every discovery tuple; verification actors are separate. Initial 12 review findings and 4 integration corrections are fixed:
 
-User explicitly approved CONTRACT.md and iterations/01/PLAN.md on 2026-11-04: "Approve this scope and start implementation." Approval includes schema v6, session-owned facts/native provenance, supported Codex fixes, migration/partial refresh, CLI/API/dashboard and regression verification. Explicit skill requests retain unknown outcomes unless success is recorded. No new acceptance boundaries introduced.
+| Finding and issue | Discovering actor / model / effort | Fix and implementing actor / model / effort |
+| --- | --- | --- |
+| DATA-01: Malformed recognized Codex skill arguments authorize deletion of stored facts. | Data reviewer / gpt-6.1-sol / high | malformed native arguments/outer fields mark the owner incomplete; accepted ledger bytes survive. Backend coder / gpt-6.1-sol / high. |
+| DATA-02: Private registration and pinned-file history gates block valid portable exact-owner refresh. | Data reviewer / gpt-6.1-sol / high; Architecture reviewer / gpt-6.1-sol / high | valid history and complete exact refresh need no private receipt or pinned-file equality. Backend coder / gpt-6.1-sol / high. |
+| DATA-03: Missing stored child prevents its complete parent snapshot from refreshing. | Data reviewer / gpt-6.1-sol / high | refresh complete owners independently and retain unavailable or malformed children. Backend coder / gpt-6.1-sol / high. |
+| BEH-01: Distinct native skill attachments collapse into one occurrence. | Data reviewer / gpt-6.1-sol / high; Behavior reviewer / gpt-6.1-sol / high; Test reviewer / gpt-6.1-sol / high | merge only one adjacent selection/attachment envelope; retain distinct requests. Backend coder / gpt-6.1-sol / high. |
+| BEH-02: Freshness guards reject successfully complete equal or older registered source snapshots. | Behavior reviewer / gpt-6.1-sol / high | complete equal/older capture snapshots replace their owner; true partial reads preserve history. Backend coder / gpt-6.1-sol / high. |
+| BEH-03: Persisted namespace-derived child UUID is later treated as explicit source identity. | Behavior reviewer / gpt-6.1-sol / high; Architecture reviewer / gpt-6.1-sol / high | persist raw child references only; resolve namespace-derived UUIDs in read projections. Backend coder / gpt-6.1-sol / high. |
+| BEH-04: Known child namespace contradiction is missed when the reported namespace has no matches. | Behavior reviewer / gpt-6.1-sol / high | report explicit child namespace contradictions even when no namespace candidate matches. Backend coder / gpt-6.1-sol / high. |
+| BEH-05: OpenCode capture bypasses owned skill and task fact extraction. | Architecture reviewer / gpt-6.1-sol / high | exact OpenCode v1/v2 capture uses the shared owned occurrence producer. Backend coder / gpt-6.1-sol / high. |
+| BEH-06: Native selected-skill requests have no produced timeline event despite the activation badge test. | Test reviewer / gpt-6.1-sol / high | source-backed activation and occurrence metadata survive save/reload and drive native timeline badges. Backend and frontend coders / gpt-6.1-sol / high. |
+| DATA-04: Opaque Codex tool outputs are promoted to known successful skill or delegation outcomes. | Data reviewer / gpt-6-luna / medium | opaque outputs and child references stay outcome-unknown without positive outcome evidence. Backend coder / gpt-6.1-sol / high. |
+| BEH-07: Opaque Codex agent_id is preferred over explicit child session_id and used as a navigable session. | Behavior reviewer / gpt-6-luna / medium | retain opaque agent IDs separately and navigate using explicit or proven session identity. Backend and frontend coders / gpt-6.1-sol / high. |
+| ARCH-01: Current v6 task links may omit explicit unknown/succeeded/failed outcome. | Architecture reviewer / gpt-6-luna / medium | current task outcomes are required; legacy defaulting is migration-only. Backend and frontend coders / gpt-6.1-sol / high. |
+| BEH-08: Frontend skill badges omit supported load_skill events and native call_id matching after persistence. | Orchestrator / gpt-6.1-sol / high | load_skill badges use native call_id independently of event ID representation. Frontend coder / gpt-6.1-sol / high. |
+| DATA-05: Sparse retained occurrence events can erase cached anomalies or fabricate consecutive-failure streaks. | Backend coder / gpt-6.1-sol / high | mark sparse persisted events partial and preserve full-source anomaly summaries. Backend coder / gpt-6.1-sol / high. |
+| DATA-06: Ticket anomaly aggregation excludes retained unavailable owners before publication. | Tester / gpt-6.1-sol / high | ticket anomaly aggregation includes every retained owner without rewriting historical DTOs. Backend coder / gpt-6.1-sol / high. |
+| DATA-07: Capture with no fresh owners bypasses an explicit local source-to-other-ticket association. | Tester / gpt-6.1-sol / high | empty refresh still rejects positive same-store other-ticket bindings; absent receipts stay allowed. Backend coder / gpt-6.1-sol / high. |
 
-Backend coder owns backend/internal/domain, backend/internal/adapters and backend/cmd/agentic-lens plus directly relevant backend schema documentation. Frontend ownership starts after the backend contract is settled. Tester receives test ownership after coders pause. Parent retains integration, ticket artifacts, telemetry and delivery.
+Verification actors: tester and implementation coders (gpt-6.1-sol/high) ran development regressions; each focused reviewer on its configured profile verified corrected scope, including raw CLI and producer-to-HTTP/DOM controls where reported. Parent orchestrator (gpt-6.1-sol/high) integrated, ran make and standalone verification. A supplied-issue verifier is not credited as a discoverer. Detailed active review records are compacted only after this approval.
 
-## Environment preparation
+## Integrated verification
 
-Parent completed npm ci and make web-assets successfully, producing the canonical ignored embedded assets. No dependency manifest or lock changes. origin/main was still baseline 19d70574d0e22b00f185c32d048baaf62792743e when checked after approval; schema 5 remains available for sequential v6 extension.
+- make: PASS on implementation commit above after main integration; Go vet/race across 13 packages, frontend typecheck/lint and 818 tests in 36 suites; Python distribution/installation/capture checks (14+10+15); canonical frontend build and five native platform binaries.
+- Standalone Linux binary version identifies commit 8ec7bca. Its actual HTTP index/JS/CSS exactly match web/dist and the embedded tree, with the source DB absent. JS index-mKcHXOp5.js SHA256 c95a2c84ef6b791e99ec90b79367ffc7479367278cd1922c19f8b711aae71bc9; CSS index-Bn43kjvY.css SHA256 586f9f4eb5f2b1cb7fe64ad5fd0f32a1eaccb14cb4cd36feaaee1105e7352541. Test server stopped.
+- Actual CLI regressions cover unregistered/copy-path history, remote/mixed-source preservation, growth/repeat/complete-empty refresh, complete parent with missing/malformed child, malformed native payload byte preservation, migration drop counts, current-only rejection, safe offline occurrence metadata/anomaly preservation and scoped source/ticket/store/project guards. [TESTING.md](iterations/02/TESTING.md) records commands/oracle transfers and bounded evidence.
+- Initial standalone attempt incorrectly used installed-launcher --al-* flags against raw source binary; help confirmed unsupported flags and the corrected raw server command passed. Final telemetry uses the built source binary from project CWD, with explicit source codex/type fix; no wrapper installation is required.
 
-Frontend coder exclusively owns web/src and iterations/01/FRONTEND.md; backend coder retains backend paths and iterations/01/BACKEND.md. Stable shared shape: session-owned collections; native provenance fields; authoritative explicit outcome; unresolved_facts for ownerless historical rows; ticket-wide API arrays derived from owned facts.
+## Remaining limits and delivery
 
-Review capability discovery confirmed Codex provider offers both configured profiles (gpt-6.1-sol/high and gpt-6-luna/medium), with reasoningEffort as the supported dispatch setting. Review is not started and no approval is claimed.
+Real Codex evidence is grounded in the formats above; other/unrecorded formats are not claimed equivalent. OpenCode v1/v2 coverage uses self-contained SQLite/source fixtures; no live provider session or browser automation was claimed. Remote hosting/CI is not yet verified. Migration intentionally discards ownerless legacy auxiliary data; older ledgers need explicit migration. Existing original source logs and other ticket ledgers remain untouched.
 
-## Iteration 02: drop compatibility and ownerless migration history
+Final telemetry extraction/identity verification and PR publication follow this approval as the final delivery steps.
 
-Source: explicit user steering on 2026-11-04: "Delete ownerless records on migration. Drop backward compatibility." This directly authorizes the changed acceptance boundaries and supersedes iteration01 unresolved-history preservation and compatible runtime/API root projections. Implementation paused for the planner delta.
+## Telemetry coverage boundary
 
-Current schema6 runtime, persisted DTO/API and frontend will use only owned session collections; no root skills/task_links compatibility copies or unresolved_facts. Older decoding remains solely for explicit migration, which drops ownerless auxiliary facts and reports discarded counts. Reliably proven owned facts may relocate. Current reads of old schemas require explicit migration. Preserve unavailable sessions' owned facts, complete-owner replacement, mixed-harness/remote history, legitimate multiplicity, provenance and unknown outcome guarantees. Tests and review now target this accepted delta; prior incompatible assumptions do not establish a regression.
+Independent raw session-meta inventory before final extraction found the AL-62 native Codex root and 13 direct children (14 sessions). Final verification will compare this exact-ID inventory with the generated ledger. Eight T3-delegated Luna review threads have service-level parent bindings, but the available thread metadata does not expose their native Codex session IDs; native parent links for those service threads are not proven. Do not invent sessions, parent links, delegation occurrences or usage to fill this gap. Report native-source-graph coverage separately from the broader service workflow; model execution settings are dispatch-acknowledged, not source-session cost evidence.
 
-Real source evidence added by backend coder: AL-62 Codex0.166.0 root 01a1a3dc-3627-79c0-8b42-8c9cea2041f3 contains direct selection (response_item line17, msg_01a1a3dc-3cc3-71f2-95e8-43f79fb7905f) and structured attachment (line19, msg_01a1a3dc-3cd7-7953-8be3-a7c4578f04f1), one activation-request envelope with unknown outcome. AL-55 spawn outputs contain task_name namespace only; an exact explicit parent_thread_id/agent_path join may resolve UUID, preserving raw child_reference if unavailable. Raw source logs and live ledgers unchanged.
+Lifecycle preparation moved the completed AL-62 specification to plan/done and promoted AL-63 to Ready because its sole AL-62 dependency is satisfied. No AL-63 implementation was performed.
 
-## Iteration 02 implementation evidence (pre-review)
+Final ingestion first failed before extraction because the configured shared local capture registry has an unsupported coordinate layout (missing worktree mapping table). Existing operational state was preserved. Retry uses the documented per-command --capture-dir override with a fresh private temporary registry, normal Codex source home and explicit source/type. No configuration or application change, reset, source-log rewrite or empty ledger workaround was used.
 
-Backend production go build passed. Current persistence/runtime/API use v6 owned facts; explicit migration alone decodes old versions and reports dropped ownerless counts. Source producers retain native occurrence provenance, explicit outcomes and parent-directed child links. Session agent_path permits exact persisted metadata resolution; relationship diagnostics preserve raw source values and disable contradictory navigation. Optional source_ref is a diagnostic locator, not a native identity.
+The per-command override retry also failed because installed-state preflight validates the configured default before the override. A temporary ignored .agenticlens-config.local.yaml now selects the same fresh state path; it was created exclusively with 0600 permissions while preserving the shared configuration SHA and old registry. No hooks exist for this checkout and none were changed. This operational override will be removed after final identity verification; source code/reviewed fingerprint remain unchanged.
 
-Frontend coder completed strict6 owned-only consumers. All810 frontend tests, typecheck, lint and canonical build passed on the initial iteration02 frontend diff. After the bounded child_link_diagnostic correction, all279 affected API/panel/trace tests, typecheck/lint/build passed again; unchanged scope retains earlier evidence. Embedded tree equals web/dist. Standalone binary and integrated make remain pending.
+### Workflow Efficiency
+- **Software Development Life Cycle Iterations:** 5
+- **Active Agent Duration:** 3h 27m (excludes user wait time)
+- **Context Window Health:** CRITICAL — Root agent peak 272.8k tokens (136% of 200k healthy ceiling, 1 compactions) | Subagents peak 449.8k (Tester)
+- **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
+- **Subagent Turn Velocity & Thrashing:** 2.0 avg turns/run (peak: 6 turns) | Planner 2.0, Coder 5.5, Tester 4.0, Reviewer-architecture 1.0, Reviewer-behavior 1.0, Reviewer-data 1.0, Reviewer-tests 1.0
+- **Test-to-Production Code Ratio:** 1.7:1 (+2,617 test lines / +1,537 prod lines)
+- **Code Delivered:** +4,333 / -2,595 lines across 104 code files (excluding docs)
+- **Reasoning Effort:** 204,210 reasoning tokens (28.7% of generated output)
+- **Tool Health & Self-Correction:** 1,250 tool calls (77 self-corrections, 93.8% success rate)
 
-Tester (gpt-6.1-sol/high, inherited configuration) discovered a real CC-02 publication failure: valid committed other-source owned facts were rejected solely because local private registration/provenance was unavailable. Backend coder (gpt-6.1-sol/high, inherited configuration) fixed the committed-history authorization path while retaining actual repository and competing-association checks. Command-level growth/empty regression uses explicit exact session extraction; separate capture tests retain incomplete-checkpoint safeguards. Final publication regression result still pending. No independent review approval yet.
+### Anomalies & Health Flags
+- **Status:** 16 execution anomalies detected (9 CRITICAL, 7 WARNING).
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.1k tokens) — Context tokens reached 200.1k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (201.0k tokens) — Context tokens reached 201.0k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.9k tokens) — Context tokens reached 200.9k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.2k tokens) — Context tokens reached 200.2k, breaching the 200k critical ceiling.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (25 cycles) — Subagent roles 'coder' and 'tester' alternated for 25 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (53 cycles) — Subagent roles 'coder' and 'tester' alternated for 53 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-behavior <-> reviewer-architecture (5 cycles) — Subagent roles 'reviewer-behavior' and 'reviewer-architecture' alternated for 5 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (66 cycles) — Subagent roles 'coder' and 'tester' alternated for 66 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-data <-> reviewer-tests (10 cycles) — Subagent roles 'reviewer-data' and 'reviewer-tests' alternated for 10 consecutive cycles.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.5k tokens) — Context tokens reached 160.5k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.9k tokens) — Context tokens reached 160.9k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.0k tokens) — Context tokens reached 160.0k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.5k tokens) — Context tokens reached 160.5k, breaching the 160k warning ceiling.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-architecture <-> reviewer-behavior (3 cycles) — Subagent roles 'reviewer-architecture' and 'reviewer-behavior' alternated for 3 consecutive cycles.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (4 cycles) — Subagent roles 'coder' and 'tester' alternated for 4 consecutive cycles.
+- [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: command (3 consecutive errors) — Tool 'command' encountered 3 consecutive execution failures.
 
-Test ownership was divided explicitly to avoid concurrent writes: frontend coder owns all web/src; backend coder owns adapter root tests except schemas_test.go/repository_test.go, HTTP tests and backfill/migration_runner_test.go; tester retains remaining backend tests. Existing obsolete root receipt and implicit legacy runtime assertions are superseded by user-approved owned-only behavior; retained assertions move to current owned snapshot/migration/security recipients documented in TESTING.md.
+### Agentic Execution Metrics
 
-## Frozen review candidate
+**Contributors:** Nilton Duarte
 
-Initial iteration02 review candidate: baseline19d70574d0e22b00f185c32d048baaf62792743e with frozen439-file source/documentation/fixture manifest fingerprint03ea89d54fdb06f626e8b2ded7f9e76aefe727d70352b41f84fd2c4865d84a7b. Product/test edits paused. Behavior, data/failure and architecture first passes launched independently as gpt-6.1-sol/high, with test-effectiveness and paired gpt-6-luna/medium cells queued for capacity-limited waves. Detailed review evidence lives in private temporary storage until consolidation; no final approval claimed.
+#### By Subagent Role
+| Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
+|---|---|---|---|---|---|---|---|---|
+| **planner** | 1 | 82,284 | 11,263 | 1,216,896 | 93.7% | 90.7k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **coder** | 2 | 561,141 | 195,414 | 90,487,680 | 99.4% | 407.2k | CRITICAL (204%) | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **tester** | 1 | 360,570 | 120,614 | 77,260,160 | 99.5% | 449.8k | CRITICAL (225%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Unknown** | 1 | 495,353 | 108,338 | 49,773,568 | 99.0% | 272.8k | BLOATED (136%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **reviewer-architecture** | 2 | 208,687 | 16,771 | 4,379,648 | 95.5% | 134.4k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **reviewer-behavior** | 2 | 218,900 | 17,747 | 3,742,592 | 94.5% | 131.3k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **reviewer-data** | 3 | 221,581 | 22,073 | 3,466,624 | 94.0% | 117.4k | ELEVATED | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
+| **reviewer-tests** | 2 | 205,025 | 14,798 | 2,609,664 | 92.7% | 108.6k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **Total** | **14** | **2,353,541** | **507,018** | **232,936,832** | **99.0%** | **449.8k** | **CRITICAL** | **Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations)** |
 
-## Initial review outcome and corrections
+#### By Model
+| Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
+|---|---|---|---|---|---|---|
+| **gpt-6.1-sol** | 14 | 2,353,541 | 507,018 | 232,936,832 | 99.0% | Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations) |
+| **Total** | **14** | **2,353,541** | **507,018** | **232,936,832** | **99.0%** | **Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations)** |
 
-All eight independent discovery cells completed on fingerprint03ea89d54fdb06f626e8b2ded7f9e76aefe727d70352b41f84fd2c4865d84a7b: behavior/data/architecture/test-effectiveness each on gpt-6.1-sol/high and gpt-6-luna/medium. Explicit dispatch settings accepted; source execution metadata not independently inspected. Seven requested changes, test-effectiveness gpt-6-luna/medium reported no blocking findings. Parent consolidated twelve contract defects; no publication approval.
+Capture observation finalized: 2026-11-04T02:14:32.236614681Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 0; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 0; reserved bytes: 0. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
 
-Correction ownership: backend coder all backend production/docs; tester all backend tests/fixtures; frontend coder all web source/tests. Frozen source lifted only after every discovery pass completed. Shared attribution retained: distinct skill requests coalescing discovered by data, behavior and test-effectiveness reviewers (all gpt-6.1-sol/high); derived child UUID persistence discovered by behavior and architecture (gpt-6.1-sol/high); private history gates discovered by data and architecture (gpt-6.1-sol/high). Other concrete reporter/finding tuples and dispositions remain in private active-review records pending final compact retention.
+### Final telemetry verification
 
-Confirmed changes cover malformed native skill decoding/completeness; receipt/pinned-file gates; per-owner backfill despite missing children; skill envelope multiplicity; complete equal/older capture authority; derived child identity storage; child namespace contradictions; omitted OpenCode capture producer; native activation timeline producer shape; unknown opaque outcomes (data gpt-6-luna/medium); opaque agent identity vs child session (behavior gpt-6-luna/medium); and required current task outcome (architecture gpt-6-luna/medium). All are corrections to existing acceptance, not a new scope iteration.
+Successful built-source CLI generation used literal nonce 7ea42988833fd9d0, --source codex, --ticket-type fix and the temporary private capture selection. It wrote schema 6 raw facts and rendered the metrics above. Independent metadata inventory and saved ledger match exactly: 14 native sessions (root+13 direct children), every native source/parent identity preserved, one root skill activation request with native primary message/attachment evidence and unknown outcome, and 13 distinct native delegation call IDs/child references. No root skills/task_links/unresolved store or namespace-inferred persisted child UUID exists. AL-62 had no prior ledger/other-harness sessions to preserve; actual cross-machine mixed-harness preservation is proven by the separate command regressions.
 
-## Corrected candidate and re-review
+A standalone isolated API run reloaded this ACTUAL generated ledger with source DB absent: all 13 child-session links resolve from stored native metadata; fleet skill_adoption contains exactly one invocation, 0 known outcomes, 1 unknown outcome. Current API contains only session-owned arrays, and GET left ledger bytes unchanged. Test server stopped. This is real source->generation->save/reload->API/fleet verification, distinct from synthetic regression fixtures and without changing live AL-55 data. Frontend source-shaped fixture/DOM tests cover the rendered consumers.
 
-Corrected442-file fingerprint904aded9b1c80a32f3638b5310260a10b63d161d13a23bd1cffc68660780177f frozen for revision-aware paired re-review. Initial twelve review findings addressed. Subsequent source-integration checks also corrected native load_skill/call_id badge joins (orchestrator gpt-6.1-sol/high), sparse-event anomaly completeness (backend coder gpt-6.1-sol/high), full-ledger retained-owner anomaly aggregation and positive scoped cross-ticket association with empty refresh (tester gpt-6.1-sol/high). No unresolved test failure after affected reruns.
-
-Backend final broad non-race run: all internal packages passed; CLI72.883s had one actual positive-association guard failure, corrected and all affected guard/portability/store/project cases passed3.297s. Frontend full815 passed before the final native-call/partial-label change, then all310 affected tests, typecheck/lint/build and embedded-tree equivalence passed. Required integrated make/race/fullCLI/standalone checks remain pending. Re-review and final approval are not yet claimed.
-
-## Integration-ready review result
-
-All required correction focus/profile cells APPROVED: behavior, data/failure, architecture and test-effectiveness each on gpt-6.1-sol/high and gpt-6-luna/medium. Final source fingerprint7bc5d7ef512cdc2a031f087c9e6ab1826a2ae6e7c4f25dc1eaccf1a3b7104168 (442 files). Residual DATA-01 outer-type case was CHANGES_REQUESTED at the prior checkpoint, then fixed and APPROVED by data gpt-6.1-sol/high and gpt-6-luna/medium; actual raw CLI whole-byte preservation and complete-empty controls passed. Sol behavior/architecture approvals carry from candidate2 because candidate3 changed only Codex malformed outer/required-field error warnings and tests; successful source, schema, ownership and consumer paths are unchanged. Other final cells reviewed candidate3 directly.
-
-No unresolved finding or material review gap remains. Parent final consolidated approval is pending the required integrated make/race/full-suite and standalone asset gates. Implementation commit precedes upstream integration; telemetry remains deferred.
+The temporary ignored local overlay was removed and shared configuration SHA 6271a7a0e1b8b6482df6ea0dabfef4aa7624f16ea396c6dbf1e780c5551a7339 remained unchanged. Old shared operational state was not reset or upgraded. Source-native metrics cover only the 14 proven sessions, not the 8 unbound T3 service review sessions described above. Source costs are unavailable; no estimates or measured zeros were invented. Rendered native metrics: 3h 27m active agent duration, 99.0% cache hits, 449.8k peak context/CRITICAL. Capture collection counters describe the separate registered collection, not the 14 exact native rollout reads.
