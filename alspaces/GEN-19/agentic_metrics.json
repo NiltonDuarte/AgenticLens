@@ -4,11 +4,13 @@
     "schema_version": 6,
     "status": "completed",
     "steps_completed": [
-      "schema_v6_lean_occurrences"
+      "git_code_facts",
+      "schema_v6_lean_occurrences",
+      "source_backfill"
     ],
-    "steps_pending": [],
-    "last_migrated_at": "",
-    "last_migrated_by": "",
+    "steps_pending": null,
+    "last_migrated_at": "2026-11-04T15:13:36.926497395Z",
+    "last_migrated_by": "Nilton Duarte",
     "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
   },
   "ticket_id": "GEN-19",
@@ -16,7 +18,7 @@
   "ticket_type": "chore",
   "started_at": "2026-11-03T11:43:47.113Z",
   "completed_at": "2026-11-03T17:08:21.310496+00:00",
-  "updated_at": "2026-11-03T17:08:21.310496+00:00",
+  "updated_at": "2026-11-04T15:13:36.926497395Z",
   "code": {
     "lines_added": 0,
     "lines_deleted": 0,
@@ -29,6 +31,211 @@
   },
   "sessions": [
     {
+      "delegations": [
+        {
+          "agent_type": "planner",
+          "description": "plan_rc_target",
+          "invoked_at": "2026-11-03T11:44:45.065Z",
+          "child_session_id": "01a1a139-d823-7f11-95a3-96b932500bec"
+        },
+        {
+          "agent_type": "coder",
+          "description": "implement_rc",
+          "invoked_at": "2026-11-03T11:48:07.569Z",
+          "child_session_id": "01a1a13c-ef28-7633-b940-b47542ad139e"
+        },
+        {
+          "agent_type": "tester",
+          "description": "test_rc",
+          "invoked_at": "2026-11-03T11:48:42.220Z",
+          "child_session_id": "01a1a13d-768b-7170-80c6-b6960ab0ff0f"
+        },
+        {
+          "agent_type": "reviewer-behavior",
+          "description": "review_behavior_sol",
+          "invoked_at": "2026-11-03T11:53:57.524Z",
+          "child_session_id": "01a1a142-4622-7d62-858b-cc2e8b455918"
+        },
+        {
+          "agent_type": "reviewer-behavior",
+          "description": "review_behavior_luna",
+          "invoked_at": "2026-11-03T11:54:02.281Z",
+          "child_session_id": "01a1a142-58bc-7e80-bce8-5a4f4d43624b"
+        },
+        {
+          "agent_type": "reviewer-data",
+          "description": "review_data_sol",
+          "invoked_at": "2026-11-03T11:54:07.970Z",
+          "child_session_id": "01a1a142-6ef4-7601-87eb-9b7367b7cbcb"
+        },
+        {
+          "agent_type": "reviewer-data",
+          "description": "review_data_luna",
+          "invoked_at": "2026-11-03T11:54:56.551Z",
+          "child_session_id": "01a1a143-2cb5-7b43-9fed-c40661119149"
+        },
+        {
+          "agent_type": "reviewer-architecture",
+          "description": "review_architecture_sol",
+          "invoked_at": "2026-11-03T11:55:53.284Z",
+          "child_session_id": "01a1a144-0a54-7973-bad8-f10a9a0d6dcc"
+        },
+        {
+          "agent_type": "reviewer-architecture",
+          "description": "review_architecture_luna",
+          "invoked_at": "2026-11-03T11:56:31.145Z"
+        },
+        {
+          "agent_type": "reviewer-architecture",
+          "description": "review_architecture_luna",
+          "invoked_at": "2026-11-03T11:57:20.841Z",
+          "child_session_id": "01a1a145-6058-7cd2-8b9c-5957490b9344"
+        },
+        {
+          "agent_type": "reviewer-tests",
+          "description": "review_tests_sol",
+          "invoked_at": "2026-11-03T11:57:27.984Z",
+          "child_session_id": "01a1a145-7c41-7961-bea4-deb640ee8225"
+        },
+        {
+          "agent_type": "reviewer-tests",
+          "description": "review_tests_luna",
+          "invoked_at": "2026-11-03T11:58:27.413Z",
+          "child_session_id": "01a1a146-6465-7830-b499-62cb0c5da3b2"
+        },
+        {
+          "agent_type": "reviewer-behavior",
+          "description": "rc2_behavior_sol",
+          "invoked_at": "2026-11-03T14:07:47.873Z",
+          "child_session_id": "01a1a1bc-ceae-77e2-9759-3980600434ea"
+        },
+        {
+          "agent_type": "reviewer-behavior",
+          "description": "rc2_behavior_luna",
+          "invoked_at": "2026-11-03T14:07:53.786Z",
+          "child_session_id": "01a1a1bc-e5cd-7c62-80b0-51635e7c67e1"
+        },
+        {
+          "agent_type": "reviewer-data",
+          "description": "rc2_data_sol",
+          "invoked_at": "2026-11-03T14:07:59.845Z",
+          "child_session_id": "01a1a1bc-fd71-7600-93a8-9f170ad45874"
+        },
+        {
+          "agent_type": "reviewer-data",
+          "description": "rc2_data_luna",
+          "invoked_at": "2026-11-03T14:09:04.055Z",
+          "child_session_id": "01a1a1bd-f847-7661-9dfa-80701e61365a"
+        },
+        {
+          "agent_type": "reviewer-architecture",
+          "description": "rc2_architecture_sol",
+          "invoked_at": "2026-11-03T14:09:54.666Z",
+          "child_session_id": "01a1a1be-bdfb-7e72-b3e8-c79a47038309"
+        },
+        {
+          "agent_type": "reviewer-architecture",
+          "description": "rc2_architecture_luna",
+          "invoked_at": "2026-11-03T14:10:37.400Z",
+          "child_session_id": "01a1a1bf-64e6-7852-adc1-6fb9caf3f701"
+        },
+        {
+          "agent_type": "reviewer-tests",
+          "description": "rc2_tests_sol",
+          "invoked_at": "2026-11-03T14:10:46.844Z",
+          "child_session_id": "01a1a1bf-89cd-75f0-b26c-6f49abd60cc4"
+        },
+        {
+          "agent_type": "reviewer-tests",
+          "description": "rc2_tests_luna",
+          "invoked_at": "2026-11-03T14:11:47.696Z",
+          "child_session_id": "01a1a1c0-777f-7e82-a972-0c278aec09d3"
+        },
+        {
+          "agent_type": "reviewer-tests",
+          "description": "rc2_tests_sol_recheck",
+          "invoked_at": "2026-11-03T14:18:21.290Z",
+          "child_session_id": "01a1a1c6-78fc-78d1-9490-a88f43147a50"
+        },
+        {
+          "agent_type": "reviewer-tests",
+          "description": "rc2_tests_luna_recheck",
+          "invoked_at": "2026-11-03T14:18:27.075Z",
+          "child_session_id": "01a1a1c6-8f97-7e60-948e-8282f19a1435"
+        },
+        {
+          "agent_type": "reviewer-tests",
+          "description": "rc2_tests_sol_final",
+          "invoked_at": "2026-11-03T14:23:02.209Z",
+          "child_session_id": "01a1a1ca-c24f-70e2-8b45-289ba3e53d48"
+        },
+        {
+          "agent_type": "reviewer-tests",
+          "description": "rc2_tests_luna_final",
+          "invoked_at": "2026-11-03T14:23:08.461Z",
+          "child_session_id": "01a1a1ca-dabc-72b0-82c0-6663c485bb90"
+        },
+        {
+          "agent_type": "reviewer-behavior",
+          "description": "rc3_behavior_sol",
+          "invoked_at": "2026-11-03T16:46:04.106Z",
+          "child_session_id": "01a1a24d-b56f-7fd2-a56a-ddb618ec4f3d"
+        },
+        {
+          "agent_type": "reviewer-behavior",
+          "description": "rc3_behavior_luna",
+          "invoked_at": "2026-11-03T16:46:09.180Z",
+          "child_session_id": "01a1a24d-c92f-7251-9b0d-5d6125535d98"
+        },
+        {
+          "agent_type": "reviewer-data",
+          "description": "rc3_data_sol",
+          "invoked_at": "2026-11-03T16:46:15.605Z",
+          "child_session_id": "01a1a24d-e245-7e72-8790-277a73481505"
+        },
+        {
+          "agent_type": "reviewer-data",
+          "description": "rc3_data_luna",
+          "invoked_at": "2026-11-03T16:50:14.097Z",
+          "child_session_id": "01a1a251-85e3-7192-baa1-2295ab2e3643"
+        },
+        {
+          "agent_type": "reviewer-architecture",
+          "description": "rc3_architecture_sol",
+          "invoked_at": "2026-11-03T16:50:21.147Z",
+          "child_session_id": "01a1a251-a16b-7630-8071-f5c22cc48f29"
+        },
+        {
+          "agent_type": "reviewer-architecture",
+          "description": "rc3_architecture_luna",
+          "invoked_at": "2026-11-03T16:50:27.882Z",
+          "child_session_id": "01a1a251-bbbe-7821-9e73-9f3575e80229"
+        },
+        {
+          "agent_type": "reviewer-behavior",
+          "description": "rc3_behavior_sol_recheck",
+          "invoked_at": "2026-11-03T16:51:11.978Z",
+          "child_session_id": "01a1a252-67fc-7ff1-b0f5-e8257f0e1611"
+        },
+        {
+          "agent_type": "reviewer-behavior",
+          "description": "rc3_behavior_luna_recheck",
+          "invoked_at": "2026-11-03T16:51:17.848Z",
+          "child_session_id": "01a1a252-7ee9-7940-8db9-843333124bd2"
+        },
+        {
+          "agent_type": "reviewer-tests",
+          "description": "rc3_tests_sol",
+          "invoked_at": "2026-11-03T16:51:25.898Z",
+          "child_session_id": "01a1a252-9e5c-7dc1-9a5b-52b763acb2b9"
+        },
+        {
+          "agent_type": "reviewer-tests",
+          "description": "rc3_tests_luna",
+          "invoked_at": "2026-11-03T16:52:24.651Z",
+          "child_session_id": "01a1a253-83d9-73a3-a930-dfd540589c8e"
+        }
+      ],
       "id": "01a1a138-f579-7481-80b2-39db0205af01",
       "source": "codex",
       "user": "Nilton Duarte",
@@ -37,10 +244,10 @@
           "role": "",
           "model": "gpt-6.1-sol",
           "started_at": "2026-11-03T11:43:48.634Z",
-          "completed_at": "2026-11-03T17:08:08.855Z",
-          "active_duration_seconds": 3883,
+          "completed_at": "2026-11-03T17:11:23.653Z",
+          "active_duration_seconds": 5761,
           "turns": 7,
-          "tokens": {"input": 670235, "output": 137931, "cache_read": 39180800, "reasoning": 81788, "peak_context": 316664},
+          "tokens": {"input": 673275, "output": 142773, "cache_read": 41737600, "reasoning": 85328, "peak_context": 322738},
           "cost_usd": null,
           "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
@@ -48,7 +255,7 @@
         }
       ],
       "tools": [
-        {"name": "command", "calls": 139, "errors": 8},
+        {"name": "command", "calls": 147, "errors": 8},
         {"name": "followup_task", "calls": 8, "errors": 0},
         {"name": "list_agents", "calls": 1, "errors": 0},
         {"name": "request_user_input_async", "calls": 2, "errors": 0},
@@ -58,7 +265,15 @@
       ],
       "anomalies": [
         {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 5, "context_tokens": 200876, "threshold": "200000"}},
-        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 5, "context_tokens": 160192, "threshold": "160000"}}
+        {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "CRITICAL", "context": {"role": "coder", "secondary_role": "tester", "count": 15, "threshold": "5"}},
+        {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "CRITICAL", "context": {"role": "reviewer-behavior", "secondary_role": "reviewer-data", "count": 10, "threshold": "5"}},
+        {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "CRITICAL", "context": {"role": "reviewer-architecture", "secondary_role": "reviewer-tests", "count": 7, "threshold": "5"}},
+        {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "CRITICAL", "context": {"role": "coder", "secondary_role": "tester", "count": 6, "threshold": "5"}},
+        {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "CRITICAL", "context": {"role": "reviewer-behavior", "secondary_role": "reviewer-data", "count": 6, "threshold": "5"}},
+        {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "CRITICAL", "context": {"role": "reviewer-behavior", "secondary_role": "reviewer-tests", "count": 7, "threshold": "5"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 5, "context_tokens": 160192, "threshold": "160000"}},
+        {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "WARNING", "context": {"role": "reviewer-architecture", "secondary_role": "reviewer-tests", "count": 4, "threshold": "3"}},
+        {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "WARNING", "context": {"role": "reviewer-behavior", "secondary_role": "reviewer-data", "count": 4, "threshold": "3"}}
       ]
     },
     {
@@ -911,14 +1126,5 @@
       "anomalies": []
     }
   ],
-  "anomalies": [
-    {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "CRITICAL", "context": {"role": "coder", "secondary_role": "tester", "count": 15, "threshold": "5"}},
-    {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "CRITICAL", "context": {"role": "reviewer-behavior", "secondary_role": "reviewer-data", "count": 10, "threshold": "5"}},
-    {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "CRITICAL", "context": {"role": "reviewer-architecture", "secondary_role": "reviewer-tests", "count": 7, "threshold": "5"}},
-    {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "CRITICAL", "context": {"role": "coder", "secondary_role": "tester", "count": 6, "threshold": "5"}},
-    {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "CRITICAL", "context": {"role": "reviewer-behavior", "secondary_role": "reviewer-data", "count": 6, "threshold": "5"}},
-    {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "CRITICAL", "context": {"role": "reviewer-behavior", "secondary_role": "reviewer-tests", "count": 7, "threshold": "5"}},
-    {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "WARNING", "context": {"role": "reviewer-architecture", "secondary_role": "reviewer-tests", "count": 4, "threshold": "3"}},
-    {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "WARNING", "context": {"role": "reviewer-behavior", "secondary_role": "reviewer-data", "count": 4, "threshold": "3"}}
-  ]
+  "anomalies": []
 }

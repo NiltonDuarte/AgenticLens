@@ -10,18 +10,18 @@ Telemetry expectation: Codex root 01a191dd-ac31-7c20-8c67-9448774a8767 confirmed
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 2
-- **Active Agent Duration:** 0m 0s (excludes user wait time)
-- **Context Window Health:** HEALTHY — Root agent peak 72.8k tokens (36% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
-- **Role Effort Distribution (Subagents):** N/A
+- **Active Agent Duration:** 4m 52s (excludes user wait time)
+- **Context Window Health:** HEALTHY — Root agent peak 74.7k tokens (17% of 450k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 549 reasoning tokens (7.5% of generated output)
-- **Tool Health & Self-Correction:** 24 tool calls (6 self-corrections, 75.0% success rate)
+- **Reasoning Effort:** 549 reasoning tokens (6.9% of generated output)
+- **Tool Health & Self-Correction:** 26 tool calls (6 self-corrections, 76.9% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 1 execution anomaly detected (1 WARNING).
-- [WARNING] **TOOL_HIGH_FAILURE_RATE**: High tool failure rate: command (25.0%) — Tool 'command' failed 6 out of 24 calls (25.0% failure rate, threshold: >20%).
+- [WARNING] **TOOL_HIGH_FAILURE_RATE**: High tool failure rate: command (23.1%) — Tool 'command' failed 6 out of 26 calls (23.1% failure rate, threshold: >20%).
 
 ### Agentic Execution Metrics
 
@@ -30,13 +30,11 @@ Telemetry expectation: Codex root 01a191dd-ac31-7c20-8c67-9448774a8767 confirmed
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 69,725 | 6,732 | 1,241,984 | 94.7% | 72.8k | HEALTHY | $0.00 |
-| **Total** | **1** | **69,725** | **6,732** | **1,241,984** | **94.7%** | **72.8k** | **HEALTHY** | **$0.00** |
+| **Unknown** | 1 | 71,401 | 7,365 | 1,610,880 | 95.8% | 74.7k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **1** | **71,401** | **7,365** | **1,610,880** | **95.8%** | **74.7k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-astra** | 1 | 69,725 | 6,732 | 1,241,984 | 94.7% | $0.00 |
-| **Total** | **1** | **69,725** | **6,732** | **1,241,984** | **94.7%** | **$0.00** |
-
-Final telemetry: extraction discovered exactly the expected Codex root and no child threads. Ledger session identity verified; no prior sessions existed to preserve. Extraction covers the session through the final generation command; subsequent delivery calls are outside that snapshot.
+| **gpt-6-astra** | 1 | 71,401 | 7,365 | 1,610,880 | 95.8% | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **1** | **71,401** | **7,365** | **1,610,880** | **95.8%** | **Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations)** |

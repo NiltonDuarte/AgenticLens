@@ -19,29 +19,31 @@
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 8
-- **Active Agent Duration:** 5m 59s (excludes user wait time)
-- **Context Window Health:** ELEVATED — Root agent peak 124.1k tokens (62% of 200k healthy ceiling, 0 compactions) | Subagents peak 102.7k (Planner)
-- **Role Effort Distribution (Subagents):** N/A
+- **Active Agent Duration:** 12m 26s (excludes user wait time)
+- **Context Window Health:** HEALTHY — Root agent peak 143.7k tokens (32% of 450k healthy ceiling, 0 compactions) | Subagents peak 102.7k (Planner)
+- **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 2.0 avg turns/run (peak: 2 turns) | Planner 2.0
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 19,034 reasoning tokens (38.4% of generated output)
-- **Tool Health & Self-Correction:** 35 tool calls (4 self-corrections, 88.6% success rate)
+- **Reasoning Effort:** 24,243 reasoning tokens (39.3% of generated output)
+- **Tool Health & Self-Correction:** 44 tool calls (4 self-corrections, 90.9% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** No execution anomalies detected (clean session).
 
 ### Agentic Execution Metrics
 
+**Contributors:** Nilton Duarte
+
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **planner** | 1 | 13,357 | 4,369 | 781,568 | 98.3% | 102.7k | ELEVATED | $0.00 |
-| **rootagent** | 1 | 133,204 | 26,140 | 4,868,736 | 97.3% | 124.1k | ELEVATED | $0.00 |
-| **Total** | **2** | **146,561** | **30,509** | **5,650,304** | **97.5%** | **124.1k** | **ELEVATED** | **$0.00** |
+| **planner** | 1 | 13,357 | 4,369 | 781,568 | 98.3% | 102.7k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Unknown** | 1 | 154,775 | 33,087 | 6,274,816 | 97.6% | 143.7k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **2** | **168,132** | **37,456** | **7,056,384** | **97.7%** | **143.7k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-luna** | 2 | 146,561 | 30,509 | 5,650,304 | 97.5% | $0.00 |
-| **Total** | **2** | **146,561** | **30,509** | **5,650,304** | **97.5%** | **$0.00** |
+| **gpt-6-luna** | 2 | 168,132 | 37,456 | 7,056,384 | 97.7% | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **Total** | **2** | **168,132** | **37,456** | **7,056,384** | **97.7%** | **Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations)** |

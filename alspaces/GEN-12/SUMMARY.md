@@ -24,14 +24,14 @@ All available ledgers and selected local rollout files were indexed, with target
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 2
-- **Active Agent Duration:** 0m 0s (excludes user wait time)
-- **Context Window Health:** HEALTHY — Root agent peak 87.5k tokens (44% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
-- **Role Effort Distribution (Subagents):** N/A
+- **Active Agent Duration:** 6m 1s (excludes user wait time)
+- **Context Window Health:** HEALTHY — Root agent peak 89.1k tokens (20% of 450k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 1,392 reasoning tokens (10.5% of generated output)
-- **Tool Health & Self-Correction:** 25 tool calls (2 self-corrections, 92.0% success rate)
+- **Reasoning Effort:** 1,408 reasoning tokens (10.2% of generated output)
+- **Tool Health & Self-Correction:** 27 tool calls (2 self-corrections, 92.6% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** No execution anomalies detected (clean session).
@@ -43,11 +43,11 @@ All available ledgers and selected local rollout files were indexed, with target
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 79,986 | 11,924 | 1,561,984 | 95.1% | 87.5k | HEALTHY | $0.00 |
-| **Total** | **1** | **79,986** | **11,924** | **1,561,984** | **95.1%** | **87.5k** | **HEALTHY** | **$0.00** |
+| **Unknown** | 1 | 81,298 | 12,408 | 1,915,776 | 95.9% | 89.1k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **1** | **81,298** | **12,408** | **1,915,776** | **95.9%** | **89.1k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-astra** | 1 | 79,986 | 11,924 | 1,561,984 | 95.1% | $0.00 |
-| **Total** | **1** | **79,986** | **11,924** | **1,561,984** | **95.1%** | **$0.00** |
+| **gpt-6-astra** | 1 | 81,298 | 12,408 | 1,915,776 | 95.9% | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **1** | **81,298** | **12,408** | **1,915,776** | **95.9%** | **Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations)** |

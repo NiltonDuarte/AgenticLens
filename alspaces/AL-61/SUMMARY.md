@@ -46,18 +46,19 @@ Extraction verified: all 10 ledger sessions exactly match actual rollout IDs (on
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 15
-- **Active Agent Duration:** 50m 0s (excludes user wait time)
-- **Context Window Health:** ELEVATED — Root agent peak 171.5k tokens (86% of 200k healthy ceiling, 0 compactions) | Subagents peak 85.6k (Tester)
+- **Active Agent Duration:** 55m 31s (excludes user wait time)
+- **Context Window Health:** HEALTHY — Root agent peak 174.6k tokens (39% of 450k healthy ceiling, 0 compactions) | Subagents peak 85.6k (Tester)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 1.3 avg turns/run (peak: 2 turns) | Planner 1.0, Coder 2.0, Tester 2.0, Reviewer 1.2
 - **Test-to-Production Code Ratio:** 1.6:1 (+99 test lines / +61 prod lines)
 - **Code Delivered:** +160 / -17 lines across 10 code files (excluding docs)
-- **Reasoning Effort:** 14,402 reasoning tokens (16.2% of generated output)
-- **Tool Health & Self-Correction:** 280 tool calls (10 self-corrections, 96.4% success rate)
+- **Reasoning Effort:** 14,612 reasoning tokens (16.1% of generated output)
+- **Tool Health & Self-Correction:** 283 tool calls (10 self-corrections, 96.5% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 2 execution anomalies detected (2 WARNING).
+- **Status:** 3 execution anomalies detected (3 WARNING).
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (167.9k tokens) — Context tokens reached 167.9k, breaching the 160k warning ceiling.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (4 cycles) — Subagent roles 'coder' and 'tester' alternated for 4 consecutive cycles.
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (4 cycles) — Subagent roles 'coder' and 'tester' alternated for 4 consecutive cycles.
 
 ### Agentic Execution Metrics
@@ -71,24 +72,12 @@ Extraction verified: all 10 ledger sessions exactly match actual rollout IDs (on
 | **coder** | 1 | 107,633 | 4,773 | 1,608,704 | 93.7% | 82.4k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **tester** | 1 | 133,651 | 5,973 | 2,389,760 | 94.7% | 85.6k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **reviewer** | 6 | 322,214 | 25,585 | 3,238,272 | 91.0% | 73.0k | HEALTHY | Unavailable (0 observed, 0 partial, 6 unavailable / 6 invocations) |
-| **Unknown** | 1 | 324,199 | 35,625 | 17,511,040 | 98.2% | 171.5k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **10** | **947,290** | **74,631** | **25,107,968** | **96.4%** | **171.5k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 10 unavailable / 10 invocations)** |
+| **Unknown** | 1 | 326,900 | 37,143 | 18,891,776 | 98.3% | 174.6k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **10** | **949,991** | **76,149** | **26,488,704** | **96.5%** | **174.6k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 10 unavailable / 10 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
 | **gpt-6-luna** | 3 | 149,766 | 11,049 | 1,546,752 | 91.2% | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
-| **gpt-6.1-sol** | 7 | 797,524 | 63,582 | 23,561,216 | 96.7% | Unavailable (0 observed, 0 partial, 7 unavailable / 7 invocations) |
-| **Total** | **10** | **947,290** | **74,631** | **25,107,968** | **96.4%** | **Unavailable (0 observed, 0 partial, 10 unavailable / 10 invocations)** |
-
-Capture observation finalized: 2026-11-03T20:54:51.702505655Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 10; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 10; reserved bytes: 8286616. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
-Owner codex/01a1a281-613f-7fd1-8918-2d7847fc3f1a: current; last successful source read 2026-11-03T20:54:51.51457495Z; accepted source checkpoint 2026-11-03T17:48:52.427Z.
-Owner codex/01a1a283-9c15-74c1-be26-747e97958030: current; last successful source read 2026-11-03T20:54:51.53198463Z; accepted source checkpoint 2026-11-03T17:47:53.186Z.
-Owner codex/01a1a286-ea21-7a93-bd0d-68d3b710ecd1: current; last successful source read 2026-11-03T20:54:51.548655962Z; accepted source checkpoint 2026-11-03T17:50:33.779Z.
-Owner codex/01a1a283-af6c-7162-a103-9548bdbdfac0: current; last successful source read 2026-11-03T20:54:51.563469329Z; accepted source checkpoint 2026-11-03T17:45:54.888Z.
-Owner codex/01a1a27f-5e46-7410-b31a-be93ba0401ac: current; last successful source read 2026-11-03T20:54:51.578532868Z; accepted source checkpoint 2026-11-03T17:41:36.094Z.
-Owner codex/01a1a2f6-5912-7890-ad62-caf9bf7887d6: current; last successful source read 2026-11-03T20:54:51.595495433Z; accepted source checkpoint 2026-11-03T19:54:58.997Z.
-Owner codex/01a1a280-bd1e-7340-929a-59edc79a5430: current; last successful source read 2026-11-03T20:54:51.61072646Z; accepted source checkpoint 2026-11-03T17:48:22.431Z.
-Owner codex/01a1a27f-326c-79b1-bb26-5c71de3375b1: current; last successful source read 2026-11-03T20:54:51.661503451Z; accepted source checkpoint 2026-11-03T20:54:51.485Z.
-Owner codex/01a1a287-0eb8-7692-925d-df396eaa7fa3: current; last successful source read 2026-11-03T20:54:51.676352276Z; accepted source checkpoint 2026-11-03T17:51:22.099Z.
-Owner codex/01a1a2f6-46fd-7db0-8868-88e1e6163abd: current; last successful source read 2026-11-03T20:54:51.695098973Z; accepted source checkpoint 2026-11-03T19:51:49.885Z.
+| **gpt-6.1-sol** | 7 | 800,225 | 65,100 | 24,941,952 | 96.9% | Unavailable (0 observed, 0 partial, 7 unavailable / 7 invocations) |
+| **Total** | **10** | **949,991** | **76,149** | **26,488,704** | **96.5%** | **Unavailable (0 observed, 0 partial, 10 unavailable / 10 invocations)** |

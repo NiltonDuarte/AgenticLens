@@ -46,18 +46,19 @@ Source inspection identifies root 01a1a395-ebd9-7820-8931-b7c6a91a5906 and nativ
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 20
-- **Active Agent Duration:** 57m 40s (excludes user wait time)
-- **Context Window Health:** ELEVATED — Root agent peak 196.0k tokens (98% of 200k healthy ceiling, 0 compactions) | Subagents peak 148.2k (Coder)
+- **Active Agent Duration:** 1h 2m (excludes user wait time)
+- **Context Window Health:** HEALTHY — Root agent peak 199.9k tokens (44% of 450k healthy ceiling, 0 compactions) | Subagents peak 148.2k (Coder)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 3.0 avg turns/run (peak: 4 turns) | Planner 2.0, Coder 3.0, Tester 4.0
 - **Test-to-Production Code Ratio:** 1.3:1 (+410 test lines / +308 prod lines)
 - **Code Delivered:** +718 / -57 lines across 17 code files (excluding docs)
-- **Reasoning Effort:** 31,103 reasoning tokens (24.6% of generated output)
-- **Tool Health & Self-Correction:** 252 tool calls (19 self-corrections, 92.5% success rate)
+- **Reasoning Effort:** 32,101 reasoning tokens (24.9% of generated output)
+- **Tool Health & Self-Correction:** 257 tool calls (20 self-corrections, 92.2% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 2 execution anomalies detected (2 WARNING).
+- **Status:** 3 execution anomalies detected (3 WARNING).
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.7k tokens) — Context tokens reached 160.7k, breaching the 160k warning ceiling.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (4 cycles) — Subagent roles 'coder' and 'tester' alternated for 4 consecutive cycles.
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (4 cycles) — Subagent roles 'coder' and 'tester' alternated for 4 consecutive cycles.
 
 ### Agentic Execution Metrics
@@ -68,15 +69,13 @@ Source inspection identifies root 01a1a395-ebd9-7820-8931-b7c6a91a5906 and nativ
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
 | **planner** | 1 | 134,214 | 6,216 | 795,904 | 85.6% | 81.2k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **coder** | 1 | 240,708 | 24,173 | 5,870,464 | 96.1% | 148.2k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **tester** | 1 | 82,971 | 9,319 | 3,637,504 | 97.8% | 136.3k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Unknown** | 1 | 169,767 | 55,430 | 21,152,896 | 99.2% | 196.0k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **4** | **627,660** | **95,138** | **31,456,768** | **98.0%** | **196.0k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations)** |
+| **coder** | 1 | 240,708 | 24,173 | 5,870,464 | 96.1% | 148.2k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **tester** | 1 | 82,971 | 9,319 | 3,637,504 | 97.8% | 136.3k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Unknown** | 1 | 172,421 | 57,224 | 23,136,896 | 99.3% | 199.9k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **4** | **630,314** | **96,932** | **33,440,768** | **98.2%** | **199.9k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 4 | 627,660 | 95,138 | 31,456,768 | 98.0% | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
-| **Total** | **4** | **627,660** | **95,138** | **31,456,768** | **98.0%** | **Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations)** |
-
-Capture observation finalized: 2026-11-03T23:43:02.706110585Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 0; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 0; reserved bytes: 0. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
+| **gpt-6.1-sol** | 4 | 630,314 | 96,932 | 33,440,768 | 98.2% | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
+| **Total** | **4** | **630,314** | **96,932** | **33,440,768** | **98.2%** | **Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations)** |

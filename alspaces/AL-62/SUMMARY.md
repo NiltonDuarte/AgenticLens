@@ -69,17 +69,24 @@ The per-command override retry also failed because installed-state preflight val
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 30
-- **Active Agent Duration:** 11h 38m (excludes user wait time)
+- **Active Agent Duration:** 11h 57m (excludes user wait time)
 - **Context Window Health:** BLOATED — Root agent peak 450.9k tokens (100% of 450k healthy ceiling, 2 compactions) | Subagents peak 449.8k (Tester)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 2.4 avg turns/run (peak: 11 turns) | Planner 2.0, Coder 6.0, Tester 4.5, Reviewer-architecture 1.3, Reviewer-behavior 1.5, Reviewer-data 1.2, Reviewer-tests 1.5
 - **Test-to-Production Code Ratio:** 1.8:1 (+5,167 test lines / +2,824 prod lines)
 - **Code Delivered:** +8,347 / -7,614 lines across 142 code files (excluding docs)
-- **Reasoning Effort:** 451,343 reasoning tokens (29.0% of generated output)
-- **Tool Health & Self-Correction:** 2,641 tool calls (190 self-corrections, 92.8% success rate)
+- **Reasoning Effort:** 452,338 reasoning tokens (29.0% of generated output)
+- **Tool Health & Self-Correction:** 2,653 tool calls (190 self-corrections, 92.8% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 25 execution anomalies detected (9 CRITICAL, 16 WARNING).
+- **Status:** 35 execution anomalies detected (16 CRITICAL, 19 WARNING).
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.1k tokens) — Context tokens reached 200.1k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.5k tokens) — Context tokens reached 200.5k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (201.5k tokens) — Context tokens reached 201.5k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (201.0k tokens) — Context tokens reached 201.0k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.9k tokens) — Context tokens reached 200.9k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (203.9k tokens) — Context tokens reached 203.9k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.2k tokens) — Context tokens reached 200.2k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (450.9k tokens) — Context tokens reached 450.9k, breaching the 450k critical ceiling.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (25 cycles) — Subagent roles 'coder' and 'tester' alternated for 25 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (53 cycles) — Subagent roles 'coder' and 'tester' alternated for 53 consecutive cycles.
@@ -89,12 +96,13 @@ The per-command override retry also failed because installed-state preflight val
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (89 cycles) — Subagent roles 'coder' and 'tester' alternated for 89 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (21 cycles) — Subagent roles 'coder' and 'tester' alternated for 21 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (13 cycles) — Subagent roles 'coder' and 'tester' alternated for 13 consecutive cycles.
-- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (256.1k tokens) — Context tokens reached 256.1k, breaching the 250k warning ceiling.
-- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (254.0k tokens) — Context tokens reached 254.0k, breaching the 250k warning ceiling.
-- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (252.4k tokens) — Context tokens reached 252.4k, breaching the 250k warning ceiling.
-- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (251.9k tokens) — Context tokens reached 251.9k, breaching the 250k warning ceiling.
-- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (252.2k tokens) — Context tokens reached 252.2k, breaching the 250k warning ceiling.
-- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (251.4k tokens) — Context tokens reached 251.4k, breaching the 250k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.5k tokens) — Context tokens reached 160.5k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.9k tokens) — Context tokens reached 160.9k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.8k tokens) — Context tokens reached 161.8k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (165.4k tokens) — Context tokens reached 165.4k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.0k tokens) — Context tokens reached 160.0k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.5k tokens) — Context tokens reached 160.5k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.9k tokens) — Context tokens reached 160.9k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (407.2k tokens) — Context tokens reached 407.2k, breaching the 250k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (286.2k tokens) — Context tokens reached 286.2k, breaching the 250k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (449.8k tokens) — Context tokens reached 449.8k, breaching the 250k warning ceiling.
@@ -104,7 +112,9 @@ The per-command override retry also failed because installed-state preflight val
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (4 cycles) — Subagent roles 'coder' and 'tester' alternated for 4 consecutive cycles.
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-behavior <-> reviewer-data (3 cycles) — Subagent roles 'reviewer-behavior' and 'reviewer-data' alternated for 3 consecutive cycles.
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-data <-> reviewer-architecture (3 cycles) — Subagent roles 'reviewer-data' and 'reviewer-architecture' alternated for 3 consecutive cycles.
+- [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: command (3 consecutive errors) — Tool 'command' encountered 3 consecutive execution failures.
 - [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: command (4 consecutive errors) — Tool 'command' encountered 4 consecutive execution failures.
+- [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: command (3 consecutive errors) — Tool 'command' encountered 3 consecutive execution failures.
 
 ### Agentic Execution Metrics
 
@@ -116,20 +126,18 @@ The per-command override retry also failed because installed-state preflight val
 | **planner** | 2 | 178,358 | 22,508 | 2,278,144 | 92.7% | 90.7k | HEALTHY | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
 | **coder** | 4 | 1,536,083 | 370,047 | 163,611,776 | 99.1% | 407.2k | ELEVATED | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
 | **tester** | 2 | 704,923 | 235,279 | 130,530,944 | 99.5% | 449.8k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **Unknown** | 1 | 1,400,006 | 318,395 | 156,879,360 | 99.1% | 450.9k | BLOATED (100%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Unknown** | 1 | 1,403,888 | 320,867 | 160,258,944 | 99.1% | 450.9k | BLOATED (100%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **reviewer-architecture** | 4 | 531,977 | 33,670 | 9,234,944 | 94.6% | 156.0k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
 | **reviewer-behavior** | 4 | 493,866 | 39,350 | 9,060,480 | 94.8% | 157.1k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
 | **reviewer-data** | 5 | 564,014 | 42,221 | 8,661,376 | 93.9% | 149.6k | HEALTHY | Unavailable (0 observed, 0 partial, 5 unavailable / 5 invocations) |
 | **reviewer-tests** | 4 | 480,495 | 43,049 | 8,571,776 | 94.7% | 156.4k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
-| **Total** | **26** | **5,889,722** | **1,104,519** | **488,828,800** | **98.8%** | **450.9k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations)** |
+| **Total** | **26** | **5,893,604** | **1,106,991** | **492,208,384** | **98.8%** | **450.9k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 26 | 5,889,722 | 1,104,519 | 488,828,800 | 98.8% | Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations) |
-| **Total** | **26** | **5,889,722** | **1,104,519** | **488,828,800** | **98.8%** | **Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations)** |
-
-Capture observation finalized: 2026-11-04T14:25:25.497525546Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 0; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 0; reserved bytes: 0. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
+| **gpt-6.1-sol** | 26 | 5,893,604 | 1,106,991 | 492,208,384 | 98.8% | Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations) |
+| **Total** | **26** | **5,893,604** | **1,106,991** | **492,208,384** | **98.8%** | **Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations)** |
 
 ## Iteration 03: planning-only follow-up
 

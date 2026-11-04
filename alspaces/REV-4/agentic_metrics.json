@@ -4,11 +4,13 @@
     "schema_version": 6,
     "status": "completed",
     "steps_completed": [
-      "schema_v6_lean_occurrences"
+      "git_code_facts",
+      "schema_v6_lean_occurrences",
+      "source_backfill"
     ],
-    "steps_pending": [],
-    "last_migrated_at": "",
-    "last_migrated_by": "",
+    "steps_pending": null,
+    "last_migrated_at": "2026-11-04T15:13:36.926497395Z",
+    "last_migrated_by": "Nilton Duarte",
     "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
   },
   "ticket_id": "REV-4",
@@ -16,7 +18,7 @@
   "ticket_type": "docs",
   "started_at": "2026-10-31T02:17:54.850Z",
   "completed_at": "2026-10-31T11:01:14.411Z",
-  "updated_at": "2026-10-31T11:01:16.939415+00:00",
+  "updated_at": "2026-11-04T15:13:36.926497395Z",
   "code": {
     "lines_added": 243,
     "lines_deleted": 2673,
@@ -29,26 +31,106 @@
   },
   "sessions": [
     {
+      "delegations": [
+        {
+          "agent_type": "planner",
+          "description": "rev4_plan",
+          "invoked_at": "2026-10-31T02:27:13.541Z",
+          "child_session_id": "01a18fc8-5651-7aa1-97e2-2220b041caf3"
+        },
+        {
+          "agent_type": "coder",
+          "description": "rev4_code",
+          "invoked_at": "2026-10-31T02:28:31.775Z",
+          "child_session_id": "01a18fc9-87b9-7162-ac5a-d743dc053c74"
+        },
+        {
+          "agent_type": "tester",
+          "description": "rev4_test",
+          "invoked_at": "2026-10-31T02:29:18.769Z",
+          "child_session_id": "01a18fca-3f66-7ea3-bcdc-54d48035993d"
+        },
+        {
+          "agent_type": "reviewer",
+          "description": "rev4_review",
+          "invoked_at": "2026-10-31T02:31:10.281Z",
+          "child_session_id": "01a18fcb-f2ed-7cd1-b537-206be96aa032"
+        },
+        {
+          "agent_type": "planner",
+          "description": "rev4_plan04",
+          "invoked_at": "2026-10-31T09:19:11.467Z",
+          "child_session_id": "01a19141-80ac-70d2-b36f-20215ed21c6c"
+        },
+        {
+          "agent_type": "coder",
+          "description": "rev4_code04",
+          "invoked_at": "2026-10-31T09:21:23.354Z",
+          "child_session_id": "01a19143-83ea-76e3-85a6-644d5f54a18f"
+        },
+        {
+          "agent_type": "tester",
+          "description": "rev4_test04",
+          "invoked_at": "2026-10-31T09:22:08.013Z",
+          "child_session_id": "01a19144-323d-7591-ba07-8c8988377e93"
+        },
+        {
+          "agent_type": "reviewer",
+          "description": "rev4_review04",
+          "invoked_at": "2026-10-31T09:23:39.633Z",
+          "child_session_id": "01a19145-9845-7cd1-b7cc-22048fa90cfd"
+        },
+        {
+          "agent_type": "planner",
+          "description": "rev4_plan05",
+          "invoked_at": "2026-10-31T09:42:37.404Z",
+          "child_session_id": "01a19156-f4ae-78e0-ac78-db9f009eb204"
+        },
+        {
+          "agent_type": "coder",
+          "description": "rev4_code05_a",
+          "invoked_at": "2026-10-31T09:52:51.539Z",
+          "child_session_id": "01a19160-536d-7353-a8e3-06d46ace1943"
+        },
+        {
+          "agent_type": "coder",
+          "description": "rev4_code05_b",
+          "invoked_at": "2026-10-31T09:53:02.021Z",
+          "child_session_id": "01a19160-7c60-7d63-a307-a9361004db75"
+        },
+        {
+          "agent_type": "tester",
+          "description": "rev4_test05",
+          "invoked_at": "2026-10-31T09:55:23.012Z",
+          "child_session_id": "01a19162-a314-71b3-8129-474e3427e18c"
+        },
+        {
+          "agent_type": "reviewer",
+          "description": "rev4_review05",
+          "invoked_at": "2026-10-31T09:58:32.400Z",
+          "child_session_id": "01a19165-86df-7583-b269-9d33f17c3100"
+        }
+      ],
       "id": "01a18fbf-cf90-7a21-b419-6eac79cfe5b7",
       "source": "codex",
       "user": "Nilton Duarte",
       "invocations": [
         {
-          "role": "RootAgent",
+          "role": "",
           "model": "gpt-6.1-sol",
           "started_at": "2026-10-31T02:17:56.414Z",
-          "completed_at": "2026-10-31T11:01:14.411Z",
-          "active_duration_seconds": 3963,
+          "completed_at": "2026-10-31T11:01:50.931Z",
+          "active_duration_seconds": 4695,
           "turns": 10,
-          "tokens": {"input": 858605, "output": 150621, "cache_read": 62753792, "reasoning": 62083, "peak_context": 449851},
-          "cost_usd": 0,
-          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
+          "tokens": {"input": 860347, "output": 151302, "cache_read": 63226752, "reasoning": 62290, "peak_context": 449851},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 1,
           "user_iterations": 11
         }
       ],
       "tools": [
-        {"name": "command", "calls": 189, "errors": 6},
+        {"name": "command", "calls": 192, "errors": 6},
         {"name": "list_agents", "calls": 1, "errors": 0},
         {"name": "request_user_input_async", "calls": 1, "errors": 0},
         {"name": "send_message", "calls": 17, "errors": 0},
@@ -58,8 +140,10 @@
       "anomalies": [
         {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 1, "token_delta": 91877, "context_tokens": 126807, "threshold": "80000"}},
         {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 3, "context_tokens": 203688, "threshold": "200000"}},
-        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"role": "RootAgent", "context_tokens": 449851, "threshold": "200000"}},
-        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 2, "context_tokens": 161481, "threshold": "160000"}}
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 2, "context_tokens": 161481, "threshold": "160000"}},
+        {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "WARNING", "context": {"role": "coder", "secondary_role": "tester", "count": 3, "threshold": "3"}},
+        {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "WARNING", "context": {"role": "tester", "secondary_role": "reviewer", "count": 3, "threshold": "3"}},
+        {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "WARNING", "context": {"role": "reviewer", "secondary_role": "tester", "count": 4, "threshold": "3"}}
       ]
     },
     {
@@ -76,8 +160,8 @@
           "active_duration_seconds": 76,
           "turns": 1,
           "tokens": {"input": 162001, "output": 3229, "cache_read": 839168, "reasoning": 224, "peak_context": 171302},
-          "cost_usd": 0,
-          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
           "user_iterations": 0
         }
@@ -87,8 +171,7 @@
         {"name": "send_message", "calls": 1, "errors": 0}
       ],
       "anomalies": [
-        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 1, "context_tokens": 165274, "threshold": "160000"}},
-        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"role": "planner", "context_tokens": 171302, "threshold": "160000"}}
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 1, "context_tokens": 165274, "threshold": "160000"}}
       ]
     },
     {
@@ -105,8 +188,8 @@
           "active_duration_seconds": 82,
           "turns": 1,
           "tokens": {"input": 34509, "output": 3226, "cache_read": 1985280, "reasoning": 677, "peak_context": 186908},
-          "cost_usd": 0,
-          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
           "user_iterations": 0
         }
@@ -116,8 +199,7 @@
         {"name": "send_message", "calls": 4, "errors": 0}
       ],
       "anomalies": [
-        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 1, "context_tokens": 173045, "threshold": "160000"}},
-        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"role": "coder", "context_tokens": 186908, "threshold": "160000"}}
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 1, "context_tokens": 173045, "threshold": "160000"}}
       ]
     },
     {
@@ -134,8 +216,8 @@
           "active_duration_seconds": 102,
           "turns": 1,
           "tokens": {"input": 42448, "output": 4736, "cache_read": 2024192, "reasoning": 752, "peak_context": 195870},
-          "cost_usd": 0,
-          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
           "user_iterations": 0
         }
@@ -145,8 +227,7 @@
         {"name": "send_message", "calls": 2, "errors": 0}
       ],
       "anomalies": [
-        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 1, "context_tokens": 176888, "threshold": "160000"}},
-        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"role": "tester", "context_tokens": 195870, "threshold": "160000"}}
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 1, "context_tokens": 176888, "threshold": "160000"}}
       ]
     },
     {
@@ -163,8 +244,8 @@
           "active_duration_seconds": 63,
           "turns": 1,
           "tokens": {"input": 63393, "output": 2736, "cache_read": 1378816, "reasoning": 314, "peak_context": 215856},
-          "cost_usd": 0,
-          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
           "user_iterations": 0
         }
@@ -176,7 +257,6 @@
       "anomalies": [
         {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 1, "token_delta": 184743, "context_tokens": 184743, "threshold": "80000"}},
         {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 1, "context_tokens": 205629, "threshold": "200000"}},
-        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"role": "reviewer", "context_tokens": 215856, "threshold": "200000"}},
         {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 1, "context_tokens": 184743, "threshold": "160000"}}
       ]
     },
@@ -194,8 +274,8 @@
           "active_duration_seconds": 100,
           "turns": 1,
           "tokens": {"input": 305886, "output": 3318, "cache_read": 1217280, "reasoning": 1159, "peak_context": 308393},
-          "cost_usd": 0,
-          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
           "user_iterations": 0
         }
@@ -205,8 +285,7 @@
         {"name": "send_message", "calls": 1, "errors": 0}
       ],
       "anomalies": [
-        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 1, "context_tokens": 296723, "threshold": "200000"}},
-        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"role": "planner", "context_tokens": 308393, "threshold": "200000"}}
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 1, "context_tokens": 296723, "threshold": "200000"}}
       ]
     },
     {
@@ -223,8 +302,8 @@
           "active_duration_seconds": 42,
           "turns": 1,
           "tokens": {"input": 31838, "output": 1820, "cache_read": 1539840, "reasoning": 139, "peak_context": 317501},
-          "cost_usd": 0,
-          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
           "user_iterations": 0
         }
@@ -235,8 +314,7 @@
       ],
       "anomalies": [
         {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 1, "token_delta": 305553, "context_tokens": 305553, "threshold": "80000"}},
-        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 1, "context_tokens": 305553, "threshold": "200000"}},
-        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"role": "coder", "context_tokens": 317501, "threshold": "200000"}}
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 1, "context_tokens": 305553, "threshold": "200000"}}
       ]
     },
     {
@@ -253,8 +331,8 @@
           "active_duration_seconds": 122,
           "turns": 1,
           "tokens": {"input": 32912, "output": 5300, "cache_read": 3445376, "reasoning": 664, "peak_context": 321195},
-          "cost_usd": 0,
-          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
           "user_iterations": 0
         }
@@ -265,8 +343,7 @@
       ],
       "anomalies": [
         {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 1, "token_delta": 307358, "context_tokens": 307358, "threshold": "80000"}},
-        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 1, "context_tokens": 307358, "threshold": "200000"}},
-        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"role": "tester", "context_tokens": 321195, "threshold": "200000"}}
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 1, "context_tokens": 307358, "threshold": "200000"}}
       ]
     },
     {
@@ -283,8 +360,8 @@
           "active_duration_seconds": 71,
           "turns": 1,
           "tokens": {"input": 43970, "output": 2931, "cache_read": 1906048, "reasoning": 345, "peak_context": 330441},
-          "cost_usd": 0,
-          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
           "user_iterations": 0
         }
@@ -294,8 +371,7 @@
         {"name": "send_message", "calls": 1, "errors": 0}
       ],
       "anomalies": [
-        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 1, "context_tokens": 312506, "threshold": "200000"}},
-        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"role": "reviewer", "context_tokens": 330441, "threshold": "200000"}}
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 1, "context_tokens": 312506, "threshold": "200000"}}
       ]
     },
     {
@@ -312,8 +388,8 @@
           "active_duration_seconds": 577,
           "turns": 1,
           "tokens": {"input": 101378, "output": 16686, "cache_read": 5906048, "reasoning": 9741, "peak_context": 394218},
-          "cost_usd": 0,
-          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
           "user_iterations": 0
         }
@@ -323,8 +399,7 @@
         {"name": "send_message", "calls": 2, "errors": 0}
       ],
       "anomalies": [
-        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 1, "context_tokens": 341138, "threshold": "200000"}},
-        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"role": "planner", "context_tokens": 394218, "threshold": "200000"}}
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 1, "context_tokens": 341138, "threshold": "200000"}}
       ]
     },
     {
@@ -341,8 +416,8 @@
           "active_duration_seconds": 126,
           "turns": 1,
           "tokens": {"input": 68750, "output": 7038, "cache_read": 774400, "reasoning": 702, "peak_context": 73157},
-          "cost_usd": 0,
-          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
           "user_iterations": 0
         }
@@ -367,8 +442,8 @@
           "active_duration_seconds": 178,
           "turns": 1,
           "tokens": {"input": 73020, "output": 8554, "cache_read": 1561984, "reasoning": 1077, "peak_context": 95490},
-          "cost_usd": 0,
-          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
           "user_iterations": 0
         }
@@ -393,8 +468,8 @@
           "active_duration_seconds": 318,
           "turns": 1,
           "tokens": {"input": 78730, "output": 12483, "cache_read": 1929984, "reasoning": 2065, "peak_context": 98134},
-          "cost_usd": 0,
-          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
           "user_iterations": 0
         }
@@ -419,8 +494,8 @@
           "active_duration_seconds": 209,
           "turns": 1,
           "tokens": {"input": 85590, "output": 7217, "cache_read": 1850752, "reasoning": 824, "peak_context": 100661},
-          "cost_usd": 0,
-          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
           "user_iterations": 0
         }

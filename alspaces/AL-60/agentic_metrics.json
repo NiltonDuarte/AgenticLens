@@ -4,11 +4,13 @@
     "schema_version": 6,
     "status": "completed",
     "steps_completed": [
-      "schema_v6_lean_occurrences"
+      "git_code_facts",
+      "schema_v6_lean_occurrences",
+      "source_backfill"
     ],
-    "steps_pending": [],
-    "last_migrated_at": "",
-    "last_migrated_by": "",
+    "steps_pending": null,
+    "last_migrated_at": "2026-11-04T15:13:36.926497395Z",
+    "last_migrated_by": "Nilton Duarte",
     "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
   },
   "ticket_id": "AL-60",
@@ -16,7 +18,7 @@
   "ticket_type": "fix",
   "started_at": "2026-11-03T17:39:52.944Z",
   "completed_at": "2026-11-03T20:40:39.905542+00:00",
-  "updated_at": "2026-11-03T20:40:39.905542+00:00",
+  "updated_at": "2026-11-04T15:13:36.926497395Z",
   "code": {
     "lines_added": 361,
     "lines_deleted": 1,
@@ -29,6 +31,110 @@
   },
   "sessions": [
     {
+      "skills": [
+        {
+          "name": "agentic-lens-dev",
+          "caller_role": "user",
+          "invoked_at": "2026-11-03T17:39:54.490Z"
+        },
+        {
+          "name": "agentic-lens-dev",
+          "caller_role": "user",
+          "invoked_at": "2026-11-03T17:48:51.873Z"
+        },
+        {
+          "name": "agentic-lens-dev",
+          "caller_role": "user",
+          "invoked_at": "2026-11-03T17:58:02.510Z"
+        },
+        {
+          "name": "agentic-lens-dev",
+          "caller_role": "user",
+          "invoked_at": "2026-11-03T18:00:32.211Z"
+        },
+        {
+          "name": "agentic-lens-dev",
+          "caller_role": "user",
+          "invoked_at": "2026-11-03T18:06:00.885Z"
+        },
+        {
+          "name": "agentic-lens-dev",
+          "caller_role": "user",
+          "invoked_at": "2026-11-03T19:23:45.450Z"
+        },
+        {
+          "name": "agentic-lens-dev",
+          "caller_role": "user",
+          "invoked_at": "2026-11-03T19:34:31.495Z"
+        },
+        {
+          "name": "agentic-lens-dev",
+          "caller_role": "user",
+          "invoked_at": "2026-11-03T20:02:14.044Z"
+        }
+      ],
+      "delegations": [
+        {
+          "agent_type": "planner",
+          "description": "plan",
+          "invoked_at": "2026-11-03T17:40:02.998Z",
+          "child_session_id": "01a1a27f-2156-7d82-951e-0831e5c48114"
+        },
+        {
+          "agent_type": "coder",
+          "description": "implement",
+          "invoked_at": "2026-11-03T17:41:40.342Z",
+          "child_session_id": "01a1a280-9d93-7471-9927-ea58a45f6e99"
+        },
+        {
+          "agent_type": "tester",
+          "description": "test",
+          "invoked_at": "2026-11-03T17:42:55.404Z",
+          "child_session_id": "01a1a281-c2de-7ec3-9541-aa8d191c94b0"
+        },
+        {
+          "agent_type": "explorer",
+          "description": "capture_diagnosis",
+          "invoked_at": "2026-11-03T18:00:44.541Z",
+          "child_session_id": "01a1a292-1334-7753-b1c2-a03b6db06572"
+        },
+        {
+          "agent_type": "planner",
+          "description": "plan02",
+          "invoked_at": "2026-11-03T18:06:13.018Z",
+          "child_session_id": "01a1a297-164e-74c2-a754-1471bec17453"
+        },
+        {
+          "agent_type": "coder",
+          "description": "capture_code",
+          "invoked_at": "2026-11-03T18:08:34.627Z",
+          "child_session_id": "01a1a299-3f71-7483-8d80-1671c9f8f5ac"
+        },
+        {
+          "agent_type": "tester",
+          "description": "capture_tests",
+          "invoked_at": "2026-11-03T18:08:48.317Z",
+          "child_session_id": "01a1a299-74ee-7e81-a1ec-6c3821ac48fe"
+        },
+        {
+          "agent_type": "planner",
+          "description": "plan03",
+          "invoked_at": "2026-11-03T20:03:10.286Z",
+          "child_session_id": "01a1a302-298d-7113-8e59-06db2ae32871"
+        },
+        {
+          "agent_type": "coder",
+          "description": "code03",
+          "invoked_at": "2026-11-03T20:06:46.130Z",
+          "child_session_id": "01a1a305-747b-7a03-8605-b609a58b1f58"
+        },
+        {
+          "agent_type": "tester",
+          "description": "test03",
+          "invoked_at": "2026-11-03T20:11:46.301Z",
+          "child_session_id": "01a1a30a-0904-7d42-8fa4-34a3d9526309"
+        }
+      ],
       "id": "01a1a27e-f9db-75b3-8e95-f6b1bbbe7f05",
       "source": "codex",
       "user": "Nilton Duarte",
@@ -37,10 +143,10 @@
           "role": "",
           "model": "gpt-6.1-sol",
           "started_at": "2026-11-03T17:39:54.114Z",
-          "completed_at": "2026-11-03T20:40:31.145Z",
-          "active_duration_seconds": 6834,
+          "completed_at": "2026-11-03T20:43:12.617Z",
+          "active_duration_seconds": 9293,
           "turns": 7,
-          "tokens": {"input": 920380, "output": 229934, "cache_read": 90497920, "reasoning": 136828, "peak_context": 450563},
+          "tokens": {"input": 924534, "output": 235365, "cache_read": 91780864, "reasoning": 139637, "peak_context": 450563},
           "cost_usd": null,
           "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 1,
@@ -48,7 +154,7 @@
         }
       ],
       "tools": [
-        {"name": "command", "calls": 245, "errors": 11},
+        {"name": "command", "calls": 253, "errors": 11},
         {"name": "followup_task", "calls": 8, "errors": 0},
         {"name": "send_message", "calls": 26, "errors": 0},
         {"name": "sleep", "calls": 10, "errors": 0},
@@ -58,6 +164,8 @@
       ],
       "anomalies": [
         {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 2, "context_tokens": 200426, "threshold": "200000"}},
+        {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "CRITICAL", "context": {"role": "coder", "secondary_role": "tester", "count": 30, "threshold": "5"}},
+        {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "CRITICAL", "context": {"role": "coder", "secondary_role": "tester", "count": 18, "threshold": "5"}},
         {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 2, "context_tokens": 160519, "threshold": "160000"}}
       ]
     },

@@ -44,17 +44,17 @@ Every declaration was inventoried and screened; detailed body/production inspect
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 11
-- **Active Agent Duration:** 1h 40m (excludes user wait time)
-- **Context Window Health:** CRITICAL — Root agent peak 449.9k tokens (225% of 200k healthy ceiling, 1 compactions) | Subagents peak 394.2k (Planner)
-- **Role Effort Distribution (Subagents):** N/A
+- **Active Agent Duration:** 1h 52m (excludes user wait time)
+- **Context Window Health:** ELEVATED — Root agent peak 449.9k tokens (100% of 450k healthy ceiling, 1 compactions) | Subagents peak 394.2k (Planner)
+- **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 1.0 avg turns/run (peak: 1 turns) | Planner 1.0, Coder 1.0, Tester 1.0, Reviewer 1.0
 - **Test-to-Production Code Ratio:** 243:0 (+243 test lines / +0 prod lines)
 - **Code Delivered:** +243 / -2,673 lines across 21 code files (excluding docs)
-- **Reasoning Effort:** 80,766 reasoning tokens (26.0% of generated output)
-- **Tool Health & Self-Correction:** 398 tool calls (10 self-corrections, 97.5% success rate)
+- **Reasoning Effort:** 80,973 reasoning tokens (26.0% of generated output)
+- **Tool Health & Self-Correction:** 401 tool calls (10 self-corrections, 97.5% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 19 execution anomalies detected (11 CRITICAL, 8 WARNING).
+- **Status:** 25 execution anomalies detected (11 CRITICAL, 14 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+91.9k tokens) — Context tokens surged by 91.9k to 126.8k tokens.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+184.7k tokens) — Context tokens surged by 184.7k to 184.7k tokens.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (205.6k tokens) — Context tokens reached 205.6k, breaching the 200k critical ceiling.
@@ -71,6 +71,12 @@ Every declaration was inventoried and screened; detailed body/production inspect
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (176.9k tokens) — Context tokens reached 176.9k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (184.7k tokens) — Context tokens reached 184.7k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.5k tokens) — Context tokens reached 161.5k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (449.9k tokens) — Context tokens reached 449.9k, breaching the 250k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (308.4k tokens) — Context tokens reached 308.4k, breaching the 250k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (317.5k tokens) — Context tokens reached 317.5k, breaching the 250k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (321.2k tokens) — Context tokens reached 321.2k, breaching the 250k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (330.4k tokens) — Context tokens reached 330.4k, breaching the 250k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (394.2k tokens) — Context tokens reached 394.2k, breaching the 250k warning ceiling.
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (3 cycles) — Subagent roles 'coder' and 'tester' alternated for 3 consecutive cycles.
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: tester <-> reviewer (3 cycles) — Subagent roles 'tester' and 'reviewer' alternated for 3 consecutive cycles.
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer <-> tester (4 cycles) — Subagent roles 'reviewer' and 'tester' alternated for 4 consecutive cycles.
@@ -82,18 +88,18 @@ Every declaration was inventoried and screened; detailed body/production inspect
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **planner** | 3 | 569,265 | 23,233 | 7,962,496 | 93.3% | 394.2k | BLOATED (197%) | $0.00 |
-| **coder** | 4 | 208,117 | 20,638 | 5,861,504 | 96.6% | 317.5k | BLOATED (159%) | $0.00 |
-| **tester** | 3 | 154,090 | 22,519 | 7,399,552 | 98.0% | 321.2k | BLOATED (161%) | $0.00 |
-| **reviewer** | 3 | 192,953 | 12,884 | 5,135,616 | 96.4% | 330.4k | BLOATED (165%) | $0.00 |
-| **rootagent** | 1 | 858,605 | 150,621 | 62,753,792 | 98.7% | 449.9k | CRITICAL (225%) | $0.00 |
-| **Total** | **14** | **1,983,030** | **229,895** | **89,112,960** | **97.8%** | **449.9k** | **CRITICAL** | **$0.00** |
+| **planner** | 3 | 569,265 | 23,233 | 7,962,496 | 93.3% | 394.2k | ELEVATED | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
+| **coder** | 4 | 208,117 | 20,638 | 5,861,504 | 96.6% | 317.5k | ELEVATED | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
+| **tester** | 3 | 154,090 | 22,519 | 7,399,552 | 98.0% | 321.2k | ELEVATED | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
+| **reviewer** | 3 | 192,953 | 12,884 | 5,135,616 | 96.4% | 330.4k | ELEVATED | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
+| **Unknown** | 1 | 860,347 | 151,302 | 63,226,752 | 98.7% | 449.9k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **14** | **1,984,772** | **230,576** | **89,585,920** | **97.8%** | **449.9k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 14 | 1,983,030 | 229,895 | 89,112,960 | 97.8% | $0.00 |
-| **Total** | **14** | **1,983,030** | **229,895** | **89,112,960** | **97.8%** | **$0.00** |
+| **gpt-6.1-sol** | 14 | 1,984,772 | 230,576 | 89,585,920 | 97.8% | Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations) |
+| **Total** | **14** | **1,984,772** | **230,576** | **89,585,920** | **97.8%** | **Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations)** |
 
 ## Iteration 02: approved candidate deletion
 

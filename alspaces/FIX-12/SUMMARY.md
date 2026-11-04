@@ -48,19 +48,20 @@
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 18
-- **Active Agent Duration:** 35m 34s (excludes user wait time)
-- **Context Window Health:** BLOATED — Root agent peak 305.4k tokens (153% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
-- **Role Effort Distribution (Subagents):** N/A
+- **Active Agent Duration:** 2h 10m (excludes user wait time)
+- **Context Window Health:** ELEVATED — Root agent peak 311.3k tokens (69% of 450k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 2.6:1 (+1,757 test lines / +675 prod lines)
 - **Code Delivered:** +2,518 / -489 lines across 27 code files (excluding docs)
-- **Reasoning Effort:** 41,585 reasoning tokens (30.7% of generated output)
-- **Tool Health & Self-Correction:** 212 tool calls (16 self-corrections, 92.5% success rate)
+- **Reasoning Effort:** 55,965 reasoning tokens (32.8% of generated output)
+- **Tool Health & Self-Correction:** 250 tool calls (17 self-corrections, 93.2% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
+- **Status:** 3 execution anomalies detected (1 CRITICAL, 2 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.1k tokens) — Context tokens reached 200.1k, breaching the 200k critical ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.2k tokens) — Context tokens reached 161.2k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (311.3k tokens) — Context tokens reached 311.3k, breaching the 250k warning ceiling.
 
 ### Agentic Execution Metrics
 
@@ -69,12 +70,12 @@
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 2 | 353,417 | 94,004 | 26,223,744 | 98.7% | 305.4k | BLOATED (153%) | $0.00 |
-| **Total** | **2** | **353,417** | **94,004** | **26,223,744** | **98.7%** | **305.4k** | **BLOATED** | **$0.00** |
+| **Unknown** | 2 | 855,937 | 114,490 | 33,363,712 | 97.5% | 311.3k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **Total** | **2** | **855,937** | **114,490** | **33,363,712** | **97.5%** | **311.3k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-luna** | 1 | 117,462 | 19,876 | 7,414,528 | 98.4% | $0.00 |
-| **gpt-6.1-sol** | 1 | 235,955 | 74,128 | 18,809,216 | 98.8% | $0.00 |
-| **Total** | **2** | **353,417** | **94,004** | **26,223,744** | **98.7%** | **$0.00** |
+| **gpt-6-luna** | 1 | 617,385 | 37,134 | 12,395,136 | 95.3% | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **gpt-6.1-sol** | 1 | 238,552 | 77,356 | 20,968,576 | 98.9% | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **2** | **855,937** | **114,490** | **33,363,712** | **97.5%** | **Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations)** |

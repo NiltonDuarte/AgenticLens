@@ -155,73 +155,66 @@ Resolved multi-device session overwrites and implemented cross-device iteration 
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 147
-- **Active Agent Duration:** 14h 56m (excludes user wait time)
-- **Context Window Health:** BLOATED — Root agent peak 247.7k tokens (124% of 200k healthy ceiling, 30 compactions) | Subagents peak 246.7k (Coder_iteration_06)
-- **Role Effort Distribution (Subagents):** Planner 12.7%, Coder 53.6%, Tester 15.1%, Reviewer 18.6%
+- **Active Agent Duration:** 15h 28m (excludes user wait time)
+- **Context Window Health:** ELEVATED — Root agent peak 247.7k tokens (55% of 450k healthy ceiling, 30 compactions) | Subagents peak 246.7k (Coder_iteration_06)
+- **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 20.9 avg turns/run (peak: 130 turns) | Planner 35.3, Coder 84.3, Tester 36.7, Reviewer 49.3, Child_cli_test 2.0, Coder_iteration_04 7.0, Coder_iteration_05 4.0, Coder_iteration_05_validation 2.0, Coder_iteration_06 13.0, Fix_child_parser 2.0, Planner_iteration_04 6.0, Planner_iteration_05 1.0, Planner_iteration_06 4.0, Planner_iteration_07 1.0, Planner_iteration_08 1.0, Reviewer_iteration_04 1.0, Reviewer_iteration_04_final 1.0, Reviewer_iteration_05 1.0, Reviewer_iteration_05_final 1.0, Reviewer_iteration_05_round2 1.0, Reviewer_iteration_05_round2_restart 1.0, Reviewer_iteration_05_round3 1.0, Reviewer_iteration_06 8.0, Role_mapping_review 1.0, Telemetry_hi 1.0, Tester_iteration_04 3.0, Tester_iteration_05 4.0, Tester_iteration_06 7.0
 - **Test-to-Production Code Ratio:** 4.2:1 (+1,504 test lines / +359 prod lines)
 - **Code Delivered:** +1,863 / -304 lines across 53 code files (excluding docs)
-- **Reasoning Effort:** 985,689 reasoning tokens (37.0% of generated output)
-- **Tool Health & Self-Correction:** 4,625 tool calls (236 self-corrections, 94.9% success rate)
+- **Reasoning Effort:** 986,509 reasoning tokens (37.0% of generated output)
+- **Tool Health & Self-Correction:** 4,631 tool calls (237 self-corrections, 94.9% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 67 execution anomalies detected (56 CRITICAL, 11 WARNING).
+- **Status:** 65 execution anomalies detected (36 CRITICAL, 29 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+245.3k tokens) — Context tokens surged by 245.3k to 245.3k tokens.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (245.3k tokens) — Context tokens reached 245.3k, breaching the 160k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (245.3k tokens) — Context tokens reached 245.3k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+137.2k tokens) — Context tokens surged by 137.2k to 137.2k tokens.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+167.3k tokens) — Context tokens surged by 167.3k to 167.3k tokens.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (167.3k tokens) — Context tokens reached 167.3k, breaching the 160k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+83.8k tokens) — Context tokens surged by 83.8k to 83.8k tokens.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (162.2k tokens) — Context tokens reached 162.2k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (163.0k tokens) — Context tokens reached 163.0k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (163.4k tokens) — Context tokens reached 163.4k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (168.0k tokens) — Context tokens reached 168.0k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (164.5k tokens) — Context tokens reached 164.5k, breaching the 160k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (201.7k tokens) — Context tokens reached 201.7k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.3k tokens) — Context tokens reached 200.3k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (201.1k tokens) — Context tokens reached 201.1k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+110.7k tokens) — Context tokens surged by 110.7k to 110.7k tokens.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (162.9k tokens) — Context tokens reached 162.9k, breaching the 160k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+132.2k tokens) — Context tokens surged by 132.2k to 132.2k tokens.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+133.9k tokens) — Context tokens surged by 133.9k to 133.9k tokens.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+142.5k tokens) — Context tokens surged by 142.5k to 142.5k tokens.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (164.2k tokens) — Context tokens reached 164.2k, breaching the 160k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+188.9k tokens) — Context tokens surged by 188.9k to 188.9k tokens.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (188.9k tokens) — Context tokens reached 188.9k, breaching the 160k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+226.6k tokens) — Context tokens surged by 226.6k to 226.6k tokens.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (226.6k tokens) — Context tokens reached 226.6k, breaching the 160k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (226.6k tokens) — Context tokens reached 226.6k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+239.4k tokens) — Context tokens surged by 239.4k to 239.4k tokens.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (239.4k tokens) — Context tokens reached 239.4k, breaching the 160k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (239.4k tokens) — Context tokens reached 239.4k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+158.8k tokens) — Context tokens surged by 158.8k to 158.8k tokens.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (163.8k tokens) — Context tokens reached 163.8k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (163.8k tokens) — Context tokens reached 163.8k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.3k tokens) — Context tokens reached 161.3k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (163.8k tokens) — Context tokens reached 163.8k, breaching the 160k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (201.6k tokens) — Context tokens reached 201.6k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (204.2k tokens) — Context tokens reached 204.2k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (202.4k tokens) — Context tokens reached 202.4k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.2k tokens) — Context tokens reached 161.2k, breaching the 160k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.0k tokens) — Context tokens reached 161.0k, breaching the 160k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.9k tokens) — Context tokens reached 160.9k, breaching the 160k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+121.7k tokens) — Context tokens surged by 121.7k to 121.7k tokens.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+84.2k tokens) — Context tokens surged by 84.2k to 84.2k tokens.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (244.5k tokens) — Context tokens reached 244.5k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (247.7k tokens) — Context tokens reached 247.7k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (182.6k tokens) — Context tokens reached 182.6k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.1k tokens) — Context tokens reached 160.1k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (170.1k tokens) — Context tokens reached 170.1k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (243.9k tokens) — Context tokens reached 243.9k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (178.1k tokens) — Context tokens reached 178.1k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (221.8k tokens) — Context tokens reached 221.8k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (245.1k tokens) — Context tokens reached 245.1k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (187.0k tokens) — Context tokens reached 187.0k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (165.1k tokens) — Context tokens reached 165.1k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (172.2k tokens) — Context tokens reached 172.2k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (176.2k tokens) — Context tokens reached 176.2k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (218.6k tokens) — Context tokens reached 218.6k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (246.7k tokens) — Context tokens reached 246.7k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (243.0k tokens) — Context tokens reached 243.0k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (245.3k tokens) — Context tokens reached 245.3k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (183.4k tokens) — Context tokens reached 183.4k, breaching the 160k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (225.1k tokens) — Context tokens reached 225.1k, breaching the 160k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (169.2k tokens) — Context tokens reached 169.2k, breaching the 160k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (176.7k tokens) — Context tokens reached 176.7k, breaching the 160k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (171.6k tokens) — Context tokens reached 171.6k, breaching the 160k critical ceiling.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: fix_child_parser <-> child_cli_test (6 cycles) — Subagent roles 'fix_child_parser' and 'child_cli_test' alternated for 6 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder_iteration_05 <-> tester_iteration_05 (21 cycles) — Subagent roles 'coder_iteration_05' and 'tester_iteration_05' alternated for 21 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer_iteration_05_round3 <-> coder_iteration_05_validation (5 cycles) — Subagent roles 'reviewer_iteration_05_round3' and 'coder_iteration_05_validation' alternated for 5 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder_iteration_06 <-> tester_iteration_06 (14 cycles) — Subagent roles 'coder_iteration_06' and 'tester_iteration_06' alternated for 14 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder_iteration_06 <-> tester_iteration_06 (26 cycles) — Subagent roles 'coder_iteration_06' and 'tester_iteration_06' alternated for 26 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder_iteration_06 <-> tester_iteration_06 (7 cycles) — Subagent roles 'coder_iteration_06' and 'tester_iteration_06' alternated for 7 consecutive cycles.
 - [CRITICAL] **TOOL_RETRY_STREAK**: Tool retry streak: command (5 consecutive errors) — Tool 'command' encountered 5 consecutive execution failures.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (167.3k tokens) — Context tokens reached 167.3k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (162.2k tokens) — Context tokens reached 162.2k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (163.0k tokens) — Context tokens reached 163.0k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (163.4k tokens) — Context tokens reached 163.4k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (168.0k tokens) — Context tokens reached 168.0k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (164.5k tokens) — Context tokens reached 164.5k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (162.9k tokens) — Context tokens reached 162.9k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (164.2k tokens) — Context tokens reached 164.2k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (188.9k tokens) — Context tokens reached 188.9k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (163.8k tokens) — Context tokens reached 163.8k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (163.8k tokens) — Context tokens reached 163.8k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.3k tokens) — Context tokens reached 161.3k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (163.8k tokens) — Context tokens reached 163.8k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+43.4k tokens) — Context tokens surged by 43.4k to 148.4k tokens.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+63.8k tokens) — Context tokens surged by 63.8k to 63.8k tokens.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+67.8k tokens) — Context tokens surged by 67.8k to 67.8k tokens.
@@ -230,6 +223,11 @@ Resolved multi-device session overwrites and implemented cross-device iteration 
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+72.9k tokens) — Context tokens surged by 72.9k to 72.9k tokens.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+64.1k tokens) — Context tokens surged by 64.1k to 64.1k tokens.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+75.2k tokens) — Context tokens surged by 75.2k to 75.2k tokens.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer_iteration_04_final <-> coder_iteration_04 (4 cycles) — Subagent roles 'reviewer_iteration_04_final' and 'coder_iteration_04' alternated for 4 consecutive cycles.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: tester_iteration_05 <-> reviewer_iteration_05_round2 (4 cycles) — Subagent roles 'tester_iteration_05' and 'reviewer_iteration_05_round2' alternated for 4 consecutive cycles.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: tester_iteration_05 <-> reviewer_iteration_05_final (3 cycles) — Subagent roles 'tester_iteration_05' and 'reviewer_iteration_05_final' alternated for 3 consecutive cycles.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: tester_iteration_06 <-> reviewer_iteration_06 (3 cycles) — Subagent roles 'tester_iteration_06' and 'reviewer_iteration_06' alternated for 3 consecutive cycles.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer_iteration_06 <-> tester_iteration_06 (4 cycles) — Subagent roles 'reviewer_iteration_06' and 'tester_iteration_06' alternated for 4 consecutive cycles.
 - [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: command (3 consecutive errors) — Tool 'command' encountered 3 consecutive execution failures.
 - [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: command (3 consecutive errors) — Tool 'command' encountered 3 consecutive execution failures.
 - [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: mcp-gateway_mcp-exec (3 consecutive errors) — Tool 'mcp-gateway_mcp-exec' encountered 3 consecutive execution failures.
@@ -242,42 +240,42 @@ Resolved multi-device session overwrites and implemented cross-device iteration 
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
 | **planner** | 3 | 564,932 | 16,435 | 3,900,439 | 87.3% | 91.8k | HEALTHY | $0.90 |
-| **coder** | 4 | 1,933,357 | 60,130 | 25,840,020 | 93.0% | 176.7k | ELEVATED | $3.82 |
-| **tester** | 3 | 679,423 | 26,267 | 5,547,148 | 89.1% | 113.7k | ELEVATED | $1.08 |
+| **coder** | 4 | 1,933,357 | 60,130 | 25,840,020 | 93.0% | 176.7k | HEALTHY | $3.82 known subtotal (partial; 3 observed, 0 partial, 1 unavailable / 4 invocations) |
+| **tester** | 3 | 679,423 | 26,267 | 5,547,148 | 89.1% | 113.7k | HEALTHY | $1.08 |
 | **reviewer** | 3 | 947,860 | 11,383 | 6,814,841 | 87.8% | 91.1k | HEALTHY | $1.33 |
-| **child_cli_test** | 1 | 6,617 | 3,066 | 2,258,432 | 99.7% | 143.4k | ELEVATED | $0.00 |
-| **coder_iteration_04** | 1 | 232,389 | 50,593 | 20,593,792 | 98.9% | 243.9k | BLOATED (122%) | $0.00 |
-| **coder_iteration_05** | 1 | 520,660 | 154,185 | 61,281,024 | 99.2% | 245.1k | BLOATED (123%) | $0.00 |
-| **coder_iteration_05_validation** | 1 | 48,684 | 18,921 | 6,521,472 | 99.3% | 172.2k | ELEVATED | $0.00 |
-| **coder_iteration_06** | 1 | 1,244,292 | 249,302 | 89,386,496 | 98.6% | 246.7k | BLOATED (123%) | $0.00 |
-| **fix_child_parser** | 1 | 11,868 | 5,234 | 2,119,552 | 99.4% | 146.3k | ELEVATED | $0.00 |
-| **general** | 1 | 11,805,449 | 121,898 | 80,999,277 | 87.3% | 171.6k | ELEVATED | $16.06 |
-| **planner_iteration_04** | 1 | 56,280 | 13,411 | 2,993,920 | 98.2% | 101.5k | ELEVATED | $0.00 |
-| **planner_iteration_05** | 1 | 28,308 | 5,183 | 683,520 | 96.0% | 78.7k | HEALTHY | $0.00 |
-| **planner_iteration_06** | 1 | 33,825 | 13,841 | 3,905,920 | 99.1% | 218.6k | BLOATED (109%) | $0.00 |
-| **planner_iteration_07** | 1 | 47,552 | 4,946 | 1,512,704 | 97.0% | 183.4k | ELEVATED | $0.00 |
-| **planner_iteration_08** | 1 | 3,866 | 1,812 | 667,520 | 99.4% | 225.1k | BLOATED (113%) | $0.00 |
-| **reviewer_iteration_04** | 1 | 21,236 | 1,983 | 360,064 | 94.4% | 103.5k | ELEVATED | $0.00 |
-| **reviewer_iteration_04_final** | 1 | 79,359 | 21,199 | 13,344,768 | 99.4% | 221.8k | BLOATED (111%) | $0.00 |
-| **reviewer_iteration_05** | 1 | 58,454 | 9,421 | 2,089,984 | 97.3% | 165.1k | ELEVATED | $0.00 |
-| **reviewer_iteration_05_final** | 1 | 41,749 | 10,415 | 3,661,952 | 98.9% | 176.2k | ELEVATED | $0.00 |
-| **reviewer_iteration_05_round2** | 1 | 22,838 | 2,386 | 1,419,904 | 98.4% | 136.6k | ELEVATED | $0.00 |
-| **reviewer_iteration_05_round2_restart** | 1 | 26,641 | 7,626 | 1,868,160 | 98.6% | 153.4k | ELEVATED | $0.00 |
-| **reviewer_iteration_05_round3** | 1 | 26,473 | 7,396 | 2,497,920 | 99.0% | 156.2k | ELEVATED | $0.00 |
-| **reviewer_iteration_06** | 1 | 335,551 | 29,968 | 8,264,832 | 96.1% | 245.3k | BLOATED (123%) | $0.00 |
-| **role_mapping_review** | 1 | 3,980 | 677 | 503,040 | 99.2% | 170.1k | ELEVATED | $0.00 |
-| **rootagent** | 2 | 5,354,393 | 752,849 | 277,273,344 | 98.1% | 247.7k | BLOATED (124%) | $0.00 |
-| **telemetry_hi** | 1 | 994 | 6 | 125,312 | 99.2% | 126.3k | ELEVATED | $0.00 |
-| **tester_iteration_04** | 1 | 49,097 | 7,761 | 8,845,056 | 99.4% | 178.1k | ELEVATED | $0.00 |
-| **tester_iteration_05** | 1 | 148,011 | 27,425 | 13,262,080 | 98.9% | 187.0k | ELEVATED | $0.00 |
-| **tester_iteration_06** | 1 | 542,560 | 45,470 | 24,035,456 | 97.8% | 243.0k | BLOATED (122%) | $0.00 |
-| **Total** | **40** | **24,876,698** | **1,681,189** | **672,577,949** | **96.4%** | **247.7k** | **BLOATED** | **$23.20** |
+| **Unknown** | 4 | 5,361,065 | 754,553 | 277,771,008 | 98.1% | 247.7k | ELEVATED | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
+| **child_cli_test** | 1 | 6,617 | 3,066 | 2,258,432 | 99.7% | 143.4k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **coder_iteration_04** | 1 | 232,389 | 50,593 | 20,593,792 | 98.9% | 243.9k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **coder_iteration_05** | 1 | 520,660 | 154,185 | 61,281,024 | 99.2% | 245.1k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **coder_iteration_05_validation** | 1 | 48,684 | 18,921 | 6,521,472 | 99.3% | 172.2k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **coder_iteration_06** | 1 | 1,244,292 | 249,302 | 89,386,496 | 98.6% | 246.7k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **fix_child_parser** | 1 | 11,868 | 5,234 | 2,119,552 | 99.4% | 146.3k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **general** | 1 | 11,805,449 | 121,898 | 80,999,277 | 87.3% | 171.6k | HEALTHY | $16.06 |
+| **planner_iteration_04** | 1 | 56,280 | 13,411 | 2,993,920 | 98.2% | 101.5k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **planner_iteration_05** | 1 | 28,308 | 5,183 | 683,520 | 96.0% | 78.7k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **planner_iteration_06** | 1 | 33,825 | 13,841 | 3,905,920 | 99.1% | 218.6k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **planner_iteration_07** | 1 | 47,552 | 4,946 | 1,512,704 | 97.0% | 183.4k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **planner_iteration_08** | 1 | 3,866 | 1,812 | 667,520 | 99.4% | 225.1k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **reviewer_iteration_04** | 1 | 21,236 | 1,983 | 360,064 | 94.4% | 103.5k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **reviewer_iteration_04_final** | 1 | 79,359 | 21,199 | 13,344,768 | 99.4% | 221.8k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **reviewer_iteration_05** | 1 | 58,454 | 9,421 | 2,089,984 | 97.3% | 165.1k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **reviewer_iteration_05_final** | 1 | 41,749 | 10,415 | 3,661,952 | 98.9% | 176.2k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **reviewer_iteration_05_round2** | 1 | 22,838 | 2,386 | 1,419,904 | 98.4% | 136.6k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **reviewer_iteration_05_round2_restart** | 1 | 26,641 | 7,626 | 1,868,160 | 98.6% | 153.4k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **reviewer_iteration_05_round3** | 1 | 26,473 | 7,396 | 2,497,920 | 99.0% | 156.2k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **reviewer_iteration_06** | 1 | 335,551 | 29,968 | 8,264,832 | 96.1% | 245.3k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **role_mapping_review** | 1 | 3,980 | 677 | 503,040 | 99.2% | 170.1k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **telemetry_hi** | 1 | 994 | 6 | 125,312 | 99.2% | 126.3k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **tester_iteration_04** | 1 | 49,097 | 7,761 | 8,845,056 | 99.4% | 178.1k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **tester_iteration_05** | 1 | 148,011 | 27,425 | 13,262,080 | 98.9% | 187.0k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **tester_iteration_06** | 1 | 542,560 | 45,470 | 24,035,456 | 97.8% | 243.0k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **42** | **24,883,370** | **1,682,893** | **673,075,613** | **96.4%** | **247.7k** | **ELEVATED** | **$23.20 known subtotal (partial; 13 observed, 0 partial, 29 unavailable / 42 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
 | **gemini-3.8-flash** | 13 | 15,930,119 | 236,104 | 122,942,493 | 88.5% | $23.20 |
-| **gpt-6-astra** | 4 | 384,986 | 53,378 | 23,834,496 | 98.4% | $0.00 |
-| **gpt-6-luna** | 24 | 8,398,734 | 1,375,295 | 521,556,992 | 98.4% | $0.00 |
-| **gpt-6.1-sol** | 1 | 162,859 | 16,412 | 4,243,968 | 96.3% | $0.00 |
-| **Total** | **40** | **24,876,698** | **1,681,189** | **672,577,949** | **96.4%** | **$23.20** |
+| **gpt-6-astra** | 4 | 384,986 | 53,378 | 23,834,496 | 98.4% | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
+| **gpt-6-luna** | 24 | 8,405,406 | 1,376,999 | 522,054,656 | 98.4% | Unavailable (0 observed, 0 partial, 24 unavailable / 24 invocations) |
+| **gpt-6.1-sol** | 1 | 162,859 | 16,412 | 4,243,968 | 96.3% | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **42** | **24,883,370** | **1,682,893** | **673,075,613** | **96.4%** | **$23.20 known subtotal (partial; 13 observed, 0 partial, 29 unavailable / 42 invocations)** |

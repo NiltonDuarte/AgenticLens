@@ -4,11 +4,13 @@
     "schema_version": 6,
     "status": "completed",
     "steps_completed": [
-      "schema_v6_lean_occurrences"
+      "git_code_facts",
+      "schema_v6_lean_occurrences",
+      "source_backfill"
     ],
-    "steps_pending": [],
-    "last_migrated_at": "",
-    "last_migrated_by": "",
+    "steps_pending": null,
+    "last_migrated_at": "2026-11-04T15:13:36.926497395Z",
+    "last_migrated_by": "Nilton Duarte",
     "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
   },
   "ticket_id": "GEN-8",
@@ -16,7 +18,7 @@
   "ticket_type": "chore",
   "started_at": "2026-10-28T07:21:18.538Z",
   "completed_at": "2026-10-28T07:26:33.321Z",
-  "updated_at": "2026-10-28T07:26:34.885855+00:00",
+  "updated_at": "2026-11-04T15:13:36.926497395Z",
   "code": {
     "lines_added": 0,
     "lines_deleted": 0,
@@ -34,21 +36,21 @@
       "user": "Nilton Duarte",
       "invocations": [
         {
-          "role": "RootAgent",
+          "role": "",
           "model": "gpt-6-luna",
           "started_at": "2026-10-28T07:21:19.220Z",
-          "completed_at": "2026-10-28T07:26:33.321Z",
-          "active_duration_seconds": 15,
-          "turns": 2,
-          "tokens": {"input": 67875, "output": 5508, "cache_read": 835840, "reasoning": 1982, "peak_context": 44368},
-          "cost_usd": 0,
-          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
+          "completed_at": "2026-10-28T07:30:01.819Z",
+          "active_duration_seconds": 263,
+          "turns": 3,
+          "tokens": {"input": 84814, "output": 7036, "cache_read": 1427712, "reasoning": 2386, "peak_context": 59307},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
-          "user_iterations": 4
+          "user_iterations": 5
         }
       ],
       "tools": [
-        {"name": "command", "calls": 13, "errors": 3},
+        {"name": "command", "calls": 21, "errors": 5},
         {"name": "request_user_input_async", "calls": 2, "errors": 0},
         {"name": "sleep", "calls": 1, "errors": 0}
       ],
@@ -58,6 +60,6 @@
     }
   ],
   "anomalies": [
-    {"rule_id": "TOOL_HIGH_FAILURE_RATE", "severity": "WARNING", "context": {"tool_name": "command", "count": 3, "total_calls": 13, "threshold": "\u003e20%", "failure_rate_pct": 23.1}}
+    {"rule_id": "TOOL_HIGH_FAILURE_RATE", "severity": "WARNING", "context": {"tool_name": "command", "count": 5, "total_calls": 21, "threshold": "\u003e20%", "failure_rate_pct": 23.8}}
   ]
 }

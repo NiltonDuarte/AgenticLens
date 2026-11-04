@@ -23,14 +23,14 @@ After merging the latest `origin/main`, `make` passed: Go vet, frontend typechec
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 5
-- **Active Agent Duration:** 1m 46s (excludes user wait time)
-- **Context Window Health:** HEALTHY — Root agent peak 73.3k tokens (37% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
-- **Role Effort Distribution (Subagents):** N/A
+- **Active Agent Duration:** 4m 25s (excludes user wait time)
+- **Context Window Health:** HEALTHY — Root agent peak 74.6k tokens (17% of 450k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 3,809 reasoning tokens (24.5% of generated output)
-- **Tool Health & Self-Correction:** 28 tool calls (4 self-corrections, 85.7% success rate)
+- **Reasoning Effort:** 4,174 reasoning tokens (25.1% of generated output)
+- **Tool Health & Self-Correction:** 32 tool calls (4 self-corrections, 87.5% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** No execution anomalies detected (clean session).
@@ -42,11 +42,11 @@ After merging the latest `origin/main`, `make` passed: Go vet, frontend typechec
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 82,004 | 11,752 | 2,720,896 | 97.1% | 73.3k | HEALTHY | $0.00 |
-| **Total** | **1** | **82,004** | **11,752** | **2,720,896** | **97.1%** | **73.3k** | **HEALTHY** | **$0.00** |
+| **Unknown** | 1 | 84,156 | 12,476 | 3,089,152 | 97.3% | 74.6k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **1** | **84,156** | **12,476** | **3,089,152** | **97.3%** | **74.6k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-luna** | 1 | 82,004 | 11,752 | 2,720,896 | 97.1% | $0.00 |
-| **Total** | **1** | **82,004** | **11,752** | **2,720,896** | **97.1%** | **$0.00** |
+| **gpt-6-luna** | 1 | 84,156 | 12,476 | 3,089,152 | 97.3% | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **1** | **84,156** | **12,476** | **3,089,152** | **97.3%** | **Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations)** |

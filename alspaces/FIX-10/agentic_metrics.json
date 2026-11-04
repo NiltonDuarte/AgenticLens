@@ -4,11 +4,12 @@
     "schema_version": 6,
     "status": "completed",
     "steps_completed": [
+      "git_code_facts",
       "schema_v6_lean_occurrences"
     ],
-    "steps_pending": [],
-    "last_migrated_at": "",
-    "last_migrated_by": "",
+    "steps_pending": null,
+    "last_migrated_at": "2026-11-04T15:13:36.926497395Z",
+    "last_migrated_by": "Nilton Duarte",
     "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
   },
   "ticket_id": "FIX-10",
@@ -16,7 +17,7 @@
   "ticket_type": "fix",
   "started_at": "2026-10-28T17:44:06.801000+00:00",
   "completed_at": "2026-10-29T10:54:25.082Z",
-  "updated_at": "2026-10-29T10:54:25.969643+00:00",
+  "updated_at": "2026-11-04T15:13:36.926497395Z",
   "code": {
     "lines_added": 3442,
     "lines_deleted": 1958,
@@ -29,31 +30,42 @@
   },
   "sessions": [
     {
+      "skills": [
+        {
+          "name": "agentic-lens-review",
+          "caller_role": "user",
+          "invoked_at": "2026-10-28T23:14:34.322Z"
+        },
+        {
+          "name": "agentic-lens-dev",
+          "caller_role": "user",
+          "invoked_at": "2026-10-28T23:28:34.184Z"
+        }
+      ],
       "id": "01a184cb-31d1-7240-ba9b-23eea56ed6ce",
       "source": "codex",
       "user": "Nilton Duarte",
       "invocations": [
         {
-          "role": "RootAgent",
+          "role": "",
           "model": "gpt-6-luna",
           "started_at": "2026-10-28T23:14:32.942Z",
-          "completed_at": "2026-10-29T10:54:25.082Z",
-          "active_duration_seconds": 3647,
+          "completed_at": "2026-10-29T10:54:39.487Z",
+          "active_duration_seconds": 3755,
           "turns": 13,
-          "tokens": {"input": 634960, "output": 95325, "cache_read": 42510080, "reasoning": 46361, "peak_context": 240877},
-          "cost_usd": 0,
-          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
+          "tokens": {"input": 636849, "output": 95693, "cache_read": 43255808, "reasoning": 46379, "peak_context": 240877},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 1,
           "user_iterations": 21
         }
       ],
       "tools": [
-        {"name": "command", "calls": 147, "errors": 8},
+        {"name": "command", "calls": 150, "errors": 8},
         {"name": "wait", "calls": 51, "errors": 0}
       ],
       "anomalies": [
         {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 5, "context_tokens": 201175, "threshold": "200000"}},
-        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"role": "RootAgent", "context_tokens": 240877, "threshold": "200000"}},
         {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 5, "context_tokens": 165762, "threshold": "160000"}}
       ]
     },

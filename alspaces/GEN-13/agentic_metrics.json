@@ -4,11 +4,13 @@
     "schema_version": 6,
     "status": "completed",
     "steps_completed": [
-      "schema_v6_lean_occurrences"
+      "git_code_facts",
+      "schema_v6_lean_occurrences",
+      "source_backfill"
     ],
-    "steps_pending": [],
-    "last_migrated_at": "",
-    "last_migrated_by": "",
+    "steps_pending": null,
+    "last_migrated_at": "2026-11-04T15:13:36.926497395Z",
+    "last_migrated_by": "Nilton Duarte",
     "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
   },
   "ticket_id": "GEN-13",
@@ -16,7 +18,7 @@
   "ticket_type": "chore",
   "started_at": "2026-10-31T12:09:46.317Z",
   "completed_at": "2026-10-31T12:14:15.852Z",
-  "updated_at": "2026-10-31T12:14:18.249828+00:00",
+  "updated_at": "2026-11-04T15:13:36.926497395Z",
   "code": {
     "lines_added": 0,
     "lines_deleted": 0,
@@ -34,26 +36,26 @@
       "user": "Nilton Duarte",
       "invocations": [
         {
-          "role": "RootAgent",
+          "role": "",
           "model": "gpt-6-astra",
           "started_at": "2026-10-31T12:09:47.596Z",
-          "completed_at": "2026-10-31T12:14:15.852Z",
-          "active_duration_seconds": 0,
+          "completed_at": "2026-10-31T12:14:39.477Z",
+          "active_duration_seconds": 292,
           "turns": 1,
-          "tokens": {"input": 69725, "output": 6732, "cache_read": 1241984, "reasoning": 549, "peak_context": 72809},
-          "cost_usd": 0,
-          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
+          "tokens": {"input": 71401, "output": 7365, "cache_read": 1610880, "reasoning": 549, "peak_context": 74707},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
           "user_iterations": 2
         }
       ],
       "tools": [
-        {"name": "command", "calls": 24, "errors": 6}
+        {"name": "command", "calls": 26, "errors": 6}
       ],
       "anomalies": []
     }
   ],
   "anomalies": [
-    {"rule_id": "TOOL_HIGH_FAILURE_RATE", "severity": "WARNING", "context": {"tool_name": "command", "count": 6, "total_calls": 24, "threshold": "\u003e20%", "failure_rate_pct": 25}}
+    {"rule_id": "TOOL_HIGH_FAILURE_RATE", "severity": "WARNING", "context": {"tool_name": "command", "count": 6, "total_calls": 26, "threshold": "\u003e20%", "failure_rate_pct": 23.1}}
   ]
 }

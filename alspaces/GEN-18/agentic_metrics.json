@@ -4,11 +4,13 @@
     "schema_version": 6,
     "status": "completed",
     "steps_completed": [
-      "schema_v6_lean_occurrences"
+      "git_code_facts",
+      "schema_v6_lean_occurrences",
+      "source_backfill"
     ],
-    "steps_pending": [],
-    "last_migrated_at": "",
-    "last_migrated_by": "",
+    "steps_pending": null,
+    "last_migrated_at": "2026-11-04T15:13:36.926497395Z",
+    "last_migrated_by": "Nilton Duarte",
     "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
   },
   "ticket_id": "GEN-18",
@@ -16,7 +18,7 @@
   "ticket_type": "chore",
   "started_at": "2026-11-03T09:22:27.839Z",
   "completed_at": "2026-11-03T09:27:02.351Z",
-  "updated_at": "2026-11-03T09:27:07.876250+00:00",
+  "updated_at": "2026-11-04T15:13:36.926497395Z",
   "code": {
     "lines_added": 0,
     "lines_deleted": 0,
@@ -37,10 +39,10 @@
           "role": "",
           "model": "gpt-6.1-sol",
           "started_at": "2026-11-03T09:22:29.268Z",
-          "completed_at": "2026-11-03T09:27:02.351Z",
-          "active_duration_seconds": 0,
+          "completed_at": "2026-11-03T09:27:40.136Z",
+          "active_duration_seconds": 311,
           "turns": 1,
-          "tokens": {"input": 37712, "output": 7121, "cache_read": 773120, "reasoning": 1018, "peak_context": 54235},
+          "tokens": {"input": 39444, "output": 8004, "cache_read": 1052288, "reasoning": 1070, "peak_context": 56875},
           "cost_usd": null,
           "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
@@ -48,7 +50,7 @@
         }
       ],
       "tools": [
-        {"name": "command", "calls": 20, "errors": 3}
+        {"name": "command", "calls": 24, "errors": 3}
       ],
       "anomalies": []
     }

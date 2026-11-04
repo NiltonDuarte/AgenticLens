@@ -45,29 +45,31 @@ Added coverage for root-plus-child replacement, single-session replacement, disc
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 16
-- **Active Agent Duration:** 29m 12s (excludes user wait time)
-- **Context Window Health:** ELEVATED — Root agent peak 186.1k tokens (93% of 200k healthy ceiling, 1 compactions) | Subagents peak 0 (None)
-- **Role Effort Distribution (Subagents):** N/A
+- **Active Agent Duration:** 31m 29s (excludes user wait time)
+- **Context Window Health:** HEALTHY — Root agent peak 186.1k tokens (41% of 450k healthy ceiling, 1 compactions) | Subagents peak 0 (None)
+- **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 3.2:1 (+226 test lines / +71 prod lines)
 - **Code Delivered:** +297 / -9 lines across 2 code files (excluding docs)
-- **Reasoning Effort:** 27,348 reasoning tokens (33.7% of generated output)
-- **Tool Health & Self-Correction:** 116 tool calls (6 self-corrections, 94.8% success rate)
+- **Reasoning Effort:** 30,567 reasoning tokens (33.5% of generated output)
+- **Tool Health & Self-Correction:** 126 tool calls (6 self-corrections, 95.2% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 1 execution anomaly detected (1 CRITICAL).
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.3k tokens) — Context tokens reached 161.3k, breaching the 160k critical ceiling.
+- **Status:** 1 execution anomaly detected (1 WARNING).
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.3k tokens) — Context tokens reached 161.3k, breaching the 160k warning ceiling.
 
 ### Agentic Execution Metrics
+
+**Contributors:** Nilton Duarte
 
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 459,995 | 53,885 | 21,887,360 | 97.9% | 186.1k | ELEVATED | $0.00 |
-| **Total** | **1** | **459,995** | **53,885** | **21,887,360** | **97.9%** | **186.1k** | **ELEVATED** | **$0.00** |
+| **Unknown** | 1 | 472,138 | 60,550 | 22,827,520 | 98.0% | 186.1k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **1** | **472,138** | **60,550** | **22,827,520** | **98.0%** | **186.1k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-luna** | 1 | 459,995 | 53,885 | 21,887,360 | 97.9% | $0.00 |
-| **Total** | **1** | **459,995** | **53,885** | **21,887,360** | **97.9%** | **$0.00** |
+| **gpt-6-luna** | 1 | 472,138 | 60,550 | 22,827,520 | 98.0% | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **1** | **472,138** | **60,550** | **22,827,520** | **98.0%** | **Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations)** |

@@ -63,14 +63,14 @@ Source: the user requested keeping a summary of findings with the model and acto
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 12
-- **Active Agent Duration:** 46m 44s (excludes user wait time)
-- **Context Window Health:** ELEVATED — Root agent peak 180.1k tokens (90% of 200k healthy ceiling, 0 compactions) | Subagents peak 110.7k (Tester)
+- **Active Agent Duration:** 47m 23s (excludes user wait time)
+- **Context Window Health:** HEALTHY — Root agent peak 181.7k tokens (40% of 450k healthy ceiling, 0 compactions) | Subagents peak 110.7k (Tester)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 1.3 avg turns/run (peak: 2 turns) | Planner 1.0, Coder 2.0, Tester 2.0, Reviewer 1.0
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 22,944 reasoning tokens (19.6% of generated output)
-- **Tool Health & Self-Correction:** 209 tool calls (4 self-corrections, 98.1% success rate)
+- **Reasoning Effort:** 23,037 reasoning tokens (19.5% of generated output)
+- **Tool Health & Self-Correction:** 211 tool calls (4 self-corrections, 98.1% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 4 execution anomalies detected (1 CRITICAL, 3 WARNING).
@@ -87,18 +87,18 @@ Source: the user requested keeping a summary of findings with the model and acto
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
 | **planner** | 1 | 48,363 | 3,575 | 376,704 | 88.6% | 58.1k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **coder** | 1 | 98,084 | 13,198 | 2,165,120 | 95.7% | 107.1k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **tester** | 1 | 47,330 | 13,823 | 2,324,224 | 98.0% | 110.7k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **coder** | 1 | 98,084 | 13,198 | 2,165,120 | 95.7% | 107.1k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **tester** | 1 | 47,330 | 13,823 | 2,324,224 | 98.0% | 110.7k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **reviewer** | 4 | 208,121 | 19,471 | 2,195,072 | 91.3% | 77.1k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
-| **rootagent** | 1 | 297,937 | 43,929 | 15,133,952 | 98.1% | 180.1k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **8** | **699,835** | **93,996** | **22,195,072** | **96.9%** | **180.1k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 8 unavailable / 8 invocations)** |
+| **Unknown** | 1 | 300,328 | 44,795 | 16,037,248 | 98.2% | 181.7k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **8** | **702,226** | **94,862** | **23,098,368** | **97.0%** | **181.7k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 8 unavailable / 8 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
 | **gpt-6-luna** | 2 | 83,320 | 7,998 | 854,272 | 91.1% | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **gpt-6.1-sol** | 6 | 616,515 | 85,998 | 21,340,800 | 97.2% | Unavailable (0 observed, 0 partial, 6 unavailable / 6 invocations) |
-| **Total** | **8** | **699,835** | **93,996** | **22,195,072** | **96.9%** | **Unavailable (0 observed, 0 partial, 8 unavailable / 8 invocations)** |
+| **gpt-6.1-sol** | 6 | 618,906 | 86,864 | 22,244,096 | 97.3% | Unavailable (0 observed, 0 partial, 6 unavailable / 6 invocations) |
+| **Total** | **8** | **702,226** | **94,862** | **23,098,368** | **97.0%** | **Unavailable (0 observed, 0 partial, 8 unavailable / 8 invocations)** |
 
 ## Final telemetry verification
 

@@ -42,14 +42,14 @@ Database-wide invalidation can reread histories of unchanged active sessions aft
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 18
-- **Active Agent Duration:** 1h 38m (excludes user wait time)
-- **Context Window Health:** BLOATED — Root agent peak 212.3k tokens (106% of 200k healthy ceiling, 0 compactions) | Subagents peak 207.6k (Tester)
+- **Active Agent Duration:** 1h 39m (excludes user wait time)
+- **Context Window Health:** HEALTHY — Root agent peak 213.9k tokens (48% of 450k healthy ceiling, 0 compactions) | Subagents peak 207.6k (Tester)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 1.5 avg turns/run (peak: 4 turns) | Planner 2.0, Coder 4.0, Tester 4.0, Reviewer-architecture 1.0, Reviewer-behavior 1.0, Reviewer-data 1.0, Reviewer-tests 1.0
 - **Test-to-Production Code Ratio:** 3.1:1 (+622 test lines / +202 prod lines)
 - **Code Delivered:** +824 / -176 lines across 34 code files (excluding docs)
-- **Reasoning Effort:** 41,527 reasoning tokens (19.6% of generated output)
-- **Tool Health & Self-Correction:** 524 tool calls (35 self-corrections, 93.3% success rate)
+- **Reasoning Effort:** 41,758 reasoning tokens (19.6% of generated output)
+- **Tool Health & Self-Correction:** 526 tool calls (35 self-corrections, 93.3% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 12 execution anomalies detected (6 CRITICAL, 6 WARNING).
@@ -74,20 +74,20 @@ Database-wide invalidation can reread histories of unchanged active sessions aft
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
 | **planner** | 1 | 70,102 | 6,506 | 1,125,120 | 94.1% | 73.4k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **coder** | 1 | 170,459 | 16,619 | 7,678,336 | 97.8% | 177.8k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **tester** | 1 | 142,308 | 32,229 | 11,555,072 | 98.8% | 207.6k | BLOATED (104%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Unknown** | 1 | 185,333 | 61,990 | 28,846,848 | 99.4% | 212.3k | BLOATED (106%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **coder** | 1 | 170,459 | 16,619 | 7,678,336 | 97.8% | 177.8k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **tester** | 1 | 142,308 | 32,229 | 11,555,072 | 98.8% | 207.6k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Unknown** | 1 | 186,259 | 62,851 | 29,486,208 | 99.4% | 213.9k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **reviewer-architecture** | 2 | 127,728 | 10,404 | 1,957,120 | 93.9% | 95.6k | HEALTHY | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **reviewer-behavior** | 2 | 207,494 | 10,717 | 1,886,592 | 90.1% | 102.9k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **reviewer-behavior** | 2 | 207,494 | 10,717 | 1,886,592 | 90.1% | 102.9k | HEALTHY | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
 | **reviewer-data** | 3 | 227,499 | 18,100 | 3,101,696 | 93.2% | 91.3k | HEALTHY | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
 | **reviewer-tests** | 3 | 187,194 | 13,542 | 2,163,200 | 92.0% | 88.1k | HEALTHY | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
-| **Total** | **14** | **1,318,117** | **170,107** | **58,313,984** | **97.8%** | **212.3k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations)** |
+| **Total** | **14** | **1,319,043** | **170,968** | **58,953,344** | **97.8%** | **213.9k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 14 | 1,318,117 | 170,107 | 58,313,984 | 97.8% | Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations) |
-| **Total** | **14** | **1,318,117** | **170,107** | **58,313,984** | **97.8%** | **Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations)** |
+| **gpt-6.1-sol** | 14 | 1,319,043 | 170,968 | 58,953,344 | 97.8% | Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations) |
+| **Total** | **14** | **1,319,043** | **170,968** | **58,953,344** | **97.8%** | **Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations)** |
 
 ## Final telemetry validation and delivery revision
 

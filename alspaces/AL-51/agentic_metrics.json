@@ -4,11 +4,13 @@
     "schema_version": 6,
     "status": "completed",
     "steps_completed": [
-      "schema_v6_lean_occurrences"
+      "git_code_facts",
+      "schema_v6_lean_occurrences",
+      "source_backfill"
     ],
-    "steps_pending": [],
-    "last_migrated_at": "",
-    "last_migrated_by": "",
+    "steps_pending": null,
+    "last_migrated_at": "2026-11-04T15:13:36.926497395Z",
+    "last_migrated_by": "Nilton Duarte",
     "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
   },
   "ticket_id": "AL-51",
@@ -16,7 +18,7 @@
   "ticket_type": "feat",
   "started_at": "2026-10-30T23:27:55.484Z",
   "completed_at": "2026-10-31T00:56:59.022Z",
-  "updated_at": "2026-10-31T00:56:59.977728+00:00",
+  "updated_at": "2026-11-04T15:13:36.926497395Z",
   "code": {
     "lines_added": 727,
     "lines_deleted": 21,
@@ -29,26 +31,128 @@
   },
   "sessions": [
     {
+      "skills": [
+        {
+          "name": "agentic-lens-dev",
+          "caller_role": "user",
+          "invoked_at": "2026-10-30T23:27:56.783Z"
+        },
+        {
+          "name": "agentic-lens-dev",
+          "caller_role": "user",
+          "invoked_at": "2026-10-31T00:48:39.980Z"
+        },
+        {
+          "name": "agentic-lens-dev",
+          "caller_role": "user",
+          "invoked_at": "2026-10-31T00:55:31.435Z"
+        }
+      ],
+      "delegations": [
+        {
+          "agent_type": "planner",
+          "description": "planner_al51",
+          "invoked_at": "2026-10-30T23:28:16.769Z",
+          "child_session_id": "01a18f24-82ed-7363-b074-26c48d5d62a7"
+        },
+        {
+          "agent_type": "coder",
+          "description": "coder_al51",
+          "invoked_at": "2026-10-30T23:29:20.736Z",
+          "child_session_id": "01a18f25-7c01-7b83-91dd-f421e763fe0d"
+        },
+        {
+          "agent_type": "tester",
+          "description": "tester_al51",
+          "invoked_at": "2026-10-30T23:38:54.500Z",
+          "child_session_id": "01a18f2e-3cbd-77e1-bcb5-d6da556d9f6f"
+        },
+        {
+          "agent_type": "reviewer",
+          "description": "reviewer_al51",
+          "invoked_at": "2026-10-30T23:40:58.900Z",
+          "child_session_id": "01a18f30-22dd-7e22-aa05-0261c842fcce"
+        },
+        {
+          "agent_type": "planner",
+          "description": "planner_al51_iter02",
+          "invoked_at": "2026-10-30T23:41:58.950Z",
+          "child_session_id": "01a18f31-0d40-7600-a98a-960113fce249"
+        },
+        {
+          "agent_type": "coder",
+          "description": "coder_al51_iter02",
+          "invoked_at": "2026-10-30T23:42:16.498Z",
+          "child_session_id": "01a18f31-51cb-7ed3-a249-4fd90aaed83d"
+        },
+        {
+          "agent_type": "tester",
+          "description": "tester_al51_iter02",
+          "invoked_at": "2026-10-30T23:44:04.806Z"
+        },
+        {
+          "agent_type": "tester",
+          "description": "tester_al51_iter02",
+          "invoked_at": "2026-10-30T23:44:06.723Z",
+          "child_session_id": "01a18f33-0060-7e72-8289-c1c2ecde4d2f"
+        },
+        {
+          "agent_type": "reviewer",
+          "description": "reviewer_al51_iter02",
+          "invoked_at": "2026-10-30T23:45:10.566Z",
+          "child_session_id": "01a18f33-f9c4-73c0-b770-365b59ddc15a"
+        },
+        {
+          "agent_type": "planner",
+          "description": "planner_al51_iter03",
+          "invoked_at": "2026-10-30T23:45:57.567Z",
+          "child_session_id": "01a18f34-b15b-7d12-9f3a-8213a11604bc"
+        },
+        {
+          "agent_type": "coder",
+          "description": "coder_al51_iter03",
+          "invoked_at": "2026-10-30T23:46:16.870Z",
+          "child_session_id": "01a18f34-fcca-7f02-b61e-bc79afdf7da0"
+        },
+        {
+          "agent_type": "tester",
+          "description": "tester_al51_iter03",
+          "invoked_at": "2026-10-30T23:47:32.203Z",
+          "child_session_id": "01a18f36-230b-7b10-9bc0-c6bf3c631df3"
+        },
+        {
+          "agent_type": "reviewer",
+          "description": "reviewer_al51_iter03",
+          "invoked_at": "2026-10-30T23:48:40.512Z",
+          "child_session_id": "01a18f37-2de3-7c20-933e-e5e68c4861d4"
+        },
+        {
+          "agent_type": "coder",
+          "description": "coder_al51_merge",
+          "invoked_at": "2026-10-30T23:50:20.200Z",
+          "child_session_id": "01a18f38-b344-7b61-ac3d-2ec648563bc0"
+        }
+      ],
       "id": "01a18f24-2e51-7283-b83e-1c9464a79e24",
       "source": "codex",
       "user": "Nilton Duarte",
       "invocations": [
         {
-          "role": "RootAgent",
+          "role": "",
           "model": "gpt-6-luna",
           "started_at": "2026-10-30T23:27:56.426Z",
-          "completed_at": "2026-10-31T00:56:59.022Z",
-          "active_duration_seconds": 2052,
+          "completed_at": "2026-10-31T00:57:10.392Z",
+          "active_duration_seconds": 2151,
           "turns": 6,
-          "tokens": {"input": 142323, "output": 26848, "cache_read": 10642560, "reasoning": 13525, "peak_context": 128228},
-          "cost_usd": 0,
-          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
+          "tokens": {"input": 143794, "output": 27356, "cache_read": 11027328, "reasoning": 13748, "peak_context": 129094},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
           "user_iterations": 10
         }
       ],
       "tools": [
-        {"name": "command", "calls": 73, "errors": 12},
+        {"name": "command", "calls": 76, "errors": 12},
         {"name": "list_agents", "calls": 3, "errors": 0},
         {"name": "send_message", "calls": 4, "errors": 0},
         {"name": "spawn_agent", "calls": 14, "errors": 0},
@@ -70,8 +174,8 @@
           "active_duration_seconds": 57,
           "turns": 1,
           "tokens": {"input": 27407, "output": 3631, "cache_read": 598016, "reasoning": 507, "peak_context": 56296},
-          "cost_usd": 0,
-          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
           "user_iterations": 0
         }
@@ -96,8 +200,8 @@
           "active_duration_seconds": 570,
           "turns": 1,
           "tokens": {"input": 116700, "output": 26075, "cache_read": 9927680, "reasoning": 10760, "peak_context": 147240},
-          "cost_usd": 0,
-          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
           "user_iterations": 0
         }
@@ -122,8 +226,8 @@
           "active_duration_seconds": 124,
           "turns": 1,
           "tokens": {"input": 35215, "output": 3680, "cache_read": 1612672, "reasoning": 1901, "peak_context": 82005},
-          "cost_usd": 0,
-          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
           "user_iterations": 0
         }
@@ -148,8 +252,8 @@
           "active_duration_seconds": 54,
           "turns": 1,
           "tokens": {"input": 35836, "output": 4127, "cache_read": 704000, "reasoning": 2548, "peak_context": 85314},
-          "cost_usd": 0,
-          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
           "user_iterations": 0
         }
@@ -173,8 +277,8 @@
           "active_duration_seconds": 15,
           "turns": 1,
           "tokens": {"input": 5819, "output": 916, "cache_read": 273280, "reasoning": 60, "peak_context": 57050},
-          "cost_usd": 0,
-          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
           "user_iterations": 0
         }
@@ -198,8 +302,8 @@
           "active_duration_seconds": 107,
           "turns": 1,
           "tokens": {"input": 30155, "output": 6694, "cache_read": 1522816, "reasoning": 1865, "peak_context": 79394},
-          "cost_usd": 0,
-          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
           "user_iterations": 0
         }
@@ -224,8 +328,8 @@
           "active_duration_seconds": 61,
           "turns": 1,
           "tokens": {"input": 14564, "output": 962, "cache_read": 466816, "reasoning": 201, "peak_context": 66116},
-          "cost_usd": 0,
-          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
           "user_iterations": 0
         }
@@ -249,8 +353,8 @@
           "active_duration_seconds": 43,
           "turns": 1,
           "tokens": {"input": 34304, "output": 3418, "cache_read": 630400, "reasoning": 1901, "peak_context": 86343},
-          "cost_usd": 0,
-          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
           "user_iterations": 0
         }
@@ -274,8 +378,8 @@
           "active_duration_seconds": 16,
           "turns": 1,
           "tokens": {"input": 5561, "output": 827, "cache_read": 281728, "reasoning": 104, "peak_context": 58683},
-          "cost_usd": 0,
-          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
           "user_iterations": 0
         }
@@ -299,8 +403,8 @@
           "active_duration_seconds": 72,
           "turns": 1,
           "tokens": {"input": 18785, "output": 3333, "cache_read": 938368, "reasoning": 815, "peak_context": 70537},
-          "cost_usd": 0,
-          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
           "user_iterations": 0
         }
@@ -324,8 +428,8 @@
           "active_duration_seconds": 66,
           "turns": 1,
           "tokens": {"input": 10031, "output": 778, "cache_read": 467712, "reasoning": 140, "peak_context": 63189},
-          "cost_usd": 0,
-          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
           "user_iterations": 0
         }
@@ -349,8 +453,8 @@
           "active_duration_seconds": 48,
           "turns": 1,
           "tokens": {"input": 32073, "output": 3438, "cache_read": 714240, "reasoning": 2061, "peak_context": 85400},
-          "cost_usd": 0,
-          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
           "user_iterations": 0
         }
@@ -374,8 +478,8 @@
           "active_duration_seconds": 123,
           "turns": 1,
           "tokens": {"input": 28535, "output": 5175, "cache_read": 1251072, "reasoning": 3027, "peak_context": 89792},
-          "cost_usd": 0,
-          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
           "user_iterations": 0
         }

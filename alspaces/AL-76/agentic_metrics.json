@@ -4,11 +4,13 @@
     "schema_version": 6,
     "status": "completed",
     "steps_completed": [
-      "schema_v6_lean_occurrences"
+      "git_code_facts",
+      "schema_v6_lean_occurrences",
+      "source_backfill"
     ],
-    "steps_pending": [],
-    "last_migrated_at": "",
-    "last_migrated_by": "",
+    "steps_pending": null,
+    "last_migrated_at": "2026-11-04T15:13:36.926497395Z",
+    "last_migrated_by": "Nilton Duarte",
     "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
   },
   "ticket_id": "AL-76",
@@ -16,7 +18,7 @@
   "ticket_type": "feat",
   "started_at": "2026-11-03T17:45:17.533Z",
   "completed_at": "2026-11-03T21:08:24.390184+00:00",
-  "updated_at": "2026-11-03T21:08:24.390184+00:00",
+  "updated_at": "2026-11-04T15:13:36.926497395Z",
   "code": {
     "lines_added": 1555,
     "lines_deleted": 123,
@@ -29,6 +31,82 @@
   },
   "sessions": [
     {
+      "skills": [
+        {
+          "name": "agentic-lens-dev",
+          "caller_role": "user",
+          "invoked_at": "2026-11-03T17:45:21.827Z"
+        },
+        {
+          "name": "agentic-lens-dev",
+          "caller_role": "user",
+          "invoked_at": "2026-11-03T17:48:52.255Z"
+        },
+        {
+          "name": "agentic-lens-dev",
+          "caller_role": "user",
+          "invoked_at": "2026-11-03T17:58:02.953Z"
+        },
+        {
+          "name": "agentic-lens-dev",
+          "caller_role": "user",
+          "invoked_at": "2026-11-03T18:06:01.154Z"
+        },
+        {
+          "name": "agentic-lens-dev",
+          "caller_role": "user",
+          "invoked_at": "2026-11-03T19:43:18.393Z"
+        },
+        {
+          "name": "agentic-lens-dev",
+          "caller_role": "user",
+          "invoked_at": "2026-11-03T21:02:47.699Z"
+        }
+      ],
+      "delegations": [
+        {
+          "agent_type": "planner",
+          "description": "plan",
+          "invoked_at": "2026-11-03T17:45:39.479Z",
+          "child_session_id": "01a1a284-43ad-7f50-bbca-b53942bf01df"
+        },
+        {
+          "agent_type": "coder",
+          "description": "implement",
+          "invoked_at": "2026-11-03T17:47:52.202Z",
+          "child_session_id": "01a1a286-4b0a-7861-a7fd-09097687e598"
+        },
+        {
+          "agent_type": "tester",
+          "description": "test",
+          "invoked_at": "2026-11-03T17:52:02.171Z",
+          "child_session_id": "01a1a28a-1b07-7b02-bd59-da25983c03af"
+        },
+        {
+          "agent_type": "reviewer-behavior",
+          "description": "behavior_sol",
+          "invoked_at": "2026-11-03T17:56:10.653Z",
+          "child_session_id": "01a1a28d-e52e-71f0-9ba6-84c9bd1a09a2"
+        },
+        {
+          "agent_type": "reviewer-data",
+          "description": "data_sol",
+          "invoked_at": "2026-11-03T17:56:17.342Z",
+          "child_session_id": "01a1a28d-ff62-79f0-8b37-aa20374a4807"
+        },
+        {
+          "agent_type": "reviewer-architecture",
+          "description": "architecture_sol",
+          "invoked_at": "2026-11-03T17:56:22.894Z",
+          "child_session_id": "01a1a28e-1502-7760-bdaa-3d2f01e383f9"
+        },
+        {
+          "agent_type": "reviewer-tests",
+          "description": "tests_sol",
+          "invoked_at": "2026-11-03T18:02:44.069Z",
+          "child_session_id": "01a1a293-e5f3-7ca0-b125-df4bd832343d"
+        }
+      ],
       "id": "01a1a283-edc6-7820-9bd5-969709b32a26",
       "source": "codex",
       "user": "Nilton Duarte",
@@ -37,10 +115,10 @@
           "role": "",
           "model": "gpt-6.1-sol",
           "started_at": "2026-11-03T17:45:21.049Z",
-          "completed_at": "2026-11-03T21:08:17.514Z",
-          "active_duration_seconds": 1474,
+          "completed_at": "2026-11-03T21:10:25.420Z",
+          "active_duration_seconds": 1933,
           "turns": 3,
-          "tokens": {"input": 153425, "output": 27639, "cache_read": 15310336, "reasoning": 4476, "peak_context": 155907},
+          "tokens": {"input": 158979, "output": 31499, "cache_read": 16909440, "reasoning": 5968, "peak_context": 163634},
           "cost_usd": null,
           "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
@@ -48,7 +126,7 @@
         }
       ],
       "tools": [
-        {"name": "command", "calls": 77, "errors": 12},
+        {"name": "command", "calls": 84, "errors": 13},
         {"name": "followup_task", "calls": 6, "errors": 0},
         {"name": "send_message", "calls": 22, "errors": 0},
         {"name": "spawn_agent", "calls": 7, "errors": 0},
@@ -56,6 +134,8 @@
         {"name": "wait_agent", "calls": 34, "errors": 0}
       ],
       "anomalies": [
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 3, "context_tokens": 160714, "threshold": "160000"}},
+        {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "WARNING", "context": {"role": "coder", "secondary_role": "tester", "count": 3, "threshold": "3"}},
         {"rule_id": "TOOL_RETRY_STREAK", "severity": "WARNING", "context": {"tool_name": "command", "turn": 1, "count": 3, "threshold": "3"}}
       ]
     },
@@ -340,7 +420,5 @@
       "anomalies": []
     }
   ],
-  "anomalies": [
-    {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "WARNING", "context": {"role": "coder", "secondary_role": "tester", "count": 3, "threshold": "3"}}
-  ]
+  "anomalies": []
 }

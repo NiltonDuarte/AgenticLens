@@ -4,11 +4,13 @@
     "schema_version": 6,
     "status": "completed",
     "steps_completed": [
-      "schema_v6_lean_occurrences"
+      "git_code_facts",
+      "schema_v6_lean_occurrences",
+      "source_backfill"
     ],
-    "steps_pending": [],
-    "last_migrated_at": "",
-    "last_migrated_by": "",
+    "steps_pending": null,
+    "last_migrated_at": "2026-11-04T15:13:36.926497395Z",
+    "last_migrated_by": "Nilton Duarte",
     "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
   },
   "ticket_id": "FIX-9",
@@ -16,7 +18,7 @@
   "ticket_type": "fix",
   "started_at": "2026-10-28T07:50:55.131Z",
   "completed_at": "2026-10-28T08:57:19.412Z",
-  "updated_at": "2026-10-28T08:57:20.312903+00:00",
+  "updated_at": "2026-11-04T15:13:36.926497395Z",
   "code": {
     "lines_added": 0,
     "lines_deleted": 0,
@@ -29,26 +31,41 @@
   },
   "sessions": [
     {
+      "skills": [
+        {
+          "name": "agentic-lens-dev",
+          "caller_role": "user",
+          "invoked_at": "2026-10-28T07:50:56.327Z"
+        }
+      ],
+      "delegations": [
+        {
+          "agent_type": null,
+          "description": "planner",
+          "invoked_at": "2026-10-28T08:20:44.790Z",
+          "child_session_id": "01a18198-ea93-7351-9e24-16d408c4ed5e"
+        }
+      ],
       "id": "01a1817d-9b92-7460-807f-e09fd59665b8",
       "source": "codex",
       "user": "Nilton Duarte",
       "invocations": [
         {
-          "role": "RootAgent",
+          "role": "",
           "model": "gpt-6-luna",
           "started_at": "2026-10-28T07:50:55.993Z",
-          "completed_at": "2026-10-28T08:57:19.412Z",
-          "active_duration_seconds": 298,
-          "turns": 5,
-          "tokens": {"input": 133204, "output": 26140, "cache_read": 4868736, "reasoning": 17954, "peak_context": 124093},
-          "cost_usd": 0,
-          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
+          "completed_at": "2026-10-28T09:22:51.456Z",
+          "active_duration_seconds": 685,
+          "turns": 6,
+          "tokens": {"input": 154775, "output": 33087, "cache_read": 6274816, "reasoning": 23163, "peak_context": 143681},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
-          "user_iterations": 8
+          "user_iterations": 9
         }
       ],
       "tools": [
-        {"name": "command", "calls": 20, "errors": 4},
+        {"name": "command", "calls": 29, "errors": 4},
         {"name": "followup_task", "calls": 1, "errors": 0},
         {"name": "list_agents", "calls": 1, "errors": 0},
         {"name": "request_user_input_async", "calls": 3, "errors": 0},
@@ -73,8 +90,8 @@
           "active_duration_seconds": 61,
           "turns": 2,
           "tokens": {"input": 13357, "output": 4369, "cache_read": 781568, "reasoning": 1080, "peak_context": 102714},
-          "cost_usd": 0,
-          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
           "user_iterations": 0
         }

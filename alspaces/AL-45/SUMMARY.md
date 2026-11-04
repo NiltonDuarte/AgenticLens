@@ -42,14 +42,14 @@
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 6
-- **Active Agent Duration:** 38m 36s (excludes user wait time)
-- **Context Window Health:** ELEVATED — Root agent peak 115.1k tokens (58% of 200k healthy ceiling, 0 compactions) | Subagents peak 139.8k (Reviewer)
-- **Role Effort Distribution (Subagents):** N/A
+- **Active Agent Duration:** 47m 15s (excludes user wait time)
+- **Context Window Health:** HEALTHY — Root agent peak 116.1k tokens (26% of 450k healthy ceiling, 0 compactions) | Subagents peak 139.8k (Reviewer)
+- **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 1.4 avg turns/run (peak: 3 turns) | Planner 1.0, Coder 1.7, Tester 1.3, Reviewer 1.5
 - **Test-to-Production Code Ratio:** 2.8:1 (+94 test lines / +34 prod lines)
 - **Code Delivered:** +160 / -36 lines across 8 code files (excluding docs)
-- **Reasoning Effort:** 33,892 reasoning tokens (32.8% of generated output)
-- **Tool Health & Self-Correction:** 223 tool calls (14 self-corrections, 93.7% success rate)
+- **Reasoning Effort:** 34,256 reasoning tokens (32.8% of generated output)
+- **Tool Health & Self-Correction:** 226 tool calls (14 self-corrections, 93.8% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 2 execution anomalies detected (2 WARNING).
@@ -63,15 +63,15 @@
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **planner** | 3 | 20,764 | 4,523 | 1,062,784 | 98.1% | 96.8k | HEALTHY | $0.00 |
-| **coder** | 3 | 82,455 | 19,104 | 4,107,904 | 98.0% | 132.5k | ELEVATED | $0.00 |
-| **tester** | 3 | 52,707 | 4,509 | 2,689,664 | 98.1% | 120.4k | ELEVATED | $0.00 |
-| **reviewer** | 4 | 79,215 | 14,852 | 4,186,112 | 98.1% | 139.8k | ELEVATED | $0.00 |
-| **rootagent** | 1 | 124,665 | 26,570 | 9,569,536 | 98.7% | 115.1k | ELEVATED | $0.00 |
-| **Total** | **14** | **359,806** | **69,558** | **21,616,000** | **98.4%** | **139.8k** | **ELEVATED** | **$0.00** |
+| **planner** | 3 | 20,764 | 4,523 | 1,062,784 | 98.1% | 96.8k | HEALTHY | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
+| **coder** | 3 | 82,455 | 19,104 | 4,107,904 | 98.0% | 132.5k | HEALTHY | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
+| **tester** | 3 | 52,707 | 4,509 | 2,689,664 | 98.1% | 120.4k | HEALTHY | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
+| **reviewer** | 4 | 79,215 | 14,852 | 4,186,112 | 98.1% | 139.8k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
+| **Unknown** | 1 | 126,286 | 27,304 | 10,030,848 | 98.8% | 116.1k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **14** | **361,427** | **70,292** | **22,077,312** | **98.4%** | **139.8k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-luna** | 14 | 359,806 | 69,558 | 21,616,000 | 98.4% | $0.00 |
-| **Total** | **14** | **359,806** | **69,558** | **21,616,000** | **98.4%** | **$0.00** |
+| **gpt-6-luna** | 14 | 361,427 | 70,292 | 22,077,312 | 98.4% | Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations) |
+| **Total** | **14** | **361,427** | **70,292** | **22,077,312** | **98.4%** | **Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations)** |
