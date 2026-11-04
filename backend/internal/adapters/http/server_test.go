@@ -42,7 +42,7 @@ func mustNewServer(t *testing.T, workspacesDir string, staticFS fs.FS, liveServi
 }
 
 func sampleTestLedgerJSON(ticketID, title string, duration int64, cost float64, invocations int64) string {
-	return fmt.Sprintf(`{"schema_version":7,"migration":{"schema_version":7,"status":"completed","steps_completed":["source_backfill"],"steps_pending":[]},"ticket_id":%q,"ticket_title":%q,"ticket_type":"feature","started_at":"2026-10-17T10:00:00Z","completed_at":"2026-10-17T11:00:00Z","updated_at":"2026-10-17T11:00:00Z","code":{"lines_added":120,"lines_deleted":20,"test_lines_added":60,"test_lines_deleted":0,"prod_lines_added":60,"prod_lines_deleted":20,"files_changed":4,"sdlc_iterations":2},"sessions":[{"id":"ses-orch","source":"opencode","user":"tester","invocations":[{"role":"orchestrator","model":"claude-3-sonnet","started_at":null,"completed_at":null,"active_duration_seconds":%d,"turns":%d,"tokens":{"input":5000,"output":1000,"cache_read":10000,"reasoning":300,"peak_context":80000},"cost_usd":%f,"cost_evidence":{"state":"observed","known_subtotal_usd":%[5]f},"compactions":0,"user_iterations":2}],"tools":[{"name":"bash","calls":5,"errors":0}],"anomalies":[]}]}`, ticketID, title, duration, invocations, cost)
+	return fmt.Sprintf(`{"schema_version":6,"migration":{"schema_version":6,"status":"completed","steps_completed":["source_backfill"],"steps_pending":[]},"ticket_id":%q,"ticket_title":%q,"ticket_type":"feature","started_at":"2026-10-17T10:00:00Z","completed_at":"2026-10-17T11:00:00Z","updated_at":"2026-10-17T11:00:00Z","code":{"lines_added":120,"lines_deleted":20,"test_lines_added":60,"test_lines_deleted":0,"prod_lines_added":60,"prod_lines_deleted":20,"files_changed":4,"sdlc_iterations":2},"sessions":[{"id":"ses-orch","source":"opencode","user":"tester","invocations":[{"role":"orchestrator","model":"claude-3-sonnet","started_at":null,"completed_at":null,"active_duration_seconds":%d,"turns":%d,"tokens":{"input":5000,"output":1000,"cache_read":10000,"reasoning":300,"peak_context":80000},"cost_usd":%f,"cost_evidence":{"state":"observed","known_subtotal_usd":%[5]f},"compactions":0,"user_iterations":2}],"tools":[{"name":"bash","calls":5,"errors":0}],"anomalies":[]}]}`, ticketID, title, duration, invocations, cost)
 }
 
 func setupFixtureWorkspaces(t *testing.T) string {
@@ -58,9 +58,9 @@ func setupFixtureWorkspaces(t *testing.T) string {
 		t.Fatalf("failed creating AL-1 dir: %v", err)
 	}
 	t1JSON := `{
-  "schema_version": 7,
+  "schema_version": 6,
   "migration": {
-    "schema_version": 7,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -132,9 +132,9 @@ func setupFixtureWorkspaces(t *testing.T) string {
 		t.Fatalf("failed creating AL-2 dir: %v", err)
 	}
 	t2JSON := `{
-  "schema_version": 7,
+  "schema_version": 6,
   "migration": {
-    "schema_version": 7,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -276,7 +276,7 @@ func TestGetWorkspaces(t *testing.T) {
 			if err := os.MkdirAll(dir, 0755); err != nil {
 				t.Fatal(err)
 			}
-			data := `{"schema_version":7,"migration":{"schema_version":7,"status":"completed","steps_completed":["source_backfill"],"steps_pending":[]},"ticket_id":"` + tid + `","updated_at":"2026-10-18T10:00:00Z","sessions":[]}`
+			data := `{"schema_version":6,"migration":{"schema_version":6,"status":"completed","steps_completed":["source_backfill"],"steps_pending":[]},"ticket_id":"` + tid + `","updated_at":"2026-10-18T10:00:00Z","sessions":[]}`
 			if err := os.WriteFile(filepath.Join(dir, "agentic_metrics.json"), []byte(data), 0644); err != nil {
 				t.Fatal(err)
 			}
@@ -548,7 +548,7 @@ func TestHTTPRejectsLegacySchemaVersionsWithoutPartialPayload(t *testing.T) {
 	if err := os.MkdirAll(ticketDir, 0755); err != nil {
 		t.Fatal(err)
 	}
-	for _, version := range []int{1, 2, 3, 4, 5, 6} {
+	for _, version := range []int{1, 2, 3, 4, 5} {
 		t.Run(fmt.Sprintf("v%d", version), func(t *testing.T) {
 			ledger := fmt.Sprintf(`{"schema_version":%d,"ticket_id":%q,"invocations":[{"id":"legacy-fact"}],"sessions":[]}`, version, ticketID)
 			if err := os.WriteFile(filepath.Join(ticketDir, "agentic_metrics.json"), []byte(ledger), 0644); err != nil {
@@ -608,10 +608,10 @@ func TestHTTPRejectsRetiredCurrentFieldsAndKeepsValidSibling(t *testing.T) {
 	if err := os.WriteFile(validPath, []byte(valid), 0600); err != nil {
 		t.Fatal(err)
 	}
-	base := `{"schema_version":7,"ticket_id":"TEST-BAD","sessions":[{"id":"owner","source":"codex","user":"tester","invocations":[],"tools":[],"anomalies":[],"skills":[{"name":"inspect","caller_role":null,"invoked_at":null}],"delegations":[{"agent_type":null,"invoked_at":null}]}]}`
+	base := `{"schema_version":6,"ticket_id":"TEST-BAD","sessions":[{"id":"owner","source":"codex","user":"tester","invocations":[],"tools":[],"anomalies":[],"skills":[{"name":"inspect","caller_role":null,"invoked_at":null}],"delegations":[{"agent_type":null,"invoked_at":null}]}]}`
 	for _, tc := range []struct{ name, needle, replacement string }{
-		{"root events", `"schema_version":7`, `"schema_version":7,"events":[]`},
-		{"root partial marker", `"schema_version":7`, `"schema_version":7,"events_are_partial":false`},
+		{"root events", `"schema_version":6`, `"schema_version":6,"events":[]`},
+		{"root partial marker", `"schema_version":6`, `"schema_version":6,"events_are_partial":false`},
 		{"session events", `"tools":[]`, `"tools":[],"events":[]`},
 		{"session partial marker", `"tools":[]`, `"tools":[],"events_are_partial":false`},
 		{"session agent path", `"tools":[]`, `"tools":[],"agent_path":""`},
@@ -1254,9 +1254,9 @@ func TestAdversarialHTTPEdgeCases(t *testing.T) {
 			t.Fatal(err)
 		}
 		zeroJSON := `{
-  "schema_version": 7,
+  "schema_version": 6,
   "migration": {
-    "schema_version": 7,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -1889,9 +1889,9 @@ func TestWorkspaceEventsAndAnomaliesHTTP(t *testing.T) {
 		t.Fatalf("failed creating dir: %v", err)
 	}
 	w1JSON := `{
-  "schema_version": 7,
+  "schema_version": 6,
   "migration": {
-    "schema_version": 7,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -1971,9 +1971,9 @@ func TestWorkspaceEventsAndAnomaliesHTTP(t *testing.T) {
 		t.Fatalf("failed creating dir: %v", err)
 	}
 	w2JSON := `{
-  "schema_version": 7,
+  "schema_version": 6,
   "migration": {
-    "schema_version": 7,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -2008,9 +2008,9 @@ func TestWorkspaceEventsAndAnomaliesHTTP(t *testing.T) {
 		t.Fatalf("failed creating dir: %v", err)
 	}
 	w3JSON := `{
-  "schema_version": 7,
+  "schema_version": 6,
   "migration": {
-    "schema_version": 7,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -2280,9 +2280,9 @@ func TestWorkspaceEventsHandler_AdversarialEdgeCases(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(emptyEventsDir, "agentic_metrics.json"), []byte(`{
-  "schema_version": 7,
+  "schema_version": 6,
   "migration": {
-    "schema_version": 7,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -2302,9 +2302,9 @@ func TestWorkspaceEventsHandler_AdversarialEdgeCases(t *testing.T) {
 		t.Fatal(err)
 	}
 	validJSON := `{
-  "schema_version": 7,
+  "schema_version": 6,
   "migration": {
-    "schema_version": 7,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -2536,7 +2536,7 @@ func TestLeanFactsSurviveSourceTraceAvailabilityWithoutGETWrites(t *testing.T) {
 	if err := os.MkdirAll(ticketDir, 0700); err != nil {
 		t.Fatal(err)
 	}
-	ledgerJSON := `{"schema_version":7,"ticket_id":"TEST-TRACE","sessions":[
+	ledgerJSON := `{"schema_version":6,"ticket_id":"TEST-TRACE","sessions":[
       {"id":"session-a","source":"opencode","user":"tester","invocations":[],"tools":[{"name":"bash","calls":6,"errors":3}],
        "skills":[{"name":"inspect","caller_role":null,"invoked_at":null},{"name":"inspect","caller_role":null,"invoked_at":null}],
        "delegations":[{"agent_type":null,"invoked_at":null,"child_session_id":"unavailable-child"}],
@@ -2646,7 +2646,7 @@ func TestWorkspaceSourceEventsPreserveIndependentEqualOccurrencesAcrossReads(t *
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		t.Fatal(err)
 	}
-	ledgerJSON := `{"schema_version":7,"ticket_id":"TEST-TRACE","sessions":[{"id":"owner","source":"opencode","user":"tester","invocations":[],"tools":[],"anomalies":[]}]}`
+	ledgerJSON := `{"schema_version":6,"ticket_id":"TEST-TRACE","sessions":[{"id":"owner","source":"opencode","user":"tester","invocations":[],"tools":[],"anomalies":[]}]}`
 	ledgerPath := filepath.Join(dir, "agentic_metrics.json")
 	if err := os.WriteFile(ledgerPath, []byte(ledgerJSON), 0600); err != nil {
 		t.Fatal(err)
@@ -2685,7 +2685,7 @@ func TestSummaryOnlyLeanEventsResponseAllocatesEmptyEventsAndKeepsAnomalies(t *t
 		t.Fatal(err)
 	}
 	content := `{
-  "schema_version": 7,
+  "schema_version": 6,
   "ticket_id": "FIX-12",
   "sessions": [
     {
@@ -2715,7 +2715,7 @@ func TestSummaryOnlyLeanEventsResponseAllocatesEmptyEventsAndKeepsAnomalies(t *t
 	rec := httptest.NewRecorder()
 	adaptershttp.WorkspaceEventsHandler(root).ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
-		t.Fatalf("expected summary-only schema7 success: %d %s", rec.Code, rec.Body.String())
+		t.Fatalf("expected summary-only schema6 success: %d %s", rec.Code, rec.Body.String())
 	}
 	var response domain.WorkspaceEventsResponse
 	if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {
@@ -2831,9 +2831,9 @@ func TestWorkspaceEvents_EndToEndLiveServiceHydrationAndPathTraversal(t *testing
 		t.Fatal(err)
 	}
 	al33JSON := `{
-  "schema_version": 7,
+  "schema_version": 6,
   "migration": {
-    "schema_version": 7,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -2890,9 +2890,9 @@ func TestWorkspaceEvents_EndToEndLiveServiceHydrationAndPathTraversal(t *testing
 		t.Fatal(err)
 	}
 	offlineJSON := `{
-  "schema_version": 7,
+  "schema_version": 6,
   "migration": {
-    "schema_version": 7,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -3137,8 +3137,8 @@ func setupMultiFilterWorkspaces(t *testing.T) string {
 			t.Fatalf("failed creating dir for %s: %v", tc.id, err)
 		}
 		rawJSON := `{
-			"schema_version":7,
-			"migration": {"schema_version":7, "status": "completed", "steps_completed": ["source_backfill"], "steps_pending": []},
+			"schema_version":6,
+			"migration": {"schema_version":6, "status": "completed", "steps_completed": ["source_backfill"], "steps_pending": []},
 			"ticket_id": "` + tc.id + `",
 			"ticket_title": "Title ` + tc.id + `",
 			"ticket_type": "` + tc.ticketType + `",
@@ -3790,9 +3790,9 @@ func TestProgressionHandler(t *testing.T) {
 		tRecentDir := filepath.Join(wsDir, "RECENT-1")
 		_ = os.MkdirAll(tRecentDir, 0755)
 		recentJSON := fmt.Sprintf(`{
-  "schema_version": 7,
+  "schema_version": 6,
   "migration": {
-    "schema_version": 7,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -3850,9 +3850,9 @@ func TestProgressionHandler(t *testing.T) {
 		tOldDir := filepath.Join(wsDir, "OLD-1")
 		_ = os.MkdirAll(tOldDir, 0755)
 		oldJSON := fmt.Sprintf(`{
-  "schema_version": 7,
+  "schema_version": 6,
   "migration": {
-    "schema_version": 7,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -3994,9 +3994,9 @@ func TestProgressionHandler_AL34_Adversarial(t *testing.T) {
 	}
 
 	rawJSON := `{
-  "schema_version": 7,
+  "schema_version": 6,
   "migration": {
-    "schema_version": 7,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"

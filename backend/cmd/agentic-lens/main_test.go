@@ -210,9 +210,9 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 		t.Fatalf("failed to create TICKET-ANOMALY dir: %v", err)
 	}
 	anomalyFactJSON := `{
-  "schema_version": 7,
+  "schema_version": 6,
   "migration": {
-    "schema_version": 7,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -1170,9 +1170,9 @@ func TestCLIGenerate_HighFailureAggregateKeepsSummaryWithoutPersistedEvents(t *t
 	tempDir := t.TempDir()
 	outJSON := filepath.Join(tempDir, "aggregate.json")
 	seedJSON := `{
-  "schema_version": 7,
+  "schema_version": 6,
   "migration": {
-    "schema_version": 7,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -1863,9 +1863,9 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 
 		cachedJSON := filepath.Join(tempDir, "cached_with_inv.json")
 		cachedJSONContent := `{
-  "schema_version": 7,
+  "schema_version": 6,
   "migration": {
-    "schema_version": 7,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -1967,9 +1967,9 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 
 		cachedJSON := filepath.Join(tempDir, "cached_no_inv.json")
 		initialJSON := `{
-  "schema_version": 7,
+  "schema_version": 6,
   "migration": {
-    "schema_version": 7,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -2046,9 +2046,9 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 
 		cachedJSON := filepath.Join(tempDir, "cached_empty.json")
 		initialJSON := `{
-  "schema_version": 7,
+  "schema_version": 6,
   "migration": {
-    "schema_version": 7,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -2840,7 +2840,7 @@ func TestCLIMigrateCommand_Adversarial(t *testing.T) {
     "sdlc_iterations": 1
   },
   "sessions": [],
-  "schema_version": 6
+  "schema_version": 5
 }`
 		_ = os.WriteFile(filepath.Join(t1Dir, "agentic_metrics.json"), []byte(t1JSON), 0644)
 		_ = os.WriteFile(filepath.Join(t1Dir, "SUMMARY.md"), []byte("# T-SUM Summary\nInitial description.\n"), 0644)
@@ -3445,9 +3445,9 @@ func TestCLITicketTypeClassification(t *testing.T) {
 
 		// Create existing fact ledger with legacy "feature"
 		legacyJSON := `{
-  "schema_version": 7,
+  "schema_version": 6,
   "migration": {
-    "schema_version": 7,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -4476,9 +4476,9 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 		tempDir := t.TempDir()
 		outJSON := filepath.Join(tempDir, "facts_ws_title.json")
 		wsCachedJSON := `{
-  "schema_version": 7,
+  "schema_version": 6,
   "migration": {
-    "schema_version": 7,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -4521,9 +4521,9 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 		tempDir := t.TempDir()
 		outJSON := filepath.Join(tempDir, "facts.json")
 		cachedJSON := `{
-  "schema_version": 7,
+  "schema_version": 6,
   "migration": {
-    "schema_version": 7,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"

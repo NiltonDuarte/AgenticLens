@@ -432,7 +432,7 @@ func TestMigrationRunner_CorruptedAndDefectiveLedgerResilience(t *testing.T) {
 	// 5. Valid v2 ledger (up to date)
 	w5Dir := filepath.Join(wsDir, "AL-UPTODATE")
 	_ = os.MkdirAll(w5Dir, 0755)
-	v2JSON := `{"schema_version":7,"ticket_id":"AL-UPTODATE","updated_at":"2026-10-18T10:00:00Z","sessions":[],"anomalies":[]}`
+	v2JSON := `{"schema_version":6,"ticket_id":"AL-UPTODATE","updated_at":"2026-10-18T10:00:00Z","sessions":[],"anomalies":[]}`
 	_ = os.WriteFile(filepath.Join(w5Dir, "agentic_metrics.json"), []byte(v2JSON), 0644)
 
 	runner := backfill.NewMigrationRunner(nil)
@@ -924,7 +924,7 @@ func TestMigrationRunner_ValidatesCurrentBeforeUpToDateFastPath(t *testing.T) {
 				t.Fatal(err)
 			}
 			path := filepath.Join(workspace, "agentic_metrics.json")
-			original := []byte(`{"schema_version":7,"ticket_id":"TEST-CURRENT","sessions":` + tc.sessions + `}`)
+			original := []byte(`{"schema_version":6,"ticket_id":"TEST-CURRENT","sessions":` + tc.sessions + `}`)
 			if err := os.WriteFile(path, original, 0600); err != nil {
 				t.Fatal(err)
 			}
@@ -1061,7 +1061,7 @@ func TestMigrationRunnerRejectsObsoletePublicationTarget(t *testing.T) {
 		t.Fatal(err)
 	}
 	report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{WorkspacesDir: ws, TargetVersion: 5, DryRun: true})
-	if err == nil || report != nil || !strings.Contains(err.Error(), "current target version 7") {
+	if err == nil || report != nil || !strings.Contains(err.Error(), "current target version 6") {
 		t.Fatalf("obsolete target not rejected: %+v %v", report, err)
 	}
 	after, err := os.ReadFile(path)

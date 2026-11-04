@@ -75,7 +75,7 @@ describe('Boundary API Client', () => {
             expect((await fetchWorkspaceById('AL-1')).data.artifacts).toEqual(expectedArtifacts);
         });
     });
-    describe('v7 lean owned occurrence boundary', () => {
+    describe('v6 lean owned occurrence boundary', () => {
         const detail = mockWorkspaceDetails['AL-1']!;
         const skill = { name: 'selected-skill', caller_role: null, invoked_at: null };
         const delegation = { agent_type: null, invoked_at: null, child_session_id: 'known-child' };
@@ -116,11 +116,11 @@ describe('Boundary API Client', () => {
             vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ...payload, ledger: { ...payload.ledger, facts: { ...payload.ledger.facts, sessions: [session] } } }) }));
             await expect(fetchWorkspaceById('AL-1')).rejects.toThrow(/Invalid workspace detail response/);
         });
-        it.each([undefined, 1, 4, 5, 6])('requires explicit migration for schema %s', async (schema_version) => {
+        it.each([undefined, 1, 4, 5])('requires explicit migration for schema %s', async (schema_version) => {
             const obsolete = { ...payload, ledger: { ...payload.ledger, facts: { ...payload.ledger.facts, schema_version } } };
             const before = JSON.stringify(obsolete);
             vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => obsolete }));
-            await expect(fetchWorkspaceById('AL-1')).rejects.toThrow(/Migration required.*schema v7/);
+            await expect(fetchWorkspaceById('AL-1')).rejects.toThrow(/Migration required.*schema v6/);
             expect(JSON.stringify(obsolete)).toBe(before);
         });
         it.each(['invocations', 'tools', 'events', 'events_are_partial', 'skills', 'task_links', 'delegations', 'unresolved_facts'])('rejects retired root %s even when empty', async (key) => {
@@ -219,7 +219,7 @@ describe('Boundary API Client', () => {
                     completed_at: '2026-10-15T11:00:00Z',
                     updated_at: '2026-10-15T11:00:00Z',
                     facts: {
-                        schema_version: 7,
+                        schema_version: 6,
                         ticket_id: 'TEST-1',
                         ticket_title: 'Test ticket',
                         ticket_type: 'feature',
@@ -330,7 +330,7 @@ describe('Boundary API Client', () => {
             const invocation = session.invocations[0]!;
             const payload = {
                 ...detail,
-                ledger: { ...detail.ledger, facts: { ...detail.ledger.facts, schema_version: 7, sessions: [{
+                ledger: { ...detail.ledger, facts: { ...detail.ledger.facts, schema_version: 6, sessions: [{
                     ...session,
                     invocations: [
                         { ...invocation, cost_usd: 0, cost_evidence: { state: 'observed', known_subtotal_usd: 0 } },
@@ -358,7 +358,7 @@ describe('Boundary API Client', () => {
             delete invocation.cost_evidence;
             const payload = {
                 ...detail,
-                ledger: { ...detail.ledger, facts: { ...detail.ledger.facts, schema_version: 7, sessions: [{
+                ledger: { ...detail.ledger, facts: { ...detail.ledger.facts, schema_version: 6, sessions: [{
                     ...session, invocations: [{ ...invocation, ...cost }],
                 }] } },
             };

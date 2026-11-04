@@ -217,7 +217,7 @@ describe('Domain Pure Formatters', () => {
                 completed_at: null,
                 updated_at: '2026-10-15T12:00:00Z',
                 facts: {
-                    schema_version: 7 as const,
+                    schema_version: 6 as const,
                     ticket_id: null,
                     ticket_title: null,
                     ticket_type: null,
@@ -304,9 +304,9 @@ describe('Domain Pure Formatters', () => {
                 completed_at: '2026-10-17T11:00:00Z',
                 updated_at: '2026-10-17T11:00:00Z',
                 facts: {
-                    schema_version: 7 as const,
+                    schema_version: 6 as const,
                     migration: {
-                        schema_version: 7,
+                        schema_version: 6,
                             status: 'partial' as const,
                         steps_completed: ['git_code_facts'],
                         steps_pending: ['opencode_db'],

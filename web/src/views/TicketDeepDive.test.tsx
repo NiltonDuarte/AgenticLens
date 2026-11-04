@@ -17,7 +17,7 @@ function withSessionOwners(detail: WorkspaceDetail, events: readonly EventFact[]
         id, source: 'opencode', user: 'tester', invocations: [], tools: [],
 
     }));
-    return { ...detail, ledger: { ...detail.ledger, facts: { ...detail.ledger.facts, schema_version: 7 as const, sessions } } };
+    return { ...detail, ledger: { ...detail.ledger, facts: { ...detail.ledger.facts, schema_version: 6 as const, sessions } } };
 }
 
 function deferred<T>() {
@@ -40,7 +40,7 @@ describe('Skills and subagents autopsy', () => {
     };
     const makeDetail = (skills?: readonly SkillFact[], delegations?: readonly DelegationFact[]): WorkspaceDetail => {
         const base = mockWorkspaceDetails['AL-1']!;
-        const facts = { ...base.ledger.facts, schema_version: 7 as const };
+        const facts = { ...base.ledger.facts, schema_version: 6 as const };
         return { ...base, ledger: { ...base.ledger, facts: { ...facts,
             sessions: facts.sessions.map((session, index) => index === 0 ? { ...session,
                 ...(skills === undefined ? {} : { skills }), ...(delegations === undefined ? {} : { delegations: delegations }),
@@ -86,7 +86,7 @@ describe('Skills and subagents autopsy', () => {
         expect(within(card).getByRole('tooltip')).toHaveTextContent('1 fully observed, 1 partial, 1 unavailable of 3 invocations');
     });
 
-    it.each(['omitted', 'empty'] as const)('renders a current v7 ledger with %s optional collections and keyboard collapse', async (mode) => {
+    it.each(['omitted', 'empty'] as const)('renders a current v6 ledger with %s optional collections and keyboard collapse', async (mode) => {
         const errors = vi.spyOn(console, 'error');
         vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
             data: mode === 'omitted' ? makeDetail() : makeDetail([], []),
@@ -114,7 +114,7 @@ describe('Skills and subagents autopsy', () => {
         const detail = makeDetail();
         const base = { ...skill, caller_role: null, invoked_at: null };
         vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: { ...detail, ledger: { ...detail.ledger, facts: {
-            ...detail.ledger.facts, schema_version: 7,
+            ...detail.ledger.facts, schema_version: 6,
             sessions: [
                 { id: 'root', source: 'codex', invocations: [], tools: [], skills: [base, base], delegations: [{ ...delegation, child_session_id: 'unavailable-known-child' }] },
                 { id: 'child', parent_id: 'root', source: 'opencode', invocations: [], tools: [], skills: [{ ...skill, name: 'child-only' }] },

@@ -81,7 +81,7 @@ function migration(value: unknown): boolean {
     (value.notes === undefined || string(value.notes));
 }
 function facts(value: unknown): boolean {
-  return isRecord(value) && ticketMetadata(value) && value.schema_version === 7 &&
+  return isRecord(value) && ticketMetadata(value) && value.schema_version === 6 &&
     (value.migration === undefined || migration(value.migration)) && isRecord(value.code) &&
     fields(value.code, ['lines_added', 'lines_deleted', 'test_lines_added', 'test_lines_deleted', 'prod_lines_added', 'prod_lines_deleted', 'files_changed', 'sdlc_iterations'], number) &&
     array(value.sessions, session) && optionalArray(value.anomalies, isAnomaly) &&

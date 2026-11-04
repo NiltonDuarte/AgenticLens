@@ -2018,7 +2018,7 @@ func TestBackfillEngine_WarningBearingRolloutsPreserveTree(t *testing.T) {
 func TestBackfillCodexCompleteParentRefreshesWhileMissingChildFactsSurvive(t *testing.T) {
 	root := t.TempDir()
 	ticket, title := "TEST-OWNER-REFRESH", "Complete parent with unavailable child"
-	version := 7
+	version := 6
 	parentID := "local-parent"
 	count := int64(3)
 	role, secondary := domain.AgentRole("coder"), domain.AgentRole("tester")

@@ -2,11 +2,11 @@
 
 ## Current acceptance: approved iteration 03 lean contract
 
-The user requested planning only for lean skills and delegations and removal of persisted events, following explicit discussion that implementation must not start yet. [Iteration 03 PLAN.md](iterations/03/PLAN.md) records the agreed direction and proposed execution contract: three-field skills, four-field delegations, source-time invoked_at, no occurrence success/outcome/provenance payloads, and no canonical session events or partial-event marker. Hydration-driven traces remain a distinct transient runtime/API response and never enter ledger serialization.
+The user requested planning only for lean skills and delegations and removal of persisted events, following explicit discussion that implementation must not start yet. [Iteration 03 PLAN.md](iterations/03/PLAN.md) records the agreed direction and approved execution contract: three-field skills, four-field delegations, source-time invoked_at, no occurrence success/outcome/provenance payloads, and no canonical session events or partial-event marker. Hydration-driven traces remain a distinct transient runtime/API response and never enter ledger serialization.
 
-The plan proposes an explicit schema 6-to-7 migration, lean fact preservation, audited removal of retired payloads, and source-only trace availability. The user subsequently approved the plan and requested implementation. Iteration 03 now governs the changed acceptance boundaries; the implemented iteration 02 source remains the baseline and its prior evidence is preserved. Execute the approved plan without a redundant approval gate.
+The approved implementation provides a direct schema 5-to-6 migration, lean fact preservation, audited removal of retired payloads, and source-only trace availability. The user subsequently approved the plan and requested implementation, then corrected the unnecessary version 7 boundary: schema 6 is unreleased AL-62 work and must contain the final lean design. Iteration 03 now governs the changed acceptance boundaries; the implemented iteration 02 source remains the baseline and its prior evidence is preserved. Execute the approved plan without a redundant approval gate.
 
-## Current acceptance: iteration 02 supersedes legacy compatibility
+## Historical acceptance: iteration 02 supersedes legacy compatibility
 
 User steering on 2026-11-04: "Delete ownerless records on migration. Drop backward compatibility" in direct response to the proposal to retain ownerless history explicitly unresolved. This is explicit approval of the changed boundary. [Iteration 02 PLAN.md](iterations/02/PLAN.md) governs implementation and verification; no additional approval is required for this requested change.
 

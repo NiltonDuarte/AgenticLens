@@ -2,7 +2,7 @@
 
 Codex previously omitted skill/delegation facts, while ticket-wide collections obscured their owner. The final schema stores lean skills and delegations within their source session: activation name/caller/time, and delegated agent/description/time/proven child session.
 
-Schema 7 removes occurrence success/outcome/provenance metadata, duplicated delegation costs and persisted events. Traces hydrate separately from native sources with explicit complete, partial or unavailable coverage; they never enter ledger serialization. Activation counts and filters remain, while skill success-rate analytics are retired.
+Schema 6 removes occurrence success/outcome/provenance metadata, duplicated delegation costs and persisted events. Traces hydrate separately from native sources with explicit complete, partial or unavailable coverage; they never enter ledger serialization. Activation counts and filters remain, while skill success-rate analytics are retired.
 
 Explicit migration converts older ledgers, audits removed payloads and preserves known owners, multiplicity, child links and unrelated financial/anomaly facts. Current reads require the new schema. Partial refresh preserves unavailable owners; complete exact snapshots replace their own facts.
 

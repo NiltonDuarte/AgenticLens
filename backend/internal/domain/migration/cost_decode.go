@@ -129,16 +129,8 @@ type legacySessionInvocation struct {
 }
 
 func decodeVersionedLedger(input []byte, version int) (legacyLedger, legacyFactCollections, bool, error) {
-	if version >= 6 {
-		var fields map[string]json.RawMessage
-		if err := json.Unmarshal(input, &fields); err != nil {
-			return legacyLedger{}, legacyFactCollections{}, false, err
-		}
-		for _, key := range []string{"skills", "task_links", "unresolved_facts"} {
-			if _, exists := fields[key]; exists {
-				return legacyLedger{}, legacyFactCollections{}, false, fmt.Errorf("current schema v6 rejects retired root %s", key)
-			}
-		}
+	if version < 1 || version > 5 {
+		return legacyLedger{}, legacyFactCollections{}, false, fmt.Errorf("%w: legacy input requires schema1 through5, got %d", ErrUnsupportedVersion, version)
 	}
 	var metadata ledgerMetadataInput
 	var collections ledgerCollectionsInput

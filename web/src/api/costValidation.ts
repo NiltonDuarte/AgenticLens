@@ -93,7 +93,7 @@ function validateFactCost(value: unknown, path: string): void {
 function validateFactLedger(value: unknown, path: string): void {
   const facts = requireRecord(value, path);
   const version = facts.schema_version;
-  if (version !== 7) throw new Error(`Migration required: ${path} must use schema v7; migrate older ledgers explicitly.`);
+  if (version !== 6) throw new Error(`Migration required: ${path} must use schema v6; migrate older ledgers explicitly.`);
   if (['invocations', 'tools', 'events', 'events_are_partial', 'skills', 'task_links', 'delegations', 'unresolved_facts'].some((key) => hasOwn(facts, key))) invalid(`${path}: retired root fact collections`);
   if (!Array.isArray(facts.sessions)) invalid(`${path}.sessions`);
   facts.sessions.forEach((value: unknown, index) => {

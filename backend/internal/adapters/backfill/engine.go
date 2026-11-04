@@ -472,7 +472,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 	}
 
 	newMigration := domain.EvaluateMigrationStatus(evalInput)
-	hasOwnershipAudit := factLedger.Migration != nil && (strings.Contains(factLedger.Migration.Notes, "Schema v6 migration dropped ownerless") || strings.Contains(factLedger.Migration.Notes, "Schema v7 migration converted"))
+	hasOwnershipAudit := factLedger.Migration != nil && strings.Contains(factLedger.Migration.Notes, "Schema v6 migration dropped ownerless")
 	if hasOwnershipAudit {
 		if newMigration.Notes != "" {
 			newMigration.Notes += "; "

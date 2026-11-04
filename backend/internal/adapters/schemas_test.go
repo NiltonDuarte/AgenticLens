@@ -46,8 +46,8 @@ func TestCurrentLedgerRejectsRetiredEventsAtRootAndSession(t *testing.T) {
 		for _, value := range []string{"null", "[]", "false", `""`} {
 			t.Run(field+"/"+value, func(t *testing.T) {
 				session := `{"id":"owner","source":"codex","user":"tester","invocations":[],"tools":[],"anomalies":[],"` + field + `":` + value + `}`
-				root := `{"schema_version":7,"sessions":[],"` + field + `":` + value + `}`
-				for _, input := range []string{root, `{"schema_version":7,"sessions":[` + session + `]}`} {
+				root := `{"schema_version":6,"sessions":[],"` + field + `":` + value + `}`
+				for _, input := range []string{root, `{"schema_version":6,"sessions":[` + session + `]}`} {
 					if err := adapters.ValidateRuntimeFactLedger([]byte(input)); err == nil {
 						t.Fatalf("retired field accepted: %s", input)
 					}
@@ -60,7 +60,7 @@ func TestCurrentLedgerRejectsRetiredEventsAtRootAndSession(t *testing.T) {
 func TestCanonicalRetiredContentFieldsReadCompatibility(t *testing.T) {
 	// This is a self-contained ledger in the shape emitted before content
 	// classification was removed. Reading it must not require source hydration.
-	const raw = `{"schema_version":7,"ticket_id":"TEST-101","sessions":[{"id":"owner","source":"codex","user":"tester","invocations":[],"anomalies":[],"tools":[{"name":"command","calls":2,"errors":1,"content_errors":1}]}]}`
+	const raw = `{"schema_version":6,"ticket_id":"TEST-101","sessions":[{"id":"owner","source":"codex","user":"tester","invocations":[],"anomalies":[],"tools":[{"name":"command","calls":2,"errors":1,"content_errors":1}]}]}`
 	if err := adapters.ValidateRuntimeFactLedger([]byte(raw)); err != nil {
 		t.Fatal(err)
 	}
@@ -111,14 +111,14 @@ func TestValidateRuntimeFactLedgerRejectsLegacyVersionsBeforeFacts(t *testing.T)
 }
 
 func TestValidateRuntimeFactLedgerRejectsIncompleteV4(t *testing.T) {
-	data := []byte(`{"schema_version":7,"sessions":[],"migration":{"status":"partial","steps_pending":["source_backfill"]}}`)
+	data := []byte(`{"schema_version":6,"sessions":[],"migration":{"status":"partial","steps_pending":["source_backfill"]}}`)
 	if err := adapters.ValidateRuntimeFactLedger(data); err == nil || !strings.Contains(err.Error(), "incomplete") {
 		t.Fatalf("expected incomplete v4 rejection, got %v", err)
 	}
 }
 
 func TestValidateRuntimeFactLedgerAcceptsCanonicalV4WithoutMigrationMetadata(t *testing.T) {
-	base := `{"schema_version":7,"sessions":[{"id":"s1","source":"opencode","user":"u","invocations":[{"role":"orchestrator","model":"m","started_at":null,"completed_at":null,"active_duration_seconds":0,"turns":0,"tokens":{"input":0,"output":0,"cache_read":0,"reasoning":0,"peak_context":0},"cost_usd":0,"compactions":0,"user_iterations":0,"cost_evidence":{"state":"observed","known_subtotal_usd":0}}],"tools":[],"anomalies":[]}]}`
+	base := `{"schema_version":6,"sessions":[{"id":"s1","source":"opencode","user":"u","invocations":[{"role":"orchestrator","model":"m","started_at":null,"completed_at":null,"active_duration_seconds":0,"turns":0,"tokens":{"input":0,"output":0,"cache_read":0,"reasoning":0,"peak_context":0},"cost_usd":0,"compactions":0,"user_iterations":0,"cost_evidence":{"state":"observed","known_subtotal_usd":0}}],"tools":[],"anomalies":[]}]}`
 	if err := adapters.ValidateRuntimeFactLedger([]byte(base)); err != nil {
 		t.Fatalf("canonical v4 without workflow metadata should be accepted: %v", err)
 	}
@@ -132,7 +132,7 @@ func TestValidateRuntimeFactLedgerAcceptsCanonicalV4WithoutMigrationMetadata(t *
 			}
 		})
 	}
-	for _, value := range []string{`"obsolete"`, `""`, `null`, `0`, `{"schema_version":7}`} {
+	for _, value := range []string{`"obsolete"`, `""`, `null`, `0`, `{"schema_version":6}`} {
 		t.Run("reject removed invocation key "+value, func(t *testing.T) {
 			data := strings.Replace(base, `"role":`, `"id":`+value+`,"role":`, 1)
 			if err := adapters.ValidateRuntimeFactLedger([]byte(data)); err == nil || !strings.Contains(err.Error(), "must not contain id") {
@@ -235,7 +235,7 @@ func TestAgenticFactLedgerDTOFromDomainPreservesTemporaryMigrationMetadata(t *te
 }
 
 func TestValidateRuntimeFactLedgerRejectsIntermediateMigrationState(t *testing.T) {
-	base := `{"schema_version":7,"migration":{"status":"partial","steps_completed":[],"steps_pending":["source_backfill"]},"sessions":[]}`
+	base := `{"schema_version":6,"migration":{"status":"partial","steps_completed":[],"steps_pending":["source_backfill"]},"sessions":[]}`
 	err := adapters.ValidateRuntimeFactLedger([]byte(base))
 	if err == nil || !strings.Contains(err.Error(), "resume") {
 		t.Fatalf("expected actionable incomplete migration rejection, got %v", err)
@@ -473,7 +473,7 @@ func TestAgenticMetricsLedgerDTO_AnomaliesSerialization(t *testing.T) {
 func TestSchemaMigrationDTOBoundaries(t *testing.T) {
 	t.Run("fact ledger rejects malformed anomaly collection", func(t *testing.T) {
 		var dto adapters.AgenticFactLedgerDTO
-		if err := json.Unmarshal([]byte(`{"schema_version":7,"sessions":[],"anomalies":"not_an_array"}`), &dto); err == nil {
+		if err := json.Unmarshal([]byte(`{"schema_version":6,"sessions":[],"anomalies":"not_an_array"}`), &dto); err == nil {
 			t.Fatal("fact input accepted malformed anomaly collection")
 		}
 	})
@@ -502,7 +502,7 @@ func TestSchemaMigrationDTOBoundaries(t *testing.T) {
 	})
 	t.Run("current event DTO rejected", func(t *testing.T) {
 		var dto adapters.AgenticFactLedgerDTO
-		if err := json.Unmarshal([]byte(`{"schema_version":7,"sessions":[{"id":"s1","events":[]}]}`), &dto); err == nil {
+		if err := json.Unmarshal([]byte(`{"schema_version":6,"sessions":[{"id":"s1","events":[]}]}`), &dto); err == nil {
 			t.Fatal("current retired event accepted")
 		}
 	})
@@ -553,8 +553,8 @@ func TestSchemaMigrationDTOBoundaries(t *testing.T) {
 		}{
 			{"schema_version string", `{"schema_version": "2"}`},
 			{"schema_version float", `{"schema_version": 7.5}`},
-			{"events not an array", `{"schema_version": 7, "events": true}`},
-			{"events array with invalid element", `{"schema_version": 7, "events": [123]}`},
+			{"events not an array", `{"schema_version": 6, "events": true}`},
+			{"events array with invalid element", `{"schema_version": 6, "events": [123]}`},
 			{"code not an object", `{"code": "not_an_object"}`},
 			{"invocations not an array", `{"invocations": {}}`},
 			{"migration not an object", `{"migration": ["git_code_facts"]}`},
@@ -573,7 +573,7 @@ func TestSchemaMigrationDTOBoundaries(t *testing.T) {
 
 	t.Run("empty json object ToDomain defaults safely without panic", func(t *testing.T) {
 		var dto adapters.AgenticFactLedgerDTO
-		if err := json.Unmarshal([]byte(`{"schema_version":7}`), &dto); err != nil {
+		if err := json.Unmarshal([]byte(`{"schema_version":6}`), &dto); err != nil {
 			t.Fatalf("unexpected unmarshal error: %v", err)
 		}
 
@@ -765,7 +765,7 @@ func TestTicketTypeBoundarySchemaAndSerialization(t *testing.T) {
 	t.Run("explicit ticket_type null preserves nil pointer across round-trip", func(t *testing.T) {
 		t.Parallel()
 		jsonBlob := `{
-			"schema_version": 7,
+			"schema_version": 6,
 			"ticket_id": "AL-29",
 			"ticket_type": null,
 			"code": {
@@ -803,7 +803,7 @@ func TestTicketTypeBoundarySchemaAndSerialization(t *testing.T) {
 	t.Run("omitted ticket_type defaults to nil pointer", func(t *testing.T) {
 		t.Parallel()
 		jsonBlob := `{
-			"schema_version": 7,
+			"schema_version": 6,
 			"ticket_id": "AL-29",
 			"code": {
 				"lines_added": 0,
@@ -876,19 +876,19 @@ func TestTicketTypeBoundarySchemaAndSerialization(t *testing.T) {
 		}{
 			{
 				name: "ticket_type as integer number",
-				json: `{"schema_version": 7, "ticket_id": "AL-29", "ticket_type": 123}`,
+				json: `{"schema_version": 6, "ticket_id": "AL-29", "ticket_type": 123}`,
 			},
 			{
 				name: "ticket_type as boolean",
-				json: `{"schema_version": 7, "ticket_id": "AL-29", "ticket_type": true}`,
+				json: `{"schema_version": 6, "ticket_id": "AL-29", "ticket_type": true}`,
 			},
 			{
 				name: "ticket_type as array",
-				json: `{"schema_version": 7, "ticket_id": "AL-29", "ticket_type": ["feat"]}`,
+				json: `{"schema_version": 6, "ticket_id": "AL-29", "ticket_type": ["feat"]}`,
 			},
 			{
 				name: "ticket_type as nested object",
-				json: `{"schema_version": 7, "ticket_id": "AL-29", "ticket_type": {"name": "feat"}}`,
+				json: `{"schema_version": 6, "ticket_id": "AL-29", "ticket_type": {"name": "feat"}}`,
 			},
 		}
 
@@ -1152,7 +1152,7 @@ func TestCostEvidenceBoundaryCompatibility(t *testing.T) {
 
 	legacyBase := `{"schema_version":4,"sessions":[{"id":"owner","source":"codex","user":"alice","invocations":[{"role":"coder","model":"model-a","started_at":null,"completed_at":null,"active_duration_seconds":0,"turns":1,"tokens":{"input":1,"output":0,"cache_read":0,"reasoning":0,"peak_context":1},COST"compactions":0,"user_iterations":0}],"tools":[],"anomalies":[]}]}`
 	t.Run("invocation partial facts survive lean delegation roundtrip", func(t *testing.T) {
-		input := []byte(`{"schema_version":7,"sessions":[{"id":"owner","source":"codex","user":"alice","invocations":[{"role":"coder","model":"fixture","started_at":null,"completed_at":null,"active_duration_seconds":0,"turns":0,"tokens":{"input":0,"output":0,"cache_read":0,"reasoning":0,"peak_context":0},"compactions":0,"user_iterations":0,"cost_usd":null,"cost_evidence":{"state":"partial","known_subtotal_usd":1.25}}],"tools":[],"anomalies":[],"delegations":[{"agent_type":"coder","invoked_at":null,"description":"Keep source task","child_session_id":"child"}]}]}`)
+		input := []byte(`{"schema_version":6,"sessions":[{"id":"owner","source":"codex","user":"alice","invocations":[{"role":"coder","model":"fixture","started_at":null,"completed_at":null,"active_duration_seconds":0,"turns":0,"tokens":{"input":0,"output":0,"cache_read":0,"reasoning":0,"peak_context":0},"compactions":0,"user_iterations":0,"cost_usd":null,"cost_evidence":{"state":"partial","known_subtotal_usd":1.25}}],"tools":[],"anomalies":[],"delegations":[{"agent_type":"coder","invoked_at":null,"description":"Keep source task","child_session_id":"child"}]}]}`)
 		if err := adapters.ValidateRuntimeFactLedger(input); err != nil {
 			t.Fatal(err)
 		}
@@ -1179,7 +1179,7 @@ func TestCostEvidenceBoundaryCompatibility(t *testing.T) {
 	})
 
 	t.Run("owning canonical decoders reject malformed trailing and unknown fields", func(t *testing.T) {
-		for _, version := range []int{7} {
+		for _, version := range []int{6} {
 			base := strings.Replace(legacyBase, `"schema_version":4`, fmt.Sprintf(`"schema_version":%d`, version), 1)
 			base = strings.Replace(base, "COST", `"cost_usd":0,"cost_evidence":{"state":"observed","known_subtotal_usd":0},`, 1)
 			for _, input := range []string{
@@ -1234,7 +1234,7 @@ func TestCostEvidenceBoundaryCompatibility(t *testing.T) {
 		`"cost_usd":-1,"cost_evidence":{"state":"observed","known_subtotal_usd":-1},`,
 	} {
 		t.Run("v5 rejects "+fields, func(t *testing.T) {
-			data := []byte(strings.Replace(strings.Replace(legacyBase, `"schema_version":4`, `"schema_version":7`, 1), "COST", fields, 1))
+			data := []byte(strings.Replace(strings.Replace(legacyBase, `"schema_version":4`, `"schema_version":6`, 1), "COST", fields, 1))
 			if err := adapters.ValidateRuntimeFactLedger(data); err == nil {
 				t.Fatal("runtime accepted contradictory/missing evidence")
 			}
@@ -1313,12 +1313,24 @@ func assertFactJSONFieldOrder(t *testing.T, data []byte) {
 	jsonFieldsInOrder(t, invocation["cost_evidence"], "state", "known_subtotal_usd")
 }
 
-func TestOwnedFactsSurviveV5ToV7MigrationSaveReloadAndRejectRetiredRuntimeShapes(t *testing.T) {
+func TestOwnedFactsSurviveV5ToV6MigrationSaveReloadAndRejectRetiredRuntimeShapes(t *testing.T) {
 	const old = `{"schema_version":5,"ticket_id":"TEST-OWNED","ticket_title":"Explicit migration","sessions":[{"id":"owner","source":"codex","user":"alice","invocations":[],"tools":[]}],"skills":[{"session_id":"owner","name":"kept","success":true,"provenance":{"message_id":"native-message"}},{"name":"discarded","success":true}],"task_links":[{"session_id":"owner","description":"kept","child_session_id":"unavailable","cost_usd":null,"cost_evidence":{"state":"unavailable","known_subtotal_usd":null}}]}`
 	if err := adapters.ValidateRuntimeFactLedger([]byte(old)); err == nil || !strings.Contains(strings.ToLower(err.Error()), "migrat") {
 		t.Fatalf("old runtime ingestion did not require migration: %v", err)
 	}
-	migrated, err := migration.NewEngine(nil).Migrate([]byte(old), 7)
+	richCurrent := strings.Replace(old, `"schema_version":5`, `"schema_version":6`, 1)
+	if err := adapters.ValidateRuntimeFactLedger([]byte(richCurrent)); err == nil {
+		t.Fatal("unreleased rich6 accepted as current runtime ledger")
+	}
+	if _, err := migration.NewEngine(nil).Migrate([]byte(richCurrent), 6); err == nil {
+		t.Fatal("unreleased rich6 silently converted through a compatibility migration")
+	}
+	unsupported := strings.Replace(old, `"schema_version":5`, `"schema_version":7`, 1)
+	if err := adapters.ValidateRuntimeFactLedger([]byte(unsupported)); err == nil {
+		t.Fatal("unsupported schema7 accepted at runtime")
+	}
+
+	migrated, err := migration.NewEngine(nil).Migrate([]byte(old), 6)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1379,7 +1391,7 @@ func TestNativeNamespaceChildProofSurvivesLeanPersistenceAndRejectsAmbiguity(t *
 	if err != nil {
 		t.Fatal(err)
 	}
-	version, ticket, title := 7, "TEST-PROJECTION", "Native namespace remains source evidence"
+	version, ticket, title := 6, "TEST-PROJECTION", "Native namespace remains source evidence"
 	ledger := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticket, TicketTitle: &title, Sessions: sessions}
 	if got := ledger.DelegationFacts(); len(got) != 1 || got[0].ChildSession != "child-a" {
 		t.Fatalf("unique native namespace should resolve in read projection: %+v", got)
@@ -1445,7 +1457,7 @@ func TestCurrentLeanOccurrencesRequireExactNullableShape(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			input := []byte(`{"schema_version":7,"sessions":[{"id":"owner","source":"codex","user":"tester","invocations":[],"tools":[],"anomalies":[],"` + tc.collection + `":[` + tc.row + `]}]}`)
+			input := []byte(`{"schema_version":6,"sessions":[{"id":"owner","source":"codex","user":"tester","invocations":[],"tools":[],"anomalies":[],"` + tc.collection + `":[` + tc.row + `]}]}`)
 			err := adapters.ValidateRuntimeFactLedger(input)
 			if (err == nil) != tc.valid {
 				t.Fatalf("valid=%t err=%v input=%s", tc.valid, err, input)
@@ -1460,7 +1472,7 @@ func TestCurrentLeanOccurrencesRequireExactNullableShape(t *testing.T) {
 		for _, field := range []string{"success", "outcome", "provenance", "evidence_kind", "path", "timestamp", "session_id", "source", "call_id", "child_reference", "child_agent_id", "child_link_diagnostic", "parent_turn", "duration_ms", "cost_usd", "cost_evidence", "error", "prompt"} {
 			t.Run(collection+"/reject "+field, func(t *testing.T) {
 				row := strings.TrimSuffix(base, "}") + `,"` + field + `":null}`
-				input := []byte(`{"schema_version":7,"sessions":[{"id":"owner","source":"codex","user":"tester","invocations":[],"tools":[],"anomalies":[],"` + collection + `":[` + row + `]}]}`)
+				input := []byte(`{"schema_version":6,"sessions":[{"id":"owner","source":"codex","user":"tester","invocations":[],"tools":[],"anomalies":[],"` + collection + `":[` + row + `]}]}`)
 				if err := adapters.ValidateRuntimeFactLedger(input); err == nil {
 					t.Fatalf("retired field accepted: %s", input)
 				}
@@ -1470,7 +1482,7 @@ func TestCurrentLeanOccurrencesRequireExactNullableShape(t *testing.T) {
 }
 
 func TestFullSourceAnomaliesSurviveLeanPersistenceAndPartialRefresh(t *testing.T) {
-	version, ticket, title := 7, "TEST-SPARSE-EVENTS", "Sparse timeline keeps full source anomaly summaries"
+	version, ticket, title := 6, "TEST-SPARSE-EVENTS", "Sparse timeline keeps full source anomaly summaries"
 	owner := domain.SessionFact{ID: "owner", Source: domain.SourceCodex, User: "tester", Tools: []domain.SessionToolFact{{Name: "bash", Calls: 5, Errors: 3}, {Name: "load_skill", Calls: 3, Errors: 3}}}
 	private := "source-only-private-body"
 	event := func(id, name, status string, order int) domain.EventFact {

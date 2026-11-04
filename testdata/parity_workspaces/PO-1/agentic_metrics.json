@@ -1,7 +1,7 @@
 {
-  "schema_version": 7,
+  "schema_version": 6,
   "migration": {
-    "schema_version": 7,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"

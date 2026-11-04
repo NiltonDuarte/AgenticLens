@@ -26,8 +26,7 @@ func NewEngine(registry *Registry) *Engine {
 			NewStepV2ToV3Sanitized(),
 			NewStepV3ToV4UserIterations(),
 			NewStepV4ToV5CostEvidence(),
-			NewStepV5ToV6OwnedOccurrences(),
-			NewStepV6ToV7LeanOccurrences(),
+			NewStepV5ToV6LeanOccurrences(),
 		} {
 			if err := registry.Register(step); err != nil {
 				// Built-in steps are static; failure indicates a programming error.
@@ -140,14 +139,17 @@ func (e *Engine) DetectVersion(input []byte) (int, error) {
 // Migrate inspects raw JSON bytes, unmarshals the ledger, plans the sequential upgrade chain,
 // and executes transformations while verifying non-destructive domain invariants at each step.
 func (e *Engine) Migrate(input []byte, targetVersion int) (domain.AgenticFactLedger, error) {
-	if targetVersion < 1 {
-		return domain.AgenticFactLedger{}, fmt.Errorf("%w: target version %d must be at least 1",
+	if targetVersion < 1 || targetVersion > domain.CurrentSchemaVersion {
+		return domain.AgenticFactLedger{}, fmt.Errorf("%w: target version %d is outside the supported range",
 			ErrUnsupportedVersion, targetVersion)
 	}
 
 	sourceVersion, err := e.DetectVersion(input)
 	if err != nil {
 		return domain.AgenticFactLedger{}, err
+	}
+	if sourceVersion > domain.CurrentSchemaVersion {
+		return domain.AgenticFactLedger{}, fmt.Errorf("%w: source schema %d is newer than current schema %d", ErrUnsupportedVersion, sourceVersion, domain.CurrentSchemaVersion)
 	}
 	if sourceVersion == domain.CurrentSchemaVersion {
 		if targetVersion != domain.CurrentSchemaVersion {
@@ -161,7 +163,7 @@ func (e *Engine) Migrate(input []byte, targetVersion int) (domain.AgenticFactLed
 		}
 		return current, nil
 	}
-	result, err := e.MigrateInput(input, targetVersion)
+	result, err := e.migrateInput(input, targetVersion)
 	if err != nil {
 		return domain.AgenticFactLedger{}, err
 	}
@@ -169,9 +171,15 @@ func (e *Engine) Migrate(input []byte, targetVersion int) (domain.AgenticFactLed
 }
 
 // MigrateInput exposes the migration-only intermediate model for explicit older
-// transitions. Runtime consumers use Migrate and the schema7 canonical output.
+// transitions. Runtime consumers use Migrate and the current canonical output.
 func (e *Engine) MigrateInput(input []byte, targetVersion int) (LedgerInput, error) {
-	if targetVersion < 1 {
+	if targetVersion >= domain.CurrentSchemaVersion {
+		return legacyLedger{}, fmt.Errorf("%w: use Migrate for the current canonical schema", ErrUnsupportedVersion)
+	}
+	return e.migrateInput(input, targetVersion)
+}
+func (e *Engine) migrateInput(input []byte, targetVersion int) (legacyLedger, error) {
+	if targetVersion < 1 || targetVersion > domain.CurrentSchemaVersion {
 		return legacyLedger{}, ErrUnsupportedVersion
 	}
 	ledger, sourceVersion, err := decodeLedger(input)

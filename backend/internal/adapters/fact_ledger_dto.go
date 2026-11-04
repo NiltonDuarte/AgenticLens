@@ -108,6 +108,9 @@ func (dto *AgenticFactLedgerDTO) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &version); err != nil {
 		return err
 	}
+	if version.SchemaVersion != nil && *version.SchemaVersion > domain.CurrentSchemaVersion {
+		return fmt.Errorf("unsupported ledger schema %d; current schema is %d and downgrades are not supported", *version.SchemaVersion, domain.CurrentSchemaVersion)
+	}
 	if version.SchemaVersion == nil || *version.SchemaVersion != domain.CurrentSchemaVersion {
 		return fmt.Errorf("ledger schema is not current v%d; run explicit agentic-lens migrate --target-version %d", domain.CurrentSchemaVersion, domain.CurrentSchemaVersion)
 	}
@@ -117,7 +120,7 @@ func (dto *AgenticFactLedgerDTO) UnmarshalJSON(data []byte) error {
 	}
 	for _, legacy := range []string{"invocations", "tools", "events", "events_are_partial", "skills", "task_links", "unresolved_facts"} {
 		if _, exists := fields[legacy]; exists {
-			return fmt.Errorf("retired root-level %s is not valid in session-owned schema v7", legacy)
+			return fmt.Errorf("retired root-level %s is not valid in session-owned schema v6", legacy)
 		}
 	}
 	decoded, err := decodeCanonicalFactLedger(data, true)
@@ -163,7 +166,7 @@ func (dto AgenticFactLedgerDTO) Validate() error {
 		return fmt.Errorf("schema v%d required; run explicit agentic-lens migrate", domain.CurrentSchemaVersion)
 	}
 	if currentSchema && dto.Sessions == nil {
-		return errors.New("sessions collection is required in schema v7")
+		return errors.New("sessions collection is required in schema v6")
 	}
 	seen := make(map[string]bool, len(dto.Sessions))
 	for i, session := range dto.Sessions {
@@ -306,94 +309,97 @@ func ValidateRuntimeFactLedger(data []byte) error {
 		return fmt.Errorf("decoding ledger metadata: %w", err)
 	}
 	if metadata.SchemaVersion == nil {
-		return errors.New("ledger schema version is missing; run `agentic-lens migrate --target-version 7` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>`")
+		return errors.New("ledger schema version is missing; run `agentic-lens migrate --target-version 6` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>`")
+	}
+	if *metadata.SchemaVersion > domain.CurrentSchemaVersion {
+		return fmt.Errorf("unsupported ledger schema %d; current schema is %d and downgrades are not supported", *metadata.SchemaVersion, domain.CurrentSchemaVersion)
 	}
 	if *metadata.SchemaVersion != domain.CurrentSchemaVersion {
-		return fmt.Errorf("ledger schema version %d is not runtime-ingestible; run `agentic-lens migrate --target-version 7` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>`", *metadata.SchemaVersion)
+		return fmt.Errorf("ledger schema version %d is not runtime-ingestible; run `agentic-lens migrate --target-version 6` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>`", *metadata.SchemaVersion)
 	}
 	for _, key := range []string{"invocations", "tools", "events", "events_are_partial", "skills", "task_links", "unresolved_facts"} {
 		if _, exists := fields[key]; exists {
-			return fmt.Errorf("schema v7 ledger contains ambiguous root-level %s; run `agentic-lens migrate --target-version 7` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>`", key)
+			return fmt.Errorf("schema v6 ledger contains ambiguous root-level %s; run `agentic-lens migrate --target-version 6` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>`", key)
 		}
 	}
 	sessionsJSON, sessionsExists := fields["sessions"]
 	if !sessionsExists || string(sessionsJSON) == "null" || !json.Valid(sessionsJSON) {
-		return errors.New("canonical schema v7 ledger requires a sessions collection; run `agentic-lens migrate --target-version 7` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>`")
+		return errors.New("canonical schema v6 ledger requires a sessions collection; run `agentic-lens migrate --target-version 6` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>`")
 	}
 	if metadata.Migration != nil && (metadata.Migration.Status != string(domain.MigrationStatusCompleted) || len(metadata.Migration.StepsPending) > 0) {
-		return errors.New("schema v7 ledger has incomplete migration metadata; resume the explicit migration and source-backed backfill workflow before runtime ingestion")
+		return errors.New("schema v6 ledger has incomplete migration metadata; resume the explicit migration and source-backed backfill workflow before runtime ingestion")
 	}
 	var canonical struct {
 		Sessions []json.RawMessage `json:"sessions"`
 	}
 	if err := json.Unmarshal(sessionsJSON, &canonical.Sessions); err != nil || canonical.Sessions == nil {
-		return errors.New("canonical schema v7 sessions must be an array")
+		return errors.New("canonical schema v6 sessions must be an array")
 	}
 	for si, rawSession := range canonical.Sessions {
 		var session map[string]json.RawMessage
 		if err := json.Unmarshal(rawSession, &session); err != nil {
-			return fmt.Errorf("canonical schema v7 session %d is invalid", si)
+			return fmt.Errorf("canonical schema v6 session %d is invalid", si)
 		}
 		for _, retired := range []string{"events", "events_are_partial", "agent_path", "task_links"} {
 			if _, exists := session[retired]; exists {
-				return fmt.Errorf("schema v7 session %d rejects retired %s", si, retired)
+				return fmt.Errorf("schema v6 session %d rejects retired %s", si, retired)
 			}
 		}
 		for _, required := range []string{"id", "source", "user", "invocations", "tools", "anomalies"} {
 			if _, ok := session[required]; !ok {
-				return fmt.Errorf("canonical schema v7 session %d is missing required %s", si, required)
+				return fmt.Errorf("canonical schema v6 session %d is missing required %s", si, required)
 			}
 		}
 		var sessionUser string
 		if err := json.Unmarshal(session["user"], &sessionUser); err != nil || strings.TrimSpace(sessionUser) == "" {
-			return fmt.Errorf("canonical schema v7 session %d requires a non-empty user", si)
+			return fmt.Errorf("canonical schema v6 session %d requires a non-empty user", si)
 		}
 		for _, collection := range []string{"tools", "anomalies"} {
 			var values []json.RawMessage
 			if err := json.Unmarshal(session[collection], &values); err != nil || values == nil {
-				return fmt.Errorf("canonical schema v7 session %d %s must be an array", si, collection)
+				return fmt.Errorf("canonical schema v6 session %d %s must be an array", si, collection)
 			}
 		}
 		var source string
 		if err := json.Unmarshal(session["source"], &source); err != nil || (source != string(domain.SourceOpenCode) && source != string(domain.SourceCodex)) {
-			return fmt.Errorf("canonical schema v7 session %d requires a supported source (opencode or codex)", si)
+			return fmt.Errorf("canonical schema v6 session %d requires a supported source (opencode or codex)", si)
 		}
 		var invocations []json.RawMessage
 		if err := json.Unmarshal(session["invocations"], &invocations); err != nil || invocations == nil {
-			return fmt.Errorf("canonical schema v7 session %d invocations must be an array", si)
+			return fmt.Errorf("canonical schema v6 session %d invocations must be an array", si)
 		}
 		for ii, rawInvocation := range invocations {
 			var invocation map[string]json.RawMessage
 			if err := json.Unmarshal(rawInvocation, &invocation); err != nil {
-				return fmt.Errorf("canonical schema v7 invocation %d in session %d is invalid", ii, si)
+				return fmt.Errorf("canonical schema v6 invocation %d in session %d is invalid", ii, si)
 			}
 			if _, ok := invocation["id"]; ok {
-				return fmt.Errorf("canonical schema v7 invocation %d in session %d must not contain id", ii, si)
+				return fmt.Errorf("canonical schema v6 invocation %d in session %d must not contain id", ii, si)
 			}
 			if _, ok := invocation["user"]; ok {
-				return fmt.Errorf("canonical schema v7 invocation %d in session %d must not contain user", ii, si)
+				return fmt.Errorf("canonical schema v6 invocation %d in session %d must not contain user", ii, si)
 			}
 			if _, ok := invocation["parent_id"]; ok {
-				return fmt.Errorf("canonical schema v7 invocation %d in session %d must not contain parent_id", ii, si)
+				return fmt.Errorf("canonical schema v6 invocation %d in session %d must not contain parent_id", ii, si)
 			}
 			for _, required := range []string{"role", "model", "started_at", "completed_at", "active_duration_seconds", "turns", "tokens", "compactions", "user_iterations"} {
 				if _, ok := invocation[required]; !ok {
-					return fmt.Errorf("canonical schema v7 invocation %d in session %d is missing required %s", ii, si, required)
+					return fmt.Errorf("canonical schema v6 invocation %d in session %d is missing required %s", ii, si, required)
 				}
 			}
 			var tokens map[string]json.RawMessage
 			if err := json.Unmarshal(invocation["tokens"], &tokens); err != nil || tokens == nil {
-				return fmt.Errorf("canonical schema v7 invocation %d in session %d requires token counts", ii, si)
+				return fmt.Errorf("canonical schema v6 invocation %d in session %d requires token counts", ii, si)
 			}
 			for _, required := range []string{"input", "output", "cache_read", "reasoning", "peak_context"} {
 				if _, ok := tokens[required]; !ok {
-					return fmt.Errorf("canonical schema v7 invocation %d in session %d is missing token count %s", ii, si, required)
+					return fmt.Errorf("canonical schema v6 invocation %d in session %d is missing token count %s", ii, si, required)
 				}
 			}
 			value, ok := invocation["user_iterations"]
 			var count int64
 			if !ok || json.Unmarshal(value, &count) != nil || count < 0 {
-				return fmt.Errorf("canonical schema v7 invocation %d in session %d requires a non-negative numeric user_iterations (zero is valid)", ii, si)
+				return fmt.Errorf("canonical schema v6 invocation %d in session %d requires a non-negative numeric user_iterations (zero is valid)", ii, si)
 			}
 		}
 	}

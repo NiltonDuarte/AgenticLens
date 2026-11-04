@@ -31,7 +31,7 @@ func TestMigrationPreservesRepeatedRowsWithinLegacySessionOwners(t *testing.T) {
 		User      string  `json:"user"`
 	}
 	for _, shape := range []string{"flat", "sessions"} {
-		for version := 1; version <= domain.CurrentSchemaVersion; version++ {
+		for version := 1; version < domain.CurrentSchemaVersion; version++ {
 			t.Run(fmt.Sprintf("%s/v%d", shape, version), func(t *testing.T) {
 				var input []byte
 				var err error
@@ -53,7 +53,7 @@ func TestMigrationPreservesRepeatedRowsWithinLegacySessionOwners(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				migrated, err := migration.NewEngine(nil).MigrateInput(input, domain.CurrentSchemaVersion)
+				migrated, err := migration.NewEngine(nil).Migrate(input, domain.CurrentSchemaVersion)
 				if err != nil {
 					t.Fatal(err)
 				}

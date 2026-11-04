@@ -130,7 +130,7 @@ export type OwnedSkillFact = SkillFact & { readonly session_id: string };
 export type OwnedDelegationFact = DelegationFact & { readonly session_id: string };
 
 export interface AgenticFactLedger {
-  readonly schema_version: 7;
+  readonly schema_version: 6;
   readonly migration?: MigrationInfo;
   readonly ticket_id: string | null;
   readonly ticket_title: string | null;

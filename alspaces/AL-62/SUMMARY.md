@@ -66,33 +66,52 @@ Final ingestion first failed before extraction because the configured shared loc
 The per-command override retry also failed because installed-state preflight validates the configured default before the override. A temporary ignored .agenticlens-config.local.yaml now selects the same fresh state path; it was created exclusively with 0600 permissions while preserving the shared configuration SHA and old registry. No hooks exist for this checkout and none were changed. This operational override will be removed after final identity verification; source code/reviewed fingerprint remain unchanged.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 5
-- **Active Agent Duration:** 3h 27m (excludes user wait time)
-- **Context Window Health:** CRITICAL — Root agent peak 272.8k tokens (136% of 200k healthy ceiling, 1 compactions) | Subagents peak 449.8k (Tester)
+- **Software Development Life Cycle Iterations:** 21
+- **Active Agent Duration:** 8h 37m (excludes user wait time)
+- **Context Window Health:** CRITICAL — Root agent peak 450.9k tokens (226% of 200k healthy ceiling, 2 compactions) | Subagents peak 449.8k (Tester)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
-- **Subagent Turn Velocity & Thrashing:** 2.0 avg turns/run (peak: 6 turns) | Planner 2.0, Coder 5.5, Tester 4.0, Reviewer-architecture 1.0, Reviewer-behavior 1.0, Reviewer-data 1.0, Reviewer-tests 1.0
-- **Test-to-Production Code Ratio:** 1.7:1 (+2,617 test lines / +1,537 prod lines)
-- **Code Delivered:** +4,333 / -2,595 lines across 104 code files (excluding docs)
-- **Reasoning Effort:** 204,210 reasoning tokens (28.7% of generated output)
-- **Tool Health & Self-Correction:** 1,250 tool calls (77 self-corrections, 93.8% success rate)
+- **Subagent Turn Velocity & Thrashing:** 1.7 avg turns/run (peak: 6 turns) | Planner 2.0, Coder 3.8, Tester 3.5, Reviewer-architecture 1.0, Reviewer-behavior 1.0, Reviewer-data 1.0, Reviewer-tests 1.0
+- **Test-to-Production Code Ratio:** 1.7:1 (+4,967 test lines / +2,860 prod lines)
+- **Code Delivered:** +8,183 / -7,606 lines across 140 code files (excluding docs)
+- **Reasoning Effort:** 376,207 reasoning tokens (28.6% of generated output)
+- **Tool Health & Self-Correction:** 2,182 tool calls (170 self-corrections, 92.2% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 16 execution anomalies detected (9 CRITICAL, 7 WARNING).
+- **Status:** 35 execution anomalies detected (21 CRITICAL, 14 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.1k tokens) — Context tokens reached 200.1k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.5k tokens) — Context tokens reached 200.5k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (201.5k tokens) — Context tokens reached 201.5k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (201.0k tokens) — Context tokens reached 201.0k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.9k tokens) — Context tokens reached 200.9k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (203.9k tokens) — Context tokens reached 203.9k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.2k tokens) — Context tokens reached 200.2k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (450.9k tokens) — Context tokens reached 450.9k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (407.2k tokens) — Context tokens reached 407.2k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (286.2k tokens) — Context tokens reached 286.2k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (449.8k tokens) — Context tokens reached 449.8k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (327.0k tokens) — Context tokens reached 327.0k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (228.1k tokens) — Context tokens reached 228.1k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (332.6k tokens) — Context tokens reached 332.6k, breaching the 200k critical ceiling.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (25 cycles) — Subagent roles 'coder' and 'tester' alternated for 25 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (53 cycles) — Subagent roles 'coder' and 'tester' alternated for 53 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-behavior <-> reviewer-architecture (5 cycles) — Subagent roles 'reviewer-behavior' and 'reviewer-architecture' alternated for 5 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (66 cycles) — Subagent roles 'coder' and 'tester' alternated for 66 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-data <-> reviewer-tests (10 cycles) — Subagent roles 'reviewer-data' and 'reviewer-tests' alternated for 10 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (89 cycles) — Subagent roles 'coder' and 'tester' alternated for 89 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (21 cycles) — Subagent roles 'coder' and 'tester' alternated for 21 consecutive cycles.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.5k tokens) — Context tokens reached 160.5k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.9k tokens) — Context tokens reached 160.9k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.8k tokens) — Context tokens reached 161.8k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (165.4k tokens) — Context tokens reached 165.4k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.0k tokens) — Context tokens reached 160.0k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.5k tokens) — Context tokens reached 160.5k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.9k tokens) — Context tokens reached 160.9k, breaching the 160k warning ceiling.
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-architecture <-> reviewer-behavior (3 cycles) — Subagent roles 'reviewer-architecture' and 'reviewer-behavior' alternated for 3 consecutive cycles.
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (4 cycles) — Subagent roles 'coder' and 'tester' alternated for 4 consecutive cycles.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-behavior <-> reviewer-data (3 cycles) — Subagent roles 'reviewer-behavior' and 'reviewer-data' alternated for 3 consecutive cycles.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-data <-> reviewer-architecture (3 cycles) — Subagent roles 'reviewer-data' and 'reviewer-architecture' alternated for 3 consecutive cycles.
+- [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: command (3 consecutive errors) — Tool 'command' encountered 3 consecutive execution failures.
+- [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: command (4 consecutive errors) — Tool 'command' encountered 4 consecutive execution failures.
 - [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: command (3 consecutive errors) — Tool 'command' encountered 3 consecutive execution failures.
 
 ### Agentic Execution Metrics
@@ -102,31 +121,23 @@ The per-command override retry also failed because installed-state preflight val
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **planner** | 1 | 82,284 | 11,263 | 1,216,896 | 93.7% | 90.7k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **coder** | 2 | 561,141 | 195,414 | 90,487,680 | 99.4% | 407.2k | CRITICAL (204%) | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **tester** | 1 | 360,570 | 120,614 | 77,260,160 | 99.5% | 449.8k | CRITICAL (225%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Unknown** | 1 | 495,353 | 108,338 | 49,773,568 | 99.0% | 272.8k | BLOATED (136%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **reviewer-architecture** | 2 | 208,687 | 16,771 | 4,379,648 | 95.5% | 134.4k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **reviewer-behavior** | 2 | 218,900 | 17,747 | 3,742,592 | 94.5% | 131.3k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **reviewer-data** | 3 | 221,581 | 22,073 | 3,466,624 | 94.0% | 117.4k | ELEVATED | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
-| **reviewer-tests** | 2 | 205,025 | 14,798 | 2,609,664 | 92.7% | 108.6k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **Total** | **14** | **2,353,541** | **507,018** | **232,936,832** | **99.0%** | **449.8k** | **CRITICAL** | **Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations)** |
+| **planner** | 2 | 178,358 | 22,508 | 2,278,144 | 92.7% | 90.7k | HEALTHY | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **coder** | 4 | 1,234,025 | 337,209 | 141,286,656 | 99.1% | 407.2k | CRITICAL (204%) | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
+| **tester** | 2 | 632,828 | 209,001 | 113,626,752 | 99.4% | 449.8k | CRITICAL (225%) | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **Unknown** | 1 | 1,026,062 | 237,350 | 116,255,104 | 99.1% | 450.9k | CRITICAL (225%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **reviewer-architecture** | 4 | 418,860 | 29,641 | 8,317,184 | 95.2% | 156.0k | ELEVATED | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
+| **reviewer-behavior** | 4 | 418,746 | 31,274 | 6,569,856 | 94.0% | 142.2k | ELEVATED | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
+| **reviewer-data** | 5 | 425,641 | 38,649 | 7,699,456 | 94.8% | 149.6k | ELEVATED | Unavailable (0 observed, 0 partial, 5 unavailable / 5 invocations) |
+| **reviewer-tests** | 4 | 416,751 | 31,492 | 6,129,664 | 93.6% | 132.9k | ELEVATED | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
+| **Total** | **26** | **4,751,271** | **937,124** | **402,162,816** | **98.8%** | **450.9k** | **CRITICAL** | **Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 14 | 2,353,541 | 507,018 | 232,936,832 | 99.0% | Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations) |
-| **Total** | **14** | **2,353,541** | **507,018** | **232,936,832** | **99.0%** | **Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations)** |
+| **gpt-6.1-sol** | 26 | 4,751,271 | 937,124 | 402,162,816 | 98.8% | Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations) |
+| **Total** | **26** | **4,751,271** | **937,124** | **402,162,816** | **98.8%** | **Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations)** |
 
-Capture observation finalized: 2026-11-04T02:14:32.236614681Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 0; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 0; reserved bytes: 0. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
-
-### Final telemetry verification
-
-Successful built-source CLI generation used literal nonce 7ea42988833fd9d0, --source codex, --ticket-type fix and the temporary private capture selection. It wrote schema 6 raw facts and rendered the metrics above. Independent metadata inventory and saved ledger match exactly: 14 native sessions (root+13 direct children), every native source/parent identity preserved, one root skill activation request with native primary message/attachment evidence and unknown outcome, and 13 distinct native delegation call IDs/child references. No root skills/task_links/unresolved store or namespace-inferred persisted child UUID exists. AL-62 had no prior ledger/other-harness sessions to preserve; actual cross-machine mixed-harness preservation is proven by the separate command regressions.
-
-A standalone isolated API run reloaded this ACTUAL generated ledger with source DB absent: all 13 child-session links resolve from stored native metadata; fleet skill_adoption contains exactly one invocation, 0 known outcomes, 1 unknown outcome. Current API contains only session-owned arrays, and GET left ledger bytes unchanged. Test server stopped. This is real source->generation->save/reload->API/fleet verification, distinct from synthetic regression fixtures and without changing live AL-55 data. Frontend source-shaped fixture/DOM tests cover the rendered consumers.
-
-The temporary ignored local overlay was removed and shared configuration SHA 6271a7a0e1b8b6482df6ea0dabfef4aa7624f16ea396c6dbf1e780c5551a7339 remained unchanged. Old shared operational state was not reset or upgraded. Source-native metrics cover only the 14 proven sessions, not the 8 unbound T3 service review sessions described above. Source costs are unavailable; no estimates or measured zeros were invented. Rendered native metrics: 3h 27m active agent duration, 99.0% cache hits, 449.8k peak context/CRITICAL. Capture collection counters describe the separate registered collection, not the 14 exact native rollout reads.
+Capture observation finalized: 2026-11-04T11:47:59.664357719Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 0; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 0; reserved bytes: 0. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
 
 ## Iteration 03: planning-only follow-up
 
@@ -158,3 +169,28 @@ Backend coder (gpt-6.1-sol/high) owns production corrections; tester (gpt-6.1-so
 Corrected source fingerprint e34012d258ae0f1e37421e439956ba14040efac323bb12b19220a49a7ce0394a covers 451 tracked/untracked source, fixture and guidance files against baseline 5e4eb34019370150786085d69c47987b328e4e79. Backend coder and tester (both gpt-6.1-sol/high) froze writes. The exact original reviewer counterexamples now pass unchanged; durable correction tests pass through native extraction, capture, migration, save/reload and actual registered-only CLI. Missing/malformed refresh retains owner and root-summary JSON bytes, costs, registration bindings and opaque cache until complete native recovery; existing observation timestamps may advance.
 
 Behavior, data-integrity and architecture correction reviewers (gpt-6.1-sol/high) independently confirmed the corrected fingerprint and approved their bounded scopes. Remaining required correction cells and integrated checks are still pending at this checkpoint. No product changes were made during either frozen review wave.
+
+
+## Iteration 03 final review and verification
+
+Consolidated review: APPROVED for the approved lean schema 7 scope after integrated checks. Reviewed implementation commit 7cec253 and corrected source fingerprint e34012d258ae0f1e37421e439956ba14040efac323bb12b19220a49a7ce0394a match exactly after integration. Fetch/merge of origin/main at 19d70574d0e22b00f185c32d048baaf62792743e required no changes. Eight discovery cells completed (four gpt-6.1-sol/high CHANGES_REQUESTED, four gpt-6-luna/medium scoped APPROVED); all eight bounded correction cells approved. Unchanged scopes retain their discovery evidence; every correction and affected dependency received both configured profiles. Model/effort was acknowledged by native or T3 dispatch, not independently attested from execution metadata. No unresolved blocker or material review gap remains.
+
+[Compact findings and all discovery credit](iterations/03/REVIEW_SUMMARY.json): BEH-01 severity 5, native invocation timestamps, discovered independently by behavior, data-integrity and test-effectiveness reviewers (each gpt-6.1-sol/high); DATA-01 severity 5, contradicted native child link, discovered by data-integrity reviewer (gpt-6.1-sol/high); ARCH-01 severity 8, old-cache recovery deadlock, discovered by architecture reviewer (gpt-6.1-sol/high). Backend coder (gpt-6.1-sol/high) fixed all three; tester (gpt-6.1-sol/high) added durable boundary regressions. Verification credit is separate: behavior, data-integrity, architecture and test-effectiveness reviewers under both gpt-6.1-sol/high and gpt-6-luna/medium verified the corrections. Original counterexamples pass unchanged; test-effectiveness reviewer gpt-6.1-sol/high confirmed five disposable production mutations fail the intended assertions.
+
+Parent verification on 7cec253: make PASS, including go vet, TypeScript typecheck/ESLint, all 13 backend packages with race detector (actual CLI 132.254s, capture 82.651s), 825 frontend tests in 36 suites, 39 Python installation/release/distribution checks, canonical asset synchronization and all five configured platform builds. No code changes followed review. Standalone binary reports commit 7cec253; HTTP index, JS index-0OOsU4ic.js and CSS index-C3WE_otj.css match web/dist and the embedded tree byte-for-byte. An isolated source-unavailable workspace remained readable with schema 7 lean facts, an empty explicitly unavailable transient trace and complete required-owner diagnostics; GET preserved ledger bytes. The first disposable probe assumed schema_version was at the metrics wrapper level; correcting it to ledger.facts matched the documented DTO and passed without product edits. Test server stopped. Browser/manual visual inspection and remote CI were not exercised locally.
+
+Delivery provides only session-owned name/caller_role/invoked_at skills and agent_type/optional description/invoked_at/optional proven child_session_id delegations. Canonical events, partial markers, agent_path and task_links are absent. Success/outcome/rate analytics and rich occurrence payloads are retired. Transient native hydration retains actual source detail and explicit complete/partial/unavailable coverage; recorded metrics/summaries remain available without source. Current runtime requires schema 7; old input is accepted solely through explicit audited migration. Ownerless legacy records are dropped, and no broad live-ledger rewrite is authorized or performed.
+
+
+## Iteration 03 schema-number correction
+
+User identified that schema 6 is part of this same unmerged task; origin/main is still schema 5 and PR109 remains open at 5e4eb340. The orchestrator incorrectly treated an intermediate checkpoint as a released compatibility boundary. Final acceptance is the same approved lean behavior as schema 6, with one direct 5-to-6 migration and no 6-to-7 or local-checkpoint compatibility. This correction supersedes the earlier schema 7 delivery wording; no implementation from iteration 03 has been pushed. Source/runtime behavior, the three confirmed fixes and their discovery credit remain preserved. Backend, test and frontend owners resumed only the version/migration correction; affected re-review and integrated verification must finish before publication.
+
+The pre-correction final-generation checkpoint used literal nonce 80e9180615bcc05c, explicit source codex and fix type. Metadata inventory matched 26 actual native sessions, all 14 earlier sessions survived, and lean arrays contained 3 skills/25 delegations with no canonical traces. The temporary ignored config was removed with SHA/inode verification; shared config SHA remained 6271a7a0e1b8b6482df6ea0dabfef4aa7624f16ea396c6dbf1e780c5551a7339. This local schema 7 checkpoint is development evidence only and will be regenerated as final schema 6. Source extraction still cannot map 16 T3 service review sessions to native owner IDs; their usage is not invented. Costs are unavailable in native source. Prior approved review compaction retains the three fixed findings; the numbering correction has not yet received final verification.
+
+
+## Iteration 03 final schema 6 review checkpoint
+
+Schema-number correction frozen source fingerprint 3f5c5896246ff1d01fc396ee6fc532b6282035de1ecf86b836b754949f1b576b (451 files), against 7cec253d6e62f0440df1f1c906263f645d075c9d. All four focus responsibilities under both gpt-6.1-sol/high and gpt-6-luna/medium approved the bounded correction; no new finding. Parent independently matched the fingerprint after reports. Prior behavior/source/capture/trace approvals carry only where the correction diff is empty; combined ownership/lean migration, current schema validators and publication guards received fresh review. Model/effort acknowledged by dispatch, not independently attested from execution metadata. Test-effectiveness reviewer gpt-6.1-sol/high confirmed five additional disposable mutations fail: ambiguous child selection, missing explicit-child audit, native overlap duplication, ownerless attachment and future-schema CLI up-to-date handling. Discovery credit for the original three fixes remains in REVIEW_SUMMARY.json; this verification adds no discoverer attribution.
+
+Correction checks: affected migration/adapters/backfill packages and actual CLI direct5-to6/backup/rejected-rich6-and7/no-write contracts pass. Frontend typecheck, 824 tests in 36 files, canonical build and HTTP package pass. Exactly one frontend parameter is retired because 6 is now valid, with valid6/future7/retired-field boundaries verified. Integrated make/race/build and final standalone verification remain pending at this checkpoint. Intermediate generated schema7 ledger retained privately; the tracked pre-iteration ledger is restored only for clean source integration, then final task-only facts will be regenerated from native sessions. No public compatibility path was added for either development checkpoint.

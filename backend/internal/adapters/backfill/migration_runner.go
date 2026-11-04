@@ -172,6 +172,12 @@ func (r *MigrationRunner) migrateWorkspace(ctx context.Context, metricPath strin
 		return res, issues
 	}
 	res.SourceVersion = sourceVer
+	if sourceVer > domain.CurrentSchemaVersion {
+		res.Status = "error"
+		res.Error = fmt.Errorf("%w: schema %d is newer than supported schema %d", migration.ErrUnsupportedVersion, sourceVer, domain.CurrentSchemaVersion)
+		issues = append(issues, fmt.Sprintf("Workspace %s: %v", metricPath, res.Error))
+		return res, issues
+	}
 	hasLegacyFacts := hasLegacyFactCollections(content)
 	missingSource := hasMissingSessionSource(content)
 	needsSanitization := sourceVer >= 4 && sourceVer <= domain.CurrentSchemaVersion && (needsEventSanitization(content) || missingSource)
