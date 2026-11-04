@@ -244,6 +244,145 @@ func TestGetWorkspaces(t *testing.T) {
 		}
 	})
 
+	t.Run("shared stored IDs survive source absence without read side effects", func(t *testing.T) {
+		root := t.TempDir()
+		wsDir := filepath.Join(root, "custom-ledgers")
+		cfg := domain.DefaultProjectConfig()
+		cfg.Database.Path = filepath.Join(root, "missing-private-state", "opencode.db")
+		cfg.Telemetry.Sources.OpenCodeDatabasePath = cfg.Database.Path
+		cfg.Telemetry.Sources.CodexHome = filepath.Join(root, "missing-private-state", "codex")
+		expected := map[string]string{}
+		for _, ticket := range []string{"TEST-1", "TEST-2"} {
+			dir := filepath.Join(wsDir, ticket)
+			if err := os.MkdirAll(dir, 0755); err != nil {
+				t.Fatal(err)
+			}
+			payload := sampleTestLedgerJSON(ticket, "Stored "+ticket, 30, 0.75, 2)
+			if ticket == "TEST-2" {
+				payload = strings.Replace(payload, `"source":"opencode"`, `"source":"codex"`, 1)
+			}
+			path := filepath.Join(dir, "agentic_metrics.json")
+			expected[path] = payload
+			if err := os.WriteFile(path, []byte(payload), 0600); err != nil {
+				t.Fatal(err)
+			}
+		}
+		server := adaptershttp.NewServerWithConfig(wsDir, fstest.MapFS{}, cfg)
+		for round := 0; round < 2; round++ {
+			recorder := httptest.NewRecorder()
+			server.Handler().ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/api/workspaces", nil))
+			if recorder.Code != http.StatusOK || recorder.Header().Get("X-AgenticLens-Workspace-Diagnostics") != "" {
+				t.Fatalf("round %d failed stored-ledger listing: %d %s", round, recorder.Code, recorder.Body.String())
+			}
+			var response []struct {
+				TicketID string `json:"ticket_id"`
+				Facts    struct {
+					Sessions []struct {
+						ID     string `json:"id"`
+						Source string `json:"source"`
+					} `json:"sessions"`
+				} `json:"facts"`
+			}
+			if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+				t.Fatal(err)
+			}
+			memberships := map[string]string{}
+			for _, row := range response {
+				if len(row.Facts.Sessions) != 1 || row.Facts.Sessions[0].ID != "ses-orch" {
+					t.Fatalf("round %d lost recorded session identity: %+v", round, row)
+				}
+				memberships[row.TicketID] = row.Facts.Sessions[0].Source
+			}
+			if len(response) != 2 || !reflect.DeepEqual(memberships, map[string]string{"TEST-1": "opencode", "TEST-2": "codex"}) {
+				t.Fatalf("round %d changed cross-ticket memberships: %+v", round, response)
+			}
+		}
+		for path, payload := range expected {
+			stored, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(stored) != payload {
+				t.Fatalf("GET rewrote %s", path)
+			}
+			entries, err := os.ReadDir(filepath.Dir(path))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(entries) != 1 || entries[0].Name() != "agentic_metrics.json" {
+				t.Fatalf("GET created workspace artifacts: %+v", entries)
+			}
+		}
+		if _, err := os.Stat(filepath.Join(root, "missing-private-state")); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("GET created private source state or failed to inspect its absence: %v", err)
+		}
+	})
+
+	t.Run("unidentified shared sessions are rejected instead of assigned directory IDs", func(t *testing.T) {
+		for _, withValidSibling := range []bool{false, true} {
+			t.Run(fmt.Sprintf("valid sibling=%t", withValidSibling), func(t *testing.T) {
+				wsDir := t.TempDir()
+				originals := map[string]string{}
+				for _, record := range []struct{ directory, identity string }{
+					{"MISSING-ID", ""}, {"NULL-ID", `,"ticket_id":null`},
+					{"EMPTY-ID", `,"ticket_id":""`}, {"BLANK-ID", `,"ticket_id":" \t"`},
+					{"DIFFERENT-DIRECTORY", `,"ticket_id":"RECORDED-1"`},
+				} {
+					if record.directory == "DIFFERENT-DIRECTORY" && !withValidSibling {
+						continue
+					}
+					dir := filepath.Join(wsDir, record.directory)
+					if err := os.MkdirAll(dir, 0755); err != nil {
+						t.Fatal(err)
+					}
+					payload := strings.Replace(sampleTestLedgerJSON("", "Stored ledger", 30, 0.75, 2), `,"ticket_id":""`, record.identity, 1)
+					path := filepath.Join(dir, "agentic_metrics.json")
+					if err := os.WriteFile(path, []byte(payload), 0600); err != nil {
+						t.Fatal(err)
+					}
+					originals[path] = payload
+				}
+				server := mustNewServer(t, wsDir, fstest.MapFS{})
+				for round := 0; round < 2; round++ {
+					recorder := httptest.NewRecorder()
+					server.Handler().ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/api/workspaces", nil))
+					var diagnostics []domain.WorkspaceDiagnostic
+					if err := json.Unmarshal([]byte(recorder.Header().Get("X-AgenticLens-Workspace-Diagnostics")), &diagnostics); err != nil {
+						t.Fatal(err)
+					}
+					if recorder.Code != http.StatusOK || len(diagnostics) != 4 {
+						t.Fatalf("missing rejection diagnostics: %d %+v", recorder.Code, diagnostics)
+					}
+					for _, diagnostic := range diagnostics {
+						if !strings.Contains(diagnostic.Message, "ticket_id is required") {
+							t.Fatalf("wrong rejection: %+v", diagnostic)
+						}
+					}
+					var ledgers []adaptershttp.MetricsLedgerResponseDTO
+					if err := json.Unmarshal(recorder.Body.Bytes(), &ledgers); err != nil {
+						t.Fatal(err)
+					}
+					if !withValidSibling {
+						if len(ledgers) != 0 {
+							t.Fatalf("invented memberships from directory names: %+v", ledgers)
+						}
+					} else if len(ledgers) != 1 || ledgers[0].TicketID == nil || *ledgers[0].TicketID != "RECORDED-1" || ledgers[0].Totals.Invocations != 1 || ledgers[0].Totals.CostUSD == nil || *ledgers[0].Totals.CostUSD != 0.75 || len(ledgers[0].Facts.Sessions) != 1 || ledgers[0].Facts.Sessions[0].ID != "ses-orch" {
+						t.Fatalf("valid recorded membership or metrics changed: %+v", ledgers)
+					}
+				}
+				for path, original := range originals {
+					after, err := os.ReadFile(path)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if string(after) != original {
+						t.Fatalf("GET repaired ledger %s", path)
+					}
+				}
+			})
+		}
+	})
+
 	t.Run("sort workspaces by cost descending", func(t *testing.T) {
 		resp, err := http.Get(ts.URL + "/api/workspaces?sort=cost&order=desc")
 		if err != nil {

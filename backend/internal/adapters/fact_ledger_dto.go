@@ -165,6 +165,9 @@ func (dto AgenticFactLedgerDTO) Validate() error {
 	if !currentSchema {
 		return fmt.Errorf("schema v%d required; run explicit agentic-lens migrate", domain.CurrentSchemaVersion)
 	}
+	if dto.TicketID == nil || strings.TrimSpace(*dto.TicketID) == "" {
+		return errors.New("ticket_id is required and cannot be blank")
+	}
 	if currentSchema && dto.Sessions == nil {
 		return errors.New("sessions collection is required in schema v6")
 	}
@@ -235,7 +238,7 @@ func (dto AgenticFactLedgerDTO) Validate() error {
 }
 
 // ValidatePersistedEvidence enforces stable source identity on rows about to be written.
-// Read validation remains tolerant of pre-iteration v4 ledgers so they can be normalized.
+// Both read and write validation require the current ledger schema.
 func (dto AgenticFactLedgerDTO) ValidatePersistedEvidence() error {
 	for i, session := range dto.Sessions {
 		if strings.TrimSpace(session.Source) == "" {
