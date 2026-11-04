@@ -1,5 +1,16 @@
 {
-  "schema_version": 4,
+  "schema_version": 6,
+  "migration": {
+    "schema_version": 6,
+    "status": "completed",
+    "steps_completed": [
+      "schema_v6_lean_occurrences"
+    ],
+    "steps_pending": [],
+    "last_migrated_at": "",
+    "last_migrated_by": "",
+    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+  },
   "ticket_id": "PO-18",
   "ticket_title": "Post-v2.0 platform follow-up tickets",
   "ticket_type": "docs",
@@ -29,54 +40,20 @@
           "completed_at": "2026-10-31T21:51:50.748Z",
           "active_duration_seconds": 1310,
           "turns": 17,
-          "tokens": {
-            "input": 124133,
-            "output": 59654,
-            "cache_read": 13585664,
-            "reasoning": 5226,
-            "peak_context": 169814
-          },
+          "tokens": {"input": 124133, "output": 59654, "cache_read": 13585664, "reasoning": 5226, "peak_context": 169814},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 19
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 91,
-          "errors": 5
-        }
+        {"name": "command", "calls": 91, "errors": 5}
       ],
       "anomalies": [
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "turn": 17,
-            "context_tokens": 165441,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "role": "RootAgent",
-            "context_tokens": 169814,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "TOOL_RETRY_STREAK",
-          "severity": "WARNING",
-          "context": {
-            "tool_name": "command",
-            "turn": 1,
-            "count": 4,
-            "threshold": "3"
-          }
-        }
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 17, "context_tokens": 165441, "threshold": "160000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"role": "RootAgent", "context_tokens": 169814, "threshold": "160000"}},
+        {"rule_id": "TOOL_RETRY_STREAK", "severity": "WARNING", "context": {"tool_name": "command", "turn": 1, "count": 4, "threshold": "3"}}
       ]
     }
   ],

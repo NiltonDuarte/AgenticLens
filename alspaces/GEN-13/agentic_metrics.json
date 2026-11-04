@@ -1,5 +1,16 @@
 {
-  "schema_version": 4,
+  "schema_version": 6,
+  "migration": {
+    "schema_version": 6,
+    "status": "completed",
+    "steps_completed": [
+      "schema_v6_lean_occurrences"
+    ],
+    "steps_pending": [],
+    "last_migrated_at": "",
+    "last_migrated_by": "",
+    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+  },
   "ticket_id": "GEN-13",
   "ticket_title": "Concise project documentation",
   "ticket_type": "chore",
@@ -29,39 +40,20 @@
           "completed_at": "2026-10-31T12:14:15.852Z",
           "active_duration_seconds": 0,
           "turns": 1,
-          "tokens": {
-            "input": 69725,
-            "output": 6732,
-            "cache_read": 1241984,
-            "reasoning": 549,
-            "peak_context": 72809
-          },
+          "tokens": {"input": 69725, "output": 6732, "cache_read": 1241984, "reasoning": 549, "peak_context": 72809},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 2
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 24,
-          "errors": 6
-        }
+        {"name": "command", "calls": 24, "errors": 6}
       ],
       "anomalies": []
     }
   ],
   "anomalies": [
-    {
-      "rule_id": "TOOL_HIGH_FAILURE_RATE",
-      "severity": "WARNING",
-      "context": {
-        "tool_name": "command",
-        "count": 6,
-        "total_calls": 24,
-        "threshold": "\u003e20%",
-        "failure_rate_pct": 25
-      }
-    }
+    {"rule_id": "TOOL_HIGH_FAILURE_RATE", "severity": "WARNING", "context": {"tool_name": "command", "count": 6, "total_calls": 24, "threshold": "\u003e20%", "failure_rate_pct": 25}}
   ]
 }

@@ -1,5 +1,16 @@
 {
-  "schema_version": 4,
+  "schema_version": 6,
+  "migration": {
+    "schema_version": 6,
+    "status": "completed",
+    "steps_completed": [
+      "schema_v6_lean_occurrences"
+    ],
+    "steps_pending": [],
+    "last_migrated_at": "",
+    "last_migrated_by": "",
+    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+  },
   "ticket_id": "AL-52",
   "ticket_title": "Rich Timeline Badges and Subagent Session Linking in Trace Views",
   "ticket_type": "feat",
@@ -29,44 +40,19 @@
           "completed_at": "2026-10-31T13:55:11.067Z",
           "active_duration_seconds": 597,
           "turns": 2,
-          "tokens": {
-            "input": 105580,
-            "output": 11736,
-            "cache_read": 5911424,
-            "reasoning": 1105,
-            "peak_context": 103268
-          },
+          "tokens": {"input": 105580, "output": 11736, "cache_read": 5911424, "reasoning": 1105, "peak_context": 103268},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 4
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 48,
-          "errors": 6
-        },
-        {
-          "name": "followup_task",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "send_message",
-          "calls": 3,
-          "errors": 0
-        },
-        {
-          "name": "spawn_agent",
-          "calls": 4,
-          "errors": 0
-        },
-        {
-          "name": "wait_agent",
-          "calls": 9,
-          "errors": 0
-        }
+        {"name": "command", "calls": 48, "errors": 6},
+        {"name": "followup_task", "calls": 1, "errors": 0},
+        {"name": "send_message", "calls": 3, "errors": 0},
+        {"name": "spawn_agent", "calls": 4, "errors": 0},
+        {"name": "wait_agent", "calls": 9, "errors": 0}
       ],
       "anomalies": []
     },
@@ -83,29 +69,16 @@
           "completed_at": "2026-10-31T12:49:21.646Z",
           "active_duration_seconds": 74,
           "turns": 1,
-          "tokens": {
-            "input": 61043,
-            "output": 2920,
-            "cache_read": 412416,
-            "reasoning": 49,
-            "peak_context": 62534
-          },
+          "tokens": {"input": 61043, "output": 2920, "cache_read": 412416, "reasoning": 49, "peak_context": 62534},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 9,
-          "errors": 1
-        },
-        {
-          "name": "send_message",
-          "calls": 1,
-          "errors": 0
-        }
+        {"name": "command", "calls": 9, "errors": 1},
+        {"name": "send_message", "calls": 1, "errors": 0}
       ],
       "anomalies": []
     },
@@ -122,29 +95,16 @@
           "completed_at": "2026-10-31T12:51:52.590Z",
           "active_duration_seconds": 151,
           "turns": 1,
-          "tokens": {
-            "input": 48707,
-            "output": 7219,
-            "cache_read": 982528,
-            "reasoning": 604,
-            "peak_context": 76960
-          },
+          "tokens": {"input": 48707, "output": 7219, "cache_read": 982528, "reasoning": 604, "peak_context": 76960},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 11,
-          "errors": 0
-        },
-        {
-          "name": "send_message",
-          "calls": 2,
-          "errors": 0
-        }
+        {"name": "command", "calls": 11, "errors": 0},
+        {"name": "send_message", "calls": 2, "errors": 0}
       ],
       "anomalies": []
     },
@@ -161,29 +121,16 @@
           "completed_at": "2026-10-31T12:53:51.030Z",
           "active_duration_seconds": 118,
           "turns": 1,
-          "tokens": {
-            "input": 60497,
-            "output": 4013,
-            "cache_read": 1358208,
-            "reasoning": 184,
-            "peak_context": 85029
-          },
+          "tokens": {"input": 60497, "output": 4013, "cache_read": 1358208, "reasoning": 184, "peak_context": 85029},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 12,
-          "errors": 0
-        },
-        {
-          "name": "send_message",
-          "calls": 2,
-          "errors": 0
-        }
+        {"name": "command", "calls": 12, "errors": 0},
+        {"name": "send_message", "calls": 2, "errors": 0}
       ],
       "anomalies": []
     },
@@ -200,24 +147,15 @@
           "completed_at": "2026-10-31T13:53:36.721Z",
           "active_duration_seconds": 65,
           "turns": 2,
-          "tokens": {
-            "input": 74726,
-            "output": 2154,
-            "cache_read": 759040,
-            "reasoning": 215,
-            "peak_context": 98660
-          },
+          "tokens": {"input": 74726, "output": 2154, "cache_read": 759040, "reasoning": 215, "peak_context": 98660},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 8,
-          "errors": 0
-        }
+        {"name": "command", "calls": 8, "errors": 0}
       ],
       "anomalies": []
     }

@@ -1,5 +1,16 @@
 {
-  "schema_version": 4,
+  "schema_version": 6,
+  "migration": {
+    "schema_version": 6,
+    "status": "completed",
+    "steps_completed": [
+      "schema_v6_lean_occurrences"
+    ],
+    "steps_pending": [],
+    "last_migrated_at": "",
+    "last_migrated_by": "",
+    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+  },
   "ticket_id": "GEN-11",
   "ticket_title": "Ignore embedded generated web bundle",
   "ticket_type": "chore",
@@ -29,54 +40,21 @@
           "completed_at": "2026-10-31T00:30:09.918Z",
           "active_duration_seconds": 29,
           "turns": 2,
-          "tokens": {
-            "input": 59745,
-            "output": 14819,
-            "cache_read": 1906688,
-            "reasoning": 9017,
-            "peak_context": 50537
-          },
+          "tokens": {"input": 59745, "output": 14819, "cache_read": 1906688, "reasoning": 9017, "peak_context": 50537},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 5
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 27,
-          "errors": 3
-        },
-        {
-          "name": "followup_task",
-          "calls": 3,
-          "errors": 0
-        },
-        {
-          "name": "list_agents",
-          "calls": 2,
-          "errors": 0
-        },
-        {
-          "name": "request_user_input_async",
-          "calls": 3,
-          "errors": 0
-        },
-        {
-          "name": "send_message",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "spawn_agent",
-          "calls": 3,
-          "errors": 0
-        },
-        {
-          "name": "wait_agent",
-          "calls": 6,
-          "errors": 0
-        }
+        {"name": "command", "calls": 27, "errors": 3},
+        {"name": "followup_task", "calls": 3, "errors": 0},
+        {"name": "list_agents", "calls": 2, "errors": 0},
+        {"name": "request_user_input_async", "calls": 3, "errors": 0},
+        {"name": "send_message", "calls": 1, "errors": 0},
+        {"name": "spawn_agent", "calls": 3, "errors": 0},
+        {"name": "wait_agent", "calls": 6, "errors": 0}
       ],
       "anomalies": []
     },
@@ -93,29 +71,16 @@
           "completed_at": "2026-10-31T00:27:50.682Z",
           "active_duration_seconds": 33,
           "turns": 2,
-          "tokens": {
-            "input": 8435,
-            "output": 2435,
-            "cache_read": 385280,
-            "reasoning": 473,
-            "peak_context": 34932
-          },
+          "tokens": {"input": 8435, "output": 2435, "cache_read": 385280, "reasoning": 473, "peak_context": 34932},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 6,
-          "errors": 1
-        },
-        {
-          "name": "send_message",
-          "calls": 2,
-          "errors": 0
-        }
+        {"name": "command", "calls": 6, "errors": 1},
+        {"name": "send_message", "calls": 2, "errors": 0}
       ],
       "anomalies": []
     },
@@ -132,34 +97,17 @@
           "completed_at": "2026-10-31T00:27:35.318Z",
           "active_duration_seconds": 28,
           "turns": 1,
-          "tokens": {
-            "input": 6075,
-            "output": 1323,
-            "cache_read": 281472,
-            "reasoning": 455,
-            "peak_context": 37265
-          },
+          "tokens": {"input": 6075, "output": 1323, "cache_read": 281472, "reasoning": 455, "peak_context": 37265},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 3,
-          "errors": 0
-        },
-        {
-          "name": "send_message",
-          "calls": 2,
-          "errors": 0
-        },
-        {
-          "name": "wait_agent",
-          "calls": 1,
-          "errors": 0
-        }
+        {"name": "command", "calls": 3, "errors": 0},
+        {"name": "send_message", "calls": 2, "errors": 0},
+        {"name": "wait_agent", "calls": 1, "errors": 0}
       ],
       "anomalies": []
     },
@@ -176,24 +124,15 @@
           "completed_at": "2026-10-31T00:28:35.939Z",
           "active_duration_seconds": 23,
           "turns": 2,
-          "tokens": {
-            "input": 4930,
-            "output": 1077,
-            "cache_read": 241152,
-            "reasoning": 340,
-            "peak_context": 42027
-          },
+          "tokens": {"input": 4930, "output": 1077, "cache_read": 241152, "reasoning": 340, "peak_context": 42027},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 3,
-          "errors": 0
-        }
+        {"name": "command", "calls": 3, "errors": 0}
       ],
       "anomalies": []
     }

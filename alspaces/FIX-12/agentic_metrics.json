@@ -1,5 +1,16 @@
 {
-  "schema_version": 4,
+  "schema_version": 6,
+  "migration": {
+    "schema_version": 6,
+    "status": "completed",
+    "steps_completed": [
+      "schema_v6_lean_occurrences"
+    ],
+    "steps_pending": [],
+    "last_migrated_at": "",
+    "last_migrated_by": "",
+    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+  },
   "ticket_id": "FIX-12",
   "ticket_title": "Render ledger waterfall without hydration",
   "ticket_type": "fix",
@@ -29,39 +40,18 @@
           "completed_at": "2026-10-29T12:21:54.546Z",
           "active_duration_seconds": 389,
           "turns": 2,
-          "tokens": {
-            "input": 117462,
-            "output": 19876,
-            "cache_read": 7414528,
-            "reasoning": 8633,
-            "peak_context": 95412
-          },
+          "tokens": {"input": 117462, "output": 19876, "cache_read": 7414528, "reasoning": 8633, "peak_context": 95412},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 6
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 28,
-          "errors": 2
-        },
-        {
-          "name": "request_user_input_async",
-          "calls": 2,
-          "errors": 0
-        },
-        {
-          "name": "sleep",
-          "calls": 6,
-          "errors": 0
-        },
-        {
-          "name": "wait",
-          "calls": 55,
-          "errors": 0
-        }
+        {"name": "command", "calls": 28, "errors": 2},
+        {"name": "request_user_input_async", "calls": 2, "errors": 0},
+        {"name": "sleep", "calls": 6, "errors": 0},
+        {"name": "wait", "calls": 55, "errors": 0}
       ],
       "anomalies": []
     },
@@ -77,63 +67,22 @@
           "completed_at": "2026-10-29T13:37:52.938Z",
           "active_duration_seconds": 1745,
           "turns": 11,
-          "tokens": {
-            "input": 235955,
-            "output": 74128,
-            "cache_read": 18809216,
-            "reasoning": 32952,
-            "peak_context": 305398
-          },
+          "tokens": {"input": 235955, "output": 74128, "cache_read": 18809216, "reasoning": 32952, "peak_context": 305398},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 12
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 118,
-          "errors": 14
-        },
-        {
-          "name": "request_user_input_async",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "wait",
-          "calls": 2,
-          "errors": 0
-        }
+        {"name": "command", "calls": 118, "errors": 14},
+        {"name": "request_user_input_async", "calls": 1, "errors": 0},
+        {"name": "wait", "calls": 2, "errors": 0}
       ],
       "anomalies": [
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 3,
-            "context_tokens": 200051,
-            "threshold": "200000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "RootAgent",
-            "context_tokens": 305398,
-            "threshold": "200000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "turn": 1,
-            "context_tokens": 161192,
-            "threshold": "160000"
-          }
-        }
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 3, "context_tokens": 200051, "threshold": "200000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"role": "RootAgent", "context_tokens": 305398, "threshold": "200000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 1, "context_tokens": 161192, "threshold": "160000"}}
       ]
     }
   ],

@@ -1,5 +1,16 @@
 {
-  "schema_version": 4,
+  "schema_version": 6,
+  "migration": {
+    "schema_version": 6,
+    "status": "completed",
+    "steps_completed": [
+      "schema_v6_lean_occurrences"
+    ],
+    "steps_pending": [],
+    "last_migrated_at": "",
+    "last_migrated_by": "",
+    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+  },
   "ticket_id": "AL-55",
   "ticket_title": "Preserve historical facts and report truthful backfill recovery",
   "ticket_type": "feat",
@@ -29,45 +40,19 @@
           "completed_at": "2026-10-31T15:29:26.635Z",
           "active_duration_seconds": 287,
           "turns": 2,
-          "tokens": {
-            "input": 150775,
-            "output": 24562,
-            "cache_read": 12913152,
-            "reasoning": 5365,
-            "peak_context": 155152
-          },
+          "tokens": {"input": 150775, "output": 24562, "cache_read": 12913152, "reasoning": 5365, "peak_context": 155152},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 6
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 54,
-          "errors": 6,
-          "content_errors": 1
-        },
-        {
-          "name": "followup_task",
-          "calls": 4,
-          "errors": 0
-        },
-        {
-          "name": "send_message",
-          "calls": 25,
-          "errors": 0
-        },
-        {
-          "name": "spawn_agent",
-          "calls": 4,
-          "errors": 0
-        },
-        {
-          "name": "wait_agent",
-          "calls": 13,
-          "errors": 0
-        }
+        {"name": "command", "calls": 54, "errors": 6},
+        {"name": "followup_task", "calls": 4, "errors": 0},
+        {"name": "send_message", "calls": 25, "errors": 0},
+        {"name": "spawn_agent", "calls": 4, "errors": 0},
+        {"name": "wait_agent", "calls": 13, "errors": 0}
       ],
       "anomalies": []
     },
@@ -84,29 +69,16 @@
           "completed_at": "2026-10-31T15:16:03.271Z",
           "active_duration_seconds": 343,
           "turns": 4,
-          "tokens": {
-            "input": 87978,
-            "output": 11483,
-            "cache_read": 1568640,
-            "reasoning": 417,
-            "peak_context": 95905
-          },
+          "tokens": {"input": 87978, "output": 11483, "cache_read": 1568640, "reasoning": 417, "peak_context": 95905},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 17,
-          "errors": 1
-        },
-        {
-          "name": "send_message",
-          "calls": 4,
-          "errors": 0
-        }
+        {"name": "command", "calls": 17, "errors": 1},
+        {"name": "send_message", "calls": 4, "errors": 0}
       ],
       "anomalies": []
     },
@@ -123,29 +95,16 @@
           "completed_at": "2026-10-31T15:24:56.265Z",
           "active_duration_seconds": 596,
           "turns": 2,
-          "tokens": {
-            "input": 125601,
-            "output": 18558,
-            "cache_read": 7505024,
-            "reasoning": 4160,
-            "peak_context": 154398
-          },
+          "tokens": {"input": 125601, "output": 18558, "cache_read": 7505024, "reasoning": 4160, "peak_context": 154398},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 29,
-          "errors": 7
-        },
-        {
-          "name": "send_message",
-          "calls": 15,
-          "errors": 0
-        }
+        {"name": "command", "calls": 29, "errors": 7},
+        {"name": "send_message", "calls": 15, "errors": 0}
       ],
       "anomalies": []
     },
@@ -162,49 +121,20 @@
           "completed_at": "2026-10-31T15:25:45.850Z",
           "active_duration_seconds": 543,
           "turns": 1,
-          "tokens": {
-            "input": 146955,
-            "output": 19989,
-            "cache_read": 7977344,
-            "reasoning": 2751,
-            "peak_context": 179078
-          },
+          "tokens": {"input": 146955, "output": 19989, "cache_read": 7977344, "reasoning": 2751, "peak_context": 179078},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 34,
-          "errors": 6
-        },
-        {
-          "name": "send_message",
-          "calls": 11,
-          "errors": 0
-        }
+        {"name": "command", "calls": 34, "errors": 6},
+        {"name": "send_message", "calls": 11, "errors": 0}
       ],
       "anomalies": [
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "turn": 1,
-            "context_tokens": 161526,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "role": "tester",
-            "context_tokens": 179078,
-            "threshold": "160000"
-          }
-        }
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 1, "context_tokens": 161526, "threshold": "160000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"role": "tester", "context_tokens": 179078, "threshold": "160000"}}
       ]
     },
     {
@@ -220,49 +150,20 @@
           "completed_at": "2026-10-31T15:26:27.264Z",
           "active_duration_seconds": 289,
           "turns": 1,
-          "tokens": {
-            "input": 176334,
-            "output": 8495,
-            "cache_read": 3937664,
-            "reasoning": 3052,
-            "peak_context": 179858
-          },
+          "tokens": {"input": 176334, "output": 8495, "cache_read": 3937664, "reasoning": 3052, "peak_context": 179858},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 11,
-          "errors": 1
-        },
-        {
-          "name": "send_message",
-          "calls": 7,
-          "errors": 0
-        }
+        {"name": "command", "calls": 11, "errors": 1},
+        {"name": "send_message", "calls": 7, "errors": 0}
       ],
       "anomalies": [
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "turn": 1,
-            "context_tokens": 164297,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "role": "reviewer",
-            "context_tokens": 179858,
-            "threshold": "160000"
-          }
-        }
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 1, "context_tokens": 164297, "threshold": "160000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"role": "reviewer", "context_tokens": 179858, "threshold": "160000"}}
       ]
     }
   ],

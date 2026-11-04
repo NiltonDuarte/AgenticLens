@@ -1,5 +1,16 @@
 {
-  "schema_version": 4,
+  "schema_version": 6,
+  "migration": {
+    "schema_version": 6,
+    "status": "completed",
+    "steps_completed": [
+      "schema_v6_lean_occurrences"
+    ],
+    "steps_pending": [],
+    "last_migrated_at": "",
+    "last_migrated_by": "",
+    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+  },
   "ticket_id": "FIX-10",
   "ticket_title": "Backfill Multi-Root Sessions and Require Explicit Command Line Fallbacks",
   "ticket_type": "fix",
@@ -29,58 +40,21 @@
           "completed_at": "2026-10-29T10:54:25.082Z",
           "active_duration_seconds": 3647,
           "turns": 13,
-          "tokens": {
-            "input": 634960,
-            "output": 95325,
-            "cache_read": 42510080,
-            "reasoning": 46361,
-            "peak_context": 240877
-          },
+          "tokens": {"input": 634960, "output": 95325, "cache_read": 42510080, "reasoning": 46361, "peak_context": 240877},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 1,
           "user_iterations": 21
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 147,
-          "errors": 8
-        },
-        {
-          "name": "wait",
-          "calls": 51,
-          "errors": 0
-        }
+        {"name": "command", "calls": 147, "errors": 8},
+        {"name": "wait", "calls": 51, "errors": 0}
       ],
       "anomalies": [
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 5,
-            "context_tokens": 201175,
-            "threshold": "200000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "RootAgent",
-            "context_tokens": 240877,
-            "threshold": "200000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "turn": 5,
-            "context_tokens": 165762,
-            "threshold": "160000"
-          }
-        }
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 5, "context_tokens": 201175, "threshold": "200000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"role": "RootAgent", "context_tokens": 240877, "threshold": "200000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 5, "context_tokens": 165762, "threshold": "160000"}}
       ]
     },
     {
@@ -96,103 +70,28 @@
           "completed_at": "2026-10-28T23:07:32.374000+00:00",
           "active_duration_seconds": 1910,
           "turns": 344,
-          "tokens": {
-            "input": 1777406,
-            "output": 46092,
-            "cache_read": 29666070,
-            "reasoning": 64295,
-            "peak_context": 168353
-          },
+          "tokens": {"input": 1777406, "output": 46092, "cache_read": 29666070, "reasoning": 64295, "peak_context": 168353},
           "cost_usd": 3.971961,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 3.971961},
           "compactions": 2,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "read",
-          "calls": 152,
-          "errors": 0
-        },
-        {
-          "name": "bash",
-          "calls": 89,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 45,
-          "errors": 1
-        },
-        {
-          "name": "edit",
-          "calls": 40,
-          "errors": 2
-        },
-        {
-          "name": "glob",
-          "calls": 10,
-          "errors": 0
-        },
-        {
-          "name": "t3-code_link_pull_request",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "write",
-          "calls": 1,
-          "errors": 0
-        }
+        {"name": "read", "calls": 152, "errors": 0},
+        {"name": "bash", "calls": 89, "errors": 0},
+        {"name": "grep", "calls": 45, "errors": 1},
+        {"name": "edit", "calls": 40, "errors": 2},
+        {"name": "glob", "calls": 10, "errors": 0},
+        {"name": "t3-code_link_pull_request", "calls": 1, "errors": 0},
+        {"name": "write", "calls": 1, "errors": 0}
       ],
       "anomalies": [
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 101,
-            "context_tokens": 160108,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 280,
-            "token_delta": 104228,
-            "context_tokens": 104228,
-            "threshold": "80000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "coder",
-            "context_tokens": 168353,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "turn": 110,
-            "token_delta": 72279,
-            "context_tokens": 72279,
-            "threshold": "40000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "role": "coder",
-            "context_tokens": 168353,
-            "threshold": "160000"
-          }
-        }
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 101, "context_tokens": 160108, "threshold": "160000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 280, "token_delta": 104228, "context_tokens": 104228, "threshold": "80000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"role": "coder", "context_tokens": 168353, "threshold": "160000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 110, "token_delta": 72279, "context_tokens": 72279, "threshold": "40000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"role": "coder", "context_tokens": 168353, "threshold": "160000"}}
       ]
     },
     {
@@ -208,39 +107,18 @@
           "completed_at": "2026-10-28T21:50:22.790000+00:00",
           "active_duration_seconds": 196,
           "turns": 32,
-          "tokens": {
-            "input": 219287,
-            "output": 4424,
-            "cache_read": 1126964,
-            "reasoning": 5384,
-            "peak_context": 79156
-          },
+          "tokens": {"input": 219287, "output": 4424, "cache_read": 1126964, "reasoning": 5384, "peak_context": 79156},
           "cost_usd": 0.285768,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0.285768},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "read",
-          "calls": 18,
-          "errors": 0
-        },
-        {
-          "name": "bash",
-          "calls": 10,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 4,
-          "errors": 0
-        },
-        {
-          "name": "write",
-          "calls": 1,
-          "errors": 0
-        }
+        {"name": "read", "calls": 18, "errors": 0},
+        {"name": "bash", "calls": 10, "errors": 0},
+        {"name": "grep", "calls": 4, "errors": 0},
+        {"name": "write", "calls": 1, "errors": 0}
       ],
       "anomalies": []
     },
@@ -257,73 +135,24 @@
           "completed_at": "2026-10-28T21:47:02.490000+00:00",
           "active_duration_seconds": 677,
           "turns": 108,
-          "tokens": {
-            "input": 499172,
-            "output": 13640,
-            "cache_read": 8319406,
-            "reasoning": 35490,
-            "peak_context": 160486
-          },
+          "tokens": {"input": 499172, "output": 13640, "cache_read": 8319406, "reasoning": 35490, "peak_context": 160486},
           "cost_usd": 1.182572,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 1.182572},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "read",
-          "calls": 60,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 24,
-          "errors": 0
-        },
-        {
-          "name": "bash",
-          "calls": 14,
-          "errors": 0
-        },
-        {
-          "name": "edit",
-          "calls": 10,
-          "errors": 0
-        },
-        {
-          "name": "glob",
-          "calls": 1,
-          "errors": 0
-        }
+        {"name": "read", "calls": 60, "errors": 0},
+        {"name": "grep", "calls": 24, "errors": 0},
+        {"name": "bash", "calls": 14, "errors": 0},
+        {"name": "edit", "calls": 10, "errors": 0},
+        {"name": "glob", "calls": 1, "errors": 0}
       ],
       "anomalies": [
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 107,
-            "context_tokens": 160486,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "coder",
-            "context_tokens": 160486,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "role": "coder",
-            "context_tokens": 160486,
-            "threshold": "160000"
-          }
-        }
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 107, "context_tokens": 160486, "threshold": "160000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"role": "coder", "context_tokens": 160486, "threshold": "160000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"role": "coder", "context_tokens": 160486, "threshold": "160000"}}
       ]
     },
     {
@@ -339,83 +168,25 @@
           "completed_at": "2026-10-28T21:35:33.525000+00:00",
           "active_duration_seconds": 486,
           "turns": 76,
-          "tokens": {
-            "input": 526119,
-            "output": 8607,
-            "cache_read": 6780503,
-            "reasoning": 29741,
-            "peak_context": 165407
-          },
+          "tokens": {"input": 526119, "output": 8607, "cache_read": 6780503, "reasoning": 29741, "peak_context": 165407},
           "cost_usd": 1.046932,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 1.046932},
           "compactions": 1,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "read",
-          "calls": 31,
-          "errors": 0
-        },
-        {
-          "name": "bash",
-          "calls": 29,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 10,
-          "errors": 0
-        },
-        {
-          "name": "glob",
-          "calls": 3,
-          "errors": 0
-        },
-        {
-          "name": "write",
-          "calls": 1,
-          "errors": 0
-        }
+        {"name": "read", "calls": 31, "errors": 0},
+        {"name": "bash", "calls": 29, "errors": 0},
+        {"name": "grep", "calls": 10, "errors": 0},
+        {"name": "glob", "calls": 3, "errors": 0},
+        {"name": "write", "calls": 1, "errors": 0}
       ],
       "anomalies": [
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 65,
-            "context_tokens": 161034,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "coder",
-            "context_tokens": 165407,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "turn": 70,
-            "token_delta": 49293,
-            "context_tokens": 49293,
-            "threshold": "40000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "role": "coder",
-            "context_tokens": 165407,
-            "threshold": "160000"
-          }
-        }
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 65, "context_tokens": 161034, "threshold": "160000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"role": "coder", "context_tokens": 165407, "threshold": "160000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 70, "token_delta": 49293, "context_tokens": 49293, "threshold": "40000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"role": "coder", "context_tokens": 165407, "threshold": "160000"}}
       ]
     },
     {
@@ -431,98 +202,27 @@
           "completed_at": "2026-10-28T21:26:32.544000+00:00",
           "active_duration_seconds": 2696,
           "turns": 352,
-          "tokens": {
-            "input": 2105687,
-            "output": 58207,
-            "cache_read": 29238408,
-            "reasoning": 114831,
-            "peak_context": 167868
-          },
+          "tokens": {"input": 2105687, "output": 58207, "cache_read": 29238408, "reasoning": 114831, "peak_context": 167868},
           "cost_usd": 4.421038,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 4.421038},
           "compactions": 2,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "read",
-          "calls": 187,
-          "errors": 0
-        },
-        {
-          "name": "edit",
-          "calls": 69,
-          "errors": 6
-        },
-        {
-          "name": "bash",
-          "calls": 45,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 40,
-          "errors": 0
-        },
-        {
-          "name": "glob",
-          "calls": 2,
-          "errors": 0
-        },
-        {
-          "name": "write",
-          "calls": 1,
-          "errors": 0
-        }
+        {"name": "read", "calls": 187, "errors": 0},
+        {"name": "edit", "calls": 69, "errors": 6},
+        {"name": "bash", "calls": 45, "errors": 0},
+        {"name": "grep", "calls": 40, "errors": 0},
+        {"name": "glob", "calls": 2, "errors": 0},
+        {"name": "write", "calls": 1, "errors": 0}
       ],
       "anomalies": [
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 71,
-            "context_tokens": 160196,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 238,
-            "token_delta": 114169,
-            "context_tokens": 114169,
-            "threshold": "80000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "coder",
-            "context_tokens": 167868,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "turn": 79,
-            "token_delta": 57779,
-            "context_tokens": 57779,
-            "threshold": "40000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "role": "coder",
-            "context_tokens": 167868,
-            "threshold": "160000"
-          }
-        }
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 71, "context_tokens": 160196, "threshold": "160000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 238, "token_delta": 114169, "context_tokens": 114169, "threshold": "80000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"role": "coder", "context_tokens": 167868, "threshold": "160000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 79, "token_delta": 57779, "context_tokens": 57779, "threshold": "40000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"role": "coder", "context_tokens": 167868, "threshold": "160000"}}
       ]
     },
     {
@@ -538,34 +238,17 @@
           "completed_at": "2026-10-28T20:41:00.214000+00:00",
           "active_duration_seconds": 27,
           "turns": 7,
-          "tokens": {
-            "input": 26856,
-            "output": 302,
-            "cache_read": 48949,
-            "reasoning": 1425,
-            "peak_context": 14539
-          },
+          "tokens": {"input": 26856, "output": 302, "cache_read": 48949, "reasoning": 1425, "peak_context": 14539},
           "cost_usd": 0.030289,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0.030289},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "bash",
-          "calls": 3,
-          "errors": 0
-        },
-        {
-          "name": "glob",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "read",
-          "calls": 1,
-          "errors": 0
-        }
+        {"name": "bash", "calls": 3, "errors": 0},
+        {"name": "glob", "calls": 1, "errors": 0},
+        {"name": "read", "calls": 1, "errors": 0}
       ],
       "anomalies": []
     },
@@ -581,172 +264,39 @@
           "completed_at": "2026-10-28T23:08:19.285000+00:00",
           "active_duration_seconds": 15068,
           "turns": 692,
-          "tokens": {
-            "input": 5261607,
-            "output": 93224,
-            "cache_read": 52654100,
-            "reasoning": 151154,
-            "peak_context": 169194
-          },
+          "tokens": {"input": 5261607, "output": 93224, "cache_read": 52654100, "reasoning": 151154, "peak_context": 169194},
           "cost_usd": 8.81168,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 8.81168},
           "compactions": 5,
           "user_iterations": 20
         }
       ],
       "tools": [
-        {
-          "name": "bash",
-          "calls": 248,
-          "errors": 2
-        },
-        {
-          "name": "read",
-          "calls": 233,
-          "errors": 0
-        },
-        {
-          "name": "edit",
-          "calls": 73,
-          "errors": 1
-        },
-        {
-          "name": "grep",
-          "calls": 64,
-          "errors": 0
-        },
-        {
-          "name": "write",
-          "calls": 12,
-          "errors": 0
-        },
-        {
-          "name": "glob",
-          "calls": 10,
-          "errors": 0
-        },
-        {
-          "name": "task",
-          "calls": 9,
-          "errors": 3
-        },
-        {
-          "name": "skill",
-          "calls": 4,
-          "errors": 0
-        },
-        {
-          "name": "question",
-          "calls": 2,
-          "errors": 0
-        },
-        {
-          "name": "t3-code_link_pull_request",
-          "calls": 2,
-          "errors": 0
-        }
+        {"name": "bash", "calls": 248, "errors": 2},
+        {"name": "read", "calls": 233, "errors": 0},
+        {"name": "edit", "calls": 73, "errors": 1},
+        {"name": "grep", "calls": 64, "errors": 0},
+        {"name": "write", "calls": 12, "errors": 0},
+        {"name": "glob", "calls": 10, "errors": 0},
+        {"name": "task", "calls": 9, "errors": 3},
+        {"name": "skill", "calls": 4, "errors": 0},
+        {"name": "question", "calls": 2, "errors": 0},
+        {"name": "t3-code_link_pull_request", "calls": 2, "errors": 0}
       ],
       "anomalies": [
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 120,
-            "context_tokens": 160725,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 491,
-            "token_delta": 102505,
-            "context_tokens": 102505,
-            "threshold": "80000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "orchestrator",
-            "context_tokens": 169194,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "turn": 127,
-            "token_delta": 50607,
-            "context_tokens": 50607,
-            "threshold": "40000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "turn": 216,
-            "token_delta": 52665,
-            "context_tokens": 52665,
-            "threshold": "40000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "turn": 255,
-            "token_delta": 47348,
-            "context_tokens": 47348,
-            "threshold": "40000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "turn": 363,
-            "token_delta": 74731,
-            "context_tokens": 74731,
-            "threshold": "40000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "turn": 572,
-            "token_delta": 49459,
-            "context_tokens": 49459,
-            "threshold": "40000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "role": "orchestrator",
-            "context_tokens": 169194,
-            "threshold": "160000"
-          }
-        }
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 120, "context_tokens": 160725, "threshold": "160000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 491, "token_delta": 102505, "context_tokens": 102505, "threshold": "80000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"role": "orchestrator", "context_tokens": 169194, "threshold": "160000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 127, "token_delta": 50607, "context_tokens": 50607, "threshold": "40000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 216, "token_delta": 52665, "context_tokens": 52665, "threshold": "40000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 255, "token_delta": 47348, "context_tokens": 47348, "threshold": "40000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 363, "token_delta": 74731, "context_tokens": 74731, "threshold": "40000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 572, "token_delta": 49459, "context_tokens": 49459, "threshold": "40000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"role": "orchestrator", "context_tokens": 169194, "threshold": "160000"}}
       ]
     }
   ],
   "anomalies": [
-    {
-      "rule_id": "TOOL_HIGH_FAILURE_RATE",
-      "severity": "WARNING",
-      "context": {
-        "tool_name": "task",
-        "count": 3,
-        "total_calls": 9,
-        "threshold": "\u003e20%",
-        "failure_rate_pct": 33.3
-      }
-    }
+    {"rule_id": "TOOL_HIGH_FAILURE_RATE", "severity": "WARNING", "context": {"tool_name": "task", "count": 3, "total_calls": 9, "threshold": "\u003e20%", "failure_rate_pct": 33.3}}
   ]
 }

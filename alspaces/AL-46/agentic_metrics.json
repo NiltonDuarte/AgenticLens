@@ -1,5 +1,16 @@
 {
-  "schema_version": 4,
+  "schema_version": 6,
+  "migration": {
+    "schema_version": 6,
+    "status": "completed",
+    "steps_completed": [
+      "schema_v6_lean_occurrences"
+    ],
+    "steps_pending": [],
+    "last_migrated_at": "",
+    "last_migrated_by": "",
+    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+  },
   "ticket_id": "AL-46",
   "ticket_title": "Collapsible Failed Tool Calls Section with Default-Collapsed State in Live Inspector",
   "ticket_type": "feat",
@@ -29,49 +40,20 @@
           "completed_at": "2026-10-30T23:36:41.899Z",
           "active_duration_seconds": 0,
           "turns": 1,
-          "tokens": {
-            "input": 84583,
-            "output": 11322,
-            "cache_read": 4208768,
-            "reasoning": 3498,
-            "peak_context": 67334
-          },
+          "tokens": {"input": 84583, "output": 11322, "cache_read": 4208768, "reasoning": 3498, "peak_context": 67334},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 3
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 27,
-          "errors": 6
-        },
-        {
-          "name": "followup_task",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "list_agents",
-          "calls": 5,
-          "errors": 0
-        },
-        {
-          "name": "send_message",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "spawn_agent",
-          "calls": 9,
-          "errors": 0
-        },
-        {
-          "name": "wait_agent",
-          "calls": 16,
-          "errors": 0
-        }
+        {"name": "command", "calls": 27, "errors": 6},
+        {"name": "followup_task", "calls": 1, "errors": 0},
+        {"name": "list_agents", "calls": 5, "errors": 0},
+        {"name": "send_message", "calls": 1, "errors": 0},
+        {"name": "spawn_agent", "calls": 9, "errors": 0},
+        {"name": "wait_agent", "calls": 16, "errors": 0}
       ],
       "anomalies": []
     },
@@ -88,24 +70,15 @@
           "completed_at": "2026-10-30T23:26:42.457Z",
           "active_duration_seconds": 23,
           "turns": 1,
-          "tokens": {
-            "input": 14478,
-            "output": 2555,
-            "cache_read": 228224,
-            "reasoning": 100,
-            "peak_context": 45912
-          },
+          "tokens": {"input": 14478, "output": 2555, "cache_read": 228224, "reasoning": 100, "peak_context": 45912},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 4,
-          "errors": 1
-        }
+        {"name": "command", "calls": 4, "errors": 1}
       ],
       "anomalies": []
     },
@@ -122,24 +95,15 @@
           "completed_at": "2026-10-30T23:30:13.785Z",
           "active_duration_seconds": 76,
           "turns": 2,
-          "tokens": {
-            "input": 27639,
-            "output": 6608,
-            "cache_read": 1097856,
-            "reasoning": 1799,
-            "peak_context": 57375
-          },
+          "tokens": {"input": 27639, "output": 6608, "cache_read": 1097856, "reasoning": 1799, "peak_context": 57375},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 17,
-          "errors": 2
-        }
+        {"name": "command", "calls": 17, "errors": 2}
       ],
       "anomalies": []
     },
@@ -156,29 +120,16 @@
           "completed_at": "2026-10-30T23:29:50.072Z",
           "active_duration_seconds": 139,
           "turns": 1,
-          "tokens": {
-            "input": 21852,
-            "output": 2533,
-            "cache_read": 1050240,
-            "reasoning": 608,
-            "peak_context": 53997
-          },
+          "tokens": {"input": 21852, "output": 2533, "cache_read": 1050240, "reasoning": 608, "peak_context": 53997},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 7,
-          "errors": 1
-        },
-        {
-          "name": "send_message",
-          "calls": 2,
-          "errors": 0
-        }
+        {"name": "command", "calls": 7, "errors": 1},
+        {"name": "send_message", "calls": 2, "errors": 0}
       ],
       "anomalies": []
     },
@@ -195,24 +146,15 @@
           "completed_at": "2026-10-30T23:27:49.244Z",
           "active_duration_seconds": 15,
           "turns": 1,
-          "tokens": {
-            "input": 11561,
-            "output": 1381,
-            "cache_read": 210816,
-            "reasoning": 429,
-            "peak_context": 47427
-          },
+          "tokens": {"input": 11561, "output": 1381, "cache_read": 210816, "reasoning": 429, "peak_context": 47427},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 3,
-          "errors": 0
-        }
+        {"name": "command", "calls": 3, "errors": 0}
       ],
       "anomalies": []
     },
@@ -229,36 +171,18 @@
           "completed_at": "2026-10-30T23:29:56.555Z",
           "active_duration_seconds": 13,
           "turns": 1,
-          "tokens": {
-            "input": 4408,
-            "output": 907,
-            "cache_read": 118528,
-            "reasoning": 162,
-            "peak_context": 42218
-          },
+          "tokens": {"input": 4408, "output": 907, "cache_read": 118528, "reasoning": 162, "peak_context": 42218},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 2,
-          "errors": 0
-        }
+        {"name": "command", "calls": 2, "errors": 0}
       ],
       "anomalies": [
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "turn": 1,
-            "token_delta": 41483,
-            "context_tokens": 41483,
-            "threshold": "40000"
-          }
-        }
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 1, "token_delta": 41483, "context_tokens": 41483, "threshold": "40000"}}
       ]
     },
     {
@@ -274,29 +198,16 @@
           "completed_at": "2026-10-30T23:30:44.248Z",
           "active_duration_seconds": 27,
           "turns": 1,
-          "tokens": {
-            "input": 3387,
-            "output": 507,
-            "cache_read": 162688,
-            "reasoning": 60,
-            "peak_context": 42317
-          },
+          "tokens": {"input": 3387, "output": 507, "cache_read": 162688, "reasoning": 60, "peak_context": 42317},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 4,
-          "errors": 1
-        },
-        {
-          "name": "send_message",
-          "calls": 1,
-          "errors": 0
-        }
+        {"name": "command", "calls": 4, "errors": 1},
+        {"name": "send_message", "calls": 1, "errors": 0}
       ],
       "anomalies": []
     },
@@ -313,24 +224,15 @@
           "completed_at": "2026-10-30T23:30:29.957Z",
           "active_duration_seconds": 12,
           "turns": 1,
-          "tokens": {
-            "input": 6625,
-            "output": 884,
-            "cache_read": 125056,
-            "reasoning": 320,
-            "peak_context": 45863
-          },
+          "tokens": {"input": 6625, "output": 884, "cache_read": 125056, "reasoning": 320, "peak_context": 45863},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 1,
-          "errors": 0
-        }
+        {"name": "command", "calls": 1, "errors": 0}
       ],
       "anomalies": []
     },
@@ -347,29 +249,16 @@
           "completed_at": "2026-10-30T23:31:47.380Z",
           "active_duration_seconds": 51,
           "turns": 1,
-          "tokens": {
-            "input": 13477,
-            "output": 2699,
-            "cache_read": 800128,
-            "reasoning": 921,
-            "peak_context": 54178
-          },
+          "tokens": {"input": 13477, "output": 2699, "cache_read": 800128, "reasoning": 921, "peak_context": 54178},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 8,
-          "errors": 2
-        },
-        {
-          "name": "send_message",
-          "calls": 1,
-          "errors": 0
-        }
+        {"name": "command", "calls": 8, "errors": 2},
+        {"name": "send_message", "calls": 1, "errors": 0}
       ],
       "anomalies": []
     }

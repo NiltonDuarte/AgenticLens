@@ -1,5 +1,16 @@
 {
-  "schema_version": 4,
+  "schema_version": 6,
+  "migration": {
+    "schema_version": 6,
+    "status": "completed",
+    "steps_completed": [
+      "schema_v6_lean_occurrences"
+    ],
+    "steps_pending": [],
+    "last_migrated_at": "",
+    "last_migrated_by": "",
+    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+  },
   "ticket_id": "AL-35",
   "ticket_title": "Pre-Release Source Code Audit, Configuration Leakage Inspection, and Review Artifact Generation",
   "ticket_type": "docs",
@@ -29,95 +40,29 @@
           "completed_at": "2026-10-20T15:40:26.993000+00:00",
           "active_duration_seconds": 2335,
           "turns": 205,
-          "tokens": {
-            "input": 1663352,
-            "output": 35635,
-            "cache_read": 14648925,
-            "reasoning": 21983,
-            "peak_context": 168083
-          },
+          "tokens": {"input": 1663352, "output": 35635, "cache_read": 14648925, "reasoning": 21983, "peak_context": 168083},
           "cost_usd": 2.562251,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 2.562251},
           "compactions": 1,
           "user_iterations": 7
         }
       ],
       "tools": [
-        {
-          "name": "bash",
-          "calls": 69,
-          "errors": 0
-        },
-        {
-          "name": "edit",
-          "calls": 15,
-          "errors": 1
-        },
-        {
-          "name": "glob",
-          "calls": 2,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 29,
-          "errors": 1
-        },
-        {
-          "name": "question",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "read",
-          "calls": 60,
-          "errors": 0
-        },
-        {
-          "name": "skill",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "t3-code_link_pull_request",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "t3-code_list_thread_pull_requests",
-          "calls": 3,
-          "errors": 0
-        },
-        {
-          "name": "todowrite",
-          "calls": 4,
-          "errors": 0
-        },
-        {
-          "name": "write",
-          "calls": 7,
-          "errors": 0
-        }
+        {"name": "bash", "calls": 69, "errors": 0},
+        {"name": "edit", "calls": 15, "errors": 1},
+        {"name": "glob", "calls": 2, "errors": 0},
+        {"name": "grep", "calls": 29, "errors": 1},
+        {"name": "question", "calls": 1, "errors": 0},
+        {"name": "read", "calls": 60, "errors": 0},
+        {"name": "skill", "calls": 1, "errors": 0},
+        {"name": "t3-code_link_pull_request", "calls": 1, "errors": 0},
+        {"name": "t3-code_list_thread_pull_requests", "calls": 3, "errors": 0},
+        {"name": "todowrite", "calls": 4, "errors": 0},
+        {"name": "write", "calls": 7, "errors": 0}
       ],
       "anomalies": [
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 140,
-            "context_tokens": 160518,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "turn": 150,
-            "token_delta": 78086,
-            "context_tokens": 78086,
-            "threshold": "40000"
-          }
-        }
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 140, "context_tokens": 160518, "threshold": "160000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 150, "token_delta": 78086, "context_tokens": 78086, "threshold": "40000"}}
       ]
     }
   ],

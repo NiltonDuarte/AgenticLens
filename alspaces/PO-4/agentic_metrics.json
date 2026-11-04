@@ -1,5 +1,16 @@
 {
-  "schema_version": 4,
+  "schema_version": 6,
+  "migration": {
+    "schema_version": 6,
+    "status": "completed",
+    "steps_completed": [
+      "schema_v6_lean_occurrences"
+    ],
+    "steps_pending": [],
+    "last_migrated_at": "",
+    "last_migrated_by": "",
+    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+  },
   "ticket_id": "PO-4",
   "ticket_title": "Session CI/CD Pipelines, Multi-Version Schema Migration, Review Skill, and Live Observability",
   "ticket_type": "docs",
@@ -29,59 +40,22 @@
           "completed_at": "2026-10-18T13:23:41.435000+00:00",
           "active_duration_seconds": 754,
           "turns": 126,
-          "tokens": {
-            "input": 1066397,
-            "output": 36557,
-            "cache_read": 10921418,
-            "reasoning": 20521,
-            "peak_context": 154653
-          },
+          "tokens": {"input": 1066397, "output": 36557, "cache_read": 10921418, "reasoning": 20521, "peak_context": 154653},
           "cost_usd": 1.832947,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 1.832947},
           "compactions": 0,
           "user_iterations": 3
         }
       ],
       "tools": [
-        {
-          "name": "bash",
-          "calls": 51,
-          "errors": 0
-        },
-        {
-          "name": "edit",
-          "calls": 2,
-          "errors": 0
-        },
-        {
-          "name": "glob",
-          "calls": 7,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 2,
-          "errors": 0
-        },
-        {
-          "name": "read",
-          "calls": 29,
-          "errors": 0
-        },
-        {
-          "name": "skill",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "todowrite",
-          "calls": 9,
-          "errors": 0
-        },
-        {
-          "name": "write",
-          "calls": 21,
-          "errors": 0
-        }
+        {"name": "bash", "calls": 51, "errors": 0},
+        {"name": "edit", "calls": 2, "errors": 0},
+        {"name": "glob", "calls": 7, "errors": 0},
+        {"name": "grep", "calls": 2, "errors": 0},
+        {"name": "read", "calls": 29, "errors": 0},
+        {"name": "skill", "calls": 1, "errors": 0},
+        {"name": "todowrite", "calls": 9, "errors": 0},
+        {"name": "write", "calls": 21, "errors": 0}
       ],
       "anomalies": []
     }

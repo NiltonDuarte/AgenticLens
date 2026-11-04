@@ -1,5 +1,16 @@
 {
-  "schema_version": 4,
+  "schema_version": 6,
+  "migration": {
+    "schema_version": 6,
+    "status": "completed",
+    "steps_completed": [
+      "schema_v6_lean_occurrences"
+    ],
+    "steps_pending": [],
+    "last_migrated_at": "",
+    "last_migrated_by": "",
+    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+  },
   "ticket_id": "GEN-4",
   "ticket_title": "Session Update TICKETS.md Status for Merged Workspaces",
   "ticket_type": "chore",
@@ -29,140 +40,32 @@
           "completed_at": "2026-10-19T19:03:46.657000+00:00",
           "active_duration_seconds": 7731,
           "turns": 1047,
-          "tokens": {
-            "input": 11872702,
-            "output": 124891,
-            "cache_read": 78597366,
-            "reasoning": 132878,
-            "peak_context": 170072
-          },
+          "tokens": {"input": 11872702, "output": 124891, "cache_read": 78597366, "reasoning": 132878, "peak_context": 170072},
           "cost_usd": 15.765963,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 15.765963},
           "compactions": 4,
           "user_iterations": 83
         }
       ],
       "tools": [
-        {
-          "name": "bash",
-          "calls": 548,
-          "errors": 12
-        },
-        {
-          "name": "edit",
-          "calls": 84,
-          "errors": 6
-        },
-        {
-          "name": "glob",
-          "calls": 13,
-          "errors": 1
-        },
-        {
-          "name": "grep",
-          "calls": 26,
-          "errors": 0
-        },
-        {
-          "name": "read",
-          "calls": 187,
-          "errors": 0
-        },
-        {
-          "name": "t3-code_link_pull_request",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "todowrite",
-          "calls": 10,
-          "errors": 0
-        },
-        {
-          "name": "write",
-          "calls": 19,
-          "errors": 0
-        }
+        {"name": "bash", "calls": 548, "errors": 12},
+        {"name": "edit", "calls": 84, "errors": 6},
+        {"name": "glob", "calls": 13, "errors": 1},
+        {"name": "grep", "calls": 26, "errors": 0},
+        {"name": "read", "calls": 187, "errors": 0},
+        {"name": "t3-code_link_pull_request", "calls": 1, "errors": 0},
+        {"name": "todowrite", "calls": 10, "errors": 0},
+        {"name": "write", "calls": 19, "errors": 0}
       ],
       "anomalies": [
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 137,
-            "token_delta": 98526,
-            "context_tokens": 98526,
-            "threshold": "80000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 279,
-            "context_tokens": 160014,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 284,
-            "token_delta": 162184,
-            "context_tokens": 162184,
-            "threshold": "80000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 292,
-            "token_delta": 91451,
-            "context_tokens": 91451,
-            "threshold": "80000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 644,
-            "token_delta": 140544,
-            "context_tokens": 140544,
-            "threshold": "80000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 678,
-            "token_delta": 88025,
-            "context_tokens": 88025,
-            "threshold": "80000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "turn": 477,
-            "token_delta": 72203,
-            "context_tokens": 72203,
-            "threshold": "40000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "turn": 820,
-            "token_delta": 62331,
-            "context_tokens": 62331,
-            "threshold": "40000"
-          }
-        }
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 137, "token_delta": 98526, "context_tokens": 98526, "threshold": "80000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 279, "context_tokens": 160014, "threshold": "160000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 284, "token_delta": 162184, "context_tokens": 162184, "threshold": "80000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 292, "token_delta": 91451, "context_tokens": 91451, "threshold": "80000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 644, "token_delta": 140544, "context_tokens": 140544, "threshold": "80000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 678, "token_delta": 88025, "context_tokens": 88025, "threshold": "80000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 477, "token_delta": 72203, "context_tokens": 72203, "threshold": "40000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 820, "token_delta": 62331, "context_tokens": 62331, "threshold": "40000"}}
       ]
     }
   ],

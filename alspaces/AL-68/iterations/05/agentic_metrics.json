@@ -1,5 +1,16 @@
 {
-  "schema_version": 5,
+  "schema_version": 6,
+  "migration": {
+    "schema_version": 6,
+    "status": "completed",
+    "steps_completed": [
+      "schema_v6_lean_occurrences"
+    ],
+    "steps_pending": [],
+    "last_migrated_at": "",
+    "last_migrated_by": "",
+    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+  },
   "ticket_id": "AL-68",
   "ticket_title": "AL-68 breaking-release marker follow-up",
   "ticket_type": "chore",
@@ -29,48 +40,21 @@
           "completed_at": "2026-11-03T17:49:45.904Z",
           "active_duration_seconds": 23,
           "turns": 2,
-          "tokens": {
-            "input": 70974,
-            "output": 8372,
-            "cache_read": 3104000,
-            "reasoning": 1827,
-            "peak_context": 71284
-          },
+          "tokens": {"input": 70974, "output": 8372, "cache_read": 3104000, "reasoning": 1827, "peak_context": 71284},
           "cost_usd": null,
-          "cost_evidence": {
-            "state": "unavailable",
-            "known_subtotal_usd": null
-          },
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
           "user_iterations": 4
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 41,
-          "errors": 11
-        },
-        {
-          "name": "sleep",
-          "calls": 9,
-          "errors": 0
-        }
+        {"name": "command", "calls": 41, "errors": 11},
+        {"name": "sleep", "calls": 9, "errors": 0}
       ],
       "anomalies": []
     }
   ],
   "anomalies": [
-    {
-      "rule_id": "TOOL_HIGH_FAILURE_RATE",
-      "severity": "WARNING",
-      "context": {
-        "tool_name": "command",
-        "count": 11,
-        "total_calls": 41,
-        "threshold": "\u003e20%",
-        "failure_rate_pct": 26.8
-      }
-    }
+    {"rule_id": "TOOL_HIGH_FAILURE_RATE", "severity": "WARNING", "context": {"tool_name": "command", "count": 11, "total_calls": 41, "threshold": "\u003e20%", "failure_rate_pct": 26.8}}
   ]
 }

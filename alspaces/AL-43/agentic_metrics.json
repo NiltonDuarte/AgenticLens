@@ -1,5 +1,16 @@
 {
-  "schema_version": 4,
+  "schema_version": 6,
+  "migration": {
+    "schema_version": 6,
+    "status": "completed",
+    "steps_completed": [
+      "schema_v6_lean_occurrences"
+    ],
+    "steps_pending": [],
+    "last_migrated_at": "",
+    "last_migrated_by": "",
+    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+  },
   "ticket_id": "AL-43",
   "ticket_title": "Revert automatic content-error classification",
   "ticket_type": "chore",
@@ -29,44 +40,19 @@
           "completed_at": "2026-10-31T14:40:05.996Z",
           "active_duration_seconds": 1252,
           "turns": 3,
-          "tokens": {
-            "input": 102232,
-            "output": 17329,
-            "cache_read": 9797120,
-            "reasoning": 1281,
-            "peak_context": 111969
-          },
+          "tokens": {"input": 102232, "output": 17329, "cache_read": 9797120, "reasoning": 1281, "peak_context": 111969},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 5
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 62,
-          "errors": 6
-        },
-        {
-          "name": "followup_task",
-          "calls": 9,
-          "errors": 0
-        },
-        {
-          "name": "send_message",
-          "calls": 5,
-          "errors": 0
-        },
-        {
-          "name": "spawn_agent",
-          "calls": 4,
-          "errors": 0
-        },
-        {
-          "name": "wait_agent",
-          "calls": 36,
-          "errors": 0
-        }
+        {"name": "command", "calls": 62, "errors": 6},
+        {"name": "followup_task", "calls": 9, "errors": 0},
+        {"name": "send_message", "calls": 5, "errors": 0},
+        {"name": "spawn_agent", "calls": 4, "errors": 0},
+        {"name": "wait_agent", "calls": 36, "errors": 0}
       ],
       "anomalies": []
     },
@@ -83,29 +69,16 @@
           "completed_at": "2026-10-31T14:34:36.419Z",
           "active_duration_seconds": 148,
           "turns": 3,
-          "tokens": {
-            "input": 105329,
-            "output": 4449,
-            "cache_read": 691328,
-            "reasoning": 73,
-            "peak_context": 66018
-          },
+          "tokens": {"input": 105329, "output": 4449, "cache_read": 691328, "reasoning": 73, "peak_context": 66018},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 11,
-          "errors": 0
-        },
-        {
-          "name": "send_message",
-          "calls": 1,
-          "errors": 0
-        }
+        {"name": "command", "calls": 11, "errors": 0},
+        {"name": "send_message", "calls": 1, "errors": 0}
       ],
       "anomalies": []
     },
@@ -122,29 +95,16 @@
           "completed_at": "2026-10-31T14:36:51.210Z",
           "active_duration_seconds": 616,
           "turns": 4,
-          "tokens": {
-            "input": 98808,
-            "output": 19964,
-            "cache_read": 5947136,
-            "reasoning": 3901,
-            "peak_context": 132656
-          },
+          "tokens": {"input": 98808, "output": 19964, "cache_read": 5947136, "reasoning": 3901, "peak_context": 132656},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 44,
-          "errors": 4
-        },
-        {
-          "name": "send_message",
-          "calls": 9,
-          "errors": 0
-        }
+        {"name": "command", "calls": 44, "errors": 4},
+        {"name": "send_message", "calls": 9, "errors": 0}
       ],
       "anomalies": []
     },
@@ -161,29 +121,16 @@
           "completed_at": "2026-10-31T14:38:04.402Z",
           "active_duration_seconds": 403,
           "turns": 3,
-          "tokens": {
-            "input": 83024,
-            "output": 13909,
-            "cache_read": 3691776,
-            "reasoning": 1044,
-            "peak_context": 113388
-          },
+          "tokens": {"input": 83024, "output": 13909, "cache_read": 3691776, "reasoning": 1044, "peak_context": 113388},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 32,
-          "errors": 2
-        },
-        {
-          "name": "send_message",
-          "calls": 9,
-          "errors": 0
-        }
+        {"name": "command", "calls": 32, "errors": 2},
+        {"name": "send_message", "calls": 9, "errors": 0}
       ],
       "anomalies": []
     },
@@ -200,29 +147,16 @@
           "completed_at": "2026-10-31T14:39:22.210Z",
           "active_duration_seconds": 223,
           "turns": 3,
-          "tokens": {
-            "input": 106116,
-            "output": 5746,
-            "cache_read": 2517760,
-            "reasoning": 1077,
-            "peak_context": 131163
-          },
+          "tokens": {"input": 106116, "output": 5746, "cache_read": 2517760, "reasoning": 1077, "peak_context": 131163},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 22,
-          "errors": 0
-        },
-        {
-          "name": "send_message",
-          "calls": 2,
-          "errors": 0
-        }
+        {"name": "command", "calls": 22, "errors": 0},
+        {"name": "send_message", "calls": 2, "errors": 0}
       ],
       "anomalies": []
     },
@@ -238,49 +172,20 @@
           "completed_at": "2026-10-31T16:00:14.988Z",
           "active_duration_seconds": 756,
           "turns": 5,
-          "tokens": {
-            "input": 142857,
-            "output": 22166,
-            "cache_read": 11120512,
-            "reasoning": 5726,
-            "peak_context": 147641
-          },
+          "tokens": {"input": 142857, "output": 22166, "cache_read": 11120512, "reasoning": 5726, "peak_context": 147641},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 7
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 62,
-          "errors": 4
-        },
-        {
-          "name": "followup_task",
-          "calls": 5,
-          "errors": 0
-        },
-        {
-          "name": "list_agents",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "send_message",
-          "calls": 10,
-          "errors": 0
-        },
-        {
-          "name": "spawn_agent",
-          "calls": 4,
-          "errors": 0
-        },
-        {
-          "name": "wait_agent",
-          "calls": 21,
-          "errors": 0
-        }
+        {"name": "command", "calls": 62, "errors": 4},
+        {"name": "followup_task", "calls": 5, "errors": 0},
+        {"name": "list_agents", "calls": 1, "errors": 0},
+        {"name": "send_message", "calls": 10, "errors": 0},
+        {"name": "spawn_agent", "calls": 4, "errors": 0},
+        {"name": "wait_agent", "calls": 21, "errors": 0}
       ],
       "anomalies": []
     },
@@ -297,29 +202,16 @@
           "completed_at": "2026-10-31T15:52:07.972Z",
           "active_duration_seconds": 185,
           "turns": 2,
-          "tokens": {
-            "input": 178444,
-            "output": 6137,
-            "cache_read": 1004160,
-            "reasoning": 327,
-            "peak_context": 102175
-          },
+          "tokens": {"input": 178444, "output": 6137, "cache_read": 1004160, "reasoning": 327, "peak_context": 102175},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 6,
-          "errors": 0
-        },
-        {
-          "name": "send_message",
-          "calls": 2,
-          "errors": 0
-        }
+        {"name": "command", "calls": 6, "errors": 0},
+        {"name": "send_message", "calls": 2, "errors": 0}
       ],
       "anomalies": []
     },
@@ -336,29 +228,16 @@
           "completed_at": "2026-10-31T15:54:45.438Z",
           "active_duration_seconds": 334,
           "turns": 2,
-          "tokens": {
-            "input": 198905,
-            "output": 12810,
-            "cache_read": 3636864,
-            "reasoning": 2021,
-            "peak_context": 148888
-          },
+          "tokens": {"input": 198905, "output": 12810, "cache_read": 3636864, "reasoning": 2021, "peak_context": 148888},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 20,
-          "errors": 0
-        },
-        {
-          "name": "send_message",
-          "calls": 4,
-          "errors": 0
-        }
+        {"name": "command", "calls": 20, "errors": 0},
+        {"name": "send_message", "calls": 4, "errors": 0}
       ],
       "anomalies": []
     },
@@ -375,29 +254,16 @@
           "completed_at": "2026-10-31T15:56:45.543Z",
           "active_duration_seconds": 278,
           "turns": 2,
-          "tokens": {
-            "input": 108296,
-            "output": 7674,
-            "cache_read": 3912192,
-            "reasoning": 1267,
-            "peak_context": 142809
-          },
+          "tokens": {"input": 108296, "output": 7674, "cache_read": 3912192, "reasoning": 1267, "peak_context": 142809},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 23,
-          "errors": 0
-        },
-        {
-          "name": "send_message",
-          "calls": 7,
-          "errors": 0
-        }
+        {"name": "command", "calls": 23, "errors": 0},
+        {"name": "send_message", "calls": 7, "errors": 0}
       ],
       "anomalies": []
     },
@@ -414,54 +280,21 @@
           "completed_at": "2026-10-31T15:57:53.656Z",
           "active_duration_seconds": 210,
           "turns": 3,
-          "tokens": {
-            "input": 128241,
-            "output": 6106,
-            "cache_read": 3318528,
-            "reasoning": 752,
-            "peak_context": 163766
-          },
+          "tokens": {"input": 128241, "output": 6106, "cache_read": 3318528, "reasoning": 752, "peak_context": 163766},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 11,
-          "errors": 0
-        },
-        {
-          "name": "send_message",
-          "calls": 6,
-          "errors": 0
-        },
-        {
-          "name": "wait_agent",
-          "calls": 1,
-          "errors": 0
-        }
+        {"name": "command", "calls": 11, "errors": 0},
+        {"name": "send_message", "calls": 6, "errors": 0},
+        {"name": "wait_agent", "calls": 1, "errors": 0}
       ],
       "anomalies": [
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "turn": 3,
-            "context_tokens": 162536,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "role": "reviewer",
-            "context_tokens": 163766,
-            "threshold": "160000"
-          }
-        }
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 3, "context_tokens": 162536, "threshold": "160000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"role": "reviewer", "context_tokens": 163766, "threshold": "160000"}}
       ]
     }
   ],

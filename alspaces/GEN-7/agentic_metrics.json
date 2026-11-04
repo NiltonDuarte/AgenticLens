@@ -1,5 +1,16 @@
 {
-  "schema_version": 4,
+  "schema_version": 6,
+  "migration": {
+    "schema_version": 6,
+    "status": "completed",
+    "steps_completed": [
+      "schema_v6_lean_occurrences"
+    ],
+    "steps_pending": [],
+    "last_migrated_at": "",
+    "last_migrated_by": "",
+    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+  },
   "ticket_id": "GEN-7",
   "ticket_title": "Multi-Platform Binary Selection and Host-Container Wrapper Support in Setup",
   "ticket_type": "chore",
@@ -29,85 +40,27 @@
           "completed_at": "2026-10-26T09:21:45.698000+00:00",
           "active_duration_seconds": 3042,
           "turns": 254,
-          "tokens": {
-            "input": 2296743,
-            "output": 50990,
-            "cache_read": 19510048,
-            "reasoning": 47736,
-            "peak_context": 167359
-          },
+          "tokens": {"input": 2296743, "output": 50990, "cache_read": 19510048, "reasoning": 47736, "peak_context": 167359},
           "cost_usd": 3.556033,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 3.556033},
           "compactions": 1,
           "user_iterations": 6
         }
       ],
       "tools": [
-        {
-          "name": "bash",
-          "calls": 83,
-          "errors": 0
-        },
-        {
-          "name": "edit",
-          "calls": 40,
-          "errors": 0
-        },
-        {
-          "name": "glob",
-          "calls": 14,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 13,
-          "errors": 0
-        },
-        {
-          "name": "read",
-          "calls": 78,
-          "errors": 1
-        },
-        {
-          "name": "t3-code_link_pull_request",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "t3-code_list_thread_pull_requests",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "todowrite",
-          "calls": 8,
-          "errors": 0
-        },
-        {
-          "name": "write",
-          "calls": 8,
-          "errors": 0
-        }
+        {"name": "bash", "calls": 83, "errors": 0},
+        {"name": "edit", "calls": 40, "errors": 0},
+        {"name": "glob", "calls": 14, "errors": 0},
+        {"name": "grep", "calls": 13, "errors": 0},
+        {"name": "read", "calls": 78, "errors": 1},
+        {"name": "t3-code_link_pull_request", "calls": 1, "errors": 0},
+        {"name": "t3-code_list_thread_pull_requests", "calls": 1, "errors": 0},
+        {"name": "todowrite", "calls": 8, "errors": 0},
+        {"name": "write", "calls": 8, "errors": 0}
       ],
       "anomalies": [
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 140,
-            "context_tokens": 160886,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 148,
-            "token_delta": 80641,
-            "context_tokens": 80641,
-            "threshold": "80000"
-          }
-        }
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 140, "context_tokens": 160886, "threshold": "160000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 148, "token_delta": 80641, "context_tokens": 80641, "threshold": "80000"}}
       ]
     }
   ],

@@ -1,7 +1,18 @@
 {
-  "schema_version": 4,
+  "schema_version": 6,
+  "migration": {
+    "schema_version": 6,
+    "status": "completed",
+    "steps_completed": [
+      "schema_v6_lean_occurrences"
+    ],
+    "steps_pending": [],
+    "last_migrated_at": "",
+    "last_migrated_by": "",
+    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+  },
   "ticket_id": "GEN-2",
-  "ticket_title": "Agent Single-Ticket Exclusivity & Steering Mandate",
+  "ticket_title": "Agent Single-Ticket Exclusivity \u0026 Steering Mandate",
   "ticket_type": "chore",
   "started_at": "2026-10-17T16:15:51.795000+00:00",
   "completed_at": "2026-10-17T16:17:40.613000+00:00",
@@ -29,54 +40,21 @@
           "completed_at": "2026-10-17T16:17:40.613000+00:00",
           "active_duration_seconds": 108,
           "turns": 31,
-          "tokens": {
-            "input": 131392,
-            "output": 3036,
-            "cache_read": 512071,
-            "reasoning": 4772,
-            "peak_context": 29125
-          },
+          "tokens": {"input": 131392, "output": 3036, "cache_read": 512071, "reasoning": 4772, "peak_context": 29125},
           "cost_usd": 0.166229,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0.166229},
           "compactions": 0,
           "user_iterations": 1
         }
       ],
       "tools": [
-        {
-          "name": "bash",
-          "calls": 9,
-          "errors": 0
-        },
-        {
-          "name": "edit",
-          "calls": 2,
-          "errors": 0
-        },
-        {
-          "name": "glob",
-          "calls": 6,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "read",
-          "calls": 6,
-          "errors": 0
-        },
-        {
-          "name": "todowrite",
-          "calls": 3,
-          "errors": 0
-        },
-        {
-          "name": "write",
-          "calls": 2,
-          "errors": 0
-        }
+        {"name": "bash", "calls": 9, "errors": 0},
+        {"name": "edit", "calls": 2, "errors": 0},
+        {"name": "glob", "calls": 6, "errors": 0},
+        {"name": "grep", "calls": 1, "errors": 0},
+        {"name": "read", "calls": 6, "errors": 0},
+        {"name": "todowrite", "calls": 3, "errors": 0},
+        {"name": "write", "calls": 2, "errors": 0}
       ],
       "anomalies": []
     }

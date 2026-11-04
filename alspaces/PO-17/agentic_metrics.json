@@ -1,5 +1,16 @@
 {
-  "schema_version": 4,
+  "schema_version": 6,
+  "migration": {
+    "schema_version": 6,
+    "status": "completed",
+    "steps_completed": [
+      "schema_v6_lean_occurrences"
+    ],
+    "steps_pending": [],
+    "last_migrated_at": "",
+    "last_migrated_by": "",
+    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+  },
   "ticket_id": "PO-17",
   "ticket_title": "Cost semantics review and approved AL-55 backfill scope",
   "ticket_type": "docs",
@@ -29,24 +40,15 @@
           "completed_at": "2026-10-31T15:16:58.334Z",
           "active_duration_seconds": 507,
           "turns": 5,
-          "tokens": {
-            "input": 130893,
-            "output": 27655,
-            "cache_read": 5172224,
-            "reasoning": 2378,
-            "peak_context": 145345
-          },
+          "tokens": {"input": 130893, "output": 27655, "cache_read": 5172224, "reasoning": 2378, "peak_context": 145345},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 11
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 42,
-          "errors": 4
-        }
+        {"name": "command", "calls": 42, "errors": 4}
       ],
       "anomalies": []
     }

@@ -1,5 +1,16 @@
 {
-  "schema_version": 4,
+  "schema_version": 6,
+  "migration": {
+    "schema_version": 6,
+    "status": "completed",
+    "steps_completed": [
+      "schema_v6_lean_occurrences"
+    ],
+    "steps_pending": [],
+    "last_migrated_at": "",
+    "last_migrated_by": "",
+    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+  },
   "ticket_id": "GEN-5",
   "ticket_title": "Restructure README as Platform Showcase and Split Internals into ARCHITECTURE and CONTRIBUTING",
   "ticket_type": "chore",
@@ -29,69 +40,24 @@
           "completed_at": "2026-10-23T10:47:48.428000+00:00",
           "active_duration_seconds": 4452,
           "turns": 80,
-          "tokens": {
-            "input": 743212,
-            "output": 13620,
-            "cache_read": 3641747,
-            "reasoning": 13234,
-            "peak_context": 79494
-          },
+          "tokens": {"input": 743212, "output": 13620, "cache_read": 3641747, "reasoning": 13234, "peak_context": 79494},
           "cost_usd": 0.931243,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0.931243},
           "compactions": 0,
           "user_iterations": 3
         }
       ],
       "tools": [
-        {
-          "name": "bash",
-          "calls": 42,
-          "errors": 1
-        },
-        {
-          "name": "edit",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "glob",
-          "calls": 7,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "question",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "read",
-          "calls": 10,
-          "errors": 0
-        },
-        {
-          "name": "t3-code_link_pull_request",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "t3-code_list_thread_pull_requests",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "todowrite",
-          "calls": 6,
-          "errors": 0
-        },
-        {
-          "name": "write",
-          "calls": 5,
-          "errors": 0
-        }
+        {"name": "bash", "calls": 42, "errors": 1},
+        {"name": "edit", "calls": 1, "errors": 0},
+        {"name": "glob", "calls": 7, "errors": 0},
+        {"name": "grep", "calls": 1, "errors": 0},
+        {"name": "question", "calls": 1, "errors": 0},
+        {"name": "read", "calls": 10, "errors": 0},
+        {"name": "t3-code_link_pull_request", "calls": 1, "errors": 0},
+        {"name": "t3-code_list_thread_pull_requests", "calls": 1, "errors": 0},
+        {"name": "todowrite", "calls": 6, "errors": 0},
+        {"name": "write", "calls": 5, "errors": 0}
       ],
       "anomalies": []
     }

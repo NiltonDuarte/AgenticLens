@@ -1,5 +1,16 @@
 {
-  "schema_version": 4,
+  "schema_version": 6,
+  "migration": {
+    "schema_version": 6,
+    "status": "completed",
+    "steps_completed": [
+      "schema_v6_lean_occurrences"
+    ],
+    "steps_pending": [],
+    "last_migrated_at": "",
+    "last_migrated_by": "",
+    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+  },
   "ticket_id": "AL-50",
   "ticket_title": "Audit and Streamline Debug Prompt Generation and Sanitization Pipeline",
   "ticket_type": "refactor",
@@ -29,61 +40,23 @@
           "completed_at": "2026-10-30T23:41:40.699Z",
           "active_duration_seconds": 0,
           "turns": 1,
-          "tokens": {
-            "input": 81707,
-            "output": 10049,
-            "cache_read": 3118592,
-            "reasoning": 4823,
-            "peak_context": 71340
-          },
+          "tokens": {"input": 81707, "output": 10049, "cache_read": 3118592, "reasoning": 4823, "peak_context": 71340},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 3
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 21,
-          "errors": 4
-        },
-        {
-          "name": "followup_task",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "list_agents",
-          "calls": 5,
-          "errors": 0
-        },
-        {
-          "name": "send_message",
-          "calls": 2,
-          "errors": 0
-        },
-        {
-          "name": "spawn_agent",
-          "calls": 4,
-          "errors": 0
-        },
-        {
-          "name": "wait_agent",
-          "calls": 8,
-          "errors": 0
-        }
+        {"name": "command", "calls": 21, "errors": 4},
+        {"name": "followup_task", "calls": 1, "errors": 0},
+        {"name": "list_agents", "calls": 5, "errors": 0},
+        {"name": "send_message", "calls": 2, "errors": 0},
+        {"name": "spawn_agent", "calls": 4, "errors": 0},
+        {"name": "wait_agent", "calls": 8, "errors": 0}
       ],
       "anomalies": [
-        {
-          "rule_id": "TOOL_RETRY_STREAK",
-          "severity": "WARNING",
-          "context": {
-            "tool_name": "command",
-            "turn": 1,
-            "count": 3,
-            "threshold": "3"
-          }
-        }
+        {"rule_id": "TOOL_RETRY_STREAK", "severity": "WARNING", "context": {"tool_name": "command", "turn": 1, "count": 3, "threshold": "3"}}
       ]
     },
     {
@@ -99,24 +72,15 @@
           "completed_at": "2026-10-30T23:27:58.961Z",
           "active_duration_seconds": 19,
           "turns": 1,
-          "tokens": {
-            "input": 12726,
-            "output": 1724,
-            "cache_read": 158720,
-            "reasoning": 111,
-            "peak_context": 46113
-          },
+          "tokens": {"input": 12726, "output": 1724, "cache_read": 158720, "reasoning": 111, "peak_context": 46113},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 2,
-          "errors": 0
-        }
+        {"name": "command", "calls": 2, "errors": 0}
       ],
       "anomalies": []
     },
@@ -133,29 +97,16 @@
           "completed_at": "2026-10-30T23:33:42.414Z",
           "active_duration_seconds": 337,
           "turns": 1,
-          "tokens": {
-            "input": 51778,
-            "output": 13388,
-            "cache_read": 3382272,
-            "reasoning": 4482,
-            "peak_context": 77513
-          },
+          "tokens": {"input": 51778, "output": 13388, "cache_read": 3382272, "reasoning": 4482, "peak_context": 77513},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 14,
-          "errors": 4
-        },
-        {
-          "name": "send_message",
-          "calls": 2,
-          "errors": 0
-        }
+        {"name": "command", "calls": 14, "errors": 4},
+        {"name": "send_message", "calls": 2, "errors": 0}
       ],
       "anomalies": []
     },
@@ -172,29 +123,16 @@
           "completed_at": "2026-10-30T23:38:17.049Z",
           "active_duration_seconds": 266,
           "turns": 2,
-          "tokens": {
-            "input": 52614,
-            "output": 7260,
-            "cache_read": 3082368,
-            "reasoning": 1866,
-            "peak_context": 84122
-          },
+          "tokens": {"input": 52614, "output": 7260, "cache_read": 3082368, "reasoning": 1866, "peak_context": 84122},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 21,
-          "errors": 4
-        },
-        {
-          "name": "send_message",
-          "calls": 2,
-          "errors": 0
-        }
+        {"name": "command", "calls": 21, "errors": 4},
+        {"name": "send_message", "calls": 2, "errors": 0}
       ],
       "anomalies": []
     },
@@ -211,24 +149,15 @@
           "completed_at": "2026-10-30T23:38:45.123Z",
           "active_duration_seconds": 26,
           "turns": 1,
-          "tokens": {
-            "input": 20876,
-            "output": 2287,
-            "cache_read": 313472,
-            "reasoning": 1364,
-            "peak_context": 74745
-          },
+          "tokens": {"input": 20876, "output": 2287, "cache_read": 313472, "reasoning": 1364, "peak_context": 74745},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 3,
-          "errors": 0
-        }
+        {"name": "command", "calls": 3, "errors": 0}
       ],
       "anomalies": []
     }

@@ -1,5 +1,16 @@
 {
-  "schema_version": 4,
+  "schema_version": 6,
+  "migration": {
+    "schema_version": 6,
+    "status": "completed",
+    "steps_completed": [
+      "schema_v6_lean_occurrences"
+    ],
+    "steps_pending": [],
+    "last_migrated_at": "",
+    "last_migrated_by": "",
+    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+  },
   "ticket_id": "AL-53",
   "ticket_title": "Dedicated Skills and Subagents Autopsy Panel in Ticket Deep Dive",
   "ticket_type": "feat",
@@ -29,44 +40,19 @@
           "completed_at": "2026-10-31T14:27:47.903Z",
           "active_duration_seconds": 1272,
           "turns": 3,
-          "tokens": {
-            "input": 140408,
-            "output": 26470,
-            "cache_read": 15305088,
-            "reasoning": 3041,
-            "peak_context": 141221
-          },
+          "tokens": {"input": 140408, "output": 26470, "cache_read": 15305088, "reasoning": 3041, "peak_context": 141221},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 7
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 87,
-          "errors": 6
-        },
-        {
-          "name": "followup_task",
-          "calls": 4,
-          "errors": 0
-        },
-        {
-          "name": "send_message",
-          "calls": 13,
-          "errors": 0
-        },
-        {
-          "name": "spawn_agent",
-          "calls": 4,
-          "errors": 0
-        },
-        {
-          "name": "wait_agent",
-          "calls": 36,
-          "errors": 0
-        }
+        {"name": "command", "calls": 87, "errors": 6},
+        {"name": "followup_task", "calls": 4, "errors": 0},
+        {"name": "send_message", "calls": 13, "errors": 0},
+        {"name": "spawn_agent", "calls": 4, "errors": 0},
+        {"name": "wait_agent", "calls": 36, "errors": 0}
       ],
       "anomalies": []
     },
@@ -83,29 +69,16 @@
           "completed_at": "2026-10-31T12:50:26.727Z",
           "active_duration_seconds": 102,
           "turns": 1,
-          "tokens": {
-            "input": 65731,
-            "output": 3466,
-            "cache_read": 451328,
-            "reasoning": 62,
-            "peak_context": 67890
-          },
+          "tokens": {"input": 65731, "output": 3466, "cache_read": 451328, "reasoning": 62, "peak_context": 67890},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 7,
-          "errors": 1
-        },
-        {
-          "name": "send_message",
-          "calls": 1,
-          "errors": 0
-        }
+        {"name": "command", "calls": 7, "errors": 1},
+        {"name": "send_message", "calls": 1, "errors": 0}
       ],
       "anomalies": []
     },
@@ -122,29 +95,16 @@
           "completed_at": "2026-10-31T14:02:39.316Z",
           "active_duration_seconds": 183,
           "turns": 2,
-          "tokens": {
-            "input": 61778,
-            "output": 6791,
-            "cache_read": 1437696,
-            "reasoning": 1090,
-            "peak_context": 88351
-          },
+          "tokens": {"input": 61778, "output": 6791, "cache_read": 1437696, "reasoning": 1090, "peak_context": 88351},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 12,
-          "errors": 2
-        },
-        {
-          "name": "send_message",
-          "calls": 2,
-          "errors": 0
-        }
+        {"name": "command", "calls": 12, "errors": 2},
+        {"name": "send_message", "calls": 2, "errors": 0}
       ],
       "anomalies": []
     },
@@ -161,29 +121,16 @@
           "completed_at": "2026-10-31T14:09:48.156Z",
           "active_duration_seconds": 536,
           "turns": 3,
-          "tokens": {
-            "input": 100281,
-            "output": 18134,
-            "cache_read": 5238656,
-            "reasoning": 3523,
-            "peak_context": 133528
-          },
+          "tokens": {"input": 100281, "output": 18134, "cache_read": 5238656, "reasoning": 3523, "peak_context": 133528},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 38,
-          "errors": 3
-        },
-        {
-          "name": "send_message",
-          "calls": 11,
-          "errors": 0
-        }
+        {"name": "command", "calls": 38, "errors": 3},
+        {"name": "send_message", "calls": 11, "errors": 0}
       ],
       "anomalies": []
     },
@@ -200,29 +147,16 @@
           "completed_at": "2026-10-31T14:05:46.393Z",
           "active_duration_seconds": 145,
           "turns": 2,
-          "tokens": {
-            "input": 80369,
-            "output": 4316,
-            "cache_read": 1469568,
-            "reasoning": 393,
-            "peak_context": 105239
-          },
+          "tokens": {"input": 80369, "output": 4316, "cache_read": 1469568, "reasoning": 393, "peak_context": 105239},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 12,
-          "errors": 0
-        },
-        {
-          "name": "send_message",
-          "calls": 4,
-          "errors": 0
-        }
+        {"name": "command", "calls": 12, "errors": 0},
+        {"name": "send_message", "calls": 4, "errors": 0}
       ],
       "anomalies": []
     }

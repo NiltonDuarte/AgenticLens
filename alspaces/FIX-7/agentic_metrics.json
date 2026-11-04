@@ -1,5 +1,16 @@
 {
-  "schema_version": 4,
+  "schema_version": 6,
+  "migration": {
+    "schema_version": 6,
+    "status": "completed",
+    "steps_completed": [
+      "schema_v6_lean_occurrences"
+    ],
+    "steps_pending": [],
+    "last_migrated_at": "",
+    "last_migrated_by": "",
+    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+  },
   "ticket_id": "FIX-7",
   "ticket_title": "Direct binary download and dynamic initial ticket selection",
   "ticket_type": "fix",
@@ -29,80 +40,26 @@
           "completed_at": "2026-10-22T22:45:58.004000+00:00",
           "active_duration_seconds": 1009,
           "turns": 185,
-          "tokens": {
-            "input": 938182,
-            "output": 23877,
-            "cache_read": 14192318,
-            "reasoning": 46871,
-            "peak_context": 170176
-          },
+          "tokens": {"input": 938182, "output": 23877, "cache_read": 14192318, "reasoning": 46871, "peak_context": 170176},
           "cost_usd": 2.033365,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 2.033365},
           "compactions": 1,
           "user_iterations": 7
         }
       ],
       "tools": [
-        {
-          "name": "bash",
-          "calls": 93,
-          "errors": 1
-        },
-        {
-          "name": "edit",
-          "calls": 7,
-          "errors": 0
-        },
-        {
-          "name": "glob",
-          "calls": 15,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 15,
-          "errors": 1
-        },
-        {
-          "name": "read",
-          "calls": 33,
-          "errors": 0
-        },
-        {
-          "name": "t3-code_link_pull_request",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "t3-code_list_thread_pull_requests",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "write",
-          "calls": 8,
-          "errors": 0
-        }
+        {"name": "bash", "calls": 93, "errors": 1},
+        {"name": "edit", "calls": 7, "errors": 0},
+        {"name": "glob", "calls": 15, "errors": 0},
+        {"name": "grep", "calls": 15, "errors": 1},
+        {"name": "read", "calls": 33, "errors": 0},
+        {"name": "t3-code_link_pull_request", "calls": 1, "errors": 0},
+        {"name": "t3-code_list_thread_pull_requests", "calls": 1, "errors": 0},
+        {"name": "write", "calls": 8, "errors": 0}
       ],
       "anomalies": [
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 135,
-            "context_tokens": 161225,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "turn": 149,
-            "token_delta": 59030,
-            "context_tokens": 59030,
-            "threshold": "40000"
-          }
-        }
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 135, "context_tokens": 161225, "threshold": "160000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 149, "token_delta": 59030, "context_tokens": 59030, "threshold": "40000"}}
       ]
     }
   ],

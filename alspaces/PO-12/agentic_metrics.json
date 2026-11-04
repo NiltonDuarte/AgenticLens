@@ -1,5 +1,16 @@
 {
-  "schema_version": 4,
+  "schema_version": 6,
+  "migration": {
+    "schema_version": 6,
+    "status": "completed",
+    "steps_completed": [
+      "schema_v6_lean_occurrences"
+    ],
+    "steps_pending": [],
+    "last_migrated_at": "",
+    "last_migrated_by": "",
+    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+  },
   "ticket_id": "PO-12",
   "ticket_title": "Model API Pricing Configuration and Rate-Card Cost Approximation",
   "ticket_type": "docs",
@@ -20,6 +31,7 @@
     {
       "id": "ses_e7bd20667ffeD9jgBkVayiieIA",
       "source": "opencode",
+      "user": "Nilton Duarte",
       "invocations": [
         {
           "role": "general",
@@ -28,91 +40,28 @@
           "completed_at": "2026-10-28T22:58:03.789000+00:00",
           "active_duration_seconds": 3538,
           "turns": 184,
-          "tokens": {
-            "input": 4250603,
-            "output": 31422,
-            "cache_read": 9737821,
-            "reasoning": 29629,
-            "peak_context": 167000
-          },
+          "tokens": {"input": 4250603, "output": 31422, "cache_read": 9737821, "reasoning": 29629, "peak_context": 167000},
           "cost_usd": 4.14723,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 4.14723},
           "compactions": 1,
           "user_iterations": 10
         }
       ],
       "tools": [
-        {
-          "name": "bash",
-          "calls": 66,
-          "errors": 1
-        },
-        {
-          "name": "edit",
-          "calls": 12,
-          "errors": 0
-        },
-        {
-          "name": "glob",
-          "calls": 12,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 20,
-          "errors": 0
-        },
-        {
-          "name": "read",
-          "calls": 46,
-          "errors": 1
-        },
-        {
-          "name": "skill",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "t3-code_link_pull_request",
-          "calls": 2,
-          "errors": 0
-        },
-        {
-          "name": "write",
-          "calls": 7,
-          "errors": 0
-        }
+        {"name": "bash", "calls": 66, "errors": 1},
+        {"name": "edit", "calls": 12, "errors": 0},
+        {"name": "glob", "calls": 12, "errors": 0},
+        {"name": "grep", "calls": 20, "errors": 0},
+        {"name": "read", "calls": 46, "errors": 1},
+        {"name": "skill", "calls": 1, "errors": 0},
+        {"name": "t3-code_link_pull_request", "calls": 2, "errors": 0},
+        {"name": "write", "calls": 7, "errors": 0}
       ],
       "anomalies": [
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 86,
-            "context_tokens": 160778,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "general",
-            "context_tokens": 167000,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "turn": 93,
-            "token_delta": 48399,
-            "context_tokens": 48399,
-            "threshold": "40000"
-          }
-        }
-      ],
-      "user": "Nilton Duarte"
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 86, "context_tokens": 160778, "threshold": "160000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"role": "general", "context_tokens": 167000, "threshold": "160000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 93, "token_delta": 48399, "context_tokens": 48399, "threshold": "40000"}}
+      ]
     }
   ],
   "anomalies": []

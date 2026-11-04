@@ -1,5 +1,16 @@
 {
-  "schema_version": 4,
+  "schema_version": 6,
+  "migration": {
+    "schema_version": 6,
+    "status": "completed",
+    "steps_completed": [
+      "schema_v6_lean_occurrences"
+    ],
+    "steps_pending": [],
+    "last_migrated_at": "",
+    "last_migrated_by": "",
+    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+  },
   "ticket_id": "AL-48",
   "ticket_title": "Interactive Multi-Metric Ticket Scatter Plot in Comparison Matrix View",
   "ticket_type": "feat",
@@ -29,49 +40,20 @@
           "completed_at": "2026-10-30T23:41:51.361Z",
           "active_duration_seconds": 0,
           "turns": 1,
-          "tokens": {
-            "input": 101229,
-            "output": 9976,
-            "cache_read": 4221568,
-            "reasoning": 4001,
-            "peak_context": 89849
-          },
+          "tokens": {"input": 101229, "output": 9976, "cache_read": 4221568, "reasoning": 4001, "peak_context": 89849},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 3
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 23,
-          "errors": 2
-        },
-        {
-          "name": "followup_task",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "list_agents",
-          "calls": 5,
-          "errors": 0
-        },
-        {
-          "name": "send_message",
-          "calls": 2,
-          "errors": 0
-        },
-        {
-          "name": "spawn_agent",
-          "calls": 4,
-          "errors": 0
-        },
-        {
-          "name": "wait_agent",
-          "calls": 20,
-          "errors": 0
-        }
+        {"name": "command", "calls": 23, "errors": 2},
+        {"name": "followup_task", "calls": 1, "errors": 0},
+        {"name": "list_agents", "calls": 5, "errors": 0},
+        {"name": "send_message", "calls": 2, "errors": 0},
+        {"name": "spawn_agent", "calls": 4, "errors": 0},
+        {"name": "wait_agent", "calls": 20, "errors": 0}
       ],
       "anomalies": []
     },
@@ -88,24 +70,15 @@
           "completed_at": "2026-10-30T23:27:24.752Z",
           "active_duration_seconds": 27,
           "turns": 1,
-          "tokens": {
-            "input": 18740,
-            "output": 2679,
-            "cache_read": 252288,
-            "reasoning": 282,
-            "peak_context": 60059
-          },
+          "tokens": {"input": 18740, "output": 2679, "cache_read": 252288, "reasoning": 282, "peak_context": 60059},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 3,
-          "errors": 0
-        }
+        {"name": "command", "calls": 3, "errors": 0}
       ],
       "anomalies": []
     },
@@ -122,29 +95,16 @@
           "completed_at": "2026-10-30T23:37:45.338Z",
           "active_duration_seconds": 403,
           "turns": 2,
-          "tokens": {
-            "input": 43564,
-            "output": 14403,
-            "cache_read": 2377472,
-            "reasoning": 2888,
-            "peak_context": 95802
-          },
+          "tokens": {"input": 43564, "output": 14403, "cache_read": 2377472, "reasoning": 2888, "peak_context": 95802},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 19,
-          "errors": 5
-        },
-        {
-          "name": "send_message",
-          "calls": 2,
-          "errors": 0
-        }
+        {"name": "command", "calls": 19, "errors": 5},
+        {"name": "send_message", "calls": 2, "errors": 0}
       ],
       "anomalies": []
     },
@@ -161,29 +121,16 @@
           "completed_at": "2026-10-30T23:37:11.508Z",
           "active_duration_seconds": 206,
           "turns": 1,
-          "tokens": {
-            "input": 29969,
-            "output": 3824,
-            "cache_read": 2515200,
-            "reasoning": 1153,
-            "peak_context": 91142
-          },
+          "tokens": {"input": 29969, "output": 3824, "cache_read": 2515200, "reasoning": 1153, "peak_context": 91142},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 8,
-          "errors": 0
-        },
-        {
-          "name": "send_message",
-          "calls": 1,
-          "errors": 0
-        }
+        {"name": "command", "calls": 8, "errors": 0},
+        {"name": "send_message", "calls": 1, "errors": 0}
       ],
       "anomalies": []
     },
@@ -200,24 +147,15 @@
           "completed_at": "2026-10-30T23:38:19.640Z",
           "active_duration_seconds": 28,
           "turns": 1,
-          "tokens": {
-            "input": 12419,
-            "output": 2589,
-            "cache_read": 305664,
-            "reasoning": 1621,
-            "peak_context": 83531
-          },
+          "tokens": {"input": 12419, "output": 2589, "cache_read": 305664, "reasoning": 1621, "peak_context": 83531},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 3,
-          "errors": 0
-        }
+        {"name": "command", "calls": 3, "errors": 0}
       ],
       "anomalies": []
     }

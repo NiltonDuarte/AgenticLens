@@ -1,5 +1,16 @@
 {
-  "schema_version": 4,
+  "schema_version": 6,
+  "migration": {
+    "schema_version": 6,
+    "status": "completed",
+    "steps_completed": [
+      "schema_v6_lean_occurrences"
+    ],
+    "steps_pending": [],
+    "last_migrated_at": "",
+    "last_migrated_by": "",
+    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+  },
   "ticket_id": "AL-59",
   "ticket_title": "Local Developer Configuration and Explicit Multi-Harness Source Selection",
   "ticket_type": "feat",
@@ -29,34 +40,17 @@
           "completed_at": "2026-10-29T08:44:39.737Z",
           "active_duration_seconds": 1527,
           "turns": 6,
-          "tokens": {
-            "input": 233355,
-            "output": 19176,
-            "cache_read": 6455680,
-            "reasoning": 7408,
-            "peak_context": 110455
-          },
+          "tokens": {"input": 233355, "output": 19176, "cache_read": 6455680, "reasoning": 7408, "peak_context": 110455},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 8
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 44,
-          "errors": 5
-        },
-        {
-          "name": "request_user_input_async",
-          "calls": 6,
-          "errors": 0
-        },
-        {
-          "name": "wait",
-          "calls": 22,
-          "errors": 0
-        }
+        {"name": "command", "calls": 44, "errors": 5},
+        {"name": "request_user_input_async", "calls": 6, "errors": 0},
+        {"name": "wait", "calls": 22, "errors": 0}
       ],
       "anomalies": []
     }

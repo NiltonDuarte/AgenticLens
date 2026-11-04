@@ -1,5 +1,16 @@
 {
-  "schema_version": 4,
+  "schema_version": 6,
+  "migration": {
+    "schema_version": 6,
+    "status": "completed",
+    "steps_completed": [
+      "schema_v6_lean_occurrences"
+    ],
+    "steps_pending": [],
+    "last_migrated_at": "",
+    "last_migrated_by": "",
+    "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+  },
   "ticket_id": "AL-49",
   "ticket_title": "Reverse Event Chronology and Quick-Scroll Navigation in Live Trace Inspector",
   "ticket_type": "feat",
@@ -29,56 +40,22 @@
           "completed_at": "2026-10-31T00:53:21.835Z",
           "active_duration_seconds": 1059,
           "turns": 5,
-          "tokens": {
-            "input": 226575,
-            "output": 32659,
-            "cache_read": 13090560,
-            "reasoning": 17783,
-            "peak_context": 132581
-          },
+          "tokens": {"input": 226575, "output": 32659, "cache_read": 13090560, "reasoning": 17783, "peak_context": 132581},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 8
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 57,
-          "errors": 12
-        },
-        {
-          "name": "list_agents",
-          "calls": 2,
-          "errors": 0
-        },
-        {
-          "name": "request_user_input_async",
-          "calls": 2,
-          "errors": 0
-        },
-        {
-          "name": "spawn_agent",
-          "calls": 4,
-          "errors": 0
-        },
-        {
-          "name": "wait_agent",
-          "calls": 6,
-          "errors": 0
-        }
+        {"name": "command", "calls": 57, "errors": 12},
+        {"name": "list_agents", "calls": 2, "errors": 0},
+        {"name": "request_user_input_async", "calls": 2, "errors": 0},
+        {"name": "spawn_agent", "calls": 4, "errors": 0},
+        {"name": "wait_agent", "calls": 6, "errors": 0}
       ],
       "anomalies": [
-        {
-          "rule_id": "TOOL_RETRY_STREAK",
-          "severity": "WARNING",
-          "context": {
-            "tool_name": "command",
-            "turn": 4,
-            "count": 4,
-            "threshold": "3"
-          }
-        }
+        {"rule_id": "TOOL_RETRY_STREAK", "severity": "WARNING", "context": {"tool_name": "command", "turn": 4, "count": 4, "threshold": "3"}}
       ]
     },
     {
@@ -94,29 +71,16 @@
           "completed_at": "2026-10-30T23:27:51.343Z",
           "active_duration_seconds": 41,
           "turns": 1,
-          "tokens": {
-            "input": 22682,
-            "output": 3370,
-            "cache_read": 380672,
-            "reasoning": 257,
-            "peak_context": 52519
-          },
+          "tokens": {"input": 22682, "output": 3370, "cache_read": 380672, "reasoning": 257, "peak_context": 52519},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 7,
-          "errors": 1
-        },
-        {
-          "name": "send_message",
-          "calls": 1,
-          "errors": 0
-        }
+        {"name": "command", "calls": 7, "errors": 1},
+        {"name": "send_message", "calls": 1, "errors": 0}
       ],
       "anomalies": []
     },
@@ -133,29 +97,16 @@
           "completed_at": "2026-10-30T23:29:41.814Z",
           "active_duration_seconds": 97,
           "turns": 1,
-          "tokens": {
-            "input": 26511,
-            "output": 8675,
-            "cache_read": 916992,
-            "reasoning": 2660,
-            "peak_context": 57719
-          },
+          "tokens": {"input": 26511, "output": 8675, "cache_read": 916992, "reasoning": 2660, "peak_context": 57719},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 9,
-          "errors": 1
-        },
-        {
-          "name": "send_message",
-          "calls": 1,
-          "errors": 0
-        }
+        {"name": "command", "calls": 9, "errors": 1},
+        {"name": "send_message", "calls": 1, "errors": 0}
       ],
       "anomalies": []
     },
@@ -172,41 +123,19 @@
           "completed_at": "2026-10-30T23:31:46.114Z",
           "active_duration_seconds": 116,
           "turns": 1,
-          "tokens": {
-            "input": 18997,
-            "output": 2385,
-            "cache_read": 910720,
-            "reasoning": 553,
-            "peak_context": 53369
-          },
+          "tokens": {"input": 18997, "output": 2385, "cache_read": 910720, "reasoning": 553, "peak_context": 53369},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 12,
-          "errors": 6
-        },
-        {
-          "name": "send_message",
-          "calls": 1,
-          "errors": 0
-        }
+        {"name": "command", "calls": 12, "errors": 6},
+        {"name": "send_message", "calls": 1, "errors": 0}
       ],
       "anomalies": [
-        {
-          "rule_id": "TOOL_RETRY_STREAK",
-          "severity": "CRITICAL",
-          "context": {
-            "tool_name": "command",
-            "turn": 1,
-            "count": 5,
-            "threshold": "5"
-          }
-        }
+        {"rule_id": "TOOL_RETRY_STREAK", "severity": "CRITICAL", "context": {"tool_name": "command", "turn": 1, "count": 5, "threshold": "5"}}
       ]
     },
     {
@@ -222,44 +151,21 @@
           "completed_at": "2026-10-30T23:30:28.597Z",
           "active_duration_seconds": 29,
           "turns": 1,
-          "tokens": {
-            "input": 11304,
-            "output": 1979,
-            "cache_read": 327040,
-            "reasoning": 977,
-            "peak_context": 51061
-          },
+          "tokens": {"input": 11304, "output": 1979, "cache_read": 327040, "reasoning": 977, "peak_context": 51061},
           "cost_usd": 0,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 5,
-          "errors": 0
-        },
-        {
-          "name": "send_message",
-          "calls": 1,
-          "errors": 0
-        }
+        {"name": "command", "calls": 5, "errors": 0},
+        {"name": "send_message", "calls": 1, "errors": 0}
       ],
       "anomalies": []
     }
   ],
   "anomalies": [
-    {
-      "rule_id": "TOOL_HIGH_FAILURE_RATE",
-      "severity": "WARNING",
-      "context": {
-        "tool_name": "command",
-        "count": 20,
-        "total_calls": 90,
-        "threshold": "\u003e20%",
-        "failure_rate_pct": 22.2
-      }
-    }
+    {"rule_id": "TOOL_HIGH_FAILURE_RATE", "severity": "WARNING", "context": {"tool_name": "command", "count": 20, "total_calls": 90, "threshold": "\u003e20%", "failure_rate_pct": 22.2}}
   ]
 }
