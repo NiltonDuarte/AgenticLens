@@ -2312,11 +2312,36 @@ telemetry:
 }
 
 func TestLoadFromFile(t *testing.T) {
-	t.Run("correctly loads base_branch from repo .agenticlens-config.yaml", func(t *testing.T) {
-		repoConfigPath := filepath.Join("..", "..", "..", "..", ".agenticlens-config.yaml")
-		cfg, err := config.LoadFromFile(repoConfigPath)
+	t.Run("loads fixture project policy independently of ancestor configuration", func(t *testing.T) {
+		ancestor := t.TempDir()
+		if err := os.WriteFile(filepath.Join(ancestor, ".agenticlens-config.yaml"), []byte("project_name: [invalid ancestor configuration\n"), 0600); err != nil {
+			t.Fatal(err)
+		}
+		project := filepath.Join(ancestor, "project")
+		if err := os.Mkdir(project, 0700); err != nil {
+			t.Fatal(err)
+		}
+		configPath := filepath.Join(project, ".agenticlens-config.yaml")
+		content := `project_name: FixtureProject
+telemetry:
+  capture:
+    state_dir: capture-state
+ticket:
+  prefixes: [AL]
+code_metrics:
+  source_roots: [web, backend]
+  base_branch: origin/main
+anomaly_thresholds:
+  context_ceiling_warning_tokens: 160000
+  context_ceiling_critical_tokens: 200000
+  consecutive_errors_streak_warning: 3
+`
+		if err := os.WriteFile(configPath, []byte(content), 0600); err != nil {
+			t.Fatal(err)
+		}
+		cfg, err := config.LoadFromFile(configPath)
 		if err != nil {
-			t.Fatalf("failed to load root .agenticlens-config.yaml: %v", err)
+			t.Fatalf("failed to load isolated fixture configuration: %v", err)
 		}
 		if cfg.CodeMetrics.BaseBranch != "origin/main" {
 			t.Errorf("expected base_branch %q, got %q", "origin/main", cfg.CodeMetrics.BaseBranch)
