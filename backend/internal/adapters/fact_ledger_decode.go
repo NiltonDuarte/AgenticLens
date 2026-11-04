@@ -5,6 +5,11 @@ package adapters
 type canonicalFactLedgerDTO AgenticFactLedgerDTO
 
 func decodeCanonicalFactLedger(data []byte, requiredCostEvidence bool) (AgenticFactLedgerDTO, error) {
+	normalized, err := normalizeFormerGenerationMetadata(data)
+	if err != nil {
+		return AgenticFactLedgerDTO{}, err
+	}
+	data = normalized
 	var wire canonicalFactLedgerDTO
 	decoder := newStrictFactDecoder(data)
 	if err := decoder.Decode(&wire); err != nil {

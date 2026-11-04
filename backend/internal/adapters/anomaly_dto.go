@@ -130,6 +130,9 @@ func anomaliesToDomain(items []AnomalyDTO) []domain.Anomaly {
 }
 
 func anomaliesFromDomain(items []domain.Anomaly) []AnomalyDTO {
+	if items == nil {
+		return nil
+	}
 	result := make([]AnomalyDTO, len(items))
 	for i, item := range items {
 		result[i] = AnomalyDTOFromDomain(item)

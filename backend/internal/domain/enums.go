@@ -73,10 +73,11 @@ func ParseLedgerSortField(val string) LedgerSortField {
 type ContextHealthStatus string
 
 const (
-	ContextHealthHealthy  ContextHealthStatus = "HEALTHY"
-	ContextHealthElevated ContextHealthStatus = "ELEVATED"
-	ContextHealthBloated  ContextHealthStatus = "BLOATED"
-	ContextHealthCritical ContextHealthStatus = "CRITICAL"
+	ContextHealthUnavailable ContextHealthStatus = "UNAVAILABLE"
+	ContextHealthHealthy     ContextHealthStatus = "HEALTHY"
+	ContextHealthElevated    ContextHealthStatus = "ELEVATED"
+	ContextHealthBloated     ContextHealthStatus = "BLOATED"
+	ContextHealthCritical    ContextHealthStatus = "CRITICAL"
 )
 
 // AgentRole defines the role of an agent invocation.

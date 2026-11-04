@@ -81,12 +81,6 @@ Related AL-67 corrections stay in existing tickets: AL-70 (F01/F02/F11), AL-69 (
   - **Blocks**: None
   - **File**: `alspaces/plan/to-do/AL-64 investigate and fix active turn duration across codex and opencode.md`
 
-- **AL-66**: Configure optional skills, task_links and anomalies output for generate
-  - **Subsystem**: Configuration / Domain / Source Adapters / CLI / Persistence / Summary / Dashboard Compatibility / Tests
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-66 configure optional metric output for generate.md`
 
 
 

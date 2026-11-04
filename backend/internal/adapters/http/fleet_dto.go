@@ -6,7 +6,7 @@ import (
 
 // FleetSummaryDTO is the concrete nullable cost projection of FleetSummary.
 type FleetSummaryDTO struct {
-	SkillAdoption            []domain.SkillAdoptionFact              `json:"skill_adoption"`
+	SkillAdoption            []domain.SkillAdoptionFact              `json:"skill_adoption,omitzero"`
 	TotalTickets             int64                                   `json:"total_tickets"`
 	TotalCostUSD             *float64                                `json:"total_cost_usd"`
 	CostSummary              domain.CostSummary                      `json:"cost_summary"`

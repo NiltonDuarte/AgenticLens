@@ -708,6 +708,27 @@ func DeriveMetricsLedger(factLedger AgenticFactLedger, cfg ProjectConfig) Agenti
 		}
 	}
 
+	analysisStatus := ContextHealthStatus("")
+	if !factLedger.CompleteAnomalyCoverage() {
+		analysisStatus = ContextHealthUnavailable
+	}
+	if analysisStatus != "" {
+		totals.ContextHealth = analysisStatus
+		eff.ContextWindowHealth.Status = analysisStatus
+		for i := range roles {
+			roles[i].ContextHealth = analysisStatus
+		}
+		for i := range models {
+			models[i].ContextHealth = analysisStatus
+		}
+		for i := range threads {
+			for j := range threads[i].Roles {
+				for k := range threads[i].Roles[j].Models {
+					threads[i].Roles[j].Models[k].ContextHealth = analysisStatus
+				}
+			}
+		}
+	}
 	return AgenticMetricsLedger{
 		TicketID:           factLedger.TicketID,
 		TicketTitle:        factLedger.TicketTitle,
@@ -753,7 +774,20 @@ func ComputeSkillAdoption(ledgers []AgenticFactLedger) []SkillAdoptionFact {
 			totals[skill.Name] = fact
 		}
 	}
-	result := make([]SkillAdoptionFact, 0, len(totals))
+	var result []SkillAdoptionFact
+	complete := true
+	observedOwners := 0
+	for _, ledger := range ledgers {
+		for _, owner := range ledger.Sessions {
+			observedOwners++
+			if owner.Skills == nil {
+				complete = false
+			}
+		}
+	}
+	if complete && observedOwners > 0 {
+		result = []SkillAdoptionFact{}
+	}
 	for _, fact := range totals {
 		result = append(result, fact)
 	}
@@ -772,7 +806,16 @@ func SkillNames(ledger AgenticFactLedger) []string {
 	for _, skill := range ledger.SkillFacts() {
 		names[skill.Name] = true
 	}
-	result := make([]string, 0, len(names))
+	var result []string
+	complete := len(ledger.Sessions) > 0
+	for _, owner := range ledger.Sessions {
+		if owner.Skills == nil {
+			complete = false
+		}
+	}
+	if complete {
+		result = []string{}
+	}
 	for name := range names {
 		result = append(result, name)
 	}

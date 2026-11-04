@@ -59,15 +59,15 @@ func ThreadExecutionRecordDTOsFromDomain(values []domain.ThreadExecutionRecord) 
 
 // SessionFactResponseDTO is the concrete nullable cost projection of SessionFact.
 type SessionFactResponseDTO struct {
-	Skills      []adapters.SkillFactDTO      `json:"skills,omitempty"`
-	Delegations []adapters.DelegationFactDTO `json:"delegations,omitempty"`
+	Skills      []adapters.SkillFactDTO      `json:"skills,omitzero"`
+	Delegations []adapters.DelegationFactDTO `json:"delegations,omitzero"`
 	ID          string                       `json:"id"`
 	ParentID    *string                      `json:"parent_id,omitempty"`
 	Source      domain.SourceHarness         `json:"source,omitempty"`
 	User        string                       `json:"user,omitempty"`
 	Invocations []adapters.InvocationFactDTO `json:"invocations"`
 	Tools       []domain.SessionToolFact     `json:"tools"`
-	Anomalies   []domain.Anomaly             `json:"anomalies"`
+	Anomalies   []domain.Anomaly             `json:"anomalies,omitzero"`
 }
 
 func SessionFactResponseDTOFromDomain(value domain.SessionFact) SessionFactResponseDTO {
@@ -106,10 +106,11 @@ type FactLedgerResponseDTO struct {
 	UpdatedAt     string                         `json:"updated_at"`
 	Code          domain.CodeFacts               `json:"code"`
 	Sessions      []SessionFactResponseDTO       `json:"sessions"`
-	Anomalies     []domain.Anomaly               `json:"anomalies"`
+	Anomalies     []domain.Anomaly               `json:"anomalies,omitzero"`
 }
 
 func FactLedgerResponseDTOFromDomain(value domain.AgenticFactLedger) FactLedgerResponseDTO {
+
 	return FactLedgerResponseDTO{
 		SchemaVersion: value.SchemaVersion,
 		Migration:     value.Migration,
@@ -139,7 +140,7 @@ type MetricsLedgerResponseDTO struct {
 	Totals             adapters.GroupedMetricDTO      `json:"totals"`
 	Roles              []adapters.RoleMetricDTO       `json:"roles"`
 	Models             []adapters.ModelMetricDTO      `json:"models"`
-	Anomalies          []domain.Anomaly               `json:"anomalies,omitempty"`
+	Anomalies          []domain.Anomaly               `json:"anomalies,omitzero"`
 }
 
 func MetricsLedgerResponseDTOFromDomain(value domain.AgenticMetricsLedger) MetricsLedgerResponseDTO {

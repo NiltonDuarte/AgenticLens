@@ -9,6 +9,7 @@ import (
 
 // ProjectConfig holds the complete configuration settings for AgenticLens.
 type ProjectConfig struct {
+	Generation        GenerationConfig        `json:"generation" yaml:"generation"`
 	AgenticLens       EntrypointConfig        `json:"agenticlens,omitempty" yaml:"agenticlens,omitempty"`
 	ProjectName       string                  `json:"project_name" yaml:"project_name"`
 	Ticket            TicketConfig            `json:"ticket" yaml:"ticket"`
@@ -59,6 +60,7 @@ func DefaultAnomalyThresholdsConfig() AnomalyThresholdsConfig {
 // DefaultProjectConfig returns a baseline ProjectConfig with pure defaults.
 func DefaultProjectConfig() ProjectConfig {
 	return ProjectConfig{
+		Generation:  GenerationConfig{Metrics: DefaultGenerationPolicy()},
 		Telemetry:   TelemetryConfig{Capture: DefaultCaptureConfig()},
 		ProjectName: "",
 		Ticket: TicketConfig{

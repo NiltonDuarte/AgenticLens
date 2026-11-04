@@ -2527,7 +2527,7 @@ func TestLedgerFileReadsOwnedOptionalSkillTaskCollections(t *testing.T) {
 		invalid  bool
 	}{
 		{name: "omitted"},
-		{name: "null", fields: `,"skills":null,"delegations":null`},
+		{name: "null", fields: `,"skills":null,"delegations":null`, invalid: true},
 		{name: "empty", fields: `,"skills":[],"delegations":[]`},
 		{name: "repeated observations", fields: `,"skills":[{"name":"review","caller_role":null,"invoked_at":null},{"name":"review","caller_role":null,"invoked_at":null}],"delegations":[{"agent_type":"coder","description":"same","invoked_at":null},{"agent_type":"coder","description":"same","invoked_at":null}]`, wantRows: 2},
 		{name: "malformed skills", fields: `,"skills":{}`, invalid: true},
@@ -2559,8 +2559,9 @@ func TestLedgerFileReadsOwnedOptionalSkillTaskCollections(t *testing.T) {
 			if existing == nil || workspace == nil {
 				t.Fatal("file read returned no ledger")
 			}
-			if workspace.Facts.SkillFacts() == nil || workspace.Facts.DelegationFacts() == nil {
-				t.Fatalf("internal collections must be initialized after file read: existing=%+v workspace=%+v", existing, workspace.Facts)
+			recorded := tc.name != "omitted"
+			if (existing.Sessions[0].Skills != nil) != recorded || (existing.Sessions[0].Delegations != nil) != recorded || (workspace.Facts.Sessions[0].Skills != nil) != recorded || (workspace.Facts.Sessions[0].Delegations != nil) != recorded {
+				t.Fatal("file read changed absent versus recorded-empty coverage")
 			}
 			if len(existing.Sessions[0].Skills) != tc.wantRows || len(existing.Sessions[0].Delegations) != tc.wantRows || len(workspace.Facts.SkillFacts()) != tc.wantRows || len(workspace.Facts.DelegationFacts()) != tc.wantRows {
 				t.Fatalf("file read changed row multiplicity: existing skills/tasks=%d/%d workspace=%d/%d", len(existing.Sessions[0].Skills), len(existing.Sessions[0].Delegations), len(workspace.Facts.SkillFacts()), len(workspace.Facts.DelegationFacts()))

@@ -205,6 +205,9 @@ func RefreshAnomalySummaries(ledger AgenticFactLedger, thresholds ...AnomalyThre
 	return RefreshAnomalySummariesFromSource(ledger, SourceEvents{}, thresholds...)
 }
 func RefreshAnomalySummariesFromSource(ledger AgenticFactLedger, source SourceEvents, thresholds ...AnomalyThresholdsConfig) []Anomaly {
+	if len(source.CompleteSessionIDs) == 0 {
+		return ledger.AnomalyFacts()
+	}
 	cached := ledger.AnomalyFacts()
 	currentSessions := make(map[string]bool)
 	for _, id := range source.CompleteSessionIDs {
@@ -216,7 +219,14 @@ func RefreshAnomalySummariesFromSource(ledger AgenticFactLedger, source SourceEv
 			events = append(events, event)
 		}
 	}
-	detected := DetectAnomaliesFromEvents(ledger, events, thresholds...)
+	observed := ledger
+	observed.Sessions = nil
+	for _, owner := range ledger.Sessions {
+		if currentSessions[owner.ID] {
+			observed.Sessions = append(observed.Sessions, owner)
+		}
+	}
+	detected := DetectAnomaliesFromEvents(observed, events, thresholds...)
 	groupComplete := func(parent string) bool {
 		if !currentSessions[parent] {
 			return false
@@ -236,21 +246,23 @@ func RefreshAnomalySummariesFromSource(ledger AgenticFactLedger, source SourceEv
 		filtered = append(filtered, anomaly)
 	}
 	detected = filtered
+	allComplete := len(ledger.Sessions) > 0
+	for _, owner := range ledger.Sessions {
+		if !currentSessions[owner.ID] {
+			allComplete = false
+		}
+	}
 	refreshed := make([]Anomaly, 0, len(cached)+len(detected))
 	for _, anomaly := range detected {
-		if anomaly.Context.SessionID == nil || *anomaly.Context.SessionID == "" {
+		if (anomaly.Context.SessionID == nil || *anomaly.Context.SessionID == "") && allComplete {
 			anomaly.Evidence = nil
 			refreshed = append(refreshed, anomaly)
 		}
 	}
-	allComplete := len(ledger.Sessions) > 0 && len(currentSessions) == len(ledger.Sessions)
 	for _, anomaly := range cached {
 		retain := false
 		if anomaly.Context.SessionID == nil {
 			retain = !allComplete
-			if anomaly.RuleID == RuleToolHighFailureRate && len(ledger.ToolFacts()) > 0 {
-				retain = false
-			}
 		} else {
 			sid := *anomaly.Context.SessionID
 			retain = !currentSessions[sid] || anomaly.RuleID == RuleSubagentReworkLoop && !groupComplete(sid)
@@ -319,6 +331,9 @@ func PersistAnomalySummaries(ledger AgenticFactLedger, thresholds ...AnomalyThre
 	return PersistSourceAnomalySummaries(ledger, SourceEvents{}, thresholds...)
 }
 func PersistSourceAnomalySummaries(ledger AgenticFactLedger, source SourceEvents, thresholds ...AnomalyThresholdsConfig) (AgenticFactLedger, error) {
+	if len(source.CompleteSessionIDs) == 0 {
+		return ledger, nil
+	}
 	anomalies := RefreshAnomalySummariesFromSource(ledger, source, thresholds...)
 	bySession := make(map[string][]Anomaly)
 	ticket := []Anomaly{}
@@ -341,9 +356,27 @@ func PersistSourceAnomalySummaries(ledger AgenticFactLedger, source SourceEvents
 		if !complete[ledger.Sessions[i].ID] {
 			continue
 		}
-		ledger.Sessions[i].Anomalies = append([]Anomaly{}, bySession[ledger.Sessions[i].ID]...)
+		owner := ledger.Sessions[i]
+		incompleteGroup := false
+		for _, child := range ledger.Sessions {
+			if child.ParentID != nil && *child.ParentID == owner.ID && !complete[child.ID] {
+				incompleteGroup = true
+			}
+		}
+		if incompleteGroup && owner.Anomalies == nil && len(bySession[owner.ID]) == 0 {
+			continue
+		}
+		ledger.Sessions[i].Anomalies = append([]Anomaly{}, bySession[owner.ID]...)
 	}
-	ledger.Anomalies = ticket
+	allComplete := len(ledger.Sessions) > 0
+	for _, owner := range ledger.Sessions {
+		if !complete[owner.ID] {
+			allComplete = false
+		}
+	}
+	if allComplete {
+		ledger.Anomalies = ticket
+	}
 	return ledger, nil
 }
 func NormalizeLedgerForRead(ledger AgenticFactLedger, thresholds ...AnomalyThresholdsConfig) (AgenticFactLedger, error) {
@@ -635,7 +668,10 @@ func RetainIncompleteGroupSummaries(previous, fresh []SessionFact) []SessionFact
 		if !incomplete[owner.ID] {
 			continue
 		}
-		summaries := []Anomaly{}
+		var summaries []Anomaly
+		if old[owner.ID].Anomalies != nil {
+			summaries = []Anomaly{}
+		}
 		for _, anomaly := range owner.Anomalies {
 			if anomaly.RuleID != RuleSubagentReworkLoop {
 				summaries = append(summaries, anomaly)
@@ -648,5 +684,14 @@ func RetainIncompleteGroupSummaries(previous, fresh []SessionFact) []SessionFact
 		}
 		result[i].Anomalies = summaries
 	}
-	return result
+	return RetainUnrecordedCategories(previous, result)
+}
+
+// PersistSourceAnomalySummariesWithPolicy bypasses analysis for disabled generate
+// output without altering retained owners before their equality guard.
+func PersistSourceAnomalySummariesWithPolicy(ledger AgenticFactLedger, source SourceEvents, policy GenerationPolicy, thresholds ...AnomalyThresholdsConfig) (AgenticFactLedger, error) {
+	if !policy.Anomalies {
+		return ledger, nil
+	}
+	return PersistSourceAnomalySummaries(ledger, source, thresholds...)
 }

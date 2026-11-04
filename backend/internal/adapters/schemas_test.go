@@ -1332,7 +1332,15 @@ func jsonFieldsInOrder(t *testing.T, data []byte, wanted ...string) map[string]j
 
 func assertFactJSONFieldOrder(t *testing.T, data []byte) {
 	t.Helper()
-	root := jsonFieldsInOrder(t, data, "schema_version", "ticket_id", "updated_at", "code", "sessions", "anomalies")
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(data, &fields); err != nil {
+		t.Fatal(err)
+	}
+	order := []string{"schema_version", "ticket_id", "updated_at", "code", "sessions"}
+	if _, recorded := fields["anomalies"]; recorded {
+		order = append(order, "anomalies")
+	}
+	root := jsonFieldsInOrder(t, data, order...)
 	jsonFieldsInOrder(t, root["code"], "lines_added", "lines_deleted", "test_lines_added", "test_lines_deleted", "prod_lines_added", "prod_lines_deleted", "files_changed", "sdlc_iterations")
 	var sessions []json.RawMessage
 	if err := json.Unmarshal(root["sessions"], &sessions); err != nil {
@@ -1582,5 +1590,177 @@ func TestFullSourceAnomaliesSurviveLeanPersistenceAndPartialRefresh(t *testing.T
 	actual := domain.RefreshAnomalySummariesFromSource(stored, domain.SourceEvents{Events: []domain.EventFact{event("partial-one", "load_skill", "error", 1), event("partial-two", "load_skill", "error", 2), event("partial-three", "load_skill", "error", 3)}})
 	if !reflect.DeepEqual(retryTools(actual), []string{"bash"}) || !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("sparse event recomputation discarded cached full-source anomalies or invented skill streak: actual=%+v expected=%+v", actual, expected)
+	}
+}
+
+func TestCurrentLedgerGenerationPolicyReadBoundary(t *testing.T) {
+	for _, tc := range []struct {
+		name, policy string
+		valid        bool
+	}{
+		{"historical_absent", "", true},
+		{"all_enabled", `,"generation_policy":{"skills":true,"delegations":true,"anomalies":true}`, true},
+		{"all_disabled", `,"generation_policy":{"skills":false,"delegations":false,"anomalies":false}`, true},
+		{"null", `,"generation_policy":null`, false},
+		{"partial", `,"generation_policy":{"skills":false}`, false},
+		{"wrong_type", `,"generation_policy":{"skills":false,"delegations":"false","anomalies":false}`, false},
+		{"retired_spelling", `,"generation_policy":{"skills":false,"task_links":false,"anomalies":false}`, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			raw := `{"schema_version":6,"sessions":[{"id":"owner","source":"codex","user":"tester","invocations":[],"tools":[]}]` + tc.policy + `}`
+			if tc.name != "all_disabled" {
+				raw = strings.Replace(raw, `"tools":[]`, `"tools":[],"anomalies":[]`, 1)
+			}
+			existing, err := adapters.DecodeExistingFactLedger([]byte(raw))
+			if (err == nil) != tc.valid {
+				t.Fatalf("valid=%t, decode error=%v", tc.valid, err)
+			}
+			if tc.valid && existing == nil {
+				t.Fatal("valid portable ledger unavailable")
+			}
+			if tc.valid {
+				var dto adapters.AgenticFactLedgerDTO
+				if err := json.Unmarshal([]byte(raw), &dto); err != nil {
+					t.Fatal(err)
+				}
+				rewritten, err := json.Marshal(dto)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if bytes.Contains(rewritten, []byte(`"generation_policy"`)) || bytes.Contains(rewritten, []byte(`"anomaly_availability"`)) {
+					t.Fatalf("read-compatible metadata re-emitted: %s", rewritten)
+				}
+				if err := adapters.ValidateRuntimeFactLedger(rewritten); err != nil {
+					t.Fatalf("metadata-free output rejected: %v", err)
+				}
+			}
+		})
+	}
+}
+
+func TestCurrentLedgerUnavailableAnomalyBoundary(t *testing.T) {
+	for _, tc := range []struct {
+		name, fields string
+		valid        bool
+	}{
+		{"omitted_unavailable", `,"anomaly_availability":"unavailable"`, true},
+		{"unknown_marker", `,"anomaly_availability":"missing"`, false},
+		{"null_marker", `,"anomaly_availability":null`, false},
+		{"boolean_marker", `,"anomaly_availability":false`, false},
+		{"contradictory_empty", `,"anomaly_availability":"unavailable","anomalies":[]`, false},
+		{"contradictory_null", `,"anomaly_availability":"unavailable","anomalies":null`, false},
+		{"unmarked_null", `,"anomalies":null`, false},
+		{"unmarked_measured_empty", `,"anomalies":[]`, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			raw := `{"schema_version":6,"sessions":[{"id":"owner","source":"codex","user":"tester","invocations":[],"tools":[]` + tc.fields + `}]}`
+			existing, err := adapters.DecodeExistingFactLedger([]byte(raw))
+			if (err == nil) != tc.valid {
+				t.Fatalf("valid=%t error=%v", tc.valid, err)
+			}
+			if tc.valid && existing == nil {
+				t.Fatal("valid portable ledger unavailable")
+			}
+			if tc.valid {
+				var dto adapters.AgenticFactLedgerDTO
+				if err := json.Unmarshal([]byte(raw), &dto); err != nil {
+					t.Fatal(err)
+				}
+				rewritten, err := json.Marshal(dto)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if bytes.Contains(rewritten, []byte(`"generation_policy"`)) || bytes.Contains(rewritten, []byte(`"anomaly_availability"`)) {
+					t.Fatalf("read-compatible metadata re-emitted: %s", rewritten)
+				}
+				if err := adapters.ValidateRuntimeFactLedger(rewritten); err != nil {
+					t.Fatalf("metadata-free output rejected: %v", err)
+				}
+			}
+		})
+	}
+}
+
+func TestOptionalCollectionPresenceSurvivesCanonicalRoundTrip(t *testing.T) {
+	for _, state := range []string{"not recorded", "recorded empty", "recorded values"} {
+		t.Run(state, func(t *testing.T) {
+			version := domain.CurrentSchemaVersion
+			owner := domain.SessionFact{ID: "owner", Source: domain.SourceCodex, User: "tester", Invocations: []domain.InvocationFact{}, Tools: []domain.SessionToolFact{}}
+			ticket, title := "TEST-PRESENCE", "Optional collection presence"
+			kind := domain.TicketTypeFeat
+			ledger := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticket, TicketTitle: &title, TicketType: &kind, UpdatedAt: "2026-01-01T00:00:00Z", Sessions: []domain.SessionFact{owner}}
+			if state != "not recorded" {
+				ledger.Sessions[0].Skills = []domain.SkillFact{}
+				ledger.Sessions[0].Delegations = []domain.DelegationFact{}
+				ledger.Sessions[0].Anomalies = []domain.Anomaly{}
+				ledger.Anomalies = []domain.Anomaly{}
+			}
+			if state == "recorded values" {
+				ledger.Sessions[0].Skills = []domain.SkillFact{{Name: "inspect"}, {Name: "inspect"}}
+				ledger.Sessions[0].Delegations = []domain.DelegationFact{{Description: "review"}, {Description: "review"}}
+				count := int64(3)
+				tool := "saved-only"
+				anomaly := domain.Anomaly{RuleID: domain.RuleToolRetryStreak, Severity: domain.SeverityWarning, Context: domain.AnomalyContext{ToolName: &tool, Count: &count}}
+				ledger.Sessions[0].Anomalies = []domain.Anomaly{anomaly}
+				ledger.Anomalies = []domain.Anomaly{anomaly}
+			}
+			path := filepath.Join(t.TempDir(), "ledger.json")
+			if err := adapters.SaveFactLedger(path, ledger); err != nil {
+				t.Fatal(err)
+			}
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := adapters.ValidateRuntimeFactLedger(raw); err != nil {
+				t.Fatal(err)
+			}
+			var wire struct {
+				Anomalies json.RawMessage              `json:"anomalies"`
+				Sessions  []map[string]json.RawMessage `json:"sessions"`
+			}
+			if err := json.Unmarshal(raw, &wire); err != nil {
+				t.Fatal(err)
+			}
+			if strings.Contains(string(raw), `"generation_policy"`) || strings.Contains(string(raw), `"anomaly_availability"`) {
+				t.Fatalf("obsolete metadata emitted: %s", raw)
+			}
+			for name, value := range map[string]json.RawMessage{"root anomalies": wire.Anomalies, "skills": wire.Sessions[0]["skills"], "delegations": wire.Sessions[0]["delegations"], "anomalies": wire.Sessions[0]["anomalies"]} {
+				switch state {
+				case "not recorded":
+					if len(value) != 0 {
+						t.Fatalf("%s fabricated recorded state: %s", name, value)
+					}
+				case "recorded empty":
+					if string(value) != "[]" {
+						t.Fatalf("%s lost recorded-empty state: %s", name, value)
+					}
+				case "recorded values":
+					if len(value) == 0 || string(value) == "[]" || string(value) == "null" {
+						t.Fatalf("%s lost recorded values: %s", name, value)
+					}
+				}
+			}
+			loaded, err := adapters.LoadExistingFactLedger(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(loaded.Sessions[0].Skills, ledger.Sessions[0].Skills) || !reflect.DeepEqual(loaded.Sessions[0].Delegations, ledger.Sessions[0].Delegations) || !reflect.DeepEqual(loaded.Sessions[0].Anomalies, ledger.Sessions[0].Anomalies) || !reflect.DeepEqual(loaded.Anomalies, ledger.Anomalies) {
+				t.Fatalf("canonical reload changed collection presence/content: %+v", loaded)
+			}
+		})
+	}
+}
+
+func TestOptionalCollectionsRejectNullWithoutChangingAbsenceMeaning(t *testing.T) {
+	for _, category := range []string{"skills", "delegations", "anomalies"} {
+		raw := `{"schema_version":6,"sessions":[{"id":"owner","source":"codex","user":"tester","invocations":[],"tools":[],"` + category + `":null}]}`
+		if err := adapters.ValidateRuntimeFactLedger([]byte(raw)); err == nil {
+			t.Fatalf("null %s accepted as absent/empty", category)
+		}
+	}
+	raw := `{"schema_version":6,"sessions":[],"anomalies":null}`
+	if err := adapters.ValidateRuntimeFactLedger([]byte(raw)); err == nil {
+		t.Fatal("null root analysis accepted as absent/empty")
 	}
 }
