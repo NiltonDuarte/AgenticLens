@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -1078,6 +1079,102 @@ func TestCaptureInstalledStateDriftIsDiagnosedAndRecoveryPreservesOldRegistry(t 
 	}
 	if !bytes.Equal(before, readCaptureFile(t, filepath.Join(old, "registry.db"))) {
 		t.Error("status/reinstall changed source registry bytes")
+	}
+}
+
+func TestCaptureManualOverridePreservesIncompatibleConfiguredRegistry(t *testing.T) {
+	for _, selection := range []string{"fresh", "healthy", "default", "incompatible", "automatic", "native capture", "damaged installed hooks", "missing installed integration", "configured coordination missing integration"} {
+		t.Run(selection, func(t *testing.T) {
+			f := newCaptureGenerationFixture(t)
+			f.bind(t, f.write(t, 29))
+			configPath := filepath.Join(f.project, ".agenticlens-config.yaml")
+			if selection == "damaged installed hooks" || selection == "missing installed integration" || selection == "configured coordination missing integration" {
+				out, err := runCaptureNative(t, f.project, "", "capture", "install", "--repo", f.project, "--source", "codex", "--store", f.store, "--binary", cliBinaryPath)
+				if err != nil {
+					t.Fatalf("install: %v %s", err, out)
+				}
+				if err := os.Remove(filepath.Join(f.project, ".codex", "hooks.json")); err != nil {
+					t.Fatal(err)
+				}
+				if selection == "missing installed integration" || selection == "configured coordination missing integration" {
+					if err := os.Remove(filepath.Join(f.project, ".codex", "agenticlens-installation.json")); err != nil {
+						t.Fatal(err)
+					}
+				}
+				if selection == "configured coordination missing integration" {
+					configPath = filepath.Join(f.project, ".agenticlens-config.local.yaml")
+					body := fmt.Sprintf("telemetry:\n  capture:\n    state_dir: %q\n", f.coordination(t))
+					if err := os.WriteFile(configPath, []byte(body), 0600); err != nil {
+						t.Fatal(err)
+					}
+				}
+			}
+			// Model the observed unsupported layout without depending on live state
+			// or assuming which historical binary created it.
+			registryPath := filepath.Join(f.state, "registry.db")
+			if selection != "missing installed integration" {
+				db, err := sql.Open("sqlite", registryPath)
+				if err != nil {
+					t.Fatal(err)
+				}
+				_, dropErr := db.Exec("DROP TABLE worktree_coordinates")
+				if err := errors.Join(dropErr, db.Close()); err != nil {
+					t.Fatal(err)
+				}
+			}
+			before := readCaptureFile(t, registryPath)
+			config := readCaptureFile(t, configPath)
+			selected := t.TempDir()
+			if selection == "healthy" {
+				store, err := capture.OpenProject(selected, f.project)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := store.Close(); err != nil {
+					t.Fatal(err)
+				}
+			}
+			args := []string{"generate", "--source", "codex", "--codex-home", f.store, "--session-id", "root", "--ticket-id", "TEST-100", "--ticket-title", "Explicit recovery", "--ticket-type", "fix", "--json-output", f.output}
+			if selection == "incompatible" {
+				selected = f.state
+			}
+			if selection != "default" {
+				args = append(args, "--capture-dir", selected)
+			}
+			if selection == "automatic" {
+				args = append(args, "--capture-auto")
+			}
+			if selection == "native capture" {
+				args = []string{"capture", "reconcile", "--repo", f.project, "--state-dir", selected, "--ticket-id", "TEST-100"}
+			}
+			out, err := runCaptureNative(t, f.project, "", args...)
+			if selection == "fresh" || selection == "healthy" {
+				if err != nil {
+					t.Fatalf("independent manual recovery: %v %s", err, out)
+				}
+				assertCaptureRootInput(t, f.ledger(t), 29)
+			} else {
+				if err == nil {
+					t.Fatalf("invalid state/installation admitted: %s", out)
+				}
+				if _, statErr := os.Stat(f.output); !os.IsNotExist(statErr) {
+					t.Fatalf("rejected generation published a ledger: %v", statErr)
+				}
+				if selection == "damaged installed hooks" || selection == "missing installed integration" || selection == "configured coordination missing integration" {
+					if !bytes.Contains(out, []byte("owned")) {
+						t.Fatalf("override failed before real installed-integration check: %s", out)
+					}
+				} else if !bytes.Contains(out, []byte("coordinate layout")) {
+					t.Fatalf("unexpected state rejection: %s", out)
+				}
+			}
+			if !bytes.Equal(before, readCaptureFile(t, registryPath)) {
+				t.Error("generation changed incompatible configured registry")
+			}
+			if !bytes.Equal(config, readCaptureFile(t, configPath)) {
+				t.Error("generation changed project configuration")
+			}
+		})
 	}
 }
 

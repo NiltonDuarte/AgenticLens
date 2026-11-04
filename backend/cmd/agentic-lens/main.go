@@ -102,7 +102,9 @@ func runGenerate(args []string) {
 		fmt.Fprintln(os.Stderr, stateErr)
 		os.Exit(1)
 	}
-	if e := checkCaptureInstallation(project, resolvedState, *captureDirFlag != ""); e != nil {
+	// Only explicit manual recovery may use independent healthy state when
+	// configured coordinate mappings are unsupported. Other guards still apply.
+	if e := checkCaptureInstallationScope(project, resolvedState, *captureDirFlag != "", *captureDirFlag != "" && !*autoFlag); e != nil {
 		fmt.Fprintln(os.Stderr, e)
 		os.Exit(1)
 	}

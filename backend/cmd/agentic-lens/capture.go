@@ -656,18 +656,13 @@ func filterCapturePrecedence(baseline []domain.SessionFact, result *capture.Reco
 	return capture.ValidateSessionMerge(baseline, result.RefreshedSessions)
 }
 func checkCaptureInstallation(project, selected string, explicit bool) error {
-	policy, err := adaptersconfig.ResolveCapture(project, "")
-	if err != nil {
-		return err
-	}
-	configuredLocation, err := capture.PreviewStateLocation(policy.StateDir, project)
-	if err != nil {
-		return err
-	}
-	configured := configuredLocation.CoordinationDirectory
-	if configuredLocation.Provisional {
-		configured = configuredLocation.RegistryDirectory
-	}
+	return checkCaptureInstallationScope(project, selected, explicit, false)
+}
+
+// Manual generation may recover from known unsupported configured mappings.
+// Healthy configured state retains local installation-manifest validation even
+// when both its discovery anchor and native integration have disappeared.
+func checkCaptureInstallationScope(project, selected string, explicit, recoverCoordinates bool) error {
 	selectedLocation, err := capture.PreviewStateLocation(selected, project)
 	if err != nil {
 		return err
@@ -675,6 +670,28 @@ func checkCaptureInstallation(project, selected string, explicit bool) error {
 	selected = selectedLocation.CoordinationDirectory
 	if selectedLocation.Provisional {
 		selected = selectedLocation.RegistryDirectory
+	}
+	policy, err := adaptersconfig.ResolveCapture(project, "")
+	if err != nil {
+		return err
+	}
+	configuredLocation, err := capture.PreviewStateLocation(policy.StateDir, project)
+	if err != nil {
+		if explicit && recoverCoordinates && errors.Is(err, capture.ErrUnsupportedCoordinateLayout) {
+			// An explicitly configured coordination directory is already known,
+			// even when its registry cannot map it. Inspect its retained manifest
+			// directly rather than guessing any unavailable coordination paths.
+			if installedErr := capture.CheckInstalledState(project, policy.StateDir, explicit); installedErr != nil {
+				return installedErr
+			}
+			fmt.Fprintln(os.Stderr, "Configured capture coordinates are unsupported; explicit manual generation uses selected state and preserves configured state:", err)
+			return capture.CheckInstalledState(project, selected, explicit)
+		}
+		return err
+	}
+	configured := configuredLocation.CoordinationDirectory
+	if configuredLocation.Provisional {
+		configured = configuredLocation.RegistryDirectory
 	}
 	if err = capture.CheckInstalledState(project, configured, explicit); err != nil {
 		return err
