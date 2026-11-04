@@ -6,13 +6,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 ## In Progress
 
-- **REV-6**: Review test performance and unit/integration boundaries
-  - **Subsystem**: Test architecture / capture CLI and adapters / CI sequencing
-  - **Status**: In Progress (approved measured review)
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/REV-6 review test performance and unit integration boundaries.md`
-
 
 
 

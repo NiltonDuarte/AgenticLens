@@ -1613,5 +1613,79 @@
       }
     ],
     "limit": "Separate instrumented single-run cohort; cumulative stacks overlap and must not be added. Not a phase wall-time decomposition."
+  },
+  "integrated_verification": {
+    "candidate_revision": "48b1b00e",
+    "source_revision": "a84adbe5be46c2ef52ede0987a417562715d38e1",
+    "source_diff": "empty across backend/web/scripts/.github/.agents",
+    "command": [
+      "make"
+    ],
+    "exit": 0,
+    "wall_seconds": 228.21,
+    "user_seconds": 435.71,
+    "system_seconds": 118.65,
+    "max_rss_kib": 632128,
+    "package_times": [
+      {
+        "package": "agenticlens/cmd/agentic-lens",
+        "seconds": 121.543
+      },
+      {
+        "package": "agenticlens/internal/adapters",
+        "seconds": 4.176
+      },
+      {
+        "package": "agenticlens/internal/adapters/backfill",
+        "seconds": 16.728
+      },
+      {
+        "package": "agenticlens/internal/adapters/capture",
+        "seconds": 73.072
+      },
+      {
+        "package": "agenticlens/internal/adapters/codex",
+        "seconds": 1.185
+      },
+      {
+        "package": "agenticlens/internal/adapters/config",
+        "seconds": 2.181
+      },
+      {
+        "package": "agenticlens/internal/adapters/git",
+        "seconds": 5.382
+      },
+      {
+        "package": "agenticlens/internal/adapters/http",
+        "seconds": 3.948
+      },
+      {
+        "package": "agenticlens/internal/adapters/live",
+        "seconds": 6.03
+      },
+      {
+        "package": "agenticlens/internal/adapters/opencode",
+        "seconds": 7.755
+      },
+      {
+        "package": "agenticlens/internal/adapters/web",
+        "seconds": 1.038
+      },
+      {
+        "package": "agenticlens/internal/domain",
+        "seconds": 1.326
+      },
+      {
+        "package": "agenticlens/internal/domain/migration",
+        "seconds": 1.356
+      }
+    ],
+    "frontend_cases_passed": 824,
+    "python_counts": [
+      14,
+      10,
+      15
+    ],
+    "limits": "Serial local Make, shared host; not Windows/hosted/external harness. Logged package timings not reported cached. No Go JSON per-test skip counts were collected for this gate."
   }
 }

@@ -2,7 +2,7 @@ h3. Title: REV-6: Review test performance and unit/integration boundaries
 
 *TARGET*: AgenticLens (Test architecture / Capture CLI and adapters / CI sequencing)
 
-*Status*: To Do
+*Status*: Done
 *Work type*: review
 *Blocked by*: None
 *Blocks*: None
