@@ -4,6 +4,6 @@ Fleet Overview now warns when an exact stored session ID appears in multiple tic
 
 Require a recorded, nonblank `ticket_id` at the canonical ledger boundary. Missing IDs are rejected with workspace diagnostics rather than inferred from directories or requested paths; valid siblings remain usable. Reads preserve ledger files and valid totals. No automatic reassignment, deletion or cross-ticket deduplication is introduced.
 
-- [Contract](CONTRACT.md)
-- [Approved correction](iterations/02/PLAN.md)
-- [Work summary and verification](SUMMARY.md)
+- [Contract](https://github.com/NiltonDuarte/AgenticLens/blob/feat/AL-77-warn-duplicate-sessions/alspaces/AL-77/CONTRACT.md)
+- [Approved correction](https://github.com/NiltonDuarte/AgenticLens/blob/feat/AL-77-warn-duplicate-sessions/alspaces/AL-77/iterations/02/PLAN.md)
+- [Work summary and verification](https://github.com/NiltonDuarte/AgenticLens/blob/feat/AL-77-warn-duplicate-sessions/alspaces/AL-77/SUMMARY.md)

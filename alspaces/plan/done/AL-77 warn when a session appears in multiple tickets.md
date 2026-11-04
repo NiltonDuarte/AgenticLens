@@ -2,7 +2,7 @@ h3. Title: AL-77: Warn when a session appears in multiple tickets
 
 *TARGET*: AgenticLens (Frontend / read-only session-to-ticket projection)
 
-*Status*: To Do
+*Status*: Done
 *Work type*: feat
 *Blocked by*: None
 *Blocks*: None

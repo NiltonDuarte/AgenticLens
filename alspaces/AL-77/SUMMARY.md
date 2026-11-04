@@ -1,39 +1,90 @@
 # AL-77 Work Summary
 
-## Baseline and scope
+## Delivered behavior and authority
 
-- Initial revision: `a84adbe5be46c2ef52ede0987a417562715d38e1`.
-- Initial working tree: clean; original branch: `AL-77/warn-duplicate-sessions-across-tickets`.
-- Implementation branch: `feat/AL-77-warn-duplicate-sessions`.
-- Request: implement the existing AL-77 specification for read-only warnings about session IDs shared across tickets.
-- Workspace root: configured `alspaces`.
+Fleet Overview inspects the unfiltered loaded project ledger dataset for exact session IDs recorded in distinct tickets. Expand the warning for complete session IDs, affected tickets, source context and existing ticket navigation. Same-ticket repetitions do not create conflicts. Diagnostic/omitted scope is partial; failed inspection is unavailable. Refresh replaces results, clears resolved conflicts, and ignores obsolete completions. Metrics filters and inspection state remain independent; reads do not repair, reassign, delete or deduplicate ledger data.
 
-## Current acceptance and authorization
+The user approved [CONTRACT.md](CONTRACT.md) and [iteration 01](iterations/01/PLAN.md), then explicitly instructed: "Do not fill missing id from directory name. Ticket id is a required field on the data". [Iteration 02](iterations/02/PLAN.md) records that authoritative delta. Persisted `ticket_id` is required and nonblank; invalid ledgers report diagnostics while valid siblings remain available. Both directory/request fallbacks were removed. The proposed recorded_ticket_id metadata solution was never implemented. No schema bump, new endpoint, source-authenticity prerequisite or path-equality rule was introduced.
 
-The user explicitly instructed: "Do not fill missing id from directory name. Ticket id is a required field on the data". [Iteration 02](iterations/02/PLAN.md) records this approved correction: require a nonblank persisted ticket ID through canonical validation and remove directory/request fallback in ordinary ledger reads. The earlier proposed recorded_ticket_id metadata solution and its pending approval request are superseded. No new metadata or API shape is planned. Missing-ID data is rejected with diagnostics; valid siblings and their source-independent recorded facts remain usable. No automatic repair or mutation is authorized.
+## Baseline and layers
 
-## Iteration 01
+Initial revision `a84adbe5be46c2ef52ede0987a417562715d38e1`; clean working tree on `AL-77/warn-duplicate-sessions-across-tickets`. Feature branch `feat/AL-77-warn-duplicate-sessions`; implementation commit `fe6d71b8`. Configuration selects workspace root `alspaces`. Upstream fetch/merge reported already up to date; no integration source changes invalidate the review.
 
-Planning completed by the planner (gpt-6.1-sol, high; inherited runtime settings). See [CONTRACT.md](CONTRACT.md) and [iteration 01 plan](iterations/01/PLAN.md). Existing unfiltered ledger responses provide the required IDs; proposed production scope is frontend only, with a Fleet Overview warning and existing ticket navigation. Independent review is planned across four core focuses plus frontend async/accessibility, each under both configured model profiles.
+- Domain/presentation: pure readonly TypeScript overlap index; accessible native disclosure and named ticket controls; Fleet Overview owns independent loading and refresh. Existing Go aggregation policy and valid ledger totals are unchanged.
+- Adapters: canonical DTO validation requires recorded ticket identity; scan/direct-load inference is deleted. Source-unavailable persisted facts remain usable. Rejected files remain untouched and valid siblings retain totals.
+- Documentation: canonical schema/runtime guidance in docs/OWNED_OCCURRENCES.md describes required identity. Specification moved to plan/done and its active index entry removed. No downstream active ticket depended on AL-77.
 
-User explicitly approved the contract and plan on 2026-11-04 by selecting "Approve implementation". No application code has changed and no checks have been run. Telemetry is deferred until the final delivery step; no ledger has been generated.
+## Review outcome and attribution
 
-## Candidate 1 implementation and verification
+Final consolidated outcome: APPROVED for candidate `AL77-candidate-2-3871cfb9066dccfb`, content SHA-256 `3871cfb9066dccfba4b962b5193f41376f5dba61defaf269325878c22b4da1a8`, delivered in `fe6d71b8`. All ten persona/model cells completed: behavior, data/failure, architecture, test effectiveness and generic reviewer with frontend async/accessibility specialty, each gpt-6.1-sol/high and gpt-6-luna/medium. Source rollout turn_context records independently confirmed all requested model/effort settings. Nine corrected-candidate child verdicts were APPROVED; one architecture CHANGES_REQUESTED candidate was refuted by parent evidence. Parent approval follows successful integrated checks, not child verdict counts.
 
-Frontend overlap projection, disclosure, navigation and refresh are implemented. Coder and tester (gpt-6.1-sol/high, inherited harness settings) passed focused frontend checks (23 tests), full frontend suite (833 tests across 37 files), final strengthened domain test, typecheck, lint and focused HTTP race test. Production frontend build and mirrored asset comparison passed. Native summary keyboard activation and assistive technology remain untested in a real browser; jsdom tests cover semantics/focus/click and keyboard ticket activation. Existing unrelated MetricProgression tests emit act warnings. Full integrated make and standalone asset runtime verification remain pending.
+- [Iteration 01 compact findings](iterations/01/REVIEW_SUMMARY.json): BEH-01, severity 6, false membership from inferred ticket IDs, independently discovered by behavior reviewers gpt-6.1-sol/high and gpt-6-luna/medium plus data/failure reviewer gpt-6.1-sol/high. Fixed by coder gpt-6.1-sol/high through required-ID validation and deletion of both fallbacks under user authority. Tester gpt-6.1-sol/high verified real boundaries and a guard-removal mutation; both behavior profiles and both data profiles verified the corrected paths. Original three CHANGES_REQUESTED runs retain shared discovery credit; seven queued original cells were superseded before dispatch and received corrected-candidate coverage.
+- [Iteration 02 compact findings](iterations/02/REVIEW_SUMMARY.json): ARCH-01, claimed severity 5 cleanup bypass, reported by architecture reviewer gpt-6-luna/medium. Parent gpt-6.1-sol/high refuted it: runtime validation reaches canonical DTO.Validate before cleanup publication. A disposable overlay probe rejected absent/null/empty/whitespace IDs and accepted a valid completed-migration control; no product fix was needed.
+- NAV-01, severity 4, preexisting detail-navigation limitation when recorded ticket ID differs from directory: independently reported by behavior and data/failure reviewers gpt-6.1-sol/high. Repository maintainers own separate identity-to-location follow-up; existing navigation is reused and no new equality rule is imposed.
+- TEST-01, severity 2, unchanged nested-session rejection fixture masked by an earlier schema error: reported by test-effectiveness reviewer gpt-6.1-sol/high. Repository maintainers own separate fixture/oracle maintenance. It does not undermine the focused AL-77 validation oracles.
 
-Candidate fingerprint: `AL77-candidate-1-4a5906d5ba2f237a`, baseline `a84adbe5be46c2ef52ede0987a417562715d38e1`. Review remains open. Behavior reviewer (gpt-6-luna/medium, dispatch acknowledged) found BEH-01, severity 6: scanner directory fallback can cause the warning to treat missing recorded ticket IDs as real membership. Parent verified the scanner-to-DTO-to-UI path. Fix and affected verification remain pending; planner is preparing an iteration 02 delta because correcting this read-boundary distinction may require a minimal backend projection beyond the approved frontend-only scope. Other reviews remain active; no consolidated approval or publication.
+No unresolved introduced finding or material review gap remains. Preexisting accepted debt stays explicit in compact records. Private active review reports/run records were compacted only after final approval; raw source transcripts remain outside Git.
 
-[Iteration 02 correction plan](iterations/02/PLAN.md) is ready for renewed approval: expose the original nullable recorded ticket ID as nonpersisted read metadata in the existing HTTP response, and let only overlap inspection use it. Preserve effective ticket IDs, nested facts, existing fallback/navigation, totals and persisted schema. No correction code has been written. Missing review cells remain queued until the corrected candidate is frozen; in-flight candidate 1 reviews retain their own revision scope.
+## Verification and limits
 
-Candidate 1 review update: Behavior reviewers gpt-6.1-sol/high and gpt-6-luna/medium, and data integrity reviewer gpt-6.1-sol/high (all dispatch acknowledged) independently reported the same severity-6 BEH-01. The two Sol reviewers additionally reproduced the missing-recorded-ID API response using disposable HTTP overlay probes. All three discovery runs returned CHANGES_REQUESTED; no additional concrete findings. Shared discovery credit is retained. Other seven initial discovery cells remain queued, and affected reviews will target the corrected frozen revision after approval/implementation. Iteration 02 approval is still pending; completion notifications do not approve its scope.
+Coder and tester gpt-6.1-sol/high ran focused frontend/domain checks (23 tests), full frontend checks, typecheck, lint, production build and relevant schema/repository/HTTP race checks. Full backend `go test -race ./...` passed. Existing positive schema fixtures received explicit IDs without weakening their original error oracles. Disposable removal of only the required-ID guard made schema, direct-load and HTTP regression tests fail. Test fixtures are self-contained; no live ticket history or developer source database is used.
 
-## Iteration 02 execution
+Parent gpt-6.1-sol/high ran integrated `make` successfully on `fe6d71b8` after upstream integration: dependency install, vet/lint/typecheck, workflow/installation/capture scripts, backend race suite, frontend 833/833 tests across 37 files, canonical frontend build and all configured platform binary builds. Existing MetricProgression React act warnings and the Vite chunk-size warning remain nonfatal. Frontend generated trees are ignored and were not committed.
 
-Planner (gpt-6.1-sol/high, inherited runtime settings) revised the current correction plan under the explicit user requirement. Coder (same inherited model/effort) owns canonical validator, removal of the two read fallbacks, schema contract documentation and relevant regression fixtures. Implementation is active; no further approval is pending. Prior frontend evidence is retained for unchanged behavior, while required validation/load/diagnostic checks and all final delivery gates remain pending.
+Standalone host binary reports commit `fe6d71b8`. Parent temporary HTTP probe verified all three generated files (index, CSS, JavaScript) match web/dist and embedded dist byte-for-byte, bundle contains the shared-session disclosure, and SPA fallback serves the same current index. Process was stopped after verification. An initial probe incorrectly passed wrapper-only --al-offline/--al-project flags to the native binary; actual native help established the correct invocation and the corrected probe passed. No application change was needed.
 
-Iteration 02 coder implemented the required ticket-ID boundary and removed both read fallbacks. Full backend `go test -race ./...` passed on the final production diff; final assertion-only strengthening reran focused schema tests successfully. HTTP tests exercise all four missing-ID forms, all-invalid and mixed sibling listings, unchanged valid totals, repeated reads without file changes, and a valid recorded ID differing from its directory. Tester review is active. No API metadata field, response shape change, schema bump or live ledger edits were introduced.
+Real browser, assistive technology and narrow-viewport geometry were not exercised. Native details/summary semantics and wrapping were inspected; jsdom tests verify focus, click disclosure, and Enter/Space ticket activation. StrictMode/unmount safety is source-based request-generation evidence, not a claimed browser experiment.
 
-Corrected candidate `AL77-candidate-2-3871cfb9066dccfb` completed all ten focus/model cells: behavior, data/failure, architecture, test effectiveness and frontend async/accessibility under gpt-6.1-sol/high and gpt-6-luna/medium (dispatch acknowledged). Nine returned scoped APPROVED. Architecture reviewer gpt-6-luna/medium claimed a completed-migration cleanup bypass (severity 5); parent gpt-6.1-sol/high refuted it by tracing runtime validation into the canonical DTO check and executing a disposable overlay probe: absent/null/empty/whitespace IDs reject before publication, valid completed-migration control passes. Its CHANGES_REQUESTED is retained with that refuted disposition, not relabeled as child approval. No unresolved introduced blocker remains; integrated gates are pending.
+## Telemetry
 
-Preexisting limitations retained: behavior and data reviewers gpt-6.1-sol/high independently noted recorded-ID/directory divergence can fail existing detail navigation (severity 4); test-effectiveness reviewer gpt-6.1-sol/high identified an unchanged nested-session test masked by an earlier schema error (severity 2). Repository maintainers own separate identity-location and test-fixture maintenance follow-ups; neither changes AL-77 acceptance or authorizes path-based identity inference. Browser/assistive-technology and narrow-viewport geometry remain unperformed, with native semantics/source inspection and jsdom focus/click/ticket-keyboard coverage distinguished from browser proof.
+Final ingestion uses source-grounded explicit selection. Source inventory identifies root `01a1a7d9-4a6e-71b1-8d22-746dc07621b3`, four native children and thirteen independent T3 review roots (mapped to exact run prompts and observed model/effort). Independent review roots have no native parent linkage; all thirteen were ingested explicitly without fabricating one. Root-tree extraction ran last and verification confirmed exact equality with all 18 inventoried source session IDs: the root, four native children with their original parent links, and thirteen independent review roots without invented parents. Every recorded source is codex; every supplemental review session survived final root extraction. No preexisting AL-77 ledger or other-harness session existed to preserve. The built native CLI is used directly from the project directory; --al-offline/--al-project are wrapper flags, and no installed wrapper was available on PATH. Supported native --source codex, --session-id, --nonce and --ticket-type feat were confirmed with generate --help. Initial extraction stopped before publication because the configured local capture coordinate layout lacks its worktree mapping table. Existing state was preserved; explicit --capture-dir selects a new private temporary registry for this manual source-backed extraction. The CLI reports that configured-state limitation on each run; no ledger or successful-empty source result was manufactured. Supplemental review roots use supported explicit --session-id because a nonce in this parent transcript would select the parent rather than those independent roots. The final parent-tree extraction used a literal nonce. All 18 invocation costs remain explicitly unavailable; no pricing or role identity was invented. The rendered capture-observation footer covers the thirteen registry-bound review roots, while the canonical ledger additionally includes the five manually extracted parent-tree sessions. It is not a common as-of snapshot or proof that all eighteen owners were registry-bound. Native role metadata identifies two planners, one coder and one tester; the parent and thirteen T3 roots have no native role metadata and remain Unknown in rendered metrics. The table predates final commit/push/PR bookkeeping by design.
+
+### Workflow Efficiency
+- **Software Development Life Cycle Iterations:** 42
+- **Active Agent Duration:** 1h 17m (excludes user wait time)
+- **Context Window Health:** HEALTHY — Root agent peak 209.3k tokens (47% of 450k healthy ceiling, 0 compactions) | Subagents peak 144.8k (Tester)
+- **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
+- **Subagent Turn Velocity & Thrashing:** 1.8 avg turns/run (peak: 2 turns) | Planner 1.5, Coder 2.0, Tester 2.0
+- **Test-to-Production Code Ratio:** 1.6:1 (+386 test lines / +241 prod lines)
+- **Code Delivered:** +627 / -68 lines across 11 code files (excluding docs)
+- **Reasoning Effort:** 30,573 reasoning tokens (18.3% of generated output)
+- **Tool Health & Self-Correction:** 388 tool calls (19 self-corrections, 95.1% success rate)
+
+### Anomalies & Health Flags
+- **Status:** 1 execution anomaly detected (1 WARNING).
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+106.1k tokens) — Context tokens surged by 106.1k to 106.1k tokens.
+
+### Agentic Execution Metrics
+
+**Contributors:** Nilton Duarte
+
+#### By Subagent Role
+| Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
+|---|---|---|---|---|---|---|---|---|
+| **planner** | 2 | 142,257 | 11,721 | 2,133,376 | 93.7% | 127.7k | HEALTHY | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **coder** | 1 | 108,083 | 18,655 | 5,515,392 | 98.1% | 143.8k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **tester** | 1 | 202,967 | 9,686 | 3,130,112 | 93.9% | 144.8k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Unknown** | 14 | 1,025,796 | 96,146 | 24,069,760 | 95.9% | 209.3k | HEALTHY | Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations) |
+| **Total** | **18** | **1,479,103** | **136,208** | **34,848,640** | **95.9%** | **209.3k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 18 unavailable / 18 invocations)** |
+
+#### By Model
+| Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
+|---|---|---|---|---|---|---|
+| **gpt-6-luna** | 6 | 308,178 | 22,795 | 2,267,392 | 88.0% | Unavailable (0 observed, 0 partial, 6 unavailable / 6 invocations) |
+| **gpt-6.1-sol** | 12 | 1,170,925 | 113,413 | 32,581,248 | 96.5% | Unavailable (0 observed, 0 partial, 12 unavailable / 12 invocations) |
+| **Total** | **18** | **1,479,103** | **136,208** | **34,848,640** | **95.9%** | **Unavailable (0 observed, 0 partial, 18 unavailable / 18 invocations)** |
+
+Capture observation finalized: 2026-11-04T19:59:10.994874303Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 13; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 13; reserved bytes: 9470916. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
+Owner codex/01a1a813-81ce-77c3-bd6e-0312d173487c: current; last successful source read 2026-11-04T19:59:10.791284702Z; accepted source checkpoint 2026-11-04T19:42:16.108Z.
+Owner codex/01a1a813-87f1-7293-b34f-0dcfd86b7ad4: current; last successful source read 2026-11-04T19:59:10.812712967Z; accepted source checkpoint 2026-11-04T19:42:29.751Z.
+Owner codex/01a1a7ec-e048-7742-8033-1b440046bbf9: current; last successful source read 2026-11-04T19:59:10.83059056Z; accepted source checkpoint 2026-11-04T18:59:30.801Z.
+Owner codex/01a1a81a-a3bb-7c93-aa4e-2440c372b161: current; last successful source read 2026-11-04T19:59:10.852591889Z; accepted source checkpoint 2026-11-04T19:49:48.921Z.
+Owner codex/01a1a818-8fe0-7b12-ac4d-7c4829c57bc0: current; last successful source read 2026-11-04T19:59:10.869102155Z; accepted source checkpoint 2026-11-04T19:47:07.215Z.
+Owner codex/01a1a816-ea2f-73a1-b63a-3baf390543b6: current; last successful source read 2026-11-04T19:59:10.889195649Z; accepted source checkpoint 2026-11-04T19:45:59.106Z.
+Owner codex/01a1a7ec-dd54-7532-8b02-2503011e8341: current; last successful source read 2026-11-04T19:59:10.907816964Z; accepted source checkpoint 2026-11-04T19:00:20.587Z.
+Owner codex/01a1a815-a44c-7572-a847-6c2f8bb4d530: current; last successful source read 2026-11-04T19:59:10.66630073Z; accepted source checkpoint 2026-11-04T19:43:29.783Z.
+Owner codex/01a1a816-58e4-7010-840d-a610eed6b2cc: current; last successful source read 2026-11-04T19:59:10.689156839Z; accepted source checkpoint 2026-11-04T19:45:17.865Z.
+Owner codex/01a1a81a-a722-7ea0-aa17-4e4cef3bbe17: current; last successful source read 2026-11-04T19:59:10.706920957Z; accepted source checkpoint 2026-11-04T19:49:29.978Z.
+Owner codex/01a1a813-8493-7fc0-954a-5bd21da98ca3: current; last successful source read 2026-11-04T19:59:10.727439992Z; accepted source checkpoint 2026-11-04T19:41:56.461Z.
+Owner codex/01a1a816-5b56-7092-890b-40e2d72e4905: current; last successful source read 2026-11-04T19:59:10.748600333Z; accepted source checkpoint 2026-11-04T19:45:19.215Z.
+Owner codex/01a1a7ec-e596-73d3-9871-1a29efcc984f: current; last successful source read 2026-11-04T19:59:10.76747632Z; accepted source checkpoint 2026-11-04T18:59:58.171Z.

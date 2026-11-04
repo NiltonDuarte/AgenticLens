@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "BEH-01",
+      "severity": 6,
+      "issue": "Overlap inspection treats directory-inferred ticket IDs as recorded identities.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed in iteration 02: required recorded ticket ID; removed directory/request fallback."
+    }
+  ]
+}

@@ -6,7 +6,7 @@ Status: Approved baseline. User explicitly approved implementation on 2026-11-04
 
 The same recorded session ID can belong to more than one ticket ledger. Show this overlap in the Fleet Overview, identify every affected ticket in the inspected project dataset, and let the user navigate to those tickets and decide how to correct attribution. Metrics may overlap; the platform cannot determine which ticket attribution was intended.
 
-The source requirement is [AL-77](../plan/to-do/AL-77%20warn%20when%20a%20session%20appears%20in%20multiple%20tickets.md). Starting development is authorized by the user's explicit invocation of agentic-lens-dev; the user subsequently selected "Approve implementation" for this contract and iteration 01 plan.
+The source requirement is [AL-77](../plan/done/AL-77%20warn%20when%20a%20session%20appears%20in%20multiple%20tickets.md). Starting development is authorized by the user's explicit invocation of agentic-lens-dev; the user subsequently selected "Approve implementation" for this contract and iteration 01 plan.
 
 ## Frozen acceptance boundaries
 

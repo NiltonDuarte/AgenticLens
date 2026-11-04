@@ -6,13 +6,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 ## In Progress
 
-- **AL-77**: Warn when a session appears in multiple tickets
-  - **Subsystem**: Dashboard / read-only session-to-ticket projection
-  - **Status**: In Progress
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/plan/to-do/AL-77 warn when a session appears in multiple tickets.md`
-
 
 
 
