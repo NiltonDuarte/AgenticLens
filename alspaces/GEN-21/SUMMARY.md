@@ -81,3 +81,12 @@ Final telemetry attempt and PR delivery facts follow below.
 Final iteration-03 Codex telemetry generation was delayed until after reviewed integration, full make and real cleanup verification. Explicit native root 01a1a714-839f-76e2-b7c2-3ec19975a921, fresh literal nonce and conventional type chore were supplied to the built 42d82e6 native. Exit 1: "unsupported capture coordinate layout: worktree mapping table is missing; preserve this state and reset or reinstall capture into a new state directory". No GEN-21 ledger was created or empty metrics fabricated; capture state was preserved. Native session_meta confirms this root and all 11 expected child sessions, and turn_context confirms requested model/effort for each. [Telemetry status](iterations/03/TELEMETRY_STATUS.json) retains source-proven identities and the exact extraction blocker. Source availability is distinct from successful extraction; capture repair/backfill for GEN-21 remains pending on this machine. All 119 historical cleaned ledgers still match their final hashes.
 
 Delivery uses the existing open PR #110: https://github.com/NiltonDuarte/AgenticLens/pull/110. The earlier migration/backfill commits and this reviewed implementation/cleanup are included; no merge or release deployment is performed.
+
+
+## Iteration 04: Capture recovery dependency and local completion
+
+User explicitly authorized controlling the existing fix thread, merging an eligible non-release PR and/or integrating its changes into this branch, and continuing until telemetry works here. Initial Git status clean at 132b3c7. Read the owning thread, which allocated FIX-17 and was planning explicit capture-directory recovery. Sent bounded implementation approval and runtime acceptance; no duplicate ticket/implementation owner was created.
+
+Owner thread: <t3-thread://v2/ccbaed6c-5335-443d-9aaa-69948fbd15d1/956094cc-6f16-46af-b1d3-8b38cf841b87>. Independent owner keeps application changes and its telemetry; GEN-21 owns integration and verification in this checkout. Native source session identities are distinct from T3 thread identifiers. Coordination remains part of active GEN-21, not a switch into FIX-17.
+
+Current state: FIX-17 implementation/review is authorized and running. Integration and successful local generation remain pending; the previously reported capture failure is not yet resolved. The source registry and all 119 historical ledgers are preserved. Host completion notification will resume coordination after the owner's run settles; a plan or owner report alone is not a success claim.
