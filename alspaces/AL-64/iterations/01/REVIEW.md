@@ -1,6 +1,6 @@
 # AL-64 iteration 01 consolidated review
 
-Status: INCOMPLETE; six confirmed issues corrected; user clarification and integrated verification pending; all correction review cells complete.
+Status: INCOMPLETE; six confirmed issues corrected and all correction review cells complete. Integrated make and standalone assets pass; user source-state policy clarification remains pending.
 
 Candidate: AL64-candidate-01 on a84adbe5be46c2ef52ede0987a417562715d38e1; app/test manifest SHA-256 6aab550b873d4b5de1242b889c26bb3b7c6838d4900ecae6d418b426c2a35695. Independent discovery is complete. Coder corrections and tester regressions are now authorized.
 
@@ -52,3 +52,9 @@ Candidate03 architecture and test-effectiveness reviewers gpt-6.1-sol/high issue
 Candidate03 Luna behavior, data and architecture correction reviews issued scoped APPROVED after exact46-path checks with no new distinct findings. Data also independently passed affected race tests. The final Luna test-effectiveness correction cell is running. Existing corrected findings are not unresolved blockers; policy/verification gaps keep the consolidated verdict INCOMPLETE.
 
 All applicable candidate03 persona/profile cells are now scoped APPROVED, with Sol behavior/data carried forward as justified above. The Luna test-effectiveness review verified the discriminating regression oracles and exact frozen file hashes. No confirmed finding remains open. Consolidated delivery remains INCOMPLETE pending the source-interval policy and integrated verification. Parent will commit the reviewed candidate, merge origin/main and run make; these reversible verification steps do not publish or approve the unresolved policy.
+
+## Integrated gate checkpoint
+
+Reviewed implementation commit 44db8658097e9fb27c7ed1149ee132906903d862; origin/main integration was already up to date and introduced no code changes. Parent ran required make successfully, including full race/frontend/check/build gates, and verified the host standalone binary serves exact current canonical HTML/JS/CSS. Source/test scopes remain identical to the frozen candidate03 manifest, so review evidence remains applicable. Full evidence is in SUMMARY.md.
+
+No confirmed bug remains open. Final consolidated approval remains INCOMPLETE because user clarification on source-state/liveness semantics is still pending. No review cleanup is performed: all reports and compact findings remain available. Final telemetry, final delivery commit, push/PR and ticket lifecycle synchronization are deferred until this acceptance boundary is resolved.

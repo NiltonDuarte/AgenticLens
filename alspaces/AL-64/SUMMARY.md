@@ -51,3 +51,17 @@ Final candidate03 manifest: f9b8bb31e5d7a3776adf9fef2b2f3f456711e76bfbceb7f27688
 Native Codex source lifecycle/child ownership records were inspected. Direct unchanged source-copy fresh generation in an isolated project was rejected by the correct source-project ownership boundary. Native Codex generate/refresh remains explicitly unverified; deterministic adapter-to-output regressions pass. No synthetic identity seed, live source edits or early real-ticket telemetry was used to bypass that limit.
 
 All required correction review cells now pass (gpt-6.1-sol/high and gpt-6-luna/medium), with dependency-justified carryforward of Sol behavior/data correction approvals. All six issues are fixed and regression-verified. Parent is committing the candidate for upstream integration and required make. The source-state/liveness clarification still gates final approval/publication; detailed active review evidence is retained until that gate is resolved. Telemetry remains deferred.
+
+## Integrated verification in progress
+
+Implementation commit: 44db8658097e9fb27c7ed1149ee132906903d862. origin/main a84adbe5be46c2ef52ede0987a417562715d38e1 was already integrated, so reviewed product/test evidence remains applicable. Parent started required make; final result and standalone asset verification are not yet recorded.
+
+[Compact findings and discovery credit](iterations/01/REVIEW_SUMMARY.json) records all six corrected findings and all independent reporting persona/model/effort tuples. Detailed reports remain active because the source-state/liveness clarification and final consolidated delivery approval are pending. No review evidence has been deleted. Coder/tester/re-review confirmation is verification credit, distinct from the retained discovery tuples.
+
+## Integrated verification result
+
+Parent verified implementation revision 44db8658097e9fb27c7ed1149ee132906903d862 after origin/main integration (already up to date). Required make passed exit 0: dependency setup, frontend build, Go vet/frontend typecheck/lint, repository release/install/capture checks, all Go race packages, all 834 frontend tests across 37 files, canonical frontend rebuild and all configured platform binaries. Full command log remains outside Git at /tmp/al64-integrated-make.log. No application/test files changed during verification.
+
+Parent verified standalone bin/agentic-lens-linux-amd64 reports commit 44db8658. In an isolated empty-workspace server run with unavailable hydration, HTTP index and both bundled assets matched web/dist and backend/internal/adapters/web/dist byte for byte. JavaScript index-z1wgKOcT.js SHA256 359da8a14fe52b72dd85ce196db33a3eb1d5c85e2fc76427308d97cb9f991869; CSS index-C3WE_otj.css SHA256 da46ce98a0a085703e286d00d417781999b3525de6b168d8a68d2005db46d4ba. The probe server exited and its disposable workspace was removed.
+
+Consolidated status remains INCOMPLETE solely for the pending acceptance-policy clarification on explicitly open native intervals versus live-process proof. Native Codex fresh generation/refresh remains an explicitly unverified runtime path after isolated project-ownership rejection; deterministic regressions and real source lifecycle evidence are retained. All confirmed correctness findings are fixed and scoped reviews pass. No final approval, publication, ticket completion or real-ticket telemetry is claimed. Existing implementation approval is preserved; the pending question only concerns the discovered source-state ambiguity.

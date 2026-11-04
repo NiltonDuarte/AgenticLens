@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "DUR-01",
+      "severity": 5,
+      "issue": "Invalid Codex completion timestamps mislabeled known duration as complete.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: preserve measured subtotal and mark invalid completion coverage partial."
+    },
+    {
+      "finding_id": "DUR-02",
+      "severity": 6,
+      "issue": "Later v1 part updates suppressed an interval proven open at the cutoff.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: use native activity start rather than generic progress update time."
+    },
+    {
+      "finding_id": "DUR-03",
+      "severity": 6,
+      "issue": "Future v1 messages erased provisional time supported at an earlier cutoff.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: bound superseding messages by the snapshot cutoff."
+    },
+    {
+      "finding_id": "DUR-04",
+      "severity": 4,
+      "issue": "Fallback OpenCode recovery discarded the operation cutoff.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: propagate the supplied cutoff through fallback tree extraction."
+    },
+    {
+      "finding_id": "DUR-05",
+      "severity": 5,
+      "issue": "Both OpenCode no-tool streaming paths could regress without test failures.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: add native-shaped v1 text/reasoning and v2 idle-null streaming oracles verified against path-removal mutants."
+    },
+    {
+      "finding_id": "DUR-06",
+      "severity": 5,
+      "issue": "Missing or malformed Codex start timestamps mislabeled known duration as complete.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: mark invalid starts partial without inventing an interval; discovered during correction re-review."
+    }
+  ]
+}
