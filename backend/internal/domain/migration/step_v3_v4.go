@@ -32,15 +32,15 @@ func (s *StepV3ToV4UserIterations) Description() string {
 }
 
 // Apply executes the pure migration from schema v3 to schema v4.
-func (s *StepV3ToV4UserIterations) Apply(ledger domain.AgenticFactLedger) (domain.AgenticFactLedger, error) {
+func (s *StepV3ToV4UserIterations) Apply(ledger legacyLedger) (legacyLedger, error) {
 	// Reapply the current persistence allowlist at the schema boundary. Some v3
 	// ledgers predate the event payload sanitizer and may still contain error text.
 	// Use the error-returning canonicalizer so required evidence without a stable
 	// source ID fails migration with a record-level diagnostic instead of being
 	// silently dropped by the legacy slice-only pruning helper.
-	cloned, err := domain.PersistAnomalySummaries(ledger)
+	cloned, err := legacyPersistAnomalySummaries(ledger)
 	if err != nil {
-		return domain.AgenticFactLedger{}, err
+		return legacyLedger{}, err
 	}
 	targetVer := 4
 	cloned.SchemaVersion = &targetVer

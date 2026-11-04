@@ -17,17 +17,17 @@ func (s *StepV5ToV6OwnedOccurrences) TargetVersion() int { return 6 }
 func (s *StepV5ToV6OwnedOccurrences) Description() string {
 	return "Moves reliably attributed occurrences and drops ownerless legacy skill/task rows"
 }
-func (s *StepV5ToV6OwnedOccurrences) Apply(ledger domain.AgenticFactLedger) (domain.AgenticFactLedger, error) {
+func (s *StepV5ToV6OwnedOccurrences) Apply(ledger legacyLedger) (legacyLedger, error) {
 	result := ledger
-	result.Sessions = append([]domain.SessionFact(nil), ledger.Sessions...)
+	result.Sessions = append([]legacySessionFact(nil), ledger.Sessions...)
 	byID := make(map[string]int)
 	for i := range result.Sessions {
 		byID[result.Sessions[i].ID] = i
-		result.Sessions[i].Skills = append([]domain.SkillFact(nil), result.Sessions[i].Skills...)
+		result.Sessions[i].Skills = append([]legacySkillFact(nil), result.Sessions[i].Skills...)
 		for j := range result.Sessions[i].Skills {
 			normalizeLegacySkill(&result.Sessions[i].Skills[j])
 		}
-		result.Sessions[i].TaskLinks = append([]domain.TaskLinkFact(nil), result.Sessions[i].TaskLinks...)
+		result.Sessions[i].TaskLinks = append([]legacyTaskLinkFact(nil), result.Sessions[i].TaskLinks...)
 		for j := range result.Sessions[i].TaskLinks {
 			if result.Sessions[i].TaskLinks[j].Outcome == "" {
 				result.Sessions[i].TaskLinks[j].Outcome = domain.OutcomeUnknown
@@ -102,7 +102,7 @@ func sameNativeOccurrence(a, b domain.FactProvenance) bool {
 	return a.EventID != "" && b.EventID != "" && a.EventID == b.EventID
 }
 
-func normalizeLegacySkill(fact *domain.SkillFact) {
+func normalizeLegacySkill(fact *legacySkillFact) {
 	if fact.Outcome == "" {
 		fact.Outcome = domain.OutcomeFailed
 		if fact.Success {

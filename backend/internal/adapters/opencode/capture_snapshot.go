@@ -12,7 +12,7 @@ import (
 // CaptureSessionSnapshot reads one exact owner from the selected schema family.
 // The caller supplies a dedicated read-only DB. A single connection keeps the
 // preflight and extraction in one consistent SQLite read transaction.
-func CaptureSessionSnapshot(ctx context.Context, db *sql.DB, id, user string, budget int64) (sessions []domain.SessionFact, bytes int64, updated string, err error) {
+func CaptureSessionSnapshot(ctx context.Context, db *sql.DB, id, user string, budget int64, source ...*domain.SourceEvents) (sessions []domain.SessionFact, bytes int64, updated string, err error) {
 	if _, err = sanitizeSessionID(id); err != nil {
 		return
 	}
@@ -59,13 +59,22 @@ func CaptureSessionSnapshot(ctx context.Context, db *sql.DB, id, user string, bu
 		err = fmt.Errorf("%w: session source snapshot requires %d bytes", ErrCaptureBudget, bytes)
 		return
 	}
-	if family == schemaFamilyV2 {
-		sessions, _, _, err = extractSchemaV2Sessions(db, []string{id}, user, nil, true)
-	} else {
-		sessions, _, _, err = extractSchemaV1Sessions(db, []string{id}, user, nil, true, true)
+	var events []domain.EventFact
+	var sink *[]domain.EventFact
+	if len(source) > 0 {
+		sink = &events
 	}
-	if err == nil {
-		sessions = WithOwnedSkillTaskFacts(sessions)
+	if family == schemaFamilyV2 {
+		sessions, _, _, err = extractSchemaV2SessionsWithEvents(db, []string{id}, user, nil, true, sink, true)
+	} else {
+		sessions, _, _, err = extractSchemaV1SessionsWithEvents(db, []string{id}, user, nil, true, sink, true)
+	}
+	if err == nil && len(source) > 0 {
+		fresh := domain.SourceEvents{Events: events}
+		for _, owner := range sessions {
+			fresh.CompleteSessionIDs = append(fresh.CompleteSessionIDs, owner.ID)
+		}
+		*source[0] = domain.MergeSourceEvents(*source[0], fresh)
 	}
 	return
 }

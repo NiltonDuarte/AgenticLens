@@ -59,30 +59,26 @@ func ThreadExecutionRecordDTOsFromDomain(values []domain.ThreadExecutionRecord) 
 
 // SessionFactResponseDTO is the concrete nullable cost projection of SessionFact.
 type SessionFactResponseDTO struct {
-	EventsArePartial bool                         `json:"events_are_partial,omitempty"`
-	AgentPath        string                       `json:"agent_path,omitempty"`
-	Skills           []domain.SkillFact           `json:"skills,omitempty"`
-	TaskLinks        []adapters.TaskLinkFactDTO   `json:"task_links,omitempty"`
-	ID               string                       `json:"id"`
-	ParentID         *string                      `json:"parent_id,omitempty"`
-	Source           domain.SourceHarness         `json:"source,omitempty"`
-	User             string                       `json:"user,omitempty"`
-	Invocations      []adapters.InvocationFactDTO `json:"invocations"`
-	Tools            []domain.SessionToolFact     `json:"tools"`
-	Events           []domain.SessionEventFact    `json:"events,omitempty"`
-	Anomalies        []domain.Anomaly             `json:"anomalies"`
+	Skills      []adapters.SkillFactDTO      `json:"skills,omitempty"`
+	Delegations []adapters.DelegationFactDTO `json:"delegations,omitempty"`
+	ID          string                       `json:"id"`
+	ParentID    *string                      `json:"parent_id,omitempty"`
+	Source      domain.SourceHarness         `json:"source,omitempty"`
+	User        string                       `json:"user,omitempty"`
+	Invocations []adapters.InvocationFactDTO `json:"invocations"`
+	Tools       []domain.SessionToolFact     `json:"tools"`
+	Anomalies   []domain.Anomaly             `json:"anomalies"`
 }
 
 func SessionFactResponseDTOFromDomain(value domain.SessionFact) SessionFactResponseDTO {
 	return SessionFactResponseDTO{
-		EventsArePartial: value.EventsArePartial, Skills: value.Skills, TaskLinks: adapters.TaskLinkFactDTOsFromDomain(value.TaskLinks),
-		AgentPath: value.AgentPath, ID: value.ID,
+		Skills: adapters.SessionFactDTOFromDomain(value).Skills, Delegations: adapters.SessionFactDTOFromDomain(value).Delegations,
+		ID:          value.ID,
 		ParentID:    value.ParentID,
 		Source:      value.Source,
 		User:        value.User,
 		Invocations: adapters.InvocationFactDTOsFromDomain(value.Invocations),
 		Tools:       value.Tools,
-		Events:      value.Events,
 		Anomalies:   value.Anomalies,
 	}
 }
@@ -114,7 +110,6 @@ type FactLedgerResponseDTO struct {
 }
 
 func FactLedgerResponseDTOFromDomain(value domain.AgenticFactLedger) FactLedgerResponseDTO {
-	value.Sessions = domain.ResolveTaskChildren(value.Sessions)
 	return FactLedgerResponseDTO{
 		SchemaVersion: value.SchemaVersion,
 		Migration:     value.Migration,

@@ -110,6 +110,10 @@ func WriteProjectConfigResponse(w http.ResponseWriter, dto ProjectConfigDTO) {
 
 // WriteEventsResponse writes a domain.WorkspaceEventsResponse as JSON.
 func WriteEventsResponse(w http.ResponseWriter, resp domain.WorkspaceEventsResponse) {
+	if err := resp.Validate(); err != nil {
+		WriteError(w, http.StatusInternalServerError, "invalid_trace_response", err.Error())
+		return
+	}
 	if resp.Events == nil {
 		resp.Events = []domain.EventFact{}
 	}

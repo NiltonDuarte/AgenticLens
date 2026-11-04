@@ -231,6 +231,8 @@ const (
 	DataSourceLocalSQLite     DataSource = "local_sqlite"
 	DataSourceLocalCodex      DataSource = "local_codex"
 	DataSourceCommittedLedger DataSource = "committed_ledger"
+	DataSourceUnavailable     DataSource = "unavailable"
+	DataSourceMixed           DataSource = "mixed_sources"
 )
 
 // AnomalySeverity defines the severity classification of a detected anomaly.

@@ -1,4 +1,3 @@
-import { skillSuccessRate } from '../domain/aggregations';
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import type { FleetSummary, TicketComparisonRow, TimeWindowPreset, WorkspaceDiagnostic } from '../domain/types';
 import {
@@ -111,7 +110,6 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
   }, [loadData]);
 
   const skillAdoption = summary?.skill_adoption ?? [];
-  const successRate = skillSuccessRate(skillAdoption);
 
   const dateFilterControl = (
     <section className="date-filter-bar" aria-label="Date Range Filter">
@@ -253,7 +251,7 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
             <div className="kpi-card">
               <h2 className="kpi-title">Skill Adoption</h2>
               <div className="kpi-value mono-number">{skillAdoption.length} unique skills</div>
-              <p>Overall skill success rate: {successRate === null ? 'Unavailable' : formatPercentage(successRate)}</p>
+              <p>{skillAdoption.reduce((total, skill) => total + skill.total_invocations, 0)} activations</p>
               {skillAdoption.length === 0 ? <p>No recorded skills</p> : (
                 <ol aria-label="Top skills">
                   {skillAdoption.slice(0, 3).map((skill) => (

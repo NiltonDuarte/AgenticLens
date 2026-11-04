@@ -127,3 +127,34 @@ Successful built-source CLI generation used literal nonce 7ea42988833fd9d0, --so
 A standalone isolated API run reloaded this ACTUAL generated ledger with source DB absent: all 13 child-session links resolve from stored native metadata; fleet skill_adoption contains exactly one invocation, 0 known outcomes, 1 unknown outcome. Current API contains only session-owned arrays, and GET left ledger bytes unchanged. Test server stopped. This is real source->generation->save/reload->API/fleet verification, distinct from synthetic regression fixtures and without changing live AL-55 data. Frontend source-shaped fixture/DOM tests cover the rendered consumers.
 
 The temporary ignored local overlay was removed and shared configuration SHA 6271a7a0e1b8b6482df6ea0dabfef4aa7624f16ea396c6dbf1e780c5551a7339 remained unchanged. Old shared operational state was not reset or upgraded. Source-native metrics cover only the 14 proven sessions, not the 8 unbound T3 service review sessions described above. Source costs are unavailable; no estimates or measured zeros were invented. Rendered native metrics: 3h 27m active agent duration, 99.0% cache hits, 449.8k peak context/CRITICAL. Capture collection counters describe the separate registered collection, not the 14 exact native rollout reads.
+
+## Iteration 03: planning-only follow-up
+
+Source: the user agreed to lean skill activation records, renamed task_links to delegations, accepted the lean delegation starting point, clarified that traces come from hydration, and requested a written plan without implementation. [PLAN.md](iterations/03/PLAN.md) captures the material delta, exact fields/nullability, preserved guarantees, superseded decisions, migration and verification impact.
+
+Proposed skills contain only name, caller_role and invoked_at. Proposed delegations contain agent_type, optional description, invoked_at and optional proven child_session_id. Source-unknown role/type/time is represented explicitly without discarding the occurrence. Success/outcome/rate analytics, rich provenance/opaque references and duplicated delegation cost/duration are retired. Canonical session events, events_are_partial and orphaned persisted agent_path are removed; a separate source-only transient trace response remains. Missing source means unavailable trace, while saved lean facts, metrics and summaries remain readable.
+
+Planning baseline is clean commit 5e4eb34019370150786085d69c47987b328e4e79. The existing PR remains open at that delivered iteration 02 head; these planning changes are local and unpublished. Only iteration 03 PLAN.md, the contract planning pointer and this summary change. No application code, tests, schema, source data, existing telemetry or prior review evidence changed. No implementation, migration, telemetry generation, commit or push was performed for this request. Documentation whitespace validation passed; application suites were not rerun for planning-only edits. Explicit execution approval remains required.
+
+## Iteration 03 approval and execution
+
+User explicitly approved the iteration 03 plan and requested implementation. Initial execution HEAD is 5e4eb34019370150786085d69c47987b328e4e79 on the existing AL-62 branch. Initial status contains only the three task-owned planning documents staged in the prior planning turn; no unrelated changes observed. PR109 is open at that same head. The earlier planning-only restriction is superseded for this approved scope. Backend/frontend implementation remains delegated; parent owns artifacts, integration, review, telemetry and delivery.
+
+## Iteration 03 frozen review candidate
+
+Implementation and development test owners paused product/test writes. Candidate source fingerprint 86056b01ea7de69f2d4dec91fde1de9fd5d9c451d4de34260f1aa8a77d68ed7f (449 files) against 5e4eb34019370150786085d69c47987b328e4e79. Independent behavior, data/failure and architecture gpt-6.1-sol/high discovery launched; remaining test focus and paired gpt-6-luna/medium cells are queued for capacity-limited waves. No final review approval or integrated make claim yet.
+
+Development evidence: affected domain/source/adapter/capture/backfill/live/migration checks pass; CLI full 91.210s before final summary changes plus affected 9.362s after them; final frontend 825 tests/typecheck/lint/build and assigned HTTP tests pass. Assertions for retired fields/rates/stored traces have named replacements or explicit retirement rationale in iteration 03 implementation/test reports. Parent retains full integrated race/build/standalone gate.
+
+## Iteration 03 first review and corrections
+
+All eight discovery cells completed on candidate 86056b01ea7de69f2d4dec91fde1de9fd5d9c451d4de34260f1aa8a77d68ed7f: four Sol/high cells requested changes; four Luna/medium cells reported no blocking findings. Parent confirmed three distinct contract defects from isolated production probes. BEH-01 incorrect OpenCode v2 invocation times was independently reported by behavior, data and test-effectiveness reviewers (gpt-6.1-sol/high); DATA-01 contradicted OpenCode child link by data reviewer (gpt-6.1-sol/high); ARCH-01 cached-snapshot recovery deadlock by architecture reviewer (gpt-6.1-sol/high). No publication approval yet.
+
+Backend coder (gpt-6.1-sol/high) owns production corrections; tester (gpt-6.1-sol/high) owns backend tests except HTTP, which remains frontend-owned. Current schema/lean shapes and transient-only traces remain as approved. Corrections preserve actual native call times/nullability, omit contradicted child links without losing delegations, and make incompatible cache metadata recoverable through fresh source extraction without accepting old rich facts or adding sidecars. Source/test freeze lifted only after all first passes finished.
+
+
+## Iteration 03 corrected candidate
+
+Corrected source fingerprint e34012d258ae0f1e37421e439956ba14040efac323bb12b19220a49a7ce0394a covers 451 tracked/untracked source, fixture and guidance files against baseline 5e4eb34019370150786085d69c47987b328e4e79. Backend coder and tester (both gpt-6.1-sol/high) froze writes. The exact original reviewer counterexamples now pass unchanged; durable correction tests pass through native extraction, capture, migration, save/reload and actual registered-only CLI. Missing/malformed refresh retains owner and root-summary JSON bytes, costs, registration bindings and opaque cache until complete native recovery; existing observation timestamps may advance.
+
+Behavior, data-integrity and architecture correction reviewers (gpt-6.1-sol/high) independently confirmed the corrected fingerprint and approved their bounded scopes. Remaining required correction cells and integrated checks are still pending at this checkpoint. No product changes were made during either frozen review wave.

@@ -1,7 +1,7 @@
 {
-  "schema_version": 6,
+  "schema_version": 7,
   "migration": {
-    "schema_version": 6,
+    "schema_version": 7,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -83,7 +83,6 @@
           "errors": 0
         }
       ],
-      "events": [],
       "anomalies": []
     },
     {
@@ -116,7 +115,6 @@
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     },
     {
@@ -149,7 +147,6 @@
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     },
     {
@@ -182,7 +179,6 @@
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     },
     {
@@ -215,8 +211,8 @@
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     }
-  ]
+  ],
+  "anomalies": []
 }

@@ -1,5 +1,5 @@
 import { validateFleetCosts, validateLedgerCosts } from './costValidation';
-import type { AgenticMetricsLedger, Anomaly, BuildInfo, EventFact, FleetSummary, ProjectConfigResponse, WorkspaceDetail } from '../domain/types';
+import type { AgenticMetricsLedger, Anomaly, BuildInfo, EventFact, FleetSummary, ProjectConfigResponse, WorkspaceDetail, WorkspaceEventsResponse } from '../domain/types';
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -21,7 +21,7 @@ const health = (value: unknown): boolean => value === 'HEALTHY' || value === 'EL
 function eventFields(value: Record<string, unknown>): boolean {
   return fields(value, ['timestamp', 'role', 'status'], string) && fields(value, ['turn', 'context_tokens'], number) &&
     (value.event_type === 'tool_call' || value.event_type === 'turn_message' || value.event_type === 'compaction' || value.event_type === 'skill_activation') &&
-    (value.call_id === undefined || string(value.call_id)) &&
+    fields(value, ['call_id', 'skill_name', 'child_session_id'], (member) => member === undefined || (typeof member === 'string' && member.trim().length > 0)) &&
     fields(value, ['event_id', 'message_id', 'tool_name', 'error_message', 'prompt_content', 'reasoning_content', 'tool_input', 'tool_output'], optionalString) &&
     (value.duration_ms === null || optionalNumber(value.duration_ms));
 }
@@ -47,32 +47,30 @@ function invocation(value: unknown): boolean {
     fields(value, ['active_duration_seconds', 'turns', 'compactions'], number) && (value.cost_usd === undefined || nullableNumber(value.cost_usd)) && optionalNumber(value.user_iterations) &&
     isRecord(value.tokens) && fields(value.tokens, ['input', 'output', 'cache_read', 'reasoning', 'peak_context'], number);
 }
-function provenance(value: unknown): boolean {
-  return isRecord(value) && fields(value, ['source_ref', 'item_id', 'event_id', 'message_id', 'call_id', 'turn_id'], (v) => v === undefined || string(v));
+function exactFields(value: Record<string, unknown>, allowed: readonly string[]): boolean {
+  return Object.keys(value).every((key) => allowed.includes(key));
 }
-function occurrence(value: Record<string, unknown>): boolean {
-  return (value.session_id === undefined || string(value.session_id)) &&
-    (value.source === undefined || value.source === 'unknown' || value.source === 'opencode' || value.source === 'codex') &&
-    (value.outcome === undefined || value.outcome === 'unknown' || value.outcome === 'succeeded' || value.outcome === 'failed') &&
-    (value.provenance === undefined || provenance(value.provenance));
+function knownOrNull(value: unknown): boolean {
+  return value === null || (typeof value === 'string' && value.trim().length > 0);
 }
 function skill(value: unknown): boolean {
-  return isRecord(value) && value.outcome !== undefined && occurrence(value) && fields(value, ['name', 'caller_role', 'timestamp'], string) &&
-    fields(value, ['turn_index', 'message_index'], number) && typeof value.success === 'boolean' &&
-    fields(value, ['error', 'path', 'evidence_kind'], (v) => v === undefined || string(v)) && optionalArray(value.evidence_references, provenance);
+  return isRecord(value) && exactFields(value, ['name', 'caller_role', 'invoked_at']) &&
+    typeof value.name === 'string' && value.name.trim().length > 0 &&
+    knownOrNull(value.caller_role) && knownOrNull(value.invoked_at);
 }
-function taskLink(value: unknown): boolean {
-  return isRecord(value) && value.outcome !== undefined && occurrence(value) && fields(value, ['subagent_type', 'description', 'timestamp'], string) &&
-    number(value.parent_turn) && fields(value, ['child_session_id', 'child_reference', 'child_agent_id', 'child_link_diagnostic', 'error'], (v) => v === undefined || string(v)) &&
-    optionalNumber(value.duration_ms) && (value.cost_usd === undefined || nullableNumber(value.cost_usd));
+function delegation(value: unknown): boolean {
+  return isRecord(value) && exactFields(value, ['agent_type', 'description', 'invoked_at', 'child_session_id']) &&
+    knownOrNull(value.agent_type) && knownOrNull(value.invoked_at) &&
+    (value.description === undefined || string(value.description)) &&
+    (value.child_session_id === undefined || (typeof value.child_session_id === 'string' && value.child_session_id.trim().length > 0));
 }
 function session(value: unknown): boolean {
-  return isRecord(value) && (value.events_are_partial === undefined || typeof value.events_are_partial === 'boolean') && string(value.id) && optionalString(value.parent_id) && (value.agent_path === undefined || string(value.agent_path)) &&
+  return isRecord(value) && string(value.id) && optionalString(value.parent_id) &&
     (value.source === undefined || value.source === 'unknown' || value.source === 'opencode' || value.source === 'codex') &&
     (value.user === undefined || string(value.user)) && array(value.invocations, invocation) &&
     array(value.tools, (v) => isRecord(v) && string(v.name) && fields(v, ['calls', 'errors'], number)) &&
-    optionalArray(value.events, (v) => isRecord(v) && eventFields(v)) && optionalArray(value.anomalies, isAnomaly) &&
-    optionalArray(value.skills, skill) && optionalArray(value.task_links, taskLink);
+    optionalArray(value.anomalies, isAnomaly) && optionalArray(value.skills, skill) && optionalArray(value.delegations, delegation) &&
+    !['events', 'events_are_partial', 'agent_path', 'task_links'].some((key) => Object.hasOwn(value, key));
 }
 function ticketMetadata(value: Record<string, unknown>): boolean {
   return fields(value, ['ticket_id', 'ticket_title', 'ticket_type', 'started_at', 'completed_at'], nullableString) && string(value.updated_at);
@@ -83,11 +81,11 @@ function migration(value: unknown): boolean {
     (value.notes === undefined || string(value.notes));
 }
 function facts(value: unknown): boolean {
-  return isRecord(value) && ticketMetadata(value) && value.schema_version === 6 &&
+  return isRecord(value) && ticketMetadata(value) && value.schema_version === 7 &&
     (value.migration === undefined || migration(value.migration)) && isRecord(value.code) &&
     fields(value.code, ['lines_added', 'lines_deleted', 'test_lines_added', 'test_lines_deleted', 'prod_lines_added', 'prod_lines_deleted', 'files_changed', 'sdlc_iterations'], number) &&
     array(value.sessions, session) && optionalArray(value.anomalies, isAnomaly) &&
-    !['invocations', 'tools', 'events', 'skills', 'task_links', 'unresolved_facts'].some((key) => Object.hasOwn(value, key));
+    !['invocations', 'tools', 'events', 'events_are_partial', 'skills', 'task_links', 'delegations', 'unresolved_facts'].some((key) => Object.hasOwn(value, key));
 }
 function workflow(value: unknown): boolean {
   if (!isRecord(value)) return false;
@@ -120,7 +118,7 @@ function prepareLedger(value: unknown): unknown {
   if (!isRecord(result)) return result;
   const rawFacts = collections(result.facts, ['sessions', 'anomalies']);
   if (isRecord(rawFacts)) {
-    if (Array.isArray(rawFacts.sessions)) rawFacts.sessions = rawFacts.sessions.map((s: unknown) => collections(s, ['invocations', 'tools', 'events', 'anomalies', 'skills', 'task_links']));
+    if (Array.isArray(rawFacts.sessions)) rawFacts.sessions = rawFacts.sessions.map((s: unknown) => collections(s, ['invocations', 'tools', 'anomalies', 'skills', 'delegations']));
     if (rawFacts.migration !== undefined) rawFacts.migration = collections(rawFacts.migration, ['steps_completed', 'steps_pending']);
     result.facts = rawFacts;
   }
@@ -153,7 +151,7 @@ function isFleet(value: unknown): value is FleetSummary {
     nullableNumber(value.total_cost_usd) && string(value.formatted_total_duration) && nullableNumericMap(value.role_costs) && nullableNumericMap(value.model_costs) &&
     fields(anomaly, ['total_anomalies', 'warning_count', 'critical_count', 'total_tickets', 'tickets_with_anomalies', 'anomaly_rate_per_ticket'], number) && numericMap(anomaly.severity_counts) && numericMap(anomaly.rule_counts) &&
     array(anomaly.brittle_tools, (v) => isRecord(v) && string(v.tool_name) && fields(v, ['anomaly_count', 'total_calls', 'error_count', 'failure_rate_pct'], number)) &&
-    optionalArray(value.skill_adoption, (v) => isRecord(v) && string(v.name) && fields(v, ['total_invocations', 'tickets_count', 'failure_count', 'failure_rate'], number) && number(v.known_outcomes) && number(v.unknown_outcomes));
+    optionalArray(value.skill_adoption, (v) => isRecord(v) && string(v.name) && fields(v, ['total_invocations', 'tickets_count'], number));
 }
 export function decodeFleet(value: unknown): FleetSummary {
   const result = collections(value, ['skill_adoption'], ['role_costs', 'model_costs']);
@@ -190,4 +188,38 @@ export function isBuildInfo(value: unknown): value is BuildInfo {
 export function isProjectConfig(value: unknown): value is ProjectConfigResponse {
   return isRecord(value) && fields(value, ['project_name', 'workspaces_dir', 'version'], string) && strings(value.role_order) &&
     array(value.prefixes, (v) => isRecord(v) && fields(v, ['prefix', 'description'], string) && (v.ticket_type === undefined || string(v.ticket_type)));
+}
+
+/** Validate the same source-only availability and owner coverage as the Go trace response. */
+export function decodeWorkspaceEvents(value: unknown, ticketId: string): WorkspaceEventsResponse {
+  const invalidResponse = (): never => { throw new Error(`Invalid workspace events response for ${ticketId}`); };
+  const stringArray = (member: unknown): member is readonly string[] => Array.isArray(member) && member.every(string);
+  if (!isRecord(value) || value.ticket_id !== ticketId || typeof value.is_hydrated !== 'boolean' ||
+    Object.hasOwn(value, 'includes_baseline') ||
+    (value.availability !== 'complete' && value.availability !== 'partial' && value.availability !== 'unavailable') ||
+    (value.data_source !== 'unavailable' && value.data_source !== 'mixed_sources' && value.data_source !== 'local_sqlite' && value.data_source !== 'local_codex') ||
+    !isRecord(value.coverage) || !stringArray(value.coverage.required_session_ids) || !stringArray(value.coverage.complete_session_ids) || !stringArray(value.coverage.diagnostics) ||
+    !Array.isArray(value.events) || !value.events.every(isEventFact) ||
+    (value.anomalies != null && (!Array.isArray(value.anomalies) || !value.anomalies.every(isAnomaly)))) return invalidResponse();
+  const coverage = value.coverage;
+  const requiredIds = coverage.required_session_ids;
+  const completeIds = coverage.complete_session_ids;
+  const diagnostics = coverage.diagnostics;
+  // Recheck the narrowed record members here so their concrete types survive the alias.
+  if (!stringArray(requiredIds) || !stringArray(completeIds) || !stringArray(diagnostics)) return invalidResponse();
+  const required = new Set(requiredIds);
+  const complete = new Set(completeIds);
+  if (required.size !== requiredIds.length || requiredIds.some((id) => !id) ||
+    complete.size !== completeIds.length || completeIds.some((id) => !required.has(id)) ||
+    value.events.some((event) => !required.has(event.session_id))) return invalidResponse();
+  if (value.availability === 'unavailable') {
+    if (value.is_hydrated || value.events.length > 0 || complete.size > 0 || value.data_source !== 'unavailable') return invalidResponse();
+  } else {
+    if (!value.is_hydrated || value.data_source === 'unavailable') return invalidResponse();
+    if (value.availability === 'complete' && (required.size === 0 || complete.size !== required.size || diagnostics.length > 0)) return invalidResponse();
+    if (value.availability === 'partial' && ((value.events.length === 0 && complete.size === 0) || (complete.size === required.size && diagnostics.length === 0))) return invalidResponse();
+  }
+  return { ticket_id: ticketId, is_hydrated: value.is_hydrated, availability: value.availability, data_source: value.data_source,
+    events: value.events, coverage: { required_session_ids: requiredIds, complete_session_ids: completeIds, diagnostics },
+    ...(value.anomalies == null ? {} : { anomalies: value.anomalies }) };
 }

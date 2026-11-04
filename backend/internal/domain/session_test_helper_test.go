@@ -44,7 +44,7 @@ func sessionFacts(invocations []domain.InvocationFact, tools []domain.ToolFact, 
 			sessions[i].Anomalies = []domain.Anomaly{}
 		}
 	}
-	return sessions
+	return fixtureSourceSummaries(sessions, events)
 }
 
 type testSessionOpt func(*domain.SessionFact, *domain.InvocationFact)
@@ -140,7 +140,6 @@ func sessionFactsWithInvs(invs []testInvFact, tools []domain.ToolFact, events []
 				},
 			},
 			Tools:     []domain.SessionToolFact{},
-			Events:    []domain.SessionEventFact{},
 			Anomalies: []domain.Anomaly{},
 		}
 		sessions = append(sessions, sess)
@@ -161,7 +160,6 @@ func testSession(id string, parentID *string, role domain.AgentRole, opts ...tes
 			},
 		},
 		Tools:     []domain.SessionToolFact{},
-		Events:    []domain.SessionEventFact{},
 		Anomalies: []domain.Anomaly{},
 	}
 	for _, opt := range opts {
@@ -171,7 +169,6 @@ func testSession(id string, parentID *string, role domain.AgentRole, opts ...tes
 }
 
 func sessionFactsFromSessions(sessions []domain.SessionFact, tools []domain.ToolFact, events []domain.EventFact) []domain.SessionFact {
-	sessMap := make(map[string]*domain.SessionFact, len(sessions))
 	for i := range sessions {
 		if sessions[i].User == "" {
 			sessions[i].User = "fixture-user"
@@ -179,38 +176,10 @@ func sessionFactsFromSessions(sessions []domain.SessionFact, tools []domain.Tool
 		if sessions[i].Anomalies == nil {
 			sessions[i].Anomalies = []domain.Anomaly{}
 		}
-		if sessions[i].Tools == nil {
-			sessions[i].Tools = []domain.SessionToolFact{}
-		}
-		if sessions[i].Events == nil {
-			sessions[i].Events = []domain.SessionEventFact{}
-		}
-		sessMap[sessions[i].ID] = &sessions[i]
-	}
-	for _, tool := range tools {
-		if sess, ok := sessMap[tool.SessionID]; ok {
-			sess.Tools = append(sess.Tools, domain.SessionToolFact{
-				Name:   tool.Name,
-				Calls:  tool.Calls,
-				Errors: tool.Errors,
-			})
-		}
-	}
-	for _, ev := range events {
-		if sess, ok := sessMap[ev.SessionID]; ok {
-			sess.Events = append(sess.Events, domain.SessionEventFact{
-				EventID:       ev.EventID,
-				Timestamp:     ev.Timestamp,
-				MessageID:     ev.MessageID,
-				Turn:          ev.Turn,
-				Role:          ev.Role,
-				EventType:     ev.EventType,
-				ToolName:      ev.ToolName,
-				Status:        ev.Status,
-				ErrorMessage:  ev.ErrorMessage,
-				DurationMs:    ev.DurationMs,
-				ContextTokens: ev.ContextTokens,
-			})
+		for _, tool := range tools {
+			if tool.SessionID == sessions[i].ID {
+				sessions[i].Tools = append(sessions[i].Tools, domain.SessionToolFact{Name: tool.Name, Calls: tool.Calls, Errors: tool.Errors})
+			}
 		}
 	}
 	return sessions
@@ -237,4 +206,16 @@ func fixtureInvocationSessions(invocations []domain.InvocationFact) []domain.Ses
 		return nil
 	}
 	return []domain.SessionFact{{ID: "fixture-session", Source: domain.SourceOpenCode, User: "fixture-user", Invocations: invocations}}
+}
+
+func fixtureSourceSummaries(sessions []domain.SessionFact, events []domain.EventFact) []domain.SessionFact {
+	ids := []string{}
+	for _, session := range sessions {
+		ids = append(ids, session.ID)
+	}
+	ledger, err := domain.PersistSourceAnomalySummaries(domain.AgenticFactLedger{Sessions: sessions}, domain.SourceEvents{Events: events, CompleteSessionIDs: ids})
+	if err != nil {
+		panic(err)
+	}
+	return ledger.Sessions
 }

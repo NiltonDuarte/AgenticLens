@@ -2,6 +2,7 @@ package domain_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -285,13 +286,12 @@ func TestPersistAnomalySummariesDropsEventsAndEvidenceButKeepsFacts(t *testing.T
 		Source:      domain.SourceCodex,
 		Invocations: []domain.InvocationFact{{Role: "orchestrator"}},
 		Tools:       []domain.SessionToolFact{{Name: tool, Calls: 6, Errors: 6}},
-		Events:      []domain.SessionEventFact{{EventID: "e1", Timestamp: "2026-01-01T00:00:00Z", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "error"}},
 	}}}
-	persisted, err := domain.PersistAnomalySummaries(facts)
+	persisted, err := domain.PersistSourceAnomalySummaries(facts, domain.SourceEvents{Events: []domain.EventFact{{SessionID: sessionID, EventID: "e1", Timestamp: "2026-01-01T00:00:00Z", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "error"}}, CompleteSessionIDs: []string{sessionID}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(persisted.Sessions) == 0 || persisted.Sessions[0].Source != domain.SourceCodex || len(persisted.EventFacts()) != 0 {
+	if len(persisted.Sessions) == 0 || persisted.Sessions[0].Source != domain.SourceCodex {
 		t.Fatalf("source/events mismatch: %#v", persisted)
 	}
 	if len(persisted.InvocationFacts()) != 1 || len(persisted.ToolFacts()) != 1 || persisted.ToolFacts()[0].Calls != 6 {
@@ -310,16 +310,16 @@ func TestPersistAnomalySummariesDropsEventsAndEvidenceButKeepsFacts(t *testing.T
 func TestPersistAnomalySummariesRefreshesNewSessionsAndAggregates(t *testing.T) {
 	tool := "bash"
 	oldSummary := domain.Anomaly{RuleID: domain.RuleContextSaturationSpike, Severity: domain.SeverityWarning}
-	newEvents := []domain.SessionEventFact{
-		{EventID: "new-1", Timestamp: "2026-10-26T10:00:01Z", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "error"},
-		{EventID: "new-2", Timestamp: "2026-10-26T10:00:02Z", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "error"},
-		{EventID: "new-3", Timestamp: "2026-10-26T10:00:03Z", Turn: 3, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "error"},
+	newEvents := []domain.EventFact{
+		{SessionID: "new-root", EventID: "new-1", Timestamp: "2026-10-26T10:00:01Z", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "error"},
+		{SessionID: "new-root", EventID: "new-2", Timestamp: "2026-10-26T10:00:02Z", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "error"},
+		{SessionID: "new-root", EventID: "new-3", Timestamp: "2026-10-26T10:00:03Z", Turn: 3, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "error"},
 	}
 	merged := domain.AgenticFactLedger{Sessions: []domain.SessionFact{
 		{ID: "old-root", Invocations: []domain.InvocationFact{{Role: "orchestrator"}}, Tools: []domain.SessionToolFact{{Name: tool, Calls: 6, Errors: 5}}, Anomalies: []domain.Anomaly{oldSummary}},
-		{ID: "new-root", Invocations: []domain.InvocationFact{{Role: "orchestrator"}}, Tools: []domain.SessionToolFact{{Name: tool, Calls: 2, Errors: 1}}, Events: newEvents, Anomalies: []domain.Anomaly{}},
+		{ID: "new-root", Invocations: []domain.InvocationFact{{Role: "orchestrator"}}, Tools: []domain.SessionToolFact{{Name: tool, Calls: 2, Errors: 1}}, Anomalies: []domain.Anomaly{}},
 	}}
-	persisted, err := domain.PersistAnomalySummaries(merged)
+	persisted, err := domain.PersistSourceAnomalySummaries(merged, domain.SourceEvents{Events: newEvents, CompleteSessionIDs: []string{"new-root"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -344,10 +344,7 @@ func TestPersistAnomalySummariesRefreshesNewSessionsAndAggregates(t *testing.T) 
 	if aggregate == nil || aggregate.Context.TotalCalls == nil || *aggregate.Context.TotalCalls != 8 || aggregate.Context.Count == nil || *aggregate.Context.Count != 6 {
 		t.Fatalf("aggregate summary was not recomputed from merged tool facts: %#v", persisted.Anomalies)
 	}
-	if len(persisted.EventFacts()) != 0 {
-		t.Fatalf("event rows persisted: %#v", persisted.EventFacts())
-	}
-	projected := domain.DeriveMetricsLedger(merged, domain.DefaultProjectConfig())
+	projected := domain.DeriveMetricsLedger(persisted, domain.DefaultProjectConfig())
 	projectedOld, projectedRetry, projectedAggregate := false, false, false
 	for _, anomaly := range projected.Anomalies {
 		projectedOld = projectedOld || anomaly.RuleID == domain.RuleContextSaturationSpike
@@ -395,16 +392,16 @@ func TestWorkspaceEventsResponseSerialization(t *testing.T) {
 						ToolOutput:       &toolOutput,
 					},
 				},
-				DataSource: domain.DataSourceLocalSQLite,
+				DataSource: domain.DataSourceLocalSQLite, Availability: domain.TraceComplete, Coverage: domain.TraceCoverage{RequiredSessionIDs: []string{"ses-123"}, CompleteSessionIDs: []string{"ses-123"}, Diagnostics: []string{}},
 			},
 		},
 		{
-			name: "unhydrated committed ledger response with empty events",
+			name: "unavailable source response with empty events",
 			input: domain.WorkspaceEventsResponse{
 				TicketID:   "AL-33",
 				IsHydrated: false,
 				Events:     []domain.EventFact{},
-				DataSource: domain.DataSourceCommittedLedger,
+				DataSource: domain.DataSourceUnavailable, Availability: domain.TraceUnavailable, Coverage: domain.TraceCoverage{RequiredSessionIDs: []string{}, CompleteSessionIDs: []string{}, Diagnostics: []string{}},
 			},
 		},
 	}
@@ -414,6 +411,9 @@ func TestWorkspaceEventsResponseSerialization(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
+			if err := tt.input.Validate(); err != nil {
+				t.Fatal(err)
+			}
 			data, err := json.Marshal(tt.input)
 			if err != nil {
 				t.Fatalf("failed to marshal WorkspaceEventsResponse: %v", err)
@@ -457,88 +457,6 @@ func TestWorkspaceEventsResponseSerialization(t *testing.T) {
 
 func ptrString(v string) *string { return &v }
 func ptrInt64(v int64) *int64    { return &v }
-
-func TestNormalizeLedgerForReadPreservesFactsAndScopesWithoutMutation(t *testing.T) {
-	tool := "bash"
-	first := domain.SessionEventFact{EventID: "first", Timestamp: "2026-10-29T10:00:00Z", MessageID: ptrString("message"), Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "error", DurationMs: ptrInt64(12), ContextTokens: 2400}
-	tie := first
-	tie.EventID = "tie"
-	late := first
-	late.EventID, late.Timestamp, late.Turn = "late", "2026-10-29T11:00:00Z", 3
-	other := first
-	other.EventID, other.Status = "other-owner", "completed"
-	facts := domain.AgenticFactLedger{Sessions: []domain.SessionFact{
-		{ID: "owner-a", Source: domain.SourceOpenCode, User: "tester", Invocations: []domain.InvocationFact{{Role: "coder"}}, Tools: []domain.SessionToolFact{{Name: tool, Calls: 8, Errors: 6}}, Events: []domain.SessionEventFact{late, first, tie}},
-		{ID: "owner-b", Source: domain.SourceCodex, User: "tester", Events: []domain.SessionEventFact{other}},
-	}}
-	before, err := json.Marshal(facts)
-	if err != nil {
-		t.Fatal(err)
-	}
-	read, err := domain.NormalizeLedgerForRead(facts)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(read.Sessions[0].Events, facts.Sessions[0].Events) || !reflect.DeepEqual(read.Sessions[1].Events, facts.Sessions[1].Events) {
-		t.Fatalf("read projection lost nested event metadata: %#v", read.Sessions)
-	}
-	events := read.EventFacts()
-	if len(events) != 4 {
-		t.Fatalf("expected four facts, got %#v", events)
-	}
-	for i, id := range []string{"first", "tie", "other-owner", "late"} {
-		if events[i].EventID != id {
-			t.Fatalf("unstable chronological order: %#v", events)
-		}
-	}
-	if events[0].SessionID != "owner-a" || events[2].SessionID != "owner-b" {
-		t.Fatalf("session owners were not restored: %#v", events)
-	}
-	if len(read.Sessions[0].Anomalies) == 0 || len(read.Anomalies) == 0 {
-		t.Fatalf("normalized session/ticket summaries missing: %#v", read)
-	}
-	for _, session := range read.Sessions {
-		for _, anomaly := range session.Anomalies {
-			if anomaly.Context.SessionID != nil || len(anomaly.Evidence) != 0 {
-				t.Fatalf("nested summary repeated scope/evidence: %#v", anomaly)
-			}
-		}
-	}
-	for _, anomaly := range read.Anomalies {
-		if anomaly.Context.SessionID != nil || len(anomaly.Evidence) != 0 {
-			t.Fatalf("ticket summary acquired local scope/evidence: %#v", anomaly)
-		}
-	}
-	if !reflect.DeepEqual(read.InvocationFacts(), facts.InvocationFacts()) || !reflect.DeepEqual(read.ToolFacts(), facts.ToolFacts()) {
-		t.Fatal("read normalization changed invocation or tool totals")
-	}
-	after, err := json.Marshal(facts)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(before) != string(after) {
-		t.Fatal("normalization mutated the input")
-	}
-	read.Sessions[0].Events[0].Status = "changed"
-	if facts.Sessions[0].Events[0].Status != "error" {
-		t.Fatal("read projection shares the input event slice")
-	}
-}
-
-func TestNormalizeLedgerForReadEmptyEvents(t *testing.T) {
-	for _, facts := range []domain.AgenticFactLedger{
-		{}, {Sessions: []domain.SessionFact{}}, {Sessions: []domain.SessionFact{{ID: "omitted"}}},
-		{Sessions: []domain.SessionFact{{ID: "empty", Events: []domain.SessionEventFact{}}}},
-	} {
-		read, err := domain.NormalizeLedgerForRead(facts)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if len(read.EventFacts()) != 0 || read.SchemaVersion != nil {
-			t.Fatalf("empty facts synthesized events or schema: %#v", read)
-		}
-	}
-}
 
 func TestReconcileEventsEnrichesPartialTraceWithoutLoss(t *testing.T) {
 	first := domain.EventFact{EventID: "call", SessionID: "owner", Timestamp: "2026-10-29T10:00:00Z", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: ptrString("bash"), Status: "error", ContextTokens: 1200, DurationMs: ptrInt64(10)}
@@ -634,8 +552,8 @@ func TestWorkspaceEventsResponse_AdversarialBoundaries(t *testing.T) {
 	if domain.DataSourceLocalSQLite != "local_sqlite" {
 		t.Errorf("expected DataSourceLocalSQLite to be %q, got %q", "local_sqlite", domain.DataSourceLocalSQLite)
 	}
-	if domain.DataSourceCommittedLedger != "committed_ledger" {
-		t.Errorf("expected DataSourceCommittedLedger to be %q, got %q", "committed_ledger", domain.DataSourceCommittedLedger)
+	if domain.DataSourceUnavailable != "unavailable" {
+		t.Errorf("invalid unavailable source discriminator: %q", domain.DataSourceUnavailable)
 	}
 
 	zeroDuration := int64(0)
@@ -666,7 +584,7 @@ func TestWorkspaceEventsResponse_AdversarialBoundaries(t *testing.T) {
 						ContextTokens: 0,
 					},
 				},
-				DataSource: domain.DataSourceLocalSQLite,
+				DataSource: domain.DataSourceLocalSQLite, Availability: domain.TraceComplete, Coverage: domain.TraceCoverage{RequiredSessionIDs: []string{"s-zero"}, CompleteSessionIDs: []string{"s-zero"}, Diagnostics: []string{}},
 			},
 			validate: func(t *testing.T, raw string, decoded domain.WorkspaceEventsResponse) {
 				if len(decoded.Events) != 1 {
@@ -688,7 +606,7 @@ func TestWorkspaceEventsResponse_AdversarialBoundaries(t *testing.T) {
 			name: "negative duration and large context tokens",
 			resp: domain.WorkspaceEventsResponse{
 				TicketID:   "AL-EXTREME",
-				IsHydrated: false,
+				IsHydrated: true,
 				Events: []domain.EventFact{
 					{
 						Timestamp:        "2026-10-19T23:59:59Z",
@@ -703,7 +621,7 @@ func TestWorkspaceEventsResponse_AdversarialBoundaries(t *testing.T) {
 						ReasoningContent: &emptyString,
 					},
 				},
-				DataSource: domain.DataSourceCommittedLedger,
+				DataSource: domain.DataSourceLocalSQLite, Availability: domain.TraceComplete, Coverage: domain.TraceCoverage{RequiredSessionIDs: []string{"s-extreme"}, CompleteSessionIDs: []string{"s-extreme"}, Diagnostics: []string{}},
 			},
 			validate: func(t *testing.T, raw string, decoded domain.WorkspaceEventsResponse) {
 				if len(decoded.Events) != 1 {
@@ -730,7 +648,7 @@ func TestWorkspaceEventsResponse_AdversarialBoundaries(t *testing.T) {
 				TicketID:   "AL-NIL-SLICE",
 				IsHydrated: false,
 				Events:     nil,
-				DataSource: domain.DataSourceCommittedLedger,
+				DataSource: domain.DataSourceUnavailable, Availability: domain.TraceUnavailable, Coverage: domain.TraceCoverage{RequiredSessionIDs: []string{}, CompleteSessionIDs: []string{}, Diagnostics: []string{}},
 			},
 			validate: func(t *testing.T, raw string, decoded domain.WorkspaceEventsResponse) {
 				if decoded.TicketID != "AL-NIL-SLICE" {
@@ -758,7 +676,7 @@ func TestWorkspaceEventsResponse_AdversarialBoundaries(t *testing.T) {
 						ContextTokens: 128000,
 					},
 				},
-				DataSource: domain.DataSourceLocalSQLite,
+				DataSource: domain.DataSourceLocalSQLite, Availability: domain.TraceComplete, Coverage: domain.TraceCoverage{RequiredSessionIDs: []string{"s-comp"}, CompleteSessionIDs: []string{"s-comp"}, Diagnostics: []string{}},
 			},
 			validate: func(t *testing.T, raw string, decoded domain.WorkspaceEventsResponse) {
 				if len(decoded.Events) != 1 {
@@ -780,6 +698,9 @@ func TestWorkspaceEventsResponse_AdversarialBoundaries(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
+			if err := tt.resp.Validate(); err != nil {
+				t.Fatal(err)
+			}
 			data, err := json.Marshal(tt.resp)
 			if err != nil {
 				t.Fatalf("marshaling failed: %v", err)
@@ -792,5 +713,93 @@ func TestWorkspaceEventsResponse_AdversarialBoundaries(t *testing.T) {
 
 			tt.validate(t, string(data), decoded)
 		})
+	}
+}
+
+func TestTransientTraceAvailabilityRequiresHonestOwnerCoverage(t *testing.T) {
+	base := domain.WorkspaceEventsResponse{Availability: domain.TraceComplete, IsHydrated: true, DataSource: domain.DataSourceLocalCodex, Events: []domain.EventFact{}, Coverage: domain.TraceCoverage{RequiredSessionIDs: []string{"owner"}, CompleteSessionIDs: []string{"owner"}, Diagnostics: []string{}}}
+	cases := []struct {
+		name   string
+		change func(*domain.WorkspaceEventsResponse)
+		valid  bool
+	}{
+		{"complete empty", func(*domain.WorkspaceEventsResponse) {}, true},
+		{"missing owner read", func(r *domain.WorkspaceEventsResponse) { r.Coverage.CompleteSessionIDs = nil }, false},
+		{"unknown complete owner", func(r *domain.WorkspaceEventsResponse) { r.Coverage.CompleteSessionIDs = []string{"other"} }, false},
+		{"duplicate owner", func(r *domain.WorkspaceEventsResponse) { r.Coverage.RequiredSessionIDs = []string{"owner", "owner"} }, false},
+		{"unrecorded event", func(r *domain.WorkspaceEventsResponse) { r.Events = []domain.EventFact{{SessionID: "other"}} }, false},
+		{"committed fallback", func(r *domain.WorkspaceEventsResponse) { r.DataSource = domain.DataSourceCommittedLedger }, false},
+		{"partial empty successful owner", func(r *domain.WorkspaceEventsResponse) {
+			r.Availability = domain.TracePartial
+			r.Coverage.RequiredSessionIDs = []string{"owner", "missing"}
+			r.Coverage.Diagnostics = []string{"missing: unavailable"}
+		}, true},
+		{"partial rows incomplete owner", func(r *domain.WorkspaceEventsResponse) {
+			r.Availability = domain.TracePartial
+			r.Events = []domain.EventFact{{SessionID: "owner"}}
+			r.Coverage.CompleteSessionIDs = nil
+			r.Coverage.Diagnostics = []string{"owner: incomplete"}
+		}, true},
+		{"partial without evidence", func(r *domain.WorkspaceEventsResponse) {
+			r.Availability = domain.TracePartial
+			r.Coverage.CompleteSessionIDs = nil
+		}, false},
+		{"unavailable", func(r *domain.WorkspaceEventsResponse) {
+			r.Availability = domain.TraceUnavailable
+			r.IsHydrated = false
+			r.DataSource = domain.DataSourceUnavailable
+			r.Coverage.CompleteSessionIDs = nil
+			r.Coverage.Diagnostics = []string{"owner: unavailable"}
+		}, true},
+		{"unavailable claims native source", func(r *domain.WorkspaceEventsResponse) {
+			r.Availability = domain.TraceUnavailable
+			r.IsHydrated = false
+			r.Coverage.CompleteSessionIDs = nil
+		}, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := base
+			tc.change(&r)
+			if err := r.Validate(); (err == nil) != tc.valid {
+				t.Fatalf("valid=%t err=%v response=%+v", tc.valid, err, r)
+			}
+		})
+	}
+}
+
+func TestSourceSummaryRefreshRequiresCompleteChildGroup(t *testing.T) {
+	parent := "parent"
+	count := int64(3)
+	coder, tester := domain.AgentRole("coder"), domain.AgentRole("tester")
+	rework := domain.Anomaly{RuleID: domain.RuleSubagentReworkLoop, Severity: domain.SeverityWarning, Context: domain.AnomalyContext{Role: &coder, SecondaryRole: &tester, Count: &count}}
+	facts := domain.AgenticFactLedger{Sessions: []domain.SessionFact{{ID: parent, Anomalies: []domain.Anomaly{rework}}, {ID: "child", ParentID: &parent}}, Anomalies: []domain.Anomaly{{RuleID: domain.RuleContextSaturationSpike, Severity: domain.SeverityWarning}}}
+	for _, complete := range [][]string{nil, {parent}} {
+		t.Run(fmt.Sprintf("coverage=%v", complete), func(t *testing.T) {
+			got := domain.RefreshAnomalySummariesFromSource(facts, domain.SourceEvents{CompleteSessionIDs: complete})
+			if len(got) != 2 {
+				t.Fatalf("incomplete source erased parent or ticket cached summary: %+v", got)
+			}
+			found := false
+			for _, a := range got {
+				found = found || a.RuleID == domain.RuleSubagentReworkLoop && a.Context.SessionID != nil && *a.Context.SessionID == parent && a.Context.Count != nil && *a.Context.Count == 3
+			}
+			if !found {
+				t.Fatalf("parent rework summary lost: %+v", got)
+			}
+		})
+	}
+	cleared := domain.RefreshAnomalySummariesFromSource(facts, domain.SourceEvents{CompleteSessionIDs: []string{parent, "child"}})
+	if len(cleared) != 0 {
+		t.Fatalf("complete empty group did not replace old summaries: %+v", cleared)
+	}
+	fresh := []domain.SessionFact{{ID: parent}}
+	retained := domain.RetainIncompleteGroupSummaries(facts.Sessions, fresh)
+	if len(retained) != 1 || len(retained[0].Anomalies) != 1 || retained[0].Anomalies[0].RuleID != domain.RuleSubagentReworkLoop || len(fresh[0].Anomalies) != 0 {
+		t.Fatalf("per-owner refresh erased group summary or mutated fresh input: %+v", retained)
+	}
+	completeFresh := domain.RetainIncompleteGroupSummaries(facts.Sessions, []domain.SessionFact{{ID: parent}, {ID: "child", ParentID: &parent}})
+	if len(completeFresh[0].Anomalies) != 0 {
+		t.Fatalf("complete group kept obsolete summary: %+v", completeFresh)
 	}
 }

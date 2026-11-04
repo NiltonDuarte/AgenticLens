@@ -37,8 +37,8 @@ func historyAuthorityFixture(t *testing.T) (captureGenerationFixture, captureGen
 func historyAuthorityAuxiliary(t *testing.T, f captureGenerationFixture, label string) []byte {
 	t.Helper()
 	ledger := f.ledger(t)
-	ledger.Sessions[0].Skills = []domain.SkillFact{{Name: label + "-skill", CallerRole: "coder", Outcome: domain.OutcomeUnknown}}
-	ledger.Sessions[0].TaskLinks = []domain.TaskLinkFact{{Outcome: domain.OutcomeUnknown, SubagentType: "tester", Description: label + "-task", ChildSession: "descriptive-only", CostEvidence: domain.CostEvidence{State: domain.CostUnavailable}}}
+	ledger.Sessions[0].Skills = []domain.SkillFact{{Name: label + "-skill", CallerRole: domain.KnownString("coder")}}
+	ledger.Sessions[0].Delegations = []domain.DelegationFact{{AgentType: domain.KnownString("tester"), Description: label + "-task", ChildSession: "descriptive-only"}}
 	body, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(ledger))
 	if err != nil {
 		t.Fatal(err)
@@ -82,7 +82,7 @@ func TestCaptureExactSourceRemainsAuthoritativeDespiteForeignGitEnvironment(t *t
 				t.Fatalf("exact local source was hidden by foreign Git environment: %v %s", err, out)
 			}
 			result := actual.ledger(t)
-			if len(result.SkillFacts()) != 0 || len(result.TaskLinkFacts()) != 0 {
+			if len(result.SkillFacts()) != 0 || len(result.DelegationFacts()) != 0 {
 				t.Fatal("complete empty local snapshot retained manual auxiliary facts")
 			}
 			if reflect.DeepEqual(forged, readCaptureFile(t, actual.output)) {
@@ -108,7 +108,7 @@ func TestCaptureExactSourceRemainsAuthoritativeDespiteForeignGitEnvironment(t *t
 					t.Fatalf("actual authority failed under %s: %v %s", mode, err, out)
 				}
 				ledger := actual.ledger(t)
-				if len(ledger.Sessions) != 1 || ledger.Sessions[0].ID != "actual-root" || len(ledger.SkillFacts()) != 0 || len(ledger.TaskLinkFacts()) != 0 {
+				if len(ledger.Sessions) != 1 || ledger.Sessions[0].ID != "actual-root" || len(ledger.SkillFacts()) != 0 || len(ledger.DelegationFacts()) != 0 {
 					t.Fatalf("wrong repository supplied evidence: %+v", ledger)
 				}
 				if foreignHistoryState(t, foreign) != foreignBefore {

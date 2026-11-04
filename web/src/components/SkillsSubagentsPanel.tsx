@@ -1,28 +1,18 @@
 import React, { useId, useState } from 'react';
-import { skillOutcome, type FactProvenance, type SkillFact, type TaskLinkFact } from '../domain/types';
+import type { OwnedSkillFact, OwnedDelegationFact } from '../domain/types';
 import {
-  formatFactCostUSD,
-  formatDurationSeconds,
   formatHistoricalDateTimeTooltip, getHistoricalTimestampDateTime,
-  formatLocalDateTime,
-  formatSubagentRole,
+  formatLocalDateTime, formatSubagentRole,
 } from '../domain/formatters';
 
-function OccurrenceOwner({ fact }: { readonly fact: { readonly session_id?: string; readonly source?: string; readonly provenance?: FactProvenance; readonly evidence_references?: readonly FactProvenance[] } }): React.ReactNode {
-  return <td className="source-text">
-    <span>{fact.session_id ?? 'Owner unavailable'}</span>
-    {fact.source && <div>Source: {fact.source}</div>}
-    {[...(fact.provenance ? [fact.provenance] : []), ...(fact.evidence_references ?? [])].map((reference, index) =>
-      <div key={index}>{index > 0 && <span>Additional evidence reference</span>}
-        {Object.entries(reference).map(([kind, identity]) =>
-          <div key={kind}>{kind === 'source_ref' ? 'Diagnostic source reference' : kind.replace('_id', '')}: {identity}</div>)}
-      </div>)}
-  </td>;
+function InvocationTime({ value }: { readonly value: string | null }): React.ReactNode {
+  return value === null ? 'Unavailable' : <time dateTime={getHistoricalTimestampDateTime(value)}
+    title={formatHistoricalDateTimeTooltip(value)}>{formatLocalDateTime(value)}</time>;
 }
 
 export interface SkillsSubagentsPanelProps {
-  readonly skills: readonly SkillFact[];
-  readonly delegations: readonly TaskLinkFact[];
+  readonly skills: readonly OwnedSkillFact[];
+  readonly delegations: readonly OwnedDelegationFact[];
   readonly availableSessionIds: readonly string[];
   readonly onJumpToSession: (sessionId: string) => void;
 }
@@ -63,20 +53,15 @@ export const SkillsSubagentsPanel: React.FC<SkillsSubagentsPanelProps> = ({
             <table className="data-table skills-subagents-table">
               <caption>Modular skills</caption>
               <thead><tr>
-                <th scope="col">Skill Name</th><th scope="col">Recorded At (Turn / Time)</th>
-                <th scope="col">Owning Session / Source Identity</th><th scope="col">Invoking Role</th><th scope="col">Execution Status</th><th scope="col">Error Details</th>
+                <th scope="col">Skill Name</th><th scope="col">Invoked At</th>
+                <th scope="col">Owning Session</th><th scope="col">Invoking Role</th>
               </tr></thead>
               <tbody>{visibleSkills.map((skill, index) => (
                 <tr key={index} tabIndex={0}>
                   <th scope="row">{skill.name}</th>
-                  <td>Turn {skill.turn_index} / <time dateTime={getHistoricalTimestampDateTime(skill.timestamp)}
-                    title={formatHistoricalDateTimeTooltip(skill.timestamp)}>{formatLocalDateTime(skill.timestamp)}</time></td>
-                  <OccurrenceOwner fact={skill} />
-                  <td>{formatSubagentRole(skill.caller_role)}</td>
-                  <td><span className={`skill-status ${skillOutcome(skill) === 'succeeded' ? 'success' : skillOutcome(skill) === 'failed' ? 'failed' : ''}`}>
-                    {skillOutcome(skill) === 'unknown' ? 'Outcome unavailable' : skillOutcome(skill) === 'succeeded' ? 'Success' : 'Failed'}
-                  </span>{skill.evidence_kind === 'activation_request' && <div>Activation requested</div>}</td>
-                  <td className="source-text">{skill.error ?? 'None recorded'}</td>
+                  <td><InvocationTime value={skill.invoked_at} /></td>
+                  <td className="source-text">{skill.session_id}</td>
+                  <td>{skill.caller_role === null ? 'Unavailable' : formatSubagentRole(skill.caller_role)}</td>
                 </tr>
               ))}</tbody>
             </table>
@@ -88,30 +73,24 @@ export const SkillsSubagentsPanel: React.FC<SkillsSubagentsPanelProps> = ({
               <caption>Subagent delegations</caption>
               <thead><tr>
                 <th scope="col">Subagent Type</th><th scope="col">Description / Task</th>
-                <th scope="col">Parent Turn</th><th scope="col">Duration</th><th scope="col">Cost (USD)</th>
-                <th scope="col">Child Session</th><th scope="col">Owning Session / Source Identity</th>
+                <th scope="col">Invoked At</th>
+                <th scope="col">Child Session</th><th scope="col">Owning Session</th>
               </tr></thead>
               <tbody>{visibleDelegations.map((task, index) => (
                 <tr key={index} tabIndex={0}>
-                  <th scope="row">{formatSubagentRole(task.subagent_type)}</th>
-                  <td className="source-text">{task.description}</td>
-                  <td>{task.parent_turn}</td>
-                  <td>{task.duration_ms === undefined ? 'Unavailable' : formatDurationSeconds(task.duration_ms / 1000)}</td>
-                  <td>{formatFactCostUSD(task.cost_usd, task.cost_evidence)}</td>
+                  <th scope="row">{task.agent_type === null ? 'Unavailable' : formatSubagentRole(task.agent_type)}</th>
+                  <td className="source-text">{task.description ?? 'Unavailable'}</td>
+                  <td><InvocationTime value={task.invoked_at} /></td>
                   <td className="source-text">{task.child_session_id ? (
-                    availableSessionIds.includes(task.child_session_id) && !task.child_link_diagnostic ? (
+                    availableSessionIds.includes(task.child_session_id) ? (
                       <button type="button" className="btn-secondary child-session-jump"
                         onClick={() => { if (task.child_session_id) onJumpToSession(task.child_session_id); }}
                         aria-label={`Jump to child session ${task.child_session_id}`}>
                         {task.child_session_id}
                       </button>
-                    ) : <><span>{task.child_session_id}</span><span className="session-unavailable">{task.child_link_diagnostic ? 'Child relationship unresolved' : 'Thread unavailable'}</span></>
-                  ) : task.child_reference ? <><span>{task.child_reference}</span><span className="session-unavailable">{task.child_link_diagnostic ? 'Child relationship unresolved' : 'Thread unavailable'}</span></> : task.child_agent_id ? <span className="session-unavailable">Session identity unavailable</span> : 'Not recorded'}
-                    {task.child_agent_id && <div>Agent reference: {task.child_agent_id}</div>}
-                    {task.child_session_id && task.child_reference && <div>Source reference: {task.child_reference}</div>}
-                    {task.child_link_diagnostic && <div role="note">Child relationship: {task.child_link_diagnostic}</div>}
-                  </td>
-                  <OccurrenceOwner fact={task} />
+                    ) : <><span>{task.child_session_id}</span><span className="session-unavailable">Thread unavailable</span></>
+                  ) : 'Session identity unavailable'}</td>
+                  <td className="source-text">{task.session_id}</td>
                 </tr>
               ))}</tbody>
             </table>

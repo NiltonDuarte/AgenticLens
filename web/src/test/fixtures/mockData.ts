@@ -418,7 +418,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
         completed_at: '2026-10-15T14:30:00Z',
         updated_at: '2026-10-15T14:32:00Z',
         facts: {
-            schema_version: 6,
+            schema_version: 7,
             ticket_id: 'AL-1',
             ticket_title: 'Core Go domain models and aggregations engine',
             ticket_type: 'feat',
@@ -767,7 +767,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
         completed_at: '2026-10-16T16:00:00Z',
         updated_at: '2026-10-16T16:15:00Z',
         facts: {
-            schema_version: 6,
+            schema_version: 7,
             ticket_id: 'AL-2',
             ticket_title: 'Go HTTP REST API and embedded filesystem server',
             ticket_type: 'feat',
@@ -1002,7 +1002,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
         completed_at: '2026-10-17T06:00:00Z',
         updated_at: '2026-10-17T06:10:00Z',
         facts: {
-            schema_version: 6,
+            schema_version: 7,
             ticket_id: 'AL-3',
             ticket_title: 'TypeScript SPA dashboard and embedded single binary',
             ticket_type: 'feat',
@@ -1257,7 +1257,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
         completed_at: '2026-10-14T11:15:00Z',
         updated_at: '2026-10-14T11:20:00Z',
         facts: {
-            schema_version: 6,
+            schema_version: 7,
             ticket_id: 'PO-1',
             ticket_title: 'Product requirements decomposition and spec drafting',
             ticket_type: 'docs',
@@ -1424,7 +1424,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
         completed_at: null,
         updated_at: '2026-10-17T09:40:00Z',
         facts: {
-            schema_version: 6,
+            schema_version: 7,
             ticket_id: 'GEN-1',
             ticket_title: 'Telemetry extraction script and session verification',
             ticket_type: 'chore',

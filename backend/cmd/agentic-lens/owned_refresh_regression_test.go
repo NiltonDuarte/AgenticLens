@@ -56,8 +56,8 @@ func TestGenerateExactSourceWithoutPrivateRegistrationReplacesPortableOwner(t *t
 func TestGenerateCopiedLedgerPreservesUnavailableOwnedFactsWithoutPinnedDestination(t *testing.T) {
 	_, b, _ := newCommittedHistoryFixture(t)
 	ledger := b.ledger(t)
-	ledger.Sessions[0].Skills = []domain.SkillFact{{Name: "unavailable-skill", Outcome: domain.OutcomeUnknown}}
-	ledger.Sessions[0].TaskLinks = []domain.TaskLinkFact{{Description: "unavailable-task", Outcome: domain.OutcomeUnknown, CostEvidence: domain.UnavailableCost()}}
+	ledger.Sessions[0].Skills = []domain.SkillFact{{Name: "unavailable-skill"}}
+	ledger.Sessions[0].Delegations = []domain.DelegationFact{{Description: "unavailable-task"}}
 	copied := filepath.Join(b.project, "copied-ledger.json")
 	if err := adapters.SaveFactLedger(copied, ledger); err != nil {
 		t.Fatal(err)
@@ -68,7 +68,16 @@ func TestGenerateCopiedLedgerPreservesUnavailableOwnedFactsWithoutPinnedDestinat
 	}
 	b.output = copied
 	got := b.ledger(t)
-	if len(got.Sessions) != 2 || len(got.SkillFacts()) != 1 || len(got.TaskLinkFacts()) != 1 || got.SkillFacts()[0].SessionID != "prior-root" || got.TaskLinkFacts()[0].Description != "unavailable-task" {
+	owned := false
+	for _, owner := range got.Sessions {
+		if owner.ID == "prior-root" && len(owner.Skills) == 1 && owner.Skills[0].Name == "unavailable-skill" && len(owner.Delegations) == 1 {
+			owned = true
+		}
+	}
+	if !owned {
+		t.Fatal("copied unavailable facts lost their native owner")
+	}
+	if len(got.Sessions) != 2 || len(got.SkillFacts()) != 1 || len(got.DelegationFacts()) != 1 || got.DelegationFacts()[0].Description != "unavailable-task" {
 		t.Fatalf("copied unavailable owner facts changed: %+v", got)
 	}
 }
@@ -97,7 +106,7 @@ func TestGenerateMalformedSkillArgumentsPreservePreviouslyOwnedSnapshot(t *testi
 				t.Fatalf("valid source control failed: %v %s", err, out)
 			}
 			first := f.ledger(t)
-			if facts := first.SkillFacts(); len(facts) != 1 || facts[0].Name != "inspect-source" || facts[0].Provenance.CallID != "skill-call" {
+			if facts := first.SkillFacts(); len(facts) != 1 || facts[0].Name != "inspect-source" || facts[0].InvokedAt == nil || *facts[0].InvokedAt != "2026-01-01T00:00:03Z" {
 				t.Fatalf("valid source failed to produce native control occurrence: %+v", facts)
 			}
 			before := readCaptureFile(t, f.output)
@@ -124,5 +133,46 @@ func TestGenerateMalformedSkillArgumentsPreservePreviouslyOwnedSnapshot(t *testi
 				t.Fatal("malformed source erased previously owned facts or changed accepted ledger bytes")
 			}
 		})
+	}
+}
+
+func TestGenerateCompleteParentRetainsGroupSummaryForUnavailableChild(t *testing.T) {
+	f := newCaptureGenerationFixture(t)
+	f.write(t, 17)
+	state := filepath.Join(t.TempDir(), "fresh-state")
+	if out, err := directOwnedGenerate(t, f.project, f.store, state, "root", f.output); err != nil {
+		t.Fatalf("valid source control: %v %s", err, out)
+	}
+	facts := f.ledger(t)
+	first, second := domain.AgentRole("coder"), domain.AgentRole("tester")
+	count := int64(3)
+	summary := domain.Anomaly{RuleID: domain.RuleSubagentReworkLoop, Severity: domain.SeverityWarning, Context: domain.AnomalyContext{Role: &first, SecondaryRole: &second, Count: &count}}
+	facts.Sessions[0].Anomalies = []domain.Anomaly{summary}
+	parent := "root"
+	facts.Sessions = append(facts.Sessions, domain.SessionFact{ID: "unavailable-child", ParentID: &parent, Source: domain.SourceCodex, User: "recorded-user", Invocations: []domain.InvocationFact{}, Tools: []domain.SessionToolFact{}, Anomalies: []domain.Anomaly{}})
+	if err := adapters.SaveFactLedger(f.output, facts); err != nil {
+		t.Fatal(err)
+	}
+	for pass := 0; pass < 2; pass++ {
+		if out, err := directOwnedGenerate(t, f.project, f.store, state, "root", f.output); err != nil {
+			t.Fatalf("complete parent refresh %d: %v %s", pass, err, out)
+		}
+		got := f.ledger(t)
+		foundParent, foundChild := false, false
+		for _, owner := range got.Sessions {
+			if owner.ID == "root" {
+				for _, anomaly := range owner.Anomalies {
+					if anomaly.RuleID == domain.RuleSubagentReworkLoop && anomaly.Context.Count != nil && *anomaly.Context.Count == 3 {
+						foundParent = true
+					}
+				}
+			}
+			if owner.ID == "unavailable-child" && owner.ParentID != nil && *owner.ParentID == "root" {
+				foundChild = true
+			}
+		}
+		if !foundParent || !foundChild {
+			t.Fatalf("pass %d lost incomplete group's recorded summary or child: %+v", pass, got.Sessions)
+		}
 	}
 }

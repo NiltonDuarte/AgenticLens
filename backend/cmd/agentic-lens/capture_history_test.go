@@ -258,11 +258,11 @@ func TestCaptureManualAuxiliaryPublicationSurvivesUnavailableSource(t *testing.T
 	}
 	setOpenCodeFixtureProject(t, path, f.project)
 	first := f.generate(t, "--source", "opencode", "--session-id", "manual-root", "--db-path", path)
-	if len(first.SkillFacts()) != 1 || len(first.TaskLinkFacts()) != 1 {
-		t.Fatalf("source did not produce auxiliary facts: %+v %+v", first.SkillFacts(), first.TaskLinkFacts())
+	if len(first.SkillFacts()) != 1 || len(first.DelegationFacts()) != 1 {
+		t.Fatalf("source did not produce auxiliary facts: %+v %+v", first.SkillFacts(), first.DelegationFacts())
 	}
 	registered := f.generate(t, "--source", "opencode", "--db-path", path)
-	if len(registered.SkillFacts()) != 1 || len(registered.TaskLinkFacts()) != 1 || registered.SkillFacts()[0].Provenance.EventID != first.SkillFacts()[0].Provenance.EventID || registered.TaskLinkFacts()[0].Provenance.EventID != first.TaskLinkFacts()[0].Provenance.EventID {
+	if len(registered.SkillFacts()) != 1 || len(registered.DelegationFacts()) != 1 || !reflect.DeepEqual(registered.SkillFacts(), first.SkillFacts()) || !reflect.DeepEqual(registered.DelegationFacts(), first.DelegationFacts()) {
 		t.Fatalf("BEH-05 registered-only OpenCode capture omitted owned source facts: %+v", registered)
 	}
 	if err = os.Remove(path); err != nil {
@@ -280,14 +280,14 @@ func TestCaptureManualAuxiliaryPublicationSurvivesUnavailableSource(t *testing.T
 	if out, err := withoutGit.CombinedOutput(); err != nil {
 		t.Fatalf("current-only stored data gained optional Git dependency: %v %s", err, out)
 	}
-	if !reflect.DeepEqual(first.SkillFacts(), second.SkillFacts()) || !reflect.DeepEqual(first.TaskLinkFacts(), second.TaskLinkFacts()) {
+	if !reflect.DeepEqual(first.SkillFacts(), second.SkillFacts()) || !reflect.DeepEqual(first.DelegationFacts(), second.DelegationFacts()) {
 		t.Fatal("own manual auxiliary rows lost without hydration")
 	}
 	if len(second.Sessions) != 1 || second.Sessions[0].ParentID != nil {
 		t.Fatal("descriptive child link created native ancestry")
 	}
 	// Valid owned history remains usable without local source/receipt evidence.
-	// Duplicate native identity is still rejected by the current schema boundary.
+	// Equal lean occurrences retain multiplicity without invented native identity.
 	accepted := readCaptureFile(t, f.output)
 	for _, edit := range []string{"skill name", "task description", "skill multiplicity"} {
 		candidate := f.ledger(t)
@@ -295,7 +295,7 @@ func TestCaptureManualAuxiliaryPublicationSurvivesUnavailableSource(t *testing.T
 		case "skill name":
 			candidate.Sessions[0].Skills[0].Name = "unproven-skill"
 		case "task description":
-			candidate.Sessions[0].TaskLinks[0].Description = "unproven description"
+			candidate.Sessions[0].Delegations[0].Description = "unproven description"
 		case "skill multiplicity":
 			candidate.Sessions[0].Skills = append(candidate.Sessions[0].Skills, candidate.Sessions[0].Skills[0])
 		}
@@ -309,21 +309,12 @@ func TestCaptureManualAuxiliaryPublicationSurvivesUnavailableSource(t *testing.T
 		cmd := exec.Command(cliBinaryPath, f.args(t, "--source", "opencode", "--db-path", path)...)
 		cmd.Dir = f.project
 		out, runErr := cmd.CombinedOutput()
-		if edit == "skill multiplicity" {
-			if runErr == nil {
-				t.Fatalf("duplicate native occurrence accepted: %s", out)
-			}
-			if !reflect.DeepEqual(readCaptureFile(t, f.output), body) {
-				t.Fatal("invalid native duplicate rewrote baseline")
-			}
-		} else {
-			if runErr != nil {
-				t.Fatalf("valid owned unavailable history rejected: %v %s", runErr, out)
-			}
-			preserved := f.ledger(t)
-			if !reflect.DeepEqual(preserved.SkillFacts(), candidate.SkillFacts()) || !reflect.DeepEqual(preserved.TaskLinkFacts(), candidate.TaskLinkFacts()) {
-				t.Fatal("unavailable valid owned facts were discarded")
-			}
+		if runErr != nil {
+			t.Fatalf("valid owned unavailable history rejected: %v %s", runErr, out)
+		}
+		preserved := f.ledger(t)
+		if !reflect.DeepEqual(preserved.SkillFacts(), candidate.SkillFacts()) || !reflect.DeepEqual(preserved.DelegationFacts(), candidate.DelegationFacts()) {
+			t.Fatal("unavailable lean history or multiplicity changed")
 		}
 
 		if err = os.WriteFile(f.output, accepted, 0600); err != nil {
@@ -412,7 +403,6 @@ func TestCaptureCommittedHistoryPreservesSupportedStoredEvidence(t *testing.T) {
 	old := a.ledger(t)
 	dto := adapters.AgenticFactLedgerDTOFromDomain(old)
 	tool := "bash"
-	dto.Sessions[0].Events = []adapters.SessionEventFactDTO{{EventID: "stored-event", Timestamp: "2026-01-01T00:00:01Z", Role: "coder", EventType: "tool_call", ToolName: &tool, Status: "error", ContextTokens: 3}}
 	count := int64(3)
 	dto.Sessions[0].Anomalies = []adapters.AnomalyDTO{
 		{RuleID: string(domain.RuleToolRetryStreak), Severity: string(domain.SeverityWarning), Context: adapters.AnomalyContextDTO{ToolName: &tool, Count: &count}, Evidence: []adapters.AnomalyEvidenceRefDTO{{SessionID: "prior-root", EventID: "stored-event"}}},
@@ -452,7 +442,7 @@ func TestCaptureCommittedHistoryPreservesSupportedStoredEvidence(t *testing.T) {
 			if owner.ID == "prior-root" {
 				found = true
 				if !reflect.DeepEqual(owner, accepted.PersistedSessions[0]) {
-					t.Fatalf("pass %d changed committed sparse events/anomalies/evidence/null-cost values: before=%+v after=%+v", pass, accepted.PersistedSessions[0], owner)
+					t.Fatalf("pass %d changed committed lean facts/anomalies/evidence/null-cost values: before=%+v after=%+v", pass, accepted.PersistedSessions[0], owner)
 				}
 			}
 		}
@@ -498,12 +488,11 @@ func TestCaptureCommittedHistoryRejectsRawBodiesBeforeReplacement(t *testing.T) 
 		t.Run(field, func(t *testing.T) {
 			a, b, _ := newCommittedHistoryFixture(t)
 			dto := adapters.AgenticFactLedgerDTOFromDomain(a.ledger(t))
-			dto.Sessions[0].Events = []adapters.SessionEventFactDTO{{EventID: "unsafe", Timestamp: "2026-01-01T00:00:01Z", Role: "coder", EventType: "tool_call", Status: "completed"}}
 			body, err := json.Marshal(dto)
 			if err != nil {
 				t.Fatal(err)
 			}
-			body = []byte(strings.Replace(string(body), `"event_id":"unsafe"`, `"`+field+`":"PRIVATE_BODY_SENTINEL","event_id":"unsafe"`, 1))
+			body = []byte(strings.Replace(string(body), `"id":"prior-root"`, `"id":"prior-root","events":[{"event_id":"unsafe","`+field+`":"PRIVATE_BODY_SENTINEL"}]`, 1))
 			if err = os.WriteFile(a.output, body, 0600); err != nil {
 				t.Fatal(err)
 			}
@@ -539,9 +528,9 @@ func TestCaptureCommittedHistoryRejectsRawBodiesBeforeReplacement(t *testing.T) 
 func TestGeneratePreservesUnavailableOwnedAuxiliaryFactsAcrossMachines(t *testing.T) {
 	a, b, _ := newCommittedHistoryFixture(t)
 	remote := a.ledger(t)
-	remote.Sessions[0].Skills = []domain.SkillFact{{Name: "remote-skill", Outcome: domain.OutcomeUnknown, EvidenceKind: "activation_request", Provenance: domain.FactProvenance{MessageID: "remote-message"}}}
-	remote.Sessions[0].TaskLinks = []domain.TaskLinkFact{{SubagentType: "tester", Description: "remote-task", ChildSession: "remote-unavailable-child", Provenance: domain.FactProvenance{CallID: "remote-call"}, Outcome: domain.OutcomeSucceeded, CostEvidence: domain.UnavailableCost()}}
-	remote.Sessions = append(remote.Sessions, domain.SessionFact{ID: "other-source", Source: domain.SourceOpenCode, User: "remote-user", Skills: []domain.SkillFact{{Name: "other-skill", Outcome: domain.OutcomeSucceeded, Success: true}}, TaskLinks: []domain.TaskLinkFact{{Outcome: domain.OutcomeUnknown, Description: "other-task", CostEvidence: domain.UnavailableCost()}}})
+	remote.Sessions[0].Skills = []domain.SkillFact{{Name: "remote-skill"}}
+	remote.Sessions[0].Delegations = []domain.DelegationFact{{AgentType: domain.KnownString("tester"), Description: "remote-task", ChildSession: "remote-unavailable-child"}}
+	remote.Sessions = append(remote.Sessions, domain.SessionFact{ID: "other-source", Source: domain.SourceOpenCode, User: "remote-user", Skills: []domain.SkillFact{{Name: "other-skill"}}, Delegations: []domain.DelegationFact{{Description: "other-task"}}})
 	if err := adapters.SaveFactLedger(a.output, remote); err != nil {
 		t.Fatal(err)
 	}
@@ -577,16 +566,16 @@ func TestGeneratePreservesUnavailableOwnedAuxiliaryFactsAcrossMachines(t *testin
 			for _, session := range got.Sessions {
 				owners[session.ID] = session
 			}
-			if len(owners) != 3 || len(owners["current-root"].Skills) != tc.localSkills || len(owners["current-root"].TaskLinks) != tc.localTasks {
+			if len(owners) != 3 || len(owners["current-root"].Skills) != tc.localSkills || len(owners["current-root"].Delegations) != tc.localTasks {
 				t.Fatalf("wrong exact local replacement: %+v", owners)
 			}
 			for _, want := range remote.Sessions {
 				actual, ok := owners[want.ID]
-				if !ok || !reflect.DeepEqual(actual.Skills, want.Skills) || !reflect.DeepEqual(actual.TaskLinks, want.TaskLinks) {
+				if !ok || !reflect.DeepEqual(actual.Skills, want.Skills) || !reflect.DeepEqual(actual.Delegations, want.Delegations) {
 					t.Fatalf("unavailable owner facts changed: owner=%s actual=%+v expected=%+v", want.ID, actual, want)
 				}
 			}
-			if len(got.SkillFacts()) != tc.localSkills+2 || len(got.TaskLinkFacts()) != tc.localTasks+2 {
+			if len(got.SkillFacts()) != tc.localSkills+2 || len(got.DelegationFacts()) != tc.localTasks+2 {
 				t.Fatalf("aggregate ignored remote facts or duplicated snapshot: %+v", got)
 			}
 			data := readCaptureFile(t, b.output)

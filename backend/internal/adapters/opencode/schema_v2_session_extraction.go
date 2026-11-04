@@ -62,7 +62,7 @@ type schemaV2ModelJSON struct {
 	ID *string `json:"id"`
 }
 
-func extractSchemaV2Sessions(db *sql.DB, roots []string, defaultUser string, userBySession map[string]string, exact ...bool) ([]domain.SessionFact, *string, *string, error) {
+func extractSchemaV2SessionsWithEvents(db *sql.DB, roots []string, defaultUser string, userBySession map[string]string, strict bool, eventSink *[]domain.EventFact, exact ...bool) ([]domain.SessionFact, *string, *string, error) {
 	ids, err := buildQuotedIDList(roots)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("validating thread ids: %w", err)
@@ -108,6 +108,11 @@ func extractSchemaV2Sessions(db *sql.DB, roots []string, defaultUser string, use
 	var invocationSessions []domain.SessionFact
 	var tools []domain.ToolFact
 	var events []domain.EventFact
+	defer func() {
+		if eventSink != nil {
+			*eventSink = append(*eventSink, events...)
+		}
+	}()
 	for _, s := range sessions {
 		role := domain.AgentRole(strings.TrimSpace(s.agent.String))
 		var persona domain.PersonaEvidence
@@ -288,7 +293,12 @@ func extractSchemaV2Sessions(db *sql.DB, roots []string, defaultUser string, use
 					}
 					output := strings.Join(outputParts, "\n")
 					input := normalizeToolInput(part.State.Input)
-					events = append(events, domain.EventFact{EventID: sourceEventID("tool", part.ID), Timestamp: stamp, SessionID: s.id, MessageID: mid, Turn: assistantTurns, Role: role, EventType: domain.EventTypeToolCall, ToolName: &toolName, Status: status, DurationMs: duration, ContextTokens: ctx, ToolInput: input, ToolOutput: schemaV2StringPointer(output)})
+					var invokedAt *string
+					if part.State.Time.Created != nil && *part.State.Time.Created > 0 {
+						value := formatEpochMilli(*part.State.Time.Created)
+						invokedAt = &value
+					}
+					events = append(events, domain.EventFact{InvokedAt: invokedAt, EventID: sourceEventID("tool", part.ID), Timestamp: stamp, SessionID: s.id, MessageID: mid, Turn: assistantTurns, Role: role, EventType: domain.EventTypeToolCall, ToolName: &toolName, Status: status, DurationMs: duration, ContextTokens: ctx, ToolInput: input, ToolOutput: schemaV2StringPointer(output)})
 				}
 			default:
 				return nil, nil, nil, fmt.Errorf("OpenCode schema family v2: unsupported message type %q for message %s in session %s", m.kind, m.id, s.id)
@@ -359,7 +369,14 @@ func extractSchemaV2Sessions(db *sql.DB, roots []string, defaultUser string, use
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("grouping OpenCode schema family v2 facts into sessions: %w", err)
 	}
-	return result, start, end, nil
+	if err := proveSourceChildLinks(db, "session_v2", events); err != nil {
+		return nil, nil, nil, err
+	}
+	projected, err := projectSourceFacts(result, events, strict)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return projected, start, end, nil
 }
 
 func schemaV2StringPointer(s string) *string { return &s }
@@ -381,4 +398,8 @@ func countSchemaV2SteeringTurns(db *sql.DB, threadIDs []string) (int64, error) {
 		return 0, fmt.Errorf("counting OpenCode schema family v2 user messages: %w", err)
 	}
 	return count, nil
+}
+
+func extractSchemaV2Sessions(db *sql.DB, ids []string, user string, users map[string]string, exact ...bool) ([]domain.SessionFact, *string, *string, error) {
+	return extractSchemaV2SessionsWithEvents(db, ids, user, users, true, nil, exact...)
 }

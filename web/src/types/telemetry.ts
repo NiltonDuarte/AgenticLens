@@ -1,6 +1,6 @@
 export type EventType = 'tool_call' | 'turn_message' | 'compaction' | 'skill_activation';
 
-export type DataSource = 'local_sqlite' | 'local_codex' | 'committed_ledger';
+export type DataSource = 'local_sqlite' | 'local_codex' | 'mixed_sources' | 'unavailable';
 
 export type SourceHarness = 'unknown' | 'opencode' | 'codex';
 
@@ -18,6 +18,10 @@ export type ConventionalTicketType =
   | 'build';
 
 export interface EventFact {
+  /** Source-recognized activation metadata, present only in transient traces. */
+  readonly skill_name?: string;
+  /** Actual native child identity proven by the source adapter. */
+  readonly child_session_id?: string;
   readonly call_id?: string;
   readonly event_id?: string | null | undefined;
   readonly timestamp: string;
@@ -43,8 +47,12 @@ export interface WorkspaceEventsResponse {
   readonly events: readonly EventFact[];
   readonly data_source: DataSource;
   readonly anomalies?: readonly Anomaly[] | undefined;
-  /** The events already include the committed ledger baseline. */
-  readonly includes_baseline?: boolean | undefined;
+  readonly availability: 'complete' | 'partial' | 'unavailable';
+  readonly coverage: {
+    readonly required_session_ids: readonly string[];
+    readonly complete_session_ids: readonly string[];
+    readonly diagnostics: readonly string[];
+  };
 }
 
 export type AnomalySeverity = 'WARNING' | 'CRITICAL';

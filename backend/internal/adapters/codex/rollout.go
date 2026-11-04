@@ -19,14 +19,12 @@ import (
 
 const maxRolloutLineBytes = 8 * 1024 * 1024
 
-// Transcript is a privacy-minimized summary of a Codex rollout. Content-bearing
-// fields such as prompts and assistant text are not retained. Selected skill
-// names/paths and delegation metadata are retained as occurrence facts; source
-// event payloads remain transient and are compacted before persistence.
+// Transcript is a request-local Codex source extraction. Events and occurrence
+// identities are ephemeral; SessionFacts projects only durable lean values.
 type Transcript struct {
-	Skills           []domain.SkillFact    `json:"-"`
-	TaskLinks        []domain.TaskLinkFact `json:"-"`
-	AgentPath        string                `json:"-"`
+	Skills           []sourceSkillOccurrence      `json:"-"`
+	Delegations      []sourceDelegationOccurrence `json:"-"`
+	AgentPath        string                       `json:"-"`
 	pendingSelection int
 	messageCount     int
 	ThreadID         string                  `json:"thread_id,omitempty"`
@@ -631,12 +629,13 @@ func (transcript *Transcript) readToolEvent(kind string, payload json.RawMessage
 func (transcript *Transcript) readResponseItem(payload json.RawMessage, timestamp, sourceID string) {
 	transcript.readOccurrence(payload, timestamp, sourceID)
 	var item struct {
-		Type   string          `json:"type"`
-		Role   string          `json:"role"`
-		CallID string          `json:"call_id"`
-		Name   string          `json:"name"`
-		Status string          `json:"status"`
-		Output json.RawMessage `json:"output"`
+		Type      string          `json:"type"`
+		Role      string          `json:"role"`
+		CallID    string          `json:"call_id"`
+		Name      string          `json:"name"`
+		Status    string          `json:"status"`
+		Output    json.RawMessage `json:"output"`
+		Arguments json.RawMessage `json:"arguments"`
 	}
 	if err := json.Unmarshal(payload, &item); err != nil {
 		transcript.Warnings = append(transcript.Warnings, sourceID+": invalid response_item payload")
@@ -683,9 +682,19 @@ func (transcript *Transcript) readResponseItem(payload json.RawMessage, timestam
 		transcript.ToolCalls++
 		transcript.pendingTools[item.CallID] = len(transcript.Events)
 		toolName := name
+		var toolInput *string
+		if len(item.Arguments) > 0 {
+			var native string
+			if json.Unmarshal(item.Arguments, &native) == nil {
+				toolInput = &native
+			} else {
+				raw := string(item.Arguments)
+				toolInput = &raw
+			}
+		}
 		transcript.Events = append(transcript.Events, domain.EventFact{
 			CallID: item.CallID, EventID: "codex-call:" + item.CallID, Timestamp: timestamp, SessionID: transcript.sessionIDOrThread(), Turn: transcript.Turns,
-			Role: transcript.role, EventType: domain.EventTypeToolCall, ToolName: &toolName,
+			Role: transcript.role, EventType: domain.EventTypeToolCall, ToolName: &toolName, ToolInput: toolInput,
 			Status: "running", ContextTokens: transcript.currentContext,
 		})
 	case "custom_tool_call_output", "function_call_output":
@@ -913,7 +922,7 @@ func (transcript *Transcript) finalizeFacts() {
 func (transcript Transcript) SessionFacts() ([]domain.SessionFact, error) {
 	owned := transcript.sessions
 	if owned == nil {
-		session := domain.SessionFact{ID: transcript.sessionIDOrThread(), Source: domain.SourceCodex, AgentPath: transcript.AgentPath, Invocations: transcript.Invocations, Skills: transcript.Skills, TaskLinks: transcript.TaskLinks}
+		session := domain.SessionFact{ID: transcript.sessionIDOrThread(), Source: domain.SourceCodex, Invocations: transcript.Invocations, Skills: transcript.leanSkills(), Delegations: transcript.leanDelegations()}
 		if transcript.ParentThread != "" {
 			parent := transcript.ParentThread
 			session.ParentID = &parent
@@ -924,7 +933,11 @@ func (transcript Transcript) SessionFacts() ([]domain.SessionFact, error) {
 	if err != nil {
 		return nil, fmt.Errorf("grouping Codex facts by session: %w", err)
 	}
-	return sessions, nil
+	facts, err := domain.PersistSourceAnomalySummaries(domain.AgenticFactLedger{Sessions: sessions}, domain.SourceEvents{Events: transcript.Events, CompleteSessionIDs: sessionIDs(sessions)})
+	if err != nil {
+		return nil, err
+	}
+	return facts.Sessions, nil
 }
 
 // CombineTranscripts merges a discovered root thread and its child threads
@@ -933,6 +946,7 @@ func CombineTranscripts(transcripts []Transcript) (Transcript, error) {
 	if len(transcripts) == 0 {
 		return Transcript{}, errors.New("cannot combine an empty Codex transcript set")
 	}
+	transcripts = resolveSourceChildren(transcripts)
 	combined := Transcript{RecordKinds: make(map[string]int64), EventKinds: make(map[string]int64), sessions: []domain.SessionFact{}}
 	for index, transcript := range transcripts {
 		sessions, err := transcript.SessionFacts()

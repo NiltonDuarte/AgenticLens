@@ -36,6 +36,7 @@ func (s *Store) QueueChild(ctx context.Context, store, path, parent string) erro
 }
 
 type ReconcileResult struct {
+	SourceEvents          domain.SourceEvents          `json:"-"`
 	DiagnosticIndex       *DiagnosticIndexProgress     `json:"diagnostic_index,omitempty"`
 	StartedAt             string                       `json:"started_at"`
 	CutoffSemantics       string                       `json:"cutoff_semantics"`
@@ -240,7 +241,13 @@ func (s *Store) Reconcile(ctx context.Context, ticket, user string, sessionBudge
 	return result, nil
 }
 
-func extractExact(ctx context.Context, r domain.CaptureRegistration, budget int64, user string) ([]domain.SessionFact, int64, string, error) {
+// sourceRead never enters registry serialization or diagnostic publication.
+type sourceRead struct {
+	transcripts []codex.Transcript
+	events      domain.SourceEvents
+}
+
+func extractExact(ctx context.Context, r domain.CaptureRegistration, budget int64, user string, source ...*sourceRead) ([]domain.SessionFact, int64, string, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, 0, "", err
 	}
@@ -277,6 +284,9 @@ func extractExact(ctx context.Context, r domain.CaptureRegistration, budget int6
 		if transcript.ThreadID != r.Identity.SessionID {
 			return nil, info.Size(), "", errors.New("hook/source identity mismatch")
 		}
+		if len(source) > 0 {
+			source[0].transcripts = append(source[0].transcripts, transcript)
+		}
 		sessions, err := transcript.SessionFacts()
 		if err != nil {
 			return nil, info.Size(), "", err
@@ -291,7 +301,12 @@ func extractExact(ctx context.Context, r domain.CaptureRegistration, budget int6
 		return nil, 0, "", err
 	}
 	defer db.Close()
-	return opencode.CaptureSessionSnapshot(ctx, db.DB(), r.Identity.SessionID, user, budget)
+	var events domain.SourceEvents
+	sessions, bytes, updated, readErr := opencode.CaptureSessionSnapshot(ctx, db.DB(), r.Identity.SessionID, user, budget, &events)
+	if readErr == nil && len(source) > 0 {
+		source[0].events = domain.MergeSourceEvents(source[0].events, events)
+	}
+	return sessions, bytes, updated, readErr
 }
 
 // ValidateSessionMerge detects identities the canonical ledger cannot distinguish.
@@ -344,6 +359,12 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 	if err != nil {
 		return nil, nil, err
 	}
+	previousSnapshots := []domain.SessionFact{}
+	for _, registration := range registrations {
+		if registration.TicketID == ticket {
+			previousSnapshots = append(previousSnapshots, registration.Snapshot...)
+		}
+	}
 	if _, err = s.db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS reconcile_cursor(worktree_id INTEGER NOT NULL,ticket TEXT,identity TEXT NOT NULL,PRIMARY KEY(worktree_id,ticket))`); err != nil {
 		return nil, nil, err
 	}
@@ -364,6 +385,8 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 		split++
 	}
 	indexes = append(append([]int{}, indexes[split:]...), indexes[:split]...)
+
+	source := sourceRead{}
 	used := 0
 	refreshed := map[string]bool{}
 	for _, i := range indexes {
@@ -408,7 +431,7 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 		// the exact owner within the existing session/byte budgets.
 
 		if extractErr == nil {
-			fresh, revision, updatedAt, extractErr = extractExact(ctx, r, budget.bytes, user)
+			fresh, revision, updatedAt, extractErr = extractExact(ctx, r, budget.bytes, user, &source)
 		}
 		budget.charge(revision)
 		updated, updateErr := s.Change(ctx, r.Identity, func(current domain.CaptureRegistration) (domain.CaptureRegistration, error) {
@@ -432,12 +455,13 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 			if owner.ParentID != nil {
 				current.ParentID = *owner.ParentID
 			}
-			// v6 auxiliary facts belong to the exact owner snapshot.
+			// Lean auxiliary facts belong to the exact owner snapshot.
 			compact, compactErr := domain.PersistAnomalySummaries(domain.AgenticFactLedger{Sessions: fresh})
 			if compactErr != nil {
 				return current, compactErr
 			}
-			current.Snapshot = compact.Sessions
+			current.Snapshot = domain.RetainIncompleteGroupSummaries(previousSnapshots, compact.Sessions)
+			current.SnapshotNeedsRefresh = false
 			current.ProjectDirectory = s.project
 			current.ProjectProof = domain.CaptureProjectVerified
 			if fingerprintErr == nil {
@@ -464,5 +488,87 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 			return nil, nil, err
 		}
 	}
+	// Native child metadata is request-local. Resolve only successfully read
+	// owners before saving the final lean snapshots; budgets bound these reads.
+	if len(source.transcripts) > 0 {
+		combined, combineErr := codex.CombineTranscripts(source.transcripts)
+		if combineErr != nil {
+			return nil, nil, combineErr
+		}
+		source.events = domain.MergeSourceEvents(source.events, domain.SourceEvents{Events: combined.Events, CompleteSessionIDs: transcriptSessionIDs(source.transcripts)})
+		owners, groupErr := combined.SessionFacts()
+		if groupErr != nil {
+			return nil, nil, groupErr
+		}
+		byID := make(map[string]domain.SessionFact)
+		for _, owner := range owners {
+			byID[owner.ID] = owner
+		}
+		for i, registration := range registrations {
+			if !refreshed[IdentityKey(registration.Identity)] {
+				continue
+			}
+			owner, ok := byID[registration.Identity.SessionID]
+			if !ok {
+				continue
+			}
+			updated, changeErr := s.Change(ctx, registration.Identity, func(current domain.CaptureRegistration) (domain.CaptureRegistration, error) {
+				for j := range current.Snapshot {
+					if current.Snapshot[j].ID == owner.ID {
+						current.Snapshot[j].Delegations = owner.Delegations
+					}
+				}
+				return current, nil
+			})
+			if changeErr != nil {
+				return nil, nil, changeErr
+			}
+			registrations[i] = updated
+		}
+	}
+	// Final summaries see all resulting owners and explicit complete source
+	// coverage, including retained children missing from this bounded pass.
+	all := []domain.SessionFact{}
+	for _, registration := range registrations {
+		if registration.TicketID == ticket {
+			all = append(all, registration.Snapshot...)
+		}
+	}
+	summary, summaryErr := domain.PersistSourceAnomalySummaries(domain.AgenticFactLedger{Sessions: all}, source.events)
+	if summaryErr != nil {
+		return nil, nil, summaryErr
+	}
+	summaries := make(map[string][]domain.Anomaly)
+	for _, owner := range summary.Sessions {
+		summaries[owner.ID] = owner.Anomalies
+	}
+	for i, registration := range registrations {
+		if !refreshed[IdentityKey(registration.Identity)] {
+			continue
+		}
+		updated, changeErr := s.Change(ctx, registration.Identity, func(current domain.CaptureRegistration) (domain.CaptureRegistration, error) {
+			for j := range current.Snapshot {
+				current.Snapshot[j].Anomalies = summaries[current.Snapshot[j].ID]
+			}
+			return current, nil
+		})
+		if changeErr != nil {
+			return nil, nil, changeErr
+		}
+		registrations[i] = updated
+	}
+	result.SourceEvents = domain.MergeSourceEvents(result.SourceEvents, source.events)
 	return registrations, refreshed, nil
+}
+
+func transcriptSessionIDs(transcripts []codex.Transcript) []string {
+	result := make([]string, 0, len(transcripts))
+	for _, source := range transcripts {
+		id := source.ThreadID
+		if id == "" {
+			id = source.SessionID
+		}
+		result = append(result, id)
+	}
+	return result
 }

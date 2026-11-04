@@ -1,7 +1,7 @@
 {
-  "schema_version": 6,
+  "schema_version": 7,
   "migration": {
-    "schema_version": 6,
+    "schema_version": 7,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -93,19 +93,8 @@
           "errors": 0
         }
       ],
-      "events": [
-        {
-          "timestamp": "2026-10-17T14:50:31.748000+00:00",
-          "turn": 37,
-          "role": "general",
-          "event_type": "tool_call",
-          "tool_name": "bash",
-          "status": "error",
-          "duration_ms": 35,
-          "context_tokens": 47888
-        }
-      ],
       "anomalies": []
     }
-  ]
+  ],
+  "anomalies": []
 }

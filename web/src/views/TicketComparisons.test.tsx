@@ -11,7 +11,7 @@ describe('TicketComparisons View Component', () => {
   });
 
   it('matches literal skill names with OR semantics, composes filters, and recovers from empty results', async () => {
-    const fact = (name: string): SkillFact => ({ name, success: true, outcome: 'succeeded' as const, caller_role: 'coder', turn_index: 0, message_index: 0, timestamp: '2026-01-01T00:00:00Z' });
+    const fact = (name: string): SkillFact => ({ name, caller_role: 'coder', invoked_at: '2026-01-01T00:00:00Z' });
     const ids = ['AL-1', 'AL-2', 'AL-3', 'PO-1'];
     const ledgers = ids.map((id, index) => {
       const ledger = mockAgenticMetricsLedgers[id]!;

@@ -27,6 +27,7 @@ func NewEngine(registry *Registry) *Engine {
 			NewStepV3ToV4UserIterations(),
 			NewStepV4ToV5CostEvidence(),
 			NewStepV5ToV6OwnedOccurrences(),
+			NewStepV6ToV7LeanOccurrences(),
 		} {
 			if err := registry.Register(step); err != nil {
 				// Built-in steps are static; failure indicates a programming error.
@@ -44,14 +45,14 @@ type versionProbe struct {
 	SchemaVersion *int `json:"schema_version"`
 }
 
-func decodeLedger(input []byte) (domain.AgenticFactLedger, int, error) {
+func decodeLedger(input []byte) (legacyLedger, int, error) {
 	version, err := (&Engine{}).DetectVersion(input)
 	if err != nil {
-		return domain.AgenticFactLedger{}, 0, err
+		return legacyLedger{}, 0, err
 	}
 	ledger, legacy, hasSessions, err := decodeVersionedLedger(input, version)
 	if err != nil {
-		return domain.AgenticFactLedger{}, 0, err
+		return legacyLedger{}, 0, err
 	}
 	if ledger.Sessions == nil && (len(legacy.Invocations) > 0 || len(legacy.Events) > 0 || len(legacy.Tools) > 0) {
 		attributed := make([]domain.ToolFact, 0, len(legacy.Tools))
@@ -63,16 +64,16 @@ func decodeLedger(input []byte) (domain.AgenticFactLedger, int, error) {
 			}
 			attributed = append(attributed, tool)
 		}
-		owned := make([]domain.SessionFact, 0, len(legacy.Invocations))
+		owned := make([]legacySessionFact, 0, len(legacy.Invocations))
 		for _, row := range legacy.Invocations {
-			owned = append(owned, domain.SessionFact{
+			owned = append(owned, legacySessionFact{
 				ID: row.SessionID, ParentID: row.ParentID, User: row.User,
 				Invocations: []domain.InvocationFact{row.InvocationFact},
 			})
 		}
-		sessions, err := domain.SessionsFromFacts(owned, attributed, legacy.Events)
+		sessions, err := legacySessionsFromFacts(owned, attributed, legacy.Events)
 		if err != nil {
-			return domain.AgenticFactLedger{}, 0, fmt.Errorf("normalizing legacy fact collections: %w", err)
+			return legacyLedger{}, 0, fmt.Errorf("normalizing legacy fact collections: %w", err)
 		}
 		if legacy.Source != "" {
 			for i := range sessions {
@@ -100,9 +101,9 @@ func decodeLedger(input []byte) (domain.AgenticFactLedger, int, error) {
 		}
 	}
 	if version >= 4 && hasSessions {
-		normalized, err := domain.PersistAnomalySummaries(ledger)
+		normalized, err := legacyPersistAnomalySummaries(ledger)
 		if err != nil {
-			return domain.AgenticFactLedger{}, 0, fmt.Errorf("sanitizing canonical session events: %w", err)
+			return legacyLedger{}, 0, fmt.Errorf("sanitizing canonical session events: %w", err)
 		}
 		ledger = normalized
 	}
@@ -144,23 +145,49 @@ func (e *Engine) Migrate(input []byte, targetVersion int) (domain.AgenticFactLed
 			ErrUnsupportedVersion, targetVersion)
 	}
 
-	ledger, sourceVersion, err := decodeLedger(input)
+	sourceVersion, err := e.DetectVersion(input)
 	if err != nil {
 		return domain.AgenticFactLedger{}, err
 	}
-	if err := validateSessions(ledger.Sessions); err != nil {
+	if sourceVersion == domain.CurrentSchemaVersion {
+		if targetVersion != domain.CurrentSchemaVersion {
+			return domain.AgenticFactLedger{}, ErrDowngradeNotAllowed
+		}
+		var current domain.AgenticFactLedger
+		decoder := json.NewDecoder(bytes.NewReader(input))
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&current); err != nil {
+			return domain.AgenticFactLedger{}, fmt.Errorf("decoding current schema: %w", err)
+		}
+		return current, nil
+	}
+	result, err := e.MigrateInput(input, targetVersion)
+	if err != nil {
 		return domain.AgenticFactLedger{}, err
 	}
+	return result.current(), nil
+}
 
-	// Idempotency: if already at target version, return ledger unchanged with zero mutations.
+// MigrateInput exposes the migration-only intermediate model for explicit older
+// transitions. Runtime consumers use Migrate and the schema7 canonical output.
+func (e *Engine) MigrateInput(input []byte, targetVersion int) (LedgerInput, error) {
+	if targetVersion < 1 {
+		return legacyLedger{}, ErrUnsupportedVersion
+	}
+	ledger, sourceVersion, err := decodeLedger(input)
+	if err != nil {
+		return legacyLedger{}, err
+	}
+	if err := validateSessions(ledger.Sessions); err != nil {
+		return legacyLedger{}, err
+	}
 	if sourceVersion == targetVersion {
 		return ledger, nil
 	}
-
 	return e.applyChain(ledger, sourceVersion, targetVersion)
 }
 
-func validateSessions(sessions []domain.SessionFact) error {
+func validateSessions(sessions []legacySessionFact) error {
 	seen := make(map[string]bool, len(sessions))
 	for i, session := range sessions {
 		id := strings.TrimSpace(session.ID)
@@ -180,10 +207,10 @@ func validateSessions(sessions []domain.SessionFact) error {
 	return nil
 }
 
-func (e *Engine) applyChain(ledger domain.AgenticFactLedger, sourceVersion int, targetVersion int) (domain.AgenticFactLedger, error) {
+func (e *Engine) applyChain(ledger legacyLedger, sourceVersion int, targetVersion int) (legacyLedger, error) {
 	chain, err := e.registry.PlanChain(sourceVersion, targetVersion)
 	if err != nil {
-		return domain.AgenticFactLedger{}, err
+		return legacyLedger{}, err
 	}
 
 	current := ledger
@@ -191,12 +218,12 @@ func (e *Engine) applyChain(ledger domain.AgenticFactLedger, sourceVersion int, 
 		before := current
 		after, err := step.Apply(current)
 		if err != nil {
-			return domain.AgenticFactLedger{}, fmt.Errorf("applying step %s (%d -> %d): %w",
+			return legacyLedger{}, fmt.Errorf("applying step %s (%d -> %d): %w",
 				step.Description(), step.SourceVersion(), step.TargetVersion(), err)
 		}
 
 		if err := e.validator.Validate(before, after, step.TargetVersion()); err != nil {
-			return domain.AgenticFactLedger{}, fmt.Errorf("step %s (%d -> %d) failed invariant check: %w",
+			return legacyLedger{}, fmt.Errorf("step %s (%d -> %d) failed invariant check: %w",
 				step.Description(), step.SourceVersion(), step.TargetVersion(), err)
 		}
 

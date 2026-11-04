@@ -70,6 +70,8 @@ const (
 
 // CaptureRegistration contains local correlation metadata, never transcript content.
 type CaptureRegistration struct {
+	// SnapshotNeedsRefresh marks opaque unsupported cache, never current facts.
+	SnapshotNeedsRefresh  bool                `json:"snapshot_needs_refresh,omitempty"`
 	BindingInstallationID string              `json:"binding_installation_id,omitempty"`
 	SourceInstallationID  string              `json:"source_installation_id,omitempty"`
 	InstallationID        string              `json:"installation_id,omitempty"`

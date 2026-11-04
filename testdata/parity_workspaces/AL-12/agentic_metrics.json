@@ -1,7 +1,7 @@
 {
-  "schema_version": 6,
+  "schema_version": 7,
   "migration": {
-    "schema_version": 6,
+    "schema_version": 7,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -113,75 +113,37 @@
           "errors": 0
         }
       ],
-      "events": [
+      "anomalies": [
         {
-          "timestamp": "2026-10-17T21:56:40.677000+00:00",
-          "turn": 13,
-          "role": "general",
-          "event_type": "tool_call",
-          "tool_name": "glob",
-          "status": "error",
-          "duration_ms": 6,
-          "context_tokens": 31661
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "turn": 109,
+            "token_delta": 111774,
+            "context_tokens": 143516,
+            "threshold": "80000"
+          }
         },
         {
-          "timestamp": "2026-10-17T21:56:43.694000+00:00",
-          "turn": 14,
-          "role": "general",
-          "event_type": "tool_call",
-          "tool_name": "read",
-          "status": "error",
-          "duration_ms": 7,
-          "context_tokens": 31742
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "WARNING",
+          "context": {
+            "turn": 130,
+            "context_tokens": 160045,
+            "threshold": "160000"
+          }
         },
         {
-          "timestamp": "2026-10-17T22:48:33.870000+00:00",
-          "turn": 109,
-          "role": "general",
-          "event_type": "tool_call",
-          "tool_name": "edit",
-          "status": "error",
-          "duration_ms": 26,
-          "context_tokens": 143516
-        },
-        {
-          "timestamp": "2026-10-17T22:50:12.768000+00:00",
-          "turn": 130,
-          "role": "general",
-          "event_type": "turn_message",
-          "status": "completed",
-          "duration_ms": 12313,
-          "context_tokens": 160045
-        },
-        {
-          "timestamp": "2026-10-17T22:50:24.933000+00:00",
-          "turn": 130,
-          "role": "general",
-          "event_type": "tool_call",
-          "tool_name": "read",
-          "status": "completed",
-          "duration_ms": 15,
-          "context_tokens": 160045
-        },
-        {
-          "timestamp": "2026-10-17T22:51:19.239000+00:00",
-          "turn": 1,
-          "role": "general",
-          "event_type": "compaction",
-          "status": "completed",
-          "context_tokens": 0
-        },
-        {
-          "timestamp": "2026-10-17T22:51:19.259000+00:00",
-          "turn": 137,
-          "role": "general",
-          "event_type": "turn_message",
-          "status": "completed",
-          "duration_ms": 9586,
-          "context_tokens": 71308
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "WARNING",
+          "context": {
+            "turn": 137,
+            "token_delta": 71308,
+            "context_tokens": 71308,
+            "threshold": "40000"
+          }
         }
-      ],
-      "anomalies": []
+      ]
     },
     {
       "id": "ses_eb426400cffelHQ5rlr9Lag0kA",
@@ -213,7 +175,6 @@
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     },
     {
@@ -246,28 +207,6 @@
         }
       ],
       "tools": [],
-      "events": [
-        {
-          "timestamp": "2026-10-17T22:07:49.244000+00:00",
-          "turn": 10,
-          "role": "coder",
-          "event_type": "tool_call",
-          "tool_name": "read",
-          "status": "error",
-          "duration_ms": 10,
-          "context_tokens": 51385
-        },
-        {
-          "timestamp": "2026-10-17T22:13:15.457000+00:00",
-          "turn": 52,
-          "role": "coder",
-          "event_type": "tool_call",
-          "tool_name": "edit",
-          "status": "error",
-          "duration_ms": 9,
-          "context_tokens": 87196
-        }
-      ],
       "anomalies": []
     },
     {
@@ -300,18 +239,6 @@
         }
       ],
       "tools": [],
-      "events": [
-        {
-          "timestamp": "2026-10-17T22:15:05.874000+00:00",
-          "turn": 5,
-          "role": "tester",
-          "event_type": "tool_call",
-          "tool_name": "read",
-          "status": "error",
-          "duration_ms": 6,
-          "context_tokens": 36629
-        }
-      ],
       "anomalies": []
     },
     {
@@ -344,8 +271,8 @@
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     }
-  ]
+  ],
+  "anomalies": []
 }

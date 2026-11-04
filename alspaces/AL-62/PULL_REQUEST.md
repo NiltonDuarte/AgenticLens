@@ -1,7 +1,9 @@
-# fix(telemetry): preserve granular skill and delegation facts (AL-62)
+# fix(telemetry): persist lean skills and delegations (AL-62)
 
-Codex extraction omitted skill and delegation facts, and ticket-level collections lost their source ownership. Schema v6 stores occurrences within their owning session, retaining native call/message provenance and explicit unknown outcomes. Codex and OpenCode producers, refresh/backfill, CLI/API and dashboard consume the owned representation.
+Codex previously omitted skill/delegation facts, while ticket-wide collections obscured their owner. The final schema stores lean skills and delegations within their source session: activation name/caller/time, and delegated agent/description/time/proven child session.
 
-Current runtime requires v6. Explicit migration drops ownerless legacy skill/task records and reports counts; root compatibility arrays and unresolved-history storage are removed by explicit user request. Partial refresh preserves unavailable owners' already-owned facts. Child references remain explicit when the child is unavailable.
+Schema 7 removes occurrence success/outcome/provenance metadata, duplicated delegation costs and persisted events. Traces hydrate separately from native sources with explicit complete, partial or unavailable coverage; they never enter ledger serialization. Activation counts and filters remain, while skill success-rate analytics are retired.
 
-Contract and accepted steering: [CONTRACT.md](alspaces/AL-62/CONTRACT.md). Delivery details and verification: [SUMMARY.md](alspaces/AL-62/SUMMARY.md).
+Explicit migration converts older ledgers, audits removed payloads and preserves known owners, multiplicity, child links and unrelated financial/anomaly facts. Current reads require the new schema. Partial refresh preserves unavailable owners; complete exact snapshots replace their own facts.
+
+Contract: [CONTRACT.md](alspaces/AL-62/CONTRACT.md). Delivery details: [SUMMARY.md](alspaces/AL-62/SUMMARY.md).

@@ -73,7 +73,7 @@ func TestSchemaV1ExtractSessions(t *testing.T) {
 
 	tools := extractedFacts.ToolFacts()
 
-	events := extractedFacts.EventFacts()
+	events := sourceEventsForSessions(t, db, extractedFacts.Sessions)
 	if err != nil {
 		t.Fatalf("ExtractSessions failed: %v", err)
 	}
@@ -209,10 +209,12 @@ func TestSchemaV1ExtractSessions(t *testing.T) {
 	}
 }
 
-func TestSchemaV1ExtractsSkillFailureAndTaskFact(t *testing.T) {
-	db := setupTestDB(t)
-	defer db.Close()
-	if _, err := db.Exec(`INSERT INTO session (id,parent_id,agent,model,title,time_created,time_updated) VALUES
+func TestSchemaV1ExtractsLeanSkillsAndDelegationsFromNativeParts(t *testing.T) {
+	for _, timeState := range []string{"recorded", "missing", "zero"} {
+		t.Run(timeState, func(t *testing.T) {
+			db := setupTestDB(t)
+			defer db.Close()
+			if _, err := db.Exec(`INSERT INTO session (id,parent_id,agent,model,title,time_created,time_updated) VALUES
 		('facts_root',NULL,'coder','default_model','root',1760000000000,1760000001000),
 		('facts_child','facts_root','tester','default_model','child',1760000000500,1760000000900);
 		INSERT INTO message (id,session_id,time_created,time_updated,data) VALUES
@@ -220,43 +222,61 @@ func TestSchemaV1ExtractsSkillFailureAndTaskFact(t *testing.T) {
 		INSERT INTO part (id,session_id,message_id,time_created,time_updated,data) VALUES
 		('skill-fail','facts_root','facts_msg',1760000000200,1760000000300,'{"type":"tool","tool":"skill","state":{"status":"error","input":{"name":"agentic-lens-dev"},"output":"load failed"}}'),
 		('task-ok','facts_root','facts_msg',1760000000400,1760000000500,'{"type":"tool","tool":"task","state":{"status":"completed","input":{"subagent_type":"tester","description":"Verify AL-51"},"output":"{\"session_id\":\"facts_child\"}"}}');`); err != nil {
-		t.Fatal(err)
-	}
-	captured, _, _, captureErr := opencode.CaptureSessionSnapshot(context.Background(), db, "facts_root", "tester", 1_000_000)
-	if captureErr != nil {
-		t.Fatal(captureErr)
-	}
-	captureFacts := domain.AgenticFactLedger{Sessions: captured}
-	if len(captureFacts.SkillFacts()) != 1 || len(captureFacts.TaskLinkFacts()) != 1 {
-		t.Fatalf("BEH-05 exact capture snapshot omitted owned source occurrences: %+v", captured)
-	}
-	sessions, _, _, err := opencode.ExtractSessions(db, []string{"facts_root"}, "tester", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	skills, tasks := opencode.ExtractSkillTaskFacts(sessions)
-	if len(skills) != 1 || skills[0].Name != "agentic-lens-dev" || skills[0].CallerRole != "coder" || skills[0].Success || skills[0].Error != "load failed" {
-		t.Fatalf("unexpected skill facts: %+v", skills)
-	}
-	if len(tasks) != 1 || tasks[0].SubagentType != "tester" || tasks[0].Description != "Verify AL-51" || tasks[0].ChildSession != "facts_child" {
-		t.Fatalf("unexpected task facts: %+v sessions=%+v", tasks, sessions)
-	}
-	if skills[0].SessionID != "facts_root" || skills[0].Provenance.MessageID != "facts_msg" || !strings.Contains(skills[0].Provenance.EventID, "skill-fail") || tasks[0].SessionID != "facts_root" || !strings.Contains(tasks[0].Provenance.EventID, "task-ok") {
-		t.Fatalf("native source owner/part/message identities lost: %+v %+v", skills, tasks)
-	}
-	if _, err := db.Exec("DELETE FROM session WHERE id=?", "facts_child"); err != nil {
-		t.Fatal(err)
-	}
-	unavailable, _, _, err := opencode.ExtractSessions(db, []string{"facts_root"}, "tester", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	owned := domain.AgenticFactLedger{Sessions: opencode.WithOwnedSkillTaskFacts(unavailable)}
-	links := owned.TaskLinkFacts()
-	if len(links) != 1 || links[0].SessionID != "facts_root" || links[0].ChildSession != "facts_child" {
-		t.Fatalf("explicit child reference disappeared without child source: %+v", links)
-	}
+				t.Fatal(err)
+			}
+			var skillTime, delegationTime *string
+			switch timeState {
+			case "recorded":
+				skillTime = domain.KnownString("2025-10-09T08:53:20.200000+00:00")
+				delegationTime = domain.KnownString("2025-10-09T08:53:20.400000+00:00")
+			case "missing":
+				if _, err := db.Exec(`UPDATE part SET time_created=NULL`); err != nil {
+					t.Fatal(err)
+				}
+			case "zero":
+				if _, err := db.Exec(`UPDATE part SET time_created=0`); err != nil {
+					t.Fatal(err)
+				}
+			}
+			captured, _, _, captureErr := opencode.CaptureSessionSnapshot(context.Background(), db, "facts_root", "tester", 1_000_000)
+			if captureErr != nil {
+				t.Fatal(captureErr)
+			}
+			captureFacts := domain.AgenticFactLedger{Sessions: captured}
+			assertOwnedInvocationTimes(t, captured, "facts_root", skillTime, delegationTime)
+			assertOwnedInvocationTimes(t, saveReloadSourceOwners(t, captured), "facts_root", skillTime, delegationTime)
+			if len(captureFacts.SkillFacts()) != 1 || len(captureFacts.DelegationFacts()) != 1 {
+				t.Fatalf("BEH-05 exact capture snapshot omitted owned source occurrences: %+v", captured)
+			}
+			sessions, _, _, err := opencode.ExtractSessions(db, []string{"facts_root"}, "tester", nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			assertOwnedInvocationTimes(t, sessions, "facts_root", skillTime, delegationTime)
+			skills, tasks := opencode.ExtractSkillTaskFacts(sourceEventsForSessions(t, db, sessions))
+			if len(skills) != 1 || skills[0].Name != "agentic-lens-dev" || skills[0].CallerRole == nil || *skills[0].CallerRole != "coder" {
+				t.Fatalf("unexpected skill facts: %+v", skills)
+			}
+			if len(tasks) != 1 || tasks[0].AgentType == nil || *tasks[0].AgentType != "tester" || tasks[0].Description != "Verify AL-51" || tasks[0].ChildSession != "facts_child" {
+				t.Fatalf("unexpected task facts: %+v sessions=%+v", tasks, sessions)
+			}
+			assertNativeOccurrenceEvent(t, sourceEventsForSessions(t, db, sessions), "facts_root", "facts_msg", "skill-fail")
+			assertNativeOccurrenceEvent(t, sourceEventsForSessions(t, db, sessions), "facts_root", "facts_msg", "task-ok")
+			if _, err := db.Exec("DELETE FROM session WHERE id=?", "facts_child"); err != nil {
+				t.Fatal(err)
+			}
+			unavailable, _, _, err := opencode.ExtractSessions(db, []string{"facts_root"}, "tester", nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			owned := domain.AgenticFactLedger{Sessions: unavailable}
+			links := owned.DelegationFacts()
+			if len(links) != 1 || links[0].ChildSession != "facts_child" {
+				t.Fatalf("explicit child reference disappeared without child source: %+v", links)
+			}
 
+		})
+	}
 }
 
 func TestSchemaV1SkillFailureStatusesAreCaseInsensitive(t *testing.T) {
@@ -275,14 +295,27 @@ func TestSchemaV1SkillFailureStatusesAreCaseInsensitive(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	skills, _ := opencode.ExtractSkillTaskFacts(sessions)
+	skills, _ := opencode.ExtractSkillTaskFacts(sourceEventsForSessions(t, db, sessions))
 	if len(skills) != 2 {
 		t.Fatalf("expected two skill facts, got %+v", skills)
 	}
 	for i, want := range []struct{ name, detail string }{{"failed-skill", "failure detail"}, {"error-skill", "uppercase failure detail"}} {
-		if skills[i].Name != want.name || skills[i].Success || skills[i].Error != want.detail {
+		if skills[i].Name != want.name || skills[i].InvokedAt == nil {
 			t.Errorf("skill[%d]=%+v, want unsuccessful %q with detail %q", i, skills[i], want.name, want.detail)
 		}
+		found := false
+		for _, event := range sourceEventsForSessions(t, db, sessions) {
+			if event.EventType == domain.EventTypeToolCall && event.ToolOutput != nil && *event.ToolOutput == want.detail {
+				found = true
+				if event.Status != "error" {
+					t.Errorf("source failure status not preserved: %+v", event)
+				}
+			}
+		}
+		if !found {
+			t.Errorf("source failure detail %q lost from transient events", want.detail)
+		}
+
 	}
 }
 
@@ -309,14 +342,17 @@ func TestSchemaV1MalformedOrIncompleteSkillTaskInputsPreserveOtherFacts(t *testi
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(sessions) != 1 || len(sessions[0].Invocations) == 0 || len(sessions[0].Events) != 4 {
+	if len(sessions) != 1 || len(sessions[0].Invocations) == 0 {
 		t.Fatalf("optional input handling lost session, invocation, or event facts: %+v", sessions)
 	}
-	skills, tasks := opencode.ExtractSkillTaskFacts(sessions)
+	if _, sourceErr := opencode.ExtractSessionSourceEvents(db, "optional_root", "tester"); sourceErr == nil {
+		t.Fatal("malformed source was certified as complete trace")
+	}
+	skills, tasks := sessions[0].Skills, sessions[0].Delegations
 	if len(skills) != 0 {
 		t.Errorf("malformed or unnamed skill input should be skipped, got %+v", skills)
 	}
-	if len(tasks) != 1 || tasks[0].SubagentType != "coder" || tasks[0].Description != "" {
+	if len(tasks) != 1 || tasks[0].AgentType == nil || *tasks[0].AgentType != "coder" || tasks[0].Description != "" {
 		t.Errorf("expected task fact to preserve only available fields, got %+v", tasks)
 	}
 }
@@ -339,7 +375,7 @@ func TestSchemaV1ExtractSessions_AdversarialEdgeCases(t *testing.T) {
 
 		tools := extractedFacts.ToolFacts()
 
-		events := extractedFacts.EventFacts()
+		events := sourceEventsForSessions(t, db, extractedFacts.Sessions)
 		if err != nil {
 			t.Fatalf("unexpected error on non-existent thread: %v", err)
 		}
@@ -427,7 +463,10 @@ func TestSchemaV1ExtractSessions_AdversarialEdgeCases(t *testing.T) {
 
 		tools := extractedFacts.ToolFacts()
 
-		events := extractedFacts.EventFacts()
+		_, sourceErr := opencode.ExtractSessionSourceEvents(db, "ses_corrupt", "tester")
+		if sourceErr == nil {
+			t.Fatal("corrupted message was certified as complete source")
+		}
 		if err != nil {
 			t.Fatalf("ExtractSessions failed on corrupted rows: %v", err)
 		}
@@ -442,10 +481,6 @@ func TestSchemaV1ExtractSessions_AdversarialEdgeCases(t *testing.T) {
 		inv := invocations[0]
 		if inv.Tokens.Input != 0 || inv.Tokens.Output != 0 || inv.CostUSD != 0.0 {
 			t.Errorf("expected zero tokens and zero cost, got %+v, cost=%f", inv.Tokens, inv.CostUSD)
-		}
-
-		if len(events) != 3 {
-			t.Errorf("expected 3 valid events (1 turn message, 2 tool calls), got %d: %+v", len(events), events)
 		}
 
 		if len(tools) != 2 {
@@ -551,7 +586,7 @@ func TestSchemaV1ExtractSessions_ChronologicalOrderingAndTieBreaking(t *testing.
 
 	extractedFacts := domain.AgenticFactLedger{Sessions: extractedSessions}
 
-	events := extractedFacts.EventFacts()
+	events := sourceEventsForSessions(t, db, extractedFacts.Sessions)
 	if err != nil {
 		t.Fatalf("ExtractSessions failed: %v", err)
 	}
@@ -627,7 +662,7 @@ func TestSchemaV1ExtractSessions_ToolCallErrorParsingAndDuration(t *testing.T) {
 
 	tools := extractedFacts.ToolFacts()
 
-	events := extractedFacts.EventFacts()
+	events := sourceEventsForSessions(t, db, extractedFacts.Sessions)
 	if err != nil {
 		t.Fatalf("ExtractSessions failed: %v", err)
 	}
@@ -743,7 +778,7 @@ func TestSchemaV1ExtractSessions_Sub4096ErrorPreservation(t *testing.T) {
 
 	extractedFacts := domain.AgenticFactLedger{Sessions: extractedSessions}
 
-	events := extractedFacts.EventFacts()
+	events := sourceEventsForSessions(t, db, extractedFacts.Sessions)
 	if err != nil {
 		t.Fatalf("ExtractSessions failed: %v", err)
 	}
@@ -846,7 +881,7 @@ func TestSchemaV1ExtractSessions_ErrorPayloadAdversarialBoundaries(t *testing.T)
 
 	extractedFacts := domain.AgenticFactLedger{Sessions: extractedSessions}
 
-	events := extractedFacts.EventFacts()
+	events := sourceEventsForSessions(t, db, extractedFacts.Sessions)
 	if err != nil {
 		t.Fatalf("ExtractSessions failed: %v", err)
 	}
@@ -916,7 +951,7 @@ func TestSchemaV1ExtractSessions_CompactionEvents(t *testing.T) {
 
 	invocations := extractedFacts.InvocationFacts()
 
-	events := extractedFacts.EventFacts()
+	events := sourceEventsForSessions(t, db, extractedFacts.Sessions)
 	if err != nil {
 		t.Fatalf("ExtractSessions failed: %v", err)
 	}
@@ -1008,7 +1043,7 @@ func TestSchemaV1ExtractSessions_RawPersonaPreservation(t *testing.T) {
 		}
 
 		ledger := domain.AgenticFactLedger{Sessions: sessions}
-		invocations, tools, events := ledger.InvocationFacts(), ledger.ToolFacts(), ledger.EventFacts()
+		invocations, tools, events := ledger.InvocationFacts(), ledger.ToolFacts(), sourceEventsForSessions(t, db, ledger.Sessions)
 
 		if len(invocations) != 2 {
 			t.Fatalf("expected 2 invocations, got %d", len(invocations))
@@ -1074,7 +1109,7 @@ func TestSchemaV1ExtractSessions_RawPersonaPreservation(t *testing.T) {
 		}
 
 		ledger := domain.AgenticFactLedger{Sessions: sessions}
-		invocations, events := ledger.InvocationFacts(), ledger.EventFacts()
+		invocations, events := ledger.InvocationFacts(), sourceEventsForSessions(t, db, ledger.Sessions)
 
 		if len(invocations) != 2 {
 			t.Fatalf("expected 2 invocations, got %d", len(invocations))
@@ -1151,7 +1186,7 @@ func TestSchemaV1ExtractSessions_RawPersonaPreservation(t *testing.T) {
 					if string(session.Invocations[0].Role) != want {
 						t.Errorf("session %s role=%q want=%q", session.ID, session.Invocations[0].Role, want)
 					}
-					for _, event := range session.Events {
+					for _, event := range sourceEventsForSessions(t, db, []domain.SessionFact{session}) {
 						if string(event.Role) != want {
 							t.Errorf("event persona differs: %+v want=%q", event, want)
 						}
@@ -1209,7 +1244,7 @@ func TestSchemaV1ExtractSessions_AdversarialPersonaPreservationAndWhitespace(t *
 	}
 
 	ledger := domain.AgenticFactLedger{Sessions: sessions}
-	invocations, events := ledger.InvocationFacts(), ledger.EventFacts()
+	invocations, events := ledger.InvocationFacts(), sourceEventsForSessions(t, db, ledger.Sessions)
 
 	if len(invocations) != 3 {
 		t.Fatalf("expected 3 invocations, got %d", len(invocations))
@@ -1391,7 +1426,7 @@ func TestSchemaV1ExtractSessions_ContentInspectionTools_CompletedStatusAndMessag
 
 	tools := extractedFacts.ToolFacts()
 
-	events := extractedFacts.EventFacts()
+	events := sourceEventsForSessions(t, db, extractedFacts.Sessions)
 	if err != nil {
 		t.Fatalf("ExtractSessions failed: %v", err)
 	}
@@ -1606,8 +1641,8 @@ func TestSchemaV1StrictRecoveryRejectsSkippedRecords(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			skills, _ := opencode.ExtractSkillTaskFacts(strict)
-			if len(skills) != 1 || skills[0].Name != "formatted" || !skills[0].Success {
+			skills, _ := opencode.ExtractSkillTaskFacts(sourceEventsForSessions(t, db, strict))
+			if len(skills) != 1 || skills[0].Name != "formatted" {
 				t.Fatalf("strict parsing discarded valid formatted producer record: %+v", skills)
 			}
 		})

@@ -6,21 +6,18 @@ import userEvent from '@testing-library/user-event';
 import { TicketDeepDive } from './TicketDeepDive';
 import * as apiClient from '../api/client';
 import { type Anomaly, type EventFact } from '../types/telemetry';
-import * as clipboard from '../utils/clipboard';
-import { type AgenticMetricsLedger, type ContextHealthStatus, type WorkspaceDetail, type SessionFact, type SkillFact, type TaskLinkFact } from '../domain/types';
+import { type AgenticMetricsLedger, type ContextHealthStatus, type WorkspaceDetail, type SessionFact, type SkillFact, type DelegationFact } from '../domain/types';
 import { mockAgenticMetricsLedgers, mockWorkspaceDetails, mockAL2Events } from '../test/fixtures/mockData';
+import codexOwnedDetail from '../test/fixtures/codexOwnedDetail.json';
+import codexSourceEvents from '../test/fixtures/codexSourceEvents.json';
 
-function withRecordedEvents(detail: WorkspaceDetail, events: readonly EventFact[]): WorkspaceDetail {
+function withSessionOwners(detail: WorkspaceDetail, events: readonly EventFact[]): WorkspaceDetail {
     const owners = [...new Set(events.map((event) => event.session_id))];
     const sessions: readonly SessionFact[] = owners.map((id) => ({
         id, source: 'opencode', user: 'tester', invocations: [], tools: [],
-        events: events.filter((event) => event.session_id === id).map((event) => ({
-            event_id: event.event_id, timestamp: event.timestamp, message_id: event.message_id,
-            turn: event.turn, role: event.role, event_type: event.event_type, tool_name: event.tool_name,
-            status: event.status, duration_ms: event.duration_ms, context_tokens: event.context_tokens,
-        })),
+
     }));
-    return { ...detail, ledger: { ...detail.ledger, facts: { ...detail.ledger.facts, schema_version: 6 as const, sessions } } };
+    return { ...detail, ledger: { ...detail.ledger, facts: { ...detail.ledger.facts, schema_version: 7 as const, sessions } } };
 }
 
 function deferred<T>() {
@@ -36,18 +33,17 @@ function deferred<T>() {
 describe('Skills and subagents autopsy', () => {
     const timestamp = '2026-10-30T12:34:56.007Z';
     const skill: SkillFact = {
-        name: 'inspect-source', turn_index: 7, message_index: 2,
-        caller_role: 'orchestrator', timestamp, success: true, outcome: 'succeeded' as const,
+        name: 'inspect-source', caller_role: 'orchestrator', invoked_at: timestamp,
     };
-    const delegation: TaskLinkFact = {
-        subagent_type: 'coder', outcome: 'unknown' as const, description: 'Implement the agreed change', parent_turn: 8, timestamp,
+    const delegation: DelegationFact = {
+        agent_type: 'coder', description: 'Implement the agreed change', invoked_at: timestamp,
     };
-    const makeDetail = (skills?: readonly SkillFact[], taskLinks?: readonly TaskLinkFact[]): WorkspaceDetail => {
+    const makeDetail = (skills?: readonly SkillFact[], delegations?: readonly DelegationFact[]): WorkspaceDetail => {
         const base = mockWorkspaceDetails['AL-1']!;
-        const facts = { ...base.ledger.facts, schema_version: 6 as const };
+        const facts = { ...base.ledger.facts, schema_version: 7 as const };
         return { ...base, ledger: { ...base.ledger, facts: { ...facts,
             sessions: facts.sessions.map((session, index) => index === 0 ? { ...session,
-                ...(skills === undefined ? {} : { skills }), ...(taskLinks === undefined ? {} : { task_links: taskLinks }),
+                ...(skills === undefined ? {} : { skills }), ...(delegations === undefined ? {} : { delegations: delegations }),
             } : session),
         } } };
     };
@@ -90,7 +86,7 @@ describe('Skills and subagents autopsy', () => {
         expect(within(card).getByRole('tooltip')).toHaveTextContent('1 fully observed, 1 partial, 1 unavailable of 3 invocations');
     });
 
-    it.each(['omitted', 'empty'] as const)('renders a current v6 ledger with %s optional collections and keyboard collapse', async (mode) => {
+    it.each(['omitted', 'empty'] as const)('renders a current v7 ledger with %s optional collections and keyboard collapse', async (mode) => {
         const errors = vi.spyOn(console, 'error');
         vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
             data: mode === 'omitted' ? makeDetail() : makeDetail([], []),
@@ -114,13 +110,13 @@ describe('Skills and subagents autopsy', () => {
         expect(errors).not.toHaveBeenCalled();
     });
 
-    it('shows v6 native owners and unknown requests, filters exactly by session and preserves unavailable owned facts after failed enrichment', async () => {
+    it('shows lean native owners and nullable activations, filters exactly by session and preserves unavailable owned facts after failed enrichment', async () => {
         const detail = makeDetail();
-        const base = { ...skill, success: false, outcome: 'unknown' as const, evidence_kind: 'activation_request', provenance: { message_id: 'native-request' } };
+        const base = { ...skill, caller_role: null, invoked_at: null };
         vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: { ...detail, ledger: { ...detail.ledger, facts: {
-            ...detail.ledger.facts, schema_version: 6,
+            ...detail.ledger.facts, schema_version: 7,
             sessions: [
-                { id: 'root', source: 'codex', events_are_partial: true, invocations: [], tools: [], skills: [base, base], task_links: [{ ...delegation, child_reference: '/root/tester', provenance: { call_id: 'spawn-parent' } }] },
+                { id: 'root', source: 'codex', invocations: [], tools: [], skills: [base, base], delegations: [{ ...delegation, child_session_id: 'unavailable-known-child' }] },
                 { id: 'child', parent_id: 'root', source: 'opencode', invocations: [], tools: [], skills: [{ ...skill, name: 'child-only' }] },
                 { id: 'remote-owner', source: 'codex', invocations: [], tools: [], skills: [{ ...skill, name: 'historical' }] },
             ],
@@ -129,13 +125,11 @@ describe('Skills and subagents autopsy', () => {
         render(<TicketDeepDive selectedTicketId="AL-1" />);
         const table = await screen.findByRole('table', { name: 'Modular skills' });
         expect(within(table).getAllByRole('row').slice(1)).toHaveLength(4);
-        expect(within(table).getAllByText('Outcome unavailable')).toHaveLength(2);
+        expect(within(table).getAllByText('Unavailable')).toHaveLength(4);
         expect(within(table).queryByText('Failed')).not.toBeInTheDocument();
-        expect(within(table).getAllByText('message: native-request')).toHaveLength(2);
         expect(within(table).getByText('remote-owner')).toBeVisible();
-        expect(screen.getByTestId('waterfall-source-badge')).toHaveTextContent('Partial saved trace');
         expect(screen.getByText('Thread unavailable')).toBeVisible();
-        expect(screen.getByText('/root/tester')).toBeVisible();
+        expect(screen.getByText('unavailable-known-child')).toBeVisible();
         expect(screen.queryByRole('button', { name: /Jump to child session/ })).not.toBeInTheDocument();
         const select = screen.getByRole('combobox', { name: 'Filter skills and delegations by session' });
         await user.selectOptions(select, 'root');
@@ -150,12 +144,11 @@ describe('Skills and subagents autopsy', () => {
         expect(within(table).getAllByRole('row').slice(1)).toHaveLength(4);
     });
 
-    it('preserves repeated skill invocations, recorded status, roles, timestamps and complete diagnostics', async () => {
-        const error = 'Source error: validation failed\n' + 'Detailed diagnostic context '.repeat(12);
+    it('preserves repeated skill invocations, nullable roles, timestamps and keyboard access', async () => {
         vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: makeDetail([
-            { ...skill, error: 'Inspection of error text completed successfully' },
-            { ...skill, success: false, outcome: 'failed' as const, caller_role: 'custom-investigator', turn_index: 9, error },
-            { ...skill, name: 'review-change', caller_role: '' },
+            skill,
+            { ...skill, caller_role: 'custom-investigator' },
+            { ...skill, name: 'review-change', caller_role: null, invoked_at: null },
         ]) });
         const user = userEvent.setup();
         render(<TicketDeepDive selectedTicketId="AL-1" />);
@@ -169,34 +162,26 @@ describe('Skills and subagents autopsy', () => {
         expect(rows[1]).toHaveFocus();
         expect(within(table).getAllByRole('rowheader', { name: 'inspect-source' })).toHaveLength(2);
         const success = within(rows[0]!);
-        expect(success.getByText('Success')).toBeVisible();
+        expect(within(table).queryByText(/Success|Failed|Outcome/)).not.toBeInTheDocument();
         expect(success.getByText('Orchestrator')).toBeVisible();
-        expect(success.getByText('Inspection of error text completed successfully')).toBeVisible();
-        expect(rows[0]).toHaveTextContent('Turn 7 /');
         const time = rows[0]!.querySelector('time');
         expect(time).toHaveAttribute('datetime', timestamp);
         expect(time).toHaveAttribute('title', expect.stringMatching(/2026.*\.007 \[UTC[+-]\d{2}:\d{2}\]/));
         expect(time).toHaveTextContent(/2026/);
         expect(time).toHaveTextContent(/\d{2}:\d{2}:\d{2}/);
         expect(time?.textContent).not.toMatch(/:\d{2}\.\d/);
-        expect(within(rows[1]!).getByText('Failed')).toBeVisible();
         expect(within(rows[1]!).getByText('custom-investigator')).toBeVisible();
-        expect(rows[1]).toHaveTextContent('Turn 9 /');
-        expect(rows[1]!.lastElementChild?.textContent).toBe(error);
-        expect(within(rows[2]!).getByText('Unknown')).toBeVisible();
-        expect(within(rows[2]!).getByText('None recorded')).toBeVisible();
+        expect(within(rows[2]!).getAllByText('Unavailable')).toHaveLength(2);
         expect(screen.queryByText('No modular skills or subagent delegations recorded for this ticket.')).not.toBeInTheDocument();
     });
 
-    it('shows delegations without skills, distinguishes missing metrics, and jumps repeatedly to the exact child by keyboard', async () => {
-        const longDescription = 'Preserve the whole task prompt: ' + 'task details '.repeat(30);
+    it('shows delegations without skills, preserves unavailable identities, and jumps repeatedly to the exact child by keyboard', async () => {
+        const longDescription = 'Source supplied short task description';
         const detail = makeDetail(undefined, [
-            { ...delegation, description: longDescription, child_session_id: 'child-a', child_agent_id: 'opaque-agent-not-a-session', duration_ms: 62500, cost_usd: 1.25 },
-            { ...delegation, description: 'Measured zero', duration_ms: 0, cost_usd: 0 },
-            { ...delegation, description: 'Missing optional measurements', child_session_id: 'child-a-unavailable' },
-            { ...delegation, description: 'Missing optional measurements', child_session_id: 'child-a-unavailable' },
-            { ...delegation, description: 'Opaque native agent only', child_agent_id: 'agent-only' },
-            { ...delegation, description: 'Conflicting recorded child relationship', child_session_id: 'child-a', child_reference: '/root/other', child_link_diagnostic: 'Recorded child UUID conflicts with parent/agent_path metadata.' },
+            { ...delegation, description: longDescription, child_session_id: 'child-a' },
+            { ...delegation, agent_type: null, invoked_at: null },
+            { ...delegation, description: 'Missing child thread', child_session_id: 'child-a-unavailable' },
+            { ...delegation, description: 'Missing child thread', child_session_id: 'child-a-unavailable' },
         ]);
         const root = detail.ledger.threads[0]!;
         vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: {
@@ -209,29 +194,16 @@ describe('Skills and subagents autopsy', () => {
         const table = await screen.findByRole('table', { name: 'Subagent delegations' });
         expect(screen.queryByRole('table', { name: 'Modular skills' })).not.toBeInTheDocument();
         const rows = within(table).getAllByRole('row').slice(1);
-        expect(rows).toHaveLength(6);
+        expect(rows).toHaveLength(4);
         expect(rows[0]!.children[0]).toHaveTextContent('Coder');
         expect(rows[0]!.children[1]?.textContent).toBe(longDescription);
-        expect(rows[0]!.children[2]).toHaveTextContent('8');
-        expect(rows[0]!.children[3]).toHaveTextContent('1m 2s');
-        expect(rows[0]!.children[4]).toHaveTextContent('$1.25');
-        expect(within(rows[0]!).getByText('Agent reference: opaque-agent-not-a-session')).toBeVisible();
-        expect(within(rows[4]!).getByText('Agent reference: agent-only')).toBeVisible();
-        expect(within(rows[4]!).getByText('Session identity unavailable')).toBeVisible();
-        expect(within(rows[4]!).queryByRole('button')).not.toBeInTheDocument();
-        expect(rows[1]!.children[3]).toHaveTextContent('0m 0s');
-        expect(rows[1]!.children[4]).toHaveTextContent('$0.00');
-        expect(within(rows[1]!).getByText('Not recorded')).toBeVisible();
-        expect(rows[2]!.children[3]).toHaveTextContent('Unavailable');
-        expect(rows[2]!.children[4]).toHaveTextContent('Unavailable');
+        expect(rows[0]!.querySelector('time')).toHaveAttribute('datetime', timestamp);
+        expect(within(rows[1]!).getAllByText('Unavailable')).toHaveLength(2);
+        expect(within(rows[1]!).getByText('Session identity unavailable')).toBeVisible();
         expect(within(rows[2]!).getByText('child-a-unavailable')).toBeVisible();
         expect(within(rows[2]!).getByText('Thread unavailable')).toBeVisible();
         expect(within(rows[2]!).queryByRole('button')).not.toBeInTheDocument();
-        expect(within(rows[5]!).getByRole('note')).toHaveTextContent('Recorded child UUID conflicts with parent/agent_path metadata.');
-        expect(within(rows[5]!).getByText('Child relationship unresolved')).toBeVisible();
-        expect(within(rows[5]!).getByText('child-a')).toBeVisible();
-        expect(within(rows[5]!).getByText('Source reference: /root/other')).toBeVisible();
-        expect(within(rows[5]!).queryByRole('button')).not.toBeInTheDocument();
+        expect(within(table).queryByRole('columnheader', { name: /Duration|Cost|Parent Turn/ })).not.toBeInTheDocument();
         const child = screen.getByRole('button', { name: /^child-a User:/ });
         const sibling = screen.getByRole('button', { name: /^child-ab User:/ });
         const parent = screen.getByRole('button', { name: /^root User:/ });
@@ -254,22 +226,6 @@ describe('Skills and subagents autopsy', () => {
         expect(child).toHaveAttribute('aria-expanded', 'true');
     });
 
-    it('shows auxiliary task partial contributions without claiming invocation coverage', async () => {
-        const detail = makeDetail(undefined, [{
-            ...delegation, description: 'Partially reported task cost', cost_usd: null,
-            cost_evidence: { state: 'partial', known_subtotal_usd: 2 },
-        }]);
-        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: {
-            ...detail, ledger: { ...detail.ledger, facts: { ...detail.ledger.facts, schema_version: 6 as const } },
-        } });
-        render(<TicketDeepDive selectedTicketId="AL-1" />);
-        const table = await screen.findByRole('table', { name: 'Subagent delegations' });
-        const row = within(table).getAllByRole('row')[1]!;
-        expect(within(row).getByText('$2.00 known subtotal (partial)')).toBeVisible();
-        expect(row.children[4]).not.toHaveTextContent(/observed|invocation|\d+\/\d+/i);
-        expect(row.children[4]).not.toHaveTextContent('Unavailable');
-    });
-
     it('keeps persisted skill and delegation facts visible before and after optional enrichment fails', async () => {
         const pending = deferred<Awaited<ReturnType<typeof apiClient.fetchWorkspaceEvents>>>();
         vi.mocked(apiClient.fetchWorkspaceEvents).mockReturnValue(pending.promise);
@@ -286,23 +242,25 @@ describe('Skills and subagents autopsy', () => {
     });
 });
 
-describe('FIX-12 committed trace and enrichment lifecycle', () => {
+describe('Source trace and stored facts lifecycle', () => {
     const recorded: readonly EventFact[] = [
-        { event_id: 'recorded-error', timestamp: '2026-10-29T10:00:00Z', session_id: 'recorded-session',
-            message_id: 'recorded-message', turn: 1, role: 'coder', event_type: 'tool_call',
-            tool_name: 'bash', status: 'error', context_tokens: 1200 },
-        { event_id: 'recorded-success', timestamp: '2026-10-29T10:01:00Z', session_id: 'recorded-session',
-            turn: 2, role: 'tester', event_type: 'turn_message', status: 'completed', context_tokens: 1300 },
+        { event_id: 'source-error', timestamp: '2026-10-29T10:00:00Z', session_id: 'owner',
+            message_id: 'source-message', turn: 1, role: 'coder', event_type: 'tool_call', tool_name: 'bash', status: 'error', context_tokens: 1200 },
+        { event_id: 'source-message', timestamp: '2026-10-29T10:01:00Z', session_id: 'owner', turn: 2,
+            role: 'tester', event_type: 'turn_message', status: 'completed', context_tokens: 1300 },
     ];
-    const makeDetail = (ticketId = 'AL-1', events = recorded): WorkspaceDetail => {
-        const detail = withRecordedEvents({ ...mockWorkspaceDetails['AL-1']!, anomalies: [] }, events);
-        return { ...detail, ledger: { ...detail.ledger, ticket_id: ticketId,
-            facts: { ...detail.ledger.facts, ticket_id: ticketId } } };
+    const coverage = { required_session_ids: ['owner'], complete_session_ids: ['owner'], diagnostics: [] };
+    const makeDetail = (ticketId = 'AL-1'): WorkspaceDetail => {
+        const detail = withSessionOwners(mockWorkspaceDetails['AL-1']!, recorded);
+        return { ...detail, anomalies: [], ledger: { ...detail.ledger, ticket_id: ticketId,
+            facts: { ...detail.ledger.facts, ticket_id: ticketId, sessions: [{ id: 'owner', invocations: [], tools: [],
+                skills: [{ name: 'stored-activation', caller_role: null, invoked_at: null }],
+                delegations: [{ agent_type: null, invoked_at: null, child_session_id: 'remote-child' }] }] } } };
     };
     const emptyResponse = (ticketId = 'AL-1') => ({ data: {
-        ticket_id: ticketId, is_hydrated: false, data_source: 'committed_ledger' as const, events: [],
+        ticket_id: ticketId, is_hydrated: false, availability: 'unavailable' as const, coverage: { ...coverage, complete_session_ids: [], diagnostics: ['Source unavailable'] },
+        data_source: 'unavailable' as const, events: [],
     } });
-
     beforeEach(() => {
         vi.restoreAllMocks();
         vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({ data: Object.values(mockAgenticMetricsLedgers) });
@@ -310,112 +268,93 @@ describe('FIX-12 committed trace and enrichment lifecycle', () => {
         vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockRejectedValue(new Error('Optional source unavailable'));
     });
 
-    it.each(['rejected', 'empty offline', 'empty hydrated'])('keeps baseline facts after %s enrichment', async (mode) => {
-        if (mode !== 'rejected') {
-            vi.mocked(apiClient.fetchWorkspaceEvents).mockResolvedValue({ data: {
-                ...emptyResponse().data, is_hydrated: mode === 'empty hydrated', data_source: 'local_sqlite',
-            } });
-        }
+    it.each(['failed', 'unavailable', 'partial', 'complete'] as const)('keeps stored facts before and after %s source hydration without artificial rows', async (state) => {
+        const pending = deferred<Awaited<ReturnType<typeof apiClient.fetchWorkspaceEvents>>>();
+        vi.mocked(apiClient.fetchWorkspaceEvents).mockReturnValue(pending.promise);
+        const anomaly: Anomaly = { rule_id: 'TOOL_RETRY_STREAK', severity: 'WARNING', context: { tool_name: 'bash', count: 3 } };
+        vi.mocked(apiClient.fetchWorkspaceById).mockResolvedValue({ data: { ...makeDetail(), anomalies: [anomaly] } });
         render(<TicketDeepDive selectedTicketId="AL-1" />);
-        await waitFor(() => expect(screen.getByTestId('waterfall-event-count')).toHaveTextContent('2 Events Recorded'));
-        const headerTimes = document.querySelectorAll('time[title]');
-        expect(headerTimes.length).toBeGreaterThan(0);
-        expect(headerTimes[0]).toHaveTextContent(/2026/);
-        expect(headerTimes[0]).toHaveTextContent(/\d{2}:\d{2}:\d{2}/);
-        expect(headerTimes[0]?.textContent).not.toMatch(/:\d{2}\.\d/);
-        expect(headerTimes[0]).toHaveAttribute('title', expect.stringMatching(/\d{4}/));
-        expect(screen.getByTestId('waterfall-source-badge')).toHaveTextContent('Source: Committed Ledger');
-        expect(screen.queryByTestId('legacy-fallback-banner')).not.toBeInTheDocument();
-        expect(screen.queryByText(/Failed to load ticket details|Optional source unavailable/)).not.toBeInTheDocument();
-        fireEvent.click(screen.getByTestId('waterfall-expand-btn'));
-        expect(screen.getByTestId('timeline-item-1')).toBeInTheDocument();
-        expect(screen.queryByTestId('timeline-item-2')).not.toBeInTheDocument();
-        fireEvent.click(screen.getByTestId('timeline-item-1'));
-        expect(screen.getByRole('dialog')).toHaveTextContent('Tool Execution Failure');
-        fireEvent.click(screen.getByRole('button', { name: 'Close' }));
-        fireEvent.click(screen.getByRole('button', { name: 'All Events' }));
-        fireEvent.click(screen.getByTestId('timeline-item-2'));
-        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+        const skills = await screen.findByRole('table', { name: 'Modular skills' });
+        expect(within(skills).getByText('stored-activation')).toBeVisible();
+        expect(screen.getByText('remote-child')).toBeVisible();
+        expect(screen.getByText('Total Cost')).toBeVisible();
+        expect(screen.getByTestId('waterfall-event-count')).toHaveTextContent('0 Events Recorded');
+        fireEvent.click(screen.getByRole('button', { name: 'Recorded anomaly summaries (1)' }));
+        fireEvent.click(screen.getByRole('button', { name: /Inspect recorded anomaly: Tool retry streak/ }));
+        const recordedInspector = screen.getByRole('dialog');
+        expect(recordedInspector).toHaveTextContent('3 consecutive errors');
+        await act(async () => {
+            if (state === 'failed') pending.reject(new Error('Cannot open source'));
+            else pending.resolve({ data: { ...emptyResponse().data, availability: state, is_hydrated: state !== 'unavailable',
+                data_source: state === 'unavailable' ? 'unavailable' : 'local_codex',
+                coverage: state === 'complete' ? coverage : { ...coverage, complete_session_ids: [], diagnostics: ['Missing owner source'] },
+                anomalies: [], events: state === 'partial' ? [recorded[0]!] : [] } });
+        });
+        expect(skills).toBeVisible();
+        expect(screen.getByText('remote-child')).toBeVisible();
+        expect(screen.getByRole('dialog')).toBe(recordedInspector);
+        expect(recordedInspector).toHaveTextContent('3 consecutive errors');
+        expect(screen.getByRole('button', { name: /Inspect recorded anomaly: Tool retry streak/ })).toBeVisible();
+        expect(screen.queryByRole('button', { name: /Jump to child session remote-child/ })).not.toBeInTheDocument();
+        expect(screen.getByTestId('waterfall-event-count')).toHaveTextContent(`${state === 'partial' ? 1 : 0} Events Recorded`);
+        if (state === 'complete') {
+            expect(screen.getByText('Zero chronological events recorded for this execution trace.')).toBeVisible();
+            expect(screen.queryByTestId('db-offline-banner')).not.toBeInTheDocument();
+        } else {
+            expect(screen.getByTestId('db-offline-banner')).toHaveTextContent(state === 'failed' ? 'Source trace request failed' : state === 'partial' ? 'Partial source trace' : 'Source trace unavailable');
+            expect(screen.getByTestId('waterfall-issues-summary')).toHaveTextContent('1 Anomaly');
+        }
+        expect(within(skills).queryByText(/Success rate|Execution Status/i)).not.toBeInTheDocument();
     });
 
-    it('shares exact repeatable child navigation between task badges and the panel and resets it on ticket change', async () => {
-        const event: EventFact = { ...recorded[0]!, tool_name: 'task', status: 'error' };
-        const detail = makeDetail('AL-1', [event]);
-        const baseThread = detail.ledger.threads[0]!;
-        const childId = 'recorded-child-thread-with-the-complete-source-identifier-0123456789';
-        const pending = deferred<Awaited<ReturnType<typeof apiClient.fetchWorkspaceEvents>>>();
-        vi.mocked(apiClient.fetchWorkspaceEvents).mockImplementation((id) => id === 'AL-1' ? pending.promise : Promise.resolve(emptyResponse(id)));
-        const taskDetail: WorkspaceDetail = {
-            ...detail, ledger: { ...detail.ledger,
-                threads: [{ ...baseThread, session_id: 'parent-thread' },
-                    { ...baseThread, session_id: `${childId}-sibling` }, { ...baseThread, session_id: childId }],
-                facts: { ...detail.ledger.facts, sessions: detail.ledger.facts.sessions.map((session) => session.id === event.session_id ? { ...session, task_links: [{ subagent_type: 'tester', outcome: 'unknown' as const, description: 'Verify',
-                    parent_turn: event.turn, timestamp: event.timestamp, child_session_id: childId }] } : session) },
-            },
-        };
-        const nextEvent: EventFact = { ...recorded[1]!, session_id: 'next-parent', turn: 42 };
-        const nextDetail = makeDetail('AL-2', [nextEvent]);
-        vi.mocked(apiClient.fetchWorkspaceById).mockImplementation(async (id) => ({ data: id === 'AL-1' ? taskDetail : {
-            ...nextDetail, ledger: { ...nextDetail.ledger,
-                threads: [{ ...baseThread, session_id: 'next-parent' }, { ...baseThread, session_id: childId }],
-                facts: { ...nextDetail.ledger.facts, sessions: nextDetail.ledger.facts.sessions.map((session) => ({ ...session, task_links: [] })) },
-            },
-        } }));
-        const user = userEvent.setup();
+    it('ignores ticket A source response after ticket B and resets the inspected summary', async () => {
+        const pendingA = deferred<Awaited<ReturnType<typeof apiClient.fetchWorkspaceEvents>>>();
+        const anomaly: Anomaly = { rule_id: 'TOOL_RETRY_STREAK', severity: 'WARNING', context: { tool_name: 'bash', count: 3 } };
+        vi.mocked(apiClient.fetchWorkspaceById).mockImplementation(async (id) => ({ data: { ...makeDetail(id), anomalies: id === 'AL-1' ? [anomaly] : [] } }));
+        const bEvent = { ...recorded[0]!, session_id: 'b-session', turn: 8, tool_output: 'B details' };
+        vi.mocked(apiClient.fetchWorkspaceEvents).mockImplementation((id) => id === 'AL-1' ? pendingA.promise : Promise.resolve({ data: {
+            ...emptyResponse(id).data, availability: 'complete', is_hydrated: true, coverage, data_source: 'local_codex', events: [bEvent] } }));
         const { rerender } = render(<TicketDeepDive selectedTicketId="AL-1" />);
-        const header = await screen.findByRole('button', { name: `${childId} User: ${baseThread.user} Compactions: ${baseThread.compactions} [+]` });
-        const parent = screen.getByRole('button', { name: /^parent-thread User:/ });
-        const sibling = screen.getByRole('button', { name: `${childId}-sibling User: ${baseThread.user} Compactions: ${baseThread.compactions} [+]` });
-        const scroll = vi.fn();
-        header.scrollIntoView = scroll;
-        expect(header).toHaveAttribute('aria-expanded', 'false');
-        expect(parent).toHaveAttribute('aria-expanded', 'true');
-        await user.click(screen.getByTestId('waterfall-expand-btn'));
-        await user.click(screen.getByRole('button', { name: 'All Events' }));
-        const badge = screen.getByRole('button', { name: `Inspect child session ${childId}` });
-        const panelJump = within(screen.getByRole('table', { name: 'Subagent delegations' }))
-            .getByRole('button', { name: `Jump to child session ${childId}` });
-        expect(panelJump).toHaveTextContent(childId);
-        const traceItem = screen.getByTestId('timeline-item-1');
-        // Both entry points must reactivate the same child after a manual close.
-        for (const [entryPoint, key] of [[badge, '{Enter}'], [panelJump, ' '], [badge, ' '], [panelJump, '{Enter}']] as const) {
-            entryPoint.focus();
-            await user.keyboard(key);
-            expect(header).toHaveAttribute('aria-expanded', 'true');
-            expect(header).toHaveFocus();
-            expect(header.closest('.thread-accordion-item')?.querySelector('.thread-body')).toBeVisible();
-            expect(parent).toHaveAttribute('aria-expanded', 'true');
-            expect(sibling).toHaveAttribute('aria-expanded', 'false');
-            expect(traceItem).not.toHaveClass('selected');
-            expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-            await user.keyboard('{Enter}');
-            expect(header).toHaveAttribute('aria-expanded', 'false');
-        }
-        expect(scroll).toHaveBeenCalledTimes(4);
-        // Leave an active child request and parent inspector to expose stale state on switching.
-        await user.click(panelJump);
-        await user.click(traceItem);
-        expect(traceItem).toHaveClass('selected');
-        expect(screen.getByRole('dialog')).toHaveTextContent('Tool Execution Failure');
+        fireEvent.click(await screen.findByRole('button', { name: 'Expand Trace Waterfall' }));
+        fireEvent.click(screen.getByRole('button', { name: /Inspect anomaly: Tool retry streak/ }));
+        expect(screen.getByRole('dialog')).toHaveTextContent('TOOL_RETRY_STREAK');
         rerender(<TicketDeepDive selectedTicketId="AL-2" />);
-        const nextHeader = await screen.findByRole('button', { name: `${childId} User: ${baseThread.user} Compactions: ${baseThread.compactions} [+]` });
-        expect(nextHeader).toHaveAttribute('aria-expanded', 'false');
-        expect(nextHeader).not.toHaveFocus();
-        expect(screen.getByRole('button', { name: /^next-parent User:/ })).toHaveAttribute('aria-expanded', 'true');
+        await waitFor(() => expect(screen.getByTestId('waterfall-source-badge')).toHaveTextContent('Local Codex'));
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: /^parent-thread User:/ })).not.toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: `Jump to child session ${childId}` })).not.toBeInTheDocument();
-        await act(async () => pending.resolve({ data: {
-            ticket_id: 'AL-1', is_hydrated: true, data_source: 'local_codex', events: [event],
-        } }));
-        await user.click(screen.getByRole('button', { name: 'Expand Trace Waterfall' }));
-        await user.click(screen.getByRole('button', { name: 'All Events' }));
-        expect(screen.getByTestId('timeline-item-42')).toBeVisible();
+        fireEvent.click(screen.getByRole('button', { name: 'Expand Trace Waterfall' }));
+        fireEvent.click(screen.getByTestId('timeline-item-8'));
+        await act(async () => pendingA.resolve({ data: { ...emptyResponse().data, availability: 'complete', is_hydrated: true, coverage,
+            data_source: 'local_sqlite', events: [{ ...recorded[0]!, tool_output: 'A stale details' }] } }));
+        expect(screen.getByRole('dialog')).toHaveTextContent('b-session');
+        expect(screen.getByTestId('timeline-item-8')).toHaveClass('selected');
         expect(screen.queryByTestId('timeline-item-1')).not.toBeInTheDocument();
-        expect(screen.getByText('Showing 1 of 1 events')).toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: `Inspect child session ${childId}` })).not.toBeInTheDocument();
-        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-        expect(nextHeader).toHaveAttribute('aria-expanded', 'false');
+        expect(screen.getByTestId('waterfall-source-badge')).toHaveTextContent('Local Codex');
+    });
+
+    it.each(['resolve', 'reject'])('ignores a stale source %s after returning to a ticket with a newer source request', async (settlement) => {
+        const old = deferred<Awaited<ReturnType<typeof apiClient.fetchWorkspaceEvents>>>();
+        vi.mocked(apiClient.fetchWorkspaceEvents).mockReturnValueOnce(old.promise).mockImplementation(async (id) => ({ data: {
+            ...emptyResponse(id).data, availability: 'complete', is_hydrated: true, coverage,
+            data_source: 'local_codex', events: [{ ...recorded[0]!, tool_output: 'Newest source payload' }] } }));
+        const { rerender } = render(<TicketDeepDive selectedTicketId="AL-1" />);
+        await screen.findByRole('table', { name: 'Modular skills' });
+        await waitFor(() => expect(apiClient.fetchWorkspaceEvents).toHaveBeenCalledTimes(1));
+        rerender(<TicketDeepDive selectedTicketId="AL-2" />);
+        await waitFor(() => expect(apiClient.fetchWorkspaceEvents).toHaveBeenCalledTimes(2));
+        rerender(<TicketDeepDive selectedTicketId="AL-1" />);
+        await waitFor(() => expect(apiClient.fetchWorkspaceEvents).toHaveBeenCalledTimes(3));
+        await waitFor(() => expect(screen.getByTestId('waterfall-source-badge')).toHaveTextContent('Local Codex'));
+        fireEvent.click(screen.getByRole('button', { name: 'Expand Trace Waterfall' }));
+        fireEvent.click(screen.getByTestId('timeline-item-1'));
+        expect(screen.getByRole('dialog')).toHaveTextContent('owner');
+        await act(async () => {
+            if (settlement === 'reject') old.reject(new Error('Old source failed'));
+            else old.resolve({ data: emptyResponse().data });
+        });
+        expect(screen.getByTestId('waterfall-source-badge')).toHaveTextContent('Local Codex');
+        expect(screen.queryByTestId('db-offline-banner')).not.toBeInTheDocument();
+        expect(screen.getByTestId('timeline-item-1')).toHaveClass('selected');
+        expect(screen.getByRole('dialog')).toHaveTextContent('Newest source payload');
     });
 
     it('renders full workspace dates visibly and preserves missing lifecycle states', async () => {
@@ -463,101 +402,6 @@ describe('FIX-12 committed trace and enrichment lifecycle', () => {
         fallbackTimes.forEach((timestamp) => expect(timestamp).toHaveAttribute('title', malformedTimestamp));
     });
 
-    it.each(['resolve', 'reject'])('renders the baseline before a deferred enrichment request can %s', async (settlement) => {
-        const pending = deferred<Awaited<ReturnType<typeof apiClient.fetchWorkspaceEvents>>>();
-        vi.mocked(apiClient.fetchWorkspaceEvents).mockReturnValue(pending.promise);
-        render(<TicketDeepDive selectedTicketId="AL-1" />);
-        await waitFor(() => expect(screen.getByTestId('waterfall-event-count')).toHaveTextContent('2 Events Recorded'));
-        expect(screen.queryByText(/loading workspace autopsy telemetry/i)).not.toBeInTheDocument();
-        fireEvent.click(screen.getByTestId('waterfall-expand-btn'));
-        expect(screen.getByTestId('timeline-item-1')).toBeInTheDocument();
-        await act(async () => {
-            if (settlement === 'resolve') pending.resolve(emptyResponse());
-            else pending.reject(new Error('Late optional failure'));
-        });
-        expect(screen.getByTestId('timeline-item-1')).toBeInTheDocument();
-        expect(screen.getByTestId('waterfall-source-badge')).toHaveTextContent('Source: Committed Ledger');
-    });
-
-    it.each(['stable ID', 'no IDs', 'new local ID'] as const)('rebinds the selected %s row and open inspector when pending enrichment completes', async (identity) => {
-        const pending = deferred<Awaited<ReturnType<typeof apiClient.fetchWorkspaceEvents>>>();
-        const copy = vi.spyOn(clipboard, 'copyTextToClipboard').mockResolvedValue(true);
-        const baseline: EventFact = {
-            ...recorded[0]!, duration_ms: 0,
-            event_id: identity === 'stable ID' ? 'recorded-error' : undefined,
-            message_id: identity === 'stable ID' ? 'recorded-message' : undefined,
-        };
-        const anomaly: Anomaly = {
-            rule_id: 'TOOL_RETRY_STREAK', severity: 'WARNING',
-            context: { session_id: baseline.session_id, tool_name: 'bash', turn: 1, count: 3 },
-        };
-        vi.mocked(apiClient.fetchWorkspaceById).mockResolvedValue({ data: {
-            ...makeDetail('AL-1', [baseline, recorded[1]!]), anomalies: [anomaly],
-        } });
-        vi.mocked(apiClient.fetchWorkspaceEvents).mockReturnValue(pending.promise);
-        render(<TicketDeepDive selectedTicketId="AL-1" />);
-        await waitFor(() => expect(screen.getByTestId('waterfall-event-count')).toHaveTextContent('2 Events Recorded'));
-        fireEvent.click(screen.getByTestId('waterfall-expand-btn'));
-        fireEvent.click(screen.getByTestId('timeline-item-1'));
-        const inspector = screen.getByRole('dialog');
-        expect(inspector).toHaveTextContent('3 consecutive errors');
-        expect(inspector).toHaveTextContent('0ms');
-        expect(within(inspector).queryByTestId('drawer-tool-output-section')).not.toBeInTheDocument();
-        expect(screen.getByTestId('timeline-item-1')).toHaveClass('selected');
-        expect(screen.getByRole('button', { name: 'Hide payload for turn 1' })).toBeInTheDocument();
-
-        const enriched: EventFact = {
-            ...baseline,
-            event_id: identity === 'new local ID' ? 'local-error' : baseline.event_id,
-            message_id: 'local-message', duration_ms: 25, error_message: 'local command exited with status 2',
-            prompt_content: 'Run the focused regression checks', reasoning_content: 'Inspect the failing command',
-            tool_input: 'make test', tool_output: 'local failure diagnostics',
-        };
-        await act(async () => pending.resolve({ data: {
-            ticket_id: 'AL-1', is_hydrated: true, data_source: 'local_sqlite', events: [enriched],
-            anomalies: [{ ...anomaly, severity: 'CRITICAL', context: { ...anomaly.context, count: 6 } }],
-        } }));
-
-        expect(screen.getByRole('dialog')).toBe(inspector);
-        expect(screen.getByTestId('timeline-item-1')).toHaveClass('selected');
-        expect(screen.getByText('Showing 1 of 2 events')).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Hide payload for turn 1' })).toBeInTheDocument();
-        expect(screen.getByTestId('tool-output-payload-block')).toHaveTextContent('local failure diagnostics');
-        expect(inspector).toHaveTextContent('local-message');
-        expect(inspector).not.toHaveTextContent('recorded-message');
-        expect(inspector).toHaveTextContent('25ms');
-        expect(inspector).toHaveTextContent('local command exited with status 2');
-        expect(inspector).toHaveTextContent('6 consecutive errors');
-        expect(within(inspector).getByText('CRITICAL')).toBeInTheDocument();
-        expect(within(inspector).getByTestId('drawer-prompt-section')).toHaveTextContent(enriched.prompt_content!);
-        expect(within(inspector).getByTestId('drawer-reasoning-section')).toHaveTextContent(enriched.reasoning_content!);
-        expect(within(inspector).getByTestId('drawer-tool-input-section')).toHaveTextContent('make test');
-        expect(within(inspector).getByTestId('drawer-tool-output-section')).toHaveTextContent('local failure diagnostics');
-        await act(async () => fireEvent.click(within(inspector).getByRole('button', { name: 'Copy execution issue debug prompt' })));
-        expect(copy).toHaveBeenCalledWith(expect.stringContaining('local command exited with status 2'));
-    });
-
-    it('keeps an ID-less selection and its open inspector across a known unhydrated baseline echo', async () => {
-        const baseline = { ...recorded[0]!, event_id: undefined, message_id: undefined };
-        const pending = deferred<Awaited<ReturnType<typeof apiClient.fetchWorkspaceEvents>>>();
-        vi.mocked(apiClient.fetchWorkspaceById).mockResolvedValue({ data: makeDetail('AL-1', [baseline]) });
-        vi.mocked(apiClient.fetchWorkspaceEvents).mockReturnValue(pending.promise);
-        render(<TicketDeepDive selectedTicketId="AL-1" />);
-        await waitFor(() => expect(screen.getByTestId('waterfall-event-count')).toHaveTextContent('1 Events Recorded'));
-        fireEvent.click(screen.getByTestId('waterfall-expand-btn'));
-        fireEvent.click(screen.getByTestId('timeline-item-1'));
-        const inspector = screen.getByRole('dialog');
-        await act(async () => pending.resolve({ data: {
-            ...emptyResponse().data, includes_baseline: true, events: [{ ...baseline }],
-        } }));
-        expect(screen.getByRole('dialog')).toBe(inspector);
-        expect(screen.getByTestId('timeline-item-1')).toHaveClass('selected');
-        expect(screen.getByRole('button', { name: 'Hide payload for turn 1' })).toBeInTheDocument();
-        expect(screen.getByTestId('unhydrated-notice')).toHaveTextContent('Payload details unavailable');
-        expect(screen.getByTestId('waterfall-source-badge')).toHaveTextContent('Source: Committed Ledger');
-        expect(screen.getByText('Showing 1 of 1 events')).toBeInTheDocument();
-    });
-
     it('rebinds an inspected summary to updated anomaly context while enrichment remains event-free', async () => {
         const user = userEvent.setup();
         const pending = deferred<Awaited<ReturnType<typeof apiClient.fetchWorkspaceEvents>>>();
@@ -566,7 +410,7 @@ describe('FIX-12 committed trace and enrichment lifecycle', () => {
             context: { session_id: 'summary-session', tool_name: 'bash', count: 3 },
         };
         vi.mocked(apiClient.fetchWorkspaceById).mockResolvedValue({ data: {
-            ...makeDetail('AL-1', []), anomalies: [anomaly],
+            ...makeDetail('AL-1'), anomalies: [anomaly],
         } });
         vi.mocked(apiClient.fetchWorkspaceEvents).mockReturnValue(pending.promise);
         render(<TicketDeepDive selectedTicketId="AL-1" />);
@@ -577,7 +421,7 @@ describe('FIX-12 committed trace and enrichment lifecycle', () => {
         const inspector = screen.getByRole('dialog');
         expect(inspector).toHaveTextContent('3 consecutive errors');
         await act(async () => pending.resolve({ data: {
-            ...emptyResponse().data,
+            ...emptyResponse().data, availability: 'complete', is_hydrated: true, coverage: { required_session_ids: [], complete_session_ids: [], diagnostics: [] }, data_source: 'local_codex',
             anomalies: [{ ...anomaly, severity: 'CRITICAL', context: { ...anomaly.context, count: 6 } }],
         } }));
         expect(screen.getByRole('dialog')).toBe(inspector);
@@ -599,7 +443,7 @@ describe('FIX-12 committed trace and enrichment lifecycle', () => {
             context: { session_id: recorded[0]!.session_id, tool_name: 'bash', count: 3 },
         };
         vi.mocked(apiClient.fetchWorkspaceById).mockResolvedValue({ data: {
-            ...makeDetail('AL-1', []), anomalies: [anomaly],
+            ...makeDetail('AL-1'), anomalies: [anomaly],
         } });
         vi.mocked(apiClient.fetchWorkspaceEvents).mockReturnValue(pending.promise);
         render(<TicketDeepDive selectedTicketId="AL-1" />);
@@ -613,7 +457,7 @@ describe('FIX-12 committed trace and enrichment lifecycle', () => {
         const toggle = screen.getByRole('button', { name: `${expanded ? 'Collapse' : 'Expand'} Trace Waterfall` });
         const bodyId = toggle.getAttribute('aria-controls');
         await act(async () => pending.resolve({ data: {
-            ticket_id: 'AL-1', is_hydrated: true, data_source: 'local_codex',
+            ticket_id: 'AL-1', is_hydrated: true, availability: 'complete', coverage: { required_session_ids: [], complete_session_ids: [], diagnostics: [] }, data_source: 'local_codex',
             events: [{ ...recorded[0]!, tool_output: 'Enriched failure diagnostics' }],
             anomalies: [{ ...anomaly, severity: 'CRITICAL', context: { ...anomaly.context, count: 6 } }],
         } }));
@@ -642,218 +486,6 @@ describe('FIX-12 committed trace and enrichment lifecycle', () => {
         expect(screen.queryByTestId('workspace-anomalies')).not.toBeInTheDocument();
     });
 
-    it.each([false, true])('never creates a summary list for an event-bearing trace with zero filter matches (hydrated=%s)', async (isHydrated) => {
-        const user = userEvent.setup();
-        const anomaly: Anomaly = {
-            rule_id: 'CONTEXT_SATURATION_SPIKE', severity: 'WARNING', context: { turn: 999, token_delta: 50000 },
-        };
-        vi.mocked(apiClient.fetchWorkspaceById).mockResolvedValue({ data: {
-            ...makeDetail('AL-1', [recorded[1]!]), anomalies: [anomaly],
-        } });
-        vi.mocked(apiClient.fetchWorkspaceEvents).mockResolvedValue({ data: {
-            ...emptyResponse().data, is_hydrated: isHydrated,
-            data_source: isHydrated ? 'local_codex' : 'committed_ledger', events: [recorded[1]!],
-        } });
-        render(<TicketDeepDive selectedTicketId="AL-1" />);
-        await waitFor(() => expect(screen.getByTestId('waterfall-source-badge'))
-            .toHaveTextContent(isHydrated ? 'Source: Local Codex' : 'Source: Committed Ledger'));
-        expect(screen.getByTestId('waterfall-event-count')).toHaveTextContent('1 Events Recorded');
-        await user.click(screen.getByRole('button', { name: 'Expand Trace Waterfall' }));
-        expect(screen.getByText('No events match the selected filters.')).toBeVisible();
-        expect(screen.getByText('Showing 0 of 1 events')).toBeInTheDocument();
-        expect(screen.queryByText('Zero chronological events recorded for this execution trace.')).not.toBeInTheDocument();
-        expect(screen.queryByTestId('workspace-anomalies')).not.toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: /^Inspect anomaly:/ })).not.toBeInTheDocument();
-
-        await user.click(screen.getByRole('button', { name: 'All Events' }));
-        expect(screen.getByTestId('timeline-item-2')).toBeVisible();
-        await user.click(screen.getByRole('button', { name: 'Collapse Trace Waterfall' }));
-        expect(screen.queryByTestId('timeline-item-2')).not.toBeInTheDocument();
-        await user.click(screen.getByRole('button', { name: 'Expand Trace Waterfall' }));
-        expect(screen.getByRole('button', { name: 'All Events' })).toHaveClass('active');
-        expect(screen.getByTestId('timeline-item-2')).toBeVisible();
-        expect(screen.queryByTestId('workspace-anomalies')).not.toBeInTheDocument();
-        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    });
-
-    it.each(['local_sqlite', 'local_codex'] as const)('adds partial %s payloads without losing unmatched facts', async (source) => {
-        vi.mocked(apiClient.fetchWorkspaceEvents).mockResolvedValue({ data: {
-            ticket_id: 'AL-1', is_hydrated: true, data_source: source,
-            events: [{ ...recorded[0]!, tool_input: 'make test', tool_output: 'failure details' }],
-        } });
-        render(<TicketDeepDive selectedTicketId="AL-1" />);
-        await waitFor(() => expect(screen.getByTestId('waterfall-source-badge')).toHaveTextContent(source === 'local_codex' ? 'Source: Local Codex' : 'Source: Local SQLite'));
-        expect(screen.getByTestId('waterfall-event-count')).toHaveTextContent('2 Events Recorded');
-        fireEvent.click(screen.getByTestId('waterfall-expand-btn'));
-        fireEvent.click(screen.getByRole('button', { name: 'All Events' }));
-        expect(screen.getByTestId('timeline-item-2')).toBeInTheDocument();
-        fireEvent.click(screen.getByRole('button', { name: 'View payload for turn 1' }));
-        expect(screen.getByTestId('tool-input-payload-block')).toHaveTextContent('make test');
-        fireEvent.click(screen.getByRole('button', { name: 'View payload for turn 2' }));
-        expect(screen.getByTestId('unhydrated-notice')).toHaveTextContent('Payload details unavailable');
-    });
-
-    it('renders a nonempty unhydrated response even when the detail contains no events', async () => {
-        vi.mocked(apiClient.fetchWorkspaceById).mockResolvedValue({ data: makeDetail('AL-1', []) });
-        vi.mocked(apiClient.fetchWorkspaceEvents).mockResolvedValue({ data: {
-            ...emptyResponse().data, events: recorded,
-        } });
-        render(<TicketDeepDive selectedTicketId="AL-1" />);
-        await waitFor(() => expect(screen.getByTestId('waterfall-event-count')).toHaveTextContent('2 Events Recorded'));
-        fireEvent.click(screen.getByTestId('waterfall-expand-btn'));
-        expect(screen.getByTestId('timeline-item-1')).toBeInTheDocument();
-    });
-
-    it.each(['omitted', 'empty'])('keeps current summary-only anomalies, threads, and artifacts with %s events', async (mode) => {
-        const user = userEvent.setup();
-        const detail = makeDetail('AL-1', []);
-        vi.mocked(apiClient.fetchWorkspaceById).mockResolvedValue({ data: {
-            ...detail, anomalies: [{ rule_id: 'CONTEXT_SATURATION_SPIKE', severity: 'WARNING', context: { turn: 5, token_delta: 50000 } }],
-            ledger: { ...detail.ledger, facts: { ...detail.ledger.facts, sessions: [{
-                id: 'summary-only', source: 'opencode', user: 'tester', invocations: [], tools: [],
-                ...(mode === 'empty' ? { events: [] } : {}),
-            }] } },
-        } });
-        render(<TicketDeepDive selectedTicketId="AL-1" />);
-        await waitFor(() => expect(screen.getByTestId('waterfall-event-count')).toHaveTextContent('0 Events Recorded'));
-        expect(screen.getByTestId('waterfall-issues-summary')).toHaveTextContent('Zero Errors, 1 Anomaly');
-        expect(screen.queryByTestId('workspace-anomalies')).not.toBeInTheDocument();
-        expect(screen.queryByText('Zero chronological events recorded for this execution trace.')).not.toBeInTheDocument();
-        expect(screen.queryByTestId('legacy-fallback-banner')).not.toBeInTheDocument();
-        expect(screen.getByText('Session Execution Threads')).toBeInTheDocument();
-        expect(screen.getByText('ses-al1-root')).toBeInTheDocument();
-        expect(screen.getByText(/Contract: AL-1/i)).toBeInTheDocument();
-        await user.click(screen.getByRole('button', { name: 'Expand Trace Waterfall' }));
-        const card = screen.getByTestId('trace-waterfall-card');
-        expect(card).toContainElement(screen.getByTestId('workspace-anomalies'));
-        expect(within(card).getByText('Zero chronological events recorded for this execution trace.')).toBeVisible();
-        expect(screen.queryByRole('group', { name: 'Filter events by type' })).not.toBeInTheDocument();
-        expect(screen.queryByTestId('db-offline-banner')).not.toBeInTheDocument();
-
-        await user.click(screen.getByRole('button', { name: 'Collapse Trace Waterfall' }));
-        expect(screen.queryByTestId('workspace-anomalies')).not.toBeInTheDocument();
-        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-        expect(screen.getByText('Session Execution Threads')).toBeInTheDocument();
-        expect(screen.getByText(/Contract: AL-1/i)).toBeInTheDocument();
-        await user.click(screen.getByRole('button', { name: 'Expand Trace Waterfall' }));
-        expect(screen.getAllByTestId('workspace-anomalies')).toHaveLength(1);
-        expect(card).toContainElement(screen.getByTestId('workspace-anomalies'));
-        await user.click(within(card).getByRole('button', { name: /Inspect anomaly: Context saturation spike/ }));
-        expect(screen.getByRole('dialog')).toHaveTextContent('CONTEXT_SATURATION_SPIKE');
-        await user.click(screen.getByRole('button', { name: 'Close' }));
-        await user.click(screen.getByRole('button', { name: /summary\.md/i }));
-        expect(screen.getByText(/Summary: AL-1 Completed/i)).toBeInTheDocument();
-    });
-
-    it('current schema preserves supplied events independently of optional enrichment', async () => {
-        const detail = makeDetail();
-        expect(detail.ledger.facts.schema_version).toBe(6);
-        vi.mocked(apiClient.fetchWorkspaceById).mockResolvedValue({ data: detail });
-        render(<TicketDeepDive selectedTicketId="AL-1" />);
-        await waitFor(() => expect(screen.getByTestId('waterfall-event-count')).toHaveTextContent('2 Events Recorded'));
-        expect(screen.queryByTestId('legacy-fallback-banner')).not.toBeInTheDocument();
-        fireEvent.click(screen.getByTestId('waterfall-expand-btn'));
-        expect(screen.getByTestId('timeline-item-1')).toBeInTheDocument();
-    });
-
-    it.each(['recorded', 'summary-only'])('ignores ticket A %s enrichment after selecting ticket B and resets the drawer and disclosure', async (mode) => {
-        const pendingA = deferred<Awaited<ReturnType<typeof apiClient.fetchWorkspaceEvents>>>();
-        const bEvent: EventFact = { ...recorded[0]!, event_id: 'b-event', session_id: 'b-session', turn: 8 };
-        const anomaly: Anomaly = {
-            rule_id: 'TOOL_RETRY_STREAK', severity: 'WARNING',
-            context: { session_id: recorded[0]!.session_id, tool_name: 'bash', turn: 1, count: 3 },
-        };
-        vi.mocked(apiClient.fetchWorkspaceById).mockImplementation(async (id) => ({ data: id === 'AL-2'
-            ? makeDetail(id, [bEvent])
-            : { ...makeDetail(id, mode === 'summary-only' ? [] : recorded), anomalies: [anomaly] },
-        }));
-        vi.mocked(apiClient.fetchWorkspaceEvents).mockImplementation((id) => id === 'AL-1' ? pendingA.promise : Promise.resolve({ data: {
-            ticket_id: 'AL-2', is_hydrated: true, data_source: 'local_codex', events: [{ ...bEvent, tool_output: 'B details' }],
-        } }));
-        const { rerender } = render(<TicketDeepDive selectedTicketId="AL-1" />);
-        await waitFor(() => expect(screen.getByTestId('waterfall-event-count'))
-            .toHaveTextContent(`${mode === 'summary-only' ? 0 : 2} Events Recorded`));
-        fireEvent.click(screen.getByTestId('waterfall-expand-btn'));
-        fireEvent.click(mode === 'summary-only'
-            ? within(screen.getByTestId('trace-waterfall-card')).getByRole('button', { name: /Inspect anomaly: Tool retry streak/ })
-            : screen.getByTestId('timeline-item-1'));
-        expect(screen.getByRole('dialog')).toHaveTextContent('TOOL_RETRY_STREAK');
-        rerender(<TicketDeepDive selectedTicketId="AL-2" />);
-        await waitFor(() => expect(screen.getByTestId('waterfall-source-badge')).toHaveTextContent('Source: Local Codex'));
-        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-        expect(screen.getByTestId('waterfall-expand-btn')).toHaveAttribute('aria-expanded', 'false');
-        expect(screen.queryByTestId('timeline-item-8')).not.toBeInTheDocument();
-        expect(screen.queryByTestId('workspace-anomalies')).not.toBeInTheDocument();
-        expect(screen.queryByText('Detected Workspace Anomalies:')).not.toBeInTheDocument();
-        fireEvent.click(screen.getByTestId('waterfall-expand-btn'));
-        fireEvent.click(screen.getByTestId('timeline-item-8'));
-        await act(async () => pendingA.resolve({ data: {
-            ticket_id: 'AL-1', is_hydrated: true, data_source: 'local_sqlite', events: [{ ...recorded[0]!, tool_output: 'A stale details' }],
-        } }));
-        expect(screen.getByTestId('waterfall-source-badge')).toHaveTextContent('Source: Local Codex');
-        expect(screen.getByText('Showing 1 of 1 events')).toBeInTheDocument();
-        expect(screen.getByTestId('timeline-item-8')).toHaveClass('selected');
-        expect(screen.queryByTestId('timeline-item-1')).not.toBeInTheDocument();
-        expect(screen.getByTestId('waterfall-collapse-btn')).toHaveAttribute('aria-expanded', 'true');
-        expect(screen.queryByTestId('workspace-anomalies')).not.toBeInTheDocument();
-        expect(screen.getByRole('dialog')).toHaveTextContent('b-session');
-        expect(screen.getByRole('dialog')).not.toHaveTextContent('TOOL_RETRY_STREAK');
-        expect(screen.queryByText('A stale details')).not.toBeInTheDocument();
-    });
-
-    it('ignores an older refresh response after a newer request completes', async () => {
-        const pending = deferred<Awaited<ReturnType<typeof apiClient.fetchWorkspaceEvents>>>();
-        vi.mocked(apiClient.fetchWorkspaceById).mockResolvedValueOnce({ data: {
-            ...makeDetail(), ledger: null as unknown as AgenticMetricsLedger,
-        } });
-        vi.mocked(apiClient.fetchWorkspaceEvents).mockResolvedValueOnce(emptyResponse()).mockReturnValueOnce(pending.promise)
-            .mockImplementation(async (id) => ({ data: {
-                ticket_id: id, is_hydrated: true, data_source: 'local_codex', events: [{ ...recorded[0]!, tool_output: 'New details' }],
-            } }));
-        const { rerender } = render(<TicketDeepDive selectedTicketId="AL-1" />);
-        await waitFor(() => expect(screen.getByRole('button', { name: 'Refresh Data' })).toBeInTheDocument());
-        fireEvent.click(screen.getByRole('button', { name: 'Refresh Data' }));
-        await waitFor(() => expect(screen.getByTestId('waterfall-event-count')).toHaveTextContent('2 Events Recorded'));
-        expect(screen.getByTestId('waterfall-expand-btn')).toHaveAttribute('aria-expanded', 'false');
-        fireEvent.click(screen.getByTestId('waterfall-expand-btn'));
-        fireEvent.click(screen.getByTestId('timeline-item-1'));
-        expect(screen.getByRole('dialog')).toBeInTheDocument();
-        rerender(<TicketDeepDive selectedTicketId="AL-2" />);
-        await waitFor(() => expect(screen.getByTestId('waterfall-source-badge')).toHaveTextContent('Source: Local Codex'));
-        expect(screen.getByTestId('waterfall-expand-btn')).toHaveAttribute('aria-expanded', 'false');
-        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-        rerender(<TicketDeepDive selectedTicketId="AL-1" />);
-        await waitFor(() => expect(apiClient.fetchWorkspaceById).toHaveBeenCalledTimes(4));
-        await waitFor(() => expect(screen.getByTestId('waterfall-source-badge')).toHaveTextContent('Source: Local Codex'));
-        expect(screen.getByTestId('waterfall-expand-btn')).toHaveAttribute('aria-expanded', 'false');
-        fireEvent.click(screen.getByTestId('waterfall-expand-btn'));
-        fireEvent.click(screen.getByTestId('timeline-item-1'));
-        await act(async () => pending.resolve({ data: {
-            ticket_id: 'AL-1', is_hydrated: true, data_source: 'local_sqlite', events: [{ ...recorded[0]!, tool_output: 'Old details' }],
-        } }));
-        expect(screen.getByTestId('waterfall-source-badge')).toHaveTextContent('Source: Local Codex');
-        expect(screen.getByText('Showing 1 of 2 events')).toBeInTheDocument();
-        expect(screen.getByRole('dialog')).toHaveTextContent('recorded-session');
-        expect(screen.getByTestId('timeline-item-1')).toHaveClass('selected');
-        expect(screen.getByRole('button', { name: 'Hide payload for turn 1' })).toBeInTheDocument();
-        expect(screen.getByTestId('tool-output-payload-block')).toHaveTextContent('New details');
-        expect(screen.getByTestId('tool-output-payload-block')).not.toHaveTextContent('Old details');
-    });
-
-    it.each(['error', 'failed'])('opens a correlated anomaly from a bare recorded %s fact', async (status) => {
-        const event = { ...recorded[0]!, status };
-        vi.mocked(apiClient.fetchWorkspaceById).mockResolvedValue({ data: {
-            ...makeDetail('AL-1', [event]), anomalies: [{
-                rule_id: 'TOOL_RETRY_STREAK', severity: 'WARNING',
-                context: { session_id: event.session_id, tool_name: 'bash', turn: 1, count: 3 },
-            }],
-        } });
-        render(<TicketDeepDive selectedTicketId="AL-1" />);
-        await waitFor(() => expect(screen.getByTestId('waterfall-event-count')).toHaveTextContent('1 Events Recorded'));
-        fireEvent.click(screen.getByTestId('waterfall-expand-btn'));
-        fireEvent.click(within(screen.getByTestId('timeline-item-1')).getByText('WARNING'));
-        expect(screen.getByRole('dialog')).toHaveTextContent('TOOL_RETRY_STREAK');
-    });
 });
 describe('TicketDeepDive View Component', () => {
     beforeEach(() => {
@@ -1510,19 +1142,19 @@ describe('TicketDeepDive View Component', () => {
         expect(screen.getByText('claude-3-7-sonnet')).toBeInTheDocument();
         expect(screen.getByText('gemini-2.5-pro')).toBeInTheDocument();
     });
-    describe('Waterfall, Legacy Fallback, and AnomalyDrawer Integration', () => {
+    describe('Source waterfall and AnomalyDrawer integration', () => {
         it('renders an immediately visible current empty trace without anomalies or a legacy claim', async () => {
             vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
                 data: Object.values(mockAgenticMetricsLedgers),
             });
             vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
-                data: withRecordedEvents(mockWorkspaceDetails['AL-1']!, []),
+                data: withSessionOwners(mockWorkspaceDetails['AL-1']!, []),
             });
             vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
                 data: {
                     ticket_id: 'AL-1',
-                    is_hydrated: false,
-                    data_source: 'committed_ledger',
+                    is_hydrated: true, availability: 'complete', coverage: { required_session_ids: [], complete_session_ids: [], diagnostics: [] },
+                    data_source: 'local_sqlite',
                     events: []
                 },
             });
@@ -1542,7 +1174,7 @@ describe('TicketDeepDive View Component', () => {
         it.each(['click', 'Enter', 'Space'] as const)('opens the view-owned aggregate inspector by %s inside an expanded empty trace', async (activation) => {
             const user = userEvent.setup();
             const summaryWithAnomalies = {
-                ...withRecordedEvents(mockWorkspaceDetails['AL-1']!, []),
+                ...withSessionOwners(mockWorkspaceDetails['AL-1']!, []),
                 anomalies: [
                     {
                         rule_id: 'CONTEXT_SATURATION_SPIKE' as const,
@@ -1560,8 +1192,8 @@ describe('TicketDeepDive View Component', () => {
             vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
                 data: {
                     ticket_id: 'AL-1',
-                    is_hydrated: false,
-                    data_source: 'committed_ledger',
+                    is_hydrated: true, availability: 'complete', coverage: { required_session_ids: [], complete_session_ids: [], diagnostics: [] },
+                    data_source: 'local_sqlite',
                     events: []
                 },
             });
@@ -1614,9 +1246,9 @@ describe('TicketDeepDive View Component', () => {
             vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
                 data: {
                     ticket_id: 'AL-2',
-                    is_hydrated: false,
+                    is_hydrated: true, availability: 'complete', coverage: { required_session_ids: [], complete_session_ids: [], diagnostics: [] },
                     events: mockAL2Events,
-                    data_source: 'committed_ledger',
+                    data_source: 'local_sqlite',
                 },
             });
             render(<TicketDeepDive selectedTicketId="AL-2"/>);
@@ -1635,9 +1267,9 @@ describe('TicketDeepDive View Component', () => {
             vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
                 data: {
                     ticket_id: 'AL-2',
-                    is_hydrated: false,
+                    is_hydrated: true, availability: 'complete', coverage: { required_session_ids: [], complete_session_ids: [], diagnostics: [] },
                     events: mockAL2Events,
-                    data_source: 'committed_ledger',
+                    data_source: 'local_sqlite',
                 },
             });
             render(<TicketDeepDive selectedTicketId="AL-2"/>);
@@ -1677,9 +1309,9 @@ describe('TicketDeepDive View Component', () => {
             vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
                 data: {
                     ticket_id: 'AL-2',
-                    is_hydrated: false,
+                    is_hydrated: true, availability: 'complete', coverage: { required_session_ids: [], complete_session_ids: [], diagnostics: [] },
                     events: mockAL2Events,
-                    data_source: 'committed_ledger',
+                    data_source: 'local_sqlite',
                 },
             });
             render(<TicketDeepDive selectedTicketId="AL-2"/>);
@@ -1714,9 +1346,9 @@ describe('TicketDeepDive View Component', () => {
             vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
                 data: {
                     ticket_id: 'AL-2',
-                    is_hydrated: false,
+                    is_hydrated: true, availability: 'complete', coverage: { required_session_ids: [], complete_session_ids: [], diagnostics: [] },
                     events: mockAL2Events,
-                    data_source: 'committed_ledger',
+                    data_source: 'local_sqlite',
                 },
             });
             render(<TicketDeepDive selectedTicketId="AL-2"/>);
@@ -1760,7 +1392,7 @@ describe('TicketDeepDive View Component', () => {
                 duration_ms: 100,
                 context_tokens: 20000,
             };
-            const plainDetail = withRecordedEvents({ ...mockWorkspaceDetails['AL-2']!, anomalies: [] }, [plainErrorEvent]);
+            const plainDetail = withSessionOwners({ ...mockWorkspaceDetails['AL-2']!, anomalies: [] }, [plainErrorEvent]);
             vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
                 data: Object.values(mockAgenticMetricsLedgers),
             });
@@ -1770,8 +1402,8 @@ describe('TicketDeepDive View Component', () => {
             vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
                 data: {
                     ticket_id: 'AL-2',
-                    is_hydrated: false,
-                    data_source: 'committed_ledger',
+                    is_hydrated: true, availability: 'complete', coverage: { required_session_ids: [], complete_session_ids: [], diagnostics: [] },
+                    data_source: 'local_sqlite',
                     events: [plainErrorEvent]
                 },
             });
@@ -1811,7 +1443,7 @@ describe('TicketDeepDive View Component', () => {
                 duration_ms: 100,
                 context_tokens: 20000,
             };
-            const plainDetail = withRecordedEvents({ ...mockWorkspaceDetails['AL-2']!, anomalies: [] }, [plainErrorEvent]);
+            const plainDetail = withSessionOwners({ ...mockWorkspaceDetails['AL-2']!, anomalies: [] }, [plainErrorEvent]);
             vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
                 data: Object.values(mockAgenticMetricsLedgers),
             });
@@ -1821,8 +1453,8 @@ describe('TicketDeepDive View Component', () => {
             vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
                 data: {
                     ticket_id: 'AL-2',
-                    is_hydrated: false,
-                    data_source: 'committed_ledger',
+                    is_hydrated: true, availability: 'complete', coverage: { required_session_ids: [], complete_session_ids: [], diagnostics: [] },
+                    data_source: 'local_sqlite',
                     events: [plainErrorEvent]
                 },
             });
@@ -1862,7 +1494,7 @@ describe('TicketDeepDive View Component', () => {
                     tool_output: 'error: syntax error',
                 },
             ];
-            const richDetail = withRecordedEvents({ ...mockWorkspaceDetails['AL-2']!, anomalies: [] }, richEvents);
+            const richDetail = withSessionOwners({ ...mockWorkspaceDetails['AL-2']!, anomalies: [] }, richEvents);
             vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
                 data: Object.values(mockAgenticMetricsLedgers),
             });
@@ -1872,7 +1504,7 @@ describe('TicketDeepDive View Component', () => {
             vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
                 data: {
                     ticket_id: 'AL-2',
-                    is_hydrated: true,
+                    is_hydrated: true, availability: 'complete', coverage: { required_session_ids: [], complete_session_ids: [], diagnostics: [] },
                     events: richEvents,
                     data_source: 'local_sqlite',
                 },
@@ -1900,7 +1532,7 @@ describe('TicketDeepDive View Component', () => {
                     context_tokens: 5000,
                 },
             ];
-            const offlineDetail = withRecordedEvents({ ...mockWorkspaceDetails['AL-2']!, anomalies: [] }, offlineEvents);
+            const offlineDetail = withSessionOwners({ ...mockWorkspaceDetails['AL-2']!, anomalies: [] }, offlineEvents);
             vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
                 data: Object.values(mockAgenticMetricsLedgers),
             });
@@ -1910,9 +1542,9 @@ describe('TicketDeepDive View Component', () => {
             vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
                 data: {
                     ticket_id: 'AL-2',
-                    is_hydrated: false,
+                    is_hydrated: false, availability: 'partial', coverage: { required_session_ids: [], complete_session_ids: [], diagnostics: [] },
                     events: offlineEvents,
-                    data_source: 'committed_ledger',
+                    data_source: 'unavailable',
                 },
             });
             render(<TicketDeepDive selectedTicketId="AL-2"/>);
@@ -1926,7 +1558,7 @@ describe('TicketDeepDive View Component', () => {
             }
             expect(screen.getByTestId('db-offline-banner')).toBeInTheDocument();
             const sourceBadge = screen.getByTestId('waterfall-source-badge');
-            expect(sourceBadge).toHaveTextContent('Source: Committed Ledger');
+            expect(sourceBadge).toHaveTextContent('Source unavailable');
         });
         it('renders unclassified pill and does not render feature when ticket_type is null or undefined', async () => {
             const unclassifiedDetail = {
@@ -1977,5 +1609,50 @@ describe('TicketDeepDive View Component', () => {
             expect(pill).toHaveClass('unclassified');
             expect(screen.queryByText('feature')).not.toBeInTheDocument();
         });
+    });
+});
+
+
+describe('Native producer wire through API validation and ticket presentation', () => {
+    it('renders lean activations and separate source badges without saved traces or opaque child links', async () => {
+        vi.restoreAllMocks();
+        const fetch = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+            const route = String(input);
+            const payload: unknown = route === '/api/workspaces' ? [codexOwnedDetail.ledger]
+                : route === '/api/workspaces/TEST-WIRE' ? codexOwnedDetail
+                : route === '/api/workspaces/TEST-WIRE/events' ? codexSourceEvents
+                : undefined;
+            if (payload === undefined) throw new Error(`Unexpected fixture route: ${route}`);
+            return new Response(JSON.stringify(payload), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        });
+        try {
+            render(<TicketDeepDive selectedTicketId="TEST-WIRE" />);
+            const skills = await screen.findByRole('table', { name: 'Modular skills' });
+            expect(within(skills).getAllByRole('rowheader', { name: 'inspect-source' })).toHaveLength(2);
+            expect(within(skills).queryByRole('columnheader', { name: /Status|Outcome|Error/ })).not.toBeInTheDocument();
+            const delegations = screen.getByRole('table', { name: 'Subagent delegations' });
+            expect(within(delegations).getAllByRole('row').slice(1)).toHaveLength(3);
+            expect(within(delegations).getByText('unavailable-a')).toBeVisible();
+            expect(within(delegations).getByText('unavailable-b')).toBeVisible();
+            expect(within(delegations).queryByText('private prompt')).not.toBeInTheDocument();
+            expect(within(delegations).queryByRole('button', { name: /Jump to child session/ })).not.toBeInTheDocument();
+            await waitFor(() => expect(screen.getByTestId('waterfall-source-badge')).toHaveTextContent('Source: Local Codex'));
+            fireEvent.click(screen.getByRole('button', { name: 'Expand Trace Waterfall' }));
+            fireEvent.click(screen.getByRole('button', { name: 'All Events' }));
+            expect(screen.getByText('Showing 6 of 6 events')).toBeVisible();
+            expect(screen.getAllByText('[skill: inspect-source]')).toHaveLength(2);
+            expect(screen.getAllByText('[task -> tester]')).toHaveLength(2);
+            expect(screen.getByText('[task -> reviewer]')).toBeVisible();
+            const activation = screen.getByText('Skill Activation').closest<HTMLElement>('.timeline-item')!;
+            expect(within(activation).getByText('Activation')).toBeVisible();
+            expect(within(activation).queryByText('Success')).not.toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Copy child session ID unavailable-a' })).toBeVisible();
+            expect(screen.getByRole('button', { name: 'Copy child session ID unavailable-b' })).toBeVisible();
+            expect(screen.queryByRole('button', { name: /Inspect child session/ })).not.toBeInTheDocument();
+            expect(screen.queryByText('[skill: catalogue-only]')).not.toBeInTheDocument();
+            expect(screen.queryByText('[skill: quoted]')).not.toBeInTheDocument();
+        } finally {
+            fetch.mockRestore();
+        }
     });
 });

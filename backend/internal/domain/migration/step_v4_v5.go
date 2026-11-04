@@ -12,10 +12,10 @@ func (s *StepV4ToV5CostEvidence) TargetVersion() int     { return 5 }
 func (s *StepV4ToV5CostEvidence) Description() string {
 	return "Adds schema v5 cost availability evidence"
 }
-func (s *StepV4ToV5CostEvidence) Apply(ledger domain.AgenticFactLedger) (domain.AgenticFactLedger, error) {
-	cloned, err := domain.PersistAnomalySummaries(ledger)
+func (s *StepV4ToV5CostEvidence) Apply(ledger legacyLedger) (legacyLedger, error) {
+	cloned, err := legacyPersistAnomalySummaries(ledger)
 	if err != nil {
-		return domain.AgenticFactLedger{}, err
+		return legacyLedger{}, err
 	}
 	version := 5
 	cloned.SchemaVersion = &version
@@ -25,7 +25,7 @@ func (s *StepV4ToV5CostEvidence) Apply(ledger domain.AgenticFactLedger) (domain.
 			inv.CostEvidence = domain.EffectiveCost(inv.CostUSD, inv.CostEvidence)
 		}
 	}
-	cloned.TaskLinks = append([]domain.TaskLinkFact(nil), ledger.TaskLinks...)
+	cloned.TaskLinks = append([]legacyTaskLinkFact(nil), ledger.TaskLinks...)
 	for i := range cloned.TaskLinks {
 		task := &cloned.TaskLinks[i]
 		if task.CostEvidence.State == "" {

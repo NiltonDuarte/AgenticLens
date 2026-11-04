@@ -1,0 +1,103 @@
+{
+  "ticket_id": "TEST-WIRE",
+  "is_hydrated": true,
+  "events": [
+    {
+      "skill_name": "inspect-source",
+      "event_id": "selection",
+      "timestamp": "2026-01-01T10:00:01Z",
+      "session_id": "owner",
+      "message_id": "selection",
+      "turn": 0,
+      "role": "user",
+      "event_type": "skill_activation",
+      "status": "unknown",
+      "context_tokens": 0
+    },
+    {
+      "child_session_id": "unavailable-a",
+      "call_id": "spawn-a",
+      "event_id": "codex-call:spawn-a",
+      "timestamp": "2026-01-01T10:00:03Z",
+      "session_id": "owner",
+      "turn": 1,
+      "role": "",
+      "event_type": "tool_call",
+      "tool_name": "collaboration.spawn_agent",
+      "status": "completed",
+      "duration_ms": 3000,
+      "context_tokens": 0,
+      "tool_input": "{\"agent_type\":\"tester\",\"task_name\":\"same-task\",\"message\":\"private prompt\"}",
+      "tool_output": "{\"session_id\":\"unavailable-a\"}"
+    },
+    {
+      "child_session_id": "unavailable-b",
+      "call_id": "spawn-b",
+      "event_id": "codex-call:spawn-b",
+      "timestamp": "2026-01-01T10:00:04Z",
+      "session_id": "owner",
+      "turn": 1,
+      "role": "",
+      "event_type": "tool_call",
+      "tool_name": "spawn_agent",
+      "status": "completed",
+      "duration_ms": 1000,
+      "context_tokens": 0,
+      "tool_input": "{\"agent_type\":\"tester\",\"task_name\":\"same-task\",\"message\":\"private prompt\"}",
+      "tool_output": "{\"session_id\":\"unavailable-b\"}"
+    },
+    {
+      "call_id": "load",
+      "event_id": "codex-call:load",
+      "timestamp": "2026-01-01T10:00:07Z",
+      "session_id": "owner",
+      "turn": 1,
+      "role": "",
+      "event_type": "tool_call",
+      "tool_name": "skill",
+      "status": "completed",
+      "duration_ms": 1000,
+      "context_tokens": 0,
+      "tool_input": "{\"name\":\"inspect-source\"}",
+      "tool_output": "{\"status\":\"completed\"}"
+    },
+    {
+      "call_id": "pending",
+      "event_id": "codex-call:pending",
+      "timestamp": "2026-01-01T10:00:09Z",
+      "session_id": "owner",
+      "turn": 1,
+      "role": "",
+      "event_type": "tool_call",
+      "tool_name": "spawn_agent",
+      "status": "running",
+      "context_tokens": 0,
+      "tool_input": "{\"agent_type\":\"reviewer\"}"
+    },
+    {
+      "call_id": "plain-read",
+      "event_id": "codex-call:plain-read",
+      "timestamp": "2026-01-01T10:00:12Z",
+      "session_id": "owner",
+      "turn": 1,
+      "role": "",
+      "event_type": "tool_call",
+      "tool_name": "exec_command",
+      "status": "running",
+      "context_tokens": 0,
+      "tool_input": "{\"cmd\":\"cat /skills/catalogue-only/SKILL.md\"}"
+    }
+  ],
+  "data_source": "local_codex",
+  "anomalies": [],
+  "availability": "complete",
+  "coverage": {
+    "required_session_ids": [
+      "owner"
+    ],
+    "complete_session_ids": [
+      "owner"
+    ],
+    "diagnostics": []
+  }
+}

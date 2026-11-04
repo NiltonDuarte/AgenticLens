@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useId } from 'react';
 import type {
   AgenticMetricsLedger,
   Anomaly,
@@ -6,8 +6,8 @@ import type {
   EventFact,
   WorkspaceDetail,
 } from '../domain/types';
-import { ledgerSkills, ledgerTaskLinks, sessionTools } from '../domain/types';
-import { rebindEvent, sessionEvents, selectWorkspaceEvents } from '../domain/events';
+import { ledgerSkills, ledgerDelegations, sessionTools } from '../domain/types';
+import { rebindEvent, selectWorkspaceEvents, selectWorkspaceAnomalies } from '../domain/events';
 import {
   fetchWorkspaceById,
   fetchWorkspaceEvents,
@@ -25,6 +25,7 @@ import {
   formatLocalDateTime,
   formatHistoricalDateTimeTooltip, getHistoricalTimestampDateTime,
 } from '../domain/formatters';
+import { formatAnomaly } from '../domain/anomalies';
 import { aggregateToolUsage } from '../domain/tools';
 import { KPICard } from '../components/KPICard';
 import { CostKPICard } from '../components/CostKPICard';
@@ -53,12 +54,17 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
   const [detail, setDetail] = useState<WorkspaceDetail | null>(null);
   const [events, setEvents] = useState<readonly EventFact[]>([]);
   const [isHydrated, setIsHydrated] = useState(false);
-  const [dataSource, setDataSource] = useState<DataSource>('committed_ledger');
+  const [dataSource, setDataSource] = useState<DataSource>('unavailable');
+  const [traceAvailability, setTraceAvailability] = useState<'pending' | 'failed' | 'complete' | 'partial' | 'unavailable'>('pending');
+  const [traceDiagnostics, setTraceDiagnostics] = useState<readonly string[]>([]);
   const [traceAnomalies, setTraceAnomalies] = useState<readonly Anomaly[]>([]);
   const [selection, setSelection] = useState<{
     readonly event: EventFact | null;
     readonly anomaly: Anomaly | null;
-  }>({ event: null, anomaly: null });
+    readonly origin: 'source' | 'recorded';
+  }>({ event: null, anomaly: null, origin: 'source' });
+  const [recordedSummariesExpanded, setRecordedSummariesExpanded] = useState(false);
+  const recordedSummaryId = useId();
   const { event: selectedEvent, anomaly: selectedAnomaly } = selection;
   const [focusedThread, setFocusedThread] = useState<{ readonly id: string } | undefined>();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -83,11 +89,14 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
     setError(null);
     setDetail(null);
     setEvents([]);
+    setTraceAvailability('pending');
+    setTraceDiagnostics([]);
     setTraceAnomalies([]);
     setIsHydrated(false);
-    setDataSource('committed_ledger');
+    setDataSource('unavailable');
     setFocusedThread(undefined);
-    setSelection({ event: null, anomaly: null });
+    setSelection({ event: null, anomaly: null, origin: 'source' });
+    setRecordedSummariesExpanded(false);
     setIsDrawerOpen(false);
     try {
       let currentLedgers = ledgersRef.current;
@@ -110,9 +119,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
       if (targetId) {
         const detailRes = await fetchWorkspaceById(targetId);
         if (!isCurrentRequest()) return;
-        const baseline = sessionEvents(detailRes.data.ledger?.facts?.sessions);
         setDetail(detailRes.data);
-        setEvents(baseline);
         setTraceAnomalies(detailRes.data.anomalies ?? []);
         setLoading(false);
 
@@ -121,18 +128,22 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
           const eventsRes = await fetchWorkspaceEvents(targetId);
           if (!isCurrentRequest()) return;
           if (eventsRes.data.ticket_id !== targetId) return;
-          const selected = selectWorkspaceEvents(baseline, eventsRes.data);
-          const anomalies = eventsRes.data.anomalies ?? detailRes.data.anomalies ?? [];
+          const selected = selectWorkspaceEvents(eventsRes.data);
+          const anomalies = selectWorkspaceAnomalies(detailRes.data.anomalies ?? [], selected);
+          setTraceAvailability(selected.availability);
+          setTraceDiagnostics(selected.coverage.diagnostics);
           setEvents(selected.events);
           setIsHydrated(selected.is_hydrated);
           setDataSource(selected.data_source);
           setTraceAnomalies(anomalies);
           setSelection((current) => {
-            const event = rebindEvent(current.event, baseline, selected.events);
+            if (current.origin === 'recorded') return current;
+            const event = rebindEvent(current.event, [], selected.events);
             const sameRule = current.anomaly
               ? anomalies.filter((anomaly) => anomaly.rule_id === current.anomaly?.rule_id)
               : anomalies;
             return {
+              origin: 'source',
               event,
               anomaly: event
                 ? findMatchingAnomaly(event, sameRule) ?? findMatchingAnomaly(event, anomalies) ?? null
@@ -140,6 +151,8 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
             };
           });
         } catch {
+          if (!isCurrentRequest()) return;
+          setTraceAvailability('failed');
           // Keep this request's committed facts and summaries if enrichment fails.
         }
       }
@@ -175,13 +188,13 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
   };
 
   const handleSelectEvent = (event: EventFact, anomaly?: Anomaly) => {
-    setSelection({ event, anomaly: anomaly ?? null });
+    setSelection({ event, anomaly: anomaly ?? null, origin: 'source' });
     const isFlagged = Boolean(anomaly) || event.status === 'error' || event.status === 'failed';
     setIsDrawerOpen(isFlagged);
   };
 
   const handleSelectAnomaly = (anomaly: Anomaly) => {
-    setSelection({ event: null, anomaly });
+    setSelection({ event: null, anomaly, origin: 'source' });
     setIsDrawerOpen(true);
   };
 
@@ -638,13 +651,12 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
         </div>
       </div>
 
-      {/* Row 6: Recorded trace and independent schema metadata */}
+      {/* Row 6: Transient source trace and recorded summaries */}
       <TraceWaterfall
         key={`trace-${requestGenerationRef.current}`}
         events={events}
-        hasPartialSavedEvents={ledger.facts.sessions.some((session) => session.events_are_partial)}
-        skills={ledgerSkills(ledger.facts)}
-        taskLinks={ledgerTaskLinks(ledger.facts)}
+        traceAvailability={traceAvailability}
+        traceDiagnostics={traceDiagnostics}
         availableSessionIds={ledger.threads.map((thread) => thread.session_id)}
         onSelectSession={handleSelectSession}
         isHydrated={isHydrated}
@@ -655,11 +667,28 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
         onSelectAnomaly={handleSelectAnomaly}
       />
 
+      {(detail.anomalies?.length ?? 0) > 0 && <section className="thread-viewer-card" aria-label="Recorded anomaly summaries">
+        <button type="button" className="thread-header-btn" aria-expanded={recordedSummariesExpanded}
+          aria-controls={recordedSummaryId} onClick={() => setRecordedSummariesExpanded((expanded) => !expanded)}>
+          Recorded anomaly summaries ({detail.anomalies.length})
+        </button>
+        <div id={recordedSummaryId} hidden={!recordedSummariesExpanded}>
+          {recordedSummariesExpanded && <>
+            <p>Recorded summaries remain available independently of current source coverage.</p>
+            {detail.anomalies.map((anomaly, index) => <button key={index} type="button" className="legacy-anomaly-item"
+              aria-label={`Inspect recorded anomaly: ${formatAnomaly(anomaly).title}`}
+              onClick={() => { setSelection({ event: null, anomaly, origin: 'recorded' }); setIsDrawerOpen(true); }}>
+              {formatAnomaly(anomaly).title} · {anomaly.severity}
+            </button>)}
+          </>}
+        </div>
+      </section>}
+
       {/* Row 7: Session Thread Logs */}
       <SkillsSubagentsPanel
         key={ledger.ticket_id}
         skills={ledgerSkills(ledger.facts)}
-        delegations={ledgerTaskLinks(ledger.facts)}
+        delegations={ledgerDelegations(ledger.facts)}
         availableSessionIds={ledger.threads.map((thread) => thread.session_id)}
         onJumpToSession={handleSelectSession}
       />

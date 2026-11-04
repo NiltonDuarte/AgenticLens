@@ -17,7 +17,7 @@ func NewInvariantValidator() *InvariantValidator {
 }
 
 // Validate compares pre-migration and post-migration states against strict preservation invariants.
-func (v *InvariantValidator) Validate(before domain.AgenticFactLedger, after domain.AgenticFactLedger, expectedTargetVersion int) error {
+func (v *InvariantValidator) Validate(before legacyLedger, after legacyLedger, expectedTargetVersion int) error {
 	// 1. Schema version invariant
 	if after.SchemaVersion == nil {
 		return fmt.Errorf("%w: schema_version is nil after migration; expected %d",
@@ -159,8 +159,8 @@ func (v *InvariantValidator) Validate(before domain.AgenticFactLedger, after dom
 			return fmt.Errorf("%w: ComputeTotals mismatch after migration", ErrInvariantViolation)
 		}
 
-		effBefore := domain.ComputeWorkflowEfficiency(before)
-		effAfter := domain.ComputeWorkflowEfficiency(after)
+		effBefore := domain.ComputeWorkflowEfficiency(before.current())
+		effAfter := domain.ComputeWorkflowEfficiency(after.current())
 		if !reflect.DeepEqual(effBefore, effAfter) {
 			return fmt.Errorf("%w: ComputeWorkflowEfficiency mismatch after migration", ErrInvariantViolation)
 		}

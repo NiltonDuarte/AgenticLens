@@ -327,6 +327,7 @@ func runGenerate(args []string) {
 	}
 
 	var freshSessions []domain.SessionFact
+	var sourceEvents domain.SourceEvents
 	captureResult, captureErr := reconcileCaptureGeneration(project, *captureDirFlag, activeTicketID)
 	if captureErr != nil {
 		fmt.Fprintf(os.Stderr, "Error reconciling capture registry; publication not completed: %v\n", captureErr)
@@ -404,6 +405,10 @@ func runGenerate(args []string) {
 		}
 		resolveCodexSessionUsers(freshCodex, userBySessionID, currentUser)
 		freshSessions = freshCodex
+		sourceEvents.Events = combined.Events
+		for _, owner := range freshCodex {
+			sourceEvents.CompleteSessionIDs = append(sourceEvents.CompleteSessionIDs, owner.ID)
+		}
 		if strings.TrimSpace(*startedAtFlag) == "" && combined.StartedAt != "" {
 			activeStartedAt = &combined.StartedAt
 		}
@@ -441,8 +446,8 @@ func runGenerate(args []string) {
 			}
 
 			if len(knownThreadIDs) > 0 {
-				extractedSessions, dbStarted, dbCompleted, extractErr := opencode.ExtractSessionsStrict(
-					dbClient.DB(), knownThreadIDs, currentUser, userBySessionID,
+				extractedSessions, dbStarted, dbCompleted, extractErr := opencode.ExtractSessionsStrictWithSource(
+					dbClient.DB(), knownThreadIDs, currentUser, userBySessionID, &sourceEvents,
 				)
 				if extractErr != nil {
 					fmt.Fprintf(os.Stderr, "Error reading selected OpenCode source at %s: %v. Check the database and telemetry.sources.opencode.database_path.\n", dbPath, extractErr)
@@ -481,6 +486,7 @@ func runGenerate(args []string) {
 			fmt.Fprintln(os.Stderr, "Capture identity collision:", err)
 			os.Exit(1)
 		}
+		sourceEvents = domain.MergeSourceEvents(captureResult.SourceEvents, sourceEvents)
 		// Retained local snapshots are fallback only; they never replace canonical or explicit facts.
 		sessions = fillMissingCaptureSessions(sessions, captureResult.Sessions)
 		// Explicit extraction runs after capture and has precedence for a duplicate refreshed owner.
@@ -602,6 +608,14 @@ func runGenerate(args []string) {
 		Sessions:      sessions,
 	}
 
+	if cachedFacts != nil {
+		factLedger.Anomalies = append([]domain.Anomaly{}, cachedFacts.Anomalies...)
+	}
+	factLedger, summaryErr := domain.PersistSourceAnomalySummaries(factLedger, sourceEvents, projCfg.AnomalyThresholds)
+	if summaryErr != nil {
+		fmt.Fprintln(os.Stderr, "Cannot calculate source summaries:", summaryErr)
+		os.Exit(1)
+	}
 	metricsLedger := domain.DeriveMetricsLedger(factLedger, projCfg)
 	tableMD := adapters.FormatMarkdownMetricsTable(metricsLedger, projCfg.RoleOrder)
 	if captureResult != nil {
@@ -1780,6 +1794,7 @@ func main() {
 }
 
 func mergeSessions(cached []domain.SessionFact, local []domain.SessionFact) []domain.SessionFact {
+	local = domain.RetainIncompleteGroupSummaries(cached, local)
 	byID := make(map[string]domain.SessionFact, len(cached)+len(local))
 	for _, session := range cached {
 		byID[session.ID] = session

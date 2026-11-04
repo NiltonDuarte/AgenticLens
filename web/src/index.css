@@ -1162,21 +1162,6 @@ body {
   outline-offset: -2px;
 }
 
-.skill-status {
-  display: inline-block;
-  padding: 3px 8px;
-  border: 1px solid currentColor;
-  border-radius: 4px;
-}
-
-.skill-status.success {
-  color: var(--status-green);
-}
-
-.skill-status.failed {
-  color: var(--status-red);
-}
-
 .child-session-jump {
   white-space: pre-wrap;
   overflow-wrap: anywhere;

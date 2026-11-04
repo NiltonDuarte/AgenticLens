@@ -163,7 +163,7 @@ describe('Domain Progression Aggregator', () => {
                 completed_at: '2026-10-19T11:30:00Z',
                 updated_at: '2026-10-19T11:30:00Z',
                 facts: {
-                    schema_version: 6,
+                    schema_version: 7,
                     ticket_id: 'HOURLY-1',
                     ticket_title: 'Hourly test',
                     ticket_type: 'chore',
@@ -307,7 +307,7 @@ describe('Domain Progression Aggregator', () => {
                 completed_at: '2026-10-15T10:05:00Z',
                 updated_at: '2026-10-15T10:05:00Z',
                 facts: {
-                    schema_version: 6,
+                    schema_version: 7,
                     ticket_id: 'ZERO-1',
                     ticket_title: 'Zero test',
                     ticket_type: 'chore',
@@ -431,7 +431,7 @@ describe('Domain Progression Aggregator', () => {
                 completed_at: `${date}T10:00:00Z`,
                 updated_at: `${date}T10:00:00Z`,
                 facts: {
-                    schema_version: 6,
+                    schema_version: 7,
                     ticket_id: id,
                     ticket_title: `Test ${id}`,
                     ticket_type: 'chore',
@@ -619,7 +619,7 @@ describe('Domain Progression Aggregator', () => {
                 completed_at: '2026-10-15T11:05:00Z',
                 updated_at: '2026-10-15T11:05:00Z',
                 facts: {
-                    schema_version: 6,
+                    schema_version: 7,
                     ticket_id: 'MULTI-1',
                     ticket_title: 'Multi invocation test',
                     ticket_type: 'chore',
@@ -727,7 +727,7 @@ describe('Domain Progression Aggregator', () => {
                 completed_at: '2026-10-20T10:10:00Z',
                 updated_at: '2026-10-20T10:10:00Z',
                 facts: {
-                    schema_version: 6,
+                    schema_version: 7,
                     ticket_id: 'CLEANUP-1',
                     ticket_title: 'Code cleanup',
                     ticket_type: 'refactor',
@@ -829,7 +829,7 @@ describe('Domain Progression Aggregator', () => {
                 completed_at: inv.completed_at,
                 updated_at: inv.completed_at ?? inv.started_at ?? '2026-10-15T00:00:00Z',
                 facts: {
-                    schema_version: 6,
+                    schema_version: 7,
                     ticket_id: id,
                     ticket_title: id,
                     ticket_type: 'chore',
@@ -919,7 +919,7 @@ describe('Domain Progression Aggregator', () => {
                 completed_at: 'bad-end',
                 updated_at: 'bad-update',
                 facts: {
-                    schema_version: 6,
+                    schema_version: 7,
                     ticket_id: 'CORRUPT-1',
                     ticket_title: 'Corrupt Dates',
                     ticket_type: 'chore',
@@ -1012,7 +1012,7 @@ describe('Domain Progression Aggregator', () => {
                 completed_at: null,
                 updated_at: '2026-10-11T10:30:00Z',
                 facts: {
-                    schema_version: 6,
+                    schema_version: 7,
                     ticket_id: 'FB-1',
                     ticket_title: 'Fallback test',
                     ticket_type: 'chore',
@@ -1120,7 +1120,7 @@ describe('Domain Progression Aggregator', () => {
                 completed_at: '2026-10-11T10:30:00Z',
                 updated_at: '2026-10-11T10:30:00Z',
                 facts: {
-                    schema_version: 6,
+                    schema_version: 7,
                     ticket_id: 'FB-2',
                     ticket_title: 'Fallback completed test',
                     ticket_type: 'chore',
@@ -1228,7 +1228,7 @@ describe('Domain Progression Aggregator', () => {
                     completed_at: invalidCompleted as string | null,
                     updated_at: '2026-10-15T10:30:00Z',
                     facts: {
-                        schema_version: 6,
+                        schema_version: 7,
                         ticket_id: 'ADV-1',
                         ticket_title: 'Adversarial invalid completed_at test',
                         ticket_type: 'chore',
@@ -1328,7 +1328,7 @@ describe('Domain Progression Aggregator', () => {
                 completed_at: '2026-10-19T00:15:00Z',
                 updated_at: '2026-10-19T00:15:00Z',
                 facts: {
-                    schema_version: 6,
+                    schema_version: 7,
                     ticket_id: 'ADV-1',
                     ticket_title: 'Adversarial Test',
                     ticket_type: 'chore',
@@ -1414,7 +1414,7 @@ describe('Domain Progression Aggregator', () => {
                 completed_at: `${dateStr}T12:00:00Z`,
                 updated_at: `${dateStr}T12:00:00Z`,
                 facts: {
-                    schema_version: 6,
+                    schema_version: 7,
                     ticket_id: id,
                     ticket_title: `Ticket ${id}`,
                     ticket_type: 'feat',

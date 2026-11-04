@@ -58,8 +58,8 @@ func sampleFactJSON(ticketID, title string, duration int64, cost float64) string
 		UpdatedAt:   "2026-10-17T11:00:00Z",
 		Code:        domain.CodeFacts{LinesAdded: 120, LinesDeleted: 20, TestLinesAdded: 60, ProdLinesAdded: 60, ProdLinesDeleted: 20, FilesChanged: 4, SDLCIterations: 2},
 		Sessions: []domain.SessionFact{
-			{ID: "ses-orch", Source: domain.SourceOpenCode, User: "test-engineer", Invocations: []domain.InvocationFact{{Role: "orchestrator", Model: "claude-3-sonnet", StartedAt: func() *string { v := "2026-10-17T10:00:00Z"; return &v }(), CompletedAt: func() *string { v := "2026-10-17T11:00:00Z"; return &v }(), ActiveDurationSeconds: duration, Turns: 6, Tokens: domain.InvocationTokens{Input: 5000, Output: 1000, CacheRead: 10000, Reasoning: 300, PeakContext: 80000}, CostUSD: cost, UserIterations: 0}}, Tools: []domain.SessionToolFact{{Name: "bash", Calls: 10, Errors: 1}}, Events: []domain.SessionEventFact{}, Anomalies: []domain.Anomaly{}},
-			{ID: "ses-coder", Source: domain.SourceOpenCode, ParentID: &parent, User: "test-engineer", Invocations: []domain.InvocationFact{{Role: "coder", Model: "claude-3-opus", StartedAt: func() *string { v := "2026-10-17T10:00:00Z"; return &v }(), CompletedAt: func() *string { v := "2026-10-17T11:00:00Z"; return &v }(), ActiveDurationSeconds: 60, Turns: 4, Tokens: domain.InvocationTokens{Input: 8000, Output: 2000, CacheRead: 12000, Reasoning: 500, PeakContext: 150000}, CostUSD: 0.75, UserIterations: 0}}, Events: []domain.SessionEventFact{}, Anomalies: []domain.Anomaly{}},
+			{ID: "ses-orch", Source: domain.SourceOpenCode, User: "test-engineer", Invocations: []domain.InvocationFact{{Role: "orchestrator", Model: "claude-3-sonnet", StartedAt: func() *string { v := "2026-10-17T10:00:00Z"; return &v }(), CompletedAt: func() *string { v := "2026-10-17T11:00:00Z"; return &v }(), ActiveDurationSeconds: duration, Turns: 6, Tokens: domain.InvocationTokens{Input: 5000, Output: 1000, CacheRead: 10000, Reasoning: 300, PeakContext: 80000}, CostUSD: cost, UserIterations: 0}}, Tools: []domain.SessionToolFact{{Name: "bash", Calls: 10, Errors: 1}}, Anomalies: []domain.Anomaly{}},
+			{ID: "ses-coder", Source: domain.SourceOpenCode, ParentID: &parent, User: "test-engineer", Invocations: []domain.InvocationFact{{Role: "coder", Model: "claude-3-opus", StartedAt: func() *string { v := "2026-10-17T10:00:00Z"; return &v }(), CompletedAt: func() *string { v := "2026-10-17T11:00:00Z"; return &v }(), ActiveDurationSeconds: 60, Turns: 4, Tokens: domain.InvocationTokens{Input: 8000, Output: 2000, CacheRead: 12000, Reasoning: 500, PeakContext: 150000}, CostUSD: 0.75, UserIterations: 0}}, Anomalies: []domain.Anomaly{}},
 		},
 	}
 	data, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(ledger))
@@ -210,9 +210,9 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 		t.Fatalf("failed to create TICKET-ANOMALY dir: %v", err)
 	}
 	anomalyFactJSON := `{
-  "schema_version": 6,
+  "schema_version": 7,
   "migration": {
-    "schema_version": 6,
+    "schema_version": 7,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -228,7 +228,6 @@ func TestCLIAnomaliesCommand(t *testing.T) {
       "source": "opencode",
       "user": "test-engineer",
       "invocations": [],
-      "events": [],
       "anomalies": [],
       "tools": [
         {
@@ -1148,16 +1147,11 @@ func TestCLIGenerate_SparseAnomalyEvidenceAndZeroErrorMessage(t *testing.T) {
 		t.Fatalf("expected 2 invocations, got %d", len(parsed.ToDomain().InvocationFacts()))
 	}
 
-	// 5. Events contain direct anomaly evidence only; isolated errors and compactions are omitted.
-	var persistedEventCount int
-	for _, ev := range parsed.ToDomain().EventFacts() {
-		persistedEventCount++
-		if ev.ErrorMessage != nil {
-			t.Errorf("expected event ErrorMessage to be nil, got: %s", *ev.ErrorMessage)
+	// Current ledgers never serialize source event streams or partial markers.
+	for _, retired := range []string{`"events"`, `"events_are_partial"`} {
+		if bytes.Contains(rawJSON, []byte(retired)) {
+			t.Fatalf("source trace field persisted: %s", retired)
 		}
-	}
-	if persistedEventCount != 0 {
-		t.Errorf("expected no unrelated event evidence to persist, got %d rows", persistedEventCount)
 	}
 	var executeCalls, executeErrors int64
 	for _, fact := range parsed.ToDomain().ToolFacts() {
@@ -1171,14 +1165,14 @@ func TestCLIGenerate_SparseAnomalyEvidenceAndZeroErrorMessage(t *testing.T) {
 	}
 }
 
-func TestCLIGenerate_HighFailureAggregateKeepsSummaryAndUnavailableEventMetadata(t *testing.T) {
+func TestCLIGenerate_HighFailureAggregateKeepsSummaryWithoutPersistedEvents(t *testing.T) {
 	t.Parallel()
 	tempDir := t.TempDir()
 	outJSON := filepath.Join(tempDir, "aggregate.json")
 	seedJSON := `{
-  "schema_version": 6,
+  "schema_version": 7,
   "migration": {
-    "schema_version": 6,
+    "schema_version": 7,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -1187,6 +1181,7 @@ func TestCLIGenerate_HighFailureAggregateKeepsSummaryAndUnavailableEventMetadata
   },
   "ticket_id": "AL-GEN-EVIDENCE",
   "ticket_title": "Aggregate evidence fixture",
+ "anomalies":[{"rule_id":"SUBAGENT_REWORK_LOOP","severity":"warning","context":{"role":"coder","secondary_role":"tester","count":3}}],
   "sessions": [
     {
       "id": "session-fixture",
@@ -1200,81 +1195,7 @@ func TestCLIGenerate_HighFailureAggregateKeepsSummaryAndUnavailableEventMetadata
           "errors": 6
         }
       ],
-      "anomalies": [],
-      "events": [
-        {
-          "event_id": "failed-1",
-          "timestamp": "2026-10-26T10:00:01Z",
-          "turn": 1,
-          "role": "coder",
-          "event_type": "tool_call",
-          "tool_name": "bash",
-          "status": "error"
-        },
-        {
-          "event_id": "failed-2",
-          "timestamp": "2026-10-26T10:00:02Z",
-          "turn": 2,
-          "role": "coder",
-          "event_type": "tool_call",
-          "tool_name": "bash",
-          "status": "error"
-        },
-        {
-          "event_id": "failed-3",
-          "timestamp": "2026-10-26T10:00:03Z",
-          "turn": 3,
-          "role": "coder",
-          "event_type": "tool_call",
-          "tool_name": "bash",
-          "status": "error"
-        },
-        {
-          "event_id": "failed-4",
-          "timestamp": "2026-10-26T10:00:04Z",
-          "turn": 4,
-          "role": "coder",
-          "event_type": "tool_call",
-          "tool_name": "bash",
-          "status": "error"
-        },
-        {
-          "event_id": "failed-5",
-          "timestamp": "2026-10-26T10:00:05Z",
-          "turn": 5,
-          "role": "coder",
-          "event_type": "tool_call",
-          "tool_name": "bash",
-          "status": "error"
-        },
-        {
-          "event_id": "failed-6",
-          "timestamp": "2026-10-26T10:00:06Z",
-          "turn": 6,
-          "role": "coder",
-          "event_type": "tool_call",
-          "tool_name": "bash",
-          "status": "error"
-        },
-        {
-          "event_id": "success-1",
-          "timestamp": "2026-10-26T10:00:07Z",
-          "turn": 7,
-          "role": "coder",
-          "event_type": "tool_call",
-          "tool_name": "bash",
-          "status": "completed"
-        },
-        {
-          "event_id": "success-2",
-          "timestamp": "2026-10-26T10:00:08Z",
-          "turn": 8,
-          "role": "coder",
-          "event_type": "tool_call",
-          "tool_name": "bash",
-          "status": "completed"
-        }
-      ]
+      "anomalies": []
     }
   ]
 }`
@@ -1310,9 +1231,19 @@ func TestCLIGenerate_HighFailureAggregateKeepsSummaryAndUnavailableEventMetadata
 	if len(highFailure.Evidence) != 0 {
 		t.Fatalf("persisted aggregate summary retained refs: %#v", highFailure.Evidence)
 	}
-	if len(facts.EventFacts()) != 8 {
-		t.Fatalf("unavailable supported historical event metadata was erased: %#v", facts.EventFacts())
+	retainedGroup := false
+	for _, anomaly := range facts.Anomalies {
+		if anomaly.RuleID == domain.RuleSubagentReworkLoop && anomaly.Context.Count != nil && *anomaly.Context.Count == 3 {
+			retainedGroup = true
+		}
 	}
+	if !retainedGroup {
+		t.Fatalf("source-unavailable regeneration lost recorded ticket summary: %+v", facts.Anomalies)
+	}
+	if bytes.Contains(raw, []byte(`"events"`)) {
+		t.Fatal("current generation persisted source events")
+	}
+
 }
 
 func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
@@ -1932,9 +1863,9 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 
 		cachedJSON := filepath.Join(tempDir, "cached_with_inv.json")
 		cachedJSONContent := `{
-  "schema_version": 6,
+  "schema_version": 7,
   "migration": {
-    "schema_version": 6,
+    "schema_version": 7,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -1972,7 +1903,6 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     }
   ]
@@ -2037,9 +1967,9 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 
 		cachedJSON := filepath.Join(tempDir, "cached_no_inv.json")
 		initialJSON := `{
-  "schema_version": 6,
+  "schema_version": 7,
   "migration": {
-    "schema_version": 6,
+    "schema_version": 7,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -2116,9 +2046,9 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 
 		cachedJSON := filepath.Join(tempDir, "cached_empty.json")
 		initialJSON := `{
-  "schema_version": 6,
+  "schema_version": 7,
   "migration": {
-    "schema_version": 6,
+    "schema_version": 7,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -2292,7 +2222,7 @@ func TestCLIBackfillCommand(t *testing.T) {
 		version := domain.CurrentSchemaVersion
 		ticket := "CUSTOM-RETENTION"
 		path := filepath.Join(workspace, "agentic_metrics.json")
-		ledger := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticket, TicketTitle: &ticket, Sessions: []domain.SessionFact{{ID: "missing-owner", Source: domain.SourceOpenCode, User: "unknown", Skills: []domain.SkillFact{{Name: "historical", Outcome: domain.OutcomeUnknown}}, Invocations: []domain.InvocationFact{{Role: "coder", Model: "stored"}}}}}
+		ledger := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticket, TicketTitle: &ticket, Sessions: []domain.SessionFact{{ID: "missing-owner", Source: domain.SourceOpenCode, User: "unknown", Skills: []domain.SkillFact{{Name: "historical"}}, Invocations: []domain.InvocationFact{{Role: "coder", Model: "stored"}}}}}
 		if err := adapters.SaveFactLedger(path, ledger); err != nil {
 			t.Fatal(err)
 		}
@@ -2751,7 +2681,7 @@ func TestCLIMigrateCommand(t *testing.T) {
 		if parsed.SchemaVersion == nil || *parsed.SchemaVersion != domain.CurrentSchemaVersion {
 			t.Errorf("expected schema_version %d, got %v", domain.CurrentSchemaVersion, parsed.SchemaVersion)
 		}
-		if parsed.Sessions == nil || len(parsed.Sessions) == 0 || len(parsed.Sessions[0].Events) != 0 {
+		if parsed.Sessions == nil || len(parsed.Sessions) == 0 || bytes.Contains(migratedData, []byte(`"events"`)) {
 			t.Errorf("expected session event rows to be omitted")
 		}
 
@@ -3515,9 +3445,9 @@ func TestCLITicketTypeClassification(t *testing.T) {
 
 		// Create existing fact ledger with legacy "feature"
 		legacyJSON := `{
-  "schema_version": 6,
+  "schema_version": 7,
   "migration": {
-    "schema_version": 6,
+    "schema_version": 7,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -4546,9 +4476,9 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 		tempDir := t.TempDir()
 		outJSON := filepath.Join(tempDir, "facts_ws_title.json")
 		wsCachedJSON := `{
-  "schema_version": 6,
+  "schema_version": 7,
   "migration": {
-    "schema_version": 6,
+    "schema_version": 7,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -4591,9 +4521,9 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 		tempDir := t.TempDir()
 		outJSON := filepath.Join(tempDir, "facts.json")
 		cachedJSON := `{
-  "schema_version": 6,
+  "schema_version": 7,
   "migration": {
-    "schema_version": 6,
+    "schema_version": 7,
     "status": "completed",
     "steps_completed": [
       "source_backfill"

@@ -25,6 +25,12 @@ func createTestWorkspace(t *testing.T, baseDir string, ticketID string, ledger d
 		t.Fatalf("failed to create test workspace dir: %v", err)
 	}
 
+	ledger.Sessions = append([]domain.SessionFact(nil), ledger.Sessions...)
+	for i := range ledger.Sessions {
+		if ledger.Sessions[i].User == "" {
+			ledger.Sessions[i].User = "fixture-user"
+		}
+	}
 	dto := adapters.AgenticFactLedgerDTOFromDomain(ledger)
 	data, err := json.MarshalIndent(dto, "", "  ")
 	if err != nil {
@@ -896,7 +902,7 @@ func TestReplaceRecoveredOwnersRefreshesExactRootAndChild(t *testing.T) {
 
 func TestReplaceRecoveredOwnersPreservesUnavailableChildWithoutDuplication(t *testing.T) {
 	parent := "root"
-	stored := []domain.SessionFact{{ID: "root", Source: domain.SourceCodex, Tools: []domain.SessionToolFact{{Name: "stale"}}}, {ID: "child", ParentID: &parent, Source: domain.SourceCodex, Skills: []domain.SkillFact{{Name: "remote-child", Outcome: domain.OutcomeUnknown}}}}
+	stored := []domain.SessionFact{{ID: "root", Source: domain.SourceCodex, Tools: []domain.SessionToolFact{{Name: "stale"}}}, {ID: "child", ParentID: &parent, Source: domain.SourceCodex, Skills: []domain.SkillFact{{Name: "remote-child"}}}}
 	refreshed := []domain.SessionFact{{ID: "root", Source: domain.SourceCodex, Tools: []domain.SessionToolFact{{Name: "fresh"}}}}
 	for pass := 0; pass < 2; pass++ {
 		replaceRecoveredOwners(&stored, refreshed)
@@ -1492,16 +1498,16 @@ func TestBackfillEngine_SkillTaskRecoverySnapshots(t *testing.T) {
 			root := t.TempDir()
 			ticket := "CUSTOM-SNAPSHOT"
 			v := domain.CurrentSchemaVersion
-			oldSkill := domain.SkillFact{Name: "historical", TurnIndex: 1, Success: true, Outcome: domain.OutcomeSucceeded}
-			oldTask := domain.TaskLinkFact{Outcome: domain.OutcomeUnknown, SubagentType: "tester", Description: "historical", CostEvidence: domain.UnavailableCost()}
+			oldSkill := domain.SkillFact{Name: "historical"}
+			oldTask := domain.DelegationFact{AgentType: domain.KnownString("tester"), Description: "historical"}
 			ledger := domain.AgenticFactLedger{SchemaVersion: &v, TicketID: &ticket, Sessions: []domain.SessionFact{
-				{ID: "root-a", Source: domain.SourceOpenCode, Skills: []domain.SkillFact{oldSkill, oldSkill}, TaskLinks: []domain.TaskLinkFact{oldTask, oldTask}, Invocations: []domain.InvocationFact{{Role: "coder", Model: "stale-a"}}},
-				{ID: "root-b", Source: domain.SourceOpenCode, Skills: []domain.SkillFact{oldSkill, oldSkill}, TaskLinks: []domain.TaskLinkFact{oldTask, oldTask}, Invocations: []domain.InvocationFact{{Role: "tester", Model: "stale-b"}}},
-				{ID: "codex-untouched", Source: domain.SourceCodex, Skills: []domain.SkillFact{{Name: "other-source-skill", Outcome: domain.OutcomeUnknown}}, TaskLinks: []domain.TaskLinkFact{{Outcome: domain.OutcomeUnknown, Description: "other-source-task", CostEvidence: domain.UnavailableCost()}}, Invocations: []domain.InvocationFact{{Role: "reviewer", Model: "other-source"}}},
+				{ID: "root-a", Source: domain.SourceOpenCode, Skills: []domain.SkillFact{oldSkill, oldSkill}, Delegations: []domain.DelegationFact{oldTask, oldTask}, Invocations: []domain.InvocationFact{{Role: "coder", Model: "stale-a"}}},
+				{ID: "root-b", Source: domain.SourceOpenCode, Skills: []domain.SkillFact{oldSkill, oldSkill}, Delegations: []domain.DelegationFact{oldTask, oldTask}, Invocations: []domain.InvocationFact{{Role: "tester", Model: "stale-b"}}},
+				{ID: "codex-untouched", Source: domain.SourceCodex, Skills: []domain.SkillFact{{Name: "other-source-skill"}}, Delegations: []domain.DelegationFact{{Description: "other-source-task"}}, Invocations: []domain.InvocationFact{{Role: "reviewer", Model: "other-source"}}},
 			}}
 			if tc.missingChild {
 				parent := "root-b"
-				ledger.Sessions = append(ledger.Sessions, domain.SessionFact{ID: "child-b", ParentID: &parent, Source: domain.SourceOpenCode, Skills: []domain.SkillFact{{Name: "remote-child-skill", Outcome: domain.OutcomeUnknown}}, TaskLinks: []domain.TaskLinkFact{{Outcome: domain.OutcomeUnknown, Description: "remote-child-task", Provenance: domain.FactProvenance{CallID: "remote-child-call"}, CostEvidence: domain.UnavailableCost()}}, Invocations: []domain.InvocationFact{{Role: "coder", Model: "stored-child"}}})
+				ledger.Sessions = append(ledger.Sessions, domain.SessionFact{ID: "child-b", ParentID: &parent, Source: domain.SourceOpenCode, Skills: []domain.SkillFact{{Name: "remote-child-skill"}}, Delegations: []domain.DelegationFact{{Description: "remote-child-task"}}, Invocations: []domain.InvocationFact{{Role: "coder", Model: "stored-child"}}})
 			}
 			if tc.emptyOwners {
 				ledger.Sessions = ledger.Sessions[2:]
@@ -1603,14 +1609,14 @@ func TestBackfillEngine_SkillTaskRecoverySnapshots(t *testing.T) {
 			if !tc.emptyOwners && (tc.missingRoot || tc.malformed) {
 				wantRetained = 2
 			}
-			if len(owners["root-a"].Skills) != wantLocal || len(owners["root-a"].TaskLinks) != wantLocal || len(owners["root-b"].Skills) != wantRetained || len(owners["root-b"].TaskLinks) != wantRetained {
+			if len(owners["root-a"].Skills) != wantLocal || len(owners["root-a"].Delegations) != wantLocal || len(owners["root-b"].Skills) != wantRetained || len(owners["root-b"].Delegations) != wantRetained {
 				t.Fatalf("complete owner replacement or unavailable owner preservation failed: %+v", owners)
 			}
 			remoteChild := 0
 			if tc.missingChild {
 				remoteChild = 1
 			}
-			if len(updated.ToDomain().SkillFacts()) != wantLocal+wantRetained+1+remoteChild || len(updated.ToDomain().TaskLinkFacts()) != wantLocal+wantRetained+1+remoteChild {
+			if len(updated.ToDomain().SkillFacts()) != wantLocal+wantRetained+1+remoteChild || len(updated.ToDomain().DelegationFacts()) != wantLocal+wantRetained+1+remoteChild {
 				t.Fatalf("owned snapshot multiplicity changed: %+v", updated)
 			}
 
@@ -1620,7 +1626,7 @@ func TestBackfillEngine_SkillTaskRecoverySnapshots(t *testing.T) {
 					models[session.ID] = session.Invocations[0].Model
 				}
 			}
-			if models["codex-untouched"] != "other-source" || len(owners["codex-untouched"].Skills) != 1 || owners["codex-untouched"].Skills[0].Name != "other-source-skill" || len(owners["codex-untouched"].TaskLinks) != 1 || owners["codex-untouched"].TaskLinks[0].Description != "other-source-task" {
+			if models["codex-untouched"] != "other-source" || len(owners["codex-untouched"].Skills) != 1 || owners["codex-untouched"].Skills[0].Name != "other-source-skill" || len(owners["codex-untouched"].Delegations) != 1 || owners["codex-untouched"].Delegations[0].Description != "other-source-task" {
 				t.Fatal("other source changed")
 			}
 			if !tc.emptyOwners && models["root-a"] != "gpt-4o" {
@@ -1631,7 +1637,7 @@ func TestBackfillEngine_SkillTaskRecoverySnapshots(t *testing.T) {
 					t.Fatalf("incomplete tree partially replaced: %v", models)
 				}
 			}
-			if tc.missingChild && (models["child-b"] != "stored-child" || len(owners["child-b"].Skills) != 1 || len(owners["child-b"].TaskLinks) != 1 || owners["child-b"].TaskLinks[0].Provenance.CallID != "remote-child-call") {
+			if tc.missingChild && (models["child-b"] != "stored-child" || len(owners["child-b"].Skills) != 1 || len(owners["child-b"].Delegations) != 1 || owners["child-b"].Delegations[0].Description != "remote-child-task") {
 				t.Fatalf("unavailable child lost: %v", models)
 			}
 			if !incomplete && !tc.emptyObservations {
@@ -1645,8 +1651,8 @@ func TestBackfillEngine_SkillTaskRecoverySnapshots(t *testing.T) {
 						t.Fatalf("repeat failed: %+v %v", again, err)
 					}
 					snapshot, _ := readRecoveryLedger(t, workspace)
-					if len(snapshot.ToDomain().SkillFacts()) != 4 || len(snapshot.ToDomain().TaskLinkFacts()) != 3 {
-						t.Fatalf("cumulative refresh duplicated/dropped observations: %+v %+v", snapshot.ToDomain().SkillFacts(), snapshot.ToDomain().TaskLinkFacts())
+					if len(snapshot.ToDomain().SkillFacts()) != 4 || len(snapshot.ToDomain().DelegationFacts()) != 3 {
+						t.Fatalf("cumulative refresh duplicated/dropped observations: %+v %+v", snapshot.ToDomain().SkillFacts(), snapshot.ToDomain().DelegationFacts())
 					}
 				}
 			}
@@ -1678,7 +1684,7 @@ func TestBackfillEngine_GlobalRecoveryRequiresEveryKnownTree(t *testing.T) {
 			parent := "codex-a"
 			ledger := domain.AgenticFactLedger{SchemaVersion: &v, TicketID: &ticket, Migration: &domain.MigrationInfo{SchemaVersion: v, Status: domain.MigrationStatusPartial, StepsCompleted: []string{domain.MigrationStepGitCodeFacts}, StepsPending: []string{domain.MigrationStepSourceBackfill, "other_requirement"}}, Sessions: []domain.SessionFact{
 				{ID: "codex-a", Source: domain.SourceCodex, Invocations: []domain.InvocationFact{{Role: "coder", Model: "old-a"}}},
-				{ID: "codex-b", Source: domain.SourceCodex, Skills: []domain.SkillFact{{Name: "keep", Outcome: domain.OutcomeUnknown}}, Invocations: []domain.InvocationFact{{Role: "coder", Model: "old-b"}}},
+				{ID: "codex-b", Source: domain.SourceCodex, Skills: []domain.SkillFact{{Name: "keep"}}, Invocations: []domain.InvocationFact{{Role: "coder", Model: "old-b"}}},
 				{ID: "opencode-c", Source: domain.SourceOpenCode, Invocations: []domain.InvocationFact{{Role: "tester", Model: "old-c"}}},
 			}}
 			if tc.missingChild {
@@ -1756,7 +1762,7 @@ func TestBackfillEngine_SchemaV2RecoversKnownGrandchildren(t *testing.T) {
 			v := domain.CurrentSchemaVersion
 			parent, grandparent := "v2-root", "v2-child"
 			ledger := domain.AgenticFactLedger{SchemaVersion: &v, TicketID: &ticket, Sessions: []domain.SessionFact{
-				{ID: "v2-root", Source: domain.SourceOpenCode, Skills: []domain.SkillFact{{Name: "stored", Outcome: domain.OutcomeUnknown}}, Invocations: []domain.InvocationFact{{Role: "coder", Model: "old"}}},
+				{ID: "v2-root", Source: domain.SourceOpenCode, Skills: []domain.SkillFact{{Name: "stored"}}, Invocations: []domain.InvocationFact{{Role: "coder", Model: "old"}}},
 				{ID: "v2-child", ParentID: &parent, Source: domain.SourceOpenCode},
 				{ID: "v2-grandchild", ParentID: &grandparent, Source: domain.SourceOpenCode},
 			}}
@@ -2012,11 +2018,14 @@ func TestBackfillEngine_WarningBearingRolloutsPreserveTree(t *testing.T) {
 func TestBackfillCodexCompleteParentRefreshesWhileMissingChildFactsSurvive(t *testing.T) {
 	root := t.TempDir()
 	ticket, title := "TEST-OWNER-REFRESH", "Complete parent with unavailable child"
-	version := 6
+	version := 7
 	parentID := "local-parent"
-	ledger := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticket, TicketTitle: &title, Sessions: []domain.SessionFact{
-		{ID: parentID, Source: domain.SourceCodex, User: "local", Skills: []domain.SkillFact{{Name: "stale-parent", Outcome: domain.OutcomeUnknown}}},
-		{ID: "missing-child", ParentID: &parentID, Source: domain.SourceCodex, User: "remote", Skills: []domain.SkillFact{{Name: "remote-child", Outcome: domain.OutcomeUnknown}}, TaskLinks: []domain.TaskLinkFact{{Outcome: domain.OutcomeUnknown, Description: "remote-task", Provenance: domain.FactProvenance{CallID: "remote-call"}, CostEvidence: domain.UnavailableCost()}}},
+	count := int64(3)
+	role, secondary := domain.AgentRole("coder"), domain.AgentRole("tester")
+	cachedGroup := domain.Anomaly{RuleID: domain.RuleSubagentReworkLoop, Severity: domain.SeverityWarning, Context: domain.AnomalyContext{Role: &role, SecondaryRole: &secondary, Count: &count}}
+	ledger := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticket, TicketTitle: &title, Anomalies: []domain.Anomaly{{RuleID: domain.RuleContextSaturationSpike, Severity: domain.SeverityWarning}}, Sessions: []domain.SessionFact{
+		{ID: parentID, Source: domain.SourceCodex, User: "local", Anomalies: []domain.Anomaly{cachedGroup}, Skills: []domain.SkillFact{{Name: "stale-parent"}}},
+		{ID: "missing-child", ParentID: &parentID, Source: domain.SourceCodex, User: "remote", Skills: []domain.SkillFact{{Name: "remote-child"}}, Delegations: []domain.DelegationFact{{Description: "remote-task"}}},
 	}}
 	workspace := createTestWorkspace(t, root, ticket, ledger)
 	home := t.TempDir()
@@ -2041,7 +2050,10 @@ func TestBackfillCodexCompleteParentRefreshesWhileMissingChildFactsSurvive(t *te
 		for _, owner := range loaded.ToDomain().Sessions {
 			owners[owner.ID] = owner
 		}
-		if len(owners) != 2 || len(owners[parentID].Skills) != 1 || owners[parentID].Skills[0].Name != "fresh-parent" || len(owners["missing-child"].Skills) != 1 || owners["missing-child"].Skills[0].Name != "remote-child" || len(owners["missing-child"].TaskLinks) != 1 || owners["missing-child"].TaskLinks[0].Provenance.CallID != "remote-call" {
+		if len(owners[parentID].Anomalies) != 1 || owners[parentID].Anomalies[0].RuleID != domain.RuleSubagentReworkLoop || owners[parentID].Anomalies[0].Context.Count == nil || *owners[parentID].Anomalies[0].Context.Count != 3 || len(loaded.ToDomain().Anomalies) != 1 || loaded.ToDomain().Anomalies[0].RuleID != domain.RuleContextSaturationSpike {
+			t.Fatalf("complete parent with missing child erased group/root summaries after reload: %+v", loaded.ToDomain())
+		}
+		if len(owners) != 2 || len(owners[parentID].Skills) != 1 || owners[parentID].Skills[0].Name != "fresh-parent" || len(owners["missing-child"].Skills) != 1 || owners["missing-child"].Skills[0].Name != "remote-child" || len(owners["missing-child"].Delegations) != 1 || owners["missing-child"].Delegations[0].Description != "remote-task" {
 			t.Fatalf("DATA-03 complete parent vetoed or unavailable child facts discarded: %+v", owners)
 		}
 	}

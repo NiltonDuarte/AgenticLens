@@ -373,6 +373,7 @@ func UpdateSummaryFile(destPath string, tableMD string) error {
 
 // ExistingLedgerFacts encapsulates raw facts extracted from an existing on-disk ledger.
 type ExistingLedgerFacts struct {
+	Anomalies         []domain.Anomaly
 	SchemaVersion     *int
 	Migration         *domain.MigrationInfo
 	TicketID          *string
@@ -443,7 +444,7 @@ func DecodeExistingFactLedger(data []byte) (*ExistingLedgerFacts, error) {
 			roots = append(roots, session.ID)
 		}
 	}
-	return &ExistingLedgerFacts{SchemaVersion: ledger.SchemaVersion, Migration: ledger.Migration, TicketID: ledger.TicketID, TicketTitle: ledger.TicketTitle, TicketType: ledger.TicketType, StartedAt: ledger.StartedAt, CompletedAt: ledger.CompletedAt, RootThreadIDs: roots, Code: &ledger.Code, Sessions: ledger.Sessions, PersistedSessions: dto.Sessions}, nil
+	return &ExistingLedgerFacts{Anomalies: ledger.Anomalies, SchemaVersion: ledger.SchemaVersion, Migration: ledger.Migration, TicketID: ledger.TicketID, TicketTitle: ledger.TicketTitle, TicketType: ledger.TicketType, StartedAt: ledger.StartedAt, CompletedAt: ledger.CompletedAt, RootThreadIDs: roots, Code: &ledger.Code, Sessions: ledger.Sessions, PersistedSessions: dto.Sessions}, nil
 }
 
 // SaveFactLedger writes an AgenticFactLedger to the specified file path, creating parent directories if needed.
@@ -475,12 +476,10 @@ func NormalizeHistorySessionForPublication(owner SessionFactDTO, schemaVersion i
 
 // SaveFactLedgerPreservingHistory compacts current owners and serializes
 // previously authorized immutable historical DTOs through the same canonical
-// validation and writer. Supported sparse events, evidence, order and nullable
+// validation and writer. Supported lean facts, summaries, order and nullable
 // values in retained rows never pass through source persistence transforms.
 func SaveFactLedgerPreservingHistory(path string, ledger domain.AgenticFactLedger, history []SessionFactDTO) error {
-	if len(ledger.Skills)+len(ledger.TaskLinks) > 0 {
-		return errors.New("legacy root occurrences require explicit migration before publication")
-	}
+
 	if ledger.TicketID == nil || strings.TrimSpace(*ledger.TicketID) == "" {
 		return fmt.Errorf("cannot save fact ledger: TicketID is required and cannot be empty")
 	}
@@ -520,7 +519,7 @@ func SaveFactLedgerPreservingHistory(path string, ledger domain.AgenticFactLedge
 	}
 	ledger, err = domain.PersistAnomalySummaries(current)
 	if err != nil {
-		return fmt.Errorf("cannot prepare sparse anomaly evidence: %w", err)
+		return fmt.Errorf("cannot prepare anomaly summaries: %w", err)
 	}
 	// Aggregate summaries cover refreshed and retained native owners together.
 	// The retained owner DTOs below remain independent immutable source records.

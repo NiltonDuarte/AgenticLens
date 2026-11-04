@@ -1,7 +1,7 @@
 {
-  "schema_version": 6,
+  "schema_version": 7,
   "migration": {
-    "schema_version": 6,
+    "schema_version": 7,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -118,7 +118,6 @@
           "errors": 0
         }
       ],
-      "events": [],
       "anomalies": []
     },
     {
@@ -151,7 +150,6 @@
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     },
     {
@@ -184,7 +182,6 @@
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     },
     {
@@ -217,7 +214,6 @@
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     },
     {
@@ -250,7 +246,6 @@
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     },
     {
@@ -283,18 +278,6 @@
         }
       ],
       "tools": [],
-      "events": [
-        {
-          "timestamp": "2026-10-17T17:01:29.121000+00:00",
-          "turn": 1,
-          "role": "coder",
-          "event_type": "tool_call",
-          "tool_name": "read",
-          "status": "error",
-          "duration_ms": 9,
-          "context_tokens": 9988
-        }
-      ],
       "anomalies": []
     },
     {
@@ -327,18 +310,6 @@
         }
       ],
       "tools": [],
-      "events": [
-        {
-          "timestamp": "2026-10-17T17:05:17.336000+00:00",
-          "turn": 1,
-          "role": "tester",
-          "event_type": "tool_call",
-          "tool_name": "read",
-          "status": "error",
-          "duration_ms": 11,
-          "context_tokens": 9897
-        }
-      ],
       "anomalies": []
     },
     {
@@ -371,18 +342,6 @@
         }
       ],
       "tools": [],
-      "events": [
-        {
-          "timestamp": "2026-10-17T17:06:01.059000+00:00",
-          "turn": 2,
-          "role": "reviewer",
-          "event_type": "tool_call",
-          "tool_name": "read",
-          "status": "error",
-          "duration_ms": 4,
-          "context_tokens": 8503
-        }
-      ],
       "anomalies": []
     },
     {
@@ -415,8 +374,8 @@
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     }
-  ]
+  ],
+  "anomalies": []
 }

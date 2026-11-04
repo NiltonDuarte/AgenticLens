@@ -2,12 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TraceWaterfall, matchesAnomaly, findMatchingAnomaly } from './TraceWaterfall';
-import { ledgerSkills, ledgerTaskLinks, type EventFact, type Anomaly } from '../domain/types';
-import { sessionEvents } from '../domain/events';
-import { decodeDetail } from '../api/validation';
-import { mockWorkspaceDetails } from '../test/fixtures/mockData';
-import nativeActivationSessions from '../test/fixtures/codexActivation.json';
-import nativeCallSessions from '../test/fixtures/codexCalls.json';
+import { type EventFact, type Anomaly } from '../domain/types';
 import { traceBadgeMetadata } from '../domain/traceBadges';
 
 describe('FIX-12 event facts without payload hydration', () => {
@@ -20,11 +15,11 @@ describe('FIX-12 event facts without payload hydration', () => {
   it('keeps counts, chronological rows, identifiers, filters, and missing-details copy without hydration', () => {
     const later: EventFact = { ...fact, event_id: undefined, message_id: undefined, timestamp: '2026-10-29T11:00:00Z',
       turn: 2, status: 'completed' };
-    render(<TraceWaterfall events={[later, fact]} isHydrated={false} dataSource="committed_ledger" />);
+    render(<TraceWaterfall events={[later, fact]} isHydrated={false} dataSource="unavailable" />);
     expect(screen.getByTestId('waterfall-event-count')).toHaveTextContent('2 Events Recorded');
-    expect(screen.getByTestId('waterfall-source-badge')).toHaveTextContent('Source: Committed Ledger');
+    expect(screen.getByTestId('waterfall-source-badge')).toHaveTextContent('Source unavailable');
     fireEvent.click(screen.getByTestId('waterfall-expand-btn'));
-    expect(screen.getByTestId('waterfall-source-badge')).toHaveTextContent('Source: Committed Ledger');
+    expect(screen.getByTestId('waterfall-source-badge')).toHaveTextContent('Source unavailable');
     expect(screen.getByTestId('timeline-item-1')).toBeInTheDocument();
     expect(screen.queryByTestId('timeline-item-2')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'All Events' }));
@@ -165,7 +160,7 @@ describe('TraceWaterfall Component', () => {
       screen.getByText('Zero chronological events recorded for this execution trace.')
     ).toBeVisible();
     expect(screen.getByTestId('waterfall-event-count')).toHaveTextContent('0 Events Recorded');
-    expect(screen.getByTestId('waterfall-source-badge')).toHaveTextContent('Source: Committed Ledger');
+    expect(screen.getByTestId('waterfall-source-badge')).toHaveTextContent('Source unavailable');
     expect(screen.queryByTestId('trace-waterfall-collapsed')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Trace Waterfall/ })).not.toBeInTheDocument();
     expect(screen.queryByTestId('workspace-anomalies')).not.toBeInTheDocument();
@@ -175,7 +170,7 @@ describe('TraceWaterfall Component', () => {
 
   describe('summary-only anomaly disclosure', () => {
     it.each([
-      ['committed_ledger', false, 'Source: Committed Ledger'],
+      ['unavailable', false, 'Source unavailable'],
       ['local_sqlite', true, 'Source: Local SQLite'],
       ['local_codex', true, 'Source: Local Codex'],
     ] as const)('keeps %s summaries and truthful counts inside the disclosure across reopening', async (dataSource, isHydrated, label) => {
@@ -676,12 +671,13 @@ describe('TraceWaterfall Component', () => {
       },
     ];
 
-    it('renders offline banner and committed ledger badge when isHydrated is false', () => {
+    it('renders partial trace coverage without claiming complete source access', () => {
       render(
         <TraceWaterfall
           events={sampleEvents}
           isHydrated={false}
-          dataSource="committed_ledger"
+          traceAvailability="partial"
+          dataSource="unavailable"
           defaultExpanded={true}
         />
       );
@@ -689,16 +685,16 @@ describe('TraceWaterfall Component', () => {
       const banner = screen.getByTestId('db-offline-banner');
       expect(banner).toBeInTheDocument();
       expect(
-        screen.getByText('Committed Ledger Facts')
+        screen.getByText('Partial source trace')
       ).toBeInTheDocument();
       expect(
         screen.getByText(
-          /Recorded event facts remain visible from the committed ledger/i
+          /Stored skills, delegations, metrics and anomaly summaries remain available/i
         )
       ).toBeInTheDocument();
 
       const sourceBadge = screen.getByTestId('waterfall-source-badge');
-      expect(sourceBadge).toHaveTextContent('Source: Committed Ledger');
+      expect(sourceBadge).toHaveTextContent('Source unavailable');
       expect(sourceBadge).toHaveClass('source-offline');
     });
 
@@ -759,7 +755,8 @@ describe('TraceWaterfall Component', () => {
         <TraceWaterfall
           events={sampleEvents}
           isHydrated={false}
-          dataSource="committed_ledger"
+          traceAvailability="partial"
+          dataSource="unavailable"
           defaultExpanded={true}
         />
       );
@@ -2674,120 +2671,48 @@ describe('TraceWaterfall Component', () => {
   });
 });
 
-describe('rich invocation badges', () => {
-  const event: EventFact = {
-    timestamp: '2026-10-30T10:00:00Z', session_id: 'parent', turn: 1, role: 'coder',
-    event_type: 'tool_call', tool_name: 'task', status: 'completed', context_tokens: 100,
-  };
-  const task = { timestamp: event.timestamp, parent_turn: 1, subagent_type: 'tester', outcome: 'unknown' as const, description: 'Verify', child_session_id: 'child' };
+describe('native source invocation badges', () => {
+  const event: EventFact = { timestamp: '2026-10-30T10:00:00Z', session_id: 'parent', turn: 1, role: 'coder',
+    event_type: 'tool_call', tool_name: 'collaboration.spawn_agent', status: 'completed', context_tokens: 100 };
 
-  it('renders committed badges and activates a child without selecting the parent event', async () => {
-    const selectChild = vi.fn();
-    const selectEvent = vi.fn();
-    render(<TraceWaterfall events={[event, { ...event, turn: 2, tool_name: 'skill' }]}
-      skills={[{ session_id: 'parent', name: 'review', turn_index: 2, message_index: 0, caller_role: 'coder', timestamp: event.timestamp, success: true, outcome: 'succeeded' as const }]}
-      taskLinks={[{ ...task, session_id: 'parent' }]} availableSessionIds={['child']} onSelectSession={selectChild}
-      onSelectEvent={selectEvent} defaultExpanded />);
+  it('reads skill and delegation badges only from actual source payloads', () => {
+    const events = [{ ...event, tool_input: '{"agent_type":"tester"}' },
+      { ...event, turn: 2, tool_name: 'skill', tool_input: '{"name":"review"}' },
+      { ...event, turn: 3, tool_input: '{broken-json' }];
+    render(<TraceWaterfall events={events} availableSessionIds={['child']} onSelectSession={vi.fn()} defaultExpanded />);
     fireEvent.click(screen.getByRole('button', { name: 'All Events' }));
     expect(screen.getByText('[skill: review]')).toHaveAttribute('title', '[skill: review]');
-    const child = screen.getByRole('button', { name: 'Inspect child session child' });
-    child.focus();
-    await userEvent.keyboard('{Enter}');
-    expect(selectChild).toHaveBeenCalledWith('child');
-    expect(selectEvent).not.toHaveBeenCalled();
-  });
-
-  it('uses native provenance within the owning session for Codex spawn records', () => {
-    const spawn: EventFact = { ...event, event_id: 'codex-call:spawn-1', call_id: 'spawn-1', tool_name: 'collaboration.spawn_agent' };
-    render(<TraceWaterfall events={[spawn, { ...spawn, session_id: 'child' }]}
-      taskLinks={[{ ...task, session_id: 'parent', provenance: { call_id: 'spawn-1' }, child_link_diagnostic: 'Recorded child UUID conflicts with parent metadata.' }]}
-      availableSessionIds={['child']} onSelectSession={vi.fn()} defaultExpanded />);
-    fireEvent.click(screen.getByRole('button', { name: 'All Events' }));
-    const parentTask = screen.getByText('[task -> tester]');
-    expect(parentTask.closest('.timeline-item')).toHaveTextContent('parent');
-    expect(parentTask).toHaveAttribute('title', expect.stringContaining('Recorded child UUID conflicts with parent metadata.'));
-    expect(screen.queryByRole('button', { name: 'Inspect child session child' })).not.toBeInTheDocument();
-    expect(screen.getByText('Child relationship unresolved')).toBeVisible();
-    const childEvent = screen.getByTitle('Session: child').closest<HTMLElement>('.timeline-item')!;
-    expect(within(childEvent).queryByText('[task -> tester]')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Copy child session ID child' })).toBeVisible();
-  });
-
-  it('renders the native selected-skill producer output through current wire decoding and owner projections', () => {
-    const base = mockWorkspaceDetails['AL-1']!;
-    // Captured from ParseRollout -> SessionFacts -> HTTP DTOs using a sanitized
-    // native selection plus its attachment; the fixture contains no live source.
-    const facts = decodeDetail({ ...base, ledger: { ...base.ledger, facts: {
-      ...base.ledger.facts, sessions: nativeActivationSessions,
-    } } }).ledger.facts;
-    const skills = ledgerSkills(facts);
-    render(<TraceWaterfall events={sessionEvents(facts.sessions)} skills={skills} defaultExpanded />);
-    fireEvent.click(screen.getByRole('button', { name: 'All Events' }));
-    expect(screen.getByText('Showing 1 of 1 events')).toBeVisible();
-    expect(screen.getByText('Skill Activation')).toBeVisible();
-    expect(screen.getByText('[skill: inspect-source]')).toBeVisible();
-    expect(screen.getByText('Outcome unavailable')).toBeVisible();
-    expect(screen.queryByText('Success')).not.toBeInTheDocument();
-    expect(screen.getByTitle('Session: owner | Message: selection')).toBeVisible();
-    expect(skills).toHaveLength(1);
-    expect(skills[0]?.evidence_references?.[0]?.message_id).toBe('attachment');
-  });
-
-  it('joins saved native load_skill and delegation events by call ID and labels the partial saved timeline', () => {
-    const base = mockWorkspaceDetails['AL-1']!;
-    // Actual sanitized ParseRollout -> SessionFacts -> save/reload -> HTTP DTOs.
-    const facts = decodeDetail({ ...base, ledger: { ...base.ledger, facts: {
-      ...base.ledger.facts, sessions: nativeCallSessions,
-    } } }).ledger.facts;
-    const events = sessionEvents(facts.sessions);
-    const skills = ledgerSkills(facts);
-    const tasks = ledgerTaskLinks(facts);
-    render(<TraceWaterfall events={events} skills={skills} taskLinks={tasks}
-      hasPartialSavedEvents={facts.sessions.some((session) => session.events_are_partial)} defaultExpanded />);
-    fireEvent.click(screen.getByRole('button', { name: 'All Events' }));
-    expect(screen.getByText('[skill: inspect-source]')).toBeVisible();
     expect(screen.getByText('[task -> tester]')).toBeVisible();
-    expect(screen.getByText('Agent reference: opaque-agent-reference')).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Copy child session ID unavailable-native-child' })).toBeVisible();
-    expect(screen.queryByRole('button', { name: /Inspect child session/ })).not.toBeInTheDocument();
-    expect(screen.getByTestId('waterfall-source-badge')).toHaveTextContent('Partial saved trace');
-    expect(screen.getByTestId('db-offline-banner')).toHaveTextContent('Some sessions include only saved occurrence events.');
-    // Event IDs are opaque in the current event contract; native call IDs must
-    // still join when a recorded event uses a different ID representation.
-    const opaqueEvents = events.map((event, index) => ({ ...event, event_id: `opaque-record-${index}` }));
-    const badges = traceBadgeMetadata(opaqueEvents, skills, tasks);
-    expect(badges.get(opaqueEvents[0]!)).toMatchObject({ kind: 'skill', name: 'inspect-source' });
-    expect(badges.get(opaqueEvents[1]!)).toMatchObject({ kind: 'task', name: 'tester', childSessionId: 'unavailable-native-child' });
-    const mismatchedCalls = opaqueEvents.map((event) => ({ ...event, call_id: 'different-native-call' }));
-    expect(traceBadgeMetadata(mismatchedCalls, skills, tasks).size).toBe(0);
-  });
-
-  it('does not attribute an ambiguous task link across sessions and retains input-only badges', () => {
-    render(<TraceWaterfall events={[event, { ...event, session_id: 'other', tool_input: '{"subagent_type":"planner"}' }]}
-      taskLinks={[task]} availableSessionIds={['child']} onSelectSession={vi.fn()} defaultExpanded />);
-    fireEvent.click(screen.getByRole('button', { name: 'All Events' }));
-    expect(screen.queryByRole('button', { name: 'Inspect child session child' })).not.toBeInTheDocument();
-    expect(screen.getByText('[task -> planner]')).toBeInTheDocument();
-    expect(screen.queryByText('[task -> tester]')).not.toBeInTheDocument();
-  });
-});
-
-
-describe('retrospective invocation metadata safety', () => {
-  const event: EventFact = { timestamp: '2026-10-30T10:00:00Z', session_id: 'parent', turn: 4,
-    role: 'coder', event_type: 'tool_call', tool_name: 'task', status: 'completed', context_tokens: 100 };
-  const task = { session_id: 'parent', timestamp: event.timestamp, parent_turn: 4, subagent_type: 'tester', outcome: 'unknown' as const, description: 'Verify', child_session_id: 'child' };
-
-  it.each(['duplicate facts', 'conflicting input', 'different timestamp'])('rejects an unsafe child link for %s', (mode) => {
-    const input = mode === 'conflicting input' ? '{"subagent_type":"planner"}' : '{broken-json';
-    const tasks = mode === 'duplicate facts' ? [task, { ...task, child_session_id: 'other-child' }]
-      : mode === 'different timestamp' ? [{ ...task, timestamp: '2026-10-30T11:00:00Z' }] : [task];
-    render(<TraceWaterfall events={[{ ...event, tool_input: input }]} taskLinks={tasks}
-      availableSessionIds={['child', 'other-child']} onSelectSession={vi.fn()} defaultExpanded />);
-    fireEvent.click(screen.getByRole('button', { name: 'All Events' }));
+    expect(screen.getByText('[task -> unknown]')).toBeVisible();
     expect(screen.queryByRole('button', { name: /Inspect child session/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Copy child session ID/ })).not.toBeInTheDocument();
-    if (mode === 'conflicting input') expect(screen.getByText('[task -> planner]')).toBeInTheDocument();
-    else expect(screen.queryByText('[task -> tester]')).not.toBeInTheDocument();
+  });
+
+  it('navigates a proven native child by keyboard without selecting its parent source event', async () => {
+    const child = vi.fn();
+    const select = vi.fn();
+    render(<TraceWaterfall events={[{ ...event, tool_input: '{"agent_type":"tester"}', child_session_id: 'native-child' }]}
+      availableSessionIds={['native-child']} onSelectSession={child} onSelectEvent={select} defaultExpanded />);
+    fireEvent.click(screen.getByRole('button', { name: 'All Events' }));
+    const badge = screen.getByRole('button', { name: 'Inspect child session native-child' });
+    badge.focus();
+    await userEvent.keyboard('{Enter}');
+    expect(child).toHaveBeenCalledWith('native-child');
+    expect(select).not.toHaveBeenCalled();
+  });
+
+  it('does not interpret opaque native outputs or requested child IDs as proof', () => {
+    const unproven = { ...event, tool_input: '{"agent_type":"tester","child_session_id":"requested"}', tool_output: '{"agent_id":"opaque-handle"}' };
+    render(<TraceWaterfall events={[unproven]} availableSessionIds={['requested', 'opaque-handle']} onSelectSession={vi.fn()} defaultExpanded />);
+    fireEvent.click(screen.getByRole('button', { name: 'All Events' }));
+    expect(screen.getByText('[task -> tester]')).toBeVisible();
+    expect(screen.getByText('Session identity unavailable')).toBeVisible();
+    expect(screen.queryByRole('button', { name: /Inspect child session|Copy child session ID/ })).not.toBeInTheDocument();
+  });
+
+  it('does not infer a skill badge from event names, timestamps or source-free rows', () => {
+    const missingPayload = { ...event, tool_name: 'load_skill', tool_input: undefined };
+    const malformedPayload = { ...event, tool_name: 'skill', tool_input: '{"name":42}' };
+    expect(traceBadgeMetadata([missingPayload, malformedPayload]).size).toBe(0);
   });
 });

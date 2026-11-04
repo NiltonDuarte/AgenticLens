@@ -309,27 +309,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 		hasTargetSessions = true
 	}
 
-	needsEventBackfill := false
-	if opts.RecomputeDB {
-		if wantsOpenCode && len(openCodeSessions) > 0 {
-			eventsCount := 0
-			for _, s := range openCodeSessions {
-				eventsCount += len(s.Events)
-			}
-			if (factLedger.SchemaVersion == nil || *factLedger.SchemaVersion < domain.CurrentSchemaVersion) && eventsCount == 0 {
-				needsEventBackfill = true
-			}
-		}
-		if wantsCodex && len(codexSessions) > 0 {
-			eventsCount := 0
-			for _, s := range codexSessions {
-				eventsCount += len(s.Events)
-			}
-			if (factLedger.SchemaVersion == nil || *factLedger.SchemaVersion < domain.CurrentSchemaVersion) && eventsCount == 0 {
-				needsEventBackfill = true
-			}
-		}
-	}
+	needsEventBackfill := opts.RecomputeDB && (factLedger.SchemaVersion == nil || *factLedger.SchemaVersion < domain.CurrentSchemaVersion)
 
 	isCompleted := !needsNormalization && factLedger.SchemaVersion != nil && *factLedger.SchemaVersion == domain.CurrentSchemaVersion &&
 		(factLedger.Migration == nil || factLedger.Migration.Status != domain.MigrationStatusPartial) &&
@@ -379,8 +359,9 @@ func (e *BackfillEngine) processSingleWorkspace(
 
 	// 2. Recover complete owner trees before publishing any replacement snapshot.
 	dbAttempted := opts.RecomputeDB && hasTargetSessions
-	hasExistingDBFacts := len(factLedger.InvocationFacts()) > 0 || len(factLedger.EventFacts()) > 0
+	hasExistingDBFacts := len(factLedger.InvocationFacts()) > 0 || len(factLedger.Sessions) > 0
 	openCodeComplete, codexComplete := false, false
+	var sourceEvents domain.SourceEvents
 	if opts.RecomputeDB && wantsOpenCode && (len(openCodeSessions) > 0 || len(factLedger.Sessions) == 0) {
 		var db *sql.DB
 		if opencodeDB != nil {
@@ -388,6 +369,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 		}
 		recovery := recoverOpenCode(db, openCodeSessions, gitUser, ticketID, workspaceDir, opts.AllowFallbacks)
 		openCodeSessions = recovery.sessions
+		sourceEvents = domain.MergeSourceEvents(sourceEvents, recovery.source)
 		openCodeComplete = recovery.complete
 		result.DBUpdated = recovery.updated
 		result.Diagnostics = append(result.Diagnostics, recovery.diagnostics...)
@@ -406,7 +388,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 			}
 		} else {
 			result.CollectionsRetained = true
-			result.Diagnostics = append(result.Diagnostics, "skills/task_links retained from previous snapshot; OpenCode history incomplete or unverifiable; refreshed session trees may be newer")
+			result.Diagnostics = append(result.Diagnostics, "skills/delegations retained from previous snapshot; OpenCode history incomplete or unverifiable; refreshed session trees may be newer")
 		}
 	}
 	if opts.RecomputeDB && wantsCodex && (len(codexSessions) > 0 || len(factLedger.Sessions) == 0) {
@@ -421,6 +403,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 		}
 		recovery := e.recoverCodex(codexSessions, codexHome, gitUser)
 		codexSessions = recovery.sessions
+		sourceEvents = domain.MergeSourceEvents(sourceEvents, recovery.source)
 		codexComplete = recovery.complete
 		result.DBUpdated = result.DBUpdated || recovery.updated
 		result.Diagnostics = append(result.Diagnostics, recovery.diagnostics...)
@@ -489,12 +472,14 @@ func (e *BackfillEngine) processSingleWorkspace(
 	}
 
 	newMigration := domain.EvaluateMigrationStatus(evalInput)
-	hasOwnershipAudit := factLedger.Migration != nil && strings.Contains(factLedger.Migration.Notes, "Schema v6 migration dropped ownerless")
+	hasOwnershipAudit := factLedger.Migration != nil && (strings.Contains(factLedger.Migration.Notes, "Schema v6 migration dropped ownerless") || strings.Contains(factLedger.Migration.Notes, "Schema v7 migration converted"))
 	if hasOwnershipAudit {
 		if newMigration.Notes != "" {
 			newMigration.Notes += "; "
 		}
-		newMigration.Notes += factLedger.Migration.Notes
+		if !strings.Contains(newMigration.Notes, factLedger.Migration.Notes) {
+			newMigration.Notes += factLedger.Migration.Notes
+		}
 	}
 	result.NewStatus = string(newMigration.Status)
 	result.PendingSteps = newMigration.StepsPending
@@ -518,7 +503,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 
 	// 4. Prepare and validate the entire candidate before dry-run or publication.
 
-	persistedLedger, err := domain.PersistAnomalySummaries(factLedger)
+	persistedLedger, err := domain.PersistSourceAnomalySummaries(factLedger, sourceEvents)
 	if err != nil {
 		result.Error = fmt.Errorf("preparing session-owned facts: %w", err)
 		return result
@@ -586,6 +571,7 @@ func resolveCodexSessionUsers(fresh []domain.SessionFact, existing []domain.Sess
 // replaceRecoveredOwners applies complete exact-owner snapshots while retaining
 // all owners outside the successful refresh set, including unavailable children.
 func replaceRecoveredOwners(stored *[]domain.SessionFact, refreshed []domain.SessionFact) {
+	refreshed = domain.RetainIncompleteGroupSummaries(*stored, refreshed)
 	replaced := make(map[string]bool, len(refreshed))
 	for _, owner := range refreshed {
 		replaced[owner.ID] = true

@@ -1,7 +1,7 @@
 {
-  "schema_version": 6,
+  "schema_version": 7,
   "migration": {
-    "schema_version": 6,
+    "schema_version": 7,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -78,7 +78,6 @@
           "errors": 0
         }
       ],
-      "events": [],
       "anomalies": []
     },
     {
@@ -111,7 +110,6 @@
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     },
     {
@@ -144,7 +142,6 @@
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     },
     {
@@ -153,57 +150,19 @@
       "user": "developer",
       "invocations": [],
       "tools": [],
-      "events": [
+      "anomalies": [
         {
-          "timestamp": "2026-10-16T13:10:00Z",
-          "turn": 4,
-          "role": "coder",
-          "event_type": "turn_message",
-          "status": "completed",
-          "duration_ms": 1200,
-          "context_tokens": 88000
-        },
-        {
-          "timestamp": "2026-10-16T13:11:00Z",
-          "turn": 4,
-          "role": "coder",
-          "event_type": "tool_call",
-          "tool_name": "bash",
-          "status": "error",
-          "duration_ms": 950,
-          "context_tokens": 89000
-        },
-        {
-          "timestamp": "2026-10-16T13:12:00Z",
-          "turn": 4,
-          "role": "coder",
-          "event_type": "tool_call",
-          "tool_name": "bash",
-          "status": "error",
-          "duration_ms": 820,
-          "context_tokens": 90000
-        },
-        {
-          "timestamp": "2026-10-16T13:13:00Z",
-          "turn": 4,
-          "role": "coder",
-          "event_type": "tool_call",
-          "tool_name": "bash",
-          "status": "error",
-          "duration_ms": 890,
-          "context_tokens": 91000
-        },
-        {
-          "timestamp": "2026-10-16T13:14:00Z",
-          "turn": 4,
-          "role": "coder",
-          "event_type": "compaction",
-          "status": "completed",
-          "duration_ms": 250,
-          "context_tokens": 65000
+          "rule_id": "TOOL_RETRY_STREAK",
+          "severity": "WARNING",
+          "context": {
+            "tool_name": "bash",
+            "turn": 4,
+            "count": 3,
+            "threshold": "3"
+          }
         }
-      ],
-      "anomalies": []
+      ]
     }
-  ]
+  ],
+  "anomalies": []
 }

@@ -432,7 +432,7 @@ func TestScanWorkspaces(t *testing.T) {
 	}
 
 	factJSON := `{
-  "schema_version": 6,
+  "schema_version": 7,
   "ticket_id": "TEST-1",
   "ticket_title": "Test Ticket",
   "updated_at": "2026-10-17T15:00:00Z",
@@ -482,7 +482,6 @@ func TestScanWorkspaces(t *testing.T) {
           "errors": 0
         }
       ],
-      "events": [],
       "anomalies": []
     }
   ]
@@ -556,7 +555,7 @@ func TestScanWorkspaces_NaturalOrdering(t *testing.T) {
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			t.Fatal(err)
 		}
-		factJSON := `{"schema_version":6,"migration":{"schema_version":6,"status":"completed","steps_completed":["source_backfill"],"steps_pending":[]},"ticket_id":"` + tid + `","updated_at":"2026-10-18T10:00:00Z","sessions":[]}`
+		factJSON := `{"schema_version":7,"migration":{"schema_version":7,"status":"completed","steps_completed":["source_backfill"],"steps_pending":[]},"ticket_id":"` + tid + `","updated_at":"2026-10-18T10:00:00Z","sessions":[]}`
 		if err := os.WriteFile(filepath.Join(dir, "agentic_metrics.json"), []byte(factJSON), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -594,7 +593,7 @@ func TestScanWorkspaces_AdversarialResilienceAndOrdering(t *testing.T) {
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			t.Fatal(err)
 		}
-		factJSON := `{"schema_version":6,"migration":{"schema_version":6,"status":"completed","steps_completed":["source_backfill"],"steps_pending":[]},"ticket_id":"` + tid + `","updated_at":"2026-10-18T10:00:00Z","sessions":[]}`
+		factJSON := `{"schema_version":7,"migration":{"schema_version":7,"status":"completed","steps_completed":["source_backfill"],"steps_pending":[]},"ticket_id":"` + tid + `","updated_at":"2026-10-18T10:00:00Z","sessions":[]}`
 		if err := os.WriteFile(filepath.Join(dir, "agentic_metrics.json"), []byte(factJSON), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -842,9 +841,9 @@ func TestScanWorkspacesResilience(t *testing.T) {
 			t.Fatal(err)
 		}
 		factJSON := `{
-  "schema_version": 6,
+  "schema_version": 7,
   "migration": {
-    "schema_version": 6,
+    "schema_version": 7,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -872,7 +871,7 @@ func TestBoundarySchemaParsingAndDefaults(t *testing.T) {
 	t.Run("minimal valid json with defaults", func(t *testing.T) {
 		raw := `{
   "updated_at": "2026-10-17T12:00:00Z",
-  "schema_version": 6
+  "schema_version": 7
 }`
 		var dto adapters.AgenticFactLedgerDTO
 		if err := json.Unmarshal([]byte(raw), &dto); err != nil {
@@ -903,7 +902,6 @@ func TestBoundarySchemaParsingAndDefaults(t *testing.T) {
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     },
     {
@@ -915,11 +913,10 @@ func TestBoundarySchemaParsingAndDefaults(t *testing.T) {
           "calls": 5
         }
       ],
-      "events": [],
       "anomalies": []
     }
   ],
-  "schema_version": 6
+  "schema_version": 7
 }`
 		var dto adapters.AgenticFactLedgerDTO
 		if err := json.Unmarshal([]byte(raw), &dto); err != nil {
@@ -948,23 +945,27 @@ func TestBoundarySchemaParsingAndDefaults(t *testing.T) {
 
 	t.Run("migration metadata round-trip DTO serialization and unmarshaling", func(t *testing.T) {
 		raw := `{
-			"schema_version": 6,
-			"ticket_id": "AL-SCHEMA-TEST",
-			"updated_at": "2026-10-17T12:00:00Z",
-			"migration": {
-				"schema_version": 6,
-				"status": "partial",
-				"steps_completed": ["git_code_facts"],
-				"steps_pending": ["opencode_db"],
-				"last_migrated_at": "2026-10-17T12:00:00Z",
-				"last_migrated_by": "engineer-1",
-				"notes": "Testing boundary serialization"
-			},
-			"code": {
-				"lines_added": 10,
-				"sdlc_iterations": 1
-			}
-		}`
+  "schema_version": 7,
+  "ticket_id": "AL-SCHEMA-TEST",
+  "updated_at": "2026-10-17T12:00:00Z",
+  "migration": {
+    "schema_version": 7,
+    "status": "partial",
+    "steps_completed": [
+      "git_code_facts"
+    ],
+    "steps_pending": [
+      "opencode_db"
+    ],
+    "last_migrated_at": "2026-10-17T12:00:00Z",
+    "last_migrated_by": "engineer-1",
+    "notes": "Testing boundary serialization"
+  },
+  "code": {
+    "lines_added": 10,
+    "sdlc_iterations": 1
+  }
+}`
 
 		var dto adapters.AgenticFactLedgerDTO
 		if err := json.Unmarshal([]byte(raw), &dto); err != nil {
@@ -1058,11 +1059,10 @@ func TestAdversarialBoundarySchemaAndRepository(t *testing.T) {
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     }
   ],
-  "schema_version": 6
+  "schema_version": 7
 }`, false},
 		}
 
@@ -1090,9 +1090,9 @@ func TestAdversarialBoundarySchemaAndRepository(t *testing.T) {
 			t.Fatal(err)
 		}
 		if err := os.WriteFile(filepath.Join(validDir, "agentic_metrics.json"), []byte(`{
-  "schema_version": 6,
+  "schema_version": 7,
   "migration": {
-    "schema_version": 6,
+    "schema_version": 7,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -1257,48 +1257,19 @@ func TestSessionEventPersistenceAndRepositoryHandling(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(ws, "agentic_metrics.json"), []byte(content), 0600); err != nil {
 		t.Fatal(err)
 	}
-	ledger, err := adapters.LoadTicketWorkspace("AL-COMPACT", temp)
-	if err != nil {
-		t.Fatal(err)
-	}
-	events := ledger.Facts.EventFacts()
-	if len(events) != 1 || events[0].EventID != "e1" || events[0].SessionID != "s1" || events[0].Status != "error" || events[0].ToolName == nil || *events[0].ToolName != "bash" {
-		t.Fatalf("accepted nested v4 facts were lost on targeted read: %#v", events)
-	}
-	if len(ledger.Facts.ToolFacts()) != 1 || ledger.Facts.ToolFacts()[0].Calls != 8 {
-		t.Fatalf("tool totals changed: %#v", ledger.Facts.ToolFacts())
-	}
-	if len(ledger.Facts.AnomalyFacts()) == 0 {
-		t.Fatal("expected normalized summaries alongside recorded event rows")
+	if _, err := adapters.LoadTicketWorkspace("AL-COMPACT", temp); err == nil || !strings.Contains(strings.ToLower(err.Error()), "migrat") {
+		t.Fatalf("old schema did not require explicit migration: %v", err)
 	}
 	report := adapters.ScanWorkspaces(temp)
-	if len(report.Diagnostics) != 0 || len(report.Ledgers) != 1 {
-		t.Fatalf("unexpected workspace scan result: %#v", report)
-	}
-	scanned, err := json.Marshal(report.Ledgers[0].Facts)
-	if err != nil {
-		t.Fatal(err)
-	}
-	loaded, err := json.Marshal(ledger.Facts)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(scanned, loaded) {
-		t.Fatalf("scan and targeted loading disagree: %s != %s", scanned, loaded)
-	}
-	encoded, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(ledger.Facts))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if strings.Contains(string(encoded), `"events"`) || strings.Contains(string(encoded), `"evidence"`) {
-		t.Fatalf("canonical encoding retained rows or refs: %s", encoded)
+	if len(report.Diagnostics) != 1 || len(report.Ledgers) != 0 {
+		t.Fatalf("invalid old workspace silently accepted: %+v", report)
 	}
 	after, err := os.ReadFile(filepath.Join(ws, "agentic_metrics.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !bytes.Equal(after, []byte(content)) {
-		t.Fatal("reading or converting the ledger rewrote source bytes")
+		t.Fatal("read rewrote old ledger")
 	}
 }
 
@@ -1310,9 +1281,9 @@ func TestLoadTicketWorkspace(t *testing.T) {
 	}
 
 	factJSON := `{
-  "schema_version": 6,
+  "schema_version": 7,
   "migration": {
-    "schema_version": 6,
+    "schema_version": 7,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -1364,7 +1335,6 @@ func TestLoadTicketWorkspace(t *testing.T) {
           "errors": 0
         }
       ],
-      "events": [],
       "anomalies": []
     }
   ]
@@ -1399,7 +1369,7 @@ func TestLoadTicketWorkspace(t *testing.T) {
 			t.Fatal(err)
 		}
 		badLedger := `{
-  "schema_version": 6,
+  "schema_version": 7,
   "tools": [
     {
       "name": "edit",
@@ -1430,9 +1400,9 @@ func TestLoadTicketWorkspace(t *testing.T) {
 			t.Fatal(err)
 		}
 		if err := os.WriteFile(filepath.Join(noIDDir, "agentic_metrics.json"), []byte(`{
-  "schema_version": 6,
+  "schema_version": 7,
   "migration": {
-    "schema_version": 6,
+    "schema_version": 7,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -2130,9 +2100,9 @@ telemetry:
 	}
 
 	factJSON := `{
-  "schema_version": 6,
+  "schema_version": 7,
   "migration": {
-    "schema_version": 6,
+    "schema_version": 7,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -2172,7 +2142,6 @@ telemetry:
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     },
     {
@@ -2205,7 +2174,6 @@ telemetry:
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     }
   ]
@@ -2309,9 +2277,9 @@ telemetry:
 	}
 
 	factJSON := `{
-  "schema_version": 6,
+  "schema_version": 7,
   "migration": {
-    "schema_version": 6,
+    "schema_version": 7,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -2351,7 +2319,6 @@ telemetry:
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     },
     {
@@ -2383,7 +2350,6 @@ telemetry:
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     }
   ]
@@ -2567,11 +2533,11 @@ func TestLedgerFileReadsOwnedOptionalSkillTaskCollections(t *testing.T) {
 		invalid  bool
 	}{
 		{name: "omitted"},
-		{name: "null", fields: `,"skills":null,"task_links":null`},
-		{name: "empty", fields: `,"skills":[],"task_links":[]`},
-		{name: "repeated observations", fields: `,"skills":[{"name":"review","turn_index":1,"outcome":"unknown","success":false},{"name":"review","turn_index":1,"outcome":"unknown","success":false}],"task_links":[{"outcome":"unknown","subagent_type":"coder","description":"same","cost_usd":null,"cost_evidence":{"state":"unavailable","known_subtotal_usd":null}},{"outcome":"unknown","subagent_type":"coder","description":"same","cost_usd":null,"cost_evidence":{"state":"unavailable","known_subtotal_usd":null}}]`, wantRows: 2},
+		{name: "null", fields: `,"skills":null,"delegations":null`},
+		{name: "empty", fields: `,"skills":[],"delegations":[]`},
+		{name: "repeated observations", fields: `,"skills":[{"name":"review","caller_role":null,"invoked_at":null},{"name":"review","caller_role":null,"invoked_at":null}],"delegations":[{"agent_type":"coder","description":"same","invoked_at":null},{"agent_type":"coder","description":"same","invoked_at":null}]`, wantRows: 2},
 		{name: "malformed skills", fields: `,"skills":{}`, invalid: true},
-		{name: "malformed tasks", fields: `,"task_links":"unknown"`, invalid: true},
+		{name: "malformed tasks", fields: `,"delegations":"unknown"`, invalid: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			root := t.TempDir()
@@ -2581,7 +2547,7 @@ func TestLedgerFileReadsOwnedOptionalSkillTaskCollections(t *testing.T) {
 				t.Fatal(err)
 			}
 			path := filepath.Join(dir, "agentic_metrics.json")
-			data := []byte(`{"schema_version":6,"ticket_id":"CUSTOM-READ","sessions":[{"id":"owner","source":"codex","user":"tester","invocations":[],"tools":[],"anomalies":[]` + tc.fields + `}]}`)
+			data := []byte(`{"schema_version":7,"ticket_id":"CUSTOM-READ","sessions":[{"id":"owner","source":"codex","user":"tester","invocations":[],"tools":[],"anomalies":[]` + tc.fields + `}]}`)
 			if err := os.WriteFile(path, data, 0644); err != nil {
 				t.Fatal(err)
 			}
@@ -2599,13 +2565,13 @@ func TestLedgerFileReadsOwnedOptionalSkillTaskCollections(t *testing.T) {
 			if existing == nil || workspace == nil {
 				t.Fatal("file read returned no ledger")
 			}
-			if workspace.Facts.SkillFacts() == nil || workspace.Facts.TaskLinkFacts() == nil {
+			if workspace.Facts.SkillFacts() == nil || workspace.Facts.DelegationFacts() == nil {
 				t.Fatalf("internal collections must be initialized after file read: existing=%+v workspace=%+v", existing, workspace.Facts)
 			}
-			if len(existing.Sessions[0].Skills) != tc.wantRows || len(existing.Sessions[0].TaskLinks) != tc.wantRows || len(workspace.Facts.SkillFacts()) != tc.wantRows || len(workspace.Facts.TaskLinkFacts()) != tc.wantRows {
-				t.Fatalf("file read changed row multiplicity: existing skills/tasks=%d/%d workspace=%d/%d", len(existing.Sessions[0].Skills), len(existing.Sessions[0].TaskLinks), len(workspace.Facts.SkillFacts()), len(workspace.Facts.TaskLinkFacts()))
+			if len(existing.Sessions[0].Skills) != tc.wantRows || len(existing.Sessions[0].Delegations) != tc.wantRows || len(workspace.Facts.SkillFacts()) != tc.wantRows || len(workspace.Facts.DelegationFacts()) != tc.wantRows {
+				t.Fatalf("file read changed row multiplicity: existing skills/tasks=%d/%d workspace=%d/%d", len(existing.Sessions[0].Skills), len(existing.Sessions[0].Delegations), len(workspace.Facts.SkillFacts()), len(workspace.Facts.DelegationFacts()))
 			}
-			if tc.wantRows > 0 && (existing.Sessions[0].Skills[1].Name != "review" || workspace.Facts.TaskLinkFacts()[1].Description != "same") {
+			if tc.wantRows > 0 && (existing.Sessions[0].Skills[1].Name != "review" || workspace.Facts.DelegationFacts()[1].Description != "same") {
 				t.Fatal("populated observation payload changed")
 			}
 			after, err := os.ReadFile(path)

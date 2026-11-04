@@ -2,8 +2,6 @@ package migration
 
 import (
 	"errors"
-
-	"agenticlens/internal/domain"
 )
 
 // MigrationStep defines the pure transformation contract for a discrete schema version upgrade.
@@ -11,7 +9,7 @@ type MigrationStep interface {
 	SourceVersion() int
 	TargetVersion() int
 	Description() string
-	Apply(ledger domain.AgenticFactLedger) (domain.AgenticFactLedger, error)
+	Apply(ledger legacyLedger) (legacyLedger, error)
 }
 
 // Domain sentinel errors for schema migration.

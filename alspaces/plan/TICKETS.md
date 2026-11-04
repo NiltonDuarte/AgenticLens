@@ -6,6 +6,13 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 ## In Progress
 
+- **AL-62**: Lean skills and delegations with source-only hydrated traces
+  - **Subsystem**: Domain / source adapters / schema migration / CLI / API / dashboard
+  - **Status**: In Progress
+  - **Blocked by**: None
+  - **Blocks**: AL-63 (prior source-fix baseline already delivered)
+  - **File**: `alspaces/plan/to-do/AL-62 fix codex skill and delegation facts with granular ownership.md`
+
 
 
 

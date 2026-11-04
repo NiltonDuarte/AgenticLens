@@ -2,6 +2,7 @@ package codex_test
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
@@ -44,11 +45,16 @@ func TestCodexAndOpenCodeAdaptersPersistEquivalentCompactSummaries(t *testing.T)
 		t.Fatal(err)
 	}
 	opencodeTransient := domain.AgenticFactLedger{Sessions: opencodeSessions}
-	opencodeLiveAnomalies, err := domain.DetectAnomaliesWithEvidence(opencodeTransient)
+	ocEvents, err := opencode.ExtractSessionSourceEvents(db, "shared-session", "test")
 	if err != nil {
 		t.Fatal(err)
 	}
-	opencodeFacts, err := domain.PersistAnomalySummaries(opencodeTransient)
+	ocSource := domain.SourceEvents{Events: ocEvents, CompleteSessionIDs: []string{"shared-session"}}
+	opencodeLiveAnomalies, err := domain.DetectAnomaliesWithEvidence(opencodeTransient, ocSource)
+	if err != nil {
+		t.Fatal(err)
+	}
+	opencodeFacts, err := domain.PersistSourceAnomalySummaries(opencodeTransient, ocSource)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,7 +75,7 @@ func TestCodexAndOpenCodeAdaptersPersistEquivalentCompactSummaries(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	codexLiveAnomalies, err := domain.DetectAnomaliesWithEvidence(domain.AgenticFactLedger{Sessions: codexTransientSessions})
+	codexLiveAnomalies, err := domain.DetectAnomaliesWithEvidence(domain.AgenticFactLedger{Sessions: codexTransientSessions}, domain.SourceEvents{Events: transcript.Events, CompleteSessionIDs: []string{"shared-session"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,9 +111,7 @@ func TestCodexAndOpenCodeAdaptersPersistEquivalentCompactSummaries(t *testing.T)
 		}
 	}
 	for _, facts := range []domain.AgenticFactLedger{opencodeFacts, codexLedger.Facts} {
-		if len(facts.EventFacts()) != 0 {
-			t.Fatalf("persisted ledger retained events: %#v", facts.EventFacts())
-		}
+		assertNoSavedEvents(t, facts)
 		for _, anomaly := range facts.AnomalyFacts() {
 			if len(anomaly.Evidence) != 0 {
 				t.Fatalf("persisted summary retained evidence refs: %#v", anomaly.Evidence)
@@ -160,8 +164,9 @@ func TestRoutineCodexEventsUseRequestContextInsteadOfCumulativeUsage(t *testing.
 					t.Fatalf("cumulative usage triggered a false context anomaly: %#v", anomaly)
 				}
 			}
-			if len(ledger.Facts.EventFacts()) != 0 || ledger.WorkflowEfficiency.ToolExecution.TotalCalls != 8 {
-				t.Fatalf("events should be omitted without losing tool totals: retained=%d calls=%d", len(ledger.Facts.EventFacts()), ledger.WorkflowEfficiency.ToolExecution.TotalCalls)
+			assertNoSavedEvents(t, ledger.Facts)
+			if ledger.WorkflowEfficiency.ToolExecution.TotalCalls != 8 {
+				t.Fatalf("events should be omitted without losing tool totals: retained=%d calls=%d", 0, ledger.WorkflowEfficiency.ToolExecution.TotalCalls)
 			}
 		})
 	}
@@ -192,13 +197,22 @@ func TestCodexLedgerOmitsEventsButRetainsAnomalySummaries(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if retained := ledger.Facts.EventFacts(); len(retained) != 0 {
-		t.Fatalf("expected no persisted events: %#v", retained)
-	}
+	assertNoSavedEvents(t, ledger.Facts)
 	if len(ledger.Anomalies) == 0 {
 		t.Fatal("expected anomaly summaries to be retained")
 	}
 	if ledger.WorkflowEfficiency.ToolExecution.TotalCalls != 4 || len(transcript.Events) != 5 {
 		t.Fatal("pruning changed aggregate calls or the full source event list")
+	}
+}
+
+func assertNoSavedEvents(t *testing.T, ledger domain.AgenticFactLedger) {
+	t.Helper()
+	data, err := json.Marshal(ledger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(data), `"events"`) || strings.Contains(string(data), `"events_are_partial"`) {
+		t.Fatalf("source trace persisted: %s", data)
 	}
 }

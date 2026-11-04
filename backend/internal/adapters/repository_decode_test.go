@@ -58,7 +58,7 @@ func TestHistoryCostNormalizationKeepsExplicitEvidenceAndRejectsInvalidCurrentFa
 			if evidence.State == domain.CostObserved {
 				amount = &zero
 			}
-			original := SessionFactDTO{ID: "history", Source: "codex", User: "fixture", Invocations: []InvocationFactDTO{{Model: "recorded", CostUSD: amount, CostEvidence: &evidence}}, Events: []SessionEventFactDTO{{EventID: "e", Status: "completed"}}, Anomalies: []AnomalyDTO{{RuleID: "TOOL_RETRY_STREAK", Evidence: []AnomalyEvidenceRefDTO{{SessionID: "history", EventID: "e"}}}}}
+			original := SessionFactDTO{ID: "history", Source: "codex", User: "fixture", Invocations: []InvocationFactDTO{{Model: "recorded", CostUSD: amount, CostEvidence: &evidence}}, Anomalies: []AnomalyDTO{{RuleID: "TOOL_RETRY_STREAK", Evidence: []AnomalyEvidenceRefDTO{{SessionID: "history", EventID: "e"}}}}}
 			before, err := json.Marshal(original)
 			if err != nil {
 				t.Fatal(err)

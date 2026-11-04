@@ -2,7 +2,7 @@ h3. Title: AL-62: Fix Codex skill and delegation facts with granular source owne
 
 *TARGET*: AgenticLens (Domain / Codex and OpenCode Adapters / Schema Migration / Backfill / CLI / API / Dashboard / Tests)
 
-*Status*: Done
+*Status*: In Progress
 *Work type*: fix
 *Blocked by*: None
 *Blocks*: AL-63
@@ -61,3 +61,7 @@ As an engineer, I want source-recorded Codex skill and delegation facts to survi
 *EXECUTION STEERING: ITERATION 02*
 
 On 2026-11-04 the user explicitly directed: "Delete ownerless records on migration. Drop backward compatibility." This supersedes the original unresolved ownerless-history retention and compatible runtime/API requirements above. Current schema v6 persistence, runtime/API and frontend use session-owned skill/task collections only. Legacy decoding exists solely for explicit migration, which discards ownerless auxiliary records and reports counts. Current old-schema reads require migration and do not rewrite files. Preservation of unavailable owners' already-owned facts, native provenance, legitimate multiplicity, complete exact-owner snapshot authority, source-grounded fixes and all remaining verification guarantees remain required. Current acceptance: alspaces/AL-62/CONTRACT.md and iterations/02/PLAN.md.
+
+*EXECUTION STEERING: ITERATION 03*
+
+The user approved lean session-owned skills and delegations and removal of persisted events. Current implementation acceptance is alspaces/AL-62/iterations/03/PLAN.md and the current CONTRACT.md pointer. Schema 7 is proposed for implementation; original source fixes, portable owner refresh, summaries and unrelated financial semantics remain. Hydration-driven traces are separate transient data. Earlier iteration completion/verification remains historical evidence; this ticket is reopened for the approved iteration 03 scope.

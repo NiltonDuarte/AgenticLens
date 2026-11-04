@@ -33,12 +33,15 @@ type schemaV1ModelJSON struct {
 }
 
 type schemaV1MessageData struct {
-	ModelID *string             `json:"modelID"`
-	Role    *string             `json:"role"`
-	Agent   string              `json:"agent"`
-	Time    *schemaV1TimeInfo   `json:"time"`
-	Tokens  *schemaV1TokensInfo `json:"tokens"`
-	Cost    *float64            `json:"cost"`
+	Content          json.RawMessage     `json:"content"`
+	Reasoning        *string             `json:"reasoning"`
+	ReasoningContent *string             `json:"reasoning_content"`
+	ModelID          *string             `json:"modelID"`
+	Role             *string             `json:"role"`
+	Agent            string              `json:"agent"`
+	Time             *schemaV1TimeInfo   `json:"time"`
+	Tokens           *schemaV1TokensInfo `json:"tokens"`
+	Cost             *float64            `json:"cost"`
 }
 
 type schemaV1PartState struct {
@@ -48,17 +51,19 @@ type schemaV1PartState struct {
 }
 
 type schemaV1PartData struct {
+	Text  *string            `json:"text"`
 	Type  *string            `json:"type"`
 	Tool  *string            `json:"tool"`
 	State *schemaV1PartState `json:"state"`
 }
 
-func extractSchemaV1Sessions(
+func extractSchemaV1SessionsWithEvents(
 	db *sql.DB,
 	threadIDs []string,
 	defaultUser string,
 	userBySessionID map[string]string,
 	strict bool,
+	eventSink *[]domain.EventFact,
 	exact ...bool,
 ) ([]domain.SessionFact, *string, *string, error) {
 
@@ -149,7 +154,29 @@ func extractSchemaV1Sessions(
 	}
 
 	msgLookup := make(map[string]msgMeta)
+	messageContent := make(map[string]string)
+	promptSource := make(map[string]string)
 	var events []domain.EventFact
+	defer func() {
+		if eventSink != nil {
+			for i := range events {
+				event := &events[i]
+				if event.EventType != domain.EventTypeTurnMessage || event.MessageID == nil {
+					continue
+				}
+				mid := *event.MessageID
+				source := mid
+				if previous, ok := promptSource[mid]; ok {
+					source = previous
+				}
+				if content := messageContent[source]; content != "" {
+					value := content
+					event.PromptContent = &value
+				}
+			}
+			*eventSink = append(*eventSink, events...)
+		}
+	}()
 	sessionRoleMap := make(map[string]domain.AgentRole)
 	sessionModels := make(map[string]map[string]*sessionModelAccumulator)
 	sessionModelOrders := make(map[string][]string)
@@ -178,6 +205,7 @@ func extractSchemaV1Sessions(
 		var totalSessionMsgs int64
 		var sessionAssistantTurn int64
 		var sessionUserTurns int64
+		lastUserMessage := ""
 
 		for msgRows.Next() {
 			totalSessionMsgs++
@@ -208,6 +236,8 @@ func extractSchemaV1Sessions(
 			}
 			if rawMD.Role != nil && strings.EqualFold(strings.TrimSpace(*rawMD.Role), "user") {
 				sessionUserTurns++
+				lastUserMessage = mid
+				messageContent[mid] = nativeMessageText(rawMD.Content)
 				continue
 			}
 
@@ -215,6 +245,15 @@ func extractSchemaV1Sessions(
 				continue
 			}
 
+			messageContent[mid] = nativeMessageText(rawMD.Content)
+			if lastUserMessage != "" {
+				promptSource[mid] = lastUserMessage
+				lastUserMessage = ""
+			}
+			reasoning := rawMD.ReasoningContent
+			if reasoning == nil {
+				reasoning = rawMD.Reasoning
+			}
 			persona = persona.WithCandidate(rawMD.Agent)
 			sessionAssistantTurn++
 			turn := sessionAssistantTurn
@@ -268,18 +307,19 @@ func extractSchemaV1Sessions(
 			}
 
 			events = append(events, domain.EventFact{
-				EventID:       sourceEventID("message", mid),
-				Timestamp:     msgTS,
-				SessionID:     s.id,
-				MessageID:     msgIDPtr,
-				Turn:          turn,
-				Role:          role,
-				EventType:     domain.EventTypeTurnMessage,
-				ToolName:      nil,
-				Status:        "completed",
-				ErrorMessage:  nil,
-				DurationMs:    msgDurMs,
-				ContextTokens: ctxTokens,
+				EventID:          sourceEventID("message", mid),
+				Timestamp:        msgTS,
+				SessionID:        s.id,
+				MessageID:        msgIDPtr,
+				Turn:             turn,
+				Role:             role,
+				EventType:        domain.EventTypeTurnMessage,
+				ToolName:         nil,
+				Status:           "completed",
+				ErrorMessage:     nil,
+				DurationMs:       msgDurMs,
+				ContextTokens:    ctxTokens,
+				ReasoningContent: reasoning,
 			})
 
 			mName := "default"
@@ -461,6 +501,26 @@ func extractSchemaV1Sessions(
 			msgIDPtr = &mIDVal
 		}
 
+		if rawPD.Text != nil {
+			if *rawPD.Type == "text" {
+				if messageContent[mID] != "" {
+					messageContent[mID] += "\n"
+				}
+				messageContent[mID] += *rawPD.Text
+			}
+			if *rawPD.Type == "reasoning" {
+				for i := range events {
+					event := &events[i]
+					if event.MessageID != nil && *event.MessageID == mID && event.EventType == domain.EventTypeTurnMessage {
+						content := *rawPD.Text
+						if event.ReasoningContent != nil {
+							content = *event.ReasoningContent + "\n" + content
+						}
+						event.ReasoningContent = &content
+					}
+				}
+			}
+		}
 		if *rawPD.Type == "compaction" {
 			compMap[sID]++
 			events = append(events, domain.EventFact{
@@ -537,8 +597,14 @@ func extractSchemaV1Sessions(
 				}
 			}
 
+			var invokedAt *string
+			if tCreated.Valid && tCreated.Int64 > 0 {
+				value := formatEpochMilli(tCreated.Int64)
+				invokedAt = &value
+			}
 			tName := toolName
 			events = append(events, domain.EventFact{
+				InvokedAt:     invokedAt,
 				EventID:       partID,
 				Timestamp:     ts,
 				SessionID:     sID,
@@ -576,36 +642,6 @@ func extractSchemaV1Sessions(
 				return toolsBySession[sid][i].Name < toolsBySession[sid][j].Name
 			}
 			return toolsBySession[sid][i].Calls > toolsBySession[sid][j].Calls
-		})
-	}
-
-	// 6. Build events per session
-	eventsBySession := make(map[string][]domain.SessionEventFact)
-	for _, ev := range events {
-		eventsBySession[ev.SessionID] = append(eventsBySession[ev.SessionID], domain.SessionEventFact{
-			EventID:          ev.EventID,
-			Timestamp:        ev.Timestamp,
-			MessageID:        ev.MessageID,
-			Turn:             ev.Turn,
-			Role:             ev.Role,
-			EventType:        ev.EventType,
-			ToolName:         ev.ToolName,
-			Status:           ev.Status,
-			ErrorMessage:     ev.ErrorMessage,
-			DurationMs:       ev.DurationMs,
-			ContextTokens:    ev.ContextTokens,
-			PromptContent:    ev.PromptContent,
-			ReasoningContent: ev.ReasoningContent,
-			ToolInput:        ev.ToolInput,
-			ToolOutput:       ev.ToolOutput,
-		})
-	}
-	for sid := range eventsBySession {
-		sort.SliceStable(eventsBySession[sid], func(i, j int) bool {
-			if eventsBySession[sid][i].Timestamp != eventsBySession[sid][j].Timestamp {
-				return eventsBySession[sid][i].Timestamp < eventsBySession[sid][j].Timestamp
-			}
-			return eventsBySession[sid][i].Turn < eventsBySession[sid][j].Turn
 		})
 	}
 
@@ -680,10 +716,6 @@ func extractSchemaV1Sessions(
 		if sTools == nil {
 			sTools = []domain.SessionToolFact{}
 		}
-		sEvents := eventsBySession[s.id]
-		if sEvents == nil {
-			sEvents = []domain.SessionEventFact{}
-		}
 
 		sessionFacts = append(sessionFacts, domain.SessionFact{
 			ID:          s.id,
@@ -692,7 +724,6 @@ func extractSchemaV1Sessions(
 			User:        sessionUser,
 			Invocations: invocations,
 			Tools:       sTools,
-			Events:      sEvents,
 			Anomalies:   []domain.Anomaly{},
 		})
 	}
@@ -712,7 +743,14 @@ func extractSchemaV1Sessions(
 		completedAtISO = maxCompleted
 	}
 
-	return sessionFacts, startedAtISO, completedAtISO, nil
+	if err := proveSourceChildLinks(db, "session", events); err != nil {
+		return nil, nil, nil, err
+	}
+	projected, err := projectSourceFacts(sessionFacts, events, strict)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return projected, startedAtISO, completedAtISO, nil
 }
 
 // countSchemaV1SteeringTurns calculates human steering turns from message records for given root threads.
@@ -760,4 +798,8 @@ func countSchemaV1SteeringTurns(db *sql.DB, threadIDs []string) (int64, error) {
 	}
 
 	return count, nil
+}
+
+func extractSchemaV1Sessions(db *sql.DB, ids []string, user string, users map[string]string, strict bool, exact ...bool) ([]domain.SessionFact, *string, *string, error) {
+	return extractSchemaV1SessionsWithEvents(db, ids, user, users, strict, nil, exact...)
 }

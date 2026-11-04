@@ -21,7 +21,7 @@ type ledgerMetadataInput struct {
 	UpdatedAt     string                         `json:"updated_at"`
 	Code          domain.CodeFacts               `json:"code"`
 	Anomalies     []domain.Anomaly               `json:"anomalies"`
-	Skills        []domain.SkillFact             `json:"skills"`
+	Skills        []legacySkillFact              `json:"skills"`
 }
 
 type schemaV1ToV4LedgerInput struct {
@@ -55,18 +55,20 @@ func (present *memberPresence) UnmarshalJSON(_ []byte) error {
 }
 
 type sessionInput struct {
-	EventsArePartial bool                      `json:"events_are_partial,omitempty"`
-	AgentPath        string                    `json:"agent_path"`
-	Skills           []domain.SkillFact        `json:"skills"`
-	TaskLinks        []taskLinkInput           `json:"task_links"`
-	ID               string                    `json:"id"`
-	ParentID         *string                   `json:"parent_id"`
-	Source           domain.SourceHarness      `json:"source"`
-	User             string                    `json:"user"`
-	Invocations      []invocationInput         `json:"invocations"`
-	Tools            []domain.SessionToolFact  `json:"tools"`
-	Events           []domain.SessionEventFact `json:"events"`
-	Anomalies        []domain.Anomaly          `json:"anomalies"`
+	partialMarkerPresent bool
+	agentPathPresent     bool
+	EventsArePartial     bool                     `json:"events_are_partial,omitempty"`
+	AgentPath            string                   `json:"agent_path"`
+	Skills               []legacySkillFact        `json:"skills"`
+	TaskLinks            []taskLinkInput          `json:"task_links"`
+	ID                   string                   `json:"id"`
+	ParentID             *string                  `json:"parent_id"`
+	Source               domain.SourceHarness     `json:"source"`
+	User                 string                   `json:"user"`
+	Invocations          []invocationInput        `json:"invocations"`
+	Tools                []domain.SessionToolFact `json:"tools"`
+	Events               []legacySessionEventFact `json:"events"`
+	Anomalies            []domain.Anomaly         `json:"anomalies"`
 }
 
 type invocationInput struct {
@@ -93,6 +95,7 @@ type legacyInvocationInput struct {
 }
 
 type taskLinkInput struct {
+	removedFields       int
 	ChildAgentID        string                `json:"child_agent_id,omitempty"`
 	ChildLinkDiagnostic string                `json:"child_link_diagnostic,omitempty"`
 	ChildReference      string                `json:"child_reference"`
@@ -125,15 +128,15 @@ type legacySessionInvocation struct {
 	User      string
 }
 
-func decodeVersionedLedger(input []byte, version int) (domain.AgenticFactLedger, legacyFactCollections, bool, error) {
+func decodeVersionedLedger(input []byte, version int) (legacyLedger, legacyFactCollections, bool, error) {
 	if version >= 6 {
 		var fields map[string]json.RawMessage
 		if err := json.Unmarshal(input, &fields); err != nil {
-			return domain.AgenticFactLedger{}, legacyFactCollections{}, false, err
+			return legacyLedger{}, legacyFactCollections{}, false, err
 		}
 		for _, key := range []string{"skills", "task_links", "unresolved_facts"} {
 			if _, exists := fields[key]; exists {
-				return domain.AgenticFactLedger{}, legacyFactCollections{}, false, fmt.Errorf("current schema v6 rejects retired root %s", key)
+				return legacyLedger{}, legacyFactCollections{}, false, fmt.Errorf("current schema v6 rejects retired root %s", key)
 			}
 		}
 	}
@@ -142,13 +145,13 @@ func decodeVersionedLedger(input []byte, version int) (domain.AgenticFactLedger,
 	if version < 5 {
 		var legacy schemaV1ToV4LedgerInput
 		if err := json.Unmarshal(input, &legacy); err != nil {
-			return domain.AgenticFactLedger{}, legacyFactCollections{}, false, fmt.Errorf("%w: %v", ErrMalformedJSON, err)
+			return legacyLedger{}, legacyFactCollections{}, false, fmt.Errorf("%w: %v", ErrMalformedJSON, err)
 		}
 		metadata, collections = legacy.ledgerMetadataInput, legacy.ledgerCollectionsInput
 	} else {
 		var current schemaV5LedgerInput
 		if err := json.Unmarshal(input, &current); err != nil {
-			return domain.AgenticFactLedger{}, legacyFactCollections{}, false, fmt.Errorf("%w: %v", ErrMalformedJSON, err)
+			return legacyLedger{}, legacyFactCollections{}, false, fmt.Errorf("%w: %v", ErrMalformedJSON, err)
 		}
 		metadata, collections = current.ledgerMetadataInput, current.ledgerCollectionsInput
 	}
@@ -163,7 +166,7 @@ func decodeVersionedLedger(input []byte, version int) (domain.AgenticFactLedger,
 		Events      memberPresence `json:"events"`
 	}
 	if err := json.Unmarshal(input, &keys); err != nil {
-		return domain.AgenticFactLedger{}, legacyFactCollections{}, false, fmt.Errorf("%w: %v", ErrMalformedJSON, err)
+		return legacyLedger{}, legacyFactCollections{}, false, fmt.Errorf("%w: %v", ErrMalformedJSON, err)
 	}
 	hasSessions := bool(keys.Sessions)
 	for _, field := range []struct {
@@ -173,7 +176,7 @@ func decodeVersionedLedger(input []byte, version int) (domain.AgenticFactLedger,
 		{"invocations", keys.Invocations}, {"tools", keys.Tools}, {"events", keys.Events},
 	} {
 		if hasSessions && bool(field.present) {
-			return domain.AgenticFactLedger{}, legacyFactCollections{}, false, fmt.Errorf("mixed ledger shape: canonical sessions cannot coexist with root-level legacy %s; remove ambiguity before migration", field.name)
+			return legacyLedger{}, legacyFactCollections{}, false, fmt.Errorf("mixed ledger shape: canonical sessions cannot coexist with root-level legacy %s; remove ambiguity before migration", field.name)
 		}
 	}
 	if hasSessions && version >= 4 {
@@ -185,12 +188,12 @@ func decodeVersionedLedger(input []byte, version int) (domain.AgenticFactLedger,
 			} `json:"sessions"`
 		}
 		if err := json.Unmarshal(input, &canonical); err != nil {
-			return domain.AgenticFactLedger{}, legacyFactCollections{}, false, fmt.Errorf("decoding canonical sessions: %w", err)
+			return legacyLedger{}, legacyFactCollections{}, false, fmt.Errorf("decoding canonical sessions: %w", err)
 		}
 		for si, session := range canonical.Sessions {
 			for ii, row := range session.Invocations {
 				if row.ID {
-					return domain.AgenticFactLedger{}, legacyFactCollections{}, false, fmt.Errorf("canonical schema v%d invocation %d in session %d must not contain id", version, ii, si)
+					return legacyLedger{}, legacyFactCollections{}, false, fmt.Errorf("canonical schema v%d invocation %d in session %d must not contain id", version, ii, si)
 				}
 			}
 		}
@@ -200,19 +203,19 @@ func decodeVersionedLedger(input []byte, version int) (domain.AgenticFactLedger,
 	return ledger, legacy, hasSessions, err
 }
 
-func (input ledgerCollectionsInput) toDomain(metadata ledgerMetadataInput, required bool) (domain.AgenticFactLedger, legacyFactCollections, error) {
-	ledger := domain.AgenticFactLedger{
+func (input ledgerCollectionsInput) toDomain(metadata ledgerMetadataInput, required bool) (legacyLedger, legacyFactCollections, error) {
+	ledger := legacyLedger{
 		SchemaVersion: metadata.SchemaVersion, Migration: metadata.Migration,
 		TicketID: metadata.TicketID, TicketTitle: metadata.TicketTitle, TicketType: metadata.TicketType,
 		StartedAt: metadata.StartedAt, CompletedAt: metadata.CompletedAt, UpdatedAt: metadata.UpdatedAt,
 		Code: metadata.Code, Anomalies: metadata.Anomalies, Skills: metadata.Skills,
 	}
 	if input.Sessions != nil {
-		ledger.Sessions = make([]domain.SessionFact, len(input.Sessions))
+		ledger.Sessions = make([]legacySessionFact, len(input.Sessions))
 	}
 	for si, session := range input.Sessions {
-		owner := domain.SessionFact{
-			EventsArePartial: session.EventsArePartial, AgentPath: session.AgentPath, ID: session.ID, ParentID: session.ParentID, Source: session.Source, User: session.User,
+		owner := legacySessionFact{
+			partialMarkerPresent: session.partialMarkerPresent, agentPathPresent: session.agentPathPresent, EventsArePartial: session.EventsArePartial, AgentPath: session.AgentPath, ID: session.ID, ParentID: session.ParentID, Source: session.Source, User: session.User,
 			Tools: session.Tools, Events: session.Events, Anomalies: session.Anomalies, Skills: session.Skills,
 		}
 		if session.Invocations != nil {
@@ -221,20 +224,20 @@ func (input ledgerCollectionsInput) toDomain(metadata ledgerMetadataInput, requi
 		for ii, row := range session.Invocations {
 			invocation, err := row.toDomain(required)
 			if err != nil {
-				return domain.AgenticFactLedger{}, legacyFactCollections{}, fmt.Errorf("sessions[%d].invocations[%d]: %w", si, ii, err)
+				return legacyLedger{}, legacyFactCollections{}, fmt.Errorf("sessions[%d].invocations[%d]: %w", si, ii, err)
 			}
 			owner.Invocations[ii] = invocation
 		}
 		tasks, err := decodeTaskLinks(session.TaskLinks, required)
 		if err != nil {
-			return domain.AgenticFactLedger{}, legacyFactCollections{}, fmt.Errorf("sessions[%d]: %w", si, err)
+			return legacyLedger{}, legacyFactCollections{}, fmt.Errorf("sessions[%d]: %w", si, err)
 		}
 		owner.TaskLinks = tasks
 		ledger.Sessions[si] = owner
 	}
 	tasks, err := decodeTaskLinks(input.TaskLinks, required)
 	if err != nil {
-		return domain.AgenticFactLedger{}, legacyFactCollections{}, err
+		return legacyLedger{}, legacyFactCollections{}, err
 	}
 	ledger.TaskLinks = tasks
 
@@ -245,7 +248,7 @@ func (input ledgerCollectionsInput) toDomain(metadata ledgerMetadataInput, requi
 	for i, row := range input.Invocations {
 		invocation, err := row.invocationInput.toDomain(required)
 		if err != nil {
-			return domain.AgenticFactLedger{}, legacyFactCollections{}, fmt.Errorf("invocations[%d]: %w", i, err)
+			return legacyLedger{}, legacyFactCollections{}, fmt.Errorf("invocations[%d]: %w", i, err)
 		}
 		legacy.Invocations[i] = legacySessionInvocation{
 			InvocationFact: invocation, SessionID: row.SessionID, ParentID: row.ParentID, User: row.User,
@@ -297,18 +300,48 @@ func decodeKnownCost(raw json.RawMessage, evidence *domain.CostEvidence, require
 	return *evidence.KnownSubtotalUSD, *evidence, nil
 }
 
-func decodeTaskLinks(input []taskLinkInput, required bool) ([]domain.TaskLinkFact, error) {
+func decodeTaskLinks(input []taskLinkInput, required bool) ([]legacyTaskLinkFact, error) {
 	if input == nil {
 		return nil, nil
 	}
-	result := make([]domain.TaskLinkFact, len(input))
+	result := make([]legacyTaskLinkFact, len(input))
 	for i, task := range input {
 		amount, evidence, err := decodeKnownCost(task.CostUSD, task.CostEvidence, required)
 		if err != nil {
 			return nil, fmt.Errorf("task_links[%d]: %w", i, err)
 		}
-		result[i] = domain.TaskLinkFact{ChildAgentID: task.ChildAgentID, ChildLinkDiagnostic: task.ChildLinkDiagnostic, ChildReference: task.ChildReference, SessionID: task.SessionID, Source: task.Source, Provenance: task.Provenance, Outcome: task.Outcome, Error: task.Error,
+		result[i] = legacyTaskLinkFact{removedFields: task.removedFields, ChildAgentID: task.ChildAgentID, ChildLinkDiagnostic: task.ChildLinkDiagnostic, ChildReference: task.ChildReference, SessionID: task.SessionID, Source: task.Source, Provenance: task.Provenance, Outcome: task.Outcome, Error: task.Error,
 			SubagentType: task.SubagentType, Description: task.Description, ParentTurn: task.ParentTurn, ChildSession: task.ChildSession, Timestamp: task.Timestamp, DurationMs: task.DurationMs, CostUSD: amount, CostEvidence: evidence}
 	}
 	return result, nil
+}
+
+func (value *sessionInput) UnmarshalJSON(data []byte) error {
+	type alias sessionInput
+	var input alias
+	if err := json.Unmarshal(data, &input); err != nil {
+		return err
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(data, &fields); err != nil {
+		return err
+	}
+	*value = sessionInput(input)
+	_, value.partialMarkerPresent = fields["events_are_partial"]
+	_, value.agentPathPresent = fields["agent_path"]
+	return nil
+}
+func (value *taskLinkInput) UnmarshalJSON(data []byte) error {
+	type alias taskLinkInput
+	var input alias
+	if err := json.Unmarshal(data, &input); err != nil {
+		return err
+	}
+	count, err := countRetiredFields(data, []string{"subagent_type", "description", "timestamp", "child_session_id"})
+	if err != nil {
+		return err
+	}
+	*value = taskLinkInput(input)
+	value.removedFields = count
+	return nil
 }

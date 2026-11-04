@@ -562,9 +562,9 @@ func TestCaptureGenerationRetainedRegistryCannotOverrideNewerCanonicalOrExplicit
 				newer := f.generate(t, "--capture-dir", filepath.Join(f.project, "absent-registry"), "--session-id", "root", "--codex-home", f.store)
 				assertCaptureRootInput(t, newer, 30)
 				newer.Sessions = append(newer.Sessions, domain.SessionFact{ID: "other-harness", Source: domain.SourceOpenCode, User: "stored-user", Invocations: []domain.InvocationFact{{Role: "reviewer", Model: "stored-model", Tokens: domain.InvocationTokens{Input: 77}}}})
-				newer.Sessions[0].Skills = []domain.SkillFact{{Name: "stored-skill", Outcome: domain.OutcomeUnknown}, {Name: "stored-skill", Outcome: domain.OutcomeUnknown}}
-				link := domain.TaskLinkFact{Outcome: domain.OutcomeUnknown, SubagentType: "reviewer", Description: "stored delegation", ChildSession: "stored-child", Timestamp: "2026-01-01T00:00:00Z", CostEvidence: domain.CostEvidence{State: domain.CostUnavailable}}
-				newer.Sessions[0].TaskLinks = []domain.TaskLinkFact{link, link}
+				newer.Sessions[0].Skills = []domain.SkillFact{{Name: "stored-skill"}, {Name: "stored-skill"}}
+				link := domain.DelegationFact{AgentType: domain.KnownString("reviewer"), Description: "stored delegation", ChildSession: "stored-child", InvokedAt: domain.KnownString("2026-01-01T00:00:00Z")}
+				newer.Sessions[0].Delegations = []domain.DelegationFact{link, link}
 				acceptFixtureOwners(t, f.project, f.state, "TEST-100", newer.Sessions)
 				// The owned snapshot above represents an accepted native publication.
 				accepted, err := capture.OpenProject(f.state, f.project)
@@ -590,8 +590,8 @@ func TestCaptureGenerationRetainedRegistryCannotOverrideNewerCanonicalOrExplicit
 				if !reflect.DeepEqual(result.SkillFacts(), newer.SkillFacts()) {
 					t.Fatalf("retained registry lost AL-62 row multiplicity: %+v", result.SkillFacts())
 				}
-				if !reflect.DeepEqual(result.TaskLinkFacts(), newer.TaskLinkFacts()) {
-					t.Fatalf("retained registry lost AL-62 delegation multiplicity: %+v", result.TaskLinkFacts())
+				if !reflect.DeepEqual(result.DelegationFacts(), newer.DelegationFacts()) {
+					t.Fatalf("retained registry lost AL-62 delegation multiplicity: %+v", result.DelegationFacts())
 				}
 				found := false
 				for _, row := range result.Sessions {

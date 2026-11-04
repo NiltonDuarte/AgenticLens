@@ -159,12 +159,24 @@ func enrichedString(recorded, local *string) *string {
 
 // DetectAnomaliesWithEvidence attaches request-local source references to summaries.
 // The references are intended only for local hydrated API responses.
-func DetectAnomaliesWithEvidence(ledger AgenticFactLedger, thresholds ...AnomalyThresholdsConfig) ([]Anomaly, error) {
-	events := SortEvents(ledger.EventFacts())
-	anomalies := RefreshAnomalySummaries(ledger, thresholds...)
-	selection, err := selectAnomalyEvidence(ledger, events, anomalies, thresholds...)
-	if err != nil {
-		return nil, err
+func DetectAnomaliesWithEvidence(ledger AgenticFactLedger, source SourceEvents, thresholds ...AnomalyThresholdsConfig) ([]Anomaly, error) {
+	events := SortEvents(source.Events)
+	anomalies := RefreshAnomalySummariesFromSource(ledger, source, thresholds...)
+	complete := make(map[string]bool)
+	for _, id := range source.CompleteSessionIDs {
+		complete[id] = true
+	}
+	selection := anomalyEvidenceSelection{events: map[int]bool{}, refs: map[int][]AnomalyEvidenceRef{}}
+	for index, anomaly := range anomalies {
+		if anomaly.Context.SessionID != nil && !complete[*anomaly.Context.SessionID] {
+			continue
+		}
+		// Missing evidence for one retained summary does not hide associations for
+		// independently complete source owners.
+		selected, err := selectAnomalyEvidence(ledger, events, []Anomaly{anomaly}, thresholds...)
+		if err == nil {
+			selection.refs[index] = selected.refs[0]
+		}
 	}
 	for index := range anomalies {
 		refs := []AnomalyEvidenceRef{}
@@ -190,24 +202,40 @@ func DetectAnomaliesWithEvidence(ledger AgenticFactLedger, thresholds ...Anomaly
 // with no complete current event stream. Sparse occurrence projections do not
 // establish source-wide anomaly evidence.
 func RefreshAnomalySummaries(ledger AgenticFactLedger, thresholds ...AnomalyThresholdsConfig) []Anomaly {
+	return RefreshAnomalySummariesFromSource(ledger, SourceEvents{}, thresholds...)
+}
+func RefreshAnomalySummariesFromSource(ledger AgenticFactLedger, source SourceEvents, thresholds ...AnomalyThresholdsConfig) []Anomaly {
 	cached := ledger.AnomalyFacts()
-	events := ledger.EventFacts()
 	currentSessions := make(map[string]bool)
-	partial := make(map[string]bool)
-	detectionLedger := ledger
-	detectionLedger.Sessions = append([]SessionFact(nil), ledger.Sessions...)
-	for i, session := range detectionLedger.Sessions {
-		if session.EventsArePartial {
-			partial[session.ID] = true
-			detectionLedger.Sessions[i].Events = nil
+	for _, id := range source.CompleteSessionIDs {
+		currentSessions[id] = true
+	}
+	events := []EventFact{}
+	for _, event := range source.Events {
+		if currentSessions[event.SessionID] {
+			events = append(events, event)
 		}
 	}
-	for _, event := range events {
-		if event.SessionID != "" && !partial[event.SessionID] {
-			currentSessions[event.SessionID] = true
+	detected := DetectAnomaliesFromEvents(ledger, events, thresholds...)
+	groupComplete := func(parent string) bool {
+		if !currentSessions[parent] {
+			return false
 		}
+		for _, owner := range ledger.Sessions {
+			if owner.ParentID != nil && *owner.ParentID == parent && !currentSessions[owner.ID] {
+				return false
+			}
+		}
+		return true
 	}
-	detected := DetectAnomalies(detectionLedger, thresholds...)
+	filtered := make([]Anomaly, 0, len(detected))
+	for _, anomaly := range detected {
+		if anomaly.RuleID == RuleSubagentReworkLoop && anomaly.Context.SessionID != nil && !groupComplete(*anomaly.Context.SessionID) {
+			continue
+		}
+		filtered = append(filtered, anomaly)
+	}
+	detected = filtered
 	refreshed := make([]Anomaly, 0, len(cached)+len(detected))
 	for _, anomaly := range detected {
 		if anomaly.Context.SessionID == nil || *anomaly.Context.SessionID == "" {
@@ -215,8 +243,19 @@ func RefreshAnomalySummaries(ledger AgenticFactLedger, thresholds ...AnomalyThre
 			refreshed = append(refreshed, anomaly)
 		}
 	}
+	allComplete := len(ledger.Sessions) > 0 && len(currentSessions) == len(ledger.Sessions)
 	for _, anomaly := range cached {
-		if anomaly.Context.SessionID != nil && !currentSessions[*anomaly.Context.SessionID] {
+		retain := false
+		if anomaly.Context.SessionID == nil {
+			retain = !allComplete
+			if anomaly.RuleID == RuleToolHighFailureRate && len(ledger.ToolFacts()) > 0 {
+				retain = false
+			}
+		} else {
+			sid := *anomaly.Context.SessionID
+			retain = !currentSessions[sid] || anomaly.RuleID == RuleSubagentReworkLoop && !groupComplete(sid)
+		}
+		if retain {
 			anomaly.Evidence = nil
 			refreshed = append(refreshed, anomaly)
 		}
@@ -275,13 +314,14 @@ func anomalyDeduplicationKey(a Anomaly) string {
 		a.RuleID, a.Severity, sid, role, tool, turn, count, tokens, delta, totalCalls, thresh)
 }
 
-// PersistAnomalySummaries derives summaries from complete in-memory facts, then
-// removes general event rows and evidence references from the canonical ledger.
-// Safe actual source events linked to owned occurrences remain for offline badges.
+// PersistAnomalySummaries normalizes durable summaries without source I/O.
 func PersistAnomalySummaries(ledger AgenticFactLedger, thresholds ...AnomalyThresholdsConfig) (AgenticFactLedger, error) {
-	anomalies := RefreshAnomalySummaries(ledger, thresholds...)
+	return PersistSourceAnomalySummaries(ledger, SourceEvents{}, thresholds...)
+}
+func PersistSourceAnomalySummaries(ledger AgenticFactLedger, source SourceEvents, thresholds ...AnomalyThresholdsConfig) (AgenticFactLedger, error) {
+	anomalies := RefreshAnomalySummariesFromSource(ledger, source, thresholds...)
 	bySession := make(map[string][]Anomaly)
-	var ticket []Anomaly
+	ticket := []Anomaly{}
 	for _, anomaly := range anomalies {
 		anomaly.Evidence = nil
 		if anomaly.Context.SessionID == nil || *anomaly.Context.SessionID == "" {
@@ -292,46 +332,22 @@ func PersistAnomalySummaries(ledger AgenticFactLedger, thresholds ...AnomalyThre
 		anomaly.Context.SessionID = nil
 		bySession[sid] = append(bySession[sid], anomaly)
 	}
-	sessions := make([]SessionFact, len(ledger.Sessions))
-	for i, orig := range ledger.Sessions {
-		cloned := SessionFact{
-			Skills:    append([]SkillFact(nil), orig.Skills...),
-			TaskLinks: append([]TaskLinkFact(nil), orig.TaskLinks...),
-			AgentPath: orig.AgentPath, ID: orig.ID,
-			ParentID:    orig.ParentID,
-			Source:      orig.Source,
-			User:        orig.User,
-			Invocations: append([]InvocationFact(nil), orig.Invocations...),
-			Tools:       append([]SessionToolFact(nil), orig.Tools...),
-			Events:      nil,
-			Anomalies:   bySession[orig.ID],
-		}
-		cloned.Events = PersistedOccurrenceEvents(orig)
-		cloned.EventsArePartial = len(cloned.Events) > 0
-		if cloned.Anomalies == nil {
-			cloned.Anomalies = []Anomaly{}
-		}
-		sessions[i] = cloned
+	complete := make(map[string]bool, len(source.CompleteSessionIDs))
+	for _, id := range source.CompleteSessionIDs {
+		complete[id] = true
 	}
-	ledger.Sessions = sessions
+	ledger.Sessions = append([]SessionFact{}, ledger.Sessions...)
+	for i := range ledger.Sessions {
+		if !complete[ledger.Sessions[i].ID] {
+			continue
+		}
+		ledger.Sessions[i].Anomalies = append([]Anomaly{}, bySession[ledger.Sessions[i].ID]...)
+	}
 	ledger.Anomalies = ticket
 	return ledger, nil
 }
-
-// NormalizeLedgerForRead retains accepted event facts alongside normalized summaries.
-// Compact persistence continues to use PersistAnomalySummaries instead.
 func NormalizeLedgerForRead(ledger AgenticFactLedger, thresholds ...AnomalyThresholdsConfig) (AgenticFactLedger, error) {
-	normalized, err := PersistAnomalySummaries(ledger, thresholds...)
-	if err != nil {
-		return AgenticFactLedger{}, err
-	}
-	for index, session := range ledger.Sessions {
-		if session.Events != nil {
-			normalized.Sessions[index].Events = append([]SessionEventFact{}, session.Events...)
-			normalized.Sessions[index].EventsArePartial = session.EventsArePartial
-		}
-	}
-	return normalized, nil
+	return PersistAnomalySummaries(ledger, thresholds...)
 }
 
 type anomalyEvidenceSelection struct {
@@ -575,12 +591,62 @@ func reworkRoleEvidence(ledger AgenticFactLedger, events []EventFact) []reworkEv
 	return evidence
 }
 
-func withoutPartialEvents(ledger AgenticFactLedger) AgenticFactLedger {
-	ledger.Sessions = append([]SessionFact(nil), ledger.Sessions...)
-	for i := range ledger.Sessions {
-		if ledger.Sessions[i].EventsArePartial {
-			ledger.Sessions[i].Events = nil
+// MergeSourceEvents applies complete ephemeral owner snapshots, including empty
+// snapshots. It never unions old event occurrences into a refreshed owner.
+func MergeSourceEvents(previous, fresh SourceEvents) SourceEvents {
+	replaced := make(map[string]bool, len(fresh.CompleteSessionIDs))
+	for _, id := range fresh.CompleteSessionIDs {
+		replaced[id] = true
+	}
+	result := SourceEvents{}
+	for _, id := range previous.CompleteSessionIDs {
+		if !replaced[id] {
+			result.CompleteSessionIDs = append(result.CompleteSessionIDs, id)
 		}
 	}
-	return ledger
+	result.CompleteSessionIDs = append(result.CompleteSessionIDs, fresh.CompleteSessionIDs...)
+	for _, event := range previous.Events {
+		if !replaced[event.SessionID] {
+			result.Events = append(result.Events, event)
+		}
+	}
+	result.Events = append(result.Events, fresh.Events...)
+	return result
+}
+
+// RetainIncompleteGroupSummaries preserves recorded parent rework summaries
+// when a complete parent refresh cannot cover its already recorded children.
+// Owner-local summaries still come from each complete source snapshot.
+func RetainIncompleteGroupSummaries(previous, fresh []SessionFact) []SessionFact {
+	refreshed := make(map[string]bool, len(fresh))
+	old := make(map[string]SessionFact, len(previous))
+	for _, owner := range fresh {
+		refreshed[owner.ID] = true
+	}
+	incomplete := make(map[string]bool)
+	for _, owner := range previous {
+		old[owner.ID] = owner
+		if owner.ParentID != nil && !refreshed[owner.ID] {
+			incomplete[*owner.ParentID] = true
+		}
+	}
+	result := append([]SessionFact{}, fresh...)
+	for i, owner := range result {
+		if !incomplete[owner.ID] {
+			continue
+		}
+		summaries := []Anomaly{}
+		for _, anomaly := range owner.Anomalies {
+			if anomaly.RuleID != RuleSubagentReworkLoop {
+				summaries = append(summaries, anomaly)
+			}
+		}
+		for _, anomaly := range old[owner.ID].Anomalies {
+			if anomaly.RuleID == RuleSubagentReworkLoop {
+				summaries = append(summaries, anomaly)
+			}
+		}
+		result[i].Anomalies = summaries
+	}
+	return result
 }

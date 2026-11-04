@@ -677,16 +677,6 @@ func DeriveMetricsLedger(factLedger AgenticFactLedger, cfg ProjectConfig) Agenti
 		mappedInvocations[i].Role = mappings.ResolveRole(string(inv.Role))
 	}
 
-	events := factLedger.EventFacts()
-	var mappedEvents []EventFact
-	if events != nil {
-		mappedEvents = make([]EventFact, len(events))
-		for i, ev := range events {
-			mappedEvents[i] = ev
-			mappedEvents[i].Role = mappings.ResolveRole(string(ev.Role))
-		}
-	}
-
 	mappedFactLedger := factLedger
 	mappedFactLedger.Sessions = make([]SessionFact, len(factLedger.Sessions))
 	for i, session := range factLedger.Sessions {
@@ -695,13 +685,6 @@ func DeriveMetricsLedger(factLedger AgenticFactLedger, cfg ProjectConfig) Agenti
 		for j, inv := range session.Invocations {
 			mappedSession.Invocations[j] = inv
 			mappedSession.Invocations[j].Role = mappings.ResolveRole(string(inv.Role))
-		}
-		if session.Events != nil {
-			mappedSession.Events = make([]SessionEventFact, len(session.Events))
-			for k, ev := range session.Events {
-				mappedSession.Events[k] = ev
-				mappedSession.Events[k].Role = mappings.ResolveRole(string(ev.Role))
-			}
 		}
 		mappedFactLedger.Sessions[i] = mappedSession
 	}
@@ -760,14 +743,6 @@ func ComputeSkillAdoption(ledgers []AgenticFactLedger) []SkillAdoptionFact {
 			fact := totals[skill.Name]
 			fact.Name = skill.Name
 			fact.TotalInvocations++
-			if skill.RecordedOutcome() == OutcomeUnknown {
-				fact.UnknownOutcomes++
-			} else {
-				fact.KnownOutcomes++
-			}
-			if skill.RecordedOutcome() == OutcomeFailed {
-				fact.FailureCount++
-			}
 			if tickets[skill.Name] == nil {
 				tickets[skill.Name] = make(map[ticketIdentity]bool)
 			}
@@ -780,9 +755,6 @@ func ComputeSkillAdoption(ledgers []AgenticFactLedger) []SkillAdoptionFact {
 	}
 	result := make([]SkillAdoptionFact, 0, len(totals))
 	for _, fact := range totals {
-		if fact.KnownOutcomes > 0 {
-			fact.FailureRate = float64(fact.FailureCount) / float64(fact.KnownOutcomes)
-		}
 		result = append(result, fact)
 	}
 	sort.Slice(result, func(i, j int) bool {

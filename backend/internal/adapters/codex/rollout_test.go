@@ -556,7 +556,7 @@ func TestCodexOwnedOccurrencesUseNativeCallsAndActivationEvidence(t *testing.T) 
 	// Synthetic records matching supported native shapes; no live rollout reads.
 	input := `{"timestamp":"2026-01-01T10:00:00Z","type":"session_meta","payload":{"id":"owner","source":"cli"}}
 {"timestamp":"2026-01-01T10:00:01Z","type":"response_item","payload":{"type":"message","id":"selection","role":"user","content":[{"type":"input_text","text":"$inspect-source investigate"}]}}
-{"timestamp":"2026-01-01T10:00:01Z","type":"response_item","payload":{"type":"message","id":"attachment","role":"user","content":[{"type":"input_text","text":"<skill>\n<name>inspect-source</name>\n<path>/skills/inspect-source/SKILL.md</path>\n</skill>"}]}}
+{"timestamp":"2026-01-01T10:00:02Z","type":"response_item","payload":{"type":"message","id":"attachment","role":"user","content":[{"type":"input_text","text":"<skill>\n<name>inspect-source</name>\n<path>/skills/inspect-source/SKILL.md</path>\n</skill>"}]}}
 {"timestamp":"2026-01-01T10:00:02Z","type":"event_msg","payload":{"type":"task_started","turn_id":"turn-owner"}}
 {"timestamp":"2026-01-01T10:00:02Z","type":"turn_context","payload":{"model":"model","turn_id":"turn-owner"}}
 {"timestamp":"2026-01-01T10:00:03Z","type":"response_item","payload":{"type":"function_call","call_id":"spawn-a","name":"collaboration.spawn_agent","arguments":"{\"agent_type\":\"tester\",\"task_name\":\"same-task\",\"message\":\"private prompt\"}"}}
@@ -579,22 +579,22 @@ func TestCodexOwnedOccurrencesUseNativeCallsAndActivationEvidence(t *testing.T) 
 		t.Fatal(err)
 	}
 	ledger := domain.AgenticFactLedger{Sessions: sessions}
-	skills, tasks := ledger.SkillFacts(), ledger.TaskLinkFacts()
+	skills, tasks := ledger.SkillFacts(), ledger.DelegationFacts()
 	if len(skills) != 2 || len(tasks) != 3 {
 		t.Fatalf("missing producer or invented activity: skills=%+v tasks=%+v", skills, tasks)
 	}
-	if skills[0].SessionID != "owner" || skills[0].Outcome != domain.OutcomeUnknown || skills[0].EvidenceKind != "activation_request" || skills[0].Path != "/skills/inspect-source/SKILL.md" || skills[0].Success {
+	if len(sessions) != 1 || sessions[0].ID != "owner" || skills[0].CallerRole == nil || *skills[0].CallerRole != "user" || skills[0].InvokedAt == nil || *skills[0].InvokedAt != "2026-01-01T10:00:01Z" {
 		t.Fatalf("request became successful execution or lost owner: %+v", skills[0])
 	}
-	if skills[1].Provenance.CallID != "load" || skills[1].Outcome != domain.OutcomeSucceeded || !skills[1].Success {
+	if skills[1].Name != "inspect-source" || skills[1].InvokedAt == nil || *skills[1].InvokedAt != "2026-01-01T10:00:07Z" || transcript.Skills[1].Provenance.CallID != "load" {
 		t.Fatalf("native load outcome lost: %+v", skills[1])
 	}
 	for i, want := range []struct{ call, child string }{{"spawn-a", "unavailable-a"}, {"spawn-b", "unavailable-b"}, {"pending", ""}} {
-		if tasks[i].SessionID != "owner" || tasks[i].Provenance.CallID != want.call || tasks[i].ChildSession != want.child {
+		if transcript.Delegations[i].Provenance.CallID != want.call || tasks[i].ChildSession != want.child {
 			t.Fatalf("output joined by order or unavailable child lost: %+v", tasks[i])
 		}
 	}
-	if tasks[2].Outcome != domain.OutcomeUnknown {
+	if tasks[2].AgentType == nil || *tasks[2].AgentType != "reviewer" {
 		t.Fatalf("unreturned delegation got invented outcome: %+v", tasks[2])
 	}
 	encoded, err := json.Marshal(ledger)
@@ -624,8 +624,8 @@ func TestCodexInheritedOccurrencesDoNotBecomeChildFacts(t *testing.T) {
 		t.Fatal(err)
 	}
 	ledger := domain.AgenticFactLedger{Sessions: sessions}
-	if len(ledger.SkillFacts()) != 0 || len(ledger.TaskLinkFacts()) != 1 || ledger.TaskLinkFacts()[0].SessionID != "child" || ledger.TaskLinkFacts()[0].Provenance.CallID != "child-spawn" {
-		t.Fatalf("parent occurrence replay leaked into child: %+v %+v", ledger.SkillFacts(), ledger.TaskLinkFacts())
+	if len(ledger.SkillFacts()) != 0 || len(ledger.DelegationFacts()) != 1 || sessions[0].ID != "child" || transcript.Delegations[0].Provenance.CallID != "child-spawn" {
+		t.Fatalf("parent occurrence replay leaked into child: %+v %+v", ledger.SkillFacts(), ledger.DelegationFacts())
 	}
 }
 
@@ -653,13 +653,12 @@ func TestCodexDistinctSkillAttachmentsPreserveNativeMultiplicityAndTimeline(t *t
 			if len(got.Skills) != 2 || got.Skills[0].Provenance.MessageID != "request-one" || got.Skills[1].Provenance.MessageID != "request-two" {
 				t.Fatalf("BEH-01 distinct native requests collapsed: %+v", got.Skills)
 			}
-			if got.Skills[0].MessageIndex >= got.Skills[1].MessageIndex {
-				t.Fatal("native request message positions collapsed")
+			sessions, err := got.SessionFacts()
+			if err != nil {
+				t.Fatal(err)
 			}
-			for _, skill := range got.Skills {
-				if skill.Outcome != domain.OutcomeUnknown || skill.Success {
-					t.Fatalf("activation fabricated execution outcome: %+v", skill)
-				}
+			if len(sessions) != 1 || len(sessions[0].Skills) != 2 || sessions[0].Skills[0].InvokedAt == nil || sessions[0].Skills[1].InvokedAt == nil || *sessions[0].Skills[0].InvokedAt != *sessions[0].Skills[1].InvokedAt {
+				t.Fatalf("equal-looking lean requests collapsed: %+v", sessions)
 			}
 			if len(got.Events) != 2 {
 				t.Fatalf("BEH-06 selected requests lost timeline occurrences: %+v", got.Events)
@@ -674,19 +673,18 @@ func TestCodexDistinctSkillAttachmentsPreserveNativeMultiplicityAndTimeline(t *t
 	}
 }
 
-func TestCodexOccurrenceOutcomesRequirePositiveSourceEvidence(t *testing.T) {
+func TestCodexLeanOccurrencesRetainAttemptsAcrossOutputStatuses(t *testing.T) {
 	for _, tc := range []struct {
 		name, output string
-		want         domain.FactOutcome
 	}{
-		{"opaque", "opaque successful-looking text", domain.OutcomeUnknown},
-		{"empty", "", domain.OutcomeUnknown},
-		{"unknown shape", `{"future_result":"done"}`, domain.OutcomeUnknown},
-		{"reference only", `{"task_name":"/root/tester"}`, domain.OutcomeUnknown},
-		{"positive status", `{"status":"completed"}`, domain.OutcomeSucceeded},
-		{"positive success", `{"success":true}`, domain.OutcomeSucceeded},
-		{"recorded error", `{"error":"load failed"}`, domain.OutcomeFailed},
-		{"negative success", `{"success":false}`, domain.OutcomeFailed},
+		{"opaque", "opaque successful-looking text"},
+		{"empty", ""},
+		{"unknown shape", `{"future_result":"done"}`},
+		{"reference only", `{"task_name":"/root/tester"}`},
+		{"positive status", `{"status":"completed"}`},
+		{"positive success", `{"success":true}`},
+		{"recorded error", `{"error":"load failed"}`},
+		{"negative success", `{"success":false}`},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			encoded, err := json.Marshal(tc.output)
@@ -702,9 +700,26 @@ func TestCodexOccurrenceOutcomesRequirePositiveSourceEvidence(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if len(got.Skills) != 1 || len(got.TaskLinks) != 1 || got.Skills[0].Outcome != tc.want || got.TaskLinks[0].Outcome != tc.want || got.Skills[0].Success != (tc.want == domain.OutcomeSucceeded) {
-				t.Fatalf("DATA-04 opaque output promoted or explicit evidence lost: skills=%+v tasks=%+v", got.Skills, got.TaskLinks)
+			if len(got.Skills) != 1 || len(got.Delegations) != 1 {
+				t.Fatalf("DATA-04 opaque output promoted or explicit evidence lost: skills=%+v tasks=%+v", got.Skills, got.Delegations)
 			}
+			sessions, err := got.SessionFacts()
+			if err != nil {
+				t.Fatal(err)
+			}
+			leanEncoded, err := json.Marshal(domain.AgenticFactLedger{Sessions: sessions})
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, retired := range []string{`"success"`, `"outcome"`, `"error"`} {
+				if strings.Contains(string(leanEncoded), retired) {
+					t.Fatalf("source output status leaked into lean occurrence: %s", leanEncoded)
+				}
+			}
+			if len(sessions) != 1 || len(sessions[0].Skills) != 1 || len(sessions[0].Delegations) != 1 || sessions[0].Skills[0].Name != "inspect-source" || sessions[0].Delegations[0].AgentType == nil || *sessions[0].Delegations[0].AgentType != "tester" {
+				t.Fatalf("output status discarded original attempts: %+v", sessions)
+			}
+
 		})
 	}
 }
@@ -724,8 +739,8 @@ func TestCodexDelegationKeepsOpaqueAgentSeparateFromSessionIdentity(t *testing.T
 			if err != nil {
 				t.Fatal(err)
 			}
-			if len(got.TaskLinks) != 1 || got.TaskLinks[0].ChildSession != tc.wantSession || got.TaskLinks[0].ChildAgentID != tc.wantAgent {
-				t.Fatalf("BEH-07 opaque agent became a session or native reference lost: %+v", got.TaskLinks)
+			if len(got.Delegations) != 1 || got.Delegations[0].ChildSession != tc.wantSession || got.Delegations[0].ChildAgentID != tc.wantAgent {
+				t.Fatalf("BEH-07 opaque agent became a session or native reference lost: %+v", got.Delegations)
 			}
 		})
 	}
@@ -786,5 +801,27 @@ func TestCodexMalformedOuterResponsePayloadMarksSourceIncomplete(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestCodexMissingRequestedTypeRoleAndTimeRemainNullableOccurrences(t *testing.T) {
+	input := `{"type":"session_meta","payload":{"id":"owner"}}` + "\n" + `{"type":"response_item","payload":{"type":"function_call","call_id":"skill","name":"load_skill","arguments":"{\"name\":\"inspect\"}"}}` + "\n" + `{"type":"response_item","payload":{"type":"function_call","call_id":"spawn","name":"spawn_agent","arguments":"{}"}}` + "\n"
+	transcript, err := codex.ParseRollout(strings.NewReader(input))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(transcript.Warnings) != 0 {
+		t.Fatalf("missing optional source values marked unsupported: %+v", transcript.Warnings)
+	}
+	sessions, err := transcript.SessionFacts()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sessions) != 1 || len(sessions[0].Skills) != 1 || len(sessions[0].Delegations) != 1 {
+		t.Fatalf("unknown source values discarded occurrences: %+v", sessions)
+	}
+	skill, delegation := sessions[0].Skills[0], sessions[0].Delegations[0]
+	if skill.CallerRole != nil || skill.InvokedAt != nil || delegation.AgentType != nil || delegation.InvokedAt != nil || delegation.Description != "" || delegation.ChildSession != "" {
+		t.Fatalf("source defaults invented: %+v %+v", skill, delegation)
 	}
 }

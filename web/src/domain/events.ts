@@ -1,5 +1,4 @@
-import type { SessionFact } from './types';
-import type { EventFact, WorkspaceEventsResponse } from '../types/telemetry';
+import type { Anomaly, EventFact, WorkspaceEventsResponse } from '../types/telemetry';
 
 export function sortEvents(events: readonly EventFact[]): readonly EventFact[] {
   return [...events].sort((left, right) => {
@@ -8,32 +7,10 @@ export function sortEvents(events: readonly EventFact[]): readonly EventFact[] {
   });
 }
 
-export function sessionEvents(sessions: readonly SessionFact[] | undefined): readonly EventFact[] {
-  return sortEvents(sessions?.flatMap((session) =>
-    (session.events ?? []).map((event) => ({ ...event, session_id: session.id }))
-  ) ?? []);
-}
-
 function occurrenceOf(event: EventFact): string {
   return JSON.stringify([
     event.session_id, event.timestamp, event.turn, event.event_type, event.tool_name ?? '',
   ]);
-}
-
-function enrichEvent(recorded: EventFact, local: EventFact): EventFact {
-  const callId = recorded.call_id || local.call_id;
-  return {
-    ...recorded,
-    ...(callId ? { call_id: callId } : {}),
-    event_id: recorded.event_id || local.event_id,
-    message_id: local.message_id || recorded.message_id,
-    error_message: local.error_message || recorded.error_message,
-    duration_ms: local.duration_ms ?? recorded.duration_ms,
-    prompt_content: local.prompt_content || recorded.prompt_content,
-    reasoning_content: local.reasoning_content || recorded.reasoning_content,
-    tool_input: local.tool_input || recorded.tool_input,
-    tool_output: local.tool_output || recorded.tool_output,
-  };
 }
 
 /** Stable IDs take precedence; missing IDs require a unique occurrence on both sides. */
@@ -97,25 +74,6 @@ function matchEventIndexes(
   return matches;
 }
 
-/** Reconcile independent source occurrences, preserving ambiguous rows even when their values agree. */
-export function reconcileEvents(
-  baseline: readonly EventFact[],
-  enrichment: readonly EventFact[],
-): readonly EventFact[] {
-  const result = [...baseline];
-  const matches = matchEventIndexes(baseline, enrichment);
-  const enrichmentUsed = new Set(matches.values());
-  for (const [recordedIndex, localIndex] of matches) {
-    const recorded = baseline[recordedIndex];
-    const local = enrichment[localIndex];
-    if (recorded && local) result[recordedIndex] = enrichEvent(recorded, local);
-  }
-  enrichment.forEach((event, index) => {
-    if (!enrichmentUsed.has(index)) result.push(event);
-  });
-  return sortEvents(result);
-}
-
 /** Retain an existing row reference or rebind using the reconciliation identity rules. */
 export function rebindEvent(
   selected: EventFact | null,
@@ -130,16 +88,22 @@ export function rebindEvent(
   return matched === undefined ? null : events[matched] ?? null;
 }
 
-export function selectWorkspaceEvents(
-  baseline: readonly EventFact[],
-  response?: WorkspaceEventsResponse,
-): Pick<WorkspaceEventsResponse, 'events' | 'is_hydrated' | 'data_source'> {
-  if (!response?.events.length) {
-    return { events: sortEvents(baseline), is_hydrated: false, data_source: 'committed_ledger' };
-  }
-  return {
-    events: response.includes_baseline ? sortEvents(response.events) : reconcileEvents(baseline, response.events),
-    is_hydrated: response.is_hydrated,
-    data_source: response.is_hydrated ? response.data_source : 'committed_ledger',
-  };
+/** Trace rows come only from the transient source response, including a complete empty result. */
+export function selectWorkspaceEvents(response: WorkspaceEventsResponse): WorkspaceEventsResponse {
+  return { ...response, events: sortEvents(response.events) };
+}
+
+/** Only complete owner reads can replace a recorded anomaly summary. */
+export function selectWorkspaceAnomalies(recorded: readonly Anomaly[], response: WorkspaceEventsResponse): readonly Anomaly[] {
+  if (response.availability === 'unavailable' || response.anomalies === undefined) return recorded;
+  if (response.availability === 'complete') return response.anomalies ?? recorded;
+  const completeOwners = new Set(response.coverage.complete_session_ids);
+  const retained = recorded.filter((anomaly) => !anomaly.context.session_id || !completeOwners.has(anomaly.context.session_id));
+  const identity = (anomaly: Anomaly) => JSON.stringify([anomaly.rule_id, Object.entries(anomaly.context).sort()]);
+  const retainedKeys = new Set(retained.map(identity));
+  const source = response.anomalies ?? [];
+  return [...source.filter((anomaly) => !retainedKeys.has(identity(anomaly))), ...retained.map((anomaly) => {
+    const enrichment = source.find((candidate) => identity(candidate) === identity(anomaly));
+    return enrichment?.evidence ? { ...anomaly, evidence: enrichment.evidence } : anomaly;
+  })];
 }

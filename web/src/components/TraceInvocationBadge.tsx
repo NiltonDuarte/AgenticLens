@@ -18,9 +18,8 @@ export const TraceInvocationBadge: React.FC<TraceInvocationBadgeProps> = ({
   if (!metadata) return null;
   const label = metadata.kind === 'skill' ? `[skill: ${metadata.name}]` : `[task -> ${metadata.name}]`;
   const childId = metadata.kind === 'task' ? metadata.childSessionId : undefined;
-  const relationshipDiagnostic = metadata.kind === 'task' ? metadata.childLinkDiagnostic : undefined;
-  const badgeTitle = relationshipDiagnostic ? `${label} — Child relationship: ${relationshipDiagnostic}` : label;
-  const canNavigate = childId && !relationshipDiagnostic && availableSessionIds?.includes(childId) && onSelectSession;
+  const badgeTitle = label;
+  const canNavigate = childId && availableSessionIds?.includes(childId) && onSelectSession;
   return (
     <span className="trace-invocation-controls" onClick={(event) => event.stopPropagation()}
       onKeyDown={(event) => event.stopPropagation()}>
@@ -31,14 +30,10 @@ export const TraceInvocationBadge: React.FC<TraceInvocationBadgeProps> = ({
       ) : (
         <span className={`trace-invocation-badge badge-${metadata.kind}`} title={badgeTitle}>{label}</span>
       )}
-      {metadata.kind === 'task' && metadata.childAgentId && <span className="trace-child-id">Agent reference: {metadata.childAgentId}{!childId && !metadata.childReference && ' · Session identity unavailable'}</span>}
-      {metadata.kind === 'task' && !childId && metadata.childReference && <span className="trace-child-unavailable">
-        Child reference: {metadata.childReference} · {relationshipDiagnostic ? 'Child relationship unresolved' : 'Thread unavailable'}
-      </span>}
+      {metadata.kind === 'task' && !childId && <span className="trace-child-unavailable">Session identity unavailable</span>}
       {childId && !canNavigate && (
-        <span className="trace-child-unavailable" title={relationshipDiagnostic ? `Child relationship: ${relationshipDiagnostic}` : `Child session ${childId} is pending or unavailable in this view`}>
+        <span className="trace-child-unavailable" title={`Child session ${childId} is pending or unavailable in this view`}>
           <span className="trace-child-id">Child: {childId}</span>
-          {relationshipDiagnostic && <span>Child relationship unresolved</span>}
           <button type="button" className="btn-copy-id" aria-label={`Copy child session ID ${childId}`}
             onClick={async () => setCopyStatus(await copyTextToClipboard(childId) ? 'Copied' : 'Copy failed')}>
             {copyStatus || 'Copy ID'}

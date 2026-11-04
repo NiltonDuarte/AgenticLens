@@ -17,6 +17,7 @@ import (
 // sourceRecovery describes this command's bounded recovery, independently of
 // whether the preserved ledger already satisfies its migration requirements.
 type sourceRecovery struct {
+	source      domain.SourceEvents
 	sessions    []domain.SessionFact
 	complete    bool
 	updated     bool
@@ -49,7 +50,8 @@ func (e *BackfillEngine) recoverCodex(stored []domain.SessionFact, home, user st
 		if covered[root.ID] {
 			continue
 		}
-		fresh, diagnostics, err := e.readCodexOwners(root.ID, home)
+		var source domain.SourceEvents
+		fresh, diagnostics, err := e.readCodexOwners(root.ID, home, &source)
 		if len(diagnostics) > 0 {
 			out.complete = false
 			out.diagnostics = append(out.diagnostics, diagnostics...)
@@ -77,6 +79,22 @@ func (e *BackfillEngine) recoverCodex(stored []domain.SessionFact, home, user st
 		if len(fresh) == 0 {
 			continue
 		}
+		acceptedIDs := make(map[string]bool, len(fresh))
+		for _, owner := range fresh {
+			acceptedIDs[owner.ID] = true
+		}
+		acceptedSource := domain.SourceEvents{}
+		for _, id := range source.CompleteSessionIDs {
+			if acceptedIDs[id] {
+				acceptedSource.CompleteSessionIDs = append(acceptedSource.CompleteSessionIDs, id)
+			}
+		}
+		for _, event := range source.Events {
+			if acceptedIDs[event.SessionID] {
+				acceptedSource.Events = append(acceptedSource.Events, event)
+			}
+		}
+		out.source = domain.MergeSourceEvents(out.source, acceptedSource)
 		resolveCodexSessionUsers(fresh, stored, user)
 		replaceRecoveredOwners(&out.sessions, fresh)
 		for _, session := range fresh {
@@ -93,7 +111,7 @@ func (e *BackfillEngine) recoverCodex(stored []domain.SessionFact, home, user st
 	return out
 }
 
-func (e *BackfillEngine) readCodexOwners(root, home string) ([]domain.SessionFact, []string, error) {
+func (e *BackfillEngine) readCodexOwners(root, home string, source ...*domain.SourceEvents) ([]domain.SessionFact, []string, error) {
 	diagnostics := []string{}
 	paths, err := e.discoverCodexRollouts(codex.DiscoveryOptions{CodexHome: home, SessionID: root})
 	if err != nil {
@@ -125,6 +143,13 @@ func (e *BackfillEngine) readCodexOwners(root, home string) ([]domain.SessionFac
 	fresh, err := combined.SessionFacts()
 	if err != nil {
 		return nil, diagnostics, fmt.Errorf("extracting source: %w", err)
+	}
+	if len(source) > 0 {
+		events := domain.SourceEvents{Events: combined.Events}
+		for _, owner := range fresh {
+			events.CompleteSessionIDs = append(events.CompleteSessionIDs, owner.ID)
+		}
+		*source[0] = domain.MergeSourceEvents(*source[0], events)
 	}
 	return fresh, diagnostics, nil
 }
@@ -220,7 +245,8 @@ func recoverOpenCode(db *sql.DB, stored []domain.SessionFact, user, ticket, work
 				continue
 			}
 			attempted[id] = true
-			fresh, _, _, readErr := opencode.CaptureSessionSnapshot(context.Background(), db, id, user, math.MaxInt64)
+			var source domain.SourceEvents
+			fresh, _, _, readErr := opencode.CaptureSessionSnapshot(context.Background(), db, id, user, math.MaxInt64, &source)
 			if readErr != nil || len(fresh) != 1 || fresh[0].ID != id {
 				out.complete = false
 				out.diagnostics = append(out.diagnostics, fmt.Sprintf("OpenCode owner %s previous snapshot retained after incomplete extraction: %v", id, readErr))
@@ -231,6 +257,7 @@ func recoverOpenCode(db *sql.DB, stored []domain.SessionFact, user, ticket, work
 				out.diagnostics = append(out.diagnostics, fmt.Sprintf("OpenCode owner %s retained: parent linkage changed", id))
 				continue
 			}
+			out.source = domain.MergeSourceEvents(out.source, source)
 			replaceRecoveredOwners(&out.sessions, fresh)
 			covered[id] = true
 			out.updated = true

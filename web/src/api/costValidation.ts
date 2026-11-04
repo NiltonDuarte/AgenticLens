@@ -90,23 +90,16 @@ function validateFactCost(value: unknown, path: string): void {
   if (hasOwn(fact, 'cost_evidence')) validateEvidence(fact.cost_evidence, fact.cost_usd, `${path}.cost_evidence`);
 }
 
-function validateTasks(value: unknown, path: string): void {
-  if (value == null) return;
-  if (!Array.isArray(value)) invalid(path);
-  value.forEach((task: unknown, index) => validateFactCost(task, `${path}[${index}]`));
-}
-
 function validateFactLedger(value: unknown, path: string): void {
   const facts = requireRecord(value, path);
   const version = facts.schema_version;
-  if (version !== 6) throw new Error(`Migration required: ${path} must use schema v6; migrate older ledgers explicitly.`);
-  if (['invocations', 'tools', 'events', 'skills', 'task_links', 'unresolved_facts'].some((key) => hasOwn(facts, key))) invalid(`${path}: retired root fact collections`);
+  if (version !== 7) throw new Error(`Migration required: ${path} must use schema v7; migrate older ledgers explicitly.`);
+  if (['invocations', 'tools', 'events', 'events_are_partial', 'skills', 'task_links', 'delegations', 'unresolved_facts'].some((key) => hasOwn(facts, key))) invalid(`${path}: retired root fact collections`);
   if (!Array.isArray(facts.sessions)) invalid(`${path}.sessions`);
   facts.sessions.forEach((value: unknown, index) => {
     const session = requireRecord(value, `${path}.sessions[${index}]`);
     if (!Array.isArray(session.invocations)) invalid(`${path}.sessions[${index}].invocations`);
     session.invocations.forEach((invocation: unknown, row) => validateFactCost(invocation, `${path}.sessions[${index}].invocations[${row}]`));
-    validateTasks(session.task_links, `${path}.sessions[${index}].task_links`);
   });
 
 }
