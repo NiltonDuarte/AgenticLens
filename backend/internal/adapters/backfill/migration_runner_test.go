@@ -1,6 +1,7 @@
 package backfill_test
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -268,6 +269,91 @@ func TestMigrationRunner_Backup(t *testing.T) {
 	}
 	if dto.SchemaVersion == nil || *dto.SchemaVersion != domain.CurrentSchemaVersion {
 		t.Errorf("expected upgraded current schema_version, got %v", dto.SchemaVersion)
+	}
+}
+
+func TestMigrationRunner_CleansCompletedCurrentMetadataWithoutChangingFacts(t *testing.T) {
+	root := t.TempDir()
+	workspace := filepath.Join(root, "records", "TEST-CLEAN", "iterations", "07")
+	if err := os.MkdirAll(workspace, 0700); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(workspace, "agentic_metrics.json")
+	original := []byte(`{"schema_version":6,"ticket_id":"TEST-CLEAN","ticket_title":"Portable history","updated_at":"2026-01-01T00:00:00Z","migration":{"schema_version":6,"status":"completed","steps_completed":["schema_v6_lean_occurrences"],"steps_pending":[],"notes":"Schema v6 migration dropped ownerless skills=2 task_links=3"},"sessions":[{"id":"remote-owner","source":"codex","user":"remote-user","invocations":[{"role":"coder","model":"fixture","cost_usd":1.25,"cost_evidence":{"state":"observed","known_subtotal_usd":1.25},"started_at":null,"completed_at":null,"active_duration_seconds":0,"turns":0,"compactions":0,"user_iterations":0,"tokens":{"input":10,"output":0,"cache_read":0,"reasoning":0,"peak_context":0}}],"tools":[],"anomalies":[],"skills":[{"name":"kept","caller_role":null,"invoked_at":null}],"delegations":[{"agent_type":null,"invoked_at":null,"child_session_id":"unavailable-child"}]}]}`)
+	if err := adapters.ValidateRuntimeFactLedger(original); err != nil {
+		t.Fatalf("current fixture is not runtime-admissible: %v", err)
+	}
+	if err := os.WriteFile(path, original, 0600); err != nil {
+		t.Fatal(err)
+	}
+	runner := backfill.NewMigrationRunner(nil)
+	opts := backfill.MigrationOptions{WorkspacesDir: filepath.Join(root, "records"), TargetVersion: domain.CurrentSchemaVersion, Backup: true, DryRun: true}
+	dry, err := runner.Run(opts)
+	if err != nil || len(dry.Results) != 1 || dry.Migrated != 1 || dry.Results[0].BackupCreated {
+		t.Fatalf("cleanup dry run result: %+v, %v", dry, err)
+	}
+	if data, err := os.ReadFile(path); err != nil || !bytes.Equal(data, original) {
+		t.Fatalf("cleanup dry run changed original: %v", err)
+	}
+	if _, err := os.Stat(path + ".bak"); !os.IsNotExist(err) {
+		t.Fatalf("cleanup dry run created a backup: %v", err)
+	}
+	opts.DryRun = false
+	report, err := runner.Run(opts)
+	if err != nil || len(report.Results) != 1 || report.Migrated != 1 || len(report.Errors) != 0 {
+		t.Fatalf("cleanup result: %+v, %v", report, err)
+	}
+	result := report.Results[0]
+	if !result.BackupCreated || result.BackupPath != path+".bak" || result.LedgerPath != path || !strings.Contains(result.DiffSummary, "completed steps: [schema_v6_lean_occurrences]") || !strings.Contains(result.DiffSummary, "dropped ownerless skills=2 task_links=3") {
+		t.Fatalf("cleanup lost ledger identity, backup or console audit: %+v", result)
+	}
+	backup, err := os.ReadFile(path + ".bak")
+	if err != nil || !bytes.Equal(backup, original) {
+		t.Fatalf("cleanup backup did not preserve exact original bytes: %v", err)
+	}
+	cleaned, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var expected, got map[string]json.RawMessage
+	if err := json.Unmarshal(original, &expected); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(cleaned, &got); err != nil {
+		t.Fatal(err)
+	}
+	delete(expected, "migration")
+	if _, exists := got["migration"]; exists {
+		t.Fatal("completed metadata remains on disk")
+	}
+	for key, value := range expected {
+		var beforeValue, afterValue json.RawMessage
+		beforeValue, err = json.Marshal(value)
+		if err != nil {
+			t.Fatal(err)
+		}
+		afterValue, err = json.Marshal(got[key])
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(beforeValue, afterValue) {
+			t.Fatalf("cleanup changed non-migration field %q: before=%s after=%s", key, beforeValue, afterValue)
+		}
+	}
+	if len(got) != len(expected) {
+		t.Fatalf("cleanup changed root member count: before=%d after=%d", len(expected), len(got))
+	}
+	second, err := runner.Run(opts)
+	if err != nil || second.Migrated != 0 || second.UpToDate != 1 || len(second.Errors) != 0 {
+		t.Fatalf("repeated cleanup was not up-to-date: %+v, %v", second, err)
+	}
+	afterSecond, err := os.ReadFile(path)
+	if err != nil || !bytes.Equal(afterSecond, cleaned) {
+		t.Fatalf("repeated cleanup changed ledger bytes: %v", err)
+	}
+	backupAfterSecond, err := os.ReadFile(path + ".bak")
+	if err != nil || !bytes.Equal(backupAfterSecond, backup) {
+		t.Fatalf("repeated cleanup overwrote original rollback backup: %v", err)
 	}
 }
 
@@ -836,8 +922,8 @@ func TestMigrationRunner_NormalizesInterimV4AndReportsDroppedUnscopedTools(t *te
 	if len(normalized.Sessions) != 0 {
 		t.Fatalf("unscoped tools must not fabricate sessions: %#v", normalized.Sessions)
 	}
-	if normalized.Migration == nil || !strings.Contains(normalized.Migration.Notes, "Removed 1 unscoped legacy tool") || !strings.Contains(normalized.Migration.Notes, "Re-extract") {
-		t.Fatalf("expected visible dropped-row count and recovery guidance, got %#v", normalized.Migration)
+	if normalized.Migration != nil {
+		t.Fatalf("completed migration audit belongs in the report, got persisted %#v", normalized.Migration)
 	}
 	if strings.Contains(string(data), `"tools"`) || strings.Contains(string(data), `"invocations"`) || strings.Contains(string(data), `"events"`) {
 		t.Fatalf("normalized v4 must not serialize root fact arrays: %s", data)
@@ -872,8 +958,12 @@ func TestMigrationRunner_RejectsMixedCanonicalAndLegacyCollectionsAtomically(t *
 
 func TestMigrationRunner_ValidatesCurrentBeforeUpToDateFastPath(t *testing.T) {
 	cases := []struct {
-		name     string
-		sessions string
+		name          string
+		sessions      string
+		migration     string
+		preserveOnly  bool
+		extraMember   string
+		expectedError string
 	}{
 		{
 			name:     "missing sessions collection",
@@ -884,36 +974,69 @@ func TestMigrationRunner_ValidatesCurrentBeforeUpToDateFastPath(t *testing.T) {
 			sessions: `[{"id":"s1"}]`,
 		},
 		{
-			name:     "padded session ID",
-			sessions: `[{"id":" s1 ","source":"opencode","user":"fixture","anomalies":[],"invocations":[],"tools":[],"events":[]}]`,
+			name:        "unknown current root field with completed metadata",
+			sessions:    `[]`,
+			migration:   `{"schema_version":6,"status":"completed","steps_completed":[],"steps_pending":[]}`,
+			extraMember: `,"retained_extension":{"recorded":"keep"}`,
 		},
 		{
-			name:     "padded session parent ID",
-			sessions: `[{"id":"root","source":"opencode","user":"fixture","anomalies":[],"invocations":[],"tools":[],"events":[]},{"id":"child","source":"opencode","user":"fixture","anomalies":[],"parent_id":" root ","invocations":[],"tools":[],"events":[]}]`,
+			name:      "completed metadata cannot bypass missing-session validation",
+			sessions:  `null`,
+			migration: `{"schema_version":6,"status":"completed","steps_completed":[],"steps_pending":[]}`,
 		},
 		{
-			name:     "padded invocation parent ID",
-			sessions: `[{"id":"root","source":"opencode","user":"fixture","anomalies":[],"invocations":[],"tools":[],"events":[]},{"id":"child","source":"opencode","user":"fixture","anomalies":[],"invocations":[{"parent_id":" root ","role":"coder","model":"m","user":"u","active_duration_seconds":0,"turns":0,"tokens":{},"cost_usd":0,"compactions":0,"user_iterations":0}],"tools":[],"events":[]}]`,
+			name:         "completed with pending work",
+			preserveOnly: true,
+			sessions:     `[]`,
+			migration:    `{"schema_version":6,"status":"completed","steps_completed":[],"steps_pending":["source_backfill"]}`,
 		},
 		{
-			name:     "duplicate session IDs",
-			sessions: `[{"id":"s1","source":"opencode","user":"fixture","anomalies":[],"invocations":[],"tools":[],"events":[]},{"id":"s1","source":"opencode","user":"fixture","anomalies":[],"invocations":[],"tools":[],"events":[]}]`,
+			name:         "partial migration remains resumable",
+			preserveOnly: true,
+			sessions:     `[]`,
+			migration:    `{"schema_version":6,"status":"partial","steps_completed":["schema_v6_lean_occurrences"],"steps_pending":["source_backfill"]}`,
 		},
 		{
-			name:     "duplicate tool rows",
-			sessions: `[{"id":"s1","source":"opencode","user":"fixture","anomalies":[],"invocations":[],"tools":[{"name":"bash","calls":2,"errors":0},{"name":"bash","calls":1,"errors":0}],"events":[]}]`,
+			name:         "pending migration remains resumable",
+			preserveOnly: true,
+			sessions:     `[]`,
+			migration:    `{"schema_version":6,"status":"pending","steps_completed":[],"steps_pending":["source_backfill"]}`,
 		},
 		{
-			name:     "invalid tool counts",
-			sessions: `[{"id":"s1","source":"opencode","user":"fixture","anomalies":[],"invocations":[],"tools":[{"name":"bash","calls":1,"errors":2}],"events":[]}]`,
+			name:          "padded session ID",
+			expectedError: `sessions[0].id must not have leading or trailing whitespace`,
+			sessions:      `[{"id":" s1 ","source":"opencode","user":"fixture","anomalies":[],"invocations":[],"tools":[]}]`,
 		},
 		{
-			name:     "dangling session parent",
-			sessions: `[{"id":"s1","source":"opencode","user":"fixture","anomalies":[],"parent_id":"missing","invocations":[],"tools":[],"events":[]}]`,
+			name:          "padded session parent ID",
+			expectedError: `sessions[1].parent_id must not have leading or trailing whitespace`,
+			sessions:      `[{"id":"root","source":"opencode","user":"fixture","anomalies":[],"invocations":[],"tools":[]},{"id":"child","source":"opencode","user":"fixture","anomalies":[],"parent_id":" root ","invocations":[],"tools":[]}]`,
+		},
+
+		{
+			name:          "duplicate session IDs",
+			expectedError: `sessions[1].id "s1" is duplicated`,
+			sessions:      `[{"id":"s1","source":"opencode","user":"fixture","anomalies":[],"invocations":[],"tools":[]},{"id":"s1","source":"opencode","user":"fixture","anomalies":[],"invocations":[],"tools":[]}]`,
 		},
 		{
-			name:     "dangling invocation parent",
-			sessions: `[{"id":"s1","source":"opencode","user":"fixture","anomalies":[],"invocations":[{"parent_id":"missing","role":"coder","model":"m","user":"u","active_duration_seconds":0,"turns":0,"tokens":{},"cost_usd":0,"compactions":0,"user_iterations":0}],"tools":[],"events":[]}]`,
+			name:          "duplicate tool rows",
+			expectedError: `sessions[0].tools[1].name "bash" is duplicated`,
+			sessions:      `[{"id":"s1","source":"opencode","user":"fixture","anomalies":[],"invocations":[],"tools":[{"name":"bash","calls":2,"errors":0},{"name":"bash","calls":1,"errors":0}]}]`,
+		},
+		{
+			name:          "invalid tool counts",
+			expectedError: `sessions[0].tools[0] has invalid calls/errors counts`,
+			sessions:      `[{"id":"s1","source":"opencode","user":"fixture","anomalies":[],"invocations":[],"tools":[{"name":"bash","calls":1,"errors":2}]}]`,
+		},
+		{
+			name:          "dangling session parent",
+			expectedError: `sessions[0].parent_id "missing" does not identify a session`,
+			sessions:      `[{"id":"s1","source":"opencode","user":"fixture","anomalies":[],"parent_id":"missing","invocations":[],"tools":[]}]`,
+		},
+		{
+			name:          "retired invocation parent reference",
+			expectedError: `unknown field "parent_id"`,
+			sessions:      `[{"id":"s1","source":"opencode","user":"fixture","anomalies":[],"invocations":[{"parent_id":"missing","role":"coder","model":"m","started_at":null,"completed_at":null,"active_duration_seconds":0,"turns":0,"tokens":{"input":0,"output":0,"cache_read":0,"reasoning":0,"peak_context":0},"cost_usd":0,"compactions":0,"user_iterations":0}],"tools":[]}]`,
 		},
 	}
 
@@ -924,17 +1047,28 @@ func TestMigrationRunner_ValidatesCurrentBeforeUpToDateFastPath(t *testing.T) {
 				t.Fatal(err)
 			}
 			path := filepath.Join(workspace, "agentic_metrics.json")
-			original := []byte(`{"schema_version":6,"ticket_id":"TEST-CURRENT","sessions":` + tc.sessions + `}`)
+			metadataMember := ""
+			if tc.migration != "" {
+				metadataMember = `,"migration":` + tc.migration
+			}
+			original := []byte(`{"schema_version":6,"ticket_id":"TEST-CURRENT","sessions":` + tc.sessions + metadataMember + tc.extraMember + `}`)
 			if err := os.WriteFile(path, original, 0600); err != nil {
 				t.Fatal(err)
 			}
 
-			report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{WorkspacesDir: filepath.Dir(workspace), TargetVersion: domain.CurrentSchemaVersion})
+			report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{WorkspacesDir: filepath.Dir(workspace), TargetVersion: domain.CurrentSchemaVersion, Backup: true})
 			if err != nil {
 				t.Fatalf("unexpected runner error: %v", err)
 			}
-			if report.UpToDate != 0 || len(report.Errors) != 1 {
+			if tc.preserveOnly {
+				if report.Migrated != 0 {
+					t.Fatalf("unfinished migration metadata was cleaned: %+v", report)
+				}
+			} else if report.UpToDate != 0 || len(report.Errors) != 1 {
 				t.Fatalf("expected current-schema validation error, got %+v", report)
+			}
+			if tc.expectedError != "" && !strings.Contains(strings.Join(report.Errors, "; "), tc.expectedError) {
+				t.Fatalf("named validation path was not reached, want %q: %+v", tc.expectedError, report)
 			}
 			after, err := os.ReadFile(path)
 			if err != nil {
@@ -943,7 +1077,98 @@ func TestMigrationRunner_ValidatesCurrentBeforeUpToDateFastPath(t *testing.T) {
 			if string(after) != string(original) {
 				t.Fatal("invalid canonical ledger was modified by validation")
 			}
+			if _, err := os.Stat(path + ".bak"); !os.IsNotExist(err) {
+				t.Fatalf("rejected current ledger created a publication backup: %v", err)
+			}
 		})
+	}
+}
+
+func TestMigrationCommandsValidateRawCleanupBeforePublication(t *testing.T) {
+	completed := `{"schema_version":6,"status":"completed","steps_completed":[],"steps_pending":[]}`
+	for _, tc := range []struct {
+		name, metadata, sessions, extraMember, diagnostic string
+	}{
+		{"completed omitted step arrays", `{"schema_version":6,"status":"completed"}`, `[]`, "", ""},
+		{"completed null step arrays", `{"schema_version":6,"status":"completed","steps_completed":null,"steps_pending":null}`, `[]`, "", ""},
+		{"unsupported status", `{"schema_version":6,"status":"unrecognized","steps_completed":[],"steps_pending":[],"notes":"Schema v6 migration dropped ownerless skills=2 task_links=3"}`, `[]`, "", "migration"},
+		{"absent status", `{"schema_version":6,"steps_completed":[],"steps_pending":[],"notes":"Schema v6 migration dropped ownerless skills=2 task_links=3"}`, `[]`, "", "migration"},
+		{"duplicate root member", completed, `[{"id":"remote-owner","source":"codex","user":"fixture","invocations":[],"tools":[],"anomalies":[]}]`, `,"sessions":[]`, `duplicate JSON member "sessions"`},
+		{"missing recorded owner tools", completed, `[{"id":"remote-owner","source":"codex","user":"fixture","invocations":[],"anomalies":[]}]`, "", "tools"},
+	} {
+		for _, command := range []struct {
+			name string
+			run  func(string) (string, error)
+		}{
+			{"migrate", func(root string) (string, error) {
+				report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{WorkspacesDir: root, TargetVersion: domain.CurrentSchemaVersion, Backup: true})
+				if err != nil {
+					return "", err
+				}
+				return strings.Join(report.Errors, "; "), nil
+			}},
+			{"backfill", func(root string) (string, error) {
+				report, err := backfill.NewEngine().Execute(backfill.BackfillOptions{WorkspacesDir: root, Source: "codex"})
+				if err != nil {
+					return "", err
+				}
+				return strings.Join(report.Warnings, "; "), nil
+			}},
+		} {
+			t.Run(command.name+"/"+tc.name, func(t *testing.T) {
+				root := t.TempDir()
+				workspace := filepath.Join(root, "TEST-RAW-ADMISSION")
+				if err := os.MkdirAll(workspace, 0700); err != nil {
+					t.Fatal(err)
+				}
+				path := filepath.Join(workspace, "agentic_metrics.json")
+				before := []byte(`{"schema_version":6,"ticket_id":"TEST-RAW-ADMISSION","sessions":` + tc.sessions + `,"migration":` + tc.metadata + tc.extraMember + `}`)
+				if err := os.WriteFile(path, before, 0600); err != nil {
+					t.Fatal(err)
+				}
+				diagnostic, err := command.run(root)
+				if err != nil || tc.diagnostic == "" && diagnostic != "" || !strings.Contains(diagnostic, tc.diagnostic) {
+					t.Fatalf("raw admission did not report %q: %s, %v", tc.diagnostic, diagnostic, err)
+				}
+				after, err := os.ReadFile(path)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if tc.diagnostic == "" {
+					var expected, actual map[string]json.RawMessage
+					if err := json.Unmarshal(before, &expected); err != nil {
+						t.Fatal(err)
+					}
+					if err := json.Unmarshal(after, &actual); err != nil {
+						t.Fatal(err)
+					}
+					delete(expected, "migration")
+					if len(expected) != len(actual) {
+						t.Fatalf("compatible cleanup did not remove only migration: %s", after)
+					}
+					for key, raw := range expected {
+						if !bytes.Equal(raw, actual[key]) {
+							t.Fatalf("compatible cleanup changed %q", key)
+						}
+					}
+					if command.name == "migrate" {
+						backup, err := os.ReadFile(path + ".bak")
+						if err != nil || !bytes.Equal(before, backup) {
+							t.Fatalf("compatible cleanup lost exact rollback bytes: %v", err)
+						}
+					}
+					return
+				}
+				if !bytes.Equal(before, after) {
+					t.Fatalf("rejected raw ledger was rewritten: %s", after)
+				}
+				for _, suffix := range []string{".bak", ".tmp"} {
+					if _, err := os.Stat(path + suffix); !os.IsNotExist(err) {
+						t.Fatalf("raw admission created publication artifact %s: %v", suffix, err)
+					}
+				}
+			})
+		}
 	}
 }
 

@@ -28,18 +28,19 @@ Telemetry: only manager Codex root 01a1a286-27c9-7c50-9f2e-70f0a332c763 belongs 
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 71
-- **Active Agent Duration:** 1h 40m (excludes user wait time)
-- **Context Window Health:** CRITICAL — Root agent peak 451.3k tokens (226% of 200k healthy ceiling, 1 compactions) | Subagents peak 0 (None)
-- **Role Effort Distribution (Subagents):** N/A
+- **Active Agent Duration:** 1h 50m (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 451.3k tokens (100% of 450k healthy ceiling, 1 compactions) | Subagents peak 0 (None)
+- **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 79,841 reasoning tokens (27.1% of generated output)
-- **Tool Health & Self-Correction:** 271 tool calls (17 self-corrections, 93.7% success rate)
+- **Reasoning Effort:** 80,618 reasoning tokens (27.1% of generated output)
+- **Tool Health & Self-Correction:** 275 tool calls (17 self-corrections, 93.8% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
+- **Status:** 3 execution anomalies detected (2 CRITICAL, 1 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (201.1k tokens) — Context tokens reached 201.1k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (451.3k tokens) — Context tokens reached 451.3k, breaching the 450k critical ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.6k tokens) — Context tokens reached 160.6k, breaching the 160k warning ceiling.
 
 ### Agentic Execution Metrics
@@ -49,11 +50,11 @@ Telemetry: only manager Codex root 01a1a286-27c9-7c50-9f2e-70f0a332c763 belongs 
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 1,445,622 | 215,095 | 79,960,192 | 98.2% | 451.3k | CRITICAL (226%) | $0.00 |
-| **Total** | **1** | **1,445,622** | **215,095** | **79,960,192** | **98.2%** | **451.3k** | **CRITICAL** | **$0.00** |
+| **Unknown** | 1 | 1,447,197 | 216,663 | 81,020,416 | 98.2% | 451.3k | BLOATED (100%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **1** | **1,447,197** | **216,663** | **81,020,416** | **98.2%** | **451.3k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 1 | 1,445,622 | 215,095 | 79,960,192 | 98.2% | $0.00 |
-| **Total** | **1** | **1,445,622** | **215,095** | **79,960,192** | **98.2%** | **$0.00** |
+| **gpt-6.1-sol** | 1 | 1,447,197 | 216,663 | 81,020,416 | 98.2% | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **1** | **1,447,197** | **216,663** | **81,020,416** | **98.2%** | **Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations)** |

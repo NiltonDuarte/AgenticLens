@@ -1,11 +1,7 @@
 {
-  "schema_version": 4,
-  "ticket_id": "FIX-2",
-  "ticket_title": "Enforce mandatory workspaces dir, eliminate mock mode branching, and display active workspace directory",
-  "ticket_type": "fix",
-  "started_at": "2026-10-21T07:01:01.276000+00:00",
-  "completed_at": "2026-10-21T15:57:48.480000+00:00",
-  "updated_at": "2026-10-27T08:05:14.604111001Z",
+  "anomalies": [
+    {"rule_id": "TOOL_HIGH_FAILURE_RATE", "severity": "CRITICAL", "context": {"tool_name": "mcp-gateway_mcp-exec", "count": 6, "total_calls": 6, "threshold": "\u003e=50%", "failure_rate_pct": 100}}
+  ],
   "code": {
     "lines_added": 1059,
     "lines_deleted": 700,
@@ -16,6 +12,8 @@
     "files_changed": 42,
     "sdlc_iterations": 14
   },
+  "completed_at": "2026-10-21T15:57:48.480000+00:00",
+  "schema_version": 6,
   "sessions": [
     {
       "id": "ses_ea1172563ffertlapg9bZrrU1B",
@@ -30,44 +28,19 @@
           "completed_at": "2026-10-21T14:46:42.903000+00:00",
           "active_duration_seconds": 322,
           "turns": 59,
-          "tokens": {
-            "input": 404417,
-            "output": 5128,
-            "cache_read": 2038084,
-            "reasoning": 10126,
-            "peak_context": 66560
-          },
+          "tokens": {"input": 404417, "output": 5128, "cache_read": 2038084, "reasoning": 10126, "peak_context": 66560},
           "cost_usd": 0.513372,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0.513372},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "glob",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 23,
-          "errors": 0
-        },
-        {
-          "name": "list_mcp_resources",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "mcp-gateway_mcp-find",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "read",
-          "calls": 32,
-          "errors": 2
-        }
+        {"name": "glob", "calls": 1, "errors": 0},
+        {"name": "grep", "calls": 23, "errors": 0},
+        {"name": "list_mcp_resources", "calls": 1, "errors": 0},
+        {"name": "mcp-gateway_mcp-find", "calls": 1, "errors": 0},
+        {"name": "read", "calls": 32, "errors": 2}
       ],
       "anomalies": []
     },
@@ -84,34 +57,17 @@
           "completed_at": "2026-10-21T14:41:11.439000+00:00",
           "active_duration_seconds": 283,
           "turns": 40,
-          "tokens": {
-            "input": 196334,
-            "output": 3323,
-            "cache_read": 2365631,
-            "reasoning": 3429,
-            "peak_context": 90245
-          },
+          "tokens": {"input": 196334, "output": 3323, "cache_read": 2365631, "reasoning": 3429, "peak_context": 90245},
           "cost_usd": 0.349993,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0.349993},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "bash",
-          "calls": 18,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 10,
-          "errors": 0
-        },
-        {
-          "name": "read",
-          "calls": 10,
-          "errors": 0
-        }
+        {"name": "bash", "calls": 18, "errors": 0},
+        {"name": "grep", "calls": 10, "errors": 0},
+        {"name": "read", "calls": 10, "errors": 0}
       ],
       "anomalies": []
     },
@@ -128,39 +84,18 @@
           "completed_at": "2026-10-21T14:36:19.812000+00:00",
           "active_duration_seconds": 1207,
           "turns": 158,
-          "tokens": {
-            "input": 1129099,
-            "output": 22521,
-            "cache_read": 14145840,
-            "reasoning": 22384,
-            "peak_context": 155907
-          },
+          "tokens": {"input": 1129099, "output": 22521, "cache_read": 14145840, "reasoning": 22384, "peak_context": 155907},
           "cost_usd": 2.076156,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 2.076156},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "bash",
-          "calls": 25,
-          "errors": 0
-        },
-        {
-          "name": "edit",
-          "calls": 47,
-          "errors": 2
-        },
-        {
-          "name": "grep",
-          "calls": 14,
-          "errors": 0
-        },
-        {
-          "name": "read",
-          "calls": 70,
-          "errors": 0
-        }
+        {"name": "bash", "calls": 25, "errors": 0},
+        {"name": "edit", "calls": 47, "errors": 2},
+        {"name": "grep", "calls": 14, "errors": 0},
+        {"name": "read", "calls": 70, "errors": 0}
       ],
       "anomalies": []
     },
@@ -177,34 +112,17 @@
           "completed_at": "2026-10-21T14:03:46.532000+00:00",
           "active_duration_seconds": 414,
           "turns": 51,
-          "tokens": {
-            "input": 215388,
-            "output": 7319,
-            "cache_read": 2217725,
-            "reasoning": 17739,
-            "peak_context": 75415
-          },
+          "tokens": {"input": 215388, "output": 7319, "cache_read": 2217725, "reasoning": 17739, "peak_context": 75415},
           "cost_usd": 0.421838,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0.421838},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "glob",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 17,
-          "errors": 0
-        },
-        {
-          "name": "read",
-          "calls": 31,
-          "errors": 0
-        }
+        {"name": "glob", "calls": 1, "errors": 0},
+        {"name": "grep", "calls": 17, "errors": 0},
+        {"name": "read", "calls": 31, "errors": 0}
       ],
       "anomalies": []
     },
@@ -221,44 +139,19 @@
           "completed_at": "2026-10-21T13:44:10.949000+00:00",
           "active_duration_seconds": 550,
           "turns": 51,
-          "tokens": {
-            "input": 398130,
-            "output": 5715,
-            "cache_read": 2958040,
-            "reasoning": 7860,
-            "peak_context": 99665
-          },
+          "tokens": {"input": 398130, "output": 5715, "cache_read": 2958040, "reasoning": 7860, "peak_context": 99665},
           "cost_usd": 0.571357,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0.571357},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "glob",
-          "calls": 2,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 27,
-          "errors": 0
-        },
-        {
-          "name": "list_mcp_resources",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "mcp-gateway_mcp-find",
-          "calls": 2,
-          "errors": 0
-        },
-        {
-          "name": "read",
-          "calls": 30,
-          "errors": 0
-        }
+        {"name": "glob", "calls": 2, "errors": 0},
+        {"name": "grep", "calls": 27, "errors": 0},
+        {"name": "list_mcp_resources", "calls": 1, "errors": 0},
+        {"name": "mcp-gateway_mcp-find", "calls": 2, "errors": 0},
+        {"name": "read", "calls": 30, "errors": 0}
       ],
       "anomalies": []
     },
@@ -275,39 +168,18 @@
           "completed_at": "2026-10-21T13:34:52.275000+00:00",
           "active_duration_seconds": 451,
           "turns": 79,
-          "tokens": {
-            "input": 304477,
-            "output": 9276,
-            "cache_read": 4027086,
-            "reasoning": 11677,
-            "peak_context": 88939
-          },
+          "tokens": {"input": 304477, "output": 9276, "cache_read": 4027086, "reasoning": 11677, "peak_context": 88939},
           "cost_usd": 0.608963,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0.608963},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "bash",
-          "calls": 43,
-          "errors": 0
-        },
-        {
-          "name": "edit",
-          "calls": 6,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 6,
-          "errors": 0
-        },
-        {
-          "name": "read",
-          "calls": 22,
-          "errors": 0
-        }
+        {"name": "bash", "calls": 43, "errors": 0},
+        {"name": "edit", "calls": 6, "errors": 0},
+        {"name": "grep", "calls": 6, "errors": 0},
+        {"name": "read", "calls": 22, "errors": 0}
       ],
       "anomalies": []
     },
@@ -324,65 +196,23 @@
           "completed_at": "2026-10-21T13:27:11.476000+00:00",
           "active_duration_seconds": 973,
           "turns": 121,
-          "tokens": {
-            "input": 1133432,
-            "output": 15574,
-            "cache_read": 10188497,
-            "reasoning": 31753,
-            "peak_context": 169226
-          },
+          "tokens": {"input": 1133432, "output": 15574, "cache_read": 10188497, "reasoning": 31753, "peak_context": 169226},
           "cost_usd": 1.791688,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 1.791688},
           "compactions": 1,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "bash",
-          "calls": 34,
-          "errors": 0
-        },
-        {
-          "name": "edit",
-          "calls": 15,
-          "errors": 0
-        },
-        {
-          "name": "glob",
-          "calls": 2,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 17,
-          "errors": 0
-        },
-        {
-          "name": "read",
-          "calls": 48,
-          "errors": 0
-        }
+        {"name": "bash", "calls": 34, "errors": 0},
+        {"name": "edit", "calls": 15, "errors": 0},
+        {"name": "glob", "calls": 2, "errors": 0},
+        {"name": "grep", "calls": 17, "errors": 0},
+        {"name": "read", "calls": 48, "errors": 0}
       ],
       "anomalies": [
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 108,
-            "context_tokens": 160965,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "turn": 112,
-            "token_delta": 72738,
-            "context_tokens": 72738,
-            "threshold": "40000"
-          }
-        }
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 108, "context_tokens": 160965, "threshold": "160000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 112, "token_delta": 72738, "context_tokens": 72738, "threshold": "40000"}}
       ]
     },
     {
@@ -398,90 +228,27 @@
           "completed_at": "2026-10-21T13:08:00.609000+00:00",
           "active_duration_seconds": 918,
           "turns": 113,
-          "tokens": {
-            "input": 834607,
-            "output": 16645,
-            "cache_read": 8577432,
-            "reasoning": 37503,
-            "peak_context": 160683
-          },
+          "tokens": {"input": 834607, "output": 16645, "cache_read": 8577432, "reasoning": 37503, "peak_context": 160683},
           "cost_usd": 1.472318,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 1.472318},
           "compactions": 1,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "glob",
-          "calls": 7,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 33,
-          "errors": 0
-        },
-        {
-          "name": "list_mcp_resources",
-          "calls": 2,
-          "errors": 0
-        },
-        {
-          "name": "mcp-gateway_code-mode",
-          "calls": 2,
-          "errors": 0
-        },
-        {
-          "name": "mcp-gateway_mcp-exec",
-          "calls": 5,
-          "errors": 5
-        },
-        {
-          "name": "mcp-gateway_mcp-find",
-          "calls": 6,
-          "errors": 0
-        },
-        {
-          "name": "read",
-          "calls": 51,
-          "errors": 1
-        },
-        {
-          "name": "skill",
-          "calls": 1,
-          "errors": 0
-        }
+        {"name": "glob", "calls": 7, "errors": 0},
+        {"name": "grep", "calls": 33, "errors": 0},
+        {"name": "list_mcp_resources", "calls": 2, "errors": 0},
+        {"name": "mcp-gateway_code-mode", "calls": 2, "errors": 0},
+        {"name": "mcp-gateway_mcp-exec", "calls": 5, "errors": 5},
+        {"name": "mcp-gateway_mcp-find", "calls": 6, "errors": 0},
+        {"name": "read", "calls": 51, "errors": 1},
+        {"name": "skill", "calls": 1, "errors": 0}
       ],
       "anomalies": [
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 85,
-            "context_tokens": 160683,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "turn": 86,
-            "token_delta": 53135,
-            "context_tokens": 53135,
-            "threshold": "40000"
-          }
-        },
-        {
-          "rule_id": "TOOL_RETRY_STREAK",
-          "severity": "WARNING",
-          "context": {
-            "tool_name": "mcp-gateway_mcp-exec",
-            "turn": 106,
-            "count": 4,
-            "threshold": "3"
-          }
-        }
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 85, "context_tokens": 160683, "threshold": "160000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 86, "token_delta": 53135, "context_tokens": 53135, "threshold": "40000"}},
+        {"rule_id": "TOOL_RETRY_STREAK", "severity": "WARNING", "context": {"tool_name": "mcp-gateway_mcp-exec", "turn": 106, "count": 4, "threshold": "3"}}
       ]
     },
     {
@@ -497,44 +264,19 @@
           "completed_at": "2026-10-21T12:03:55.924000+00:00",
           "active_duration_seconds": 278,
           "turns": 66,
-          "tokens": {
-            "input": 284485,
-            "output": 5321,
-            "cache_read": 3233797,
-            "reasoning": 10157,
-            "peak_context": 72653
-          },
+          "tokens": {"input": 284485, "output": 5321, "cache_read": 3233797, "reasoning": 10157, "peak_context": 72653},
           "cost_usd": 0.513941,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0.513941},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "glob",
-          "calls": 3,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 31,
-          "errors": 1
-        },
-        {
-          "name": "list_mcp_resources",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "mcp-gateway_mcp-find",
-          "calls": 2,
-          "errors": 0
-        },
-        {
-          "name": "read",
-          "calls": 31,
-          "errors": 2
-        }
+        {"name": "glob", "calls": 3, "errors": 0},
+        {"name": "grep", "calls": 31, "errors": 1},
+        {"name": "list_mcp_resources", "calls": 1, "errors": 0},
+        {"name": "mcp-gateway_mcp-find", "calls": 2, "errors": 0},
+        {"name": "read", "calls": 31, "errors": 2}
       ],
       "anomalies": []
     },
@@ -551,34 +293,17 @@
           "completed_at": "2026-10-21T11:59:10.587000+00:00",
           "active_duration_seconds": 283,
           "turns": 45,
-          "tokens": {
-            "input": 339933,
-            "output": 4631,
-            "cache_read": 1479240,
-            "reasoning": 3727,
-            "peak_context": 79676
-          },
+          "tokens": {"input": 339933, "output": 4631, "cache_read": 1479240, "reasoning": 3727, "peak_context": 79676},
           "cost_usd": 0.397235,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0.397235},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "bash",
-          "calls": 27,
-          "errors": 2
-        },
-        {
-          "name": "grep",
-          "calls": 6,
-          "errors": 0
-        },
-        {
-          "name": "read",
-          "calls": 12,
-          "errors": 0
-        }
+        {"name": "bash", "calls": 27, "errors": 2},
+        {"name": "grep", "calls": 6, "errors": 0},
+        {"name": "read", "calls": 12, "errors": 0}
       ],
       "anomalies": []
     },
@@ -595,75 +320,24 @@
           "completed_at": "2026-10-21T11:54:19.136000+00:00",
           "active_duration_seconds": 1665,
           "turns": 243,
-          "tokens": {
-            "input": 1648873,
-            "output": 46373,
-            "cache_read": 24629649,
-            "reasoning": 51457,
-            "peak_context": 168766
-          },
+          "tokens": {"input": 1648873, "output": 46373, "cache_read": 24629649, "reasoning": 51457, "peak_context": 168766},
           "cost_usd": 3.450741,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 3.450741},
           "compactions": 2,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "bash",
-          "calls": 21,
-          "errors": 0
-        },
-        {
-          "name": "edit",
-          "calls": 60,
-          "errors": 2
-        },
-        {
-          "name": "glob",
-          "calls": 3,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 50,
-          "errors": 0
-        },
-        {
-          "name": "read",
-          "calls": 101,
-          "errors": 1
-        }
+        {"name": "bash", "calls": 21, "errors": 0},
+        {"name": "edit", "calls": 60, "errors": 2},
+        {"name": "glob", "calls": 3, "errors": 0},
+        {"name": "grep", "calls": 50, "errors": 0},
+        {"name": "read", "calls": 101, "errors": 1}
       ],
       "anomalies": [
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 62,
-            "context_tokens": 160251,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 226,
-            "token_delta": 86545,
-            "context_tokens": 86545,
-            "threshold": "80000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "turn": 69,
-            "token_delta": 50756,
-            "context_tokens": 50756,
-            "threshold": "40000"
-          }
-        }
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 62, "context_tokens": 160251, "threshold": "160000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 226, "token_delta": 86545, "context_tokens": 86545, "threshold": "80000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 69, "token_delta": 50756, "context_tokens": 50756, "threshold": "40000"}}
       ]
     },
     {
@@ -679,39 +353,18 @@
           "completed_at": "2026-10-21T11:15:25.075000+00:00",
           "active_duration_seconds": 293,
           "turns": 34,
-          "tokens": {
-            "input": 166520,
-            "output": 7590,
-            "cache_read": 1189541,
-            "reasoning": 17658,
-            "peak_context": 68127
-          },
+          "tokens": {"input": 166520, "output": 7590, "cache_read": 1189541, "reasoning": 17658, "peak_context": 68127},
           "cost_usd": 0.308786,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0.308786},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "glob",
-          "calls": 2,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 10,
-          "errors": 0
-        },
-        {
-          "name": "mcp-gateway_mcp-find",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "read",
-          "calls": 20,
-          "errors": 0
-        }
+        {"name": "glob", "calls": 2, "errors": 0},
+        {"name": "grep", "calls": 10, "errors": 0},
+        {"name": "mcp-gateway_mcp-find", "calls": 1, "errors": 0},
+        {"name": "read", "calls": 20, "errors": 0}
       ],
       "anomalies": []
     },
@@ -728,34 +381,17 @@
           "completed_at": "2026-10-21T10:55:53.238000+00:00",
           "active_duration_seconds": 244,
           "turns": 49,
-          "tokens": {
-            "input": 207508,
-            "output": 6920,
-            "cache_read": 1998494,
-            "reasoning": 13593,
-            "peak_context": 72160
-          },
+          "tokens": {"input": 207508, "output": 6920, "cache_read": 1998494, "reasoning": 13593, "peak_context": 72160},
           "cost_usd": 0.382442,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0.382442},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "glob",
-          "calls": 2,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 26,
-          "errors": 2
-        },
-        {
-          "name": "read",
-          "calls": 19,
-          "errors": 0
-        }
+        {"name": "glob", "calls": 2, "errors": 0},
+        {"name": "grep", "calls": 26, "errors": 2},
+        {"name": "read", "calls": 19, "errors": 0}
       ],
       "anomalies": []
     },
@@ -772,49 +408,20 @@
           "completed_at": "2026-10-21T10:12:00.189000+00:00",
           "active_duration_seconds": 890,
           "turns": 67,
-          "tokens": {
-            "input": 373062,
-            "output": 6085,
-            "cache_read": 3316430,
-            "reasoning": 9763,
-            "peak_context": 83485
-          },
+          "tokens": {"input": 373062, "output": 6085, "cache_read": 3316430, "reasoning": 9763, "peak_context": 83485},
           "cost_usd": 0.587959,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0.587959},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "glob",
-          "calls": 8,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 22,
-          "errors": 0
-        },
-        {
-          "name": "list_mcp_resource_templates",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "list_mcp_resources",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "mcp-gateway_mcp-find",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "read",
-          "calls": 41,
-          "errors": 0
-        }
+        {"name": "glob", "calls": 8, "errors": 0},
+        {"name": "grep", "calls": 22, "errors": 0},
+        {"name": "list_mcp_resource_templates", "calls": 1, "errors": 0},
+        {"name": "list_mcp_resources", "calls": 1, "errors": 0},
+        {"name": "mcp-gateway_mcp-find", "calls": 1, "errors": 0},
+        {"name": "read", "calls": 41, "errors": 0}
       ],
       "anomalies": []
     },
@@ -831,39 +438,18 @@
           "completed_at": "2026-10-21T09:57:02.300000+00:00",
           "active_duration_seconds": 526,
           "turns": 87,
-          "tokens": {
-            "input": 523743,
-            "output": 11160,
-            "cache_read": 5126553,
-            "reasoning": 14001,
-            "peak_context": 99253
-          },
+          "tokens": {"input": 523743, "output": 11160, "cache_read": 5126553, "reasoning": 14001, "peak_context": 99253},
           "cost_usd": 0.871652,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0.871652},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "bash",
-          "calls": 34,
-          "errors": 0
-        },
-        {
-          "name": "edit",
-          "calls": 7,
-          "errors": 1
-        },
-        {
-          "name": "grep",
-          "calls": 11,
-          "errors": 0
-        },
-        {
-          "name": "read",
-          "calls": 35,
-          "errors": 0
-        }
+        {"name": "bash", "calls": 34, "errors": 0},
+        {"name": "edit", "calls": 7, "errors": 1},
+        {"name": "grep", "calls": 11, "errors": 0},
+        {"name": "read", "calls": 35, "errors": 0}
       ],
       "anomalies": []
     },
@@ -880,70 +466,24 @@
           "completed_at": "2026-10-21T09:48:08.977000+00:00",
           "active_duration_seconds": 5685,
           "turns": 233,
-          "tokens": {
-            "input": 8054601,
-            "output": 45531,
-            "cache_read": 13594104,
-            "reasoning": 58681,
-            "peak_context": 169985
-          },
+          "tokens": {"input": 8054601, "output": 45531, "cache_read": 13594104, "reasoning": 58681, "peak_context": 169985},
           "cost_usd": 7.451304,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 7.451304},
           "compactions": 1,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "bash",
-          "calls": 41,
-          "errors": 0
-        },
-        {
-          "name": "edit",
-          "calls": 42,
-          "errors": 0
-        },
-        {
-          "name": "glob",
-          "calls": 8,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 21,
-          "errors": 0
-        },
-        {
-          "name": "read",
-          "calls": 98,
-          "errors": 0
-        },
-        {
-          "name": "write",
-          "calls": 18,
-          "errors": 0
-        }
+        {"name": "bash", "calls": 41, "errors": 0},
+        {"name": "edit", "calls": 42, "errors": 0},
+        {"name": "glob", "calls": 8, "errors": 0},
+        {"name": "grep", "calls": 21, "errors": 0},
+        {"name": "read", "calls": 98, "errors": 0},
+        {"name": "write", "calls": 18, "errors": 0}
       ],
       "anomalies": [
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 129,
-            "context_tokens": 160011,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 145,
-            "token_delta": 83650,
-            "context_tokens": 83650,
-            "threshold": "80000"
-          }
-        }
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 129, "context_tokens": 160011, "threshold": "160000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 145, "token_delta": 83650, "context_tokens": 83650, "threshold": "80000"}}
       ]
     },
     {
@@ -959,69 +499,24 @@
           "completed_at": "2026-10-21T08:10:33.789000+00:00",
           "active_duration_seconds": 1952,
           "turns": 75,
-          "tokens": {
-            "input": 1874170,
-            "output": 9812,
-            "cache_read": 2463408,
-            "reasoning": 22899,
-            "peak_context": 104100
-          },
+          "tokens": {"input": 1874170, "output": 9812, "cache_read": 2463408, "reasoning": 22899, "peak_context": 104100},
           "cost_usd": 1.713049,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 1.713049},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "glob",
-          "calls": 10,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 13,
-          "errors": 0
-        },
-        {
-          "name": "list_mcp_resource_templates",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "list_mcp_resources",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "mcp-gateway_code-mode",
-          "calls": 2,
-          "errors": 0
-        },
-        {
-          "name": "mcp-gateway_mcp-exec",
-          "calls": 1,
-          "errors": 1
-        },
-        {
-          "name": "mcp-gateway_mcp-find",
-          "calls": 3,
-          "errors": 0
-        },
-        {
-          "name": "read",
-          "calls": 40,
-          "errors": 1
-        },
-        {
-          "name": "skill",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "t3-code_list_thread_pull_requests",
-          "calls": 1,
-          "errors": 0
-        }
+        {"name": "glob", "calls": 10, "errors": 0},
+        {"name": "grep", "calls": 13, "errors": 0},
+        {"name": "list_mcp_resource_templates", "calls": 1, "errors": 0},
+        {"name": "list_mcp_resources", "calls": 1, "errors": 0},
+        {"name": "mcp-gateway_code-mode", "calls": 2, "errors": 0},
+        {"name": "mcp-gateway_mcp-exec", "calls": 1, "errors": 1},
+        {"name": "mcp-gateway_mcp-find", "calls": 3, "errors": 0},
+        {"name": "read", "calls": 40, "errors": 1},
+        {"name": "skill", "calls": 1, "errors": 0},
+        {"name": "t3-code_list_thread_pull_requests", "calls": 1, "errors": 0}
       ],
       "anomalies": []
     },
@@ -1038,44 +533,19 @@
           "completed_at": "2026-10-21T07:37:53.771000+00:00",
           "active_duration_seconds": 1899,
           "turns": 67,
-          "tokens": {
-            "input": 865327,
-            "output": 10066,
-            "cache_read": 3412011,
-            "reasoning": 29310,
-            "peak_context": 113580
-          },
+          "tokens": {"input": 865327, "output": 10066, "cache_read": 3412011, "reasoning": 29310, "peak_context": 113580},
           "cost_usd": 1.052556,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 1.052556},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "glob",
-          "calls": 9,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 12,
-          "errors": 1
-        },
-        {
-          "name": "mcp-gateway_mcp-find",
-          "calls": 2,
-          "errors": 0
-        },
-        {
-          "name": "read",
-          "calls": 43,
-          "errors": 0
-        },
-        {
-          "name": "skill",
-          "calls": 1,
-          "errors": 0
-        }
+        {"name": "glob", "calls": 9, "errors": 0},
+        {"name": "grep", "calls": 12, "errors": 1},
+        {"name": "mcp-gateway_mcp-find", "calls": 2, "errors": 0},
+        {"name": "read", "calls": 43, "errors": 0},
+        {"name": "skill", "calls": 1, "errors": 0}
       ],
       "anomalies": []
     },
@@ -1091,124 +561,37 @@
           "completed_at": "2026-10-21T15:57:48.480000+00:00",
           "active_duration_seconds": 23596,
           "turns": 286,
-          "tokens": {
-            "input": 2969725,
-            "output": 73976,
-            "cache_read": 19874403,
-            "reasoning": 47672,
-            "peak_context": 173471
-          },
+          "tokens": {"input": 2969725, "output": 73976, "cache_read": 19874403, "reasoning": 47672, "peak_context": 173471},
           "cost_usd": 4.174054,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 4.174054},
           "compactions": 2,
           "user_iterations": 14
         }
       ],
       "tools": [
-        {
-          "name": "bash",
-          "calls": 101,
-          "errors": 0
-        },
-        {
-          "name": "edit",
-          "calls": 2,
-          "errors": 0
-        },
-        {
-          "name": "glob",
-          "calls": 17,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 24,
-          "errors": 1
-        },
-        {
-          "name": "question",
-          "calls": 7,
-          "errors": 0
-        },
-        {
-          "name": "read",
-          "calls": 50,
-          "errors": 0
-        },
-        {
-          "name": "skill",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "t3-code_link_pull_request",
-          "calls": 2,
-          "errors": 0
-        },
-        {
-          "name": "t3-code_list_thread_pull_requests",
-          "calls": 2,
-          "errors": 0
-        },
-        {
-          "name": "task",
-          "calls": 19,
-          "errors": 0
-        },
-        {
-          "name": "todowrite",
-          "calls": 22,
-          "errors": 0
-        },
-        {
-          "name": "write",
-          "calls": 14,
-          "errors": 0
-        }
+        {"name": "bash", "calls": 101, "errors": 0},
+        {"name": "edit", "calls": 2, "errors": 0},
+        {"name": "glob", "calls": 17, "errors": 0},
+        {"name": "grep", "calls": 24, "errors": 1},
+        {"name": "question", "calls": 7, "errors": 0},
+        {"name": "read", "calls": 50, "errors": 0},
+        {"name": "skill", "calls": 1, "errors": 0},
+        {"name": "t3-code_link_pull_request", "calls": 2, "errors": 0},
+        {"name": "t3-code_list_thread_pull_requests", "calls": 2, "errors": 0},
+        {"name": "task", "calls": 19, "errors": 0},
+        {"name": "todowrite", "calls": 22, "errors": 0},
+        {"name": "write", "calls": 14, "errors": 0}
       ],
       "anomalies": [
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 99,
-            "context_tokens": 160996,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 230,
-            "token_delta": 80914,
-            "context_tokens": 80914,
-            "threshold": "80000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "turn": 107,
-            "token_delta": 74772,
-            "context_tokens": 74772,
-            "threshold": "40000"
-          }
-        }
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 99, "context_tokens": 160996, "threshold": "160000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 230, "token_delta": 80914, "context_tokens": 80914, "threshold": "80000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 107, "token_delta": 74772, "context_tokens": 74772, "threshold": "40000"}}
       ]
     }
   ],
-  "anomalies": [
-    {
-      "rule_id": "TOOL_HIGH_FAILURE_RATE",
-      "severity": "CRITICAL",
-      "context": {
-        "tool_name": "mcp-gateway_mcp-exec",
-        "count": 6,
-        "total_calls": 6,
-        "threshold": ">=50%",
-        "failure_rate_pct": 100
-      }
-    }
-  ]
+  "started_at": "2026-10-21T07:01:01.276000+00:00",
+  "ticket_id": "FIX-2",
+  "ticket_title": "Enforce mandatory workspaces dir, eliminate mock mode branching, and display active workspace directory",
+  "ticket_type": "fix",
+  "updated_at": "2026-10-27T08:05:14.604111001Z"
 }

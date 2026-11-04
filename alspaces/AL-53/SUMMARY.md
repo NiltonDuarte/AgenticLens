@@ -30,14 +30,14 @@ Expected Codex root `01a19201-1d81-7ee0-b315-cfd8231ba70e`, with planner `01a192
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 7
-- **Active Agent Duration:** 37m 18s (excludes user wait time)
-- **Context Window Health:** ELEVATED — Root agent peak 141.2k tokens (71% of 200k healthy ceiling, 0 compactions) | Subagents peak 133.5k (Tester)
-- **Role Effort Distribution (Subagents):** N/A
+- **Active Agent Duration:** 40m 34s (excludes user wait time)
+- **Context Window Health:** HEALTHY — Root agent peak 144.1k tokens (32% of 450k healthy ceiling, 0 compactions) | Subagents peak 133.5k (Tester)
+- **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 2.0 avg turns/run (peak: 3 turns) | Planner 1.0, Coder 2.0, Tester 3.0, Reviewer 2.0
 - **Test-to-Production Code Ratio:** 1.2:1 (+229 test lines / +188 prod lines)
 - **Code Delivered:** +417 / -16 lines across 5 code files (excluding docs)
-- **Reasoning Effort:** 8,109 reasoning tokens (12.1% of generated output)
-- **Tool Health & Self-Correction:** 231 tool calls (12 self-corrections, 94.8% success rate)
+- **Reasoning Effort:** 8,125 reasoning tokens (11.8% of generated output)
+- **Tool Health & Self-Correction:** 234 tool calls (12 self-corrections, 94.9% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 2 execution anomalies detected (2 WARNING).
@@ -51,18 +51,18 @@ Expected Codex root `01a19201-1d81-7ee0-b315-cfd8231ba70e`, with planner `01a192
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **planner** | 1 | 65,731 | 3,466 | 451,328 | 87.3% | 67.9k | HEALTHY | $0.00 |
-| **coder** | 1 | 61,778 | 6,791 | 1,437,696 | 95.9% | 88.4k | HEALTHY | $0.00 |
-| **tester** | 1 | 100,281 | 18,134 | 5,238,656 | 98.1% | 133.5k | ELEVATED | $0.00 |
-| **reviewer** | 1 | 80,369 | 4,316 | 1,469,568 | 94.8% | 105.2k | ELEVATED | $0.00 |
-| **rootagent** | 1 | 140,408 | 26,470 | 15,305,088 | 99.1% | 141.2k | ELEVATED | $0.00 |
-| **Total** | **5** | **448,567** | **59,177** | **23,902,336** | **98.2%** | **141.2k** | **ELEVATED** | **$0.00** |
+| **planner** | 1 | 65,731 | 3,466 | 451,328 | 87.3% | 67.9k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **coder** | 1 | 61,778 | 6,791 | 1,437,696 | 95.9% | 88.4k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **tester** | 1 | 100,281 | 18,134 | 5,238,656 | 98.1% | 133.5k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **reviewer** | 1 | 80,369 | 4,316 | 1,469,568 | 94.8% | 105.2k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Unknown** | 1 | 142,736 | 27,927 | 16,300,416 | 99.1% | 144.1k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **5** | **450,895** | **60,634** | **24,897,664** | **98.2%** | **144.1k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 5 unavailable / 5 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 5 | 448,567 | 59,177 | 23,902,336 | 98.2% | $0.00 |
-| **Total** | **5** | **448,567** | **59,177** | **23,902,336** | **98.2%** | **$0.00** |
+| **gpt-6.1-sol** | 5 | 450,895 | 60,634 | 24,897,664 | 98.2% | Unavailable (0 observed, 0 partial, 5 unavailable / 5 invocations) |
+| **Total** | **5** | **450,895** | **60,634** | **24,897,664** | **98.2%** | **Unavailable (0 observed, 0 partial, 5 unavailable / 5 invocations)** |
 
 ## MGT-1 routine main integration (2026-10-31)
 

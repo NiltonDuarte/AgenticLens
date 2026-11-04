@@ -12,21 +12,21 @@ Telemetry provenance: root Codex session 01a19219-d82c-7463-8071-c89fe8841a03 is
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 70
-- **Active Agent Duration:** 1h 20m (excludes user wait time)
-- **Context Window Health:** CRITICAL — Root agent peak 449.9k tokens (225% of 200k healthy ceiling, 1 compactions) | Subagents peak 0 (None)
-- **Role Effort Distribution (Subagents):** N/A
+- **Active Agent Duration:** 1h 24m (excludes user wait time)
+- **Context Window Health:** ELEVATED — Root agent peak 449.9k tokens (100% of 450k healthy ceiling, 1 compactions) | Subagents peak 0 (None)
+- **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 58,273 reasoning tokens (26.9% of generated output)
-- **Tool Health & Self-Correction:** 243 tool calls (13 self-corrections, 94.7% success rate)
+- **Reasoning Effort:** 58,369 reasoning tokens (26.8% of generated output)
+- **Tool Health & Self-Correction:** 249 tool calls (13 self-corrections, 94.8% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 4 execution anomalies detected (2 CRITICAL, 2 WARNING).
+- **Status:** 4 execution anomalies detected (1 CRITICAL, 3 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (207.6k tokens) — Context tokens reached 207.6k, breaching the 200k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (449.9k tokens) — Context tokens reached 449.9k, breaching the 200k critical ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (182.1k tokens) — Context tokens reached 182.1k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (164.6k tokens) — Context tokens reached 164.6k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (449.9k tokens) — Context tokens reached 449.9k, breaching the 250k warning ceiling.
 
 ### Agentic Execution Metrics
 
@@ -35,14 +35,14 @@ Telemetry provenance: root Codex session 01a19219-d82c-7463-8071-c89fe8841a03 is
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 2 | 738,139 | 158,391 | 78,891,008 | 99.1% | 449.9k | CRITICAL (225%) | $0.00 |
-| **Total** | **2** | **738,139** | **158,391** | **78,891,008** | **99.1%** | **449.9k** | **CRITICAL** | **$0.00** |
+| **Unknown** | 2 | 740,884 | 159,672 | 80,833,792 | 99.1% | 449.9k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **Total** | **2** | **740,884** | **159,672** | **80,833,792** | **99.1%** | **449.9k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 2 | 738,139 | 158,391 | 78,891,008 | 99.1% | $0.00 |
-| **Total** | **2** | **738,139** | **158,391** | **78,891,008** | **99.1%** | **$0.00** |
+| **gpt-6.1-sol** | 2 | 740,884 | 159,672 | 80,833,792 | 99.1% | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **Total** | **2** | **740,884** | **159,672** | **80,833,792** | **99.1%** | **Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations)** |
 
 ## Iteration 02: management ticket workflow
 

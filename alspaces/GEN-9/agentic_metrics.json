@@ -1,11 +1,5 @@
 {
-  "schema_version": 4,
-  "ticket_id": "GEN-9",
-  "ticket_title": "AgenticLens operator skill",
-  "ticket_type": "feat",
-  "started_at": "2026-10-29T16:38:58.073Z",
-  "completed_at": "2026-10-29T17:12:04.334Z",
-  "updated_at": "2026-10-29T17:12:06.645430+00:00",
+  "anomalies": [],
   "code": {
     "lines_added": 0,
     "lines_deleted": 0,
@@ -16,6 +10,8 @@
     "files_changed": 0,
     "sdlc_iterations": 13
   },
+  "completed_at": "2026-10-29T17:12:04.334Z",
+  "schema_version": 6,
   "sessions": [
     {
       "id": "01a18887-68ef-7523-92e4-fe41fdde6380",
@@ -23,33 +19,28 @@
       "user": "Nilton Duarte",
       "invocations": [
         {
-          "role": "RootAgent",
+          "role": "",
           "model": "gpt-6-luna",
           "started_at": "2026-10-29T16:38:59.626Z",
-          "completed_at": "2026-10-29T17:12:04.334Z",
-          "active_duration_seconds": 522,
+          "completed_at": "2026-10-29T17:12:25.203Z",
+          "active_duration_seconds": 793,
           "turns": 11,
-          "tokens": {
-            "input": 212406,
-            "output": 55674,
-            "cache_read": 7676160,
-            "reasoning": 28093,
-            "peak_context": 152204
-          },
-          "cost_usd": 0,
+          "tokens": {"input": 214398, "output": 56317, "cache_read": 8286720, "reasoning": 28384, "peak_context": 153670},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
           "user_iterations": 13
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 55,
-          "errors": 5
-        }
+        {"name": "command", "calls": 59, "errors": 5}
       ],
       "anomalies": []
     }
   ],
-  "anomalies": []
+  "started_at": "2026-10-29T16:38:58.073Z",
+  "ticket_id": "GEN-9",
+  "ticket_title": "AgenticLens operator skill",
+  "ticket_type": "feat",
+  "updated_at": "2026-11-04T15:13:36.926497395Z"
 }

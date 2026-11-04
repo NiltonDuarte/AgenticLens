@@ -1,0 +1,137 @@
+{
+  "status": "blocked",
+  "harness": "codex",
+  "root_session_id": "01a1a714-839f-76e2-b7c2-3ec19975a921",
+  "native_root_source": "vscode",
+  "originator": "T3 Code",
+  "expected_source_proven_children": [
+    {
+      "session_id": "01a1a73b-bcf0-7ba3-a76b-0804963fbbb0",
+      "parent_session_id": "01a1a714-839f-76e2-b7c2-3ec19975a921",
+      "role": "reviewer-architecture",
+      "observed_model_effort": [
+        {
+          "model": "gpt-6.1-sol",
+          "effort": "high"
+        }
+      ]
+    },
+    {
+      "session_id": "01a1a739-10a4-78e2-8cbb-94712f9e3210",
+      "parent_session_id": "01a1a714-839f-76e2-b7c2-3ec19975a921",
+      "role": "reviewer-behavior",
+      "observed_model_effort": [
+        {
+          "model": "gpt-6-luna",
+          "effort": "medium"
+        }
+      ]
+    },
+    {
+      "session_id": "01a1a738-e711-7171-bfe1-98d66265bcbd",
+      "parent_session_id": "01a1a714-839f-76e2-b7c2-3ec19975a921",
+      "role": "reviewer-behavior",
+      "observed_model_effort": [
+        {
+          "model": "gpt-6.1-sol",
+          "effort": "high"
+        }
+      ]
+    },
+    {
+      "session_id": "01a1a730-4fd9-7230-943b-ea8b407b3246",
+      "parent_session_id": "01a1a714-839f-76e2-b7c2-3ec19975a921",
+      "role": "coder",
+      "observed_model_effort": [
+        {
+          "model": "gpt-6.1-sol",
+          "effort": "high"
+        }
+      ]
+    },
+    {
+      "session_id": "01a1a732-15f9-77d1-8735-7af4139bce3c",
+      "parent_session_id": "01a1a714-839f-76e2-b7c2-3ec19975a921",
+      "role": "tester",
+      "observed_model_effort": [
+        {
+          "model": "gpt-6.1-sol",
+          "effort": "high"
+        }
+      ]
+    },
+    {
+      "session_id": "01a1a73a-c0a4-7c21-ba76-9d089c2cadd6",
+      "parent_session_id": "01a1a714-839f-76e2-b7c2-3ec19975a921",
+      "role": "reviewer-data",
+      "observed_model_effort": [
+        {
+          "model": "gpt-6-luna",
+          "effort": "medium"
+        }
+      ]
+    },
+    {
+      "session_id": "01a1a73d-1a7a-7db3-98f8-e0bbd9451333",
+      "parent_session_id": "01a1a714-839f-76e2-b7c2-3ec19975a921",
+      "role": "reviewer-tests",
+      "observed_model_effort": [
+        {
+          "model": "gpt-6.1-sol",
+          "effort": "high"
+        }
+      ]
+    },
+    {
+      "session_id": "01a1a73c-5eb2-74f3-be5c-f0867bc27ccc",
+      "parent_session_id": "01a1a714-839f-76e2-b7c2-3ec19975a921",
+      "role": "reviewer-architecture",
+      "observed_model_effort": [
+        {
+          "model": "gpt-6-luna",
+          "effort": "medium"
+        }
+      ]
+    },
+    {
+      "session_id": "01a1a73e-997a-70a3-96f9-ea01156d9615",
+      "parent_session_id": "01a1a714-839f-76e2-b7c2-3ec19975a921",
+      "role": "reviewer-tests",
+      "observed_model_effort": [
+        {
+          "model": "gpt-6-luna",
+          "effort": "medium"
+        }
+      ]
+    },
+    {
+      "session_id": "01a1a739-3b4e-7363-acda-2c031518a7b3",
+      "parent_session_id": "01a1a714-839f-76e2-b7c2-3ec19975a921",
+      "role": "reviewer-data",
+      "observed_model_effort": [
+        {
+          "model": "gpt-6.1-sol",
+          "effort": "high"
+        }
+      ]
+    },
+    {
+      "session_id": "01a1a72d-6861-7423-901a-62a3ace3b4c2",
+      "parent_session_id": "01a1a714-839f-76e2-b7c2-3ec19975a921",
+      "role": "planner",
+      "observed_model_effort": [
+        {
+          "model": "gpt-6.1-sol",
+          "effort": "high"
+        }
+      ]
+    }
+  ],
+  "attempted_commit": "42d82e6",
+  "exit_code": 1,
+  "error": "unsupported capture coordinate layout: worktree mapping table is missing; preserve this state and reset or reinstall capture into a new state directory",
+  "ledger_created": false,
+  "registry_reset": false,
+  "history_ledgers_preserved": 119,
+  "note": "Source session metadata and turn contexts were inspected; no usage/cost extraction or source-complete ledger is claimed. Capture admission blocked generation before publication."
+}

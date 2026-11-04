@@ -118,17 +118,18 @@ func TestBackfillEngine_CleansCompletedMigrationMetadata(t *testing.T) {
 	tempDir := t.TempDir()
 	ticketID := "AL-COMPLETED-METADATA"
 	version := domain.CurrentSchemaVersion
-	ledger := domain.AgenticFactLedger{
-		SchemaVersion: &version,
-		TicketID:      &ticketID,
-		Migration: &domain.MigrationInfo{
-			SchemaVersion:  domain.CurrentSchemaVersion,
-			Status:         domain.MigrationStatusCompleted,
-			StepsCompleted: []string{domain.MigrationStepSourceBackfill},
-			StepsPending:   []string{},
-		},
+	workspace := filepath.Join(tempDir, ticketID)
+	if err := os.MkdirAll(workspace, 0700); err != nil {
+		t.Fatal(err)
 	}
-	createTestWorkspace(t, tempDir, ticketID, ledger)
+	path := filepath.Join(workspace, "agentic_metrics.json")
+	before := []byte(`{"schema_version":6,"ticket_id":"AL-COMPLETED-METADATA","ticket_title":"Portable history","ticket_type":"chore","updated_at":"2026-01-01T00:00:00Z","code":{"lines_added":19,"lines_deleted":3,"test_lines_added":7,"test_lines_deleted":1,"prod_lines_added":12,"prod_lines_deleted":2,"files_changed":4,"sdlc_iterations":3},"migration":{"schema_version":6,"status":"completed","steps_completed":["source_backfill"],"steps_pending":[],"notes":"Schema v6 migration dropped ownerless skills=2 task_links=3"},"anomalies":[{"rule_id":"TOOL_RETRY_STREAK","severity":"WARNING","context":{"count":5}}],"sessions":[{"id":"remote-owner","source":"codex","user":"remote-user","invocations":[{"role":"coder","model":"fixture","cost_usd":1.25,"cost_evidence":{"state":"observed","known_subtotal_usd":1.25},"started_at":null,"completed_at":null,"active_duration_seconds":11,"turns":3,"compactions":1,"user_iterations":2,"tokens":{"input":10,"output":2,"cache_read":3,"reasoning":4,"peak_context":19}}],"tools":[{"name":"bash","calls":3,"errors":1}],"anomalies":[{"rule_id":"TOOL_HIGH_FAILURE_RATE","severity":"WARNING","context":{"count":1,"total_calls":3}}],"skills":[{"name":"kept","caller_role":null,"invoked_at":null}],"delegations":[{"agent_type":null,"invoked_at":null,"child_session_id":"unavailable-child"}]}]}`)
+	if err := adapters.ValidateRuntimeFactLedger(before); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, before, 0600); err != nil {
+		t.Fatal(err)
+	}
 
 	metadataFreeTicket := "AL-COMPLETED-CLEAN"
 	createTestWorkspace(t, tempDir, metadataFreeTicket, domain.AgenticFactLedger{
@@ -143,6 +144,15 @@ func TestBackfillEngine_CleansCompletedMigrationMetadata(t *testing.T) {
 	if report.Updated != 1 || report.Skipped != 1 {
 		t.Fatalf("expected metadata cleanup and metadata-free skip, got %+v", report)
 	}
+	var audit string
+	for _, result := range report.Results {
+		if result.TicketID == ticketID {
+			audit = result.Notes
+		}
+	}
+	if !strings.Contains(audit, "completed steps: [source_backfill]") || !strings.Contains(audit, "dropped ownerless skills=2 task_links=3") {
+		t.Fatalf("completed cleanup lost console/report audit: %s", audit)
+	}
 
 	data, err := os.ReadFile(filepath.Join(tempDir, ticketID, "agentic_metrics.json"))
 	if err != nil {
@@ -156,7 +166,88 @@ func TestBackfillEngine_CleansCompletedMigrationMetadata(t *testing.T) {
 		t.Fatalf("completed migration metadata must be removed: %s", data)
 	}
 	if err := adapters.ValidateRuntimeFactLedger(data); err != nil {
-		t.Fatalf("cleaned schema-v4 ledger should be runtime-ready: %v", err)
+		t.Fatalf("cleaned schema-6 ledger should be runtime-ready: %v", err)
+	}
+	var expected, actual map[string]json.RawMessage
+	if err := json.Unmarshal(before, &expected); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(data, &actual); err != nil {
+		t.Fatal(err)
+	}
+	delete(expected, "migration")
+	if len(expected) != len(actual) {
+		t.Fatalf("cleanup changed root member count: %s", data)
+	}
+	for key, raw := range expected {
+		original, err := json.Marshal(raw)
+		if err != nil {
+			t.Fatal(err)
+		}
+		cleaned, err := json.Marshal(actual[key])
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(original) != string(cleaned) {
+			t.Fatalf("cleanup changed non-migration field %q: before=%s after=%s", key, original, cleaned)
+		}
+	}
+}
+
+func TestBackfillEngine_PreservesIncompleteMetadataWithoutRefresh(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		status  domain.MigrationStatus
+		pending []string
+		reject  bool
+	}{
+		{"partial with work", domain.MigrationStatusPartial, []string{domain.MigrationStepSourceBackfill}, false},
+		{"pending with work", domain.MigrationStatusPending, []string{domain.MigrationStepSourceBackfill}, false},
+		{"completed with work", domain.MigrationStatusCompleted, []string{domain.MigrationStepSourceBackfill}, true},
+		{"partial without work", domain.MigrationStatusPartial, []string{}, true},
+		{"pending without work", domain.MigrationStatusPending, []string{}, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root := t.TempDir()
+			version, ticket := domain.CurrentSchemaVersion, "TEST-INCOMPLETE"
+			completed := []string{}
+			if tc.status == domain.MigrationStatusPartial && len(tc.pending) > 0 {
+				completed = []string{domain.MigrationStepGitCodeFacts}
+			}
+			createTestWorkspace(t, root, ticket, domain.AgenticFactLedger{
+				SchemaVersion: &version, TicketID: &ticket,
+				Migration: &domain.MigrationInfo{SchemaVersion: version, Status: tc.status, StepsCompleted: completed, StepsPending: tc.pending},
+			})
+			path := filepath.Join(root, ticket, "agentic_metrics.json")
+			before, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			report, err := NewEngine().Execute(BackfillOptions{WorkspacesDir: root, Source: "codex"})
+			if err != nil || len(report.Results) != 1 {
+				t.Fatalf("backfill result: %+v, %v", report, err)
+			}
+			after, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tc.reject {
+				if report.Results[0].Error == nil || string(before) != string(after) {
+					t.Fatalf("inconsistent metadata silently completed or changed: %+v\n%s", report.Results[0], after)
+				}
+				return
+			}
+			if report.Results[0].Error != nil {
+				t.Fatalf("valid resumable state was rejected: %+v", report.Results[0])
+			}
+			var got adapters.AgenticFactLedgerDTO
+			if err := json.Unmarshal(after, &got); err != nil {
+				t.Fatal(err)
+			}
+			if got.Migration == nil || got.Migration.Status != string(tc.status) || !reflect.DeepEqual(got.Migration.StepsPending, tc.pending) {
+				t.Fatalf("backfill cleared unresolved migration state: %+v", got.Migration)
+			}
+		})
 	}
 }
 
@@ -557,8 +648,17 @@ func TestBackfillEngine_MultiMachineLifecycle(t *testing.T) {
 	if loadedB2.SchemaVersion == nil || *loadedB2.SchemaVersion != domain.CurrentSchemaVersion {
 		t.Errorf("expected schema_version %d, got %v", domain.CurrentSchemaVersion, loadedB2.SchemaVersion)
 	}
-	if loadedB2.Migration == nil || loadedB2.Migration.Status != "completed" || !strings.Contains(loadedB2.Migration.Notes, "dropped ownerless skills=0 task_links=0") {
-		t.Errorf("completed explicit migration must retain its drop audit: %+v", loadedB2.Migration)
+	if loadedB2.Migration != nil {
+		t.Errorf("completed explicit migration must omit persisted metadata: %+v", loadedB2.Migration)
+	}
+	var completionAudit string
+	for _, result := range reportB.Results {
+		if result.TicketID == tidB {
+			completionAudit = result.Notes
+		}
+	}
+	if !strings.Contains(completionAudit, "dropped ownerless skills=0 task_links=0") {
+		t.Errorf("completed explicit migration must report its drop audit: %s", completionAudit)
 	}
 
 	if err := adapters.ValidateRuntimeFactLedger(dataB2); err != nil {

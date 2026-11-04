@@ -32,14 +32,14 @@ Generation is deferred to the final pre-commit step, with explicit Codex source,
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 10
-- **Active Agent Duration:** 13m 34s (excludes user wait time)
-- **Context Window Health:** ELEVATED — Root agent peak 115.2k tokens (58% of 200k healthy ceiling, 0 compactions) | Subagents peak 94.7k (Tester)
+- **Active Agent Duration:** 24m 49s (excludes user wait time)
+- **Context Window Health:** HEALTHY — Root agent peak 124.0k tokens (28% of 450k healthy ceiling, 0 compactions) | Subagents peak 94.7k (Tester)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 1.0 avg turns/run (peak: 1 turns) | Planner 1.0, Coder 1.0, Tester 1.0, Reviewer-behavior 1.0, Reviewer-tests 1.0
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 6,774 reasoning tokens (15.1% of generated output)
-- **Tool Health & Self-Correction:** 146 tool calls (13 self-corrections, 91.1% success rate)
+- **Reasoning Effort:** 7,078 reasoning tokens (15.0% of generated output)
+- **Tool Health & Self-Correction:** 154 tool calls (13 self-corrections, 91.6% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** No execution anomalies detected (clean session).
@@ -54,20 +54,14 @@ Generation is deferred to the final pre-commit step, with explicit Codex source,
 | **planner** | 1 | 57,575 | 3,713 | 442,496 | 88.5% | 59.8k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **coder** | 1 | 60,842 | 2,980 | 1,396,864 | 95.8% | 85.1k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **tester** | 1 | 26,984 | 1,880 | 617,216 | 95.8% | 94.7k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Unknown** | 3 | 199,015 | 21,916 | 7,752,832 | 97.5% | 115.2k | ELEVATED | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
+| **Unknown** | 3 | 207,589 | 23,968 | 9,049,472 | 97.8% | 124.0k | HEALTHY | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
 | **reviewer-behavior** | 1 | 39,818 | 3,353 | 306,304 | 88.5% | 54.5k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **reviewer-tests** | 1 | 66,072 | 4,177 | 375,936 | 85.1% | 48.2k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **8** | **450,306** | **38,019** | **10,891,648** | **96.0%** | **115.2k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 8 unavailable / 8 invocations)** |
+| **Total** | **8** | **458,880** | **40,071** | **12,188,288** | **96.4%** | **124.0k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 8 unavailable / 8 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
 | **gpt-6-luna** | 2 | 88,318 | 5,471 | 399,232 | 81.9% | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **gpt-6.1-sol** | 6 | 361,988 | 32,548 | 10,492,416 | 96.7% | Unavailable (0 observed, 0 partial, 6 unavailable / 6 invocations) |
-| **Total** | **8** | **450,306** | **38,019** | **10,891,648** | **96.0%** | **Unavailable (0 observed, 0 partial, 8 unavailable / 8 invocations)** |
-
-Capture observation finalized: 2026-11-03T23:03:38.517792185Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 2; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 2; reserved bytes: 938518. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
-Owner codex/01a1a3a1-9fc9-7682-b2ca-e91bffa1fec6: current; last successful source read 2026-11-03T23:03:38.486685968Z; accepted source checkpoint 2026-11-03T22:58:28.531Z.
-Owner codex/01a1a3a2-87b8-7281-a6db-9df85e216c2b: current; last successful source read 2026-11-03T23:03:38.507116278Z; accepted source checkpoint 2026-11-03T22:59:17.227Z.
-
-Final telemetry validation: all eight expected source session IDs are present, including the root, five native children and two independently rooted delegated reviewers. Source is Codex and ticket type is fix; no prior sessions were replaced. Generation completed without source errors; capture diagnostics report no pending, failed or unresolved child evidence. Cost evidence is unavailable. Configured Go/TypeScript code roots exclude this Python test change, so zero code counts do not mean no source changed. The installed shared launcher is absent; the freshly built native was used directly from this checkout. Native help confirms source/nonce/title flags; wrapper-only --al-offline/--al-project flags were rejected before extraction and omitted on the successful native invocation. An explicit ticket title was required and supplied. Raw logs/transcripts remain outside Git.
+| **gpt-6.1-sol** | 6 | 370,562 | 34,600 | 11,789,056 | 97.0% | Unavailable (0 observed, 0 partial, 6 unavailable / 6 invocations) |
+| **Total** | **8** | **458,880** | **40,071** | **12,188,288** | **96.4%** | **Unavailable (0 observed, 0 partial, 8 unavailable / 8 invocations)** |

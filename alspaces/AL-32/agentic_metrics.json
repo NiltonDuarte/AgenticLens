@@ -1,11 +1,5 @@
 {
-  "schema_version": 4,
-  "ticket_id": "AL-32",
-  "ticket_title": "Telemetry Event Pruning, Database Message Stripping, and Schema V3 Migration",
-  "ticket_type": "feat",
-  "started_at": "2026-10-19T17:13:13.091000+00:00",
-  "completed_at": "2026-10-19T21:56:37.752000+00:00",
-  "updated_at": "2026-10-27T08:05:14.604111001Z",
+  "anomalies": [],
   "code": {
     "lines_added": 1448,
     "lines_deleted": 158,
@@ -16,6 +10,8 @@
     "files_changed": 16,
     "sdlc_iterations": 9
   },
+  "completed_at": "2026-10-19T21:56:37.752000+00:00",
+  "schema_version": 6,
   "sessions": [
     {
       "id": "ses_eaa8f6169ffeZLjrnSr5OkH3PQ",
@@ -30,34 +26,17 @@
           "completed_at": "2026-10-19T18:36:39.658000+00:00",
           "active_duration_seconds": 193,
           "turns": 54,
-          "tokens": {
-            "input": 246552,
-            "output": 4798,
-            "cache_read": 3398500,
-            "reasoning": 8074,
-            "peak_context": 102633
-          },
+          "tokens": {"input": 246552, "output": 4798, "cache_read": 3398500, "reasoning": 8074, "peak_context": 102633},
           "cost_usd": 0.488072,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0.488072},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "grep",
-          "calls": 21,
-          "errors": 0
-        },
-        {
-          "name": "mcp-gateway_mcp-find",
-          "calls": 3,
-          "errors": 0
-        },
-        {
-          "name": "read",
-          "calls": 39,
-          "errors": 2
-        }
+        {"name": "grep", "calls": 21, "errors": 0},
+        {"name": "mcp-gateway_mcp-find", "calls": 3, "errors": 0},
+        {"name": "read", "calls": 39, "errors": 2}
       ],
       "anomalies": []
     },
@@ -74,55 +53,22 @@
           "completed_at": "2026-10-19T18:33:11.415000+00:00",
           "active_duration_seconds": 632,
           "turns": 122,
-          "tokens": {
-            "input": 803462,
-            "output": 13573,
-            "cache_read": 9444305,
-            "reasoning": 27238,
-            "peak_context": 167278
-          },
+          "tokens": {"input": 803462, "output": 13573, "cache_read": 9444305, "reasoning": 27238, "peak_context": 167278},
           "cost_usd": 1.463961,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 1.463961},
           "compactions": 1,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "bash",
-          "calls": 50,
-          "errors": 2
-        },
-        {
-          "name": "edit",
-          "calls": 2,
-          "errors": 0
-        },
-        {
-          "name": "glob",
-          "calls": 6,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 15,
-          "errors": 0
-        },
-        {
-          "name": "read",
-          "calls": 45,
-          "errors": 0
-        }
+        {"name": "bash", "calls": 50, "errors": 2},
+        {"name": "edit", "calls": 2, "errors": 0},
+        {"name": "glob", "calls": 6, "errors": 0},
+        {"name": "grep", "calls": 15, "errors": 0},
+        {"name": "read", "calls": 45, "errors": 0}
       ],
       "anomalies": [
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 50,
-            "context_tokens": 165739,
-            "threshold": "160000"
-          }
-        }
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 50, "context_tokens": 165739, "threshold": "160000"}}
       ]
     },
     {
@@ -138,80 +84,25 @@
           "completed_at": "2026-10-19T18:21:59.647000+00:00",
           "active_duration_seconds": 2601,
           "turns": 297,
-          "tokens": {
-            "input": 4256770,
-            "output": 46640,
-            "cache_read": 21747639,
-            "reasoning": 63888,
-            "peak_context": 168494
-          },
+          "tokens": {"input": 4256770, "output": 46640, "cache_read": 21747639, "reasoning": 63888, "peak_context": 168494},
           "cost_usd": 5.23813,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 5.23813},
           "compactions": 2,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "bash",
-          "calls": 76,
-          "errors": 1
-        },
-        {
-          "name": "edit",
-          "calls": 37,
-          "errors": 3
-        },
-        {
-          "name": "glob",
-          "calls": 8,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 41,
-          "errors": 0
-        },
-        {
-          "name": "read",
-          "calls": 124,
-          "errors": 1
-        },
-        {
-          "name": "write",
-          "calls": 3,
-          "errors": 0
-        }
+        {"name": "bash", "calls": 76, "errors": 1},
+        {"name": "edit", "calls": 37, "errors": 3},
+        {"name": "glob", "calls": 8, "errors": 0},
+        {"name": "grep", "calls": 41, "errors": 0},
+        {"name": "read", "calls": 124, "errors": 1},
+        {"name": "write", "calls": 3, "errors": 0}
       ],
       "anomalies": [
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 94,
-            "context_tokens": 160108,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 201,
-            "token_delta": 85217,
-            "context_tokens": 85217,
-            "threshold": "80000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "turn": 98,
-            "token_delta": 60128,
-            "context_tokens": 60128,
-            "threshold": "40000"
-          }
-        }
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 94, "context_tokens": 160108, "threshold": "160000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 201, "token_delta": 85217, "context_tokens": 85217, "threshold": "80000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 98, "token_delta": 60128, "context_tokens": 60128, "threshold": "40000"}}
       ]
     },
     {
@@ -227,76 +118,26 @@
           "completed_at": "2026-10-19T17:26:19.342000+00:00",
           "active_duration_seconds": 430,
           "turns": 62,
-          "tokens": {
-            "input": 307007,
-            "output": 18026,
-            "cache_read": 4760854,
-            "reasoning": 25734,
-            "peak_context": 152655
-          },
+          "tokens": {"input": 307007, "output": 18026, "cache_read": 4760854, "reasoning": 25734, "peak_context": 152655},
           "cost_usd": 0.751419,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 0.751419},
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {
-          "name": "glob",
-          "calls": 3,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 15,
-          "errors": 3
-        },
-        {
-          "name": "list_mcp_resource_templates",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "list_mcp_resources",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "mcp-gateway_code-mode",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "mcp-gateway_mcp-add",
-          "calls": 1,
-          "errors": 1
-        },
-        {
-          "name": "mcp-gateway_mcp-exec",
-          "calls": 3,
-          "errors": 3
-        },
-        {
-          "name": "mcp-gateway_mcp-find",
-          "calls": 5,
-          "errors": 0
-        },
-        {
-          "name": "read",
-          "calls": 33,
-          "errors": 0
-        }
+        {"name": "glob", "calls": 3, "errors": 0},
+        {"name": "grep", "calls": 15, "errors": 3},
+        {"name": "list_mcp_resource_templates", "calls": 1, "errors": 0},
+        {"name": "list_mcp_resources", "calls": 1, "errors": 0},
+        {"name": "mcp-gateway_code-mode", "calls": 1, "errors": 0},
+        {"name": "mcp-gateway_mcp-add", "calls": 1, "errors": 1},
+        {"name": "mcp-gateway_mcp-exec", "calls": 3, "errors": 3},
+        {"name": "mcp-gateway_mcp-find", "calls": 5, "errors": 0},
+        {"name": "read", "calls": 33, "errors": 0}
       ],
       "anomalies": [
-        {
-          "rule_id": "TOOL_RETRY_STREAK",
-          "severity": "WARNING",
-          "context": {
-            "tool_name": "mcp-gateway_mcp-exec",
-            "turn": 58,
-            "count": 3,
-            "threshold": "3"
-          }
-        }
+        {"rule_id": "TOOL_RETRY_STREAK", "severity": "WARNING", "context": {"tool_name": "mcp-gateway_mcp-exec", "turn": 58, "count": 3, "threshold": "3"}}
       ]
     },
     {
@@ -311,97 +152,35 @@
           "completed_at": "2026-10-19T21:56:37.752000+00:00",
           "active_duration_seconds": 6085,
           "turns": 174,
-          "tokens": {
-            "input": 1904004,
-            "output": 29264,
-            "cache_read": 14673777,
-            "reasoning": 19871,
-            "peak_context": 168033
-          },
+          "tokens": {"input": 1904004, "output": 29264, "cache_read": 14673777, "reasoning": 19871, "peak_context": 168033},
           "cost_usd": 2.712793,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 2.712793},
           "compactions": 1,
           "user_iterations": 9
         }
       ],
       "tools": [
-        {
-          "name": "bash",
-          "calls": 91,
-          "errors": 0
-        },
-        {
-          "name": "glob",
-          "calls": 9,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 5,
-          "errors": 0
-        },
-        {
-          "name": "question",
-          "calls": 2,
-          "errors": 0
-        },
-        {
-          "name": "read",
-          "calls": 27,
-          "errors": 1
-        },
-        {
-          "name": "skill",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "t3-code_link_pull_request",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "t3-code_list_thread_pull_requests",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "task",
-          "calls": 5,
-          "errors": 0
-        },
-        {
-          "name": "todowrite",
-          "calls": 10,
-          "errors": 0
-        },
-        {
-          "name": "write",
-          "calls": 5,
-          "errors": 0
-        }
+        {"name": "bash", "calls": 91, "errors": 0},
+        {"name": "glob", "calls": 9, "errors": 0},
+        {"name": "grep", "calls": 5, "errors": 0},
+        {"name": "question", "calls": 2, "errors": 0},
+        {"name": "read", "calls": 27, "errors": 1},
+        {"name": "skill", "calls": 1, "errors": 0},
+        {"name": "t3-code_link_pull_request", "calls": 1, "errors": 0},
+        {"name": "t3-code_list_thread_pull_requests", "calls": 1, "errors": 0},
+        {"name": "task", "calls": 5, "errors": 0},
+        {"name": "todowrite", "calls": 10, "errors": 0},
+        {"name": "write", "calls": 5, "errors": 0}
       ],
       "anomalies": [
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 145,
-            "context_tokens": 160796,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "turn": 158,
-            "token_delta": 68949,
-            "context_tokens": 68949,
-            "threshold": "40000"
-          }
-        }
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 145, "context_tokens": 160796, "threshold": "160000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 158, "token_delta": 68949, "context_tokens": 68949, "threshold": "40000"}}
       ]
     }
   ],
-  "anomalies": []
+  "started_at": "2026-10-19T17:13:13.091000+00:00",
+  "ticket_id": "AL-32",
+  "ticket_title": "Telemetry Event Pruning, Database Message Stripping, and Schema V3 Migration",
+  "ticket_type": "feat",
+  "updated_at": "2026-10-27T08:05:14.604111001Z"
 }

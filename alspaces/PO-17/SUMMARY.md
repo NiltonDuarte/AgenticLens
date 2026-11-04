@@ -26,14 +26,14 @@ Final verification: full make passed on integrated head 39470c899c8f383ded697523
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 11
-- **Active Agent Duration:** 8m 27s (excludes user wait time)
-- **Context Window Health:** ELEVATED — Root agent peak 145.3k tokens (73% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
-- **Role Effort Distribution (Subagents):** N/A
+- **Active Agent Duration:** 14m 57s (excludes user wait time)
+- **Context Window Health:** HEALTHY — Root agent peak 150.6k tokens (34% of 450k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 2,378 reasoning tokens (7.9% of generated output)
-- **Tool Health & Self-Correction:** 42 tool calls (4 self-corrections, 90.5% success rate)
+- **Reasoning Effort:** 2,718 reasoning tokens (8.3% of generated output)
+- **Tool Health & Self-Correction:** 47 tool calls (5 self-corrections, 89.4% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** No execution anomalies detected (clean session).
@@ -45,13 +45,11 @@ Final verification: full make passed on integrated head 39470c899c8f383ded697523
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 130,893 | 27,655 | 5,172,224 | 97.5% | 145.3k | ELEVATED | $0.00 |
-| **Total** | **1** | **130,893** | **27,655** | **5,172,224** | **97.5%** | **145.3k** | **ELEVATED** | **$0.00** |
+| **Unknown** | 1 | 134,341 | 29,874 | 6,355,456 | 97.9% | 150.6k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **1** | **134,341** | **29,874** | **6,355,456** | **97.9%** | **150.6k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 1 | 130,893 | 27,655 | 5,172,224 | 97.5% | $0.00 |
-| **Total** | **1** | **130,893** | **27,655** | **5,172,224** | **97.5%** | **$0.00** |
-
-Final telemetry verification: literal nonce generation with --source codex and --ticket-type docs resolved exactly the independent root 01a19266-f5c8-77e3-a2c0-f9f0cf9fe06a, matching local rollout metadata and this assigned worktree. Ledger has one nonempty invocation, no children and no manager/AL-55/foreign-harness sessions. No pre-existing PO-17 ledger existed. Raw transcripts remain outside Git. Extraction snapshot excludes later verification/commit/push/PR bookkeeping; numeric zero cost remains unavailable billing evidence under the deferred cost limitation.
+| **gpt-6.1-sol** | 1 | 134,341 | 29,874 | 6,355,456 | 97.9% | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **1** | **134,341** | **29,874** | **6,355,456** | **97.9%** | **Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations)** |

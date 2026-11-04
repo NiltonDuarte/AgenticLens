@@ -12,14 +12,14 @@ Telemetry expectation: Codex root 01a19e1f-2c2e-7682-b59e-cb439d5253b3, confirme
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 4
-- **Active Agent Duration:** 4m 51s (excludes user wait time)
-- **Context Window Health:** HEALTHY — Root agent peak 62.1k tokens (31% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Active Agent Duration:** 6m 10s (excludes user wait time)
+- **Context Window Health:** HEALTHY — Root agent peak 64.2k tokens (14% of 450k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 1,217 reasoning tokens (10.5% of generated output)
-- **Tool Health & Self-Correction:** 31 tool calls (3 self-corrections, 90.3% success rate)
+- **Reasoning Effort:** 1,241 reasoning tokens (10.0% of generated output)
+- **Tool Health & Self-Correction:** 34 tool calls (4 self-corrections, 88.2% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** No execution anomalies detected (clean session).
@@ -31,14 +31,14 @@ Telemetry expectation: Codex root 01a19e1f-2c2e-7682-b59e-cb439d5253b3, confirme
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 78,256 | 10,377 | 1,573,376 | 95.3% | 62.1k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **1** | **78,256** | **10,377** | **1,573,376** | **95.3%** | **62.1k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations)** |
+| **Unknown** | 1 | 79,757 | 11,180 | 1,953,152 | 96.1% | 64.2k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **1** | **79,757** | **11,180** | **1,953,152** | **96.1%** | **64.2k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 1 | 78,256 | 10,377 | 1,573,376 | 95.3% | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **1** | **78,256** | **10,377** | **1,573,376** | **95.3%** | **Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations)** |
+| **gpt-6.1-sol** | 1 | 79,757 | 11,180 | 1,953,152 | 96.1% | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **1** | **79,757** | **11,180** | **1,953,152** | **96.1%** | **Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations)** |
 
 ## Iteration 02: compact format steering
 

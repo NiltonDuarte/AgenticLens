@@ -58,19 +58,20 @@ Final explicit Codex extraction found root 01a19201-e9f1-7001-922f-3ff5d6344a64 
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 12
-- **Active Agent Duration:** 1h 13m (excludes user wait time)
-- **Context Window Health:** ELEVATED — Root agent peak 147.6k tokens (74% of 200k healthy ceiling, 0 compactions) | Subagents peak 163.8k (Reviewer)
-- **Role Effort Distribution (Subagents):** N/A
+- **Active Agent Duration:** 1h 30m (excludes user wait time)
+- **Context Window Health:** HEALTHY — Root agent peak 150.0k tokens (33% of 450k healthy ceiling, 0 compactions) | Subagents peak 163.8k (Reviewer)
+- **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 2.8 avg turns/run (peak: 4 turns) | Planner 2.5, Coder 3.0, Tester 2.5, Reviewer 3.0
 - **Test-to-Production Code Ratio:** 0.6:1 (+142 test lines / +220 prod lines)
 - **Code Delivered:** +362 / -707 lines across 36 code files (excluding docs)
-- **Reasoning Effort:** 17,469 reasoning tokens (13.1% of generated output)
-- **Tool Health & Self-Correction:** 429 tool calls (16 self-corrections, 96.3% success rate)
+- **Reasoning Effort:** 17,810 reasoning tokens (13.0% of generated output)
+- **Tool Health & Self-Correction:** 436 tool calls (16 self-corrections, 96.3% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
+- **Status:** 3 execution anomalies detected (1 CRITICAL, 2 WARNING).
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: tester <-> reviewer (5 cycles) — Subagent roles 'tester' and 'reviewer' alternated for 5 consecutive cycles.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (162.5k tokens) — Context tokens reached 162.5k, breaching the 160k warning ceiling.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (3 cycles) — Subagent roles 'coder' and 'tester' alternated for 3 consecutive cycles.
 
 ### Agentic Execution Metrics
 
@@ -79,18 +80,18 @@ Final explicit Codex extraction found root 01a19201-e9f1-7001-922f-3ff5d6344a64 
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **planner** | 2 | 283,773 | 10,586 | 1,695,488 | 85.7% | 102.2k | ELEVATED | $0.00 |
-| **coder** | 2 | 297,713 | 32,774 | 9,584,000 | 97.0% | 148.9k | ELEVATED | $0.00 |
-| **tester** | 2 | 191,320 | 21,583 | 7,603,968 | 97.5% | 142.8k | ELEVATED | $0.00 |
-| **reviewer** | 2 | 234,357 | 11,852 | 5,836,288 | 96.1% | 163.8k | ELEVATED | $0.00 |
-| **rootagent** | 2 | 245,089 | 39,495 | 20,917,632 | 98.8% | 147.6k | ELEVATED | $0.00 |
-| **Total** | **10** | **1,252,252** | **116,290** | **45,637,376** | **97.3%** | **163.8k** | **ELEVATED** | **$0.00** |
+| **planner** | 2 | 283,773 | 10,586 | 1,695,488 | 85.7% | 102.2k | HEALTHY | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **coder** | 2 | 297,713 | 32,774 | 9,584,000 | 97.0% | 148.9k | HEALTHY | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **tester** | 2 | 191,320 | 21,583 | 7,603,968 | 97.5% | 142.8k | HEALTHY | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **reviewer** | 2 | 234,357 | 11,852 | 5,836,288 | 96.1% | 163.8k | HEALTHY | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **Unknown** | 2 | 248,415 | 42,061 | 22,336,640 | 98.9% | 150.0k | HEALTHY | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **Total** | **10** | **1,255,578** | **118,856** | **47,056,384** | **97.4%** | **163.8k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 10 unavailable / 10 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 10 | 1,252,252 | 116,290 | 45,637,376 | 97.3% | $0.00 |
-| **Total** | **10** | **1,252,252** | **116,290** | **45,637,376** | **97.3%** | **$0.00** |
+| **gpt-6.1-sol** | 10 | 1,255,578 | 118,856 | 47,056,384 | 97.4% | Unavailable (0 observed, 0 partial, 10 unavailable / 10 invocations) |
+| **Total** | **10** | **1,255,578** | **118,856** | **47,056,384** | **97.4%** | **Unavailable (0 observed, 0 partial, 10 unavailable / 10 invocations)** |
 
 ## Management review corrections F3/F4
 

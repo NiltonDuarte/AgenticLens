@@ -1,0 +1,1148 @@
+{
+  "release": "v3.0.0-rc.125+86bea59",
+  "pre_backfill_commit": "8d57793c015c1d4dc7cd2c353ac316306c7d0bde",
+  "source": "codex",
+  "source_home": "/home/niltonduarte/.codex",
+  "codex_ledgers": 51,
+  "non_codex_ledgers_preserved": 68,
+  "totals": {
+    "other_harness_sessions_preserved": 513,
+    "before_sessions": 605,
+    "before_codex_sessions": 585,
+    "before_invocations": 607,
+    "before_skills": 3,
+    "before_delegations": 25,
+    "after_sessions": 605,
+    "after_codex_sessions": 585,
+    "after_invocations": 607,
+    "after_skills": 73,
+    "after_delegations": 395,
+    "changed_codex_sessions": 292
+  },
+  "cli_summary": "119 scanned; 119 completed; 0 partial; 68 no-Codex-owner diagnostics; 51 selected-source refreshes",
+  "scope_note": "CLI metadata and summary rewrites for the 68 ledgers without Codex owners restored to the pre-backfill commit. All 513 non-Codex session snapshots verified unchanged before scope restoration.",
+  "ledgers": [
+    {
+      "path": "alspaces/AL-43/agentic_metrics.json",
+      "before_sha256": "1ed63b9265a678fef033b6d3811c0866e9e88cf2b9d209aa8265bba3044b17e5",
+      "after_sha256": "002c59f5d788c814d4a86c7d1f842f4796580f260ec338c153c445d62d715e24",
+      "before": {
+        "sessions": 10,
+        "codex_sessions": 10,
+        "invocations": 10,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 10,
+        "codex_sessions": 10,
+        "invocations": 10,
+        "skills": 1,
+        "delegations": 8
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 10,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/AL-45/agentic_metrics.json",
+      "before_sha256": "49c3f00406aecf12ab7cc210ca703a57c56ce8470a56492336a06f1e6ab16816",
+      "after_sha256": "cc74486c9b3af243adcb04d0df54134f21b023953ec254a45d170dd184a79291",
+      "before": {
+        "sessions": 14,
+        "codex_sessions": 14,
+        "invocations": 14,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 14,
+        "codex_sessions": 14,
+        "invocations": 14,
+        "skills": 2,
+        "delegations": 13
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 14,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/AL-46/agentic_metrics.json",
+      "before_sha256": "6f0fcff876551369374086503bdacbf251a54e7954a72de3f2d864839f651b0e",
+      "after_sha256": "281017b676986b35ace10b2ad803c17c201459c7ee1b8c1b6b5883aef0222077",
+      "before": {
+        "sessions": 9,
+        "codex_sessions": 9,
+        "invocations": 9,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 9,
+        "codex_sessions": 9,
+        "invocations": 9,
+        "skills": 1,
+        "delegations": 9
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 9,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/AL-47/agentic_metrics.json",
+      "before_sha256": "7105d9567338432fba55f1c731254991a9b28e22d03605a5abcdca5ce56d2744",
+      "after_sha256": "70f675b91c811e89a22ea64eed04161363ff0b58f4e807843015a3c600896a17",
+      "before": {
+        "sessions": 9,
+        "codex_sessions": 9,
+        "invocations": 9,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 9,
+        "codex_sessions": 9,
+        "invocations": 9,
+        "skills": 1,
+        "delegations": 8
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 9,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/AL-48/agentic_metrics.json",
+      "before_sha256": "842029cf56305a8147c4e13ccf1e795634206a8a4ba13b59959702ecde230b24",
+      "after_sha256": "73ae4bd8446c0709ac494d4e4a89ae4da9105471481f7ff27697be231023c8ad",
+      "before": {
+        "sessions": 5,
+        "codex_sessions": 5,
+        "invocations": 5,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 5,
+        "codex_sessions": 5,
+        "invocations": 5,
+        "skills": 1,
+        "delegations": 4
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 5,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/AL-49/agentic_metrics.json",
+      "before_sha256": "92807cb9ca7c27b8896baccb8784e987abf395d6d88a2cf9f775795fbaa01481",
+      "after_sha256": "bf83733f3ffa185d9c286e396dd30f4c81d7f509b4902f4e5bb74ba75f7e50a6",
+      "before": {
+        "sessions": 5,
+        "codex_sessions": 5,
+        "invocations": 5,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 5,
+        "codex_sessions": 5,
+        "invocations": 5,
+        "skills": 1,
+        "delegations": 4
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 5,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/AL-50/agentic_metrics.json",
+      "before_sha256": "5592a461d946cc4a7c7edfcc76f24004f97540b02d66da37bdbccbcb820fe621",
+      "after_sha256": "dc05d42c8b9b138fab4ffd43a1efcdae2cab334aa0536ecb5a98a52d7947daba",
+      "before": {
+        "sessions": 5,
+        "codex_sessions": 5,
+        "invocations": 5,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 5,
+        "codex_sessions": 5,
+        "invocations": 5,
+        "skills": 1,
+        "delegations": 4
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 5,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/AL-51/agentic_metrics.json",
+      "before_sha256": "c695b6c0445a3d75a76c07a2527186a2cd6bb9604692a2e48250f8c77c7f036e",
+      "after_sha256": "ebe9d650f6bd8c806d8e24233791dfa2aa1c64dbfed72b02dfeaa20aca9d2da5",
+      "before": {
+        "sessions": 14,
+        "codex_sessions": 14,
+        "invocations": 14,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 14,
+        "codex_sessions": 14,
+        "invocations": 14,
+        "skills": 3,
+        "delegations": 14
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 14,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/AL-52/agentic_metrics.json",
+      "before_sha256": "da98b29e88adce19025aded294d92687e10ce763bb7b99491b95220a0973a60d",
+      "after_sha256": "5d5d1880c98305bd9408231e83847d66211fe7fb51e88b84147d5e05ea577a03",
+      "before": {
+        "sessions": 5,
+        "codex_sessions": 5,
+        "invocations": 5,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 5,
+        "codex_sessions": 5,
+        "invocations": 5,
+        "skills": 1,
+        "delegations": 4
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 5,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/AL-53/agentic_metrics.json",
+      "before_sha256": "253cec54e0019aa9e62b38ad15fa734e892fa2ae83487c2ab393406f0bb2f4ab",
+      "after_sha256": "ff9e0c70e980ad5394c34a167b589027b85e2a72f20d10660f15ccbe3922cc32",
+      "before": {
+        "sessions": 5,
+        "codex_sessions": 5,
+        "invocations": 5,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 5,
+        "codex_sessions": 5,
+        "invocations": 5,
+        "skills": 1,
+        "delegations": 4
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 5,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/AL-54/agentic_metrics.json",
+      "before_sha256": "346a7f17ac7d741be2c837c44fae48d01617cd7b5c81881e6625ebb66be5cb8d",
+      "after_sha256": "2754d019a018ea241dc1f89a9bcd119c4e811d1def1c0c796cf47b6f1042f91a",
+      "before": {
+        "sessions": 5,
+        "codex_sessions": 5,
+        "invocations": 5,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 5,
+        "codex_sessions": 5,
+        "invocations": 5,
+        "skills": 1,
+        "delegations": 4
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 5,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/AL-55/agentic_metrics.json",
+      "before_sha256": "4378b0be514f73df81ff11a2c05726d607a662d1bdb17e9da8807416d219a693",
+      "after_sha256": "93b2014fa67167f6bb92d7ce000b5ec47c43a09eabdaeea9476e1f42a7cb8089",
+      "before": {
+        "sessions": 5,
+        "codex_sessions": 5,
+        "invocations": 5,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 5,
+        "codex_sessions": 5,
+        "invocations": 5,
+        "skills": 0,
+        "delegations": 4
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 5,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/AL-56/agentic_metrics.json",
+      "before_sha256": "dd1a7524325e162a01f4c0bfe540c85d7b3712e98d5b6fb901ed5b289d71c688",
+      "after_sha256": "e29c0a826e664115ba7563bc62dfb3d258c338dd40a07d417cd094afbe786c01",
+      "before": {
+        "sessions": 40,
+        "codex_sessions": 27,
+        "invocations": 42,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 40,
+        "codex_sessions": 27,
+        "invocations": 42,
+        "skills": 1,
+        "delegations": 25
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 27,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/AL-57/agentic_metrics.json",
+      "before_sha256": "6859e3e384082dd4b896af5576bb7af81bc784a457a180312cf6988bc1f11843",
+      "after_sha256": "2d90db022610253561085e8e786899533ea9a5b02fa3f36316abfda42e209db6",
+      "before": {
+        "sessions": 9,
+        "codex_sessions": 9,
+        "invocations": 9,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 9,
+        "codex_sessions": 9,
+        "invocations": 9,
+        "skills": 3,
+        "delegations": 8
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 6,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/AL-58/agentic_metrics.json",
+      "before_sha256": "5d1cc9ebbee32735e22d9a0861ab8b2c50a527a65a3cfec7b627115f8d2f25e6",
+      "after_sha256": "01ad014c10198ee67c4342f7e07eab6e7081c63c4ae6a5c63e7941eb88fc829e",
+      "before": {
+        "sessions": 10,
+        "codex_sessions": 10,
+        "invocations": 10,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 10,
+        "codex_sessions": 10,
+        "invocations": 10,
+        "skills": 7,
+        "delegations": 9
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 10,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/AL-59/agentic_metrics.json",
+      "before_sha256": "43aafe4715f59e3e90fbbe339722493d01221e995b22137ec457d28df35cbcec",
+      "after_sha256": "ac8531a314607d23ee03bb0bfde4fd89f20a4eb3a948984fa125f3d7582d4166",
+      "before": {
+        "sessions": 1,
+        "codex_sessions": 1,
+        "invocations": 1,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 1,
+        "codex_sessions": 1,
+        "invocations": 1,
+        "skills": 1,
+        "delegations": 0
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 1,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/AL-60/agentic_metrics.json",
+      "before_sha256": "7c38627eff820e0967b193fe88928bdec8b95f191f640d11cbf4d5c0b94650be",
+      "after_sha256": "de0cf3fc2b0e65492ebc9d4bbb8567e1865d49807fbe0468378aa286e6eb9500",
+      "before": {
+        "sessions": 54,
+        "codex_sessions": 54,
+        "invocations": 54,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 54,
+        "codex_sessions": 54,
+        "invocations": 54,
+        "skills": 8,
+        "delegations": 10
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 1,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/AL-61/agentic_metrics.json",
+      "before_sha256": "ee6dd69c90829c3c716d1a90b4e63e76741b2d41b103d83c5c3908d8092c84e2",
+      "after_sha256": "83396bfa92edf91bc2405a081c99418296ab95d688cfdfa37efd576c4fe774e2",
+      "before": {
+        "sessions": 10,
+        "codex_sessions": 10,
+        "invocations": 10,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 10,
+        "codex_sessions": 10,
+        "invocations": 10,
+        "skills": 8,
+        "delegations": 9
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 1,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/AL-62/agentic_metrics.json",
+      "before_sha256": "401995a2367ebaff7289b286e1ef5cf491eadd2ef62fedc26971f0a7416db5fd",
+      "after_sha256": "6391077a4c528a3a027b0e61ab965a6995c3f30f34224dc0df63c2b1d0baa874",
+      "before": {
+        "sessions": 26,
+        "codex_sessions": 26,
+        "invocations": 26,
+        "skills": 3,
+        "delegations": 25
+      },
+      "after": {
+        "sessions": 26,
+        "codex_sessions": 26,
+        "invocations": 26,
+        "skills": 3,
+        "delegations": 25
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 8,
+      "pending_steps": []
+    },
+    {
+      "path": "alspaces/AL-68/agentic_metrics.json",
+      "before_sha256": "a11b5c7b9bbe3b24edfdd17efb9ff2d5914817759c0a5ba0566d95998f151815",
+      "after_sha256": "ce4efd097fe457c161e885da1a99a5c5d227af9e1c26c25b6971445d44449e89",
+      "before": {
+        "sessions": 199,
+        "codex_sessions": 199,
+        "invocations": 199,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 199,
+        "codex_sessions": 199,
+        "invocations": 199,
+        "skills": 5,
+        "delegations": 110
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 77,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/AL-68/iterations/05/agentic_metrics.json",
+      "before_sha256": "bff15c5b0450bcb4aa2ae002a398e9b3566b8b383a07b3b0cd46c9e814e0ec31",
+      "after_sha256": "ed7ce78e13a8dabdfcd587ed2042422ec3d93bfa2626df6692995d7f6b936850",
+      "before": {
+        "sessions": 1,
+        "codex_sessions": 1,
+        "invocations": 1,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 1,
+        "codex_sessions": 1,
+        "invocations": 1,
+        "skills": 1,
+        "delegations": 0
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 1,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/AL-76/agentic_metrics.json",
+      "before_sha256": "e390d37cb3082a77b544a05bb68d8402d772974f4a5a580d673cf4d0fe7b8cb4",
+      "after_sha256": "35f86968b97ce57b4dd66c342fec4b22b5613b1e83d9172e2005eb537de1506a",
+      "before": {
+        "sessions": 12,
+        "codex_sessions": 12,
+        "invocations": 12,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 12,
+        "codex_sessions": 12,
+        "invocations": 12,
+        "skills": 6,
+        "delegations": 7
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 1,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/FIX-10/agentic_metrics.json",
+      "before_sha256": "f4ecfaa27d3e5464f1424e003c95ab5750a2677f5352de1b72039624e6d768b9",
+      "after_sha256": "0ec8e41d05973b9f9f4cd3a8e3592ce757f48eca86dec8c0128e87ac53621809",
+      "before": {
+        "sessions": 8,
+        "codex_sessions": 1,
+        "invocations": 8,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 8,
+        "codex_sessions": 1,
+        "invocations": 8,
+        "skills": 2,
+        "delegations": 0
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 1,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/FIX-12/agentic_metrics.json",
+      "before_sha256": "3146df44b27c6f9c2fd0cef5ab46571b735029345257ca57c9cd88e275971d4d",
+      "after_sha256": "288371740fb3b60a7d3a41d8a19e1387a5918dd7762f7c1d23be89e08622312c",
+      "before": {
+        "sessions": 2,
+        "codex_sessions": 2,
+        "invocations": 2,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 2,
+        "codex_sessions": 2,
+        "invocations": 2,
+        "skills": 1,
+        "delegations": 0
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 2,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/FIX-13/agentic_metrics.json",
+      "before_sha256": "55c1b8c52e7a873fb4eef771022cab30cd255d2bd6cab59ddb558367b315f178",
+      "after_sha256": "e41b5f917a6636d64d99789e070d03c44f6b269ae04e05dc42f9d53cdc23f6f1",
+      "before": {
+        "sessions": 4,
+        "codex_sessions": 4,
+        "invocations": 4,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 4,
+        "codex_sessions": 4,
+        "invocations": 4,
+        "skills": 1,
+        "delegations": 3
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 4,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/FIX-14/agentic_metrics.json",
+      "before_sha256": "f99c5ee514a7ea50a2f198fbbb409e6837eaf80ac5e908a5bbace01ee2a0aaa2",
+      "after_sha256": "f2971d1d72c9ee63126cf9c8f2678a3f69b8b02d7aa88b81490c421fef1263ef",
+      "before": {
+        "sessions": 6,
+        "codex_sessions": 6,
+        "invocations": 6,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 6,
+        "codex_sessions": 6,
+        "invocations": 6,
+        "skills": 1,
+        "delegations": 5
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 6,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/FIX-16/agentic_metrics.json",
+      "before_sha256": "71384081f1f63836ec8afb352975a16c270a2ca638a7f82b2bbdcc5d8bcaf63f",
+      "after_sha256": "d2fdbdcf34bfc339c3ec6f1e1d12d72fc4f9aad52fa43cfa9cc3e25c736f151c",
+      "before": {
+        "sessions": 8,
+        "codex_sessions": 8,
+        "invocations": 8,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 8,
+        "codex_sessions": 8,
+        "invocations": 8,
+        "skills": 1,
+        "delegations": 5
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 1,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/FIX-8/agentic_metrics.json",
+      "before_sha256": "61b2a342ce485069d2ed82dd15d2e43c142fbaa204fbc9daa4d3c80feef23844",
+      "after_sha256": "4b98dfb6553d34c6d044de66b3b1977728d56423f7a3f735d9e42346c31629be",
+      "before": {
+        "sessions": 1,
+        "codex_sessions": 1,
+        "invocations": 1,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 1,
+        "codex_sessions": 1,
+        "invocations": 1,
+        "skills": 2,
+        "delegations": 0
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 1,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/FIX-9/agentic_metrics.json",
+      "before_sha256": "262a69ec923eca3be7756a6ca311976521f49008dfaf8d3dbf78d21d9d3917c1",
+      "after_sha256": "c9f0b4e6a2bb6359b5b853c5ea940201e5d77f590a4327e775c2bbd378baa4ff",
+      "before": {
+        "sessions": 2,
+        "codex_sessions": 2,
+        "invocations": 2,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 2,
+        "codex_sessions": 2,
+        "invocations": 2,
+        "skills": 1,
+        "delegations": 1
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 2,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/GEN-10/agentic_metrics.json",
+      "before_sha256": "bb80cfc8c309ff3abc2dbb112f86c589dbca545fc13f59dc701ea4665f35dc73",
+      "after_sha256": "2e4507adff0024caef7d6f37266296981d590ee921d7644959c79d1f72e3cc4c",
+      "before": {
+        "sessions": 1,
+        "codex_sessions": 1,
+        "invocations": 1,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 1,
+        "codex_sessions": 1,
+        "invocations": 1,
+        "skills": 0,
+        "delegations": 0
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 1,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/GEN-11/agentic_metrics.json",
+      "before_sha256": "1e0b313aaf47a2e66b725daad1f0ebbeaf017933f6471583f404cbde5b29dd3f",
+      "after_sha256": "89606422514b99cd6ad93286618e94fb960fedccb152a025d15d1eae25869a69",
+      "before": {
+        "sessions": 4,
+        "codex_sessions": 4,
+        "invocations": 4,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 4,
+        "codex_sessions": 4,
+        "invocations": 4,
+        "skills": 0,
+        "delegations": 3
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 4,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/GEN-12/agentic_metrics.json",
+      "before_sha256": "8559b749990122e1df639e111dbe5830c04aabf164a64503e8916f340997108d",
+      "after_sha256": "f721ffd42b7332ad44df0fe32a33f37b53d6fd25839afd5f16d111b7ce883f19",
+      "before": {
+        "sessions": 1,
+        "codex_sessions": 1,
+        "invocations": 1,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 1,
+        "codex_sessions": 1,
+        "invocations": 1,
+        "skills": 0,
+        "delegations": 0
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 1,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/GEN-13/agentic_metrics.json",
+      "before_sha256": "c960d7118d8508296553857406ab715808c43a534e74ae1a5e77bbc36abf5cd3",
+      "after_sha256": "d101f7aa34b26694ad9841fdf0fde3850b360da3e7edbb4f246bfd3693cfef52",
+      "before": {
+        "sessions": 1,
+        "codex_sessions": 1,
+        "invocations": 1,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 1,
+        "codex_sessions": 1,
+        "invocations": 1,
+        "skills": 0,
+        "delegations": 0
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 1,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/GEN-15/agentic_metrics.json",
+      "before_sha256": "8539bfed618396a56fe0e5e867a983e74f6ddc20d04153453a60c03888c676c9",
+      "after_sha256": "9f36f1e5ded343105e95d0852dcc4039f28754aa57e68f195088b2c1d5a2189b",
+      "before": {
+        "sessions": 8,
+        "codex_sessions": 8,
+        "invocations": 8,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 8,
+        "codex_sessions": 8,
+        "invocations": 8,
+        "skills": 0,
+        "delegations": 7
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 1,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/GEN-16/agentic_metrics.json",
+      "before_sha256": "0c74d91cca87017ed4c7ce4d437bc6f9d9f9d39e0babc0702d04119b5877de71",
+      "after_sha256": "5446c639fea8cdd58d7a160f3e23cfb56c4a76f2b556e13a3aab7f8569622980",
+      "before": {
+        "sessions": 1,
+        "codex_sessions": 1,
+        "invocations": 1,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 1,
+        "codex_sessions": 1,
+        "invocations": 1,
+        "skills": 0,
+        "delegations": 0
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 1,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/GEN-17/agentic_metrics.json",
+      "before_sha256": "759840dcd9d8e41ca5dbe2214980619dbde1135dda1fea84a787f23c89e2e210",
+      "after_sha256": "852e49d15e7d1c10e2ceec100192182c73b43cb2fdcc622d89e38f9985e83bce",
+      "before": {
+        "sessions": 14,
+        "codex_sessions": 14,
+        "invocations": 14,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 14,
+        "codex_sessions": 14,
+        "invocations": 14,
+        "skills": 1,
+        "delegations": 14
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 3,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/GEN-18/agentic_metrics.json",
+      "before_sha256": "ce928515de76ac5b724872691d0fefa49738552e90fcd727eef4a4b685f17a2c",
+      "after_sha256": "4ed6fccd9d564c356cf1d64826c72c486142f4b77c9b9251c651edfb676e8b08",
+      "before": {
+        "sessions": 1,
+        "codex_sessions": 1,
+        "invocations": 1,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 1,
+        "codex_sessions": 1,
+        "invocations": 1,
+        "skills": 0,
+        "delegations": 0
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 1,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/GEN-19/agentic_metrics.json",
+      "before_sha256": "5aa9cb6285d54286bda53b4e81705b95ad2093448c0f5f50281f3eda925e52a8",
+      "after_sha256": "ccfe4af9bf090fb94bb8596871c57b84f65e96311215ad7d571e1f32c26ca808",
+      "before": {
+        "sessions": 34,
+        "codex_sessions": 34,
+        "invocations": 34,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 34,
+        "codex_sessions": 34,
+        "invocations": 34,
+        "skills": 0,
+        "delegations": 34
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 1,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/GEN-20/agentic_metrics.json",
+      "before_sha256": "ca8877725039018ac4749c82eb90d2184dcf68c9be038bec4c34f85ff94b8229",
+      "after_sha256": "5d034a5ad436d8edb3e3e7275d1aebbc4ff9d05883798269350bab761576447f",
+      "before": {
+        "sessions": 4,
+        "codex_sessions": 4,
+        "invocations": 4,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 4,
+        "codex_sessions": 4,
+        "invocations": 4,
+        "skills": 1,
+        "delegations": 3
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 1,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/GEN-8/agentic_metrics.json",
+      "before_sha256": "10117da9563686e2c841b159fc5ea70378ec5b729bbb2bd28ee546a84d38e6f6",
+      "after_sha256": "2318a97becbbb94acc40edaf157371bb0c1d598320b6951aada766577be97976",
+      "before": {
+        "sessions": 1,
+        "codex_sessions": 1,
+        "invocations": 1,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 1,
+        "codex_sessions": 1,
+        "invocations": 1,
+        "skills": 0,
+        "delegations": 0
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 1,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/GEN-9/agentic_metrics.json",
+      "before_sha256": "4ae38d185348774c0320de90148c9ed2b927d048485847ad135e2fd24cf224b0",
+      "after_sha256": "49578282a9c23fcec18a4f537bf51d03fbefbcd6d70b091177ab8a78bb486bf7",
+      "before": {
+        "sessions": 1,
+        "codex_sessions": 1,
+        "invocations": 1,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 1,
+        "codex_sessions": 1,
+        "invocations": 1,
+        "skills": 0,
+        "delegations": 0
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 1,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/MGT-1/agentic_metrics.json",
+      "before_sha256": "0920ae245b8e7e73d9a6daa8a7dd5c3535d395b4338fecd37aa1a00d34f605b6",
+      "after_sha256": "64889d6643d4e79e3f8a0df981fffb31c7c5b1cf397ff0fde9acda3d5de210ab",
+      "before": {
+        "sessions": 2,
+        "codex_sessions": 2,
+        "invocations": 2,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 2,
+        "codex_sessions": 2,
+        "invocations": 2,
+        "skills": 0,
+        "delegations": 0
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 2,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/MGT-2/agentic_metrics.json",
+      "before_sha256": "0a71fd56394f865b4f6f4e120d15e560a94c90c1e07a03dd7c2ecdf70ab1e418",
+      "after_sha256": "3415864517677b96132e76ecedeb496333bdfd92015937ebe94e8e28edef2e98",
+      "before": {
+        "sessions": 1,
+        "codex_sessions": 1,
+        "invocations": 1,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 1,
+        "codex_sessions": 1,
+        "invocations": 1,
+        "skills": 1,
+        "delegations": 0
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 1,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/PO-13/agentic_metrics.json",
+      "before_sha256": "20341d33d4ac211a04094030102658b87c7c12f6779b9a41324854acecb215f4",
+      "after_sha256": "5736ed9d608941de73e28f68487274c040fc4ffb6995c47784073d49ea623949",
+      "before": {
+        "sessions": 1,
+        "codex_sessions": 1,
+        "invocations": 1,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 1,
+        "codex_sessions": 1,
+        "invocations": 1,
+        "skills": 1,
+        "delegations": 0
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 1,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/PO-16/agentic_metrics.json",
+      "before_sha256": "94ab840f4f4c957118889bb585e24ca0d867c116ef2bf9dac678b8e40c7a7d6c",
+      "after_sha256": "37bbd7d3634577ff662e8e072d38f144b8331d3244412d12b96150bc268f5141",
+      "before": {
+        "sessions": 1,
+        "codex_sessions": 1,
+        "invocations": 1,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 1,
+        "codex_sessions": 1,
+        "invocations": 1,
+        "skills": 0,
+        "delegations": 0
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 1,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/PO-17/agentic_metrics.json",
+      "before_sha256": "94a7d254ef16d49782b6407a5b3fbf520d04aac23cc62b972d6adade37061579",
+      "after_sha256": "77afa3e5a9331847c673c6860989465b24a8b27bd1071e6f080e8a3a34d21342",
+      "before": {
+        "sessions": 1,
+        "codex_sessions": 1,
+        "invocations": 1,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 1,
+        "codex_sessions": 1,
+        "invocations": 1,
+        "skills": 0,
+        "delegations": 0
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 1,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/PO-18/agentic_metrics.json",
+      "before_sha256": "1f4789ad72858dc7468e49430c7afcd50f4b021d1e46c9bc6f6e313dcbb01d71",
+      "after_sha256": "118a3cc0442e209cad55b04bd4ea05a15b1bfee7d36d541d3b594a28f4720832",
+      "before": {
+        "sessions": 1,
+        "codex_sessions": 1,
+        "invocations": 1,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 1,
+        "codex_sessions": 1,
+        "invocations": 1,
+        "skills": 1,
+        "delegations": 0
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 1,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/REV-2/agentic_metrics.json",
+      "before_sha256": "0106d0a219b45d6af1774b7359efc91cf2cfbf08b7452a8c237f500b1eda7e37",
+      "after_sha256": "d17372fe7968e21a1065c6636ed65b55e8f5f63750324f38ad2132059fa8c443",
+      "before": {
+        "sessions": 1,
+        "codex_sessions": 1,
+        "invocations": 1,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 1,
+        "codex_sessions": 1,
+        "invocations": 1,
+        "skills": 1,
+        "delegations": 0
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 1,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/REV-3/agentic_metrics.json",
+      "before_sha256": "f68a1c4bd3cdbee68c25327c1c1a5c23755a46dd94f610aade3946598b7d7cc8",
+      "after_sha256": "d2c4e501e3f9b2d434564ed7f7a5ef881606f61c7e7fe7d60024c5310808d1d6",
+      "before": {
+        "sessions": 1,
+        "codex_sessions": 1,
+        "invocations": 1,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 1,
+        "codex_sessions": 1,
+        "invocations": 1,
+        "skills": 0,
+        "delegations": 0
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 1,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/REV-4/agentic_metrics.json",
+      "before_sha256": "0fdee272cdc72085bb3226c92481ff8e0a83d406c393fbf1aa99d10559db1976",
+      "after_sha256": "08bb1c367f3bcaaa8667b7329bfb123d8ed102036714f493a169e1878413c86e",
+      "before": {
+        "sessions": 14,
+        "codex_sessions": 14,
+        "invocations": 14,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 14,
+        "codex_sessions": 14,
+        "invocations": 14,
+        "skills": 0,
+        "delegations": 13
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 14,
+      "pending_steps": null
+    },
+    {
+      "path": "alspaces/REV-5/agentic_metrics.json",
+      "before_sha256": "835c5ba1aeab2a1ce5eab09f2b2a3f8ea4ca3e79f9308a187bb6db4c7180a61e",
+      "after_sha256": "7c51c7cea29b66122ebf213c6a00b8160833cba462efb76e8e44d97816f59441",
+      "before": {
+        "sessions": 27,
+        "codex_sessions": 27,
+        "invocations": 27,
+        "skills": 0,
+        "delegations": 0
+      },
+      "after": {
+        "sessions": 27,
+        "codex_sessions": 27,
+        "invocations": 27,
+        "skills": 1,
+        "delegations": 24
+      },
+      "new_session_ids": [],
+      "changed_codex_sessions": 11,
+      "pending_steps": null
+    }
+  ]
+}

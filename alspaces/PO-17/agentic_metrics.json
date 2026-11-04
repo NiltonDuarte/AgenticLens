@@ -1,11 +1,5 @@
 {
-  "schema_version": 4,
-  "ticket_id": "PO-17",
-  "ticket_title": "Cost semantics review and approved AL-55 backfill scope",
-  "ticket_type": "docs",
-  "started_at": "2026-10-31T14:39:43.573Z",
-  "completed_at": "2026-10-31T15:16:58.334Z",
-  "updated_at": "2026-10-31T15:17:00.553874+00:00",
+  "anomalies": [],
   "code": {
     "lines_added": 0,
     "lines_deleted": 0,
@@ -16,6 +10,8 @@
     "files_changed": 0,
     "sdlc_iterations": 11
   },
+  "completed_at": "2026-10-31T15:16:58.334Z",
+  "schema_version": 6,
   "sessions": [
     {
       "id": "01a19266-f5c8-77e3-a2c0-f9f0cf9fe06a",
@@ -23,33 +19,28 @@
       "user": "Nilton Duarte",
       "invocations": [
         {
-          "role": "RootAgent",
+          "role": "",
           "model": "gpt-6.1-sol",
           "started_at": "2026-10-31T14:39:44.441Z",
-          "completed_at": "2026-10-31T15:16:58.334Z",
-          "active_duration_seconds": 507,
+          "completed_at": "2026-10-31T15:18:06.922Z",
+          "active_duration_seconds": 897,
           "turns": 5,
-          "tokens": {
-            "input": 130893,
-            "output": 27655,
-            "cache_read": 5172224,
-            "reasoning": 2378,
-            "peak_context": 145345
-          },
-          "cost_usd": 0,
+          "tokens": {"input": 134341, "output": 29874, "cache_read": 6355456, "reasoning": 2718, "peak_context": 150565},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
           "user_iterations": 11
         }
       ],
       "tools": [
-        {
-          "name": "command",
-          "calls": 42,
-          "errors": 4
-        }
+        {"name": "command", "calls": 47, "errors": 5}
       ],
       "anomalies": []
     }
   ],
-  "anomalies": []
+  "started_at": "2026-10-31T14:39:43.573Z",
+  "ticket_id": "PO-17",
+  "ticket_title": "Cost semantics review and approved AL-55 backfill scope",
+  "ticket_type": "docs",
+  "updated_at": "2026-11-04T15:13:36.926497395Z"
 }

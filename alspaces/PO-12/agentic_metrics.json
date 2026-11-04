@@ -1,11 +1,5 @@
 {
-  "schema_version": 4,
-  "ticket_id": "PO-12",
-  "ticket_title": "Model API Pricing Configuration and Rate-Card Cost Approximation",
-  "ticket_type": "docs",
-  "started_at": "2026-10-28T20:22:47.960000+00:00",
-  "completed_at": "2026-10-28T22:58:03.789000+00:00",
-  "updated_at": "2026-10-28T22:58:12.491279+00:00",
+  "anomalies": [],
   "code": {
     "lines_added": 0,
     "lines_deleted": 0,
@@ -16,10 +10,13 @@
     "files_changed": 0,
     "sdlc_iterations": 10
   },
+  "completed_at": "2026-10-28T22:58:03.789000+00:00",
+  "schema_version": 6,
   "sessions": [
     {
       "id": "ses_e7bd20667ffeD9jgBkVayiieIA",
       "source": "opencode",
+      "user": "Nilton Duarte",
       "invocations": [
         {
           "role": "general",
@@ -28,92 +25,33 @@
           "completed_at": "2026-10-28T22:58:03.789000+00:00",
           "active_duration_seconds": 3538,
           "turns": 184,
-          "tokens": {
-            "input": 4250603,
-            "output": 31422,
-            "cache_read": 9737821,
-            "reasoning": 29629,
-            "peak_context": 167000
-          },
+          "tokens": {"input": 4250603, "output": 31422, "cache_read": 9737821, "reasoning": 29629, "peak_context": 167000},
           "cost_usd": 4.14723,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 4.14723},
           "compactions": 1,
           "user_iterations": 10
         }
       ],
       "tools": [
-        {
-          "name": "bash",
-          "calls": 66,
-          "errors": 1
-        },
-        {
-          "name": "edit",
-          "calls": 12,
-          "errors": 0
-        },
-        {
-          "name": "glob",
-          "calls": 12,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 20,
-          "errors": 0
-        },
-        {
-          "name": "read",
-          "calls": 46,
-          "errors": 1
-        },
-        {
-          "name": "skill",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "t3-code_link_pull_request",
-          "calls": 2,
-          "errors": 0
-        },
-        {
-          "name": "write",
-          "calls": 7,
-          "errors": 0
-        }
+        {"name": "bash", "calls": 66, "errors": 1},
+        {"name": "edit", "calls": 12, "errors": 0},
+        {"name": "glob", "calls": 12, "errors": 0},
+        {"name": "grep", "calls": 20, "errors": 0},
+        {"name": "read", "calls": 46, "errors": 1},
+        {"name": "skill", "calls": 1, "errors": 0},
+        {"name": "t3-code_link_pull_request", "calls": 2, "errors": 0},
+        {"name": "write", "calls": 7, "errors": 0}
       ],
       "anomalies": [
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 86,
-            "context_tokens": 160778,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "role": "general",
-            "context_tokens": 167000,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "turn": 93,
-            "token_delta": 48399,
-            "context_tokens": 48399,
-            "threshold": "40000"
-          }
-        }
-      ],
-      "user": "Nilton Duarte"
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 86, "context_tokens": 160778, "threshold": "160000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"role": "general", "context_tokens": 167000, "threshold": "160000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 93, "token_delta": 48399, "context_tokens": 48399, "threshold": "40000"}}
+      ]
     }
   ],
-  "anomalies": []
+  "started_at": "2026-10-28T20:22:47.960000+00:00",
+  "ticket_id": "PO-12",
+  "ticket_title": "Model API Pricing Configuration and Rate-Card Cost Approximation",
+  "ticket_type": "docs",
+  "updated_at": "2026-10-28T22:58:12.491279+00:00"
 }

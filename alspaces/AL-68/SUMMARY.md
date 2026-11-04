@@ -171,17 +171,17 @@ AL-76 defines compact ledger JSON serialization and a source-independent format 
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 316
-- **Active Agent Duration:** 46h 9m (excludes user wait time)
-- **Context Window Health:** CRITICAL — Root agent peak 454.1k tokens (227% of 200k healthy ceiling, 9 compactions) | Subagents peak 451.4k (Coder)
+- **Active Agent Duration:** 46h 16m (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 454.1k tokens (101% of 450k healthy ceiling, 10 compactions) | Subagents peak 451.4k (Coder)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 1.4 avg turns/run (peak: 8 turns) | Planner 1.8, Coder 3.2, Tester 3.2, Reviewer 1.0, Reviewer-architecture 1.0, Reviewer-behavior 1.0, Reviewer-data 1.0, Reviewer-tests 1.1
 - **Test-to-Production Code Ratio:** 1.2:1 (+15,386 test lines / +12,638 prod lines)
 - **Code Delivered:** +28,172 / -190 lines across 134 code files (excluding docs)
-- **Reasoning Effort:** 2,146,130 reasoning tokens (32.2% of generated output)
-- **Tool Health & Self-Correction:** 7,831 tool calls (457 self-corrections, 94.2% success rate)
+- **Reasoning Effort:** 2,146,632 reasoning tokens (32.1% of generated output)
+- **Tool Health & Self-Correction:** 7,836 tool calls (457 self-corrections, 94.2% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 76 execution anomalies detected (46 CRITICAL, 30 WARNING).
+- **Status:** 109 execution anomalies detected (67 CRITICAL, 42 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (203.5k tokens) — Context tokens reached 203.5k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (207.3k tokens) — Context tokens reached 207.3k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+300.5k tokens) — Context tokens surged by 300.5k to 300.5k tokens.
@@ -206,15 +206,11 @@ AL-76 defines compact ledger JSON serialization and a source-independent format 
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (203.6k tokens) — Context tokens reached 203.6k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.4k tokens) — Context tokens reached 200.4k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.5k tokens) — Context tokens reached 200.5k, breaching the 200k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (336.6k tokens) — Context tokens reached 336.6k, breaching the 200k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (303.6k tokens) — Context tokens reached 303.6k, breaching the 200k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (453.9k tokens) — Context tokens reached 453.9k, breaching the 200k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (210.0k tokens) — Context tokens reached 210.0k, breaching the 200k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (236.5k tokens) — Context tokens reached 236.5k, breaching the 200k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (348.1k tokens) — Context tokens reached 348.1k, breaching the 200k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (450.0k tokens) — Context tokens reached 450.0k, breaching the 200k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (451.4k tokens) — Context tokens reached 451.4k, breaching the 200k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (353.3k tokens) — Context tokens reached 353.3k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (454.1k tokens) — Context tokens reached 454.1k, breaching the 450k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (453.9k tokens) — Context tokens reached 453.9k, breaching the 450k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (450.0k tokens) — Context tokens reached 450.0k, breaching the 450k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (451.4k tokens) — Context tokens reached 451.4k, breaching the 450k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (450.3k tokens) — Context tokens reached 450.3k, breaching the 450k critical ceiling.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer <-> reviewer-tests (8 cycles) — Subagent roles 'reviewer' and 'reviewer-tests' alternated for 8 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer <-> reviewer-tests (7 cycles) — Subagent roles 'reviewer' and 'reviewer-tests' alternated for 7 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-behavior <-> reviewer-data (18 cycles) — Subagent roles 'reviewer-behavior' and 'reviewer-data' alternated for 18 consecutive cycles.
@@ -224,6 +220,31 @@ AL-76 defines compact ledger JSON serialization and a source-independent format 
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-data <-> reviewer-behavior (38 cycles) — Subagent roles 'reviewer-data' and 'reviewer-behavior' alternated for 38 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-architecture <-> reviewer-tests (5 cycles) — Subagent roles 'reviewer-architecture' and 'reviewer-tests' alternated for 5 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer <-> reviewer-tests (20 cycles) — Subagent roles 'reviewer' and 'reviewer-tests' alternated for 20 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-architecture <-> reviewer-tests (6 cycles) — Subagent roles 'reviewer-architecture' and 'reviewer-tests' alternated for 6 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-data <-> reviewer-behavior (13 cycles) — Subagent roles 'reviewer-data' and 'reviewer-behavior' alternated for 13 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: tester <-> reviewer-tests (5 cycles) — Subagent roles 'tester' and 'reviewer-tests' alternated for 5 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (30 cycles) — Subagent roles 'coder' and 'tester' alternated for 30 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer <-> reviewer-tests (8 cycles) — Subagent roles 'reviewer' and 'reviewer-tests' alternated for 8 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (17 cycles) — Subagent roles 'coder' and 'tester' alternated for 17 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (21 cycles) — Subagent roles 'coder' and 'tester' alternated for 21 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (5 cycles) — Subagent roles 'coder' and 'tester' alternated for 5 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer <-> reviewer-tests (7 cycles) — Subagent roles 'reviewer' and 'reviewer-tests' alternated for 7 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (55 cycles) — Subagent roles 'coder' and 'tester' alternated for 55 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-behavior <-> reviewer-data (18 cycles) — Subagent roles 'reviewer-behavior' and 'reviewer-data' alternated for 18 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-architecture <-> reviewer-tests (16 cycles) — Subagent roles 'reviewer-architecture' and 'reviewer-tests' alternated for 16 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (27 cycles) — Subagent roles 'coder' and 'tester' alternated for 27 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-data <-> reviewer-behavior (6 cycles) — Subagent roles 'reviewer-data' and 'reviewer-behavior' alternated for 6 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (15 cycles) — Subagent roles 'coder' and 'tester' alternated for 15 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-tests <-> reviewer (14 cycles) — Subagent roles 'reviewer-tests' and 'reviewer' alternated for 14 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: planner <-> coder (9 cycles) — Subagent roles 'planner' and 'coder' alternated for 9 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: tester <-> coder (49 cycles) — Subagent roles 'tester' and 'coder' alternated for 49 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-data <-> reviewer-architecture (19 cycles) — Subagent roles 'reviewer-data' and 'reviewer-architecture' alternated for 19 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (6 cycles) — Subagent roles 'coder' and 'tester' alternated for 6 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-behavior <-> reviewer-data (21 cycles) — Subagent roles 'reviewer-behavior' and 'reviewer-data' alternated for 21 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-behavior <-> reviewer-data (16 cycles) — Subagent roles 'reviewer-behavior' and 'reviewer-data' alternated for 16 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-architecture <-> reviewer-tests (5 cycles) — Subagent roles 'reviewer-architecture' and 'reviewer-tests' alternated for 5 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer <-> reviewer-tests (10 cycles) — Subagent roles 'reviewer' and 'reviewer-tests' alternated for 10 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (13 cycles) — Subagent roles 'coder' and 'tester' alternated for 13 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-architecture <-> reviewer-tests (6 cycles) — Subagent roles 'reviewer-architecture' and 'reviewer-tests' alternated for 6 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-data <-> reviewer-behavior (13 cycles) — Subagent roles 'reviewer-data' and 'reviewer-behavior' alternated for 13 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: tester <-> reviewer-tests (5 cycles) — Subagent roles 'tester' and 'reviewer-tests' alternated for 5 consecutive cycles.
@@ -246,12 +267,24 @@ AL-76 defines compact ledger JSON serialization and a source-independent format 
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.8k tokens) — Context tokens reached 161.8k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (162.4k tokens) — Context tokens reached 162.4k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (161.0k tokens) — Context tokens reached 161.0k, breaching the 160k warning ceiling.
-- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (174.3k tokens) — Context tokens reached 174.3k, breaching the 160k warning ceiling.
-- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (190.5k tokens) — Context tokens reached 190.5k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (336.6k tokens) — Context tokens reached 336.6k, breaching the 250k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (303.6k tokens) — Context tokens reached 303.6k, breaching the 250k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (348.1k tokens) — Context tokens reached 348.1k, breaching the 250k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (353.3k tokens) — Context tokens reached 353.3k, breaching the 250k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (336.3k tokens) — Context tokens reached 336.3k, breaching the 250k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (407.1k tokens) — Context tokens reached 407.1k, breaching the 250k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (388.9k tokens) — Context tokens reached 388.9k, breaching the 250k warning ceiling.
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-behavior <-> reviewer-data (3 cycles) — Subagent roles 'reviewer-behavior' and 'reviewer-data' alternated for 3 consecutive cycles.
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-data <-> reviewer-architecture (3 cycles) — Subagent roles 'reviewer-data' and 'reviewer-architecture' alternated for 3 consecutive cycles.
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-architecture <-> reviewer-data (3 cycles) — Subagent roles 'reviewer-architecture' and 'reviewer-data' alternated for 3 consecutive cycles.
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-data <-> reviewer-architecture (4 cycles) — Subagent roles 'reviewer-data' and 'reviewer-architecture' alternated for 4 consecutive cycles.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-architecture <-> reviewer-behavior (4 cycles) — Subagent roles 'reviewer-architecture' and 'reviewer-behavior' alternated for 4 consecutive cycles.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-data <-> reviewer-architecture (3 cycles) — Subagent roles 'reviewer-data' and 'reviewer-architecture' alternated for 3 consecutive cycles.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-architecture <-> reviewer-data (3 cycles) — Subagent roles 'reviewer-architecture' and 'reviewer-data' alternated for 3 consecutive cycles.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-data <-> reviewer-architecture (4 cycles) — Subagent roles 'reviewer-data' and 'reviewer-architecture' alternated for 4 consecutive cycles.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> reviewer (3 cycles) — Subagent roles 'coder' and 'reviewer' alternated for 3 consecutive cycles.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-behavior <-> reviewer-data (4 cycles) — Subagent roles 'reviewer-behavior' and 'reviewer-data' alternated for 4 consecutive cycles.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-behavior <-> coder (3 cycles) — Subagent roles 'reviewer-behavior' and 'coder' alternated for 3 consecutive cycles.
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-architecture <-> reviewer-behavior (4 cycles) — Subagent roles 'reviewer-architecture' and 'reviewer-behavior' alternated for 4 consecutive cycles.
 - [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: command (3 consecutive errors) — Tool 'command' encountered 3 consecutive execution failures.
 - [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: command (3 consecutive errors) — Tool 'command' encountered 3 consecutive execution failures.
@@ -266,44 +299,23 @@ AL-76 defines compact ledger JSON serialization and a source-independent format 
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **planner** | 4 | 1,100,156 | 45,391 | 10,905,856 | 90.8% | 236.5k | BLOATED (118%) | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
-| **coder** | 14 | 6,651,701 | 1,321,043 | 382,681,984 | 98.3% | 451.4k | CRITICAL (226%) | Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations) |
-| **tester** | 5 | 2,463,776 | 305,653 | 127,008,000 | 98.1% | 388.9k | BLOATED (194%) | Unavailable (0 observed, 0 partial, 5 unavailable / 5 invocations) |
-| **reviewer** | 25 | 2,012,374 | 153,731 | 28,388,352 | 93.4% | 145.8k | ELEVATED | Unavailable (0 observed, 0 partial, 25 unavailable / 25 invocations) |
-| **Unknown** | 24 | 8,831,450 | 1,430,089 | 449,008,384 | 98.1% | 454.1k | CRITICAL (227%) | Unavailable (0 observed, 0 partial, 24 unavailable / 24 invocations) |
-| **reviewer-architecture** | 14 | 1,544,287 | 99,833 | 17,053,952 | 91.7% | 164.2k | ELEVATED | Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations) |
-| **reviewer-behavior** | 15 | 1,600,123 | 108,360 | 18,735,232 | 92.1% | 155.7k | ELEVATED | Unavailable (0 observed, 0 partial, 15 unavailable / 15 invocations) |
-| **reviewer-data** | 17 | 1,562,596 | 138,626 | 24,578,432 | 94.0% | 161.4k | ELEVATED | Unavailable (0 observed, 0 partial, 17 unavailable / 17 invocations) |
-| **reviewer-tests** | 15 | 1,131,028 | 83,227 | 13,314,048 | 92.2% | 139.7k | ELEVATED | Unavailable (0 observed, 0 partial, 15 unavailable / 15 invocations) |
-| **rootagent** | 66 | 7,336,451 | 841,164 | 141,539,968 | 95.1% | 453.9k | CRITICAL (227%) | Unavailable (0 observed, 0 partial, 66 unavailable / 66 invocations) |
-| **Total** | **199** | **34,233,942** | **4,527,117** | **1,213,214,208** | **97.3%** | **454.1k** | **CRITICAL** | **Unavailable (0 observed, 0 partial, 199 unavailable / 199 invocations)** |
+| **planner** | 4 | 1,100,156 | 45,391 | 10,905,856 | 90.8% | 236.5k | ELEVATED | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
+| **coder** | 14 | 6,651,701 | 1,321,043 | 382,681,984 | 98.3% | 451.4k | BLOATED (100%) | Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations) |
+| **tester** | 5 | 2,463,776 | 305,653 | 127,008,000 | 98.1% | 388.9k | ELEVATED | Unavailable (0 observed, 0 partial, 5 unavailable / 5 invocations) |
+| **reviewer** | 25 | 2,012,374 | 153,731 | 28,388,352 | 93.4% | 145.8k | HEALTHY | Unavailable (0 observed, 0 partial, 25 unavailable / 25 invocations) |
+| **Unknown** | 90 | 16,204,994 | 2,275,887 | 592,069,376 | 97.3% | 454.1k | BLOATED (101%) | Unavailable (0 observed, 0 partial, 90 unavailable / 90 invocations) |
+| **reviewer-architecture** | 14 | 1,544,287 | 99,833 | 17,053,952 | 91.7% | 164.2k | HEALTHY | Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations) |
+| **reviewer-behavior** | 15 | 1,600,123 | 108,360 | 18,735,232 | 92.1% | 155.7k | HEALTHY | Unavailable (0 observed, 0 partial, 15 unavailable / 15 invocations) |
+| **reviewer-data** | 17 | 1,562,596 | 138,626 | 24,578,432 | 94.0% | 161.4k | HEALTHY | Unavailable (0 observed, 0 partial, 17 unavailable / 17 invocations) |
+| **reviewer-tests** | 15 | 1,131,028 | 83,227 | 13,314,048 | 92.2% | 139.7k | HEALTHY | Unavailable (0 observed, 0 partial, 15 unavailable / 15 invocations) |
+| **Total** | **199** | **34,271,035** | **4,531,751** | **1,214,735,232** | **97.3%** | **454.1k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 199 unavailable / 199 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
 | **gpt-6-luna** | 77 | 5,535,731 | 338,973 | 40,801,664 | 88.1% | Unavailable (0 observed, 0 partial, 77 unavailable / 77 invocations) |
-| **gpt-6.1-sol** | 122 | 28,698,211 | 4,188,144 | 1,172,412,544 | 97.6% | Unavailable (0 observed, 0 partial, 122 unavailable / 122 invocations) |
-| **Total** | **199** | **34,233,942** | **4,527,117** | **1,213,214,208** | **97.3%** | **Unavailable (0 observed, 0 partial, 199 unavailable / 199 invocations)** |
-
-Capture observation finalized: 2026-11-03T16:07:23.685105049Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 117; retained older facts: 82; pending: 82; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 199; reserved bytes: 56671855. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
-Owner codex/01a19cdc-11b8-71c2-884a-eb44f01314af: pending; last successful source read 2026-11-03T16:07:21.660407628Z; accepted source checkpoint 2026-11-02T15:34:50.187Z.
-Owner codex/01a1a163-a41b-7801-87e6-da31df0b8f94: current; last successful source read 2026-11-03T16:07:21.665197872Z; accepted source checkpoint 2026-11-03T12:31:59.996Z.
-Owner codex/01a1a0d3-b974-7e01-8f96-7cf6a03d0776: pending; last successful source read 2026-11-03T16:07:21.672474578Z; accepted source checkpoint 2026-11-03T11:29:02.076Z.
-Owner codex/01a19d37-ffca-75b3-98e2-0f1910131d0b: current; last successful source read 2026-11-03T16:07:21.681061978Z; accepted source checkpoint 2026-11-02T17:08:17.403Z.
-Owner codex/01a19d2f-e920-7853-87ee-a74af51865fe: current; last successful source read 2026-11-03T16:07:21.687776305Z; accepted source checkpoint 2026-11-02T16:57:52.001Z.
-Owner codex/01a19866-1ebf-7be3-aa0d-47262ddfccc5: pending; last successful source read 2026-11-03T16:07:21.694973944Z; accepted source checkpoint 2026-11-01T18:37:58.167Z.
-Owner codex/01a19869-c33d-70e1-8337-a34812486051: pending; last successful source read 2026-11-03T16:07:21.701337775Z; accepted source checkpoint 2026-11-01T18:42:12.941Z.
-Owner codex/01a1a1dc-c052-7de2-a159-18282689f094: current; last successful source read 2026-11-03T16:07:21.710231702Z; accepted source checkpoint 2026-11-03T14:43:21.59Z.
-Owner codex/01a1989a-866e-7a10-8345-14e09454b715: pending; last successful source read 2026-11-03T16:07:21.716156473Z; accepted source checkpoint 2026-11-01T19:39:07.209Z.
-Owner codex/01a1a0f5-2ae1-7391-b5c6-aa84bd474189: pending; last successful source read 2026-11-03T16:07:21.723152671Z; accepted source checkpoint 2026-11-03T13:35:29.035Z.
-Owner codex/01a19f64-c34a-7b40-954d-5d2b2ab0d8e1: current; last successful source read 2026-11-03T16:07:21.728733369Z; accepted source checkpoint 2026-11-03T03:16:46.778Z.
-Owner codex/01a19ccd-8b24-7690-94de-3ff167b15442: pending; last successful source read 2026-11-03T16:07:21.735014219Z; accepted source checkpoint 2026-11-02T15:10:02.466Z.
-Owner codex/01a19f72-4c53-7d83-aa54-8cd4d680f03a: current; last successful source read 2026-11-03T16:07:21.743838801Z; accepted source checkpoint 2026-11-03T03:29:09.385Z.
-Owner codex/01a19efe-cc11-7521-86fc-b0d1283f1a41: current; last successful source read 2026-11-03T16:07:21.750226971Z; accepted source checkpoint 2026-11-03T01:26:42.249Z.
-Owner codex/01a19f6d-bf3d-7b33-b46e-43207debfa50: current; last successful source read 2026-11-03T16:07:21.757735499Z; accepted source checkpoint 2026-11-03T03:26:43.131Z.
-Owner codex/01a198b3-a8e7-7411-a8a6-46df93652e58: pending; last successful source read 2026-11-03T16:07:21.764625473Z; accepted source checkpoint 2026-11-01T20:03:34.142Z.
-Additional owner freshness details remain in local capture diagnostics.
-
+| **gpt-6.1-sol** | 122 | 28,735,304 | 4,192,778 | 1,173,933,568 | 97.6% | Unavailable (0 observed, 0 partial, 122 unavailable / 122 invocations) |
+| **Total** | **199** | **34,271,035** | **4,531,751** | **1,214,735,232** | **97.3%** | **Unavailable (0 observed, 0 partial, 199 unavailable / 199 invocations)** |
 
 ## Iteration 05: major release declaration
 

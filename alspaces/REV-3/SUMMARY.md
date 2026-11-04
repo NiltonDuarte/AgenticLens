@@ -40,14 +40,14 @@ The generator discovered one Codex rollout and wrote one session with nonempty i
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 4
-- **Active Agent Duration:** 10m 56s (excludes user wait time)
-- **Context Window Health:** ELEVATED — Root agent peak 161.2k tokens (81% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
-- **Role Effort Distribution (Subagents):** N/A
+- **Active Agent Duration:** 11m 39s (excludes user wait time)
+- **Context Window Health:** HEALTHY — Root agent peak 162.4k tokens (36% of 450k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 4,199 reasoning tokens (14.5% of generated output)
-- **Tool Health & Self-Correction:** 53 tool calls (2 self-corrections, 96.2% success rate)
+- **Reasoning Effort:** 4,199 reasoning tokens (14.3% of generated output)
+- **Tool Health & Self-Correction:** 55 tool calls (2 self-corrections, 96.4% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 1 execution anomaly detected (1 WARNING).
@@ -60,14 +60,14 @@ The generator discovered one Codex rollout and wrote one session with nonempty i
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 145,657 | 24,829 | 6,668,800 | 97.9% | 161.2k | ELEVATED | $0.00 |
-| **Total** | **1** | **145,657** | **24,829** | **6,668,800** | **97.9%** | **161.2k** | **ELEVATED** | **$0.00** |
+| **Unknown** | 1 | 146,801 | 25,242 | 7,316,096 | 98.0% | 162.4k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **1** | **146,801** | **25,242** | **7,316,096** | **98.0%** | **162.4k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 1 | 145,657 | 24,829 | 6,668,800 | 97.9% | $0.00 |
-| **Total** | **1** | **145,657** | **24,829** | **6,668,800** | **97.9%** | **$0.00** |
+| **gpt-6.1-sol** | 1 | 146,801 | 25,242 | 7,316,096 | 98.0% | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **1** | **146,801** | **25,242** | **7,316,096** | **98.0%** | **Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations)** |
 
 ## Shared documentation reference correction
 

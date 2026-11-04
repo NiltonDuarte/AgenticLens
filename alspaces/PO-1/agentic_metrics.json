@@ -1,11 +1,5 @@
 {
-  "schema_version": 4,
-  "ticket_id": "PO-1",
-  "ticket_title": "Rewrite Python Application in Go + TypeScript",
-  "ticket_type": "docs",
-  "started_at": "2026-10-17T14:39:15.644000+00:00",
-  "completed_at": "2026-10-17T15:12:34.057000+00:00",
-  "updated_at": "2026-10-27T08:05:14.604111001Z",
+  "anomalies": [],
   "code": {
     "lines_added": 0,
     "lines_deleted": 0,
@@ -16,6 +10,8 @@
     "files_changed": 0,
     "sdlc_iterations": 10
   },
+  "completed_at": "2026-10-17T15:12:34.057000+00:00",
+  "schema_version": 6,
   "sessions": [
     {
       "id": "ses_eb5b27f43ffeWVRP6KeVPxVwt2",
@@ -29,57 +25,28 @@
           "completed_at": "2026-10-17T15:12:34.057000+00:00",
           "active_duration_seconds": 1234,
           "turns": 141,
-          "tokens": {
-            "input": 1139501,
-            "output": 28249,
-            "cache_read": 7633800,
-            "reasoning": 20118,
-            "peak_context": 113824
-          },
+          "tokens": {"input": 1139501, "output": 28249, "cache_read": 7633800, "reasoning": 20118, "peak_context": 113824},
           "cost_usd": 1.608537,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 1.608537},
           "compactions": 0,
           "user_iterations": 10
         }
       ],
       "tools": [
-        {
-          "name": "bash",
-          "calls": 47,
-          "errors": 1
-        },
-        {
-          "name": "edit",
-          "calls": 8,
-          "errors": 0
-        },
-        {
-          "name": "glob",
-          "calls": 9,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 5,
-          "errors": 0
-        },
-        {
-          "name": "read",
-          "calls": 31,
-          "errors": 0
-        },
-        {
-          "name": "skill",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "write",
-          "calls": 20,
-          "errors": 0
-        }
+        {"name": "bash", "calls": 47, "errors": 1},
+        {"name": "edit", "calls": 8, "errors": 0},
+        {"name": "glob", "calls": 9, "errors": 0},
+        {"name": "grep", "calls": 5, "errors": 0},
+        {"name": "read", "calls": 31, "errors": 0},
+        {"name": "skill", "calls": 1, "errors": 0},
+        {"name": "write", "calls": 20, "errors": 0}
       ],
       "anomalies": []
     }
   ],
-  "anomalies": []
+  "started_at": "2026-10-17T14:39:15.644000+00:00",
+  "ticket_id": "PO-1",
+  "ticket_title": "Rewrite Python Application in Go + TypeScript",
+  "ticket_type": "docs",
+  "updated_at": "2026-10-27T08:05:14.604111001Z"
 }

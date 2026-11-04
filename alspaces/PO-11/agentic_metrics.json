@@ -1,11 +1,7 @@
 {
-  "schema_version": 4,
-  "ticket_id": "PO-11",
-  "ticket_title": "live observability refinements, comparison scatter plot, and agent/skill tracking",
-  "ticket_type": "docs",
-  "started_at": "2026-10-22T12:20:03.117000+00:00",
-  "completed_at": "2026-10-23T13:46:46.459000+00:00",
-  "updated_at": "2026-10-27T08:05:14.604111001Z",
+  "anomalies": [
+    {"rule_id": "TOOL_HIGH_FAILURE_RATE", "severity": "WARNING", "context": {"tool_name": "grep", "count": 5, "total_calls": 15, "threshold": "\u003e20%", "failure_rate_pct": 33.3}}
+  ],
   "code": {
     "lines_added": 0,
     "lines_deleted": 0,
@@ -16,6 +12,8 @@
     "files_changed": 0,
     "sdlc_iterations": 17
   },
+  "completed_at": "2026-10-23T13:46:46.459000+00:00",
+  "schema_version": 6,
   "sessions": [
     {
       "id": "ses_e9c722653ffep5q7OO5ZGoWZwk",
@@ -29,139 +27,38 @@
           "completed_at": "2026-10-23T13:46:46.459000+00:00",
           "active_duration_seconds": 4837,
           "turns": 381,
-          "tokens": {
-            "input": 5660197,
-            "output": 127178,
-            "cache_read": 29659559,
-            "reasoning": 57357,
-            "peak_context": 170576
-          },
+          "tokens": {"input": 5660197, "output": 127178, "cache_read": 29659559, "reasoning": 57357, "peak_context": 170576},
           "cost_usd": 7.161621,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 7.161621},
           "compactions": 2,
           "user_iterations": 17
         }
       ],
       "tools": [
-        {
-          "name": "bash",
-          "calls": 140,
-          "errors": 2
-        },
-        {
-          "name": "edit",
-          "calls": 32,
-          "errors": 1
-        },
-        {
-          "name": "glob",
-          "calls": 16,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 15,
-          "errors": 5
-        },
-        {
-          "name": "question",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "read",
-          "calls": 74,
-          "errors": 1
-        },
-        {
-          "name": "skill",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "t3-code_link_pull_request",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "t3-code_list_thread_pull_requests",
-          "calls": 4,
-          "errors": 0
-        },
-        {
-          "name": "todowrite",
-          "calls": 23,
-          "errors": 0
-        },
-        {
-          "name": "write",
-          "calls": 42,
-          "errors": 0
-        }
+        {"name": "bash", "calls": 140, "errors": 2},
+        {"name": "edit", "calls": 32, "errors": 1},
+        {"name": "glob", "calls": 16, "errors": 0},
+        {"name": "grep", "calls": 15, "errors": 5},
+        {"name": "question", "calls": 1, "errors": 0},
+        {"name": "read", "calls": 74, "errors": 1},
+        {"name": "skill", "calls": 1, "errors": 0},
+        {"name": "t3-code_link_pull_request", "calls": 1, "errors": 0},
+        {"name": "t3-code_list_thread_pull_requests", "calls": 4, "errors": 0},
+        {"name": "todowrite", "calls": 23, "errors": 0},
+        {"name": "write", "calls": 42, "errors": 0}
       ],
       "anomalies": [
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 120,
-            "context_tokens": 160812,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 129,
-            "token_delta": 84001,
-            "context_tokens": 84001,
-            "threshold": "80000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 332,
-            "token_delta": 103465,
-            "context_tokens": 103465,
-            "threshold": "80000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 352,
-            "token_delta": 130699,
-            "context_tokens": 130699,
-            "threshold": "80000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "turn": 268,
-            "token_delta": 77768,
-            "context_tokens": 77768,
-            "threshold": "40000"
-          }
-        }
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 120, "context_tokens": 160812, "threshold": "160000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 129, "token_delta": 84001, "context_tokens": 84001, "threshold": "80000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 332, "token_delta": 103465, "context_tokens": 103465, "threshold": "80000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 352, "token_delta": 130699, "context_tokens": 130699, "threshold": "80000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 268, "token_delta": 77768, "context_tokens": 77768, "threshold": "40000"}}
       ]
     }
   ],
-  "anomalies": [
-    {
-      "rule_id": "TOOL_HIGH_FAILURE_RATE",
-      "severity": "WARNING",
-      "context": {
-        "tool_name": "grep",
-        "count": 5,
-        "total_calls": 15,
-        "threshold": ">20%",
-        "failure_rate_pct": 33.3
-      }
-    }
-  ]
+  "started_at": "2026-10-22T12:20:03.117000+00:00",
+  "ticket_id": "PO-11",
+  "ticket_title": "live observability refinements, comparison scatter plot, and agent/skill tracking",
+  "ticket_type": "docs",
+  "updated_at": "2026-10-27T08:05:14.604111001Z"
 }

@@ -55,26 +55,31 @@ Final source-grounded refresh follows verification/review and preserves 54 exact
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 107
-- **Active Agent Duration:** 4h 0m (excludes user wait time)
-- **Context Window Health:** CRITICAL — Root agent peak 450.6k tokens (225% of 200k healthy ceiling, 1 compactions) | Subagents peak 425.8k (Planner)
+- **Active Agent Duration:** 4h 41m (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 450.6k tokens (100% of 450k healthy ceiling, 1 compactions) | Subagents peak 425.8k (Planner)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 1.8 avg turns/run (peak: 4 turns) | Planner 1.0, Coder 2.3, Tester 2.3, Explorer 1.0
 - **Test-to-Production Code Ratio:** 361:0 (+361 test lines / +0 prod lines)
 - **Code Delivered:** +361 / -1 lines across 4 code files (excluding docs)
-- **Reasoning Effort:** 232,220 reasoning tokens (30.7% of generated output)
-- **Tool Health & Self-Correction:** 1,088 tool calls (87 self-corrections, 92.0% success rate)
+- **Reasoning Effort:** 235,029 reasoning tokens (30.7% of generated output)
+- **Tool Health & Self-Correction:** 1,096 tool calls (87 self-corrections, 92.1% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 11 execution anomalies detected (6 CRITICAL, 5 WARNING).
+- **Status:** 16 execution anomalies detected (9 CRITICAL, 7 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+155.8k tokens) — Context tokens surged by 155.8k to 155.8k tokens.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+156.4k tokens) — Context tokens surged by 156.4k to 156.4k tokens.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (403.8k tokens) — Context tokens reached 403.8k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.4k tokens) — Context tokens reached 200.4k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (203.6k tokens) — Context tokens reached 203.6k, breaching the 200k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.2k tokens) — Context tokens reached 200.2k, breaching the 200k critical ceiling.
-- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.4k tokens) — Context tokens reached 200.4k, breaching the 200k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (450.6k tokens) — Context tokens reached 450.6k, breaching the 450k critical ceiling.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (30 cycles) — Subagent roles 'coder' and 'tester' alternated for 30 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (18 cycles) — Subagent roles 'coder' and 'tester' alternated for 18 consecutive cycles.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (162.6k tokens) — Context tokens reached 162.6k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (163.1k tokens) — Context tokens reached 163.1k, breaching the 160k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.5k tokens) — Context tokens reached 160.5k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (250.7k tokens) — Context tokens reached 250.7k, breaching the 250k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (425.8k tokens) — Context tokens reached 425.8k, breaching the 250k warning ceiling.
 - [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: command (3 consecutive errors) — Tool 'command' encountered 3 consecutive execution failures.
 - [WARNING] **TOOL_RETRY_STREAK**: Tool retry streak: command (3 consecutive errors) — Tool 'command' encountered 3 consecutive execution failures.
 
@@ -85,35 +90,16 @@ Final source-grounded refresh follows verification/review and preserves 54 exact
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **planner** | 3 | 521,628 | 12,387 | 4,792,064 | 90.2% | 425.8k | CRITICAL (213%) | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
-| **coder** | 3 | 271,419 | 74,859 | 25,208,064 | 98.9% | 250.7k | BLOATED (125%) | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
-| **tester** | 3 | 198,476 | 40,277 | 14,986,240 | 98.7% | 224.8k | BLOATED (112%) | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
-| **Unknown** | 44 | 3,307,892 | 394,924 | 106,279,680 | 97.0% | 450.6k | CRITICAL (225%) | Unavailable (0 observed, 0 partial, 44 unavailable / 44 invocations) |
-| **explorer** | 1 | 115,406 | 2,546 | 1,165,568 | 91.0% | 139.9k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **54** | **4,414,821** | **524,993** | **152,431,616** | **97.2%** | **450.6k** | **CRITICAL** | **Unavailable (0 observed, 0 partial, 54 unavailable / 54 invocations)** |
+| **planner** | 3 | 521,628 | 12,387 | 4,792,064 | 90.2% | 425.8k | ELEVATED | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
+| **coder** | 3 | 271,419 | 74,859 | 25,208,064 | 98.9% | 250.7k | ELEVATED | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
+| **tester** | 3 | 198,476 | 40,277 | 14,986,240 | 98.7% | 224.8k | HEALTHY | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
+| **Unknown** | 44 | 3,312,046 | 400,355 | 107,562,624 | 97.0% | 450.6k | BLOATED (100%) | Unavailable (0 observed, 0 partial, 44 unavailable / 44 invocations) |
+| **explorer** | 1 | 115,406 | 2,546 | 1,165,568 | 91.0% | 139.9k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **54** | **4,418,975** | **530,424** | **153,714,560** | **97.2%** | **450.6k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 54 unavailable / 54 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
 | **gpt-6-luna** | 22 | 1,050,743 | 89,401 | 7,281,920 | 87.4% | Unavailable (0 observed, 0 partial, 22 unavailable / 22 invocations) |
-| **gpt-6.1-sol** | 32 | 3,364,078 | 435,592 | 145,149,696 | 97.7% | Unavailable (0 observed, 0 partial, 32 unavailable / 32 invocations) |
-| **Total** | **54** | **4,414,821** | **524,993** | **152,431,616** | **97.2%** | **Unavailable (0 observed, 0 partial, 54 unavailable / 54 invocations)** |
-
-Capture observation finalized: 2026-11-03T20:40:32.279759093Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 50; retained older facts: 4; pending: 4; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 54; reserved bytes: 13128150. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
-Owner codex/01a1a30e-bf04-7550-ab6d-f3afae93e432: current; last successful source read 2026-11-03T20:40:31.335463001Z; accepted source checkpoint 2026-11-03T20:18:27.371Z.
-Owner codex/01a1a2be-ff93-7cf1-9cd4-b03867a02717: current; last successful source read 2026-11-03T20:40:31.347938855Z; accepted source checkpoint 2026-11-03T18:51:43.233Z.
-Owner codex/01a1a2a4-80f0-7693-8a56-af32baa4f8d3: current; last successful source read 2026-11-03T20:40:31.355789534Z; accepted source checkpoint 2026-11-03T18:22:23.269Z.
-Owner codex/01a1a2c1-b051-7e42-9a91-b0ac50729fbe: current; last successful source read 2026-11-03T20:40:31.363191433Z; accepted source checkpoint 2026-11-03T18:53:46.76Z.
-Owner codex/01a1a31d-a425-7d82-a9c7-c6a01ba08d99: current; last successful source read 2026-11-03T20:40:31.370322458Z; accepted source checkpoint 2026-11-03T20:33:54.23Z.
-Owner codex/01a1a2c5-a775-7232-b859-d3f26c37dea0: current; last successful source read 2026-11-03T20:40:31.378438169Z; accepted source checkpoint 2026-11-03T18:57:51.764Z.
-Owner codex/01a1a319-923d-7380-8daf-902f3308a886: current; last successful source read 2026-11-03T20:40:31.385155407Z; accepted source checkpoint 2026-11-03T20:29:24.885Z.
-Owner codex/01a1a285-a7e2-7083-aad5-781dfee72767: current; last successful source read 2026-11-03T20:40:31.391147709Z; accepted source checkpoint 2026-11-03T17:47:46.391Z.
-Owner codex/01a1a280-9d93-7471-9927-ea58a45f6e99: current; last successful source read 2026-11-03T20:40:31.398939666Z; accepted source checkpoint 2026-11-03T17:42:54.585Z.
-Owner codex/01a1a31b-b63b-7870-ade3-e96f5a00e07c: current; last successful source read 2026-11-03T20:40:31.405728915Z; accepted source checkpoint 2026-11-03T20:32:44.364Z.
-Owner codex/01a1a2bf-d677-7fe1-947c-2598194c95d5: current; last successful source read 2026-11-03T20:40:31.416177149Z; accepted source checkpoint 2026-11-03T18:51:27.725Z.
-Owner codex/01a1a2a8-baa7-7f73-a867-947232170d28: current; last successful source read 2026-11-03T20:40:31.426548931Z; accepted source checkpoint 2026-11-03T18:28:06.704Z.
-Owner codex/01a1a2c0-a935-7380-bf48-3f2bbc717073: current; last successful source read 2026-11-03T20:40:31.440560545Z; accepted source checkpoint 2026-11-03T18:53:42.27Z.
-Owner codex/01a1a2be-400d-7b21-a540-b929fb017e00: current; last successful source read 2026-11-03T20:40:31.449759573Z; accepted source checkpoint 2026-11-03T18:50:40.693Z.
-Owner codex/01a1a285-f25d-79f1-bef1-db5606c7ef63: current; last successful source read 2026-11-03T20:40:31.457169433Z; accepted source checkpoint 2026-11-03T17:48:17.873Z.
-Owner codex/01a1a31a-8686-7091-aeb7-0bd581fd5039: current; last successful source read 2026-11-03T20:40:31.463836707Z; accepted source checkpoint 2026-11-03T20:30:57.729Z.
-Additional owner freshness details remain in local capture diagnostics.
+| **gpt-6.1-sol** | 32 | 3,368,232 | 441,023 | 146,432,640 | 97.8% | Unavailable (0 observed, 0 partial, 32 unavailable / 32 invocations) |
+| **Total** | **54** | **4,418,975** | **530,424** | **153,714,560** | **97.2%** | **Unavailable (0 observed, 0 partial, 54 unavailable / 54 invocations)** |

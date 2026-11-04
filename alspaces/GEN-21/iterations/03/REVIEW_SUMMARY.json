@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "DATA-01",
+      "severity": 6,
+      "issue": "Unsupported or absent migration status can be normalized and deleted during backfill.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: validate raw current status before defaults; malformed input remains unchanged."
+    },
+    {
+      "finding_id": "DATA-02",
+      "severity": 0,
+      "issue": "Unknown nested migration fields allegedly disappear during explicit migrate cleanup.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Refuted (reported severity 6): existing strict engine decode rejects the unknown member before any rewrite."
+    },
+    {
+      "finding_id": "ARCH-01",
+      "severity": 5,
+      "issue": "Current cleanup collapses duplicate root JSON keys before validation.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: validate duplicate members in original bytes before map decoding."
+    },
+    {
+      "finding_id": "ARCH-02",
+      "severity": 4,
+      "issue": "Cleanup-only backfill rewrites unrelated recorded values and timestamp.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: metadata-only backfill preserves every unrelated raw value."
+    },
+    {
+      "finding_id": "TEST-01",
+      "severity": 4,
+      "issue": "Backfill cleanup tests do not exercise preservation of populated facts.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: populated engine and CLI fixtures assert equality of all other raw facts."
+    },
+    {
+      "finding_id": "TEST-02",
+      "severity": 3,
+      "issue": "Existing identity-validation fixtures reject retired events before reaching identity checks.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed existing debt: remove retired fixture fields and assert the actual identity/schema rejection guards."
+    },
+    {
+      "finding_id": "ARCH-03",
+      "severity": 1,
+      "issue": "Superseded private current-ledger validation helper remains unused.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed after re-review: delete unreferenced helper; approvals carried forward for this unreachable-code deletion."
+    }
+  ]
+}

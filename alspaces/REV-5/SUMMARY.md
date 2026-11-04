@@ -10,14 +10,14 @@ Telemetry expectation: local Codex rollout metadata identifies root 01a19432-352
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 38
-- **Active Agent Duration:** 2h 58m (excludes user wait time)
-- **Context Window Health:** BLOATED — Root agent peak 245.7k tokens (123% of 200k healthy ceiling, 6 compactions) | Subagents peak 248.6k (Reviewer)
+- **Active Agent Duration:** 3h 1m (excludes user wait time)
+- **Context Window Health:** ELEVATED — Root agent peak 245.7k tokens (55% of 450k healthy ceiling, 6 compactions) | Subagents peak 248.6k (Reviewer)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 1.2 avg turns/run (peak: 2 turns) | Planner 1.0, Coder 1.3, Tester 1.0, Reviewer 1.0, Parallel_protocol_exercise 1.0, Review_eval_original 2.0, Review_eval_revised 2.0
 - **Test-to-Production Code Ratio:** 2.3:1 (+650 test lines / +280 prod lines)
 - **Code Delivered:** +930 / -2,550 lines across 53 code files (excluding docs)
-- **Reasoning Effort:** 71,629 reasoning tokens (17.2% of generated output)
-- **Tool Health & Self-Correction:** 929 tool calls (45 self-corrections, 95.2% success rate)
+- **Reasoning Effort:** 71,714 reasoning tokens (17.1% of generated output)
+- **Tool Health & Self-Correction:** 933 tool calls (45 self-corrections, 95.2% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 24 execution anomalies detected (13 CRITICAL, 11 WARNING).
@@ -53,23 +53,23 @@ Telemetry expectation: local Codex rollout metadata identifies root 01a19432-352
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **planner** | 3 | 268,346 | 7,695 | 1,442,432 | 84.3% | 148.2k | ELEVATED | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
-| **coder** | 7 | 693,476 | 58,843 | 21,748,480 | 96.9% | 184.5k | ELEVATED | Unavailable (0 observed, 0 partial, 7 unavailable / 7 invocations) |
-| **tester** | 3 | 185,217 | 11,530 | 5,664,000 | 96.8% | 174.6k | ELEVATED | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
-| **reviewer** | 8 | 1,715,967 | 85,479 | 35,289,728 | 95.4% | 248.6k | BLOATED (124%) | Unavailable (0 observed, 0 partial, 8 unavailable / 8 invocations) |
+| **planner** | 3 | 268,346 | 7,695 | 1,442,432 | 84.3% | 148.2k | HEALTHY | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
+| **coder** | 7 | 693,476 | 58,843 | 21,748,480 | 96.9% | 184.5k | HEALTHY | Unavailable (0 observed, 0 partial, 7 unavailable / 7 invocations) |
+| **tester** | 3 | 185,217 | 11,530 | 5,664,000 | 96.8% | 174.6k | HEALTHY | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
+| **reviewer** | 8 | 1,715,967 | 85,479 | 35,289,728 | 95.4% | 248.6k | ELEVATED | Unavailable (0 observed, 0 partial, 8 unavailable / 8 invocations) |
+| **Unknown** | 3 | 924,201 | 174,434 | 58,629,504 | 98.4% | 245.7k | ELEVATED | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
 | **parallel_protocol_exercise** | 1 | 34,071 | 3,638 | 176,128 | 83.8% | 36.4k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **review_eval_original** | 1 | 38,836 | 2,525 | 126,848 | 76.6% | 40.5k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **review_eval_revised** | 1 | 15,805 | 3,212 | 168,192 | 91.4% | 37.1k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **rootagent** | 3 | 920,431 | 173,108 | 57,502,720 | 98.4% | 245.7k | BLOATED (123%) | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
-| **Total** | **27** | **3,872,149** | **346,030** | **122,118,528** | **96.9%** | **248.6k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 27 unavailable / 27 invocations)** |
+| **Total** | **27** | **3,875,919** | **347,356** | **123,245,312** | **97.0%** | **248.6k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 27 unavailable / 27 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-astra** | 25 | 3,788,802 | 339,855 | 121,684,352 | 97.0% | Unavailable (0 observed, 0 partial, 25 unavailable / 25 invocations) |
+| **gpt-6-astra** | 25 | 3,792,572 | 341,181 | 122,811,136 | 97.0% | Unavailable (0 observed, 0 partial, 25 unavailable / 25 invocations) |
 | **gpt-6-luna** | 1 | 36,163 | 1,977 | 141,312 | 79.6% | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **gpt-6.1-sol** | 1 | 47,184 | 4,198 | 292,864 | 86.1% | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **27** | **3,872,149** | **346,030** | **122,118,528** | **96.9%** | **Unavailable (0 observed, 0 partial, 27 unavailable / 27 invocations)** |
+| **Total** | **27** | **3,875,919** | **347,356** | **123,245,312** | **97.0%** | **Unavailable (0 observed, 0 partial, 27 unavailable / 27 invocations)** |
 
 ## Iteration 02: REV-5 reclassification and remediation
 

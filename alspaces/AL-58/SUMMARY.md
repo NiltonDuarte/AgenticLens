@@ -48,14 +48,14 @@ Iteration 02 naming refactor is committed as `ab374c8`; iteration 03 cleanup is 
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 33
-- **Active Agent Duration:** 1h 30m (excludes user wait time)
-- **Context Window Health:** BLOATED — Root agent peak 244.9k tokens (123% of 200k healthy ceiling, 6 compactions) | Subagents peak 246.1k (Coder)
-- **Role Effort Distribution (Subagents):** N/A
+- **Active Agent Duration:** 1h 40m (excludes user wait time)
+- **Context Window Health:** ELEVATED — Root agent peak 244.9k tokens (54% of 450k healthy ceiling, 6 compactions) | Subagents peak 246.1k (Coder)
+- **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 1.1 avg turns/run (peak: 2 turns) | Planner 1.0, Coder 1.0, Tester 1.5, Reviewer 1.0
 - **Test-to-Production Code Ratio:** 1.4:1 (+2,099 test lines / +1,494 prod lines)
 - **Code Delivered:** +3,593 / -2,392 lines across 20 code files (excluding docs)
-- **Reasoning Effort:** 93,212 reasoning tokens (33.6% of generated output)
-- **Tool Health & Self-Correction:** 355 tool calls (21 self-corrections, 94.1% success rate)
+- **Reasoning Effort:** 93,971 reasoning tokens (33.6% of generated output)
+- **Tool Health & Self-Correction:** 358 tool calls (21 self-corrections, 94.1% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 14 execution anomalies detected (13 CRITICAL, 1 WARNING).
@@ -81,15 +81,15 @@ Iteration 02 naming refactor is committed as `ab374c8`; iteration 03 cleanup is 
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **planner** | 2 | 108,220 | 7,662 | 1,837,568 | 94.4% | 244.7k | BLOATED (122%) | $0.00 |
-| **coder** | 3 | 89,565 | 16,435 | 5,623,424 | 98.4% | 246.1k | BLOATED (123%) | $0.00 |
-| **tester** | 2 | 54,510 | 5,743 | 2,770,304 | 98.1% | 245.0k | BLOATED (123%) | $0.00 |
-| **reviewer** | 2 | 21,234 | 3,725 | 1,298,944 | 98.4% | 226.7k | BLOATED (113%) | $0.00 |
-| **rootagent** | 1 | 1,383,053 | 150,563 | 48,882,048 | 97.2% | 244.9k | BLOATED (122%) | $0.00 |
-| **Total** | **10** | **1,656,582** | **184,128** | **60,412,288** | **97.3%** | **246.1k** | **BLOATED** | **$0.00** |
+| **planner** | 2 | 108,220 | 7,662 | 1,837,568 | 94.4% | 244.7k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **coder** | 3 | 89,565 | 16,435 | 5,623,424 | 98.4% | 246.1k | ELEVATED | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
+| **tester** | 2 | 54,510 | 5,743 | 2,770,304 | 98.1% | 245.0k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **reviewer** | 2 | 21,234 | 3,725 | 1,298,944 | 98.4% | 226.7k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **Unknown** | 1 | 1,387,170 | 151,859 | 49,358,208 | 97.3% | 244.9k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **10** | **1,660,699** | **185,424** | **60,888,448** | **97.3%** | **246.1k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 10 unavailable / 10 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-luna** | 10 | 1,656,582 | 184,128 | 60,412,288 | 97.3% | $0.00 |
-| **Total** | **10** | **1,656,582** | **184,128** | **60,412,288** | **97.3%** | **$0.00** |
+| **gpt-6-luna** | 10 | 1,660,699 | 185,424 | 60,888,448 | 97.3% | Unavailable (0 observed, 0 partial, 10 unavailable / 10 invocations) |
+| **Total** | **10** | **1,660,699** | **185,424** | **60,888,448** | **97.3%** | **Unavailable (0 observed, 0 partial, 10 unavailable / 10 invocations)** |

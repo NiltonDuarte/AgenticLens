@@ -1,11 +1,5 @@
 {
-  "schema_version": 4,
-  "ticket_id": "GEN-7",
-  "ticket_title": "Multi-Platform Binary Selection and Host-Container Wrapper Support in Setup",
-  "ticket_type": "chore",
-  "started_at": "2026-10-23T14:15:20.857000+00:00",
-  "completed_at": "2026-10-26T09:21:45.698000+00:00",
-  "updated_at": "2026-10-27T08:05:14.604111001Z",
+  "anomalies": [],
   "code": {
     "lines_added": 1473,
     "lines_deleted": 159,
@@ -16,6 +10,8 @@
     "files_changed": 8,
     "sdlc_iterations": 6
   },
+  "completed_at": "2026-10-26T09:21:45.698000+00:00",
+  "schema_version": 6,
   "sessions": [
     {
       "id": "ses_e96e23be6ffecWBYCn5ZPxpixl",
@@ -29,87 +25,33 @@
           "completed_at": "2026-10-26T09:21:45.698000+00:00",
           "active_duration_seconds": 3042,
           "turns": 254,
-          "tokens": {
-            "input": 2296743,
-            "output": 50990,
-            "cache_read": 19510048,
-            "reasoning": 47736,
-            "peak_context": 167359
-          },
+          "tokens": {"input": 2296743, "output": 50990, "cache_read": 19510048, "reasoning": 47736, "peak_context": 167359},
           "cost_usd": 3.556033,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 3.556033},
           "compactions": 1,
           "user_iterations": 6
         }
       ],
       "tools": [
-        {
-          "name": "bash",
-          "calls": 83,
-          "errors": 0
-        },
-        {
-          "name": "edit",
-          "calls": 40,
-          "errors": 0
-        },
-        {
-          "name": "glob",
-          "calls": 14,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 13,
-          "errors": 0
-        },
-        {
-          "name": "read",
-          "calls": 78,
-          "errors": 1
-        },
-        {
-          "name": "t3-code_link_pull_request",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "t3-code_list_thread_pull_requests",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "todowrite",
-          "calls": 8,
-          "errors": 0
-        },
-        {
-          "name": "write",
-          "calls": 8,
-          "errors": 0
-        }
+        {"name": "bash", "calls": 83, "errors": 0},
+        {"name": "edit", "calls": 40, "errors": 0},
+        {"name": "glob", "calls": 14, "errors": 0},
+        {"name": "grep", "calls": 13, "errors": 0},
+        {"name": "read", "calls": 78, "errors": 1},
+        {"name": "t3-code_link_pull_request", "calls": 1, "errors": 0},
+        {"name": "t3-code_list_thread_pull_requests", "calls": 1, "errors": 0},
+        {"name": "todowrite", "calls": 8, "errors": 0},
+        {"name": "write", "calls": 8, "errors": 0}
       ],
       "anomalies": [
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 140,
-            "context_tokens": 160886,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 148,
-            "token_delta": 80641,
-            "context_tokens": 80641,
-            "threshold": "80000"
-          }
-        }
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 140, "context_tokens": 160886, "threshold": "160000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 148, "token_delta": 80641, "context_tokens": 80641, "threshold": "80000"}}
       ]
     }
   ],
-  "anomalies": []
+  "started_at": "2026-10-23T14:15:20.857000+00:00",
+  "ticket_id": "GEN-7",
+  "ticket_title": "Multi-Platform Binary Selection and Host-Container Wrapper Support in Setup",
+  "ticket_type": "chore",
+  "updated_at": "2026-10-27T08:05:14.604111001Z"
 }

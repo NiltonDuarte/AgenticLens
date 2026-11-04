@@ -1,5 +1,12 @@
 package backfill
 
+import (
+	"fmt"
+	"strings"
+
+	"agenticlens/internal/domain"
+)
+
 // TicketMigrationResult represents the migration result for an individual ticket workspace.
 type TicketMigrationResult struct {
 	RefreshIncomplete   bool     `json:"refresh_incomplete"`
@@ -7,6 +14,7 @@ type TicketMigrationResult struct {
 	Diagnostics         []string `json:"diagnostics,omitempty"`
 	TicketID            string   `json:"ticket_id"`
 	WorkspacePath       string   `json:"workspace_path"`
+	LedgerPath          string   `json:"ledger_path"`
 	PreviousStatus      string   `json:"previous_status"`
 	NewStatus           string   `json:"new_status"`
 	GitUpdated          bool     `json:"git_updated"`
@@ -36,10 +44,12 @@ type BackfillReport struct {
 type TicketSchemaMigrationResult struct {
 	TicketID      string `json:"ticket_id"`
 	WorkspacePath string `json:"workspace_path"`
+	LedgerPath    string `json:"ledger_path"`
 	SourceVersion int    `json:"source_version"`
 	TargetVersion int    `json:"target_version"`
 	Status        string `json:"status"`
 	BackupCreated bool   `json:"backup_created"`
+	BackupPath    string `json:"backup_path,omitempty"`
 	DiffSummary   string `json:"diff_summary"`
 	Error         error  `json:"error,omitempty"`
 }
@@ -52,4 +62,20 @@ type SchemaMigrationReport struct {
 	Skipped  int                           `json:"skipped"`
 	Errors   []string                      `json:"errors"`
 	Results  []TicketSchemaMigrationResult `json:"results"`
+}
+
+// migrationAuditSummary keeps migration accounting in command reports before
+// completed metadata is omitted from the persisted ledger.
+func migrationAuditSummary(info *domain.MigrationInfo) string {
+	if info == nil {
+		return ""
+	}
+	var parts []string
+	if len(info.StepsCompleted) > 0 {
+		parts = append(parts, fmt.Sprintf("completed steps: [%s]", strings.Join(info.StepsCompleted, ", ")))
+	}
+	if notes := strings.TrimSpace(info.Notes); notes != "" {
+		parts = append(parts, notes)
+	}
+	return strings.Join(parts, "; ")
 }

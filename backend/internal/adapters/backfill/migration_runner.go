@@ -127,6 +127,7 @@ func (r *MigrationRunner) migrateWorkspace(ctx context.Context, metricPath strin
 	res = TicketSchemaMigrationResult{
 		TicketID:      wsName,
 		WorkspacePath: wsDir,
+		LedgerPath:    metricPath,
 		TargetVersion: targetVer,
 	}
 
@@ -150,6 +151,7 @@ func (r *MigrationRunner) migrateWorkspace(ctx context.Context, metricPath strin
 		}
 	}()
 	metricPath = canonicalPath
+	res.LedgerPath = metricPath
 	if err := adapters.CheckPublication(metricPath); err != nil {
 		res.Status = "error"
 		res.Error = err
@@ -181,21 +183,29 @@ func (r *MigrationRunner) migrateWorkspace(ctx context.Context, metricPath strin
 	hasLegacyFacts := hasLegacyFactCollections(content)
 	missingSource := hasMissingSessionSource(content)
 	needsSanitization := sourceVer >= 4 && sourceVer <= domain.CurrentSchemaVersion && (needsEventSanitization(content) || missingSource)
-	if sourceVer == domain.CurrentSchemaVersion && !hasLegacyFacts {
-		if err := validateCurrentLedger(content); err != nil {
+	var current *currentLedgerPreparation
+	if sourceVer == domain.CurrentSchemaVersion {
+		prepared, err := prepareCurrentLedger(content)
+		if err != nil {
 			res.Status = "error"
 			res.Error = fmt.Errorf("validating current schema ledger: %w", err)
-			issues = append(issues, fmt.Sprintf("Workspace %s: %v", metricPath, res.Error))
-			return res, issues
+			return res, []string{res.Error.Error()}
 		}
+		current = &prepared
 	}
-	if sourceVer >= targetVer && !(sourceVer >= 4 && sourceVer <= domain.CurrentSchemaVersion && (hasLegacyFacts || needsSanitization)) {
+	cleanupCompleted := current != nil && current.Completed
+	if sourceVer >= targetVer && !cleanupCompleted && !(sourceVer >= 4 && sourceVer <= domain.CurrentSchemaVersion && (hasLegacyFacts || needsSanitization)) {
 		res.Status = "up-to-date"
 		res.DiffSummary = fmt.Sprintf("Schema version %d is already up-to-date", sourceVer)
 		return res, issues
 	}
 
-	migrated, err := r.engine.Migrate(content, targetVer)
+	var migrated domain.AgenticFactLedger
+	if current != nil {
+		migrated = current.Ledger
+	} else {
+		migrated, err = r.engine.Migrate(content, targetVer)
+	}
 	if err != nil {
 		res.Status = "error"
 		res.Error = fmt.Errorf("migrating schema: %w", err)
@@ -207,8 +217,40 @@ func (r *MigrationRunner) migrateWorkspace(ctx context.Context, metricPath strin
 		res.TicketID = strings.TrimSpace(*migrated.TicketID)
 	}
 	res.DiffSummary = fmt.Sprintf("Upgraded schema v%d -> v%d", sourceVer, targetVer)
-	if migrated.Migration != nil && strings.TrimSpace(migrated.Migration.Notes) != "" {
-		res.DiffSummary += "; " + strings.TrimSpace(migrated.Migration.Notes)
+	if cleanupCompleted {
+		res.DiffSummary = "Removed completed migration metadata"
+	}
+	if audit := migrationAuditSummary(migrated.Migration); audit != "" {
+		res.DiffSummary += "; " + audit
+	}
+	if migrated.Migration != nil && migrated.Migration.Status == domain.MigrationStatusCompleted && len(migrated.Migration.StepsPending) == 0 {
+		migrated.Migration = nil
+	}
+
+	// Validate and prepare the complete candidate before dry run or backup. Current
+	// schema cleanup deletes only the metadata member, preserving every other raw value.
+	dto := adapters.AgenticFactLedgerDTOFromDomain(migrated)
+	if err := dto.Validate(); err != nil {
+		res.Status = "error"
+		res.Error = fmt.Errorf("validating migrated schema: %w", err)
+		return res, []string{res.Error.Error()}
+	}
+	var data []byte
+	if cleanupCompleted {
+		data = current.WithoutMigration
+	} else {
+		data, err = json.Marshal(dto)
+	}
+	if err != nil {
+		res.Status = "error"
+		res.Error = fmt.Errorf("marshaling migrated JSON: %w", err)
+		return res, []string{res.Error.Error()}
+	}
+	data, err = adapters.FormatLedgerJSON(data)
+	if err != nil {
+		res.Status = "error"
+		res.Error = err
+		return res, []string{err.Error()}
 	}
 
 	if opts.DryRun {
@@ -225,28 +267,7 @@ func (r *MigrationRunner) migrateWorkspace(ctx context.Context, metricPath strin
 			return res, issues
 		}
 		res.BackupCreated = true
-	}
-
-	dto := adapters.AgenticFactLedgerDTOFromDomain(migrated)
-	if err := dto.Validate(); err != nil {
-		res.Status = "error"
-		res.Error = fmt.Errorf("validating migrated schema: %w", err)
-		issues = append(issues, fmt.Sprintf("Workspace %s: %v", metricPath, res.Error))
-		return res, issues
-	}
-	data, err := json.Marshal(dto)
-	if err != nil {
-		res.Status = "error"
-		res.Error = fmt.Errorf("marshaling migrated JSON: %w", err)
-		issues = append(issues, fmt.Sprintf("Workspace %s: %v", metricPath, res.Error))
-		return res, issues
-	}
-	data, err = adapters.FormatLedgerJSON(data)
-	if err != nil {
-		res.Status = "error"
-		res.Error = err
-		issues = append(issues, err.Error())
-		return res, issues
+		res.BackupPath = backupPath
 	}
 
 	tempPath := metricPath + ".tmp"
@@ -332,46 +353,4 @@ func hasMissingSessionSource(content []byte) bool {
 		}
 	}
 	return false
-}
-
-func validateCurrentLedger(content []byte) error {
-	// Pre-iteration v4 ledgers may contain payload keys that this normalization removes.
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(content, &raw); err != nil {
-		return err
-	}
-	if sessions, ok := raw["sessions"]; ok {
-		var items []map[string]json.RawMessage
-		if err := json.Unmarshal(sessions, &items); err == nil {
-			for i := range items {
-				if events, exists := items[i]["events"]; exists {
-					var rows []map[string]json.RawMessage
-					if json.Unmarshal(events, &rows) == nil {
-						for j := range rows {
-							for _, key := range []string{"error_message", "prompt_content", "reasoning_content", "tool_input", "tool_output"} {
-								delete(rows[j], key)
-							}
-						}
-						items[i]["events"], _ = json.Marshal(rows)
-					}
-				}
-				if _, hasSrc := items[i]["source"]; !hasSrc {
-					items[i]["source"], _ = json.Marshal(domain.SourceOpenCode)
-				}
-				if _, hasUser := items[i]["user"]; !hasUser {
-					items[i]["user"], _ = json.Marshal("unknown")
-				}
-			}
-			raw["sessions"], _ = json.Marshal(items)
-		}
-	}
-	cleaned, err := json.Marshal(raw)
-	if err != nil {
-		return err
-	}
-	var dto adapters.AgenticFactLedgerDTO
-	if err := json.Unmarshal(cleaned, &dto); err != nil {
-		return err
-	}
-	return dto.Validate()
 }

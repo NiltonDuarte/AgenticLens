@@ -45,18 +45,24 @@ Telemetry recovery: the first current-native generation correctly refused legacy
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 8
-- **Active Agent Duration:** 2h 14m (excludes user wait time)
-- **Context Window Health:** BLOATED — Root agent peak 316.7k tokens (158% of 200k healthy ceiling, 0 compactions) | Subagents peak 153.5k (Tester)
+- **Active Agent Duration:** 2h 45m (excludes user wait time)
+- **Context Window Health:** ELEVATED — Root agent peak 322.7k tokens (72% of 450k healthy ceiling, 0 compactions) | Subagents peak 153.5k (Tester)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 1.2 avg turns/run (peak: 5 turns) | Planner 3.0, Coder 3.0, Tester 5.0, Reviewer-architecture 1.0, Reviewer-behavior 1.0, Reviewer-data 1.0, Reviewer-tests 1.0
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 117,977 reasoning tokens (29.8% of generated output)
-- **Tool Health & Self-Correction:** 591 tool calls (27 self-corrections, 95.4% success rate)
+- **Reasoning Effort:** 121,517 reasoning tokens (30.1% of generated output)
+- **Tool Health & Self-Correction:** 599 tool calls (27 self-corrections, 95.5% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 11 execution anomalies detected (7 CRITICAL, 4 WARNING).
+- **Status:** 20 execution anomalies detected (13 CRITICAL, 7 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (200.9k tokens) — Context tokens reached 200.9k, breaching the 200k critical ceiling.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (15 cycles) — Subagent roles 'coder' and 'tester' alternated for 15 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-behavior <-> reviewer-data (10 cycles) — Subagent roles 'reviewer-behavior' and 'reviewer-data' alternated for 10 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-architecture <-> reviewer-tests (7 cycles) — Subagent roles 'reviewer-architecture' and 'reviewer-tests' alternated for 7 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (6 cycles) — Subagent roles 'coder' and 'tester' alternated for 6 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-behavior <-> reviewer-data (6 cycles) — Subagent roles 'reviewer-behavior' and 'reviewer-data' alternated for 6 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-behavior <-> reviewer-tests (7 cycles) — Subagent roles 'reviewer-behavior' and 'reviewer-tests' alternated for 7 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (15 cycles) — Subagent roles 'coder' and 'tester' alternated for 15 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-behavior <-> reviewer-data (10 cycles) — Subagent roles 'reviewer-behavior' and 'reviewer-data' alternated for 10 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-architecture <-> reviewer-tests (7 cycles) — Subagent roles 'reviewer-architecture' and 'reviewer-tests' alternated for 7 consecutive cycles.
@@ -65,6 +71,9 @@ Telemetry recovery: the first current-native generation correctly refused legacy
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-behavior <-> reviewer-tests (7 cycles) — Subagent roles 'reviewer-behavior' and 'reviewer-tests' alternated for 7 consecutive cycles.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+60.3k tokens) — Context tokens surged by 60.3k to 60.3k tokens.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (160.2k tokens) — Context tokens reached 160.2k, breaching the 160k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (322.7k tokens) — Context tokens reached 322.7k, breaching the 250k warning ceiling.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-architecture <-> reviewer-tests (4 cycles) — Subagent roles 'reviewer-architecture' and 'reviewer-tests' alternated for 4 consecutive cycles.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-behavior <-> reviewer-data (4 cycles) — Subagent roles 'reviewer-behavior' and 'reviewer-data' alternated for 4 consecutive cycles.
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-architecture <-> reviewer-tests (4 cycles) — Subagent roles 'reviewer-architecture' and 'reviewer-tests' alternated for 4 consecutive cycles.
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-behavior <-> reviewer-data (4 cycles) — Subagent roles 'reviewer-behavior' and 'reviewer-data' alternated for 4 consecutive cycles.
 
@@ -76,39 +85,18 @@ Telemetry recovery: the first current-native generation correctly refused legacy
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
 | **planner** | 1 | 150,115 | 6,023 | 1,037,056 | 87.4% | 82.8k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **coder** | 1 | 96,309 | 18,254 | 5,313,280 | 98.2% | 126.5k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **tester** | 1 | 84,531 | 30,094 | 7,246,208 | 98.8% | 153.5k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Unknown** | 1 | 670,235 | 137,931 | 39,180,800 | 98.3% | 316.7k | BLOATED (158%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **coder** | 1 | 96,309 | 18,254 | 5,313,280 | 98.2% | 126.5k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **tester** | 1 | 84,531 | 30,094 | 7,246,208 | 98.8% | 153.5k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Unknown** | 1 | 673,275 | 142,773 | 41,737,600 | 98.4% | 322.7k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **reviewer-architecture** | 6 | 317,122 | 15,482 | 1,709,824 | 84.4% | 69.2k | HEALTHY | Unavailable (0 observed, 0 partial, 6 unavailable / 6 invocations) |
 | **reviewer-behavior** | 8 | 384,868 | 23,588 | 2,905,088 | 88.3% | 71.7k | HEALTHY | Unavailable (0 observed, 0 partial, 8 unavailable / 8 invocations) |
 | **reviewer-data** | 6 | 225,865 | 17,304 | 1,794,816 | 88.8% | 63.1k | HEALTHY | Unavailable (0 observed, 0 partial, 6 unavailable / 6 invocations) |
 | **reviewer-tests** | 10 | 406,341 | 28,905 | 3,198,848 | 88.7% | 60.3k | HEALTHY | Unavailable (0 observed, 0 partial, 10 unavailable / 10 invocations) |
-| **Total** | **34** | **2,335,386** | **277,581** | **62,385,920** | **96.4%** | **316.7k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 34 unavailable / 34 invocations)** |
+| **Total** | **34** | **2,338,426** | **282,423** | **64,942,720** | **96.5%** | **322.7k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 34 unavailable / 34 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
 | **gpt-6-luna** | 15 | 659,710 | 32,195 | 3,131,264 | 82.6% | Unavailable (0 observed, 0 partial, 15 unavailable / 15 invocations) |
-| **gpt-6.1-sol** | 19 | 1,675,676 | 245,386 | 59,254,656 | 97.2% | Unavailable (0 observed, 0 partial, 19 unavailable / 19 invocations) |
-| **Total** | **34** | **2,335,386** | **277,581** | **62,385,920** | **96.4%** | **Unavailable (0 observed, 0 partial, 34 unavailable / 34 invocations)** |
-
-Capture observation finalized: 2026-11-03T17:08:09.423237482Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 34; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 34; reserved bytes: 24330580. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
-Owner codex/01a1a251-a16b-7630-8071-f5c22cc48f29: current; last successful source read 2026-11-03T17:08:08.848899105Z; accepted source checkpoint 2026-11-03T16:51:16.477Z.
-Owner codex/01a1a1bc-e5cd-7c62-80b0-51635e7c67e1: current; last successful source read 2026-11-03T17:08:08.862635847Z; accepted source checkpoint 2026-11-03T14:08:46.278Z.
-Owner codex/01a1a1ca-dabc-72b0-82c0-6663c485bb90: current; last successful source read 2026-11-03T17:08:08.874577686Z; accepted source checkpoint 2026-11-03T14:23:55.606Z.
-Owner codex/01a1a1bd-f847-7661-9dfa-80701e61365a: current; last successful source read 2026-11-03T17:08:08.887008565Z; accepted source checkpoint 2026-11-03T14:09:43.748Z.
-Owner codex/01a1a24d-b56f-7fd2-a56a-ddb618ec4f3d: current; last successful source read 2026-11-03T17:08:08.904684039Z; accepted source checkpoint 2026-11-03T16:47:38.524Z.
-Owner codex/01a1a13c-ef28-7633-b940-b47542ad139e: current; last successful source read 2026-11-03T17:08:08.936971896Z; accepted source checkpoint 2026-11-03T16:43:41.958Z.
-Owner codex/01a1a1bf-64e6-7852-adc1-6fb9caf3f701: current; last successful source read 2026-11-03T17:08:08.95217366Z; accepted source checkpoint 2026-11-03T14:11:15.107Z.
-Owner codex/01a1a144-0a54-7973-bad8-f10a9a0d6dcc: current; last successful source read 2026-11-03T17:08:08.970704834Z; accepted source checkpoint 2026-11-03T11:58:04.378Z.
-Owner codex/01a1a138-f579-7481-80b2-39db0205af01: current; last successful source read 2026-11-03T17:08:09.053952946Z; accepted source checkpoint 2026-11-03T17:08:08.855Z.
-Owner codex/01a1a1bf-89cd-75f0-b26c-6f49abd60cc4: current; last successful source read 2026-11-03T17:08:09.071713679Z; accepted source checkpoint 2026-11-03T14:12:52.538Z.
-Owner codex/01a1a142-58bc-7e80-bce8-5a4f4d43624b: current; last successful source read 2026-11-03T17:08:09.083802627Z; accepted source checkpoint 2026-11-03T11:54:45.777Z.
-Owner codex/01a1a1c6-8f97-7e60-948e-8282f19a1435: current; last successful source read 2026-11-03T17:08:09.097614548Z; accepted source checkpoint 2026-11-03T14:19:16.98Z.
-Owner codex/01a1a252-67fc-7ff1-b0f5-e8257f0e1611: current; last successful source read 2026-11-03T17:08:09.111563045Z; accepted source checkpoint 2026-11-03T16:52:23.804Z.
-Owner codex/01a1a1bc-fd71-7600-93a8-9f170ad45874: current; last successful source read 2026-11-03T17:08:09.123370454Z; accepted source checkpoint 2026-11-03T14:10:14.033Z.
-Owner codex/01a1a143-2cb5-7b43-9fed-c40661119149: current; last successful source read 2026-11-03T17:08:09.134498409Z; accepted source checkpoint 2026-11-03T11:55:37.601Z.
-Owner codex/01a1a145-7c41-7961-bea4-deb640ee8225: current; last successful source read 2026-11-03T17:08:09.14927247Z; accepted source checkpoint 2026-11-03T12:00:42.321Z.
-Additional owner freshness details remain in local capture diagnostics.
-
-Final telemetry validation: all 34 expected Codex session IDs exactly match source metadata, including root 01a1a138-f579-7481-80b2-39db0205af01 and 33 children. All 24 previous IDs are retained; no other-harness sessions existed to preserve. The post-recovery extraction completed without source errors, ticket type chore. Cost evidence remains unavailable. Configured code roots exclude this CI tooling, so rendered zero code-line counts are not a no-change claim. Raw anomaly flags remain visible; they do not establish the reported number of actual product rework cycles. Raw transcripts remain outside Git.
+| **gpt-6.1-sol** | 19 | 1,678,716 | 250,228 | 61,811,456 | 97.4% | Unavailable (0 observed, 0 partial, 19 unavailable / 19 invocations) |
+| **Total** | **34** | **2,338,426** | **282,423** | **64,942,720** | **96.5%** | **Unavailable (0 observed, 0 partial, 34 unavailable / 34 invocations)** |

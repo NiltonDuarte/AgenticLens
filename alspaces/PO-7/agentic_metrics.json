@@ -1,11 +1,5 @@
 {
-  "schema_version": 4,
-  "ticket_id": "PO-7",
-  "ticket_title": "Session Eliminate Cumulative Granularity and Implement Bi-Directional Code Churn Visualization",
-  "ticket_type": "docs",
-  "started_at": "2026-10-19T17:24:08.008000+00:00",
-  "completed_at": "2026-10-19T17:46:57.656000+00:00",
-  "updated_at": "2026-10-27T08:05:14.604111001Z",
+  "anomalies": [],
   "code": {
     "lines_added": 0,
     "lines_deleted": 0,
@@ -16,6 +10,8 @@
     "files_changed": 0,
     "sdlc_iterations": 4
   },
+  "completed_at": "2026-10-19T17:46:57.656000+00:00",
+  "schema_version": 6,
   "sessions": [
     {
       "id": "ses_eaaced537ffexVp8rcG77E6xCJ",
@@ -29,57 +25,28 @@
           "completed_at": "2026-10-19T17:46:57.656000+00:00",
           "active_duration_seconds": 533,
           "turns": 96,
-          "tokens": {
-            "input": 589614,
-            "output": 15403,
-            "cache_read": 6185557,
-            "reasoning": 21495,
-            "peak_context": 110105
-          },
+          "tokens": {"input": 589614, "output": 15403, "cache_read": 6185557, "reasoning": 21495, "peak_context": 110105},
           "cost_usd": 1.044495,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 1.044495},
           "compactions": 0,
           "user_iterations": 4
         }
       ],
       "tools": [
-        {
-          "name": "bash",
-          "calls": 30,
-          "errors": 0
-        },
-        {
-          "name": "edit",
-          "calls": 8,
-          "errors": 0
-        },
-        {
-          "name": "glob",
-          "calls": 5,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 9,
-          "errors": 0
-        },
-        {
-          "name": "read",
-          "calls": 31,
-          "errors": 0
-        },
-        {
-          "name": "skill",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "write",
-          "calls": 4,
-          "errors": 0
-        }
+        {"name": "bash", "calls": 30, "errors": 0},
+        {"name": "edit", "calls": 8, "errors": 0},
+        {"name": "glob", "calls": 5, "errors": 0},
+        {"name": "grep", "calls": 9, "errors": 0},
+        {"name": "read", "calls": 31, "errors": 0},
+        {"name": "skill", "calls": 1, "errors": 0},
+        {"name": "write", "calls": 4, "errors": 0}
       ],
       "anomalies": []
     }
   ],
-  "anomalies": []
+  "started_at": "2026-10-19T17:24:08.008000+00:00",
+  "ticket_id": "PO-7",
+  "ticket_title": "Session Eliminate Cumulative Granularity and Implement Bi-Directional Code Churn Visualization",
+  "ticket_type": "docs",
+  "updated_at": "2026-10-27T08:05:14.604111001Z"
 }

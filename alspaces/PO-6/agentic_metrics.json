@@ -1,11 +1,5 @@
 {
-  "schema_version": 4,
-  "ticket_id": "PO-6",
-  "ticket_title": "Session Telemetry Sanitization, Dynamic Local Hydration, and Structural Hierarchy Integrity",
-  "ticket_type": "docs",
-  "started_at": "2026-10-19T15:37:33.520000+00:00",
-  "completed_at": "2026-10-19T17:08:44.397000+00:00",
-  "updated_at": "2026-10-27T08:05:14.604111001Z",
+  "anomalies": [],
   "code": {
     "lines_added": 0,
     "lines_deleted": 0,
@@ -16,6 +10,8 @@
     "files_changed": 0,
     "sdlc_iterations": 8
   },
+  "completed_at": "2026-10-19T17:08:44.397000+00:00",
+  "schema_version": 6,
   "sessions": [
     {
       "id": "ses_eab3067afffeVhI1D0k4CABZ3z",
@@ -29,92 +25,33 @@
           "completed_at": "2026-10-19T17:08:44.397000+00:00",
           "active_duration_seconds": 1378,
           "turns": 216,
-          "tokens": {
-            "input": 1566857,
-            "output": 53089,
-            "cache_read": 15528699,
-            "reasoning": 49030,
-            "peak_context": 168745
-          },
+          "tokens": {"input": 1566857, "output": 53089, "cache_read": 15528699, "reasoning": 49030, "peak_context": 168745},
           "cost_usd": 2.722741,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 2.722741},
           "compactions": 1,
           "user_iterations": 8
         }
       ],
       "tools": [
-        {
-          "name": "bash",
-          "calls": 73,
-          "errors": 0
-        },
-        {
-          "name": "edit",
-          "calls": 21,
-          "errors": 0
-        },
-        {
-          "name": "glob",
-          "calls": 9,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 16,
-          "errors": 0
-        },
-        {
-          "name": "read",
-          "calls": 60,
-          "errors": 0
-        },
-        {
-          "name": "skill",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "todowrite",
-          "calls": 8,
-          "errors": 0
-        },
-        {
-          "name": "write",
-          "calls": 15,
-          "errors": 0
-        }
+        {"name": "bash", "calls": 73, "errors": 0},
+        {"name": "edit", "calls": 21, "errors": 0},
+        {"name": "glob", "calls": 9, "errors": 0},
+        {"name": "grep", "calls": 16, "errors": 0},
+        {"name": "read", "calls": 60, "errors": 0},
+        {"name": "skill", "calls": 1, "errors": 0},
+        {"name": "todowrite", "calls": 8, "errors": 0},
+        {"name": "write", "calls": 15, "errors": 0}
       ],
       "anomalies": [
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 113,
-            "context_tokens": 160566,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "turn": 118,
-            "token_delta": 79905,
-            "context_tokens": 79905,
-            "threshold": "40000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "turn": 183,
-            "token_delta": 75526,
-            "context_tokens": 75526,
-            "threshold": "40000"
-          }
-        }
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 113, "context_tokens": 160566, "threshold": "160000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 118, "token_delta": 79905, "context_tokens": 79905, "threshold": "40000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 183, "token_delta": 75526, "context_tokens": 75526, "threshold": "40000"}}
       ]
     }
   ],
-  "anomalies": []
+  "started_at": "2026-10-19T15:37:33.520000+00:00",
+  "ticket_id": "PO-6",
+  "ticket_title": "Session Telemetry Sanitization, Dynamic Local Hydration, and Structural Hierarchy Integrity",
+  "ticket_type": "docs",
+  "updated_at": "2026-10-27T08:05:14.604111001Z"
 }

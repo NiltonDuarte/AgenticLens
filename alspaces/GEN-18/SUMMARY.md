@@ -26,14 +26,14 @@ No matching GEN-18 planning specification or index entry existed, so no plan lif
 
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 2
-- **Active Agent Duration:** 0m 0s (excludes user wait time)
-- **Context Window Health:** HEALTHY — Root agent peak 54.2k tokens (27% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Active Agent Duration:** 5m 11s (excludes user wait time)
+- **Context Window Health:** HEALTHY — Root agent peak 56.9k tokens (13% of 450k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 1,018 reasoning tokens (12.5% of generated output)
-- **Tool Health & Self-Correction:** 20 tool calls (3 self-corrections, 85.0% success rate)
+- **Reasoning Effort:** 1,070 reasoning tokens (11.8% of generated output)
+- **Tool Health & Self-Correction:** 24 tool calls (3 self-corrections, 87.5% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** No execution anomalies detected (clean session).
@@ -45,13 +45,11 @@ No matching GEN-18 planning specification or index entry existed, so no plan lif
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **Unknown** | 1 | 37,712 | 7,121 | 773,120 | 95.3% | 54.2k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **1** | **37,712** | **7,121** | **773,120** | **95.3%** | **54.2k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations)** |
+| **Unknown** | 1 | 39,444 | 8,004 | 1,052,288 | 96.4% | 56.9k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **1** | **39,444** | **8,004** | **1,052,288** | **96.4%** | **56.9k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 1 | 37,712 | 7,121 | 773,120 | 95.3% | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **1** | **37,712** | **7,121** | **773,120** | **95.3%** | **Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations)** |
-
-Telemetry validation: ledger contains the actual Codex root `01a1a0b7-9371-78a2-912d-92fd7730bb7c`, source `codex`, exactly one session and no children, matching the rollout metadata and no-delegation workflow. Ticket GEN-18 is classified as chore. No prior ledger existed. Extraction completed without source errors.
+| **gpt-6.1-sol** | 1 | 39,444 | 8,004 | 1,052,288 | 96.4% | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **1** | **39,444** | **8,004** | **1,052,288** | **96.4%** | **Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations)** |

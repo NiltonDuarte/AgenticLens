@@ -1,11 +1,7 @@
 {
-  "schema_version": 4,
-  "ticket_id": "PO-9",
-  "ticket_title": "AgenticLens v2 - Agent Debug Prompt Generator, Multi-Project Observability, and Workspace Archive Engine",
-  "ticket_type": "docs",
-  "started_at": "2026-10-20T15:07:25.583000+00:00",
-  "completed_at": "2026-10-20T21:01:12.351000+00:00",
-  "updated_at": "2026-10-27T08:05:14.604111001Z",
+  "anomalies": [
+    {"rule_id": "TOOL_HIGH_FAILURE_RATE", "severity": "WARNING", "context": {"tool_name": "grep", "count": 3, "total_calls": 13, "threshold": "\u003e20%", "failure_rate_pct": 23.1}}
+  ],
   "code": {
     "lines_added": 0,
     "lines_deleted": 0,
@@ -16,6 +12,8 @@
     "files_changed": 0,
     "sdlc_iterations": 8
   },
+  "completed_at": "2026-10-20T21:01:12.351000+00:00",
+  "schema_version": 6,
   "sessions": [
     {
       "id": "ses_ea625a1f0ffe2kLBQaSLXc1QYO",
@@ -29,119 +27,36 @@
           "completed_at": "2026-10-20T21:01:12.351000+00:00",
           "active_duration_seconds": 2202,
           "turns": 195,
-          "tokens": {
-            "input": 1985501,
-            "output": 48064,
-            "cache_read": 14510489,
-            "reasoning": 37646,
-            "peak_context": 167895
-          },
+          "tokens": {"input": 1985501, "output": 48064, "cache_read": 14510489, "reasoning": 37646, "peak_context": 167895},
           "cost_usd": 2.898825,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 2.898825},
           "compactions": 1,
           "user_iterations": 8
         }
       ],
       "tools": [
-        {
-          "name": "bash",
-          "calls": 67,
-          "errors": 0
-        },
-        {
-          "name": "edit",
-          "calls": 13,
-          "errors": 0
-        },
-        {
-          "name": "glob",
-          "calls": 10,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 13,
-          "errors": 3
-        },
-        {
-          "name": "question",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "read",
-          "calls": 44,
-          "errors": 0
-        },
-        {
-          "name": "skill",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "t3-code_link_pull_request",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "t3-code_list_thread_pull_requests",
-          "calls": 5,
-          "errors": 0
-        },
-        {
-          "name": "todowrite",
-          "calls": 9,
-          "errors": 0
-        },
-        {
-          "name": "write",
-          "calls": 16,
-          "errors": 0
-        }
+        {"name": "bash", "calls": 67, "errors": 0},
+        {"name": "edit", "calls": 13, "errors": 0},
+        {"name": "glob", "calls": 10, "errors": 0},
+        {"name": "grep", "calls": 13, "errors": 3},
+        {"name": "question", "calls": 1, "errors": 0},
+        {"name": "read", "calls": 44, "errors": 0},
+        {"name": "skill", "calls": 1, "errors": 0},
+        {"name": "t3-code_link_pull_request", "calls": 1, "errors": 0},
+        {"name": "t3-code_list_thread_pull_requests", "calls": 5, "errors": 0},
+        {"name": "todowrite", "calls": 9, "errors": 0},
+        {"name": "write", "calls": 16, "errors": 0}
       ],
       "anomalies": [
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 128,
-            "context_tokens": 160013,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 144,
-            "token_delta": 84929,
-            "context_tokens": 84929,
-            "threshold": "80000"
-          }
-        },
-        {
-          "rule_id": "TOOL_RETRY_STREAK",
-          "severity": "WARNING",
-          "context": {
-            "tool_name": "grep",
-            "turn": 40,
-            "count": 3,
-            "threshold": "3"
-          }
-        }
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 128, "context_tokens": 160013, "threshold": "160000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 144, "token_delta": 84929, "context_tokens": 84929, "threshold": "80000"}},
+        {"rule_id": "TOOL_RETRY_STREAK", "severity": "WARNING", "context": {"tool_name": "grep", "turn": 40, "count": 3, "threshold": "3"}}
       ]
     }
   ],
-  "anomalies": [
-    {
-      "rule_id": "TOOL_HIGH_FAILURE_RATE",
-      "severity": "WARNING",
-      "context": {
-        "tool_name": "grep",
-        "count": 3,
-        "total_calls": 13,
-        "threshold": ">20%",
-        "failure_rate_pct": 23.1
-      }
-    }
-  ]
+  "started_at": "2026-10-20T15:07:25.583000+00:00",
+  "ticket_id": "PO-9",
+  "ticket_title": "AgenticLens v2 - Agent Debug Prompt Generator, Multi-Project Observability, and Workspace Archive Engine",
+  "ticket_type": "docs",
+  "updated_at": "2026-10-27T08:05:14.604111001Z"
 }

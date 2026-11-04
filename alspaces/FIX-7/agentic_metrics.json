@@ -1,11 +1,5 @@
 {
-  "schema_version": 4,
-  "ticket_id": "FIX-7",
-  "ticket_title": "Direct binary download and dynamic initial ticket selection",
-  "ticket_type": "fix",
-  "started_at": "2026-10-22T21:51:58.313000+00:00",
-  "completed_at": "2026-10-22T22:45:58.004000+00:00",
-  "updated_at": "2026-10-27T08:05:14.604111001Z",
+  "anomalies": [],
   "code": {
     "lines_added": 61,
     "lines_deleted": 203,
@@ -16,6 +10,8 @@
     "files_changed": 6,
     "sdlc_iterations": 7
   },
+  "completed_at": "2026-10-22T22:45:58.004000+00:00",
+  "schema_version": 6,
   "sessions": [
     {
       "id": "ses_e9a668a96ffeNXvWbU2Xc05uJ6",
@@ -29,82 +25,32 @@
           "completed_at": "2026-10-22T22:45:58.004000+00:00",
           "active_duration_seconds": 1009,
           "turns": 185,
-          "tokens": {
-            "input": 938182,
-            "output": 23877,
-            "cache_read": 14192318,
-            "reasoning": 46871,
-            "peak_context": 170176
-          },
+          "tokens": {"input": 938182, "output": 23877, "cache_read": 14192318, "reasoning": 46871, "peak_context": 170176},
           "cost_usd": 2.033365,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 2.033365},
           "compactions": 1,
           "user_iterations": 7
         }
       ],
       "tools": [
-        {
-          "name": "bash",
-          "calls": 93,
-          "errors": 1
-        },
-        {
-          "name": "edit",
-          "calls": 7,
-          "errors": 0
-        },
-        {
-          "name": "glob",
-          "calls": 15,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 15,
-          "errors": 1
-        },
-        {
-          "name": "read",
-          "calls": 33,
-          "errors": 0
-        },
-        {
-          "name": "t3-code_link_pull_request",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "t3-code_list_thread_pull_requests",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "write",
-          "calls": 8,
-          "errors": 0
-        }
+        {"name": "bash", "calls": 93, "errors": 1},
+        {"name": "edit", "calls": 7, "errors": 0},
+        {"name": "glob", "calls": 15, "errors": 0},
+        {"name": "grep", "calls": 15, "errors": 1},
+        {"name": "read", "calls": 33, "errors": 0},
+        {"name": "t3-code_link_pull_request", "calls": 1, "errors": 0},
+        {"name": "t3-code_list_thread_pull_requests", "calls": 1, "errors": 0},
+        {"name": "write", "calls": 8, "errors": 0}
       ],
       "anomalies": [
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 135,
-            "context_tokens": 161225,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "turn": 149,
-            "token_delta": 59030,
-            "context_tokens": 59030,
-            "threshold": "40000"
-          }
-        }
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 135, "context_tokens": 161225, "threshold": "160000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 149, "token_delta": 59030, "context_tokens": 59030, "threshold": "40000"}}
       ]
     }
   ],
-  "anomalies": []
+  "started_at": "2026-10-22T21:51:58.313000+00:00",
+  "ticket_id": "FIX-7",
+  "ticket_title": "Direct binary download and dynamic initial ticket selection",
+  "ticket_type": "fix",
+  "updated_at": "2026-10-27T08:05:14.604111001Z"
 }

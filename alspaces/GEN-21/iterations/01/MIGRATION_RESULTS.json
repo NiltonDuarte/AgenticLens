@@ -1,0 +1,2390 @@
+{
+  "release": "v3.0.0-rc.125+86bea59",
+  "baseline": "86bea59",
+  "original_ledgers": 119,
+  "sessions": 1098,
+  "invocations": 1100,
+  "unchanged_current_ledgers": 1,
+  "migrated_ledgers": 118,
+  "pending_steps": [],
+  "legacy_extra_fields_removed": [
+    {
+      "path": "alspaces/AL-55/agentic_metrics.json",
+      "session_id": "01a19267-636b-7d61-85c6-db8d3d3eba77",
+      "tool": "command",
+      "removed_content_errors": 1
+    }
+  ],
+  "ledgers": [
+    {
+      "path": "alspaces/AL-1/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 7,
+      "invocations": 7,
+      "before_sha256": "6c07cb1a977e8871892616305727e42941d6ad8fb12ba2f787986bc96c03eb05",
+      "after_sha256": "84acb8e938738f9bb48c936572ca8d9328a16002d338c7aca4e4ee365409a324",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-10/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 4,
+      "invocations": 4,
+      "before_sha256": "450e2bf80fb42a5922d17b5dcbdfc43ca961eea06c1dc1c3fc433d280eb4b833",
+      "after_sha256": "ce29ff5927f7594cea5daa563f9f68eb0f03cd86d07c871c5fffff268a546b82",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-11/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 5,
+      "invocations": 5,
+      "before_sha256": "1e64b852d7b17902c0746c8c20448d89651bf0839dbacbb558f5c9076a5ceff3",
+      "after_sha256": "c6fbae3657831eb7409e3a70328c562661741e4ac427db859385708dada2b64e",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-12/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 5,
+      "invocations": 5,
+      "before_sha256": "4f00aeed9393ecfe1a08277c53d3c7ed157fc4822898bcbe2e4f20b2e2c8dd0a",
+      "after_sha256": "ba9fa68dcfe2bfacd6cd6159592d07104c67b32b5d4241fb10dd7de928ce39bf",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-13/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 6,
+      "invocations": 6,
+      "before_sha256": "a0acec6ff6b9e5364e92403c0c69c77316dd75b9391e297ab743a0b55209352f",
+      "after_sha256": "a871606a18edf5dca727ca35952885f1eeb2f1410098195260cfd812ea1a0d15",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-14/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 5,
+      "invocations": 5,
+      "before_sha256": "77410aa179ff1f2c7dc6bbcac81de0e52f917215402fbb243cfdd02c6f994c9b",
+      "after_sha256": "b90149aeb15ed540e4bdef9089bcfa5756210fd6897bb9b01e3942654f90b23b",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-15/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 10,
+      "invocations": 10,
+      "before_sha256": "dbd820519a0c5cf9d9c81fa8e4329e9585aebe04570d2907a13000ecec0633d4",
+      "after_sha256": "d2464a5bdecc0a07818ad7c974c4cd66480c4cc8fa8e08bca56de535682928f8",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-16/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 9,
+      "invocations": 9,
+      "before_sha256": "523b5f6aeb51f1493ca9501f508017e5e56f195c5f1e66574c1c96d8f3920c3b",
+      "after_sha256": "6e4a9cb85c92546f175e453e6e5410116daba2b2fddbd7e8e0bd1bf86a8ef952",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-17/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 7,
+      "invocations": 7,
+      "before_sha256": "6d45973f3da5c8572aba10b07324917743377a21b4f67d825a2cda565ba2922b",
+      "after_sha256": "a729a70ce9a625b4f1ebbc9c727192d7fe7345c4249f5822efddd2d2338deb9c",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-19/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 9,
+      "invocations": 9,
+      "before_sha256": "ff0a6ae157338758e0758037f0410c1e2600b5bed28f9b8afe206f7942748f49",
+      "after_sha256": "0708e7e28427e36dff1ebfba2b20b6021f2c13a366e1fdc0b9bf788ae7bb6469",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-2/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 9,
+      "invocations": 9,
+      "before_sha256": "239e7a5b9411fd38e5c7f74f87f6a77d82a4eb796323be07ec5650016181b055",
+      "after_sha256": "c8fdc0ad9070672911b3ae6fc6f8d988775d1af32a2fc6be97cbacf7fef08897",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-20/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 9,
+      "invocations": 9,
+      "before_sha256": "cdbf191ec4fbce7b1b42dfb31b144df6d6d622192ca9d76be1f30a74ff184b43",
+      "after_sha256": "4ed581fbf3d57c766ec33bc5e36d03bf56d5b5adbb6d328ff31bcad0ad5acc8f",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-21/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 10,
+      "invocations": 10,
+      "before_sha256": "c3c2380204e53d710975c096b5b603bcc81ff7659c600aee4034a6b1721a5eea",
+      "after_sha256": "d1c52445bcb4e2590552e454f24fdd33469c3e773b4bd6a083f1c111759b3fa6",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-22/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 7,
+      "invocations": 7,
+      "before_sha256": "4e183eb40800bd2188853fadd6c8d5ba5fb6550b6bc14e25620957b7e3f8c60b",
+      "after_sha256": "a43700541f3572557c1bf4766d98b7d663f0d05c79f04fd56821a7e079cdde0e",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-23/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 5,
+      "invocations": 5,
+      "before_sha256": "2f281bc7ecff98505f8e0525e67f43746c7ea644f15d439abb315741f658b8d4",
+      "after_sha256": "9540fb7d0bbc6245fbc2d37a985b9723774dea987b70ccc7617ebbdee50c7dc3",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-24/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 11,
+      "invocations": 11,
+      "before_sha256": "feb81077f0a69457f226237e3cfbdaf7dd0d0283078bedce67bef64514fc2fe9",
+      "after_sha256": "03fc7a47c7447610a1f01352d807003c2d224e1327906152a8e7cc9c5cf2aff5",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-25/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 19,
+      "invocations": 19,
+      "before_sha256": "ea5021d5a5f038fdff5a93eb5797108718b2af120b748abfd037e306a6fa0f6d",
+      "after_sha256": "0c0c88a375f6c33590a4acd44cbe1854d9723d0e4de52f135f3eaf957793817f",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-26/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 5,
+      "invocations": 5,
+      "before_sha256": "f30ea7189742109b1a51cee993479fc0e3e36af6cf4bb44baca18cad94d35d92",
+      "after_sha256": "e9ee4544f5e17094c5ad334c3d198c2973831adce8bbbf9ba247e6eb1849d47d",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-27/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 5,
+      "invocations": 5,
+      "before_sha256": "89de4511ab5b5fe0bbb7f582f796a9ee7d93a48aea9420039be052556130af3d",
+      "after_sha256": "254188d1decccae1a9ffd022319acaf694259cca52a05a8238655204a8c06f19",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-28/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 11,
+      "invocations": 11,
+      "before_sha256": "813a430ea5e9045b7c6cf0a7fb32c4214e050f8b39bda467b8ef009ac9d77d1d",
+      "after_sha256": "abdb711e5133f1f3c4bb3139c3dcc510f0fd012e0670d65a9d2be069ae61b355",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-29/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 10,
+      "invocations": 10,
+      "before_sha256": "b0e72bd26f53b69f774b3bba526acc908cd769ee93a597c5c0bcd64390fbbb06",
+      "after_sha256": "d0680dc037fa27de72794b3d4e6e31e08d2f1d0249d00573038cbf019cb37c99",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-3/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 9,
+      "invocations": 9,
+      "before_sha256": "48d3c70c39d42c841d7b3dcf2f3a9ee0c97e0f40ebac5907a4a7056c58acc2cd",
+      "after_sha256": "c684246d9a09290e11f326cee27d8af22926aaac976894163d69f646797d0d0f",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-30/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 5,
+      "invocations": 5,
+      "before_sha256": "bf2cd44ee45808fb3d16324555a3702ec8129e1f45f9a3fe497412cabd34fcd7",
+      "after_sha256": "ed8683201ceca473063b7d31b4e1d597ef7dec6b5e901c5cca58b6121c6bdd66",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-31/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 17,
+      "invocations": 17,
+      "before_sha256": "d417b862a073de678c08e43666265582f67c4c33bb38cd397f94670a27c5ce8f",
+      "after_sha256": "d29e3cbcfcb7c0573aa9df9f81db88039759f29019940f7e03e3eb421b9c73d5",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-32/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 5,
+      "invocations": 5,
+      "before_sha256": "dd06cfc1b88c0f3cf19f0bcbb2341e51183114601356d8ca5cd10756ba347d87",
+      "after_sha256": "eb944a8c9d19020aec4a7c54bb1a25f041a5fbdff3873fec7ae8d60a7333d7ec",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-33/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 18,
+      "invocations": 18,
+      "before_sha256": "b4e1df6de2c9bec1bcd9793539f74a4046cc70a871ede49b38e89889f58997ae",
+      "after_sha256": "f9fd6b16d33cea98e789651ee64afcaff964fdbe4083d481b9907e1162ae1161",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-34/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 9,
+      "invocations": 9,
+      "before_sha256": "0b966d96cd47d3941d42164c87ebe5523cce2e8513d1a1d85922a0dfb7c394fd",
+      "after_sha256": "a4b5322cb56cd981944e96c0c67522e1737335e96a0e5ac1e866b0e656c044ad",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-35/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 1,
+      "invocations": 1,
+      "before_sha256": "6c29eebd01f271e49bd65fbfca0d6355544e51d9be9bc59ffa3ea572fd26f72f",
+      "after_sha256": "efc8d96cd6efdf57220409446b377fb8e3d44f46629be117fe5e956cde22a594",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-36/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 17,
+      "invocations": 17,
+      "before_sha256": "1aa9fa431a775d16990f577ab4ee9b9be6700eb3c576c91738b08144ef3e6bce",
+      "after_sha256": "53676433bce577745b0ba04f673f9e925f2829ab3a0cc4a12f584caa34ef5ea9",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-37/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 18,
+      "invocations": 18,
+      "before_sha256": "a4c0d86fa100e3e585b9401070842c4c51bcde009611511d61412708f908b1da",
+      "after_sha256": "e80cbf49e73b72ecd8acf7ca92ef2b3309c2392ddee400d306d4808df986cce6",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-38/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 5,
+      "invocations": 5,
+      "before_sha256": "49d7fdf366e90a5ba0d7694996b3bd108ba56d922f83e12641e69789f144331b",
+      "after_sha256": "2b091e2eb07df06600edefac421a569617095307ceb06aea3ad5c27a815a8314",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-39/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 23,
+      "invocations": 23,
+      "before_sha256": "c958400261f864e3af7452bc753fae54bb839f3db3fe0e67126100781e3589cf",
+      "after_sha256": "acd46212d3caa57633a4ea230999107a089f72ac970a165ba14c7f95e1c802e6",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-4/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 10,
+      "invocations": 10,
+      "before_sha256": "6ef7c9d46883b20a39111f1f5c9f35c3f110f389a22e7262df534e4ace6a5050",
+      "after_sha256": "7891c05eff688fe307834aff06af41d85662ab8a5eb2693beead49e120f17e1c",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-40/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 9,
+      "invocations": 9,
+      "before_sha256": "c885e9e550b0afba1d092c8b3311bb44acf14da36f949c103c62fff4089affbf",
+      "after_sha256": "d3e065378e63e25a3296f3537de7821b766bfb04be94bf656baa7ac978829ac6",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-41/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 5,
+      "invocations": 5,
+      "before_sha256": "d5686f3802d4eaaa15551d1c555a16f04b2cfdcb77ce72c11cf6d7aa49df8be8",
+      "after_sha256": "61fd52b7ab3ae277eb3890447fe2fe60589c55f120fd458cdc6b181a7d6e4daf",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-43/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 10,
+      "invocations": 10,
+      "before_sha256": "3f8ca91c0e14b66616daa3e8141dee91770d79e1de0fe809b0e32b70229e400e",
+      "after_sha256": "1ed63b9265a678fef033b6d3811c0866e9e88cf2b9d209aa8265bba3044b17e5",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-45/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 14,
+      "invocations": 14,
+      "before_sha256": "b96964b900b1885c4a3264633eb1d547e52a7e3296295f66480931af2a0f11b1",
+      "after_sha256": "49c3f00406aecf12ab7cc210ca703a57c56ce8470a56492336a06f1e6ab16816",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-46/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 9,
+      "invocations": 9,
+      "before_sha256": "83d10b7ee2aed2882becd54ae5a1c0e90642a755529de252c0639fd7624cc0cb",
+      "after_sha256": "6f0fcff876551369374086503bdacbf251a54e7954a72de3f2d864839f651b0e",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-47/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 9,
+      "invocations": 9,
+      "before_sha256": "e7784e0bffdf57c4a5e6c930bbeff5d936992d4afb38cdc2a822e94290efc6b8",
+      "after_sha256": "7105d9567338432fba55f1c731254991a9b28e22d03605a5abcdca5ce56d2744",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-48/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 5,
+      "invocations": 5,
+      "before_sha256": "5aafca20438b36e00bb5986dee2916f86e2f9cd44b9a73fc51554eef1197a063",
+      "after_sha256": "842029cf56305a8147c4e13ccf1e795634206a8a4ba13b59959702ecde230b24",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-49/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 5,
+      "invocations": 5,
+      "before_sha256": "90528074a6150928d0be1c23b2eb474de946ebb982b33a08744c75d4de5a9230",
+      "after_sha256": "92807cb9ca7c27b8896baccb8784e987abf395d6d88a2cf9f775795fbaa01481",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-5/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 10,
+      "invocations": 10,
+      "before_sha256": "a409b47a9a792c0b2da731fa8b88a045f4d18fdf96d5fdad864f7176b290833c",
+      "after_sha256": "fd6054785676ccbc51ebb9c73406fc551a3f535d965f560d2eb6f84f8808ed34",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-50/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 5,
+      "invocations": 5,
+      "before_sha256": "57b04ca8d2349677fa279f356bfa0f1eaa83238830efa8746320e645f23303e4",
+      "after_sha256": "5592a461d946cc4a7c7edfcc76f24004f97540b02d66da37bdbccbcb820fe621",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-51/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 14,
+      "invocations": 14,
+      "before_sha256": "df69c236d4c94eabeefa0f5e81c6ead73f5587c2774af39f9f065ff535388999",
+      "after_sha256": "c695b6c0445a3d75a76c07a2527186a2cd6bb9604692a2e48250f8c77c7f036e",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-52/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 5,
+      "invocations": 5,
+      "before_sha256": "61c7a635eaed5d551362de8d5dbfc4525a863e69b4781288e56f746671cc6ca4",
+      "after_sha256": "da98b29e88adce19025aded294d92687e10ce763bb7b99491b95220a0973a60d",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-53/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 5,
+      "invocations": 5,
+      "before_sha256": "22013d6bfb00f2916e742e89905774e3f7b18dc9e978a35f1be6860a777ecf57",
+      "after_sha256": "253cec54e0019aa9e62b38ad15fa734e892fa2ae83487c2ab393406f0bb2f4ab",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-54/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 5,
+      "invocations": 5,
+      "before_sha256": "cff2d51b9d4be020df68d561d3de49826c634554c4770996ee39eecc4c1c5418",
+      "after_sha256": "346a7f17ac7d741be2c837c44fae48d01617cd7b5c81881e6625ebb66be5cb8d",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-55/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 5,
+      "invocations": 5,
+      "before_sha256": "75baa0c19b4ad319eeca265f0cddfa0caa389a2565791be75976fc4896069936",
+      "after_sha256": "4378b0be514f73df81ff11a2c05726d607a662d1bdb17e9da8807416d219a693",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-56/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 40,
+      "invocations": 42,
+      "before_sha256": "86d927d4abcc458664d8046fb6d92a560820c43af6adf9237c345287d78e30b3",
+      "after_sha256": "dd1a7524325e162a01f4c0bfe540c85d7b3712e98d5b6fb901ed5b289d71c688",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-57/agentic_metrics.json",
+      "from_schema": 5,
+      "to_schema": 6,
+      "sessions": 9,
+      "invocations": 9,
+      "before_sha256": "5426052d788717a53d61c5a9cd138b2277e75e4ca28992986e31d71c302c95a8",
+      "after_sha256": "6859e3e384082dd4b896af5576bb7af81bc784a457a180312cf6988bc1f11843",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-58/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 10,
+      "invocations": 10,
+      "before_sha256": "8831345175531f22f49122836bc7da48ff721496990ef5a478058ab797cfe1e4",
+      "after_sha256": "5d1cc9ebbee32735e22d9a0861ab8b2c50a527a65a3cfec7b627115f8d2f25e6",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-59/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 1,
+      "invocations": 1,
+      "before_sha256": "24e36a056c69f57a1273f8eff5a9b016136a936e6d70bff5e6b52f5588c2a926",
+      "after_sha256": "43aafe4715f59e3e90fbbe339722493d01221e995b22137ec457d28df35cbcec",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-6/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 5,
+      "invocations": 5,
+      "before_sha256": "55dd5eb66886e9808dc1d3c872597757d9e01569f94f0d9cc22e8df0dd720f44",
+      "after_sha256": "8f64c9ae9213939be7618c3609591fd0ed6fbc7f34d79ab3ed0ebbf422a8f52c",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-60/agentic_metrics.json",
+      "from_schema": 5,
+      "to_schema": 6,
+      "sessions": 54,
+      "invocations": 54,
+      "before_sha256": "dc0056bd95c5be5063698a922dab9118dc08fd6e7ae59ab3a216f883667b9df7",
+      "after_sha256": "7c38627eff820e0967b193fe88928bdec8b95f191f640d11cbf4d5c0b94650be",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-61/agentic_metrics.json",
+      "from_schema": 5,
+      "to_schema": 6,
+      "sessions": 10,
+      "invocations": 10,
+      "before_sha256": "f3eadba2158d1befc38fbe5174650a19e1f19d4070a0477f920cd6cbe27e38e3",
+      "after_sha256": "ee6dd69c90829c3c716d1a90b4e63e76741b2d41b103d83c5c3908d8092c84e2",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-62/agentic_metrics.json",
+      "from_schema": 6,
+      "to_schema": 6,
+      "sessions": 26,
+      "invocations": 26,
+      "before_sha256": "401995a2367ebaff7289b286e1ef5cf491eadd2ef62fedc26971f0a7416db5fd",
+      "after_sha256": "401995a2367ebaff7289b286e1ef5cf491eadd2ef62fedc26971f0a7416db5fd",
+      "migration": null
+    },
+    {
+      "path": "alspaces/AL-68/agentic_metrics.json",
+      "from_schema": 5,
+      "to_schema": 6,
+      "sessions": 199,
+      "invocations": 199,
+      "before_sha256": "be5d38366ea2697e525edd1b46c492ff1dc99508f809d63696dbbd1a40b64872",
+      "after_sha256": "a11b5c7b9bbe3b24edfdd17efb9ff2d5914817759c0a5ba0566d95998f151815",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-68/iterations/05/agentic_metrics.json",
+      "from_schema": 5,
+      "to_schema": 6,
+      "sessions": 1,
+      "invocations": 1,
+      "before_sha256": "23d06c7189382f6795f8412d4d14879c0a1ea5121bc67e0adf692d5078a0b512",
+      "after_sha256": "bff15c5b0450bcb4aa2ae002a398e9b3566b8b383a07b3b0cd46c9e814e0ec31",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-7/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 7,
+      "invocations": 7,
+      "before_sha256": "85c43efa28700013517c70aff00f710ce674d65960e43749d85eb24b4de0946c",
+      "after_sha256": "858e5db2802b8989c2bded0bd0ed9914c3b8a3fd8ba951d16a92e1ead03f04a8",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-76/agentic_metrics.json",
+      "from_schema": 5,
+      "to_schema": 6,
+      "sessions": 12,
+      "invocations": 12,
+      "before_sha256": "7753e4790c0e3b4429de28f55f346c7152844501e8e25280697e396aa40b2047",
+      "after_sha256": "e390d37cb3082a77b544a05bb68d8402d772974f4a5a580d673cf4d0fe7b8cb4",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-8/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 5,
+      "invocations": 5,
+      "before_sha256": "5d3b2ec2514a5a132ef95406ff116442781b5d53ffaa84a6ac38d387d66a56b6",
+      "after_sha256": "2e4e35d2c6e50296fbc211df5a7283165a31533fa5375211dd4f5bdfa11a7c73",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/AL-9/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 16,
+      "invocations": 16,
+      "before_sha256": "d867f3111909d6db94eab7be7e2b6f02a7d227e6a7196fa2efb816db01b4ae5a",
+      "after_sha256": "07820061fb9736248daa0195ee27eabc1077a21490c55e03d65887a96ff0f258",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/FIX-1/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 11,
+      "invocations": 11,
+      "before_sha256": "b0f105d26e1e0916a33c4787a2303713b9dc2b63042fa301f79ca45a71b02e42",
+      "after_sha256": "858f9b568e4215aed22e438eee74b02b5aedb069d2f92e084b08033d29d7acf4",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/FIX-10/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 8,
+      "invocations": 8,
+      "before_sha256": "087ae37e4b61011a5cfc13779df96bc7b8c176e86c029a6fa4f73983e5c6cda0",
+      "after_sha256": "f4ecfaa27d3e5464f1424e003c95ab5750a2677f5352de1b72039624e6d768b9",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/FIX-11/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 10,
+      "invocations": 10,
+      "before_sha256": "0df2f377f65e2ee30619b96696f593bf6655644f759897ae2ac91d30194796fe",
+      "after_sha256": "d6f43c7f2fed9c3bad2435e9ea1bb748c5e4b98b05294cdcb888bda235603553",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/FIX-12/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 2,
+      "invocations": 2,
+      "before_sha256": "101d72350cda9cce2553a1d8e52791f8c6a3e86bf612dd6afa72698a741e2f5c",
+      "after_sha256": "3146df44b27c6f9c2fd0cef5ab46571b735029345257ca57c9cd88e275971d4d",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/FIX-13/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 4,
+      "invocations": 4,
+      "before_sha256": "d5aa8a3923449065c33c5d504d003ad7bae24c7d346b685256d200fbe9dbe68f",
+      "after_sha256": "55c1b8c52e7a873fb4eef771022cab30cd255d2bd6cab59ddb558367b315f178",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/FIX-14/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 6,
+      "invocations": 6,
+      "before_sha256": "5b3ead891c57fdff131088725e02ee92485f0e3cd04e1cfae93aef46ca530df1",
+      "after_sha256": "f99c5ee514a7ea50a2f198fbbb409e6837eaf80ac5e908a5bbace01ee2a0aaa2",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/FIX-16/agentic_metrics.json",
+      "from_schema": 5,
+      "to_schema": 6,
+      "sessions": 8,
+      "invocations": 8,
+      "before_sha256": "4197221372f4a4d2dbd5c5ffb835db420fa3392ebc61703e048a3d65e3fcc6f3",
+      "after_sha256": "71384081f1f63836ec8afb352975a16c270a2ca638a7f82b2bbdcc5d8bcaf63f",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/FIX-2/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 19,
+      "invocations": 19,
+      "before_sha256": "979e79073f81266b377ab255cf7b76dfe3825552145a547f383216538986f8b7",
+      "after_sha256": "374eed2db5d5407321a85d1cd67ef7cba21dd1fc0b3d20ec8f83965d138f313c",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/FIX-3/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 27,
+      "invocations": 27,
+      "before_sha256": "75590bfc0279df4b6a4752bf38cc821c2304b3be51c54a71914306647021a939",
+      "after_sha256": "bccfe938759bf75cb516af90fe621bb401fadf4c755d3119e89a9fb2ae2fb776",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/FIX-4/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 27,
+      "invocations": 27,
+      "before_sha256": "ce6bd94e9fc9c4b604ef215650f830a56a21f2f45a81cd2068275dd1c27e488c",
+      "after_sha256": "a4b45456ba60414a0c9e2ba4c913aaac7dbebde822429dd9578337b0c553209a",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/FIX-5/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 5,
+      "invocations": 5,
+      "before_sha256": "51bc643598432f69e3b8eda6ce31c5cb0208ca3aae17ea1a32a3b49ad8abcd0d",
+      "after_sha256": "19b6a77a448a2ac61c70ecb99229c0014408b8443c9ada7bb1b08f629bfa9085",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/FIX-6/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 1,
+      "invocations": 1,
+      "before_sha256": "fff2786e88f2a0b7760981766e55be67d1943fe071db753b4a5e0b06ebd55a56",
+      "after_sha256": "bc42bdedb4ab4c5689c63bf2001af82ff3b5353cc88431e3c0dffd420d45c1aa",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/FIX-7/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 1,
+      "invocations": 1,
+      "before_sha256": "4890f21cf0d47c64740634090ea85a8bbecbd9f7a441ee40fa1e85e41aa5c53a",
+      "after_sha256": "2a6bae5d34ff757879e257143cc65f7bc5eff6d8659b52bc57f675770d471df2",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/FIX-8/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 1,
+      "invocations": 1,
+      "before_sha256": "e82c2677652c900244cc7ee42a1f23a708bc0b2a5beecc798a2abf2d13419ebe",
+      "after_sha256": "61b2a342ce485069d2ed82dd15d2e43c142fbaa204fbc9daa4d3c80feef23844",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/FIX-9/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 2,
+      "invocations": 2,
+      "before_sha256": "9b35872730b32d43f727fc12dc9968a7a77fa8830b44781a8e0f93ee84c991b1",
+      "after_sha256": "262a69ec923eca3be7756a6ca311976521f49008dfaf8d3dbf78d21d9d3917c1",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/GEN-1/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 1,
+      "invocations": 1,
+      "before_sha256": "774a26e4a56120ad3f493c67687c8e4721fbf07b70cd419c4c53651d5a343098",
+      "after_sha256": "c689381eefab0fdf9dc8a2ee394a1593a3b5205b5ce7a166e4787ad573a29b4e",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/GEN-10/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 1,
+      "invocations": 1,
+      "before_sha256": "b1b7303a91cbd3d5c61837be57649e500732e35502b87dfec1c59708a330c618",
+      "after_sha256": "bb80cfc8c309ff3abc2dbb112f86c589dbca545fc13f59dc701ea4665f35dc73",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/GEN-11/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 4,
+      "invocations": 4,
+      "before_sha256": "33391e7f8f29cfaa92829137c1b8032115c0cd48bf0a9e2570aa95ce7142f3ac",
+      "after_sha256": "1e0b313aaf47a2e66b725daad1f0ebbeaf017933f6471583f404cbde5b29dd3f",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/GEN-12/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 1,
+      "invocations": 1,
+      "before_sha256": "d0e78af37cf03c6d86b6c5dfdef503a2e3d0f0b443d50ca04f48748b0e056a45",
+      "after_sha256": "8559b749990122e1df639e111dbe5830c04aabf164a64503e8916f340997108d",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/GEN-13/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 1,
+      "invocations": 1,
+      "before_sha256": "a2b9431ca9fbb6c9b3f7044dc7b4af7aa3ff41776a91ff33511e4fe6d2febc00",
+      "after_sha256": "c960d7118d8508296553857406ab715808c43a534e74ae1a5e77bbc36abf5cd3",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/GEN-15/agentic_metrics.json",
+      "from_schema": 5,
+      "to_schema": 6,
+      "sessions": 8,
+      "invocations": 8,
+      "before_sha256": "766d85f82bc49f160b4869dc9ab9e752ad5f2d3421670c387dc76e576dd9d779",
+      "after_sha256": "8539bfed618396a56fe0e5e867a983e74f6ddc20d04153453a60c03888c676c9",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/GEN-16/agentic_metrics.json",
+      "from_schema": 5,
+      "to_schema": 6,
+      "sessions": 1,
+      "invocations": 1,
+      "before_sha256": "4b1fc4e20113e20298e69793a1a461482144d494746c0fea8da9bd79eef21dac",
+      "after_sha256": "0c74d91cca87017ed4c7ce4d437bc6f9d9f9d39e0babc0702d04119b5877de71",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/GEN-17/agentic_metrics.json",
+      "from_schema": 5,
+      "to_schema": 6,
+      "sessions": 14,
+      "invocations": 14,
+      "before_sha256": "5b5e295f334e0635ec5df181dde2bca971ad5e44ac98fead35a995e713c3f599",
+      "after_sha256": "759840dcd9d8e41ca5dbe2214980619dbde1135dda1fea84a787f23c89e2e210",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/GEN-18/agentic_metrics.json",
+      "from_schema": 5,
+      "to_schema": 6,
+      "sessions": 1,
+      "invocations": 1,
+      "before_sha256": "28ccf573ff5be027a0eaaefe354e757ac9bc986c72f018c3b549731ac69a339c",
+      "after_sha256": "ce928515de76ac5b724872691d0fefa49738552e90fcd727eef4a4b685f17a2c",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/GEN-19/agentic_metrics.json",
+      "from_schema": 5,
+      "to_schema": 6,
+      "sessions": 34,
+      "invocations": 34,
+      "before_sha256": "dd4560c8042506cccb8a39f9e95d6c2777b44b18a9ae166bb95d075dc2bf6125",
+      "after_sha256": "5aa9cb6285d54286bda53b4e81705b95ad2093448c0f5f50281f3eda925e52a8",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/GEN-2/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 1,
+      "invocations": 1,
+      "before_sha256": "86e23152681c5e217680b9f632111b78c34bea112beaef381c493206cccbc6c4",
+      "after_sha256": "16f9b48544cfbf683eea0212097fd3e575b4f9f53994b2c506f68a3b47a0fbe7",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/GEN-20/agentic_metrics.json",
+      "from_schema": 5,
+      "to_schema": 6,
+      "sessions": 4,
+      "invocations": 4,
+      "before_sha256": "01e85c2d2a569d6ee7bd1e544feecb1c85d0789bcafbac329e4b307fcea21c5d",
+      "after_sha256": "ca8877725039018ac4749c82eb90d2184dcf68c9be038bec4c34f85ff94b8229",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/GEN-3/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 1,
+      "invocations": 1,
+      "before_sha256": "3fbc357ab8f0ac3a27fec959de6b179b5643516aee72c7a1b47016c30f256a82",
+      "after_sha256": "8202a1dbf1d77918099a2c93c6f7aaf480779335404d599160888ec10e90a486",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/GEN-4/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 1,
+      "invocations": 1,
+      "before_sha256": "66a9cb4b5481c0cc37d44edf0d491ee1ab3b8ead8fdc1ceec6cc3de54aaf3060",
+      "after_sha256": "8fa10ffc234d5c5f44266fa377c338809a45a4086e7fad15135b66821b30d5b1",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/GEN-5/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 1,
+      "invocations": 1,
+      "before_sha256": "ab5488ceef7000dbc9c1cfd3b4e9351fb1aa6dffacf112a05f1bcb4331a5de6f",
+      "after_sha256": "f26f8e1625f0605cb7b2dbec5a094cb45f86aaab7a21b37e8099337efe2f1b6d",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/GEN-6/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 1,
+      "invocations": 1,
+      "before_sha256": "896b5a38d5d9f1c07b1d7dd8fc68745a23235c8f47c56c79aa7b00f0cfb083af",
+      "after_sha256": "ebd86b697f996547a7c09be27ef1da624416c2e4ac17326b001c37336af90707",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/GEN-7/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 1,
+      "invocations": 1,
+      "before_sha256": "4e15331155446b7b6282d133baf94e1f13b9be6ed44991ae7f81dc8164da6a0f",
+      "after_sha256": "00e85a0ef45bc4e7111ab6ccb838c2f205b4dc6dd043583e5da867fac918eb5c",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/GEN-8/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 1,
+      "invocations": 1,
+      "before_sha256": "216f119623e58db3249b45e4ca99d81ca2d0564a43af6b7a9a2aa69dd5f58658",
+      "after_sha256": "10117da9563686e2c841b159fc5ea70378ec5b729bbb2bd28ee546a84d38e6f6",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/GEN-9/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 1,
+      "invocations": 1,
+      "before_sha256": "bf31937f9cb6c02e80e94671cf87b616253ada78243e15661db9b65a54c54901",
+      "after_sha256": "4ae38d185348774c0320de90148c9ed2b927d048485847ad135e2fd24cf224b0",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/MGT-1/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 2,
+      "invocations": 2,
+      "before_sha256": "a4ad1a8740fa55fc99e0d8b937daee6e564aab5566d4e1c99d3f32392b314da7",
+      "after_sha256": "0920ae245b8e7e73d9a6daa8a7dd5c3535d395b4338fecd37aa1a00d34f605b6",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/MGT-2/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 1,
+      "invocations": 1,
+      "before_sha256": "73156d3723e5fe0420a7f33170045cd68a2d9407fbe4976e60fc654b3b6a77f3",
+      "after_sha256": "0a71fd56394f865b4f6f4e120d15e560a94c90c1e07a03dd7c2ecdf70ab1e418",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/PO-1/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 1,
+      "invocations": 1,
+      "before_sha256": "89abe2ff854748cc4f180c5502e909a5d1632317f5c75a79173e025615f1b525",
+      "after_sha256": "1adb7da568fe957792d940d30fb84ceacb0e5ff55a64ce2145b9a47301ff0a14",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/PO-10/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 1,
+      "invocations": 1,
+      "before_sha256": "7c61fe9389ca5b7756bfabd6418f263c274d150ba5d74d920fb64cba0d68c2c4",
+      "after_sha256": "67a8fb5728688676edefd56fa810b7f3ebd207140888eae6c70eea08e28413f1",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/PO-11/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 1,
+      "invocations": 1,
+      "before_sha256": "e04aa3abffce34e18541e397f702d94dcc79b5cef514af745597da98d84ca954",
+      "after_sha256": "ee7138288db8c707b91800a9c16fe2d7f9180f08c6dfdedeedc8fb900db4f250",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/PO-12/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 1,
+      "invocations": 1,
+      "before_sha256": "16b5300fed4947a6b266e26de37c03441dc9e062bb67cdcab5ea7f856ee3fae7",
+      "after_sha256": "f2c309e66328dd89489a67dfb2722bfce8d2e3f8880edc8cb172374b25124802",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/PO-13/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 1,
+      "invocations": 1,
+      "before_sha256": "f6d99f5c312e6af3f1988c7e61b894faa56e6037e6110dd5ce7aa019d4518c45",
+      "after_sha256": "20341d33d4ac211a04094030102658b87c7c12f6779b9a41324854acecb215f4",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/PO-16/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 1,
+      "invocations": 1,
+      "before_sha256": "f2c5049d04e24b80f80c7f8bb701041cad62636ba4255224c3c4e2a41f82731c",
+      "after_sha256": "94ab840f4f4c957118889bb585e24ca0d867c116ef2bf9dac678b8e40c7a7d6c",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/PO-17/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 1,
+      "invocations": 1,
+      "before_sha256": "9b9d348dc325e10a25d8cc90fb44947a639fc7a1ed36b297a242fe2d491986eb",
+      "after_sha256": "94a7d254ef16d49782b6407a5b3fbf520d04aac23cc62b972d6adade37061579",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/PO-18/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 1,
+      "invocations": 1,
+      "before_sha256": "78919e0cf95021c022b7710faf1087af10430c04b54993d3e79cbdfbbbbf2971",
+      "after_sha256": "1f4789ad72858dc7468e49430c7afcd50f4b021d1e46c9bc6f6e313dcbb01d71",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/PO-2/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 1,
+      "invocations": 1,
+      "before_sha256": "735daa9131261e6f9bf06cef382d5f2c2b5d88d6fbc73d6b9cd9c81b60197829",
+      "after_sha256": "101cd68f817eac675aabe44f47e83ac39b1c25dc4c7c9c2c65d0a038ec16befa",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/PO-3/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 1,
+      "invocations": 1,
+      "before_sha256": "be3e0bff8a0e9a9a426f959b8284b3f73e2375fa1c5a853ea8ce30f3c8094441",
+      "after_sha256": "8a4b05c881f6eca37ff3ea7495d6900cd85092370a02b8383ebb7849a30c8042",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/PO-4/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 1,
+      "invocations": 1,
+      "before_sha256": "299321c780d6348766bb452e156eed365f5804402aa4b05502bb64c2a1819c3b",
+      "after_sha256": "2cbf2497cb351f1f5b067c98dc59580a8731d4430b02083ba5e603e13e0f17fa",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/PO-5/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 1,
+      "invocations": 1,
+      "before_sha256": "dcc78f15d77e0702e0701b7dac78af397692f0ebf2bf1193ad9fcee5845ff884",
+      "after_sha256": "ea42b172c6f0002b5488016af97ce5859bf2005e37c56ca09254af3ef59a6353",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/PO-6/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 1,
+      "invocations": 1,
+      "before_sha256": "82fb45dca443430c418757beba7f810bc710aa4b4ade6e955e725fa576e01b88",
+      "after_sha256": "fcbf27ce6ff849382e112644f9206ee5f211ffe663efd6012d122ca8c7036250",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/PO-7/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 1,
+      "invocations": 1,
+      "before_sha256": "27306c35513e1183811c2a53c09d45cef28c8c241a41a75588ce16918c8f5284",
+      "after_sha256": "ef7e812c72da4b79cd454ebd771537eeaec9fdc929d46026ed285620616919c7",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/PO-8/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 1,
+      "invocations": 1,
+      "before_sha256": "e0bc1a9a3572d3c7e05e20d5630b514f9f37887f7999ce2eb570467de49e30c3",
+      "after_sha256": "24e3cb10861d1af03b3deef0e9ec3c1daad0b40553d52862a35088f87ef5cb9c",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/PO-9/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 1,
+      "invocations": 1,
+      "before_sha256": "a932bb303aaa08afbf766173a6305321675b09cf6d32504e6788c63a1a28aefa",
+      "after_sha256": "6ba32ee4359cf0e554fd72fa5792509b3bf94e6fdfc3f024104f69f416abe121",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/REV-1/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 11,
+      "invocations": 11,
+      "before_sha256": "a52f239bc8fdb43ed719aa8aa0deeacfdb3902c0db72e198e4988a4dc227affd",
+      "after_sha256": "01e3007d968d5664d14d2ef0e316ce0f552a12ffc09bdf33ffb025b9f3682dcd",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/REV-2/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 1,
+      "invocations": 1,
+      "before_sha256": "511ea87bacb79fd8323f45b8f82db6fd987f5e050e7d31b9e2848590a2e2b700",
+      "after_sha256": "0106d0a219b45d6af1774b7359efc91cf2cfbf08b7452a8c237f500b1eda7e37",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/REV-3/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 1,
+      "invocations": 1,
+      "before_sha256": "fd3c5ec74362d930fa4f9691732eb0022e85e7f01236291a2b96be40dd7d1e75",
+      "after_sha256": "f68a1c4bd3cdbee68c25327c1c1a5c23755a46dd94f610aade3946598b7d7cc8",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/REV-4/agentic_metrics.json",
+      "from_schema": 4,
+      "to_schema": 6,
+      "sessions": 14,
+      "invocations": 14,
+      "before_sha256": "64a76267198175c0c20968e8df8f9df4c8bccef85e9d1212ee92229e7f7ee230",
+      "after_sha256": "0fdee272cdc72085bb3226c92481ff8e0a83d406c393fbf1aa99d10559db1976",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    },
+    {
+      "path": "alspaces/REV-5/agentic_metrics.json",
+      "from_schema": 5,
+      "to_schema": 6,
+      "sessions": 27,
+      "invocations": 27,
+      "before_sha256": "991ca234402d227fb45c24b4be97467d86a5112a14ec4d49c80dab8a58d83f04",
+      "after_sha256": "835c5ba1aeab2a1ce5eab09f2b2a3f8ea4ca3e79f9308a187bb6db4c7180a61e",
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "schema_v6_lean_occurrences"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": "",
+        "notes": "Schema v6 migration dropped ownerless skills=0 task_links=0; converted skills=0 delegations=0; discarded events=0 partial_markers=0 rich_fields=0 unresolved_child_references=0"
+      }
+    }
+  ]
+}

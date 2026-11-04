@@ -1,11 +1,7 @@
 {
-  "schema_version": 4,
-  "ticket_id": "GEN-6",
-  "ticket_title": "Platform Visual Showcase in README with Real Telemetry Artifacts",
-  "ticket_type": "chore",
-  "started_at": "2026-10-23T11:02:23.520000+00:00",
-  "completed_at": "2026-10-23T11:41:15.815000+00:00",
-  "updated_at": "2026-10-27T08:05:14.604111001Z",
+  "anomalies": [
+    {"rule_id": "TOOL_HIGH_FAILURE_RATE", "severity": "WARNING", "context": {"tool_name": "t3-code_preview_navigate", "count": 2, "total_calls": 5, "threshold": "\u003e20%", "failure_rate_pct": 40}}
+  ],
   "code": {
     "lines_added": 36,
     "lines_deleted": 0,
@@ -16,6 +12,8 @@
     "files_changed": 1,
     "sdlc_iterations": 4
   },
+  "completed_at": "2026-10-23T11:41:15.815000+00:00",
+  "schema_version": 6,
   "sessions": [
     {
       "id": "ses_e9792e3dfffeQdAyICK0TWsQFU",
@@ -29,124 +27,38 @@
           "completed_at": "2026-10-23T11:41:15.815000+00:00",
           "active_duration_seconds": 1497,
           "turns": 153,
-          "tokens": {
-            "input": 1081035,
-            "output": 12700,
-            "cache_read": 13837233,
-            "reasoning": 18201,
-            "peak_context": 167817
-          },
+          "tokens": {"input": 1081035, "output": 12700, "cache_read": 13837233, "reasoning": 18201, "peak_context": 167817},
           "cost_usd": 1.964447,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 1.964447},
           "compactions": 1,
           "user_iterations": 4
         }
       ],
       "tools": [
-        {
-          "name": "bash",
-          "calls": 74,
-          "errors": 3
-        },
-        {
-          "name": "edit",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "glob",
-          "calls": 10,
-          "errors": 1
-        },
-        {
-          "name": "grep",
-          "calls": 4,
-          "errors": 0
-        },
-        {
-          "name": "read",
-          "calls": 32,
-          "errors": 0
-        },
-        {
-          "name": "t3-code_link_pull_request",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "t3-code_list_thread_pull_requests",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "t3-code_preview_evaluate",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "t3-code_preview_navigate",
-          "calls": 5,
-          "errors": 2
-        },
-        {
-          "name": "t3-code_preview_open",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "t3-code_preview_snapshot",
-          "calls": 2,
-          "errors": 0
-        },
-        {
-          "name": "t3-code_preview_status",
-          "calls": 2,
-          "errors": 0
-        },
-        {
-          "name": "todowrite",
-          "calls": 6,
-          "errors": 0
-        },
-        {
-          "name": "write",
-          "calls": 6,
-          "errors": 0
-        }
+        {"name": "bash", "calls": 74, "errors": 3},
+        {"name": "edit", "calls": 1, "errors": 0},
+        {"name": "glob", "calls": 10, "errors": 1},
+        {"name": "grep", "calls": 4, "errors": 0},
+        {"name": "read", "calls": 32, "errors": 0},
+        {"name": "t3-code_link_pull_request", "calls": 1, "errors": 0},
+        {"name": "t3-code_list_thread_pull_requests", "calls": 1, "errors": 0},
+        {"name": "t3-code_preview_evaluate", "calls": 1, "errors": 0},
+        {"name": "t3-code_preview_navigate", "calls": 5, "errors": 2},
+        {"name": "t3-code_preview_open", "calls": 1, "errors": 0},
+        {"name": "t3-code_preview_snapshot", "calls": 2, "errors": 0},
+        {"name": "t3-code_preview_status", "calls": 2, "errors": 0},
+        {"name": "todowrite", "calls": 6, "errors": 0},
+        {"name": "write", "calls": 6, "errors": 0}
       ],
       "anomalies": [
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 128,
-            "context_tokens": 160223,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "turn": 148,
-            "token_delta": 42147,
-            "context_tokens": 42147,
-            "threshold": "40000"
-          }
-        }
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 128, "context_tokens": 160223, "threshold": "160000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 148, "token_delta": 42147, "context_tokens": 42147, "threshold": "40000"}}
       ]
     }
   ],
-  "anomalies": [
-    {
-      "rule_id": "TOOL_HIGH_FAILURE_RATE",
-      "severity": "WARNING",
-      "context": {
-        "tool_name": "t3-code_preview_navigate",
-        "count": 2,
-        "total_calls": 5,
-        "threshold": ">20%",
-        "failure_rate_pct": 40
-      }
-    }
-  ]
+  "started_at": "2026-10-23T11:02:23.520000+00:00",
+  "ticket_id": "GEN-6",
+  "ticket_title": "Platform Visual Showcase in README with Real Telemetry Artifacts",
+  "ticket_type": "chore",
+  "updated_at": "2026-10-27T08:05:14.604111001Z"
 }

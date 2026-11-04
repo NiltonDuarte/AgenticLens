@@ -32,8 +32,8 @@
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 8
 - **Active Agent Duration:** 25m 27s (excludes user wait time)
-- **Context Window Health:** ELEVATED — Root agent peak 110.5k tokens (55% of 200k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
-- **Role Effort Distribution (Subagents):** N/A
+- **Context Window Health:** HEALTHY — Root agent peak 110.5k tokens (25% of 450k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 1.0:1 (+303 test lines / +289 prod lines)
 - **Code Delivered:** +592 / -39 lines across 8 code files (excluding docs)
@@ -45,14 +45,16 @@
 
 ### Agentic Execution Metrics
 
+**Contributors:** Nilton Duarte
+
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **rootagent** | 1 | 233,355 | 19,176 | 6,455,680 | 96.5% | 110.5k | ELEVATED | $0.00 |
-| **Total** | **1** | **233,355** | **19,176** | **6,455,680** | **96.5%** | **110.5k** | **ELEVATED** | **$0.00** |
+| **Unknown** | 1 | 233,355 | 19,176 | 6,455,680 | 96.5% | 110.5k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **1** | **233,355** | **19,176** | **6,455,680** | **96.5%** | **110.5k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-luna** | 1 | 233,355 | 19,176 | 6,455,680 | 96.5% | $0.00 |
-| **Total** | **1** | **233,355** | **19,176** | **6,455,680** | **96.5%** | **$0.00** |
+| **gpt-6-luna** | 1 | 233,355 | 19,176 | 6,455,680 | 96.5% | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **1** | **233,355** | **19,176** | **6,455,680** | **96.5%** | **Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations)** |

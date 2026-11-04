@@ -1,11 +1,5 @@
 {
-  "schema_version": 4,
-  "ticket_id": "FIX-6",
-  "ticket_title": "automate binary cross-compilation and archive attachment in Release Please workflow",
-  "ticket_type": "fix",
-  "started_at": "2026-10-22T20:38:02.168000+00:00",
-  "completed_at": "2026-10-22T21:30:48.297000+00:00",
-  "updated_at": "2026-10-27T08:05:14.604111001Z",
+  "anomalies": [],
   "code": {
     "lines_added": 103,
     "lines_deleted": 0,
@@ -16,6 +10,8 @@
     "files_changed": 1,
     "sdlc_iterations": 7
   },
+  "completed_at": "2026-10-22T21:30:48.297000+00:00",
+  "schema_version": 6,
   "sessions": [
     {
       "id": "ses_e9aaa3b47ffevLfJH42EFfD0EQ",
@@ -29,87 +25,33 @@
           "completed_at": "2026-10-22T21:30:48.297000+00:00",
           "active_duration_seconds": 1015,
           "turns": 169,
-          "tokens": {
-            "input": 1692601,
-            "output": 17009,
-            "cache_read": 12514143,
-            "reasoning": 57686,
-            "peak_context": 169644
-          },
+          "tokens": {"input": 1692601, "output": 17009, "cache_read": 12514143, "reasoning": 57686, "peak_context": 169644},
           "cost_usd": 2.488118,
+          "cost_evidence": {"state": "observed", "known_subtotal_usd": 2.488118},
           "compactions": 1,
           "user_iterations": 7
         }
       ],
       "tools": [
-        {
-          "name": "bash",
-          "calls": 80,
-          "errors": 1
-        },
-        {
-          "name": "edit",
-          "calls": 3,
-          "errors": 0
-        },
-        {
-          "name": "glob",
-          "calls": 11,
-          "errors": 0
-        },
-        {
-          "name": "grep",
-          "calls": 16,
-          "errors": 0
-        },
-        {
-          "name": "question",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "read",
-          "calls": 33,
-          "errors": 0
-        },
-        {
-          "name": "t3-code_link_pull_request",
-          "calls": 1,
-          "errors": 0
-        },
-        {
-          "name": "todowrite",
-          "calls": 8,
-          "errors": 0
-        },
-        {
-          "name": "write",
-          "calls": 3,
-          "errors": 0
-        }
+        {"name": "bash", "calls": 80, "errors": 1},
+        {"name": "edit", "calls": 3, "errors": 0},
+        {"name": "glob", "calls": 11, "errors": 0},
+        {"name": "grep", "calls": 16, "errors": 0},
+        {"name": "question", "calls": 1, "errors": 0},
+        {"name": "read", "calls": 33, "errors": 0},
+        {"name": "t3-code_link_pull_request", "calls": 1, "errors": 0},
+        {"name": "todowrite", "calls": 8, "errors": 0},
+        {"name": "write", "calls": 3, "errors": 0}
       ],
       "anomalies": [
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "CRITICAL",
-          "context": {
-            "turn": 101,
-            "context_tokens": 163062,
-            "threshold": "160000"
-          }
-        },
-        {
-          "rule_id": "CONTEXT_SATURATION_SPIKE",
-          "severity": "WARNING",
-          "context": {
-            "turn": 112,
-            "token_delta": 47916,
-            "context_tokens": 47916,
-            "threshold": "40000"
-          }
-        }
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 101, "context_tokens": 163062, "threshold": "160000"}},
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "WARNING", "context": {"turn": 112, "token_delta": 47916, "context_tokens": 47916, "threshold": "40000"}}
       ]
     }
   ],
-  "anomalies": []
+  "started_at": "2026-10-22T20:38:02.168000+00:00",
+  "ticket_id": "FIX-6",
+  "ticket_title": "automate binary cross-compilation and archive attachment in Release Please workflow",
+  "ticket_type": "fix",
+  "updated_at": "2026-10-27T08:05:14.604111001Z"
 }
