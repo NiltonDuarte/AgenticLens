@@ -51,7 +51,7 @@ func TestFormatLedgerJSONLexemesAndLayout(t *testing.T) {
 	}
 }
 func TestFormatLedgerJSONRejectsAmbiguousInputs(t *testing.T) {
-	for _, input := range []string{`{`, `{} `, `[]`, `{"ticket_id":"X","sessions":{},"schema_version":5}`, `{"ticket_id":"X","sessions":[],"schema_version":999}`, `{"ticket_id":"X","sessions":[{"tools":[null]}]}`, `{"ticket_id":"X","sessions":[],"future":{"x":1,"\u0078":2}}`, `{"ticket_id":"X","invocations":[{"tokens":[]}]}`, `{"ticket_id":"X","sessions":[{"invocations":[{"cost_evidence":1}]}]}`, `{"ticket_id":"X","sessions":[],"anomalies":[false]}`} {
+	for _, input := range []string{`{`, `{} `, `[]`, `{"ticket_id":"X","sessions":{},"schema_version":6}`, `{"ticket_id":"X","sessions":[],"schema_version":999}`, `{"ticket_id":"X","sessions":[{"tools":[null]}]}`, `{"ticket_id":"X","sessions":[],"future":{"x":1,"\u0078":2}}`, `{"ticket_id":"X","invocations":[{"tokens":[]}]}`, `{"ticket_id":"X","sessions":[{"invocations":[{"cost_evidence":1}]}]}`, `{"ticket_id":"X","sessions":[],"anomalies":[false]}`} {
 		t.Run(input, func(t *testing.T) {
 			if _, err := FormatLedgerJSON([]byte(input)); err == nil {
 				t.Fatal("accepted unsupported or ambiguous ledger")

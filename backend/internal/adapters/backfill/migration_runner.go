@@ -8,7 +8,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"reflect"
 	"sort"
 	"strings"
 	"time"
@@ -40,6 +39,9 @@ func (r *MigrationRunner) Run(opts MigrationOptions) (*SchemaMigrationReport, er
 	targetVer := opts.TargetVersion
 	if targetVer <= 0 {
 		targetVer = domain.CurrentSchemaVersion
+	}
+	if targetVer != domain.CurrentSchemaVersion {
+		return nil, fmt.Errorf("migration publication requires current target version %d; intermediate transformations are migration-engine internals", domain.CurrentSchemaVersion)
 	}
 
 	targetDir, err := adapters.ResolveWorkspacesDir(opts.WorkspacesDir)
@@ -170,10 +172,16 @@ func (r *MigrationRunner) migrateWorkspace(ctx context.Context, metricPath strin
 		return res, issues
 	}
 	res.SourceVersion = sourceVer
+	if sourceVer > domain.CurrentSchemaVersion {
+		res.Status = "error"
+		res.Error = fmt.Errorf("%w: schema %d is newer than supported schema %d", migration.ErrUnsupportedVersion, sourceVer, domain.CurrentSchemaVersion)
+		issues = append(issues, fmt.Sprintf("Workspace %s: %v", metricPath, res.Error))
+		return res, issues
+	}
 	hasLegacyFacts := hasLegacyFactCollections(content)
 	missingSource := hasMissingSessionSource(content)
 	needsSanitization := sourceVer >= 4 && sourceVer <= domain.CurrentSchemaVersion && (needsEventSanitization(content) || missingSource)
-	if sourceVer >= 4 && sourceVer <= domain.CurrentSchemaVersion && !hasLegacyFacts {
+	if sourceVer == domain.CurrentSchemaVersion && !hasLegacyFacts {
 		if err := validateCurrentLedger(content); err != nil {
 			res.Status = "error"
 			res.Error = fmt.Errorf("validating current schema ledger: %w", err)
@@ -271,23 +279,22 @@ func (r *MigrationRunner) migrateWorkspace(ctx context.Context, metricPath strin
 }
 
 func needsEventSanitization(content []byte) bool {
-	var ledger domain.AgenticFactLedger
-	if json.Unmarshal(content, &ledger) != nil {
+	var input struct {
+		Events   json.RawMessage `json:"events"`
+		Partial  json.RawMessage `json:"events_are_partial"`
+		Sessions []struct {
+			Events  json.RawMessage `json:"events"`
+			Partial json.RawMessage `json:"events_are_partial"`
+		} `json:"sessions"`
+	}
+	if json.Unmarshal(content, &input) != nil {
 		return false
 	}
-	events := ledger.EventFacts()
-	pruned, err := domain.PersistAnomalySummaries(ledger)
-	if err != nil {
+	if len(input.Events) > 0 || len(input.Partial) > 0 {
 		return true
 	}
-	if len(events) != len(pruned.EventFacts()) {
-		return true
-	}
-	if !reflect.DeepEqual(events, pruned.EventFacts()) || !reflect.DeepEqual(ledger.AnomalyFacts(), pruned.AnomalyFacts()) || ledger.Anomalies == nil {
-		return true
-	}
-	for _, session := range ledger.Sessions {
-		if session.Anomalies == nil {
+	for _, owner := range input.Sessions {
+		if len(owner.Events) > 0 || len(owner.Partial) > 0 {
 			return true
 		}
 	}

@@ -3,7 +3,6 @@ package live
 import (
 	"bytes"
 	"context"
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -822,540 +821,116 @@ func formatEpochMilli(ms int64) string {
 	return t.Format("2006-01-02T15:04:05.000000+00:00")
 }
 
-// HydrateWorkspaceEvents dynamically hydrates full execution events from the local SQLite database.
-// If the database is missing, sessions are not found, or an error occurs, it gracefully falls back
-// to the committed ledger facts. Zero transient data is persisted to disk.
+// HydrateWorkspaceEvents returns request-local source evidence. Ledger facts
+// are never mutated or used to synthesize trace events.
 func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID string, ledger domain.AgenticMetricsLedger) (domain.WorkspaceEventsResponse, error) {
-	fallbackResp := domain.WorkspaceEventsResponse{
-		TicketID:         ticketID,
-		IsHydrated:       false,
-		Events:           domain.SortEvents(ledger.Facts.EventFacts()),
-		DataSource:       domain.DataSourceCommittedLedger,
-		Anomalies:        ledger.Facts.AnomalyFacts(),
-		IncludesBaseline: true,
-	}
-	withLocalEvents := func(events []domain.EventFact, source domain.DataSource) domain.WorkspaceEventsResponse {
-		if len(events) == 0 {
-			return fallbackResp
+	response := domain.WorkspaceEventsResponse{TicketID: ticketID, Events: []domain.EventFact{}, Anomalies: ledger.Facts.AnomalyFacts(), Availability: domain.TraceUnavailable, DataSource: domain.DataSourceUnavailable, Coverage: domain.TraceCoverage{RequiredSessionIDs: []string{}, CompleteSessionIDs: []string{}, Diagnostics: []string{}}}
+	var transcripts []codex.Transcript
+	openCodeObserved, codexObserved := false, false
+	for _, owner := range ledger.Facts.Sessions {
+		response.Coverage.RequiredSessionIDs = append(response.Coverage.RequiredSessionIDs, owner.ID)
+		if err := ctx.Err(); err != nil {
+			response.Coverage.Diagnostics = append(response.Coverage.Diagnostics, owner.ID+": "+err.Error())
+			continue
 		}
-		reconciled := domain.ReconcileSourceEvents(fallbackResp.Events, events)
-		return domain.WorkspaceEventsResponse{
-			TicketID:         ticketID,
-			IsHydrated:       true,
-			Events:           reconciled,
-			DataSource:       source,
-			Anomalies:        hydrateAnomalyAssociations(ledger.Facts, reconciled),
-			IncludesBaseline: true,
-		}
-	}
-
-	var openCodeSessions []domain.SessionFact
-	var codexSessions []domain.SessionFact
-	for _, session := range ledger.Facts.Sessions {
-		switch session.Source {
+		switch owner.Source {
 		case domain.SourceOpenCode:
-			openCodeSessions = append(openCodeSessions, session)
-		case domain.SourceCodex:
-			codexSessions = append(codexSessions, session)
-		}
-	}
-
-	if len(openCodeSessions) == 0 && len(codexSessions) == 0 {
-		return fallbackResp, nil
-	}
-
-	codexEvents := s.loadCodexEvents(codexSessions)
-	if len(openCodeSessions) == 0 || s == nil || s.hook == nil || s.hook.DB() == nil {
-		return withLocalEvents(codexEvents, domain.DataSourceLocalCodex), nil
-	}
-
-	// 1. Collect session IDs from OpenCode sessions
-	sessionIDMap := make(map[string]bool)
-	for _, session := range openCodeSessions {
-		trimmed := strings.TrimSpace(session.ID)
-		if trimmed != "" {
-			sessionIDMap[trimmed] = true
-		}
-	}
-
-	// If no session IDs in ledger, attempt resolution via OpenCode resolver
-	if len(sessionIDMap) == 0 {
-		resolvedID, err := opencode.ResolveActiveRootSession(s.hook.DB(), "", ticketID, "")
-		if err == nil && resolvedID != nil && strings.TrimSpace(*resolvedID) != "" {
-			sessionIDMap[strings.TrimSpace(*resolvedID)] = true
-		}
-	}
-
-	if len(sessionIDMap) == 0 {
-		return withLocalEvents(codexEvents, domain.DataSourceLocalCodex), nil
-	}
-
-	// 2. Discover child sub-sessions to gather complete execution tree
-	var initialIDs []string
-	for sid := range sessionIDMap {
-		initialIDs = append(initialIDs, sid)
-	}
-
-	frontier := initialIDs
-	for len(frontier) > 0 {
-		children, err := s.hook.ResolveChildSessionIDs(frontier)
-		if err != nil {
-			break
-		}
-		var nextFrontier []string
-		for _, cid := range children {
-			if !sessionIDMap[cid] {
-				sessionIDMap[cid] = true
-				nextFrontier = append(nextFrontier, cid)
+			if s == nil || s.hook == nil || s.hook.DB() == nil {
+				response.Coverage.Diagnostics = append(response.Coverage.Diagnostics, owner.ID+": OpenCode source unavailable")
+				continue
 			}
-		}
-		frontier = nextFrontier
-	}
-
-	// 3. Verify existence in SQLite
-	var verifiedSessions []string
-	for sid := range sessionIDMap {
-		exists, err := s.hook.SessionExists(sid)
-		if err == nil && exists {
-			verifiedSessions = append(verifiedSessions, sid)
-		}
-	}
-
-	if len(verifiedSessions) == 0 {
-		return withLocalEvents(codexEvents, domain.DataSourceLocalCodex), nil
-	}
-
-	// 4. Map session IDs to roles
-	sessionRoleMap := make(map[string]domain.AgentRole)
-	for _, session := range ledger.Facts.Sessions {
-		for _, inv := range session.Invocations {
-			if session.ID != "" && inv.Role != "" {
-				sessionRoleMap[session.ID] = inv.Role
+			events, err := opencode.ExtractSessionSourceEvents(s.hook.DB(), owner.ID, owner.User)
+			if err == nil || len(events) > 0 {
+				openCodeObserved = true
+			}
+			if err != nil {
+				response.Coverage.Diagnostics = append(response.Coverage.Diagnostics, owner.ID+": "+err.Error())
+				response.Events = append(response.Events, events...)
+				continue
+			}
+			response.Events = append(response.Events, events...)
+			response.Coverage.CompleteSessionIDs = append(response.Coverage.CompleteSessionIDs, owner.ID)
+		case domain.SourceCodex:
+			if s == nil || strings.TrimSpace(s.codexHome) == "" {
+				response.Coverage.Diagnostics = append(response.Coverage.Diagnostics, owner.ID+": Codex source unavailable")
+				continue
+			}
+			paths, err := codex.DiscoverRolloutPaths(codex.DiscoveryOptions{CodexHome: s.codexHome, SessionID: owner.ID})
+			if err != nil || len(paths) == 0 {
+				response.Coverage.Diagnostics = append(response.Coverage.Diagnostics, owner.ID+": Codex native session unavailable")
+				continue
+			}
+			found := false
+			for _, path := range paths {
+				transcript, parseErr := codex.ParseRolloutPath(path)
+				if parseErr != nil {
+					response.Coverage.Diagnostics = append(response.Coverage.Diagnostics, owner.ID+": "+parseErr.Error())
+					continue
+				}
+				id := transcript.ThreadID
+				if id == "" {
+					id = transcript.SessionID
+				}
+				if id != owner.ID {
+					continue
+				}
+				if transcript.ParentThread != "" && (owner.ParentID == nil || *owner.ParentID != transcript.ParentThread) {
+					response.Coverage.Diagnostics = append(response.Coverage.Diagnostics, owner.ID+": source parent contradicts recorded owner")
+					continue
+				}
+				transcripts = append(transcripts, transcript)
+				if len(transcript.Warnings) == 0 || len(transcript.Events) > 0 {
+					codexObserved = true
+				}
+				found = true
+				if len(transcript.Warnings) == 0 {
+					response.Coverage.CompleteSessionIDs = append(response.Coverage.CompleteSessionIDs, owner.ID)
+				} else {
+					response.Coverage.Diagnostics = append(response.Coverage.Diagnostics, owner.ID+": incomplete Codex source records")
+				}
 				break
 			}
+			if !found {
+				response.Coverage.Diagnostics = append(response.Coverage.Diagnostics, owner.ID+": exact Codex native session unavailable")
+			}
+		default:
+			response.Coverage.Diagnostics = append(response.Coverage.Diagnostics, owner.ID+": unsupported source")
 		}
 	}
-	// Source metadata takes precedence over stored role projections. Keep
-	// known persisted personas when optional source evidence is unavailable.
-	sessionAgents := make(map[string]string)
-	for _, sid := range verifiedSessions {
-		var agent sql.NullString
-		if err := s.hook.DB().QueryRowContext(ctx, "SELECT agent FROM session WHERE id = ?", sid).Scan(&agent); err != nil {
-			// A failed metadata read cannot establish an unknown persona. Keep
-			// the OpenCode baseline while retaining independent Codex evidence.
-			return withLocalEvents(codexEvents, domain.DataSourceLocalCodex), nil
-		}
-		sessionAgents[sid] = agent.String
-	}
-
-	// 5. Fetch all messages and parts ordered by time_created ASC
-	rawMsgs, rawParts, err := s.hook.FetchSessionTraceMulti(verifiedSessions)
-	if err != nil {
-		return withLocalEvents(codexEvents, domain.DataSourceLocalCodex), nil
-	}
-
-	if len(rawMsgs) == 0 && len(rawParts) == 0 {
-		return withLocalEvents(codexEvents, domain.DataSourceLocalCodex), nil
-	}
-
-	messagesBySession := make(map[string][]RawMessageRecord)
-	for _, message := range rawMsgs {
-		messagesBySession[message.SessionID] = append(messagesBySession[message.SessionID], message)
-	}
-	for sid, agent := range sessionAgents {
-		evidence := assistantPersonaEvidence(messagesBySession[sid])
-		resolved := evidence.Resolve(agent)
-		stored := sessionRoleMap[sid]
-		if resolved != "" || evidence.Conflicting || stored == domain.RoleRootAgent || stored == domain.RoleUnassignedSubAgent || stored == "" {
-			sessionRoleMap[sid] = resolved
-		}
-	}
-
-	// Group parts by message ID
-	partsByMsg := make(map[string][]RawPartRecord)
-	orphanParts := make(map[string][]RawPartRecord)
-	for _, p := range rawParts {
-		if p.MessageID != "" {
-			partsByMsg[p.MessageID] = append(partsByMsg[p.MessageID], p)
+	if len(transcripts) > 0 {
+		combined, err := codex.CombineTranscripts(transcripts)
+		if err != nil {
+			response.Coverage.Diagnostics = append(response.Coverage.Diagnostics, err.Error())
 		} else {
-			orphanParts[p.SessionID] = append(orphanParts[p.SessionID], p)
+			response.Events = append(response.Events, combined.Events...)
 		}
 	}
-
-	var events []domain.EventFact
-	sessionTurns := make(map[string]int64)
-	lastUserPromptPerSession := make(map[string]string)
-	sessionConsecutiveErrors := make(map[string]int)
-
-	// Process messages per session
-	for _, rm := range rawMsgs {
-		role := sessionRoleMap[rm.SessionID]
-
-		var msgRole string
-		var contentStr string
-		var reasoningStr *string
-		var ctxTokens int64
-		var msgDurMs *int64
-
-		if strings.TrimSpace(rm.Data) != "" {
-			var rawMD struct {
-				Role             *string         `json:"role"`
-				Content          json.RawMessage `json:"content"`
-				Reasoning        *string         `json:"reasoning"`
-				ReasoningContent *string         `json:"reasoning_content"`
-				Tokens           *struct {
-					Input  *int64 `json:"input"`
-					Output *int64 `json:"output"`
-					Cache  *struct {
-						Read *int64 `json:"read"`
-					} `json:"cache"`
-					Reasoning *int64 `json:"reasoning"`
-				} `json:"tokens"`
-				Time *struct {
-					Created   *float64 `json:"created"`
-					Completed *float64 `json:"completed"`
-				} `json:"time"`
-			}
-			if err := json.Unmarshal([]byte(rm.Data), &rawMD); err == nil {
-				if rawMD.Role != nil {
-					msgRole = strings.TrimSpace(*rawMD.Role)
-				}
-				contentStr = extractMessageContent(rawMD.Content)
-				if rawMD.ReasoningContent != nil && strings.TrimSpace(*rawMD.ReasoningContent) != "" {
-					reasoningStr = rawMD.ReasoningContent
-				} else if rawMD.Reasoning != nil && strings.TrimSpace(*rawMD.Reasoning) != "" {
-					reasoningStr = rawMD.Reasoning
-				}
-				if rawMD.Tokens != nil {
-					var inp, cache int64
-					if rawMD.Tokens.Input != nil {
-						inp = *rawMD.Tokens.Input
-					}
-					if rawMD.Tokens.Cache != nil && rawMD.Tokens.Cache.Read != nil {
-						cache = *rawMD.Tokens.Cache.Read
-					}
-					ctxTokens = inp + cache
-				}
-				if rawMD.Time != nil && rawMD.Time.Created != nil && rawMD.Time.Completed != nil {
-					dur := int64(*rawMD.Time.Completed) - int64(*rawMD.Time.Created)
-					if dur >= 0 {
-						msgDurMs = &dur
-					}
-				}
-			}
-		}
-
-		if msgRole == "user" {
-			if contentStr != "" {
-				lastUserPromptPerSession[rm.SessionID] = contentStr
-			}
-			// User messages provide context for assistant turns
-			continue
-		}
-
-		if msgDurMs == nil && rm.TimeUpdated >= rm.TimeCreated && rm.TimeCreated > 0 {
-			dur := rm.TimeUpdated - rm.TimeCreated
-			msgDurMs = &dur
-		}
-
-		sessionTurns[rm.SessionID]++
-		turn := sessionTurns[rm.SessionID]
-
-		ts := formatEpochMilli(rm.TimeCreated)
-
-		// Check parts for this message
-		partRecords := partsByMsg[rm.ID]
-
-		// Inherit reasoning from part if not already on message
-		if reasoningStr == nil {
-			for _, pr := range partRecords {
-				var pCheck struct {
-					Type *string `json:"type"`
-					Text *string `json:"text"`
-				}
-				if json.Unmarshal([]byte(pr.Data), &pCheck) == nil {
-					if pCheck.Type != nil && *pCheck.Type == "reasoning" && pCheck.Text != nil && *pCheck.Text != "" {
-						t := strings.TrimSpace(*pCheck.Text)
-						reasoningStr = &t
-						break
-					}
-				}
-			}
-		}
-
-		var promptContentPtr *string
-		if userPrompt, ok := lastUserPromptPerSession[rm.SessionID]; ok && userPrompt != "" {
-			promptContentPtr = &userPrompt
-			delete(lastUserPromptPerSession, rm.SessionID)
-		} else if contentStr != "" {
-			promptContentPtr = &contentStr
-		}
-
-		// Append turn_message event
-		events = append(events, domain.EventFact{
-			EventID:          "opencode:message:" + rm.ID,
-			Timestamp:        ts,
-			SessionID:        rm.SessionID,
-			Turn:             turn,
-			Role:             role,
-			EventType:        domain.EventTypeTurnMessage,
-			ToolName:         nil,
-			Status:           "completed",
-			DurationMs:       msgDurMs,
-			ContextTokens:    ctxTokens,
-			PromptContent:    promptContentPtr,
-			ReasoningContent: reasoningStr,
-		})
-
-		// Append parts for this message
-		consecutiveErrors := sessionConsecutiveErrors[rm.SessionID]
-		for _, pr := range partRecords {
-			partEvent := convertPartToEventFact(pr, turn, role, ctxTokens, &consecutiveErrors)
-			if partEvent != nil {
-				events = append(events, *partEvent)
-			}
-		}
-		sessionConsecutiveErrors[rm.SessionID] = consecutiveErrors
+	if len(response.Coverage.RequiredSessionIDs) > 0 && len(response.Coverage.CompleteSessionIDs) == len(response.Coverage.RequiredSessionIDs) && len(response.Coverage.Diagnostics) == 0 {
+		response.Availability = domain.TraceComplete
+	} else if len(response.Events) > 0 || len(response.Coverage.CompleteSessionIDs) > 0 {
+		response.Availability = domain.TracePartial
 	}
-
-	// Append any orphan parts that weren't tied to a specific message ID
-	for sid, parts := range orphanParts {
-		role := sessionRoleMap[sid]
-		turn := sessionTurns[sid]
-		if turn == 0 {
-			turn = 1
-		}
-		consecutiveErrors := sessionConsecutiveErrors[sid]
-		for _, pr := range parts {
-			partEvent := convertPartToEventFact(pr, turn, role, 0, &consecutiveErrors)
-			if partEvent != nil {
-				events = append(events, *partEvent)
-			}
-		}
-		sessionConsecutiveErrors[sid] = consecutiveErrors
+	switch {
+	case openCodeObserved && codexObserved:
+		response.DataSource = domain.DataSourceMixed
+	case openCodeObserved:
+		response.DataSource = domain.DataSourceLocalSQLite
+	case codexObserved:
+		response.DataSource = domain.DataSourceLocalCodex
 	}
-
-	dataSource := domain.DataSourceLocalSQLite
-	if len(events) == 0 && len(codexEvents) > 0 {
-		dataSource = domain.DataSourceLocalCodex
+	response.IsHydrated = response.Availability != domain.TraceUnavailable
+	response.Events = domain.SortEvents(response.Events)
+	source := domain.SourceEvents{Events: response.Events, CompleteSessionIDs: response.Coverage.CompleteSessionIDs}
+	response.Anomalies = hydrateAnomalyAssociations(ledger.Facts, source)
+	if err := response.Validate(); err != nil {
+		return domain.WorkspaceEventsResponse{}, err
 	}
-	// Only source occurrences enter reconciliation; neither source can echo the baseline over the other.
-	return withLocalEvents(append(events, codexEvents...), dataSource), nil
+	return response, nil
 }
-
-func (s *LiveService) loadCodexEvents(codexSessions []domain.SessionFact) []domain.EventFact {
-	if s == nil || strings.TrimSpace(s.codexHome) == "" {
-		return nil
-	}
-	var paths []string
-	seenPaths := make(map[string]bool)
-	expectedThreadIDs := make(map[string]bool)
-	for _, session := range codexSessions {
-		sessID := strings.TrimSpace(session.ID)
-		if sessID == "" {
-			return nil
-		}
-		expectedThreadIDs[sessID] = true
-		if session.ParentID != nil {
-			continue
-		}
-		found, err := codex.DiscoverRolloutPaths(codex.DiscoveryOptions{CodexHome: s.codexHome, SessionID: session.ID})
-		if err != nil || len(found) == 0 {
-			return nil
-		}
-		for _, path := range found {
-			if !seenPaths[path] {
-				seenPaths[path] = true
-				paths = append(paths, path)
-			}
-		}
-	}
-	if len(paths) == 0 {
-		return nil
-	}
-	var events []domain.EventFact
-	parsedThreadIDs := make(map[string]bool)
-	for _, path := range paths {
-		transcript, err := codex.ParseRolloutPath(path)
-		if err != nil {
-			return nil
-		}
-		threadID := strings.TrimSpace(transcript.ThreadID)
-		if threadID == "" {
-			threadID = strings.TrimSpace(transcript.SessionID)
-		}
-		if threadID != "" {
-			parsedThreadIDs[threadID] = true
-		}
-		events = append(events, transcript.Events...)
-	}
-	for expectedID := range expectedThreadIDs {
-		if !parsedThreadIDs[expectedID] {
-			return nil
-		}
-	}
-	return events
-}
-
-func hydrateAnomalyAssociations(facts domain.AgenticFactLedger, events []domain.EventFact) []domain.Anomaly {
-	transient := facts
-	transient.Anomalies = nil
-	if len(facts.Sessions) > 0 {
-		eventsBySession := make(map[string][]domain.SessionEventFact)
-		for _, ev := range events {
-			eventsBySession[ev.SessionID] = append(eventsBySession[ev.SessionID], domain.SessionEventFact{
-				EventID:          ev.EventID,
-				Timestamp:        ev.Timestamp,
-				MessageID:        ev.MessageID,
-				Turn:             ev.Turn,
-				Role:             ev.Role,
-				EventType:        ev.EventType,
-				ToolName:         ev.ToolName,
-				Status:           ev.Status,
-				ErrorMessage:     ev.ErrorMessage,
-				DurationMs:       ev.DurationMs,
-				ContextTokens:    ev.ContextTokens,
-				PromptContent:    ev.PromptContent,
-				ReasoningContent: ev.ReasoningContent,
-				ToolInput:        ev.ToolInput,
-				ToolOutput:       ev.ToolOutput,
-			})
-		}
-		clonedSessions := make([]domain.SessionFact, len(facts.Sessions))
-		for i, s := range facts.Sessions {
-			clonedSessions[i] = s
-			if evs, ok := eventsBySession[s.ID]; ok {
-				clonedSessions[i].Events = evs
-			} else {
-				clonedSessions[i].Events = append([]domain.SessionEventFact(nil), s.Events...)
-			}
-		}
-		transient.Sessions = clonedSessions
-	} else {
-		sessions, err := domain.SessionsFromFacts(facts.Sessions, facts.ToolFacts(), events)
-		if err != nil {
-			return facts.AnomalyFacts()
-		}
-		transient.Sessions = sessions
-	}
-	anomalies, err := domain.DetectAnomaliesWithEvidence(transient)
+func hydrateAnomalyAssociations(facts domain.AgenticFactLedger, source domain.SourceEvents) []domain.Anomaly {
+	anomalies, err := domain.DetectAnomaliesWithEvidence(facts, source)
 	if err != nil {
-		return facts.AnomalyFacts()
+		return domain.RefreshAnomalySummariesFromSource(facts, source)
 	}
 	return anomalies
-}
-
-func convertPartToEventFact(pr RawPartRecord, turn int64, role domain.AgentRole, ctxTokens int64, consecutiveErrors *int) *domain.EventFact {
-	ts := formatEpochMilli(pr.TimeCreated)
-
-	var pData struct {
-		Type  *string `json:"type"`
-		Tool  *string `json:"tool"`
-		Text  *string `json:"text"`
-		State *struct {
-			Status *string         `json:"status"`
-			Input  json.RawMessage `json:"input"`
-			Output json.RawMessage `json:"output"`
-		} `json:"state"`
-	}
-
-	partType := "tool"
-	var toolName *string
-	var inputStr, outputStr, status string
-
-	if strings.TrimSpace(pr.Data) != "" {
-		if err := json.Unmarshal([]byte(pr.Data), &pData); err == nil {
-			if pData.Type != nil && strings.TrimSpace(*pData.Type) != "" {
-				partType = strings.TrimSpace(*pData.Type)
-			}
-			if pData.Tool != nil && strings.TrimSpace(*pData.Tool) != "" {
-				toolName = pData.Tool
-			}
-			if pData.State != nil {
-				if pData.State.Status != nil {
-					status = strings.TrimSpace(*pData.State.Status)
-				}
-				inputStr = rawMessageToString(pData.State.Input)
-				outputStr = rawMessageToString(pData.State.Output)
-			}
-			if outputStr == "" && pData.Text != nil {
-				outputStr = strings.TrimSpace(*pData.Text)
-			}
-		}
-	}
-
-	if status == "" {
-		status = "completed"
-	}
-
-	var durMs *int64
-	if pr.TimeUpdated >= pr.TimeCreated && pr.TimeCreated > 0 {
-		dur := pr.TimeUpdated - pr.TimeCreated
-		durMs = &dur
-	}
-
-	var msgIDPtr *string
-	if pr.MessageID != "" {
-		mID := pr.MessageID
-		msgIDPtr = &mID
-	}
-
-	if partType == "compaction" {
-		return &domain.EventFact{
-			EventID:       "opencode:part:" + pr.ID,
-			Timestamp:     ts,
-			SessionID:     pr.SessionID,
-			MessageID:     msgIDPtr,
-			Turn:          turn,
-			Role:          role,
-			EventType:     domain.EventTypeCompaction,
-			ToolName:      nil,
-			Status:        "completed",
-			DurationMs:    durMs,
-			ContextTokens: ctxTokens,
-		}
-	}
-
-	if partType == "tool" {
-		tName := "unknown"
-		if toolName != nil {
-			tName = *toolName
-		}
-		classification := domain.ClassifyToolExecution(tName, status, outputStr, *consecutiveErrors)
-		isError, errorMessage := classification.IsError, classification.ErrorMessage
-		if isError {
-			*consecutiveErrors++
-			status = "error"
-		} else {
-			*consecutiveErrors = 0
-		}
-
-		var inputPtr *string
-		if inputStr != "" {
-			inputPtr = &inputStr
-		}
-		var outputPtr *string
-		if outputStr != "" {
-			outputPtr = &outputStr
-		}
-
-		return &domain.EventFact{
-			EventID:       "opencode:part:" + pr.ID,
-			Timestamp:     ts,
-			SessionID:     pr.SessionID,
-			MessageID:     msgIDPtr,
-			Turn:          turn,
-			Role:          role,
-			EventType:     domain.EventTypeToolCall,
-			ToolName:      toolName,
-			Status:        status,
-			ErrorMessage:  errorMessage,
-			DurationMs:    durMs,
-			ContextTokens: ctxTokens,
-			ToolInput:     inputPtr,
-			ToolOutput:    outputPtr,
-		}
-	}
-
-	return nil
 }

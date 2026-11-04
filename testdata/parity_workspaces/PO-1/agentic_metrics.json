@@ -1,7 +1,7 @@
 {
-  "schema_version": 4,
+  "schema_version": 6,
   "migration": {
-    "schema_version": 4,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -49,7 +49,11 @@
           },
           "cost_usd": 1.608537,
           "compactions": 0,
-          "user_iterations": 1
+          "user_iterations": 1,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 1.608537
+          }
         }
       ],
       "tools": [
@@ -89,19 +93,8 @@
           "errors": 0
         }
       ],
-      "events": [
-        {
-          "timestamp": "2026-10-17T14:50:31.748000+00:00",
-          "turn": 37,
-          "role": "general",
-          "event_type": "tool_call",
-          "tool_name": "bash",
-          "status": "error",
-          "duration_ms": 35,
-          "context_tokens": 47888
-        }
-      ],
       "anomalies": []
     }
-  ]
+  ],
+  "anomalies": []
 }

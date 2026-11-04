@@ -1,7 +1,7 @@
 {
-  "schema_version": 4,
+  "schema_version": 6,
   "migration": {
-    "schema_version": 4,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -49,7 +49,11 @@
           },
           "cost_usd": 0.845708,
           "compactions": 0,
-          "user_iterations": 1
+          "user_iterations": 1,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.845708
+          }
         }
       ],
       "tools": [
@@ -119,48 +123,18 @@
           "errors": 0
         }
       ],
-      "events": [
+      "anomalies": [
         {
-          "timestamp": "2026-10-17T19:43:05.498000+00:00",
-          "turn": 14,
-          "role": "general",
-          "event_type": "tool_call",
-          "tool_name": "read",
-          "status": "error",
-          "duration_ms": 3,
-          "context_tokens": 26795
-        },
-        {
-          "timestamp": "2026-10-17T19:59:47.922000+00:00",
-          "turn": 46,
-          "role": "general",
-          "event_type": "tool_call",
-          "tool_name": "task",
-          "status": "error",
-          "duration_ms": 193359,
-          "context_tokens": 0
-        },
-        {
-          "timestamp": "2026-10-17T20:05:23.021000+00:00",
-          "turn": 47,
-          "role": "general",
-          "event_type": "turn_message",
-          "status": "completed",
-          "duration_ms": 9643,
-          "context_tokens": 62366
-        },
-        {
-          "timestamp": "2026-10-17T20:05:32.600000+00:00",
-          "turn": 47,
-          "role": "general",
-          "event_type": "tool_call",
-          "tool_name": "bash",
-          "status": "completed",
-          "duration_ms": 39,
-          "context_tokens": 62366
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "WARNING",
+          "context": {
+            "turn": 47,
+            "token_delta": 62366,
+            "context_tokens": 62366,
+            "threshold": "40000"
+          }
         }
-      ],
-      "anomalies": []
+      ]
     },
     {
       "id": "ses_eb49e8e35ffe4tOlB0urEsJTAm",
@@ -184,62 +158,36 @@
           },
           "cost_usd": 0.271532,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.271532
+          }
         }
       ],
       "tools": [],
-      "events": [
+      "anomalies": [
         {
-          "timestamp": "2026-10-17T19:40:45.860000+00:00",
-          "turn": 2,
-          "role": "planner",
-          "event_type": "tool_call",
-          "tool_name": "read",
-          "status": "error",
-          "duration_ms": 13,
-          "context_tokens": 12516
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "WARNING",
+          "context": {
+            "turn": 25,
+            "token_delta": 45720,
+            "context_tokens": 58236,
+            "threshold": "40000"
+          }
         },
         {
-          "timestamp": "2026-10-17T19:42:15.231000+00:00",
-          "turn": 25,
-          "role": "planner",
-          "event_type": "tool_call",
-          "tool_name": "mcp-gateway_mcp-exec",
-          "status": "error",
-          "duration_ms": 8,
-          "context_tokens": 58236
-        },
-        {
-          "timestamp": "2026-10-17T19:42:20.860000+00:00",
-          "turn": 26,
-          "role": "planner",
-          "event_type": "tool_call",
-          "tool_name": "mcp-gateway_mcp-exec",
-          "status": "error",
-          "duration_ms": 16,
-          "context_tokens": 58421
-        },
-        {
-          "timestamp": "2026-10-17T19:42:20.947000+00:00",
-          "turn": 27,
-          "role": "planner",
-          "event_type": "turn_message",
-          "status": "completed",
-          "duration_ms": 3025,
-          "context_tokens": 58951
-        },
-        {
-          "timestamp": "2026-10-17T19:42:23.835000+00:00",
-          "turn": 27,
-          "role": "planner",
-          "event_type": "tool_call",
-          "tool_name": "mcp-gateway_mcp-exec",
-          "status": "error",
-          "duration_ms": 8,
-          "context_tokens": 58951
+          "rule_id": "TOOL_RETRY_STREAK",
+          "severity": "WARNING",
+          "context": {
+            "tool_name": "mcp-gateway_mcp-exec",
+            "turn": 27,
+            "count": 3,
+            "threshold": "3"
+          }
         }
-      ],
-      "anomalies": []
+      ]
     },
     {
       "id": "ses_eb491be70ffefMjZwuDQeakO6X",
@@ -263,22 +211,14 @@
           },
           "cost_usd": 0.21184,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.21184
+          }
         }
       ],
       "tools": [],
-      "events": [
-        {
-          "timestamp": "2026-10-17T19:54:48.941000+00:00",
-          "turn": 2,
-          "role": "planner",
-          "event_type": "tool_call",
-          "tool_name": "read",
-          "status": "error",
-          "duration_ms": 7,
-          "context_tokens": 13491
-        }
-      ],
       "anomalies": []
     },
     {
@@ -303,23 +243,16 @@
           },
           "cost_usd": 0.328555,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.328555
+          }
         }
       ],
       "tools": [],
-      "events": [
-        {
-          "timestamp": "2026-10-17T20:00:22.588000+00:00",
-          "turn": 10,
-          "role": "coder",
-          "event_type": "tool_call",
-          "tool_name": "read",
-          "status": "error",
-          "duration_ms": 6,
-          "context_tokens": 62499
-        }
-      ],
       "anomalies": []
     }
-  ]
+  ],
+  "anomalies": []
 }

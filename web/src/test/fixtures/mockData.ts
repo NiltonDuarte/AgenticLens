@@ -418,6 +418,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
         completed_at: '2026-10-15T14:30:00Z',
         updated_at: '2026-10-15T14:32:00Z',
         facts: {
+            schema_version: 6,
             ticket_id: 'AL-1',
             ticket_title: 'Core Go domain models and aggregations engine',
             ticket_type: 'feat',
@@ -454,6 +455,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                                 peak_context: 97000,
                             },
                             cost_usd: 1.25,
+                            cost_evidence: { state: 'observed', known_subtotal_usd: 1.25 },
                             compactions: 0,
                         }
                     ],
@@ -479,6 +481,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                                 peak_context: 52000,
                             },
                             cost_usd: 0.65,
+                            cost_evidence: { state: 'observed', known_subtotal_usd: 0.65 },
                             compactions: 0,
                         }
                     ],
@@ -504,6 +507,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                                 peak_context: 88000,
                             },
                             cost_usd: 1.82,
+                            cost_evidence: { state: 'observed', known_subtotal_usd: 1.82 },
                             compactions: 0,
                         }
                     ],
@@ -529,6 +533,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                                 peak_context: 64000,
                             },
                             cost_usd: 0.72,
+                            cost_evidence: { state: 'observed', known_subtotal_usd: 0.72 },
                             compactions: 0,
                         }
                     ],
@@ -554,6 +559,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                                 peak_context: 45000,
                             },
                             cost_usd: 0.4815,
+                            cost_evidence: { state: 'observed', known_subtotal_usd: 0.4815 },
                             compactions: 0,
                         }
                     ],
@@ -761,6 +767,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
         completed_at: '2026-10-16T16:00:00Z',
         updated_at: '2026-10-16T16:15:00Z',
         facts: {
+            schema_version: 6,
             ticket_id: 'AL-2',
             ticket_title: 'Go HTTP REST API and embedded filesystem server',
             ticket_type: 'feat',
@@ -797,6 +804,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                         peak_context: 128000,
                     },
                     cost_usd: 1.42,
+                    cost_evidence: { state: 'observed', known_subtotal_usd: 1.42 },
                     compactions: 0,
                 },
                 {
@@ -814,6 +822,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                         peak_context: 115000,
                     },
                     cost_usd: 1.68,
+                    cost_evidence: { state: 'observed', known_subtotal_usd: 1.68 },
                     compactions: 0,
                 },
                 {
@@ -831,6 +840,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                         peak_context: 92000,
                     },
                     cost_usd: 0.742,
+                    cost_evidence: { state: 'observed', known_subtotal_usd: 0.742 },
                     compactions: 0,
                 },
                ],
@@ -992,6 +1002,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
         completed_at: '2026-10-17T06:00:00Z',
         updated_at: '2026-10-17T06:10:00Z',
         facts: {
+            schema_version: 6,
             ticket_id: 'AL-3',
             ticket_title: 'TypeScript SPA dashboard and embedded single binary',
             ticket_type: 'feat',
@@ -1028,6 +1039,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                                 peak_context: 104000,
                             },
                             cost_usd: 1.45,
+                            cost_evidence: { state: 'observed', known_subtotal_usd: 1.45 },
                             compactions: 0,
                         }
                     ],
@@ -1053,6 +1065,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                                 peak_context: 98000,
                             },
                             cost_usd: 1.95,
+                            cost_evidence: { state: 'observed', known_subtotal_usd: 1.95 },
                             compactions: 0,
                         }
                     ],
@@ -1078,6 +1091,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                                 peak_context: 72000,
                             },
                             cost_usd: 0.75,
+                            cost_evidence: { state: 'observed', known_subtotal_usd: 0.75 },
                             compactions: 0,
                         }
                     ],
@@ -1243,6 +1257,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
         completed_at: '2026-10-14T11:15:00Z',
         updated_at: '2026-10-14T11:20:00Z',
         facts: {
+            schema_version: 6,
             ticket_id: 'PO-1',
             ticket_title: 'Product requirements decomposition and spec drafting',
             ticket_type: 'docs',
@@ -1279,6 +1294,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                                 peak_context: 70400,
                             },
                             cost_usd: 2.145,
+                            cost_evidence: { state: 'observed', known_subtotal_usd: 2.145 },
                             compactions: 0,
                         }
                     ],
@@ -1408,6 +1424,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
         completed_at: null,
         updated_at: '2026-10-17T09:40:00Z',
         facts: {
+            schema_version: 6,
             ticket_id: 'GEN-1',
             ticket_title: 'Telemetry extraction script and session verification',
             ticket_type: 'chore',
@@ -1444,6 +1461,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                                 peak_context: 225000,
                             },
                             cost_usd: 2.15,
+                            cost_evidence: { state: 'observed', known_subtotal_usd: 2.15 },
                             compactions: 2,
                         }
                     ],
@@ -1469,6 +1487,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
                                 peak_context: 185000,
                             },
                             cost_usd: 1.7625,
+                            cost_evidence: { state: 'observed', known_subtotal_usd: 1.7625 },
                             compactions: 1,
                         }
                     ],

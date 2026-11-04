@@ -19,6 +19,7 @@ type CaptureDiagnostic struct {
 }
 
 type CapturePublishedOwner struct {
+	RefreshState      string        `json:"refresh_state,omitempty"`
 	Association       string        `json:"association,omitempty"`
 	Store             string        `json:"store,omitempty"`
 	InstallationID    string        `json:"installation_id,omitempty"`

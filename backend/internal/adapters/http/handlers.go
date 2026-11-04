@@ -274,34 +274,25 @@ func WorkspaceEventsHandler(workspacesDir string, hydrator ...WorkspaceEventHydr
 			return
 		}
 
-		fallbackResp := domain.WorkspaceEventsResponse{
-			TicketID:         ticketID,
-			IsHydrated:       false,
-			Events:           domain.SortEvents(targetLedger.Facts.EventFacts()),
-			DataSource:       domain.DataSourceCommittedLedger,
-			Anomalies:        targetLedger.Facts.AnomalyFacts(),
-			IncludesBaseline: true,
+		fallbackResp := domain.WorkspaceEventsResponse{TicketID: ticketID, Events: []domain.EventFact{}, DataSource: domain.DataSourceUnavailable, Anomalies: targetLedger.Facts.AnomalyFacts(), Availability: domain.TraceUnavailable, Coverage: domain.TraceCoverage{RequiredSessionIDs: []string{}, CompleteSessionIDs: []string{}, Diagnostics: []string{"Native source hydration unavailable"}}}
+		for _, owner := range targetLedger.Facts.Sessions {
+			fallbackResp.Coverage.RequiredSessionIDs = append(fallbackResp.Coverage.RequiredSessionIDs, owner.ID)
 		}
-
 		if h != nil {
 			hydratedResp, err := h.HydrateWorkspaceEvents(r.Context(), ticketID, *targetLedger)
-			if err == nil && len(hydratedResp.Events) > 0 {
+			if err == nil {
+				err = hydratedResp.Validate()
+			}
+			if err == nil {
 				hydratedResp.TicketID = ticketID
-				if !hydratedResp.IncludesBaseline {
-					hydratedResp.Events = domain.ReconcileEvents(fallbackResp.Events, hydratedResp.Events)
-				} else {
-					hydratedResp.Events = domain.SortEvents(hydratedResp.Events)
-				}
-				hydratedResp.IncludesBaseline = true
-				if !hydratedResp.IsHydrated {
-					hydratedResp.DataSource = domain.DataSourceCommittedLedger
-				}
+				hydratedResp.Events = domain.SortEvents(hydratedResp.Events)
 				if hydratedResp.Anomalies == nil {
 					hydratedResp.Anomalies = fallbackResp.Anomalies
 				}
 				WriteEventsResponse(w, hydratedResp)
 				return
 			}
+			fallbackResp.Coverage.Diagnostics = []string{err.Error()}
 		}
 
 		WriteEventsResponse(w, fallbackResp)

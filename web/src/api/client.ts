@@ -1,6 +1,5 @@
 import type {
   AgenticMetricsLedger,
-  Anomaly,
   BuildInfo,
   FleetSummary,
   ProjectConfigResponse,
@@ -10,7 +9,7 @@ import type {
   WorkspaceDiagnostic,
 } from '../domain/types';
 import { deriveTicketComparisonRows } from '../domain/formatters';
-import { decodeDetail, decodeFleet, decodeLedgers, isAnomaly, isBuildInfo, isEventFact, isProjectConfig, isRecord } from './validation';
+import { decodeDetail, decodeFleet, decodeLedgers, decodeWorkspaceEvents, isBuildInfo, isProjectConfig, isRecord } from './validation';
 
 export interface ApiResponse<T> {
   readonly data: T;
@@ -231,41 +230,7 @@ export async function fetchWorkspaceEvents(
       throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch workspace events'}`);
     }
     const rawData: unknown = await res.json();
-    if (
-      isRecord(rawData) &&
-      'is_hydrated' in rawData
-    ) {
-      const resp = rawData;
-      if (resp.ticket_id !== ticketId || typeof resp.is_hydrated !== 'boolean' ||
-        (resp.includes_baseline !== undefined && typeof resp.includes_baseline !== 'boolean') ||
-        (resp.data_source !== 'committed_ledger' && resp.data_source !== 'local_sqlite' && resp.data_source !== 'local_codex') ||
-        !Array.isArray(resp.events) || !resp.events.every(isEventFact) ||
-        (resp.anomalies != null && (!Array.isArray(resp.anomalies) || !resp.anomalies.every(isAnomaly)))) {
-        throw new Error(`Invalid workspace events response for ${ticketId}`);
-      }
-      return {
-        data: {
-          ticket_id: ticketId,
-          is_hydrated: resp.is_hydrated,
-          events: resp.events,
-          data_source: resp.data_source,
-          ...(resp.includes_baseline === undefined ? {} : { includes_baseline: resp.includes_baseline }),
-          ...(resp.anomalies == null ? {} : { anomalies: resp.anomalies as readonly Anomaly[] }),
-        },
-      };
-    }
-    if (Array.isArray(rawData)) {
-      if (!rawData.every(isEventFact)) throw new Error(`Invalid workspace events response for ${ticketId}`);
-      return {
-        data: {
-          ticket_id: ticketId,
-          is_hydrated: false,
-          events: rawData,
-          data_source: 'committed_ledger',
-        },
-      };
-    }
-    throw new Error(`Invalid workspace events response for ${ticketId}`);
+    return { data: decodeWorkspaceEvents(rawData, ticketId) };
   } catch (err: unknown) {
     rethrowError(err, `Failed to fetch workspace events for ${ticketId}`);
   }

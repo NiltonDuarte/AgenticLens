@@ -70,6 +70,8 @@ const (
 
 // CaptureRegistration contains local correlation metadata, never transcript content.
 type CaptureRegistration struct {
+	// SnapshotNeedsRefresh marks opaque unsupported cache, never current facts.
+	SnapshotNeedsRefresh  bool                `json:"snapshot_needs_refresh,omitempty"`
 	BindingInstallationID string              `json:"binding_installation_id,omitempty"`
 	SourceInstallationID  string              `json:"source_installation_id,omitempty"`
 	InstallationID        string              `json:"installation_id,omitempty"`
@@ -95,27 +97,6 @@ type CaptureRegistration struct {
 	UpdatedAt             string              `json:"updated_at"`
 	Revision              int64               `json:"revision"`
 	Snapshot              []SessionFact       `json:"-"`
-	Skills                []SkillFact         `json:"-"`
-	TaskLinks             []TaskLinkFact      `json:"-"`
-}
-
-// CaptureSnapshotAccept rejects a truncated or older cumulative source snapshot.
-func CaptureSnapshotAccept(previousRevision, revision int64, previousTime, nextTime string) bool {
-	if revision < previousRevision {
-		return false
-	}
-	if previousTime == "" {
-		return true
-	}
-	previous, err := time.Parse(time.RFC3339Nano, previousTime)
-	if err != nil {
-		return false
-	}
-	next, err := time.Parse(time.RFC3339Nano, nextTime)
-	if err != nil {
-		return false
-	}
-	return !next.Before(previous)
 }
 
 // CaptureOwnerCheckpoint is the latest source-reported invocation completion.

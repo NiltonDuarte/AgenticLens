@@ -2,6 +2,7 @@ package opencode
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -90,23 +91,6 @@ func normalizeToolInput(raw json.RawMessage) *string {
 	if len(bytes.TrimSpace(raw)) == 0 || bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
 		return nil
 	}
-	var fields map[string]json.RawMessage
-	if json.Unmarshal(raw, &fields) == nil {
-		if path, ok := fields["path"]; ok {
-			canonical, _ := json.Marshal(struct {
-				Path json.RawMessage `json:"path"`
-			}{path})
-			v := string(canonical)
-			return &v
-		}
-		if path, ok := fields["filePath"]; ok {
-			canonical, _ := json.Marshal(struct {
-				Path json.RawMessage `json:"path"`
-			}{path})
-			v := string(canonical)
-			return &v
-		}
-	}
 	v := string(raw)
 	return &v
 }
@@ -122,7 +106,7 @@ func ExtractSessionsStrict(db *sql.DB, threadIDs []string, defaultUser string, u
 	return extractSessions(db, threadIDs, defaultUser, userBySessionID, true)
 }
 
-func extractSessions(db *sql.DB, threadIDs []string, defaultUser string, userBySessionID map[string]string, strict bool) ([]domain.SessionFact, *string, *string, error) {
+func extractSessions(db *sql.DB, threadIDs []string, defaultUser string, userBySessionID map[string]string, strict bool, source ...*domain.SourceEvents) ([]domain.SessionFact, *string, *string, error) {
 	if db == nil {
 		return nil, nil, nil, errors.New("database connection is nil")
 	}
@@ -133,10 +117,29 @@ func extractSessions(db *sql.DB, threadIDs []string, defaultUser string, userByS
 	if len(threadIDs) == 0 {
 		return []domain.SessionFact{}, nil, nil, nil
 	}
-	if family == schemaFamilyV2 {
-		return extractSchemaV2Sessions(db, threadIDs, defaultUser, userBySessionID)
+	var sessions []domain.SessionFact
+	var events []domain.EventFact
+	var sink *[]domain.EventFact
+	if len(source) > 0 {
+		sink = &events
 	}
-	return extractSchemaV1Sessions(db, threadIDs, defaultUser, userBySessionID, strict)
+	var started, completed *string
+	if family == schemaFamilyV2 {
+		sessions, started, completed, err = extractSchemaV2SessionsWithEvents(db, threadIDs, defaultUser, userBySessionID, strict, sink)
+	} else {
+		sessions, started, completed, err = extractSchemaV1SessionsWithEvents(db, threadIDs, defaultUser, userBySessionID, strict, sink)
+	}
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if len(source) > 0 {
+		fresh := domain.SourceEvents{Events: events}
+		for _, owner := range sessions {
+			fresh.CompleteSessionIDs = append(fresh.CompleteSessionIDs, owner.ID)
+		}
+		*source[0] = domain.MergeSourceEvents(*source[0], fresh)
+	}
+	return sessions, started, completed, nil
 }
 
 // ExtractSteeringTurns calculates human steering turns from message records for given root threads.
@@ -166,4 +169,68 @@ func (acc sessionModelAccumulator) costEvidence() domain.CostEvidence {
 		return domain.PartialCost(amount)
 	}
 	return domain.ObservedCost(amount)
+}
+
+// ExtractSessionSourceEvents reads one exact owner and returns source-only trace
+// rows. Successful empty extraction is distinct from a missing native session.
+func ExtractSessionSourceEvents(db *sql.DB, id, user string) ([]domain.EventFact, error) {
+	family, err := captureSchemaFamily(context.Background(), db, id)
+	if err != nil {
+		return nil, err
+	}
+	events := []domain.EventFact{}
+	var sessions []domain.SessionFact
+	if family == schemaFamilyV2 {
+		sessions, _, _, err = extractSchemaV2SessionsWithEvents(db, []string{id}, user, nil, true, &events, true)
+	} else {
+		sessions, _, _, err = extractSchemaV1SessionsWithEvents(db, []string{id}, user, nil, true, &events, true)
+	}
+	if err != nil {
+		strictErr := err
+		if len(events) == 0 {
+			var partialErr error
+			if family == schemaFamilyV2 {
+				_, _, _, partialErr = extractSchemaV2SessionsWithEvents(db, []string{id}, user, nil, false, &events, true)
+			} else {
+				_, _, _, partialErr = extractSchemaV1SessionsWithEvents(db, []string{id}, user, nil, false, &events, true)
+			}
+			if partialErr != nil {
+				strictErr = errors.Join(strictErr, partialErr)
+			}
+		}
+		return events, strictErr
+	}
+
+	if len(sessions) != 1 || sessions[0].ID != id {
+		return nil, fmt.Errorf("native session %q unavailable", id)
+	}
+	return events, nil
+}
+
+// nativeMessageText decodes only the source message's own content envelope.
+func nativeMessageText(raw json.RawMessage) string {
+	var text string
+	if json.Unmarshal(raw, &text) == nil {
+		return text
+	}
+	var parts []struct {
+		Type string `json:"type"`
+		Text string `json:"text"`
+	}
+	if json.Unmarshal(raw, &parts) != nil {
+		return ""
+	}
+	result := []string{}
+	for _, part := range parts {
+		if part.Type == "text" || part.Type == "input_text" || part.Type == "output_text" {
+			result = append(result, part.Text)
+		}
+	}
+	return strings.Join(result, "\n")
+}
+
+// ExtractSessionsStrictWithSource returns canonical owners and a separate
+// request-local event input for final aggregation across retained owners.
+func ExtractSessionsStrictWithSource(db *sql.DB, ids []string, user string, users map[string]string, source *domain.SourceEvents) ([]domain.SessionFact, *string, *string, error) {
+	return extractSessions(db, ids, user, users, true, source)
 }

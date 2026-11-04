@@ -1,7 +1,7 @@
 {
-  "schema_version": 4,
+  "schema_version": 6,
   "migration": {
-    "schema_version": 4,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -49,7 +49,11 @@
           },
           "cost_usd": 1.42,
           "compactions": 0,
-          "user_iterations": 2
+          "user_iterations": 2,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 1.42
+          }
         }
       ],
       "tools": [
@@ -74,7 +78,6 @@
           "errors": 0
         }
       ],
-      "events": [],
       "anomalies": []
     },
     {
@@ -99,11 +102,14 @@
           },
           "cost_usd": 1.68,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 1.68
+          }
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     },
     {
@@ -128,11 +134,14 @@
           },
           "cost_usd": 0.742,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.742
+          }
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     },
     {
@@ -141,57 +150,19 @@
       "user": "developer",
       "invocations": [],
       "tools": [],
-      "events": [
+      "anomalies": [
         {
-          "timestamp": "2026-10-16T13:10:00Z",
-          "turn": 4,
-          "role": "coder",
-          "event_type": "turn_message",
-          "status": "completed",
-          "duration_ms": 1200,
-          "context_tokens": 88000
-        },
-        {
-          "timestamp": "2026-10-16T13:11:00Z",
-          "turn": 4,
-          "role": "coder",
-          "event_type": "tool_call",
-          "tool_name": "bash",
-          "status": "error",
-          "duration_ms": 950,
-          "context_tokens": 89000
-        },
-        {
-          "timestamp": "2026-10-16T13:12:00Z",
-          "turn": 4,
-          "role": "coder",
-          "event_type": "tool_call",
-          "tool_name": "bash",
-          "status": "error",
-          "duration_ms": 820,
-          "context_tokens": 90000
-        },
-        {
-          "timestamp": "2026-10-16T13:13:00Z",
-          "turn": 4,
-          "role": "coder",
-          "event_type": "tool_call",
-          "tool_name": "bash",
-          "status": "error",
-          "duration_ms": 890,
-          "context_tokens": 91000
-        },
-        {
-          "timestamp": "2026-10-16T13:14:00Z",
-          "turn": 4,
-          "role": "coder",
-          "event_type": "compaction",
-          "status": "completed",
-          "duration_ms": 250,
-          "context_tokens": 65000
+          "rule_id": "TOOL_RETRY_STREAK",
+          "severity": "WARNING",
+          "context": {
+            "tool_name": "bash",
+            "turn": 4,
+            "count": 3,
+            "threshold": "3"
+          }
         }
-      ],
-      "anomalies": []
+      ]
     }
-  ]
+  ],
+  "anomalies": []
 }

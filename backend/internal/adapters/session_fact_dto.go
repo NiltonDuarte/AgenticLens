@@ -33,49 +33,16 @@ func (dto *SessionToolFactDTO) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-type SessionEventFactDTO struct {
-	EventID       string  `json:"event_id"`
-	Timestamp     string  `json:"timestamp"`
-	MessageID     *string `json:"message_id,omitempty"`
-	Turn          int64   `json:"turn"`
-	Role          string  `json:"role"`
-	EventType     string  `json:"event_type"`
-	ToolName      *string `json:"tool_name,omitempty"`
-	Status        string  `json:"status"`
-	DurationMs    *int64  `json:"duration_ms,omitempty"`
-	ContextTokens int64   `json:"context_tokens"`
-}
-
-// UnmarshalJSON discards retired content diagnostics while retaining strict
-// validation of the supported persisted event shape.
-func (dto *SessionEventFactDTO) UnmarshalJSON(data []byte) error {
-	type eventAlias SessionEventFactDTO
-	var decoded struct {
-		eventAlias
-		HasContentError     json.RawMessage `json:"has_content_error"`
-		ContentSeverity     json.RawMessage `json:"content_severity"`
-		ContentErrorSnippet json.RawMessage `json:"content_error_snippet"`
-	}
-	decoder := newStrictFactDecoder(data)
-	if err := decoder.Decode(&decoded); err != nil {
-		return fmt.Errorf("decoding session event fact: %w", err)
-	}
-	if err := requireFactJSONEOF(decoder, "session event fact"); err != nil {
-		return err
-	}
-	*dto = SessionEventFactDTO(decoded.eventAlias)
-	return nil
-}
-
 type SessionFactDTO struct {
-	ID          string                `json:"id"`
-	ParentID    *string               `json:"parent_id,omitempty"`
-	Source      string                `json:"source,omitempty"`
-	User        string                `json:"user,omitempty"`
-	Invocations []InvocationFactDTO   `json:"invocations"`
-	Tools       []SessionToolFactDTO  `json:"tools"`
-	Events      []SessionEventFactDTO `json:"events,omitempty"`
-	Anomalies   []AnomalyDTO          `json:"anomalies"`
+	Skills      []SkillFactDTO       `json:"skills,omitempty"`
+	Delegations []DelegationFactDTO  `json:"delegations,omitempty"`
+	ID          string               `json:"id"`
+	ParentID    *string              `json:"parent_id,omitempty"`
+	Source      string               `json:"source,omitempty"`
+	User        string               `json:"user,omitempty"`
+	Invocations []InvocationFactDTO  `json:"invocations"`
+	Tools       []SessionToolFactDTO `json:"tools"`
+	Anomalies   []AnomalyDTO         `json:"anomalies"`
 }
 
 // ErrToolSessionIDRequired identifies a fact ledger that has tool aggregates
@@ -87,6 +54,7 @@ func (session SessionFactDTO) ToDomain() domain.SessionFact {
 	user := strings.TrimSpace(session.User)
 	parentID := session.ParentID
 	result := domain.SessionFact{
+		Skills: skillFactDTOsToDomain(session.Skills), Delegations: delegationFactDTOsToDomain(session.Delegations),
 		ID:       session.ID,
 		ParentID: parentID,
 		Source:   sessionSource,
@@ -105,13 +73,6 @@ func (session SessionFactDTO) ToDomain() domain.SessionFact {
 		}
 		result.Tools = append(result.Tools, domain.SessionToolFact{Name: name, Calls: tool.Calls, Errors: tool.Errors})
 	}
-	for _, event := range session.Events {
-		result.Events = append(result.Events, domain.SessionEventFact{
-			EventID: event.EventID, Timestamp: event.Timestamp, MessageID: event.MessageID, Turn: event.Turn,
-			Role: domain.AgentRole(event.Role), EventType: domain.EventType(event.EventType), ToolName: event.ToolName,
-			Status: event.Status, DurationMs: event.DurationMs, ContextTokens: event.ContextTokens,
-		})
-	}
 	for _, anomaly := range session.Anomalies {
 		detected := anomaly.ToDomain()
 		detected.Context.SessionID = nil
@@ -123,6 +84,7 @@ func (session SessionFactDTO) ToDomain() domain.SessionFact {
 func SessionFactDTOFromDomain(session domain.SessionFact) SessionFactDTO {
 	sessionSource := strings.TrimSpace(string(session.Source))
 	result := SessionFactDTO{
+		Skills: skillFactDTOsFromDomain(session.Skills), Delegations: delegationFactDTOsFromDomain(session.Delegations),
 		ID:          session.ID,
 		ParentID:    session.ParentID,
 		Source:      sessionSource,

@@ -2,9 +2,9 @@ h3. Title: AL-63: Audit source capability parity across OpenCode v1, OpenCode v2
 
 *TARGET*: AgenticLens (Multi-source ingestion / hydration / recovery)
 
-*Status*: Blocked
+*Status*: Ready
 *Work type*: docs
-*Blocked by*: AL-62
+*Blocked by*: None
 *Blocks*: AL-65
 *Origin*: PO-18; user review dated 2026-10-31, build v2.0.0-rc.106+9707d41-1-g45cb679.
 

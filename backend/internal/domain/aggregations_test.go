@@ -1121,170 +1121,16 @@ func TestAdversarialDomainAggregations(t *testing.T) {
 	})
 }
 
-func TestDeriveMetricsLedger_EventsPreservationAndInvariants(t *testing.T) {
-	t.Run("auxiliary partial task cost is excluded from invocation totals", func(t *testing.T) {
-		facts := domain.AgenticFactLedger{Sessions: []domain.SessionFact{{ID: "root", Invocations: []domain.InvocationFact{{Role: "coder", Model: "model-a", CostUSD: 1}}}}, TaskLinks: []domain.TaskLinkFact{{SubagentType: "tester", CostUSD: 2, CostEvidence: domain.PartialCost(2)}}}
-		metrics := domain.DeriveMetricsLedger(facts, domain.ProjectConfig{})
-		if metrics.Totals.Invocations != 1 || metrics.Totals.CostSummary.FullyObserved != 1 || metrics.Totals.CostSummary.Partial != 0 || metrics.Totals.CostSummary.CompleteAmount() == nil || *metrics.Totals.CostSummary.CompleteAmount() != 1 {
-			t.Fatalf("task cost leaked into invocation totals: %+v", metrics.Totals)
-		}
-	})
-	t.Parallel()
-	tid := "AL-6"
-	title := "Chronological Event Extraction"
-	ttype := domain.TicketTypeFeat
-	baseLedger := domain.AgenticFactLedger{
-		TicketID:    &tid,
-		TicketTitle: &title,
-		TicketType:  &ttype,
-		Code: domain.CodeFacts{
-			LinesAdded:   100,
-			LinesDeleted: 20,
-			FilesChanged: 4,
-		}, Sessions: sessionFacts([]domain.InvocationFact{
-			{
-				Role:                  "orchestrator",
-				Model:                 "gemini-3.8-flash",
-				ActiveDurationSeconds: 120,
-				Turns:                 5,
-				Tokens: domain.InvocationTokens{
-					Input:       5000,
-					Output:      1000,
-					CacheRead:   15000,
-					PeakContext: 20000,
-				},
-				CostUSD: 0.05,
-			},
-		},
-			[]domain.ToolFact{
-				{SessionID: "session-a", Name: "bash", Calls: 5, Errors: 1},
-			}, nil),
+func TestDeriveMetricsLedger_LeanDelegationsDoNotChangeInvocationTotals(t *testing.T) {
+	facts := domain.AgenticFactLedger{Sessions: []domain.SessionFact{{ID: "root", Invocations: []domain.InvocationFact{{Role: "coder", Model: "model-a", CostUSD: 1}}, Delegations: []domain.DelegationFact{{AgentType: domain.KnownString("tester")}}}}}
+	metrics := domain.DeriveMetricsLedger(facts, domain.ProjectConfig{})
+	if metrics.Totals.Invocations != 1 || metrics.Totals.CostSummary.FullyObserved != 1 || metrics.Totals.CostSummary.Partial != 0 || metrics.Totals.CostSummary.CompleteAmount() == nil || *metrics.Totals.CostSummary.CompleteAmount() != 1 {
+		t.Fatalf("delegations changed invocation totals: %+v", metrics.Totals)
 	}
-
-	t.Run("nil events preserved in Facts and does not mutate mathematical derivations", func(t *testing.T) {
-		ledgerNilEvents := baseLedger
-		setEventFacts(&ledgerNilEvents, nil)
-
-		metrics := domain.DeriveMetricsLedger(ledgerNilEvents, domain.DefaultProjectConfig())
-		if metrics.Facts.EventFacts() != nil {
-			t.Errorf("expected nil Facts.Events, got %+v", metrics.Facts.EventFacts())
-		}
-		if metrics.Totals.Invocations != 1 {
-			t.Errorf("expected 1 invocation, got %d", metrics.Totals.Invocations)
-		}
-		if metrics.Totals.CostUSD != 0.05 {
-			t.Errorf("expected cost 0.05, got %f", metrics.Totals.CostUSD)
-		}
-	})
-
-	t.Run("empty slice events preserved in Facts", func(t *testing.T) {
-		ledgerEmptyEvents := baseLedger
-		setEventFacts(&ledgerEmptyEvents, []domain.EventFact{})
-
-		metrics := domain.DeriveMetricsLedger(ledgerEmptyEvents, domain.DefaultProjectConfig())
-		if metrics.Facts.EventFacts() == nil {
-			t.Fatal("expected non-nil empty Events slice")
-		}
-		if len(metrics.Facts.EventFacts()) != 0 {
-			t.Errorf("expected 0 events, got %d", len(metrics.Facts.EventFacts()))
-		}
-	})
-
-	t.Run("populated events preserved without mutating totals or efficiency", func(t *testing.T) {
-		toolBash := "bash"
-		errBash := "exit status 1"
-		var durMs int64 = 42
-
-		events := []domain.EventFact{
-			{
-				Timestamp:     "2026-10-18T10:00:00.000000+00:00",
-				SessionID:     "ses-orch-1",
-				Turn:          1,
-				Role:          "orchestrator",
-				EventType:     domain.EventTypeTurnMessage,
-				Status:        "completed",
-				ContextTokens: 20000,
-			},
-			{
-				Timestamp:     "2026-10-18T10:00:01.000000+00:00",
-				SessionID:     "ses-orch-1",
-				Turn:          1,
-				Role:          "orchestrator",
-				EventType:     domain.EventTypeToolCall,
-				ToolName:      &toolBash,
-				Status:        "error",
-				ErrorMessage:  &errBash,
-				DurationMs:    &durMs,
-				ContextTokens: 20000,
-			},
-			{
-				Timestamp:     "2026-10-18T10:00:02.000000+00:00",
-				SessionID:     "ses-orch-1",
-				Turn:          2,
-				Role:          "orchestrator",
-				EventType:     domain.EventTypeCompaction,
-				Status:        "completed",
-				ContextTokens: 15000,
-			},
-		}
-
-		ledgerWithEvents := baseLedger
-		setEventFacts(&ledgerWithEvents, events)
-
-		metricsWithEvents := domain.DeriveMetricsLedger(ledgerWithEvents, domain.DefaultProjectConfig())
-		metricsWithoutEvents := domain.DeriveMetricsLedger(baseLedger, domain.DefaultProjectConfig())
-
-		if len(metricsWithEvents.Facts.EventFacts()) != 3 {
-			t.Fatalf("expected 3 events in Facts, got %d", len(metricsWithEvents.Facts.EventFacts()))
-		}
-
-		// Invariant: totals, efficiency, roles, models must be identical
-		if !reflect.DeepEqual(metricsWithEvents.Totals, metricsWithoutEvents.Totals) {
-			t.Errorf("totals mutated by presence of events: with=%+v without=%+v",
-				metricsWithEvents.Totals, metricsWithoutEvents.Totals)
-		}
-		if metricsWithEvents.WorkflowEfficiency.ActiveDurationFormatted != metricsWithoutEvents.WorkflowEfficiency.ActiveDurationFormatted {
-			t.Errorf("active duration mutated by presence of events")
-		}
-		if metricsWithEvents.WorkflowEfficiency.ToolExecution != metricsWithoutEvents.WorkflowEfficiency.ToolExecution {
-			t.Errorf("tool execution mutated by presence of events")
-		}
-
-		// Verify event facts fidelity
-		ev0 := metricsWithEvents.Facts.EventFacts()[0]
-		if ev0.EventType != domain.EventTypeTurnMessage || ev0.Turn != 1 {
-			t.Errorf("unexpected event 0: %+v", ev0)
-		}
-		ev1 := metricsWithEvents.Facts.EventFacts()[1]
-		if ev1.EventType != domain.EventTypeToolCall || ev1.Status != "error" || *ev1.ErrorMessage != errBash || *ev1.DurationMs != durMs {
-			t.Errorf("unexpected event 1: %+v", ev1)
-		}
-		ev2 := metricsWithEvents.Facts.EventFacts()[2]
-		if ev2.EventType != domain.EventTypeCompaction || ev2.Turn != 2 {
-			t.Errorf("unexpected event 2: %+v", ev2)
-		}
-	})
-
-	t.Run("zero division on completely empty fact ledger", func(t *testing.T) {
-		emptyLedger := domain.AgenticFactLedger{}
-		metrics := domain.DeriveMetricsLedger(emptyLedger, domain.DefaultProjectConfig())
-
-		if metrics.Totals.Invocations != 0 {
-			t.Errorf("expected 0 invocations, got %d", metrics.Totals.Invocations)
-		}
-		if metrics.Totals.CacheHitRatePct != 0.0 {
-			t.Errorf("expected 0 cache hit rate, got %f", metrics.Totals.CacheHitRatePct)
-		}
-		if metrics.WorkflowEfficiency.ActiveDurationFormatted != "0m 0s" {
-			t.Errorf("expected '0m 0s', got %q", metrics.WorkflowEfficiency.ActiveDurationFormatted)
-		}
-		if metrics.WorkflowEfficiency.ToolExecution.SuccessRatePct != 100.0 {
-			t.Errorf("expected 100.0%% default success rate, got %f", metrics.WorkflowEfficiency.ToolExecution.SuccessRatePct)
-		}
-		if len(metrics.Facts.EventFacts()) != 0 {
-			t.Errorf("expected 0 events, got %d", len(metrics.Facts.EventFacts()))
-		}
-	})
+	empty := domain.DeriveMetricsLedger(domain.AgenticFactLedger{}, domain.DefaultProjectConfig())
+	if empty.Totals.Invocations != 0 || empty.Totals.CacheHitRatePct != 0 || empty.WorkflowEfficiency.ActiveDurationFormatted != "0m 0s" || empty.WorkflowEfficiency.ToolExecution.SuccessRatePct != 100 {
+		t.Fatalf("empty-ledger defaults changed: %+v", empty)
+	}
 }
 
 func TestCompareTicketIDs(t *testing.T) {
@@ -2440,45 +2286,15 @@ func TestDeriveMetricsLedger_AdversarialDeepImmutabilityAndEdgeCases(t *testing.
 			},
 		}
 
-		origEvents := []domain.EventFact{
-			{
-				Timestamp: "2026-10-18T10:00:00Z",
-				SessionID: "ses-orch-raw",
-				Turn:      1,
-				Role:      "build",
-				EventType: domain.EventTypeTurnMessage,
-				Status:    "completed",
-			},
-			{
-				Timestamp: "2026-10-18T10:00:05Z",
-				SessionID: "ses-sub-qa",
-				Turn:      1,
-				Role:      "custom-qa",
-				EventType: domain.EventTypeTurnMessage,
-				Status:    "completed",
-			},
-			{
-				Timestamp: "2026-10-18T10:00:10Z",
-				SessionID: "ses-sub-dyn",
-				Turn:      1,
-				Role:      "security-auditor",
-				EventType: domain.EventTypeToolCall,
-				Status:    "completed",
-			},
-		}
-
 		tid := "AL-IMMUTABILITY"
 		factLedger := domain.AgenticFactLedger{
-			TicketID: &tid, Sessions: sessionFactsFromSessions(origSessions, nil, origEvents),
+			TicketID: &tid, Sessions: sessionFactsFromSessions(origSessions, nil, nil),
 		}
 
 		// Snapshot before derivation
 		invBefore0Role := factLedger.InvocationFacts()[0].Role
 		invBefore1Role := factLedger.InvocationFacts()[1].Role
 		invBefore2Role := factLedger.InvocationFacts()[2].Role
-		evBefore0Role := factLedger.EventFacts()[0].Role
-		evBefore1Role := factLedger.EventFacts()[1].Role
-		evBefore2Role := factLedger.EventFacts()[2].Role
 
 		mappings := domain.RoleMappings{
 			"build":     "orchestrator",
@@ -2499,15 +2315,6 @@ func TestDeriveMetricsLedger_AdversarialDeepImmutabilityAndEdgeCases(t *testing.
 		if factLedger.InvocationFacts()[2].Role != invBefore2Role || invBefore2Role != "security-auditor" {
 			t.Errorf("input factLedger.InvocationFacts()[2].Role mutated: got %q, want 'security-auditor'", factLedger.InvocationFacts()[2].Role)
 		}
-		if factLedger.EventFacts()[0].Role != evBefore0Role || evBefore0Role != "build" {
-			t.Errorf("input factLedger.EventFacts()[0].Role mutated: got %q, want 'build'", factLedger.EventFacts()[0].Role)
-		}
-		if factLedger.EventFacts()[1].Role != evBefore1Role || evBefore1Role != "custom-qa" {
-			t.Errorf("input factLedger.EventFacts()[1].Role mutated: got %q, want 'custom-qa'", factLedger.EventFacts()[1].Role)
-		}
-		if factLedger.EventFacts()[2].Role != evBefore2Role || evBefore2Role != "security-auditor" {
-			t.Errorf("input factLedger.EventFacts()[2].Role mutated: got %q, want 'security-auditor'", factLedger.EventFacts()[2].Role)
-		}
 
 		// 2. Assert derived.Facts retains the exact raw persona strings
 		if derived.Facts.InvocationFacts()[0].Role != "build" {
@@ -2518,15 +2325,6 @@ func TestDeriveMetricsLedger_AdversarialDeepImmutabilityAndEdgeCases(t *testing.
 		}
 		if derived.Facts.InvocationFacts()[2].Role != "security-auditor" {
 			t.Errorf("derived.Facts.InvocationFacts()[2].Role is not raw 'security-auditor', got %q", derived.Facts.InvocationFacts()[2].Role)
-		}
-		if derived.Facts.EventFacts()[0].Role != "build" {
-			t.Errorf("derived.Facts.EventFacts()[0].Role is not raw 'build', got %q", derived.Facts.EventFacts()[0].Role)
-		}
-		if derived.Facts.EventFacts()[1].Role != "custom-qa" {
-			t.Errorf("derived.Facts.EventFacts()[1].Role is not raw 'custom-qa', got %q", derived.Facts.EventFacts()[1].Role)
-		}
-		if derived.Facts.EventFacts()[2].Role != "security-auditor" {
-			t.Errorf("derived.Facts.EventFacts()[2].Role is not raw 'security-auditor', got %q", derived.Facts.EventFacts()[2].Role)
 		}
 
 		// 3. Assert derived aggregates use mapped roles (orchestrator, tester) and dynamic subagent (security-auditor)
@@ -5920,9 +5718,9 @@ func TestComputeSkillAdoption(t *testing.T) {
 	t.Parallel()
 	first, second := "T-1", "T-2"
 	facts := []domain.AgenticFactLedger{
-		{TicketID: &first, Skills: []domain.SkillFact{{Name: "beta", Success: true}, {Name: "alpha", Success: false}, {Name: "beta", Success: true, Error: "inspection text"}}},
-		{TicketID: &second, Skills: []domain.SkillFact{{Name: "beta", Success: false}, {Name: "alpha", Success: true}}},
-		{TicketID: &first, Skills: []domain.SkillFact{{Name: "alpha", Success: true}}},
+		{TicketID: &first, Sessions: []domain.SessionFact{{ID: "owner", Skills: []domain.SkillFact{{Name: "beta"}, {Name: "alpha"}, {Name: "beta"}}}}},
+		{TicketID: &second, Sessions: []domain.SessionFact{{ID: "owner", Skills: []domain.SkillFact{{Name: "beta"}, {Name: "alpha"}}}}},
+		{TicketID: &first, Sessions: []domain.SessionFact{{ID: "owner", Skills: []domain.SkillFact{{Name: "alpha"}}}}},
 		{},
 	}
 	before, err := json.Marshal(facts)
@@ -5930,8 +5728,8 @@ func TestComputeSkillAdoption(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := []domain.SkillAdoptionFact{
-		{Name: "alpha", TotalInvocations: 3, TicketsCount: 2, FailureCount: 1, FailureRate: 1.0 / 3},
-		{Name: "beta", TotalInvocations: 3, TicketsCount: 2, FailureCount: 1, FailureRate: 1.0 / 3},
+		{Name: "alpha", TotalInvocations: 3, TicketsCount: 2},
+		{Name: "beta", TotalInvocations: 3, TicketsCount: 2},
 	}
 	if got := domain.ComputeSkillAdoption(facts); !reflect.DeepEqual(got, want) {
 		t.Fatalf("adoption = %#v, want %#v", got, want)
@@ -5956,7 +5754,10 @@ func TestComputeSkillAdoption(t *testing.T) {
 	if string(before) != string(after) {
 		t.Fatal("skill aggregation mutated facts")
 	}
-	unidentified := []domain.AgenticFactLedger{{Skills: []domain.SkillFact{{Name: "x", Success: true}}}, {Skills: []domain.SkillFact{{Name: "x", Success: true}}}}
+	unidentified := []domain.AgenticFactLedger{
+		{Sessions: []domain.SessionFact{{ID: "owner", Skills: []domain.SkillFact{{Name: "x"}}}}},
+		{Sessions: []domain.SessionFact{{ID: "owner", Skills: []domain.SkillFact{{Name: "x"}}}}},
+	}
 	if got := domain.ComputeSkillAdoption(unidentified); got[0].TicketsCount != 2 {
 		t.Fatalf("unidentified tickets = %d", got[0].TicketsCount)
 	}
@@ -5964,15 +5765,12 @@ func TestComputeSkillAdoption(t *testing.T) {
 
 func TestSkillAdoptionOrderingAndEmptyProjections(t *testing.T) {
 	t.Parallel()
-	ledger := domain.AgenticFactLedger{Skills: []domain.SkillFact{{Name: "a"}, {Name: "b"}, {Name: "b"}, {Name: "c"}}}
+	ledger := domain.AgenticFactLedger{Sessions: []domain.SessionFact{{ID: "owner", Skills: []domain.SkillFact{{Name: "a"}, {Name: "b"}, {Name: "b"}, {Name: "c"}}}}}
 	got := domain.ComputeSkillAdoption([]domain.AgenticFactLedger{ledger})
 	if got[0].Name != "b" || got[1].Name != "a" || got[2].Name != "c" {
 		t.Fatalf("ranked skills = %#v", got)
 	}
-	if got[0].FailureRate != 1 {
-		t.Fatalf("all-failure rate = %v", got[0].FailureRate)
-	}
-	if names := domain.SkillNames(domain.AgenticFactLedger{Skills: []domain.SkillFact{{Name: "\U00010000"}, {Name: "\uE000"}}}); !reflect.DeepEqual(names, []string{"\uE000", "\U00010000"}) {
+	if names := domain.SkillNames(domain.AgenticFactLedger{Sessions: []domain.SessionFact{{ID: "owner", Skills: []domain.SkillFact{{Name: "\U00010000"}, {Name: "\uE000"}}}}}); !reflect.DeepEqual(names, []string{"\uE000", "\U00010000"}) {
 		t.Fatalf("Unicode name order = %#v", names)
 	}
 	if adoption := domain.CalculateFleetSummary(nil).SkillAdoption; adoption == nil || len(adoption) != 0 {

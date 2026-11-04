@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"agenticlens/internal/adapters/capture"
-	"agenticlens/internal/adapters/codex"
 	adaptersconfig "agenticlens/internal/adapters/config"
 	"agenticlens/internal/domain"
 )
@@ -296,62 +295,6 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 		return retire()
 	}
 	return capture.LaunchWorker(binary, project, state)
-}
-
-func validateGenerationProject(project, state string, sessions []domain.SessionFact, ticket string) error {
-	if len(sessions) == 0 {
-		return nil
-	}
-	s, err := capture.OpenProject(state, project)
-	if err != nil {
-		return err
-	}
-	defer s.Close()
-	rows, err := s.List(context.Background())
-	if err != nil {
-		return err
-	}
-	return validateGenerationOwners(project, rows, sessions, ticket)
-}
-
-func validateGenerationOwners(project string, rows []domain.CaptureRegistration, sessions []domain.SessionFact, ticket string) error {
-	byID := map[string][]domain.CaptureRegistration{}
-	for _, r := range rows {
-		byID[r.Identity.SessionID] = append(byID[r.Identity.SessionID], r)
-	}
-	for _, owner := range sessions {
-		var candidates []domain.CaptureRegistration
-		for _, candidate := range byID[owner.ID] {
-			if owner.Source == "" || candidate.Identity.Source == owner.Source {
-				candidates = append(candidates, candidate)
-			}
-		}
-		if len(candidates) > 1 {
-			return fmt.Errorf("baseline owner %s has ambiguous source/store associations; explicit recovery required", owner.ID)
-		}
-		if len(candidates) == 0 {
-			return fmt.Errorf("baseline owner %s lacks verified project/source association; explicit recovery required", owner.ID)
-		}
-		r := candidates[0]
-		if r.TicketID != ticket {
-			return fmt.Errorf("baseline owner %s is bound to ticket %s, refusing %s", owner.ID, r.TicketID, ticket)
-		}
-		if r.Identity.Source == domain.SourceCodex && r.TranscriptPath != "" {
-			if err := codex.ValidateRolloutStore(r.Identity.Store, r.TranscriptPath); err != nil {
-				return err
-			}
-		}
-
-		if owner.Source != "" && r.Identity.Source != owner.Source {
-			return errors.New("baseline source conflicts with project registration")
-		}
-		if r.ProjectDirectory != project {
-			if err := capture.ValidateOwner(context.Background(), project, r); err != nil {
-				return fmt.Errorf("baseline owner %s project unresolved: %w", owner.ID, err)
-			}
-		}
-	}
-	return nil
 }
 
 // Disabled policy stops new passes and handoffs. A publication already committing

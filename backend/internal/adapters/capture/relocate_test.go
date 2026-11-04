@@ -659,9 +659,6 @@ func TestRelocationReservationFencesAllocationBeforeSourceRetirement(t *testing.
 				if _, err = before.Register(ctx, id, "", "UserPromptSubmit"); err == nil {
 					t.Fatal("already-open destination handle accepted pending work")
 				}
-				if err = before.RecordAuxiliaryReceipt(ctx, "T-1", AuxiliaryFacts{}); err == nil {
-					t.Fatal("already-open destination handle accepted a pending auxiliary receipt")
-				}
 			}
 			if wrong, e := openRegistryForRelocation(target, "Shared", project, "different-migration"); e == nil {
 				wrong.Close()
@@ -669,9 +666,6 @@ func TestRelocationReservationFencesAllocationBeforeSourceRetirement(t *testing.
 			}
 			if err = peer.RequestPublication(ctx); err != nil {
 				t.Fatalf("migration fenced peer scope: %v", err)
-			}
-			if err = peer.RecordAuxiliaryReceipt(ctx, "T-1", AuxiliaryFacts{}); err != nil {
-				t.Fatalf("migration fenced peer auxiliary receipt: %v", err)
 			}
 			if err = fenceLegacyRegistry(ctx, legacy, project); err != nil {
 				t.Fatal(err)
@@ -803,7 +797,7 @@ func TestRelocationRejectsReplacedDestinationOwnerAtEveryReservationBoundary(t *
 }
 
 func TestRelocationReservationRefusesPriorDestinationWorkBeforeRetiringSource(t *testing.T) {
-	for _, conflict := range []string{"active-worker", "accepted-handoff", "accepted-receipt"} {
+	for _, conflict := range []string{"active-worker", "accepted-handoff"} {
 		t.Run(conflict, func(t *testing.T) {
 			ctx := context.Background()
 			project, source, base, legacy := relocationFixture(t)
@@ -826,10 +820,7 @@ func TestRelocationReservationRefusesPriorDestinationWorkBeforeRetiringSource(t 
 					t.Fatal(err)
 				}
 				defer worker.Close()
-			} else if conflict == "accepted-receipt" {
-				if err = existing.RecordAuxiliaryReceipt(ctx, "T-1", AuxiliaryFacts{}); err != nil {
-					t.Fatal(err)
-				}
+
 			} else {
 				id := domain.CaptureIdentity{Source: domain.SourceCodex, Store: t.TempDir(), SessionID: "accepted-before-reservation"}
 				if _, err = existing.Register(ctx, id, "", "UserPromptSubmit"); err != nil {
@@ -861,12 +852,6 @@ func TestRelocationReservationRefusesPriorDestinationWorkBeforeRetiringSource(t 
 			}
 			if conflict == "accepted-handoff" && (len(rows) != 1 || rows[0].Identity.SessionID != "accepted-before-reservation") {
 				t.Fatal("reservation refusal changed accepted destination work")
-			}
-			if conflict == "accepted-receipt" {
-				var receipts int
-				if err = existing.db.QueryRow("SELECT count(*) FROM capture_auxiliary_receipts WHERE worktree_id=? AND ticket='T-1'", existing.worktreeID).Scan(&receipts); err != nil || receipts != 1 {
-					t.Fatalf("refusal changed accepted auxiliary receipt: %d %v", receipts, err)
-				}
 			}
 			if _, err = os.Stat(filepath.Join(source, "relocation-fenced.db")); !errors.Is(err, os.ErrNotExist) {
 				t.Fatal("reservation refusal created a fenced source backup")

@@ -111,7 +111,6 @@ func sessionFactsWithInvs(invs []testInvFact, tools []domain.ToolFact, events []
 				},
 			},
 			Tools:     []domain.SessionToolFact{},
-			Events:    []domain.SessionEventFact{},
 			Anomalies: []domain.Anomaly{},
 		}
 		sessions = append(sessions, sess)

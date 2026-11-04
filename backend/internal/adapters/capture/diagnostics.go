@@ -115,7 +115,7 @@ func OpenReadOnlyProject(directory, project string) (*Store, error) {
 	return openRegistry(directory, cfg.ProjectName, project, true)
 }
 
-func (s *Store) RecordPublication(ctx context.Context, ticket, outcome, destination, summary string, owners []domain.SessionFact, detail string) error {
+func (s *Store) RecordPublication(ctx context.Context, ticket, outcome, destination, summary string, owners []domain.SessionFact, detail string, refreshed ...[]domain.SessionFact) error {
 	rows, err := s.List(ctx)
 	if err != nil {
 		return err
@@ -141,8 +141,20 @@ func (s *Store) RecordPublication(ctx context.Context, ticket, outcome, destinat
 			candidates[key] = append(candidates[key], row)
 		}
 	}
+	refreshIDs := make(map[string]bool)
+	for _, snapshot := range refreshed {
+		for _, owner := range snapshot {
+			refreshIDs[string(owner.Source)+"\x00"+owner.ID] = true
+		}
+	}
 	for _, owner := range compact.Sessions {
 		recorded := domain.CapturePublishedOwner{Source: owner.Source, SessionID: owner.ID, Association: "unknown"}
+		if len(refreshed) > 0 {
+			recorded.RefreshState = "retained"
+			if refreshIDs[string(owner.Source)+"\x00"+owner.ID] {
+				recorded.RefreshState = "refreshed"
+			}
+		}
 		if checkpoint, known := domain.CaptureOwnerCheckpoint(owner); known {
 			recorded.Checkpoint = checkpoint.UTC().Format(time.RFC3339Nano)
 		}

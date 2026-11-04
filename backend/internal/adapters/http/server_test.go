@@ -42,7 +42,7 @@ func mustNewServer(t *testing.T, workspacesDir string, staticFS fs.FS, liveServi
 }
 
 func sampleTestLedgerJSON(ticketID, title string, duration int64, cost float64, invocations int64) string {
-	return fmt.Sprintf(`{"schema_version":4,"migration":{"schema_version":4,"status":"completed","steps_completed":["source_backfill"],"steps_pending":[]},"ticket_id":%q,"ticket_title":%q,"ticket_type":"feature","started_at":"2026-10-17T10:00:00Z","completed_at":"2026-10-17T11:00:00Z","updated_at":"2026-10-17T11:00:00Z","code":{"lines_added":120,"lines_deleted":20,"test_lines_added":60,"test_lines_deleted":0,"prod_lines_added":60,"prod_lines_deleted":20,"files_changed":4,"sdlc_iterations":2},"sessions":[{"id":"ses-orch","source":"opencode","user":"tester","invocations":[{"role":"orchestrator","model":"claude-3-sonnet","started_at":null,"completed_at":null,"active_duration_seconds":%d,"turns":%d,"tokens":{"input":5000,"output":1000,"cache_read":10000,"reasoning":300,"peak_context":80000},"cost_usd":%f,"compactions":0,"user_iterations":2}],"tools":[{"name":"bash","calls":5,"errors":0}],"events":[],"anomalies":[]}]}`, ticketID, title, duration, invocations, cost)
+	return fmt.Sprintf(`{"schema_version":6,"migration":{"schema_version":6,"status":"completed","steps_completed":["source_backfill"],"steps_pending":[]},"ticket_id":%q,"ticket_title":%q,"ticket_type":"feature","started_at":"2026-10-17T10:00:00Z","completed_at":"2026-10-17T11:00:00Z","updated_at":"2026-10-17T11:00:00Z","code":{"lines_added":120,"lines_deleted":20,"test_lines_added":60,"test_lines_deleted":0,"prod_lines_added":60,"prod_lines_deleted":20,"files_changed":4,"sdlc_iterations":2},"sessions":[{"id":"ses-orch","source":"opencode","user":"tester","invocations":[{"role":"orchestrator","model":"claude-3-sonnet","started_at":null,"completed_at":null,"active_duration_seconds":%d,"turns":%d,"tokens":{"input":5000,"output":1000,"cache_read":10000,"reasoning":300,"peak_context":80000},"cost_usd":%f,"cost_evidence":{"state":"observed","known_subtotal_usd":%[5]f},"compactions":0,"user_iterations":2}],"tools":[{"name":"bash","calls":5,"errors":0}],"anomalies":[]}]}`, ticketID, title, duration, invocations, cost)
 }
 
 func setupFixtureWorkspaces(t *testing.T) string {
@@ -57,11 +57,10 @@ func setupFixtureWorkspaces(t *testing.T) string {
 	if err := os.MkdirAll(t1Dir, 0755); err != nil {
 		t.Fatalf("failed creating AL-1 dir: %v", err)
 	}
-	t1JSON := `
-{
-  "schema_version": 4,
+	t1JSON := `{
+  "schema_version": 6,
   "migration": {
-    "schema_version": 4,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -106,16 +105,18 @@ func setupFixtureWorkspaces(t *testing.T) string {
           "compactions": 0,
           "started_at": null,
           "completed_at": null,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.1
+          }
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     }
   ]
-}
-`
+}`
 	if err := os.WriteFile(filepath.Join(t1Dir, "agentic_metrics.json"), []byte(t1JSON), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -130,11 +131,10 @@ func setupFixtureWorkspaces(t *testing.T) string {
 	if err := os.MkdirAll(t2Dir, 0755); err != nil {
 		t.Fatalf("failed creating AL-2 dir: %v", err)
 	}
-	t2JSON := `
-{
-  "schema_version": 4,
+	t2JSON := `{
+  "schema_version": 6,
   "migration": {
-    "schema_version": 4,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -179,16 +179,18 @@ func setupFixtureWorkspaces(t *testing.T) string {
           "compactions": 0,
           "started_at": null,
           "completed_at": null,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.5
+          }
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     }
   ]
-}
-`
+}`
 	if err := os.WriteFile(filepath.Join(t2Dir, "agentic_metrics.json"), []byte(t2JSON), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -274,7 +276,7 @@ func TestGetWorkspaces(t *testing.T) {
 			if err := os.MkdirAll(dir, 0755); err != nil {
 				t.Fatal(err)
 			}
-			data := `{"schema_version":4,"migration":{"schema_version":4,"status":"completed","steps_completed":["source_backfill"],"steps_pending":[]},"ticket_id":"` + tid + `","updated_at":"2026-10-18T10:00:00Z","sessions":[]}`
+			data := `{"schema_version":6,"migration":{"schema_version":6,"status":"completed","steps_completed":["source_backfill"],"steps_pending":[]},"ticket_id":"` + tid + `","updated_at":"2026-10-18T10:00:00Z","sessions":[]}`
 			if err := os.WriteFile(filepath.Join(dir, "agentic_metrics.json"), []byte(data), 0644); err != nil {
 				t.Fatal(err)
 			}
@@ -546,7 +548,7 @@ func TestHTTPRejectsLegacySchemaVersionsWithoutPartialPayload(t *testing.T) {
 	if err := os.MkdirAll(ticketDir, 0755); err != nil {
 		t.Fatal(err)
 	}
-	for _, version := range []int{1, 2, 3} {
+	for _, version := range []int{1, 2, 3, 4, 5} {
 		t.Run(fmt.Sprintf("v%d", version), func(t *testing.T) {
 			ledger := fmt.Sprintf(`{"schema_version":%d,"ticket_id":%q,"invocations":[{"id":"legacy-fact"}],"sessions":[]}`, version, ticketID)
 			if err := os.WriteFile(filepath.Join(ticketDir, "agentic_metrics.json"), []byte(ledger), 0644); err != nil {
@@ -589,6 +591,80 @@ func TestHTTPRejectsLegacySchemaVersionsWithoutPartialPayload(t *testing.T) {
 						t.Fatalf("rejected response included partial ledger data: %s", body)
 					}
 				})
+			}
+		})
+	}
+}
+
+func TestHTTPRejectsRetiredCurrentFieldsAndKeepsValidSibling(t *testing.T) {
+	root := t.TempDir()
+	for _, id := range []string{"TEST-VALID", "TEST-BAD"} {
+		if err := os.MkdirAll(filepath.Join(root, id), 0700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	valid := sampleTestLedgerJSON("TEST-VALID", "Current sibling", 1, 0, 1)
+	validPath := filepath.Join(root, "TEST-VALID", "agentic_metrics.json")
+	if err := os.WriteFile(validPath, []byte(valid), 0600); err != nil {
+		t.Fatal(err)
+	}
+	base := `{"schema_version":6,"ticket_id":"TEST-BAD","sessions":[{"id":"owner","source":"codex","user":"tester","invocations":[],"tools":[],"anomalies":[],"skills":[{"name":"inspect","caller_role":null,"invoked_at":null}],"delegations":[{"agent_type":null,"invoked_at":null}]}]}`
+	for _, tc := range []struct{ name, needle, replacement string }{
+		{"root events", `"schema_version":6`, `"schema_version":6,"events":[]`},
+		{"root partial marker", `"schema_version":6`, `"schema_version":6,"events_are_partial":false`},
+		{"session events", `"tools":[]`, `"tools":[],"events":[]`},
+		{"session partial marker", `"tools":[]`, `"tools":[],"events_are_partial":false`},
+		{"session agent path", `"tools":[]`, `"tools":[],"agent_path":""`},
+		{"retired task links", `"tools":[]`, `"tools":[],"task_links":[]`},
+		{"rich skill success", `"name":"inspect"`, `"name":"inspect","success":false`},
+		{"rich skill provenance", `"name":"inspect"`, `"name":"inspect","provenance":{}`},
+		{"unknown skill member", `"name":"inspect"`, `"name":"inspect","future":null`},
+		{"rich delegation cost", `"agent_type":null`, `"agent_type":null,"cost_usd":0`},
+		{"opaque child reference", `"agent_type":null`, `"agent_type":null,"child_reference":"opaque"`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			payload := strings.Replace(base, tc.needle, tc.replacement, 1)
+			path := filepath.Join(root, "TEST-BAD", "agentic_metrics.json")
+			if err := os.WriteFile(path, []byte(payload), 0600); err != nil {
+				t.Fatal(err)
+			}
+			for _, route := range []struct {
+				path    string
+				handler http.HandlerFunc
+			}{{"/api/workspaces/TEST-BAD", adaptershttp.WorkspaceDetailHandler(root)}, {"/api/workspaces/TEST-BAD/events", adaptershttp.WorkspaceEventsHandler(root)}} {
+				request := httptest.NewRequest(http.MethodGet, route.path, nil)
+				request.SetPathValue("ticketId", "TEST-BAD")
+				recorder := httptest.NewRecorder()
+				route.handler.ServeHTTP(recorder, request)
+				if recorder.Code != http.StatusUnprocessableEntity {
+					t.Fatalf("%s accepted retired shape: %d %s", route.path, recorder.Code, recorder.Body.String())
+				}
+				var result adaptershttp.ErrorResponse
+				if err := json.Unmarshal(recorder.Body.Bytes(), &result); err != nil {
+					t.Fatal(err)
+				}
+				if result.Error != "invalid_ledger" {
+					t.Fatalf("incorrect current-schema diagnostic: %#v", result)
+				}
+			}
+			request := httptest.NewRequest(http.MethodGet, "/api/workspaces", nil)
+			recorder := httptest.NewRecorder()
+			adaptershttp.WorkspacesHandler(root).ServeHTTP(recorder, request)
+			var siblings []domain.AgenticMetricsLedger
+			if err := json.Unmarshal(recorder.Body.Bytes(), &siblings); err != nil {
+				t.Fatal(err)
+			}
+			if recorder.Code != http.StatusOK || len(siblings) != 1 || siblings[0].TicketID == nil || *siblings[0].TicketID != "TEST-VALID" || !strings.Contains(recorder.Header().Get("X-AgenticLens-Workspace-Diagnostics"), "TEST-BAD") {
+				t.Fatalf("valid sibling lost: %d %s", recorder.Code, recorder.Body.String())
+			}
+			for file, want := range map[string]string{path: payload, validPath: valid} {
+				got, err := os.ReadFile(file)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if string(got) != want {
+					t.Fatal("GET changed ledger bytes")
+				}
 			}
 		})
 	}
@@ -812,12 +888,12 @@ func TestGetWorkspaceDetail(t *testing.T) {
 }
 
 func TestGetFleet(t *testing.T) {
-	t.Run("mixed v4 and v5 evidence survives HTTP reads without ledger rewrites", func(t *testing.T) {
+	t.Run("mixed current cost evidence survives HTTP reads without ledger rewrites", func(t *testing.T) {
 		root := t.TempDir()
 		inputs := map[string]string{
 			"TEST-0": sampleTestLedgerJSON("TEST-0", "Legacy zero", 1, 0, 1),
-			"TEST-1": strings.Replace(sampleTestLedgerJSON("TEST-1", "Missing amount", 1, 1, 1), `"cost_usd":1.000000,`, "", 1),
-			"TEST-2": strings.ReplaceAll(strings.Replace(sampleTestLedgerJSON("TEST-2", "Partial source", 1, 2, 1), `"cost_usd":2.000000`, `"cost_usd":null,"cost_evidence":{"state":"partial","known_subtotal_usd":2}`, 1), `"schema_version":4`, `"schema_version":5`),
+			"TEST-1": strings.Replace(sampleTestLedgerJSON("TEST-1", "Missing amount", 1, 1, 1), `"cost_usd":1.000000,"cost_evidence":{"state":"observed","known_subtotal_usd":1.000000}`, `"cost_usd":null,"cost_evidence":{"state":"unavailable","known_subtotal_usd":null}`, 1),
+			"TEST-2": strings.Replace(sampleTestLedgerJSON("TEST-2", "Partial source", 1, 2, 1), `"cost_usd":2.000000,"cost_evidence":{"state":"observed","known_subtotal_usd":2.000000}`, `"cost_usd":null,"cost_evidence":{"state":"partial","known_subtotal_usd":2}`, 1),
 		}
 		for id, input := range inputs {
 			dir := filepath.Join(root, id)
@@ -1177,11 +1253,10 @@ func TestAdversarialHTTPEdgeCases(t *testing.T) {
 		if err := os.MkdirAll(ticketDir, 0755); err != nil {
 			t.Fatal(err)
 		}
-		zeroJSON := `
-{
-  "schema_version": 4,
+		zeroJSON := `{
+  "schema_version": 6,
   "migration": {
-    "schema_version": 4,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -1213,16 +1288,18 @@ func TestAdversarialHTTPEdgeCases(t *testing.T) {
           "started_at": null,
           "completed_at": null,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.0
+          }
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     }
   ]
-}
-`
+}`
 		if err := os.WriteFile(filepath.Join(ticketDir, "agentic_metrics.json"), []byte(zeroJSON), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -1611,7 +1688,7 @@ func TestResponseHelpersAndSerialization(t *testing.T) {
 		sourceText := `{"tokens":{},"model":"source text","role":"coder","cost_usd":null,"cost_evidence":{"state":"observed"}}`
 		events := domain.WorkspaceEventsResponse{
 			TicketID:   "TKT-1",
-			IsHydrated: false,
+			IsHydrated: true,
 			Events: []domain.EventFact{
 				{
 					SessionID:  "ses-1",
@@ -1623,7 +1700,9 @@ func TestResponseHelpersAndSerialization(t *testing.T) {
 					ToolOutput: &sourceText,
 				},
 			},
-			DataSource: domain.DataSourceCommittedLedger,
+			DataSource:   domain.DataSourceLocalSQLite,
+			Availability: domain.TraceComplete,
+			Coverage:     domain.TraceCoverage{RequiredSessionIDs: []string{"ses-1"}, CompleteSessionIDs: []string{"ses-1"}},
 		}
 		adaptershttp.WriteEventsResponse(rec, events)
 		if rec.Code != http.StatusOK {
@@ -1634,7 +1713,7 @@ func TestResponseHelpersAndSerialization(t *testing.T) {
 			t.Fatalf("failed decoding events response: %v", err)
 		}
 		if len(parsed.Events) != 1 || parsed.Events[0].SessionID != "ses-1" {
-			t.Errorf("unexpected events parsed: %+v", parsed)
+			t.Fatalf("unexpected events parsed: %+v", parsed)
 		}
 		if parsed.Events[0].ToolOutput == nil || *parsed.Events[0].ToolOutput != sourceText {
 			t.Fatalf("noncost source payload changed: %+v", parsed.Events[0])
@@ -1804,16 +1883,15 @@ func TestWorkspaceEventsAndAnomaliesHTTP(t *testing.T) {
 		t.Fatalf("failed creating workspaces dir: %v", err)
 	}
 
-	// Workspace 1: with events and anomalies
+	// Workspace 1: recorded anomaly summaries without persisted source events
 	w1Dir := filepath.Join(wsDir, "AL-EVENT-1")
 	if err := os.MkdirAll(w1Dir, 0755); err != nil {
 		t.Fatalf("failed creating dir: %v", err)
 	}
-	w1JSON := `
-{
-  "schema_version": 4,
+	w1JSON := `{
+  "schema_version": 6,
   "migration": {
-    "schema_version": 4,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -1858,36 +1936,14 @@ func TestWorkspaceEventsAndAnomaliesHTTP(t *testing.T) {
           "compactions": 0,
           "started_at": null,
           "completed_at": null,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.1
+          }
         }
       ],
       "tools": [],
-      "events": [
-        {
-          "timestamp": "2026-10-18T10:00:00Z",
-          "turn": 1,
-          "role": "coder",
-          "event_type": "tool_call",
-          "tool_name": "bash",
-          "status": "error"
-        },
-        {
-          "timestamp": "2026-10-18T10:00:05Z",
-          "turn": 1,
-          "role": "coder",
-          "event_type": "tool_call",
-          "tool_name": "bash",
-          "status": "error"
-        },
-        {
-          "timestamp": "2026-10-18T10:00:10Z",
-          "turn": 1,
-          "role": "coder",
-          "event_type": "tool_call",
-          "tool_name": "bash",
-          "status": "error"
-        }
-      ],
       "anomalies": [
         {
           "rule_id": "TOOL_RETRY_STREAK",
@@ -1904,20 +1960,26 @@ func TestWorkspaceEventsAndAnomaliesHTTP(t *testing.T) {
       ]
     }
   ]
-}
-`
+}`
 	if err := os.WriteFile(filepath.Join(w1Dir, "agentic_metrics.json"), []byte(w1JSON), 0644); err != nil {
 		t.Fatal(err)
 	}
 
-	// Workspace 2: canonical v4 with no events and no anomalies
+	// Workspace 2: current lean schema without anomalies
 	w2Dir := filepath.Join(wsDir, "AL-LEGACY")
 	if err := os.MkdirAll(w2Dir, 0755); err != nil {
 		t.Fatalf("failed creating dir: %v", err)
 	}
 	w2JSON := `{
-	"schema_version": 4,
-  "migration": {"schema_version": 4, "status": "completed", "steps_completed": ["source_backfill"], "steps_pending": []},
+  "schema_version": 6,
+  "migration": {
+    "schema_version": 6,
+    "status": "completed",
+    "steps_completed": [
+      "source_backfill"
+    ],
+    "steps_pending": []
+  },
   "ticket_id": "AL-LEGACY",
   "ticket_title": "Legacy Ticket",
   "ticket_type": "chore",
@@ -1946,18 +2008,46 @@ func TestWorkspaceEventsAndAnomaliesHTTP(t *testing.T) {
 		t.Fatalf("failed creating dir: %v", err)
 	}
 	w3JSON := `{
-		"schema_version": 4,
-		"migration": {"schema_version": 4, "status": "completed", "steps_completed": ["source_backfill"], "steps_pending": []},
-		"ticket_id": "AL-UNSORTED",
-		"ticket_title": "Unsorted Events Ticket",
-		"ticket_type": "feature",
-		"started_at": "2026-10-18T10:00:00Z",
-		"sessions": [
-			{"id":"ses-late","source":"opencode","user":"dev","invocations":[],"tools":[],"events":[{"timestamp":"2026-10-18T12:00:00Z","turn":2,"role":"coder","event_type":"tool_call","status":"success"}],"anomalies":[]},
-			{"id":"ses-early-t2","source":"opencode","user":"dev","invocations":[],"tools":[],"events":[{"timestamp":"2026-10-18T10:00:00Z","turn":2,"role":"coder","event_type":"tool_call","status":"success"}],"anomalies":[]},
-			{"id":"ses-early-t1","source":"opencode","user":"dev","invocations":[],"tools":[],"events":[{"timestamp":"2026-10-18T10:00:00Z","turn":1,"role":"orchestrator","event_type":"turn_message","status":"success"}],"anomalies":[]}
-		]
-	}`
+  "schema_version": 6,
+  "migration": {
+    "schema_version": 6,
+    "status": "completed",
+    "steps_completed": [
+      "source_backfill"
+    ],
+    "steps_pending": []
+  },
+  "ticket_id": "AL-UNSORTED",
+  "ticket_title": "Unsorted Events Ticket",
+  "ticket_type": "feature",
+  "started_at": "2026-10-18T10:00:00Z",
+  "sessions": [
+    {
+      "id": "ses-late",
+      "source": "opencode",
+      "user": "dev",
+      "invocations": [],
+      "tools": [],
+      "anomalies": []
+    },
+    {
+      "id": "ses-early-t2",
+      "source": "opencode",
+      "user": "dev",
+      "invocations": [],
+      "tools": [],
+      "anomalies": []
+    },
+    {
+      "id": "ses-early-t1",
+      "source": "opencode",
+      "user": "dev",
+      "invocations": [],
+      "tools": [],
+      "anomalies": []
+    }
+  ]
+}`
 	if err := os.WriteFile(filepath.Join(w3Dir, "agentic_metrics.json"), []byte(w3JSON), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -1992,11 +2082,11 @@ func TestWorkspaceEventsAndAnomaliesHTTP(t *testing.T) {
 		if eventsResp.IsHydrated {
 			t.Errorf("expected IsHydrated == false without live hook, got true")
 		}
-		if eventsResp.DataSource != domain.DataSourceCommittedLedger {
-			t.Errorf("expected DataSource == %s, got %s", domain.DataSourceCommittedLedger, eventsResp.DataSource)
+		if eventsResp.DataSource != domain.DataSourceUnavailable {
+			t.Errorf("expected DataSource == %s, got %s", domain.DataSourceUnavailable, eventsResp.DataSource)
 		}
-		if len(eventsResp.Events) != 3 || eventsResp.Events[0].SessionID != "ses-1" {
-			t.Fatalf("recorded events must remain visible without a live hook: %#v", eventsResp.Events)
+		if len(eventsResp.Events) != 0 || eventsResp.Availability != domain.TraceUnavailable {
+			t.Fatalf("source events must be unavailable without a live hook: %#v", eventsResp)
 		}
 	})
 
@@ -2064,13 +2154,8 @@ func TestWorkspaceEventsAndAnomaliesHTTP(t *testing.T) {
 		if err := json.NewDecoder(resp.Body).Decode(&eventsResp); err != nil {
 			t.Fatalf("failed decoding events: %v", err)
 		}
-		if eventsResp.IsHydrated || len(eventsResp.Events) != 3 {
-			t.Fatalf("expected three unhydrated recorded events, got %#v", eventsResp)
-		}
-		for i, owner := range []string{"ses-early-t1", "ses-early-t2", "ses-late"} {
-			if eventsResp.Events[i].SessionID != owner {
-				t.Fatalf("incorrect timestamp/turn order: %#v", eventsResp.Events)
-			}
+		if eventsResp.IsHydrated || len(eventsResp.Events) != 0 || eventsResp.Availability != domain.TraceUnavailable {
+			t.Fatalf("source-only trace must be unavailable without hydration: %#v", eventsResp)
 		}
 	})
 
@@ -2194,7 +2279,20 @@ func TestWorkspaceEventsHandler_AdversarialEdgeCases(t *testing.T) {
 	if err := os.MkdirAll(emptyEventsDir, 0755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(emptyEventsDir, "agentic_metrics.json"), []byte(`{"schema_version":4,"migration":{"schema_version":4,"status":"completed","steps_completed":["source_backfill"],"steps_pending":[]},"ticket_id":"AL-NO-EVENTS","updated_at":"2026-10-18T10:00:00Z","sessions":[]}`), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(emptyEventsDir, "agentic_metrics.json"), []byte(`{
+  "schema_version": 6,
+  "migration": {
+    "schema_version": 6,
+    "status": "completed",
+    "steps_completed": [
+      "source_backfill"
+    ],
+    "steps_pending": []
+  },
+  "ticket_id": "AL-NO-EVENTS",
+  "updated_at": "2026-10-18T10:00:00Z",
+  "sessions": []
+}`), 0644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -2204,15 +2302,36 @@ func TestWorkspaceEventsHandler_AdversarialEdgeCases(t *testing.T) {
 		t.Fatal(err)
 	}
 	validJSON := `{
-		"schema_version": 4,
-		"migration": {"schema_version": 4, "status": "completed", "steps_completed": ["source_backfill"], "steps_pending": []},
-		"ticket_id": "AL-TARGETED-VALID",
-		"updated_at": "2026-10-18T10:00:00Z",
-		"sessions": [
-			{"id":"ses-2","source":"opencode","user":"dev","invocations":[],"tools":[],"events":[{"timestamp":"2026-10-18T10:00:10Z","turn":2,"role":"orchestrator","event_type":"tool_call","status":"completed"}],"anomalies":[]},
-			{"id":"ses-1","source":"opencode","user":"dev","invocations":[],"tools":[],"events":[{"timestamp":"2026-10-18T10:00:05Z","turn":1,"role":"orchestrator","event_type":"tool_call","status":"completed"}],"anomalies":[]}
-		]
-	}`
+  "schema_version": 6,
+  "migration": {
+    "schema_version": 6,
+    "status": "completed",
+    "steps_completed": [
+      "source_backfill"
+    ],
+    "steps_pending": []
+  },
+  "ticket_id": "AL-TARGETED-VALID",
+  "updated_at": "2026-10-18T10:00:00Z",
+  "sessions": [
+    {
+      "id": "ses-2",
+      "source": "opencode",
+      "user": "dev",
+      "invocations": [],
+      "tools": [],
+      "anomalies": []
+    },
+    {
+      "id": "ses-1",
+      "source": "opencode",
+      "user": "dev",
+      "invocations": [],
+      "tools": [],
+      "anomalies": []
+    }
+  ]
+}`
 	if err := os.WriteFile(filepath.Join(validDir, "agentic_metrics.json"), []byte(validJSON), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -2319,8 +2438,8 @@ func TestWorkspaceEventsHandler_AdversarialEdgeCases(t *testing.T) {
 		if err := json.Unmarshal(rec.Body.Bytes(), &eventsResp); err != nil {
 			t.Fatalf("failed unmarshaling events response: %v", err)
 		}
-		if len(eventsResp.Events) != 2 || eventsResp.Events[0].SessionID != "ses-1" || eventsResp.Events[1].SessionID != "ses-2" {
-			t.Fatalf("targeted read lost recorded facts: %+v", eventsResp.Events)
+		if len(eventsResp.Events) != 0 || eventsResp.Availability != domain.TraceUnavailable {
+			t.Fatalf("targeted source trace must remain unavailable: %+v", eventsResp)
 		}
 	})
 
@@ -2333,8 +2452,10 @@ func TestWorkspaceEventsHandler_AdversarialEdgeCases(t *testing.T) {
 		prompt := "test prompt"
 		mockH := &mockHydrator{
 			resp: domain.WorkspaceEventsResponse{
-				TicketID:   "AL-TARGETED-VALID",
-				IsHydrated: true,
+				TicketID:     "AL-TARGETED-VALID",
+				IsHydrated:   true,
+				Availability: domain.TraceComplete,
+				Coverage:     domain.TraceCoverage{RequiredSessionIDs: []string{"ses-1", "ses-2"}, CompleteSessionIDs: []string{"ses-1", "ses-2"}},
 				Events: []domain.EventFact{
 					{
 						SessionID:     "ses-1",
@@ -2366,12 +2487,12 @@ func TestWorkspaceEventsHandler_AdversarialEdgeCases(t *testing.T) {
 		if resp.DataSource != domain.DataSourceLocalSQLite {
 			t.Errorf("expected DataSource == %s, got %s", domain.DataSourceLocalSQLite, resp.DataSource)
 		}
-		if len(resp.Events) != 3 || resp.Events[0].PromptContent == nil || *resp.Events[0].PromptContent != "test prompt" {
+		if len(resp.Events) != 1 || resp.Events[0].PromptContent == nil || *resp.Events[0].PromptContent != "test prompt" {
 			t.Errorf("unexpected hydrated events: %+v", resp.Events)
 		}
 	})
 
-	t.Run("hydrator failure gracefully falls back to committed ledger", func(t *testing.T) {
+	t.Run("hydrator failure returns unavailable source trace", func(t *testing.T) {
 		t.Parallel()
 		req := httptest.NewRequest(http.MethodGet, "/api/workspaces/AL-TARGETED-VALID/events", nil)
 		req.SetPathValue("ticketId", "AL-TARGETED-VALID")
@@ -2394,11 +2515,11 @@ func TestWorkspaceEventsHandler_AdversarialEdgeCases(t *testing.T) {
 		if resp.IsHydrated {
 			t.Errorf("expected IsHydrated == false on hydrator error")
 		}
-		if resp.DataSource != domain.DataSourceCommittedLedger {
-			t.Errorf("expected DataSource == %s, got %s", domain.DataSourceCommittedLedger, resp.DataSource)
+		if resp.DataSource != domain.DataSourceUnavailable {
+			t.Errorf("expected DataSource == %s, got %s", domain.DataSourceUnavailable, resp.DataSource)
 		}
-		if len(resp.Events) != 2 {
-			t.Errorf("expected two recorded fallback events, got %#v", resp.Events)
+		if len(resp.Events) != 0 || resp.Availability != domain.TraceUnavailable {
+			t.Errorf("expected unavailable source trace, got %#v", resp)
 		}
 	})
 }
@@ -2408,21 +2529,20 @@ type mockHydrator struct {
 	err  error
 }
 
-func TestRecordedV4FactsSurviveDetailEventsAndOptionalHydration(t *testing.T) {
+func TestLeanFactsSurviveSourceTraceAvailabilityWithoutGETWrites(t *testing.T) {
 	root := t.TempDir()
-	ticket := "FIX-12"
+	ticket := "TEST-TRACE"
 	ticketDir := filepath.Join(root, ticket)
 	if err := os.MkdirAll(ticketDir, 0700); err != nil {
 		t.Fatal(err)
 	}
-	ledgerJSON := `{"schema_version":4,"ticket_id":"FIX-12","sessions":[
-		{"id":"session-a","source":"opencode","user":"tester","invocations":[],"tools":[{"name":"bash","calls":6,"errors":3}],"events":[
-			{"event_id":"late","timestamp":"2026-10-29T11:00:00Z","turn":3,"role":"coder","event_type":"tool_call","tool_name":"bash","status":"error","context_tokens":2400},
-			{"event_id":"early","timestamp":"2026-10-29T10:00:00Z","message_id":"message","turn":1,"role":"coder","event_type":"tool_call","tool_name":"bash","status":"error","duration_ms":0,"context_tokens":1200},
-			{"timestamp":"2026-10-29T10:00:00Z","turn":2,"role":"coder","event_type":"tool_call","tool_name":"bash","status":"error","context_tokens":1300}],"anomalies":[]},
-		{"id":"session-b","source":"codex","user":"tester","invocations":[],"tools":[],"events":[
-			{"event_id":"tie","timestamp":"2026-10-29T10:00:00Z","turn":1,"role":"tester","event_type":"turn_message","status":"completed","context_tokens":0}],"anomalies":[]}]}`
-	for name, content := range map[string]string{"agentic_metrics.json": ledgerJSON, "CONTRACT.md": "Recorded trace contract", "SUMMARY.md": "Recorded trace summary"} {
+	ledgerJSON := `{"schema_version":6,"ticket_id":"TEST-TRACE","sessions":[
+      {"id":"session-a","source":"opencode","user":"tester","invocations":[],"tools":[{"name":"bash","calls":6,"errors":3}],
+       "skills":[{"name":"inspect","caller_role":null,"invoked_at":null},{"name":"inspect","caller_role":null,"invoked_at":null}],
+       "delegations":[{"agent_type":null,"invoked_at":null,"child_session_id":"unavailable-child"}],
+       "anomalies":[{"rule_id":"TOOL_RETRY_STREAK","severity":"WARNING","context":{"tool_name":"bash","count":3}}]},
+      {"id":"session-b","source":"codex","user":"tester","invocations":[],"tools":[],"skills":[{"name":"remote","caller_role":"reviewer","invoked_at":null}],"anomalies":[]}]}`
+	for name, content := range map[string]string{"agentic_metrics.json": ledgerJSON, "CONTRACT.md": "Lean trace contract", "SUMMARY.md": "Recorded trace summary"} {
 		if err := os.WriteFile(filepath.Join(ticketDir, name), []byte(content), 0600); err != nil {
 			t.Fatal(err)
 		}
@@ -2451,78 +2571,67 @@ func TestRecordedV4FactsSurviveDetailEventsAndOptionalHydration(t *testing.T) {
 		return files
 	}
 	before := snapshot()
-	req := httptest.NewRequest(http.MethodGet, "/api/workspaces/FIX-12", nil)
-	req.SetPathValue("ticketId", ticket)
-	rec := httptest.NewRecorder()
-	adaptershttp.WorkspaceDetailHandler(root).ServeHTTP(rec, req)
-	if rec.Code != http.StatusOK {
-		t.Fatalf("detail failed: %d %s", rec.Code, rec.Body.String())
+	detailRequest := httptest.NewRequest(http.MethodGet, "/api/workspaces/"+ticket, nil)
+	detailRequest.SetPathValue("ticketId", ticket)
+	detailRecorder := httptest.NewRecorder()
+	adaptershttp.WorkspaceDetailHandler(root).ServeHTTP(detailRecorder, detailRequest)
+	if detailRecorder.Code != http.StatusOK {
+		t.Fatalf("detail: %d %s", detailRecorder.Code, detailRecorder.Body.String())
 	}
-	var detail struct {
-		Ledger    domain.AgenticMetricsLedger `json:"ledger"`
-		Anomalies []domain.Anomaly            `json:"anomalies"`
-	}
-	if err := json.Unmarshal(rec.Body.Bytes(), &detail); err != nil {
+	var detail adaptershttp.WorkspaceDetailResponse
+	if err := json.Unmarshal(detailRecorder.Body.Bytes(), &detail); err != nil {
 		t.Fatal(err)
 	}
-	baseline := detail.Ledger.Facts.EventFacts()
-	if len(baseline) != 4 || len(detail.Anomalies) == 0 {
-		t.Fatalf("detail lost recorded events/summaries: %#v", detail)
-	}
-	for i, id := range []string{"early", "tie", "", "late"} {
-		if baseline[i].EventID != id {
-			t.Fatalf("incorrect timestamp/turn/stable ordering: %#v", baseline)
-		}
-	}
-	if baseline[0].SessionID != "session-a" || baseline[1].SessionID != "session-b" || baseline[0].MessageID == nil || *baseline[0].MessageID != "message" || baseline[0].DurationMs == nil || *baseline[0].DurationMs != 0 {
-		t.Fatalf("detail lost nested metadata or owner: %#v", baseline)
+	owners := detail.Ledger.Facts.Sessions
+	if len(owners) != 2 || len(owners[0].Skills) != 2 || len(owners[1].Skills) != 1 || len(owners[0].Delegations) != 1 || owners[0].Delegations[0].ChildSession != "unavailable-child" || len(detail.Anomalies) != 2 || owners[0].Tools[0].Calls != 6 {
+		t.Fatalf("lean facts, multiplicity, unavailable IDs or metrics lost: %#v", detail)
 	}
 	input, output := "make test", "failure details"
-	local := baseline[0]
-	local.ToolInput, local.ToolOutput = &input, &output
+	local := domain.EventFact{EventID: "native-call", Timestamp: "2026-10-29T10:00:00Z", SessionID: "session-a", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, Status: "error", ToolInput: &input, ToolOutput: &output}
+	required := []string{"session-a", "session-b"}
 	for _, tc := range []struct {
-		name     string
-		hydrator *mockHydrator
-		hydrated bool
-		source   domain.DataSource
-		enriched bool
+		name         string
+		hydrator     *mockHydrator
+		availability domain.TraceAvailability
+		hydrated     bool
+		source       domain.DataSource
+		events       []domain.EventFact
+		complete     []string
 	}{
-		{name: "no hydrator", source: domain.DataSourceCommittedLedger},
-		{name: "hydrator error", hydrator: &mockHydrator{err: errors.New("local DB missing")}, source: domain.DataSourceCommittedLedger},
-		{name: "empty unhydrated result", hydrator: &mockHydrator{}, source: domain.DataSourceCommittedLedger},
-		{name: "empty hydrated result", hydrator: &mockHydrator{resp: domain.WorkspaceEventsResponse{IsHydrated: true, DataSource: domain.DataSourceLocalSQLite, Events: []domain.EventFact{}}}, source: domain.DataSourceCommittedLedger},
-		{name: "nonempty unhydrated result", hydrator: &mockHydrator{resp: domain.WorkspaceEventsResponse{Events: []domain.EventFact{local}, DataSource: domain.DataSourceLocalSQLite}}, source: domain.DataSourceCommittedLedger, enriched: true},
-		{name: "partial SQLite enrichment", hydrator: &mockHydrator{resp: domain.WorkspaceEventsResponse{IsHydrated: true, DataSource: domain.DataSourceLocalSQLite, Events: []domain.EventFact{local}}}, hydrated: true, source: domain.DataSourceLocalSQLite, enriched: true},
-		{name: "partial Codex enrichment", hydrator: &mockHydrator{resp: domain.WorkspaceEventsResponse{IsHydrated: true, DataSource: domain.DataSourceLocalCodex, Events: []domain.EventFact{local}}}, hydrated: true, source: domain.DataSourceLocalCodex, enriched: true},
+		{name: "no hydrator", availability: domain.TraceUnavailable, source: domain.DataSourceUnavailable},
+		{name: "source error", hydrator: &mockHydrator{err: errors.New("native source missing")}, availability: domain.TraceUnavailable, source: domain.DataSourceUnavailable},
+		{name: "explicit unavailable", hydrator: &mockHydrator{resp: domain.WorkspaceEventsResponse{Availability: domain.TraceUnavailable, DataSource: domain.DataSourceUnavailable, Coverage: domain.TraceCoverage{RequiredSessionIDs: required, Diagnostics: []string{"Missing native sources"}}}}, availability: domain.TraceUnavailable, source: domain.DataSourceUnavailable},
+		{name: "complete zero", hydrator: &mockHydrator{resp: domain.WorkspaceEventsResponse{Availability: domain.TraceComplete, IsHydrated: true, DataSource: domain.DataSourceLocalSQLite, Coverage: domain.TraceCoverage{RequiredSessionIDs: required, CompleteSessionIDs: required}}}, availability: domain.TraceComplete, hydrated: true, source: domain.DataSourceLocalSQLite, complete: required},
+		{name: "partial SQLite", hydrator: &mockHydrator{resp: domain.WorkspaceEventsResponse{Availability: domain.TracePartial, IsHydrated: true, DataSource: domain.DataSourceLocalSQLite, Events: []domain.EventFact{local}, Coverage: domain.TraceCoverage{RequiredSessionIDs: required, CompleteSessionIDs: []string{"session-a"}, Diagnostics: []string{"session-b unavailable"}}}}, availability: domain.TracePartial, hydrated: true, source: domain.DataSourceLocalSQLite, events: []domain.EventFact{local}, complete: []string{"session-a"}},
+		{name: "partial Codex", hydrator: &mockHydrator{resp: domain.WorkspaceEventsResponse{Availability: domain.TracePartial, IsHydrated: true, DataSource: domain.DataSourceLocalCodex, Events: []domain.EventFact{local}, Coverage: domain.TraceCoverage{RequiredSessionIDs: required, CompleteSessionIDs: []string{"session-a"}, Diagnostics: []string{"session-b unavailable"}}}}, availability: domain.TracePartial, hydrated: true, source: domain.DataSourceLocalCodex, events: []domain.EventFact{local}, complete: []string{"session-a"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			handler := adaptershttp.WorkspaceEventsHandler(root)
 			if tc.hydrator != nil {
 				handler = adaptershttp.WorkspaceEventsHandler(root, tc.hydrator)
 			}
-			req := httptest.NewRequest(http.MethodGet, "/api/workspaces/FIX-12/events", nil)
-			req.SetPathValue("ticketId", ticket)
-			rec := httptest.NewRecorder()
-			handler.ServeHTTP(rec, req)
-			if rec.Code != http.StatusOK {
-				t.Fatalf("events failed: %d %s", rec.Code, rec.Body.String())
+			request := httptest.NewRequest(http.MethodGet, "/api/workspaces/"+ticket+"/events", nil)
+			request.SetPathValue("ticketId", ticket)
+			recorder := httptest.NewRecorder()
+			handler.ServeHTTP(recorder, request)
+			if recorder.Code != http.StatusOK {
+				t.Fatalf("events: %d %s", recorder.Code, recorder.Body.String())
 			}
 			var response domain.WorkspaceEventsResponse
-			if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {
+			if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
 				t.Fatal(err)
 			}
-			if response.TicketID != ticket || response.IsHydrated != tc.hydrated || response.DataSource != tc.source || response.Events == nil || !response.IncludesBaseline {
-				t.Fatalf("incorrect response metadata: %#v", response)
+			if response.TicketID != ticket || response.Availability != tc.availability || response.IsHydrated != tc.hydrated || response.DataSource != tc.source || response.Events == nil {
+				t.Fatalf("incorrect trace availability: %#v", response)
 			}
-			want := append([]domain.EventFact{}, baseline...)
-			if tc.enriched {
-				want[0] = local
+			if len(response.Events) != len(tc.events) || (len(tc.events) > 0 && !reflect.DeepEqual(response.Events, tc.events)) {
+				t.Fatalf("source payload lost or artificial event created: %#v", response.Events)
 			}
-			if !reflect.DeepEqual(response.Events, want) {
-				t.Fatalf("enrichment changed distinct recorded rows: %#v", response.Events)
+			if !reflect.DeepEqual(response.Coverage.RequiredSessionIDs, required) || len(response.Coverage.CompleteSessionIDs) != len(tc.complete) {
+				t.Fatalf("incorrect coverage: %#v", response.Coverage)
 			}
 			if !reflect.DeepEqual(response.Anomalies, detail.Anomalies) {
-				t.Fatalf("response lost detail summaries: %#v", response.Anomalies)
+				t.Fatalf("recorded summaries lost: %#v", response.Anomalies)
 			}
 			if !reflect.DeepEqual(snapshot(), before) {
 				t.Fatal("GET rewrote ledger bytes or workspace contents")
@@ -2531,90 +2640,73 @@ func TestRecordedV4FactsSurviveDetailEventsAndOptionalHydration(t *testing.T) {
 	}
 }
 
-func TestWorkspaceEventsAmbiguousFreshOccurrencesAndKnownBaselineEchoes(t *testing.T) {
+func TestWorkspaceSourceEventsPreserveIndependentEqualOccurrencesAcrossReads(t *testing.T) {
 	root := t.TempDir()
-	ticketDir := filepath.Join(root, "FIX-12")
-	if err := os.MkdirAll(ticketDir, 0700); err != nil {
+	dir := filepath.Join(root, "TEST-TRACE")
+	if err := os.MkdirAll(dir, 0700); err != nil {
 		t.Fatal(err)
 	}
-	ledgerJSON := `{"schema_version":4,"ticket_id":"FIX-12","sessions":[{"id":"ambiguous-session","source":"opencode","user":"tester","invocations":[],"tools":[],"anomalies":[],"events":[
-		{"timestamp":"2026-10-29T10:00:00Z","turn":1,"role":"coder","event_type":"tool_call","status":"error","context_tokens":0},
-		{"timestamp":"2026-10-29T10:00:00Z","turn":1,"role":"coder","event_type":"tool_call","status":"error","context_tokens":0}]}]}`
-	ledgerPath := filepath.Join(ticketDir, "agentic_metrics.json")
+	ledgerJSON := `{"schema_version":6,"ticket_id":"TEST-TRACE","sessions":[{"id":"owner","source":"opencode","user":"tester","invocations":[],"tools":[],"anomalies":[]}]}`
+	ledgerPath := filepath.Join(dir, "agentic_metrics.json")
 	if err := os.WriteFile(ledgerPath, []byte(ledgerJSON), 0600); err != nil {
 		t.Fatal(err)
 	}
-	bare := domain.EventFact{Timestamp: "2026-10-29T10:00:00Z", SessionID: "ambiguous-session", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, Status: "error"}
-	service := live.NewLiveServiceWithCodexHome(nil, domain.ProjectConfig{}, t.TempDir())
-	t.Cleanup(func() {
-		if err := service.Close(); err != nil {
-			t.Error(err)
+	bare := domain.EventFact{Timestamp: "2026-10-29T10:00:00Z", SessionID: "owner", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, Status: "error"}
+	hydrator := &mockHydrator{resp: domain.WorkspaceEventsResponse{Availability: domain.TraceComplete, IsHydrated: true, DataSource: domain.DataSourceLocalSQLite, Events: []domain.EventFact{bare, bare}, Coverage: domain.TraceCoverage{RequiredSessionIDs: []string{"owner"}, CompleteSessionIDs: []string{"owner"}}}}
+	for round := 0; round < 3; round++ {
+		request := httptest.NewRequest(http.MethodGet, "/api/workspaces/TEST-TRACE/events", nil)
+		request.SetPathValue("ticketId", "TEST-TRACE")
+		recorder := httptest.NewRecorder()
+		adaptershttp.WorkspaceEventsHandler(root, hydrator).ServeHTTP(recorder, request)
+		if recorder.Code != http.StatusOK {
+			t.Fatalf("round %d: %d %s", round, recorder.Code, recorder.Body.String())
 		}
-	})
-	for _, tc := range []struct {
-		name     string
-		hydrator adaptershttp.WorkspaceEventHydrator
-		count    int
-		hydrated bool
-	}{
-		{name: "no hydrator", count: 2},
-		{name: "live service baseline fallback", hydrator: service, count: 2},
-		{name: "fresh identical occurrence without provenance", hydrator: &mockHydrator{resp: domain.WorkspaceEventsResponse{IsHydrated: true, DataSource: domain.DataSourceLocalSQLite, Events: []domain.EventFact{bare}}}, count: 3, hydrated: true},
-		{name: "known unhydrated baseline echo", hydrator: &mockHydrator{resp: domain.WorkspaceEventsResponse{IncludesBaseline: true, Events: []domain.EventFact{bare, bare}, DataSource: domain.DataSourceCommittedLedger}}, count: 2},
-		{name: "known complete baseline and fresh occurrence", hydrator: &mockHydrator{resp: domain.WorkspaceEventsResponse{IncludesBaseline: true, IsHydrated: true, DataSource: domain.DataSourceLocalSQLite, Events: []domain.EventFact{bare, bare, bare}}}, count: 3, hydrated: true},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			hydrator := tc.hydrator
-			for round := 0; round < 3; round++ {
-				req := httptest.NewRequest(http.MethodGet, "/api/workspaces/FIX-12/events", nil)
-				req.SetPathValue("ticketId", "FIX-12")
-				rec := httptest.NewRecorder()
-				adaptershttp.WorkspaceEventsHandler(root, hydrator).ServeHTTP(rec, req)
-				if rec.Code != http.StatusOK {
-					t.Fatalf("round %d: events failed: %d %s", round, rec.Code, rec.Body.String())
-				}
-				var response domain.WorkspaceEventsResponse
-				if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {
-					t.Fatal(err)
-				}
-				want := make([]domain.EventFact, tc.count)
-				for index := range want {
-					want[index] = bare
-				}
-				if !reflect.DeepEqual(response.Events, want) {
-					t.Fatalf("round %d: expected %d independent occurrences, got %#v", round, tc.count, response.Events)
-				}
-				if !response.IncludesBaseline || response.IsHydrated != tc.hydrated || response.TicketID != "FIX-12" {
-					t.Fatalf("round %d: incorrect baseline provenance: %#v", round, response)
-				}
-				wantSource := domain.DataSourceCommittedLedger
-				if tc.hydrated {
-					wantSource = domain.DataSourceLocalSQLite
-				}
-				if response.DataSource != wantSource {
-					t.Fatalf("round %d: incorrect source: %s", round, response.DataSource)
-				}
-				// A response re-entering the boundary carries explicit baseline provenance.
-				hydrator = &mockHydrator{resp: response}
-			}
-			unchanged, err := os.ReadFile(ledgerPath)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if string(unchanged) != ledgerJSON {
-				t.Fatal("events reconciliation rewrote the committed ledger")
-			}
-		})
+		var response domain.WorkspaceEventsResponse
+		if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(response.Events, []domain.EventFact{bare, bare}) || response.Availability != domain.TraceComplete || !response.IsHydrated {
+			t.Fatalf("round %d changed source occurrences: %#v", round, response)
+		}
+	}
+	data, err := os.ReadFile(ledgerPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != ledgerJSON {
+		t.Fatal("trace reads rewrote ledger")
 	}
 }
 
-func TestSummaryOnlyV4EventsResponseAllocatesEmptyEventsAndKeepsAnomalies(t *testing.T) {
+func TestSummaryOnlyLeanEventsResponseAllocatesEmptyEventsAndKeepsAnomalies(t *testing.T) {
 	root := t.TempDir()
 	path := filepath.Join(root, "FIX-12")
 	if err := os.MkdirAll(path, 0700); err != nil {
 		t.Fatal(err)
 	}
-	content := `{"schema_version":4,"ticket_id":"FIX-12","sessions":[{"id":"summary","source":"opencode","user":"tester","invocations":[],"tools":[],"anomalies":[{"rule_id":"TOOL_RETRY_STREAK","severity":"WARNING","context":{"tool_name":"bash","count":3}}]}]}`
+	content := `{
+  "schema_version": 6,
+  "ticket_id": "FIX-12",
+  "sessions": [
+    {
+      "id": "summary",
+      "source": "opencode",
+      "user": "tester",
+      "invocations": [],
+      "tools": [],
+      "anomalies": [
+        {
+          "rule_id": "TOOL_RETRY_STREAK",
+          "severity": "WARNING",
+          "context": {
+            "tool_name": "bash",
+            "count": 3
+          }
+        }
+      ]
+    }
+  ]
+}`
 	if err := os.WriteFile(filepath.Join(path, "agentic_metrics.json"), []byte(content), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -2623,13 +2715,13 @@ func TestSummaryOnlyV4EventsResponseAllocatesEmptyEventsAndKeepsAnomalies(t *tes
 	rec := httptest.NewRecorder()
 	adaptershttp.WorkspaceEventsHandler(root).ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
-		t.Fatalf("expected summary-only v4 success: %d %s", rec.Code, rec.Body.String())
+		t.Fatalf("expected summary-only schema6 success: %d %s", rec.Code, rec.Body.String())
 	}
 	var response domain.WorkspaceEventsResponse
 	if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {
 		t.Fatal(err)
 	}
-	if response.Events == nil || len(response.Events) != 0 || response.IsHydrated || response.DataSource != domain.DataSourceCommittedLedger || len(response.Anomalies) != 1 {
+	if response.Events == nil || len(response.Events) != 0 || response.IsHydrated || response.DataSource != domain.DataSourceUnavailable || len(response.Anomalies) != 1 {
 		t.Fatalf("summary-only ledger must return allocated empty events with summaries: %#v", response)
 	}
 	data, err := os.ReadFile(filepath.Join(path, "agentic_metrics.json"))
@@ -2738,18 +2830,16 @@ func TestWorkspaceEvents_EndToEndLiveServiceHydrationAndPathTraversal(t *testing
 	if err := os.MkdirAll(al33Dir, 0755); err != nil {
 		t.Fatal(err)
 	}
-	al33JSON := `
-{
-  "schema_version": 4,
+	al33JSON := `{
+  "schema_version": 6,
   "migration": {
-    "schema_version": 4,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
     ],
     "steps_pending": []
   },
-  "source": "opencode",
   "ticket_id": "AL-33",
   "ticket_title": "End-to-End Dual Plane",
   "ticket_type": "feature",
@@ -2778,24 +2868,18 @@ func TestWorkspaceEvents_EndToEndLiveServiceHydrationAndPathTraversal(t *testing
           },
           "cost_usd": 0,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0
+          }
         }
       ],
       "tools": [],
-      "events": [
-        {
-          "timestamp": "2026-10-19T10:00:00Z",
-          "turn": 1,
-          "role": "orchestrator",
-          "event_type": "turn_message",
-          "status": "completed"
-        }
-      ],
       "anomalies": []
     }
   ]
-}
-`
+}`
 	if err := os.WriteFile(filepath.Join(al33Dir, "agentic_metrics.json"), []byte(al33JSON), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -2805,18 +2889,16 @@ func TestWorkspaceEvents_EndToEndLiveServiceHydrationAndPathTraversal(t *testing
 	if err := os.MkdirAll(alOfflineDir, 0755); err != nil {
 		t.Fatal(err)
 	}
-	offlineJSON := `
-{
-  "schema_version": 4,
+	offlineJSON := `{
+  "schema_version": 6,
   "migration": {
-    "schema_version": 4,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
     ],
     "steps_pending": []
   },
-  "source": "opencode",
   "ticket_id": "AL-OFFLINE",
   "ticket_title": "Offline Ticket",
   "ticket_type": "fix",
@@ -2845,24 +2927,18 @@ func TestWorkspaceEvents_EndToEndLiveServiceHydrationAndPathTraversal(t *testing
           },
           "cost_usd": 0,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0
+          }
         }
       ],
       "tools": [],
-      "events": [
-        {
-          "timestamp": "2026-10-19T09:00:00Z",
-          "turn": 1,
-          "role": "coder",
-          "event_type": "compaction",
-          "status": "completed"
-        }
-      ],
       "anomalies": []
     }
   ]
-}
-`
+}`
 	if err := os.WriteFile(filepath.Join(alOfflineDir, "agentic_metrics.json"), []byte(offlineJSON), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -2915,20 +2991,14 @@ func TestWorkspaceEvents_EndToEndLiveServiceHydrationAndPathTraversal(t *testing
 		if eventResp.DataSource != domain.DataSourceLocalSQLite {
 			t.Errorf("expected DataSource == %s, got %s", domain.DataSourceLocalSQLite, eventResp.DataSource)
 		}
-		if len(eventResp.Events) < 3 {
-			t.Fatalf("expected the unmatched committed row plus local message/tool events, got %d", len(eventResp.Events))
+		if len(eventResp.Events) != 2 || eventResp.Availability != domain.TraceComplete {
+			t.Fatalf("expected only complete native message/tool trace, got %#v", eventResp)
 		}
 
 		// Verify rich diagnostic context
-		var foundTurnMsg, foundToolCall, foundCommitted bool
+		var foundTurnMsg, foundToolCall bool
 		for _, ev := range eventResp.Events {
-			if ev.Timestamp == "2026-10-19T10:00:00Z" && ev.SessionID == "ses_al33" {
-				foundCommitted = true
-				if ev.ContextTokens != 0 || ev.PromptContent != nil || ev.ReasoningContent != nil {
-					t.Errorf("unmatched committed row acquired invented payloads: %#v", ev)
-				}
-				continue
-			}
+
 			if ev.EventType == domain.EventTypeTurnMessage {
 				foundTurnMsg = true
 				if ev.PromptContent == nil || *ev.PromptContent != "Execute full dual-plane test" {
@@ -2961,12 +3031,9 @@ func TestWorkspaceEvents_EndToEndLiveServiceHydrationAndPathTraversal(t *testing
 		if !foundToolCall {
 			t.Errorf("missing tool_call event")
 		}
-		if !foundCommitted {
-			t.Error("partial local hydration discarded the unmatched committed row")
-		}
 	})
 
-	t.Run("GET /api/workspaces/AL-OFFLINE/events gracefully falls back to committed ledger", func(t *testing.T) {
+	t.Run("GET /api/workspaces/AL-OFFLINE/events reports missing native source", func(t *testing.T) {
 		resp, err := http.Get(ts.URL + "/api/workspaces/AL-OFFLINE/events")
 		if err != nil {
 			t.Fatalf("request failed: %v", err)
@@ -2988,11 +3055,11 @@ func TestWorkspaceEvents_EndToEndLiveServiceHydrationAndPathTraversal(t *testing
 		if eventResp.IsHydrated {
 			t.Errorf("expected IsHydrated == false for missing session")
 		}
-		if eventResp.DataSource != domain.DataSourceCommittedLedger {
-			t.Errorf("expected DataSource == %s, got %s", domain.DataSourceCommittedLedger, eventResp.DataSource)
+		if eventResp.DataSource != domain.DataSourceUnavailable {
+			t.Errorf("expected DataSource == %s, got %s", domain.DataSourceUnavailable, eventResp.DataSource)
 		}
-		if len(eventResp.Events) != 1 || eventResp.Events[0].SessionID != "ses_missing_99" || eventResp.Events[0].EventType != domain.EventTypeCompaction {
-			t.Fatalf("expected the recorded fallback compaction, got %#v", eventResp.Events)
+		if len(eventResp.Events) != 0 || eventResp.Availability != domain.TraceUnavailable || len(eventResp.Coverage.Diagnostics) == 0 {
+			t.Fatalf("expected unavailable native trace with diagnostics, got %#v", eventResp)
 		}
 	})
 
@@ -3070,8 +3137,8 @@ func setupMultiFilterWorkspaces(t *testing.T) string {
 			t.Fatalf("failed creating dir for %s: %v", tc.id, err)
 		}
 		rawJSON := `{
-			"schema_version": 4,
-			"migration": {"schema_version": 4, "status": "completed", "steps_completed": ["source_backfill"], "steps_pending": []},
+			"schema_version":6,
+			"migration": {"schema_version":6, "status": "completed", "steps_completed": ["source_backfill"], "steps_pending": []},
 			"ticket_id": "` + tc.id + `",
 			"ticket_title": "Title ` + tc.id + `",
 			"ticket_type": "` + tc.ticketType + `",
@@ -3092,13 +3159,12 @@ func setupMultiFilterWorkspaces(t *testing.T) string {
 					"active_duration_seconds": 60,
 					"turns": 1,
 					"tokens": {"input": 100, "output": 50, "cache_read": 0, "reasoning": 0, "peak_context": 5000},
-					"cost_usd": ` + tc.cost + `,
+					"cost_usd": ` + tc.cost + `,"cost_evidence":{"state":"observed","known_subtotal_usd":` + tc.cost + `},
 					"compactions": 0,
 					"user_iterations": 1
 				}
 			],
 			"tools": [],
-			"events": [],
 			"anomalies": []
 			}]
 		}`
@@ -3723,11 +3789,10 @@ func TestProgressionHandler(t *testing.T) {
 
 		tRecentDir := filepath.Join(wsDir, "RECENT-1")
 		_ = os.MkdirAll(tRecentDir, 0755)
-		recentJSON := fmt.Sprintf(`
-{
-  "schema_version": 4,
+		recentJSON := fmt.Sprintf(`{
+  "schema_version": 6,
   "migration": {
-    "schema_version": 4,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -3768,25 +3833,26 @@ func TestProgressionHandler(t *testing.T) {
           "active_duration_seconds": 0,
           "turns": 0,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.05
+          }
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     }
   ]
-}
-`, recentTS, recentTS, recentTS, recentTS, recentTS)
+}`, recentTS, recentTS, recentTS, recentTS, recentTS)
 		_ = os.WriteFile(filepath.Join(tRecentDir, "agentic_metrics.json"), []byte(recentJSON), 0644)
 
 		tOldDir := filepath.Join(wsDir, "OLD-1")
 		_ = os.MkdirAll(tOldDir, 0755)
-		oldJSON := fmt.Sprintf(`
-{
-  "schema_version": 4,
+		oldJSON := fmt.Sprintf(`{
+  "schema_version": 6,
   "migration": {
-    "schema_version": 4,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -3827,16 +3893,18 @@ func TestProgressionHandler(t *testing.T) {
           "active_duration_seconds": 0,
           "turns": 0,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.05
+          }
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     }
   ]
-}
-`, oldTS, oldTS, oldTS, oldTS, oldTS)
+}`, oldTS, oldTS, oldTS, oldTS, oldTS)
 		_ = os.WriteFile(filepath.Join(tOldDir, "agentic_metrics.json"), []byte(oldJSON), 0644)
 
 		s := mustNewServer(t, wsDir, fstest.MapFS{})
@@ -3925,11 +3993,10 @@ func TestProgressionHandler_AL34_Adversarial(t *testing.T) {
 		t.Fatalf("failed creating test workspace: %v", err)
 	}
 
-	rawJSON := `
-{
-  "schema_version": 4,
+	rawJSON := `{
+  "schema_version": 6,
   "migration": {
-    "schema_version": 4,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -3968,16 +4035,18 @@ func TestProgressionHandler_AL34_Adversarial(t *testing.T) {
           "active_duration_seconds": 0,
           "turns": 0,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.05
+          }
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     }
   ]
-}
-`
+}`
 	if err := os.WriteFile(filepath.Join(wsDir, "agentic_metrics.json"), []byte(rawJSON), 0644); err != nil {
 		t.Fatalf("failed writing test metrics: %v", err)
 	}

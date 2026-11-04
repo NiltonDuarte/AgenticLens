@@ -240,6 +240,9 @@ func ValidateProject(project, sourceDirectory string) error {
 	return nil
 }
 func ValidateOwner(ctx context.Context, project string, r domain.CaptureRegistration) error {
+	// Exact explicit ticket selection, or its source-proven child binding,
+	// authorizes portable source identity across original checkout paths.
+	bound := r.TicketID != "" && r.ProjectDirectory == project && hasExplicitSourceBinding(r)
 	if r.Identity.Source == domain.SourceCodex {
 		path := r.TranscriptPath
 		if path == "" {
@@ -260,6 +263,9 @@ func ValidateOwner(ctx context.Context, project string, r domain.CaptureRegistra
 		if t.ThreadID != r.Identity.SessionID {
 			return errors.New("source identity mismatch")
 		}
+		if bound {
+			return nil
+		}
 		return ValidateProject(project, t.WorkingDir)
 	}
 	db, err := opencode.OpenDB(r.Identity.Store)
@@ -267,6 +273,10 @@ func ValidateOwner(ctx context.Context, project string, r domain.CaptureRegistra
 		return err
 	}
 	defer db.Close()
+	if bound {
+		_, err := opencode.CaptureSourceFingerprint(ctx, db.DB(), r.Identity.SessionID)
+		return err
+	}
 	directory, err := opencode.CaptureProjectDirectory(ctx, db.DB(), r.Identity.SessionID)
 	if err != nil {
 		return err

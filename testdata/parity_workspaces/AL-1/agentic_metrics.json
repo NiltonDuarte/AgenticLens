@@ -1,7 +1,7 @@
 {
-  "schema_version": 4,
+  "schema_version": 6,
   "migration": {
-    "schema_version": 4,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -49,7 +49,11 @@
           },
           "cost_usd": 1.813991,
           "compactions": 0,
-          "user_iterations": 1
+          "user_iterations": 1,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 1.813991
+          }
         }
       ],
       "tools": [
@@ -114,18 +118,6 @@
           "errors": 0
         }
       ],
-      "events": [
-        {
-          "timestamp": "2026-10-17T15:18:43.065000+00:00",
-          "turn": 20,
-          "role": "general",
-          "event_type": "tool_call",
-          "tool_name": "glob",
-          "status": "error",
-          "duration_ms": 6,
-          "context_tokens": 52166
-        }
-      ],
       "anomalies": []
     },
     {
@@ -150,11 +142,14 @@
           },
           "cost_usd": 0.176053,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.176053
+          }
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     },
     {
@@ -179,32 +174,14 @@
           },
           "cost_usd": 0.557333,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.557333
+          }
         }
       ],
       "tools": [],
-      "events": [
-        {
-          "timestamp": "2026-10-17T15:24:52.844000+00:00",
-          "turn": 9,
-          "role": "coder",
-          "event_type": "tool_call",
-          "tool_name": "bash",
-          "status": "error",
-          "duration_ms": 44,
-          "context_tokens": 46827
-        },
-        {
-          "timestamp": "2026-10-17T15:24:55.579000+00:00",
-          "turn": 10,
-          "role": "coder",
-          "event_type": "tool_call",
-          "tool_name": "bash",
-          "status": "error",
-          "duration_ms": 38,
-          "context_tokens": 47074
-        }
-      ],
       "anomalies": []
     },
     {
@@ -229,11 +206,14 @@
           },
           "cost_usd": 0.314597,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.314597
+          }
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     },
     {
@@ -258,11 +238,14 @@
           },
           "cost_usd": 0.264129,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.264129
+          }
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     },
     {
@@ -287,11 +270,14 @@
           },
           "cost_usd": 0.091869,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.091869
+          }
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     },
     {
@@ -316,12 +302,16 @@
           },
           "cost_usd": 0.085714,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.085714
+          }
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     }
-  ]
+  ],
+  "anomalies": []
 }

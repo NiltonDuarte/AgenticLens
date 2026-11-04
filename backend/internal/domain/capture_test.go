@@ -28,26 +28,3 @@ func TestCaptureBindingPreservesExplicitSessionOwnership(t *testing.T) {
 		})
 	}
 }
-
-func TestCaptureSnapshotPrecedenceRejectsTruncationAndOlderSource(t *testing.T) {
-	for _, tc := range []struct {
-		name                   string
-		previous, next         int64
-		previousTime, nextTime string
-		accept                 bool
-	}{
-		{"first", 0, 100, "", "2026-01-01T00:00:01Z", true},
-		{"unchanged", 100, 100, "2026-01-01T00:00:01Z", "2026-01-01T00:00:01Z", true},
-		{"growing resumed source", 100, 200, "2026-01-01T00:00:01Z", "2026-01-01T00:00:02Z", true},
-		{"truncated later source", 200, 100, "2026-01-01T00:00:01Z", "2026-01-01T00:00:02Z", false},
-		{"larger but older source", 100, 200, "2026-01-01T00:00:02Z", "2026-01-01T00:00:01Z", false},
-		{"fractional later source", 100, 200, "2026-01-01T00:00:01Z", "2026-01-01T00:00:01.1Z", true},
-		{"offset equivalent source", 100, 200, "2026-01-01T00:00:01Z", "2025-12-31T19:00:01-05:00", true},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			if got := domain.CaptureSnapshotAccept(tc.previous, tc.next, tc.previousTime, tc.nextTime); got != tc.accept {
-				t.Fatalf("accept=%v, want %v", got, tc.accept)
-			}
-		})
-	}
-}

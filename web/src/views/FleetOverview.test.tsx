@@ -20,20 +20,21 @@ describe('FleetOverview View Component', () => {
     expect(within(card).getByRole('tooltip')).toHaveTextContent('1 fully observed, 1 partial, 1 unavailable of 3 invocations');
   });
 
-  it('shows ranked adoption and invocation-weighted success, then refreshes safely without skill facts', async () => {
+  it('shows ranked activation counts, then refreshes safely without skill facts', async () => {
     const fetchFleet = vi.spyOn(apiClient, 'fetchFleetSummary')
       .mockResolvedValueOnce({ data: { ...mockFleetSummary, skill_adoption: [
-        { name: 'alpha', total_invocations: 8, tickets_count: 2, failure_count: 2, failure_rate: 0.25 },
-        { name: 'beta', total_invocations: 1, tickets_count: 1, failure_count: 1, failure_rate: 1 },
-        { name: 'gamma', total_invocations: 1, tickets_count: 1, failure_count: 0, failure_rate: 0 },
-        { name: 'omega', total_invocations: 1, tickets_count: 1, failure_count: 0, failure_rate: 0 },
+        { name: 'alpha', total_invocations: 8, tickets_count: 2 },
+        { name: 'beta', total_invocations: 1, tickets_count: 1 },
+        { name: 'gamma', total_invocations: 1, tickets_count: 1 },
+        { name: 'omega', total_invocations: 1, tickets_count: 1 },
       ] } })
       .mockResolvedValue({ data: mockFleetSummary });
     vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({ data: [...mockTicketComparisonRows] });
     render(<FleetOverview />);
     const card = await screen.findByRole('region', { name: 'Skill Adoption' });
     expect(within(card).getByText('4 unique skills')).toBeInTheDocument();
-    expect(within(card).getByText('Overall skill success rate: 72.7%')).toBeInTheDocument();
+    expect(within(card).getByText('11 activations')).toBeInTheDocument();
+    expect(within(card).queryByText(/success rate/i)).not.toBeInTheDocument();
     expect(within(card).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
       'alpha: 8 invocations', 'beta: 1 invocations', 'gamma: 1 invocations',
     ]);
@@ -42,7 +43,20 @@ describe('FleetOverview View Component', () => {
     const emptyCard = await screen.findByRole('region', { name: 'Skill Adoption' });
     expect(within(emptyCard).getByText('0 unique skills')).toBeInTheDocument();
     expect(within(emptyCard).getByText('No recorded skills')).toBeInTheDocument();
-    expect(within(emptyCard).getByText('Overall skill success rate: Unavailable')).toBeInTheDocument();
+    expect(within(emptyCard).getByText('0 activations')).toBeInTheDocument();
+  });
+
+  it('keeps recorded activations visible without outcome analytics', async () => {
+    vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({ data: { ...mockFleetSummary, skill_adoption: [
+      { name: 'selected-skill', total_invocations: 3, tickets_count: 1 },
+    ] } });
+    vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({ data: [...mockTicketComparisonRows] });
+    render(<FleetOverview />);
+    const card = await screen.findByRole('region', { name: 'Skill Adoption' });
+    expect(within(card).getByText('1 unique skills')).toBeVisible();
+    expect(within(card).getByText('selected-skill: 3 invocations')).toBeVisible();
+    expect(within(card).getByText('3 activations')).toBeVisible();
+    expect(within(card).queryByText(/success rate/i)).not.toBeInTheDocument();
   });
 
   it('shows ticket-specific skipped-workspace diagnostics alongside valid workspace data', async () => {

@@ -2,7 +2,6 @@ import React, { useState, useMemo, useId } from 'react';
 import type { EventFact, Anomaly, DataSource } from '../types/telemetry';
 import { formatRoleLabel, formatTokensK, formatLocalDateTime, formatHistoricalDateTimeTooltip, getHistoricalTimestampDateTime } from '../domain/formatters';
 import { rebindEvent, sortEvents } from '../domain/events';
-import type { SkillFact, TaskLinkFact } from '../domain/types';
 import { traceBadgeMetadata } from '../domain/traceBadges';
 import { TraceInvocationBadge, type ChildSessionNavigation } from './TraceInvocationBadge';
 import { AnomalyBadge } from './AnomalyBadge';
@@ -31,8 +30,8 @@ export {
 };
 
 export interface TraceWaterfallProps extends ChildSessionNavigation {
-  readonly skills?: readonly SkillFact[] | undefined;
-  readonly taskLinks?: readonly TaskLinkFact[] | undefined;
+  readonly traceAvailability?: 'pending' | 'failed' | 'complete' | 'partial' | 'unavailable' | undefined;
+  readonly traceDiagnostics?: readonly string[] | undefined;
   readonly events: readonly EventFact[];
   readonly anomalies?: readonly Anomaly[] | undefined;
   readonly selectedEvent?: EventFact | null | undefined;
@@ -57,6 +56,8 @@ const formatEventTypeLabel = (type: string): string => {
   switch (type) {
     case 'tool_call':
       return 'Tool Call';
+    case 'skill_activation':
+      return 'Skill Activation';
     case 'turn_message':
       return 'Turn Message';
     case 'compaction':
@@ -75,8 +76,8 @@ const isSameEvent = (a?: EventFact | null, b?: EventFact | null): boolean => {
 
 export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
   events,
-  skills,
-  taskLinks,
+  traceAvailability = 'complete',
+  traceDiagnostics = [],
   availableSessionIds,
   onSelectSession,
   anomalies,
@@ -84,7 +85,7 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
   onSelectEvent,
   onSelectAnomaly,
   isHydrated = false,
-  dataSource = 'committed_ledger',
+  dataSource = 'unavailable',
   defaultExpanded = false,
 }) => {
   const [isWaterfallExpanded, setIsWaterfallExpanded] = useState<boolean>(defaultExpanded);
@@ -99,15 +100,15 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
   const [expandedKeys, setExpandedKeys] = useState<Record<string, boolean>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const waterfallBodyId = useId();
-  const badges = useMemo(() => traceBadgeMetadata(events, skills ?? [], taskLinks ?? []), [events, skills, taskLinks]);
+  const badges = useMemo(() => traceBadgeMetadata(events), [events]);
 
   const activeSelectedEvent = selectedEvent !== undefined
     ? selectedEvent
     : localSelection ? rebindEvent(localSelection.event, localSelection.events, events) : null;
-  const hasLocalSource = isHydrated && dataSource !== 'committed_ledger';
-  const sourceLabel = hasLocalSource
-    ? (dataSource === 'local_codex' ? 'Source: Local Codex' : 'Source: Local SQLite')
-    : 'Source: Committed Ledger';
+  const hasLocalSource = isHydrated && ['local_sqlite', 'local_codex', 'mixed_sources'].includes(dataSource);
+  const sourceLabel = (hasLocalSource
+    ? (dataSource === 'mixed_sources' ? 'Source: Mixed native sources' : dataSource === 'local_codex' ? 'Source: Local Codex' : 'Source: Local SQLite')
+    : 'Source unavailable') + (traceAvailability === 'partial' ? ' · Partial trace' : '');
 
   const handleCopyIdentifier = async (
     idText: string,
@@ -290,6 +291,12 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
     selectedAnomalies,
   ]);
 
+  const availabilityNotice = traceAvailability === 'complete' ? null : <div role="status" className="db-offline-banner" data-testid="db-offline-banner">
+    <p>{traceAvailability === 'pending' ? 'Loading source trace' : traceAvailability === 'failed' ? 'Source trace request failed' : traceAvailability === 'partial' ? 'Partial source trace' : 'Source trace unavailable'}</p>
+    <p>Stored skills, delegations, metrics and anomaly summaries remain available. Trace details require the original session sources.</p>
+    {traceDiagnostics.map((diagnostic, index) => <p key={index}>{diagnostic}</p>)}
+  </div>;
+
   if ((!events || events.length === 0) && (!anomalies || anomalies.length === 0)) {
     return (
       <div className="trace-waterfall-card" data-testid="trace-waterfall-card">
@@ -307,8 +314,9 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
             </span>
           </div>
         </div>
+        {availabilityNotice}
         <div className="trace-empty-state">
-          Zero chronological events recorded for this execution trace.
+          {traceAvailability === 'complete' ? 'Zero chronological events recorded for this execution trace.' : 'No source trace events available.'}
         </div>
       </div>
     );
@@ -321,10 +329,8 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
 
   const issuesSummaryText =
     totalErrorsCount === 0 && totalAnomaliesCount === 0
-      ? 'Clean Execution'
-      : `${totalErrorsCount === 0 ? 'Zero' : totalErrorsCount} ${
-          totalErrorsCount === 1 ? 'Error' : 'Errors'
-        }, ${totalAnomaliesCount === 0 ? 'Zero' : totalAnomaliesCount} ${
+      ? (traceAvailability === 'complete' ? 'Clean Execution' : 'Trace coverage incomplete')
+      : `${totalErrorsCount === 0 && traceAvailability !== 'complete' ? 'Errors unavailable' : `${totalErrorsCount === 0 ? 'Zero' : totalErrorsCount} ${totalErrorsCount === 1 ? 'Error' : 'Errors'}`}, ${totalAnomaliesCount === 0 ? 'Zero' : totalAnomaliesCount} ${
           totalAnomaliesCount === 1 ? 'Anomaly' : 'Anomalies'
         }`;
 
@@ -374,6 +380,7 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
         </div>
       </div>
 
+      {availabilityNotice}
       <div id={waterfallBodyId} className="waterfall-body" hidden={!isWaterfallExpanded}>
         {body}
       </div>
@@ -386,7 +393,7 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
     return renderCard(
       <>
         <div className="trace-empty-state">
-          Zero chronological events recorded for this execution trace.
+          {traceAvailability === 'complete' ? 'Zero chronological events recorded for this execution trace.' : 'No source trace events available.'}
         </div>
         <div className="legacy-anomalies-section" data-testid="workspace-anomalies">
           <span className="legacy-anomalies-heading">Detected Workspace Anomalies:</span>
@@ -492,18 +499,6 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
         </div>
       </div>
 
-      {/* Dynamic Hydration Fallback Banner */}
-      {!hasLocalSource && (
-        <div className="db-offline-banner" data-testid="db-offline-banner" role="status">
-          <div className="offline-banner-header">
-            <span className="offline-indicator-badge">Committed Ledger Facts</span>
-          </div>
-          <p className="offline-banner-text">
-            Recorded event facts remain visible from the committed ledger. Additional payload details require a local session source.
-          </p>
-        </div>
-      )}
-
       {/* Waterfall Timeline Track */}
       {filteredEvents.length === 0 ? (
         <div className="trace-empty-state">
@@ -587,6 +582,8 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
                   </div>
 
                   <div className="timeline-details-row">
+                    {ev.event_type === 'skill_activation' && <span className="status-pill">Activation</span>}
+                    {ev.event_type !== 'tool_call' && <TraceInvocationBadge metadata={badges.get(ev)} availableSessionIds={availableSessionIds} onSelectSession={onSelectSession} />}
                     {ev.event_type === 'tool_call' && (
                       <div className="tool-details-group">
                         <span className="tool-label">Tool:</span>

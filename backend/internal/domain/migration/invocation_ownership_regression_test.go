@@ -19,7 +19,7 @@ func TestMigrationPreservesRepeatedRowsWithinLegacySessionOwners(t *testing.T) {
 	}
 	otherModel := row
 	otherModel.Model = "model-b"
-	want := []domain.SessionFact{
+	want := []migration.SessionInput{
 		{ID: rootID, Source: domain.SourceCodex, User: "alice", Invocations: []domain.InvocationFact{row, row, otherModel}},
 		{ID: "opaque-child", ParentID: &rootID, Source: domain.SourceCodex, User: "bob", Invocations: []domain.InvocationFact{row}},
 	}
@@ -31,7 +31,7 @@ func TestMigrationPreservesRepeatedRowsWithinLegacySessionOwners(t *testing.T) {
 		User      string  `json:"user"`
 	}
 	for _, shape := range []string{"flat", "sessions"} {
-		for version := 1; version <= domain.CurrentSchemaVersion; version++ {
+		for version := 1; version < domain.CurrentSchemaVersion; version++ {
 			t.Run(fmt.Sprintf("%s/v%d", shape, version), func(t *testing.T) {
 				var input []byte
 				var err error
@@ -48,7 +48,7 @@ func TestMigrationPreservesRepeatedRowsWithinLegacySessionOwners(t *testing.T) {
 						{otherModel, rootID, nil, "alice"},
 					}})
 				} else {
-					input, err = json.Marshal(domain.AgenticFactLedger{SchemaVersion: &version, Sessions: want})
+					input, err = json.Marshal(migration.LedgerInput{SchemaVersion: &version, Sessions: want})
 				}
 				if err != nil {
 					t.Fatal(err)

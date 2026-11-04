@@ -45,7 +45,7 @@ func registerBound(t *testing.T, s *capture.Store, store, path, id, ticket strin
 	return row
 }
 
-func TestReconcilePreservesAcceptedSnapshotsThroughResumeTruncationAndMissingSource(t *testing.T) {
+func TestReconcileReplacesCompleteRestoredSnapshotAndPreservesMissingSource(t *testing.T) {
 	ctx := context.Background()
 	s := openStore(t, t.TempDir())
 	store := t.TempDir()
@@ -88,14 +88,14 @@ func TestReconcilePreservesAcceptedSnapshotsThroughResumeTruncationAndMissingSou
 		t.Fatal(err)
 	}
 	truncated := reconcile()
-	if !reflect.DeepEqual(grown.Sessions, truncated.Sessions) || truncated.Registrations[0].State != domain.CapturePending {
-		t.Fatalf("truncation lost facts or completeness: %+v", truncated)
+	if len(truncated.Sessions) != 1 || truncated.Sessions[0].Invocations[0].Tokens.Input != 10 || truncated.Registrations[0].State == domain.CapturePending {
+		t.Fatalf("BEH-02 complete restored smaller source was rejected as incomplete: %+v", truncated)
 	}
 	if err := os.Remove(path); err != nil {
 		t.Fatal(err)
 	}
 	missing := reconcile()
-	if !reflect.DeepEqual(grown.Sessions, missing.Sessions) || missing.Registrations[0].State != domain.CaptureFailed {
+	if !reflect.DeepEqual(truncated.Sessions, missing.Sessions) || missing.Registrations[0].State != domain.CaptureFailed {
 		t.Fatalf("missing source erased facts: %+v", missing)
 	}
 }
@@ -785,8 +785,8 @@ func TestReconcileSuccessfulReadPreservesParentConflictAndNormalPendingRecovery(
 		t.Fatal(e)
 	}
 	normalRead, e := s.Reconcile(ctx, "TEST-300", "reviewer", 20, capture.DefaultByteBudget)
-	if e != nil || len(normalRead.Registrations) != 1 || normalRead.Registrations[0].State != domain.CapturePending || normalRead.SourceAttempts < 1 {
-		t.Fatalf("pending unchanged-read control not reached: %+v %v", normalRead, e)
+	if e != nil || len(normalRead.Registrations) != 1 || normalRead.Registrations[0].State != domain.CaptureCurrent || normalRead.SourceAttempts < 1 {
+		t.Fatalf("complete unchanged-read control not reached: %+v %v", normalRead, e)
 	}
 	normalDiagnostics, e := s.Diagnostics(ctx)
 	if e != nil {

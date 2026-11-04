@@ -1,7 +1,7 @@
 {
-  "schema_version": 4,
+  "schema_version": 6,
   "migration": {
-    "schema_version": 4,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -49,7 +49,11 @@
           },
           "cost_usd": 0.190815,
           "compactions": 0,
-          "user_iterations": 1
+          "user_iterations": 1,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.190815
+          }
         }
       ],
       "tools": [
@@ -79,8 +83,8 @@
           "errors": 0
         }
       ],
-      "events": [],
       "anomalies": []
     }
-  ]
+  ],
+  "anomalies": []
 }

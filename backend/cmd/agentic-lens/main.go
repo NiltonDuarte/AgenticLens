@@ -304,8 +304,6 @@ func runGenerate(args []string) {
 	var knownThreadIDs []string
 	userBySessionID := make(map[string]string)
 	var sessions []domain.SessionFact
-	var skills []domain.SkillFact
-	var taskLinks []domain.TaskLinkFact
 	var fallbackCode *domain.CodeFacts
 
 	baseline, baselineErr := classifyGenerationBaseline(project, *captureDirFlag, *jsonOutputFlag, activeTicketID, cachedFacts)
@@ -313,14 +311,9 @@ func runGenerate(args []string) {
 		fmt.Fprintln(os.Stderr, "Baseline authorization:", baselineErr)
 		os.Exit(1)
 	}
-	if err := recordGenerationHistory(project, *captureDirFlag, activeTicketID, baseline); err != nil {
-		fmt.Fprintln(os.Stderr, "Cannot record retained history diagnostic:", err)
-		os.Exit(1)
-	}
+
 	if cachedFacts != nil {
 		sessions = append(sessions, baseline.Current...)
-		skills = append(skills, cachedFacts.Skills...)
-		taskLinks = append(taskLinks, cachedFacts.TaskLinks...)
 		for _, owner := range baseline.Current {
 			if owner.ParentID == nil && (owner.Source == domain.SourceOpenCode || owner.Source == "") {
 				knownThreadIDs = append(knownThreadIDs, owner.ID)
@@ -333,9 +326,8 @@ func runGenerate(args []string) {
 		}
 	}
 
-	baselineSkills := append([]domain.SkillFact{}, skills...)
-	baselineTaskLinks := append([]domain.TaskLinkFact{}, taskLinks...)
 	var freshSessions []domain.SessionFact
+	var sourceEvents domain.SourceEvents
 	captureResult, captureErr := reconcileCaptureGeneration(project, *captureDirFlag, activeTicketID)
 	if captureErr != nil {
 		fmt.Fprintf(os.Stderr, "Error reconciling capture registry; publication not completed: %v\n", captureErr)
@@ -347,6 +339,17 @@ func runGenerate(args []string) {
 	}
 	registeredOnly := (*autoFlag || hasBoundRegistrations(captureResult)) && strings.TrimSpace(*nonceFlag) == "" && strings.TrimSpace(*sessionIDFlag) == ""
 	if registeredOnly {
+		configuredStores := make(map[domain.SourceHarness]string)
+		if *codexHomeFlag != "" || projCfg.Telemetry.Sources.CodexHome != "" || os.Getenv("CODEX_HOME") != "" {
+			configuredStores[domain.SourceCodex] = adaptersconfig.ResolveCodexHome(*codexHomeFlag, adaptersconfig.ProjectSourcePath(project, projCfg.Telemetry.Sources.CodexHome), os.Getenv("CODEX_HOME"), "")
+		}
+		if *dbPathFlag != "" || projCfg.Telemetry.Sources.OpenCodeDatabasePath != "" {
+			configuredStores[domain.SourceOpenCode] = adaptersconfig.ResolveOpenCodePath(*dbPathFlag, adaptersconfig.ProjectSourcePath(project, projCfg.Telemetry.Sources.OpenCodeDatabasePath), adaptersconfig.ProjectSourcePath(project, projCfg.Database.Path))
+		}
+		if associationErr := validateRegisteredGenerationBaseline(project, *captureDirFlag, activeTicketID, baseline.Current, configuredStores); associationErr != nil {
+			fmt.Fprintln(os.Stderr, "Baseline ticket association conflict:", associationErr)
+			os.Exit(1)
+		}
 		freshSessions = captureResult.RefreshedSessions
 	} else if activeSource == "codex" {
 		builtinCodexHome := ""
@@ -372,6 +375,10 @@ func runGenerate(args []string) {
 				fmt.Fprintf(os.Stderr, "Error reading selected Codex source rollout %s: %v. Check telemetry.sources.codex.home or --codex-home.\n", path, parseErr)
 				os.Exit(1)
 			}
+			if len(transcript.Warnings) > 0 {
+				fmt.Fprintf(os.Stderr, "Error: incomplete Codex owner %s; stored snapshots preserved: %s\n", transcript.ThreadID, strings.Join(transcript.Warnings, "; "))
+				os.Exit(1)
+			}
 			transcripts = append(transcripts, transcript)
 			knownThreadIDs = append(knownThreadIDs, transcript.ThreadID)
 		}
@@ -388,16 +395,20 @@ func runGenerate(args []string) {
 			fmt.Fprintf(os.Stderr, "Error grouping Codex session facts: %v\n", factErr)
 			os.Exit(1)
 		}
-		if collisionErr := validateFreshGenerationOwners(project, *captureDirFlag, baseline.History, freshCodex); collisionErr != nil {
+		if collisionErr := capture.ValidateSessionMerge(sessions, freshCodex); collisionErr != nil {
 			fmt.Fprintln(os.Stderr, collisionErr)
 			os.Exit(1)
 		}
-		if ownerErr := validateCaptureSelection(project, *captureDirFlag, activeTicketID, domain.SourceCodex, codexHome, freshCodex); ownerErr != nil {
+		if ownerErr := validateCaptureSelection(project, *captureDirFlag, activeTicketID, domain.SourceCodex, codexHome, freshCodex, baseline.Current); ownerErr != nil {
 			fmt.Fprintln(os.Stderr, "Capture ownership conflict:", ownerErr)
 			os.Exit(1)
 		}
 		resolveCodexSessionUsers(freshCodex, userBySessionID, currentUser)
 		freshSessions = freshCodex
+		sourceEvents.Events = combined.Events
+		for _, owner := range freshCodex {
+			sourceEvents.CompleteSessionIDs = append(sourceEvents.CompleteSessionIDs, owner.ID)
+		}
 		if strings.TrimSpace(*startedAtFlag) == "" && combined.StartedAt != "" {
 			activeStartedAt = &combined.StartedAt
 		}
@@ -435,34 +446,23 @@ func runGenerate(args []string) {
 			}
 
 			if len(knownThreadIDs) > 0 {
-				extractedSessions, dbStarted, dbCompleted, extractErr := opencode.ExtractSessions(
-					dbClient.DB(), knownThreadIDs, currentUser, userBySessionID,
+				extractedSessions, dbStarted, dbCompleted, extractErr := opencode.ExtractSessionsStrictWithSource(
+					dbClient.DB(), knownThreadIDs, currentUser, userBySessionID, &sourceEvents,
 				)
 				if extractErr != nil {
 					fmt.Fprintf(os.Stderr, "Error reading selected OpenCode source at %s: %v. Check the database and telemetry.sources.opencode.database_path.\n", dbPath, extractErr)
 					os.Exit(1)
 				}
 				if len(extractedSessions) > 0 {
-					if collisionErr := validateFreshGenerationOwners(project, *captureDirFlag, baseline.History, extractedSessions); collisionErr != nil {
+					if collisionErr := capture.ValidateSessionMerge(sessions, extractedSessions); collisionErr != nil {
 						fmt.Fprintln(os.Stderr, collisionErr)
 						os.Exit(1)
 					}
-					if ownerErr := validateCaptureSelection(project, *captureDirFlag, activeTicketID, domain.SourceOpenCode, dbPath, extractedSessions); ownerErr != nil {
+					if ownerErr := validateCaptureSelection(project, *captureDirFlag, activeTicketID, domain.SourceOpenCode, dbPath, extractedSessions, baseline.Current); ownerErr != nil {
 						fmt.Fprintln(os.Stderr, "Capture ownership conflict:", ownerErr)
 						os.Exit(1)
 					}
 					freshSessions = extractedSessions
-					freshSkills, freshLinks := opencode.ExtractSkillTaskFacts(extractedSessions)
-					skills, err = mergeCaptureRows(skills, freshSkills)
-					if err != nil {
-						fmt.Fprintln(os.Stderr, err)
-						os.Exit(1)
-					}
-					taskLinks, err = mergeCaptureRows(taskLinks, freshLinks)
-					if err != nil {
-						fmt.Fprintln(os.Stderr, err)
-						os.Exit(1)
-					}
 					if strings.TrimSpace(*startedAtFlag) == "" && dbStarted != nil {
 						activeStartedAt = dbStarted
 					}
@@ -478,7 +478,7 @@ func runGenerate(args []string) {
 	}
 
 	if captureResult != nil {
-		if err := validateFreshGenerationOwners(project, *captureDirFlag, baseline.History, captureResult.Sessions); err != nil {
+		if err := capture.ValidateSessionMerge(sessions, captureResult.Sessions); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
@@ -486,6 +486,7 @@ func runGenerate(args []string) {
 			fmt.Fprintln(os.Stderr, "Capture identity collision:", err)
 			os.Exit(1)
 		}
+		sourceEvents = domain.MergeSourceEvents(captureResult.SourceEvents, sourceEvents)
 		// Retained local snapshots are fallback only; they never replace canonical or explicit facts.
 		sessions = fillMissingCaptureSessions(sessions, captureResult.Sessions)
 		// Explicit extraction runs after capture and has precedence for a duplicate refreshed owner.
@@ -493,53 +494,24 @@ func runGenerate(args []string) {
 		for _, session := range captureResult.Sessions {
 			knownThreadIDs = append(knownThreadIDs, session.ID)
 		}
-		var mergeErr error
-		skills, mergeErr = mergeCaptureRows(skills, captureResult.RefreshedSkills)
-		if mergeErr != nil {
-			fmt.Fprintln(os.Stderr, "Capture skill merge:", mergeErr)
-			os.Exit(1)
-		}
-		taskLinks, mergeErr = mergeCaptureRows(taskLinks, captureResult.RefreshedTaskLinks)
-		if mergeErr != nil {
-			fmt.Fprintln(os.Stderr, "Capture task merge:", mergeErr)
-			os.Exit(1)
-		}
+
 	}
 	if len(freshSessions) > 0 {
 		if err := capture.ValidateSessionMerge(sessions, freshSessions); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
-		var checkpointErr error
-		sourceRefreshes := freshSessions
-		freshSessions, checkpointErr = rejectOlderExplicitOwners(sessions, freshSessions)
-		if checkpointErr != nil {
-			fmt.Fprintln(os.Stderr, "Source checkpoint comparison:", checkpointErr)
-			os.Exit(1)
-		}
-		if len(freshSessions) < len(sourceRefreshes) {
-			// v5 auxiliary rows have no owner ID; retain baseline on partial unordered
-			// refresh rather than publish rows from a rejected source snapshot.
-			skills = baselineSkills
-			taskLinks = baselineTaskLinks
-			acceptedIDs := map[string]bool{}
-			for _, owner := range freshSessions {
-				acceptedIDs[owner.ID] = true
-			}
-			if captureResult != nil {
-				for i := range captureResult.Registrations {
-					if !acceptedIDs[captureResult.Registrations[i].Identity.SessionID] {
-						captureResult.Registrations[i].State = domain.CapturePending
-						captureResult.Registrations[i].Detail = "Selected source checkpoint could not establish newer canonical facts; accepted baseline preserved"
-					}
-				}
-				captureResult.Limits = append(captureResult.Limits, "Explicit source refresh had unordered/older checkpoints; retained canonical source facts and ownerless auxiliary rows.")
-			}
-		}
+		// Explicit complete local snapshots are authoritative for their owner,
+		// including older restored sources and legitimate removal to empty.
+
 		sessions = mergeSessions(sessions, freshSessions)
 	}
 	// Retained facts join only after owned extraction and checkpoint decisions.
-	sessions = append(sessions, baseline.History...)
+	retainUnrefreshedGenerationOwners(&baseline, freshSessions)
+	if err := recordGenerationHistory(project, *captureDirFlag, activeTicketID, baseline); err != nil {
+		fmt.Fprintln(os.Stderr, "Cannot record retained history:", err)
+		os.Exit(1)
+	}
 	invocations := (domain.AgenticFactLedger{Sessions: sessions}).InvocationFacts()
 
 	if len(knownThreadIDs) == 0 && len(invocations) == 0 && !*allowEmptyFlag {
@@ -634,10 +606,16 @@ func runGenerate(args []string) {
 		UpdatedAt:     updatedAtISO,
 		Code:          codeFacts,
 		Sessions:      sessions,
-		Skills:        skills,
-		TaskLinks:     taskLinks,
 	}
 
+	if cachedFacts != nil {
+		factLedger.Anomalies = append([]domain.Anomaly{}, cachedFacts.Anomalies...)
+	}
+	factLedger, summaryErr := domain.PersistSourceAnomalySummaries(factLedger, sourceEvents, projCfg.AnomalyThresholds)
+	if summaryErr != nil {
+		fmt.Fprintln(os.Stderr, "Cannot calculate source summaries:", summaryErr)
+		os.Exit(1)
+	}
 	metricsLedger := domain.DeriveMetricsLedger(factLedger, projCfg)
 	tableMD := adapters.FormatMarkdownMetricsTable(metricsLedger, projCfg.RoleOrder)
 	if captureResult != nil {
@@ -659,7 +637,7 @@ func runGenerate(args []string) {
 		if *appendFlag != "" {
 			publicationPaths = append(publicationPaths, *appendFlag)
 		}
-		if e := recordGenerationPublication(project, *captureDirFlag, activeTicketID, "staging", *jsonOutputFlag, *appendFlag, sessionsWithoutHistory(factLedger.Sessions, baseline.History), "Artifact replacement started; success is unconfirmed until journal commit and diagnostic acknowledgement. If interrupted, rerun generate to recover the prior accepted set."); e != nil {
+		if e := recordGenerationPublication(project, *captureDirFlag, activeTicketID, "staging", *jsonOutputFlag, *appendFlag, factLedger.Sessions, "Artifact replacement started; success is unconfirmed until journal commit and diagnostic acknowledgement. If interrupted, rerun generate to recover the prior accepted set.", freshSessions); e != nil {
 			fmt.Fprintln(os.Stderr, "Cannot persist publication diagnostic:", e)
 			os.Exit(1)
 		}
@@ -699,20 +677,11 @@ func runGenerate(args []string) {
 		fmt.Println(tableMD)
 	}
 	if *jsonOutputFlag != "" {
-		ownAuxiliary, auxiliaryErr := ownPublicationAuxiliary(capture.AuxiliaryFacts{Skills: factLedger.Skills, TaskLinks: factLedger.TaskLinks}, baseline.CommittedAuxiliary)
-		if auxiliaryErr != nil {
-			fmt.Fprintln(os.Stderr, "Cannot prepare scoped publication evidence:", auxiliaryErr)
-			os.Exit(1)
-		}
-		if e := recordGenerationAuxiliary(project, *captureDirFlag, activeTicketID, ownAuxiliary); e != nil {
-			fmt.Fprintln(os.Stderr, "Cannot persist scoped publication evidence:", e)
-			os.Exit(1)
-		}
 		if e := adapters.CommitPublication(*jsonOutputFlag, publicationPaths); e != nil {
 			fmt.Fprintln(os.Stderr, "Publication remains interrupted; regenerate to restore prior accepted set:", e)
 			os.Exit(1)
 		}
-		if e := recordGenerationPublication(project, *captureDirFlag, activeTicketID, "committed", *jsonOutputFlag, *appendFlag, sessionsWithoutHistory(factLedger.Sessions, baseline.History), "Ledger and requested summary replacement committed."); e != nil {
+		if e := recordGenerationPublication(project, *captureDirFlag, activeTicketID, "committed", *jsonOutputFlag, *appendFlag, factLedger.Sessions, "Ledger and requested summary replacement committed.", freshSessions); e != nil {
 			fmt.Fprintln(os.Stderr, "Artifacts committed but diagnostic acknowledgement failed; publication verification remains incomplete:", e)
 			os.Exit(1)
 		}
@@ -1825,6 +1794,7 @@ func main() {
 }
 
 func mergeSessions(cached []domain.SessionFact, local []domain.SessionFact) []domain.SessionFact {
+	local = domain.RetainIncompleteGroupSummaries(cached, local)
 	byID := make(map[string]domain.SessionFact, len(cached)+len(local))
 	for _, session := range cached {
 		byID[session.ID] = session

@@ -10,8 +10,6 @@ func CaptureOwnerFactsEqual(a, b SessionFact) (bool, error) {
 	// facts rather than selecting fields by numerical maximum.
 	a.User = ""
 	b.User = ""
-	a.Events = nil
-	b.Events = nil
 	if a.Source == "" {
 		a.Source = b.Source
 	}

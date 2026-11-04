@@ -18,17 +18,19 @@ export const TraceInvocationBadge: React.FC<TraceInvocationBadgeProps> = ({
   if (!metadata) return null;
   const label = metadata.kind === 'skill' ? `[skill: ${metadata.name}]` : `[task -> ${metadata.name}]`;
   const childId = metadata.kind === 'task' ? metadata.childSessionId : undefined;
+  const badgeTitle = label;
   const canNavigate = childId && availableSessionIds?.includes(childId) && onSelectSession;
   return (
     <span className="trace-invocation-controls" onClick={(event) => event.stopPropagation()}
       onKeyDown={(event) => event.stopPropagation()}>
       {canNavigate ? (
         <button type="button" className={`trace-invocation-badge badge-${metadata.kind}`}
-          title={`${label} — Inspect child session ${childId}`} aria-label={`Inspect child session ${childId}`}
+          title={`${badgeTitle} — Inspect child session ${childId}`} aria-label={`Inspect child session ${childId}`}
           onClick={() => onSelectSession(childId)}>{label}</button>
       ) : (
-        <span className={`trace-invocation-badge badge-${metadata.kind}`} title={label}>{label}</span>
+        <span className={`trace-invocation-badge badge-${metadata.kind}`} title={badgeTitle}>{label}</span>
       )}
+      {metadata.kind === 'task' && !childId && <span className="trace-child-unavailable">Session identity unavailable</span>}
       {childId && !canNavigate && (
         <span className="trace-child-unavailable" title={`Child session ${childId} is pending or unavailable in this view`}>
           <span className="trace-child-id">Child: {childId}</span>

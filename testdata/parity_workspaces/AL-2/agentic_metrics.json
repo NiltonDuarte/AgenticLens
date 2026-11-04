@@ -1,7 +1,7 @@
 {
-  "schema_version": 4,
+  "schema_version": 6,
   "migration": {
-    "schema_version": 4,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -49,7 +49,11 @@
           },
           "cost_usd": 1.390457,
           "compactions": 0,
-          "user_iterations": 1
+          "user_iterations": 1,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 1.390457
+          }
         }
       ],
       "tools": [
@@ -114,7 +118,6 @@
           "errors": 0
         }
       ],
-      "events": [],
       "anomalies": []
     },
     {
@@ -139,11 +142,14 @@
           },
           "cost_usd": 0.17621,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.17621
+          }
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     },
     {
@@ -168,11 +174,14 @@
           },
           "cost_usd": 0.424168,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.424168
+          }
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     },
     {
@@ -197,11 +206,14 @@
           },
           "cost_usd": 0.737172,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.737172
+          }
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     },
     {
@@ -226,11 +238,14 @@
           },
           "cost_usd": 0.240596,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.240596
+          }
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     },
     {
@@ -255,22 +270,14 @@
           },
           "cost_usd": 0.273636,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.273636
+          }
         }
       ],
       "tools": [],
-      "events": [
-        {
-          "timestamp": "2026-10-17T17:01:29.121000+00:00",
-          "turn": 1,
-          "role": "coder",
-          "event_type": "tool_call",
-          "tool_name": "read",
-          "status": "error",
-          "duration_ms": 9,
-          "context_tokens": 9988
-        }
-      ],
       "anomalies": []
     },
     {
@@ -295,22 +302,14 @@
           },
           "cost_usd": 0.100423,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.100423
+          }
         }
       ],
       "tools": [],
-      "events": [
-        {
-          "timestamp": "2026-10-17T17:05:17.336000+00:00",
-          "turn": 1,
-          "role": "tester",
-          "event_type": "tool_call",
-          "tool_name": "read",
-          "status": "error",
-          "duration_ms": 11,
-          "context_tokens": 9897
-        }
-      ],
       "anomalies": []
     },
     {
@@ -335,22 +334,14 @@
           },
           "cost_usd": 0.233545,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.233545
+          }
         }
       ],
       "tools": [],
-      "events": [
-        {
-          "timestamp": "2026-10-17T17:06:01.059000+00:00",
-          "turn": 2,
-          "role": "reviewer",
-          "event_type": "tool_call",
-          "tool_name": "read",
-          "status": "error",
-          "duration_ms": 4,
-          "context_tokens": 8503
-        }
-      ],
       "anomalies": []
     },
     {
@@ -375,12 +366,16 @@
           },
           "cost_usd": 0.137785,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.137785
+          }
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     }
-  ]
+  ],
+  "anomalies": []
 }

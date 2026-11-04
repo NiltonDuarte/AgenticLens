@@ -2,6 +2,7 @@
 package capture
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
@@ -12,6 +13,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"agenticlens/internal/adapters/codex"
@@ -48,8 +50,6 @@ type storedRegistration struct {
 	Registration domain.CaptureRegistration `json:"registration"`
 	Path         string                     `json:"path"`
 	Snapshot     []domain.SessionFact       `json:"snapshot,omitempty"`
-	Skills       []domain.SkillFact         `json:"skills,omitempty"`
-	TaskLinks    []domain.TaskLinkFact      `json:"task_links,omitempty"`
 }
 
 // Open creates an isolated unassociated registry for adapter callers. Production
@@ -355,20 +355,105 @@ func IdentityKey(id domain.CaptureIdentity) string {
 	h := sha256.Sum256(b)
 	return hex.EncodeToString(h[:])
 }
-func encode(r domain.CaptureRegistration) ([]byte, error) {
-	return json.Marshal(storedRegistration{r, r.TranscriptPath, r.Snapshot, r.Skills, r.TaskLinks})
+
+// encodeWithSnapshot retains an unsupported snapshot in its existing registry
+// row while independently valid registration metadata changes. No removed fact
+// is decoded, projected, republished or moved into a replacement sidecar.
+func encodeWithSnapshot(r domain.CaptureRegistration, opaque json.RawMessage) ([]byte, error) {
+	if !r.SnapshotNeedsRefresh {
+		return encode(r)
+	}
+	if len(opaque) == 0 {
+		return nil, errors.New("opaque source snapshot missing during metadata update")
+	}
+	metadata, err := json.Marshal(storedRegistration{Registration: r, Path: r.TranscriptPath})
+	if err != nil {
+		return nil, err
+	}
+	result := append([]byte{}, metadata[:len(metadata)-1]...)
+	result = append(result, []byte(`,"snapshot":`)...)
+	result = append(result, opaque...)
+	result = append(result, '}')
+	return result, nil
 }
+func encode(r domain.CaptureRegistration) ([]byte, error) {
+	if r.SnapshotNeedsRefresh {
+		return nil, errors.New("unsupported snapshot requires native source re-extraction")
+	}
+	return json.Marshal(storedRegistration{r, r.TranscriptPath, r.Snapshot})
+}
+
+type registrationInput struct {
+	Registration domain.CaptureRegistration `json:"registration"`
+	Path         string                     `json:"path"`
+	Snapshot     json.RawMessage            `json:"snapshot"`
+}
+
+const snapshotReextractDetail = "Cached snapshot requires native source re-extraction before publishing current lean facts"
+
 func decode(b []byte) (domain.CaptureRegistration, error) {
-	var v storedRegistration
-	if err := json.Unmarshal(b, &v); err != nil {
+	var input registrationInput
+	if err := json.Unmarshal(b, &input); err != nil {
 		return domain.CaptureRegistration{}, err
 	}
-	r := v.Registration
-	r.TranscriptPath = v.Path
-	r.Snapshot = v.Snapshot
-	r.Skills = v.Skills
-	r.TaskLinks = v.TaskLinks
+	r := input.Registration
+	r.TranscriptPath = input.Path
+	r.Snapshot = nil
+	r.SnapshotNeedsRefresh = false
+	if len(input.Snapshot) == 0 || bytes.Equal(bytes.TrimSpace(input.Snapshot), []byte("null")) {
+		return r, nil
+	}
+	snapshot, err := decodeCurrentSnapshot(input.Snapshot)
+	if err == nil {
+		r.Snapshot = snapshot
+		return r, nil
+	}
+	r.SnapshotNeedsRefresh = true
+	if r.State == domain.CaptureCurrent {
+		r.State = domain.CapturePending
+	}
+	if !strings.Contains(r.Detail, snapshotReextractDetail) {
+		if r.Detail != "" {
+			r.Detail += "; "
+		}
+		r.Detail += snapshotReextractDetail
+	}
 	return r, nil
+}
+
+// Unsupported cache is opaque. Strict current decoding does not convert a rich
+// snapshot into empty lean collections or grant source replacement authority.
+func decodeCurrentSnapshot(data []byte) ([]domain.SessionFact, error) {
+	var snapshot []domain.SessionFact
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&snapshot); err != nil {
+		return nil, err
+	}
+	var fields []struct {
+		Skills      []map[string]json.RawMessage `json:"skills"`
+		Delegations []map[string]json.RawMessage `json:"delegations"`
+	}
+	if err := json.Unmarshal(data, &fields); err != nil {
+		return nil, err
+	}
+	for i, owner := range fields {
+		for _, fact := range owner.Skills {
+			for _, key := range []string{"name", "caller_role", "invoked_at"} {
+				if _, ok := fact[key]; !ok {
+					return nil, fmt.Errorf("snapshot owner %d skill requires %s", i, key)
+				}
+			}
+		}
+		for _, fact := range owner.Delegations {
+			for _, key := range []string{"agent_type", "invoked_at"} {
+				if _, ok := fact[key]; !ok {
+					return nil, fmt.Errorf("snapshot owner %d delegation requires %s", i, key)
+				}
+			}
+		}
+	}
+	return snapshot, nil
 }
 func (s *Store) List(ctx context.Context) ([]domain.CaptureRegistration, error) {
 	return s.list(ctx, 0)
@@ -452,6 +537,7 @@ func (s *Store) Change(ctx context.Context, id domain.CaptureIdentity, change fu
 		return r, err
 	}
 	matched := []string{}
+	var opaqueSnapshot json.RawMessage
 	for rows.Next() {
 		var key string
 		var raw []byte
@@ -468,6 +554,13 @@ func (s *Store) Change(ctx context.Context, id domain.CaptureIdentity, change fu
 		}
 		if same {
 			matched = append(matched, key)
+			if candidate.SnapshotNeedsRefresh {
+				var input registrationInput
+				if err := json.Unmarshal(raw, &input); err != nil {
+					return r, errors.Join(err, rows.Close())
+				}
+				opaqueSnapshot = append(json.RawMessage{}, input.Snapshot...)
+			}
 			r = candidate
 		}
 	}
@@ -490,7 +583,7 @@ func (s *Store) Change(ctx context.Context, id domain.CaptureIdentity, change fu
 	if err != nil {
 		return r, err
 	}
-	b, err = encode(r)
+	b, err = encodeWithSnapshot(r, opaqueSnapshot)
 	if err != nil {
 		return r, err
 	}

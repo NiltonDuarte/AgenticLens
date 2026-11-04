@@ -1,7 +1,7 @@
 {
-  "schema_version": 4,
+  "schema_version": 6,
   "migration": {
-    "schema_version": 4,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -49,7 +49,11 @@
           },
           "cost_usd": 1.154499,
           "compactions": 0,
-          "user_iterations": 1
+          "user_iterations": 1,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 1.154499
+          }
         }
       ],
       "tools": [
@@ -94,19 +98,8 @@
           "errors": 0
         }
       ],
-      "events": [
-        {
-          "timestamp": "2026-10-17T16:41:50.256000+00:00",
-          "turn": 20,
-          "role": "general",
-          "event_type": "tool_call",
-          "tool_name": "read",
-          "status": "error",
-          "duration_ms": 9,
-          "context_tokens": 32800
-        }
-      ],
       "anomalies": []
     }
-  ]
+  ],
+  "anomalies": []
 }

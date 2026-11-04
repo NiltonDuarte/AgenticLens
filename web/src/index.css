@@ -1162,21 +1162,6 @@ body {
   outline-offset: -2px;
 }
 
-.skill-status {
-  display: inline-block;
-  padding: 3px 8px;
-  border: 1px solid currentColor;
-  border-radius: 4px;
-}
-
-.skill-status.success {
-  color: var(--status-green);
-}
-
-.skill-status.failed {
-  color: var(--status-red);
-}
-
 .child-session-jump {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -3523,30 +3508,6 @@ body {
 .tool-name-col {
   font-weight: 600;
   color: var(--accent-blue);
-}
-
-/* Legacy v1 Fallback Banner */
-.legacy-fallback-banner {
-  background-color: rgba(245, 158, 11, 0.08);
-  border: 1px solid rgba(245, 158, 11, 0.35);
-  border-radius: 12px;
-  padding: 20px 24px;
-  margin-bottom: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.legacy-banner-title {
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--status-yellow);
-}
-
-.legacy-banner-text {
-  font-size: 0.9rem;
-  color: var(--text-primary);
-  line-height: 1.5;
 }
 
 .legacy-anomalies-section {

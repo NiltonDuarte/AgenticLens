@@ -309,27 +309,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 		hasTargetSessions = true
 	}
 
-	needsEventBackfill := false
-	if opts.RecomputeDB {
-		if wantsOpenCode && len(openCodeSessions) > 0 {
-			eventsCount := 0
-			for _, s := range openCodeSessions {
-				eventsCount += len(s.Events)
-			}
-			if (factLedger.SchemaVersion == nil || *factLedger.SchemaVersion < domain.CurrentSchemaVersion) && eventsCount == 0 {
-				needsEventBackfill = true
-			}
-		}
-		if wantsCodex && len(codexSessions) > 0 {
-			eventsCount := 0
-			for _, s := range codexSessions {
-				eventsCount += len(s.Events)
-			}
-			if (factLedger.SchemaVersion == nil || *factLedger.SchemaVersion < domain.CurrentSchemaVersion) && eventsCount == 0 {
-				needsEventBackfill = true
-			}
-		}
-	}
+	needsEventBackfill := opts.RecomputeDB && (factLedger.SchemaVersion == nil || *factLedger.SchemaVersion < domain.CurrentSchemaVersion)
 
 	isCompleted := !needsNormalization && factLedger.SchemaVersion != nil && *factLedger.SchemaVersion == domain.CurrentSchemaVersion &&
 		(factLedger.Migration == nil || factLedger.Migration.Status != domain.MigrationStatusPartial) &&
@@ -379,26 +359,21 @@ func (e *BackfillEngine) processSingleWorkspace(
 
 	// 2. Recover complete owner trees before publishing any replacement snapshot.
 	dbAttempted := opts.RecomputeDB && hasTargetSessions
-	hasExistingDBFacts := len(factLedger.InvocationFacts()) > 0 || len(factLedger.EventFacts()) > 0
+	hasExistingDBFacts := len(factLedger.InvocationFacts()) > 0 || len(factLedger.Sessions) > 0
 	openCodeComplete, codexComplete := false, false
-	if opts.RecomputeDB && wantsOpenCode && (len(openCodeSessions) > 0 || len(factLedger.Sessions) == 0 || len(factLedger.Skills) > 0 || len(factLedger.TaskLinks) > 0) {
+	var sourceEvents domain.SourceEvents
+	if opts.RecomputeDB && wantsOpenCode && (len(openCodeSessions) > 0 || len(factLedger.Sessions) == 0) {
 		var db *sql.DB
 		if opencodeDB != nil {
 			db = opencodeDB.DB()
 		}
 		recovery := recoverOpenCode(db, openCodeSessions, gitUser, ticketID, workspaceDir, opts.AllowFallbacks)
 		openCodeSessions = recovery.sessions
+		sourceEvents = domain.MergeSourceEvents(sourceEvents, recovery.source)
 		openCodeComplete = recovery.complete
 		result.DBUpdated = recovery.updated
 		result.Diagnostics = append(result.Diagnostics, recovery.diagnostics...)
 		if recovery.complete {
-			factLedger.Skills, factLedger.TaskLinks = opencode.ExtractSkillTaskFacts(openCodeSessions)
-			if factLedger.Skills == nil {
-				factLedger.Skills = []domain.SkillFact{}
-			}
-			if factLedger.TaskLinks == nil {
-				factLedger.TaskLinks = []domain.TaskLinkFact{}
-			}
 			if opts.RecomputeGit && db != nil {
 				var ids []string
 				for _, session := range openCodeSessions {
@@ -413,7 +388,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 			}
 		} else {
 			result.CollectionsRetained = true
-			result.Diagnostics = append(result.Diagnostics, "skills/task_links retained from previous snapshot; OpenCode history incomplete or unverifiable; refreshed session trees may be newer")
+			result.Diagnostics = append(result.Diagnostics, "skills/delegations retained from previous snapshot; OpenCode history incomplete or unverifiable; refreshed session trees may be newer")
 		}
 	}
 	if opts.RecomputeDB && wantsCodex && (len(codexSessions) > 0 || len(factLedger.Sessions) == 0) {
@@ -428,6 +403,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 		}
 		recovery := e.recoverCodex(codexSessions, codexHome, gitUser)
 		codexSessions = recovery.sessions
+		sourceEvents = domain.MergeSourceEvents(sourceEvents, recovery.source)
 		codexComplete = recovery.complete
 		result.DBUpdated = result.DBUpdated || recovery.updated
 		result.Diagnostics = append(result.Diagnostics, recovery.diagnostics...)
@@ -435,18 +411,19 @@ func (e *BackfillEngine) processSingleWorkspace(
 	selectedComplete := (!wantsOpenCode || openCodeComplete) && (!wantsCodex || codexComplete)
 	// An empty selected harness does not need recovery when a different selected
 	// harness owns the known sessions. Unknown ownerless collections remain unresolved.
-	if len(openCodeSessions) == 0 && len(codexSessions) > 0 && len(factLedger.Skills) == 0 && len(factLedger.TaskLinks) == 0 {
+	if wantsCodex && len(openCodeSessions) == 0 && len(codexSessions) > 0 {
 		selectedComplete = (!wantsCodex || codexComplete)
 	}
-	if len(codexSessions) == 0 && len(openCodeSessions) > 0 {
+	if wantsOpenCode && len(codexSessions) == 0 && len(openCodeSessions) > 0 {
 		selectedComplete = (!wantsOpenCode || openCodeComplete)
 	}
-	globalComplete := len(factLedger.Sessions) > 0 && len(otherSessions) == 0 &&
-		(len(openCodeSessions) == 0 || (wantsOpenCode && openCodeComplete)) &&
-		(len(codexSessions) == 0 || (wantsCodex && codexComplete))
-	if len(openCodeSessions) == 0 && (len(factLedger.Skills) > 0 || len(factLedger.TaskLinks) > 0) {
-		globalComplete = false
+	if opts.RecomputeDB && !hasTargetSessions {
+		selectedComplete = false
+		result.CollectionsRetained = true
+		result.Diagnostics = append(result.Diagnostics, "No exact selected-source owner is recorded; previous snapshot preserved without heuristic source reassignment")
 	}
+	globalComplete := len(factLedger.Sessions) > 0 && len(otherSessions) == 0 && (len(openCodeSessions) == 0 || wantsOpenCode && openCodeComplete) && (len(codexSessions) == 0 || wantsCodex && codexComplete)
+
 	dbSessionFound := selectedComplete
 	if factLedger.Migration != nil {
 		dbSessionFound = globalComplete
@@ -495,6 +472,15 @@ func (e *BackfillEngine) processSingleWorkspace(
 	}
 
 	newMigration := domain.EvaluateMigrationStatus(evalInput)
+	hasOwnershipAudit := factLedger.Migration != nil && strings.Contains(factLedger.Migration.Notes, "Schema v6 migration dropped ownerless")
+	if hasOwnershipAudit {
+		if newMigration.Notes != "" {
+			newMigration.Notes += "; "
+		}
+		if !strings.Contains(newMigration.Notes, factLedger.Migration.Notes) {
+			newMigration.Notes += factLedger.Migration.Notes
+		}
+	}
 	result.NewStatus = string(newMigration.Status)
 	result.PendingSteps = newMigration.StepsPending
 	result.Notes = newMigration.Notes
@@ -508,7 +494,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 
 	version := domain.CurrentSchemaVersion
 	factLedger.SchemaVersion = &version
-	if newMigration.Status == domain.MigrationStatusCompleted {
+	if newMigration.Status == domain.MigrationStatusCompleted && !hasOwnershipAudit {
 		factLedger.Migration = nil
 	} else {
 		factLedger.Migration = &newMigration
@@ -517,7 +503,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 
 	// 4. Prepare and validate the entire candidate before dry-run or publication.
 
-	persistedLedger, err := domain.PersistAnomalySummaries(factLedger)
+	persistedLedger, err := domain.PersistSourceAnomalySummaries(factLedger, sourceEvents)
 	if err != nil {
 		result.Error = fmt.Errorf("preparing session-owned facts: %w", err)
 		return result
@@ -582,42 +568,19 @@ func resolveCodexSessionUsers(fresh []domain.SessionFact, existing []domain.Sess
 	}
 }
 
-func replacementSessionIDs(stored []domain.SessionFact, requestedRoot string, refreshed []domain.SessionFact) map[string]struct{} {
-	refreshedIDs := make(map[string]struct{}, len(refreshed))
-	for _, session := range refreshed {
-		refreshedIDs[session.ID] = struct{}{}
+// replaceRecoveredOwners applies complete exact-owner snapshots while retaining
+// all owners outside the successful refresh set, including unavailable children.
+func replaceRecoveredOwners(stored *[]domain.SessionFact, refreshed []domain.SessionFact) {
+	refreshed = domain.RetainIncompleteGroupSummaries(*stored, refreshed)
+	replaced := make(map[string]bool, len(refreshed))
+	for _, owner := range refreshed {
+		replaced[owner.ID] = true
 	}
-	removeIDs := make(map[string]struct{}, len(refreshedIDs)+1)
-	removeIDs[requestedRoot] = struct{}{}
-	for id := range refreshedIDs {
-		removeIDs[id] = struct{}{}
-	}
-	for changed := true; changed; {
-		changed = false
-		for _, session := range stored {
-			if session.ParentID == nil {
-				continue
-			}
-			if _, parentMatched := removeIDs[*session.ParentID]; parentMatched {
-				if _, exists := removeIDs[session.ID]; !exists {
-					removeIDs[session.ID] = struct{}{}
-					changed = true
-				}
-			}
+	result := make([]domain.SessionFact, 0, len(*stored)+len(refreshed))
+	for _, owner := range *stored {
+		if !replaced[owner.ID] {
+			result = append(result, owner)
 		}
 	}
-	return removeIDs
-}
-
-func replaceCodexTree(stored *[]domain.SessionFact, requestedRoot string, refreshed []domain.SessionFact) {
-	removeIDs := replacementSessionIDs(*stored, requestedRoot, refreshed)
-
-	result := make([]domain.SessionFact, 0, len(*stored)-len(removeIDs)+len(refreshed))
-	for _, session := range *stored {
-		if _, remove := removeIDs[session.ID]; !remove {
-			result = append(result, session)
-		}
-	}
-	result = append(result, refreshed...)
-	*stored = result
+	*stored = append(result, refreshed...)
 }

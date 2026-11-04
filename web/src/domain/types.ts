@@ -21,7 +21,6 @@ export type {
 
 import type {
   AgentRole,
-  EventFact,
   SourceHarness,
 } from '../types/telemetry';
 
@@ -69,7 +68,7 @@ export interface InvocationFact {
   readonly active_duration_seconds: number;
   readonly turns: number;
   readonly tokens: InvocationTokens;
-  // Legacy wire facts may omit cost; schema v5 requires explicit cost evidence.
+  // Current invocation wire facts require explicit cost evidence at the API boundary.
   readonly cost_usd?: number | null;
   readonly cost_evidence?: CostEvidence;
   readonly compactions: number;
@@ -115,27 +114,23 @@ export interface CodeFacts {
 
 export interface SkillFact {
   readonly name: string;
-  readonly turn_index: number;
-  readonly message_index: number;
-  readonly caller_role: string;
-  readonly timestamp: string;
-  readonly success: boolean;
-  readonly error?: string;
+  readonly caller_role: string | null;
+  readonly invoked_at: string | null;
 }
 
-export interface TaskLinkFact {
-  readonly subagent_type: string;
-  readonly description: string;
-  readonly parent_turn: number;
+export interface DelegationFact {
+  readonly agent_type: string | null;
+  readonly description?: string;
+  readonly invoked_at: string | null;
   readonly child_session_id?: string;
-  readonly timestamp: string;
-  readonly duration_ms?: number;
-  readonly cost_usd?: number | null;
-  readonly cost_evidence?: CostEvidence;
 }
+
+/** Read-only owner projection; ownership is stored only on the enclosing session. */
+export type OwnedSkillFact = SkillFact & { readonly session_id: string };
+export type OwnedDelegationFact = DelegationFact & { readonly session_id: string };
 
 export interface AgenticFactLedger {
-  readonly schema_version?: number;
+  readonly schema_version: 6;
   readonly migration?: MigrationInfo;
   readonly ticket_id: string | null;
   readonly ticket_title: string | null;
@@ -146,16 +141,19 @@ export interface AgenticFactLedger {
   readonly code: CodeFacts;
   readonly sessions: readonly SessionFact[];
   readonly anomalies?: readonly Anomaly[];
-  readonly skills?: readonly SkillFact[];
-  readonly task_links?: readonly TaskLinkFact[];
 }
 
-export function ledgerSkills(ledger: Pick<AgenticFactLedger, 'skills'> | undefined): readonly SkillFact[] {
-  return ledger?.skills ?? [];
+type OwnedFactLedger = Pick<AgenticFactLedger, 'sessions'>;
+
+/** Each occurrence inherits its session owner; repeated source occurrences stay distinct. */
+export function ledgerSkills(ledger: OwnedFactLedger | undefined, sessionId?: string): readonly OwnedSkillFact[] {
+  return (ledger?.sessions ?? []).filter((session) => sessionId === undefined || session.id === sessionId)
+    .flatMap((session) => (session.skills ?? []).map((fact) => ({ ...fact, session_id: session.id })));
 }
 
-export function ledgerTaskLinks(ledger: Pick<AgenticFactLedger, 'task_links'> | undefined): readonly TaskLinkFact[] {
-  return ledger?.task_links ?? [];
+export function ledgerDelegations(ledger: OwnedFactLedger | undefined, sessionId?: string): readonly OwnedDelegationFact[] {
+  return (ledger?.sessions ?? []).filter((session) => sessionId === undefined || session.id === sessionId)
+    .flatMap((session) => (session.delegations ?? []).map((fact) => ({ ...fact, session_id: session.id })));
 }
 
 export type WorkspaceDiagnostic = {
@@ -169,28 +167,16 @@ export type WorkspaceDiagnostic = {
 };
 
 export interface SessionFact {
+  readonly skills?: readonly SkillFact[];
+  readonly delegations?: readonly DelegationFact[];
   readonly id: string;
   readonly parent_id?: string | null;
   readonly source?: SourceHarness;
   readonly user?: string;
   readonly invocations: readonly InvocationFact[];
   readonly tools: readonly Omit<ToolFact, 'session_id'>[];
-  readonly events?: readonly SessionEventFact[];
   readonly anomalies?: readonly Anomaly[];
 }
-
-export type SessionEventFact = Pick<EventFact,
-  | 'event_id'
-  | 'timestamp'
-  | 'message_id'
-  | 'turn'
-  | 'role'
-  | 'event_type'
-  | 'tool_name'
-  | 'status'
-  | 'duration_ms'
-  | 'context_tokens'
->;
 
 export function sessionInvocations(sessions: readonly SessionFact[] | undefined): readonly InvocationFact[] {
   return sessions?.flatMap((session) => session.invocations ?? []) ?? [];
@@ -320,8 +306,6 @@ export interface SkillAdoptionFact {
   readonly name: string;
   readonly total_invocations: number;
   readonly tickets_count: number;
-  readonly failure_count: number;
-  readonly failure_rate: number;
 }
 
 export interface FleetSummary {

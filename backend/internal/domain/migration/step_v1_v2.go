@@ -30,17 +30,17 @@ func (s *StepV1ToV2) Description() string {
 }
 
 // Apply executes the pure migration from schema v1 to schema v2.
-func (s *StepV1ToV2) Apply(ledger domain.AgenticFactLedger) (domain.AgenticFactLedger, error) {
+func (s *StepV1ToV2) Apply(ledger legacyLedger) (legacyLedger, error) {
 	cloned := ledger
 	targetVer := 2
 	cloned.SchemaVersion = &targetVer
 	if cloned.Sessions == nil {
-		cloned.Sessions = []domain.SessionFact{}
+		cloned.Sessions = []legacySessionFact{}
 	}
 
 	for i := range cloned.Sessions {
 		if cloned.Sessions[i].Events == nil {
-			cloned.Sessions[i].Events = []domain.SessionEventFact{}
+			cloned.Sessions[i].Events = []legacySessionEventFact{}
 		}
 	}
 

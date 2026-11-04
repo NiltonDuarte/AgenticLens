@@ -59,25 +59,26 @@ func ThreadExecutionRecordDTOsFromDomain(values []domain.ThreadExecutionRecord) 
 
 // SessionFactResponseDTO is the concrete nullable cost projection of SessionFact.
 type SessionFactResponseDTO struct {
+	Skills      []adapters.SkillFactDTO      `json:"skills,omitempty"`
+	Delegations []adapters.DelegationFactDTO `json:"delegations,omitempty"`
 	ID          string                       `json:"id"`
 	ParentID    *string                      `json:"parent_id,omitempty"`
 	Source      domain.SourceHarness         `json:"source,omitempty"`
 	User        string                       `json:"user,omitempty"`
 	Invocations []adapters.InvocationFactDTO `json:"invocations"`
 	Tools       []domain.SessionToolFact     `json:"tools"`
-	Events      []domain.SessionEventFact    `json:"events,omitempty"`
 	Anomalies   []domain.Anomaly             `json:"anomalies"`
 }
 
 func SessionFactResponseDTOFromDomain(value domain.SessionFact) SessionFactResponseDTO {
 	return SessionFactResponseDTO{
+		Skills: adapters.SessionFactDTOFromDomain(value).Skills, Delegations: adapters.SessionFactDTOFromDomain(value).Delegations,
 		ID:          value.ID,
 		ParentID:    value.ParentID,
 		Source:      value.Source,
 		User:        value.User,
 		Invocations: adapters.InvocationFactDTOsFromDomain(value.Invocations),
 		Tools:       value.Tools,
-		Events:      value.Events,
 		Anomalies:   value.Anomalies,
 	}
 }
@@ -106,8 +107,6 @@ type FactLedgerResponseDTO struct {
 	Code          domain.CodeFacts               `json:"code"`
 	Sessions      []SessionFactResponseDTO       `json:"sessions"`
 	Anomalies     []domain.Anomaly               `json:"anomalies"`
-	Skills        []domain.SkillFact             `json:"skills,omitempty"`
-	TaskLinks     []adapters.TaskLinkFactDTO     `json:"task_links,omitempty"`
 }
 
 func FactLedgerResponseDTOFromDomain(value domain.AgenticFactLedger) FactLedgerResponseDTO {
@@ -123,8 +122,6 @@ func FactLedgerResponseDTOFromDomain(value domain.AgenticFactLedger) FactLedgerR
 		Code:          value.Code,
 		Sessions:      SessionFactResponseDTOsFromDomain(value.Sessions),
 		Anomalies:     value.Anomalies,
-		Skills:        value.Skills,
-		TaskLinks:     adapters.TaskLinkFactDTOsFromDomain(value.TaskLinks),
 	}
 }
 

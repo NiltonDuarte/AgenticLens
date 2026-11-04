@@ -101,8 +101,54 @@ func findParityWorkspacesDir() string {
 	return filepath.Join("..", "..", "..", "testdata", "parity_workspaces")
 }
 
+// The historical reference metrics use this fixed policy, independent of the
+// adopting repository's current configuration and machine-local overrides.
+func isolatedParityWorkspacesDir(t *testing.T) string {
+	t.Helper()
+	ancestor := t.TempDir()
+	if err := os.WriteFile(filepath.Join(ancestor, ".agenticlens-config.yaml"), []byte("project_name: [invalid ancestor configuration\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	project := filepath.Join(ancestor, "project")
+	if err := os.Mkdir(project, 0700); err != nil {
+		t.Fatal(err)
+	}
+	policy := `project_name: ParityFixture
+telemetry:
+  capture:
+    state_dir: capture-state
+ticket:
+  prefixes: [AL, GEN, PO]
+workspaces:
+  dir: workspaces
+code_metrics:
+  source_roots: [web, backend]
+  base_branch: origin/main
+anomaly_thresholds:
+  context_ceiling_warning_tokens: 160000
+  context_ceiling_critical_tokens: 200000
+  consecutive_errors_streak_warning: 3
+role_mappings:
+  orchestrator: orchestrator
+  build: orchestrator
+  planner: planner
+  coder: coder
+  tester: tester
+  reviewer: reviewer
+role_order: [orchestrator, planner, coder, tester, reviewer]
+`
+	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), []byte(policy), 0600); err != nil {
+		t.Fatal(err)
+	}
+	workspaces := filepath.Join(project, "workspaces")
+	if err := os.CopyFS(workspaces, os.DirFS(findParityWorkspacesDir())); err != nil {
+		t.Fatalf("copying parity fixture ledgers: %v", err)
+	}
+	return workspaces
+}
+
 func TestCrossEngineParityOnWorkspaceLedgers(t *testing.T) {
-	workspacesDir := findParityWorkspacesDir()
+	workspacesDir := isolatedParityWorkspacesDir(t)
 
 	report := adapters.ScanWorkspaces(workspacesDir)
 	if len(report.Errors) > 0 {
@@ -989,7 +1035,7 @@ func TestCrossEngineParityOnWorkspaceLedgers(t *testing.T) {
 }
 
 func TestFleetSummaryAndComparisonParity(t *testing.T) {
-	workspacesDir := findParityWorkspacesDir()
+	workspacesDir := isolatedParityWorkspacesDir(t)
 
 	report := adapters.ScanWorkspaces(workspacesDir)
 	referenceTickets := map[string]bool{
@@ -1071,7 +1117,7 @@ func TestFleetSummaryAndComparisonParity(t *testing.T) {
 }
 
 func TestStructuralClassificationParityOnWorkspaces(t *testing.T) {
-	workspacesDir := findParityWorkspacesDir()
+	workspacesDir := isolatedParityWorkspacesDir(t)
 	report := adapters.ScanWorkspaces(workspacesDir)
 	if len(report.Ledgers) == 0 {
 		t.Fatalf("expected ledgers in %s, got 0", workspacesDir)

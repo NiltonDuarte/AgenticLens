@@ -50,7 +50,7 @@ func TestSessionsFromFactsPreservesOwnersAndEveryMetricRow(t *testing.T) {
 			t.Fatalf("session metadata or metric rows changed: %+v", sessions[i])
 		}
 	}
-	if len(sessions[0].Events) != 1 || len(sessions[0].Tools) != 0 || len(sessions[1].Events) != 0 || len(sessions[1].Tools) != 1 {
+	if len(sessions[0].Tools) != 0 || len(sessions[1].Tools) != 1 {
 		t.Fatalf("tools or events crossed session boundaries: %+v", sessions)
 	}
 	metrics := domain.DeriveMetricsLedger(domain.AgenticFactLedger{Sessions: sessions}, domain.DefaultProjectConfig())

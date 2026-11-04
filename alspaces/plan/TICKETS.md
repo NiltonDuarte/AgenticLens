@@ -8,6 +8,8 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 
 
+
+
 ---
 
 ## To Do
@@ -28,16 +30,17 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 ## Ready
 
+- **AL-63**: Audit source capability parity across OpenCode v1, OpenCode v2, and Codex
+  - **Subsystem**: Multi-source ingestion / hydration / recovery
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: AL-65
+  - **File**: `alspaces/plan/to-do/AL-63 audit capabilities across opencode v1 v2 and codex.md`
+
 ### Post-v2.0 review: Ready
 
 
 
-- **AL-62**: Fix Codex skill and delegation facts with granular source ownership
-  - **Subsystem**: Domain / Codex and OpenCode Adapters / Schema Migration / Backfill / CLI / API / Dashboard / Tests
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: AL-63
-  - **File**: `alspaces/plan/to-do/AL-62 fix codex skill and delegation facts with granular ownership.md`
 
 - **AL-64**: Investigate and fix active-turn duration across Codex and OpenCode v1/v2
   - **Subsystem**: Domain / Codex / OpenCode v1 and v2 / Generation / Backfill / Ledger / Presentation
@@ -176,12 +179,7 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 ### Post-v2.0 review: Dependencies
 
-- **AL-63**: Audit source capability parity across OpenCode v1, OpenCode v2, and Codex
-  - **Subsystem**: Multi-source ingestion / hydration / recovery
-  - **Status**: Blocked
-  - **Blocked by**: AL-62
-  - **Blocks**: AL-65
-  - **File**: `alspaces/plan/to-do/AL-63 audit capabilities across opencode v1 v2 and codex.md`
+
 
 - **AL-65**: Research default source-backed recomputation and the future of Force
   - **Subsystem**: Backfill CLI semantics / source recovery

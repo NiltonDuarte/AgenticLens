@@ -2,6 +2,7 @@ package codex_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -548,5 +549,279 @@ func TestCodexMCPOutputEnvelopeRespectsExecutionStatus(t *testing.T) {
 				t.Fatal("MCP raw envelope changed")
 			}
 		})
+	}
+}
+
+func TestCodexOwnedOccurrencesUseNativeCallsAndActivationEvidence(t *testing.T) {
+	// Synthetic records matching supported native shapes; no live rollout reads.
+	input := `{"timestamp":"2026-01-01T10:00:00Z","type":"session_meta","payload":{"id":"owner","source":"cli"}}
+{"timestamp":"2026-01-01T10:00:01Z","type":"response_item","payload":{"type":"message","id":"selection","role":"user","content":[{"type":"input_text","text":"$inspect-source investigate"}]}}
+{"timestamp":"2026-01-01T10:00:02Z","type":"response_item","payload":{"type":"message","id":"attachment","role":"user","content":[{"type":"input_text","text":"<skill>\n<name>inspect-source</name>\n<path>/skills/inspect-source/SKILL.md</path>\n</skill>"}]}}
+{"timestamp":"2026-01-01T10:00:02Z","type":"event_msg","payload":{"type":"task_started","turn_id":"turn-owner"}}
+{"timestamp":"2026-01-01T10:00:02Z","type":"turn_context","payload":{"model":"model","turn_id":"turn-owner"}}
+{"timestamp":"2026-01-01T10:00:03Z","type":"response_item","payload":{"type":"function_call","call_id":"spawn-a","name":"collaboration.spawn_agent","arguments":"{\"agent_type\":\"tester\",\"task_name\":\"same-task\",\"message\":\"private prompt\"}"}}
+{"timestamp":"2026-01-01T10:00:04Z","type":"response_item","payload":{"type":"function_call","call_id":"spawn-b","name":"spawn_agent","arguments":"{\"agent_type\":\"tester\",\"task_name\":\"same-task\",\"message\":\"private prompt\"}"}}
+{"timestamp":"2026-01-01T10:00:05Z","type":"response_item","payload":{"type":"function_call_output","call_id":"spawn-b","output":"{\"session_id\":\"unavailable-b\"}"}}
+{"timestamp":"2026-01-01T10:00:06Z","type":"response_item","payload":{"type":"function_call_output","call_id":"spawn-a","output":"{\"session_id\":\"unavailable-a\"}"}}
+{"timestamp":"2026-01-01T10:00:07Z","type":"response_item","payload":{"type":"function_call","call_id":"load","name":"skill","arguments":"{\"name\":\"inspect-source\"}"}}
+{"timestamp":"2026-01-01T10:00:08Z","type":"response_item","payload":{"type":"function_call_output","call_id":"load","output":"{\"status\":\"completed\"}"}}
+{"timestamp":"2026-01-01T10:00:09Z","type":"response_item","payload":{"type":"function_call","call_id":"pending","name":"spawn_agent","arguments":"{\"agent_type\":\"reviewer\"}"}}
+{"timestamp":"2026-01-01T10:00:10Z","type":"response_item","payload":{"type":"message","id":"catalogue","role":"user","content":[{"type":"input_text","text":"Available skills: $catalogue-only at /skills/catalogue-only/SKILL.md"}]}}
+{"timestamp":"2026-01-01T10:00:11Z","type":"response_item","payload":{"type":"message","id":"quote","role":"user","content":[{"type":"input_text","text":"> $quoted is an example"}]}}
+{"timestamp":"2026-01-01T10:00:12Z","type":"response_item","payload":{"type":"function_call","call_id":"plain-read","name":"exec_command","arguments":"{\"cmd\":\"cat /skills/catalogue-only/SKILL.md\"}"}}
+`
+	transcript, err := codex.ParseRollout(strings.NewReader(input))
+	if err != nil {
+		t.Fatal(err)
+	}
+	sessions, err := transcript.SessionFacts()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ledger := domain.AgenticFactLedger{Sessions: sessions}
+	skills, tasks := ledger.SkillFacts(), ledger.DelegationFacts()
+	if len(skills) != 2 || len(tasks) != 3 {
+		t.Fatalf("missing producer or invented activity: skills=%+v tasks=%+v", skills, tasks)
+	}
+	if len(sessions) != 1 || sessions[0].ID != "owner" || skills[0].CallerRole == nil || *skills[0].CallerRole != "user" || skills[0].InvokedAt == nil || *skills[0].InvokedAt != "2026-01-01T10:00:01Z" {
+		t.Fatalf("request became successful execution or lost owner: %+v", skills[0])
+	}
+	if skills[1].Name != "inspect-source" || skills[1].InvokedAt == nil || *skills[1].InvokedAt != "2026-01-01T10:00:07Z" || transcript.Skills[1].Provenance.CallID != "load" {
+		t.Fatalf("native load outcome lost: %+v", skills[1])
+	}
+	for i, want := range []struct{ call, child string }{{"spawn-a", "unavailable-a"}, {"spawn-b", "unavailable-b"}, {"pending", ""}} {
+		if transcript.Delegations[i].Provenance.CallID != want.call || tasks[i].ChildSession != want.child {
+			t.Fatalf("output joined by order or unavailable child lost: %+v", tasks[i])
+		}
+	}
+	if tasks[2].AgentType == nil || *tasks[2].AgentType != "reviewer" {
+		t.Fatalf("unreturned delegation got invented outcome: %+v", tasks[2])
+	}
+	encoded, err := json.Marshal(ledger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(encoded), "private prompt") {
+		t.Fatal("delegation prompt leaked into exported facts")
+	}
+}
+
+func TestCodexInheritedOccurrencesDoNotBecomeChildFacts(t *testing.T) {
+	input := `{"timestamp":"2026-01-01T10:01:00Z","type":"session_meta","payload":{"id":"child","source":{"subagent":{"thread_spawn":{"parent_thread_id":"root"}}}}}
+{"timestamp":"2026-01-01T10:01:00Z","type":"session_meta","payload":{"id":"root","source":"cli"}}
+{"timestamp":"2026-01-01T10:01:00Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"$inherited-skill"}]}}
+{"timestamp":"2026-01-01T10:01:00Z","type":"response_item","payload":{"type":"function_call","call_id":"parent-spawn","name":"spawn_agent","arguments":"{\"agent_type\":\"coder\"}"}}
+{"timestamp":"2026-01-01T10:01:01Z","type":"event_msg","payload":{"type":"thread_settings_applied","thread_id":"child"}}
+{"timestamp":"2026-01-01T10:01:02Z","type":"event_msg","payload":{"type":"task_started","turn_id":"child-turn"}}
+{"timestamp":"2026-01-01T10:01:03Z","type":"response_item","payload":{"type":"function_call","call_id":"child-spawn","name":"spawn_agent","arguments":"{\"agent_type\":\"tester\"}"}}
+`
+	transcript, err := codex.ParseRollout(strings.NewReader(input))
+	if err != nil {
+		t.Fatal(err)
+	}
+	sessions, err := transcript.SessionFacts()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ledger := domain.AgenticFactLedger{Sessions: sessions}
+	if len(ledger.SkillFacts()) != 0 || len(ledger.DelegationFacts()) != 1 || sessions[0].ID != "child" || transcript.Delegations[0].Provenance.CallID != "child-spawn" {
+		t.Fatalf("parent occurrence replay leaked into child: %+v %+v", ledger.SkillFacts(), ledger.DelegationFacts())
+	}
+}
+
+func TestCodexDistinctSkillAttachmentsPreserveNativeMultiplicityAndTimeline(t *testing.T) {
+	attachment := `<skill><name>inspect-source</name><path>/skills/inspect-source/SKILL.md</path></skill>`
+	for _, separated := range []bool{false, true} {
+		t.Run(fmt.Sprintf("intervening-user=%t", separated), func(t *testing.T) {
+			input := `{"type":"session_meta","payload":{"id":"owner","source":"cli"}}` + "\n"
+			message := func(id, text string) string {
+				data, err := json.Marshal(text)
+				if err != nil {
+					t.Fatal(err)
+				}
+				return `{"timestamp":"2026-01-01T10:00:01Z","type":"response_item","payload":{"type":"message","id":"` + id + `","role":"user","content":[{"type":"input_text","text":` + string(data) + `}]}}` + "\n"
+			}
+			input += message("request-one", attachment)
+			if separated {
+				input += message("unrelated", "A different user instruction")
+			}
+			input += message("request-two", attachment)
+			got, err := codex.ParseRollout(strings.NewReader(input))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(got.Skills) != 2 || got.Skills[0].Provenance.MessageID != "request-one" || got.Skills[1].Provenance.MessageID != "request-two" {
+				t.Fatalf("BEH-01 distinct native requests collapsed: %+v", got.Skills)
+			}
+			sessions, err := got.SessionFacts()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(sessions) != 1 || len(sessions[0].Skills) != 2 || sessions[0].Skills[0].InvokedAt == nil || sessions[0].Skills[1].InvokedAt == nil || *sessions[0].Skills[0].InvokedAt != *sessions[0].Skills[1].InvokedAt {
+				t.Fatalf("equal-looking lean requests collapsed: %+v", sessions)
+			}
+			if len(got.Events) != 2 {
+				t.Fatalf("BEH-06 selected requests lost timeline occurrences: %+v", got.Events)
+			}
+			for i, id := range []string{"request-one", "request-two"} {
+				event := got.Events[i]
+				if event.EventType != domain.EventType("skill_activation") || event.SessionID != "owner" || event.MessageID == nil || *event.MessageID != id || event.Status != "unknown" {
+					t.Fatalf("activation event does not preserve producer-native identity/outcome: %+v", event)
+				}
+			}
+		})
+	}
+}
+
+func TestCodexLeanOccurrencesRetainAttemptsAcrossOutputStatuses(t *testing.T) {
+	for _, tc := range []struct {
+		name, output string
+	}{
+		{"opaque", "opaque successful-looking text"},
+		{"empty", ""},
+		{"unknown shape", `{"future_result":"done"}`},
+		{"reference only", `{"task_name":"/root/tester"}`},
+		{"positive status", `{"status":"completed"}`},
+		{"positive success", `{"success":true}`},
+		{"recorded error", `{"error":"load failed"}`},
+		{"negative success", `{"success":false}`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			encoded, err := json.Marshal(tc.output)
+			if err != nil {
+				t.Fatal(err)
+			}
+			input := `{"type":"session_meta","payload":{"id":"owner"}}` + "\n" +
+				`{"type":"response_item","payload":{"type":"function_call","name":"load_skill","call_id":"skill-call","arguments":"{\"name\":\"inspect-source\"}"}}` + "\n" +
+				`{"type":"response_item","payload":{"type":"function_call_output","call_id":"skill-call","output":` + string(encoded) + `}}` + "\n" +
+				`{"type":"response_item","payload":{"type":"function_call","name":"spawn_agent","call_id":"task-call","arguments":"{\"agent_type\":\"tester\"}"}}` + "\n" +
+				`{"type":"response_item","payload":{"type":"function_call_output","call_id":"task-call","output":` + string(encoded) + `}}` + "\n"
+			got, err := codex.ParseRollout(strings.NewReader(input))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(got.Skills) != 1 || len(got.Delegations) != 1 {
+				t.Fatalf("DATA-04 opaque output promoted or explicit evidence lost: skills=%+v tasks=%+v", got.Skills, got.Delegations)
+			}
+			sessions, err := got.SessionFacts()
+			if err != nil {
+				t.Fatal(err)
+			}
+			leanEncoded, err := json.Marshal(domain.AgenticFactLedger{Sessions: sessions})
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, retired := range []string{`"success"`, `"outcome"`, `"error"`} {
+				if strings.Contains(string(leanEncoded), retired) {
+					t.Fatalf("source output status leaked into lean occurrence: %s", leanEncoded)
+				}
+			}
+			if len(sessions) != 1 || len(sessions[0].Skills) != 1 || len(sessions[0].Delegations) != 1 || sessions[0].Skills[0].Name != "inspect-source" || sessions[0].Delegations[0].AgentType == nil || *sessions[0].Delegations[0].AgentType != "tester" {
+				t.Fatalf("output status discarded original attempts: %+v", sessions)
+			}
+
+		})
+	}
+}
+
+func TestCodexDelegationKeepsOpaqueAgentSeparateFromSessionIdentity(t *testing.T) {
+	for _, tc := range []struct{ name, output, wantSession, wantAgent string }{
+		{"explicit session", `{"agent_id":"opaque-agent","session_id":"native-session","status":"completed"}`, "native-session", "opaque-agent"},
+		{"opaque only", `{"agent_id":"opaque-agent","status":"completed"}`, "", "opaque-agent"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			output, err := json.Marshal(tc.output)
+			if err != nil {
+				t.Fatal(err)
+			}
+			input := `{"type":"session_meta","payload":{"id":"owner"}}` + "\n" + `{"type":"response_item","payload":{"type":"function_call","call_id":"spawn","name":"spawn_agent","arguments":"{\"agent_type\":\"tester\"}"}}` + "\n" + `{"type":"response_item","payload":{"type":"function_call_output","call_id":"spawn","output":` + string(output) + `}}`
+			got, err := codex.ParseRollout(strings.NewReader(input))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(got.Delegations) != 1 || got.Delegations[0].ChildSession != tc.wantSession || got.Delegations[0].ChildAgentID != tc.wantAgent {
+				t.Fatalf("BEH-07 opaque agent became a session or native reference lost: %+v", got.Delegations)
+			}
+		})
+	}
+}
+
+func TestCodexMalformedRecognizedSkillOccurrenceMarksSourceIncomplete(t *testing.T) {
+	for _, arguments := range []string{`"{"`, `42`, `"{}"`, `"{\"name\":42}"`, `"{\"name\":\"\"}"`} {
+		t.Run(arguments, func(t *testing.T) {
+			input := `{"type":"session_meta","payload":{"id":"owner"}}` + "\n" + `{"type":"response_item","payload":{"type":"function_call","name":"load_skill","call_id":"native-call","arguments":` + arguments + `}}`
+			got, err := codex.ParseRollout(strings.NewReader(input))
+			if err != nil {
+				return
+			}
+			if len(got.Warnings) == 0 {
+				t.Fatalf("DATA-01 malformed recognized occurrence became a complete empty owner: %+v", got)
+			}
+		})
+	}
+}
+
+func TestCodexMalformedOuterResponsePayloadMarksSourceIncomplete(t *testing.T) {
+	good := `{"type":"function_call","name":"load_skill","call_id":"native-call","arguments":"{\"name\":\"inspect-source\"}"}`
+	parse := func(t *testing.T, payload string) codex.Transcript {
+		t.Helper()
+		input := `{"type":"session_meta","payload":{"id":"owner"}}` + "\n" + `{"type":"response_item","payload":` + payload + `}`
+		got, err := codex.ParseRollout(strings.NewReader(input))
+		if err != nil {
+			t.Fatalf("valid JSONL should report an incomplete native payload: %v", err)
+		}
+		return got
+	}
+	control := parse(t, good)
+	if len(control.Warnings) != 0 || len(control.Skills) != 1 || control.Skills[0].Provenance.CallID != "native-call" {
+		t.Fatalf("valid native control was not complete: %+v", control)
+	}
+	cases := []struct {
+		name, original, replacement, diagnostic string
+	}{
+		{"numeric_call_id", `"call_id":"native-call"`, `"call_id":42`, "invalid response_item payload"},
+		{"missing_call_id", `,"call_id":"native-call"`, ``, "requires call_id"},
+		{"blank_call_id", `"call_id":"native-call"`, `"call_id":" "`, "requires call_id"},
+		{"numeric_name", `"name":"load_skill"`, `"name":42`, "invalid response_item payload"},
+		{"missing_name", `"name":"load_skill",`, ``, "requires name"},
+		{"blank_name", `"name":"load_skill"`, `"name":" "`, "requires name"},
+		{"missing_type", `"type":"function_call",`, ``, "requires type"},
+		{"numeric_type", `"type":"function_call"`, `"type":42`, "invalid response_item payload"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			bad := strings.Replace(good, tc.original, tc.replacement, 1)
+			if bad == good {
+				t.Fatal("fixture failed to corrupt native response payload")
+			}
+			got := parse(t, bad)
+			for _, diagnostic := range []string{"codex-rollout-line:2", tc.diagnostic} {
+				if !strings.Contains(strings.Join(got.Warnings, "; "), diagnostic) {
+					t.Fatalf("DATA-01 malformed outer response payload omitted diagnostic %q: %+v", diagnostic, got.Warnings)
+				}
+			}
+		})
+	}
+}
+
+func TestCodexMissingRequestedTypeRoleAndTimeRemainNullableOccurrences(t *testing.T) {
+	input := `{"type":"session_meta","payload":{"id":"owner"}}` + "\n" + `{"type":"response_item","payload":{"type":"function_call","call_id":"skill","name":"load_skill","arguments":"{\"name\":\"inspect\"}"}}` + "\n" + `{"type":"response_item","payload":{"type":"function_call","call_id":"spawn","name":"spawn_agent","arguments":"{}"}}` + "\n"
+	transcript, err := codex.ParseRollout(strings.NewReader(input))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(transcript.Warnings) != 0 {
+		t.Fatalf("missing optional source values marked unsupported: %+v", transcript.Warnings)
+	}
+	sessions, err := transcript.SessionFacts()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sessions) != 1 || len(sessions[0].Skills) != 1 || len(sessions[0].Delegations) != 1 {
+		t.Fatalf("unknown source values discarded occurrences: %+v", sessions)
+	}
+	skill, delegation := sessions[0].Skills[0], sessions[0].Delegations[0]
+	if skill.CallerRole != nil || skill.InvokedAt != nil || delegation.AgentType != nil || delegation.InvokedAt != nil || delegation.Description != "" || delegation.ChildSession != "" {
+		t.Fatalf("source defaults invented: %+v %+v", skill, delegation)
 	}
 }

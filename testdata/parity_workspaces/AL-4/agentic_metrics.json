@@ -1,7 +1,7 @@
 {
-  "schema_version": 4,
+  "schema_version": 6,
   "migration": {
-    "schema_version": 4,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -49,7 +49,11 @@
           },
           "cost_usd": 4.168777,
           "compactions": 2,
-          "user_iterations": 2
+          "user_iterations": 2,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 4.168777
+          }
         }
       ],
       "tools": [
@@ -154,181 +158,57 @@
           "errors": 0
         }
       ],
-      "events": [
+      "anomalies": [
         {
-          "timestamp": "2026-10-17T19:45:18.484000+00:00",
-          "turn": 37,
-          "role": "orchestrator",
-          "event_type": "tool_call",
-          "tool_name": "read",
-          "status": "error",
-          "duration_ms": 5,
-          "context_tokens": 59976
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "WARNING",
+          "context": {
+            "turn": 139,
+            "context_tokens": 160963,
+            "threshold": "160000"
+          }
         },
         {
-          "timestamp": "2026-10-17T20:34:42.543000+00:00",
-          "turn": 51,
-          "role": "orchestrator",
-          "event_type": "tool_call",
-          "tool_name": "read",
-          "status": "error",
-          "duration_ms": 8,
-          "context_tokens": 86984
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "WARNING",
+          "context": {
+            "turn": 144,
+            "token_delta": 75696,
+            "context_tokens": 75696,
+            "threshold": "40000"
+          }
         },
         {
-          "timestamp": "2026-10-17T20:49:10.983000+00:00",
-          "turn": 80,
-          "role": "orchestrator",
-          "event_type": "tool_call",
-          "tool_name": "t3-code_preview_navigate",
-          "status": "error",
-          "duration_ms": 34,
-          "context_tokens": 107377
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "WARNING",
+          "context": {
+            "turn": 202,
+            "token_delta": 70650,
+            "context_tokens": 131582,
+            "threshold": "40000"
+          }
         },
         {
-          "timestamp": "2026-10-17T20:52:41.120000+00:00",
-          "turn": 95,
-          "role": "orchestrator",
-          "event_type": "tool_call",
-          "tool_name": "t3-code_preview_navigate",
-          "status": "error",
-          "duration_ms": 207,
-          "context_tokens": 113967
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "WARNING",
+          "context": {
+            "turn": 245,
+            "token_delta": 61109,
+            "context_tokens": 61109,
+            "threshold": "40000"
+          }
         },
         {
-          "timestamp": "2026-10-17T20:57:53.694000+00:00",
-          "turn": 110,
-          "role": "orchestrator",
-          "event_type": "tool_call",
-          "tool_name": "t3-code_preview_navigate",
-          "status": "error",
-          "duration_ms": 170,
-          "context_tokens": 121018
-        },
-        {
-          "timestamp": "2026-10-17T20:58:19.461000+00:00",
-          "turn": 114,
-          "role": "orchestrator",
-          "event_type": "tool_call",
-          "tool_name": "grep",
-          "status": "error",
-          "duration_ms": 30,
-          "context_tokens": 124055
-        },
-        {
-          "timestamp": "2026-10-17T20:59:44.331000+00:00",
-          "turn": 127,
-          "role": "orchestrator",
-          "event_type": "tool_call",
-          "tool_name": "t3-code_preview_evaluate",
-          "status": "error",
-          "duration_ms": 15044,
-          "context_tokens": 145454
-        },
-        {
-          "timestamp": "2026-10-17T21:00:13.359000+00:00",
-          "turn": 128,
-          "role": "orchestrator",
-          "event_type": "tool_call",
-          "tool_name": "t3-code_preview_evaluate",
-          "status": "error",
-          "duration_ms": 12,
-          "context_tokens": 146046
-        },
-        {
-          "timestamp": "2026-10-17T21:38:35.471000+00:00",
-          "turn": 139,
-          "role": "orchestrator",
-          "event_type": "turn_message",
-          "status": "completed",
-          "duration_ms": 13140,
-          "context_tokens": 160963
-        },
-        {
-          "timestamp": "2026-10-17T21:38:48.408000+00:00",
-          "turn": 139,
-          "role": "orchestrator",
-          "event_type": "tool_call",
-          "tool_name": "todowrite",
-          "status": "completed",
-          "duration_ms": 8,
-          "context_tokens": 160963
-        },
-        {
-          "timestamp": "2026-10-17T21:49:34.478000+00:00",
-          "turn": 1,
-          "role": "orchestrator",
-          "event_type": "compaction",
-          "status": "completed",
-          "context_tokens": 0
-        },
-        {
-          "timestamp": "2026-10-17T21:49:34.527000+00:00",
-          "turn": 144,
-          "role": "orchestrator",
-          "event_type": "turn_message",
-          "status": "completed",
-          "duration_ms": 21130,
-          "context_tokens": 75696
-        },
-        {
-          "timestamp": "2026-10-17T21:59:05.730000+00:00",
-          "turn": 182,
-          "role": "orchestrator",
-          "event_type": "tool_call",
-          "tool_name": "t3-code_preview_open",
-          "status": "error",
-          "duration_ms": 15,
-          "context_tokens": 60932
-        },
-        {
-          "timestamp": "2026-10-17T22:00:54.227000+00:00",
-          "turn": 202,
-          "role": "orchestrator",
-          "event_type": "turn_message",
-          "status": "completed",
-          "duration_ms": 23213,
-          "context_tokens": 131582
-        },
-        {
-          "timestamp": "2026-10-17T22:01:16.399000+00:00",
-          "turn": 202,
-          "role": "orchestrator",
-          "event_type": "tool_call",
-          "tool_name": "bash",
-          "status": "completed",
-          "duration_ms": 1017,
-          "context_tokens": 131582
-        },
-        {
-          "timestamp": "2026-10-17T22:01:54.315000+00:00",
-          "turn": 205,
-          "role": "orchestrator",
-          "event_type": "tool_call",
-          "tool_name": "read",
-          "status": "error",
-          "duration_ms": 8,
-          "context_tokens": 134762
-        },
-        {
-          "timestamp": "2026-10-17T22:21:49.908000+00:00",
-          "turn": 1,
-          "role": "orchestrator",
-          "event_type": "compaction",
-          "status": "completed",
-          "context_tokens": 0
-        },
-        {
-          "timestamp": "2026-10-17T22:21:49.927000+00:00",
-          "turn": 245,
-          "role": "orchestrator",
-          "event_type": "turn_message",
-          "status": "completed",
-          "duration_ms": 27059,
-          "context_tokens": 61109
+          "rule_id": "TOOL_RETRY_STREAK",
+          "severity": "WARNING",
+          "context": {
+            "tool_name": "t3-code_preview_navigate",
+            "turn": 110,
+            "count": 3,
+            "threshold": "3"
+          }
         }
-      ],
-      "anomalies": []
+      ]
     },
     {
       "id": "ses_eb49d852bffeBa75BAsTH5ksrT",
@@ -352,22 +232,14 @@
           },
           "cost_usd": 0.412475,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.412475
+          }
         }
       ],
       "tools": [],
-      "events": [
-        {
-          "timestamp": "2026-10-17T19:42:08.353000+00:00",
-          "turn": 6,
-          "role": "planner",
-          "event_type": "tool_call",
-          "tool_name": "mcp-gateway_mcp-exec",
-          "status": "error",
-          "duration_ms": 9,
-          "context_tokens": 12663
-        }
-      ],
       "anomalies": []
     },
     {
@@ -392,86 +264,55 @@
           },
           "cost_usd": 2.282972,
           "compactions": 2,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 2.282972
+          }
         }
       ],
       "tools": [],
-      "events": [
+      "anomalies": [
         {
-          "timestamp": "2026-10-17T20:03:35.854000+00:00",
-          "turn": 63,
-          "role": "coder",
-          "event_type": "turn_message",
-          "status": "completed",
-          "duration_ms": 4586,
-          "context_tokens": 163581
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "turn": 69,
+            "token_delta": 85377,
+            "context_tokens": 85377,
+            "threshold": "80000"
+          }
         },
         {
-          "timestamp": "2026-10-17T20:03:38.994000+00:00",
-          "turn": 63,
-          "role": "coder",
-          "event_type": "tool_call",
-          "tool_name": "bash",
-          "status": "completed",
-          "duration_ms": 1426,
-          "context_tokens": 163581
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "WARNING",
+          "context": {
+            "turn": 63,
+            "context_tokens": 163581,
+            "threshold": "160000"
+          }
         },
         {
-          "timestamp": "2026-10-17T20:04:20.183000+00:00",
-          "turn": 1,
-          "role": "coder",
-          "event_type": "compaction",
-          "status": "completed",
-          "context_tokens": 0
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "WARNING",
+          "context": {
+            "turn": 107,
+            "token_delta": 52100,
+            "context_tokens": 138979,
+            "threshold": "40000"
+          }
         },
         {
-          "timestamp": "2026-10-17T20:04:20.230000+00:00",
-          "turn": 69,
-          "role": "coder",
-          "event_type": "turn_message",
-          "status": "completed",
-          "duration_ms": 18725,
-          "context_tokens": 85377
-        },
-        {
-          "timestamp": "2026-10-17T20:07:09.463000+00:00",
-          "turn": 97,
-          "role": "coder",
-          "event_type": "tool_call",
-          "tool_name": "read",
-          "status": "error",
-          "duration_ms": 123,
-          "context_tokens": 86879
-        },
-        {
-          "timestamp": "2026-10-17T20:08:30.772000+00:00",
-          "turn": 107,
-          "role": "coder",
-          "event_type": "tool_call",
-          "tool_name": "edit",
-          "status": "error",
-          "duration_ms": 8,
-          "context_tokens": 138979
-        },
-        {
-          "timestamp": "2026-10-17T20:09:57.380000+00:00",
-          "turn": 1,
-          "role": "coder",
-          "event_type": "compaction",
-          "status": "completed",
-          "context_tokens": 0
-        },
-        {
-          "timestamp": "2026-10-17T20:09:57.415000+00:00",
-          "turn": 123,
-          "role": "coder",
-          "event_type": "turn_message",
-          "status": "completed",
-          "duration_ms": 8641,
-          "context_tokens": 48715
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "WARNING",
+          "context": {
+            "turn": 123,
+            "token_delta": 48715,
+            "context_tokens": 48715,
+            "threshold": "40000"
+          }
         }
-      ],
-      "anomalies": []
+      ]
     },
     {
       "id": "ses_eb47ed4ecffetJeODsIZNIlBom",
@@ -495,49 +336,35 @@
           },
           "cost_usd": 1.204117,
           "compactions": 1,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 1.204117
+          }
         }
       ],
       "tools": [],
-      "events": [
+      "anomalies": [
         {
-          "timestamp": "2026-10-17T20:22:43.224000+00:00",
-          "turn": 49,
-          "role": "tester",
-          "event_type": "turn_message",
-          "status": "completed",
-          "duration_ms": 26139,
-          "context_tokens": 160483
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "WARNING",
+          "context": {
+            "turn": 49,
+            "context_tokens": 160483,
+            "threshold": "160000"
+          }
         },
         {
-          "timestamp": "2026-10-17T20:23:08.845000+00:00",
-          "turn": 49,
-          "role": "tester",
-          "event_type": "tool_call",
-          "tool_name": "edit",
-          "status": "completed",
-          "duration_ms": 11,
-          "context_tokens": 160483
-        },
-        {
-          "timestamp": "2026-10-17T20:23:50.620000+00:00",
-          "turn": 1,
-          "role": "tester",
-          "event_type": "compaction",
-          "status": "completed",
-          "context_tokens": 0
-        },
-        {
-          "timestamp": "2026-10-17T20:23:50.661000+00:00",
-          "turn": 54,
-          "role": "tester",
-          "event_type": "turn_message",
-          "status": "completed",
-          "duration_ms": 17561,
-          "context_tokens": 43668
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "WARNING",
+          "context": {
+            "turn": 54,
+            "token_delta": 43668,
+            "context_tokens": 43668,
+            "threshold": "40000"
+          }
         }
-      ],
-      "anomalies": []
+      ]
     },
     {
       "id": "ses_eb471a515ffehuEg34y4uywdlx",
@@ -561,22 +388,14 @@
           },
           "cost_usd": 0.541457,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.541457
+          }
         }
       ],
       "tools": [],
-      "events": [
-        {
-          "timestamp": "2026-10-17T20:30:26.845000+00:00",
-          "turn": 12,
-          "role": "reviewer",
-          "event_type": "tool_call",
-          "tool_name": "read",
-          "status": "error",
-          "duration_ms": 3,
-          "context_tokens": 27633
-        }
-      ],
       "anomalies": []
     },
     {
@@ -601,11 +420,14 @@
           },
           "cost_usd": 0.149023,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.149023
+          }
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     },
     {
@@ -630,11 +452,14 @@
           },
           "cost_usd": 0.62365,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.62365
+          }
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     },
     {
@@ -659,22 +484,14 @@
           },
           "cost_usd": 0.703428,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.703428
+          }
         }
       ],
       "tools": [],
-      "events": [
-        {
-          "timestamp": "2026-10-17T21:43:46.098000+00:00",
-          "turn": 44,
-          "role": "tester",
-          "event_type": "tool_call",
-          "tool_name": "edit",
-          "status": "error",
-          "duration_ms": 3,
-          "context_tokens": 88212
-        }
-      ],
       "anomalies": []
     },
     {
@@ -699,11 +516,14 @@
           },
           "cost_usd": 0.317812,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.317812
+          }
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     },
     {
@@ -728,23 +548,39 @@
           },
           "cost_usd": 0.167744,
           "compactions": 0,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 0.167744
+          }
         }
       ],
       "tools": [],
-      "events": [
-        {
-          "timestamp": "2026-10-17T22:18:33.090000+00:00",
-          "turn": 9,
-          "role": "coder",
-          "event_type": "tool_call",
-          "tool_name": "grep",
-          "status": "error",
-          "duration_ms": 8,
-          "context_tokens": 17752
-        }
-      ],
       "anomalies": []
+    }
+  ],
+  "anomalies": [
+    {
+      "rule_id": "TOOL_HIGH_FAILURE_RATE",
+      "severity": "WARNING",
+      "context": {
+        "tool_name": "t3-code_preview_evaluate",
+        "count": 2,
+        "total_calls": 7,
+        "threshold": ">20%",
+        "failure_rate_pct": 28.6
+      }
+    },
+    {
+      "rule_id": "TOOL_HIGH_FAILURE_RATE",
+      "severity": "WARNING",
+      "context": {
+        "tool_name": "t3-code_preview_navigate",
+        "count": 3,
+        "total_calls": 9,
+        "threshold": ">20%",
+        "failure_rate_pct": 33.3
+      }
     }
   ]
 }

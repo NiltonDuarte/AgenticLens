@@ -476,14 +476,14 @@ func reconcileCaptureGeneration(project, dir, ticket string) (*capture.Reconcile
 	}
 	return &result, nil
 }
-func recordGenerationPublication(project, directory, ticket, outcome, destination, summary string, owners []domain.SessionFact, detail string) error {
+func recordGenerationPublication(project, directory, ticket, outcome, destination, summary string, owners []domain.SessionFact, detail string, refreshed ...[]domain.SessionFact) error {
 	s, err := capture.OpenProject(directory, project)
 	if err != nil {
 		return err
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	return errors.Join(s.RecordPublication(ctx, ticket, outcome, destination, summary, owners, detail), s.Close())
+	return errors.Join(s.RecordPublication(ctx, ticket, outcome, destination, summary, owners, detail, refreshed...), s.Close())
 }
 func hasBoundRegistrations(result *capture.ReconcileResult) bool {
 	if result == nil {
@@ -495,33 +495,6 @@ func hasBoundRegistrations(result *capture.ReconcileResult) bool {
 		}
 	}
 	return false
-}
-
-// mergeCaptureRows preserves legitimate multiplicity while making repeated snapshots idempotent.
-// The v5 skill/task rows have no owner ID, so partial refresh cannot safely delete cached rows.
-func mergeCaptureRows[T domain.SkillFact | domain.TaskLinkFact](cached, fresh []T) ([]T, error) {
-	result := append([]T{}, cached...)
-	counts := map[string]int{}
-	for _, row := range cached {
-		b, err := json.Marshal(row)
-		if err != nil {
-			return nil, err
-		}
-		counts[string(b)]++
-	}
-	seen := map[string]int{}
-	for _, row := range fresh {
-		b, err := json.Marshal(row)
-		if err != nil {
-			return nil, err
-		}
-		key := string(b)
-		seen[key]++
-		if seen[key] > counts[key] {
-			result = append(result, row)
-		}
-	}
-	return result, nil
 }
 
 func fillMissingCaptureSessions(existing, fallback []domain.SessionFact) []domain.SessionFact {
@@ -538,10 +511,34 @@ func fillMissingCaptureSessions(existing, fallback []domain.SessionFact) []domai
 	}
 	return result
 }
-func validateCaptureSelection(project, dir, ticket string, source domain.SourceHarness, store string, selected []domain.SessionFact) error {
+func validateCaptureSelection(project, dir, ticket string, source domain.SourceHarness, store string, selected []domain.SessionFact, baseline ...[]domain.SessionFact) error {
+	trusted := make(map[string]bool)
+	for _, snapshot := range baseline {
+		for _, owner := range snapshot {
+			if owner.Source == source {
+				trusted[owner.ID] = true
+			}
+		}
+	}
+	for changed := true; changed; {
+		changed = false
+		for _, owner := range selected {
+			if owner.ParentID != nil && trusted[*owner.ParentID] && !trusted[owner.ID] {
+				trusted[owner.ID] = true
+				changed = true
+			}
+		}
+	}
 	var err error
 	for _, owner := range selected {
-		if err = capture.ValidateOwner(context.Background(), project, domain.CaptureRegistration{Identity: domain.CaptureIdentity{Source: source, Store: store, SessionID: owner.ID}}); err != nil {
+		registration := domain.CaptureRegistration{Identity: domain.CaptureIdentity{Source: source, Store: store, SessionID: owner.ID}}
+		if trusted[owner.ID] {
+			registration.TicketID = ticket
+			registration.Binding = "explicit_manual_selection"
+			registration.ProjectDirectory = project
+			registration.ProjectProof = domain.CaptureProjectVerified
+		}
+		if err = capture.ValidateOwner(context.Background(), project, registration); err != nil {
 			return fmt.Errorf("selected source owner %s: %w", owner.ID, err)
 		}
 	}
@@ -553,6 +550,9 @@ func validateCaptureSelection(project, dir, ticket string, source domain.SourceH
 	defer s.Close()
 	absoluteStore, err := capture.CanonicalStore(store)
 	if err != nil {
+		return err
+	}
+	if err = s.RejectSessionAssociations(context.Background(), ticket, absoluteStore, selected); err != nil {
 		return err
 	}
 	owners, err := s.List(context.Background())
@@ -647,85 +647,14 @@ func saveGenerationLedgerPreservingHistory(path string, ledger domain.AgenticFac
 	return os.Rename(temp, target)
 }
 
-// filterCapturePrecedence preserves the canonical source checkpoint when an
-// independently lagging registry merely rereads its own older accepted source.
-// Equal/unknown checkpoints do not order differing snapshots.
+// filterCapturePrecedence validates identity only. RefreshedSessions contains
+// successful complete exact-source reads, including equal/older snapshots.
 func filterCapturePrecedence(baseline []domain.SessionFact, result *capture.ReconcileResult) error {
 	if result == nil {
 		return nil
 	}
-	existing := map[string]domain.SessionFact{}
-	for _, owner := range baseline {
-		existing[owner.ID] = owner
-	}
-	accepted := []domain.SessionFact{}
-	rejected := map[string]bool{}
-	for _, owner := range result.RefreshedSessions {
-		previous, ok := existing[owner.ID]
-		if !ok {
-			accepted = append(accepted, owner)
-			continue
-		}
-		previousTime, previousKnown := domain.CaptureOwnerCheckpoint(previous)
-		nextTime, nextKnown := domain.CaptureOwnerCheckpoint(owner)
-		equal, e := sameCaptureOwner(previous, owner)
-		if e != nil {
-			return e
-		}
-		if equal || (previousKnown && nextKnown && nextTime.After(previousTime)) {
-			accepted = append(accepted, owner)
-			continue
-		}
-		rejected[owner.ID] = true
-	}
-	result.RefreshedSessions = accepted
-	if len(rejected) > 0 {
-		// v5 skill/task rows have no session ID. Without per-owner precedence their
-		// replacement authority is unknown; keep the accepted canonical baseline.
-		result.RefreshedSkills = nil
-		result.RefreshedTaskLinks = nil
-		for i := range result.Registrations {
-			if rejected[result.Registrations[i].Identity.SessionID] {
-				result.Registrations[i].State = domain.CapturePending
-				result.Registrations[i].Detail = "Canonical owner has a newer or unordered source checkpoint; accepted canonical facts preserved"
-			}
-		}
-		result.Limits = append(result.Limits, "Some successful source rereads did not establish precedence over canonical owner checkpoints; preserved canonical facts and left coverage pending.")
-	}
-	return nil
+	return capture.ValidateSessionMerge(baseline, result.RefreshedSessions)
 }
-func sameCaptureOwner(a, b domain.SessionFact) (bool, error) {
-	return domain.CaptureOwnerFactsEqual(a, b)
-}
-
-// Explicit selection and registered refresh share the same source-evidence
-// precedence. A selected path alone does not prove that differing equal/unknown
-// checkpoints are newer than accepted canonical source facts.
-func rejectOlderExplicitOwners(baseline, fresh []domain.SessionFact) ([]domain.SessionFact, error) {
-	previous := map[string]domain.SessionFact{}
-	for _, owner := range baseline {
-		previous[owner.ID] = owner
-	}
-	accepted := []domain.SessionFact{}
-	for _, owner := range fresh {
-		old, ok := previous[owner.ID]
-		if ok {
-			equal, err := sameCaptureOwner(old, owner)
-			if err != nil {
-				return nil, err
-			}
-			oldTime, oldKnown := domain.CaptureOwnerCheckpoint(old)
-			nextTime, nextKnown := domain.CaptureOwnerCheckpoint(owner)
-			if !equal && !(oldKnown && nextKnown && nextTime.After(oldTime)) {
-				fmt.Fprintf(os.Stderr, "Capture owner %s source checkpoint does not establish newer facts; preserved canonical owner and left refresh unresolved\n", owner.ID)
-				continue
-			}
-		}
-		accepted = append(accepted, owner)
-	}
-	return accepted, nil
-}
-
 func checkCaptureInstallation(project, selected string, explicit bool) error {
 	policy, err := adaptersconfig.ResolveCapture(project, "")
 	if err != nil {

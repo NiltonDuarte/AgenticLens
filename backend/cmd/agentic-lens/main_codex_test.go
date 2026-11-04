@@ -105,8 +105,8 @@ func testCodexRefresh(t *testing.T, ticketID, prefix, workspaceDir string) {
 		if len(models) != 2 || models["gpt-example"].Input != 40 || models["gpt-next"].Input != 80 {
 			t.Fatalf("refresh duplicated or lost token usage: %#v", models)
 		}
-		if len(ledger.ToolFacts()) != len(first.ToolFacts()) || len(ledger.EventFacts()) != len(first.EventFacts()) {
-			t.Fatalf("refresh duplicated tool/event facts: tools=%d events=%d", len(ledger.ToolFacts()), len(ledger.EventFacts()))
+		if len(ledger.ToolFacts()) != len(first.ToolFacts()) {
+			t.Fatalf("refresh duplicated tool facts: tools=%d", len(ledger.ToolFacts()))
 		}
 	}
 }
@@ -192,8 +192,9 @@ func TestGenerateCodexPreservesChildIdentityAndExcludesInheritedUsage(t *testing
 		if err != nil {
 			t.Fatal(err)
 		}
-		if strings.Contains(string(encodedLedger), "/private/agents/coder") {
-			t.Fatal("agent path leaked into exported ledger")
+
+		if strings.Contains(string(encodedLedger), `"agent_path"`) {
+			t.Fatal("canonical ledger retained native agent path")
 		}
 		if ledger.Code.SDLCIterations != 1 {
 			t.Fatalf("child replay inflated root steering count: %d", ledger.Code.SDLCIterations)

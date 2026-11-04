@@ -44,7 +44,11 @@ func TestOfflineAndLiveToolExecutionParity(t *testing.T) {
 	}
 	sessions, _, _, err := opencode.ExtractSessions(db, []string{"ses_parity"}, "user", nil)
 	facts := domain.AgenticFactLedger{Sessions: sessions}
-	tools, offlineEvents := facts.ToolFacts(), facts.EventFacts()
+	tools := facts.ToolFacts()
+	offlineEvents, sourceErr := opencode.ExtractSessionSourceEvents(db, "ses_parity", "user")
+	if sourceErr != nil {
+		t.Fatal(sourceErr)
+	}
 	if err != nil {
 		t.Fatal(err)
 	}

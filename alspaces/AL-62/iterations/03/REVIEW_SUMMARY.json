@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "BEH-01",
+      "severity": 5,
+      "issue": "OpenCode v2 invocation times use the enclosing message timestamp instead of native tool time or null.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: project native tool invocation time; preserve null when absent."
+    },
+    {
+      "finding_id": "ARCH-01",
+      "severity": 8,
+      "issue": "Strict rejection of old capture snapshots prevents their own source recovery and blocks unrelated tickets.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: recover unsupported caches through metadata and successful native extraction while preserving opaque bytes and accepted owners on failure."
+    },
+    {
+      "finding_id": "DATA-01",
+      "severity": 5,
+      "issue": "OpenCode persists child links contradicted by known native parent metadata.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: suppress child links contradicted by native parent metadata; retain delegations and unavailable explicit IDs."
+    },
+    {
+      "finding_id": "TEST-01",
+      "severity": 5,
+      "issue": "Fixture tests inherit live project configuration and fail on legitimate settings changes.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: real scanner/loader use complete temporary fixture projects with explicit historical policies; golden assertions unchanged."
+    },
+    {
+      "finding_id": "TEST-02",
+      "severity": 3,
+      "issue": "Parity oracle may omit expected fixture tickets after a partial scan.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Pre-existing test completeness gap; no change required for config isolation. Follow-up: test maintenance review REV-6."
+    }
+  ]
+}

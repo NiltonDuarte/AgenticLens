@@ -29,15 +29,15 @@ func (s *StepV2ToV3Sanitized) Description() string {
 }
 
 // Apply executes the pure migration from schema v2 to schema v3.
-func (s *StepV2ToV3Sanitized) Apply(ledger domain.AgenticFactLedger) (domain.AgenticFactLedger, error) {
+func (s *StepV2ToV3Sanitized) Apply(ledger legacyLedger) (legacyLedger, error) {
 	cloned := ledger
 	targetVer := 3
 	cloned.SchemaVersion = &targetVer
 
 	events := legacyV3Events(ledger)
-	sessions, err := domain.SessionsFromFacts(ledger.Sessions, ledger.ToolFacts(), events)
+	sessions, err := legacySessionsFromFacts(ledger.Sessions, ledger.ToolFacts(), events)
 	if err != nil {
-		return domain.AgenticFactLedger{}, err
+		return legacyLedger{}, err
 	}
 	cloned.Sessions = sessions
 
@@ -84,7 +84,7 @@ func (s *StepV2ToV3Sanitized) Apply(ledger domain.AgenticFactLedger) (domain.Age
 	return cloned, nil
 }
 
-func legacyV3Events(ledger domain.AgenticFactLedger) []domain.EventFact {
+func legacyV3Events(ledger legacyLedger) []domain.EventFact {
 	events := ledger.EventFacts()
 	type anomalyTurn struct {
 		session string
@@ -92,7 +92,7 @@ func legacyV3Events(ledger domain.AgenticFactLedger) []domain.EventFact {
 	}
 	turns := make(map[anomalyTurn]bool)
 	wildcardTurns := make(map[int64]bool)
-	for _, anomaly := range domain.DetectAnomalies(ledger) {
+	for _, anomaly := range domain.DetectAnomaliesFromEvents(ledger.current(), ledger.EventFacts()) {
 		if anomaly.Context.Turn == nil {
 			continue
 		}

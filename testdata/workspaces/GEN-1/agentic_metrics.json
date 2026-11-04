@@ -1,7 +1,7 @@
 {
-  "schema_version": 4,
+  "schema_version": 6,
   "migration": {
-    "schema_version": 4,
+    "schema_version": 6,
     "status": "completed",
     "steps_completed": [
       "source_backfill"
@@ -49,7 +49,11 @@
           },
           "cost_usd": 2.15,
           "compactions": 2,
-          "user_iterations": 4
+          "user_iterations": 4,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 2.15
+          }
         }
       ],
       "tools": [
@@ -74,7 +78,6 @@
           "errors": 0
         }
       ],
-      "events": [],
       "anomalies": []
     },
     {
@@ -99,11 +102,14 @@
           },
           "cost_usd": 1.7625,
           "compactions": 1,
-          "user_iterations": 0
+          "user_iterations": 0,
+          "cost_evidence": {
+            "state": "observed",
+            "known_subtotal_usd": 1.7625
+          }
         }
       ],
       "tools": [],
-      "events": [],
       "anomalies": []
     },
     {
@@ -112,18 +118,18 @@
       "user": "developer",
       "invocations": [],
       "tools": [],
-      "events": [
+      "anomalies": [
         {
-          "timestamp": "2026-10-17T08:15:00Z",
-          "turn": 8,
-          "role": "orchestrator",
-          "event_type": "turn_message",
-          "status": "completed",
-          "duration_ms": 1200,
-          "context_tokens": 225000
+          "rule_id": "CONTEXT_SATURATION_SPIKE",
+          "severity": "CRITICAL",
+          "context": {
+            "turn": 8,
+            "context_tokens": 225000,
+            "threshold": "200000"
+          }
         }
-      ],
-      "anomalies": []
+      ]
     }
-  ]
+  ],
+  "anomalies": []
 }

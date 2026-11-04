@@ -209,9 +209,10 @@ const (
 type EventType string
 
 const (
-	EventTypeToolCall    EventType = "tool_call"
-	EventTypeTurnMessage EventType = "turn_message"
-	EventTypeCompaction  EventType = "compaction"
+	EventTypeSkillActivation EventType = "skill_activation"
+	EventTypeToolCall        EventType = "tool_call"
+	EventTypeTurnMessage     EventType = "turn_message"
+	EventTypeCompaction      EventType = "compaction"
 )
 
 // SourceHarness identifies the agentic runtime harness (e.g. OpenCode, Codex).
@@ -230,6 +231,8 @@ const (
 	DataSourceLocalSQLite     DataSource = "local_sqlite"
 	DataSourceLocalCodex      DataSource = "local_codex"
 	DataSourceCommittedLedger DataSource = "committed_ledger"
+	DataSourceUnavailable     DataSource = "unavailable"
+	DataSourceMixed           DataSource = "mixed_sources"
 )
 
 // AnomalySeverity defines the severity classification of a detected anomaly.

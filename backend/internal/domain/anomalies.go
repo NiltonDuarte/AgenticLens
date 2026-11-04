@@ -215,7 +215,7 @@ func detectToolRetryStreaks(events []EventFact, thresholds AnomalyThresholdsConf
 }
 
 // detectToolHighFailureRates detects tools with an excessively high failure rate across the ticket.
-func detectToolHighFailureRates(ledger AgenticFactLedger, thresholds AnomalyThresholdsConfig) []Anomaly {
+func detectToolHighFailureRates(ledger AgenticFactLedger, events []EventFact, thresholds AnomalyThresholdsConfig) []Anomaly {
 	type toolStats struct {
 		calls  int64
 		errors int64
@@ -236,8 +236,8 @@ func detectToolHighFailureRates(ledger AgenticFactLedger, thresholds AnomalyThre
 			st.calls += t.Calls
 			st.errors += t.Errors
 		}
-	} else if len(ledger.EventFacts()) > 0 {
-		for _, e := range ledger.EventFacts() {
+	} else if len(events) > 0 {
+		for _, e := range events {
 			if e.EventType != EventTypeToolCall || e.ToolName == nil || *e.ToolName == "" {
 				continue
 			}
@@ -295,7 +295,7 @@ func detectToolHighFailureRates(ledger AgenticFactLedger, thresholds AnomalyThre
 }
 
 // detectContextSaturationSpikes detects single-turn context surges and critical ceiling breaches.
-func detectContextSaturationSpikes(ledger AgenticFactLedger, thresholds AnomalyThresholdsConfig) []Anomaly {
+func detectContextSaturationSpikes(ledger AgenticFactLedger, events []EventFact, thresholds AnomalyThresholdsConfig) []Anomaly {
 	var anomalies []Anomaly
 
 	warnDelta := thresholds.TokenVelocityWarningDeltaTokens
@@ -315,9 +315,9 @@ func detectContextSaturationSpikes(ledger AgenticFactLedger, thresholds AnomalyT
 		critCeiling = ContextCeilingCriticalTokens
 	}
 
-	if len(ledger.EventFacts()) > 0 {
+	if len(events) > 0 {
 		sessionEvents := make(map[string][]EventFact)
-		for _, e := range ledger.EventFacts() {
+		for _, e := range events {
 			sid := e.SessionID
 			if sid == "" {
 				sid = "default"
@@ -433,9 +433,8 @@ func detectContextSaturationSpikes(ledger AgenticFactLedger, thresholds AnomalyT
 
 // detectSubagentReworkLoops detects cyclic role alternation within each explicit
 // invocation parent-child group. Independent child groups never share a role stream.
-func detectSubagentReworkLoops(ledger AgenticFactLedger) []Anomaly {
+func detectSubagentReworkLoops(ledger AgenticFactLedger, events []EventFact) []Anomaly {
 	childParent := make(map[string]string)
-	invocationRoles := make(map[string][]string)
 	for _, session := range ledger.Sessions {
 		if session.ParentID == nil {
 			continue
@@ -447,16 +446,11 @@ func detectSubagentReworkLoops(ledger AgenticFactLedger) []Anomaly {
 		if session.ID != "" {
 			childParent[session.ID] = parent
 		}
-		for _, invocation := range session.Invocations {
-			role := strings.ToLower(strings.TrimSpace(string(invocation.Role)))
-			if role != "" {
-				invocationRoles[parent] = appendDistinctRole(invocationRoles[parent], role)
-			}
-		}
+
 	}
 
 	eventRoles := make(map[string][]string)
-	for _, event := range ledger.EventFacts() {
+	for _, event := range events {
 		parent, child := childParent[event.SessionID]
 		if !child {
 			continue
@@ -476,19 +470,10 @@ func detectSubagentReworkLoops(ledger AgenticFactLedger) []Anomaly {
 			seenParent[parent] = true
 		}
 	}
-	for parent := range invocationRoles {
-		if !seenParent[parent] {
-			parents = append(parents, parent)
-			seenParent[parent] = true
-		}
-	}
 	sort.Strings(parents)
 	var anomalies []Anomaly
 	for _, parent := range parents {
 		roles := eventRoles[parent]
-		if len(roles) == 0 {
-			roles = invocationRoles[parent]
-		}
 		for i := 0; i < len(roles)-1; {
 			a, b := roles[i], roles[i+1]
 			if a == b {
@@ -507,7 +492,7 @@ func detectSubagentReworkLoops(ledger AgenticFactLedger) []Anomaly {
 				}
 				anomalies = append(anomalies, Anomaly{
 					RuleID: RuleSubagentReworkLoop, Severity: severity,
-					Context: AnomalyContext{Role: agentRolePtr(AgentRole(a)), SecondaryRole: agentRolePtr(AgentRole(b)), Count: int64Ptr(cycles), Threshold: strPtr(threshold)},
+					Context: AnomalyContext{SessionID: strPtr(parent), Role: agentRolePtr(AgentRole(a)), SecondaryRole: agentRolePtr(AgentRole(b)), Count: int64Ptr(cycles), Threshold: strPtr(threshold)},
 				})
 				i = pos
 			} else {
@@ -575,13 +560,17 @@ func resolveAnomalyThresholds(thresholds ...AnomalyThresholdsConfig) AnomalyThre
 
 // DetectAnomalies evaluates deterministic operational rules against the fact ledger.
 func DetectAnomalies(ledger AgenticFactLedger, thresholds ...AnomalyThresholdsConfig) []Anomaly {
+	return DetectAnomaliesFromEvents(ledger, nil, thresholds...)
+}
+func DetectAnomaliesFromEvents(ledger AgenticFactLedger, events []EventFact, thresholds ...AnomalyThresholdsConfig) []Anomaly {
+
 	cfg := resolveAnomalyThresholds(thresholds...)
 	var anomalies []Anomaly
 
-	anomalies = append(anomalies, detectToolRetryStreaks(ledger.EventFacts(), cfg)...)
-	anomalies = append(anomalies, detectToolHighFailureRates(ledger, cfg)...)
-	anomalies = append(anomalies, detectContextSaturationSpikes(ledger, cfg)...)
-	anomalies = append(anomalies, detectSubagentReworkLoops(ledger)...)
+	anomalies = append(anomalies, detectToolRetryStreaks(events, cfg)...)
+	anomalies = append(anomalies, detectToolHighFailureRates(ledger, events, cfg)...)
+	anomalies = append(anomalies, detectContextSaturationSpikes(ledger, events, cfg)...)
+	anomalies = append(anomalies, detectSubagentReworkLoops(ledger, events)...)
 
 	if len(anomalies) == 0 {
 		return []Anomaly{}
@@ -704,16 +693,6 @@ func ComputeFleetAnomalies(ledgers []AgenticFactLedger, thresholds ...AnomalyThr
 					tm := getTool(t.Name)
 					tm.calls += t.Calls
 					tm.errors += t.Errors
-				}
-			}
-		} else if len(ledger.EventFacts()) > 0 {
-			for _, e := range ledger.EventFacts() {
-				if e.EventType == EventTypeToolCall && e.ToolName != nil && *e.ToolName != "" {
-					tm := getTool(*e.ToolName)
-					tm.calls++
-					if e.Status == "error" {
-						tm.errors++
-					}
 				}
 			}
 		}

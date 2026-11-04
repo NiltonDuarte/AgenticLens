@@ -1,8 +1,10 @@
 package opencode_test
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 	"testing"
 
 	"agenticlens/internal/adapters/opencode"
@@ -40,7 +42,7 @@ func TestSchemaV2SessionRuntimeEvidenceExtractsNormalizedFacts(t *testing.T) {
 	extractedFacts := domain.AgenticFactLedger{Sessions: extractedSessions}
 	invs := extractedFacts.InvocationFacts()
 	tools := extractedFacts.ToolFacts()
-	events := extractedFacts.EventFacts()
+	events := sourceEventsForSessions(t, db, extractedFacts.Sessions)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,30 +88,74 @@ func TestSchemaV2SessionRuntimeEvidenceExtractsNormalizedFacts(t *testing.T) {
 	}
 }
 
-func TestSchemaV2ExtractsSkillAndTaskFactsWithExplicitChildSession(t *testing.T) {
-	db, err := sql.Open("sqlite", ":memory:")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
-	createSchemaV2TestDB(t, db)
-	if _, err := db.Exec(`INSERT INTO session_v2 VALUES('ses_child','ses_root','coder','mock-model','child',1793231971000,1793231971000)`); err != nil {
-		t.Fatal(err)
-	}
-	payload := `{"time":{"created":1793231970238,"completed":1793231970358},"agent":"build","model":{"id":"mock-model"},"content":[{"type":"tool","id":"skill-call","name":"skill","state":{"status":"completed","input":{"name":"agentic-lens-dev"},"content":[{"type":"text","text":"loaded"}],"time":{"created":1793231970288,"completed":1793231970300}}},{"type":"tool","id":"task-call","name":"task","state":{"status":"completed","input":{"subagent_type":"coder","description":"Implement AL-51"},"content":[{"type":"text","text":"{\"session_id\":\"ses_child\"}"}],"time":{"created":1793231970301,"completed":1793231970345}}}],"cost":0,"tokens":{"input":23,"output":11}}`
-	if _, err := db.Exec(`UPDATE session_message SET data=? WHERE id='a1'`, payload); err != nil {
-		t.Fatal(err)
-	}
-	sessions, _, _, err := opencode.ExtractSessions(db, []string{"ses_root"}, "tester", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	skills, tasks := opencode.ExtractSkillTaskFacts(sessions)
-	if len(skills) != 1 || skills[0].Name != "agentic-lens-dev" || skills[0].TurnIndex != 1 || skills[0].MessageIndex != 1 || skills[0].CallerRole != "build" || !skills[0].Success {
-		t.Fatalf("unexpected skill facts: %+v sessions=%+v", skills, sessions)
-	}
-	if len(tasks) != 1 || tasks[0].SubagentType != "coder" || tasks[0].Description != "Implement AL-51" || tasks[0].ParentTurn != 1 || tasks[0].ChildSession != "ses_child" {
-		t.Fatalf("unexpected task facts: %+v", tasks)
+func TestSchemaV2ExtractsLeanOccurrencesWithExplicitChildSession(t *testing.T) {
+	for _, nativeTimes := range []bool{true, false} {
+		t.Run(fmt.Sprintf("native_times=%t", nativeTimes), func(t *testing.T) {
+			db, err := sql.Open("sqlite", ":memory:")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer db.Close()
+			createSchemaV2TestDB(t, db)
+			if _, err := db.Exec(`INSERT INTO session_v2 VALUES('ses_child','ses_root','coder','mock-model','child',1793231971000,1793231971000)`); err != nil {
+				t.Fatal(err)
+			}
+			payload := `{"time":{"created":1793231970238,"completed":1793231970358},"agent":"build","model":{"id":"mock-model"},"content":[{"type":"tool","id":"skill-call","name":"skill","state":{"status":"completed","input":{"name":"agentic-lens-dev"},"content":[{"type":"text","text":"loaded"}],"time":{"created":1793231970288,"completed":1793231970300}}},{"type":"tool","id":"task-call","name":"task","state":{"status":"completed","input":{"subagent_type":"coder","description":"Implement AL-51"},"content":[{"type":"text","text":"{\"session_id\":\"ses_child\"}"}],"time":{"created":1793231970301,"completed":1793231970345}}}],"cost":0,"tokens":{"input":23,"output":11}}`
+			if !nativeTimes {
+				payload = strings.ReplaceAll(payload, `,"time":{"created":1793231970288,"completed":1793231970300}`, "")
+				payload = strings.ReplaceAll(payload, `,"time":{"created":1793231970301,"completed":1793231970345}`, "")
+			}
+			var skillTime, delegationTime *string
+			if nativeTimes {
+				skillTime = domain.KnownString("2026-10-28T23:59:30.288000+00:00")
+				delegationTime = domain.KnownString("2026-10-28T23:59:30.301000+00:00")
+			}
+			if _, err := db.Exec(`UPDATE session_message SET data=? WHERE id='a1'`, payload); err != nil {
+				t.Fatal(err)
+			}
+			captured, _, _, captureErr := opencode.CaptureSessionSnapshot(context.Background(), db, "ses_root", "tester", 1_000_000)
+			if captureErr != nil {
+				t.Fatal(captureErr)
+			}
+			captureFacts := domain.AgenticFactLedger{Sessions: captured}
+			assertOwnedInvocationTimes(t, captured, "ses_root", skillTime, delegationTime)
+			assertOwnedInvocationTimes(t, saveReloadSourceOwners(t, captured), "ses_root", skillTime, delegationTime)
+			if len(captureFacts.SkillFacts()) != 1 || len(captureFacts.DelegationFacts()) != 1 {
+				t.Fatalf("BEH-05 exact capture snapshot omitted owned source occurrences: %+v", captured)
+			}
+			sessions, _, _, err := opencode.ExtractSessions(db, []string{"ses_root"}, "tester", nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			assertOwnedInvocationTimes(t, sessions, "ses_root", skillTime, delegationTime)
+			strict, _, _, strictErr := opencode.ExtractSessionsStrict(db, []string{"ses_root"}, "tester", nil)
+			if strictErr != nil {
+				t.Fatal(strictErr)
+			}
+			assertOwnedInvocationTimes(t, saveReloadSourceOwners(t, strict), "ses_root", skillTime, delegationTime)
+			skills, tasks := opencode.ExtractSkillTaskFacts(sourceEventsForSessions(t, db, sessions))
+			if len(skills) != 1 || skills[0].Name != "agentic-lens-dev" || skills[0].CallerRole == nil || *skills[0].CallerRole != "build" {
+				t.Fatalf("unexpected skill facts: %+v sessions=%+v", skills, sessions)
+			}
+			if len(tasks) != 1 || tasks[0].AgentType == nil || *tasks[0].AgentType != "coder" || tasks[0].Description != "Implement AL-51" || tasks[0].ChildSession != "ses_child" {
+				t.Fatalf("unexpected task facts: %+v", tasks)
+			}
+			assertNativeOccurrenceEvent(t, sourceEventsForSessions(t, db, sessions), "ses_root", "a1", "skill-call")
+			assertNativeOccurrenceEvent(t, sourceEventsForSessions(t, db, sessions), "ses_root", "a1", "task-call")
+			if _, err := db.Exec("DELETE FROM session_v2 WHERE id=?", "ses_child"); err != nil {
+				t.Fatal(err)
+			}
+			unavailable, _, _, err := opencode.ExtractSessions(db, []string{"ses_root"}, "tester", nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			owned := domain.AgenticFactLedger{Sessions: unavailable}
+			links := owned.DelegationFacts()
+			if len(links) != 1 || links[0].ChildSession != "ses_child" {
+				t.Fatalf("explicit child reference disappeared without child source: %+v", links)
+			}
+
+		})
 	}
 }
 
@@ -128,14 +174,17 @@ func TestSchemaV2MalformedOrIncompleteSkillTaskInputsPreserveOtherFacts(t *testi
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(sessions) != 1 || len(sessions[0].Invocations) == 0 || len(sessions[0].Events) < 4 {
+	if len(sessions) != 1 || len(sessions[0].Invocations) == 0 {
 		t.Fatalf("optional input handling lost session, invocation, or event facts: %+v", sessions)
 	}
-	skills, tasks := opencode.ExtractSkillTaskFacts(sessions)
+	if _, sourceErr := opencode.ExtractSessionSourceEvents(db, "ses_root", "tester"); sourceErr == nil {
+		t.Fatal("malformed source was certified as complete trace")
+	}
+	skills, tasks := sessions[0].Skills, sessions[0].Delegations
 	if len(skills) != 0 {
 		t.Errorf("malformed or unnamed skill input should be skipped, got %+v", skills)
 	}
-	if len(tasks) != 1 || tasks[0].SubagentType != "coder" || tasks[0].Description != "" {
+	if len(tasks) != 1 || tasks[0].AgentType == nil || *tasks[0].AgentType != "coder" || tasks[0].Description != "" {
 		t.Errorf("expected task fact to preserve only available fields, got %+v", tasks)
 	}
 }
@@ -154,7 +203,7 @@ func TestSchemaV2SessionEmptySessionProducesEmptyFacts(t *testing.T) {
 	extractedFacts := domain.AgenticFactLedger{Sessions: extractedSessions}
 	invs := extractedFacts.InvocationFacts()
 	tools := extractedFacts.ToolFacts()
-	events := extractedFacts.EventFacts()
+	events := sourceEventsForSessions(t, db, extractedFacts.Sessions)
 	if err != nil || len(invs) != 1 || len(tools) != 0 || len(events) != 0 || start == nil || end == nil {
 		t.Fatalf("empty session facts inv=%+v tools=%+v events=%+v bounds=%v/%v err=%v", invs, tools, events, start, end, err)
 	}
@@ -219,7 +268,7 @@ func TestSchemaV2SessionTiedTimestampsPreserveSourceAndSameMessageOrder(t *testi
 	}
 	extractedSessions, _, _, err := opencode.ExtractSessions(db, []string{"ses_root"}, "", nil)
 	extractedFacts := domain.AgenticFactLedger{Sessions: extractedSessions}
-	events := extractedFacts.EventFacts()
+	events := sourceEventsForSessions(t, db, extractedFacts.Sessions)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -355,10 +404,10 @@ func TestSchemaV2SourcePersonaPrecedenceAndUnknownChildren(t *testing.T) {
 				if len(session.Invocations) != 1 || string(session.Invocations[0].Role) != want || session.Invocations[0].Tokens.Input != input {
 					t.Errorf("unexpected invocation in %s: %+v want role=%q input=%d", session.ID, session.Invocations, want, input)
 				}
-				if len(session.Events) == 0 {
+				if len(sourceEventsForSessions(t, db, []domain.SessionFact{session})) == 0 {
 					t.Fatalf("missing source events: %s", session.ID)
 				}
-				for _, event := range session.Events {
+				for _, event := range sourceEventsForSessions(t, db, []domain.SessionFact{session}) {
 					if string(event.Role) != want {
 						t.Errorf("event persona mismatch: %+v want=%q", event, want)
 					}

@@ -45,20 +45,20 @@ func TestImmutableLedgerDecoderSharesPersistedBoundary(t *testing.T) {
 	if _, err = DecodeExistingFactLedger(unsupported); err == nil {
 		t.Fatal("unsupported committed schema accepted")
 	}
-	if _, err = DecodeExistingFactLedger([]byte(`{"schema_version":5,"sessions":[{"id":17}]}`)); err == nil {
+	if _, err = DecodeExistingFactLedger([]byte(`{"schema_version":6,"sessions":[{"id":17}]}`)); err == nil {
 		t.Fatal("malformed committed ledger accepted")
 	}
 }
 
 func TestHistoryCostNormalizationKeepsExplicitEvidenceAndRejectsInvalidCurrentFacts(t *testing.T) {
 	zero, subtotal := float64(0), float64(2.5)
-	for _, schema := range []int{4, 5} {
+	for _, schema := range []int{domain.CurrentSchemaVersion} {
 		for _, evidence := range []domain.CostEvidence{{State: domain.CostUnavailable}, {State: domain.CostObserved, KnownSubtotalUSD: &zero}, {State: domain.CostPartial, KnownSubtotalUSD: &subtotal}} {
 			amount := (*float64)(nil)
 			if evidence.State == domain.CostObserved {
 				amount = &zero
 			}
-			original := SessionFactDTO{ID: "history", Source: "codex", User: "fixture", Invocations: []InvocationFactDTO{{Model: "recorded", CostUSD: amount, CostEvidence: &evidence}}, Events: []SessionEventFactDTO{{EventID: "e", Status: "completed"}}, Anomalies: []AnomalyDTO{{RuleID: "TOOL_RETRY_STREAK", Evidence: []AnomalyEvidenceRefDTO{{SessionID: "history", EventID: "e"}}}}}
+			original := SessionFactDTO{ID: "history", Source: "codex", User: "fixture", Invocations: []InvocationFactDTO{{Model: "recorded", CostUSD: amount, CostEvidence: &evidence}}, Anomalies: []AnomalyDTO{{RuleID: "TOOL_RETRY_STREAK", Evidence: []AnomalyEvidenceRefDTO{{SessionID: "history", EventID: "e"}}}}}
 			before, err := json.Marshal(original)
 			if err != nil {
 				t.Fatal(err)
@@ -84,8 +84,13 @@ func TestHistoryCostNormalizationKeepsExplicitEvidenceAndRejectsInvalidCurrentFa
 		}
 	}
 	invalidCurrent := SessionFactDTO{ID: "history", Invocations: []InvocationFactDTO{{CostUSD: &zero}}}
-	if _, err := NormalizeHistorySessionForPublication(invalidCurrent, 5); err == nil {
+	if _, err := NormalizeHistorySessionForPublication(invalidCurrent, domain.CurrentSchemaVersion); err == nil {
 		t.Fatal("current invalid missing evidence was reinterpreted as legacy known zero")
+	}
+	for _, legacy := range []int{4, 5} {
+		if _, err := NormalizeHistorySessionForPublication(invalidCurrent, legacy); err == nil {
+			t.Fatalf("accepted retired historical schema %d", legacy)
+		}
 	}
 	if _, err := NormalizeHistorySessionForPublication(invalidCurrent, 99); err == nil {
 		t.Fatal("unknown historical schema normalized")

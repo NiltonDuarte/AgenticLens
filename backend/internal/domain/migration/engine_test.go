@@ -38,12 +38,12 @@ func TestCanonicalV4MigrationRejectsRemovedInvocationKey(t *testing.T) {
 		current := strings.Replace(base, `"schema_version":4`, `"schema_version":5`, 1)
 		current = strings.Replace(current, `"cost_usd":0.1`, `"cost_usd":0.1,"cost_evidence":{"state":"observed","known_subtotal_usd":0.1}`, 1)
 		current = strings.Replace(current, `"cost_usd":0.2`, `"cost_usd":0.2,"cost_evidence":{"state":"observed","known_subtotal_usd":0.2}`, 1)
-		if _, err := engine.Migrate([]byte(current), 5); err != nil {
+		if _, err := engine.MigrateInput([]byte(current), 5); err != nil {
 			t.Fatal(err)
 		}
 		for _, value := range []string{`"obsolete"`, `""`, `null`} {
 			input := strings.Replace(current, `"role":`, `"id":`+value+`,"role":`, 1)
-			if _, err := engine.Migrate([]byte(input), 5); err == nil || !strings.Contains(err.Error(), "must not contain id") {
+			if _, err := engine.MigrateInput([]byte(input), 5); err == nil || !strings.Contains(err.Error(), "must not contain id") {
 				t.Fatalf("v5 removed id guard lost for %s: %v", value, err)
 			}
 		}
@@ -59,16 +59,16 @@ func TestCanonicalV4MigrationRejectsRemovedInvocationKey(t *testing.T) {
 func TestMigrationInvariantPreservesSessionOwnership(t *testing.T) {
 	version, target := 1, 2
 	rootID := "owner"
-	before := domain.AgenticFactLedger{SchemaVersion: &version, Sessions: []domain.SessionFact{
+	before := migration.LedgerInput{SchemaVersion: &version, Sessions: []migration.SessionInput{
 		{ID: rootID, Source: domain.SourceOpenCode, User: "alice", Invocations: []domain.InvocationFact{{Role: "coder", Model: "model-a"}}},
 		{ID: "child", ParentID: &rootID, Source: domain.SourceOpenCode, User: "alice"},
 	}}
-	for name, mutate := range map[string]func([]domain.SessionFact){
-		"session ID": func(s []domain.SessionFact) { s[0].ID = "other" },
-		"parent ID":  func(s []domain.SessionFact) { s[1].ParentID = nil },
-		"source":     func(s []domain.SessionFact) { s[0].Source = domain.SourceCodex },
-		"user":       func(s []domain.SessionFact) { s[0].User = "bob" },
-		"move rows": func(s []domain.SessionFact) {
+	for name, mutate := range map[string]func([]migration.SessionInput){
+		"session ID": func(s []migration.SessionInput) { s[0].ID = "other" },
+		"parent ID":  func(s []migration.SessionInput) { s[1].ParentID = nil },
+		"source":     func(s []migration.SessionInput) { s[0].Source = domain.SourceCodex },
+		"user":       func(s []migration.SessionInput) { s[0].User = "bob" },
+		"move rows": func(s []migration.SessionInput) {
 			s[1].Invocations = s[0].Invocations
 			s[0].Invocations = nil
 		},
@@ -76,7 +76,7 @@ func TestMigrationInvariantPreservesSessionOwnership(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			after := before
 			after.SchemaVersion = &target
-			after.Sessions = append([]domain.SessionFact(nil), before.Sessions...)
+			after.Sessions = append([]migration.SessionInput(nil), before.Sessions...)
 			mutate(after.Sessions)
 			if err := migration.NewInvariantValidator().Validate(before, after, target); !errors.Is(err, migration.ErrInvariantViolation) {
 				t.Fatalf("expected session ownership violation, got %v", err)
@@ -89,8 +89,8 @@ func ticketTypePtr(tt domain.ConventionalTicketType) *domain.ConventionalTicketT
 	return &tt
 }
 
-func sampleFactLedger() domain.AgenticFactLedger {
-	return domain.AgenticFactLedger{
+func sampleFactLedger() migration.LedgerInput {
+	return migration.LedgerInput{
 		TicketID:    stringPtr("AL-100"),
 		TicketTitle: stringPtr("Sample Ticket"),
 		TicketType:  ticketTypePtr(domain.TicketTypeFeat),
@@ -289,13 +289,13 @@ type mockStep struct {
 	source int
 	target int
 	desc   string
-	apply  func(domain.AgenticFactLedger) (domain.AgenticFactLedger, error)
+	apply  func(migration.LedgerInput) (migration.LedgerInput, error)
 }
 
 func (m *mockStep) SourceVersion() int  { return m.source }
 func (m *mockStep) TargetVersion() int  { return m.target }
 func (m *mockStep) Description() string { return m.desc }
-func (m *mockStep) Apply(l domain.AgenticFactLedger) (domain.AgenticFactLedger, error) {
+func (m *mockStep) Apply(l migration.LedgerInput) (migration.LedgerInput, error) {
 	if m.apply != nil {
 		return m.apply(l)
 	}
@@ -467,9 +467,6 @@ func TestStepV1ToV2(t *testing.T) {
 		if upgraded.Sessions == nil {
 			t.Errorf("expected non-nil sessions collection")
 		}
-		if len(upgraded.EventFacts()) != 0 {
-			t.Errorf("expected 0 events, got %d", len(upgraded.EventFacts()))
-		}
 		if upgraded.Migration == nil {
 			t.Fatalf("expected non-nil migration info")
 		}
@@ -492,7 +489,7 @@ func TestStepV1ToV2(t *testing.T) {
 	})
 
 	t.Run("completely empty zero-value ledger initializes schema v2 cleanly", func(t *testing.T) {
-		emptyLedger := domain.AgenticFactLedger{}
+		emptyLedger := migration.LedgerInput{}
 		upgraded, err := step.Apply(emptyLedger)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -502,9 +499,6 @@ func TestStepV1ToV2(t *testing.T) {
 		}
 		if upgraded.Sessions == nil {
 			t.Errorf("expected non-nil sessions collection")
-		}
-		if len(upgraded.EventFacts()) != 0 {
-			t.Errorf("expected 0 events, got %d", len(upgraded.EventFacts()))
 		}
 		if upgraded.Migration == nil || upgraded.Migration.SchemaVersion != 2 {
 			t.Errorf("expected migration info initialized with v2")
@@ -716,16 +710,16 @@ func TestInvariantValidator(t *testing.T) {
 	t.Run("code facts individual mutations fail", func(t *testing.T) {
 		cases := []struct {
 			name   string
-			mutate func(*domain.AgenticFactLedger)
+			mutate func(*migration.LedgerInput)
 		}{
-			{"lines_added", func(l *domain.AgenticFactLedger) { l.Code.LinesAdded++ }},
-			{"lines_deleted", func(l *domain.AgenticFactLedger) { l.Code.LinesDeleted++ }},
-			{"test_lines_added", func(l *domain.AgenticFactLedger) { l.Code.TestLinesAdded++ }},
-			{"test_lines_deleted", func(l *domain.AgenticFactLedger) { l.Code.TestLinesDeleted++ }},
-			{"prod_lines_added", func(l *domain.AgenticFactLedger) { l.Code.ProdLinesAdded++ }},
-			{"prod_lines_deleted", func(l *domain.AgenticFactLedger) { l.Code.ProdLinesDeleted++ }},
-			{"files_changed", func(l *domain.AgenticFactLedger) { l.Code.FilesChanged++ }},
-			{"sdlc_iterations", func(l *domain.AgenticFactLedger) { l.Code.SDLCIterations++ }},
+			{"lines_added", func(l *migration.LedgerInput) { l.Code.LinesAdded++ }},
+			{"lines_deleted", func(l *migration.LedgerInput) { l.Code.LinesDeleted++ }},
+			{"test_lines_added", func(l *migration.LedgerInput) { l.Code.TestLinesAdded++ }},
+			{"test_lines_deleted", func(l *migration.LedgerInput) { l.Code.TestLinesDeleted++ }},
+			{"prod_lines_added", func(l *migration.LedgerInput) { l.Code.ProdLinesAdded++ }},
+			{"prod_lines_deleted", func(l *migration.LedgerInput) { l.Code.ProdLinesDeleted++ }},
+			{"files_changed", func(l *migration.LedgerInput) { l.Code.FilesChanged++ }},
+			{"sdlc_iterations", func(l *migration.LedgerInput) { l.Code.SDLCIterations++ }},
 		}
 
 		for _, tc := range cases {
@@ -1096,7 +1090,7 @@ func TestEngineMigrate(t *testing.T) {
 	}`
 
 	t.Run("migrates unversioned JSON to v2", func(t *testing.T) {
-		migrated, err := engine.Migrate([]byte(unversionedJSON), 2)
+		migrated, err := engine.MigrateInput([]byte(unversionedJSON), 2)
 		if err != nil {
 			t.Fatalf("unexpected error migrating unversioned json: %v", err)
 		}
@@ -1138,7 +1132,7 @@ func TestEngineMigrate(t *testing.T) {
 			"events": []
 		}`
 
-		migrated, err := engine.Migrate([]byte(v2JSON), 2)
+		migrated, err := engine.MigrateInput([]byte(v2JSON), 2)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -1153,7 +1147,7 @@ func TestEngineMigrate(t *testing.T) {
 			source: 1,
 			target: 2,
 			desc:   "corrupt step",
-			apply: func(l domain.AgenticFactLedger) (domain.AgenticFactLedger, error) {
+			apply: func(l migration.LedgerInput) (migration.LedgerInput, error) {
 				ver := 2
 				l.SchemaVersion = &ver
 				// Invariant violation: wipe code facts
@@ -1164,7 +1158,7 @@ func TestEngineMigrate(t *testing.T) {
 		_ = reg.Register(corruptStep)
 		faultyEngine := migration.NewEngine(reg)
 
-		_, err := faultyEngine.Migrate([]byte(unversionedJSON), 2)
+		_, err := faultyEngine.MigrateInput([]byte(unversionedJSON), 2)
 		if err == nil {
 			t.Fatalf("expected invariant violation error, got nil")
 		}
@@ -1174,7 +1168,7 @@ func TestEngineMigrate(t *testing.T) {
 	})
 
 	t.Run("migrates empty json object {} to v2", func(t *testing.T) {
-		migrated, err := engine.Migrate([]byte(`{}`), 2)
+		migrated, err := engine.MigrateInput([]byte(`{}`), 2)
 		if err != nil {
 			t.Fatalf("unexpected error migrating empty json: %v", err)
 		}
@@ -1187,31 +1181,31 @@ func TestEngineMigrate(t *testing.T) {
 	})
 
 	t.Run("empty and whitespace bytes return ErrMalformedJSON", func(t *testing.T) {
-		_, errEmpty := engine.Migrate([]byte(""), 2)
+		_, errEmpty := engine.MigrateInput([]byte(""), 2)
 		if !errors.Is(errEmpty, migration.ErrMalformedJSON) {
 			t.Errorf("expected ErrMalformedJSON on empty bytes, got %v", errEmpty)
 		}
 
-		_, errWhitespace := engine.Migrate([]byte("   \n\t  "), 2)
+		_, errWhitespace := engine.MigrateInput([]byte("   \n\t  "), 2)
 		if !errors.Is(errWhitespace, migration.ErrMalformedJSON) {
 			t.Errorf("expected ErrMalformedJSON on whitespace bytes, got %v", errWhitespace)
 		}
 	})
 
 	t.Run("corrupted json syntax returns ErrMalformedJSON", func(t *testing.T) {
-		_, err := engine.Migrate([]byte(`{"ticket_id": "AL-1", "code": {broken`), 2)
+		_, err := engine.MigrateInput([]byte(`{"ticket_id": "AL-1", "code": {broken`), 2)
 		if !errors.Is(err, migration.ErrMalformedJSON) {
 			t.Errorf("expected ErrMalformedJSON, got %v", err)
 		}
 	})
 
 	t.Run("target version less than 1 returns ErrUnsupportedVersion", func(t *testing.T) {
-		_, err0 := engine.Migrate([]byte(unversionedJSON), 0)
+		_, err0 := engine.MigrateInput([]byte(unversionedJSON), 0)
 		if !errors.Is(err0, migration.ErrUnsupportedVersion) {
 			t.Errorf("expected ErrUnsupportedVersion for target 0, got %v", err0)
 		}
 
-		_, errNeg := engine.Migrate([]byte(unversionedJSON), -1)
+		_, errNeg := engine.MigrateInput([]byte(unversionedJSON), -1)
 		if !errors.Is(errNeg, migration.ErrUnsupportedVersion) {
 			t.Errorf("expected ErrUnsupportedVersion for target -1, got %v", errNeg)
 		}
@@ -1219,15 +1213,19 @@ func TestEngineMigrate(t *testing.T) {
 
 	t.Run("downgrade request returns ErrDowngradeNotAllowed", func(t *testing.T) {
 		v2Payload := `{"schema_version": 2, "ticket_id": "AL-100", "updated_at": "2026-10-18T10:00:00Z"}`
-		_, err := engine.Migrate([]byte(v2Payload), 1)
+		_, err := engine.MigrateInput([]byte(v2Payload), 1)
 		if !errors.Is(err, migration.ErrDowngradeNotAllowed) {
 			t.Errorf("expected ErrDowngradeNotAllowed, got %v", err)
 		}
 	})
 
 	t.Run("missing migration step returns ErrMissingStep", func(t *testing.T) {
-		// Default engine has steps through v5. Asking for v6 must fail with a missing step.
-		_, err := engine.Migrate([]byte(unversionedJSON), 6)
+		// Exercise a real historical chain gap, without inventing a released schema.
+		registry := migration.NewRegistry()
+		if err := registry.Register(migration.NewStepV1ToV2()); err != nil {
+			t.Fatal(err)
+		}
+		_, err := migration.NewEngine(registry).MigrateInput([]byte(unversionedJSON), 3)
 		if !errors.Is(err, migration.ErrMissingStep) {
 			t.Errorf("expected ErrMissingStep when chain has gap, got %v", err)
 		}
@@ -1239,14 +1237,14 @@ func TestEngineMigrate(t *testing.T) {
 			source: 1,
 			target: 2,
 			desc:   "failing step",
-			apply: func(l domain.AgenticFactLedger) (domain.AgenticFactLedger, error) {
-				return domain.AgenticFactLedger{}, errors.New("disk failure during step")
+			apply: func(l migration.LedgerInput) (migration.LedgerInput, error) {
+				return migration.LedgerInput{}, errors.New("disk failure during step")
 			},
 		}
 		_ = reg.Register(failingStep)
 		failingEngine := migration.NewEngine(reg)
 
-		_, err := failingEngine.Migrate([]byte(unversionedJSON), 2)
+		_, err := failingEngine.MigrateInput([]byte(unversionedJSON), 2)
 		if err == nil {
 			t.Fatalf("expected step failure error, got nil")
 		}
@@ -1260,7 +1258,7 @@ func TestEngineMigrate(t *testing.T) {
 			source: 2,
 			target: 3,
 			desc:   "step v2 to v3 adding note",
-			apply: func(l domain.AgenticFactLedger) (domain.AgenticFactLedger, error) {
+			apply: func(l migration.LedgerInput) (migration.LedgerInput, error) {
 				v3 := 3
 				l.SchemaVersion = &v3
 				if l.Migration != nil {
@@ -1275,7 +1273,7 @@ func TestEngineMigrate(t *testing.T) {
 		_ = reg.Register(stepV2ToV3)
 
 		multiEngine := migration.NewEngine(reg)
-		migrated, err := multiEngine.Migrate([]byte(unversionedJSON), 3)
+		migrated, err := multiEngine.MigrateInput([]byte(unversionedJSON), 3)
 		if err != nil {
 			t.Fatalf("multi-step migration failed: %v", err)
 		}
@@ -1348,7 +1346,7 @@ func TestEngineMigrate(t *testing.T) {
 			]
 		}`
 
-		migrated, err := engine.Migrate([]byte(v2WithEventsJSON), 3)
+		migrated, err := engine.MigrateInput([]byte(v2WithEventsJSON), 3)
 		if err != nil {
 			t.Fatalf("unexpected error migrating to v3: %v", err)
 		}
@@ -1394,7 +1392,7 @@ func TestEngineMigrate(t *testing.T) {
 	})
 
 	t.Run("chained migration from v1 unversioned to v3 via default NewEngine(nil)", func(t *testing.T) {
-		migrated, err := engine.Migrate([]byte(unversionedJSON), 3)
+		migrated, err := engine.MigrateInput([]byte(unversionedJSON), 3)
 		if err != nil {
 			t.Fatalf("unexpected error on chained v1 -> v3 migration: %v", err)
 		}
@@ -1421,7 +1419,7 @@ func TestEngineMigrate(t *testing.T) {
 			"events": []
 		}`
 
-		migrated, err := engine.Migrate([]byte(v3JSON), 3)
+		migrated, err := engine.MigrateInput([]byte(v3JSON), 3)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -1432,7 +1430,7 @@ func TestEngineMigrate(t *testing.T) {
 
 	t.Run("Migrate serialized ledger", func(t *testing.T) {
 		ledger := sampleFactLedger()
-		upgraded, err := engine.Migrate(marshalTestLedger(t, ledger), 2)
+		upgraded, err := engine.MigrateInput(marshalTestLedger(t, ledger), 2)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -1445,7 +1443,7 @@ func TestEngineMigrate(t *testing.T) {
 		ledger := sampleFactLedger()
 
 		// targetVersion < 1
-		_, err0 := engine.Migrate(marshalTestLedger(t, ledger), 0)
+		_, err0 := engine.MigrateInput(marshalTestLedger(t, ledger), 0)
 		if !errors.Is(err0, migration.ErrUnsupportedVersion) {
 			t.Errorf("expected ErrUnsupportedVersion for target 0, got %v", err0)
 		}
@@ -1454,7 +1452,7 @@ func TestEngineMigrate(t *testing.T) {
 		v2 := 2
 		ledgerV2 := ledger
 		ledgerV2.SchemaVersion = &v2
-		same, errSame := engine.Migrate(marshalTestLedger(t, ledgerV2), 2)
+		same, errSame := engine.MigrateInput(marshalTestLedger(t, ledgerV2), 2)
 		if errSame != nil {
 			t.Fatalf("unexpected error: %v", errSame)
 		}
@@ -1463,7 +1461,7 @@ func TestEngineMigrate(t *testing.T) {
 		}
 
 		// downgrade attempt
-		_, errDown := engine.Migrate(marshalTestLedger(t, ledgerV2), 1)
+		_, errDown := engine.MigrateInput(marshalTestLedger(t, ledgerV2), 1)
 		if !errors.Is(errDown, migration.ErrDowngradeNotAllowed) {
 			t.Errorf("expected ErrDowngradeNotAllowed, got %v", errDown)
 		}
@@ -1499,7 +1497,7 @@ func TestEngineMigrate(t *testing.T) {
 			"tools": []
 		}`
 
-		migrated, err := engine.Migrate([]byte(v1JSON), 4)
+		migrated, err := engine.MigrateInput([]byte(v1JSON), 4)
 		if err != nil {
 			t.Fatalf("unexpected error migrating v1 to v4: %v", err)
 		}
@@ -1540,7 +1538,7 @@ func TestEngineMigrate(t *testing.T) {
 			"events": []
 		}`
 
-		migrated, err := engine.Migrate([]byte(v2JSON), 4)
+		migrated, err := engine.MigrateInput([]byte(v2JSON), 4)
 		if err != nil {
 			t.Fatalf("unexpected error migrating v2 to v4: %v", err)
 		}
@@ -1573,7 +1571,7 @@ func TestEngineMigrate(t *testing.T) {
 			"events": []
 		}`
 
-		migrated, err := engine.Migrate([]byte(v3JSON), 4)
+		migrated, err := engine.MigrateInput([]byte(v3JSON), 4)
 		if err != nil {
 			t.Fatalf("unexpected error migrating v3 to v4: %v", err)
 		}
@@ -1600,7 +1598,7 @@ func TestStepV3ToV4UserIterations(t *testing.T) {
 		v3 := 3
 		initial.SchemaVersion = &v3
 		initial.Code.SDLCIterations = 5
-		initial.Sessions = []domain.SessionFact{
+		initial.Sessions = []migration.SessionInput{
 			{
 				ID:       "root-1",
 				ParentID: nil,
@@ -1677,7 +1675,7 @@ func TestStepV3ToV4UserIterations(t *testing.T) {
 		v3 := 3
 		initial.SchemaVersion = &v3
 		initial.Code.SDLCIterations = 10
-		initial.Sessions = []domain.SessionFact{
+		initial.Sessions = []migration.SessionInput{
 			{
 				ID:       "root-1",
 				ParentID: nil,
@@ -1716,7 +1714,7 @@ func TestStepV3ToV4UserIterations(t *testing.T) {
 		}
 	})
 
-	t.Run("drops legacy events without stable IDs while preserving summary", func(t *testing.T) {
+	t.Run("preserves legacy summary before final trace removal", func(t *testing.T) {
 		initial := sampleFactLedger()
 		v3 := 3
 		initial.SchemaVersion = &v3
@@ -1735,15 +1733,12 @@ func TestStepV3ToV4UserIterations(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if len(upgraded.EventFacts()) != 0 {
-			t.Fatalf("migration retained transient events: %#v", upgraded.EventFacts())
-		}
 		if len(upgraded.AnomalyFacts()) == 0 {
 			t.Fatal("migration dropped detected anomaly summary")
 		}
 	})
 
-	t.Run("drops legacy events without ids when they are not direct evidence", func(t *testing.T) {
+	t.Run("accepts legacy events without ids before final trace removal", func(t *testing.T) {
 		initial := sampleFactLedger()
 		v3 := 3
 		initial.SchemaVersion = &v3
@@ -1753,8 +1748,8 @@ func TestStepV3ToV4UserIterations(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unselected legacy event without id should not block migration: %v", err)
 		}
-		if len(upgraded.EventFacts()) != 0 {
-			t.Fatalf("unselected legacy event should be pruned, got %#v", upgraded.EventFacts())
+		if upgraded.SchemaVersion == nil || *upgraded.SchemaVersion != 4 {
+			t.Fatalf("wrong intermediate schema: %+v", upgraded.SchemaVersion)
 		}
 	})
 }
@@ -1762,7 +1757,7 @@ func TestStepV3ToV4UserIterations(t *testing.T) {
 func TestMigrationDropsUnscopedToolsWithDiagnostic(t *testing.T) {
 	engine := migration.NewEngine(nil)
 	input := `{"schema_version":3,"tools":[{"name":"bash","calls":4,"errors":1}]}`
-	migrated, err := engine.Migrate([]byte(input), 4)
+	migrated, err := engine.MigrateInput([]byte(input), 4)
 	if err != nil {
 		t.Fatalf("expected v3 migration to complete, got %v", err)
 	}
@@ -1780,7 +1775,7 @@ func TestMigrationDropsUnscopedToolsWithDiagnostic(t *testing.T) {
 func TestMigrationDroppedToolNotePreservesPartialStatusForPendingSteps(t *testing.T) {
 	engine := migration.NewEngine(nil)
 	input := `{"schema_version":3,"migration":{"schema_version":3,"status":"partial","steps_completed":["git_code_facts"],"steps_pending":["opencode_db"],"last_migrated_at":"2026-10-20T10:00:00Z","last_migrated_by":"tester"},"tools":[{"name":"bash","calls":4,"errors":1}]}`
-	migrated, err := engine.Migrate([]byte(input), 4)
+	migrated, err := engine.MigrateInput([]byte(input), 4)
 	if err != nil {
 		t.Fatalf("expected v3 migration to complete with pending external steps, got %v", err)
 	}
@@ -1804,7 +1799,7 @@ func migrationHasStep(steps []string, expected string) bool {
 func TestMigrationEngineNormalizesInterimV4AndDropsUnscopedTools(t *testing.T) {
 	engine := migration.NewEngine(nil)
 	input := `{"schema_version":4,"invocations":[{"id":"root-1","parent_id":null,"role":"orchestrator","model":"model-a","user":"dev","tokens":{}}],"tools":[{"name":"bash","calls":4,"errors":1}],"events":[]}`
-	migrated, err := engine.Migrate([]byte(input), 4)
+	migrated, err := engine.MigrateInput([]byte(input), 4)
 	if err != nil {
 		t.Fatalf("expected interim-v4 normalization, got %v", err)
 	}
@@ -1816,7 +1811,7 @@ func TestMigrationEngineNormalizesInterimV4AndDropsUnscopedTools(t *testing.T) {
 	}
 }
 
-func marshalTestLedger(t *testing.T, ledger domain.AgenticFactLedger) []byte {
+func marshalTestLedger(t *testing.T, ledger migration.LedgerInput) []byte {
 	t.Helper()
 	data, err := json.Marshal(ledger)
 	if err != nil {
@@ -1830,7 +1825,7 @@ func TestCostEvidenceMigrationPreservesObservedHistoryAndMissingPresence(t *test
 		for _, version := range []int{1, 2, 3} {
 			t.Run(fmt.Sprintf("v%d", version), func(t *testing.T) {
 				input := []byte(fmt.Sprintf(`{"schema_version":%d,"source":"codex","invocations":[{"id":"root","user":"alice","role":"coder","model":"m","cost_usd":0},{"id":"root","user":"alice","role":"coder","model":"m","cost_usd":null},{"id":"root","user":"alice","role":"coder","model":"m","cost_usd":7},{"id":"root","user":"alice","role":"coder","model":"m"}]}`, version))
-				migrated, err := migration.NewEngine(nil).Migrate(input, 5)
+				migrated, err := migration.NewEngine(nil).MigrateInput(input, 5)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -1846,7 +1841,7 @@ func TestCostEvidenceMigrationPreservesObservedHistoryAndMissingPresence(t *test
 			for _, shape := range []string{`"sessions":[]`, `"invocations":[]`} {
 				t.Run(fmt.Sprintf("v%d/%s", version, shape), func(t *testing.T) {
 					input := fmt.Sprintf(`{"schema_version":%d,%s,"task_links":[{"subagent_type":"coder","description":"delegated","parent_turn":4,"child_session_id":"child","timestamp":"2026-10-31T09:00:00Z","duration_ms":12,"cost_usd":0},{"cost_usd":7},{"cost_usd":null},{}]}`, version, shape)
-					ledger, err := migration.NewEngine(nil).Migrate([]byte(input), 5)
+					ledger, err := migration.NewEngine(nil).MigrateInput([]byte(input), 5)
 					if err != nil {
 						t.Fatal(err)
 					}
@@ -1905,7 +1900,7 @@ func TestCostEvidenceMigrationPreservesObservedHistoryAndMissingPresence(t *test
 					// Unknown retired metadata is compatible migration input, even
 					// when it happens to carry invocation-like field names.
 					input := fmt.Sprintf(`{"schema_version":5,%s,"retired_metadata":{"role":"coder","model":"payload","cost_usd":"source text"}}`, collections)
-					ledger, err := migration.NewEngine(nil).Migrate([]byte(input), 5)
+					ledger, err := migration.NewEngine(nil).MigrateInput([]byte(input), 5)
 					if tc.state == "" {
 						if err == nil {
 							t.Fatal("accepted contradictory or malformed v5 cost")
@@ -1941,7 +1936,7 @@ func TestCostEvidenceMigrationPreservesObservedHistoryAndMissingPresence(t *test
 	t.Run("mixed collections reject explicit null members", func(t *testing.T) {
 		for _, key := range []string{"invocations", "tools", "events"} {
 			input := fmt.Sprintf(`{"schema_version":4,"sessions":null,%q:null}`, key)
-			if _, err := migration.NewEngine(nil).Migrate([]byte(input), 5); err == nil || !strings.Contains(err.Error(), "mixed ledger shape") {
+			if _, err := migration.NewEngine(nil).MigrateInput([]byte(input), 5); err == nil || !strings.Contains(err.Error(), "mixed ledger shape") {
 				t.Fatalf("ambiguous null collections were accepted for %s: %v", key, err)
 			}
 		}
@@ -1949,7 +1944,7 @@ func TestCostEvidenceMigrationPreservesObservedHistoryAndMissingPresence(t *test
 
 	input := []byte(`{"schema_version":4,"sessions":[{"id":"root","source":"codex","user":"alice","invocations":[{"role":"coder","model":"m","cost_usd":0},{"role":"coder","model":"m","cost_usd":null},{"role":"coder","model":"m","cost_usd":7},{"role":"coder","model":"m"}],"tools":[],"anomalies":[]}]}`)
 	engine := migration.NewEngine(nil)
-	migrated, err := engine.Migrate(input, 5)
+	migrated, err := engine.MigrateInput(input, 5)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1963,5 +1958,56 @@ func TestCostEvidenceMigrationPreservesObservedHistoryAndMissingPresence(t *test
 	summary := domain.ComputeTotals(rows).CostSummary
 	if summary.KnownSubtotalUSD == nil || *summary.KnownSubtotalUSD != 7 || summary.CompleteAmount() != nil || summary.FullyObserved != 2 || summary.Unavailable != 2 {
 		t.Fatalf("unexpected migrated coverage: %+v", summary)
+	}
+}
+
+func TestV6MigrationDropsOnlyOwnerlessFactsAndPreservesNativeMultiplicity(t *testing.T) {
+	const input = `{"schema_version":5,"ticket_id":"TEST-MIGRATION","sessions":[
+{"id":"root","source":"codex","user":"alice","invocations":[],"tools":[],"skills":[{"name":"selected","success":true,"provenance":{"call_id":"shared-call"}}]},
+{"id":"child","parent_id":"root","source":"opencode","user":"bob","invocations":[],"tools":[],"skills":[{"name":"selected","success":true,"provenance":{"call_id":"shared-call"}}]}],
+"skills":[{"name":"lost","success":true},{"name":"lost","success":true},{"session_id":"root","source":"codex","name":"selected","success":true,"provenance":{"call_id":"shared-call"}},{"session_id":"root","name":"selected","success":false,"provenance":{"call_id":"new-call"}},{"session_id":"root","source":"opencode","name":"wrong-source","success":true},{"session_id":"missing","name":"missing-owner","success":true}],
+"task_links":[{"description":"lost","cost_usd":null,"cost_evidence":{"state":"unavailable","known_subtotal_usd":null}},{"description":"lost","cost_usd":null,"cost_evidence":{"state":"unavailable","known_subtotal_usd":null}},{"session_id":"root","description":"kept","child_session_id":"unavailable-child","provenance":{"call_id":"task-call"},"cost_usd":0,"cost_evidence":{"state":"observed","known_subtotal_usd":0}},{"session_id":"root","source":"opencode","description":"wrong-source","cost_usd":null,"cost_evidence":{"state":"unavailable","known_subtotal_usd":null}}]}`
+	engine := migration.NewEngine(nil)
+	got, err := engine.Migrate([]byte(input), 6)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Migration == nil || !strings.Contains(got.Migration.Notes, "skills=4 task_links=3") {
+		t.Fatalf("missing deterministic discarded row counts: %+v", got.Migration)
+	}
+	if len(got.Sessions[0].Skills) != 2 || len(got.Sessions[1].Skills) != 1 || len(got.Sessions[0].Skills)+len(got.Sessions[1].Skills) != 3 || len(got.Sessions[0].Delegations) != 1 {
+		t.Fatalf("known owners/native multiplicity lost or root projection doubled: %+v", got)
+	}
+	for _, owner := range got.Sessions {
+		for _, skill := range owner.Skills {
+			if skill.CallerRole != nil || skill.InvokedAt != nil {
+				t.Fatalf("migration invented missing native role/time: %+v", skill)
+			}
+		}
+	}
+
+	task := got.Sessions[0].Delegations[0]
+	if task.ChildSession != "unavailable-child" || task.Description != "kept" || task.AgentType != nil || task.InvokedAt != nil {
+		t.Fatalf("owned delegation identity/nullable fields lost: %+v", task)
+	}
+	encoded, err := json.Marshal(got)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(encoded, &fields); err != nil {
+		t.Fatal(err)
+	}
+	for _, retired := range []string{"skills", "task_links", "unresolved_facts"} {
+		if _, ok := fields[retired]; ok {
+			t.Fatalf("migration emitted retired root field %s", retired)
+		}
+	}
+	again, err := engine.Migrate(encoded, 6)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(again.Sessions[0].Skills)+len(again.Sessions[1].Skills) != 3 || len(again.Sessions[0].Delegations) != 1 || again.Migration.Notes != got.Migration.Notes {
+		t.Fatalf("migration repeated rows or reported repeat deletion: %+v", again)
 	}
 }

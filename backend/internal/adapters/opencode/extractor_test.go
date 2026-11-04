@@ -6,9 +6,11 @@ import (
 	"strings"
 	"testing"
 
+	"agenticlens/internal/adapters"
 	"agenticlens/internal/adapters/opencode"
 	"agenticlens/internal/domain"
 	_ "modernc.org/sqlite"
+	"reflect"
 )
 
 func setupTestDB(t *testing.T) *sql.DB {
@@ -90,7 +92,7 @@ func TestEmptyThreadSelectionStillValidatesSchema(t *testing.T) {
 		extractedFacts := domain.AgenticFactLedger{Sessions: extractedSessions}
 		invocations := extractedFacts.InvocationFacts()
 		tools := extractedFacts.ToolFacts()
-		events := extractedFacts.EventFacts()
+		events := sourceEventsForSessions(t, db, extractedFacts.Sessions)
 		if err != nil || len(invocations) != 0 || len(tools) != 0 || len(events) != 0 || startedAt != nil || completedAt != nil {
 			t.Fatalf("unexpected empty facts result: invocations=%d tools=%d events=%d start=%v complete=%v err=%v", len(invocations), len(tools), len(events), startedAt, completedAt, err)
 		}
@@ -133,8 +135,8 @@ func TestOpenDBRemainsReadOnly(t *testing.T) {
 	}
 }
 
-func TestV1FilePathAndV2PathNormalizeToSameToolInput(t *testing.T) {
-	inputs := []string{`{"filePath":"marker.txt"}`, `{"path":"marker.txt"}`}
+func TestSourceToolInputsPreservePathVariantsAndAllArguments(t *testing.T) {
+	inputs := []string{`{"filePath":"marker.txt"}`, `{"path":"marker.txt"}`, `{ "filePath": "marker.txt", "offset": 4, "limit": 12 }`}
 	for _, raw := range inputs {
 		var normalized *string
 		db, err := sql.Open("sqlite", ":memory:")
@@ -151,7 +153,7 @@ func TestV1FilePathAndV2PathNormalizeToSameToolInput(t *testing.T) {
 		}
 		extractedSessions, _, _, err := opencode.ExtractSessions(db, []string{"s"}, "user", nil)
 		extractedFacts := domain.AgenticFactLedger{Sessions: extractedSessions}
-		events := extractedFacts.EventFacts()
+		events := sourceEventsForSessions(t, db, extractedFacts.Sessions)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -160,9 +162,61 @@ func TestV1FilePathAndV2PathNormalizeToSameToolInput(t *testing.T) {
 				normalized = event.ToolInput
 			}
 		}
-		if normalized == nil || *normalized != `{"path":"marker.txt"}` {
-			t.Fatalf("input %s normalized to %v", raw, normalized)
+		if normalized == nil || *normalized != raw {
+			t.Fatalf("source input %s lost original fields/bytes: %v", raw, normalized)
 		}
 		db.Close()
 	}
+}
+
+func sourceEventsForSessions(t *testing.T, db *sql.DB, sessions []domain.SessionFact) []domain.EventFact {
+	t.Helper()
+	events := []domain.EventFact{}
+	for _, session := range sessions {
+		rows, err := opencode.ExtractSessionSourceEvents(db, session.ID, "tester")
+		if err != nil {
+			t.Fatal(err)
+		}
+		events = append(events, rows...)
+	}
+	return domain.SortEvents(events)
+}
+func assertNativeOccurrenceEvent(t *testing.T, events []domain.EventFact, owner, message, native string) {
+	t.Helper()
+	for _, event := range events {
+		if event.SessionID == owner && event.MessageID != nil && *event.MessageID == message && strings.Contains(event.EventID, native) {
+			return
+		}
+	}
+	t.Fatalf("native source event %s/%s/%s lost: %+v", owner, message, native, events)
+}
+
+func saveReloadSourceOwners(t *testing.T, sessions []domain.SessionFact) []domain.SessionFact {
+	t.Helper()
+	version, ticket, title := domain.CurrentSchemaVersion, "TEST-SOURCE", "Source projection"
+	path := filepath.Join(t.TempDir(), "ledger.json")
+	if err := adapters.SaveFactLedger(path, domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticket, TicketTitle: &title, Sessions: sessions}); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := adapters.LoadExistingFactLedger(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return loaded.Sessions
+}
+func assertOwnedInvocationTimes(t *testing.T, sessions []domain.SessionFact, id string, skillTime, delegationTime *string) {
+	t.Helper()
+	for _, owner := range sessions {
+		if owner.ID != id {
+			continue
+		}
+		if len(owner.Skills) != 1 || len(owner.Delegations) != 1 {
+			t.Fatalf("source occurrences lost: %+v", owner)
+		}
+		if !reflect.DeepEqual(owner.Skills[0].InvokedAt, skillTime) || !reflect.DeepEqual(owner.Delegations[0].InvokedAt, delegationTime) {
+			t.Fatalf("source-native invocation times changed: skill=%v delegation=%v expected=%v/%v owner=%+v", owner.Skills[0].InvokedAt, owner.Delegations[0].InvokedAt, skillTime, delegationTime, owner)
+		}
+		return
+	}
+	t.Fatalf("source owner %s lost", id)
 }

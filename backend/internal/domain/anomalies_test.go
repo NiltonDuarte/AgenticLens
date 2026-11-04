@@ -1,6 +1,7 @@
 package domain_test
 
 import (
+	"fmt"
 	"testing"
 
 	"agenticlens/internal/domain"
@@ -55,6 +56,38 @@ func TestDetectAnomalies_CleanSessions(t *testing.T) {
 	toolBash := "bash"
 
 	t.Run("fully populated clean session returns empty slice", func(t *testing.T) {
+		ledgerSourceEvents :=
+
+			// 1/8 = 12.5% <= 20%
+
+			[]domain.EventFact{
+				{
+					SessionID:     "ses-1",
+					Turn:          1,
+					Role:          "orchestrator",
+					EventType:     domain.EventTypeTurnMessage,
+					Status:        "completed",
+					ContextTokens: 10000,
+				},
+				{
+					SessionID:     "ses-1",
+					Turn:          2,
+					Role:          "coder",
+					EventType:     domain.EventTypeToolCall,
+					ToolName:      &toolRead,
+					Status:        "completed",
+					ContextTokens: 15000,
+				},
+				{
+					SessionID:     "ses-1",
+					Turn:          3,
+					Role:          "tester",
+					EventType:     domain.EventTypeToolCall,
+					ToolName:      &toolBash,
+					Status:        "completed",
+					ContextTokens: 20000,
+				},
+			}
 		ledger := domain.AgenticFactLedger{
 			TicketID: &tid, Sessions: sessionFacts([]domain.InvocationFact{
 				{
@@ -76,39 +109,12 @@ func TestDetectAnomalies_CleanSessions(t *testing.T) {
 			},
 				[]domain.ToolFact{
 					{SessionID: "session-a", Name: "read_file", Calls: 10, Errors: 0},
-					{SessionID: "session-a", Name: "bash", Calls: 8, Errors: 1}, // 1/8 = 12.5% <= 20%
-				},
-				[]domain.EventFact{
-					{
-						SessionID:     "ses-1",
-						Turn:          1,
-						Role:          "orchestrator",
-						EventType:     domain.EventTypeTurnMessage,
-						Status:        "completed",
-						ContextTokens: 10000,
-					},
-					{
-						SessionID:     "ses-1",
-						Turn:          2,
-						Role:          "coder",
-						EventType:     domain.EventTypeToolCall,
-						ToolName:      &toolRead,
-						Status:        "completed",
-						ContextTokens: 15000,
-					},
-					{
-						SessionID:     "ses-1",
-						Turn:          3,
-						Role:          "tester",
-						EventType:     domain.EventTypeToolCall,
-						ToolName:      &toolBash,
-						Status:        "completed",
-						ContextTokens: 20000,
-					},
-				}),
+					{SessionID: "session-a", Name: "bash", Calls: 8, Errors: 1},
+				}, ledgerSourceEvents,
+			),
 		}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		if anomalies == nil {
 			t.Fatalf("expected non-nil empty slice, got nil")
 		}
@@ -129,9 +135,9 @@ func TestDetectAnomalies_CleanSessions(t *testing.T) {
 		// 6 calls, 2 errors (33.3%), wait! If calls=6, errors=2, high failure rate triggers!
 		// For a truly clean run, make errors 1 out of 6 (16.7% <= 20%):
 		events[0].Status = "completed"
-
-		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, events)}
-		anomalies := domain.DetectAnomalies(ledger)
+		ledgerSourceEvents := events
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, ledgerSourceEvents)}
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		if len(anomalies) != 0 {
 			t.Fatalf("expected 0 anomalies, got %d: %+v", len(anomalies), anomalies)
 		}
@@ -145,15 +151,15 @@ func TestDetectAnomalies_ToolRetryStreak(t *testing.T) {
 	toolGit := "git"
 
 	t.Run("3 consecutive errors trigger WARNING", func(t *testing.T) {
-		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, []domain.EventFact{
+		ledgerSourceEvents := []domain.EventFact{
 			{SessionID: "s1", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
 			{SessionID: "s1", Turn: 2, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
 			{SessionID: "s1", Turn: 3, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
 			{SessionID: "s1", Turn: 4, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "completed"},
-		}),
 		}
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, ledgerSourceEvents)}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		if len(anomalies) != 1 {
 			t.Fatalf("expected 1 anomaly, got %d: %+v", len(anomalies), anomalies)
 		}
@@ -179,16 +185,16 @@ func TestDetectAnomalies_ToolRetryStreak(t *testing.T) {
 	})
 
 	t.Run("4 consecutive errors trigger WARNING", func(t *testing.T) {
-		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, []domain.EventFact{
+		ledgerSourceEvents := []domain.EventFact{
 			{SessionID: "s1", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
 			{SessionID: "s1", Turn: 2, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
 			{SessionID: "s1", Turn: 3, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
 			{SessionID: "s1", Turn: 4, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
 			{SessionID: "s1", Turn: 5, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "completed"},
-		}),
 		}
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, ledgerSourceEvents)}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		var streak *domain.Anomaly
 		for i := range anomalies {
 			if anomalies[i].RuleID == domain.RuleToolRetryStreak {
@@ -208,16 +214,16 @@ func TestDetectAnomalies_ToolRetryStreak(t *testing.T) {
 	})
 
 	t.Run("5 consecutive errors trigger CRITICAL", func(t *testing.T) {
-		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, []domain.EventFact{
+		ledgerSourceEvents := []domain.EventFact{
 			{SessionID: "s1", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
 			{SessionID: "s1", Turn: 2, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
 			{SessionID: "s1", Turn: 3, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
 			{SessionID: "s1", Turn: 4, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
 			{SessionID: "s1", Turn: 5, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
-		}),
 		}
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, ledgerSourceEvents)}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		var streak *domain.Anomaly
 		for i := range anomalies {
 			if anomalies[i].RuleID == domain.RuleToolRetryStreak {
@@ -250,9 +256,10 @@ func TestDetectAnomalies_ToolRetryStreak(t *testing.T) {
 				Status:    "error",
 			})
 		}
-		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, events)}
+		ledgerSourceEvents := events
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, ledgerSourceEvents)}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		var streak *domain.Anomaly
 		for i := range anomalies {
 			if anomalies[i].RuleID == domain.RuleToolRetryStreak {
@@ -272,17 +279,17 @@ func TestDetectAnomalies_ToolRetryStreak(t *testing.T) {
 	})
 
 	t.Run("reset on success prevents streak accumulation", func(t *testing.T) {
-		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, []domain.EventFact{
+		ledgerSourceEvents := []domain.EventFact{
 			{SessionID: "s1", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
 			{SessionID: "s1", Turn: 2, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
 			{SessionID: "s1", Turn: 3, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "completed"},
 			{SessionID: "s1", Turn: 4, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
 			{SessionID: "s1", Turn: 5, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
 			{SessionID: "s1", Turn: 6, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "completed"},
-		}),
 		}
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, ledgerSourceEvents)}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		for _, a := range anomalies {
 			if a.RuleID == domain.RuleToolRetryStreak {
 				t.Fatalf("unexpected streak anomaly: %+v", a)
@@ -291,7 +298,7 @@ func TestDetectAnomalies_ToolRetryStreak(t *testing.T) {
 	})
 
 	t.Run("reset on tool change resets streak", func(t *testing.T) {
-		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, []domain.EventFact{
+		ledgerSourceEvents := []domain.EventFact{
 			{SessionID: "s1", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
 			{SessionID: "s1", Turn: 2, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
 			// Tool changes to git
@@ -299,10 +306,10 @@ func TestDetectAnomalies_ToolRetryStreak(t *testing.T) {
 			// Tool changes back to bash
 			{SessionID: "s1", Turn: 4, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
 			{SessionID: "s1", Turn: 5, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "completed"},
-		}),
 		}
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, ledgerSourceEvents)}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		for _, a := range anomalies {
 			if a.RuleID == domain.RuleToolRetryStreak {
 				t.Fatalf("unexpected streak anomaly across alternating tools: %+v", a)
@@ -311,16 +318,16 @@ func TestDetectAnomalies_ToolRetryStreak(t *testing.T) {
 	})
 
 	t.Run("non-tool events between tool errors do not reset streak", func(t *testing.T) {
-		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, []domain.EventFact{
+		ledgerSourceEvents := []domain.EventFact{
 			{SessionID: "s1", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
 			{SessionID: "s1", Turn: 1, EventType: domain.EventTypeTurnMessage, Status: "completed"},
 			{SessionID: "s1", Turn: 2, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
 			{SessionID: "s1", Turn: 2, EventType: domain.EventTypeCompaction, Status: "completed"},
 			{SessionID: "s1", Turn: 3, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
-		}),
 		}
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, ledgerSourceEvents)}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		var streak *domain.Anomaly
 		for i := range anomalies {
 			if anomalies[i].RuleID == domain.RuleToolRetryStreak {
@@ -337,16 +344,17 @@ func TestDetectAnomalies_ToolRetryStreak(t *testing.T) {
 	})
 
 	t.Run("consecutive errors split across sessions do not combine into single streak", func(t *testing.T) {
-		// 2 consecutive errors in session 1, then 2 consecutive errors in session 2 (neither reaches threshold 3)
-		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, []domain.EventFact{
-			{SessionID: "s1", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
-			{SessionID: "s1", Turn: 2, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
-			{SessionID: "s2", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
-			{SessionID: "s2", Turn: 2, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
-		}),
-		}
+		ledgerSourceEvents :=
+			// 2 consecutive errors in session 1, then 2 consecutive errors in session 2 (neither reaches threshold 3)
+			[]domain.EventFact{
+				{SessionID: "s1", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				{SessionID: "s1", Turn: 2, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				{SessionID: "s2", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				{SessionID: "s2", Turn: 2, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+			}
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, ledgerSourceEvents)}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		for _, a := range anomalies {
 			if a.RuleID == domain.RuleToolRetryStreak {
 				t.Fatalf("expected no streak anomaly across separate sessions, got: %+v", a)
@@ -355,16 +363,17 @@ func TestDetectAnomalies_ToolRetryStreak(t *testing.T) {
 	})
 
 	t.Run("2 errors in session A and 1 error in session B should NOT trigger 3-streak", func(t *testing.T) {
-		// Adversarial verification of session boundary streak reset:
-		// Total errors = 3, but 2 in session A and 1 in session B -> neither reaches threshold 3
-		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, []domain.EventFact{
-			{SessionID: "sessionA", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
-			{SessionID: "sessionA", Turn: 2, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
-			{SessionID: "sessionB", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
-		}),
-		}
+		ledgerSourceEvents :=
+			// Adversarial verification of session boundary streak reset:
+			// Total errors = 3, but 2 in session A and 1 in session B -> neither reaches threshold 3
+			[]domain.EventFact{
+				{SessionID: "sessionA", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				{SessionID: "sessionA", Turn: 2, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				{SessionID: "sessionB", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+			}
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, ledgerSourceEvents)}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		for _, a := range anomalies {
 			if a.RuleID == domain.RuleToolRetryStreak {
 				t.Fatalf("expected no TOOL_RETRY_STREAK anomaly across session transition (2 in A, 1 in B), got: %+v", a)
@@ -373,16 +382,17 @@ func TestDetectAnomalies_ToolRetryStreak(t *testing.T) {
 	})
 
 	t.Run("3 errors in session A and 1 error in session B should trigger 1 streak for session A", func(t *testing.T) {
-		// 3 errors in session A triggers streak for A with count=3; session B transition resets and has only 1 error
-		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, []domain.EventFact{
-			{SessionID: "sessionA", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
-			{SessionID: "sessionA", Turn: 2, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
-			{SessionID: "sessionA", Turn: 3, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
-			{SessionID: "sessionB", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
-		}),
-		}
+		ledgerSourceEvents :=
+			// 3 errors in session A triggers streak for A with count=3; session B transition resets and has only 1 error
+			[]domain.EventFact{
+				{SessionID: "sessionA", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				{SessionID: "sessionA", Turn: 2, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				{SessionID: "sessionA", Turn: 3, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				{SessionID: "sessionB", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+			}
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, ledgerSourceEvents)}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		var streaks []domain.Anomaly
 		for _, a := range anomalies {
 			if a.RuleID == domain.RuleToolRetryStreak {
@@ -405,27 +415,28 @@ func TestDetectAnomalies_ToolRetryStreak(t *testing.T) {
 	})
 
 	t.Run("multiple session transitions correctly isolate streaks per session", func(t *testing.T) {
-		// Session A (3 errors) -> Session B (1 error) -> Session C (4 errors) -> Session D (2 errors)
-		// Should produce exactly 2 streaks: Session A (count 3) and Session C (count 4)
-		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, []domain.EventFact{
-			// Session A
-			{SessionID: "ses-A", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
-			{SessionID: "ses-A", Turn: 2, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
-			{SessionID: "ses-A", Turn: 3, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
-			// Session B
-			{SessionID: "ses-B", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
-			// Session C
-			{SessionID: "ses-C", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
-			{SessionID: "ses-C", Turn: 2, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
-			{SessionID: "ses-C", Turn: 3, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
-			{SessionID: "ses-C", Turn: 4, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
-			// Session D
-			{SessionID: "ses-D", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
-			{SessionID: "ses-D", Turn: 2, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
-		}),
-		}
+		ledgerSourceEvents :=
+			// Session A (3 errors) -> Session B (1 error) -> Session C (4 errors) -> Session D (2 errors)
+			// Should produce exactly 2 streaks: Session A (count 3) and Session C (count 4)
+			[]domain.EventFact{
+				// Session A
+				{SessionID: "ses-A", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				{SessionID: "ses-A", Turn: 2, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				{SessionID: "ses-A", Turn: 3, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				// Session B
+				{SessionID: "ses-B", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				// Session C
+				{SessionID: "ses-C", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				{SessionID: "ses-C", Turn: 2, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				{SessionID: "ses-C", Turn: 3, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				{SessionID: "ses-C", Turn: 4, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				// Session D
+				{SessionID: "ses-D", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				{SessionID: "ses-D", Turn: 2, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+			}
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, ledgerSourceEvents)}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		var streaks []domain.Anomaly
 		for _, a := range anomalies {
 			if a.RuleID == domain.RuleToolRetryStreak {
@@ -444,17 +455,18 @@ func TestDetectAnomalies_ToolRetryStreak(t *testing.T) {
 	})
 
 	t.Run("streak in session 1 emits even when session 2 follows", func(t *testing.T) {
-		// 3 errors in session 1, followed by 2 errors in session 2
-		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, []domain.EventFact{
-			{SessionID: "s1", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
-			{SessionID: "s1", Turn: 2, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
-			{SessionID: "s1", Turn: 3, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
-			{SessionID: "s2", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
-			{SessionID: "s2", Turn: 2, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
-		}),
-		}
+		ledgerSourceEvents :=
+			// 3 errors in session 1, followed by 2 errors in session 2
+			[]domain.EventFact{
+				{SessionID: "s1", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				{SessionID: "s1", Turn: 2, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				{SessionID: "s1", Turn: 3, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				{SessionID: "s2", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+				{SessionID: "s2", Turn: 2, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
+			}
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, ledgerSourceEvents)}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		var streakCount int
 		var foundSession string
 		for _, a := range anomalies {
@@ -474,14 +486,17 @@ func TestDetectAnomalies_ToolRetryStreak(t *testing.T) {
 	})
 
 	t.Run("v1 fallback returns empty for tool retry streak", func(t *testing.T) {
-		// Even if ToolFact has many errors, v1 cannot determine consecutive streak
+		ledgerSourceEvents :=
+			// Even if ToolFact has many errors, v1 cannot determine consecutive streak
+
+			[]domain.EventFact(nil)
 		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, []domain.ToolFact{
 			{SessionID: "session-a", Name: "bash", Calls: 10, Errors: 8},
-		},
-			nil),
+		}, ledgerSourceEvents,
+		),
 		}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		for _, a := range anomalies {
 			if a.RuleID == domain.RuleToolRetryStreak {
 				t.Fatalf("v1 fallback must not emit TOOL_RETRY_STREAK, got: %+v", a)
@@ -505,9 +520,10 @@ func TestDetectAnomalies_ToolHighFailureRate(t *testing.T) {
 			{SessionID: "s1", Turn: 5, EventType: domain.EventTypeToolCall, ToolName: &toolGit, Status: "error"},
 			{SessionID: "s1", Turn: 6, EventType: domain.EventTypeToolCall, ToolName: &toolGit, Status: "completed"},
 		}
-		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, events)}
+		ledgerSourceEvents := events
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, ledgerSourceEvents)}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		if len(anomalies) != 1 {
 			t.Fatalf("expected 1 anomaly, got %d: %+v", len(anomalies), anomalies)
 		}
@@ -542,9 +558,10 @@ func TestDetectAnomalies_ToolHighFailureRate(t *testing.T) {
 			{SessionID: "s1", Turn: 5, EventType: domain.EventTypeToolCall, ToolName: &toolGit, Status: "completed"},
 			{SessionID: "s1", Turn: 6, EventType: domain.EventTypeToolCall, ToolName: &toolGit, Status: "error"},
 		}
-		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, events)}
+		ledgerSourceEvents := events
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, ledgerSourceEvents)}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		var rateAnomaly *domain.Anomaly
 		for i := range anomalies {
 			if anomalies[i].RuleID == domain.RuleToolHighFailureRate {
@@ -573,9 +590,10 @@ func TestDetectAnomalies_ToolHighFailureRate(t *testing.T) {
 			{SessionID: "s1", Turn: 3, EventType: domain.EventTypeToolCall, ToolName: &toolGit, Status: "error"},
 			{SessionID: "s1", Turn: 4, EventType: domain.EventTypeToolCall, ToolName: &toolGit, Status: "error"},
 		}
-		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, events)}
+		ledgerSourceEvents := events
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, ledgerSourceEvents)}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		for _, a := range anomalies {
 			if a.RuleID == domain.RuleToolHighFailureRate {
 				t.Fatalf("tool with 4 calls should be ignored, got: %+v", a)
@@ -592,20 +610,24 @@ func TestDetectAnomalies_ToolHighFailureRate(t *testing.T) {
 			{SessionID: "s1", Turn: 4, EventType: domain.EventTypeToolCall, ToolName: &toolGit, Status: "completed"},
 			{SessionID: "s1", Turn: 5, EventType: domain.EventTypeToolCall, ToolName: &toolGit, Status: "completed"},
 		}
-		ledger5 := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, events5)}
-		anomalies5 := domain.DetectAnomalies(ledger5)
+		ledger5SourceEvents := events5
+		ledger5 := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, ledger5SourceEvents)}
+		anomalies5 := domain.DetectAnomaliesFromEvents(ledger5, ledger5SourceEvents)
 		for _, a := range anomalies5 {
 			if a.RuleID == domain.RuleToolHighFailureRate {
 				t.Fatalf("5 calls with 1 error (20%%) must not trigger high failure rate, got: %+v", a)
 			}
 		}
+		ledger10SourceEvents :=
 
-		// 10 calls, 2 errors = 20.0% -> NOT > 20%
+			// 10 calls, 2 errors = 20.0% -> NOT > 20%
+
+			[]domain.EventFact(nil)
 		ledger10 := domain.AgenticFactLedger{Sessions: sessionFacts(nil, []domain.ToolFact{
 			{SessionID: "session-a", Name: "git", Calls: 10, Errors: 2},
-		}, nil),
+		}, ledger10SourceEvents),
 		}
-		anomalies10 := domain.DetectAnomalies(ledger10)
+		anomalies10 := domain.DetectAnomaliesFromEvents(ledger10, ledger10SourceEvents)
 		for _, a := range anomalies10 {
 			if a.RuleID == domain.RuleToolHighFailureRate {
 				t.Fatalf("10 calls with 2 errors (20%%) must not trigger high failure rate in v1, got: %+v", a)
@@ -614,14 +636,20 @@ func TestDetectAnomalies_ToolHighFailureRate(t *testing.T) {
 	})
 
 	t.Run("v1 fallback parity with v2 event detection", func(t *testing.T) {
-		// v1 ledger
+		ledgerV1SourceEvents :=
+			// v1 ledger
+
+			// 33.3% WARNING
+			// 60.0% CRITICAL
+			// <5 calls -> ignored
+			[]domain.EventFact(nil)
 		ledgerV1 := domain.AgenticFactLedger{Sessions: sessionFacts(nil, []domain.ToolFact{
-			{SessionID: "session-a", Name: "git", Calls: 6, Errors: 2},   // 33.3% WARNING
-			{SessionID: "session-a", Name: "bash", Calls: 10, Errors: 6}, // 60.0% CRITICAL
-			{SessionID: "session-a", Name: "curl", Calls: 4, Errors: 4},  // <5 calls -> ignored
-		}, nil),
+			{SessionID: "session-a", Name: "git", Calls: 6, Errors: 2},
+			{SessionID: "session-a", Name: "bash", Calls: 10, Errors: 6},
+			{SessionID: "session-a", Name: "curl", Calls: 4, Errors: 4},
+		}, ledgerV1SourceEvents),
 		}
-		anomaliesV1 := domain.DetectAnomalies(ledgerV1)
+		anomaliesV1 := domain.DetectAnomaliesFromEvents(ledgerV1, ledgerV1SourceEvents)
 
 		// v2 ledger with equivalent calls
 		var eventsV2 []domain.EventFact
@@ -669,8 +697,9 @@ func TestDetectAnomalies_ToolHighFailureRate(t *testing.T) {
 			{SessionID: "s", Turn: 19, EventType: domain.EventTypeToolCall, ToolName: &toolCurl, Status: "error"},
 			{SessionID: "s", Turn: 20, EventType: domain.EventTypeToolCall, ToolName: &toolCurl, Status: "error"},
 		}
-		ledgerV2 := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, eventsV2)}
-		anomaliesV2 := domain.DetectAnomalies(ledgerV2)
+		ledgerV2SourceEvents := eventsV2
+		ledgerV2 := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, ledgerV2SourceEvents)}
+		anomaliesV2 := domain.DetectAnomaliesFromEvents(ledgerV2, ledgerV2SourceEvents)
 
 		// Filter to high failure rate anomalies
 		var v1Rates, v2Rates []domain.Anomaly
@@ -711,11 +740,12 @@ func TestDetectAnomalies_ToolHighFailureRate(t *testing.T) {
 }
 
 func TestToolFailureAnomaliesAggregateSessionFactsByName(t *testing.T) {
+	ledgerSourceEvents := []domain.EventFact(nil)
 	ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, []domain.ToolFact{
 		{SessionID: "session-a", Name: "bash", Calls: 4, Errors: 1},
 		{SessionID: "session-b", Name: "bash", Calls: 6, Errors: 2},
-	}, nil)}
-	anomalies := domain.DetectAnomalies(ledger)
+	}, ledgerSourceEvents)}
+	anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 	var failureRateAnomalies []domain.Anomaly
 	for _, anomaly := range anomalies {
 		if anomaly.RuleID == domain.RuleToolHighFailureRate {
@@ -738,13 +768,13 @@ func TestToolFailureAnomaliesAggregateSessionFactsByName(t *testing.T) {
 func TestDetectAnomalies_ContextSaturationSpike(t *testing.T) {
 	t.Parallel()
 	t.Run("single-turn jump >40k tokens triggers WARNING", func(t *testing.T) {
-		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, []domain.EventFact{
+		ledgerSourceEvents := []domain.EventFact{
 			{SessionID: "s1", Turn: 1, ContextTokens: 10_000},
 			{SessionID: "s1", Turn: 2, ContextTokens: 50_001}, // +40,001
-		}),
 		}
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, ledgerSourceEvents)}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		if len(anomalies) != 1 {
 			t.Fatalf("expected 1 anomaly, got %d: %+v", len(anomalies), anomalies)
 		}
@@ -764,26 +794,26 @@ func TestDetectAnomalies_ContextSaturationSpike(t *testing.T) {
 	})
 
 	t.Run("exact 40k delta boundary does not trigger", func(t *testing.T) {
-		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, []domain.EventFact{
+		ledgerSourceEvents := []domain.EventFact{
 			{SessionID: "s1", Turn: 1, ContextTokens: 10_000},
 			{SessionID: "s1", Turn: 2, ContextTokens: 50_000}, // +40,000 exactly
-		}),
 		}
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, ledgerSourceEvents)}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		if len(anomalies) != 0 {
 			t.Fatalf("exact 40k delta must not trigger anomaly, got %d: %+v", len(anomalies), anomalies)
 		}
 	})
 
 	t.Run("exact 80k delta triggers WARNING not CRITICAL", func(t *testing.T) {
-		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, []domain.EventFact{
+		ledgerSourceEvents := []domain.EventFact{
 			{SessionID: "s1", Turn: 1, ContextTokens: 10_000},
 			{SessionID: "s1", Turn: 2, ContextTokens: 90_000}, // +80,000 exactly (>40k, but not >80k)
-		}),
 		}
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, ledgerSourceEvents)}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		if len(anomalies) != 1 {
 			t.Fatalf("expected 1 anomaly, got %d: %+v", len(anomalies), anomalies)
 		}
@@ -793,13 +823,13 @@ func TestDetectAnomalies_ContextSaturationSpike(t *testing.T) {
 	})
 
 	t.Run("single-turn jump >80k tokens triggers CRITICAL", func(t *testing.T) {
-		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, []domain.EventFact{
+		ledgerSourceEvents := []domain.EventFact{
 			{SessionID: "s1", Turn: 1, ContextTokens: 10_000},
 			{SessionID: "s1", Turn: 2, ContextTokens: 90_001}, // +80,001 (>80k)
-		}),
 		}
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, ledgerSourceEvents)}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		if len(anomalies) != 1 {
 			t.Fatalf("expected 1 anomaly, got %d: %+v", len(anomalies), anomalies)
 		}
@@ -812,25 +842,25 @@ func TestDetectAnomalies_ContextSaturationSpike(t *testing.T) {
 	})
 
 	t.Run("negative token delta does not trigger", func(t *testing.T) {
-		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, []domain.EventFact{
+		ledgerSourceEvents := []domain.EventFact{
 			{SessionID: "s1", Turn: 1, ContextTokens: 100_000},
 			{SessionID: "s1", Turn: 2, ContextTokens: 20_000}, // compaction / drop
-		}),
 		}
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, ledgerSourceEvents)}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		if len(anomalies) != 0 {
 			t.Fatalf("negative token delta must not trigger anomaly, got: %+v", anomalies)
 		}
 	})
 
 	t.Run("turn with 160k tokens triggers WARNING ceiling breach", func(t *testing.T) {
-		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, []domain.EventFact{
+		ledgerSourceEvents := []domain.EventFact{
 			{SessionID: "s1", Turn: 1, ContextTokens: 160_000},
-		}),
 		}
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, ledgerSourceEvents)}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		if len(anomalies) != 1 {
 			t.Fatalf("expected 1 anomaly for 160k ceiling breach, got %d: %+v", len(anomalies), anomalies)
 		}
@@ -850,12 +880,12 @@ func TestDetectAnomalies_ContextSaturationSpike(t *testing.T) {
 	})
 
 	t.Run("turn with 200k tokens triggers CRITICAL ceiling breach", func(t *testing.T) {
-		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, []domain.EventFact{
+		ledgerSourceEvents := []domain.EventFact{
 			{SessionID: "s1", Turn: 1, ContextTokens: 200_000},
-		}),
 		}
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, ledgerSourceEvents)}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		if len(anomalies) != 1 {
 			t.Fatalf("expected 1 anomaly for 200k ceiling breach, got %d: %+v", len(anomalies), anomalies)
 		}
@@ -875,35 +905,40 @@ func TestDetectAnomalies_ContextSaturationSpike(t *testing.T) {
 	})
 
 	t.Run("ceiling breach reported only once per session", func(t *testing.T) {
-		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, []domain.EventFact{
+		ledgerSourceEvents := []domain.EventFact{
 			{SessionID: "s1", Turn: 1, ContextTokens: 162_000},
 			{SessionID: "s1", Turn: 2, ContextTokens: 165_000}, // delta is 3k (<40k), ceiling already breached
 			{SessionID: "s1", Turn: 3, ContextTokens: 170_000}, // delta is 5k (<40k), ceiling already breached
-		}),
 		}
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, ledgerSourceEvents)}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		if len(anomalies) != 1 {
 			t.Fatalf("expected exactly 1 ceiling breach anomaly for session, got %d: %+v", len(anomalies), anomalies)
 		}
 	})
 
 	t.Run("session isolation prevents cross-session false spikes", func(t *testing.T) {
-		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, []domain.EventFact{
+		ledgerSourceEvents := []domain.EventFact{
 			{SessionID: "ses-A", Turn: 1, ContextTokens: 10_000},
 			{SessionID: "ses-A", Turn: 2, ContextTokens: 15_000},
 			{SessionID: "ses-B", Turn: 1, ContextTokens: 70_000}, // first turn of ses-B, not a jump from ses-A
 			{SessionID: "ses-B", Turn: 2, ContextTokens: 75_000},
-		}),
 		}
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, ledgerSourceEvents)}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		if len(anomalies) != 0 {
 			t.Fatalf("cross-session events must not trigger false token jump, got %d: %+v", len(anomalies), anomalies)
 		}
 	})
 
 	t.Run("v1 fallback evaluates PeakContext >= 160k tokens", func(t *testing.T) {
+		ledgerSourceEvents :=
+
+			// below 160k
+
+			[]domain.EventFact(nil)
 		ledger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
 			{
 				Role: "orchestrator",
@@ -914,13 +949,13 @@ func TestDetectAnomalies_ContextSaturationSpike(t *testing.T) {
 			{
 				Role: "coder",
 				Tokens: domain.InvocationTokens{
-					PeakContext: 159_999, // below 160k
+					PeakContext: 159_999,
 				},
 			},
-		}, nil, nil),
+		}, nil, ledgerSourceEvents),
 		}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		if len(anomalies) != 1 {
 			t.Fatalf("expected 1 anomaly in v1 fallback, got %d: %+v", len(anomalies), anomalies)
 		}
@@ -951,7 +986,7 @@ func TestDetectAnomalies_ContextSaturationSpike(t *testing.T) {
 			},
 		}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, nil)
 		if len(anomalies) != 1 {
 			t.Fatalf("expected 1 anomaly in v1 fallback, got %d: %+v", len(anomalies), anomalies)
 		}
@@ -963,7 +998,14 @@ func TestDetectAnomalies_ContextSaturationSpike(t *testing.T) {
 			t.Fatalf("expected AnomalyContext.SessionID=%q, got %v", sessionID, a.Context.SessionID)
 		}
 
-		persisted, err := domain.PersistAnomalySummaries(ledger)
+		preserved, err := domain.PersistAnomalySummaries(ledger)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(preserved.Sessions[0].Anomalies) != 0 {
+			t.Fatal("source-less normalization changed the recorded owner snapshot")
+		}
+		persisted, err := domain.PersistSourceAnomalySummaries(ledger, domain.SourceEvents{CompleteSessionIDs: []string{sessionID}})
 		if err != nil {
 			t.Fatalf("PersistAnomalySummaries failed: %v", err)
 		}
@@ -986,21 +1028,23 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 		rootID := "ses-root"
 		childCoderID := "ses-coder"
 		childTesterID := "ses-tester"
-		ledger := domain.AgenticFactLedger{Sessions: sessionFactsFromSessions([]domain.SessionFact{
-			testSession(rootID, nil, "general"),
-			testSession(childCoderID, &rootID, "coder"),
-			testSession(childTesterID, &rootID, "tester"),
-		}, nil, []domain.EventFact{
+		ledgerSourceEvents := []domain.EventFact{
 			{SessionID: childCoderID, Turn: 1, Role: "coder"},
 			{SessionID: childTesterID, Turn: 2, Role: "tester"},
 			{SessionID: childCoderID, Turn: 3, Role: "coder"},
 			{SessionID: childTesterID, Turn: 4, Role: "tester"},
 			{SessionID: childCoderID, Turn: 5, Role: "coder"},
 			{SessionID: childTesterID, Turn: 6, Role: "tester"},
-		}),
+		}
+		ledger := domain.AgenticFactLedger{Sessions: sessionFactsFromSessions([]domain.SessionFact{
+			testSession(rootID, nil, "general"),
+			testSession(childCoderID, &rootID, "coder"),
+			testSession(childTesterID, &rootID, "tester"),
+		}, nil, ledgerSourceEvents,
+		),
 		}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		if len(anomalies) != 1 {
 			t.Fatalf("expected 1 anomaly, got %d: %+v", len(anomalies), anomalies)
 		}
@@ -1029,19 +1073,21 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 		rootID := "ses-root"
 		childCoderID := "ses-coder"
 		childTesterID := "ses-tester"
-		ledger := domain.AgenticFactLedger{Sessions: sessionFactsFromSessions([]domain.SessionFact{
-			testSession(rootID, nil, "general"),
-			testSession(childCoderID, &rootID, "coder"),
-			testSession(childTesterID, &rootID, "tester"),
-		}, nil, []domain.EventFact{
+		ledgerSourceEvents := []domain.EventFact{
 			{SessionID: childCoderID, Turn: 1, Role: "coder"}, {SessionID: childTesterID, Turn: 2, Role: "tester"},
 			{SessionID: childCoderID, Turn: 3, Role: "coder"}, {SessionID: childTesterID, Turn: 4, Role: "tester"},
 			{SessionID: childCoderID, Turn: 5, Role: "coder"}, {SessionID: childTesterID, Turn: 6, Role: "tester"},
 			{SessionID: childCoderID, Turn: 7, Role: "coder"}, {SessionID: childTesterID, Turn: 8, Role: "tester"},
-		}),
+		}
+		ledger := domain.AgenticFactLedger{Sessions: sessionFactsFromSessions([]domain.SessionFact{
+			testSession(rootID, nil, "general"),
+			testSession(childCoderID, &rootID, "coder"),
+			testSession(childTesterID, &rootID, "tester"),
+		}, nil, ledgerSourceEvents,
+		),
 		}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		if len(anomalies) != 1 {
 			t.Fatalf("expected 1 anomaly, got %d: %+v", len(anomalies), anomalies)
 		}
@@ -1055,6 +1101,10 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 
 	t.Run("coder <-> tester 5 cycles triggers CRITICAL", func(t *testing.T) {
 		rootID := "ses-root"
+		ledgerSourceEvents := []domain.EventFact{}
+		for cycle := 1; cycle <= 5; cycle++ {
+			ledgerSourceEvents = append(ledgerSourceEvents, domain.EventFact{SessionID: fmt.Sprintf("c%d", cycle), Role: "coder", Turn: int64(cycle*2 - 1)}, domain.EventFact{SessionID: fmt.Sprintf("t%d", cycle), Role: "tester", Turn: int64(cycle * 2)})
+		}
 		ledger := domain.AgenticFactLedger{Sessions: sessionFactsFromSessions([]domain.SessionFact{
 			testSession(rootID, nil, "general"),
 			testSession("c1", &rootID, "coder"), testSession("t1", &rootID, "tester"),
@@ -1062,10 +1112,10 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 			testSession("c3", &rootID, "coder"), testSession("t3", &rootID, "tester"),
 			testSession("c4", &rootID, "coder"), testSession("t4", &rootID, "tester"),
 			testSession("c5", &rootID, "coder"), testSession("t5", &rootID, "tester"),
-		}, nil, nil),
+		}, nil, ledgerSourceEvents),
 		}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		if len(anomalies) != 1 {
 			t.Fatalf("expected 1 anomaly, got %d: %+v", len(anomalies), anomalies)
 		}
@@ -1085,19 +1135,21 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 		rootID := "ses-root"
 		childCoderID := "ses-coder"
 		childTesterID := "ses-tester"
-		ledger := domain.AgenticFactLedger{Sessions: sessionFactsFromSessions([]domain.SessionFact{
-			testSession(rootID, nil, "general"),
-			testSession(childCoderID, &rootID, "coder"),
-			testSession(childTesterID, &rootID, "tester"),
-		}, nil, []domain.EventFact{
+		ledgerSourceEvents := []domain.EventFact{
 			{SessionID: childCoderID, Turn: 1, Role: "coder"},
 			{SessionID: childTesterID, Turn: 2, Role: "tester"},
 			{SessionID: childCoderID, Turn: 3, Role: "coder"},
 			{SessionID: childTesterID, Turn: 4, Role: "tester"},
-		}),
+		}
+		ledger := domain.AgenticFactLedger{Sessions: sessionFactsFromSessions([]domain.SessionFact{
+			testSession(rootID, nil, "general"),
+			testSession(childCoderID, &rootID, "coder"),
+			testSession(childTesterID, &rootID, "tester"),
+		}, nil, ledgerSourceEvents,
+		),
 		}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		if len(anomalies) != 0 {
 			t.Fatalf("2 cycles must not trigger rework loop, got: %+v", anomalies)
 		}
@@ -1109,22 +1161,24 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 		childCoderID := "ses-coder"
 		childTesterID := "ses-tester"
 		childReviewerID := "ses-reviewer"
-		ledger := domain.AgenticFactLedger{Sessions: sessionFactsFromSessions([]domain.SessionFact{
-			testSession(rootID, nil, "general"),
-			testSession(childCoderID, &rootID, "coder"),
-			testSession(childTesterID, &rootID, "tester"),
-			testSession(childReviewerID, &rootID, "reviewer"),
-		}, nil, []domain.EventFact{
+		ledgerSourceEvents := []domain.EventFact{
 			{SessionID: childCoderID, Turn: 1, Role: "coder"},
 			{SessionID: childTesterID, Turn: 2, Role: "tester"},
 			{SessionID: childReviewerID, Turn: 3, Role: "reviewer"},
 			{SessionID: childCoderID, Turn: 4, Role: "coder"},
 			{SessionID: childTesterID, Turn: 5, Role: "tester"},
 			{SessionID: childReviewerID, Turn: 6, Role: "reviewer"},
-		}),
+		}
+		ledger := domain.AgenticFactLedger{Sessions: sessionFactsFromSessions([]domain.SessionFact{
+			testSession(rootID, nil, "general"),
+			testSession(childCoderID, &rootID, "coder"),
+			testSession(childTesterID, &rootID, "tester"),
+			testSession(childReviewerID, &rootID, "reviewer"),
+		}, nil, ledgerSourceEvents,
+		),
 		}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		for _, a := range anomalies {
 			if a.RuleID == domain.RuleSubagentReworkLoop {
 				t.Fatalf("non-alternating transitions should not trigger rework loop, got: %+v", a)
@@ -1137,11 +1191,7 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 		rootID := "ses-root"
 		childCoderID := "ses-coder"
 		childTesterID := "ses-tester"
-		ledger := domain.AgenticFactLedger{Sessions: sessionFactsFromSessions([]domain.SessionFact{
-			testSession(rootID, nil, "orchestrator"),
-			testSession(childCoderID, &rootID, "coder"),
-			testSession(childTesterID, &rootID, "tester"),
-		}, nil, []domain.EventFact{
+		ledgerSourceEvents := []domain.EventFact{
 			{SessionID: rootID, Turn: 1, Role: "orchestrator"},
 			{SessionID: childCoderID, Turn: 2, Role: "coder"},
 			{SessionID: rootID, Turn: 3, Role: "orchestrator"},
@@ -1154,10 +1204,16 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 			{SessionID: childCoderID, Turn: 10, Role: "coder"},
 			{SessionID: rootID, Turn: 11, Role: "orchestrator"},
 			{SessionID: childTesterID, Turn: 12, Role: "tester"},
-		}),
+		}
+		ledger := domain.AgenticFactLedger{Sessions: sessionFactsFromSessions([]domain.SessionFact{
+			testSession(rootID, nil, "orchestrator"),
+			testSession(childCoderID, &rootID, "coder"),
+			testSession(childTesterID, &rootID, "tester"),
+		}, nil, ledgerSourceEvents,
+		),
 		}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		var rework *domain.Anomaly
 		for i := range anomalies {
 			if anomalies[i].RuleID == domain.RuleSubagentReworkLoop {
@@ -1183,11 +1239,7 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 		rootID := "ses-root"
 		childCoderID := "ses-coder"
 		childTesterID := "ses-tester"
-		ledger := domain.AgenticFactLedger{Sessions: sessionFactsFromSessions([]domain.SessionFact{
-			testSession(rootID, nil, "general"),
-			testSession(childCoderID, &rootID, "coder"),
-			testSession(childTesterID, &rootID, "tester"),
-		}, nil, []domain.EventFact{
+		ledgerSourceEvents := []domain.EventFact{
 			{SessionID: rootID, Turn: 1, Role: "general"},
 			{SessionID: childCoderID, Turn: 2, Role: "coder"},
 			{SessionID: rootID, Turn: 3, Role: "general"},
@@ -1200,10 +1252,16 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 			{SessionID: childCoderID, Turn: 10, Role: "coder"},
 			{SessionID: rootID, Turn: 11, Role: "general"},
 			{SessionID: childTesterID, Turn: 12, Role: "tester"},
-		}),
+		}
+		ledger := domain.AgenticFactLedger{Sessions: sessionFactsFromSessions([]domain.SessionFact{
+			testSession(rootID, nil, "general"),
+			testSession(childCoderID, &rootID, "coder"),
+			testSession(childTesterID, &rootID, "tester"),
+		}, nil, ledgerSourceEvents,
+		),
 		}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		var rework *domain.Anomaly
 		for i := range anomalies {
 			if anomalies[i].RuleID == domain.RuleSubagentReworkLoop {
@@ -1227,6 +1285,7 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 
 	t.Run("structural hierarchy ignores root invocations in fallback sequence", func(t *testing.T) {
 		rootID := "ses-root"
+		ledgerSourceEvents := []domain.EventFact(nil)
 		ledger := domain.AgenticFactLedger{Sessions: sessionFactsFromSessions([]domain.SessionFact{
 			testSession(rootID, nil, "general"),
 			testSession("ses-c1", &rootID, "coder"),
@@ -1235,25 +1294,14 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 			testSession("ses-t2", &rootID, "tester"),
 			testSession("ses-c3", &rootID, "coder"),
 			testSession("ses-t3", &rootID, "tester"),
-		}, nil, nil),
+		}, nil, ledgerSourceEvents),
 		}
 
-		anomalies := domain.DetectAnomalies(ledger)
-		var rework *domain.Anomaly
-		for i := range anomalies {
-			if anomalies[i].RuleID == domain.RuleSubagentReworkLoop {
-				rework = &anomalies[i]
-				break
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
+		for _, anomaly := range anomalies {
+			if anomaly.RuleID == domain.RuleSubagentReworkLoop {
+				t.Fatalf("missing/unmapped source fabricated sequence from metrics: %+v", anomalies)
 			}
-		}
-		if rework == nil {
-			t.Fatalf("expected rework loop in invocations fallback with root ignored, got: %+v", anomalies)
-		}
-		if *rework.Context.Role != "coder" || *rework.Context.SecondaryRole != "tester" {
-			t.Errorf("expected coder <-> tester loop, got %s <-> %s", *rework.Context.Role, *rework.Context.SecondaryRole)
-		}
-		if *rework.Context.Count != 3 {
-			t.Errorf("expected 3 cycles, got %d", *rework.Context.Count)
 		}
 	})
 
@@ -1261,19 +1309,21 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 		rootID := "ses-root"
 		childCoderID := "ses-coder"
 		childTesterID := "ses-tester"
-		ledger := domain.AgenticFactLedger{Sessions: sessionFactsFromSessions([]domain.SessionFact{
-			testSession(rootID, nil, "general"),
-			testSession(childCoderID, &rootID, "coder"),
-			testSession(childTesterID, &rootID, "tester"),
-		}, nil, []domain.EventFact{
+		ledgerSourceEvents := []domain.EventFact{
 			{SessionID: childCoderID, Turn: 1, Role: "coder"},
 			{SessionID: childCoderID, Turn: 2, Role: "coder"},
 			{SessionID: childTesterID, Turn: 3, Role: "tester"},
 			{SessionID: childTesterID, Turn: 4, Role: "tester"},
-		}),
+		}
+		ledger := domain.AgenticFactLedger{Sessions: sessionFactsFromSessions([]domain.SessionFact{
+			testSession(rootID, nil, "general"),
+			testSession(childCoderID, &rootID, "coder"),
+			testSession(childTesterID, &rootID, "tester"),
+		}, nil, ledgerSourceEvents,
+		),
 		}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		if len(anomalies) != 0 {
 			t.Fatalf("expected 0 anomalies, got %d: %+v", len(anomalies), anomalies)
 		}
@@ -1283,11 +1333,7 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 		rootID := "ses-root"
 		c1ID := "ses-planner"
 		c2ID := "ses-reviewer"
-		ledger := domain.AgenticFactLedger{Sessions: sessionFactsFromSessions([]domain.SessionFact{
-			testSession(rootID, nil, "coder"),
-			testSession(c1ID, &rootID, "planner"),
-			testSession(c2ID, &rootID, "reviewer"),
-		}, nil, []domain.EventFact{
+		ledgerSourceEvents := []domain.EventFact{
 			{SessionID: rootID, Turn: 1, Role: "coder"},
 			{SessionID: c1ID, Turn: 2, Role: "planner"},
 			{SessionID: rootID, Turn: 3, Role: "coder"},
@@ -1300,10 +1346,16 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 			{SessionID: c1ID, Turn: 10, Role: "planner"},
 			{SessionID: rootID, Turn: 11, Role: "coder"},
 			{SessionID: c2ID, Turn: 12, Role: "reviewer"},
-		}),
+		}
+		ledger := domain.AgenticFactLedger{Sessions: sessionFactsFromSessions([]domain.SessionFact{
+			testSession(rootID, nil, "coder"),
+			testSession(c1ID, &rootID, "planner"),
+			testSession(c2ID, &rootID, "reviewer"),
+		}, nil, ledgerSourceEvents,
+		),
 		}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		var rework *domain.Anomaly
 		for i := range anomalies {
 			if anomalies[i].RuleID == domain.RuleSubagentReworkLoop {
@@ -1325,20 +1377,22 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 	t.Run("adversarial: root session events alternating subagent roles do not trigger rework loop", func(t *testing.T) {
 		rootID := "ses-root"
 		childID := "ses-child"
-		ledger := domain.AgenticFactLedger{Sessions: sessionFactsFromSessions([]domain.SessionFact{
-			testSession(rootID, nil, "orchestrator"),
-			testSession(childID, &rootID, "coder"),
-		}, nil, []domain.EventFact{
+		ledgerSourceEvents := []domain.EventFact{
 			{SessionID: rootID, Turn: 1, Role: "planner"},
 			{SessionID: rootID, Turn: 2, Role: "reviewer"},
 			{SessionID: rootID, Turn: 3, Role: "planner"},
 			{SessionID: rootID, Turn: 4, Role: "reviewer"},
 			{SessionID: rootID, Turn: 5, Role: "planner"},
 			{SessionID: rootID, Turn: 6, Role: "reviewer"},
-		}),
+		}
+		ledger := domain.AgenticFactLedger{Sessions: sessionFactsFromSessions([]domain.SessionFact{
+			testSession(rootID, nil, "orchestrator"),
+			testSession(childID, &rootID, "coder"),
+		}, nil, ledgerSourceEvents,
+		),
 		}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		for _, a := range anomalies {
 			if a.RuleID == domain.RuleSubagentReworkLoop {
 				t.Fatalf("root session events must not trigger SUBAGENT_REWORK_LOOP, got: %+v", a)
@@ -1348,6 +1402,7 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 
 	t.Run("adversarial: invocations fallback ignores root invocation labeled reviewer", func(t *testing.T) {
 		rootID := "ses-root"
+		ledgerSourceEvents := []domain.EventFact(nil)
 		ledger := domain.AgenticFactLedger{Sessions: sessionFactsFromSessions([]domain.SessionFact{
 			testSession(rootID, nil, "reviewer"),
 			testSession("ses-t1", &rootID, "tester"),
@@ -1356,31 +1411,20 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 			testSession("ses-c2", &rootID, "coder"),
 			testSession("ses-t3", &rootID, "tester"),
 			testSession("ses-c3", &rootID, "coder"),
-		}, nil, nil),
+		}, nil, ledgerSourceEvents),
 		}
 
-		anomalies := domain.DetectAnomalies(ledger)
-		var rework *domain.Anomaly
-		for i := range anomalies {
-			if anomalies[i].RuleID == domain.RuleSubagentReworkLoop {
-				rework = &anomalies[i]
-				break
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
+		for _, anomaly := range anomalies {
+			if anomaly.RuleID == domain.RuleSubagentReworkLoop {
+				t.Fatalf("missing/unmapped source fabricated sequence from metrics: %+v", anomalies)
 			}
-		}
-		if rework == nil {
-			t.Fatalf("expected rework loop in invocations fallback with root reviewer ignored, got: %+v", anomalies)
-		}
-		if *rework.Context.Role != "tester" || *rework.Context.SecondaryRole != "coder" {
-			t.Errorf("expected tester <-> coder loop, got %s <-> %s", *rework.Context.Role, *rework.Context.SecondaryRole)
-		}
-		if *rework.Context.Count != 3 {
-			t.Errorf("expected 3 cycles, got %d", *rework.Context.Count)
 		}
 	})
 
 	t.Run("boundary: empty ledger yields zero rework loop anomalies", func(t *testing.T) {
 		ledger := domain.AgenticFactLedger{}
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, nil)
 		for _, a := range anomalies {
 			if a.RuleID == domain.RuleSubagentReworkLoop {
 				t.Fatalf("empty ledger must not produce rework loop anomalies, got: %+v", a)
@@ -1390,9 +1434,7 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 
 	t.Run("boundary: events with unmapped SessionID are ignored and never trigger rework loop", func(t *testing.T) {
 		rootID := "ses-root"
-		ledger := domain.AgenticFactLedger{Sessions: sessionFactsFromSessions([]domain.SessionFact{
-			testSession(rootID, nil, "orchestrator"),
-		}, nil, []domain.EventFact{
+		ledgerSourceEvents := []domain.EventFact{
 			{SessionID: "phantom-session-1", Turn: 1, Role: "coder"},
 			{SessionID: "phantom-session-2", Turn: 2, Role: "tester"},
 			{SessionID: "phantom-session-1", Turn: 3, Role: "coder"},
@@ -1401,10 +1443,14 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 			{SessionID: "phantom-session-2", Turn: 6, Role: "tester"},
 			{SessionID: "", Turn: 7, Role: "coder"},
 			{SessionID: "", Turn: 8, Role: "tester"},
-		}),
+		}
+		ledger := domain.AgenticFactLedger{Sessions: sessionFactsFromSessions([]domain.SessionFact{
+			testSession(rootID, nil, "orchestrator"),
+		}, nil, ledgerSourceEvents,
+		),
 		}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		for _, a := range anomalies {
 			if a.RuleID == domain.RuleSubagentReworkLoop {
 				t.Fatalf("events with unmapped SessionID must not trigger rework loop, got: %+v", a)
@@ -1416,11 +1462,7 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 		rootID := "ses-root"
 		childCoderID := "ses-coder"
 		childTesterID := "ses-tester"
-		ledger := domain.AgenticFactLedger{Sessions: sessionFactsFromSessions([]domain.SessionFact{
-			testSession(rootID, nil, "orchestrator"),
-			testSession(childCoderID, &rootID, "coder"),
-			testSession(childTesterID, &rootID, "tester"),
-		}, nil, []domain.EventFact{
+		ledgerSourceEvents := []domain.EventFact{
 			{SessionID: "unmapped-1", Turn: 1, Role: "reviewer"},
 			{SessionID: childCoderID, Turn: 2, Role: "coder"},
 			{SessionID: "unmapped-2", Turn: 3, Role: "planner"},
@@ -1431,10 +1473,16 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 			{SessionID: childTesterID, Turn: 8, Role: "tester"},
 			{SessionID: childCoderID, Turn: 9, Role: "coder"},
 			{SessionID: childTesterID, Turn: 10, Role: "tester"},
-		}),
+		}
+		ledger := domain.AgenticFactLedger{Sessions: sessionFactsFromSessions([]domain.SessionFact{
+			testSession(rootID, nil, "orchestrator"),
+			testSession(childCoderID, &rootID, "coder"),
+			testSession(childTesterID, &rootID, "tester"),
+		}, nil, ledgerSourceEvents,
+		),
 		}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		var rework *domain.Anomaly
 		for i := range anomalies {
 			if anomalies[i].RuleID == domain.RuleSubagentReworkLoop {
@@ -1457,11 +1505,7 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 		r1 := "root-orchestrator"
 		r2 := "root-general"
 		r3 := "root-build"
-		ledger := domain.AgenticFactLedger{Sessions: sessionFactsFromSessions([]domain.SessionFact{
-			testSession(r1, nil, "orchestrator"),
-			testSession(r2, nil, "general"),
-			testSession(r3, nil, "build"),
-		}, nil, []domain.EventFact{
+		ledgerSourceEvents := []domain.EventFact{
 			{SessionID: r1, Turn: 1, Role: "coder"},
 			{SessionID: r2, Turn: 2, Role: "tester"},
 			{SessionID: r1, Turn: 3, Role: "coder"},
@@ -1470,10 +1514,16 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 			{SessionID: r2, Turn: 6, Role: "tester"},
 			{SessionID: r1, Turn: 7, Role: "coder"},
 			{SessionID: r2, Turn: 8, Role: "tester"},
-		}),
+		}
+		ledger := domain.AgenticFactLedger{Sessions: sessionFactsFromSessions([]domain.SessionFact{
+			testSession(r1, nil, "orchestrator"),
+			testSession(r2, nil, "general"),
+			testSession(r3, nil, "build"),
+		}, nil, ledgerSourceEvents,
+		),
 		}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		for _, a := range anomalies {
 			if a.RuleID == domain.RuleSubagentReworkLoop {
 				t.Fatalf("only root sessions in events must not trigger rework loop, got: %+v", a)
@@ -1482,6 +1532,7 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 	})
 
 	t.Run("boundary: invocations with only root sessions never trigger rework loop in fallback", func(t *testing.T) {
+		ledgerSourceEvents := []domain.EventFact(nil)
 		ledger := domain.AgenticFactLedger{Sessions: sessionFactsFromSessions([]domain.SessionFact{
 			testSession("r1", nil, "coder"),
 			testSession("r2", nil, "tester"),
@@ -1489,10 +1540,10 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 			testSession("r4", nil, "tester"),
 			testSession("r5", nil, "coder"),
 			testSession("r6", nil, "tester"),
-		}, nil, nil),
+		}, nil, ledgerSourceEvents),
 		}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		for _, a := range anomalies {
 			if a.RuleID == domain.RuleSubagentReworkLoop {
 				t.Fatalf("only root sessions in invocations fallback must not trigger rework loop, got: %+v", a)
@@ -1504,20 +1555,22 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 		missingParent := "missing-parent-404"
 		child1 := "child-c"
 		child2 := "child-t"
-		ledger := domain.AgenticFactLedger{Sessions: sessionFactsFromSessions([]domain.SessionFact{
-			testSession(child1, &missingParent, "coder"),
-			testSession(child2, &missingParent, "tester"),
-		}, nil, []domain.EventFact{
+		ledgerSourceEvents := []domain.EventFact{
 			{SessionID: child1, Turn: 1, Role: "coder"},
 			{SessionID: child2, Turn: 2, Role: "tester"},
 			{SessionID: child1, Turn: 3, Role: "coder"},
 			{SessionID: child2, Turn: 4, Role: "tester"},
 			{SessionID: child1, Turn: 5, Role: "coder"},
 			{SessionID: child2, Turn: 6, Role: "tester"},
-		}),
+		}
+		ledger := domain.AgenticFactLedger{Sessions: sessionFactsFromSessions([]domain.SessionFact{
+			testSession(child1, &missingParent, "coder"),
+			testSession(child2, &missingParent, "tester"),
+		}, nil, ledgerSourceEvents,
+		),
 		}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		var rework *domain.Anomaly
 		for i := range anomalies {
 			if anomalies[i].RuleID == domain.RuleSubagentReworkLoop {
@@ -1539,8 +1592,9 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 		}
 	})
 
-	t.Run("boundary: orphaned child sessions in fallback sequence trigger rework loop", func(t *testing.T) {
+	t.Run("boundary: orphaned child sessions in without source do not imply rework sequence", func(t *testing.T) {
 		phantomParent := "missing-root-ses"
+		ledgerSourceEvents := []domain.EventFact(nil)
 		ledger := domain.AgenticFactLedger{Sessions: sessionFactsFromSessions([]domain.SessionFact{
 			testSession("c1", &phantomParent, "coder"),
 			testSession("t1", &phantomParent, "tester"),
@@ -1548,30 +1602,20 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 			testSession("t2", &phantomParent, "tester"),
 			testSession("c3", &phantomParent, "coder"),
 			testSession("t3", &phantomParent, "tester"),
-		}, nil, nil),
+		}, nil, ledgerSourceEvents),
 		}
 
-		anomalies := domain.DetectAnomalies(ledger)
-		var rework *domain.Anomaly
-		for i := range anomalies {
-			if anomalies[i].RuleID == domain.RuleSubagentReworkLoop {
-				rework = &anomalies[i]
-				break
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
+		for _, anomaly := range anomalies {
+			if anomaly.RuleID == domain.RuleSubagentReworkLoop {
+				t.Fatalf("missing/unmapped source fabricated sequence from metrics: %+v", anomalies)
 			}
-		}
-		if rework == nil {
-			t.Fatalf("orphaned child sessions in fallback must trigger rework loop, got: %+v", anomalies)
-		}
-		if *rework.Context.Role != "coder" || *rework.Context.SecondaryRole != "tester" {
-			t.Errorf("expected coder <-> tester loop, got %s <-> %s", *rework.Context.Role, *rework.Context.SecondaryRole)
-		}
-		if *rework.Context.Count != 3 {
-			t.Errorf("expected 3 cycles, got %d", *rework.Context.Count)
 		}
 	})
 
 	t.Run("boundary: child sessions with empty IDs handled safely in fallback", func(t *testing.T) {
 		parent := "root"
+		ledgerSourceEvents := []domain.EventFact(nil)
 		ledger := domain.AgenticFactLedger{Sessions: sessionFactsFromSessions([]domain.SessionFact{
 			testSession("", &parent, "coder"),
 			testSession("", &parent, "tester"),
@@ -1579,27 +1623,24 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 			testSession("", &parent, "tester"),
 			testSession("", &parent, "coder"),
 			testSession("", &parent, "tester"),
-		}, nil, nil),
+		}, nil, ledgerSourceEvents),
 		}
 
-		anomalies := domain.DetectAnomalies(ledger)
-		var rework *domain.Anomaly
-		for i := range anomalies {
-			if anomalies[i].RuleID == domain.RuleSubagentReworkLoop {
-				rework = &anomalies[i]
-				break
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
+		for _, anomaly := range anomalies {
+			if anomaly.RuleID == domain.RuleSubagentReworkLoop {
+				t.Fatalf("missing/unmapped source fabricated sequence from metrics: %+v", anomalies)
 			}
-		}
-		if rework == nil {
-			t.Fatalf("child sessions with empty IDs in fallback must trigger rework loop, got: %+v", anomalies)
-		}
-		if *rework.Context.Count != 3 {
-			t.Errorf("expected 3 cycles, got %d", *rework.Context.Count)
 		}
 	})
 
-	t.Run("boundary: events with only unmapped SessionIDs fall back to invocations sequence", func(t *testing.T) {
+	t.Run("boundary: events with only unmapped SessionIDs do not authorize invocation-order sequence", func(t *testing.T) {
 		rootID := "ses-root"
+		ledgerSourceEvents := []domain.EventFact{
+			// All events have unmapped session IDs
+			{SessionID: "unmapped-orphan-1", Turn: 1, Role: "reviewer"},
+			{SessionID: "unmapped-orphan-2", Turn: 2, Role: "reviewer"},
+		}
 		ledger := domain.AgenticFactLedger{Sessions: sessionFactsFromSessions([]domain.SessionFact{
 			testSession(rootID, nil, "orchestrator"),
 			testSession("c1", &rootID, "coder"),
@@ -1608,29 +1649,15 @@ func TestDetectAnomalies_SubagentReworkLoop(t *testing.T) {
 			testSession("t2", &rootID, "tester"),
 			testSession("c3", &rootID, "coder"),
 			testSession("t3", &rootID, "tester"),
-		}, nil, []domain.EventFact{
-			// All events have unmapped session IDs
-			{SessionID: "unmapped-orphan-1", Turn: 1, Role: "reviewer"},
-			{SessionID: "unmapped-orphan-2", Turn: 2, Role: "reviewer"},
-		}),
+		}, nil, ledgerSourceEvents,
+		),
 		}
 
-		anomalies := domain.DetectAnomalies(ledger)
-		var rework *domain.Anomaly
-		for i := range anomalies {
-			if anomalies[i].RuleID == domain.RuleSubagentReworkLoop {
-				rework = &anomalies[i]
-				break
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
+		for _, anomaly := range anomalies {
+			if anomaly.RuleID == domain.RuleSubagentReworkLoop {
+				t.Fatalf("missing/unmapped source fabricated sequence from metrics: %+v", anomalies)
 			}
-		}
-		if rework == nil {
-			t.Fatalf("expected fallback to invocations when all events are unmapped, got: %+v", anomalies)
-		}
-		if *rework.Context.Role != "coder" || *rework.Context.SecondaryRole != "tester" {
-			t.Errorf("expected coder <-> tester loop, got %s <-> %s", *rework.Context.Role, *rework.Context.SecondaryRole)
-		}
-		if *rework.Context.Count != 3 {
-			t.Errorf("expected 3 cycles, got %d", *rework.Context.Count)
 		}
 	})
 }
@@ -1655,8 +1682,9 @@ func TestDetectAnomalies_DoesNotConcatenateIndependentParentGroups(t *testing.T)
 		{Timestamp: "2026-10-01T00:00:05Z", SessionID: "coder-3", Role: "coder"},
 		{Timestamp: "2026-10-01T00:00:06Z", SessionID: "tester-3", Role: "tester"},
 	}
-	ledger := domain.AgenticFactLedger{Sessions: sessionFactsFromSessions(sessions, nil, events)}
-	anomalies := domain.DetectAnomalies(ledger)
+	ledgerSourceEvents := events
+	ledger := domain.AgenticFactLedger{Sessions: sessionFactsFromSessions(sessions, nil, ledgerSourceEvents)}
+	anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 	if len(anomalies) != 0 {
 		t.Fatalf("independent parent groups were concatenated into a false loop: %#v", anomalies)
 	}
@@ -1667,7 +1695,7 @@ func TestDetectAnomalies_BoundaryCases(t *testing.T) {
 	t.Parallel()
 	t.Run("empty ledger returns non-nil slice", func(t *testing.T) {
 		ledger := domain.AgenticFactLedger{}
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, nil)
 		if anomalies == nil {
 			t.Fatalf("expected non-nil empty slice for empty ledger")
 		}
@@ -1677,8 +1705,9 @@ func TestDetectAnomalies_BoundaryCases(t *testing.T) {
 	})
 
 	t.Run("nil events, nil tools, nil invocations", func(t *testing.T) {
-		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, nil)}
-		anomalies := domain.DetectAnomalies(ledger)
+		ledgerSourceEvents := []domain.EventFact(nil)
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, ledgerSourceEvents)}
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		if anomalies == nil || len(anomalies) != 0 {
 			t.Fatalf("expected empty slice for nil fields, got: %+v", anomalies)
 		}
@@ -1686,6 +1715,9 @@ func TestDetectAnomalies_BoundaryCases(t *testing.T) {
 
 	t.Run("zero tokens throughout does not cause division by zero or false positive", func(t *testing.T) {
 		toolName := "bash"
+		ledgerSourceEvents := []domain.EventFact{
+			{SessionID: "ses-0", Turn: 0, EventType: domain.EventTypeToolCall, ToolName: &toolName, Status: "completed", ContextTokens: 0},
+		}
 		ledger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
 			{
 				Role: "orchestrator",
@@ -1703,13 +1735,11 @@ func TestDetectAnomalies_BoundaryCases(t *testing.T) {
 		},
 			[]domain.ToolFact{
 				{SessionID: "session-a", Name: "bash", Calls: 0, Errors: 0},
-			},
-			[]domain.EventFact{
-				{SessionID: "ses-0", Turn: 0, EventType: domain.EventTypeToolCall, ToolName: &toolName, Status: "completed", ContextTokens: 0},
-			}),
+			}, ledgerSourceEvents,
+		),
 		}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		if len(anomalies) != 0 {
 			t.Fatalf("expected 0 anomalies on zero tokens, got: %+v", anomalies)
 		}
@@ -1717,39 +1747,40 @@ func TestDetectAnomalies_BoundaryCases(t *testing.T) {
 
 	t.Run("events with nil tool name or empty tool name safely handled", func(t *testing.T) {
 		emptyTool := ""
-		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, []domain.EventFact{
+		ledgerSourceEvents := []domain.EventFact{
 			{Turn: 1, EventType: domain.EventTypeToolCall, ToolName: nil, Status: "error"},
 			{Turn: 2, EventType: domain.EventTypeToolCall, ToolName: &emptyTool, Status: "error"},
 			{Turn: 3, EventType: domain.EventTypeToolCall, ToolName: nil, Status: "completed"},
-		}),
 		}
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, ledgerSourceEvents)}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		if len(anomalies) != 0 {
 			t.Fatalf("expected 0 anomalies for nil/empty tool names, got: %+v", anomalies)
 		}
 	})
 
 	t.Run("events with empty role and status handled without panic", func(t *testing.T) {
-		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, []domain.EventFact{
+		ledgerSourceEvents := []domain.EventFact{
 			{Turn: 1, Role: "", EventType: domain.EventTypeTurnMessage, Status: ""},
 			{Turn: 2, Role: "   ", EventType: domain.EventTypeTurnMessage, Status: ""},
-		}),
 		}
+		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, ledgerSourceEvents)}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		if len(anomalies) != 0 {
 			t.Fatalf("expected 0 anomalies, got: %+v", anomalies)
 		}
 	})
 
 	t.Run("v1 fallback tool facts with empty name safely skipped", func(t *testing.T) {
+		ledgerSourceEvents := []domain.EventFact(nil)
 		ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, []domain.ToolFact{
 			{SessionID: "session-a", Name: "", Calls: 10, Errors: 10},
-		}, nil),
+		}, ledgerSourceEvents),
 		}
 
-		anomalies := domain.DetectAnomalies(ledger)
+		anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 		if len(anomalies) != 0 {
 			t.Fatalf("expected 0 anomalies for empty tool name in v1, got: %+v", anomalies)
 		}
@@ -1769,10 +1800,7 @@ func TestDetectAnomalies_DeterministicSortingAllRules(t *testing.T) {
 	// Rule 3: CONTEXT_SATURATION_SPIKE (CRITICAL: ceiling breach 165k; CRITICAL: jump 90k; WARNING: jump 50k)
 	// Rule 4: SUBAGENT_REWORK_LOOP (WARNING: 3 cycles between coder and tester)
 	rootID := "ses-root"
-	ledger := domain.AgenticFactLedger{Sessions: sessionFactsFromSessions([]domain.SessionFact{
-		testSession(rootID, nil, "orchestrator"),
-		testSession("s1", &rootID, "coder"),
-	}, nil, []domain.EventFact{
+	ledgerSourceEvents := []domain.EventFact{
 		// Rule 3: Token jumps and ceiling breach
 		{SessionID: "s1", Turn: 1, Role: "coder", ContextTokens: 5_000},
 		{SessionID: "s1", Turn: 2, Role: "tester", ContextTokens: 55_001},  // +50,001 jump -> WARNING spike
@@ -1813,10 +1841,15 @@ func TestDetectAnomalies_DeterministicSortingAllRules(t *testing.T) {
 		{SessionID: "s1", Turn: 33, EventType: domain.EventTypeToolCall, ToolName: &toolC, Status: "completed"},
 		{SessionID: "s1", Turn: 34, EventType: domain.EventTypeToolCall, ToolName: &toolC, Status: "error"},
 		{SessionID: "s1", Turn: 35, EventType: domain.EventTypeToolCall, ToolName: &toolC, Status: "error"},
-	}),
+	}
+	ledger := domain.AgenticFactLedger{Sessions: sessionFactsFromSessions([]domain.SessionFact{
+		testSession(rootID, nil, "orchestrator"),
+		testSession("s1", &rootID, "coder"),
+	}, nil, ledgerSourceEvents,
+	),
 	}
 
-	anomalies := domain.DetectAnomalies(ledger)
+	anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 	if len(anomalies) < 7 {
 		t.Fatalf("expected at least 7 anomalies across all rules, got %d: %+v", len(anomalies), anomalies)
 	}
@@ -1881,29 +1914,33 @@ func TestDetectAnomalies_SortingTieBreakers(t *testing.T) {
 	toolX := "tool_x"
 	toolY := "tool_y"
 	turn1 := int64(1)
+	ledgerSourceEvents :=
 
-	// Context saturation spikes: one with Turn 1, one with Turn nil (from v1 fallback invocation)
+		// Context saturation spikes: one with Turn 1, one with Turn nil (from v1 fallback invocation)
+
+		[]domain.EventFact{
+			// tool_call with 6 calls and 4 errors -> CRITICAL
+			{SessionID: "s1", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolY, Status: "error"},
+			{SessionID: "s1", Turn: 2, EventType: domain.EventTypeToolCall, ToolName: &toolY, Status: "error"},
+			{SessionID: "s1", Turn: 3, EventType: domain.EventTypeToolCall, ToolName: &toolY, Status: "error"},
+			{SessionID: "s1", Turn: 4, EventType: domain.EventTypeToolCall, ToolName: &toolY, Status: "error"},
+			{SessionID: "s1", Turn: 5, EventType: domain.EventTypeToolCall, ToolName: &toolY, Status: "completed"},
+			{SessionID: "s1", Turn: 6, EventType: domain.EventTypeToolCall, ToolName: &toolY, Status: "completed"},
+			// tool_x also 6 calls and 4 errors -> CRITICAL
+			{SessionID: "s1", Turn: 7, EventType: domain.EventTypeToolCall, ToolName: &toolX, Status: "error"},
+			{SessionID: "s1", Turn: 8, EventType: domain.EventTypeToolCall, ToolName: &toolX, Status: "error"},
+			{SessionID: "s1", Turn: 9, EventType: domain.EventTypeToolCall, ToolName: &toolX, Status: "error"},
+			{SessionID: "s1", Turn: 10, EventType: domain.EventTypeToolCall, ToolName: &toolX, Status: "error"},
+			{SessionID: "s1", Turn: 11, EventType: domain.EventTypeToolCall, ToolName: &toolX, Status: "completed"},
+			{SessionID: "s1", Turn: 12, EventType: domain.EventTypeToolCall, ToolName: &toolX, Status: "completed"},
+		}
 	ledger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
 		{Role: "coder", Tokens: domain.InvocationTokens{PeakContext: 180_000}},
-	}, nil, []domain.EventFact{
-		// tool_call with 6 calls and 4 errors -> CRITICAL
-		{SessionID: "s1", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolY, Status: "error"},
-		{SessionID: "s1", Turn: 2, EventType: domain.EventTypeToolCall, ToolName: &toolY, Status: "error"},
-		{SessionID: "s1", Turn: 3, EventType: domain.EventTypeToolCall, ToolName: &toolY, Status: "error"},
-		{SessionID: "s1", Turn: 4, EventType: domain.EventTypeToolCall, ToolName: &toolY, Status: "error"},
-		{SessionID: "s1", Turn: 5, EventType: domain.EventTypeToolCall, ToolName: &toolY, Status: "completed"},
-		{SessionID: "s1", Turn: 6, EventType: domain.EventTypeToolCall, ToolName: &toolY, Status: "completed"},
-		// tool_x also 6 calls and 4 errors -> CRITICAL
-		{SessionID: "s1", Turn: 7, EventType: domain.EventTypeToolCall, ToolName: &toolX, Status: "error"},
-		{SessionID: "s1", Turn: 8, EventType: domain.EventTypeToolCall, ToolName: &toolX, Status: "error"},
-		{SessionID: "s1", Turn: 9, EventType: domain.EventTypeToolCall, ToolName: &toolX, Status: "error"},
-		{SessionID: "s1", Turn: 10, EventType: domain.EventTypeToolCall, ToolName: &toolX, Status: "error"},
-		{SessionID: "s1", Turn: 11, EventType: domain.EventTypeToolCall, ToolName: &toolX, Status: "completed"},
-		{SessionID: "s1", Turn: 12, EventType: domain.EventTypeToolCall, ToolName: &toolX, Status: "completed"},
-	}),
+	}, nil, ledgerSourceEvents,
+	),
 	}
 
-	anomalies := domain.DetectAnomalies(ledger)
+	anomalies := domain.DetectAnomaliesFromEvents(ledger, ledgerSourceEvents)
 	var rateAnoms []domain.Anomaly
 	for _, a := range anomalies {
 		if a.RuleID == domain.RuleToolHighFailureRate {
@@ -1932,12 +1969,13 @@ func TestDetectAnomalies_SortingTieBreakers(t *testing.T) {
 	}
 	// Test DetectAnomalies sorting helper logic by sorting a slice directly
 	sorted := []domain.Anomaly{aWithoutTurn, aWithTurn}
-	// Derive through DetectAnomalies on a constructed ledger with both
-	testLedger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, []domain.EventFact{
-		{SessionID: "s1", Turn: 1, ContextTokens: 170_000},
-	}),
-	}
-	res := domain.DetectAnomalies(testLedger)
+	testLedgerSourceEvents :=
+		// Derive through DetectAnomalies on a constructed ledger with both
+		[]domain.EventFact{
+			{SessionID: "s1", Turn: 1, ContextTokens: 170_000},
+		}
+	testLedger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, testLedgerSourceEvents)}
+	res := domain.DetectAnomaliesFromEvents(testLedger, testLedgerSourceEvents)
 	if len(res) != 1 {
 		t.Fatalf("expected 1 anomaly, got %d", len(res))
 	}
@@ -1951,13 +1989,13 @@ func TestDetectAnomalies_SortingTieBreakers(t *testing.T) {
 func TestDeriveMetricsLedger_IntegratesAnomalies(t *testing.T) {
 	t.Parallel()
 	toolBash := "bash"
-	factLedger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, []domain.EventFact{
+	factLedgerSourceEvents := []domain.EventFact{
 		{SessionID: "s1", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
 		{SessionID: "s1", Turn: 2, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
 		{SessionID: "s1", Turn: 3, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
 		{SessionID: "s1", Turn: 4, EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "completed"},
-	}),
 	}
+	factLedger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, factLedgerSourceEvents)}
 
 	metrics := domain.DeriveMetricsLedger(factLedger, domain.DefaultProjectConfig())
 	if len(metrics.Anomalies) != 1 {
@@ -2025,13 +2063,13 @@ func TestComputeFleetAnomalies_CleanLedgers(t *testing.T) {
 
 	ledgers := []domain.AgenticFactLedger{
 		{
-			TicketID: &tid1, Sessions: sessionFacts(nil, nil, []domain.EventFact{
+			TicketID: &tid1, Sessions: fleetSessionFacts(nil, nil, []domain.EventFact{
 				{SessionID: "s1", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolRead, Status: "completed", ContextTokens: 5000},
 				{SessionID: "s1", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolWrite, Status: "completed", ContextTokens: 10000},
 			}),
 		},
 		{
-			TicketID: &tid2, Sessions: sessionFacts(nil, nil, []domain.EventFact{
+			TicketID: &tid2, Sessions: fleetSessionFacts(nil, nil, []domain.EventFact{
 				{SessionID: "s2", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolRead, Status: "completed", ContextTokens: 8000},
 			}),
 		},
@@ -2067,7 +2105,7 @@ func TestComputeFleetAnomalies_MultipleAnomaliesAndBrittleTools(t *testing.T) {
 	ledgers := []domain.AgenticFactLedger{
 		// Ticket 1: Tool retry streak (WARNING) on bash (3 errors)
 		{
-			TicketID: &tid1, Sessions: sessionFacts(nil, nil, []domain.EventFact{
+			TicketID: &tid1, Sessions: fleetSessionFacts(nil, nil, []domain.EventFact{
 				{SessionID: "s1", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error", ContextTokens: 10000},
 				{SessionID: "s1", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error", ContextTokens: 12000},
 				{SessionID: "s1", Turn: 3, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error", ContextTokens: 14000},
@@ -2076,7 +2114,7 @@ func TestComputeFleetAnomalies_MultipleAnomaliesAndBrittleTools(t *testing.T) {
 		},
 		// Ticket 2: Context ceiling breach (CRITICAL >= 200k) + High failure rate on git (5 calls, 2 errors = 40.0% -> WARNING, non-consecutive so no retry streak)
 		{
-			TicketID: &tid2, Sessions: sessionFacts(nil, nil, []domain.EventFact{
+			TicketID: &tid2, Sessions: fleetSessionFacts(nil, nil, []domain.EventFact{
 				{SessionID: "s2", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolGit, Status: "error", ContextTokens: 200000},
 				{SessionID: "s2", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolGit, Status: "completed", ContextTokens: 201000},
 				{SessionID: "s2", Turn: 3, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolGit, Status: "error", ContextTokens: 202000},
@@ -2086,7 +2124,7 @@ func TestComputeFleetAnomalies_MultipleAnomaliesAndBrittleTools(t *testing.T) {
 		},
 		// Ticket 3: Clean ticket with python tool (2 calls, 1 error, 0 anomalies, error > 0 makes it brittle)
 		{
-			TicketID: &tid3, Sessions: sessionFacts(nil, nil, []domain.EventFact{
+			TicketID: &tid3, Sessions: fleetSessionFacts(nil, nil, []domain.EventFact{
 				{SessionID: "s3", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolPython, Status: "error", ContextTokens: 5000},
 				{SessionID: "s3", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolPython, Status: "completed", ContextTokens: 7000},
 			}),
@@ -2190,7 +2228,7 @@ func TestComputeFleetAnomalies_BrittleToolsSortingTieBreakers(t *testing.T) {
 		// ErrorCount 2 > 1, so toolA must come before toolB despite lower failure rate
 		ledgers := []domain.AgenticFactLedger{
 			{
-				TicketID: &tid, Sessions: sessionFacts(nil, nil, []domain.EventFact{
+				TicketID: &tid, Sessions: fleetSessionFacts(nil, nil, []domain.EventFact{
 					{SessionID: "s1", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolA, Status: "error"},
 					{SessionID: "s1", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolA, Status: "completed"},
 					{SessionID: "s1", Turn: 3, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolA, Status: "error"},
@@ -2222,7 +2260,7 @@ func TestComputeFleetAnomalies_BrittleToolsSortingTieBreakers(t *testing.T) {
 		// Same anomaly count (0), same error count (2), but high_rate_tool (100%) > low_rate_tool (50%)
 		ledgers := []domain.AgenticFactLedger{
 			{
-				TicketID: &tid, Sessions: sessionFacts(nil, nil, []domain.EventFact{
+				TicketID: &tid, Sessions: fleetSessionFacts(nil, nil, []domain.EventFact{
 					{SessionID: "s1", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolHighRate, Status: "error"},
 					{SessionID: "s1", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolHighRate, Status: "error"},
 
@@ -2253,7 +2291,7 @@ func TestComputeFleetAnomalies_BrittleToolsSortingTieBreakers(t *testing.T) {
 
 		ledgers := []domain.AgenticFactLedger{
 			{
-				TicketID: &tid, Sessions: sessionFacts(nil, nil, []domain.EventFact{
+				TicketID: &tid, Sessions: fleetSessionFacts(nil, nil, []domain.EventFact{
 					{SessionID: "s1", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolZ, Status: "error"},
 					{SessionID: "s1", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolA, Status: "error"},
 				}),
@@ -2276,7 +2314,7 @@ func TestComputeFleetAnomalies_BrittleToolsSortingTieBreakers(t *testing.T) {
 		tid := "T-ZERO-CALLS"
 		ledgers := []domain.AgenticFactLedger{
 			{
-				TicketID: &tid, Sessions: sessionFacts(nil, []domain.ToolFact{
+				TicketID: &tid, Sessions: fleetSessionFacts(nil, []domain.ToolFact{
 					{SessionID: "session-a", Name: "zero_call_tool", Calls: 0, Errors: 1},
 				}, nil),
 			},
@@ -2299,7 +2337,7 @@ func TestComputeFleetAnomalies_LegacyV1Fallback(t *testing.T) {
 	tidV1 := "AL-V1"
 	ledgers := []domain.AgenticFactLedger{
 		{
-			TicketID: &tidV1, Sessions: sessionFacts(
+			TicketID: &tidV1, Sessions: fleetSessionFacts(
 
 				// 40% failure rate > 20% -> WARNING anomaly
 
@@ -2343,7 +2381,7 @@ func TestCalculateFleetSummary_IncludesAnomalySummary(t *testing.T) {
 		{
 			TicketID: &tid,
 			Facts: domain.AgenticFactLedger{
-				TicketID: &tid, Sessions: sessionFacts(nil, nil, []domain.EventFact{
+				TicketID: &tid, Sessions: fleetSessionFacts(nil, nil, []domain.EventFact{
 					{SessionID: "s1", Turn: 1, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
 					{SessionID: "s1", Turn: 2, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
 					{SessionID: "s1", Turn: 3, Role: "coder", EventType: domain.EventTypeToolCall, ToolName: &toolBash, Status: "error"},
@@ -2366,4 +2404,32 @@ func TestCalculateFleetSummary_IncludesAnomalySummary(t *testing.T) {
 	if len(summary.AnomalySummary.BrittleTools) != 1 {
 		t.Errorf("expected 1 brittle tool, got %d", len(summary.AnomalySummary.BrittleTools))
 	}
+}
+
+// Fleet consumes saved metrics/summaries rather than raw trace events. These
+// source-shaped fixture events are converted to the same durable inputs first.
+func fleetSessionFacts(invocations []domain.InvocationFact, tools []domain.ToolFact, events []domain.EventFact) []domain.SessionFact {
+	if len(tools) == 0 {
+		for _, event := range events {
+			if event.EventType != domain.EventTypeToolCall || event.ToolName == nil {
+				continue
+			}
+			found := -1
+			for i := range tools {
+				if tools[i].SessionID == event.SessionID && tools[i].Name == *event.ToolName {
+					found = i
+					break
+				}
+			}
+			if found < 0 {
+				tools = append(tools, domain.ToolFact{SessionID: event.SessionID, Name: *event.ToolName})
+				found = len(tools) - 1
+			}
+			tools[found].Calls++
+			if event.Status == "error" {
+				tools[found].Errors++
+			}
+		}
+	}
+	return sessionFacts(invocations, tools, events)
 }
