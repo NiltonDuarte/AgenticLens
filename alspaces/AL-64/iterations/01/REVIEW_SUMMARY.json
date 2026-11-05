@@ -108,6 +108,20 @@
         }
       ],
       "disposition": "Fixed: mark invalid starts partial without inventing an interval; discovered during correction re-review."
+    },
+    {
+      "finding_id": "INT-DATA-01",
+      "severity": 6,
+      "issue": "Registered Codex disabled-delegation refresh can overwrite retained registry delegations.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Pre-existing upstream concern; introduced-merge claim refuted by identical block. Not fixed in this merge. Owner: capture adapter maintainer; follow-up ticket unassigned."
     }
   ]
 }

@@ -1,0 +1,30 @@
+# Data integration review — Luna/medium
+
+## Assessment
+
+**CHANGES_REQUESTED** for merge `1378860955deb1acc05924953b8b959b825d3ebc` (`e9ca2676` + `40b16def`). Focus: data retention and failure semantics at the 15 manual conflict resolutions and directly composed generation/capture/OpenCode/ledger/API paths, plus AL-77 overlap inspection lifecycle. The frozen 397-path backend/web manifest SHA256 `fcbd17a0ceb42b82feb75a887e2ddf224c4548dfc19aa10a35783047b2f3757a` was independently verified: all 397 current file hashes match. This is not a whole-manifest audit.
+
+## Finding
+
+**Severity 6/10 — registered Codex reconciliation can erase retained delegation facts when delegation output is disabled.**
+
+- **Location:** `backend/internal/adapters/capture/reconcile.go:533-537`, reached from `refreshTicketOwners` at lines 509-536.
+- **Trigger:** A registered Codex owner already has a persisted delegation slice in its capture snapshot; `generate` reconciles that owner while `generation.metrics.delegations=false`; the complete source read succeeds.
+- **Evidence:** `sourceRead.policy` is populated from the generate policy (`reconcile.go:403`). `extractExactAt` passes that policy to `Transcript.SessionFacts` (`reconcile.go:297-310`). `SessionFacts` applies `ProjectGenerationFacts`, which sets disabled `Delegations` to nil (`backend/internal/domain/generation.go:21-36`, `backend/internal/adapters/codex/rollout.go:1014-1020`). The first snapshot update calls `RetainIncompleteGroupSummaries`, which in turn uses `RetainUnrecordedCategories` and preserves prior categories for which fresh data is nil (`reconcile.go:459-464`; `backend/internal/domain/events.go:653-687`; `generation.go:64-90`). But after that retention, the Codex grouping pass calls `CombineTranscriptsWithPolicy` with the same disabled policy and unconditionally assigns `owner.Delegations` into the stored snapshot (`reconcile.go:509-537`). That value is nil, overwriting the retained delegation slice. The effect persists in the local registry and may become the input to later generation when source data is unavailable.
+- **Expected:** A disabled optional category is omitted from this generation and is not a successful empty category refresh. Existing facts remain retained; AL-66's current contract distinguishes omitted/unrecorded from explicit empty and says missing or partial source categories preserve recorded facts. No persisted policy marker is needed.
+- **Consequence:** A successful registered generation under a disabled setting destructively removes previously captured delegation evidence from operational persisted state. A later enabled generation with unavailable Codex source can no longer recover those facts from that state.
+- **Classification:** Introduced by the merge interaction between AL-66 policy projection and AL-64's later native-child-link projection. Not a speculative suggestion. The direct JSON output projection may still omit the category as requested; retention is required at the capture snapshot update boundary.
+
+## Hypotheses investigated
+
+- **Cutoff/policy composition across source reads:** The CLI captures one `snapshotCutoff`, passes it to registered reconciliation and direct OpenCode extraction, and the explicit cutoff reaches v1/v2 extraction. The Codex duration data survives `ProjectGenerationFacts`, whose transforms only clear optional categories. The reported defect is specifically the later delegation assignment, not a duration cutoff loss. Static call-path evidence; no new source-store probe run.
+- **OpenCode optional category retention:** Exact OpenCode capture receives policy plus cutoff. Disabled fields are projected to nil; the snapshot retention call preserves nil fresh categories from prior snapshots. No equivalent later unconditional skill/delegation reassignment was found in the reviewed OpenCode path.
+- **AL-66 field presence / forbidden markers:** Current contract `alspaces/AL-66/CONTRACT.md` iteration 02 specifies omission vs empty vs nonempty and rejects newly persisted `generation_policy`/`anomaly_availability` markers. Inspected DTO normalization, `ProjectGenerationDTO`, `omitempty`/`omitzero` serialization tags and frontend boundary checks: disabled categories are omitted; newly written marker fields are absent. Existing transitional read compatibility remains separate.
+- **Portable history and unavailable owners:** `SaveFactLedgerPreservingHistory` validates original retained owners before projection, appends immutable history DTOs and applies the transient policy at the final DTO projection. The AL-64 paths inspected preserve owner replacement/retention and do not require source fingerprints for shared ledger history. This does not excuse the capture-snapshot overwrite above because it mutates refreshed operational state before final projection.
+- **AL-77 overlap ownership:** `FleetOverview` uses independent request IDs for metrics and inspection, rejects obsolete success/error results, invalidates both on dependency cleanup, and refreshes the overlap inspection alongside metrics. Overlap derivation consumes the full workspace ledger response rather than filtered metric rows; navigation remains available through `SessionOverlapWarning`. No data-integrity defect confirmed in this path from static trace.
+
+## Verification and limits
+
+- **Executed:** Frozen manifest SHA verification, 397/397 files unchanged; source/diff tracing at the paths cited above.
+- **Reused from supplied integration evidence:** Parent's integrated `make` passed (Go race packages, 863 frontend tests/38 files, type/lint/vet/repository checks and platform builds); isolated standalone binary served exact embedded assets. The six-case CLI matrix and FleetOverview lifecycle suite passed per the supplied tester report. I did not rerun whole suites or create a targeted mutable registry probe.
+- **Limits:** This review is scoped to data integrity and the cited merged interactions. Static evidence establishes the Codex retention overwrite; no other introduced blocking data defect was confirmed. No claim is made about iteration 02 hybrid behavior or whole-repository correctness.
