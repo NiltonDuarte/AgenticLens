@@ -836,17 +836,17 @@ func TestRolloutActiveDurationCutoffAndTerminalBoundaries(t *testing.T) {
 	for _, tc := range []struct {
 		name, tail                 string
 		cutoff, total, provisional int64
-		state                      domain.DurationState
+		invalid                    bool
 	}{
-		{"open", "", 20, 14, 10, "provisional"},
-		{"advance", "", 30, 24, 20, "provisional"},
-		{"future_completion", `{"timestamp":"2026-01-01T00:00:40Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"b"}}`, 20, 14, 10, "provisional"},
-		{"complete", `{"timestamp":"2026-01-01T00:00:40Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"b"}}`, 50, 34, 0, "complete"},
-		{"abort", `{"timestamp":"2026-01-01T00:00:15Z","type":"event_msg","payload":{"type":"turn_aborted","turn_id":"b"}}`, 20, 9, 0, "complete"},
-		{"reversed_completion", `{"timestamp":"2026-01-01T00:00:09Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"b"}}`, 20, 4, 0, "partial"},
-		{"malformed_completion", `{"timestamp":"not-a-date","type":"event_msg","payload":{"type":"task_complete","turn_id":"b"}}`, 20, 4, 0, "partial"},
-		{"malformed_start", `{"timestamp":"2026-01-01T00:00:15Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"b"}}`, 20, 4, 0, "partial"},
-		{"missing_start", `{"timestamp":"2026-01-01T00:00:15Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"b"}}`, 20, 4, 0, "partial"},
+		{"open", "", 20, 14, 10, false},
+		{"advance", "", 30, 24, 20, false},
+		{"future_completion", `{"timestamp":"2026-01-01T00:00:40Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"b"}}`, 20, 14, 10, false},
+		{"complete", `{"timestamp":"2026-01-01T00:00:40Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"b"}}`, 50, 34, 0, false},
+		{"abort", `{"timestamp":"2026-01-01T00:00:15Z","type":"event_msg","payload":{"type":"turn_aborted","turn_id":"b"}}`, 20, 9, 0, false},
+		{"reversed_completion", `{"timestamp":"2026-01-01T00:00:09Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"b"}}`, 20, 4, 0, true},
+		{"malformed_completion", `{"timestamp":"not-a-date","type":"event_msg","payload":{"type":"task_complete","turn_id":"b"}}`, 20, 4, 0, true},
+		{"malformed_start", `{"timestamp":"2026-01-01T00:00:15Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"b"}}`, 20, 4, 0, true},
+		{"missing_start", `{"timestamp":"2026-01-01T00:00:15Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"b"}}`, 20, 4, 0, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			cutoff := time.Date(2026, 1, 1, 0, 0, int(tc.cutoff), 0, time.UTC)
@@ -863,15 +863,15 @@ func TestRolloutActiveDurationCutoffAndTerminalBoundaries(t *testing.T) {
 					t.Fatal(err)
 				}
 				inv := tr.Invocations[0]
-				if inv.ActiveDurationSeconds != tc.total || inv.DurationEvidence == nil || inv.DurationEvidence.ProvisionalSeconds != tc.provisional || inv.DurationEvidence.State != tc.state || tr.ActiveSeconds != tc.total {
+				if inv.ActiveDurationSeconds != tc.total || inv.ProvisionalSeconds != tc.provisional || tr.ActiveSeconds != tc.total {
 					t.Fatalf("duration %+v, transcript total %d", inv, tr.ActiveSeconds)
 				}
-				if tc.state == domain.DurationPartial {
-					if inv.DurationEvidence.Cutoff != "" || inv.CompletedAt == nil || *inv.CompletedAt != "2026-01-01T00:00:05Z" {
+				if tc.invalid {
+					if inv.ProvisionalSeconds != 0 || inv.CompletedAt == nil || *inv.CompletedAt != "2026-01-01T00:00:05Z" {
 						t.Fatalf("invalid lifecycle invented provisional/completed boundary: %+v", inv)
 					}
-					if inv.DurationEvidence.Limitation == "" || inv.DurationEvidence.CompletedSeconds != 4 || domain.DurationForInvocation(inv).UnknownInvocations != 1 {
-						t.Fatalf("invalid lifecycle falsely certified known subtotal: %+v", inv)
+					if len(tr.Warnings) == 0 {
+						t.Fatal("invalid lifecycle lost ordinary source diagnostic")
 					}
 				}
 			}

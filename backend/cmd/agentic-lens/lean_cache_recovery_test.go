@@ -186,3 +186,74 @@ func TestRegisteredGenerateRecoversRetiredCacheAndPreservesUnavailableCurrentOwn
 		})
 	}
 }
+
+func TestRegisteredDraftDurationCacheNormalizesWithoutReadMutation(t *testing.T) {
+	f := newCaptureGenerationFixture(t)
+	path := f.write(t, 17)
+	f.bind(t, path)
+	f.generate(t)
+	db, err := sql.Open("sqlite", filepath.Join(capture.RegistryPathDirectory(f.state), "registry.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	var original []byte
+	if err := db.QueryRow(`SELECT record FROM registrations WHERE session_id='root'`).Scan(&original); err != nil {
+		t.Fatal(err)
+	}
+	var record map[string]json.RawMessage
+	if err := json.Unmarshal(original, &record); err != nil {
+		t.Fatal(err)
+	}
+	var owners []map[string]json.RawMessage
+	if err := json.Unmarshal(record["snapshot"], &owners); err != nil {
+		t.Fatal(err)
+	}
+	var invocations []map[string]json.RawMessage
+	if err := json.Unmarshal(owners[0]["invocations"], &invocations); err != nil {
+		t.Fatal(err)
+	}
+	invocations[0]["active_duration_seconds"] = json.RawMessage(`10`)
+	invocations[0]["duration_evidence"] = json.RawMessage(`{"state":"provisional","completed_seconds":3,"provisional_seconds":7,"cutoff":"2026-01-01T00:00:10Z","basis":"codex:turn"}`)
+	owners[0]["invocations"], err = json.Marshal(invocations)
+	if err != nil {
+		t.Fatal(err)
+	}
+	record["snapshot"], err = json.Marshal(owners)
+	if err != nil {
+		t.Fatal(err)
+	}
+	draft, err := json.Marshal(record)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`UPDATE registrations SET record=? WHERE session_id='root'`, draft); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+	registry, err := capture.OpenReadOnlyProject(f.state, f.project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows, listErr := registry.List(context.Background())
+	closeErr := registry.Close()
+	if listErr != nil || closeErr != nil {
+		t.Fatalf("read compatible cache: %v %v", listErr, closeErr)
+	}
+	if len(rows) != 1 || rows[0].SnapshotNeedsRefresh || len(rows[0].Snapshot) != 1 || len(rows[0].Snapshot[0].Invocations) != 1 {
+		t.Fatalf("valid draft cache discarded: %+v", rows)
+	}
+	inv := rows[0].Snapshot[0].Invocations[0]
+	if rows[0].Snapshot[0].ID != "root" || inv.ActiveDurationSeconds != 10 || inv.ProvisionalSeconds != 7 || inv.Tokens.Input != 17 {
+		t.Fatalf("draft cache numeric/identity loss: %+v", rows[0])
+	}
+	var after []byte
+	if err := db.QueryRow(`SELECT record FROM registrations WHERE session_id='root'`).Scan(&after); err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(draft, after) {
+		t.Fatal("read-only cache normalization mutated stored record")
+	}
+}

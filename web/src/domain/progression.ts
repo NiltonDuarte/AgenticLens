@@ -1,10 +1,9 @@
-import { emptyDurationSummary, invocationDuration, mergeDuration } from './duration';
 import { completeCost, emptyCostSummary, invocationCostSummary, mergeCostSummaries } from './cost';
-import type { CostSummary, DurationSummary } from './types';
+import type { CostSummary } from './types';
 import { sessionInvocations, type AgenticMetricsLedger, type TimeBucketMetric, type TimeGranularity } from './types';
 
 interface MutableBucketAccumulator {
- duration_summary: DurationSummary;
+ provisional_seconds: number;
   invocations: number;
   cost_summary: CostSummary;
   input_tokens: number;
@@ -158,7 +157,7 @@ export function aggregateMetricsOverTime(
       cache_read_tokens: 0,
       reasoning_tokens: 0,
       active_duration_seconds: 0,
- duration_summary: emptyDurationSummary(),
+ provisional_seconds: 0,
       peak_context_tokens: 0,
       lines_added: 0,
       lines_deleted: 0,
@@ -195,7 +194,7 @@ export function aggregateMetricsOverTime(
       acc.cache_read_tokens += inv.tokens.cache_read;
       acc.reasoning_tokens += inv.tokens.reasoning;
       acc.active_duration_seconds += inv.active_duration_seconds;
- acc.duration_summary = mergeDuration(acc.duration_summary, invocationDuration(inv));
+ acc.provisional_seconds += inv.provisional_seconds ?? 0;
       if (inv.tokens.peak_context > acc.peak_context_tokens) {
         acc.peak_context_tokens = inv.tokens.peak_context;
       }
@@ -270,7 +269,7 @@ export function aggregateMetricsOverTime(
       net_lines_added: acc.lines_added - acc.lines_deleted,
       peak_context_tokens: acc.peak_context_tokens,
       active_duration_seconds: acc.active_duration_seconds,
- duration_summary: acc.duration_summary,
+ ...(acc.provisional_seconds > 0 ? {provisional_seconds: acc.provisional_seconds} : {}),
       cumulative_cost_usd: completeCost(runningCumCost),
       cumulative_cost_summary: runningCumCost,
       cumulative_input_tokens: runningCumInput,

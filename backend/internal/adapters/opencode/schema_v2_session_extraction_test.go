@@ -458,7 +458,7 @@ func TestSchemaV2ActiveDurationSnapshotAndCompletion(t *testing.T) {
 					t.Fatal(err)
 				}
 				inv := sessions[0].Invocations[0]
-				if inv.ActiveDurationSeconds != seconds || inv.DurationEvidence == nil || inv.DurationEvidence.State != "provisional" || inv.CompletedAt != nil {
+				if inv.ActiveDurationSeconds != seconds || inv.ProvisionalSeconds != seconds || inv.CompletedAt != nil {
 					t.Fatalf("snapshot %+v", inv)
 				}
 			}
@@ -472,7 +472,7 @@ func TestSchemaV2ActiveDurationSnapshotAndCompletion(t *testing.T) {
 					t.Fatal(err)
 				}
 				inv := sessions[0].Invocations[0]
-				if inv.ActiveDurationSeconds != 30 || inv.DurationEvidence.State != "complete" {
+				if inv.ActiveDurationSeconds != 30 || inv.ProvisionalSeconds != 0 {
 					t.Fatalf("completion %+v", inv)
 				}
 			}

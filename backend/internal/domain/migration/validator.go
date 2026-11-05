@@ -88,7 +88,7 @@ func (v *InvariantValidator) Validate(before legacyLedger, after legacyLedger, e
 			!ptrEqual(b.StartedAt, a.StartedAt) ||
 			!ptrEqual(b.CompletedAt, a.CompletedAt) ||
 			b.ActiveDurationSeconds != a.ActiveDurationSeconds ||
-			!reflect.DeepEqual(b.DurationEvidence, a.DurationEvidence) ||
+			b.ProvisionalSeconds != a.ProvisionalSeconds ||
 			b.Turns != a.Turns ||
 			b.Tokens != a.Tokens ||
 			b.CostUSD != a.CostUSD ||

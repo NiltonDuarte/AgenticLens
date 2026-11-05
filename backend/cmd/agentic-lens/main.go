@@ -1766,7 +1766,7 @@ func main() {
 			if ledger.TicketID != nil && *ledger.TicketID != "" {
 				tid = *ledger.TicketID
 			}
-			dur := ledger.WorkflowEfficiency.ActiveDurationFormatted + " (" + domain.DurationDescription(ledger.WorkflowEfficiency.DurationSummary) + ")"
+			dur := ledger.WorkflowEfficiency.ActiveDurationFormatted + " (" + domain.DurationDescription(ledger.WorkflowEfficiency.ProvisionalSeconds) + ")"
 			cost := adapters.FormatCostSummary(domain.EffectiveCostSummary(ledger.Totals.CostSummary, ledger.Totals.CostUSD, ledger.Totals.Invocations))
 			health := ledger.WorkflowEfficiency.ContextWindowHealth.Status
 			iters := fmt.Sprintf("%d", ledger.WorkflowEfficiency.SDLCIterations)

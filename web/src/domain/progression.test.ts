@@ -566,6 +566,7 @@ describe('Domain Progression Aggregator', () => {
                 started_at: '2026-10-15T09:00:00Z',
                 completed_at: '2026-10-15T09:10:00Z',
                 active_duration_seconds: 600,
+                provisional_seconds: 20,
                 turns: 1,
                 tokens: {
                     input: 1000,
@@ -583,6 +584,7 @@ describe('Domain Progression Aggregator', () => {
                 started_at: '2026-10-15T10:00:00Z',
                 completed_at: '2026-10-15T10:15:00Z',
                 active_duration_seconds: 900,
+                provisional_seconds: 30,
                 turns: 3,
                 tokens: {
                     input: 2000,
@@ -697,6 +699,7 @@ describe('Domain Progression Aggregator', () => {
             expect(b.cache_read_tokens).toBe(11500);
             expect(b.reasoning_tokens).toBe(200);
             expect(b.active_duration_seconds).toBe(1800);
+            expect(b.provisional_seconds).toBe(50);
             // Peak context must be the maximum of the 3 invocations (180,000)
             expect(b.peak_context_tokens).toBe(180000);
             // Code delivery

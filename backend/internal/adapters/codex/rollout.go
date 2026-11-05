@@ -893,6 +893,9 @@ func (transcript *Transcript) turnNumber(turnID string) int64 {
 }
 
 func (transcript *Transcript) finalizeFacts() {
+	if transcript.durationLimit != "" {
+		transcript.Warnings = append(transcript.Warnings, transcript.durationLimit)
+	}
 	for id, started := range transcript.turnStarts {
 		if !transcript.snapshotCutoff.Before(started) {
 			acc := transcript.modelUsageFor(transcript.turnModels[id])
@@ -938,7 +941,7 @@ func (transcript *Transcript) finalizeFacts() {
 			completedAt = &completed
 		}
 		turns := int64(len(usage.turns))
-		activeSeconds, durationEvidence := domain.MeasuredDuration(usage.activeMillis, usage.provisionalMillis, usage.provisional, transcript.snapshotCutoff.Format(time.RFC3339Nano), "codex:lifecycle-turn", transcript.durationLimit)
+		activeSeconds, provisionalSeconds := domain.MeasuredDuration(usage.activeMillis, usage.provisionalMillis)
 		if usage.provisional {
 			completedAt = nil
 		}
@@ -957,7 +960,7 @@ func (transcript *Transcript) finalizeFacts() {
 			StartedAt:             startedAt,
 			CompletedAt:           completedAt,
 			ActiveDurationSeconds: activeSeconds,
-			DurationEvidence:      durationEvidence,
+			ProvisionalSeconds:    provisionalSeconds,
 			Turns:                 turns,
 			Tokens:                usage.usage.ToInvocationTokens(),
 			CostUSD:               0,

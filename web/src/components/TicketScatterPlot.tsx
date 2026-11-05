@@ -119,11 +119,11 @@ export const TicketScatterPlot: React.FC<TicketScatterPlotProps> = ({ rows, onSe
                 className="ticket-scatter-point"
                 tabIndex={0}
                 role="button"
-                aria-label={`${row.ticket_id}: ${row.ticket_title}; ${xMeta.label} ${xMeta.format(Number(rawX))}; ${yMeta.label} ${yMeta.format(Number(rawY))}; Skills Used: ${skills}\n${durationDescription(row.duration_summary)}`}
+                aria-label={`${row.ticket_id}: ${row.ticket_title}; ${xMeta.label} ${xMeta.format(Number(rawX))}; ${yMeta.label} ${yMeta.format(Number(rawY))}; Skills Used: ${skills}\n${durationDescription(row.provisional_seconds)}`}
                 onClick={() => onSelectTicket?.(row.ticket_id)}
                 onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onSelectTicket?.(row.ticket_id); } }}
               >
-                <title>{`${row.ticket_id} — ${row.ticket_title}\n${xMeta.label}: ${xMeta.format(Number(rawX))}\n${yMeta.label}: ${yMeta.format(Number(rawY))}; Skills Used: ${skills}\n${durationDescription(row.duration_summary)}`}</title>
+                <title>{`${row.ticket_id} — ${row.ticket_title}\n${xMeta.label}: ${xMeta.format(Number(rawX))}\n${yMeta.label}: ${yMeta.format(Number(rawY))}; Skills Used: ${skills}\n${durationDescription(row.provisional_seconds)}`}</title>
               </circle>
             );
           })}

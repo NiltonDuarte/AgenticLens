@@ -164,7 +164,7 @@ func ComputeWorkflowEfficiencyWithCeiling(ledger AgenticFactLedger, ceiling int6
 	code := ledger.Code
 
 	var activeDurationSeconds int64
-	durationSummary := DurationSummary{Cutoffs: []string{}}
+	var provisionalSeconds int64
 	var totReasoning, totOutput, totCompactions int64
 	rolePeaks := make(map[AgentRole]int64)
 
@@ -182,7 +182,7 @@ func ComputeWorkflowEfficiencyWithCeiling(ledger AgenticFactLedger, ceiling int6
 		for _, inv := range session.Invocations {
 			role := AgentRole(strings.TrimSpace(string(inv.Role)))
 			activeDurationSeconds += inv.ActiveDurationSeconds
-			durationSummary = MergeDuration(durationSummary, DurationForInvocation(inv))
+			provisionalSeconds += inv.ProvisionalSeconds
 			totReasoning += inv.Tokens.Reasoning
 			totOutput += inv.Tokens.Output
 			totCompactions += inv.Compactions
@@ -408,7 +408,7 @@ func ComputeWorkflowEfficiencyWithCeiling(ledger AgenticFactLedger, ceiling int6
 	return WorkflowEfficiency{
 		SDLCIterations:              code.SDLCIterations,
 		ActiveDurationSeconds:       activeDurationSeconds,
-		DurationSummary:             durationSummary,
+		ProvisionalSeconds:          provisionalSeconds,
 		ActiveDurationFormatted:     activeDurationFormatted,
 		RoleEffortDistributionPct:   roleEffortDistributionPct,
 		RoleEffortUnavailableReason: roleEffortUnavailableReason,
@@ -862,7 +862,7 @@ func CalculateFleetSummary(ledgers []AgenticMetricsLedger) FleetSummary {
 	roleCostSummaries := make(map[AgentRole]CostSummary)
 	modelCostSummaries := make(map[string]CostSummary)
 	var totalInvocations, totalInputTokens, totalOutputTokens, totalCacheReadTokens int64
-	fleetDuration := DurationSummary{Cutoffs: []string{}}
+	var fleetProvisionalSeconds int64
 	var totalDurationSeconds, totalLinesAdded, totalLinesDeleted, totalFilesChanged, totalReasoningTokens int64
 
 	roleCosts := make(map[AgentRole]float64)
@@ -879,7 +879,7 @@ func CalculateFleetSummary(ledgers []AgenticMetricsLedger) FleetSummary {
 		totalOutputTokens += ledger.Totals.OutputTokens
 		totalCacheReadTokens += ledger.Totals.CacheReadTokens
 		totalDurationSeconds += ledger.WorkflowEfficiency.ActiveDurationSeconds
-		fleetDuration = MergeDuration(fleetDuration, ledger.WorkflowEfficiency.DurationSummary)
+		fleetProvisionalSeconds += ledger.WorkflowEfficiency.ProvisionalSeconds
 		totalLinesAdded += ledger.WorkflowEfficiency.CodeDelivered.LinesAdded
 		totalLinesDeleted += ledger.WorkflowEfficiency.CodeDelivered.LinesDeleted
 		totalFilesChanged += ledger.WorkflowEfficiency.CodeDelivered.FilesChanged
@@ -933,7 +933,7 @@ func CalculateFleetSummary(ledgers []AgenticMetricsLedger) FleetSummary {
 		TotalCacheReadTokens:     totalCacheReadTokens,
 		OverallCacheHitRatePct:   overallCacheHitRatePct,
 		TotalDurationSeconds:     totalDurationSeconds,
-		DurationSummary:          fleetDuration,
+		ProvisionalSeconds:       fleetProvisionalSeconds,
 		FormattedTotalDuration:   formattedTotalDuration,
 		TotalLinesAdded:          totalLinesAdded,
 		TotalLinesDeleted:        totalLinesDeleted,
@@ -1017,7 +1017,7 @@ func BuildComparisonRows(ledgers []AgenticMetricsLedger) []TicketComparisonRow {
 			UpdatedAt:               ledger.UpdatedAt,
 			SDLCIterations:          eff.SDLCIterations,
 			ActiveDurationSeconds:   eff.ActiveDurationSeconds,
-			DurationSummary:         eff.DurationSummary,
+			ProvisionalSeconds:      eff.ProvisionalSeconds,
 			ActiveDurationFormatted: eff.ActiveDurationFormatted,
 			CostUSD:                 tot.CostUSD,
 			CostSummary:             EffectiveCostSummary(tot.CostSummary, tot.CostUSD, tot.Invocations),
@@ -1410,7 +1410,7 @@ func SortLedgers(ledgers []AgenticMetricsLedger, field LedgerSortField, ascendin
 }
 
 type bucketAccumulator struct {
-	durationSummary       DurationSummary
+	provisionalSeconds    int64
 	invocations           int64
 	costSummary           CostSummary
 	inputTokens           int64
@@ -1495,7 +1495,7 @@ func AggregateMetricsOverTime(
 			acc.cacheReadTokens += inv.Tokens.CacheRead
 			acc.reasoningTokens += inv.Tokens.Reasoning
 			acc.activeDurationSeconds += inv.ActiveDurationSeconds
-			acc.durationSummary = MergeDuration(acc.durationSummary, DurationForInvocation(inv))
+			acc.provisionalSeconds += inv.ProvisionalSeconds
 			if inv.Tokens.PeakContext > acc.peakContextTokens {
 				acc.peakContextTokens = inv.Tokens.PeakContext
 			}
@@ -1584,7 +1584,7 @@ func AggregateMetricsOverTime(
 			NetLinesAdded:           acc.linesAdded - acc.linesDeleted,
 			PeakContextTokens:       acc.peakContextTokens,
 			ActiveDurationSeconds:   acc.activeDurationSeconds,
-			DurationSummary:         acc.durationSummary,
+			ProvisionalSeconds:      acc.provisionalSeconds,
 			CumulativeCostUSD:       math.Round(cumulativeCostSummary.Subtotal()*10000.0) / 10000.0,
 			CumulativeCostSummary:   FinalizeCostSummary(cumulativeCostSummary),
 			CumulativeInputTokens:   runningCumInput,

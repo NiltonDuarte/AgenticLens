@@ -1,4 +1,4 @@
-import { durationLabel, durationDescription, emptyDurationSummary, mergeDuration } from '../domain/duration';
+import { durationLabel, durationDescription } from '../domain/duration';
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import type {
   AgenticMetricsLedger,
@@ -246,7 +246,7 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
         <KPICard
           title="Average Active Duration"
           value={benchmarks.avgDurationFormatted}
-          secondary={`Compute time per ticket; ${durationDescription(filteredRows.reduce((sum, row) => mergeDuration(sum, row.duration_summary ?? { ...emptyDurationSummary(), unknown_invocations: 1 }), emptyDurationSummary()))}`}
+          secondary={`Compute time per ticket; ${durationDescription(filteredRows.length === 0 ? 0 : Math.round(filteredRows.reduce((sum, row) => sum + (row.provisional_seconds ?? 0), 0) / filteredRows.length))}`}
           tooltip="Average cumulative active compute time across all agent invocations per ticket (cumulative man-hours)."
         />
         <KPICard
@@ -565,7 +565,7 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
                       <td className="date-cell">{formatIsoDateTimeShort(row.completed_at)}</td>
                       <td className="date-cell">{formatIsoDateTimeShort(row.started_at)}</td>
                       <td className="mono">{row.lead_duration_formatted}</td>
-                      <td className="num-col mono" title={durationDescription(row.duration_summary)}>{durationLabel(row.active_duration_formatted, row.duration_summary)}</td>
+                      <td className="num-col mono" title={durationDescription(row.provisional_seconds)}>{durationLabel(row.active_duration_formatted, row.provisional_seconds)}</td>
                       <td className="num-col mono">{row.sdlc_iterations}</td>
                       <td className="num-col mono">{formatCostUSD(row.cost_usd, row.cost_summary)}</td>
                       <td className="num-col mono">{formatPercentage(row.cache_hit_rate_pct)}</td>

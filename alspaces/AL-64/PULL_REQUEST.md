@@ -1,13 +1,11 @@
-# fix(duration): account for source-proven active turns (AL-64)
+# fix(duration): include provisional active-turn duration (AL-64)
 
-Generation during supported unfinished Codex or OpenCode v1/v2 activity records elapsed time through a snapshot cutoff and marks it provisional. Completion refresh replaces that contribution without adding both snapshots. Compact duration evidence survives persistence, CLI/API projections and dashboard displays; legacy and unsupported coverage remain explicit.
+Generation during unfinished Codex or OpenCode v1/v2 activity includes elapsed time through the snapshot cutoff. The existing active_duration_seconds total includes an optional positive provisional_seconds portion. Completion refresh replaces the prior snapshot without double counting.
 
-The branch includes main through 40b16def, preserving optional metric omission and shared-session warnings. Native OpenCode v1 bootstrap-table detection accepts the observed empty auxiliary layout while retaining strict ambiguous-layout rejection.
+Backend readers accept the earlier draft duration evidence and normalize it to numeric fields on canonical writes. CLI summaries, APIs and dashboard displays show the recorded total and positive provisional portion. No reasoning field, configuration toggle or process-liveness check is added. Stored open intervals are provisional estimates and may outlive their process.
 
-Draft boundary: iteration 02 proposes exact-caller verification and supported read-only checks for other sessions; that scope is unapproved and unimplemented. Stored open markers can outlive a process. Native Codex fresh generation/refresh remains unverified after an isolated project-ownership rejection. A pre-existing registry delegation-retention concern is recorded as INT-DATA-01.
+The branch preserves upstream optional metric omission and shared-session warnings. Native OpenCode v1 bootstrap-table detection accepts the observed empty auxiliary layout while retaining ambiguous-layout rejection.
 
-Reader-first v6 expansion requires upgrading consuming readers before writer rollout; pre-change strict readers reject the evidence fields. No release rollout is authorized.
+Upgrade consuming readers before enabling new scalar writers; older strict readers may reject expanded v6 fields. No release rollout is authorized. Existing unrelated delegation-retention and legacy-null compatibility debt is recorded in the work summary.
 
-Telemetry contains the root and 18 native children; 12 delegated reviews lack native parent links and are not included. Pricing is unavailable.
-
-See [technical contract](alspaces/AL-64/CONTRACT.md), [work summary](alspaces/AL-64/SUMMARY.md) and [iteration 02 proposal](alspaces/AL-64/iterations/02/PLAN.md).
+See the [technical baseline](alspaces/AL-64/CONTRACT.md), [approved numeric-only plan](alspaces/AL-64/iterations/03/PLAN.md) and [work summary](alspaces/AL-64/SUMMARY.md).

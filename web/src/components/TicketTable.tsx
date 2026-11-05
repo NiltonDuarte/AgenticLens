@@ -212,7 +212,7 @@ export const TicketTable: React.FC<TicketTableProps> = ({
                         {r.context_health_status}
                       </span>
                     </td>
-                    <td className="mono-number" title={durationDescription(r.duration_summary)}>{durationLabel(r.active_duration_formatted, r.duration_summary)}</td>
+                    <td className="mono-number" title={durationDescription(r.provisional_seconds)}>{durationLabel(r.active_duration_formatted, r.provisional_seconds)}</td>
                     <td className="mono-number">{formatCostUSD(r.cost_usd, r.cost_summary)}</td>
                     <td className="mono-number">{formatPercentage(r.cache_hit_rate_pct)}</td>
                     <td className="mono-number">

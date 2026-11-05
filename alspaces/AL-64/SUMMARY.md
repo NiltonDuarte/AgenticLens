@@ -161,3 +161,28 @@ Draft publication is authorized at this checkpoint. Iteration 02 implementation 
 | **Total** | **19** | **2,985,200** | **322,771** | **105,270,400** | **97.2%** | **Unavailable (0 observed, 0 partial, 19 unavailable / 19 invocations)** |
 
 Capture observation finalized: 2026-11-05T10:36:46.900371127Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 0; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 0; reserved bytes: 0. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
+
+## Iteration 03 steering: numeric-only provisional accounting
+
+The agreed direction is active_duration_seconds plus positive-only provisional_seconds. The estimated portion is included in the existing total. No duration_reasoning field, setting, CLI option, summary explanation section or frontend reasoning behavior is planned. This removes the earlier optional reasoning proposal within the same iteration. Source validation errors remain ordinary errors, and neutral numeric labels avoid implying complete source coverage when the optional number is absent.
+
+[Iteration 03 plan](iterations/03/PLAN.md) supersedes the unapproved hybrid liveness design. Source-established open intervals remain provisional estimates through the calculation cutoff, with stopped-but-open source markers an accepted limitation. Preserve all six fixes, legacy numeric facts, exact-owner refresh/retention and integrated AL-66/AL-77 behavior. Existing rich draft evidence is normalized only by backend readers; canonical writes become lean. User steering is paraphrased, not quoted.
+
+Application implementation has not started; current draft PR 121 still contains the reviewed initial representation. This checkpoint updates the agreed design and example only. No new application tests, telemetry extraction or PR push occurred.
+
+## Iteration 03 implementation approval
+
+On 2026-11-05 the user explicitly approved implementation of the numeric-only iteration 03 plan. Approval covers the existing total plus positive provisional_seconds, removal of canonical rich duration metadata, backend-only compatibility normalization, numeric-only output/UI and no reasoning feature or liveness machinery. This supersedes the prior planning-only state; no new scope confirmation is required. User messages are paraphrased.
+
+Implementation baseline: c68fbc9079d2f24c624d5de0fe87d313ed095b19. Initial application/test status is clean; staged AL-64 planning/summary changes are task-owned and preserved. The interrupted start completed read-only inspection only. Coder owns application changes, independent tester owns subsequent regression work, and parent owns integration/review/telemetry/PR delivery.
+
+## Iteration 03 implementation and verification checkpoint
+
+Coder gpt-6.1-sol/high implemented the lean numeric facts, backend-only draft normalization and numeric projections/UI, removing canonical rich duration graphs. Source arithmetic, AL-66 optional-category behavior and AL-77 overlap behavior remain in scope for independent review. No reasoning field, flag or setting is introduced. See iterations/03/IMPLEMENTATION.md.
+
+Native runtime and adversarial test engineers (both tester, gpt-6.1-sol/high) independently exposed an intermediate current-v6 input path bypassing duration normalization/validation. Coder gpt-6.1-sol/high fixed it. Native authentic 19-owner rewrite preserved all numeric facts, and source recompute/repeat verified replacement and legitimate child discovery without changing the real ledger. Coder gpt-6.1-sol/high also discovered a mixed-case duration-key bypass; tester gpt-6.1-sol/high proved red/green alias cases after the bounded fix. These are implementation-phase discoveries; formal discovery review is now starting.
+
+Frontend 868 tests across 38 files, typecheck/lint and post-alias affected Go-race checks pass. Broad pre-alias Go-race passed 12 non-CLI packages but had one capture-install context-deadline failure; its unchanged isolated retry on final source passed. No timeout or assertion was weakened. Full final make remains mandatory, not replaced by that retry. Product/test inputs are frozen for all four review focuses on both profiles; current candidate manifest b05c2065769609e7e29cbb7e4b8158d804fc2b38ca905cea9b6a2bdbd1f237b5.
+
+
+All eight iteration03 discovery cells completed; two introduced compatibility/publication gaps were corrected by coder gpt-6.1-sol/high and verified by independent tester gpt-6.1-sol/high. Cleanup discovery is shared by behavior/data/architecture gpt-6.1-sol/high and data gpt-6-luna/medium; historical alias discovery is shared by data gpt-6.1-sol/high and data gpt-6-luna/medium. Legacy nested-null interpretation is verified pre-existing debt (behavior/test-effectiveness gpt-6.1-sol/high and test-effectiveness gpt-6-luna/medium), owner backend input compatibility maintainer, follow-up unassigned. All eight bounded correction rechecks approve LEAN-02, manifest e40b0bb87a233eeeec0da9716cfc51311c1763ecc8752c95b280d6f92d7fc3b8. Affected race suites and CLI paths pass; parent integration/full make/standalone gates remain outstanding.

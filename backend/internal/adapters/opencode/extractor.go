@@ -22,21 +22,21 @@ func sourceEventID(kind, sourceID string) string {
 }
 
 type sessionModelAccumulator struct {
-	input         int64
-	output        int64
-	cache         int64
-	reasoning     int64
-	peak          int64
-	cost          float64
-	costPresent   int64
-	costMissing   int64
-	activeMS      int64
-	provisionalMS int64
-	provisional   bool
-	durationLimit string
-	firstTS       *int64
-	lastTS        *int64
-	asstMsgs      int64
+	input              int64
+	output             int64
+	cache              int64
+	reasoning          int64
+	peak               int64
+	cost               float64
+	costPresent        int64
+	costMissing        int64
+	activeMS           int64
+	provisionalMS      int64
+	provisional        bool
+	durationIncomplete bool
+	firstTS            *int64
+	lastTS             *int64
+	asstMsgs           int64
 }
 
 type toolAccumulator struct {

@@ -428,7 +428,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       <td className="mono-number">
                         {Number.isFinite(w.sdlc_iterations) ? w.sdlc_iterations : 0}
                       </td>
-                      <td className="mono-number" title={durationDescription(w.duration_summary)}>{durationLabel(w.active_duration_formatted, w.duration_summary)}</td>
+                      <td className="mono-number" title={durationDescription(w.provisional_seconds)}>{durationLabel(w.active_duration_formatted, w.provisional_seconds)}</td>
                       <td>
                         <button
                           type="button"

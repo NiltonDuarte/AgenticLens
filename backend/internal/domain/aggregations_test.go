@@ -163,6 +163,7 @@ func TestComputeWorkflowEfficiency(t *testing.T) {
 					Invocations: []domain.InvocationFact{
 						{
 							Role:                  "orchestrator",
+							ProvisionalSeconds:    700,
 							ActiveDurationSeconds: 3700, // 1h 1m 40s -> 1h 1m
 							Turns:                 10,
 							Tokens: domain.InvocationTokens{
@@ -180,6 +181,7 @@ func TestComputeWorkflowEfficiency(t *testing.T) {
 					Invocations: []domain.InvocationFact{
 						{
 							Role:                  "coder",
+							ProvisionalSeconds:    20,
 							ActiveDurationSeconds: 120,
 							Turns:                 4,
 							Tokens: domain.InvocationTokens{
@@ -215,6 +217,9 @@ func TestComputeWorkflowEfficiency(t *testing.T) {
 		}
 
 		eff := domain.ComputeWorkflowEfficiency(ledger)
+		if eff.ActiveDurationSeconds != 3900 || eff.ProvisionalSeconds != 720 {
+			t.Fatalf("total/provisional rollup must not double-count: %+v", eff)
+		}
 		if eff.ActiveDurationFormatted != "1h 5m" { // 3700 + 120 + 80 = 3900s = 1h 5m
 			t.Errorf("expected '1h 5m', got %q", eff.ActiveDurationFormatted)
 		}
@@ -428,6 +433,7 @@ func TestCalculateFleetSummary(t *testing.T) {
 			},
 			WorkflowEfficiency: domain.WorkflowEfficiency{
 				ActiveDurationSeconds: 120,
+				ProvisionalSeconds:    20,
 				CodeDelivered: domain.CodeDeliveredStats{
 					LinesAdded:   10,
 					LinesDeleted: 5,
@@ -445,6 +451,9 @@ func TestCalculateFleetSummary(t *testing.T) {
 	}
 
 	fleet := domain.CalculateFleetSummary(ledgers)
+	if fleet.TotalDurationSeconds != 120 || fleet.ProvisionalSeconds != 20 {
+		t.Fatalf("fleet duration lost numeric components: %+v", fleet)
+	}
 	if fleet.TotalTickets != 1 {
 		t.Errorf("expected 1 ticket, got %d", fleet.TotalTickets)
 	}
@@ -738,6 +747,8 @@ func TestBuildComparisonRows(t *testing.T) {
 			},
 			WorkflowEfficiency: domain.WorkflowEfficiency{
 				ActiveDurationFormatted: "10m 0s",
+				ActiveDurationSeconds:   600,
+				ProvisionalSeconds:      20,
 				ContextWindowHealth: domain.ContextWindowHealth{
 					Status: domain.ContextHealthHealthy,
 				},
@@ -751,6 +762,9 @@ func TestBuildComparisonRows(t *testing.T) {
 	rows := domain.BuildComparisonRows(ledgers)
 	if len(rows) != 1 {
 		t.Fatalf("expected 1 row, got %d", len(rows))
+	}
+	if rows[0].ActiveDurationSeconds != 600 || rows[0].ProvisionalSeconds != 20 {
+		t.Fatalf("comparison duration lost numeric components: %+v", rows[0])
 	}
 	if rows[0].TicketID != "AL-1" {
 		t.Errorf("expected ticket_id AL-1, got %s", rows[0].TicketID)
@@ -3397,6 +3411,7 @@ func TestAggregateMetricsOverTime_Hourly(t *testing.T) {
 					},
 					CostUSD:               0.05,
 					ActiveDurationSeconds: 10,
+					ProvisionalSeconds:    3,
 				},
 				{
 					CompletedAt: &ts2,
@@ -3408,6 +3423,7 @@ func TestAggregateMetricsOverTime_Hourly(t *testing.T) {
 					},
 					CostUSD:               0.10,
 					ActiveDurationSeconds: 20,
+					ProvisionalSeconds:    7,
 				},
 			}, nil, nil),
 			},
@@ -3433,6 +3449,7 @@ func TestAggregateMetricsOverTime_Hourly(t *testing.T) {
 					},
 					CostUSD:               0.15,
 					ActiveDurationSeconds: 15,
+					ProvisionalSeconds:    5,
 				},
 			}, nil, nil),
 			},
@@ -3451,6 +3468,9 @@ func TestAggregateMetricsOverTime_Hourly(t *testing.T) {
 		t.Fatalf("expected 2 hourly buckets, got %d", len(buckets))
 	}
 
+	if buckets[0].ProvisionalSeconds != 10 || buckets[1].ProvisionalSeconds != 5 {
+		t.Fatalf("time bucket numeric provisional rollup changed: %+v", buckets)
+	}
 	b1 := buckets[0]
 	if b1.BucketKey != "2026-10-19T10:00:00Z" {
 		t.Errorf("expected bucket key 2026-10-19T10:00:00Z, got %s", b1.BucketKey)

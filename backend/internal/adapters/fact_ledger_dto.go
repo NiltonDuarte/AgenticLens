@@ -163,7 +163,7 @@ func (dto AgenticFactLedgerDTO) ToDomain() domain.AgenticFactLedger {
 func (dto AgenticFactLedgerDTO) Validate() error {
 	for _, session := range dto.Sessions {
 		for _, inv := range session.Invocations {
-			if err := domain.ValidateDuration(inv.ActiveDurationSeconds, inv.DurationEvidence); err != nil {
+			if err := domain.ValidateDuration(inv.ActiveDurationSeconds, inv.ProvisionalSeconds); err != nil {
 				return err
 			}
 		}

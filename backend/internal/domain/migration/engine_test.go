@@ -2011,3 +2011,58 @@ func TestV6MigrationDropsOnlyOwnerlessFactsAndPreservesNativeMultiplicity(t *tes
 		t.Fatalf("migration repeated rows or reported repeat deletion: %+v", again)
 	}
 }
+
+func TestHistoricalMigrationDurationInputBoundaries(t *testing.T) {
+	draft := `"duration_evidence":{"state":"provisional","completed_seconds":3,"provisional_seconds":7,"cutoff":"2026-01-01T00:00:10Z","basis":"codex:turn"}`
+	for version := 1; version <= 5; version++ {
+		for _, layout := range []string{"flat", "sessions"} {
+			for _, tc := range []struct {
+				name, members string
+				valid         bool
+			}{
+				{"lean", `"provisional_seconds":7`, true},
+				{"draft", draft, true},
+				{"equal_dual", `"provisional_seconds":7,` + draft, true},
+				{"unrelated_historical_fields", `"historical_note":{"opaque":true},"model":"superseded","model":"fixture","provisional_seconds":7`, true},
+				{"conflicting_dual", `"provisional_seconds":6,` + draft, false},
+				{"aliased_conflict", `"provisional_seconds":6,"Provisional_Seconds":7,` + draft, false},
+				{"aliased_total", `"Active_Duration_Seconds":10,` + draft, false},
+				{"aliased_draft", strings.Replace(draft, `"duration_evidence"`, `"Duration_Evidence"`, 1), false},
+				{"duplicate_flat", `"provisional_seconds":6,"provisional_seconds":7,` + draft, false},
+			} {
+				t.Run(fmt.Sprintf("v%d/%s/%s", version, layout, tc.name), func(t *testing.T) {
+					identity := ""
+					if layout == "flat" {
+						identity = `"id":"remote","user":"alice",`
+					}
+					invocation := `{` + identity + `"role":"coder","model":"fixture","started_at":null,"completed_at":null,"active_duration_seconds":10,` + tc.members + `,"tokens":{"input":31},"cost_usd":null,"cost_evidence":{"state":"unavailable"}}`
+					var collections string
+					if layout == "flat" {
+						collections = `"source":"codex","invocations":[` + invocation + `],"tools":[],"events":[]`
+					} else {
+						collections = `"sessions":[{"id":"remote","source":"codex","user":"alice","invocations":[` + invocation + `],"tools":[],"events":[],"anomalies":[]}]`
+					}
+					raw := []byte(fmt.Sprintf(`{"schema_version":%d,"ticket_id":"TEST-HISTORICAL-DURATION",%s}`, version, collections))
+					before := append([]byte(nil), raw...)
+					got, err := migration.NewEngine(nil).Migrate(raw, domain.CurrentSchemaVersion)
+					if (err == nil) != tc.valid {
+						t.Fatalf("valid=%t err=%v output=%+v", tc.valid, err, got.Sessions)
+					}
+					if string(raw) != string(before) {
+						t.Fatal("migration mutated historical input")
+					}
+					if !tc.valid {
+						return
+					}
+					if len(got.Sessions) != 1 || len(got.Sessions[0].Invocations) != 1 {
+						t.Fatalf("historical owner multiplicity lost: %+v", got.Sessions)
+					}
+					owner, inv := got.Sessions[0], got.Sessions[0].Invocations[0]
+					if owner.ID != "remote" || owner.Source != domain.SourceCodex || owner.User != "alice" || inv.Model != "fixture" || inv.ActiveDurationSeconds != 10 || inv.ProvisionalSeconds != 7 || inv.Tokens.Input != 31 || inv.CostEvidence.State != domain.CostUnavailable {
+						t.Fatalf("historical numeric/identity/cost facts lost: %+v", owner)
+					}
+				})
+			}
+		}
+	}
+}

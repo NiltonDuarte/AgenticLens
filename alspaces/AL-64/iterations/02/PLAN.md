@@ -1,6 +1,6 @@
 # AL-64 iteration 02: agent-directed activity verification
 
-Status: Proposed; awaiting explicit approval before implementation. Planning review correction incorporated: exact current activity supports provisional native-interval elapsed time without an uninterrupted-execution proof requirement; self-verification is a single-command path. Baseline: edc51c0a (clean checkout), containing reviewed implementation 44db8658097e9fb27c7ed1149ee132906903d862. CONTRACT.md remains immutable. This delta governs only the newly requested activity-verification decision; completed behavior and verified corrections from iteration 01 remain accepted.
+Status: Superseded by iteration03 lean provisional-accounting proposal; this hybrid liveness plan was never approved or implemented. Planning review correction incorporated: exact current activity supports provisional native-interval elapsed time without an uninterrupted-execution proof requirement; self-verification is a single-command path. Baseline: edc51c0a (clean checkout), containing reviewed implementation 44db8658097e9fb27c7ed1149ee132906903d862. CONTRACT.md remains immutable. This delta governs only the newly requested activity-verification decision; completed behavior and verified corrections from iteration 01 remain accepted.
 
 ## Steering record and acceptance delta
 

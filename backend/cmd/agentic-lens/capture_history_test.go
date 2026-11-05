@@ -402,6 +402,8 @@ func TestCaptureCommittedHistoryPreservesSupportedStoredEvidence(t *testing.T) {
 	a, b, _ := newCommittedHistoryFixture(t)
 	old := a.ledger(t)
 	dto := adapters.AgenticFactLedgerDTOFromDomain(old)
+	dto.Sessions[0].Invocations[0].ActiveDurationSeconds = 10
+	dto.Sessions[0].Invocations[0].ProvisionalSeconds = 7
 	tool := "bash"
 	count := int64(3)
 	dto.Sessions[0].Anomalies = []adapters.AnomalyDTO{
@@ -418,6 +420,7 @@ func TestCaptureCommittedHistoryPreservesSupportedStoredEvidence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	body = []byte(strings.ReplaceAll(string(body), `"provisional_seconds":7`, `"duration_evidence":{"state":"provisional","completed_seconds":3,"provisional_seconds":7,"cutoff":"2026-01-01T00:00:10Z","basis":"codex:turn"}`))
 	if err = os.WriteFile(a.output, body, 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -433,6 +436,9 @@ func TestCaptureCommittedHistoryPreservesSupportedStoredEvidence(t *testing.T) {
 	}
 	for pass := 0; pass < 2; pass++ {
 		b.generate(t)
+		if strings.Contains(string(readCaptureFile(t, b.output)), `"duration_evidence"`) {
+			t.Fatal("registered publication re-emitted draft duration history")
+		}
 		persisted, err := adapters.LoadExistingFactLedger(b.output)
 		if err != nil {
 			t.Fatal(err)

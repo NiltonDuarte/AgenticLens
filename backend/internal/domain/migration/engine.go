@@ -155,8 +155,12 @@ func (e *Engine) Migrate(input []byte, targetVersion int) (domain.AgenticFactLed
 		if targetVersion != domain.CurrentSchemaVersion {
 			return domain.AgenticFactLedger{}, ErrDowngradeNotAllowed
 		}
+		normalized, err := NormalizeLedgerDurationJSON(input)
+		if err != nil {
+			return domain.AgenticFactLedger{}, fmt.Errorf("normalizing current duration input: %w", err)
+		}
 		var current domain.AgenticFactLedger
-		decoder := json.NewDecoder(bytes.NewReader(input))
+		decoder := json.NewDecoder(bytes.NewReader(normalized))
 		decoder.DisallowUnknownFields()
 		if err := decoder.Decode(&current); err != nil {
 			return domain.AgenticFactLedger{}, fmt.Errorf("decoding current schema: %w", err)

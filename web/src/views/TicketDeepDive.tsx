@@ -304,8 +304,8 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
         />
         <KPICard
           title="Active Compute Duration"
-          value={durationLabel(eff.active_duration_formatted || formatDurationSeconds(eff.active_duration_seconds), eff.duration_summary)}
-          secondary={durationDescription(eff.duration_summary)}
+          value={durationLabel(eff.active_duration_formatted || formatDurationSeconds(eff.active_duration_seconds), eff.provisional_seconds)}
+          secondary={durationDescription(eff.provisional_seconds)}
           tooltip="Cumulative active compute duration across all agent invocations (analogous to cumulative man-hours). Can exceed wall-clock lead time due to concurrent subagent execution."
         />
         <CostKPICard

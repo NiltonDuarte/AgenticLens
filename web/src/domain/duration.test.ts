@@ -1,50 +1,42 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { decodeLedgers } from '../api/validation';
-import { mockAgenticMetricsLedgers } from '../test/fixtures/mockData';
-import type { DurationEvidence } from './types';
-import { durationDescription, durationLabel, emptyDurationSummary, invocationDuration, mergeDuration, validDurationEvidence } from './duration';
+import { decodeLedgers, decodeFleet } from '../api/validation';
+import { mockAgenticMetricsLedgers, mockFleetSummary } from '../test/fixtures/mockData';
+import { durationDescription, durationLabel, validDuration } from './duration';
 
-describe('duration coverage at the read boundary', () => {
-  const cutoff = '2026-01-01T00:00:10Z';
-  const evidence: DurationEvidence = { state: 'provisional', completed_seconds: 3, provisional_seconds: 7, cutoff, basis: 'codex:turn' };
+describe('numeric provisional duration at the read boundary', () => {
   const base = Object.values(mockAgenticMetricsLedgers)[0]!;
   const invocation = base.facts.sessions.flatMap((s) => s.invocations)[0]!;
-  const withEvidence = (value: unknown): unknown => ({ ...base, facts: { ...base.facts, sessions: [{ ...base.facts.sessions[0]!, invocations: [{ ...invocation, active_duration_seconds: 10, duration_evidence: value }] }] } });
+  const withProvisional = (value: unknown): unknown => ({ ...base, facts: { ...base.facts, sessions: [{ ...base.facts.sessions[0]!, invocations: [{ ...invocation, active_duration_seconds: 10, provisional_seconds: value }] }] } });
 
-  it('retains legacy unknown coverage and distinct recorded cutoffs without advancing them', () => {
-    const legacy = invocationDuration(invocation);
-    expect(legacy.unknown_invocations).toBe(1);
-    const active = invocationDuration({ ...invocation, active_duration_seconds: 10, duration_evidence: evidence });
-    const later = invocationDuration({ ...invocation, active_duration_seconds: 10, duration_evidence: { ...evidence, cutoff: '2026-01-01T00:00:20Z' } });
-    const combined = mergeDuration(mergeDuration(legacy, active), later);
-    expect(combined).toEqual({ provisional_seconds: 14, provisional_invocations: 2, unknown_invocations: 1, cutoffs: [cutoff, '2026-01-01T00:00:20Z'] });
-    expect(active.cutoffs).toEqual([cutoff]);
-    expect(durationLabel('20s', combined)).toContain('provisional');
-    expect(durationDescription(combined)).toContain(cutoff);
-    expect(durationDescription(combined)).toContain('unknown');
-    expect(durationDescription(undefined)).not.toContain('Completed');
-    expect(durationDescription(emptyDurationSummary())).toBe('Completed measurements');
+  it('uses neutral recorded labels for absent and zero contributions', () => {
+    for (const value of [undefined, 0]) {
+      expect(durationLabel('10s', value)).toBe('10s');
+      expect(durationDescription(value)).toBe('Recorded duration');
+      expect(durationDescription(value)).not.toMatch(/complete|verified|coverage|cutoff/i);
+    }
+    expect(durationLabel('10s', 7)).toContain('7s provisional');
+    expect(durationDescription(7)).toBe('Recorded duration including 7s provisional');
   });
 
-  it('preserves duration evidence through the actual ledger decoder', () => {
-    const decoded = decodeLedgers([withEvidence(evidence)]);
-    expect(decoded[0]!.facts.sessions[0]!.invocations[0]!.duration_evidence).toEqual(evidence);
-    expect(validDurationEvidence(evidence, 10)).toBe(true);
-    const legacy = decodeLedgers([base]);
-    expect(legacy[0]!.facts.sessions.flatMap((s) => s.invocations)[0]!.active_duration_seconds).toBe(invocation.active_duration_seconds);
+  it.each([undefined, 0, 7, 10])('retains optional numeric contribution %s through the actual ledger decoder', (value) => {
+    const decoded = decodeLedgers([withProvisional(value)]);
+    const inv = decoded[0]!.facts.sessions[0]!.invocations[0]!;
+    expect(inv.active_duration_seconds).toBe(10);
+    expect(inv.provisional_seconds).toBe(value);
+    expect(validDuration(10, value)).toBe(true);
+    expect(decodeLedgers([base])[0]!.facts.sessions.flatMap((s) => s.invocations)[0]!.active_duration_seconds).toBe(invocation.active_duration_seconds);
   });
 
-  it.each([
-    { ...evidence, completed_seconds: 4 },
-    { ...evidence, provisional_seconds: -7 },
-    { ...evidence, cutoff: 'not-a-date' },
-    { ...evidence, cutoff: undefined },
-    { ...evidence, basis: '' },
-    { ...evidence, state: 'complete' },
-    { ...evidence, state: 'invented' },
-  ])('rejects inconsistent duration evidence through the ledger decoder: %j', (invalid) => {
-    expect(validDurationEvidence(invalid, 10)).toBe(false);
-    expect(() => decodeLedgers([withEvidence(invalid)])).toThrow();
+  it.each([-1, 1.5, 11, Number.MAX_SAFE_INTEGER + 1, null, '7', Infinity, NaN])('rejects inconsistent numeric duration through the ledger decoder: %s', (value) => {
+    expect(validDuration(10, value)).toBe(false);
+    expect(() => decodeLedgers([withProvisional(value)])).toThrow();
+  });
+
+  it('validates aggregate provisional duration against its recorded total', () => {
+    const fleet = { ...mockFleetSummary, total_duration_seconds: 10, provisional_seconds: 7 };
+    expect(decodeFleet(fleet).provisional_seconds).toBe(7);
+    expect(() => decodeFleet({ ...fleet, provisional_seconds: 11 })).toThrow();
+    expect(() => decodeFleet({ ...fleet, provisional_seconds: 0.5 })).toThrow();
   });
 });

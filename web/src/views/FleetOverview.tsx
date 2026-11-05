@@ -280,7 +280,7 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
             <KPICard
               title="Active Duration"
               value={summary.formatted_total_duration}
-              secondary={`${summary.total_files_changed} files touched; ${durationDescription(summary.duration_summary)}`}
+              secondary={`${summary.total_files_changed} files touched; ${durationDescription(summary.provisional_seconds)}`}
               tooltip="Cumulative active agent execution time across all tickets (cumulative man-hours)."
             />
           </section>

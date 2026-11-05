@@ -615,7 +615,7 @@ CREATE TABLE session_message(id TEXT PRIMARY KEY,session_id TEXT,type TEXT,seq I
 				if err := adapters.ValidateRuntimeFactLedger(readCaptureFile(t, f.output)); err != nil {
 					t.Fatal(err)
 				}
-				var cutoff string
+				var operationSeconds int64
 				for _, owner := range f.ledger(t).Sessions {
 					if owner.Source != source || len(owner.Invocations) != 1 || (owner.ID != "root" && owner.ID != "child") {
 						t.Fatalf("optional output changed native owners: %+v", owner)
@@ -624,22 +624,93 @@ CREATE TABLE session_message(id TEXT PRIMARY KEY,session_id TEXT,type TEXT,seq I
 						t.Fatal("delegation omission removed source-proven child linkage")
 					}
 					inv := owner.Invocations[0]
-					evidence := inv.DurationEvidence
-					if evidence == nil || evidence.State != domain.DurationProvisional || evidence.CompletedSeconds != 0 || inv.CompletedAt != nil || inv.Tokens.Input != 17 {
-						t.Fatalf("omission lost active duration coverage: %+v", inv)
+					if inv.CompletedAt != nil || inv.Tokens.Input != 17 {
+						t.Fatalf("omission lost active numeric facts: %+v", inv)
 					}
-					observed, err := time.Parse(time.RFC3339Nano, evidence.Cutoff)
-					if err != nil || observed.Before(before) || observed.After(after) {
-						t.Fatalf("duration cutoff outside generation: %s (%v)", evidence.Cutoff, err)
+					lower := int64(math.Round(float64(before.UnixMilli()-startMS) / 1000))
+					upper := int64(math.Round(float64(after.UnixMilli()-startMS) / 1000))
+					if inv.ActiveDurationSeconds < lower || inv.ActiveDurationSeconds > upper || inv.ProvisionalSeconds != inv.ActiveDurationSeconds || inv.ProvisionalSeconds <= 0 {
+						t.Fatalf("optional policy changed numeric duration: %+v bounds %d..%d", inv, lower, upper)
 					}
-					want := int64(math.Round(float64(observed.UnixMilli()-startMS) / 1000))
-					if inv.ActiveDurationSeconds != want || evidence.ProvisionalSeconds != want || want <= 0 {
-						t.Fatalf("cutoff and omitted-policy composition changed numeric duration: %+v; want %d", inv, want)
+					if operationSeconds != 0 && operationSeconds != inv.ProvisionalSeconds {
+						t.Fatalf("one operation used inconsistent owner durations: %d and %d", operationSeconds, inv.ProvisionalSeconds)
 					}
-					if cutoff != "" && cutoff != evidence.Cutoff {
-						t.Fatalf("one operation used inconsistent owner cutoffs: %s and %s", cutoff, evidence.Cutoff)
+					operationSeconds = inv.ProvisionalSeconds
+				}
+
+				// Complete one exact source while its child is unavailable.
+				// Both registered and explicit generation must retain the child's
+				// recorded provisional contribution without advancing it.
+				prior := f.ledger(t).Sessions
+				var retained domain.SessionFact
+				for _, owner := range prior {
+					if owner.ID == "child" {
+						retained = owner
 					}
-					cutoff = evidence.Cutoff
+				}
+				if family == "codex" {
+					if err := os.Remove(filepath.Join(f.store, "sessions", "child.jsonl")); err != nil {
+						t.Fatal(err)
+					}
+					path := filepath.Join(f.store, "sessions", "root.jsonl")
+					body := readCaptureFile(t, path)
+					terminal := fmt.Sprintf(`{"timestamp":%q,"type":"event_msg","payload":{"type":"task_complete","turn_id":"active"}}`+"\n", time.UnixMilli(startMS+30000).UTC().Format(time.RFC3339Nano))
+					if err := os.WriteFile(path, append(body, []byte(terminal)...), 0600); err != nil {
+						t.Fatal(err)
+					}
+				} else if family == "v1" {
+					if _, err := db.Exec(`DELETE FROM part WHERE session_id='child'; DELETE FROM message WHERE session_id='child'; DELETE FROM session WHERE id='child'`); err != nil {
+						t.Fatal(err)
+					}
+					payload := fmt.Sprintf(`{"role":"assistant","modelID":"source-model","time":{"created":%d,"completed":%d},"tokens":{"input":17,"output":2}}`, startMS, startMS+30000)
+					if _, err := db.Exec(`UPDATE message SET data=?,time_updated=? WHERE session_id='root'`, payload, startMS+30000); err != nil {
+						t.Fatal(err)
+					}
+					if _, err := db.Exec(`UPDATE part SET data='{"type":"tool","tool":"bash","state":{"status":"completed"}}' WHERE session_id='root'`); err != nil {
+						t.Fatal(err)
+					}
+				} else {
+					if _, err := db.Exec(`DELETE FROM session_message WHERE session_id='child'; DELETE FROM session_v2 WHERE id='child'`); err != nil {
+						t.Fatal(err)
+					}
+					payload := fmt.Sprintf(`{"agent":"coder","model":{"id":"source-model"},"time":{"created":%d,"completed":%d},"tokens":{"input":17,"output":2},"content":[]}`, startMS, startMS+30000)
+					if _, err := db.Exec(`UPDATE session_message SET data=?,time_updated=? WHERE session_id='root'`, payload, startMS+30000); err != nil {
+						t.Fatal(err)
+					}
+				}
+				var completed []domain.SessionFact
+				for pass := 0; pass < 2; pass++ {
+					cmd := exec.Command(cliBinaryPath, args...)
+					cmd.Dir = f.project
+					if out, err := cmd.CombinedOutput(); err != nil {
+						t.Fatalf("completion with unavailable child: %v %s", err, out)
+					}
+					assertWrittenPolicy(t, f.output, domain.GenerationPolicy{}, 2)
+					body := readCaptureFile(t, f.output)
+					if strings.Contains(string(body), `"duration_evidence"`) || strings.Contains(string(body), `"duration_reasoning"`) {
+						t.Fatal("generation emitted retired duration metadata")
+					}
+					owners := f.ledger(t).Sessions
+					if len(owners) != 2 {
+						t.Fatalf("completion lost/duplicated owners: %+v", owners)
+					}
+					for _, owner := range owners {
+						if owner.ID == "child" {
+							if !reflect.DeepEqual(owner, retained) {
+								t.Fatalf("unavailable child's recorded numeric history changed: before=%+v after=%+v", retained, owner)
+							}
+						} else if owner.ID == "root" {
+							if len(owner.Invocations) != 1 || owner.Invocations[0].ActiveDurationSeconds != 30 || owner.Invocations[0].ProvisionalSeconds != 0 || owner.Invocations[0].CompletedAt == nil {
+								t.Fatalf("completion did not replace provisional snapshot: %+v", owner)
+							}
+						} else {
+							t.Fatalf("unexpected owner: %+v", owner)
+						}
+					}
+					if pass == 1 && !reflect.DeepEqual(owners, completed) {
+						t.Fatal("unchanged completed refresh accumulated snapshots")
+					}
+					completed = owners
 				}
 			})
 		}

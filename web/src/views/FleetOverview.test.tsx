@@ -135,7 +135,7 @@ describe('FleetOverview View Component', () => {
 
   describe('Shared recorded sessions', () => {
     const sessionId = `stored-shared-native-session-${'long-native-id-'.repeat(24)}end`;
-    const durationDisclosure = '10s provisional; snapshot cutoffs: 2026-01-01T00:00:20Z';
+    const durationDisclosure = 'Recorded duration including 10s provisional';
     const base = mockAgenticMetricsLedgers['AL-1']!;
     const ledgers = ['HIDDEN-1', 'HIDDEN-2'].map((ticketId) => ({
       ...base, ticket_id: ticketId, ticket_title: `Recorded ${ticketId}`,
@@ -145,7 +145,7 @@ describe('FleetOverview View Component', () => {
     beforeEach(() => {
       vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({ data: {
         ...mockFleetSummary,
-        duration_summary: { provisional_seconds: 10, provisional_invocations: 1, unknown_invocations: 0, cutoffs: ['2026-01-01T00:00:20Z'] },
+        provisional_seconds: 10,
       } });
       vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({ data: [...mockTicketComparisonRows] });
     });

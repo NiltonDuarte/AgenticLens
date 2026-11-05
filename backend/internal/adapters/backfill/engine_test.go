@@ -1465,7 +1465,7 @@ func TestBackfillEngine_ExplicitFallbackResolvesWhenAllowed(t *testing.T) {
 				t.Fatalf("fallback lost active owner: %+v", session)
 			}
 			inv := session.Invocations[0]
-			if inv.ActiveDurationSeconds != 3 || inv.DurationEvidence == nil || inv.DurationEvidence.State != domain.DurationProvisional || inv.DurationEvidence.Cutoff != cutoff.Format(time.RFC3339Nano) {
+			if inv.ActiveDurationSeconds != 3 || inv.ProvisionalSeconds != 3 {
 				t.Fatalf("fallback ignored operation cutoff: %+v want %s", inv, cutoff.Format(time.RFC3339Nano))
 			}
 		}
@@ -2192,11 +2192,10 @@ func TestBackfillActiveDurationReplacesSnapshotsAcrossSourceFamilies(t *testing.
 			if family == "codex" {
 				source, other = domain.SourceCodex, domain.SourceOpenCode
 			}
-			storedCutoff := "2026-01-01T00:00:08Z"
 			baseline := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticket, Sessions: []domain.SessionFact{
 				{ID: parent, Source: source, User: "local"},
 				{ID: "child", Source: source, ParentID: &parent, User: "local"},
-				{ID: "unavailable-root", Source: source, User: "remote", Invocations: []domain.InvocationFact{{Role: "coder", Model: "m", ActiveDurationSeconds: 7, DurationEvidence: &domain.DurationEvidence{State: domain.DurationProvisional, ProvisionalSeconds: 7, Cutoff: storedCutoff, Basis: "native-open-interval"}}}},
+				{ID: "unavailable-root", Source: source, User: "remote", Invocations: []domain.InvocationFact{{Role: "coder", Model: "m", ActiveDurationSeconds: 7, ProvisionalSeconds: 7}}},
 				{ID: "other-harness", Source: other, User: "remote", Invocations: []domain.InvocationFact{{Role: "coder", Model: "m", ActiveDurationSeconds: 17}}},
 			}}
 			workspace := createTestWorkspace(t, root, ticket, baseline)
@@ -2313,14 +2312,14 @@ func TestBackfillActiveDurationReplacesSnapshotsAcrossSourceFamilies(t *testing.
 					t.Fatalf("child accounting/ancestry lost: %+v", byID["child"])
 				}
 				inv := byID[parent].Invocations
-				if len(inv) != 1 || inv[0].ActiveDurationSeconds != seconds || inv[0].DurationEvidence == nil {
+				if len(inv) != 1 || inv[0].ActiveDurationSeconds != seconds {
 					t.Fatalf("snapshot %d root=%+v", i, inv)
 				}
 				if i < 3 {
-					if inv[0].DurationEvidence.State != domain.DurationProvisional || inv[0].DurationEvidence.ProvisionalSeconds != seconds || inv[0].DurationEvidence.Cutoff != opts.SnapshotCutoff.Format(time.RFC3339Nano) || inv[0].CompletedAt != nil {
+					if inv[0].ProvisionalSeconds != seconds || inv[0].CompletedAt != nil {
 						t.Errorf("missing provisional cutoff/coverage: %+v", inv[0])
 					}
-				} else if inv[0].DurationEvidence.State != domain.DurationComplete || inv[0].DurationEvidence.ProvisionalSeconds != 0 || inv[0].DurationEvidence.Cutoff != "" {
+				} else if inv[0].ProvisionalSeconds != 0 {
 					t.Errorf("completion accumulated old provisional time: %+v", inv[0])
 				}
 				total := domain.ComputeWorkflowEfficiency(domain.AgenticFactLedger{Sessions: sessions})

@@ -2,6 +2,7 @@ package adapters
 
 import (
 	"agenticlens/internal/domain"
+	"agenticlens/internal/domain/migration"
 )
 
 // InvocationTokensDTO represents the token counts in JSON boundary serialization.
@@ -25,16 +26,16 @@ func (dto InvocationTokensDTO) ToDomain() domain.InvocationTokens {
 
 // InvocationFactDTO represents a single invocation fact in JSON boundary serialization.
 type InvocationFactDTO struct {
-	DurationEvidence      *domain.DurationEvidence `json:"duration_evidence,omitempty"`
-	Role                  string                   `json:"role"`
-	Model                 string                   `json:"model"`
-	StartedAt             *string                  `json:"started_at"`
-	CompletedAt           *string                  `json:"completed_at"`
-	ActiveDurationSeconds int64                    `json:"active_duration_seconds"`
-	Turns                 int64                    `json:"turns"`
-	Tokens                InvocationTokensDTO      `json:"tokens"`
-	CostUSD               *float64                 `json:"cost_usd"`
-	CostEvidence          *domain.CostEvidence     `json:"cost_evidence"`
+	ProvisionalSeconds    int64                `json:"provisional_seconds,omitempty"`
+	Role                  string               `json:"role"`
+	Model                 string               `json:"model"`
+	StartedAt             *string              `json:"started_at"`
+	CompletedAt           *string              `json:"completed_at"`
+	ActiveDurationSeconds int64                `json:"active_duration_seconds"`
+	Turns                 int64                `json:"turns"`
+	Tokens                InvocationTokensDTO  `json:"tokens"`
+	CostUSD               *float64             `json:"cost_usd"`
+	CostEvidence          *domain.CostEvidence `json:"cost_evidence"`
 	decodedCost           bool
 	costPresent           bool
 	evidencePresent       bool
@@ -50,7 +51,7 @@ func (dto InvocationFactDTO) ToDomain() domain.InvocationFact {
 		StartedAt:             dto.StartedAt,
 		CompletedAt:           dto.CompletedAt,
 		ActiveDurationSeconds: dto.ActiveDurationSeconds,
-		DurationEvidence:      dto.DurationEvidence,
+		ProvisionalSeconds:    dto.ProvisionalSeconds,
 		Turns:                 dto.Turns,
 		Tokens:                dto.Tokens.ToDomain(),
 		CostUSD:               costFactAccumulator(dto.CostUSD, evidence),
@@ -69,7 +70,7 @@ func InvocationFactDTOFromDomain(inv domain.InvocationFact) InvocationFactDTO {
 		StartedAt:             inv.StartedAt,
 		CompletedAt:           inv.CompletedAt,
 		ActiveDurationSeconds: inv.ActiveDurationSeconds,
-		DurationEvidence:      inv.DurationEvidence,
+		ProvisionalSeconds:    inv.ProvisionalSeconds,
 		Turns:                 inv.Turns,
 		Tokens: InvocationTokensDTO{
 			Input:       inv.Tokens.Input,
@@ -86,9 +87,13 @@ func InvocationFactDTOFromDomain(inv domain.InvocationFact) InvocationFactDTO {
 }
 
 func (dto *InvocationFactDTO) UnmarshalJSON(data []byte) error {
+	normalized, err := migration.NormalizeInvocationDurationJSON(data)
+	if err != nil {
+		return err
+	}
 	type invocationAlias InvocationFactDTO
 	var value invocationAlias
-	decoder := newStrictFactDecoder(data)
+	decoder := newStrictFactDecoder(normalized)
 	if err := decoder.Decode(&value); err != nil {
 		return err
 	}
@@ -103,7 +108,7 @@ func (dto *InvocationFactDTO) UnmarshalJSON(data []byte) error {
 	dto.decodedCost = true
 	dto.costPresent = amountPresent
 	dto.evidencePresent = evidencePresent
-	if err := domain.ValidateDuration(dto.ActiveDurationSeconds, dto.DurationEvidence); err != nil {
+	if err := domain.ValidateDuration(dto.ActiveDurationSeconds, dto.ProvisionalSeconds); err != nil {
 		return err
 	}
 	return domain.ValidateCostEvidence(dto.CostUSD, dto.CostEvidence, false)

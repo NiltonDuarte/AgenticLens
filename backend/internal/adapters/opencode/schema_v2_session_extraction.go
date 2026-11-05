@@ -267,12 +267,15 @@ func extractSchemaV2SessionsWithPolicyAt(db *sql.DB, roots []string, defaultUser
 						break
 					}
 				}
-				completedMS, provisionalMS, pending, limitation := domain.DurationInterval(ts, p.Time.Completed, cutoff.UnixMilli(), running)
+				completedMS, provisionalMS, pending, durationErr := domain.DurationInterval(ts, p.Time.Completed, cutoff.UnixMilli(), running)
+				if durationErr != nil {
+					return nil, nil, nil, fmt.Errorf("OpenCode schema family v2 message %s activity: %w", m.id, durationErr)
+				}
 				acc.activeMS += completedMS
 				acc.provisionalMS += provisionalMS
 				acc.provisional = acc.provisional || pending
-				if limitation != "" {
-					acc.durationLimit = limitation
+				if p.Time.Completed == nil && !pending {
+					acc.durationIncomplete = true
 				}
 				if p.Time.Completed != nil && *p.Time.Completed >= ts && *p.Time.Completed <= cutoff.UnixMilli() && (acc.lastTS == nil || *p.Time.Completed > *acc.lastTS) {
 					v := *p.Time.Completed
@@ -411,12 +414,12 @@ func extractSchemaV2SessionsWithPolicyAt(db *sql.DB, roots []string, defaultUser
 			if i == 0 && !s.parent.Valid {
 				iterations = userTurns
 			}
-			activeSeconds, durationEvidence := domain.MeasuredDuration(a.activeMS, a.provisionalMS, a.provisional, cutoff.UTC().Format(time.RFC3339Nano), "opencode:v2-assistant-message", a.durationLimit)
+			activeSeconds, provisionalSeconds := domain.MeasuredDuration(a.activeMS, a.provisionalMS)
 			var completedAt *string
-			if a.lastTS != nil && !a.provisional && a.durationLimit == "" {
+			if a.lastTS != nil && !a.provisional && !a.durationIncomplete {
 				completedAt = schemaV2StringPointer(formatEpochMilli(last))
 			}
-			invocations = append(invocations, domain.InvocationFact{Role: role, Model: name, StartedAt: schemaV2StringPointer(formatEpochMilli(first)), CompletedAt: completedAt, ActiveDurationSeconds: activeSeconds, DurationEvidence: durationEvidence, Turns: turns, Tokens: domain.InvocationTokens{Input: a.input, Output: a.output, CacheRead: a.cache, Reasoning: a.reasoning, PeakContext: a.peak}, CostUSD: math.Round(a.cost*1e6) / 1e6, CostEvidence: a.costEvidence(), UserIterations: iterations})
+			invocations = append(invocations, domain.InvocationFact{Role: role, Model: name, StartedAt: schemaV2StringPointer(formatEpochMilli(first)), CompletedAt: completedAt, ActiveDurationSeconds: activeSeconds, ProvisionalSeconds: provisionalSeconds, Turns: turns, Tokens: domain.InvocationTokens{Input: a.input, Output: a.output, CacheRead: a.cache, Reasoning: a.reasoning, PeakContext: a.peak}, CostUSD: math.Round(a.cost*1e6) / 1e6, CostEvidence: a.costEvidence(), UserIterations: iterations})
 		}
 		var parent *string
 		if s.parent.Valid {

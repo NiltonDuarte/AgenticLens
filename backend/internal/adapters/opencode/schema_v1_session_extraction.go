@@ -388,18 +388,21 @@ func extractSchemaV1SessionsWithPolicyAt(db *sql.DB, threadIDs []string, default
 					v := int64(*rawMD.Time.Completed)
 					finish = &v
 				}
-				completed, provisional, pending, limitation := domain.DurationInterval(c, finish, cutoff.UnixMilli(), runningMessages[mid])
+				completed, provisional, pending, durationErr := domain.DurationInterval(c, finish, cutoff.UnixMilli(), runningMessages[mid])
+				if durationErr != nil {
+					return nil, nil, nil, errors.Join(fmt.Errorf("OpenCode schema family v1 message %s activity: %w", mid, durationErr), msgRows.Close())
+				}
 				acc.activeMS += completed
 				acc.provisionalMS += provisional
 				acc.provisional = acc.provisional || pending
-				if limitation != "" {
-					acc.durationLimit = limitation
+				if finish == nil && !pending {
+					acc.durationIncomplete = true
 				}
 				if finish != nil && *finish >= c && *finish <= cutoff.UnixMilli() && (acc.lastTS == nil || *finish > *acc.lastTS) {
 					acc.lastTS = finish
 				}
 			} else {
-				acc.durationLimit = "assistant message has no source activity start"
+				acc.durationIncomplete = true
 			}
 
 			acc.input += inp
@@ -739,9 +742,9 @@ func extractSchemaV1SessionsWithPolicyAt(db *sql.DB, threadIDs []string, default
 				}
 			}
 
-			activeSecs, durationEvidence := domain.MeasuredDuration(st.activeMS, st.provisionalMS, st.provisional, cutoff.UTC().Format(time.RFC3339Nano), "opencode:v1-assistant-message", st.durationLimit)
+			activeSecs, provisionalSeconds := domain.MeasuredDuration(st.activeMS, st.provisionalMS)
 			var completedAt *string
-			if st.lastTS != nil && !st.provisional && st.durationLimit == "" {
+			if st.lastTS != nil && !st.provisional && !st.durationIncomplete {
 				completedAt = &endISO
 			}
 
@@ -751,7 +754,7 @@ func extractSchemaV1SessionsWithPolicyAt(db *sql.DB, threadIDs []string, default
 				StartedAt:             &stISO,
 				CompletedAt:           completedAt,
 				ActiveDurationSeconds: activeSecs,
-				DurationEvidence:      durationEvidence,
+				ProvisionalSeconds:    provisionalSeconds,
 				Turns:                 turns,
 				Tokens: domain.InvocationTokens{
 					Input:       st.input,

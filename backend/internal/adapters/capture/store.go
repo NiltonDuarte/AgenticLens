@@ -18,6 +18,7 @@ import (
 
 	"agenticlens/internal/adapters/codex"
 	"agenticlens/internal/domain"
+	"agenticlens/internal/domain/migration"
 	"modernc.org/sqlite"
 )
 
@@ -424,6 +425,24 @@ func decode(b []byte) (domain.CaptureRegistration, error) {
 // Unsupported cache is opaque. Strict current decoding does not convert a rich
 // snapshot into empty lean collections or grant source replacement authority.
 func decodeCurrentSnapshot(data []byte) ([]domain.SessionFact, error) {
+	// Draft duration input is a supported numeric compatibility transition,
+	// unlike retired trace/occurrence payloads which remain opaque.
+	var rawOwners []json.RawMessage
+	if err := json.Unmarshal(data, &rawOwners); err != nil {
+		return nil, err
+	}
+	for i, owner := range rawOwners {
+		normalized, err := migration.NormalizeSessionDurationJSON(owner)
+		if err != nil {
+			return nil, fmt.Errorf("snapshot owner %d: %w", i, err)
+		}
+		rawOwners[i] = normalized
+	}
+	normalized, err := json.Marshal(rawOwners)
+	if err != nil {
+		return nil, err
+	}
+	data = normalized
 	var snapshot []domain.SessionFact
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()

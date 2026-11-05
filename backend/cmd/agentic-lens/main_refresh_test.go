@@ -130,7 +130,9 @@ func TestCLIGenerate_SessionRefreshMatchesFreshExtraction(t *testing.T) {
 			} {
 				t.Run(want.name, func(t *testing.T) {
 					advance(t, stage)
+					before := time.Now().UTC()
 					refreshed := generate(t, output)
+					after := time.Now().UTC()
 					fresh := generate(t, filepath.Join(project, fmt.Sprintf("fresh-%d.json", stage)))
 					if !reflect.DeepEqual(stableDurationSnapshot(refreshed.Sessions), stableDurationSnapshot(fresh.Sessions)) {
 						t.Errorf("refresh differs from fresh extraction: refreshed=%+v fresh=%+v", refreshed.Sessions, fresh.Sessions)
@@ -150,26 +152,23 @@ func TestCLIGenerate_SessionRefreshMatchesFreshExtraction(t *testing.T) {
 						if inv.CompletedAt != nil {
 							t.Errorf("unfinished invocation fabricated completion: %+v", inv)
 						}
-						if inv.DurationEvidence == nil {
-							t.Fatal("unfinished duration has no coverage evidence")
-						}
 						if source == domain.SourceCodex {
-							cutoff, err := time.Parse(time.RFC3339Nano, inv.DurationEvidence.Cutoff)
-							if err != nil {
-								t.Fatal(err)
-							}
 							start := time.Date(2026, 10, 25, 9, 0, 2, 0, time.UTC)
-							wantSeconds := int64(math.Round(float64(cutoff.Sub(start).Milliseconds()) / 1000))
-							if inv.DurationEvidence.State != domain.DurationProvisional || inv.ActiveDurationSeconds != wantSeconds || inv.DurationEvidence.ProvisionalSeconds != wantSeconds {
-								t.Errorf("active snapshot does not match its recorded cutoff: %+v want %d", inv, wantSeconds)
+							lower := int64(math.Round(float64(before.Sub(start).Milliseconds()) / 1000))
+							upper := int64(math.Round(float64(after.Sub(start).Milliseconds()) / 1000))
+							if inv.ActiveDurationSeconds < lower || inv.ActiveDurationSeconds > upper || inv.ProvisionalSeconds != inv.ActiveDurationSeconds {
+								t.Errorf("active snapshot outside supplied operation bounds: %+v bounds %d..%d", inv, lower, upper)
 							}
-						} else if inv.DurationEvidence.State != domain.DurationPartial || inv.DurationEvidence.Limitation == "" {
+						} else if inv.ProvisionalSeconds != 0 {
 							t.Errorf("missing completion alone implied running activity: %+v", inv)
 						}
 					} else if inv.CompletedAt == nil {
 						t.Fatal("missing aggregate completion timestamp")
 					}
 					if stage > 0 {
+						if inv.ProvisionalSeconds != 0 {
+							t.Fatalf("completion retained provisional contribution: %+v", inv)
+						}
 						completed, err := time.Parse(time.RFC3339Nano, *inv.CompletedAt)
 						if err != nil || completed.UTC().Format(time.RFC3339) != want.completedAt {
 							t.Errorf("expected completion %s, got %s (parse error: %v)", want.completedAt, *inv.CompletedAt, err)
@@ -185,17 +184,17 @@ func TestCLIGenerate_SessionRefreshMatchesFreshExtraction(t *testing.T) {
 }
 
 // Separate CLI invocations intentionally select different wall-clock cutoffs.
-// Compare all stable facts, and validate advancing duration against each
-// invocation's recorded cutoff separately. Completed rows are never normalized.
+// Compare stable facts after subtracting the advancing provisional portion.
+// Each actual total is checked against the operation bounds separately.
 func stableDurationSnapshot(sessions []domain.SessionFact) []domain.SessionFact {
 	result := append([]domain.SessionFact(nil), sessions...)
 	for i := range result {
 		result[i].Invocations = append([]domain.InvocationFact(nil), sessions[i].Invocations...)
 		for j := range result[i].Invocations {
 			inv := &result[i].Invocations[j]
-			if inv.DurationEvidence != nil && inv.DurationEvidence.State == domain.DurationProvisional {
-				inv.ActiveDurationSeconds = 0
-				inv.DurationEvidence = nil
+			if inv.ProvisionalSeconds > 0 {
+				inv.ActiveDurationSeconds -= inv.ProvisionalSeconds
+				inv.ProvisionalSeconds = 0
 			}
 		}
 	}
