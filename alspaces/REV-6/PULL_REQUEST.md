@@ -1,9 +1,9 @@
-# docs(review): measure test cost and recommend verification boundaries (REV-6)
+# test(testing): gate integration on successful unit tests (REV-6)
 
-Capture verification mixes pure calculations, real storage, native CLI setup and lifecycle waits. REV-6 records comparable local measurements, separates package/setup costs from individual tests, and recommends explicit fast gates before slower integration work.
+Verification previously mixed pure tests with native/storage/DOM checks, allowing expensive integration work to start before unit failures were known. Two ledger-boundary fixtures also omitted required ticket identity and rejected otherwise-valid controls.
 
-Includes a capture-first boundary inventory, preserved assertion owners, resource/cache/race assumptions, provisional local budgets and prioritized follow-ups. Application, test, fixture, runtime and CI files remain unchanged; implementation requires separate tickets.
+Separate Go core packages and pure frontend tests from complementary integration suites. Make and CI require both language unit gates before repository integration; standalone npm commands require frontend units first. Preserve race coverage, shared embedded-asset preparation, native/platform fixtures and build-only commands. Repair fixture identities and strengthen intended validation-cause assertions; add real failure-injection and partition checks.
 
-- [Contract](CONTRACT.md)
-- [Measured review](iterations/01/TEST_REVIEW.md)
-- [Summary and limits](SUMMARY.md)
+- [Current contract delta](alspaces/REV-6/iterations/02/CONTRACT_DELTA.md)
+- [Implementation plan](alspaces/REV-6/iterations/02/PLAN.md)
+- [Summary, verification and historical review](alspaces/REV-6/SUMMARY.md)

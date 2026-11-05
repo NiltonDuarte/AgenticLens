@@ -1,0 +1,104 @@
+{
+  "frontend": {
+    "baseline": {
+      "files": 37,
+      "cases": 853,
+      "passed": 853,
+      "pending": 0
+    },
+    "unit": {
+      "files": 12,
+      "cases": 176,
+      "passed": 176,
+      "pending": 0
+    },
+    "integration": {
+      "files": 25,
+      "cases": 677,
+      "passed": 677,
+      "pending": 0
+    }
+  },
+  "frontend_counter_union_equal": true,
+  "frontend_counter_overlap_empty": true,
+  "unit_files": [
+    "src/domain/aggregations.test.ts",
+    "src/domain/anomalies.test.ts",
+    "src/domain/events.test.ts",
+    "src/domain/formatters.test.ts",
+    "src/domain/invocation_rows.test.ts",
+    "src/domain/liveMessageOrdering.test.ts",
+    "src/domain/progression.test.ts",
+    "src/domain/sessionOverlaps.test.ts",
+    "src/domain/ticket_scatter.test.ts",
+    "src/domain/tools.test.ts",
+    "src/utils/debugPrompt.test.ts",
+    "src/utils/theme.test.ts"
+  ],
+  "integration_files": [
+    "src/api/client.test.ts",
+    "src/api/liveApi.test.ts",
+    "src/components/AnomalyBadge.test.tsx",
+    "src/components/AnomalyDrawer.test.tsx",
+    "src/components/ArtifactViewer.test.tsx",
+    "src/components/Components.test.tsx",
+    "src/components/FailedToolAlertCard.test.tsx",
+    "src/components/FleetAnomalyCard.test.tsx",
+    "src/components/LiveAnomalyBanner.test.tsx",
+    "src/components/LiveSessionTree.test.tsx",
+    "src/components/LiveTraceInspector.test.tsx",
+    "src/components/MultiSelectDropdown.test.tsx",
+    "src/components/Navbar.test.tsx",
+    "src/components/TicketScatterPlot.test.tsx",
+    "src/components/TicketTable.test.tsx",
+    "src/components/TraceWaterfall.test.tsx",
+    "src/components/TrendChart.test.tsx",
+    "src/components/WorkspaceLoadWarning.test.tsx",
+    "src/test/sync-assets.test.ts",
+    "src/views/FleetOverview.test.tsx",
+    "src/views/LandingPage.test.tsx",
+    "src/views/LiveObservability.test.tsx",
+    "src/views/MetricProgression.test.tsx",
+    "src/views/TicketComparisons.test.tsx",
+    "src/views/TicketDeepDive.test.tsx"
+  ],
+  "go_packages": {
+    "all": [
+      "agenticlens/cmd/agentic-lens",
+      "agenticlens/internal/adapters",
+      "agenticlens/internal/adapters/backfill",
+      "agenticlens/internal/adapters/capture",
+      "agenticlens/internal/adapters/codex",
+      "agenticlens/internal/adapters/config",
+      "agenticlens/internal/adapters/filesystem",
+      "agenticlens/internal/adapters/git",
+      "agenticlens/internal/adapters/http",
+      "agenticlens/internal/adapters/live",
+      "agenticlens/internal/adapters/opencode",
+      "agenticlens/internal/adapters/web",
+      "agenticlens/internal/domain",
+      "agenticlens/internal/domain/migration"
+    ],
+    "unit": [
+      "agenticlens/internal/domain",
+      "agenticlens/internal/domain/migration"
+    ],
+    "integration": [
+      "agenticlens/cmd/agentic-lens",
+      "agenticlens/internal/adapters",
+      "agenticlens/internal/adapters/backfill",
+      "agenticlens/internal/adapters/capture",
+      "agenticlens/internal/adapters/codex",
+      "agenticlens/internal/adapters/config",
+      "agenticlens/internal/adapters/filesystem",
+      "agenticlens/internal/adapters/git",
+      "agenticlens/internal/adapters/http",
+      "agenticlens/internal/adapters/live",
+      "agenticlens/internal/adapters/opencode",
+      "agenticlens/internal/adapters/web"
+    ]
+  },
+  "go_full_discovery_equal_union": true,
+  "go_overlap_empty": true,
+  "limit": "Runtime case multisets prove retention for this revision, not mutation equivalence. Go package discovery used already prepared source assets."
+}

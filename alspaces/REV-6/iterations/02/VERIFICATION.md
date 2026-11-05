@@ -1,0 +1,20 @@
+# REV-6 iteration02 verification
+
+Baseline: 23b381637106da39ca552faed4e344cca2ab1a35, user-approved contract delta/plan. Candidate source is being frozen; parent integrated make and independent review are still pending. No application runtime validation was relaxed.
+
+## Targeted fixture and guard proof
+
+Tester gpt-6.1-sol/high reproduced both original positive-table failures (missing ticket_id), then ran the repaired two tables and existing required-ID test successfully. Fixtures now include valid fixed identities and preserve decoded identity plus nil-versus-empty anomaly distinctions. Every invalid policy/anomaly row asserts its intended diagnostic cause. Disposable Go overlays bypassing policy arity, anomaly marker and optional-array validation each made the corresponding strengthened test fail; shared production files were not modified. Existing missing/null/blank identity coverage was reused without duplicate declarations.
+
+## Sequencing and completeness
+
+The actual candidate Makefile/npm/Vitest configs are exercised in self-contained fixtures with real minimal Go and Vitest assertions, not simulated unit exit codes. Marker wrappers observe expensive integration entrypoints. Failed Go units and failed frontend units each prevent global integration setup under supported aliases/check and parallel mixed goals. Passing controls reach integration only after both languages, prepare one shared asset writer, and preserve standalone build-only WEB_DIR/PLATFORMS override behavior. Standalone npm uses its applicable frontend gate; compatibility public execution dispatches to the same Make graph. A removed-Make-gate mutation permits integration despite failed frontend source and is detected. A removed CI needs edge is rejected by the structural test; structural validation is not hosted execution proof.
+
+[PARTITION_PROOF.json](PARTITION_PROOF.json) retains exact file and package accounting. The former frontend environment's 853 passing runtime cases equal the disjoint unit (176 cases/12 files) and integration (677/25) counters by file/full name/status, preserving duplicate multiplicity, with no pending cases. The asset-sync Node-annotated test remains integration. All 14 current Go package paths equal two domain unit packages plus twelve complementary integration packages, including the filesystem package with no tests; no overlap. Instrumented domain verification is a separate later race pass, preserving full original Go race coverage without calling the complete suite integration or duplicating every test.
+
+## Parent pre-review corrections
+
+- COORD-01, severity3: initial orchestration discovery test queried the real embedded-source package set without ensuring generated assets existed. Orchestrator gpt-6.1-sol/high verified a minimal missing-dist go list counterexample. Tester gpt-6.1-sol/high corrected durable discovery to a self-contained module, including domain/migration and domainish prefix-boundary cases. Actual source accounting is a separate check after canonical asset preparation.
+- COORD-02, severity3: the standalone compatibility both-mode path ends with CLI Go tests and requires canonical embedded assets after its unit gate. Orchestrator gpt-6.1-sol/high identified that prerequisite; coder gpt-6.1-sol/high centralized public script dispatch into the same Make DAG and its shared both-mode asset dependency, preserving provider/runtime behavior. A targeted positive control checks one asset preparation after both units and before the compatibility copy boundary.
+
+Raw logs, overlays and temporary fixtures are private under /tmp/rev6-iteration02-tests; they are not committed. The tester ran targeted schema checks, dynamic orchestration, combined units and frontend baseline/lane comparison. Broad backend integration is reserved for the parent's required make gate to avoid duplicate full runs of unchanged source. Native Windows, remote release publishing and real OpenCode provider execution remain unexecuted limits unless separately observed. Final evidence and reviewed revision will be appended after integration/review.

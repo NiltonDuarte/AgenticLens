@@ -86,10 +86,10 @@ jobs:
       - name: Fetch all git tags
         run: git fetch --tags --force
 
-      - name: Set up Go 1.23
+      - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version-file: backend/go.mod
           cache: true
           cache-dependency-path: backend/go.sum
 
@@ -136,6 +136,10 @@ jobs:
         if: steps.candidate.outputs.should_publish == 'true'
         working-directory: web
         run: npm ci
+
+      - name: Unit Tests
+        if: steps.candidate.outputs.should_publish == 'true'
+        run: make test-unit
 
       - name: Static Analysis
         if: steps.candidate.outputs.should_publish == 'true'

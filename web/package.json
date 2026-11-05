@@ -8,7 +8,9 @@
     "build": "tsc --noEmit && vite build && node scripts/sync-assets.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"src/**/*.{ts,tsx}\" --max-warnings 0",
-    "test": "vitest run"
+    "test": "npm run test:integration --",
+    "test:unit": "vitest run --config vitest.unit.config.ts",
+    "test:integration": "npm run test:unit && vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {
     "lucide-react": "^0.460.0",

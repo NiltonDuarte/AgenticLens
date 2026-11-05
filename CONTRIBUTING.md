@@ -75,14 +75,18 @@ Open `http://localhost:8085` to view the standalone dashboard.
 | `make all` | Default target: install dependencies, run static checks, run test suites, and build binary |
 | `make install` | Install all backend Go dependencies and frontend npm packages |
 | `make install-backend` | Download Go modules (`go mod download` in `backend/`) |
-| `make install-frontend` | Install web dependencies (`npm install` in `web/`) |
-| `make backend-check` | Prepare embedded assets, run Go vet and backend race tests (shared local/CI entry point) |
-| `make web-assets` | Build frontend and copy assets into the Go embed tree; requires installed web dependencies |
-| `make check` | Run static checks (`go vet`, frontend typecheck, frontend linter, `git diff --check`) |
-| `make test` | Run full test suite across Go backend (with race detector) and TypeScript frontend |
-| `make test-backend` | Run Go test suite with data race detector enabled (`go test -race ./...`) |
-| `make test-frontend` | Run frontend test suite via Vitest (`npm test` in `web/`) |
-| `make test-release-workflow` | Run release revision, RC metadata/guard and GitHub response-filter tests against local fixtures |
+| `make install-frontend` | Prepare web dependencies with `npm ci` when manifests changed or dependencies are absent |
+| `make backend-check` | Require both unit lanes, prepare shared embedded assets, then Go vet and both Go race lanes |
+| `make web-assets` | Prepare dependencies, build frontend and copy assets into the Go embed tree; shared once per Make invocation |
+| `make check` | Require both unit lanes, then static checks and Python workflow/distribution/orchestration integration checks |
+| `make test-unit` | Run pure Go domain/migration and frontend Node units, without embedded asset preparation |
+| `make test-unit-backend` | Run only the fast non-race Go pure-core unit lane |
+| `make test-unit-frontend` | Run only frontend Node units |
+| `make test-integration` / `make test` | Require both unit lanes, then complete Go race and frontend integration coverage |
+| `make test-backend-integration` / `make test-backend` | Require both units, then domain race verification and the complementary Go integration packages with race |
+| `make test-frontend-integration` / `make test-frontend` | Require both units, then the complementary frontend DOM/API/filesystem integration lane |
+| `make test-release-workflow` | Require both units, then release revision, metadata/guard and response-filter tests against local fixtures |
+| `make test-orchestration` | Require both units, then exercise unit failure and integration sequencing with isolated real tool fixtures |
 | `make vet` | Run `go vet` across all Go packages |
 | `make lint` | Run Go vet, TypeScript typecheck, and ESLint |
 | `make build` | Compile frontend bundle and build multi-platform binaries in `bin/` |
@@ -103,7 +107,13 @@ Preserve the [portable ledger contract](TECHNICAL_GUIDELINES.md#portable-ledger-
 
 Select the applicable cases in the [regression prevention checklist](docs/REGRESSION_PREVENTION.md) before changing extraction, configuration, hydration, live polling, or distribution. Record evidence in the active iteration review.
 
-After `make install`, use `make backend-check` for backend-only work or `make` for the full gate. Both prepare assets before Go loads embed-dependent packages. Before direct `go vet`, `go test`, or `go run`, run `make web-assets`. Build/CI changes require verification with generated assets absent and on a repeated build; frontend source checks alone do not validate the standalone bundle.
+Use `make test-unit` for fast feedback and `make` for the full gate. `make check`, `make backend-check`, every supported Make integration target and direct compatibility scripts require both Go and frontend units to succeed before boundary work starts. The dependency graph also applies to parallel and mixed goals, such as `make -j8 check test build`; units are not a sibling prerequisite that can race integrations. Frontend dependency preparation is shared with unit execution rather than silently skipping an absent frontend. No persistent unit-success stamp is used.
+
+The Go unit lane is `backend/internal/domain/...`; all other packages form a conservative integration lane, including pure cases in mixed adapter/CLI packages. Race verification covers both lanes after the fast gate. CLI package `TestMain` still builds its native application, and real storage, process and platform oracles remain integration tests. The outer race runner does not implicitly instrument that separate native build.
+
+Frontend classification is shared by `web/test-suites.ts`: domain and the named pure utility owners run under Node, while the disjoint complement retains jsdom, setup and explicit per-file environment annotations. The Node-annotated asset-sync test remains integration because it exercises real files and processes. From `web/`, `npm run test:unit` runs frontend units; `npm test` and `npm run test:integration` always run the complete frontend unit lane before integration. Standalone npm commands are frontend-scoped and do not require Go or Make. Repository Make and CI use the stronger two-language gate. CI's native Windows and Linux distribution jobs wait for both unit jobs; build verification waits for every required integration branch.
+
+Direct `go test`, `vitest`, Python test files and raw build commands are diagnostic probes, not supported unit-first integration entrypoints. Prepare assets with `make web-assets` before embed-dependent Go probes; pure domain units do not need assets. Standalone `make build`, `make verify-build` and release build/package commands remain build-only. Asset preparation is shared when build and verification goals coexist; an installation fixture may override `WEB_DIR` to reuse already prepared assets without recursively running tests. Build/CI changes require verification with generated assets absent and on a repeated build; frontend source checks alone do not validate the standalone bundle.
 
 Follow [TECHNICAL_GUIDELINES.md](TECHNICAL_GUIDELINES.md) for FCIS boundaries, strict typing, race freedom, and the zero-emoji rule. `git diff --check` must pass.
 
