@@ -26,7 +26,7 @@ The AL-55 timing observations in the ticket are user-supplied evidence, not obse
 
 ## Approval
 
-On 2026-11-04 the user explicitly approved the proposed contract and iteration 01 plan: "Approve scope and begin implementation." Implementation is authorized within these boundaries.
+On 2026-11-04 the user explicitly approved the proposed contract and iteration 01 plan, authorizing implementation within those boundaries.
 
 ## Implementation candidate and native evidence
 
@@ -65,3 +65,15 @@ Parent verified implementation revision 44db8658097e9fb27c7ed1149ee132906903d862
 Parent verified standalone bin/agentic-lens-linux-amd64 reports commit 44db8658. In an isolated empty-workspace server run with unavailable hydration, HTTP index and both bundled assets matched web/dist and backend/internal/adapters/web/dist byte for byte. JavaScript index-z1wgKOcT.js SHA256 359da8a14fe52b72dd85ce196db33a3eb1d5c85e2fc76427308d97cb9f991869; CSS index-C3WE_otj.css SHA256 da46ce98a0a085703e286d00d417781999b3525de6b168d8a68d2005db46d4ba. The probe server exited and its disposable workspace was removed.
 
 Consolidated status remains INCOMPLETE solely for the pending acceptance-policy clarification on explicitly open native intervals versus live-process proof. Native Codex fresh generation/refresh remains an explicitly unverified runtime path after isolated project-ownership rejection; deterministic regressions and real source lifecycle evidence are retained. All confirmed correctness findings are fixed and scoped reviews pass. No final approval, publication, ticket completion or real-ticket telemetry is claimed. Existing implementation approval is preserved; the pending question only concerns the discovered source-state ambiguity.
+
+## Iteration 02 steering: agent-assisted liveness policy
+
+Source: user asks to expose the decision to the agent, use provisional accounting for its own open session and check other sessions for liveness. This supersedes the earlier binary choice; do not keep asking the user to select unconditional source-state counting versus universal live-process proof. Proposed acceptance is per-session evidence, exact current caller/turn versus independently checked other session, and explicit unknown/unsupported results. Exact proof boundaries and supported probes require a grounded delta plan and scope approval before new application changes.
+
+Preserved guarantees: all six corrected defects, completed measurements, deterministic cutoffs, portable recorded facts, exact-owner replacement and unavailable-source retention. Existing candidate03 reviews, full make and standalone checks remain valid for unchanged code. Superseded decision: one blanket policy for every open session. Verification impact: new caller/turn correlation, read-only probe semantics, races, unknown fallback and per-session agent decisions; re-review only affected scopes with both configured profiles. No session has been poked, woken or messaged.
+
+Planner owns iterations/02/PLAN.md. Existing CONTRACT.md stays immutable; iteration02 records the proposed delta. The candidate is committed and the implementation remains unchanged pending this new scope gate.
+
+Iteration02 planning completed by planner gpt-6.1-sol/high. [Delta plan](iterations/02/PLAN.md) supports single-command exact-current-caller verification, optional supported read-only other-session status, and explicit unknown/unsupported retention. A live exact-interval observation supports provisional elapsed time, not CPU utilization; unobservable pauses are disclosed rather than requiring unprovable continuous execution. Pokes that start new work remain excluded. Native transport help does not establish exact-turn status support; no universal cross-session probe is promised. Application changes await approval of this changed scope under agentic-lens-dev.
+
+Documentation preference: paraphrase steering and approval decisions without reproducing user messages in plans or contracts. Direct message quotations were removed from both iteration plans and the summary; the contract contains no direct message quotations. This documentation correction does not establish iteration02 implementation approval.

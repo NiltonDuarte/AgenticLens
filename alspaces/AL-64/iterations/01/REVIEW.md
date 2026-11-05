@@ -58,3 +58,7 @@ All applicable candidate03 persona/profile cells are now scoped APPROVED, with S
 Reviewed implementation commit 44db8658097e9fb27c7ed1149ee132906903d862; origin/main integration was already up to date and introduced no code changes. Parent ran required make successfully, including full race/frontend/check/build gates, and verified the host standalone binary serves exact current canonical HTML/JS/CSS. Source/test scopes remain identical to the frozen candidate03 manifest, so review evidence remains applicable. Full evidence is in SUMMARY.md.
 
 No confirmed bug remains open. Final consolidated approval remains INCOMPLETE because user clarification on source-state/liveness semantics is still pending. No review cleanup is performed: all reports and compact findings remain available. Final telemetry, final delivery commit, push/PR and ticket lifecycle synchronization are deferred until this acceptance boundary is resolved.
+
+## Steering after integrated verification
+
+The user's hybrid-policy proposal supersedes the earlier binary policy choice. Acceptance clarification now belongs to iteration02 PLAN.md: exact self/current-turn evidence versus independently checked other-session activity and agent-facing unknown states. Candidate03 findings/checks remain preserved; no new application changes are made before the delta scope is approved. Final consolidated approval stays INCOMPLETE against the changed acceptance boundary, rather than waiting for an answer to the obsolete binary question.

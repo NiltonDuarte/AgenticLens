@@ -6,4 +6,4 @@ Compact duration evidence survives persistence and projections. Source-backed re
 
 Reader-first v6 expansion: upgrade consuming readers before writer rollout; pre-change strict readers reject new evidence fields. No release rollout is authorized here.
 
-Draft pending source-interval liveness policy clarification and final delivery gates. See [technical contract](CONTRACT.md) and [work summary](SUMMARY.md).
+Draft pending approval and implementation of the iteration02 agent-directed hybrid verification policy, then affected review and final delivery gates. See [technical contract](CONTRACT.md) and [work summary](SUMMARY.md).

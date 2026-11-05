@@ -1,6 +1,6 @@
 # AL-64 iteration 01 plan
 
-Status: Approved. Scope source: user invocation of agentic-lens-dev and the AL-64 specification. Explicit user approval on 2026-11-04: "Approve scope and begin implementation." Approval covers the proposed contract and plan; proceed without repeating the approval gate.
+Status: Approved. Scope source: user invocation of agentic-lens-dev and the AL-64 specification. The user explicitly approved implementation on 2026-11-04. Approval covers the proposed contract and plan; proceed without repeating the approval gate.
 
 ## Baseline and grounding
 
