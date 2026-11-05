@@ -84,3 +84,10 @@ Read-only `PRAGMA table_info` confirmed local v1 and v2 table shapes and v2 `tim
 This investigation did not generate deterministic fixtures or run tests. Existing tests can validate selector behavior for verified/unknown caller values, exact intervals, F05 and fallback wording, but cannot certify an installed native transport. Installed help, installed type declarations, authentic source-open records and a verified executing-caller handoff remain distinct evidence classes.
 
 Outstanding native cases are explicitly unexecuted: trustworthy generic caller/current-interval handoff for Codex and both OpenCode families; independently observed natural completion followed by a later turn and telemetry refresh; and any automatic next-turn operation. Their absence does not block supported F03/F04 behavior, alter the previously accepted numeric producer, or create a new liveness/accounting/authenticity requirement.
+
+
+## Parent delivery verification on 73572098
+
+The parent orchestrator (gpt-6.1-sol/high) executed real Codex generation after integrated make and standalone validation using explicit isolated capture state. It discovered 39 native rollouts, preserved 28 earlier owners and emitted exactly one F03 on stderr: owner 01a1a7d8-b9d2-7383-a6f7-3c7002ba88e6, native turn 01a1ae15-e95d-74c0-a36f-cdbbebbc05f7, start 2026-11-05T23:40:34.023Z, recorded/elapsed 544s at threshold 180. A filtered read of the genuine rollout independently confirms that task_started ID/timestamp and no matching terminal at the bounded read. Requested stdout/ledger/summary remained feedback-free. Configured legacy capture state was not reset or rewritten. Raw output and structured verification stay outside Git under /tmp/al64-04-final-delivery/.
+
+This verifies native source-open F03 output in the current Codex transport, not a trusted generic caller or automatic/natural next-turn refresh cycle. F01/F02/F05 native capability and current OpenCode feedback runtime cycles remain unverified; their deterministic boundaries are covered separately. No session poke, queue/resume action, synthetic completion or source mutation occurred.

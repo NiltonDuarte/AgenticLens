@@ -4,16 +4,6 @@ Active specifications live in `alspaces/plan/to-do/`; completed specifications r
 
 Reconciled 2026-11-05 against merged `origin/main` at `03f5b05d` and open PRs. See [PO-19 evidence and ticket review](../PO-19/SPEC.md). Ready means no outstanding ticket prerequisite; it does not imply implementation approval or passing acceptance.
 
-## In Progress
-
-- **AL-64**: Provisional telemetry checkpoint feedback
-  - **Subsystem**: Generation / Source adapters / Configuration / CLI
-  - **Status**: In Progress
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: [AL-64 investigate and fix active turn duration across codex and opencode.md](to-do/AL-64%20investigate%20and%20fix%20active%20turn%20duration%20across%20codex%20and%20opencode.md)
-  - **Delivery**: [PR #121](https://github.com/NiltonDuarte/AgenticLens/pull/121); iteration 04 implementation in progress.
-
 ## Ready
 
 - **AL-63**: Audit source capability parity across OpenCode v1, OpenCode v2, and Codex

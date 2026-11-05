@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "CP-IN-01",
+      "severity": 4,
+      "issue": "Partial or historical native timing could overstate checkpoint evidence completeness or openness.",
+      "reporters": [
+        {
+          "persona": "coder",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "tester",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: distinguish source-open proof from historical timing and propagate partial evidence without changing numeric facts."
+    },
+    {
+      "finding_id": "CP-IN-02",
+      "severity": 3,
+      "issue": "Synthetic Codex accounting IDs could be presented as native checkpoint interval IDs.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: retain actual native-ID presence and qualify synthetic accounting fallback only."
+    },
+    {
+      "finding_id": "CP-REV-01",
+      "severity": 4,
+      "issue": "Stale v2 running-tool state could override native idle in source-open feedback.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: optional native idle metadata qualifies feedback only; errors remain nonfatal and numeric accounting unchanged."
+    },
+    {
+      "finding_id": "CP-TEST-01",
+      "severity": 3,
+      "issue": "OpenCode tests did not protect feedback qualification against future superseding messages.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: both-family durable assertions detect removal of future-message supersession guards."
+    },
+    {
+      "finding_id": "CP-OBS-01",
+      "severity": 0,
+      "issue": "The read-only stderr fixture was suspected of remaining writable under root.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Refuted: an O_RDONLY descriptor remains unwritable under root; added failed-write fixture preflight. No production defect."
+    }
+  ]
+}

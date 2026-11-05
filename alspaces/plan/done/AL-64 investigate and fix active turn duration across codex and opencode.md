@@ -2,7 +2,7 @@ h3. Title: AL-64: Investigate and fix active-turn duration across Codex and Open
 
 *TARGET*: AgenticLens (Domain / Codex / OpenCode v1 and v2 / Generation / Backfill / Ledger / Presentation)
 
-*Status*: In Progress
+*Status*: Done
 *Work type*: fix
 *Blocked by*: None
 *Blocks*: None
@@ -59,3 +59,7 @@ Per-source investigation, native evidence, regression results, compact shared di
 *ITERATION 04 REOPENED (2026-11-06)*
 
 The user approved implementation of transient checkpoint feedback with a default 180-second threshold and five exact message variants. The former continuation identifier is now F05; aggregation-only feedback is excluded. [Approved iteration 04 plan](../../AL-64/iterations/04/PLAN.md) records the acceptance delta. Iteration 03 delivery/verification remains valid for unchanged accounting; new feedback delivery and verification are in progress.
+
+*ITERATION 04 DELIVERY (2026-11-06)*
+
+Checkpoint feedback implemented on 73572098; all required local review, full make and standalone gates pass. Default180-second owner-scoped stderr messages preserve lean numeric accounting. No generic native caller/continuation handoff was verified; F03/F04 fallback is delivered, stronger messages remain gated and no automatic next-turn action is added. Updated delivery remains PR121 for review, without remote merge or release. [Summary and current verification](../../AL-64/SUMMARY.md) retain coverage and capability limits.
