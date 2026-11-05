@@ -93,3 +93,71 @@ All eight integration persona/profile cells completed: behavior, data/failure, a
 Consolidated local integration is APPROVED, with that explicit pre-existing follow-up. Independent tester gpt-6.1-sol/high verified combined output-policy/duration behavior; test-effectiveness gpt-6.1-sol/high independently confirmed a duration-evidence-loss mutation is caught. Parent verified final make and standalone assets. Detailed completed no-finding integration reports were compacted; the debt report and still-open ticket reviews remain.
 
 Iteration 02 remains unapproved and unimplemented. The merge request does not approve that scope, ticket completion, PR publication or release. Telemetry remains delayed until the final iteration delivery step; no successful or empty ledger is manufactured for this intermediate merge.
+
+## Draft PR publication checkpoint
+
+The user authorized creating a PR for the current branch. Publish a draft for the reviewed initial implementation and verified main merge; do not treat this as approval to implement iteration02 or mark AL-64 complete. The existing todo specification and in-progress ticket entry remain. PR title/body are prepared from PULL_REQUEST.md; no application changes followed reviewed merge13788609.
+
+Final telemetry for this publication checkpoint uses the built native binary (the installed wrapper is unavailable on PATH, and wrapper-only --al-offline/--al-project options are unsupported by the native parser). Supported source/ticket/nonce/output options were inspected. Use explicit source codex and ticket type fix. The generation is real current-project extraction, not the previously blocked isolated source-copy experiment.
+
+Source inventory before extraction: expected root01a1a7d8-b9d2-7383-a6f7-3c7002ba88e6,18 native child sessions with that authoritative parent, and12 additional gpt-6-luna review sessions whose native metadata has no parent link. Source task records associate those12 with the known review report assignments, but no native parent relationship will be fabricated. Extraction coverage and pricing limitations must be checked before committing the ledger. No pre-existing AL-64 ledger or other-harness facts exist to preserve at this first publication.
+
+The first native generate attempt failed before ledger publication: existing configured capture state has no worktree mapping table and is an unsupported coordinate layout. That state is preserved, not reset or migrated. Retry manual nonce-based extraction using a fresh isolated capture-state directory; no existing AL-64 ledger is present, and no successful registered-cache recovery is claimed. The stale registry is unavailable evidence, distinct from the native source sessions.
+
+The isolated-state retry passed capture admission but stopped at the required first-ledger title check. No ledger was published. The next attempt supplies the explicit AL-64 ticket title together with a fresh literal nonce; configured legacy state remains untouched.
+
+## Publication telemetry coverage
+
+Generation succeeded using explicit codex source, fix type and an isolated manual capture state. The raw ledger contains root 01a1a7d8-b9d2-7383-a6f7-3c7002ba88e6 and all 18 authoritative native children: 19 unique Codex sessions/invocations, no duplicate sessions and no missing native child from the source inventory. Provisional root time is explicitly labeled with cutoff 2026-11-05T10:36:46.850981184Z; no source completion timestamp is invented for that open invocation. There was no prior AL-64 or other-harness ledger to overwrite. The generated native-source snapshot is real current-project evidence; it does not claim the separate native-refresh lifecycle experiment was performed.
+
+Coverage is incomplete for the full orchestrated effort: 12 gpt-6-luna review sessions have no authoritative native parent relationship and are absent from this ledger. Their source task assignments match the delegated reviews, but they were not attached through guessed ancestry. Missing source session IDs: 01a1a804-8077-7be0-8ef6-630b932f4717, 01a1a804-8328-74e0-82a6-ab6849d1b9d9, 01a1a804-86b4-7330-b8d7-d118f11cfbaf, 01a1a806-afb8-7072-a03a-884dcdb9b113, 01a1a815-e50b-7061-b99f-4b1ae3727f3e, 01a1a815-e80f-7a71-8bbf-b7bb2eb6bb37, 01a1a815-ec8e-7fd0-a760-769e3ae923af, 01a1a817-98d3-74b1-9db2-3742ca1ee17f, 01a1a944-15e0-7b03-9f1e-65e8c3887135, 01a1a944-17e9-72d3-862b-43cebfba1f61, 01a1a944-1b4f-71c1-a02c-c3a9899f8a89, 01a1a945-dd24-7e73-ac4e-78d0df278ce9. The source inventory and task-to-report matches were inspected outside Git; raw transcripts remain outside Git.
+
+Pricing evidence is unavailable for all 19 recorded invocations; no zero cost or complete total cost is claimed. The generated duration/token/cache tables cover only the 19 recorded native sessions and exclude those 12 delegated review sessions. Configured legacy capture state remains untouched and unavailable; successful extraction used the explicit manual-recovery state. Native read-only parent metadata, rather than the legacy registry, established the 18 child relationships.
+
+Draft publication is authorized at this checkpoint. Iteration 02 implementation and final ticket completion remain pending; a later delivery must refresh telemetry to include subsequent work and preserve existing facts.
+
+### Workflow Efficiency
+- **Software Development Life Cycle Iterations:** 21
+- **Active Agent Duration:** 3h 28m (excludes user wait time; includes 350s provisional across 1 invocation(s); snapshot cutoffs: [2026-11-05T10:36:46.850981184Z])
+- **Context Window Health:** ELEVATED — Root agent peak 306.1k tokens (68% of 450k healthy ceiling, 0 compactions) | Subagents peak 269.5k (Coder)
+- **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
+- **Subagent Turn Velocity & Thrashing:** 1.6 avg turns/run (peak: 5 turns) | Planner 3.0, Coder 5.0, Tester 2.3, Reviewer-architecture 1.0, Reviewer-behavior 1.0, Reviewer-data 1.0, Reviewer-tests 1.0
+- **Test-to-Production Code Ratio:** 1.1:1 (+810 test lines / +752 prod lines)
+- **Code Delivered:** +1,562 / -206 lines across 48 code files (excluding docs)
+- **Reasoning Effort:** 86,886 reasoning tokens (21.2% of generated output)
+- **Tool Health & Self-Correction:** 934 tool calls (66 self-corrections, 92.9% success rate)
+
+### Anomalies & Health Flags
+- **Status:** 7 execution anomalies detected (4 CRITICAL, 3 WARNING).
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (21 cycles) — Subagent roles 'coder' and 'tester' alternated for 21 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-tests <-> reviewer-data (6 cycles) — Subagent roles 'reviewer-tests' and 'reviewer-data' alternated for 6 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (6 cycles) — Subagent roles 'coder' and 'tester' alternated for 6 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-architecture <-> reviewer-tests (6 cycles) — Subagent roles 'reviewer-architecture' and 'reviewer-tests' alternated for 6 consecutive cycles.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (265.0k tokens) — Context tokens reached 265.0k, breaching the 250k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (250.4k tokens) — Context tokens reached 250.4k, breaching the 250k warning ceiling.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-architecture <-> tester (3 cycles) — Subagent roles 'reviewer-architecture' and 'tester' alternated for 3 consecutive cycles.
+
+### Agentic Execution Metrics
+
+**Contributors:** Nilton Duarte
+
+#### By Subagent Role
+| Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
+|---|---|---|---|---|---|---|---|---|
+| **planner** | 1 | 208,076 | 13,965 | 2,110,208 | 91.0% | 127.3k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **coder** | 1 | 378,928 | 50,715 | 20,779,136 | 98.2% | 269.5k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **tester** | 3 | 543,238 | 64,155 | 22,429,440 | 97.6% | 197.5k | HEALTHY | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
+| **Unknown** | 1 | 802,890 | 108,876 | 46,286,848 | 98.3% | 306.1k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **reviewer-architecture** | 4 | 316,007 | 24,085 | 4,185,088 | 93.0% | 159.4k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
+| **reviewer-behavior** | 3 | 238,274 | 19,655 | 2,928,896 | 92.5% | 106.7k | HEALTHY | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
+| **reviewer-data** | 3 | 257,245 | 20,345 | 3,153,664 | 92.5% | 103.7k | HEALTHY | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
+| **reviewer-tests** | 3 | 240,542 | 20,975 | 3,397,120 | 93.4% | 108.3k | HEALTHY | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
+| **Total** | **19** | **2,985,200** | **322,771** | **105,270,400** | **97.2%** | **306.1k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 19 unavailable / 19 invocations)** |
+
+#### By Model
+| Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
+|---|---|---|---|---|---|---|
+| **gpt-6.1-sol** | 19 | 2,985,200 | 322,771 | 105,270,400 | 97.2% | Unavailable (0 observed, 0 partial, 19 unavailable / 19 invocations) |
+| **Total** | **19** | **2,985,200** | **322,771** | **105,270,400** | **97.2%** | **Unavailable (0 observed, 0 partial, 19 unavailable / 19 invocations)** |
+
+Capture observation finalized: 2026-11-05T10:36:46.900371127Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 0; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 0; reserved bytes: 0. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
