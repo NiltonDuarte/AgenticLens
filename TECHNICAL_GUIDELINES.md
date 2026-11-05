@@ -144,7 +144,7 @@ Before submitting any iteration or PR, all quality gates must pass:
 
 ### Automated Verification (Makefile)
 
-Run `make` for the full gate. See [contributor build targets](CONTRIBUTING.md#4-makefile-targets-reference) and [verification prerequisites](CONTRIBUTING.md#5-quality-standards-and-invariants). Direct Go commands require `make web-assets` after installing frontend dependencies. Frontend checks from `web/` are `npm run typecheck`, `npm run lint`, `npm test`, and `npm run build`.
+Run `make test-unit` for pure-core feedback and `make` for the full gate. Repository integration targets require successful Go and frontend units before setup/execution, including parallel Make and hosted CI dependencies. Standalone npm integration requires the complete frontend unit lane first. See the canonical [contributor build targets](CONTRIBUTING.md#4-makefile-targets-reference) and [verification prerequisites](CONTRIBUTING.md#5-quality-standards-and-invariants) for disjoint lane classification, race coverage and command applicability. Embed-dependent Go probes require `make web-assets`; pure domain units do not. Raw Go/Vitest/Python commands are diagnostic probes without the public entrypoints' gating guarantee. Frontend checks also include `npm run typecheck`, `npm run lint`, and `npm run build`.
 
 ### Test Purpose and Proportionality
 

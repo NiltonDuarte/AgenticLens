@@ -1,0 +1,179 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "REV6-01",
+      "severity": 3,
+      "issue": "Filtered CLI commands still execute the native TestMain build.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Documented setup separately; future fixture-sharing owner must preserve build identity. No implementation."
+    },
+    {
+      "finding_id": "REV6-02",
+      "severity": 4,
+      "issue": "A faster split must preserve independent native and persisted-state oracles.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Preservation constraint adopted; all existing coverage retained. No present product defect asserted."
+    },
+    {
+      "finding_id": "REV6-03",
+      "severity": 4,
+      "issue": "Current local and hosted graphs lack an explicit pure-unit prerequisite.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Accepted follow-up for a separate CI sequencing owner; commands and needs edges specified, no CI edit."
+    },
+    {
+      "finding_id": "REV6-04",
+      "severity": 2,
+      "issue": "ACK tests repeat one transition while retaining different namespace assertions.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Optional P3 only; publication-control is the recipient for the repeated block, namespace/native proof stays. No measured saving."
+    },
+    {
+      "finding_id": "REV6-05",
+      "severity": 5,
+      "issue": "Ordinary PR CI omits the three Unix Python check targets.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Accepted P1 coverage-gap follow-up for a separate CI owner; add gated Unix checks, no installer bug claimed."
+    },
+    {
+      "finding_id": "REV6-06",
+      "severity": 4,
+      "issue": "Parallel Make can race dependency and embedded-asset preparation.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Accepted debt: route separate FIX before enabling parallel Make; owner unassigned. Serial make remains the gate."
+    },
+    {
+      "finding_id": "REV6-07",
+      "severity": 3,
+      "issue": "Outer race tests do not instrument separately built application children.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Limitation disclosed; explicit native-race cohort requires its own measured follow-up, no race defect asserted."
+    },
+    {
+      "finding_id": "REV6-08",
+      "severity": 4,
+      "issue": "HTTP readiness can block past the outer advertised deadline.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Existing AL-74 accepted debt revalidated; AL-74 owns bounded requests and nonresponding-listener proof. No duplicate ticket or fix."
+    },
+    {
+      "finding_id": "REV6-09",
+      "severity": 2,
+      "issue": "Diagnostic-history timing combines quadratic fixture width and real index backfill.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Separate performance follow-up should time setup/backfill/read and preserve index-seek/bounded-head proof; no savings or production complexity claimed."
+    }
+  ]
+}
