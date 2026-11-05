@@ -2,6 +2,10 @@ h3. Title: AL2-4: Remote Git Repository Ingestion, Shallow Cache Manager, and Pr
 
 *TARGET*: AgenticLens (adapters | git | http | server | tests)
 
+*Status*: Blocked
+*Blocked by*: AL2-3
+*Blocks*: AL2-5
+
 *CONTEXT*
  
 While AL2-3 enables multi-project scanning of local directories, engineering managers also need to monitor remote git repositories directly (e.g. `https://github.com/myorg/billing-service.git`) without requiring developers to pre-clone every project manually. To support this safely and efficiently, AgenticLens requires a dedicated git cache manager performing shallow clones, background synchronization, and a project registry REST API enabling live project discovery and on-demand syncing.
@@ -32,3 +36,9 @@ Build a shallow git repository cache manager in `internal/adapters/git` that clo
 * Quality gates passing (`make check`, `make test`, or `make`).
 * Go type checking clean with zero any.
 * Telemetry tested with `agentic-lens` CLI.
+
+*DEVELOPMENT STATE REVIEW (2026-11-05)*
+
+Still blocked by AL2-3. No /api/projects registry/sync or GitCacheManager implementation was found. Existing Git code-metric analysis is not remote project ingestion.
+
+Evidence and review limits: [PO-19 reconciliation](../../PO-19/SPEC.md), merged baseline `03f5b05d`. This planning review does not certify runtime behavior or close unverified acceptance criteria.

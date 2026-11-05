@@ -73,3 +73,9 @@ Table sorting/navigation is mouse-only, the modal drawer does not own focus, and
 *SOURCE EVIDENCE*
 
 * [REV-5 FRONTEND_REPORT.md](../../REV-5/iterations/03/FRONTEND_REPORT.md)
+
+*DEVELOPMENT STATE REVIEW (2026-11-05)*
+
+Retain keyboard, clipboard, chart and accessibility corrections. Existing prompt copying and chart views are present; this work corrects their behavior rather than introducing them.
+
+Evidence and review limits: [PO-19 reconciliation](../../PO-19/SPEC.md), merged baseline `03f5b05d`. This planning review does not certify runtime behavior or close unverified acceptance criteria.

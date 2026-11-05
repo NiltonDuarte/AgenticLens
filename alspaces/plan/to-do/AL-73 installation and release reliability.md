@@ -56,3 +56,9 @@ A hashing failure hidden by a pipeline can publish a partial SHA256SUMS that rel
 *SOURCE EVIDENCE*
 
 * [REV-5 DELIVERY_REPORT.md](../../REV-5/iterations/03/DELIVERY_REPORT.md)
+
+*DEVELOPMENT STATE REVIEW (2026-11-05)*
+
+Retain installer/checksum failure acceptance. FIX-16 and GEN-19 repaired release-candidate workflow behavior; that delivery does not establish installer artifact validation or complete checksum-manifest rejection.
+
+Evidence and review limits: [PO-19 reconciliation](../../PO-19/SPEC.md), merged baseline `03f5b05d`. This planning review does not certify runtime behavior or close unverified acceptance criteria.
