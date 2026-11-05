@@ -143,12 +143,13 @@ class ReleaseRevisionTest(unittest.TestCase):
         workflow = steps()
         names = list(workflow)
         select = names.index("Select release revision")
-        for name in ["Set up Go 1.23", "Set up Node.js 20", "Install web dependencies", "Static Analysis", "Run Test Suite", "Compute Release Metadata", "Cross-Compile Release Binaries", "Upload Release Artifacts"]:
+        for name in ["Set up Go", "Set up Node.js 20", "Install web dependencies", "Static Analysis", "Run Test Suite", "Compute Release Metadata", "Cross-Compile Release Binaries", "Upload Release Artifacts"]:
             self.assertGreater(names.index(name), select)
         for name in ["Run Release Please Action", "Update Floating Latest Tag", "Sweep All Stale Release Candidates"]:
             condition = next(line for line in workflow[name] if line.startswith("        if:"))
             self.assertIn("inputs.force_tag == ''", condition)
-        self.assertLess(names.index("Verify forced release exists"), names.index("Set up Go 1.23"))
+        self.assertLess(names.index("Verify forced release exists"), names.index("Set up Go"))
+        self.assertIn("          go-version-file: backend/go.mod", workflow["Set up Go"])
         self.assertIn("        if: ${{ inputs.force_tag != '' }}", workflow["Verify forced release exists"])
         self.assertIn('        run: gh release view "$RELEASE_TAG" > /dev/null', workflow["Verify forced release exists"])
         self.assertIn("          tag_name: ${{ env.RELEASE_TAG }}", workflow["Upload Release Artifacts"])

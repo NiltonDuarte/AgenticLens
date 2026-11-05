@@ -2,6 +2,10 @@ h3. Title: AL2-2: End-to-End Workspace Archive Engine, CLI Compaction, and In-Me
 
 *TARGET*: AgenticLens (domain | adapters | cli | http | presentation | web | tests)
 
+*Status*: Ready
+*Blocked by*: None
+*Blocks*: None
+
 *CONTEXT*
  
 As multi-agent development iterations accumulate across weeks and months, dozens of completed workspace ticket folders (`workspaces/<PREFIX>-NN/`) consume repository space, waste filesystem inodes, and slow down directory walking. Delivering an end-to-end vertical slice from archive creation and cleanup to transparent server-side in-memory reading and web dashboard presentation enables teams and CI to compact older workspaces into `.tar.gz` archives without losing the ability to view, query, and filter historical telemetry.
@@ -35,3 +39,9 @@ Deliver an end-to-end workspace archiving and transparent ingestion engine, inco
 * Quality gates passing (`make check`, `make test`, or `make`).
 * Go and TypeScript type checking clean with zero any.
 * Telemetry tested with `agentic-lens` CLI.
+
+*DEVELOPMENT STATE REVIEW (2026-11-05)*
+
+Not delivered: current CLI has no archive subcommand and scanner has no is_archived contract. AL-76 compact JSON/format is shipped but is not workspace archiving. Preserve configured workspace roots and portable history.
+
+Evidence and review limits: [PO-19 reconciliation](../../PO-19/SPEC.md), merged baseline `03f5b05d`. This planning review does not certify runtime behavior or close unverified acceptance criteria.

@@ -95,3 +95,9 @@ The dashboard advertises localhost but binds all interfaces by default. The user
 * [REV-5 FRONTEND_REPORT.md](../../REV-5/iterations/03/FRONTEND_REPORT.md)
 
 * [AL-67 source configuration evidence](../../AL-67/ARCHITECTURE_ASSESSMENT.md), F01/F02/F11.
+
+*DEVELOPMENT STATE REVIEW (2026-11-05)*
+
+Retain configuration/path/identity work. AL-67 F01/F02/F11 supplies recent composition evidence; http/server.go still binds :port. AL-59 source selection exists, so correct propagation rather than recreating selection.
+
+Evidence and review limits: [PO-19 reconciliation](../../PO-19/SPEC.md), merged baseline `03f5b05d`. This planning review does not certify runtime behavior or close unverified acceptance criteria.

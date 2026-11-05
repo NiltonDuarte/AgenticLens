@@ -85,3 +85,9 @@ Maintained compatibility targets depend on AL-58 historical evidence and fixed p
 * [REV-5 FRONTEND_REPORT.md](../../REV-5/iterations/03/FRONTEND_REPORT.md)
 
 * [AL-67 test and consumer evidence](../../AL-67/ARCHITECTURE_ASSESSMENT.md), F10 and F07 (production accessor use). Original REV-5 evidence remains historical.
+
+*DEVELOPMENT STATE REVIEW (2026-11-05)*
+
+Retain remaining migration, oracle, isolation and unused-code corrections. REV-6 (#113) already split test lanes and gates integration on unit success; do not repeat that orchestration. Current domain/events.go retains anomalyEvidenceSelection.events; AL-67 F10 reconfirms the required-column oracle issue.
+
+Evidence and review limits: [PO-19 reconciliation](../../PO-19/SPEC.md), merged baseline `03f5b05d`. This planning review does not certify runtime behavior or close unverified acceptance criteria.

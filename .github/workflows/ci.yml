@@ -13,16 +13,53 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
+  backend-unit:
+    name: Backend Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache: true
+          cache-dependency-path: backend/go.sum
+      - name: Pure Go unit tests
+        run: make test-unit-backend
+
+  frontend-unit:
+    name: Frontend Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+      - name: Install web dependencies
+        run: npm ci --prefix web
+      - name: TypeScript typecheck
+        run: npm run typecheck --prefix web
+      - name: ESLint
+        run: npm run lint --prefix web
+      - name: Pure frontend unit tests
+        run: npm run test:unit --prefix web
+
   windows-entrypoint:
     name: Windows installation and hook integration
+    needs: [backend-unit, frontend-unit]
     runs-on: windows-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-      - name: Set up Go 1.23
+      - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version-file: backend/go.mod
           cache: false
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -54,94 +91,101 @@ jobs:
 
   backend-check:
     name: Backend Check
+    needs: [backend-unit, frontend-unit]
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Set up Go 1.23
+      - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version-file: backend/go.mod
           cache: true
           cache-dependency-path: backend/go.sum
-
       - name: Set up Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: web/package-lock.json
-
       - name: Install web dependencies
-        working-directory: web
-        run: npm ci
-
-      - name: Backend Go Checks
-        # Shares the local Makefile asset prerequisite before vet and tests.
+        run: npm ci --prefix web
+      - name: Backend integration and complete race coverage
         run: make backend-check
 
   frontend-check:
     name: Frontend Check
+    needs: [backend-unit, frontend-unit]
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-
       - name: Set up Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: web/package-lock.json
+      - name: Install web dependencies
+        run: npm ci --prefix web
+      - name: Frontend integration tests
+        run: npm run test:integration --prefix web
 
-      - name: Install dependencies
-        working-directory: web
-        run: npm ci
-
-      - name: TypeScript Typecheck
-        working-directory: web
-        run: npm run typecheck
-
-      - name: ESLint
-        working-directory: web
-        run: npm run lint
-
-      - name: Frontend Unit Tests
-        working-directory: web
-        run: npm test
-
-  build-binary:
-    name: Build Binary and Verify Version
-    needs: [backend-check, frontend-check]
+  distribution-check:
+    name: Linux distribution and workflow integration
+    needs: [backend-unit, frontend-unit]
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Set up Go 1.23
+      - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version-file: backend/go.mod
           cache: true
           cache-dependency-path: backend/go.sum
-
       - name: Set up Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: web/package-lock.json
-
       - name: Install web dependencies
-        working-directory: web
-        run: npm ci
+        run: npm ci --prefix web
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Distribution, release guards and orchestration boundaries
+        run: make test-release-workflow test-installation test-capture-distribution test-orchestration
 
+  build-binary:
+    name: Build Binary and Verify Version
+    needs: [backend-check, frontend-check, distribution-check, windows-entrypoint]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache: true
+          cache-dependency-path: backend/go.sum
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+      - name: Install web dependencies
+        run: npm ci --prefix web
       - name: Build and verify the current source native
-        # verify-build executes the host binary produced by this build directly.
         # The installed common wrapper remains a separate exact-YAML-pin entrypoint.
         run: make verify-build

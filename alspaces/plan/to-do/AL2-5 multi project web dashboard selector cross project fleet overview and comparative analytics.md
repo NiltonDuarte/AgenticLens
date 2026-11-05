@@ -2,6 +2,10 @@ h3. Title: AL2-5: Multi-Project Web Dashboard Selector, Cross-Project Fleet Over
 
 *TARGET*: AgenticLens (presentation | web | components | state | tests)
 
+*Status*: Blocked
+*Blocked by*: AL2-3, AL2-4
+*Blocks*: None
+
 *CONTEXT*
  
 With backend multi-project ingestion and REST endpoints in place (AL2-3, AL2-4), web dashboard users need an intuitive visual interface to view, filter, and compare data across projects. Project managers and leads must be able to switch between individual projects or select multiple projects simultaneously to evaluate cross-project agent velocity, compare financial expenditures, and inspect multi-repo health in a single dashboard view.
@@ -33,3 +37,9 @@ Deliver a comprehensive multi-project presentation suite in the TypeScript web f
 * Quality gates passing (`make check`, `make test`, or `make`).
 * TypeScript type checking clean with zero any.
 * Telemetry tested with `agentic-lens` CLI.
+
+*DEVELOPMENT STATE REVIEW (2026-11-05)*
+
+Still blocked by AL2-3 and AL2-4. FleetOverview exists for one project; no project registry client or ProjectSelector was found. Retain project identity across API selection and views.
+
+Evidence and review limits: [PO-19 reconciliation](../../PO-19/SPEC.md), merged baseline `03f5b05d`. This planning review does not certify runtime behavior or close unverified acceptance criteria.

@@ -89,3 +89,9 @@ Fallback matching ignores contradictory tool identities; generic error totals ar
 * [REV-5 FRONTEND_REPORT.md](../../REV-5/iterations/03/FRONTEND_REPORT.md)
 
 * [AL-67 child-lookup evidence](../../AL-67/ARCHITECTURE_ASSESSMENT.md), F05. This is shared discovery of the existing correction, not a second ticket.
+
+*DEVELOPMENT STATE REVIEW (2026-11-05)*
+
+Retain the scoped corrections. Current domain/live.go still inspects crash phrases, and AL-67 F05 independently supports the child-lookup diagnostic gap. AL-62 lean ownership and AL-66 optional output are shipped baselines to preserve, not work to repeat.
+
+Evidence and review limits: [PO-19 reconciliation](../../PO-19/SPEC.md), merged baseline `03f5b05d`. This planning review does not certify runtime behavior or close unverified acceptance criteria.

@@ -49,3 +49,9 @@ No broad repository redesign, invented source facts or cleanup of real developer
 
 * [AL-67 assessment](../../AL-67/ARCHITECTURE_ASSESSMENT.md), F04; application baseline a84adbe5be46c2ef52ede0987a417562715d38e1. Findings are unimplemented.
 * [Follow-up ownership](../../AL-67/iterations/02/FOLLOW_UP_TICKETS.md).
+
+*DEVELOPMENT STATE REVIEW (2026-11-05)*
+
+Still open: AL-67 F04 documents duplicate active/archive owner snapshots through generation/backfill versus first-readable hydration. No merged corrective delivery was found; retain exact-owner ambiguity semantics.
+
+Evidence and review limits: [PO-19 reconciliation](../../PO-19/SPEC.md), merged baseline `03f5b05d`. This planning review does not certify runtime behavior or close unverified acceptance criteria.

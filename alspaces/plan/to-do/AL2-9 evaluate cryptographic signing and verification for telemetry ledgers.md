@@ -2,6 +2,10 @@ h3. Title: AL2-9: Evaluate Cryptographic Signing and Verification for Telemetry 
 
 *TARGET*: AgenticLens (Product / Security / CLI / Documentation)
 
+*Status*: Ready
+*Blocked by*: None
+*Blocks*: None
+
 *CONTEXT*
 
 AgenticLens generates JSON telemetry ledgers but does not authenticate their origin or detect modifications after generation. Developers have raised SSH detached signatures and the possibility of a platform-managed key pair. A signature can establish that signed bytes have not changed and that a trusted key signed them; it does not prove the telemetry facts are accurate. The project has not selected who should control signing keys or how verifiers should establish trust.
@@ -37,3 +41,9 @@ Produce a focused discovery recommendation for signing and verifying telemetry l
 # A reviewed discovery document captures the recommendation, alternatives, threat model, workflow, and open questions.
 # Follow-up implementation work is represented by one or more actionable tickets if the recommendation supports proceeding.
 # The ticket is marked complete only after its findings are recorded and accepted by the product owner.
+
+*DEVELOPMENT STATE REVIEW (2026-11-05)*
+
+Ready, discovery-only. No signing implementation was found or is authorized. Portable ledger reads remain supported without local receipts, private keys or mandatory authenticity checks; any proposed policy change needs an explicit product decision.
+
+Evidence and review limits: [PO-19 reconciliation](../../PO-19/SPEC.md), merged baseline `03f5b05d`. This planning review does not certify runtime behavior or close unverified acceptance criteria.

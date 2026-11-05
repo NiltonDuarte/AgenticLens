@@ -49,3 +49,9 @@ As an operator generating telemetry from Codex, OpenCode v1 or OpenCode v2, I wa
 * Deliver per-source investigation evidence, the diagnosed Codex fix, all confirmed OpenCode accounting fixes and meaningful regression coverage through agentic-lens-dev in a separate dedicated session with approved scope. This is active-duration accounting work, not restoration of the removed standalone live-inspector walkthrough.
 * Pass required make verification; frontend changes include the canonical build and verification of embedded standalone assets.
 * Maintain ticket summary/review/PR artifacts and source-grounded telemetry; publish a reviewable PR. Completion requires evidence, not just a plan.
+
+*DEVELOPMENT STATE REVIEW (2026-11-05)*
+
+In Progress: draft PR #121 is open at c68fbc9079d2f24c624d5de0fe87d313ed095b19. Checks reported success, but GitHub reports merge conflicts. The fix is not merged; preserve every source-family acceptance case and let the existing owner finish delivery.
+
+Evidence and review limits: [PO-19 reconciliation](../../PO-19/SPEC.md), merged baseline `03f5b05d`. This planning review does not certify runtime behavior or close unverified acceptance criteria.
