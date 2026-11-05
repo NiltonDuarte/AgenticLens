@@ -645,7 +645,7 @@ func ComputeFleetAnomalies(ledgers []AgenticFactLedger, thresholds ...AnomalyThr
 			RuleCounts:           ruleCounts,
 			TotalTickets:         0,
 			TicketsWithAnomalies: 0,
-			AnomalyRatePerTicket: 0.0,
+			AnomalyRatePerTicket: nil,
 			BrittleTools:         []BrittleToolSummary{},
 		}
 	}
@@ -665,9 +665,22 @@ func ComputeFleetAnomalies(ledgers []AgenticFactLedger, thresholds ...AnomalyThr
 		return st
 	}
 
-	var totalAnomalies, warningCount, criticalCount, ticketsWithAnomalies int64
+	var totalAnomalies, warningCount, criticalCount, ticketsWithAnomalies, totalTickets int64
 
 	for _, ledger := range ledgers {
+		if len(ledger.ToolFacts()) > 0 {
+			for _, t := range ledger.ToolFacts() {
+				if t.Name != "" {
+					tm := getTool(t.Name)
+					tm.calls += t.Calls
+					tm.errors += t.Errors
+				}
+			}
+		}
+
+		if ledger.CompleteAnomalyCoverage() {
+			totalTickets++
+		}
 		ticketAnomalies := RefreshAnomalySummaries(ledger, thresholds...)
 		if len(ticketAnomalies) > 0 {
 			ticketsWithAnomalies++
@@ -687,21 +700,12 @@ func ComputeFleetAnomalies(ledgers []AgenticFactLedger, thresholds ...AnomalyThr
 			}
 		}
 
-		if len(ledger.ToolFacts()) > 0 {
-			for _, t := range ledger.ToolFacts() {
-				if t.Name != "" {
-					tm := getTool(t.Name)
-					tm.calls += t.Calls
-					tm.errors += t.Errors
-				}
-			}
-		}
 	}
 
-	totalTickets := int64(len(ledgers))
-	var anomalyRatePerTicket float64
-	if totalTickets > 0 {
-		anomalyRatePerTicket = math.Round((float64(totalAnomalies)/float64(totalTickets))*100.0) / 100.0
+	var anomalyRatePerTicket *float64
+	if totalTickets > 0 && totalTickets == int64(len(ledgers)) {
+		rate := math.Round((float64(totalAnomalies)/float64(totalTickets))*100.0) / 100.0
+		anomalyRatePerTicket = &rate
 	}
 
 	brittleTools := make([]BrittleToolSummary, 0)

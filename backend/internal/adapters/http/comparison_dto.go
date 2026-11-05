@@ -6,7 +6,7 @@ import (
 
 // TicketComparisonRowDTO is the concrete nullable cost projection of TicketComparisonRow.
 type TicketComparisonRowDTO struct {
-	SkillsUsed              []string                       `json:"skills_used"`
+	SkillsUsed              []string                       `json:"skills_used,omitzero"`
 	TicketID                string                         `json:"ticket_id"`
 	UpdatedAt               string                         `json:"updated_at"`
 	SDLCIterations          int64                          `json:"sdlc_iterations"`

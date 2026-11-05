@@ -16,7 +16,7 @@ const numericMap = (value: unknown): boolean => isRecord(value) && Object.values
 const fields = (value: Record<string, unknown>, keys: readonly string[], check: (item: unknown) => boolean): boolean => keys.every((key) => check(value[key]));
 const array = (value: unknown, check: (item: unknown) => boolean): boolean => Array.isArray(value) && value.every(check);
 const optionalArray = (value: unknown, check: (item: unknown) => boolean): boolean => value === undefined || array(value, check);
-const health = (value: unknown): boolean => value === 'HEALTHY' || value === 'ELEVATED' || value === 'BLOATED' || value === 'CRITICAL';
+const health = (value: unknown): boolean => value === 'UNAVAILABLE' || value === 'HEALTHY' || value === 'ELEVATED' || value === 'BLOATED' || value === 'CRITICAL';
 
 function eventFields(value: Record<string, unknown>): boolean {
   return fields(value, ['timestamp', 'role', 'status'], string) && fields(value, ['turn', 'context_tokens'], number) &&
@@ -65,7 +65,7 @@ function delegation(value: unknown): boolean {
     (value.child_session_id === undefined || (typeof value.child_session_id === 'string' && value.child_session_id.trim().length > 0));
 }
 function session(value: unknown): boolean {
-  return isRecord(value) && string(value.id) && optionalString(value.parent_id) &&
+  return isRecord(value) && !Object.hasOwn(value, 'anomaly_availability') && string(value.id) && optionalString(value.parent_id) &&
     (value.source === undefined || value.source === 'unknown' || value.source === 'opencode' || value.source === 'codex') &&
     (value.user === undefined || string(value.user)) && array(value.invocations, invocation) &&
     array(value.tools, (v) => isRecord(v) && string(v.name) && fields(v, ['calls', 'errors'], number)) &&
@@ -82,7 +82,8 @@ function migration(value: unknown): boolean {
 }
 function facts(value: unknown): boolean {
   return isRecord(value) && ticketMetadata(value) && value.schema_version === 6 &&
-    (value.migration === undefined || migration(value.migration)) && isRecord(value.code) &&
+    (value.migration === undefined || migration(value.migration)) &&
+    !Object.hasOwn(value, 'generation_policy') && isRecord(value.code) &&
     fields(value.code, ['lines_added', 'lines_deleted', 'test_lines_added', 'test_lines_deleted', 'prod_lines_added', 'prod_lines_deleted', 'files_changed', 'sdlc_iterations'], number) &&
     array(value.sessions, session) && optionalArray(value.anomalies, isAnomaly) &&
     !['invocations', 'tools', 'events', 'events_are_partial', 'skills', 'task_links', 'delegations', 'unresolved_facts'].some((key) => Object.hasOwn(value, key));
@@ -114,11 +115,11 @@ function collections(value: unknown, arrays: readonly string[] = [], maps: reado
   return result;
 }
 function prepareLedger(value: unknown): unknown {
-  const result = collections(value, ['threads', 'roles', 'models', 'anomalies']);
+  const result = collections(value, ['threads', 'roles', 'models']);
   if (!isRecord(result)) return result;
-  const rawFacts = collections(result.facts, ['sessions', 'anomalies']);
+  const rawFacts = collections(result.facts, ['sessions']);
   if (isRecord(rawFacts)) {
-    if (Array.isArray(rawFacts.sessions)) rawFacts.sessions = rawFacts.sessions.map((s: unknown) => collections(s, ['invocations', 'tools', 'anomalies', 'skills', 'delegations']));
+    if (Array.isArray(rawFacts.sessions)) rawFacts.sessions = rawFacts.sessions.map((s: unknown) => collections(s, ['invocations', 'tools']));
     if (rawFacts.migration !== undefined) rawFacts.migration = collections(rawFacts.migration, ['steps_completed', 'steps_pending']);
     result.facts = rawFacts;
   }
@@ -149,12 +150,12 @@ function isFleet(value: unknown): value is FleetSummary {
   const anomaly = value.anomaly_summary;
   return fields(value, ['total_tickets', 'total_invocations', 'total_input_tokens', 'total_output_tokens', 'total_cache_read_tokens', 'overall_cache_hit_rate_pct', 'total_duration_seconds', 'total_lines_added', 'total_lines_deleted', 'total_files_changed', 'total_reasoning_tokens', 'overall_reasoning_ratio_pct'], number) &&
     nullableNumber(value.total_cost_usd) && string(value.formatted_total_duration) && nullableNumericMap(value.role_costs) && nullableNumericMap(value.model_costs) &&
-    fields(anomaly, ['total_anomalies', 'warning_count', 'critical_count', 'total_tickets', 'tickets_with_anomalies', 'anomaly_rate_per_ticket'], number) && numericMap(anomaly.severity_counts) && numericMap(anomaly.rule_counts) &&
+    fields(anomaly, ['total_anomalies', 'warning_count', 'critical_count', 'total_tickets', 'tickets_with_anomalies'], number) && optionalNumber(anomaly.anomaly_rate_per_ticket) && numericMap(anomaly.severity_counts) && numericMap(anomaly.rule_counts) &&
     array(anomaly.brittle_tools, (v) => isRecord(v) && string(v.tool_name) && fields(v, ['anomaly_count', 'total_calls', 'error_count', 'failure_rate_pct'], number)) &&
     optionalArray(value.skill_adoption, (v) => isRecord(v) && string(v.name) && fields(v, ['total_invocations', 'tickets_count'], number));
 }
 export function decodeFleet(value: unknown): FleetSummary {
-  const result = collections(value, ['skill_adoption'], ['role_costs', 'model_costs']);
+  const result = collections(value, [], ['role_costs', 'model_costs']);
   if (isRecord(result)) result.anomaly_summary = collections(result.anomaly_summary, ['brittle_tools'], ['severity_counts', 'rule_counts']);
   validateFleetCosts(result);
   if (!isFleet(result)) throw new Error('Invalid fleet summary response');
@@ -164,10 +165,10 @@ function isDetail(value: unknown): value is WorkspaceDetail {
   if (!isRecord(value) || !isLedger(value.ledger) || !isRecord(value.artifacts)) return false;
   const artifacts = value.artifacts;
   return string(artifacts.ticket_id) && fields(artifacts, ['contract_content', 'summary_content'], optionalString) &&
-    optionalArray(artifacts.items, (v) => isRecord(v) && fields(v, ['path', 'title', 'description'], string) && nullableString(v.content)) && array(value.anomalies, isAnomaly);
+    optionalArray(artifacts.items, (v) => isRecord(v) && fields(v, ['path', 'title', 'description'], string) && nullableString(v.content)) && optionalArray(value.anomalies, isAnomaly);
 }
 export function decodeDetail(value: unknown): WorkspaceDetail {
-  const result = collections(value, ['anomalies']);
+  const result = collections(value);
   if (isRecord(result)) {
     result.ledger = prepareLedger(result.ledger);
     const artifacts = collections(result.artifacts, ['items']);

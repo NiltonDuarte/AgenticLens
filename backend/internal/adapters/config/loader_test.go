@@ -2547,3 +2547,60 @@ anomaly_thresholds:
 		}
 	})
 }
+
+func TestLoadGenerationMetricsStrictIndependentDefaults(t *testing.T) {
+	for _, tc := range []struct {
+		name, metrics string
+		want          domain.GenerationPolicy
+	}{
+		{"omitted", "", domain.GenerationPolicy{Skills: true, Delegations: true, Anomalies: true}},
+		{"empty", "generation:\n  metrics: {}\n", domain.GenerationPolicy{Skills: true, Delegations: true, Anomalies: true}},
+		{"skills", "generation:\n  metrics:\n    skills: false\n", domain.GenerationPolicy{Delegations: true, Anomalies: true}},
+		{"delegations", "generation:\n  metrics:\n    delegations: false\n", domain.GenerationPolicy{Skills: true, Anomalies: true}},
+		{"anomalies", "generation:\n  metrics:\n    anomalies: false\n", domain.GenerationPolicy{Skills: true, Delegations: true}},
+		{"mixed", "generation:\n  metrics:\n    skills: false\n    delegations: true\n    anomalies: false\n", domain.GenerationPolicy{Delegations: true}},
+		{"all_off", "generation:\n  metrics:\n    skills: false\n    delegations: false\n    anomalies: false\n", domain.GenerationPolicy{}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root := t.TempDir()
+			path := filepath.Join(root, ".agenticlens-config.yaml")
+			if err := os.WriteFile(path, []byte("project_name: Policy\n"+tc.metrics+testValidSuffixYAML), 0600); err != nil {
+				t.Fatal(err)
+			}
+			cfg, err := config.Load(root)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if cfg.Generation.Metrics != tc.want {
+				t.Fatalf("got %+v want %+v", cfg.Generation.Metrics, tc.want)
+			}
+			rendered, err := config.GenerateConfigYAML(cfg)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(path, []byte(rendered), 0600); err != nil {
+				t.Fatal(err)
+			}
+			roundtrip, err := config.Load(root)
+			if err != nil || roundtrip.Generation.Metrics != tc.want {
+				t.Fatalf("writer lost false/default policy: %+v %v", roundtrip.Generation.Metrics, err)
+			}
+		})
+	}
+	for _, value := range []string{"null", "'false'", "0", "[]", "{}"} {
+		for _, key := range []string{"skills", "delegations", "anomalies"} {
+			t.Run(key+"_invalid_"+value, func(t *testing.T) {
+				root := t.TempDir()
+				path := filepath.Join(root, ".agenticlens-config.yaml")
+				input := "project_name: Policy\ngeneration:\n  metrics:\n    " + key + ": " + value + "\n" + testValidSuffixYAML
+				if err := os.WriteFile(path, []byte(input), 0600); err != nil {
+					t.Fatal(err)
+				}
+				_, err := config.Load(root)
+				if err == nil || !strings.Contains(err.Error(), "generation.metrics."+key) || !strings.Contains(err.Error(), "boolean") {
+					t.Fatalf("invalid type lacked actionable error: %v", err)
+				}
+			})
+		}
+	}
+}

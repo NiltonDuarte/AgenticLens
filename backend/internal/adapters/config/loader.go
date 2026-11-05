@@ -531,6 +531,11 @@ func loadFromFile(filePath string) (domain.ProjectConfig, error) {
 	}
 
 	cfg := mergeConfig(dto)
+	policy, policyErr := decodeGenerationPolicy(data)
+	if policyErr != nil {
+		return domain.ProjectConfig{}, fmt.Errorf("configuration %s: %w", filePath, policyErr)
+	}
+	cfg.Generation.Metrics = policy
 	if dto.AgenticLens != nil && ext != ".json" {
 		if _, err := parseEntrypoint(data, false); err != nil {
 			return domain.ProjectConfig{}, fmt.Errorf("bootstrap configuration %s: %w", filePath, err)

@@ -592,3 +592,27 @@ The ledger uses schema v6 at `<workspaces.dir>/<ticket>/agentic_metrics.json`. T
 Validated byte-identical native cache leaves retain their filesystem identity, including force-identical installation and in-place permission repair, so another project's admitted worker is not retired. A changed-content repair remains explicit. Pre-apply validation/activation failures roll back owned changes. Once external capture apply may have committed, an incomplete result, output-limit or timeout failure retains validated native/wrapper files and recoverable prior backups; it reports incomplete setup and directs status/owned reinstall recovery rather than claiming complete rollback or removing handlers referenced by hooks. Resolve those diagnostics before declaring setup healthy.
 
 Printed scaffold completion runs inside the selected project and restores the caller's location. The common wrapper's --al-project selects release authority; it does not change ordinary native working-directory semantics. Keep the printed scoped command when supplying project facts, so shared and local configuration writes cannot target another same-version scaffold in the caller's directory.
+
+### Optional metrics during generation
+
+Shared project settings independently control optional `generate` output:
+
+```yaml
+generation:
+  metrics:
+    skills: true
+    delegations: true
+    anomalies: true
+```
+
+Every omitted member defaults to true. Explicit false disables that category; values must be actual booleans, not null, strings or numbers. The public key is `delegations`; there is no `task_links` alias. Invalid settings fail before ledger or summary replacement.
+
+Configuration discovery searches upward within the project boundary and selects `.agenticlens-config.yaml`, `.agenticlens-config.yml`, then `.agenticlens-config.json` at each directory. These are alternatives, not merged files. The selected shared file overlays enabled defaults per member. `.agenticlens-config.local.yaml` retains its machine-source/capture override whitelist and cannot override these generation settings. No environment or CLI override exists for them.
+
+Disabled categories are absent from saved JSON, including retained sessions from unavailable or other harness sources. New ledger/API output contains no `generation_policy`, `anomaly_availability` or replacement persisted reason marker. Field presence carries the contract for skills, delegations and anomalies at every canonical owner: omitted means not recorded, `[]` means a complete supported inspection recorded no rows, and values mean recorded facts. Explicit null arrays are invalid. Legacy AL-66 marker shapes remain validated read-compatible at the canonical DTO boundary but are never emitted again and do not justify filling in missing arrays. There is no schema version bump or bulk rewrite.
+
+Ordinary execution, tool errors, child identities, tokens, costs and code metrics remain available. The managed Markdown section is replaced without stale disabled values or changes to user-authored prose. Current `generate --anomalies` reports disabled when `generation.metrics.anomalies` is false; it never re-enables analysis or persistence. The running command may explain its effective settings. Later readers use field presence and say not recorded/partial; they cannot distinguish disabled from unavailable or unsupported evidence and do not infer today's configuration for historical records.
+
+Regeneration intentionally removes disabled categories from that target's retained history. Re-enabling can recover available source-backed facts; it cannot recover omitted facts after the original sources become unavailable. Complete supported snapshots establish empty arrays or values only for their exact owners. Missing, partial or other-source owners keep their existing field presence and known facts. Root/group anomaly analysis requires complete coverage of its required owners, independently of session-local evidence; cached known group findings survive unavailable children. Reads and non-source writes preserve absence rather than deriving successful zero or healthy analysis from ordinary tool counts. Partial known findings remain visible, and incomplete population rates are omitted.
+
+These settings apply to manual and automatic generate only: they do not rewrite other ledgers, suppress live trace collection, redact raw text, globally filter the dashboard, or change explicit backfill defaults. Explicit backfill may replace successfully complete supported owners, including recorded-empty results, while preserving missing/partial/other-harness owners. Fleet tool reliability remains visible independently of anomaly recording.

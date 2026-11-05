@@ -37,7 +37,7 @@ export const SaturationBar: React.FC<SaturationBarProps> = ({
           <InfoTooltip
             content={
               tooltip ??
-              'Context window utilization of the root agent and subagents evaluated against the 200,000 token healthy operating ceiling.'
+              (status === 'UNAVAILABLE' ? 'Recorded context usage. Complete anomaly analysis is not recorded for this ledger.' : 'Context window utilization of the root agent and subagents evaluated against the 200,000 token healthy operating ceiling.')
             }
             ariaLabel="Information about Context Window Saturation"
           />
@@ -45,7 +45,7 @@ export const SaturationBar: React.FC<SaturationBarProps> = ({
         </div>
         <div className="saturation-status-badge" style={{ borderColor: statusColor, color: statusColor }}>
           <span className="status-dot" style={{ backgroundColor: statusColor }} />
-          {status}
+          {status === 'UNAVAILABLE' ? 'Not recorded' : status}
         </div>
       </div>
 

@@ -16,18 +16,12 @@ type AgenticMetricsLedgerDTO struct {
 	Totals             GroupedMetricDTO      `json:"totals"`
 	Roles              []RoleMetricDTO       `json:"roles"`
 	Models             []ModelMetricDTO      `json:"models"`
-	Anomalies          []AnomalyDTO          `json:"anomalies,omitempty"`
+	Anomalies          []AnomalyDTO          `json:"anomalies,omitzero"`
 }
 
 // SerializeLedger converts a domain AgenticMetricsLedger into an AgenticMetricsLedgerDTO.
 func SerializeLedger(ledger domain.AgenticMetricsLedger) AgenticMetricsLedgerDTO {
-	var anomalies []AnomalyDTO
-	if len(ledger.Anomalies) > 0 {
-		anomalies = make([]AnomalyDTO, len(ledger.Anomalies))
-		for i, a := range ledger.Anomalies {
-			anomalies[i] = AnomalyDTOFromDomain(a)
-		}
-	}
+	anomalies := anomaliesFromDomain(ledger.Anomalies)
 	return AgenticMetricsLedgerDTO{
 		TicketID:           ledger.TicketID,
 		TicketTitle:        ledger.TicketTitle,

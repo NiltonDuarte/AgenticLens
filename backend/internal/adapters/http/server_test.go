@@ -244,6 +244,145 @@ func TestGetWorkspaces(t *testing.T) {
 		}
 	})
 
+	t.Run("shared stored IDs survive source absence without read side effects", func(t *testing.T) {
+		root := t.TempDir()
+		wsDir := filepath.Join(root, "custom-ledgers")
+		cfg := domain.DefaultProjectConfig()
+		cfg.Database.Path = filepath.Join(root, "missing-private-state", "opencode.db")
+		cfg.Telemetry.Sources.OpenCodeDatabasePath = cfg.Database.Path
+		cfg.Telemetry.Sources.CodexHome = filepath.Join(root, "missing-private-state", "codex")
+		expected := map[string]string{}
+		for _, ticket := range []string{"TEST-1", "TEST-2"} {
+			dir := filepath.Join(wsDir, ticket)
+			if err := os.MkdirAll(dir, 0755); err != nil {
+				t.Fatal(err)
+			}
+			payload := sampleTestLedgerJSON(ticket, "Stored "+ticket, 30, 0.75, 2)
+			if ticket == "TEST-2" {
+				payload = strings.Replace(payload, `"source":"opencode"`, `"source":"codex"`, 1)
+			}
+			path := filepath.Join(dir, "agentic_metrics.json")
+			expected[path] = payload
+			if err := os.WriteFile(path, []byte(payload), 0600); err != nil {
+				t.Fatal(err)
+			}
+		}
+		server := adaptershttp.NewServerWithConfig(wsDir, fstest.MapFS{}, cfg)
+		for round := 0; round < 2; round++ {
+			recorder := httptest.NewRecorder()
+			server.Handler().ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/api/workspaces", nil))
+			if recorder.Code != http.StatusOK || recorder.Header().Get("X-AgenticLens-Workspace-Diagnostics") != "" {
+				t.Fatalf("round %d failed stored-ledger listing: %d %s", round, recorder.Code, recorder.Body.String())
+			}
+			var response []struct {
+				TicketID string `json:"ticket_id"`
+				Facts    struct {
+					Sessions []struct {
+						ID     string `json:"id"`
+						Source string `json:"source"`
+					} `json:"sessions"`
+				} `json:"facts"`
+			}
+			if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+				t.Fatal(err)
+			}
+			memberships := map[string]string{}
+			for _, row := range response {
+				if len(row.Facts.Sessions) != 1 || row.Facts.Sessions[0].ID != "ses-orch" {
+					t.Fatalf("round %d lost recorded session identity: %+v", round, row)
+				}
+				memberships[row.TicketID] = row.Facts.Sessions[0].Source
+			}
+			if len(response) != 2 || !reflect.DeepEqual(memberships, map[string]string{"TEST-1": "opencode", "TEST-2": "codex"}) {
+				t.Fatalf("round %d changed cross-ticket memberships: %+v", round, response)
+			}
+		}
+		for path, payload := range expected {
+			stored, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(stored) != payload {
+				t.Fatalf("GET rewrote %s", path)
+			}
+			entries, err := os.ReadDir(filepath.Dir(path))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(entries) != 1 || entries[0].Name() != "agentic_metrics.json" {
+				t.Fatalf("GET created workspace artifacts: %+v", entries)
+			}
+		}
+		if _, err := os.Stat(filepath.Join(root, "missing-private-state")); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("GET created private source state or failed to inspect its absence: %v", err)
+		}
+	})
+
+	t.Run("unidentified shared sessions are rejected instead of assigned directory IDs", func(t *testing.T) {
+		for _, withValidSibling := range []bool{false, true} {
+			t.Run(fmt.Sprintf("valid sibling=%t", withValidSibling), func(t *testing.T) {
+				wsDir := t.TempDir()
+				originals := map[string]string{}
+				for _, record := range []struct{ directory, identity string }{
+					{"MISSING-ID", ""}, {"NULL-ID", `,"ticket_id":null`},
+					{"EMPTY-ID", `,"ticket_id":""`}, {"BLANK-ID", `,"ticket_id":" \t"`},
+					{"DIFFERENT-DIRECTORY", `,"ticket_id":"RECORDED-1"`},
+				} {
+					if record.directory == "DIFFERENT-DIRECTORY" && !withValidSibling {
+						continue
+					}
+					dir := filepath.Join(wsDir, record.directory)
+					if err := os.MkdirAll(dir, 0755); err != nil {
+						t.Fatal(err)
+					}
+					payload := strings.Replace(sampleTestLedgerJSON("", "Stored ledger", 30, 0.75, 2), `,"ticket_id":""`, record.identity, 1)
+					path := filepath.Join(dir, "agentic_metrics.json")
+					if err := os.WriteFile(path, []byte(payload), 0600); err != nil {
+						t.Fatal(err)
+					}
+					originals[path] = payload
+				}
+				server := mustNewServer(t, wsDir, fstest.MapFS{})
+				for round := 0; round < 2; round++ {
+					recorder := httptest.NewRecorder()
+					server.Handler().ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/api/workspaces", nil))
+					var diagnostics []domain.WorkspaceDiagnostic
+					if err := json.Unmarshal([]byte(recorder.Header().Get("X-AgenticLens-Workspace-Diagnostics")), &diagnostics); err != nil {
+						t.Fatal(err)
+					}
+					if recorder.Code != http.StatusOK || len(diagnostics) != 4 {
+						t.Fatalf("missing rejection diagnostics: %d %+v", recorder.Code, diagnostics)
+					}
+					for _, diagnostic := range diagnostics {
+						if !strings.Contains(diagnostic.Message, "ticket_id is required") {
+							t.Fatalf("wrong rejection: %+v", diagnostic)
+						}
+					}
+					var ledgers []adaptershttp.MetricsLedgerResponseDTO
+					if err := json.Unmarshal(recorder.Body.Bytes(), &ledgers); err != nil {
+						t.Fatal(err)
+					}
+					if !withValidSibling {
+						if len(ledgers) != 0 {
+							t.Fatalf("invented memberships from directory names: %+v", ledgers)
+						}
+					} else if len(ledgers) != 1 || ledgers[0].TicketID == nil || *ledgers[0].TicketID != "RECORDED-1" || ledgers[0].Totals.Invocations != 1 || ledgers[0].Totals.CostUSD == nil || *ledgers[0].Totals.CostUSD != 0.75 || len(ledgers[0].Facts.Sessions) != 1 || ledgers[0].Facts.Sessions[0].ID != "ses-orch" {
+						t.Fatalf("valid recorded membership or metrics changed: %+v", ledgers)
+					}
+				}
+				for path, original := range originals {
+					after, err := os.ReadFile(path)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if string(after) != original {
+						t.Fatalf("GET repaired ledger %s", path)
+					}
+				}
+			})
+		}
+	})
+
 	t.Run("sort workspaces by cost descending", func(t *testing.T) {
 		resp, err := http.Get(ts.URL + "/api/workspaces?sort=cost&order=desc")
 		if err != nil {
@@ -1583,13 +1722,14 @@ func TestResponseHelpersAndSerialization(t *testing.T) {
 
 	t.Run("WriteFleetResponse writes valid JSON", func(t *testing.T) {
 		rec := httptest.NewRecorder()
+		rate := 0.8
 		summary := domain.FleetSummary{
 			TotalTickets: 5, TotalCostUSD: 1.25,
 			AnomalySummary: domain.FleetAnomalySummary{
 				TotalAnomalies: 4, WarningCount: 3, CriticalCount: 1,
 				SeverityCounts: map[string]int64{"WARNING": 3, "CRITICAL": 1},
 				RuleCounts:     map[string]int64{"TOOL_RETRY_STREAK": 2, "TOOL_HIGH_FAILURE_RATE": 1, "CONTEXT_SATURATION_SPIKE": 1, "SUBAGENT_REWORK_LOOP": 0},
-				TotalTickets:   5, TicketsWithAnomalies: 2, AnomalyRatePerTicket: 0.8,
+				TotalTickets:   5, TicketsWithAnomalies: 2, AnomalyRatePerTicket: &rate,
 				BrittleTools: []domain.BrittleToolSummary{
 					{ToolName: "bash", AnomalyCount: 2, TotalCalls: 20, ErrorCount: 5, FailureRatePct: 25},
 					{ToolName: "git", AnomalyCount: 1, TotalCalls: 10, ErrorCount: 3, FailureRatePct: 30},
@@ -1608,7 +1748,7 @@ func TestResponseHelpersAndSerialization(t *testing.T) {
 			t.Fatalf("unexpected fleet summary: %+v", parsed)
 		}
 		anomaly := parsed.AnomalySummary
-		if anomaly.TotalAnomalies != 4 || anomaly.WarningCount != 3 || anomaly.CriticalCount != 1 || anomaly.TotalTickets != 5 || anomaly.TicketsWithAnomalies != 2 || anomaly.AnomalyRatePerTicket != 0.8 {
+		if anomaly.TotalAnomalies != 4 || anomaly.WarningCount != 3 || anomaly.CriticalCount != 1 || anomaly.TotalTickets != 5 || anomaly.TicketsWithAnomalies != 2 || anomaly.AnomalyRatePerTicket == nil || *anomaly.AnomalyRatePerTicket != 0.8 {
 			t.Fatalf("fleet anomaly scalar fields lost: %+v", anomaly)
 		}
 		if !reflect.DeepEqual(anomaly.SeverityCounts, map[string]int64{"WARNING": 3, "CRITICAL": 1}) || !reflect.DeepEqual(anomaly.RuleCounts, map[string]int64{"TOOL_RETRY_STREAK": 2, "TOOL_HIGH_FAILURE_RATE": 1, "CONTEXT_SATURATION_SPIKE": 1, "SUBAGENT_REWORK_LOOP": 0}) {
@@ -1637,7 +1777,7 @@ func TestResponseHelpersAndSerialization(t *testing.T) {
 			t.Fatal(err)
 		}
 		got := parsed.AnomalySummary
-		if got.TotalAnomalies != 0 || got.WarningCount != 0 || got.CriticalCount != 0 || got.TotalTickets != 0 || got.TicketsWithAnomalies != 0 || got.AnomalyRatePerTicket != 0 {
+		if got.TotalAnomalies != 0 || got.WarningCount != 0 || got.CriticalCount != 0 || got.TotalTickets != 0 || got.TicketsWithAnomalies != 0 || got.AnomalyRatePerTicket != nil {
 			t.Fatalf("empty anomaly scalar values changed: %+v", got)
 		}
 		if !reflect.DeepEqual(got.SeverityCounts, map[string]int64{"WARNING": 0, "CRITICAL": 0}) || !reflect.DeepEqual(got.RuleCounts, map[string]int64{"TOOL_RETRY_STREAK": 0}) || got.BrittleTools == nil || len(got.BrittleTools) != 0 {
@@ -2182,7 +2322,7 @@ func TestWorkspaceEventsAndAnomaliesHTTP(t *testing.T) {
 		}
 	})
 
-	t.Run("GET /api/workspaces/AL-LEGACY includes empty array for anomalies (never null)", func(t *testing.T) {
+	t.Run("GET /api/workspaces/AL-LEGACY keeps unrecorded anomalies absent", func(t *testing.T) {
 		resp, err := http.Get(ts.URL + "/api/workspaces/AL-LEGACY")
 		if err != nil {
 			t.Fatalf("HTTP get failed: %v", err)
@@ -2203,12 +2343,8 @@ func TestWorkspaceEventsAndAnomaliesHTTP(t *testing.T) {
 			t.Fatalf("failed parsing raw JSON: %v", err)
 		}
 
-		anomaliesJSON, exists := rawMap["anomalies"]
-		if !exists {
-			t.Fatal("anomalies key must exist in workspace detail JSON")
-		}
-		if string(anomaliesJSON) != "[]" {
-			t.Fatalf("expected anomalies to be [], got %s", string(anomaliesJSON))
+		if anomaliesJSON, exists := rawMap["anomalies"]; exists {
+			t.Fatalf("unrecorded legacy analysis became a measurement: %s", anomaliesJSON)
 		}
 	})
 
@@ -2583,7 +2719,7 @@ func TestLeanFactsSurviveSourceTraceAvailabilityWithoutGETWrites(t *testing.T) {
 		t.Fatal(err)
 	}
 	owners := detail.Ledger.Facts.Sessions
-	if len(owners) != 2 || len(owners[0].Skills) != 2 || len(owners[1].Skills) != 1 || len(owners[0].Delegations) != 1 || owners[0].Delegations[0].ChildSession != "unavailable-child" || len(detail.Anomalies) != 2 || owners[0].Tools[0].Calls != 6 {
+	if len(owners) != 2 || len(owners[0].Skills) != 2 || len(owners[1].Skills) != 1 || len(owners[0].Delegations) != 1 || owners[0].Delegations[0].ChildSession != "unavailable-child" || len(detail.Anomalies) != 1 || detail.Anomalies[0].RuleID != domain.RuleToolRetryStreak || owners[0].Tools[0].Calls != 6 {
 		t.Fatalf("lean facts, multiplicity, unavailable IDs or metrics lost: %#v", detail)
 	}
 	input, output := "make test", "failure details"
@@ -4846,4 +4982,66 @@ func TestServerWorkspaceDirConfigSynchronization(t *testing.T) {
 			t.Errorf("expected workspaces_dir %q, got %q", overrideSpaceDir, dto.WorkspacesDir)
 		}
 	})
+}
+
+func TestGeneratedPolicyHTTPReadPreservesOmissionWithoutWriting(t *testing.T) {
+	root := t.TempDir()
+	ticket := "TEST-POLICY"
+	dir := filepath.Join(root, ticket)
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	ledger := `{"schema_version":6,"ticket_id":"TEST-POLICY","generation_policy":{"skills":false,"delegations":false,"anomalies":false},"sessions":[{"id":"recorded-owner","source":"codex","user":"tester","invocations":[],"tools":[{"name":"bash","calls":3,"errors":2}]}]}`
+	path := filepath.Join(dir, "agentic_metrics.json")
+	if err := os.WriteFile(path, []byte(ledger), 0600); err != nil {
+		t.Fatal(err)
+	}
+	request := httptest.NewRequest(http.MethodGet, "/api/workspaces/"+ticket, nil)
+	request.SetPathValue("ticketId", ticket)
+	recorder := httptest.NewRecorder()
+	adaptershttp.WorkspaceDetailHandler(root).ServeHTTP(recorder, request)
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("disabled ledger unavailable without original source: %d %s", recorder.Code, recorder.Body.String())
+	}
+	var response struct {
+		Ledger struct {
+			Facts struct {
+				GenerationPolicy json.RawMessage `json:"generation_policy"`
+				Anomalies        json.RawMessage `json:"anomalies"`
+				Sessions         []struct {
+					ID          string                   `json:"id"`
+					Tools       []domain.SessionToolFact `json:"tools"`
+					Skills      json.RawMessage          `json:"skills"`
+					Delegations json.RawMessage          `json:"delegations"`
+					Anomalies   json.RawMessage          `json:"anomalies"`
+				} `json:"sessions"`
+			} `json:"facts"`
+			Totals struct {
+				ContextHealth string `json:"context_health"`
+			} `json:"totals"`
+		} `json:"ledger"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatal(err)
+	}
+	facts := response.Ledger.Facts
+	if len(facts.GenerationPolicy) != 0 {
+		t.Fatalf("read lost disabled policy: %+v", facts.GenerationPolicy)
+	}
+	if len(facts.Sessions) != 1 || facts.Sessions[0].ID != "recorded-owner" || len(facts.Sessions[0].Tools) != 1 || facts.Sessions[0].Tools[0].Errors != 2 {
+		t.Fatalf("read lost ordinary persisted evidence: %+v", facts.Sessions)
+	}
+	if len(facts.Anomalies) != 0 || len(facts.Sessions[0].Anomalies) != 0 || len(facts.Sessions[0].Skills) != 0 || len(facts.Sessions[0].Delegations) != 0 {
+		t.Fatal("read restored disabled category fields")
+	}
+	if response.Ledger.Totals.ContextHealth != "UNAVAILABLE" {
+		t.Fatalf("disabled read claimed health %q", response.Ledger.Totals.ContextHealth)
+	}
+	after, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(after) != ledger {
+		t.Fatal("GET rewrote generation policy ledger")
+	}
 }

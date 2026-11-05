@@ -349,6 +349,9 @@ func TestSchemaV1MalformedOrIncompleteSkillTaskInputsPreserveOtherFacts(t *testi
 		t.Fatal("malformed source was certified as complete trace")
 	}
 	skills, tasks := sessions[0].Skills, sessions[0].Delegations
+	if skills != nil || sessions[0].Anomalies != nil {
+		t.Fatal("partial optional input became a successful recorded-empty category")
+	}
 	if len(skills) != 0 {
 		t.Errorf("malformed or unnamed skill input should be skipped, got %+v", skills)
 	}
@@ -1711,4 +1714,61 @@ func TestSchemaV1CostEvidenceCoalescesReportedAndMissingRecords(t *testing.T) {
 		})
 	}
 
+}
+
+func TestSchemaV1PermissivePartialPartsPreservePresenceAndKnownFacts(t *testing.T) {
+	for _, tc := range []struct {
+		name, malformed string
+		knownSkill      bool
+	}{
+		{name: "complete empty control"},
+		{name: "selected malformed tool", malformed: `{"type":"tool",bad`},
+		{name: "malformed part outside former SQL prefix", malformed: `{bad`},
+		{name: "selected malformed tool with known skill", malformed: `{"type":"tool",bad`, knownSkill: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			db := setupTestDB(t)
+			defer db.Close()
+			if _, err := db.Exec(`INSERT INTO session(id,parent_id,agent,model,title,time_created,time_updated) VALUES('presence-owner',NULL,'coder','mock','partial source',1760000000000,1760000001000);
+INSERT INTO message(id,session_id,time_created,time_updated,data) VALUES('presence-message','presence-owner',1760000000100,1760000000800,'{"role":"assistant","modelID":"mock","time":{"created":1760000000100,"completed":1760000000800},"tokens":{"input":29,"output":2},"cost":0.2}');`); err != nil {
+				t.Fatal(err)
+			}
+			if tc.knownSkill {
+				if _, err := db.Exec(`INSERT INTO part(id,session_id,message_id,time_created,time_updated,data) VALUES('known-skill','presence-owner','presence-message',1760000000200,1760000000250,'{"type":"tool","tool":"skill","state":{"status":"completed","input":{"name":"preserved-skill"},"output":"loaded"}}')`); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if tc.malformed != "" {
+				if _, err := db.Exec(`INSERT INTO part(id,session_id,message_id,time_created,time_updated,data) VALUES('incomplete-part','presence-owner','presence-message',1760000000300,1760000000350,?)`, tc.malformed); err != nil {
+					t.Fatal(err)
+				}
+			}
+			owners, _, _, err := opencode.ExtractSessions(db, []string{"presence-owner"}, "tester", nil)
+			if err != nil || len(owners) != 1 {
+				t.Fatalf("permissive extraction lost readable owner: %+v %v", owners, err)
+			}
+			_, _, _, strictErr := opencode.ExtractSessionsStrict(db, []string{"presence-owner"}, "tester", nil)
+			if (strictErr != nil) != (tc.malformed != "") {
+				t.Fatalf("strict completeness did not match native malformed input: %v", strictErr)
+			}
+			for _, snapshot := range [][]domain.SessionFact{owners, saveReloadSourceOwners(t, owners)} {
+				owner := snapshot[0]
+				if owner.ID != "presence-owner" || len(owner.Invocations) != 1 || owner.Invocations[0].Tokens.Input != 29 || owner.Invocations[0].Tokens.Output != 2 {
+					t.Fatalf("optional failure erased ordinary source work: %+v", owner)
+				}
+				if tc.malformed == "" {
+					if owner.Skills == nil || owner.Delegations == nil || owner.Anomalies == nil || len(owner.Skills) != 0 || len(owner.Delegations) != 0 || len(owner.Anomalies) != 0 {
+						t.Fatalf("valid complete source did not record empty arrays: %+v", owner)
+					}
+				} else {
+					if owner.Delegations != nil || owner.Anomalies != nil || (!tc.knownSkill && owner.Skills != nil) {
+						t.Fatalf("incomplete part falsely certified empty optional evidence: %+v", owner)
+					}
+					if tc.knownSkill && (len(owner.Skills) != 1 || owner.Skills[0].Name != "preserved-skill") {
+						t.Fatalf("partial owner lost known native occurrence: %+v", owner.Skills)
+					}
+				}
+			}
+		})
+	}
 }

@@ -20,9 +20,13 @@ type currentLedgerPreparation struct {
 func prepareCurrentLedger(content []byte) (currentLedgerPreparation, error) {
 	// The formatter owns duplicate-member validation, including escaped keys.
 	// Run it on the original bytes before a map can collapse conflicting values.
-	if _, err := adapters.FormatLedgerJSON(content); err != nil {
-		return currentLedgerPreparation{}, fmt.Errorf("validating original ledger JSON: %w", err)
+	normalized, err := adapters.NormalizeFormerGenerationMetadata(content)
+	if err != nil {
+		return currentLedgerPreparation{}, err
 	}
+	// Use normalized bytes for both domain decoding and the raw metadata-only
+	// cleanup candidate; neither path may re-emit former policy/reason fields.
+	content = normalized
 	ledger, err := migration.NewEngine(nil).Migrate(content, domain.CurrentSchemaVersion)
 	if err != nil {
 		return currentLedgerPreparation{}, fmt.Errorf("decoding current ledger: %w", err)

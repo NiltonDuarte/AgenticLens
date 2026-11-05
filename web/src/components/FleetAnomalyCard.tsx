@@ -3,6 +3,7 @@ import type { FleetAnomalySummary } from '../types/telemetry';
 
 export interface FleetAnomalyCardProps {
   readonly summary?: FleetAnomalySummary | null | undefined;
+  readonly selectedTickets?: number;
   readonly onViewTicket?: ((ticketId: string) => void) | undefined;
 }
 
@@ -36,9 +37,18 @@ const RULES: readonly RuleMeta[] = [
 ];
 
 export const FleetAnomalyCard: React.FC<FleetAnomalyCardProps> = ({
-  summary,
+  summary, selectedTickets,
 }) => {
-  if (!summary || summary.total_anomalies === 0) {
+  const complete = summary?.anomaly_rate_per_ticket !== undefined &&
+    (selectedTickets === undefined || summary.total_tickets === selectedTickets);
+  if (!summary || (summary.total_anomalies === 0 && !complete)) {
+    return <div className="fleet-anomaly-card" data-testid="fleet-anomaly-card">
+      <h3 className="card-section-title">Anomaly analysis not recorded</h3>
+      <p>Complete analysis was not recorded for every selected owner and group. No clean-fleet conclusion is available.</p>
+      <ToolReliabilityTable brittleTools={summary?.brittle_tools ?? []} showAnomalies={false} />
+    </div>;
+  }
+  if (summary.total_anomalies === 0) {
     return (
       <div className="fleet-anomaly-card clean-card" data-testid="fleet-anomaly-card">
         <div className="clean-card-header">
@@ -47,6 +57,7 @@ export const FleetAnomalyCard: React.FC<FleetAnomalyCardProps> = ({
             All workspace executions operate within normal health thresholds with zero flagged anomalies.
           </p>
         </div>
+        {summary && (summary.brittle_tools?.length ?? 0) > 0 && <ToolReliabilityTable brittleTools={summary.brittle_tools} showAnomalies={false} />}
       </div>
     );
   }
@@ -60,7 +71,8 @@ export const FleetAnomalyCard: React.FC<FleetAnomalyCardProps> = ({
         <div>
           <h3 className="card-section-title">Fleet Anomaly and Reliability Profile</h3>
           <p className="card-section-subtitle">
-            Operational anomalies, severity distributions, and brittle tool rankings across active workspaces.
+            Recorded findings remain visible across selected workspaces. Tool calls and errors cover all recorded workspaces.
+            {!complete && ' Analysis is not recorded for the full population; counts reflect known findings only.'}
           </p>
         </div>
       </div>
@@ -78,19 +90,19 @@ export const FleetAnomalyCard: React.FC<FleetAnomalyCardProps> = ({
         <div className="anomaly-kpi-item">
           <span className="anomaly-kpi-label">Affected Tickets</span>
           <span className="anomaly-kpi-val mono">
-            {summary.tickets_with_anomalies} of {summary.total_tickets} tickets
+            {complete ? `${summary.tickets_with_anomalies} of ${summary.total_tickets} tickets` : `${summary.tickets_with_anomalies} tickets with recorded findings`}
           </span>
           <span className="anomaly-kpi-sub">
-            {summary.total_tickets > 0
-              ? `${Math.round((summary.tickets_with_anomalies / summary.total_tickets) * 100)}% of fleet`
-              : '0% of fleet'}
+            {complete && summary.total_tickets > 0
+              ? `${Math.round((summary.tickets_with_anomalies / summary.total_tickets) * 100)}% of analyzed tickets`
+              : 'Complete population rate not recorded'}
           </span>
         </div>
 
         <div className="anomaly-kpi-item">
           <span className="anomaly-kpi-label">Anomaly Rate</span>
           <span className="anomaly-kpi-val mono">
-            {summary.anomaly_rate_per_ticket.toFixed(2)}
+            {summary.anomaly_rate_per_ticket === undefined ? 'Not recorded' : summary.anomaly_rate_per_ticket.toFixed(2)}
           </span>
           <span className="anomaly-kpi-sub">average per ticket</span>
         </div>
@@ -117,12 +129,20 @@ export const FleetAnomalyCard: React.FC<FleetAnomalyCardProps> = ({
         </div>
       </div>
 
-      {/* Brittle Tools Section */}
-      <div className="brittle-tools-section">
-        <h4 className="subsection-title">Brittle Tools</h4>
+      <ToolReliabilityTable brittleTools={brittleTools} showAnomalies />
+    </div>
+  );
+};
+
+function ToolReliabilityTable({ brittleTools, showAnomalies }: {
+  readonly brittleTools: FleetAnomalySummary['brittle_tools']; readonly showAnomalies: boolean;
+}): React.ReactNode {
+  return (
+    <div className="brittle-tools-section">
+        <h4 className="subsection-title">{showAnomalies ? 'Brittle Tools' : 'Recorded Tool Reliability'}</h4>
         {brittleTools.length === 0 ? (
           <div className="brittle-tools-empty">
-            Zero brittle tools identified across the workspace fleet.
+            {showAnomalies ? 'Zero brittle tools identified across the workspace fleet.' : 'No recorded tool errors or flagged tools in the selected fleet.'}
           </div>
         ) : (
           <div className="table-responsive">
@@ -130,7 +150,7 @@ export const FleetAnomalyCard: React.FC<FleetAnomalyCardProps> = ({
               <thead>
                 <tr>
                   <th>Tool Name</th>
-                  <th className="num-col">Anomalies</th>
+                  {showAnomalies && <th className="num-col">Anomalies</th>}
                   <th className="num-col">Total Calls</th>
                   <th className="num-col">Errors</th>
                   <th className="num-col">Failure Rate</th>
@@ -146,7 +166,7 @@ export const FleetAnomalyCard: React.FC<FleetAnomalyCardProps> = ({
                   return (
                     <tr key={t.tool_name}>
                       <td className="tool-name-col mono">{t.tool_name}</td>
-                      <td className="num-col mono">{t.anomaly_count}</td>
+                      {showAnomalies && <td className="num-col mono">{t.anomaly_count}</td>}
                       <td className="num-col mono">{t.total_calls}</td>
                       <td className="num-col mono negative">{t.error_count}</td>
                       <td className="num-col mono">{failureRate.toFixed(1)}%</td>
@@ -158,6 +178,5 @@ export const FleetAnomalyCard: React.FC<FleetAnomalyCardProps> = ({
           </div>
         )}
       </div>
-    </div>
   );
-};
+}

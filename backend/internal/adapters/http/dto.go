@@ -18,7 +18,7 @@ type ErrorResponse struct {
 type WorkspaceDetailResponse struct {
 	Ledger    MetricsLedgerResponseDTO `json:"ledger"`
 	Artifacts domain.TicketArtifacts   `json:"artifacts"`
-	Anomalies []domain.Anomaly         `json:"anomalies"`
+	Anomalies []domain.Anomaly         `json:"anomalies,omitzero"`
 }
 
 // BuildInfoDTO represents the serialized build information payload.

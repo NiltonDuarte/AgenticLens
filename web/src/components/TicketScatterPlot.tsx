@@ -107,7 +107,7 @@ export const TicketScatterPlot: React.FC<TicketScatterPlotProps> = ({ rows, onSe
             const isCompleted = row.completed_at !== null;
             const rawX = getScatterMetricValue(row, xMetric) ?? 0;
             const rawY = getScatterMetricValue(row, yMetric) ?? 0;
-            const skills = row.skills_used?.length ? row.skills_used.join(', ') : 'No recorded skills';
+            const skills = row.skills_used === undefined ? 'Skills not recorded' : row.skills_used?.length ? row.skills_used.join(', ') : 'No recorded skills';
             return (
               <circle
                 key={row.ticket_id}

@@ -128,15 +128,6 @@ func ScanWorkspaces(basePath string) domain.ScanReport {
 			continue
 		}
 
-		// Deduce ticket_id from parent directory if omitted
-		if factLedger.TicketID == nil || *factLedger.TicketID == "" {
-			parentDir := filepath.Dir(metricFile)
-			parentName := filepath.Base(parentDir)
-			if parentName != "workspaces" && parentName != "." {
-				factLedger.TicketID = &parentName
-			}
-		}
-
 		ledger := domain.DeriveMetricsLedger(factLedger, cfg)
 		ledgers = append(ledgers, ledger)
 	}
@@ -304,10 +295,6 @@ func LoadTicketWorkspace(ticketID, basePath string) (*domain.AgenticMetricsLedge
 	if err != nil {
 		return nil, fmt.Errorf("normalizing metrics for ticket %s: %w", cleanID, err)
 	}
-	if factLedger.TicketID == nil || *factLedger.TicketID == "" {
-		factLedger.TicketID = &cleanID
-	}
-
 	cfg, configErr := config.Load(basePath)
 	if configErr != nil && !errors.Is(configErr, config.ErrConfigNotFound) {
 		return nil, fmt.Errorf("loading ticket configuration: %w", configErr)
@@ -478,7 +465,7 @@ func NormalizeHistorySessionForPublication(owner SessionFactDTO, schemaVersion i
 // previously authorized immutable historical DTOs through the same canonical
 // validation and writer. Supported lean facts, summaries, order and nullable
 // values in retained rows never pass through source persistence transforms.
-func SaveFactLedgerPreservingHistory(path string, ledger domain.AgenticFactLedger, history []SessionFactDTO) error {
+func SaveFactLedgerPreservingHistory(path string, ledger domain.AgenticFactLedger, history []SessionFactDTO, policies ...domain.GenerationPolicy) error {
 
 	if ledger.TicketID == nil || strings.TrimSpace(*ledger.TicketID) == "" {
 		return fmt.Errorf("cannot save fact ledger: TicketID is required and cannot be empty")
@@ -534,6 +521,7 @@ func SaveFactLedgerPreservingHistory(path string, ledger domain.AgenticFactLedge
 		}
 		dto.Sessions = append(dto.Sessions, cloned)
 	}
+	dto = ProjectGenerationDTO(dto, policies...)
 	if err := dto.Validate(); err != nil {
 		return fmt.Errorf("cannot save fact ledger: %w", err)
 	}
