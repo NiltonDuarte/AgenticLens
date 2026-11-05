@@ -10,3 +10,5 @@ Source: user request to reconcile all current tickets and remove the To Do secti
 Acceptance: SPEC.md is authoritative for the 23-ticket review and preserved guarantees. No material scope steering received. No implementation is authorized here.
 
 Steps 1-3 complete: all documentation/dependency checks and full make passed; main integration was already up to date. Step 4 uses the current-source native because the configured installed binary is unavailable.
+
+Step 4 complete: source-grounded schema 6 telemetry verified through isolated supported manual recovery; known active-turn duration limitation and source/state facts retained in SUMMARY.md.
