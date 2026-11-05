@@ -2,7 +2,7 @@ h3. Title: AL-67: Review shared telemetry repository interfaces and source injec
 
 *TARGET*: AgenticLens (Architecture / Domain Ports / OpenCode v1 and v2 / Codex / CLI Composition / Backfill / Hydration / HTTP and Live Services / Tests)
 
-*Status*: Ready
+*Status*: Done
 *Work type*: docs
 *Blocked by*: None
 *Blocks*: None

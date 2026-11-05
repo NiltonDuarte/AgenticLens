@@ -5241,3 +5241,47 @@ button.trace-invocation-badge { cursor: pointer; }
 }
 .trace-child-unavailable button { flex-shrink: 0; }
 .tool-details-group, .part-header { min-width: 0; flex-wrap: wrap; }
+
+/* Shared-session inspection stays visible independently of metric filters. */
+.fleet-refresh-controls {
+  margin-bottom: 1rem;
+}
+
+.session-overlap-warning {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--border-color);
+  border-left: 4px solid #b7791f;
+  border-radius: 0.5rem;
+  background: var(--bg-surface-elevated);
+  overflow-wrap: anywhere;
+}
+
+.session-overlap-warning p {
+  margin: 0 0 0.75rem;
+}
+
+.session-overlap-warning summary {
+  cursor: pointer;
+}
+
+.session-overlap-warning summary:focus-visible,
+.session-overlap-warning button:focus-visible {
+  outline: 2px solid var(--text-primary);
+  outline-offset: 3px;
+}
+
+.session-overlap-list {
+  padding-left: 1.25rem;
+}
+
+.session-overlap-list li {
+  margin-top: 0.75rem;
+}
+
+.session-overlap-list button {
+  max-width: 100%;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}

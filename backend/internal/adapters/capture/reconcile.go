@@ -54,12 +54,12 @@ type ReconcileResult struct {
 	Limits                []string                     `json:"limits"`
 }
 
-func (s *Store) Reconcile(ctx context.Context, ticket, user string, sessionBudget int, byteBudget int64) (ReconcileResult, error) {
-	return s.ReconcileAt(ctx, ticket, user, sessionBudget, byteBudget, time.Now().UTC())
+func (s *Store) Reconcile(ctx context.Context, ticket, user string, sessionBudget int, byteBudget int64, policies ...domain.GenerationPolicy) (ReconcileResult, error) {
+	return s.ReconcileAt(ctx, ticket, user, sessionBudget, byteBudget, time.Now().UTC(), policies...)
 }
 
-// ReconcileAt applies one duration cutoff across this source-read operation.
-func (s *Store) ReconcileAt(ctx context.Context, ticket, user string, sessionBudget int, byteBudget int64, cutoff time.Time) (result ReconcileResult, returnErr error) {
+// ReconcileAt applies one duration cutoff and transient generation policy across source reads.
+func (s *Store) ReconcileAt(ctx context.Context, ticket, user string, sessionBudget int, byteBudget int64, cutoff time.Time, policies ...domain.GenerationPolicy) (result ReconcileResult, returnErr error) {
 	result = ReconcileResult{Protocol: RegistryProtocolVersion, StartedAt: cutoff.UTC().Format(time.RFC3339Nano), CutoffSemantics: "cutoff is reconciliation completion, not a common as-of source time; refreshed_at is each owner's successful read completion", TicketID: ticket, Limits: []string{"Only registered, explicitly bound or source-proven inherited sessions are selected. Sessions that never delivered a hook cannot be counted as covered.", "Hook installation is not proof of harness trust, agent response or complete source availability."}}
 	if sessionBudget < 1 || byteBudget < 1 {
 		return result, errors.New("capture budgets must be positive")
@@ -123,7 +123,7 @@ func (s *Store) ReconcileAt(ctx context.Context, ticket, user string, sessionBud
 	for offset := 0; offset < int(workClassCount); offset++ {
 		class := workClass((phase + offset) % int(workClassCount))
 		if class == workRefresh {
-			updatedOwners, accepted, err := s.refreshTicketOwners(ctx, ticket, user, budget, &result, attempted)
+			updatedOwners, accepted, err := s.refreshTicketOwners(ctx, ticket, user, budget, &result, attempted, policies...)
 			if err != nil {
 				return result, err
 			}
@@ -143,7 +143,7 @@ func (s *Store) ReconcileAt(ctx context.Context, ticket, user string, sessionBud
 	// Discoveries made after the refresh class can use leftover resources
 	// immediately. Each owner is attempted at most once per pass.
 	if budget.sessions > 0 && budget.bytes > 0 {
-		updatedOwners, accepted, err := s.refreshTicketOwners(ctx, ticket, user, budget, &result, attempted)
+		updatedOwners, accepted, err := s.refreshTicketOwners(ctx, ticket, user, budget, &result, attempted, policies...)
 		if err != nil {
 			return result, err
 		}
@@ -248,6 +248,7 @@ func (s *Store) ReconcileAt(ctx context.Context, ticket, user string, sessionBud
 
 // sourceRead never enters registry serialization or diagnostic publication.
 type sourceRead struct {
+	policy      *domain.GenerationPolicy
 	transcripts []codex.Transcript
 	events      domain.SourceEvents
 }
@@ -296,7 +297,11 @@ func extractExactAt(ctx context.Context, r domain.CaptureRegistration, budget in
 		if len(source) > 0 {
 			source[0].transcripts = append(source[0].transcripts, transcript)
 		}
-		sessions, err := transcript.SessionFacts()
+		var policies []domain.GenerationPolicy
+		if len(source) > 0 && source[0].policy != nil {
+			policies = append(policies, *source[0].policy)
+		}
+		sessions, err := transcript.SessionFacts(policies...)
 		if err != nil {
 			return nil, info.Size(), "", err
 		}
@@ -311,7 +316,7 @@ func extractExactAt(ctx context.Context, r domain.CaptureRegistration, budget in
 	}
 	defer db.Close()
 	var events domain.SourceEvents
-	sessions, bytes, updated, readErr := opencode.CaptureSessionSnapshotAt(ctx, db.DB(), r.Identity.SessionID, user, budget, cutoff, &events)
+	sessions, bytes, updated, readErr := opencode.CaptureSessionSnapshotWithPolicyAt(ctx, db.DB(), r.Identity.SessionID, user, budget, sourceReadPolicy(source), cutoff, &events)
 	if readErr == nil && len(source) > 0 {
 		source[0].events = domain.MergeSourceEvents(source[0].events, events)
 	}
@@ -363,7 +368,7 @@ func CoverageSummary(result ReconcileResult) string {
 
 // refreshTicketOwners is one scheduler work class; source acceptance and the
 // existing owner continuation are unchanged.
-func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, budget *workBudget, result *ReconcileResult, attempted map[string]bool) ([]domain.CaptureRegistration, map[string]bool, error) {
+func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, budget *workBudget, result *ReconcileResult, attempted map[string]bool, policies ...domain.GenerationPolicy) ([]domain.CaptureRegistration, map[string]bool, error) {
 	registrations, err := s.List(ctx)
 	if err != nil {
 		return nil, nil, err
@@ -395,7 +400,7 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 	}
 	indexes = append(append([]int{}, indexes[split:]...), indexes[:split]...)
 
-	source := sourceRead{}
+	source := sourceRead{policy: captureGenerationPolicy(policies)}
 	used := 0
 	refreshed := map[string]bool{}
 	for _, i := range indexes {
@@ -504,12 +509,12 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 	// Native child metadata is request-local. Resolve only successfully read
 	// owners before saving the final lean snapshots; budgets bound these reads.
 	if len(source.transcripts) > 0 {
-		combined, combineErr := codex.CombineTranscripts(source.transcripts)
+		combined, combineErr := codex.CombineTranscriptsWithPolicy(source.transcripts, policies...)
 		if combineErr != nil {
 			return nil, nil, combineErr
 		}
 		source.events = domain.MergeSourceEvents(source.events, domain.SourceEvents{Events: combined.Events, CompleteSessionIDs: transcriptSessionIDs(source.transcripts)})
-		owners, groupErr := combined.SessionFacts()
+		owners, groupErr := combined.SessionFacts(policies...)
 		if groupErr != nil {
 			return nil, nil, groupErr
 		}
@@ -547,7 +552,11 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 			all = append(all, registration.Snapshot...)
 		}
 	}
-	summary, summaryErr := domain.PersistSourceAnomalySummaries(domain.AgenticFactLedger{Sessions: all}, source.events)
+	effectivePolicy := domain.DefaultGenerationPolicy()
+	if source.policy != nil {
+		effectivePolicy = *source.policy
+	}
+	summary, summaryErr := domain.PersistSourceAnomalySummariesWithPolicy(domain.AgenticFactLedger{Sessions: all}, source.events, effectivePolicy)
 	if summaryErr != nil {
 		return nil, nil, summaryErr
 	}
@@ -584,4 +593,19 @@ func transcriptSessionIDs(transcripts []codex.Transcript) []string {
 		result = append(result, id)
 	}
 	return result
+}
+
+func captureGenerationPolicy(policies []domain.GenerationPolicy) *domain.GenerationPolicy {
+	if len(policies) == 0 {
+		return nil
+	}
+	policy := policies[0]
+	return &policy
+}
+
+func sourceReadPolicy(sources []*sourceRead) *domain.GenerationPolicy {
+	if len(sources) == 0 {
+		return nil
+	}
+	return sources[0].policy
 }

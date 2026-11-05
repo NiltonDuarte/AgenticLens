@@ -34,15 +34,15 @@ func (dto *SessionToolFactDTO) UnmarshalJSON(data []byte) error {
 }
 
 type SessionFactDTO struct {
-	Skills      []SkillFactDTO       `json:"skills,omitempty"`
-	Delegations []DelegationFactDTO  `json:"delegations,omitempty"`
+	Skills      []SkillFactDTO       `json:"skills,omitzero"`
+	Delegations []DelegationFactDTO  `json:"delegations,omitzero"`
 	ID          string               `json:"id"`
 	ParentID    *string              `json:"parent_id,omitempty"`
 	Source      string               `json:"source,omitempty"`
 	User        string               `json:"user,omitempty"`
 	Invocations []InvocationFactDTO  `json:"invocations"`
 	Tools       []SessionToolFactDTO `json:"tools"`
-	Anomalies   []AnomalyDTO         `json:"anomalies"`
+	Anomalies   []AnomalyDTO         `json:"anomalies,omitzero"`
 }
 
 // ErrToolSessionIDRequired identifies a fact ledger that has tool aggregates
@@ -91,7 +91,7 @@ func SessionFactDTOFromDomain(session domain.SessionFact) SessionFactDTO {
 		User:        session.User,
 		Invocations: []InvocationFactDTO{},
 		Tools:       []SessionToolFactDTO{},
-		Anomalies:   []AnomalyDTO{},
+		Anomalies:   nil,
 	}
 	for _, inv := range session.Invocations {
 		result.Invocations = append(result.Invocations, InvocationFactDTOFromDomain(inv))
@@ -99,9 +99,14 @@ func SessionFactDTOFromDomain(session domain.SessionFact) SessionFactDTO {
 	for _, tool := range session.Tools {
 		result.Tools = append(result.Tools, SessionToolFactDTO{Name: tool.Name, Calls: tool.Calls, Errors: tool.Errors})
 	}
+
+	if session.Anomalies != nil {
+		result.Anomalies = []AnomalyDTO{}
+	}
 	for _, anomaly := range session.Anomalies {
 		anomaly.Context.SessionID = nil
 		result.Anomalies = append(result.Anomalies, AnomalyDTOFromDomain(anomaly))
 	}
+
 	return result
 }

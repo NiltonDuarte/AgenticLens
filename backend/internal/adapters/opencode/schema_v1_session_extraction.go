@@ -59,20 +59,20 @@ type schemaV1PartData struct {
 }
 
 func extractSchemaV1SessionsWithEvents(db *sql.DB, ids []string, user string, users map[string]string, strict bool, sink *[]domain.EventFact, exact ...bool) ([]domain.SessionFact, *string, *string, error) {
-	return extractSchemaV1SessionsWithEventsAt(db, ids, user, users, strict, sink, time.Now().UTC(), exact...)
+	return extractSchemaV1SessionsWithPolicyAt(db, ids, user, users, strict, sink, nil, time.Now().UTC(), exact...)
 }
 
-func extractSchemaV1SessionsWithEventsAt(
-	db *sql.DB,
-	threadIDs []string,
-	defaultUser string,
-	userBySessionID map[string]string,
-	strict bool,
-	eventSink *[]domain.EventFact,
-	cutoff time.Time,
-	exact ...bool,
-) ([]domain.SessionFact, *string, *string, error) {
+func extractSchemaV1SessionsWithEventsAt(db *sql.DB, threadIDs []string, defaultUser string, userBySessionID map[string]string, strict bool, eventSink *[]domain.EventFact, cutoff time.Time, exact ...bool) ([]domain.SessionFact, *string, *string, error) {
+	return extractSchemaV1SessionsWithPolicyAt(db, threadIDs, defaultUser, userBySessionID, strict, eventSink, nil, cutoff, exact...)
+}
 
+func extractSchemaV1SessionsWithPolicy(db *sql.DB, threadIDs []string, defaultUser string, userBySessionID map[string]string, strict bool, eventSink *[]domain.EventFact, policy *domain.GenerationPolicy, exact ...bool) ([]domain.SessionFact, *string, *string, error) {
+	return extractSchemaV1SessionsWithPolicyAt(db, threadIDs, defaultUser, userBySessionID, strict, eventSink, policy, time.Now().UTC(), exact...)
+}
+
+func extractSchemaV1SessionsWithPolicyAt(db *sql.DB, threadIDs []string, defaultUser string, userBySessionID map[string]string, strict bool, eventSink *[]domain.EventFact, policy *domain.GenerationPolicy, cutoff time.Time, exact ...bool) ([]domain.SessionFact, *string, *string, error) {
+
+	incompleteOwners := make(map[string]bool)
 	quotedList, err := buildQuotedIDList(threadIDs)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("OpenCode schema family v1: validating thread ids: %w", err)
@@ -260,6 +260,7 @@ func extractSchemaV1SessionsWithEventsAt(
 				if strict {
 					return nil, nil, nil, errors.Join(fmt.Errorf("OpenCode schema family v1: empty message %s in session %s", mid, s.id), msgRows.Close())
 				}
+				incompleteOwners[s.id] = true
 				continue
 			}
 
@@ -268,6 +269,7 @@ func extractSchemaV1SessionsWithEventsAt(
 				if strict {
 					return nil, nil, nil, errors.Join(fmt.Errorf("OpenCode schema family v1: decoding message %s in session %s: %w", mid, s.id, err), msgRows.Close())
 				}
+				incompleteOwners[s.id] = true
 				continue
 			}
 
@@ -282,6 +284,7 @@ func extractSchemaV1SessionsWithEventsAt(
 			}
 
 			if rawMD.Role == nil || *rawMD.Role != "assistant" {
+				incompleteOwners[s.id] = true
 				continue
 			}
 
@@ -454,21 +457,17 @@ func extractSchemaV1SessionsWithEventsAt(
 		sessionUserIterations[s.id] = sessionUserTurns
 	}
 
-	// Strict replacement reads every part so a malformed record cannot be
-	// hidden by the tolerant tool/compaction SQL projection.
-	partFilter := ""
-	if !strict {
-		partFilter = `AND (p.data LIKE '%"type":"tool"%' OR p.data LIKE '%"type":"compaction"%')`
-	}
+	// Both extraction modes inspect every part: a malformed record cannot
+	// establish complete optional-category evidence by escaping a tool filter.
+	// Strict mode rejects it; permissive mode records incomplete owner coverage.
 	// 4. Query parts (tool calls and compactions)
 	qParts := fmt.Sprintf(`
 		SELECT p.id, p.session_id, p.message_id, p.time_created, p.time_updated, p.data
 		FROM part p
 		JOIN session s ON p.session_id = s.id
 		WHERE (s.id IN (%s) OR s.parent_id IN (%s))
-		  %s
 		ORDER BY p.time_created ASC
-	`, quotedList, parentList, partFilter)
+	`, quotedList, parentList)
 
 	partRows, err := db.Query(qParts)
 	if err != nil {
@@ -490,6 +489,7 @@ func extractSchemaV1SessionsWithEventsAt(
 			if strict {
 				return nil, nil, nil, fmt.Errorf("OpenCode schema family v1: empty part %s in session %s", pid.String, sid.String)
 			}
+			incompleteOwners[sid.String] = true
 			continue
 		}
 
@@ -498,6 +498,7 @@ func extractSchemaV1SessionsWithEventsAt(
 			if strict {
 				return nil, nil, nil, fmt.Errorf("OpenCode schema family v1: decoding part %s in session %s: %w", pid.String, sid.String, err)
 			}
+			incompleteOwners[sid.String] = true
 			continue
 		}
 
@@ -505,6 +506,7 @@ func extractSchemaV1SessionsWithEventsAt(
 			if strict {
 				return nil, nil, nil, fmt.Errorf("OpenCode schema family v1: missing type in part %s in session %s", pid.String, sid.String)
 			}
+			incompleteOwners[sid.String] = true
 			continue
 		}
 
@@ -799,7 +801,7 @@ func extractSchemaV1SessionsWithEventsAt(
 	if err := proveSourceChildLinks(db, "session", events); err != nil {
 		return nil, nil, nil, err
 	}
-	projected, err := projectSourceFacts(sessionFacts, events, strict)
+	projected, err := projectSourceFacts(sessionFacts, events, strict, policy, incompleteOwners)
 	if err != nil {
 		return nil, nil, nil, err
 	}

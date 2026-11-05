@@ -110,10 +110,18 @@ func ExtractSessionsStrict(db *sql.DB, threadIDs []string, defaultUser string, u
 }
 
 func extractSessions(db *sql.DB, threadIDs []string, defaultUser string, userBySessionID map[string]string, strict bool, source ...*domain.SourceEvents) ([]domain.SessionFact, *string, *string, error) {
-	return extractSessionsAt(db, threadIDs, defaultUser, userBySessionID, strict, time.Now().UTC(), source...)
+	return extractSessionsWithPolicyAt(db, threadIDs, defaultUser, userBySessionID, strict, nil, time.Now().UTC(), source...)
 }
 
 func extractSessionsAt(db *sql.DB, threadIDs []string, defaultUser string, userBySessionID map[string]string, strict bool, cutoff time.Time, source ...*domain.SourceEvents) ([]domain.SessionFact, *string, *string, error) {
+	return extractSessionsWithPolicyAt(db, threadIDs, defaultUser, userBySessionID, strict, nil, cutoff, source...)
+}
+
+func extractSessionsWithPolicy(db *sql.DB, threadIDs []string, defaultUser string, userBySessionID map[string]string, strict bool, policy *domain.GenerationPolicy, source ...*domain.SourceEvents) ([]domain.SessionFact, *string, *string, error) {
+	return extractSessionsWithPolicyAt(db, threadIDs, defaultUser, userBySessionID, strict, policy, time.Now().UTC(), source...)
+}
+
+func extractSessionsWithPolicyAt(db *sql.DB, threadIDs []string, defaultUser string, userBySessionID map[string]string, strict bool, policy *domain.GenerationPolicy, cutoff time.Time, source ...*domain.SourceEvents) ([]domain.SessionFact, *string, *string, error) {
 	if db == nil {
 		return nil, nil, nil, errors.New("database connection is nil")
 	}
@@ -132,9 +140,9 @@ func extractSessionsAt(db *sql.DB, threadIDs []string, defaultUser string, userB
 	}
 	var started, completed *string
 	if family == schemaFamilyV2 {
-		sessions, started, completed, err = extractSchemaV2SessionsWithEventsAt(db, threadIDs, defaultUser, userBySessionID, strict, sink, cutoff)
+		sessions, started, completed, err = extractSchemaV2SessionsWithPolicyAt(db, threadIDs, defaultUser, userBySessionID, strict, sink, policy, cutoff)
 	} else {
-		sessions, started, completed, err = extractSchemaV1SessionsWithEventsAt(db, threadIDs, defaultUser, userBySessionID, strict, sink, cutoff)
+		sessions, started, completed, err = extractSchemaV1SessionsWithPolicyAt(db, threadIDs, defaultUser, userBySessionID, strict, sink, policy, cutoff)
 	}
 	if err != nil {
 		return nil, nil, nil, err
@@ -245,4 +253,14 @@ func ExtractSessionsStrictWithSource(db *sql.DB, ids []string, user string, user
 // ExtractSessionsStrictWithSourceAt uses one explicit duration snapshot cutoff.
 func ExtractSessionsStrictWithSourceAt(db *sql.DB, ids []string, user string, users map[string]string, source *domain.SourceEvents, cutoff time.Time) ([]domain.SessionFact, *string, *string, error) {
 	return extractSessionsAt(db, ids, user, users, true, cutoff, source)
+}
+
+// ExtractSessionsStrictWithPolicy applies generate policy without changing other callers.
+func ExtractSessionsStrictWithPolicy(db *sql.DB, ids []string, user string, users map[string]string, source *domain.SourceEvents, policy domain.GenerationPolicy) ([]domain.SessionFact, *string, *string, error) {
+	return ExtractSessionsStrictWithPolicyAt(db, ids, user, users, source, policy, time.Now().UTC())
+}
+
+// ExtractSessionsStrictWithPolicyAt preserves both the selected analysis policy and operation cutoff.
+func ExtractSessionsStrictWithPolicyAt(db *sql.DB, ids []string, user string, users map[string]string, source *domain.SourceEvents, policy domain.GenerationPolicy, cutoff time.Time) ([]domain.SessionFact, *string, *string, error) {
+	return extractSessionsWithPolicyAt(db, ids, user, users, true, &policy, cutoff, source)
 }

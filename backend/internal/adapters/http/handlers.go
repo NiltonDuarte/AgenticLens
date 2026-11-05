@@ -231,9 +231,6 @@ func WorkspaceDetailHandler(workspacesDir string, artifactConfigs ...[]domain.Wo
 		}
 
 		anomalies := targetLedger.Anomalies
-		if anomalies == nil {
-			anomalies = []domain.Anomaly{}
-		}
 
 		resp := WorkspaceDetailResponse{
 			Ledger:    MetricsLedgerResponseDTOFromDomain(*targetLedger),

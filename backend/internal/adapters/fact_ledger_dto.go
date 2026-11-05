@@ -96,7 +96,7 @@ type AgenticFactLedgerDTO struct {
 	UpdatedAt     string            `json:"updated_at"`
 	Code          CodeFactsDTO      `json:"code"`
 	Sessions      []SessionFactDTO  `json:"sessions"`
-	Anomalies     []AnomalyDTO      `json:"anomalies"`
+	Anomalies     []AnomalyDTO      `json:"anomalies,omitzero"`
 }
 
 // UnmarshalJSON accepts the current schema only; legacy input decoding belongs
@@ -172,9 +172,13 @@ func (dto AgenticFactLedgerDTO) Validate() error {
 	if !currentSchema {
 		return fmt.Errorf("schema v%d required; run explicit agentic-lens migrate", domain.CurrentSchemaVersion)
 	}
+	if dto.TicketID == nil || strings.TrimSpace(*dto.TicketID) == "" {
+		return errors.New("ticket_id is required and cannot be blank")
+	}
 	if currentSchema && dto.Sessions == nil {
 		return errors.New("sessions collection is required in schema v6")
 	}
+
 	seen := make(map[string]bool, len(dto.Sessions))
 	for i, session := range dto.Sessions {
 		if strings.TrimSpace(session.ID) == "" {
@@ -189,6 +193,7 @@ func (dto AgenticFactLedgerDTO) Validate() error {
 		seen[session.ID] = true
 	}
 	for i, session := range dto.Sessions {
+
 		if err := validateOwnedOccurrences(session); err != nil {
 			return fmt.Errorf("sessions[%d]: %w", i, err)
 		}
@@ -242,7 +247,7 @@ func (dto AgenticFactLedgerDTO) Validate() error {
 }
 
 // ValidatePersistedEvidence enforces stable source identity on rows about to be written.
-// Read validation remains tolerant of pre-iteration v4 ledgers so they can be normalized.
+// Both read and write validation require the current ledger schema.
 func (dto AgenticFactLedgerDTO) ValidatePersistedEvidence() error {
 	for i, session := range dto.Sessions {
 		if strings.TrimSpace(session.Source) == "" {
@@ -254,12 +259,13 @@ func (dto AgenticFactLedgerDTO) ValidatePersistedEvidence() error {
 
 // AgenticFactLedgerDTOFromDomain converts a domain AgenticFactLedger to its DTO for serialization.
 func AgenticFactLedgerDTOFromDomain(ledger domain.AgenticFactLedger) AgenticFactLedgerDTO {
+
 	sessions := make([]SessionFactDTO, len(ledger.Sessions))
 	for i, session := range ledger.Sessions {
 		sessions[i] = SessionFactDTOFromDomain(session)
 	}
 
-	return AgenticFactLedgerDTO{
+	return ProjectGenerationDTO(AgenticFactLedgerDTO{
 		SchemaVersion: ledger.SchemaVersion,
 		Migration:     MigrationInfoDTOFromDomain(ledger.Migration),
 		TicketID:      ledger.TicketID,
@@ -280,7 +286,7 @@ func AgenticFactLedgerDTOFromDomain(ledger domain.AgenticFactLedger) AgenticFact
 		},
 		Sessions:  sessions,
 		Anomalies: anomaliesFromDomain(ledger.Anomalies),
-	}
+	})
 }
 
 func (dto AgenticFactLedgerDTO) validateCostFields(required bool) error {
@@ -300,6 +306,11 @@ func (dto AgenticFactLedgerDTO) validateCostFields(required bool) error {
 // ValidateRuntimeFactLedger rejects legacy or explicitly incomplete ledgers before
 // any fact collections are decoded by ordinary ingestion paths.
 func ValidateRuntimeFactLedger(data []byte) error {
+	normalized, err := normalizeFormerGenerationMetadata(data)
+	if err != nil {
+		return fmt.Errorf("decoding ledger metadata: %w", err)
+	}
+	data = normalized
 	var fields map[string]json.RawMessage
 	if err := json.Unmarshal(data, &fields); err != nil {
 		return fmt.Errorf("decoding ledger metadata: %w", err)
@@ -329,6 +340,7 @@ func ValidateRuntimeFactLedger(data []byte) error {
 			return fmt.Errorf("schema v6 ledger contains ambiguous root-level %s; run `agentic-lens migrate --target-version 6` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>`", key)
 		}
 	}
+
 	sessionsJSON, sessionsExists := fields["sessions"]
 	if !sessionsExists || string(sessionsJSON) == "null" || !json.Valid(sessionsJSON) {
 		return errors.New("canonical schema v6 ledger requires a sessions collection; run `agentic-lens migrate --target-version 6` followed by source-backed `agentic-lens backfill --recompute-db --source <opencode|codex>`")
@@ -352,7 +364,8 @@ func ValidateRuntimeFactLedger(data []byte) error {
 				return fmt.Errorf("schema v6 session %d rejects retired %s", si, retired)
 			}
 		}
-		for _, required := range []string{"id", "source", "user", "invocations", "tools", "anomalies"} {
+		requiredFields := []string{"id", "source", "user", "invocations", "tools"}
+		for _, required := range requiredFields {
 			if _, ok := session[required]; !ok {
 				return fmt.Errorf("canonical schema v6 session %d is missing required %s", si, required)
 			}
@@ -361,7 +374,9 @@ func ValidateRuntimeFactLedger(data []byte) error {
 		if err := json.Unmarshal(session["user"], &sessionUser); err != nil || strings.TrimSpace(sessionUser) == "" {
 			return fmt.Errorf("canonical schema v6 session %d requires a non-empty user", si)
 		}
-		for _, collection := range []string{"tools", "anomalies"} {
+		collections := []string{"tools"}
+
+		for _, collection := range collections {
 			var values []json.RawMessage
 			if err := json.Unmarshal(session[collection], &values); err != nil || values == nil {
 				return fmt.Errorf("canonical schema v6 session %d %s must be an array", si, collection)

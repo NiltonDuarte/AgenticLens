@@ -64,3 +64,7 @@ Reserve one slot for parent; run at most three reviewer cells concurrently in wa
 ## Delivery and approval gate
 
 STOP here for explicit user approval of CONTRACT.md and this plan. Following approval, parent coordinates the workflow, commits reviewed task-owned changes, integrates origin/main and runs make, consolidates review after required checks, writes concise summary/PR context and performs ticket lifecycle synchronization. Preserve numeric finding severity and every reporting model/persona/effort in REVIEW_SUMMARY.json before completed-review cleanup. Parent generates source-grounded telemetry at the last delivery step with literal nonce, --source codex and --ticket-type fix, verifies root/children and retained other-harness facts, commits/pushes and publishes/links a reviewable PR. No telemetry ledger or implementation completion is claimed at this planning checkpoint.
+
+## Routine main integration on 2026-11-05
+
+The user requested merging current main into the feature branch. Preserve the reviewed implementation and upstream optional-output/overlap features; resolve conflicts and run affected independent verification plus required make. The integration roster, initial revisions and15 conflicting paths are recorded in [INTEGRATION.md](INTEGRATION.md). This routine integration does not approve iteration02's proposed hybrid policy or reopen unchanged acceptance decisions.

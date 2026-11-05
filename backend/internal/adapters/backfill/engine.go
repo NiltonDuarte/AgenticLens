@@ -603,7 +603,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 	// 5. Update Markdown Summary if requested
 	if opts.UpdateSummaries {
 		summaryPath := filepath.Join(workspaceDir, "SUMMARY.md")
-		derivedLedger := domain.DeriveMetricsLedger(factLedger, cfg)
+		derivedLedger := domain.DeriveMetricsLedger(persistedLedger, cfg)
 		tableMD := adapters.FormatMarkdownMetricsTable(derivedLedger, cfg.RoleOrder)
 		if err := adapters.UpdateSummaryFile(summaryPath, tableMD); err != nil {
 			result.Error = fmt.Errorf("updating summary file %s: %w", summaryPath, err)

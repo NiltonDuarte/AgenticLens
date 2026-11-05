@@ -293,7 +293,7 @@ describe('Domain Pure Formatters', () => {
             expect(rows[0]?.ticket_id).toBe('unknown');
             expect(rows[0]?.ticket_title).toBe('N/A');
             expect(rows[0]?.lead_duration_formatted).toBe('In Progress');
-            expect(rows[0]?.skills_used).toEqual([]);
+            expect(rows[0]?.skills_used).toBeUndefined();
         });
         it('handles migrated and partially migrated ledger objects cleanly', () => {
             const migratedLedger = {

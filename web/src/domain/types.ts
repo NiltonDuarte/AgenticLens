@@ -27,7 +27,7 @@ export interface CostSummary {
   readonly total: number;
 }
 
-export type ContextHealthStatus = 'HEALTHY' | 'ELEVATED' | 'BLOATED' | 'CRITICAL';
+export type ContextHealthStatus = 'HEALTHY' | 'ELEVATED' | 'BLOATED' | 'CRITICAL' | 'UNAVAILABLE';
 
 export type {
   AgentRole,
@@ -394,7 +394,7 @@ export interface TicketArtifacts {
 export interface WorkspaceDetail {
   readonly ledger: AgenticMetricsLedger;
   readonly artifacts: TicketArtifacts;
-  readonly anomalies: readonly Anomaly[];
+  readonly anomalies?: readonly Anomaly[];
 }
 
 export type TimeGranularity = 'hourly' | 'daily' | 'weekly';
@@ -483,3 +483,19 @@ export type {
   AnomalyRule,
   ToolFailureAnomalyRule,
 } from './anomalies';
+
+export type MetricCoverage = 'not-recorded' | 'partial' | 'recorded';
+export type OptionalMetricCategory = 'skills' | 'delegations' | 'anomalies';
+
+/** Category presence is observation evidence, never a persisted reason marker. */
+export function sessionMetricCoverage(sessions: readonly SessionFact[], category: OptionalMetricCategory): MetricCoverage {
+  const recorded = sessions.filter((session) => session[category] !== undefined).length;
+  return recorded === 0 ? 'not-recorded' : recorded === sessions.length ? 'recorded' : 'partial';
+}
+
+export function ledgerMetricCoverage(ledger: AgenticFactLedger, category: OptionalMetricCategory): MetricCoverage {
+  const owners = sessionMetricCoverage(ledger.sessions, category);
+  if (category !== 'anomalies') return owners;
+  if (ledger.anomalies !== undefined && (owners === 'recorded' || ledger.sessions.length === 0)) return 'recorded';
+  return ledger.anomalies !== undefined || owners !== 'not-recorded' ? 'partial' : 'not-recorded';
+}

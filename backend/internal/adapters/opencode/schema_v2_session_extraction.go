@@ -65,10 +65,18 @@ type schemaV2ModelJSON struct {
 }
 
 func extractSchemaV2SessionsWithEvents(db *sql.DB, roots []string, defaultUser string, userBySession map[string]string, strict bool, eventSink *[]domain.EventFact, exact ...bool) ([]domain.SessionFact, *string, *string, error) {
-	return extractSchemaV2SessionsWithEventsAt(db, roots, defaultUser, userBySession, strict, eventSink, time.Now().UTC(), exact...)
+	return extractSchemaV2SessionsWithPolicyAt(db, roots, defaultUser, userBySession, strict, eventSink, nil, time.Now().UTC(), exact...)
 }
 
 func extractSchemaV2SessionsWithEventsAt(db *sql.DB, roots []string, defaultUser string, userBySession map[string]string, strict bool, eventSink *[]domain.EventFact, cutoff time.Time, exact ...bool) ([]domain.SessionFact, *string, *string, error) {
+	return extractSchemaV2SessionsWithPolicyAt(db, roots, defaultUser, userBySession, strict, eventSink, nil, cutoff, exact...)
+}
+
+func extractSchemaV2SessionsWithPolicy(db *sql.DB, roots []string, defaultUser string, userBySession map[string]string, strict bool, eventSink *[]domain.EventFact, policy *domain.GenerationPolicy, exact ...bool) ([]domain.SessionFact, *string, *string, error) {
+	return extractSchemaV2SessionsWithPolicyAt(db, roots, defaultUser, userBySession, strict, eventSink, policy, time.Now().UTC(), exact...)
+}
+
+func extractSchemaV2SessionsWithPolicyAt(db *sql.DB, roots []string, defaultUser string, userBySession map[string]string, strict bool, eventSink *[]domain.EventFact, policy *domain.GenerationPolicy, cutoff time.Time, exact ...bool) ([]domain.SessionFact, *string, *string, error) {
 	ids, err := buildQuotedIDList(roots)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("validating thread ids: %w", err)
@@ -436,7 +444,7 @@ func extractSchemaV2SessionsWithEventsAt(db *sql.DB, roots []string, defaultUser
 	if err := proveSourceChildLinks(db, "session_v2", events); err != nil {
 		return nil, nil, nil, err
 	}
-	projected, err := projectSourceFacts(result, events, strict)
+	projected, err := projectSourceFacts(result, events, strict, policy)
 	if err != nil {
 		return nil, nil, nil, err
 	}

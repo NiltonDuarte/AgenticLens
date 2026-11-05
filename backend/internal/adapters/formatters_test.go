@@ -13,7 +13,7 @@ func TestFormatMarkdownMetricsTable(t *testing.T) {
 	parentID := "ses-1"
 	ledger := domain.AgenticMetricsLedger{
 		TicketID: &tid,
-		Facts: domain.AgenticFactLedger{Sessions: sessionFactsWithInvs([]testInvFact{
+		Facts: domain.AgenticFactLedger{Anomalies: []domain.Anomaly{}, Sessions: sessionFactsWithInvs([]testInvFact{
 			{SessionID: "ses-1",
 				Role:                  "orchestrator",
 				Model:                 "model-a",
@@ -414,7 +414,7 @@ func TestFormatMarkdownMetricsTable_EmptyAndZeroValues(t *testing.T) {
 	requiredKPIs := []string{
 		"- **Software Development Life Cycle Iterations:**",
 		"- **Active Agent Duration:**",
-		"- **Context Window Health:**",
+		"- **Context Window Usage:**",
 		"- **Role Effort Distribution (Subagents):**",
 		"- **Subagent Turn Velocity & Thrashing:**",
 		"- **Test-to-Production Code Ratio:**",
@@ -435,7 +435,7 @@ func TestFormatMarkdownMetricsTable_SingleRootAndZeroSubagents(t *testing.T) {
 	tid := "GEN-1"
 	ledger := domain.AgenticMetricsLedger{
 		TicketID: &tid,
-		Facts: domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+		Facts: domain.AgenticFactLedger{Anomalies: []domain.Anomaly{}, Sessions: sessionFacts([]domain.InvocationFact{
 			{
 				Role:                  "general",
 				ActiveDurationSeconds: 120,

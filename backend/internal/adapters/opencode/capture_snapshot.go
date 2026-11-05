@@ -14,11 +14,19 @@ import (
 // The caller supplies a dedicated read-only DB. A single connection keeps the
 // preflight and extraction in one consistent SQLite read transaction.
 func CaptureSessionSnapshot(ctx context.Context, db *sql.DB, id, user string, budget int64, source ...*domain.SourceEvents) ([]domain.SessionFact, int64, string, error) {
-	return CaptureSessionSnapshotAt(ctx, db, id, user, budget, time.Now().UTC(), source...)
+	return CaptureSessionSnapshotWithPolicyAt(ctx, db, id, user, budget, nil, time.Now().UTC(), source...)
 }
 
-// CaptureSessionSnapshotAt preserves an explicit duration observation cutoff.
-func CaptureSessionSnapshotAt(ctx context.Context, db *sql.DB, id, user string, budget int64, cutoff time.Time, source ...*domain.SourceEvents) (sessions []domain.SessionFact, bytes int64, updated string, err error) {
+func CaptureSessionSnapshotAt(ctx context.Context, db *sql.DB, id, user string, budget int64, cutoff time.Time, source ...*domain.SourceEvents) ([]domain.SessionFact, int64, string, error) {
+	return CaptureSessionSnapshotWithPolicyAt(ctx, db, id, user, budget, nil, cutoff, source...)
+}
+
+func CaptureSessionSnapshotWithPolicy(ctx context.Context, db *sql.DB, id, user string, budget int64, policy *domain.GenerationPolicy, source ...*domain.SourceEvents) ([]domain.SessionFact, int64, string, error) {
+	return CaptureSessionSnapshotWithPolicyAt(ctx, db, id, user, budget, policy, time.Now().UTC(), source...)
+}
+
+// CaptureSessionSnapshotWithPolicyAt keeps optional analysis and duration cutoff request-local.
+func CaptureSessionSnapshotWithPolicyAt(ctx context.Context, db *sql.DB, id, user string, budget int64, policy *domain.GenerationPolicy, cutoff time.Time, source ...*domain.SourceEvents) (sessions []domain.SessionFact, bytes int64, updated string, err error) {
 	if _, err = sanitizeSessionID(id); err != nil {
 		return
 	}
@@ -71,9 +79,9 @@ func CaptureSessionSnapshotAt(ctx context.Context, db *sql.DB, id, user string, 
 		sink = &events
 	}
 	if family == schemaFamilyV2 {
-		sessions, _, _, err = extractSchemaV2SessionsWithEventsAt(db, []string{id}, user, nil, true, sink, cutoff, true)
+		sessions, _, _, err = extractSchemaV2SessionsWithPolicyAt(db, []string{id}, user, nil, true, sink, policy, cutoff, true)
 	} else {
-		sessions, _, _, err = extractSchemaV1SessionsWithEventsAt(db, []string{id}, user, nil, true, sink, cutoff, true)
+		sessions, _, _, err = extractSchemaV1SessionsWithPolicyAt(db, []string{id}, user, nil, true, sink, policy, cutoff, true)
 	}
 	if err == nil && len(source) > 0 {
 		fresh := domain.SourceEvents{Events: events}

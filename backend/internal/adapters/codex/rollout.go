@@ -66,7 +66,8 @@ type Transcript struct {
 	role             domain.AgentRole        `json:"-"`
 	ParentThread     string                  `json:"parent_thread,omitempty"`
 	sessions         []domain.SessionFact    `json:"-"`
-	latestTime       string                  `json:"-"`
+	completeOwners   []string
+	latestTime       string `json:"-"`
 }
 
 // Usage contains Codex-reported token counts. Cost is deliberately omitted:
@@ -982,7 +983,7 @@ func (transcript *Transcript) finalizeFacts() {
 }
 
 // SessionFacts converts the transcript invocations, tools, and events into normalized SessionFacts.
-func (transcript Transcript) SessionFacts() ([]domain.SessionFact, error) {
+func (transcript Transcript) SessionFacts(policies ...domain.GenerationPolicy) ([]domain.SessionFact, error) {
 	owned := transcript.sessions
 	if owned == nil {
 		session := domain.SessionFact{ID: transcript.sessionIDOrThread(), Source: domain.SourceCodex, Invocations: transcript.Invocations, Skills: transcript.leanSkills(), Delegations: transcript.leanDelegations()}
@@ -996,7 +997,26 @@ func (transcript Transcript) SessionFacts() ([]domain.SessionFact, error) {
 	if err != nil {
 		return nil, fmt.Errorf("grouping Codex facts by session: %w", err)
 	}
-	facts, err := domain.PersistSourceAnomalySummaries(domain.AgenticFactLedger{Sessions: sessions}, domain.SourceEvents{Events: transcript.Events, CompleteSessionIDs: sessionIDs(sessions)})
+	completeOwners := transcript.completeOwners
+	if completeOwners == nil && len(transcript.Warnings) == 0 {
+		completeOwners = sessionIDs(sessions)
+	}
+	if len(transcript.Warnings) > 0 && transcript.sessions == nil {
+		for i, owner := range sessions {
+			if len(owner.Skills) == 0 {
+				sessions[i].Skills = nil
+			}
+			if len(owner.Delegations) == 0 {
+				sessions[i].Delegations = nil
+			}
+		}
+	}
+	policy := domain.DefaultGenerationPolicy()
+	if len(policies) > 0 {
+		policy = policies[0]
+	}
+	facts, err := domain.PersistSourceAnomalySummariesWithPolicy(domain.AgenticFactLedger{Sessions: sessions}, domain.SourceEvents{Events: transcript.Events, CompleteSessionIDs: completeOwners}, policy)
+	facts = domain.ProjectGenerationFacts(facts, policy)
 	if err != nil {
 		return nil, err
 	}
@@ -1006,17 +1026,25 @@ func (transcript Transcript) SessionFacts() ([]domain.SessionFact, error) {
 // CombineTranscripts merges a discovered root thread and its child threads
 // while preserving per-thread invocation facts and aggregating tool summaries.
 func CombineTranscripts(transcripts []Transcript) (Transcript, error) {
+	return CombineTranscriptsWithPolicy(transcripts)
+}
+
+// CombineTranscriptsWithPolicy carries generate output policy through grouping.
+func CombineTranscriptsWithPolicy(transcripts []Transcript, policies ...domain.GenerationPolicy) (Transcript, error) {
 	if len(transcripts) == 0 {
 		return Transcript{}, errors.New("cannot combine an empty Codex transcript set")
 	}
 	transcripts = resolveSourceChildren(transcripts)
-	combined := Transcript{RecordKinds: make(map[string]int64), EventKinds: make(map[string]int64), sessions: []domain.SessionFact{}}
+	combined := Transcript{RecordKinds: make(map[string]int64), EventKinds: make(map[string]int64), sessions: []domain.SessionFact{}, completeOwners: []string{}}
 	for index, transcript := range transcripts {
-		sessions, err := transcript.SessionFacts()
+		sessions, err := transcript.SessionFacts(policies...)
 		if err != nil {
 			return Transcript{}, fmt.Errorf("grouping Codex transcript %d: %w", index, err)
 		}
 		combined.sessions = append(combined.sessions, sessions...)
+		if len(transcript.Warnings) == 0 {
+			combined.completeOwners = append(combined.completeOwners, sessionIDs(sessions)...)
+		}
 		if index == 0 {
 			// Human steering belongs to the root; child prompts are delegation.
 			combined.SteeringTurns = transcript.SteeringTurns

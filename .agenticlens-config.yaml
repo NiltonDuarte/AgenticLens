@@ -12,6 +12,12 @@ telemetry:
   capture:
     state_dir: ~/.agenticlens/state
     commit_warning: true
+# Optional generate output. Missing keys default to true; local config cannot override these.
+generation:
+  metrics:
+    skills: true
+    delegations: true
+    anomalies: true
 # Automated anomaly detection rules governing offline generation and live stream monitoring.
 anomaly_thresholds:
   # Time in seconds without session turn activity before flagging a stall anomaly.

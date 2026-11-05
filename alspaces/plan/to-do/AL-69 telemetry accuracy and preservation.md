@@ -8,7 +8,7 @@ h3. Title: AL-69: Correct telemetry accuracy and preserve evidence
 *Blocked by*: None
 *Blocks*: None
 *Origin*: REV-5 iteration 03 audit; consolidated draft batch at the user's request in iteration 09.
-*Findings*: ADP-06, ADP-10, ADP-12, CC-01, CC-03, CC-04, CC-08, FE-09, FE-12
+*Findings*: AL-67 F05; ADP-06, ADP-10, ADP-12, CC-01, CC-03, CC-04, CC-08, FE-09, FE-12
 *Related*: AL-62 owns auxiliary-fact preservation and granular ownership; AL-63 owns capability parity; AL-67 owns broader architecture investigation. Reuse their contracts without duplicating their scope.
 
 *CONTEXT*
@@ -48,6 +48,7 @@ CLI scan hides malformed siblings and rejected targets; live child lookup failur
 
 * Present per-ticket rejection and fatal scan diagnostics while retaining valid siblings under the existing partial-scan policy. Distinguish rejected targets from nonexistent tickets.
 * Keep supported live messages/parts visible when optional child lookup fails, with a typed completeness diagnostic reaching HTTP/CLI consumers.
+* AL-67 F05 confirms the reachable case: remove session.parent_id while leaving parent/message/part reads usable. The trace still has useful content, but its caller currently swallows the child-query error. Report unavailable relationship lookup distinctly from a proven empty child set; do not trust a tool payload as native parent evidence. Repair the existing TestLiveTraceSurvivesChildSessionLookupFailure oracle to require that diagnostic while retaining its content-preservation assertions.
 * Test corrupt/unsupported/unreadable scan siblings and failed, successful-empty and successful-linked child lookup. Do not turn optional enrichment failure into an empty or wholly failed trace.
 
 h4. Preserve summary evidence when replacing generated metrics
@@ -86,3 +87,5 @@ Fallback matching ignores contradictory tool identities; generic error totals ar
 * [REV-5 ADAPTERS_REPORT.md](../../REV-5/iterations/03/ADAPTERS_REPORT.md)
 * [REV-5 CORE_CLI_REPORT.md](../../REV-5/iterations/03/CORE_CLI_REPORT.md)
 * [REV-5 FRONTEND_REPORT.md](../../REV-5/iterations/03/FRONTEND_REPORT.md)
+
+* [AL-67 child-lookup evidence](../../AL-67/ARCHITECTURE_ASSESSMENT.md), F05. This is shared discovery of the existing correction, not a second ticket.

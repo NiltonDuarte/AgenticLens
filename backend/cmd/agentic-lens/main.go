@@ -52,7 +52,7 @@ func runGenerate(args []string) {
 	appendFlag := genFlags.String("append", "", "Path to markdown file to append/update metrics table in")
 	dbPathFlag := genFlags.String("db-path", "", "Path to OpenCode SQLite database")
 	codexHomeFlag := genFlags.String("codex-home", "", "Path to CODEX_HOME (defaults to $CODEX_HOME or ~/.codex)")
-	anomaliesFlag := genFlags.Bool("anomalies", false, "Display anomalies and health flags for target ticket")
+	anomaliesFlag := genFlags.Bool("anomalies", false, "Display anomalies and health flags; generation.metrics.anomalies=false reports disabled and never re-enables analysis")
 	captureDirFlag := genFlags.String("capture-dir", "", "Local lifecycle registry to reconcile before final publication")
 	autoFlag := genFlags.Bool("capture-auto", false, "Native lifecycle publication (registered owners only)")
 	allowEmptyFlag := genFlags.Bool("allow-empty", false, "Allow empty metrics generation even if no root session or invocations are resolved (test escape hatch)")
@@ -331,7 +331,8 @@ func runGenerate(args []string) {
 
 	var freshSessions []domain.SessionFact
 	var sourceEvents domain.SourceEvents
-	captureResult, captureErr := reconcileCaptureGeneration(project, *captureDirFlag, activeTicketID, snapshotCutoff)
+	generationPolicy := projCfg.Generation.Metrics
+	captureResult, captureErr := reconcileCaptureGenerationAt(project, *captureDirFlag, activeTicketID, snapshotCutoff, generationPolicy)
 	if captureErr != nil {
 		fmt.Fprintf(os.Stderr, "Error reconciling capture registry; publication not completed: %v\n", captureErr)
 		os.Exit(1)
@@ -385,7 +386,7 @@ func runGenerate(args []string) {
 			transcripts = append(transcripts, transcript)
 			knownThreadIDs = append(knownThreadIDs, transcript.ThreadID)
 		}
-		combined, combineErr := codex.CombineTranscripts(transcripts)
+		combined, combineErr := codex.CombineTranscriptsWithPolicy(transcripts, generationPolicy)
 		if combineErr != nil {
 			fmt.Fprintf(os.Stderr, "Error combining Codex session facts: %v\n", combineErr)
 			os.Exit(1)
@@ -393,7 +394,7 @@ func runGenerate(args []string) {
 		for _, warning := range combined.Warnings {
 			fmt.Fprintf(os.Stderr, "Warning: Codex rollout: %s\n", warning)
 		}
-		freshCodex, factErr := combined.SessionFacts()
+		freshCodex, factErr := combined.SessionFacts(generationPolicy)
 		if factErr != nil {
 			fmt.Fprintf(os.Stderr, "Error grouping Codex session facts: %v\n", factErr)
 			os.Exit(1)
@@ -449,8 +450,8 @@ func runGenerate(args []string) {
 			}
 
 			if len(knownThreadIDs) > 0 {
-				extractedSessions, dbStarted, dbCompleted, extractErr := opencode.ExtractSessionsStrictWithSourceAt(
-					dbClient.DB(), knownThreadIDs, currentUser, userBySessionID, &sourceEvents, snapshotCutoff,
+				extractedSessions, dbStarted, dbCompleted, extractErr := opencode.ExtractSessionsStrictWithPolicyAt(
+					dbClient.DB(), knownThreadIDs, currentUser, userBySessionID, &sourceEvents, generationPolicy, snapshotCutoff,
 				)
 				if extractErr != nil {
 					fmt.Fprintf(os.Stderr, "Error reading selected OpenCode source at %s: %v. Check the database and telemetry.sources.opencode.database_path.\n", dbPath, extractErr)
@@ -611,20 +612,23 @@ func runGenerate(args []string) {
 		Sessions:      sessions,
 	}
 
-	if cachedFacts != nil {
+	if cachedFacts != nil && cachedFacts.Anomalies != nil {
 		factLedger.Anomalies = append([]domain.Anomaly{}, cachedFacts.Anomalies...)
 	}
-	factLedger, summaryErr := domain.PersistSourceAnomalySummaries(factLedger, sourceEvents, projCfg.AnomalyThresholds)
+	factLedger, summaryErr := domain.PersistSourceAnomalySummariesWithPolicy(factLedger, sourceEvents, generationPolicy, projCfg.AnomalyThresholds)
 	if summaryErr != nil {
 		fmt.Fprintln(os.Stderr, "Cannot calculate source summaries:", summaryErr)
 		os.Exit(1)
 	}
-	metricsLedger := domain.DeriveMetricsLedger(factLedger, projCfg)
-	tableMD := adapters.FormatMarkdownMetricsTable(metricsLedger, projCfg.RoleOrder)
+	metricsLedger := domain.DeriveMetricsLedger(domain.ProjectGenerationFacts(factLedger, generationPolicy), projCfg)
+	tableMD := adapters.FormatMarkdownMetricsTableWithPolicy(metricsLedger, generationPolicy, projCfg.RoleOrder)
 	if captureResult != nil {
 		tableMD += capture.CoverageSummary(*captureResult)
 	}
 	tableMD += historySummary(baseline)
+	if !generationPolicy.Skills || !generationPolicy.Delegations || !generationPolicy.Anomalies {
+		tableMD = strings.ReplaceAll(tableMD, "unchanged because their sources were not refreshed", "outside the source refresh set; optional categories follow the current generate settings")
+	}
 
 	if *autoFlag {
 		enabled, e := automaticCaptureEnabled(project, *captureDirFlag)
@@ -650,7 +654,7 @@ func runGenerate(args []string) {
 		}
 	}
 	if *jsonOutputFlag != "" {
-		if err := saveGenerationLedgerPreservingHistory(*jsonOutputFlag, factLedger, baseline.HistoryDTOs); err != nil {
+		if err := saveGenerationLedgerPreservingHistory(*jsonOutputFlag, factLedger, baseline.HistoryDTOs, generationPolicy); err != nil {
 			fmt.Fprintf(os.Stderr, "Error writing JSON to %s: %v\n", *jsonOutputFlag, err)
 			os.Exit(1)
 		}
@@ -662,7 +666,11 @@ func runGenerate(args []string) {
 		if metricsLedger.TicketID != nil && *metricsLedger.TicketID != "" {
 			tid = *metricsLedger.TicketID
 		}
-		printAnomalyDiagnostics(tid, metricsLedger.Anomalies)
+		if !generationPolicy.Anomalies {
+			fmt.Printf("Anomaly analysis is disabled for %s by generation.metrics.anomalies=false.\n", tid)
+		} else {
+			printAnomalyDiagnostics(tid, metricsLedger.Anomalies, metricsLedger.Facts.UnrecordedAnomalyScopes())
+		}
 	}
 
 	if *appendFlag != "" {
@@ -1207,7 +1215,13 @@ func formatAnomalyListSummary(anomalies []domain.Anomaly) string {
 	return strings.Join(parts, ", ")
 }
 
-func printAnomalyDiagnostics(ticketID string, anomalies []domain.Anomaly) {
+func printAnomalyDiagnostics(ticketID string, anomalies []domain.Anomaly, unavailableSessions ...int) {
+	if len(unavailableSessions) > 0 && unavailableSessions[0] > 0 {
+		fmt.Printf("Anomaly analysis was not recorded for %d owner/group scope(s) in %s; complete source-backed refresh is required.\n", unavailableSessions[0], ticketID)
+		if len(anomalies) == 0 {
+			return
+		}
+	}
 	if len(anomalies) == 0 {
 		fmt.Printf("No anomalies detected for ticket %s.\n", ticketID)
 		return
@@ -1687,7 +1701,7 @@ func main() {
 	appendFlag := flag.String("append", "", "Path to markdown summary file to idempotently update with metrics table")
 	jsonOutputFlag := flag.String("json-output", "", "Path to write computed metrics ledger as JSON")
 	listFlag := flag.Bool("list", false, "List all discovered ticket workspaces and summary metrics")
-	anomaliesFlag := flag.Bool("anomalies", false, "Display anomalies and health flags for target ticket")
+	anomaliesFlag := flag.Bool("anomalies", false, "Display anomalies and health flags; generation.metrics.anomalies=false reports disabled and never re-enables analysis")
 	versionFlag := flag.Bool("v", false, "Print version information and exit")
 	versionLongFlag := flag.Bool("version", false, "Print version information and exit")
 
@@ -1796,7 +1810,7 @@ func main() {
 		if targetLedger.TicketID != nil && *targetLedger.TicketID != "" {
 			tid = *targetLedger.TicketID
 		}
-		printAnomalyDiagnostics(tid, targetLedger.Anomalies)
+		printAnomalyDiagnostics(tid, targetLedger.Anomalies, targetLedger.Facts.UnrecordedAnomalyScopes())
 		return
 	}
 

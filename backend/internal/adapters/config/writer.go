@@ -66,6 +66,10 @@ func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
 	b.WriteString("# database connectivity, live observability thresholds, code metrics classification,\n")
 	b.WriteString("# and agent-backend bridge role mappings.\n\n")
 
+	b.WriteString("# Optional generate output only; omitted settings default to true.\n")
+	b.WriteString("# Shared project settings; local machine overrides and CLI do not override these.\n")
+	b.WriteString(fmt.Sprintf("generation:\n  metrics:\n    skills: %t\n    delegations: %t\n    anomalies: %t\n\n", cfg.Generation.Metrics.Skills, cfg.Generation.Metrics.Delegations, cfg.Generation.Metrics.Anomalies))
+
 	// Project Name
 	projName := strings.TrimSpace(cfg.ProjectName)
 	if projName == "" {

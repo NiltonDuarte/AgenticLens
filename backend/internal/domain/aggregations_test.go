@@ -2380,8 +2380,8 @@ func TestDeriveMetricsLedger_AdversarialDeepImmutabilityAndEdgeCases(t *testing.
 		if derivedEmpty.Totals.CostUSD != 0.0 {
 			t.Errorf("expected 0.0 cost, got %f", derivedEmpty.Totals.CostUSD)
 		}
-		if derivedEmpty.Totals.ContextHealth != domain.ContextHealthHealthy {
-			t.Errorf("expected HEALTHY context health for empty ledger, got %s", derivedEmpty.Totals.ContextHealth)
+		if derivedEmpty.Totals.ContextHealth != domain.ContextHealthUnavailable {
+			t.Errorf("expected UNAVAILABLE context health for unrecorded ledger, got %s", derivedEmpty.Totals.ContextHealth)
 		}
 		if derivedEmpty.WorkflowEfficiency.ContextWindowHealth.SubagentsPeakRole != "none" {
 			t.Errorf("expected 'none' subagents peak role, got %s", derivedEmpty.WorkflowEfficiency.ContextWindowHealth.SubagentsPeakRole)
@@ -2395,7 +2395,7 @@ func TestDeriveMetricsLedger_AdversarialDeepImmutabilityAndEdgeCases(t *testing.
 		}
 
 		// Case B: Invocations with all zeroes across metrics
-		zeroInvLedger := domain.AgenticFactLedger{Sessions: sessionFacts([]domain.InvocationFact{
+		zeroInvLedger := domain.AgenticFactLedger{Anomalies: []domain.Anomaly{}, Sessions: sessionFacts([]domain.InvocationFact{
 			{
 				Role:                  "build",
 				Model:                 "zero-model",
@@ -5650,7 +5650,8 @@ func TestConfigurableHealthyCeilingAggregations(t *testing.T) {
 		},
 	}
 	ledger := domain.AgenticFactLedger{
-		Sessions: sessionFacts(invocations, nil, nil),
+		Anomalies: []domain.Anomaly{},
+		Sessions:  sessionFacts(invocations, nil, nil),
 	}
 
 	t.Run("ComputeTotals respects custom ceiling", func(t *testing.T) {
@@ -5735,9 +5736,19 @@ func TestComputeSkillAdoption(t *testing.T) {
 		t.Fatalf("adoption = %#v, want %#v", got, want)
 	}
 	for _, empty := range [][]domain.AgenticFactLedger{nil, {}, {{}}} {
-		if got := domain.ComputeSkillAdoption(empty); got == nil || len(got) != 0 {
+		if got := domain.ComputeSkillAdoption(empty); got != nil {
 			t.Fatalf("empty adoption = %#v", got)
 		}
+	}
+	recordedEmpty := []domain.AgenticFactLedger{{Sessions: []domain.SessionFact{{ID: "observed", Skills: []domain.SkillFact{}}}}}
+	if got := domain.ComputeSkillAdoption(recordedEmpty); got == nil || len(got) != 0 {
+		t.Fatalf("recorded-empty population lost its measured zero: %#v", got)
+	}
+	if names := domain.SkillNames(recordedEmpty[0]); names == nil || len(names) != 0 {
+		t.Fatalf("recorded-empty ticket names lost presence: %#v", names)
+	}
+	if names := domain.SkillNames(domain.AgenticFactLedger{Sessions: []domain.SessionFact{{ID: "unrecorded"}}}); names != nil {
+		t.Fatalf("unrecorded skills became measured empty: %#v", names)
 	}
 	metrics := []domain.AgenticMetricsLedger{{TicketID: &first, Facts: facts[0]}, {TicketID: &second, Facts: facts[1]}, {TicketID: &first, Facts: facts[2]}}
 	if got := domain.CalculateFleetSummary(metrics).SkillAdoption; !reflect.DeepEqual(got, want) {
@@ -5773,10 +5784,10 @@ func TestSkillAdoptionOrderingAndEmptyProjections(t *testing.T) {
 	if names := domain.SkillNames(domain.AgenticFactLedger{Sessions: []domain.SessionFact{{ID: "owner", Skills: []domain.SkillFact{{Name: "\U00010000"}, {Name: "\uE000"}}}}}); !reflect.DeepEqual(names, []string{"\uE000", "\U00010000"}) {
 		t.Fatalf("Unicode name order = %#v", names)
 	}
-	if adoption := domain.CalculateFleetSummary(nil).SkillAdoption; adoption == nil || len(adoption) != 0 {
+	if adoption := domain.CalculateFleetSummary(nil).SkillAdoption; adoption != nil {
 		t.Fatalf("empty fleet adoption = %#v", adoption)
 	}
-	if names := domain.BuildComparisonRows([]domain.AgenticMetricsLedger{{}})[0].SkillsUsed; names == nil || len(names) != 0 {
+	if names := domain.BuildComparisonRows([]domain.AgenticMetricsLedger{{}})[0].SkillsUsed; names != nil {
 		t.Fatalf("missing skills = %#v", names)
 	}
 }

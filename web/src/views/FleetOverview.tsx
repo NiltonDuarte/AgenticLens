@@ -1,5 +1,5 @@
 import { durationDescription } from '../domain/duration';
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import type { FleetSummary, TicketComparisonRow, TimeWindowPreset, WorkspaceDiagnostic } from '../domain/types';
 import {
   formatPercentage,
@@ -7,7 +7,9 @@ import {
   extractTicketPrefix,
   combineDistinctPrefixes,
 } from '../domain/formatters';
-import { fetchFleetSummary, fetchWorkspaces } from '../api/client';
+import { fetchFleetSummary, fetchWorkspaces, fetchWorkspaceLedgers } from '../api/client';
+import { deriveSessionOverlaps } from '../domain/sessionOverlaps';
+import { SessionOverlapWarning, type SessionOverlapInspection } from '../components/SessionOverlapWarning';
 import { KPICard } from '../components/KPICard';
 import { CostKPICard } from '../components/CostKPICard';
 import { DistributionCard } from '../components/DistributionCard';
@@ -44,6 +46,29 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
   const [loading, setLoading] = useState<boolean>(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const [inspection, setInspection] = useState<SessionOverlapInspection>({ state: 'loading' });
+  const inspectionRequest = useRef(0);
+  const metricsRequest = useRef(0);
+
+  const loadInspection = useCallback(async () => {
+    const request = ++inspectionRequest.current;
+    setInspection({ state: 'loading' });
+    try {
+      const response = await fetchWorkspaceLedgers();
+      if (request !== inspectionRequest.current) return;
+      setInspection({ state: 'ready', projection: deriveSessionOverlaps(response.data), diagnostics: response.diagnostics ?? [] });
+    } catch (err: unknown) {
+      if (request !== inspectionRequest.current) return;
+      setInspection({ state: 'unavailable', message: err instanceof Error ? err.message : 'Failed to inspect project ledgers.' });
+    }
+  }, []);
+
+  useEffect(() => {
+    const requests = inspectionRequest;
+    void loadInspection();
+    return () => { requests.current++; };
+  }, [loadInspection]);
+
   const [windowPreset, setWindowPreset] = useState<TimeWindowPreset>('all');
   const [customSince, setCustomSince] = useState<string>('');
   const [customUntil, setCustomUntil] = useState<string>('');
@@ -70,6 +95,7 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
   }, [knownPrefixes, configuredPrefixes]);
 
   const loadData = useCallback(async () => {
+    const request = ++metricsRequest.current;
     setLoading(true);
     setErrorMessage(null);
     try {
@@ -95,20 +121,29 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
           : fetchWorkspaces(windowParam, '', '', sinceParam, untilParam),
       ]);
 
+      if (request !== metricsRequest.current) return;
       setSummary(fleetRes.data);
       setWorkspaces(workspacesRes.data);
       setDiagnostics(mergeWorkspaceDiagnostics(fleetRes.diagnostics ?? [], workspacesRes.diagnostics ?? []));
     } catch (err: unknown) {
+      if (request !== metricsRequest.current) return;
       const msg = err instanceof Error ? err.message : 'Failed to retrieve telemetry data';
       setErrorMessage(msg);
     } finally {
-      setLoading(false);
+      if (request === metricsRequest.current) setLoading(false);
     }
   }, [windowPreset, customSince, customUntil, selectedTicketTypes, selectedPrefixes]);
 
   useEffect(() => {
+    const requests = metricsRequest;
     void loadData();
+    return () => { requests.current++; };
   }, [loadData]);
+
+  const refreshData = () => {
+    void loadData();
+    void loadInspection();
+  };
 
   const skillAdoption = summary?.skill_adoption ?? [];
 
@@ -187,6 +222,10 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
       <WorkspaceLoadWarning diagnostics={diagnostics} />
       {/* Date Range Filter Bar */}
       {dateFilterControl}
+      <div className="fleet-refresh-controls">
+        <button type="button" className="btn-secondary" onClick={refreshData}>Refresh Data</button>
+      </div>
+      <SessionOverlapWarning inspection={inspection} onSelectTicket={onSelectTicket} />
 
       {loading ? (
         <div className="loading-container">
@@ -195,7 +234,7 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
       ) : errorMessage ? (
         <div className="error-banner">
           <span>{errorMessage}</span>
-          <button type="button" className="btn-primary" onClick={loadData}>
+          <button type="button" className="btn-primary" onClick={refreshData}>
             Retry Connection
           </button>
         </div>
@@ -203,8 +242,6 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
         <EmptyState
           title="Zero Telemetry Workspaces Available"
           message="No workspaces with recorded session metrics were discovered. Ensure tickets contain agentic_metrics.json ledgers."
-          actionLabel="Refresh Data"
-          onAction={loadData}
         />
       ) : (
         <>
@@ -251,9 +288,9 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
           <section className="distribution-row" aria-label="Skill Adoption">
             <div className="kpi-card">
               <h2 className="kpi-title">Skill Adoption</h2>
-              <div className="kpi-value mono-number">{skillAdoption.length} unique skills</div>
-              <p>{skillAdoption.reduce((total, skill) => total + skill.total_invocations, 0)} activations</p>
-              {skillAdoption.length === 0 ? <p>No recorded skills</p> : (
+              <div className="kpi-value mono-number">{summary.skill_adoption === undefined ? 'Not recorded' : `${skillAdoption.length} recorded skills`}</div>
+              <p>{summary.skill_adoption === undefined ? 'Skill metrics not recorded for a complete population.' : `${skillAdoption.reduce((total, skill) => total + skill.total_invocations, 0)} activations`}</p>
+              {skillAdoption.length === 0 ? summary.skill_adoption === undefined ? null : <p>No recorded skills</p> : (
                 <ol aria-label="Top skills">
                   {skillAdoption.slice(0, 3).map((skill) => (
                     <li key={skill.name}>{skill.name}: {skill.total_invocations} invocations</li>
@@ -267,6 +304,7 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
           <section aria-label="Fleet Anomaly Profile">
             <FleetAnomalyCard
               summary={summary.anomaly_summary}
+              selectedTickets={summary.total_tickets}
               onViewTicket={onSelectTicket}
             />
           </section>

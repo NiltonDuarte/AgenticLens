@@ -453,7 +453,11 @@ func captureSourceStore(source, project string) (string, error) {
 	return "", errors.New("install requires --source codex or opencode")
 }
 
-func reconcileCaptureGeneration(project, dir, ticket string, cutoffs ...time.Time) (*capture.ReconcileResult, error) {
+func reconcileCaptureGeneration(project, dir, ticket string, generationPolicies ...domain.GenerationPolicy) (*capture.ReconcileResult, error) {
+	return reconcileCaptureGenerationAt(project, dir, ticket, time.Now().UTC(), generationPolicies...)
+}
+
+func reconcileCaptureGenerationAt(project, dir, ticket string, cutoff time.Time, generationPolicies ...domain.GenerationPolicy) (*capture.ReconcileResult, error) {
 	if _, err := os.Stat(filepath.Join(capture.RegistryPathDirectory(dir), "registry.db")); errors.Is(err, os.ErrNotExist) {
 		return nil, nil
 	} else if err != nil {
@@ -470,11 +474,7 @@ func reconcileCaptureGeneration(project, dir, ticket string, cutoffs ...time.Tim
 	if err != nil {
 		return nil, err
 	}
-	cutoff := time.Now().UTC()
-	if len(cutoffs) > 0 {
-		cutoff = cutoffs[0]
-	}
-	result, err := s.ReconcileAt(ctx, ticket, git.GetGitUser(), policy.MaxSessions, policy.MaxSourceBytes, cutoff)
+	result, err := s.ReconcileAt(ctx, ticket, git.GetGitUser(), policy.MaxSessions, policy.MaxSourceBytes, cutoff, generationPolicies...)
 	if err != nil {
 		return nil, err
 	}
@@ -614,7 +614,7 @@ func saveGenerationLedger(path string, ledger domain.AgenticFactLedger) error {
 	return saveGenerationLedgerPreservingHistory(path, ledger, nil)
 }
 
-func saveGenerationLedgerPreservingHistory(path string, ledger domain.AgenticFactLedger, history []adapters.SessionFactDTO) error {
+func saveGenerationLedgerPreservingHistory(path string, ledger domain.AgenticFactLedger, history []adapters.SessionFactDTO, policies ...domain.GenerationPolicy) error {
 	target, err := capture.ProjectDirectory(path)
 	if err != nil {
 		return err
@@ -635,7 +635,7 @@ func saveGenerationLedgerPreservingHistory(path string, ledger domain.AgenticFac
 			fmt.Fprintln(os.Stderr, "Generation staging cleanup:", removeErr)
 		}
 	}()
-	if err = adapters.SaveFactLedgerPreservingHistory(temp, ledger, history); err != nil {
+	if err = adapters.SaveFactLedgerPreservingHistory(temp, ledger, history, policies...); err != nil {
 		return err
 	}
 	file, err = os.OpenFile(temp, os.O_RDWR, 0)
