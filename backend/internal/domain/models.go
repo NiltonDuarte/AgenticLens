@@ -139,6 +139,7 @@ type TraceCoverage struct {
 // SourceEvents is an ephemeral calculation input. Complete owners may have no
 // events; a missing owner never authorizes replacement of a recorded summary.
 type SourceEvents struct {
+	CheckpointEvidence []CheckpointInvocationEvidence `json:"-"`
 	Events             []EventFact
 	CompleteSessionIDs []string
 }

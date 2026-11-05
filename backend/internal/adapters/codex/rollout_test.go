@@ -878,3 +878,52 @@ func TestRolloutActiveDurationCutoffAndTerminalBoundaries(t *testing.T) {
 		})
 	}
 }
+
+func TestCodexCheckpointNativeIntervalsBeforeModelGrouping(t *testing.T) {
+	cutoff := time.Date(2026, 1, 1, 0, 10, 0, 0, time.UTC)
+	for _, tc := range []struct {
+		name         string
+		starts       []int64
+		wantCases    []domain.CheckpointCase
+		wantSubtotal int64
+	}{
+		{"rounded_short", []int64{179999}, nil, 180},
+		{"exact_threshold", []int64{180000}, []domain.CheckpointCase{domain.CheckpointUnknownCaller}, 180},
+		{"missing_native_turn_id", []int64{180000}, []domain.CheckpointCase{domain.CheckpointUnavailableInterval}, 180},
+		{"future_native_completion", []int64{180000}, []domain.CheckpointCase{domain.CheckpointUnavailableInterval}, 180},
+		{"superseded_short_does_not_pool", []int64{100000, 90000}, nil, 90},
+		{"superseded_long_keeps_partial_qualification", []int64{200000, 180000}, []domain.CheckpointCase{domain.CheckpointUnavailableInterval, domain.CheckpointUnknownCaller}, 180},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			input := `{"timestamp":"2026-01-01T00:00:00Z","type":"session_meta","payload":{"id":"owner"}}` + "\n"
+			for i, age := range tc.starts {
+				timestamp := cutoff.Add(-time.Duration(age) * time.Millisecond).Format(time.RFC3339Nano)
+				input += fmt.Sprintf(`{"timestamp":%q,"type":"turn_context","payload":{"model":"m","turn_id":"native-%d"}}`+"\n", timestamp, i)
+				input += fmt.Sprintf(`{"timestamp":%q,"type":"event_msg","payload":{"type":"task_started","turn_id":"native-%d"}}`+"\n", timestamp, i)
+			}
+			if tc.name == "missing_native_turn_id" {
+				input = strings.ReplaceAll(input, `,"turn_id":"native-0"`, "")
+			}
+			if tc.name == "future_native_completion" {
+				input += fmt.Sprintf(`{"timestamp":%q,"type":"event_msg","payload":{"type":"task_complete","turn_id":"native-0"}}`+"\n", cutoff.Add(time.Second).Format(time.RFC3339Nano))
+			}
+			tr, err := codex.ParseRolloutAt(strings.NewReader(input), cutoff)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(tr.Invocations) != 1 || tr.Invocations[0].ProvisionalSeconds != tc.wantSubtotal {
+				t.Fatalf("numeric grouping changed: %+v", tr.Invocations)
+			}
+			session := domain.SessionFact{ID: "owner", Source: domain.SourceCodex, Invocations: tr.Invocations}
+			got := domain.SelectCheckpointFeedback([]domain.SessionFact{session}, tr.CheckpointEvidence, domain.CheckpointCaller{}, cutoff, 180)
+			if len(got) != len(tc.wantCases) {
+				t.Fatalf("native age/subtotal classification: %+v", got)
+			}
+			for i, item := range got {
+				if item.Case != tc.wantCases[i] || (item.Case != domain.CheckpointUnavailableInterval && item.Interval.ID == "") || item.ProvisionalSeconds != tc.wantSubtotal {
+					t.Fatalf("lost native identity or subtotal: %+v", got)
+				}
+			}
+		})
+	}
+}

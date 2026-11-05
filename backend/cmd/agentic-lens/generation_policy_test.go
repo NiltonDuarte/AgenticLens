@@ -5,6 +5,7 @@ import (
 	"agenticlens/internal/adapters/capture"
 	adaptershttp "agenticlens/internal/adapters/http"
 	"agenticlens/internal/domain"
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -574,7 +575,7 @@ CREATE TABLE session_message(id TEXT PRIMARY KEY,session_id TEXT,type TEXT,seq I
 						}
 					}
 				}
-				args := []string{"generate", "--capture-dir", f.state, "--ticket-id", "TEST-100", "--ticket-title", "Active optional output", "--ticket-type", "feat", "--json-output", f.output}
+				args := []string{"generate", "--capture-dir", f.state, "--ticket-id", "TEST-100", "--ticket-title", "Active optional output", "--ticket-type", "feat", "--json-output", f.output, "--append", filepath.Join(f.project, "SUMMARY.md")}
 				if family == "codex" {
 					args = append(args, "--codex-home", f.store)
 				} else {
@@ -607,8 +608,33 @@ CREATE TABLE session_message(id TEXT PRIMARY KEY,session_id TEXT,type TEXT,seq I
 				before := time.Now().UTC()
 				cmd := exec.Command(cliBinaryPath, args...)
 				cmd.Dir = f.project
-				if out, err := cmd.CombinedOutput(); err != nil {
-					t.Fatalf("generate: %v %s", err, out)
+				var stdout, stderr bytes.Buffer
+				cmd.Stdout, cmd.Stderr = &stdout, &stderr
+				if err := cmd.Run(); err != nil {
+					t.Fatalf("generate: %v %s %s", err, stdout.String(), stderr.String())
+				}
+				if strings.Contains(stdout.String(), "AgenticLens checkpoint:") || strings.Count(stderr.String(), "AgenticLens checkpoint:") != 2 || !strings.Contains(stderr.String(), "invoking caller is unverified") || strings.Contains(stderr.String(), "Your verified current") || strings.Contains(stderr.String(), "automatic next-turn") {
+					t.Fatalf("extraction root falsely certified caller or lost owners: stdout=%s stderr=%s", stdout.String(), stderr.String())
+				}
+				for _, body := range [][]byte{readCaptureFile(t, f.output), readCaptureFile(t, filepath.Join(f.project, "SUMMARY.md"))} {
+					if strings.Contains(string(body), "AgenticLens checkpoint:") || strings.Contains(string(body), "CheckpointEvidence") || strings.Contains(string(body), "checkpoint_evidence") {
+						t.Fatalf("transient feedback leaked to artifact: %s", body)
+					}
+				}
+				request := httptest.NewRequest(http.MethodGet, "/api/workspaces/TEST-100", nil)
+				request.SetPathValue("ticketId", "TEST-100")
+				// Publish a copy under the configured workspace root for the actual API reader.
+				apiPath := filepath.Join(f.project, "records", "TEST-100")
+				if err := os.MkdirAll(apiPath, 0700); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(filepath.Join(apiPath, "agentic_metrics.json"), readCaptureFile(t, f.output), 0600); err != nil {
+					t.Fatal(err)
+				}
+				recorder := httptest.NewRecorder()
+				adaptershttp.WorkspaceDetailHandler(filepath.Join(f.project, "records")).ServeHTTP(recorder, request)
+				if recorder.Code != http.StatusOK || strings.Contains(recorder.Body.String(), "AgenticLens checkpoint:") || strings.Contains(recorder.Body.String(), "checkpoint_evidence") {
+					t.Fatalf("feedback affected API: %d %s", recorder.Code, recorder.Body.String())
 				}
 				after := time.Now().UTC()
 				assertWrittenPolicy(t, f.output, domain.GenerationPolicy{}, 2)
@@ -682,8 +708,14 @@ CREATE TABLE session_message(id TEXT PRIMARY KEY,session_id TEXT,type TEXT,seq I
 				for pass := 0; pass < 2; pass++ {
 					cmd := exec.Command(cliBinaryPath, args...)
 					cmd.Dir = f.project
-					if out, err := cmd.CombinedOutput(); err != nil {
-						t.Fatalf("completion with unavailable child: %v %s", err, out)
+					stdout.Reset()
+					stderr.Reset()
+					cmd.Stdout, cmd.Stderr = &stdout, &stderr
+					if err := cmd.Run(); err != nil {
+						t.Fatalf("completion with unavailable child: %v %s %s", err, stdout.String(), stderr.String())
+					}
+					if strings.Count(stderr.String(), "AgenticLens checkpoint:") != 1 || !strings.Contains(stderr.String(), "session=child;") || !strings.Contains(stderr.String(), "Current native interval evidence is unavailable or unverified") || strings.Contains(stdout.String(), "AgenticLens checkpoint:") {
+						t.Fatalf("retained-only feedback must be F04 for child: stdout=%s stderr=%s", stdout.String(), stderr.String())
 					}
 					assertWrittenPolicy(t, f.output, domain.GenerationPolicy{}, 2)
 					body := readCaptureFile(t, f.output)

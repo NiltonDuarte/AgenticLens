@@ -513,7 +513,7 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 		if combineErr != nil {
 			return nil, nil, combineErr
 		}
-		source.events = domain.MergeSourceEvents(source.events, domain.SourceEvents{Events: combined.Events, CompleteSessionIDs: transcriptSessionIDs(source.transcripts)})
+		source.events = domain.MergeSourceEvents(source.events, domain.SourceEvents{Events: combined.Events, CheckpointEvidence: combined.CheckpointEvidence, CompleteSessionIDs: transcriptSessionIDs(source.transcripts)})
 		owners, groupErr := combined.SessionFacts(policies...)
 		if groupErr != nil {
 			return nil, nil, groupErr

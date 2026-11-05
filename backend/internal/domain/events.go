@@ -644,6 +644,12 @@ func MergeSourceEvents(previous, fresh SourceEvents) SourceEvents {
 		}
 	}
 	result.Events = append(result.Events, fresh.Events...)
+	for _, evidence := range previous.CheckpointEvidence {
+		if !replaced[evidence.SessionID] {
+			result.CheckpointEvidence = append(result.CheckpointEvidence, evidence)
+		}
+	}
+	result.CheckpointEvidence = append(result.CheckpointEvidence, fresh.CheckpointEvidence...)
 	return result
 }
 

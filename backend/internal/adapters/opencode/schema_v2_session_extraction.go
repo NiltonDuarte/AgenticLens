@@ -77,6 +77,11 @@ func extractSchemaV2SessionsWithPolicy(db *sql.DB, roots []string, defaultUser s
 }
 
 func extractSchemaV2SessionsWithPolicyAt(db *sql.DB, roots []string, defaultUser string, userBySession map[string]string, strict bool, eventSink *[]domain.EventFact, policy *domain.GenerationPolicy, cutoff time.Time, exact ...bool) ([]domain.SessionFact, *string, *string, error) {
+	return extractSchemaV2SessionsWithCheckpointAt(db, roots, defaultUser, userBySession, strict, eventSink, policy, cutoff, nil, exact...)
+}
+
+func extractSchemaV2SessionsWithCheckpointAt(db *sql.DB, roots []string, defaultUser string, userBySession map[string]string, strict bool, eventSink *[]domain.EventFact, policy *domain.GenerationPolicy, cutoff time.Time, checkpointSink *[]domain.CheckpointInvocationEvidence, exact ...bool) ([]domain.SessionFact, *string, *string, error) {
+	var checkpointEvidence []domain.CheckpointInvocationEvidence
 	ids, err := buildQuotedIDList(roots)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("validating thread ids: %w", err)
@@ -112,6 +117,10 @@ func extractSchemaV2SessionsWithPolicyAt(db *sql.DB, roots []string, defaultUser
 		if err := activityRows.Close(); err != nil {
 			return nil, nil, nil, err
 		}
+	}
+	var checkpointIdle map[string]sql.NullInt64
+	if checkpointSink != nil && columns["session_v2"]["time_idle"] {
+		checkpointIdle = schemaV2CheckpointIdle(db, ids, parentIDs)
 	}
 	rows, err := db.Query(fmt.Sprintf(`SELECT id,parent_id,agent,model,time_created,time_updated FROM session_v2 WHERE id IN (%s) OR parent_id IN (%s) ORDER BY time_created,id`, ids, parentIDs))
 	if err != nil {
@@ -274,6 +283,15 @@ func extractSchemaV2SessionsWithPolicyAt(db *sql.DB, roots []string, defaultUser
 				acc.activeMS += completedMS
 				acc.provisionalMS += provisionalMS
 				acc.provisional = acc.provisional || pending
+				if pending {
+					idle, idleKnown := checkpointIdle[s.id]
+					// A native idle at/after this message terminates current
+					// source-open proof even when it follows the numeric cutoff.
+					// Missing/malformed optional evidence stays qualified; an
+					// absent column preserves older schema behavior.
+					idleAllowsOpen := !columns["session_v2"]["time_idle"] || (idleKnown && (!idle.Valid || idle.Int64 < ts))
+					acc.checkpointIntervals = append(acc.checkpointIntervals, domain.CheckpointInterval{Kind: "assistant message", ID: m.id, StartedAt: time.UnixMilli(ts).UTC(), SourceOpen: p.Time.Completed == nil && running && mi == len(msgs)-1 && idleAllowsOpen})
+				}
 				if p.Time.Completed == nil && !pending {
 					acc.durationIncomplete = true
 				}
@@ -419,6 +437,7 @@ func extractSchemaV2SessionsWithPolicyAt(db *sql.DB, roots []string, defaultUser
 			if a.lastTS != nil && !a.provisional && !a.durationIncomplete {
 				completedAt = schemaV2StringPointer(formatEpochMilli(last))
 			}
+			checkpointEvidence = append(checkpointEvidence, domain.CheckpointInvocationEvidence{Source: domain.SourceOpenCode, SessionID: s.id, InvocationRow: len(invocations) + 1, Model: name, Cutoff: cutoff, Complete: !a.durationIncomplete, Intervals: a.checkpointIntervals})
 			invocations = append(invocations, domain.InvocationFact{Role: role, Model: name, StartedAt: schemaV2StringPointer(formatEpochMilli(first)), CompletedAt: completedAt, ActiveDurationSeconds: activeSeconds, ProvisionalSeconds: provisionalSeconds, Turns: turns, Tokens: domain.InvocationTokens{Input: a.input, Output: a.output, CacheRead: a.cache, Reasoning: a.reasoning, PeakContext: a.peak}, CostUSD: math.Round(a.cost*1e6) / 1e6, CostEvidence: a.costEvidence(), UserIterations: iterations})
 		}
 		var parent *string
@@ -451,7 +470,42 @@ func extractSchemaV2SessionsWithPolicyAt(db *sql.DB, roots []string, defaultUser
 	if err != nil {
 		return nil, nil, nil, err
 	}
+	if checkpointSink != nil {
+		*checkpointSink = append(*checkpointSink, checkpointEvidence...)
+	}
 	return projected, start, end, nil
+}
+
+// schemaV2CheckpointIdle reads optional current-source feedback evidence only.
+// Absent map entries mean unavailable or malformed evidence, never active state.
+// Numeric activity extraction retains its existing independent rules above.
+func schemaV2CheckpointIdle(db *sql.DB, ids, parentIDs string) (known map[string]sql.NullInt64) {
+	rows, err := db.Query(fmt.Sprintf(`SELECT id,typeof(time_idle),
+        CASE WHEN typeof(time_idle)='integer' THEN time_idle ELSE NULL END
+        FROM session_v2 WHERE id IN (%s) OR parent_id IN (%s)`, ids, parentIDs))
+	if err != nil {
+		return nil
+	}
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			known = nil
+		}
+	}()
+	known = make(map[string]sql.NullInt64)
+	for rows.Next() {
+		var id, kind string
+		var idle sql.NullInt64
+		if scanErr := rows.Scan(&id, &kind, &idle); scanErr != nil {
+			return nil
+		}
+		if kind == "null" || (kind == "integer" && idle.Valid && idle.Int64 > 0) {
+			known[id] = idle
+		}
+	}
+	if rows.Err() != nil {
+		return nil
+	}
+	return known
 }
 
 func schemaV2StringPointer(s string) *string { return &s }

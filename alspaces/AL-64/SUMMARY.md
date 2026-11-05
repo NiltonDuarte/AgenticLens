@@ -35,6 +35,22 @@ Native OpenCode 1.19.5 and 2.2.0 probes used isolated sources. OpenCode v1 cance
 
 Consolidated local approval: APPROVED after all eight correction cells and integrated gates. Initial policy uncertainty is resolved by the approved provisional-estimate semantics. Earlier unchanged scopes carry forward with the dependency rationale above. PR #121 is the delivery vehicle; hosting checks on the final pushed head are reported separately. No release or remote merge is authorized.
 
+## Iteration 04 planning delta: telemetry checkpoint feedback
+
+Subsequent user steering requests a [checkpoint-feedback plan](iterations/04/PLAN.md), with a default threshold of three minutes (180 seconds), every exact feedback variant and its triggering case, including multiple affected owners. This is authorized plan authorship; implementation approval is not inferred. The completed iteration 03 implementation and verification remain unchanged.
+
+The proposed extension identifies session/invocation owners and suggests a real turn boundary only when the executing caller and native open interval are verified. Other owners, unknown caller identity and unavailable source evidence receive distinct qualified feedback. It must not equate extraction root with caller, fabricate completion, promise automatic continuation without verified support, or claim tokens/cost are final. Same-turn regeneration does not close an interval. Human tool feedback adds no ledger fields, duration reasoning or frontend behavior, and does not alter numeric accounting or portable refresh. This extends tool guidance while preserving iteration 03's rejection of mandatory liveness/accounting gates. Verification must cover threshold boundaries, ownership/identity, interval versus subtotal distinctions, fallback and multi-owner messages before any implementation is delivered. User steering is paraphrased.
+
+Further steering on 2026-11-06 removes aggregation-only feedback from iteration 04. Individually known intervals shorter than 180 seconds produce no message even when their combined subtotal crosses the threshold, and must not fall through to F04. Qualified F04 feedback remains for unavailable individual interval evidence. Five exact message variants remain; implementation is still pending approval.
+
+On 2026-11-06 the user authorized implementation of iteration 04 and renamed the unsupported-continuation notice to F05. The removed aggregation-only case remains excluded. Approval covers the five feedback templates, default 180-second threshold and optional threshold configuration, transient ownership/evidence and qualified fallbacks. Existing iteration 03 verification remains historical evidence for unchanged accounting; new feedback verification/review and final delivery are pending.
+
+The iteration 04 [native capability investigation](iterations/04/RUNTIME_CAPABILITIES.md) distinguishes real source-open interval evidence from an executing-caller handoff. No installed generic-generate transport was verified for stronger F01/F02 advice or next-turn continuation. Production feedback therefore uses qualified F03/F04 where appropriate; F01/F02/F05 remain gated on independently verified caller/current-interval context. This is an approved fallback boundary, not proof of process liveness or a new accounting gate. No session was poked or automatically continued.
+
+Iteration 04 CP-02 is frozen under manifest512721e4192e55dcad98f2f1d7a080360178b73ce016c0225b50840dc69ff629. All six behavior/data/test-effectiveness correction cells approve on gpt-6.1-sol/high and gpt-6-luna/medium; both initial architecture approvals carry forward with unchanged layer/contracts and a three-path correction. Shared Sol behavior/data discovery of native-idle qualification was corrected, Sol test supersession coverage strengthened, and the Luna stderr hypothesis refuted by descriptor access mode and failed-write preflight. Native capability limits remain explicit. Parent integration/full make/standalone and final delivery are pending.
+
+The telemetry below remains the published iteration 03 snapshot; it will be regenerated at the final delivery step after implementation and review.
+
 ### Workflow Efficiency
 - **Software Development Life Cycle Iterations:** 39
 - **Active Agent Duration:** 6h 18m (recorded duration including 768s provisional)

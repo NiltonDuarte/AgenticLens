@@ -66,9 +66,9 @@ func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
 	b.WriteString("# database connectivity, live observability thresholds, code metrics classification,\n")
 	b.WriteString("# and agent-backend bridge role mappings.\n\n")
 
-	b.WriteString("# Optional generate output only; omitted settings default to true.\n")
+	b.WriteString("# Optional generate metrics default to enabled; checkpoint feedback defaults to 180s.\n")
 	b.WriteString("# Shared project settings; local machine overrides and CLI do not override these.\n")
-	b.WriteString(fmt.Sprintf("generation:\n  metrics:\n    skills: %t\n    delegations: %t\n    anomalies: %t\n\n", cfg.Generation.Metrics.Skills, cfg.Generation.Metrics.Delegations, cfg.Generation.Metrics.Anomalies))
+	b.WriteString(fmt.Sprintf("generation:\n  metrics:\n    skills: %t\n    delegations: %t\n    anomalies: %t\n  feedback:\n    # Human stderr diagnostics only; 0 disables them.\n    provisional_threshold_seconds: %d\n\n", cfg.Generation.Metrics.Skills, cfg.Generation.Metrics.Delegations, cfg.Generation.Metrics.Anomalies, cfg.Generation.Feedback.ProvisionalThresholdSeconds))
 
 	// Project Name
 	projName := strings.TrimSpace(cfg.ProjectName)
@@ -434,6 +434,7 @@ func GenerateDefaultYAML(projectName string, workspacesDir string, dbPath string
 	}
 
 	cfg := domain.ProjectConfig{
+		Generation:  domain.GenerationConfig{Metrics: domain.DefaultGenerationPolicy(), Feedback: domain.DefaultGenerationFeedbackConfig()},
 		ProjectName: projName,
 		Ticket: domain.TicketConfig{
 			Prefixes:        cleanPrefixes,

@@ -74,17 +74,18 @@ func CaptureSessionSnapshotWithPolicyAt(ctx context.Context, db *sql.DB, id, use
 		return
 	}
 	var events []domain.EventFact
+	var checkpointEvidence []domain.CheckpointInvocationEvidence
 	var sink *[]domain.EventFact
 	if len(source) > 0 {
 		sink = &events
 	}
 	if family == schemaFamilyV2 {
-		sessions, _, _, err = extractSchemaV2SessionsWithPolicyAt(db, []string{id}, user, nil, true, sink, policy, cutoff, true)
+		sessions, _, _, err = extractSchemaV2SessionsWithCheckpointAt(db, []string{id}, user, nil, true, sink, policy, cutoff, &checkpointEvidence, true)
 	} else {
-		sessions, _, _, err = extractSchemaV1SessionsWithPolicyAt(db, []string{id}, user, nil, true, sink, policy, cutoff, true)
+		sessions, _, _, err = extractSchemaV1SessionsWithCheckpointAt(db, []string{id}, user, nil, true, sink, policy, cutoff, &checkpointEvidence, true)
 	}
 	if err == nil && len(source) > 0 {
-		fresh := domain.SourceEvents{Events: events}
+		fresh := domain.SourceEvents{Events: events, CheckpointEvidence: checkpointEvidence}
 		for _, owner := range sessions {
 			fresh.CompleteSessionIDs = append(fresh.CompleteSessionIDs, owner.ID)
 		}

@@ -2,7 +2,7 @@ h3. Title: AL-64: Investigate and fix active-turn duration across Codex and Open
 
 *TARGET*: AgenticLens (Domain / Codex / OpenCode v1 and v2 / Generation / Backfill / Ledger / Presentation)
 
-*Status*: Done
+*Status*: In Progress
 *Work type*: fix
 *Blocked by*: None
 *Blocks*: None
@@ -55,3 +55,7 @@ As an operator generating telemetry from Codex, OpenCode v1 or OpenCode v2, I wa
 Implementation and local verification complete on integrated revision f8aeac2b. Delivery is PR #121 for review; no remote merge or release is performed. The approved iteration 03 numeric scope supersedes richer duration metadata and the unimplemented hybrid-liveness proposal: total plus positive provisional_seconds, backend-only draft normalization, numeric displays and accepted source-open estimates through the explicit calculation cutoff. No duration reasoning or mandatory process-liveness checks are introduced.
 
 Per-source investigation, native evidence, regression results, compact shared discovery credit, accepted debt and telemetry coverage limits are in [AL-64 summary](../../AL-64/SUMMARY.md). Required make and standalone embedded-asset verification pass. The earlier [PO-19 reconciliation](../../PO-19/SPEC.md) records its historical planning snapshot.
+
+*ITERATION 04 REOPENED (2026-11-06)*
+
+The user approved implementation of transient checkpoint feedback with a default 180-second threshold and five exact message variants. The former continuation identifier is now F05; aggregation-only feedback is excluded. [Approved iteration 04 plan](../../AL-64/iterations/04/PLAN.md) records the acceptance delta. Iteration 03 delivery/verification remains valid for unchanged accounting; new feedback delivery and verification are in progress.

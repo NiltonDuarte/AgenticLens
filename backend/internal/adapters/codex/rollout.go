@@ -22,6 +22,11 @@ const maxRolloutLineBytes = 8 * 1024 * 1024
 // Transcript is a request-local Codex source extraction. Events and occurrence
 // identities are ephemeral; SessionFacts projects only durable lean values.
 type Transcript struct {
+	CheckpointEvidence []domain.CheckpointInvocationEvidence `json:"-"`
+
+	checkpointHistorical bool
+	checkpointNativeIDs  map[string]bool
+
 	snapshotCutoff   time.Time
 	durationLimit    string
 	seenTurns        map[string]bool
@@ -166,6 +171,9 @@ type tokenUsageRecord struct {
 }
 
 type modelUsage struct {
+	checkpointIntervals  []domain.CheckpointInterval
+	checkpointIncomplete bool
+
 	usage             Usage
 	turns             map[string]struct{}
 	activeMillis      int64
@@ -215,19 +223,20 @@ func ParseRolloutAt(reader io.Reader, cutoff time.Time) (Transcript, error) {
 	}
 
 	transcript := Transcript{
-		snapshotCutoff:   cutoff.UTC(),
-		seenTurns:        make(map[string]bool),
-		RecordKinds:      make(map[string]int64),
-		EventKinds:       make(map[string]int64),
-		modelUsage:       make(map[string]*modelUsage),
-		toolUsage:        make(map[string]*toolUsage),
-		pendingTools:     make(map[string]int),
-		turnStarts:       make(map[string]time.Time),
-		turnModels:       make(map[string]string),
-		turnNumbers:      make(map[string]int64),
-		toolIDs:          make(map[string]struct{}),
-		currentModel:     "default",
-		pendingSelection: -1,
+		snapshotCutoff:      cutoff.UTC(),
+		checkpointNativeIDs: make(map[string]bool),
+		seenTurns:           make(map[string]bool),
+		RecordKinds:         make(map[string]int64),
+		EventKinds:          make(map[string]int64),
+		modelUsage:          make(map[string]*modelUsage),
+		toolUsage:           make(map[string]*toolUsage),
+		pendingTools:        make(map[string]int),
+		turnStarts:          make(map[string]time.Time),
+		turnModels:          make(map[string]string),
+		turnNumbers:         make(map[string]int64),
+		toolIDs:             make(map[string]struct{}),
+		currentModel:        "default",
+		pendingSelection:    -1,
 	}
 	usageRecordSeen := false
 	inheritedHistory := false
@@ -395,6 +404,7 @@ func readEvent(payload json.RawMessage, timestamp string, transcript *Transcript
 	if stamp, err := time.Parse(time.RFC3339Nano, timestamp); err == nil && stamp.After(transcript.snapshotCutoff) {
 		switch event.Type {
 		case "turn_started", "task_started", "turn_complete", "turn_completed", "task_complete", "task_completed", "turn_failed", "task_failed", "turn_aborted", "task_aborted", "turn_interrupted", "task_interrupted", "shutdown_complete", "thread_ended":
+			transcript.checkpointHistorical = true
 			return
 		}
 	}
@@ -411,6 +421,7 @@ func readEvent(payload json.RawMessage, timestamp string, transcript *Transcript
 		}
 		if !transcript.seenTurns[turnID] {
 			transcript.seenTurns[turnID] = true
+			transcript.checkpointNativeIDs[turnID] = lifecycle.TurnID != ""
 			if len(transcript.turnStarts) > 0 {
 				transcript.durationLimit = "superseded unfinished lifecycle; unsupported interval excluded"
 				clear(transcript.turnStarts)
@@ -901,6 +912,12 @@ func (transcript *Transcript) finalizeFacts() {
 			acc := transcript.modelUsageFor(transcript.turnModels[id])
 			acc.provisionalMillis += transcript.snapshotCutoff.Sub(started).Milliseconds()
 			acc.provisional = true
+			nativeID := id
+			if !transcript.checkpointNativeIDs[id] {
+				nativeID = ""
+				acc.checkpointIncomplete = true
+			}
+			acc.checkpointIntervals = append(acc.checkpointIntervals, domain.CheckpointInterval{Kind: "turn", ID: nativeID, StartedAt: started, SourceOpen: nativeID != "" && !transcript.checkpointHistorical})
 		}
 	}
 	if transcript.StartedAt == "" {
@@ -954,6 +971,10 @@ func (transcript *Transcript) finalizeFacts() {
 				userIterations = transcript.SteeringTurns
 			}
 		}
+		transcript.CheckpointEvidence = append(transcript.CheckpointEvidence, domain.CheckpointInvocationEvidence{
+			Source: domain.SourceCodex, SessionID: transcript.sessionIDOrThread(), InvocationRow: len(transcript.Invocations) + 1,
+			Model: model, Cutoff: transcript.snapshotCutoff, Complete: !usage.checkpointIncomplete && transcript.durationLimit == "", Intervals: usage.checkpointIntervals,
+		})
 		transcript.Invocations = append(transcript.Invocations, domain.InvocationFact{
 			Role:                  transcript.role,
 			Model:                 model,
@@ -1072,6 +1093,7 @@ func CombineTranscriptsWithPolicy(transcripts []Transcript, policies ...domain.G
 		combined.ActiveSeconds += transcript.ActiveSeconds
 		combined.Invocations = append(combined.Invocations, transcript.Invocations...)
 		combined.Events = append(combined.Events, transcript.Events...)
+		combined.CheckpointEvidence = append(combined.CheckpointEvidence, transcript.CheckpointEvidence...)
 		combined.Warnings = append(combined.Warnings, transcript.Warnings...)
 		for kind, count := range transcript.RecordKinds {
 			combined.RecordKinds[kind] += count

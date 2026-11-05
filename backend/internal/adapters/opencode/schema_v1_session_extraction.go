@@ -71,6 +71,11 @@ func extractSchemaV1SessionsWithPolicy(db *sql.DB, threadIDs []string, defaultUs
 }
 
 func extractSchemaV1SessionsWithPolicyAt(db *sql.DB, threadIDs []string, defaultUser string, userBySessionID map[string]string, strict bool, eventSink *[]domain.EventFact, policy *domain.GenerationPolicy, cutoff time.Time, exact ...bool) ([]domain.SessionFact, *string, *string, error) {
+	return extractSchemaV1SessionsWithCheckpointAt(db, threadIDs, defaultUser, userBySessionID, strict, eventSink, policy, cutoff, nil, exact...)
+}
+
+func extractSchemaV1SessionsWithCheckpointAt(db *sql.DB, threadIDs []string, defaultUser string, userBySessionID map[string]string, strict bool, eventSink *[]domain.EventFact, policy *domain.GenerationPolicy, cutoff time.Time, checkpointSink *[]domain.CheckpointInvocationEvidence, exact ...bool) ([]domain.SessionFact, *string, *string, error) {
+	var checkpointEvidence []domain.CheckpointInvocationEvidence
 
 	incompleteOwners := make(map[string]bool)
 	quotedList, err := buildQuotedIDList(threadIDs)
@@ -195,7 +200,8 @@ func extractSchemaV1SessionsWithPolicyAt(db *sql.DB, threadIDs []string, default
 	// progress update after cutoff does not erase an earlier open interval.
 	// Only a later message at or before cutoff can supersede that evidence.
 	runningMessages := map[string]bool{}
-	runningRows, runErr := db.Query(fmt.Sprintf(`SELECT DISTINCT p.message_id FROM part p
+	currentMessages := map[string]bool{}
+	runningRows, runErr := db.Query(fmt.Sprintf(`SELECT DISTINCT p.message_id, NOT EXISTS (SELECT 1 FROM message newer WHERE newer.session_id=m.session_id AND newer.time_created>m.time_created) FROM part p
       JOIN message m ON m.id=p.message_id AND m.session_id=p.session_id
       WHERE (p.session_id IN (%s) OR p.session_id IN (SELECT id FROM session WHERE parent_id IN (%s)))
       AND json_valid(p.data)
@@ -209,11 +215,13 @@ func extractSchemaV1SessionsWithPolicyAt(db *sql.DB, threadIDs []string, default
 	}
 	for runningRows.Next() {
 		var id string
-		if err := runningRows.Scan(&id); err != nil {
+		var current bool
+		if err := runningRows.Scan(&id, &current); err != nil {
 			runningRows.Close()
 			return nil, nil, nil, err
 		}
 		runningMessages[id] = true
+		currentMessages[id] = current
 	}
 	if err := runningRows.Err(); err != nil {
 		runningRows.Close()
@@ -395,6 +403,9 @@ func extractSchemaV1SessionsWithPolicyAt(db *sql.DB, threadIDs []string, default
 				acc.activeMS += completed
 				acc.provisionalMS += provisional
 				acc.provisional = acc.provisional || pending
+				if pending {
+					acc.checkpointIntervals = append(acc.checkpointIntervals, domain.CheckpointInterval{Kind: "assistant message", ID: mid, StartedAt: time.UnixMilli(c).UTC(), SourceOpen: finish == nil && currentMessages[mid]})
+				}
 				if finish == nil && !pending {
 					acc.durationIncomplete = true
 				}
@@ -748,6 +759,7 @@ func extractSchemaV1SessionsWithPolicyAt(db *sql.DB, threadIDs []string, default
 				completedAt = &endISO
 			}
 
+			checkpointEvidence = append(checkpointEvidence, domain.CheckpointInvocationEvidence{Source: domain.SourceOpenCode, SessionID: s.id, InvocationRow: len(invocations) + 1, Model: mName, Cutoff: cutoff, Complete: !st.durationIncomplete, Intervals: st.checkpointIntervals})
 			invocations = append(invocations, domain.InvocationFact{
 				Role:                  role,
 				Model:                 mName,
@@ -807,6 +819,9 @@ func extractSchemaV1SessionsWithPolicyAt(db *sql.DB, threadIDs []string, default
 	projected, err := projectSourceFacts(sessionFacts, events, strict, policy, incompleteOwners)
 	if err != nil {
 		return nil, nil, nil, err
+	}
+	if checkpointSink != nil {
+		*checkpointSink = append(*checkpointSink, checkpointEvidence...)
 	}
 	return projected, startedAtISO, completedAtISO, nil
 }

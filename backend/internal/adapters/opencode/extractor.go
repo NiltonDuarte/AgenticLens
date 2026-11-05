@@ -22,6 +22,8 @@ func sourceEventID(kind, sourceID string) string {
 }
 
 type sessionModelAccumulator struct {
+	checkpointIntervals []domain.CheckpointInterval
+
 	input              int64
 	output             int64
 	cache              int64
@@ -134,21 +136,22 @@ func extractSessionsWithPolicyAt(db *sql.DB, threadIDs []string, defaultUser str
 	}
 	var sessions []domain.SessionFact
 	var events []domain.EventFact
+	var checkpointEvidence []domain.CheckpointInvocationEvidence
 	var sink *[]domain.EventFact
 	if len(source) > 0 {
 		sink = &events
 	}
 	var started, completed *string
 	if family == schemaFamilyV2 {
-		sessions, started, completed, err = extractSchemaV2SessionsWithPolicyAt(db, threadIDs, defaultUser, userBySessionID, strict, sink, policy, cutoff)
+		sessions, started, completed, err = extractSchemaV2SessionsWithCheckpointAt(db, threadIDs, defaultUser, userBySessionID, strict, sink, policy, cutoff, &checkpointEvidence)
 	} else {
-		sessions, started, completed, err = extractSchemaV1SessionsWithPolicyAt(db, threadIDs, defaultUser, userBySessionID, strict, sink, policy, cutoff)
+		sessions, started, completed, err = extractSchemaV1SessionsWithCheckpointAt(db, threadIDs, defaultUser, userBySessionID, strict, sink, policy, cutoff, &checkpointEvidence)
 	}
 	if err != nil {
 		return nil, nil, nil, err
 	}
 	if len(source) > 0 {
-		fresh := domain.SourceEvents{Events: events}
+		fresh := domain.SourceEvents{Events: events, CheckpointEvidence: checkpointEvidence}
 		for _, owner := range sessions {
 			fresh.CompleteSessionIDs = append(fresh.CompleteSessionIDs, owner.ID)
 		}
