@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "COORD-01",
+      "severity": 3,
+      "issue": "Orchestration package-partition test required unprepared live embedded assets.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: use self-contained discovery fixtures; verify actual source accounting separately after asset preparation."
+    },
+    {
+      "finding_id": "COORD-02",
+      "severity": 3,
+      "issue": "Compatibility both-mode CLI test consumer lacked gated shared asset preparation.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: compatibility dispatch shares the Make unit barrier and both-mode asset producer."
+    },
+    {
+      "finding_id": "COORD-03",
+      "severity": 6,
+      "issue": "Legacy release workflow test still names the old Go setup label.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: update the release-step consumer while preserving all selection, ordering and publication guards."
+    },
+    {
+      "finding_id": "REL-01",
+      "severity": 5,
+      "issue": "New literal unit target breaks forced rebuilds of historical release Makefiles.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: release retains selected-source check/test interfaces; current Make supplies the unit gate internally."
+    },
+    {
+      "finding_id": "COORD-04",
+      "severity": 5,
+      "issue": "Make dependency and wildcard expansion split supported WEB_DIR paths containing spaces.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: escape Make filename/wildcard spaces and quote directory arguments; supported installer and mixed-goal cases pass."
+    },
+    {
+      "finding_id": "COORD-05",
+      "severity": 2,
+      "issue": "New root-level test configuration files were outside TypeScript typecheck inclusion.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: include both Vitest roots and imported selector in the unchanged strict TypeScript program."
+    }
+  ]
+}

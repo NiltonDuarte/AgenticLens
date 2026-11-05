@@ -1,0 +1,61 @@
+{
+  "source_revision": "8280c2bd3cc5bc03f2f4f3f401cefcc0524bdc4b",
+  "integrated_make": {
+    "command": "make",
+    "result": "PASS",
+    "started_with_generated_asset_trees_absent": true,
+    "wall_seconds": 229.67,
+    "user_seconds": 425.66,
+    "system_seconds": 127.14,
+    "max_rss_kib": 654448,
+    "stage_results": {
+      "release_workflow_python": 14,
+      "installation_python": 10,
+      "capture_distribution_python": 15,
+      "orchestration_python": 6,
+      "frontend_unit_cases": 176,
+      "frontend_integration_cases": 677,
+      "go": "unit non-race, unit race, all complementary integration packages with -race -count=1",
+      "cross_build": "all configured platforms"
+    },
+    "earlier_failed_candidates": {
+      "df3e02c9": "obsolete release step-name expectation",
+      "ee82c243": "spaced WEB_DIR dependency/wildcard tokenization"
+    }
+  },
+  "generated_assets": {
+    "web_equals_embedded": true,
+    "repeat_build_identical": true,
+    "files": {
+      "assets/index-BGH-Pi_l.css": "56fc9b5f8eb69637e9dcc07ac8e2cb08813bf968cd1ec79d7e9b911158e39746",
+      "assets/index-NlnCCttj.js": "a9106fe5073fc4529a1f5f4bd190d3e5090a50ab83a90613b0cd39136ff56823",
+      "index.html": "121f2297446f3c2e4e5cb46aafd9bb57489f5c2f50eea118a456ae9427636e99"
+    }
+  },
+  "standalone_native": {
+    "node_absent_from_child_path": true,
+    "unique_fixture_api_identity_verified": true,
+    "bounded_http_readiness": true,
+    "all_served_asset_hashes_match": true,
+    "served_files": {
+      "assets/index-BGH-Pi_l.css": "56fc9b5f8eb69637e9dcc07ac8e2cb08813bf968cd1ec79d7e9b911158e39746",
+      "assets/index-NlnCCttj.js": "a9106fe5073fc4529a1f5f4bd190d3e5090a50ab83a90613b0cd39136ff56823",
+      "index.html": "121f2297446f3c2e4e5cb46aafd9bb57489f5c2f50eea118a456ae9427636e99"
+    },
+    "cleanup": "SIGTERM/wait completed",
+    "initial_probe": "invalid private fixture lacked required context-ceiling thresholds; corrected fixture, no product change"
+  },
+  "toolchains": {
+    "go": "1.26.0 linux/amd64",
+    "node": "24.22.1",
+    "npm": "11.19.1",
+    "make": "GNU Make 4.3"
+  },
+  "limits": [
+    "Local Linux/WSL evidence; hosted and Windows-native runs not observed.",
+    "Actual OpenCode provider and release publishing not executed.",
+    "Mixed adapter packages remain integration, including pure helpers; domain race is intentionally an extra instrumented verification.",
+    "Pre-feature historical release sources retain their own original verification semantics.",
+    "No general mutation equivalence or speed/billing saving claim."
+  ]
+}

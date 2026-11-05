@@ -43,18 +43,24 @@ The existing specification is completed and moved to plan/done; the matching ind
 The installed agentic-lens wrapper was absent on PATH. The current source-native CLI was built and its help/version inspected; wrapper-only --al-offline/--al-project flags are not native flags. Final extraction uses the built native from the repository working directory and explicit --source codex; no global install, pin or configuration was changed. Exact session ingestion supplements root discovery for T3 review sessions whose source metadata records independent vscode roots, preserving that missing-parent limitation rather than inventing edges. The native planner has its recorded Codex parent edge. Expected source owners: root, planner and ten reviews. Existing other-harness sessions: none at baseline. Telemetry verification/facts are recorded at extraction below.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 28
-- **Active Agent Duration:** 1h 4m (excludes user wait time)
-- **Context Window Health:** ELEVATED — Root agent peak 278.3k tokens (62% of 450k healthy ceiling, 0 compactions) | Subagents peak 69.7k (Planner)
+- **Software Development Life Cycle Iterations:** 54
+- **Active Agent Duration:** 2h 44m (excludes user wait time)
+- **Context Window Health:** BLOATED — Root agent peak 450.1k tokens (100% of 450k healthy ceiling, 1 compactions) | Subagents peak 407.8k (Tester)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
-- **Subagent Turn Velocity & Thrashing:** 1.0 avg turns/run (peak: 1 turns) | Planner 1.0
-- **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
-- **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 38,120 reasoning tokens (23.1% of generated output)
-- **Tool Health & Self-Correction:** 259 tool calls (20 self-corrections, 92.3% success rate)
+- **Subagent Turn Velocity & Thrashing:** 4.0 avg turns/run (peak: 5 turns) | Planner 2.0, Coder 5.0, Tester 5.0
+- **Test-to-Production Code Ratio:** 37:0 (+37 test lines / +0 prod lines)
+- **Code Delivered:** +72 / -24 lines across 7 code files (excluding docs)
+- **Reasoning Effort:** 180,384 reasoning tokens (31.9% of generated output)
+- **Tool Health & Self-Correction:** 632 tool calls (39 self-corrections, 93.8% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 1 execution anomaly detected (1 WARNING).
+- **Status:** 7 execution anomalies detected (4 CRITICAL, 3 WARNING).
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (450.1k tokens) — Context tokens reached 450.1k, breaching the 450k critical ceiling.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+316.9k tokens) — Context tokens surged by 316.9k to 316.9k tokens.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+317.5k tokens) — Context tokens surged by 317.5k to 317.5k tokens.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (21 cycles) — Subagent roles 'coder' and 'tester' alternated for 21 consecutive cycles.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (316.9k tokens) — Context tokens reached 316.9k, breaching the 250k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (317.5k tokens) — Context tokens reached 317.5k, breaching the 250k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (251.4k tokens) — Context tokens reached 251.4k, breaching the 250k warning ceiling.
 
 ### Agentic Execution Metrics
@@ -64,30 +70,37 @@ The installed agentic-lens wrapper was absent on PATH. The current source-native
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **planner** | 1 | 66,593 | 4,579 | 473,088 | 87.7% | 69.7k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Unknown** | 11 | 1,256,151 | 121,984 | 30,703,104 | 96.1% | 278.3k | ELEVATED | Unavailable (0 observed, 0 partial, 11 unavailable / 11 invocations) |
-| **Total** | **12** | **1,322,744** | **126,563** | **31,176,192** | **95.9%** | **278.3k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 12 unavailable / 12 invocations)** |
+| **planner** | 1 | 167,034 | 13,862 | 1,428,096 | 89.5% | 108.2k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **coder** | 1 | 407,184 | 33,434 | 22,571,648 | 98.2% | 388.6k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **tester** | 1 | 65,352 | 52,009 | 30,916,096 | 99.8% | 407.8k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Unknown** | 23 | 2,264,294 | 286,524 | 84,394,880 | 97.4% | 450.1k | BLOATED (100%) | Unavailable (0 observed, 0 partial, 23 unavailable / 23 invocations) |
+| **Total** | **26** | **2,903,864** | **385,829** | **139,310,720** | **98.0%** | **450.1k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-luna** | 5 | 325,605 | 19,657 | 1,901,184 | 85.4% | Unavailable (0 observed, 0 partial, 5 unavailable / 5 invocations) |
-| **gpt-6.1-sol** | 7 | 997,139 | 106,906 | 29,275,008 | 96.7% | Unavailable (0 observed, 0 partial, 7 unavailable / 7 invocations) |
-| **Total** | **12** | **1,322,744** | **126,563** | **31,176,192** | **95.9%** | **Unavailable (0 observed, 0 partial, 12 unavailable / 12 invocations)** |
+| **gpt-6-luna** | 11 | 705,240 | 38,734 | 3,645,440 | 83.8% | Unavailable (0 observed, 0 partial, 11 unavailable / 11 invocations) |
+| **gpt-6.1-sol** | 15 | 2,198,624 | 347,095 | 135,665,280 | 98.4% | Unavailable (0 observed, 0 partial, 15 unavailable / 15 invocations) |
+| **Total** | **26** | **2,903,864** | **385,829** | **139,310,720** | **98.0%** | **Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations)** |
 
-Capture observation finalized: 2026-11-05T00:50:22.023467189Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 12; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 12; reserved bytes: 11960950. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
-Owner codex/01a1a7f0-ae81-7e60-90f7-f89c6dde0447: current; last successful source read 2026-11-05T00:50:21.73629618Z; accepted source checkpoint 2026-11-04T19:03:50.831Z.
-Owner codex/01a1a7fd-a6d1-7772-abf8-4c9a4adc4863: current; last successful source read 2026-11-05T00:50:21.75369396Z; accepted source checkpoint 2026-11-04T19:18:10.103Z.
-Owner codex/01a1a7db-7264-7d71-869d-64e1c5906a2f: current; last successful source read 2026-11-05T00:50:21.854697658Z; accepted source checkpoint 2026-11-05T00:50:21.635Z.
-Owner codex/01a1a7fc-317e-7fb1-8d67-ef6b03325642: current; last successful source read 2026-11-05T00:50:21.878715347Z; accepted source checkpoint 2026-11-04T19:16:18.157Z.
-Owner codex/01a1a7db-ce2f-7391-b1f2-a646b932ce13: current; last successful source read 2026-11-05T00:50:21.902585564Z; accepted source checkpoint 2026-11-04T18:41:31.704Z.
-Owner codex/01a1a7ed-c79d-7e42-9c23-015dc99ca004: current; last successful source read 2026-11-05T00:50:21.92806974Z; accepted source checkpoint 2026-11-04T19:02:07.549Z.
-Owner codex/01a1a7f7-7427-70e2-8900-c647a0f73bc8: current; last successful source read 2026-11-05T00:50:21.94451763Z; accepted source checkpoint 2026-11-04T19:11:22.593Z.
-Owner codex/01a1a7f3-c7d5-77f2-adf0-9a6a3c12ffcd: current; last successful source read 2026-11-05T00:50:21.644804417Z; accepted source checkpoint 2026-11-04T19:09:29.222Z.
-Owner codex/01a1a800-3dcc-78e3-94d6-41511e1016aa: current; last successful source read 2026-11-05T00:50:21.660688487Z; accepted source checkpoint 2026-11-04T19:20:26.566Z.
-Owner codex/01a1a7f9-fd32-7d00-86b6-6cee5278a7ae: current; last successful source read 2026-11-05T00:50:21.68009216Z; accepted source checkpoint 2026-11-04T19:14:35.214Z.
-Owner codex/01a1a7eb-39fb-7460-94e1-fe524cb8a72e: current; last successful source read 2026-11-05T00:50:21.701327182Z; accepted source checkpoint 2026-11-04T18:58:54.434Z.
-Owner codex/01a1a7f2-ac77-7a90-bf87-2e534216eba8: current; last successful source read 2026-11-05T00:50:21.718927053Z; accepted source checkpoint 2026-11-04T19:05:31.355Z.
+Capture observation finalized: 2026-11-05T11:47:31.861130446Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 24; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 24; reserved bytes: 24831945. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
+Owner codex/01a1ab7d-db70-7dc2-a23b-510473ebe1b4: current; last successful source read 2026-11-05T11:47:31.380707112Z; accepted source checkpoint 2026-11-05T11:37:19.427Z.
+Owner codex/01a1a7f0-ae81-7e60-90f7-f89c6dde0447: current; last successful source read 2026-11-05T11:47:31.406384754Z; accepted source checkpoint 2026-11-04T19:03:50.831Z.
+Owner codex/01a1ab58-b06d-7590-88cb-266601d044f4: current; last successful source read 2026-11-05T11:47:31.430729175Z; accepted source checkpoint 2026-11-05T10:56:55.02Z.
+Owner codex/01a1ab75-5d33-7f60-957a-9b63fadf3514: current; last successful source read 2026-11-05T11:47:31.44978109Z; accepted source checkpoint 2026-11-05T11:28:43.449Z.
+Owner codex/01a1a7fd-a6d1-7772-abf8-4c9a4adc4863: current; last successful source read 2026-11-05T11:47:31.468931711Z; accepted source checkpoint 2026-11-04T19:18:10.103Z.
+Owner codex/01a1a7db-7264-7d71-869d-64e1c5906a2f: current; last successful source read 2026-11-05T11:47:31.617408629Z; accepted source checkpoint 2026-11-05T11:47:31.069Z.
+Owner codex/01a1a7fc-317e-7fb1-8d67-ef6b03325642: current; last successful source read 2026-11-05T11:47:31.638093862Z; accepted source checkpoint 2026-11-04T19:16:18.157Z.
+Owner codex/01a1a7db-ce2f-7391-b1f2-a646b932ce13: current; last successful source read 2026-11-05T11:47:31.66844758Z; accepted source checkpoint 2026-11-05T00:56:55.201Z.
+Owner codex/01a1a7ed-c79d-7e42-9c23-015dc99ca004: current; last successful source read 2026-11-05T11:47:31.695170669Z; accepted source checkpoint 2026-11-04T19:02:07.549Z.
+Owner codex/01a1ab80-cede-7d33-8287-451861d732f9: current; last successful source read 2026-11-05T11:47:31.714628136Z; accepted source checkpoint 2026-11-05T11:39:48.275Z.
+Owner codex/01a1a7f7-7427-70e2-8900-c647a0f73bc8: current; last successful source read 2026-11-05T11:47:31.735053777Z; accepted source checkpoint 2026-11-04T19:11:22.593Z.
+Owner codex/01a1a7f3-c7d5-77f2-adf0-9a6a3c12ffcd: current; last successful source read 2026-11-05T11:47:31.090657288Z; accepted source checkpoint 2026-11-04T19:09:29.222Z.
+Owner codex/01a1a800-3dcc-78e3-94d6-41511e1016aa: current; last successful source read 2026-11-05T11:47:31.112218423Z; accepted source checkpoint 2026-11-04T19:20:26.566Z.
+Owner codex/01a1ab77-e9a0-7e00-b9e7-4a14dcf0f5b9: current; last successful source read 2026-11-05T11:47:31.133624527Z; accepted source checkpoint 2026-11-05T11:29:55.07Z.
+Owner codex/01a1ab57-98d2-72b0-8756-bd732e611231: current; last successful source read 2026-11-05T11:47:31.154680188Z; accepted source checkpoint 2026-11-05T10:54:36.788Z.
+Owner codex/01a1ab67-ba43-75a1-983e-c838d3ce3908: current; last successful source read 2026-11-05T11:47:31.178725759Z; accepted source checkpoint 2026-11-05T11:13:23.028Z.
+Additional owner freshness details remain in local capture diagnostics.
 
 ## Final telemetry verification
 
@@ -119,3 +132,33 @@ Iteration02 implementation checkpoint: coder owns the Make/npm/CI/compatibility 
 Iteration02 review loop: first candidate df3e02c9's required make failed a stale release step-name consumer, shared discovery by orchestrator, behavior and data reviewers gpt-6.1-sol/high. Behavior gpt-6.1-sol/high additionally found forced historical tags lack the new unit target. Coder/tester gpt-6.1-sol/high corrected workflow/test interfaces while preserving exact selected source, all original publication guards and historical verification. Normal CI/Make partitions, schema oracles and runtime source did not change. Current Make check/test own the unit barrier; historical sources pre-dating the feature keep their own verification lifecycle. Focused14 release checks and sequencing/legacy-Make controls pass; integrated and revision-aware review gates remain pending.
 
 Iteration02 second integration correction: root orchestrator gpt-6.1-sol/high found the required installer source-build fixture's absolute WEB_DIR-with-spaces override was broken by Make filename/wildcard tokenization. Tester gpt-6.1-sol/high captured three failing-before routing cases; coder gpt-6.1-sol/high corrected Make escaping/quoting, and tester verified focused positive controls plus original native/cache-invariance metadata subcases. Root also identified unchecked root-level TypeScript configs; coder included the Vitest roots with strict settings unchanged and verified their compiler closure. Both earlier make failures remain recorded; another integrated gate and affected paired-model review are required.
+
+
+## Iteration 02 completion and consolidated review
+
+Final source reviewed and tested: 8280c2bd3cc5bc03f2f4f3f401cefcc0524bdc4b, against implementation baseline 23b381637106da39ca552faed4e344cca2ab1a35. Final consolidated verdict: APPROVED for the approved iteration02 scope after corrections and the required integrated checks. Upstream main was integrated before the candidate; the implementation sync found origin/main already current at 40b16def. This approval permits publication, not merging. Later artifact/telemetry commits do not change tested source.
+
+Delivered by layer: domain/runtime application code and ledger schema are unchanged. Adapter test fixtures now carry valid ticket identity and assert the intended failure cause plus nil/empty preservation. The shell/build boundary separates domain Go units from complementary integration packages, and pure Node frontend units from complementary jsdom/annotated integration tests. Repository Make and CI wait for both languages' units before integration/setup; standalone npm waits for frontend units only. Shared asset production, complete race coverage, build-only overrides and historical selected-release interfaces are preserved. Contributor guidance explains these public entrypoints.
+
+The planner, implementation coder, tester and coordinating orchestrator each ran gpt-6.1-sol/high, confirmed from their Codex source turn_context metadata. Eight fresh independent discovery runs covered behavior/integration, data/failure, architecture/maintainability and test effectiveness, each with gpt-6.1-sol/high and gpt-6-luna/medium. Four correction re-reviews covered affected behavior and architecture with both profiles. Dispatch receipts and real source metadata match for all twelve review runs; supplied findings in re-reviews receive verification credit, not additional discovery credit.
+
+- Behavior/integration: gpt-6.1-sol/high initially CHANGES_REQUESTED at df3e02c9 for the stale release-test consumer and historical-tag target incompatibility; gpt-6-luna/medium initially APPROVED without findings at that revision. Both correction reviews APPROVED at 8280c2bd, with no new findings.
+- Data/failure: gpt-6.1-sol/high initially CHANGES_REQUESTED at df3e02c9 solely for the shared release-test blocker, explicitly finding no blocking schema/data-contract defect. gpt-6-luna/medium APPROVED without findings at ee82c243. The data investigation is carried forward, not relabeled as a later child approval: schema fixtures/validators, package selector, preserved state/ownership tests and frontend classification are unchanged through 8280c2bd. Later changes concern Make path handling, release consumer/commands and TypeScript inclusion; paired behavior/architecture re-review and actual release/integration checks settle those interactions and the shared blocker.
+- Architecture/maintainability: gpt-6.1-sol/high and gpt-6-luna/medium initially APPROVED without findings at ee82c243; both affected correction reviews APPROVED without new findings at 8280c2bd.
+- Test effectiveness: gpt-6.1-sol/high and gpt-6-luna/medium independently APPROVED without findings at 8280c2bd. Their scoped approvals reused raw tester evidence; final complete Make and standalone binary evidence were separately verified by the parent.
+
+[Compact findings and all discovery reporters](iterations/02/REVIEW_SUMMARY.json) retain six confirmed, fixed root causes. COORD-01 (3) was discovered by the orchestrator gpt-6.1-sol/high and fixed by tester gpt-6.1-sol/high using self-contained discovery. COORD-02 (3) was discovered by the orchestrator gpt-6.1-sol/high and fixed by coder gpt-6.1-sol/high through shared compatibility asset ordering. COORD-03 (6, aliases BEH-SOL-01/DS-01) shares discovery credit between orchestrator, behavior/integration reviewer and data/failure reviewer, all gpt-6.1-sol/high; tester gpt-6.1-sol/high synchronized the release guard consumer. REL-01 (5) was discovered by the behavior/integration reviewer gpt-6.1-sol/high; coder gpt-6.1-sol/high preserved historical release interfaces and tester gpt-6.1-sol/high verified a historical Make control. COORD-04 (5) and COORD-05 (2) were discovered by the orchestrator gpt-6.1-sol/high; coder gpt-6.1-sol/high fixed supported spaced paths and compiler inclusion, with tester gpt-6.1-sol/high checking before/after paths and the original installer. Both profile pairs verified affected corrections; they did not discover these supplied issues. No unresolved finding, accepted new debt or material local review gap remains.
+
+Verification: parent orchestrator gpt-6.1-sol/high ran complete make successfully at 8280c2bd from absent ignored frontend/embed assets (229.67 seconds wall). The gate passed Go units, full retained race coverage, frontend units/integration, all release/installer/distribution/orchestration checks and configured platform builds. Tester gpt-6.1-sol/high proved exact disjoint package/case accounting, selected schema-oracle mutations and real per-language unit-failure blocking, including parallel/mixed goals and frontend-scoped npm controls. Canonical frontend build repetition and backend embedding match byte-for-byte; the built native binary served those exact assets with Node absent, bounded HTTP/cleanup and unique disposable API identity. Earlier failed Make gates and the corrected invalid probe fixture remain explicit in [verification history](iterations/02/VERIFICATION.md); [integrated evidence](iterations/02/INTEGRATED_VERIFICATION.json) and [partition proof](iterations/02/PARTITION_PROOF.json) retain the final results.
+
+Limits: local Linux/WSL, Go1.26, Node24/npm11 and GNU Make4.3. Hosted CI/Node20, native Windows, external provider compatibility, actual historical tagged builds and release publication were not executed. Mixed Go packages remain conservatively integration. The deliberate domain race pass is extra instrumented verification. No general speedup, billing saving or mutation-equivalence claim is made. The earlier iteration01 accepted review recommendations remain historical follow-ups; this implementation does not claim all of them resolved.
+
+The active REV-6 index entry is removed; its original review specification remains under plan/done. No downstream dependency needed promotion. Completed iteration02 working reports/run/finding records are compacted only after attribution preservation and consolidated approval; no unrelated historical audit is cleaned. Source rollouts, probes and raw logs remain outside Git. Final source-backed telemetry follows this review closure.
+
+### Iteration 02 final telemetry verification
+
+Source-native binary bin/agentic-lens-linux-amd64, built from tested source 8280c2bd, generated the final schema 6 ledger with explicit --source codex, ticket-type test, exact root 01a1a7db-7264-7d71-869d-64e1c5906a2f and literal nonce adb264e574cc4d5c. Twelve supplementary exact-session generations included all iteration02 T3 reviews; the final root extraction discovered root plus the native planner/coder/tester. All commands exited 0 and source-session set equality was independently verified: 26 unique Codex sessions, preserving every one of the previous 12 IDs and adding the two implementation children plus twelve reviews. The root's three native delegation edges match real source metadata. No other-harness sessions existed at the pre-refresh baseline.
+
+The configured capture coordinates still lack a worktree mapping table. The CLI explicitly warned and used the previously established isolated manual capture directory; configured state and installation were preserved. No empty ledger or successful configured-state recovery is claimed. T3 review metadata records independent vscode roots: their parent edges and role attribution remain unavailable, with no manufactured hierarchy. Ledger roles are planner/coder/tester once each and 23 Unknown invocations (root plus 22 independent review sessions). The capture footer's 24 selected owners and zero unresolved native children describe its collection, not complete T3 parentage.
+
+Final ledger updated_at cutoff: 2026-11-05T11:47:37.104470+00:00. Aggregate recorded actor activity is 9889 seconds (2h44m49s), not elapsed wall time; cache-hit ratio 98.0%. All 26 invocation cost states are unavailable, not observed zero-dollar costs. Source peak context 450125 tokens and one recorded compaction render BLOATED under configured thresholds. These are source-derived session metrics, not independently established model capacity. This final verification, commit and push necessarily follow the extraction cutoff; raw transcripts and private state remain outside Git. Earlier telemetry facts above are historical snapshots; the rendered metrics and this section describe the latest iteration.

@@ -6,21 +6,6 @@ Individual ticket definitions are located in `alspaces/plan/done/`, `alspaces/pl
 
 ## In Progress
 
-- **REV-6**: Repair ledger test fixtures and enforce unit-before-integration execution
-  - **Subsystem**: Backend tests / frontend tests / local and CI test orchestration
-  - **Status**: In Progress (iteration 02 implementation approved)
-  - **Blocked by**: None
-  - **Blocks**: None
-  - **File**: `alspaces/REV-6/iterations/02/PLAN.md`
-
-
-
-
-
-
-
----
-
 ## To Do
 
 

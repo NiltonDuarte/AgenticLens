@@ -1,6 +1,6 @@
 # REV-6 iteration02 verification
 
-Baseline: 23b381637106da39ca552faed4e344cca2ab1a35, user-approved contract delta/plan. Candidate source is being frozen; parent integrated make and independent review are still pending. No application runtime validation was relaxed.
+Baseline: 23b381637106da39ca552faed4e344cca2ab1a35, user-approved contract delta/plan. This document retains the successive candidate checks; final source 8280c2bd passed integrated make and consolidated review as recorded below. No application runtime validation was relaxed.
 
 ## Targeted fixture and guard proof
 
@@ -30,3 +30,13 @@ Behavior reviewer gpt-6.1-sol/high independently found that a real historical ta
 Second parent make at ee82c243 passed release guards, then the original installer source-build test failed both metadata subcases because Make split its absolute WEB_DIR path containing spaces. Orchestrator gpt-6.1-sol/high discovered the integration failure; tester gpt-6.1-sol/high reproduced three before-failures in the existing build-only/parallel test: absent spaced override errors, present spaced override skipped assets, and mixed goals misparsed package paths. Coder gpt-6.1-sol/high added Make filename/wildcard escaping and quoted directory arguments. Tester passed the expanded two focused build/parallel tests and the original installer method with both default/candidate metadata and selected-cache invariance. No timeout or runtime validator was changed.
 
 Orchestrator gpt-6.1-sol/high also identified that root-level lane configs were excluded from the existing TypeScript src-only include. Coder gpt-6.1-sol/high added both Vitest roots to the include list without altering any strict options. Typecheck passed, and tsc --listFilesOnly confirms those roots and their imported classification/base configs are checked. A further complete make gate follows these corrections; earlier failed gates remain failed evidence rather than approvals.
+
+## Passing integrated candidate
+
+At 8280c2bd, the required serial make passed from absent ignored web/dist and backend embed trees: full current global unit gates, release/installation/distribution Python checks, all six orchestration tests, instrumented domain verification, complete complementary Go integration race lane, all frontend integration cases and configured multi-platform builds. Earlier df3e/ee82 failures remain retained in the correction history. [INTEGRATED_VERIFICATION.json](INTEGRATED_VERIFICATION.json) records commands/resources/stages and limits. No tracked source changed during these runs.
+
+Canonical web and backend embedded trees match byte-for-byte, and a repeated canonical frontend build produced identical manifests. The built standalone native served the exact canonical index/assets over HTTP with Node absent from its child PATH; a unique disposable project name/workspace in /api/config proved the reached process identity. Requests/readiness and child cleanup were bounded, with an ephemeral port and explicit nonprivate nonexistent source DB. The first private probe correctly rejected an incomplete configuration missing required thresholds; the fixture was corrected, no application change. These checks establish current embedded-asset serving, not browser geometry or hosted/Windows execution.
+
+## Final review closure
+
+All eight focus/model cells have current or explicitly justified carried-forward evidence, including paired behavior/architecture correction approvals at 8280c2bd. Parent consolidated APPROVED after passing integrated Make and standalone assets. Six confirmed findings are fixed; no material local gap remains. See [compact findings](REVIEW_SUMMARY.json) and the ticket [summary](../../SUMMARY.md) for discovery/verification attribution, earlier child outcomes, exact source revisions and carried data-scope rationale. Hosted, Windows-native, provider and release limits above remain.
