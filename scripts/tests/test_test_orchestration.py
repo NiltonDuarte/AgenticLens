@@ -236,7 +236,7 @@ class TestOrchestration(unittest.TestCase):
                          '\n'.join(events) + '\n' + result.stdout + result.stderr)
 
     def test_each_language_failure_blocks_make_entrypoints_and_parallel_mixed_goals(self):
-        goals = [[], ['test-integration'], ['test-backend'], ['test-frontend'], ['backend-check'], ['check'],
+        goals = [[], ['test'], ['test-integration'], ['test-backend'], ['test-frontend'], ['backend-check'], ['check'],
                  ['-j8', 'check', 'test', 'web-assets', 'build']]
         for failed, marker in [('go', 'go'), ('frontend', 'frontend')]:
             for goal in goals:
@@ -341,17 +341,38 @@ class TestOrchestration(unittest.TestCase):
         from test_release_revision import steps
         for filename in ['release-please.yml', 'release-candidate.yml', 'release-stable.yml']:
             with self.subTest(workflow=filename):
-                parsed = steps(ROOT / '.github/workflows' / filename)
+                path = ROOT / '.github/workflows' / filename
+                parsed = steps(path)
                 ordered = list(parsed)
-                self.assertIn('Unit Tests', parsed)
-                unit = parsed['Unit Tests']
-                self.assertIn('        run: make test-unit', unit)
-                for name, lines in parsed.items():
-                    if '        run: make check' in lines or '        run: make test' in lines:
-                        self.assertLess(ordered.index('Unit Tests'), ordered.index(name))
-                        unit_condition = [line for line in unit if line.startswith('        if:')]
-                        integration_condition = [line for line in lines if line.startswith('        if:')]
-                        self.assertEqual(unit_condition, integration_condition)
+                self.assertLess(ordered.index('Static Analysis'), ordered.index('Run Test Suite'))
+                self.assertIn('        run: make check', parsed['Static Analysis'])
+                self.assertIn('        run: make test', parsed['Run Test Suite'])
+                quality_condition = [line for line in parsed['Static Analysis'] if line.startswith('        if:')]
+                self.assertEqual(quality_condition, [line for line in parsed['Run Test Suite'] if line.startswith('        if:')])
+                text = path.read_text()
+                checkout = text.rfind('      - name: Check out repository')
+                self.assertGreaterEqual(checkout, 0)
+                self.assertLess(checkout, text.index('      - name: Static Analysis'))
+                for selection in ['Select release revision', 'Compute Release Candidate Metadata']:
+                    if selection in parsed:
+                        self.assertLess(ordered.index(selection), ordered.index('Static Analysis'))
+                # Workflows execute the selected source's established commands.
+                # Current Make gates them dynamically above; historical tags may
+                # legitimately have no separately named test-unit target.
+                before_build = ordered[:ordered.index('Cross-Compile Release Binaries')]
+                verification = [line.removeprefix('        run: ') for name in before_build
+                                for line in parsed[name] if line.startswith('        run: make ')]
+                self.assertEqual(verification, ['make check', 'make test'])
+                historical = self.fixture.root / filename.removesuffix('.yml')
+                historical.mkdir()
+                (historical / 'Makefile').write_text(
+                    ".PHONY: check test\ncheck:\n\t@printf 'check\\n' >> verified\n"
+                    "test:\n\t@printf 'test\\n' >> verified\n")
+                for command in verification:
+                    result = subprocess.run(command.split(), cwd=historical, text=True,
+                                            capture_output=True, timeout=10)
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertEqual((historical / 'verified').read_text().splitlines(), ['check', 'test'])
 
 
 if __name__ == '__main__':

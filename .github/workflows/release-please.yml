@@ -80,10 +80,6 @@ jobs:
         working-directory: web
         run: npm ci
 
-      - name: Unit Tests
-        if: ${{ steps.release.outputs.releases_created == 'true' || steps.release.outputs.release_created == 'true' || inputs.force_tag != '' }}
-        run: make test-unit
-
       - name: Static Analysis
         if: ${{ steps.release.outputs.releases_created == 'true' || steps.release.outputs.release_created == 'true' || inputs.force_tag != '' }}
         run: make check

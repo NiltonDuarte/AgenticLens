@@ -44,9 +44,6 @@ jobs:
         working-directory: web
         run: npm ci
 
-      - name: Unit Tests
-        run: make test-unit
-
       - name: Static Analysis
         run: make check
 

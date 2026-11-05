@@ -137,10 +137,6 @@ jobs:
         working-directory: web
         run: npm ci
 
-      - name: Unit Tests
-        if: steps.candidate.outputs.should_publish == 'true'
-        run: make test-unit
-
       - name: Static Analysis
         if: steps.candidate.outputs.should_publish == 'true'
         run: make check
