@@ -19,8 +19,13 @@ LDFLAGS := -X 'agenticlens/internal/domain.Version=$(VERSION)' \
            -X 'agenticlens/internal/domain.GitCommit=$(GIT_COMMIT)' \
            -X 'agenticlens/internal/domain.BuildDate=$(BUILD_DATE)'
 
+# Escape spaces for Make's file rules and wildcard input, not shell arguments.
+empty :=
+space := $(empty) $(empty)
+make_path = $(subst $(space),\$(space),$(1))
+
 # Dependency preparation is shared with unit execution, including parallel goals.
-FRONTEND_DEPS := $(WEB_DIR)/node_modules/.package-lock.json
+FRONTEND_DEPS := $(call make_path,$(WEB_DIR)/node_modules/.package-lock.json)
 
 # Build-only commands stay build-only. When test/check goals coexist (including
 # default all), their common asset producer and native builds wait for both units.
@@ -67,14 +72,14 @@ install: install-backend install-frontend
 
 install-backend:
 	@echo "Installing backend dependencies..."
-	(cd $(BACKEND_DIR) && go mod download)
+	(cd "$(BACKEND_DIR)" && go mod download)
 
 install-frontend: frontend-deps
 
 frontend-deps: $(FRONTEND_DEPS)
 
-$(FRONTEND_DEPS): $(WEB_DIR)/package.json $(WEB_DIR)/package-lock.json
-	(cd $(WEB_DIR) && npm ci)
+$(FRONTEND_DEPS): $(call make_path,$(WEB_DIR)/package.json) $(call make_path,$(WEB_DIR)/package-lock.json)
+	(cd "$(WEB_DIR)" && npm ci)
 
 check: test-unit vet lint test-release-workflow test-installation test-capture-distribution test-orchestration
 	@git diff --check
@@ -96,21 +101,21 @@ backend-check: test-unit vet test-backend-integration
 
 web-assets: frontend-deps
 	@echo "Building frontend assets required by Go embed..."
-	(cd $(WEB_DIR) && npm run build)
+	(cd "$(WEB_DIR)" && npm run build)
 
 vet: test-unit web-assets
-	(cd $(BACKEND_DIR) && go vet ./...)
+	(cd "$(BACKEND_DIR)" && go vet ./...)
 
 lint: test-unit vet frontend-deps
-	(cd $(WEB_DIR) && npm run typecheck && npm run lint)
+	(cd "$(WEB_DIR)" && npm run typecheck && npm run lint)
 
 test-unit: test-unit-backend test-unit-frontend
 
 test-unit-backend:
-	(cd $(BACKEND_DIR) && go test -count=1 ./internal/domain/...)
+	(cd "$(BACKEND_DIR)" && go test -count=1 ./internal/domain/...)
 
 test-unit-frontend: frontend-deps
-	(cd $(WEB_DIR) && npm run test:unit)
+	(cd "$(WEB_DIR)" && npm run test:unit)
 
 test: test-integration
 
@@ -123,14 +128,14 @@ test-frontend: test-frontend-integration
 # This second, instrumented core pass retains the race coverage of the former
 # full race suite without classifying mixed adapter/CLI packages as pure units.
 test-unit-backend-race: test-unit
-	(cd $(BACKEND_DIR) && go test -race -count=1 ./internal/domain/...)
+	(cd "$(BACKEND_DIR)" && go test -race -count=1 ./internal/domain/...)
 
 test-backend-integration: test-unit test-unit-backend-race web-assets
 	@packages=$$(cd "$(BACKEND_DIR)" && "$(CURDIR)/scripts/go-test-packages.sh" integration) || exit 1; \
 	(cd "$(BACKEND_DIR)" && go test -race -count=1 $$packages)
 
 test-frontend-integration: test-unit frontend-deps
-	(cd $(WEB_DIR) && npm exec -- vitest run --config vitest.integration.config.ts)
+	(cd "$(WEB_DIR)" && npm exec -- vitest run --config vitest.integration.config.ts)
 
 opencode-compat-v1: test-unit
 	bash -c 'source ./scripts/opencode-compat.sh; run_compatibility v1'
@@ -143,7 +148,7 @@ opencode-compat: test-unit web-assets
 
 # One asset writer per Make process; the installation build-only fixture uses
 # an absent WEB_DIR to reuse an already prepared embed tree without recursion.
-ifneq ($(wildcard $(WEB_DIR)/package.json),)
+ifneq ($(wildcard $(call make_path,$(WEB_DIR)/package.json)),)
 build release-build: web-assets
 endif
 
@@ -155,7 +160,7 @@ build:
 		os=$${platform%/*}; arch=$${platform#*/}; ext=""; \
 		if [ "$$os" = windows ]; then ext=".exe"; fi; \
 		output="$$build_dir/agentic-lens-$$os-$$arch$$ext"; \
-		(cd $(BACKEND_DIR) && CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build -ldflags "$(LDFLAGS)" -o "$$output" ./cmd/agentic-lens) || exit 1; \
+		(cd "$(BACKEND_DIR)" && CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build -ldflags "$(LDFLAGS)" -o "$$output" ./cmd/agentic-lens) || exit 1; \
 	done
 
 # Source development must exercise this build, never a shared-pin installed release.
@@ -180,7 +185,7 @@ release-build:
 		if [ "$$os" = "windows" ]; then ext=".exe"; fi; \
 		output="$(RELEASE_DIR)/bin/agentic-lens-$$os-$$arch$$ext"; \
 		echo "Compiling $$output for $$os/$$arch (CGO_ENABLED=0)..."; \
-		(cd $(BACKEND_DIR) && CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build -ldflags "$(LDFLAGS)" -o ../$$output ./cmd/agentic-lens) || exit 1; \
+		(cd "$(BACKEND_DIR)" && CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build -ldflags "$(LDFLAGS)" -o ../$$output ./cmd/agentic-lens) || exit 1; \
 	done
 
 release-package:

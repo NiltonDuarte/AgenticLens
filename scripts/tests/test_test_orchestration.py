@@ -293,13 +293,33 @@ class TestOrchestration(unittest.TestCase):
         self.assertLess(events.index('dependencies-pass'), events.index('unit-frontend-start'))
 
     def test_build_only_and_installation_override_do_not_run_tests(self):
-        for extra in [[], ['WEB_DIR=absent-web']]:
+        spaced = OrchestrationFixture(self.fixture.root / 'project with spaces')
+        present = spaced.root / 'web'
+        os.utime(present / 'node_modules/.package-lock.json', (1, 1))
+        cases = [(self.fixture, [], 1, 0),
+                 (self.fixture, ['WEB_DIR=absent-web'], 0, 0),
+                 (spaced, ['WEB_DIR=' + str(spaced.root / 'no web dependency scan')], 0, 0),
+                 (spaced, ['WEB_DIR=' + str(present)], 1, 1)]
+        for fixture, extra, assets, installs in cases:
             with self.subTest(extra=extra):
-                self.fixture.set_units('go')
-                result = self.fixture.run(['make', 'verify-build', 'PLATFORMS=linux/amd64', *extra])
+                fixture.set_units('go')
+                result = fixture.run(['make', 'verify-build', 'PLATFORMS=linux/amd64', *extra])
+                events = fixture.events()
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-                self.assertFalse([event for event in self.fixture.events() if event.startswith('unit-')],
-                                 self.fixture.events())
+                self.assertFalse([event for event in events if event.startswith('unit-')], events)
+                self.assertEqual(events.count('integration-assets'), assets, events)
+                self.assertEqual(events.count('dependencies-start'), installs, events)
+        # The same present directory also participates in the globally gated DAG.
+        spaced.set_units()
+        result = spaced.run(['make', '-j8', 'test', 'web-assets', 'build',
+                             'PLATFORMS=linux/amd64', 'WEB_DIR=' + str(present)])
+        events = spaced.events()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(events.count('integration-assets'), 1, events)
+        for index, event in enumerate(events):
+            if event.startswith('integration-'):
+                self.assertIn('unit-go-pass', events[:index], events)
+                self.assertIn('unit-frontend-pass', events[:index], events)
 
     def test_go_package_partition_is_complete_and_discovery_errors_fail(self):
         helper = self.fixture.root / 'scripts/go-test-packages.sh'
