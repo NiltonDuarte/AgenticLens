@@ -1,0 +1,111 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "LEAN-IN-01",
+      "severity": 7,
+      "issue": "Current-schema migration bypassed duration normalization and validation.",
+      "reporters": [
+        {
+          "persona": "tester",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: normalize and validate before strict current-schema decoding."
+    },
+    {
+      "finding_id": "LEAN-IN-02",
+      "severity": 4,
+      "issue": "Current duration aliases bypassed comparison of legacy and flat values.",
+      "reporters": [
+        {
+          "persona": "coder",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: reject duration aliases before current input projection."
+    },
+    {
+      "finding_id": "LEAN-WRITE-01",
+      "severity": 5,
+      "issue": "Completed-migration cleanup republished retired duration metadata.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: canonicalize duration in raw cleanup while retaining other facts and rollback bytes."
+    },
+    {
+      "finding_id": "LEAN-READ-01",
+      "severity": 4,
+      "issue": "Historical migration accepted alias-hidden conflicting duration values.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: guard historical raw duration before typed decoding; preserve unrelated-field tolerance."
+    },
+    {
+      "finding_id": "LEAN-READ-02",
+      "severity": 3,
+      "issue": "Legacy nested null duration components are interpreted as zero.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Introduced-acceptance claim refuted by exact baseline parity. Accepted existing interpretation; owner backend input compatibility maintainer, stricter legacy-null follow-up unassigned."
+    }
+  ]
+}

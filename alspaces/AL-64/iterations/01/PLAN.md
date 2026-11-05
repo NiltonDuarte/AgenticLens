@@ -68,3 +68,5 @@ STOP here for explicit user approval of CONTRACT.md and this plan. Following app
 ## Routine main integration on 2026-11-05
 
 The user requested merging current main into the feature branch. Preserve the reviewed implementation and upstream optional-output/overlap features; resolve conflicts and run affected independent verification plus required make. The integration roster, initial revisions and15 conflicting paths are recorded in [INTEGRATION.md](INTEGRATION.md). This routine integration does not approve iteration02's proposed hybrid policy or reopen unchanged acceptance decisions.
+
+Completed review evidence is retained in [REVIEW_SUMMARY.json](REVIEW_SUMMARY.json) and the ticket SUMMARY.md. Detailed report filenames above describe the planned working artifacts; those reports were removed after consolidated approval under the canonical retention policy.

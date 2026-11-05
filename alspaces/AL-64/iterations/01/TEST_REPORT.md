@@ -46,7 +46,7 @@ Native runtime observations and generated-output experiments belong to RUNTIME_E
 
 ## Review-correction verification: DUR-01 through DUR-05
 
-The earlier no-defects result describes the initial independent test pass, not the later focused review. Focused reviewers subsequently discovered the five findings retained in REVIEW.md; this tester verified supplied findings and added their permanent oracles, without taking discovery credit.
+The earlier no-defects result describes the initial independent test pass, not the later focused review. Focused reviewers subsequently discovered the five findings retained in REVIEW_SUMMARY.json; this tester verified supplied findings and added their permanent oracles, without taking discovery credit.
 
 Only existing coherent tests were extended:
 
@@ -68,7 +68,7 @@ Corrected app/test content fingerprint at affected-suite launch, using the same 
 
 ## DUR-06 invalid-start correction verification
 
-Architecture reviewer gpt-6.1-sol/high discovered this distinct invalid-start path during candidate 02 correction review (RECHECK_ARCHITECTURE_SOL.md). This tester verified the supplied issue; discovery credit remains with that reviewer.
+Architecture reviewer gpt-6.1-sol/high discovered this distinct invalid-start path during candidate 02 correction review (retained as DUR-06 in REVIEW_SUMMARY.json). This tester verified the supplied issue; discovery credit remains with that reviewer.
 
 Extended the same Codex lifecycle/cutoff table with malformed-start and missing-start timestamps, each followed by a valid matching completion after an earlier measured four-second turn. The assertions require the known four-second subtotal, partial coverage with explicit limitation, unknown summary coverage, no invented provisional cutoff/time, and completed_at retained at the earlier proven completion (00:00:05). Existing valid/invalid completion and interruption cases remain in the same table.
 

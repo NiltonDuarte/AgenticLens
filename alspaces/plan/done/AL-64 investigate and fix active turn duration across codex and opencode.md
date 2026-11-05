@@ -2,7 +2,7 @@ h3. Title: AL-64: Investigate and fix active-turn duration across Codex and Open
 
 *TARGET*: AgenticLens (Domain / Codex / OpenCode v1 and v2 / Generation / Backfill / Ledger / Presentation)
 
-*Status*: In Progress
+*Status*: Done
 *Work type*: fix
 *Blocked by*: None
 *Blocks*: None
@@ -50,8 +50,8 @@ As an operator generating telemetry from Codex, OpenCode v1 or OpenCode v2, I wa
 * Pass required make verification; frontend changes include the canonical build and verification of embedded standalone assets.
 * Maintain ticket summary/review/PR artifacts and source-grounded telemetry; publish a reviewable PR. Completion requires evidence, not just a plan.
 
-*DEVELOPMENT STATE REVIEW (2026-11-05)*
+*DELIVERY STATE (2026-11-05)*
 
-In Progress: draft PR #121 is open at c68fbc9079d2f24c624d5de0fe87d313ed095b19. Checks reported success, but GitHub reports merge conflicts. The fix is not merged; preserve every source-family acceptance case and let the existing owner finish delivery.
+Implementation and local verification complete on integrated revision f8aeac2b. Delivery is PR #121 for review; no remote merge or release is performed. The approved iteration 03 numeric scope supersedes richer duration metadata and the unimplemented hybrid-liveness proposal: total plus positive provisional_seconds, backend-only draft normalization, numeric displays and accepted source-open estimates through the explicit calculation cutoff. No duration reasoning or mandatory process-liveness checks are introduced.
 
-Evidence and review limits: [PO-19 reconciliation](../../PO-19/SPEC.md), merged baseline `03f5b05d`. This planning review does not certify runtime behavior or close unverified acceptance criteria.
+Per-source investigation, native evidence, regression results, compact shared discovery credit, accepted debt and telemetry coverage limits are in [AL-64 summary](../../AL-64/SUMMARY.md). Required make and standalone embedded-asset verification pass. The earlier [PO-19 reconciliation](../../PO-19/SPEC.md) records its historical planning snapshot.

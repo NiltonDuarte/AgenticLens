@@ -1,141 +1,65 @@
-# AL-64 work summary
+# AL-64: active-turn duration
 
-## Initial state
+PR: https://github.com/NiltonDuarte/AgenticLens/pull/121
 
-- Initial revision: a84adbe5be46c2ef52ede0987a417562715d38e1.
-- Initial Git status: clean.
-- Initial branch: AL-64/investigate-fix-active-turn-duration-codex-opencode.
-- Work branch: fix/AL-64-active-turn-duration.
-- Workspace: alspaces/AL-64, from configured workspaces.dir.
-- Scope: diagnosed Codex active-turn duration fix and independent OpenCode v1/v2 investigation with remediation of confirmed defects, compatible persistence and presentation, generation and refresh regressions.
+Implemented the approved [iteration 03 numeric contract](iterations/03/PLAN.md): active_duration_seconds includes the optional positive provisional_seconds portion. Zero is omitted. No reasoning field, setting, console explanation or frontend reasoning behavior is added. Source-open intervals accrue through an explicit calculation cutoff; a stopped process whose source interval remains open can overestimate time. Zero or absence does not establish completed coverage. The original [CONTRACT.md](CONTRACT.md) remains the frozen baseline; iteration 03 supersedes its richer duration representation and the unimplemented iteration 02 hybrid proposal. User approval and steering are paraphrased.
 
-## Iteration 01
+## Delivered behavior
 
-Planning completed by the planner (gpt-6.1-sol, high; inherited runtime settings). Proposed [contract](CONTRACT.md) and [plan](iterations/01/PLAN.md) are ready for explicit approval under agentic-lens-dev. No application code has changed.
+The pure duration core retains deterministic interval/rounding rules and numeric rollups. Codex now counts unfinished turns; independently investigated OpenCode v1/v2 paths account for their native unfinished assistant/tool/text activity. Terminal events, future boundaries, invalid starts/completions and fallback cutoffs retain explicit handling. Completion replaces provisional snapshots; repeated refresh avoids duplicate owners or duration, and unavailable sources retain recorded facts.
 
-Grounding confirms Codex counts completed lifecycle pairs, OpenCode v1 counts completed assistant intervals, and v2 falls back to row update time without explicit completion. Available local OpenCode samples contain completed activity only; source-proven unfinished runtime behavior remains unverified. See the plan for the read-only inventory and verification limits.
+Backend readers accept original v6, earlier draft evidence and lean numeric inputs. Canonical writes use only the total plus positive provisional scalar. Valid old/new dual forms must agree; aliases and contradictory values reject before historical typed decoding. Completed-migration cleanup preserves unrelated raw facts, optional-category presence and rollback bytes. Portable history needs no private receipt. CLI summaries, API projections and dashboard duration consumers show numeric recorded/provisional values. Upstream optional metrics and shared-session warnings remain preserved.
 
-The AL-55 timing observations in the ticket are user-supplied evidence, not observations independently reproduced by this session. Its live workspace and ledger must remain untouched.
+Investigation: [source-family analysis](iterations/01/INVESTIGATION.md), [native OpenCode evidence](iterations/01/RUNTIME_EVIDENCE.md), [lean implementation](iterations/03/IMPLEMENTATION.md) and [native Codex refresh](iterations/03/NATIVE_REFRESH_EVIDENCE.md).
 
-## Verification and environment
+## Review and verification
 
-- Planner and orchestrator: git diff --check passed for planning artifacts.
-- Required application verification has not run during planning.
-- agentic-lens --help: command unavailable on PATH. Build/use the repository CLI and inspect supported options before final telemetry extraction.
-- Telemetry extraction is deferred until the final delivery step. No ledger has been generated or claimed complete.
+The implementation author is coder gpt-6.1-sol/high. Independent deterministic and native runtime testers use gpt-6.1-sol/high. Behavior, data/failure, architecture and test effectiveness each ran on gpt-6.1-sol/high and gpt-6-luna/medium. Discovery initially requested changes; all eight bounded correction rechecks approved LEAN-02, the 399-path manifest e40b0bb87a233eeeec0da9716cfc51311c1763ecc8752c95b280d6f92d7fc3b8 on baseline c68fbc90. Verification credit is separate from discovery credit.
 
-## Approval
+The original six corrections and their discovering reviewers are retained in [iteration 01 compact findings](iterations/01/REVIEW_SUMMARY.json). The numeric rewrite findings and exact shared reporter tuples are retained in [iteration 03 compact findings](iterations/03/REVIEW_SUMMARY.json). Native/adversarial testers gpt-6.1-sol/high discovered the current-schema normalization gap; coder gpt-6.1-sol/high discovered the current-input alias gap. Cleanup publication was independently reported by behavior/data/architecture gpt-6.1-sol/high and data gpt-6-luna/medium. Historical alias decoding was independently reported by data gpt-6.1-sol/high and data gpt-6-luna/medium. Coder gpt-6.1-sol/high fixed those gaps, and tester gpt-6.1-sol/high verified original-code red overlays followed by passing affected race checks. The Sol test-effectiveness recheck also independently passed 97 cause/publication/compatibility probes.
 
-On 2026-11-04 the user explicitly approved the proposed contract and iteration 01 plan, authorizing implementation within those boundaries.
+LEAN-02 was committed as 64da0bfa; main 29699cc6 was merged as f8aeac2b. No application production code changed during this integration. Tester gpt-6.1-sol/high resolved schemas_test.go by retaining all 41 functions: AL-64 numeric assertions remain byte-identical and upstream policy/anomaly assertions retain their stronger causes/identity checks. Targeted adapter race checks pass. Parent integration assessment carries forward reviewed feature behavior because the other imported application changes only configure test/build orchestration; the full integrated gate exercises both test lanes and asset build.
 
-## Implementation candidate and native evidence
+Required make passed exit 0 on f8aeac2beadce9f5d46ea0c3cc25dbc53bfc2401: Go units and every race package, frontend 190 unit plus 678 integration tests (868 total), typecheck/lint/vet, 45 Python release/installation/capture/orchestration checks, canonical assets and five platform builds. Standalone binary commit f8aeac2b served exact HTML/JS/CSS matching web/dist and the embedded tree; assets index-zSnCKFwx.js and index-BGH-Pi_l.css. The first two disposable probe attempts omitted required config/schema fields; the corrected probe used the project config with isolated state. No product change was needed, and its server/workspace were cleaned. Raw make/asset logs remain outside Git under /tmp/al64-final-delivery/.
 
-Coder (gpt-6.1-sol/high, inherited runtime) implemented cutoff-aware extraction, compact optional duration evidence, persistence validation, aggregate coverage and CLI/dashboard labels. Application edits are frozen for independent testing. See [investigation](iterations/01/INVESTIGATION.md) and [native OpenCode evidence](iterations/01/RUNTIME_EVIDENCE.md). Required integrated checks and final review remain pending.
+Affected migration/adapters/backfill/capture race and selected CLI race checks pass. The correction tests fail on 40 historical invalid-input cases and three cleanup publishers with original production overlays, then pass with 90 historical cases and three command variants after correction. Frontend verification before integration passed 868 tests, typecheck and lint. An earlier broad Go race run failed one unchanged capture-install deadline; its unchanged isolated retry passed. No timeout or assertion was weakened, and that failed run is not reported as a clean full-suite result. [Detailed test evidence](iterations/03/TEST_REPORT.md) retains command/revision limits.
 
-The runtime test engineer (gpt-6.1-sol/high, inherited runtime) verified isolated native OpenCode 1.19.5 and 2.2.0 streaming/tool/completion/interruption shapes. Native v1 SIGINT can leave a stored running interval unchanged after process exit. The orchestrator requested clarification: count explicitly open source intervals provisionally with disclosed process-liveness uncertainty, or require extra live-process evidence. This is pending; no final accounting-policy approval or completed delivery is claimed. Existing approval for the rest of iteration 01 remains valid.
+Native OpenCode 1.19.5 and 2.2.0 probes used isolated sources. OpenCode v1 cancellation demonstrated the accepted stale-open interval risk. The native Codex probe normalized an authentic copied 19-owner ledger without losing numeric facts, then source-backed recomputation discovered one legitimate new child and verified completion/repeat replacement. A prior fresh copied-source ownership rejection and an intermediate normalization failure remain documented; neither is presented as success. The actual ticket ledger stayed unchanged during experiments. No new OpenCode provider experiment was run for the numeric rewrite; unchanged native source semantics plus current deterministic three-family generation/refresh fixtures are reused.
 
-Reader-first v6 extension limit: expanded readers accept old valid facts and new optional evidence; pre-change strict readers reject the emitted extension. Upgrade consuming readers before writer rollout. No release or distribution rollout is performed by this ticket.
+## Remaining limits and debt
 
-## Independent verification checkpoint
+- Pre-expansion strict readers can reject expanded v6 scalar output. Upgrade consumers before writer rollout; this ticket authorizes no release.
+- INT-DATA-01: disabled-delegation registered Codex refresh may overwrite retained registry delegations. Data reviewer gpt-6-luna/medium discovered the concern; parent source comparison refuted its introduced-merge classification because the block was byte-identical to upstream main. Source-traced, not independently runtime-reproduced; not fixed. Owner: capture adapter maintainer; follow-up unassigned.
+- LEAN-READ-02: legacy nested numeric null is interpreted as zero. Behavior and test-effectiveness gpt-6.1-sol/high and test-effectiveness gpt-6-luna/medium reported it. Exact baseline probes refute introduced acceptance; new flat null correctly rejects. Historical interpretation is retained. Owner: backend input compatibility maintainer; stricter legacy policy follow-up unassigned.
+- Final telemetry is limited to the root and 27 authoritatively linked native children (28 owners). Twenty delegated gpt-6-luna reviews have no native parent metadata and are excluded; review execution/attribution is retained separately. Pricing is unavailable. Extraction verified the exact root, all 27 native children and preservation of every prior owner from the 19-owner Codex-only baseline. All 28 recorded invocations have unavailable pricing; no zero or complete total cost is claimed. Canonical ledger checks confirm positive-only provisional values and no retired duration metadata. Unsupported configured legacy capture state is preserved; explicit isolated capture state provides manual recovery. Raw source inventories remain outside Git.
 
-The independent tester (gpt-6.1-sol/high) passed full Go race tests across all test-bearing packages, 834 frontend tests, typecheck and lint on frozen candidate 01. See [test evidence](iterations/01/TEST_REPORT.md). Native live CLI generation/active recomputation/completion/repeat passed v1 (3/4/21/21 seconds) and v2 (2/3/20/20 seconds); provisional contributions were replaced by completed snapshots. These are pre-correction checks, not final approval.
-
-All four Sol discovery focuses completed with changes requested: invalid Codex completion classification (shared discovery across behavior/data/architecture/test-effectiveness); v1 future-message suppression (behavior); v1 later-update suppression (architecture); fallback recovery losing operation cutoff (data); missing no-tool streaming regression guards (test effectiveness). Every listed discovery used gpt-6.1-sol/high. Detailed reports remain active; Luna discovery and verified corrections are pending. No integrated make, final approval, telemetry generation, commit or PR publication has been claimed.
-
-## Correction checkpoint
-
-Six confirmed issues are corrected. Shared initial Codex invalid-completion discovery: all four Sol personas, gpt-6.1-sol/high. V1 future-message cutoff discovery: behavior gpt-6.1-sol/high and architecture gpt-6-luna/medium. V1 progress-update cutoff discovery: architecture gpt-6.1-sol/high. Fallback cutoff discovery: data gpt-6.1-sol/high. Missing no-tool streaming regression discovery: test effectiveness gpt-6.1-sol/high. Invalid/missing Codex start discovery: architecture gpt-6.1-sol/high during correction review. Coder gpt-6.1-sol/high implemented fixes; tester gpt-6.1-sol/high verified red/green overlays, streaming mutants and affected race suites.
-
-Final candidate03 manifest: f9b8bb31e5d7a3776adf9fef2b2f3f456711e76bfbceb7f276880e7e4634eb49. Architecture/test-effectiveness Sol correction reviews approve; behavior/data Sol candidate02 correction approval carries forward with the dependency rationale in REVIEW.md. Luna correction reviews and user liveness clarification remain pending, so active detailed reviews are retained. No consolidated delivery approval or completed PR is claimed.
-
-Native Codex source lifecycle/child ownership records were inspected. Direct unchanged source-copy fresh generation in an isolated project was rejected by the correct source-project ownership boundary. Native Codex generate/refresh remains explicitly unverified; deterministic adapter-to-output regressions pass. No synthetic identity seed, live source edits or early real-ticket telemetry was used to bypass that limit.
-
-All required correction review cells now pass (gpt-6.1-sol/high and gpt-6-luna/medium), with dependency-justified carryforward of Sol behavior/data correction approvals. All six issues are fixed and regression-verified. Parent is committing the candidate for upstream integration and required make. The source-state/liveness clarification still gates final approval/publication; detailed active review evidence is retained until that gate is resolved. Telemetry remains deferred.
-
-## Integrated verification in progress
-
-Implementation commit: 44db8658097e9fb27c7ed1149ee132906903d862. origin/main a84adbe5be46c2ef52ede0987a417562715d38e1 was already integrated, so reviewed product/test evidence remains applicable. Parent started required make; final result and standalone asset verification are not yet recorded.
-
-[Compact findings and discovery credit](iterations/01/REVIEW_SUMMARY.json) records all six corrected findings and all independent reporting persona/model/effort tuples. Detailed reports remain active because the source-state/liveness clarification and final consolidated delivery approval are pending. No review evidence has been deleted. Coder/tester/re-review confirmation is verification credit, distinct from the retained discovery tuples.
-
-## Integrated verification result
-
-Parent verified implementation revision 44db8658097e9fb27c7ed1149ee132906903d862 after origin/main integration (already up to date). Required make passed exit 0: dependency setup, frontend build, Go vet/frontend typecheck/lint, repository release/install/capture checks, all Go race packages, all 834 frontend tests across 37 files, canonical frontend rebuild and all configured platform binaries. Full command log remains outside Git at /tmp/al64-integrated-make.log. No application/test files changed during verification.
-
-Parent verified standalone bin/agentic-lens-linux-amd64 reports commit 44db8658. In an isolated empty-workspace server run with unavailable hydration, HTTP index and both bundled assets matched web/dist and backend/internal/adapters/web/dist byte for byte. JavaScript index-z1wgKOcT.js SHA256 359da8a14fe52b72dd85ce196db33a3eb1d5c85e2fc76427308d97cb9f991869; CSS index-C3WE_otj.css SHA256 da46ce98a0a085703e286d00d417781999b3525de6b168d8a68d2005db46d4ba. The probe server exited and its disposable workspace was removed.
-
-Consolidated status remains INCOMPLETE solely for the pending acceptance-policy clarification on explicitly open native intervals versus live-process proof. Native Codex fresh generation/refresh remains an explicitly unverified runtime path after isolated project-ownership rejection; deterministic regressions and real source lifecycle evidence are retained. All confirmed correctness findings are fixed and scoped reviews pass. No final approval, publication, ticket completion or real-ticket telemetry is claimed. Existing implementation approval is preserved; the pending question only concerns the discovered source-state ambiguity.
-
-## Iteration 02 steering: agent-assisted liveness policy
-
-Source: user asks to expose the decision to the agent, use provisional accounting for its own open session and check other sessions for liveness. This supersedes the earlier binary choice; do not keep asking the user to select unconditional source-state counting versus universal live-process proof. Proposed acceptance is per-session evidence, exact current caller/turn versus independently checked other session, and explicit unknown/unsupported results. Exact proof boundaries and supported probes require a grounded delta plan and scope approval before new application changes.
-
-Preserved guarantees: all six corrected defects, completed measurements, deterministic cutoffs, portable recorded facts, exact-owner replacement and unavailable-source retention. Existing candidate03 reviews, full make and standalone checks remain valid for unchanged code. Superseded decision: one blanket policy for every open session. Verification impact: new caller/turn correlation, read-only probe semantics, races, unknown fallback and per-session agent decisions; re-review only affected scopes with both configured profiles. No session has been poked, woken or messaged.
-
-Planner owns iterations/02/PLAN.md. Existing CONTRACT.md stays immutable; iteration02 records the proposed delta. The candidate is committed and the implementation remains unchanged pending this new scope gate.
-
-Iteration 02 planning completed by planner gpt-6.1-sol/high. [Delta plan](iterations/02/PLAN.md) supports single-command exact-current-caller verification, optional supported read-only other-session status, and explicit unknown/unsupported retention. A live exact-interval observation supports provisional elapsed time, not CPU utilization; unobservable pauses are disclosed rather than requiring unprovable continuous execution. Pokes that start new work remain excluded. Native transport help does not establish exact-turn status support; no universal cross-session probe is promised. Application changes await approval of this changed scope under agentic-lens-dev.
-
-Documentation preference: paraphrase steering and approval decisions without reproducing user messages in plans or contracts. Direct message quotations were removed from both iteration plans and the summary; the contract contains no direct message quotations. This documentation correction does not establish iteration02 implementation approval.
-
-## Main integration requested on 2026-11-05
-
-Pending planning documents were checkpointed at e9ca2676 before merging origin/main 40b16def. Fifteen content conflicts span CLI/capture composition, OpenCode family readers, duration/optional DTOs, API validation, FleetOverview and tests. Coder gpt-6.1-sol/high resolved the contents, preserving upstream optional-category field-presence semantics and shared-session warnings plus AL-64 duration evidence and six fixes. See [integration plan](iterations/01/INTEGRATION.md) and [implementation evidence](iterations/01/INTEGRATION_IMPLEMENTATION.md).
-
-Focused affected Go packages, frontend typecheck/build and387 frontend tests pass. One initial CLI worker-lease deadline failed despite acknowledged publication; the unchanged isolated rerun passed, and no assertion or timeout was weakened. The failed command is retained in integration evidence. Independent interaction tests, integrated make and affected review are pending; the earlier integrated make remains historical evidence for the pre-merge implementation only. Iteration 02 hybrid implementation remains unapproved and untouched.
-
-## Main merge completed and verified
-
-Merge 1378860955deb1acc05924953b8b959b825d3ebc integrates origin/main 40b16def into this feature branch and resolves 15 conflicts. Required make passes on that revision, including all Go race packages and 863 frontend tests across 38 files. The standalone host binary serves exact current canonical/embedded assets (index-BGuN6wTp.js and index-BGH-Pi_l.css). No application/test changes followed verification.
-
-All eight integration persona/profile cells completed: behavior, data/failure, architecture and test-effectiveness on gpt-6.1-sol/high and gpt-6-luna/medium. Seven scoped approvals; data gpt-6-luna/medium reported INT-DATA-01 severity 6. Parent verified the implicated block is byte-identical to upstream main, refuting its introduced-merge classification. The pre-existing delegation-retention concern is not fixed; owner is the capture adapter maintainer, follow-up ticket unassigned. [Original finding](iterations/01/INTEGRATION_DATA_LUNA.md), [compact findings](iterations/01/REVIEW_SUMMARY.json), and [consolidated integration outcome](iterations/01/INTEGRATION.md) preserve the debt, exact reporter tuple and source-comparison evidence. No confirmed merge regression remains.
-
-Consolidated local integration is APPROVED, with that explicit pre-existing follow-up. Independent tester gpt-6.1-sol/high verified combined output-policy/duration behavior; test-effectiveness gpt-6.1-sol/high independently confirmed a duration-evidence-loss mutation is caught. Parent verified final make and standalone assets. Detailed completed no-finding integration reports were compacted; the debt report and still-open ticket reviews remain.
-
-Iteration 02 remains unapproved and unimplemented. The merge request does not approve that scope, ticket completion, PR publication or release. Telemetry remains delayed until the final iteration delivery step; no successful or empty ledger is manufactured for this intermediate merge.
-
-## Draft PR publication checkpoint
-
-The user authorized creating a PR for the current branch. Publish a draft for the reviewed initial implementation and verified main merge; do not treat this as approval to implement iteration02 or mark AL-64 complete. The existing todo specification and in-progress ticket entry remain. PR title/body are prepared from PULL_REQUEST.md; no application changes followed reviewed merge13788609.
-
-Final telemetry for this publication checkpoint uses the built native binary (the installed wrapper is unavailable on PATH, and wrapper-only --al-offline/--al-project options are unsupported by the native parser). Supported source/ticket/nonce/output options were inspected. Use explicit source codex and ticket type fix. The generation is real current-project extraction, not the previously blocked isolated source-copy experiment.
-
-Source inventory before extraction: expected root01a1a7d8-b9d2-7383-a6f7-3c7002ba88e6,18 native child sessions with that authoritative parent, and12 additional gpt-6-luna review sessions whose native metadata has no parent link. Source task records associate those12 with the known review report assignments, but no native parent relationship will be fabricated. Extraction coverage and pricing limitations must be checked before committing the ledger. No pre-existing AL-64 ledger or other-harness facts exist to preserve at this first publication.
-
-The first native generate attempt failed before ledger publication: existing configured capture state has no worktree mapping table and is an unsupported coordinate layout. That state is preserved, not reset or migrated. Retry manual nonce-based extraction using a fresh isolated capture-state directory; no existing AL-64 ledger is present, and no successful registered-cache recovery is claimed. The stale registry is unavailable evidence, distinct from the native source sessions.
-
-The isolated-state retry passed capture admission but stopped at the required first-ledger title check. No ledger was published. The next attempt supplies the explicit AL-64 ticket title together with a fresh literal nonce; configured legacy state remains untouched.
-
-## Publication telemetry coverage
-
-Generation succeeded using explicit codex source, fix type and an isolated manual capture state. The raw ledger contains root 01a1a7d8-b9d2-7383-a6f7-3c7002ba88e6 and all 18 authoritative native children: 19 unique Codex sessions/invocations, no duplicate sessions and no missing native child from the source inventory. Provisional root time is explicitly labeled with cutoff 2026-11-05T10:36:46.850981184Z; no source completion timestamp is invented for that open invocation. There was no prior AL-64 or other-harness ledger to overwrite. The generated native-source snapshot is real current-project evidence; it does not claim the separate native-refresh lifecycle experiment was performed.
-
-Coverage is incomplete for the full orchestrated effort: 12 gpt-6-luna review sessions have no authoritative native parent relationship and are absent from this ledger. Their source task assignments match the delegated reviews, but they were not attached through guessed ancestry. Missing source session IDs: 01a1a804-8077-7be0-8ef6-630b932f4717, 01a1a804-8328-74e0-82a6-ab6849d1b9d9, 01a1a804-86b4-7330-b8d7-d118f11cfbaf, 01a1a806-afb8-7072-a03a-884dcdb9b113, 01a1a815-e50b-7061-b99f-4b1ae3727f3e, 01a1a815-e80f-7a71-8bbf-b7bb2eb6bb37, 01a1a815-ec8e-7fd0-a760-769e3ae923af, 01a1a817-98d3-74b1-9db2-3742ca1ee17f, 01a1a944-15e0-7b03-9f1e-65e8c3887135, 01a1a944-17e9-72d3-862b-43cebfba1f61, 01a1a944-1b4f-71c1-a02c-c3a9899f8a89, 01a1a945-dd24-7e73-ac4e-78d0df278ce9. The source inventory and task-to-report matches were inspected outside Git; raw transcripts remain outside Git.
-
-Pricing evidence is unavailable for all 19 recorded invocations; no zero cost or complete total cost is claimed. The generated duration/token/cache tables cover only the 19 recorded native sessions and exclude those 12 delegated review sessions. Configured legacy capture state remains untouched and unavailable; successful extraction used the explicit manual-recovery state. Native read-only parent metadata, rather than the legacy registry, established the 18 child relationships.
-
-Draft publication is authorized at this checkpoint. Iteration 02 implementation and final ticket completion remain pending; a later delivery must refresh telemetry to include subsequent work and preserve existing facts.
+Consolidated local approval: APPROVED after all eight correction cells and integrated gates. Initial policy uncertainty is resolved by the approved provisional-estimate semantics. Earlier unchanged scopes carry forward with the dependency rationale above. PR #121 is the delivery vehicle; hosting checks on the final pushed head are reported separately. No release or remote merge is authorized.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 21
-- **Active Agent Duration:** 3h 28m (excludes user wait time; includes 350s provisional across 1 invocation(s); snapshot cutoffs: [2026-11-05T10:36:46.850981184Z])
-- **Context Window Health:** ELEVATED — Root agent peak 306.1k tokens (68% of 450k healthy ceiling, 0 compactions) | Subagents peak 269.5k (Coder)
+- **Software Development Life Cycle Iterations:** 39
+- **Active Agent Duration:** 6h 18m (recorded duration including 768s provisional)
+- **Context Window Health:** BLOATED — Root agent peak 450.2k tokens (100% of 450k healthy ceiling, 1 compactions) | Subagents peak 363.1k (Coder)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
-- **Subagent Turn Velocity & Thrashing:** 1.6 avg turns/run (peak: 5 turns) | Planner 3.0, Coder 5.0, Tester 2.3, Reviewer-architecture 1.0, Reviewer-behavior 1.0, Reviewer-data 1.0, Reviewer-tests 1.0
-- **Test-to-Production Code Ratio:** 1.1:1 (+810 test lines / +752 prod lines)
-- **Code Delivered:** +1,562 / -206 lines across 48 code files (excluding docs)
-- **Reasoning Effort:** 86,886 reasoning tokens (21.2% of generated output)
-- **Tool Health & Self-Correction:** 934 tool calls (66 self-corrections, 92.9% success rate)
+- **Subagent Turn Velocity & Thrashing:** 1.6 avg turns/run (peak: 7 turns) | Planner 4.0, Coder 7.0, Tester 2.8, Reviewer-architecture 1.0, Reviewer-behavior 1.0, Reviewer-data 1.0, Reviewer-tests 1.0
+- **Test-to-Production Code Ratio:** 1.4:1 (+1,283 test lines / +891 prod lines)
+- **Code Delivered:** +2,174 / -151 lines across 61 code files (excluding docs)
+- **Reasoning Effort:** 214,496 reasoning tokens (25.7% of generated output)
+- **Tool Health & Self-Correction:** 1,574 tool calls (106 self-corrections, 93.3% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 7 execution anomalies detected (4 CRITICAL, 3 WARNING).
+- **Status:** 12 execution anomalies detected (7 CRITICAL, 5 WARNING).
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (450.2k tokens) — Context tokens reached 450.2k, breaching the 450k critical ceiling.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (21 cycles) — Subagent roles 'coder' and 'tester' alternated for 21 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-tests <-> reviewer-data (6 cycles) — Subagent roles 'reviewer-tests' and 'reviewer-data' alternated for 6 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (6 cycles) — Subagent roles 'coder' and 'tester' alternated for 6 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-architecture <-> reviewer-tests (6 cycles) — Subagent roles 'reviewer-architecture' and 'reviewer-tests' alternated for 6 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (30 cycles) — Subagent roles 'coder' and 'tester' alternated for 30 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (7 cycles) — Subagent roles 'coder' and 'tester' alternated for 7 consecutive cycles.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (265.0k tokens) — Context tokens reached 265.0k, breaching the 250k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (250.4k tokens) — Context tokens reached 250.4k, breaching the 250k warning ceiling.
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-architecture <-> tester (3 cycles) — Subagent roles 'reviewer-architecture' and 'tester' alternated for 3 consecutive cycles.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-data <-> reviewer-behavior (3 cycles) — Subagent roles 'reviewer-data' and 'reviewer-behavior' alternated for 3 consecutive cycles.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-behavior <-> reviewer-tests (4 cycles) — Subagent roles 'reviewer-behavior' and 'reviewer-tests' alternated for 4 consecutive cycles.
 
 ### Agentic Execution Metrics
 
@@ -144,45 +68,20 @@ Draft publication is authorized at this checkpoint. Iteration 02 implementation 
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **planner** | 1 | 208,076 | 13,965 | 2,110,208 | 91.0% | 127.3k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **coder** | 1 | 378,928 | 50,715 | 20,779,136 | 98.2% | 269.5k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **tester** | 3 | 543,238 | 64,155 | 22,429,440 | 97.6% | 197.5k | HEALTHY | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
-| **Unknown** | 1 | 802,890 | 108,876 | 46,286,848 | 98.3% | 306.1k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **reviewer-architecture** | 4 | 316,007 | 24,085 | 4,185,088 | 93.0% | 159.4k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
-| **reviewer-behavior** | 3 | 238,274 | 19,655 | 2,928,896 | 92.5% | 106.7k | HEALTHY | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
-| **reviewer-data** | 3 | 257,245 | 20,345 | 3,153,664 | 92.5% | 103.7k | HEALTHY | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
-| **reviewer-tests** | 3 | 240,542 | 20,975 | 3,397,120 | 93.4% | 108.3k | HEALTHY | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
-| **Total** | **19** | **2,985,200** | **322,771** | **105,270,400** | **97.2%** | **306.1k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 19 unavailable / 19 invocations)** |
+| **planner** | 1 | 352,850 | 17,799 | 2,950,528 | 89.3% | 147.6k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **coder** | 1 | 1,061,045 | 91,109 | 43,572,864 | 97.6% | 363.1k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **tester** | 4 | 1,279,879 | 123,440 | 43,072,640 | 97.1% | 222.0k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
+| **Unknown** | 1 | 1,183,086 | 239,514 | 91,645,824 | 98.7% | 450.2k | BLOATED (100%) | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **reviewer-architecture** | 6 | 473,532 | 39,898 | 6,420,992 | 93.1% | 159.4k | HEALTHY | Unavailable (0 observed, 0 partial, 6 unavailable / 6 invocations) |
+| **reviewer-behavior** | 5 | 393,324 | 34,601 | 5,138,688 | 92.9% | 108.5k | HEALTHY | Unavailable (0 observed, 0 partial, 5 unavailable / 5 invocations) |
+| **reviewer-data** | 5 | 418,224 | 36,828 | 5,931,776 | 93.4% | 111.1k | HEALTHY | Unavailable (0 observed, 0 partial, 5 unavailable / 5 invocations) |
+| **reviewer-tests** | 5 | 376,742 | 37,447 | 5,731,584 | 93.8% | 109.5k | HEALTHY | Unavailable (0 observed, 0 partial, 5 unavailable / 5 invocations) |
+| **Total** | **28** | **5,538,682** | **620,636** | **204,464,896** | **97.4%** | **450.2k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 28 unavailable / 28 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 19 | 2,985,200 | 322,771 | 105,270,400 | 97.2% | Unavailable (0 observed, 0 partial, 19 unavailable / 19 invocations) |
-| **Total** | **19** | **2,985,200** | **322,771** | **105,270,400** | **97.2%** | **Unavailable (0 observed, 0 partial, 19 unavailable / 19 invocations)** |
+| **gpt-6.1-sol** | 28 | 5,538,682 | 620,636 | 204,464,896 | 97.4% | Unavailable (0 observed, 0 partial, 28 unavailable / 28 invocations) |
+| **Total** | **28** | **5,538,682** | **620,636** | **204,464,896** | **97.4%** | **Unavailable (0 observed, 0 partial, 28 unavailable / 28 invocations)** |
 
-Capture observation finalized: 2026-11-05T10:36:46.900371127Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 0; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 0; reserved bytes: 0. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
-
-## Iteration 03 steering: numeric-only provisional accounting
-
-The agreed direction is active_duration_seconds plus positive-only provisional_seconds. The estimated portion is included in the existing total. No duration_reasoning field, setting, CLI option, summary explanation section or frontend reasoning behavior is planned. This removes the earlier optional reasoning proposal within the same iteration. Source validation errors remain ordinary errors, and neutral numeric labels avoid implying complete source coverage when the optional number is absent.
-
-[Iteration 03 plan](iterations/03/PLAN.md) supersedes the unapproved hybrid liveness design. Source-established open intervals remain provisional estimates through the calculation cutoff, with stopped-but-open source markers an accepted limitation. Preserve all six fixes, legacy numeric facts, exact-owner refresh/retention and integrated AL-66/AL-77 behavior. Existing rich draft evidence is normalized only by backend readers; canonical writes become lean. User steering is paraphrased, not quoted.
-
-Application implementation has not started; current draft PR 121 still contains the reviewed initial representation. This checkpoint updates the agreed design and example only. No new application tests, telemetry extraction or PR push occurred.
-
-## Iteration 03 implementation approval
-
-On 2026-11-05 the user explicitly approved implementation of the numeric-only iteration 03 plan. Approval covers the existing total plus positive provisional_seconds, removal of canonical rich duration metadata, backend-only compatibility normalization, numeric-only output/UI and no reasoning feature or liveness machinery. This supersedes the prior planning-only state; no new scope confirmation is required. User messages are paraphrased.
-
-Implementation baseline: c68fbc9079d2f24c624d5de0fe87d313ed095b19. Initial application/test status is clean; staged AL-64 planning/summary changes are task-owned and preserved. The interrupted start completed read-only inspection only. Coder owns application changes, independent tester owns subsequent regression work, and parent owns integration/review/telemetry/PR delivery.
-
-## Iteration 03 implementation and verification checkpoint
-
-Coder gpt-6.1-sol/high implemented the lean numeric facts, backend-only draft normalization and numeric projections/UI, removing canonical rich duration graphs. Source arithmetic, AL-66 optional-category behavior and AL-77 overlap behavior remain in scope for independent review. No reasoning field, flag or setting is introduced. See iterations/03/IMPLEMENTATION.md.
-
-Native runtime and adversarial test engineers (both tester, gpt-6.1-sol/high) independently exposed an intermediate current-v6 input path bypassing duration normalization/validation. Coder gpt-6.1-sol/high fixed it. Native authentic 19-owner rewrite preserved all numeric facts, and source recompute/repeat verified replacement and legitimate child discovery without changing the real ledger. Coder gpt-6.1-sol/high also discovered a mixed-case duration-key bypass; tester gpt-6.1-sol/high proved red/green alias cases after the bounded fix. These are implementation-phase discoveries; formal discovery review is now starting.
-
-Frontend 868 tests across 38 files, typecheck/lint and post-alias affected Go-race checks pass. Broad pre-alias Go-race passed 12 non-CLI packages but had one capture-install context-deadline failure; its unchanged isolated retry on final source passed. No timeout or assertion was weakened. Full final make remains mandatory, not replaced by that retry. Product/test inputs are frozen for all four review focuses on both profiles; current candidate manifest b05c2065769609e7e29cbb7e4b8158d804fc2b38ca905cea9b6a2bdbd1f237b5.
-
-
-All eight iteration03 discovery cells completed; two introduced compatibility/publication gaps were corrected by coder gpt-6.1-sol/high and verified by independent tester gpt-6.1-sol/high. Cleanup discovery is shared by behavior/data/architecture gpt-6.1-sol/high and data gpt-6-luna/medium; historical alias discovery is shared by data gpt-6.1-sol/high and data gpt-6-luna/medium. Legacy nested-null interpretation is verified pre-existing debt (behavior/test-effectiveness gpt-6.1-sol/high and test-effectiveness gpt-6-luna/medium), owner backend input compatibility maintainer, follow-up unassigned. All eight bounded correction rechecks approve LEAN-02, manifest e40b0bb87a233eeeec0da9716cfc51311c1763ecc8752c95b280d6f92d7fc3b8. Affected race suites and CLI paths pass; parent integration/full make/standalone gates remain outstanding.
+Capture observation finalized: 2026-11-05T20:03:53.677127982Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 0; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 0; reserved bytes: 0. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
