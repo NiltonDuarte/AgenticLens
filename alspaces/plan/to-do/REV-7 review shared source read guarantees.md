@@ -50,3 +50,9 @@ Review only: no application, schema, runtime-script or new test changes and no b
 
 * [AL-67 assessment](../../AL-67/ARCHITECTURE_ASSESSMENT.md), F07, F08, F09, F12; application baseline a84adbe5be46c2ef52ede0987a417562715d38e1. Findings are unimplemented.
 * [Follow-up ownership](../../AL-67/iterations/02/FOLLOW_UP_TICKETS.md).
+
+*DEVELOPMENT STATE REVIEW (2026-11-05)*
+
+Ready, review-only. AL-67 delivered the broad architecture assessment; this narrower follow-up owns remaining mixed-family, snapshot, ordering and resource guarantees. It does not block concrete fixes.
+
+Evidence and review limits: [PO-19 reconciliation](../../PO-19/SPEC.md), merged baseline `03f5b05d`. This planning review does not certify runtime behavior or close unverified acceptance criteria.

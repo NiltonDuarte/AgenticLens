@@ -49,3 +49,9 @@ No requirement to implement v2 or Codex live observation. AL-63 retains capabili
 
 * [AL-67 assessment](../../AL-67/ARCHITECTURE_ASSESSMENT.md), F03; application baseline a84adbe5be46c2ef52ede0987a417562715d38e1. Findings are unimplemented.
 * [Follow-up ownership](../../AL-67/iterations/02/FOLLOW_UP_TICKETS.md).
+
+*DEVELOPMENT STATE REVIEW (2026-11-05)*
+
+Still open: AL-67 F03 distinguishes v2 historical support from v1 live queries. Current live/sqlite.go still queries session/message/part; no merged corrective delivery was found.
+
+Evidence and review limits: [PO-19 reconciliation](../../PO-19/SPEC.md), merged baseline `03f5b05d`. This planning review does not certify runtime behavior or close unverified acceptance criteria.

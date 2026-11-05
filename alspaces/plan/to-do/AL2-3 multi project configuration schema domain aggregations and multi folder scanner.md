@@ -2,6 +2,10 @@ h3. Title: AL2-3: Multi-Project Configuration Schema, Domain Aggregations, and M
 
 *TARGET*: AgenticLens (domain | adapters | cli | config | tests)
 
+*Status*: Ready
+*Blocked by*: None
+*Blocks*: AL2-4, AL2-5
+
 *CONTEXT*
  
 Currently, AgenticLens only scans a single workspace directory and reads a single root configuration manifest. Engineering leads managing multiple services or teams need a single AgenticLens instance to monitor and aggregate telemetry from multiple project directories. The platform requires a multi-project configuration schema, domain models tagged by project, project-level filtering, and a scanner capable of traversing multiple distinct project folders while respecting each project's individual configuration.
@@ -31,3 +35,9 @@ Implement the multi-project configuration schema in `.agenticlens-config.yaml` a
 * Quality gates passing (`make check`, `make test`, or `make`).
 * Go type checking clean with zero any.
 * Telemetry tested with `agentic-lens` CLI.
+
+*DEVELOPMENT STATE REVIEW (2026-11-05)*
+
+Not delivered: project-name configuration exists, but no ProjectDefinition/ScanMultiProjectWorkspaces contract was found. Single-project behavior remains the baseline; this ticket unlocks AL2-4 and AL2-5.
+
+Evidence and review limits: [PO-19 reconciliation](../../PO-19/SPEC.md), merged baseline `03f5b05d`. This planning review does not certify runtime behavior or close unverified acceptance criteria.

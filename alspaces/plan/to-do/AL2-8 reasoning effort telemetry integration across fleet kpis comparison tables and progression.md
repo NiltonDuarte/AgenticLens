@@ -2,14 +2,18 @@ h3. Title: AL2-8: Ingest Model Reasoning Effort Variants and Surface Deliberatio
 
 *TARGET*: AgenticLens (domain | adapters | http | presentation | web | tests)
 
+*Status*: Ready
+*Blocked by*: None
+*Blocks*: None
+
 *CONTEXT*
 
 When utilizing reasoning models (such as Gemini 2.5/3.8 Flash thinking, OpenAI o-series, and Claude thinking), operators configure deliberate reasoning intensity: `low`, `medium`, or `high`.
-Forensic investigation of OpenCode's SQLite database (`~/.local/share/opencode/opencode.db`) reveals that OpenCode explicitly persists this reasoning effort setting as the `variant` property in two locations:
+The original planning notes reported `variant` in the following OpenCode records. Treat these examples as historical evidence to validate separately against each supported schema family:
 1. `session` table: `model` JSON column contains `{"id": "gemini-3.8-flash", "providerID": "litellm", "variant": "high"}`.
 2. `message` table: `data` JSON column contains `{"providerID": "litellm", "modelID": "gemini-3.8-flash", "variant": "high"}`.
 
-Live queries in real databases confirm active values: `high` (over 1,700 messages), `medium` (89 messages), and `low` (1 message). Currently, AgenticLens only extracts the model identifier (`modelID` / `id`) while discarding `variant`. Consequently, platform operators cannot discern whether a session or subagent run operated under low, medium, or high reasoning budgets, making it impossible to evaluate the cost, latency, and quality trade-offs between different reasoning tiers.
+Original planning observations (not revalidated against current source versions) recorded: `high` (over 1,700 messages), `medium` (89 messages), and `low` (1 message). Currently, AgenticLens only extracts the model identifier (`modelID` / `id`) while discarding `variant`. Consequently, platform operators cannot discern whether a session or subagent run operated under low, medium, or high reasoning budgets, making it impossible to evaluate the cost, latency, and quality trade-offs between different reasoning tiers.
 
 *GOAL*
 
@@ -18,8 +22,8 @@ Ingest model reasoning effort variants (`low`, `medium`, `high`) from OpenCode s
 *VERTICAL SLICE SCOPE*
 
 * Adapters & Ingestion (`internal/adapters/opencode`):
-  - Extend model deserialization structs in `extractor.go` to capture `variant` from `session.model` JSON and `message.data.model.variant`.
-  - Normalize variant values into canonical representations: `"low" | "medium" | "high"` (treating empty, `"default"`, or missing as null/omitted).
+  - Extend the owning schema-specific decoder to capture the verified native setting location; resolve the historical top-level versus nested message examples from source evidence.
+  - Preserve the native configured effort value, including values outside low/medium/high. Missing/default settings remain explicitly unspecified; never infer configuration from reasoning-token counts.
   - Attach `reasoning_effort` to extracted `InvocationFact` and `SessionFact` models.
 * Domain Core (`internal/domain`):
   - Add `ReasoningEffort string` (or `ReasoningVariant string`) to `InvocationFact`, `SessionFact`, and `ModelFact`.
@@ -39,8 +43,8 @@ Ingest model reasoning effort variants (`low`, `medium`, `high`) from OpenCode s
 
 *ACCEPTANCE CRITERIA*
 
-* OpenCode SQLite extraction correctly parses `variant` from both `session.model` and `message.data.model.variant`.
-* Canonical reasoning efforts (`low`, `medium`, `high`) are attached to invocation and session facts.
+* OpenCode v1/v2 extraction reads the setting from the source-backed locations established by the per-family investigation, with deterministic fixtures proving top-level/nested and missing-field behavior where supported.
+* Source-backed reasoning effort values are attached to their owning invocation/session without collapsing unknown native settings. Validate OpenCode v1/v2 locations separately, preserve historical facts, and expose unsupported or absent settings honestly.
 * Model breakdown tables in Deep Dive and Fleet views render distinct reasoning effort badges or labels for models configured with variants.
 * Missing or default variants are displayed gracefully without empty badges or layout shifts.
 * Zero regressions in existing token counting or cost calculations.
@@ -52,3 +56,9 @@ Ingest model reasoning effort variants (`low`, `medium`, `high`) from OpenCode s
 * Quality gates passing (`make`).
 * Go and TypeScript type checking clean with zero any.
 * Verified end-to-end in embedded dashboard.
+
+*DEVELOPMENT STATE REVIEW (2026-11-05)*
+
+Not delivered: reasoning token metrics exist, but no configured reasoning_effort/variant fact or display contract was found. Historical OpenCode sample counts are original observations, not a current schema guarantee; validate v1/v2 independently and preserve native unknown values.
+
+Evidence and review limits: [PO-19 reconciliation](../../PO-19/SPEC.md), merged baseline `03f5b05d`. This planning review does not certify runtime behavior or close unverified acceptance criteria.
