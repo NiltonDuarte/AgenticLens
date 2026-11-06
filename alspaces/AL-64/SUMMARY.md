@@ -8,6 +8,10 @@ Implemented the approved [iteration 03 numeric contract](iterations/03/PLAN.md):
 
 The development capture installation proposal was withdrawn as outside AL-64 scope; its unimplemented iteration directory and plan were removed. No development installer, hook installation, release-pin change, hook trust change or existing-state replacement was applied. Follow-up [AL-78](../plan/to-do/AL-78%20make%20open%20turn%20feedback%20effective%20across%20codex%20and%20opencode.md) records the unresolved ongoing/open-turn workflow and that CLI feedback to the agent is not working as intended: qualified checkpoint output was emitted, but the observed agent did not finish and begin a subsequent metrics-refresh turn. Native behavior must be verified independently for Codex and OpenCode without depending on T3. Existing duration, lean persistence and checkpoint-feedback implementation remains in scope; emitting feedback is not proof that an agent acted on it.
 
+Follow-up delivery verification at b011b488: origin/main was already integrated; required make passed with backend race checks, 190 frontend unit and 678 integration tests, 45 Python checks and platform builds. Canonical and embedded assets match byte-for-byte across three files. Source metadata verifies the original Codex root and 39 native children, including the planning session for the withdrawn proposal; three independent test roots remain distinct owners. The baseline ledger contains 42 owners. The final telemetry refresh uses explicit source codex and ticket type fix with the repository-built native binary and isolated capture state under /tmp/al64-followup-delivery-7e4b91; no stable wrapper was installed and incompatible configured state remains untouched. Native records confirm that independent session 01a1b0d2-14f9-70b1-9522-6ba10ef25f64 completed its turn at 2026-11-06T12:37:05.342Z; its refresh can now replace the earlier provisional snapshot. The currently executing parent remains provisional until its own natural completion. Raw command logs, inventories and verification remain outside Git in that temporary directory. No application or runtime-script changes were made for this follow-up.
+
+Final telemetry verification: all 42 prior owners preserved, 43 Codex owners after refresh, all 40 expected native tree owners present, three independent roots retained without fabricated ancestry, and zero source metadata errors. No other-harness owners existed in the baseline. The completed test session now records 704 active seconds and no provisional portion; the current parent snapshot contributes 342 provisional seconds. All 43 invocation costs remain unavailable. The final parent generation used literal nonce 9c25a9fc42a0a8b5 and emitted qualified F03 feedback, without establishing native caller identity or automatic continuation. Unselected independent session snapshots remain unchanged. git diff --check passed.
+
 ## Delivered behavior
 
 The pure duration core retains deterministic interval/rounding rules and numeric rollups. Codex now counts unfinished turns; independently investigated OpenCode v1/v2 paths account for their native unfinished assistant/tool/text activity. Terminal events, future boundaries, invalid starts/completions and fallback cutoffs retain explicit handling. Completion replaces provisional snapshots; repeated refresh avoids duplicate owners or duration, and unavailable sources retain recorded facts.
@@ -74,15 +78,15 @@ Telemetry uses the rebuilt native bin/agentic-lens-linux-amd64 with explicit sou
 Telemetry validation at 2026-11-06T12:35:58Z: all 39 prior owners preserved, 38 native children verified, three independent roots added, 42 Codex owners total, zero expected owners missing and zero source metadata errors. No other-harness owners existed in the baseline. All 42 invocation costs remain unavailable. The final current-session command used literal nonce c69e3d071b4af852 and explicit session ID 01a1b0d2-14f9-70b1-9522-6ba10ef25f64. Four successful source generations followed the rejected mismatched-nonce attempt; raw stdout/stderr and structured validation remain outside Git. The final run emitted qualified F03 for two open source intervals (historical root and current session); these remain provisional, without claiming native caller identity or terminal completion. git diff --check passed. Only this summary, the ticket PR description and ledger are staged for delivery.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 71
-- **Active Agent Duration:** 8h 58m (recorded duration including 1213s provisional)
-- **Context Window Health:** BLOATED — Root agent peak 450.2k tokens (100% of 450k healthy ceiling, 1 compactions) | Subagents peak 363.1k (Coder)
+- **Software Development Life Cycle Iterations:** 81
+- **Active Agent Duration:** 9h 25m (recorded duration including 342s provisional)
+- **Context Window Health:** BLOATED — Root agent peak 450.2k tokens (100% of 450k healthy ceiling, 2 compactions) | Subagents peak 363.1k (Coder)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
-- **Subagent Turn Velocity & Thrashing:** 1.5 avg turns/run (peak: 7 turns) | Planner 2.5, Coder 4.5, Tester 2.6, Explorer 1.0, Reviewer-architecture 1.0, Reviewer-behavior 1.0, Reviewer-data 1.0, Reviewer-tests 1.0
+- **Subagent Turn Velocity & Thrashing:** 1.5 avg turns/run (peak: 7 turns) | Planner 2.0, Coder 4.5, Tester 2.6, Explorer 1.0, Reviewer-architecture 1.0, Reviewer-behavior 1.0, Reviewer-data 1.0, Reviewer-tests 1.0
 - **Test-to-Production Code Ratio:** 1.5:1 (+1,967 test lines / +1,321 prod lines)
 - **Code Delivered:** +3,288 / -190 lines across 74 code files (excluding docs)
-- **Reasoning Effort:** 333,890 reasoning tokens (27.0% of generated output)
-- **Tool Health & Self-Correction:** 2,244 tool calls (149 self-corrections, 93.4% success rate)
+- **Reasoning Effort:** 347,643 reasoning tokens (27.0% of generated output)
+- **Tool Health & Self-Correction:** 2,325 tool calls (156 self-corrections, 93.3% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 16 execution anomalies detected (9 CRITICAL, 7 WARNING).
@@ -110,38 +114,24 @@ Telemetry validation at 2026-11-06T12:35:58Z: all 39 prior owners preserved, 38 
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **planner** | 2 | 414,853 | 26,097 | 3,597,312 | 89.7% | 147.6k | HEALTHY | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **planner** | 3 | 519,471 | 31,655 | 4,969,984 | 90.5% | 157.4k | HEALTHY | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
 | **coder** | 2 | 1,305,002 | 121,573 | 50,659,328 | 97.5% | 363.1k | ELEVATED | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
 | **tester** | 5 | 1,507,677 | 156,257 | 51,962,112 | 97.2% | 222.0k | HEALTHY | Unavailable (0 observed, 0 partial, 5 unavailable / 5 invocations) |
-| **Unknown** | 4 | 2,489,016 | 388,432 | 144,824,448 | 98.3% | 450.2k | BLOATED (100%) | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
+| **Unknown** | 4 | 2,681,503 | 422,978 | 156,033,024 | 98.3% | 450.2k | BLOATED (100%) | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
 | **explorer** | 1 | 54,209 | 8,882 | 898,816 | 94.3% | 72.7k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **reviewer-architecture** | 7 | 560,048 | 45,290 | 7,528,832 | 93.1% | 159.4k | HEALTHY | Unavailable (0 observed, 0 partial, 7 unavailable / 7 invocations) |
 | **reviewer-behavior** | 7 | 542,868 | 50,874 | 7,629,184 | 93.4% | 108.5k | HEALTHY | Unavailable (0 observed, 0 partial, 7 unavailable / 7 invocations) |
 | **reviewer-data** | 7 | 557,472 | 50,971 | 8,134,400 | 93.6% | 111.1k | HEALTHY | Unavailable (0 observed, 0 partial, 7 unavailable / 7 invocations) |
 | **reviewer-tests** | 7 | 517,920 | 53,492 | 7,794,560 | 93.8% | 109.5k | HEALTHY | Unavailable (0 observed, 0 partial, 7 unavailable / 7 invocations) |
-| **Total** | **42** | **7,949,065** | **901,868** | **283,028,992** | **97.3%** | **450.2k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 42 unavailable / 42 invocations)** |
+| **Total** | **43** | **8,246,170** | **941,972** | **295,610,240** | **97.3%** | **450.2k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 43 unavailable / 43 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 42 | 7,949,065 | 901,868 | 283,028,992 | 97.3% | Unavailable (0 observed, 0 partial, 42 unavailable / 42 invocations) |
-| **Total** | **42** | **7,949,065** | **901,868** | **283,028,992** | **97.3%** | **Unavailable (0 observed, 0 partial, 42 unavailable / 42 invocations)** |
+| **gpt-6.1-sol** | 43 | 8,246,170 | 941,972 | 295,610,240 | 97.3% | Unavailable (0 observed, 0 partial, 43 unavailable / 43 invocations) |
+| **Total** | **43** | **8,246,170** | **941,972** | **295,610,240** | **97.3%** | **Unavailable (0 observed, 0 partial, 43 unavailable / 43 invocations)** |
 
-Capture observation finalized: 2026-11-06T12:35:55.441602894Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 41; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 41; reserved bytes: 64058837. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
-Owner codex/01a1ae0f-3684-77b3-bca8-2566899fd22c: current; last successful source read 2026-11-06T12:35:53.677752481Z; accepted source checkpoint 2026-11-05T23:36:19.119Z.
-Owner codex/01a1ad14-a2c4-7d83-b609-e7404fc60e23: current; last successful source read 2026-11-06T12:35:53.756671216Z; accepted source checkpoint 2026-11-05T19:52:55.14Z.
-Owner codex/01a1ae0f-0f0c-7e40-8535-feec19bdfe59: current; last successful source read 2026-11-06T12:35:53.782306174Z; accepted source checkpoint 2026-11-05T23:35:41.296Z.
-Owner codex/01a1ad3d-dbb6-7e21-bbc3-ca9d4c40f0b5: current; last successful source read 2026-11-06T12:35:53.809939043Z; accepted source checkpoint 2026-11-05T19:46:42.618Z.
-Owner codex/01a1a93d-8236-7453-ac38-0928815ba3a1: current; last successful source read 2026-11-06T12:35:53.838552975Z; accepted source checkpoint 2026-11-05T01:09:13.181Z.
-Owner codex/01a1ad25-0b0e-7701-ad71-486a280ab78c: current; last successful source read 2026-11-06T12:35:53.869425448Z; accepted source checkpoint 2026-11-05T19:22:58.634Z.
-Owner codex/01a1ad3b-ecfa-71f2-b930-ef17df3f6c8c: current; last successful source read 2026-11-06T12:35:53.891895471Z; accepted source checkpoint 2026-11-05T19:45:05.508Z.
-Owner codex/01a1a7d8-b9d2-7383-a6f7-3c7002ba88e6: current; last successful source read 2026-11-06T12:35:54.148823331Z; accepted source checkpoint 2026-11-06T12:35:53.652Z.
-Owner codex/01a1ae05-e4d3-75a2-867a-eeae727ebab8: current; last successful source read 2026-11-06T12:35:54.1753496Z; accepted source checkpoint 2026-11-05T23:26:41.255Z.
-Owner codex/01a1b0ca-0226-7f22-9ee2-98c388adf85d: current; last successful source read 2026-11-06T12:35:54.185475626Z; accepted source checkpoint 2026-11-06T12:21:17.887Z.
-Owner codex/01a1a7d9-1ed2-7622-bf5b-199e307cf484: current; last successful source read 2026-11-06T12:35:54.215039332Z; accepted source checkpoint 2026-11-05T18:28:52.494Z.
-Owner codex/01a1ae31-2810-79e2-8106-2e0a6c41ce24: current; last successful source read 2026-11-06T12:35:54.229936774Z; accepted source checkpoint 2026-11-06T00:16:25.847Z.
-Owner codex/01a1a93d-a9f5-7a22-816e-0d2aba47d928: current; last successful source read 2026-11-06T12:35:54.260235499Z; accepted source checkpoint 2026-11-05T01:08:32.674Z.
-Owner codex/01a1a937-8cb1-7cc2-aeec-b58704111fb7: current; last successful source read 2026-11-06T12:35:54.28341508Z; accepted source checkpoint 2026-11-05T01:05:21.71Z.
-Owner codex/01a1ae01-fac8-7361-b082-f996fedafba0: current; last successful source read 2026-11-06T12:35:54.307591805Z; accepted source checkpoint 2026-11-05T23:22:39.314Z.
-Owner codex/01a1a7fc-f913-79c3-ab30-87f83343797b: current; last successful source read 2026-11-06T12:35:54.33040506Z; accepted source checkpoint 2026-11-04T19:19:21.28Z.
-Additional owner freshness details remain in local capture diagnostics.
+Capture observation finalized: 2026-11-06T15:33:29.287842844Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 1; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 1; reserved bytes: 873856. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
+Owner codex/01a1b0d2-14f9-70b1-9522-6ba10ef25f64: current; last successful source read 2026-11-06T15:33:29.275803071Z; accepted source checkpoint 2026-11-06T12:37:05.342Z.
+
+Retained recorded history: 2 session(s), unchanged because their sources were not refreshed. They do not establish capture coverage in this worktree.
