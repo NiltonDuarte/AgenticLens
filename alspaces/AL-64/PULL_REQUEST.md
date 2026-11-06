@@ -9,3 +9,5 @@ Generic native caller/current-interval handoff remains unverified. Production us
 The branch preserves optional metric omission and shared-session warnings. Stored open intervals remain provisional estimates and can outlive their process. Upgrade readers before expanded v6 scalar writes; older strict readers may reject them. Existing unrelated delegation-retention and legacy-null debt remains documented. No release is authorized.
 
 See the [technical baseline](alspaces/AL-64/CONTRACT.md), [numeric plan](alspaces/AL-64/iterations/03/PLAN.md), [checkpoint plan](alspaces/AL-64/iterations/04/PLAN.md) and [work summary](alspaces/AL-64/SUMMARY.md).
+
+Finalization revalidated on 2026-11-06 at 12ec5152: origin/main already integrated; required make passed (all backend unit/race checks, 868 frontend tests, 45 Python checks, typecheck/lint/vet and five platform builds). Canonical and embedded assets match. Final source-backed Codex telemetry refresh and coverage limits are recorded in SUMMARY.md.
