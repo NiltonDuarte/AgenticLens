@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 	"strings"
+	"time"
 
 	"agenticlens/internal/adapters/codex"
 	"agenticlens/internal/adapters/git"
@@ -122,7 +123,17 @@ func (e *BackfillEngine) readCodexOwners(root, home string, source ...*domain.So
 	}
 	transcripts := make([]codex.Transcript, 0, len(paths))
 	for _, p := range paths {
-		t, err := e.parseCodexRollout(p)
+		var t codex.Transcript
+		var err error
+		if e.parseCodexRollout != nil {
+			t, err = e.parseCodexRollout(p)
+		} else {
+			cutoff := e.snapshotCutoff
+			if cutoff.IsZero() {
+				cutoff = time.Now().UTC()
+			}
+			t, err = codex.ParseRolloutPathAt(p, cutoff)
+		}
 		if err != nil {
 			diagnostics = append(diagnostics, fmt.Sprintf("Codex source owner retained after parse failure: %v", err))
 			continue
@@ -189,12 +200,13 @@ func discoverOpenCodeTreeIDs(db *sql.DB, table, root string) (ids []string, resu
 	return ids, nil
 }
 
-func readOpenCodeTree(db *sql.DB, table, root, user string) ([]domain.SessionFact, error) {
+func readOpenCodeTree(db *sql.DB, table, root, user string, cutoff time.Time) ([]domain.SessionFact, error) {
 	ids, err := discoverOpenCodeTreeIDs(db, table, root)
 	if err != nil {
 		return nil, err
 	}
-	fresh, _, _, err := opencode.ExtractSessionsStrict(db, ids, user, nil)
+	var source domain.SourceEvents
+	fresh, _, _, err := opencode.ExtractSessionsStrictWithSourceAt(db, ids, user, nil, &source, cutoff)
 	if err != nil {
 		return nil, err
 	}
@@ -211,6 +223,10 @@ func readOpenCodeTree(db *sql.DB, table, root, user string) ([]domain.SessionFac
 }
 
 func recoverOpenCode(db *sql.DB, stored []domain.SessionFact, user, ticket, workspace string, allowFallbacks bool) sourceRecovery {
+	return recoverOpenCodeAt(db, stored, user, ticket, workspace, allowFallbacks, time.Now().UTC())
+}
+
+func recoverOpenCodeAt(db *sql.DB, stored []domain.SessionFact, user, ticket, workspace string, allowFallbacks bool, cutoff time.Time) sourceRecovery {
 	out := sourceRecovery{sessions: append([]domain.SessionFact(nil), stored...), complete: len(stored) > 0}
 	if db == nil {
 		out.complete = false
@@ -246,7 +262,7 @@ func recoverOpenCode(db *sql.DB, stored []domain.SessionFact, user, ticket, work
 			}
 			attempted[id] = true
 			var source domain.SourceEvents
-			fresh, _, _, readErr := opencode.CaptureSessionSnapshot(context.Background(), db, id, user, math.MaxInt64, &source)
+			fresh, _, _, readErr := opencode.CaptureSessionSnapshotAt(context.Background(), db, id, user, math.MaxInt64, cutoff, &source)
 			if readErr != nil || len(fresh) != 1 || fresh[0].ID != id {
 				out.complete = false
 				out.diagnostics = append(out.diagnostics, fmt.Sprintf("OpenCode owner %s previous snapshot retained after incomplete extraction: %v", id, readErr))
@@ -279,7 +295,7 @@ func recoverOpenCode(db *sql.DB, stored []domain.SessionFact, user, ticket, work
 			}
 		}
 		if e == nil && sid != nil && strings.TrimSpace(*sid) != "" {
-			fresh, e := readOpenCodeTree(db, table, *sid, user)
+			fresh, e := readOpenCodeTree(db, table, *sid, user, cutoff)
 			if e == nil {
 				// Reject overlap so fallback cannot replace unavailable exact stored facts.
 				known := make(map[string]bool)

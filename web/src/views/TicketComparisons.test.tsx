@@ -22,7 +22,7 @@ describe('TicketComparisons View Component', () => {
           ? { state: 'unavailable' as const, known_subtotal_usd: null, fully_observed: 0, partial: 0, unavailable: 1, total: 1 }
           : { state: 'complete' as const, known_subtotal_usd: amount, fully_observed: 1, partial: 0, unavailable: 0, total: 1 };
       return { ...ledger, totals: { ...ledger.totals, cost_usd: amount, cost_summary },
-        workflow_efficiency: { ...ledger.workflow_efficiency, active_duration_seconds: [60, 120, 900, 300][index]!, sdlc_iterations: [2, 4, 12, 20][index]! },
+        workflow_efficiency: { ...ledger.workflow_efficiency, active_duration_seconds: [60, 120, 900, 300][index]!, provisional_seconds: [10, 20, 60, 30][index]!, sdlc_iterations: [2, 4, 12, 20][index]! },
         facts: { ...ledger.facts, sessions: [{ ...ledger.facts.sessions[0]!, skills: index === 0 ? [fact('all'), fact('all')] : index === 1 ? [fact('ALL')] : index === 3 ? [fact('all')] : [] }] } };
     });
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({ data: ledgers });
@@ -37,12 +37,14 @@ describe('TicketComparisons View Component', () => {
       expect(card.querySelector('.kpi-secondary')?.textContent).toBe(population);
     };
     expectSpend('$3.00', '2 of 4 tickets with cost');
+    expect(screen.getByText('Average Active Duration').closest('.kpi-card')?.querySelector('.kpi-secondary')).toHaveTextContent('including 30s provisional');
     expect(within(table).getByText('No recorded skills')).toBeInTheDocument();
     expect(within(table).getAllByText('all')).toHaveLength(2);
     fireEvent.click(screen.getByRole('combobox', { name: 'Filter by Skill selector' }));
     fireEvent.click(screen.getByRole('checkbox', { name: 'all' }));
     expect(visibleIDs()).toEqual(['AL-1', 'PO-1']);
     expectSpend('$6.00', '1 of 2 tickets with cost');
+    expect(screen.getByText('Average Active Duration').closest('.kpi-card')?.querySelector('.kpi-secondary')).toHaveTextContent('including 20s provisional');
     fireEvent.click(screen.getByRole('checkbox', { name: 'ALL' }));
     expect(visibleIDs()).toEqual(['AL-1', 'AL-2', 'PO-1']);
     expectSpend('$3.00', '2 of 3 tickets with cost');
@@ -61,6 +63,7 @@ describe('TicketComparisons View Component', () => {
     fireEvent.change(search, { target: { value: 'AL-3' } });
     expect(screen.getByText(/No tickets match the query/)).toBeInTheDocument();
     expectSpend('Unavailable', '0 of 0 tickets with cost');
+    expect(screen.getByText('Average Active Duration').closest('.kpi-card')?.querySelector('.kpi-secondary')).toHaveTextContent('Compute time per ticket; Recorded duration');
     // Options are still derived from source ledgers while no displayed row matches.
     expect(screen.getByRole('checkbox', { name: 'all' })).toBeChecked();
     fireEvent.click(screen.getByRole('checkbox', { name: 'Select all Filter by Skill' }));

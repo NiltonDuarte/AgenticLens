@@ -60,7 +60,7 @@ func DefaultAnomalyThresholdsConfig() AnomalyThresholdsConfig {
 // DefaultProjectConfig returns a baseline ProjectConfig with pure defaults.
 func DefaultProjectConfig() ProjectConfig {
 	return ProjectConfig{
-		Generation:  GenerationConfig{Metrics: DefaultGenerationPolicy()},
+		Generation:  GenerationConfig{Metrics: DefaultGenerationPolicy(), Feedback: DefaultGenerationFeedbackConfig()},
 		Telemetry:   TelemetryConfig{Capture: DefaultCaptureConfig()},
 		ProjectName: "",
 		Ticket: TicketConfig{

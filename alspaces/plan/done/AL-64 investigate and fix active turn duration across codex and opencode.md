@@ -2,7 +2,7 @@ h3. Title: AL-64: Investigate and fix active-turn duration across Codex and Open
 
 *TARGET*: AgenticLens (Domain / Codex / OpenCode v1 and v2 / Generation / Backfill / Ledger / Presentation)
 
-*Status*: In Progress
+*Status*: Done
 *Work type*: fix
 *Blocked by*: None
 *Blocks*: None
@@ -50,8 +50,16 @@ As an operator generating telemetry from Codex, OpenCode v1 or OpenCode v2, I wa
 * Pass required make verification; frontend changes include the canonical build and verification of embedded standalone assets.
 * Maintain ticket summary/review/PR artifacts and source-grounded telemetry; publish a reviewable PR. Completion requires evidence, not just a plan.
 
-*DEVELOPMENT STATE REVIEW (2026-11-05)*
+*DELIVERY STATE (2026-11-05)*
 
-In Progress: draft PR #121 is open at c68fbc9079d2f24c624d5de0fe87d313ed095b19. Checks reported success, but GitHub reports merge conflicts. The fix is not merged; preserve every source-family acceptance case and let the existing owner finish delivery.
+Implementation and local verification complete on integrated revision f8aeac2b. Delivery is PR #121 for review; no remote merge or release is performed. The approved iteration 03 numeric scope supersedes richer duration metadata and the unimplemented hybrid-liveness proposal: total plus positive provisional_seconds, backend-only draft normalization, numeric displays and accepted source-open estimates through the explicit calculation cutoff. No duration reasoning or mandatory process-liveness checks are introduced.
 
-Evidence and review limits: [PO-19 reconciliation](../../PO-19/SPEC.md), merged baseline `03f5b05d`. This planning review does not certify runtime behavior or close unverified acceptance criteria.
+Per-source investigation, native evidence, regression results, compact shared discovery credit, accepted debt and telemetry coverage limits are in [AL-64 summary](../../AL-64/SUMMARY.md). Required make and standalone embedded-asset verification pass. The earlier [PO-19 reconciliation](../../PO-19/SPEC.md) records its historical planning snapshot.
+
+*ITERATION 04 REOPENED (2026-11-06)*
+
+The user approved implementation of transient checkpoint feedback with a default 180-second threshold and five exact message variants. The former continuation identifier is now F05; aggregation-only feedback is excluded. [Approved iteration 04 plan](../../AL-64/iterations/04/PLAN.md) records the acceptance delta. Iteration 03 delivery/verification remains valid for unchanged accounting; new feedback delivery and verification are in progress.
+
+*ITERATION 04 DELIVERY (2026-11-06)*
+
+Checkpoint feedback implemented on 73572098; all required local review, full make and standalone gates pass. Default180-second owner-scoped stderr messages preserve lean numeric accounting. No generic native caller/continuation handoff was verified; F03/F04 fallback is delivered, stronger messages remain gated and no automatic next-turn action is added. Updated delivery remains PR121 for review, without remote merge or release. [Summary and current verification](../../AL-64/SUMMARY.md) retain coverage and capability limits.

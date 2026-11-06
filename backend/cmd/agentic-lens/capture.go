@@ -454,6 +454,10 @@ func captureSourceStore(source, project string) (string, error) {
 }
 
 func reconcileCaptureGeneration(project, dir, ticket string, generationPolicies ...domain.GenerationPolicy) (*capture.ReconcileResult, error) {
+	return reconcileCaptureGenerationAt(project, dir, ticket, time.Now().UTC(), generationPolicies...)
+}
+
+func reconcileCaptureGenerationAt(project, dir, ticket string, cutoff time.Time, generationPolicies ...domain.GenerationPolicy) (*capture.ReconcileResult, error) {
 	if _, err := os.Stat(filepath.Join(capture.RegistryPathDirectory(dir), "registry.db")); errors.Is(err, os.ErrNotExist) {
 		return nil, nil
 	} else if err != nil {
@@ -470,7 +474,7 @@ func reconcileCaptureGeneration(project, dir, ticket string, generationPolicies 
 	if err != nil {
 		return nil, err
 	}
-	result, err := s.Reconcile(ctx, ticket, git.GetGitUser(), policy.MaxSessions, policy.MaxSourceBytes, generationPolicies...)
+	result, err := s.ReconcileAt(ctx, ticket, git.GetGitUser(), policy.MaxSessions, policy.MaxSourceBytes, cutoff, generationPolicies...)
 	if err != nil {
 		return nil, err
 	}

@@ -1,3 +1,4 @@
+import { durationDescription } from '../domain/duration';
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import type { FleetSummary, TicketComparisonRow, TimeWindowPreset, WorkspaceDiagnostic } from '../domain/types';
 import {
@@ -279,7 +280,7 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
             <KPICard
               title="Active Duration"
               value={summary.formatted_total_duration}
-              secondary={`${summary.total_files_changed} files touched`}
+              secondary={`${summary.total_files_changed} files touched; ${durationDescription(summary.provisional_seconds)}`}
               tooltip="Cumulative active agent execution time across all tickets (cumulative man-hours)."
             />
           </section>

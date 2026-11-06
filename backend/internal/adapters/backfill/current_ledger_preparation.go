@@ -10,7 +10,7 @@ import (
 )
 
 // currentLedgerPreparation validates the original wire input before any decoding
-// can normalize it, and retains a metadata-only candidate for explicit cleanup.
+// can normalize it, and retains a duration-canonical candidate for explicit cleanup.
 type currentLedgerPreparation struct {
 	Ledger           domain.AgenticFactLedger
 	WithoutMigration []byte
@@ -24,8 +24,9 @@ func prepareCurrentLedger(content []byte) (currentLedgerPreparation, error) {
 	if err != nil {
 		return currentLedgerPreparation{}, err
 	}
-	// Use normalized bytes for both domain decoding and the raw metadata-only
-	// cleanup candidate; neither path may re-emit former policy/reason fields.
+	// Use normalized bytes for domain decoding and the raw cleanup candidate;
+	// neither path may re-emit former policy/reason fields. Duration receives
+	// its own canonical output projection after original input validation.
 	content = normalized
 	ledger, err := migration.NewEngine(nil).Migrate(content, domain.CurrentSchemaVersion)
 	if err != nil {
@@ -46,8 +47,14 @@ func prepareCurrentLedger(content []byte) (currentLedgerPreparation, error) {
 		}
 	}
 
+	// Keep the original non-duration wire facts and optional field presence,
+	// while making even metadata-cleanup-only writes use canonical duration.
+	canonicalDuration, err := migration.NormalizeLedgerDurationJSON(content)
+	if err != nil {
+		return currentLedgerPreparation{}, fmt.Errorf("normalizing current cleanup duration: %w", err)
+	}
 	var fields map[string]json.RawMessage
-	if err := json.Unmarshal(content, &fields); err != nil {
+	if err := json.Unmarshal(canonicalDuration, &fields); err != nil {
 		return currentLedgerPreparation{}, fmt.Errorf("reading current ledger members: %w", err)
 	}
 	delete(fields, "migration")

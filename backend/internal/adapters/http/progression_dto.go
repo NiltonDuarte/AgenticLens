@@ -6,6 +6,7 @@ import (
 
 // TimeBucketMetricDTO is the concrete nullable cost projection of TimeBucketMetric.
 type TimeBucketMetricDTO struct {
+	ProvisionalSeconds      int64              `json:"provisional_seconds,omitempty"`
 	BucketKey               string             `json:"bucket_key"`
 	BucketDate              string             `json:"bucket_date"`
 	Invocations             int64              `json:"invocations"`
@@ -36,6 +37,7 @@ func TimeBucketMetricDTOFromDomain(value domain.TimeBucketMetric) TimeBucketMetr
 	summary := domain.EffectiveCostSummary(value.CostSummary, value.CostUSD, value.Invocations)
 	cumulative := domain.EffectiveCostSummary(value.CumulativeCostSummary, value.CumulativeCostUSD, value.CumulativeInvocations)
 	return TimeBucketMetricDTO{
+		ProvisionalSeconds:      value.ProvisionalSeconds,
 		BucketKey:               value.BucketKey,
 		BucketDate:              value.BucketDate,
 		Invocations:             value.Invocations,

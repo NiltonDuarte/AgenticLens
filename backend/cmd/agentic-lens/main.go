@@ -31,11 +31,8 @@ import (
 )
 
 func runGenerate(args []string) {
+	snapshotCutoff := time.Now().UTC()
 	genFlags := flag.NewFlagSet("generate", flag.ExitOnError)
-	if len(args) > 0 && args[0] == "help" {
-		genFlags.Usage()
-		return
-	}
 
 	ticketIDFlag := genFlags.String("ticket-id", "", "Target ticket identifier to lock session resolution to")
 	codeRefFlag := genFlags.String("code-ref", "HEAD", "Git branch or commit to measure against the configured base (defaults to HEAD; committed changes only)")
@@ -56,6 +53,15 @@ func runGenerate(args []string) {
 	autoFlag := genFlags.Bool("capture-auto", false, "Native lifecycle publication (registered owners only)")
 	allowEmptyFlag := genFlags.Bool("allow-empty", false, "Allow empty metrics generation even if no root session or invocations are resolved (test escape hatch)")
 
+	defaultUsage := genFlags.Usage
+	genFlags.Usage = func() {
+		defaultUsage()
+		fmt.Fprintln(genFlags.Output(), "Checkpoint feedback: generation.feedback.provisional_threshold_seconds defaults to 180; 0 disables human stderr diagnostics. --session-id selects an extraction root, not a verified caller.")
+	}
+	if len(args) > 0 && args[0] == "help" {
+		genFlags.Usage()
+		return
+	}
 	if err := genFlags.Parse(args); err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing generate flags: %v\n", err)
 		os.Exit(1)
@@ -331,7 +337,7 @@ func runGenerate(args []string) {
 	var freshSessions []domain.SessionFact
 	var sourceEvents domain.SourceEvents
 	generationPolicy := projCfg.Generation.Metrics
-	captureResult, captureErr := reconcileCaptureGeneration(project, *captureDirFlag, activeTicketID, generationPolicy)
+	captureResult, captureErr := reconcileCaptureGenerationAt(project, *captureDirFlag, activeTicketID, snapshotCutoff, generationPolicy)
 	if captureErr != nil {
 		fmt.Fprintf(os.Stderr, "Error reconciling capture registry; publication not completed: %v\n", captureErr)
 		os.Exit(1)
@@ -373,7 +379,7 @@ func runGenerate(args []string) {
 		}
 		transcripts := make([]codex.Transcript, 0, len(rolloutPaths))
 		for _, path := range rolloutPaths {
-			transcript, parseErr := codex.ParseRolloutPath(path)
+			transcript, parseErr := codex.ParseRolloutPathAt(path, snapshotCutoff)
 			if parseErr != nil {
 				fmt.Fprintf(os.Stderr, "Error reading selected Codex source rollout %s: %v. Check telemetry.sources.codex.home or --codex-home.\n", path, parseErr)
 				os.Exit(1)
@@ -409,6 +415,7 @@ func runGenerate(args []string) {
 		resolveCodexSessionUsers(freshCodex, userBySessionID, currentUser)
 		freshSessions = freshCodex
 		sourceEvents.Events = combined.Events
+		sourceEvents.CheckpointEvidence = combined.CheckpointEvidence
 		for _, owner := range freshCodex {
 			sourceEvents.CompleteSessionIDs = append(sourceEvents.CompleteSessionIDs, owner.ID)
 		}
@@ -449,8 +456,8 @@ func runGenerate(args []string) {
 			}
 
 			if len(knownThreadIDs) > 0 {
-				extractedSessions, dbStarted, dbCompleted, extractErr := opencode.ExtractSessionsStrictWithPolicy(
-					dbClient.DB(), knownThreadIDs, currentUser, userBySessionID, &sourceEvents, generationPolicy,
+				extractedSessions, dbStarted, dbCompleted, extractErr := opencode.ExtractSessionsStrictWithPolicyAt(
+					dbClient.DB(), knownThreadIDs, currentUser, userBySessionID, &sourceEvents, generationPolicy, snapshotCutoff,
 				)
 				if extractErr != nil {
 					fmt.Fprintf(os.Stderr, "Error reading selected OpenCode source at %s: %v. Check the database and telemetry.sources.opencode.database_path.\n", dbPath, extractErr)
@@ -694,6 +701,14 @@ func runGenerate(args []string) {
 		if e := recordGenerationPublication(project, *captureDirFlag, activeTicketID, "committed", *jsonOutputFlag, *appendFlag, factLedger.Sessions, "Ledger and requested summary replacement committed.", freshSessions); e != nil {
 			fmt.Fprintln(os.Stderr, "Artifacts committed but diagnostic acknowledgement failed; publication verification remains incomplete:", e)
 			os.Exit(1)
+		}
+	}
+	if !*autoFlag {
+		// Generic generate has no independently verified native caller/interval
+		// transport. Source selection and process environment are not proof.
+		feedback := domain.SelectCheckpointFeedback(factLedger.Sessions, sourceEvents.CheckpointEvidence, domain.CheckpointCaller{}, snapshotCutoff, projCfg.Generation.Feedback.ProvisionalThresholdSeconds)
+		if err := writeCheckpointFeedback(os.Stderr, feedback); err != nil {
+			fmt.Fprintln(os.Stderr, "Optional checkpoint feedback unavailable:", err)
 		}
 	}
 }
@@ -1765,7 +1780,7 @@ func main() {
 			if ledger.TicketID != nil && *ledger.TicketID != "" {
 				tid = *ledger.TicketID
 			}
-			dur := ledger.WorkflowEfficiency.ActiveDurationFormatted
+			dur := ledger.WorkflowEfficiency.ActiveDurationFormatted + " (" + domain.DurationDescription(ledger.WorkflowEfficiency.ProvisionalSeconds) + ")"
 			cost := adapters.FormatCostSummary(domain.EffectiveCostSummary(ledger.Totals.CostSummary, ledger.Totals.CostUSD, ledger.Totals.Invocations))
 			health := ledger.WorkflowEfficiency.ContextWindowHealth.Status
 			iters := fmt.Sprintf("%d", ledger.WorkflowEfficiency.SDLCIterations)

@@ -1588,23 +1588,24 @@ func TestResponseHelpersAndSerialization(t *testing.T) {
 		observed := domain.ComputeTotals([]domain.InvocationFact{{CostUSD: 0}}).CostSummary
 		unavailable := domain.ComputeTotals([]domain.InvocationFact{{CostEvidence: domain.UnavailableCost()}}).CostSummary
 		mixed := domain.MergeCostSummaries(observed, unavailable)
-		fleet := domain.FleetSummary{TotalTickets: 3, TotalInvocations: 2, TotalInputTokens: 17, CostSummary: mixed,
+		fleet := domain.FleetSummary{TotalTickets: 3, TotalInvocations: 2, TotalDurationSeconds: 12, ProvisionalSeconds: 7, TotalInputTokens: 17, CostSummary: mixed,
 			RoleCosts: map[domain.AgentRole]float64{"coder": 0, "reviewer": 0}, RoleCostSummaries: map[domain.AgentRole]domain.CostSummary{"coder": observed, "reviewer": unavailable},
 			ModelCosts: map[string]float64{"known": 0, "missing": 0}, ModelCostSummaries: map[string]domain.CostSummary{"known": observed, "missing": unavailable}}
 		rec := httptest.NewRecorder()
 		adaptershttp.WriteFleetResponse(rec, fleet)
 		var output struct {
-			Cost    *float64            `json:"total_cost_usd"`
-			Summary domain.CostSummary  `json:"cost_summary"`
-			Roles   map[string]*float64 `json:"role_costs"`
-			Models  map[string]*float64 `json:"model_costs"`
-			Tickets int64               `json:"total_tickets"`
-			Input   int64               `json:"total_input_tokens"`
+			Cost        *float64            `json:"total_cost_usd"`
+			Summary     domain.CostSummary  `json:"cost_summary"`
+			Roles       map[string]*float64 `json:"role_costs"`
+			Models      map[string]*float64 `json:"model_costs"`
+			Tickets     int64               `json:"total_tickets"`
+			Input       int64               `json:"total_input_tokens"`
+			Provisional int64               `json:"provisional_seconds"`
 		}
 		if err := json.Unmarshal(rec.Body.Bytes(), &output); err != nil {
 			t.Fatal(err)
 		}
-		if rec.Code != http.StatusOK || output.Cost != nil || output.Summary.KnownSubtotalUSD == nil || *output.Summary.KnownSubtotalUSD != 0 || output.Summary.FullyObserved != 1 || output.Summary.Unavailable != 1 || output.Summary.Total != 2 || output.Tickets != 3 || output.Input != 17 {
+		if rec.Code != http.StatusOK || output.Cost != nil || output.Summary.KnownSubtotalUSD == nil || *output.Summary.KnownSubtotalUSD != 0 || output.Summary.FullyObserved != 1 || output.Summary.Unavailable != 1 || output.Summary.Total != 2 || output.Tickets != 3 || output.Input != 17 || output.Provisional != 7 {
 			t.Fatalf("typed fleet projection changed values: %s", rec.Body.String())
 		}
 		if known, exists := output.Roles["coder"]; !exists || known == nil || *known != 0 {
@@ -1620,13 +1621,14 @@ func TestResponseHelpersAndSerialization(t *testing.T) {
 			t.Fatalf("model unavailable lost: %s", rec.Body.String())
 		}
 
-		ledger := domain.AgenticMetricsLedger{Totals: domain.GroupedMetric{Invocations: 2, CostSummary: mixed}, WorkflowEfficiency: domain.WorkflowEfficiency{ActiveDurationSeconds: 12, RoleEffortDistributionPct: map[string]float64{"coder": 50, "reviewer": 50}, RoleEffortUnavailableReason: "Incomplete source cost"}}
+		ledger := domain.AgenticMetricsLedger{Totals: domain.GroupedMetric{Invocations: 2, CostSummary: mixed}, WorkflowEfficiency: domain.WorkflowEfficiency{ActiveDurationSeconds: 12, ProvisionalSeconds: 7, RoleEffortDistributionPct: map[string]float64{"coder": 50, "reviewer": 50}, RoleEffortUnavailableReason: "Incomplete source cost"}}
 		assertWorkflow := func(data []byte) {
 			var value struct {
 				Workflow struct {
-					Shares   map[string]*float64 `json:"role_effort_distribution_pct"`
-					Reason   string              `json:"role_effort_unavailable_reason"`
-					Duration int64               `json:"active_duration_seconds"`
+					Shares      map[string]*float64 `json:"role_effort_distribution_pct"`
+					Reason      string              `json:"role_effort_unavailable_reason"`
+					Duration    int64               `json:"active_duration_seconds"`
+					Provisional int64               `json:"provisional_seconds"`
 				} `json:"workflow_efficiency"`
 				Totals struct {
 					Cost    *float64           `json:"cost_usd"`
@@ -1636,7 +1638,7 @@ func TestResponseHelpersAndSerialization(t *testing.T) {
 			if err := json.Unmarshal(data, &value); err != nil {
 				t.Fatal(err)
 			}
-			if len(value.Workflow.Shares) != 2 || value.Workflow.Shares["coder"] != nil || value.Workflow.Shares["reviewer"] != nil || value.Workflow.Reason != "Incomplete source cost" || value.Workflow.Duration != 12 || value.Totals.Cost != nil || value.Totals.Summary.Total != 2 {
+			if len(value.Workflow.Shares) != 2 || value.Workflow.Shares["coder"] != nil || value.Workflow.Shares["reviewer"] != nil || value.Workflow.Reason != "Incomplete source cost" || value.Workflow.Duration != 12 || value.Workflow.Provisional != 7 || value.Totals.Cost != nil || value.Totals.Summary.Total != 2 {
 				t.Fatalf("typed workflow or cost metadata changed: %s", data)
 			}
 		}
@@ -1659,29 +1661,31 @@ func TestResponseHelpersAndSerialization(t *testing.T) {
 		rec = httptest.NewRecorder()
 		adaptershttp.WriteComparisonResponse(rec, domain.BuildComparisonRows([]domain.AgenticMetricsLedger{ledger}))
 		var comparisons []struct {
-			Cost     *float64           `json:"cost_usd"`
-			Summary  domain.CostSummary `json:"cost_summary"`
-			Duration int64              `json:"active_duration_seconds"`
+			Cost        *float64           `json:"cost_usd"`
+			Summary     domain.CostSummary `json:"cost_summary"`
+			Duration    int64              `json:"active_duration_seconds"`
+			Provisional int64              `json:"provisional_seconds"`
 		}
 		if err := json.Unmarshal(rec.Body.Bytes(), &comparisons); err != nil {
 			t.Fatal(err)
 		}
-		if len(comparisons) != 1 || comparisons[0].Cost != nil || comparisons[0].Summary.Total != 2 || comparisons[0].Duration != 12 {
+		if len(comparisons) != 1 || comparisons[0].Cost != nil || comparisons[0].Summary.Total != 2 || comparisons[0].Duration != 12 || comparisons[0].Provisional != 7 {
 			t.Fatalf("comparison projection changed: %s", rec.Body.String())
 		}
 		rec = httptest.NewRecorder()
-		adaptershttp.WriteProgressionResponse(rec, []domain.TimeBucketMetric{{BucketKey: "2026-11-01", BucketDate: "2026-11-01", Invocations: 1, CostSummary: observed, CumulativeCostSummary: mixed, CumulativeInvocations: 2, InputTokens: 7, CumulativeInputTokens: 13}})
+		adaptershttp.WriteProgressionResponse(rec, []domain.TimeBucketMetric{{BucketKey: "2026-11-01", BucketDate: "2026-11-01", Invocations: 1, ActiveDurationSeconds: 12, ProvisionalSeconds: 7, CostSummary: observed, CumulativeCostSummary: mixed, CumulativeInvocations: 2, InputTokens: 7, CumulativeInputTokens: 13}})
 		var buckets []struct {
 			Cost            *float64           `json:"cost_usd"`
 			Cumulative      *float64           `json:"cumulative_cost_usd"`
 			Summary         domain.CostSummary `json:"cumulative_cost_summary"`
 			Input           int64              `json:"input_tokens"`
+			Provisional     int64              `json:"provisional_seconds"`
 			CumulativeInput int64              `json:"cumulative_input_tokens"`
 		}
 		if err := json.Unmarshal(rec.Body.Bytes(), &buckets); err != nil {
 			t.Fatal(err)
 		}
-		if len(buckets) != 1 || buckets[0].Cost == nil || *buckets[0].Cost != 0 || buckets[0].Cumulative != nil || buckets[0].Summary.Total != 2 || buckets[0].Input != 7 || buckets[0].CumulativeInput != 13 {
+		if len(buckets) != 1 || buckets[0].Cost == nil || *buckets[0].Cost != 0 || buckets[0].Cumulative != nil || buckets[0].Summary.Total != 2 || buckets[0].Input != 7 || buckets[0].CumulativeInput != 13 || buckets[0].Provisional != 7 {
 			t.Fatalf("bucket and cumulative projections conflated: %s", rec.Body.String())
 		}
 	})

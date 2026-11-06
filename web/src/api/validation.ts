@@ -1,3 +1,4 @@
+import { validDuration } from '../domain/duration';
 import { validateFleetCosts, validateLedgerCosts } from './costValidation';
 import type { AgenticMetricsLedger, Anomaly, BuildInfo, EventFact, FleetSummary, ProjectConfigResponse, WorkspaceDetail, WorkspaceEventsResponse } from '../domain/types';
 
@@ -44,7 +45,7 @@ function model(value: unknown): boolean { return isRecord(value) && string(value
 function role(value: unknown): boolean { return isRecord(value) && string(value.role) && grouped(value); }
 function invocation(value: unknown): boolean {
   return isRecord(value) && fields(value, ['role', 'model'], string) && fields(value, ['started_at', 'completed_at'], nullableString) &&
-    fields(value, ['active_duration_seconds', 'turns', 'compactions'], number) && (value.cost_usd === undefined || nullableNumber(value.cost_usd)) && optionalNumber(value.user_iterations) &&
+    fields(value, ['active_duration_seconds', 'turns', 'compactions'], number) && validDuration(value.active_duration_seconds,value.provisional_seconds) && (value.cost_usd === undefined || nullableNumber(value.cost_usd)) && optionalNumber(value.user_iterations) &&
     isRecord(value.tokens) && fields(value.tokens, ['input', 'output', 'cache_read', 'reasoning', 'peak_context'], number);
 }
 function exactFields(value: Record<string, unknown>, allowed: readonly string[]): boolean {
@@ -91,7 +92,7 @@ function facts(value: unknown): boolean {
 function workflow(value: unknown): boolean {
   if (!isRecord(value)) return false;
   const velocity = value.subagent_turn_velocity, ratio = value.test_to_production_ratio, code = value.code_delivered, tool = value.tool_execution, context = value.context_window_health;
-  return fields(value, ['sdlc_iterations', 'active_duration_seconds', 'reasoning_tokens', 'reasoning_ratio_pct'], number) && string(value.active_duration_formatted) && nullableNumericMap(value.role_effort_distribution_pct) && (value.role_effort_unavailable_reason === undefined || string(value.role_effort_unavailable_reason)) &&
+  return fields(value, ['sdlc_iterations', 'active_duration_seconds', 'reasoning_tokens', 'reasoning_ratio_pct'], number) && validDuration(value.active_duration_seconds,value.provisional_seconds) && string(value.active_duration_formatted) && nullableNumericMap(value.role_effort_distribution_pct) && (value.role_effort_unavailable_reason === undefined || string(value.role_effort_unavailable_reason)) &&
     isRecord(velocity) && fields(velocity, ['avg_turns_per_invocation', 'peak_turns'], number) && numericMap(velocity.by_role) &&
     isRecord(ratio) && string(ratio.ratio) && fields(ratio, ['test_lines_added', 'prod_lines_added'], number) &&
     isRecord(code) && fields(code, ['lines_added', 'lines_deleted', 'files_changed'], number) &&
@@ -149,7 +150,7 @@ function isFleet(value: unknown): value is FleetSummary {
   if (!isRecord(value) || !isRecord(value.anomaly_summary)) return false;
   const anomaly = value.anomaly_summary;
   return fields(value, ['total_tickets', 'total_invocations', 'total_input_tokens', 'total_output_tokens', 'total_cache_read_tokens', 'overall_cache_hit_rate_pct', 'total_duration_seconds', 'total_lines_added', 'total_lines_deleted', 'total_files_changed', 'total_reasoning_tokens', 'overall_reasoning_ratio_pct'], number) &&
-    nullableNumber(value.total_cost_usd) && string(value.formatted_total_duration) && nullableNumericMap(value.role_costs) && nullableNumericMap(value.model_costs) &&
+    nullableNumber(value.total_cost_usd) && validDuration(value.total_duration_seconds,value.provisional_seconds) && string(value.formatted_total_duration) && nullableNumericMap(value.role_costs) && nullableNumericMap(value.model_costs) &&
     fields(anomaly, ['total_anomalies', 'warning_count', 'critical_count', 'total_tickets', 'tickets_with_anomalies'], number) && optionalNumber(anomaly.anomaly_rate_per_ticket) && numericMap(anomaly.severity_counts) && numericMap(anomaly.rule_counts) &&
     array(anomaly.brittle_tools, (v) => isRecord(v) && string(v.tool_name) && fields(v, ['anomaly_count', 'total_calls', 'error_count', 'failure_rate_pct'], number)) &&
     optionalArray(value.skill_adoption, (v) => isRecord(v) && string(v.name) && fields(v, ['total_invocations', 'tickets_count'], number));

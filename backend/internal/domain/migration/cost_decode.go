@@ -72,11 +72,13 @@ type sessionInput struct {
 }
 
 type invocationInput struct {
+	ProvisionalSeconds    json.RawMessage         `json:"provisional_seconds"`
+	DraftDurationEvidence json.RawMessage         `json:"duration_evidence"`
 	Role                  domain.AgentRole        `json:"role"`
 	Model                 string                  `json:"model"`
 	StartedAt             *string                 `json:"started_at"`
 	CompletedAt           *string                 `json:"completed_at"`
-	ActiveDurationSeconds int64                   `json:"active_duration_seconds"`
+	ActiveDurationSeconds json.RawMessage         `json:"active_duration_seconds"`
 	Turns                 int64                   `json:"turns"`
 	Tokens                domain.InvocationTokens `json:"tokens"`
 	CostUSD               json.RawMessage         `json:"cost_usd"`
@@ -131,6 +133,11 @@ type legacySessionInvocation struct {
 func decodeVersionedLedger(input []byte, version int) (legacyLedger, legacyFactCollections, bool, error) {
 	if version < 1 || version > 5 {
 		return legacyLedger{}, legacyFactCollections{}, false, fmt.Errorf("%w: legacy input requires schema1 through5, got %d", ErrUnsupportedVersion, version)
+	}
+	// Validate raw duration names and dual representations before typed JSON
+	// matching can collapse case aliases in historical invocation records.
+	if err := validateHistoricalDurationInputs(input); err != nil {
+		return legacyLedger{}, legacyFactCollections{}, false, err
 	}
 	var metadata ledgerMetadataInput
 	var collections ledgerCollectionsInput
@@ -250,13 +257,21 @@ func (input ledgerCollectionsInput) toDomain(metadata ledgerMetadataInput, requi
 }
 
 func (input invocationInput) toDomain(required bool) (domain.InvocationFact, error) {
+	active, err := decodeActiveDurationSeconds(input.ActiveDurationSeconds)
+	if err != nil {
+		return domain.InvocationFact{}, err
+	}
+	provisional, err := DecodeProvisionalSeconds(active, input.ProvisionalSeconds, input.DraftDurationEvidence)
+	if err != nil {
+		return domain.InvocationFact{}, err
+	}
 	amount, evidence, err := decodeKnownCost(input.CostUSD, input.CostEvidence, required)
 	if err != nil {
 		return domain.InvocationFact{}, err
 	}
 	return domain.InvocationFact{
 		Role: input.Role, Model: input.Model, StartedAt: input.StartedAt, CompletedAt: input.CompletedAt,
-		ActiveDurationSeconds: input.ActiveDurationSeconds, Turns: input.Turns, Tokens: input.Tokens,
+		ActiveDurationSeconds: active, ProvisionalSeconds: provisional, Turns: input.Turns, Tokens: input.Tokens,
 		CostUSD: amount, CostEvidence: evidence, Compactions: input.Compactions, UserIterations: input.UserIterations,
 	}, nil
 }
@@ -335,5 +350,32 @@ func (value *taskLinkInput) UnmarshalJSON(data []byte) error {
 	}
 	*value = taskLinkInput(input)
 	value.removedFields = count
+	return nil
+}
+
+// validateHistoricalDurationInputs inspects only established invocation
+// collections. It does not rewrite historical shape, row identity or payloads.
+func validateHistoricalDurationInputs(data []byte) error {
+	var raw struct {
+		Invocations []json.RawMessage `json:"invocations"`
+		Sessions    []struct {
+			Invocations []json.RawMessage `json:"invocations"`
+		} `json:"sessions"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return fmt.Errorf("reading historical duration inputs: %w", err)
+	}
+	for i, invocation := range raw.Invocations {
+		if err := validateHistoricalDurationInvocation(invocation); err != nil {
+			return fmt.Errorf("invocations[%d] duration: %w", i, err)
+		}
+	}
+	for si, owner := range raw.Sessions {
+		for ii, invocation := range owner.Invocations {
+			if err := validateHistoricalDurationInvocation(invocation); err != nil {
+				return fmt.Errorf("sessions[%d].invocations[%d] duration: %w", si, ii, err)
+			}
+		}
+	}
 	return nil
 }

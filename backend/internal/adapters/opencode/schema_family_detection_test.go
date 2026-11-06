@@ -82,3 +82,45 @@ func TestSchemaFamilyRejectsEveryRequiredTableColumnOmission(t *testing.T) {
 		}
 	}
 }
+
+func TestSchemaFamilyV1AuxiliaryBootstrapTable(t *testing.T) {
+	const v1 = `CREATE TABLE session(id TEXT,parent_id TEXT,agent TEXT,model TEXT,title TEXT,time_created INTEGER,time_updated INTEGER);
+ CREATE TABLE message(id TEXT,session_id TEXT,time_created INTEGER,time_updated INTEGER,data TEXT);
+ CREATE TABLE part(id TEXT,session_id TEXT,message_id TEXT,time_created INTEGER,time_updated INTEGER,data TEXT);
+ INSERT INTO session VALUES('s',NULL,'coder','m','fixture',1767225600000,1767225604000);
+ INSERT INTO message VALUES('a','s',1767225601000,1767225604000,'{"role":"assistant","modelID":"m","time":{"created":1767225601000,"completed":1767225604000}}');`
+	const auxiliary = `CREATE TABLE session_message(id TEXT,session_id TEXT,type TEXT,seq INTEGER,time_created INTEGER,time_updated INTEGER,data TEXT);`
+	for _, tc := range []struct {
+		name, sql string
+		reject    bool
+	}{
+		{"native empty bootstrap", auxiliary, false},
+		{"populated auxiliary", auxiliary + `INSERT INTO session_message VALUES('unexpected','s','assistant',1,1767225601000,1767225604000,'{}');`, true},
+		{"malformed auxiliary", `CREATE TABLE session_message(id TEXT);`, true},
+		{"empty partial owner", auxiliary + `CREATE TABLE session_v2(id TEXT);`, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			db, err := sql.Open("sqlite", ":memory:")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer db.Close()
+			if _, err := db.Exec(v1 + tc.sql); err != nil {
+				t.Fatal(err)
+			}
+			sessions, _, _, err := opencode.ExtractSessions(db, []string{"s"}, "tester", nil)
+			if tc.reject {
+				if err == nil {
+					t.Fatalf("ambiguous/incomplete family accepted: %+v", sessions)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(sessions) != 1 || len(sessions[0].Invocations) != 1 || sessions[0].Invocations[0].ActiveDurationSeconds != 3 {
+				t.Fatalf("native v1 bootstrap hid completed duration: %+v", sessions)
+			}
+		})
+	}
+}

@@ -8,6 +8,7 @@ import (
 	"math"
 	"sort"
 	"strings"
+	"time"
 
 	"agenticlens/internal/domain"
 )
@@ -58,10 +59,23 @@ type schemaV1PartData struct {
 }
 
 func extractSchemaV1SessionsWithEvents(db *sql.DB, ids []string, user string, users map[string]string, strict bool, sink *[]domain.EventFact, exact ...bool) ([]domain.SessionFact, *string, *string, error) {
-	return extractSchemaV1SessionsWithPolicy(db, ids, user, users, strict, sink, nil, exact...)
+	return extractSchemaV1SessionsWithPolicyAt(db, ids, user, users, strict, sink, nil, time.Now().UTC(), exact...)
+}
+
+func extractSchemaV1SessionsWithEventsAt(db *sql.DB, threadIDs []string, defaultUser string, userBySessionID map[string]string, strict bool, eventSink *[]domain.EventFact, cutoff time.Time, exact ...bool) ([]domain.SessionFact, *string, *string, error) {
+	return extractSchemaV1SessionsWithPolicyAt(db, threadIDs, defaultUser, userBySessionID, strict, eventSink, nil, cutoff, exact...)
 }
 
 func extractSchemaV1SessionsWithPolicy(db *sql.DB, threadIDs []string, defaultUser string, userBySessionID map[string]string, strict bool, eventSink *[]domain.EventFact, policy *domain.GenerationPolicy, exact ...bool) ([]domain.SessionFact, *string, *string, error) {
+	return extractSchemaV1SessionsWithPolicyAt(db, threadIDs, defaultUser, userBySessionID, strict, eventSink, policy, time.Now().UTC(), exact...)
+}
+
+func extractSchemaV1SessionsWithPolicyAt(db *sql.DB, threadIDs []string, defaultUser string, userBySessionID map[string]string, strict bool, eventSink *[]domain.EventFact, policy *domain.GenerationPolicy, cutoff time.Time, exact ...bool) ([]domain.SessionFact, *string, *string, error) {
+	return extractSchemaV1SessionsWithCheckpointAt(db, threadIDs, defaultUser, userBySessionID, strict, eventSink, policy, cutoff, nil, exact...)
+}
+
+func extractSchemaV1SessionsWithCheckpointAt(db *sql.DB, threadIDs []string, defaultUser string, userBySessionID map[string]string, strict bool, eventSink *[]domain.EventFact, policy *domain.GenerationPolicy, cutoff time.Time, checkpointSink *[]domain.CheckpointInvocationEvidence, exact ...bool) ([]domain.SessionFact, *string, *string, error) {
+	var checkpointEvidence []domain.CheckpointInvocationEvidence
 
 	incompleteOwners := make(map[string]bool)
 	quotedList, err := buildQuotedIDList(threadIDs)
@@ -179,6 +193,43 @@ func extractSchemaV1SessionsWithPolicy(db *sql.DB, threadIDs []string, defaultUs
 	sessionModelOrders := make(map[string][]string)
 	sessionTurns := make(map[string]int64)
 	sessionUserIterations := make(map[string]int64)
+
+	// Native running tools or open streaming-part timing establish an unfinished
+	// execution lifecycle. Native activity start (or record creation for older
+	// tool records without a native start) bounds that evidence; a generic
+	// progress update after cutoff does not erase an earlier open interval.
+	// Only a later message at or before cutoff can supersede that evidence.
+	runningMessages := map[string]bool{}
+	currentMessages := map[string]bool{}
+	runningRows, runErr := db.Query(fmt.Sprintf(`SELECT DISTINCT p.message_id, NOT EXISTS (SELECT 1 FROM message newer WHERE newer.session_id=m.session_id AND newer.time_created>m.time_created) FROM part p
+      JOIN message m ON m.id=p.message_id AND m.session_id=p.session_id
+      WHERE (p.session_id IN (%s) OR p.session_id IN (SELECT id FROM session WHERE parent_id IN (%s)))
+      AND json_valid(p.data)
+      AND ((json_extract(p.data,'$.type')='tool' AND json_extract(p.data,'$.state.status')='running'
+            AND coalesce(json_extract(p.data,'$.state.time.start'),p.time_created)>0
+            AND coalesce(json_extract(p.data,'$.state.time.start'),p.time_created)<=?)
+        OR (json_extract(p.data,'$.type') IN ('text','reasoning') AND json_type(p.data,'$.time.start')='integer' AND json_extract(p.data,'$.time.start')<=? AND json_type(p.data,'$.time.end') IS NULL))
+      AND NOT EXISTS (SELECT 1 FROM message newer WHERE newer.session_id=m.session_id AND newer.time_created>m.time_created AND newer.time_created<=?)`, quotedList, parentList), cutoff.UnixMilli(), cutoff.UnixMilli(), cutoff.UnixMilli())
+	if runErr != nil {
+		return nil, nil, nil, fmt.Errorf("reading v1 activity evidence: %w", runErr)
+	}
+	for runningRows.Next() {
+		var id string
+		var current bool
+		if err := runningRows.Scan(&id, &current); err != nil {
+			runningRows.Close()
+			return nil, nil, nil, err
+		}
+		runningMessages[id] = true
+		currentMessages[id] = current
+	}
+	if err := runningRows.Err(); err != nil {
+		runningRows.Close()
+		return nil, nil, nil, err
+	}
+	if err := runningRows.Close(); err != nil {
+		return nil, nil, nil, err
+	}
 
 	// 3. Process messages per session
 	for _, s := range sessions {
@@ -335,24 +386,34 @@ func extractSchemaV1SessionsWithPolicy(db *sql.DB, threadIDs []string, defaultUs
 			}
 			acc.asstMsgs++
 
-			if rawMD.Time != nil {
-				if rawMD.Time.Created != nil {
-					c := int64(*rawMD.Time.Created)
-					if acc.firstTS == nil || c < *acc.firstTS {
-						acc.firstTS = &c
-					}
-					if rawMD.Time.Completed != nil {
-						comp := int64(*rawMD.Time.Completed)
-						if acc.lastTS == nil || comp > *acc.lastTS {
-							acc.lastTS = &comp
-						}
-						if comp >= c {
-							acc.activeMS += comp - c
-						}
-					} else if acc.lastTS == nil || c > *acc.lastTS {
-						acc.lastTS = &c
-					}
+			if rawMD.Time != nil && rawMD.Time.Created != nil {
+				c := int64(*rawMD.Time.Created)
+				if acc.firstTS == nil || c < *acc.firstTS {
+					acc.firstTS = &c
 				}
+				var finish *int64
+				if rawMD.Time.Completed != nil {
+					v := int64(*rawMD.Time.Completed)
+					finish = &v
+				}
+				completed, provisional, pending, durationErr := domain.DurationInterval(c, finish, cutoff.UnixMilli(), runningMessages[mid])
+				if durationErr != nil {
+					return nil, nil, nil, errors.Join(fmt.Errorf("OpenCode schema family v1 message %s activity: %w", mid, durationErr), msgRows.Close())
+				}
+				acc.activeMS += completed
+				acc.provisionalMS += provisional
+				acc.provisional = acc.provisional || pending
+				if pending {
+					acc.checkpointIntervals = append(acc.checkpointIntervals, domain.CheckpointInterval{Kind: "assistant message", ID: mid, StartedAt: time.UnixMilli(c).UTC(), SourceOpen: finish == nil && currentMessages[mid]})
+				}
+				if finish == nil && !pending {
+					acc.durationIncomplete = true
+				}
+				if finish != nil && *finish >= c && *finish <= cutoff.UnixMilli() && (acc.lastTS == nil || *finish > *acc.lastTS) {
+					acc.lastTS = finish
+				}
+			} else {
+				acc.durationIncomplete = true
 			}
 
 			acc.input += inp
@@ -587,6 +648,10 @@ func extractSchemaV1SessionsWithPolicy(db *sql.DB, threadIDs []string, defaultUs
 				dur := tUpdated.Int64 - tCreated.Int64
 				durMs = &dur
 			}
+			if stat == "running" || stat == "pending" {
+				eventStatus = stat
+				durMs = nil
+			}
 			var toolInput, toolOutput *string
 			if rawPD.State != nil {
 				toolInput = normalizeToolInput(rawPD.State.Input)
@@ -688,14 +753,20 @@ func extractSchemaV1SessionsWithPolicy(db *sql.DB, threadIDs []string, defaultUs
 				}
 			}
 
-			activeSecs := int64(math.Round(float64(st.activeMS) / 1000.0))
+			activeSecs, provisionalSeconds := domain.MeasuredDuration(st.activeMS, st.provisionalMS)
+			var completedAt *string
+			if st.lastTS != nil && !st.provisional && !st.durationIncomplete {
+				completedAt = &endISO
+			}
 
+			checkpointEvidence = append(checkpointEvidence, domain.CheckpointInvocationEvidence{Source: domain.SourceOpenCode, SessionID: s.id, InvocationRow: len(invocations) + 1, Model: mName, Cutoff: cutoff, Complete: !st.durationIncomplete, Intervals: st.checkpointIntervals})
 			invocations = append(invocations, domain.InvocationFact{
 				Role:                  role,
 				Model:                 mName,
 				StartedAt:             &stISO,
-				CompletedAt:           &endISO,
+				CompletedAt:           completedAt,
 				ActiveDurationSeconds: activeSecs,
+				ProvisionalSeconds:    provisionalSeconds,
 				Turns:                 turns,
 				Tokens: domain.InvocationTokens{
 					Input:       st.input,
@@ -748,6 +819,9 @@ func extractSchemaV1SessionsWithPolicy(db *sql.DB, threadIDs []string, defaultUs
 	projected, err := projectSourceFacts(sessionFacts, events, strict, policy, incompleteOwners)
 	if err != nil {
 		return nil, nil, nil, err
+	}
+	if checkpointSink != nil {
+		*checkpointSink = append(*checkpointSink, checkpointEvidence...)
 	}
 	return projected, startedAtISO, completedAtISO, nil
 }

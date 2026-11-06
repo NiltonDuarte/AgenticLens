@@ -1,3 +1,4 @@
+import { durationLabel, durationDescription } from '../domain/duration';
 import React, { useEffect, useState, useCallback, useRef, useId } from 'react';
 import type {
   AgenticMetricsLedger,
@@ -303,8 +304,8 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
         />
         <KPICard
           title="Active Compute Duration"
-          value={eff.active_duration_formatted || formatDurationSeconds(eff.active_duration_seconds)}
-          secondary={`${eff.active_duration_seconds.toLocaleString()}s total`}
+          value={durationLabel(eff.active_duration_formatted || formatDurationSeconds(eff.active_duration_seconds), eff.provisional_seconds)}
+          secondary={durationDescription(eff.provisional_seconds)}
           tooltip="Cumulative active compute duration across all agent invocations (analogous to cumulative man-hours). Can exceed wall-clock lead time due to concurrent subagent execution."
         />
         <CostKPICard

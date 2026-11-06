@@ -18,6 +18,7 @@ type InvocationTokens struct {
 
 // InvocationFact represents an atomic execution record for an agent invocation.
 type InvocationFact struct {
+	ProvisionalSeconds    int64            `json:"provisional_seconds,omitempty"`
 	Role                  AgentRole        `json:"role"`
 	Model                 string           `json:"model"`
 	StartedAt             *string          `json:"started_at"`
@@ -138,6 +139,7 @@ type TraceCoverage struct {
 // SourceEvents is an ephemeral calculation input. Complete owners may have no
 // events; a missing owner never authorizes replacement of a recorded summary.
 type SourceEvents struct {
+	CheckpointEvidence []CheckpointInvocationEvidence `json:"-"`
 	Events             []EventFact
 	CompleteSessionIDs []string
 }
@@ -388,6 +390,7 @@ type ContextWindowHealth struct {
 
 // WorkflowEfficiency aggregates SDLC duration, code delivery, and operational health metrics.
 type WorkflowEfficiency struct {
+	ProvisionalSeconds          int64                `json:"provisional_seconds,omitempty"`
 	SDLCIterations              int64                `json:"sdlc_iterations"`
 	ActiveDurationSeconds       int64                `json:"active_duration_seconds"`
 	ActiveDurationFormatted     string               `json:"active_duration_formatted"`
@@ -463,6 +466,7 @@ type AgenticMetricsLedger struct {
 
 // TimeBucketMetric captures telemetry aggregates for a chronological time bucket.
 type TimeBucketMetric struct {
+	ProvisionalSeconds      int64       `json:"provisional_seconds,omitempty"`
 	BucketKey               string      `json:"bucket_key"`
 	BucketDate              string      `json:"bucket_date"`
 	Invocations             int64       `json:"invocations"`
@@ -520,6 +524,7 @@ type SkillAdoptionFact struct {
 
 // FleetSummary aggregates high-level metrics across multiple tickets.
 type FleetSummary struct {
+	ProvisionalSeconds       int64                     `json:"provisional_seconds,omitempty"`
 	SkillAdoption            []SkillAdoptionFact       `json:"skill_adoption,omitzero"`
 	TotalTickets             int64                     `json:"total_tickets"`
 	TotalCostUSD             float64                   `json:"total_cost_usd"`
@@ -545,6 +550,7 @@ type FleetSummary struct {
 
 // TicketComparisonRow summarizes a single ticket for cross-ticket matrix presentation.
 type TicketComparisonRow struct {
+	ProvisionalSeconds      int64                   `json:"provisional_seconds,omitempty"`
 	SkillsUsed              []string                `json:"skills_used,omitzero"`
 	TicketID                string                  `json:"ticket_id"`
 	UpdatedAt               string                  `json:"updated_at"`

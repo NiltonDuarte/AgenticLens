@@ -99,6 +99,28 @@ func detectSchemaFamily(db *sql.DB) (schemaFamily, error) {
 			}
 		}
 	}
+	// Native OpenCode 1.19.5 initializes an empty session_message auxiliary
+	// table before a v2 owner table exists. It is not a competing source family.
+	// Accept only that exact supported shape: never ignore populated or malformed
+	// auxiliary rows, nor a present but incomplete session_v2 owner table.
+	if complete[schemaFamilyV1] && all["session_v2"] == nil && all["session_message"] != nil {
+		auxiliaryComplete := true
+		for _, column := range requiredColumns[schemaFamilyV2]["session_message"] {
+			if !all["session_message"][column] {
+				auxiliaryComplete = false
+				break
+			}
+		}
+		if auxiliaryComplete {
+			var populated bool
+			if err := db.QueryRow(`SELECT EXISTS(SELECT 1 FROM session_message LIMIT 1)`).Scan(&populated); err != nil {
+				return "", fmt.Errorf("checking native v1 auxiliary session_message table: %w", err)
+			}
+			if !populated {
+				return schemaFamilyV1, nil
+			}
+		}
+	}
 	if (present[schemaFamilyV1] && present[schemaFamilyV2]) || (complete[schemaFamilyV1] && present[schemaFamilyV2]) || (complete[schemaFamilyV2] && present[schemaFamilyV1]) {
 		observed := make([]string, 0, len(all))
 		for name := range all {

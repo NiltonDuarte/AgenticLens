@@ -22,6 +22,14 @@ const maxRolloutLineBytes = 8 * 1024 * 1024
 // Transcript is a request-local Codex source extraction. Events and occurrence
 // identities are ephemeral; SessionFacts projects only durable lean values.
 type Transcript struct {
+	CheckpointEvidence []domain.CheckpointInvocationEvidence `json:"-"`
+
+	checkpointHistorical bool
+	checkpointNativeIDs  map[string]bool
+
+	snapshotCutoff   time.Time
+	durationLimit    string
+	seenTurns        map[string]bool
 	Skills           []sourceSkillOccurrence      `json:"-"`
 	Delegations      []sourceDelegationOccurrence `json:"-"`
 	AgentPath        string                       `json:"-"`
@@ -163,12 +171,17 @@ type tokenUsageRecord struct {
 }
 
 type modelUsage struct {
-	usage        Usage
-	turns        map[string]struct{}
-	activeMillis int64
-	startedAt    string
-	completedAt  string
-	peakContext  int64
+	checkpointIntervals  []domain.CheckpointInterval
+	checkpointIncomplete bool
+
+	usage             Usage
+	turns             map[string]struct{}
+	activeMillis      int64
+	provisionalMillis int64
+	provisional       bool
+	startedAt         string
+	completedAt       string
+	peakContext       int64
 }
 
 type toolUsage struct {
@@ -200,22 +213,30 @@ type turnContext struct {
 // Malformed records, including a possibly partial final write, produce warnings
 // while parsing continues. Consumers replacing stored facts must check warnings.
 func ParseRollout(reader io.Reader) (Transcript, error) {
+	return ParseRolloutAt(reader, time.Now().UTC())
+}
+
+// ParseRolloutAt measures source lifecycle activity through an explicit cutoff.
+func ParseRolloutAt(reader io.Reader, cutoff time.Time) (Transcript, error) {
 	if reader == nil {
 		return Transcript{}, errors.New("rollout reader is nil")
 	}
 
 	transcript := Transcript{
-		RecordKinds:      make(map[string]int64),
-		EventKinds:       make(map[string]int64),
-		modelUsage:       make(map[string]*modelUsage),
-		toolUsage:        make(map[string]*toolUsage),
-		pendingTools:     make(map[string]int),
-		turnStarts:       make(map[string]time.Time),
-		turnModels:       make(map[string]string),
-		turnNumbers:      make(map[string]int64),
-		toolIDs:          make(map[string]struct{}),
-		currentModel:     "default",
-		pendingSelection: -1,
+		snapshotCutoff:      cutoff.UTC(),
+		checkpointNativeIDs: make(map[string]bool),
+		seenTurns:           make(map[string]bool),
+		RecordKinds:         make(map[string]int64),
+		EventKinds:          make(map[string]int64),
+		modelUsage:          make(map[string]*modelUsage),
+		toolUsage:           make(map[string]*toolUsage),
+		pendingTools:        make(map[string]int),
+		turnStarts:          make(map[string]time.Time),
+		turnModels:          make(map[string]string),
+		turnNumbers:         make(map[string]int64),
+		toolIDs:             make(map[string]struct{}),
+		currentModel:        "default",
+		pendingSelection:    -1,
 	}
 	usageRecordSeen := false
 	inheritedHistory := false
@@ -378,6 +399,15 @@ func readEvent(payload json.RawMessage, timestamp string, transcript *Transcript
 		return
 	}
 	transcript.EventKinds[event.Type]++
+	// Cutoff gates duration lifecycle only; unrelated source facts retain their
+	// established projection rather than losing late token/user records.
+	if stamp, err := time.Parse(time.RFC3339Nano, timestamp); err == nil && stamp.After(transcript.snapshotCutoff) {
+		switch event.Type {
+		case "turn_started", "task_started", "turn_complete", "turn_completed", "task_complete", "task_completed", "turn_failed", "task_failed", "turn_aborted", "task_aborted", "turn_interrupted", "task_interrupted", "shutdown_complete", "thread_ended":
+			transcript.checkpointHistorical = true
+			return
+		}
+	}
 	switch event.Type {
 	case "turn_started", "task_started":
 		transcript.pendingSelection = -1
@@ -389,7 +419,13 @@ func readEvent(payload json.RawMessage, timestamp string, transcript *Transcript
 		if turnID == "" {
 			turnID = fmt.Sprintf("turn-%d", transcript.Turns+1)
 		}
-		if _, exists := transcript.turnStarts[turnID]; !exists {
+		if !transcript.seenTurns[turnID] {
+			transcript.seenTurns[turnID] = true
+			transcript.checkpointNativeIDs[turnID] = lifecycle.TurnID != ""
+			if len(transcript.turnStarts) > 0 {
+				transcript.durationLimit = "superseded unfinished lifecycle; unsupported interval excluded"
+				clear(transcript.turnStarts)
+			}
 			transcript.Turns++
 			transcript.turnModels[turnID] = transcript.currentModel
 			transcript.turnNumbers[turnID] = transcript.Turns
@@ -400,6 +436,10 @@ func readEvent(payload json.RawMessage, timestamp string, transcript *Transcript
 				if modelAcc.startedAt == "" || timestamp < modelAcc.startedAt {
 					modelAcc.startedAt = timestamp
 				}
+			} else {
+				// Seen identity is not evidence of a measurable start. Preserve
+				// known intervals while exposing this unsupported lifecycle.
+				transcript.durationLimit = "invalid lifecycle start boundary"
 			}
 		}
 	case "turn_complete", "turn_completed", "task_complete", "task_completed", "turn_failed", "task_failed":
@@ -420,11 +460,32 @@ func readEvent(payload json.RawMessage, timestamp string, transcript *Transcript
 				modelAcc := transcript.modelUsageFor(transcript.turnModels[turnID])
 				modelAcc.activeMillis += millis
 				modelAcc.completedAt = timestamp
+			} else {
+				// A matching but invalid terminal record does not establish a
+				// measurable interval or prove this turn remains active.
+				transcript.durationLimit = "invalid lifecycle completion boundary"
 			}
 			delete(transcript.turnStarts, turnID)
+		} else if !transcript.seenTurns[turnID] {
+			transcript.durationLimit = "orphan completion without activity start"
 		}
-	case "shutdown_complete", "thread_ended":
-		transcript.CompletedAt = timestamp
+	case "turn_aborted", "task_aborted", "turn_interrupted", "task_interrupted", "shutdown_complete", "thread_ended":
+		// Interruption is an authoritative activity end, even though the task
+		// did not succeed. Never extend that interval to a later snapshot.
+		for id, started := range transcript.turnStarts {
+			if ended, err := time.Parse(time.RFC3339Nano, timestamp); err == nil && !ended.Before(started) {
+				acc := transcript.modelUsageFor(transcript.turnModels[id])
+				acc.activeMillis += ended.Sub(started).Milliseconds()
+				acc.completedAt = timestamp
+			} else {
+				transcript.durationLimit = "invalid lifecycle terminal boundary"
+			}
+		}
+		clear(transcript.turnStarts)
+		if event.Type == "shutdown_complete" || event.Type == "thread_ended" {
+			transcript.CompletedAt = timestamp
+		}
+
 	case "exec_command_begin", "exec_command_end", "mcp_tool_call_begin", "mcp_tool_call_end", "collab_tool_call_begin", "collab_tool_call_end", "web_search_begin", "web_search_end":
 		transcript.readToolEvent(event.Type, payload, timestamp, eventID)
 	case "context_compacted", "compaction_started", "compaction_completed":
@@ -843,6 +904,22 @@ func (transcript *Transcript) turnNumber(turnID string) int64 {
 }
 
 func (transcript *Transcript) finalizeFacts() {
+	if transcript.durationLimit != "" {
+		transcript.Warnings = append(transcript.Warnings, transcript.durationLimit)
+	}
+	for id, started := range transcript.turnStarts {
+		if !transcript.snapshotCutoff.Before(started) {
+			acc := transcript.modelUsageFor(transcript.turnModels[id])
+			acc.provisionalMillis += transcript.snapshotCutoff.Sub(started).Milliseconds()
+			acc.provisional = true
+			nativeID := id
+			if !transcript.checkpointNativeIDs[id] {
+				nativeID = ""
+				acc.checkpointIncomplete = true
+			}
+			acc.checkpointIntervals = append(acc.checkpointIntervals, domain.CheckpointInterval{Kind: "turn", ID: nativeID, StartedAt: started, SourceOpen: nativeID != "" && !transcript.checkpointHistorical})
+		}
+	}
 	if transcript.StartedAt == "" {
 		transcript.StartedAt = transcript.latestTime
 	}
@@ -858,6 +935,7 @@ func (transcript *Transcript) finalizeFacts() {
 		modelNames = append(modelNames, model)
 	}
 	sort.Strings(modelNames)
+	transcript.ActiveSeconds = 0
 	for _, model := range modelNames {
 		usage := transcript.modelUsage[model]
 		usage.usage.PeakContext = usage.peakContext
@@ -880,7 +958,11 @@ func (transcript *Transcript) finalizeFacts() {
 			completedAt = &completed
 		}
 		turns := int64(len(usage.turns))
-		activeSeconds := int64(math.Round(float64(usage.activeMillis) / 1000))
+		activeSeconds, provisionalSeconds := domain.MeasuredDuration(usage.activeMillis, usage.provisionalMillis)
+		if usage.provisional {
+			completedAt = nil
+		}
+		transcript.ActiveSeconds += activeSeconds
 		compactions := int64(0)
 		userIterations := int64(0)
 		if len(transcript.Invocations) == 0 {
@@ -889,12 +971,17 @@ func (transcript *Transcript) finalizeFacts() {
 				userIterations = transcript.SteeringTurns
 			}
 		}
+		transcript.CheckpointEvidence = append(transcript.CheckpointEvidence, domain.CheckpointInvocationEvidence{
+			Source: domain.SourceCodex, SessionID: transcript.sessionIDOrThread(), InvocationRow: len(transcript.Invocations) + 1,
+			Model: model, Cutoff: transcript.snapshotCutoff, Complete: !usage.checkpointIncomplete && transcript.durationLimit == "", Intervals: usage.checkpointIntervals,
+		})
 		transcript.Invocations = append(transcript.Invocations, domain.InvocationFact{
 			Role:                  transcript.role,
 			Model:                 model,
 			StartedAt:             startedAt,
 			CompletedAt:           completedAt,
 			ActiveDurationSeconds: activeSeconds,
+			ProvisionalSeconds:    provisionalSeconds,
 			Turns:                 turns,
 			Tokens:                usage.usage.ToInvocationTokens(),
 			CostUSD:               0,
@@ -1006,6 +1093,7 @@ func CombineTranscriptsWithPolicy(transcripts []Transcript, policies ...domain.G
 		combined.ActiveSeconds += transcript.ActiveSeconds
 		combined.Invocations = append(combined.Invocations, transcript.Invocations...)
 		combined.Events = append(combined.Events, transcript.Events...)
+		combined.CheckpointEvidence = append(combined.CheckpointEvidence, transcript.CheckpointEvidence...)
 		combined.Warnings = append(combined.Warnings, transcript.Warnings...)
 		for kind, count := range transcript.RecordKinds {
 			combined.RecordKinds[kind] += count

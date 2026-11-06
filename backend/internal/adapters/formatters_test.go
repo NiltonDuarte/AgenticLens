@@ -52,6 +52,7 @@ func TestFormatMarkdownMetricsTable(t *testing.T) {
 		},
 		WorkflowEfficiency: domain.WorkflowEfficiency{
 			SDLCIterations:          1,
+			ProvisionalSeconds:      70,
 			ActiveDurationSeconds:   300,
 			ActiveDurationFormatted: "5m 0s",
 			RoleEffortDistributionPct: map[string]float64{
@@ -149,6 +150,13 @@ func TestFormatMarkdownMetricsTable(t *testing.T) {
 	}
 
 	tableMD := adapters.FormatMarkdownMetricsTable(ledger)
+
+	if !strings.Contains(tableMD, "5m 0s (recorded duration including 70s provisional)") {
+		t.Fatalf("missing numeric total/provisional summary: %s", tableMD)
+	}
+	if strings.Contains(tableMD, "snapshot cutoffs") || strings.Contains(tableMD, "Completed measurements") {
+		t.Fatal("summary retained rich duration narrative")
+	}
 
 	// Invariants check
 	if !strings.Contains(tableMD, "### Workflow Efficiency") {
@@ -396,6 +404,9 @@ func TestFormatMarkdownMetricsTable_EmptyAndZeroValues(t *testing.T) {
 	t.Parallel()
 	emptyLedger := domain.AgenticMetricsLedger{}
 	tableMD := adapters.FormatMarkdownMetricsTable(emptyLedger)
+	if !strings.Contains(tableMD, "(recorded duration)") || strings.Contains(tableMD, "Completed measurements") {
+		t.Fatal("zero or absent contribution implied source completion")
+	}
 
 	requiredHeadings := []string{
 		"### Workflow Efficiency",

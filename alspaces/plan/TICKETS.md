@@ -4,17 +4,15 @@ Active specifications live in `alspaces/plan/to-do/`; completed specifications r
 
 Reconciled 2026-11-05 against merged `origin/main` at `03f5b05d` and open PRs. See [PO-19 evidence and ticket review](../PO-19/SPEC.md). Ready means no outstanding ticket prerequisite; it does not imply implementation approval or passing acceptance.
 
-## In Progress
+## Ready
 
-- **AL-64**: Investigate and fix active-turn duration across Codex and OpenCode v1/v2
-  - **Subsystem**: Domain / Codex / OpenCode v1 and v2 / Generation / Backfill / Ledger / Presentation
-  - **Status**: In Progress
+- **AL-78**: Make open-turn feedback effective across Codex and OpenCode
+  - **Subsystem**: CLI Feedback / Native Harness Lifecycle / Capture and Metrics Refresh
+  - **Priority**: P2
+  - **Status**: Ready
   - **Blocked by**: None
   - **Blocks**: None
-  - **File**: [AL-64 investigate and fix active turn duration across codex and opencode.md](to-do/AL-64%20investigate%20and%20fix%20active%20turn%20duration%20across%20codex%20and%20opencode.md)
-  - **Delivery**: [Draft PR #121](https://github.com/NiltonDuarte/AgenticLens/pull/121); not merged.
-
-## Ready
+  - **File**: [AL-78 make open turn feedback effective across codex and opencode.md](to-do/AL-78%20make%20open%20turn%20feedback%20effective%20across%20codex%20and%20opencode.md)
 
 - **AL-63**: Audit source capability parity across OpenCode v1, OpenCode v2, and Codex
   - **Subsystem**: Multi-source ingestion / hydration / recovery

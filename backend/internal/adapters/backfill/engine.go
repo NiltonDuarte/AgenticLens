@@ -26,6 +26,7 @@ import (
 // BackfillEngine coordinates scanning, Git recomputation, OpenCode SQLite querying,
 // non-destructive fallback preservation, atomic JSON writes, and summary updates.
 type BackfillEngine struct {
+	snapshotCutoff        time.Time
 	discoverCodexRollouts func(codex.DiscoveryOptions) ([]string, error)
 	parseCodexRollout     func(string) (codex.Transcript, error)
 	combineCodex          func([]codex.Transcript) (codex.Transcript, error)
@@ -35,13 +36,19 @@ type BackfillEngine struct {
 func NewEngine() *BackfillEngine {
 	return &BackfillEngine{
 		discoverCodexRollouts: codex.DiscoverRolloutPaths,
-		parseCodexRollout:     codex.ParseRolloutPath,
-		combineCodex:          codex.CombineTranscripts,
+
+		combineCodex: codex.CombineTranscripts,
 	}
 }
 
 // Execute runs the backfill and migration workflow across target workspaces.
 func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) {
+	run := *e
+	if opts.SnapshotCutoff.IsZero() {
+		opts.SnapshotCutoff = time.Now().UTC()
+	}
+	run.snapshotCutoff = opts.SnapshotCutoff
+	e = &run
 	cleanSource := strings.ToLower(strings.TrimSpace(opts.Source))
 	if cleanSource == "" {
 		cleanSource = "opencode"
@@ -154,7 +161,7 @@ func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) 
 
 	gitUser := git.GetGitUser()
 	classificationCfg, _ := git.LoadConfig("")
-	nowISO := time.Now().UTC().Format(time.RFC3339Nano)
+	nowISO := opts.SnapshotCutoff.UTC().Format(time.RFC3339Nano)
 
 	// 2. Iterate each discovered workspace with per-ticket error isolation
 	for _, metricPath := range targetFiles {
@@ -419,7 +426,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 		if opencodeDB != nil {
 			db = opencodeDB.DB()
 		}
-		recovery := recoverOpenCode(db, openCodeSessions, gitUser, ticketID, workspaceDir, opts.AllowFallbacks)
+		recovery := recoverOpenCodeAt(db, openCodeSessions, gitUser, ticketID, workspaceDir, opts.AllowFallbacks, opts.SnapshotCutoff)
 		openCodeSessions = recovery.sessions
 		sourceEvents = domain.MergeSourceEvents(sourceEvents, recovery.source)
 		openCodeComplete = recovery.complete

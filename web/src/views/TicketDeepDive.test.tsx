@@ -73,6 +73,21 @@ describe('Skills and subagents autopsy', () => {
         expect(screen.getAllByText('Unknown').length).toBeGreaterThanOrEqual(2);
     });
 
+    it('keeps persisted provisional duration visible when source hydration is unavailable', async () => {
+        const detail = makeDetail();
+        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: { ...detail, ledger: { ...detail.ledger,
+            workflow_efficiency: { ...detail.ledger.workflow_efficiency, active_duration_seconds: 10, active_duration_formatted: '10s',
+                provisional_seconds: 7,
+            },
+        } } });
+        render(<TicketDeepDive selectedTicketId="AL-1" />);
+        const card = (await screen.findByText('Active Compute Duration')).closest<HTMLElement>('.kpi-card')!;
+        expect(card.querySelector('.kpi-value')).toHaveTextContent('10s (includes 7s provisional)');
+        expect(card.querySelector('.kpi-secondary')).toHaveTextContent('7s provisional');
+        expect(card.querySelector('.kpi-secondary')).toHaveTextContent('Recorded duration');
+        expect(card.querySelector('.kpi-secondary')).not.toHaveTextContent(/completed|cutoff|coverage/i);
+    });
+
     it('uses compact cost presentation for the selected ticket with full evidence in the tooltip', async () => {
         const detail = makeDetail();
         vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: { ...detail, ledger: { ...detail.ledger, totals: {

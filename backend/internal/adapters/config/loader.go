@@ -43,6 +43,9 @@ func (e *ConfigValidationError) Is(target error) bool {
 
 // ValidateConfig checks that mandatory configuration fields are present and non-empty.
 func ValidateConfig(cfg domain.ProjectConfig) error {
+	if cfg.Generation.Feedback.ProvisionalThresholdSeconds < 0 {
+		return &ConfigValidationError{Message: "generation.feedback.provisional_threshold_seconds must be a nonnegative integer"}
+	}
 	var missing []string
 	if strings.TrimSpace(cfg.ProjectName) == "" {
 		missing = append(missing, "project_name")
@@ -531,11 +534,11 @@ func loadFromFile(filePath string) (domain.ProjectConfig, error) {
 	}
 
 	cfg := mergeConfig(dto)
-	policy, policyErr := decodeGenerationPolicy(data)
+	generation, policyErr := decodeGenerationConfig(data)
 	if policyErr != nil {
 		return domain.ProjectConfig{}, fmt.Errorf("configuration %s: %w", filePath, policyErr)
 	}
-	cfg.Generation.Metrics = policy
+	cfg.Generation = generation
 	if dto.AgenticLens != nil && ext != ".json" {
 		if _, err := parseEntrypoint(data, false); err != nil {
 			return domain.ProjectConfig{}, fmt.Errorf("bootstrap configuration %s: %w", filePath, err)

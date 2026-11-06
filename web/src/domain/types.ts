@@ -61,6 +61,7 @@ export interface InvocationTokens {
 }
 
 export interface InvocationFact {
+ readonly provisional_seconds?: number;
   readonly role: AgentRole;
   readonly model: string;
   readonly started_at: string | null;
@@ -234,6 +235,7 @@ export interface ContextWindowHealth {
 }
 
 export interface WorkflowEfficiency {
+ readonly provisional_seconds?: number;
   readonly sdlc_iterations: number;
   readonly active_duration_seconds: number;
   readonly active_duration_formatted: string;
@@ -309,6 +311,7 @@ export interface SkillAdoptionFact {
 }
 
 export interface FleetSummary {
+ readonly provisional_seconds?: number;
   readonly skill_adoption?: readonly SkillAdoptionFact[];
   readonly total_tickets: number;
   readonly total_cost_usd: number | null;
@@ -333,6 +336,7 @@ export interface FleetSummary {
 }
 
 export interface TicketComparisonRow {
+ readonly provisional_seconds?: number;
   readonly skills_used?: readonly string[];
   readonly ticket_id: string;
   readonly ticket_type: TicketType | null;
@@ -401,6 +405,7 @@ export type ComparisonSortField =
 export type ComparisonSortOrder = 'asc' | 'desc';
 
 export interface TimeBucketMetric {
+ readonly provisional_seconds?: number;
   readonly bucket_key: string;
   readonly bucket_date: string;
   readonly invocations: number;

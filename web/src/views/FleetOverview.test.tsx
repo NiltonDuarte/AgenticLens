@@ -135,6 +135,7 @@ describe('FleetOverview View Component', () => {
 
   describe('Shared recorded sessions', () => {
     const sessionId = `stored-shared-native-session-${'long-native-id-'.repeat(24)}end`;
+    const durationDisclosure = 'Recorded duration including 10s provisional';
     const base = mockAgenticMetricsLedgers['AL-1']!;
     const ledgers = ['HIDDEN-1', 'HIDDEN-2'].map((ticketId) => ({
       ...base, ticket_id: ticketId, ticket_title: `Recorded ${ticketId}`,
@@ -142,7 +143,10 @@ describe('FleetOverview View Component', () => {
     }));
 
     beforeEach(() => {
-      vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({ data: mockFleetSummary });
+      vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({ data: {
+        ...mockFleetSummary,
+        provisional_seconds: 10,
+      } });
       vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({ data: [...mockTicketComparisonRows] });
     });
 
@@ -170,6 +174,7 @@ describe('FleetOverview View Component', () => {
       await user.keyboard(' ');
       expect(onSelectTicket.mock.calls).toEqual([['HIDDEN-1'], ['HIDDEN-2']]);
       expect(screen.getByText('$14.82')).toBeVisible();
+      expect(screen.getByText(new RegExp(durationDisclosure))).toBeVisible();
       fireEvent.change(screen.getByLabelText('Date Range Preset'), { target: { value: '7d' } });
       await screen.findByLabelText(/filter tickets/i);
       await user.click(screen.getByRole('combobox', { name: 'Ticket Type selector' }));
@@ -188,6 +193,7 @@ describe('FleetOverview View Component', () => {
       await waitFor(() => expect(screen.queryByRole('region', { name: 'Session overlap inspection' })).not.toBeInTheDocument());
       expect(inspect).toHaveBeenCalledTimes(2);
       expect(screen.getByText('$14.82')).toBeVisible();
+      expect(screen.getByText(new RegExp(durationDisclosure))).toBeVisible();
     });
 
     it('keeps partial conflicts and metrics visible, then reports inspection failure without claiming absence', async () => {
@@ -206,10 +212,12 @@ describe('FleetOverview View Component', () => {
       expect(screen.getByText(/Inspection offline/)).toHaveTextContent('Overlap outside inspected records is unknown');
       expect(screen.queryByText(sessionId)).not.toBeInTheDocument();
       expect(screen.getByText('Total Cost')).toBeVisible();
+      expect(screen.getByText(new RegExp(durationDisclosure))).toBeVisible();
       fireEvent.click(screen.getByRole('button', { name: 'Refresh Data' }));
       expect(await screen.findByText('1 shared session found across tickets.')).toBeVisible();
       expect(screen.queryByText(/Inspection offline/)).not.toBeInTheDocument();
       expect(screen.queryByText(/Scope is partial/)).not.toBeInTheDocument();
+      expect(screen.getByText(new RegExp(durationDisclosure))).toBeVisible();
     });
 
     it.each([
@@ -247,6 +255,7 @@ describe('FleetOverview View Component', () => {
       });
       expect(screen.queryByText(sessionId)).not.toBeInTheDocument();
       expect(screen.queryByRole('region', { name: 'Session overlap inspection' })).not.toBeInTheDocument();
+      expect(screen.getByText(new RegExp(durationDisclosure))).toBeVisible();
     });
 
   });

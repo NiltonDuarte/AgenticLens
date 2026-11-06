@@ -616,3 +616,19 @@ Ordinary execution, tool errors, child identities, tokens, costs and code metric
 Regeneration intentionally removes disabled categories from that target's retained history. Re-enabling can recover available source-backed facts; it cannot recover omitted facts after the original sources become unavailable. Complete supported snapshots establish empty arrays or values only for their exact owners. Missing, partial or other-source owners keep their existing field presence and known facts. Root/group anomaly analysis requires complete coverage of its required owners, independently of session-local evidence; cached known group findings survive unavailable children. Reads and non-source writes preserve absence rather than deriving successful zero or healthy analysis from ordinary tool counts. Partial known findings remain visible, and incomplete population rates are omitted.
 
 These settings apply to manual and automatic generate only: they do not rewrite other ledgers, suppress live trace collection, redact raw text, globally filter the dashboard, or change explicit backfill defaults. Explicit backfill may replace successfully complete supported owners, including recorded-empty results, while preserving missing/partial/other-harness owners. Fleet tool reliability remains visible independently of anomaly recording.
+
+### Provisional checkpoint feedback
+
+Explicit `generate` commands may write human checkpoint diagnostics to stderr after successful publication. Configure their threshold in the shared project file:
+
+```yaml
+generation:
+  feedback:
+    provisional_threshold_seconds: 180
+```
+
+The default is 180 seconds, zero disables these diagnostics, and a positive integer overrides the threshold. Negative, fractional, quoted, null and unrepresentable values are invalid. Configuration discovery and the local override whitelist follow the generation settings above; there is no CLI or environment override. This threshold is independent of stall and live activity settings.
+
+Fresh native interval age is compared before rounding: 179999ms does not qualify, and 180000ms does. Individually known short intervals produce no feedback when only their sum reaches the threshold. Retained or unavailable native evidence may instead produce qualified invocation-subtotal guidance. Each diagnostic identifies the owning source/session/invocation, and source-open evidence does not establish that the invoking caller owns the interval or that a process remains executing.
+
+Installed generic command transports do not currently verify the caller's exact native interval. The command therefore uses qualified source-open or unavailable-evidence wording. It never ends a turn, schedules continuation or resumes itself. After the owner completes naturally, a user or supported harness action must initiate the next turn before refreshing telemetry. Diagnostics never enter ledgers, summaries, APIs or the dashboard, and optional feedback failures do not invalidate successful publication. Automatic lifecycle generation, backfill and ordinary reads do not emit these checkpoint diagnostics.

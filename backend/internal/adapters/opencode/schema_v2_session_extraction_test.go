@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"agenticlens/internal/adapters/opencode"
 	"agenticlens/internal/domain"
@@ -234,7 +235,7 @@ func TestSchemaV2SessionMalformedJSONAndUnknownMessageVariantFailWithContext(t *
 	}
 }
 
-func TestSchemaV2SessionToolPendingRunningAndUnknownStatusesFailClosed(t *testing.T) {
+func TestSchemaV2SessionToolInProgressIsNotCompletedAndUnknownStatusFailsClosed(t *testing.T) {
 	for _, status := range []string{"pending", "running", "mystery"} {
 		t.Run(status, func(t *testing.T) {
 			db, err := sql.Open("sqlite", ":memory:")
@@ -247,9 +248,25 @@ func TestSchemaV2SessionToolPendingRunningAndUnknownStatusesFailClosed(t *testin
 			if _, err := db.Exec(`UPDATE session_message SET data=? WHERE id='a1'`, payload); err != nil {
 				t.Fatal(err)
 			}
-			_, _, _, err = opencode.ExtractSessions(db, []string{"ses_root"}, "", nil)
-			if err == nil || !containsSubstring(err.Error(), `OpenCode schema family v2: unsupported tool status "`+status+`"`) {
-				t.Fatalf("status %q should not claim success, got %v", status, err)
+			sessions, _, _, err := opencode.ExtractSessions(db, []string{"ses_root"}, "", nil)
+			if status == "mystery" {
+				if err == nil || !containsSubstring(err.Error(), `unsupported tool status "mystery"`) {
+					t.Fatalf("unknown status: %v", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			events := sourceEventsForSessions(t, db, sessions)
+			found := false
+			for _, event := range events {
+				if event.EventType == domain.EventTypeToolCall && event.Status == status {
+					found = true
+				}
+			}
+			if !found {
+				t.Fatalf("unfinished tool lost native status %s: %+v", status, events)
 			}
 		})
 	}
@@ -411,6 +428,52 @@ func TestSchemaV2SourcePersonaPrecedenceAndUnknownChildren(t *testing.T) {
 					if string(event.Role) != want {
 						t.Errorf("event persona mismatch: %+v want=%q", event, want)
 					}
+				}
+			}
+		})
+	}
+}
+
+func TestSchemaV2ActiveDurationSnapshotAndCompletion(t *testing.T) {
+	for _, streaming := range []bool{false, true} {
+		t.Run(fmt.Sprintf("streaming_without_tool=%t", streaming), func(t *testing.T) {
+			db, err := sql.Open("sqlite", ":memory:")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer db.Close()
+			createSchemaV2TestDB(t, db)
+			if _, err = db.Exec(`DELETE FROM session_message WHERE id IN ('a2','i'); UPDATE session_message SET data='{"time":{"created":1793231970238},"model":{"id":"mock-model"},"content":[{"type":"tool","id":"call1","name":"read","state":{"status":"running"}}]}' WHERE id='a1'`); err != nil {
+				t.Fatal(err)
+			}
+			if streaming {
+				if _, err := db.Exec(`ALTER TABLE session_v2 ADD COLUMN time_idle INTEGER; UPDATE session_message SET data='{"time":{"created":1793231970238},"model":{"id":"mock-model"},"content":[{"type":"text","text":"streaming"}]}' WHERE id='a1'`); err != nil {
+					t.Fatal(err)
+				}
+			}
+			for _, seconds := range []int64{10, 20, 20} {
+				var source domain.SourceEvents
+				sessions, _, _, err := opencode.ExtractSessionsStrictWithSourceAt(db, []string{"ses_root"}, "tester", nil, &source, time.UnixMilli(1793231970238+seconds*1000))
+				if err != nil {
+					t.Fatal(err)
+				}
+				inv := sessions[0].Invocations[0]
+				if inv.ActiveDurationSeconds != seconds || inv.ProvisionalSeconds != seconds || inv.CompletedAt != nil {
+					t.Fatalf("snapshot %+v", inv)
+				}
+			}
+			if _, err = db.Exec(`UPDATE session_message SET data='{"time":{"created":1793231970238,"completed":1793232000238},"model":{"id":"mock-model"},"content":[]}' WHERE id='a1'`); err != nil {
+				t.Fatal(err)
+			}
+			for range 2 {
+				var source domain.SourceEvents
+				sessions, _, _, err := opencode.ExtractSessionsStrictWithSourceAt(db, []string{"ses_root"}, "tester", nil, &source, time.UnixMilli(1793232010238))
+				if err != nil {
+					t.Fatal(err)
+				}
+				inv := sessions[0].Invocations[0]
+				if inv.ActiveDurationSeconds != 30 || inv.ProvisionalSeconds != 0 {
+					t.Fatalf("completion %+v", inv)
 				}
 			}
 		})

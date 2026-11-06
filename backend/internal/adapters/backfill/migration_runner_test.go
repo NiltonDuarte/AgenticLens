@@ -1294,3 +1294,120 @@ func TestMigrationRunnerRejectsObsoletePublicationTarget(t *testing.T) {
 		t.Fatalf("obsolete publication target changed ledger: %v", err)
 	}
 }
+
+func TestMigrationCommandsCanonicalizeCompletedDraftDuration(t *testing.T) {
+	positive := `"duration_evidence":{"state":"provisional","completed_seconds":3,"provisional_seconds":7,"cutoff":"2026-01-01T00:00:10Z","basis":"codex:turn"}`
+	zero := `"duration_evidence":{"state":"complete","completed_seconds":4,"provisional_seconds":0,"basis":"codex:turn"},"provisional_seconds":0`
+	fixture := func(first, second string) []byte {
+		return []byte(`{"schema_version":6,"ticket_id":"TEST-DURATION-CLEANUP","ticket_title":"Raw portable history","code":{"lines_added":19},"migration":{"schema_version":6,"status":"completed","steps_completed":[],"steps_pending":[]},"anomalies":[],"sessions":[{"id":"remote","source":"codex","user":"alice","invocations":[{"role":"coder","model":"fixture","started_at":null,"completed_at":null,"active_duration_seconds":10,` + first + `,"turns":2,"tokens":{"input":31,"output":2,"cache_read":0,"reasoning":0,"peak_context":31},"cost_usd":1.2500,"cost_evidence":{"state":"observed","known_subtotal_usd":1.2500},"compactions":0,"user_iterations":1},{"role":"tester","model":"fixture","started_at":null,"completed_at":null,"active_duration_seconds":4` + second + `,"turns":1,"tokens":{"input":7,"output":0,"cache_read":0,"reasoning":0,"peak_context":7},"cost_usd":null,"cost_evidence":{"state":"unavailable"},"compactions":0,"user_iterations":0}],"tools":[{"name":"bash","calls":2,"errors":0}],"skills":[{"name":"kept","caller_role":null,"invoked_at":null},{"name":"kept","caller_role":null,"invoked_at":null}],"anomalies":[]},{"id":"empty","source":"opencode","user":"bob","invocations":[],"tools":[],"skills":[],"delegations":[],"anomalies":[]},{"id":"unrecorded","source":"codex","user":"charlie","invocations":[],"tools":[]}]}`)
+	}
+	original := fixture(positive, ","+zero)
+	expected := fixture(`"provisional_seconds":7`, "")
+	var expectedRoot map[string]json.RawMessage
+	if err := json.Unmarshal(expected, &expectedRoot); err != nil {
+		t.Fatal(err)
+	}
+	delete(expectedRoot, "migration")
+	expected, err := json.Marshal(expectedRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, command := range []string{"migrate", "backfill", "backfill_force"} {
+		t.Run(command, func(t *testing.T) {
+			root := t.TempDir()
+			workspace := filepath.Join(root, "TEST-DURATION-CLEANUP")
+			if err := os.MkdirAll(workspace, 0700); err != nil {
+				t.Fatal(err)
+			}
+			path := filepath.Join(workspace, "agentic_metrics.json")
+			if err := adapters.ValidateRuntimeFactLedger(original); err != nil {
+				t.Fatalf("invalid isolated fixture: %v", err)
+			}
+			if err := os.WriteFile(path, original, 0600); err != nil {
+				t.Fatal(err)
+			}
+			if command == "migrate" {
+				report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{WorkspacesDir: root, TargetVersion: domain.CurrentSchemaVersion, Backup: true})
+				if err != nil || report.Migrated != 1 || len(report.Errors) != 0 {
+					t.Fatalf("migration cleanup: %+v %v", report, err)
+				}
+				backup, err := os.ReadFile(path + ".bak")
+				if err != nil || !bytes.Equal(backup, original) {
+					t.Fatalf("lost exact rollback bytes: %v", err)
+				}
+			} else {
+				report, err := backfill.NewEngine().Execute(backfill.BackfillOptions{WorkspacesDir: root, Source: "codex", Force: command == "backfill_force"})
+				if err != nil || report.Updated != 1 || len(report.Warnings) != 0 {
+					t.Fatalf("backfill cleanup: %+v %v", report, err)
+				}
+			}
+			written, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := adapters.ValidateRuntimeFactLedger(written); err != nil {
+				t.Fatal(err)
+			}
+			if bytes.Contains(written, []byte(`"duration_evidence"`)) || bytes.Contains(written, []byte(`"completed_seconds"`)) {
+				t.Fatalf("successful cleanup published retired duration metadata: %s", written)
+			}
+			assertRawCleanupJSONEqual(t, expected, written)
+			var dto adapters.AgenticFactLedgerDTO
+			if err := json.Unmarshal(written, &dto); err != nil {
+				t.Fatal(err)
+			}
+			inv := dto.ToDomain().Sessions[0].Invocations
+			if len(inv) != 2 || inv[0].ActiveDurationSeconds != 10 || inv[0].ProvisionalSeconds != 7 || inv[1].ActiveDurationSeconds != 4 || inv[1].ProvisionalSeconds != 0 {
+				t.Fatalf("cleanup lost recorded numeric portions: %+v", inv)
+			}
+		})
+	}
+}
+
+// Compare raw facts recursively while permitting object member reordering.
+// Scalar lexemes, nullable members, array multiplicity and optional presence remain exact.
+func assertRawCleanupJSONEqual(t *testing.T, expected, actual []byte) {
+	t.Helper()
+	expected, actual = bytes.TrimSpace(expected), bytes.TrimSpace(actual)
+	if len(expected) == 0 || len(actual) == 0 {
+		t.Fatalf("missing JSON: want=%s got=%s", expected, actual)
+	}
+	switch expected[0] {
+	case '{':
+		var want, got map[string]json.RawMessage
+		if err := json.Unmarshal(expected, &want); err != nil {
+			t.Fatal(err)
+		}
+		if err := json.Unmarshal(actual, &got); err != nil {
+			t.Fatal(err)
+		}
+		if len(want) != len(got) {
+			t.Fatalf("raw member count changed: want=%s got=%s", expected, actual)
+		}
+		for key, value := range want {
+			received, exists := got[key]
+			if !exists {
+				t.Fatalf("raw member %s missing: %s", key, actual)
+			}
+			assertRawCleanupJSONEqual(t, value, received)
+		}
+	case '[':
+		var want, got []json.RawMessage
+		if err := json.Unmarshal(expected, &want); err != nil {
+			t.Fatal(err)
+		}
+		if err := json.Unmarshal(actual, &got); err != nil {
+			t.Fatal(err)
+		}
+		if len(want) != len(got) {
+			t.Fatalf("raw array multiplicity changed: want=%s got=%s", expected, actual)
+		}
+		for i := range want {
+			assertRawCleanupJSONEqual(t, want[i], got[i])
+		}
+	default:
+		if !bytes.Equal(expected, actual) {
+			t.Fatalf("raw scalar changed: want=%s got=%s", expected, actual)
+		}
+	}
+}

@@ -1593,6 +1593,168 @@ func TestFullSourceAnomaliesSurviveLeanPersistenceAndPartialRefresh(t *testing.T
 	}
 }
 
+func TestDurationEvidenceRoundTripLegacyAndValidation(t *testing.T) {
+	version := domain.CurrentSchemaVersion
+	ticket, title := "FIX-DURATION", "Portable numeric duration"
+	want := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticket, TicketTitle: &title, Sessions: []domain.SessionFact{{ID: "owner", Source: domain.SourceCodex, User: "alice", Invocations: []domain.InvocationFact{{Role: "coder", Model: "m", ActiveDurationSeconds: 10, ProvisionalSeconds: 7, Tokens: domain.InvocationTokens{Input: 31}}}}}}
+	encoded, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(want))
+	if err != nil {
+		t.Fatal(err)
+	}
+	draft := `"duration_evidence":{"state":"provisional","completed_seconds":3,"provisional_seconds":7,"cutoff":"2026-01-01T00:00:10Z","basis":"codex:turn"}`
+	wire := func(member string) []byte {
+		return []byte(strings.Replace(string(encoded), `"provisional_seconds":7`, member, 1))
+	}
+	for _, tc := range []struct {
+		name, member string
+		portion      int64
+	}{
+		{"original_v6", "", 0},
+		{"explicit_zero", `"provisional_seconds":0`, 0},
+		{"lean", `"provisional_seconds":7`, 7},
+		{"draft", draft, 7},
+		{"equal_dual", `"provisional_seconds":7,` + draft, 7},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			raw := wire(tc.member)
+			if tc.member == "" {
+				raw = bytes.Replace(raw, []byte(",,"), []byte(","), 1)
+				raw = bytes.Replace(raw, []byte("{,"), []byte("{"), 1)
+			}
+			if err := adapters.ValidateRuntimeFactLedger(raw); err != nil {
+				t.Fatal(err)
+			}
+			var dto adapters.AgenticFactLedgerDTO
+			if err := json.Unmarshal(raw, &dto); err != nil {
+				t.Fatal(err)
+			}
+			ledger := dto.ToDomain()
+			inv := ledger.Sessions[0].Invocations[0]
+			if inv.ActiveDurationSeconds != 10 || inv.ProvisionalSeconds != tc.portion || inv.Tokens.Input != 31 {
+				t.Fatalf("numeric/owner fact loss: %+v", ledger)
+			}
+			migrated, err := migration.NewEngine(nil).Migrate(raw, version)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if migrated.Sessions[0].ID != ledger.Sessions[0].ID || migrated.Sessions[0].Source != ledger.Sessions[0].Source || migrated.Sessions[0].User != ledger.Sessions[0].User || !reflect.DeepEqual(migrated.Sessions[0].Invocations, ledger.Sessions[0].Invocations) {
+				t.Fatalf("migration changed normalized owner: %+v", migrated)
+			}
+			canonical, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(migrated))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if bytes.Contains(canonical, []byte(`"duration_evidence"`)) || bytes.Contains(canonical, []byte(`"duration_reasoning"`)) || bytes.Contains(canonical, []byte(`"completed_seconds"`)) {
+				t.Fatalf("canonical output kept retired metadata: %s", canonical)
+			}
+			if bytes.Contains(canonical, []byte(`"provisional_seconds"`)) != (tc.portion > 0) {
+				t.Fatalf("nonpositive provisional not omitted: %s", canonical)
+			}
+			var reloaded adapters.AgenticFactLedgerDTO
+			if err := json.Unmarshal(canonical, &reloaded); err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(reloaded.ToDomain().Sessions[0].Invocations, ledger.Sessions[0].Invocations) {
+				t.Fatal("save/reload changed numeric facts or identity")
+			}
+		})
+	}
+	invalid := map[string]string{
+		"negative": `"provisional_seconds":-1`, "fractional": `"provisional_seconds":1.5`, "null": `"provisional_seconds":null`, "string": `"provisional_seconds":"7"`,
+		"over_total": `"provisional_seconds":11`, "unsafe_integer": `"provisional_seconds":9007199254740992`,
+		"dual_conflict": `"provisional_seconds":6,` + draft, "dual_zero_conflict": `"provisional_seconds":0,` + draft,
+		"flat_key_alias":                `"Provisional_Seconds":7`,
+		"draft_key_alias":               strings.Replace(draft, `"duration_evidence"`, `"Duration_Evidence"`, 1),
+		"total_key_alias":               `"Active_Duration_Seconds":10`,
+		"alias_conflicting_legacy_zero": `"Provisional_Seconds":7,"duration_evidence":{"state":"complete","completed_seconds":10,"provisional_seconds":0,"basis":"codex:turn"}`,
+	}
+	for name, replacement := range map[string][2]string{
+		"legacy_negative":                  {`"provisional_seconds":7`, `"provisional_seconds":-7`},
+		"legacy_sum":                       {`"completed_seconds":3`, `"completed_seconds":4`},
+		"legacy_bad_cutoff":                {`2026-01-01T00:00:10Z`, `not-a-time`},
+		"legacy_missing_cutoff":            {`"cutoff":"2026-01-01T00:00:10Z",`, ``},
+		"legacy_complete_with_provisional": {`"state":"provisional"`, `"state":"complete"`},
+		"legacy_unknown_state":             {`"state":"provisional"`, `"state":"invented"`},
+		"legacy_missing_basis":             {`"basis":"codex:turn"`, `"basis":""`},
+		"legacy_blank_basis":               {`"basis":"codex:turn"`, `"basis":"  "`},
+		"legacy_unknown_member":            {`"basis":"codex:turn"`, `"basis":"codex:turn","invented":true`},
+	} {
+		invalid[name] = strings.Replace(draft, replacement[0], replacement[1], 1)
+	}
+	for _, total := range []string{"-1", "null", "1.5", "9007199254740992"} {
+		t.Run("invalid_total_"+total, func(t *testing.T) {
+			raw := bytes.Replace(encoded, []byte(`"active_duration_seconds":10`), []byte(`"active_duration_seconds":`+total), 1)
+			if err := adapters.ValidateRuntimeFactLedger(raw); err == nil {
+				t.Fatalf("invalid total accepted: %s", raw)
+			}
+			if _, err := migration.NewEngine(nil).Migrate(raw, version); err == nil {
+				t.Fatalf("migration accepted invalid total %s", total)
+			}
+		})
+	}
+	for name, member := range invalid {
+		t.Run(name, func(t *testing.T) {
+			raw := wire(member)
+			if err := adapters.ValidateRuntimeFactLedger(raw); err == nil {
+				t.Fatalf("invalid duration accepted: %s", raw)
+			}
+			var dto adapters.AgenticFactLedgerDTO
+			if err := json.Unmarshal(raw, &dto); err == nil {
+				t.Fatal("DTO accepted invalid duration")
+			}
+			if _, err := migration.NewEngine(nil).Migrate(raw, version); err == nil {
+				t.Fatal("migration accepted invalid duration")
+			}
+		})
+	}
+}
+
+func TestRetainedDraftDurationNormalizesWithoutMutatingBaseline(t *testing.T) {
+	raw := []byte(`{"schema_version":6,"ticket_id":"FIX-HISTORY","ticket_title":"Retained duration","sessions":[{"id":"remote","source":"codex","user":"alice","invocations":[{"role":"coder","model":"m","started_at":null,"completed_at":null,"active_duration_seconds":10,"duration_evidence":{"state":"provisional","completed_seconds":3,"provisional_seconds":7,"cutoff":"2026-01-01T00:00:10Z","basis":"codex:turn"},"turns":2,"tokens":{"input":31,"output":2,"cache_read":0,"reasoning":0,"peak_context":31},"cost_usd":null,"cost_evidence":{"state":"unavailable"},"compactions":0,"user_iterations":1}],"tools":[],"anomalies":[]}]}`)
+	existing, err := adapters.DecodeExistingFactLedger(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	before, err := json.Marshal(existing.PersistedSessions)
+	if err != nil {
+		t.Fatal(err)
+	}
+	normalized, err := adapters.NormalizeHistorySessionForPublication(existing.PersistedSessions[0], domain.CurrentSchemaVersion)
+	if err != nil {
+		t.Fatal(err)
+	}
+	after, _ := json.Marshal(existing.PersistedSessions)
+	if !bytes.Equal(before, after) {
+		t.Fatal("history normalization mutated retained baseline")
+	}
+	if !reflect.DeepEqual(normalized.ToDomain(), existing.Sessions[0]) {
+		t.Fatal("history normalization changed owned facts")
+	}
+	ledger := domain.AgenticFactLedger{SchemaVersion: existing.SchemaVersion, TicketID: existing.TicketID, TicketTitle: existing.TicketTitle, Sessions: existing.Sessions}
+	path := filepath.Join(t.TempDir(), "copied", "agentic_metrics.json")
+	if err := adapters.SaveFactLedgerPreservingHistory(path, ledger, existing.PersistedSessions); err != nil {
+		t.Fatal(err)
+	}
+	canonical, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(canonical, []byte(`"duration_evidence"`)) || !bytes.Contains(canonical, []byte(`"provisional_seconds": 7`)) {
+		t.Fatalf("retained draft not canonicalized: %s", canonical)
+	}
+	reloaded, err := adapters.DecodeExistingFactLedger(canonical)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(reloaded.Sessions, existing.Sessions) {
+		t.Fatalf("history save/reload lost numeric or identity facts: %+v", reloaded.Sessions)
+	}
+	after, _ = json.Marshal(existing.PersistedSessions)
+	if !bytes.Equal(before, after) {
+		t.Fatal("history publication mutated baseline")
+	}
+}
+
 func TestCurrentLedgerGenerationPolicyReadBoundary(t *testing.T) {
 	for _, tc := range []struct {
 		name, policy string
@@ -1774,12 +1936,12 @@ func TestOptionalCollectionPresenceSurvivesCanonicalRoundTrip(t *testing.T) {
 
 func TestOptionalCollectionsRejectNullWithoutChangingAbsenceMeaning(t *testing.T) {
 	for _, category := range []string{"skills", "delegations", "anomalies"} {
-		raw := `{"schema_version":6,"sessions":[{"id":"owner","source":"codex","user":"tester","invocations":[],"tools":[],"` + category + `":null}]}`
+		raw := `{"schema_version":6,"ticket_id":"TEST-PRESENCE","sessions":[{"id":"owner","source":"codex","user":"tester","invocations":[],"tools":[],"` + category + `":null}]}`
 		if err := adapters.ValidateRuntimeFactLedger([]byte(raw)); err == nil {
 			t.Fatalf("null %s accepted as absent/empty", category)
 		}
 	}
-	raw := `{"schema_version":6,"sessions":[],"anomalies":null}`
+	raw := `{"schema_version":6,"ticket_id":"TEST-PRESENCE","sessions":[],"anomalies":null}`
 	if err := adapters.ValidateRuntimeFactLedger([]byte(raw)); err == nil {
 		t.Fatal("null root analysis accepted as absent/empty")
 	}

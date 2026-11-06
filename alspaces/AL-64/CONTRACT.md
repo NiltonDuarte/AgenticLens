@@ -1,0 +1,45 @@
+# AL-64 technical contract
+
+Status: Proposed; implementation requires explicit user approval. Iteration 01.
+
+## Purpose and boundaries
+
+Fix Codex active-turn undercounting and independently investigate and fix confirmed equivalent OpenCode schema v1/v2 defects. Generation during source-proven unfinished activity must report elapsed activity through an explicit snapshot cutoff, distinguish provisional contributions from completed measurements, and converge after completion without duplicate duration or sessions. This scope includes extraction, generation, registered capture, source-backed backfill, persistence, API/CLI and dashboard projections. It does not restore the retired standalone live-inspector walkthrough or change ticket attribution.
+
+The baseline is a84adbe5be46c2ef52ede0987a417562715d38e1. The initial checkout was clean. The orchestrator owns integration and delivery; application changes belong to the coder, regression coverage to the tester, and independent audit to focused reviewers. The configured workspace is alspaces/AL-64. Historical ticket ledgers, including AL-55, are not fixtures or cleanup targets.
+
+## Evidence and investigation boundary
+
+The supplied AL-55 observation is retained as user evidence, not a newly reproduced runtime result: root 01a19267-636b-7d61-85c6-db8d3d3eba77 began its second turn at 2026-10-31T15:11:36.949Z; generation ran at 15:29:26.541Z, ledger update was 15:29:28.051249Z, and completion was 15:30:26.217Z. Refresh changed root active seconds from 287 to 1417 and total from 2058 to 3188 while four children remained unchanged. The 1130-second delta corresponds to the newly completed turn. Preserve this distinction from duplicate accumulation.
+
+Codex source inspection confirms that readEvent in backend/internal/adapters/codex/rollout.go accrues duration only when lifecycle completion matches a recorded start. finalizeFacts projects model accumulated milliseconds; remaining turnStarts do not contribute. This corroborates the supplied diagnosis.
+
+OpenCode must be assessed by its own semantics. Schema v1 sums assistant payload time.created to time.completed only; missing completion contributes no interval. Schema v2 uses assistant payload time.completed when present, otherwise message time_updated, treating that fallback as completed duration. Neither path currently exposes provisional coverage. These are confirmed calculation paths, not yet proof that each missing-completion record denotes currently executing activity. v2 also rejects running/pending tool states, which may prevent extraction of a supported active snapshot; investigate before altering fail-closed handling.
+
+Each family must have an investigation record specifying source schema/version, authoritative start/activity/terminal boundaries, observed records, current and corrected generated/persisted values, outcome classification and unexecuted checks. Validate native status/idle/interruption semantics before treating an unpaired start or assistant creation as still active. Source evidence and hypotheses stay separate. An unavailable active-runtime environment remains unverified even when deterministic fixtures pass.
+
+## Duration semantics
+
+The snapshot cutoff is supplied as immutable data by the imperative boundary. Capture it once for a coherent generation or refresh operation and propagate it through affected extraction paths; the domain must never read a clock. Read source data consistently and exclude future activity from duration. A completion after the cutoff cannot make the interval completed at that cutoff. For mutable source snapshots lacking historical as-of fields, state the observation limitation explicitly rather than claim historical reconstruction.
+
+Preserve existing measured completed intervals and source-specific assistant-message versus turn accounting. Codex measures lifecycle turns; OpenCode currently measures assistant message intervals. Do not silently change these into whole-session wall time, merge sequential message gaps into activity, duplicate mirrored records, or change additive child rollups into wall-clock unions. Retain the current rounding convention at the established per-invocation aggregation boundary and make provisional/completed component totals reconcile to the stored integer total.
+
+For authoritative unfinished activity, count from the proven interval start to the cutoff, subject to a proven earlier terminal boundary. An explicit interruption, idle/end marker, replaced activity or invalid lifecycle must not extend indefinitely to the cutoff. Missing completion alone does not prove ongoing activity. Ambiguous, orphaned, stale-without-current-activity-proof, negative or unsupported sequences preserve supported known duration and report their limitation. Never fabricate duration or a completed_at value from the cutoff or generic time_updated.
+
+active_duration_seconds remains the backward-compatible numeric total of supported measured and provisional contributions. Add optional, typed compact invocation duration evidence describing coverage state, known completed and provisional seconds, the provisional snapshot cutoff, source schema/boundary basis and limitation reason where needed. The exact field names may be selected during implementation within these semantics. Completed, provisional and unsupported/partial coverage must be distinguishable; missing evidence on existing facts means legacy coverage unknown, not verified completed and not measured zero. Mixed known contributions and unsupported activity must remain expressible.
+
+Only compact accounting evidence is durable. Do not persist raw source transcripts, an event stream or a parallel lifecycle journal. Complete authoritative source refresh can reconstruct and replace a session's provisional contribution without retaining every native event. Preserve the immutable recorded cutoff when sources are unavailable; ordinary reads must never advance it using the current clock.
+
+Derived workflow/session/ticket/project and comparison/progression projections expose provisional subtotal and coverage/cutoff information sufficient to prevent their numeric totals appearing wholly completed. Mixed cutoffs remain attributable to their stored session snapshots; do not manufacture a single globally observed cutoff. CLI/Markdown and visible dashboard duration consumers label provisional/unknown coverage and provide an accessible explanation. Legacy inputs remain displayable with unchanged numeric values and honest unknown coverage.
+
+## Persistence, compatibility and refresh
+
+Prefer additive optional evidence within current schema v6. Expand domain, DTO validation, serialization and TypeScript readers before emitting it; preserve support for existing valid v6 facts lacking the extension. Validate nonnegative, internally coherent values and valid cutoff/state combinations. Source refresh replaces the exact successfully extracted owner's snapshot, never adds its new cumulative duration to its old one. If compatibility inspection proves a version transition necessary, use expand-contract, preserve every valid fact, and record why; a destructive migration or new authenticity requirement needs renewed scope approval.
+
+The canonical portable ledger contract in TECHNICAL_GUIDELINES.md governs all refreshes. Preserve unavailable roots/children, other harnesses/developers and unrelated sessions; successful complete local extraction remains authoritative even if totals reduce. Repeated backfill of unchanged completed data is stable. Repeated active refresh at a fixed cutoff is stable, while a later cutoff advances only source-proven active contributions. Completion refresh removes/replaces provisional evidence and recomputes additive rollups without changing unchanged children. --recompute-db performs source refresh; --force alone is not an acceptable demonstration.
+
+## Architecture and acceptance
+
+Go 1.23+ and strict TypeScript 5.x, FCIS, zero any/interface{} and zero emojis apply. Domain calculations remain pure. Source parsing, clocks, SQLite/file I/O and source diagnostics stay in adapters/CLI. Frontend assets must be rebuilt canonically and the standalone embedded tree/binary verified.
+
+Acceptance requires independent family evidence and deterministic generation-to-refresh regressions for Codex, v1 and v2, including an active root with children, future/invalid/terminal boundaries, repeated snapshots and unavailable-source retention. Reuse existing multi-machine and owner-replacement coverage when unchanged rather than duplicate it. Unsupported evidence is an explicit truthful result, not permission to leave a confirmed supported-path accounting defect unfixed. Required make verification, focused model/persona review, consolidated approval, ticket lifecycle updates and a reviewable PR complete delivery. Telemetry is generated only at the final delivery step with explicit source codex and ticket type fix; source/root/child extraction completeness must be inspected, not inferred from exit status.

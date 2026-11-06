@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"agenticlens/internal/adapters/codex"
 	"agenticlens/internal/domain"
@@ -823,5 +824,106 @@ func TestCodexMissingRequestedTypeRoleAndTimeRemainNullableOccurrences(t *testin
 	skill, delegation := sessions[0].Skills[0], sessions[0].Delegations[0]
 	if skill.CallerRole != nil || skill.InvokedAt != nil || delegation.AgentType != nil || delegation.InvokedAt != nil || delegation.Description != "" || delegation.ChildSession != "" {
 		t.Fatalf("source defaults invented: %+v %+v", skill, delegation)
+	}
+}
+
+func TestRolloutActiveDurationCutoffAndTerminalBoundaries(t *testing.T) {
+	input := `{"timestamp":"2026-01-01T00:00:00Z","type":"session_meta","payload":{"id":"active-root","source":"cli"}}
+{"timestamp":"2026-01-01T00:00:01Z","type":"event_msg","payload":{"type":"task_started","turn_id":"a"}}
+{"timestamp":"2026-01-01T00:00:05Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"a"}}
+{"timestamp":"2026-01-01T00:00:10Z","type":"event_msg","payload":{"type":"task_started","turn_id":"b"}}
+`
+	for _, tc := range []struct {
+		name, tail                 string
+		cutoff, total, provisional int64
+		invalid                    bool
+	}{
+		{"open", "", 20, 14, 10, false},
+		{"advance", "", 30, 24, 20, false},
+		{"future_completion", `{"timestamp":"2026-01-01T00:00:40Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"b"}}`, 20, 14, 10, false},
+		{"complete", `{"timestamp":"2026-01-01T00:00:40Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"b"}}`, 50, 34, 0, false},
+		{"abort", `{"timestamp":"2026-01-01T00:00:15Z","type":"event_msg","payload":{"type":"turn_aborted","turn_id":"b"}}`, 20, 9, 0, false},
+		{"reversed_completion", `{"timestamp":"2026-01-01T00:00:09Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"b"}}`, 20, 4, 0, true},
+		{"malformed_completion", `{"timestamp":"not-a-date","type":"event_msg","payload":{"type":"task_complete","turn_id":"b"}}`, 20, 4, 0, true},
+		{"malformed_start", `{"timestamp":"2026-01-01T00:00:15Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"b"}}`, 20, 4, 0, true},
+		{"missing_start", `{"timestamp":"2026-01-01T00:00:15Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"b"}}`, 20, 4, 0, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cutoff := time.Date(2026, 1, 1, 0, 0, int(tc.cutoff), 0, time.UTC)
+			records := input
+			switch tc.name {
+			case "malformed_start":
+				records = strings.Replace(input, `"timestamp":"2026-01-01T00:00:10Z"`, `"timestamp":"not-a-date"`, 1)
+			case "missing_start":
+				records = strings.Replace(input, `"timestamp":"2026-01-01T00:00:10Z",`, "", 1)
+			}
+			for range 2 {
+				tr, err := codex.ParseRolloutAt(strings.NewReader(records+tc.tail), cutoff)
+				if err != nil {
+					t.Fatal(err)
+				}
+				inv := tr.Invocations[0]
+				if inv.ActiveDurationSeconds != tc.total || inv.ProvisionalSeconds != tc.provisional || tr.ActiveSeconds != tc.total {
+					t.Fatalf("duration %+v, transcript total %d", inv, tr.ActiveSeconds)
+				}
+				if tc.invalid {
+					if inv.ProvisionalSeconds != 0 || inv.CompletedAt == nil || *inv.CompletedAt != "2026-01-01T00:00:05Z" {
+						t.Fatalf("invalid lifecycle invented provisional/completed boundary: %+v", inv)
+					}
+					if len(tr.Warnings) == 0 {
+						t.Fatal("invalid lifecycle lost ordinary source diagnostic")
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestCodexCheckpointNativeIntervalsBeforeModelGrouping(t *testing.T) {
+	cutoff := time.Date(2026, 1, 1, 0, 10, 0, 0, time.UTC)
+	for _, tc := range []struct {
+		name         string
+		starts       []int64
+		wantCases    []domain.CheckpointCase
+		wantSubtotal int64
+	}{
+		{"rounded_short", []int64{179999}, nil, 180},
+		{"exact_threshold", []int64{180000}, []domain.CheckpointCase{domain.CheckpointUnknownCaller}, 180},
+		{"missing_native_turn_id", []int64{180000}, []domain.CheckpointCase{domain.CheckpointUnavailableInterval}, 180},
+		{"future_native_completion", []int64{180000}, []domain.CheckpointCase{domain.CheckpointUnavailableInterval}, 180},
+		{"superseded_short_does_not_pool", []int64{100000, 90000}, nil, 90},
+		{"superseded_long_keeps_partial_qualification", []int64{200000, 180000}, []domain.CheckpointCase{domain.CheckpointUnavailableInterval, domain.CheckpointUnknownCaller}, 180},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			input := `{"timestamp":"2026-01-01T00:00:00Z","type":"session_meta","payload":{"id":"owner"}}` + "\n"
+			for i, age := range tc.starts {
+				timestamp := cutoff.Add(-time.Duration(age) * time.Millisecond).Format(time.RFC3339Nano)
+				input += fmt.Sprintf(`{"timestamp":%q,"type":"turn_context","payload":{"model":"m","turn_id":"native-%d"}}`+"\n", timestamp, i)
+				input += fmt.Sprintf(`{"timestamp":%q,"type":"event_msg","payload":{"type":"task_started","turn_id":"native-%d"}}`+"\n", timestamp, i)
+			}
+			if tc.name == "missing_native_turn_id" {
+				input = strings.ReplaceAll(input, `,"turn_id":"native-0"`, "")
+			}
+			if tc.name == "future_native_completion" {
+				input += fmt.Sprintf(`{"timestamp":%q,"type":"event_msg","payload":{"type":"task_complete","turn_id":"native-0"}}`+"\n", cutoff.Add(time.Second).Format(time.RFC3339Nano))
+			}
+			tr, err := codex.ParseRolloutAt(strings.NewReader(input), cutoff)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(tr.Invocations) != 1 || tr.Invocations[0].ProvisionalSeconds != tc.wantSubtotal {
+				t.Fatalf("numeric grouping changed: %+v", tr.Invocations)
+			}
+			session := domain.SessionFact{ID: "owner", Source: domain.SourceCodex, Invocations: tr.Invocations}
+			got := domain.SelectCheckpointFeedback([]domain.SessionFact{session}, tr.CheckpointEvidence, domain.CheckpointCaller{}, cutoff, 180)
+			if len(got) != len(tc.wantCases) {
+				t.Fatalf("native age/subtotal classification: %+v", got)
+			}
+			for i, item := range got {
+				if item.Case != tc.wantCases[i] || (item.Case != domain.CheckpointUnavailableInterval && item.Interval.ID == "") || item.ProvisionalSeconds != tc.wantSubtotal {
+					t.Fatalf("lost native identity or subtotal: %+v", got)
+				}
+			}
+		})
 	}
 }

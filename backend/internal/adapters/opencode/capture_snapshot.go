@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"agenticlens/internal/domain"
 )
@@ -12,12 +13,20 @@ import (
 // CaptureSessionSnapshot reads one exact owner from the selected schema family.
 // The caller supplies a dedicated read-only DB. A single connection keeps the
 // preflight and extraction in one consistent SQLite read transaction.
-func CaptureSessionSnapshot(ctx context.Context, db *sql.DB, id, user string, budget int64, source ...*domain.SourceEvents) (sessions []domain.SessionFact, bytes int64, updated string, err error) {
-	return CaptureSessionSnapshotWithPolicy(ctx, db, id, user, budget, nil, source...)
+func CaptureSessionSnapshot(ctx context.Context, db *sql.DB, id, user string, budget int64, source ...*domain.SourceEvents) ([]domain.SessionFact, int64, string, error) {
+	return CaptureSessionSnapshotWithPolicyAt(ctx, db, id, user, budget, nil, time.Now().UTC(), source...)
 }
 
-// CaptureSessionSnapshotWithPolicy is the generation-specific analysis boundary.
-func CaptureSessionSnapshotWithPolicy(ctx context.Context, db *sql.DB, id, user string, budget int64, policy *domain.GenerationPolicy, source ...*domain.SourceEvents) (sessions []domain.SessionFact, bytes int64, updated string, err error) {
+func CaptureSessionSnapshotAt(ctx context.Context, db *sql.DB, id, user string, budget int64, cutoff time.Time, source ...*domain.SourceEvents) ([]domain.SessionFact, int64, string, error) {
+	return CaptureSessionSnapshotWithPolicyAt(ctx, db, id, user, budget, nil, cutoff, source...)
+}
+
+func CaptureSessionSnapshotWithPolicy(ctx context.Context, db *sql.DB, id, user string, budget int64, policy *domain.GenerationPolicy, source ...*domain.SourceEvents) ([]domain.SessionFact, int64, string, error) {
+	return CaptureSessionSnapshotWithPolicyAt(ctx, db, id, user, budget, policy, time.Now().UTC(), source...)
+}
+
+// CaptureSessionSnapshotWithPolicyAt keeps optional analysis and duration cutoff request-local.
+func CaptureSessionSnapshotWithPolicyAt(ctx context.Context, db *sql.DB, id, user string, budget int64, policy *domain.GenerationPolicy, cutoff time.Time, source ...*domain.SourceEvents) (sessions []domain.SessionFact, bytes int64, updated string, err error) {
 	if _, err = sanitizeSessionID(id); err != nil {
 		return
 	}
@@ -65,17 +74,18 @@ func CaptureSessionSnapshotWithPolicy(ctx context.Context, db *sql.DB, id, user 
 		return
 	}
 	var events []domain.EventFact
+	var checkpointEvidence []domain.CheckpointInvocationEvidence
 	var sink *[]domain.EventFact
 	if len(source) > 0 {
 		sink = &events
 	}
 	if family == schemaFamilyV2 {
-		sessions, _, _, err = extractSchemaV2SessionsWithPolicy(db, []string{id}, user, nil, true, sink, policy, true)
+		sessions, _, _, err = extractSchemaV2SessionsWithCheckpointAt(db, []string{id}, user, nil, true, sink, policy, cutoff, &checkpointEvidence, true)
 	} else {
-		sessions, _, _, err = extractSchemaV1SessionsWithPolicy(db, []string{id}, user, nil, true, sink, policy, true)
+		sessions, _, _, err = extractSchemaV1SessionsWithCheckpointAt(db, []string{id}, user, nil, true, sink, policy, cutoff, &checkpointEvidence, true)
 	}
 	if err == nil && len(source) > 0 {
-		fresh := domain.SourceEvents{Events: events}
+		fresh := domain.SourceEvents{Events: events, CheckpointEvidence: checkpointEvidence}
 		for _, owner := range sessions {
 			fresh.CompleteSessionIDs = append(fresh.CompleteSessionIDs, owner.ID)
 		}
