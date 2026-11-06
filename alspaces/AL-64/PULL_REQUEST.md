@@ -6,6 +6,8 @@ Explicit generation now reports long provisional activity on stderr, defaulting 
 
 Generic native caller/current-interval handoff remains unverified. Production uses qualified F03/F04 feedback; stronger F01/F02/F05 wording is gated without claiming native availability. No automatic continuation, session poke, fabricated completion, frontend feedback or persisted reasoning is added. Optional diagnostic failure leaves successful publication successful.
 
+Follow-up AL-78 records that emitted CLI feedback did not lead the observed agent to complete its open interval and refresh in a subsequent turn. It requires independent Codex and OpenCode investigation without T3. The proposed development capture installation was withdrawn; no installer implementation is included.
+
 The branch preserves optional metric omission and shared-session warnings. Stored open intervals remain provisional estimates and can outlive their process. Upgrade readers before expanded v6 scalar writes; older strict readers may reject them. Existing unrelated delegation-retention and legacy-null debt remains documented. No release is authorized.
 
 See the [technical baseline](alspaces/AL-64/CONTRACT.md), [numeric plan](alspaces/AL-64/iterations/03/PLAN.md), [checkpoint plan](alspaces/AL-64/iterations/04/PLAN.md) and [work summary](alspaces/AL-64/SUMMARY.md).

@@ -6,6 +6,14 @@ Reconciled 2026-11-05 against merged `origin/main` at `03f5b05d` and open PRs. S
 
 ## Ready
 
+- **AL-78**: Make open-turn feedback effective across Codex and OpenCode
+  - **Subsystem**: CLI Feedback / Native Harness Lifecycle / Capture and Metrics Refresh
+  - **Priority**: P2
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: [AL-78 make open turn feedback effective across codex and opencode.md](to-do/AL-78%20make%20open%20turn%20feedback%20effective%20across%20codex%20and%20opencode.md)
+
 - **AL-63**: Audit source capability parity across OpenCode v1, OpenCode v2, and Codex
   - **Subsystem**: Multi-source ingestion / hydration / recovery
   - **Status**: Ready
