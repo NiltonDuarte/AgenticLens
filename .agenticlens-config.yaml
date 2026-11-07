@@ -7,7 +7,7 @@
 project_name: AgenticLens
 # Exact shared release authority. Install explicitly; dispatch never downloads.
 agenticlens:
-  version: v2.0.0-rc.111+99fbcd7
+  version: v3.0.0-rc.131+03f5b05-2-g57a3503e
 telemetry:
   capture:
     state_dir: ~/.agenticlens/state
