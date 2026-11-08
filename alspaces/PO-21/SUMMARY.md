@@ -4,7 +4,7 @@ Status: Product specification and development ticket authored; application imple
 
 ## Outcome and scope
 
-Created [AL-82](../plan/to-do/AL-82%20add%20metric%20tags%20filters%20and%20comparison%20coloring.md), Ready with no prerequisites, and registered it in the roadmap. [SPEC.md](SPEC.md) defines shared/local/CLI key-value tags, per-key precedence, persisted owner metadata, default-unset dashboard filters and comparison coloring with visible Missing/Mixed categories.
+Created [AL-82](../plan/to-do/AL-82%20filter%20and%20compare%20metrics%20by%20tags.md), Ready with no prerequisites, and registered it in the roadmap. [SPEC.md](SPEC.md) defines shared/local/CLI key-value tags, per-key precedence, persisted owner metadata, default-unset dashboard filters and comparison coloring with visible Missing/Mixed categories.
 
 The user invoked agentic-lens-po to replace an unapproved user-attribution proposal with additive tags. The earlier developer contract and iteration plans were removed at the user's request. Implementation must start in a separate developer session; this session changed no application code, tests, runtime scripts or schemas.
 

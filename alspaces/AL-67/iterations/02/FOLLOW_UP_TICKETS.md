@@ -4,13 +4,13 @@ All twelve assessment findings have one tracking owner. Four new tickets are Rea
 
 | Ticket | Plain-language issue | Assessment findings |
 | --- | --- | --- |
-| [FIX-18](../../../plan/to-do/FIX-18%20report%20unsupported%20live%20telemetry%20schemas%20accurately.md) | A v2 database can be announced as live-active even though live queries need v1 tables. Report the actual capability without breaking historical traces. | F03 |
-| [FIX-19](../../../plan/to-do/FIX-19%20reject%20ambiguous%20codex%20owner%20snapshots.md) | An active rollout and its archive copy can be counted as two cumulative snapshots of one session. Diagnose ambiguous owners instead of doubling facts. | F04 |
-| [FIX-20](../../../plan/to-do/FIX-20%20cancel%20native%20source%20reads%20with%20their%20callers.md) | Cancelling a request does not reliably stop the SQL/file read already in progress. Propagate cancellation and release resources while preserving history. | F06 |
-| [REV-7](../../../plan/to-do/REV-7%20review%20shared%20source%20read%20guarantees.md) | Investigate inconsistent source-read rules, snapshot boundaries and tied-row ordering before deciding on small shared interfaces. | F07, F08, F09, F12 |
-| [AL-70, existing](../../../plan/to-do/AL-70%20configuration%20paths%20and%20ticket%20identity.md) | Generate, server and backfill can search different stores for the same configuration. Keep the configuration fix and its no-fallback/composition tests together. | F01, F02, F11 |
-| [AL-69, existing](../../../plan/to-do/AL-69%20telemetry%20accuracy%20and%20preservation.md) | Child lookup failure currently looks like no children. Preserve useful trace content and expose the unavailable relationship lookup. | F05 |
-| [AL-74, existing](../../../plan/to-do/AL-74%20test%20reliability%20and%20unused%20code%20cleanup.md) | Column-omission tests always fail the mixed-schema guard, so they can miss a broken column check. Keep the oracle repair in its existing ticket. | F10 |
+| [FIX-18](../../../plan/to-do/FIX-18%20report%20unsupported%20live%20telemetry%20accurately.md) | A v2 database can be announced as live-active even though live queries need v1 tables. Report the actual capability without breaking historical traces. | F03 |
+| [FIX-19](../../../plan/to-do/FIX-19%20reject%20ambiguous%20codex%20session%20snapshots.md) | An active rollout and its archive copy can be counted as two cumulative snapshots of one session. Diagnose ambiguous owners instead of doubling facts. | F04 |
+| [FIX-20](../../../plan/to-do/FIX-20%20stop%20source%20reads%20when%20callers%20cancel.md) | Cancelling a request does not reliably stop the SQL/file read already in progress. Propagate cancellation and release resources while preserving history. | F06 |
+| [REV-7](../../../plan/to-do/REV-7%20review%20source%20read%20guarantees.md) | Investigate inconsistent source-read rules, snapshot boundaries and tied-row ordering before deciding on small shared interfaces. | F07, F08, F09, F12 |
+| [AL-70, existing](../../../plan/to-do/AL-70%20honor%20configuration%20paths%20and%20ticket%20identity.md) | Generate, server and backfill can search different stores for the same configuration. Keep the configuration fix and its no-fallback/composition tests together. | F01, F02, F11 |
+| [AL-69, existing](../../../plan/to-do/AL-69%20preserve%20accurate%20telemetry%20and%20evidence.md) | Child lookup failure currently looks like no children. Preserve useful trace content and expose the unavailable relationship lookup. | F05 |
+| [AL-74, existing](../../../plan/to-do/AL-74%20make%20regression%20checks%20reliable%20and%20remove%20unused%20code.md) | Column-omission tests always fail the mixed-schema guard, so they can miss a broken column check. Keep the oracle repair in its existing ticket. | F10 |
 
 Examples in the tickets are illustrative source counterexamples, not invented production incidents. In particular, one real invocation copied into two files must not become two invocations; distinct real repeated invocations must remain distinct.
 

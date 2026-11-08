@@ -27,9 +27,12 @@ a separate development session.
    review in one session. Declare dependencies explicitly. For foundational schema
    refactors, plan expand, migrate callers in batches, then contract.
 4. Generate tickets with [the ticket template](templates/TICKET_TEMPLATE.txt).
-   Allocate unused sequential configured IDs. Preserve its title convention and
-   status/dependency fields; put goal/context before routing metadata. Link shared
-   requirements precisely while keeping each ticket understandable alone. Include
+   Allocate unused sequential configured IDs. Use its Markdown headings and short
+   outcome title. Keep status and dependency metadata only in `plan/TICKETS.md`,
+   never repeated in ticket specifications. Do not add Work type, Origin or a
+   standard metadata block. Priority is optional, only in `plan/TICKETS.md`, and
+   only when it expresses a deliberate ordering decision; never fill it by default.
+   Link shared requirements precisely while keeping each ticket understandable alone. Include
    related-owner boundaries and ticket-specific evidence only when necessary;
    do not copy standard testing, approval, telemetry or PR checklists.
 
@@ -58,8 +61,8 @@ with a distinct purpose. State acceptance once in its owning spec/ticket.
 | Artifact | Content | Usual prose length |
 | --- | --- | --- |
 | `PO-#/SPEC.md` | Shared initiative goal, context, expected behavior/acceptance and delivery dependencies; technical notes last. | 300–600 words |
-| `plan/to-do/<PREFIX>-# <slug>.md` | Ticket-specific goal, context, observable acceptance, minimal routing fields and optional technical notes. | 200–400 words |
-| `plan/TICKETS.md` | Shared execution tiers and adjacency lists: status, Blocked by/Blocks and spec links, without copied requirements. | One concise entry per active ticket |
+| `plan/to-do/<PREFIX>-# <slug>.md` | Ticket-specific goal, context, observable acceptance and optional technical notes; no duplicated roadmap metadata. | 200–400 words |
+| `plan/TICKETS.md` | Shared execution tiers and adjacency lists: status, Blocked by/Blocks and spec links, without copied requirements; priority only when explicitly useful. | One concise entry per active ticket |
 | `PO-#/SUMMARY.md` | Planning outcome, key decisions, ticket readiness, verification and open questions. | 150–300 words before metrics |
 | `PO-#/PULL_REQUEST.md` | Conventional title first; problem, resulting plan, validation and open decisions; link spec/summary. | Usually 100–200 words; at most 3000 characters |
 | `PO-#/agentic_metrics.json` | Final session ledger with ticket type `docs`; rendered metrics follow summary. | Structured output |
