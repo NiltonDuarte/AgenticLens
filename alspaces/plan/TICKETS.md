@@ -4,12 +4,6 @@ Active tickets live in `to-do/`; completed specifications move to `done/` and le
 
 Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946` on 2026-11-08. Historical evidence and previously accepted product decisions remain authoritative within their stated limits. Existing IDs and accepted ticket groupings are preserved across earlier batches.
 
-## In Progress
-
-- **AL-69**: Preserve accurate telemetry and evidence
-  - **Status**: In Progress; **Blocked by**: None; **Blocks**: None
-  - **File**: [AL-69](to-do/AL-69%20preserve%20accurate%20telemetry%20and%20evidence.md)
-
 ## Ready
 
 - **AL-63**: Verify source capabilities across harnesses

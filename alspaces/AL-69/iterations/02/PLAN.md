@@ -20,7 +20,7 @@ Use the iteration 01 behavior/data/architecture/test review matrix under both co
 
 ## Configuration slice evidence
 
-Configuration creation/writer/loader implementation and adversarial tests are complete. Tested baseline is `eb7d169c7f18fb935d4c2ceac998d4eca2ac36f4` plus source/config/test diff `fb3efe3d61397d21d202dfc4acd0979b95d428cc871b6029f4eb9904a345ccf9`. Separate coder and tester preserved ownership. Actual configuration/domain/CLI checks, parent full `make`, canonical asset preparation and standalone Linux binary execution passed; [SUMMARY.md](../../SUMMARY.md) owns command/results and environment limits. No final review or upstream integration is claimed. All other AL-69 implementation, including consuming the new values in anomaly evaluation, remains pending.
+Configuration creation/writer/loader implementation and adversarial tests are complete. Tested baseline is `eb7d169c7f18fb935d4c2ceac998d4eca2ac36f4` plus source/config/test diff `fb3efe3d61397d21d202dfc4acd0979b95d428cc871b6029f4eb9904a345ccf9`. Separate coder and tester preserved ownership. Actual configuration/domain/CLI checks, parent full `make`, canonical asset preparation and standalone Linux binary execution passed; [SUMMARY.md](../../SUMMARY.md) owns command/results and environment limits. No final review or upstream integration is claimed. At that checkpoint, remaining behavior was pending; the approved continuation and final verification below complete it.
 
 ## Approved continuation and ownership
 
@@ -51,3 +51,7 @@ Repeated broad capture verification also exposed a pre-existing constructor race
 ## Review execution override
 
 Source: the user instructed "run only Luna reviewers" during corrected-candidate review. All remaining review/re-review focuses now use only configured `gpt-6-luna`/medium. Stop active Sol runs and exclude queued Sol follow-ups; preserve every completed earlier discovery, finding, actor attribution and cancellation. The interrupted Luna data pass receives a fresh Luna run. Four focus responsibilities and all accepted behavior/verification requirements remain unchanged. This session override supersedes the two-model dispatch policy for remaining work without changing repository-wide model-policy.yaml or inventing approvals for cancelled runs.
+
+## Final integration and review outcome
+
+Corrected source candidate `7ff311313542c2997f1aa495118739090028c9fd9c7b9a37a69fbe21f070bb43` is committed at `a18d29cddd003c39dd33be6e0014fa5e1d8a685f`. Fetch/merge found main already current; no source changed, preserving review evidence. Four Luna-only re-reviews passed. Integrated `make` and a standalone source-binary HTTP asset test without Node passed. SUMMARY.md owns actual commands/results and limits; REVIEW_SUMMARY.json retains all four canonical findings and discovery tuples. Consolidated approval is final; only telemetry verification and artifact/PR publication follow.

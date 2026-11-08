@@ -6,6 +6,6 @@ Use structured execution facts only, explicit configured minimum/warning/critica
 
 Configuration writer defaults are 5 minimum calls and 70% critical; this repository retains 35% warning. Runtime requires the file values. Saved schema/privacy and AL-62/AL-66 ownership/presence guarantees remain unchanged.
 
-Validation: actual CLI/SQLite/HTTP/dashboard regressions, before/after preservation probes, four dropped-policy mutation controls and constructor controls passed. Initial reviews found two preservation gaps and one weak oracle; all are corrected. Final focused reviews used Luna only as requested and passed. Integrated `make` and standalone-binary checks are the remaining delivery gate; Windows runtime was not exercised on Linux.
+Validation: actual CLI/SQLite/HTTP/dashboard regressions, before/after preservation probes, four dropped-policy mutation controls and constructor controls passed. Initial reviews found two preservation gaps and one weak oracle; all are corrected. Final focused reviews used Luna only as requested and passed. Integrated `make` passed, including Go race tests, 199 frontend units and 686 integration cases. The standalone binary served current embedded HTML/JS/CSS without Node. Windows runtime was not exercised on Linux.
 
-[Contract](CONTRACT.md) · [Evidence and limits](SUMMARY.md)
+[Contract](https://github.com/NiltonDuarte/AgenticLens/blob/AL-69/preserve-accurate-telemetry-and-evidence/alspaces/AL-69/CONTRACT.md) · [Evidence and limits](https://github.com/NiltonDuarte/AgenticLens/blob/AL-69/preserve-accurate-telemetry-and-evidence/alspaces/AL-69/SUMMARY.md)
