@@ -1,13 +1,16 @@
 # docs(po): specify machine-wide worktree capture and two delivery tickets (PO-20)
 
-Reclassifies the same capture initiative from GEN-22 to PO-20 and moves its workspace without creating developer workspaces or contracts. The closed user decision review is organized into SPEC.md and retained discussion notes.
+Define automatic AgenticLens capture for base checkouts and Git worktrees through a single user-level installation in Codex or OpenCode. Shared configuration supplies project/metrics rules and executable selection; the selected local configuration controls machine-specific capture settings.
 
-Creates the minimum practical two vertical deliveries: AL-79 provides the shared configuration/native runtime and end-to-end user-level Codex capture; AL-80 adds global OpenCode integration using that runtime. The roadmap records AL-79 as Ready and AL-80 as blocked by AL-79. Existing tickets remain unchanged.
+The specification covers whole-file local configuration fallback, native session routing, pinned/development binary selection, ticket binding, background publication, bounded recovery and state retention. Portable ticket ledgers remain usable without the original machine's private capture state.
 
-The specification covers whole-file local fallback, user-level adoption, native session routing, shared pinned/development binary selection, explicit binding, automatic publication, recovery and retention while preserving portable ledgers. No application, test or runtime implementation is added.
+Create two vertical delivery tickets:
 
-This draft replaces [#124](https://github.com/NiltonDuarte/AgenticLens/pull/124), whose head remains the former GEN branch. The earlier user-approved shared development pin is retained; machine-local hooks, Python launcher, trust and capture state remain outside Git. Runtime capture remains unverified.
+- **AL-79 — Ready:** shared native runtime and end-to-end user-level Codex capture.
+- **AL-80 — Blocked by AL-79:** global OpenCode integration using the shared runtime.
 
-See alspaces/PO-20/SPEC.md and SUMMARY.md. Implementation belongs in separate agentic-lens-dev sessions.
+The roadmap records their dependency. No application, test or runtime implementation is added; development belongs in separate agentic-lens-dev sessions. The shared development pin selects the locally built version; machine-local integrations and capture state remain outside Git.
 
-Fresh PO-20 telemetry extraction is blocked by the session's existing GEN-22 capture binding. The retained native snapshot is reclassified only in ticket metadata; TELEMETRY_STATUS.json records its age and incomplete refresh. No session facts or capture bindings were fabricated or changed.
+Validation: specification links, unique ticket entries and reciprocal dependencies checked. Application code is unchanged; the prior full `make` result is reused. Live automatic capture remains unverified. Telemetry retains an earlier native snapshot because a session ownership conflict prevents fresh extraction; `TELEMETRY_STATUS.json` records the incomplete coverage.
+
+See [SPEC.md](alspaces/PO-20/SPEC.md) and [SUMMARY.md](alspaces/PO-20/SUMMARY.md).
