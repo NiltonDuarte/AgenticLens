@@ -4,6 +4,6 @@ Install Codex capture once in the effective user home. Native callbacks resolve 
 
 Select one complete local configuration, preserve local enablement and state/source isolation, and share exact-version/development executable resolution. Retain immutable worker builds, independent child ticket assignments and portable history; recover publication and installer transactions safely. Preserve supported manual pins, caller working directories and normal human trust.
 
-Remove the Windows test CI job and its build dependency as explicitly requested. Windows runtime support and release artifacts remain for later removal; Windows verification is partial. The local make gate and affected POSIX/CI-graph checks pass. This draft awaits final current-scope review and delivery artifacts.
+Remove the Windows test CI job and its build dependency as explicitly requested. Windows runtime support and release artifacts remain for later removal; Windows verification is partial. The local make gate and affected POSIX/CI-graph checks pass. Independent review approves the current agreed scope; verification and remaining limits are recorded in the summary.
 
 Scope: [CONTRACT.md](alspaces/AL-79/CONTRACT.md), [approved CI delta](alspaces/AL-79/iterations/02/PLAN.md). Implementation, review and limits: [SUMMARY.md](alspaces/AL-79/SUMMARY.md).
