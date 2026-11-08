@@ -1,11 +1,11 @@
 {
   "schema_version": 6,
   "ticket_id": "GEN-23",
-  "ticket_title": "Publish the ticket roadmap on GitHub Pages",
+  "ticket_title": "Publish the ticket roadmap with native Jekyll",
   "ticket_type": "feat",
   "started_at": "2026-11-08T18:39:44.159Z",
-  "completed_at": "2026-11-08T19:01:56.701465+00:00",
-  "updated_at": "2026-11-08T19:01:56.701465+00:00",
+  "completed_at": "2026-11-08T19:34:04.478544+00:00",
+  "updated_at": "2026-11-08T19:34:04.478544+00:00",
   "code": {
     "lines_added": 0,
     "lines_deleted": 0,
@@ -14,7 +14,7 @@
     "prod_lines_added": 0,
     "prod_lines_deleted": 0,
     "files_changed": 0,
-    "sdlc_iterations": 3
+    "sdlc_iterations": 7
   },
   "sessions": [
     {
@@ -97,6 +97,23 @@
           "description": "behavior_luna_recheck",
           "invoked_at": "2026-11-08T18:54:02.428Z",
           "child_session_id": "01a1bc82-aacf-7273-842e-ce5da8d21ded"
+        },
+        {
+          "agent_type": "reviewer-behavior",
+          "description": "jekyll_behavior_sol",
+          "invoked_at": "2026-11-08T19:15:50.270Z",
+          "child_session_id": "01a1bc96-9f90-7903-a4b7-e4b34180ceb8"
+        },
+        {
+          "agent_type": "reviewer-behavior",
+          "description": "jekyll_behavior_luna",
+          "invoked_at": "2026-11-08T19:16:01.409Z",
+          "child_session_id": "01a1bc96-cb0f-77a3-bda5-a9902a7bad40"
+        },
+        {
+          "agent_type": "reviewer-data",
+          "description": "jekyll_data_sol",
+          "invoked_at": "2026-11-08T19:16:11.272Z"
         }
       ],
       "id": "01a1bc75-9212-7db1-926c-03f65aaf65b1",
@@ -104,34 +121,39 @@
       "user": "Nilton Duarte",
       "invocations": [
         {
-          "provisional_seconds": 1181,
+          "provisional_seconds": 1627,
           "role": "",
           "model": "gpt-6.1-sol",
           "started_at": "2026-11-08T18:39:44.908Z",
           "completed_at": null,
-          "active_duration_seconds": 1210,
-          "turns": 2,
-          "tokens": {"input": 107614, "output": 25600, "cache_read": 10203008, "reasoning": 6401, "peak_context": 115286},
+          "active_duration_seconds": 2972,
+          "turns": 4,
+          "tokens": {"input": 287903, "output": 73867, "cache_read": 30744832, "reasoning": 31829, "peak_context": 201041},
           "cost_usd": null,
           "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
-          "user_iterations": 3
+          "user_iterations": 7
         }
       ],
       "tools": [
-        {"name": "command", "calls": 68, "errors": 4},
-        {"name": "followup_task", "calls": 2, "errors": 0},
-        {"name": "send_message", "calls": 16, "errors": 0},
-        {"name": "sleep", "calls": 5, "errors": 0},
-        {"name": "spawn_agent", "calls": 13, "errors": 0},
-        {"name": "wait_agent", "calls": 15, "errors": 0}
+        {"name": "command", "calls": 123, "errors": 7},
+        {"name": "followup_task", "calls": 19, "errors": 0},
+        {"name": "send_message", "calls": 36, "errors": 0},
+        {"name": "sleep", "calls": 11, "errors": 0},
+        {"name": "spawn_agent", "calls": 16, "errors": 0},
+        {"name": "wait_agent", "calls": 22, "errors": 0}
       ],
       "anomalies": [
         {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "CRITICAL", "context": {"role": "coder", "secondary_role": "tester", "count": 6, "threshold": "5"}},
         {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "CRITICAL", "context": {"role": "reviewer-behavior", "secondary_role": "reviewer-data", "count": 7, "threshold": "5"}},
+        {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "CRITICAL", "context": {"role": "coder", "secondary_role": "tester", "count": 10, "threshold": "5"}},
+        {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "CRITICAL", "context": {"role": "reviewer-behavior", "secondary_role": "reviewer-data", "count": 5, "threshold": "5"}},
+        {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "CRITICAL", "context": {"role": "reviewer-behavior", "secondary_role": "reviewer-data", "count": 6, "threshold": "5"}},
         {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "WARNING", "context": {"role": "tester", "secondary_role": "coder", "count": 3, "threshold": "3"}},
         {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "WARNING", "context": {"role": "reviewer-architecture", "secondary_role": "reviewer-tests", "count": 4, "threshold": "3"}},
-        {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "WARNING", "context": {"role": "reviewer-behavior", "secondary_role": "reviewer-tests", "count": 3, "threshold": "3"}}
+        {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "WARNING", "context": {"role": "reviewer-behavior", "secondary_role": "reviewer-tests", "count": 3, "threshold": "3"}},
+        {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "WARNING", "context": {"role": "reviewer-behavior", "secondary_role": "tester", "count": 4, "threshold": "3"}},
+        {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "WARNING", "context": {"role": "coder", "secondary_role": "tester", "count": 3, "threshold": "3"}}
       ]
     },
     {
@@ -146,10 +168,10 @@
           "role": "planner",
           "model": "gpt-6.1-sol",
           "started_at": "2026-11-08T18:42:28.044Z",
-          "completed_at": "2026-11-08T18:43:43.953Z",
-          "active_duration_seconds": 76,
-          "turns": 1,
-          "tokens": {"input": 64799, "output": 2215, "cache_read": 427520, "reasoning": 291, "peak_context": 65933},
+          "completed_at": "2026-11-08T19:08:55.287Z",
+          "active_duration_seconds": 177,
+          "turns": 2,
+          "tokens": {"input": 148349, "output": 5292, "cache_read": 1198208, "reasoning": 1339, "peak_context": 84916},
           "cost_usd": null,
           "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
@@ -157,8 +179,8 @@
         }
       ],
       "tools": [
-        {"name": "command", "calls": 5, "errors": 0},
-        {"name": "send_message", "calls": 2, "errors": 0}
+        {"name": "command", "calls": 9, "errors": 0},
+        {"name": "send_message", "calls": 4, "errors": 0}
       ],
       "anomalies": []
     },
@@ -174,10 +196,10 @@
           "role": "coder",
           "model": "gpt-6.1-sol",
           "started_at": "2026-11-08T18:43:45.279Z",
-          "completed_at": "2026-11-08T18:51:15.428Z",
-          "active_duration_seconds": 299,
-          "turns": 2,
-          "tokens": {"input": 48710, "output": 9699, "cache_read": 2215296, "reasoning": 1748, "peak_context": 85470},
+          "completed_at": "2026-11-08T19:21:51.870Z",
+          "active_duration_seconds": 779,
+          "turns": 5,
+          "tokens": {"input": 75593, "output": 24748, "cache_read": 6859264, "reasoning": 6678, "peak_context": 120048},
           "cost_usd": null,
           "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
@@ -185,8 +207,9 @@
         }
       ],
       "tools": [
-        {"name": "command", "calls": 17, "errors": 3},
-        {"name": "send_message", "calls": 9, "errors": 0}
+        {"name": "command", "calls": 33, "errors": 4},
+        {"name": "send_message", "calls": 22, "errors": 0},
+        {"name": "wait_agent", "calls": 1, "errors": 0}
       ],
       "anomalies": []
     },
@@ -202,10 +225,10 @@
           "role": "tester",
           "model": "gpt-6.1-sol",
           "started_at": "2026-11-08T18:43:51.472Z",
-          "completed_at": "2026-11-08T18:51:59.199Z",
-          "active_duration_seconds": 297,
-          "turns": 2,
-          "tokens": {"input": 52077, "output": 8838, "cache_read": 2289152, "reasoning": 1707, "peak_context": 86951},
+          "completed_at": "2026-11-08T19:26:32.304Z",
+          "active_duration_seconds": 897,
+          "turns": 5,
+          "tokens": {"input": 79215, "output": 22765, "cache_read": 7804672, "reasoning": 6255, "peak_context": 119339},
           "cost_usd": null,
           "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
@@ -213,9 +236,9 @@
         }
       ],
       "tools": [
-        {"name": "command", "calls": 16, "errors": 0},
-        {"name": "send_message", "calls": 10, "errors": 0},
-        {"name": "wait_agent", "calls": 1, "errors": 0}
+        {"name": "command", "calls": 38, "errors": 4},
+        {"name": "send_message", "calls": 26, "errors": 0},
+        {"name": "wait_agent", "calls": 4, "errors": 0}
       ],
       "anomalies": []
     },
@@ -287,10 +310,10 @@
           "role": "reviewer-data",
           "model": "gpt-6.1-sol",
           "started_at": "2026-11-08T18:47:59.645Z",
-          "completed_at": "2026-11-08T18:49:55.992Z",
-          "active_duration_seconds": 116,
-          "turns": 1,
-          "tokens": {"input": 30795, "output": 4126, "cache_read": 321536, "reasoning": 993, "peak_context": 46420},
+          "completed_at": "2026-11-08T19:28:29.713Z",
+          "active_duration_seconds": 413,
+          "turns": 3,
+          "tokens": {"input": 56230, "output": 13043, "cache_read": 2008064, "reasoning": 3784, "peak_context": 75817},
           "cost_usd": null,
           "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
@@ -298,8 +321,8 @@
         }
       ],
       "tools": [
-        {"name": "command", "calls": 10, "errors": 0},
-        {"name": "send_message", "calls": 1, "errors": 0}
+        {"name": "command", "calls": 29, "errors": 1},
+        {"name": "send_message", "calls": 7, "errors": 0}
       ],
       "anomalies": []
     },
@@ -315,10 +338,10 @@
           "role": "reviewer-data",
           "model": "gpt-6-luna",
           "started_at": "2026-11-08T18:48:36.921Z",
-          "completed_at": "2026-11-08T18:49:38.329Z",
-          "active_duration_seconds": 61,
-          "turns": 1,
-          "tokens": {"input": 24418, "output": 2066, "cache_read": 254848, "reasoning": 569, "peak_context": 35195},
+          "completed_at": "2026-11-08T19:29:11.945Z",
+          "active_duration_seconds": 189,
+          "turns": 3,
+          "tokens": {"input": 45678, "output": 5886, "cache_read": 785920, "reasoning": 1803, "peak_context": 54276},
           "cost_usd": null,
           "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
@@ -326,8 +349,8 @@
         }
       ],
       "tools": [
-        {"name": "command", "calls": 6, "errors": 0},
-        {"name": "send_message", "calls": 1, "errors": 0}
+        {"name": "command", "calls": 14, "errors": 0},
+        {"name": "send_message", "calls": 3, "errors": 0}
       ],
       "anomalies": []
     },
@@ -343,10 +366,10 @@
           "role": "reviewer-architecture",
           "model": "gpt-6.1-sol",
           "started_at": "2026-11-08T18:52:10.248Z",
-          "completed_at": "2026-11-08T18:53:23.889Z",
-          "active_duration_seconds": 74,
-          "turns": 1,
-          "tokens": {"input": 32586, "output": 2624, "cache_read": 269056, "reasoning": 541, "peak_context": 46756},
+          "completed_at": "2026-11-08T19:24:29.729Z",
+          "active_duration_seconds": 162,
+          "turns": 2,
+          "tokens": {"input": 49755, "output": 5244, "cache_read": 732544, "reasoning": 1262, "peak_context": 65171},
           "cost_usd": null,
           "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
@@ -354,8 +377,8 @@
         }
       ],
       "tools": [
-        {"name": "command", "calls": 12, "errors": 1},
-        {"name": "send_message", "calls": 1, "errors": 0}
+        {"name": "command", "calls": 20, "errors": 1},
+        {"name": "send_message", "calls": 2, "errors": 0}
       ],
       "anomalies": []
     },
@@ -371,10 +394,10 @@
           "role": "reviewer-architecture",
           "model": "gpt-6-luna",
           "started_at": "2026-11-08T18:52:19.777Z",
-          "completed_at": "2026-11-08T18:53:25.331Z",
-          "active_duration_seconds": 66,
-          "turns": 1,
-          "tokens": {"input": 24705, "output": 2837, "cache_read": 249728, "reasoning": 939, "peak_context": 35487},
+          "completed_at": "2026-11-08T19:26:06.580Z",
+          "active_duration_seconds": 241,
+          "turns": 2,
+          "tokens": {"input": 52100, "output": 9654, "cache_read": 1011328, "reasoning": 5569, "peak_context": 60128},
           "cost_usd": null,
           "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
@@ -382,8 +405,8 @@
         }
       ],
       "tools": [
-        {"name": "command", "calls": 7, "errors": 2},
-        {"name": "send_message", "calls": 1, "errors": 0}
+        {"name": "command", "calls": 15, "errors": 2},
+        {"name": "send_message", "calls": 2, "errors": 0}
       ],
       "anomalies": []
     },
@@ -399,10 +422,10 @@
           "role": "reviewer-tests",
           "model": "gpt-6.1-sol",
           "started_at": "2026-11-08T18:52:29.545Z",
-          "completed_at": "2026-11-08T18:53:46.424Z",
-          "active_duration_seconds": 77,
-          "turns": 1,
-          "tokens": {"input": 25455, "output": 2825, "cache_read": 202880, "reasoning": 803, "peak_context": 39907},
+          "completed_at": "2026-11-08T19:25:27.726Z",
+          "active_duration_seconds": 202,
+          "turns": 2,
+          "tokens": {"input": 47916, "output": 6913, "cache_read": 824448, "reasoning": 2335, "peak_context": 64533},
           "cost_usd": null,
           "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
@@ -410,7 +433,8 @@
         }
       ],
       "tools": [
-        {"name": "command", "calls": 8, "errors": 0}
+        {"name": "command", "calls": 18, "errors": 1},
+        {"name": "send_message", "calls": 2, "errors": 0}
       ],
       "anomalies": []
     },
@@ -426,10 +450,10 @@
           "role": "reviewer-tests",
           "model": "gpt-6-luna",
           "started_at": "2026-11-08T18:53:32.969Z",
-          "completed_at": "2026-11-08T18:54:28.245Z",
-          "active_duration_seconds": 55,
-          "turns": 1,
-          "tokens": {"input": 31014, "output": 2362, "cache_read": 203904, "reasoning": 868, "peak_context": 42045},
+          "completed_at": "2026-11-08T19:26:13.477Z",
+          "active_duration_seconds": 135,
+          "turns": 2,
+          "tokens": {"input": 52313, "output": 4932, "cache_read": 639232, "reasoning": 1635, "peak_context": 61956},
           "cost_usd": null,
           "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
@@ -437,8 +461,8 @@
         }
       ],
       "tools": [
-        {"name": "command", "calls": 5, "errors": 1},
-        {"name": "send_message", "calls": 1, "errors": 0}
+        {"name": "command", "calls": 11, "errors": 1},
+        {"name": "send_message", "calls": 2, "errors": 0}
       ],
       "anomalies": []
     },
@@ -494,6 +518,62 @@
       "tools": [
         {"name": "command", "calls": 11, "errors": 3},
         {"name": "send_message", "calls": 1, "errors": 0}
+      ],
+      "anomalies": []
+    },
+    {
+      "skills": [],
+      "delegations": [],
+      "id": "01a1bc96-9f90-7903-a4b7-e4b34180ceb8",
+      "parent_id": "01a1bc75-9212-7db1-926c-03f65aaf65b1",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "started_at": "2026-11-08T19:15:50.319Z",
+          "completed_at": "2026-11-08T19:27:56.559Z",
+          "active_duration_seconds": 241,
+          "turns": 2,
+          "tokens": {"input": 61904, "output": 7181, "cache_read": 1402112, "reasoning": 1350, "peak_context": 63912},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {"name": "command", "calls": 25, "errors": 1},
+        {"name": "send_message", "calls": 4, "errors": 0}
+      ],
+      "anomalies": []
+    },
+    {
+      "skills": [],
+      "delegations": [],
+      "id": "01a1bc96-cb0f-77a3-bda5-a9902a7bad40",
+      "parent_id": "01a1bc75-9212-7db1-926c-03f65aaf65b1",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "role": "reviewer-behavior",
+          "model": "gpt-6-luna",
+          "started_at": "2026-11-08T19:16:01.452Z",
+          "completed_at": "2026-11-08T19:28:30.320Z",
+          "active_duration_seconds": 154,
+          "turns": 2,
+          "tokens": {"input": 45993, "output": 6297, "cache_read": 956416, "reasoning": 2074, "peak_context": 61263},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
+          "compactions": 0,
+          "user_iterations": 0
+        }
+      ],
+      "tools": [
+        {"name": "command", "calls": 15, "errors": 2},
+        {"name": "send_message", "calls": 2, "errors": 0}
       ],
       "anomalies": []
     }

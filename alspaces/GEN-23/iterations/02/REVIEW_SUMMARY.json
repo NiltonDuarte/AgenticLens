@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "BEH-01",
+      "severity": 5,
+      "issue": "Supporting-file rewriting lost encoded filename delimiters.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed by encoding path components independently of query/fragment; exact-before regression fails and paired behavior re-review approves."
+    },
+    {
+      "finding_id": "DATA-01",
+      "severity": 4,
+      "issue": "Ticket front matter could publish outside the required roadmap route.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed by rejecting staged output outside roadmap before replacement; regression preserves previous artifact and paired data re-review approves."
+    },
+    {
+      "finding_id": "DATA-02",
+      "severity": 4,
+      "issue": "Suppressed cleanup errors could report success with stale nested output.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed with checked removal and exact installation; unprivileged filesystem regression detects the former false success and both data profiles verify the correction."
+    },
+    {
+      "finding_id": "TEST-01",
+      "severity": 2,
+      "issue": "Migrated nesting test omitted the parent ticket-label assertion.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed by restoring parent own-text checks that exclude child metadata; tester executed all seven tests with 109 assertions and parent verified the oracle."
+    }
+  ]
+}
