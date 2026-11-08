@@ -40,3 +40,7 @@ Parent records findings/limits, integrates main, passes checks, compacts approve
 ## Final operator guidance correction
 
 C2 left only a build-review documentation finding: the active operator configuration reference still described wrapper replacement and whole-bootstrap rollback. The parent corrects those paragraphs to native manager/engine protocol ownership, per-operation recovery, explicit foreign-cache limits and current schema v6. No application, runtime, test or build source changes. Use a narrow build/distribution correction review under both configured profiles; carry all C2 core/security/test approvals and executed checks by unchanged dependency scope. This is a review correction within iteration03, not a new acceptance delta.
+
+## Integrated orchestration fixture correction
+
+The integrated make gate at bd40bee1 found six fixture failures: the isolated orchestration repository created only the original utility command while the reviewed Makefile now also builds the manager. The tester changes only test_test_orchestration.py and retains real Go unit/build execution, both output identities, paths with spaces and unchanged unit-failure guards. All six focused tests pass. No application, runtime, build or existing reviewed path changes. Use narrow test-effectiveness correction reviews under both configured profiles; carry all other approvals by unchanged source scope, then commit and rerun full make before installation.
