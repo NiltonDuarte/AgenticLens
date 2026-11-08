@@ -2535,7 +2535,7 @@ func TestReplaceRecoveredOwnersPreservesUnrecordedNativeCategories(t *testing.T)
 
 func writePresenceRecoveryConfig(t *testing.T, root string) domain.ProjectConfig {
 	t.Helper()
-	input := fmt.Sprintf("project_name: PresenceRecoveryFixture\ntelemetry:\n  capture:\n    state_dir: %q\nticket:\n  prefixes: [TEST]\nworkspaces:\n  dir: records\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n", filepath.Join(root, "capture-state"))
+	input := fmt.Sprintf("project_name: PresenceRecoveryFixture\ntelemetry:\n  capture:\n    state_dir: %q\nticket:\n  prefixes: [TEST]\nworkspaces:\n  dir: records\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n", filepath.Join(root, "capture-state"))
 	if err := os.WriteFile(filepath.Join(root, ".agenticlens-config.yaml"), []byte(input), 0600); err != nil {
 		t.Fatal(err)
 	}

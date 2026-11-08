@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -83,9 +84,21 @@ func ValidateConfig(cfg domain.ProjectConfig) error {
 	if cfg.AnomalyThresholds.ContextCeilingWarningTokens <= 0 {
 		missing = append(missing, "anomaly_thresholds.context_ceiling_warning_tokens")
 	}
+	if cfg.AnomalyThresholds.ErrorRateMinCalls == 0 {
+		missing = append(missing, "anomaly_thresholds.error_rate_min_calls")
+	}
+	if cfg.AnomalyThresholds.ErrorRateThreshold == 0 {
+		missing = append(missing, "anomaly_thresholds.error_rate_threshold")
+	}
+	if cfg.AnomalyThresholds.ErrorRateCriticalThreshold == 0 {
+		missing = append(missing, "anomaly_thresholds.error_rate_critical_threshold")
+	}
 
 	if len(missing) > 0 {
 		return &ConfigValidationError{MissingFields: missing}
+	}
+	if err := validateErrorRatePolicy(cfg.AnomalyThresholds); err != nil {
+		return err
 	}
 
 	if cfg.AnomalyThresholds.ContextCeilingWarningTokens > cfg.AnomalyThresholds.ContextCeilingCriticalTokens {
@@ -94,6 +107,27 @@ func ValidateConfig(cfg domain.ProjectConfig) error {
 		}
 	}
 
+	return nil
+}
+
+func validateErrorRatePolicy(thresholds domain.AnomalyThresholdsConfig) error {
+	if thresholds.ErrorRateMinCalls < 1 {
+		return &ConfigValidationError{Message: "anomaly_thresholds.error_rate_min_calls must be a positive integer"}
+	}
+	for _, rate := range []struct {
+		key   string
+		value float64
+	}{
+		{"error_rate_threshold", thresholds.ErrorRateThreshold},
+		{"error_rate_critical_threshold", thresholds.ErrorRateCriticalThreshold},
+	} {
+		if math.IsNaN(rate.value) || math.IsInf(rate.value, 0) || rate.value <= 0 || rate.value > 1 {
+			return &ConfigValidationError{Message: "anomaly_thresholds." + rate.key + " must be a finite ratio greater than 0 and at most 1"}
+		}
+	}
+	if thresholds.ErrorRateThreshold > thresholds.ErrorRateCriticalThreshold {
+		return &ConfigValidationError{Message: "anomaly_thresholds.error_rate_threshold cannot exceed anomaly_thresholds.error_rate_critical_threshold"}
+	}
 	return nil
 }
 
@@ -201,22 +235,38 @@ type rawTelemetryConfig struct {
 	} `json:"sources" yaml:"sources"`
 }
 
+type rawErrorRateMinCalls int
+
+func (r *rawErrorRateMinCalls) UnmarshalYAML(node *yaml.Node) error {
+	if node.Kind != yaml.ScalarNode || node.Tag != "!!int" {
+		return fmt.Errorf("anomaly_thresholds.error_rate_min_calls must be an integer")
+	}
+	var value int
+	if err := node.Decode(&value); err != nil {
+		return fmt.Errorf("decoding anomaly_thresholds.error_rate_min_calls: %w", err)
+	}
+	*r = rawErrorRateMinCalls(value)
+	return nil
+}
+
 type rawAnomalyThresholdsConfig struct {
-	StallThresholdSeconds               *int     `json:"stall_threshold_seconds" yaml:"stall_threshold_seconds"`
-	ErrorRateThreshold                  *float64 `json:"error_rate_threshold" yaml:"error_rate_threshold"`
-	ContextExhaustionPct                *float64 `json:"context_exhaustion_pct" yaml:"context_exhaustion_pct"`
-	ConsecutiveErrorsStreakWarning      *int     `json:"consecutive_errors_streak_warning" yaml:"consecutive_errors_streak_warning"`
-	ConsecutiveErrorsStreakCritical     *int     `json:"consecutive_errors_streak_critical" yaml:"consecutive_errors_streak_critical"`
-	ContextCeilingWarningTokens         *int64   `json:"context_ceiling_warning_tokens" yaml:"context_ceiling_warning_tokens"`
-	ContextCeilingCriticalTokens        *int64   `json:"context_ceiling_critical_tokens" yaml:"context_ceiling_critical_tokens"`
-	ContextCeilingApproachRatioWarning  *float64 `json:"context_ceiling_approach_ratio_warning" yaml:"context_ceiling_approach_ratio_warning"`
-	ContextCeilingApproachRatioCritical *float64 `json:"context_ceiling_approach_ratio_critical" yaml:"context_ceiling_approach_ratio_critical"`
-	TokenVelocityWarningTokens          *int64   `json:"token_velocity_warning_tokens" yaml:"token_velocity_warning_tokens"`
-	TokenVelocityCriticalTokens         *int64   `json:"token_velocity_critical_tokens" yaml:"token_velocity_critical_tokens"`
-	TokenVelocityWarningDeltaTokens     *int64   `json:"token_velocity_warning_delta_tokens" yaml:"token_velocity_warning_delta_tokens"`
-	TokenVelocityCriticalDeltaTokens    *int64   `json:"token_velocity_critical_delta_tokens" yaml:"token_velocity_critical_delta_tokens"`
-	ToolThrashingMinFailures            *int     `json:"tool_thrashing_min_failures" yaml:"tool_thrashing_min_failures"`
-	ToolThrashingCriticalFailures       *int     `json:"tool_thrashing_critical_failures" yaml:"tool_thrashing_critical_failures"`
+	StallThresholdSeconds               *int                  `json:"stall_threshold_seconds" yaml:"stall_threshold_seconds"`
+	ErrorRateMinCalls                   *rawErrorRateMinCalls `json:"error_rate_min_calls" yaml:"error_rate_min_calls"`
+	ErrorRateThreshold                  *float64              `json:"error_rate_threshold" yaml:"error_rate_threshold"`
+	ErrorRateCriticalThreshold          *float64              `json:"error_rate_critical_threshold" yaml:"error_rate_critical_threshold"`
+	ContextExhaustionPct                *float64              `json:"context_exhaustion_pct" yaml:"context_exhaustion_pct"`
+	ConsecutiveErrorsStreakWarning      *int                  `json:"consecutive_errors_streak_warning" yaml:"consecutive_errors_streak_warning"`
+	ConsecutiveErrorsStreakCritical     *int                  `json:"consecutive_errors_streak_critical" yaml:"consecutive_errors_streak_critical"`
+	ContextCeilingWarningTokens         *int64                `json:"context_ceiling_warning_tokens" yaml:"context_ceiling_warning_tokens"`
+	ContextCeilingCriticalTokens        *int64                `json:"context_ceiling_critical_tokens" yaml:"context_ceiling_critical_tokens"`
+	ContextCeilingApproachRatioWarning  *float64              `json:"context_ceiling_approach_ratio_warning" yaml:"context_ceiling_approach_ratio_warning"`
+	ContextCeilingApproachRatioCritical *float64              `json:"context_ceiling_approach_ratio_critical" yaml:"context_ceiling_approach_ratio_critical"`
+	TokenVelocityWarningTokens          *int64                `json:"token_velocity_warning_tokens" yaml:"token_velocity_warning_tokens"`
+	TokenVelocityCriticalTokens         *int64                `json:"token_velocity_critical_tokens" yaml:"token_velocity_critical_tokens"`
+	TokenVelocityWarningDeltaTokens     *int64                `json:"token_velocity_warning_delta_tokens" yaml:"token_velocity_warning_delta_tokens"`
+	TokenVelocityCriticalDeltaTokens    *int64                `json:"token_velocity_critical_delta_tokens" yaml:"token_velocity_critical_delta_tokens"`
+	ToolThrashingMinFailures            *int                  `json:"tool_thrashing_min_failures" yaml:"tool_thrashing_min_failures"`
+	ToolThrashingCriticalFailures       *int                  `json:"tool_thrashing_critical_failures" yaml:"tool_thrashing_critical_failures"`
 }
 
 type rawLiveConfig struct {
@@ -256,6 +306,10 @@ func mergeConfig(dto rawProjectConfigDTO) domain.ProjectConfig {
 	}
 	cfg.AnomalyThresholds.ContextCeilingWarningTokens = 0
 	cfg.AnomalyThresholds.ContextCeilingCriticalTokens = 0
+	// Required failure-rate settings must come from the selected configuration section.
+	cfg.AnomalyThresholds.ErrorRateMinCalls = 0
+	cfg.AnomalyThresholds.ErrorRateThreshold = 0
+	cfg.AnomalyThresholds.ErrorRateCriticalThreshold = 0
 
 	if dto.ProjectName != nil && strings.TrimSpace(*dto.ProjectName) != "" {
 		cfg.ProjectName = strings.TrimSpace(*dto.ProjectName)
@@ -350,6 +404,12 @@ func mergeConfig(dto rawProjectConfigDTO) domain.ProjectConfig {
 		}
 		if rawAT.ErrorRateThreshold != nil {
 			cfg.AnomalyThresholds.ErrorRateThreshold = *rawAT.ErrorRateThreshold
+		}
+		if rawAT.ErrorRateMinCalls != nil {
+			cfg.AnomalyThresholds.ErrorRateMinCalls = int(*rawAT.ErrorRateMinCalls)
+		}
+		if rawAT.ErrorRateCriticalThreshold != nil {
+			cfg.AnomalyThresholds.ErrorRateCriticalThreshold = *rawAT.ErrorRateCriticalThreshold
 		}
 		if rawAT.ContextExhaustionPct != nil {
 			cfg.AnomalyThresholds.ContextExhaustionPct = *rawAT.ContextExhaustionPct

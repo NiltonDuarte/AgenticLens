@@ -146,6 +146,9 @@ func TestDefaultProjectConfig(t *testing.T) {
 	if cfg.AnomalyThresholds.StallThresholdSeconds != 120 {
 		t.Errorf("expected AnomalyThresholds.StallThresholdSeconds 120, got %d", cfg.AnomalyThresholds.StallThresholdSeconds)
 	}
+	if cfg.AnomalyThresholds.ErrorRateMinCalls != 0 || cfg.AnomalyThresholds.ErrorRateCriticalThreshold != 0 {
+		t.Fatalf("writer-only defaults leaked into runtime defaults: %+v", cfg.AnomalyThresholds)
+	}
 	if cfg.AnomalyThresholds.ErrorRateThreshold != 0.25 {
 		t.Errorf("expected AnomalyThresholds.ErrorRateThreshold 0.25, got %f", cfg.AnomalyThresholds.ErrorRateThreshold)
 	}

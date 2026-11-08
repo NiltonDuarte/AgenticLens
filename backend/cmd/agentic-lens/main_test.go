@@ -638,7 +638,7 @@ func TestCLIServerSubcommandEdgeCases(t *testing.T) {
 
 func TestServer_FailsWithoutWorkspacesConfig(t *testing.T) {
 	tempDir := t.TempDir()
-	cfgContent := "project_name: Test\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes:\n    - prefix: TEST\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+	cfgContent := "project_name: Test\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes:\n    - prefix: TEST\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 	if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -2181,7 +2181,7 @@ func TestCLIBackfillCommand(t *testing.T) {
 	t.Run("malformed local config is reported before backfill dispatch", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
-		cfgContent := "project_name: Test\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes:\n    - prefix: TEST\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+		cfgContent := "project_name: Test\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes:\n    - prefix: TEST\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -3883,7 +3883,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 	t.Run("custom prefix resolves automatically from project config", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
-		cfgContent := "project_name: \"TestProject\"\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes:\n    - prefix: \"CUSTOM\"\n      ticket_type: \"fix\"\ncode_metrics:\n  source_roots:\n    - \"src\"\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+		cfgContent := "project_name: \"TestProject\"\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes:\n    - prefix: \"CUSTOM\"\n      ticket_type: \"fix\"\ncode_metrics:\n  source_roots:\n    - \"src\"\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing .agenticlens-config.yaml: %v", err)
 		}
@@ -3929,7 +3929,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 	t.Run("configured prefix overrides default prefix mapping", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
-		cfgContent := "project_name: \"TestProject\"\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes:\n    - prefix: \"PO\"\n      ticket_type: \"feat\"\ncode_metrics:\n  source_roots:\n    - \"src\"\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+		cfgContent := "project_name: \"TestProject\"\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes:\n    - prefix: \"PO\"\n      ticket_type: \"feat\"\ncode_metrics:\n  source_roots:\n    - \"src\"\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing .agenticlens-config.yaml: %v", err)
 		}
@@ -3975,7 +3975,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 	t.Run("explicit CLI ticket-type flag overrides configured prefix", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
-		cfgContent := "project_name: \"TestProject\"\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes:\n    - prefix: \"CUSTOM\"\n      ticket_type: \"fix\"\ncode_metrics:\n  source_roots:\n    - \"src\"\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+		cfgContent := "project_name: \"TestProject\"\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes:\n    - prefix: \"CUSTOM\"\n      ticket_type: \"fix\"\ncode_metrics:\n  source_roots:\n    - \"src\"\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing .agenticlens-config.yaml: %v", err)
 		}
@@ -4022,7 +4022,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 	t.Run("strict-type succeeds when custom prefix matches in project config", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
-		cfgContent := "project_name: \"TestProject\"\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes:\n    - prefix: \"HOTFIX\"\n      ticket_type: \"fix\"\ncode_metrics:\n  source_roots:\n    - \"src\"\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+		cfgContent := "project_name: \"TestProject\"\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes:\n    - prefix: \"HOTFIX\"\n      ticket_type: \"fix\"\ncode_metrics:\n  source_roots:\n    - \"src\"\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing .agenticlens-config.yaml: %v", err)
 		}
@@ -4087,7 +4087,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			t.Fatalf("git checkout -b failed: %v", err)
 		}
 
-		cfgContent := "project_name: \"TestProject\"\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes:\n    - prefix: \"AL\"\n      ticket_type: \"docs\"\ncode_metrics:\n  source_roots:\n    - \"src\"\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+		cfgContent := "project_name: \"TestProject\"\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes:\n    - prefix: \"AL\"\n      ticket_type: \"docs\"\ncode_metrics:\n  source_roots:\n    - \"src\"\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing .agenticlens-config.yaml: %v", err)
 		}
@@ -4155,7 +4155,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		}
 
 		// Configure AL to map to docs in .agenticlens-config.yaml
-		cfgContent := "project_name: \"TestProject\"\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes:\n    - prefix: \"AL\"\n      ticket_type: \"docs\"\ncode_metrics:\n  source_roots:\n    - \"src\"\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+		cfgContent := "project_name: \"TestProject\"\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes:\n    - prefix: \"AL\"\n      ticket_type: \"docs\"\ncode_metrics:\n  source_roots:\n    - \"src\"\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing .agenticlens-config.yaml: %v", err)
 		}
@@ -4227,6 +4227,9 @@ code_metrics:
   source_roots:
     - "src"
 anomaly_thresholds:
+  error_rate_min_calls: 5
+  error_rate_threshold: 0.25
+  error_rate_critical_threshold: 0.70
   context_ceiling_warning_tokens: 160000
   context_ceiling_critical_tokens: 200000
 `
@@ -4320,6 +4323,9 @@ code_metrics:
   source_roots:
     - "src"
 anomaly_thresholds:
+  error_rate_min_calls: 5
+  error_rate_threshold: 0.25
+  error_rate_critical_threshold: 0.70
   context_ceiling_warning_tokens: 160000
   context_ceiling_critical_tokens: 200000
 `
@@ -4339,6 +4345,9 @@ code_metrics:
   source_roots:
     - "src"
 anomaly_thresholds:
+  error_rate_min_calls: 5
+  error_rate_threshold: 0.25
+  error_rate_critical_threshold: 0.70
   context_ceiling_warning_tokens: 160000
   context_ceiling_critical_tokens: 200000
 `
@@ -4755,7 +4764,7 @@ func TestCLI_Invariants(t *testing.T) {
 		runCmd("add", "README.md")
 		runCmd("commit", "-m", "initial commit")
 
-		cfgContent := "project_name: \"TestProject\"\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes:\n    - prefix: \"DEV\"\ncode_metrics:\n  source_roots:\n    - \"src\"\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+		cfgContent := "project_name: \"TestProject\"\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes:\n    - prefix: \"DEV\"\ncode_metrics:\n  source_roots:\n    - \"src\"\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -4808,7 +4817,7 @@ func TestCLI_Invariants(t *testing.T) {
 		runCmd("add", "README.md")
 		runCmd("commit", "-m", "initial commit")
 
-		cfgContent := "project_name: MissingRootsFixture\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes: [DEV]\ncode_metrics:\n  source_roots: []\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+		cfgContent := "project_name: MissingRootsFixture\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes: [DEV]\ncode_metrics:\n  source_roots: []\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -4897,6 +4906,9 @@ func TestInitCommand(t *testing.T) {
 					}
 					if loaded.AgenticLens.Version != "v9.8.7" || loaded.ProjectName != "Scaffold fixture" {
 						t.Fatalf("full pinned config missing: %+v", loaded)
+					}
+					if loaded.AnomalyThresholds.ErrorRateMinCalls != 5 || loaded.AnomalyThresholds.ErrorRateCriticalThreshold != 0.70 {
+						t.Fatalf("init did not persist writer failure-rate defaults: %+v", loaded.AnomalyThresholds)
 					}
 					if bytes.Contains(after, []byte("bootstrap scaffold")) {
 						t.Fatal("full config still claims incomplete scaffold")
@@ -5925,6 +5937,9 @@ code_metrics:
   source_roots:
     - src
 anomaly_thresholds:
+  error_rate_min_calls: 5
+  error_rate_threshold: 0.25
+  error_rate_critical_threshold: 0.70
   context_ceiling_warning_tokens: 160000
   context_ceiling_critical_tokens: 200000
 `
@@ -6069,6 +6084,9 @@ code_metrics:
   source_roots:
     - src
 anomaly_thresholds:
+  error_rate_min_calls: 5
+  error_rate_threshold: 0.25
+  error_rate_critical_threshold: 0.70
   context_ceiling_warning_tokens: 160000
   context_ceiling_critical_tokens: 200000
 `
@@ -6111,6 +6129,9 @@ code_metrics:
   source_roots:
     - src
 anomaly_thresholds:
+  error_rate_min_calls: 5
+  error_rate_threshold: 0.25
+  error_rate_critical_threshold: 0.70
   context_ceiling_warning_tokens: 160000
   context_ceiling_critical_tokens: 200000
 `
@@ -6153,6 +6174,9 @@ code_metrics:
   source_roots:
     - src
 anomaly_thresholds:
+  error_rate_min_calls: 5
+  error_rate_threshold: 0.25
+  error_rate_critical_threshold: 0.70
   context_ceiling_warning_tokens: 160000
   context_ceiling_critical_tokens: 200000
 `
@@ -6243,6 +6267,9 @@ code_metrics:
 database:
   path: "test.db"
 anomaly_thresholds:
+  error_rate_min_calls: 5
+  error_rate_threshold: 0.25
+  error_rate_critical_threshold: 0.70
   context_ceiling_warning_tokens: 160000
   context_ceiling_critical_tokens: 200000
 `
@@ -6313,6 +6340,9 @@ code_metrics:
 database:
   path: "test.db"
 anomaly_thresholds:
+  error_rate_min_calls: 5
+  error_rate_threshold: 0.25
+  error_rate_critical_threshold: 0.70
   context_ceiling_warning_tokens: 160000
   context_ceiling_critical_tokens: 200000
 `
@@ -6560,6 +6590,9 @@ code_metrics:
   test_patterns: ["*_test.go"]
   prod_patterns: ["*.go"]
 anomaly_thresholds:
+  error_rate_min_calls: 5
+  error_rate_threshold: 0.25
+  error_rate_critical_threshold: 0.70
   context_ceiling_warning_tokens: 160000
   context_ceiling_critical_tokens: 200000
 `
@@ -6780,6 +6813,9 @@ code_metrics:
   test_patterns: ["*_test.go"]
   prod_patterns: ["*.go"]
 anomaly_thresholds:
+  error_rate_min_calls: 5
+  error_rate_threshold: 0.25
+  error_rate_critical_threshold: 0.70
   context_ceiling_warning_tokens: 160000
   context_ceiling_critical_tokens: 200000
 `
@@ -6925,6 +6961,9 @@ code_metrics:
   test_patterns: ["*_test.go"]
   prod_patterns: ["*.go"]
 anomaly_thresholds:
+  error_rate_min_calls: 5
+  error_rate_threshold: 0.25
+  error_rate_critical_threshold: 0.70
   context_ceiling_warning_tokens: 160000
   context_ceiling_critical_tokens: 200000
 `

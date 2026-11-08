@@ -72,12 +72,12 @@ func TestRequiredCaptureStateAcrossOperationalReaders(t *testing.T) {
 				home := filepath.Join(root, "uncreated-home")
 				t.Setenv("HOME", home)
 				t.Setenv("USERPROFILE", home)
-				body := "project_name: Example\nticket:\n  prefixes: [AL]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+				body := "project_name: Example\nticket:\n  prefixes: [AL]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 				if value != "missing" {
 					body += "telemetry:\n  capture:\n    state_dir: " + value + "\n"
 				}
 				if ext == "json" {
-					body = `{"project_name":"Example","ticket":{"prefixes":["AL"]},"code_metrics":{"source_roots":["src"]},"anomaly_thresholds":{"context_ceiling_warning_tokens":160000,"context_ceiling_critical_tokens":200000}`
+					body = `{"project_name":"Example","ticket":{"prefixes":["AL"]},"code_metrics":{"source_roots":["src"]},"anomaly_thresholds":{"error_rate_min_calls":5,"error_rate_threshold":0.25,"error_rate_critical_threshold":0.70,"context_ceiling_warning_tokens":160000,"context_ceiling_critical_tokens":200000}`
 					if value != "missing" {
 						body += `,"telemetry":{"capture":{"state_dir":` + value + `}}`
 					}
@@ -111,7 +111,7 @@ func TestRequiredCaptureStateAcrossOperationalReaders(t *testing.T) {
 func TestLocalOnlyCaptureStateAndMissingFilesystemDoNotNeedFallback(t *testing.T) {
 	root := t.TempDir()
 	shared := filepath.Join(root, ".agenticlens-config.yaml")
-	body := "project_name: Example\nticket:\n  prefixes: [AL]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+	body := "project_name: Example\nticket:\n  prefixes: [AL]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 	if err := os.WriteFile(shared, []byte(body), 0600); err != nil {
 		t.Fatal(err)
 	}

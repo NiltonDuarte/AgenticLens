@@ -36,7 +36,7 @@ func prepareCaptureInstall(t *testing.T, cwd string, args []string) []string {
 	shared := filepath.Join(root, ".agenticlens-config.yaml")
 	body, err := os.ReadFile(shared)
 	if os.IsNotExist(err) {
-		body = []byte("project_name: Capture installer fixture\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes: [TEST]\nworkspaces:\n  dir: workspaces\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n")
+		body = []byte("project_name: Capture installer fixture\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes: [TEST]\nworkspaces:\n  dir: workspaces\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n")
 	} else if err != nil {
 		t.Fatal(err)
 	}

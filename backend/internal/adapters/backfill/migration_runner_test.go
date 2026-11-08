@@ -1259,7 +1259,7 @@ func TestMigrationRunner_MissingWorkspacesDir(t *testing.T) {
 func TestMigrationRunnerRejectsExistingInvalidStateConfigWithoutMutation(t *testing.T) {
 	ws := setupMigrationTestWorkspaces(t)
 	root := filepath.Dir(ws)
-	invalid := []byte("project_name: Example\nticket:\n  prefixes: [AL]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n")
+	invalid := []byte("project_name: Example\nticket:\n  prefixes: [AL]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n")
 	if err := os.WriteFile(filepath.Join(root, ".agenticlens-config.yaml"), invalid, 0600); err != nil {
 		t.Fatal(err)
 	}
