@@ -1,22 +1,18 @@
-h3. Title: <PREFIX>-#: <Short title describing the outcome>
+# <PREFIX>-#: <Short title describing the outcome>
 
-*GOAL*
+## Goal
 
 <What the user will be able to do when this ticket is complete.>
 
-*CONTEXT*
+## Context
 
 <What happens today, why it is a problem and why this ticket is needed. A concrete before/after example can replace abstract explanation.>
 
-*ACCEPTANCE CRITERIA*
+## Acceptance criteria
 
-* <Observable behavior that proves the goal is met.>
-* <Relevant failure behavior or scope exclusion, only if needed.>
+- <Observable behavior that proves the goal is met.>
+- <Relevant failure behavior or scope exclusion, only if needed.>
 
-*Status*: <Ready or Blocked>
-*Blocked by*: <Ticket IDs or None>
-*Specification*: <Link to shared context, if needed; do not copy it here.>
+## Implementation notes
 
-*IMPLEMENTATION NOTES* (optional; omit when unnecessary)
-
-<Only technical contracts, grounded constraints, ownership boundaries or ticket-specific evidence needed beyond standard repository gates. Do not repeat acceptance, inventory every layer or copy the development workflow. Remove all prompts before delivery.>
+<Optional: necessary technical constraints, shared specification/evidence links or ownership boundaries beyond standard repository gates. Omit this section when unnecessary. Do not duplicate roadmap metadata or the development workflow. Remove all prompts before delivery.>
