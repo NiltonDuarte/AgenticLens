@@ -58,14 +58,15 @@ func TestReadDerivationPreservesUnrecordedAndRecordedEmptyAnalysis(t *testing.T)
 func TestSourceAnomalyPreparationRequiresRootAndChildCoverage(t *testing.T) {
 	parent := "root"
 	original := AgenticFactLedger{Sessions: []SessionFact{{ID: parent}, {ID: "child", ParentID: &parent}}}
-	partial, err := PersistSourceAnomalySummaries(original, SourceEvents{CompleteSessionIDs: []string{parent}})
+	policy := AnomalyThresholdsConfig{ErrorRateMinCalls: 5, ErrorRateThreshold: .35, ErrorRateCriticalThreshold: .70}
+	partial, err := PersistSourceAnomalySummaries(original, SourceEvents{CompleteSessionIDs: []string{parent}}, policy)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if partial.Anomalies != nil || partial.Sessions[0].Anomalies != nil || partial.Sessions[1].Anomalies != nil {
 		t.Fatalf("complete parent fabricated root/child observation: %+v", partial)
 	}
-	complete, err := PersistSourceAnomalySummaries(original, SourceEvents{CompleteSessionIDs: []string{parent, "child"}})
+	complete, err := PersistSourceAnomalySummaries(original, SourceEvents{CompleteSessionIDs: []string{parent, "child"}}, policy)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,7 +77,7 @@ func TestSourceAnomalyPreparationRequiresRootAndChildCoverage(t *testing.T) {
 	tool := "recorded-source-only"
 	known := Anomaly{RuleID: RuleToolRetryStreak, Severity: SeverityWarning, Context: AnomalyContext{ToolName: &tool, Count: &count}}
 	original.Anomalies = []Anomaly{known}
-	retained, err := PersistSourceAnomalySummaries(original, SourceEvents{CompleteSessionIDs: []string{parent}})
+	retained, err := PersistSourceAnomalySummaries(original, SourceEvents{CompleteSessionIDs: []string{parent}}, policy)
 	if err != nil {
 		t.Fatal(err)
 	}

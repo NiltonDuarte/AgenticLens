@@ -1,10 +1,12 @@
 package live_test
 
 import (
+	adaptershttp "agenticlens/internal/adapters/http"
 	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -46,9 +48,11 @@ func testProjectConfig() domain.ProjectConfig {
 			MaxTraceBufferMessages: 500,
 		},
 		AnomalyThresholds: domain.AnomalyThresholdsConfig{
-			StallThresholdSeconds: 120,
-			ErrorRateThreshold:    0.25,
-			ContextExhaustionPct:  0.85,
+			StallThresholdSeconds:      120,
+			ErrorRateThreshold:         0.25,
+			ErrorRateMinCalls:          5,
+			ErrorRateCriticalThreshold: 0.70,
+			ContextExhaustionPct:       0.85,
 		},
 		RoleMappings: domain.RoleMappings{
 			"orchestrator": "orchestrator",
@@ -654,6 +658,9 @@ func TestLiveTraceIncludesSkillAndExplicitTaskChildAttributes(t *testing.T) {
 	if len(trace.Messages) != 1 || len(trace.Messages[0].Parts) != 2 {
 		t.Fatalf("unexpected live trace: %+v", trace)
 	}
+	if trace.Relationships.State != domain.LiveRelationshipsComplete || len(trace.Diagnostics) != 0 {
+		t.Fatalf("linked native relationships not reported complete: %+v", trace)
+	}
 	if trace.Messages[0].Parts[0].SkillName != "agentic-lens-dev" || trace.Messages[0].Parts[1].SubagentType != "coder" || trace.Messages[0].Parts[1].ChildSessionID != "child" {
 		t.Fatalf("skill/task metadata missing from live trace: %+v", trace.Messages[0].Parts)
 	}
@@ -794,6 +801,23 @@ func TestLiveTraceSurvivesChildSessionLookupFailure(t *testing.T) {
 	taskPart := trace.Messages[0].Parts[0]
 	if taskPart.SubagentType != "coder" || taskPart.ChildSessionID != "" {
 		t.Fatalf("expected task attributes without an unresolved child id, got %+v", taskPart)
+	}
+	if trace.Relationships.State != domain.LiveRelationshipsUnavailable || len(trace.Diagnostics) != 1 || trace.Diagnostics[0].Code != domain.DiagnosticChildRelationshipLookupFailed || trace.Diagnostics[0].Message == "" {
+		t.Fatalf("optional lookup failure was indistinguishable from an empty child set: %+v", trace)
+	}
+	payload, err := json.Marshal(trace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(payload), `"relationships":{"state":"unavailable"}`) || !strings.Contains(string(payload), `"code":"child_relationship_lookup_failed"`) {
+		t.Fatalf("serialized trace lost typed completeness: %s", payload)
+	}
+	request := httptest.NewRequest("GET", "/api/live/trace/parent", nil)
+	request.SetPathValue("id", "parent")
+	response := httptest.NewRecorder()
+	adaptershttp.LiveTraceHandler(service)(response, request)
+	if response.Code != 200 || !strings.Contains(response.Body.String(), `"state":"unavailable"`) || !strings.Contains(response.Body.String(), `"code":"child_relationship_lookup_failed"`) || !strings.Contains(response.Body.String(), `"subagent_type":"coder"`) {
+		t.Fatalf("HTTP discarded partial trace/diagnostic status=%d body=%s", response.Code, response.Body.String())
 	}
 }
 

@@ -1,8 +1,12 @@
 package live_test
 
 import (
+	"agenticlens/internal/adapters"
 	"context"
 	"database/sql"
+	"encoding/json"
+	"fmt"
+	"strings"
 	"testing"
 
 	"agenticlens/internal/adapters/live"
@@ -137,9 +141,247 @@ func TestOfflineAndLiveToolExecutionParity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, anomaly := range domain.DetectAnomalies(domain.AgenticFactLedger{Sessions: offlineSessions}) {
+	policy := testProjectConfig().AnomalyThresholds
+	for _, anomaly := range domain.DetectAnomaliesFromEvents(domain.AgenticFactLedger{Sessions: offlineSessions}, offlineEvents, policy) {
 		if anomaly.RuleID == domain.RuleToolRetryStreak {
 			t.Fatalf("successful offline calls inflated the retry streak: %+v", anomaly)
+		}
+	}
+	// Independent positive sequence makes the negative reset oracle non-vacuous.
+	tool := "edit"
+	positive := []domain.EventFact{}
+	for i := 0; i < 3; i++ {
+		positive = append(positive, domain.EventFact{SessionID: "positive", EventID: fmt.Sprintf("failure-%d", i), Timestamp: fmt.Sprintf("2026-11-08T10:00:0%dZ", i), Turn: int64(i + 1), EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "error"})
+	}
+	found := false
+	for _, a := range domain.DetectAnomaliesFromEvents(domain.AgenticFactLedger{}, positive, policy) {
+		found = found || (a.RuleID == domain.RuleToolRetryStreak && a.Context.Count != nil && *a.Context.Count == 3)
+	}
+	if !found {
+		t.Fatal("positive source-event control did not reach retry detection")
+	}
+}
+
+// Synthetic OpenCode v1 records exercise the real SQLite/live/extraction boundaries.
+func TestV1StructuredExecutionAndVerbatimSourceParity(t *testing.T) {
+	const rawEvidence = "  segmentation fault\nexit code 2\n\tprivate-raw-source-marker  "
+	encoded, _ := json.Marshal(rawEvidence)
+	for _, tc := range []struct {
+		name, tool, status, output, metadata, wantOutput, wantStatus string
+		wantError                                                    bool
+	}{
+		{"read inspection", "read", "completed", string(encoded), `{}`, rawEvidence, "completed", false},
+		{"shell inspection", "bash", "completed", string(encoded), `{}`, rawEvidence, "completed", false},
+		{"native nonzero exit", "bash", "completed", string(encoded), `{"exit":2}`, rawEvidence, "error", true},
+		{"native zero exit", "bash", "completed", string(encoded), `{"exit":0}`, rawEvidence, "completed", false},
+		{"malformed exit unknown", "bash", "completed", string(encoded), `{"exit":"2"}`, rawEvidence, "completed", false},
+		{"null exit unknown", "bash", "completed", string(encoded), `{"exit":null}`, rawEvidence, "completed", false},
+		{"negative native exit", "bash", "completed", string(encoded), `{"exit":-1}`, rawEvidence, "error", true},
+		{"explicit failed status", "bash", "failed", string(encoded), `{}`, rawEvidence, "error", true},
+		{"unsupported exit alias", "bash", "completed", string(encoded), `{"exit_code":2}`, rawEvidence, "completed", false},
+		{"non-execution metadata", "read", "completed", string(encoded), `{"exit":2}`, rawEvidence, "completed", false},
+		{"unknown state", "bash", "unrecognized", string(encoded), `{}`, rawEvidence, "unrecognized", false},
+		{"missing status", "bash", "", string(encoded), `{}`, rawEvidence, "unknown", false},
+		{"malformed numeric status", "bash", "<number>", string(encoded), `{}`, rawEvidence, "unknown", false},
+		{"malformed optional error", "bash", "error", string(encoded), `{}`, rawEvidence, "error", true},
+		{"structured output", "read", "completed", `{ "source": "  private-raw-source-marker  " }`, `{}`, `{ "source": "  private-raw-source-marker  " }`, "completed", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dbPath := createTestDBFile(t)
+			db, err := sql.Open("sqlite", dbPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer db.Close()
+			if _, err = db.Exec(`INSERT INTO session (id,parent_id,agent,model,title,time_created,time_updated) VALUES ('source',NULL,'coder','model','source',1760000000000,1760000010000); INSERT INTO message (id,session_id,time_created,time_updated,data) VALUES ('message','source',1760000001000,1760000010000,'{"role":"assistant","tokens":{"input":1}}')`); err != nil {
+				t.Fatal(err)
+			}
+			statusJSON, _ := json.Marshal(tc.status)
+			if tc.status == "<number>" {
+				statusJSON = []byte("17")
+			}
+			payload := fmt.Sprintf(`{"type":"tool","tool":%q,"state":{"status":%s,"output":%s,"metadata":%s}}`, tc.tool, statusJSON, tc.output, tc.metadata)
+			if tc.name == "malformed optional error" {
+				payload = strings.Replace(payload, `"state":{`, `"state":{"error":{"unrecognized":"source detail"},`, 1)
+			}
+			if _, err = db.Exec(`INSERT INTO part (id,session_id,message_id,time_created,time_updated,data) VALUES ('part','source','message',1760000002000,1760000003000,?)`, payload); err != nil {
+				t.Fatal(err)
+			}
+			owners, _, _, err := opencode.ExtractSessions(db, []string{"source"}, "user", nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(owners) != 1 || owners[0].Anomalies != nil {
+				t.Fatalf("cfg-less raw source invented complete anomaly analysis: %+v", owners)
+			}
+			events, err := opencode.ExtractSessionSourceEvents(db, "source", "user")
+			if err != nil {
+				t.Fatal(err)
+			}
+			var offline *domain.EventFact
+			for i := range events {
+				if events[i].EventID == "opencode:part:part" {
+					offline = &events[i]
+				}
+			}
+			hook, err := live.OpenReadOnlyHook(dbPath, 5000)
+			if err != nil {
+				t.Fatal(err)
+			}
+			service := live.NewLiveService(hook, testProjectConfig())
+			defer service.Close()
+			trace, err := service.GetSessionTrace(context.Background(), "source")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if offline == nil || len(trace.Messages) != 1 || len(trace.Messages[0].Parts) != 1 {
+				t.Fatalf("source records unavailable offline=%+v trace=%+v", offline, trace)
+			}
+			part := trace.Messages[0].Parts[0]
+			if offline.Status != tc.wantStatus || part.Status != tc.wantStatus || part.IsError != tc.wantError {
+				t.Fatalf("classification differs: offline=%+v live=%+v", offline, part)
+			}
+			if offline.ToolOutput == nil || *offline.ToolOutput != tc.wantOutput || part.OutputSnippet != tc.wantOutput {
+				t.Fatalf("raw source changed offline=%+v live=%q expected=%q", offline.ToolOutput, part.OutputSnippet, tc.wantOutput)
+			}
+			if trace.Relationships.State != domain.LiveRelationshipsComplete || len(trace.Diagnostics) != 0 {
+				t.Fatalf("successful empty child lookup not complete: %+v", trace)
+			}
+			serialized, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(domain.AgenticFactLedger{Sessions: owners}))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if strings.Contains(string(serialized), "private-raw-source-marker") {
+				t.Fatalf("raw source entered persisted ledger: %s", serialized)
+			}
+		})
+	}
+}
+
+func TestV1ErrorOnlyLongEvidenceSurvivesLiveAndOffline(t *testing.T) {
+	dbPath := createTestDBFile(t)
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	raw := " \t" + strings.Repeat("private-error-only-source-marker\n", 100) + "  \n"
+	encoded, err := json.Marshal(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = db.Exec(`INSERT INTO session(id,parent_id,agent,model,title,time_created,time_updated) VALUES('owner',NULL,'coder','model','fixture',1760000000000,1760000010000);INSERT INTO message(id,session_id,time_created,time_updated,data) VALUES('message','owner',1760000001000,1760000010000,'{"role":"assistant","tokens":{"input":1}}')`); err != nil {
+		t.Fatal(err)
+	}
+	payload := fmt.Sprintf(`{"type":"tool","tool":"bash","state":{"status":"error","error":%s}}`, encoded)
+	if _, err = db.Exec(`INSERT INTO part(id,session_id,message_id,time_created,time_updated,data) VALUES('error-only','owner','message',1760000002000,1760000003000,?)`, payload); err != nil {
+		t.Fatal(err)
+	}
+	owners, _, _, err := opencode.ExtractSessions(db, []string{"owner"}, "user", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	events, err := opencode.ExtractSessionSourceEvents(db, "owner", "user")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var source *domain.EventFact
+	for i := range events {
+		if events[i].EventID == "opencode:part:error-only" {
+			source = &events[i]
+		}
+	}
+	hook, err := live.OpenReadOnlyHook(dbPath, 5000)
+	if err != nil {
+		t.Fatal(err)
+	}
+	service := live.NewLiveService(hook, testProjectConfig())
+	defer service.Close()
+	trace, err := service.GetSessionTrace(context.Background(), "owner")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if source == nil || len(trace.Messages) != 1 || len(trace.Messages[0].Parts) != 1 {
+		t.Fatalf("supported error-only record disappeared: source=%+v trace=%+v", source, trace)
+	}
+	part := trace.Messages[0].Parts[0]
+	if source.ToolOutput == nil || *source.ToolOutput != raw || part.OutputSnippet != raw {
+		t.Fatalf("full error evidence diverged: offlineOutput=%v liveBytes=%d wantBytes=%d", source.ToolOutput, len(part.OutputSnippet), len(raw))
+	}
+	if source.ErrorMessage == nil || len(*source.ErrorMessage) != 2048 || part.ErrorMessage == nil || len(*part.ErrorMessage) != 2048 {
+		t.Fatalf("bounded diagnostics changed: source=%+v part=%+v", source, part)
+	}
+	wire, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(domain.AgenticFactLedger{Sessions: owners}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(wire), "private-error-only-source-marker") {
+		t.Fatalf("raw error body leaked into ledger: %s", wire)
+	}
+}
+
+func TestLiveServiceAndHydrationReceiveConfiguredFailureRatePolicy(t *testing.T) {
+	dbPath := createTestDBFile(t)
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = db.Exec(`INSERT INTO session(id,parent_id,agent,model,title,time_created,time_updated) VALUES('owner',NULL,'coder','model','fixture',1760000000000,1760000010000);INSERT INTO message(id,session_id,time_created,time_updated,data) VALUES('message','owner',1760000001000,1760000010000,'{"role":"assistant","tokens":{"input":1}}');INSERT INTO part(id,session_id,message_id,time_created,time_updated,data) VALUES('first','owner','message',1760000002000,1760000002100,'{"type":"tool","tool":"read","state":{"status":"error","output":"failure"}}'),('second','owner','message',1760000003000,1760000003100,'{"type":"tool","tool":"read","state":{"status":"completed","output":"quoted crash"}}'),('third','owner','message',1760000004000,1760000004100,'{"type":"tool","tool":"read","state":{"status":"error","output":"failure"}}')`); err != nil {
+		t.Fatal(err)
+	}
+	owners, _, _, err := opencode.ExtractSessions(db, []string{"owner"}, "user", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		minimum  int
+		critical float64
+		severity domain.AnomalySeverity
+	}{{3, .8, domain.SeverityWarning}, {4, .8, ""}, {3, .6, domain.SeverityCritical}} {
+		cfg := testProjectConfig()
+		cfg.AnomalyThresholds.ErrorRateMinCalls = tc.minimum
+		cfg.AnomalyThresholds.ErrorRateThreshold = .4
+		cfg.AnomalyThresholds.ErrorRateCriticalThreshold = tc.critical
+		hook, err := live.OpenReadOnlyHook(dbPath, 5000)
+		if err != nil {
+			t.Fatal(err)
+		}
+		service := live.NewLiveService(hook, cfg)
+		trace, err := service.GetSessionTrace(context.Background(), "owner")
+		if err != nil {
+			service.Close()
+			t.Fatal(err)
+		}
+		var liveRates []domain.LiveAnomalyAlert
+		for _, a := range trace.Anomalies {
+			if a.RuleName == domain.RuleLiveToolHighFailureRate {
+				liveRates = append(liveRates, a)
+			}
+		}
+		expected := 0
+		if tc.severity != "" {
+			expected = 1
+		}
+		if len(liveRates) != expected || (expected == 1 && string(liveRates[0].Severity) != string(tc.severity)) {
+			service.Close()
+			t.Fatalf("live service dropped configured policy: %+v", liveRates)
+		}
+		response, err := service.HydrateWorkspaceEvents(context.Background(), "TEST-1", domain.DeriveMetricsLedger(domain.AgenticFactLedger{Sessions: owners}, cfg))
+		service.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+		var hydratedRates []domain.Anomaly
+		for _, a := range response.Anomalies {
+			if a.RuleID == domain.RuleToolHighFailureRate {
+				hydratedRates = append(hydratedRates, a)
+			}
+		}
+		if len(hydratedRates) != expected || (expected == 1 && hydratedRates[0].Severity != tc.severity) {
+			t.Fatalf("hydration dropped configured policy: %+v", response)
 		}
 	}
 }

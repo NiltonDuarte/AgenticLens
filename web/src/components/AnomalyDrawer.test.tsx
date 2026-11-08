@@ -596,3 +596,20 @@ describe('AnomalyDrawer Component', () => {
     });
   });
 });
+
+describe('rate anomaly inspector count semantics', () => {
+ it('retains a failure total and raw evidence without describing a consecutive streak', async () => {
+  const output='  quoted source evidence\nexit status 2\n';
+  const writeText=vi.fn().mockResolvedValue(undefined);
+  Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText}});
+  const anomaly:Anomaly={rule_id:'TOOL_HIGH_FAILURE_RATE',severity:'WARNING',context:{tool_name:'read',session_id:'source',turn:1,count:7,total_calls:20,failure_rate_pct:35,threshold:'>=35%'}};
+  const event:EventFact={session_id:'source',turn:1,role:'coder',event_type:'tool_call',tool_name:'read',status:'error',timestamp:'2026-11-08T10:00:00Z',tool_output:output,context_tokens:1};
+  render(<AnomalyDrawer isOpen={true} onClose={vi.fn()} anomaly={anomaly} event={event} />);
+  expect(screen.getByText('Failure / Loop Count')).toBeInTheDocument();
+  expect(screen.getByText("Tool 'read' failed 7 out of 20 calls (35.0% failure rate, threshold: >=35%).")).toBeInTheDocument();
+  await act(async()=>{fireEvent.click(screen.getByRole('button',{name:'Copy execution issue debug prompt'}));});
+  const prompt=String(writeText.mock.calls[0]?.[0]);
+  expect(prompt).not.toContain('consecutive');
+  expect(prompt).toContain('```\n'+output+'\n```');
+ });
+});

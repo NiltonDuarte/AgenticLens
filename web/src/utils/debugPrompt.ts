@@ -76,6 +76,7 @@ export function translateRuleToPlainEnglish(ruleId: string, toolName?: string): 
     TOOL_RETRY_STREAK: tool ? `Consecutive tool failures on \`${tool}\`` : 'Consecutive tool failure streak',
     ConsecutiveToolErrors: tool ? `Consecutive tool failures on \`${tool}\`` : 'Consecutive tool failure streak',
     TOOL_HIGH_FAILURE_RATE: tool ? `High failure rate on \`${tool}\`` : 'High tool failure rate',
+    ToolHighFailureRate: tool ? `High failure rate on \`${tool}\`` : 'High tool failure rate',
     CONTEXT_SATURATION_SPIKE: 'Context window saturation approach',
     ContextCeilingApproach: 'Context window saturation approach',
     SUBAGENT_REWORK_LOOP: tool ? `Repeated tool thrashing on \`${tool}\`` : 'Repeated tool thrashing',
@@ -96,11 +97,12 @@ const location = (sessionId: string, turn?: number): string => turn === undefine
 export function generateToolExecutionPrompt(params: ToolExecutionPromptParams): string {
   const tool = metadata(params.toolName, 'unknown_tool');
   const failed = ['error', 'failed'].includes(params.status.toLowerCase());
+  const completed = ['completed', 'success', 'succeeded'].includes(params.status.toLowerCase());
   const outcome = failed
     ? params.consecutiveErrors !== undefined && params.consecutiveErrors > 1
       ? `failed with ${params.consecutiveErrors} consecutive failures on this tool.`
       : 'failed with an execution error.'
-    : 'completed successfully.';
+    : completed ? 'completed successfully.' : `has reported status \`${metadata(params.status, 'unknown')}\`; its execution outcome is unconfirmed.`;
   const ids = [
     present(params.messageId) ? `message \`${params.messageId}\`` : '',
     present(params.partId) ? `part \`${params.partId}\`` : '',

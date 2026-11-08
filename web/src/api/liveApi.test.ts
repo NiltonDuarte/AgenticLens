@@ -5,6 +5,7 @@ import {
   fetchLiveTrace,
   parseLiveSessionTree,
   parseLiveTraceView,
+  parseLiveAnomalyAlert,
   type LiveStreamCallbacks,
 } from './liveApi';
 import type {
@@ -181,7 +182,7 @@ describe('liveApi Streaming and Boundary Layer', () => {
       expect(onAnomalyAlert).toHaveBeenCalledWith(alert);
 
       // Dispatch trace_update
-      const trace: LiveTraceView = mockLiveTraceView;
+      const trace: LiveTraceView = { ...mockLiveTraceView, relationships:{state:"unavailable"},diagnostics:[{code:"child_relationship_lookup_failed",message:"Native query failed"}] };
       es.dispatchEvent('trace_update', JSON.stringify(trace));
       expect(onTraceUpdate).toHaveBeenCalledWith(trace);
 
@@ -639,4 +640,30 @@ describe('liveApi Streaming and Boundary Layer', () => {
       await expect(fetchLiveTrace('ses-malformed-json')).rejects.toThrow(/Unexpected token/i);
     });
   });
+});
+
+
+describe('live relationship completeness boundary', () => {
+ it('preserves partial relationship diagnostics alongside usable messages', () => {
+  const trace = parseLiveTraceView({session_id:'parent',messages:[{id:'message',parts:[{id:'part',type:'text',text:'useful content'}]}],relationships:{state:'unavailable'},diagnostics:[{code:'child_relationship_lookup_failed',message:'child query unavailable'}]}, 'parent');
+  expect(trace.relationships?.state).toBe('unavailable');
+  expect(trace.diagnostics).toEqual([{code:'child_relationship_lookup_failed',message:'child query unavailable'}]);
+  expect(trace.messages).toHaveLength(1);
+ });
+ it('distinguishes proven complete relationship lookup from legacy unknown metadata', () => {
+  expect(parseLiveTraceView({session_id:'parent',messages:[],relationships:{state:'complete'},diagnostics:[]}, 'parent').relationships?.state).toBe('complete');
+  expect(parseLiveTraceView({session_id:'parent',messages:[]}, 'parent').relationships).toBeUndefined();
+ });
+});
+
+
+describe('live rate alert structured fields', () => {
+ it('preserves exact structured identities and raw evidence without turning totals into streaks', () => {
+  const message='  7 separated failures\n';const alert=parseLiveAnomalyAlert({session_id:'parent',rule_name:'ToolHighFailureRate',severity:'WARNING',message,trigger_event:'part-1',timestamp:'2026-11-08T10:00:00Z',tool_name:'read',part_id:'part-1',count:7});
+  expect(alert?.rule_name).toBe('ToolHighFailureRate');expect(alert?.tool_name).toBe('read');expect(alert?.part_id).toBe('part-1');expect(alert?.count).toBe(7);expect(alert?.message).toBe(message);
+ });
+ it('rejects malformed supplied completeness instead of claiming a complete lookup', () => {
+  expect(()=>parseLiveTraceView({session_id:'parent',messages:[],relationships:{state:'garbage'}},'parent')).toThrow();
+  expect(()=>parseLiveTraceView({session_id:'parent',messages:[],relationships:{state:'complete'},diagnostics:[{code:'child_relationship_lookup_failed',message:17}]},'parent')).toThrow();
+ });
 });

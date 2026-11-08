@@ -26,8 +26,11 @@ export function formatAnomaly(anomaly: Anomaly): AnomalyDisplayText {
       }
       break;
     case 'CONTEXT_SATURATION_SPIKE':
-      if (context.context_tokens !== undefined && context.threshold === '160000') {
-        return { title: `Context ceiling breached (${formatTokensK(context.context_tokens)} tokens)`, description: `Context tokens reached ${formatTokensK(context.context_tokens)}, breaching the 160k critical ceiling.` };
+      if (context.context_tokens !== undefined && context.token_delta === undefined && context.threshold) {
+        const configuredCeiling = Number(context.threshold);
+        const ceiling = Number.isFinite(configuredCeiling) && configuredCeiling > 0
+          ? formatTokensK(configuredCeiling) : context.threshold;
+        return { title: `Context ceiling breached (${formatTokensK(context.context_tokens)} tokens)`, description: `Context tokens reached ${formatTokensK(context.context_tokens)}, breaching the ${ceiling} ${anomaly.severity.toLowerCase()} ceiling.` };
       }
       if (context.token_delta !== undefined && context.context_tokens !== undefined) {
         return { title: `Context saturation spike (+${formatTokensK(context.token_delta)} tokens)`, description: `Context tokens surged by ${formatTokensK(context.token_delta)} to ${formatTokensK(context.context_tokens)} tokens.` };
@@ -58,6 +61,7 @@ export type ToolFailureAnomalyRule =
   | 'TOOL_RETRY_STREAK'
   | 'TOOL_HIGH_FAILURE_RATE'
   | 'ConsecutiveToolErrors'
+  | 'ToolHighFailureRate'
   | 'ToolThrashing';
 
 type AnomalyMatchEvent = Omit<EventFact, 'session_id'> & { readonly session_id?: string | null | undefined };
@@ -73,6 +77,7 @@ export function isToolFailureAnomalyRule(
     ruleId === 'TOOL_RETRY_STREAK' ||
     ruleId === 'TOOL_HIGH_FAILURE_RATE' ||
     ruleId === 'ConsecutiveToolErrors' ||
+    ruleId === 'ToolHighFailureRate' ||
     ruleId === 'ToolThrashing'
   );
 }
@@ -97,8 +102,19 @@ export function matchesAnomaly(event: AnomalyMatchEvent, anomaly: Anomaly): bool
     return new Set(matchingRefs.map((ref) => ref.session_id)).size === 1;
   }
 
-  // Strict Session ID Guard: if both context and event specify session_id, they must match
-  if (ctx.session_id && event.session_id && ctx.session_id !== event.session_id) {
+  // A fallback cannot establish an explicitly scoped session from a missing ID.
+  if (ctx.session_id && ctx.session_id !== event.session_id) {
+    return false;
+  }
+  if (ctx.tool_name && (!event.tool_name || ctx.tool_name.toLowerCase() !== event.tool_name.toLowerCase())) {
+    return false;
+  }
+  if (ctx.turn !== undefined && ctx.turn !== event.turn) {
+    return false;
+  }
+  if ((ctx.role || ctx.secondary_role) &&
+    ctx.role?.toLowerCase() !== event.role.toLowerCase() &&
+    ctx.secondary_role?.toLowerCase() !== event.role.toLowerCase()) {
     return false;
   }
 
@@ -159,6 +175,15 @@ export function findMatchingAnomaly(
   return anomalies.find((a) => matchesAnomaly(event, a));
 }
 
+/** Find streak evidence independently of the display ordering of other rules. */
+export function findMatchingStreak(
+  event: EventFact,
+  anomalies?: readonly Anomaly[]
+): number | undefined {
+  const streak = anomalies?.find((anomaly) => extractStreakCount(anomaly) !== undefined && matchesAnomaly(event, anomaly));
+  return extractStreakCount(streak);
+}
+
 /** Rebind a selected summary only when its rule and occurrence context identify one counterpart. */
 export function rebindAnomaly(selected: Anomaly | null, anomalies: readonly Anomaly[]): Anomaly | null {
   if (!selected) return null;
@@ -173,7 +198,7 @@ export function rebindAnomaly(selected: Anomaly | null, anomalies: readonly Anom
 }
 
 /**
- * Extracts numeric streak or failure count from an Anomaly or LiveAnomalyAlert.
+ * Only rules that measure consecutive failures can supply a streak count.
  */
 export function extractStreakCount(
   anomaly?: Anomaly | LiveAnomalyAlert | null | undefined
@@ -181,12 +206,10 @@ export function extractStreakCount(
   if (!anomaly) {
     return undefined;
   }
-
-  if ('count' in anomaly && typeof anomaly.count === 'number') {
+  if ('rule_name' in anomaly && anomaly.rule_name === 'ConsecutiveToolErrors' && typeof anomaly.count === 'number') {
     return anomaly.count;
   }
-
-  if ('context' in anomaly && anomaly.context && typeof anomaly.context.count === 'number') {
+  if ('rule_id' in anomaly && anomaly.rule_id === 'TOOL_RETRY_STREAK' && typeof anomaly.context.count === 'number') {
     return anomaly.context.count;
   }
 
@@ -194,34 +217,37 @@ export function extractStreakCount(
 }
 
 /**
- * Locates an active live anomaly alert matching a live part fact by tool name, trigger event, or part id.
+ * Matches structured identities first. Legacy triggers use the exact emitted
+ * part/evidence or tool/part-list grammar, never message/output substrings.
  */
 export function findMatchingLiveAlert(
   part: LivePartFact,
-  alerts?: readonly LiveAnomalyAlert[]
+  alerts?: readonly LiveAnomalyAlert[],
+  sessionId?: string
 ): LiveAnomalyAlert | undefined {
   if (!alerts || alerts.length === 0) {
     return undefined;
   }
 
   return alerts.find((alert) => {
-    // 1. Direct trigger event match (part id in trigger event)
-    if (alert.trigger_event && part.id && alert.trigger_event.includes(part.id)) {
-      return true;
+    if (sessionId !== undefined && alert.session_id !== sessionId) return false;
+    if (!isToolFailureAnomalyRule(alert.rule_name) || !part.is_error) return false;
+    if (alert.tool_name && alert.tool_name.toLowerCase() !== part.tool_name?.toLowerCase()) return false;
+    if (alert.part_id) {
+      return alert.part_id === part.id;
     }
-
-    // 2. Tool failure alert matching tool name
-    if (isToolFailureAnomalyRule(alert.rule_name)) {
-      if (
-        part.tool_name &&
-        (alert.message.toLowerCase().includes(part.tool_name.toLowerCase()) ||
-          (alert.trigger_event &&
-            alert.trigger_event.toLowerCase().includes(part.tool_name.toLowerCase())))
-      ) {
-        return true;
-      }
+    if (alert.rule_name === 'ToolHighFailureRate') {
+      return Boolean(alert.tool_name && part.tool_name);
     }
-
-    return false;
+    const separator = alert.trigger_event.indexOf(': ');
+    if (alert.rule_name === 'ConsecutiveToolErrors') {
+      const partId = separator < 0 ? alert.trigger_event : alert.trigger_event.slice(0, separator);
+      return part.id.length > 0 && partId === part.id;
+    }
+    if (alert.rule_name !== 'ToolThrashing' || separator < 0) return false;
+    const toolName = alert.trigger_event.slice(0, separator);
+    if (toolName.toLowerCase() !== part.tool_name?.toLowerCase()) return false;
+    const partIds = alert.trigger_event.slice(separator + 2).split(', ');
+    return part.id.length > 0 && partIds.includes(part.id);
   });
 }

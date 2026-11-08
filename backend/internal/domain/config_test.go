@@ -62,7 +62,7 @@ func testProjectConfig() domain.ProjectConfig {
 		},
 		AnomalyThresholds: domain.AnomalyThresholdsConfig{
 			StallThresholdSeconds:            120,
-			ErrorRateThreshold:               0.25,
+			ErrorRateThreshold:               0,
 			ContextExhaustionPct:             0.85,
 			ConsecutiveErrorsStreakWarning:   3,
 			ConsecutiveErrorsStreakCritical:  5,
@@ -149,8 +149,8 @@ func TestDefaultProjectConfig(t *testing.T) {
 	if cfg.AnomalyThresholds.ErrorRateMinCalls != 0 || cfg.AnomalyThresholds.ErrorRateCriticalThreshold != 0 {
 		t.Fatalf("writer-only defaults leaked into runtime defaults: %+v", cfg.AnomalyThresholds)
 	}
-	if cfg.AnomalyThresholds.ErrorRateThreshold != 0.25 {
-		t.Errorf("expected AnomalyThresholds.ErrorRateThreshold 0.25, got %f", cfg.AnomalyThresholds.ErrorRateThreshold)
+	if cfg.AnomalyThresholds.ErrorRateThreshold != 0 {
+		t.Errorf("expected no runtime AnomalyThresholds.ErrorRateThreshold default, got %f", cfg.AnomalyThresholds.ErrorRateThreshold)
 	}
 	if cfg.AnomalyThresholds.ContextExhaustionPct != 0.85 {
 		t.Errorf("expected AnomalyThresholds.ContextExhaustionPct 0.85, got %f", cfg.AnomalyThresholds.ContextExhaustionPct)

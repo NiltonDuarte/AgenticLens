@@ -96,7 +96,7 @@ func normalizeToolInput(raw json.RawMessage) *string {
 	if len(bytes.TrimSpace(raw)) == 0 || bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
 		return nil
 	}
-	v := string(raw)
+	v := SchemaV1RawValue(raw)
 	return &v
 }
 

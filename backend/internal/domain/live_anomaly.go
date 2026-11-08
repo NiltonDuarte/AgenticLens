@@ -12,10 +12,11 @@ type LiveAnomalyRuleName string
 
 // Canonical live anomaly rule names.
 const (
-	RuleConsecutiveToolErrors  LiveAnomalyRuleName = "ConsecutiveToolErrors"
-	RuleContextCeilingApproach LiveAnomalyRuleName = "ContextCeilingApproach"
-	RuleTokenVelocityRunaway   LiveAnomalyRuleName = "TokenVelocityRunaway"
-	RuleToolThrashing          LiveAnomalyRuleName = "ToolThrashing"
+	RuleConsecutiveToolErrors   LiveAnomalyRuleName = "ConsecutiveToolErrors"
+	RuleContextCeilingApproach  LiveAnomalyRuleName = "ContextCeilingApproach"
+	RuleTokenVelocityRunaway    LiveAnomalyRuleName = "TokenVelocityRunaway"
+	RuleToolThrashing           LiveAnomalyRuleName = "ToolThrashing"
+	RuleLiveToolHighFailureRate LiveAnomalyRuleName = "ToolHighFailureRate"
 )
 
 // LiveAnomalySeverity defines the severity tier of a live anomaly alert.
@@ -44,6 +45,8 @@ const (
 
 // LiveAnomalyAlert represents an active health degradation or operational failure alert in a live session.
 type LiveAnomalyAlert struct {
+	ToolName     string              `json:"tool_name,omitempty"`
+	PartID       string              `json:"part_id,omitempty"`
 	SessionID    string              `json:"session_id"`
 	RuleName     LiveAnomalyRuleName `json:"rule_name"`
 	Severity     LiveAnomalySeverity `json:"severity"`
@@ -143,7 +146,8 @@ func EvaluateConsecutiveToolErrors(trace *LiveTraceView, streakThresholds ...int
 			Message:      msg,
 			Timestamp:    lastFailingTimestamp,
 			TriggerEvent: triggerEvent,
-			Count:        &streakCount,
+			ToolName:     toolName, PartID: lastFailingPart.ID,
+			Count: &streakCount,
 		},
 	}
 }
@@ -473,6 +477,7 @@ func EvaluateToolThrashing(trace *LiveTraceView, failureThresholds ...int) []Liv
 			Message:      msg,
 			Timestamp:    cand.timestamp,
 			TriggerEvent: trigger,
+			ToolName:     cand.toolName,
 			Count:        &failCount,
 		})
 	}
@@ -530,6 +535,9 @@ func EvaluateLiveAnomalies(tree *LiveSessionTree, trace *LiveTraceView, opts ...
 	if len(opts) > 0 {
 		opt := opts[0]
 		t := opt.Thresholds
+		thresholds.ErrorRateMinCalls = t.ErrorRateMinCalls
+		thresholds.ErrorRateThreshold = t.ErrorRateThreshold
+		thresholds.ErrorRateCriticalThreshold = t.ErrorRateCriticalThreshold
 		if t.ConsecutiveErrorsStreakWarning > 0 {
 			thresholds.ConsecutiveErrorsStreakWarning = t.ConsecutiveErrorsStreakWarning
 		}
@@ -563,6 +571,7 @@ func EvaluateLiveAnomalies(tree *LiveSessionTree, trace *LiveTraceView, opts ...
 	}
 
 	if trace != nil {
+		collected = append(collected, EvaluateLiveToolFailureRates(trace, thresholds)...)
 		collected = append(collected, EvaluateConsecutiveToolErrors(trace, thresholds.ConsecutiveErrorsStreakWarning, thresholds.ConsecutiveErrorsStreakCritical)...)
 		collected = append(collected, EvaluateContextCeilingApproach(trace, thresholds.ContextCeilingWarningTokens, thresholds.ContextCeilingCriticalTokens)...)
 		collected = append(collected, EvaluateTokenVelocityRunaway(trace, thresholds.TokenVelocityWarningTokens, thresholds.TokenVelocityCriticalTokens, thresholds.TokenVelocityWarningDeltaTokens, thresholds.TokenVelocityCriticalDeltaTokens)...)
@@ -601,4 +610,50 @@ func EvaluateLiveAnomalies(tree *LiveSessionTree, trace *LiveTraceView, opts ...
 
 	SortLiveAnomalies(unique)
 	return unique
+}
+
+// EvaluateLiveToolFailureRates uses the same configured rate policy as offline detection.
+func EvaluateLiveToolFailureRates(trace *LiveTraceView, thresholds AnomalyThresholdsConfig) []LiveAnomalyAlert {
+	if trace == nil {
+		return nil
+	}
+	type stats struct {
+		calls, errors      int64
+		lastPart, lastTime string
+	}
+	tools := map[string]*stats{}
+	for _, message := range trace.Messages {
+		for _, part := range message.Parts {
+			if part.Type != "tool" || part.ToolName == nil || *part.ToolName == "" {
+				continue
+			}
+			name := *part.ToolName
+			st := tools[name]
+			if st == nil {
+				st = &stats{}
+				tools[name] = st
+			}
+			st.calls++
+			if part.IsError {
+				st.errors++
+				st.lastPart = part.ID
+				st.lastTime = message.Timestamp
+			}
+		}
+	}
+	var alerts []LiveAnomalyAlert
+	for name, st := range tools {
+		severity, threshold, detected := EvaluateToolFailureRate(st.calls, st.errors, thresholds)
+		if !detected {
+			continue
+		}
+		liveSeverity := LiveSeverityWarning
+		if severity == SeverityCritical {
+			liveSeverity = LiveSeverityCritical
+		}
+		count := st.errors
+		alerts = append(alerts, LiveAnomalyAlert{SessionID: trace.SessionID, RuleName: RuleLiveToolHighFailureRate, Severity: liveSeverity, ToolName: name, PartID: st.lastPart, Message: fmt.Sprintf("Tool '%s' failed %d out of %d calls (threshold: %s).", name, st.errors, st.calls, threshold), Timestamp: st.lastTime, TriggerEvent: st.lastPart, Count: &count})
+	}
+	SortLiveAnomalies(alerts)
+	return alerts
 }

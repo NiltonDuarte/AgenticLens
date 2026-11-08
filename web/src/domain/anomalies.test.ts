@@ -32,12 +32,13 @@ describe('Domain Anomalies Logic', () => {
     });
   });
   describe('isToolFailureAnomalyRule', () => {
-    it('returns true for all four tool failure anomaly rule IDs', () => {
+    it('returns true for supported tool failure anomaly rule IDs', () => {
       const canonicalFailures: readonly string[] = [
         'TOOL_RETRY_STREAK',
         'TOOL_HIGH_FAILURE_RATE',
         'ConsecutiveToolErrors',
         'ToolThrashing',
+        'ToolHighFailureRate',
       ];
 
       for (const rule of canonicalFailures) {
@@ -411,7 +412,7 @@ describe('Domain Anomalies Logic', () => {
     it('finds alert by tool failure rule and tool name match', () => {
       const otherPart: LivePartFact = {
         ...errorPart,
-        id: 'different-part-id',
+        id: 'p1',
       };
       const matched = findMatchingLiveAlert(otherPart, [alertByToolName]);
       expect(matched).toEqual(alertByToolName);
@@ -441,4 +442,35 @@ describe('Domain Anomalies Logic', () => {
       expect(findMatchingLiveAlert(errorPart, [])).toBeUndefined();
     });
   });
+});
+
+
+describe('anomaly identity and rule-specific count regressions', () => {
+ const event: EventFact = { session_id: 'session', event_id: 'event', timestamp: '2026-11-08T10:00:00Z', turn: 1, role: 'coder', event_type: 'tool_call', tool_name: 'read', status: 'error', context_tokens: 1 };
+ it('rejects contradictory tools before same-turn or role fallback', () => {
+  for (const tool of ['read_file', 'bash']) {
+   const anomaly: Anomaly = { rule_id: 'TOOL_RETRY_STREAK', severity: 'WARNING', context: { session_id: 'session', turn: 1, role: 'coder', tool_name: tool, count: 4 } };
+   expect(matchesAnomaly(event, anomaly)).toBe(false);
+  }
+ });
+ it('cannot infer an explicitly required historical session from a matching tool and turn', () => {
+  const anomaly:Anomaly={rule_id:'TOOL_RETRY_STREAK',severity:'WARNING',context:{session_id:'session',tool_name:'read',turn:1,count:4}};
+  const {session_id:omitted,...nested}=event;
+  expect(omitted).toBe('session');
+  expect(matchesAnomaly(nested,anomaly)).toBe(false);
+ });
+ it('does not export rate totals or thrashing frequencies as consecutive streaks', () => {
+  expect(extractStreakCount({ rule_id: 'TOOL_HIGH_FAILURE_RATE', severity: 'WARNING', context: {count: 7, total_calls: 20} })).toBeUndefined();
+  expect(extractStreakCount({ session_id: 'session', rule_name: 'ToolThrashing', severity: 'WARNING', message: '7 errors', trigger_event: 'read: part-1', timestamp: event.timestamp, count: 7 })).toBeUndefined();
+  expect(extractStreakCount({ session_id: 'session', rule_name: 'ToolHighFailureRate', severity: 'WARNING', message: '7 errors', trigger_event: 'read', timestamp: event.timestamp, count: 7 })).toBeUndefined();
+ });
+ it('matches exact part tokens and exact tool identifiers in supported legacy triggers', () => {
+  const part: LivePartFact = {id:'part-1', type:'tool', tool_name:'read', status:'error', is_error:true, severity:'medium', output_snippet:'source text'};
+  const base: LiveAnomalyAlert = {session_id:'session', rule_name:'ConsecutiveToolErrors', severity:'WARNING', message:'read failed', trigger_event:'part-10: source text', timestamp:event.timestamp, count:4};
+  expect(findMatchingLiveAlert(part,[base])).toBeUndefined();
+  expect(findMatchingLiveAlert(part,[{...base,trigger_event:'part-1: source text'}])).toBeDefined();
+  expect(findMatchingLiveAlert(part,[{...base,rule_name:'ToolThrashing',trigger_event:'read_file: part-1'}])).toBeUndefined();
+  expect(findMatchingLiveAlert(part,[{...base,rule_name:'ToolThrashing',trigger_event:'read: part-10'}])).toBeUndefined();
+  expect(findMatchingLiveAlert(part,[{...base,rule_name:'ToolThrashing',trigger_event:'read: part-1, part-10'}])).toBeDefined();
+ });
 });

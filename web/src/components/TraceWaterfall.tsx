@@ -16,6 +16,7 @@ import {
   matchesAnomaly,
   findMatchingAnomaly,
   formatAnomaly,
+  findMatchingStreak,
   type AnomalyRule,
   type ToolFailureAnomalyRule,
 } from '../domain/anomalies';
@@ -131,8 +132,7 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
     e.stopPropagation();
     let prompt: string;
     if (ev.event_type === 'tool_call') {
-      const matched = findMatchingAnomaly(ev, anomalies);
-      const streakCount = matched?.context?.count;
+      const streakCount = findMatchingStreak(ev, anomalies);
       prompt = generateToolExecutionPrompt({
         toolName: ev.tool_name || 'unknown_tool',
         turn: ev.turn,

@@ -60,9 +60,18 @@ func ScanWorkspaces(basePath string) domain.ScanReport {
 	}
 
 	var metricFiles []string
+	type scanWalkFailure struct {
+		path string
+		err  error
+	}
+	var walkFailures []scanWalkFailure
 	err = filepath.WalkDir(targetDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return err
+			if path == targetDir {
+				return err
+			}
+			walkFailures = append(walkFailures, scanWalkFailure{path: path, err: err})
+			return nil
 		}
 		if !d.IsDir() && d.Name() == "agentic_metrics.json" {
 			metricFiles = append(metricFiles, path)
@@ -98,6 +107,14 @@ func ScanWorkspaces(basePath string) domain.ScanReport {
 			TicketID: ticketID,
 			Message:  fmt.Sprintf("Ticket workspace %s was skipped: %s", ticketID, guidance),
 		})
+	}
+
+	for _, failure := range walkFailures {
+		metricPath := failure.path
+		if filepath.Base(metricPath) != "agentic_metrics.json" {
+			metricPath = filepath.Join(metricPath, "agentic_metrics.json")
+		}
+		addDiagnostic(metricPath, fmt.Errorf("workspace traversal unavailable: %w", failure.err))
 	}
 
 	for _, metricFile := range metricFiles {
@@ -303,57 +320,21 @@ func LoadTicketWorkspace(ticketID, basePath string) (*domain.AgenticMetricsLedge
 	return &ledger, nil
 }
 
-// UpdateSummaryFile idempotently updates or appends the metrics table inside the summary file.
-func UpdateSummaryFile(destPath string, tableMD string) error {
-	parentDir := filepath.Dir(destPath)
-	if err := os.MkdirAll(parentDir, 0755); err != nil {
-		return fmt.Errorf("creating parent directories for %s: %w", destPath, err)
+// UpdateSummaryFile replaces only the managed metrics block, preserving other evidence.
+func UpdateSummaryFile(destPath, tableMD string) error {
+	if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
+		return fmt.Errorf("creating summary directory: %w", err)
 	}
-
-	header := "### Workflow Efficiency"
-	legacyHeader := "### Agentic Execution Metrics"
-
-	if data, err := os.ReadFile(destPath); err == nil {
-		content := string(data)
-		targetIdx := -1
-		if idx := strings.Index(content, header); idx != -1 {
-			targetIdx = idx
-		} else if idx := strings.Index(content, legacyHeader); idx != -1 {
-			targetIdx = idx
-		}
-
-		if targetIdx != -1 {
-			nextHeading := strings.Index(content[targetIdx+len(header):], "\n## ")
-			var newContent string
-			if nextHeading != -1 {
-				absNextHeading := targetIdx + len(header) + nextHeading
-				newContent = strings.TrimRight(content[:targetIdx], " \t\r\n") +
-					"\n\n" +
-					strings.TrimSpace(tableMD) +
-					"\n\n" +
-					strings.TrimLeft(content[absNextHeading:], " \t\r\n")
-			} else {
-				newContent = strings.TrimRight(content[:targetIdx], " \t\r\n") +
-					"\n\n" +
-					strings.TrimSpace(tableMD) +
-					"\n"
-			}
-			if err := os.WriteFile(destPath, []byte(newContent), 0644); err != nil {
-				return fmt.Errorf("writing updated summary to %s: %w", destPath, err)
-			}
-			return nil
-		}
+	data, err := os.ReadFile(destPath)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("reading summary %s: %w", destPath, err)
 	}
-
-	f, err := os.OpenFile(destPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	updated, err := replaceSummaryMetrics(string(data), tableMD)
 	if err != nil {
-		return fmt.Errorf("opening %s for appending: %w", destPath, err)
+		return fmt.Errorf("updating summary %s: %w", destPath, err)
 	}
-	defer f.Close()
-
-	tableContent := "\n" + strings.TrimSpace(tableMD) + "\n"
-	if _, err := f.WriteString(tableContent); err != nil {
-		return fmt.Errorf("writing metrics table to %s: %w", destPath, err)
+	if err := os.WriteFile(destPath, []byte(updated), 0644); err != nil {
+		return fmt.Errorf("writing summary %s: %w", destPath, err)
 	}
 	return nil
 }

@@ -630,13 +630,11 @@ func (transcript *Transcript) readToolEvent(kind string, payload json.RawMessage
 		}
 	}
 	if status == "" {
-		status = "completed"
+		status = "unknown"
 	}
 	isError := status == "error" || status == "failed" || (raw.ExitCode != nil && *raw.ExitCode != 0)
 	if isError {
 		status = "error"
-	} else if status != "running" {
-		status = "completed"
 	}
 	if index, exists := transcript.pendingTools[callKey]; exists {
 		transcript.Events[index].Status = status
@@ -821,6 +819,8 @@ func (transcript *Transcript) readCompletedItem(payload json.RawMessage, timesta
 	transcript.ToolCalls++
 	status := strings.ToLower(strings.TrimSpace(completed.Item.Status))
 	if status == "" {
+		// The native completed-item kind establishes tool completion, not a
+		// process exit result. Structured nonzero exits below remain failures.
 		status = "completed"
 	}
 	isError := status == "failed" || status == "error" || (completed.Item.ExitCode != nil && *completed.Item.ExitCode != 0)
@@ -828,8 +828,6 @@ func (transcript *Transcript) readCompletedItem(payload json.RawMessage, timesta
 		status = "error"
 		tool.errors++
 		transcript.ToolErrors++
-	} else {
-		status = "completed"
 	}
 	startedAt := timestamp
 	if completed.StartedAtMS > 0 {

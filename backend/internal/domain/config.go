@@ -42,7 +42,6 @@ func (c ProjectConfig) EffectiveHealthyCeiling() int64 {
 func DefaultAnomalyThresholdsConfig() AnomalyThresholdsConfig {
 	return AnomalyThresholdsConfig{
 		StallThresholdSeconds:            120,
-		ErrorRateThreshold:               0.25,
 		ContextExhaustionPct:             0.85,
 		ConsecutiveErrorsStreakWarning:   ConsecutiveToolErrorsStreakWarning,
 		ConsecutiveErrorsStreakCritical:  ConsecutiveToolErrorsStreakCritical,

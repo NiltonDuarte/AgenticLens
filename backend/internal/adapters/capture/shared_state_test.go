@@ -532,3 +532,48 @@ func TestUnsupportedCoordinateLayoutFailsWithoutChangingState(t *testing.T) {
 		})
 	}
 }
+
+func TestRegistryConstructorRejectsForeignDatabaseWithoutChangingIt(t *testing.T) {
+	for _, readOnly := range []bool{false, true} {
+		name := "writable"
+		if readOnly {
+			name = "read-only"
+		}
+		t.Run(name, func(t *testing.T) {
+			dir := t.TempDir()
+			path := filepath.Join(dir, "registry.db")
+			foreign, err := sql.Open("sqlite", path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err = foreign.Exec("CREATE TABLE foreign_fact(value TEXT); INSERT INTO foreign_fact VALUES('preserved foreign evidence')"); err != nil {
+				foreign.Close()
+				t.Fatal(err)
+			}
+			if err := foreign.Close(); err != nil {
+				t.Fatal(err)
+			}
+			before, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			opened, err := openRegistry(dir, "Project", t.TempDir(), readOnly)
+			if opened != nil {
+				opened.Close()
+				t.Fatal("foreign database was admitted as a capture registry")
+			}
+			if err == nil || !strings.Contains(err.Error(), "unrecognized capture database") {
+				t.Fatalf("foreign schema did not retain explicit rejection: %v", err)
+			}
+			after, err := os.ReadFile(path)
+			if err != nil || !bytes.Equal(before, after) {
+				t.Fatalf("rejected foreign database changed: %v", err)
+			}
+			for _, suffix := range []string{"-wal", "-shm"} {
+				if _, err := os.Stat(path + suffix); !os.IsNotExist(err) {
+					t.Fatalf("rejection created SQLite sidecar %s: %v", suffix, err)
+				}
+			}
+		})
+	}
+}

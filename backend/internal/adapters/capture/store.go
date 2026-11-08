@@ -40,12 +40,13 @@ const DefaultDirectory = ".agenticlens-capture"
 const MaxPayloadBytes = 64 * 1024
 
 type Store struct {
-	db               *sql.DB
-	project          string
-	directory        string
-	registry         string
-	worktreeID       int64
-	relocationWorker *PublicationLock
+	anomalyThresholds domain.AnomalyThresholdsConfig
+	db                *sql.DB
+	project           string
+	directory         string
+	registry          string
+	worktreeID        int64
+	relocationWorker  *PublicationLock
 }
 type storedRegistration struct {
 	Registration domain.CaptureRegistration `json:"registration"`
@@ -142,18 +143,15 @@ func openRegistryAttemptContext(ctx context.Context, directory, name, project st
 		}
 		return nil, errors.Join(e, db.Close())
 	}
-	var existing int
-	if err = db.QueryRowContext(ctx, "SELECT count(*) FROM sqlite_master WHERE name='capture_meta'").Scan(&existing); err != nil {
+	// Observe both schema facts in one SQLite statement. Separate reads can
+	// straddle another initializer's commit and mistake its valid new registry
+	// for a foreign database with tables but no capture metadata.
+	var existing, tables int
+	if err = db.QueryRowContext(ctx, "SELECT count(CASE WHEN name='capture_meta' THEN 1 END), count(CASE WHEN type='table' THEN 1 END) FROM sqlite_master").Scan(&existing, &tables); err != nil {
 		return fail(err)
 	}
-	if existing == 0 {
-		var tables int
-		if err = db.QueryRowContext(ctx, "SELECT count(*) FROM sqlite_master WHERE type='table'").Scan(&tables); err != nil {
-			return fail(err)
-		}
-		if tables > 0 {
-			return fail(errors.New("unrecognized capture database; explicit recovery required"))
-		}
+	if existing == 0 && tables > 0 {
+		return fail(errors.New("unrecognized capture database; explicit recovery required"))
 	}
 	if existing > 0 {
 		var version int

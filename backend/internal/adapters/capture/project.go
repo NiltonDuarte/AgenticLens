@@ -198,7 +198,12 @@ func OpenProjectContext(ctx context.Context, directory, project string) (*Store,
 	if err != nil {
 		return nil, err
 	}
-	return openRegistryContext(ctx, directory, cfg.ProjectName, project, false)
+	store, err := openRegistryContext(ctx, directory, cfg.ProjectName, project, false)
+	if err != nil {
+		return nil, err
+	}
+	store.anomalyThresholds = cfg.AnomalyThresholds
+	return store, nil
 }
 func ExistingLocation(directory, project string) (StateLocation, error) {
 	s, err := OpenReadOnlyProject(directory, project)

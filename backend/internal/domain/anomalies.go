@@ -214,6 +214,30 @@ func detectToolRetryStreaks(events []EventFact, thresholds AnomalyThresholdsConf
 	return anomalies
 }
 
+// HasConfiguredFailureRatePolicy distinguishes unavailable analysis policy from
+// a configured policy whose evaluation found no anomalies.
+func HasConfiguredFailureRatePolicy(thresholds AnomalyThresholdsConfig) bool {
+	warning, critical := thresholds.ErrorRateThreshold, thresholds.ErrorRateCriticalThreshold
+	return thresholds.ErrorRateMinCalls >= 1 && warning > 0 && critical > 0 && warning <= critical && critical <= 1 && !math.IsNaN(warning) && !math.IsNaN(critical) && !math.IsInf(warning, 0) && !math.IsInf(critical, 0)
+}
+
+// EvaluateToolFailureRate applies only explicitly supplied failure-rate policy.
+// Configuration adapters reject unavailable/invalid policy before analysis.
+func EvaluateToolFailureRate(calls, errors int64, thresholds AnomalyThresholdsConfig) (AnomalySeverity, string, bool) {
+	warning, critical := thresholds.ErrorRateThreshold, thresholds.ErrorRateCriticalThreshold
+	if !HasConfiguredFailureRatePolicy(thresholds) || calls < int64(thresholds.ErrorRateMinCalls) || calls <= 0 || errors < 0 || errors > calls {
+		return "", "", false
+	}
+	rate := float64(errors) / float64(calls)
+	if rate >= critical {
+		return SeverityCritical, ">=" + strconv.FormatFloat(critical*100, 'f', -1, 64) + "%", true
+	}
+	if rate >= warning {
+		return SeverityWarning, ">=" + strconv.FormatFloat(warning*100, 'f', -1, 64) + "%", true
+	}
+	return "", "", false
+}
+
 // detectToolHighFailureRates detects tools with an excessively high failure rate across the ticket.
 func detectToolHighFailureRates(ledger AgenticFactLedger, events []EventFact, thresholds AnomalyThresholdsConfig) []Anomaly {
 	type toolStats struct {
@@ -263,32 +287,15 @@ func detectToolHighFailureRates(ledger AgenticFactLedger, events []EventFact, th
 	var anomalies []Anomaly
 	for _, name := range toolNames {
 		st := statsMap[name]
-		if st.calls < 5 {
+		severity, threshold, detected := EvaluateToolFailureRate(st.calls, st.errors, thresholds)
+		if !detected {
 			continue
 		}
-
-		rate := float64(st.errors) / float64(st.calls)
-		if rate > 0.20 {
-			sev := SeverityWarning
-			thresholdStr := ">20%"
-			if rate >= 0.50 {
-				sev = SeverityCritical
-				thresholdStr = ">=50%"
-			}
-			pct := math.Round(rate*1000.0) / 10.0
-			anomaly := Anomaly{
-				RuleID:   RuleToolHighFailureRate,
-				Severity: sev,
-				Context: AnomalyContext{
-					ToolName:       strPtr(name),
-					Count:          int64Ptr(st.errors),
-					TotalCalls:     int64Ptr(st.calls),
-					FailureRatePct: float64Ptr(pct),
-					Threshold:      strPtr(thresholdStr),
-				},
-			}
-			anomalies = append(anomalies, anomaly)
-		}
+		pct := math.Round(float64(st.errors)/float64(st.calls)*1000.0) / 10.0
+		anomalies = append(anomalies, Anomaly{
+			RuleID: RuleToolHighFailureRate, Severity: severity,
+			Context: AnomalyContext{ToolName: strPtr(name), Count: int64Ptr(st.errors), TotalCalls: int64Ptr(st.calls), FailureRatePct: float64Ptr(pct), Threshold: strPtr(threshold)},
+		})
 	}
 
 	return anomalies
@@ -519,9 +526,7 @@ func resolveAnomalyThresholds(thresholds ...AnomalyThresholdsConfig) AnomalyThre
 	if t.StallThresholdSeconds <= 0 {
 		t.StallThresholdSeconds = def.StallThresholdSeconds
 	}
-	if t.ErrorRateThreshold <= 0 {
-		t.ErrorRateThreshold = def.ErrorRateThreshold
-	}
+	// Failure-rate values are required configuration, never runtime defaults.
 	if t.ContextExhaustionPct <= 0 {
 		t.ContextExhaustionPct = def.ContextExhaustionPct
 	}
@@ -625,6 +630,11 @@ func sortAnomalies(anomalies []Anomaly) {
 
 // ComputeFleetAnomalies aggregates operational anomalies, severity counts, and brittle tools across all ledgers.
 func ComputeFleetAnomalies(ledgers []AgenticFactLedger, thresholds ...AnomalyThresholdsConfig) FleetAnomalySummary {
+	return computeFleetAnomalies(ledgers, nil, thresholds...)
+}
+
+// computeFleetAnomalies retains already configured read projections when supplied.
+func computeFleetAnomalies(ledgers []AgenticFactLedger, projections [][]Anomaly, thresholds ...AnomalyThresholdsConfig) FleetAnomalySummary {
 	severityCounts := map[string]int64{
 		string(SeverityWarning):  0,
 		string(SeverityCritical): 0,
@@ -667,7 +677,7 @@ func ComputeFleetAnomalies(ledgers []AgenticFactLedger, thresholds ...AnomalyThr
 
 	var totalAnomalies, warningCount, criticalCount, ticketsWithAnomalies, totalTickets int64
 
-	for _, ledger := range ledgers {
+	for ledgerIndex, ledger := range ledgers {
 		if len(ledger.ToolFacts()) > 0 {
 			for _, t := range ledger.ToolFacts() {
 				if t.Name != "" {
@@ -682,6 +692,9 @@ func ComputeFleetAnomalies(ledgers []AgenticFactLedger, thresholds ...AnomalyThr
 			totalTickets++
 		}
 		ticketAnomalies := RefreshAnomalySummaries(ledger, thresholds...)
+		if ledgerIndex < len(projections) {
+			ticketAnomalies = projections[ledgerIndex]
+		}
 		if len(ticketAnomalies) > 0 {
 			ticketsWithAnomalies++
 		}

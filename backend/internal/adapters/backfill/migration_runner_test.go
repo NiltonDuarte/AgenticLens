@@ -1194,8 +1194,12 @@ func TestMigrationRunner_NormalizesPreIterationV4AnomalySummaries(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(after), `"anomalies": []`) {
-		t.Fatalf("normalized v4 ledger is missing canonical anomaly arrays: %s", string(after))
+	var canonical adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal(after, &canonical); err != nil {
+		t.Fatal(err)
+	}
+	if canonical.SchemaVersion == nil || *canonical.SchemaVersion != domain.CurrentSchemaVersion || len(canonical.Sessions) != 1 || len(canonical.Sessions[0].Tools) != 1 || canonical.Sessions[0].Tools[0].Calls != 2 || canonical.Anomalies != nil || canonical.Sessions[0].Anomalies != nil || strings.Contains(string(after), `"events"`) {
+		t.Fatalf("cfg-less structural migration changed facts or invented complete analysis: %s", after)
 	}
 }
 
@@ -1227,8 +1231,8 @@ func TestMigrationRunner_SanitizesCanonicalV4EventPayloads(t *testing.T) {
 	if err := json.Unmarshal(data, &dto); err != nil {
 		t.Fatal(err)
 	}
-	if len(dto.Sessions) != 1 || dto.Sessions[0].Anomalies == nil || dto.Anomalies == nil {
-		t.Fatalf("expected isolated error omitted and canonical summary arrays present, got %+v", dto)
+	if len(dto.Sessions) != 1 || dto.Sessions[0].ID != "s1" || dto.Sessions[0].Anomalies != nil || dto.Anomalies != nil {
+		t.Fatalf("expected isolated error omitted without inventing configured analysis, got %+v", dto)
 	}
 }
 
