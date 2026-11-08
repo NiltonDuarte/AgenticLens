@@ -52,25 +52,25 @@ Use targeted questions to identify:
 - **Interface Target**: Is this primarily a TypeScript web dashboard visualization, a Go CLI table report, or a programmatic Go domain calculation?
 
 ### Step 2: Formulate Product Specification
-Draft a concise, structured specification based on `templates/SPEC_TEMPLATE.md`:
-1. **Problem Statement**: Grounded in concrete agent developer friction or visibility gaps.
-2. **User Stories**: Follow the format `As a <persona>, I want <capability>, so that <benefit>`.
-3. **Functional Scope**: Layer-by-layer expectations across Go domain, Go adapters/CLI, and TypeScript frontend.
-4. **Acceptance Constraints**: Strict typing, no emojis, testing with zero domain mocks in Go and pure test suites in TS.
+Use `templates/SPEC_TEMPLATE.md` and the [PO writing rules](../../../docs/WORKSPACE_ARTIFACTS.md#po-specifications-and-development-tickets). Lead with the goal and enough context for a human to understand why it matters. Describe the expected behavior and observable acceptance, using a concrete before/after example when useful. User-story syntax is optional; do not repeat the same requirement as a story, scope item and acceptance paragraph.
+
+Keep one spec with optional implementation notes at the end. Include only necessary data/interface contracts, grounded constraints or unresolved engineering questions there; do not create a second agent spec by default. The developer owns implementation planning. Link canonical architecture and delivery rules instead of copying them.
 
 ### Step 3: Decompose into Vertical Tracer Bullets
 Break down large features or epics into individual development tickets:
-- **Vertical Slicing**: Every ticket must cut through Go domain models, Go adapters/data extraction, TypeScript/CLI presentation, and automated tests. Avoid horizontal slicing (e.g. never create a ticket that only defines structs without wiring them to domain logic and tests).
+- **Vertical Slicing**: Each ticket delivers one coherent, independently verifiable outcome through the affected layers. Do not invent backend, frontend or schema work to fill a template. Avoid splitting a usable outcome into disconnected layer-only tickets.
 - **Single Context Window**: Sized so an agent can complete implementation, testing, and review in one session.
 - **Dependency Graph**: Explicitly declare `Blocked by: <Ticket>` edges so tickets can be sequenced or executed in parallel where unblocked.
 - **Wide Refactor Protocol**: If modifying foundational trace schemas or data structures, use the Expand-Contract pattern (Expand schema -> Migrate extractors/callers in batches -> Contract legacy format).
 
 ### Step 4: Generate Jira / Development Tickets
 Output tickets to `<WORKSPACES_DIR>/plan/to-do/<PREFIX>-# <slug>.md` using `templates/TICKET_TEMPLATE.txt`:
-- Sequential numbering: `<PREFIX>-1`, `<PREFIX>-2`, etc.
-- `h3. Title: <PREFIX>-#: <Action-oriented title>` (e.g. `AL-1: ...`)
-- `*TARGET*: AgenticLens (<Subsystem>)`
-- `*CONTEXT*`, `*GOAL*`, `*VERTICAL SLICE SCOPE*`, `*ACCEPTANCE CRITERIA*`, and `*DEFINITION OF DONE*`.
+- Allocate an unused sequential identifier under the configured prefix.
+- Keep the `h3. Title: <PREFIX>-#: <Action-oriented title>` convention.
+- Put the goal and context before routing metadata; a human should understand the result without opening another document.
+- Use concise, behavior-based acceptance criteria. Put necessary implementation notes last; omit them when they add nothing.
+- Keep status/dependency fields needed by the index. Include origin/specification links and related-ticket boundaries only when useful; avoid component inventories.
+- Do not repeat the repository definition of done, test commands, telemetry, approval or PR workflow. Add ticket-specific evidence requirements only when ordinary checks cannot establish the accepted behavior.
 
 #### Revise the current PO ticket batch
 
@@ -102,5 +102,5 @@ The agent must generate a unique random nonce directly (e.g. an 8 to 16 characte
 - **Zero Hallucinated Metrics**: Every metric must be derivable from real agent trace logs or explicit session inputs.
 - **No Premature Workspaces or Contracts**: `workspaces/<PREFIX>-#` directories are strictly for active developer work, and `CONTRACT.md` is authored by developers during `agentic-lens-dev`, never by the PO. PO writes ticket files to `workspaces/plan/to-do/<PREFIX>-# <slug>.md`.
 - **Maintain PO Workspace Isolation**: The PO records its own session facts, summary, and PR draft under `workspaces/PO-#/`.
-- **No Implementation Over-Prescription**: Define WHAT the user needs, WHICH layers must be touched, and WHAT acceptance criteria prove success. Do not write concrete Go/TS implementation snippets inside Jira tickets unless specifying an exact interface contract.
+- **No Implementation Over-Prescription**: Define the user outcome, affected scope and observable acceptance. Name layers or modules only when they clarify a real boundary. Do not write concrete Go/TS implementation snippets inside Jira tickets unless specifying an exact interface contract.
 - **Maintain Architectural Rigor**: Reject feature designs that break FCIS, leak UI logic into domain aggregations, or introduce mutable shared state.

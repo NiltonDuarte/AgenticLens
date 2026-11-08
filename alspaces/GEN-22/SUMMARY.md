@@ -5,22 +5,26 @@ canonical guide. Each document has one purpose, practical length targets and
 rules for linking evidence. Summaries report current outcomes instead of
 accumulating routine execution history.
 
-Aligned AGENTS.md, contributor/setup guidance, planner/orchestrator personas,
-development/management/PO/review skills and the specification template. Removed
-mandatory layer inventories, the PR ban on test evidence and automatic new
-iterations on resume. Required review attribution, verification, unresolved limits
-and generated metrics remain intact.
+Aligned contributor guidance, planner/orchestrator personas, relevant skills and
+both PO templates. Removed mandatory layer inventories, repeated delivery
+checklists, the PR ban on test evidence and automatic new iterations on resume.
 
-Scope follows the user's opening request and [contract](CONTRACT.md).
-[Iteration 01](iterations/01/PLAN.md) records the clean baseline and delivery plan.
-Historical ticket artifacts and application code were not changed.
+PO specs and tickets now lead with the goal, context and observable acceptance.
+Necessary implementation notes follow in the same document. Shared initiative
+context is linked rather than copied into every ticket; separate human/agent
+specifications are not the default.
+
+Scope follows the [contract](CONTRACT.md) and the user's
+[PO-ticket clarification](iterations/02/PLAN.md). Historical tickets, application
+code and generated metrics formatting remain unchanged. Required review credit,
+verification and unresolved limits remain protected.
 
 Verification: `make` passed on `938e7e44` after integration with origin/main
 (already current): Go race suites, frontend units/integration, static and Python
 workflow checks, embedded assets and platform builds. Changed-document links,
 four edited skills' metadata validation and `git diff --check` also passed.
 
-The documentation coordinator (gpt-6.1-sol/high) checked instruction consistency;
+Iteration 02 checks are pending. The documentation coordinator (gpt-6.1-sol/high) checked instruction consistency;
 no confirmed issues remain. There was no independent application review or
 behavioral forward test. Length targets guide future writing; this change does
 not enforce them automatically. Hosted CI has not been observed.

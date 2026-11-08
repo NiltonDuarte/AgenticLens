@@ -1,14 +1,17 @@
-# chore(docs): make workspace artifacts readable (GEN-22)
+# chore(docs): make workspace artifacts and PO tickets readable (GEN-22)
 
-Workspace instructions encouraged repeated policy text, layer inventories and
-execution diaries. Add one writing standard with clear document purposes,
-practical length targets, linked evidence and a concise example. Align contributor
-guidance, planner/orchestrator personas, skills and the specification template.
+Workspace instructions encouraged repeated policy text and execution diaries;
+PO tickets buried their goals beneath technical inventories. Add a canonical
+writing standard and align contributor guidance, personas, skills and templates.
 
-Summaries now describe current outcomes. Required review attribution, verification,
-unresolved findings and generated metrics remain protected. Existing ticket
-history and application behavior are unchanged.
+Documents have distinct purposes and practical length targets. PO specs and
+tickets start with the goal, context and observable acceptance, with optional
+implementation notes last in the same document. Remove forced layer inventories
+and repeated delivery checklists; link shared context instead of duplicating it.
 
-Validation: integrated `make`, documentation consistency, relative links, skill
-metadata and `git diff --check` passed. Evidence and limits are in the
-[summary](SUMMARY.md). See the [contract](CONTRACT.md) for scope.
+Required review attribution, verification, unresolved findings and generated
+metrics remain protected. Existing ticket history and application behavior are
+unchanged.
+
+Validation and limits: [summary](SUMMARY.md). Scope: [contract](CONTRACT.md) and
+[PO-ticket extension](iterations/02/PLAN.md).

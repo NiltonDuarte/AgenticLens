@@ -17,11 +17,39 @@ Generated metrics and structured review records are outside these prose targets.
 | `iterations/<NN>/PLAN.md` | A short ordered path to that outcome, affected components/owners and verification. Later iterations describe the acceptance delta and link the baseline. Include the required review coverage when applicable. | 200–400 words |
 | `SUMMARY.md` | Current delivered behavior/status, meaningful decisions, actual verification, review outcome and remaining limits. Link the contract, active plan and retained findings as needed. | 300–600 words before generated metrics |
 | `PULL_REQUEST.md` | Conventional title on the first line, problem and resulting behavior, concise validation and material limits; link the contract/summary for detail. | Usually 100–250 words; at most 3000 characters |
-| Product specification | User problem, expected behavior, acceptance and dependencies. Keep implementation planning in the developer ticket. | Proportional to the product decision |
+| Product specification | Goal, context, expected behavior/acceptance and delivery dependencies. Optional technical notes come last. | Usually 300–600 words |
+| PO-generated development ticket | One understandable goal, context and observable acceptance; minimal routing fields and optional technical notes. | Usually 200–400 words |
 
 Small tickets can be much shorter. Do not pad a document to reach a range or add a
 length-justification section. A substantial ticket may need more detail, but first
 remove duplication and link evidence already recorded elsewhere.
+
+## PO specifications and development tickets
+
+Keep one document by default. Its opening must let a human understand what is
+being requested, what happens today and why the change matters without reading
+technical notes or following links. Use a concrete example when it makes the goal
+clearer. Put goal and context before routing metadata and internal references.
+
+Describe expected behavior and acceptance once. Separate optional implementation
+notes at the end for necessary data/interface contracts, grounded constraints or
+open engineering questions. They must not introduce user-visible requirements
+missing from the human-facing part. Leave implementation steps to the developer.
+Do not force user stories, every code layer or repeated delivery checklists into
+each ticket.
+
+The initiative spec owns shared context and cross-ticket decisions; each ticket
+owns its distinct outcome and acceptance. Link shared requirements precisely,
+while keeping the ticket's goal understandable on its own. Split a ticket when
+it contains independently useful outcomes, not merely to meet a word target.
+Add another artifact only when a substantial reusable contract or evidence needs
+its own home; do not maintain parallel human and agent copies of the requirements.
+
+For example, “Correct scoped behavior through production consumers” does not
+explain an outcome. Prefer: “Show ‘Copied’ only after a successful clipboard write.
+Today, a denied write can still display success. On failure, show an accessible
+error and allow retry.” Then list the distinct acceptance cases without repeating
+that paragraph in another section.
 
 ## Keep the reading path short
 

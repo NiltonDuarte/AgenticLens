@@ -1,26 +1,19 @@
-# Feature Specification: <Feature Name>
+# <Feature name>
 
-<!-- Use only relevant sections; follow docs/WORKSPACE_ARTIFACTS.md in this repository. Remove prompts before delivery. -->
+<!-- Start with the human review content. Omit optional sections and remove prompts before delivery. Follow docs/WORKSPACE_ARTIFACTS.md. -->
 
-## Problem Statement
-<Clear description of user challenge, pain point, or missing observability dimension in AgenticLens from the user or developer perspective.>
+## Goal
+<What the user will be able to do, in plain language.>
 
-## Target Personas & Use Cases
-- **Audience**: <e.g., Software Engineers, AI System Architects, Tech Leads>
-- **Core Use Case**: <e.g., Identifying token saturation across multi-agent iterations before hitting context limits>
+## Context
+<The current problem and why it matters. Include a concrete example if useful.>
 
-## User Stories
-1. As a <user persona>, I want <capability>, so that <benefit>.
+## Expected behavior and acceptance
+- <Observable outcome that proves the goal is met.>
+- <Important scope exclusion or unresolved product decision, only if needed.>
 
-## Functional Requirements
-- <Expected behavior and relevant inputs/outputs; describe only affected areas.>
+## Delivery
+<For a multi-ticket initiative, link each ticket with its distinct outcome and dependencies. Do not duplicate ticket acceptance here. Omit for a single-ticket change if the ticket link alone is sufficient.>
 
-## Acceptance Criteria
-- <Observable outcome that establishes the requirement is met.>
-
-## Scope & Constraints
-- <Scope exclusion or ticket-specific constraint, only when needed. Link canonical technical rules rather than copying them. For persistence/refresh, select relevant cross-machine acceptance cases from docs/REGRESSION_PREVENTION.md.>
-
-## Decomposition & Delivery Roadmap
-- [ ] Ticket 1: <Tracer-bullet title> (Unblocked)
-- [ ] Ticket 2: <Tracer-bullet title> (Blocked by Ticket 1)
+## Implementation notes (optional)
+<Only necessary technical contracts, grounded constraints or open engineering questions. Link canonical rules; leave implementation steps to the developer.>
