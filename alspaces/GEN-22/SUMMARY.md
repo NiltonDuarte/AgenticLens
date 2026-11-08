@@ -11,6 +11,11 @@ PO specs/tickets still lead with goal, context and observable acceptance, with
 optional technical notes last. Review/installation protocols and application code
 are unchanged; required approval, evidence, credit and delivery gates remain.
 
+The user requested skill version updates at handoff: development, PO and review
+advance from 0.1.0 to 0.1.1; management gains its first VERSION file at 0.1.1.
+All four version records pass format/content checks. This metadata correction
+stays in iteration 04; the existing make result covers unchanged application code.
+
 Scope follows the [contract](CONTRACT.md) and current
 [instruction-reduction plan](iterations/04/PLAN.md), which preserves the prior
 [PO format](iterations/02/PLAN.md) and [skill ownership](iterations/03/PLAN.md).

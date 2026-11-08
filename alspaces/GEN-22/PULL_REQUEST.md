@@ -10,7 +10,8 @@ simplification pass without moving that bulk into new references.
 Artifacts have distinct purposes and practical prose targets. PO specs/tickets
 lead with goal, context and observable acceptance; optional technical notes come
 last in the same document. Required approval, review credit, evidence, telemetry
-and delivery gates remain. Historical tickets and application behavior are
+and delivery gates remain. Affected skills are versioned at 0.1.1, adding the
+previously absent management VERSION record. Historical tickets and application behavior are
 unchanged.
 
 Validation: links/anchors, skill metadata, whitespace and an independent four-case
