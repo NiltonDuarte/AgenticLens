@@ -1,16 +1,16 @@
-h3. Title: REV-7: Review source read guarantees
+# REV-7: Review source read guarantees
 
-*GOAL*
+## Goal
 
 Produce an evidence-backed, bounded read contract and remediation plan that lets consumers share meaningful operations without erasing source-specific capabilities.
 
-*CONTEXT*
+## Context
 
 The sources normalize into common facts but consumers still know storage details and follow different read rules. Backfill chooses the v2 table when it exists; exact-owner hydration can read a uniquely owned v1 session in a mixed database. Exact SQLite capture is transactional, ordinary reads span queries, and Codex discovery/parsing are separate file reads. V1 timestamp ties also have weaker ordering than v2 native sequence.
 
 Example: a mixed database contains a v1-only owner A and unrelated v2 rows. Exact historical hydration can find A, while backfill's v2 tree query cannot. That is a documented policy divergence, not evidence that mixed-schema recovery was promised. Concurrent writers and tied timestamps are investigation cases, not established corruption incidents.
 
-*ACCEPTANCE CRITERIA*
+## Acceptance criteria
 
 * State what complete, partial, unavailable, unsupported and complete-empty mean for each operation, and which result permits owner replacement. Preserve portable recorded history without private receipts.
 * Investigate the mixed-family backfill/exact-hydration discrepancy. Explain the supported policy, show its consumer impact, and propose a bounded correction or an explicitly approved compatibility change; do not silently broaden generic generate's mixed-layout acceptance.
@@ -19,14 +19,9 @@ Example: a mixed database contains a v1-only owner A and unrelated v2 rows. Exac
 * Propose the smallest useful consumer-owned read capabilities. Keep ledger persistence, root discovery, optional children, historical events and live observation distinct; retain legitimate v1/v2 adapter dispatch. Reject a single all-purpose repository if it only forwards existing coupling.
 * Include a proposed dependency map, compatibility guarantees, concrete verification cases and prioritized follow-up slices. Reuse AL-67 evidence instead of repeating the whole audit. AL-63 keeps capability/version-matrix ownership.
 
-*Status*: Ready
-*Blocked by*: None
-*Work type*: docs
-*Priority*: P3
+## Implementation notes
 
-*IMPLEMENTATION NOTES*
-
-*Findings*: F07, F08, F09, F12
+Finding references: F07, F08, F09, F12
 
 Review only: no application, schema, runtime-script or new test changes and no broad refactor authorization. FIX-18/FIX-19/FIX-20 and AL-69/AL-70/AL-74 own their concrete corrections; their completion is not a prerequisite for this investigation.
 

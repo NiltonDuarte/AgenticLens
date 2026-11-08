@@ -1,16 +1,16 @@
-h3. Title: FIX-18: Report unsupported live telemetry accurately
+# FIX-18: Report unsupported live telemetry accurately
 
-*GOAL*
+## Goal
 
 Operators can tell whether live observation is supported, unavailable or failing, while retaining usable historical traces and ledger-backed views.
 
-*CONTEXT*
+## Context
 
 The server can open an OpenCode v2 database and announce that live telemetry is active, even though its live queries still read v1 tables. The live session list then fails, while background polling can drop the error. Historical trace hydration is a separate path and can still work with v2.
 
 Example: select a valid database containing session_v2/session_message but no session/message/part. Startup succeeds and advertises an active hook; opening the live view cannot load a tree. This is a source-level counterexample, not a recorded production outage.
 
-*ACCEPTANCE CRITERIA*
+## Acceptance criteria
 
 * A valid v1 source retains its active tree, trace, polling and cleanup behavior.
 * A v2-only source is explicitly reported as unsupported for current live operations; no active-hook notice, successful empty tree or silent stream is used to imply support. Historical v2 hydration and persisted facts remain available independently.
@@ -18,14 +18,9 @@ Example: select a valid database containing session_v2/session_message but no se
 * Verify ordinary v1/v2 extraction and exact-owner mixed-layout hydration retain their documented, different policies. Do not reject useful historical access just because live observation is unsupported.
 * Tests reach the actual server-to-service selection path, including a source that connects successfully but lacks live tables; injected extractor tests alone are insufficient.
 
-*Status*: Ready
-*Blocked by*: None
-*Work type*: fix
-*Priority*: P2
+## Implementation notes
 
-*IMPLEMENTATION NOTES*
-
-*Findings*: F03
+Finding references: F03
 
 No requirement to implement v2 or Codex live observation. AL-63 retains capability-matrix ownership; AL-74 owns the independent required-column test-oracle repair. Coordinate shared files without blocking this correction on those tickets.
 

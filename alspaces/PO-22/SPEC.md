@@ -12,7 +12,7 @@ This review retains all active identifiers and existing dependencies. These are 
 
 ## Expected behavior and acceptance
 
-Every active ticket has a short outcome-focused title using the ticket-template convention and a matching filename slug. Registry entries and links to renamed active tickets remain synchronized. Goal and context precede observable acceptance and routing metadata. Repeated approval, test-suite, telemetry and PR checklists give way to canonical links. Ticket-specific reproduction cases, discovery attribution, owner boundaries and evidence links survive. Explicit interfaces remain where they are product contracts; developer filenames and speculative internal types do not prescribe implementation.
+Every active ticket has a short outcome-focused title using Markdown headings and the ticket-template convention and a matching filename slug. Registry entries and links to renamed active tickets remain synchronized. Goal and context precede observable acceptance. Status and dependency metadata live only in TICKETS.md; ticket files omit Status, Work type, Blocked by, Blocks, Origin and Priority lines. Priority is optional and index-only, with no default assignment. Repeated approval, test-suite, telemetry and PR checklists give way to canonical links. Ticket-specific reproduction cases, discovery attribution, owner boundaries and evidence links survive. Explicit interfaces remain where they are product contracts; developer filenames and speculative internal types do not prescribe implementation.
 
 The registry lists each active ticket once with consistent Ready/Blocked status and reciprocal, acyclic dependencies. Historical findings remain historical; this author review is not independent correctness review or native runtime verification. Previously accepted shared-ledger portability, source authority, unavailable values and exact-owner refresh remain baseline requirements.
 
@@ -29,8 +29,12 @@ The registry lists each active ticket once with consistent Ready/Blocked status 
 - **AL2-9:** retain signing discovery without a mandatory authenticity gate or implementation.
 - **FIX-18–FIX-20, REV-7:** retain concrete source capability, ambiguity and cancellation corrections, and independent read-contract investigation. Preserve AL-67 finding ownership and source-format evidence.
 
+## Ticket format correction
+
+The user explicitly removes the metadata convention in [iteration 02](iterations/02/PLAN.md). The previous template mandated Status and Blocked by and the skill required preserving them; both are corrected at their source. Work type, Origin and per-ticket Priority are removed without inventing replacements. Markdown headings replace Jira-style h3/h4 and emphasized uppercase section labels. Finding attribution and substantive evidence remain; the registry retains its existing status/dependency graph without adding priorities. This supersedes the earlier formatting decisions only.
+
 ## Technical notes and limits
 
 Newly explicit draft defaults clarify no-selection/URL preference, duplicate project input handling and safe archive publication. These are planning decisions, not claims about shipped behavior. Developers must ground source field locations, rate-card matching and supported runtime interfaces before agreeing a contract. No live pricing, dependency advisories or runtime support claims are newly asserted here.
 
-The active registry, active tickets and this PO workspace change; references in earlier documents receive only link-target repairs for the renamed tickets. Historical initiative specs remain evidence with unchanged requirements. Application, tests, runtime scripts and developer contracts remain outside this session. Follow [engineering rules](../../TECHNICAL_GUIDELINES.md) and [regression boundaries](../../docs/REGRESSION_PREVENTION.md). Implementation starts in separate development sessions.
+The canonical PO skill/template, active registry, active tickets and this PO workspace change; references in earlier documents receive only link-target repairs for the renamed tickets. Historical initiative specs remain evidence with unchanged requirements. Application, tests, runtime scripts and developer contracts remain outside this session. Follow [engineering rules](../../TECHNICAL_GUIDELINES.md) and [regression boundaries](../../docs/REGRESSION_PREVENTION.md). Implementation starts in separate development sessions.

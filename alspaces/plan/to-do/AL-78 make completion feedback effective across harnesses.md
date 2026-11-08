@@ -1,14 +1,14 @@
-h3. Title: AL-78: Make completion feedback effective across harnesses
+# AL-78: Make completion feedback effective across harnesses
 
-*GOAL*
+## Goal
 
 Make open-turn feedback lead to a source-proven completion and subsequent metrics refresh on native Codex and OpenCode.
 
-*CONTEXT*
+## Context
 
 CLI feedback in the observed Codex run printed a checkpoint warning but did not produce native completion followed by a refresh. Repeated generation in one open turn left duration provisional. OpenCode completion/refresh remains unverified. The intended workflow preserves ongoing work, reaches natural native completion, then publishes completed duration and usage. T3 is an interface, not a harness.
 
-*ACCEPTANCE CRITERIA*
+## Acceptance criteria
 
 * Reproduce on both native harnesses and distinguish message emission, delivery to agent context, agent response, actual native completion, and successful subsequent metrics publication. Verify exact owner and native interval; do not treat an aggregate subtotal, nonce, directory or extraction root as proof of current-caller identity.
 * Determine whether the remedy belongs in feedback wording/delivery, native continuation, existing lifecycle capture, or a combination. Verify natural completion versus continuing within the same accounting interval. A supported post-completion capture refresh may avoid a metrics-only model turn; do not prescribe extra turns without evidence they are necessary.
@@ -19,14 +19,9 @@ CLI feedback in the observed Codex run printed a checkpoint warning but did not 
 
 * When the workflow changes, update canonical setup/operator/developer guidance to explain what the agent does, what capture refreshes automatically and which native boundaries remain unsupported.
 
-*Status*: Ready
-*Blocked by*: None
-*Work type*: fix
-*Priority*: P2
+## Implementation notes
 
-*IMPLEMENTATION NOTES*
-
-*Related*: AL-64 duration accounting and owner-scoped checkpoint feedback; AL-68 automatic lifecycle capture. Revalidate their delivered revisions before implementation.
+Related work: AL-64 duration accounting and owner-scoped checkpoint feedback; AL-68 automatic lifecycle capture. Revalidate their delivered revisions before implementation.
 
 Excluded from this ticket:
 

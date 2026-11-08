@@ -1,16 +1,16 @@
-h3. Title: AL-73: Verify release artifacts before installation
+# AL-73: Verify release artifacts before installation
 
-*GOAL*
+## Goal
 
 Installers replace binaries only with verified release artifacts and report failures accurately; release verification rejects incomplete checksum inventories.
 
-*CONTEXT*
+## Context
 
 Only verified artifacts should replace installed binaries, failures must retain truthful update state, and release manifests must cover every required artifact.
 
-*ACCEPTANCE CRITERIA*
+## Acceptance criteria
 
-h4. Verify installer artifacts and preserve failed update outcomes
+### Verify installer artifacts and preserve failed update outcomes
 
 Failed downloads can report successful update and advance version state; downloaders do not verify published checksums and execute arbitrary returned bytes. Duplicate shipped copies require parallel fixes.
 
@@ -19,7 +19,7 @@ Failed downloads can report successful update and advance version state; downloa
 * Use one canonical packaged implementation or deterministic equivalence checks while preserving both legitimate installation destinations and differing defaults. Address D6 as part of shipping D1/D2 consistently.
 * Use isolated local HTTP/hash stubs, never execute unverified fetched content in tests. Preserve release-only installation and report publisher-trust limits without claiming checksum validation authenticates the publisher.
 
-h4. Reject incomplete release checksum manifests
+### Reject incomplete release checksum manifests
 
 A hashing failure hidden by a pipeline can publish a partial SHA256SUMS that release-verify still accepts.
 
@@ -27,16 +27,11 @@ A hashing failure hidden by a pipeline can publish a partial SHA256SUMS that rel
 * Use a fault-injected hashing command that emits one valid entry then fails; packaging and independent verification must reject partial coverage.
 * Preserve successful release packaging and host verification. No hosted release publication or tag mutation is needed to demonstrate this boundary.
 
-*Status*: Ready
-*Blocked by*: None
-*Work type*: fix
-*Priority*: P2
+## Implementation notes
 
-*IMPLEMENTATION NOTES*
+Related work: Coordinate with AL-68 hook installation so canonical packaging and updates retain hook assets regardless of landing order. AL-75 owns compiler and dependency reproducibility.
 
-*Related*: Coordinate with AL-68 hook installation so canonical packaging and updates retain hook assets regardless of landing order. AL-75 owns compiler and dependency reproducibility.
-
-*Findings*: D1, D2, D5, D6
+Finding references: D1, D2, D5, D6
 
 * [REV-5 DELIVERY_REPORT.md](../../REV-5/iterations/03/DELIVERY_REPORT.md)
 

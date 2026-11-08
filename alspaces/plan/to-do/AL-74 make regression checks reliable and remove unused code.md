@@ -1,16 +1,16 @@
-h3. Title: AL-74: Make regression checks reliable and remove unused code
+# AL-74: Make regression checks reliable and remove unused code
 
-*GOAL*
+## Goal
 
 Maintainers can trust isolated regression checks and immutable transformations while removing confirmed unused code without losing meaningful assertions.
 
-*CONTEXT*
+## Context
 
 Pure transformations must not mutate inputs, tests must exercise their claimed boundary in isolated environments, and unused production surfaces and duplicated setup should be removed while preserving meaningful assertions.
 
-*ACCEPTANCE CRITERIA*
+## Acceptance criteria
 
-h4. Remove discarded core work and preserve migration input values
+### Remove discarded core work and preserve migration input values
 
 V1 migration mutates its input through a shared session slice. Core aggregation builds unread mapped-event structures and duplicates model grouping; some tests construct and discard their purported sorting fixtures.
 
@@ -18,7 +18,7 @@ V1 migration mutates its input through a shared session slice. Core aggregation 
 * Remove unused mappedEvents and anomalyEvidenceSelection.events work and reuse existing model aggregation where behavior is equivalent. Preserve role order, thread ceilings, precise and incomplete-cost behavior; claim no unmeasured speedup.
 * Repair the actual sorting oracle or remove its unsupported nil-turn claim, preserve meaningful tool-name ordering, remove overwritten parity setup, and consolidate completion-date duplicates only with explicit assertion recipients.
 
-h4. Isolate backend tests from checkout and unrelated listeners
+### Isolate backend tests from checkout and unrelated listeners
 
 Tests depend on live repository configuration/branch inventory. A fixed-port server smoke test can pass against an unrelated HTTP service, and readiness requests can exceed their stated timeout.
 
@@ -26,7 +26,7 @@ Tests depend on live repository configuration/branch inventory. A fixed-port ser
 * Use isolated listeners and verify the launched process and expected fixture identity. Detect early child exit; give readiness requests and cleanup bounded lifetimes.
 * Exercise an occupied-port/foreign-service scenario and an accepting nonresponding listener. Prove parser and branch-precedence regressions remain detectable.
 
-h4. Repair adapter test oracles and reassess database accessor
+### Repair adapter test oracles and reassess database accessor
 
 Required-column omission tests reject an already mixed schema and some no-write tests inspect absent or unrelated directories. A database accessor previously described as test-only also serves production hydration at the AL-67 baseline; reassess its real consumers before changing it.
 
@@ -35,7 +35,7 @@ Required-column omission tests reject an already mixed schema and some no-write 
 * Revalidate the DB accessor's current consumers before removal: AL-67 found production historical hydration calls SQLiteHook.DB(), so it is no longer accurately described as test-only. Preserve that runtime path; remove or narrow the accessor only when its actual responsibility has a safe replacement in this approved scope. Coordinate broader source-boundary redesign with REV-7 rather than silently expanding this cleanup. Retain read-only enforcement proof and compile all consumers; do not replace it with another unnecessary production hook.
 * AL-67 F10 independently confirms why the omission oracle is weak: each case creates both complete table inventories before removing one column and expects mixed-family rejection. Even disabled column validation could leave that earlier guard green. Keep mixed-family cases, but prove each isolated family's required-column check is the reason its omission fails.
 
-h4. Remove unused frontend contracts, dependencies and props
+### Remove unused frontend contracts, dependencies and props
 
 Unused api/types contracts, lucide-react and ignored component props enlarge the production surface without consumers.
 
@@ -43,7 +43,7 @@ Unused api/types contracts, lucide-react and ignored component props enlarge the
 * If message identity is required for an export, implement explicit provenance in its owning feature rather than keeping a no-op prop; do not invent consumers to justify speculative abstractions.
 * Preserve callers and meaningful assertions; validate lockfile consistency, typecheck and canonical embedded asset build. No test-count target or unmeasured performance claim.
 
-h4. Decouple compatibility checks from ticket artifacts and fixed ports
+### Decouple compatibility checks from ticket artifacts and fixed ports
 
 Maintained compatibility targets depend on AL-58 historical evidence and fixed ports; a foreign listener or exhausted readiness loop can falsely satisfy setup.
 
@@ -51,16 +51,11 @@ Maintained compatibility targets depend on AL-58 historical evidence and fixed p
 * Allocate/configure isolated ports, verify launched child and expected protocol identity, fail readiness exhaustion before launching the client, and clean up processes.
 * Exercise missing provider, occupied port and stalled startup with local fixtures; run supported real OpenCode compatibility environments when available and label unavailable environments explicitly.
 
-*Status*: Ready
-*Blocked by*: None
-*Work type*: refactor
-*Priority*: P2
+## Implementation notes
 
-*IMPLEMENTATION NOTES*
+Related work: Coordinate pure aggregation changes with AL-69, UI cleanup with AL-72, and dependency/lockfile edits with AL-75. These are shared-file coordination needs, not speculative blocking dependencies.
 
-*Related*: Coordinate pure aggregation changes with AL-69, UI cleanup with AL-72, and dependency/lockfile edits with AL-75. These are shared-file coordination needs, not speculative blocking dependencies.
-
-*Findings*: AL-67 F10; ADP-07, ADP-08, ADP-09, ADP-13, CC-09, CC-10, CC-11, CC-12, D4, FE-D1
+Finding references: AL-67 F10; ADP-07, ADP-08, ADP-09, ADP-13, CC-09, CC-10, CC-11, CC-12, D4, FE-D1
 
 * [REV-5 ADAPTERS_REPORT.md](../../REV-5/iterations/03/ADAPTERS_REPORT.md)
 * [REV-5 CORE_CLI_REPORT.md](../../REV-5/iterations/03/CORE_CLI_REPORT.md)

@@ -1,16 +1,16 @@
-h3. Title: FIX-19: Reject ambiguous Codex session snapshots
+# FIX-19: Reject ambiguous Codex session snapshots
 
-*GOAL*
+## Goal
 
 Every exact Codex owner is refreshed from an unambiguous native snapshot, with conflicting source copies diagnosed rather than summed or chosen arbitrarily.
 
-*CONTEXT*
+## Context
 
 Codex family discovery can return two files with the same native session ID, such as an active JSONL and its archived gzip copy. Generation/backfill combine both cumulative snapshots: domain grouping produces one owner but appends their invocation rows and sums tools. Hydration instead accepts the first readable copy. Unique session-ID validation therefore does not catch the duplicated facts.
 
 Example: session A has one tool call in sessions/A.jsonl and the same complete content in archived_sessions/A.jsonl.gz. Counting both files can report two calls for A. Two distinct real tool calls inside one authoritative transcript must still count twice.
 
-*ACCEPTANCE CRITERIA*
+## Acceptance criteria
 
 * Identical or divergent readable files for one owner produce an explicit ambiguity/incomplete result before they can be combined or certified complete. Do not choose by filename, timestamp or directory priority without a separately approved authority rule.
 * Generate cannot publish doubled owner facts; failed refresh/backfill preserves that owner's accepted ledger history and reports the reason. Historical hydration does not select an arbitrary copy; unaffected owners remain usable with truthful coverage.
@@ -18,14 +18,9 @@ Example: session A has one tool call in sessions/A.jsonl and the same complete c
 * Verify active/archive and compressed/uncompressed duplicates, warning-bearing/conflicting copies, child relationships, unrelated owners and repeated unchanged runs through actual consuming paths.
 * Exact discovery's existing ambiguity rejection remains effective. Demonstrate the counterexample before the fix and correct counts/preservation afterward.
 
-*Status*: Ready
-*Blocked by*: None
-*Work type*: fix
-*Priority*: P2
+## Implementation notes
 
-*IMPLEMENTATION NOTES*
-
-*Findings*: F04
+Finding references: F04
 
 No broad repository redesign, invented source facts or cleanup of real developer logs. Unavailable same-harness and other-harness history must survive; this ticket does not require source receipts for Git-shared ledgers.
 

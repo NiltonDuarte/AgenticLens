@@ -1,14 +1,14 @@
-h3. Title: AL2-1: Generate and preview anomaly debug prompts
+# AL2-1: Generate and preview anomaly debug prompts
 
-*GOAL*
+## Goal
 
 Engineers can generate, preview and copy the same evidence-preserving anomaly debug prompt from the CLI, API and existing dashboard entry points.
 
-*CONTEXT*
+## Context
 
 AL-50 already delivers browser prompt generation and copying. The remaining gap is CLI/API availability and a consistent preview flow. Engineers diagnosing tool failures, context saturation or subagent rework need available evidence without invented raw payloads.
 
-*ACCEPTANCE CRITERIA*
+## Acceptance criteria
 
 * Generate deterministic Markdown containing incident overview, anomaly diagnostics, invocation forensics, preceding trace and rule-specific remediation for retry streak, high failure rate, context saturation and subagent rework anomalies. Available tool input/output and error bodies remain verbatim under the approved redaction policy.
 * GET /api/workspaces/{ticketId}/debug-prompt accepts optional turn, rule_id and tool_name selectors and returns prompt Markdown with diagnostic metadata. Unknown tickets return 404; malformed parameters return 400; valid requests return 200.
@@ -16,11 +16,7 @@ AL-50 already delivers browser prompt generation and copying. The remaining gap 
 * Existing anomaly drawer, failed waterfall-node and live-alert entry points open a consistent rendered preview and raw text view. Copy reports the actual clipboard outcome with accessible success/failure feedback; loading and request failures remain recoverable.
 * Use available native hydration and supported committed facts when sources are unavailable. Explicitly identify missing evidence and its source; never fabricate raw input/output or mutate a ledger on read.
 
-*Status*: Ready
-*Blocked by*: None
-*Work type*: feat
-
-*IMPLEMENTATION NOTES*
+## Implementation notes
 
 Reuse existing browser prompt guarantees and controls. AL-69 owns anomaly attribution/count corrections; AL-72 owns shared clipboard reliability. Coordinate those paths without making them prerequisites or rebuilding their features.
 

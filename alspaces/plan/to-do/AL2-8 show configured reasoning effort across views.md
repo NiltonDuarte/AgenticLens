@@ -1,14 +1,14 @@
-h3. Title: AL2-8: Show configured reasoning effort across views
+# AL2-8: Show configured reasoning effort across views
 
-*GOAL*
+## Goal
 
 Operators can distinguish configured reasoning effort for model runs in historical and live views without inferring settings from token counts.
 
-*CONTEXT*
+## Context
 
 Historical OpenCode observations reported variant values in session-model and message JSON. These locations and sample counts are not current schema guarantees. Reasoning token metrics already exist; they do not establish the configured reasoning setting.
 
-*ACCEPTANCE CRITERIA*
+## Acceptance criteria
 
 * Validate setting locations separately for supported OpenCode v1/v2 families, including top-level/nested examples where applicable. Record version/field evidence and honestly identify unsupported, absent or unavailable settings.
 * Preserve native values, including values beyond low/medium/high, with exact invocation/session ownership. Missing/default stays unspecified; never infer configured effort from reasoning-token totals or another owner’s setting.
@@ -16,11 +16,7 @@ Historical OpenCode observations reported variant values in session-model and me
 * Deep Dive and Fleet model breakdowns distinguish reasoning effort; Model Profile/session timelines and Live Trace message headers show known settings. Missing/default values avoid empty badges and remain understandable. Mixed settings cannot be presented as one unqualified dominant setting.
 * Fleet users can group or filter models by effort while retaining unknown values and recoverable empty states. Aggregations distinguish model/effort cohorts deterministically without duplicating usage.
 
-*Status*: Ready
-*Blocked by*: None
-*Work type*: feat
-
-*IMPLEMENTATION NOTES*
+## Implementation notes
 
 Do not prescribe retired fact types or a new broad source abstraction. Resolve native session defaults versus message overrides using actual source evidence in the developer contract. Existing live capability limits still apply; this ticket does not introduce a new harness live service.
 

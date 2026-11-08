@@ -1,14 +1,14 @@
-h3. Title: AL2-7: Compare cost modes and simulate rate cards
+# AL2-7: Compare cost modes and simulate rate cards
 
-*GOAL*
+## Goal
 
 Analysts can switch cost views and simulate alternate rate cards without changing measured evidence or saved telemetry.
 
-*CONTEXT*
+## Context
 
 AL2-6 supplies cost provenance and rate-card estimates. Fleet, progression and comparison views need consistent projections so subscription-equivalent estimates are not mistaken for measured spend.
 
-*ACCEPTANCE CRITERIA*
+## Acceptance criteria
 
 * Provide Measured Spend, Estimated Equivalent and Combined Hybrid modes across fleet, progression and comparisons, retaining the user preference on refresh. The default preserves current measured-spend behavior.
 * Measured shows recorded billing with coverage. Estimated shows eligible rate-card estimates with coverage. Hybrid combines measured facts and estimates for uncovered eligible facts once each; it never adds a second estimate over already measured spend. Unknowns remain explicit.
@@ -16,11 +16,7 @@ AL2-6 supplies cost provenance and rate-card estimates. Fleet, progression and c
 * A rate-card simulation drawer validates alternate finite nonnegative rates and projects historical token categories without writing configuration, measured facts or ledgers. Reset restores the saved baseline; unmatched/unknown inputs remain unavailable.
 * Cost-mode and simulation changes handle loading, failures and stale responses without relabeling old values as the new projection. Recorded estimates and temporary simulation values are distinguishable, including for partial mixed-harness history.
 
-*Status*: Blocked
-*Blocked by*: AL2-6
-*Work type*: feat
-
-*IMPLEMENTATION NOTES*
+## Implementation notes
 
 No financial return claim is implied by an API-equivalent estimate. Preserve AL2-6 token-category, provenance and no-double-counting semantics. Pure calculations belong to domain projections; avoid independent pricing arithmetic in each view.
 

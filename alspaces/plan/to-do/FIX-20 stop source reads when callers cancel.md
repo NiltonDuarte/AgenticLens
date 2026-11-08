@@ -1,16 +1,16 @@
-h3. Title: FIX-20: Stop source reads when callers cancel
+# FIX-20: Stop source reads when callers cancel
 
-*GOAL*
+## Goal
 
 Cancelling a request or backfill operation stops its in-flight native work promptly and releases resources without discarding accepted facts.
 
-*CONTEXT*
+## Context
 
 Some consumers accept a context but lose it before expensive work. Live SQL uses non-context queries, Codex discovery/parsing lacks cancellation, and backfill can call exact snapshots with a background context despite a workspace deadline. Cancellation is checked between owners, which does not interrupt the owner currently being read.
 
 Example: closing a historical-trace request during a large rollout scan leaves the scan running. A slow live read can also keep the shared trace-cache lock occupied after its caller leaves. Latency and production incident frequency were not measured.
 
-*ACCEPTANCE CRITERIA*
+## Acceptance criteria
 
 * Already-cancelled and mid-read cancellation stop native work at the relevant query/read boundaries. A context parameter that is ignored below the interface does not satisfy acceptance.
 * Cancellation reaches public HTTP/backfill consumers with an explicit error or partial result; it cannot certify an empty complete snapshot or replace an unavailable owner's stored facts.
@@ -18,14 +18,9 @@ Example: closing a historical-trace request during a large rollout scan leaves t
 * A cancelled trace read does not leave the cache lock held indefinitely or prevent subsequent independent reads. Preserve accepted cached snapshots, revision invalidation and useful partial data.
 * Normal uncancelled v1/v2/Codex extraction and mixed-owner history remain unchanged. Record the controlled test conditions; do not claim a universal latency SLA or unmeasured speedup.
 
-*Status*: Ready
-*Blocked by*: None
-*Work type*: fix
-*Priority*: P2
+## Implementation notes
 
-*IMPLEMENTATION NOTES*
-
-*Findings*: F06
+Finding references: F06
 
 No global timeout-policy redesign, new source repository framework or speculative cache optimization. REV-7 investigates wider read/lifetime guarantees; this concrete cancellation correction can proceed independently.
 

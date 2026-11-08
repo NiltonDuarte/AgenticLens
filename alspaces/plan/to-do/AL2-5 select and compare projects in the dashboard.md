@@ -1,14 +1,14 @@
-h3. Title: AL2-5: Select and compare projects in the dashboard
+# AL2-5: Select and compare projects in the dashboard
 
-*GOAL*
+## Goal
 
 Dashboard users can select projects, compare their metrics and retain project context when opening individual tickets.
 
-*CONTEXT*
+## Context
 
 AL2-3 and AL2-4 provide project identity, registry and query support. Existing views operate on one project. A global selection must update every affected view consistently and recover when a project or synchronization is unavailable.
 
-*ACCEPTANCE CRITERIA*
+## Acceptance criteria
 
 * A global accessible multi-select lists configured projects from GET /api/projects. All Projects means every configured project; clearing the explicit selection restores All Projects. One or more IDs constrain all affected views to that set.
 * Selection updates URL ?projects=... and survives refresh with local preference storage. Explicit URL selection takes precedence over stored preference; removed/invalid IDs are reported and can be cleared rather than yielding an unexplained empty view.
@@ -16,11 +16,7 @@ AL2-3 and AL2-4 provide project identity, registry and query support. Existing v
 * Fleet views compare cost, velocity and anomalies by project and provide combined totals for the selected set. Unavailable costs retain their coverage rather than becoming zero; stale responses cannot overwrite a later project selection.
 * Show synchronization state and allow on-demand refresh through the registry API. Loading, sync failure and empty results retain usable selection/retry controls; refresh never displays another project’s data under the current label.
 
-*Status*: Blocked
-*Blocked by*: AL2-3, AL2-4
-*Work type*: feat
-
-*IMPLEMENTATION NOTES*
+## Implementation notes
 
 Reuse existing view and query contracts rather than prescribing component filenames. AL-71 owns general request-state corrections; coordinate their invariants. No new ingestion or rate-card cost policy is owned here.
 

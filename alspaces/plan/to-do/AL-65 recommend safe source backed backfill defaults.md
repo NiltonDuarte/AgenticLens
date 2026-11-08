@@ -1,14 +1,14 @@
-h3. Title: AL-65: Recommend safe source-backed backfill defaults
+# AL-65: Recommend safe source-backed backfill defaults
 
-*GOAL*
+## Goal
 
 As an operator, I want a recommendation for understandable, safe backfill defaults so that available source facts refresh without requiring Force while unavailable history remains intact.
 
-*CONTEXT*
+## Context
 
 The user expects backfill to follow sessions already recorded in a ledger and recompute when original source metrics are available, while retaining stored facts when source data is unavailable. Current --force only bypasses completed-ledger skipping; --recompute-db and --recompute-git already bypass that skip and select different work. Force alone neither rereads sources nor enables heuristic matching. Research is requested; no default/flag behavior change is approved.
 
-*ACCEPTANCE CRITERIA*
+## Acceptance criteria
 
 * Interpret availability as original session/metric source records needed for recomputation, never merely previously saved ledger metrics.
 * Evaluate recomputing exact stored session identities by default without skipping complete ledgers; unavailable sessions retain existing facts rather than receiving zero/empty replacements.
@@ -18,11 +18,7 @@ The user expects backfill to follow sessions already recorded in a ledger and re
 * Recommend retaining, changing or replacing --force only after research; distinguish the requested default source-backed behavior from simply enabling current Force.
 * Provide proposed available/unavailable/retained outcome messages and migration/compatibility options. Any behavior change requires subsequent explicit approval and a separate implementation session.
 
-*Status*: Blocked
-*Blocked by*: AL-63
-*Work type*: docs
-
-*IMPLEMENTATION NOTES*
+## Implementation notes
 
 Discovery only: no application, schema, runtime or new test changes. Use existing evidence and disposable probes; label unavailable and unexecuted cases. Preserve the original AL-55 ledger. [Prior reconciliation](../../PO-19/SPEC.md) records shipped foundations and historical limits.
 

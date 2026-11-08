@@ -1,30 +1,30 @@
-h3. Title: AL-69: Preserve accurate telemetry and evidence
+# AL-69: Preserve accurate telemetry and evidence
 
-*GOAL*
+## Goal
 
 Operators can trust tool-failure metrics, configured anomalies and source completeness without losing saved summary or trace evidence.
 
-*CONTEXT*
+## Context
 
 Execution status, configured anomaly policy, partial-data diagnostics, summary preservation, source fidelity and anomaly attribution must agree across extraction, persistence and presentation.
 
-*ACCEPTANCE CRITERIA*
+## Acceptance criteria
 
-h4. Classify tool failures from execution evidence
+### Classify tool failures from execution evidence
 
 Successful reads containing exit code or crash phrases are classified as failed tools, corrupting live and offline failure metrics.
 
 * Use authoritative status and process-exit evidence. Limit any legacy text fallback to execution tools and a recognized execution envelope; arbitrary read/search output is content.
 * Exercise successful reads containing exit code 2 and segmentation fault, actual process failures, grep/glob no-match behavior, and live/offline parity through the real consumers.
 
-h4. Apply anomaly thresholds consistently through persistence and views
+### Apply anomaly thresholds consistently through persistence and views
 
 Custom anomaly thresholds disappear during persistence and fleet recomputation; ErrorRateThreshold is serialized but ignored in favor of fixed levels.
 
 * Define the configured error-rate threshold and warning/critical semantics in the contract; apply the effective policy to event detection and aggregate fallback, and display truthful thresholds.
 * Prove generate/save/reload/detail/fleet and live parity for settings above and below defaults, including exact boundaries and event pruning. Do not silently replace an already configured projection with default detection.
 
-h4. Surface partial scan and child-linkage diagnostics
+### Surface partial scan and child-linkage diagnostics
 
 CLI scan hides malformed siblings and rejected targets; live child lookup failures look like a successful absence of children.
 
@@ -33,14 +33,14 @@ CLI scan hides malformed siblings and rejected targets; live child lookup failur
 * AL-67 F05 confirms the reachable case: remove session.parent_id while leaving parent/message/part reads usable. The trace still has useful content, but its caller currently swallows the child-query error. Report unavailable relationship lookup distinctly from a proven empty child set; do not trust a tool payload as native parent evidence. Repair the existing TestLiveTraceSurvivesChildSessionLookupFailure oracle to require that diagnostic while retaining its content-preservation assertions.
 * Test corrupt/unsupported/unreadable scan siblings and failed, successful-empty and successful-linked child lookup. Do not turn optional enrichment failure into an empty or wholly failed trace.
 
-h4. Preserve summary evidence when replacing generated metrics
+### Preserve summary evidence when replacing generated metrics
 
 Updating Workflow Efficiency consumes a subsequent peer-level Verification heading and deletes user evidence.
 
 * Bound generated-block replacement with stable markers or correct heading-aware boundaries and a conservative legacy path. Preserve all unrelated prose and evidence.
 * Test peer/parent headings, heading-like text inside fenced code, legacy headers, absent-block append and repeat-run idempotence through the actual writer and CLI boundary.
 
-h4. Align live and offline source decoding fidelity
+### Align live and offline source decoding fidelity
 
 Live raw tool output trims meaningful whitespace that offline v1 decoding preserves; duplicated interpretation owns inconsistent field/status semantics.
 
@@ -48,7 +48,7 @@ Live raw tool output trims meaningful whitespace that offline v1 decoding preser
 * Preserve transient raw strings verbatim and verify parity for whitespace, structured values, malformed/unknown states and normal records.
 * Preserve ledger privacy: no raw-payload expansion in serialization. Keep status behavior aligned with the execution-classification section above without inventing a universal source abstraction.
 
-h4. Preserve anomaly identity and count semantics
+### Preserve anomaly identity and count semantics
 
 Fallback matching ignores contradictory tool identities; generic error totals are exported as consecutive-error streaks.
 
@@ -56,16 +56,11 @@ Fallback matching ignores contradictory tool identities; generic error totals ar
 * Test same-session/same-turn different tools, part-1 versus part-10, and read versus read_file in live and historical matching.
 * Only consecutive/retry rules supply streak counts. Test separated errors under a rate anomaly versus a real streak through badges, filtering, inspector and export; preserve original evidence text.
 
-*Status*: Ready
-*Blocked by*: None
-*Work type*: fix
-*Priority*: P2
+## Implementation notes
 
-*IMPLEMENTATION NOTES*
+Related work: AL-62 owns auxiliary-fact preservation and granular ownership; AL-63 owns capability parity; AL-67 owns broader architecture investigation. Reuse their contracts without duplicating their scope.
 
-*Related*: AL-62 owns auxiliary-fact preservation and granular ownership; AL-63 owns capability parity; AL-67 owns broader architecture investigation. Reuse their contracts without duplicating their scope.
-
-*Findings*: AL-67 F05; ADP-06, ADP-10, ADP-12, CC-01, CC-03, CC-04, CC-08, FE-09, FE-12
+Finding references: AL-67 F05; ADP-06, ADP-10, ADP-12, CC-01, CC-03, CC-04, CC-08, FE-09, FE-12
 
 * [REV-5 ADAPTERS_REPORT.md](../../REV-5/iterations/03/ADAPTERS_REPORT.md)
 * [REV-5 CORE_CLI_REPORT.md](../../REV-5/iterations/03/CORE_CLI_REPORT.md)

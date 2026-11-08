@@ -1,14 +1,14 @@
-h3. Title: AL-63: Verify source capabilities across harnesses
+# AL-63: Verify source capabilities across harnesses
 
-*GOAL*
+## Goal
 
 As an operator, I want a versioned capability matrix with evidence and limits so that I can choose sources and diagnose gaps accurately.
 
-*CONTEXT*
+## Context
 
 The user reports Codex lacks trace hydration and requests a capability comparison. Identical capabilities across harnesses are not assumed. Incorporate the merged Codex-fact fix and granular ownership delivery instead of rerunning unchanged evidence. The standalone active OpenCode walkthrough has been removed from this plan; this capability audit retains its original matrix scope and reports unexecuted live checks explicitly.
 
-*ACCEPTANCE CRITERIA*
+## Acceptance criteria
 
 * Provide a three-source matrix covering ingestion, historical trace hydration, live observability, skill facts, delegation facts, child-session navigation, execution-error reporting, and source-backed recovery.
 * Every cell distinguishes supported and verified, supported but failing, unsupported, unavailable source evidence, or not yet executed. Cite declared support separately from runtime evidence, including build, source version/schema, command, IDs and result.
@@ -17,11 +17,7 @@ The user reports Codex lacks trace hydration and requests a capability compariso
 * Check exact stored-session identity, parent/source preservation, other-harness facts, growing-source refresh, unchanged repeat runs, and explicit opt-in for heuristic recovery using disposable evidence copies.
 * Use AL-62 diagnosis/implemented-fix verification; record residual gaps without asserting a successful backfill or preservation check based on the original notes. Findings propose follow-up tickets rather than silently expanding this audit.
 
-*Status*: Ready
-*Blocked by*: None
-*Work type*: docs
-
-*IMPLEMENTATION NOTES*
+## Implementation notes
 
 Discovery only: no application, schema, runtime or new test changes. Use existing evidence and disposable probes; label unavailable and unexecuted cases. Preserve the original AL-55 ledger. [Prior reconciliation](../../PO-19/SPEC.md) records shipped foundations and historical limits.
 

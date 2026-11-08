@@ -1,16 +1,16 @@
-h3. Title: AL-71: Keep dashboard requests and live data reliable
+# AL-71: Keep dashboard requests and live data reliable
 
-*GOAL*
+## Goal
 
 Dashboard selections own their results, time windows behave consistently, and live data survives transport errors and recovers accurately.
 
-*CONTEXT*
+## Context
 
 The current selection must own asynchronous results, time windows must have one meaning, and malformed or recovering live transports must preserve valid data and truthful status.
 
-*ACCEPTANCE CRITERIA*
+## Acceptance criteria
 
-h4. Own filter requests and progression date boundaries consistently
+### Own filter requests and progression date boundaries consistently
 
 Late filter responses overwrite current selections. Progression presets switch from latest-ledger time to server-current time when a type/prefix is selected. Duplicated state ownership lets the views diverge.
 
@@ -19,7 +19,7 @@ Late filter responses overwrite current selections. Progression presets switch f
 * Extract only shared request/filter/date invariants that remove concrete duplication, and keep pure calculations out of views. Do not add a generic caching framework.
 * Use deferred A/B response and rejection permutations and a real server-date contract fixture, not only immediately resolved mocked requests. FE-D2 benchmark arithmetic belongs to AL-72.
 
-h4. Validate live payloads and recover polling state
+### Validate live payloads and recover polling state
 
 Malformed nested live payloads pass unchecked casts and crash consumers; fallback polling remains in error after successful recovery and launches overlapping requests.
 
@@ -27,16 +27,11 @@ Malformed nested live payloads pass unchecked casts and crash consumers; fallbac
 * Restore fallback-polling status on success after error, serialize/coalesce pending polls, and prevent obsolete or post-teardown results from mutating state.
 * Test null/primitive/wrong-scalar/nested-malformed payloads, valid optional omissions, failure-threshold recovery, deferred overlapping requests and teardown. Do not misrepresent malformed data as a valid empty snapshot.
 
-*Status*: Ready
-*Blocked by*: None
-*Work type*: fix
-*Priority*: P2
+## Implementation notes
 
-*IMPLEMENTATION NOTES*
+Related work: AL-69 owns source diagnostics and anomaly semantics; AL-70 owns configured ticket parsing/filter identity; AL-72 owns rendered UI behavior and benchmark arithmetic.
 
-*Related*: AL-69 owns source diagnostics and anomaly semantics; AL-70 owns configured ticket parsing/filter identity; AL-72 owns rendered UI behavior and benchmark arithmetic.
-
-*Findings*: FE-02, FE-03, FE-04, FE-05, FE-D2
+Finding references: FE-02, FE-03, FE-04, FE-05, FE-D2
 
 * [REV-5 FRONTEND_REPORT.md](../../REV-5/iterations/03/FRONTEND_REPORT.md)
 

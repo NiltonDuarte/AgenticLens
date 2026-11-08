@@ -1,16 +1,16 @@
-h3. Title: AL-75: Verify dependency integrity and build reproducibility
+# AL-75: Verify dependency integrity and build reproducibility
 
-*GOAL*
+## Goal
 
 Maintainers can reproduce supported builds and decide dependency changes from current integrity, reachability and bundle evidence rather than historical warnings.
 
-*CONTEXT*
+## Context
 
 Investigate bounded integrity/advisory/bundle signals and align build inputs with declared toolchains. Historical observations are not proof of a current exploit or measured performance defect.
 
-*ACCEPTANCE CRITERIA*
+## Acceptance criteria
 
-h4. Investigate dependency integrity and align reproducible build inputs
+### Investigate dependency integrity and align reproducible build inputs
 
 Bounded audit observations found lockfile entries without resolved/integrity metadata, npm advisory output, a large bundle warning, CI Go setup inconsistent with go.mod, and a Docker npm-ci fallback that can conceal lockfile drift. These are signals, not proven exploitable vulnerabilities or measured performance defects.
 
@@ -19,16 +19,11 @@ Bounded audit observations found lockfile entries without resolved/integrity met
 * Measure bundle composition/load impact before proposing optimization; record no-action conclusions when justified. Do not blanket-upgrade dependencies or promise a performance benefit without evidence.
 * Coordinate package/lockfile edits with AL-74 and verify build, tests and embedded assets for accepted changes.
 
-*Status*: Ready
-*Blocked by*: None
-*Work type*: chore
-*Priority*: P3
+## Implementation notes
 
-*IMPLEMENTATION NOTES*
+Related work: Coordinate package/lockfile cleanup with AL-74 and release packaging with AL-73; do not duplicate installer integrity verification.
 
-*Related*: Coordinate package/lockfile cleanup with AL-74 and release packaging with AL-73; do not duplicate installer integrity verification.
-
-*Findings*: Bounded dependency/toolchain/reproducibility observations; not a confirmed exploit or performance defect.
+Finding references: Bounded dependency/toolchain/reproducibility observations; not a confirmed exploit or performance defect.
 
 * [REV-5 DELIVERY_REPORT.md](../../REV-5/iterations/03/DELIVERY_REPORT.md)
 * [REV-5 FRONTEND_REPORT.md](../../REV-5/iterations/03/FRONTEND_REPORT.md)

@@ -1,14 +1,14 @@
-h3. Title: AL2-2: Archive workspaces without losing history
+# AL2-2: Archive workspaces without losing history
 
-*GOAL*
+## Goal
 
 Operators can compact completed ticket workspaces into archives while continuing to browse and query their historical telemetry.
 
-*CONTEXT*
+## Context
 
 Long-lived repositories accumulate completed ticket folders. JSON formatting from AL-76 does not archive those folders. Archiving must respect configured workspace roots and retain portable history, artifacts and ordinary directory-based access.
 
-*ACCEPTANCE CRITERIA*
+## Acceptance criteria
 
 * agentic-lens archive supports --before, --workspaces, --output, --keep and --dry-run. Date selection includes only proven completed tickets before the cutoff; missing completion evidence never becomes an inferred date. A terminal invocation without --before offers interactive selection; noninteractive missing selection fails clearly.
 * Create .tar.gz packages with a manifest and verified checksums/entries. Publish the verified archive atomically before removing source folders. Failure preserves originals; --keep retains them; --dry-run makes no writes or deletions. Never delete a source changed since the archived snapshot.
@@ -16,11 +16,7 @@ Long-lived repositories accumulate completed ticket folders. JSON formatting fro
 * Workspace API results identify archived records with is_archived. Dashboard rows show an Archived badge, detail shows archive origin, and All/Active/Archived filtering retains historical queries and metrics.
 * Corrupt packages and unsafe archive entries produce diagnostics without losing valid sibling tickets. Bound archive reading and reject path traversal; preserve supported ledger facts and unrelated files.
 
-*Status*: Ready
-*Blocked by*: None
-*Work type*: feat
-
-*IMPLEMENTATION NOTES*
+## Implementation notes
 
 Archive creation/streaming belongs to adapters; eligibility and duplicate precedence belong to the pure core. Completion comes from established ticket data, not folder age. No raw transcript capture or new history-authenticity requirement is included.
 
