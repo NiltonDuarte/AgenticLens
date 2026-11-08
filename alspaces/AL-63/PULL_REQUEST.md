@@ -1,7 +1,7 @@
-# docs(plan): clarify cross-harness capability audit evidence (AL-63)
+# docs(audit): verify cross-harness source capabilities (AL-63)
 
-AL-63 leaves its three source columns implicit and can blur historical fixture evidence with current runtime verification. Clarify OpenCode v1, OpenCode v2 and Codex comparisons, evidence provenance, unavailable hydration and exact-owner refresh cases while preserving its discovery-only scope and all eight capability areas.
+Execute AL-63's existing discovery ticket and restore its specification to the pre-session text. Report an evidence-qualified matrix for OpenCode v1, OpenCode v2 and Codex across ingestion, historical hydration, live observation, skill/delegation facts, child navigation, execution errors and recovery.
 
-Keep FIX-18 and REV-7 ownership intact. AL-63 remains Ready; AL-65 stays blocked until the audit is actually delivered. This PR refines planning and does not execute or close the audit, change application behavior or approve implementation.
+Codex historical hydration succeeds on the AL-55 copy (232 events, all five owners). Native/recorded-source HTTP reads, existing fixtures and disposable preservation/refresh probes distinguish working paths from v2 live failures, configured Codex-home selection, metadata child-link loss and error-summary limitations. Findings propose bounded follow-ups; no application, schema, runtime or new test changes.
 
-The [specification](alspaces/plan/to-do/AL-63%20verify%20source%20capabilities%20across%20harnesses.md) owns acceptance. [Summary](alspaces/AL-63/SUMMARY.md) records verification and remaining limits; the iteration plan records scope. Validation includes document consistency, dependency preservation, whitespace and the repository integrated gate, with outcomes recorded in the summary.
+[Capability matrix and evidence](alspaces/AL-63/CAPABILITIES.md) and [verification/limits](alspaces/AL-63/SUMMARY.md) retain source versions, identities, commands, attribution and unexecuted cases. Validation reuses the successful full make for identical application/test/build inputs and adds focused tests, disposable probes, document consistency and original-ledger hash checks. Original AL-55/AL-62 ledgers are unchanged. This PR delivers an audit, not implementation approval or cross-harness parity.

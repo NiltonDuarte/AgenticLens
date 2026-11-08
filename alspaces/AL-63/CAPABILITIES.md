@@ -1,0 +1,74 @@
+# Source capabilities across harnesses
+
+Codex historical hydration works: a copied AL-55 ledger produced 232 source events for all five recorded owners. Live observation is a different capability: the current reader uses OpenCode v1 tables, has no Codex live source, and fails for v2-only records. Configured Codex source paths can also fail to reach server hydration.
+
+This audit executes the original AL-63 discovery scope. No application, tests, schemas, runtime scripts or backfill defaults changed. Findings below are follow-up recommendations, not implemented fixes.
+
+## Revision and evidence labels
+
+Application inspected at `f4152225af06e2594477574c0e9f175a81218053`, identical application/test/build inputs to `eb7d169c` and the successful `make` at `0a8cfcee`. Parent probes used the built native CLI `v3.0.0-rc.133+57a3503-7-g0a8cfcee`, commit `0a8cfcee`. Its application source matches the shared installed CLI `v3.0.0-rc.131+03f5b05-2-g57a3503e`; the latter generated the initial native AL-63 ledger. The data review's private binary had uninjected development version fields; its unchanged-source revision is recorded in its report.
+
+- **V/R**: supported and verified using recorded local source data. No new harness session was started.
+- **V/F**: supported and verified using disposable SQLite/JSONL fixtures through production code. This does not establish native version parity.
+- **FAIL**: supported/advertised path has a demonstrated failure; working variants are qualified separately.
+- **UNSUPPORTED**: no implementation of that capability for this source.
+- **UNAVAILABLE**: positive source evidence was unavailable in the inspected records.
+- **NOT RUN**: the operation or version case was not executed. Static declarations alone are not verification.
+
+Each cell cites evidence IDs defined below. Installed harnesses report OpenCode `1.19.5` and `codex-cli 0.167.0`. Selected v1 source rows record `1.19.5`; selected v2 source row records `2.2.0`. AL-55/AL-62 Codex metadata records CLI `0.166.0`, T3 Code origin, JSONL schema. A stored version value is evidence about that record, not a promise of compatibility with every release. V2's fresh native producer and positive skill/task samples were not exercised.
+
+## Capability matrix
+
+| Capability | OpenCode v1 (`session/message/part`) | OpenCode v2 (`session_v2/session_message`) | Codex (rollout JSONL) |
+| --- | --- | --- | --- |
+| Ingestion | Supported: **V/F**, plus extraction from family-isolated recorded rows. Generic populated mixed-family store rejected. A1, D1 | Supported: **V/F**, plus extraction from isolated recorded v2 row. Generic mixed store rejected. A1, D1 | Supported: **V/F**, native initial AL-63 generation **V/R**. Child discovery is source-backed. A1, C3 |
+| Historical trace hydration | Supported: **V/R**, complete 27 events. H1 | Supported: **V/R**, complete four events; producer label 2.2.0, no fresh native run. H1 | Supported: **V/R**, complete 232 events/5 owners; partial 104 events/1 owner when children unavailable. Configured-home variant **FAIL**. H1, H2 |
+| Live observability | Supported: historical live-reader trace **V/R** (18 messages); update/poll/SSE **V/F**. Fresh active walkthrough **NOT RUN**. B1 | Current v2-only live path **FAIL**: mixed-store owner omitted/404; clean v2 fixture 500. Correct unsupported reporting belongs to FIX-18; v2 live implementation is not promised. B1 | **UNSUPPORTED**: live tree, trace and polling require SQLite. Historical JSONL hydration remains supported. B1 |
+| Skill facts | Supported: **V/R** one recorded activation and **V/F**. A1 | Supported: **V/F**; native positive sample **UNAVAILABLE** in inspected v2 rows. A1, D2 | Supported: **V/F**, plus reused AL-62 native selection/attachment evidence. Three persisted activations remain visible without hydration **V/R**. C1, H1 |
+| Delegation facts | Supported: recorded `task` occurrences **V/R**, **V/F**; child identity has a separate failure below. A1 | Supported: **V/F**; native positive sample **UNAVAILABLE**. A1, D2 | Supported: direct spawn calls and call-ID outputs **V/F**; reused AL-62 native facts, 25 persisted delegations readable without hydration **V/R**. Arbitrary script text is not a native spawn fact. C1, H1 |
+| Child-session navigation | JSON output identity **V/F**; native `state.metadata.sessionId` form **FAIL**, despite proven native parent. Browser click-through **NOT RUN**. A2 | Historical child proof/presentation **V/F**; native positive navigation **NOT RUN**. Live path fails as above. A1, B1 | Proven IDs/parent/agent-path matching **V/F**; opaque handles remain unlinked. AL-55 five-owner hydration **V/R**; native browser click-through **NOT RUN**. A1, H1 |
+| Execution-error reporting | **V/R** historical error event; status/text and live/offline parity **V/F**. Live incompleteness diagnostics **FAIL** separately. B1, B3 | **V/F**: two reads yield exactly one failure; successful error-like text stays successful. Native failed-tool sample **NOT RUN**. D2 | Command/MCP lifecycle status **V/F**; explicit failed/error function-output summary counts **FAIL** in supported synthetic branch. No native failed-output version claim. B2 |
+| Source-backed recovery | Exact-owner refresh/preservation **V/F**; native backfill **NOT RUN**. Mixed-layout v1 recovery limitation retained. D1 | Exact-owner refresh/preservation/growth/repeat **V/F**; native backfill and enabled heuristic fallback **NOT RUN**. Mixed-layout policy remains distinct. D1, D2 | Exact-owner/parent recovery, malformed/missing-child retention, same/other-harness history and repeat **V/F**. Native AL-55 backfill **NOT RUN**. No title-based Codex fallback. D1 |
+
+## Runtime evidence
+
+**H1 — disposable HTTP probes.** The built CLI ran `server --workspaces <private-project>/alspaces --db-path <SQLite-backup-or-missing-path> --port <private-port>`. Requests used `GET /api/workspaces/{id}` and `GET /api/workspaces/{id}/events`; Codex home was selected with `CODEX_HOME`. Every server was stopped. Original AL-55/AL-62 ledgers were copied, never refreshed in place. OpenCode selectors were synthetic lean owner ledgers selecting exact recorded source IDs; they prove hydration, not native CLI ingestion.
+
+| Selector/source state | Detail/events HTTP | Coverage | Source events | Saved facts / disk behavior |
+| --- | --- | --- | --- | --- |
+| AL-55, Codex available | 200 / 200 | complete, 5/5 | 232 | Five owners/four delegations; ledger bytes unchanged |
+| AL-55, only root rollout copied | 200 / 200 | partial, 1/5; four explicit missing-child diagnostics | 104 | Same five owners/four delegations; bytes unchanged |
+| AL-55, source absent | 200 / 200 | unavailable, 0/5; five diagnostics | 0 | Same five owners/four delegations; bytes unchanged |
+| AL-62, source absent | 200 / 200 | unavailable, 0/26; 26 diagnostics | 0 | 26 owners/three skills/25 delegations; bytes unchanged |
+| v1 exact owner, backup available | 200 / 200 | complete, 1/1 | 27 | Selector bytes unchanged |
+| v2 exact owner, backup available | 200 / 200 | complete, 1/1 | 4 | Selector bytes unchanged |
+| v1/v2 exact owner, source absent | 200 / 200 | unavailable, 0/1; source diagnostic | 0 | Selector bytes unchanged |
+
+Source identities: AL-55 root `01a19267-636b-7d61-85c6-db8d3d3eba77`, children `01a19267-a66a-71b1-a7e8-cf880007ce6b`, `01a19286-06d4-7881-acd0-580111b793e6`, `01a19288-d362-7201-a246-3b42d554ef27`, `01a1928d-556d-7232-9753-245d9283cea7`, each parented to that root. AL-62 root `01a1a3dc-3627-79c0-8b42-8c9cea2041f3`. V1 root `ses_e5e78aaeeffenvBiNRLGiiNYZG`; v2 root `ses_e7b078fd0ffehWQ4Mw6lRlwIzl` (both native parent null). OpenCode source inventory: 32 v1 sessions, two v2 sessions, eight v2 messages. Whole-source backup retains both families; schema-isolated extraction copies are explicitly derived fixtures.
+
+One AL-62 available-source events request exceeded a 25-second client timeout. It was not counted as successful hydration or diagnosed as a performance defect; AL-62 unavailable-source reads succeeded. Initial native CLI extraction attempts on copies were rejected by publication/project-ownership guards because the source project differed or no longer existed. Those attempts prove neither successful ingestion nor a source parser defect. No source project identity was falsified to bypass them.
+
+**D2 — additional v2 evidence after test review.** `python3 /tmp/al63-v2-gap-probe.py` called the built CLI with `backfill --source opencode --workspaces <private>/workspaces --ticket-id AL-63-PROBE --recompute-db --db-path <private>/source.db`. Synthetic exact IDs: `stored-root`, missing `stored-child` parented to it, missing same-harness `remote-root`, unrelated Codex `other-source`. Steps: one skill/task; two equal-valued occurrences with distinct source IDs; unchanged repeat; malformed message `m`; missing root. All five runs passed their assertions, reported `Completed: 1` alongside `Incomplete: 1` and mixed-age diagnostics. Counts grew 1/1 → 2/2, then entire session arrays stayed equal on repeat and both failure steps. Child skill/delegation, same-harness root and other-harness owner stayed exactly equal throughout. Two read calls, one explicit error and one successful error-like output, consistently persisted exactly one tool error. Initial invalid probe scaffolding was rejected before extraction and is excluded from this result. No durable test was added; native v2 behavior remains separately qualified.
+
+**D1/A1/B1/B2/B3/H2 — specialized evidence.** Detailed commands, probes, source locations and IDs are retained in the [architecture Sol](iterations/02/ARCHITECTURE_SOL.md), [behavior Sol](iterations/02/BEHAVIOR_SOL.md), [data Sol](iterations/02/DATA_SOL.md) and [test Sol](iterations/02/TESTS_SOL.md) reports. Independent Luna source/test assessments are retained alongside them. D1 includes pure-v1/v2 malformed CLI controls preserving prior skill/task snapshots, missing children, unavailable same/other-harness owners, growing-cutoff tests for all three families and unchanged repeats. A1 includes producer/exact-child proof fixtures. B1 includes actual server handlers and SQLite-update/SSE fixtures, and the v2 404/500 contrast. B2/H2/B3 include isolated function-output, configured-home and child-lookup failure probes. Full `make` passed on unchanged inputs: backend race/integration, 190 frontend unit, 678 integration, static/release/install/capture/orchestration checks and multi-platform builds. Fixture tests and preserved historical AL-62 verification do not constitute another native walkthrough.
+
+**C1/C3 — reused foundations.** [AL-62 evidence](../AL-62/SUMMARY.md) documents original Codex skill selection/attachment, four AL-55 direct spawn calls joined by call ID, and 26-owner final generation. Its source paths are unchanged in the audited revision; preservation of recorded facts was rechecked through H1. Initial AL-63 native generation resolved root `01a1bd1f-69c1-7043-9bf4-8d4fe9a53c9b` using explicit Codex/docs selection on the pinned shared CLI. This confirms ingestion in this environment, not every producer format or completeness of T3 service-level delegations.
+
+## Findings and follow-up boundaries
+
+| Finding | Observed limit and evidence | Recommended follow-up |
+| --- | --- | --- |
+| CAP-01 (6/10) | Native v1 task metadata contains a proven child, but occurrence/event projection reads only JSON output references. Owner `ses_e630a9ee0ffe5ndOp1sGrE82qr`, part `prt_19cf578b3001fn4CZpiNg6ZAho`, child `ses_e630a86f7ffe463blCAno5iETv`; seven sampled metadata pairs agree with native parentage. Separate `CaptureChildFinished` already recognizes this shape. A2 | Proposed new bounded correction: preserve metadata-backed OpenCode child identity; no ticket allocated or fix implemented. Coordinate AL-69 source fidelity. |
+| CAP-02 (6/10) | V2 historical hydration succeeds while live queries read v1 tables; mixed store omits v2 owner/404, clean v2 store fails/500. B1 | Existing FIX-18 owns honest unsupported-live reporting. Do not silently add v2 live support. |
+| CAP-03 (6/10) | Server constructor ignores configured Codex home; configured-only fixture unavailable through normal wiring, complete through explicit-home control. H2 | Existing AL-70 owns consistent effective source settings. |
+| CAP-04 (5/10) | Explicit failed/error `function_call_output` updates event status but leaves invocation/tool error counters zero. Completed control also zero; command/MCP paths behave differently. B2 | Proposed bounded Codex function-output counter correction, related to AL-69; no ticket allocated or fix implemented. |
+| CAP-05 (4/10) | Live child-lookup/malformed-part failures preserve useful trace content but omit typed completeness diagnostics. Historical path exposes diagnostics. B3 | Existing AL-69 owns child-linkage diagnostics; malformed-part disclosure needs explicit follow-up scoping. |
+| CAP-06 (3/10) | Backfill selects v2 by table existence and misses a valid v1-only owner in mixed layout, retaining stale history. Generic extraction and exact historical hydration have different policies. D1 | Existing REV-7 owns this documented policy divergence. Not a promise of mixed-schema ingestion or a data-loss finding. |
+
+Architecture/Sol discovered CAP-01; behavior/Sol discovered CAP-02–05; data/Sol reproduced CAP-06 and reconciled its existing REV-7 policy. Exact profiles: `gpt-6.1-sol/high`; native child turn-context records independently confirm those model/effort settings; cost is not measured. Luna profile settings are dispatch-acknowledged, with native identity unavailable. Other independent source/test reviews did not establish additional product defects. Tests/Sol's two evidence candidates are resolved for this audit by D2, while durable regression coverage and native-positive cases remain unimplemented/unexecuted. Full attribution and run outcomes belong in the consolidated review record.
+
+## Limits and preservation
+
+No fresh active OpenCode walkthrough, native positive v2 skill/delegation/navigation session, native AL-55 backfill, native browser click-through, enabled v2 heuristic fallback, concurrency/power-loss probe or all-version compatibility claim was executed. Live update/SSE evidence is fixture-based. Existing tests distinguish complete-empty, partial and unavailable trace coverage; native unavailable-source zero events are not a verified complete-empty snapshot. Preserve this distinction when using the matrix to inform AL-65 defaults.
+
+Original ledger SHA256 remains AL-55 `77625de54c0125576bbf48240d9e41e16a2db1497e289283e52e99cf71d4b3b2`, AL-62 `6391077a4c528a3a027b0e61ab965a6995c3f30f34224dc0df63c2b1d0baa874`. Raw rollouts, SQLite backups and probe programs/results stay outside Git. Findings remain open follow-up work; a completed capability audit does not certify defect-free sources or authorize implementation.
