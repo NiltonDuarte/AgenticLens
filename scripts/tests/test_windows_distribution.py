@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import platform
 import shutil
+import stat
 import subprocess
 import time
 import unittest
@@ -39,7 +40,7 @@ class WindowsDistributionTest(unittest.TestCase):
         code = "$p = [IO.Path]::Combine([IO.Path]::GetTempPath(), '" + name + "'); [IO.Directory]::CreateDirectory($p) | Out-Null; [Console]::WriteLine($p)"
         created = subprocess.check_output([POWERSHELL, '-NoLogo', '-NoProfile', '-NonInteractive', '-Command', code], text=True).strip()
         self.root = local(created)
-        self.addCleanup(shutil.rmtree, self.root)
+        self.addCleanup(self.remove_fixture_tree)
         self.repo = self.root / 'project A'; self.repo.mkdir()
         self.home = self.root / 'isolated native home'; self.home.mkdir()
         self.cache = self.root / 'native cache ü'; self.dest = self.root / 'user PATH bin'
@@ -55,6 +56,28 @@ class WindowsDistributionTest(unittest.TestCase):
         self.env.update(HOME=win(self.home), USERPROFILE=win(self.home), CODEX_HOME=win(self.home / '.codex'),
                         XDG_CONFIG_HOME=win(self.home / '.config'), XDG_CACHE_HOME=win(self.home / '.cache'),
                         XDG_STATE_HOME=win(self.home / '.state'))
+
+    def remove_fixture_tree(self):
+        root = self.root.resolve()
+
+        def remove_readonly(function, name, exception):
+            error = exception[1]
+            candidate = Path(name)
+            if not isinstance(error, PermissionError) or candidate.is_symlink() or not candidate.is_file():
+                raise error
+            if not candidate.resolve().is_relative_to(root):
+                raise error
+            metadata = candidate.stat()
+            readonly = getattr(metadata, 'st_file_attributes', 0) & getattr(stat, 'FILE_ATTRIBUTE_READONLY', 1)
+            if not readonly and metadata.st_mode & stat.S_IWRITE:
+                raise error
+            # Retained fixture executables are intentionally read-only. Unlock
+            # only this proven owned file and retry once; a loaded image or any
+            # other permission failure remains a visible test error.
+            candidate.chmod(metadata.st_mode | stat.S_IWRITE)
+            function(name)
+
+        shutil.rmtree(self.root, onerror=remove_readonly)
 
     def write_config(self, form=None):
         self.config.write_text(f"agenticlens: # authority\n  version: {form or self.pin} # exact release\n  install_root: '{win(self.cache)}'\n", encoding='utf-8')
@@ -100,7 +123,7 @@ class WindowsDistributionTest(unittest.TestCase):
 
     def install_native_reporting_probe(self):
         application = self.use_actual_application()
-        self.succeeds(self.install())
+        self.succeeds(self.install('-Force'))
         development = self.root / 'compatible development probe'; development.mkdir()
         candidate = development / self.native().name
         shutil.copyfile(build_probe(self.pin, 'windows', 'amd64'), candidate)
@@ -135,7 +158,7 @@ class WindowsDistributionTest(unittest.TestCase):
         before = caller_shared.read_bytes(), caller_local.read_bytes(), selected_local.read_bytes()
         quote = lambda value: "'" + value.replace("'", "''") + "'"
         execute = 'Set-Location -LiteralPath ' + quote(win(caller)) + '; ' + command
-        execute += '; if ((Get-Location).ProviderPath -ne ' + quote(win(caller)) + ") { throw 'Caller location changed' }"
+        execute += '; if ((Get-Location).ProviderPath -ne ' + quote(win(caller)) + ") { throw 'Caller location changed' }; exit $LASTEXITCODE"
         result = subprocess.run([POWERSHELL, '-NoLogo', '-NoProfile', '-NonInteractive', '-Command', execute],
                                 env=self.env, input='', text=True, encoding='utf-8', capture_output=True, timeout=20)
         self.succeeds(result)
@@ -212,14 +235,19 @@ class WindowsDistributionTest(unittest.TestCase):
         self.assertEqual(hooks.read_bytes(), before_hooks)
         dispatcher.write_bytes(before_dispatcher)
         active_bytes = active.read_bytes(); authority_bytes = authority.read_bytes()
-        active.write_bytes(active_bytes + b'owner active-build customization')
-        refused = self.install('-CaptureSource', 'codex', '-CaptureStore', win(home))
-        self.assertNotEqual(refused.returncode, 0)
-        self.assertEqual(active.read_bytes(), active_bytes + b'owner active-build customization')
-        self.assertEqual(authority.read_bytes(), authority_bytes)
-        self.assertEqual(hooks.read_bytes(), before_hooks)
-        self.assertEqual(receipt.read_bytes(), before_receipt)
-        active.write_bytes(active_bytes)
+        active_mode = active.stat().st_mode
+        active.chmod(active_mode | stat.S_IWRITE)
+        try:
+            active.write_bytes(active_bytes + b'owner active-build customization')
+            refused = self.install('-CaptureSource', 'codex', '-CaptureStore', win(home))
+            self.assertNotEqual(refused.returncode, 0)
+            self.assertEqual(active.read_bytes(), active_bytes + b'owner active-build customization')
+            self.assertEqual(authority.read_bytes(), authority_bytes)
+            self.assertEqual(hooks.read_bytes(), before_hooks)
+            self.assertEqual(receipt.read_bytes(), before_receipt)
+        finally:
+            active.write_bytes(active_bytes)
+            active.chmod(active_mode)
         # Repair of a missing stable launcher writes the selected B bytes, so
         # both stable and active identities must remain usable and coherent.
         dispatcher.unlink()
@@ -245,8 +273,12 @@ class WindowsDistributionTest(unittest.TestCase):
         old_cache = win(self.cache)
         self.cache = self.root / "native cache O'Brien"
         local_config = self.repo / '.agenticlens-config.local.yaml'
+        cache_scalar = '"' + win(self.cache).replace('\\', '/') + '"'
         for configured in [self.config, local_config]:
-            configured.write_text(configured.read_text().replace(old_cache, win(self.cache).replace("'", "''")), encoding='utf-8')
+            contents = configured.read_text()
+            old_scalar = "'" + old_cache + "'"
+            self.assertIn(old_scalar, contents)
+            configured.write_text(contents.replace(old_scalar, cache_scalar), encoding='utf-8')
         self.succeeds(self.install())
         selected = self.native()
         (self.repo / 'src').mkdir()
@@ -346,18 +378,26 @@ class WindowsDistributionTest(unittest.TestCase):
     def test_failed_candidate_checksum_protocol_and_wrapper_edit_preserve_install(self):
         self.succeeds(self.install())
         before = self.native().read_bytes(); wrapper = self.dest / 'agentic-lens.ps1'; wrapper_before = wrapper.read_bytes()
-        original_probe = self.probe.read_bytes()
+        original_probe = self.probe
         for protocol in ['1', '2']:
             with self.subTest(protocol=protocol):
-                shutil.copyfile(build_probe(self.pin, 'windows', 'amd64', protocol=protocol), self.probe)
-                result = self.install('-Force')
-                self.probe.write_bytes(original_probe)
+                candidate = self.root / f'native protocol {protocol}.exe'
+                shutil.copyfile(build_probe(self.pin, 'windows', 'amd64', protocol=protocol), candidate)
+                self.probe = candidate
+                try:
+                    result = self.install('-Force')
+                finally:
+                    self.probe = original_probe
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn('required 3', result.stderr)
                 self.assertEqual(self.native().read_bytes(), before)
                 self.assertEqual(wrapper.read_bytes(), wrapper_before)
-        self.probe.write_bytes(b'not native')
-        self.assertNotEqual(self.install('-Force').returncode, 0)
+        invalid = self.root / 'invalid native input.bin'; invalid.write_bytes(b'not native')
+        self.probe = invalid
+        try:
+            self.assertNotEqual(self.install('-Force').returncode, 0)
+        finally:
+            self.probe = original_probe
         self.assertEqual(self.native().read_bytes(), before)
         wrapper.write_text('owner custom script\n')
         self.assertNotEqual(self.install('-Force').returncode, 0)

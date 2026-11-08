@@ -154,6 +154,10 @@ function Run-Probe([string]$Executable, [string[]]$Arguments) {
     try {
         $result = Read-ProbeResult $process 10000 1048576 $true
         if ($result.Code -ne 0) { throw "Native setup probe failed: $($result.Diagnostic)$($result.Output)" }
+        if ($result.Diagnostic) {
+            $bytes = [Text.Encoding]::UTF8.GetBytes($result.Diagnostic)
+            $stream = [Console]::OpenStandardError(); $stream.Write($bytes, 0, $bytes.Length); $stream.Flush()
+        }
         return $result.Output.TrimEnd("`r", "`n")
     } finally { $process.Dispose() }
 }
@@ -185,7 +189,7 @@ try {
         if ($DryRun) { Write-SetupLine ("Would create shared pin $Version and explicitly install Windows amd64; runtime verification pending."); exit 0 }
         $pin = [IO.Path]::Combine($projectPath, '.agenticlens-config.yaml')
         $stream = [IO.File]::Open($pin, [IO.FileMode]::CreateNew)
-        try { $bytes = [Text.Encoding]::UTF8.GetBytes("# AgenticLens bootstrap scaffold v1: incomplete project configuration`nagenticlens:`n  version: $Version`ntelemetry:`n  capture:`n    state_dir: ~/.agenticlens/state`n    commit_warning: true`n"); $stream.Write($bytes, 0, $bytes.Length) } finally { $stream.Dispose() }
+        try { $bytes = [Text.Encoding]::UTF8.GetBytes("# AgenticLens bootstrap scaffold v1: incomplete project configuration`nagenticlens:`n  version: $Version`n"); $stream.Write($bytes, 0, $bytes.Length) } finally { $stream.Dispose() }
         $targets.Add($pin); $backups.Add('')
     }
     $context = (Run-Probe $shell @('-NoLogo', '-NoProfile', '-NonInteractive', '-File', $source, '--al-project', $projectPath, '--al-resolve-cache')) -split '\r?\n'

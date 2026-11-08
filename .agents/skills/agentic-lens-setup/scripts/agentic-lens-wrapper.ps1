@@ -14,6 +14,10 @@ function Invoke-NativeTransport([string]$native, [string[]]$arguments, [bool]$ad
     $start.FileName = $native
     $start.UseShellExecute = $false
     $start.Arguments = [string]::Join(' ', $quotedArguments)
+    # PowerShell's filesystem location can differ from the process directory.
+    $location = Get-Location
+    if ($location.Provider.Name -cne 'FileSystem') { throw 'Native entrypoint requires a filesystem current directory' }
+    $start.WorkingDirectory = $location.ProviderPath
     $process = [Diagnostics.Process]::Start($start)
     if ($advisory) {
         if (-not $process.WaitForExit(1500)) {

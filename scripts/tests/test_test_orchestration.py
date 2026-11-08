@@ -353,7 +353,15 @@ class TestOrchestration(unittest.TestCase):
     def test_ci_and_release_graphs_require_units_and_detect_missing_edge(self):
         text = (ROOT / '.github/workflows/ci.yml').read_text()
         jobs = require_unit_dependencies(text)
-        self.assertTrue({'windows-entrypoint', 'distribution-check', 'backend-check', 'frontend-check'} <= jobs.keys())
+        self.assertTrue({'distribution-check', 'backend-check', 'frontend-check', 'build-binary'} <= jobs.keys())
+        self.assertNotIn('windows-entrypoint', jobs)
+        for job in jobs.values():
+            self.assertNotIn('windows-entrypoint', job['needs'])
+        dangling = text.replace('needs: [backend-check, frontend-check, distribution-check]',
+                                'needs: [backend-check, frontend-check, distribution-check, windows-entrypoint]')
+        self.assertNotEqual(dangling, text)
+        with self.assertRaisesRegex(AssertionError, 'Unknown dependency: windows-entrypoint'):
+            require_unit_dependencies(dangling)
         mutated = text.replace('    needs: [backend-unit, frontend-unit]', '    needs: [frontend-unit]', 1)
         self.assertNotEqual(mutated, text)
         with self.assertRaisesRegex(AssertionError, 'lacks both unit gates'):
