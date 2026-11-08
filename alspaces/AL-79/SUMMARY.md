@@ -1,49 +1,34 @@
-# AL-79: Native user-level Codex capture across worktrees
+# AL-79: Native Codex capture and separate version management
 
-[Iteration03](iterations/03/PLAN.md) is in progress after the user's explicit approval: "approved. Implement this approach and install it on this machine". The final design separates the installed native `agentic-lens` manager from `agentic-lens-engine`, removes POSIX shell selection and the duplicate dispatcher/pointer, and gives the manager explicit version installation and self-update responsibilities. This supersedes the unshipped proposal to reuse the full utility as the installed dispatcher. Older installation compatibility is waived. Focused correction reviews now approve the separate manager/engine implementation; integrated make and the requested machine installation are still pending. Earlier checks below cover their recorded revisions. Existing source extraction, binding and portable-ledger guarantees remain required.
+[Pull request #130](https://github.com/NiltonDuarte/AgenticLens/pull/130). The approved [contract](CONTRACT.md) and [manager/engine plan](iterations/03/PLAN.md) are implemented and installed on this Linux machine. Initial checkout was clean at 4df45967c801824500ac2ea39a8f52fa9cbdcf66; iteration 03 started from 9c39cf9d4f44bdb968cb92b0212dccf577d10255. The user explicitly approved implementation and installation and waived compatibility with older installations. No merge is authorized. AL-79's specification is done; AL-80 remains Ready.
 
-[PR130](https://github.com/NiltonDuarte/AgenticLens/pull/130). Iterations01/02 were approved for their recorded scope; final iteration03 delivery awaits integration and installation checks. No merge is authorized. Initial checkout was clean at4df45967c801824500ac2ea39a8f52fa9cbdcf66. Branch: feat/AL-79-native-user-codex-capture; configured workspace root: alspaces.
+`~/.local/bin/agentic-lens` is now the native manager. It selects an engine offline, explicitly installs exact engine versions and updates its own executable independently. `agentic-lens-engine` owns capture, generation, workers and the embedded dashboard; it has no dispatcher. The former shell launcher and sidecars are backed up outside Git. This repository's shared `agenticlens.binary_dir: bin` selects `bin/agentic-lens-engine-linux-amd64` from root or nested backend directories. Its exact fallback release pin is unchanged. An explicit companion engine installation supports commands outside projects.
 
-User approved [CONTRACT.md](CONTRACT.md) and [iteration01 plan](iterations/01/PLAN.md). The later instruction, "Remove windows test CI, I will remove support from windows later", approves [iteration02's delta](iterations/02/PLAN.md): remove the Windows job/build edge, retain runtime scripts/binaries/release targets, and stop further Windows verification. Other acceptance boundaries remain. AL-79 is moved to done and AL-80 is Ready.
+Six additive native user hooks support configured checkouts and linked worktrees, authoritative session/source routing, whole-file local capture policy, independent child ticket assignment, immutable worker images and portable schema v6 history. Interrupted legacy migration retains full undo privately and shares only typed discovery metadata; all resources are leased before recovery. Receipt adoption consumes the current installer protocol. Actual home hooks/configuration and normal human trust were preserved. Earlier real Linux root/child capture evidence carries only for unchanged paths: [native proof](iterations/01/NATIVE_EVIDENCE.md).
 
-## Delivered behavior
+Reviewed/built source: `a013dcfa0eedc2881c46ebaf17ad9af827a2b444`; final 71-path content fingerprint `4bd69745495d906d01e8fe48b81e49323d2cda07cdf9397e6988911feda8833c`. Main integration is current. Full `make` passes, including Go race/recovery checks, frontend units/integration, installation/distribution/orchestration checks and both artifact families across five targets. [Verification and installation](iterations/03/FINAL_EVIDENCE.md) records the actual commands, revision and hashes. Installed version: `v3.0.0-rc.133+57a3503-22-ga013dcfa`. Manager/engine/capture protocols and project/nested/standalone execution pass.
 
-Six additive native Codex hooks install once in the effective user home. Callbacks validate exact session/source context and select one whole local configuration: worktree-local first, otherwise Git-base-local. Shared policy supplies executable selection; capture enablement, source and state remain local. Disabled capture stops before capture-only I/O. Unassigned facts stay local until explicit binding.
+Final consolidated review: APPROVED after 48 iteration 03 scoped review cells, with current or explicit carried evidence across behavior, data/failure, architecture, tests, security and build/distribution under gpt-6.1-sol/high and gpt-6-luna/medium. Initial findings were corrected; [compact findings](iterations/03/REVIEW_SUMMARY.json) retains all 24 candidates, shared discovery, refutations and accepted debt. The behavior reviewer gpt-6.1-sol/high discovered the public missing-owner bypass; the parent gpt-6.1-sol/high found cross-home migration through integration; the implementation engineer gpt-6.1-sol/high found the receipt mismatch. The parent and test engineer, both gpt-6.1-sol/high, identified and reproduced the live-disable shutdown race. Implementation engineers gpt-6.1-sol/high fixed production; testers gpt-6.1-sol/high and the focused dual-profile reviewers verified corrections, including disposable mutation controls. Luna security's C5 paired-report exposure is disclosed as correction verification, not independent discovery. Earlier [iteration 01](iterations/01/REVIEW_SUMMARY.json) and [iteration 02](iterations/02/REVIEW_SUMMARY.json) findings remain retained separately.
 
-Adapters preserve root/child identities, ancestry and independently bound child tickets; retain immutable worker builds across rebuilds; and coalesce publication with bounded retry, durable recovery and deletion retention. Portable v6 history accepts an external parent without importing another ticket's metrics. Partial group context preserves owner/cached analysis without a false clean conclusion. Pure domain logic remains separate from I/O. Manual pins/cwd, normal trust and standalone embedded assets remain supported. Setup uses the common native resolver.
-
-Repository adoption: the user subsequently requested binary_dir in shared configuration. The one-line agenticlens.binary_dir: bin change retains the exact fallback pin. Native resolution and the current repository wrapper selected/executed bin/agentic-lens-linux-amd64 from backend cwd in an isolated home/cache with no pinned binary. The existing global launcher rejects the new key and needs a separate upgrade; its files/hooks were preserved. Runtime source/review evidence is unchanged.
-
-## Review and verification
-
-Reviewed source160db423ce493942a7d0ca0cca6e56fe98185d75, source diff SHA256139d0e87e1e014ef0035b4aff4a09edfef843056352cd0545d2479e1309cf672; final six-file correction fingerprint69893e0f69877f377c9dcdf59989893b9768e6e0f6e69754112b2e0d58759adc. Behavior, data/failure, architecture, tests, security and build/distribution reviews used gpt-6.1-sol/high and gpt-6-luna/medium. Initial CHANGES_REQUESTED findings were corrected, later test-only scopes passed both profiles, and final bounded CI/distribution review passed both. Earlier Windows INCOMPLETE evidence was superseded by the explicit scope withdrawal, never relabeled a platform pass.
-
-[Canonical findings](iterations/01/REVIEW_SUMMARY.json) retain28 candidates, numeric severity, every discovering persona/model/effort, fixes, the refuted routing claim and accepted Windows fixture debt. [Final correction review](iterations/02/REVIEW_SUMMARY.json) found no new candidate. Architecture/build reviewers and the independent parent, all gpt-6.1-sol/high, share process-lifetime discovery. Data reviewer gpt-6-luna/medium discovered executable retention; its architecture peer's routing objection was refuted. Go/distribution testers gpt-6.1-sol/high discovered recovery/scaffold/fixture issues; the parent gpt-6.1-sol/high found integrated assertion and native transport/diagnostic failures. Implementation engineer gpt-6.1-sol/high fixed runtime; Go/distribution testers gpt-6.1-sol/high fixed oracles. Independent reviewers and parent verified corrections; discovery is kept separate.
-
-Full make passed on8b15b2ee: all Go races/recovery locks,190 frontend units,678 integration tests, installation/distribution/workflow checks and five-platform compilation. All314 Go/module/embed files remain identical: f1b674667f1247eeccfe01640f5353d27a27e9794831aa2b99ce6d917bd6195b. Current corrections also pass POSIX installation10/distribution21 and dependency-graph checks. All six retained [CI checks](https://github.com/NiltonDuarte/AgenticLens/actions/runs/42514876409) passed on reviewed source160db423; subsequent delivery changes are documentation/telemetry only. [Test evidence](iterations/01/TEST_EVIDENCE.md) and [distribution evidence](iterations/01/DISTRIBUTION_EVIDENCE.md) distinguish passes, failures and stops.
-
-Genuine normal-trust Codex0.167.0/Linux root/child capture and automatic publication passed in two worktrees with exact source facts and preserved history. The user signed in and trusted six isolated hooks normally. Unchanged callback/extraction/binding paths retain that revision-bounded [native proof](iterations/01/NATIVE_EVIDENCE.md).
-
-Windows remains uncertified: actual win32 plugin6 and distribution12/14 plus isolated completion passed; DrvFS/setup and loaded-upgrade assurance remained limited. The earlier unavailable-local-runtime assumption was corrected. These retained limits belong to the user's planned support removal.
-
-Telemetry is a final Codex checkpoint:41 source sessions, comprising the root,25 native children and15 separately rooted tool-delegated reviews. Exact source membership/parentage and preservation of prior imports passed validation; no prior other-harness ledger existed. Native parentage for the tool-delegated roots is unavailable and was not invented. Isolated acceptance-probe usage stays in its separate-project evidence. The main root remains provisional; unavailable costs are not fabricated.
+Windows CI was removed by explicit user instruction; target builds pass but Windows runtime remains uncertified and existing-manager replacement requires manual maintenance. No new release was published. Final Codex extraction validates 94 source sessions: the root, 78 native child sessions and 15 separately rooted tool-delegated reviews. All 41 prior sessions and actual source/parent identities are preserved. The root remains provisional; caller ownership is unverified and unavailable costs remain unknown.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 61
-- **Active Agent Duration:** 10h 31m (recorded duration including 677s provisional)
-- **Context Window Health:** BLOATED — Root agent peak 450.1k tokens (100% of 450k healthy ceiling, 3 compactions) | Subagents peak 451.4k (Tester)
+- **Software Development Life Cycle Iterations:** 70
+- **Active Agent Duration:** 17h 18m (recorded duration including 9137s provisional)
+- **Context Window Health:** BLOATED — Root agent peak 451.6k tokens (100% of 450k healthy ceiling, 5 compactions) | Subagents peak 451.4k (Tester)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
-- **Subagent Turn Velocity & Thrashing:** 2.0 avg turns/run (peak: 12 turns) | Planner 1.0, Coder 12.0, Tester 4.8, Reviewer 1.0, Reviewer-architecture 1.0, Reviewer-behavior 1.0, Reviewer-data 1.0, Reviewer-tests 1.0
-- **Test-to-Production Code Ratio:** 1.0:1 (+2,377 test lines / +2,453 prod lines)
-- **Code Delivered:** +4,830 / -595 lines across 74 code files (excluding docs)
-- **Reasoning Effort:** 650,168 reasoning tokens (34.6% of generated output)
-- **Tool Health & Self-Correction:** 2,236 tool calls (132 self-corrections, 94.1% success rate)
+- **Subagent Turn Velocity & Thrashing:** 1.6 avg turns/run (peak: 12 turns) | Planner 1.5, Coder 7.3, Tester 5.0, Reviewer 1.0, Reviewer-architecture 1.0, Reviewer-behavior 1.0, Reviewer-data 1.0, Reviewer-tests 1.0
+- **Test-to-Production Code Ratio:** 1.0:1 (+3,528 test lines / +3,654 prod lines)
+- **Code Delivered:** +7,187 / -685 lines across 92 code files (excluding docs)
+- **Reasoning Effort:** 1,067,233 reasoning tokens (33.8% of generated output)
+- **Tool Health & Self-Correction:** 3,984 tool calls (246 self-corrections, 93.8% success rate)
 
 ### Anomalies & Health Flags
-- **Status:** 17 execution anomalies detected (11 CRITICAL, 6 WARNING).
+- **Status:** 38 execution anomalies detected (25 CRITICAL, 13 WARNING).
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (450.1k tokens) — Context tokens reached 450.1k, breaching the 450k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (451.4k tokens) — Context tokens reached 451.4k, breaching the 450k critical ceiling.
 - [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+120.5k tokens) — Context tokens surged by 120.5k to 120.5k tokens.
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+122.6k tokens) — Context tokens surged by 122.6k to 122.6k tokens.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (71 cycles) — Subagent roles 'coder' and 'tester' alternated for 71 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-architecture <-> tester (9 cycles) — Subagent roles 'reviewer-architecture' and 'tester' alternated for 9 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (16 cycles) — Subagent roles 'coder' and 'tester' alternated for 16 consecutive cycles.
@@ -52,12 +37,32 @@ Telemetry is a final Codex checkpoint:41 source sessions, comprising the root,25
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (14 cycles) — Subagent roles 'coder' and 'tester' alternated for 14 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-tests <-> reviewer (13 cycles) — Subagent roles 'reviewer-tests' and 'reviewer' alternated for 13 consecutive cycles.
 - [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (7 cycles) — Subagent roles 'coder' and 'tester' alternated for 7 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (6 cycles) — Subagent roles 'coder' and 'tester' alternated for 6 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (49 cycles) — Subagent roles 'coder' and 'tester' alternated for 49 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-architecture <-> reviewer-behavior (12 cycles) — Subagent roles 'reviewer-architecture' and 'reviewer-behavior' alternated for 12 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-data <-> reviewer-behavior (9 cycles) — Subagent roles 'reviewer-data' and 'reviewer-behavior' alternated for 9 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer <-> reviewer-tests (13 cycles) — Subagent roles 'reviewer' and 'reviewer-tests' alternated for 13 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-architecture <-> reviewer (8 cycles) — Subagent roles 'reviewer-architecture' and 'reviewer' alternated for 8 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer <-> reviewer-behavior (6 cycles) — Subagent roles 'reviewer' and 'reviewer-behavior' alternated for 6 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer <-> reviewer-tests (7 cycles) — Subagent roles 'reviewer' and 'reviewer-tests' alternated for 7 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (18 cycles) — Subagent roles 'coder' and 'tester' alternated for 18 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-behavior <-> reviewer-data (9 cycles) — Subagent roles 'reviewer-behavior' and 'reviewer-data' alternated for 9 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-tests <-> reviewer-data (10 cycles) — Subagent roles 'reviewer-tests' and 'reviewer-data' alternated for 10 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-behavior <-> reviewer-data (5 cycles) — Subagent roles 'reviewer-behavior' and 'reviewer-data' alternated for 5 consecutive cycles.
+- [CRITICAL] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-data <-> reviewer-tests (5 cycles) — Subagent roles 'reviewer-data' and 'reviewer-tests' alternated for 5 consecutive cycles.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+98.5k tokens) — Context tokens surged by 98.5k to 98.5k tokens.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (250.3k tokens) — Context tokens reached 250.3k, breaching the 250k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (253.9k tokens) — Context tokens reached 253.9k, breaching the 250k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (257.5k tokens) — Context tokens reached 257.5k, breaching the 250k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (253.3k tokens) — Context tokens reached 253.3k, breaching the 250k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (250.6k tokens) — Context tokens reached 250.6k, breaching the 250k warning ceiling.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (250.7k tokens) — Context tokens reached 250.7k, breaching the 250k warning ceiling.
 - [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (251.2k tokens) — Context tokens reached 251.2k, breaching the 250k warning ceiling.
 - [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-behavior <-> reviewer-architecture (3 cycles) — Subagent roles 'reviewer-behavior' and 'reviewer-architecture' alternated for 3 consecutive cycles.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer-data <-> reviewer-tests (3 cycles) — Subagent roles 'reviewer-data' and 'reviewer-tests' alternated for 3 consecutive cycles.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: reviewer <-> reviewer-behavior (4 cycles) — Subagent roles 'reviewer' and 'reviewer-behavior' alternated for 4 consecutive cycles.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: coder <-> tester (4 cycles) — Subagent roles 'coder' and 'tester' alternated for 4 consecutive cycles.
+- [WARNING] **SUBAGENT_REWORK_LOOP**: Subagent rework loop: tester <-> coder (4 cycles) — Subagent roles 'tester' and 'coder' alternated for 4 consecutive cycles.
 
 ### Agentic Execution Metrics
 
@@ -66,41 +71,41 @@ Telemetry is a final Codex checkpoint:41 source sessions, comprising the root,25
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **planner** | 1 | 91,461 | 8,921 | 771,840 | 89.4% | 98.8k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **coder** | 1 | 1,384,039 | 166,026 | 72,547,968 | 98.1% | 446.5k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **tester** | 4 | 2,714,396 | 343,148 | 142,070,272 | 98.1% | 451.4k | BLOATED (100%) | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
-| **reviewer** | 5 | 390,921 | 41,431 | 7,422,464 | 95.0% | 129.3k | HEALTHY | Unavailable (0 observed, 0 partial, 5 unavailable / 5 invocations) |
-| **Unknown** | 16 | 2,021,216 | 532,781 | 134,427,776 | 98.5% | 450.1k | BLOATED (100%) | Unavailable (0 observed, 0 partial, 16 unavailable / 16 invocations) |
-| **reviewer-architecture** | 4 | 446,218 | 39,441 | 7,805,824 | 94.6% | 177.0k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
-| **reviewer-behavior** | 3 | 347,832 | 31,929 | 8,083,456 | 95.9% | 152.6k | HEALTHY | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
-| **reviewer-data** | 3 | 331,904 | 38,039 | 8,578,816 | 96.3% | 151.5k | HEALTHY | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
-| **reviewer-tests** | 4 | 309,400 | 26,986 | 5,904,512 | 95.0% | 168.0k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
-| **Total** | **41** | **8,037,387** | **1,228,702** | **387,612,928** | **98.0%** | **451.4k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 41 unavailable / 41 invocations)** |
+| **planner** | 2 | 212,624 | 19,509 | 2,252,544 | 91.4% | 103.3k | HEALTHY | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **coder** | 3 | 2,634,409 | 305,943 | 121,834,624 | 97.9% | 446.5k | ELEVATED | Unavailable (0 observed, 0 partial, 3 unavailable / 3 invocations) |
+| **tester** | 6 | 4,826,940 | 513,276 | 206,553,088 | 97.7% | 451.4k | BLOATED (100%) | Unavailable (0 observed, 0 partial, 6 unavailable / 6 invocations) |
+| **reviewer** | 17 | 1,224,137 | 101,504 | 16,370,176 | 93.0% | 129.3k | HEALTHY | Unavailable (0 observed, 0 partial, 17 unavailable / 17 invocations) |
+| **Unknown** | 16 | 3,865,336 | 864,925 | 230,424,960 | 98.4% | 451.6k | BLOATED (100%) | Unavailable (0 observed, 0 partial, 16 unavailable / 16 invocations) |
+| **reviewer-architecture** | 10 | 918,014 | 64,686 | 11,921,792 | 92.9% | 177.0k | HEALTHY | Unavailable (0 observed, 0 partial, 10 unavailable / 10 invocations) |
+| **reviewer-behavior** | 13 | 964,688 | 74,004 | 15,834,240 | 94.3% | 152.6k | HEALTHY | Unavailable (0 observed, 0 partial, 13 unavailable / 13 invocations) |
+| **reviewer-data** | 13 | 960,712 | 77,443 | 14,488,192 | 93.8% | 151.5k | HEALTHY | Unavailable (0 observed, 0 partial, 13 unavailable / 13 invocations) |
+| **reviewer-tests** | 14 | 832,371 | 69,853 | 14,499,712 | 94.6% | 168.0k | HEALTHY | Unavailable (0 observed, 0 partial, 14 unavailable / 14 invocations) |
+| **Total** | **94** | **16,439,231** | **2,091,143** | **634,179,328** | **97.5%** | **451.6k** | **BLOATED** | **Unavailable (0 observed, 0 partial, 94 unavailable / 94 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6-luna** | 15 | 1,069,019 | 62,167 | 7,651,712 | 87.7% | Unavailable (0 observed, 0 partial, 15 unavailable / 15 invocations) |
-| **gpt-6.1-sol** | 26 | 6,968,368 | 1,166,535 | 379,961,216 | 98.2% | Unavailable (0 observed, 0 partial, 26 unavailable / 26 invocations) |
-| **Total** | **41** | **8,037,387** | **1,228,702** | **387,612,928** | **98.0%** | **Unavailable (0 observed, 0 partial, 41 unavailable / 41 invocations)** |
+| **gpt-6-luna** | 39 | 2,261,850 | 153,021 | 21,221,504 | 90.4% | Unavailable (0 observed, 0 partial, 39 unavailable / 39 invocations) |
+| **gpt-6.1-sol** | 55 | 14,177,381 | 1,938,122 | 612,957,824 | 97.7% | Unavailable (0 observed, 0 partial, 55 unavailable / 55 invocations) |
+| **Total** | **94** | **16,439,231** | **2,091,143** | **634,179,328** | **97.5%** | **Unavailable (0 observed, 0 partial, 94 unavailable / 94 invocations)** |
 
-Capture observation finalized: 2026-11-08T20:08:34.980294304Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 39; retained older facts: 1; pending: 2; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 41; reserved bytes: 66615179. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
-Owner codex/01a1bc5e-2601-7840-9e69-810cde5028e3: current; last successful source read 2026-11-08T20:08:34.510221213Z; accepted source checkpoint 2026-11-08T18:15:47.97Z.
-Owner codex/01a1bc5c-1650-7532-9e70-b53d09e3c1ca: current; last successful source read 2026-11-08T20:08:34.535260924Z; accepted source checkpoint 2026-11-08T18:13:49.667Z.
-Owner codex/01a1bc55-a30a-7e52-8b72-ee63618fb744: current; last successful source read 2026-11-08T20:08:34.557557488Z; accepted source checkpoint 2026-11-08T18:07:25.057Z.
-Owner codex/01a1bc15-64b6-7f42-9544-6b75d7cc0825: current; last successful source read 2026-11-08T20:08:34.575445112Z; accepted source checkpoint 2026-11-08T16:55:39.706Z.
-Owner codex/01a1bc02-d12f-7f12-944e-e9ae65bfca5b: current; last successful source read 2026-11-08T20:08:34.620017418Z; accepted source checkpoint 2026-11-08T16:41:25.475Z.
-Owner codex/01a1bc6c-298f-76f2-8011-2a307ef663d6: current; last successful source read 2026-11-08T20:08:34.638275142Z; accepted source checkpoint 2026-11-08T18:31:03.925Z.
-Owner codex/01a1bc0a-17b8-74a3-ba6f-83e308083e66: current; last successful source read 2026-11-08T20:08:34.6695387Z; accepted source checkpoint 2026-11-08T16:48:26.304Z.
+Capture observation finalized: 2026-11-08T23:37:26.903766246Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 30; retained older facts: 10; pending: 11; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 41; reserved bytes: 67054822. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
+Owner codex/01a1bc5e-2601-7840-9e69-810cde5028e3: pending; last successful source read 2026-11-08T20:08:34.510221213Z; accepted source checkpoint 2026-11-08T18:15:47.97Z.
+Owner codex/01a1bc5c-1650-7532-9e70-b53d09e3c1ca: pending; last successful source read 2026-11-08T20:08:34.535260924Z; accepted source checkpoint 2026-11-08T18:13:49.667Z.
+Owner codex/01a1bc55-a30a-7e52-8b72-ee63618fb744: pending; last successful source read 2026-11-08T20:08:34.557557488Z; accepted source checkpoint 2026-11-08T18:07:25.057Z.
+Owner codex/01a1bc15-64b6-7f42-9544-6b75d7cc0825: pending; last successful source read 2026-11-08T20:08:34.575445112Z; accepted source checkpoint 2026-11-08T16:55:39.706Z.
+Owner codex/01a1bc02-d12f-7f12-944e-e9ae65bfca5b: pending; last successful source read 2026-11-08T20:08:34.620017418Z; accepted source checkpoint 2026-11-08T16:41:25.475Z.
+Owner codex/01a1bc6c-298f-76f2-8011-2a307ef663d6: pending; last successful source read 2026-11-08T20:08:34.638275142Z; accepted source checkpoint 2026-11-08T18:31:03.925Z.
+Owner codex/01a1bc0a-17b8-74a3-ba6f-83e308083e66: pending; last successful source read 2026-11-08T20:08:34.6695387Z; accepted source checkpoint 2026-11-08T16:48:26.304Z.
 Owner codex/01a1bbd3-f01a-7772-ae01-e52423c52f48: pending; last successful source read unavailable; accepted source checkpoint unknown.
-Owner codex/01a1bc19-7489-7c63-9dff-88dfe73a1645: current; last successful source read 2026-11-08T20:08:34.706115735Z; accepted source checkpoint 2026-11-08T17:01:23.855Z.
+Owner codex/01a1bc19-7489-7c63-9dff-88dfe73a1645: pending; last successful source read 2026-11-08T20:08:34.706115735Z; accepted source checkpoint 2026-11-08T17:01:23.855Z.
 Owner codex/01a1bc5e-c2a5-70b0-a604-b33e8fb00e1e: pending; last successful source read 2026-11-08T19:46:27.385382763Z; accepted source checkpoint 2026-11-08T18:16:29.027Z.
-Owner codex/01a1bc3a-a845-7d73-8665-ec31767ae319: current; last successful source read 2026-11-08T20:08:33.401823165Z; accepted source checkpoint 2026-11-08T17:43:22.688Z.
-Owner codex/01a1bc9a-3851-7a43-8faf-bb765748798e: current; last successful source read 2026-11-08T20:08:33.42349735Z; accepted source checkpoint 2026-11-08T19:21:40.09Z.
-Owner codex/01a1bc03-0564-75f3-a03d-f90a9ab91b63: current; last successful source read 2026-11-08T20:08:33.460418533Z; accepted source checkpoint 2026-11-08T16:41:08.672Z.
-Owner codex/01a1bbf4-3a95-7283-951c-166f9c3037da: current; last successful source read 2026-11-08T20:08:33.489354903Z; accepted source checkpoint 2026-11-08T16:22:53.365Z.
-Owner codex/01a1bc7e-c0db-7af2-b725-9c698832119a: current; last successful source read 2026-11-08T20:08:33.507921723Z; accepted source checkpoint 2026-11-08T18:51:09.626Z.
-Owner codex/01a1bc9f-2567-7fc1-9200-9a5612c5ce48: current; last successful source read 2026-11-08T20:08:33.523134429Z; accepted source checkpoint 2026-11-08T19:26:05.722Z.
+Owner codex/01a1bc3a-a845-7d73-8665-ec31767ae319: current; last successful source read 2026-11-08T23:37:25.015228914Z; accepted source checkpoint 2026-11-08T17:43:22.688Z.
+Owner codex/01a1bc9a-3851-7a43-8faf-bb765748798e: current; last successful source read 2026-11-08T23:37:25.042670055Z; accepted source checkpoint 2026-11-08T19:21:40.09Z.
+Owner codex/01a1bc03-0564-75f3-a03d-f90a9ab91b63: current; last successful source read 2026-11-08T23:37:25.092506095Z; accepted source checkpoint 2026-11-08T16:41:08.672Z.
+Owner codex/01a1bbf4-3a95-7283-951c-166f9c3037da: current; last successful source read 2026-11-08T23:37:25.140204215Z; accepted source checkpoint 2026-11-08T16:22:53.365Z.
+Owner codex/01a1bc7e-c0db-7af2-b725-9c698832119a: current; last successful source read 2026-11-08T23:37:25.161292541Z; accepted source checkpoint 2026-11-08T18:51:09.626Z.
+Owner codex/01a1bc9f-2567-7fc1-9200-9a5612c5ce48: current; last successful source read 2026-11-08T23:37:25.181771604Z; accepted source checkpoint 2026-11-08T19:26:05.722Z.
 Additional owner freshness details remain in local capture diagnostics.
 
-Retained recorded history: 1 session(s), unchanged because their sources were not refreshed. They do not establish capture coverage in this worktree.
+Retained recorded history: 5 session(s), unchanged because their sources were not refreshed. They do not establish capture coverage in this worktree.
