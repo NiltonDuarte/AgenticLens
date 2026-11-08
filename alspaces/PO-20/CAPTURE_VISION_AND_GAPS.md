@@ -1,6 +1,6 @@
 # AgenticLens capture: vision and decisions
 
-GEN-22 discussion notes. Started 2026-11-07; consolidated 2026-11-08. The user confirmed the final consistency rule and closed the decision review. This document is not an implementation plan or a frozen contract. Confirmed decisions describe the intended behavior, not functionality already implemented. Superseded choices remain traceable in the session discussion and SUMMARY.md.
+PO-20 discussion notes, reclassified from GEN-22 by explicit user request. Started 2026-11-07; consolidated 2026-11-08. The user confirmed the final consistency rule and closed the decision review. This decision record accompanies [SPEC.md](SPEC.md); it is not an implementation plan or a developer contract. Confirmed decisions describe the intended behavior, not functionality already implemented. Superseded choices remain traceable in the session discussion and SUMMARY.md.
 
 ## Vision
 
@@ -151,7 +151,7 @@ These are not additional selected policies or implementation work:
 - Exact installation/migration/removal behavior for existing project hooks and manifests, user-hook trust and the temporary Python launcher.
 - Explicit cleanup/recovery commands and version-cache maintenance.
 
-Changes to user-visible policy discovered while resolving these details must be brought back for discussion. No implementation plan or contract has been created.
+Changes to user-visible policy discovered while resolving these details must be brought back for discussion. No implementation plan or developer contract has been created; the PO specification and development-ticket handoff are in SPEC.md.
 
 ## Current local setup and known implementation gaps
 

@@ -4,7 +4,18 @@ Active specifications live in `alspaces/plan/to-do/`; completed specifications r
 
 Reconciled 2026-11-05 against merged `origin/main` at `03f5b05d` and open PRs. See [PO-19 evidence and ticket review](../PO-19/SPEC.md). Ready means no outstanding ticket prerequisite; it does not imply implementation approval or passing acceptance.
 
+2026-11-08: PO-20 adds the user-level capture initiative as two vertical slices: AL-79 is ready and unblocks AL-80. Existing roadmap entries and dependencies are unchanged.
+
 ## Ready
+
+- **AL-79**: Deliver native user-level Codex capture across worktrees
+  - **Subsystem**: Domain / Configuration / Native Capture / Codex / CLI / Setup
+  - **Priority**: P1
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: AL-80
+  - **File**: [AL-79 native user level codex capture across worktrees.md](to-do/AL-79%20native%20user%20level%20codex%20capture%20across%20worktrees.md)
+  - **Specification**: [PO-20](../PO-20/SPEC.md)
 
 - **AL-78**: Make open-turn feedback effective across Codex and OpenCode
   - **Subsystem**: CLI Feedback / Native Harness Lifecycle / Capture and Metrics Refresh
@@ -158,6 +169,15 @@ Reconciled 2026-11-05 against merged `origin/main` at `03f5b05d` and open PRs. S
   - **File**: [REV-7 review shared source read guarantees.md](to-do/REV-7%20review%20shared%20source%20read%20guarantees.md)
 
 ## Blocked
+
+- **AL-80**: Deliver global OpenCode capture using the shared worktree runtime
+  - **Subsystem**: OpenCode / TypeScript Plugin / Native Capture / CLI / Tests
+  - **Priority**: P1
+  - **Status**: Blocked
+  - **Blocked by**: AL-79
+  - **Blocks**: None
+  - **File**: [AL-80 global opencode capture with shared worktree runtime.md](to-do/AL-80%20global%20opencode%20capture%20with%20shared%20worktree%20runtime.md)
+  - **Specification**: [PO-20](../PO-20/SPEC.md)
 
 - **AL-65**: Research default source-backed recomputation and the future of Force
   - **Subsystem**: Backfill CLI semantics / source recovery
