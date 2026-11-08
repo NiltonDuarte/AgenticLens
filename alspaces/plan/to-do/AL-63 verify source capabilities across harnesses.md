@@ -2,23 +2,23 @@
 
 ## Goal
 
-As an operator, I want a versioned capability matrix with evidence and limits so that I can choose sources and diagnose gaps accurately.
+Operators can choose a source and diagnose missing telemetry using a versioned capability matrix that separates declared support from observed behavior and evidence gaps.
 
 ## Context
 
-The user reports Codex lacks trace hydration and requests a capability comparison. Identical capabilities across harnesses are not assumed. Incorporate the merged Codex-fact fix and granular ownership delivery instead of rerunning unchanged evidence. The standalone active OpenCode walkthrough has been removed from this plan; this capability audit retains its original matrix scope and reports unexecuted live checks explicitly.
+The original report that Codex lacks trace hydration needs revalidation against the shipped AL-62 fact and ownership fixes. The three comparison columns are OpenCode v1, OpenCode v2 and Codex; they need not offer identical capabilities. Historical trace hydration and live observation are separate capabilities. Prior fixture coverage does not establish native runtime compatibility.
 
 ## Acceptance criteria
 
-* Provide a three-source matrix covering ingestion, historical trace hydration, live observability, skill facts, delegation facts, child-session navigation, execution-error reporting, and source-backed recovery.
-* Every cell distinguishes supported and verified, supported but failing, unsupported, unavailable source evidence, or not yet executed. Cite declared support separately from runtime evidence, including build, source version/schema, command, IDs and result.
-* Check persisted-data behavior with optional hydration available and unavailable; supported stored facts remain visible when enrichment fails.
-* For both OpenCode schema families, check missing and malformed source records, unavailable children, retention of previous trees and skill/task snapshots, and explicit incomplete/mixed-age diagnostics. Do not treat unavailable lookup as successful empty data.
-* Check exact stored-session identity, parent/source preservation, other-harness facts, growing-source refresh, unchanged repeat runs, and explicit opt-in for heuristic recovery using disposable evidence copies.
-* Use AL-62 diagnosis/implemented-fix verification; record residual gaps without asserting a successful backfill or preservation check based on the original notes. Findings propose follow-up tickets rather than silently expanding this audit.
+- Deliver a matrix covering ingestion, historical trace hydration, live observability, skill facts, delegation facts, child-session navigation, execution-error reporting and source-backed recovery for all three source families.
+- Every cell separates declared support from verification and identifies supported-and-verified, supported-but-failing, unsupported, source-evidence-unavailable or not-executed behavior. Qualify by operation/version where results differ. Link evidence with AgenticLens build/revision, harness version and schema family (or explicitly unknown), command or API operation, relevant session/parent IDs, expected and observed result, and limitations. Distinguish native observations, synthetic fixtures and reused historical evidence; record why reused evidence still applies.
+- Compare persisted-data reads with optional hydration available, partial and unavailable. Supported stored facts remain visible; distinguish complete-empty traces from missing or failed lookup, and do not synthesize traces from lean facts or persist enrichment during reads.
+- For both OpenCode families, check missing/malformed records, unavailable children, retention of previous trees and skill/task snapshots, and explicit incomplete/mixed-age diagnostics. Unavailable lookup must never count as successful empty data.
+- On disposable copies, check exact stored-session identity, parent/source preservation, unavailable owners from the same harness, other-harness facts, growing-source refresh and unchanged-repeat idempotence. Include complete smaller/empty snapshots versus partial/failed reads, local-source authority and whole-ledger aggregates under the portable-ledger contract. Heuristic recovery requires explicit opt-in; preserve the original AL-55 ledger.
+- Reuse AL-62 diagnosis and implemented-fix verification with stated revision limits. Report residual failures and unexecuted live checks honestly; original notes alone prove neither successful backfill nor preservation. Conclude with evidence gaps and bounded follow-up recommendations, referencing existing owners before proposing new tickets. Supply findings usable by the backfill-defaults investigation without changing defaults.
 
 ## Implementation notes
 
-Discovery only: no application, schema, runtime or new test changes. Use existing evidence and disposable probes; label unavailable and unexecuted cases. Preserve the original AL-55 ledger. [Prior reconciliation](../../PO-19/SPEC.md) records shipped foundations and historical limits.
+Discovery only: no application, schema, runtime or new test changes. No reinstatement of the removed standalone active OpenCode walkthrough. [AL-62 evidence](../../AL-62/SUMMARY.md) and [roadmap reconciliation](../../PO-19/SPEC.md) provide historical foundations. [FIX-18](FIX-18%20report%20unsupported%20live%20telemetry%20accurately.md) owns live-support corrections; [REV-7](REV-7%20review%20source%20read%20guarantees.md) owns read-contract investigation. Neither is a prerequisite to recording current limits.
 
-[Engineering rules](../../../TECHNICAL_GUIDELINES.md) and [relevant regression boundaries](../../../docs/REGRESSION_PREVENTION.md) apply. Historical findings require revalidation; this rewrite is not runtime verification or implementation approval.
+Preserve the [portable-ledger contract](../../../TECHNICAL_GUIDELINES.md#portable-ledger-contract) and select relevant [regression scenarios](../../../docs/REGRESSION_PREVENTION.md). This specification is planning, not runtime verification or implementation approval.
