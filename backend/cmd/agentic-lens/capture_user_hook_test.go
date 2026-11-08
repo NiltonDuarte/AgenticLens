@@ -16,7 +16,7 @@ import (
 	"agenticlens/internal/domain"
 )
 
-func TestNativeDispatcherDisabledSessionUsesContextAndAvoidsCaptureIO(t *testing.T) {
+func TestNativeUserHookDisabledSessionUsesContextAndAvoidsCaptureIO(t *testing.T) {
 	f := newCaptureGenerationFixture(t)
 	shared := filepath.Join(f.project, ".agenticlens-config.yaml")
 	if err := os.WriteFile(shared, append([]byte("agenticlens:\n  version: v9.8.7\n  install_root: "+filepath.Join(f.project, "absent-cache")+"\n"), readCaptureFile(t, shared)...), 0600); err != nil {
@@ -32,13 +32,15 @@ func TestNativeDispatcherDisabledSessionUsesContextAndAvoidsCaptureIO(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
-	command := exec.Command(cliBinaryPath, "dispatch", "codex-hook")
-	command.Dir = t.TempDir()
-	command.Stdin = strings.NewReader(string(payload))
-	command.Env = append(os.Environ(), "CODEX_HOME="+filepath.Join(f.project, "different-runtime-home"))
-	out, err := command.CombinedOutput()
-	if err != nil || strings.TrimSpace(string(out)) != "{}" {
-		t.Fatalf("disabled callback touched source/readiness: %s %v", out, err)
+	for _, invocation := range [][]string{{cliBinaryPath, "capture", "user-hook"}, {managerBinaryPath, "codex-hook"}} {
+		command := exec.Command(invocation[0], invocation[1:]...)
+		command.Dir = t.TempDir()
+		command.Stdin = strings.NewReader(string(payload))
+		command.Env = append(os.Environ(), "CODEX_HOME="+filepath.Join(f.project, "different-runtime-home"))
+		out, err := command.CombinedOutput()
+		if err != nil || strings.TrimSpace(string(out)) != "{}" {
+			t.Fatalf("disabled callback %v touched source/readiness: %s %v", invocation, out, err)
+		}
 	}
 	for _, path := range []string{source, state, filepath.Join(f.project, "absent-cache")} {
 		if _, err := os.Stat(path); !os.IsNotExist(err) {
@@ -215,7 +217,7 @@ func TestNativeSubagentStartUsesProvenChildTranscriptWithoutRelabelingParent(t *
 	}
 	invoke := func() ([]byte, error) {
 		t.Helper()
-		command := exec.Command(cliBinaryPath, "dispatch", "codex-hook")
+		command := exec.Command(managerBinaryPath, "codex-hook")
 		command.Dir = t.TempDir()
 		command.Stdin = strings.NewReader(string(payload))
 		return command.CombinedOutput()

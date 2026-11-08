@@ -41,7 +41,25 @@ def build_app(version='v9.8.7', operating_system=None, arch=None):
     return target
 
 
+def build_manager(version='v9.8.7', operating_system=None, arch=None):
+    operating_system = operating_system or {'Linux': 'linux', 'Darwin': 'darwin', 'Windows': 'windows'}[platform.system()]
+    arch = arch or {'x86_64': 'amd64', 'amd64': 'amd64', 'aarch64': 'arm64', 'arm64': 'arm64'}[platform.machine().lower()]
+    target = Path(COMPILED.name) / ('manager-' + version + '-' + operating_system + '-' + arch + ('.exe' if operating_system == 'windows' else ''))
+    if not target.exists():
+        subprocess.run(['go', 'build', '-ldflags', '-X agenticlens/internal/domain.Version=' + version, '-o', str(target), './cmd/agentic-lens-manager'],
+                       cwd=ROOT / 'backend', env=dict(os.environ, GOOS=operating_system, GOARCH=arch, CGO_ENABLED='0'),
+                       check=True, capture_output=True, timeout=180)
+    return target
+
+
 class DistributionFixture(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # Compile once before filesystem cases so build failures stay bounded.
+        cls.fixture_probe = build_probe()
+        cls.fixture_application = build_app()
+        cls.fixture_manager = build_manager()
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix='agenticlens distribution ')
         self.addCleanup(self.temp.cleanup)
@@ -54,7 +72,9 @@ class DistributionFixture(unittest.TestCase):
         self.config = self.repo / '.agenticlens-config.yaml'
         self.pin = 'v9.8.7'
         self.write_config()
-        self.probe = build_probe()
+        self.probe = self.fixture_probe
+        self.application = self.fixture_application
+        self.manager = self.fixture_manager
         self.network_log = self.root / 'fetch-log'
         commands = self.root / 'commands'
         commands.mkdir()
@@ -81,7 +101,7 @@ else: shutil.copyfile(os.environ['AL_FIXTURE_RELEASE'], target)
         self.env.update(HOME=str(self.home), USERPROFILE=str(self.home), CODEX_HOME=str(self.home / '.codex'),
                         XDG_CONFIG_HOME=str(self.home / '.config'), XDG_CACHE_HOME=str(self.home / '.cache'),
                         XDG_STATE_HOME=str(self.home / '.state'), PATH=str(commands) + os.pathsep + os.environ['PATH'], AL_FETCH_LOG=str(self.network_log),
-                        AL_FIXTURE_SOURCE=str(ROOT), AL_FIXTURE_RELEASE=str(self.probe), AL_FIXTURE_NAME=self.native().name)
+                        AL_FIXTURE_SOURCE=str(ROOT), AL_FIXTURE_RELEASE=str(self.application), AL_FIXTURE_NAME=self.native().name)
 
     def write_config(self, pin=None):
         self.pin = pin or self.pin
@@ -90,7 +110,7 @@ else: shutil.copyfile(os.environ['AL_FIXTURE_RELEASE'], target)
     def native(self, pin=None):
         operating_system = {'Linux': 'linux', 'Darwin': 'darwin', 'Windows': 'windows'}[platform.system()]
         arch = {'x86_64': 'amd64', 'amd64': 'amd64', 'aarch64': 'arm64', 'arm64': 'arm64'}[platform.machine().lower()]
-        name = f'agentic-lens-{operating_system}-{arch}' + ('.exe' if operating_system == 'windows' else '')
+        name = f'agentic-lens-engine-{operating_system}-{arch}' + ('.exe' if operating_system == 'windows' else '')
         return self.cache / 'bin' / (pin or self.pin) / f'{operating_system}-{arch}' / name
 
     def install(self, *arguments, script=None, env=None):
@@ -98,8 +118,9 @@ else: shutil.copyfile(os.environ['AL_FIXTURE_RELEASE'], target)
                               cwd=self.repo, env=env or self.env, input='', capture_output=True, text=True, timeout=30)
 
     def install_local(self, *arguments, script=None, probe=None, env=None):
-        probe = probe or self.probe
-        return self.install('--local-bin', probe, '--sha256', digest(probe), *arguments, script=script, env=env)
+        probe = probe or self.application
+        return self.install('--local-manager-bin', self.manager, '--manager-sha256', digest(self.manager),
+                            '--local-bin', probe, '--sha256', digest(probe), *arguments, script=script, env=env)
 
     def launch(self, *arguments, cwd=None, env=None, input='payload\n'):
         return subprocess.run([str(self.dest / 'agentic-lens'), *map(str, arguments)], cwd=cwd or self.repo,

@@ -1,0 +1,42 @@
+# AL-79 iteration 03: native manager and separate engine
+
+Ship a small native `agentic-lens` manager and separate `agentic-lens-engine` utility. Baseline: `9c39cf9d`; implementation is in a shared checkout with uncommitted iteration work. This plan supersedes the unshipped single-full-binary proposal in place, not a new iteration. Preserve the frozen [contract](../../CONTRACT.md) except for these explicit installation changes.
+
+## Approved steering and preserved scope
+
+The user waived older-installation compatibility: "This installation is only on this machine and we can update it as we want". After choosing separate binaries and their names, the user explicitly approved: "approved. Implement this approach and install it on this machine". Approval covers this design and bounded replacement of the machine installation; do not ask again or build a legacy layout/protocol fallback framework.
+
+Preserve exact project pins, optional `binary_dir`, offline commands/hooks, whole-file local policy, source validation, binding, portable history, immutable worker builds and human trust. Manager version is machine-owned and independent of the project's engine pin. Keep existing OpenCode integration working through the manager. Retain Windows runtime/targets and removed Windows CI; no new Windows certification or support-removal scope. The old full-utility dispatcher activation is superseded by the split. A loaded Windows manager update may fail explicitly while preserving accepted bytes and metadata; POSIX atomic manager replacement is required. Do not carry dead Windows activation code into the engine.
+
+## Design and ownership
+
+The manager implementation engineer owns new `backend/cmd/agentic-lens-manager` and `backend/internal/adapters/manager` production paths. The engine implementation engineer owns existing production Go, runtime/setup/build/release scripts and shipped copies, and active guidance. Both binaries build from this repository: manager from `backend/cmd/agentic-lens-manager`, engine from the existing `backend/cmd/agentic-lens` utility package. Manager contains selection, thin callback routing and explicit maintenance, with no engine capture/worker/publication/dashboard or embedded-frontend imports. Engine contains capture, workers, generation and the embedded dashboard; it has no dispatcher and never routes back through manager. Shared pure selection/interface values belong in domain; filesystem, network, execution and installation stay in adapters.
+
+Install the manager as `~/.local/bin/agentic-lens`, supporting a custom destination. Publish/build manager `agentic-lens-GOOS-GOARCH` and engine `agentic-lens-engine-GOOS-GOARCH`, with native Windows extensions. Shared `binary_dir: bin` now expects the engine filename. Prefer a valid development engine, use exact installed cache only when absent, reject invalid present engines and mismatched cache identities. Preserve command arguments, cwd, stdin/output, signals and exit status. Direct engine commands execute directly, with no naming heuristic or recursive selection.
+
+Minimal manager maintenance commands are `install <exact-version>` for engine cache provisioning, `versions` for manager identity and installed engines, and `self-update --version <exact-version>` for the manager alone. Explicit installs/updates verify exact artifacts and checksums, stage before atomic POSIX replacement, preserve owned-file safeguards and recover interrupted transactions. Local engines must target the executing host so role/version admission can run; foreign published engines may be cached from their exact named, checksum-verified release assets, with native interface checks explicitly deferred until target-host use. Never edit project pins, remove active worker images or self-update during ordinary commands/hooks. Existing utility commands pass through unchanged. Outside a project, utility init/help/version use the manager's exact companion engine release in the default user cache; provision that explicitly, separately from a differing project pin or custom cache. Bootstrap installs the requested project engine and must not implicitly fetch another engine because the manager differs. If the companion is absent, diagnose the exact install needed without network. Manager identity, protocol and maintenance help need no engine. Parent provisions this machine's companion explicitly using verified local artifacts. Present malformed project configuration errors instead of bypassing it.
+
+First bootstrap may download and verify exact native artifacts, then invoke native installation; it does not install a runtime shell parser, separate dispatcher copy or pointer. Manager install/self-update accept local binaries and explicit SHA-256 values for offline development installation. Hooks call manager `codex-hook`; it selects the engine and forwards the original payload to engine `capture user-hook` for authoritative source validation. Engine workers retain immutable engine bytes and invoke those directly. Hook uninstall retains manager/cache. Retire obsolete POSIX wrapper/protocol consumers coherently rather than retaining renamed compatibility layers.
+
+Tester owns changed Go tests and `scripts/tests/`; adapt existing fixtures and preserve meaningful assertions when retiring shell tests. All owners preserve shared-checkout edits. Parent owns integration, reviews, telemetry, commits and PR delivery, and the real machine installation using the existing backup at `/tmp/al79-native-entrypoint-0ta97kas`. Preserve actual home hooks/trust; hook changes use normal trust separately.
+
+## Verification and review
+
+Verify separate artifacts and dependency boundaries; native bootstrap/install/self-update with success, checksum failure and interruption; independent manager/project engine versions; offline ordinary execution; custom paths; checkout/two-worktree/nested routing; development fallback/refusal; standalone commands; process transport; engine direct execution; immutable A/B workers; OpenCode consumers; and unchanged source/history guarantees. Use isolated roots before machine selection/execution with hooks unchanged. Run affected distribution tests and integrated `make`; no Windows runtime gate. Carry previous capture/source/binding/ledger evidence only for demonstrably unchanged paths.
+
+Freeze one candidate. Each row independently runs gpt-6.1-sol/high and gpt-6-luna/medium, owning only its report here, suffixed `_SOL.md`/`_LUNA.md`; parent consolidates.
+
+| Focus | Risk and report stem |
+| --- | --- |
+| Behavior/integration | Manager/engine forwarding, standalone/project routing and OpenCode; `REVIEW_BEHAVIOR` |
+| Data/failure | Installation/update recovery, ownership, cache and worker continuity; `REVIEW_DATA` |
+| Architecture | Small manager dependency boundary, engine without dispatcher, FCIS; `REVIEW_ARCHITECTURE` |
+| Test effectiveness | Production-path oracles, retired compatibility tests and isolated fixtures; `REVIEW_TESTS` |
+| Build/distribution | Two artifact families, checksums, bootstrap and shipped guidance; `REVIEW_BUILD` |
+| Security | Explicit network maintenance, executable replacement and hook trust; `REVIEW_SECURITY` |
+
+Parent records findings/limits, integrates main, passes checks, compacts approved reviews, refreshes source-grounded telemetry last and updates the correct open PR without merging. Earlier review/CI passes do not certify changed boundaries.
+
+## Final operator guidance correction
+
+C2 left only a build-review documentation finding: the active operator configuration reference still described wrapper replacement and whole-bootstrap rollback. The parent corrects those paragraphs to native manager/engine protocol ownership, per-operation recovery, explicit foreign-cache limits and current schema v6. No application, runtime, test or build source changes. Use a narrow build/distribution correction review under both configured profiles; carry all C2 core/security/test approvals and executed checks by unchanged dependency scope. This is a review correction within iteration03, not a new acceptance delta.

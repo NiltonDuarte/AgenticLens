@@ -61,9 +61,12 @@ func captureCommand(args []string, input io.Reader, output io.Writer) error {
 }
 func captureCommandAction(args []string, input io.Reader, output io.Writer) (returnErr error) {
 	if len(args) == 0 {
-		return errors.New("usage: capture install-dispatcher|install-user|uninstall-user|install|install-check|uninstall-check|status|diagnostics|inspect-state|verify|check|receive|request|bind|reconcile|relocate-state|disable|uninstall|protocol")
+		return errors.New("usage: capture install-user|uninstall-user|install|install-check|uninstall-check|status|diagnostics|inspect-state|verify|check|receive|request|bind|reconcile|relocate-state|disable|uninstall|protocol")
 	}
 	command := args[0]
+	if command == "user-hook" {
+		return nativeCodexUserHook(input, output, os.Stderr)
+	}
 	if command == "relocate-state" {
 		return relocateCaptureCommand(args[1:], output)
 	}
@@ -81,7 +84,8 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 	state := flags.String("state-dir", "", "Capture state override (configured telemetry.capture.state_dir is required)")
 	repo := flags.String("repo", ".", "Repository root for additive local hook installation")
 	binary := flags.String("binary", "", "Selected native release binary (defaults to current executable; workers retain this executable)")
-	wrapper := flags.String("wrapper", "", "Owned common version-pinned wrapper for installed integrations and agent binding feedback")
+	wrapper := flags.String("wrapper", "", "Installed native manager for integrations and agent binding feedback")
+	entrypoint := flags.String("entrypoint", "", "Installed native PATH command (defaults to the user's agentic-lens command)")
 	sessionID := flags.String("session-id", "", "Exact harness session identity")
 	ticketTitle := flags.String("ticket-title", "", "Explicit human-readable ticket title for automatic publication")
 	ticketType := flags.String("ticket-type", "", "Explicit conventional ticket type")
@@ -117,7 +121,7 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 	}
 	ctx, cancel := context.WithTimeout(callerCtx, *timeout)
 	defer cancel()
-	if command == "install-user" || command == "uninstall-user" || command == "install-dispatcher" {
+	if command == "install-user" || command == "uninstall-user" {
 		home, err := capture.EffectiveCodexHome()
 		if err != nil {
 			return err
@@ -126,14 +130,7 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 		if err != nil {
 			return err
 		}
-		selected := *binary
-		if selected == "" {
-			selected, err = os.Executable()
-			if err != nil {
-				return err
-			}
-		}
-		result, err := capture.InstallUserCodex(ctx, capture.UserInstallOptions{Repository: entry.Project, DispatcherOnly: command == "install-dispatcher", LegacyRepository: *legacyRepository, Home: home, InstallRoot: entry.InstallRoot, Binary: selected, DryRun: *dryRun, Remove: command == "uninstall-user"})
+		result, err := capture.InstallUserCodex(ctx, capture.UserInstallOptions{Repository: entry.Project, Entrypoint: *entrypoint, LegacyRepository: *legacyRepository, Home: home, DryRun: *dryRun, Remove: command == "uninstall-user"})
 		if err != nil {
 			return err
 		}

@@ -24,6 +24,7 @@ import (
 )
 
 var cliBinaryPath string
+var managerBinaryPath string
 
 func TestMain(m *testing.M) {
 	tempDir, err := os.MkdirTemp("", "agentic-lens-test-bin-*")
@@ -40,6 +41,12 @@ func TestMain(m *testing.M) {
 		panic(string(out))
 	}
 	cliBinaryPath = binPath
+	managerBinaryPath = filepath.Join(tempDir, "agentic-lens-manager")
+	managerBuild := exec.Command("go", "build", "-o", managerBinaryPath, "../agentic-lens-manager")
+	if out, err := managerBuild.CombinedOutput(); err != nil {
+		os.RemoveAll(tempDir)
+		panic(string(out))
+	}
 
 	code := m.Run()
 	os.RemoveAll(tempDir)

@@ -89,8 +89,7 @@ func prepareCaptureInstall(t *testing.T, cwd string, args []string) []string {
 		t.Fatal(err)
 	}
 	wrapper := filepath.Join(entry.InstallRoot, "wrapper __BINARY__ __STATE__ __STORE__")
-	source := filepath.Join("..", "..", "..", "scripts", "agentic-lens-wrapper.sh")
-	wrapperBody, err := os.ReadFile(source)
+	wrapperBody, err := os.ReadFile(managerBinaryPath)
 	if err != nil {
 		t.Fatal(err)
 	}

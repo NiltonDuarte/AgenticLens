@@ -42,7 +42,7 @@ type Entrypoint struct {
 // NativePath selects the executing environment, never the installing host.
 func (e Entrypoint) NativePath() (string, error) {
 	if e.BinaryDir != "" {
-		name := "agentic-lens-" + runtime.GOOS + "-" + runtime.GOARCH
+		name := "agentic-lens-engine-" + runtime.GOOS + "-" + runtime.GOARCH
 		if runtime.GOOS == "windows" {
 			name += ".exe"
 		}
@@ -65,21 +65,21 @@ func (e Entrypoint) CachedNativePath() (string, error) {
 	if (osName != "linux" && osName != "darwin" && osName != "windows") || (arch != "amd64" && arch != "arm64") || (osName == "windows" && arch != "amd64") {
 		return "", fmt.Errorf("unsupported native platform %s-%s", osName, arch)
 	}
-	name := "agentic-lens-" + osName + "-" + arch
+	name := "agentic-lens-engine-" + osName + "-" + arch
 	if osName == "windows" {
 		name += ".exe"
 	}
 	return filepath.Join(e.InstallRoot, "bin", e.Version, osName+"-"+arch, name), nil
 }
 
-// UserWrapperPath is stable across projects and release switches.
-func UserWrapperPath() (string, error) {
+// UserManagerPath is the native manager command, stable across engine switches.
+func UserManagerPath() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("user wrapper home: %w", err)
 	}
 	if runtime.GOOS == "windows" {
-		return filepath.Join(home, ".agenticlens", "agentic-lens.ps1"), nil
+		return filepath.Join(home, ".agenticlens", "agentic-lens.exe"), nil
 	}
 	return filepath.Join(home, ".local", "bin", "agentic-lens"), nil
 }

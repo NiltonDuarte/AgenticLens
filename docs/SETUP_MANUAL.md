@@ -19,28 +19,30 @@ Use the canonical [setup skill](../.agents/skills/agentic-lens-setup/SKILL.md) f
 
 Fresh unpinned installations default to the [latest stable release](https://github.com/NiltonDuarte/AgenticLens/releases/latest); resolve its exact tag once. Existing projects retain their approved shared pin for repair. Follow [release selection and tagged bootstrap](../.agents/skills/agentic-lens-setup/SKILL.md#step-1-install-complete-skills-and-the-user-entrypoint): retrieve manifests, scripts and binaries from that tag, and report missing bundle files rather than mixing revisions. Older tagged installations do not establish support for the new wrapper/lifecycle protocol.
 
-Select one exact published release. Shared `.agenticlens-config.yaml` owns `agenticlens.version`; the user-level PATH wrapper resolves that pin from the project/subdirectory and detects the executing platform. Local `agenticlens.install_root` customizes cache placement independently of telemetry.capture.state_dir. Ordinary commands and integrations are offline and never install a missing release.
+Select one exact published release. Shared `.agenticlens-config.yaml` owns `agenticlens.version`; the user-level native manager resolves that pin from the project/subdirectory and detects the executing platform. Local `agenticlens.install_root` customizes cache placement independently of telemetry.capture.state_dir. Ordinary commands and integrations are offline and never install a missing release.
 
 The commands below require a selected release containing the complete setup bundle. Review and retrieve its installer before running it.
 
 ```sh
 bash .agents/skills/agentic-lens-setup/scripts/install.sh --version <EXACT_TAG> --dest <PROJECT>
-bash .agents/skills/agentic-lens-setup/scripts/download.sh --project <PROJECT> --dry-run
-bash .agents/skills/agentic-lens-setup/scripts/download.sh --project <PROJECT>
+bash .agents/skills/agentic-lens-setup/scripts/download.sh --project <PROJECT> --manager-version <EXACT_MANAGER_TAG> --dry-run
+bash .agents/skills/agentic-lens-setup/scripts/download.sh --project <PROJECT> --manager-version <EXACT_MANAGER_TAG>
 agentic-lens --al-project <PROJECT> version --short
 ```
 
 The first command bootstraps both setup/operator skills from the selected tag. Restore missing setup scripts from that tag after reviewing them. Existing configurations/files are preserved; do not fetch moving-main wrappers or moving latest artifact URLs. For a new project use explicit --init-config --version only as a bootstrap scaffold; complete full native init with project/source roots/ticket prefixes before claiming publication readiness. Never overwrite arbitrary project/local config using --force.
 
-The POSIX stable wrapper defaults to ~/.local/bin/agentic-lens. Native Windows uses ~/.agenticlens/agentic-lens.ps1 and the shipped native installer:
+The native manager defaults to `~/.local/bin/agentic-lens` on POSIX and `~/.agenticlens/agentic-lens.exe` on Windows. The explicit Windows bootstrap is:
 
 ```powershell
-powershell.exe -NoLogo -NoProfile -NonInteractive -File .\.agents\skills\agentic-lens-setup\scripts\download.ps1 -Project <PROJECT> -DryRun
-powershell.exe -NoLogo -NoProfile -NonInteractive -File .\.agents\skills\agentic-lens-setup\scripts\download.ps1 -Project <PROJECT>
-powershell.exe -NoLogo -NoProfile -NonInteractive -File <STABLE_WRAPPER> --al-project <PROJECT> version --short
+powershell.exe -NoLogo -NoProfile -NonInteractive -File .\.agents\skills\agentic-lens-setup\scripts\download.ps1 -Project <PROJECT> -ManagerVersion <EXACT_MANAGER_TAG> -DryRun
+powershell.exe -NoLogo -NoProfile -NonInteractive -File .\.agents\skills\agentic-lens-setup\scripts\download.ps1 -Project <PROJECT> -ManagerVersion <EXACT_MANAGER_TAG>
+& <INSTALLED_MANAGER_EXE> --al-project <PROJECT> version --short
 ```
 
-Native binaries coexist in ~/.agenticlens/bin/<version>/<os-arch>/<artifact>. Explicit installation verifies checksum/version and required hook capability, stages and rolls back changes; it preserves other versions and edited wrappers. Offline local installation requires the expected SHA256. Installers report the required user PATH entry without changing profiles. Authorize permanent PATH changes separately. Windows local PS5.1/PE invocation is demonstrated; UNC script authorization, generic console cancellation and untested platforms remain limitations. No trust/policy bypass is allowed.
+Exact engines coexist in `~/.agenticlens/bin/<version>/<os-arch>/agentic-lens-engine-<os>-<arch>[.exe]`. Manager and engine local artifacts require separate expected SHA256 values. The bootstrap provisions the project engine and installs the manager directly; no shell runtime launcher or dispatcher copy is installed. Native installation verifies staged bytes and preserves modified/unowned files and other versions. Installers report the required PATH directory without changing profiles. Windows native transport and build targets remain, with no new Windows runtime certification; replacing a loaded manager can require an explicit manual update.
+
+Manager and engine versions are independent. Inspect the manager with `agentic-lens --manager-version --json`, inspect selected engine with `agentic-lens --al-project <PROJECT> version --json`, install engines using `agentic-lens install <EXACT_ENGINE_TAG>` and explicitly update the manager using `agentic-lens self-update --version <EXACT_MANAGER_TAG>`. Updating the manager never edits project pins. Outside configured projects, utility commands require the manager's same-version companion in the default user cache; install it explicitly with `agentic-lens install <MANAGER_VERSION> --install-root <USER_HOME>/.agenticlens` when needed. Native maintenance help remains available without an engine.
 
 ### Reviewed lifecycle installation and verification
 
@@ -48,9 +50,9 @@ Native binaries coexist in ~/.agenticlens/bin/<version>/<os-arch>/<artifact>. Ex
 agentic-lens --al-offline --al-project <PROJECT> capture install-user --repo <PROJECT> --dry-run
 ```
 
-Review exact additive hooks/plugin/state-ignore changes, then repeat without --dry-run under existing applicable approval. Every installed lifecycle/Git callback uses the stable common wrapper with explicit project context. Internal workers retain their selected native executable/version for a pass. Capture install, version output and files prove installation only: verify actual normal harness trust, callback, exact session/request, explicit agent response and available source extraction through status/diagnostics/verify. Independent roots require independent bindings; unknown ownership remains unassigned.
+Review exact additive hooks/plugin/state-ignore changes, then repeat without --dry-run under existing applicable approval. Every installed lifecycle/Git callback uses the stable native manager with explicit project context. Internal workers retain their selected native executable/version for a pass. Capture install, version output and files prove installation only: verify actual normal harness trust, callback, exact session/request, explicit agent response and available source extraction through status/diagnostics/verify. Independent roots require independent bindings; unknown ownership remains unassigned.
 
-After a shared pin change, explicitly install the release, preview owned setup refresh with the original store/state and repeat live verification. Old in-flight workers may finish; other cache versions remain intact. User hooks invoke the stable native dispatcher; ordinary CLI and callbacks use the same offline resolver. No automatic trust changes or repository updater is supported. The optional install-check/uninstall-check integration is separately opt-in and advisory; it honors hooksPath, derives the committing worktree and refuses arbitrary-hook overwrites. No adopting-project CI/global Git settings are changed.
+After a shared pin change, explicitly install the release, preview owned setup refresh with the original store/state and repeat live verification. Old in-flight workers may finish; other cache versions remain intact. User hooks invoke the stable native manager; ordinary CLI and callbacks use the same offline resolver. No automatic trust changes or repository updater is supported. The optional install-check/uninstall-check integration is separately opt-in and advisory; it honors hooksPath, derives the committing worktree and refuses arbitrary-hook overwrites. No adopting-project CI/global Git settings are changed.
 
 Publication produces ledger plus SUMMARY.md, preserving available facts and explaining coverage/freshness/failure. Detailed reconciliation/publication evidence stays in local database diagnostics; old detailed_report keys are deprecated/no-effect and old sidecars remain obsolete, never automatically deleted. Local state deletion can lose bindings and pending observations; the native home cache does not move the capture database.
 
@@ -494,7 +496,7 @@ The stable user wrapper is shared; each physical configured project/worktree sel
 
 See [architecture and subsystem responsibilities](../ARCHITECTURE.md) and the mandatory [technical boundaries](../TECHNICAL_GUIDELINES.md#2-functional-core-imperative-shell-fcis).
 
-### A.2 Single Binary Zero-Dependency Model
+### A.2 Native Manager and Self-Contained Engine
 
 Go 1.23+ builds with `CGO_ENABLED=0`; `modernc.org/sqlite` needs no C compiler or shared C libraries. Vite compiles the TypeScript dashboard into `web/dist`, embedded via `embed.FS`. The resulting executable provides both CLI and web UI without external runtimes.
 
@@ -553,7 +555,7 @@ Context saturation severely impacts model reasoning quality, instruction adheren
 
 Installed lifecycle callbacks hand off to a bounded native worker; contributing agents only answer the explicit session-ticket binding request, including the user-supplied human-readable title (`--ticket-title`) and optional conventional type (`--ticket-type`). Missing titles remain pending because the current schema requires them. No contributing agent needs to run `generate`. The command remains available for manual recovery. Automatic publication uses the same canonical-output lock as manual generation, before reading baseline or source facts.
 
-Automatic capture selects one whole `.agenticlens-config.local.yaml`: worktree-local if present, otherwise base-local through Git metadata. It never inherits missing worktree-local keys from base-local/shared capture settings. Explicit boolean `telemetry.capture.enabled` and valid `state_dir` are required; numeric defaults remain bounded. Relative state/source paths resolve from the selected local file. Shared YAML must exist in the active checkout. Native Codex user hooks route validated session context through the installed native dispatcher and freeze no project/source/state path. Disabled callbacks validate configuration, then avoid capture-only I/O. No CI settings or harness trust changes are installed.
+Automatic capture selects one whole `.agenticlens-config.local.yaml`: worktree-local if present, otherwise base-local through Git metadata. It never inherits missing worktree-local keys from base-local/shared capture settings. Explicit boolean `telemetry.capture.enabled` and valid `state_dir` are required; numeric defaults remain bounded. Relative state/source paths resolve from the selected local file. Shared YAML must exist in the active checkout. Native Codex user hooks route validated session context through the installed native manager and freeze no project/source/state path. Disabled callbacks validate configuration, then avoid capture-only I/O. No CI settings or harness trust changes are installed.
 
 ```yaml
 telemetry:
@@ -591,7 +593,7 @@ The ledger uses schema v6 at `<workspaces.dir>/<ticket>/agentic_metrics.json`. T
 
 Validated byte-identical native cache leaves retain their filesystem identity, including force-identical installation and in-place permission repair, so another project's admitted worker is not retired. A changed-content repair remains explicit. Pre-apply validation/activation failures roll back owned changes. Once external capture apply may have committed, an incomplete result, output-limit or timeout failure retains validated native/wrapper files and recoverable prior backups; it reports incomplete setup and directs status/owned reinstall recovery rather than claiming complete rollback or removing handlers referenced by hooks. Resolve those diagnostics before declaring setup healthy.
 
-Printed scaffold completion runs inside the selected project and restores the caller's location. The common wrapper's --al-project selects release authority; it does not change ordinary native working-directory semantics. Keep the printed scoped command when supplying project facts, so shared and local configuration writes cannot target another same-version scaffold in the caller's directory.
+Printed scaffold completion runs inside the selected project and restores the caller's location. The native manager's --al-project selects release authority; it does not change ordinary native working-directory semantics. Keep the printed scoped command when supplying project facts, so shared and local configuration writes cannot target another same-version scaffold in the caller's directory.
 
 ### Optional metrics during generation
 
@@ -637,8 +639,8 @@ Installed generic command transports do not currently verify the caller's exact 
 
 Codex uses `capture install-user` in the effective user home; `uninstall-user` removes only unchanged owned groups and retains state. Installation is additive and journaled. Explicit `--migrate-legacy-repo <ORIGINAL_CHECKOUT>` removes unchanged owned project callbacks while preserving state; unknown/modified callbacks error and remain untouched. No per-worktree installation manifest is required by this path. Legacy OpenCode project-plugin commands remain separate until its global integration is delivered.
 
-Shared `agenticlens.version` is always an exact required fallback pin. Optional shared `agenticlens.binary_dir` prefers valid host output `agentic-lens-GOOS-GOARCH[.exe]` in that directory. Missing output selects the exact already installed cache; invalid present output errors without fallback. Local files cannot override these selectors. Workers retain immutable executable bytes for later children through normal exit; new invocations select the current preferred build. Status exposes local configuration origin and active/preferred identity.
+Shared `agenticlens.version` is always an exact required fallback pin. Optional shared `agenticlens.binary_dir` prefers valid host output `agentic-lens-engine-GOOS-GOARCH[.exe]` in that directory. Missing output selects the exact already installed cache; invalid present output errors without fallback. Local files cannot override these selectors. Workers retain immutable executable bytes for later children through normal exit; new invocations select the current preferred build. Status exposes local configuration origin and active/preferred identity.
 
-Dispatcher installation is owned by the native `capture install-dispatcher` transaction. Its canonical authority, lock and interrupted-installation journal live under the selected machine install root; per-Codex-home hook records retain group ownership and historical build observations without overriding that authority. Explicit updates preserve modified/unowned safeguards and support different effective Codex homes sharing the cache. User-hook uninstall retains the machine dispatcher record for later CLI execution and upgrades. On Windows, the stable executable forwards to root-owned immutable active build bytes rather than replacing a loaded image; native Windows runtime evidence remains separate from compilation/source verification.
+The native manager owns installation and routing. `agentic-lens install <EXACT_ENGINE_VERSION>` provisions an engine; `agentic-lens self-update --version <EXACT_MANAGER_VERSION>` explicitly updates the installed manager without editing any project pin. Both verify staged artifacts, preserve modified/unowned destinations and recover interrupted replacements under a destination lease. Codex hook installation only writes owned hooks and their receipt; it does not copy an engine into a dispatcher path. Hook removal retains the installed manager and engine cache.
 
-Ordinary manual commands preserve caller cwd and relative-argument meaning even with `--al-project`. Explicitly installed legacy exact pins can execute manual commands without the new capture interfaces; automatic callbacks and configured development output retain strict native-interface validation.
+Ordinary engine commands preserve caller cwd and relative-argument meaning even with `--al-project`. The manager validates the selected engine and forwards ordinary argv. Engines contain no dispatch mode and workers execute their retained engine directly.

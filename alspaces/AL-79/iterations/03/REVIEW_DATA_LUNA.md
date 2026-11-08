@@ -1,0 +1,18 @@
+# AL-79 iteration 03 — data and failure review
+
+**Outcome: CHANGES_REQUESTED.** Reviewed the frozen candidate based on `9c39cf9d4f44bdb968cb92b0212dccf577d10255`; `freeze_candidate.py --verify` matched `c84c6b274d12ef53544596f8214c1e5501cf6022883276fc0184bf528320e5cd` at both start and end. Requested reviewer identity: `gpt-6-luna/medium`; runtime model metadata was unavailable. Scope: manager installation/cache transactions and engine worker continuation. Product sources remained read-only. `CANDIDATE.json` was not present at the specified path, so the freeze verifier, Git status/diff inventory and direct reads of new manager files were used; the manifest-specific inventory could not be independently reconciled.
+
+## Finding
+
+- **I03-DATA-LUNA-01 — severity 4/10:** A manager update can overwrite a pre-existing, unowned checksum sidecar. In `replaceManagerWithCheckpoint` (`backend/internal/adapters/manager/storage.go`), ownership is checked only for the executable/installation receipt pair. If the executable and `.installation.json` are absent, an existing `<target>.sha256` is read into the transaction and then replaced without an ownership check. The update path is reachable through `self-update --dest <path>` (or the default manager destination); its later transaction loop treats every pre-existing value as an ordinary before-image. Consequently, an unrelated file at the conventional sidecar path is silently replaced and the success path records the new checksum. This violates the plan's owned-file safeguard. Refuse a sidecar without a verifiable manager installation receipt, preserving it and the destination. This is a narrow same-directory collision, not loss of the executable or project telemetry.
+
+## Hypotheses investigated
+
+- Manager replacement crash recovery: source trace and existing manager tests cover journaled state and every actual write prefix, reverse rollback, conflicting edits and escaping journal paths. The protocol records exact before/after bytes and mode, atomically replaces each file, and retains a conflicted journal. No additional introduced defect found in this trace.
+- Engine cache artifact admission and concurrency: the manager stages and verifies checksum, native platform/role and local-host exact version before cache writes; per-leaf locking serializes repair. Identical bytes repair mode in place; differing bytes require explicit `--force`. No defect found in inspected paths.
+- Worker continuity: the engine's worker successor resolves the exact project pin, validates active installation identity and protocol, then rechecks project selection, policy/state and installation identities after probes before takeover. The capture path launches from the admitted engine executable. No data-loss defect found in this bounded review.
+- Portable history: manager changes do not alter ledger persistence/refresh semantics; no private receipt or cache requirement was introduced into ledger acceptance in the inspected paths. Existing source/ledger evidence was not treated as new live certification.
+
+## Verification and limits
+
+Read the approved iteration plan, frozen contract, reviewer procedure, data/failure persona, shared context, portable-ledger contract and regression boundary. Inspected manager install/storage/run/locking code, manager tests, native admission tests, config entrypoint resolution and worker successor/capture launch paths. Reused test evidence in `MANAGER_TEST_EVIDENCE.md` and `TEST_EVIDENCE.md`; no tests were run in this review. This is a source-level finding; the exact collision was not executed in a disposable probe. Parent integration, `make`, Windows runtime behavior and machine installation remain outside this scoped verdict.

@@ -17,6 +17,11 @@ var version = "v9.8.7"
 var protocol = "3"
 
 func main() {
+	if len(os.Args) == 3 && os.Args[1] == "engine" && os.Args[2] == "protocol" {
+		fmt.Println("1")
+		return
+	}
+
 	if len(os.Args) == 3 && os.Args[1] == "version" && os.Args[2] == "--short" {
 		fmt.Println(version)
 		return

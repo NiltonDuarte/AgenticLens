@@ -113,7 +113,7 @@ func testCaptureWorkerReleaseSwitch(t *testing.T, queueNext bool) {
 		t.Fatal(err)
 	}
 	wrapper := filepath.Join(cache, "common wrapper")
-	if err := os.WriteFile(wrapper, readCaptureFile(t, filepath.Join("..", "..", "..", "scripts", "agentic-lens-wrapper.sh")), 0700); err != nil {
+	if err := os.WriteFile(wrapper, readCaptureFile(t, managerBinaryPath), 0700); err != nil {
 		t.Fatal(err)
 	}
 	install := func(binary string) {

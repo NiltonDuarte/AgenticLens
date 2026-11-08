@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"runtime"
 	"strings"
 	"testing"
 
@@ -18,9 +17,9 @@ import (
 )
 
 type userTransactionFixture struct {
-	options                                                                       UserInstallOptions
-	project, state, legacyHooks, legacyAnchor, legacyState, pendingDB, dispatcher string
-	paths                                                                         []string
+	options                                                           UserInstallOptions
+	project, state, legacyHooks, legacyAnchor, legacyState, pendingDB string
+	paths                                                             []string
 }
 
 func newUserTransactionFixture(t *testing.T) userTransactionFixture {
@@ -30,7 +29,7 @@ func newUserTransactionFixture(t *testing.T) userTransactionFixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f := userTransactionFixture{options: UserInstallOptions{Home: filepath.Join(root, "home"), InstallRoot: filepath.Join(root, "cache"), Binary: binary}, project: filepath.Join(root, "project"), state: filepath.Join(root, "legacy-state")}
+	f := userTransactionFixture{options: UserInstallOptions{Home: filepath.Join(root, "home"), Entrypoint: binary}, project: filepath.Join(root, "project"), state: filepath.Join(root, "legacy-state")}
 	for _, dir := range []string{f.options.Home, filepath.Join(f.project, ".codex"), f.state} {
 		if err := os.MkdirAll(dir, 0700); err != nil {
 			t.Fatal(err)
@@ -76,11 +75,7 @@ func newUserTransactionFixture(t *testing.T) userTransactionFixture {
 	if err := os.WriteFile(filepath.Join(f.options.Home, "hooks.json"), []byte(foreign), 0600); err != nil {
 		t.Fatal(err)
 	}
-	f.dispatcher = filepath.Join(f.options.InstallRoot, "dispatcher")
-	if runtime.GOOS == "windows" {
-		f.dispatcher += ".exe"
-	}
-	f.paths = []string{f.legacyHooks, f.legacyAnchor, f.legacyState, f.pendingDB, f.dispatcher, filepath.Join(f.options.InstallRoot, "dispatcher-installation.json"), filepath.Join(f.options.InstallRoot, "dispatcher.sha256"), filepath.Join(f.options.Home, "hooks.json"), filepath.Join(f.options.Home, "agenticlens-user-installation.json")}
+	f.paths = []string{f.legacyHooks, f.legacyAnchor, f.legacyState, f.pendingDB, filepath.Join(f.options.Home, "hooks.json"), filepath.Join(f.options.Home, "agenticlens-user-installation.json")}
 	return f
 }
 
@@ -130,7 +125,7 @@ func stopUserTransactionAt(t *testing.T, f userTransactionFixture, target string
 		if stage == userInstallJournaled {
 			// Production writes the complete journal once before applying changes.
 			// Keep its actual path order without decoding executable bytes per prefix.
-			journal := readUserTransactionJournal(t, f.options.InstallRoot)
+			journal := readUserTransactionJournal(t, f.options.Home)
 			for _, change := range journal.Changes {
 				changePaths = append(changePaths, change.Path)
 			}
@@ -145,7 +140,7 @@ func stopUserTransactionAt(t *testing.T, f userTransactionFixture, target string
 			if index < 0 || index >= len(changePaths) {
 				t.Fatalf("applied checkpoint lacks actual journal change: %d", index)
 			}
-			desired := map[string]string{"legacy-hooks": f.legacyHooks, "dispatcher": f.dispatcher, "home-hooks": filepath.Join(f.options.Home, "hooks.json")}[target]
+			desired := map[string]string{"legacy-hooks": f.legacyHooks, "home-hooks": filepath.Join(f.options.Home, "hooks.json")}[target]
 			if changePaths[index] == desired {
 				return interrupted
 			}
@@ -155,12 +150,12 @@ func stopUserTransactionAt(t *testing.T, f userTransactionFixture, target string
 	if !errors.Is(err, interrupted) {
 		t.Fatalf("did not interrupt actual %s prefix: %v", target, err)
 	}
-	readUserTransactionJournal(t, f.options.InstallRoot)
+	readUserTransactionJournal(t, f.options.Home)
 	return interrupted
 }
 func assertCompletedUserMigration(t *testing.T, f userTransactionFixture, database []byte) {
 	t.Helper()
-	if _, err := os.Stat(filepath.Join(f.options.InstallRoot, "agenticlens-user-install.pending.json")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(f.options.Home, "agenticlens-user-install.pending.json")); !os.IsNotExist(err) {
 		t.Fatalf("completed migration retains unresolved journal: %v", err)
 	}
 	if !bytes.Equal(database, mustReadUserInstall(t, f.pendingDB)) {
@@ -183,18 +178,11 @@ func assertCompletedUserMigration(t *testing.T, f userTransactionFixture, databa
 	if !bytes.Contains(home, []byte("foreign home callback")) || bytes.Count(home, []byte(userHookMarker)) != 6 {
 		t.Fatalf("global migration lost foreign content or duplicated owned hooks: %s", home)
 	}
-	var owner dispatcherInstallation
-	if err := json.Unmarshal(mustReadUserInstall(t, filepath.Join(f.options.InstallRoot, "dispatcher-installation.json")), &owner); err != nil {
-		t.Fatal(err)
-	}
-	digest := sha256.Sum256(mustReadUserInstall(t, owner.Dispatcher))
-	if owner.Hash != fmt.Sprintf("%x", digest) {
-		t.Fatal("committed canonical ownership differs from actual launcher")
-	}
+
 }
 
 func TestUserInstallationDurablePrefixesRecoverExplicitMigration(t *testing.T) {
-	for _, target := range []string{"journaled", "legacy-hooks", "dispatcher", "home-hooks", "before-commit"} {
+	for _, target := range []string{"journaled", "legacy-hooks", "home-hooks", "before-commit"} {
 		t.Run(target, func(t *testing.T) {
 			f := newUserTransactionFixture(t)
 			before := snapshotUserArtifacts(t, f.paths)
@@ -242,7 +230,7 @@ func TestInterruptedUserMigrationPreservesEditAndResumesAfterResolution(t *testi
 	if !bytes.Equal(edited, mustReadUserInstall(t, path)) || !bytes.Equal(database, mustReadUserInstall(t, f.pendingDB)) {
 		t.Fatal("conflicting recovery changed user edit or pending capture state")
 	}
-	readUserTransactionJournal(t, f.options.InstallRoot)
+	readUserTransactionJournal(t, f.options.Home)
 	// Resolve only this known test-owned conflict; the same durable journal resumes.
 	if err := os.WriteFile(path, transactionBytes, 0600); err != nil {
 		t.Fatal(err)
@@ -260,9 +248,9 @@ func TestRootRecoveryLocksInterruptedHomeEvenWhenCurrentHomeDiffers(t *testing.T
 				f := newUserTransactionFixture(t)
 				database := mustReadUserInstall(t, f.pendingDB)
 				stopUserTransactionAt(t, f, "home-hooks")
-				journalPath := filepath.Join(f.options.InstallRoot, "agenticlens-user-install.pending.json")
+				journalPath := filepath.Join(f.options.Home, "agenticlens-user-install.pending.json")
 				if legacyShape {
-					journal := readUserTransactionJournal(t, f.options.InstallRoot)
+					journal := readUserTransactionJournal(t, f.options.Home)
 					journal.Homes = nil
 					body, err := json.Marshal(journal)
 					if err != nil {
@@ -309,17 +297,12 @@ func TestRootRecoveryLocksInterruptedHomeEvenWhenCurrentHomeDiffers(t *testing.T
 }
 
 func TestUserRecoveryRejectsResourcesAddedAfterDiscovery(t *testing.T) {
-	root := t.TempDir()
-	home := filepath.Join(root, "current-home")
-	otherHome := filepath.Join(root, "other-home")
-	if err := os.MkdirAll(home, 0700); err != nil {
-		t.Fatal(err)
-	}
-	binary, err := compatibleCaptureTestExecutable(t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	options := UserInstallOptions{Home: home, InstallRoot: filepath.Join(root, "current-cache"), Binary: binary}
+	f := newUserTransactionFixture(t)
+	second := newUserTransactionFixture(t)
+	second.options.Home = filepath.Dir(f.legacyHooks)
+	otherHome := filepath.Dir(second.legacyHooks)
+	journalPath := filepath.Join(second.options.Home, "agenticlens-user-install.pending.json")
+	paths := []string{second.legacyHooks, second.legacyAnchor, second.legacyState, filepath.Join(second.options.Home, "hooks.json"), filepath.Join(second.options.Home, "agenticlens-user-installation.json")}
 	var lease *PublicationLock
 	defer func() {
 		if lease != nil {
@@ -329,18 +312,16 @@ func TestUserRecoveryRejectsResourcesAddedAfterDiscovery(t *testing.T) {
 	var journalBefore []byte
 	var before map[string]userArtifactSnapshot
 	scheduled := false
-	journalPath := filepath.Join(home, "agenticlens-user-install.pending.json")
-	paths := []string{filepath.Join(otherHome, "hooks.json"), filepath.Join(otherHome, "agenticlens-user-installation.json"), filepath.Join(home, "dispatcher-installation.json"), filepath.Join(home, "dispatcher.sha256")}
-	_, installErr := installUserCodexWithCheckpoint(context.Background(), options, func(stage userInstallStage, _ int) error {
+	_, installErr := installUserCodexWithCheckpoint(context.Background(), f.options, func(stage userInstallStage, _ int) error {
 		if stage != userInstallResourcesDiscovered || scheduled {
 			return nil
 		}
 		scheduled = true
-		interrupted := errors.New("second real installer interrupted after other-home hooks")
-		_, err := installUserCodexWithCheckpoint(context.Background(), UserInstallOptions{Home: otherHome, InstallRoot: home, Binary: binary}, func(stage userInstallStage, index int) error {
+		interrupted := errors.New("second real installer interrupted after newly discovered legacy hooks")
+		_, err := installUserCodexWithCheckpoint(context.Background(), second.options, func(stage userInstallStage, index int) error {
 			if stage == userInstallApplied {
-				journal := readUserTransactionJournal(t, home)
-				if journal.Changes[index].Path == filepath.Join(otherHome, "hooks.json") {
+				journal := readUserTransactionJournal(t, second.options.Home)
+				if journal.Changes[index].Path == second.legacyHooks {
 					return interrupted
 				}
 			}
@@ -348,9 +329,6 @@ func TestUserRecoveryRejectsResourcesAddedAfterDiscovery(t *testing.T) {
 		})
 		if !errors.Is(err, interrupted) {
 			t.Fatalf("second actual installation did not reach durable prefix: %v", err)
-		}
-		if len(mustReadUserInstall(t, paths[0])) == 0 {
-			t.Fatal("second installation wrote no actual hooks")
 		}
 		journalBefore = mustReadUserInstall(t, journalPath)
 		before = snapshotUserArtifacts(t, paths)
@@ -361,25 +339,22 @@ func TestUserRecoveryRejectsResourcesAddedAfterDiscovery(t *testing.T) {
 		return nil
 	})
 	if !scheduled || installErr == nil || !strings.Contains(installErr.Error(), "retry") {
-		t.Fatalf("stale resource discovery did not require a safe retry: scheduled=%t err=%v", scheduled, installErr)
+		t.Fatalf("stale resource discovery did not require safe retry: scheduled=%t err=%v", scheduled, installErr)
 	}
 	if !reflect.DeepEqual(before, snapshotUserArtifacts(t, paths)) || !bytes.Equal(journalBefore, mustReadUserInstall(t, journalPath)) {
-		t.Fatal("recovery changed newly discovered resources or journal without their lease")
+		t.Fatal("recovery changed newly discovered resources without their lease")
 	}
 	if err := lease.Close(); err != nil {
 		t.Fatal(err)
 	}
 	lease = nil
-	if _, err := InstallUserCodex(context.Background(), options); err != nil {
+	if _, err := InstallUserCodex(context.Background(), f.options); err != nil {
 		t.Fatalf("fresh discovery failed to recover and resume: %v", err)
 	}
 	if _, err := os.Stat(journalPath); !os.IsNotExist(err) {
 		t.Fatalf("resumed recovery retained old journal: %v", err)
 	}
-	if _, err := os.Stat(paths[0]); !os.IsNotExist(err) {
-		t.Fatalf("recovery failed to restore other-home absent before-image: %v", err)
-	}
-	if hooks := mustReadUserInstall(t, filepath.Join(home, "hooks.json")); bytes.Count(hooks, []byte(userHookMarker)) != 6 {
-		t.Fatalf("resumed current-home installation missing owned hooks: %s", hooks)
+	if hooks := mustReadUserInstall(t, filepath.Join(f.options.Home, "hooks.json")); bytes.Count(hooks, []byte(userHookMarker)) != 6 {
+		t.Fatalf("resumed home installation missing owned hooks: %s", hooks)
 	}
 }

@@ -1720,8 +1720,8 @@ func runVersion(args []string) {
 }
 
 func main() {
-	if len(os.Args) > 1 && os.Args[1] == "dispatch" {
-		runNativeDispatch(os.Args[2:])
+	if len(os.Args) == 3 && os.Args[1] == "engine" && os.Args[2] == "protocol" {
+		fmt.Println("1")
 		return
 	}
 	if len(os.Args) > 1 {
@@ -1761,6 +1761,9 @@ func main() {
 		}
 
 		switch arg {
+		case "manager", "dispatch":
+			fmt.Fprintln(os.Stderr, "This executable is the AgenticLens engine; installation and routing belong to the agentic-lens manager.")
+			os.Exit(2)
 		case "capture":
 			runCapture(os.Args[2:])
 			return

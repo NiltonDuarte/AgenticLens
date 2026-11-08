@@ -8,9 +8,8 @@ const projectDir = __PROJECT__;
 const stateDir = __STATE__;
 const sourceStore = __STORE__;
 
-// Windows allows PowerShell startup plus the native two-second handoff. Own the
-// deadline and buffers: execFile's automatic kill would terminate PowerShell
-// before its native child, potentially retaining inherited output pipes.
+// Windows owns the deadline, buffers and complete native manager/engine tree.
+// Killing only the manager could leave its engine holding inherited pipes.
 function callWindows(executable: string, args: string[], payload?: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const child = spawn(executable, args, { windowsHide: true });
@@ -85,14 +84,12 @@ function call(args: string[], payload?: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const prefix = ["--al-offline", "--al-project", projectDir, "capture"];
     const windows = process.platform === "win32";
-    const executable = windows ? `${process.env.SystemRoot || "C:\\Windows"}\\System32\\WindowsPowerShell\\v1.0\\powershell.exe` : wrapper;
-    const command = windows ? ["-NoLogo", "-NoProfile", "-NonInteractive", "-File", wrapper, ...prefix] : prefix;
-    const nativeArgs = [...command, ...args, "--state-dir", stateDir, "--repo", projectDir, "--wrapper", wrapper];
+    const nativeArgs = [...prefix, ...args, "--state-dir", stateDir, "--repo", projectDir, "--wrapper", wrapper];
     if (windows) {
-      callWindows(executable, nativeArgs, payload).then(resolve, reject);
+      callWindows(wrapper, nativeArgs, payload).then(resolve, reject);
       return;
     }
-    const child = execFile(executable, nativeArgs,
+    const child = execFile(wrapper, nativeArgs,
       { timeout: 1500, maxBuffer: 65536, windowsHide: true },
       (error, stdout) => error ? reject(error) : resolve(stdout));
     if (payload !== undefined) child.stdin?.end(payload);

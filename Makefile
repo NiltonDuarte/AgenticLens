@@ -4,7 +4,8 @@ BIN_DIR := bin
 HOST_OS := $(shell go env GOHOSTOS)
 HOST_ARCH := $(shell go env GOHOSTARCH)
 HOST_EXT := $(if $(filter windows,$(HOST_OS)),.exe,)
-BINARY := $(BIN_DIR)/agentic-lens-$(HOST_OS)-$(HOST_ARCH)$(HOST_EXT)
+BINARY := $(BIN_DIR)/agentic-lens-engine-$(HOST_OS)-$(HOST_ARCH)$(HOST_EXT)
+MANAGER := $(BIN_DIR)/agentic-lens-$(HOST_OS)-$(HOST_ARCH)$(HOST_EXT)
 WEB_DIR := web
 BACKEND_DIR := backend
 PORT ?= 8085
@@ -159,12 +160,14 @@ build:
 	for platform in $(PLATFORMS); do \
 		os=$${platform%/*}; arch=$${platform#*/}; ext=""; \
 		if [ "$$os" = windows ]; then ext=".exe"; fi; \
-		output="$$build_dir/agentic-lens-$$os-$$arch$$ext"; \
+		output="$$build_dir/agentic-lens-engine-$$os-$$arch$$ext"; \
 		(cd "$(BACKEND_DIR)" && CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build -ldflags "$(LDFLAGS)" -o "$$output" ./cmd/agentic-lens) || exit 1; \
+		(cd "$(BACKEND_DIR)" && CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build -ldflags "$(LDFLAGS)" -o "$$build_dir/agentic-lens-$$os-$$arch$$ext" ./cmd/agentic-lens-manager) || exit 1; \
 	done
 
 # Source development must exercise this build, never a shared-pin installed release.
 verify-build: build
+	"$(MANAGER)" --manager-version --json
 	"$(BINARY)" version
 	"$(BINARY)" version --short
 	"$(BINARY)" version --json
@@ -183,9 +186,10 @@ release-build:
 		arch=$${platform#*/}; \
 		ext=""; \
 		if [ "$$os" = "windows" ]; then ext=".exe"; fi; \
-		output="$(RELEASE_DIR)/bin/agentic-lens-$$os-$$arch$$ext"; \
+		output="$(RELEASE_DIR)/bin/agentic-lens-engine-$$os-$$arch$$ext"; \
 		echo "Compiling $$output for $$os/$$arch (CGO_ENABLED=0)..."; \
 		(cd "$(BACKEND_DIR)" && CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build -ldflags "$(LDFLAGS)" -o ../$$output ./cmd/agentic-lens) || exit 1; \
+		(cd "$(BACKEND_DIR)" && CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build -ldflags "$(LDFLAGS)" -o ../$(RELEASE_DIR)/bin/agentic-lens-$$os-$$arch$$ext ./cmd/agentic-lens-manager) || exit 1; \
 	done
 
 release-package:
@@ -197,6 +201,9 @@ release-package:
 		if [ "$$os" = "windows" ]; then ext=".exe"; fi; \
 		bin_name="agentic-lens-$$os-$$arch$$ext"; \
 		bin_path="$(RELEASE_DIR)/bin/$$bin_name"; \
+		engine_name="agentic-lens-engine-$$os-$$arch$$ext"; \
+		engine_path="$(RELEASE_DIR)/bin/$$engine_name"; \
+		if [ ! -f "$$engine_path" ]; then echo "Missing engine $$engine_path" >&2; exit 1; fi; \
 		if [ ! -f "$$bin_path" ]; then \
 			echo "Binary $$bin_path not found. Run 'make release-build' first." >&2; \
 			exit 1; \
@@ -207,12 +214,12 @@ release-package:
 			archive_name="agentic-lens-$(VERSION)-$$os-$$arch.zip"; \
 			echo "Packaging $$archive_name..."; \
 			rm -f "$(RELEASE_DIR)/$$archive_name"; \
-			zip -q -j "$(RELEASE_DIR)/$$archive_name" "$$bin_path" "$(CURDIR)/README.md" $$( [ -n "$$license_file" ] && echo "$(CURDIR)/$$license_file" ) || exit 1; \
+			zip -q -j "$(RELEASE_DIR)/$$archive_name" "$$bin_path" "$$engine_path" "$(CURDIR)/README.md" $$( [ -n "$$license_file" ] && echo "$(CURDIR)/$$license_file" ) || exit 1; \
 		else \
 			archive_name="agentic-lens-$(VERSION)-$$os-$$arch.tar.gz"; \
 			echo "Packaging $$archive_name..."; \
 			rm -f "$(RELEASE_DIR)/$$archive_name"; \
-			tar -czf "$(RELEASE_DIR)/$$archive_name" -C "$(RELEASE_DIR)/bin" "$$bin_name" -C "$(CURDIR)" README.md $$license_file || exit 1; \
+			tar -czf "$(RELEASE_DIR)/$$archive_name" -C "$(RELEASE_DIR)/bin" "$$bin_name" "$$engine_name" -C "$(CURDIR)" README.md $$license_file || exit 1; \
 		fi; \
 	done
 	@echo "Generating SHA256SUMS..."
@@ -229,7 +236,9 @@ release-verify:
 	host_arch=$$(go env GOARCH); \
 	ext=""; \
 	if [ "$$host_os" = "windows" ]; then ext=".exe"; fi; \
-	host_bin="$(RELEASE_DIR)/bin/agentic-lens-$$host_os-$$host_arch$$ext"; \
+	host_bin="$(RELEASE_DIR)/bin/agentic-lens-engine-$$host_os-$$host_arch$$ext"; \
+	host_manager="$(RELEASE_DIR)/bin/agentic-lens-$$host_os-$$host_arch$$ext"; \
+	if [ -f "$$host_manager" ]; then ./$$host_manager --manager-version --json || exit 1; fi; \
 	if [ -f "$$host_bin" ]; then \
 		echo "Verifying host binary: $$host_bin"; \
 		./$$host_bin version || exit 1; \

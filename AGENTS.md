@@ -98,8 +98,9 @@ Role workflows have one owner:
 
 [TECHNICAL_GUIDELINES.md](TECHNICAL_GUIDELINES.md) owns engineering rules:
 Go 1.23+ in backend, TypeScript 5.x+ strict in web, pure immutable domain logic,
-I/O in adapters/CLI, typed states and zero any/interface{}. Embed the compiled
-frontend in the single Go binary; no production Node runtime. Zero emojis in
+I/O in adapters/CLI, typed states and zero any/interface{}. Distribute a native installation/router manager and a separate engine; embed the compiled
+frontend in the engine. The manager must not import engine CLI or web assets; the
+engine must not dispatch to another build. No production Node runtime. Zero emojis in
 code, comments, UI/logs, commits, PRs or artifacts.
 
 

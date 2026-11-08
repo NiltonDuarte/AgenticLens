@@ -4,12 +4,10 @@ import (
 	config "agenticlens/internal/adapters/config"
 	"bytes"
 	"context"
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"testing"
 )
@@ -30,7 +28,7 @@ func TestUserHooksInstallIdempotentAndOwnedRemoval(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	opts := UserInstallOptions{Home: home, InstallRoot: cache, Binary: binary, DryRun: true}
+	opts := UserInstallOptions{Home: home, Entrypoint: binary, DryRun: true}
 	if _, err := InstallUserCodex(context.Background(), opts); err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +60,7 @@ func TestUserHooksInstallIdempotentAndOwnedRemoval(t *testing.T) {
 		t.Fatalf("additive owned groups incorrect: %+v", doc)
 	}
 	for event, groups := range doc.Hooks {
-		if len(groups) == 0 || !strings.Contains(string(groups[len(groups)-1]), "dispatch") {
+		if len(groups) == 0 || !strings.Contains(string(groups[len(groups)-1]), "codex-hook") {
 			t.Fatalf("missing native dispatch for %s: %s", event, groups)
 		}
 	}
@@ -70,16 +68,19 @@ func TestUserHooksInstallIdempotentAndOwnedRemoval(t *testing.T) {
 	if err := json.Unmarshal(mustReadUserInstall(t, filepath.Join(home, "agenticlens-user-installation.json")), &receipt); err != nil {
 		t.Fatal(err)
 	}
-	beforeDispatcher, err := os.Stat(receipt.Dispatcher)
+	if receipt.Protocol != 2 || receipt.Manager != binary {
+		t.Fatalf("hook receipt owns the wrong manager path/protocol: %+v", receipt)
+	}
+	beforeManager, err := os.Stat(binary)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if _, err := InstallUserCodex(context.Background(), opts); err != nil {
 		t.Fatal(err)
 	}
-	afterDispatcher, err := os.Stat(receipt.Dispatcher)
-	if err != nil || !os.SameFile(beforeDispatcher, afterDispatcher) {
-		t.Fatalf("idempotent install replaced admitted dispatcher: %v", err)
+	afterManager, err := os.Stat(binary)
+	if err != nil || !os.SameFile(beforeManager, afterManager) {
+		t.Fatalf("idempotent hook install replaced manager: %v", err)
 	}
 	if again, err := os.ReadFile(hooksPath); err != nil || !bytes.Equal(first, again) {
 		t.Fatalf("repeat duplicated or rewrote hooks: %v", err)
@@ -115,7 +116,7 @@ func TestUserHooksModifiedOwnedCommandPreserved(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	opts := UserInstallOptions{Home: home, InstallRoot: filepath.Join(root, "native"), Binary: binary}
+	opts := UserInstallOptions{Home: home, Entrypoint: binary}
 	if _, err := InstallUserCodex(context.Background(), opts); err != nil {
 		t.Fatal(err)
 	}
@@ -187,84 +188,28 @@ func mustReadUserInstall(t *testing.T, path string) []byte {
 	return body
 }
 
-func TestDispatcherOnlyUpgradePreservesHooksAndOwnedIntegrity(t *testing.T) {
-	root := t.TempDir()
-	home := filepath.Join(root, "codex")
-	binary, err := compatibleCaptureTestExecutable(t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	opts := UserInstallOptions{Home: home, InstallRoot: filepath.Join(root, "native"), Binary: binary}
-	if _, err := InstallUserCodex(context.Background(), opts); err != nil {
-		t.Fatal(err)
-	}
-	hooksPath := filepath.Join(home, "hooks.json")
-	receiptPath := filepath.Join(home, "agenticlens-user-installation.json")
-	hooksBefore := mustReadUserInstall(t, hooksPath)
-	var initial userInstallation
-	if err := json.Unmarshal(mustReadUserInstall(t, receiptPath), &initial); err != nil {
-		t.Fatal(err)
-	}
-	// A different valid native artifact exercises direct transaction ownership;
-	// actual versioned A-to-B execution is covered by the production downloader test.
-	upgraded := append(mustReadUserInstall(t, binary), []byte("AL79 distinct native artifact\n")...)
-	candidate := filepath.Join(root, "candidate-native")
-	if err := os.WriteFile(candidate, upgraded, 0700); err != nil {
-		t.Fatal(err)
-	}
-	opts.Binary = candidate
-	opts.DispatcherOnly = true
-	if _, err := InstallUserCodex(context.Background(), opts); err != nil {
-		t.Fatalf("owned dispatcher-only upgrade: %v", err)
-	}
-	if !bytes.Equal(hooksBefore, mustReadUserInstall(t, hooksPath)) {
-		t.Fatal("dispatcher-only upgrade changed installed hook commands")
-	}
-	receiptBytes := mustReadUserInstall(t, receiptPath)
-	var current userInstallation
-	if err := json.Unmarshal(receiptBytes, &current); err != nil {
-		t.Fatal(err)
-	}
-	expected := sha256.Sum256(upgraded)
-	if current.DispatcherHash != fmt.Sprintf("%x", expected) || current.DispatcherHash == initial.DispatcherHash || !bytes.Equal(upgraded, mustReadUserInstall(t, current.Dispatcher)) {
-		t.Fatalf("artifact and ownership receipt differ: %+v", current)
-	}
-	if !reflect.DeepEqual(current.Groups, initial.Groups) {
-		t.Fatal("dispatcher-only upgrade forgot owned hook groups")
-	}
-	if err := os.Chmod(current.Dispatcher, 0700); err != nil {
-		t.Fatal(err)
-	}
-	edited := []byte("user-modified dispatcher")
-	if err := os.WriteFile(current.Dispatcher, edited, 0700); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := InstallUserCodex(context.Background(), opts); err == nil {
-		t.Fatal("dispatcher-only upgrade overwrote modified owned artifact")
-	}
-	if !bytes.Equal(edited, mustReadUserInstall(t, current.Dispatcher)) || !bytes.Equal(receiptBytes, mustReadUserInstall(t, receiptPath)) || !bytes.Equal(hooksBefore, mustReadUserInstall(t, hooksPath)) {
-		t.Fatal("rejected dispatcher replacement changed owned or foreign state")
-	}
-}
-
-// These adapter fixtures execute a real host-native helper through the same
-// interface probes as production. Unknown invocations never bypass validation.
 func init() {
 	if os.Getenv("AL79_CAPTURE_NATIVE_FIXTURE") == "" {
 		return
 	}
 	switch strings.Join(os.Args[1:], " ") {
+	case "engine protocol":
+		fmt.Println("1")
 	case "capture protocol":
 		if os.Getenv("AL79_CAPTURE_NATIVE_FIXTURE") == "old-interface" {
 			fmt.Println("1")
 		} else {
 			fmt.Println(HandlerProtocolVersion)
 		}
-	case "dispatch protocol":
-		fmt.Println("1")
+	case "manager protocol", "dispatch protocol":
+		if os.Getenv("AL79_CAPTURE_NATIVE_FIXTURE") == "bad-manager" {
+			fmt.Println("0")
+		} else {
+			fmt.Println("1")
+		}
 	case "version --short":
 		fmt.Println("v9.8.7")
-	case "version --json":
+	case "version --json", "--manager-version --json":
 		fmt.Println(`{"version":"v9.8.7","commit":"native-test-fixture","build_date":"test"}`)
 	default:
 		return
@@ -278,110 +223,43 @@ func compatibleCaptureTestExecutable(t *testing.T) (string, error) {
 	return os.Executable()
 }
 
-func TestCanonicalDispatcherOwnershipSurvivesAnotherHomeAndRejectsRecordConflict(t *testing.T) {
-	root := t.TempDir()
-	homeA := filepath.Join(root, "home-a")
-	homeB := filepath.Join(root, "home-b")
-	cache := filepath.Join(root, "cache")
-	binary, err := compatibleCaptureTestExecutable(t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	options := UserInstallOptions{Home: homeA, InstallRoot: cache, Binary: binary}
-	if _, err := InstallUserCodex(context.Background(), options); err != nil {
-		t.Fatal(err)
-	}
-	homeAReceipt := mustReadUserInstall(t, filepath.Join(homeA, "agenticlens-user-installation.json"))
-	homeAHooks := mustReadUserInstall(t, filepath.Join(homeA, "hooks.json"))
-	next := filepath.Join(root, "completed-next-native")
-	nextBytes := append(mustReadUserInstall(t, binary), []byte("AL79 cross-home build\n")...)
-	if err := os.WriteFile(next, nextBytes, 0700); err != nil {
-		t.Fatal(err)
-	}
-	other := UserInstallOptions{Home: homeB, InstallRoot: cache, Binary: next, DispatcherOnly: true}
-	if _, err := InstallUserCodex(context.Background(), other); err != nil {
-		t.Fatalf("canonical root authority rejected second home: %v", err)
-	}
-	if !bytes.Equal(homeAReceipt, mustReadUserInstall(t, filepath.Join(homeA, "agenticlens-user-installation.json"))) || !bytes.Equal(homeAHooks, mustReadUserInstall(t, filepath.Join(homeA, "hooks.json"))) {
-		t.Fatal("another home's update rewrote first home's receipt/hooks")
-	}
-	options.Binary = next
-	if _, err := InstallUserCodex(context.Background(), options); err != nil {
-		t.Fatalf("historical first-home hash overrode canonical authority: %v", err)
-	}
-	ownerPath := filepath.Join(cache, "dispatcher-installation.json")
-	ownerBytes := mustReadUserInstall(t, ownerPath)
-	var owner dispatcherInstallation
-	if err := json.Unmarshal(ownerBytes, &owner); err != nil {
-		t.Fatal(err)
-	}
-	dispatcherBytes := mustReadUserInstall(t, owner.Dispatcher)
-	expected := sha256.Sum256(dispatcherBytes)
-	if owner.Hash != fmt.Sprintf("%x", expected) {
-		t.Fatalf("canonical stable hash disagrees with actual bytes: %+v", owner)
-	}
-	owner.Hash = strings.Repeat("0", 64)
-	conflict, err := json.Marshal(owner)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(ownerPath, conflict, 0600); err != nil {
-		t.Fatal(err)
-	}
-	receiptBefore := mustReadUserInstall(t, filepath.Join(homeA, "agenticlens-user-installation.json"))
-	hooksBefore := mustReadUserInstall(t, filepath.Join(homeA, "hooks.json"))
-	if _, err := InstallUserCodex(context.Background(), options); err == nil {
-		t.Fatal("home receipt silently bypassed conflicting canonical root record")
-	}
-	if !bytes.Equal(conflict, mustReadUserInstall(t, ownerPath)) || !bytes.Equal(dispatcherBytes, mustReadUserInstall(t, owner.Dispatcher)) || !bytes.Equal(receiptBefore, mustReadUserInstall(t, filepath.Join(homeA, "agenticlens-user-installation.json"))) || !bytes.Equal(hooksBefore, mustReadUserInstall(t, filepath.Join(homeA, "hooks.json"))) {
-		t.Fatal("refused root conflict mutated owned state")
-	}
-}
-
-func TestIncompatibleUserNativeDoesNotCreateOrChangeOwnedState(t *testing.T) {
+func TestIncompatibleUserManagerDoesNotCreateOrChangeOwnedState(t *testing.T) {
 	for _, owned := range []bool{false, true} {
 		t.Run(fmt.Sprint(owned), func(t *testing.T) {
 			root := t.TempDir()
-			options := UserInstallOptions{Home: filepath.Join(root, "home"), InstallRoot: filepath.Join(root, "cache")}
 			binary, err := compatibleCaptureTestExecutable(t)
 			if err != nil {
 				t.Fatal(err)
 			}
-			options.Binary = binary
+			options := UserInstallOptions{Home: filepath.Join(root, "home"), Entrypoint: binary}
 			before := map[string][]byte{}
 			if owned {
 				if _, err := InstallUserCodex(context.Background(), options); err != nil {
 					t.Fatal(err)
 				}
-				for _, path := range []string{filepath.Join(options.Home, "hooks.json"), filepath.Join(options.Home, "agenticlens-user-installation.json"), filepath.Join(options.InstallRoot, "dispatcher-installation.json"), filepath.Join(options.InstallRoot, "dispatcher.sha256")} {
+				for _, path := range []string{filepath.Join(options.Home, "hooks.json"), filepath.Join(options.Home, "agenticlens-user-installation.json")} {
 					before[path] = mustReadUserInstall(t, path)
 				}
-				var owner dispatcherInstallation
-				if err := json.Unmarshal(before[filepath.Join(options.InstallRoot, "dispatcher-installation.json")], &owner); err != nil {
-					t.Fatal(err)
-				}
-				before[owner.Dispatcher] = mustReadUserInstall(t, owner.Dispatcher)
 			}
-			t.Setenv("AL79_CAPTURE_NATIVE_FIXTURE", "old-interface")
+			t.Setenv("AL79_CAPTURE_NATIVE_FIXTURE", "bad-manager")
 			if _, err := InstallUserCodex(context.Background(), options); err == nil {
-				t.Fatal("capture-incompatible native installed")
+				t.Fatal("incompatible manager accepted")
 			}
 			if !owned {
-				for _, path := range []string{options.Home, options.InstallRoot} {
+				for _, path := range []string{options.Home, filepath.Join(root, "cache")} {
 					if _, err := os.Stat(path); !os.IsNotExist(err) {
-						t.Fatalf("invalid native mutated fresh destination %s: %v", path, err)
+						t.Fatalf("invalid manager mutated fresh destination %s: %v", path, err)
 					}
 				}
 			}
 			for path, body := range before {
 				if !bytes.Equal(body, mustReadUserInstall(t, path)) {
-					t.Fatalf("invalid native changed owned path %s", path)
+					t.Fatalf("invalid manager changed owned path %s", path)
 				}
 			}
 		})
 	}
 }
-
 func TestRetainedAdmissionRejectsSourceChangedAfterValidation(t *testing.T) {
 	for _, when := range []string{"before-retention", "opened-truncation", "copied-same-size-restored-time"} {
 		t.Run(when, func(t *testing.T) {
@@ -447,15 +325,48 @@ func TestRetainedAdmissionRejectsSourceChangedAfterValidation(t *testing.T) {
 	}
 }
 
-func TestWindowsStableDispatcherHashUsesActualRecreatedBytes(t *testing.T) {
-	for _, scenario := range []struct {
-		name, existing, candidate, want string
-		present                         bool
-	}{{"present launcher retains admitted build", "build-A", "build-B", "build-A", true}, {"missing launcher repairs to candidate", "build-A", "build-B", "build-B", false}, {"first install", "", "build-B", "build-B", false}} {
-		t.Run(scenario.name, func(t *testing.T) {
-			if got := stableDispatcherHash(scenario.existing, scenario.candidate, scenario.present); got != scenario.want {
-				t.Fatalf("stable ownership hash=%s want=%s", got, scenario.want)
-			}
-		})
+func TestUserHooksDoNotOwnOrReplaceManager(t *testing.T) {
+	root := t.TempDir()
+	binary, err := compatibleCaptureTestExecutable(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manager := filepath.Join(root, "manager")
+	original := mustReadUserInstall(t, binary)
+	if err := os.WriteFile(manager, original, 0700); err != nil {
+		t.Fatal(err)
+	}
+	homeA, homeB := filepath.Join(root, "home-a"), filepath.Join(root, "home-b")
+	options := UserInstallOptions{Home: homeA, Entrypoint: manager}
+	if _, err := InstallUserCodex(context.Background(), options); err != nil {
+		t.Fatal(err)
+	}
+	hooks := mustReadUserInstall(t, filepath.Join(homeA, "hooks.json"))
+	receipt := mustReadUserInstall(t, filepath.Join(homeA, "agenticlens-user-installation.json"))
+	upgraded := append(append([]byte{}, original...), []byte("completed manager update")...)
+	if err := os.WriteFile(manager, upgraded, 0700); err != nil {
+		t.Fatal(err)
+	}
+	options.Home = homeB
+	if _, err := InstallUserCodex(context.Background(), options); err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(upgraded, mustReadUserInstall(t, manager)) {
+		t.Fatal("hook installer replaced manager")
+	}
+	if !bytes.Equal(hooks, mustReadUserInstall(t, filepath.Join(homeA, "hooks.json"))) || !bytes.Equal(receipt, mustReadUserInstall(t, filepath.Join(homeA, "agenticlens-user-installation.json"))) {
+		t.Fatal("another home's hook install rewrote first home")
+	}
+	options.Home, options.Remove = homeA, true
+	if _, err := InstallUserCodex(context.Background(), options); err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(upgraded, mustReadUserInstall(t, manager)) {
+		t.Fatal("hook uninstall removed or replaced manager")
+	}
+	for _, path := range []string{filepath.Join(root, "cache"), manager + ".sha256", manager + ".installation.json"} {
+		if _, err := os.Stat(path); !os.IsNotExist(err) {
+			t.Fatalf("hook installer acquired manager ownership at %s: %v", path, err)
+		}
 	}
 }

@@ -33,11 +33,11 @@ func TestDevelopmentSelectionPrefersValidHostOutputAndRejectsInvalidPresent(t *t
 		t.Fatalf("absent development did not select exact cache: %s %v", selected, err)
 	}
 	source := filepath.Join(root, "fixture.go")
-	program := "package main\nimport (\"fmt\";\"os\";\"strings\")\nfunc main(){switch strings.Join(os.Args[1:],\" \"){case \"capture protocol\":fmt.Println(\"3\");case \"dispatch protocol\":fmt.Println(\"1\");case \"version --json\":fmt.Println(`{\"version\":\"v0.0.0-development\",\"commit\":\"actual-dev\",\"build_date\":\"fixture\"}`);default:os.Exit(2)}}\n"
+	program := "package main\nimport (\"fmt\";\"os\";\"strings\")\nfunc main(){switch strings.Join(os.Args[1:],\" \"){case \"capture protocol\":fmt.Println(\"3\");case \"engine protocol\":fmt.Println(\"1\");case \"version --json\":fmt.Println(`{\"version\":\"v0.0.0-development\",\"commit\":\"actual-dev\",\"build_date\":\"fixture\"}`);default:os.Exit(2)}}\n"
 	if err := os.WriteFile(source, []byte(program), 0600); err != nil {
 		t.Fatal(err)
 	}
-	name := "agentic-lens-" + runtime.GOOS + "-" + runtime.GOARCH
+	name := "agentic-lens-engine-" + runtime.GOOS + "-" + runtime.GOARCH
 	if runtime.GOOS == "windows" {
 		name += ".exe"
 	}

@@ -1,0 +1,18 @@
+# AL-79 iteration03 C2 data and failure correction review
+
+APPROVED for the assigned correction scope. New findings: **0**; no new severity assigned. This does not approve integration or publication.
+
+Run `i03_data_sol_c2`; requested identity `codex/gpt-6.1-sol/high` (runtime model/usage metadata unavailable). Base `9c39cf9d4f44bdb968cb92b0212dccf577d10255`; C1 `c84c6b274d12ef53544596f8214c1e5501cf6022883276fc0184bf528320e5cd`; frozen 65-path C2 `d3a52d7385dae492e3c224f76b890234cc673987db543ee0cffefae58b910afe`. Candidate verification matched before and after review. Both absolute manifests were present and read; C1's reported missing manifest is not a remaining evidence gap. The final 12-path manager test inventory matches C2 exactly.
+
+I read the approved split plan, preserved contract, assigned persona/procedure and portable-history boundaries, then traced corrected source before reconciling the prior DATA_SOL/DATA_LUNA reports.
+
+- **I03-DATA-LUNA-01, severity 4/10: resolved.** `manager/storage.go` now rejects an orphan checksum or checksum bytes inconsistent with the owned executable receipt before creating the pending transaction. Existing ownership controls assert preserved executable/receipt/checksum bytes and no journal. The tester's isolated guard-removal mutation fails both relevant controls; discovery credit remains with the Luna reviewer.
+- **Custom update ownership:** `selfUpdate` resolves `os.Executable()` through `PhysicalPath` when no destination is supplied. The native symlink-invocation control verifies replacement at the custom physical installation while preserving its project pin and engine and creating no default-home installation.
+- **Cache admission and location:** foreign local artifacts are rejected before staging/cache writes. Published foreign artifacts remain explicitly subject to deferred target-host interface validation, as approved. Literal symlink/parent components in explicit cache roots resolve through the existing physical-path helper before joining version leaves; install/list controls verify the same physical destination. Runtime selection also rejects a valid engine whose identity disagrees with the cache pin.
+- **Retained state:** the manager exception is restricted to explicit `inspect-state` arguments. The engine validates retained registry protocol, configured name and stored worktree identity through a read-only SQLite connection. Existing real manager/direct-engine evidence asserts registrations, pending publication and database bytes survive without recreating directories; ordinary capture remains guarded.
+
+C1 worker/recovery/history conclusions carry forward: retention, worker-successor, installation transaction and user-installation paths are unchanged between manifests; ledger/source refresh is unchanged. Manager maintenance does not edit bindings, snapshots or ledgers, and active workers continue through retained engine bytes. Recovery may restore owned files before encountering a later conflict; preserved edited bytes plus the resumable journal satisfy the approved boundary. No all-files-unchanged requirement was inferred.
+
+Executed from `backend/`: focused ownership/lease, durable-prefix and conflicting-recovery race tests passed in **1.679s**; the four native controls above passed in **6.344s**. Reused revision-matched C2 manager race/mutation evidence and retained-state integration evidence rather than repeating their broader suites.
+
+Only this assigned report was written. Integrated `make`, real machine installation and final telemetry remain parent-owned. No actual home hooks/trust were changed; no Windows runtime or loaded-update certification is claimed.

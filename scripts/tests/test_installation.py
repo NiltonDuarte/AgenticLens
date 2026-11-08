@@ -24,7 +24,7 @@ class InstallationTest(DistributionFixture):
                            GOMODCACHE=subprocess.check_output(['go', 'env', 'GOMODCACHE'], text=True).strip())
         for key in ('VERSION', 'GIT_COMMIT', 'BUILD_DATE'):
             environment.pop(key, None)
-        native = destination / f'agentic-lens-{host_os}-{host_arch}'
+        native = destination / f'agentic-lens-engine-{host_os}-{host_arch}'
         if host_os == 'windows': native = native.with_suffix('.exe')
         source_version = subprocess.check_output(['git', 'describe', '--tags', '--always', '--dirty'], cwd=ROOT, text=True).strip()
         candidate = {'VERSION': 'v9.8.8-rc.1+abcdef0', 'GIT_COMMIT': 'abcdef0', 'BUILD_DATE': '2026-01-02T03:04:05Z'}
@@ -45,7 +45,7 @@ class InstallationTest(DistributionFixture):
                 self.assertTrue(os.path.samestat(before, cached.stat()))
                 self.assertEqual(cached.read_bytes(), cached_bytes)
                 self.assertEqual(self.launch('version', '--short').stdout.strip(), self.pin)
-                self.assertFalse((destination / 'agentic-lens').exists(), 'source build copied a release-cache wrapper')
+                self.assertFalse((destination / 'agentic-lens').exists(), 'source build copied an unqualified installed command')
 
     def test_printed_completion_scopes_both_files_to_selected_project_from_another_scaffold(self):
         self.config.unlink()
@@ -85,10 +85,10 @@ class InstallationTest(DistributionFixture):
         self.config.write_bytes(completed)
         selected_local.write_bytes(local_before)
 
-    def test_compatibility_launcher_missing_bootstrap_and_default_user_entrypoint(self):
+    def test_operator_launcher_missing_installation_and_default_user_entrypoint(self):
         launcher = ROOT / '.agents/skills/agentic-lens-operator/scripts/agentic-lens.sh'
         def launch():
-            return subprocess.run(['sh', str(launcher), 'capture', 'status', '--repo', str(self.repo)],
+            return subprocess.run(['sh', str(launcher), 'version', '--short'],
                                   cwd=self.repo, env=self.env, input='', text=True, capture_output=True, timeout=10)
         missing = launch()
         self.assertNotEqual(missing.returncode, 0)
@@ -96,7 +96,7 @@ class InstallationTest(DistributionFixture):
         self.assertIn('https://github.com/', missing.stderr)
         self.assertEqual(missing.stdout, '')
         self.succeeds(self.install_local('--dest', self.home / '.local/bin'))
-        self.assertEqual(json.loads(self.succeeds(launch()).stdout)['args'], ['capture', 'status', '--repo', str(self.repo)])
+        self.assertEqual(self.succeeds(launch()).stdout.strip(), self.pin)
         self.assertEqual(self.requests(), [])
 
     def git(self, *arguments, cwd=None):
@@ -112,7 +112,7 @@ class InstallationTest(DistributionFixture):
         ignore = self.repo / '.gitignore'; ignore.write_text('# owner policy\n')
         before = self.config.read_bytes(); ignored = ignore.read_bytes()
         self.succeeds(self.bundle())
-        for relative in ['scripts/install.sh', 'scripts/download.sh', 'scripts/download.ps1', 'scripts/agentic-lens-wrapper.sh', 'scripts/agentic-lens-wrapper.ps1', 'SKILL.md']:
+        for relative in ['scripts/install.sh', 'scripts/download.sh', 'scripts/download.ps1', 'SKILL.md']:
             self.assertTrue((self.repo / BUNDLE_SETUP / relative).is_file(), relative)
         self.assertEqual((self.repo / BUNDLE_SETUP / 'RELEASE_VERSION').read_text(), self.pin + '\n')
         self.succeeds(self.install_local(script=self.repo / BUNDLE_SETUP / 'scripts/download.sh'))
@@ -126,10 +126,9 @@ class InstallationTest(DistributionFixture):
         self.assertTrue(self.requests())
         self.assertTrue(all('/' + self.pin + '/' in url for url in self.requests()))
         self.network_log.unlink()
-        self.succeeds(self.install(script=self.repo / BUNDLE_SETUP / 'scripts/download.sh'))
-        self.assertEqual(self.requests(), [f'https://github.com/NiltonDuarte/AgenticLens/releases/download/{self.pin}/SHA256SUMS',
-                                          f'https://github.com/NiltonDuarte/AgenticLens/releases/download/{self.pin}/{self.native().name}'])
-        self.succeeds(self.launch())
+        self.succeeds(self.install_local(script=self.repo / BUNDLE_SETUP / 'scripts/download.sh'))
+        self.assertEqual(self.requests(), [])
+        self.succeeds(self.launch('version', '--short'))
 
     def test_bundle_conflict_preflight_preserves_every_existing_file(self):
         conflict = self.repo / BUNDLE_OPERATOR / 'references/dashboard.md'
@@ -148,8 +147,8 @@ class InstallationTest(DistributionFixture):
         worktree = self.root / 'worktree without marker'
         self.git('worktree', 'add', '-qb', 'fixture-worktree', worktree)
         self.succeeds(self.install_local(script=worktree / BUNDLE_SETUP / 'scripts/download.sh'))
-        result = self.succeeds(self.launch('--al-project', worktree, 'capture', 'status', '--repo', worktree, cwd=worktree))
-        self.assertEqual(json.loads(result.stdout)['version'], self.pin)
+        result = self.succeeds(self.launch('--al-project', worktree, 'version', '--short', cwd=worktree))
+        self.assertEqual(result.stdout.strip(), self.pin)
         self.assertEqual(self.git('status', '--porcelain', cwd=worktree), '')
         self.assertFalse((worktree / BUNDLE_OPERATOR / 'bin').exists())
         self.assertFalse((worktree / BUNDLE_SETUP / 'RELEASE_VERSION').exists())
@@ -180,7 +179,7 @@ class InstallationTest(DistributionFixture):
 
     def test_invalid_or_conflicting_versions_and_missing_values_fail_before_fetch(self):
         for version in ['latest', '../v9.8.7', 'v9.8.7/rc', 'v9.8.7 rc', 'v9.8.7+$(touch INJECTED)', 'v1.0.0']:
-            for action in ([lambda: self.install('--version', version)] if version == 'v1.0.0' else [lambda: self.install('--version', version), lambda: self.bundle('--version', version)]):
+            for action in ([lambda: self.install_local('--version', version)] if version == 'v1.0.0' else [lambda: self.install_local('--version', version), lambda: self.bundle('--version', version)]):
                 with self.subTest(version=version):
                     self.assertNotEqual(action().returncode, 0)
         self.assertFalse((self.repo / 'INJECTED').exists()); self.assertEqual(self.requests(), [])
@@ -190,10 +189,10 @@ class InstallationTest(DistributionFixture):
         legacy = self.repo / 'bin'; legacy.mkdir(); (legacy / 'agentic-lens').write_text('owner wrapper\n')
         self.succeeds(self.install_local())
         contents = self.native().read_bytes(); self.native().chmod(0o600)
-        self.assertNotEqual(self.launch().returncode, 0)
+        self.assertNotEqual(self.launch('version', '--short').returncode, 0)
         self.succeeds(self.install_local())
         self.assertEqual(self.native().read_bytes(), contents)
-        self.succeeds(self.launch())
+        self.succeeds(self.launch('version', '--short'))
         self.assertEqual((legacy / 'agentic-lens').read_text(), 'owner wrapper\n')
 
 

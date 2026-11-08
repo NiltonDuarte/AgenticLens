@@ -1,0 +1,18 @@
+# AL-79 iteration 03 C2 test-effectiveness correction review
+
+**Outcome: APPROVED within the assigned test-effectiveness focus.** No blocking finding; no new nonblocking finding. Run `i03_tests_luna_c2`, correction-review phase; requested profile Codex / gpt-6-luna / medium (runtime metadata unavailable). Base `9c39cf9d4f44bdb968cb92b0212dccf577d10255`; frozen C2 candidate `d3a52d7385dae492e3c224f76b890234cc673987db543ee0cffefae58b910afe` matched both before and after inspection. Scope is the approved manager/engine split and C2 correction tests, not whole-repository certification.
+
+## Corrections and oracles assessed
+
+- The C1 cache-identity gap now has a durable ordinary-execution negative case in `backend/internal/adapters/manager/native_test.go`: a genuine vA engine is placed under the exact vB cache leaf, invoked via the real manager, and must be rejected without changing either pin or bytes. The supplied disposable mutant removing the runtime comparison fails this assertion. This covers the runtime path independently of install-time identity checks.
+- The production plugin is loaded in a Node VM with mocked child-process/timer boundaries, while executing its actual command construction. Windows and POSIX cases assert native manager selection, complete argv, literal paths, Unicode payload, receive/request/bind behavior, timeout, taskkill PID-tree arguments and stream cleanup. This is a useful construction/cleanup oracle; it explicitly does not claim Windows process execution or a real OpenCode exchange. Git advisory execution separately builds and invokes a real native manager through a temporary Git repository; binding prompt checks cover shell quoting for apostrophes and shell-like input on both syntaxes.
+- The retained-state regression test creates a real registry with a registration and pending publication, deletes its worktree, then inspects it through both the engine and real manager. It compares database bytes and asserts no deleted checkout or survivor state is recreated; a live-project command remains rejected. This reaches the read-only exception and its adjacent guard.
+- Manager tests retain controls for all version aliases, physical custom self-update via symlink (no default-home copy, engine or pin change), foreign local artifact refusal before writes, orphan/edited checksum preservation, and physical cache-root resolution. The sidecar mutant and physical-path mutant each fail their targeted assertions. These cases cover distinct runtime/admission/ownership boundaries; I found no unjustified duplicate suite or invalid retirement.
+
+Retired PowerShell plugin/advisory expectations are replaced by native executable behavior checks. Waived old-installation/protocol compatibility and deleted dispatcher behavior are not accidentally retained as acceptance requirements. Existing unrelated Windows watchdog tests still exercise the separate hook timeout contract.
+
+## Verification and limits
+
+Reused revision-matched evidence in `TEST_EVIDENCE.md` and `MANAGER_TEST_EVIDENCE.md`: distribution 23/23, installation 10/10, focused capture/advisory/binding race checks, retained-state integration, and manager race suite 10.663s. The supplied exact-pin, sidecar-ownership, and physical-cache-root mutation results directly exercise the corrected oracles. I inspected test bodies/helpers and the key production boundaries; I did not rerun these suites or integrated `make`.
+
+No actual Windows runtime, hosted artifact publication, live Codex trust exchange, or full integrated `make` is certified here. Parent owns those gates and final consolidation. Product and test source files were not changed by this review; only this assigned report was written.
