@@ -1,9 +1,9 @@
-# feat(docs): publish the ticket roadmap with Jekyll (GEN-23)
+# feat(docs): add a welcome page linking to the roadmap (GEN-23)
 
-Publish the existing ticket roadmap and specifications at `/AgenticLens/roadmap/`. Native Jekyll renders the Markdown through standard optional-front-matter and relative-link plugins, with a shared readable layout and navigation back to the roadmap. Supporting documents open at the matching GitHub source revision.
+Add a small welcome page at the GitHub Pages project root, `/AgenticLens/`, with a visible link to `/AgenticLens/roadmap/`. It reuses the existing Jekyll layout and styling.
 
-The staging adapter reads the configured workspace, includes only plan Markdown and presentation files, and validates that generated pages stay under `roadmap/`. The workflow tests pull requests and deploys only main, with Pages/OIDC permissions confined to deployment. Ruby is needed only during the build; the published site is static.
+The build stages only the trusted welcome scaffold alongside the roadmap. Ticket pages remain confined to roadmap destinations, so front matter cannot overwrite the welcome page. The README is unchanged.
 
-Validation: seven native Jekyll tests with 109 assertions, a real 101-page build, 229 internal link/anchor checks, full integrated `make`, and standalone Linux binary execution. The integrated repository gate and retained review findings are recorded in [SUMMARY.md](alspaces/GEN-23/SUMMARY.md).
+Validation: seven native Jekyll tests with 133 assertions; a 102-page real build and 232 internal link/anchor checks. The overwrite regression fails when the provenance guard is removed in a disposable copy. Integrated checks and review evidence are recorded in [SUMMARY.md](alspaces/GEN-23/SUMMARY.md).
 
-The new route becomes live after merge and successful deployment. [Publishing guide](docs/TICKETS_SITE.md); [contract](alspaces/GEN-23/CONTRACT.md).
+The welcome page becomes live after merge and successful Pages deployment.

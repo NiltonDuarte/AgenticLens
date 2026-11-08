@@ -40,7 +40,7 @@ end
 
 Dir.mktmpdir("ticket-jekyll-") do |staging|
   source = Pathname.new(staging)
-  %w[_layouts _plugins roadmap].each { |name| FileUtils.cp_r(File.join(__dir__, name), source.join(name)) }
+  %w[index.html _layouts _plugins roadmap].each { |name| FileUtils.cp_r(File.join(__dir__, name), source.join(name)) }
   Dir.glob(plan.join("**/*.md")).each do |path|
     file = Pathname.new(path)
     raise "Plan source escapes through a symlink: #{file}" unless file.realpath.to_s.start_with?("#{plan}/")
@@ -58,9 +58,11 @@ Dir.mktmpdir("ticket-jekyll-") do |staging|
   built = source.join("_site")
   success = system(RbConfig.ruby, "-S", "jekyll", "build", "--source", source.to_s, "--destination", built.to_s)
   raise "Jekyll build failed" unless success
+  raise "Jekyll did not render the welcome page" unless built.join("index.html").file?
   raise "Jekyll did not render the roadmap" unless built.join("roadmap/index.html").file?
-  unless built.children.all? { |entry| entry.basename.to_s == "roadmap" && entry.directory? }
-    raise "Jekyll output must stay under roadmap/"
+  unless built.children.all? { |entry| (entry.basename.to_s == "roadmap" && entry.directory?) ||
+                                     (entry.basename.to_s == "index.html" && entry.file?) }
+    raise "Jekyll output must be the welcome page or stay under roadmap/"
   end
   built.join(".tickets-site-output").write("Generated ticket website\n")
   FileUtils.mkdir_p(output.dirname)
