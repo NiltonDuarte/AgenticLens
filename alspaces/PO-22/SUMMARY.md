@@ -1,0 +1,9 @@
+# PO-22: Active backlog rewritten with the updated PO skill
+
+Reviewed and rewrote all 27 active ticket specifications using the current PO templates. Goals and context now precede observable acceptance and routing. The roadmap contains one concise entry per ticket, with status, dependencies and a specification link. Repeated development checklists and most prescribed code structure are removed; ticket-specific evidence and exact interface requirements remain.
+
+All existing ticket IDs, accepted consolidated scopes and dependency edges survive. There are 22 Ready tickets and five Blocked tickets. No ticket was completed, merged, discarded or renumbered. Historical completed/discarded records, prior initiative specifications and application/test/runtime files remain unchanged. Larger accepted correction/capture tickets retain the evidence needed to implement their scope safely rather than being shortened to a quota.
+
+[The specification](SPEC.md) records every ticket’s disposition and newly explicit draft defaults. [The iteration plan](iterations/01/PLAN.md) records the request, clean baseline and verification boundaries. Portable ledger access, exact-owner refresh, unavailable values, measured-zero semantics and native-source evidence requirements remain preserved.
+
+Document consistency checks passed: all 27 title/IDs and required sections, local file links, unchanged statuses/dependencies, reciprocal acyclic graph, retained finding fields and legacy acceptance bullets. The required integrated `make` gate is running. This is author planning review, not independent correctness investigation or proof of implementation. Historical findings require revalidation in their owning developer/review sessions; source-specific interfaces and rate-card matching must be grounded before implementation approval.

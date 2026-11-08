@@ -1,30 +1,12 @@
 h3. Title: AL-79: Deliver native user-level Codex capture across worktrees
 
-*TARGET*: AgenticLens (Domain / Configuration / Git / Codex / Native CLI / Worker / Setup Distribution / Tests)
-
-*Status*: Ready
-*Work type*: feat
-*Priority*: P1
-*Blocked by*: None
-*Blocks*: AL-80
-*Origin*: PO-20, reclassified from GEN-22 after the user closed the capture design review.
-*Specification*: [PO-20 SPEC.md](../../PO-20/SPEC.md), F1-F6; [confirmed discussion](../../PO-20/CAPTURE_VISION_AND_GAPS.md).
-*Related*: Coordinate shared modules with AL-70 and installer boundaries with AL-73. AL-78's open-turn feedback and AL-63's broader capability audit remain independent; do not absorb unrelated acceptance.
-
-*CONTEXT*
-
-The inspected Codex runtime reads linked-worktree project hooks from the original checkout. Untracked worktree-only hooks are therefore insufficient. The local home-hook workaround uses Python and per-worktree manifests, neither of which meets the user's machine-wide native adoption model. Existing source extraction, binding and worker behavior are foundations to preserve and reuse, not a mandate to rewrite the platform.
-
 *GOAL*
 
 Install once in Codex user home and capture configured base/worktree sessions through the native runtime, with correct file-based configuration fallback, explicit binding, version/development selection and autonomous publication. Deliver a usable Codex slice and the common runtime consumed by AL-80; no OpenCode API implementation is required here.
 
-*VERTICAL SLICE SCOPE*
+*CONTEXT*
 
-* Domain Core: pure configuration/enablement and executable-selection decisions; exact session/parent binding and snapshot/publication semantics.
-* Boundary Adapters: Git-aware whole-file local selection, source agreement, additive user hooks, native dispatcher, cache/development executable handling, source reads and existing worker/persistence integration.
-* Presentation: CLI/setup/status/errors expose selected configuration and its origin, disabled/unassigned/failed publication, and active versus preferred build without introducing production verification gates.
-* Quality: deterministic self-contained Go/config/Git/process tests, existing distribution checks and genuine native Codex root/child integration evidence. Preserve existing dashboard/API consumers; no new web UI is requested.
+The inspected Codex runtime reads linked-worktree project hooks from the original checkout. Untracked worktree-only hooks are therefore insufficient. The local home-hook workaround uses Python and per-worktree manifests, neither of which meets the user's machine-wide native adoption model. Existing source extraction, binding and worker behavior are foundations to preserve and reuse, not a mandate to rewrite the platform.
 
 *ACCEPTANCE CRITERIA*
 
@@ -60,9 +42,14 @@ h4. Evidence and portable history
 * Exercise PO-20's cross-machine/other-harness ledger preservation, unavailable enrichment and complete-versus-partial snapshot cases. Capture state/installation receipts are not prerequisites for reading supported Git-shared history. No schema expansion or bulk migration is assumed.
 * Keep fixtures independent of PO/ticket workspace paths and isolate every writable HOME/config/cache/state destination. Retain meaningful existing assertions and update canonical guidance/shipped copies without general audit cleanup.
 
-*DEFINITION OF DONE*
+*Status*: Ready
+*Blocked by*: None
+*Specification*: [PO-20 SPEC.md](../../PO-20/SPEC.md), F1-F6; [confirmed discussion](../../PO-20/CAPTURE_VISION_AND_GAPS.md).
+*Work type*: feat
+*Priority*: P1
 
-* Implement in a separate agentic-lens-dev session with approved developer contract; no implementation is authorized by this PO file alone.
-* All Codex/common-runtime acceptance is delivered end to end; AL-80 can reuse the shared behavior without another policy implementation. Do not call the combined two-harness initiative complete before AL-80.
-* Follow TECHNICAL_GUIDELINES.md and docs/REGRESSION_PREVENTION.md: FCIS, strict typing, zero any/interface{}, zero emojis, zero domain mocks. Pass affected checks, focused independent review and required make. Rebuild/verify embedded assets if affected; preserve existing UI consumers.
-* Publish revision-specific validation, source-grounded telemetry and implementation PR. Runtime evidence gaps are explicitly incomplete, not silent skips. Coordinate related tickets instead of duplicating their unrelated work.
+*IMPLEMENTATION NOTES*
+
+*Related*: Coordinate shared modules with AL-70 and installer boundaries with AL-73. AL-78's open-turn feedback and AL-63's broader capability audit remain independent; do not absorb unrelated acceptance.
+
+[Engineering rules](../../../TECHNICAL_GUIDELINES.md) and [relevant regression boundaries](../../../docs/REGRESSION_PREVENTION.md) apply. Historical findings require revalidation; this rewrite is not runtime verification or implementation approval.

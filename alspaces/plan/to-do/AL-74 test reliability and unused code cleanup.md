@@ -1,30 +1,12 @@
 h3. Title: AL-74: Strengthen test reliability and remove unused code
 
-*TARGET*: AgenticLens (Domain Migration and Aggregation / Adapter and CLI Tests / Frontend Cleanup / Compatibility Fixtures)
+*GOAL*
 
-*Status*: Ready
-*Work type*: refactor
-*Priority*: P2
-*Blocked by*: None
-*Blocks*: None
-*Origin*: REV-5 iteration 03 audit; consolidated draft batch at the user's request in iteration 09.
-*Findings*: AL-67 F10; ADP-07, ADP-08, ADP-09, ADP-13, CC-09, CC-10, CC-11, CC-12, D4, FE-D1
-*Related*: Coordinate pure aggregation changes with AL-69, UI cleanup with AL-72, and dependency/lockfile edits with AL-75. These are shared-file coordination needs, not speculative blocking dependencies.
+Maintainers can trust isolated regression checks and immutable transformations while removing confirmed unused code without losing meaningful assertions.
 
 *CONTEXT*
 
 Pure transformations must not mutate inputs, tests must exercise their claimed boundary in isolated environments, and unused production surfaces and duplicated setup should be removed while preserving meaningful assertions.
-
-The source reports retain affected paths, triggers, evidence and limits at their frozen baseline. Revalidate before implementation; this specification does not claim remediation. Overlapping findings and test/architecture analyses are counted once in the current finding map.
-
-*GOAL*
-
-Correct the scoped behavior through its production consumers and verification boundaries, satisfying every acceptance section below.
-
-*VERTICAL SLICE SCOPE*
-
-* Own the changes through Domain Migration and Aggregation / Adapter and CLI Tests / Frontend Cleanup / Compatibility Fixtures, including real consumer behavior and regression proof. Keep pure calculations in the core and I/O in adapters; preserve supported stored facts when enrichment is unavailable.
-* Use bounded implementation and review iterations within this ticket. Grouping reduces tracking overhead; it does not authorize dropping acceptance cases, skipping focused reviews or calling a partial fix complete. No broad framework rewrite or new speculative abstraction is required.
 
 *ACCEPTANCE CRITERIA*
 
@@ -69,15 +51,16 @@ Maintained compatibility targets depend on AL-58 historical evidence and fixed p
 * Allocate/configure isolated ports, verify launched child and expected protocol identity, fail readiness exhaustion before launching the client, and clean up processes.
 * Exercise missing provider, occupied port and stalled startup with local fixtures; run supported real OpenCode compatibility environments when available and label unavailable environments explicitly.
 
-* Add or repair the specific failing behavior oracle; reuse meaningful existing tests and map preserved assertions before any consolidation. Fixtures must be self-contained, never dependent on live ticket workspaces.
+*Status*: Ready
+*Blocked by*: None
+*Work type*: refactor
+*Priority*: P2
 
-*DEFINITION OF DONE*
+*IMPLEMENTATION NOTES*
 
-* Implement in a separate agentic-lens-dev session with an approved concrete contract. Complete every scoped correction and evidence case; this planning session changes no application, test or runtime code.
-* Follow TECHNICAL_GUIDELINES.md and docs/REGRESSION_PREVENTION.md: strict typing, zero any/interface{}, zero emojis, no domain mocks and self-contained fixtures. Pass affected checks, independent focused review and the required make gate. Frontend changes require canonical build and standalone embedded-asset verification.
-* Preserve source identity, unavailable values, meaningful existing assertions and applicable local-only boundaries. Record tested revision, reproduction/probe evidence, reused checks and environment limits; update finding dispositions only after verified fixes. Publish the implementation PR and source-grounded telemetry.
+*Related*: Coordinate pure aggregation changes with AL-69, UI cleanup with AL-72, and dependency/lockfile edits with AL-75. These are shared-file coordination needs, not speculative blocking dependencies.
 
-*SOURCE EVIDENCE*
+*Findings*: AL-67 F10; ADP-07, ADP-08, ADP-09, ADP-13, CC-09, CC-10, CC-11, CC-12, D4, FE-D1
 
 * [REV-5 ADAPTERS_REPORT.md](../../REV-5/iterations/03/ADAPTERS_REPORT.md)
 * [REV-5 CORE_CLI_REPORT.md](../../REV-5/iterations/03/CORE_CLI_REPORT.md)
@@ -91,3 +74,5 @@ Maintained compatibility targets depend on AL-58 historical evidence and fixed p
 Retain remaining migration, oracle, isolation and unused-code corrections. REV-6 (#113) already split test lanes and gates integration on unit success; do not repeat that orchestration. Current domain/events.go retains anomalyEvidenceSelection.events; AL-67 F10 reconfirms the required-column oracle issue.
 
 Evidence and review limits: [PO-19 reconciliation](../../PO-19/SPEC.md), merged baseline `03f5b05d`. This planning review does not certify runtime behavior or close unverified acceptance criteria.
+
+[Engineering rules](../../../TECHNICAL_GUIDELINES.md) and [relevant regression boundaries](../../../docs/REGRESSION_PREVENTION.md) apply. Historical findings require revalidation; this rewrite is not runtime verification or implementation approval.

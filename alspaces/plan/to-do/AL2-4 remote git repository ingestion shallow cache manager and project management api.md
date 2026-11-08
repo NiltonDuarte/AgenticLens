@@ -1,44 +1,27 @@
 h3. Title: AL2-4: Remote Git Repository Ingestion, Shallow Cache Manager, and Project Management API
 
-*TARGET*: AgenticLens (adapters | git | http | server | tests)
+*GOAL*
+
+Operators can monitor configured remote repositories and refresh them without manually cloning every project or interrupting current reads.
+
+*CONTEXT*
+
+AL2-3 supplies local multi-project identity and scanning. This ticket adds remote retrieval and an HTTP registry/query interface that also serves local projects, enabling AL2-5’s dashboard.
+
+*ACCEPTANCE CRITERIA*
+
+* Configured remote projects or --project <id>=<url> accept validated HTTP/HTTPS/SSH Git locations. Use isolated shallow caches under the user cache (default ~/.cache/agenticlens/remotes/<project_id>/); credentials never appear in ledgers, API responses or diagnostics.
+* GET /api/projects lists configured local/remote projects, connection state, workspace counts and last successful synchronization. Unknown versus unavailable projects are distinguishable.
+* POST /api/projects/sync requests background refresh. Readers retain the last complete usable cache during refresh or network failure; failed/partial fetches do not replace it or advance the successful-sync timestamp. Failures remain visible.
+* Workspace, fleet, comparison and progression queries accept project selection and aggregate only selected identities. Repeated project parameters and comma-separated values have equivalent meaning; omitted selection means all configured projects, invalid IDs fail clearly.
+* Project isolation holds for duplicate ticket IDs, concurrent refresh/read and repository URLs containing credentials. Remote caches require no private source/capture receipts to expose committed telemetry.
 
 *Status*: Blocked
 *Blocked by*: AL2-3
-*Blocks*: AL2-5
+*Work type*: feat
 
-*CONTEXT*
- 
-While AL2-3 enables multi-project scanning of local directories, engineering managers also need to monitor remote git repositories directly (e.g. `https://github.com/myorg/billing-service.git`) without requiring developers to pre-clone every project manually. To support this safely and efficiently, AgenticLens requires a dedicated git cache manager performing shallow clones, background synchronization, and a project registry REST API enabling live project discovery and on-demand syncing.
+*IMPLEMENTATION NOTES*
 
-*GOAL*
- 
-Build a shallow git repository cache manager in `internal/adapters/git` that clones and updates remote repositories in `~/.cache/agenticlens/remotes/`, integrate it into the multi-project scanner, and expose `GET /api/projects` and `POST /api/projects/sync` endpoints with multi-project filtering on all telemetry queries.
+Git/network/filesystem operations remain adapter-owned. Verify with temporary local bare repositories and controlled failures; do not require public-network access for regression checks. Remote read caches do not authorize mutation or commits in upstream repositories.
 
-*VERTICAL SLICE SCOPE*
- 
-* Boundary Adapter (Git Cache): Implement `GitCacheManager` in `internal/adapters/git/cache.go`. Manage shallow clones (`git clone --depth 1` / `git fetch --depth 1`) in a deterministic cache folder (`~/.cache/agenticlens/remotes/<project_id>/`). Validate remote repository URLs (HTTP/HTTPS/SSH) and isolate credentials. Support on-demand refresh and graceful fallback to cached state on network errors.
-* Boundary Adapter (HTTP Server): Implement `ProjectsHandler` (`GET /api/projects`) returning list of monitored projects, source types, paths, ledger counts, and last synchronization timestamps. Implement `ProjectSyncHandler` (`POST /api/projects/sync`) triggering background fetch of remote repositories.
-* Query Filtering: Update `WorkspacesHandler`, `FleetHandler`, `ComparisonHandler`, and `ProgressionHandler` in `internal/adapters/http/handlers.go` to parse `project` query parameters (e.g. `?project=billing&project=core`), applying domain multi-project filtering.
-* Quality: Integration tests in `internal/adapters/git` using local bare git repositories verifying shallow cloning, fetching, error handling, and cache isolation. HTTP server tests in `internal/adapters/http` asserting project registry outputs, sync responses, and multi-project query filtering.
-
-*ACCEPTANCE CRITERIA*
- 
-* Remote git URLs configured in `projects:` or passed via `--project <id>=<url>` are shallow-cloned into the cache directory.
-* `GET /api/projects` returns the complete list of configured projects with connection status, workspace counts, and last sync timestamp.
-* `POST /api/projects/sync` fetches remote repositories and updates cached workspaces without blocking active reads.
-* `GET /api/workspaces?project=billing` returns only ledgers belonging to the billing project.
-* When multiple projects are requested (`?project=p1,p2`), responses aggregate only those selected projects.
-* All Go test suites pass with zero warnings or data races (`go test -race ./...`).
-
-*DEFINITION OF DONE*
- 
-* Code and tests merged to target branch.
-* Quality gates passing (`make check`, `make test`, or `make`).
-* Go type checking clean with zero any.
-* Telemetry tested with `agentic-lens` CLI.
-
-*DEVELOPMENT STATE REVIEW (2026-11-05)*
-
-Still blocked by AL2-3. No /api/projects registry/sync or GitCacheManager implementation was found. Existing Git code-metric analysis is not remote project ingestion.
-
-Evidence and review limits: [PO-19 reconciliation](../../PO-19/SPEC.md), merged baseline `03f5b05d`. This planning review does not certify runtime behavior or close unverified acceptance criteria.
+Follow [engineering rules](../../../TECHNICAL_GUIDELINES.md) and [regression boundaries](../../../docs/REGRESSION_PREVENTION.md). [PO-19](../../PO-19/SPEC.md) preserves the earlier development reconciliation; historical observations require revalidation, not an assumption of current runtime support.

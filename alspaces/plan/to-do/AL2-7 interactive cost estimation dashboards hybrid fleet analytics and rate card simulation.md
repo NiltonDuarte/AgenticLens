@@ -1,43 +1,27 @@
 h3. Title: AL2-7: Interactive Cost Estimation Dashboards, Hybrid Fleet Analytics, and Rate-Card Simulation
 
-*TARGET*: AgenticLens (presentation | web | components | state | analytics | tests)
+*GOAL*
 
-*Status*: Blocked
-*Blocked by*: AL2-6
-*Blocks*: None
+Analysts can switch cost views and simulate alternate rate cards without changing measured evidence or saved telemetry.
 
 *CONTEXT*
 
-With foundational rate-card configuration and domain cost approximation established in AL2-6, operators require multi-dimensional visualization and interactive controls across the web dashboard. Specifically, fleet overview aggregations, progression timelines, and cross-ticket comparison scatter plots currently operate solely on measured spend, preventing comparative ROI evaluations between teams using pay-per-token API keys and teams operating under flat-rate subscription models.
-
-*GOAL*
-
-Deliver rich interactive cost observability across the TypeScript dashboard, introducing a global Cost Mode toggle (`Measured Spend`, `Estimated Equivalent`, `Combined Hybrid`), dynamic scatter plot and progression re-projections, and an interactive rate-card simulation drawer allowing engineers to model pricing changes on historical token traces.
-
-*VERTICAL SLICE SCOPE*
-
-* Domain Core & Aggregations: Extend fleet rollouts and comparison projection helpers in `internal/domain` to support parameterized cost mode selection (`CostDisplayMode`). Provide pure projection functions for fleet-level measured vs estimated vs hybrid totals.
-* Boundary Adapter & API: Extend HTTP query parameters on `/api/fleet`, `/api/workspaces`, and comparison endpoints to support `?cost_mode=measured|estimated|hybrid` and simulation overrides.
-* Web Presentation & State: Implement global `CostModeSelector` component in `AppHeader.tsx` or view action bars, persisting preference in local storage. Update `FleetOverview.tsx`, `TicketProgressionChart.tsx`, and `TicketComparisons.tsx` (scatter plot X-axis and comparison cards) to dynamically switch axes and series data based on selected cost mode. Add `RateCardDrawer.tsx` to simulate alternate model pricing scenarios in real time.
-* Quality: Vitest component and interaction tests for `CostModeSelector`, chart re-projections, and `RateCardDrawer`. Full typecheck and verification with `make`.
+AL2-6 supplies cost provenance and rate-card estimates. Fleet, progression and comparison views need consistent projections so subscription-equivalent estimates are not mistaken for measured spend.
 
 *ACCEPTANCE CRITERIA*
 
-* Operators can toggle between `Measured Spend`, `Estimated Equivalent`, and `Combined Hybrid` across Fleet Overview and Ticket Comparisons.
-* Scatter plot X-axis and data points dynamically re-scale and update when switching cost modes.
-* Chart tooltips and comparison cards explicitly indicate whether displayed values reflect measured spend, estimated rate cards, or a hybrid blend.
-* Rate card simulation drawer allows testing alternate rate values against workspace token totals without mutating configuration files.
-* TypeScript strict mode passes with zero `any`; full test suite passes with `make`.
+* Provide Measured Spend, Estimated Equivalent and Combined Hybrid modes across fleet, progression and comparisons, retaining the user preference on refresh. The default preserves current measured-spend behavior.
+* Measured shows recorded billing with coverage. Estimated shows eligible rate-card estimates with coverage. Hybrid combines measured facts and estimates for uncovered eligible facts once each; it never adds a second estimate over already measured spend. Unknowns remain explicit.
+* HTTP fleet/workspace/comparison projections accept cost_mode=measured|estimated|hybrid consistently. Mode changes update chart scales, coordinates, cards and tooltips with the selected basis clearly labeled; preserve ticket identity and existing filters.
+* A rate-card simulation drawer validates alternate finite nonnegative rates and projects historical token categories without writing configuration, measured facts or ledgers. Reset restores the saved baseline; unmatched/unknown inputs remain unavailable.
+* Cost-mode and simulation changes handle loading, failures and stale responses without relabeling old values as the new projection. Recorded estimates and temporary simulation values are distinguishable, including for partial mixed-harness history.
 
-*DEFINITION OF DONE*
+*Status*: Blocked
+*Blocked by*: AL2-6
+*Work type*: feat
 
-* Code and tests merged to target branch.
-* Quality gates passing (`make`).
-* Go and TypeScript type checking clean with zero any.
-* End-to-end dashboard verified with embedded binary.
+*IMPLEMENTATION NOTES*
 
-*DEVELOPMENT STATE REVIEW (2026-11-05)*
+No financial return claim is implied by an API-equivalent estimate. Preserve AL2-6 token-category, provenance and no-double-counting semantics. Pure calculations belong to domain projections; avoid independent pricing arithmetic in each view.
 
-Still blocked by AL2-6. Current cost views expose observed cost/coverage, not CostDisplayMode or rate-card simulation. Simulation must not rewrite measured evidence or shared ledgers.
-
-Evidence and review limits: [PO-19 reconciliation](../../PO-19/SPEC.md), merged baseline `03f5b05d`. This planning review does not certify runtime behavior or close unverified acceptance criteria.
+Follow [engineering rules](../../../TECHNICAL_GUIDELINES.md) and [regression boundaries](../../../docs/REGRESSION_PREVENTION.md). [PO-19](../../PO-19/SPEC.md) preserves the earlier development reconciliation; historical observations require revalidation, not an assumption of current runtime support.

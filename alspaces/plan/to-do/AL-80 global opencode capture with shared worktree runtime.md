@@ -1,30 +1,12 @@
 h3. Title: AL-80: Deliver global OpenCode capture using the shared worktree runtime
 
-*TARGET*: AgenticLens (Domain Integration / OpenCode Source Adapter / TypeScript Plugin / Native CLI / Worker / Setup Distribution / Tests)
-
-*Status*: Blocked
-*Work type*: feat
-*Priority*: P1
-*Blocked by*: AL-79
-*Blocks*: None
-*Origin*: PO-20, reclassified from GEN-22 after the user closed the capture design review.
-*Specification*: [PO-20 SPEC.md](../../PO-20/SPEC.md), F1-F6; [confirmed discussion](../../PO-20/CAPTURE_VISION_AND_GAPS.md).
-*Related*: AL-63 source-family audit and AL-78 native feedback remain independent. Do not extrapolate historical source-schema support into untested plugin/live support.
-
-*CONTEXT*
-
-The existing OpenCode plugin embeds installing-project/store/state paths. A machine-global plugin must serve actual session worktrees without binding them to the server's cwd or requiring a copied project plugin/manifest. AL-79 supplies the native configuration, routing, binary, binding and publication behavior; this slice adds the OpenCode integration rather than duplicating that logic in TypeScript.
-
 *GOAL*
 
 Install the OpenCode integration once in the effective user plugin directory and demonstrate a native root/child session in configured base/worktrees reaching the shared collector and publishing ticket metrics with the exact PO-20 policy.
 
-*VERTICAL SLICE SCOPE*
+*CONTEXT*
 
-* Domain Core: connect native OpenCode identities, explicit binding and proven-parent relationships to the shared policies from AL-79; preserve pure core decisions and owner/snapshot semantics.
-* Boundary Adapters: global OpenCode loading, per-session context/source extraction, SDK/plugin binding surface, selected source families, bounded native handoff and worker integration.
-* Presentation: thin strictly typed TypeScript plugin gives the agent exact-session binding requests/tools; CLI/setup/status provides actionable installation/source/configuration and publication outcomes. No new dashboard feature is required.
-* Quality: actual global plugin discovery and native root/child evidence, plus isolated TypeScript/process/Go adapter regression coverage and cross-harness portable history checks.
+The existing OpenCode plugin embeds installing-project/store/state paths. A machine-global plugin must serve actual session worktrees without binding them to the server's cwd or requiring a copied project plugin/manifest. AL-79 supplies the native configuration, routing, binary, binding and publication behavior; this slice adds the OpenCode integration rather than duplicating that logic in TypeScript.
 
 *ACCEPTANCE CRITERIA*
 
@@ -50,9 +32,14 @@ h4. Native parity and regressions
 * Ensure the Codex path from AL-79 and manual CLI still operate with the same shared configuration/metrics semantics. Copy a valid mixed-harness ledger without original private capture/source state and preserve supported recorded facts while refreshing only complete available owners.
 * Fixtures use isolated user config/cache/state destinations, zero domain mocks, strict TypeScript and meaningful existing test recipients. No test depends on live PO/ticket workspace contents.
 
-*DEFINITION OF DONE*
+*Status*: Blocked
+*Blocked by*: AL-79
+*Specification*: [PO-20 SPEC.md](../../PO-20/SPEC.md), F1-F6; [confirmed discussion](../../PO-20/CAPTURE_VISION_AND_GAPS.md).
+*Work type*: feat
+*Priority*: P1
 
-* Start in a separate agentic-lens-dev session after AL-79 and an approved developer contract. Do not recreate common policy logic or absorb unrelated AL-63/AL-78 scope.
-* Complete global OpenCode root/child-to-publication behavior and preserve Codex parity; update setup/operator documentation and packaged copies at their canonical sources. Describe tested interfaces and remaining limits accurately.
-* Pass relevant Go/TypeScript/native integration checks, revision-specific focused independent review and required make. Apply frontend/embedded build rules if affected; keep supported UI/API consumers functional.
-* Publish implementation PR and source-grounded session telemetry. Development verification stays in tests/evidence, not a production certification step. No model loop, automatic runtime download, implicit worktree recreation or automatic state deletion is introduced.
+*IMPLEMENTATION NOTES*
+
+*Related*: AL-63 source-family audit and AL-78 native feedback remain independent. Do not extrapolate historical source-schema support into untested plugin/live support.
+
+[Engineering rules](../../../TECHNICAL_GUIDELINES.md) and [relevant regression boundaries](../../../docs/REGRESSION_PREVENTION.md) apply. Historical findings require revalidation; this rewrite is not runtime verification or implementation approval.

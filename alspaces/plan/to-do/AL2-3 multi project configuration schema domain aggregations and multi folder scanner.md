@@ -1,43 +1,27 @@
 h3. Title: AL2-3: Multi-Project Configuration Schema, Domain Aggregations, and Multi-Folder Scanner
 
-*TARGET*: AgenticLens (domain | adapters | cli | config | tests)
+*GOAL*
+
+Engineering leads can scan several local projects in one invocation and receive correct per-project and combined telemetry.
+
+*CONTEXT*
+
+The existing project name and single-project scanner do not provide multi-project identity or configuration isolation. Identical ticket IDs in two repositories must remain distinguishable. This foundation enables remote ingestion and the project dashboard.
+
+*ACCEPTANCE CRITERIA*
+
+* Configuration supports projects with stable IDs, names and local locations, including each project’s workspace/configuration location. scan and server accept repeatable --project <id>=<path> and --projects-config. Explicit CLI definitions override the same configured ID; invalid/duplicate definitions within one input fail clearly.
+* Each project uses its own configuration, workspace root, ticket prefixes, roles and classification policy. Resolve configured relative locations from their declaring file; explicit relative CLI paths remain caller-relative.
+* Scan results and CLI tables identify project origin. Per-project filtering and combined rollups count each project/ticket identity once; matching ticket IDs across projects never overwrite each other.
+* A failed or unavailable project is diagnosed separately while valid projects remain usable. Preserve unavailable values and supported committed facts without original source logs or capture state.
+* Existing single-project invocations remain usable with their prior semantics. Deliver local-project scanning and aggregation without requiring remote fetch or a new dashboard selector.
 
 *Status*: Ready
 *Blocked by*: None
-*Blocks*: AL2-4, AL2-5
+*Work type*: feat
 
-*CONTEXT*
- 
-Currently, AgenticLens only scans a single workspace directory and reads a single root configuration manifest. Engineering leads managing multiple services or teams need a single AgenticLens instance to monitor and aggregate telemetry from multiple project directories. The platform requires a multi-project configuration schema, domain models tagged by project, project-level filtering, and a scanner capable of traversing multiple distinct project folders while respecting each project's individual configuration.
+*IMPLEMENTATION NOTES*
 
-*GOAL*
- 
-Implement the multi-project configuration schema in `.agenticlens-config.yaml` and CLI flags, tag all ingested ledgers with `ProjectID` and `ProjectName`, extend domain aggregations to support multi-project rollups and filtering, and implement a multi-folder repository scanner that loads per-project configuration manifests.
+AL2-4 owns remote synchronization and HTTP project registry/filtering; AL2-5 owns interactive project selection. Project identity is a read/aggregation context, not permission to rewrite committed ledger ownership. Concrete Go representations remain developer-owned.
 
-*VERTICAL SLICE SCOPE*
- 
-* Domain Core: Define `ProjectDefinition` (`ID`, `Name`, `SourceType`, `SourcePath`, `WorkspacesDir`, `ConfigPath`), `ProjectConfig.Projects []ProjectDefinition`. Extend `AgenticMetricsLedger` and `ScanReport` with `ProjectID string` and `ProjectName string`. Implement pure `FilterLedgersByProjects(ledgers []AgenticMetricsLedger, projectIDs []string) []AgenticMetricsLedger` and `CalculateMultiProjectSummary(ledgers []AgenticMetricsLedger) MultiProjectSummary`. Pure functions, zero I/O imports.
-* Boundary Adapter: Extend `internal/adapters/config/loader.go` to parse the `projects:` array from `.agenticlens-config.yaml`. Implement `ScanMultiProjectWorkspaces(projects []ProjectDefinition) MultiProjectScanReport` in `internal/adapters/repository.go` that iterates configured project paths, loads each project's specific `.agenticlens-config.yaml` for ticket prefixes and role mappings, and extracts workspaces.
-* Presentation: Add repeatable `--project <id>=<path>` flags and `--projects-config <path>` to `cmd/agentic-lens` for `scan` and `server` commands. Extend CLI table formatter to display project origin column when multiple projects are scanned.
-* Quality: Table-driven domain unit tests in `internal/domain` verifying multi-project filtering and summary rollups. Adapter tests in `internal/adapters` using `t.TempDir()` with multiple project directories each containing distinct configs and ticket prefixes, asserting accurate configuration scoping and ledger tagging.
-
-*ACCEPTANCE CRITERIA*
- 
-* `.agenticlens-config.yaml` supports defining an array of `projects:` with custom IDs, names, and workspace directories.
-* CLI commands accept `--project core=./workspaces --project billing=/path/to/billing` alongside config definitions.
-* The scanner loads each project's own `.agenticlens-config.yaml` and applies its ticket prefixes and role mappings to its ledgers.
-* Domain rollups accurately compute individual project metrics and aggregate cross-project totals.
-* All Go tests pass cleanly with zero mocks in domain logic (`go test -race ./...`).
-
-*DEFINITION OF DONE*
- 
-* Code and tests merged to target branch.
-* Quality gates passing (`make check`, `make test`, or `make`).
-* Go type checking clean with zero any.
-* Telemetry tested with `agentic-lens` CLI.
-
-*DEVELOPMENT STATE REVIEW (2026-11-05)*
-
-Not delivered: project-name configuration exists, but no ProjectDefinition/ScanMultiProjectWorkspaces contract was found. Single-project behavior remains the baseline; this ticket unlocks AL2-4 and AL2-5.
-
-Evidence and review limits: [PO-19 reconciliation](../../PO-19/SPEC.md), merged baseline `03f5b05d`. This planning review does not certify runtime behavior or close unverified acceptance criteria.
+Follow [engineering rules](../../../TECHNICAL_GUIDELINES.md) and [regression boundaries](../../../docs/REGRESSION_PREVENTION.md). [PO-19](../../PO-19/SPEC.md) preserves the earlier development reconciliation; historical observations require revalidation, not an assumption of current runtime support.

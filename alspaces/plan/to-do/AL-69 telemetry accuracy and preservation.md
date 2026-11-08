@@ -1,30 +1,12 @@
 h3. Title: AL-69: Correct telemetry accuracy and preserve evidence
 
-*TARGET*: AgenticLens (Domain / Source Adapters / CLI / Persistence / Anomaly Presentation)
+*GOAL*
 
-*Status*: Ready
-*Work type*: fix
-*Priority*: P2
-*Blocked by*: None
-*Blocks*: None
-*Origin*: REV-5 iteration 03 audit; consolidated draft batch at the user's request in iteration 09.
-*Findings*: AL-67 F05; ADP-06, ADP-10, ADP-12, CC-01, CC-03, CC-04, CC-08, FE-09, FE-12
-*Related*: AL-62 owns auxiliary-fact preservation and granular ownership; AL-63 owns capability parity; AL-67 owns broader architecture investigation. Reuse their contracts without duplicating their scope.
+Operators can trust tool-failure metrics, configured anomalies and source completeness without losing saved summary or trace evidence.
 
 *CONTEXT*
 
 Execution status, configured anomaly policy, partial-data diagnostics, summary preservation, source fidelity and anomaly attribution must agree across extraction, persistence and presentation.
-
-The source reports retain affected paths, triggers, evidence and limits at their frozen baseline. Revalidate before implementation; this specification does not claim remediation. Overlapping findings and test/architecture analyses are counted once in the current finding map.
-
-*GOAL*
-
-Correct the scoped behavior through its production consumers and verification boundaries, satisfying every acceptance section below.
-
-*VERTICAL SLICE SCOPE*
-
-* Own the changes through Domain / Source Adapters / CLI / Persistence / Anomaly Presentation, including real consumer behavior and regression proof. Keep pure calculations in the core and I/O in adapters; preserve supported stored facts when enrichment is unavailable.
-* Use bounded implementation and review iterations within this ticket. Grouping reduces tracking overhead; it does not authorize dropping acceptance cases, skipping focused reviews or calling a partial fix complete. No broad framework rewrite or new speculative abstraction is required.
 
 *ACCEPTANCE CRITERIA*
 
@@ -74,15 +56,16 @@ Fallback matching ignores contradictory tool identities; generic error totals ar
 * Test same-session/same-turn different tools, part-1 versus part-10, and read versus read_file in live and historical matching.
 * Only consecutive/retry rules supply streak counts. Test separated errors under a rate anomaly versus a real streak through badges, filtering, inspector and export; preserve original evidence text.
 
-* Add or repair the specific failing behavior oracle; reuse meaningful existing tests and map preserved assertions before any consolidation. Fixtures must be self-contained, never dependent on live ticket workspaces.
+*Status*: Ready
+*Blocked by*: None
+*Work type*: fix
+*Priority*: P2
 
-*DEFINITION OF DONE*
+*IMPLEMENTATION NOTES*
 
-* Implement in a separate agentic-lens-dev session with an approved concrete contract. Complete every scoped correction and evidence case; this planning session changes no application, test or runtime code.
-* Follow TECHNICAL_GUIDELINES.md and docs/REGRESSION_PREVENTION.md: strict typing, zero any/interface{}, zero emojis, no domain mocks and self-contained fixtures. Pass affected checks, independent focused review and the required make gate. Frontend changes require canonical build and standalone embedded-asset verification.
-* Preserve source identity, unavailable values, meaningful existing assertions and applicable local-only boundaries. Record tested revision, reproduction/probe evidence, reused checks and environment limits; update finding dispositions only after verified fixes. Publish the implementation PR and source-grounded telemetry.
+*Related*: AL-62 owns auxiliary-fact preservation and granular ownership; AL-63 owns capability parity; AL-67 owns broader architecture investigation. Reuse their contracts without duplicating their scope.
 
-*SOURCE EVIDENCE*
+*Findings*: AL-67 F05; ADP-06, ADP-10, ADP-12, CC-01, CC-03, CC-04, CC-08, FE-09, FE-12
 
 * [REV-5 ADAPTERS_REPORT.md](../../REV-5/iterations/03/ADAPTERS_REPORT.md)
 * [REV-5 CORE_CLI_REPORT.md](../../REV-5/iterations/03/CORE_CLI_REPORT.md)
@@ -95,3 +78,5 @@ Fallback matching ignores contradictory tool identities; generic error totals ar
 Retain the scoped corrections. Current domain/live.go still inspects crash phrases, and AL-67 F05 independently supports the child-lookup diagnostic gap. AL-62 lean ownership and AL-66 optional output are shipped baselines to preserve, not work to repeat.
 
 Evidence and review limits: [PO-19 reconciliation](../../PO-19/SPEC.md), merged baseline `03f5b05d`. This planning review does not certify runtime behavior or close unverified acceptance criteria.
+
+[Engineering rules](../../../TECHNICAL_GUIDELINES.md) and [relevant regression boundaries](../../../docs/REGRESSION_PREVENTION.md) apply. Historical findings require revalidation; this rewrite is not runtime verification or implementation approval.

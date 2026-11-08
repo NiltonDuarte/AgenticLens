@@ -1,30 +1,12 @@
 h3. Title: AL-70: Preserve configuration, paths and ticket identity
 
-*TARGET*: AgenticLens (Configuration / CLI / Git and OpenCode Adapters / HTTP Listener / Frontend Identity)
+*GOAL*
 
-*Status*: Ready
-*Work type*: fix
-*Priority*: P2
-*Blocked by*: None
-*Blocks*: None
-*Origin*: REV-5 iteration 03 audit; consolidated draft batch at the user's request in iteration 09.
-*Findings*: AL-67 F01, F02, F11; ADP-02, ADP-03, ADP-04, ADP-05, ADP-11, CC-05, CC-06, CC-07, D7, FE-01
-*Related*: AL-68 owns hook installation. Coordinate configuration changes while preserving its explicit session binding and local-only boundaries.
+Operators get the same configured paths, source and ticket identity in every command and view, with a local dashboard bound to loopback by default.
 
 *CONTEXT*
 
 Configuration must round-trip faithfully, retain path origin and explicit overrides, and give the same ticket/path identity to every consumer. The local dashboard must use a loopback default.
-
-The source reports retain affected paths, triggers, evidence and limits at their frozen baseline. Revalidate before implementation; this specification does not claim remediation. Overlapping findings and test/architecture analyses are counted once in the current finding map.
-
-*GOAL*
-
-Correct the scoped behavior through its production consumers and verification boundaries, satisfying every acceptance section below.
-
-*VERTICAL SLICE SCOPE*
-
-* Own the changes through Configuration / CLI / Git and OpenCode Adapters / HTTP Listener / Frontend Identity, including real consumer behavior and regression proof. Keep pure calculations in the core and I/O in adapters; preserve supported stored facts when enrichment is unavailable.
-* Use bounded implementation and review iterations within this ticket. Grouping reduces tracking overhead; it does not authorize dropping acceptance cases, skipping focused reviews or calling a partial fix complete. No broad framework rewrite or new speculative abstraction is required.
 
 *ACCEPTANCE CRITERIA*
 
@@ -79,15 +61,16 @@ The dashboard advertises localhost but binds all interfaces by default. The user
 * Prove standalone embedded UI and API access still work locally and assert the actual listener address.
 * Do not add authentication, a new remote-deployment mode or mandatory remote-host configuration. Preserve ADP-05 at P2 default hardening under the user's accepted scope.
 
-* Add or repair the specific failing behavior oracle; reuse meaningful existing tests and map preserved assertions before any consolidation. Fixtures must be self-contained, never dependent on live ticket workspaces.
+*Status*: Ready
+*Blocked by*: None
+*Work type*: fix
+*Priority*: P2
 
-*DEFINITION OF DONE*
+*IMPLEMENTATION NOTES*
 
-* Implement in a separate agentic-lens-dev session with an approved concrete contract. Complete every scoped correction and evidence case; this planning session changes no application, test or runtime code.
-* Follow TECHNICAL_GUIDELINES.md and docs/REGRESSION_PREVENTION.md: strict typing, zero any/interface{}, zero emojis, no domain mocks and self-contained fixtures. Pass affected checks, independent focused review and the required make gate. Frontend changes require canonical build and standalone embedded-asset verification.
-* Preserve source identity, unavailable values, meaningful existing assertions and applicable local-only boundaries. Record tested revision, reproduction/probe evidence, reused checks and environment limits; update finding dispositions only after verified fixes. Publish the implementation PR and source-grounded telemetry.
+*Related*: AL-68 owns hook installation. Coordinate configuration changes while preserving its explicit session binding and local-only boundaries.
 
-*SOURCE EVIDENCE*
+*Findings*: AL-67 F01, F02, F11; ADP-02, ADP-03, ADP-04, ADP-05, ADP-11, CC-05, CC-06, CC-07, D7, FE-01
 
 * [REV-5 ADAPTERS_REPORT.md](../../REV-5/iterations/03/ADAPTERS_REPORT.md)
 * [REV-5 CORE_CLI_REPORT.md](../../REV-5/iterations/03/CORE_CLI_REPORT.md)
@@ -101,3 +84,5 @@ The dashboard advertises localhost but binds all interfaces by default. The user
 Retain configuration/path/identity work. AL-67 F01/F02/F11 supplies recent composition evidence; http/server.go still binds :port. AL-59 source selection exists, so correct propagation rather than recreating selection.
 
 Evidence and review limits: [PO-19 reconciliation](../../PO-19/SPEC.md), merged baseline `03f5b05d`. This planning review does not certify runtime behavior or close unverified acceptance criteria.
+
+[Engineering rules](../../../TECHNICAL_GUIDELINES.md) and [relevant regression boundaries](../../../docs/REGRESSION_PREVENTION.md) apply. Historical findings require revalidation; this rewrite is not runtime verification or implementation approval.

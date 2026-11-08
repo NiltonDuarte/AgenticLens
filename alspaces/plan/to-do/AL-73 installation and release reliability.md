@@ -1,30 +1,12 @@
 h3. Title: AL-73: Make installation and release verification reliable
 
-*TARGET*: AgenticLens (Installer / Downloader / Packaged Setup / Release Packaging)
+*GOAL*
 
-*Status*: Ready
-*Work type*: fix
-*Priority*: P2
-*Blocked by*: None
-*Blocks*: None
-*Origin*: REV-5 iteration 03 audit; consolidated draft batch at the user's request in iteration 09.
-*Findings*: D1, D2, D5, D6
-*Related*: Coordinate with AL-68 hook installation so canonical packaging and updates retain hook assets regardless of landing order. AL-75 owns compiler and dependency reproducibility.
+Installers replace binaries only with verified release artifacts and report failures accurately; release verification rejects incomplete checksum inventories.
 
 *CONTEXT*
 
 Only verified artifacts should replace installed binaries, failures must retain truthful update state, and release manifests must cover every required artifact.
-
-The source reports retain affected paths, triggers, evidence and limits at their frozen baseline. Revalidate before implementation; this specification does not claim remediation. Overlapping findings and test/architecture analyses are counted once in the current finding map.
-
-*GOAL*
-
-Correct the scoped behavior through its production consumers and verification boundaries, satisfying every acceptance section below.
-
-*VERTICAL SLICE SCOPE*
-
-* Own the changes through Installer / Downloader / Packaged Setup / Release Packaging, including real consumer behavior and regression proof. Keep pure calculations in the core and I/O in adapters; preserve supported stored facts when enrichment is unavailable.
-* Use bounded implementation and review iterations within this ticket. Grouping reduces tracking overhead; it does not authorize dropping acceptance cases, skipping focused reviews or calling a partial fix complete. No broad framework rewrite or new speculative abstraction is required.
 
 *ACCEPTANCE CRITERIA*
 
@@ -45,15 +27,16 @@ A hashing failure hidden by a pipeline can publish a partial SHA256SUMS that rel
 * Use a fault-injected hashing command that emits one valid entry then fails; packaging and independent verification must reject partial coverage.
 * Preserve successful release packaging and host verification. No hosted release publication or tag mutation is needed to demonstrate this boundary.
 
-* Add or repair the specific failing behavior oracle; reuse meaningful existing tests and map preserved assertions before any consolidation. Fixtures must be self-contained, never dependent on live ticket workspaces.
+*Status*: Ready
+*Blocked by*: None
+*Work type*: fix
+*Priority*: P2
 
-*DEFINITION OF DONE*
+*IMPLEMENTATION NOTES*
 
-* Implement in a separate agentic-lens-dev session with an approved concrete contract. Complete every scoped correction and evidence case; this planning session changes no application, test or runtime code.
-* Follow TECHNICAL_GUIDELINES.md and docs/REGRESSION_PREVENTION.md: strict typing, zero any/interface{}, zero emojis, no domain mocks and self-contained fixtures. Pass affected checks, independent focused review and the required make gate. Frontend changes require canonical build and standalone embedded-asset verification.
-* Preserve source identity, unavailable values, meaningful existing assertions and applicable local-only boundaries. Record tested revision, reproduction/probe evidence, reused checks and environment limits; update finding dispositions only after verified fixes. Publish the implementation PR and source-grounded telemetry.
+*Related*: Coordinate with AL-68 hook installation so canonical packaging and updates retain hook assets regardless of landing order. AL-75 owns compiler and dependency reproducibility.
 
-*SOURCE EVIDENCE*
+*Findings*: D1, D2, D5, D6
 
 * [REV-5 DELIVERY_REPORT.md](../../REV-5/iterations/03/DELIVERY_REPORT.md)
 
@@ -62,3 +45,5 @@ A hashing failure hidden by a pipeline can publish a partial SHA256SUMS that rel
 Retain installer/checksum failure acceptance. FIX-16 and GEN-19 repaired release-candidate workflow behavior; that delivery does not establish installer artifact validation or complete checksum-manifest rejection.
 
 Evidence and review limits: [PO-19 reconciliation](../../PO-19/SPEC.md), merged baseline `03f5b05d`. This planning review does not certify runtime behavior or close unverified acceptance criteria.
+
+[Engineering rules](../../../TECHNICAL_GUIDELINES.md) and [relevant regression boundaries](../../../docs/REGRESSION_PREVENTION.md) apply. Historical findings require revalidation; this rewrite is not runtime verification or implementation approval.
