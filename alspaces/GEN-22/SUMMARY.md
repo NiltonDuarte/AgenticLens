@@ -41,15 +41,15 @@ there was no other-harness history. The open turn remains provisional; unavailab
 roles/pricing and post-extraction delivery calls remain coverage limits.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 5
-- **Active Agent Duration:** 32m 0s (recorded duration including 538s provisional)
-- **Context Window Health:** HEALTHY — Root agent peak 163.0k tokens (36% of 450k healthy ceiling, 0 compactions) | Subagents peak 37.4k (Default)
+- **Software Development Life Cycle Iterations:** 8
+- **Active Agent Duration:** 34m 45s (recorded duration including 46s provisional)
+- **Context Window Health:** HEALTHY — Root agent peak 180.0k tokens (40% of 450k healthy ceiling, 0 compactions) | Subagents peak 37.4k (Default)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 1.0 avg turns/run (peak: 1 turns) | Default 1.0
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 10,883 reasoning tokens (21.1% of generated output)
-- **Tool Health & Self-Correction:** 100 tool calls (3 self-corrections, 97.0% success rate)
+- **Reasoning Effort:** 12,356 reasoning tokens (21.4% of generated output)
+- **Tool Health & Self-Correction:** 107 tool calls (3 self-corrections, 97.2% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** No execution anomalies detected (clean session).
@@ -61,15 +61,16 @@ roles/pricing and post-extraction delivery calls remain coverage limits.
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **Unknown** | 1 | 132,423 | 39,048 | 9,317,248 | 98.6% | 163.0k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Unknown** | 1 | 145,703 | 43,809 | 11,172,736 | 98.7% | 180.0k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **default** | 1 | 37,433 | 1,538 | 139,776 | 78.9% | 37.4k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **2** | **169,856** | **40,586** | **9,457,024** | **98.2%** | **163.0k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations)** |
+| **Total** | **2** | **183,136** | **45,347** | **11,312,512** | **98.4%** | **180.0k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 2 | 169,856 | 40,586 | 9,457,024 | 98.2% | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **Total** | **2** | **169,856** | **40,586** | **9,457,024** | **98.2%** | **Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations)** |
+| **gpt-6.1-sol** | 2 | 183,136 | 45,347 | 11,312,512 | 98.4% | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **Total** | **2** | **183,136** | **45,347** | **11,312,512** | **98.4%** | **Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations)** |
 
-Capture observation finalized: 2026-11-08T16:12:22.388058918Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 1; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 1; reserved bytes: 2300480. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
-Owner codex/01a1bbce-df16-7632-ac2d-9a565b47e918: current; last successful source read 2026-11-08T16:12:22.378375132Z; accepted source checkpoint 2026-11-08T16:12:22.287Z.
+Capture observation finalized: 2026-11-08T16:29:00.266854387Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 2; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 2; reserved bytes: 2995528. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
+Owner codex/01a1bbce-df16-7632-ac2d-9a565b47e918: current; last successful source read 2026-11-08T16:29:00.247034484Z; accepted source checkpoint 2026-11-08T16:29:00.125Z.
+Owner codex/01a1bbe9-614e-7450-9a71-4d311f68c211: current; last successful source read 2026-11-08T16:29:00.179021095Z; accepted source checkpoint 2026-11-08T16:07:34.196Z.
