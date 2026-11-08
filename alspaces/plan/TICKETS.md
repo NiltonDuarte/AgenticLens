@@ -6,6 +6,14 @@ Reconciled 2026-11-05 against merged `origin/main` at `03f5b05d` and open PRs. S
 
 ## Ready
 
+- **AL-79**: Add metric tags, dashboard filters and comparison coloring
+  - **Subsystem**: Domain / Config / CLI / Persistence / HTTP / Dashboard
+  - **Priority**: P2
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: [AL-79 add metric tags filters and comparison coloring.md](to-do/AL-79%20add%20metric%20tags%20filters%20and%20comparison%20coloring.md)
+
 - **AL-78**: Make open-turn feedback effective across Codex and OpenCode
   - **Subsystem**: CLI Feedback / Native Harness Lifecycle / Capture and Metrics Refresh
   - **Priority**: P2
