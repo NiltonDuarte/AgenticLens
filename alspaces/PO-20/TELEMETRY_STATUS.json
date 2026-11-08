@@ -1,0 +1,18 @@
+{
+  "status": "refreshed",
+  "ticket_id": "PO-20",
+  "ticket_type": "docs",
+  "source": "codex",
+  "root_session_id": "01a1b268-f31e-7503-a954-4f4fd77370b2",
+  "expected_child_session_id": "01a1b291-2ff1-7830-81d8-7d0dff387ee3",
+  "source_facts_refreshed": true,
+  "snapshot_updated_at": "2026-11-08T14:34:10.572391+00:00",
+  "registry_reset": "User-authorized deletion after verified SQLite backup outside Git; generate recreated the configured registry. Harness source stores were preserved.",
+  "explicit_capture_dir": "/home/niltonduarte/.agenticlens/state",
+  "remaining_limits": [
+    "Snapshot excludes activity after extraction.",
+    "Live automatic hook capture remains unverified.",
+    "Unavailable source facts and costs remain unavailable rather than inferred.",
+    "Retained local installation metadata still reports coordinate drift; explicit state selection permits manual generation but does not repair automatic integration."
+  ]
+}
