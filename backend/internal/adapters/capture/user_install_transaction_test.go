@@ -125,20 +125,28 @@ func readUserTransactionJournal(t *testing.T, root string) userInstallJournal {
 func stopUserTransactionAt(t *testing.T, f userTransactionFixture, target string) error {
 	t.Helper()
 	interrupted := errors.New("test interruption after durable production checkpoint")
+	var changePaths []string
 	_, err := installUserCodexWithCheckpoint(context.Background(), f.options, func(stage userInstallStage, index int) error {
-		if target == "journaled" && stage == userInstallJournaled {
-			return interrupted
+		if stage == userInstallJournaled {
+			// Production writes the complete journal once before applying changes.
+			// Keep its actual path order without decoding executable bytes per prefix.
+			journal := readUserTransactionJournal(t, f.options.InstallRoot)
+			for _, change := range journal.Changes {
+				changePaths = append(changePaths, change.Path)
+			}
+			if target == "journaled" {
+				return interrupted
+			}
 		}
 		if target == "before-commit" && stage == userInstallBeforeCommit {
 			return interrupted
 		}
 		if stage == userInstallApplied {
-			journal := readUserTransactionJournal(t, f.options.InstallRoot)
-			if index < 0 || index >= len(journal.Changes) {
+			if index < 0 || index >= len(changePaths) {
 				t.Fatalf("applied checkpoint lacks actual journal change: %d", index)
 			}
 			desired := map[string]string{"legacy-hooks": f.legacyHooks, "dispatcher": f.dispatcher, "home-hooks": filepath.Join(f.options.Home, "hooks.json")}[target]
-			if journal.Changes[index].Path == desired {
+			if changePaths[index] == desired {
 				return interrupted
 			}
 		}
