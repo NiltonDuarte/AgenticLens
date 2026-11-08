@@ -17,6 +17,8 @@ CLI feedback in the observed Codex run printed a checkpoint warning but did not 
 * If an installed harness cannot support the required workflow, expose the specific unsupported boundary honestly and provide an actionable fallback. Do not claim completion solely because a diagnostic printed or a command exited successfully.
 * Keep the ledger lean: existing duration total plus optional positive provisional_seconds, no reasoning field or persisted feedback/provenance expansion. Preserve unavailable owners, other harnesses and portable recorded facts.
 
+* When the workflow changes, update canonical setup/operator/developer guidance to explain what the agent does, what capture refreshes automatically and which native boundaries remain unsupported.
+
 *Status*: Ready
 *Blocked by*: None
 *Work type*: fix
@@ -25,6 +27,8 @@ CLI feedback in the observed Codex run printed a checkpoint warning but did not 
 *IMPLEMENTATION NOTES*
 
 *Related*: AL-64 duration accounting and owner-scoped checkpoint feedback; AL-68 automatic lifecycle capture. Revalidate their delivered revisions before implementation.
+
+Excluded from this ticket:
 
 * Development-only capture installation, local build distribution, changing the shared release pin, migrating/resetting existing capture state, or a general installer redesign. The unimplemented AL-64 development-install proposal was removed at the user's direction; this ticket does not carry that implementation forward.
 * T3-specific orchestration, a generic autonomous scheduler, forced rollover of arbitrary sessions, frontend reasoning behavior, or fabricated live-process proof.

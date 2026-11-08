@@ -19,3 +19,7 @@ The new skill supersedes the old presentation structure, not accepted product po
 5. Generate final Codex telemetry with a literal nonce and docs classification, inspect root/source/session coverage, commit, push and open the PO planning PR.
 
 Selected regression boundaries: configured workspace root; ticket relocation independent of application/tests; portable ledger policy; explicit unavailable evidence; historical versus current source claims. Verification results and delivery limits belong in SUMMARY.md. This is author verification, not an independent code review.
+
+Document verification passed against baseline `731de946`: 27 stable IDs/titles; required section order; valid local links; unchanged status/prerequisite fields; reciprocal acyclic dependency graph; finding fields and all legacy correction/capture acceptance bullets retained. AL2 requirements were reviewed manually against their original scope and acceptance. `origin/main` remained `731de946`; merging after planning commit `2f5a9920` was a no-op. Only AL-78 wording and PO artifacts changed afterward; application/test/runtime inputs to the integrated gate are unchanged.
+
+Integrated `make` completed with exit 0: static checks, Go race/integration lanes, frontend 190 unit + 678 integration tests, release/install/capture/orchestration checks, asset sync and multi-platform builds passed. No gate stage skipped. npm advisory/bundle and React act warnings were observed, not remediated. Application inputs remained unchanged; no native capture proof is claimed.

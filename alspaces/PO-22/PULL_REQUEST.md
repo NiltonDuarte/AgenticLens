@@ -4,4 +4,6 @@ The active roadmap mixed user outcomes with implementation recipes and repeated 
 
 Preserve existing IDs, accepted consolidated scopes, finding attribution, evidence links and all dependency edges. Clarify archive safety, project selection, measured versus estimated costs and native reasoning settings without implementing them. Historical completed/discarded records and earlier initiative specifications remain intact.
 
+Document consistency checks cover all 27 tickets, local links and the dependency graph; the required integrated gate is recorded in the summary.
+
 [Planning decisions and dispositions](alspaces/PO-22/SPEC.md) explain scope and newly explicit draft defaults. [Verification and limits](alspaces/PO-22/SUMMARY.md) record document checks and the integrated gate. This is planning delivery; application implementation requires separate development sessions.
