@@ -16,35 +16,35 @@ Scope follows the [contract](CONTRACT.md) and current
 [PO format](iterations/02/PLAN.md) and [skill ownership](iterations/03/PLAN.md).
 Historical tickets and metric formatting remain unchanged.
 
-Verification: `make` passed on integrated revision `4c88edf3`: Go race suites,
-frontend units/integration, static and Python workflow checks, embedded assets
-and platform builds. Integration added only PO-21 planning artifacts from main.
-Changed-document links/anchors, all four edited skills' metadata and
-`git diff --check` passed. No active link to the removed guide remains.
+Verification: `make` passed on `e0bdb731` after integration with origin/main
+(already current): Go race suites, frontend units/integration, static and Python
+workflow checks, embedded assets and platform builds. All active instruction
+links/anchors, the three edited skills' metadata and `git diff --check` passed.
+Prior results remain valid for unchanged technical/review protocols.
 
-An independent instruction walkthrough (gpt-6.1-sol/high, inherited settings)
+An independent instruction walkthrough (gpt-6.1-sol/high, source-observed settings)
 resolved four cases without contradictions: resumed approval with incomplete
 review, ad hoc delivery, PO draft consolidation/session separation and management
 merge authority. It did not inspect live ticket/PR readiness or prove production
-execution quality. Iteration 04 links/anchors, skill metadata and whitespace
-checks passed; integrated make is pending.
+execution quality. Hosted CI has not been observed for this update.
 
-Telemetry: source Codex; expected root `01a1bbce-df16-7632-ac2d-9a565b47e918`
-was confirmed in local source metadata, with no source-linked children and no
-subagents dispatched. Generated membership matches that root exactly. No prior
-GEN-22 ledger or other-harness history existed. The open turn remains provisional;
-role and pricing are unavailable, and post-extraction delivery calls are excluded.
+Telemetry source metadata confirms root `01a1bbce-df16-7632-ac2d-9a565b47e918`
+and independent-walkthrough child `01a1bbe9-614e-7450-9a71-4d311f68c211`, with
+native parent lineage. Final extraction matches both sessions and preserves
+all prior session identities;
+there was no other-harness history. The open turn remains provisional; unavailable
+roles/pricing and post-extraction delivery calls remain coverage limits.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 4
-- **Active Agent Duration:** 21m 31s (recorded duration including 383s provisional)
-- **Context Window Health:** HEALTHY — Root agent peak 122.5k tokens (27% of 450k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Software Development Life Cycle Iterations:** 5
+- **Active Agent Duration:** 32m 0s (recorded duration including 538s provisional)
+- **Context Window Health:** HEALTHY — Root agent peak 163.0k tokens (36% of 450k healthy ceiling, 0 compactions) | Subagents peak 37.4k (Default)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
-- **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
+- **Subagent Turn Velocity & Thrashing:** 1.0 avg turns/run (peak: 1 turns) | Default 1.0
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 5,688 reasoning tokens (18.8% of generated output)
-- **Tool Health & Self-Correction:** 70 tool calls (2 self-corrections, 97.1% success rate)
+- **Reasoning Effort:** 10,883 reasoning tokens (21.1% of generated output)
+- **Tool Health & Self-Correction:** 100 tool calls (3 self-corrections, 97.0% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** No execution anomalies detected (clean session).
@@ -56,14 +56,15 @@ role and pricing are unavailable, and post-extraction delivery calls are exclude
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **Unknown** | 1 | 101,285 | 24,517 | 5,625,088 | 98.2% | 122.5k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **1** | **101,285** | **24,517** | **5,625,088** | **98.2%** | **122.5k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations)** |
+| **Unknown** | 1 | 132,423 | 39,048 | 9,317,248 | 98.6% | 163.0k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **default** | 1 | 37,433 | 1,538 | 139,776 | 78.9% | 37.4k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **2** | **169,856** | **40,586** | **9,457,024** | **98.2%** | **163.0k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 1 | 101,285 | 24,517 | 5,625,088 | 98.2% | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **1** | **101,285** | **24,517** | **5,625,088** | **98.2%** | **Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations)** |
+| **gpt-6.1-sol** | 2 | 169,856 | 40,586 | 9,457,024 | 98.2% | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **Total** | **2** | **169,856** | **40,586** | **9,457,024** | **98.2%** | **Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations)** |
 
-Capture observation finalized: 2026-11-08T16:02:51.140744662Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 1; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 1; reserved bytes: 1695023. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
-Owner codex/01a1bbce-df16-7632-ac2d-9a565b47e918: current; last successful source read 2026-11-08T16:02:51.132302957Z; accepted source checkpoint 2026-11-08T16:02:51.011Z.
+Capture observation finalized: 2026-11-08T16:12:22.388058918Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 1; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 1; reserved bytes: 2300480. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
+Owner codex/01a1bbce-df16-7632-ac2d-9a565b47e918: current; last successful source read 2026-11-08T16:12:22.378375132Z; accepted source checkpoint 2026-11-08T16:12:22.287Z.
