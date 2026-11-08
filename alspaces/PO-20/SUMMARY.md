@@ -12,10 +12,15 @@ No application code, tests, runtime scripts or machine-local integrations are ch
 - [CAPTURE_VISION_AND_GAPS.md](CAPTURE_VISION_AND_GAPS.md): closed decision record and observed integration gaps.
 - [AL-79](../plan/to-do/AL-79%20native%20user%20level%20codex%20capture%20across%20worktrees.md): Ready; shared native runtime and end-to-end user-level Codex capture.
 - [AL-80](../plan/to-do/AL-80%20global%20opencode%20capture%20with%20shared%20worktree%20runtime.md): Blocked by AL-79; global OpenCode integration using that runtime.
+- [AL-81](../plan/to-do/AL-81%20decouple%20manual%20generate%20from%20capture%20registry.md): Ready; manual generation independent of capture state.
 - [Roadmap](../plan/TICKETS.md): ticket statuses and reciprocal dependency metadata.
 - [Draft PR #125](https://github.com/NiltonDuarte/AgenticLens/pull/125): specification and backlog delivery on `docs/PO-20-user-level-worktree-capture`.
 
 Two tickets keep delivery vertical: the shared runtime ships with a usable Codex integration, then OpenCode adds its distinct plugin binding path. Configuration, routing, binding and publication policies are implemented once. No separate horizontal configuration, UI or testing tickets are introduced. Existing roadmap tickets remain unchanged.
+
+## Manual-generation clarification
+
+The user requested AL-81 to make manual generate independent of the AgenticLens capture registry. The correction is Ready with no prerequisites and is specified in F7. Harness source access, source validation, portable ledger rules and publication serialization remain required; automatic capture continues to enforce registry bindings. This adds one focused correction alongside the two capture integration deliveries, without application changes.
 
 ## Agreed behavior
 
@@ -35,22 +40,22 @@ Local investigation demonstrated a Linux amd64 build and checksum-verified offli
 
 ## Session telemetry
 
-Fresh native extraction for PO-20 is incomplete because the source session has an existing conflicting ticket binding and the CLI offers no supported reticket operation. Capture bindings and source identities were not altered to bypass that guard.
+Native `generate --source codex` refreshed PO-20 from the authoritative root and planner-child rollouts after the user requested deletion of the AgenticLens capture registry. A verified SQLite backup was retained outside Git; only the registry and its SQLite sidecars were deleted. Harness source stores and existing ledger history were preserved. The CLI recreated its registry and recorded PO-20 manual selections.
 
-The ledger retains the last native snapshot with PO-20 ticket metadata; source facts and timestamps are unchanged. [TELEMETRY_STATUS.json](TELEMETRY_STATUS.json) records its provenance and incomplete refresh. Later PO activity is not included. Rendering retained facts does not establish fresh extraction or working automatic capture.
+The first post-reset attempt reported stale installation coordinates. Explicitly selecting the configured state base with `--capture-dir /home/niltonduarte/.agenticlens/state` allowed generation using the same configured project namespace. The retained installation metadata still reports coordinate drift; automatic integration has not been repaired. No application code, configuration or source identity was changed. Live automatic hooks remain unverified; successful manual generation does not establish live capture coverage.
 
-The retained Codex root is `01a1b268-f31e-7503-a954-4f4fd77370b2`; its source-proven planner child is `01a1b291-2ff1-7830-81d8-7d0dff387ee3`. Their identities and parent link are preserved. Raw transcripts remain outside Git.
+The refreshed ledger contains Codex root `01a1b268-f31e-7503-a954-4f4fd77370b2` and source-proven planner child `01a1b291-2ff1-7830-81d8-7d0dff387ee3`, with the parent link preserved. [TELEMETRY_STATUS.json](TELEMETRY_STATUS.json) records the extraction cutoff and remaining limits. It is a current source snapshot, not final accounting for activity after extraction. Raw transcripts remain outside Git.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 115
-- **Active Agent Duration:** 1h 41m (recorded duration including 111s provisional)
-- **Context Window Health:** ELEVATED — Root agent peak 385.6k tokens (86% of 450k healthy ceiling, 0 compactions) | Subagents peak 208.5k (Planner)
+- **Software Development Life Cycle Iterations:** 126
+- **Active Agent Duration:** 2h 4m (recorded duration including 190s provisional)
+- **Context Window Health:** ELEVATED — Root agent peak 450.0k tokens (100% of 450k healthy ceiling, 1 compactions) | Subagents peak 208.5k (Planner)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 1.0 avg turns/run (peak: 1 turns) | Planner 1.0
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 81,821 reasoning tokens (30.3% of generated output)
-- **Tool Health & Self-Correction:** 302 tool calls (11 self-corrections, 96.4% success rate)
+- **Reasoning Effort:** 98,921 reasoning tokens (29.9% of generated output)
+- **Tool Health & Self-Correction:** 347 tool calls (18 self-corrections, 94.8% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
@@ -65,11 +70,15 @@ The retained Codex root is `01a1b268-f31e-7503-a954-4f4fd77370b2`; its source-pr
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
 | **planner** | 1 | 388,552 | 16,674 | 5,996,160 | 93.9% | 208.5k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Unknown** | 1 | 799,940 | 171,350 | 103,065,600 | 99.2% | 385.6k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **2** | **1,188,492** | **188,024** | **109,061,760** | **98.9%** | **385.6k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations)** |
+| **Unknown** | 1 | 938,212 | 215,400 | 115,524,224 | 99.2% | 450.0k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **2** | **1,326,764** | **232,074** | **121,520,384** | **98.9%** | **450.0k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 2 | 1,188,492 | 188,024 | 109,061,760 | 98.9% | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **Total** | **2** | **1,188,492** | **188,024** | **109,061,760** | **98.9%** | **Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations)** |
+| **gpt-6.1-sol** | 2 | 1,326,764 | 232,074 | 121,520,384 | 98.9% | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **Total** | **2** | **1,326,764** | **232,074** | **121,520,384** | **98.9%** | **Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations)** |
+
+Capture observation finalized: 2026-11-08T14:34:07.904911895Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 2; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 2; reserved bytes: 10949775. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
+Owner codex/01a1b291-2ff1-7830-81d8-7d0dff387ee3: current; last successful source read 2026-11-08T14:34:07.690601615Z; accepted source checkpoint 2026-11-06T20:41:25.096Z.
+Owner codex/01a1b268-f31e-7503-a954-4f4fd77370b2: current; last successful source read 2026-11-08T14:34:07.885465142Z; accepted source checkpoint 2026-11-08T14:34:07.557Z.

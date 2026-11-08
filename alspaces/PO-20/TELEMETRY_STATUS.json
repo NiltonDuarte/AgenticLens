@@ -1,18 +1,18 @@
 {
-  "status": "incomplete",
-  "reason": "Fresh native generation refused because the selected source session is already bound to GEN-22.",
-  "requested_ticket_id": "PO-20",
-  "requested_ticket_type": "docs",
+  "status": "refreshed",
+  "ticket_id": "PO-20",
+  "ticket_type": "docs",
+  "source": "codex",
   "root_session_id": "01a1b268-f31e-7503-a954-4f4fd77370b2",
   "expected_child_session_id": "01a1b291-2ff1-7830-81d8-7d0dff387ee3",
-  "retained_native_snapshot": {
-    "git_revision": "c487364e",
-    "path": "alspaces/GEN-22/agentic_metrics.json",
-    "completed_at": "2026-11-08T00:28:47.275711+00:00",
-    "updated_at": "2026-11-08T00:28:47.275711+00:00"
-  },
-  "reclassification": "User explicitly requested moving the same initiative from GEN-22 to PO-20. Only ticket_id, ticket_type and ticket_title changed.",
-  "source_facts_refreshed": false,
-  "capture_binding_modified": false,
-  "remaining_limit": "PO-phase activity after the retained snapshot is not included. A future supported reticket/recovery operation is required for a fresh PO-20 extraction."
+  "source_facts_refreshed": true,
+  "snapshot_updated_at": "2026-11-08T14:34:10.572391+00:00",
+  "registry_reset": "User-authorized deletion after verified SQLite backup outside Git; generate recreated the configured registry. Harness source stores were preserved.",
+  "explicit_capture_dir": "/home/niltonduarte/.agenticlens/state",
+  "remaining_limits": [
+    "Snapshot excludes activity after extraction.",
+    "Live automatic hook capture remains unverified.",
+    "Unavailable source facts and costs remain unavailable rather than inferred.",
+    "Retained local installation metadata still reports coordinate drift; explicit state selection permits manual generation but does not repair automatic integration."
+  ]
 }

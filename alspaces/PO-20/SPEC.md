@@ -81,6 +81,15 @@ This is the same initiative originally tracked as GEN-22, explicitly reclassifie
 - Retain all existing capture state after worktree deletion, complete and incomplete, until explicit cleanup. Do not recreate the checkout, redirect publication or delete even fully published/inactive state automatically. Report missing publication destinations.
 - Automatic publication does not imply automatic Git commits. Binary-cache cleanup is a separate concern; do not introduce unrequested cleanup behavior.
 
+### F7. Ad hoc manual generation without capture-state dependency
+
+- Manual `generate` reads the selected harness source, project/metrics configuration and existing output ledger without reading, creating or modifying the AgenticLens capture registry. No capture installation, enablement or capture-only state configuration is required.
+- Explicit manual session/ticket selection does not mutate automatic capture bindings. Stale/conflicting bindings, absent/corrupt registries and unavailable capture-state paths do not block manual generation.
+- Preserve source/project validation, root/child extraction, output validation, atomic publication, shared writer serialization and the portable ledger contract. Unavailable/partial source facts are not fabricated or treated as zero.
+- OpenCode's source SQLite database remains a legitimate telemetry input; Codex uses its source rollout files. Registry independence concerns AgenticLens's operational database only.
+- Automatic worker publication still enforces enabled configuration, registry ownership and ticket binding. Separating manual generation must not provide an automatic-publication bypass.
+- Deliver this correction independently in AL-81, coordinating shared publication boundaries with AL-79/AL-78 without artificial dependencies.
+
 ## Layer scope and presentation
 
 - **Go domain:** pure eligibility/selection/binding/publication decisions and existing owner/snapshot semantics; no I/O, clocks or process execution in the functional core.
@@ -98,7 +107,7 @@ Demonstrate an ordinary checkout and two linked worktrees, nested invocation, co
 
 Native integration evidence must name the actual harness/version/interface and source session identities, show global discovery, normal human trust, root binding, a source-proven child, source collection and ticket publication. Fixture payloads and installed files are not proof of live operation. Evidence gaps remain incomplete rather than silently passing. No test-only activation requirement is shipped.
 
-## Minimal decomposition and dependencies
+## Capture integration decomposition and dependencies
 
 Two end-to-end tickets are the smallest practical batch that keeps each session bounded and each delivery independently usable. One ticket per layer would fragment ownership; one ticket for both harness integrations would combine distinct runtime APIs, trust/binding flows and real-source verification into an unnecessarily broad delivery.
 
@@ -106,6 +115,10 @@ Two end-to-end tickets are the smallest practical batch that keeps each session 
 2. [AL-80: Global OpenCode capture using the shared worktree runtime](../plan/to-do/AL-80%20global%20opencode%20capture%20with%20shared%20worktree%20runtime.md) — Blocked by AL-79. Adds the TypeScript global adapter, runtime binding and native OpenCode parity using the same core rules.
 
 Related existing work remains separately owned: AL-70 configuration/path propagation corrections, AL-73 release/checksum reliability, AL-78 open-turn feedback effectiveness, and AL-63 source capability audit. They are coordination points, not artificial prerequisites. Revalidate their current state and avoid duplicating their unrelated scope.
+
+## Additional manual-generation correction
+
+[AL-81: Make manual generate independent of the capture registry](../plan/to-do/AL-81%20decouple%20manual%20generate%20from%20capture%20registry.md) is Ready with no ticket prerequisite. This separately requested correction addresses F7; the two-ticket capture integration sequence remains AL-79 then AL-80. The user requested ad hoc generation independent of the AgenticLens registry, while retaining harness source access and automatic capture safeguards.
 
 ## Handoff limits
 

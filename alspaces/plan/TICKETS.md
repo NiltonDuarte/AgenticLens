@@ -8,6 +8,15 @@ Reconciled 2026-11-05 against merged `origin/main` at `03f5b05d` and open PRs. S
 
 ## Ready
 
+- **AL-81**: Make manual generate independent of the capture registry
+  - **Subsystem**: Domain / CLI / Source Adapters / Ledger Publication
+  - **Priority**: P1
+  - **Status**: Ready
+  - **Blocked by**: None
+  - **Blocks**: None
+  - **File**: [AL-81 decouple manual generate from capture registry.md](to-do/AL-81%20decouple%20manual%20generate%20from%20capture%20registry.md)
+  - **Specification**: [PO-20](../PO-20/SPEC.md)
+
 - **AL-79**: Deliver native user-level Codex capture across worktrees
   - **Subsystem**: Domain / Configuration / Native Capture / Codex / CLI / Setup
   - **Priority**: P1
