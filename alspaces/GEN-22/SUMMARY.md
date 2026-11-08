@@ -45,15 +45,15 @@ Delivery checks on `1ce7cc25` after fetching and merging `origin/main`: upstream
 Final telemetry source is Codex at the normal `~/.codex` home. The root rollout metadata identifies session `01a1b268-f31e-7503-a954-4f4fd77370b2`, this exact worktree, source `vscode` and originator T3 Code. Source metadata proves one planner child, `01a1b291-2ff1-7830-81d8-7d0dff387ee3`, through its parent_thread_id. No prior GEN-22 ledger or other-harness sessions exist to preserve. The independent diagnostic CLI roots are not inferred to be children. Extraction is performed immediately before the final telemetry commit and checked against these source identities; source availability is distinct from live hook verification.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 35
-- **Active Agent Duration:** 49m 24s (recorded duration including 491s provisional)
-- **Context Window Health:** ELEVATED — Root agent peak 256.2k tokens (57% of 450k healthy ceiling, 0 compactions) | Subagents peak 208.5k (Planner)
+- **Software Development Life Cycle Iterations:** 115
+- **Active Agent Duration:** 1h 41m (recorded duration including 111s provisional)
+- **Context Window Health:** ELEVATED — Root agent peak 385.6k tokens (86% of 450k healthy ceiling, 0 compactions) | Subagents peak 208.5k (Planner)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 1.0 avg turns/run (peak: 1 turns) | Planner 1.0
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 38,197 reasoning tokens (29.9% of generated output)
-- **Tool Health & Self-Correction:** 152 tool calls (11 self-corrections, 92.8% success rate)
+- **Reasoning Effort:** 81,821 reasoning tokens (30.3% of generated output)
+- **Tool Health & Self-Correction:** 302 tool calls (11 self-corrections, 96.4% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
@@ -68,18 +68,18 @@ Final telemetry source is Codex at the normal `~/.codex` home. The root rollout 
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
 | **planner** | 1 | 388,552 | 16,674 | 5,996,160 | 93.9% | 208.5k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Unknown** | 1 | 469,961 | 73,000 | 28,805,632 | 98.4% | 256.2k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **2** | **858,513** | **89,674** | **34,801,792** | **97.6%** | **256.2k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations)** |
+| **Unknown** | 1 | 799,940 | 171,350 | 103,065,600 | 99.2% | 385.6k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **2** | **1,188,492** | **188,024** | **109,061,760** | **98.9%** | **385.6k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 2 | 858,513 | 89,674 | 34,801,792 | 97.6% | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **Total** | **2** | **858,513** | **89,674** | **34,801,792** | **97.6%** | **Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations)** |
+| **gpt-6.1-sol** | 2 | 1,188,492 | 188,024 | 109,061,760 | 98.9% | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **Total** | **2** | **1,188,492** | **188,024** | **109,061,760** | **98.9%** | **Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations)** |
 
-Capture observation finalized: 2026-11-07T13:06:40.604259309Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 0; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 0; reserved bytes: 0. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
-
-Ledger validation confirmed schema 6, ticket GEN-22/type chore, exactly the expected Codex root and planner child, and the source-proven parent link. The generator reports an open/provisional root interval and unknown root role; those source limitations are retained rather than treated as finalized execution or fabricated role data. This is a manual source snapshot, not proof that home hooks ran. Raw transcripts remain outside Git.
+Capture observation finalized: 2026-11-08T00:28:44.24331899Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 2; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 2; reserved bytes: 8497140. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
+Owner codex/01a1b291-2ff1-7830-81d8-7d0dff387ee3: current; last successful source read 2026-11-08T00:28:44.081285031Z; accepted source checkpoint 2026-11-06T20:41:25.096Z.
+Owner codex/01a1b268-f31e-7503-a954-4f4fd77370b2: current; last successful source read 2026-11-08T00:28:44.225320264Z; accepted source checkpoint 2026-11-08T00:28:44.04Z.
 
 ## Configuration discussion decision
 
@@ -162,3 +162,9 @@ The user confirmed full retention is clear and correct and authorized final cons
 Final consistency decision: the user selected always requiring a valid exact shared version pin, with binary_dir only an optional development-output preference. No development-location-only mode without fallback is intended. Valid local output is preferred; absence uses the exact pinned cache, invalid local output errors without fallback, and execution still does not download or mutate pins. Recorded the final policy choice; the user confirmed it is clear and correct and explicitly closed the decision review. Discussion notes remain non-implementation artifacts; no plan, contract or code was created.
 
 Decision review closed by explicit user confirmation. CAPTURE_VISION_AND_GAPS.md now consolidates the agreed behavior. Engineering details remain identified separately; no implementation, plan or contract is implied by closing this discussion. The user subsequently requested committing and pushing the confirmed notes to draft PR #124; delivery evidence follows.
+
+## Confirmed-decision follow-up delivery
+
+Committed the closed decision review and refreshed the draft PR description. Fetched origin/main; the branch was already current. git diff --check passed, and comparison with the previously make-tested 1ce7cc25 confirms backend, frontend, scripts and Makefile are unchanged. Reused that full passing make result rather than rerunning application suites for documentation-only updates. Refreshed the final Codex telemetry snapshot before the follow-up telemetry commit; expected existing root/child source identities remain unchanged.
+
+Refreshed ledger validation retained exactly the known Codex root and planner child with the source-proven parent link. The draft PR title/body now describe the closed decision review. This remains a manual source snapshot and does not verify production hook execution.
