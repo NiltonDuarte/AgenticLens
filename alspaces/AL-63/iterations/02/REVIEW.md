@@ -1,6 +1,6 @@
 # AL-63 consolidated capability evidence
 
-Application reviewed at f4152225, unchanged from eb7d169c application inputs. All eight discovery reports are available. Final integrated gate result is recorded at delivery. This is a bounded discovery audit, not a whole-repository correctness approval or permission to implement fixes.
+Application reviewed at f4152225, unchanged from eb7d169c application inputs. All eight discovery reports are available. Full make at 1e95b333 exited0 after no-op origin/main integration; later changes are documentation only. This is a bounded discovery audit, not a whole-repository correctness approval or permission to implement fixes.
 
 ## Independent first-pass roster
 
@@ -26,3 +26,5 @@ Parent also checked source guards and paths for CAP-01–06, retained both-famil
 ## Scope-qualified conclusion
 
 The delivered matrix makes no native parity certification. Luna/data's INCOMPLETE native-verification outcome remains intact: that reviewer used fixtures and did not inspect local native stores. Parent H1/C2 supplies recorded-source hydration and native Codex copy-backfill evidence, while native OpenCode backfill and v2 positive occurrence samples remain explicitly NOT RUN/UNAVAILABLE. These are allowed report states in the original discovery acceptance, not hidden source evidence. All original preservation/identity/repeat/diagnostic cases have current fixture/probe evidence; every matrix cell qualifies its proof boundary. The audit can deliver these bounded results without approving broader native claims or unresolved product behavior. No model/focus cell is waived or silently replaced.
+
+Final verdict: APPROVED for the evidence-qualified discovery matrix only. All eight selected profile/focus reports completed; initial CHANGES_REQUESTED/INCOMPLETE outcomes and open product limits remain above. No native-parity or product-correctness approval is inferred.
