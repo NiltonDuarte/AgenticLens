@@ -9,3 +9,5 @@ The specification covers whole-file local fallback, user-level adoption, native 
 This draft replaces [#124](https://github.com/NiltonDuarte/AgenticLens/pull/124), whose head remains the former GEN branch. The earlier user-approved shared development pin is retained; machine-local hooks, Python launcher, trust and capture state remain outside Git. Runtime capture remains unverified.
 
 See alspaces/PO-20/SPEC.md and SUMMARY.md. Implementation belongs in separate agentic-lens-dev sessions.
+
+Fresh PO-20 telemetry extraction is blocked by the session's existing GEN-22 capture binding. The retained native snapshot is reclassified only in ticket metadata; TELEMETRY_STATUS.json records its age and incomplete refresh. No session facts or capture bindings were fabricated or changed.

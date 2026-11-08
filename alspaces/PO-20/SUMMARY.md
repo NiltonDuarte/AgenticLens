@@ -41,8 +41,47 @@ Earlier user-authorized legacy database/state resets retained the binary cache a
 
 The former draft is [#124](https://github.com/NiltonDuarte/AgenticLens/pull/124). GitHub cannot retarget it to the new branch, and renaming an open PR head closes that PR; delivery uses a replacement PO draft and marks #124 superseded without deleting its branch/history.
 
-Regenerate telemetry under PO-20 with conventional type docs rather than manually relabeling metrics. The known Codex root is `01a1b268-f31e-7503-a954-4f4fd77370b2` (T3 Code origin, source class vscode); authoritative metadata proves planner child `01a1b291-2ff1-7830-81d8-7d0dff387ee3`. The original GEN ledger is retained in prior Git revisions. Verify the final PO ledger preserves these source identities and parent link; raw transcripts stay outside Git. Telemetry is a source snapshot, not live capture verification.
+Attempted native regeneration under PO-20 with conventional type docs before final commit. The existing binding to GEN-22 blocks a fresh extraction; see the explicit incomplete status below. The known Codex root is `01a1b268-f31e-7503-a954-4f4fd77370b2` (T3 Code origin, source class vscode); authoritative metadata proves planner child `01a1b291-2ff1-7830-81d8-7d0dff387ee3`. The original GEN ledger is retained in prior Git revisions. Verify the final PO ledger preserves these source identities and parent link; raw transcripts stay outside Git. Telemetry is a source snapshot, not live capture verification.
 
 PO validation and final delivery results are recorded below. This session does not implement the generated development tickets.
 
 PO artifact validation passed: local Markdown links resolve; AL-79/AL-80 each have one specification and registry entry; status and reciprocal dependency metadata agree. No GEN-22 workspace, developer ticket directories, CONTRACT.md or iteration PLAN.md remain. Comparison with c487364e confirms all PO-phase changes are restricted to alspaces documentation/ledger relocation, preserving the earlier approved configuration and every application/test/runtime path. The previously passing full make result remains applicable to unchanged code; no application tests were added or rerun solely for artifact relocation. This is author validation, not an independent implementation review.
+
+### Telemetry limitation and preserved baseline
+
+The final native generate attempt for PO-20/type docs failed with `Capture ownership conflict: session 01a1b268-f31e-7503-a954-4f4fd77370b2 in selected source store is bound to ticket GEN-22, refusing PO-20`. Inspected the CLI and found no supported reticket operation. Did not reset bindings, mutate SQLite, change source IDs or use independent state to bypass the ownership guard.
+
+Retained the last natively generated ledger from c487364e:alspaces/GEN-22/agentic_metrics.json and applied only the user's explicit ticket reclassification metadata: ticket_id PO-20, ticket_type docs and the PO title. Session/source facts, code snapshot and timestamps are unchanged. Verified all non-ticket metadata values are identical. TELEMETRY_STATUS.json marks fresh extraction incomplete and identifies the retained revision/timestamps; later PO-phase activity is not included. The native renderer may render these retained facts, but rendering is not a new extraction or live-capture proof. This limitation does not authorize adding a reticket feature in this PO session.
+
+### Workflow Efficiency
+- **Software Development Life Cycle Iterations:** 115
+- **Active Agent Duration:** 1h 41m (recorded duration including 111s provisional)
+- **Context Window Health:** ELEVATED — Root agent peak 385.6k tokens (86% of 450k healthy ceiling, 0 compactions) | Subagents peak 208.5k (Planner)
+- **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
+- **Subagent Turn Velocity & Thrashing:** 1.0 avg turns/run (peak: 1 turns) | Planner 1.0
+- **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
+- **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
+- **Reasoning Effort:** 81,821 reasoning tokens (30.3% of generated output)
+- **Tool Health & Self-Correction:** 302 tool calls (11 self-corrections, 96.4% success rate)
+
+### Anomalies & Health Flags
+- **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
+- [CRITICAL] **CONTEXT_SATURATION_SPIKE**: Context saturation spike (+163.4k tokens) — Context tokens surged by 163.4k to 163.4k tokens.
+- [WARNING] **CONTEXT_SATURATION_SPIKE**: Context ceiling breached (254.0k tokens) — Context tokens reached 254.0k, breaching the 250k warning ceiling.
+
+### Agentic Execution Metrics
+
+**Contributors:** Nilton Duarte
+
+#### By Subagent Role
+| Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
+|---|---|---|---|---|---|---|---|---|
+| **planner** | 1 | 388,552 | 16,674 | 5,996,160 | 93.9% | 208.5k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Unknown** | 1 | 799,940 | 171,350 | 103,065,600 | 99.2% | 385.6k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **2** | **1,188,492** | **188,024** | **109,061,760** | **98.9%** | **385.6k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations)** |
+
+#### By Model
+| Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
+|---|---|---|---|---|---|---|
+| **gpt-6.1-sol** | 2 | 1,188,492 | 188,024 | 109,061,760 | 98.9% | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **Total** | **2** | **1,188,492** | **188,024** | **109,061,760** | **98.9%** | **Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations)** |
