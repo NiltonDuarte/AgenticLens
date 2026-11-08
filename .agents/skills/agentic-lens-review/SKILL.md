@@ -5,6 +5,8 @@ description: Use when auditing, reviewing, or finding refactoring, performance, 
 
 # AgenticLens Architecture, Code & Test Suite Review
 
+Follow [Writing workspace artifacts](../../../docs/WORKSPACE_ARTIFACTS.md) for concise human-facing documents and evidence placement.
+
 Find concrete correctness defects in AgenticLens Go, TypeScript and delivery code. Plans, implementation reports and passing suites are evidence to evaluate, not conclusions to endorse. Use this procedure for development reviews as well as standalone audits; architecture and test profiling are additional lenses, not substitutes for investigating behavior.
 
 ## Review coverage

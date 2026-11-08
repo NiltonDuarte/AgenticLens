@@ -5,6 +5,8 @@ description: Supervise AgenticLens ticket threads and coordinate non-release pul
 
 # AgenticLens management
 
+Follow [Writing workspace artifacts](../../../docs/WORKSPACE_ARTIFACTS.md) for concise human-facing documents and evidence placement.
+
 Use one configured MGT ticket for coordination. Follow [AGENTS.md](../../../AGENTS.md) for artifacts, ownership, telemetry and delivery. Read the active management contract and iteration before acting. A management thread controls independent ticket threads as a user proxy; it does not become their application developer or telemetry parent.
 
 ## Authority and release exclusion

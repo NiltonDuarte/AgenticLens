@@ -5,6 +5,8 @@ description: Use when acting as the Product / Project Owner for AgenticLens to e
 
 # AgenticLens Project Owner Skill
 
+Follow [Writing workspace artifacts](../../../docs/WORKSPACE_ARTIFACTS.md) for concise human-facing documents and evidence placement.
+
 Acts as the Project Owner and Product Manager for the **AgenticLens** telemetry and visualization platform. Elicits requirements, scopes initiatives, creates structured product specifications, and decomposes work into tracer-bullet vertical slices ready for implementation in Go (backend/CLI) and TypeScript (frontend) via `agentic-lens-dev`.
 
 Preserve the existing [portable ledger contract](../../../TECHNICAL_GUIDELINES.md#portable-ledger-contract) in specifications and acceptance criteria. Multi-developer/machine/harness history shared through Git is a baseline capability, not an optional feature requiring renewed approval. Changes to that boundary need an explicit product decision.
@@ -82,7 +84,7 @@ Shared planning registry lives under `<WORKSPACES_DIR>/plan/`:
 
 PO session-specific deliverables live under `<WORKSPACES_DIR>/PO-#/`:
 - `SPEC.md`: Structured feature specification.
-- `SUMMARY.md`: Session execution log with appended AgenticLens metrics table.
+- `SUMMARY.md`: Current planning outcome, decisions, verification and remaining limits, followed by the generated AgenticLens metrics table.
 - `PULL_REQUEST.md`: Conventional PR draft describing the specification.
 - `agentic_metrics.json`: Extracted session fact ledger generated with conventional commit type (`--ticket-type docs`).
 

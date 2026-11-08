@@ -31,7 +31,8 @@ Every task, feature, bugfix, or refactoring in this repository must have a ticke
    - Check the existing workspace and ticket index before allocating an ad hoc identifier. A generated branch name is not proof that its ticket number is unused.
    - A rename or relocation of ticket artifacts must not require application or test changes. Tests must use self-contained fixtures, never the live ticket workspace.
 5. **Workspace Deliverables Checklist**:
-   - `<WORKSPACES_DIR>/<TICKET_ID>/SUMMARY.md`: Summary log of work completed, changes made, and verification status.
+   - Write human-facing artifacts using [the workspace writing standard](docs/WORKSPACE_ARTIFACTS.md): distinct document purposes, concise current outcomes, linked evidence and no session-log prose. Required evidence and unresolved limits must survive shortening.
+   - `<WORKSPACES_DIR>/<TICKET_ID>/SUMMARY.md`: Current outcome, material decisions, verification and remaining limits.
    - `<WORKSPACES_DIR>/<TICKET_ID>/PULL_REQUEST.md`: Pull request description and context.
    - `<WORKSPACES_DIR>/<TICKET_ID>/CONTRACT.md`: Frozen technical contract and acceptance boundaries, when required by the configured artifact list.
    - **Plan Lifecycle Synchronization**: When a matching specification exists in `<WORKSPACES_DIR>/plan/to-do/<TICKET_ID>*.md`, move it to `<WORKSPACES_DIR>/plan/done/` when the ticket is completed. Remove the completed ticket entry from `<WORKSPACES_DIR>/plan/TICKETS.md` only if one exists; do not create a specification, ticket entry, or Done section just to satisfy this lifecycle rule. For ticketed work, unblock downstream tickets whose dependencies are now fully satisfied by promoting them to `## Ready` with `Status: Ready`.

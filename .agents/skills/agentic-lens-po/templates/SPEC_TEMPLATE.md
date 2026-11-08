@@ -1,5 +1,7 @@
 # Feature Specification: <Feature Name>
 
+<!-- Use only relevant sections; follow docs/WORKSPACE_ARTIFACTS.md in this repository. Remove prompts before delivery. -->
+
 ## Problem Statement
 <Clear description of user challenge, pain point, or missing observability dimension in AgenticLens from the user or developer perspective.>
 
@@ -9,19 +11,15 @@
 
 ## User Stories
 1. As a <user persona>, I want <capability>, so that <benefit>.
-2. As a <user persona>, I want <capability>, so that <benefit>.
-3. As a <user persona>, I want <capability>, so that <benefit>.
 
 ## Functional Requirements
-- **Data Ingestion & Extraction**: <What metrics/traces need parsing in Go internal/adapters>
-- **Domain Aggregations**: <What rollup calculations or KPIs must be derived pure-functionally in Go internal/domain>
-- **Visual Presentation**: <TypeScript dashboard layout, charts, KPI cards, table formatting, or Go CLI commands>
+- <Expected behavior and relevant inputs/outputs; describe only affected areas.>
 
-## Non-Functional & Architectural Invariants
-- **Portable Ledgers**: Preserve the [portable ledger contract](../../../../TECHNICAL_GUIDELINES.md#portable-ledger-contract); include relevant [cross-machine acceptance scenarios](../../../../docs/REGRESSION_PREVENTION.md#portable-ledgers-across-developers-and-machines) when persistence/refresh is affected.
-- **Layer Flow**: Go domain remains pure; Go adapters isolate filesystem/schemas; TypeScript/CLI handles presentation.
-- **Language Standards**: Go 1.23+ value semantics, TypeScript 5.x+ strict mode, zero any across both.
-- **Performance**: Zero redundant recomputation, memory-efficient data structures.
+## Acceptance Criteria
+- <Observable outcome that establishes the requirement is met.>
+
+## Scope & Constraints
+- <Scope exclusion or ticket-specific constraint, only when needed. Link canonical technical rules rather than copying them. For persistence/refresh, select relevant cross-machine acceptance cases from docs/REGRESSION_PREVENTION.md.>
 
 ## Decomposition & Delivery Roadmap
 - [ ] Ticket 1: <Tracer-bullet title> (Unblocked)

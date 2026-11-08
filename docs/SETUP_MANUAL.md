@@ -302,7 +302,7 @@ Below is the standard policy block that can be added to your repository's OpenCo
 
 3. Dedicated Workspace Allocation:
    - Store task documentation and metrics in `workspaces/<TICKET_ID>/`.
-   - Maintain `CONTRACT.md` (scope boundaries) and `SUMMARY.md` (execution log) as required by the project's artifact list.
+   - Maintain `CONTRACT.md` (scope boundaries) and `SUMMARY.md` (current outcome, verification and limits) as required by the project's artifact list.
 
 4. Automatic Telemetry Publication:
    - Answer the native lifecycle session-specific binding request with the explicitly supplied ticket and title; never infer ticket ownership.

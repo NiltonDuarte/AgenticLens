@@ -5,6 +5,8 @@ description: Use when building features, fixing bugs, or refactoring the standal
 
 # AgenticLens Multi-Agent Development Workflow
 
+Follow [Writing workspace artifacts](../../../docs/WORKSPACE_ARTIFACTS.md) for concise human-facing documents and evidence placement.
+
 Coordinates autonomous development in the standalone **AgenticLens** project across specialized subagents (`planner`, `coder`, `tester`, `reviewer`). Architecture is built in **Go** (core aggregations, boundary adapters, CLI, server) and **TypeScript** (modern web dashboard embedded into the Go binary via `embed.FS`). Persona instructions and layer boundaries live in `.agents/agent/`.
 
 The skill itself uses the AgenticLens CLI application to parse, validate, and render developer telemetry and lifecycle metrics for every development iteration.
@@ -33,9 +35,9 @@ Follow the repository [testing policy](../../../TECHNICAL_GUIDELINES.md#test-pur
 1. Require `<TICKET_ID>` (prefixed with configured ticket prefix, e.g. `AL-#`, `GEN-#`, or `PO-#`). Pick up specification from `<WORKSPACES_DIR>/plan/to-do/<TICKET_ID>*.md` and update ticket status to `In Progress` in `<WORKSPACES_DIR>/plan/TICKETS.md`.
 2. Checkout ticket branch: `git checkout -b <type>/<TICKET_ID>-<slug>`.
 3. Workspace layout under `<WORKSPACES_DIR>/<TICKET_ID>/`:
-   - `CONTRACT.md`: Immutable baseline authored by the developer (problem statement, FCIS architectural invariants, Go/TS scope boundaries).
-   - `SUMMARY.md` & `agentic_metrics.json`: Unified summary of everything developed for the ticket grouped by layer (`domain`, `adapters`, `presentation`), plus AgenticLens-rendered metrics table.
-   - `PULL_REQUEST.md`: Conventional PR draft (max 3000 chars, pointers to `CONTRACT.md` & `SUMMARY.md`, summary of changes; no test evidence).
+   - `CONTRACT.md`: Immutable baseline authored by the developer (problem, agreed outcome, scope and observable acceptance; link canonical FCIS rules).
+   - `SUMMARY.md` & `agentic_metrics.json`: Current outcome, material decisions, verification and remaining limits, followed by AgenticLens-rendered metrics. Group by behavior; use layers only when they help explain the change.
+   - `PULL_REQUEST.md`: Conventional PR draft (max 3000 chars, pointers to `CONTRACT.md` & `SUMMARY.md`, summary of changes, concise validation and material limits).
    - `iterations/<NN>/`: `PLAN.md` and working review artifacts per iteration. After corrections and consolidated approval, retain `iterations/<NN>/REVIEW_SUMMARY.json` with severity, brief issue and every reporting persona/model/effort; link it and record approval/verification in `SUMMARY.md`, then delete detailed review files under the [review lifecycle](../agentic-lens-review/references/parallel-review.md#completed-review-retention).
 
 ---
@@ -110,7 +112,7 @@ After focused review is ready (no unresolved blockers/material review gaps), per
    make
    # or run individually: make check && make test && make build
    ```
-3. Update `<WORKSPACES_DIR>/<TICKET_ID>/SUMMARY.md`: Unified summary of everything developed for the ticket grouped by layer (`domain`, `adapters`, `presentation`), plus verification status.
+3. Update `<WORKSPACES_DIR>/<TICKET_ID>/SUMMARY.md`: Current outcome, material decisions, verification and remaining limits under the workspace writing standard.
 4. Update `<WORKSPACES_DIR>/<TICKET_ID>/PULL_REQUEST.md`: Conventional PR draft with the first line formatted as `# <type>(<scope>): <summary> (<TICKET_ID>)` (max 3000 chars, pointers to `CONTRACT.md` and `SUMMARY.md`).
 5. **Plan Lifecycle Synchronization**:
    Move specification file from `<WORKSPACES_DIR>/plan/to-do/<TICKET_ID>*.md` to `<WORKSPACES_DIR>/plan/done/`, remove the completed ticket entry from `<WORKSPACES_DIR>/plan/TICKETS.md` (do not create or maintain a Done section; completed specifications remain in `plan/done/`), and unblock downstream tickets: check tickets blocked by `<TICKET_ID>` and promote any whose dependencies are now fully satisfied to `## Ready` with `Status: Ready`.
