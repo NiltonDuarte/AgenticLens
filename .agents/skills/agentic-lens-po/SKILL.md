@@ -3,102 +3,68 @@ name: agentic-lens-po
 description: Use when acting as the Product / Project Owner for AgenticLens to elicit requirements, design features, structure product specs, and break down roadmaps into vertical tracer-bullet Jira tickets for Go + TypeScript.
 ---
 
-# AgenticLens Project Owner Skill
+# AgenticLens product planning
 
-Acts as the Project Owner and Product Manager for the **AgenticLens** telemetry and visualization platform. Elicits requirements, scopes initiatives, creates structured product specifications, and decomposes work into tracer-bullet vertical slices ready for implementation in Go (backend/CLI) and TypeScript (frontend) via `agentic-lens-dev`.
+Elicit requirements and produce specs/tickets only. Follow
+[AGENTS.md](../../../AGENTS.md) for ticket isolation, role boundaries and delivery.
+Read configured prefixes and `workspaces.dir` (default `workspaces`); paths below
+are relative to that root. The PO never writes application/tests/runtime code or
+developer contracts. End this session at planning delivery; implementation needs
+a separate development session.
 
-Preserve the existing [portable ledger contract](../../../TECHNICAL_GUIDELINES.md#portable-ledger-contract) in specifications and acceptance criteria. Multi-developer/machine/harness history shared through Git is a baseline capability, not an optional feature requiring renewed approval. Changes to that boundary need an explicit product decision.
+## Product discovery and scope
 
----
+1. Establish the user, current problem, intended outcome, available data,
+   calculation semantics and interface. Ask only unresolved questions that affect
+   the decision; ground claims in existing behavior and real source facts.
+2. Use [the spec template](templates/SPEC_TEMPLATE.md). Lead with goal and context,
+   then observable behavior/acceptance. User-story syntax is optional. Keep
+   necessary technical contracts/constraints/questions last; they cannot introduce
+   requirements missing from the human-facing portion. Leave implementation steps
+   to developers and link canonical rules instead of copying them.
+3. Split independently useful, verifiable outcomes through the affected layers;
+   do not force every layer into each ticket. Size for implementation/testing/
+   review in one session. Declare dependencies explicitly. For foundational schema
+   refactors, plan expand, migrate callers in batches, then contract.
+4. Generate tickets with [the ticket template](templates/TICKET_TEMPLATE.txt).
+   Allocate unused sequential configured IDs. Preserve its title convention and
+   status/dependency fields; put goal/context before routing metadata. Link shared
+   requirements precisely while keeping each ticket understandable alone. Include
+   related-owner boundaries and ticket-specific evidence only when necessary;
+   do not copy standard testing, approval, telemetry or PR checklists.
 
-## Configuration & Parametrization (`.agenticlens-config.yaml`)
+Preserve the [portable ledger contract](../../../TECHNICAL_GUIDELINES.md#portable-ledger-contract)
+and relevant [regression boundaries](../../../docs/REGRESSION_PREVENTION.md).
+Shared history across machines/harnesses is baseline behavior; changing that
+policy requires an explicit product decision. Reject designs violating canonical
+architecture; do not prescribe concrete code except an exact interface contract.
 
-At startup, inspect `.agenticlens-config.yaml` in the project root to load project parameters (falling back to defaults if not present):
-- `ticket.prefixes`: Supported prefix identifiers and descriptions (defaults: `AL`, `GEN`, `PO`).
-- `workspaces.dir`: Directory for workspace artifacts (default: `"workspaces"`).
-- `project_name`: Project name (default: `"AgenticLens"`).
+## Revise the current PO ticket batch
 
-Throughout this workflow:
-- `<WORKSPACES_DIR>` refers to the configured `workspaces.dir` (e.g. `workspaces`).
-- `<PREFIX>` refers to the configured ticket prefixes (e.g. `AL`, `GEN`, or `PO`).
-- `<TICKET_ID>` uses the configured prefix with sequential integer numbering (e.g. `AL-1`, `AL-2`, `PO-1`).
-- PO workspaces are isolated under `<WORKSPACES_DIR>/PO-#/` (e.g. `workspaces/PO-1/`).
-- `<WORKSPACES_DIR>/<PREFIX>-#` is strictly reserved for tickets being actively worked on by developers. `CONTRACT.md` is authored by developers, not the PO.
+Treat the current batch as drafts. When removing/merging a draft, delete its spec
+and registry entry; preserve requirements in survivors, not tombstones, Discarded
+statuses or a discarded directory. Close numbering gaps within this batch/prefix,
+updating names, titles, dependency edges, registry/spec links and PR context
+atomically. Never renumber unrelated, active-development or completed tickets,
+or change application/tests to accommodate renames. Git preserves earlier drafts.
 
----
+## PO artifact definitions
 
-## 1. Domain & Product Context
+Use the [shared writing rules](../../../AGENTS.md#artifact-writing-rules).
+One spec with optional technical notes is the default; avoid parallel human/agent
+copies. Create an extra artifact only for a substantial reusable contract/evidence
+with a distinct purpose. State acceptance once in its owning spec/ticket.
 
-AgenticLens is a specialized telemetry and analytics platform for multi-agent development sessions. As the Project Owner, your decisions must align with:
+| Artifact | Content | Usual prose length |
+| --- | --- | --- |
+| `PO-#/SPEC.md` | Shared initiative goal, context, expected behavior/acceptance and delivery dependencies; technical notes last. | 300–600 words |
+| `plan/to-do/<PREFIX>-# <slug>.md` | Ticket-specific goal, context, observable acceptance, minimal routing fields and optional technical notes. | 200–400 words |
+| `plan/TICKETS.md` | Shared execution tiers and adjacency lists: status, Blocked by/Blocks and spec links, without copied requirements. | One concise entry per active ticket |
+| `PO-#/SUMMARY.md` | Planning outcome, key decisions, ticket readiness, verification and open questions. | 150–300 words before metrics |
+| `PO-#/PULL_REQUEST.md` | Conventional title first; problem, resulting plan, validation and open decisions; link spec/summary. | Usually 100–200 words; at most 3000 characters |
+| `PO-#/agentic_metrics.json` | Final session ledger with ticket type `docs`; rendered metrics follow summary. | Structured output |
 
-- **Telemetry Core**: Ingestion of multi-agent traces, iteration metrics, token usage (input, output, cache read/write, reasoning tokens), financial cost, turn counts, tool execution health/error distributions, and context window saturation.
-- **Architectural Principles**: Functional Core, Imperative Shell (FCIS), strict inward dependencies (`internal/domain` -> `internal/adapters` -> `cmd/` & `web/`), value semantics in Go, strict mode in TypeScript with zero `any`.
-- **Presentation Capabilities**: Modern TypeScript web dashboard, interactive charts, and a rich Go CLI (`cmd/agentic-lens`) for developer workflow integration.
-- **Audience**: AI system engineers, data platform developers, and engineering managers monitoring agentic velocity and cost-efficiency.
-
----
-
-## 2. Product Discovery & Scope Workflow
-
-When invoked with a new idea, feature request, or optimization:
-
-### Step 1: Clarify & Interview
-Use targeted questions to identify:
-- **Core Value / Persona**: Who needs this metric or view (e.g. agent developer debugging token blowup vs lead reviewing session cost)?
-- **Data & Telemetry Boundary**: Does the required data already exist in iteration traces / transcripts, or does the extractor need expansion?
-- **Aggregations & Derivations**: What mathematical or statistical rollup is needed (e.g. median duration per turn, p95 tokens, cost per completed ticket)?
-- **Interface Target**: Is this primarily a TypeScript web dashboard visualization, a Go CLI table report, or a programmatic Go domain calculation?
-
-### Step 2: Formulate Product Specification
-Draft a concise, structured specification based on `templates/SPEC_TEMPLATE.md`:
-1. **Problem Statement**: Grounded in concrete agent developer friction or visibility gaps.
-2. **User Stories**: Follow the format `As a <persona>, I want <capability>, so that <benefit>`.
-3. **Functional Scope**: Layer-by-layer expectations across Go domain, Go adapters/CLI, and TypeScript frontend.
-4. **Acceptance Constraints**: Strict typing, no emojis, testing with zero domain mocks in Go and pure test suites in TS.
-
-### Step 3: Decompose into Vertical Tracer Bullets
-Break down large features or epics into individual development tickets:
-- **Vertical Slicing**: Every ticket must cut through Go domain models, Go adapters/data extraction, TypeScript/CLI presentation, and automated tests. Avoid horizontal slicing (e.g. never create a ticket that only defines structs without wiring them to domain logic and tests).
-- **Single Context Window**: Sized so an agent can complete implementation, testing, and review in one session.
-- **Dependency Graph**: Explicitly declare `Blocked by: <Ticket>` edges so tickets can be sequenced or executed in parallel where unblocked.
-- **Wide Refactor Protocol**: If modifying foundational trace schemas or data structures, use the Expand-Contract pattern (Expand schema -> Migrate extractors/callers in batches -> Contract legacy format).
-
-### Step 4: Generate Jira / Development Tickets
-Output tickets to `<WORKSPACES_DIR>/plan/to-do/<PREFIX>-# <slug>.md` using `templates/TICKET_TEMPLATE.txt`:
-- Sequential numbering: `<PREFIX>-1`, `<PREFIX>-2`, etc.
-- `h3. Title: <PREFIX>-#: <Action-oriented title>` (e.g. `AL-1: ...`)
-- `*TARGET*: AgenticLens (<Subsystem>)`
-- `*CONTEXT*`, `*GOAL*`, `*VERTICAL SLICE SCOPE*`, `*ACCEPTANCE CRITERIA*`, and `*DEFINITION OF DONE*`.
-
-#### Revise the current PO ticket batch
-
-Tickets being shaped during a PO session are drafts. When a draft is removed or merged, delete its specification and registry entry; never create a discarded ticket file, a `Discarded` status, a tombstone, or a new `plan/discarded/` entry. For a merge or redistribution, incorporate the retained requirements into the surviving tickets and adjust their scope and acceptance criteria coherently.
-
-Close numbering gaps within the current PO batch and configured prefix. Rename files and update ticket titles, dependency edges, registry entries, specification links and PR descriptions together. Keep the current plan authoritative; Git history preserves earlier drafts. Do not renumber unrelated tickets, tickets already in development, or completed history, and do not create developer workspaces or change application/tests to accommodate draft renaming.
-
-Shared planning registry lives under `<WORKSPACES_DIR>/plan/`:
-- `TICKETS.md`: Shared roadmap index and dependency graph structured using **Execution Tiers with Adjacency Lists** (e.g. `Tier 1 (Ready)`, with explicit `Blocked by: ...` and `Blocks: ...` links for unambiguous agent parsing). Updated across PO sessions as tickets are created, and by developers as tickets advance from `Ready` to `In Progress`. On completion, remove the ticket from the index and retain its specification in `plan/done/`; do not create or maintain a Done section.
-- `to-do/<PREFIX>-# <slug>.md`: Planned ticket definitions.
-
-PO session-specific deliverables live under `<WORKSPACES_DIR>/PO-#/`:
-- `SPEC.md`: Structured feature specification.
-- `SUMMARY.md`: Session execution log with appended AgenticLens metrics table.
-- `PULL_REQUEST.md`: Conventional PR draft describing the specification.
-- `agentic_metrics.json`: Extracted session fact ledger generated with conventional commit type (`--ticket-type docs`).
-
-Generate PO session metrics via:
-```bash
-agentic-lens --al-offline --al-project . generate --nonce <GENERATED_NONCE> --ticket-id PO-# --ticket-type docs --ticket-title <TICKET_TITLE> --json-output <WORKSPACES_DIR>/PO-#/agentic_metrics.json --append <WORKSPACES_DIR>/PO-#/SUMMARY.md
-```
-The agent must generate a unique random nonce directly (e.g. an 8 to 16 character alphanumeric or hex string) and pass the literal token to `--nonce <GENERATED_NONCE>`. Shell variables (`$NONCE`) must not be used because OpenCode records tool inputs to SQLite before subshell expansion occurs.
-
----
-
-## 3. Key Rules for the Project Owner
-- **Zero Code Changes Invariant (PO Non-Execution)**: Project Owners are strictly prohibited from writing, editing, or modifying application code, test files, runtime scripts, or adapters. The Project Owner only plans tasks, elicits requirements, authors product specifications (`SPEC.md`), and decomposes work into vertical Jira tickets (`workspaces/plan/to-do/`). All implementation, refactoring, and bug fixing must be performed by developers through `agentic-lens-dev`.
-- **Session Boundary & Separate Development Session**: The Project Owner session terminates once requirements are elicited, specifications are written, tickets are placed in `<WORKSPACES_DIR>/plan/to-do/`, roadmap registries are updated, and PO session artifacts are generated. Implementation of planned tickets must NEVER be started within the same PO session. Development must always be initiated in a separate, dedicated session using `agentic-lens-dev`.
-- **Zero Hallucinated Metrics**: Every metric must be derivable from real agent trace logs or explicit session inputs.
-- **No Premature Workspaces or Contracts**: `workspaces/<PREFIX>-#` directories are strictly for active developer work, and `CONTRACT.md` is authored by developers during `agentic-lens-dev`, never by the PO. PO writes ticket files to `workspaces/plan/to-do/<PREFIX>-# <slug>.md`.
-- **Maintain PO Workspace Isolation**: The PO records its own session facts, summary, and PR draft under `workspaces/PO-#/`.
-- **No Implementation Over-Prescription**: Define WHAT the user needs, WHICH layers must be touched, and WHAT acceptance criteria prove success. Do not write concrete Go/TS implementation snippets inside Jira tickets unless specifying an exact interface contract.
-- **Maintain Architectural Rigor**: Reject feature designs that break FCIS, leak UI logic into domain aggregations, or introduce mutable shared state.
+Developers advance index status to In Progress; completed specifications move to
+plan/done and leave the index under repository lifecycle policy, without a Done
+section. Finish with [final telemetry and PR delivery](../../../AGENTS.md#1-ticketed-and-ad-hoc-work)
+for the PO session only; do not create developer workspaces or start development.
