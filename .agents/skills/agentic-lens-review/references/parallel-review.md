@@ -77,7 +77,7 @@ Stop when this gate is satisfied for the requested scope. Do not add endless spe
 
 ## Completed review retention
 
-Use [Writing workspace artifacts](../../../../docs/WORKSPACE_ARTIFACTS.md) for the human-facing summary. Keep the retention requirements below; group repeated outcomes rather than duplicating run narratives.
+Apply the [shared writing rules](../../../../AGENTS.md#artifact-writing-rules) to the human-facing summary. This protocol owns review artifact content and retention; group repeated outcomes rather than duplicating run narratives.
 
 Review reports and structured run/finding files support the active investigation, correction loop and approval gate. Once findings are addressed and consolidated approval is issued, the parent compacts them into `iterations/<NN>/REVIEW_SUMMARY.json` before deleting any source reports. Keep this small structured file permanently and link it from the ticket's `SUMMARY.md`. Then delete individual review reports, consolidated `REVIEW.md`, `REVIEW_RUNS.json`, and `FINDINGS.json` for that completed review; remove stale links. Keep plans, regression tests, telemetry and other required deliverables. Historical audits in unrelated tickets remain outside this cleanup scope.
 

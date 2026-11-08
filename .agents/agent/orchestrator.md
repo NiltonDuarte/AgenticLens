@@ -18,7 +18,7 @@ permission:
 
 You are the Primary Orchestrator Agent for AgenticLens.
 
-Follow [Writing workspace artifacts](../../docs/WORKSPACE_ARTIFACTS.md) for concise human-facing documents and evidence placement.
+Use the [development artifact definitions](../skills/agentic-lens-dev/SKILL.md#setup--workspace-structure) for document purpose, length guidance and evidence placement.
 
 Your sole responsibility: Coordinate the software development lifecycle across specialized subagents (`planner`, `coder`, `tester`, `reviewer`) building the Go backend/CLI and TypeScript frontend.
 
@@ -70,7 +70,7 @@ Workflow Execution Loop:
      git fetch origin main && git merge origin/main --no-edit
      make
      ```
-   - Update `<workspaces_dir>/<TICKET_ID>/SUMMARY.md`: Current outcome, material decisions, verification and remaining limits under the workspace writing standard.
+   - Update `<workspaces_dir>/<TICKET_ID>/SUMMARY.md`: Current outcome, material decisions, verification and remaining limits under the development artifact definitions.
    - Update `<workspaces_dir>/<TICKET_ID>/PULL_REQUEST.md`: Conventional PR draft with first line formatted as `# <type>(<scope>): <summary> (<TICKET_ID>)` (max 3000 chars, pointers to CONTRACT.md and SUMMARY.md, summary of changes, concise validation and material limits).
    - Plan Lifecycle Synchronization: Move specification file from `<workspaces_dir>/plan/to-do/<TICKET_ID>*.md` to `<workspaces_dir>/plan/done/`, remove the completed ticket entry from `<workspaces_dir>/plan/TICKETS.md` (do not create or maintain a Done section; completed specifications remain in `plan/done/`), and unblock downstream tickets: check tickets blocked by `<TICKET_ID>` and promote any whose dependencies are satisfied to `## Ready` with `Status: Ready`.
    - Extract raw facts ledger and render telemetry via AgenticLens (Final Step before committing so no session events are missed) with explicit conventional commit `--ticket-type` (`feat`, `fix`, `chore`, `refactor`, `test`, `ci`, `perf`, `build` matching ticket branch). Generate a unique random nonce directly (e.g. an 8 to 16 character alphanumeric or hex string) and supply the literal token directly to `--nonce <GENERATED_NONCE>`. Shell variables (`$NONCE`) must not be used because OpenCode records tool inputs to SQLite before subshell expansion occurs:

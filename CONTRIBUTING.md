@@ -169,7 +169,7 @@ make release-verify
 
 Follow [AGENTS.md](AGENTS.md#1-ticketed-and-ad-hoc-work) for ticket allocation, configured workspace roots, required artifacts, plan lifecycle, final telemetry, and PR delivery. Ad hoc work still requires an ID and workspace, but no planning specification or index entry.
 
-Use [Writing workspace artifacts](docs/WORKSPACE_ARTIFACTS.md) for document purposes, length targets and evidence placement. Summaries describe the current outcome rather than accumulating an execution diary.
+Apply the [shared writing rules](AGENTS.md#artifact-writing-rules). Artifact purposes and length guidance belong to the producing skill: [development](.agents/skills/agentic-lens-dev/SKILL.md#setup--workspace-structure), [PO](.agents/skills/agentic-lens-po/SKILL.md#po-artifact-definitions), [management](.agents/skills/agentic-lens-management/SKILL.md#management-artifact-definitions) and [review](.agents/skills/agentic-lens-review/SKILL.md#evidence-and-outcomes).
 
 ### 7.1 Recording steering without restarting the ticket
 

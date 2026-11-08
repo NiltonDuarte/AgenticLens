@@ -1,6 +1,6 @@
 # <Feature name>
 
-<!-- Start with the human review content. Omit optional sections and remove prompts before delivery. Follow docs/WORKSPACE_ARTIFACTS.md. -->
+<!-- Start with the human review content. Omit optional sections and remove prompts before delivery. Follow the PO skill artifact definitions. -->
 
 ## Goal
 <What the user will be able to do, in plain language.>

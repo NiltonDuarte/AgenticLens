@@ -5,7 +5,7 @@ description: Use when acting as the Product / Project Owner for AgenticLens to e
 
 # AgenticLens Project Owner Skill
 
-Follow [Writing workspace artifacts](../../../docs/WORKSPACE_ARTIFACTS.md) for concise human-facing documents and evidence placement.
+Apply the [shared artifact writing rules](../../../AGENTS.md#artifact-writing-rules); the artifact definitions below belong to this workflow.
 
 Acts as the Project Owner and Product Manager for the **AgenticLens** telemetry and visualization platform. Elicits requirements, scopes initiatives, creates structured product specifications, and decomposes work into tracer-bullet vertical slices ready for implementation in Go (backend/CLI) and TypeScript (frontend) via `agentic-lens-dev`.
 
@@ -52,9 +52,13 @@ Use targeted questions to identify:
 - **Interface Target**: Is this primarily a TypeScript web dashboard visualization, a Go CLI table report, or a programmatic Go domain calculation?
 
 ### Step 2: Formulate Product Specification
-Use `templates/SPEC_TEMPLATE.md` and the [PO writing rules](../../../docs/WORKSPACE_ARTIFACTS.md#po-specifications-and-development-tickets). Lead with the goal and enough context for a human to understand why it matters. Describe the expected behavior and observable acceptance, using a concrete before/after example when useful. User-story syntax is optional; do not repeat the same requirement as a story, scope item and acceptance paragraph.
+Use `templates/SPEC_TEMPLATE.md` and the artifact definitions below. Lead with the goal and enough context for a human to understand why it matters. Describe the expected behavior and observable acceptance, using a concrete before/after example when useful. User-story syntax is optional; do not repeat the same requirement as a story, scope item and acceptance paragraph.
 
 Keep one spec with optional implementation notes at the end. Include only necessary data/interface contracts, grounded constraints or unresolved engineering questions there; do not create a second agent spec by default. The developer owns implementation planning. Link canonical architecture and delivery rules instead of copying them.
+
+Technical notes must not introduce user-visible requirements missing from the human-facing part. The initiative spec owns shared context and cross-ticket decisions; each ticket owns its distinct outcome and acceptance. Link shared requirements precisely while keeping the ticket understandable on its own. Split independently useful outcomes, not documents merely exceeding a word target.
+
+For example, replace “Correct scoped behavior through production consumers” with “Show ‘Copied’ only after a successful clipboard write. Today, denied writes can still display success. On failure, show an accessible error and allow retry.” List distinct acceptance cases without repeating this explanation.
 
 ### Step 3: Decompose into Vertical Tracer Bullets
 Break down large features or epics into individual development tickets:
@@ -82,11 +86,21 @@ Shared planning registry lives under `<WORKSPACES_DIR>/plan/`:
 - `TICKETS.md`: Shared roadmap index and dependency graph structured using **Execution Tiers with Adjacency Lists** (e.g. `Tier 1 (Ready)`, with explicit `Blocked by: ...` and `Blocks: ...` links for unambiguous agent parsing). Updated across PO sessions as tickets are created, and by developers as tickets advance from `Ready` to `In Progress`. On completion, remove the ticket from the index and retain its specification in `plan/done/`; do not create or maintain a Done section.
 - `to-do/<PREFIX>-# <slug>.md`: Planned ticket definitions.
 
-PO session-specific deliverables live under `<WORKSPACES_DIR>/PO-#/`:
-- `SPEC.md`: Structured feature specification.
-- `SUMMARY.md`: Current planning outcome, decisions, verification and remaining limits, followed by the generated AgenticLens metrics table.
-- `PULL_REQUEST.md`: Conventional PR draft describing the specification.
-- `agentic_metrics.json`: Extracted session fact ledger generated with conventional commit type (`--ticket-type docs`).
+### PO artifact definitions
+
+| Artifact | Purpose and content | Usual prose length |
+| --- | --- | --- |
+| `PO-#/SPEC.md` | Initiative goal, context, expected behavior/acceptance and delivery dependencies. Optional implementation notes come last. | 300–600 words |
+| `plan/to-do/<PREFIX>-# <slug>.md` | One developer ticket's goal, context and observable acceptance, followed by minimal routing fields and optional technical notes. Use the ticket template. | 200–400 words |
+| `plan/TICKETS.md` | Shared status/dependency index as defined above; link specifications rather than copying their requirements. | One concise entry per active ticket |
+| `PO-#/SUMMARY.md` | Current planning outcome, key product decisions, ticket links/readiness, verification and open questions. | 150–300 words before generated metrics |
+| `PO-#/PULL_REQUEST.md` | Conventional title first; product problem, resulting plan, validation and material open decisions. Link spec/summary for detail. | Usually 100–200 words; at most 3000 characters |
+| `PO-#/agentic_metrics.json` | Final CLI-generated session ledger, classified as `docs`; rendered metrics follow the summary. | Structured output |
+
+Paths are relative to `<WORKSPACES_DIR>`. Keep one spec with optional technical
+notes rather than parallel human/agent copies. Add a separate artifact only for
+a substantial reusable contract or evidence that needs its own home. The PO
+never creates developer contracts/workspaces; those belong to development.
 
 Generate PO session metrics via:
 ```bash

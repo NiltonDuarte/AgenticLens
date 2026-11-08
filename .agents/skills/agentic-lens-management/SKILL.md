@@ -5,9 +5,21 @@ description: Supervise AgenticLens ticket threads and coordinate non-release pul
 
 # AgenticLens management
 
-Follow [Writing workspace artifacts](../../../docs/WORKSPACE_ARTIFACTS.md) for concise human-facing documents and evidence placement.
+Apply the [shared artifact writing rules](../../../AGENTS.md#artifact-writing-rules); the artifact definitions below belong to this workflow.
 
 Use one configured MGT ticket for coordination. Follow [AGENTS.md](../../../AGENTS.md) for artifacts, ownership, telemetry and delivery. Read the active management contract and iteration before acting. A management thread controls independent ticket threads as a user proxy; it does not become their application developer or telemetry parent.
+
+## Management artifact definitions
+
+Keep the contract focused on authorized supervision/merge boundaries; iteration
+plans record priority or acceptance deltas. Use a single control ledger for the
+ownership/status fields below, updating rows instead of appending polling history.
+`SUMMARY.md` explains delivered coordination outcomes, remaining blockers and
+external review ownership (usually 150–300 words before generated metrics).
+`PULL_REQUEST.md` describes management guidance/decisions and validation, with a
+conventional title first (usually 100–200 words; at most 3000 characters). Link
+the ledger and owning ticket evidence rather than copying their implementation
+reports. The final `agentic_metrics.json` records this management session only.
 
 ## Authority and release exclusion
 

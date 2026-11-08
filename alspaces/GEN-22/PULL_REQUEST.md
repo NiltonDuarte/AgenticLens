@@ -1,17 +1,18 @@
 # chore(docs): make workspace artifacts and PO tickets readable (GEN-22)
 
-Workspace instructions encouraged repeated policy text and execution diaries;
-PO tickets buried their goals beneath technical inventories. Add a canonical
-writing standard and align contributor guidance, personas, skills and templates.
+Workspace instructions encouraged repetitive execution histories and PO tickets
+buried their goals beneath technical inventories. Put artifact definitions in
+their producing skills, with short shared writing rules in AGENTS.md. Align
+contributor guidance, personas and templates; remove the standalone docs guide.
 
-Documents have distinct purposes and practical length targets. PO specs and
-tickets start with the goal, context and observable acceptance, with optional
-implementation notes last in the same document. Remove forced layer inventories
-and repeated delivery checklists; link shared context instead of duplicating it.
+Documents have distinct purposes and practical prose targets. PO specs/tickets
+lead with goal, context and observable acceptance; optional technical notes come
+last in the same document. Remove forced layer inventories and repeated delivery
+checklists, linking shared context instead of copying it.
 
-Required review attribution, verification, unresolved findings and generated
-metrics remain protected. Existing ticket history and application behavior are
-unchanged.
+Required review credit, verification, unresolved findings and generated metrics
+remain protected. Historical tickets and application behavior are unchanged.
 
-Validation and limits: [summary](SUMMARY.md). Scope: [contract](CONTRACT.md) and
-[PO-ticket extension](iterations/02/PLAN.md).
+Validation and limits: [summary](SUMMARY.md). Scope: [contract](CONTRACT.md),
+[PO-ticket extension](iterations/02/PLAN.md) and
+[skill ownership](iterations/03/PLAN.md).

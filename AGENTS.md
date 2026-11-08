@@ -31,7 +31,7 @@ Every task, feature, bugfix, or refactoring in this repository must have a ticke
    - Check the existing workspace and ticket index before allocating an ad hoc identifier. A generated branch name is not proof that its ticket number is unused.
    - A rename or relocation of ticket artifacts must not require application or test changes. Tests must use self-contained fixtures, never the live ticket workspace.
 5. **Workspace Deliverables Checklist**:
-   - Write human-facing artifacts using [the workspace writing standard](docs/WORKSPACE_ARTIFACTS.md): distinct document purposes, concise current outcomes, linked evidence and no session-log prose. Required evidence and unresolved limits must survive shortening.
+   - Apply the [shared writing rules](#artifact-writing-rules); each skill owns its artifact purposes, content and length guidance. Required evidence and unresolved limits must survive shortening.
    - `<WORKSPACES_DIR>/<TICKET_ID>/SUMMARY.md`: Current outcome, material decisions, verification and remaining limits.
    - `<WORKSPACES_DIR>/<TICKET_ID>/PULL_REQUEST.md`: Pull request description and context.
    - `<WORKSPACES_DIR>/<TICKET_ID>/CONTRACT.md`: Frozen technical contract and acceptance boundaries, when required by the configured artifact list.
@@ -61,6 +61,22 @@ Every task, feature, bugfix, or refactoring in this repository must have a ticke
    - Commit final deliverables and telemetry facts on the feature branch, push upstream, and open a GitHub Pull Request via `gh pr create --title "$PR_TITLE" --body-file <WORKSPACES_DIR>/<TICKET_ID>/PULL_REQUEST.md`.
    - Avoid directly merging or checking out `main` within agent worktrees.
    - The Pull Request URL must be prominently displayed at the top of the final handoff report.
+
+### Artifact writing rules
+
+- Write for a human without the conversation: lead with the goal or outcome, use
+  plain language and include technical detail only when it explains a decision.
+- Give each document one job. Keep it understandable on its own, then link shared
+  context and evidence instead of copying sections or repository rules.
+- Maintain the current account, not a session diary. Omit routine tool attempts,
+  dispatch logs, repeated status and file inventories. Record material steering
+  once in its iteration plan; link it from the summary.
+- Follow the producing skill's artifact definitions. Lengths are prose targets,
+  not quotas; omit empty sections and never pad or remove necessary evidence to
+  meet a target. Add an artifact only when it needs a distinct purpose.
+- Preserve verification, discovery credit, unresolved findings and limits under
+  their owning protocols. Keep generated metrics intact without repeating them
+  in prose; keep raw transcripts and private diagnostics outside Git.
 
 ---
 

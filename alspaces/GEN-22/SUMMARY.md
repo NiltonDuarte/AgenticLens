@@ -1,29 +1,28 @@
 # GEN-22: Human-readable workspace artifacts
 
-Added [Writing workspace artifacts](../../docs/WORKSPACE_ARTIFACTS.md) as the
-canonical guide. Each document has one purpose, practical length targets and
-rules for linking evidence. Summaries report current outcomes instead of
-accumulating routine execution history.
+Artifact definitions now live in their producing skills:
+[development](../../.agents/skills/agentic-lens-dev/SKILL.md#setup--workspace-structure),
+[PO](../../.agents/skills/agentic-lens-po/SKILL.md#po-artifact-definitions),
+[management](../../.agents/skills/agentic-lens-management/SKILL.md#management-artifact-definitions)
+and [review](../../.agents/skills/agentic-lens-review/SKILL.md#evidence-and-outcomes).
+AGENTS.md retains short shared writing rules; the standalone docs guide is removed.
 
-Aligned contributor guidance, planner/orchestrator personas, relevant skills and
-both PO templates. Removed mandatory layer inventories, repeated delivery
-checklists, the PR ban on test evidence and automatic new iterations on resume.
+Each document has one purpose and practical prose targets. Summaries report
+current outcomes. PO specs/tickets lead with goal, context and observable
+acceptance, with optional technical notes last in the same document. Shared
+context is linked rather than copied; forced layer inventories and repeated
+delivery checklists are removed.
 
-PO specs and tickets now lead with the goal, context and observable acceptance.
-Necessary implementation notes follow in the same document. Shared initiative
-context is linked rather than copied into every ticket; separate human/agent
-specifications are not the default.
-
-Scope follows the [contract](CONTRACT.md) and the user's
-[PO-ticket clarification](iterations/02/PLAN.md). Historical tickets, application
-code and generated metrics formatting remain unchanged. Required review credit,
+Scope follows the [contract](CONTRACT.md), [PO-ticket clarification](iterations/02/PLAN.md)
+and [skill-ownership decision](iterations/03/PLAN.md). Historical tickets,
+application code and metric formatting remain unchanged. Required review credit,
 verification and unresolved limits remain protected.
 
 Verification: `make` passed on `2ff67d95` after integration with origin/main
 (already current): Go race suites, frontend units/integration, static and Python
 workflow checks, embedded assets and platform builds. Changed-document links,
 the new PO section anchor, PO skill metadata and `git diff --check` also passed.
-Earlier iteration checks remain valid for unchanged guidance.
+Iteration 03 verification is pending; earlier results remain valid for unchanged behavior.
 
 The documentation coordinator (gpt-6.1-sol/high) checked both templates against
 recent PO-20/AL-79/AL-72 examples for goal visibility and duplication; no confirmed
