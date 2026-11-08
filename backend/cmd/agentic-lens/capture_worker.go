@@ -50,6 +50,12 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 	}
 	binary = fence.binary
 	retire := func() error {
+		// Disablement may race an earlier policy read and make the fence false.
+		// It stops this owner without a superseded diagnostic or successor.
+		enabled, err := automaticCaptureEnabled(project, state)
+		if err != nil || !enabled {
+			return err
+		}
 		if err := s.RecordDiagnostic(context.Background(), domain.CaptureDiagnostic{Phase: "worker", Outcome: "superseded", Detail: "Project release or active installation changed. This native owner retired; only its captured generation may be acknowledged and later work remains pending for the selected native."}); err != nil {
 			return err
 		}
@@ -75,6 +81,15 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 		defer cancel()
 		next, err := capture.WorkerSuccessor(ctx, project, state)
 		if err != nil {
+			// A later disable can also stop successor validation normally. Keep
+			// actual policy/state errors and enabled takeover failures visible.
+			enabled, policyErr := automaticCaptureEnabled(project, state)
+			if policyErr != nil {
+				return errors.Join(err, policyErr)
+			}
+			if !enabled {
+				return nil
+			}
 			diagnosticErr := s.RecordDiagnostic(context.Background(), domain.CaptureDiagnostic{Phase: "worker", Outcome: "failed", Detail: "Worker release/installation changed, but automatic successor validation failed. Pending work remains in the original namespace. Verify the exact pin, selected native/protocol, owned integration and configured state; retry capture reconcile. Cause: " + err.Error()})
 			return errors.Join(fmt.Errorf("native worker retired; pending work retained; selected-native takeover unavailable: %w", err), diagnosticErr)
 		}
