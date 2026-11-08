@@ -4,6 +4,15 @@ require "addressable/uri"
 require "nokogiri"
 require "pathname"
 
+# Only the trusted scaffold may write the welcome page or another root destination.
+Jekyll::Hooks.register :pages, :pre_render do |page|
+  next unless page.relative_path.start_with?("roadmap/")
+
+  roadmap = File.expand_path("roadmap", page.site.dest)
+  destination = File.expand_path(page.destination(page.site.dest))
+  raise "Ticket output must stay under roadmap/" unless destination.start_with?("#{roadmap}/")
+end
+
 # The relative-links plugin handles published pages. Supporting files stay on GitHub.
 Jekyll::Hooks.register :pages, :post_render do |page|
   next unless page.ext == ".md"

@@ -114,7 +114,11 @@ class TicketsSiteTest < Minitest::Test
       [path.relative_path_from(@project), path.binread]
     end
     assert_build
-    refute @output.join("index.html").exist?, "The site root must not replace the /roadmap/ page"
+    welcome = document(@output.join("index.html"))
+    assert_includes welcome.at_css("main h1").text, "AgenticLens"
+    assert_match(/welcome/i, welcome.at_css("main").text)
+    assert_includes links(welcome.at_css("main")), "/FixtureRepo/roadmap/"
+    assert welcome.at_css("meta[name='viewport']"), "The welcome page must support narrow screens"
     roadmap = document(@output.join("roadmap/index.html"))
     %w[Ready Blocked].each { |heading| assert_includes roadmap.css("h2").map(&:text), heading }
     assert_includes roadmap.text, "Fixture roadmap"
@@ -156,6 +160,8 @@ class TicketsSiteTest < Minitest::Test
     [nil, "project_name: Fixture\n", "workspaces: {}\n"].each do |config|
       @project.join(".agenticlens-config.yaml").write(config) if config
       assert_build(base_path: "")
+      welcome = document(@output.join("index.html"))
+      assert_includes links(welcome.at_css("main")), "/roadmap/"
       roadmap = document(@output.join("roadmap/index.html"))
       assert_includes links(roadmap), "/roadmap/to-do/TASK-Z%20sample.html#details"
     end
@@ -217,17 +223,19 @@ class TicketsSiteTest < Minitest::Test
     original_artifact = @output.glob("**/*", File::FNM_DOTMATCH).select(&:file?).to_h do |path|
       [path.relative_path_from(@output), path.binread]
     end
-    content = "---\npermalink: /\n---\n# Unexpected root page\n"
-    @ticket.write(content)
-    stdout, stderr, status = build
-    refute status.success?, "An explicit permalink must not escape /roadmap/"
-    assert_includes stdout + stderr, "Jekyll output must stay under roadmap/"
-    refute @output.join("index.html").exist?
-    after = @output.glob("**/*", File::FNM_DOTMATCH).select(&:file?).to_h do |path|
-      [path.relative_path_from(@output), path.binread]
+    assert original_artifact.key?(Pathname("index.html")), "The preserved artifact must include the welcome page"
+    ["/", "/index.html", "/roadmap/%2e%2e/index.html"].each do |permalink|
+      content = "---\npermalink: #{permalink}\n---\n# Unexpected root page\n"
+      @ticket.write(content)
+      stdout, stderr, status = build
+      refute status.success?, "Ticket permalink #{permalink.inspect} must not escape /roadmap/"
+      assert_includes stdout + stderr, "roadmap/"
+      after = @output.glob("**/*", File::FNM_DOTMATCH).select(&:file?).to_h do |path|
+        [path.relative_path_from(@output), path.binread]
+      end
+      assert_equal original_artifact, after, "Rejected output must preserve the welcome page and roadmap artifact"
+      assert_equal content, @ticket.read
     end
-    assert_equal original_artifact, after, "Rejected output must leave the previous artifact intact"
-    assert_equal content, @ticket.read
   end
 
   def test_permission_failure_rejects_rebuild_without_nested_or_stale_success
