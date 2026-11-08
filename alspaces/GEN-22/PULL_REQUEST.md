@@ -1,18 +1,18 @@
-# chore(docs): make workspace artifacts and PO tickets readable (GEN-22)
+# chore(docs): simplify agent instructions and human review artifacts (GEN-22)
 
-Workspace instructions encouraged repetitive execution histories and PO tickets
-buried their goals beneath technical inventories. Put artifact definitions in
-their producing skills, with short shared writing rules in AGENTS.md. Align
-contributor guidance, personas and templates; remove the standalone docs guide.
+Repeated workflows and policy made agent instructions long, while generated
+artifacts obscured goals with execution history and technical inventories.
+Consolidate repository policy in AGENTS.md, workflows/artifact definitions in
+skills and assigned duties in personas. Remove repeated command recipes and
+delegation prompts, reducing eight instruction files by about 44% in the final
+simplification pass without moving that bulk into new references.
 
-Documents have distinct purposes and practical prose targets. PO specs/tickets
+Artifacts have distinct purposes and practical prose targets. PO specs/tickets
 lead with goal, context and observable acceptance; optional technical notes come
-last in the same document. Remove forced layer inventories and repeated delivery
-checklists, linking shared context instead of copying it.
+last in the same document. Required approval, review credit, evidence, telemetry
+and delivery gates remain. Historical tickets and application behavior are
+unchanged.
 
-Required review credit, verification, unresolved findings and generated metrics
-remain protected. Historical tickets and application behavior are unchanged.
-
-Validation and limits: [summary](SUMMARY.md). Scope: [contract](CONTRACT.md),
-[PO-ticket extension](iterations/02/PLAN.md) and
-[skill ownership](iterations/03/PLAN.md).
+Validation: links/anchors, skill metadata, whitespace and an independent four-case
+instruction walkthrough. Integrated checks and limits: [summary](SUMMARY.md).
+Scope: [contract](CONTRACT.md) and [current plan](iterations/04/PLAN.md).

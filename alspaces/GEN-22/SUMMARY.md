@@ -1,22 +1,20 @@
 # GEN-22: Human-readable workspace artifacts
 
-Artifact definitions now live in their producing skills:
-[development](../../.agents/skills/agentic-lens-dev/SKILL.md#setup--workspace-structure),
-[PO](../../.agents/skills/agentic-lens-po/SKILL.md#po-artifact-definitions),
-[management](../../.agents/skills/agentic-lens-management/SKILL.md#management-artifact-definitions)
-and [review](../../.agents/skills/agentic-lens-review/SKILL.md#evidence-and-outcomes).
-AGENTS.md retains short shared writing rules; the standalone docs guide is removed.
+Shortened eight active instruction files by 4,601 whitespace-delimited words
+(44% of their iteration-04 baseline), including Markdown/frontmatter/examples.
+This removes duplicated workflow and policy rather than relocating it to new files.
 
-Each document has one purpose and practical prose targets. Summaries report
-current outcomes. PO specs/tickets lead with goal, context and observable
-acceptance, with optional technical notes last in the same document. Shared
-context is linked rather than copied; forced layer inventories and repeated
-delivery checklists are removed.
+AGENTS.md owns repository policy, skills own workflows/artifact definitions and
+personas contain only assigned duties. The development skill no longer repeats
+command recipes or delegation prompts; the orchestrator follows that workflow.
+PO specs/tickets still lead with goal, context and observable acceptance, with
+optional technical notes last. Review/installation protocols and application code
+are unchanged; required approval, evidence, credit and delivery gates remain.
 
-Scope follows the [contract](CONTRACT.md), [PO-ticket clarification](iterations/02/PLAN.md)
-and [skill-ownership decision](iterations/03/PLAN.md). Historical tickets,
-application code and metric formatting remain unchanged. Required review credit,
-verification and unresolved limits remain protected.
+Scope follows the [contract](CONTRACT.md) and current
+[instruction-reduction plan](iterations/04/PLAN.md), which preserves the prior
+[PO format](iterations/02/PLAN.md) and [skill ownership](iterations/03/PLAN.md).
+Historical tickets and metric formatting remain unchanged.
 
 Verification: `make` passed on integrated revision `4c88edf3`: Go race suites,
 frontend units/integration, static and Python workflow checks, embedded assets
@@ -24,11 +22,12 @@ and platform builds. Integration added only PO-21 planning artifacts from main.
 Changed-document links/anchors, all four edited skills' metadata and
 `git diff --check` passed. No active link to the removed guide remains.
 
-The documentation coordinator (gpt-6.1-sol/high) checked ownership and instruction
-consistency; no confirmed issues remain. Prior PO-template checks remain valid.
-There was no independent application review or behavioral forward test. Length
-targets guide writing without automatic enforcement. Hosted CI has not been
-observed for this update.
+An independent instruction walkthrough (gpt-6.1-sol/high, inherited settings)
+resolved four cases without contradictions: resumed approval with incomplete
+review, ad hoc delivery, PO draft consolidation/session separation and management
+merge authority. It did not inspect live ticket/PR readiness or prove production
+execution quality. Iteration 04 links/anchors, skill metadata and whitespace
+checks passed; integrated make is pending.
 
 Telemetry: source Codex; expected root `01a1bbce-df16-7632-ac2d-9a565b47e918`
 was confirmed in local source metadata, with no source-linked children and no

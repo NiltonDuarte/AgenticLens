@@ -11,7 +11,6 @@ Every task, feature, bugfix, or refactoring in this repository must have a ticke
 ### Configurable Workspace Root
 - Define `<WORKSPACES_DIR>` as the `workspaces.dir` value in `.agenticlens-config.yaml`.
 - If `.agenticlens-config.yaml` or the `workspaces.dir` key is absent, use `workspaces` as the fallback.
-- The current configuration sets `workspaces.dir` to `alspaces`, so `<WORKSPACES_DIR>` currently resolves to `alspaces`.
 - Use `<WORKSPACES_DIR>` as the root for all ticket workspaces and plan paths below.
 
 ### Rules
@@ -37,7 +36,7 @@ Every task, feature, bugfix, or refactoring in this repository must have a ticke
    - `<WORKSPACES_DIR>/<TICKET_ID>/CONTRACT.md`: Frozen technical contract and acceptance boundaries, when required by the configured artifact list.
    - **Plan Lifecycle Synchronization**: When a matching specification exists in `<WORKSPACES_DIR>/plan/to-do/<TICKET_ID>*.md`, move it to `<WORKSPACES_DIR>/plan/done/` when the ticket is completed. Remove the completed ticket entry from `<WORKSPACES_DIR>/plan/TICKETS.md` only if one exists; do not create a specification, ticket entry, or Done section just to satisfy this lifecycle rule. For ticketed work, unblock downstream tickets whose dependencies are now fully satisfied by promoting them to `## Ready` with `Status: Ready`.
    - `<WORKSPACES_DIR>/<TICKET_ID>/agentic_metrics.json`: Raw session telemetry ledger (generated at the very final step of the iteration).
-   - Store iteration plans under `<WORKSPACES_DIR>/<TICKET_ID>/iterations/<NN>/PLAN.md`. Review reports and structured run/finding records are working artifacts while review or corrections are open. Once findings are addressed and consolidated review is approved, first retain `iterations/<NN>/REVIEW_SUMMARY.json` with each finding's numeric severity (0 low to 10 high), very brief issue, all reporting persona/model/effort tuples and disposition under the [canonical compact findings format](.agents/skills/agentic-lens-review/references/parallel-review.md#compact-findings-format). Link it from a concise review summary in `SUMMARY.md`: findings and dispositions/fixes, discovering actor/role and model/effort, verification actors, reviewed revision, final approval, verification and remaining limits. Use readable reviewer responsibilities and put the exact model and reasoning effort beside each concrete finding and fix; internal run IDs or agent namespace paths are not useful actor labels. Preserve shared discovery credit and distinguish discovery from verification. Then delete the detailed review reports, consolidated `REVIEW.md`, `REVIEW_RUNS.json`, and `FINDINGS.json` for that completed review; remove stale links. Do not use cleanup to hide unresolved findings, incomplete reviews or accepted debt. Follow the canonical review protocol for active-review evidence. Historical audit records in other tickets are not a bulk-cleanup target.
+   - Store plans under `iterations/<NN>/PLAN.md`. Review artifacts, all finding/actor attribution and cleanup follow the [canonical retention protocol](.agents/skills/agentic-lens-review/references/parallel-review.md#completed-review-retention). Retain REVIEW_SUMMARY.json and its linked human summary before deleting approved-review working files. Never hide unresolved findings, accepted debt or incomplete evidence; unrelated historical audits are not cleanup targets.
 6. **Telemetry Ingestion as the Final Step & Conventional Commit Type Classification**:
    - **Delayed Ingestion Mandate**: Generating telemetry must always be delayed to the very last step of the workflow. Running telemetry early causes subsequent turns, tool calls, compactions, and subagent sessions to be omitted from the ledger.
    - **Literal Nonce Generation**: The agent must generate a unique random nonce directly (by any means, e.g. an 8 to 16 character alphanumeric or hex string) and supply the literal token directly in the command. Shell variables (`$NONCE`) or command substitutions (`$(...)`) must not be used because OpenCode records tool inputs into SQLite before subshell expansion occurs, which causes database searches for the expanded token to fail.
@@ -86,66 +85,53 @@ Application development in this repository is orchestrated through specialized a
 
 For delegated work, name one owner for each writable path, state the role and acceptance boundaries, and pass the contract, current plan, review findings, and baseline commit. Tell agents that they share the checkout and must preserve others' changes. The parent owns integration, telemetry, commits, and PR delivery unless explicitly delegated. A tester or reviewer must not publish or continue product implementation on its own.
 
-Specialized roles:
+Role workflows have one owner:
 
-- **Management (`agentic-lens-management`, `MGT-#`)**:
-  - Coordinates existing independent ticket threads, integration dependencies, review corrections and authorized non-release merges. Owns only management artifacts and guidance; each ticket owner retains application implementation and its own telemetry.
-  - Managing ticket threads under one MGT ticket does not switch the manager into those tickets. Follow [the management skill](.agents/skills/agentic-lens-management/SKILL.md) for ownership discovery, exact-head merge gates and asynchronous supervision.
-  - Release PRs are strictly human controlled. Agents must never merge them, enable their auto-merge, or instruct another agent to merge them.
-  - A management thread must not merge its own management PR, enable its auto-merge, or delegate that merge to a child to bypass this boundary. Prepare and publish it for a human or a separately authorized independent controller to review and merge. Broad non-release merge authorization excludes the owning thread's management PR.
-  - Keep an active management workflow's PR open (draft while still evolving); an accepted checkpoint requires external merge ownership. Continuing work after an externally merged checkpoint requires a new PR for undelivered changes.
-
-- **Product / Scope Inception (`agentic-lens-po`)**:
-  - Elicits requirements and decomposes features into tracer-bullet tickets.
-  - Used when creating new tickets, structuring specifications, or defining acceptance criteria.
-  - **PO Non-Execution Invariant**: Project Owners are strictly prohibited from writing or modifying application code, test files, runtime scripts, or adapters. Project Owners only plan tasks, author product specifications (`SPEC.md`), and decompose roadmaps into Jira tickets. All implementation must be performed through `agentic-lens-dev`.
-  - **PO Session Separation**: The PO session strictly ends once specifications and planning tickets are authored. Development must never take place in the same session and must always run in a separate, dedicated session.
-- **Development Orchestrator (`orchestrator` / `agentic-lens-dev`)**:
-  - Coordinates iterations across subagents (`planner` -> `coder` -> `tester` -> focused reviewers -> consolidated review), using the [parallel review protocol](.agents/skills/agentic-lens-review/references/parallel-review.md) for substantive changes.
-  - **Orchestrator Non-Execution Invariant**: Orchestrators never write application code directly.
-  - **Mandatory User Confirmation Gate**: Obtain explicit user approval for the proposed scope before writing code, using the available question mechanism when approval is missing. An explicit pre-approval for that scope satisfies the gate; record it and do not ask again. Seek renewed approval when the proposed implementation materially changes the approved boundaries.
-- **Subagents**:
-  - `planner`: Contracts, architecture, and zero-code plans.
-  - `coder`: Go backend and TypeScript frontend implementation.
-  - `tester`: Adversarial unit and boundary tests. Zero mocks in domain, zero silent skips.
-  - `reviewer`: Independent correctness investigation following [the review skill](.agents/skills/agentic-lens-review/SKILL.md), including relevant unchanged dependencies. Product code is read-only; reports need explicitly assigned output permission. `INCOMPLETE` review evidence does not pass the delivery gate.
+- [Management](.agents/skills/agentic-lens-management/SKILL.md) supervises independent ticket owners under MGT, without taking their implementation/telemetry. Never merge releases or the owning thread's management PR, enable their auto-merge or delegate that merge. Keep an evolving MGT PR open/draft for external review; later work after a merged checkpoint needs a new PR.
+- [PO](.agents/skills/agentic-lens-po/SKILL.md) authors specs/tickets only: no application, tests, runtime scripts, adapters or developer contracts. End the PO session at planning delivery; development requires a separate session.
+- [Development](.agents/skills/agentic-lens-dev/SKILL.md) coordinates planner -> coder -> tester -> focused reviewers -> consolidated review. The orchestrator never implements application code. Obtain explicit scope approval before coding; record existing pre-approval instead of asking again. Material boundary changes require renewed approval.
+- Planner owns zero-code contracts/plans; coder owns implementation; tester owns adversarial tests with zero domain mocks and no silent skips. [Reviewers](.agents/skills/agentic-lens-review/SKILL.md) independently investigate relevant changed/unchanged dependencies. Product code stays read-only; report writes need explicit permission. INCOMPLETE evidence cannot pass delivery.
 
 ---
 
 ## 3. Architecture & Code Invariants
 
-All code must strictly satisfy `TECHNICAL_GUIDELINES.md`:
-
-1. **Stack**:
-   - Go 1.23+ for backend, CLI, and HTTP services under `backend/` (`backend/cmd/agentic-lens`, `backend/internal/domain`, `backend/internal/adapters`).
-   - TypeScript 5.x+ strict for frontend (`web/`).
-2. **Single Binary Distribution**:
-   - The compiled TypeScript frontend (`web/dist`) must be embedded into the Go executable via `embed.FS`.
-   - Zero Node.js runtime dependency in production.
-3. **FCIS (Functional Core, Imperative Shell)**:
-   - `internal/domain`: Pure functions, value semantics, immutable structs. Zero I/O, zero network, zero clocks.
-   - `internal/adapters` & `cmd/`: Imperative shell. Traversal, validation, HTTP routing, asset embedding.
-4. **Typing & Zero Any**:
-   - Zero `any` or `interface{}` across Go and TypeScript.
-   - Discriminated unions for multi-state representations.
-5. **Zero Emojis**:
-   - Zero emojis permitted in code, comments, docstrings, commit messages, PR drafts, UI strings, logs, or workspace artifacts.
+[TECHNICAL_GUIDELINES.md](TECHNICAL_GUIDELINES.md) owns engineering rules:
+Go 1.23+ in backend, TypeScript 5.x+ strict in web, pure immutable domain logic,
+I/O in adapters/CLI, typed states and zero any/interface{}. Embed the compiled
+frontend in the single Go binary; no production Node runtime. Zero emojis in
+code, comments, UI/logs, commits, PRs or artifacts.
 
 
 ## 4. Session-Grounded Execution Practices
 
-Use the boundary-specific [regression prevention checklist](docs/REGRESSION_PREVENTION.md) when planning and reviewing changes. Record the applicable cases and evidence in the current iteration; use [TECHNICAL_GUIDELINES.md](TECHNICAL_GUIDELINES.md) as the canonical technical rule source.
+Select relevant [regression boundaries](docs/REGRESSION_PREVENTION.md) and record
+their evidence in the active iteration. Canonical technical rules stay in
+[TECHNICAL_GUIDELINES.md](TECHNICAL_GUIDELINES.md).
 
-- **Ground before changing**: Inspect the configuration, owning module, existing tests, and current command help. Use configured workspace roots, code classification patterns, and source locations; never infer them from this repository's ticket names or one developer's checkout.
-- **Keep evidence distinct from inference**: For telemetry work, record source and session identifiers and validate against real source records. Synthetic fixtures are for deterministic tests, not evidence of a real session. Unknown records, missing children, unavailable pricing, and partial migrations must be surfaced according to the data contract rather than silently treated as complete or zero.
-- **Preserve portable history**: Follow the [portable ledger contract](TECHNICAL_GUIDELINES.md#portable-ledger-contract). Git-shared history must survive a different developer, machine and harness without the original private capture/source state. Select the cross-machine acceptance cases before changing persistence or refresh; tests and review findings cannot introduce a new authenticity policy on their own.
-- **Preserve baseline functionality**: Optional hydration enriches stored facts. Test the persisted-data path with enrichment unavailable as well as available; enrichment failure must not hide supported ledger data.
-- **Name by responsibility and version**: Version-specific adapters and tests should identify both the schema family and responsibility (for example, `schema_v2_session_extraction.go`). Shared logic should not claim to be version-specific. Keep public comments consistent with actual dispatch behavior.
-- **Bound investigation and output**: Use targeted searches and bounded reads. After a repeated failure, inspect the cause and change the hypothesis or command before retrying. Summarize resolved findings and remaining work in the active iteration so a compacted session does not restart discovery.
-- **Select tests by value**: Follow [test purpose and proportionality](TECHNICAL_GUIDELINES.md#test-purpose-and-proportionality). Identify the regression, inspect existing coverage before adding tests, and justify removals or map meaningful assertions to coherent existing recipients. Scores, counts, and line ratios are investigation aids, never automatic thresholds.
-- **Coordinate verification**: Record the tested commit or diff, command, result, and environment limitation in the review. Reuse valid results for unchanged code. Re-run affected checks after fixes and the required `make` gate after integration; reviewers need not duplicate a completed suite without a concrete concern. Report skipped stages explicitly.
-- **Keep the shipped UI current**: Frontend changes require the canonical frontend build and verification of the embedded asset tree under `backend/internal/adapters/web/dist/`. Respect the current tracking policy for generated files; if assets are tracked, do not restore stale versions merely to reduce the diff. Verify the standalone binary's assets as well as development-source behavior.
-- **Close with evidence**: State delivered behavior, verification, remaining limitations, and the correct PR URL. Do not call work complete because a plan exists, a child reports success, or an earlier PR passed checks.
-- **Maintain guidance at its source**: When correcting a recurring failure, update the owning rule and search active contributor docs, personas, skill references, and setup templates for conflicting guidance. Link to canonical rules rather than adding competing copies. Preserve historical audit records and distinguish recommendations from implemented fixes.
+- Ground changes in configured paths/classification, owning modules, existing tests
+  and installed command help, not ticket names or one developer's checkout.
+- Distinguish real source/session facts from inference and synthetic fixtures.
+  Surface unknown pricing, missing children, source errors and partial migrations.
+- Preserve [portable history](TECHNICAL_GUIDELINES.md#portable-ledger-contract)
+  across machines/harnesses without private capture receipts. Select cross-machine
+  cases for persistence/refresh; tests/reviews cannot invent authenticity policy.
+  Optional hydration must not hide supported persisted facts when unavailable.
+- Name version-specific adapters/tests by schema family and responsibility; shared
+  logic/comments must reflect actual dispatch. Bound searches/output and change
+  the hypothesis after repeated failure; retain progress across compaction.
+- Follow [test proportionality](TECHNICAL_GUIDELINES.md#test-purpose-and-proportionality):
+  identify regressions, inspect coverage, justify deletions and preserve distinct
+  assertions. Scores/counts/ratios guide investigation, never automatic thresholds.
+- Record tested revision/diff, commands, results and skipped/environment limits.
+  Reuse valid unchanged-code results; rerun affected checks after fixes and `make`
+  after integration. Frontend work requires canonical build, current embedded
+  assets under backend/internal/adapters/web/dist and standalone-binary verification;
+  respect generated-file tracking policy, never restore stale assets for a small diff.
+- Close with delivered behavior, verification, limits and the correct PR URL.
+  Plans, child reports and earlier PR results alone do not establish completion.
+- Correct recurring guidance at its source; search active docs/personas/skills/setup
+  templates for conflicts. Link canonical rules; preserve historical audit records
+  and distinguish proposed recommendations from implemented fixes.
 
-Rationale and session references: [GEN-12 session audit](alspaces/GEN-12/iterations/01/REVIEW.md).
+Rationale: [GEN-12 session audit](alspaces/GEN-12/iterations/01/REVIEW.md).

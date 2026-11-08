@@ -3,148 +3,65 @@ name: agentic-lens-dev
 description: Use when building features, fixing bugs, or refactoring the standalone AgenticLens application in Go (backend/CLI/engine) and TypeScript (frontend dashboard) with multi-agent orchestration (planner, coder, tester, reviewer). Requires a Jira ticket or task identifier.
 ---
 
-# AgenticLens Multi-Agent Development Workflow
+# AgenticLens development
 
-Apply the [shared artifact writing rules](../../../AGENTS.md#artifact-writing-rules); the artifact definitions below belong to this workflow.
-
-Coordinates autonomous development in the standalone **AgenticLens** project across specialized subagents (`planner`, `coder`, `tester`, `reviewer`). Architecture is built in **Go** (core aggregations, boundary adapters, CLI, server) and **TypeScript** (modern web dashboard embedded into the Go binary via `embed.FS`). Persona instructions and layer boundaries live in `.agents/agent/`.
-
-The skill itself uses the AgenticLens CLI application to parse, validate, and render developer telemetry and lifecycle metrics for every development iteration.
-
-## Configuration & Parametrization (`.agenticlens-config.yaml`)
-At startup, inspect `.agenticlens-config.yaml` in the project root to load parameters (falling back to defaults if not present):
-- `ticket.prefixes`: Supported prefix identifiers and descriptions (defaults: `AL`, `GEN`, `PO`). If a numeric ID is passed (e.g. `42`), format as `<ticket_prefix>-<ID>` (e.g. `AL-42`, `GEN-42`, or `PO-2`).
-- `workspaces.dir`: Directory for workspace artifacts (default: `"workspaces"`).
-- `project_name`: Project name (default: `"AgenticLens"`).
-
-Throughout this workflow:
-- `<WORKSPACES_DIR>` refers to the configured `workspaces.dir` (e.g. `workspaces`).
-- `<TICKET_ID>` uses a configured ticket prefix (e.g. `AL-42`, `GEN-42`, or `PO-2`).
-
-Follow the repository [testing policy](../../../TECHNICAL_GUIDELINES.md#test-purpose-and-proportionality) and [test review checklist](../../../docs/REGRESSION_PREVENTION.md#adding-reviewing-or-reducing-tests) when planning additions, consolidation, or removal.
-
-## Core Invariants
-- **Portable Ledgers**: Apply the [canonical portable ledger contract](../../../TECHNICAL_GUIDELINES.md#portable-ledger-contract) and select its [cross-machine acceptance cases](../../../docs/REGRESSION_PREVENTION.md#portable-ledgers-across-developers-and-machines) when changing persisted facts or refresh. Local receipts/fingerprints and existing test assertions cannot silently impose a new authenticity requirement on shared history.
-- **Single-Ticket Exclusivity**: Never work on more than one ticket at a time. Refuse any switch to another ticket. Treat all subsequent prompts as steering for the active ticket, creating new iterations as needed.
-- **Orchestrator Coordinates Only**: Never write application code, edit manifests/schemas/views, or execute manual fixes directly.
-- **Mandatory User Gate**: STOP after planning. Present `<WORKSPACES_DIR>/<TICKET_ID>/CONTRACT.md` and `iterations/<NN>/PLAN.md` to the user via the `question` tool. NEVER dispatch `coder` without explicit user confirmation.
-- **Context Pointers Over Bloat**: Pass file pointers to subagents (`CONTRACT.md`, `iterations/<NN>/PLAN.md`, `git diff`), not long duplicated prompt instructions.
-- **Self-Reflexive Telemetry via AgenticLens**: Use the native AgenticLens CLI command (`agentic-lens --al-offline --al-project . generate ...`) to ingest the extracted fact ledger, validate schemas, calculate domain aggregations, update `SUMMARY.md`, and render development metrics.
+Coordinate application changes through planner, coder, tester and independent
+reviewers. Follow [repository policy](../../../AGENTS.md) for ticket isolation,
+role boundaries, approvals, telemetry and delivery, and
+[technical guidelines](../../../TECHNICAL_GUIDELINES.md) for engineering rules.
+Read `.agenticlens-config.yaml` for ticket prefixes and `workspaces.dir`
+(default `workspaces`); paths below are relative to the active ticket workspace.
 
 ## Setup & Workspace Structure
-1. Require `<TICKET_ID>` (prefixed with configured ticket prefix, e.g. `AL-#`, `GEN-#`, or `PO-#`). Pick up specification from `<WORKSPACES_DIR>/plan/to-do/<TICKET_ID>*.md` and update ticket status to `In Progress` in `<WORKSPACES_DIR>/plan/TICKETS.md`.
-2. Checkout ticket branch: `git checkout -b <type>/<TICKET_ID>-<slug>`.
-3. Workspace layout under `<WORKSPACES_DIR>/<TICKET_ID>/` follows these development artifact definitions:
 
-| Artifact | Purpose and content | Usual prose length |
+Reuse the supplied ticket and branch/workspace when resuming. Record initial Git
+status, preserve unrelated changes and read any matching specification. Update an
+existing index entry to In Progress; ad hoc work needs no specification/index.
+Create a feature branch if needed; never develop on main.
+
+| Artifact | Content | Usual prose length |
 | --- | --- | --- |
-| `CONTRACT.md` | Frozen problem, agreed outcome, scope exclusions and observable acceptance. Link canonical FCIS rules; state only ticket-specific constraints. | 200–400 words |
-| `iterations/<NN>/PLAN.md` | Ordered implementation steps, affected components/owners, verification and review coverage. Later plans record the acceptance delta and link the baseline. | 200–400 words |
-| `SUMMARY.md` | Current delivered behavior, material decisions, checks/results with tested revision, review outcome and remaining limits. Group by behavior; use layers only when useful. | 300–600 words before generated metrics |
-| `PULL_REQUEST.md` | Conventional title first; problem, resulting behavior, concise validation and material limits. Link contract/summary for detail. | Usually 100–250 words; at most 3000 characters |
-| `agentic_metrics.json` | Final CLI-generated session fact ledger; its rendered metrics follow the authored summary. | Structured output |
+| `CONTRACT.md` | Frozen problem, agreed outcome, exclusions and observable acceptance; link canonical technical rules. | 200–400 words |
+| `iterations/<NN>/PLAN.md` | Steps, affected components/owners, verification and review coverage; later plans record acceptance deltas. | 200–400 words |
+| `SUMMARY.md` | Current behavior, decisions, actual checks/revision, review outcome and limits. | 300–600 words before metrics |
+| `PULL_REQUEST.md` | Conventional title first; problem, resulting behavior, validation and limits; link contract/summary. | Usually 100–250 words; at most 3000 characters |
+| `agentic_metrics.json` | Final CLI-generated session ledger; rendered metrics follow the authored summary. | Structured output |
 
-Keep baseline/reviewed revisions at their evidence rather than repeating hashes
-throughout prose. Distinguish planned checks from actual results and state skipped
-stages/environment limits. Summarize findings in plain language and link the
-retained record; group identical outcomes instead of narrating each review run.
-Active review files and retained `iterations/<NN>/REVIEW_SUMMARY.json` follow the
-[review skill's lifecycle](../agentic-lens-review/references/parallel-review.md#completed-review-retention), including all required credit and unresolved limits.
+Use the [shared writing rules](../../../AGENTS.md#artifact-writing-rules).
+Review records and retained findings follow the
+[review lifecycle](../agentic-lens-review/references/parallel-review.md#completed-review-retention).
 
----
+## Iteration lifecycle
 
-## Iteration Lifecycle
+1. **Plan:** Give the planner the request, baseline, contract and active iteration.
+   Ground in existing modules/tests; write the initial contract/plan or a scope
+   delta under the repository's iteration rules. Select relevant
+   [regression boundaries](../../../docs/REGRESSION_PREVENTION.md), including
+   cross-machine cases for persistence/refresh. Tests cannot impose a new
+   authenticity policy on portable history.
+2. **Approve:** Present contract/plan and obtain explicit scope approval before
+   dispatching a coder. Existing explicit approval satisfies this gate; record it.
+   Material scope changes need renewed approval, not routine corrections.
+3. **Implement:** Assign the coder owned paths, contract, current plan and any
+   findings. The orchestrator coordinates; it never implements application fixes.
+4. **Verify:** Assign the tester relevant regressions and missing contract cases
+   under [test proportionality](../../../TECHNICAL_GUIDELINES.md#test-purpose-and-proportionality).
+   Reuse valid existing checks; record actual results and skipped stages.
+5. **Review:** Follow the [parallel protocol](../agentic-lens-review/references/parallel-review.md)
+   for focus/model selection, independent frozen-revision investigations,
+   attribution, findings, corrections and re-review. Pass file pointers and
+   task-specific boundaries rather than copying common instructions. Each child
+   owns a separate report; the parent alone consolidates.
+6. **Integrate and deliver:** Once focused investigations have no unresolved
+   blockers/material gaps, commit owned changes, integrate main and run `make`
+   under [delivery policy](../../../AGENTS.md#1-ticketed-and-ad-hoc-work).
+   Assess integration changes against the review evidence. Final consolidated
+   approval requires passing integrated checks; child approval alone cannot open
+   publication. Complete artifact/index lifecycle, final telemetry, commits, push
+   and PR handoff under that same policy.
 
-### Phase 1: Grounding, Planning & Steering
-- **Iteration 01**:
-  ```python
-  task(
-      subagent_type="planner",
-      description="Ground, contract & plan iteration 01",
-      prompt="Ticket: <TICKET_ID>. Request: <USER_REQUEST>. Config: .agenticlens-config.yaml. Ground against existing AgenticLens layers (Go backend in backend/internal/domain, backend/internal/adapters, backend/cmd/ and TypeScript frontend in web/) and TECHNICAL_GUIDELINES.md. Write <WORKSPACES_DIR>/<TICKET_ID>/CONTRACT.md and <WORKSPACES_DIR>/<TICKET_ID>/iterations/01/PLAN.md. Zero code blocks.",
-  )
-  ```
-- **Iteration > 01**:
-  ```python
-  task(
-      subagent_type="planner",
-      description="Plan iteration delta",
-      prompt="Ticket: <TICKET_ID>. Follow-up: <USER_REQUEST>. Config: .agenticlens-config.yaml. Context: <WORKSPACES_DIR>/<TICKET_ID>/CONTRACT.md and prior iterations. Write delta plan to <WORKSPACES_DIR>/<TICKET_ID>/iterations/<NN>/PLAN.md.",
-  )
-  ```
-
-### User Gate (HARD STOP)
-Present planning artifacts. Wait for explicit user confirmation via `question` tool before touching code. If changes requested, re-dispatch `planner`.
-
-### Phase 2: Implementation, Testing & Audit Loop
-Use the [specialized parallel review protocol](../agentic-lens-review/references/parallel-review.md). Record dedicated persona names, focus owners and unique report paths in the plan. The coordinator alone loads the role matrix; each child gets its own persona and shared rules. Substantive changes default to separate behavior, data/failure, architecture and test-effectiveness reviewers, with risk-selected specialists; capacity limits require waves, not omitted coverage. Narrow low-risk exceptions need a rationale. Give each reviewer the same frozen revision/requirements and a fresh context where supported. Load the review model policy and expand each selected persona into all configured profiles before dispatch. Preserve per-run model/effort evidence and finding attribution under the review protocol. The parent owns the consolidated verdict.
-
-Run `coder` -> `tester` -> independent focused reviewers -> verified findings/consolidation on `<WORKSPACES_DIR>/<TICKET_ID>/iterations/<NN>/`:
-
-1. **Code (`coder`)**:
-   ```python
-   task(
-       subagent_type="coder",
-       description="Implement iteration <NN>",
-       prompt="Context: <WORKSPACES_DIR>/<TICKET_ID>/CONTRACT.md, <WORKSPACES_DIR>/<TICKET_ID>/iterations/<NN>/PLAN.md (and REVIEW.md if rework), TECHNICAL_GUIDELINES.md. Implement Go domain models/aggregations, Go adapters/CLI, or TypeScript frontend components adhering to FCIS, static typing, zero any in Go/TS, and zero emojis. Return STATUS: BLOCKED if conflicting constraints arise.",
-   )
-   ```
-2. **Test (`tester`)**:
-   ```python
-   task(
-       subagent_type="tester",
-       description="Test iteration <NN>",
-        prompt="Context: <WORKSPACES_DIR>/<TICKET_ID>/CONTRACT.md, <WORKSPACES_DIR>/<TICKET_ID>/iterations/<NN>/PLAN.md, TECHNICAL_GUIDELINES.md, git diff. Execute pure Go domain tests (zero mocks) with make test (or go test -race ./...), boundary schema tests, and TypeScript test suites. Inspect existing coverage and verify only relevant missing contract cases under the canonical testing policy; extend coherent existing tests before adding declarations. For reductions, verify deletion rationales and assertion-to-recipient transfers. Zero silent skips allowed.",
-   )
-   ```
-3. **Focused audit (`reviewer`)**:
-   Dispatch the applicable focus assignments using the brief in the parallel review protocol, concurrently within harness capacity. Each reviewer follows the canonical review skill, inspects relevant unchanged dependencies and owns a separate report. Do not have children overwrite a shared REVIEW.md. Parent verifies/deduplicates candidates, preserves dissent supported by evidence and writes the consolidated REVIEW.md. Corrections return to coder/tester, followed by revision-aware re-review of affected focuses.
-
-**Loop Control**:
-After focused review is ready (no unresolved blockers/material review gaps), perform Phase 3 commit/integration/checks. Final consolidated approval gates publication, not the ability to run those checks; integration changes require affected re-review.
-
-- Consolidated `APPROVED`: Complete the remaining publication steps under the parallel protocol gate; child approvals alone do not suffice. Required integrated checks must have passed and this does not authorize merging.
-- `INCOMPLETE`: Resolve the named material evidence/access gap before delivery; do not treat missing findings as approval.
-- `CHANGES_REQUESTED`: Feed findings back to `coder`/`tester`.
-- `STATUS: BLOCKED`: Re-engage `planner` with details, update `PLAN.md`, and re-confirm with user.
-
-### Phase 3: Delivery Sync (Every Iteration)
-1. **Commit Implementation**:
-   Commit all implementation files and test changes on the feature branch first to ensure a clean working tree:
-   ```bash
-   git add -A
-   git commit -m "<type>(<scope>): <summary> (<TICKET_ID>)"
-   ```
-2. **Sync Upstream & Verify Code Quality**:
-   Merge `main` into the feature branch with a clean working tree to resolve any conflicts, then run automated checks:
-   ```bash
-   git fetch origin main && git merge origin/main --no-edit
-   # Run automated checks, tests, and build via Makefile
-   make
-   # or run individually: make check && make test && make build
-   ```
-3. Update `<WORKSPACES_DIR>/<TICKET_ID>/SUMMARY.md`: Current outcome, material decisions, verification and remaining limits under the development artifact definitions above.
-4. Update `<WORKSPACES_DIR>/<TICKET_ID>/PULL_REQUEST.md`: Conventional PR draft with the first line formatted as `# <type>(<scope>): <summary> (<TICKET_ID>)` (max 3000 chars, pointers to `CONTRACT.md` and `SUMMARY.md`).
-5. **Plan Lifecycle Synchronization**:
-   Move specification file from `<WORKSPACES_DIR>/plan/to-do/<TICKET_ID>*.md` to `<WORKSPACES_DIR>/plan/done/`, remove the completed ticket entry from `<WORKSPACES_DIR>/plan/TICKETS.md` (do not create or maintain a Done section; completed specifications remain in `plan/done/`), and unblock downstream tickets: check tickets blocked by `<TICKET_ID>` and promote any whose dependencies are now fully satisfied to `## Ready` with `Status: Ready`.
-6. **Extract Telemetry & Render Metrics (Final Step Before PR Commit)**:
-   Delayed strictly to the final step before committing so that fewer turns, tool calls, compactions, or subagent sessions are omitted.
-   Generate a unique random nonce directly (e.g. an 8 to 16 character alphanumeric or hex string) and supply the literal token directly to `--nonce <GENERATED_NONCE>`. Shell variables (`$NONCE`) must not be used because OpenCode records tool inputs into SQLite before subshell expansion occurs.
-   Run AgenticLens Go CLI to query OpenCode SQLite and Git, construct the fact ledger, validate boundary schemas, derive domain metrics, update `SUMMARY.md`, and output KPIs. Pass explicit `--ticket-type` matching the conventional commit classification (`feat`, `fix`, `chore`, `refactor`, `test`, `ci`, `perf`, `build`):
-   ```bash
-   agentic-lens --al-offline --al-project . generate --nonce <GENERATED_NONCE> --ticket-id <TICKET_ID> --ticket-type <CONVENTIONAL_TYPE> --json-output <WORKSPACES_DIR>/<TICKET_ID>/agentic_metrics.json --append <WORKSPACES_DIR>/<TICKET_ID>/SUMMARY.md
-   ```
-7. **Commit, Push & Open Pull Request**:
-   Extract title from the first line of `PULL_REQUEST.md`, commit final workspace and telemetry files, push upstream, and open a GitHub Pull Request:
-   ```bash
-   PR_TITLE=$(head -n 1 <WORKSPACES_DIR>/<TICKET_ID>/PULL_REQUEST.md | sed 's/^# *//')
-   git add -A
-   git commit -m "chore(telemetry): update workspace metrics and summary ($PR_TITLE)" # or git commit --amend
-   git push -u origin <branch>
-   PR_URL=$(gh pr create --title "$PR_TITLE" --body-file <WORKSPACES_DIR>/<TICKET_ID>/PULL_REQUEST.md)
-   ```
-   If running in an environment with pull request linking tools (e.g. `link_pull_request`), register the pull request URL immediately.
-8. **Print Handoff Summary & Pull Request Link**:
-   Print concise handoff summary to user, with the Pull Request link prominently displayed at the top:
-   - **Pull Request**: `<PR_URL>`
-   - Active duration, cost, cache hits, test status, context window health.
+`CHANGES_REQUESTED` returns to coder/tester. `INCOMPLETE` requires the missing
+material evidence before delivery. A blocked scope decision returns to planning;
+ask again only for changed approval boundaries. `APPROVED` permits publication,
+not merging. Preserve applicable approvals/checks for unchanged behavior and
+compact completed review records only through the review retention protocol.

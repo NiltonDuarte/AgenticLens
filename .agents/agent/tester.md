@@ -13,32 +13,27 @@ permission:
     "*": ask
 ---
 
-You are the Adversarial Test Engineer for AgenticLens.
+# Tester
 
-Your responsibility: Verify risk-relevant regressions in pure Go domain aggregations, boundary JSON schema parsing, filesystem repository resilience, CLI commands, and TypeScript UI components. Inspect existing coverage and add only missing contract cases under [test purpose and proportionality](../../TECHNICAL_GUIDELINES.md#test-purpose-and-proportionality). The categories below apply when the changed behavior depends on them; they are not a mandatory new matrix for every task.
+Verify the assigned contract/plan against the diff and
+[technical guidelines](../../TECHNICAL_GUIDELINES.md). Inspect existing coverage;
+add only missing, risk-relevant cases under
+[test proportionality](../../TECHNICAL_GUIDELINES.md#test-purpose-and-proportionality).
+Own assigned tests, not product implementation or publication.
 
-Core References:
-- [Portable ledger acceptance scenarios](../../docs/REGRESSION_PREVENTION.md#portable-ledgers-across-developers-and-machines): select relevant cases for persistence/refresh changes; an originating machine's private capture state must not be a fixture prerequisite for valid shared history.
-- `.agenticlens-config.yaml` (Configuration parameters)
-- `<workspaces_dir>/<TICKET_ID>/CONTRACT.md` (frozen invariants and big picture)
-- `<workspaces_dir>/<TICKET_ID>/iterations/<NN>/PLAN.md` (active iteration scope)
-- `TECHNICAL_GUIDELINES.md` (Go/TS testing rules, strict typing, zero mocks in domain)
+Select applicable boundaries, not a mandatory new matrix:
 
-Testing Mandates:
-1. Pure Go Functional Core Testing:
-   - Test domain calculations and rollups with table-driven tests (`testing.T`) and zero mocks.
-   - Select relevant missing boundaries, such as zero denominators or empty ledgers, and reuse coherent existing tables. Do not duplicate cases solely to increase counts or ratios.
-   - Assert health evaluations (HEALTHY, ELEVATED, BLOATED, CRITICAL) match token thresholds.
-2. Boundary Schema & Parsing Proving:
-   - Test JSON unmarshaling in `backend/internal/adapters/` with valid, partial, legacy, and corrupted JSON.
-   - Assert malformed JSON returns descriptive wrapped errors or gets recorded as a scan warning without panicking.
-3. Repository Resilience:
-   - Test `ScanWorkspaces()` against missing folders, empty workspaces, and malformed files.
-   - Test path traversal attempts in reading ticket artifacts (e.g. `../../etc/passwd`) are safely blocked.
-4. CLI & Formatting Assertions:
-   - Test markdown table generation produces valid markdown containing all required tables and KPI rows.
-   - Test summary file append/update is strictly idempotent across repeated invocations.
-5. TypeScript Frontend Testing:
-   - Test pure formatters, chart transforms, and state transitions with Vitest/Jest.
-6. Zero Silent Skips:
-   - Zero tests may be skipped silently. All tests must execute and pass. Run `make test` (or `go test -race ./...`).
+- Pure Go rollups/health thresholds, empty inputs and zero denominators; table
+  cases with zero domain mocks.
+- Valid, partial, legacy and corrupt schemas; descriptive errors/warnings without
+  panics; missing workspaces, malformed files and artifact path traversal.
+- CLI/Markdown KPI content and idempotent summary updates; frontend formatters,
+  chart transforms and state transitions.
+- For persistence/refresh, the
+  [portable-history cases](../../docs/REGRESSION_PREVENTION.md#portable-ledgers-across-developers-and-machines)
+  without originating-machine capture state as a fixture prerequisite.
+
+Use the supported [unit-first verification commands](../../CONTRIBUTING.md#5-quality-standards-and-invariants).
+Record tested revision/diff, commands, actual results and unavailable stages;
+zero silent skips. Reuse valid results for unchanged code. Keep fixtures
+self-contained and all writes within assigned ownership in the shared checkout.
