@@ -5,5 +5,5 @@ Create AL-82 for key-value metric tags supplied by shared configuration, local c
 This replaces the earlier unapproved user-attribution proposal. It is product planning only; implementation belongs in a separate development session.
 
 - [Specification](SPEC.md)
-- [Development ticket](../plan/to-do/AL-82%20add%20metric%20tags%20filters%20and%20comparison%20coloring.md)
+- [Development ticket](../plan/to-do/AL-82%20filter%20and%20compare%20metrics%20by%20tags.md)
 - [Summary](SUMMARY.md)

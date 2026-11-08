@@ -1,4 +1,4 @@
-h3. Title: AL2-1: End-to-End Agent Anomaly Debug Prompt Generator, CLI, and Interactive Web Drawer
+h3. Title: AL2-1: Generate and preview anomaly debug prompts
 
 *GOAL*
 

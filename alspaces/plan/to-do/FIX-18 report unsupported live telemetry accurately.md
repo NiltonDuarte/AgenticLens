@@ -1,4 +1,4 @@
-h3. Title: FIX-18: Report unsupported live telemetry schemas accurately
+h3. Title: FIX-18: Report unsupported live telemetry accurately
 
 *GOAL*
 

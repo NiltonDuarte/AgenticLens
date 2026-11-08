@@ -1,4 +1,4 @@
-h3. Title: AL-74: Strengthen test reliability and remove unused code
+h3. Title: AL-74: Make regression checks reliable and remove unused code
 
 *GOAL*
 

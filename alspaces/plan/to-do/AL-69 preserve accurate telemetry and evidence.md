@@ -1,4 +1,4 @@
-h3. Title: AL-69: Correct telemetry accuracy and preserve evidence
+h3. Title: AL-69: Preserve accurate telemetry and evidence
 
 *GOAL*
 

@@ -1,4 +1,4 @@
-h3. Title: AL-73: Make installation and release verification reliable
+h3. Title: AL-73: Verify release artifacts before installation
 
 *GOAL*
 

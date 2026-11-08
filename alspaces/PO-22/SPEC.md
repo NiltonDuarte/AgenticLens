@@ -12,7 +12,7 @@ This review retains all active identifiers and existing dependencies. These are 
 
 ## Expected behavior and acceptance
 
-Every active ticket puts goal and context before observable acceptance and routing metadata. Repeated approval, test-suite, telemetry and PR checklists give way to canonical links. Ticket-specific reproduction cases, discovery attribution, owner boundaries and evidence links survive. Explicit interfaces remain where they are product contracts; developer filenames and speculative internal types do not prescribe implementation.
+Every active ticket has a short outcome-focused title using the ticket-template convention and a matching filename slug. Registry entries and links to renamed active tickets remain synchronized. Goal and context precede observable acceptance and routing metadata. Repeated approval, test-suite, telemetry and PR checklists give way to canonical links. Ticket-specific reproduction cases, discovery attribution, owner boundaries and evidence links survive. Explicit interfaces remain where they are product contracts; developer filenames and speculative internal types do not prescribe implementation.
 
 The registry lists each active ticket once with consistent Ready/Blocked status and reciprocal, acyclic dependencies. Historical findings remain historical; this author review is not independent correctness review or native runtime verification. Previously accepted shared-ledger portability, source authority, unavailable values and exact-owner refresh remain baseline requirements.
 
@@ -33,4 +33,4 @@ The registry lists each active ticket once with consistent Ready/Blocked status 
 
 Newly explicit draft defaults clarify no-selection/URL preference, duplicate project input handling and safe archive publication. These are planning decisions, not claims about shipped behavior. Developers must ground source field locations, rate-card matching and supported runtime interfaces before agreeing a contract. No live pricing, dependency advisories or runtime support claims are newly asserted here.
 
-Only the active registry, active tickets and this PO workspace change. Historical initiative specs remain linked evidence. Application, tests, runtime scripts and developer contracts remain outside this session. Follow [engineering rules](../../TECHNICAL_GUIDELINES.md) and [regression boundaries](../../docs/REGRESSION_PREVENTION.md). Implementation starts in separate development sessions.
+The active registry, active tickets and this PO workspace change; references in earlier documents receive only link-target repairs for the renamed tickets. Historical initiative specs remain evidence with unchanged requirements. Application, tests, runtime scripts and developer contracts remain outside this session. Follow [engineering rules](../../TECHNICAL_GUIDELINES.md) and [regression boundaries](../../docs/REGRESSION_PREVENTION.md). Implementation starts in separate development sessions.

@@ -1,4 +1,4 @@
-h3. Title: AL-63: Audit source capability parity across OpenCode v1, OpenCode v2, and Codex
+h3. Title: AL-63: Verify source capabilities across harnesses
 
 *GOAL*
 

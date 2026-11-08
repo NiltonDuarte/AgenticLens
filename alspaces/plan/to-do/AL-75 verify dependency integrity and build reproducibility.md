@@ -1,4 +1,4 @@
-h3. Title: AL-75: Verify dependency integrity and reproducible builds
+h3. Title: AL-75: Verify dependency integrity and build reproducibility
 
 *GOAL*
 

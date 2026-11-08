@@ -1,4 +1,4 @@
-h3. Title: AL2-3: Multi-Project Configuration Schema, Domain Aggregations, and Multi-Folder Scanner
+h3. Title: AL2-3: Scan and aggregate local projects
 
 *GOAL*
 

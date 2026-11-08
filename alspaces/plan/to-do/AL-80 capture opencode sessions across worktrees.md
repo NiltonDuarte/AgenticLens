@@ -1,4 +1,4 @@
-h3. Title: AL-80: Deliver global OpenCode capture using the shared worktree runtime
+h3. Title: AL-80: Capture OpenCode sessions across worktrees
 
 *GOAL*
 

@@ -1,4 +1,4 @@
-h3. Title: AL2-6: Model API Pricing Configuration, Domain Rate-Card Cost Approximation Engine, and Hybrid Ledger Ingestion
+h3. Title: AL2-6: Estimate API-equivalent costs alongside measured spend
 
 *GOAL*
 

@@ -1,4 +1,4 @@
-h3. Title: AL-78: Make open-turn feedback effective across Codex and OpenCode
+h3. Title: AL-78: Make completion feedback effective across harnesses
 
 *GOAL*
 

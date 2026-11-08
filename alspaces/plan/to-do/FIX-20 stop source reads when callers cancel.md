@@ -1,4 +1,4 @@
-h3. Title: FIX-20: Cancel native source reads with their callers
+h3. Title: FIX-20: Stop source reads when callers cancel
 
 *GOAL*
 

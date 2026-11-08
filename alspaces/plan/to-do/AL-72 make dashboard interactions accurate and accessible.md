@@ -1,4 +1,4 @@
-h3. Title: AL-72: Correct UI interactions, calculations and accessibility
+h3. Title: AL-72: Make dashboard interactions accurate and accessible
 
 *GOAL*
 

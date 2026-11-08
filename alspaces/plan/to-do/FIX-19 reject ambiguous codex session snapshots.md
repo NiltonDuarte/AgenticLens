@@ -1,4 +1,4 @@
-h3. Title: FIX-19: Reject ambiguous Codex owner snapshots
+h3. Title: FIX-19: Reject ambiguous Codex session snapshots
 
 *GOAL*
 

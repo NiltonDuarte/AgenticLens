@@ -1,4 +1,4 @@
-h3. Title: AL2-5: Multi-Project Web Dashboard Selector, Cross-Project Fleet Overview, and Comparative Analytics
+h3. Title: AL2-5: Select and compare projects in the dashboard
 
 *GOAL*
 

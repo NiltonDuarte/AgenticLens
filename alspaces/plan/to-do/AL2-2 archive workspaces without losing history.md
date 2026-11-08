@@ -1,4 +1,4 @@
-h3. Title: AL2-2: End-to-End Workspace Archive Engine, CLI Compaction, and In-Memory Decompression Ingestion
+h3. Title: AL2-2: Archive workspaces without losing history
 
 *GOAL*
 

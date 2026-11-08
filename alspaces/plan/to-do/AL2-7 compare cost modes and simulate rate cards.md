@@ -1,4 +1,4 @@
-h3. Title: AL2-7: Interactive Cost Estimation Dashboards, Hybrid Fleet Analytics, and Rate-Card Simulation
+h3. Title: AL2-7: Compare cost modes and simulate rate cards
 
 *GOAL*
 

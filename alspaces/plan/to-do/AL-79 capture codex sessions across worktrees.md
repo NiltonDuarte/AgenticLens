@@ -1,4 +1,4 @@
-h3. Title: AL-79: Deliver native user-level Codex capture across worktrees
+h3. Title: AL-79: Capture Codex sessions across worktrees
 
 *GOAL*
 

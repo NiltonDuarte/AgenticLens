@@ -1,4 +1,4 @@
-h3. Title: REV-7: Review shared source read guarantees
+h3. Title: REV-7: Review source read guarantees
 
 *GOAL*
 

@@ -1,4 +1,4 @@
-h3. Title: AL-65: Research default source-backed recomputation and the future of Force
+h3. Title: AL-65: Recommend safe source-backed backfill defaults
 
 *GOAL*
 

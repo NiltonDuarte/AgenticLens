@@ -1,4 +1,4 @@
-h3. Title: AL-70: Preserve configuration, paths and ticket identity
+h3. Title: AL-70: Honor configuration paths and ticket identity
 
 *GOAL*
 

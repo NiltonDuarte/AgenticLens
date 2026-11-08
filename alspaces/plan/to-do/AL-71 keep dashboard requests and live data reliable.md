@@ -1,4 +1,4 @@
-h3. Title: AL-71: Make frontend requests and live data handling reliable
+h3. Title: AL-71: Keep dashboard requests and live data reliable
 
 *GOAL*
 

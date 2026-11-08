@@ -1,4 +1,4 @@
-h3. Title: AL-81: Make manual generate independent of the capture registry
+h3. Title: AL-81: Generate metrics without capture registry access
 
 *GOAL*
 

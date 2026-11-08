@@ -1,4 +1,4 @@
-h3. Title: AL2-8: Ingest Model Reasoning Effort Variants and Surface Deliberation Settings across Platform Views
+h3. Title: AL2-8: Show configured reasoning effort across views
 
 *GOAL*
 

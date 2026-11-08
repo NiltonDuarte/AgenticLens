@@ -1,4 +1,4 @@
-h3. Title: AL2-4: Remote Git Repository Ingestion, Shallow Cache Manager, and Project Management API
+h3. Title: AL2-4: Monitor and refresh remote Git projects
 
 *GOAL*
 

@@ -1,4 +1,4 @@
-h3. Title: AL2-9: Evaluate Cryptographic Signing and Verification for Telemetry Ledgers
+h3. Title: AL2-9: Evaluate optional ledger signatures
 
 *GOAL*
 
