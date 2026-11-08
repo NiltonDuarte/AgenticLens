@@ -1,0 +1,61 @@
+name: Ticket roadmap pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tickets-pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: scripts/tickets-site-requirements.txt
+      - name: Install documentation build dependencies
+        run: python -m pip install -r scripts/tickets-site-requirements.txt
+      - name: Test the real ticket site builder
+        run: python scripts/tests/test_tickets_site.py
+      - name: Build ticket pages
+        env:
+          REPOSITORY: ${{ github.repository }}
+          REVISION: ${{ github.sha }}
+          REPOSITORY_NAME: ${{ github.event.repository.name }}
+        run: >-
+          python scripts/build-tickets-site.py
+          --repository "$REPOSITORY"
+          --revision "$REVISION"
+          --base-path "/$REPOSITORY_NAME"
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/tickets-site
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy ticket pages
+        id: deployment
+        uses: actions/deploy-pages@v4
