@@ -13,7 +13,7 @@ existing sources. The other instruction reductions remain. Across eight files,
 the final net reduction from iteration 04's baseline is 3,882 whitespace-delimited
 words (37%), counting Markdown/frontmatter/examples without relocating the bulk.
 
-Development is version 0.1.2; PO/review are 0.1.1, and management gained its first
+Development is version 0.1.1; PO/review are 0.1.1, and management gained its first
 VERSION record at 0.1.1. All four version records pass format/content checks.
 Scope follows the [contract](CONTRACT.md) and current
 [development refinement](iterations/05/PLAN.md), preserving the prior

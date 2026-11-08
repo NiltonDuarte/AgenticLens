@@ -8,7 +8,8 @@ development workflow; reductions in other instructions remain accepted.
 The documentation coordinator owns development SKILL.md/VERSION and GEN-22
 artifacts. Keep technical rules, review protocol details and exact command recipes
 at their existing sources. Preserve role boundaries and all prior approval,
-evidence and delivery guarantees. Increment the affected skill to 0.1.2.
+evidence and delivery guarantees. Keep the affected skill at 0.1.1 per the user’s subsequent version correction;
+this supersedes the planned increment.
 
 Validate links/metadata and an independent walkthrough of a new feature, resumed
 ticket, failed review and integration conflict. Then commit, integrate main, run
