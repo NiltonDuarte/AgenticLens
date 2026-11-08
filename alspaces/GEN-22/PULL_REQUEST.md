@@ -9,6 +9,6 @@ Summaries now describe current outcomes. Required review attribution, verificati
 unresolved findings and generated metrics remain protected. Existing ticket
 history and application behavior are unchanged.
 
-Validation: documentation consistency, relative links, skill metadata and
-`git diff --check`; integrated `make` result is recorded in the
+Validation: integrated `make`, documentation consistency, relative links, skill
+metadata and `git diff --check` passed. Evidence and limits are in the
 [summary](SUMMARY.md). See the [contract](CONTRACT.md) for scope.
