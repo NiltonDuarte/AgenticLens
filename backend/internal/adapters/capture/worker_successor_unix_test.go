@@ -42,7 +42,7 @@ func TestWorkerSuccessorRequiresExactReadyInstallationAndOriginalState(t *testin
 			}
 			switch scenario {
 			case "state drift":
-				if err = os.WriteFile(filepath.Join(project, ".agenticlens-config.local.yaml"), []byte("telemetry:\n  capture:\n    state_dir: moved-state\n"), 0600); err != nil {
+				if err = os.WriteFile(filepath.Join(project, ".agenticlens-config.local.yaml"), []byte("telemetry:\n  capture:\n    enabled: true\n    state_dir: moved-state\n"), 0600); err != nil {
 					t.Fatal(err)
 				}
 			case "manifest version":

@@ -1,6 +1,14 @@
 #!/bin/sh
 # AgenticLens common entrypoint v1: offline shared-YAML release selection.
 set -eu
+# The explicit installer supplies a stable native dispatcher. Legacy bootstrap
+# remains available only for older pinned binaries that predate this interface.
+dispatcher_path=${HOME:?}/.agenticlens/dispatcher
+if [ -f "$0.dispatcher" ]; then IFS= read -r dispatcher_path < "$0.dispatcher" || exit 2; fi
+if [ -e "$dispatcher_path" ] || [ -L "$dispatcher_path" ]; then
+  [ -x "$dispatcher_path" ] || { printf '%s\n' "Native dispatcher unavailable: $dispatcher_path" >&2; exit 2; }
+  exec "$dispatcher_path" dispatch "$@"
+fi
 fail() { printf '%s\n' "$*" >&2; exit 2; }
 read_bootstrap() {
   input=$1; mode=$2; field=$3
@@ -59,12 +67,15 @@ function scalar(value,    q) {
     if(line !~ /^  [A-Za-z_][A-Za-z0-9_-]*:([ \t]+.*)?$/) fail("agenticlens children require exactly two spaces and plain keys")
     key=substr(line,3); sub(/:.*/, "", key)
     if(children[key]++) fail("duplicate agenticlens key")
-    if(key!="version" && key!="install_root") fail("unknown agenticlens key")
+    if(key!="version" && key!="install_root" && key!="binary_dir") fail("unknown agenticlens key")
     value=scalar(substr(line,length(key)+4))
     if(key=="version") {
         if(mode=="local") fail("local version overrides are prohibited; edit shared YAML")
         if(length(value)>128 || value !~ /^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?(\+[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?$/) fail("version must be an exact vMAJOR.MINOR.PATCH release tag")
         version=value
+    } else if(key=="binary_dir") {
+        if(mode=="local") fail("local development selection overrides prohibited")
+        if(length(value)>4096) fail("binary_dir exceeds path limit")
     } else {
         if(length(value)>4096 || value !~ /^(\/|~\/|[A-Za-z]:[\\\/]|\\\\[^\\]+\\[^\\]+)/ || value ~ /[<>|?*]/) fail("install_root must be an absolute path or ~/path")
         install_root=value
@@ -86,7 +97,7 @@ while [ "$#" -gt 0 ]; do
   case "$1" in
     --al-offline) shift ;;
     --al-project) [ "$#" -ge 2 ] || fail '--al-project requires a directory'; project=$2; shift 2 ;;
-    --al-resolve) resolve=1; shift ;;
+    --al-resolve|--al-resolve-cache) resolve=1; shift ;;
     *) break ;;
   esac
 done

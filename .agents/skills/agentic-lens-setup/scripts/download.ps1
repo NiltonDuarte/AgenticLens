@@ -188,7 +188,7 @@ try {
         try { $bytes = [Text.Encoding]::UTF8.GetBytes("# AgenticLens bootstrap scaffold v1: incomplete project configuration`nagenticlens:`n  version: $Version`ntelemetry:`n  capture:`n    state_dir: ~/.agenticlens/state`n    commit_warning: true`n"); $stream.Write($bytes, 0, $bytes.Length) } finally { $stream.Dispose() }
         $targets.Add($pin); $backups.Add('')
     }
-    $context = (Run-Probe $shell @('-NoLogo', '-NoProfile', '-NonInteractive', '-File', $source, '--al-project', $projectPath, '--al-resolve')) -split '\r?\n'
+    $context = (Run-Probe $shell @('-NoLogo', '-NoProfile', '-NonInteractive', '-File', $source, '--al-project', $projectPath, '--al-resolve-cache')) -split '\r?\n'
     if ($context.Count -ne 4) { throw 'Common wrapper resolution protocol incompatible' }
     $pinVersion = $context[0]; $projectPath = $context[1]; $installRoot = $context[2]; $native = $context[3]
     if ($Version -and $Version -cne $pinVersion) { throw '-Version conflicts with shared YAML pin' }
@@ -234,6 +234,16 @@ try {
     Activate $source $wrapper
     $hashFile = [IO.Path]::Combine($stage, 'wrapper.sha256'); [IO.File]::WriteAllText($hashFile, (Hash-File $source))
     Activate $hashFile ($wrapper + '.sha256')
+    $dispatcherProtocol = ''
+    try { $dispatcherProtocol = (Run-Probe $native @('dispatch', 'protocol')).Trim() } catch { $dispatcherProtocol = '' }
+    if ($dispatcherProtocol -ceq '1') {
+        # The native transaction owns bytes, checksum and machine receipt.
+        $dispatcher = [IO.Path]::Combine($installRoot, 'dispatcher.exe')
+        Write-SetupLine ((Run-Probe $native @('capture', 'install-dispatcher', '--repo', $projectPath, '--binary', $native)))
+        $pointer = [IO.Path]::Combine($stage, 'dispatcher.pointer')
+        [IO.File]::WriteAllText($pointer, $dispatcher); Activate $pointer ($wrapper + '.dispatcher')
+    }
+
     if ($InitConfig) {
         Write-SetupLine ('Configuration incomplete: scaffold defines no project/ticket/code roots.')
         if ($observedProtocol -ceq '3') {
@@ -246,6 +256,7 @@ try {
     if ($CaptureSource) {
         if ($InitConfig) { throw 'Complete project configuration before enabling capture' }
         $captureArgs = @('capture', 'install', '--repo', $projectPath, '--source', $CaptureSource, '--store', $CaptureStore, '--binary', $native, '--wrapper', $wrapper)
+        if ($CaptureSource -ceq 'codex') { $captureArgs = @('capture', 'install-user', '--repo', $projectPath, '--binary', $native) }
         if ($CaptureStateDir) { $captureArgs += @('--state-dir', $CaptureStateDir) }
         $captureApplyStarted = $true
         Write-SetupLine ((Run-Probe $native $captureArgs))

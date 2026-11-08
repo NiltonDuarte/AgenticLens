@@ -88,7 +88,7 @@ func testProjectConfig() domain.ProjectConfig {
 	}
 }
 
-func TestLoad_LocalTelemetrySourcesMergeAndValidate(t *testing.T) {
+func TestLoad_LocalTelemetrySourcesResolveAndValidate(t *testing.T) {
 	root := t.TempDir()
 	shared := "project_name: Shared\nticket:\n  prefixes: [AL]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n\ntelemetry:\n  capture:\n    state_dir: capture-state\n"
 	if err := os.WriteFile(filepath.Join(root, ".agenticlens-config.yaml"), []byte(shared), 0600); err != nil {
@@ -103,7 +103,7 @@ func TestLoad_LocalTelemetrySourcesMergeAndValidate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.ProjectName != "Shared" || cfg.Telemetry.DefaultSource != "codex" || cfg.Telemetry.Sources.CodexHome != "~/private-codex" || cfg.Telemetry.Sources.OpenCodeDatabasePath != "~/opencode.db" {
+	if cfg.ProjectName != "Shared" || cfg.Telemetry.DefaultSource != "codex" || cfg.Telemetry.Sources.CodexHome != filepath.Join(mustTestHome(t), "private-codex") || cfg.Telemetry.Sources.OpenCodeDatabasePath != filepath.Join(mustTestHome(t), "opencode.db") {
 		t.Fatalf("unexpected merged config: %+v", cfg)
 	}
 	if err := os.WriteFile(localPath, []byte("telemetry:\n  default_source: both\n"), 0600); err != nil {
@@ -151,7 +151,7 @@ func TestLoad_LocalTelemetrySourceCombinations(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if cfg.Telemetry.DefaultSource != tc.defaultSrc || cfg.Telemetry.Sources.CodexHome != tc.codex || cfg.Telemetry.Sources.OpenCodeDatabasePath != tc.opencode {
+			if cfg.Telemetry.DefaultSource != tc.defaultSrc || cfg.Telemetry.Sources.CodexHome != expandedTestHome(t, tc.codex) || cfg.Telemetry.Sources.OpenCodeDatabasePath != expandedTestHome(t, tc.opencode) {
 				t.Fatalf("unexpected source settings: %+v", cfg.Telemetry)
 			}
 		})
@@ -2603,4 +2603,20 @@ func TestLoadGenerationMetricsStrictIndependentDefaults(t *testing.T) {
 			})
 		}
 	}
+}
+
+func mustTestHome(t *testing.T) string {
+	t.Helper()
+	h, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return h
+}
+func expandedTestHome(t *testing.T, p string) string {
+	t.Helper()
+	if p == "" {
+		return ""
+	}
+	return filepath.Join(mustTestHome(t), strings.TrimPrefix(p, "~/"))
 }

@@ -17,15 +17,6 @@ Reconciled 2026-11-05 against merged `origin/main` at `03f5b05d` and open PRs. S
   - **File**: [AL-81 decouple manual generate from capture registry.md](to-do/AL-81%20decouple%20manual%20generate%20from%20capture%20registry.md)
   - **Specification**: [PO-20](../PO-20/SPEC.md)
 
-- **AL-79**: Deliver native user-level Codex capture across worktrees
-  - **Subsystem**: Domain / Configuration / Native Capture / Codex / CLI / Setup
-  - **Priority**: P1
-  - **Status**: Ready
-  - **Blocked by**: None
-  - **Blocks**: AL-80
-  - **File**: [AL-79 native user level codex capture across worktrees.md](to-do/AL-79%20native%20user%20level%20codex%20capture%20across%20worktrees.md)
-  - **Specification**: [PO-20](../PO-20/SPEC.md)
-
 - **AL-78**: Make open-turn feedback effective across Codex and OpenCode
   - **Subsystem**: CLI Feedback / Native Harness Lifecycle / Capture and Metrics Refresh
   - **Priority**: P2
@@ -176,6 +167,17 @@ Reconciled 2026-11-05 against merged `origin/main` at `03f5b05d` and open PRs. S
   - **Blocked by**: None
   - **Blocks**: None
   - **File**: [REV-7 review shared source read guarantees.md](to-do/REV-7%20review%20shared%20source%20read%20guarantees.md)
+
+## In Progress
+
+- **AL-79**: Deliver native user-level Codex capture across worktrees
+  - **Subsystem**: Domain / Configuration / Native Capture / Codex / CLI / Setup
+  - **Priority**: P1
+  - **Status**: In Progress
+  - **Blocked by**: None
+  - **Blocks**: AL-80
+  - **File**: [AL-79 native user level codex capture across worktrees.md](to-do/AL-79%20native%20user%20level%20codex%20capture%20across%20worktrees.md)
+  - **Specification**: [PO-20](../PO-20/SPEC.md)
 
 ## Blocked
 

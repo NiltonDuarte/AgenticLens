@@ -11,7 +11,7 @@ func BootstrapScaffold(version string) ([]byte, error) {
 	if err := ValidateReleaseVersion(version); err != nil {
 		return nil, err
 	}
-	return []byte("# AgenticLens bootstrap scaffold v1: incomplete project configuration\nagenticlens:\n  version: " + version + "\ntelemetry:\n  capture:\n    state_dir: ~/.agenticlens/state\n    commit_warning: true\n"), nil
+	return []byte("# AgenticLens bootstrap scaffold v1: incomplete project configuration\nagenticlens:\n  version: " + version + "\n"), nil
 }
 
 // ValidateBootstrapScaffold permits completion of only the exact owned scaffold.

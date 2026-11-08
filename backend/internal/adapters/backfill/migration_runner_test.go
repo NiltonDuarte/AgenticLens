@@ -962,6 +962,7 @@ func TestMigrationRunner_ValidatesCurrentBeforeUpToDateFastPath(t *testing.T) {
 		sessions      string
 		migration     string
 		preserveOnly  bool
+		validCurrent  bool
 		extraMember   string
 		expectedError string
 	}{
@@ -1029,9 +1030,9 @@ func TestMigrationRunner_ValidatesCurrentBeforeUpToDateFastPath(t *testing.T) {
 			sessions:      `[{"id":"s1","source":"opencode","user":"fixture","anomalies":[],"invocations":[],"tools":[{"name":"bash","calls":1,"errors":2}]}]`,
 		},
 		{
-			name:          "dangling session parent",
-			expectedError: `sessions[0].parent_id "missing" does not identify a session`,
-			sessions:      `[{"id":"s1","source":"opencode","user":"fixture","anomalies":[],"parent_id":"missing","invocations":[],"tools":[]}]`,
+			name:         "portable external session parent",
+			validCurrent: true,
+			sessions:     `[{"id":"s1","source":"opencode","user":"fixture","anomalies":[],"parent_id":"missing","invocations":[],"tools":[]}]`,
 		},
 		{
 			name:          "retired invocation parent reference",
@@ -1060,7 +1061,11 @@ func TestMigrationRunner_ValidatesCurrentBeforeUpToDateFastPath(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected runner error: %v", err)
 			}
-			if tc.preserveOnly {
+			if tc.validCurrent {
+				if report.UpToDate != 1 || report.Migrated != 0 || len(report.Errors) != 0 {
+					t.Fatalf("valid external parent was treated as malformed current history: %+v", report)
+				}
+			} else if tc.preserveOnly {
 				if report.Migrated != 0 {
 					t.Fatalf("unfinished migration metadata was cleaned: %+v", report)
 				}

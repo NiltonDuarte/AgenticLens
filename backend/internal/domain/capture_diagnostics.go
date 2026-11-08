@@ -103,7 +103,12 @@ func CaptureVerification(rows []CaptureRegistration, diagnostics []CaptureDiagno
 	attemptUnknown := false
 	for _, row := range rows {
 		callback := row.CallbackObservedAt != ""
-		binding := row.Binding == "explicit_agent_response" && row.InstallationID != "" && row.BindingInstallationID == row.InstallationID
+		binding := row.Binding == "explicit_agent_response" && row.BindingInstallationID == row.InstallationID
+		if row.InstallationID == "" {
+			// Native user capture records exact binding acceptance without a project
+			// installation receipt. Proven inherited bindings remain a distinct source.
+			binding = row.TicketID != "" && ((row.Binding == "explicit_agent_response" && row.BindingAcceptedAt != "") || (row.Binding == "source_parent" && row.ParentID != ""))
+		}
 		source := row.RefreshedAt != "" && len(row.Snapshot) > 0 && row.SourceInstallationID == row.InstallationID
 		published := false
 		for _, owner := range publications[row.TicketID].Owners {

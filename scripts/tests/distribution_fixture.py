@@ -78,7 +78,9 @@ else: shutil.copyfile(os.environ['AL_FIXTURE_RELEASE'], target)
 ''')
         curl.chmod(0o755)
         self.env = {key: value for key, value in os.environ.items() if not key.startswith(('AGENTIC_LENS_', 'AL_PROBE_'))}
-        self.env.update(HOME=str(self.home), PATH=str(commands) + os.pathsep + os.environ['PATH'], AL_FETCH_LOG=str(self.network_log),
+        self.env.update(HOME=str(self.home), USERPROFILE=str(self.home), CODEX_HOME=str(self.home / '.codex'),
+                        XDG_CONFIG_HOME=str(self.home / '.config'), XDG_CACHE_HOME=str(self.home / '.cache'),
+                        XDG_STATE_HOME=str(self.home / '.state'), PATH=str(commands) + os.pathsep + os.environ['PATH'], AL_FETCH_LOG=str(self.network_log),
                         AL_FIXTURE_SOURCE=str(ROOT), AL_FIXTURE_RELEASE=str(self.probe), AL_FIXTURE_NAME=self.native().name)
 
     def write_config(self, pin=None):

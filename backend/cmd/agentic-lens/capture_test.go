@@ -19,6 +19,7 @@ import (
 
 	"agenticlens/internal/adapters"
 	"agenticlens/internal/adapters/capture"
+	adaptersconfig "agenticlens/internal/adapters/config"
 	"agenticlens/internal/domain"
 )
 
@@ -62,14 +63,19 @@ func init() {
 	os.Exit(0)
 }
 
-type captureGenerationFixture struct{ project, store, state, output string }
+type captureGenerationFixture struct{ project, store, state, stateBase, output string }
 
 func newCaptureGenerationFixture(t *testing.T) captureGenerationFixture {
 	t.Helper()
 	f := captureGenerationFixture{project: t.TempDir(), store: t.TempDir(), state: t.TempDir()}
+	t.Setenv("CODEX_HOME", f.store)
+	f.stateBase = f.state
 	f.output = filepath.Join(f.project, "ledger.json")
 	config := "project_name: CaptureFixture\ntelemetry:\n  capture:\n    state_dir: " + strconv.Quote(f.state) + "\nticket:\n  prefixes: [TEST]\nworkspaces:\n  dir: records\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 	if err := os.WriteFile(filepath.Join(f.project, ".agenticlens-config.yaml"), []byte(config), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := writeCaptureFixtureLocal(t, f, []byte("telemetry:\n  capture:\n")); err != nil {
 		t.Fatal(err)
 	}
 	var err error
@@ -206,11 +212,15 @@ func assertCaptureRootInput(t *testing.T, ledger domain.AgenticFactLedger, want 
 
 func captureCLI(t *testing.T, project, input string, args ...string) ([]byte, error) {
 	t.Helper()
-	// Registration/installer tests do not own detached automatic workers. Native
-	// worker tests supply their explicit enabled policy before invoking callbacks.
 	local := filepath.Join(project, ".agenticlens-config.local.yaml")
 	if _, err := os.Stat(local); os.IsNotExist(err) {
-		if err = os.WriteFile(local, []byte("telemetry:\n  capture:\n    enabled: false\n"), 0600); err != nil {
+		state := ".agenticlens-capture"
+		for i := 0; i+1 < len(args); i++ {
+			if args[i] == "--state-dir" {
+				state = args[i+1]
+			}
+		}
+		if err := writeCaptureFixtureLocal(t, captureGenerationFixture{project: project, state: state}, []byte("telemetry:\n  capture:\n")); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -427,6 +437,12 @@ func TestCaptureCLIGenerateIncludesBoundIndependentSessionsAndSummaryDiagnostics
 		t.Fatal(err)
 	}
 	state, store := filepath.Join(project, "state with spaces"), t.TempDir()
+	t.Setenv("CODEX_HOME", store)
+	fixture := captureGenerationFixture{project: project, state: state, store: store}
+	if err := writeCaptureFixtureLocal(t, fixture, []byte("telemetry:\n  capture:\n")); err != nil {
+		t.Fatal(err)
+	}
+	serializeCaptureFixtureWorkers(t, fixture)
 	var requestTokens []string
 	request := func(id string, tokens int, ticket string) {
 		t.Helper()
@@ -805,7 +821,7 @@ func testCaptureOverlappingPublishers(t *testing.T, explicitNewer, automatic boo
 	f := newCaptureGenerationFixture(t)
 	if automatic {
 		f.output = filepath.Join(f.project, "records", "TEST-100", "agentic_metrics.json")
-		if err := os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte("telemetry:\n  capture:\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 10000\n"), 0600); err != nil {
+		if err := writeCaptureFixtureLocal(t, f, []byte("telemetry:\n  capture:\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 10000\n")); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -1175,5 +1191,155 @@ func TestCaptureNativeWorkerPublishesMultipleRootsAndRefreshesWithoutGenerate(t 
 	}
 	if _, err = os.Stat(filepath.Join(filepath.Dir(output), "capture_report.json")); !os.IsNotExist(err) {
 		t.Fatalf("deprecated detailed_report produced sidecar: %v", err)
+	}
+}
+
+// Existing capture fixtures explicitly supply a complete selected local policy.
+// Tests of omission use config's dedicated whole-file selection cases instead.
+func writeCaptureFixtureLocal(t *testing.T, f captureGenerationFixture, body []byte) error {
+	t.Helper()
+	text := string(body)
+	extra := ""
+	if !strings.Contains(text, "    enabled:") {
+		extra += "    enabled: true\n"
+	}
+	if !strings.Contains(text, "    state_dir:") {
+		state := f.stateBase
+		if state == "" {
+			state = f.state
+		}
+		extra += "    state_dir: '" + strings.ReplaceAll(state, "'", "''") + "'\n"
+	}
+	for _, setting := range []struct{ key, value string }{{"refresh_ms", "100"}, {"debounce_ms", "0"}, {"idle_ms", "300"}, {"max_lifetime_ms", "5000"}, {"pass_timeout_ms", "3000"}} {
+		if !strings.Contains(text, "    "+setting.key+":") {
+			extra += "    " + setting.key + ": " + setting.value + "\n"
+		}
+	}
+	text = strings.Replace(text, "  capture:\n", "  capture:\n"+extra, 1)
+	return os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte(text), 0600)
+}
+
+// These fixtures test source guards or explicit publication, while autonomous
+// worker behavior has its own process tests. Hold the actual worker lease and
+// drain every launched child's inherited log handle before releasing its files.
+func serializeCaptureFixtureWorkers(t *testing.T, f captureGenerationFixture) {
+	t.Helper()
+	state, err := capture.ProjectState(f.state, f.project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	store, err := capture.OpenProject(state, f.project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lease, err := capture.AcquireWorker(store.CoordinationDirectory())
+	if err != nil || lease == nil {
+		store.Close()
+		t.Fatalf("fixture worker serialization: %v", err)
+	}
+	completion := captureWorkerCompletion(t, store.CoordinationDirectory())
+	t.Cleanup(func() {
+		captureCleanupWorkers(t, completion)
+		if err := lease.Close(); err != nil {
+			t.Error(err)
+		}
+		if err := store.Close(); err != nil {
+			t.Error(err)
+		}
+	})
+}
+
+func TestAutomaticGenerationUsesSelectedLocalDefaultsRatherThanSharedBudget(t *testing.T) {
+	f := newCaptureGenerationFixture(t)
+	f.bind(t, f.write(t, 10))
+	assertCaptureRootInput(t, f.generate(t), 10)
+	sharedPath := filepath.Join(f.project, ".agenticlens-config.yaml")
+	shared := strings.Replace(string(readCaptureFile(t, sharedPath)), "  capture:\n", "  capture:\n    max_source_bytes: 1\n", 1)
+	if err := os.WriteFile(sharedPath, []byte(shared), 0600); err != nil {
+		t.Fatal(err)
+	}
+	// Omission means documented automatic defaults, not machine keys from shared YAML.
+	local := fmt.Sprintf("telemetry:\n  capture:\n    enabled: true\n    state_dir: %q\n  sources:\n    codex:\n      home: %q\n", f.stateBase, f.store)
+	if err := os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte(local), 0600); err != nil {
+		t.Fatal(err)
+	}
+	policy, err := adaptersconfig.ResolveCapture(f.project, "")
+	if err != nil || policy.MaxSourceBytes != capture.DefaultByteBudget {
+		t.Fatalf("worker's local default policy: %+v %v", policy, err)
+	}
+	f.writeAt(t, 31, "2026-01-01T00:00:03Z")
+	assertCaptureRootInput(t, f.generate(t, "--capture-auto"), 31)
+}
+
+func TestAutomaticParentAndExplicitOtherTicketChildPublishIndependently(t *testing.T) {
+	f := newCaptureGenerationFixture(t)
+	rootPath := f.write(t, 10)
+	f.bind(t, rootPath)
+	childPath := filepath.Join(f.store, "sessions", "child.jsonl")
+	body := fmt.Sprintf(`{"timestamp":"2026-01-01T00:00:00Z","type":"session_meta","payload":{"id":"child","cwd":%q,"parent_thread_id":"root","timestamp":"2026-01-01T00:00:00Z"}}
+{"timestamp":"2026-01-01T00:00:01Z","type":"turn_context","payload":{"model":"child-model","turn_id":"child-turn"}}
+{"timestamp":"2026-01-01T00:00:02Z","type":"token_usage_record","payload":{"thread_id":"child","turn_id":"child-turn","usage":{"input_tokens":31,"output_tokens":2}}}
+`, f.project)
+	if err := os.WriteFile(childPath, []byte(body), 0600); err != nil {
+		t.Fatal(err)
+	}
+	store, err := capture.OpenProject(f.state, f.project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := domain.CaptureIdentity{Source: domain.SourceCodex, Store: f.store, SessionID: "child"}
+	row, err := store.Register(context.Background(), id, childPath, "SessionEnd")
+	if err != nil {
+		store.Close()
+		t.Fatal(err)
+	}
+	if _, err := store.Bind(context.Background(), id, "TEST-200", row.Request); err != nil {
+		store.Close()
+		t.Fatal(err)
+	}
+	if err := store.QueueChild(context.Background(), f.store, childPath, "root"); err != nil {
+		store.Close()
+		t.Fatal(err)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatal(err)
+	}
+	local := fmt.Sprintf("telemetry:\n  default_source: codex\n  sources:\n    codex:\n      home: %q\n  capture:\n", f.store)
+	if err := writeCaptureFixtureLocal(t, f, []byte(local)); err != nil {
+		t.Fatal(err)
+	}
+	// Match the worker's registered-only automatic child: no --session-id can
+	// broaden an exact-ticket collector into the selected owner's source root.
+	generate := func(ticket, output string) domain.AgenticFactLedger {
+		t.Helper()
+		command := exec.Command(cliBinaryPath, "generate", "--capture-auto", "--capture-dir", f.state, "--ticket-id", ticket, "--ticket-title", "Explicit "+ticket, "--ticket-type", "feat", "--json-output", output, "--append", output+".md")
+		command.Dir = f.project
+		if out, err := command.CombinedOutput(); err != nil {
+			t.Fatalf("automatic %s publication: %s %v", ticket, out, err)
+		}
+		var ledger domain.AgenticFactLedger
+		if err := json.Unmarshal(readCaptureFile(t, output), &ledger); err != nil {
+			t.Fatal(err)
+		}
+		return ledger
+	}
+	parent := generate("TEST-100", f.output)
+	if len(parent.Sessions) != 1 || parent.Sessions[0].ID != "root" || parent.Sessions[0].Invocations[0].Tokens.Input != 10 {
+		t.Fatalf("child blocked/crossed parent publication: %+v", parent.Sessions)
+	}
+	acceptedParent := readCaptureFile(t, f.output)
+	child := generate("TEST-200", filepath.Join(f.project, "child-ledger.json"))
+	if len(child.Sessions) != 1 || child.Sessions[0].ID != "child" || child.Sessions[0].ParentID == nil || *child.Sessions[0].ParentID != "root" || child.Sessions[0].Invocations[0].Tokens.Input != 31 {
+		t.Fatalf("explicit child publication lost source ownership: %+v", child.Sessions)
+	}
+	if !bytes.Equal(acceptedParent, readCaptureFile(t, f.output)) {
+		t.Fatal("child ticket publication changed parent ticket ledger")
+	}
+	if child.Anomalies != nil || child.Sessions[0].Anomalies == nil || child.CompleteAnomalyCoverage() || child.UnrecordedAnomalyScopes() != 1 {
+		t.Fatalf("fresh complete child invented external-parent group coverage: %+v", child)
+	}
+	summary := string(readCaptureFile(t, filepath.Join(f.project, "child-ledger.json.md")))
+	if strings.Contains(summary, "No execution anomalies detected (clean session)") || !strings.Contains(summary, "no clean-session conclusion is available") {
+		t.Fatalf("external-parent summary misrepresented partial analysis: %s", summary)
 	}
 }

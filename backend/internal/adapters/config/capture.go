@@ -12,62 +12,73 @@ import (
 	"strings"
 )
 
-// ResolveCapture overlays numeric policy defaults, shared and local configuration.
-// A state path must be explicitly configured before any CLI override is applied.
+// ResolveCapture reads numeric defaults and exactly one selected local policy.
+// It validates before applying disablement; no shared capture values are inherited.
 func ResolveCapture(project, stateOverride string) (domain.CaptureConfig, error) {
 	cfg := captureReadPolicy()
-	root, err := ProjectRoot(project)
+	selection, err := SelectConfig(project)
 	if err != nil {
 		return cfg, err
 	}
-	project = root
-	shared, err := FindConfigFile(project)
+	data, err := readSelectedLocal(selection)
 	if err != nil {
 		return cfg, err
 	}
-	if shared == "" {
-		return cfg, ErrConfigNotFound
+	if err := localCaptureEnabled(data); err != nil {
+		return cfg, fmt.Errorf("local configuration %s: %w", selection.LocalPath, err)
 	}
-	for _, name := range []string{shared, filepath.Join(project, ".agenticlens-config.local.yaml")} {
-		if name == "" {
-			continue
-		}
-		data, err := os.ReadFile(name)
-		if errors.Is(err, os.ErrNotExist) {
-			continue
-		}
-		if err != nil {
-			return cfg, err
-		}
-		selector := struct {
-			AgenticLens *domain.EntrypointConfig `yaml:"agenticlens"`
-		}{}
-		if !bytes.HasPrefix(bytes.TrimSpace(data), []byte("{")) {
-			if err := yaml.Unmarshal(data, &selector); err != nil {
-				return cfg, err
-			}
-			if selector.AgenticLens != nil {
-				if _, err := parseEntrypoint(data, name != shared); err != nil {
-					return cfg, fmt.Errorf("entrypoint configuration %s: %w", name, err)
-				}
-			}
-		}
-		cfg, err = decodeCapturePolicy(data, cfg)
-		if err != nil {
-			return cfg, fmt.Errorf("capture configuration %s: %w", name, err)
-		}
+	cfg, err = decodeCapturePolicy(data, cfg)
+	if err != nil {
+		return cfg, fmt.Errorf("local configuration %s: %w", selection.LocalPath, err)
 	}
 	if err := cfg.Validate(); err != nil {
-		return cfg, fmt.Errorf("capture configuration %s: %w", shared, err)
+		return cfg, fmt.Errorf("local configuration %s: %w", selection.LocalPath, err)
 	}
 	if stateOverride != "" {
 		cfg.StateDir = stateOverride
-		if err := cfg.Validate(); err != nil {
+	}
+	cfg.StateDir, err = ResolveCaptureStatePath(filepath.Dir(selection.LocalPath), cfg.StateDir)
+	return cfg, err
+}
+
+// ResolveGenerationCapture retains the legacy manual operational policy when no
+// local file exists. It does not silently authorize automatic capture.
+func ResolveGenerationCapture(project, stateOverride string) (domain.CaptureConfig, error) {
+	selection, selectErr := SelectConfig(project)
+	if selectErr != nil && !errors.Is(selectErr, os.ErrNotExist) {
+		return domain.CaptureConfig{}, selectErr
+	}
+	data, err := os.ReadFile(selection.SharedPath)
+	if err != nil {
+		return domain.CaptureConfig{}, err
+	}
+	cfg, err := decodeCapturePolicy(data, captureReadPolicy())
+	if err != nil {
+		return cfg, err
+	}
+	origin := selection.Project
+	if selectErr == nil {
+		local, err := readSelectedLocal(selection)
+		if err != nil {
 			return cfg, err
 		}
+		cfg, err = decodeCapturePolicy(local, cfg)
+		if err != nil {
+			return cfg, err
+		}
+		if _, present, err := captureStateValue(local); err != nil {
+			return cfg, err
+		} else if present {
+			origin = filepath.Dir(selection.LocalPath)
+		}
 	}
-
-	cfg.StateDir, err = ResolveCaptureStatePath(project, cfg.StateDir)
+	if err := cfg.Validate(); err != nil {
+		return cfg, err
+	}
+	if stateOverride != "" {
+		cfg.StateDir = stateOverride
+	}
+	cfg.StateDir, err = ResolveCaptureStatePath(origin, cfg.StateDir)
 	return cfg, err
 }
 

@@ -56,23 +56,34 @@ class InstallationTest(DistributionFixture):
         caller_shared = caller / '.agenticlens-config.yaml'; caller_shared.write_bytes(self.config.read_bytes())
         caller_local = caller / '.agenticlens-config.local.yaml'; caller_local.write_text('# preserve caller local\n')
         before = (caller_shared.read_bytes(), caller_local.read_bytes())
-        selected_local = self.repo / '.agenticlens-config.local.yaml'; selected_local.write_text('# selected local settings\n')
+        selected_local = self.repo / '.agenticlens-config.local.yaml'
+        selected_local.write_text(f"# selected local settings\ntelemetry:\n  capture:\n    enabled: false\n    state_dir: '{self.root / 'capture state'}'\n  default_source: codex\n  sources:\n    codex:\n      home: '{self.home / '.codex'}'\n")
         local_before = selected_local.read_bytes()
         command = completion.replace('--project-name NAME', '--project-name Selected').replace('--src-folders DIRS', '--src-folders src').replace('--ticket-prefixes PREFIXES', '--ticket-prefixes FX')
+        scaffold_before = self.config.read_bytes()
+        selected_local.unlink()
+        missing_choices = subprocess.run(['bash', '-c', command], cwd=caller, env=self.env, text=True, capture_output=True, timeout=15)
+        self.assertNotEqual(missing_choices.returncode, 0)
+        self.assertIn('telemetry.capture.enabled', missing_choices.stderr)
+        self.assertEqual(self.config.read_bytes(), scaffold_before)
+        self.assertFalse(selected_local.exists())
+        selected_local.write_bytes(local_before)
         result = subprocess.run(['bash', '-c', command], cwd=caller, env=self.env, text=True, capture_output=True, timeout=15)
         self.succeeds(result)
         self.assertIn('project_name: Selected', self.config.read_text())
         self.assertEqual(selected_local.read_bytes(), local_before)
         self.assertEqual((caller_shared.read_bytes(), caller_local.read_bytes()), before)
         completed = self.config.read_bytes()
-        self.config.write_text(''.join(line for line in completed.decode().splitlines(keepends=True)
-                                       if not line.lstrip().startswith('state_dir:')))
+        self.assertNotIn('state_dir:', completed.decode())
+        selected_local.write_text(''.join(line for line in local_before.decode().splitlines(keepends=True)
+                                          if not line.lstrip().startswith('state_dir:')))
         missing = self.launch('capture', 'status', '--repo', self.repo, '--state-dir', self.root / 'CLI rescue')
         self.assertNotEqual(missing.returncode, 0)
         self.assertIn('telemetry.capture.state_dir', missing.stderr)
         self.assertFalse((self.root / 'CLI rescue').exists())
         self.assertFalse((self.home / '.agenticlens/state').exists())
         self.config.write_bytes(completed)
+        selected_local.write_bytes(local_before)
 
     def test_compatibility_launcher_missing_bootstrap_and_default_user_entrypoint(self):
         launcher = ROOT / '.agents/skills/agentic-lens-operator/scripts/agentic-lens.sh'
@@ -142,6 +153,17 @@ class InstallationTest(DistributionFixture):
         self.assertEqual(self.git('status', '--porcelain', cwd=worktree), '')
         self.assertFalse((worktree / BUNDLE_OPERATOR / 'bin').exists())
         self.assertFalse((worktree / BUNDLE_SETUP / 'RELEASE_VERSION').exists())
+        shared_before = self.config.read_bytes()
+        self.succeeds(self.install_local('--force', probe=build_app()))
+        refused = self.launch('--al-project', worktree, 'init', '--local-only', '--capture-enabled', 'true',
+                              '--source', 'codex', '--codex-home', self.home / '.codex',
+                              '--state-dir', self.root / 'explicit state', cwd=worktree)
+        self.assertNotEqual(refused.returncode, 0)
+        self.assertIn('linked-worktree setup', refused.stderr)
+        self.assertEqual(self.config.read_bytes(), shared_before)
+        self.assertFalse((self.repo / '.agenticlens-config.local.yaml').exists())
+        self.assertFalse((worktree / '.agenticlens-config.local.yaml').exists())
+        self.assertFalse((self.root / 'explicit state').exists())
 
     def test_initial_pin_is_explicit_and_failure_rolls_back_only_created_configuration(self):
         self.config.unlink()
@@ -153,7 +175,8 @@ class InstallationTest(DistributionFixture):
         self.assertNotEqual(result.returncode, 0); self.assertFalse(self.config.exists())
         self.succeeds(self.install_local('--init-config', '--version', self.pin))
         self.assertIn('version: ' + self.pin, self.config.read_text())
-        self.assertIn('state_dir: ~/.agenticlens/state', self.config.read_text())
+        self.assertNotIn('state_dir:', self.config.read_text())
+        self.assertFalse((self.repo / '.agenticlens-config.local.yaml').exists(), 'binary bootstrap guessed local capture choices')
 
     def test_invalid_or_conflicting_versions_and_missing_values_fail_before_fetch(self):
         for version in ['latest', '../v9.8.7', 'v9.8.7/rc', 'v9.8.7 rc', 'v9.8.7+$(touch INJECTED)', 'v1.0.0']:

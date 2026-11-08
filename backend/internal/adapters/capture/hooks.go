@@ -16,6 +16,7 @@ import (
 )
 
 type HookInput struct {
+	WorkingDirectory    string `json:"cwd,omitempty"`
 	Activity            string `json:"activity,omitempty"`
 	SessionID           string `json:"session_id"`
 	Event               string `json:"hook_event_name"`
@@ -87,10 +88,31 @@ func replaceQuotes(s string) string {
 }
 
 func BindingPrompt(r domain.CaptureRegistration, binary, directory string) string {
-	return fmt.Sprintf("AgenticLens requires explicit ticket information for this exact %s session %s. Do not infer a ticket from directory, branch, role or timing. If the user has explicitly identified the active ticket, respond now by executing: %s capture bind --state-dir %s --source %s --store %s --session-id %s --request %s --ticket-id <EXPLICIT_TICKET_ID> --ticket-title <EXPLICIT_TICKET_TITLE> [--ticket-type <EXPLICIT_TYPE>]. If no ticket was explicitly supplied, ask the user for it; leave capture unassigned. Do not invent source, parent, model or usage fields.", r.Identity.Source, r.Identity.SessionID, QuoteArgument(binary), QuoteArgument(directory), r.Identity.Source, QuoteArgument(r.Identity.Store), QuoteArgument(r.Identity.SessionID), QuoteArgument(r.Request))
+	return NativeBindingPrompt(r, binary, directory, runtime.GOOS == "windows")
 }
 
-func ReceiveCodex(ctx context.Context, s *Store, input HookInput, sourceStore, binary, directory string, wrappers ...string) (result HookOutput, returnErr error) {
+// NativeBindingPrompt renders the executable command for its supported shell.
+func NativeBindingPrompt(r domain.CaptureRegistration, binary, directory string, windows bool) string {
+	quote := QuoteArgument
+	command := quote(binary)
+	if windows {
+		quote = func(s string) string { return "'" + strings.ReplaceAll(s, "'", "''") + "'" }
+		command = "& " + quote(binary)
+	}
+	return fmt.Sprintf("AgenticLens requires explicit ticket information for this exact %s session %s. Do not infer a ticket from directory, branch, role or timing. If the user has explicitly identified the active ticket, respond now by executing: %s capture bind --state-dir %s --source %s --store %s --session-id %s --request %s --ticket-id <EXPLICIT_TICKET_ID> --ticket-title <EXPLICIT_TICKET_TITLE> [--ticket-type <EXPLICIT_TYPE>]. If no ticket was explicitly supplied, ask the user for it; leave capture unassigned. Do not invent source, parent, model or usage fields.", r.Identity.Source, r.Identity.SessionID, command, quote(directory), r.Identity.Source, quote(r.Identity.Store), quote(r.Identity.SessionID), quote(r.Request))
+}
+
+func ReceiveCodex(ctx context.Context, s *Store, input HookInput, sourceStore, binary, directory string, wrappers ...string) (HookOutput, error) {
+	return receiveCodex(ctx, s, input, sourceStore, binary, directory, false, wrappers...)
+}
+
+// ReceiveCodexUser uses the selected native handler for binding feedback without
+// depending on a historical per-project wrapper or installation receipt.
+func ReceiveCodexUser(ctx context.Context, s *Store, input HookInput, sourceStore, binary, directory string) (HookOutput, error) {
+	return receiveCodex(ctx, s, input, sourceStore, binary, directory, true)
+}
+
+func receiveCodex(ctx context.Context, s *Store, input HookInput, sourceStore, binary, directory string, userLevel bool, wrappers ...string) (result HookOutput, returnErr error) {
 	switch input.Event {
 	case "SessionStart", "SubagentStart", "SubagentStop", "Stop", "SessionEnd", "UserPromptSubmit":
 	default:
@@ -104,6 +126,10 @@ func ReceiveCodex(ctx context.Context, s *Store, input HookInput, sourceStore, b
 		return HookOutput{}, normalizeErr
 	}
 	sourceStore = canonicalStore
+	input, normalizeErr = NormalizeCodexSubagentStart(input, sourceStore, s.project)
+	if normalizeErr != nil {
+		return HookOutput{}, normalizeErr
+	}
 	// Commit identity and its unverified source pointer before metadata inspection.
 	r, err := s.Register(ctx, domain.CaptureIdentity{Source: domain.SourceCodex, Store: sourceStore, SessionID: input.SessionID}, input.TranscriptPath, input.Event)
 	if err != nil {
@@ -137,6 +163,11 @@ func ReceiveCodex(ctx context.Context, s *Store, input HookInput, sourceStore, b
 		if err = s.QueueChildStart(ctx, sourceStore, input.SessionID, input.AgentID); err != nil {
 			return HookOutput{}, err
 		}
+		if input.AgentTranscriptPath != "" {
+			if err := s.QueueChild(ctx, sourceStore, input.AgentTranscriptPath, input.SessionID); err != nil {
+				return HookOutput{}, err
+			}
+		}
 		return HookOutput{Context: &HookContext{Event: input.Event, Context: "AgenticLens observed your start. The callback identifies your parent, not your own source identity. Do not bind using the parent's ID. Your identity will be reconciled only from authoritative session metadata; if independently launched, respond to your own SessionStart binding request."}}, nil
 	}
 	if input.Event == "SubagentStop" && input.AgentTranscriptPath != "" {
@@ -147,7 +178,10 @@ func ReceiveCodex(ctx context.Context, s *Store, input HookInput, sourceStore, b
 	}
 	if (r.TicketID == "" || r.TicketTitle == "" || (r.InstallationID != "" && r.BindingInstallationID != r.InstallationID)) && (input.Event == "SessionStart" || input.Event == "UserPromptSubmit") {
 		prompt := BindingPrompt(r, binary, directory)
-		if len(wrappers) > 0 && wrappers[0] != "" {
+		if userLevel {
+			// The machine dispatcher already selected this native build. The explicit
+			// binding command remains usable even when no PATH launcher was installed.
+		} else if len(wrappers) > 0 && wrappers[0] != "" {
 			prompt = WrapperBindingPrompt(r, wrappers[0], s.project, directory)
 		} else if wrapper, e := installedWrapper(directory, "codex"); e == nil {
 			if wrapper == "" {
@@ -167,7 +201,11 @@ func projectBindingArgument(s *Store) string {
 	if s.project == "" {
 		return ""
 	}
-	return " Use --repo " + QuoteArgument(s.project) + " on that binding command to preserve the installed project context."
+	quote := QuoteArgument
+	if runtime.GOOS == "windows" {
+		quote = func(s string) string { return "'" + strings.ReplaceAll(s, "'", "''") + "'" }
+	}
+	return " Use --repo " + quote(s.project) + " on that binding command to preserve the installed project context."
 }
 
 func installedWrapper(directory, source string) (string, error) {

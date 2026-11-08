@@ -73,14 +73,14 @@ if ((INIT)); then
  if ((DRY)); then
   STAGE="$(mktemp -d)"
   printf 'agenticlens:\n  version: %s\n' "$VERSION_REQUEST" > "$STAGE/.agenticlens-config.yaml"
-  CONTEXT="$(sh "$SOURCE_WRAPPER" --al-project "$STAGE" --al-resolve)"
+  CONTEXT="$(sh "$SOURCE_WRAPPER" --al-project "$STAGE" --al-resolve-cache)"
  else
   pin="$PROJECT/.agenticlens-config.yaml"
-  (set -o noclobber; printf '# AgenticLens bootstrap scaffold v1: incomplete project configuration\nagenticlens:\n  version: %s\ntelemetry:\n  capture:\n    state_dir: ~/.agenticlens/state\n    commit_warning: true\n' "$VERSION_REQUEST" > "$pin") || fail 'Could not create explicit shared pin'
+  (set -o noclobber; printf '# AgenticLens bootstrap scaffold v1: incomplete project configuration\nagenticlens:\n  version: %s\n' "$VERSION_REQUEST" > "$pin") || fail 'Could not create explicit shared pin'
   TARGETS+=("$pin"); BACKUPS+=('')
-  CONTEXT="$(sh "$SOURCE_WRAPPER" --al-project "$PROJECT" --al-resolve)"
+  CONTEXT="$(sh "$SOURCE_WRAPPER" --al-project "$PROJECT" --al-resolve-cache)"
  fi
-else CONTEXT="$(sh "$SOURCE_WRAPPER" --al-project "$PROJECT" --al-resolve)"; fi
+else CONTEXT="$(sh "$SOURCE_WRAPPER" --al-project "$PROJECT" --al-resolve-cache)"; fi
 VALUES=(); while IFS= read -r value; do VALUES+=("$value"); done <<< "$CONTEXT"
 VERSION=${VALUES[0]}
 if ((!INIT)); then PROJECT=${VALUES[1]}; fi
@@ -191,6 +191,16 @@ for source in "$SOURCE_WRAPPER" "$PS_WRAPPER"; do
  cp -- "$source" "$STAGE/wrapper"; chmod 700 "$STAGE/wrapper"; replace "$STAGE/wrapper" "$target"
  digest "$source" > "$STAGE/wrapper.sha256"; replace "$STAGE/wrapper.sha256" "$target.sha256"
 done
+# One native transaction owns dispatcher bytes, digest and machine receipt.
+# The downloader never independently advances one of those ownership records.
+if [[ "$("$PRIMARY" dispatch protocol 2>/dev/null || true)" == 1 ]]; then
+ dispatcher="$INSTALL_ROOT/dispatcher"
+ "$PRIMARY" capture install-dispatcher --repo "$PROJECT" --binary "$PRIMARY"
+ for launcher in "$WRAPPER" "$DEST/agentic-lens.ps1"; do
+  printf '%s\n' "$dispatcher" > "$STAGE/dispatcher.pointer"; replace "$STAGE/dispatcher.pointer" "$launcher.dispatcher"
+ done
+fi
+
 if ((INIT)); then
  printf 'Configuration incomplete: bootstrap scaffold defines no project/ticket/code roots.\n'
  if [[ "${observed_protocol:-}" == 3 ]]; then
@@ -200,6 +210,7 @@ fi
 if [[ -n "$CAPTURE_SOURCE" ]]; then
  ((INIT==0)) || fail 'Complete project configuration first, then explicitly install capture'
  args=(capture install --source "$CAPTURE_SOURCE" --store "$CAPTURE_STORE" --repo "$PROJECT" --binary "$PRIMARY" --wrapper "$WRAPPER")
+ if [[ "$CAPTURE_SOURCE" == codex ]]; then args=(capture install-user --repo "$PROJECT" --binary "$PRIMARY"); fi
  [[ -z "$CAPTURE_STATE" ]] || args+=(--state-dir "$CAPTURE_STATE")
  CAPTURE_APPLY_STARTED=1
  "$WRAPPER" --al-offline --al-project "$PROJECT" "${args[@]}"

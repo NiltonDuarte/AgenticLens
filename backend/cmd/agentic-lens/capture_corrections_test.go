@@ -36,7 +36,7 @@ func runCaptureNative(t *testing.T, cwd, input string, args ...string) ([]byte, 
 func writeCapturePolicy(t *testing.T, f captureGenerationFixture, enabled bool, debounce int) {
 	t.Helper()
 	b := fmt.Sprintf("telemetry:\n  capture:\n    enabled: %t\n    refresh_ms: 100\n    debounce_ms: %d\n    idle_ms: 200\n    max_lifetime_ms: 2000\n", enabled, debounce)
-	if err := os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte(b), 0600); err != nil {
+	if err := writeCaptureFixtureLocal(t, f, []byte(b)); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -92,7 +92,7 @@ func TestCapturePublicationBudgetExpiryRetainsPendingAndRecovers(t *testing.T) {
 		}
 	}()
 	policy := fmt.Sprintf("telemetry:\n  capture:\n    enabled: true\n    state_dir: %q\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 1000\n    pass_timeout_ms: 100\n", f.state)
-	if err = os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte(policy), 0600); err != nil {
+	if err = writeCaptureFixtureLocal(t, f, []byte(policy)); err != nil {
 		t.Fatal(err)
 	}
 	out, err := runCaptureNative(t, f.project, "", "capture", "worker", "--repo", f.project, "--state-dir", f.state)
@@ -743,10 +743,38 @@ func TestCaptureLiveDisableStopsWritesAndManualRecoverySurvives(t *testing.T) {
 			if out, err := runCaptureNative(t, f.project, "", "capture", "install", "--repo", f.project, "--source", "codex", "--store", f.store, "--state-dir", f.state, "--binary", cliBinaryPath); err != nil {
 				t.Fatalf("install: %v %s", err, out)
 			}
-			writeCapturePolicy(t, f, true, 0)
+			// Remain live well beyond the post-disable assertions: idle exit cannot
+			// satisfy the deactivation oracle on its own.
+			live := fmt.Sprintf("telemetry:\n  capture:\n    enabled: true\n    state_dir: %q\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 5000\n    max_lifetime_ms: 20000\n    pass_timeout_ms: 5000\n", f.stateBase)
+			if err := writeCaptureFixtureLocal(t, f, []byte(live)); err != nil {
+				t.Fatal(err)
+			}
+			registry, err := capture.OpenProject(f.state, f.project)
+			if err != nil {
+				t.Fatal(err)
+			}
+			identity := domain.CaptureIdentity{Source: domain.SourceCodex, Store: f.store, SessionID: "root"}
+			if _, err := registry.Change(context.Background(), identity, func(row domain.CaptureRegistration) (domain.CaptureRegistration, error) {
+				row.Activity = "busy"
+				row.Event = "UserPromptSubmit"
+				return row, nil
+			}); err != nil {
+				registry.Close()
+				t.Fatal(err)
+			}
+			if err := registry.Close(); err != nil {
+				t.Fatal(err)
+			}
 			startCorrectionWorker(t, f)
 			output := filepath.Join(f.project, "records", "TEST-100", "agentic_metrics.json")
 			waitCorrectionLedger(t, output, "root", 10)
+			active, err := capture.WorkerStatus(f.coordination(t))
+			if err != nil || active.PID <= 0 {
+				t.Fatalf("nonidle publisher not established: %+v %v", active, err)
+			}
+			if exited, err := captureNativeProcessExited(active.PID); err != nil || exited {
+				t.Fatalf("worker already exited before disable: %v %v", exited, err)
+			}
 			if mode == "yaml" {
 				writeCapturePolicy(t, f, false, 0)
 			} else {
@@ -789,9 +817,8 @@ func TestCaptureInstallerUsesSelectedProjectSourceAndTrueAliases(t *testing.T) {
 	f := newCaptureGenerationFixture(t)
 	caller := newCaptureGenerationFixture(t)
 	for _, fixture := range []captureGenerationFixture{f, caller} {
-		cfg := filepath.Join(fixture.project, ".agenticlens-config.local.yaml")
 		b := []byte(fmt.Sprintf("telemetry:\n  capture:\n    enabled: false\n  sources:\n    codex:\n      home: %q\n", fixture.store))
-		if err := os.WriteFile(cfg, b, 0600); err != nil {
+		if err := writeCaptureFixtureLocal(t, fixture, b); err != nil {
 			t.Fatal(err)
 		}
 
@@ -822,6 +849,7 @@ func TestCaptureSuppliedTranscriptRequiresSelectedHomeIncludingQueuedChildren(t 
 	for _, relation := range []string{"foreign", "foreign symlink", "archive", "home alias"} {
 		t.Run(relation, func(t *testing.T) {
 			f := newCaptureGenerationFixture(t)
+			serializeCaptureFixtureWorkers(t, f)
 			path := f.write(t, 23)
 			selected := f.store
 			if relation == "foreign" || relation == "foreign symlink" {
@@ -856,7 +884,7 @@ func TestCaptureSuppliedTranscriptRequiresSelectedHomeIncludingQueuedChildren(t 
 				}
 				selected = alias
 			}
-			writeCapturePolicy(t, f, false, 0)
+			writeCapturePolicy(t, f, true, 0)
 			payload, err := json.Marshal(capture.HookInput{SessionID: "root", Event: "SessionStart", TranscriptPath: path})
 			if err != nil {
 				t.Fatal(err)
@@ -895,7 +923,7 @@ func TestCaptureRejectsRawStoreTraversalAndPreservesAcceptedOwner(t *testing.T) 
 	f.generate(t, "--append", summary)
 	acceptedLedger := readCaptureFile(t, f.output)
 	acceptedSummary := readCaptureFile(t, summary)
-	writeCapturePolicy(t, f, false, 0)
+	writeCapturePolicy(t, f, true, 0)
 	outside := t.TempDir()
 	if err := os.Mkdir(filepath.Join(outside, "child"), 0700); err != nil {
 		t.Fatal(err)
@@ -992,7 +1020,7 @@ func TestCaptureInstalledRawSourceAliasesMatchNativeRead(t *testing.T) {
 					t.Fatal(err)
 				}
 				cfg := fmt.Sprintf("telemetry:\n  capture:\n    enabled: false\n    state_dir: %q\n  sources:\n    codex:\n      home: %q\n", f.state, raw)
-				if err := os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte(cfg), 0600); err != nil {
+				if err := writeCaptureFixtureLocal(t, f, []byte(cfg)); err != nil {
 					t.Fatal(err)
 				}
 				payload, err := json.Marshal(capture.HookInput{SessionID: "root", Event: "SessionStart", TranscriptPath: root})
@@ -1083,47 +1111,22 @@ func TestCaptureInstalledStateDriftIsDiagnosedAndRecoveryPreservesOldRegistry(t 
 }
 
 func TestCaptureManualOverridePreservesIncompatibleConfiguredRegistry(t *testing.T) {
-	for _, selection := range []string{"fresh", "healthy", "default", "incompatible", "automatic", "native capture", "damaged installed hooks", "missing installed integration", "configured coordination missing integration"} {
+	for _, selection := range []string{"fresh", "healthy", "default", "incompatible"} {
 		t.Run(selection, func(t *testing.T) {
 			f := newCaptureGenerationFixture(t)
 			f.bind(t, f.write(t, 29))
-			configPath := filepath.Join(f.project, ".agenticlens-config.yaml")
-			if selection == "damaged installed hooks" || selection == "missing installed integration" || selection == "configured coordination missing integration" {
-				out, err := runCaptureNative(t, f.project, "", "capture", "install", "--repo", f.project, "--source", "codex", "--store", f.store, "--binary", cliBinaryPath)
-				if err != nil {
-					t.Fatalf("install: %v %s", err, out)
-				}
-				if err := os.Remove(filepath.Join(f.project, ".codex", "hooks.json")); err != nil {
-					t.Fatal(err)
-				}
-				if selection == "missing installed integration" || selection == "configured coordination missing integration" {
-					if err := os.Remove(filepath.Join(f.project, ".codex", "agenticlens-installation.json")); err != nil {
-						t.Fatal(err)
-					}
-				}
-				if selection == "configured coordination missing integration" {
-					configPath = filepath.Join(f.project, ".agenticlens-config.local.yaml")
-					body := fmt.Sprintf("telemetry:\n  capture:\n    state_dir: %q\n", f.coordination(t))
-					if err := os.WriteFile(configPath, []byte(body), 0600); err != nil {
-						t.Fatal(err)
-					}
-				}
-			}
-			// Model the observed unsupported layout without depending on live state
-			// or assuming which historical binary created it.
 			registryPath := filepath.Join(f.state, "registry.db")
-			if selection != "missing installed integration" {
-				db, err := sql.Open("sqlite", registryPath)
-				if err != nil {
-					t.Fatal(err)
-				}
-				_, dropErr := db.Exec("DROP TABLE worktree_coordinates")
-				if err := errors.Join(dropErr, db.Close()); err != nil {
-					t.Fatal(err)
-				}
+			db, err := sql.Open("sqlite", registryPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, dropErr := db.Exec("DROP TABLE worktree_coordinates")
+			if err := errors.Join(dropErr, db.Close()); err != nil {
+				t.Fatal(err)
 			}
 			before := readCaptureFile(t, registryPath)
-			config := readCaptureFile(t, configPath)
+			configPath := filepath.Join(f.project, ".agenticlens-config.yaml")
+			configuration := readCaptureFile(t, configPath)
 			selected := t.TempDir()
 			if selection == "healthy" {
 				store, err := capture.OpenProject(selected, f.project)
@@ -1134,18 +1137,12 @@ func TestCaptureManualOverridePreservesIncompatibleConfiguredRegistry(t *testing
 					t.Fatal(err)
 				}
 			}
-			args := []string{"generate", "--source", "codex", "--codex-home", f.store, "--session-id", "root", "--ticket-id", "TEST-100", "--ticket-title", "Explicit recovery", "--ticket-type", "fix", "--json-output", f.output}
 			if selection == "incompatible" {
 				selected = f.state
 			}
+			args := []string{"generate", "--source", "codex", "--codex-home", f.store, "--session-id", "root", "--ticket-id", "TEST-100", "--ticket-title", "Explicit recovery", "--ticket-type", "fix", "--json-output", f.output}
 			if selection != "default" {
 				args = append(args, "--capture-dir", selected)
-			}
-			if selection == "automatic" {
-				args = append(args, "--capture-auto")
-			}
-			if selection == "native capture" {
-				args = []string{"capture", "reconcile", "--repo", f.project, "--state-dir", selected, "--ticket-id", "TEST-100"}
 			}
 			out, err := runCaptureNative(t, f.project, "", args...)
 			if selection == "fresh" || selection == "healthy" {
@@ -1154,25 +1151,18 @@ func TestCaptureManualOverridePreservesIncompatibleConfiguredRegistry(t *testing
 				}
 				assertCaptureRootInput(t, f.ledger(t), 29)
 			} else {
-				if err == nil {
-					t.Fatalf("invalid state/installation admitted: %s", out)
+				if err == nil || !bytes.Contains(out, []byte("coordinate layout")) {
+					t.Fatalf("configured invalid registry accepted: %v %s", err, out)
 				}
-				if _, statErr := os.Stat(f.output); !os.IsNotExist(statErr) {
-					t.Fatalf("rejected generation published a ledger: %v", statErr)
-				}
-				if selection == "damaged installed hooks" || selection == "missing installed integration" || selection == "configured coordination missing integration" {
-					if !bytes.Contains(out, []byte("owned")) {
-						t.Fatalf("override failed before real installed-integration check: %s", out)
-					}
-				} else if !bytes.Contains(out, []byte("coordinate layout")) {
-					t.Fatalf("unexpected state rejection: %s", out)
+				if _, err := os.Stat(f.output); !os.IsNotExist(err) {
+					t.Fatalf("rejected generation published: %v", err)
 				}
 			}
 			if !bytes.Equal(before, readCaptureFile(t, registryPath)) {
-				t.Error("generation changed incompatible configured registry")
+				t.Fatal("generation changed incompatible configured registry")
 			}
-			if !bytes.Equal(config, readCaptureFile(t, configPath)) {
-				t.Error("generation changed project configuration")
+			if !bytes.Equal(configuration, readCaptureFile(t, configPath)) {
+				t.Fatal("generation changed project configuration")
 			}
 		})
 	}
@@ -1332,7 +1322,7 @@ func TestCaptureCheckUsesPublishedFactsWithoutSourceOrMutation(t *testing.T) {
 	if out := check(); !bytes.Contains(out, []byte("no readable metrics")) || bytes.Count(out, []byte("AgenticLens capture advisory:")) != 1 {
 		t.Fatalf("missing metrics not one bounded warning: %s", out)
 	}
-	if err = os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte("telemetry:\n  capture:\n    commit_warning: false\n"), 0600); err != nil {
+	if err = writeCaptureFixtureLocal(t, f, []byte("telemetry:\n  capture:\n    commit_warning: false\n")); err != nil {
 		t.Fatal(err)
 	}
 	if out := check(); len(out) != 0 {

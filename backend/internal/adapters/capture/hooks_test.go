@@ -96,3 +96,20 @@ func TestHookInputBoundsAndUnsupportedEvent(t *testing.T) {
 		t.Fatalf("invalid callback persisted: rows=%+v err=%v", rows, err)
 	}
 }
+
+func TestNativeBindingPromptUsesExecutableShellSyntaxAndLiteralArguments(t *testing.T) {
+	row := domain.CaptureRegistration{Identity: domain.CaptureIdentity{Source: domain.SourceCodex, Store: `C:\Codex\user's home`, SessionID: "root's$(danger)"}, Request: "request's"}
+	windows := capture.NativeBindingPrompt(row, `C:\Program Files\AgenticLens's\agentic-lens.exe`, `C:\State\agent's`, true)
+	for _, literal := range []string{`executing: & 'C:\Program Files\AgenticLens''s\agentic-lens.exe' capture bind`, `--state-dir 'C:\State\agent''s'`, `--store 'C:\Codex\user''s home'`, `--session-id 'root''s$(danger)'`, `--request 'request''s'`} {
+		if !strings.Contains(windows, literal) {
+			t.Fatalf("PowerShell command omitted executable/literal syntax %q: %s", literal, windows)
+		}
+	}
+	if strings.Contains(windows, `'"'"'`) {
+		t.Fatalf("POSIX apostrophe escaping leaked into PowerShell command: %s", windows)
+	}
+	posix := capture.NativeBindingPrompt(row, "/native agent's/agentic-lens", "/state user's", false)
+	if !strings.Contains(posix, `executing: '/native agent'"'"'s/agentic-lens' capture bind`) || strings.Contains(posix, "executing: & ") {
+		t.Fatalf("POSIX command syntax changed: %s", posix)
+	}
+}

@@ -865,3 +865,48 @@ func TestReconcileSuccessfulReadPreservesParentConflictAndNormalPendingRecovery(
 		t.Fatalf("parent binding conflict rewritten to successful completion: health=%+v feedback=%q advisory=%v", h, feedback, issues)
 	}
 }
+
+func TestReconcileExplicitChildTicketDoesNotBlockOrReassignParent(t *testing.T) {
+	ctx := context.Background()
+	s := openStore(t, t.TempDir())
+	source := t.TempDir()
+	if err := os.Mkdir(filepath.Join(source, "sessions"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	parentPath := filepath.Join(source, "sessions", "parent.jsonl")
+	childPath := filepath.Join(source, "sessions", "child.jsonl")
+	writeRollout(t, parentPath, "parent", "", 10)
+	writeRollout(t, childPath, "child", "parent", 31)
+	registerBound(t, s, source, parentPath, "parent", "TEST-100")
+	registerBound(t, s, source, childPath, "child", "TEST-200")
+	if err := s.QueueChild(ctx, source, childPath, "parent"); err != nil {
+		t.Fatal(err)
+	}
+	parent, err := s.Reconcile(ctx, "TEST-100", "tester", 20, capture.DefaultByteBudget)
+	if err != nil {
+		t.Fatalf("explicit child blocked parent: %v", err)
+	}
+	if len(parent.Sessions) != 1 || parent.Sessions[0].ID != "parent" || parent.Sessions[0].Invocations[0].Tokens.Input != 10 {
+		t.Fatalf("child crossed into parent ticket: %+v", parent.Sessions)
+	}
+	child, err := s.Reconcile(ctx, "TEST-200", "tester", 20, capture.DefaultByteBudget)
+	if err != nil {
+		t.Fatalf("child's own ticket blocked: %v", err)
+	}
+	if len(child.Sessions) != 1 || child.Sessions[0].ID != "child" || child.Sessions[0].ParentID == nil || *child.Sessions[0].ParentID != "parent" || child.Sessions[0].Invocations[0].Tokens.Input != 31 {
+		t.Fatalf("explicit child identity/source ownership lost: %+v", child.Sessions)
+	}
+	rows, err := s.List(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, row := range rows {
+		if row.Identity.SessionID == "child" && (row.TicketID != "TEST-200" || row.Binding != "explicit_agent_response" || row.ParentID != "parent") {
+			t.Fatalf("explicit child binding rewritten: %+v", row)
+		}
+	}
+	again, err := s.Reconcile(ctx, "TEST-100", "tester", 20, capture.DefaultByteBudget)
+	if err != nil || len(again.Sessions) != 1 || again.Sessions[0].ID != "parent" {
+		t.Fatalf("settled child work blocked/reassigned repeated parent: %+v %v", again.Sessions, err)
+	}
+}

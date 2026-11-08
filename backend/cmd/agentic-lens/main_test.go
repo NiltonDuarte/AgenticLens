@@ -4855,7 +4855,7 @@ func TestInitCommand(t *testing.T) {
 				if err = os.WriteFile(shared, original, 0600); err != nil {
 					t.Fatal(err)
 				}
-				localBody := []byte("# user overlay\ntelemetry:\n  default_source: codex\n  capture:\n    commit_warning: false\n")
+				localBody := []byte("# user overlay\ntelemetry:\n  default_source: codex\n  sources:\n    codex:\n      home: ~/.codex\n  capture:\n    enabled: false\n    state_dir: ~/.agenticlens/state\n    commit_warning: false\n")
 				if scenario != "new local" {
 					if err = os.WriteFile(local, localBody, 0600); err != nil {
 						t.Fatal(err)
@@ -4869,7 +4869,7 @@ func TestInitCommand(t *testing.T) {
 				if scenario == "dry run" {
 					args = append(args, "--dry-run")
 				}
-				cmd := exec.Command(cliBinaryPath, args...)
+				cmd := initFixtureCommand(t, args...)
 				cmd.Dir = project
 				out, runErr := cmd.CombinedOutput()
 				after, err := os.ReadFile(shared)
@@ -4920,7 +4920,7 @@ func TestInitCommand(t *testing.T) {
 			if pin != "" {
 				args = append(args, "--agenticlens-version", pin)
 			}
-			cmd := exec.Command(cliBinaryPath, args...)
+			cmd := initFixtureCommand(t, args...)
 			cmd.Dir = project
 			out, err := cmd.CombinedOutput()
 			if err == nil || !bytes.Contains(out, []byte("version")) {
@@ -4941,7 +4941,7 @@ func TestInitCommand(t *testing.T) {
 
 		for _, args := range variations {
 			tempDir := t.TempDir()
-			cmd := exec.Command(cliBinaryPath, args...)
+			cmd := initFixtureCommand(t, args...)
 			cmd.Dir = tempDir
 			var stderr bytes.Buffer
 			cmd.Stderr = &stderr
@@ -4972,7 +4972,7 @@ func TestInitCommand(t *testing.T) {
 
 		for _, args := range variations {
 			tempDir := t.TempDir()
-			cmd := exec.Command(cliBinaryPath, args...)
+			cmd := initFixtureCommand(t, args...)
 			cmd.Dir = tempDir
 			var stderr bytes.Buffer
 			cmd.Stderr = &stderr
@@ -5003,7 +5003,7 @@ func TestInitCommand(t *testing.T) {
 
 		for _, args := range variations {
 			tempDir := t.TempDir()
-			cmd := exec.Command(cliBinaryPath, args...)
+			cmd := initFixtureCommand(t, args...)
 			cmd.Dir = tempDir
 			var stderr bytes.Buffer
 			cmd.Stderr = &stderr
@@ -5027,7 +5027,7 @@ func TestInitCommand(t *testing.T) {
 
 	t.Run("missing all required flags fails with exit code 1", func(t *testing.T) {
 		tempDir := t.TempDir()
-		cmd := exec.Command(cliBinaryPath, "init", "--agenticlens-version", "v9.8.7")
+		cmd := initFixtureCommand(t, "init", "--agenticlens-version", "v9.8.7")
 		cmd.Dir = tempDir
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
@@ -5051,8 +5051,7 @@ func TestInitCommand(t *testing.T) {
 	t.Run("valid required flags create valid configuration file", func(t *testing.T) {
 		tempDir := t.TempDir()
 
-		cmd := exec.Command(
-			cliBinaryPath,
+		cmd := initFixtureCommand(t,
 			"init", "--agenticlens-version", "v9.8.7",
 			"--project-name", "AcmeApp",
 			"--src-folders", "web,backend",
@@ -5077,7 +5076,7 @@ func TestInitCommand(t *testing.T) {
 			t.Fatalf("expected local source config: %v", readErr)
 		}
 		localContent := string(localBytes)
-		if !strings.Contains(localContent, "default_source: opencode") || !strings.Contains(localContent, "database_path: ~/.local/share/opencode/opencode.db") || !strings.Contains(localContent, "home: ~/.codex") {
+		if !strings.Contains(localContent, "default_source: opencode") || !strings.Contains(localContent, "database_path: ~/.local/share/opencode/opencode.db") || !strings.Contains(localContent, "enabled: false") {
 			t.Fatalf("unexpected local defaults: %s", localContent)
 		}
 		if strings.Contains(localContent, os.Getenv("HOME")) {
@@ -5127,8 +5126,7 @@ func TestInitCommand(t *testing.T) {
 		tempDir := t.TempDir()
 		customOutput := filepath.Join(tempDir, "custom-config.yaml")
 
-		cmd := exec.Command(
-			cliBinaryPath,
+		cmd := initFixtureCommand(t,
 			"init", "--agenticlens-version", "v9.8.7",
 			"--project-name", "AcmePlatform",
 			"--workspaces", "team_workspaces",
@@ -5157,8 +5155,9 @@ func TestInitCommand(t *testing.T) {
 		if loaded.Workspaces.Dir != "team_workspaces" {
 			t.Errorf("expected workspaces.dir 'team_workspaces', got %q", loaded.Workspaces.Dir)
 		}
-		if loaded.Database.Path != "/opt/opencode/data.db" {
-			t.Errorf("expected database.path '/opt/opencode/data.db', got %q", loaded.Database.Path)
+		localBody, readErr := os.ReadFile(filepath.Join(tempDir, ".agenticlens-config.local.yaml"))
+		if readErr != nil || !bytes.Contains(localBody, []byte("database_path: /opt/opencode/data.db")) || loaded.Database.Path != domain.DefaultProjectConfig().Database.Path {
+			t.Fatalf("machine source path must be local: %s %v", localBody, readErr)
 		}
 		if len(loaded.CodeMetrics.SourceRoots) != 3 || loaded.CodeMetrics.SourceRoots[0] != "services" {
 			t.Errorf("unexpected code_metrics.source_roots: %v", loaded.CodeMetrics.SourceRoots)
@@ -5181,8 +5180,7 @@ func TestInitCommand(t *testing.T) {
 		tempDir := t.TempDir()
 		outConfig := filepath.Join(tempDir, ".agenticlens-config.yaml")
 
-		cmd := exec.Command(
-			cliBinaryPath,
+		cmd := initFixtureCommand(t,
 			"init", "--agenticlens-version", "v9.8.7",
 			"--project-name", "PeerTest",
 			"--src-folders", "core,cli",
@@ -5216,8 +5214,7 @@ func TestInitCommand(t *testing.T) {
 
 	t.Run("empty ticket-prefixes fails with exit code 1", func(t *testing.T) {
 		tempDir := t.TempDir()
-		cmd := exec.Command(
-			cliBinaryPath,
+		cmd := initFixtureCommand(t,
 			"init", "--agenticlens-version", "v9.8.7",
 			"--project-name", "PeerTest",
 			"--src-folders", "core",
@@ -5239,8 +5236,7 @@ func TestInitCommand(t *testing.T) {
 
 	t.Run("empty src-folders fails with exit code 1", func(t *testing.T) {
 		tempDir := t.TempDir()
-		cmd := exec.Command(
-			cliBinaryPath,
+		cmd := initFixtureCommand(t,
 			"init", "--agenticlens-version", "v9.8.7",
 			"--project-name", "PeerTest",
 			"--src-folders", " , , ",
@@ -5267,8 +5263,7 @@ func TestInitCommand(t *testing.T) {
 			t.Fatalf("writing initial config: %v", err)
 		}
 
-		cmd := exec.Command(
-			cliBinaryPath,
+		cmd := initFixtureCommand(t,
 			"init", "--agenticlens-version", "v9.8.7",
 			"--project-name", "Original",
 			"--src-folders", "src",
@@ -5302,8 +5297,7 @@ func TestInitCommand(t *testing.T) {
 			t.Fatalf("writing initial config: %v", err)
 		}
 
-		cmd := exec.Command(
-			cliBinaryPath,
+		cmd := initFixtureCommand(t,
 			"init", "--agenticlens-version", "v9.8.7",
 			"--project-name", "Overwritten",
 			"--src-folders", "src",
@@ -5331,8 +5325,7 @@ func TestInitCommand(t *testing.T) {
 	t.Run("dry run prints YAML to stdout without creating file", func(t *testing.T) {
 		tempDir := t.TempDir()
 
-		cmd := exec.Command(
-			cliBinaryPath,
+		cmd := initFixtureCommand(t,
 			"init", "--agenticlens-version", "v9.8.7",
 			"--dry-run",
 			"--project-name", "DryRunTest",
@@ -5371,7 +5364,7 @@ func TestInitCommand(t *testing.T) {
 
 	t.Run("local output collision is rejected", func(t *testing.T) {
 		tempDir := t.TempDir()
-		cmd := exec.Command(cliBinaryPath, "init", "--agenticlens-version", "v9.8.7", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefixes", "AL", "--output", ".agenticlens-config.local.yaml")
+		cmd := initFixtureCommand(t, "init", "--agenticlens-version", "v9.8.7", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefixes", "AL", "--output", ".agenticlens-config.local.yaml")
 		cmd.Dir = tempDir
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
@@ -5383,19 +5376,19 @@ func TestInitCommand(t *testing.T) {
 		}
 	})
 
-	t.Run("existing local settings are protected unless force is explicit", func(t *testing.T) {
+	t.Run("existing valid local settings are preserved during project initialization", func(t *testing.T) {
 		tempDir := t.TempDir()
 		localPath := filepath.Join(tempDir, ".agenticlens-config.local.yaml")
-		original := "telemetry:\n  default_source: codex\n"
+		original := "telemetry:\n  default_source: codex\n  sources:\n    codex:\n      home: ~/.codex\n  capture:\n    enabled: false\n    state_dir: ~/.agenticlens/state\n"
 		if err := os.WriteFile(localPath, []byte(original), 0600); err != nil {
 			t.Fatal(err)
 		}
-		cmd := exec.Command(cliBinaryPath, "init", "--agenticlens-version", "v9.8.7", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefixes", "AL")
+		cmd := initFixtureCommand(t, "init", "--agenticlens-version", "v9.8.7", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefixes", "AL")
 		cmd.Dir = tempDir
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
-		if err := cmd.Run(); err == nil || !strings.Contains(stderr.String(), "already exists") {
-			t.Fatalf("expected existing local file protection, got err=%v stderr=%s", err, stderr.String())
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("initializing shared config with valid local failed: %v %s", err, stderr.String())
 		}
 		got, err := os.ReadFile(localPath)
 		if err != nil {
@@ -5420,7 +5413,7 @@ func TestInitCommand(t *testing.T) {
 				if err := os.Mkdir(filepath.Join(tempDir, ".agenticlens-config.local.yaml"), 0700); err != nil {
 					t.Fatal(err)
 				}
-				cmd := exec.Command(cliBinaryPath, "init", "--agenticlens-version", "v9.8.7", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefixes", "AL", "--force")
+				cmd := initFixtureCommand(t, "init", "--agenticlens-version", "v9.8.7", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefixes", "AL", "--force")
 				cmd.Dir = tempDir
 				var stdout, stderr bytes.Buffer
 				cmd.Stdout, cmd.Stderr = &stdout, &stderr
@@ -5460,8 +5453,7 @@ func TestInitCommand(t *testing.T) {
 		projName := "My Special Project"
 		customOutput := filepath.Join(tempDir, "nested dir", "app config.yaml")
 
-		cmd := exec.Command(
-			cliBinaryPath,
+		cmd := initFixtureCommand(t,
 			"init", "--agenticlens-version", "v9.8.7",
 			"--project-name", projName,
 			"--workspaces", "team workspaces",
@@ -5492,7 +5484,7 @@ func TestInitCommand(t *testing.T) {
 
 	t.Run("invalid or unknown flag returns error and exits non-zero", func(t *testing.T) {
 		tempDir := t.TempDir()
-		cmd := exec.Command(cliBinaryPath, "init", "--agenticlens-version", "v9.8.7", "--invalid-nonexistent-flag=true")
+		cmd := initFixtureCommand(t, "init", "--agenticlens-version", "v9.8.7", "--invalid-nonexistent-flag=true")
 		cmd.Dir = tempDir
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -5509,7 +5501,7 @@ func TestInitCommand(t *testing.T) {
 
 	t.Run("passing deprecated or unknown --ticket-prefix flag fails as unknown flag", func(t *testing.T) {
 		tempDir := t.TempDir()
-		cmd := exec.Command(cliBinaryPath, "init", "--agenticlens-version", "v9.8.7", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefix", "AL")
+		cmd := initFixtureCommand(t, "init", "--agenticlens-version", "v9.8.7", "--project-name", "Acme", "--src-folders", "src", "--ticket-prefix", "AL")
 		cmd.Dir = tempDir
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -5532,8 +5524,7 @@ func TestInitCommand(t *testing.T) {
 			t.Fatalf("writing target file: %v", err)
 		}
 
-		cmd := exec.Command(
-			cliBinaryPath,
+		cmd := initFixtureCommand(t,
 			"init", "--agenticlens-version", "v9.8.7",
 			"--project-name", "AttemptedOverwrite",
 			"--src-folders", "src",
@@ -5574,8 +5565,7 @@ func TestInitCommand(t *testing.T) {
 		defer os.Chmod(roDir, 0755)
 
 		target := filepath.Join(roDir, "config.yaml")
-		cmd := exec.Command(
-			cliBinaryPath,
+		cmd := initFixtureCommand(t,
 			"init", "--agenticlens-version", "v9.8.7",
 			"--project-name", "Protected",
 			"--src-folders", "src",
@@ -5600,7 +5590,7 @@ func TestInitCommand(t *testing.T) {
 		tempDir := t.TempDir()
 
 		// Test root command in dir with no config
-		cmdRoot := exec.Command(cliBinaryPath, "--workspaces", tempDir)
+		cmdRoot := initFixtureCommand(t, "--workspaces", tempDir)
 		cmdRoot.Dir = tempDir
 		var stderrRoot bytes.Buffer
 		cmdRoot.Stderr = &stderrRoot
@@ -5620,7 +5610,7 @@ func TestInitCommand(t *testing.T) {
 		}
 
 		// Test server command in dir with no config
-		cmdServer := exec.Command(cliBinaryPath, "server", "--port", "29199", "--workspaces", tempDir)
+		cmdServer := initFixtureCommand(t, "server", "--port", "29199", "--workspaces", tempDir)
 		cmdServer.Dir = tempDir
 		var stderrServer bytes.Buffer
 		cmdServer.Stderr = &stderrServer
@@ -5640,7 +5630,7 @@ func TestInitCommand(t *testing.T) {
 		}
 
 		// Test server command in dir with no config and no workspaces flag
-		cmdServerNoFlag := exec.Command(cliBinaryPath, "server", "--port", "29198")
+		cmdServerNoFlag := initFixtureCommand(t, "server", "--port", "29198")
 		cmdServerNoFlag.Dir = tempDir
 		var stderrServerNoFlag bytes.Buffer
 		cmdServerNoFlag.Stderr = &stderrServerNoFlag
@@ -5660,7 +5650,7 @@ func TestInitCommand(t *testing.T) {
 		}
 
 		// Test generate command in dir with no config
-		cmdGenerate := exec.Command(cliBinaryPath, "generate", "--ticket-id", "TEST-1", "--allow-empty")
+		cmdGenerate := initFixtureCommand(t, "generate", "--ticket-id", "TEST-1", "--allow-empty")
 		cmdGenerate.Dir = tempDir
 		prepareLegacyGenerateFixture(t, cmdGenerate)
 		var stderrGen bytes.Buffer
@@ -5685,7 +5675,7 @@ func TestInitCommand(t *testing.T) {
 		tempDir := t.TempDir()
 
 		// 1. Root command without --workspaces and without config
-		cmdRoot := exec.Command(cliBinaryPath, "--list")
+		cmdRoot := initFixtureCommand(t, "--list")
 		cmdRoot.Dir = tempDir
 		var stderrRoot bytes.Buffer
 		cmdRoot.Stderr = &stderrRoot
@@ -5705,7 +5695,7 @@ func TestInitCommand(t *testing.T) {
 		}
 
 		// 2. Server command without --workspaces and without config
-		cmdServer := exec.Command(cliBinaryPath, "server", "--port", "29199")
+		cmdServer := initFixtureCommand(t, "server", "--port", "29199")
 		cmdServer.Dir = tempDir
 		var stderrServer bytes.Buffer
 		cmdServer.Stderr = &stderrServer
@@ -5725,7 +5715,7 @@ func TestInitCommand(t *testing.T) {
 		}
 
 		// 3. Backfill command without --workspaces and without config
-		cmdBackfill := exec.Command(cliBinaryPath, "backfill", "--source", "opencode")
+		cmdBackfill := initFixtureCommand(t, "backfill", "--source", "opencode")
 		cmdBackfill.Dir = tempDir
 		var stderrBackfill bytes.Buffer
 		cmdBackfill.Stderr = &stderrBackfill
@@ -5745,7 +5735,7 @@ func TestInitCommand(t *testing.T) {
 		}
 
 		// 4. Migrate command without --workspaces and without config
-		cmdMigrate := exec.Command(cliBinaryPath, "migrate")
+		cmdMigrate := initFixtureCommand(t, "migrate")
 		cmdMigrate.Dir = tempDir
 		var stderrMigrate bytes.Buffer
 		cmdMigrate.Stderr = &stderrMigrate
@@ -7065,4 +7055,24 @@ func writeLegacyFactFixture(path string, ledger domain.AgenticFactLedger) error 
 		return err
 	}
 	return os.WriteFile(path, data, 0600)
+}
+
+// Setup fixtures supply machine choices explicitly; production must never guess them.
+func initFixtureCommand(t *testing.T, args ...string) *exec.Cmd {
+	t.Helper()
+	if len(args) == 0 || args[0] != "init" {
+		return exec.Command(cliBinaryPath, args...)
+	}
+	for _, choice := range []struct{ key, value string }{{"--capture-enabled", "false"}, {"--source", "opencode"}, {"--db-path", "~/.local/share/opencode/opencode.db"}, {"--codex-home", "~/.codex"}, {"--state-dir", "~/.agenticlens/state"}} {
+		supplied := false
+		for _, arg := range args {
+			if arg == choice.key || strings.HasPrefix(arg, choice.key+"=") {
+				supplied = true
+			}
+		}
+		if !supplied {
+			args = append(args, choice.key, choice.value)
+		}
+	}
+	return exec.Command(cliBinaryPath, args...)
 }

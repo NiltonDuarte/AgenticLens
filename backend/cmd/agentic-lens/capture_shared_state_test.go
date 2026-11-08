@@ -161,7 +161,7 @@ func TestCaptureConfigUpdateRefusesLegacyStateWithoutConfiguredPath(t *testing.T
 	cmd := exec.Command(cliBinaryPath, "init", "--update-capture-config")
 	cmd.Dir = root
 	home := t.TempDir()
-	cmd.Env = append(os.Environ(), "HOME="+home, "USERPROFILE="+home)
+	cmd.Env = append(os.Environ(), "HOME="+home, "USERPROFILE="+home, "CODEX_HOME="+filepath.Join(home, ".codex"))
 	output, err := cmd.CombinedOutput()
 	if err == nil {
 		t.Fatalf("configuration update orphaned retained legacy state: %s", output)
@@ -177,6 +177,9 @@ func TestCaptureInstallIgnoresLogicalRegistryAndPreservesUserRules(t *testing.T)
 	source := t.TempDir()
 	config := []byte("project_name: LocalCapture\ntelemetry:\n  capture:\n    state_dir: .capture-local\nticket:\n  prefixes: [TEST]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n")
 	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), config, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.local.yaml"), []byte("telemetry:\n  capture:\n    enabled: true\n    state_dir: .capture-local\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	ownerRules := []byte("# Owner rules retained\n/retained-legacy/\nunrelated-output\n")

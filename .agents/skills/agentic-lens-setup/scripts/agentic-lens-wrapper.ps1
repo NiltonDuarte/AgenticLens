@@ -1,5 +1,60 @@
 # AgenticLens common entrypoint v1: offline shared-YAML release selection.
 $ErrorActionPreference = 'Stop'
+function Invoke-NativeTransport([string]$native, [string[]]$arguments, [bool]$advisory) {
+    # ProcessStartInfo with inherited handles avoids PowerShell 5.1's lossy
+    # empty-argument conversion and native pipeline re-encoding. Windows CRT
+    # argument quoting doubles trailing backslashes and those before quotes.
+    $quotedArguments = [Collections.Generic.List[string]]::new()
+    foreach ($argument in $arguments) {
+        $encoded = [Text.RegularExpressions.Regex]::Replace($argument, '(\\*)"', '$1$1\"')
+        $encoded = [Text.RegularExpressions.Regex]::Replace($encoded, '(\\+)$', '$1$1')
+        $quotedArguments.Add('"' + $encoded + '"')
+    }
+    $start = [Diagnostics.ProcessStartInfo]::new()
+    $start.FileName = $native
+    $start.UseShellExecute = $false
+    $start.Arguments = [string]::Join(' ', $quotedArguments)
+    $process = [Diagnostics.Process]::Start($start)
+    if ($advisory) {
+        if (-not $process.WaitForExit(1500)) {
+            $terminate = [Diagnostics.ProcessStartInfo]::new()
+            $terminate.FileName = [IO.Path]::Combine($env:SystemRoot, 'System32', 'taskkill.exe')
+            $terminate.Arguments = '/PID ' + $process.Id + ' /T /F'
+            $terminate.UseShellExecute = $false; $terminate.CreateNoWindow = $true
+            $cleanupDeadline = [DateTime]::UtcNow.AddMilliseconds(500)
+            $stop = [Diagnostics.Process]::Start($terminate)
+            if (-not $stop.WaitForExit(250)) { $stop.Kill() }; $stop.Dispose()
+            if (-not $process.HasExited) { $process.Kill() }
+            $remaining = [Math]::Max(0, [int]($cleanupDeadline - [DateTime]::UtcNow).TotalMilliseconds)
+            [void]$process.WaitForExit($remaining); $process.Dispose()
+            throw 'Offline advisory check timed out; inspect capture diagnostics explicitly'
+        }
+    } else { $process.WaitForExit() }
+    $exitCode = $process.ExitCode
+    $process.Dispose()
+    return $exitCode
+}
+function Test-OfflineAdvisory([string[]]$values) {
+    $offline = $false; $index = 0
+    while ($index -lt $values.Count) {
+        if ($values[$index] -ceq '--al-offline') { $offline = $true; $index++; continue }
+        if ($values[$index] -ceq '--al-project') { $index += 2; continue }
+        break
+    }
+    return ($offline -and $index + 1 -lt $values.Count -and $values[$index] -ceq 'capture' -and $values[$index + 1] -ceq 'check')
+}
+# Native selection owns shared/local configuration policy after explicit install.
+$dispatcherPath = [IO.Path]::Combine([Environment]::GetFolderPath('UserProfile'), '.agenticlens', 'dispatcher.exe')
+$dispatcherPointer = $PSCommandPath + '.dispatcher'
+if ([IO.File]::Exists($dispatcherPointer)) { $dispatcherPath = [IO.File]::ReadAllText($dispatcherPointer).TrimEnd("`r", "`n") }
+if ([IO.File]::Exists($dispatcherPath)) {
+    try { exit (Invoke-NativeTransport $dispatcherPath (@('dispatch') + $args) (Test-OfflineAdvisory $args)) }
+    catch {
+        $message = [Text.Encoding]::UTF8.GetBytes($_.Exception.Message + "`n")
+        $errorStream = [Console]::OpenStandardError(); $errorStream.Write($message, 0, $message.Length); $errorStream.Flush()
+        exit 2
+    }
+}
 # Resolve reparse targets before following later .. components, including
 # not-yet-created cache suffixes. Never use GetFullPath to collapse them first.
 function Resolve-PhysicalDirectory([string]$Path, [bool]$RequireExisting = $false) {
@@ -96,7 +151,7 @@ function Read-Bootstrap([string]$Path, [bool]$Local) {
         $key = $Matches[1]; $value = ([string]$Matches[2]).Trim([char[]]" `t")
         if ($children.ContainsKey($key)) { throw 'Duplicate agenticlens key' }
         $children[$key] = $true
-        if ($key -cne 'version' -and $key -cne 'install_root') { throw 'Unknown agenticlens key' }
+        if ($key -cne 'version' -and $key -cne 'install_root' -and $key -cne 'binary_dir') { throw 'Unknown agenticlens key' }
         if ($value.StartsWith('"') -or $value.StartsWith("'")) {
             $q = $value.Substring(0, 1)
             if ($value.Length -lt 2 -or -not $value.EndsWith($q)) { throw 'Unsupported quoted scalar' }
@@ -107,6 +162,9 @@ function Read-Bootstrap([string]$Path, [bool]$Local) {
         if ($key -ceq 'version') {
             if ($Local) { throw 'Local version overrides are prohibited; edit shared YAML' }
             if ($value.Length -gt 128 -or $value -cnotmatch '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?(\+[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?$') { throw 'Version must be an exact vMAJOR.MINOR.PATCH release tag' }
+        } elseif ($key -ceq 'binary_dir') {
+            if ($Local) { throw 'Local development selection overrides prohibited' }
+            if ([Text.Encoding]::UTF8.GetByteCount($value) -gt 4096) { throw 'binary_dir exceeds path limit' }
         } elseif ([Text.Encoding]::UTF8.GetByteCount($value) -gt 4096 -or $value -notmatch '^(\/|~\/|[A-Za-z]:[\\\/]|\\\\[^\\]+\\[^\\]+)' -or $value -match '[<>|?*]') { throw 'install_root must be an absolute path or ~/path' }
         $result[$key] = $value
     }
@@ -119,7 +177,7 @@ try {
     $project = '.'; $resolve = $false; $offline = $false
     while ($arguments.Count -gt 0) {
         if ($arguments[0] -ceq '--al-offline') { $offline = $true; $arguments.RemoveAt(0); continue }
-        if ($arguments[0] -ceq '--al-resolve') { $resolve = $true; $arguments.RemoveAt(0); continue }
+        if ($arguments[0] -ceq '--al-resolve' -or $arguments[0] -ceq '--al-resolve-cache') { $resolve = $true; $arguments.RemoveAt(0); continue }
         if ($arguments[0] -ceq '--al-project') {
             if ($arguments.Count -lt 2) { throw '--al-project requires a directory' }
             $project = $arguments[1]; $arguments.RemoveRange(0, 2); continue
@@ -193,29 +251,7 @@ try {
     $stream = [IO.File]::OpenRead($native)
     try { $magic1 = $stream.ReadByte(); $magic2 = $stream.ReadByte() } finally { $stream.Dispose() }
     if ($magic1 -ne 77 -or $magic2 -ne 90) { throw 'Cache artifact is not native; explicit repair required' }
-    # ProcessStartInfo with inherited handles avoids PowerShell 5.1's lossy
-    # empty-argument conversion and native pipeline re-encoding. Windows CRT
-    # argument quoting doubles trailing backslashes and those before quotes.
-    $quotedArguments = [Collections.Generic.List[string]]::new()
-    foreach ($argument in $arguments) {
-        $encoded = [Text.RegularExpressions.Regex]::Replace($argument, '(\\*)"', '$1$1\"')
-        $encoded = [Text.RegularExpressions.Regex]::Replace($encoded, '(\\+)$', '$1$1')
-        $quotedArguments.Add('"' + $encoded + '"')
-    }
-    $start = [Diagnostics.ProcessStartInfo]::new()
-    $start.FileName = $native
-    $start.UseShellExecute = $false
-    $start.Arguments = [string]::Join(' ', $quotedArguments)
-    $process = [Diagnostics.Process]::Start($start)
-    if ($offline -and $arguments.Count -gt 1 -and $arguments[0] -ceq 'capture' -and $arguments[1] -ceq 'check') {
-        if (-not $process.WaitForExit(1500)) {
-            $process.Kill(); [void]$process.WaitForExit(500); $process.Dispose()
-            throw 'Offline advisory check timed out; inspect capture diagnostics explicitly'
-        }
-    } else { $process.WaitForExit() }
-    $exitCode = $process.ExitCode
-    $process.Dispose()
-    exit $exitCode
+    exit (Invoke-NativeTransport $native $arguments.ToArray() ($offline -and $arguments.Count -gt 1 -and $arguments[0] -ceq 'capture' -and $arguments[1] -ceq 'check'))
 } catch {
     $diagnostic = [Text.Encoding]::UTF8.GetBytes($_.Exception.Message + "`n")
     $stderr = [Console]::OpenStandardError(); $stderr.Write($diagnostic, 0, $diagnostic.Length); $stderr.Flush()

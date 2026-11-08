@@ -73,10 +73,6 @@ func ValidateConfig(cfg domain.ProjectConfig) error {
 		missing = append(missing, "code_metrics.source_roots")
 	}
 
-	if strings.TrimSpace(cfg.Telemetry.Capture.StateDir) == "" {
-		missing = append(missing, "telemetry.capture.state_dir")
-	}
-
 	if cfg.AnomalyThresholds.ContextCeilingCriticalTokens <= 0 {
 		missing = append(missing, "anomaly_thresholds.context_ceiling_critical_tokens")
 	}
@@ -556,9 +552,6 @@ func validateLoadedConfig(cfg domain.ProjectConfig, filePath string) (domain.Pro
 	if err := ValidateConfig(cfg); err != nil {
 		return domain.ProjectConfig{}, fmt.Errorf("validating configuration %s: %w", filePath, err)
 	}
-	if err := cfg.Telemetry.Capture.Validate(); err != nil {
-		return domain.ProjectConfig{}, fmt.Errorf("validating configuration %s: %w", filePath, err)
-	}
 	return cfg, nil
 }
 
@@ -576,14 +569,21 @@ func Load(repoRoot string) (domain.ProjectConfig, error) {
 	if err != nil {
 		return domain.ProjectConfig{}, err
 	}
-	localPath := filepath.Join(filepath.Dir(cfgFile), ".agenticlens-config.local.yaml")
-	data, err := os.ReadFile(localPath)
-	if errors.Is(err, os.ErrNotExist) {
-		return validateLoadedConfig(cfg, cfgFile)
+	selection, selectErr := SelectConfig(repoRoot)
+	if selectErr != nil {
+		// Shared-only reads remain available to manual generation and dashboards.
+		// Automatic capture separately requires a complete local policy.
+		if errors.Is(selectErr, os.ErrNotExist) {
+			return validateLoadedConfig(cfg, cfgFile)
+		}
+		return domain.ProjectConfig{}, selectErr
 	}
+	localPath := selection.LocalPath
+	data, err := readSelectedLocal(selection)
 	if err != nil {
-		return domain.ProjectConfig{}, fmt.Errorf("reading local configuration %s: %w", localPath, err)
+		return domain.ProjectConfig{}, err
 	}
+
 	var local rawProjectConfigDTO
 	if err := yaml.Unmarshal(data, &local); err != nil {
 		return domain.ProjectConfig{}, fmt.Errorf("decoding local configuration %s: %w", localPath, err)
@@ -597,11 +597,13 @@ func Load(repoRoot string) (domain.ProjectConfig, error) {
 			cfg.AgenticLens.InstallRoot = entry.InstallRoot
 		}
 	}
-	capturePolicy, captureErr := decodeCapturePolicy(data, cfg.Telemetry.Capture)
+	capturePolicy, captureErr := decodeCapturePolicy(data, captureReadPolicy())
 	if captureErr != nil {
 		return domain.ProjectConfig{}, captureErr
 	}
 	cfg.Telemetry.Capture = capturePolicy
+	cfg.Telemetry.DefaultSource = ""
+	cfg.Telemetry.Sources = domain.TelemetrySourcePaths{}
 	if local.Telemetry == nil {
 		return validateLoadedConfig(cfg, cfgFile+" with "+localPath)
 	}
@@ -619,14 +621,14 @@ func Load(repoRoot string) (domain.ProjectConfig, error) {
 			if value == "" {
 				return domain.ProjectConfig{}, fmt.Errorf("invalid local configuration %s: telemetry.sources.opencode.database_path cannot be empty", localPath)
 			}
-			cfg.Telemetry.Sources.OpenCodeDatabasePath = value
+			cfg.Telemetry.Sources.OpenCodeDatabasePath = ProjectSourcePath(filepath.Dir(localPath), value)
 		}
 		if source := telemetry.Sources.Codex; source != nil && source.Home != nil {
 			value := strings.TrimSpace(*source.Home)
 			if value == "" {
 				return domain.ProjectConfig{}, fmt.Errorf("invalid local configuration %s: telemetry.sources.codex.home cannot be empty", localPath)
 			}
-			cfg.Telemetry.Sources.CodexHome = value
+			cfg.Telemetry.Sources.CodexHome = ProjectSourcePath(filepath.Dir(localPath), value)
 		}
 	}
 	return validateLoadedConfig(cfg, cfgFile+" with "+localPath)

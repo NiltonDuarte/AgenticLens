@@ -35,11 +35,32 @@ type Entrypoint struct {
 	Project     string
 	ConfigPath  string
 	Version     string
+	BinaryDir   string
 	InstallRoot string
 }
 
 // NativePath selects the executing environment, never the installing host.
 func (e Entrypoint) NativePath() (string, error) {
+	if e.BinaryDir != "" {
+		name := "agentic-lens-" + runtime.GOOS + "-" + runtime.GOARCH
+		if runtime.GOOS == "windows" {
+			name += ".exe"
+		}
+		development := filepath.Join(e.BinaryDir, name)
+		if _, err := os.Lstat(development); err == nil {
+			if _, err := ValidateNativeExecutable(development); err != nil {
+				return "", fmt.Errorf("development output %s: %w", development, err)
+			}
+			return development, nil
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return "", fmt.Errorf("development output %s: %w", development, err)
+		}
+	}
+	return e.CachedNativePath()
+}
+
+// CachedNativePath identifies only the exact shared pin; provisioning is explicit.
+func (e Entrypoint) CachedNativePath() (string, error) {
 	osName, arch := runtime.GOOS, runtime.GOARCH
 	if (osName != "linux" && osName != "darwin" && osName != "windows") || (arch != "amd64" && arch != "arm64") || (osName == "windows" && arch != "amd64") {
 		return "", fmt.Errorf("unsupported native platform %s-%s", osName, arch)
@@ -115,19 +136,23 @@ func ResolveEntrypoint(start string) (Entrypoint, error) {
 	if err != nil {
 		return result, err
 	}
-	localPath := filepath.Join(root, ".agenticlens-config.local.yaml")
-	localData, err := readBootstrap(localPath)
-	if err == nil {
-		local, parseErr := parseEntrypoint(localData, true)
-		if parseErr != nil {
-			return result, fmt.Errorf("local version configuration: %w", parseErr)
+	selection, selectErr := SelectConfig(root)
+	if selectErr == nil {
+		localData, err := readSelectedLocal(selection)
+		if err != nil {
+			return result, err
+		}
+		local, err := parseEntrypoint(localData, true)
+		if err != nil {
+			return result, fmt.Errorf("local version configuration %s: %w", selection.LocalPath, err)
 		}
 		if local.InstallRoot != "" {
 			shared.InstallRoot = local.InstallRoot
 		}
-	} else if !errors.Is(err, os.ErrNotExist) {
-		return result, err
+	} else if !errors.Is(selectErr, os.ErrNotExist) {
+		return result, selectErr
 	}
+
 	if value := os.Getenv("AGENTIC_LENS_VERSION"); value != "" && value != shared.Version {
 		return result, errors.New("AGENTIC_LENS_VERSION conflicts with authoritative shared agenticlens.version")
 	}
@@ -148,7 +173,11 @@ func ResolveEntrypoint(start string) (Entrypoint, error) {
 	if err != nil {
 		return result, fmt.Errorf("physical install_root: %w", err)
 	}
-	return Entrypoint{Project: root, ConfigPath: path, Version: shared.Version, InstallRoot: installRoot}, nil
+	binaryDir := shared.BinaryDir
+	if binaryDir != "" {
+		binaryDir = ProjectSourcePath(root, binaryDir)
+	}
+	return Entrypoint{Project: root, ConfigPath: path, Version: shared.Version, InstallRoot: installRoot, BinaryDir: binaryDir}, nil
 }
 
 // parseEntrypoint matches the documented shell/PowerShell bootstrap profile.
@@ -245,6 +274,14 @@ func parseEntrypoint(data []byte, local bool) (domain.EntrypointConfig, error) {
 				return failure(err.Error())
 			}
 			result.Version = value
+		case "binary_dir":
+			if local {
+				return failure("local development selection overrides prohibited; edit shared YAML")
+			}
+			if len(value) > 4096 {
+				return failure("binary_dir exceeds path limit")
+			}
+			result.BinaryDir = value
 		case "install_root":
 			if len(value) > 4096 || !absoluteInstallRoot.MatchString(value) || strings.ContainsAny(value, "<>|?*") {
 				return failure("install_root must be an absolute path or ~/path")

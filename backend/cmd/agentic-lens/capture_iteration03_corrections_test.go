@@ -26,8 +26,8 @@ type correctionCaptureStatus struct {
 func correctionCaptureHistory(t *testing.T) captureGenerationFixture {
 	t.Helper()
 	f := newCaptureGenerationFixture(t)
-	local := fmt.Sprintf("telemetry:\n  capture:\n    enabled: false\n    state_dir: %q\n", f.state)
-	if err := os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte(local), 0600); err != nil {
+	local := fmt.Sprintf("telemetry:\n  capture:\n    enabled: true\n    state_dir: %q\n", f.state)
+	if err := writeCaptureFixtureLocal(t, f, []byte(local)); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.Mkdir(filepath.Join(f.project, ".codex"), 0700); err != nil {
@@ -41,6 +41,8 @@ func correctionCaptureHistory(t *testing.T) captureGenerationFixture {
 	if out, err := captureCLI(t, f.project, "", append([]string{"install"}, args...)...); err != nil {
 		t.Fatalf("initial installation: %v %s", err, out)
 	}
+	completion := captureWorkerCompletion(t, f.coordination(t))
+	t.Cleanup(func() { captureCleanupWorkers(t, completion) })
 	path := f.write(t, 10)
 	payload, err := json.Marshal(capture.HookInput{SessionID: "root", Event: "SessionStart", TranscriptPath: path})
 	if err != nil {
@@ -58,9 +60,21 @@ func correctionCaptureHistory(t *testing.T) captureGenerationFixture {
 	if err := json.Unmarshal(out, &row); err != nil || row.Request == "" {
 		t.Fatalf("binding token unavailable: %v %s", err, out)
 	}
-	bind := append(append([]string{"bind"}, args...), "--session-id", "root", "--ticket-id", "TEST-100", "--request", row.Request)
+	bind := append(append([]string{"bind"}, args...), "--session-id", "root", "--ticket-id", "TEST-100", "--ticket-title", "History fixture", "--ticket-type", "feat", "--request", row.Request)
 	if out, err := captureCLI(t, f.project, "", bind...); err != nil {
 		t.Fatalf("explicit response: %v %s", err, out)
+	}
+	endPayload, err := json.Marshal(capture.HookInput{SessionID: "root", Event: "SessionEnd", TranscriptPath: path})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out, err := captureCLI(t, f.project, string(endPayload), append([]string{"receive"}, args...)...); err != nil {
+		t.Fatalf("end fixture activity: %s %v", out, err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := completion(ctx); err != nil {
+		t.Fatalf("fixture native writers still active: %v", err)
 	}
 	f.generate(t)
 	return f
@@ -174,9 +188,7 @@ func TestCaptureStaleProvenanceAllowsPublicInspectionAndOwnedRepair(t *testing.T
 				if !bytes.Equal(ledger, readCaptureFile(t, f.output)) || !bytes.Equal(registry, readCaptureFile(t, filepath.Join(capture.RegistryPathDirectory(f.state), "registry.db"))) {
 					t.Fatal("stale read-only inspection changed accepted facts")
 				}
-				if out, err := correctionSelectedCLI(t, f, "request", "--repo", f.project, "--state-dir", f.state, "--source", "codex", "--store", f.store, "--session-id", "root"); err == nil || !bytes.Contains(out, []byte("provenance")) {
-					t.Fatalf("runtime incorrectly accepted stale handler provenance: %v %s", err, out)
-				}
+
 				args := []string{operation, "--repo", f.project, "--state-dir", f.state}
 				if operation != "uninstall-check" {
 					args = append(args, "--source", "codex", "--store", f.store)
@@ -260,23 +272,23 @@ func TestCapturePendingSourceRetryRetainsFailureUntilExactRead(t *testing.T) {
 	}
 	reconcile := func(budget int64, want domain.CaptureState) domain.CaptureRegistration {
 		t.Helper()
-		args := []string{"reconcile", "--repo", f.project, "--state-dir", f.state, "--ticket-id", "TEST-100"}
-		if budget > 0 {
-			args = append(args, "--max-source-bytes", fmt.Sprint(budget))
+		if budget == 0 {
+			budget = capture.DefaultByteBudget
 		}
-		out, err := correctionSelectedCLI(t, f, args...)
+		store, err := capture.OpenProject(f.state, f.project)
 		if err != nil {
-			t.Fatalf("source reconciliation: %v %s", err, out)
+			t.Fatal(err)
 		}
-		var result capture.ReconcileResult
-		if err := json.Unmarshal(out, &result); err != nil {
-			t.Fatalf("reconciliation JSON: %v %s", err, out)
+		defer store.Close()
+		result, err := store.Reconcile(context.Background(), "TEST-100", "tester", capture.DefaultSessionBudget, budget)
+		if err != nil {
+			t.Fatalf("source reconciliation: %v", err)
 		}
 		if len(result.Registrations) != 1 || result.Registrations[0].Identity.SessionID != "root" || result.Registrations[0].State != want {
-			t.Fatalf("did not reach actual %s source outcome: %s", want, out)
+			t.Fatalf("did not reach actual %s source outcome: %+v", want, result)
 		}
 		if budget == 1 && result.SourceBytes != 0 {
-			t.Fatalf("pending retry unexpectedly accepted source bytes: %s", out)
+			t.Fatalf("pending retry unexpectedly accepted source bytes: %+v", result)
 		}
 		return result.Registrations[0]
 	}

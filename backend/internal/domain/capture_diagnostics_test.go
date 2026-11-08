@@ -75,6 +75,19 @@ func TestCaptureVerificationRequiresSameCurrentInstallationSession(t *testing.T)
 		want string
 	}{
 		{"complete exchange", func(r *CaptureRegistration, d *CaptureDiagnostic) {}, "verified"},
+		{"native exchange without installation receipt", func(r *CaptureRegistration, d *CaptureDiagnostic) {
+			r.InstallationID = ""
+			r.BindingInstallationID = ""
+			r.SourceInstallationID = ""
+			r.BindingAcceptedAt = "2026-01-01T10:01:00Z"
+			d.Owners = []CapturePublishedOwner{{Source: id.Source, Store: id.Store, SessionID: id.SessionID}}
+		}, "verified"},
+		{"native binding missing accepted response", func(r *CaptureRegistration, d *CaptureDiagnostic) {
+			r.InstallationID = ""
+			r.BindingInstallationID = ""
+			r.SourceInstallationID = ""
+			d.Owners = []CapturePublishedOwner{{Source: id.Source, Store: id.Store, SessionID: id.SessionID}}
+		}, "verification_pending"},
 		{"callback absent", func(r *CaptureRegistration, d *CaptureDiagnostic) { r.CallbackObservedAt = "" }, "verification_pending"},
 		{"previous installation binding", func(r *CaptureRegistration, d *CaptureDiagnostic) { r.BindingInstallationID = "install-old" }, "verification_pending"},
 		{"previous installation source", func(r *CaptureRegistration, d *CaptureDiagnostic) { r.SourceInstallationID = "install-old" }, "verification_pending"},
