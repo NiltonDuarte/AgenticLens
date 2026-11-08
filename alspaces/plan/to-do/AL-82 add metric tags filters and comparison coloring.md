@@ -1,4 +1,4 @@
-h3. Title: AL-79: Add metric tags, dashboard filters and comparison coloring
+h3. Title: AL-82: Add metric tags, dashboard filters and comparison coloring
 
 *TARGET*: AgenticLens (Domain / Config / CLI / Persistence / HTTP / Dashboard / Tests)
 

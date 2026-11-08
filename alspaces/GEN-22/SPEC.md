@@ -47,6 +47,6 @@ Exercise frontend default no-filter behavior on tagged, untagged and legacy reco
 
 ## Delivery roadmap
 
-One vertical development ticket: [AL-79](../plan/to-do/AL-79%20add%20metric%20tags%20filters%20and%20comparison%20coloring.md), Ready, Blocked by: None, Blocks: None. It delivers configuration through persistence, API, filtering and comparison visualization together. Related AL-70 and AL-72 are coordination references, not prerequisites; recheck shared-file changes at implementation time. Explicit deletion/bulk retagging, tag management CRUD, numerical tag aggregation and live-source tag inference are out of scope.
+One vertical development ticket: [AL-82](../plan/to-do/AL-82%20add%20metric%20tags%20filters%20and%20comparison%20coloring.md), Ready, Blocked by: None, Blocks: None. It delivers configuration through persistence, API, filtering and comparison visualization together. Related AL-70 and AL-72 are coordination references, not prerequisites; recheck shared-file changes at implementation time. Explicit deletion/bulk retagging, tag management CRUD, numerical tag aggregation and live-source tag inference are out of scope.
 
 Implementation must start in a separate agentic-lens-dev session. This PO session does not authorize writing application code or tests.

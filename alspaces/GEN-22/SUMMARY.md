@@ -4,26 +4,26 @@ Status: Product specification and development ticket authored; application imple
 
 ## Outcome
 
-Created [AL-79](../plan/to-do/AL-79%20add%20metric%20tags%20filters%20and%20comparison%20coloring.md), Ready with no prerequisites, and registered it in the roadmap. [SPEC.md](SPEC.md) defines shared/local/CLI key-value tags, per-key precedence, persisted owner metadata, default-unset dashboard filters and comparison coloring with visible Missing/Mixed categories.
+Created [AL-82](../plan/to-do/AL-82%20add%20metric%20tags%20filters%20and%20comparison%20coloring.md), Ready with no prerequisites, and registered it in the roadmap. [SPEC.md](SPEC.md) defines shared/local/CLI key-value tags, per-key precedence, persisted owner metadata, default-unset dashboard filters and comparison coloring with visible Missing/Mixed categories.
 
 ## Steering and authority
 
 The latest user request explicitly invokes agentic-lens-po and supersedes the unapproved user-attribution proposal. [Iteration 02](iterations/02/PLAN.md) records the scope delta. Iteration 01 and CONTRACT.md are unapproved historical planning, not current implementation requirements. No application code, tests, runtime scripts or schemas were modified. Implementation must run in a separate developer session.
 
-This session stays under GEN-22 to honor single-ticket exclusivity; the PO skill's usual new PO workspace convention is adapted to the already active workspace. AL-79 is a roadmap deliverable, not a second active development assignment. No developer workspace or contract was created for AL-79.
+This session stays under GEN-22 to honor single-ticket exclusivity; the PO skill's usual new PO workspace convention is adapted to the already active workspace. AL-82 is a roadmap deliverable, not a second active development assignment. No developer workspace or contract was created for AL-82.
 
 ## Baseline and verification
 
 - Initial status at session start: clean; latest steering began with four staged GEN-22 planning files from the previous turn.
 - Baseline: 57a3503e3024f3993ce9391fee604aad0bcc44d5; branch feat/GEN-22-user-tag.
-- Workspace root and ticket prefixes resolved from .agenticlens-config.yaml. Checked workspace/spec/index history before selecting AL-79 (previous maximum AL-78).
+- Workspace root and ticket prefixes resolved from .agenticlens-config.yaml. Initially selected AL-79 against the then-local roadmap (maximum AL-78). After the requested merge of origin/main at 4df45967, AL-79 through AL-81 were occupied, so this draft and all active references were renamed AL-82.
 - Grounded PO templates, shared/local loader and writer, session facts, HTTP projections, frontend types, comparison filters and scatter plot.
 - Configured pinned native v2.0.0-rc.111+99fbcd7 is unavailable. An installed native v3.0.0-rc.131+03f5b05-2-g57a3503e successfully prints generate help and can be used explicitly for session telemetry without changing the project pin.
-- Planning verification and delivery results are recorded below. Application behavior tests are deferred to AL-79, not claimed as passed by this ticket.
+- Planning verification and delivery results are recorded below. Application behavior tests are deferred to AL-82, not claimed as passed by this ticket.
 
 ## Final planning verification
 
-Planning commit d24f1b45 was integrated with origin/main (already up to date). Full make passed with exit 0: Go domain and adapter/CLI race suites, 190 frontend unit tests and 678 frontend integration tests, typecheck/lint, release/installation/capture/orchestration checks, canonical frontend and embedded asset build, and native builds. The existing Vite chunk-size advisory remains. No tracked application or asset changes resulted. Local planning-link and character validation passed for specification, summary, PR draft, roadmap and ticket; git diff --check passed. These checks validate the baseline and documentation delivery, not the unimplemented AL-79 feature.
+Planning commit d24f1b45 was integrated with origin/main (already up to date). Full make passed with exit 0: Go domain and adapter/CLI race suites, 190 frontend unit tests and 678 frontend integration tests, typecheck/lint, release/installation/capture/orchestration checks, canonical frontend and embedded asset build, and native builds. The existing Vite chunk-size advisory remains. No tracked application or asset changes resulted. Local planning-link and character validation passed for specification, summary, PR draft, roadmap and ticket; git diff --check passed. These checks validate the baseline and documentation delivery, not the unimplemented AL-82 feature.
 
 ## Telemetry source verification
 
@@ -65,3 +65,7 @@ Capture observation finalized: 2026-11-08T15:20:48.651149624Z (successful owner 
 ### Telemetry result and limits
 
 The direct native rejects wrapper-only --al-offline/--al-project flags; corrected invocation used generate directly from the project directory without changing configuration or downloading a release. Generation succeeded and the schema-6 ledger contains exactly the source-verified root and planner child, both source codex; no previous other-harness sessions existed to preserve. The rendered metrics were appended by the CLI. Generation reported an open provisional interval and an unverified invoking caller; this ledger is a snapshot before final response/publication, not completed-session duration or cost evidence. Source metadata establishes child discovery independently of UI labels. Later publication calls are outside the captured snapshot; no complete eventual-session extraction is claimed.
+
+## Upstream integration and ticket-number correction
+
+Source: user reported AL-79 was taken and requested merging main into the branch. This is a routine integration correction within iteration 02, with no scope or acceptance changes. Merged origin/main at 4df45967, retained its AL-79/AL-80/AL-81 tickets and PO-20 artifacts, and resolved the roadmap conflict by retaining both initiatives. Renamed the current draft to AL-82, updating its title, filename, roadmap, specification, plan and PR description together. No developer workspace, application or test changes were needed. Previous verification remains applicable to unchanged application code; integration verification is recorded below.
