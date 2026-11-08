@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "BEH-01",
+      "severity": 4,
+      "issue": "Default Markdown heading IDs broke GitHub section fragments.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed with a pinned GitHub slugger and per-document heading state; both behavior profiles verified the regression."
+    },
+    {
+      "finding_id": "BEH-02",
+      "severity": 3,
+      "issue": "Two-space roadmap child bullets rendered as sibling tickets.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed with two-space Markdown nesting and a structural HTML regression; both behavior profiles verified the correction."
+    },
+    {
+      "finding_id": "DATA-01",
+      "severity": 2,
+      "issue": "A final rename failure can remove regenerable local build output.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Accepted local-build limitation owned by build maintainers: rerun generation after filesystem failure; atomic local output replacement is deferred. Source files and the deployed site remain protected."
+    }
+  ]
+}

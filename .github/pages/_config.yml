@@ -1,0 +1,19 @@
+title: AgenticLens roadmap
+markdown: kramdown
+kramdown:
+  input: GFM
+  hard_wrap: false
+plugins:
+  - jekyll-optional-front-matter
+  - jekyll-relative-links
+optional_front_matter:
+  remove_originals: true
+defaults:
+  - scope:
+      path: roadmap
+    values:
+      layout: ticket
+  - scope:
+      path: roadmap/TICKETS.md
+    values:
+      permalink: /roadmap/
