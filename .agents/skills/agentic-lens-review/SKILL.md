@@ -5,6 +5,8 @@ description: Use when auditing, reviewing, or finding refactoring, performance, 
 
 # AgenticLens Architecture, Code & Test Suite Review
 
+Apply the [shared artifact writing rules](../../../AGENTS.md#artifact-writing-rules); the artifact definitions below belong to this workflow.
+
 Find concrete correctness defects in AgenticLens Go, TypeScript and delivery code. Plans, implementation reports and passing suites are evidence to evaluate, not conclusions to endorse. Use this procedure for development reviews as well as standalone audits; architecture and test profiling are additional lenses, not substitutes for investigating behavior.
 
 ## Review coverage
@@ -24,6 +26,8 @@ For ledger, capture, refresh or migration changes, assess the [portable ledger c
 7. Reconcile the investigation with requirements, implementation/test reports and engineering standards. Report findings first and bound the conclusion to the inspected revision and paths. Stop when the scoped risks have sufficient evidence; name material gaps instead of repeating reviews until someone approves.
 
 ### Evidence and outcomes
+
+Review artifacts follow this report definition and the [retention protocol](references/parallel-review.md#completed-review-retention), not the development/PO templates. Usually aim for 200–400 words for a focused report; necessary findings and evidence may require more.
 
 Use a compact report: reviewed revision/scope; findings with locations, triggers, consequences and evidence; consequential hypotheses investigated and their disposition; reused/executed verification; remaining limits. This is a record of investigation, not a mandatory essay for trivial edits. Separate unresolved introduced defects from existing debt and suggestions; do not silently omit an existing defect because it is outside the diff.
 

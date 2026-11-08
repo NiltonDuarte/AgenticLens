@@ -5,7 +5,21 @@ description: Supervise AgenticLens ticket threads and coordinate non-release pul
 
 # AgenticLens management
 
+Apply the [shared artifact writing rules](../../../AGENTS.md#artifact-writing-rules); the artifact definitions below belong to this workflow.
+
 Use one configured MGT ticket for coordination. Follow [AGENTS.md](../../../AGENTS.md) for artifacts, ownership, telemetry and delivery. Read the active management contract and iteration before acting. A management thread controls independent ticket threads as a user proxy; it does not become their application developer or telemetry parent.
+
+## Management artifact definitions
+
+Keep the contract focused on authorized supervision/merge boundaries; iteration
+plans record priority or acceptance deltas. Use a single control ledger for the
+ownership/status fields below, updating rows instead of appending polling history.
+`SUMMARY.md` explains delivered coordination outcomes, remaining blockers and
+external review ownership (usually 150–300 words before generated metrics).
+`PULL_REQUEST.md` describes management guidance/decisions and validation, with a
+conventional title first (usually 100–200 words; at most 3000 characters). Link
+the ledger and owning ticket evidence rather than copying their implementation
+reports. The final `agentic_metrics.json` records this management session only.
 
 ## Authority and release exclusion
 
@@ -36,37 +50,18 @@ Use the available T3 thread read/send tools for existing independent roots. Do n
 
 ### Message contract
 
-Begin with an explicit skill invocation: `$agentic-lens-dev` for application work, `$agentic-lens-po` for product planning, or `$agentic-lens-review` for a dedicated audit.
+Start with `$agentic-lens-dev`, `$agentic-lens-po` or `$agentic-lens-review` as
+appropriate. State the desired outcome, actual approval/acceptance delta and
+concrete inputs, observed behavior and expected result. Include only accessible
+repository paths or durable links; never depend on another thread's temporary
+files or local worktree. Name finding IDs only for accessible shared records.
 
-Translate user steering into an actionable assignment for the recipient. Include the desired outcome, relevant approval, and new acceptance criteria. For an established thread, send only the decision or correction it needs; preserve completed work and avoid restarting its workflow.
-
-Keep routing checks, ownership verification, management ticket history, branch/worktree metadata and coordination bookkeeping in the manager’s records. Supply operational details only when resolving a concrete ambiguity or failure. Establish writable ownership and isolation at initial assignment or transfer, rather than repeating them in follow-ups.
-
-Describe findings with concrete inputs, actual behavior and expected behavior. Use plain language; include finding identifiers or priority labels only when they refer to a shared, accessible record.
-
-Make the assignment self-contained. Include relevant reproduction inputs directly. Supporting references must be accessible repository paths or durable links, such as a GitHub permalink. Never require another thread’s local worktree or temporary files, or make those paths dependencies in the recipient’s contract or plan.
-
-Let the invoked skill and repository documentation govern execution. Do not repeat their roles, commands, testing, telemetry or delivery checklists. State task-specific handoff responsibilities when needed, including who owns merging. A material product-scope change still requires explicit approval.
-
-Before sending, check:
-
-- **Necessary:** Does each detail change what the recipient should do?
-- **Portable:** Can another developer understand and review the assignment from the repository and message?
-- **Nonduplicative:** Does the invoked skill already govern this instruction?
-
-Message template (replace placeholders and omit optional lines before sending):
-
-```text
-$<skill-name>
-
-<Requested outcome for the ticket or PR.>
-<Confirmed approval or changed acceptance criteria, when applicable.>
-
-<Concrete inputs, observed behavior and expected behavior, when needed.>
-<Accessible repository reference or durable link, when needed.>
-
-<Expected handoff and merge responsibility.>
-```
+Keep follow-ups to the decision/correction needed, preserving completed work.
+Establish writable ownership/isolation at assignment or transfer; keep routing
+checks and coordination bookkeeping in the manager ledger. Include operational
+metadata only to resolve an actual ambiguity. State specific handoff/merge
+ownership; let the invoked skill govern standard execution and delivery.
+Before sending, remove unnecessary, nonportable or duplicated instructions.
 
 Allow independent defect fixes in parallel. Serialize upstream integration and merges where files or dependencies overlap. Send an upstream-update instruction only once its predecessor is actually merged; do not repeatedly restart work to chase every unrelated push. Preserve passed checks for unchanged code and require `make` after actual integration, with embedded assets checked for frontend changes.
 
