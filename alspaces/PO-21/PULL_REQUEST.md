@@ -1,4 +1,4 @@
-# docs(plan): specify metric tags, filters and comparison coloring (GEN-22)
+# docs(plan): specify metric tags, filters and comparison coloring (PO-21)
 
 Create AL-82 for key-value metric tags supplied by shared configuration, local configuration and CLI, merged per key with CLI > local > shared precedence. Define durable metadata, dashboard filters defaulting to none, and comparison coloring with visible untagged and mixed-value points.
 

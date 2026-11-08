@@ -7,7 +7,7 @@ h3. Title: AL-82: Add metric tags, dashboard filters and comparison coloring
 *Priority*: P2
 *Blocked by*: None
 *Blocks*: None
-*Specification*: [Metric tags specification](../../GEN-22/SPEC.md)
+*Specification*: [Metric tags specification](../../PO-21/SPEC.md)
 *Related*: AL-70 configuration preservation; AL-72 UI correctness. Coordinate shared paths; neither is a prerequisite.
 
 *CONTEXT*

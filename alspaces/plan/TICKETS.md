@@ -15,6 +15,7 @@ Reconciled 2026-11-05 against merged `origin/main` at `03f5b05d` and open PRs. S
   - **Blocked by**: None
   - **Blocks**: None
   - **File**: [AL-82 add metric tags filters and comparison coloring.md](to-do/AL-82%20add%20metric%20tags%20filters%20and%20comparison%20coloring.md)
+  - **Specification**: [PO-21](../PO-21/SPEC.md)
 
 - **AL-81**: Make manual generate independent of the capture registry
   - **Subsystem**: Domain / CLI / Source Adapters / Ledger Publication

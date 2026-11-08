@@ -1,8 +1,8 @@
 {
   "schema_version": 6,
-  "ticket_id": "GEN-22",
+  "ticket_id": "PO-21",
   "ticket_title": "Plan metric tags filters and comparison coloring",
-  "ticket_type": "chore",
+  "ticket_type": "docs",
   "started_at": "2026-11-08T01:10:29.835Z",
   "completed_at": "2026-11-08T15:34:47.619681+00:00",
   "updated_at": "2026-11-08T15:34:47.619681+00:00",
@@ -45,20 +45,53 @@
           "completed_at": null,
           "active_duration_seconds": 1188,
           "turns": 4,
-          "tokens": {"input": 142854, "output": 18602, "cache_read": 5204096, "reasoning": 3185, "peak_context": 91850},
+          "tokens": {
+            "input": 142854,
+            "output": 18602,
+            "cache_read": 5204096,
+            "reasoning": 3185,
+            "peak_context": 91850
+          },
           "cost_usd": null,
-          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
+          "cost_evidence": {
+            "state": "unavailable",
+            "known_subtotal_usd": null
+          },
           "compactions": 0,
           "user_iterations": 7
         }
       ],
       "tools": [
-        {"name": "command", "calls": 66, "errors": 3},
-        {"name": "request_user_input_async", "calls": 1, "errors": 0},
-        {"name": "send_message", "calls": 2, "errors": 0},
-        {"name": "spawn_agent", "calls": 1, "errors": 0},
-        {"name": "wait", "calls": 1, "errors": 0},
-        {"name": "wait_agent", "calls": 2, "errors": 0}
+        {
+          "name": "command",
+          "calls": 66,
+          "errors": 3
+        },
+        {
+          "name": "request_user_input_async",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "send_message",
+          "calls": 2,
+          "errors": 0
+        },
+        {
+          "name": "spawn_agent",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "wait",
+          "calls": 1,
+          "errors": 0
+        },
+        {
+          "name": "wait_agent",
+          "calls": 2,
+          "errors": 0
+        }
       ],
       "anomalies": []
     },
@@ -77,16 +110,33 @@
           "completed_at": "2026-11-08T01:12:42.266Z",
           "active_duration_seconds": 106,
           "turns": 1,
-          "tokens": {"input": 60375, "output": 3839, "cache_read": 465792, "reasoning": 305, "peak_context": 62567},
+          "tokens": {
+            "input": 60375,
+            "output": 3839,
+            "cache_read": 465792,
+            "reasoning": 305,
+            "peak_context": 62567
+          },
           "cost_usd": null,
-          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
+          "cost_evidence": {
+            "state": "unavailable",
+            "known_subtotal_usd": null
+          },
           "compactions": 0,
           "user_iterations": 0
         }
       ],
       "tools": [
-        {"name": "command", "calls": 5, "errors": 0},
-        {"name": "send_message", "calls": 1, "errors": 0}
+        {
+          "name": "command",
+          "calls": 5,
+          "errors": 0
+        },
+        {
+          "name": "send_message",
+          "calls": 1,
+          "errors": 0
+        }
       ],
       "anomalies": []
     }
