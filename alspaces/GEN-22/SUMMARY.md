@@ -30,15 +30,15 @@ Planning commit d24f1b45 was integrated with origin/main (already up to date). F
 Native Codex session_meta records identify root 01a1b8b4-f6bc-7070-a3f6-8e491741257b in this worktree (source vscode) and one expected planner child 01a1b8b5-5f4d-7f91-8d34-80d75fd236af, whose thread_spawn parent points to that root. The child authored the earlier unapproved attribution plan; the PO revision launched no further agents. Raw transcripts remain outside Git. There is no previous GEN-22 ledger or other-harness history to merge. Telemetry uses the explicit installed native matching baseline application revision 57a3503e, source codex, and generic-ticket classification chore per repository policy; no PO-# ticket was allocated in this locked session.
 
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 4
-- **Active Agent Duration:** 14m 2s (recorded duration including 579s provisional)
-- **Context Window Health:** HEALTHY — Root agent peak 75.1k tokens (17% of 450k healthy ceiling, 0 compactions) | Subagents peak 62.6k (Planner)
+- **Software Development Life Cycle Iterations:** 5
+- **Active Agent Duration:** 19m 43s (recorded duration including 282s provisional)
+- **Context Window Health:** HEALTHY — Root agent peak 85.1k tokens (19% of 450k healthy ceiling, 0 compactions) | Subagents peak 62.6k (Planner)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 1.0 avg turns/run (peak: 1 turns) | Planner 1.0
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 2,342 reasoning tokens (12.9% of generated output)
-- **Tool Health & Self-Correction:** 51 tool calls (2 self-corrections, 96.1% success rate)
+- **Reasoning Effort:** 3,030 reasoning tokens (13.2% of generated output)
+- **Tool Health & Self-Correction:** 70 tool calls (3 self-corrections, 95.7% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** No execution anomalies detected (clean session).
@@ -51,21 +51,23 @@ Native Codex session_meta records identify root 01a1b8b4-f6bc-7070-a3f6-8e491741
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
 | **planner** | 1 | 60,375 | 3,839 | 465,792 | 88.5% | 62.6k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Unknown** | 1 | 128,043 | 11,946 | 2,314,496 | 94.8% | 75.1k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **2** | **188,418** | **15,785** | **2,780,288** | **93.7%** | **75.1k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations)** |
+| **Unknown** | 1 | 136,968 | 16,083 | 4,073,344 | 96.7% | 85.1k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **2** | **197,343** | **19,922** | **4,539,136** | **95.8%** | **85.1k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 2 | 188,418 | 15,785 | 2,780,288 | 93.7% | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
-| **Total** | **2** | **188,418** | **15,785** | **2,780,288** | **93.7%** | **Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations)** |
+| **gpt-6.1-sol** | 2 | 197,343 | 19,922 | 4,539,136 | 95.8% | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
+| **Total** | **2** | **197,343** | **19,922** | **4,539,136** | **95.8%** | **Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations)** |
 
-Capture observation finalized: 2026-11-08T15:20:48.651149624Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 0; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 0; reserved bytes: 0. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
-
-### Telemetry result and limits
-
-The direct native rejects wrapper-only --al-offline/--al-project flags; corrected invocation used generate directly from the project directory without changing configuration or downloading a release. Generation succeeded and the schema-6 ledger contains exactly the source-verified root and planner child, both source codex; no previous other-harness sessions existed to preserve. The rendered metrics were appended by the CLI. Generation reported an open provisional interval and an unverified invoking caller; this ledger is a snapshot before final response/publication, not completed-session duration or cost evidence. Source metadata establishes child discovery independently of UI labels. Later publication calls are outside the captured snapshot; no complete eventual-session extraction is claimed.
+Capture observation finalized: 2026-11-08T15:32:27.516090822Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 2; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 2; reserved bytes: 1781561. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
+Owner codex/01a1b8b5-5f4d-7f91-8d34-80d75fd236af: current; last successful source read 2026-11-08T15:32:27.46664792Z; accepted source checkpoint 2026-11-08T01:12:42.266Z.
+Owner codex/01a1b8b4-f6bc-7070-a3f6-8e491741257b: current; last successful source read 2026-11-08T15:32:27.497862036Z; accepted source checkpoint 2026-11-08T15:32:27.344Z.
 
 ## Upstream integration and ticket-number correction
 
 Source: user reported AL-79 was taken and requested merging main into the branch. This is a routine integration correction within iteration 02, with no scope or acceptance changes. Merged origin/main at 4df45967, retained its AL-79/AL-80/AL-81 tickets and PO-20 artifacts, and resolved the roadmap conflict by retaining both initiatives. Renamed the current draft to AL-82, updating its title, filename, roadmap, specification, plan and PR description together. No developer workspace, application or test changes were needed. Previous verification remains applicable to unchanged application code; integration verification is recorded below.
+
+Post-merge verification: planning links resolve; AL-79, AL-80, AL-81 and AL-82 each appear exactly once in the roadmap; no conflict markers remain. Full make passed with exit 0 on merged commit 6ee93872, including Go race suites, 190 frontend unit tests, 678 frontend integration tests, static/distribution/orchestration checks, embedded assets and native builds. Working tree remained clean after the build. PR #126 remains open and its body now names AL-82; gh pr edit hit a deprecated Projects Classic query, so the update used GitHub REST successfully. No scope change or new iteration was needed.
+
+Post-merge telemetry refreshed successfully with the now-available configured native and explicit Codex source. Verified the exact same root and planner child remain, both Codex; there were no other-harness owners to preserve. The current open interval remains provisional and caller-unverified, and publication calls after generation are outside this snapshot.
