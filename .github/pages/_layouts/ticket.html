@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ page.title | default: page.name | escape }} | {{ site.title | escape }}</title>
+  <link rel="stylesheet" href="{{ '/roadmap/style.css' | relative_url }}">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="{{ '/roadmap/' | relative_url }}">Back to roadmap</a>
+    <a href="https://github.com/{{ site.ticket_repository | escape }}">View repository</a>
+  </nav></header>
+  <main>{{ content }}</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>

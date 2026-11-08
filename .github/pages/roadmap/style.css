@@ -1,0 +1,16 @@
+:root { color-scheme: light dark; font-family: system-ui, sans-serif; line-height: 1.65; }
+body { margin: 0; background: light-dark(#f5f7fa, #111820); color: light-dark(#172330, #e4eaf0); }
+header, main, footer { max-width: 56rem; margin: auto; padding: 1.25rem; }
+header { border-bottom: 1px solid light-dark(#d6dce3, #384452); }
+header nav { display: flex; flex-wrap: wrap; gap: 1.25rem; }
+main { overflow-wrap: anywhere; }
+a { color: light-dark(#095db5, #8bc4ff); text-underline-offset: .18em; }
+a:focus-visible { outline: 3px solid currentColor; outline-offset: 4px; }
+h1, h2, h3 { line-height: 1.25; margin-top: 1.6em; }
+li { margin-block: .35em; }
+pre { overflow-x: auto; padding: 1rem; background: light-dark(#e8edf3, #202c38); }
+code { font-size: .9em; }
+table { display: block; overflow-x: auto; border-collapse: collapse; }
+td, th { padding: .5rem; border: 1px solid light-dark(#cbd3dd, #435162); }
+img { max-width: 100%; height: auto; }
+footer { font-size: .9rem; }
