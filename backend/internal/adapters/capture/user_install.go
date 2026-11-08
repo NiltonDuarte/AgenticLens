@@ -16,6 +16,7 @@ import (
 )
 
 const userHookMarker = "AgenticLens native user capture v1"
+const userCaptureOwnershipProtocol = 2
 
 type UserInstallOptions struct {
 	Repository       string
@@ -58,6 +59,7 @@ func installUserCodexWithCheckpoint(ctx context.Context, options UserInstallOpti
 		return result, err
 	}
 	root := home
+	coordinator := home
 	manager := options.Entrypoint
 	if manager == "" {
 		manager, err = adaptersconfig.UserManagerPath()
@@ -90,18 +92,37 @@ func installUserCodexWithCheckpoint(ctx context.Context, options UserInstallOpti
 			return result, err
 		}
 		homes = append(homes, legacyHomes...)
+		coordinator, err = absolute(legacyHomes[0])
+		if err != nil {
+			return result, err
+		}
+	}
+
+	if options.Repository != "" && !options.Remove {
+		projects, err := legacyUserProjects(ctx, options.Repository)
+		if err != nil {
+			return result, err
+		}
+		for _, project := range projects {
+			directory := filepath.Join(project, ".codex")
+			info, err := os.Stat(directory)
+			if errors.Is(err, os.ErrNotExist) {
+				continue
+			}
+			if err != nil {
+				return result, err
+			}
+			if info.IsDir() {
+				homes = append(homes, directory)
+			}
+		}
 	}
 
 	heldUserResources := map[string]bool{}
 	if !options.DryRun {
-		if err := os.MkdirAll(root, 0700); err != nil {
-			return result, err
-		}
-		machineLock, err := acquireInstallLock(root)
-		if err != nil {
-			return result, err
-		}
-		defer func() { returnErr = errors.Join(returnErr, machineLock.Close()) }()
+		// Discover pending authority before creating a fresh home. A shared
+		// reference to a deleted private owner must remain unknown; mkdir would
+		// otherwise make its missing journal look like a completed transaction.
 		locks := append([]string(nil), homes...)
 		discovered := map[string]bool{}
 		for index := 0; index < len(locks); index++ {
@@ -120,6 +141,14 @@ func installUserCodexWithCheckpoint(ctx context.Context, options UserInstallOpti
 			locks = append(locks, pending...)
 		}
 		sort.Strings(locks)
+		if err := os.MkdirAll(root, 0700); err != nil {
+			return result, err
+		}
+		machineLock, err := acquireInstallLock(root)
+		if err != nil {
+			return result, err
+		}
+		defer func() { returnErr = errors.Join(returnErr, machineLock.Close()) }()
 		if checkpoint != nil {
 			if err := checkpoint(userInstallResourcesDiscovered, -1); err != nil {
 				return result, err
@@ -176,8 +205,18 @@ func installUserCodexWithCheckpoint(ctx context.Context, options UserInstallOpti
 				return result, err
 			}
 		}
+		if options.LegacyRepository == "" && options.Repository != "" && !options.Remove {
+			if err := checkLegacyUserConflicts(ctx, options.Repository, ""); err != nil {
+				return result, err
+			}
+		}
 		// No recovery writes occur until all current and prior journal homes are
 		// excluded, including a prior invocation's different effective Codex home.
+		for directory := range seen {
+			if err := validateUserRecovery(directory); err != nil {
+				return result, err
+			}
+		}
 		for directory := range seen {
 			if err := recoverUserInstallation(directory); err != nil {
 				return result, err
@@ -208,13 +247,13 @@ func installUserCodexWithCheckpoint(ctx context.Context, options UserInstallOpti
 	}
 	hooksPath := filepath.Join(home, "hooks.json")
 	receiptPath := filepath.Join(home, "agenticlens-user-installation.json")
-	receipt := userInstallation{Protocol: 2}
+	receipt := userInstallation{Protocol: userCaptureOwnershipProtocol}
 	prior, err := os.ReadFile(receiptPath)
 	if err == nil {
 		if err := json.Unmarshal(prior, &receipt); err != nil {
 			return result, err
 		}
-		if receipt.Protocol != 2 {
+		if receipt.Protocol != userCaptureOwnershipProtocol {
 			return result, errors.New("unsupported user capture ownership protocol")
 		}
 	} else if !errors.Is(err, os.ErrNotExist) {
@@ -269,7 +308,7 @@ func installUserCodexWithCheckpoint(ctx context.Context, options UserInstallOpti
 	if receipt.Manager != "" && receipt.Manager != manager {
 		return result, errors.New("user manager location differs from owned hooks; explicitly uninstall before relocating")
 	}
-	next := userInstallation{Protocol: 2, Manager: manager, Groups: []OwnedGroup{}}
+	next := userInstallation{Protocol: userCaptureOwnershipProtocol, Manager: manager, Groups: []OwnedGroup{}}
 	changes := append([]fileChange(nil), legacyChanges...)
 	if !options.Remove {
 		command, err := staticCommand([]string{manager, "codex-hook"}, runtime.GOOS == "windows")
@@ -335,7 +374,7 @@ func installUserCodexWithCheckpoint(ctx context.Context, options UserInstallOpti
 			return result, errors.New("user installation changed during planning; retry")
 		}
 	}
-	if err := applyUserInstallationWithCheckpoint(root, "", changes, homes, checkpoint); err != nil {
+	if err := applyUserInstallationWithCheckpoint(home, coordinator, options.LegacyRepository, changes, checkpoint); err != nil {
 		return result, err
 	}
 	return result, nil

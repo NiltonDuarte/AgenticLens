@@ -30,27 +30,29 @@ func UserCodexInstalled() (bool, error) {
 	if err := json.Unmarshal(data, &receipt); err != nil {
 		return false, err
 	}
-	if receipt.Protocol != 1 {
+	if receipt.Protocol != userCaptureOwnershipProtocol {
 		return false, errors.New("unsupported user capture ownership protocol")
 	}
 	return len(receipt.Groups) > 0, nil
 }
 
-func checkLegacyUserConflicts(ctx context.Context, project, migration string) error {
+// legacyUserProjects returns only the selected and Git-original checkouts whose
+// project callbacks can overlap an installed user hook.
+func legacyUserProjects(ctx context.Context, project string) ([]string, error) {
 	project, err := ProjectDirectory(project)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	candidates := []string{project}
 	// Native Codex project hooks are discovered from the original checkout, so a
 	// worktree-local scan alone cannot establish absence of duplicate callbacks.
 	output, gitErr := exec.CommandContext(ctx, "git", "-C", project, "worktree", "list", "--porcelain").Output()
 	if ctx.Err() != nil {
-		return ctx.Err()
+		return nil, ctx.Err()
 	}
 	if gitErr != nil {
 		if info, err := os.Stat(filepath.Join(project, ".git")); err == nil && info.Mode().IsRegular() {
-			return fmt.Errorf("cannot establish original checkout legacy hook ownership: %w", gitErr)
+			return nil, fmt.Errorf("cannot establish original checkout legacy hook ownership: %w", gitErr)
 		}
 	}
 	if gitErr == nil {
@@ -63,6 +65,14 @@ func checkLegacyUserConflicts(ctx context.Context, project, migration string) er
 	}
 	if output, err := exec.CommandContext(ctx, "git", "-C", project, "rev-parse", "--show-toplevel").Output(); err == nil {
 		candidates = append(candidates, strings.TrimSpace(string(output)))
+	}
+	return candidates, nil
+}
+
+func checkLegacyUserConflicts(ctx context.Context, project, migration string) error {
+	candidates, err := legacyUserProjects(ctx, project)
+	if err != nil {
+		return err
 	}
 	if migration != "" {
 		migration, err = ProjectDirectory(migration)
@@ -84,7 +94,14 @@ func checkLegacyUserConflicts(ctx context.Context, project, migration string) er
 			continue
 		} // Post-recovery migration planning examines the remaining groups; only
 		// exact receipt-attested removed groups are exempt, never the checkout.
-		path := filepath.Join(candidate, ".codex", "hooks.json")
+		coordinator := filepath.Join(candidate, ".codex")
+		if _, _, err := readUserInstallJournal(coordinator); err == nil {
+			return fmt.Errorf("pending legacy AgenticLens migration at %s; preserve it and explicitly use --migrate-legacy-repo %s to recover before installing user hooks", coordinator, candidate)
+		} else if !errors.Is(err, errNoPendingUserJournal) {
+			return fmt.Errorf("pending legacy migration at %s is invalid; preserved: %w", coordinator, err)
+		}
+
+		path := filepath.Join(coordinator, "hooks.json")
 		data, err := readEntrypointFile(path, installationHealthFileLimit)
 		if errors.Is(err, os.ErrNotExist) {
 			continue

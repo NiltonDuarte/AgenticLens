@@ -112,7 +112,7 @@ func readUserTransactionJournal(t *testing.T, root string) userInstallJournal {
 	if err := json.Unmarshal(mustReadUserInstall(t, filepath.Join(root, "agenticlens-user-install.pending.json")), &journal); err != nil {
 		t.Fatal(err)
 	}
-	if journal.Version != 1 || len(journal.Changes) == 0 {
+	if journal.Version != userInstallJournalVersion || journal.Kind != userInstallJournalKind || journal.OwnerHome != root || len(journal.Changes) == 0 {
 		t.Fatalf("invalid interrupted production journal: %+v", journal)
 	}
 	return journal
@@ -242,58 +242,85 @@ func TestInterruptedUserMigrationPreservesEditAndResumesAfterResolution(t *testi
 }
 
 func TestRootRecoveryLocksInterruptedHomeEvenWhenCurrentHomeDiffers(t *testing.T) {
-	for _, legacyShape := range []bool{false, true} {
-		for _, resource := range []string{"previous-home", "legacy-project-home", "legacy-state"} {
-			t.Run(fmt.Sprintf("old-shape-%t/%s", legacyShape, resource), func(t *testing.T) {
-				f := newUserTransactionFixture(t)
-				database := mustReadUserInstall(t, f.pendingDB)
-				stopUserTransactionAt(t, f, "home-hooks")
-				journalPath := filepath.Join(f.options.Home, "agenticlens-user-install.pending.json")
-				if legacyShape {
-					journal := readUserTransactionJournal(t, f.options.Home)
-					journal.Homes = nil
-					body, err := json.Marshal(journal)
-					if err != nil {
-						t.Fatal(err)
-					}
-					if err := os.WriteFile(journalPath, body, 0600); err != nil {
-						t.Fatal(err)
-					}
-				}
-				journalBefore := mustReadUserInstall(t, journalPath)
-				before := snapshotUserArtifacts(t, f.paths)
-				lockHome := f.options.Home
-				if resource == "legacy-project-home" {
-					lockHome = filepath.Join(f.project, ".codex")
-				}
-				if resource == "legacy-state" {
-					lockHome = f.state
-				}
-				lock, err := acquireInstallLock(lockHome)
-				if err != nil {
-					t.Fatal(err)
-				}
-				other := f.options
-				other.Home = filepath.Join(t.TempDir(), "different-current-home")
-				_, installErr := InstallUserCodex(context.Background(), other)
-				if installErr == nil || !strings.Contains(installErr.Error(), "progress") {
-					lock.Close()
-					t.Fatalf("recovery ignored affected %s lock: %v", resource, installErr)
-				}
-				if !reflect.DeepEqual(before, snapshotUserArtifacts(t, f.paths)) || !bytes.Equal(journalBefore, mustReadUserInstall(t, journalPath)) {
-					lock.Close()
-					t.Fatal("busy recovery restored bytes before acquiring every affected-home lock")
-				}
-				if err := lock.Close(); err != nil {
-					t.Fatal(err)
-				}
-				if _, err := InstallUserCodex(context.Background(), f.options); err != nil {
-					t.Fatalf("unlocked original recovery failed: %v", err)
-				}
-				assertCompletedUserMigration(t, f, database)
-			})
-		}
+	for _, resource := range []string{"previous-home", "legacy-project-home", "legacy-state"} {
+		t.Run(resource, func(t *testing.T) {
+			f := newUserTransactionFixture(t)
+			database := mustReadUserInstall(t, f.pendingDB)
+			stopUserTransactionAt(t, f, "home-hooks")
+			journalPath := filepath.Join(f.options.Home, "agenticlens-user-install.pending.json")
+			journalBefore := mustReadUserInstall(t, journalPath)
+			paths := append(append([]string{}, f.paths...), filepath.Join(f.project, ".codex", userInstallPendingFile))
+			before := snapshotUserArtifacts(t, paths)
+			lockHome := f.options.Home
+			if resource == "legacy-project-home" {
+				lockHome = filepath.Join(f.project, ".codex")
+			}
+			if resource == "legacy-state" {
+				lockHome = f.state
+			}
+			lock, err := acquireInstallLock(lockHome)
+			if err != nil {
+				t.Fatal(err)
+			}
+			other := f.options
+			other.Home = filepath.Join(t.TempDir(), "different-current-home")
+			_, installErr := InstallUserCodex(context.Background(), other)
+			if installErr == nil || !strings.Contains(installErr.Error(), "progress") {
+				lock.Close()
+				t.Fatalf("recovery ignored affected %s lock: %v", resource, installErr)
+			}
+			if !reflect.DeepEqual(before, snapshotUserArtifacts(t, paths)) || !bytes.Equal(journalBefore, mustReadUserInstall(t, journalPath)) {
+				lock.Close()
+				t.Fatal("busy recovery restored bytes before acquiring every affected-home lock")
+			}
+			if err := lock.Close(); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := InstallUserCodex(context.Background(), f.options); err != nil {
+				t.Fatalf("unlocked original recovery failed: %v", err)
+			}
+			assertCompletedUserMigration(t, f, database)
+		})
 	}
+}
+
+func TestUserRecoveryRefusesUnmatchedPrivateJournalEdit(t *testing.T) {
+	f := newUserTransactionFixture(t)
+	database := mustReadUserInstall(t, f.pendingDB)
+	stopUserTransactionAt(t, f, "home-hooks")
+	journalPath := filepath.Join(f.options.Home, userInstallPendingFile)
+	original := mustReadUserInstall(t, journalPath)
+	journal := readUserTransactionJournal(t, f.options.Home)
+	// This used to model an older journal shape. With an authenticated shared
+	// reference, editing the private body without its binding is corruption.
+	journal.Homes = nil
+	changed, err := json.Marshal(journal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Equal(changed, original) {
+		t.Fatal("fixture did not change the authenticated journal body")
+	}
+	if err := os.WriteFile(journalPath, changed, 0600); err != nil {
+		t.Fatal(err)
+	}
+	paths := append(append([]string{}, f.paths...), journalPath, filepath.Join(f.project, ".codex", userInstallPendingFile))
+	before := snapshotUserArtifacts(t, paths)
+	other := f.options
+	other.Home = filepath.Join(t.TempDir(), "different-current-home")
+	if _, err := InstallUserCodex(context.Background(), other); err == nil || !strings.Contains(err.Error(), "changed") {
+		t.Fatalf("edited private journal bypassed its shared binding: %v", err)
+	}
+	if !reflect.DeepEqual(before, snapshotUserArtifacts(t, paths)) {
+		t.Fatal("rejected journal edit changed retained state, hooks or recovery records")
+	}
+	if err := os.WriteFile(journalPath, original, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := InstallUserCodex(context.Background(), f.options); err != nil {
+		t.Fatalf("restored exact private journal could not recover: %v", err)
+	}
+	assertCompletedUserMigration(t, f, database)
 }
 
 func TestUserRecoveryRejectsResourcesAddedAfterDiscovery(t *testing.T) {

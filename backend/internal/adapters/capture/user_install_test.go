@@ -15,6 +15,7 @@ import (
 func TestUserHooksInstallIdempotentAndOwnedRemoval(t *testing.T) {
 	root := t.TempDir()
 	home := filepath.Join(root, "codex")
+	t.Setenv("CODEX_HOME", home)
 	cache := filepath.Join(root, "native")
 	if err := os.Mkdir(home, 0700); err != nil {
 		t.Fatal(err)
@@ -41,6 +42,9 @@ func TestUserHooksInstallIdempotentAndOwnedRemoval(t *testing.T) {
 	opts.DryRun = false
 	if _, err := InstallUserCodex(context.Background(), opts); err != nil {
 		t.Fatal(err)
+	}
+	if installed, err := UserCodexInstalled(); err != nil || !installed {
+		t.Fatalf("adoption reader rejected the actual current installation receipt: installed=%t err=%v", installed, err)
 	}
 	first, err := os.ReadFile(hooksPath)
 	if err != nil {
@@ -88,6 +92,9 @@ func TestUserHooksInstallIdempotentAndOwnedRemoval(t *testing.T) {
 	opts.Remove = true
 	if _, err := InstallUserCodex(context.Background(), opts); err != nil {
 		t.Fatal(err)
+	}
+	if installed, err := UserCodexInstalled(); err != nil || installed {
+		t.Fatalf("adoption reader retained an uninstalled integration: installed=%t err=%v", installed, err)
 	}
 	body, err := os.ReadFile(hooksPath)
 	if err != nil {

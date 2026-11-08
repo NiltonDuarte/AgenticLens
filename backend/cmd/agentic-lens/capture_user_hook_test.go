@@ -49,8 +49,11 @@ func TestNativeUserHookDisabledSessionUsesContextAndAvoidsCaptureIO(t *testing.T
 	}
 }
 
-func TestNativeUserBindingUsesSelectedHandlerDespiteStaleWrapper(t *testing.T) {
+func TestNativeUserBindingUsesSelectedHandlerDespiteInactiveLegacyWrapper(t *testing.T) {
 	f := newCaptureGenerationFixture(t)
+	if _, err := capture.InstallUserCodex(context.Background(), capture.UserInstallOptions{Home: f.store, Entrypoint: managerBinaryPath}); err != nil {
+		t.Fatalf("install actual current user integration: %v", err)
+	}
 	t.Setenv("PATH", t.TempDir())
 	path := f.write(t, 17)
 	store, err := capture.OpenProject(f.state, f.project)
@@ -59,7 +62,7 @@ func TestNativeUserBindingUsesSelectedHandlerDespiteStaleWrapper(t *testing.T) {
 	}
 	defer store.Close()
 	scope := store.CoordinationDirectory()
-	stale := capture.Manifest{Protocol: capture.ManifestProtocolVersion, Repository: f.project, StateDir: scope, Source: "codex", SourceStore: f.store, Wrapper: filepath.Join(f.project, "missing-historical-wrapper"), Active: true}
+	stale := capture.Manifest{Protocol: capture.ManifestProtocolVersion, Repository: f.project, StateDir: scope, Source: "codex", SourceStore: f.store, Wrapper: filepath.Join(f.project, "missing-historical-wrapper"), Active: false}
 	encoded, err := json.Marshal(stale)
 	if err != nil {
 		t.Fatal(err)

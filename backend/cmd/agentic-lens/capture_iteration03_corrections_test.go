@@ -363,12 +363,13 @@ func TestCaptureSamePinOtherProjectInstallPreservesAcknowledgedActiveWorker(t *t
 		t.Fatal(err)
 	}
 	checksum := fmt.Sprintf("%x", sha256.Sum256(readCaptureFile(t, cliBinaryPath)))
+	managerChecksum := fmt.Sprintf("%x", sha256.Sum256(readCaptureFile(t, managerBinaryPath)))
 	installer := filepath.Join("..", "..", "..", ".agents", "skills", "agentic-lens-setup", "scripts", "download.sh")
 	install := func(project string, captureSource bool) {
 		t.Helper()
 		ctx, cancel := context.WithTimeout(context.Background(), 12*time.Second)
 		defer cancel()
-		args := []string{installer, "--project", project, "--local-bin", cliBinaryPath, "--sha256", checksum, "--dest", wrappers, "--force"}
+		args := []string{installer, "--project", project, "--local-manager-bin", managerBinaryPath, "--manager-sha256", managerChecksum, "--local-bin", cliBinaryPath, "--sha256", checksum, "--dest", wrappers, "--force"}
 		if captureSource {
 			args = append(args, "--capture-source", "codex", "--capture-store", f.store, "--capture-state-dir", f.state)
 		}
