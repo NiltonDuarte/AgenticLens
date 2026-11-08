@@ -1,25 +1,25 @@
 # GEN-22: Human-readable workspace artifacts
 
-Shortened eight active instruction files by 4,601 whitespace-delimited words
-(44% of their iteration-04 baseline), including Markdown/frontmatter/examples.
-This removes duplicated workflow and policy rather than relocating it to new files.
+Artifacts now have distinct purposes and concise human-facing content. PO specs
+and tickets lead with goal, context and acceptance; optional technical notes come
+last in the same document. AGENTS.md owns repository policy, skills own workflows
+and artifact definitions, and personas own assigned duties.
 
-AGENTS.md owns repository policy, skills own workflows/artifact definitions and
-personas contain only assigned duties. The development skill no longer repeats
-command recipes or delegation prompts; the orchestrator follows that workflow.
-PO specs/tickets still lead with goal, context and observable acceptance, with
-optional technical notes last. Review/installation protocols and application code
-are unchanged; required approval, evidence, credit and delivery gates remain.
+The development skill restores operational detail after the user rejected its
+compressed overview: startup/resume checks, assignment/return contracts, parent
+checks, approval boundaries, correction routing and ordered delivery gates.
+Technical rules, detailed review mechanics and exact commands stay at their
+existing sources. The other instruction reductions remain. Across eight files,
+the final net reduction from iteration 04's baseline is 3,882 whitespace-delimited
+words (37%), counting Markdown/frontmatter/examples without relocating the bulk.
 
-The user requested skill version updates at handoff: development, PO and review
-advance from 0.1.0 to 0.1.1; management gains its first VERSION file at 0.1.1.
-All four version records pass format/content checks. This metadata correction
-stays in iteration 04; the existing make result covers unchanged application code.
-
+Development is version 0.1.2; PO/review are 0.1.1, and management gained its first
+VERSION record at 0.1.1. All four version records pass format/content checks.
 Scope follows the [contract](CONTRACT.md) and current
-[instruction-reduction plan](iterations/04/PLAN.md), which preserves the prior
-[PO format](iterations/02/PLAN.md) and [skill ownership](iterations/03/PLAN.md).
-Historical tickets and metric formatting remain unchanged.
+[development refinement](iterations/05/PLAN.md), preserving the prior
+[PO format](iterations/02/PLAN.md), [skill ownership](iterations/03/PLAN.md) and
+[instruction reduction](iterations/04/PLAN.md). Application code, historical
+tickets and metric formatting remain unchanged.
 
 Verification: `make` passed on `e0bdb731` after integration with origin/main
 (already current): Go race suites, frontend units/integration, static and Python
@@ -27,11 +27,13 @@ workflow checks, embedded assets and platform builds. All active instruction
 links/anchors, the three edited skills' metadata and `git diff --check` passed.
 Prior results remain valid for unchanged technical/review protocols.
 
-An independent instruction walkthrough (gpt-6.1-sol/high, source-observed settings)
-resolved four cases without contradictions: resumed approval with incomplete
-review, ad hoc delivery, PO draft consolidation/session separation and management
-merge authority. It did not inspect live ticket/PR readiness or prove production
-execution quality. Hosted CI has not been observed for this update.
+An independent development walkthrough (gpt-6.1-sol/high, source-observed)
+resolved all four scenarios: new feature with an unresolved policy choice,
+resumed correction, failed/incomplete review and an integration conflict changing
+reviewed behavior. Each had a clear owner, assignment, return, parent check and
+gate; no material issue was found. The earlier general-policy walkthrough also
+passed. These are documentation usability checks, not proof of production
+execution quality or application correctness. Current integrated make is pending.
 
 Telemetry source metadata confirms root `01a1bbce-df16-7632-ac2d-9a565b47e918`
 and independent-walkthrough child `01a1bbe9-614e-7450-9a71-4d311f68c211`, with

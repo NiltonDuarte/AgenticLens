@@ -1,19 +1,20 @@
 # chore(docs): simplify agent instructions and human review artifacts (GEN-22)
 
-Repeated workflows and policy made agent instructions long, while generated
-artifacts obscured goals with execution history and technical inventories.
-Consolidate repository policy in AGENTS.md, workflows/artifact definitions in
-skills and assigned duties in personas. Remove repeated command recipes and
-delegation prompts, reducing eight instruction files by about 44% in the final
-simplification pass without moving that bulk into new references.
+Repeated workflows and policy made instructions long, while generated artifacts
+obscured goals with execution history. Put policy in AGENTS.md, workflows/artifact
+definitions in skills and assigned duties in personas. Remove duplicated command
+recipes and prompts; eight instruction files retain a net reduction of about 37%.
+
+The development skill keeps operational detail: phase inputs/returns, parent
+checks, correction routing, approval boundaries and ordered integration/delivery.
+Technical rules, detailed review mechanics and exact commands remain at their
+existing sources. Development is version 0.1.2; other affected skills are 0.1.1,
+including a new management VERSION record.
 
 Artifacts have distinct purposes and practical prose targets. PO specs/tickets
-lead with goal, context and observable acceptance; optional technical notes come
-last in the same document. Required approval, review credit, evidence, telemetry
-and delivery gates remain. Affected skills are versioned at 0.1.1, adding the
-previously absent management VERSION record. Historical tickets and application behavior are
-unchanged.
+lead with goal, context and acceptance, with optional technical notes last in the
+same document. Approval, review credit, evidence, telemetry and delivery gates
+remain. Historical tickets and application behavior are unchanged.
 
-Validation: links/anchors, skill metadata, whitespace and an independent four-case
-instruction walkthrough. Integrated checks and limits: [summary](SUMMARY.md).
-Scope: [contract](CONTRACT.md) and [current plan](iterations/04/PLAN.md).
+Validation and limits: [summary](SUMMARY.md). Scope: [contract](CONTRACT.md) and
+[current plan](iterations/05/PLAN.md).
