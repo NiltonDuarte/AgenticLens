@@ -4,8 +4,8 @@
   "ticket_title": "Native user-level Codex capture across worktrees",
   "ticket_type": "feat",
   "started_at": "2026-11-08T15:29:42.182Z",
-  "completed_at": "2026-11-09T19:59:35.354306+00:00",
-  "updated_at": "2026-11-09T19:59:35.354306+00:00",
+  "completed_at": "2026-11-09T20:21:14.036126+00:00",
+  "updated_at": "2026-11-09T20:21:14.036126+00:00",
   "code": {
     "lines_added": 7187,
     "lines_deleted": 685,
@@ -14,7 +14,7 @@
     "prod_lines_added": 3654,
     "prod_lines_deleted": 310,
     "files_changed": 92,
-    "sdlc_iterations": 73
+    "sdlc_iterations": 75
   },
   "sessions": [
     {
@@ -500,22 +500,22 @@
       "user": "Nilton Duarte",
       "invocations": [
         {
-          "provisional_seconds": 255,
+          "provisional_seconds": 62,
           "role": "",
           "model": "gpt-6.1-sol",
           "started_at": "2026-11-08T15:29:43.191Z",
           "completed_at": null,
-          "active_duration_seconds": 26083,
-          "turns": 30,
-          "tokens": {"input": 3090508, "output": 817329, "cache_read": 226845568, "reasoning": 557233, "peak_context": 451553},
+          "active_duration_seconds": 26293,
+          "turns": 32,
+          "tokens": {"input": 3098714, "output": 823064, "cache_read": 229860608, "reasoning": 560303, "peak_context": 451553},
           "cost_usd": null,
           "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 3,
-          "user_iterations": 43
+          "user_iterations": 45
         }
       ],
       "tools": [
-        {"name": "command", "calls": 700, "errors": 37},
+        {"name": "command", "calls": 711, "errors": 37},
         {"name": "followup_task", "calls": 48, "errors": 0},
         {"name": "list_agents", "calls": 9, "errors": 0},
         {"name": "request_user_input_async", "calls": 2, "errors": 0},
