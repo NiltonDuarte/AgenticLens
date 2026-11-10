@@ -6,6 +6,10 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
 
 ## Ready
 
+- **AL-83**: Present AgenticLens on GitHub Pages
+  - **Status**: Ready; **Blocked by**: None; **Blocks**: None
+  - **File**: [AL-83](to-do/AL-83%20present%20agenticlens%20on%20github%20pages.md)
+
 - **AL-80**: Capture OpenCode sessions across worktrees
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None
   - **File**: [AL-80](to-do/AL-80%20capture%20opencode%20sessions%20across%20worktrees.md)
