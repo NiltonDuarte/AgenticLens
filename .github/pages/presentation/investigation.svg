@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="470" viewBox="0 0 600 470" role="img" aria-labelledby="title desc">
+  <title id="title">An illustrative execution investigation</title>
+  <desc id="desc">A qualitative trace shows planning, coding, repeated tool attempts and testing. An inspection card connects the repeated attempts to a human review of the cause. No timings or outcomes are measured.</desc>
+  <rect width="600" height="470" fill="#fffef9"/>
+  <g font-family="system-ui, sans-serif">
+    <text x="30" y="43" fill="#526466" font-size="14" letter-spacing="2">EXECUTION / DELEGATION</text>
+    <path d="M155 72v218 M260 72v218 M365 72v218 M470 72v218" stroke="#e0e5dd" stroke-dasharray="3 6"/>
+    <g fill="#526466" font-size="16"><text x="30" y="105">Planner</text><text x="30" y="162">Coder</text><text x="30" y="219">Tool</text><text x="30" y="276">Tester</text></g>
+    <rect x="155" y="82" width="107" height="30" rx="5" fill="#17685c"/>
+    <path d="M230 112v35h33" fill="none" stroke="#77958a" stroke-width="2"/>
+    <rect x="263" y="139" width="130" height="30" rx="5" fill="#adc6b8"/>
+    <path d="M302 169v30" stroke="#77958a" stroke-width="2"/>
+    <g fill="#f1dfc9" stroke="#8b5226"><rect x="294" y="197" width="31" height="30" rx="4"/><rect x="335" y="197" width="31" height="30" rx="4"/><rect x="376" y="197" width="31" height="30" rx="4"/></g>
+    <path d="M409 213h54v37" fill="none" stroke="#77958a" stroke-width="2"/>
+    <rect x="448" y="254" width="92" height="30" rx="5" fill="#adc6b8"/>
+    <circle cx="391" cy="212" r="5" fill="#8b5226"/>
+    <path d="M391 228v79" stroke="#8b5226" stroke-width="2" stroke-dasharray="4 5"/>
+    <rect x="28" y="310" width="544" height="126" rx="7" fill="#f3eee3" stroke="#c7baa4"/>
+    <circle cx="54" cy="339" r="9" fill="#8b5226"/>
+    <text x="73" y="345" fill="#563c21" font-size="16" font-weight="650">Inspect the repeated attempts</text>
+    <text x="48" y="377" fill="#526466" font-size="15">Read tool context before choosing the next step.</text>
+    <text x="48" y="407" fill="#17685c" font-size="15" font-weight="600">Trace → anomaly → human decision</text>
+  </g>
+</svg>
