@@ -260,6 +260,26 @@ func TestFormatMarkdownMetricsTable_WithAnomalies(t *testing.T) {
 			t.Errorf("expected formatted bullet, got:\n%s", tableMD)
 		}
 	})
+	t.Run("external-parent cached analysis stays visible with partial context", func(t *testing.T) {
+		parent := "external-parent"
+		for _, hasWarning := range []bool{false, true} {
+			facts := domain.AgenticFactLedger{Anomalies: []domain.Anomaly{}, Sessions: []domain.SessionFact{{ID: "child", ParentID: &parent, Source: domain.SourceCodex, Anomalies: []domain.Anomaly{}}}}
+			if hasWarning {
+				facts.Anomalies = []domain.Anomaly{{RuleID: domain.RuleToolRetryStreak, Severity: domain.SeverityWarning, Context: domain.AnomalyContext{ToolName: &toolBash, Count: &count5}}}
+			}
+			metrics := domain.DeriveMetricsLedger(facts, domain.DefaultProjectConfig())
+			tableMD := adapters.FormatMarkdownMetricsTable(metrics)
+			if strings.Contains(tableMD, "No execution anomalies detected (clean session)") || strings.Contains(tableMD, "not recorded for the full ledger") || strings.Contains(tableMD, "not recorded for every required owner/group") {
+				t.Fatalf("cached analysis was declared absent or unqualified clean: %s", tableMD)
+			}
+			if !strings.Contains(strings.ToLower(tableMD), "parent") {
+				t.Fatalf("cached summary did not disclose unavailable parent context: %s", tableMD)
+			}
+			if hasWarning && !strings.Contains(tableMD, "TOOL_RETRY_STREAK") {
+				t.Fatalf("partial parent context hid the recorded warning: %s", tableMD)
+			}
+		}
+	})
 }
 
 func TestFormatMarkdownMetricsTable_DynamicSubagentRoles(t *testing.T) {

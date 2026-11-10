@@ -101,6 +101,12 @@ func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
 			}
 			b.WriteString("  install_root: '" + cfg.AgenticLens.InstallRoot + "'\n")
 		}
+		if cfg.AgenticLens.BinaryDir != "" {
+			if strings.ContainsAny(cfg.AgenticLens.BinaryDir, "'\r\n\x00") {
+				return nil, errors.New("binary_dir contains unsupported bootstrap characters")
+			}
+			b.WriteString("  binary_dir: '" + cfg.AgenticLens.BinaryDir + "'\n")
+		}
 		b.WriteString("\n")
 	}
 
@@ -187,10 +193,7 @@ func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
 	}
 
 	// Database Settings
-	dbPath := strings.TrimSpace(cfg.Database.Path)
-	if dbPath == "" {
-		dbPath = "~/.local/share/opencode/opencode.db"
-	}
+
 	queryTimeout := cfg.Database.QueryTimeoutMs
 	if queryTimeout <= 0 {
 		queryTimeout = 5000
@@ -201,8 +204,6 @@ func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
 	}
 	b.WriteString("# OpenCode SQLite database connectivity and timeout parameters.\n")
 	b.WriteString("database:\n")
-	b.WriteString("  # Path to local OpenCode SQLite database file.\n")
-	b.WriteString(fmt.Sprintf("  path: %s\n", dbPath))
 	b.WriteString("  # Query execution timeout in milliseconds.\n")
 	b.WriteString(fmt.Sprintf("  query_timeout_ms: %d\n", queryTimeout))
 	b.WriteString("  # SQLite busy handler wait timeout in milliseconds.\n")
@@ -366,28 +367,7 @@ func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
 		}
 	}
 
-	capturePolicy := cfg.Telemetry.Capture
-	if capturePolicy == (domain.CaptureConfig{}) {
-		capturePolicy = domain.DefaultCaptureConfig()
-	}
-	if capturePolicy.StateDir == "" {
-		capturePolicy.StateDir = domain.DefaultCaptureConfig().StateDir
-	}
-	capturePolicy.DetailedReport = false
-	if err := capturePolicy.Validate(); err != nil {
-		return nil, fmt.Errorf("encoding capture configuration: %w", err)
-	}
-	captureBytes, err := yaml.Marshal(struct {
-		Telemetry struct {
-			Capture domain.CaptureConfig `yaml:"capture"`
-		} `yaml:"telemetry"`
-	}{Telemetry: struct {
-		Capture domain.CaptureConfig `yaml:"capture"`
-	}{Capture: capturePolicy}})
-	if err != nil {
-		return nil, fmt.Errorf("encoding capture configuration: %w", err)
-	}
-	b.Write(captureBytes)
+	b.WriteString("# Machine-specific capture/source settings belong only in selected local YAML.\n")
 	result := []byte(b.String())
 
 	// Validate output syntax with yaml parser

@@ -63,7 +63,7 @@ func WorkerSuccessor(ctx context.Context, project, state string) (string, error)
 		if manifest.Protocol != ManifestProtocolVersion || manifest.Version != entry.Version || !sameEntrypointPath(manifest.Binary, native) || !sameEntrypointPath(manifest.Repository, project) || !sameEntrypointPath(manifest.StateDir, state) || manifest.TemplateVersion != installationTemplateVersion() || manifest.Wrapper == "" || manifest.SourceStore == "" {
 			return "", errors.New("selected worker installation is incompatible; explicitly refresh setup and recover pending work")
 		}
-		if err := CheckWrapperCompatibility(manifest.Wrapper, manifest.WrapperHash); err != nil {
+		if err := CheckManagerCompatibility(manifest.Wrapper, manifest.WrapperHash); err != nil {
 			return "", fmt.Errorf("selected worker wrapper incompatible; pending work retained: %w", err)
 		}
 	}

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -16,28 +15,20 @@ import (
 )
 
 func installationTemplateVersion() string {
-	return hash([]byte(marker + pluginTemplate + "common-wrapper-v1;codex-windows-outer5-native2"))
+	return hash([]byte(marker + pluginTemplate + "native-manager-v1;engine-v1;codex-user2"))
 }
 
-// CheckWrapperCompatibility verifies current shared-wrapper integrity separately
-// from a project's historical installation identity. A compatible installer-owned
-// global update must not invalidate another project's unchanged manifest.
-func CheckWrapperCompatibility(wrapper, historicalHash string) error {
-	body, err := readEntrypointFile(wrapper, 128*1024)
+const nativeEntrypointLimit = 256 * 1024 * 1024
+
+// CheckManagerCompatibility verifies the common native manager independently of
+// the project's historical installation. Owned manager upgrades remain valid.
+func CheckManagerCompatibility(wrapper, historicalHash string) error {
+	if err := validateManagerEntrypoint(wrapper); err != nil {
+		return err
+	}
+	body, err := readEntrypointFile(wrapper, nativeEntrypointLimit)
 	if err != nil {
-		return fmt.Errorf("common wrapper unavailable; explicit setup repair required: %w", err)
-	}
-	compatible := false
-	for _, line := range strings.Split(string(body), "\n") {
-		if strings.HasPrefix(line, "# AgenticLens common entrypoint ") {
-			if !strings.HasPrefix(line, "# AgenticLens common entrypoint v1:") {
-				return errors.New("common wrapper contract incompatible; explicitly refresh setup")
-			}
-			compatible = true
-		}
-	}
-	if !compatible {
-		return errors.New("common wrapper contract unavailable; explicitly refresh setup")
+		return fmt.Errorf("native manager unavailable: %w", err)
 	}
 	current := hash(body)
 	if current == historicalHash {
@@ -45,9 +36,14 @@ func CheckWrapperCompatibility(wrapper, historicalHash string) error {
 	}
 	owned, err := readEntrypointFile(wrapper+".sha256", 256)
 	if err != nil || strings.TrimSpace(string(owned)) != current {
-		return errors.New("shared common wrapper changed without matching installer ownership; edited/unowned wrapper preserved, explicit repair required")
+		return errors.New("native manager changed without matching installer ownership; edited/unowned command preserved, explicit repair required")
 	}
 	return nil
+}
+
+func validateManagerEntrypoint(path string) error {
+	_, err := adaptersconfig.ValidateManagerExecutable(path)
+	return err
 }
 
 func readEntrypointFile(path string, limit int64) ([]byte, error) {
@@ -103,38 +99,20 @@ func validateNativeHeader(path string) error {
 	return nil
 }
 
-// WrapperCommand keeps lifecycle selection in one stable, offline entrypoint.
-// Native workers deliberately use their already selected executable instead.
-func WrapperCommand(wrapper string, args ...string) []string {
-	if strings.EqualFold(filepath.Ext(wrapper), ".ps1") {
-		shell := "powershell.exe"
-		if runtime.GOOS == "windows" {
-			shell = filepath.Join(os.Getenv("SystemRoot"), "System32", "WindowsPowerShell", "v1.0", "powershell.exe")
-		}
-		result := []string{shell, "-NoLogo", "-NoProfile", "-NonInteractive", "-File", wrapper}
-		return append(result, args...)
+func validateCommonManager(ctx context.Context, wrapper string, entry adaptersconfig.Entrypoint) error {
+	if err := validateManagerEntrypoint(wrapper); err != nil {
+		return err
 	}
-	return append([]string{wrapper}, args...)
-}
-
-func validateCommonWrapper(ctx context.Context, wrapper string, entry adaptersconfig.Entrypoint) error {
-	body, err := readEntrypointFile(wrapper, 128*1024)
-	if err != nil {
-		return fmt.Errorf("common wrapper unavailable; explicitly refresh setup: %w", err)
-	}
-	if len(body) > 128*1024 || !bytes.Contains(body, []byte("AgenticLens common entrypoint v1")) {
-		return errors.New("unsupported common wrapper; refresh owned user-level setup")
-	}
-	command := WrapperCommand(wrapper, "--al-offline", "--al-project", entry.Project, "--al-resolve")
+	command := []string{wrapper, "--al-offline", "--al-project", entry.Project, "--al-resolve"}
 	probeCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 	output, err := installCommandOutput(probeCtx, command[0], command[1:]...)
 	if err != nil {
-		return fmt.Errorf("common wrapper cannot resolve project pin; refresh setup: %w", err)
+		return fmt.Errorf("native manager cannot resolve project pin; refresh setup: %w", err)
 	}
 	parts := strings.Split(strings.TrimRight(string(output), "\r\n"), "\n")
 	if len(parts) != 4 {
-		return errors.New("common wrapper resolution protocol incompatible")
+		return errors.New("native manager resolution protocol incompatible")
 	}
 	for i := range parts {
 		parts[i] = strings.TrimSuffix(parts[i], "\r")
@@ -143,8 +121,12 @@ func validateCommonWrapper(ctx context.Context, wrapper string, entry adaptersco
 	if err != nil {
 		return err
 	}
-	if parts[0] != entry.Version || !sameEntrypointPath(parts[1], entry.Project) || !sameEntrypointPath(parts[2], entry.InstallRoot) || !sameEntrypointPath(parts[3], native) {
-		return errors.New("common wrapper resolution differs from shared version/configuration; refresh setup")
+	identity, err := adaptersconfig.ValidateManualExecutable(native)
+	if err != nil {
+		return err
+	}
+	if parts[0] != identity.Version || !sameEntrypointPath(parts[1], entry.Project) || !sameEntrypointPath(parts[2], entry.InstallRoot) || !sameEntrypointPath(parts[3], native) {
+		return errors.New("native manager resolution differs from shared version/configuration; refresh setup")
 	}
 	return nil
 }

@@ -271,7 +271,7 @@ func installWithWriter(ctx context.Context, options InstallOptions, write func(f
 		}
 		wrapper = options.Wrapper
 		if wrapper == "" {
-			wrapper, e = adaptersconfig.UserWrapperPath()
+			wrapper, e = adaptersconfig.UserManagerPath()
 			if e != nil {
 				return result, e
 			}
@@ -280,7 +280,7 @@ func installWithWriter(ctx context.Context, options InstallOptions, write func(f
 		if e != nil {
 			return result, e
 		}
-		if e = validateCommonWrapper(ctx, wrapper, entry); e != nil {
+		if e = validateCommonManager(ctx, wrapper, entry); e != nil {
 			return result, e
 		}
 		version = entry.Version
@@ -299,7 +299,7 @@ func installWithWriter(ctx context.Context, options InstallOptions, write func(f
 	}
 	m := Manifest{Protocol: ManifestProtocolVersion, Source: options.Source, Repository: repo, Binary: binary, Wrapper: wrapper, Version: version, SourceStore: store, TemplateVersion: installationTemplateVersion(), StateDir: dir, Active: !options.Remove}
 	if !options.Remove {
-		wrapperBody, e := readEntrypointFile(wrapper, 128*1024)
+		wrapperBody, e := readEntrypointFile(wrapper, nativeEntrypointLimit)
 		if e != nil {
 			return result, e
 		}
@@ -372,7 +372,7 @@ func installWithWriter(ctx context.Context, options InstallOptions, write func(f
 					}
 				}
 			}
-			args := WrapperCommand(wrapper, "--al-offline", "--al-project", repo, "capture", "receive", "--source", "codex", "--store", store, "--state-dir", logicalRegistryDirectory(dir), "--repo", repo, "--wrapper", wrapper)
+			args := []string{wrapper, "--al-offline", "--al-project", repo, "capture", "receive", "--source", "codex", "--store", store, "--state-dir", logicalRegistryDirectory(dir), "--repo", repo, "--wrapper", wrapper}
 			command, e := staticCommand(args, false)
 			if e != nil {
 				return result, e
@@ -511,8 +511,8 @@ func installWithWriter(ctx context.Context, options InstallOptions, write func(f
 	return result, nil
 }
 
-// The native handoff remains two seconds. Native Windows additionally needs
-// bounded PowerShell startup time before that handoff begins.
+// The native handoff remains two seconds. Windows receives a bounded allowance
+// for starting the native manager and selected engine.
 func codexHookGroup(event, command, windowsCommand string, windows bool) (json.RawMessage, error) {
 	timeout := 2
 	if windows {

@@ -39,7 +39,6 @@ func TestGenerateConfigYAML_Default(t *testing.T) {
 		"  case_insensitive: true",
 		"workspaces:",
 		"database:",
-		"  path: ~/.local/share/opencode/opencode.db",
 		"  query_timeout_ms: 5000",
 		"  busy_timeout_ms: 5000",
 		"  read_only: true",
@@ -74,6 +73,7 @@ func TestGenerateConfigYAML_Default(t *testing.T) {
 	}
 
 	unexpectedSubstrings := []string{
+		"  path: ~/.local/share/opencode/opencode.db",
 		"healthy_ceiling_tokens:",
 		"orchestrator: orchestrator",
 		"planner: planner",
@@ -234,8 +234,8 @@ func TestGenerateDefaultYAML_Overrides(t *testing.T) {
 	if loaded.Workspaces.Dir != "custom_workspaces" {
 		t.Errorf("expected workspaces.dir custom_workspaces, got %s", loaded.Workspaces.Dir)
 	}
-	if loaded.Database.Path != "/var/data/opencode.db" {
-		t.Errorf("expected database.path /var/data/opencode.db, got %s", loaded.Database.Path)
+	if loaded.Database.Path != domain.DefaultProjectConfig().Database.Path || strings.Contains(string(data), "/var/data/opencode.db") {
+		t.Errorf("machine database path leaked into shared config: %s", loaded.Database.Path)
 	}
 	if len(loaded.CodeMetrics.SourceRoots) != 2 || loaded.CodeMetrics.SourceRoots[0] != "services" {
 		t.Errorf("unexpected code_metrics.source_roots: %v", loaded.CodeMetrics.SourceRoots)
@@ -289,7 +289,6 @@ func TestGenerateDefaultYAML_EdgeCases(t *testing.T) {
 			checkStrings: []string{
 				"project_name: Enterprise Core Platform",
 				"dir: my workspaces/dir",
-				"path: /path with spaces/opencode.db",
 				"- services/app one",
 				"- frontend/ui module",
 				"prefix: ECP",
@@ -325,6 +324,9 @@ func TestGenerateDefaultYAML_EdgeCases(t *testing.T) {
 				t.Fatalf("GenerateDefaultYAML failed: %v", err)
 			}
 			content := string(yamlData)
+			if strings.Contains(content, tc.dbPath) {
+				t.Fatal("machine database path leaked into shared output")
+			}
 			for _, check := range tc.checkStrings {
 				if !strings.Contains(content, check) {
 					t.Errorf("expected generated YAML to contain %q, but was not found in:\n%s", check, content)

@@ -150,11 +150,19 @@ func legacySummaryContentOwned(text, section string, tableColumns *int) bool {
 			}
 		}
 	}
-	if text == "Optional anomaly analysis: disabled by generation policy." || text == "Anomaly analysis is not recorded for every required owner/group; recorded findings remain visible. A complete source-backed refresh is required for recovery." {
+	switch text {
+	case "Optional anomaly analysis: disabled by generation policy.",
+		"Anomaly analysis is not recorded for every required owner/group; recorded findings remain visible. A complete source-backed refresh is required for recovery.",
+		"Some owner/group scopes have no recorded analysis. Parent/group context outside this ticket remains incomplete; recorded findings remain visible.",
+		"Recorded anomaly summaries remain visible. Parent/group context outside this ticket is partial, so a complete group conclusion is unavailable.":
 		return true
 	}
 	if section == "Anomalies & Health Flags" {
-		if text == "- **Status:** No execution anomalies detected (clean session)." || text == "- **Status:** Anomaly analysis is not recorded for the full ledger; no clean-session conclusion is available." {
+		switch text {
+		case "- **Status:** No execution anomalies detected (clean session).",
+			"- **Status:** Anomaly analysis is not recorded for the full ledger; no clean-session conclusion is available.",
+			"- **Status:** Recorded anomaly summaries are available, but parent/group context outside this ticket is partial; no complete clean-session conclusion is available.",
+			"- **Status:** Parent/group anomaly coverage outside this ticket is incomplete; no clean-session conclusion is available.":
 			return true
 		}
 		if status, ok := strings.CutPrefix(text, "- **Status:** "); ok {

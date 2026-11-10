@@ -1,6 +1,6 @@
 # AgenticLens
 
-AgenticLens records multi-agent development telemetry, detects execution anomalies, and provides a local dashboard. It supports live OpenCode monitoring and offline OpenCode/Codex session ledgers.
+AgenticLens records multi-agent development telemetry, detects execution anomalies, and provides a local dashboard. It supports live OpenCode monitoring and offline OpenCode/Codex session ledgers. The native `agentic-lens` manager installs and selects project engines; `agentic-lens-engine` performs telemetry work and embeds the dashboard.
 
 Ledgers are trusted, durable project records designed to be committed and shared through Git across developers, machines and harnesses. Local source sessions take precedence when refreshed; unavailable sessions remain preserved in the ledger, and the runtime aggregates the full result. Migration is best-effort and resumable across machines. See the [portable ledger contract](TECHNICAL_GUIDELINES.md#portable-ledger-contract) for preservation, refresh and compatibility guarantees.
 
@@ -9,12 +9,12 @@ Ledgers are trusted, durable project records designed to be committed and shared
 Ask your coding agent to install and configure AgenticLens in the repository. For an OpenCode agent, use this prompt:
 
 ```text
-For an existing repository, use its approved shared agenticlens.version pin as <RELEASE_TAG>; otherwise resolve the latest stable AgenticLens release at https://api.github.com/repos/NiltonDuarte/AgenticLens/releases/latest and use its tag_name as <RELEASE_TAG>. Read https://raw.githubusercontent.com/NiltonDuarte/AgenticLens/<RELEASE_TAG>/.agents/skills/agentic-lens-setup/SKILL.md and follow it to install and configure AgenticLens in this repository. Keep all skill files, scripts, and binaries pinned to that same tag, replacing any main or latest download references in older manifests. If a required file is absent, report it instead of falling back to main. Explain the proposed changes and ask before modifying agent policy files.
+For an existing repository, use its approved shared agenticlens.version pin as <RELEASE_TAG>; otherwise resolve the latest stable AgenticLens release at https://api.github.com/repos/NiltonDuarte/AgenticLens/releases/latest and use its tag_name as <RELEASE_TAG>. Read https://raw.githubusercontent.com/NiltonDuarte/AgenticLens/<RELEASE_TAG>/.agents/skills/agentic-lens-setup/SKILL.md and follow it to install and configure AgenticLens in this repository. Use that tag for the setup bundle and exact engine pin. Review the manager version separately; its own update does not change project engine pins. Replace main or latest download references in older manifests. If a required file is absent, report it instead of falling back to main. Explain the proposed changes and ask before modifying agent policy files.
 ```
 
 The `main` branch contains development for future releases. Fresh installations without an approved pin default to the [latest stable release](https://github.com/NiltonDuarte/AgenticLens/releases/latest). Repairs honor the existing shared pin; upgrades require explicit approval. Retrieve every installation file from the selected exact tag, including when a prerelease pin was explicitly approved.
 
-The setup skill guides the agent through downloading the platform binaries, configuring the repository, and installing the skills available in that release. For releases containing the complete setup bundle, each worktree can explicitly install missing platform binaries using the local setup scripts; if the scripts are also absent, follow the complete bootstrap in the setup manifest. Git tracking and ignore choices for all installed files belong to the repository owner. Review the [Platform Setup Manual](docs/SETUP_MANUAL.md) for the complete setup process and manual installation options.
+The setup skill guides the agent through downloading the platform binaries, configuring the repository, and installing the skills available in that release. For releases containing the complete setup bundle, explicit setup provisions shared cached platform binaries using the local setup scripts; configured Codex worktrees adopt through the user-level native hook without per-worktree installation; if the scripts are also absent, follow the complete bootstrap in the setup manifest. Git tracking and ignore choices for all installed files belong to the repository owner. Review the [Platform Setup Manual](docs/SETUP_MANUAL.md) for the complete setup process and manual installation options.
 
 ---
 

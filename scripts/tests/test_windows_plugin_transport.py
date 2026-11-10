@@ -73,7 +73,7 @@ try {
     def environment(self, **extra):
         result = dict(self.env, **extra)
         if not IS_WINDOWS:
-            forwarded = [key for key in result if key.startswith(('AL_PROBE_', 'AGENTIC_LENS_')) or key in ('ELECTRON_RUN_AS_NODE', 'SystemRoot')]
+            forwarded = [key for key in result if key.startswith(('AL_PROBE_', 'AGENTIC_LENS_')) or key in ('ELECTRON_RUN_AS_NODE', 'SystemRoot', 'HOME', 'USERPROFILE', 'CODEX_HOME', 'XDG_CONFIG_HOME', 'XDG_CACHE_HOME', 'XDG_STATE_HOME')]
             result['WSLENV'] = ':'.join(filter(None, [result.get('WSLENV', ''), *forwarded]))
         return result
 

@@ -122,9 +122,8 @@ func TestCaptureUpdateRejectsInvalidValuesAndPreservesExplicitPolicy(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	policy, err := decodeCapturePolicy(generated, captureReadPolicy())
-	if err != nil || policy.StateDir != "~/.agenticlens/state" || policy.Enabled || policy.MaxSessions != 7 {
-		t.Fatalf("writer reset explicit policy: %+v %v", policy, err)
+	if strings.Contains(string(generated), "capture:") {
+		t.Fatal("shared writer leaked machine capture policy")
 	}
 	if _, err := PrepareCaptureConfigUpdate(path+"-absent", ""); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("created missing config: %v", err)
@@ -259,7 +258,7 @@ func TestCaptureConfigUpdateSurvivesProcessDeath(t *testing.T) {
 			if err != nil {
 				t.Fatalf("config disappeared at %s: %v", stage, err)
 			}
-			want := domain.DefaultCaptureConfig().StateDir
+			want := ""
 			if stage == "activated" {
 				want = "after-crash-state"
 			}

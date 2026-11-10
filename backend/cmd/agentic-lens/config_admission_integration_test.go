@@ -20,7 +20,7 @@ func captureAdmissionFixture(t *testing.T) (captureGenerationFixture, string, st
 	t.Helper()
 	f := newCaptureGenerationFixture(t)
 	f.write(t, 11)
-	if err := os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte("telemetry:\n  capture:\n    enabled: false\n"), 0600); err != nil {
+	if err := writeCaptureFixtureLocal(t, f, []byte("telemetry:\n  capture:\n    enabled: true\n")); err != nil {
 		t.Fatal(err)
 	}
 	return f, filepath.Dir(filepath.Dir(f.state)), filepath.Join(t.TempDir(), "new-state")
@@ -33,6 +33,9 @@ func admissionRequest(f captureGenerationFixture) *exec.Cmd {
 }
 
 func admissionUpdate(f captureGenerationFixture, next, output string) *exec.Cmd {
+	if output == "" {
+		output = filepath.Join(f.project, ".agenticlens-config.local.yaml")
+	}
 	args := []string{"init", "--update-capture-config", "--capture-state-dir", next}
 	if output != "" {
 		args = append(args, "--output", output)
@@ -49,6 +52,49 @@ func admissionBind(t *testing.T, f captureGenerationFixture, request string) {
 	if output, err := command.CombinedOutput(); err != nil {
 		t.Fatalf("accepted request token became detached: %v %s", err, output)
 	}
+	// Drain the actual publisher process before TempDir removes its registry.
+	policy, err := adaptersconfig.ResolveCapture(f.project, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	state, err := capture.ProjectState(policy.StateDir, f.project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	store, err := capture.OpenProject(state, f.project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	id := domain.CaptureIdentity{Source: domain.SourceCodex, Store: f.store, SessionID: "root"}
+	if _, err := store.Change(context.Background(), id, func(row domain.CaptureRegistration) (domain.CaptureRegistration, error) {
+		row.Activity = "idle"
+		return row, nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) {
+		request, err := store.PublicationRequest(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		progress, err := capture.WorkerStatus(store.CoordinationDirectory())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if request.Generation == request.Acknowledged && progress.PID > 0 {
+			exited, err := captureNativeProcessExited(progress.PID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if exited {
+				return
+			}
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatal("admitted native worker did not finish before fixture removal")
 }
 
 func admissionToken(t *testing.T, output []byte) string {
@@ -158,7 +204,7 @@ func TestCaptureAdmissionBeforeUpdateRetainsDurableOldHandoff(t *testing.T) {
 
 func TestConfigUpdateAdmissionBeforeNativeRequestSelectsNewState(t *testing.T) {
 	f, _, next := captureAdmissionFixture(t)
-	path := filepath.Join(f.project, ".agenticlens-config.yaml")
+	path := filepath.Join(f.project, ".agenticlens-config.local.yaml")
 	preview, err := adaptersconfig.PrepareCaptureConfigUpdate(path, next)
 	if err != nil {
 		t.Fatal(err)
@@ -227,7 +273,7 @@ func TestConfigUpdateAdmissionBeforeNativeRequestSelectsNewState(t *testing.T) {
 func TestCaptureConfigUpdateGuardsEffectiveLocalSelection(t *testing.T) {
 	f, oldBase, next := captureAdmissionFixture(t)
 	localPath := filepath.Join(f.project, ".agenticlens-config.local.yaml")
-	local := []byte(fmt.Sprintf("telemetry:\n  capture:\n    enabled: false\n    state_dir: %q\n", oldBase))
+	local := []byte(fmt.Sprintf("telemetry:\n  capture:\n    enabled: true\n    state_dir: %q\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 5000\n    pass_timeout_ms: 3000\n", oldBase))
 	if err := os.WriteFile(localPath, local, 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -235,7 +281,7 @@ func TestCaptureConfigUpdateGuardsEffectiveLocalSelection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("request: %v %s", err, request)
 	}
-	if output, err := admissionUpdate(f, next, "").CombinedOutput(); err != nil {
+	if output, err := admissionUpdate(f, next, filepath.Join(f.project, ".agenticlens-config.yaml")).CombinedOutput(); err != nil {
 		t.Fatalf("shadowed shared setting should not move effective state: %v %s", err, output)
 	}
 	if output, err := admissionUpdate(f, next, localPath).CombinedOutput(); err == nil {

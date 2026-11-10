@@ -1,0 +1,371 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "I03-BUILD-01",
+      "severity": 5,
+      "issue": "Bootstrap admitted manager bytes before copying them into staging.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: compare staged manager bytes with the supplied SHA-256 before execution."
+    },
+    {
+      "finding_id": "I03-ARCH-01",
+      "severity": 8,
+      "issue": "Engine admission accepted a forwarding manager and enabled recursive selection.",
+      "reporters": [
+        {
+          "persona": "coder",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "tester",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: require an engine role probe and reject the reserved engine protocol on managers."
+    },
+    {
+      "finding_id": "I03-BEH-01",
+      "severity": 4,
+      "issue": "Wrapped admission failures suppressed actionable command diagnostics.",
+      "reporters": [
+        {
+          "persona": "tester",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: distinguish forwarded command exits from validation failures."
+    },
+    {
+      "finding_id": "I03-DATA-01",
+      "severity": 6,
+      "issue": "Recovery could mutate a journal resource without acquiring its home lease.",
+      "reporters": [
+        {
+          "persona": "tester",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: discover all pending resources and revalidate the closure under leases."
+    },
+    {
+      "finding_id": "I03-BEH-02",
+      "severity": 6,
+      "issue": "Explicit capture repositories could execute through another project\u2019s engine.",
+      "reporters": [
+        {
+          "persona": "tester",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: validate explicit repository authority before forwarding capture."
+    },
+    {
+      "finding_id": "I03-WIN-01",
+      "severity": 6,
+      "issue": "Windows consumers passed a native manager executable to PowerShell -File.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: invoke the native executable directly; runtime certification remains excluded."
+    },
+    {
+      "finding_id": "I03-UPDATE-01",
+      "severity": 4,
+      "issue": "Self-update ignored the invoked custom manager installation path.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: use the physical executing manager path when no destination is supplied."
+    },
+    {
+      "finding_id": "I03-INSPECT-01",
+      "severity": 5,
+      "issue": "Read-only inspection rejected retained state from a deleted worktree.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: allow explicit registry inspection without live repository validation."
+    },
+    {
+      "finding_id": "I03-ALIASES-01",
+      "severity": 3,
+      "issue": "Existing version aliases failed outside a configured project.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: route version aliases through the explicitly provisioned companion engine."
+    },
+    {
+      "finding_id": "I03-OWNERSHIP-01",
+      "severity": 4,
+      "issue": "Manager installation overwrote an unowned checksum sidecar.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: reject orphan or edited checksum metadata before replacement."
+    },
+    {
+      "finding_id": "I03-FOREIGN-01",
+      "severity": 5,
+      "issue": "Foreign local binaries bypassed executable role and version validation.",
+      "reporters": [
+        {
+          "persona": "reviewer",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: refuse foreign local artifacts; published foreign caches disclose deferred runtime validation."
+    },
+    {
+      "finding_id": "I03-DOCS-01",
+      "severity": 2,
+      "issue": "Active contributor guidance described the retired single-binary wrapper layout.",
+      "reporters": [
+        {
+          "persona": "reviewer",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: document separate native artifacts. Related server-forwarding claim refuted by successful direct help execution."
+    },
+    {
+      "finding_id": "I03-CACHE-ORACLE-01",
+      "severity": 3,
+      "issue": "Tests omitted ordinary cached-engine identity rejection.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: add a production-path negative oracle with a positive control."
+    },
+    {
+      "finding_id": "I03-RECOVERY-HYP-01",
+      "severity": 5,
+      "issue": "A reviewer alleged recovery must leave every file unchanged on conflict.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Refuted: edited bytes and the pending journal survive and recovery resumes; whole-state rollback was not promised."
+    },
+    {
+      "finding_id": "I03-PATH-01",
+      "severity": 5,
+      "issue": "Lexical normalization changed explicit cache roots containing symlink/.. .",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: resolve physical path semantics and verify with a real native command."
+    },
+    {
+      "finding_id": "I03-OPERATOR-GUIDE-01",
+      "severity": 3,
+      "issue": "The operator reference described wrapper replacement and whole-bootstrap rollback.",
+      "reporters": [
+        {
+          "persona": "reviewer",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: document native protocols, per-operation recovery and foreign-cache limits."
+    },
+    {
+      "finding_id": "I03-SCHEMA-DOC-01",
+      "severity": 2,
+      "issue": "The active operator reference still named ledger schema v5.",
+      "reporters": [
+        {
+          "persona": "reviewer",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: align current operator guidance with schema v6."
+    },
+    {
+      "finding_id": "I03-ORCHESTRATION-01",
+      "severity": 3,
+      "issue": "The isolated build fixture omitted the new manager command.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: build and distinguish both real native commands while retaining failure guards."
+    },
+    {
+      "finding_id": "I03-WINDOWS-MAINT-LIMIT",
+      "severity": 3,
+      "issue": "Updating an existing Windows manager requires manual replacement.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Accepted debt: safe refusal preserves files; user owns deferred Windows support removal. No Windows runtime certification."
+    },
+    {
+      "finding_id": "I03-MIGRATION-01",
+      "severity": 7,
+      "issue": "Another Codex home could commit before an interrupted legacy migration lost rollback authority.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: shared typed discovery reference, private undo journal, complete lease closure and private-journal commit point."
+    },
+    {
+      "finding_id": "I03-ADOPTION-PROTOCOL-01",
+      "severity": 5,
+      "issue": "The adoption reader rejected the receipt protocol emitted by the installer.",
+      "reporters": [
+        {
+          "persona": "coder",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: share protocol2 between receipt writer and reader; test their real round trip."
+    },
+    {
+      "finding_id": "I03-CLI-INSTALL-FIXTURE-01",
+      "severity": 3,
+      "issue": "The active-worker installer fixture supplied only the engine artifact.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: provide real verified manager and engine artifacts while retaining worker ACK and inode assertions."
+    },
+    {
+      "finding_id": "I03-MISSING-OWNER-01",
+      "severity": 5,
+      "issue": "Public installation recreated a deleted private transaction owner before recovery discovery.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed during correction verification: discover pending authority before creating the home; public regression preserves the reference and absent owner."
+    },
+    {
+      "finding_id": "I03-DISABLE-RACE-01",
+      "severity": 4,
+      "issue": "Live disable racing a worker fence was misclassified as supersession and failed shutdown.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "tester",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: recheck capture enablement before retirement and successor handling; retain pending generations and strict worker exit assertions."
+    }
+  ]
+}

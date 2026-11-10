@@ -479,7 +479,7 @@ func TestSchemaMigrationDTOBoundaries(t *testing.T) {
 	})
 
 	t.Run("malformed nested session records are rejected instead of defaulted", func(t *testing.T) {
-		missingParent := "missing"
+		emptyParent, paddedParent := "", " external-parent "
 		cases := []struct {
 			name    string
 			session adapters.SessionFactDTO
@@ -488,7 +488,8 @@ func TestSchemaMigrationDTOBoundaries(t *testing.T) {
 			{"negative tool calls", adapters.SessionFactDTO{ID: "s1", User: "alice", Tools: []adapters.SessionToolFactDTO{{Name: "bash", Calls: -1}}}},
 			{"errors exceed calls", adapters.SessionFactDTO{ID: "s1", User: "alice", Tools: []adapters.SessionToolFactDTO{{Name: "bash", Calls: 1, Errors: 2}}}},
 			{"duplicate tool name", adapters.SessionFactDTO{ID: "s1", User: "alice", Tools: []adapters.SessionToolFactDTO{{Name: "bash", Calls: 1}, {Name: "bash", Calls: 2}}}},
-			{"dangling session parent", adapters.SessionFactDTO{ID: "s1", User: "alice", ParentID: &missingParent}},
+			{"empty session parent", adapters.SessionFactDTO{ID: "s1", User: "alice", ParentID: &emptyParent}},
+			{"padded external session parent", adapters.SessionFactDTO{ID: "s1", User: "alice", ParentID: &paddedParent}},
 			{"blank session user", adapters.SessionFactDTO{ID: "s1", User: "   "}},
 		}
 		for _, tc := range cases {
@@ -1944,5 +1945,59 @@ func TestOptionalCollectionsRejectNullWithoutChangingAbsenceMeaning(t *testing.T
 	raw := `{"schema_version":6,"ticket_id":"TEST-PRESENCE","sessions":[],"anomalies":null}`
 	if err := adapters.ValidateRuntimeFactLedger([]byte(raw)); err == nil {
 		t.Fatal("null root analysis accepted as absent/empty")
+	}
+}
+
+func TestExternalParentReferenceSurvivesPortableSaveReloadAndReadProjection(t *testing.T) {
+	version := domain.CurrentSchemaVersion
+	ticket := "TEST-200"
+	title := "Explicit child ticket"
+	kind := domain.ConventionalTicketType("feat")
+	parent := "parent-owned-by-another-ticket"
+	started, completed := "2026-01-01T00:00:01Z", "2026-01-01T00:00:02Z"
+	facts := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticket, TicketTitle: &title, TicketType: &kind, UpdatedAt: "2026-01-01T00:00:03Z", Sessions: []domain.SessionFact{{ID: "explicit-child", ParentID: &parent, Source: domain.SourceCodex, User: "fixture", Invocations: []domain.InvocationFact{{Role: "coder", Model: "recorded-model", StartedAt: &started, CompletedAt: &completed, Tokens: domain.InvocationTokens{Input: 31}, CostEvidence: domain.UnavailableCost()}}, Tools: []domain.SessionToolFact{}}}}
+	original := filepath.Join(t.TempDir(), "agentic_metrics.json")
+	if err := adapters.SaveFactLedger(original, facts); err != nil {
+		t.Fatalf("legitimate external source parent rejected: %v", err)
+	}
+	transferred := filepath.Join(t.TempDir(), "records", ticket, "agentic_metrics.json")
+	if err := os.MkdirAll(filepath.Dir(transferred), 0700); err != nil {
+		t.Fatal(err)
+	}
+	encoded, err := os.ReadFile(original)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(transferred, encoded, 0600); err != nil {
+		t.Fatal(err)
+	}
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	t.Setenv("CODEX_HOME", filepath.Join(home, "unavailable-source"))
+	if err := adapters.ValidateRuntimeFactLedger(encoded); err != nil {
+		t.Fatal(err)
+	}
+	var dto adapters.AgenticFactLedgerDTO
+	if err := json.Unmarshal(encoded, &dto); err != nil {
+		t.Fatal(err)
+	}
+	owner := dto.ToDomain().Sessions[0]
+	if owner.ParentID == nil || *owner.ParentID != parent || len(owner.Invocations) != 1 || owner.Invocations[0].Tokens.Input != 31 {
+		t.Fatalf("portable child source ancestry/owned facts changed: %+v", owner)
+	}
+	report := adapters.ScanWorkspaces(filepath.Dir(filepath.Dir(transferred)))
+	if report.FatalError != "" || len(report.Errors) != 0 || len(report.Ledgers) != 1 {
+		t.Fatalf("no-source/no-registry read hid external-parent child: %+v", report)
+	}
+	read := report.Ledgers[0].Facts.Sessions
+	if len(read) != 1 || read[0].ID != "explicit-child" || read[0].ParentID == nil || *read[0].ParentID != parent {
+		t.Fatalf("read projection fabricated parent/root or erased child: %+v", read)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".agenticlens")); !os.IsNotExist(err) {
+		t.Fatalf("portable read required private capture state: %v", err)
+	}
+	if after, err := os.ReadFile(transferred); err != nil || !bytes.Equal(encoded, after) {
+		t.Fatalf("read projection rewrote shared parent reference: %v", err)
 	}
 }

@@ -24,7 +24,7 @@ func TestEntrypointLiteralAuthorityAndLocalPaths(t *testing.T) {
 			}
 			install := filepath.Join(t.TempDir(), "local path")
 			local := filepath.Join(root, ".agenticlens-config.local.yaml")
-			if err := os.WriteFile(local, []byte("agenticlens:\n  install_root: '"+filepath.ToSlash(install)+"'\ntelemetry:\n  capture:\n    commit_warning: false\n"), 0600); err != nil {
+			if err := os.WriteFile(local, []byte("agenticlens:\n  install_root: '"+filepath.ToSlash(install)+"'\ntelemetry:\n  capture:\n    enabled: true\n    state_dir: state\n    commit_warning: false\n"), 0600); err != nil {
 				t.Fatal(err)
 			}
 			entry, err := ResolveEntrypoint(nested)
@@ -120,7 +120,7 @@ func TestGeneratedPinnedConfigRoundTripsWithoutRetiredReportKey(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.AgenticLens.Version != "v9.8.7" || cfg.Workspaces.Dir != "custom-work" || cfg.Telemetry.Capture.StateDir != "~/.agenticlens/state" || !cfg.Telemetry.Capture.CommitWarning {
+	if cfg.AgenticLens.Version != "v9.8.7" || cfg.Workspaces.Dir != "custom-work" || cfg.Telemetry.Capture.StateDir != "" || !cfg.Telemetry.Capture.CommitWarning {
 		t.Fatalf("configuration %+v", cfg)
 	}
 	entry, err := ResolveEntrypoint(root)

@@ -171,6 +171,10 @@ func writeRelocationConfig(t *testing.T, project, state string) {
 	if err = adaptersconfig.WriteCaptureConfigUpdate(path, update); err != nil {
 		t.Fatal(err)
 	}
+	local := fmt.Sprintf("telemetry:\n  capture:\n    enabled: true\n    state_dir: %q\n", state)
+	if err = os.WriteFile(filepath.Join(project, ".agenticlens-config.local.yaml"), []byte(local), 0600); err != nil {
+		t.Fatal(err)
+	}
 }
 func TestRelocationPreservesScopedFactsAndFencesAlreadyOpenLegacyWriter(t *testing.T) {
 	project, source, base, old := relocationFixture(t)
@@ -449,9 +453,6 @@ func TestAdministrativeRelocationGuardReadsIncompleteConfigWithoutLoadFallback(t
 	}
 	if err = os.WriteFile(path, []byte(strings.Join(kept, "\n")), 0600); err != nil {
 		t.Fatal(err)
-	}
-	if _, err = adaptersconfig.Load(project); err == nil || !strings.Contains(err.Error(), "state_dir") {
-		t.Fatalf("operational loader accepted absent path: %v", err)
 	}
 	err = CheckStateRelocation(project, source, base)
 	if err == nil || !strings.Contains(err.Error(), "state exists") {
@@ -967,9 +968,6 @@ func TestAdministrativeRelocationGuardUsesCanonicalConfiguredName(t *testing.T) 
 				incomplete := []byte(strings.Join(kept, "\n"))
 				if err = os.WriteFile(path, incomplete, 0600); err != nil {
 					t.Fatal(err)
-				}
-				if _, err = adaptersconfig.Load(project); err == nil {
-					t.Fatal("operational load accepted missing state key")
 				}
 				if err = CheckStateRelocation(project, oldBase, newBase); err == nil || !strings.Contains(err.Error(), "protocol-2") {
 					t.Fatalf("raw repair lost canonical namespace: %v", err)

@@ -178,7 +178,7 @@ func CheckInstalledState(project, state string, explicit bool) error {
 		if manifest.Version != entry.Version || !sameEntrypointPath(manifest.Binary, native) || manifest.TemplateVersion != installationTemplateVersion() || manifest.Wrapper == "" || manifest.SourceStore == "" {
 			return errors.New("installed capture pin/template/source provenance differs from current release; explicitly refresh owned capture setup before claiming runtime health")
 		}
-		if err := CheckWrapperCompatibility(manifest.Wrapper, manifest.WrapperHash); err != nil {
+		if err := CheckManagerCompatibility(manifest.Wrapper, manifest.WrapperHash); err != nil {
 			return err
 		}
 		if err := checkOwnedIntegration(project, source, manifest); err != nil {

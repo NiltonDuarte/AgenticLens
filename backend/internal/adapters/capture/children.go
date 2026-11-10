@@ -128,6 +128,12 @@ func (s *Store) inheritChild(ctx context.Context, parent domain.CaptureRegistrat
 		return nil
 	}
 	_, err := s.Change(ctx, identity, func(r domain.CaptureRegistration) (domain.CaptureRegistration, error) {
+		if r.TicketID != "" && (r.Binding == "explicit_agent_response" || r.Binding == "explicit_manual_selection") {
+			// Explicit child attribution is authoritative even when its parent belongs
+			// to another ticket. Keep that owner's accepted facts and let the parent
+			// reconciliation proceed without forcing inheritance or retrying forever.
+			return r, nil
+		}
 		bound, e := domain.CaptureBinding(r.TicketID, "", parent.TicketID)
 		if e != nil {
 			return r, e

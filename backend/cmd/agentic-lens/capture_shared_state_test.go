@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 
@@ -161,7 +162,7 @@ func TestCaptureConfigUpdateRefusesLegacyStateWithoutConfiguredPath(t *testing.T
 	cmd := exec.Command(cliBinaryPath, "init", "--update-capture-config")
 	cmd.Dir = root
 	home := t.TempDir()
-	cmd.Env = append(os.Environ(), "HOME="+home, "USERPROFILE="+home)
+	cmd.Env = append(os.Environ(), "HOME="+home, "USERPROFILE="+home, "CODEX_HOME="+filepath.Join(home, ".codex"))
 	output, err := cmd.CombinedOutput()
 	if err == nil {
 		t.Fatalf("configuration update orphaned retained legacy state: %s", output)
@@ -177,6 +178,9 @@ func TestCaptureInstallIgnoresLogicalRegistryAndPreservesUserRules(t *testing.T)
 	source := t.TempDir()
 	config := []byte("project_name: LocalCapture\ntelemetry:\n  capture:\n    state_dir: .capture-local\nticket:\n  prefixes: [TEST]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n")
 	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), config, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.local.yaml"), []byte("telemetry:\n  capture:\n    enabled: true\n    state_dir: .capture-local\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	ownerRules := []byte("# Owner rules retained\n/retained-legacy/\nunrelated-output\n")
@@ -242,5 +246,62 @@ func TestCaptureInstallIgnoresLogicalRegistryAndPreservesUserRules(t *testing.T)
 	status := git("status", "--short", "--untracked-files=all")
 	if bytes.Contains(status, []byte("registry.db")) {
 		t.Fatalf("private capture database leaked to Git status: %s", status)
+	}
+}
+
+func TestCaptureInspectRetainedStateThroughManagerAfterWorktreeDeletion(t *testing.T) {
+	deleted := newCaptureGenerationFixture(t)
+	survivor := newCaptureGenerationFixture(t)
+	prepareCaptureInstall(t, survivor.project, []string{"install", "--repo", survivor.project, "--source", "codex", "--store", survivor.store})
+	store, err := capture.OpenProject(deleted.state, deleted.project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity := domain.CaptureIdentity{Source: domain.SourceCodex, Store: deleted.store, SessionID: "retained-deleted-root"}
+	if _, err := store.Register(context.Background(), identity, "", "SessionStart"); err != nil {
+		store.Close()
+		t.Fatal(err)
+	}
+	if err := store.RequestPublication(context.Background()); err != nil {
+		store.Close()
+		t.Fatal(err)
+	}
+	if err := store.Close(); err != nil {
+		t.Fatal(err)
+	}
+	database := filepath.Join(deleted.state, "registry.db")
+	before := readCaptureFile(t, database)
+	if err := os.RemoveAll(deleted.project); err != nil {
+		t.Fatal(err)
+	}
+	args := []string{"capture", "inspect-state", "--repo", deleted.project, "--state-dir", deleted.state, "--project-name", "CaptureFixture"}
+	for _, invocation := range [][]string{{cliBinaryPath}, {managerBinaryPath, "--al-project", survivor.project}} {
+		command := exec.Command(invocation[0], append(append([]string{}, invocation[1:]...), args...)...)
+		command.Dir = survivor.project
+		output, err := command.CombinedOutput()
+		if err != nil {
+			t.Fatalf("retained inspection through %v failed: %v %s", invocation, err, output)
+		}
+		var inspection capture.RetainedStateInspection
+		if err := json.Unmarshal(output, &inspection); err != nil {
+			t.Fatal(err)
+		}
+		if inspection.Project != deleted.project || inspection.ProjectName != "CaptureFixture" || len(inspection.Registrations) != 1 || inspection.Registrations[0].Identity != identity || inspection.Publication.Generation != 1 || inspection.Publication.Acknowledged != 0 {
+			t.Fatalf("retained observations or pending work changed: %+v", inspection)
+		}
+		if !bytes.Equal(before, readCaptureFile(t, database)) {
+			t.Fatal("read-only inspection mutated retained registry")
+		}
+		for _, path := range []string{deleted.project, survivor.state} {
+			if _, err := os.Stat(path); !os.IsNotExist(err) {
+				t.Fatalf("inspection recreated checkout or initialized survivor state %s: %v", path, err)
+			}
+		}
+	}
+	// The read-only exception must not admit an ordinary cross-project command.
+	command := exec.Command(managerBinaryPath, "--al-project", survivor.project, "capture", "status", "--repo", deleted.project)
+	command.Dir = survivor.project
+	if output, err := command.CombinedOutput(); err == nil || !strings.Contains(string(output), "AgenticLens manager:") || !strings.Contains(string(output), deleted.project) {
+		t.Fatalf("ordinary capture unexpectedly bypassed manager's deleted-project guard: %v %s", err, output)
 	}
 }

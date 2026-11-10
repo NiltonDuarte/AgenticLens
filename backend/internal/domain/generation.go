@@ -1,5 +1,7 @@
 package domain
 
+import "strings"
+
 // GenerationPolicy configures optional generate output. It is transient and is
 // never persisted as ledger metadata.
 type GenerationPolicy struct {
@@ -50,7 +52,7 @@ func (ledger AgenticFactLedger) UnrecordedAnomalySessions() int {
 
 // CompleteAnomalyCoverage requires independently recorded root and owner analysis.
 func (ledger AgenticFactLedger) CompleteAnomalyCoverage() bool {
-	return ledger.Anomalies != nil && ledger.UnrecordedAnomalySessions() == 0
+	return ledger.Anomalies != nil && ledger.UnrecordedAnomalySessions() == 0 && !ledger.HasExternalParentReference()
 }
 
 // UnrecordedAnomalyScopes includes the independently observed root/group scope.
@@ -60,6 +62,37 @@ func (ledger AgenticFactLedger) UnrecordedAnomalyScopes() int {
 		count++
 	}
 	return count
+}
+
+// HasExternalParentReference identifies a required parent outside this
+// ticket's owner set. Recorded summaries remain usable, but a complete child
+// source alone cannot establish fresh root/group coverage or a clean conclusion.
+func (ledger AgenticFactLedger) HasExternalParentReference() bool {
+	owners := make(map[string]bool, len(ledger.Sessions))
+	for _, owner := range ledger.Sessions {
+		owners[owner.ID] = true
+	}
+	for _, owner := range ledger.Sessions {
+		if owner.ParentID != nil && strings.TrimSpace(*owner.ParentID) != "" && !owners[*owner.ParentID] {
+			return true
+		}
+	}
+	return false
+}
+
+func completeAnomalySourceCoverage(ledger AgenticFactLedger, complete map[string]bool) bool {
+	if len(ledger.Sessions) == 0 || ledger.HasExternalParentReference() {
+		return false
+	}
+	for _, owner := range ledger.Sessions {
+		if !complete[owner.ID] {
+			return false
+		}
+		if owner.ParentID != nil && strings.TrimSpace(*owner.ParentID) != "" && !complete[*owner.ParentID] {
+			return false
+		}
+	}
+	return true
 }
 
 // RetainUnrecordedCategories preserves recorded optional evidence when a fresh

@@ -77,7 +77,7 @@ func runGenerate(args []string) {
 		os.Exit(1)
 	}
 	admissionCtx, admissionCancel := context.WithTimeout(context.Background(), 2*time.Second)
-	admission, admissionErr := adaptersconfig.AcquireCaptureAdmission(admissionCtx, project)
+	admission, admissionErr := adaptersconfig.AcquireGenerationAdmission(admissionCtx, project)
 	defer admissionCancel()
 	if admissionErr != nil {
 		if errors.Is(admissionErr, adaptersconfig.ErrConfigNotFound) {
@@ -94,13 +94,20 @@ func runGenerate(args []string) {
 			}
 		}
 	}()
-	policy, policyErr := admission.ResolveCapture(*captureDirFlag)
+	policy, policyErr := admission.ResolveGenerationCapture(*captureDirFlag)
+	if *autoFlag {
+		policy, policyErr = admission.ResolveCapture(*captureDirFlag)
+	}
 	if policyErr != nil {
 		if errors.Is(policyErr, adaptersconfig.ErrConfigNotFound) {
 			fmt.Fprintln(os.Stderr, "Project configuration not found. Please run 'agentic-lens init' to initialize the project.")
 		} else {
 			fmt.Fprintln(os.Stderr, policyErr)
 		}
+		os.Exit(1)
+	}
+	if *autoFlag && !policy.Enabled {
+		fmt.Fprintln(os.Stderr, "Automatic publication disabled by selected local policy")
 		os.Exit(1)
 	}
 	resolvedState, stateErr := capture.ProjectState(policy.StateDir, project)
@@ -337,7 +344,7 @@ func runGenerate(args []string) {
 	var freshSessions []domain.SessionFact
 	var sourceEvents domain.SourceEvents
 	generationPolicy := projCfg.Generation.Metrics
-	captureResult, captureErr := reconcileCaptureGenerationAt(project, *captureDirFlag, activeTicketID, snapshotCutoff, generationPolicy)
+	captureResult, captureErr := reconcileCaptureGenerationAtWithPolicy(project, *captureDirFlag, activeTicketID, snapshotCutoff, policy, generationPolicy)
 	if captureErr != nil {
 		fmt.Fprintf(os.Stderr, "Error reconciling capture registry; publication not completed: %v\n", captureErr)
 		os.Exit(1)
@@ -675,7 +682,7 @@ func runGenerate(args []string) {
 		if !generationPolicy.Anomalies {
 			fmt.Printf("Anomaly analysis is disabled for %s by generation.metrics.anomalies=false.\n", tid)
 		} else {
-			printAnomalyDiagnostics(tid, metricsLedger.Anomalies, metricsLedger.Facts.UnrecordedAnomalyScopes())
+			printLedgerAnomalyDiagnostics(tid, metricsLedger.Anomalies, metricsLedger.Facts)
 		}
 	}
 
@@ -1229,6 +1236,22 @@ func formatAnomalyListSummary(anomalies []domain.Anomaly) string {
 	return strings.Join(parts, ", ")
 }
 
+func printLedgerAnomalyDiagnostics(ticketID string, anomalies []domain.Anomaly, facts domain.AgenticFactLedger) {
+	if !facts.HasExternalParentReference() {
+		printAnomalyDiagnostics(ticketID, anomalies, facts.UnrecordedAnomalyScopes())
+		return
+	}
+	fmt.Printf("Parent/group anomaly context outside ticket %s is partial; recorded summaries remain available.\n", ticketID)
+	if count := facts.UnrecordedAnomalyScopes(); count > 0 {
+		fmt.Printf("Anomaly analysis has not been recorded for %d owner/group scope(s).\n", count)
+	}
+	if len(anomalies) == 0 {
+		fmt.Printf("No complete clean-session conclusion is available for ticket %s.\n", ticketID)
+		return
+	}
+	printAnomalyDiagnostics(ticketID, anomalies)
+}
+
 func printAnomalyDiagnostics(ticketID string, anomalies []domain.Anomaly, unavailableSessions ...int) {
 	if len(unavailableSessions) > 0 && unavailableSessions[0] > 0 {
 		fmt.Printf("Anomaly analysis was not recorded for %d owner/group scope(s) in %s; complete source-backed refresh is required.\n", unavailableSessions[0], ticketID)
@@ -1284,10 +1307,15 @@ func runInit(args []string) {
 	projectNameFlag := initFlags.String("project-name", "", "Human-readable name of the project (required)")
 	selectedVersionFlag := initFlags.String("agenticlens-version", domain.GetBuildInfo().Version, "Exact shared release pin (required for development/unknown native builds)")
 	workspacesFlag := initFlags.String("workspaces", "workspaces", "Directory where ticket artifacts and session telemetry ledgers are stored")
-	dbPathFlag := initFlags.String("db-path", "~/.local/share/opencode/opencode.db", "Path to local OpenCode SQLite database file")
+	dbPathFlag := initFlags.String("db-path", "", "Path to local OpenCode SQLite database file")
 	srcFoldersFlag := initFlags.String("src-folders", "", "Comma-separated list of monitored source code directories (required, e.g. web,backend)")
 	ticketPrefixesFlag := initFlags.String("ticket-prefixes", "", "Comma-separated list of ticket prefix identifiers (required, e.g. AL,GEN,PO)")
 	outputFlag := initFlags.String("output", ".agenticlens-config.yaml", "Destination path for generated configuration file")
+	localOnlyFlag := initFlags.Bool("local-only", false, "Fill missing explicit base-local choices while preserving existing valid values")
+	localStateFlag := initFlags.String("state-dir", "", "Explicit capture state directory for local setup")
+	captureEnabledFlag := initFlags.String("capture-enabled", "", "Explicit true or false for a new machine-local capture policy (recommended: true)")
+	telemetrySourceFlag := initFlags.String("source", "", "Explicit machine-local source: codex or opencode")
+	codexHomeFlag := initFlags.String("codex-home", "", "Explicit Codex source home for a new local policy")
 	forceFlag := initFlags.Bool("force", false, "Overwrite existing configuration file without prompting")
 	completeScaffoldFlag := initFlags.Bool("complete-scaffold", false, "Complete only the exact owned bootstrap scaffold for an explicit release; preserve existing local settings")
 	updateCaptureFlag := initFlags.Bool("update-capture-config", false, "Insert a missing capture state setting in an existing config without reinitializing it")
@@ -1304,6 +1332,38 @@ func runInit(args []string) {
 		os.Exit(1)
 	}
 
+	if *localOnlyFlag {
+		localData, err := adaptersconfig.InitialLocalYAML(".", *captureEnabledFlag, *telemetrySourceFlag, *codexHomeFlag, *dbPathFlag, *localStateFlag)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Error:", err)
+			os.Exit(1)
+		}
+		if *dryRunFlag {
+			fmt.Print(string(localData))
+			return
+		}
+		localPath := ".agenticlens-config.local.yaml"
+		if before, err := os.ReadFile(localPath); err == nil {
+			if bytes.Equal(before, localData) {
+				fmt.Println("Existing valid local choices retained.")
+				return
+			}
+			if err := adaptersconfig.WriteCaptureConfigUpdate(localPath, adaptersconfig.CaptureConfigUpdate{Original: before, Data: localData, Changed: true}); err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				os.Exit(1)
+			}
+		} else if errors.Is(err, os.ErrNotExist) {
+			if err := writeConfigPair(localPath, localData, "", nil, false); err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				os.Exit(1)
+			}
+		} else {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		fmt.Println("Local configuration ready; existing valid choices retained.")
+		return
+	}
 	if *updateCaptureFlag {
 		invalidFlag := ""
 		initFlags.Visit(func(value *flag.Flag) {
@@ -1334,6 +1394,10 @@ func runInit(args []string) {
 		os.Exit(1)
 	}
 
+	if err := adaptersconfig.CheckBaseSetup("."); err != nil {
+		fmt.Fprintln(os.Stderr, "Error:", err)
+		os.Exit(1)
+	}
 	projectName := strings.TrimSpace(*projectNameFlag)
 	if projectName == "" {
 		fmt.Fprintln(os.Stderr, "Error: missing required flag --project-name")
@@ -1396,7 +1460,16 @@ func runInit(args []string) {
 		fmt.Fprintf(os.Stderr, "Error generating configuration: %v\n", err)
 		os.Exit(1)
 	}
-	localYAML := []byte("# Machine-local telemetry source settings. Do not commit this file.\ntelemetry:\n  default_source: opencode\n  sources:\n    opencode:\n      database_path: ~/.local/share/opencode/opencode.db\n    codex:\n      home: ~/.codex\n")
+	localYAML, localSetupErr := adaptersconfig.InitialLocalYAML(".", *captureEnabledFlag, *telemetrySourceFlag, *codexHomeFlag, *dbPathFlag, *localStateFlag)
+	if localSetupErr != nil {
+		fmt.Fprintln(os.Stderr, "Error:", localSetupErr)
+		os.Exit(1)
+	}
+
+	if existing, e := os.ReadFile(".agenticlens-config.local.yaml"); e == nil && !bytes.Equal(existing, localYAML) {
+		fmt.Fprintln(os.Stderr, "Error: existing local configuration is incomplete; run init --local-only with the explicit missing choices first. Existing shared/local configuration preserved.")
+		os.Exit(1)
+	}
 	outputPath := strings.TrimSpace(*outputFlag)
 	if outputPath == "" {
 		outputPath = ".agenticlens-config.yaml"
@@ -1404,6 +1477,12 @@ func runInit(args []string) {
 	localPath := ".agenticlens-config.local.yaml"
 	var ownedScaffold []byte
 	preserveLocal := false
+	if _, err := os.Lstat(localPath); err == nil {
+		preserveLocal = true
+	} else if !errors.Is(err, os.ErrNotExist) {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 	if *completeScaffoldFlag {
 		ownedScaffold, err = os.ReadFile(outputPath)
 		if err == nil {
@@ -1641,6 +1720,10 @@ func runVersion(args []string) {
 }
 
 func main() {
+	if len(os.Args) == 3 && os.Args[1] == "engine" && os.Args[2] == "protocol" {
+		fmt.Println("1")
+		return
+	}
 	if len(os.Args) > 1 {
 		arg := os.Args[1]
 		if arg == "help" || arg == "-h" || arg == "--help" || arg == "-help" {
@@ -1678,6 +1761,9 @@ func main() {
 		}
 
 		switch arg {
+		case "manager", "dispatch":
+			fmt.Fprintln(os.Stderr, "This executable is the AgenticLens engine; installation and routing belong to the agentic-lens manager.")
+			os.Exit(2)
 		case "capture":
 			runCapture(os.Args[2:])
 			return
@@ -1839,7 +1925,7 @@ func main() {
 		if targetLedger.TicketID != nil && *targetLedger.TicketID != "" {
 			tid = *targetLedger.TicketID
 		}
-		printAnomalyDiagnostics(tid, targetLedger.Anomalies, targetLedger.Facts.UnrecordedAnomalyScopes())
+		printLedgerAnomalyDiagnostics(tid, targetLedger.Anomalies, targetLedger.Facts)
 		return
 	}
 

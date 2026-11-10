@@ -55,3 +55,11 @@ Source: the user instructed "run only Luna reviewers" during corrected-candidate
 ## Final integration and review outcome
 
 Corrected source candidate `7ff311313542c2997f1aa495118739090028c9fd9c7b9a37a69fbe21f070bb43` is committed at `a18d29cddd003c39dd33be6e0014fa5e1d8a685f`. Fetch/merge found main already current; no source changed, preserving review evidence. Four Luna-only re-reviews passed. Integrated `make` and a standalone source-binary HTTP asset test without Node passed. SUMMARY.md owns actual commands/results and limits; REVIEW_SUMMARY.json retains all four canonical findings and discovery tuples. Consolidated approval is final; only telemetry verification and artifact/PR publication follow.
+
+## Main refresh: 2026-11-10
+
+Source: the user requested `$agentic-lens-dev merge main into branch`. This is routine integration within the accepted AL-69 scope, not a new iteration or approval boundary. Initial worktree was clean at `2c151b814e5312ea2b084723930a027a8e6cbd90`; main advanced to `583c678de2f0a5d2f5aec472e11ad02003bb684e` with AL-79 native capture and manager/engine separation. PR134 remains open.
+
+The coder resolved seven conflicts by preserving both accepted behaviors: external-parent completeness and explicit-rate-policy guards are combined, shared-only history remains accessible, malformed selected local policy remains rejected, and native/Windows fixtures retain upstream paths with explicit shared rate settings. The new formatter's four exact external-parent disclosures are positively recognized by legacy summary ownership; a real formatter/writer regression failed before this compatibility correction and passed after. The tester owns combined-guard and selected-local/shared-rate regressions. Prior unchanged AL-69 approvals remain valid only with a diff/dependency rationale; affected behavior/data/architecture/test integration checks use Luna only per the user's persistent override.
+
+Build/test commands must use main's canonical manager/engine targets. The source engine contains embedded assets and never dispatches; the manager remains separate. Parent owns merge commit, full `make`, final telemetry refresh preserving existing22 source sessions, and push/link of the existing PR. No PR merge is authorized.

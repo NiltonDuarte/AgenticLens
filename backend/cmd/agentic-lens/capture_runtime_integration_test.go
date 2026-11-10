@@ -19,8 +19,8 @@ import (
 func TestCaptureVerifyNativeExchangeBelongsToCurrentInstallationAndSelector(t *testing.T) {
 	f := newCaptureGenerationFixture(t)
 	path := f.write(t, 23)
-	local := fmt.Sprintf("telemetry:\n  capture:\n    enabled: false\n    state_dir: %q\n", f.state)
-	if err := os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte(local), 0600); err != nil {
+	local := fmt.Sprintf("telemetry:\n  capture:\n    enabled: true\n    state_dir: %q\n", f.state)
+	if err := writeCaptureFixtureLocal(t, f, []byte(local)); err != nil {
 		t.Fatal(err)
 	}
 	if out, err := captureCLI(t, f.project, "", "install", "--repo", f.project, "--source", "codex", "--store", f.store, "--state-dir", f.state); err != nil {
@@ -41,6 +41,13 @@ func TestCaptureVerifyNativeExchangeBelongsToCurrentInstallationAndSelector(t *t
 	if h := verify("root", f.store); h.State != "verification_pending" || h.CallbackObserved {
 		t.Fatalf("installation alone established callback health: %+v", h)
 	}
+	lease, err := capture.AcquireWorker(f.coordination(t))
+	if err != nil || lease == nil {
+		t.Fatalf("fixture worker serialization: %v", err)
+	}
+	defer lease.Close()
+	completion := captureWorkerCompletion(t, f.coordination(t))
+	t.Cleanup(func() { captureCleanupWorkers(t, completion) })
 	payload, err := json.Marshal(capture.HookInput{SessionID: "root", Event: "SessionStart", TranscriptPath: path})
 	if err != nil {
 		t.Fatal(err)
@@ -56,7 +63,7 @@ func TestCaptureVerifyNativeExchangeBelongsToCurrentInstallationAndSelector(t *t
 	if err := json.Unmarshal(request, &registration); err != nil || registration.Request == "" {
 		t.Fatalf("exact binding request unavailable: %v %s", err, request)
 	}
-	if out, err := captureCLI(t, f.project, "", "bind", "--repo", f.project, "--source", "codex", "--store", f.store, "--state-dir", f.state, "--session-id", "root", "--ticket-id", "TEST-100", "--request", registration.Request); err != nil {
+	if out, err := captureCLI(t, f.project, "", "bind", "--repo", f.project, "--source", "codex", "--store", f.store, "--state-dir", f.state, "--session-id", "root", "--ticket-id", "TEST-100", "--ticket-title", "Current exchange", "--ticket-type", "feat", "--request", registration.Request); err != nil {
 		t.Fatalf("explicit binding: %v %s", err, out)
 	}
 	if h := verify("root", f.store); h.State == "verified" || h.PublicationAccepted {
@@ -70,6 +77,11 @@ func TestCaptureVerifyNativeExchangeBelongsToCurrentInstallationAndSelector(t *t
 		if h := verify(selection.session, selection.store); h.State == "verified" || h.CallbackObserved {
 			t.Fatalf("unrelated selector inherited another session's health: %+v", h)
 		}
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := completion(ctx); err != nil {
+		t.Fatalf("fixture workers did not exit under serialization: %v", err)
 	}
 	manifest := filepath.Join(f.coordination(t), "install-codex.json")
 	var current map[string]json.RawMessage
@@ -87,9 +99,7 @@ func TestCaptureVerifyNativeExchangeBelongsToCurrentInstallationAndSelector(t *t
 	if err := os.WriteFile(manifest, body, 0600); err != nil {
 		t.Fatal(err)
 	}
-	if out, err := captureCLI(t, f.project, "", "request", "--repo", f.project, "--source", "codex", "--store", f.store, "--state-dir", f.state, "--session-id", "root"); err != nil {
-		t.Fatalf("request after installation change: %v %s", err, out)
-	}
+
 	if h := verify("root", f.store); h.State == "verified" || h.CallbackObserved {
 		t.Fatalf("new installation reused an old callback/source/publication chain: %+v", h)
 	}
@@ -112,7 +122,7 @@ func TestCaptureVerifyNativeExchangeBelongsToCurrentInstallationAndSelector(t *t
 	if out, err := captureCLI(t, f.project, "", check...); err != nil || !bytes.Contains(out, []byte("Owned capture installation is missing, edited or stale")) {
 		t.Fatalf("installation drift control was not actionable: %v %s", err, out)
 	}
-	if err := os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte(local+"    commit_warning: false\n"), 0600); err != nil {
+	if err := writeCaptureFixtureLocal(t, f, []byte(local+"    commit_warning: false\n")); err != nil {
 		t.Fatal(err)
 	}
 	if out, err := captureCLI(t, f.project, "", check...); err != nil || len(out) != 0 {
@@ -317,7 +327,7 @@ func TestCaptureNativeGitAdvisoryKeepsActualWorktreeHealthIsolated(t *testing.T)
 	writeLocal := func(f captureGenerationFixture, warning bool) {
 		t.Helper()
 		body := fmt.Sprintf("telemetry:\n  capture:\n    enabled: false\n    state_dir: %q\n    commit_warning: %t\n", base, warning)
-		if err := os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte(body), 0600); err != nil {
+		if err := writeCaptureFixtureLocal(t, f, []byte(body)); err != nil {
 			t.Fatal(err)
 		}
 	}

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
@@ -2587,23 +2588,59 @@ func TestLedgerFileReadsOwnedOptionalSkillTaskCollections(t *testing.T) {
 }
 
 func TestScanWorkspacesRejectsInvalidStateConfiguration(t *testing.T) {
-	root := t.TempDir()
-	workspaces := filepath.Join(root, "workspaces")
-	if err := os.Mkdir(workspaces, 0700); err != nil {
-		t.Fatal(err)
-	}
-	invalid := []byte("project_name: Example\nticket:\n  prefixes: [AL]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n")
-	path := filepath.Join(root, ".agenticlens-config.yaml")
-	if err := os.WriteFile(path, invalid, 0600); err != nil {
-		t.Fatal(err)
-	}
-	report := adapters.ScanWorkspaces(workspaces)
-	if !strings.Contains(report.FatalError, "telemetry.capture.state_dir") {
-		t.Fatalf("invalid configured state silently ignored: %+v", report)
-	}
-	actual, err := os.ReadFile(path)
-	if err != nil || !bytes.Equal(actual, invalid) {
-		t.Fatalf("scan repaired config without authorization: %v", err)
+	for _, malformedLocal := range []bool{false, true} {
+		name := "shared-only history needs no machine state"
+		if malformedLocal {
+			name = "malformed selected local state is rejected"
+		}
+		t.Run(name, func(t *testing.T) {
+			root := t.TempDir()
+			workspaces := filepath.Join(root, "workspaces")
+			ticketDir := filepath.Join(workspaces, "AL-1")
+			if err := os.MkdirAll(ticketDir, 0700); err != nil {
+				t.Fatal(err)
+			}
+			shared := []byte("project_name: Example\nticket:\n  prefixes: [AL]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n")
+			sharedPath := filepath.Join(root, ".agenticlens-config.yaml")
+			if err := os.WriteFile(sharedPath, shared, 0600); err != nil {
+				t.Fatal(err)
+			}
+			localPath := filepath.Join(root, ".agenticlens-config.local.yaml")
+			local := []byte("telemetry:\n  capture:\n    enabled: false\n    state_dir: []\n")
+			if malformedLocal {
+				if err := os.WriteFile(localPath, local, 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			ledgerPath := filepath.Join(ticketDir, "agentic_metrics.json")
+			ledger := []byte(`{"schema_version":6,"ticket_id":"AL-1","sessions":[{"id":"remote","source":"codex","user":"fixture","invocations":[],"tools":[]}]}`)
+			if err := os.WriteFile(ledgerPath, ledger, 0600); err != nil {
+				t.Fatal(err)
+			}
+			report := adapters.ScanWorkspaces(workspaces)
+			if malformedLocal {
+				if !strings.Contains(report.FatalError, "telemetry.capture.state_dir") || len(report.Ledgers) != 0 {
+					t.Fatalf("malformed selected local state silently ignored: %+v", report)
+				}
+				actual, err := os.ReadFile(localPath)
+				if err != nil || !bytes.Equal(actual, local) {
+					t.Fatalf("scan repaired local config without authorization: %v", err)
+				}
+			} else {
+				if report.FatalError != "" || len(report.Errors) != 0 || len(report.Ledgers) != 1 || len(report.Ledgers[0].Facts.Sessions) != 1 || report.Ledgers[0].Facts.Sessions[0].ID != "remote" {
+					t.Fatalf("shared-only history acquired a machine-state prerequisite: %+v", report)
+				}
+				if _, err := os.Stat(localPath); !errors.Is(err, os.ErrNotExist) {
+					t.Fatalf("scan created local configuration: %v", err)
+				}
+			}
+			for path, expected := range map[string][]byte{sharedPath: shared, ledgerPath: ledger} {
+				actual, err := os.ReadFile(path)
+				if err != nil || !bytes.Equal(actual, expected) {
+					t.Fatalf("scan changed %s: %v", path, err)
+				}
+			}
+		})
 	}
 }
 
@@ -2742,5 +2779,56 @@ func TestLegacySummaryRefusesAmbiguousSplitGeneratedSections(t *testing.T) {
 	after, readErr := os.ReadFile(path)
 	if readErr != nil || string(after) != original {
 		t.Fatalf("refused update changed evidence: %v %s", readErr, after)
+	}
+}
+
+func TestLegacySummaryMigratesExternalParentFormatterOutput(t *testing.T) {
+	for _, recorded := range []bool{false, true} {
+		t.Run(fmt.Sprintf("recorded=%t", recorded), func(t *testing.T) {
+			parent := "external-parent"
+			facts := domain.AgenticFactLedger{Sessions: []domain.SessionFact{{ID: "child", ParentID: &parent, Source: domain.SourceCodex}}}
+			if recorded {
+				facts.Anomalies = []domain.Anomaly{}
+				facts.Sessions[0].Anomalies = []domain.Anomaly{}
+			}
+			cfg := domain.DefaultProjectConfig()
+			cfg.AnomalyThresholds.ErrorRateMinCalls = 5
+			cfg.AnomalyThresholds.ErrorRateThreshold = .35
+			cfg.AnomalyThresholds.ErrorRateCriticalThreshold = .70
+			facts.Code.SDLCIterations = 999
+			legacy := adapters.FormatMarkdownMetricsTable(domain.DeriveMetricsLedger(facts, cfg))
+			if !strings.Contains(legacy, "parent/group") && !strings.Contains(legacy, "Parent/group") {
+				t.Fatalf("fixture missed external-parent disclosure: %s", legacy)
+			}
+			facts.Code.SDLCIterations = 2
+			updatedMetrics := adapters.FormatMarkdownMetricsTable(domain.DeriveMetricsLedger(facts, cfg))
+			evidence := "## Verification\nPreserve authored external-parent evidence.\n"
+			path := filepath.Join(t.TempDir(), "SUMMARY.md")
+			if err := os.WriteFile(path, []byte("# Summary\n\n"+legacy+"\n"+evidence), 0600); err != nil {
+				t.Fatal(err)
+			}
+			if err := adapters.UpdateSummaryFile(path, updatedMetrics); err != nil {
+				t.Fatalf("recognized formatter output could not migrate: %v", err)
+			}
+			first, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.HasSuffix(first, []byte(evidence)) || bytes.Contains(first, []byte("Life Cycle Iterations:** 999")) {
+				t.Fatalf("legacy replacement lost evidence or retained stale values: %s", first)
+			}
+			for _, heading := range []string{"### Workflow Efficiency", "### Anomalies & Health Flags", "### Agentic Execution Metrics"} {
+				if strings.Count(string(first), heading) != 1 {
+					t.Fatalf("legacy replacement duplicated %s: %s", heading, first)
+				}
+			}
+			if err := adapters.UpdateSummaryFile(path, updatedMetrics); err != nil {
+				t.Fatal(err)
+			}
+			second, err := os.ReadFile(path)
+			if err != nil || !bytes.Equal(first, second) {
+				t.Fatalf("repeat changed managed metrics/evidence: %v", err)
+			}
+		})
 	}
 }

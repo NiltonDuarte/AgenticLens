@@ -213,9 +213,13 @@ func (dto AgenticFactLedgerDTO) Validate() error {
 			if *session.ParentID != strings.TrimSpace(*session.ParentID) {
 				return fmt.Errorf("sessions[%d].parent_id must not have leading or trailing whitespace", i)
 			}
-			if !seen[*session.ParentID] {
-				return fmt.Errorf("sessions[%d].parent_id %q does not identify a session", i, *session.ParentID)
+			if *session.ParentID == "" {
+				return fmt.Errorf("sessions[%d].parent_id cannot be blank", i)
 			}
+			// ParentID is source relationship evidence, not an owned occurrence. A
+			// source-proven parent may belong to another ticket or be unavailable on
+			// this machine; retaining the child does not import that parent's facts.
+
 		}
 		for j, tool := range session.Tools {
 			if strings.TrimSpace(tool.Name) == "" {

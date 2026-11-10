@@ -19,6 +19,9 @@ func captureProjectConfig(t *testing.T, project, name string) {
 	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), []byte(data), 0600); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.local.yaml"), []byte("telemetry:\n  capture:\n    enabled: true\n    state_dir: .agenticlens-capture\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestProjectStateAliasesIsolationAndCopiedOwnership(t *testing.T) {

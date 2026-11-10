@@ -73,7 +73,7 @@ func InstallCheck(ctx context.Context, options CheckInstallOptions) (CheckInstal
 	}
 	wrapper := options.Wrapper
 	if wrapper == "" {
-		wrapper, err = adaptersconfig.UserWrapperPath()
+		wrapper, err = adaptersconfig.UserManagerPath()
 		if err != nil {
 			return result, fmt.Errorf("resolve stable user wrapper: %w", err)
 		}
@@ -140,14 +140,14 @@ func ownedCheckHook(body []byte) bool {
 }
 
 func renderCheckHook(wrapper string) []byte {
-	command := WrapperCommand(wrapper, "--al-offline", "--al-project")
+	command := []string{wrapper, "--al-offline", "--al-project"}
 	quoted := make([]string, len(command))
 	for i, arg := range command {
 		quoted[i] = QuoteArgument(filepath.ToSlash(arg))
 	}
-	// POSIX wrappers exec the selected native. Git for Windows uses a distinct
-	// MSYS surrogate, so its verified WinPID owns the entire PowerShell/native
-	// tree. Killing just PowerShell could leave inherited stderr handles open.
+	// POSIX managers exec the selected engine. Git for Windows uses a distinct
+	// MSYS surrogate, so its verified WinPID owns the entire manager/engine tree.
+	// Killing just the manager could leave inherited stderr handles open.
 	// Watchdog descriptors are detached so sleep cannot delay EOF.
 	// dd bounds bytes before awk bounds lines, even for malformed native output.
 	return []byte(checkHookHeader + base64.StdEncoding.EncodeToString([]byte(wrapper)) + `
