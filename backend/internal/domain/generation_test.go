@@ -84,3 +84,48 @@ func TestSourceAnomalyPreparationRequiresRootAndChildCoverage(t *testing.T) {
 		t.Fatal("partial source coverage erased recorded root/group history")
 	}
 }
+
+func TestExternalParentAnomalyCoverageRemainsPartial(t *testing.T) {
+	parent := "external-parent"
+	known := Anomaly{RuleID: RuleToolRetryStreak, Severity: SeverityWarning}
+	for _, history := range []string{"fresh", "recorded-empty", "recorded-warning"} {
+		t.Run(history, func(t *testing.T) {
+			original := AgenticFactLedger{Sessions: []SessionFact{{ID: "child", ParentID: &parent, Source: SourceCodex, Invocations: []InvocationFact{{Role: "coder", Tokens: InvocationTokens{Input: 31}}}}}}
+			switch history {
+			case "recorded-empty":
+				original.Anomalies = []Anomaly{}
+				original.Sessions[0].Anomalies = []Anomaly{}
+			case "recorded-warning":
+				original.Anomalies = []Anomaly{known}
+				original.Sessions[0].Anomalies = []Anomaly{known}
+			}
+			unavailable, err := PersistSourceAnomalySummaries(original, SourceEvents{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(unavailable, original) {
+				t.Fatal("unavailable source erased recorded external-parent history")
+			}
+			fresh, err := PersistSourceAnomalySummaries(original, SourceEvents{CompleteSessionIDs: []string{"child"}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(fresh.Anomalies, original.Anomalies) || fresh.Sessions[0].Anomalies == nil {
+				t.Fatalf("complete child replaced unavailable group history or lost independent owner analysis: %+v", fresh)
+			}
+			unrecordedScopes := 0
+			if history == "fresh" {
+				unrecordedScopes = 1
+			}
+			if fresh.CompleteAnomalyCoverage() || fresh.UnrecordedAnomalyScopes() != unrecordedScopes || fresh.UnrecordedAnomalySessions() != 0 {
+				t.Fatalf("external-parent context fabricated completeness or discarded recorded coverage: %+v", fresh)
+			}
+			if len(fresh.Sessions) != 1 || fresh.Sessions[0].ParentID == nil || *fresh.Sessions[0].ParentID != parent || !reflect.DeepEqual(fresh.Sessions[0].Invocations, original.Sessions[0].Invocations) {
+				t.Fatal("partial group analysis changed ancestry or owner metrics")
+			}
+			if history == "fresh" && (original.Anomalies != nil || original.Sessions[0].Anomalies != nil) || history == "recorded-warning" && (len(original.Anomalies) != 1 || len(original.Sessions[0].Anomalies) != 1) {
+				t.Fatal("analysis mutated caller-owned source facts")
+			}
+		})
+	}
+}

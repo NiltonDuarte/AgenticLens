@@ -35,7 +35,7 @@ func TestCaptureLaterAgentChannelReportsBoundPublicationFailure(t *testing.T) {
 		t.Fatalf("installed fixture: %v %s", err, out)
 	}
 	local := fmt.Sprintf("telemetry:\n  capture:\n    enabled: true\n    state_dir: %q\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 1000\n    pass_timeout_ms: 500\n", f.state)
-	if err = os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte(local), 0600); err != nil {
+	if err = writeCaptureFixtureLocal(t, f, []byte(local)); err != nil {
 		t.Fatal(err)
 	}
 	args := []string{"--repo", f.project, "--state-dir", f.state, "--source", "codex", "--store", f.store}
@@ -153,10 +153,12 @@ func TestCaptureLaterAgentChannelReportsBoundPublicationFailure(t *testing.T) {
 	}
 	prepareCaptureOwner(t, f, "other", "TEST-200", 9)
 	assertQuiet(query("other", f.store))
-	if err = os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte(strings.Replace(local, "enabled: true", "enabled: false", 1)), 0600); err != nil {
+	if err = writeCaptureFixtureLocal(t, f, []byte(strings.Replace(local, "enabled: true", "enabled: false", 1))); err != nil {
 		t.Fatal(err)
 	}
-	assertQuiet(query("root", f.store))
+	if out := query("root", f.store); strings.TrimSpace(string(out)) != "" {
+		t.Fatalf("disabled request did not stop before capture IO: %s", out)
+	}
 	disabledInput, err := json.Marshal(capture.HookInput{SessionID: "root", Event: "UserPromptSubmit", TranscriptPath: path})
 	if err != nil {
 		t.Fatal(err)
@@ -166,7 +168,7 @@ func TestCaptureLaterAgentChannelReportsBoundPublicationFailure(t *testing.T) {
 		t.Fatalf("disabled callback: %v %s", err, disabledOut)
 	}
 	assertQuiet(disabledOut)
-	if err = os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte(local), 0600); err != nil {
+	if err = writeCaptureFixtureLocal(t, f, []byte(local)); err != nil {
 		t.Fatal(err)
 	}
 	if err = os.Remove(summary); err != nil {

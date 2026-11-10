@@ -1,6 +1,6 @@
 # AgenticLens System Architecture and Internals
 
-AgenticLens is engineered to provide deterministic observability and telemetry aggregation for autonomous multi-agent software engineering workflows. The platform operates on the Functional Core, Imperative Shell (FCIS) pattern, distributing as a self-contained, single Go executable that embeds a strict TypeScript single-page application (SPA).
+AgenticLens is engineered to provide deterministic observability and telemetry aggregation for autonomous multi-agent software engineering workflows. The platform operates on the Functional Core, Imperative Shell (FCIS) pattern, distributing a native manager for installation and engine selection alongside a self-contained telemetry engine that embeds a strict TypeScript single-page application (SPA).
 
 ---
 
@@ -66,7 +66,11 @@ The compatibility evidence window is OpenCode v1.19.5 and npm `@opencode/cli` v2
 - **Migration Runner (`adapters/migration/`)**: Implements atomic file persistence, backup creation, and execution of domain migration plans.
 - **Web & HTTP Delivery (`adapters/web/`)**: Configures standard library HTTP multiplexers, REST endpoints, Server-Sent Events (SSE) for live streaming, and static asset serving from embedded files.
 
-### 2.3 CLI & Command Routing (`backend/cmd/agentic-lens`)
+### 2.3 Native Manager and Engine CLI
+
+`backend/cmd/agentic-lens-manager` builds the public `agentic-lens` command. It owns exact artifact installation, its own explicit self-update and offline project engine selection. It never imports the engine CLI or embedded web assets. Manager identity uses `--manager-version`; ordinary `version` reports the selected engine. Shared `agenticlens.version` pins the engine, while `binary_dir` can prefer a valid host development engine.
+
+`backend/cmd/agentic-lens` builds `agentic-lens-engine`. It executes utility commands directly, with no dispatch mode or automatic selection. Native Codex hooks call the manager, which forwards the exact callback to the selected engine's `capture user-hook` handler. That handler validates source/session context before collection; workers retain immutable engine bytes through normal exit.
 
 The command-line interface provides unified execution pathways for local observation and automation:
 
@@ -101,17 +105,17 @@ The anomaly detection engine is implemented as a deterministic, pure-functional 
 
 ### 3.2 CLI Inspection and Reporting
 
-Inspect anomalies via the CLI across one or more workspaces:
+Inspect anomalies through the source-built engine across one or more workspaces. These POSIX examples use the current host engine directly. The installed `agentic-lens` manager accepts the same utility commands and selects the configured project engine.
 
 ```bash
 # List all workspaces with anomaly counts
-./bin/agentic-lens --workspaces alspaces --list
+./bin/agentic-lens-engine-$(go env GOHOSTOS)-$(go env GOHOSTARCH) --workspaces alspaces --list
 
 # View detailed anomaly diagnosis table for a specific ticket
-./bin/agentic-lens --workspaces alspaces --ticket-id AL-15 --anomalies
+./bin/agentic-lens-engine-$(go env GOHOSTOS)-$(go env GOHOSTARCH) --workspaces alspaces --ticket-id AL-15 --anomalies
 
 # Append or update markdown metrics and anomalies table in SUMMARY.md
-./bin/agentic-lens --workspaces alspaces --ticket-id AL-15 --append alspaces/AL-15/SUMMARY.md
+./bin/agentic-lens-engine-$(go env GOHOSTOS)-$(go env GOHOSTARCH) --workspaces alspaces --ticket-id AL-15 --append alspaces/AL-15/SUMMARY.md
 ```
 
 ---
@@ -136,13 +140,13 @@ The telemetry backfill engine provides batch reconciliation across workspaces, r
 
 ```bash
 # Dry-run preview of Git code facts recomputation across all workspaces
-./bin/agentic-lens backfill --source opencode --workspaces alspaces --recompute-git --dry-run
+./bin/agentic-lens-engine-$(go env GOHOSTOS)-$(go env GOHOSTARCH) backfill --source opencode --workspaces alspaces --recompute-git --dry-run
 
 # Full batch telemetry backfill with schema migration and summary table updates
-./bin/agentic-lens backfill --source opencode --workspaces alspaces --recompute-git --recompute-db --migrate-schema --update-summaries
+./bin/agentic-lens-engine-$(go env GOHOSTOS)-$(go env GOHOSTARCH) backfill --source opencode --workspaces alspaces --recompute-git --recompute-db --migrate-schema --update-summaries
 
 # Single ticket targeted backfill with Git facts recomputation and schema migration
-./bin/agentic-lens backfill --source opencode --workspaces alspaces --ticket-id AL-15 --recompute-git --migrate-schema --update-summaries
+./bin/agentic-lens-engine-$(go env GOHOSTOS)-$(go env GOHOSTARCH) backfill --source opencode --workspaces alspaces --ticket-id AL-15 --recompute-git --migrate-schema --update-summaries
 ```
 
 ---
@@ -172,13 +176,13 @@ The migration engine provides stepwise upgrades for `agentic_metrics.json` ledge
 
 ```bash
 # Dry-run preview of pending schema migrations across all workspaces
-./bin/agentic-lens migrate --workspaces alspaces --dry-run
+./bin/agentic-lens-engine-$(go env GOHOSTOS)-$(go env GOHOSTARCH) migrate --workspaces alspaces --dry-run
 
 # Batch upgrade historical workspaces with backup file generation
-./bin/agentic-lens migrate --workspaces alspaces --backup
+./bin/agentic-lens-engine-$(go env GOHOSTOS)-$(go env GOHOSTARCH) migrate --workspaces alspaces --backup
 
 # Migrate single ticket workspace with backup creation and summary table regeneration
-./bin/agentic-lens migrate --workspaces alspaces --ticket-id AL-15 --backup --update-summaries
+./bin/agentic-lens-engine-$(go env GOHOSTOS)-$(go env GOHOSTARCH) migrate --workspaces alspaces --ticket-id AL-15 --backup --update-summaries
 ```
 
 ---

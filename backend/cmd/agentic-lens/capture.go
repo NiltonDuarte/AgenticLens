@@ -61,9 +61,12 @@ func captureCommand(args []string, input io.Reader, output io.Writer) error {
 }
 func captureCommandAction(args []string, input io.Reader, output io.Writer) (returnErr error) {
 	if len(args) == 0 {
-		return errors.New("usage: capture install|install-check|uninstall-check|status|diagnostics|inspect-state|verify|check|receive|request|bind|reconcile|relocate-state|disable|uninstall|protocol")
+		return errors.New("usage: capture install-user|uninstall-user|install|install-check|uninstall-check|status|diagnostics|inspect-state|verify|check|receive|request|bind|reconcile|relocate-state|disable|uninstall|protocol")
 	}
 	command := args[0]
+	if command == "user-hook" {
+		return nativeCodexUserHook(input, output, os.Stderr)
+	}
 	if command == "relocate-state" {
 		return relocateCaptureCommand(args[1:], output)
 	}
@@ -81,12 +84,15 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 	state := flags.String("state-dir", "", "Capture state override (configured telemetry.capture.state_dir is required)")
 	repo := flags.String("repo", ".", "Repository root for additive local hook installation")
 	binary := flags.String("binary", "", "Selected native release binary (defaults to current executable; workers retain this executable)")
-	wrapper := flags.String("wrapper", "", "Owned common version-pinned wrapper for installed integrations and agent binding feedback")
+	wrapper := flags.String("wrapper", "", "Installed native manager for integrations and agent binding feedback")
+	entrypoint := flags.String("entrypoint", "", "Installed native PATH command (defaults to the user's agentic-lens command)")
 	sessionID := flags.String("session-id", "", "Exact harness session identity")
 	ticketTitle := flags.String("ticket-title", "", "Explicit human-readable ticket title for automatic publication")
 	ticketType := flags.String("ticket-type", "", "Explicit conventional ticket type")
 	ticket := flags.String("ticket-id", "", "Explicit ticket binding or reconciliation target")
 	request := flags.String("request", "", "Exact binding request token delivered by hook feedback")
+	userLevel := flags.Bool("user-level", false, "Native user-level handoff; binding has no project wrapper dependency")
+	legacyRepository := flags.String("migrate-legacy-repo", "", "Explicit original checkout whose unchanged owned Codex project hooks should migrate to user hooks")
 	dryRun := flags.Bool("dry-run", false, "Show owned installation changes without writing")
 	byteBudget := flags.Int64("max-source-bytes", capture.DefaultByteBudget, "Source or diagnostic payload bytes per bounded pass")
 	sessionBudget := flags.Int("max-sessions", capture.DefaultSessionBudget, "Session work budget per reconciliation or inspection pass")
@@ -115,6 +121,21 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 	}
 	ctx, cancel := context.WithTimeout(callerCtx, *timeout)
 	defer cancel()
+	if command == "install-user" || command == "uninstall-user" {
+		home, err := capture.EffectiveCodexHome()
+		if err != nil {
+			return err
+		}
+		entry, err := adaptersconfig.ResolveEntrypoint(*repo)
+		if err != nil {
+			return err
+		}
+		result, err := capture.InstallUserCodex(ctx, capture.UserInstallOptions{Repository: entry.Project, Entrypoint: *entrypoint, LegacyRepository: *legacyRepository, Home: home, DryRun: *dryRun, Remove: command == "uninstall-user"})
+		if err != nil {
+			return err
+		}
+		return json.NewEncoder(output).Encode(result)
+	}
 	project, err := adaptersconfig.ProjectRoot(*repo)
 	if err != nil {
 		return err
@@ -150,6 +171,13 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 	if err != nil {
 		return err
 	}
+	if !policy.Enabled && (command == "receive" || command == "request" || command == "worker") {
+		if command == "receive" {
+			_, err := io.WriteString(output, "{}\n")
+			return err
+		}
+		return nil
+	}
 	// A valid explicit local disable is authoritative before inspecting state
 	// or installation health. Diagnostics for other commands remain visible.
 	if command == "check" && !policy.CommitWarning {
@@ -173,11 +201,7 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 	if err != nil {
 		return err
 	}
-	if !inspection && !repair {
-		if err := checkCaptureInstallation(project, absState, *state != ""); err != nil {
-			return err
-		}
-	}
+
 	if *source != "" && *source != "codex" && *source != "opencode" {
 		return errors.New("capture source must be codex or opencode")
 	}
@@ -329,7 +353,12 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 			if e != nil {
 				return e
 			}
-			response, e := capture.ReceiveCodex(ctx, s, value, absoluteStore, native, absState, *wrapper)
+			var response capture.HookOutput
+			if *userLevel {
+				response, e = capture.ReceiveCodexUser(ctx, s, value, absoluteStore, native, absState)
+			} else {
+				response, e = capture.ReceiveCodex(ctx, s, value, absoluteStore, native, absState, *wrapper)
+			}
 			handoffAccepted = response.Registered
 			if e != nil {
 				return e
@@ -458,6 +487,14 @@ func reconcileCaptureGeneration(project, dir, ticket string, generationPolicies 
 }
 
 func reconcileCaptureGenerationAt(project, dir, ticket string, cutoff time.Time, generationPolicies ...domain.GenerationPolicy) (*capture.ReconcileResult, error) {
+	policy, err := adaptersconfig.ResolveGenerationCapture(project, "")
+	if err != nil {
+		return nil, err
+	}
+	return reconcileCaptureGenerationAtWithPolicy(project, dir, ticket, cutoff, policy, generationPolicies...)
+}
+
+func reconcileCaptureGenerationAtWithPolicy(project, dir, ticket string, cutoff time.Time, policy domain.CaptureConfig, generationPolicies ...domain.GenerationPolicy) (*capture.ReconcileResult, error) {
 	if _, err := os.Stat(filepath.Join(capture.RegistryPathDirectory(dir), "registry.db")); errors.Is(err, os.ErrNotExist) {
 		return nil, nil
 	} else if err != nil {
@@ -470,10 +507,6 @@ func reconcileCaptureGenerationAt(project, dir, ticket string, cutoff time.Time,
 	defer s.Close()
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	policy, err := adaptersconfig.ResolveCapture(project, "")
-	if err != nil {
-		return nil, err
-	}
 	result, err := s.ReconcileAt(ctx, ticket, git.GetGitUser(), policy.MaxSessions, policy.MaxSourceBytes, cutoff, generationPolicies...)
 	if err != nil {
 		return nil, err
@@ -667,6 +700,9 @@ func checkCaptureInstallation(project, selected string, explicit bool) error {
 // Healthy configured state retains local installation-manifest validation even
 // when both its discovery anchor and native integration have disappeared.
 func checkCaptureInstallationScope(project, selected string, explicit, recoverCoordinates bool) error {
+	if _, err := adaptersconfig.SelectConfig(project); err == nil {
+		return nil
+	}
 	selectedLocation, err := capture.PreviewStateLocation(selected, project)
 	if err != nil {
 		return err
@@ -675,7 +711,7 @@ func checkCaptureInstallationScope(project, selected string, explicit, recoverCo
 	if selectedLocation.Provisional {
 		selected = selectedLocation.RegistryDirectory
 	}
-	policy, err := adaptersconfig.ResolveCapture(project, "")
+	policy, err := adaptersconfig.ResolveGenerationCapture(project, "")
 	if err != nil {
 		return err
 	}

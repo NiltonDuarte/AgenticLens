@@ -53,8 +53,6 @@ FILES=(
     agentic-lens-setup/SKILL.md
     agentic-lens-setup/scripts/install.sh
     agentic-lens-setup/scripts/download.sh
-    agentic-lens-setup/scripts/agentic-lens-wrapper.sh
-    agentic-lens-setup/scripts/agentic-lens-wrapper.ps1
     agentic-lens-setup/scripts/download.ps1
     agentic-lens-operator/SKILL.md
     agentic-lens-operator/references/cli.md

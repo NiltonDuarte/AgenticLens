@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import platform
 import shutil
+import stat
 import subprocess
 import time
 import unittest
@@ -39,8 +40,9 @@ class WindowsDistributionTest(unittest.TestCase):
         code = "$p = [IO.Path]::Combine([IO.Path]::GetTempPath(), '" + name + "'); [IO.Directory]::CreateDirectory($p) | Out-Null; [Console]::WriteLine($p)"
         created = subprocess.check_output([POWERSHELL, '-NoLogo', '-NoProfile', '-NonInteractive', '-Command', code], text=True).strip()
         self.root = local(created)
-        self.addCleanup(shutil.rmtree, self.root)
+        self.addCleanup(self.remove_fixture_tree)
         self.repo = self.root / 'project A'; self.repo.mkdir()
+        self.home = self.root / 'isolated native home'; self.home.mkdir()
         self.cache = self.root / 'native cache ü'; self.dest = self.root / 'user PATH bin'
         self.scripts = self.root / 'setup scripts'; self.scripts.mkdir()
         for filename in ['download.ps1', 'agentic-lens-wrapper.ps1']:
@@ -51,6 +53,31 @@ class WindowsDistributionTest(unittest.TestCase):
         self.probe = self.root / 'native release.exe'
         shutil.copyfile(build_probe(self.pin, 'windows', 'amd64'), self.probe)
         self.env = {key: value for key, value in os.environ.items() if not key.startswith(('AL_PROBE_', 'AGENTIC_LENS_'))}
+        self.env.update(HOME=win(self.home), USERPROFILE=win(self.home), CODEX_HOME=win(self.home / '.codex'),
+                        XDG_CONFIG_HOME=win(self.home / '.config'), XDG_CACHE_HOME=win(self.home / '.cache'),
+                        XDG_STATE_HOME=win(self.home / '.state'))
+
+    def remove_fixture_tree(self):
+        root = self.root.resolve()
+
+        def remove_readonly(function, name, exception):
+            error = exception[1]
+            candidate = Path(name)
+            if not isinstance(error, PermissionError) or candidate.is_symlink() or not candidate.is_file():
+                raise error
+            if not candidate.resolve().is_relative_to(root):
+                raise error
+            metadata = candidate.stat()
+            readonly = getattr(metadata, 'st_file_attributes', 0) & getattr(stat, 'FILE_ATTRIBUTE_READONLY', 1)
+            if not readonly and metadata.st_mode & stat.S_IWRITE:
+                raise error
+            # Retained fixture executables are intentionally read-only. Unlock
+            # only this proven owned file and retry once; a loaded image or any
+            # other permission failure remains a visible test error.
+            candidate.chmod(metadata.st_mode | stat.S_IWRITE)
+            function(name)
+
+        shutil.rmtree(self.root, onerror=remove_readonly)
 
     def write_config(self, form=None):
         self.config.write_text(f"agenticlens: # authority\n  version: {form or self.pin} # exact release\n  install_root: '{win(self.cache)}'\n", encoding='utf-8')
@@ -61,7 +88,7 @@ class WindowsDistributionTest(unittest.TestCase):
     def call(self, script, args, env=None, input='payload\n'):
         environment = dict(env or self.env)
         if not IS_WINDOWS:
-            forwarded = [key for key in environment if key.startswith(('AL_PROBE_', 'AGENTIC_LENS_'))]
+            forwarded = [key for key in environment if key.startswith(('AL_PROBE_', 'AGENTIC_LENS_')) or key in ('HOME', 'USERPROFILE', 'CODEX_HOME', 'XDG_CONFIG_HOME', 'XDG_CACHE_HOME', 'XDG_STATE_HOME')]
             environment['WSLENV'] = ':'.join(filter(None, [environment.get('WSLENV', ''), *forwarded]))
         # Text-mode pipes translate LF to CRLF in native Windows Python before
         # the wrapper receives stdin. Send exact UTF-8 bytes and decode only output.
@@ -85,7 +112,22 @@ class WindowsDistributionTest(unittest.TestCase):
         application = self.root / 'actual application.exe'
         shutil.copyfile(build_app(self.pin, 'windows', 'amd64'), application)
         shutil.copyfile(application, self.probe)
-        self.config.write_text(f"project_name: Fixture\nagenticlens:\n  version: {self.pin}\n  install_root: '{win(self.cache)}'\nticket:\n  prefixes: [FX]\nworkspaces:\n  dir: workspaces\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\ntelemetry:\n  capture:\n    state_dir: '{win(self.root / 'capture state')}'\n", encoding='utf-8')
+        self.config.write_text(f"project_name: Fixture\nagenticlens:\n  version: {self.pin}\n  install_root: '{win(self.cache)}'\nticket:\n  prefixes: [FX]\nworkspaces:\n  dir: workspaces\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n", encoding='utf-8')
+        self.write_local_policy()
+        return application
+
+    def write_local_policy(self):
+        local_config = self.repo / '.agenticlens-config.local.yaml'
+        local_config.write_text(f"agenticlens:\n  install_root: '{win(self.cache)}'\ntelemetry:\n  capture:\n    enabled: false\n    state_dir: '{win(self.root / 'capture state')}'\n  default_source: codex\n  sources:\n    codex:\n      home: '{win(self.home / '.codex')}'\n", encoding='utf-8')
+        return local_config
+
+    def install_native_reporting_probe(self):
+        application = self.use_actual_application()
+        self.succeeds(self.install('-Force'))
+        development = self.root / 'compatible development probe'; development.mkdir()
+        candidate = development / self.native().name
+        shutil.copyfile(build_probe(self.pin, 'windows', 'amd64'), candidate)
+        self.config.write_text(self.config.read_text().replace('agenticlens:\n', f"agenticlens:\n  binary_dir: '{win(development)}'\n"), encoding='utf-8')
         return application
 
     def test_same_pin_second_project_and_force_retain_native_file_identity(self):
@@ -106,7 +148,7 @@ class WindowsDistributionTest(unittest.TestCase):
         self.config.unlink()
         # Windows UserProfile is independent of HOME: pin the native cache locally.
         selected_local = self.repo / '.agenticlens-config.local.yaml'
-        selected_local.write_text(f"# preserve selected local\nagenticlens:\n  install_root: '{win(self.cache)}'\n", encoding='utf-8')
+        self.write_local_policy()
         first = self.succeeds(self.install('-InitConfig', '-Version', self.pin))
         printed = next(line.split(': ', 1)[1] for line in first.stdout.splitlines() if line.startswith('Complete unchanged owned scaffold: '))
         command = printed.replace('--project-name NAME', '--project-name Selected').replace('--src-folders DIRS', '--src-folders src').replace('--ticket-prefixes PREFIXES', '--ticket-prefixes FX')
@@ -116,7 +158,7 @@ class WindowsDistributionTest(unittest.TestCase):
         before = caller_shared.read_bytes(), caller_local.read_bytes(), selected_local.read_bytes()
         quote = lambda value: "'" + value.replace("'", "''") + "'"
         execute = 'Set-Location -LiteralPath ' + quote(win(caller)) + '; ' + command
-        execute += '; if ((Get-Location).ProviderPath -ne ' + quote(win(caller)) + ") { throw 'Caller location changed' }"
+        execute += '; if ((Get-Location).ProviderPath -ne ' + quote(win(caller)) + ") { throw 'Caller location changed' }; exit $LASTEXITCODE"
         result = subprocess.run([POWERSHELL, '-NoLogo', '-NoProfile', '-NonInteractive', '-Command', execute],
                                 env=self.env, input='', text=True, encoding='utf-8', capture_output=True, timeout=20)
         self.succeeds(result)
@@ -128,9 +170,14 @@ class WindowsDistributionTest(unittest.TestCase):
         store = self.root / 'source store'; store.mkdir()
         installed = self.succeeds(self.install('-CaptureSource', 'codex', '-CaptureStore', win(store)))
         decoder = json.JSONDecoder(); result, _ = decoder.raw_decode(installed.stdout)
-        self.assertEqual(len(result['manifest']['groups']), 6)
-        self.assertGreater(len(installed.stdout.encode('utf-8')), 8192)
-        hooks = self.repo / '.codex/hooks.json'; previous_hooks = hooks.read_bytes()
+        self.assertEqual(result['manifest']['source'], 'codex')
+        hooks = self.home / '.codex/hooks.json'; previous_hooks = hooks.read_bytes()
+        self.assertEqual(len(json.loads(previous_hooks)['hooks']), 6)
+        self.assertFalse((self.repo / '.codex/hooks.json').exists())
+        dispatcher = self.cache / 'dispatcher.exe'; admitted = dispatcher.stat()
+        self.succeeds(self.launch('capture', 'install-user', '--repo', win(self.repo), '--binary', win(self.native())))
+        self.assertTrue(os.path.samestat(admitted, dispatcher.stat()), 'unchanged install rewrote running dispatcher')
+        self.assertEqual(hooks.read_bytes(), previous_hooks)
         # Real application apply finishes before the proxy injects result failure.
         shutil.copyfile(build_probe(self.pin, 'windows', 'amd64'), self.probe)
         pid_file = self.root / 'owned-apply.pid'
@@ -141,7 +188,7 @@ class WindowsDistributionTest(unittest.TestCase):
                                       env=dict(environment, AL_PROBE_CAPTURE_RESULT=mode))
                 if mode == 'both-streams':
                     self.succeeds(result)
-                    self.assertGreater(len(result.stdout.encode('utf-8')), 8192)
+                    self.assertGreater(len(result.stderr.encode('utf-8')), 8192)
                 else:
                     self.assertNotEqual(result.returncode, 0)
                     self.assertIn('validated native/wrapper retained', result.stderr)
@@ -155,6 +202,142 @@ class WindowsDistributionTest(unittest.TestCase):
                     stopped = subprocess.run([POWERSHELL, '-NoLogo', '-NoProfile', '-NonInteractive', '-Command',
                                               f'if (Get-Process -Id {pid} -ErrorAction SilentlyContinue) {{ exit 1 }}; exit 0'], capture_output=True)
                     self.assertEqual(stopped.returncode, 0, 'owned capture apply process survived timeout')
+
+    def test_native_user_upgrade_keeps_receipt_consistent_and_preserves_foreign_hooks(self):
+        self.use_actual_application()
+        home = self.home / '.codex'; home.mkdir(parents=True)
+        hooks = home / 'hooks.json'
+        foreign = {'hooks': [{'type': 'command', 'command': 'echo owner hook'}]}
+        hooks.write_text(json.dumps({'hooks': {'SessionStart': [foreign]}}))
+        self.succeeds(self.install('-CaptureSource', 'codex', '-CaptureStore', win(home)))
+        first_native = self.native(); first_bytes = first_native.read_bytes()
+        self.pin = 'v9.8.8'
+        self.use_actual_application()
+        self.succeeds(self.install('-CaptureSource', 'codex', '-CaptureStore', win(home)))
+        self.assertEqual(first_native.read_bytes(), first_bytes)
+        self.assertEqual(self.succeeds(self.launch('version', '--short')).stdout.strip(), self.pin)
+        dispatcher = self.cache / 'dispatcher.exe'
+        receipt = home / 'agenticlens-user-installation.json'
+        authority = self.cache / 'dispatcher-installation.json'
+        self.assertEqual(json.loads(authority.read_text())['hash'], digest(dispatcher))
+        self.assertEqual((self.cache / 'dispatcher.exe.sha256').read_text().strip(), digest(dispatcher))
+        active = local(json.loads(authority.read_text())['active_native'])
+        self.assertEqual(json.loads(authority.read_text())['active_hash'], digest(active))
+        self.assertEqual(active.read_bytes(), self.native().read_bytes())
+        self.assertIn(foreign, json.loads(hooks.read_text())['hooks']['SessionStart'])
+        before_hooks = hooks.read_bytes(); before_receipt = receipt.read_bytes()
+        before_dispatcher = dispatcher.read_bytes()
+        dispatcher.write_bytes(before_dispatcher + b'owner customization')
+        refused = self.install('-CaptureSource', 'codex', '-CaptureStore', win(home))
+        self.assertNotEqual(refused.returncode, 0)
+        self.assertEqual(dispatcher.read_bytes(), before_dispatcher + b'owner customization')
+        self.assertEqual(receipt.read_bytes(), before_receipt)
+        self.assertEqual(hooks.read_bytes(), before_hooks)
+        dispatcher.write_bytes(before_dispatcher)
+        active_bytes = active.read_bytes(); authority_bytes = authority.read_bytes()
+        active_mode = active.stat().st_mode
+        active.chmod(active_mode | stat.S_IWRITE)
+        try:
+            active.write_bytes(active_bytes + b'owner active-build customization')
+            refused = self.install('-CaptureSource', 'codex', '-CaptureStore', win(home))
+            self.assertNotEqual(refused.returncode, 0)
+            self.assertEqual(active.read_bytes(), active_bytes + b'owner active-build customization')
+            self.assertEqual(authority.read_bytes(), authority_bytes)
+            self.assertEqual(hooks.read_bytes(), before_hooks)
+            self.assertEqual(receipt.read_bytes(), before_receipt)
+        finally:
+            active.write_bytes(active_bytes)
+            active.chmod(active_mode)
+        # Repair of a missing stable launcher writes the selected B bytes, so
+        # both stable and active identities must remain usable and coherent.
+        dispatcher.unlink()
+        self.succeeds(self.install('-CaptureSource', 'codex', '-CaptureStore', win(home)))
+        repaired = json.loads(authority.read_text())
+        self.assertEqual(repaired['hash'], digest(dispatcher))
+        self.assertEqual((self.cache / 'dispatcher.exe.sha256').read_text().strip(), digest(dispatcher))
+        self.assertEqual(json.loads(receipt.read_text())['dispatcher_hash'], digest(dispatcher))
+        self.assertEqual(repaired['active_hash'], digest(local(repaired['active_native'])))
+        self.assertEqual(dispatcher.read_bytes(), self.native().read_bytes())
+        self.assertEqual(self.succeeds(self.launch('version', '--short')).stdout.strip(), self.pin)
+        self.assertEqual(hooks.read_bytes(), before_hooks)
+        self.succeeds(self.launch('capture', 'uninstall-user', '--repo', win(self.repo)))
+        self.assertEqual(json.loads(hooks.read_text())['hooks'], {'SessionStart': [foreign]})
+        self.assertFalse(json.loads(receipt.read_text()).get('groups'))
+        self.assertEqual(json.loads(authority.read_text())['hash'], digest(dispatcher))
+
+    def test_rendered_native_user_binding_command_executes_in_powershell(self):
+        renamed = self.root / "project O'Brien"
+        self.repo.rename(renamed); self.repo = renamed
+        self.config = self.repo / '.agenticlens-config.yaml'
+        self.use_actual_application()
+        old_cache = win(self.cache)
+        self.cache = self.root / "native cache O'Brien"
+        local_config = self.repo / '.agenticlens-config.local.yaml'
+        cache_scalar = '"' + win(self.cache).replace('\\', '/') + '"'
+        for configured in [self.config, local_config]:
+            contents = configured.read_text()
+            old_scalar = "'" + old_cache + "'"
+            self.assertIn(old_scalar, contents)
+            configured.write_text(contents.replace(old_scalar, cache_scalar), encoding='utf-8')
+        self.succeeds(self.install())
+        selected = self.native()
+        (self.repo / 'src').mkdir()
+        enabled = local_config.read_text().replace('enabled: false', 'enabled: true')
+        enabled = enabled.replace('    state_dir:', '    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 100\n    max_lifetime_ms: 1000\n    pass_timeout_ms: 100\n    state_dir:')
+        local_config.write_text(enabled, encoding='utf-8')
+        state = self.root / 'capture state'
+        quote = lambda value: "'" + value.replace("'", "''") + "'"
+        cleanup = self.root / 'stop owned fixture workers.ps1'
+        prefix = win(self.root) + '\\'
+        cleanup.write_text("$ErrorActionPreference = 'Stop'\nGet-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -and $_.ExecutablePath.StartsWith(" + quote(prefix) + ", [StringComparison]::OrdinalIgnoreCase) } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }\n", encoding='utf-8-sig')
+        self.addCleanup(lambda: self.succeeds(self.call(cleanup, [], input='')))
+        receiver = self.root / 'invoke native receiver.ps1'
+        receiver.write_text('& ' + quote(win(selected)) + ' @args\nexit $LASTEXITCODE\n', encoding='utf-8-sig')
+        source = self.home / '.codex'; (source / 'sessions').mkdir(parents=True, exist_ok=True)
+        session = 'rendered-bind-root'
+        transcript = source / 'sessions' / 'binding-root.jsonl'
+        transcript.write_text(json.dumps({'timestamp': '2026-01-01T00:00:00Z', 'type': 'session_meta',
+                                         'payload': {'id': session, 'cwd': win(self.repo), 'timestamp': '2026-01-01T00:00:00Z'}}) + '\n', encoding='utf-8')
+        arguments = ['dispatch', 'codex-hook']
+        payload = {'session_id': session, 'cwd': win(self.repo), 'hook_event_name': 'SessionStart', 'transcript_path': win(transcript)}
+        received = self.succeeds(self.call(receiver, arguments, input=json.dumps(payload)))
+        context = json.loads(received.stdout)['hookSpecificOutput']['additionalContext']
+        command = context.split('respond now by executing: ', 1)[1].split('. If no ticket', 1)[0]
+        title = "Rendered O'Brien binding"
+        command = command.replace('<EXPLICIT_TICKET_ID>', quote('FX-901')).replace('<EXPLICIT_TICKET_TITLE>', quote(title))
+        command = command.replace('[--ticket-type <EXPLICIT_TYPE>]', "--ticket-type 'test'")
+        rendered_project = context.split(' Use --repo ', 1)[1].split(' on that binding command', 1)[0]
+        command += ' --repo ' + rendered_project
+        binding = self.root / 'execute rendered binding.ps1'
+        binding.write_text(command + '\nexit $LASTEXITCODE\n', encoding='utf-8-sig')
+        bound = self.succeeds(self.call(binding, [], input=''))
+        registration = json.loads(bound.stdout)
+        self.assertEqual(registration['ticket_id'], 'FX-901')
+        self.assertEqual(registration['ticket_title'], title)
+        self.assertEqual(registration['identity']['session_id'], session)
+        payload['hook_event_name'] = 'SessionEnd'
+        self.succeeds(self.call(receiver, arguments, input=json.dumps(payload)))
+        local_config.write_text(enabled.replace('enabled: true', 'enabled: false'), encoding='utf-8')
+
+    def test_actual_native_dispatch_preserves_nested_cwd_relative_io_stdin_and_exit(self):
+        application = self.install_native_reporting_probe()
+        nested = self.repo / 'nested cwd'; nested.mkdir()
+        quote = lambda value: "'" + value.replace("'", "''") + "'"
+        driver = self.root / 'invoke from nested.ps1'
+        driver.write_text('Set-Location -LiteralPath ' + quote(win(nested)) + '\n& ' + quote(win(self.dest / 'agentic-lens.ps1')) + ' @args\nexit $LASTEXITCODE\n', encoding='utf-8-sig')
+        environment = dict(self.env, AL_PROBE_CAPTURE_APPLY=win(application), AL_PROBE_LOG='relative-result.json', AL_PROBE_EXIT='23')
+        relative_args = ['fixture-cwd', '', "O'Brien", 'embedded"quote', 'tail\\', '--session-id', '',
+                         '--json-output', 'relative/metrics.json', '--append', 'relative/SUMMARY.md']
+        for project_args in [[], ['--al-project', win(self.repo)]]:
+            for payload in ['native payload ü\n', 'first ü\nsecond\r\nthird\rlast', '']:
+                with self.subTest(project_args=project_args, payload=payload):
+                    result = self.call(driver, [*project_args, *relative_args], env=environment, input=payload)
+                    self.assertEqual(result.returncode, 23, result.stderr)
+                    expected = {'version': self.pin, 'args': relative_args, 'stdin': payload, 'cwd': win(nested)}
+                    self.assertEqual(json.loads(result.stdout), expected)
+                    self.assertEqual(json.loads((nested / 'relative-result.json').read_text(encoding='utf-8')), expected)
+                    self.assertFalse((self.repo / 'relative-result.json').exists())
+                    (nested / 'relative-result.json').unlink()
 
     def test_real_install_quote_argv_stdin_exit_and_local_overlay(self):
         result = self.succeeds(self.install())
@@ -195,18 +378,26 @@ class WindowsDistributionTest(unittest.TestCase):
     def test_failed_candidate_checksum_protocol_and_wrapper_edit_preserve_install(self):
         self.succeeds(self.install())
         before = self.native().read_bytes(); wrapper = self.dest / 'agentic-lens.ps1'; wrapper_before = wrapper.read_bytes()
-        original_probe = self.probe.read_bytes()
+        original_probe = self.probe
         for protocol in ['1', '2']:
             with self.subTest(protocol=protocol):
-                shutil.copyfile(build_probe(self.pin, 'windows', 'amd64', protocol=protocol), self.probe)
-                result = self.install('-Force')
-                self.probe.write_bytes(original_probe)
+                candidate = self.root / f'native protocol {protocol}.exe'
+                shutil.copyfile(build_probe(self.pin, 'windows', 'amd64', protocol=protocol), candidate)
+                self.probe = candidate
+                try:
+                    result = self.install('-Force')
+                finally:
+                    self.probe = original_probe
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn('required 3', result.stderr)
                 self.assertEqual(self.native().read_bytes(), before)
                 self.assertEqual(wrapper.read_bytes(), wrapper_before)
-        self.probe.write_bytes(b'not native')
-        self.assertNotEqual(self.install('-Force').returncode, 0)
+        invalid = self.root / 'invalid native input.bin'; invalid.write_bytes(b'not native')
+        self.probe = invalid
+        try:
+            self.assertNotEqual(self.install('-Force').returncode, 0)
+        finally:
+            self.probe = original_probe
         self.assertEqual(self.native().read_bytes(), before)
         wrapper.write_text('owner custom script\n')
         self.assertNotEqual(self.install('-Force').returncode, 0)
@@ -319,18 +510,24 @@ class WindowsDistributionTest(unittest.TestCase):
     def test_offline_advisory_timeout_kills_actual_native_child(self):
         self.succeeds(self.install())
         pid_file = self.root / 'native.pid'
-        started = time.monotonic()
-        result = self.launch('capture', 'check', '--repo', win(self.repo),
-                             env=dict(self.env, AL_PROBE_HANG='1', AL_PROBE_PID=win(pid_file)))
-        elapsed = time.monotonic() - started
-        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
-        self.assertIn('timed out', result.stderr)
-        self.assertLess(elapsed, 4)
-        pid = int(pid_file.read_text())
-        probe = subprocess.run([POWERSHELL, '-NoLogo', '-NoProfile', '-NonInteractive', '-Command',
-                                f'if (Get-Process -Id {pid} -ErrorAction SilentlyContinue) {{ exit 1 }}; exit 0'], capture_output=True)
-        self.assertEqual(probe.returncode, 0, 'native child survived wrapper timeout')
-        print(f'Windows native check PID {pid} terminated; wrapper returned {result.returncode} after {elapsed:.3f}s')
+        for adopted in [False, True]:
+            with self.subTest(native_dispatcher_adopted=adopted):
+                environment = dict(self.env, AL_PROBE_HANG='1', AL_PROBE_PID=win(pid_file))
+                if adopted:
+                    application = self.install_native_reporting_probe()
+                    environment['AL_PROBE_CAPTURE_APPLY'] = win(application)
+                started = time.monotonic()
+                result = self.launch('capture', 'check', '--repo', win(self.repo), env=environment)
+                elapsed = time.monotonic() - started
+                self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+                self.assertIn('timed out', result.stderr)
+                self.assertLess(elapsed, 4)
+                pid = int(pid_file.read_text())
+                probe = subprocess.run([POWERSHELL, '-NoLogo', '-NoProfile', '-NonInteractive', '-Command',
+                                        f'if (Get-Process -Id {pid} -ErrorAction SilentlyContinue) {{ exit 1 }}; exit 0'], capture_output=True)
+                self.assertEqual(probe.returncode, 0, 'native child survived wrapper timeout')
+                pid_file.unlink()
+                print(f'Windows native check PID {pid} terminated; wrapper returned {result.returncode} after {elapsed:.3f}s')
 
     def test_windows_junction_dotdot_selects_physical_project_pin(self):
         self.succeeds(self.install())

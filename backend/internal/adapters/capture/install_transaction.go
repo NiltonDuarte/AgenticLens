@@ -102,7 +102,7 @@ func currentInstallIdentity(ctx context.Context, options InstallOptions, repo, s
 		}
 		wrapper := options.Wrapper
 		if wrapper == "" {
-			wrapper, err = adaptersconfig.UserWrapperPath()
+			wrapper, err = adaptersconfig.UserManagerPath()
 			if err != nil {
 				return installIdentity{}, err
 			}
@@ -114,7 +114,7 @@ func currentInstallIdentity(ctx context.Context, options InstallOptions, repo, s
 		if wrapper != m.Wrapper {
 			return installIdentity{}, errors.New("pending installer wrapper differs from requested entrypoint")
 		}
-		content, err := readEntrypointFile(wrapper, 128*1024)
+		content, err := readEntrypointFile(wrapper, nativeEntrypointLimit)
 		if err != nil {
 			return installIdentity{}, err
 		}

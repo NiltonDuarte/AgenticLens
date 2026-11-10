@@ -187,7 +187,7 @@ func (s *Store) ReconcileAt(ctx context.Context, ticket, user string, sessionBud
 				continue
 			}
 			if r.TicketID != "" {
-				if r.TicketID != parent.TicketID {
+				if r.TicketID != parent.TicketID && r.Binding != "explicit_agent_response" && r.Binding != "explicit_manual_selection" {
 					r.State = domain.CaptureFailed
 					r.Detail = "Conflicting source-proven parent ticket binding"
 					registrations[i] = r

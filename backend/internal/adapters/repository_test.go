@@ -2581,22 +2581,58 @@ func TestLedgerFileReadsOwnedOptionalSkillTaskCollections(t *testing.T) {
 }
 
 func TestScanWorkspacesRejectsInvalidStateConfiguration(t *testing.T) {
-	root := t.TempDir()
-	workspaces := filepath.Join(root, "workspaces")
-	if err := os.Mkdir(workspaces, 0700); err != nil {
-		t.Fatal(err)
-	}
-	invalid := []byte("project_name: Example\nticket:\n  prefixes: [AL]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n")
-	path := filepath.Join(root, ".agenticlens-config.yaml")
-	if err := os.WriteFile(path, invalid, 0600); err != nil {
-		t.Fatal(err)
-	}
-	report := adapters.ScanWorkspaces(workspaces)
-	if !strings.Contains(report.FatalError, "telemetry.capture.state_dir") {
-		t.Fatalf("invalid configured state silently ignored: %+v", report)
-	}
-	actual, err := os.ReadFile(path)
-	if err != nil || !bytes.Equal(actual, invalid) {
-		t.Fatalf("scan repaired config without authorization: %v", err)
+	for _, malformedLocal := range []bool{false, true} {
+		name := "shared-only history needs no machine state"
+		if malformedLocal {
+			name = "malformed selected local state is rejected"
+		}
+		t.Run(name, func(t *testing.T) {
+			root := t.TempDir()
+			workspaces := filepath.Join(root, "workspaces")
+			ticketDir := filepath.Join(workspaces, "AL-1")
+			if err := os.MkdirAll(ticketDir, 0700); err != nil {
+				t.Fatal(err)
+			}
+			shared := []byte("project_name: Example\nticket:\n  prefixes: [AL]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n")
+			sharedPath := filepath.Join(root, ".agenticlens-config.yaml")
+			if err := os.WriteFile(sharedPath, shared, 0600); err != nil {
+				t.Fatal(err)
+			}
+			localPath := filepath.Join(root, ".agenticlens-config.local.yaml")
+			local := []byte("telemetry:\n  capture:\n    enabled: false\n    state_dir: []\n")
+			if malformedLocal {
+				if err := os.WriteFile(localPath, local, 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			ledgerPath := filepath.Join(ticketDir, "agentic_metrics.json")
+			ledger := []byte(`{"schema_version":6,"ticket_id":"AL-1","sessions":[{"id":"remote","source":"codex","user":"fixture","invocations":[],"tools":[]}]}`)
+			if err := os.WriteFile(ledgerPath, ledger, 0600); err != nil {
+				t.Fatal(err)
+			}
+			report := adapters.ScanWorkspaces(workspaces)
+			if malformedLocal {
+				if !strings.Contains(report.FatalError, "telemetry.capture.state_dir") || len(report.Ledgers) != 0 {
+					t.Fatalf("malformed selected local state silently ignored: %+v", report)
+				}
+				actual, err := os.ReadFile(localPath)
+				if err != nil || !bytes.Equal(actual, local) {
+					t.Fatalf("scan repaired local config without authorization: %v", err)
+				}
+			} else {
+				if report.FatalError != "" || len(report.Errors) != 0 || len(report.Ledgers) != 1 || len(report.Ledgers[0].Facts.Sessions) != 1 || report.Ledgers[0].Facts.Sessions[0].ID != "remote" {
+					t.Fatalf("shared-only history acquired a machine-state prerequisite: %+v", report)
+				}
+				if _, err := os.Stat(localPath); !errors.Is(err, os.ErrNotExist) {
+					t.Fatalf("scan created local configuration: %v", err)
+				}
+			}
+			for path, expected := range map[string][]byte{sharedPath: shared, ledgerPath: ledger} {
+				actual, err := os.ReadFile(path)
+				if err != nil || !bytes.Equal(actual, expected) {
+					t.Fatalf("scan changed %s: %v", path, err)
+				}
+			}
+		})
 	}
 }

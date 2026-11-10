@@ -119,9 +119,9 @@ Apply the [portable-ledger acceptance scenarios](docs/REGRESSION_PREVENTION.md#p
 
 ---
 
-## 5. Single Binary Distribution & Static Asset Bundling
+## 5. Native Manager, Engine & Static Asset Bundling
 
-AgenticLens deploys as a single, self-contained executable with the TypeScript web application bundled directly into the Go binary.
+AgenticLens distributes two native executables: a small `agentic-lens` manager for installation, updates and project engine selection, and `agentic-lens-engine` for telemetry, capture, analysis and the dashboard. The engine embeds the TypeScript web application. The manager never imports the engine CLI or embedded dashboard, and the engine never dispatches to another engine.
 
 ### Rules
 1. **Embedding Mandate (`embed.FS`)**:
@@ -132,9 +132,9 @@ AgenticLens deploys as a single, self-contained executable with the TypeScript w
    - Production / Standalone: Serves embedded static assets from `embed.FS` with client-side fallback routing for SPA navigation.
    - Local Development: Vite dev server runs with HMR and proxies API requests (`/api/*`) to the Go backend.
 3. **Build Sequence**:
-   - Production binary build sequence: `(cd web && npm run build)` followed by `(cd backend && go build -o ../bin/agentic-lens ./cmd/agentic-lens)`.
+   - Build the manager independently with `(cd backend && go build -o ../bin/agentic-lens ./cmd/agentic-lens-manager)`. Build the engine after `(cd web && npm run build)` with `(cd backend && go build -o ../bin/agentic-lens-engine ./cmd/agentic-lens)`. `make build` emits platform-stamped names for both artifacts.
    - The frontend build copies assets to `backend/internal/adapters/web/dist/`, the Go embed input. Verify that tree after frontend changes. Respect its Git tracking policy; do not add ignored build output.
-   - CI and container builds must compile the frontend first before invoking Go build.
+   - Engine CI/container builds compile the frontend before the engine; the manager builds without frontend assets.
 
 ---
 
@@ -178,5 +178,5 @@ Select cases from the [regression prevention checklist](docs/REGRESSION_PREVENTI
 ### Invariant Checks
 - Verify zero `any` in Go and TypeScript.
 - Verify zero emojis in code, UI, docstrings, and log messages.
-- Verify single binary self-contained execution without Node runtime dependency.
+- Verify manager/engine separation and self-contained engine execution without a Node runtime dependency.
 

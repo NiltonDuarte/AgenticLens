@@ -219,7 +219,7 @@ func TestCaptureAutomaticSharedStoreAndTicketStayInExactProjects(t *testing.T) {
 		t.Cleanup(func() {
 			defer func() {
 				// Stop future passes/handoffs even if a callback or assertion failed.
-				if err := os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte("telemetry:\n  capture:\n    enabled: false\n"), 0600); err != nil {
+				if err := writeCaptureFixtureLocal(t, f, []byte("telemetry:\n  capture:\n    enabled: false\n")); err != nil {
 					t.Error(err)
 				}
 				captureCleanupWorkers(t, completion)
@@ -297,7 +297,7 @@ func TestCaptureAutomaticSharedStoreAndTicketStayInExactProjects(t *testing.T) {
 
 func TestCaptureWorkerCompletionIncludesDelayedNativeStartup(t *testing.T) {
 	f := newCaptureGenerationFixture(t)
-	if err := os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte("telemetry:\n  capture:\n    enabled: false\n"), 0600); err != nil {
+	if err := writeCaptureFixtureLocal(t, f, []byte("telemetry:\n  capture:\n    enabled: true\n")); err != nil {
 		t.Fatal(err)
 	}
 	store, err := capture.OpenProject(f.state, f.project)
@@ -442,8 +442,8 @@ func TestCaptureDescendantOwnershipComesFromEachNativeSession(t *testing.T) {
 	}
 }
 
-func TestCaptureInstallerUsesSharedLocalAndExplicitStatePolicy(t *testing.T) {
-	for _, level := range []string{"shared", "local", "cli"} {
+func TestCaptureInstallerUsesLocalAndExplicitStatePolicy(t *testing.T) {
+	for _, level := range []string{"local", "cli"} {
 		t.Run(level, func(t *testing.T) {
 			f := newCaptureGenerationFixture(t)
 			config := filepath.Join(f.project, ".agenticlens-config.yaml")
@@ -460,7 +460,7 @@ func TestCaptureInstallerUsesSharedLocalAndExplicitStatePolicy(t *testing.T) {
 			want := "shared-state"
 			if level != "shared" {
 				want = "local-state"
-				if err := os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte("telemetry:\n  capture:\n    enabled: false\n    state_dir: local-state\n"), 0600); err != nil {
+				if err := writeCaptureFixtureLocal(t, f, []byte("telemetry:\n  capture:\n    enabled: false\n    state_dir: local-state\n")); err != nil {
 					t.Fatal(err)
 				}
 			}

@@ -68,6 +68,8 @@ func FormatMarkdownMetricsTableWithPolicy(ledger domain.AgenticMetricsLedger, po
 func formatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, policy *domain.GenerationPolicy, roleOrder ...[]string) string {
 	anomaliesEnabled := policy == nil || policy.Anomalies
 	incompleteAnalysis := !ledger.Facts.CompleteAnomalyCoverage()
+	externalParentContext := ledger.Facts.HasExternalParentReference()
+	unrecordedScopes := ledger.Facts.UnrecordedAnomalyScopes()
 	we := ledger.WorkflowEfficiency
 	cwh := we.ContextWindowHealth
 	totals := ledger.Totals
@@ -199,7 +201,14 @@ func formatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, policy *doma
 		lines[3] = fmt.Sprintf("- **Context Window Usage:** Root peak %s tokens (%s of %s reference ceiling, %d compactions) | Subagents peak %s (%s)", rootTokStr, rootPctStr, domain.FormatTokensK(effectiveCeiling), cwh.Compactions, subTokStr, subPeakRoleStr)
 		lines = append(lines, "Optional anomaly analysis: disabled by generation policy.")
 	} else if len(ledger.Anomalies) == 0 && incompleteAnalysis {
-		lines = append(lines, "- **Status:** Anomaly analysis is not recorded for the full ledger; no clean-session conclusion is available.")
+		if externalParentContext && unrecordedScopes == 0 {
+			lines = append(lines, "- **Status:** Recorded anomaly summaries are available, but parent/group context outside this ticket is partial; no complete clean-session conclusion is available.")
+		} else if externalParentContext {
+			lines = append(lines, "- **Status:** Parent/group anomaly coverage outside this ticket is incomplete; no clean-session conclusion is available.")
+		} else {
+			lines = append(lines, "- **Status:** Anomaly analysis is not recorded for the full ledger; no clean-session conclusion is available.")
+		}
+
 	} else if len(ledger.Anomalies) == 0 {
 		lines = append(lines, "- **Status:** No execution anomalies detected (clean session).")
 	} else {
@@ -234,7 +243,15 @@ func formatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, policy *doma
 
 	if anomaliesEnabled && incompleteAnalysis {
 		lines[3] = fmt.Sprintf("- **Context Window Usage:** Root peak %s tokens (%s of %s reference ceiling, %d compactions) | Subagents peak %s (%s)", rootTokStr, rootPctStr, domain.FormatTokensK(effectiveCeiling), cwh.Compactions, subTokStr, subPeakRoleStr)
-		lines = append(lines, "Anomaly analysis is not recorded for every required owner/group; recorded findings remain visible. A complete source-backed refresh is required for recovery.")
+		if externalParentContext {
+			if unrecordedScopes > 0 {
+				lines = append(lines, "Some owner/group scopes have no recorded analysis. Parent/group context outside this ticket remains incomplete; recorded findings remain visible.")
+			} else {
+				lines = append(lines, "Recorded anomaly summaries remain visible. Parent/group context outside this ticket is partial, so a complete group conclusion is unavailable.")
+			}
+		} else {
+			lines = append(lines, "Anomaly analysis is not recorded for every required owner/group; recorded findings remain visible. A complete source-backed refresh is required for recovery.")
+		}
 	}
 	lines = append(lines,
 		"",

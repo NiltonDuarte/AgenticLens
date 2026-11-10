@@ -48,6 +48,21 @@ func prepareCaptureInstall(t *testing.T, cwd string, args []string) []string {
 			t.Fatal(err)
 		}
 	}
+	local := filepath.Join(root, ".agenticlens-config.local.yaml")
+	if _, err := os.Lstat(local); os.IsNotExist(err) {
+		state := ".agenticlens-capture"
+		for i := 0; i+1 < len(args); i++ {
+			if args[i] == "--state-dir" {
+				state = args[i+1]
+			}
+		}
+		policy := fmt.Sprintf("telemetry:\n  capture:\n    enabled: true\n    state_dir: %q\n", state)
+		if err := os.WriteFile(local, []byte(policy), 0600); err != nil {
+			t.Fatal(err)
+		}
+	} else if err != nil {
+		t.Fatal(err)
+	}
 	entry, err := adaptersconfig.ResolveEntrypoint(root)
 	if err != nil {
 		t.Fatal(err)
@@ -74,8 +89,7 @@ func prepareCaptureInstall(t *testing.T, cwd string, args []string) []string {
 		t.Fatal(err)
 	}
 	wrapper := filepath.Join(entry.InstallRoot, "wrapper __BINARY__ __STATE__ __STORE__")
-	source := filepath.Join("..", "..", "..", "scripts", "agentic-lens-wrapper.sh")
-	wrapperBody, err := os.ReadFile(source)
+	wrapperBody, err := os.ReadFile(managerBinaryPath)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -962,6 +962,7 @@ func TestMigrationRunner_ValidatesCurrentBeforeUpToDateFastPath(t *testing.T) {
 		sessions      string
 		migration     string
 		preserveOnly  bool
+		validCurrent  bool
 		extraMember   string
 		expectedError string
 	}{
@@ -1029,9 +1030,9 @@ func TestMigrationRunner_ValidatesCurrentBeforeUpToDateFastPath(t *testing.T) {
 			sessions:      `[{"id":"s1","source":"opencode","user":"fixture","anomalies":[],"invocations":[],"tools":[{"name":"bash","calls":1,"errors":2}]}]`,
 		},
 		{
-			name:          "dangling session parent",
-			expectedError: `sessions[0].parent_id "missing" does not identify a session`,
-			sessions:      `[{"id":"s1","source":"opencode","user":"fixture","anomalies":[],"parent_id":"missing","invocations":[],"tools":[]}]`,
+			name:         "portable external session parent",
+			validCurrent: true,
+			sessions:     `[{"id":"s1","source":"opencode","user":"fixture","anomalies":[],"parent_id":"missing","invocations":[],"tools":[]}]`,
 		},
 		{
 			name:          "retired invocation parent reference",
@@ -1060,7 +1061,11 @@ func TestMigrationRunner_ValidatesCurrentBeforeUpToDateFastPath(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected runner error: %v", err)
 			}
-			if tc.preserveOnly {
+			if tc.validCurrent {
+				if report.UpToDate != 1 || report.Migrated != 0 || len(report.Errors) != 0 {
+					t.Fatalf("valid external parent was treated as malformed current history: %+v", report)
+				}
+			} else if tc.preserveOnly {
 				if report.Migrated != 0 {
 					t.Fatalf("unfinished migration metadata was cleaned: %+v", report)
 				}
@@ -1257,24 +1262,64 @@ func TestMigrationRunner_MissingWorkspacesDir(t *testing.T) {
 }
 
 func TestMigrationRunnerRejectsExistingInvalidStateConfigWithoutMutation(t *testing.T) {
-	ws := setupMigrationTestWorkspaces(t)
-	root := filepath.Dir(ws)
-	invalid := []byte("project_name: Example\nticket:\n  prefixes: [AL]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n")
-	if err := os.WriteFile(filepath.Join(root, ".agenticlens-config.yaml"), invalid, 0600); err != nil {
-		t.Fatal(err)
-	}
-	ledgerPath := filepath.Join(ws, "AL-1", "agentic_metrics.json")
-	before, err := os.ReadFile(ledgerPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{WorkspacesDir: ws, TargetVersion: domain.CurrentSchemaVersion})
-	if err == nil || !strings.Contains(err.Error(), "telemetry.capture.state_dir") || report != nil {
-		t.Fatalf("invalid target config fell back to caller config: %+v %v", report, err)
-	}
-	after, err := os.ReadFile(ledgerPath)
-	if err != nil || string(before) != string(after) {
-		t.Fatalf("rejected migration changed ledger: %v", err)
+	for _, malformedLocal := range []bool{false, true} {
+		name := "shared-only migration needs no machine state"
+		if malformedLocal {
+			name = "malformed selected local state is rejected"
+		}
+		t.Run(name, func(t *testing.T) {
+			ws := setupMigrationTestWorkspaces(t)
+			root := filepath.Dir(ws)
+			shared := []byte("project_name: Example\nticket:\n  prefixes: [AL]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n")
+			sharedPath := filepath.Join(root, ".agenticlens-config.yaml")
+			if err := os.WriteFile(sharedPath, shared, 0600); err != nil {
+				t.Fatal(err)
+			}
+			localPath := filepath.Join(root, ".agenticlens-config.local.yaml")
+			local := []byte("telemetry:\n  capture:\n    enabled: false\n    state_dir: []\n")
+			if malformedLocal {
+				if err := os.WriteFile(localPath, local, 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			ledgerPath := filepath.Join(ws, "AL-1", "agentic_metrics.json")
+			before, err := os.ReadFile(ledgerPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			report, runErr := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{WorkspacesDir: ws, TicketID: "AL-1", TargetVersion: domain.CurrentSchemaVersion})
+			after, err := os.ReadFile(ledgerPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if malformedLocal {
+				if runErr == nil || !strings.Contains(runErr.Error(), "telemetry.capture.state_dir") || report != nil {
+					t.Fatalf("malformed selected local config fell back to caller config: %+v %v", report, runErr)
+				}
+				if !bytes.Equal(before, after) {
+					t.Fatal("rejected migration changed ledger")
+				}
+				actual, err := os.ReadFile(localPath)
+				if err != nil || !bytes.Equal(actual, local) {
+					t.Fatalf("rejected migration changed local config: %v", err)
+				}
+			} else {
+				if runErr != nil || report == nil || report.Scanned != 1 || report.Migrated != 1 || len(report.Errors) != 0 {
+					t.Fatalf("shared-only migration acquired a machine-state prerequisite: %+v %v", report, runErr)
+				}
+				var migrated adapters.AgenticFactLedgerDTO
+				if err := json.Unmarshal(after, &migrated); err != nil || migrated.SchemaVersion == nil || *migrated.SchemaVersion != domain.CurrentSchemaVersion || bytes.Equal(before, after) {
+					t.Fatalf("migration did not publish current schema: %v", err)
+				}
+				if _, err := os.Stat(localPath); !errors.Is(err, os.ErrNotExist) {
+					t.Fatalf("migration created local configuration: %v", err)
+				}
+			}
+			actual, err := os.ReadFile(sharedPath)
+			if err != nil || !bytes.Equal(actual, shared) {
+				t.Fatalf("migration changed shared config: %v", err)
+			}
+		})
 	}
 }
 

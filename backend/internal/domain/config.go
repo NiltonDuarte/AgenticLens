@@ -25,6 +25,7 @@ type ProjectConfig struct {
 
 // EntrypointConfig separates shared release authority from machine-local installation paths.
 type EntrypointConfig struct {
+	BinaryDir   string `json:"binary_dir,omitempty" yaml:"binary_dir,omitempty"`
 	Version     string `json:"version" yaml:"version"`
 	InstallRoot string `json:"install_root,omitempty" yaml:"install_root,omitempty"`
 }

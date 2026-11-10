@@ -102,9 +102,12 @@ class OrchestrationFixture:
         boundary = backend / 'internal/boundary'
         boundary.mkdir()
         (boundary / 'boundary_test.go').write_text('package boundary\nimport "testing"\nfunc TestBoundary(t *testing.T) {}\n')
-        application = backend / 'cmd/agentic-lens'
-        application.mkdir(parents=True)
-        (application / 'main.go').write_text('package main\nimport "fmt"\nfunc main() { fmt.Println("fixture-native") }\n')
+        for command, identity in [('agentic-lens', 'fixture-engine'),
+                                  ('agentic-lens-manager', 'fixture-manager')]:
+            application = backend / 'cmd' / command
+            application.mkdir(parents=True)
+            (application / 'main.go').write_text(
+                'package main\nimport "fmt"\nfunc main() { fmt.Println("' + identity + '") }\n')
         domain = destination / 'web/src/domain'
         domain.mkdir(parents=True)
         (domain / 'add.ts').write_text('export const add = (a: number, b: number): number => a + b;\n')
@@ -145,7 +148,10 @@ it('executes the integration fixture', () => {
                               env=self.env, text=True, capture_output=True, timeout=90)
 
     def events(self):
-        return [json.loads(line)['event'] for line in self.log.read_text().splitlines()] if self.log.exists() else []
+        return [record['event'] for record in self.records()]
+
+    def records(self):
+        return [json.loads(line) for line in self.log.read_text().splitlines()] if self.log.exists() else []
 
 
 def jobs_from_text(text):
@@ -235,6 +241,23 @@ class TestOrchestration(unittest.TestCase):
         self.assertFalse([event for event in events if event.startswith('integration-')],
                          '\n'.join(events) + '\n' + result.stdout + result.stderr)
 
+    def assert_native_builds(self, fixture, output_directory=None):
+        builds = [record['args'] for record in fixture.records()
+                  if record['event'] == 'integration-native-build']
+        self.assertEqual({args[-1] for args in builds},
+                         {'./cmd/agentic-lens', './cmd/agentic-lens-manager'})
+        output_directory = output_directory or fixture.root / 'bin'
+        for source, filename, identity in [('./cmd/agentic-lens', 'agentic-lens-engine-linux-amd64', 'fixture-engine'),
+                                           ('./cmd/agentic-lens-manager', 'agentic-lens-linux-amd64', 'fixture-manager')]:
+            matching = [args for args in builds if args[-1] == source]
+            self.assertTrue(matching, source)
+            executable = output_directory / filename
+            for args in matching:
+                self.assertEqual(Path(args[args.index('-o') + 1]), executable.resolve())
+            result = fixture.run([str(executable)])
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual(result.stdout.strip(), identity)
+
     def test_each_language_failure_blocks_make_entrypoints_and_parallel_mixed_goals(self):
         goals = [[], ['test'], ['test-integration'], ['test-backend'], ['test-frontend'], ['backend-check'], ['check'],
                  ['-j8', 'check', 'test', 'web-assets', 'build']]
@@ -291,16 +314,19 @@ class TestOrchestration(unittest.TestCase):
         self.assertEqual(events.count('integration-assets'), 1, events)
         self.assertEqual(events.count('dependencies-start'), 1, events)
         self.assertLess(events.index('dependencies-pass'), events.index('unit-frontend-start'))
+        self.assert_native_builds(self.fixture)
 
     def test_build_only_and_installation_override_do_not_run_tests(self):
         spaced = OrchestrationFixture(self.fixture.root / 'project with spaces')
         present = spaced.root / 'web'
         os.utime(present / 'node_modules/.package-lock.json', (1, 1))
-        cases = [(self.fixture, [], 1, 0),
-                 (self.fixture, ['WEB_DIR=absent-web'], 0, 0),
-                 (spaced, ['WEB_DIR=' + str(spaced.root / 'no web dependency scan')], 0, 0),
-                 (spaced, ['WEB_DIR=' + str(present)], 1, 1)]
-        for fixture, extra, assets, installs in cases:
+        overridden = spaced.root / 'native build output'
+        cases = [(self.fixture, [], 1, 0, None),
+                 (self.fixture, ['WEB_DIR=absent-web'], 0, 0, None),
+                 (spaced, ['WEB_DIR=' + str(spaced.root / 'no web dependency scan'),
+                           'BIN_DIR=' + str(overridden)], 0, 0, overridden),
+                 (spaced, ['WEB_DIR=' + str(present)], 1, 1, None)]
+        for fixture, extra, assets, installs, output_directory in cases:
             with self.subTest(extra=extra):
                 fixture.set_units('go')
                 result = fixture.run(['make', 'verify-build', 'PLATFORMS=linux/amd64', *extra])
@@ -309,6 +335,7 @@ class TestOrchestration(unittest.TestCase):
                 self.assertFalse([event for event in events if event.startswith('unit-')], events)
                 self.assertEqual(events.count('integration-assets'), assets, events)
                 self.assertEqual(events.count('dependencies-start'), installs, events)
+                self.assert_native_builds(fixture, output_directory)
         # The same present directory also participates in the globally gated DAG.
         spaced.set_units()
         result = spaced.run(['make', '-j8', 'test', 'web-assets', 'build',
@@ -320,6 +347,7 @@ class TestOrchestration(unittest.TestCase):
             if event.startswith('integration-'):
                 self.assertIn('unit-go-pass', events[:index], events)
                 self.assertIn('unit-frontend-pass', events[:index], events)
+        self.assert_native_builds(spaced)
 
     def test_go_package_partition_is_complete_and_discovery_errors_fail(self):
         helper = self.fixture.root / 'scripts/go-test-packages.sh'
@@ -336,6 +364,8 @@ class TestOrchestration(unittest.TestCase):
         self.assertEqual(lanes['all'], lanes['unit'] | lanes['integration'])
         self.assertEqual(lanes['unit'], {'agenticlens/internal/domain', 'agenticlens/internal/domain/migration'})
         self.assertIn('agenticlens/internal/domainish', lanes['integration'])
+        self.assertIn('agenticlens/cmd/agentic-lens', lanes['integration'])
+        self.assertIn('agenticlens/cmd/agentic-lens-manager', lanes['integration'])
         unavailable = self.fixture.root / 'unavailable-go'
         unavailable.mkdir()
         failing = unavailable / 'go'
@@ -353,7 +383,15 @@ class TestOrchestration(unittest.TestCase):
     def test_ci_and_release_graphs_require_units_and_detect_missing_edge(self):
         text = (ROOT / '.github/workflows/ci.yml').read_text()
         jobs = require_unit_dependencies(text)
-        self.assertTrue({'windows-entrypoint', 'distribution-check', 'backend-check', 'frontend-check'} <= jobs.keys())
+        self.assertTrue({'distribution-check', 'backend-check', 'frontend-check', 'build-binary'} <= jobs.keys())
+        self.assertNotIn('windows-entrypoint', jobs)
+        for job in jobs.values():
+            self.assertNotIn('windows-entrypoint', job['needs'])
+        dangling = text.replace('needs: [backend-check, frontend-check, distribution-check]',
+                                'needs: [backend-check, frontend-check, distribution-check, windows-entrypoint]')
+        self.assertNotEqual(dangling, text)
+        with self.assertRaisesRegex(AssertionError, 'Unknown dependency: windows-entrypoint'):
+            require_unit_dependencies(dangling)
         mutated = text.replace('    needs: [backend-unit, frontend-unit]', '    needs: [frontend-unit]', 1)
         self.assertNotEqual(mutated, text)
         with self.assertRaisesRegex(AssertionError, 'lacks both unit gates'):

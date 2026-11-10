@@ -18,7 +18,7 @@ func TestCaptureWorkerCompletionSurvivesFixtureEarlyReturn(t *testing.T) {
 	t.Run("returns with native still blocked", func(t *testing.T) {
 		f := newCaptureGenerationFixture(t)
 		directory = f.project
-		if err := os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte("telemetry:\n  capture:\n    enabled: false\n"), 0600); err != nil {
+		if err := writeCaptureFixtureLocal(t, f, []byte("telemetry:\n  capture:\n    enabled: true\n")); err != nil {
 			t.Fatal(err)
 		}
 		store, err := capture.OpenProject(f.state, f.project)

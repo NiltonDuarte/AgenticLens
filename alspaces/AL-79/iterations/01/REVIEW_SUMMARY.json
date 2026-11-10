@@ -1,0 +1,409 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "ARCH-01",
+      "severity": 7,
+      "issue": "Competing dispatcher ownership breaks A-to-B installation and later uninstall.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed root-owned dispatcher authority and separate per-home hook ownership; upgrade/uninstall counterexamples verified."
+    },
+    {
+      "finding_id": "ARCH-02",
+      "severity": 6,
+      "issue": "Machine native dispatcher rejects supported legacy manual pins.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed manual exact-pin compatibility while retaining strict automatic/development interface admission."
+    },
+    {
+      "finding_id": "ARCH-03",
+      "severity": 6,
+      "issue": "Native dispatch changes nested manual caller working directory.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed manual dispatch to preserve caller cwd and relative arguments."
+    },
+    {
+      "finding_id": "BEH-01",
+      "severity": 6,
+      "issue": "User installation silently permits duplicate active legacy project callbacks.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed exact attested group removal followed by rejection of remaining unknown executable callbacks, including inactive receipts."
+    },
+    {
+      "finding_id": "BEH-02",
+      "severity": 7,
+      "issue": "Legacy disable permits a live worker to keep publishing fresh source changes.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed legacy active-state fencing so disabled/uninstalled live workers stop publication."
+    },
+    {
+      "finding_id": "DATA-01",
+      "severity": 6,
+      "issue": "Automatic generation inherits shared capture limits instead of selected-local defaults.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed automatic generation to use whole selected-local policy and bounded defaults throughout publication."
+    },
+    {
+      "finding_id": "DATA-02",
+      "severity": 6,
+      "issue": "Root-journal recovery rewrites home hooks before acquiring the home lock.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed recovery lease acquisition and post-acquisition resource rediscovery with explicit retry before unheld-resource writes."
+    },
+    {
+      "finding_id": "DATA-03",
+      "severity": 6,
+      "issue": "An explicitly bound child prevents parent reconciliation and publication.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed explicitly bound child publication independently, retaining actual external ancestry in portable v6 facts."
+    },
+    {
+      "finding_id": "ARCH-04",
+      "severity": 6,
+      "issue": "Terminating native dispatch leaves the selected manual CLI process alive.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed POSIX dispatch with exec so cancellation owns the selected process and preserves exit status."
+    },
+    {
+      "finding_id": "ARCH-05",
+      "severity": 6,
+      "issue": "PowerShell native routing bypasses existing lossless transport and timeout.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed PowerShell native routing to reuse lossless argument/handle transport and advisory timeout."
+    },
+    {
+      "finding_id": "ARCH-06",
+      "severity": 5,
+      "issue": "Windows missing-launcher repair stores inconsistent executable ownership hashes.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: stable launcher repair records actual installed hashes; native Windows repair passed within partial platform evidence."
+    },
+    {
+      "finding_id": "TEST-01",
+      "severity": 4,
+      "issue": "Native user installation and migration interruption/recovery lack a direct acceptance oracle.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Added actual root/home journal durable-prefix interruption, recovery and conflict oracles with pending-state preservation."
+    },
+    {
+      "finding_id": "SEC-01",
+      "severity": 5,
+      "issue": "Native Windows binding feedback uses a non-executable POSIX-quoted command.",
+      "reporters": [
+        {
+          "persona": "reviewer",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed platform-aware Windows binding command syntax and quoting."
+    },
+    {
+      "finding_id": "BUILD-01",
+      "severity": 7,
+      "issue": "User installation accepts an incompatible native executable and breaks the shared dispatcher.",
+      "reporters": [
+        {
+          "persona": "reviewer",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed native format/platform/protocol/build identity admission before installer writes."
+    },
+    {
+      "finding_id": "ARCH-07",
+      "severity": 0,
+      "issue": "Alleged callback process-cwd routing loss conflates process cwd with declared native session cwd.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Refuted: process cwd differs from declared native session cwd; contract requires rejection of contradictory authoritative context. Original reported severity8 is not a demonstrated defect."
+    },
+    {
+      "finding_id": "DATA-04",
+      "severity": 4,
+      "issue": "Retaining mutable development output can accept incomplete bytes changed after selection.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed retention with stable copied-byte metadata/digest/native validation, rejecting incomplete or changed source bytes."
+    },
+    {
+      "finding_id": "INST-01",
+      "severity": 6,
+      "issue": "Planning migration before interrupted-install recovery can reject resume or leave restored legacy callbacks active.",
+      "reporters": [
+        {
+          "persona": "tester",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed recovery before fresh migration planning; discovered during tester correction validation, not review first pass."
+    },
+    {
+      "finding_id": "DATA-05",
+      "severity": 5,
+      "issue": "External-parent child publication falsely declares complete group coverage and a clean session.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed external-parent group completeness and clean wording while preserving per-owner analysis and exact cached summaries."
+    },
+    {
+      "finding_id": "TEST-02",
+      "severity": 3,
+      "issue": "CLI history fixture rejects valid external-parent ancestry as malformed.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: Transfer to preserved external ancestry and retain blank/whitespace/padded identity rejection with nonmutation."
+    },
+    {
+      "finding_id": "TEST-03",
+      "severity": 3,
+      "issue": "Scan and migration fixtures require capture machine state in shared-only configuration.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: Accept shared-only read/manual configuration and retain selected-local malformed-type nonmutation oracles."
+    },
+    {
+      "finding_id": "TEST-04",
+      "severity": 3,
+      "issue": "Reconciliation fixture treats an explicitly bound child on another ticket as a parent conflict.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: create genuine source-parent inherited conflict through actual interfaces, retain explicit independent-child success, exact facts and historical failure diagnostics."
+    },
+    {
+      "finding_id": "WIN-01",
+      "severity": 6,
+      "issue": "PowerShell native transport inherits Win32 cwd instead of the caller filesystem location.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: use caller filesystem ProviderPath for native child cwd; actual Windows cwd/argument cases passed."
+    },
+    {
+      "finding_id": "WIN-02",
+      "severity": 4,
+      "issue": "Windows setup discards successful native stderr diagnostics.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: forward successful UTF8 setup diagnostics to stderr; actual Windows both-stream case passed."
+    },
+    {
+      "finding_id": "WIN-03",
+      "severity": 5,
+      "issue": "Windows InitConfig emits a scaffold rejected by canonical native completion.",
+      "reporters": [
+        {
+          "persona": "tester",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: emit canonical minimal bootstrap scaffold; isolated actual Windows completion passed."
+    },
+    {
+      "finding_id": "WTEST-01",
+      "severity": 3,
+      "issue": "Windows fixtures mutate and delete retained read-only executables without clearing the read-only attribute.",
+      "reporters": [
+        {
+          "persona": "tester",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: permit owned read-only cleanup/tamper while preserving genuine process-lock failures."
+    },
+    {
+      "finding_id": "WTEST-02",
+      "severity": 3,
+      "issue": "The adopted Windows advisory fixture replaces an immutable exact-pin leaf without explicit repair.",
+      "reporters": [
+        {
+          "persona": "tester",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: use explicit Force only for intentional fixture-owned binary replacement."
+    },
+    {
+      "finding_id": "WTEST-03",
+      "severity": 3,
+      "issue": "The Windows binding fixture uses YAML escaping outside the supported bootstrap subset.",
+      "reporters": [
+        {
+          "persona": "tester",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: encode the apostrophe path within the supported quoted slash-path profile."
+    },
+    {
+      "finding_id": "WTEST-04",
+      "severity": 2,
+      "issue": "The local Windows protocol2 fixture can fail reading its PE input through DrvFS.",
+      "reporters": [
+        {
+          "persona": "tester",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Accepted Windows-only limit: CI/verification withdrawn by explicit user instruction; follow-up is the user's planned Windows support removal. No full Windows pass claimed."
+    }
+  ]
+}

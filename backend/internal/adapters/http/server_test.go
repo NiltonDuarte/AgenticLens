@@ -5049,3 +5049,46 @@ func TestGeneratedPolicyHTTPReadPreservesOmissionWithoutWriting(t *testing.T) {
 		t.Fatal("GET rewrote generation policy ledger")
 	}
 }
+
+func TestWorkspaceDetailShowsExternalParentChildWithoutPrivateSource(t *testing.T) {
+	root := t.TempDir()
+	records := filepath.Join(root, "records")
+	ticket := "TEST-200"
+	path := filepath.Join(records, ticket, "agentic_metrics.json")
+	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+		t.Fatal(err)
+	}
+	raw := sampleTestLedgerJSON(ticket, "Explicit child ticket", 1, 0.5, 1)
+	raw = strings.Replace(raw, `"id":"ses-orch"`, `"id":"explicit-child","parent_id":"parent-owned-by-another-ticket"`, 1)
+	if err := os.WriteFile(path, []byte(raw), 0600); err != nil {
+		t.Fatal(err)
+	}
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	t.Setenv("CODEX_HOME", filepath.Join(home, "unavailable-source"))
+	request := httptest.NewRequest(http.MethodGet, "/api/workspaces/"+ticket, nil)
+	request.SetPathValue("ticketId", ticket)
+	response := httptest.NewRecorder()
+	adaptershttp.WorkspaceDetailHandler(records)(response, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("valid external-parent child hidden by API: %d %s", response.Code, response.Body.String())
+	}
+	var detail adaptershttp.WorkspaceDetailResponse
+	if err := json.Unmarshal(response.Body.Bytes(), &detail); err != nil {
+		t.Fatal(err)
+	}
+	children := detail.Ledger.Facts.Sessions
+	if len(children) != 1 || children[0].ID != "explicit-child" || children[0].ParentID == nil || *children[0].ParentID != "parent-owned-by-another-ticket" || len(children[0].Invocations) != 1 {
+		t.Fatalf("public response changed source ancestry/owner: %+v", children)
+	}
+	if !strings.Contains(response.Body.String(), `"root_peak_tokens":0`) || !strings.Contains(response.Body.String(), `"status":"UNAVAILABLE"`) {
+		t.Fatalf("external-parent data fabricated healthy root analysis: %s", response.Body.String())
+	}
+	if after, err := os.ReadFile(path); err != nil || string(after) != raw {
+		t.Fatalf("baseline read rewrote portable history: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".agenticlens")); !os.IsNotExist(err) {
+		t.Fatalf("API baseline read required private capture state: %v", err)
+	}
+}

@@ -227,8 +227,12 @@ func RefreshAnomalySummariesFromSource(ledger AgenticFactLedger, source SourceEv
 		}
 	}
 	detected := DetectAnomaliesFromEvents(observed, events, thresholds...)
+	owned := make(map[string]bool, len(ledger.Sessions))
+	for _, owner := range ledger.Sessions {
+		owned[owner.ID] = true
+	}
 	groupComplete := func(parent string) bool {
-		if !currentSessions[parent] {
+		if !currentSessions[parent] || !owned[parent] {
 			return false
 		}
 		for _, owner := range ledger.Sessions {
@@ -246,12 +250,7 @@ func RefreshAnomalySummariesFromSource(ledger AgenticFactLedger, source SourceEv
 		filtered = append(filtered, anomaly)
 	}
 	detected = filtered
-	allComplete := len(ledger.Sessions) > 0
-	for _, owner := range ledger.Sessions {
-		if !currentSessions[owner.ID] {
-			allComplete = false
-		}
-	}
+	allComplete := completeAnomalySourceCoverage(ledger, currentSessions)
 	refreshed := make([]Anomaly, 0, len(cached)+len(detected))
 	for _, anomaly := range detected {
 		if (anomaly.Context.SessionID == nil || *anomaly.Context.SessionID == "") && allComplete {
@@ -368,12 +367,7 @@ func PersistSourceAnomalySummaries(ledger AgenticFactLedger, source SourceEvents
 		}
 		ledger.Sessions[i].Anomalies = append([]Anomaly{}, bySession[owner.ID]...)
 	}
-	allComplete := len(ledger.Sessions) > 0
-	for _, owner := range ledger.Sessions {
-		if !complete[owner.ID] {
-			allComplete = false
-		}
-	}
+	allComplete := completeAnomalySourceCoverage(ledger, complete)
 	if allComplete {
 		ledger.Anomalies = ticket
 	}

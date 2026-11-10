@@ -45,3 +45,18 @@ func captureWorkerCompletion(t *testing.T, directory string) func(context.Contex
 		}
 	}
 }
+
+func captureNativeProcessExited(pid int) (bool, error) {
+	if pid <= 0 {
+		return false, nil
+	}
+	handle, err := windows.OpenProcess(windows.SYNCHRONIZE, false, uint32(pid))
+	if errors.Is(err, windows.ERROR_INVALID_PARAMETER) {
+		return true, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	status, waitErr := windows.WaitForSingleObject(handle, 0)
+	return status == windows.WAIT_OBJECT_0, errors.Join(waitErr, windows.CloseHandle(handle))
+}

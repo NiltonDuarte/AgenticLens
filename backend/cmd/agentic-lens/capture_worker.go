@@ -48,7 +48,14 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 	if err != nil {
 		return err
 	}
+	binary = fence.binary
 	retire := func() error {
+		// Disablement may race an earlier policy read and make the fence false.
+		// It stops this owner without a superseded diagnostic or successor.
+		enabled, err := automaticCaptureEnabled(project, state)
+		if err != nil || !enabled {
+			return err
+		}
 		if err := s.RecordDiagnostic(context.Background(), domain.CaptureDiagnostic{Phase: "worker", Outcome: "superseded", Detail: "Project release or active installation changed. This native owner retired; only its captured generation may be acknowledged and later work remains pending for the selected native."}); err != nil {
 			return err
 		}
@@ -74,6 +81,15 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 		defer cancel()
 		next, err := capture.WorkerSuccessor(ctx, project, state)
 		if err != nil {
+			// A later disable can also stop successor validation normally. Keep
+			// actual policy/state errors and enabled takeover failures visible.
+			enabled, policyErr := automaticCaptureEnabled(project, state)
+			if policyErr != nil {
+				return errors.Join(err, policyErr)
+			}
+			if !enabled {
+				return nil
+			}
 			diagnosticErr := s.RecordDiagnostic(context.Background(), domain.CaptureDiagnostic{Phase: "worker", Outcome: "failed", Detail: "Worker release/installation changed, but automatic successor validation failed. Pending work remains in the original namespace. Verify the exact pin, selected native/protocol, owned integration and configured state; retry capture reconcile. Cause: " + err.Error()})
 			return errors.Join(fmt.Errorf("native worker retired; pending work retained; selected-native takeover unavailable: %w", err), diagnosticErr)
 		}
@@ -105,7 +121,7 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 			return retire()
 		}
 		now := time.Now()
-		if err := capture.WriteWorkerProgress(state, capture.WorkerProgress{PID: os.Getpid(), State: "running", Heartbeat: now.UnixMilli(), Deadline: started.Add(time.Duration(policy.MaxLifetimeMS) * time.Millisecond).UnixMilli(), NextAttempt: nextAttempt.UnixMilli(), Detail: lastFailure + fmt.Sprintf(" generation=%d acknowledged=%d pass_timeout_ms=%d max_sessions=%d max_source_bytes=%d", req.Generation, req.Acknowledged, policy.PassTimeoutMS, policy.MaxSessions, policy.MaxSourceBytes)}); err != nil {
+		if err := capture.WriteWorkerProgress(state, capture.WorkerProgress{Executable: binary, Build: domain.GetBuildInfo(), PID: os.Getpid(), State: "running", Heartbeat: now.UnixMilli(), Deadline: started.Add(time.Duration(policy.MaxLifetimeMS) * time.Millisecond).UnixMilli(), NextAttempt: nextAttempt.UnixMilli(), Detail: lastFailure + fmt.Sprintf(" generation=%d acknowledged=%d pass_timeout_ms=%d max_sessions=%d max_source_bytes=%d", req.Generation, req.Acknowledged, policy.PassTimeoutMS, policy.MaxSessions, policy.MaxSourceBytes)}); err != nil {
 			return err
 		}
 		proofCtx, proofCancel := context.WithTimeout(context.Background(), time.Second)
@@ -158,6 +174,12 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 			if !current {
 				return retire()
 			}
+			unassignedCtx, unassignedCancel := context.WithTimeout(context.Background(), time.Duration(policy.PassTimeoutMS)*time.Millisecond)
+			unassigned, unassignedErr := s.Reconcile(unassignedCtx, "", "", policy.MaxSessions, policy.MaxSourceBytes)
+			unassignedCancel()
+			if unassignedErr != nil {
+				lastFailure = unassignedErr.Error()
+			}
 			rows, err := s.List(context.Background())
 			if err != nil {
 				return err
@@ -177,7 +199,12 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 			if err != nil {
 				return err
 			}
-			success := true
+			success := unassignedErr == nil
+			for _, registration := range unassigned.Registrations {
+				if registration.State == domain.CaptureFailed || registration.State == domain.CapturePending {
+					success = false
+				}
+			}
 			for _, ticket := range ordered {
 				enabled, e := automaticCaptureEnabled(project, state)
 				if e != nil || !enabled {
@@ -229,7 +256,7 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 						return e
 					}
 					fmt.Fprintln(os.Stderr, "automatic publication pending:", err)
-					if e := capture.WriteWorkerProgress(state, capture.WorkerProgress{PID: os.Getpid(), State: "failure", Heartbeat: time.Now().UnixMilli(), Deadline: started.Add(time.Duration(policy.MaxLifetimeMS) * time.Millisecond).UnixMilli(), NextAttempt: time.Now().Add(backoff * 2).UnixMilli(), Detail: err.Error()}); e != nil {
+					if e := capture.WriteWorkerProgress(state, capture.WorkerProgress{Executable: binary, Build: domain.GetBuildInfo(), PID: os.Getpid(), State: "failure", Heartbeat: time.Now().UnixMilli(), Deadline: started.Add(time.Duration(policy.MaxLifetimeMS) * time.Millisecond).UnixMilli(), NextAttempt: time.Now().Add(backoff * 2).UnixMilli(), Detail: err.Error()}); e != nil {
 						return e
 					}
 				}
@@ -294,7 +321,15 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 	if !current {
 		return retire()
 	}
-	return capture.LaunchWorker(binary, project, state)
+	entry, err := adaptersconfig.ResolveEntrypoint(project)
+	if err != nil {
+		return err
+	}
+	preferred, err := entry.NativePath()
+	if err != nil {
+		return err
+	}
+	return capture.LaunchWorker(preferred, project, state)
 }
 
 // Disabled policy stops new passes and handoffs. A publication already committing
@@ -311,5 +346,11 @@ func automaticCaptureEnabled(project, state string) (bool, error) {
 	if location.Provisional {
 		return false, nil
 	}
-	return capture.AutomaticEnabled(location.CoordinationDirectory)
+	legacyEnabled, err := capture.AutomaticEnabled(location.CoordinationDirectory)
+	if err != nil || legacyEnabled {
+		return legacyEnabled, err
+	}
+	// A migrated user integration remains active independently of its preserved
+	// inactive legacy receipt; fresh native adoption needs no project receipt.
+	return capture.UserCodexInstalled()
 }

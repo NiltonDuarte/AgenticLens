@@ -247,11 +247,25 @@ func TestGitCheckAdvisoryFailuresOutputAndDeadline(t *testing.T) {
 	}
 }
 
-func TestGitCheckPowerShellUsesCommonEntrypoint(t *testing.T) {
+func TestGitCheckInvokesNativeManagerWithLiteralPath(t *testing.T) {
 	repo := checkRepository(t)
-	result := installCheck(t, capture.CheckInstallOptions{Repository: repo, Wrapper: filepath.Join(t.TempDir(), "wrapper with spaces.ps1")})
+	manager := filepath.Join(t.TempDir(), "native manager's command.exe")
+	build := exec.Command("go", "build", "-ldflags", "-X agenticlens/internal/domain.Version=v9.8.7", "-o", manager, "./cmd/agentic-lens-manager")
+	build.Dir = filepath.Join("..", "..", "..")
+	if output, err := build.CombinedOutput(); err != nil {
+		t.Fatalf("build native manager: %v %s", err, output)
+	}
+	cache := filepath.ToSlash(t.TempDir())
+	checkWrite(t, filepath.Join(repo, ".agenticlens-config.yaml"), "agenticlens:\n  version: v1.0.0\n  install_root: '"+cache+"'\n", 0600)
+	result := installCheck(t, capture.CheckInstallOptions{Repository: repo, Wrapper: manager})
 	body := string(checkRead(t, result.HookPath))
-	if !strings.Contains(body, "powershell.exe' '-NoLogo' '-NoProfile' '-NonInteractive' '-File'") || strings.Contains(body, "ExecutionPolicy") {
-		t.Fatalf("native PowerShell entrypoint not preserved: %s", body)
+	if !strings.Contains(body, capture.QuoteArgument(filepath.ToSlash(manager))+" '--al-offline' '--al-project'") || strings.Contains(strings.ToLower(body), "powershell.exe") || strings.Contains(body, "ExecutionPolicy") || strings.Contains(body, "-File") {
+		t.Fatalf("advisory did not directly invoke the literal native manager: %s", body)
+	}
+	// A genuine manager without its selected engine supplies an observable
+	// native diagnostic; the advisory must still permit the commit.
+	output := checkGit(t, repo, "commit", "--quiet", "--allow-empty", "-m", "native advisory")
+	if !strings.Contains(output, "AgenticLens manager:") || !strings.Contains(output, "engine") || len(output) > 513 || strings.Count(output, "\n") != 1 {
+		t.Fatalf("native manager diagnostic was lost or unbounded: %q", output)
 	}
 }
