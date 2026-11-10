@@ -12,3 +12,7 @@ The user requested a ticket for a GitHub Pages presentation covering purpose, ex
 4. Generate final Codex session telemetry with literal nonce and docs type, verify source/root/children, commit, push and create the planning PR.
 
 Selected regression boundaries: portable ledger semantics, honest source/cost availability, evidence-bounded compatibility, native manager/engine separation, Pages versus embedded frontend separation, configurable workspace root and ticket relocation independence. These guide the specification; documentation checks do not verify future runtime behavior. English content, default GitHub project URL and one complete implementation ticket are reasonable scope assumptions. No custom domain or hosted interactive dashboard is planned.
+
+## Verification outcome
+
+Planning validation passed at `a9f9e6d7`; origin/main integration was a no-op. The required make gate is incomplete after the CLI integration process was stopped at approximately 150 seconds; see SUMMARY.md for passed lanes and limits. The source tree remained unchanged. Native engine compilation for final telemetry uses the generated assets from the successful canonical web-assets stage, without installing or repinning the project.
