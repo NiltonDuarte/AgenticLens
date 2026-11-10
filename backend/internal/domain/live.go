@@ -2,7 +2,6 @@ package domain
 
 import (
 	"reflect"
-	"regexp"
 	"sort"
 	"strings"
 )
@@ -74,69 +73,106 @@ type LiveMessageFact struct {
 	Parts            []LivePartFact `json:"parts"`
 }
 
+// LiveRelationshipState describes native child lookup independently of trace content.
+type LiveRelationshipState string
+
+const (
+	LiveRelationshipsComplete    LiveRelationshipState = "complete"
+	LiveRelationshipsUnavailable LiveRelationshipState = "unavailable"
+)
+
+type LiveRelationships struct {
+	State LiveRelationshipState `json:"state"`
+}
+type LiveTraceDiagnosticCode string
+
+const DiagnosticChildRelationshipLookupFailed LiveTraceDiagnosticCode = "child_relationship_lookup_failed"
+
+type LiveTraceDiagnostic struct {
+	Code    LiveTraceDiagnosticCode `json:"code"`
+	Message string                  `json:"message"`
+}
+
 // LiveTraceView captures the full chronological execution trace and error summary for a target session.
 type LiveTraceView struct {
-	SessionID       string             `json:"session_id"`
-	Messages        []LiveMessageFact  `json:"messages"`
-	TotalToolCalls  int                `json:"total_tool_calls"`
-	FailedToolCalls int                `json:"failed_tool_calls"`
-	RecentErrors    []LivePartFact     `json:"recent_errors"`
-	Anomalies       []LiveAnomalyAlert `json:"anomalies"`
+	Relationships   LiveRelationships     `json:"relationships"`
+	Diagnostics     []LiveTraceDiagnostic `json:"diagnostics"`
+	SessionID       string                `json:"session_id"`
+	Messages        []LiveMessageFact     `json:"messages"`
+	TotalToolCalls  int                   `json:"total_tool_calls"`
+	FailedToolCalls int                   `json:"failed_tool_calls"`
+	RecentErrors    []LivePartFact        `json:"recent_errors"`
+	Anomalies       []LiveAnomalyAlert    `json:"anomalies"`
 }
 
-// ToolExecutionResult is the normalized result of classifying one tool execution.
+// ToolProcessEvidence contains only source-supplied structured process facts.
+// A nil field means the source did not report that fact.
+type ToolProcessEvidence struct {
+	ExitCode *int
+	Signal   *string
+	TimedOut *bool
+}
+
+// ToolExecutionResult retains the source tool status independently of process coverage.
 type ToolExecutionResult struct {
-	IsError      bool
-	Severity     FailureSeverity
-	ErrorMessage *string
+	IsError             bool
+	Severity            FailureSeverity
+	ErrorMessage        *string
+	Status              string
+	ProcessOutcomeKnown bool
 }
 
-var exitStatusPattern = regexp.MustCompile(`(?i)\bexit(?:ed)?\s+(?:status|code)\s*[:=]?\s*([0-9]+)\b`)
-
-// ClassifyToolExecution identifies process-level failures without interpreting semantic output.
-func ClassifyToolExecution(toolName string, status string, output string, consecutiveErrors int) ToolExecutionResult {
-	trimmedOutput := strings.TrimSpace(output)
-	lowerOutput := strings.ToLower(trimmedOutput)
+// ClassifyToolExecution never interprets free-form text as execution evidence.
+// Output is retained only as diagnostic content after structured failure is established.
+func ClassifyToolExecution(toolName, status, output string, consecutiveErrors int, process ...ToolProcessEvidence) ToolExecutionResult {
 	cleanStatus := strings.ToLower(strings.TrimSpace(status))
-	cleanTool := strings.ToLower(strings.TrimSpace(toolName))
-	exitCode := -1
-	if match := exitStatusPattern.FindStringSubmatch(trimmedOutput); len(match) == 2 {
-		exitCode = 0
-		for _, digit := range match[1] {
-			exitCode = exitCode*10 + int(digit-'0')
+	if cleanStatus == "" {
+		cleanStatus = "unknown"
+	}
+	if cleanStatus == "success" || cleanStatus == "succeeded" {
+		cleanStatus = "completed"
+	}
+	result := ToolExecutionResult{Status: cleanStatus, Severity: SeverityNone}
+	isError := cleanStatus == "error" || cleanStatus == "failed"
+	highSeverity := false
+	if len(process) > 0 {
+		facts := process[0]
+		if facts.ExitCode != nil {
+			result.ProcessOutcomeKnown = true
+			noMatch := (strings.EqualFold(toolName, "grep") || strings.EqualFold(toolName, "glob")) && *facts.ExitCode == 1
+			if *facts.ExitCode != 0 && !noMatch {
+				isError = true
+			}
+		}
+		if facts.Signal != nil && strings.TrimSpace(*facts.Signal) != "" {
+			isError = true
+			highSeverity = true
+			result.ProcessOutcomeKnown = true
+		}
+		if facts.TimedOut != nil && *facts.TimedOut {
+			isError = true
+			highSeverity = true
+			result.ProcessOutcomeKnown = true
 		}
 	}
-	noMatch := (cleanTool == "grep" || cleanTool == "glob") && (exitCode == 1 || strings.Contains(lowerOutput, "no matches") || strings.Contains(lowerOutput, "0 matches") || strings.Contains(lowerOutput, "no matching files"))
-	if noMatch && cleanStatus != "error" && cleanStatus != "failed" {
-		return ToolExecutionResult{Severity: SeverityNone}
-	}
-	isCrash := strings.Contains(lowerOutput, "segmentation fault") ||
-		strings.Contains(lowerOutput, "signal: killed") ||
-		strings.Contains(lowerOutput, "killed by signal") ||
-		strings.Contains(lowerOutput, "out of memory")
-	hardOutputFailure := (exitCode > 0 && !((cleanTool == "grep" || cleanTool == "glob") && exitCode == 1)) || (exitCode != 0 && (isCrash || lowerOutput == "permission denied" || lowerOutput == "command timed out" || lowerOutput == "operation timed out"))
-	isError := cleanStatus == "error" || cleanStatus == "failed" || hardOutputFailure
 	if !isError {
-		return ToolExecutionResult{Severity: SeverityNone}
+		return result
 	}
-	severity := SeverityMedium
-	if isCrash || consecutiveErrors >= 2 {
-		severity = SeverityHigh
+	result.IsError = true
+	result.Status = "error"
+	result.Severity = SeverityMedium
+	if highSeverity || consecutiveErrors >= 2 {
+		result.Severity = SeverityHigh
 	}
-
-	// Preserve source error evidence, bounded to 2048 bytes.
-	msg := trimmedOutput
+	msg := output
 	if msg == "" {
 		msg = cleanStatus
-		if msg == "" {
-			msg = "tool error"
-		}
 	}
 	if len(msg) > 2048 {
 		msg = msg[:2048]
 	}
-
-	return ToolExecutionResult{IsError: true, Severity: severity, ErrorMessage: &msg}
+	result.ErrorMessage = &msg
+	return result
 }
 
 // InferTicketID inspects the session title exclusively, matching candidate ticket identifiers

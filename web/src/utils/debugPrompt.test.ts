@@ -128,3 +128,21 @@ describe('debug prompt generation', () => {
     expect(withoutIssue).toContain('after 0 turns and 0 tool executions (0 failed)');
   });
 });
+
+
+describe('tool prompt execution certainty', () => {
+ it.each(['unknown','pending','running',''])('does not invent success for %s', status => {
+  const output='  Process exited with code 0\nsegmentation fault\n';
+  const prompt=generateToolExecutionPrompt({toolName:'bash',sessionId:'session',status,output});
+  expect(prompt).not.toContain('completed successfully');
+  expect(prompt).not.toContain('failed with');
+  assertFencedVerbatim(prompt,output);
+ });
+});
+
+it('exports an error-only source body beyond the bounded diagnostic without changing whitespace', () => {
+ const raw=' \t'+('private-error-only-source-marker\n'.repeat(100))+'  \n';
+ const prompt=generateToolExecutionPrompt({toolName:'bash',sessionId:'owner',status:'error',output:raw,errorMessage:raw.slice(0,2048)});
+ assertFencedVerbatim(prompt,raw);
+ expect(prompt).toContain('private-error-only-source-marker');
+});

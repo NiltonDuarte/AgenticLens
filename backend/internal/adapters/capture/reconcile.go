@@ -556,7 +556,7 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 	if source.policy != nil {
 		effectivePolicy = *source.policy
 	}
-	summary, summaryErr := domain.PersistSourceAnomalySummariesWithPolicy(domain.AgenticFactLedger{Sessions: all}, source.events, effectivePolicy)
+	summary, summaryErr := domain.PersistSourceAnomalySummariesWithPolicy(domain.AgenticFactLedger{Sessions: all}, source.events, effectivePolicy, s.anomalyThresholds)
 	if summaryErr != nil {
 		return nil, nil, summaryErr
 	}

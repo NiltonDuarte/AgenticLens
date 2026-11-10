@@ -72,7 +72,7 @@ func TestExecuteFormatConfiguredWorkspaceAndDiagnostics(t *testing.T) {
 			t.Error(err)
 		}
 	})
-	configuration := "project_name: Fixture\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  dir: custom-records\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\ntelemetry:\n  capture:\n    state_dir: missing-state\n"
+	configuration := "project_name: Fixture\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  dir: custom-records\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\ntelemetry:\n  capture:\n    state_dir: missing-state\n"
 	if err := os.WriteFile(".agenticlens-config.yaml", []byte(configuration), 0600); err != nil {
 		t.Fatal(err)
 	}

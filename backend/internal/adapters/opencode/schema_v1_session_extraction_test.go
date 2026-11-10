@@ -864,10 +864,10 @@ func TestSchemaV1ExtractSessions_ErrorPayloadAdversarialBoundaries(t *testing.T)
 			expectedStatus: "error",
 		},
 		{
-			name:           "empty_status_with_error_prefix_handled",
+			name:           "empty_status_with_error_prefix_remains_unknown",
 			partID:         "p_err_prefix_clean",
 			partJSON:       `{"type":"tool","tool":"bash","state":{"output":"Error: simple failure"}}`,
-			expectedStatus: "completed",
+			expectedStatus: "unknown",
 		},
 	}
 
@@ -1816,8 +1816,12 @@ INSERT INTO message(id,session_id,time_created,time_updated,data) VALUES('presen
 					t.Fatalf("optional failure erased ordinary source work: %+v", owner)
 				}
 				if tc.malformed == "" {
-					if owner.Skills == nil || owner.Delegations == nil || owner.Anomalies == nil || len(owner.Skills) != 0 || len(owner.Delegations) != 0 || len(owner.Anomalies) != 0 {
-						t.Fatalf("valid complete source did not record empty arrays: %+v", owner)
+					if owner.Skills == nil || owner.Delegations == nil || owner.Anomalies != nil || len(owner.Skills) != 0 || len(owner.Delegations) != 0 {
+						t.Fatalf("raw native completeness invented configured anomaly analysis: %+v", owner)
+					}
+					configured, err := domain.PersistSourceAnomalySummaries(domain.AgenticFactLedger{Sessions: snapshot}, domain.SourceEvents{Events: []domain.EventFact{}, CompleteSessionIDs: []string{"presence-owner"}}, domain.AnomalyThresholdsConfig{ErrorRateMinCalls: 5, ErrorRateThreshold: .35, ErrorRateCriticalThreshold: .70})
+					if err != nil || configured.Sessions[0].Anomalies == nil || configured.Anomalies == nil {
+						t.Fatalf("complete configured final analysis did not record empty arrays: %+v %v", configured, err)
 					}
 				} else {
 					if owner.Delegations != nil || owner.Anomalies != nil || (!tc.knownSkill && owner.Skills != nil) {

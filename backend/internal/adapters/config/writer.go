@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -55,6 +56,18 @@ func (e *FileExistsError) Error() string {
 
 func (e *FileExistsError) Is(target error) bool {
 	return target == ErrFileExists
+}
+
+// formatRateRatio preserves configured precision while keeping simple ratios readable.
+func formatRateRatio(value float64) string {
+	formatted := strconv.FormatFloat(value, 'f', -1, 64)
+	if !strings.Contains(formatted, ".") {
+		return formatted + ".00"
+	}
+	if len(formatted)-strings.IndexByte(formatted, '.') == 2 {
+		return formatted + "0"
+	}
+	return formatted
 }
 
 // GenerateConfigYAML produces cleanly formatted, richly commented YAML bytes for a ProjectConfig.
@@ -228,8 +241,23 @@ func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
 		stallSec = 120
 	}
 	errorRate := cfg.AnomalyThresholds.ErrorRateThreshold
-	if errorRate <= 0 {
+	if errorRate == 0 {
 		errorRate = 0.25
+	}
+	minCalls := cfg.AnomalyThresholds.ErrorRateMinCalls
+	if minCalls == 0 {
+		minCalls = 5
+	}
+	criticalRate := cfg.AnomalyThresholds.ErrorRateCriticalThreshold
+	if criticalRate == 0 {
+		criticalRate = 0.70
+	}
+	policy := cfg.AnomalyThresholds
+	policy.ErrorRateMinCalls = minCalls
+	policy.ErrorRateThreshold = errorRate
+	policy.ErrorRateCriticalThreshold = criticalRate
+	if err := validateErrorRatePolicy(policy); err != nil {
+		return nil, fmt.Errorf("generating failure-rate configuration: %w", err)
 	}
 	contextPct := cfg.AnomalyThresholds.ContextExhaustionPct
 	if contextPct <= 0 {
@@ -240,8 +268,12 @@ func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
 	b.WriteString("anomaly_thresholds:\n")
 	b.WriteString("  # Time in seconds without session turn activity before flagging a stall anomaly.\n")
 	b.WriteString(fmt.Sprintf("  stall_threshold_seconds: %d\n", stallSec))
-	b.WriteString("  # Ratio of tool errors to total invocations triggering a high failure anomaly.\n")
-	b.WriteString(fmt.Sprintf("  error_rate_threshold: %0.2f\n", errorRate))
+	b.WriteString("  # Minimum calls to a tool before evaluating its failure rate.\n")
+	b.WriteString(fmt.Sprintf("  error_rate_min_calls: %d\n", minCalls))
+	b.WriteString("  # Failure-rate ratio triggering a warning.\n")
+	b.WriteString(fmt.Sprintf("  error_rate_threshold: %s\n", formatRateRatio(errorRate)))
+	b.WriteString("  # Failure-rate ratio triggering a critical alert (0.70 = 70%).\n")
+	b.WriteString(fmt.Sprintf("  error_rate_critical_threshold: %s\n", formatRateRatio(criticalRate)))
 	b.WriteString("  # Token context window utilization percentage triggering saturation warnings.\n")
 	b.WriteString(fmt.Sprintf("  context_exhaustion_pct: %0.2f\n", contextPct))
 	at := cfg.AnomalyThresholds

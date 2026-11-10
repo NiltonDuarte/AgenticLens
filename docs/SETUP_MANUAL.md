@@ -154,10 +154,15 @@ live:
   active_threshold_seconds: 300
   poll_interval_ms: 2000
   max_trace_buffer_messages: 500
-  anomaly_thresholds:
-    stall_threshold_seconds: 120
-    error_rate_threshold: 0.25
-    context_exhaustion_pct: 0.85
+
+anomaly_thresholds:
+  stall_threshold_seconds: 120
+  error_rate_min_calls: 5
+  error_rate_threshold: 0.25
+  error_rate_critical_threshold: 0.70
+  context_exhaustion_pct: 0.85
+  context_ceiling_warning_tokens: 160000
+  context_ceiling_critical_tokens: 200000
 
 code_metrics:
   base_branch: origin/main
@@ -219,10 +224,17 @@ Configures real-time session polling and automated anomaly detection.
 - **`active_threshold_seconds`** (Integer, Default: `300`): Sliding window in seconds. Sessions with turn activity within this window are classified as active.
 - **`poll_interval_ms`** (Integer, Default: `2000`): Frequency in milliseconds at which the embedded server polls SQLite for new session turns.
 - **`max_trace_buffer_messages`** (Integer, Default: `500`): Legacy compatibility setting, still accepted when loading configuration. It does not truncate live trace responses.
-- **`anomaly_thresholds`**:
-  - `stall_threshold_seconds` (Integer, Default: `120`): Elapsed seconds without turn activity in an active session before raising a stall anomaly.
-  - `error_rate_threshold` (Float, Default: `0.25`): Ratio of tool errors to total invocations triggering a high error rate alert (e.g. 0.25 = 25%).
-  - `context_exhaustion_pct` (Float, Default: `0.85`): Token usage percentage of model context window capacity triggering a saturation warning (e.g. 0.85 = 85%).
+
+#### `anomaly_thresholds`
+Configures anomaly policy in a top-level section. Legacy files may place the section under `live`; when both sections exist, the top-level section takes precedence as a whole.
+
+- **`stall_threshold_seconds`** (Integer, Default: `120`): Elapsed seconds without turn activity in an active session before raising a stall anomaly.
+- **`error_rate_min_calls`** (Positive integer, Required): Minimum calls to a tool before evaluating its failure rate. The configuration writer emits `5` when no authoring value is supplied.
+- **`error_rate_threshold`** (Ratio, Required): Warning failure-rate ratio. The configuration writer emits `0.25` when unspecified; `0.35` means 35%.
+- **`error_rate_critical_threshold`** (Ratio, Required): Critical failure-rate ratio. The configuration writer emits `0.70` when unspecified; this means 70%, not the numeric value `70`.
+- **`context_exhaustion_pct`** (Float, Default: `0.85`): Token usage percentage of model context window capacity triggering a saturation warning (e.g. 0.85 = 85%).
+
+Failure-rate ratios must be finite, greater than zero and at most one; the warning ratio cannot exceed the critical ratio. Writer defaults are materialized in generated files. Loading an existing file requires all three failure-rate fields explicitly and reports missing or invalid values instead of supplying runtime defaults. Explicit valid writer overrides retain their precision.
 
 #### `code_metrics`
 Configures git commit diff extraction and file classification.
@@ -539,7 +551,7 @@ In addition to post-turn historical ledgers, AgenticLens provides live observabi
 
 AgenticLens continuously analyzes active sessions and historical ledgers against configurable statistical thresholds to detect engineering inefficiencies:
 - **Session Stalls**: Sessions that remain open with no new turn activity beyond a configurable duration (`stall_threshold_seconds`, default 120 seconds).
-- **High Tool Error Rates**: Sessions where the ratio of failed tool executions to total invocations exceeds a critical limit (`error_rate_threshold`, default 0.25 or 25%).
+- **High Tool Error Rates**: The configuration records a minimum tool-call count, warning ratio (`error_rate_threshold`) and critical ratio (`error_rate_critical_threshold`). Ratios are explicit values between zero and one; configuration generation supplies initial values, while runtime loading requires the fields to be present.
 - **Context Window Exhaustion**: Sessions where cumulative prompt and generation tokens reach or exceed a critical percentage of model capacity (`context_exhaustion_pct`, default 0.85 or 85%).
 
 ### A.6 Context Window Health States

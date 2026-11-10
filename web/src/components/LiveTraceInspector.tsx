@@ -250,7 +250,7 @@ const LiveMessageTurnItem: React.FC<MessageTurnProps> = ({
       {message.parts && message.parts.length > 0 && (
         <div className="message-parts-container">
           {message.parts.map((part) => {
-            const matchedAlert = findMatchingLiveAlert(part, anomalies);
+            const matchedAlert = findMatchingLiveAlert(part, anomalies?.filter((alert) => alert.rule_name === 'ConsecutiveToolErrors'), sessionId);
             const streakCount = extractStreakCount(matchedAlert);
             const consecutiveErrors = streakCount && streakCount > 1 ? streakCount : undefined;
             return (
@@ -408,6 +408,15 @@ export const LiveTraceInspector: React.FC<LiveTraceInspectorProps> = ({
         </div>
       )}
 
+      {trace?.relationships?.state === 'unavailable' && (
+        <div className="inspector-loading-indicator" role="status">
+          <p>Child-session relationships are unavailable. Available trace messages remain visible.</p>
+          {trace.diagnostics?.map((diagnostic) => (
+            <p key={diagnostic.code}>{diagnostic.message}</p>
+          ))}
+        </div>
+      )}
+
       {hasFailedTools && trace && trace.recent_errors.length > 0 && (
         <section
           className="inspector-failed-tools-section"
@@ -437,7 +446,7 @@ export const LiveTraceInspector: React.FC<LiveTraceInspectorProps> = ({
             hidden={!isFailedToolsExpanded}
           >
             {isFailedToolsExpanded && trace.recent_errors.map((errorPart, idx) => {
-              const matchedAlert = findMatchingLiveAlert(errorPart, trace.anomalies);
+              const matchedAlert = findMatchingLiveAlert(errorPart, trace.anomalies.filter((alert) => alert.rule_name === 'ConsecutiveToolErrors'), trace.session_id);
               const streakCount = extractStreakCount(matchedAlert);
               const parentMsg = trace.messages.find((m) =>
                 m.parts?.some((p) => p.id === errorPart.id)

@@ -1,6 +1,7 @@
 package config_test
 
 import (
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -48,6 +49,8 @@ func TestGenerateConfigYAML_Default(t *testing.T) {
 		"anomaly_thresholds:",
 		"  stall_threshold_seconds: 120",
 		"  error_rate_threshold: 0.25",
+		"  error_rate_min_calls: 5",
+		"  error_rate_critical_threshold: 0.70",
 		"  context_exhaustion_pct: 0.85",
 		"  context_ceiling_warning_tokens: 160000",
 		"  context_ceiling_critical_tokens: 200000",
@@ -464,5 +467,69 @@ func TestGenerateConfigYAML_WorkspaceArtifacts(t *testing.T) {
 	}
 	if loaded.Workspaces.Artifacts[0].Title != "Custom Documentation" {
 		t.Errorf("expected title 'Custom Documentation', got %q", loaded.Workspaces.Artifacts[0].Title)
+	}
+}
+
+func TestGenerateConfigYAMLFailureRatePolicyRoundTrip(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name              string
+		minimum           int
+		warning, critical float64
+		wantMinimum       int
+		wantCritical      float64
+	}{
+		{"writer defaults", 0, 0.35, 0, 5, 0.70},
+		{"explicit precise overrides", 13, 0.35123456789, 0.81234567891, 13, 0.81234567891},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := testProjectConfig()
+			cfg.AnomalyThresholds.ErrorRateMinCalls = tc.minimum
+			cfg.AnomalyThresholds.ErrorRateThreshold = tc.warning
+			cfg.AnomalyThresholds.ErrorRateCriticalThreshold = tc.critical
+			body, err := adaptersconfig.GenerateConfigYAML(cfg)
+			if err != nil {
+				t.Fatal(err)
+			}
+			path := filepath.Join(t.TempDir(), ".agenticlens-config.yaml")
+			if err := os.WriteFile(path, body, 0600); err != nil {
+				t.Fatal(err)
+			}
+			got, err := adaptersconfig.LoadFromFile(path)
+			if err != nil {
+				t.Fatalf("writer output not consumable: %v", err)
+			}
+			if got.AnomalyThresholds.ErrorRateMinCalls != tc.wantMinimum || got.AnomalyThresholds.ErrorRateThreshold != tc.warning || got.AnomalyThresholds.ErrorRateCriticalThreshold != tc.wantCritical {
+				t.Fatalf("writer changed policy: %+v", got.AnomalyThresholds)
+			}
+		})
+	}
+}
+
+func TestGenerateConfigYAMLRejectsInvalidFailureRatePolicy(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name              string
+		minimum           int
+		warning, critical float64
+		key               string
+	}{
+		{"negative count", -1, 0.35, 0.70, "error_rate_min_calls"},
+		{"negative warning", 5, -0.1, 0.70, "error_rate_threshold"},
+		{"warning above one", 5, 1.1, 0.70, "error_rate_threshold"},
+		{"critical above one", 5, 0.35, 1.1, "error_rate_critical_threshold"},
+		{"nonfinite warning", 5, math.NaN(), 0.70, "error_rate_threshold"},
+		{"nonfinite critical", 5, 0.35, math.Inf(1), "error_rate_critical_threshold"},
+		{"reversed rates", 5, 0.8, 0.7, "error_rate_threshold"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := testProjectConfig()
+			cfg.AnomalyThresholds.ErrorRateMinCalls = tc.minimum
+			cfg.AnomalyThresholds.ErrorRateThreshold = tc.warning
+			cfg.AnomalyThresholds.ErrorRateCriticalThreshold = tc.critical
+			if body, err := adaptersconfig.GenerateConfigYAML(cfg); err == nil || len(body) != 0 || !strings.Contains(err.Error(), tc.key) {
+				t.Fatalf("invalid explicit policy was not rejected with key diagnostic: %s %v", body, err)
+			}
+		})
 	}
 }

@@ -2525,7 +2525,14 @@ func TestReplaceRecoveredOwnersPreservesUnrecordedNativeCategories(t *testing.T)
 			if err != nil {
 				t.Fatal(err)
 			}
-			replaceRecoveredOwners(&stored, fresh)
+			if fresh[0].Anomalies != nil {
+				t.Fatalf("raw source without policy claimed complete anomaly analysis: %+v", fresh)
+			}
+			configured, err := domain.PersistSourceAnomalySummaries(domain.AgenticFactLedger{Sessions: fresh}, domain.SourceEvents{Events: complete.Events, CompleteSessionIDs: []string{"native"}}, domain.AnomalyThresholdsConfig{ErrorRateMinCalls: 5, ErrorRateThreshold: .35, ErrorRateCriticalThreshold: .70})
+			if err != nil {
+				t.Fatal(err)
+			}
+			replaceRecoveredOwners(&stored, configured.Sessions)
 			if stored[0].Skills == nil || len(stored[0].Skills) != 0 || stored[0].Delegations == nil || len(stored[0].Delegations) != 0 || stored[0].Anomalies == nil || len(stored[0].Anomalies) != 0 {
 				t.Fatalf("complete recorded-empty categories did not replace stale observations: %+v", stored)
 			}
@@ -2535,7 +2542,7 @@ func TestReplaceRecoveredOwnersPreservesUnrecordedNativeCategories(t *testing.T)
 
 func writePresenceRecoveryConfig(t *testing.T, root string) domain.ProjectConfig {
 	t.Helper()
-	input := fmt.Sprintf("project_name: PresenceRecoveryFixture\ntelemetry:\n  capture:\n    state_dir: %q\nticket:\n  prefixes: [TEST]\nworkspaces:\n  dir: records\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n", filepath.Join(root, "capture-state"))
+	input := fmt.Sprintf("project_name: PresenceRecoveryFixture\ntelemetry:\n  capture:\n    state_dir: %q\nticket:\n  prefixes: [TEST]\nworkspaces:\n  dir: records\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n", filepath.Join(root, "capture-state"))
 	if err := os.WriteFile(filepath.Join(root, ".agenticlens-config.yaml"), []byte(input), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -2684,6 +2691,88 @@ func TestFormerGenerationMetadataRecoveryWorkflows(t *testing.T) {
 					t.Fatal("metadata-only cleanup changed user summary")
 				}
 			})
+		}
+	}
+}
+
+func TestBackfillRequiresConfiguredPolicyBeforePublication(t *testing.T) {
+	root := t.TempDir()
+	workspace := filepath.Join(root, "tickets", "FX-1")
+	if err := os.MkdirAll(workspace, 0700); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(workspace, "agentic_metrics.json")
+	original := []byte(`{"retained_evidence":"not inspected without configuration"}`)
+	if err := os.WriteFile(path, original, 0600); err != nil {
+		t.Fatal(err)
+	}
+	previous, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(root); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := os.Chdir(previous); err != nil {
+			t.Errorf("restore cwd: %v", err)
+		}
+	}()
+	if _, err := NewEngine().Execute(BackfillOptions{WorkspacesDir: filepath.Join(root, "tickets")}); err == nil || !strings.Contains(err.Error(), "required backfill configuration") {
+		t.Fatalf("missing config did not fail before publication: %v", err)
+	}
+	after, err := os.ReadFile(path)
+	if err != nil || string(after) != string(original) {
+		t.Fatalf("missing policy changed retained file: %v %s", err, after)
+	}
+}
+
+func TestBackfillRefreshReceivesConfiguredFailureRatePolicy(t *testing.T) {
+	root := t.TempDir()
+	ticket := "TEST-POLICY"
+	version := domain.CurrentSchemaVersion
+	workspace := createTestWorkspace(t, root, ticket, domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticket, Sessions: sessionFactsWithInvs([]testInvFact{{SessionID: "owner", Role: "coder", Model: "stale"}}, nil, nil)})
+	dbPath := filepath.Join(root, "native.db")
+	setupMockOpenCodeDB(t, dbPath, "owner", ticket)
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = db.Exec(`UPDATE part SET data='{"type":"tool","tool":"read","state":{"status":"error","output":"first failure"}}' WHERE id='p1';INSERT INTO part(id,session_id,message_id,data,time_created,time_updated) SELECT 'second','owner','m1','{"type":"tool","tool":"read","state":{"status":"completed","output":"quoted exit code 2"}}',time_created+1,time_updated+1 FROM part WHERE id='p1';INSERT INTO part(id,session_id,message_id,data,time_created,time_updated) SELECT 'third','owner','m1','{"type":"tool","tool":"read","state":{"status":"error","output":"second failure"}}',time_created+2,time_updated+2 FROM part WHERE id='p1'`); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		minimum  int
+		critical float64
+		severity domain.AnomalySeverity
+	}{{3, .8, domain.SeverityWarning}, {4, .8, ""}, {3, .6, domain.SeverityCritical}} {
+		cfg := fmt.Sprintf("project_name: BackfillPolicy\ntelemetry:\n  capture:\n    state_dir: capture-state\nticket:\n  prefixes: [TEST]\nworkspaces:\n  dir: .\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: %d\n  error_rate_threshold: 0.40\n  error_rate_critical_threshold: %g\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n", tc.minimum, tc.critical)
+		if err := os.WriteFile(filepath.Join(root, ".agenticlens-config.yaml"), []byte(cfg), 0600); err != nil {
+			t.Fatal(err)
+		}
+		report, err := NewEngine().Execute(BackfillOptions{WorkspacesDir: root, TicketID: ticket, Source: "opencode", RecomputeDB: true, DBPath: dbPath})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(report.Results) != 1 || report.Results[0].Error != nil || !report.Results[0].DBUpdated {
+			t.Fatalf("native backfill did not execute: %+v", report)
+		}
+		facts, _ := readRecoveryLedger(t, workspace)
+		var rates []domain.Anomaly
+		for _, a := range facts.ToDomain().AnomalyFacts() {
+			if a.RuleID == domain.RuleToolHighFailureRate {
+				rates = append(rates, a)
+			}
+		}
+		expected := 0
+		if tc.severity != "" {
+			expected = 1
+		}
+		if len(rates) != expected || (expected == 1 && rates[0].Severity != tc.severity) {
+			t.Fatalf("backfill ignored configured policy %+v: %+v", tc, rates)
 		}
 	}
 }

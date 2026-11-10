@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	testValidSuffixYAML = "\ntelemetry:\n  capture:\n    state_dir: capture-state\nticket:\n  prefixes:\n    - prefix: AL\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
-	testValidSuffixJSON = `,"telemetry":{"capture":{"state_dir":"capture-state"}},"ticket":{"prefixes":[{"prefix":"AL"}]},"code_metrics":{"source_roots":["src"]},"anomaly_thresholds":{"context_ceiling_warning_tokens":160000,"context_ceiling_critical_tokens":200000}}`
+	testValidSuffixYAML = "\ntelemetry:\n  capture:\n    state_dir: capture-state\nticket:\n  prefixes:\n    - prefix: AL\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+	testValidSuffixJSON = `,"telemetry":{"capture":{"state_dir":"capture-state"}},"ticket":{"prefixes":[{"prefix":"AL"}]},"code_metrics":{"source_roots":["src"]},"anomaly_thresholds":{"error_rate_min_calls":5,"error_rate_threshold":0.25,"error_rate_critical_threshold":0.70,"context_ceiling_warning_tokens":160000,"context_ceiling_critical_tokens":200000}}`
 )
 
 func testProjectConfig() domain.ProjectConfig {
@@ -58,7 +58,9 @@ func testProjectConfig() domain.ProjectConfig {
 		},
 		AnomalyThresholds: domain.AnomalyThresholdsConfig{
 			StallThresholdSeconds:        120,
+			ErrorRateMinCalls:            5,
 			ErrorRateThreshold:           0.25,
+			ErrorRateCriticalThreshold:   0.70,
 			ContextExhaustionPct:         0.85,
 			ContextCeilingWarningTokens:  160000,
 			ContextCeilingCriticalTokens: 200000,
@@ -90,7 +92,7 @@ func testProjectConfig() domain.ProjectConfig {
 
 func TestLoad_LocalTelemetrySourcesResolveAndValidate(t *testing.T) {
 	root := t.TempDir()
-	shared := "project_name: Shared\nticket:\n  prefixes: [AL]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n\ntelemetry:\n  capture:\n    state_dir: capture-state\n"
+	shared := "project_name: Shared\nticket:\n  prefixes: [AL]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n\ntelemetry:\n  capture:\n    state_dir: capture-state\n"
 	if err := os.WriteFile(filepath.Join(root, ".agenticlens-config.yaml"), []byte(shared), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -127,7 +129,7 @@ func TestLoad_LocalTelemetrySourcesResolveAndValidate(t *testing.T) {
 }
 
 func TestLoad_LocalTelemetrySourceCombinations(t *testing.T) {
-	shared := "project_name: Shared\nticket:\n  prefixes: [AL]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n\ntelemetry:\n  capture:\n    state_dir: capture-state\n"
+	shared := "project_name: Shared\nticket:\n  prefixes: [AL]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n\ntelemetry:\n  capture:\n    state_dir: capture-state\n"
 	for _, tc := range []struct {
 		name       string
 		local      string
@@ -196,6 +198,8 @@ live:
   poll_interval_ms: 3000
   max_trace_buffer_messages: 800
 anomaly_thresholds:
+  error_rate_min_calls: 5
+  error_rate_critical_threshold: 0.70
   stall_threshold_seconds: 150
   error_rate_threshold: 0.35
   context_exhaustion_pct: 0.90
@@ -410,6 +414,9 @@ code_metrics:
 database:
   path: /custom/path/db.sqlite
 anomaly_thresholds:
+  error_rate_min_calls: 5
+  error_rate_threshold: 0.25
+  error_rate_critical_threshold: 0.70
   context_ceiling_warning_tokens: 160000
   context_ceiling_critical_tokens: 200000
 
@@ -711,6 +718,9 @@ database:
 live:
   poll_interval_ms: 1234
 anomaly_thresholds:
+  error_rate_min_calls: 5
+  error_rate_threshold: 0.25
+  error_rate_critical_threshold: 0.70
   stall_threshold_seconds: 45
   context_ceiling_warning_tokens: 160000
   context_ceiling_critical_tokens: 200000
@@ -844,7 +854,7 @@ func TestLoad_AdversarialLegacyJSONAndCanonicalPriority(t *testing.T) {
 				"src_folders": ["modern_web", "modern_backend"]
 			},
 			"code_metrics": {"source_roots": ["canonical_web", "canonical_backend"]},
-			"anomaly_thresholds": {
+			"anomaly_thresholds": {"error_rate_min_calls":5,"error_rate_threshold":0.25,"error_rate_critical_threshold":0.70,
 				"context_ceiling_warning_tokens": 160000,
 				"context_ceiling_critical_tokens": 200000
 			}
@@ -957,6 +967,9 @@ code_metrics:
   source_roots:
     - src
 anomaly_thresholds:
+  error_rate_min_calls: 5
+  error_rate_threshold: 0.25
+  error_rate_critical_threshold: 0.70
   context_ceiling_warning_tokens: 160000
   context_ceiling_critical_tokens: 200000
 
@@ -1006,6 +1019,9 @@ code_metrics:
   source_roots:
     - src
 anomaly_thresholds:
+  error_rate_min_calls: 5
+  error_rate_threshold: 0.25
+  error_rate_critical_threshold: 0.70
   context_ceiling_warning_tokens: 160000
   context_ceiling_critical_tokens: 200000
 
@@ -1056,6 +1072,9 @@ code_metrics:
   source_roots:
     - src
 anomaly_thresholds:
+  error_rate_min_calls: 5
+  error_rate_threshold: 0.25
+  error_rate_critical_threshold: 0.70
   context_ceiling_warning_tokens: 160000
   context_ceiling_critical_tokens: 200000
 
@@ -1094,7 +1113,7 @@ telemetry:
 		structuredJSON := `{
 			"project_name": "PrefixApp",
 			"code_metrics": {"source_roots": ["src"]},
-			"anomaly_thresholds": {
+			"anomaly_thresholds": {"error_rate_min_calls":5,"error_rate_threshold":0.25,"error_rate_critical_threshold":0.70,
 				"context_ceiling_warning_tokens": 160000,
 				"context_ceiling_critical_tokens": 200000
 			},
@@ -1108,7 +1127,7 @@ telemetry:
 		scalarJSON := `{
 			"project_name": "PrefixApp",
 			"code_metrics": {"source_roots": ["src"]},
-			"anomaly_thresholds": {
+			"anomaly_thresholds": {"error_rate_min_calls":5,"error_rate_threshold":0.25,"error_rate_critical_threshold":0.70,
 				"context_ceiling_warning_tokens": 160000,
 				"context_ceiling_critical_tokens": 200000
 			},
@@ -1270,6 +1289,9 @@ code_metrics:
   source_roots:
     - src
 anomaly_thresholds:
+  error_rate_min_calls: 5
+  error_rate_threshold: 0.25
+  error_rate_critical_threshold: 0.70
   context_ceiling_warning_tokens: 160000
   context_ceiling_critical_tokens: 200000
 
@@ -1311,7 +1333,7 @@ telemetry:
 		jsonContent := `{
 			"project_name": "TicketTypeApp",
 			"code_metrics": {"source_roots": ["src"]},
-			"anomaly_thresholds": {
+			"anomaly_thresholds": {"error_rate_min_calls":5,"error_rate_threshold":0.25,"error_rate_critical_threshold":0.70,
 				"context_ceiling_warning_tokens": 160000,
 				"context_ceiling_critical_tokens": 200000
 			},
@@ -1363,7 +1385,7 @@ func TestLoad_RoleOrderParsingAndFallback(t *testing.T) {
 		jsonContent := `{
 			"project_name": "JSONRoleOrderProject",
 			"code_metrics": {"source_roots": ["src"]},
-			"anomaly_thresholds": {
+			"anomaly_thresholds": {"error_rate_min_calls":5,"error_rate_threshold":0.25,"error_rate_critical_threshold":0.70,
 				"context_ceiling_warning_tokens": 160000,
 				"context_ceiling_critical_tokens": 200000
 			},
@@ -1404,6 +1426,9 @@ code_metrics:
   source_roots:
     - src
 anomaly_thresholds:
+  error_rate_min_calls: 5
+  error_rate_threshold: 0.25
+  error_rate_critical_threshold: 0.70
   context_ceiling_warning_tokens: 160000
   context_ceiling_critical_tokens: 200000
 role_order:
@@ -1506,6 +1531,9 @@ code_metrics:
   source_roots:
     - src
 anomaly_thresholds:
+  error_rate_min_calls: 5
+  error_rate_threshold: 0.25
+  error_rate_critical_threshold: 0.70
   context_ceiling_warning_tokens: 160000
   context_ceiling_critical_tokens: 200000
 role_order:
@@ -1546,7 +1574,7 @@ telemetry:
 		jsonContent := `{
 			"project_name": "SanitizedJSON",
 			"code_metrics": {"source_roots": ["src"]},
-			"anomaly_thresholds": {
+			"anomaly_thresholds": {"error_rate_min_calls":5,"error_rate_threshold":0.25,"error_rate_critical_threshold":0.70,
 				"context_ceiling_warning_tokens": 160000,
 				"context_ceiling_critical_tokens": 200000
 			},
@@ -1587,6 +1615,9 @@ code_metrics:
   source_roots:
     - src
 anomaly_thresholds:
+  error_rate_min_calls: 5
+  error_rate_threshold: 0.25
+  error_rate_critical_threshold: 0.70
   context_ceiling_warning_tokens: 160000
   context_ceiling_critical_tokens: 200000
 role_order:
@@ -1654,6 +1685,8 @@ live:
   poll_interval_ms: 1500
   max_trace_buffer_messages: 600
 anomaly_thresholds:
+  error_rate_min_calls: 5
+  error_rate_critical_threshold: 0.70
   stall_threshold_seconds: 90
   error_rate_threshold: 0.20
   context_exhaustion_pct: 0.80
@@ -2256,6 +2289,9 @@ code_metrics:
   source_roots: [src]
   base_branch: "release/v1.0"
 anomaly_thresholds:
+  error_rate_min_calls: 5
+  error_rate_threshold: 0.25
+  error_rate_critical_threshold: 0.70
   context_ceiling_warning_tokens: 160000
   context_ceiling_critical_tokens: 200000
 
@@ -2332,6 +2368,9 @@ code_metrics:
   source_roots: [web, backend]
   base_branch: origin/main
 anomaly_thresholds:
+  error_rate_min_calls: 5
+  error_rate_threshold: 0.25
+  error_rate_critical_threshold: 0.70
   context_ceiling_warning_tokens: 160000
   context_ceiling_critical_tokens: 200000
   consecutive_errors_streak_warning: 3
@@ -2370,6 +2409,9 @@ code_metrics:
   source_roots: [src]
   base_branch: "origin/release-2.0"
 anomaly_thresholds:
+  error_rate_min_calls: 5
+  error_rate_threshold: 0.25
+  error_rate_critical_threshold: 0.70
   context_ceiling_warning_tokens: 160000
   context_ceiling_critical_tokens: 200000
 
@@ -2413,6 +2455,9 @@ telemetry:
 		tempDir := t.TempDir()
 		yamlContent := baseConfig + `
 anomaly_thresholds:
+  error_rate_min_calls: 5
+  error_rate_threshold: 0.25
+  error_rate_critical_threshold: 0.70
   context_ceiling_warning_tokens: 160000
 `
 		cfgPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
@@ -2436,6 +2481,9 @@ anomaly_thresholds:
 		tempDir := t.TempDir()
 		yamlContent := baseConfig + `
 anomaly_thresholds:
+  error_rate_min_calls: 5
+  error_rate_threshold: 0.25
+  error_rate_critical_threshold: 0.70
   context_ceiling_critical_tokens: 200000
 `
 		cfgPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
@@ -2459,6 +2507,9 @@ anomaly_thresholds:
 		tempDir := t.TempDir()
 		yamlContent := baseConfig + `
 anomaly_thresholds:
+  error_rate_min_calls: 5
+  error_rate_threshold: 0.25
+  error_rate_critical_threshold: 0.70
   context_ceiling_warning_tokens: 160000
   context_ceiling_critical_tokens: 0
 `
@@ -2480,6 +2531,9 @@ anomaly_thresholds:
 		tempDir := t.TempDir()
 		yamlContent := baseConfig + `
 anomaly_thresholds:
+  error_rate_min_calls: 5
+  error_rate_threshold: 0.25
+  error_rate_critical_threshold: 0.70
   context_ceiling_warning_tokens: -10
   context_ceiling_critical_tokens: 200000
 `
@@ -2501,6 +2555,9 @@ anomaly_thresholds:
 		tempDir := t.TempDir()
 		yamlContent := baseConfig + `
 anomaly_thresholds:
+  error_rate_min_calls: 5
+  error_rate_threshold: 0.25
+  error_rate_critical_threshold: 0.70
   context_ceiling_warning_tokens: 250000
   context_ceiling_critical_tokens: 200000
 `
@@ -2525,6 +2582,9 @@ anomaly_thresholds:
 		tempDir := t.TempDir()
 		yamlContent := baseConfig + `
 anomaly_thresholds:
+  error_rate_min_calls: 5
+  error_rate_threshold: 0.25
+  error_rate_critical_threshold: 0.70
   context_ceiling_warning_tokens: 160000
   context_ceiling_critical_tokens: 200000
 `
@@ -2602,6 +2662,137 @@ func TestLoadGenerationMetricsStrictIndependentDefaults(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func TestLoadRequiredFailureRatePolicy(t *testing.T) {
+	t.Parallel()
+	const yamlBase = "project_name: Policy\ntelemetry:\n  capture:\n    state_dir: capture-state\nticket:\n  prefixes: [AL]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.35\n  error_rate_critical_threshold: 0.70\n"
+	const jsonBase = `{"project_name":"Policy","telemetry":{"capture":{"state_dir":"capture-state"}},"ticket":{"prefixes":["AL"]},"code_metrics":{"source_roots":["src"]},"anomaly_thresholds":{"context_ceiling_warning_tokens":160000,"context_ceiling_critical_tokens":200000,"error_rate_min_calls":5,"error_rate_threshold":0.35,"error_rate_critical_threshold":0.70}}`
+	for _, field := range []struct{ key, original string }{{"error_rate_min_calls", "5"}, {"error_rate_threshold", "0.35"}, {"error_rate_critical_threshold", "0.70"}} {
+		for _, value := range []string{"omitted", "null", "0", "-1", `"invalid"`} {
+			for _, format := range []string{"yaml", "json"} {
+				t.Run(format+"/"+field.key+"/"+value, func(t *testing.T) {
+					body, old, replacement := yamlBase, "  "+field.key+": "+field.original+"\n", "  "+field.key+": "+value+"\n"
+					if format == "json" {
+						body, old, replacement = jsonBase, `,"`+field.key+`":`+field.original, `,"`+field.key+`":`+value
+					}
+					if value == "omitted" {
+						replacement = ""
+					}
+					body = strings.Replace(body, old, replacement, 1)
+					if body == yamlBase || body == jsonBase {
+						t.Fatal("fixture mutation did not change target")
+					}
+					path := filepath.Join(t.TempDir(), ".agenticlens-config."+format)
+					if err := os.WriteFile(path, []byte(body), 0600); err != nil {
+						t.Fatal(err)
+					}
+					_, err := config.LoadFromFile(path)
+					if err == nil {
+						t.Fatal("invalid/missing policy accepted")
+					}
+					if value != `"invalid"` && !strings.Contains(err.Error(), field.key) {
+						t.Fatalf("error does not identify %s: %v", field.key, err)
+					}
+					if after, readErr := os.ReadFile(path); readErr != nil || string(after) != body {
+						t.Fatalf("loading changed config: %v", readErr)
+					}
+				})
+			}
+		}
+	}
+	for _, tc := range []struct{ name, key, old, value string }{
+		{"fractional count", "error_rate_min_calls", "5", "5.5"},
+		{"integer-valued float count", "error_rate_min_calls", "5", "5.0"},
+		{"warning above one", "error_rate_threshold", "0.35", "1.01"},
+		{"critical above one", "error_rate_critical_threshold", "0.70", "1.01"},
+		{"reversed ordering", "error_rate_threshold", "0.35", "0.71"},
+		{"nonfinite warning", "error_rate_threshold", "0.35", ".nan"},
+		{"nonfinite critical", "error_rate_critical_threshold", "0.70", ".inf"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			body := strings.Replace(yamlBase, "  "+tc.key+": "+tc.old+"\n", "  "+tc.key+": "+tc.value+"\n", 1)
+			path := filepath.Join(t.TempDir(), ".agenticlens-config.yaml")
+			if err := os.WriteFile(path, []byte(body), 0600); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := config.LoadFromFile(path); err == nil {
+				t.Fatal("invalid policy accepted")
+			}
+		})
+	}
+	for _, value := range []string{"5.5", "5.0"} {
+		t.Run("json/fractional count/"+value, func(t *testing.T) {
+			body := strings.Replace(jsonBase, `"error_rate_min_calls":5`, `"error_rate_min_calls":`+value, 1)
+			path := filepath.Join(t.TempDir(), ".agenticlens-config.json")
+			if err := os.WriteFile(path, []byte(body), 0600); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := config.LoadFromFile(path); err == nil {
+				t.Fatal("JSON count accepted a non-integer representation")
+			}
+		})
+	}
+	for _, format := range []string{"yaml", "json"} {
+		t.Run(format+"/equal unit thresholds", func(t *testing.T) {
+			body := strings.ReplaceAll(yamlBase, ": 0.35", ": 1")
+			body = strings.ReplaceAll(body, ": 0.70", ": 1")
+			body = strings.ReplaceAll(body, "error_rate_min_calls: 5", "error_rate_min_calls: 1")
+			if format == "json" {
+				body = strings.ReplaceAll(jsonBase, ":0.35", ":1")
+				body = strings.ReplaceAll(body, ":0.70", ":1")
+				body = strings.ReplaceAll(body, `"error_rate_min_calls":5`, `"error_rate_min_calls":1`)
+			}
+			path := filepath.Join(t.TempDir(), ".agenticlens-config."+format)
+			if err := os.WriteFile(path, []byte(body), 0600); err != nil {
+				t.Fatal(err)
+			}
+			got, err := config.LoadFromFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got.AnomalyThresholds.ErrorRateMinCalls != 1 || got.AnomalyThresholds.ErrorRateThreshold != 1 || got.AnomalyThresholds.ErrorRateCriticalThreshold != 1 {
+				t.Fatalf("boundary values changed: %+v", got.AnomalyThresholds)
+			}
+		})
+	}
+}
+
+func TestLoadFailureRateLegacySectionPrecedence(t *testing.T) {
+	t.Parallel()
+	const base = "project_name: Policy\ntelemetry:\n  capture:\n    state_dir: capture-state\nticket:\n  prefixes: [AL]\ncode_metrics:\n  source_roots: [src]\n"
+	const policy = "anomaly_thresholds:\n  error_rate_min_calls: 9\n  error_rate_threshold: 0.31\n  error_rate_critical_threshold: 0.81\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+	const nested = "live:\n  " + "anomaly_thresholds:\n    error_rate_min_calls: 9\n    error_rate_threshold: 0.31\n    error_rate_critical_threshold: 0.81\n    context_ceiling_warning_tokens: 160000\n    context_ceiling_critical_tokens: 200000\n"
+	for _, tc := range []struct {
+		name, top                 string
+		wantCount                 int
+		wantWarning, wantCritical float64
+		missing                   string
+	}{
+		{"legacy only", "", 9, 0.31, 0.81, ""},
+		{"complete canonical wins", strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(policy, "calls: 9", "calls: 11"), "threshold: 0.31", "threshold: 0.41"), "threshold: 0.81", "threshold: 0.91"), 11, 0.41, 0.91, ""},
+		{"incomplete canonical cannot borrow legacy", strings.Replace(policy, "  error_rate_min_calls: 9\n", "", 1), 0, 0, 0, "error_rate_min_calls"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), ".agenticlens-config.yaml")
+			if err := os.WriteFile(path, []byte(base+nested+tc.top), 0600); err != nil {
+				t.Fatal(err)
+			}
+			got, err := config.LoadFromFile(path)
+			if tc.missing != "" {
+				if err == nil || !strings.Contains(err.Error(), tc.missing) {
+					t.Fatalf("missing canonical value borrowed from legacy: %+v %v", got, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got.AnomalyThresholds.ErrorRateMinCalls != tc.wantCount || got.AnomalyThresholds.ErrorRateThreshold != tc.wantWarning || got.AnomalyThresholds.ErrorRateCriticalThreshold != tc.wantCritical {
+				t.Fatalf("policy precedence changed: %+v", got.AnomalyThresholds)
+			}
+		})
 	}
 }
 

@@ -15,7 +15,7 @@ import (
 
 func captureProjectConfig(t *testing.T, project, name string) {
 	t.Helper()
-	data := fmt.Sprintf("project_name: %q\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes: [TEST]\nworkspaces:\n  dir: records\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n", name)
+	data := fmt.Sprintf("project_name: %q\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes: [TEST]\nworkspaces:\n  dir: records\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n", name)
 	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), []byte(data), 0600); err != nil {
 		t.Fatal(err)
 	}

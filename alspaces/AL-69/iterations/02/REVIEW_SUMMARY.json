@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "BEH-01",
+      "severity": 7,
+      "issue": "Legacy metrics replacement deleted authored prose, fenced evidence and Setext sections.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: positive legacy generated ownership, Setext/fence/prose preservation and byte-preserving refusal of ambiguous split blocks; writer/CLI regressions pass."
+    },
+    {
+      "finding_id": "BEH-02",
+      "severity": 6,
+      "issue": "Historical native error-only traces lost raw text beyond the bounded diagnostic.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: full native error-only body retained in transient ToolOutput alongside bounded diagnostic; SQLite/live/export parity and no-ledger-payload regressions pass."
+    },
+    {
+      "finding_id": "TEST-01",
+      "severity": 3,
+      "issue": "Offline retry-reset regression omitted the event sequence and could pass vacuously.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: offline retry assertion receives extracted source events and explicit policy, with independent positive streak control."
+    },
+    {
+      "finding_id": "DATA-INIT",
+      "severity": 5,
+      "issue": "Separate schema reads could falsely reject a valid concurrently initialized capture registry.",
+      "reporters": [
+        {
+          "persona": "coder",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "tester",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: one atomic SQLite schema observation prevents false foreign-database rejection during concurrent first opens; rejection/ownership/readonly/deadline controls and integrated race tests pass."
+    },
+    {
+      "finding_id": "INT-01",
+      "severity": 4,
+      "issue": "Upstream external-parent formatter disclosures prevented safe legacy summary migration.",
+      "reporters": [
+        {
+          "persona": "coder",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed during main integration: recognize four exact generated disclosures; real formatter-to-writer regression fails before the fix and passes after, preserving authored evidence."
+    }
+  ]
+}

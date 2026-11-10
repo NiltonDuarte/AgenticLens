@@ -80,8 +80,8 @@ func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) 
 	if errors.Is(err, config.ErrConfigNotFound) {
 		cfg, err = config.Load("")
 	}
-	if err != nil && !errors.Is(err, config.ErrConfigNotFound) {
-		return nil, fmt.Errorf("loading backfill configuration: %w", err)
+	if err != nil {
+		return nil, fmt.Errorf("loading required backfill configuration (including anomaly_thresholds.error_rate_min_calls, error_rate_threshold and error_rate_critical_threshold): %w", err)
 	}
 
 	report := &BackfillReport{
@@ -571,7 +571,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 
 	// 4. Prepare and validate the entire candidate before dry-run or publication.
 
-	persistedLedger, err := domain.PersistSourceAnomalySummaries(factLedger, sourceEvents)
+	persistedLedger, err := domain.PersistSourceAnomalySummaries(factLedger, sourceEvents, cfg.AnomalyThresholds)
 	if err != nil {
 		result.Error = fmt.Errorf("preparing session-owned facts: %w", err)
 		return result

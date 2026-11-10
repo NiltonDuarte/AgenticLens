@@ -112,7 +112,7 @@ class WindowsDistributionTest(unittest.TestCase):
         application = self.root / 'actual application.exe'
         shutil.copyfile(build_app(self.pin, 'windows', 'amd64'), application)
         shutil.copyfile(application, self.probe)
-        self.config.write_text(f"project_name: Fixture\nagenticlens:\n  version: {self.pin}\n  install_root: '{win(self.cache)}'\nticket:\n  prefixes: [FX]\nworkspaces:\n  dir: workspaces\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n", encoding='utf-8')
+        self.config.write_text(f"project_name: Fixture\nagenticlens:\n  version: {self.pin}\n  install_root: '{win(self.cache)}'\nticket:\n  prefixes: [FX]\nworkspaces:\n  dir: workspaces\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.35\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n", encoding='utf-8')
         self.write_local_policy()
         return application
 

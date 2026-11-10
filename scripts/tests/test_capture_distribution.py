@@ -267,7 +267,7 @@ class CaptureDistributionTest(DistributionFixture):
         source = Path(self.env['CODEX_HOME']); source.mkdir(parents=True, exist_ok=True)
         (source / 'sessions').mkdir()
         state = self.root / 'legacy capture state'
-        self.config.write_text(self.config.read_text() + 'ticket:\n  prefixes: [FX]\nworkspaces:\n  dir: workspaces\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n')
+        self.config.write_text(self.config.read_text() + 'ticket:\n  prefixes: [FX]\nworkspaces:\n  dir: workspaces\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.35\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n')
         (self.repo / 'src').mkdir()
         local = self.repo / '.agenticlens-config.local.yaml'
         local.write_text(f"telemetry:\n  default_source: codex\n  sources:\n    codex:\n      home: '{source}'\n  capture:\n    enabled: true\n    state_dir: '{state}'\n")
@@ -419,7 +419,7 @@ class CaptureDistributionTest(DistributionFixture):
         (child / '.agenticlens-config.json').unlink(); (child / '.git').write_text('gitdir: somewhere\n')
         self.assertNotEqual(self.launch(cwd=child).returncode, 0)
         other = self.root / 'other'; other.mkdir()
-        (other / '.agenticlens-config.yaml').write_text(self.config.read_text() + 'ticket:\n  prefixes: [FX]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n')
+        (other / '.agenticlens-config.yaml').write_text(self.config.read_text() + 'ticket:\n  prefixes: [FX]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.35\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n')
         (other / '.agenticlens-config.local.yaml').write_text(f"telemetry:\n  capture:\n    enabled: false\n    state_dir: '{self.root / 'other state'}'\n  default_source: codex\n  sources:\n    codex:\n      home: '{self.home / '.codex'}'\n")
         self.assertIn('--al-project', self.launch('capture', 'status', '--repo', other).stderr)
         self.succeeds(self.launch('--al-project', other, 'capture', 'status', '--repo', other))

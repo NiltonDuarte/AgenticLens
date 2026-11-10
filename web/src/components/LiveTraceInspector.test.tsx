@@ -80,6 +80,14 @@ describe('LiveTraceInspector Component', () => {
 
   });
 
+  it('discloses unavailable child lookup without hiding available trace evidence', () => {
+    const message=mockLiveTraceView.messages[0];if(!message) throw new Error('missing trace fixture');
+    const trace:LiveTraceView={...mockLiveTraceView,relationships:{state:'unavailable'},diagnostics:[{code:'child_relationship_lookup_failed',message:'Native child lookup failed'}],messages:[{...message,content:'Saved useful trace evidence',parts:[]}]};
+    render(<LiveTraceInspector sessionNode={mockNode} trace={trace} loading={false} onClose={vi.fn()} />);
+    expect(screen.getByText('Child-session relationships are unavailable. Available trace messages remain visible.')).toBeInTheDocument();
+    expect(screen.getByText('Saved useful trace evidence')).toBeInTheDocument();
+  });
+
   it('renders placeholder prompt when sessionNode is null', () => {
     render(
       <LiveTraceInspector

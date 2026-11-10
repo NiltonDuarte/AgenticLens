@@ -102,7 +102,7 @@ func TestRequiredCaptureStateInSelectedLocalPolicy(t *testing.T) {
 func TestLocalOnlyCaptureStateAndMissingFilesystemDoNotNeedFallback(t *testing.T) {
 	root := t.TempDir()
 	shared := filepath.Join(root, ".agenticlens-config.yaml")
-	body := "project_name: Example\nticket:\n  prefixes: [AL]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+	body := "project_name: Example\nticket:\n  prefixes: [AL]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 	if err := os.WriteFile(shared, []byte(body), 0600); err != nil {
 		t.Fatal(err)
 	}

@@ -895,7 +895,11 @@ func CalculateFleetSummary(ledgers []AgenticMetricsLedger) FleetSummary {
 		}
 	}
 
-	anomalySummary := ComputeFleetAnomalies(factLedgers)
+	projectedAnomalies := make([][]Anomaly, len(ledgers))
+	for i, ledger := range ledgers {
+		projectedAnomalies[i] = ledger.Anomalies
+	}
+	anomalySummary := computeFleetAnomalies(factLedgers, projectedAnomalies)
 
 	totalCachedOrInput := totalInputTokens + totalCacheReadTokens
 	var overallCacheHitRatePct float64

@@ -1850,6 +1850,21 @@ func main() {
 		os.Exit(1)
 	}
 	report := adapters.ScanWorkspaces(workspacesDir)
+	if report.FatalError != "" {
+		fmt.Fprintf(os.Stderr, "Error scanning workspaces: %s\n", report.FatalError)
+		os.Exit(1)
+	}
+	for _, diagnostic := range report.Diagnostics {
+		fmt.Fprintf(os.Stderr, "Warning: %s\n", diagnostic.Message)
+	}
+	if *ticketIDFlag != "" {
+		for _, diagnostic := range report.Diagnostics {
+			if diagnostic.TicketID == *ticketIDFlag {
+				fmt.Fprintf(os.Stderr, "Error: Ticket '%s' was rejected during workspace scanning: %s\n", *ticketIDFlag, diagnostic.Message)
+				os.Exit(1)
+			}
+		}
+	}
 
 	if len(report.Ledgers) == 0 {
 		fmt.Fprintf(os.Stderr, "No valid agentic_metrics.json ledgers found in %s\n", workspacesDir)

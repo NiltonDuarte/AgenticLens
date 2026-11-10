@@ -14,15 +14,15 @@ Execution status, configured anomaly policy, partial-data diagnostics, summary p
 
 Successful reads containing exit code or crash phrases are classified as failed tools, corrupting live and offline failure metrics.
 
-* Use authoritative status and process-exit evidence. Limit any legacy text fallback to execution tools and a recognized execution envelope; arbitrary read/search output is content.
+* Use only authoritative structured status and structured process-exit evidence. No textual process fallback is permitted, including execution-tool wrappers and legacy records. Free-form output/error text is preserved content and never determines failure, severity or no-match behavior. Preserve a reported tool status without inventing an unavailable process result; missing structured evidence stays unknown. This boundary follows the user's explicit AL-69 clarification recorded in the active iteration plan.
 * Exercise successful reads containing exit code 2 and segmentation fault, actual process failures, grep/glob no-match behavior, and live/offline parity through the real consumers.
 
 ### Apply anomaly thresholds consistently through persistence and views
 
 Custom anomaly thresholds disappear during persistence and fleet recomputation; ErrorRateThreshold is serialized but ignored in favor of fixed levels.
 
-* Define the configured error-rate threshold and warning/critical semantics in the contract; apply the effective policy to event detection and aggregate fallback, and display truthful thresholds.
-* Prove generate/save/reload/detail/fleet and live parity for settings above and below defaults, including exact boundaries and event pruning. Do not silently replace an already configured projection with default detection.
+* Require explicit configuration-file values for minimum tool-call count, warning rate and critical rate. No invented numeric defaults, hardcoded minimum or derived critical rate is permitted. Missing/invalid required values must fail affected analysis clearly. Apply the configured policy to event detection and aggregate fallback, and display truthful thresholds.
+* Prove generate/save/reload/detail/fleet and live parity with distinct explicitly configured values, including exact boundaries, missing/invalid configuration and event pruning. Do not silently replace an already configured projection with default detection. The user's required-configuration clarification is recorded in AL-69 iteration 02.
 
 ### Surface partial scan and child-linkage diagnostics
 

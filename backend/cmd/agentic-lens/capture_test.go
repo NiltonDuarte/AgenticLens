@@ -71,7 +71,7 @@ func newCaptureGenerationFixture(t *testing.T) captureGenerationFixture {
 	t.Setenv("CODEX_HOME", f.store)
 	f.stateBase = f.state
 	f.output = filepath.Join(f.project, "ledger.json")
-	config := "project_name: CaptureFixture\ntelemetry:\n  capture:\n    state_dir: " + strconv.Quote(f.state) + "\nticket:\n  prefixes: [TEST]\nworkspaces:\n  dir: records\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+	config := "project_name: CaptureFixture\ntelemetry:\n  capture:\n    state_dir: " + strconv.Quote(f.state) + "\nticket:\n  prefixes: [TEST]\nworkspaces:\n  dir: records\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 	if err := os.WriteFile(filepath.Join(f.project, ".agenticlens-config.yaml"), []byte(config), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -432,7 +432,7 @@ func TestCaptureCLIRequestExposesUnassignedTicketToPlugin(t *testing.T) {
 
 func TestCaptureCLIGenerateIncludesBoundIndependentSessionsAndSummaryDiagnostics(t *testing.T) {
 	project := t.TempDir()
-	configuration := "project_name: CaptureFixture\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes: [TEST]\nworkspaces:\n  dir: custom records\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+	configuration := "project_name: CaptureFixture\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes: [TEST]\nworkspaces:\n  dir: custom records\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), []byte(configuration), 0600); err != nil {
 		t.Fatal(err)
 	}

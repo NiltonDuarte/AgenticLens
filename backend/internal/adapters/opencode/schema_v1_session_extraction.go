@@ -45,19 +45,6 @@ type schemaV1MessageData struct {
 	Cost             *float64            `json:"cost"`
 }
 
-type schemaV1PartState struct {
-	Status *string         `json:"status"`
-	Output *string         `json:"output"`
-	Input  json.RawMessage `json:"input"`
-}
-
-type schemaV1PartData struct {
-	Text  *string            `json:"text"`
-	Type  *string            `json:"type"`
-	Tool  *string            `json:"tool"`
-	State *schemaV1PartState `json:"state"`
-}
-
 func extractSchemaV1SessionsWithEvents(db *sql.DB, ids []string, user string, users map[string]string, strict bool, sink *[]domain.EventFact, exact ...bool) ([]domain.SessionFact, *string, *string, error) {
 	return extractSchemaV1SessionsWithPolicyAt(db, ids, user, users, strict, sink, nil, time.Now().UTC(), exact...)
 }
@@ -507,7 +494,7 @@ func extractSchemaV1SessionsWithCheckpointAt(db *sql.DB, threadIDs []string, def
 			continue
 		}
 
-		var rawPD schemaV1PartData
+		var rawPD SchemaV1PartData
 		if err := json.Unmarshal([]byte(pData.String), &rawPD); err != nil {
 			if strict {
 				return nil, nil, nil, fmt.Errorf("OpenCode schema family v1: decoding part %s in session %s: %w", pid.String, sid.String, err)
@@ -624,11 +611,14 @@ func extractSchemaV1SessionsWithCheckpointAt(db *sql.DB, threadIDs []string, def
 					stat = *rawPD.State.Status
 				}
 				if rawPD.State.Output != nil {
-					out = *rawPD.State.Output
+					out = SchemaV1RawValue(rawPD.State.Output)
+				}
+				if out == "" && rawPD.State.Error != nil {
+					out = SchemaV1RawValue(rawPD.State.Error)
 				}
 			}
 
-			classification := domain.ClassifyToolExecution(toolName, stat, out, tAcc.consecutiveErrors)
+			classification := domain.ClassifyToolExecution(toolName, stat, out, tAcc.consecutiveErrors, rawPD.ProcessEvidence())
 			isError := classification.IsError
 
 			if isError {
@@ -638,7 +628,7 @@ func extractSchemaV1SessionsWithCheckpointAt(db *sql.DB, threadIDs []string, def
 				tAcc.consecutiveErrors = 0
 			}
 
-			eventStatus := "completed"
+			eventStatus := classification.Status
 			if isError {
 				eventStatus = "error"
 			}
@@ -655,8 +645,10 @@ func extractSchemaV1SessionsWithCheckpointAt(db *sql.DB, threadIDs []string, def
 			var toolInput, toolOutput *string
 			if rawPD.State != nil {
 				toolInput = normalizeToolInput(rawPD.State.Input)
-				if rawPD.State.Output != nil {
-					outputValue := *rawPD.State.Output
+				// Keep the full native output/error body in the transient trace;
+				// the separately bounded classification diagnostic is not its owner.
+				if rawPD.State.Output != nil || rawPD.State.Error != nil {
+					outputValue := out
 					toolOutput = &outputValue
 				}
 			}
@@ -794,7 +786,6 @@ func extractSchemaV1SessionsWithCheckpointAt(db *sql.DB, threadIDs []string, def
 			User:        sessionUser,
 			Invocations: invocations,
 			Tools:       sTools,
-			Anomalies:   []domain.Anomaly{},
 		})
 	}
 

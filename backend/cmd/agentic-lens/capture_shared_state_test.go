@@ -38,7 +38,7 @@ func TestCaptureSharedDatabasePublishesSameTicketToExactWorktrees(t *testing.T) 
 		}
 	}
 	git("init", "-qb", "main")
-	cfg := "project_name: SharedCLI\ntelemetry:\n  capture:\n    state_dir: " + strconv.Quote(base) + "\nticket:\n  prefixes: [TEST]\nworkspaces:\n  dir: records\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+	cfg := "project_name: SharedCLI\ntelemetry:\n  capture:\n    state_dir: " + strconv.Quote(base) + "\nticket:\n  prefixes: [TEST]\nworkspaces:\n  dir: records\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 	if err := os.WriteFile(filepath.Join(repo, ".agenticlens-config.yaml"), []byte(cfg), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -141,7 +141,7 @@ func TestCaptureSharedDatabasePublishesSameTicketToExactWorktrees(t *testing.T) 
 func TestCaptureConfigUpdateRefusesLegacyStateWithoutConfiguredPath(t *testing.T) {
 	root := t.TempDir()
 	config := filepath.Join(root, ".agenticlens-config.yaml")
-	body := []byte("project_name: LegacyProject\nticket:\n  prefixes: [TEST]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n")
+	body := []byte("project_name: LegacyProject\nticket:\n  prefixes: [TEST]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n")
 	if err := os.WriteFile(config, body, 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -176,7 +176,7 @@ func TestCaptureConfigUpdateRefusesLegacyStateWithoutConfiguredPath(t *testing.T
 func TestCaptureInstallIgnoresLogicalRegistryAndPreservesUserRules(t *testing.T) {
 	project := t.TempDir()
 	source := t.TempDir()
-	config := []byte("project_name: LocalCapture\ntelemetry:\n  capture:\n    state_dir: .capture-local\nticket:\n  prefixes: [TEST]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n")
+	config := []byte("project_name: LocalCapture\ntelemetry:\n  capture:\n    state_dir: .capture-local\nticket:\n  prefixes: [TEST]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n")
 	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), config, 0600); err != nil {
 		t.Fatal(err)
 	}

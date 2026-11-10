@@ -125,6 +125,9 @@ code_metrics:
   source_roots: [web, backend]
   base_branch: origin/main
 anomaly_thresholds:
+  error_rate_min_calls: 5
+  error_rate_threshold: 0.25
+  error_rate_critical_threshold: 0.70
   context_ceiling_warning_tokens: 160000
   context_ceiling_critical_tokens: 200000
   consecutive_errors_streak_warning: 3

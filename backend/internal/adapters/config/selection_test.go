@@ -30,7 +30,7 @@ func TestSelectedLocalOriginAcrossLinkedWorktrees(t *testing.T) {
 		}
 	}
 	git(base, "init", "-b", "main")
-	shared := "project_name: Portable\nagenticlens:\n  version: v9.8.7\nworkspaces:\n  dir: custom-records\nticket:\n  prefixes: [CUSTOM]\ncode_metrics:\n  source_roots: [custom-src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+	shared := "project_name: Portable\nagenticlens:\n  version: v9.8.7\nworkspaces:\n  dir: custom-records\nticket:\n  prefixes: [CUSTOM]\ncode_metrics:\n  source_roots: [custom-src]\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.35\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 	write(filepath.Join(base, ".agenticlens-config.yaml"), shared)
 	git(base, "add", ".agenticlens-config.yaml")
 	git(base, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-m", "fixture")
@@ -128,5 +128,49 @@ func TestCaptureEnablementMustBeExplicitBoolean(t *testing.T) {
 				t.Fatalf("nonboolean accepted: %s", value)
 			}
 		})
+	}
+}
+
+func TestSelectedLocalCapturePolicyCannotOverrideSharedFailureRateSettings(t *testing.T) {
+	root := t.TempDir()
+	shared := "project_name: SharedRates\nticket:\n  prefixes: [AL]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: 13\n  error_rate_threshold: 0.35123456789\n  error_rate_critical_threshold: 0.81234567891\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+	sharedPath := filepath.Join(root, ".agenticlens-config.yaml")
+	if err := os.WriteFile(sharedPath, []byte(shared), 0600); err != nil {
+		t.Fatal(err)
+	}
+	local := "telemetry:\n  capture:\n    enabled: true\n    state_dir: local-capture-state\n    max_sessions: 17\nanomaly_thresholds:\n  error_rate_min_calls: 1\n  error_rate_threshold: 0.01\n  error_rate_critical_threshold: 0.02\n"
+	localPath := filepath.Join(root, ".agenticlens-config.local.yaml")
+	if err := os.WriteFile(localPath, []byte(local), 0600); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := Load(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded.AnomalyThresholds.ErrorRateMinCalls != 13 || loaded.AnomalyThresholds.ErrorRateThreshold != .35123456789 || loaded.AnomalyThresholds.ErrorRateCriticalThreshold != .81234567891 {
+		t.Fatalf("selected local capture file overrode shared metrics policy: %+v", loaded.AnomalyThresholds)
+	}
+	capture, err := ResolveCapture(root, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !capture.Enabled || capture.MaxSessions != 17 || capture.StateDir != filepath.Join(root, "local-capture-state") {
+		t.Fatalf("shared-rate protection lost actual selected local capture policy: %+v", capture)
+	}
+	for key, value := range map[string]string{"error_rate_min_calls": "13", "error_rate_threshold": "0.35123456789", "error_rate_critical_threshold": "0.81234567891"} {
+		missing := strings.Replace(shared, "  "+key+": "+value+"\n", "", 1)
+		if err := os.WriteFile(sharedPath, []byte(missing), 0600); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := Load(root); err == nil || !strings.Contains(err.Error(), key) {
+			t.Fatalf("local file supplied missing shared %s: %v", key, err)
+		}
+	}
+	after, err := os.ReadFile(localPath)
+	if err != nil || string(after) != local {
+		t.Fatalf("configuration reads rewrote selected local policy: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(root, "local-capture-state")); !os.IsNotExist(err) {
+		t.Fatalf("read-only configuration selection allocated capture state: %v", err)
 	}
 }

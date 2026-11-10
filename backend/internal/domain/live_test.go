@@ -292,14 +292,14 @@ func TestClassifyToolExecution(t *testing.T) {
 		{"completed traceback text", "read", "completed", "Traceback (most recent call last): example", 0, false, domain.SeverityNone},
 		{"explicit status error", "edit", "error", "", 0, true, domain.SeverityMedium},
 		{"explicit failed status", "bash", "failed", "", 0, true, domain.SeverityMedium},
-		{"nonzero exit", "bash", "completed", "exit status 2", 0, true, domain.SeverityMedium},
+		{"nonzero exit", "bash", "completed", "exit status 2", 0, false, domain.SeverityNone},
 		{"grep no match exit one", "grep", "completed", "exit status 1", 0, false, domain.SeverityNone},
 		{"grep no match cannot override explicit error status", "grep", "error", "exit status 1", 0, true, domain.SeverityMedium},
 		{"glob no match cannot override explicit failed status", "glob", "failed", "no matches", 0, true, domain.SeverityMedium},
 		{"glob zero matches", "glob", "completed", "0 matches", 0, false, domain.SeverityNone},
-		{"timeout", "bash", "completed", "operation timed out", 0, true, domain.SeverityMedium},
-		{"permission denied", "bash", "completed", "permission denied", 0, true, domain.SeverityMedium},
-		{"process crash", "bash", "completed", "segmentation fault", 0, true, domain.SeverityHigh},
+		{"timeout", "bash", "completed", "operation timed out", 0, false, domain.SeverityNone},
+		{"permission denied", "bash", "completed", "permission denied", 0, false, domain.SeverityNone},
+		{"process crash", "bash", "completed", "segmentation fault", 0, false, domain.SeverityNone},
 		{"consecutive errors escalate", "bash", "failed", "exit status 1", 2, true, domain.SeverityHigh},
 	}
 	for _, tt := range tests {

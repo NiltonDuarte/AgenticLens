@@ -956,3 +956,45 @@ func TestReconcileExplicitChildTicketDoesNotBlockOrReassignParent(t *testing.T) 
 		t.Fatalf("settled child work blocked/reassigned repeated parent: %+v %v", again.Sessions, err)
 	}
 }
+
+func TestProjectReconciliationReceivesConfiguredAnomalyPolicy(t *testing.T) {
+	project := t.TempDir()
+	state := filepath.Join(project, "capture-state")
+	cfg := fmt.Sprintf("project_name: ReconcilePolicy\ntelemetry:\n  capture:\n    state_dir: %q\nticket:\n  prefixes: [TEST]\nworkspaces:\n  dir: records\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: 3\n  error_rate_threshold: 0.40\n  error_rate_critical_threshold: 0.80\n  consecutive_errors_streak_warning: 2\n  consecutive_errors_streak_critical: 2\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n", state)
+	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), []byte(cfg), 0600); err != nil {
+		t.Fatal(err)
+	}
+	home := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(home, "sessions"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(home, "sessions", "source.jsonl")
+	source := writeRollout(t, path, "policy-owner", "", 5)
+	source = []byte(strings.Replace(string(source), `"payload":{"id":`, fmt.Sprintf(`"payload":{"cwd":%q,"id":`, project), 1))
+	for i, exit := range []int{1, 1, 0} {
+		source = append(source, []byte(fmt.Sprintf(`{"timestamp":"2026-01-01T00:00:0%dZ","type":"event_msg","payload":{"type":"exec_command_end","call_id":"call-%d","turn_id":"turn-one","exit_code":%d}}`+"\n", i+3, i, exit))...)
+	}
+	if err := os.WriteFile(path, source, 0600); err != nil {
+		t.Fatal(err)
+	}
+	registry, err := capture.OpenProjectContext(context.Background(), state, project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer registry.Close()
+	registerBound(t, registry, home, path, "policy-owner", "TEST-100")
+	result, err := registry.Reconcile(context.Background(), "TEST-100", "tester", 10, capture.DefaultByteBudget)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Sessions) != 1 || result.Sessions[0].Anomalies == nil {
+		t.Fatalf("configured analysis was not recorded: %+v", result)
+	}
+	found := false
+	for _, a := range result.Sessions[0].Anomalies {
+		found = found || (a.RuleID == domain.RuleToolRetryStreak && a.Severity == domain.SeverityCritical && a.Context.Count != nil && *a.Context.Count == 2)
+	}
+	if !found {
+		t.Fatalf("reconciliation lost configured two-error critical rule: %+v", result.Sessions[0].Anomalies)
+	}
+}

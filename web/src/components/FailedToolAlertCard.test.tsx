@@ -84,7 +84,7 @@ describe('FailedToolAlertCard Component', () => {
     expect(onInspect).toHaveBeenCalledTimes(1);
   });
 
-  it('renders all severity levels (high, medium, low, none) and defaults to high when omitted', () => {
+  it('renders all supplied severity levels and keeps omitted severity unknown', () => {
     const severities: readonly FailureSeverity[] = ['high', 'medium', 'low', 'none'];
 
     for (const sev of severities) {
@@ -100,7 +100,7 @@ describe('FailedToolAlertCard Component', () => {
       unmount();
     }
 
-    // Omitted severity defaults to HIGH
+    // Omitted structured severity must remain unknown.
     const omittedSevPart: LivePartFact = {
       id: 'part-omitted-sev',
       type: 'tool',
@@ -109,8 +109,8 @@ describe('FailedToolAlertCard Component', () => {
     };
     render(<FailedToolAlertCard part={omittedSevPart} />);
     const card = screen.getByTestId('failed-tool-alert-card');
-    expect(card).toHaveClass('severity-high');
-    expect(screen.getByText('HIGH')).toBeInTheDocument();
+    expect(card).toHaveClass('severity-unknown');
+    expect(screen.getByText('UNKNOWN')).toBeInTheDocument();
   });
 
   it('handles output snippet length boundary: 200 chars is not truncated, 201 chars triggers expand button', () => {

@@ -571,7 +571,14 @@ func (s *LiveService) readSessionTrace(ctx context.Context, sessionID string) (t
 		recentErrors[i], recentErrors[j] = recentErrors[j], recentErrors[i]
 	}
 
+	relationships := domain.LiveRelationships{State: domain.LiveRelationshipsComplete}
+	diagnostics := []domain.LiveTraceDiagnostic{}
+	if childErr != nil {
+		relationships.State = domain.LiveRelationshipsUnavailable
+		diagnostics = append(diagnostics, domain.LiveTraceDiagnostic{Code: domain.DiagnosticChildRelationshipLookupFailed, Message: fmt.Sprintf("Native child relationships could not be checked: %v", childErr)})
+	}
 	trace := domain.LiveTraceView{
+		Relationships: relationships, Diagnostics: diagnostics,
 		SessionID:       sessionID,
 		Messages:        messages,
 		TotalToolCalls:  totalTools,
@@ -605,22 +612,14 @@ func assistantPersonaEvidence(messages []RawMessageRecord) domain.PersonaEvidenc
 }
 
 func parsePartRecord(rp RawPartRecord, consecutiveErrors *int) domain.LivePartFact {
-	partType := "tool"
+	partType := "unknown"
 	var toolName *string
 	var inputSnippet, outputSnippet, status string
 	var skillName, subagentType string
+	var process domain.ToolProcessEvidence
 
 	if strings.TrimSpace(rp.Data) != "" {
-		var pData struct {
-			Type  *string `json:"type"`
-			Tool  *string `json:"tool"`
-			Text  *string `json:"text"`
-			State *struct {
-				Status *string         `json:"status"`
-				Input  json.RawMessage `json:"input"`
-				Output json.RawMessage `json:"output"`
-			} `json:"state"`
-		}
+		var pData opencode.SchemaV1PartData
 		if err := json.Unmarshal([]byte(rp.Data), &pData); err == nil {
 			if pData.Type != nil && strings.TrimSpace(*pData.Type) != "" {
 				partType = strings.TrimSpace(*pData.Type)
@@ -629,11 +628,15 @@ func parsePartRecord(rp RawPartRecord, consecutiveErrors *int) domain.LivePartFa
 				toolName = pData.Tool
 			}
 			if pData.State != nil {
+				process = pData.ProcessEvidence()
 				if pData.State.Status != nil {
 					status = strings.TrimSpace(*pData.State.Status)
 				}
 				inputSnippet = rawMessageToString(pData.State.Input)
 				outputSnippet = rawMessageToString(pData.State.Output)
+				if outputSnippet == "" && pData.State.Error != nil {
+					outputSnippet = opencode.SchemaV1RawValue(pData.State.Error)
+				}
 				var input map[string]json.RawMessage
 				if json.Unmarshal(pData.State.Input, &input) == nil {
 					if toolName != nil && strings.TrimSpace(*toolName) == "skill" {
@@ -651,13 +654,13 @@ func parsePartRecord(rp RawPartRecord, consecutiveErrors *int) domain.LivePartFa
 				}
 			}
 			if outputSnippet == "" && pData.Text != nil {
-				outputSnippet = strings.TrimSpace(*pData.Text)
+				outputSnippet = *pData.Text
 			}
 		}
 	}
 
 	if status == "" {
-		status = "completed"
+		status = "unknown"
 	}
 
 	var isError bool
@@ -669,8 +672,9 @@ func parsePartRecord(rp RawPartRecord, consecutiveErrors *int) domain.LivePartFa
 		if toolName != nil {
 			tName = *toolName
 		}
-		classification := domain.ClassifyToolExecution(tName, status, outputSnippet, *consecutiveErrors)
+		classification := domain.ClassifyToolExecution(tName, status, outputSnippet, *consecutiveErrors, process)
 		isError, severity, errorMessage = classification.IsError, classification.Severity, classification.ErrorMessage
+		status = classification.Status
 		if isError {
 			*consecutiveErrors++
 			status = "error"
@@ -679,14 +683,6 @@ func parsePartRecord(rp RawPartRecord, consecutiveErrors *int) domain.LivePartFa
 		}
 	} else {
 		severity = domain.SeverityNone
-	}
-
-	// Bound snippets
-	if len(inputSnippet) > 500 {
-		inputSnippet = inputSnippet[:500]
-	}
-	if len(outputSnippet) > 1000 {
-		outputSnippet = outputSnippet[:1000]
 	}
 
 	return domain.LivePartFact{
@@ -740,14 +736,7 @@ func validateSessionID(id string) error {
 }
 
 func rawMessageToString(raw json.RawMessage) string {
-	if len(raw) == 0 {
-		return ""
-	}
-	var str string
-	if err := json.Unmarshal(raw, &str); err == nil {
-		return strings.TrimSpace(str)
-	}
-	return strings.TrimSpace(string(raw))
+	return opencode.SchemaV1RawValue(raw)
 }
 
 func extractMessageContent(raw json.RawMessage) string {
@@ -921,16 +910,20 @@ func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID strin
 	response.IsHydrated = response.Availability != domain.TraceUnavailable
 	response.Events = domain.SortEvents(response.Events)
 	source := domain.SourceEvents{Events: response.Events, CompleteSessionIDs: response.Coverage.CompleteSessionIDs}
-	response.Anomalies = hydrateAnomalyAssociations(ledger.Facts, source)
+	var thresholds []domain.AnomalyThresholdsConfig
+	if s != nil {
+		thresholds = append(thresholds, s.cfg.AnomalyThresholds)
+	}
+	response.Anomalies = hydrateAnomalyAssociations(ledger.Facts, source, thresholds...)
 	if err := response.Validate(); err != nil {
 		return domain.WorkspaceEventsResponse{}, err
 	}
 	return response, nil
 }
-func hydrateAnomalyAssociations(facts domain.AgenticFactLedger, source domain.SourceEvents) []domain.Anomaly {
-	anomalies, err := domain.DetectAnomaliesWithEvidence(facts, source)
+func hydrateAnomalyAssociations(facts domain.AgenticFactLedger, source domain.SourceEvents, thresholds ...domain.AnomalyThresholdsConfig) []domain.Anomaly {
+	anomalies, err := domain.DetectAnomaliesWithEvidence(facts, source, thresholds...)
 	if err != nil {
-		return domain.RefreshAnomalySummariesFromSource(facts, source)
+		return domain.RefreshAnomalySummariesFromSource(facts, source, thresholds...)
 	}
 	return anomalies
 }

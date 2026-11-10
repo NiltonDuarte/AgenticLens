@@ -1,0 +1,11 @@
+# fix(AL-69): preserve accurate telemetry and evidence
+
+AgenticLens could count inspected error text as tool failures, ignore configured anomaly policy, conceal incomplete scans/child lookup, and overwrite or misattribute evidence.
+
+Use structured execution facts only, explicit configured minimum/warning/critical rates, and shared version-specific live/offline decoding. Preserve unavailable historical facts and authoritative fleet projections; expose partial-data diagnostics without hiding usable traces. Replace only owned generated summary content, preserve full transient native errors, and match exact anomaly identities while keeping rate totals separate from streaks. Also fix the pre-existing capture schema-read race exposed by concurrent-open verification without weakening database rejection or ownership checks.
+
+Configuration writer defaults are 5 minimum calls and 70% critical; this repository retains 35% warning. Runtime requires the file values. Saved schema/privacy and AL-62/AL-66 ownership/presence guarantees remain unchanged.
+
+Validation: actual CLI/SQLite/HTTP/dashboard regressions, before/after preservation probes, four dropped-policy mutation controls and constructor controls passed. Initial reviews found two preservation gaps and one weak oracle; all are corrected. Final focused reviews used Luna only as requested and passed. Merged main `583c678d` (AL-79), preserving native completeness and required-rate guards, shared history and manager/engine separation. Four Luna/medium integration reviews approved; the formatter/legacy-writer compatibility regression is fixed. Final `make` passed at `8cece50a`, including Go race tests, 199 frontend units and 686 integration cases. The standalone engine served current embedded HTML/JS/CSS without Node; engine/capture/manager protocols are 1/3/1. Windows runtime was not exercised on Linux.
+
+[Contract](https://github.com/NiltonDuarte/AgenticLens/blob/AL-69/preserve-accurate-telemetry-and-evidence/alspaces/AL-69/CONTRACT.md) · [Evidence and limits](https://github.com/NiltonDuarte/AgenticLens/blob/AL-69/preserve-accurate-telemetry-and-evidence/alspaces/AL-69/SUMMARY.md)

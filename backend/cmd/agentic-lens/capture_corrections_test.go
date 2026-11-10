@@ -303,7 +303,7 @@ func TestCaptureGenerateUsesOwningConfigurationRoot(t *testing.T) {
 			old := filepath.Join(f.project, ".agenticlens-config.yaml")
 			body := readCaptureFile(t, old)
 			if format == "json" {
-				body = []byte(`{"project_name":"CaptureFixture","telemetry":{"capture":{"state_dir":` + strconv.Quote(f.state) + `}},"ticket":{"prefixes":["TEST"]},"workspaces":{"dir":"records"},"code_metrics":{"source_roots":["src"]},"anomaly_thresholds":{"context_ceiling_warning_tokens":160000,"context_ceiling_critical_tokens":200000}}`)
+				body = []byte(`{"project_name":"CaptureFixture","telemetry":{"capture":{"state_dir":` + strconv.Quote(f.state) + `}},"ticket":{"prefixes":["TEST"]},"workspaces":{"dir":"records"},"code_metrics":{"source_roots":["src"]},"anomaly_thresholds":{"error_rate_min_calls":5,"error_rate_threshold":0.25,"error_rate_critical_threshold":0.70,"context_ceiling_warning_tokens":160000,"context_ceiling_critical_tokens":200000}}`)
 			}
 			if format != "yaml" {
 				if err := os.Remove(old); err != nil {

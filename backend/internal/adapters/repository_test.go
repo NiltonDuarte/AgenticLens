@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
@@ -131,7 +132,7 @@ func TestResolveWorkspacesDir(t *testing.T) {
 		if err := os.MkdirAll(wsDir, 0755); err != nil {
 			t.Fatal(err)
 		}
-		cfgContent := "project_name: Test\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  dir: root_yaml_workspaces\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n\ntelemetry:\n  capture:\n    state_dir: capture-state\n"
+		cfgContent := "project_name: Test\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  dir: root_yaml_workspaces\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n\ntelemetry:\n  capture:\n    state_dir: capture-state\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -157,7 +158,7 @@ func TestResolveWorkspacesDir(t *testing.T) {
 		if err := os.MkdirAll(wsDir, 0755); err != nil {
 			t.Fatal(err)
 		}
-		cfgContent := "project_name: Test\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  dir: root_yml_workspaces\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n\ntelemetry:\n  capture:\n    state_dir: capture-state\n"
+		cfgContent := "project_name: Test\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  dir: root_yml_workspaces\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n\ntelemetry:\n  capture:\n    state_dir: capture-state\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -183,7 +184,7 @@ func TestResolveWorkspacesDir(t *testing.T) {
 		if err := os.MkdirAll(wsDir, 0755); err != nil {
 			t.Fatal(err)
 		}
-		cfgContent := `{"project_name": "Test", "ticket": {"prefixes": [{"prefix": "TEST"}]}, "workspaces": {"dir": "root_json_workspaces"}, "code_metrics": {"source_roots": ["src"]}, "anomaly_thresholds": {"context_ceiling_warning_tokens": 160000, "context_ceiling_critical_tokens": 200000},"telemetry":{"capture":{"state_dir":"capture-state"}}}`
+		cfgContent := `{"project_name": "Test", "ticket": {"prefixes": [{"prefix": "TEST"}]}, "workspaces": {"dir": "root_json_workspaces"}, "code_metrics": {"source_roots": ["src"]}, "anomaly_thresholds": {"error_rate_min_calls":5,"error_rate_threshold":0.25,"error_rate_critical_threshold":0.70,"context_ceiling_warning_tokens": 160000, "context_ceiling_critical_tokens": 200000},"telemetry":{"capture":{"state_dir":"capture-state"}}}`
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.json"), []byte(cfgContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -209,7 +210,7 @@ func TestResolveWorkspacesDir(t *testing.T) {
 		if err := os.MkdirAll(wsDir, 0755); err != nil {
 			t.Fatal(err)
 		}
-		cfgContent := "project_name: Test\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  dir: deep_root_ws\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n\ntelemetry:\n  capture:\n    state_dir: capture-state\n"
+		cfgContent := "project_name: Test\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  dir: deep_root_ws\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n\ntelemetry:\n  capture:\n    state_dir: capture-state\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -245,7 +246,7 @@ func TestResolveWorkspacesDir(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		cfgContent := "project_name: TestPrecedence\nticket:\n  prefixes:\n    - prefix: PREC\nworkspaces:\n  dir: precedence_workspaces\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n\ntelemetry:\n  capture:\n    state_dir: capture-state\n"
+		cfgContent := "project_name: TestPrecedence\nticket:\n  prefixes:\n    - prefix: PREC\nworkspaces:\n  dir: precedence_workspaces\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n\ntelemetry:\n  capture:\n    state_dir: capture-state\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -1512,7 +1513,7 @@ func TestUpdateSummaryFile(t *testing.T) {
 	})
 
 	t.Run("idempotent replacement in existing file with other sections", func(t *testing.T) {
-		initial := "# Title\n\n### Workflow Efficiency\n- Old Content\n\n### Anomalies & Health Flags\n- Old Anomaly\n\n## Next Section\nSomething else\n"
+		initial := "# Title\n\n### Workflow Efficiency\n- **Software Development Life Cycle Iterations:** 999\n\n### Anomalies & Health Flags\n- **Status:** No execution anomalies detected (clean session).\n\n## Next Section\nSomething else\n"
 		if err := os.WriteFile(summaryFile, []byte(initial), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -1525,7 +1526,7 @@ func TestUpdateSummaryFile(t *testing.T) {
 
 		updated, _ := os.ReadFile(summaryFile)
 		updatedStr := string(updated)
-		if strings.Contains(updatedStr, "Old Content") || strings.Contains(updatedStr, "Old Anomaly") {
+		if strings.Contains(updatedStr, "Iterations:** 999") || strings.Contains(updatedStr, "No execution anomalies detected (clean session).") {
 			t.Errorf("expected Old Content and Old Anomaly to be replaced")
 		}
 		if !strings.Contains(updatedStr, "New Content") {
@@ -1544,7 +1545,7 @@ func TestUpdateSummaryFile(t *testing.T) {
 
 	t.Run("replaces legacy header cleanly", func(t *testing.T) {
 		legacyFile := filepath.Join(tempDir, "LEGACY_SUMMARY.md")
-		initialLegacy := "# Summary\n\n### Agentic Execution Metrics\n- Old metrics\n\n## Results\nDone\n"
+		initialLegacy := "# Summary\n\n### Agentic Execution Metrics\n**Contributors:** stale-generated-contributor\n\n## Results\nDone\n"
 		if err := os.WriteFile(legacyFile, []byte(initialLegacy), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -1556,7 +1557,7 @@ func TestUpdateSummaryFile(t *testing.T) {
 
 		content, _ := os.ReadFile(legacyFile)
 		contentStr := string(content)
-		if strings.Contains(contentStr, "Old metrics") {
+		if strings.Contains(contentStr, "stale-generated-contributor") {
 			t.Errorf("expected legacy metrics to be replaced")
 		}
 		if !strings.Contains(contentStr, "### Workflow Efficiency") {
@@ -2073,6 +2074,9 @@ code_metrics:
   source_roots:
     - src
 anomaly_thresholds:
+  error_rate_min_calls: 5
+  error_rate_threshold: 0.25
+  error_rate_critical_threshold: 0.70
   context_ceiling_warning_tokens: 160000
   context_ceiling_critical_tokens: 200000
 role_mappings:
@@ -2250,6 +2254,9 @@ code_metrics:
   source_roots:
     - src
 anomaly_thresholds:
+  error_rate_min_calls: 5
+  error_rate_threshold: 0.25
+  error_rate_critical_threshold: 0.70
   context_ceiling_warning_tokens: 160000
   context_ceiling_critical_tokens: 200000
 role_mappings:
@@ -2593,7 +2600,7 @@ func TestScanWorkspacesRejectsInvalidStateConfiguration(t *testing.T) {
 			if err := os.MkdirAll(ticketDir, 0700); err != nil {
 				t.Fatal(err)
 			}
-			shared := []byte("project_name: Example\nticket:\n  prefixes: [AL]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n")
+			shared := []byte("project_name: Example\nticket:\n  prefixes: [AL]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n")
 			sharedPath := filepath.Join(root, ".agenticlens-config.yaml")
 			if err := os.WriteFile(sharedPath, shared, 0600); err != nil {
 				t.Fatal(err)
@@ -2632,6 +2639,195 @@ func TestScanWorkspacesRejectsInvalidStateConfiguration(t *testing.T) {
 				if err != nil || !bytes.Equal(actual, expected) {
 					t.Fatalf("scan changed %s: %v", path, err)
 				}
+			}
+		})
+	}
+}
+
+func TestSummaryWriterPreservesPeerEvidenceAndFencedHeadings(t *testing.T) {
+	generated := "### Workflow Efficiency\n- Updated metrics\n\n### Anomalies & Health Flags\n- Updated anomaly summary\n"
+	for _, header := range []string{"### Workflow Efficiency", "### Agentic Execution Metrics"} {
+		for _, fence := range []string{"```", "~~~"} {
+			t.Run(header+fence, func(t *testing.T) {
+				path := filepath.Join(t.TempDir(), "SUMMARY.md")
+				preamble := "# Summary\n\n" + fence + "markdown\n### Workflow Efficiency\n## Not a boundary\n" + fence + "\n\nAuthored explanation.\n\n"
+				evidence := "### Verification\nOriginal evidence: exit code 2 and segmentation fault are quoted output.\n\n" + fence + "\n## Example only\n" + fence + "\n\n## Remaining limits\nKeep this exact evidence.\n"
+				body := "- **Software Development Life Cycle Iterations:** 999"
+				if header == "### Agentic Execution Metrics" {
+					body = "**Contributors:** stale-generated-contributor"
+				}
+				initial := preamble + header + "\n" + body + "\n\n### Anomalies & Health Flags\n- **Status:** No execution anomalies detected (clean session).\n\n" + evidence
+				if err := os.WriteFile(path, []byte(initial), 0600); err != nil {
+					t.Fatal(err)
+				}
+				if err := adapters.UpdateSummaryFile(path, generated); err != nil {
+					t.Fatal(err)
+				}
+				first, err := os.ReadFile(path)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !strings.Contains(string(first), preamble) || !strings.Contains(string(first), evidence) {
+					t.Fatalf("authored evidence changed: %s", first)
+				}
+				if strings.Contains(string(first), "Iterations:** 999") || strings.Contains(string(first), "stale-generated-contributor") || strings.Contains(string(first), "No execution anomalies detected (clean session).") {
+					t.Fatalf("stale generated data survived: %s", first)
+				}
+				if err := adapters.UpdateSummaryFile(path, generated); err != nil {
+					t.Fatal(err)
+				}
+				second, err := os.ReadFile(path)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if string(first) != string(second) {
+					t.Fatalf("repeat changed summary\nfirst: %s\nsecond: %s", first, second)
+				}
+			})
+		}
+	}
+}
+
+func TestSummaryWriterRejectsAmbiguousMarkersWithoutChangingEvidence(t *testing.T) {
+	for _, content := range []string{
+		"# Evidence\n<!-- agentic-lens:metrics:start -->\nAuthored evidence with missing end\n",
+		"# Evidence\n<!-- agentic-lens:metrics:end -->\nAuthored evidence with missing start\n",
+		"<!-- agentic-lens:metrics:start -->\n<!-- agentic-lens:metrics:start -->\n<!-- agentic-lens:metrics:end -->\n",
+	} {
+		path := filepath.Join(t.TempDir(), "SUMMARY.md")
+		if err := os.WriteFile(path, []byte(content), 0600); err != nil {
+			t.Fatal(err)
+		}
+		if err := adapters.UpdateSummaryFile(path, "### Workflow Efficiency\nNew metrics\n"); err == nil {
+			t.Fatal("ambiguous markers accepted")
+		}
+		after, err := os.ReadFile(path)
+		if err != nil || string(after) != content {
+			t.Fatalf("error path changed original evidence: %v %s", err, after)
+		}
+	}
+}
+
+func TestScanRetainsValidSiblingWhenPublicationIsUnavailable(t *testing.T) {
+	root := t.TempDir()
+	version := domain.CurrentSchemaVersion
+	for _, ticket := range []string{"FX-VALID", "FX-UNAVAILABLE"} {
+		title := ticket
+		ledger := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &title, TicketTitle: &title, Sessions: sessionFactsWithInvs([]testInvFact{{SessionID: ticket, Role: "coder", Model: "fixture"}}, nil, nil)}
+		path := filepath.Join(root, ticket, "agentic_metrics.json")
+		if err := adapters.SaveFactLedger(path, ledger); err != nil {
+			t.Fatal(err)
+		}
+		if ticket == "FX-UNAVAILABLE" {
+			if err := os.WriteFile(path+".publication-pending", []byte("interrupted fixture publication"), 0600); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	report := adapters.ScanWorkspaces(root)
+	if report.FatalError != "" || len(report.Ledgers) != 1 || report.Ledgers[0].TicketID == nil || *report.Ledgers[0].TicketID != "FX-VALID" || len(report.Diagnostics) != 1 || report.Diagnostics[0].TicketID != "FX-UNAVAILABLE" || !strings.Contains(report.Diagnostics[0].Message, "interrupted artifact publication") {
+		t.Fatalf("unavailable read hid valid siblings or rejection reason: %+v", report)
+	}
+}
+
+func TestLegacySummaryReplacementPreservesUnheadedAndSetextEvidence(t *testing.T) {
+	for _, suffix := range []string{
+		"Manual verification passed.\nKeep this paragraph without a heading.\n",
+		"```text\nOriginal evidence\n### Workflow Efficiency\n```\n",
+		"Verification\n------------\nOriginal verification evidence.\n\nRemaining limits\n===============\nUnresolved source access.",
+		"## Verification\nOriginal evidence\n",
+	} {
+		path := filepath.Join(t.TempDir(), "SUMMARY.md")
+		initial := "# Summary\n\n### Workflow Efficiency\n- **Software Development Life Cycle Iterations:** 999\n\n" + suffix
+		if err := os.WriteFile(path, []byte(initial), 0600); err != nil {
+			t.Fatal(err)
+		}
+		updated := "### Workflow Efficiency\n- **Software Development Life Cycle Iterations:** 2\n"
+		if err := adapters.UpdateSummaryFile(path, updated); err != nil {
+			t.Fatalf("safe owned-prefix replacement failed: %v", err)
+		}
+		first, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(string(first), suffix) {
+			t.Fatalf("authored suffix changed or disappeared: %s", first)
+		}
+		if strings.Contains(string(first), "Iterations:** 999") {
+			t.Fatalf("recognized stale metric survived: %s", first)
+		}
+		if err := adapters.UpdateSummaryFile(path, updated); err != nil {
+			t.Fatal(err)
+		}
+		second, err := os.ReadFile(path)
+		if err != nil || string(first) != string(second) {
+			t.Fatalf("repeat changed evidence: %v first=%s second=%s", err, first, second)
+		}
+	}
+}
+
+func TestLegacySummaryRefusesAmbiguousSplitGeneratedSections(t *testing.T) {
+	original := "# Summary\n\n### Workflow Efficiency\n- **Software Development Life Cycle Iterations:** 999\n\nManually verified evidence between generated sections.\n\n### Anomalies & Health Flags\n- **Status:** No execution anomalies detected (clean session).\n"
+	path := filepath.Join(t.TempDir(), "SUMMARY.md")
+	if err := os.WriteFile(path, []byte(original), 0600); err != nil {
+		t.Fatal(err)
+	}
+	err := adapters.UpdateSummaryFile(path, "### Workflow Efficiency\n- **Software Development Life Cycle Iterations:** 2\n")
+	if err == nil || !strings.Contains(err.Error(), "marker") {
+		t.Fatalf("ambiguous legacy layout lacked actionable refusal: %v", err)
+	}
+	after, readErr := os.ReadFile(path)
+	if readErr != nil || string(after) != original {
+		t.Fatalf("refused update changed evidence: %v %s", readErr, after)
+	}
+}
+
+func TestLegacySummaryMigratesExternalParentFormatterOutput(t *testing.T) {
+	for _, recorded := range []bool{false, true} {
+		t.Run(fmt.Sprintf("recorded=%t", recorded), func(t *testing.T) {
+			parent := "external-parent"
+			facts := domain.AgenticFactLedger{Sessions: []domain.SessionFact{{ID: "child", ParentID: &parent, Source: domain.SourceCodex}}}
+			if recorded {
+				facts.Anomalies = []domain.Anomaly{}
+				facts.Sessions[0].Anomalies = []domain.Anomaly{}
+			}
+			cfg := domain.DefaultProjectConfig()
+			cfg.AnomalyThresholds.ErrorRateMinCalls = 5
+			cfg.AnomalyThresholds.ErrorRateThreshold = .35
+			cfg.AnomalyThresholds.ErrorRateCriticalThreshold = .70
+			facts.Code.SDLCIterations = 999
+			legacy := adapters.FormatMarkdownMetricsTable(domain.DeriveMetricsLedger(facts, cfg))
+			if !strings.Contains(legacy, "parent/group") && !strings.Contains(legacy, "Parent/group") {
+				t.Fatalf("fixture missed external-parent disclosure: %s", legacy)
+			}
+			facts.Code.SDLCIterations = 2
+			updatedMetrics := adapters.FormatMarkdownMetricsTable(domain.DeriveMetricsLedger(facts, cfg))
+			evidence := "## Verification\nPreserve authored external-parent evidence.\n"
+			path := filepath.Join(t.TempDir(), "SUMMARY.md")
+			if err := os.WriteFile(path, []byte("# Summary\n\n"+legacy+"\n"+evidence), 0600); err != nil {
+				t.Fatal(err)
+			}
+			if err := adapters.UpdateSummaryFile(path, updatedMetrics); err != nil {
+				t.Fatalf("recognized formatter output could not migrate: %v", err)
+			}
+			first, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.HasSuffix(first, []byte(evidence)) || bytes.Contains(first, []byte("Life Cycle Iterations:** 999")) {
+				t.Fatalf("legacy replacement lost evidence or retained stale values: %s", first)
+			}
+			for _, heading := range []string{"### Workflow Efficiency", "### Anomalies & Health Flags", "### Agentic Execution Metrics"} {
+				if strings.Count(string(first), heading) != 1 {
+					t.Fatalf("legacy replacement duplicated %s: %s", heading, first)
+				}
+			}
+			if err := adapters.UpdateSummaryFile(path, updatedMetrics); err != nil {
+				t.Fatal(err)
+			}
+			second, err := os.ReadFile(path)
+			if err != nil || !bytes.Equal(first, second) {
+				t.Fatalf("repeat changed managed metrics/evidence: %v", err)
 			}
 		})
 	}

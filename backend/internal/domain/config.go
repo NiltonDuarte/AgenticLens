@@ -43,7 +43,6 @@ func (c ProjectConfig) EffectiveHealthyCeiling() int64 {
 func DefaultAnomalyThresholdsConfig() AnomalyThresholdsConfig {
 	return AnomalyThresholdsConfig{
 		StallThresholdSeconds:            120,
-		ErrorRateThreshold:               0.25,
 		ContextExhaustionPct:             0.85,
 		ConsecutiveErrorsStreakWarning:   ConsecutiveToolErrorsStreakWarning,
 		ConsecutiveErrorsStreakCritical:  ConsecutiveToolErrorsStreakCritical,
@@ -209,7 +208,9 @@ type TelemetrySourcePaths struct {
 // AnomalyThresholdsConfig defines numerical thresholds for anomaly detection rules.
 type AnomalyThresholdsConfig struct {
 	StallThresholdSeconds            int     `json:"stall_threshold_seconds" yaml:"stall_threshold_seconds"`
+	ErrorRateMinCalls                int     `json:"error_rate_min_calls" yaml:"error_rate_min_calls"`
 	ErrorRateThreshold               float64 `json:"error_rate_threshold" yaml:"error_rate_threshold"`
+	ErrorRateCriticalThreshold       float64 `json:"error_rate_critical_threshold" yaml:"error_rate_critical_threshold"`
 	ContextExhaustionPct             float64 `json:"context_exhaustion_pct" yaml:"context_exhaustion_pct"`
 	ConsecutiveErrorsStreakWarning   int     `json:"consecutive_errors_streak_warning" yaml:"consecutive_errors_streak_warning"`
 	ConsecutiveErrorsStreakCritical  int     `json:"consecutive_errors_streak_critical" yaml:"consecutive_errors_streak_critical"`
