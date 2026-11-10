@@ -1,0 +1,7 @@
+# PO-23: GitHub Pages presentation plan
+
+Prepared [AL-83](../plan/to-do/AL-83%20present%20agenticlens%20on%20github%20pages.md) as one implementation ticket for a public presentation and its GitHub Pages delivery. It is Ready in the roadmap with no ticket dependencies; implementation approval remains a separate development gate. [SPEC.md](SPEC.md) explains the initiative and [RESEARCH.md](RESEARCH.md) preserves official-source research and repository grounding.
+
+The proposed page connects purpose and boundaries to an illustrated workflow, product capabilities, project use cases, working modes, architecture and maintained setup links. It separates live OpenCode observation from retrospective OpenCode/Codex analysis and distinguishes the public static site from the local embedded dashboard. Portable history, source availability and cost limitations stay explicit. Planned remote/multi-project and cost-simulation features are not advertised as delivered.
+
+Research used Langfuse, OpenTelemetry and Dagger for content patterns, plus GitHub’s Pages documentation for hosting constraints. This was a text-based information review, not a browser design audit. The initial checkout was clean at `f63e3db6`; only planning documents and the roadmap are task-owned. No application behavior, external Jira issue or public site was created. No unresolved product question blocks the ticket; tooling/design and actual repository Pages permissions remain for development. Verification and telemetry limits are recorded below when complete.
