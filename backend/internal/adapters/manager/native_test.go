@@ -317,7 +317,7 @@ func TestManagerDisabledHookValidatesWithoutSourceOrCacheIO(t *testing.T) {
 	t.Setenv("USERPROFILE", home)
 	state := filepath.Join(root, "uninitialized-state")
 	source := filepath.Join(root, "unavailable-source")
-	managerWrite(t, filepath.Join(project, ".agenticlens-config.yaml"), []byte("project_name: Fixture\nagenticlens:\n  version: v9.4.2\nticket:\n  prefixes: [TEST]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"), 0600)
+	managerWrite(t, filepath.Join(project, ".agenticlens-config.yaml"), []byte("project_name: Fixture\nagenticlens:\n  version: v9.4.2\nticket:\n  prefixes: [TEST]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.35\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"), 0600)
 	local := filepath.Join(project, ".agenticlens-config.local.yaml")
 	configuration := fmt.Sprintf("telemetry:\n  capture:\n    enabled: false\n    state_dir: %q\n  default_source: codex\n  sources:\n    codex:\n      home: %q\n", state, source)
 	managerWrite(t, local, []byte(configuration), 0600)
