@@ -1,7 +1,9 @@
 # feat(AL-83): present AgenticLens on GitHub Pages
 
-Replace the minimal welcome page with an English presentation for developers and engineering leads. Explain local telemetry, investigation workflows, practical use cases, operating modes and architecture, with clearly labeled illustrative product visuals and release-aware setup links. Preserve the existing roadmap and single native Jekyll deployment path.
+Replace the minimal welcome page with an English presentation for developers and engineering leads. Explain local telemetry, investigation workflows, three use cases, operating modes, evidence limits and architecture, with labeled illustrative product visuals and release-aware setup links. Preserve the roadmap and single native Jekyll deployment path.
 
-The presentation remains separate from the embedded local dashboard and publishes no session sources or telemetry payloads. See the [contract](CONTRACT.md) and [summary](SUMMARY.md) for boundaries and evidence.
+The builder stages only named presentation assets and validates their output bytes. The static page requires no account or local engine and publishes no private session captures. See the [contract](https://github.com/NiltonDuarte/AgenticLens/blob/AL-83/present-agenticlens-on-github-pages/alspaces/AL-83/CONTRACT.md) and [summary](https://github.com/NiltonDuarte/AgenticLens/blob/AL-83/present-agenticlens-on-github-pages/alspaces/AL-83/SUMMARY.md).
 
-Local validation passed: 8 Jekyll tests/335 assertions; project/root builds and all internal links; responsive keyboard/asset checks and zero axe violations at four viewport widths. Integrated make and final consolidation are pending. Public deployment remains incomplete until this change is merged and the main Pages workflow deploys successfully; this PR does not authorize merging.
+Validation: integrated `make` passed; 8 Jekyll tests/335 assertions; project/root builds with 244 valid internal links each; keyboard/responsive checks at four widths and zero axe violations. Four review focuses ran under Sol/high and Luna/medium. Tester found and verified a corrected accessible-name issue; reviewers retained pre-existing output-replacement debt and a nonblocking copy-test suggestion.
+
+Publication remains incomplete until merge and successful main Pages deployment, followed by public verification. The existing local output-replacement filesystem-failure weakness is unchanged; builder maintainers own follow-up. This PR does not authorize merging.

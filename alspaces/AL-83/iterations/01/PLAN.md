@@ -1,6 +1,6 @@
 # AL-83 implementation plan
 
-Status: approved for implementation. Approval source: the user’s “$agentic-lens-dev continue” on 2026-11-10 in response to the presented [contract](../../CONTRACT.md) and plan. Baseline `59f7ddeeed4ad4b95283acb2d0fd445317536057`; branch `AL-83/present-agenticlens-on-github-pages`; initial working tree clean. No implementation verification exists yet.
+Status: implementation and local verification complete; public deployment pending. Approval source: the user’s “$agentic-lens-dev continue” on 2026-11-10 in response to the presented [contract](../../CONTRACT.md) and plan. Baseline `59f7ddeeed4ad4b95283acb2d0fd445317536057`; branch `AL-83/present-agenticlens-on-github-pages`; initial working tree clean. No implementation verification exists yet.
 
 ## Implementation and ownership
 
@@ -16,3 +16,5 @@ Selected [regression boundaries](../../../../docs/REGRESSION_PREVENTION.md): bui
 Freeze candidate revision/diff before independent review. Four core focuses apply: behavior (content/accessibility/routes), data (publication allowlist/privacy/failure preservation), architecture (single Pages pipeline and runtime separation), tests (meaningful fixture oracles). Each uses configured `sol_6_1_high` and `luna_6_medium` profiles in capacity-limited waves; evidence owners write unique `REVIEW_<FOCUS>_<PROFILE>.md` files in this iteration. Parent consolidates under the canonical review/retention protocol. No extra specialist is planned: the core scopes cover this static scaffold and existing deployment boundary.
 
 Local checks and PR CI cannot verify the future publication. After separately authorized merge and successful main deployment, inspect the public URL, assets, anchors and retained roadmap. Until then report publication acceptance incomplete. No unresolved product choice blocks approval; actual deployment permissions/protection and runtime verification remain delivery evidence to obtain.
+
+Integration at `a648bba10fea51297cf6f5cb1b3996c8aef74a67` merged current main without changes and passed `make`. The reviewed source fingerprint stayed unchanged. All eight discovery cells completed; [summary](../../SUMMARY.md) and [retained findings](REVIEW_SUMMARY.json) record initial verdicts, parent dispositions and remaining publication limits. No acceptance delta occurred.

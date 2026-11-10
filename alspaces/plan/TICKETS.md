@@ -7,7 +7,7 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
 ## In Progress
 
 - **AL-83**: Present AgenticLens on GitHub Pages
-  - **Status**: In Progress; planning, awaiting scope approval; **Blocked by**: None; **Blocks**: None
+  - **Status**: In Progress; implementation verified, awaiting publication; **Blocked by**: None; **Blocks**: None
   - **File**: [AL-83](to-do/AL-83%20present%20agenticlens%20on%20github%20pages.md)
 
 ## Ready
