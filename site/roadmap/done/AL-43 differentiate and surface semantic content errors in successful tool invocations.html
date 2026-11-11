@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AL-43 differentiate and surface semantic content errors in successful tool invocations.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><p>h3. Title: AL-43: Differentiate and Surface Semantic Content Errors in Successful Tool Invocations</p>
+
+<table>
+  <tbody>
+    <tr>
+      <td>
+<em>TARGET</em>: AgenticLens (domain</td>
+      <td>adapters</td>
+      <td>presentation</td>
+      <td>web</td>
+      <td>tests)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><em>CONTEXT</em></p>
+
+<p>While AL-42 isolates hard process execution failures (non-zero exit codes and crashes), autonomous agents frequently run tools that succeed at the OS level (<code class="language-plaintext highlighter-rouge">status: "completed"</code>, exit 0) but produce semantic errors in their output (compiler syntax errors, unhandled promise rejections, test assertion failures, stack traces). Currently, if these are treated as execution failures, they corrupt tool reliability metrics; if they are ignored, critical failure forensics are lost. Treating semantic content errors as a distinct, first-class metric across domain models, aggregations, APIs, and the UI allows developers to track agent coding mistakes independently from infrastructure/tool breakage.</p>
+
+<p><em>GOAL</em></p>
+
+<p>Deliver end-to-end support for semantic content errors in completed tool calls: implement pure domain content classification, extend domain models and serialization schemas (<code class="language-plaintext highlighter-rouge">ContentErrors</code> on <code class="language-plaintext highlighter-rouge">ToolFact</code>, <code class="language-plaintext highlighter-rouge">HasContentError</code> on <code class="language-plaintext highlighter-rouge">EventFact</code> and <code class="language-plaintext highlighter-rouge">LivePartFact</code>), update offline and live adapters, and surface dual-indicator visualizations (Red for execution failure vs Amber for content errors) across the TypeScript web dashboard (Trace Waterfall, Live Inspector, and Deep Dive).</p>
+
+<p><em>VERTICAL SLICE SCOPE</em></p>
+
+<ul>
+  <li>Domain Core (<code class="language-plaintext highlighter-rouge">internal/domain/live.go</code>, <code class="language-plaintext highlighter-rouge">internal/domain/models.go</code>):
+    <ul>
+      <li>Implement pure classifier <code class="language-plaintext highlighter-rouge">ClassifyToolContent(toolName string, output string) ToolContentResult</code> returning <code class="language-plaintext highlighter-rouge">HasContentError bool</code>, <code class="language-plaintext highlighter-rouge">Severity FailureSeverity</code>, <code class="language-plaintext highlighter-rouge">Category string</code>, and <code class="language-plaintext highlighter-rouge">ErrorSnippet *string</code>.</li>
+      <li>Target semantic patterns in completed output: stack traces, panic messages, compiler errors (<code class="language-plaintext highlighter-rouge">syntax error</code>, <code class="language-plaintext highlighter-rouge">cannot find package</code>, <code class="language-plaintext highlighter-rouge">build failed</code>), and unhandled exceptions.</li>
+      <li>Extend <code class="language-plaintext highlighter-rouge">ToolFact</code> with <code class="language-plaintext highlighter-rouge">ContentErrors int64</code>.</li>
+      <li>Extend <code class="language-plaintext highlighter-rouge">EventFact</code> and <code class="language-plaintext highlighter-rouge">LivePartFact</code> with <code class="language-plaintext highlighter-rouge">HasContentError bool</code>, <code class="language-plaintext highlighter-rouge">ContentSeverity string</code>, and <code class="language-plaintext highlighter-rouge">ContentErrorSnippet *string</code>.</li>
+      <li>Ensure pure backward compatibility with legacy ledgers where <code class="language-plaintext highlighter-rouge">ContentErrors</code> defaults to 0.</li>
+    </ul>
+  </li>
+  <li>Boundary Adapters &amp; HTTP (<code class="language-plaintext highlighter-rouge">internal/adapters/schemas.go</code>, <code class="language-plaintext highlighter-rouge">internal/adapters/http/dto.go</code>, <code class="language-plaintext highlighter-rouge">internal/adapters/live/service.go</code>, <code class="language-plaintext highlighter-rouge">internal/adapters/opencode/extractor.go</code>):
+    <ul>
+      <li>Extend <code class="language-plaintext highlighter-rouge">ToolFactDTO</code> with <code class="language-plaintext highlighter-rouge">ContentErrors int64</code> (<code class="language-plaintext highlighter-rouge">omitempty</code>).</li>
+      <li>Wire both offline extractor and live service to evaluate <code class="language-plaintext highlighter-rouge">ClassifyToolContent</code> on tool completions.</li>
+      <li>Expose <code class="language-plaintext highlighter-rouge">content_errors</code> and <code class="language-plaintext highlighter-rouge">has_content_error</code> across REST endpoints (<code class="language-plaintext highlighter-rouge">/api/workspaces/{ticketId}/events</code>, <code class="language-plaintext highlighter-rouge">/api/live/sessions/{id}/trace</code>).</li>
+    </ul>
+  </li>
+  <li>Web Presentation (<code class="language-plaintext highlighter-rouge">web/src/</code>):
+    <ul>
+      <li>Update TypeScript types in <code class="language-plaintext highlighter-rouge">web/src/types/telemetry.ts</code> and <code class="language-plaintext highlighter-rouge">web/src/domain/live.ts</code>.</li>
+      <li>Update <code class="language-plaintext highlighter-rouge">TraceWaterfall.tsx</code>: Render amber node outlines and <code class="language-plaintext highlighter-rouge">CONTENT ERROR</code> badges for completed tool calls containing semantic content errors, distinct from red <code class="language-plaintext highlighter-rouge">EXEC ERROR</code> badges.</li>
+      <li>Update <code class="language-plaintext highlighter-rouge">LiveTraceInspector.tsx</code>: Display side-by-side metric counters for <code class="language-plaintext highlighter-rouge">Failed Tools</code> (execution failures) and <code class="language-plaintext highlighter-rouge">Content Errors</code> (semantic errors).</li>
+      <li>Update <code class="language-plaintext highlighter-rouge">TicketDeepDive.tsx</code>: Add <code class="language-plaintext highlighter-rouge">Content Errors</code> column in tool execution breakdown tables.</li>
+      <li>Update <code class="language-plaintext highlighter-rouge">AnomalyDrawer.tsx</code>: Differentiate diagnostics between process execution crashes and semantic content warnings.</li>
+    </ul>
+  </li>
+  <li>Quality:
+    <ul>
+      <li>Table-driven Go unit tests for <code class="language-plaintext highlighter-rouge">ClassifyToolContent</code> with regex boundary cases, compiler outputs, and false-positive avoidance.</li>
+      <li>Serialization and deserialization tests verifying backward compatibility with legacy v6 ledgers lacking <code class="language-plaintext highlighter-rouge">content_errors</code>.</li>
+      <li>Vitest unit tests in <code class="language-plaintext highlighter-rouge">web/src/components/TraceWaterfall.test.tsx</code> and <code class="language-plaintext highlighter-rouge">LiveTraceInspector.test.tsx</code> asserting accurate rendering of dual badges and stat counters.</li>
+    </ul>
+  </li>
+</ul>
+
+<p><em>ACCEPTANCE CRITERIA</em></p>
+
+<ul>
+  <li>Completed tool calls (<code class="language-plaintext highlighter-rouge">status: "completed"</code>) containing compiler errors or tracebacks have <code class="language-plaintext highlighter-rouge">has_content_error: true</code> without having their status changed to <code class="language-plaintext highlighter-rouge">"error"</code>.</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">ToolFact</code> tracks <code class="language-plaintext highlighter-rouge">errors</code> (execution crashes) and <code class="language-plaintext highlighter-rouge">content_errors</code> (output errors) separately.</li>
+  <li>Deserializing existing legacy ledgers without <code class="language-plaintext highlighter-rouge">content_errors</code> defaults gracefully to 0 without errors.</li>
+  <li>REST API endpoints include <code class="language-plaintext highlighter-rouge">content_errors</code> and <code class="language-plaintext highlighter-rouge">has_content_error</code> in JSON responses.</li>
+  <li>Web dashboard renders red indicators for execution errors and amber indicators for content errors.</li>
+  <li>Go test suite (<code class="language-plaintext highlighter-rouge">go test -race ./...</code>) and frontend test suite (<code class="language-plaintext highlighter-rouge">npm test</code>, <code class="language-plaintext highlighter-rouge">npm run typecheck</code>) pass with zero errors.</li>
+</ul>
+
+<p><em>DEFINITION OF DONE</em></p>
+
+<ul>
+  <li>Code and tests merged to target branch.</li>
+  <li>Quality gates passing (<code class="language-plaintext highlighter-rouge">make check</code>, <code class="language-plaintext highlighter-rouge">make test</code>, or <code class="language-plaintext highlighter-rouge">make</code>).</li>
+  <li>Go and TypeScript type checking clean with zero any.</li>
+  <li>Telemetry tested with <code class="language-plaintext highlighter-rouge">agentic-lens</code> CLI.</li>
+</ul>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>

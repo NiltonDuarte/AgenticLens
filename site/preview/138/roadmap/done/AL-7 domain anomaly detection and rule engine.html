@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AL-7 domain anomaly detection and rule engine.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/preview/138/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/preview/138/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><p>h3. Title: AL-7: Domain Anomaly Detection and Rule Engine</p>
+
+<table>
+  <tbody>
+    <tr>
+      <td>
+<em>TARGET</em>: AgenticLens (domain</td>
+      <td>cli</td>
+      <td>tests)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><em>CONTEXT</em></p>
+
+<p>Multi-agent development sessions occasionally encounter execution degradation such as repetitive tool error streaks (e.g. repeated failing edits or commands), rapid context window saturation jumps, or cyclic ping-pong handoffs between subagents. We need a deterministic rule evaluator in the pure Go domain to identify these patterns and flag them in CLI reports.</p>
+
+<p><em>GOAL</em></p>
+
+<p>Build a pure functional anomaly detection engine in the Go domain evaluating deterministic rules against <code class="language-plaintext highlighter-rouge">AgenticFactLedger</code>, complete with CLI table formatting and summary markdown integration.</p>
+
+<p><em>VERTICAL SLICE SCOPE</em></p>
+
+<ul>
+  <li>Domain Core: Pure structs and rule evaluator in <code class="language-plaintext highlighter-rouge">internal/domain/anomalies.go</code>:
+    <ul>
+      <li>Models: <code class="language-plaintext highlighter-rouge">Anomaly</code>, <code class="language-plaintext highlighter-rouge">AnomalySeverity</code> (<code class="language-plaintext highlighter-rouge">WARNING</code>, <code class="language-plaintext highlighter-rouge">CRITICAL</code>), <code class="language-plaintext highlighter-rouge">AnomalyRuleID</code>, <code class="language-plaintext highlighter-rouge">AnomalyContext</code>.</li>
+      <li>Rules:
+        <ol>
+          <li>
+<code class="language-plaintext highlighter-rouge">TOOL_RETRY_STREAK</code>: Detect 3+ consecutive failures of the same tool or command sequence.</li>
+          <li>
+<code class="language-plaintext highlighter-rouge">TOOL_HIGH_FAILURE_RATE</code>: Detect tools with error rate &gt; 20% (minimum 5 invocations).</li>
+          <li>
+<code class="language-plaintext highlighter-rouge">CONTEXT_SATURATION_SPIKE</code>: Single-turn context jump exceeding 40k tokens or reaching <code class="language-plaintext highlighter-rouge">CRITICAL</code> (&gt;160k tokens) ceiling.</li>
+          <li>
+<code class="language-plaintext highlighter-rouge">SUBAGENT_REWORK_LOOP</code>: Repeated cyclic transitions between identical worker roles exceeding threshold.</li>
+        </ol>
+      </li>
+      <li>Pure function <code class="language-plaintext highlighter-rouge">DetectAnomalies(ledger AgenticFactLedger) []Anomaly</code>.</li>
+    </ul>
+  </li>
+  <li>Boundary Adapter &amp; CLI:
+    <ul>
+      <li>Add anomaly summary section to Markdown summary formatter (<code class="language-plaintext highlighter-rouge">internal/adapters/formatters.go</code>).</li>
+      <li>Add <code class="language-plaintext highlighter-rouge">--anomalies</code> flag and table column to <code class="language-plaintext highlighter-rouge">cmd/agentic-lens/main.go</code>.</li>
+    </ul>
+  </li>
+  <li>Quality: Comprehensive table-driven tests in <code class="language-plaintext highlighter-rouge">internal/domain/anomalies_test.go</code> covering edge cases: clean sessions, consecutive failures, mixed successes/failures, legacy v1 fallback behavior, and multi-anomaly runs. Zero mocks.</li>
+</ul>
+
+<p><em>ACCEPTANCE CRITERIA</em></p>
+
+<ul>
+  <li>
+<code class="language-plaintext highlighter-rouge">DetectAnomalies</code> correctly flags 3 consecutive tool failures in v2 event streams.</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">DetectAnomalies</code> evaluates v1 ledgers gracefully using aggregate tool error counts and peak context.</li>
+  <li>Running <code class="language-plaintext highlighter-rouge">agentic-lens --ticket-id &lt;ID&gt; --append &lt;SUMMARY.md&gt;</code> appends an “Anomalies &amp; Health Flags” section if anomalies are detected, or clean status if none.</li>
+  <li>CLI table output reflects anomaly counts per ticket.</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">go test -race ./...</code> and <code class="language-plaintext highlighter-rouge">go vet ./...</code> pass with zero errors.</li>
+</ul>
+
+<p><em>DEFINITION OF DONE</em></p>
+
+<ul>
+  <li>Code and tests merged to target branch.</li>
+  <li>Quality gates passing (<code class="language-plaintext highlighter-rouge">go vet ./...</code>, <code class="language-plaintext highlighter-rouge">go test -race ./...</code>).</li>
+  <li>Go type checking clean with zero any or empty <code class="language-plaintext highlighter-rouge">interface{}</code>.</li>
+  <li>Telemetry tested with <code class="language-plaintext highlighter-rouge">agentic-lens</code> CLI.</li>
+</ul>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>

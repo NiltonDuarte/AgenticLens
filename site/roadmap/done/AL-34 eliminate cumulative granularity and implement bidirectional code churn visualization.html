@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AL-34 eliminate cumulative granularity and implement bidirectional code churn visualization.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><p>h3. Title: AL-34: Eliminate Cumulative Granularity and Implement Bi-Directional Code Churn Visualization</p>
+
+<table>
+  <tbody>
+    <tr>
+      <td>
+<em>TARGET</em>: AgenticLens (domain</td>
+      <td>adapters</td>
+      <td>presentation</td>
+      <td>tests)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><em>CONTEXT</em></p>
+
+<p>The Metric Progression temporal analysis view currently exposes “Cumulative” as a time granularity alongside Hourly, Daily, and Weekly. Granularity represents bucket duration, while cumulative is an accumulation method. Presenting “Cumulative” as a granularity breaks domain semantics, silently defaults to daily bucketing, and leaves 4 out of 5 charts on the page unresponsive. Furthermore, Chart 4 (“Delivered Code Line Churn &amp; Net Growth”) currently renders lines deleted as upward-pointing positive bars, obscuring the distinction between net codebase growth, code replacement, and refactoring velocity. In addition, Chart 4’s Y-axis currently formats tick values with verbose fractional strings (e.g. <code class="language-plaintext highlighter-rouge">33,306.56 lines</code>), which overflow the chart container boundary and make no mathematical sense for discrete line counts.</p>
+
+<p><em>GOAL</em></p>
+
+<p>Refactor the Metric Progression granularity model to purely temporal intervals (<code class="language-plaintext highlighter-rouge">hourly</code>, <code class="language-plaintext highlighter-rouge">daily</code>, <code class="language-plaintext highlighter-rouge">weekly</code>), maintain composite views for spend and token distributions, enhance the code churn chart into a bi-directional diverging visualization centered on a zero baseline with upward additions (green), downward deletions (red), and a running cumulative net code growth trajectory line, and resolve Y-axis label container overflow by introducing compact integer metric formatting (<code class="language-plaintext highlighter-rouge">k</code>, <code class="language-plaintext highlighter-rouge">M</code>) and integer tick rounding.</p>
+
+<p><em>VERTICAL SLICE SCOPE</em></p>
+
+<ul>
+  <li>Domain Core:
+    <ul>
+      <li>Remove <code class="language-plaintext highlighter-rouge">GranularityCumulative</code> from <code class="language-plaintext highlighter-rouge">TimeGranularity</code> enum in Go <code class="language-plaintext highlighter-rouge">backend/internal/domain/enums.go</code> and update <code class="language-plaintext highlighter-rouge">ParseTimeGranularity</code>.</li>
+      <li>Update <code class="language-plaintext highlighter-rouge">backend/internal/domain/aggregations.go</code> to support purely temporal bucketing (<code class="language-plaintext highlighter-rouge">hourly</code>, <code class="language-plaintext highlighter-rouge">daily</code>, <code class="language-plaintext highlighter-rouge">weekly</code>).</li>
+      <li>Update TypeScript <code class="language-plaintext highlighter-rouge">TimeGranularity</code> type in <code class="language-plaintext highlighter-rouge">web/src/domain/types.ts</code> to <code class="language-plaintext highlighter-rouge">'hourly' | 'daily' | 'weekly'</code>.</li>
+      <li>Compute <code class="language-plaintext highlighter-rouge">cumulative_net_lines_added</code> (<code class="language-plaintext highlighter-rouge">cumulative_lines_added - cumulative_lines_deleted</code>) in <code class="language-plaintext highlighter-rouge">TimeBucketMetric</code> in <code class="language-plaintext highlighter-rouge">web/src/domain/progression.ts</code>.</li>
+      <li>Update <code class="language-plaintext highlighter-rouge">web/src/domain/formatters.ts</code> to remove <code class="language-plaintext highlighter-rouge">'cumulative'</code> timestamp formatting, and implement compact integer count formatting (<code class="language-plaintext highlighter-rouge">formatLinesCompact</code> / <code class="language-plaintext highlighter-rouge">formatCompactCount</code>) supporting <code class="language-plaintext highlighter-rouge">k</code>, <code class="language-plaintext highlighter-rouge">M</code>, and sign prefixes (<code class="language-plaintext highlighter-rouge">+</code> / <code class="language-plaintext highlighter-rouge">-</code>).</li>
+    </ul>
+  </li>
+  <li>Boundary Adapter:
+    <ul>
+      <li>Update <code class="language-plaintext highlighter-rouge">handleProgression</code> in <code class="language-plaintext highlighter-rouge">backend/internal/adapters/http/handlers.go</code> to reject non-temporal granularities with HTTP 400 (<code class="language-plaintext highlighter-rouge">must be hourly, daily, or weekly</code>).</li>
+      <li>Update Go HTTP routing tests in <code class="language-plaintext highlighter-rouge">server_test.go</code> and domain tests in <code class="language-plaintext highlighter-rouge">aggregations_test.go</code>.</li>
+    </ul>
+  </li>
+  <li>Presentation:
+    <ul>
+      <li>Remove the “Cumulative” toggle button from <code class="language-plaintext highlighter-rouge">MetricProgression.tsx</code> controls bar.</li>
+      <li>Keep Chart 1 (“Financial Spend &amp; Cumulative Trajectory”) composite across all granularities with period spend bars and cumulative spend line; title remains static.</li>
+      <li>Keep Chart 2 (“Token Volume Distribution”) composite across input, output, and cache read tokens.</li>
+      <li>Upgrade <code class="language-plaintext highlighter-rouge">TrendChart.tsx</code> to support:
+        <ul>
+          <li>Bi-directional diverging bar charts centered on a zero baseline when data contains negative values (e.g. <code class="language-plaintext highlighter-rouge">minY &lt; 0</code>), rendering positive bars upward and negative bars downward from <code class="language-plaintext highlighter-rouge">y = getYCoord(0)</code>.</li>
+          <li>Dedicated <code class="language-plaintext highlighter-rouge">yAxisFormatter?: (val: number) =&gt; string</code> prop so axes can use compact notation while tooltips retain full precision (<code class="language-plaintext highlighter-rouge">valueFormatter</code>).</li>
+          <li>Integer rounding on Y-axis tick intervals for discrete count metrics, eliminating fractional ticks (e.g. <code class="language-plaintext highlighter-rouge">33,306.56</code>).</li>
+          <li>Layout containment preventing axis labels from overflowing the chart card boundary.</li>
+        </ul>
+      </li>
+      <li>Update Chart 4 (“Delivered Code Line Churn &amp; Net Growth”) in <code class="language-plaintext highlighter-rouge">MetricProgression.tsx</code>:
+        <ul>
+          <li>Lines Added: positive green bars growing upward from zero baseline.</li>
+          <li>Lines Deleted: negative red bars growing downward from zero baseline.</li>
+          <li>Net Lines Growth: line tracing <code class="language-plaintext highlighter-rouge">cumulative_net_lines_added</code> across the time window.</li>
+          <li>Use <code class="language-plaintext highlighter-rouge">formatLinesCompact</code> for Y-axis tick labels and precise formatting in tooltips.</li>
+          <li>Update tooltip to format positive additions (<code class="language-plaintext highlighter-rouge">+N lines</code>), negative deletions (<code class="language-plaintext highlighter-rouge">-N lines</code>), and cumulative net lines (<code class="language-plaintext highlighter-rouge">+N / -N lines</code>) clearly.</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li>Quality:
+    <ul>
+      <li>Go unit tests in <code class="language-plaintext highlighter-rouge">aggregations_test.go</code> verifying valid granularities and rejecting removed cumulative granularity.</li>
+      <li>Go HTTP tests in <code class="language-plaintext highlighter-rouge">server_test.go</code> ensuring <code class="language-plaintext highlighter-rouge">granularity=cumulative</code> returns HTTP 400.</li>
+      <li>TypeScript unit tests in <code class="language-plaintext highlighter-rouge">progression.test.ts</code>, <code class="language-plaintext highlighter-rouge">formatters.test.ts</code>, <code class="language-plaintext highlighter-rouge">MetricProgression.test.tsx</code>, and <code class="language-plaintext highlighter-rouge">TrendChart.test.tsx</code> testing the removed toggle, composite spend chart, bi-directional churn chart rendering, compact axis scaling, and overflow prevention.</li>
+    </ul>
+  </li>
+</ul>
+
+<p><em>ACCEPTANCE CRITERIA</em></p>
+
+<ul>
+  <li>Metric Progression controls bar displays only <code class="language-plaintext highlighter-rouge">Hourly</code>, <code class="language-plaintext highlighter-rouge">Daily</code>, and <code class="language-plaintext highlighter-rouge">Weekly</code> granularities, defaulting to <code class="language-plaintext highlighter-rouge">Daily</code>.</li>
+  <li>Passing <code class="language-plaintext highlighter-rouge">granularity=cumulative</code> to <code class="language-plaintext highlighter-rouge">/api/progression</code> returns HTTP 400 with a descriptive error.</li>
+  <li>Chart 1 (“Financial Spend &amp; Cumulative Trajectory ($ USD)”) renders period spend bars and cumulative spend trajectory across all active granularities.</li>
+  <li>Chart 2 (“Token Volume Distribution”) continues to render composite token series (Cache Read, Input, Output).</li>
+  <li>Chart 4 (“Delivered Code Line Churn &amp; Net Growth”) renders a centered zero baseline:
+    <ul>
+      <li>Lines added bars grow upward in green (+).</li>
+      <li>Lines deleted bars grow downward in red (-).</li>
+      <li>Net code growth line tracks running cumulative net lines (<code class="language-plaintext highlighter-rouge">cumulative_lines_added - cumulative_lines_deleted</code>).</li>
+    </ul>
+  </li>
+  <li>Chart 4 Y-axis displays compact integer tick marks using <code class="language-plaintext highlighter-rouge">k</code> and <code class="language-plaintext highlighter-rouge">M</code> (e.g. <code class="language-plaintext highlighter-rouge">+30k</code>, <code class="language-plaintext highlighter-rouge">-10k</code>, <code class="language-plaintext highlighter-rouge">0</code>), strictly eliminating fractional numbers (e.g. <code class="language-plaintext highlighter-rouge">33,306.56 lines</code>).</li>
+  <li>Chart 4 axis labels remain strictly within the chart card margins without overflowing the bounding box.</li>
+  <li>Tooltip on Chart 4 clearly displays added lines (+), deleted lines (-), and cumulative net growth with exact integer formatting.</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">TrendChart</code> SVG handles both positive and negative values cleanly without axis or label distortion.</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">make test-backend</code> and <code class="language-plaintext highlighter-rouge">npm test</code> pass cleanly with zero failures.</li>
+  <li>Zero <code class="language-plaintext highlighter-rouge">any</code> in Go and TypeScript. Zero emojis in code, tests, and UI strings.</li>
+</ul>
+
+<p><em>DEFINITION OF DONE</em></p>
+
+<ul>
+  <li>Code and tests merged to target branch.</li>
+  <li>Quality gates passing (<code class="language-plaintext highlighter-rouge">make check</code>, <code class="language-plaintext highlighter-rouge">make test</code>, or <code class="language-plaintext highlighter-rouge">make</code>).</li>
+  <li>Go and TypeScript type checking clean with zero any.</li>
+  <li>Telemetry tested with <code class="language-plaintext highlighter-rouge">agentic-lens</code> CLI.</li>
+</ul>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>

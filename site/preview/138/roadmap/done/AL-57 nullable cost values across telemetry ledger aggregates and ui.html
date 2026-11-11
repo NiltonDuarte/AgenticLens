@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AL-57 nullable cost values across telemetry ledger aggregates and ui.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/preview/138/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/preview/138/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><p>h3. Title: AL-57: Represent unavailable telemetry cost as nullable</p>
+
+<p><em>TARGET</em>: AgenticLens (domain / adapters / CLI / presentation / tests)</p>
+
+<p><em>CONTEXT</em></p>
+
+<p>Some telemetry sources report token usage without establishing a billable USD cost. The Codex adapter currently writes numeric zero into a shared cost field, so dashboards and summaries can present unavailable cost as free usage. Cost is repeated across invocation facts, aggregates, progression data, comparisons, and UI views; changing only one source adapter would leave derived totals misleading.</p>
+
+<p><em>GOAL</em></p>
+
+<p>Represent cost availability across the full telemetry contract so an actual zero remains distinguishable from an unknown cost. Preserve measured OpenCode costs, emit unavailable cost for sources without billing evidence, and make the CLI, ledger, aggregates, migrations, and dashboard communicate that distinction consistently.</p>
+
+<p><em>VERTICAL SLICE SCOPE</em></p>
+
+<ul>
+  <li>Domain Core: Define nullable USD cost for invocation facts and all derived totals. Unknown inputs must not be summed as zero or yield a misleading partial aggregate; define and document propagation behavior for mixed known and unknown inputs.</li>
+  <li>Boundary Adapter: Map measured source costs to values and sources without billing evidence to null. Preserve legacy numeric ledger values and add a cost-specific compatibility/migration path where source provenance can reliably establish that zero meant unavailable. Coordinate schema versioning with other migration work without depending on it.</li>
+  <li>Presentation: Render null as unavailable across ticket details, fleet totals, comparisons, progression charts, and CLI output. Keep genuine zero distinct and define sort/filter/chart behavior for unavailable values.</li>
+  <li>Quality: Add Go serialization, aggregation, migration, and source-mapping tests plus TypeScript formatter/component tests; include mixed-source and legacy-ledger cases.</li>
+</ul>
+
+<p><em>ACCEPTANCE CRITERIA</em></p>
+
+<ul>
+  <li>JSON serialization distinguishes <code class="language-plaintext highlighter-rouge">null</code> cost from numeric <code class="language-plaintext highlighter-rouge">0</code> without changing the meaning of measured OpenCode costs.</li>
+  <li>Aggregates containing unavailable cost follow the documented rule and never display an incomplete sum as a complete total.</li>
+  <li>Every cost display handles unavailable values explicitly; no UI or CLI renders null as <code class="language-plaintext highlighter-rouge">$0.00</code>.</li>
+  <li>Versioned migration preserves known numeric costs and marks unavailable Codex costs null only when source provenance proves the conversion is safe.</li>
+  <li>Go vet/tests and TypeScript typecheck/lint/tests pass; generated frontend assets remain embedded in the Go binary.</li>
+</ul>
+
+<p><em>DEFINITION OF DONE</em></p>
+
+<ul>
+  <li>Cost migration is versioned and compatible with the repository’s existing migration framework; it does not require AL-55 to complete first.</li>
+  <li>Quality gates pass with <code class="language-plaintext highlighter-rouge">make</code>.</li>
+  <li>Existing ledgers with numeric costs continue to load and display correctly.</li>
+</ul>
+
+<p><em>APPROVED DEVELOPMENT CLARIFICATION</em></p>
+
+<p>The current user approved the developer contract with the explicit amendment: “remove legacy_unverified type. treat legacy costs as observed. keep it simple”. The accepted baseline is alspaces/AL-57/CONTRACT.md and iterations/02/PLAN.md; the earlier iteration 01 proposal is historical.</p>
+
+<ul>
+  <li>Valid historical numeric amounts, including zero and historical Codex zero, are observed in read projections, migration, aggregation and display. There is no special historical cost state, counter or label. Missing/null amounts remain unavailable.</li>
+  <li>Current source extraction distinguishes observed, partial and unavailable evidence. Coalesced invocation rows retain known contributions when some cost-bearing records omit cost.</li>
+  <li>Mixed aggregates show a clearly labeled known subtotal and invocation coverage; their complete total remains unavailable. Cost-dependent ratios require complete, nonzero denominators.</li>
+  <li>Schema v5 persists cost evidence. Canonical v4 remains readable through a read-only compatibility projection; v1-v3 retain explicit migration. Legacy presence must be decoded before scalar defaults. All source ownership, migration backup/atomicity, AL-55 safeguards and non-cost facts remain preserved.</li>
+  <li>CLI/API and the embedded dashboard ship together with nullable complete costs, explicit unavailable/partial states, stable incomplete-last cost ordering and truthful chart gaps. Estimates and rate cards remain excluded.</li>
+</ul>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>

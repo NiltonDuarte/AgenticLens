@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RFC-telemetry-sanitization-and-local-hydration.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/preview/138/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/preview/138/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><h1 id="rfc-telemetry-sanitization-in-git--dynamic-local-database-hydration">RFC: Telemetry Sanitization in Git &amp; Dynamic Local Database Hydration</h1>
+
+<h2 id="1-executive-summary--problem-statement">1. Executive Summary &amp; Problem Statement</h2>
+
+<p>Agentic development sessions produce extensive interaction data: user prompts, LLM reasoning thoughts, tool invocations (<code class="language-plaintext highlighter-rouge">filePath</code>, <code class="language-plaintext highlighter-rouge">command</code>, code snippets), durations, token counts, and error outputs.</p>
+
+<p>Currently, the <code class="language-plaintext highlighter-rouge">AgenticLens</code> CLI persists raw chronological events directly into <code class="language-plaintext highlighter-rouge">workspaces/&lt;TICKET_ID&gt;/agentic_metrics.json</code>. In long multi-turn sessions (100+ turns), this architecture introduces critical vulnerabilities and operational hurdles:</p>
+
+<ol>
+  <li>
+<strong>Security &amp; Confidentiality Risk</strong>:
+    <ul>
+      <li>Committing raw prompts and tool inputs into Git repositories risks permanently leaking environment secrets (<code class="language-plaintext highlighter-rouge">.env</code>), API keys, credentials, customer data, and proprietary intellectual property into repository history.</li>
+      <li>Raw interaction context must never be committed to Git.</li>
+    </ul>
+  </li>
+  <li>
+<strong>Repository &amp; Git Churn Bloat</strong>:
+    <ul>
+      <li>In sessions with hundreds of tool calls, the <code class="language-plaintext highlighter-rouge">events</code> array consumes over 99% of file size and generates 6,000+ lines of formatted JSON diffs on routine telemetry generation.</li>
+    </ul>
+  </li>
+  <li>
+<strong>Empty Routine Shells</strong>:
+    <ul>
+      <li>Routine successful tool calls currently store only bare metadata (<code class="language-plaintext highlighter-rouge">tool_name: "read"</code>, <code class="language-plaintext highlighter-rouge">status: "completed"</code>) without arguments or outputs. Storing hundreds of these empty shells adds massive noise with zero diagnostic utility.</li>
+    </ul>
+  </li>
+</ol>
+
+<hr>
+
+<h2 id="2-core-invariants">2. Core Invariants</h2>
+
+<ol>
+  <li>
+<strong>Zero Sensitive Context in Git</strong>:
+    <ul>
+      <li>User prompts, assistant reasoning streams, tool inputs, and successful command outputs are strictly prohibited from being committed to Git or written into <code class="language-plaintext highlighter-rouge">workspaces/</code>.</li>
+    </ul>
+  </li>
+  <li>
+<strong>Lightweight &amp; Sanitized Committed Ledgers</strong>:
+    <ul>
+      <li>
+<code class="language-plaintext highlighter-rouge">workspaces/&lt;TICKET_ID&gt;/agentic_metrics.json</code> must remain compact (&lt;5 KB, ~50–80 lines).</li>
+      <li>Only aggregated metrics, detected anomalies, compactions, and explicitly failed tool executions (<code class="language-plaintext highlighter-rouge">status: "error"</code>) may be persisted to Git.</li>
+      <li>Any error message persisted to Git must pass through an automated secret redaction and normalization pipeline. Raw uncensored error output is never written to disk.</li>
+    </ul>
+  </li>
+  <li>
+<strong>Dynamic Local Hydration</strong>:
+    <ul>
+      <li>Full-fidelity interaction history (prompts, tool parameters, reasoning thoughts) is read on-demand directly from the local OpenCode SQLite database at runtime when running <code class="language-plaintext highlighter-rouge">agentic-lens serve</code>.</li>
+      <li>Local trace data remains strictly in-memory and transient; it is never written to disk.</li>
+    </ul>
+  </li>
+</ol>
+
+<hr>
+
+<h2 id="3-dual-plane-architecture">3. Dual-Plane Architecture</h2>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>                       +--------------------------------------------------------+
+                       |                     AgenticLens UI                     |
+                       +---------------------------+----------------------------+
+                                                   |
+                                      GET /api/workspaces/:id/events
+                                                   |
+                         +-------------------------+-------------------------+
+                         |                                                   |
+                         v                                                   v
+            [Local DB Available?]                                [Remote / CI / No DB?]
+                         |                                                   |
+                        YES                                                 NO
+                         |                                                   |
+                         v                                                   v
+         +-------------------------------+                  +---------------------------------+
+         |     SQLite Reader (AL-17)     |                  |  workspaces/:id/agentic_metrics |
+         |   Non-locking read of local   |                  |  Committed sanitized ledger     |
+         |   sessions/messages/parts     |                  |  containing anomalies &amp; errors  |
+         +---------------+---------------+                  +----------------+----------------+
+                         |                                                   |
+                         v                                                   v
+         Full trace with prompts,                           Error &amp; anomaly waterfall fallback
+         tool inputs &amp; reasoning                            (safe, compact, portable)
+</code></pre></div></div>
+
+<h3 id="31-committed-git-plane-agentic_metricsjson">3.1 Committed Git Plane (<code class="language-plaintext highlighter-rouge">agentic_metrics.json</code>)</h3>
+
+<p>At generation time (<code class="language-plaintext highlighter-rouge">agentic-lens generate</code>):</p>
+<ul>
+  <li>Compute high-level facts (<code class="language-plaintext highlighter-rouge">code</code>, <code class="language-plaintext highlighter-rouge">invocations</code>, aggregated <code class="language-plaintext highlighter-rouge">tools</code>).</li>
+  <li>Evaluate domain anomaly detection rules in memory across all session events.</li>
+  <li>Filter <code class="language-plaintext highlighter-rouge">events</code> to retain strictly:
+    <ul>
+      <li>Events with <code class="language-plaintext highlighter-rouge">status == "error"</code> (passed through the redaction engine).</li>
+      <li>Events with <code class="language-plaintext highlighter-rouge">event_type == "compaction"</code>.</li>
+      <li>Events directly associated with detected anomalies.</li>
+    </ul>
+  </li>
+  <li>Exclude all routine <code class="language-plaintext highlighter-rouge">completed</code> turn messages and successful tool calls.</li>
+</ul>
+
+<h4 id="311-error-message-sanitization--redaction-engine">3.1.1 Error Message Sanitization &amp; Redaction Engine</h4>
+
+<p>Uncensored error outputs are a primary vector for credential leaks (e.g. stack traces printing local variable dictionaries, database connection strings, authorization header dumps, or failed curl commands).</p>
+
+<p>Before any <code class="language-plaintext highlighter-rouge">error_message</code> is persisted to <code class="language-plaintext highlighter-rouge">agentic_metrics.json</code>:</p>
+<ol>
+  <li>
+<strong>Multi-Pattern Secret Redaction</strong>:
+    <ul>
+      <li>
+<strong>Bearer Tokens / JWTs</strong>: <code class="language-plaintext highlighter-rouge">Bearer [A-Za-z0-9\-_.]+</code> -&gt; <code class="language-plaintext highlighter-rouge">Bearer [REDACTED_TOKEN]</code>
+</li>
+      <li>
+<strong>API Keys</strong>: Common provider key patterns (OpenAI <code class="language-plaintext highlighter-rouge">sk-...</code>, Anthropic <code class="language-plaintext highlighter-rouge">sk-ant-...</code>, GitHub <code class="language-plaintext highlighter-rouge">ghp_...</code> / <code class="language-plaintext highlighter-rouge">github_pat_...</code>, AWS <code class="language-plaintext highlighter-rouge">AKIA...</code>, Slack <code class="language-plaintext highlighter-rouge">xox...</code>) replaced with <code class="language-plaintext highlighter-rouge">[REDACTED_API_KEY]</code>.</li>
+      <li>
+<strong>Connection URIs</strong>: URLs with credentials (<code class="language-plaintext highlighter-rouge">(postgres|mysql|mongodb|redis|amqp)://[^:]+:[^@]+@</code>) masked to <code class="language-plaintext highlighter-rouge">proto://[REDACTED_CREDENTIALS]@host</code>.</li>
+      <li>
+<strong>Private Keys</strong>: <code class="language-plaintext highlighter-rouge">-----BEGIN [A-Z ]+ PRIVATE KEY-----</code> replaced with <code class="language-plaintext highlighter-rouge">[REDACTED_PRIVATE_KEY]</code>.</li>
+      <li>
+<strong>Environment Variable Assignments</strong>: Matches on <code class="language-plaintext highlighter-rouge">(API_KEY|SECRET|TOKEN|PASSWORD|AUTH|KEY)=([^\s\n]+)</code> masked to <code class="language-plaintext highlighter-rouge">$1=[REDACTED]</code>.</li>
+    </ul>
+  </li>
+  <li>
+<strong>Path Sanitization</strong>:
+    <ul>
+      <li>Strip absolute home directory paths (e.g. <code class="language-plaintext highlighter-rouge">/Users/username/...</code> or <code class="language-plaintext highlighter-rouge">/home/agent/...</code>) to relative or generic prefixes (<code class="language-plaintext highlighter-rouge">~/...</code>) to prevent leaking local developer usernames and directory structures.</li>
+    </ul>
+  </li>
+  <li>
+<strong>Truncation &amp; Fingerprinting</strong>:
+    <ul>
+      <li>Cap persisted error message length to at most 256 characters (or the first informative error line), discarding deep internal stack dumps where secrets typically hide.</li>
+      <li>The full, raw, uncensored traceback remains available in the local developer’s SQLite database and is only viewed locally during hydration.</li>
+    </ul>
+  </li>
+</ol>
+
+<h4 id="312-assistant-reflection-extraction--ai-error-summarization">3.1.2 Assistant Reflection Extraction &amp; AI Error Summarization</h4>
+
+<p>Beyond deterministic regex masking, replacing raw error outputs with high-level semantic descriptions eliminates secret leakage while providing vastly superior human diagnostic readability.</p>
+
+<p>We employ a defense-in-depth summarization hierarchy:</p>
+
+<ol>
+  <li>
+<strong>Primary: Assistant Reflection Extraction (Zero Cost / Offline / Instant)</strong>:
+    <ul>
+      <li>When a tool fails during an agent session, the LLM assistant almost invariably diagnoses and explains the failure in the very next turn (e.g. <em>“The test failed due to an assertion mismatch on calculateTotal; let me inspect the input fixture.”</em>).</li>
+      <li>The SQLite database already records this subsequent assistant response message.</li>
+      <li>The CLI extractor extracts the opening diagnosis (first 1–2 sentences, capped at 200 characters) directly from the succeeding assistant turn and assigns it as <code class="language-plaintext highlighter-rouge">sanitized_description</code>.</li>
+      <li><strong>Zero additional LLM API calls, zero additional cost, works 100% offline.</strong></li>
+    </ul>
+  </li>
+  <li>
+<strong>Secondary: Interactive / CLI-Driven Sanitization Hook (Optional)</strong>:
+    <ul>
+      <li>For standalone runs where assistant reflections are absent or ambiguous, <code class="language-plaintext highlighter-rouge">agentic-lens generate</code> supports an optional <code class="language-plaintext highlighter-rouge">--ai-sanitize</code> flag.</li>
+      <li>The CLI passes the regex-scrubbed error snippet to the configured provider asking for a 1-sentence sanitized technical summary stripped of all environment specifics.</li>
+    </ul>
+  </li>
+  <li>
+<strong>Fallback: Scrubbed Error Fingerprint</strong>:
+    <ul>
+      <li>If no assistant reflection exists and AI summarization is disabled, the system falls back to the deterministic regex-scrubbed first line of the error output.</li>
+    </ul>
+  </li>
+</ol>
+
+<p><strong>Result</strong>:</p>
+<ul>
+  <li>A 650-event session shrinks from 650 entries down to 5–15 entries.</li>
+  <li>File size drops from ~196 KB to ~4 KB.</li>
+  <li>Git diffs become concise and reviewable.</li>
+  <li>Zero secret leakage risk into public or shared Git repositories.</li>
+  <li>Error events present clear, human-readable explanations instead of unreadable, sensitive raw dumps.</li>
+</ul>
+
+<h3 id="32-dynamic-local-hydration-plane-agentic-lens-serve">3.2 Dynamic Local Hydration Plane (<code class="language-plaintext highlighter-rouge">agentic-lens serve</code>)</h3>
+
+<p>At serve time:</p>
+<ul>
+  <li>When a user inspects a ticket in <code class="language-plaintext highlighter-rouge">TicketDeepDive</code>:
+    <ol>
+      <li>The UI requests <code class="language-plaintext highlighter-rouge">GET /api/workspaces/{ticketId}/events</code>.</li>
+      <li>The backend handler checks if the ticket’s session ID exists in the local OpenCode SQLite database (<code class="language-plaintext highlighter-rouge">opencode.db</code>).</li>
+      <li>
+<strong>Local DB Available (Developer Workstation)</strong>:
+        <ul>
+          <li>Uses read-only, non-locking SQLite queries (<code class="language-plaintext highlighter-rouge">PRAGMA query_only = ON;</code>, WAL mode) to extract full messages, reasoning thoughts, and tool inputs/outputs.</li>
+          <li>Streams rich trace facts dynamically to the UI in memory.</li>
+        </ul>
+      </li>
+      <li>
+<strong>Local DB Unavailable (CI, Docker, or Remote Repository Clone)</strong>:
+        <ul>
+          <li>Gracefully falls back to the committed <code class="language-plaintext highlighter-rouge">agentic_metrics.json</code> error/compaction event list.</li>
+          <li>Displays the sanitized error and anomaly timeline.</li>
+        </ul>
+      </li>
+    </ol>
+  </li>
+</ul>
+
+<hr>
+
+<h2 id="4-implementation-roadmap">4. Implementation Roadmap</h2>
+
+<h3 id="phase-1-cli-event-filtering-error-redaction--reflection-summarization">Phase 1: CLI Event Filtering, Error Redaction &amp; Reflection Summarization</h3>
+<ul>
+  <li>
+<strong>Scope</strong>: <code class="language-plaintext highlighter-rouge">backend/internal/adapters/opencode/extractor.go</code>, <code class="language-plaintext highlighter-rouge">internal/adapters/sanitizer.go</code>, <code class="language-plaintext highlighter-rouge">cmd/agentic-lens/main.go</code>.</li>
+  <li>
+<strong>Changes</strong>:
+    <ul>
+      <li>Implement pure domain/adapter <code class="language-plaintext highlighter-rouge">SanitizeError(msg string) string</code> with regex-based secret masking and path anonymization.</li>
+      <li>Implement assistant reflection extractor: inspect the assistant turn immediately following a failed tool call to extract the opening diagnosis as <code class="language-plaintext highlighter-rouge">sanitized_description</code>.</li>
+      <li>Filter extracted <code class="language-plaintext highlighter-rouge">events</code> prior to ledger serialization: keep only <code class="language-plaintext highlighter-rouge">Status == "error"</code> (sanitized) or <code class="language-plaintext highlighter-rouge">EventType == "compaction"</code>.</li>
+      <li>Cap persisted error message excerpt to 256 characters.</li>
+      <li>Maintain in-memory calculation of token usage, duration, and anomaly detection over the complete raw event stream so metrics and anomalies remain 100% accurate.</li>
+      <li>Backfill existing workspaces with <code class="language-plaintext highlighter-rouge">agentic-lens migrate</code> or backfill script to prune historical routine events and sanitize legacy error messages.</li>
+    </ul>
+  </li>
+</ul>
+
+<h3 id="phase-2-non-locking-local-sqlite-reader-aligned-with-al-17">Phase 2: Non-Locking Local SQLite Reader (Aligned with AL-17)</h3>
+<ul>
+  <li>
+<strong>Scope</strong>: <code class="language-plaintext highlighter-rouge">backend/internal/adapters/live/sqlite.go</code>.</li>
+  <li>
+<strong>Changes</strong>:
+    <ul>
+      <li>Open local OpenCode database with non-blocking read-only pragmas.</li>
+      <li>Reconstruct session hierarchy and map session IDs to workspace tickets.</li>
+    </ul>
+  </li>
+</ul>
+
+<h3 id="phase-3-runtime-trace-hydration-aligned-with-al-18">Phase 3: Runtime Trace Hydration (Aligned with AL-18)</h3>
+<ul>
+  <li>
+<strong>Scope</strong>: <code class="language-plaintext highlighter-rouge">backend/internal/adapters/http/handlers.go</code>, <code class="language-plaintext highlighter-rouge">internal/domain/live.go</code>.</li>
+  <li>
+<strong>Changes</strong>:
+    <ul>
+      <li>In <code class="language-plaintext highlighter-rouge">WorkspaceEventsHandler</code>, query the local SQLite reader for the ticket’s session ID.</li>
+      <li>If found, construct and return the rich hydrated event stream (including reasoning and tool inputs).</li>
+      <li>If not found, return the sanitized committed ledger events from <code class="language-plaintext highlighter-rouge">agentic_metrics.json</code>.</li>
+    </ul>
+  </li>
+  <li>
+<strong>Frontend</strong>:
+    <ul>
+      <li>Update <code class="language-plaintext highlighter-rouge">TraceWaterfall.tsx</code> to display hydrated prompt/tool detail drawers when available, while seamlessly presenting the compact error view when only fallback events exist.</li>
+    </ul>
+  </li>
+</ul>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AL-23 natural ticket identifier ordering and sortable tables.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><p>h3. Title: AL-23: Natural Ticket Identifier Ordering and Sortable Tables</p>
+
+<table>
+  <tbody>
+    <tr>
+      <td>
+<em>TARGET</em>: AgenticLens (domain</td>
+      <td>presentation</td>
+      <td>adapters</td>
+      <td>tests)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><em>CONTEXT</em></p>
+
+<p>Currently, sorting ticket identifiers relies on standard alphanumeric string comparison (<code class="language-plaintext highlighter-rouge">sort.Strings</code> in Go and <code class="language-plaintext highlighter-rouge">localeCompare</code> in TypeScript), producing distorted ordering sequences such as <code class="language-plaintext highlighter-rouge">AL-1</code>, <code class="language-plaintext highlighter-rouge">AL-10</code>, <code class="language-plaintext highlighter-rouge">AL-11</code>, <code class="language-plaintext highlighter-rouge">AL-2</code>, <code class="language-plaintext highlighter-rouge">AL-22</code>. Users navigating workspaces across the Landing Page, Fleet Overview, Ticket Deep Dive, and Comparisons matrix experience broken ordering where low-numbered tickets are scattered. Furthermore, the Quick-Launch Workspaces directory on the Landing Page is completely static and cannot be sorted by column headers.</p>
+
+<p><em>GOAL</em></p>
+
+<p>Implement pure domain natural ticket identifier parsing and comparison (<code class="language-plaintext highlighter-rouge">&lt;PREFIX&gt;-NN</code>, <code class="language-plaintext highlighter-rouge">&lt;PREFIX&gt;NN</code>) across Go and TypeScript, wire interactive column sorting to the Landing Page Quick-Launch Workspaces table, and enforce natural ordering across all dashboard tables and ticket selectors.</p>
+
+<p><em>VERTICAL SLICE SCOPE</em></p>
+
+<ul>
+  <li>Domain Core:
+    <ul>
+      <li>Implement pure Go comparator <code class="language-plaintext highlighter-rouge">CompareTicketIDs(a, b string) int</code> parsing ticket prefix (alphabetical) and numeric suffix (numerical integer comparison). Handle variations like <code class="language-plaintext highlighter-rouge">AL-1</code>, <code class="language-plaintext highlighter-rouge">AL1</code>, <code class="language-plaintext highlighter-rouge">GEN-42</code>, <code class="language-plaintext highlighter-rouge">PO-5</code>.</li>
+      <li>Add <code class="language-plaintext highlighter-rouge">SortFieldTicketID</code> to Go domain sorting functions.</li>
+    </ul>
+  </li>
+  <li>Boundary Adapter:
+    <ul>
+      <li>Wire natural ticket ordering into <code class="language-plaintext highlighter-rouge">adapters.ScanWorkspaces</code> and <code class="language-plaintext highlighter-rouge">/api/workspaces</code> response generation.</li>
+    </ul>
+  </li>
+  <li>Presentation:
+    <ul>
+      <li>Implement TypeScript natural comparator <code class="language-plaintext highlighter-rouge">compareTicketIds(a: string, b: string): number</code> in <code class="language-plaintext highlighter-rouge">web/src/domain/formatters.ts</code>.</li>
+      <li>Add interactive column sorting to <code class="language-plaintext highlighter-rouge">LandingPage.tsx</code> Quick-Launch Workspaces table (<code class="language-plaintext highlighter-rouge">Ticket ID</code>, <code class="language-plaintext highlighter-rouge">Title</code>, <code class="language-plaintext highlighter-rouge">Status</code>, <code class="language-plaintext highlighter-rouge">Iterations</code>, <code class="language-plaintext highlighter-rouge">Active Duration</code>), using natural sort for <code class="language-plaintext highlighter-rouge">Ticket ID</code>.</li>
+      <li>Update <code class="language-plaintext highlighter-rouge">TicketTable.tsx</code> to sort by <code class="language-plaintext highlighter-rouge">ticket_id</code> using <code class="language-plaintext highlighter-rouge">compareTicketIds</code>.</li>
+      <li>Update <code class="language-plaintext highlighter-rouge">TicketSelector.tsx</code> to display tickets in natural order by default.</li>
+      <li>Update <code class="language-plaintext highlighter-rouge">deriveTicketComparisonRows</code> tie-breaker to sort by natural ticket ID order.</li>
+    </ul>
+  </li>
+  <li>Quality:
+    <ul>
+      <li>Go table-driven unit tests for <code class="language-plaintext highlighter-rouge">CompareTicketIDs</code> covering edge cases (<code class="language-plaintext highlighter-rouge">AL-2</code> vs <code class="language-plaintext highlighter-rouge">AL-10</code>, <code class="language-plaintext highlighter-rouge">AL-1</code> vs <code class="language-plaintext highlighter-rouge">AL-01</code>, mixed prefixes, missing numbers, empty strings).</li>
+      <li>TypeScript unit tests in <code class="language-plaintext highlighter-rouge">formatters.test.ts</code>, <code class="language-plaintext highlighter-rouge">LandingPage.test.tsx</code>, <code class="language-plaintext highlighter-rouge">TicketTable.test.tsx</code>, and <code class="language-plaintext highlighter-rouge">TicketSelector.test.tsx</code>.</li>
+    </ul>
+  </li>
+</ul>
+
+<p><em>ACCEPTANCE CRITERIA</em></p>
+
+<ul>
+  <li>Sorting tickets with identical prefix produces strictly numerical order: <code class="language-plaintext highlighter-rouge">AL-1</code>, <code class="language-plaintext highlighter-rouge">AL-2</code>, <code class="language-plaintext highlighter-rouge">AL-3</code>, …, <code class="language-plaintext highlighter-rouge">AL-9</code>, <code class="language-plaintext highlighter-rouge">AL-10</code>, <code class="language-plaintext highlighter-rouge">AL-11</code>, <code class="language-plaintext highlighter-rouge">AL-22</code>.</li>
+  <li>Multi-prefix lists group by prefix alphabetically and then sort numerically within each prefix (<code class="language-plaintext highlighter-rouge">AL-1</code>, <code class="language-plaintext highlighter-rouge">AL-2</code>, <code class="language-plaintext highlighter-rouge">GEN-1</code>, <code class="language-plaintext highlighter-rouge">GEN-10</code>, <code class="language-plaintext highlighter-rouge">PO-1</code>).</li>
+  <li>Landing Page Quick-Launch Workspaces table headers are clickable, sortable ascending and descending with visible indicators.</li>
+  <li>Fleet Overview Ticket Workspaces Directory sorts by <code class="language-plaintext highlighter-rouge">&lt;PREFIX&gt;-NN</code> when sorted by Ticket ID.</li>
+  <li>Ticket Deep Dive Workspace Autopsy dropdown presents tickets in <code class="language-plaintext highlighter-rouge">&lt;PREFIX&gt;-NN</code> order by default.</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">make test-backend</code>, <code class="language-plaintext highlighter-rouge">npm test</code>, <code class="language-plaintext highlighter-rouge">make check</code>, and <code class="language-plaintext highlighter-rouge">make build</code> pass cleanly.</li>
+</ul>
+
+<p><em>DEFINITION OF DONE</em></p>
+
+<ul>
+  <li>Code and tests merged to target branch.</li>
+  <li>Quality gates passing (<code class="language-plaintext highlighter-rouge">make check</code>, <code class="language-plaintext highlighter-rouge">make test</code>, or <code class="language-plaintext highlighter-rouge">make</code>).</li>
+  <li>Go and TypeScript type checking clean with zero any.</li>
+  <li>Telemetry tested with <code class="language-plaintext highlighter-rouge">agentic-lens</code> CLI.</li>
+</ul>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>

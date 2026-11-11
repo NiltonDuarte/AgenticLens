@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AL-78 make completion feedback effective across harnesses.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><h1 id="al-78-make-completion-feedback-effective-across-harnesses">AL-78: Make completion feedback effective across harnesses</h1>
+
+<h2 id="goal">Goal</h2>
+
+<p>Make open-turn feedback lead to a source-proven completion and subsequent metrics refresh on native Codex and OpenCode.</p>
+
+<h2 id="context">Context</h2>
+
+<p>CLI feedback in the observed Codex run printed a checkpoint warning but did not produce native completion followed by a refresh. Repeated generation in one open turn left duration provisional. OpenCode completion/refresh remains unverified. The intended workflow preserves ongoing work, reaches natural native completion, then publishes completed duration and usage. T3 is an interface, not a harness.</p>
+
+<h2 id="acceptance-criteria">Acceptance criteria</h2>
+
+<ul>
+  <li>Reproduce on both native harnesses and distinguish message emission, delivery to agent context, agent response, actual native completion, and successful subsequent metrics publication. Verify exact owner and native interval; do not treat an aggregate subtotal, nonce, directory or extraction root as proof of current-caller identity.</li>
+  <li>Determine whether the remedy belongs in feedback wording/delivery, native continuation, existing lifecycle capture, or a combination. Verify natural completion versus continuing within the same accounting interval. A supported post-completion capture refresh may avoid a metrics-only model turn; do not prescribe extra turns without evidence they are necessary.</li>
+  <li>Demonstrate an actual native completion followed by a source-backed refresh for Codex and OpenCode separately. Verify completed duration replaces the provisional snapshot without accumulation or duplicate owners, and check whether token/turn records are current at that read. Preserve unavailable cost and explicitly report any source flush delay or incomplete refresh.</li>
+  <li>Preserve the default 180-second threshold and owner/interval attribution unless a separately approved product decision changes them. Do not introduce aggregate-only warnings or endless refresh/continuation loops. Never write synthetic terminal events, claim that a model-request boundary necessarily closes an interval, interrupt unrelated work, or bypass harness trust.</li>
+  <li>If an installed harness cannot support the required workflow, expose the specific unsupported boundary honestly and provide an actionable fallback. Do not claim completion solely because a diagnostic printed or a command exited successfully.</li>
+  <li>
+    <p>Keep the ledger lean: existing duration total plus optional positive provisional_seconds, no reasoning field or persisted feedback/provenance expansion. Preserve unavailable owners, other harnesses and portable recorded facts.</p>
+  </li>
+  <li>When the workflow changes, update canonical setup/operator/developer guidance to explain what the agent does, what capture refreshes automatically and which native boundaries remain unsupported.</li>
+</ul>
+
+<h2 id="implementation-notes">Implementation notes</h2>
+
+<p>Related work: AL-64 duration accounting and owner-scoped checkpoint feedback; AL-68 automatic lifecycle capture. Revalidate their delivered revisions before implementation.</p>
+
+<p>Excluded from this ticket:</p>
+
+<ul>
+  <li>Development-only capture installation, local build distribution, changing the shared release pin, migrating/resetting existing capture state, or a general installer redesign. The unimplemented AL-64 development-install proposal was removed at the user’s direction; this ticket does not carry that implementation forward.</li>
+  <li>
+    <p>T3-specific orchestration, a generic autonomous scheduler, forced rollover of arbitrary sessions, frontend reasoning behavior, or fabricated live-process proof.</p>
+  </li>
+  <li>
+<a href="https://github.com/NiltonDuarte/AgenticLens/blob/167c204fc958da34eb82d97129dedd85ac9b8c58/alspaces/AL-64/SUMMARY.md">AL-64 summary</a>, including task finalization at 3f7652a6.</li>
+  <li>
+<a href="https://github.com/NiltonDuarte/AgenticLens/blob/167c204fc958da34eb82d97129dedd85ac9b8c58/alspaces/AL-64/iterations/04/PLAN.md">AL-64 iteration 04 plan</a>.</li>
+  <li>
+<a href="https://github.com/NiltonDuarte/AgenticLens/blob/167c204fc958da34eb82d97129dedd85ac9b8c58/alspaces/AL-64/iterations/04/RUNTIME_CAPABILITIES.md">AL-64 native capability investigation</a>.</li>
+</ul>
+
+<p>Native Codex evidence at AL-64 commit <code class="language-plaintext highlighter-rouge">3f7652a6</code>: session <code class="language-plaintext highlighter-rouge">01a1b0d2-14f9-70b1-9522-6ba10ef25f64</code>, turn <code class="language-plaintext highlighter-rouge">01a1b0d2-1a26-7cb2-b18f-813a453f857e</code>, snapshot around 2026-11-06 12:35:58Z retained 632 provisional seconds despite four source generations. No owned hooks/plugin were installed and capture state was incompatible; this does not prove healthy automatic capture fails. Detailed source values and flush limits remain in the linked AL-64 evidence; reproduce from genuine native records.</p>
+
+<p><a href="https://github.com/NiltonDuarte/AgenticLens/blob/167c204fc958da34eb82d97129dedd85ac9b8c58/TECHNICAL_GUIDELINES.md">Engineering rules</a> and <a href="https://github.com/NiltonDuarte/AgenticLens/blob/167c204fc958da34eb82d97129dedd85ac9b8c58/docs/REGRESSION_PREVENTION.md">relevant regression boundaries</a> apply. Historical findings require revalidation; this rewrite is not runtime verification or implementation approval.</p>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="360" viewBox="0 0 600 360" role="img" aria-labelledby="title desc">
+  <title id="title">Illustrative ticket analytics</title>
+  <desc id="desc">Conceptual panels for comparing ticket effort, role and model activity, token and cache use, and metric progression. The shapes contain no measured values.</desc>
+  <rect width="600" height="360" fill="#fffef9"/>
+  <g font-family="system-ui, sans-serif">
+    <text x="28" y="35" fill="#526466" font-size="14" letter-spacing="1.5">COMPARE / UNDERSTAND / INVESTIGATE</text>
+    <g fill="#f5f3ec" stroke="#ccd3c9"><rect x="24" y="57" width="266" height="132" rx="6"/><rect x="310" y="57" width="266" height="132" rx="6"/><rect x="24" y="205" width="552" height="130" rx="6"/></g>
+    <g fill="#172f31" font-size="16" font-weight="600"><text x="42" y="87">Ticket comparison</text><text x="328" y="87">Role &amp; model activity</text><text x="42" y="236">Token / cache progression</text></g>
+    <g stroke="#ccd3c9"><path d="M118 101v66 M42 124h224 M42 153h224 M328 122h224 M328 153h224 M42 306h512"/></g>
+    <g fill="#526466" font-size="14"><text x="42" y="117">Ticket A</text><text x="42" y="146">Ticket B</text><text x="328" y="115">Role</text><text x="438" y="115">Model</text></g>
+    <g fill="#adc6b8"><rect x="132" y="105" width="96" height="12" rx="3"/><rect x="132" y="134" width="72" height="12" rx="3"/><rect x="328" y="134" width="79" height="10" rx="3"/><rect x="328" y="165" width="49" height="10" rx="3"/></g>
+    <g fill="#17685c"><rect x="439" y="134" width="72" height="10" rx="3"/><rect x="439" y="165" width="96" height="10" rx="3"/></g>
+    <path d="M47 287l74-21 74 12 74-18 74 13 74-17 74 8 57-20" fill="none" stroke="#17685c" stroke-width="3"/>
+    <path d="M47 299l74-5 74 5 74-13 74 6 74-7 74 5 57-12" fill="none" stroke="#77958a" stroke-width="3" stroke-dasharray="6 5"/>
+    <text x="42" y="325" fill="#526466" font-size="12">ILLUSTRATIVE SHAPES · NO MEASURED VALUES</text>
+  </g>
+</svg>

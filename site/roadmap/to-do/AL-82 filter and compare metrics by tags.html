@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AL-82 filter and compare metrics by tags.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><h1 id="al-82-filter-and-compare-metrics-by-tags">AL-82: Filter and compare metrics by tags</h1>
+
+<h2 id="goal">Goal</h2>
+
+<p>Deliver tags from shared/local configuration and CLI through durable metric records and API responses to dashboard filters and comparison point identity. Preserve existing user identity, portable history and numerical metrics when no tag filter is selected.</p>
+
+<h2 id="context">Context</h2>
+
+<p>Users need arbitrary key-value cohort metadata in their metrics. A single user attribution field cannot express experiments, teams and environments. Existing comparison points distinguish completion status. Historical untagged metrics must stay valid and visible.</p>
+
+<h2 id="acceptance-criteria">Acceptance criteria</h2>
+
+<ul>
+  <li>Shared .agenticlens-config.yaml and private .agenticlens-config.local.yaml accept a top-level tags string mapping. CLI repeatable –tag KEY=VALUE overrides local, which overrides shared, per key; unrelated lower-layer keys survive. A tags-only local file works. CLI repeats use the last value, splitting at the first equals sign. Invalid/blank keys or values, non-string YAML values and duplicate normalized YAML keys fail before any ledger publication. Trim outer whitespace, preserve internal text and case. Document examples and that effective local tags become shared ledger data.</li>
+  <li>Tags are additional metadata, independent of SessionFact.User. Fresh root/child owners for Codex and OpenCode receive effective tags, including automatic publication. Existing owner keys remain unless an effective key replaces them; no tag deletion syntax is included. Missing tag inputs do not erase recorded metadata.</li>
+  <li>Preserve tags and facts for every owner outside a successful complete local refresh. Save/reload, source-unavailable reading, backfill, supported migration and cross-machine Git sharing preserve tags. Do not use current reader configuration to relabel historical metrics. Untagged/legacy ledgers remain valid without a forced migration unless canonical schema policy requires an explicit compatible transition.</li>
+  <li>Dashboard tag filters start unset; values within a key are OR, keys are AND, and existing filters compose. Offer Missing distinctly from literal values. Reset restores tagged and untagged records. Build choices before tag filtering; show an actionable empty result. A conjunction must match one owner, not unrelated owners in the same ticket. Recompute session-derived totals from matching owners; ticket-only metrics remain clearly ticket-scoped without invented allocations.</li>
+  <li>Comparison Color by tag starts off, preserving completion coloring. Selecting a key uses stable value identities with legend and textual/accessibility identification, without filtering or changing point count, identity or coordinates. Keep completion status available. Missing-key points remain visible with a neutral identity. A ticket aggregating multiple values or tagged/untagged contributors is Mixed with a tooltip listing its membership; preserve one point per ticket. Missing/Mixed categories cannot collide with literal tag values. Existing unavailable-metric exclusions and explicit user exclusions remain supported.</li>
+  <li>Tests prove full three-layer precedence and retained keys; config round trips and tags-only local files; root/child and capture publication; persisted tags with unavailable sources; two developers and harnesses sharing history; absent-input refresh/backfill preservation and idempotence; no-filter compatibility; owner-aware filter totals; Missing/Mixed and accessible stable comparison identities.</li>
+</ul>
+
+<p>Shared specification: <a href="https://github.com/NiltonDuarte/AgenticLens/blob/167c204fc958da34eb82d97129dedd85ac9b8c58/alspaces/PO-21/SPEC.md">Metric tags specification</a></p>
+
+<h2 id="implementation-notes">Implementation notes</h2>
+
+<p>Related work: AL-70 configuration preservation; AL-72 UI correctness. Coordinate shared paths; neither is a prerequisite.</p>
+
+<p><a href="https://github.com/NiltonDuarte/AgenticLens/blob/167c204fc958da34eb82d97129dedd85ac9b8c58/TECHNICAL_GUIDELINES.md">Engineering rules</a> and <a href="https://github.com/NiltonDuarte/AgenticLens/blob/167c204fc958da34eb82d97129dedd85ac9b8c58/docs/REGRESSION_PREVENTION.md">relevant regression boundaries</a> apply. Historical findings require revalidation; this rewrite is not runtime verification or implementation approval.</p>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>

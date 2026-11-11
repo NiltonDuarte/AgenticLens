@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AL-3 typescript spa shell and fleet overview.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><p>h3. Title: AL-3: Build TypeScript SPA Shell and Fleet Overview Dashboard</p>
+
+<table>
+  <tbody>
+    <tr>
+      <td>
+<em>TARGET</em>: AgenticLens (presentation</td>
+      <td>web</td>
+      <td>tests)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><em>CONTEXT</em></p>
+
+<p>The Python Streamlit app provides a Fleet Overview showing KPI metric cards and role/model cost distributions. We need the TypeScript web frontend application reproducing this overview with fast rendering and strict typing.</p>
+
+<p><em>GOAL</em></p>
+
+<p>Scaffold the <code class="language-plaintext highlighter-rouge">web/</code> application using Vite, TypeScript, and a modern component architecture, providing API boundary types, a dual-mode network client (live <code class="language-plaintext highlighter-rouge">/api/*</code> with mock fixture fallback), and the Fleet Overview dashboard. Fully decoupled from Go server completion.</p>
+
+<p><em>VERTICAL SLICE SCOPE</em></p>
+
+<ul>
+  <li>Domain Types: <code class="language-plaintext highlighter-rouge">web/src/domain/</code>: strictly typed interfaces matching Go contracts (<code class="language-plaintext highlighter-rouge">AgenticMetricsLedger</code>, <code class="language-plaintext highlighter-rouge">FleetSummary</code>, <code class="language-plaintext highlighter-rouge">GroupedMetric</code>, <code class="language-plaintext highlighter-rouge">RoleMetric</code>, <code class="language-plaintext highlighter-rouge">ModelMetric</code>), zero any.</li>
+  <li>Boundary Adapter &amp; Mock Harness: <code class="language-plaintext highlighter-rouge">web/src/api/client.ts</code>: type-safe HTTP client for <code class="language-plaintext highlighter-rouge">/api/*</code> with error narrowing and mock fixture harness (<code class="language-plaintext highlighter-rouge">web/src/api/mockData.ts</code>) allowing standalone development and testing without running Go backend.</li>
+  <li>Presentation: Top-level navigation bar, theme, and Fleet Overview view:
+    <ul>
+      <li>KPI cards: Total Cost, Invocations, Total Tokens, Cache Hit Rate %, Active Duration.</li>
+      <li>Role and Model distribution cards/charts.</li>
+      <li>Ticket directory table with search, sorting, and links to deep dive.</li>
+    </ul>
+  </li>
+  <li>Quality: TypeScript unit tests for pure formatting functions; Vitest component tests against mock fixtures; zero typecheck errors.</li>
+</ul>
+
+<p><em>ACCEPTANCE CRITERIA</em></p>
+
+<ul>
+  <li>
+<code class="language-plaintext highlighter-rouge">npm run build</code> generates static assets in <code class="language-plaintext highlighter-rouge">web/dist/</code>.</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">npm run typecheck</code> passes with zero errors under strict mode.</li>
+  <li>App runs stand-alone in Vite dev mode using mock fixtures when backend is absent.</li>
+  <li>Fleet Overview displays correct aggregated figures retrieved from <code class="language-plaintext highlighter-rouge">/api/fleet</code> when live backend is connected.</li>
+  <li>Empty dataset handles gracefully without runtime exceptions.</li>
+  <li>Zero emojis anywhere in UI text, labels, or tooltips.</li>
+</ul>
+
+<p><em>DEFINITION OF DONE</em></p>
+
+<ul>
+  <li>Code and tests merged to target branch.</li>
+  <li>Quality gates passing (<code class="language-plaintext highlighter-rouge">npm run typecheck</code>, <code class="language-plaintext highlighter-rouge">npm run lint</code>, <code class="language-plaintext highlighter-rouge">npm test</code>).</li>
+  <li>TypeScript type checking clean with zero any.</li>
+  <li>Telemetry tested with <code class="language-plaintext highlighter-rouge">agentic-lens</code> CLI.</li>
+</ul>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>

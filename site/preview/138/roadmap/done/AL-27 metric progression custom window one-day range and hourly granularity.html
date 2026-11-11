@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AL-27 metric progression custom window one-day range and hourly granularity.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/preview/138/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/preview/138/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><p>h3. Title: AL-27: Metric Progression Custom Window, 1-Day Window, and Hourly Granularity</p>
+
+<table>
+  <tbody>
+    <tr>
+      <td>
+<em>TARGET</em>: AgenticLens (domain</td>
+      <td>adapters</td>
+      <td>presentation</td>
+      <td>tests)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><em>CONTEXT</em></p>
+
+<p>The Metric Progression temporal analysis view currently supports limited preset windows (<code class="language-plaintext highlighter-rouge">all</code>, <code class="language-plaintext highlighter-rouge">7d</code>, <code class="language-plaintext highlighter-rouge">30d</code>, <code class="language-plaintext highlighter-rouge">90d</code>) and fixed granularities (<code class="language-plaintext highlighter-rouge">daily</code>, <code class="language-plaintext highlighter-rouge">weekly</code>, <code class="language-plaintext highlighter-rouge">cumulative</code>). Developers investigating acute cost spikes, short-lived runaways, or active debugging sessions require high-resolution temporal tracking: a 1-day (24-hour) window option, an arbitrary custom date range picker, and hourly aggregation granularity, while preserving defaults to lifetime window and daily granularity.</p>
+
+<p><em>GOAL</em></p>
+
+<p>Extend the Metric Progression aggregation engine and UI with custom window date pickers, a 1-day preset window, and hourly temporal granularity while maintaining backward compatibility and defaults.</p>
+
+<p><em>VERTICAL SLICE SCOPE</em></p>
+
+<ul>
+  <li>Domain Core:
+    <ul>
+      <li>Add <code class="language-plaintext highlighter-rouge">GranularityHourly</code> (<code class="language-plaintext highlighter-rouge">"hourly"</code>) to <code class="language-plaintext highlighter-rouge">TimeGranularity</code> enum in Go <code class="language-plaintext highlighter-rouge">internal/domain</code>.</li>
+      <li>Update <code class="language-plaintext highlighter-rouge">AggregateMetricsOverTime</code> to support hourly bucketing (<code class="language-plaintext highlighter-rouge">YYYY-MM-DDTHH:00:00Z</code>).</li>
+      <li>Add <code class="language-plaintext highlighter-rouge">TimeWindow1D</code> (<code class="language-plaintext highlighter-rouge">"1d"</code>) and custom range parsing to domain window utilities.</li>
+    </ul>
+  </li>
+  <li>Boundary Adapter:
+    <ul>
+      <li>Update <code class="language-plaintext highlighter-rouge">/api/progression</code> HTTP handler to accept <code class="language-plaintext highlighter-rouge">window=1d</code>, <code class="language-plaintext highlighter-rouge">window=custom</code>, <code class="language-plaintext highlighter-rouge">since</code>, <code class="language-plaintext highlighter-rouge">until</code>, and <code class="language-plaintext highlighter-rouge">granularity=hourly</code>.</li>
+    </ul>
+  </li>
+  <li>Presentation:
+    <ul>
+      <li>Add <code class="language-plaintext highlighter-rouge">hourly</code> option to granularity selector in <code class="language-plaintext highlighter-rouge">MetricProgression.tsx</code> (<code class="language-plaintext highlighter-rouge">Hourly</code>, <code class="language-plaintext highlighter-rouge">Daily</code> [default], <code class="language-plaintext highlighter-rouge">Weekly</code>, <code class="language-plaintext highlighter-rouge">Cumulative</code>).</li>
+      <li>Add <code class="language-plaintext highlighter-rouge">1d</code> option (<code class="language-plaintext highlighter-rouge">Last 24 Hours</code>) and <code class="language-plaintext highlighter-rouge">custom</code> option (<code class="language-plaintext highlighter-rouge">Custom Range</code>) to Window dropdown.</li>
+      <li>Implement date-time picker inputs in <code class="language-plaintext highlighter-rouge">MetricProgression.tsx</code> that appear when <code class="language-plaintext highlighter-rouge">custom</code> is selected.</li>
+      <li>Update <code class="language-plaintext highlighter-rouge">TrendChart.tsx</code> and formatters to render hourly timestamps cleanly on chart axes.</li>
+    </ul>
+  </li>
+  <li>Quality:
+    <ul>
+      <li>Pure Go domain tests in <code class="language-plaintext highlighter-rouge">aggregations_test.go</code> verifying hourly bucketing, timestamp boundaries, and empty bucket handling.</li>
+      <li>TypeScript unit tests in <code class="language-plaintext highlighter-rouge">MetricProgression.test.tsx</code> and <code class="language-plaintext highlighter-rouge">progression.test.ts</code> testing 1-day windows, custom ranges, and hourly charts.</li>
+    </ul>
+  </li>
+</ul>
+
+<p><em>ACCEPTANCE CRITERIA</em></p>
+
+<ul>
+  <li>Metric Progression defaults to Project Lifetime window and Daily granularity.</li>
+  <li>Selecting <code class="language-plaintext highlighter-rouge">1d</code> window restricts telemetry to the past 24 hours.</li>
+  <li>Selecting <code class="language-plaintext highlighter-rouge">Custom Range</code> reveals date inputs and restricts progression data to specified interval.</li>
+  <li>Selecting <code class="language-plaintext highlighter-rouge">Hourly</code> granularity aggregates tokens, cost, invocations, and code churn into 1-hour time buckets.</li>
+  <li>All charts render without layout distortion or tick label overlap at hourly resolution.</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">make test-backend</code> and <code class="language-plaintext highlighter-rouge">npm test</code> pass cleanly.</li>
+</ul>
+
+<p><em>DEFINITION OF DONE</em></p>
+
+<ul>
+  <li>Code and tests merged to target branch.</li>
+  <li>Quality gates passing (<code class="language-plaintext highlighter-rouge">make check</code>, <code class="language-plaintext highlighter-rouge">make test</code>, or <code class="language-plaintext highlighter-rouge">make</code>).</li>
+  <li>Go and TypeScript type checking clean with zero any.</li>
+  <li>Telemetry tested with <code class="language-plaintext highlighter-rouge">agentic-lens</code> CLI.</li>
+</ul>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>

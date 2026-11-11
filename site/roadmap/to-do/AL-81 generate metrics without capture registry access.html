@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AL-81 generate metrics without capture registry access.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><h1 id="al-81-generate-metrics-without-capture-registry-access">AL-81: Generate metrics without capture registry access</h1>
+
+<h2 id="goal">Goal</h2>
+
+<p>Deliver manual generate as a source-backed ad hoc operation that does not read, create or mutate the AgenticLens capture registry, while retaining source validation, portable ledger preservation and serialized publication. Automatic capture publication continues to enforce its registry ownership and lifecycle rules.</p>
+
+<h2 id="context">Context</h2>
+
+<p>Manual Codex generation currently acquires capture configuration/state, creates the AgenticLens registry when absent, validates selected sessions against its bindings and records manual bindings. A stale local binding can therefore block an explicit session/ticket extraction even when the authoritative transcripts and existing ledger are available. This makes ad hoc generation depend on machine-local capture history. The database at issue is AgenticLens’s capture registry, not OpenCode’s source database.</p>
+
+<h2 id="acceptance-criteria">Acceptance criteria</h2>
+
+<ul>
+  <li>Manual generate with explicit ticket and supported session/nonce selection succeeds from valid project/metrics/source configuration without capture installation, capture enablement or capture-only state settings. Do not weaken validation of settings actually required by manual generation.</li>
+  <li>A missing registry stays missing; an existing registry is neither read nor modified. A stale/conflicting ticket binding, corrupt registry or inaccessible capture-state location cannot block manual extraction. Test these cases with isolated paths and prove no registry/state initialization side effects.</li>
+  <li>Codex generation reads authoritative rollout files. OpenCode generation still reads its configured source SQLite database through the supported source adapters. Missing, unreadable or invalid source data remains an actionable error, not empty successful telemetry.</li>
+  <li>Preserve supported session/child discovery and source/project validation. An explicit manual ticket selection is authoritative for the requested output and does not rebind automatic capture sessions. This ticket adds no general reticket command, automatic cross-ticket cleanup or silent ticket inference.</li>
+  <li>Refresh only exact source-complete owners, including legitimate lower/zero snapshots; preserve unavailable/partial owners, other harnesses and other contributors under the portable ledger contract. Do not require private capture receipts for supported Git-shared history or accumulate duplicate snapshots.</li>
+  <li>Keep output destination validation, interruption-safe writes and shared publication serialization between manual and automatic writers without making manual publication depend on the registry. Test concurrent publication preserves updates rather than losing or duplicating sessions.</li>
+  <li>Automatic publication, including the worker’s generate invocation, still requires enabled configuration, valid registry ownership and ticket binding. Conflicting binding remains an error on that path; unassigned sessions do not publish. Verify separating manual admission does not turn automatic invocations into an ownership bypass.</li>
+  <li>Demonstrate the same real source root/child extraction with and without a local capture registry and record source IDs, output facts and limits. Synthetic fixtures do not establish native runtime capture coverage.</li>
+</ul>
+
+<p>Shared specification: <a href="https://github.com/NiltonDuarte/AgenticLens/blob/167c204fc958da34eb82d97129dedd85ac9b8c58/alspaces/PO-20/SPEC.md">PO-20 SPEC.md</a>, F7.</p>
+
+<h2 id="implementation-notes">Implementation notes</h2>
+
+<p>Related work: Coordinate shared CLI/publication changes with AL-79 and AL-78; neither is a prerequisite. AL-80 consumes the automatic runtime and must retain its safeguards.</p>
+
+<p><a href="https://github.com/NiltonDuarte/AgenticLens/blob/167c204fc958da34eb82d97129dedd85ac9b8c58/TECHNICAL_GUIDELINES.md">Engineering rules</a> and <a href="https://github.com/NiltonDuarte/AgenticLens/blob/167c204fc958da34eb82d97129dedd85ac9b8c58/docs/REGRESSION_PREVENTION.md">relevant regression boundaries</a> apply. Historical findings require revalidation; this rewrite is not runtime verification or implementation approval.</p>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>

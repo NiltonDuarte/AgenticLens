@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AL-71 keep dashboard requests and live data reliable.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><h1 id="al-71-keep-dashboard-requests-and-live-data-reliable">AL-71: Keep dashboard requests and live data reliable</h1>
+
+<h2 id="goal">Goal</h2>
+
+<p>Dashboard selections own their results, time windows behave consistently, and live data survives transport errors and recovers accurately.</p>
+
+<h2 id="context">Context</h2>
+
+<p>The current selection must own asynchronous results, time windows must have one meaning, and malformed or recovering live transports must preserve valid data and truthful status.</p>
+
+<h2 id="acceptance-criteria">Acceptance criteria</h2>
+
+<h3 id="own-filter-requests-and-progression-date-boundaries-consistently">Own filter requests and progression date boundaries consistently</h3>
+
+<p>Late filter responses overwrite current selections. Progression presets switch from latest-ledger time to server-current time when a type/prefix is selected. Duplicated state ownership lets the views diverge.</p>
+
+<ul>
+  <li>Fence data, diagnostics, loading and errors by the active request, including stale rejections after newer successes. Preserve existing useLiveTrace and TicketDeepDive ownership semantics.</li>
+  <li>Choose one documented progression time-window meaning and use it with and without filters; test a clock far beyond the newest ledger while toggling a type/prefix that includes all shown tickets.</li>
+  <li>Extract only shared request/filter/date invariants that remove concrete duplication, and keep pure calculations out of views. Do not add a generic caching framework.</li>
+  <li>Use deferred A/B response and rejection permutations and a real server-date contract fixture, not only immediately resolved mocked requests. FE-D2 benchmark arithmetic belongs to AL-72.</li>
+</ul>
+
+<h3 id="validate-live-payloads-and-recover-polling-state">Validate live payloads and recover polling state</h3>
+
+<p>Malformed nested live payloads pass unchecked casts and crash consumers; fallback polling remains in error after successful recovery and launches overlapping requests.</p>
+
+<ul>
+  <li>Validate required nested nodes/messages/parts/anomalies at REST and SSE ingress using shared decoders. Normalize only truly optional collections and retain the last valid snapshot on malformed input.</li>
+  <li>Restore fallback-polling status on success after error, serialize/coalesce pending polls, and prevent obsolete or post-teardown results from mutating state.</li>
+  <li>Test null/primitive/wrong-scalar/nested-malformed payloads, valid optional omissions, failure-threshold recovery, deferred overlapping requests and teardown. Do not misrepresent malformed data as a valid empty snapshot.</li>
+</ul>
+
+<h2 id="implementation-notes">Implementation notes</h2>
+
+<p>Related work: AL-69 owns source diagnostics and anomaly semantics; AL-70 owns configured ticket parsing/filter identity; AL-72 owns rendered UI behavior and benchmark arithmetic.</p>
+
+<p>Finding references: FE-02, FE-03, FE-04, FE-05, FE-D2</p>
+
+<ul>
+  <li><a href="https://github.com/NiltonDuarte/AgenticLens/blob/167c204fc958da34eb82d97129dedd85ac9b8c58/alspaces/REV-5/iterations/03/FRONTEND_REPORT.md">REV-5 FRONTEND_REPORT.md</a></li>
+</ul>
+
+<p><em>DEVELOPMENT STATE REVIEW (2026-11-05)</em></p>
+
+<p>Retain request ownership, date boundaries and live validation/recovery. Current TicketComparisons, MetricProgression and live hooks remain the consumers. AL-60 exclusion search is shipped and must survive these corrections.</p>
+
+<p>Evidence and review limits: <a href="https://github.com/NiltonDuarte/AgenticLens/blob/167c204fc958da34eb82d97129dedd85ac9b8c58/alspaces/PO-19/SPEC.md">PO-19 reconciliation</a>, merged baseline <code class="language-plaintext highlighter-rouge">03f5b05d</code>. This planning review does not certify runtime behavior or close unverified acceptance criteria.</p>
+
+<p><a href="https://github.com/NiltonDuarte/AgenticLens/blob/167c204fc958da34eb82d97129dedd85ac9b8c58/TECHNICAL_GUIDELINES.md">Engineering rules</a> and <a href="https://github.com/NiltonDuarte/AgenticLens/blob/167c204fc958da34eb82d97129dedd85ac9b8c58/docs/REGRESSION_PREVENTION.md">relevant regression boundaries</a> apply. Historical findings require revalidation; this rewrite is not runtime verification or implementation approval.</p>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>

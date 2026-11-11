@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AL-50 audit and streamline debug prompt generation and sanitization.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/preview/138/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/preview/138/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><p>h3. Title: AL-50: Audit and Streamline Debug Prompt Generation and Sanitization Pipeline</p>
+
+<p><em>TARGET</em>: AgenticLens (presentation / web / utils / tests / review)</p>
+
+<p><em>CONTEXT</em></p>
+
+<p>Branch <code class="language-plaintext highlighter-rouge">fix/FIX-3-centralize-live-anomalies-debug-identifiers</code> introduced <code class="language-plaintext highlighter-rouge">web/src/utils/debugPrompt.ts</code> (420+ LOC) to generate structured markdown debug prompts across 4 operational layers (Tool Execution, Execution Issue, Message Turn, and Session Overview) for instant copy-pasting into an AI debugging assistant.</p>
+
+<p>However, the implementation suffers from two major design defects:</p>
+<ol>
+  <li>
+<strong>Excessive and Destructive Sanitization Pipeline</strong>: The module applies heavyweight, multi-pass regexes (<code class="language-plaintext highlighter-rouge">stripInternalIdentifiers</code>, <code class="language-plaintext highlighter-rouge">cleanSeverityTiers</code>, <code class="language-plaintext highlighter-rouge">sanitizeTextForPrompt</code>) and a cascade of fragile grammatical repair regexes (cleaning orphaned commas, coordinating conjunctions, and dashes) across raw payloads. Applying this pipeline to raw tool inputs, tool outputs, compiler error messages, and agent deliberation irreversibly corrupts legitimate technical diagnostic data (e.g. git commands lose branch arguments, test names containing ticket prefixes get stripped, stack traces lose file paths, and syntax errors are mangled).</li>
+  <li>
+<strong>Verbose and Redundant Prompt Messages</strong>: The generated debug prompts contain repetitive boilerplate sentences (e.g. repeating “This data was extracted from the OpenCode database.” across all layers), overly conversational provenance phrasing, and repetitive multi-line “### What to check” checklists with leading rhetorical questions.</li>
+</ol>
+
+<p><em>GOAL</em></p>
+
+<p>Audit and streamline <code class="language-plaintext highlighter-rouge">web/src/utils/debugPrompt.ts</code>:</p>
+<ol>
+  <li>Eliminate destructive regex sanitization on raw technical payloads (tool inputs, tool outputs, compiler errors, deliberation, and message bodies) so that code fences preserve exact, unmutated runtime artifacts.</li>
+  <li>Remove fragile regex grammar repairs and restrict any metadata sanitization strictly to top-level UI summary titles, or replace it with a lightweight, deterministic transform.</li>
+  <li>Review and refine prompt messages to be concise, direct, factual, and optimized for AI assistant ingestion.</li>
+</ol>
+
+<p><em>VERTICAL SLICE SCOPE</em></p>
+
+<ul>
+  <li>Domain Core / Utils:
+    <ul>
+      <li>Refactor <code class="language-plaintext highlighter-rouge">web/src/utils/debugPrompt.ts</code> to dramatically reduce complexity and size (targeting under 200 LOC, down from 420+ LOC).</li>
+      <li>Guarantee raw technical payloads (<code class="language-plaintext highlighter-rouge">input</code>, <code class="language-plaintext highlighter-rouge">output</code>, <code class="language-plaintext highlighter-rouge">errorMessage</code>, <code class="language-plaintext highlighter-rouge">reasoningContent</code>, <code class="language-plaintext highlighter-rouge">messageContent</code>) bypass destructive text replacement and are inserted verbatim into defensive Markdown code fences (<code class="language-plaintext highlighter-rouge">formatCodeBlock</code>).</li>
+      <li>Simplify helper routines (<code class="language-plaintext highlighter-rouge">sanitizeTextForPrompt</code>, <code class="language-plaintext highlighter-rouge">translateRuleToPlainEnglish</code>), removing fragile punctuation and conjunction stripping regexes.</li>
+      <li>Refactor prompt templates across all 4 layers (Tool Execution, Execution Issue, Message Turn, Session Overview) to use direct, concise diagnostic wording and sharp, non-redundant checklists.</li>
+    </ul>
+  </li>
+  <li>Boundary Adapter: Zero backend/API changes; leverages existing live event data.</li>
+  <li>Presentation: Verify that <code class="language-plaintext highlighter-rouge">CopyPromptButton</code> in <code class="language-plaintext highlighter-rouge">LiveTraceInspector.tsx</code> and anomaly cards receive clean, faithful Markdown output.</li>
+  <li>Quality: Update and expand <code class="language-plaintext highlighter-rouge">web/src/utils/debugPrompt.test.ts</code> to assert that code blocks and payloads containing ticket IDs (e.g. <code class="language-plaintext highlighter-rouge">AL-42</code>), branch names (<code class="language-plaintext highlighter-rouge">fix/FIX-3</code>), and severity tags remain unmutated inside code fences, while prompt metadata remains clean and properly formatted.</li>
+</ul>
+
+<p><em>ACCEPTANCE CRITERIA</em></p>
+
+<ul>
+  <li>Tool inputs, outputs, error messages, and message contents are preserved verbatim inside fenced code blocks without destructive string replacement or regex mangling.</li>
+  <li>Fragile regex-based grammar mending (orphan commas, trailing conjunctions) is eliminated.</li>
+  <li>Code size of <code class="language-plaintext highlighter-rouge">web/src/utils/debugPrompt.ts</code> is reduced by at least 40% (under 250 LOC).</li>
+  <li>Repetitive boilerplate phrases (e.g. “This data was extracted from the OpenCode database.”) are removed or condensed into clean, concise provenance headers.</li>
+  <li>Checklists are concise, actionable, and free of rhetorical filler.</li>
+  <li>Unit tests in <code class="language-plaintext highlighter-rouge">web/src/utils/debugPrompt.test.ts</code> pass with 100% assertion coverage, including test cases explicitly verifying that technical payloads containing tickets, branches, and keywords are not corrupted.</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">npm run typecheck</code>, <code class="language-plaintext highlighter-rouge">npm run lint</code>, and <code class="language-plaintext highlighter-rouge">npm test</code> pass with zero errors.</li>
+</ul>
+
+<p><em>DEFINITION OF DONE</em></p>
+
+<ul>
+  <li>Code and tests merged to target branch.</li>
+  <li>Quality gates passing (<code class="language-plaintext highlighter-rouge">make check</code>, <code class="language-plaintext highlighter-rouge">make test</code>, or <code class="language-plaintext highlighter-rouge">make</code>).</li>
+  <li>Go and TypeScript type checking clean with zero any.</li>
+  <li>Telemetry tested with <code class="language-plaintext highlighter-rouge">agentic-lens</code> CLI.</li>
+</ul>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>
