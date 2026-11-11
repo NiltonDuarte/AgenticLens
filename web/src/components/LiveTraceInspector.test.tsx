@@ -38,6 +38,17 @@ describe('LiveTraceInspector Component', () => {
     sub_sessions: [],
   };
 
+  it.each([['', 'Unknown'], ['default', 'default'], ['unknown', 'unknown']])('labels model %j as %j in the inspector and human session summary', async (model, label) => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    mockClipboard(writeText);
+    const node = {...mockNode, model};
+    const {container} = render(<LiveTraceInspector sessionNode={node} trace={mockLiveTraceView} loading={false} onClose={vi.fn()} />);
+    expect(container.querySelector('.inspector-model-badge')).toHaveTextContent(label);
+    await act(async () => fireEvent.click(screen.getByRole('button', {name: 'Copy session overview debug prompt'})));
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining(`running \`${label}\``));
+    expect(node.model).toBe(model);
+  });
+
   it('keeps completed task navigation, output copy and execution expansion beside rich invocations', async () => {
     const select = vi.fn();
     const writeText = vi.fn().mockResolvedValue(undefined);

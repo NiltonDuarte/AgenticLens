@@ -6,6 +6,15 @@ import { ProjectConfigContext } from '../contexts/ProjectConfigContext';
 import { mockProjectConfig, mockLiveSessionTree } from '../test/fixtures/mockData';
 
 describe('LiveSessionTree Component', () => {
+  it.each([['', 'Unknown'], ['default', 'default'], ['unknown', 'unknown']])('displays model %j as %j without changing session identity or count', (model, label) => {
+    const node = {...mockLiveSessionTree.root_sessions[0]!, model, sub_sessions: []};
+    const tree = {...mockLiveSessionTree, root_sessions: [node], total_active_sessions: 1};
+    const {container} = render(<LiveSessionTree tree={tree} selectedSessionId={null} onSelectSession={vi.fn()} />);
+    expect(container.querySelector('.node-model-name')).toHaveTextContent(label);
+    expect(container.querySelectorAll('.live-session-node-card')).toHaveLength(1);
+    expect(node.model).toBe(model);
+  });
+
   it('renders informative empty state when root_sessions is empty', () => {
     const emptyTree: LiveSessionTreeType = {
       root_sessions: [],

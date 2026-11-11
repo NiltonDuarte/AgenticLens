@@ -328,9 +328,13 @@ func formatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, policy *doma
 	})
 
 	for _, m := range sortedModels {
+		modelLabel := m.Model
+		if modelLabel == "" {
+			modelLabel = "Unknown"
+		}
 		lines = append(lines, fmt.Sprintf(
 			"| **%s** | %d | %s | %s | %s | %.1f%% | %s |",
-			m.Model,
+			modelLabel,
 			m.Invocations,
 			FormatNumber(m.InputTokens),
 			FormatNumber(m.OutputTokens),

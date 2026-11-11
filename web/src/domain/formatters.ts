@@ -16,6 +16,11 @@ export function formatSkillStatus(success: boolean): 'Success' | 'Failed' {
   return success ? 'Success' : 'Failed';
 }
 
+/** Empty is the canonical missing-model identity; observed names remain verbatim. */
+export function formatModelLabel(model: string): string {
+  return model === '' ? 'Unknown' : model;
+}
+
 // Preserve persona spelling while making unavailable source roles visible.
 export function formatRoleLabel(role: string): string {
   return role.trim() || 'Unknown';

@@ -2449,3 +2449,145 @@ func TestLiveTraceLegacyRevisionRecoveryAndBoundedOnDemandCache(t *testing.T) {
 		t.Fatal("uncertain source generation reused old cache or lost source facts")
 	}
 }
+
+func TestLiveModelResolutionPreservesUnknownAndObservedNames(t *testing.T) {
+	cases := []struct {
+		id, raw, want string
+		null          bool
+	}{
+		{id: "absent", want: "", null: true},
+		{id: "empty", raw: "", want: ""},
+		{id: "blank", raw: " \t\n ", want: ""},
+		{id: "observed-default", raw: "default", want: "default"},
+		{id: "observed-unknown", raw: "unknown", want: "unknown"},
+		{id: "observed-known", raw: "source-model", want: "source-model"},
+		{id: "observed-trimmed", raw: " source-model ", want: "source-model"},
+		{id: "object-default", raw: `{"id":"default"}`, want: "default"},
+		{id: "object-known", raw: `{"id":"source-model"}`, want: "source-model"},
+		// A12 preserves existing nonempty wrapper interpretation rather than
+		// broadening accepted model metadata or normalizing stored names.
+		{id: "object-empty-id", raw: `{"id":" "}`, want: `{"id":" "}`},
+	}
+	path := createTestDBFile(t)
+	writer, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stamp := time.Now().UnixMilli()
+	for _, tc := range cases {
+		if _, err := writer.Exec(`INSERT INTO session(id,agent,model,title,time_created,time_updated) VALUES(?, 'builder', ?, 'Model identity', ?, ?)`, tc.id, sql.NullString{String: tc.raw, Valid: !tc.null}, stamp, stamp); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	before, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hook, err := live.OpenReadOnlyHook(path, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	service := live.NewLiveService(hook, testProjectConfig())
+	defer service.Close()
+	response := httptest.NewRecorder()
+	adaptershttp.LiveSessionsHandler(service)(response, httptest.NewRequest("GET", "/api/live/sessions", nil))
+	if response.Code != 200 {
+		t.Fatalf("live models HTTP %d: %s", response.Code, response.Body.String())
+	}
+	var tree domain.LiveSessionTree
+	if err := json.Unmarshal(response.Body.Bytes(), &tree); err != nil {
+		t.Fatal(err)
+	}
+	var wire struct {
+		Roots []struct {
+			ID    string  `json:"id"`
+			Model *string `json:"model"`
+		} `json:"root_sessions"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &wire); err != nil {
+		t.Fatal(err)
+	}
+	for _, node := range wire.Roots {
+		if node.Model == nil {
+			t.Fatalf("model string became absent/null for %s: %s", node.ID, response.Body.String())
+		}
+	}
+	if tree.TotalActiveSessions != len(cases) || len(tree.RootSessions) != len(cases) {
+		t.Fatalf("missing model changed session count: %+v", tree)
+	}
+	nodes := make(map[string]*domain.LiveSessionNode, len(tree.RootSessions))
+	for _, node := range tree.RootSessions {
+		nodes[node.ID] = node
+	}
+	for _, tc := range cases {
+		if node := nodes[tc.id]; node == nil || node.Model != tc.want {
+			t.Errorf("source %s model changed: node=%+v want=%q", tc.id, node, tc.want)
+		}
+	}
+	if after, err := os.ReadFile(path); err != nil || !reflect.DeepEqual(before, after) {
+		t.Fatalf("live read changed source database bytes: %v", err)
+	}
+}
+
+func TestRecordedModelNamesAndCountersSurviveRepeatedReads(t *testing.T) {
+	root := t.TempDir()
+	shared, err := os.ReadFile("../config/testdata/shared-policy.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, ".agenticlens-config.yaml"), shared, 0600); err != nil {
+		t.Fatal(err)
+	}
+	workspace := filepath.Join(root, "records")
+	ticket := filepath.Join(workspace, "T-02")
+	if err := os.MkdirAll(ticket, 0700); err != nil {
+		t.Fatal(err)
+	}
+	ledger := []byte(`{"schema_version":6,"ticket_id":"T-02","ticket_title":"Recorded models","ticket_type":"feat","started_at":"2026-10-17T10:00:00Z","completed_at":"2026-10-17T11:00:00Z","updated_at":"2026-10-17T11:00:00Z","code":{"lines_added":0,"lines_deleted":0,"test_lines_added":0,"test_lines_deleted":0,"prod_lines_added":0,"prod_lines_deleted":0,"files_changed":0,"sdlc_iterations":0},"sessions":[{"id":"recorded-owner","source":"opencode","user":"fixture","invocations":[{"role":"builder","model":"default","started_at":null,"completed_at":null,"active_duration_seconds":7,"turns":2,"tokens":{"input":17,"output":3,"cache_read":0,"reasoning":0,"peak_context":17},"cost_usd":0.1,"cost_evidence":{"state":"observed","known_subtotal_usd":0.1},"compactions":1,"user_iterations":2},{"role":"builder","model":"unknown","started_at":null,"completed_at":null,"active_duration_seconds":9,"turns":3,"tokens":{"input":19,"output":5,"cache_read":0,"reasoning":0,"peak_context":19},"cost_usd":0.2,"cost_evidence":{"state":"observed","known_subtotal_usd":0.2},"compactions":2,"user_iterations":3}],"tools":[],"anomalies":[]}]}`)
+	path := filepath.Join(ticket, "agentic_metrics.json")
+	if err := os.WriteFile(path, ledger, 0600); err != nil {
+		t.Fatal(err)
+	}
+	get := func() adaptershttp.WorkspaceDetailResponse {
+		t.Helper()
+		request := httptest.NewRequest("GET", "/api/workspaces/T-02", nil)
+		request.SetPathValue("ticketId", "T-02")
+		response := httptest.NewRecorder()
+		adaptershttp.WorkspaceDetailHandler(workspace)(response, request)
+		if response.Code != 200 {
+			t.Fatalf("recorded models HTTP %d: %s", response.Code, response.Body.String())
+		}
+		var detail adaptershttp.WorkspaceDetailResponse
+		if err := json.Unmarshal(response.Body.Bytes(), &detail); err != nil {
+			t.Fatal(err)
+		}
+		return detail
+	}
+	for i := 0; i < 2; i++ {
+		detail := get()
+		owners := detail.Ledger.Facts.Sessions
+		if len(owners) != 1 || len(owners[0].Invocations) != 2 {
+			t.Fatalf("recorded rows changed: %+v", owners)
+		}
+		rows := owners[0].Invocations
+		if rows[0].Model != "default" || rows[1].Model != "unknown" || rows[0].ActiveDurationSeconds != 7 || rows[1].ActiveDurationSeconds != 9 || rows[0].Turns != 2 || rows[1].Turns != 3 || rows[0].Compactions != 1 || rows[1].Compactions != 2 || rows[0].UserIterations != 2 || rows[1].UserIterations != 3 {
+			t.Fatalf("recorded model identity/counters changed: %+v", rows)
+		}
+		if rows[0].Tokens.Input != 17 || rows[0].Tokens.Output != 3 || rows[1].Tokens.Input != 19 || rows[1].Tokens.Output != 5 || rows[0].CostUSD == nil || *rows[0].CostUSD != 0.1 || rows[1].CostUSD == nil || *rows[1].CostUSD != 0.2 {
+			t.Fatalf("recorded tokens/cost changed: %+v", rows)
+		}
+		modelCounts := map[string]int64{}
+		for _, model := range detail.Ledger.Models {
+			modelCounts[model.Model] = model.Invocations
+		}
+		if !reflect.DeepEqual(modelCounts, map[string]int64{"default": 1, "unknown": 1}) {
+			t.Fatalf("recorded model groups changed: %+v", detail.Ledger.Models)
+		}
+		if after, err := os.ReadFile(path); err != nil || !reflect.DeepEqual(after, ledger) {
+			t.Fatalf("recorded read rewrote original ledger bytes: %v", err)
+		}
+	}
+}

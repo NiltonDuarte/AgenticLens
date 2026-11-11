@@ -2,7 +2,7 @@ import { useRolePresentation } from '../contexts/ProjectConfigContext';
 import type { CostSummary } from '../domain/types';
 import { compareCosts } from '../domain/cost';
 import React from 'react';
-import { formatRoleLabel, formatCostUSD, formatPercentage } from '../domain/formatters';
+import { formatModelLabel, formatRoleLabel, formatCostUSD, formatPercentage } from '../domain/formatters';
 import { getRoleColor, getModelColor, THEME_COLORS } from '../utils/theme';
 import { InfoTooltip } from './InfoTooltip';
 
@@ -93,7 +93,7 @@ export const DistributionCard: React.FC<DistributionCardProps> = ({
                       }}
                       aria-hidden="true"
                     />
-                    <span className="distribution-name">{resolvedColorType === 'role' ? formatRoleLabel(item.name) : item.name}</span>
+                    <span className="distribution-name">{resolvedColorType === 'role' ? formatRoleLabel(item.name) : resolvedColorType === 'model' ? formatModelLabel(item.name) : item.name}</span>
                   </div>
                   <div className="distribution-values mono-number">
                     <span>{formatCostUSD(item.cost, costSummaries?.[item.name])}</span>

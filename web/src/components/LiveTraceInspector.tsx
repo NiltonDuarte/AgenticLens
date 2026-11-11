@@ -2,6 +2,7 @@ import { useRolePresentation } from '../contexts/ProjectConfigContext';
 import React, { useLayoutEffect, useRef, useState } from 'react';
 import type { LiveMessageFact, LiveSessionNode, LiveTraceView, LivePartFact, LiveAnomalyAlert } from '../domain/live';
 import {
+  formatModelLabel,
   formatTokensK,
   truncateMiddle,
   formatLocalTimeWithMs,
@@ -375,7 +376,7 @@ export const LiveTraceInspector: React.FC<LiveTraceInspectorProps> = ({
             <span className={`node-role-badge role-${sessionNode.role.toLowerCase()}`}>
               {rolePresentation.projectedLabel(sessionNode.role)}
             </span>
-            <span className="inspector-model-badge">{sessionNode.model}</span>
+            <span className="inspector-model-badge">{formatModelLabel(sessionNode.model)}</span>
           </div>
           <div className="inspector-metrics-row">
             <span className="inspector-stat">

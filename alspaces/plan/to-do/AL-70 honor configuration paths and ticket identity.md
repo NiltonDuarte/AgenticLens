@@ -1,6 +1,8 @@
 # AL-70: Honor configuration paths and ticket identity
 
-Completed under the confirmed [AL-70 contract](../../AL-70/CONTRACT.md) and [inventory verdicts](../../AL-70/LEGACY_AND_FALLBACKS.md), with verification in the [delivery summary](../../AL-70/SUMMARY.md). The original specification below is historical; confirmed scope supersedes its former defaults, source roots, selector heuristics and compatibility proposals.
+Reopened for approved A12 under [iteration 03](../../AL-70/iterations/03/PLAN.md).
+
+Iteration 02 completed under the confirmed [AL-70 contract](../../AL-70/CONTRACT.md) and [inventory verdicts](../../AL-70/LEGACY_AND_FALLBACKS.md), with verification in the [delivery summary](../../AL-70/SUMMARY.md). The original specification below is historical; confirmed scope supersedes its former defaults, source roots, selector heuristics and compatibility proposals.
 
 ## Goal
 

@@ -768,7 +768,7 @@ func extractMessageContent(raw json.RawMessage) string {
 func resolveModelName(rawModel string) string {
 	trimmed := strings.TrimSpace(rawModel)
 	if trimmed == "" {
-		return "default"
+		return ""
 	}
 	if strings.HasPrefix(trimmed, "{") {
 		var m struct {

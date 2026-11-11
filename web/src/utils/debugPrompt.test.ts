@@ -12,6 +12,12 @@ const assertFencedVerbatim = (prompt: string, content: string, fence = '```'): v
 };
 
 describe('debug prompt generation', () => {
+  it.each([['', 'Unknown'], ['default', 'default'], ['unknown', 'unknown']])('labels supplied model %j consistently in human debug copy', (model, label) => {
+    expect(generateSessionOverviewPrompt({sessionId: 'owner', role: 'coder', model, status: 'completed', turnCount: 2, totalToolCalls: 1, failedToolCalls: 0})).toContain(`running \`${label}\``);
+    expect(generateMessageTurnPrompt({turn: 1, role: 'assistant', model, sessionId: 'owner'})).toContain(`/ \`${label}\``);
+    expect(generateExecutionIssuePrompt({summary: 'Issue', sessionId: 'owner', model, description: 'Captured detail'})).toContain(`running \`${label}\``);
+  });
+
   it('preserves tool input and output verbatim, including identifiers, tags, punctuation, and whitespace', () => {
     const input = '  git checkout fix/FIX-3\n# AL-42 [CRITICAL] TOOL_RETRY_STREAK: keep, exactly.  ';
     const output = '\tERROR: SeverityHigh; AL-42, fix/FIX-3\n';

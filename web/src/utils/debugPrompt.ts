@@ -1,3 +1,5 @@
+import { formatModelLabel } from '../domain/formatters';
+
 /** Markdown debug prompts that preserve captured runtime evidence verbatim. */
 
 export interface ToolExecutionPromptParams {
@@ -125,7 +127,7 @@ export function generateToolExecutionPrompt(params: ToolExecutionPromptParams): 
 export function generateExecutionIssuePrompt(params: ExecutionIssuePromptParams): string {
   const summary = titleMetadata(params.summary, 'Operational Execution Issue');
   const role = params.role?.trim();
-  const model = params.model?.trim();
+  const model = params.model === undefined ? undefined : formatModelLabel(params.model.trim());
   const agent = role && model
     ? `agent \`${role}\` running \`${model}\``
     : role ? `agent \`${role}\`` : model ? `running \`${model}\`` : '';
@@ -146,7 +148,7 @@ export function generateExecutionIssuePrompt(params: ExecutionIssuePromptParams)
 /** Layer 3: review a single message turn. */
 export function generateMessageTurnPrompt(params: MessageTurnPromptParams): string {
   const role = metadata(params.role, 'assistant');
-  const model = present(params.model) ? ` / \`${params.model.trim()}\`` : '';
+  const model = params.model === undefined ? '' : ` / \`${formatModelLabel(params.model.trim())}\``;
   const messageId = present(params.messageId) ? ` (message \`${params.messageId}\`)` : '';
   const tools = params.toolsExecuted?.length
     ? params.toolsExecuted.map((tool) => {
@@ -177,7 +179,7 @@ export function generateSessionOverviewPrompt(params: SessionOverviewPromptParam
 
   return [
     `# Session Overview: \`${sessionId}\``,
-    `Session \`${sessionId}\` is a \`${metadata(params.role, 'agent')}\` subagent running \`${metadata(params.model, 'unknown-model')}\`${parent ? ` (parent session: ${params.parentId})` : ''}. The session is currently **${metadata(params.status, 'unknown')}** after ${params.turnCount} turns and ${params.totalToolCalls} tool executions (${params.failedToolCalls} failed).`,
+    `Session \`${sessionId}\` is a \`${metadata(params.role, 'agent')}\` subagent running \`${formatModelLabel(params.model.trim())}\`${parent ? ` (parent session: ${params.parentId})` : ''}. The session is currently **${metadata(params.status, 'unknown')}** after ${params.turnCount} turns and ${params.totalToolCalls} tool executions (${params.failedToolCalls} failed).`,
     '### Flagged Issues',
     ...(issues.length > 0
       ? issues.map((issue) => evidence(issue, ''))

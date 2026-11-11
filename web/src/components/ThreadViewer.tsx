@@ -1,7 +1,7 @@
 import { useRolePresentation } from '../contexts/ProjectConfigContext';
 import React, { useEffect, useRef, useState } from 'react';
 import type { ThreadExecutionRecord } from '../domain/types';
-import { formatRoleLabel, formatCostUSD, formatPercentage, formatTokensK } from '../domain/formatters';
+import { formatModelLabel, formatRoleLabel, formatCostUSD, formatPercentage, formatTokensK } from '../domain/formatters';
 import { InfoTooltip } from './InfoTooltip';
 
 export interface ThreadViewerProps {
@@ -204,7 +204,7 @@ export const ThreadViewer: React.FC<ThreadViewerProps> = ({ threads, focusSessio
                           r.models.map((m, mIdx) => (
                             <tr key={`${r.role}-${m.model}-${mIdx}`}>
                               <td className="role-col">{formatRoleLabel(r.role)}</td>
-                              <td className="model-col">{m.model}</td>
+                              <td className="model-col">{formatModelLabel(m.model)}</td>
                               <td className="num-col">{m.invocations}</td>
                               <td className="num-col">{formatTokensK(m.input_tokens)}</td>
                               <td className="num-col">{formatTokensK(m.output_tokens)}</td>

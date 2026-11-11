@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest';
-import { formatTokensK, formatCurrencyUSD, formatPercentage, formatDurationSeconds, formatLeadTime, computeLeadTimeSeconds, deriveTicketComparisonRows as configuredDeriveTicketComparisonRows, formatIsoDateTimeShort, compareTicketIds as configuredCompareTicketIds, getEffectiveCompletionDateMs, compareTicketCompletionDate as configuredCompareTicketCompletionDate, canonicalTicketType, extractTicketPrefix, combineDistinctPrefixes, filterLedgersByTicketTypes, filterLedgersByPrefixes as configuredFilterLedgersByPrefixes, formatChartAxisTimestamp, formatCompactCount, formatLinesCompact, truncateMiddle, formatLocalTimeWithMs, formatLocalDateTimeTooltip, getClientTimezoneBadge, formatLocalDateTime, formatHistoricalDateTimeTooltip, } from './formatters';
+import { formatModelLabel, formatTokensK, formatCurrencyUSD, formatPercentage, formatDurationSeconds, formatLeadTime, computeLeadTimeSeconds, deriveTicketComparisonRows as configuredDeriveTicketComparisonRows, formatIsoDateTimeShort, compareTicketIds as configuredCompareTicketIds, getEffectiveCompletionDateMs, compareTicketCompletionDate as configuredCompareTicketCompletionDate, canonicalTicketType, extractTicketPrefix, combineDistinctPrefixes, filterLedgersByTicketTypes, filterLedgersByPrefixes as configuredFilterLedgersByPrefixes, formatChartAxisTimestamp, formatCompactCount, formatLinesCompact, truncateMiddle, formatLocalTimeWithMs, formatLocalDateTimeTooltip, getClientTimezoneBadge, formatLocalDateTime, formatHistoricalDateTimeTooltip, } from './formatters';
 import { mockAgenticMetricsLedgers } from '../test/fixtures/mockData';
 import type { AgenticMetricsLedger, ContextHealthStatus, ConventionalTicketType, } from './types';
 const policy = {prefixes: ['AL', 'BL', 'GEN', 'PO', 'TEST'], caseInsensitive: true};
@@ -9,6 +9,9 @@ const compareTicketCompletionDate = (...args: Parameters<typeof configuredCompar
 const deriveTicketComparisonRows = (...args: Parameters<typeof configuredDeriveTicketComparisonRows>) => configuredDeriveTicketComparisonRows(args[0], args[1], args[2], policy);
 const filterLedgersByPrefixes = (...args: [readonly AgenticMetricsLedger[], readonly string[]]) => configuredFilterLedgersByPrefixes(args[0], args[1], true);
 describe('Domain Pure Formatters', () => {
+    it.each([['', 'Unknown'], ['default', 'default'], ['unknown', 'unknown'], ['Unknown', 'Unknown'], ['model-x', 'model-x'], [' model-x ', ' model-x ']])('labels canonical model %j as %j without renaming observed identities', (model, label) => {
+        expect(formatModelLabel(model)).toBe(label);
+    });
     describe('truncateMiddle', () => {
         it('keeps the default leading and trailing characters around an ellipsis', () => {
             expect(truncateMiddle('ses_0192a83e-unique-x-304a')).toBe('ses_0192...x-304a');

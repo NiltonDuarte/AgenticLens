@@ -1,6 +1,7 @@
 package adapters_test
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 
@@ -516,5 +517,35 @@ func TestFormatMarkdownMetricsTable_SingleRootAndZeroSubagents(t *testing.T) {
 	expectedVel := "- **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)"
 	if !strings.Contains(tableMD, expectedVel) {
 		t.Errorf("expected zero turn velocity format:\nwant: %s\ngot:\n%s", expectedVel, tableMD)
+	}
+}
+
+func TestModelSummaryLabelsUnknownWithoutChangingGroups(t *testing.T) {
+	ledger := domain.AgenticMetricsLedger{
+		Totals: domain.GroupedMetric{Invocations: 10, InputTokens: 100},
+		Models: []domain.ModelMetric{
+			{Model: "default", Invocations: 3, InputTokens: 30},
+			{Model: "", Invocations: 2, InputTokens: 20},
+			{Model: "unknown", Invocations: 4, InputTokens: 40},
+			{Model: "Alpha", Invocations: 1, InputTokens: 10},
+		},
+	}
+	before := append([]domain.ModelMetric(nil), ledger.Models...)
+	markdown := adapters.FormatMarkdownMetricsTable(ledger)
+	previous := -1
+	for _, row := range []string{
+		"| **Unknown** | 2 | 20 |",
+		"| **Alpha** | 1 | 10 |",
+		"| **default** | 3 | 30 |",
+		"| **unknown** | 4 | 40 |",
+	} {
+		position := strings.Index(markdown, row)
+		if position < 0 || position <= previous {
+			t.Fatalf("model label/count/raw-key ordering changed for %q: %s", row, markdown)
+		}
+		previous = position
+	}
+	if !reflect.DeepEqual(before, ledger.Models) {
+		t.Fatalf("human label rewrote canonical model groups: before=%+v after=%+v", before, ledger.Models)
 	}
 }

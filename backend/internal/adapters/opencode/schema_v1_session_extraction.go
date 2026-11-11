@@ -360,7 +360,7 @@ func extractSchemaV1SessionsWithCheckpointAt(db *sql.DB, threadIDs []string, def
 				ReasoningContent: reasoning,
 			})
 
-			mName := "default"
+			mName := ""
 			if rawMD.ModelID != nil && strings.TrimSpace(*rawMD.ModelID) != "" {
 				mName = strings.TrimSpace(*rawMD.ModelID)
 			}
@@ -435,7 +435,7 @@ func extractSchemaV1SessionsWithCheckpointAt(db *sql.DB, threadIDs []string, def
 		}
 
 		if len(byModel) == 0 {
-			fallbackModel := "default"
+			fallbackModel := ""
 			if strings.TrimSpace(s.model) != "" {
 				var mJSON schemaV1ModelJSON
 				if err := json.Unmarshal([]byte(s.model), &mJSON); err == nil && mJSON.ID != nil && strings.TrimSpace(*mJSON.ID) != "" {

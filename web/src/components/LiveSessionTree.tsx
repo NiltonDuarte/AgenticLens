@@ -1,7 +1,7 @@
 import { useRolePresentation } from '../contexts/ProjectConfigContext';
 import React, { useState } from 'react';
 import type { LiveSessionNode, LiveSessionTree as LiveSessionTreeType } from '../domain/live';
-import { formatDurationSeconds } from '../domain/formatters';
+import { formatModelLabel, formatDurationSeconds } from '../domain/formatters';
 
 export interface LiveSessionTreeProps {
   readonly tree: LiveSessionTreeType;
@@ -67,7 +67,7 @@ const LiveSessionNodeItem: React.FC<NodeItemProps> = ({
             <span className={`node-role-badge role-${node.role.toLowerCase()}`}>
               {rolePresentation.projectedLabel(node.role)}
             </span>
-            <span className="node-model-name">{node.model}</span>
+            <span className="node-model-name">{formatModelLabel(node.model)}</span>
           </div>
           <div className="node-status-group">
             <span className={`node-status-pill status-${node.status.toLowerCase()}`}>

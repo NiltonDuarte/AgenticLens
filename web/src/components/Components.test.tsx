@@ -156,6 +156,19 @@ describe('Presentation Components Boundary Tests', () => {
       expect(twentyFives.length).toBe(2);
     });
 
+    it('keeps empty and observed sentinel-like model cost groups distinct while displaying Unknown', () => {
+      const items = {'': 4, default: 3, unknown: 2, Unknown: 1};
+      const before = JSON.stringify(items);
+      const {container} = render(<DistributionCard title="Model Cost Distribution" items={items} totalCostUSD={10} />);
+      expect([...container.querySelectorAll('.distribution-name')].map((node) => node.textContent)).toEqual(['Unknown', 'default', 'unknown', 'Unknown']);
+      expect(container.querySelectorAll('.distribution-item')).toHaveLength(4);
+      expect(screen.getByText('(40.0%)')).toBeVisible();
+      expect(screen.getByText('(30.0%)')).toBeVisible();
+      expect(screen.getByText('(20.0%)')).toBeVisible();
+      expect(screen.getByText('(10.0%)')).toBeVisible();
+      expect(JSON.stringify(items)).toBe(before);
+    });
+
     it('renders arbitrary models with correct labels and percentages', () => {
       render(
         <DistributionCard

@@ -1765,6 +1765,31 @@ items: [{path: 'CONTRACT.md', title: 'CONTRACT.md', description: '', content: nu
 
 
 describe('Recorded fixture JSON through API validation and ticket presentation', () => {
+    it.each([['', 'Unknown'], ['default', 'default'], ['unknown', 'unknown']])('renders API model %j as %j in model and thread tables without rewriting facts or dropping rows', async (model, label) => {
+        vi.restoreAllMocks();
+        const detail = structuredClone(codexOwnedDetail);
+        for (const metric of detail.ledger.models) metric.model = model;
+        for (const thread of detail.ledger.threads) for (const role of thread.roles) for (const metric of role.models) metric.model = model;
+        for (const owner of detail.ledger.facts.sessions) for (const invocation of owner.invocations) invocation.model = model;
+        const before = JSON.stringify(detail);
+        const fetch = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+            const route = String(input);
+            if (route === '/api/workspaces/TEST-WIRE/events') return new Response('', {status: 503});
+            const payload: unknown = route === '/api/workspaces' ? [detail.ledger]
+                : route === '/api/workspaces/TEST-WIRE' ? detail : undefined;
+            if (payload === undefined) throw new Error(`Unexpected fixture route: ${route}`);
+            return new Response(JSON.stringify(payload), {status: 200, headers: {'Content-Type': 'application/json'}});
+        });
+        try {
+            const {container} = render(<TicketDeepDive selectedTicketId="TEST-WIRE" />);
+            await screen.findByText('Model Resource Consumption');
+            const cells = [...container.querySelectorAll('.model-col')];
+            expect(cells.map((cell) => cell.textContent)).toEqual([label, label]);
+            expect(cells.map((cell) => cell.nextElementSibling?.textContent)).toEqual(['1', '1']);
+            expect(JSON.stringify(detail)).toBe(before);
+        } finally { fetch.mockRestore(); }
+    });
+
     it('renders lean activations and separate source badges without saved traces or opaque child links', async () => {
         vi.restoreAllMocks();
         const fetch = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
