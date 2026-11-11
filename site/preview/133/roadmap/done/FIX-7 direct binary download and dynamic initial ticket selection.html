@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FIX-7 direct binary download and dynamic initial ticket selection.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/preview/133/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/preview/133/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><h1 id="fix-7-direct-binary-download-and-dynamic-initial-ticket-selection">FIX-7: Direct Binary Download and Dynamic Initial Ticket Selection</h1>
+
+<h2 id="metadata">Metadata</h2>
+<ul>
+  <li>
+<strong>Ticket ID</strong>: FIX-7</li>
+  <li>
+<strong>Subsystem</strong>: Scripts / Web / Setup / Presentation / Tests</li>
+  <li>
+<strong>Status</strong>: Done</li>
+  <li>
+<strong>Type</strong>: fix</li>
+</ul>
+
+<h2 id="problem-statement">Problem Statement</h2>
+<ol>
+  <li>Artifact downloader scripts (<code class="language-plaintext highlighter-rouge">scripts/download-agentic-lens.sh</code> and <code class="language-plaintext highlighter-rouge">.opencode/skills/agentic-lens-setup/scripts/download.sh</code>) attempted to download <code class="language-plaintext highlighter-rouge">.tar.gz</code>/<code class="language-plaintext highlighter-rouge">.zip</code> compressed archives and unpack them, and attempted to use <code class="language-plaintext highlighter-rouge">gh</code> CLI. Standalone precompiled binaries are directly distributed on GitHub Releases with embedded frontend assets and runtime dependencies, rendering archive handling and <code class="language-plaintext highlighter-rouge">gh</code> invocations unnecessary.</li>
+  <li>In <code class="language-plaintext highlighter-rouge">web/src/App.tsx</code>, the initial state for <code class="language-plaintext highlighter-rouge">selectedTicketId</code> was hardcoded to <code class="language-plaintext highlighter-rouge">'AL-1'</code>, causing the Ticket Deep Dive view to display a “Workspace AL-1 not found” error when running in projects with custom ticket prefixes or without an <code class="language-plaintext highlighter-rouge">AL-1</code> ticket.</li>
+</ol>
+
+<h2 id="solution">Solution</h2>
+<ol>
+  <li>Refactored both downloader scripts to download the standalone binary directly (<code class="language-plaintext highlighter-rouge">agentic-lens-${OS}-${ARCH}${BIN_EXT}</code>) via <code class="language-plaintext highlighter-rouge">curl</code> with <code class="language-plaintext highlighter-rouge">wget</code> fallback, removing all archive tools and <code class="language-plaintext highlighter-rouge">gh</code> invocations.</li>
+  <li>Updated <code class="language-plaintext highlighter-rouge">web/src/App.tsx</code> to initialize <code class="language-plaintext highlighter-rouge">selectedTicketId</code> to <code class="language-plaintext highlighter-rouge">null</code>, allowing Ticket Deep Dive to dynamically default to the first available ticket in the project workspace catalog.</li>
+  <li>Removed silent fallback redirect in <code class="language-plaintext highlighter-rouge">TicketDeepDive.tsx</code> so genuine errors are accurately surfaced when an explicit invalid ticket ID is requested.</li>
+</ol>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>

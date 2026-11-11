@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AL-51 additive domain contracts opencode extractor and live stream ingestion for skills and tasks.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/preview/133/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/preview/133/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><h1 id="al-51-additive-domain-contracts-opencode-extractor-and-live-stream-ingestion-for-skills-and-tasks">AL-51: Additive Domain Contracts, OpenCode Extractor, and Live Stream Ingestion for Skills and Tasks</h1>
+
+<ul>
+  <li>
+<strong>Subsystem</strong>: Domain / Adapters / OpenCode / Live / HTTP / Tests</li>
+  <li>
+<strong>Phase</strong>: Phase 8 (v2 Observability / Skills)</li>
+  <li>
+<strong>Status</strong>: Ready</li>
+  <li>
+<strong>Blocked by</strong>: None</li>
+  <li>
+<strong>Blocks</strong>: AL-52, AL-53, AL-54</li>
+</ul>
+
+<h2 id="context">Context</h2>
+<p>Operators currently lack first-class visibility into modular skill invocations (<code class="language-plaintext highlighter-rouge">tool == "skill"</code>) and subagent delegations (<code class="language-plaintext highlighter-rouge">tool == "task"</code>), both during live real-time observation and in historical ticket autopsies. To allow iterative UI exploration without premature migration churn, domain contracts for skills and tasks must be introduced additively. By adding optional fields (<code class="language-plaintext highlighter-rouge">omitempty</code>) to <code class="language-plaintext highlighter-rouge">AgenticFactLedger</code> and maintaining <code class="language-plaintext highlighter-rouge">SchemaVersion</code> at 3, existing ledgers remain fully valid and backward-compatible while both offline extractors and live SSE streams gain full dual-plane parity.</p>
+
+<h2 id="goal">Goal</h2>
+<p>Establish pure Go and TypeScript domain contracts for <code class="language-plaintext highlighter-rouge">SkillFact</code> and <code class="language-plaintext highlighter-rouge">TaskLinkFact</code> as optional fields on <code class="language-plaintext highlighter-rouge">AgenticFactLedger</code>, implement extraction in the OpenCode adapter from SQLite session logs, and extend the live SQLite watcher and SSE streaming engine to capture skill and task facts in real time.</p>
+
+<h2 id="scope-across-layers">Scope Across Layers</h2>
+
+<h3 id="1-functional-core-internaldomainmodelsgo-internaldomainlivego">1. Functional Core (<code class="language-plaintext highlighter-rouge">internal/domain/models.go</code>, <code class="language-plaintext highlighter-rouge">internal/domain/live.go</code>)</h3>
+<ul>
+  <li>Define <code class="language-plaintext highlighter-rouge">SkillFact</code>:
+    <div class="language-go highlighter-rouge">
+<div class="highlight"><pre class="highlight"><code><span class="k">type</span> <span class="n">SkillFact</span> <span class="k">struct</span> <span class="p">{</span>
+    <span class="n">Name</span>         <span class="kt">string</span> <span class="s">`json:"name"`</span>
+    <span class="n">TurnIndex</span>    <span class="kt">int</span>    <span class="s">`json:"turn_index"`</span>
+    <span class="n">MessageIndex</span> <span class="kt">int</span>    <span class="s">`json:"message_index"`</span>
+    <span class="n">CallerRole</span>   <span class="kt">string</span> <span class="s">`json:"caller_role"`</span>
+    <span class="n">Timestamp</span>    <span class="kt">string</span> <span class="s">`json:"timestamp"`</span>
+    <span class="n">Success</span>      <span class="kt">bool</span>   <span class="s">`json:"success"`</span>
+    <span class="n">Error</span>        <span class="kt">string</span> <span class="s">`json:"error,omitempty"`</span>
+<span class="p">}</span>
+</code></pre></div>    </div>
+  </li>
+  <li>Define <code class="language-plaintext highlighter-rouge">TaskLinkFact</code>:
+    <div class="language-go highlighter-rouge">
+<div class="highlight"><pre class="highlight"><code><span class="k">type</span> <span class="n">TaskLinkFact</span> <span class="k">struct</span> <span class="p">{</span>
+    <span class="n">SubagentType</span> <span class="kt">string</span>  <span class="s">`json:"subagent_type"`</span>
+    <span class="n">Description</span>  <span class="kt">string</span>  <span class="s">`json:"description"`</span>
+    <span class="n">ParentTurn</span>   <span class="kt">int</span>     <span class="s">`json:"parent_turn"`</span>
+    <span class="n">ChildSession</span> <span class="kt">string</span>  <span class="s">`json:"child_session_id,omitempty"`</span>
+    <span class="n">Timestamp</span>    <span class="kt">string</span>  <span class="s">`json:"timestamp"`</span>
+    <span class="n">DurationMs</span>   <span class="kt">int64</span>   <span class="s">`json:"duration_ms,omitempty"`</span>
+    <span class="n">CostUSD</span>      <span class="kt">float64</span> <span class="s">`json:"cost_usd,omitempty"`</span>
+<span class="p">}</span>
+</code></pre></div>    </div>
+  </li>
+  <li>Add additive fields to <code class="language-plaintext highlighter-rouge">AgenticFactLedger</code>:
+    <div class="language-go highlighter-rouge">
+<div class="highlight"><pre class="highlight"><code><span class="n">Skills</span>    <span class="p">[]</span><span class="n">SkillFact</span>    <span class="s">`json:"skills,omitempty"`</span>
+<span class="n">TaskLinks</span> <span class="p">[]</span><span class="n">TaskLinkFact</span> <span class="s">`json:"task_links,omitempty"`</span>
+</code></pre></div>    </div>
+  </li>
+  <li>Extend <code class="language-plaintext highlighter-rouge">LivePartFact</code> with additive optional fields:
+    <div class="language-go highlighter-rouge">
+<div class="highlight"><pre class="highlight"><code><span class="n">SkillName</span>      <span class="kt">string</span> <span class="s">`json:"skill_name,omitempty"`</span>
+<span class="n">ChildSessionID</span> <span class="kt">string</span> <span class="s">`json:"child_session_id,omitempty"`</span>
+<span class="n">SubagentType</span>   <span class="kt">string</span> <span class="s">`json:"subagent_type,omitempty"`</span>
+</code></pre></div>    </div>
+  </li>
+  <li>Invariant: Maintain <code class="language-plaintext highlighter-rouge">CurrentSchemaVersion = 3</code>. No migration step is executed in this ticket.</li>
+</ul>
+
+<h3 id="2-frontend-contracts-websrctypests-websrcdomainlivets">2. Frontend Contracts (<code class="language-plaintext highlighter-rouge">web/src/types.ts</code>, <code class="language-plaintext highlighter-rouge">web/src/domain/live.ts</code>)</h3>
+<ul>
+  <li>Mirror Go structures in TypeScript:
+    <div class="language-typescript highlighter-rouge">
+<div class="highlight"><pre class="highlight"><code><span class="k">export</span> <span class="kr">interface</span> <span class="nx">SkillFact</span> <span class="p">{</span>
+  <span class="nl">name</span><span class="p">:</span> <span class="kr">string</span><span class="p">;</span>
+  <span class="nl">turn_index</span><span class="p">:</span> <span class="kr">number</span><span class="p">;</span>
+  <span class="nl">message_index</span><span class="p">:</span> <span class="kr">number</span><span class="p">;</span>
+  <span class="nl">caller_role</span><span class="p">:</span> <span class="kr">string</span><span class="p">;</span>
+  <span class="nl">timestamp</span><span class="p">:</span> <span class="kr">string</span><span class="p">;</span>
+  <span class="nl">success</span><span class="p">:</span> <span class="nx">boolean</span><span class="p">;</span>
+  <span class="nl">error</span><span class="p">?:</span> <span class="kr">string</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">export</span> <span class="kr">interface</span> <span class="nx">TaskLinkFact</span> <span class="p">{</span>
+  <span class="nl">subagent_type</span><span class="p">:</span> <span class="kr">string</span><span class="p">;</span>
+  <span class="nl">description</span><span class="p">:</span> <span class="kr">string</span><span class="p">;</span>
+  <span class="nl">parent_turn</span><span class="p">:</span> <span class="kr">number</span><span class="p">;</span>
+  <span class="nl">child_session_id</span><span class="p">?:</span> <span class="kr">string</span><span class="p">;</span>
+  <span class="nl">timestamp</span><span class="p">:</span> <span class="kr">string</span><span class="p">;</span>
+  <span class="nl">duration_ms</span><span class="p">?:</span> <span class="kr">number</span><span class="p">;</span>
+  <span class="nl">cost_usd</span><span class="p">?:</span> <span class="kr">number</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">export</span> <span class="kr">interface</span> <span class="nx">LivePartFact</span> <span class="p">{</span>
+  <span class="c1">// ... existing fields ...</span>
+  <span class="nl">skill_name</span><span class="p">?:</span> <span class="kr">string</span><span class="p">;</span>
+  <span class="nl">child_session_id</span><span class="p">?:</span> <span class="kr">string</span><span class="p">;</span>
+  <span class="nl">subagent_type</span><span class="p">?:</span> <span class="kr">string</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>    </div>
+  </li>
+  <li>Add optional fields to <code class="language-plaintext highlighter-rouge">AgenticFactLedger</code> in <code class="language-plaintext highlighter-rouge">types.ts</code>:
+    <div class="language-typescript highlighter-rouge">
+<div class="highlight"><pre class="highlight"><code><span class="nx">skills</span><span class="p">?:</span> <span class="nx">SkillFact</span><span class="p">[];</span>
+<span class="nl">task_links</span><span class="p">?:</span> <span class="nx">TaskLinkFact</span><span class="p">[];</span>
+</code></pre></div>    </div>
+  </li>
+  <li>Enforce defensive accessors (<code class="language-plaintext highlighter-rouge">ledger.skills ?? []</code>, <code class="language-plaintext highlighter-rouge">ledger.task_links ?? []</code>) across frontend consumers to prevent runtime exceptions when processing legacy ledgers.</li>
+</ul>
+
+<h3 id="3-imperative-shell---offline-opencode-extractor-internaladaptersopencodeextractorgo">3. Imperative Shell - Offline OpenCode Extractor (<code class="language-plaintext highlighter-rouge">internal/adapters/opencode/extractor.go</code>)</h3>
+<ul>
+  <li>Enhance OpenCode session extraction:
+    <ul>
+      <li>When a tool call with name <code class="language-plaintext highlighter-rouge">"skill"</code> is processed, extract <code class="language-plaintext highlighter-rouge">args.name</code> into <code class="language-plaintext highlighter-rouge">SkillFact</code>.</li>
+      <li>When a tool call with name <code class="language-plaintext highlighter-rouge">"task"</code> is processed, extract <code class="language-plaintext highlighter-rouge">args.subagent_type</code>, <code class="language-plaintext highlighter-rouge">args.description</code>, and locate the spawned child session id if recorded in the tool output or OpenCode metadata into <code class="language-plaintext highlighter-rouge">TaskLinkFact</code>.</li>
+      <li>Append extracted facts to the ledger.</li>
+    </ul>
+  </li>
+</ul>
+
+<h3 id="4-imperative-shell---live-stream-watcher-internaladapterslivewatchergo">4. Imperative Shell - Live Stream Watcher (<code class="language-plaintext highlighter-rouge">internal/adapters/live/watcher.go</code>)</h3>
+<ul>
+  <li>During incremental SQLite polling of active sessions:
+    <ul>
+      <li>Detect tool invocation parts where <code class="language-plaintext highlighter-rouge">Tool == "skill"</code>: parse JSON arguments to populate <code class="language-plaintext highlighter-rouge">SkillName</code>.</li>
+      <li>Detect tool invocation parts where <code class="language-plaintext highlighter-rouge">Tool == "task"</code>: parse JSON arguments for <code class="language-plaintext highlighter-rouge">SubagentType</code> and correlate completion parts or child session spawn records to populate <code class="language-plaintext highlighter-rouge">ChildSessionID</code>.</li>
+      <li>Propagate these attributes through the SSE event channel (<code class="language-plaintext highlighter-rouge">/api/live/stream</code>) and trace payload endpoints (<code class="language-plaintext highlighter-rouge">/api/live/traces/:id</code>).</li>
+    </ul>
+  </li>
+</ul>
+
+<h3 id="5-automated-tests">5. Automated Tests</h3>
+<ul>
+  <li>Unit tests in <code class="language-plaintext highlighter-rouge">internal/domain/models_test.go</code> verifying JSON serialization with and without skills/task_links.</li>
+  <li>Extractor tests in <code class="language-plaintext highlighter-rouge">internal/adapters/opencode/extractor_test.go</code> using synthetic SQLite fixture databases containing skill and task invocations.</li>
+  <li>Live watcher tests in <code class="language-plaintext highlighter-rouge">internal/adapters/live/watcher_test.go</code> verifying tool extraction for skills and task delegations during live streaming.</li>
+  <li>Frontend tests in <code class="language-plaintext highlighter-rouge">web/src/domain/events.test.ts</code> and <code class="language-plaintext highlighter-rouge">web/src/domain/live.test.ts</code> validating parsing of legacy, skill-augmented, and live SSE event payloads.</li>
+</ul>
+
+<h2 id="acceptance-criteria">Acceptance Criteria</h2>
+<ol>
+  <li>
+<code class="language-plaintext highlighter-rouge">AgenticFactLedger</code> includes optional <code class="language-plaintext highlighter-rouge">Skills</code> and <code class="language-plaintext highlighter-rouge">TaskLinks</code> slices without breaking existing v3 ledgers.</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">CurrentSchemaVersion</code> remains 3.</li>
+  <li>OpenCode extractor accurately parses <code class="language-plaintext highlighter-rouge">tool == "skill"</code> calls and populates <code class="language-plaintext highlighter-rouge">SkillFact</code> records with name, turn index, caller role, and success state.</li>
+  <li>OpenCode extractor accurately parses <code class="language-plaintext highlighter-rouge">tool == "task"</code> calls and populates <code class="language-plaintext highlighter-rouge">TaskLinkFact</code> records with subagent type, description, parent turn, and child session identifier if available.</li>
+  <li>Active session live stream emits <code class="language-plaintext highlighter-rouge">LivePartFact</code> events with <code class="language-plaintext highlighter-rouge">skill_name</code> populated when skills are invoked, and <code class="language-plaintext highlighter-rouge">subagent_type</code> / <code class="language-plaintext highlighter-rouge">child_session_id</code> populated when tasks are delegated.</li>
+  <li>Zero regressions in legacy test suites.</li>
+</ol>
+
+<h2 id="definition-of-done">Definition of Done</h2>
+<ul>
+  <li>Pure domain models and TypeScript interfaces authored with zero <code class="language-plaintext highlighter-rouge">any</code> or <code class="language-plaintext highlighter-rouge">interface{}</code>.</li>
+  <li>Extractor and live watcher logic covered by unit tests with synthetic SQLite fixtures.</li>
+  <li>All Go backend tests and Vitest suites pass (<code class="language-plaintext highlighter-rouge">make check</code>).</li>
+  <li>Zero emojis across all code, tests, and documentation.</li>
+</ul>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>

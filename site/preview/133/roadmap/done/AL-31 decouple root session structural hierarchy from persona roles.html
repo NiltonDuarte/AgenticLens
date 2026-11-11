@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AL-31 decouple root session structural hierarchy from persona roles.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/preview/133/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/preview/133/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><p>h3. Title: AL-31: Decouple Root Session Structural Hierarchy from Persona Roles in Domain Engine and Tests</p>
+
+<table>
+  <tbody>
+    <tr>
+      <td>
+<em>TARGET</em>: AgenticLens (domain</td>
+      <td>adapters</td>
+      <td>tests)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><em>CONTEXT</em></p>
+
+<p>In AgenticLens, session telemetry is organized as a hierarchy: a root session coordinates the user workflow, and child invocations (<code class="language-plaintext highlighter-rouge">ParentID != nil</code>) represent delegated subagents (<code class="language-plaintext highlighter-rouge">planner</code>, <code class="language-plaintext highlighter-rouge">coder</code>, <code class="language-plaintext highlighter-rouge">tester</code>, <code class="language-plaintext highlighter-rouge">reviewer</code>).
+However, the domain metrics engine and extraction adapters conflated session hierarchy (structural: <code class="language-plaintext highlighter-rouge">ParentID == nil</code> vs <code class="language-plaintext highlighter-rouge">ParentID != nil</code>) with agent persona (semantic: <code class="language-plaintext highlighter-rouge">general</code>, <code class="language-plaintext highlighter-rouge">orchestrator</code>, <code class="language-plaintext highlighter-rouge">coder</code>, etc.). Specifically, <code class="language-plaintext highlighter-rouge">domain.IsSubagentRole()</code> checked <code class="language-plaintext highlighter-rouge">role != "orchestrator"</code>.
+When a user interacts directly with OpenCode, the root session is assigned the persona <code class="language-plaintext highlighter-rouge">"general"</code>. Because <code class="language-plaintext highlighter-rouge">"general" != "orchestrator"</code>, the root session was misclassified as a delegated subagent. Consequently:</p>
+<ol>
+  <li>Root session peak context tokens (e.g., 123.3k in AL-1) were attributed to <code class="language-plaintext highlighter-rouge">SubagentsPeakTokens</code> with <code class="language-plaintext highlighter-rouge">SubagentsPeakRole = "general"</code>.</li>
+  <li>Root coordination metrics (<code class="language-plaintext highlighter-rouge">OrchestratorPeakTokens</code>, <code class="language-plaintext highlighter-rouge">OrchestratorSaturationPct</code>) dropped to 0 because they looked up the literal key <code class="language-plaintext highlighter-rouge">"orchestrator"</code>.</li>
+  <li>Subagent effort distribution percentages were distorted because root session tokens diluted actual subagents.</li>
+  <li>Eight test cases failed in <code class="language-plaintext highlighter-rouge">backend/internal/adapters/parity_test.go</code> when evaluated against authentic workspace ledgers.</li>
+</ol>
+
+<p><em>GOAL</em></p>
+
+<p>Decouple structural session hierarchy from agent persona roles across the Go domain engine and adapters, ensuring that root invocations (<code class="language-plaintext highlighter-rouge">ParentID == nil</code>) exclusively drive root coordination metrics regardless of persona name (<code class="language-plaintext highlighter-rouge">general</code>, <code class="language-plaintext highlighter-rouge">orchestrator</code>, <code class="language-plaintext highlighter-rouge">build</code>, etc.), child invocations (<code class="language-plaintext highlighter-rouge">ParentID != nil</code>) exclusively drive subagent metrics, and <code class="language-plaintext highlighter-rouge">parity_test.go</code> test baselines match authentic root session calculations.</p>
+
+<p><em>VERTICAL SLICE SCOPE</em></p>
+
+<ul>
+  <li>Domain Core (<code class="language-plaintext highlighter-rouge">internal/domain/</code>):
+    <ul>
+      <li>Refactor <code class="language-plaintext highlighter-rouge">DeriveWorkflowEfficiency</code> and aggregation routines in <code class="language-plaintext highlighter-rouge">internal/domain/aggregations.go</code>:
+        <ul>
+          <li>Determine root vs subagent status strictly by structural hierarchy (<code class="language-plaintext highlighter-rouge">ParentID == nil</code> for root session; <code class="language-plaintext highlighter-rouge">ParentID != nil</code> for subagents).</li>
+          <li>Attribute root coordination peak tokens and saturation percentage from root invocations (<code class="language-plaintext highlighter-rouge">ParentID == nil</code>) rather than looking up fixed role name <code class="language-plaintext highlighter-rouge">"orchestrator"</code>.</li>
+          <li>Restrict <code class="language-plaintext highlighter-rouge">SubagentsPeakTokens</code>, <code class="language-plaintext highlighter-rouge">SubagentsPeakRole</code>, <code class="language-plaintext highlighter-rouge">subCosts</code>, <code class="language-plaintext highlighter-rouge">roleEffortDistributionPct</code>, and <code class="language-plaintext highlighter-rouge">SubagentTurnVelocity</code> strictly to invocations where <code class="language-plaintext highlighter-rouge">ParentID != nil</code>.</li>
+          <li>When no child invocations exist (<code class="language-plaintext highlighter-rouge">ParentID != nil</code>), set <code class="language-plaintext highlighter-rouge">SubagentsPeakTokens</code> to 0, <code class="language-plaintext highlighter-rouge">SubagentsPeakRole</code> to <code class="language-plaintext highlighter-rouge">"none"</code>, and <code class="language-plaintext highlighter-rouge">roleEffortDistributionPct</code> to empty map.</li>
+        </ul>
+      </li>
+      <li>Refactor <code class="language-plaintext highlighter-rouge">IsSubagentRole</code> and <code class="language-plaintext highlighter-rouge">OrderSubagentRoles</code> in <code class="language-plaintext highlighter-rouge">internal/domain/enums.go</code>:
+        <ul>
+          <li>Decouple subagent classification from the <code class="language-plaintext highlighter-rouge">"orchestrator"</code> string check. Role ordering must handle any custom or standard role without treating root <code class="language-plaintext highlighter-rouge">"general"</code> sessions as subagents.</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li>Boundary Adapter (<code class="language-plaintext highlighter-rouge">internal/adapters/</code>):
+    <ul>
+      <li>Ensure <code class="language-plaintext highlighter-rouge">ExtractFacts</code> in <code class="language-plaintext highlighter-rouge">internal/adapters/opencode/extractor.go</code> and schema types in <code class="language-plaintext highlighter-rouge">internal/adapters/schemas.go</code> consistently preserve <code class="language-plaintext highlighter-rouge">ParentID</code> and authentic persona names without synthetic remapping.</li>
+      <li>Update <code class="language-plaintext highlighter-rouge">internal/adapters/formatters.go</code> to cleanly format root coordination metrics regardless of whether the root persona is <code class="language-plaintext highlighter-rouge">"general"</code>, <code class="language-plaintext highlighter-rouge">"orchestrator"</code>, or custom.</li>
+    </ul>
+  </li>
+  <li>Quality &amp; Tests:
+    <ul>
+      <li>Table-driven unit tests in <code class="language-plaintext highlighter-rouge">internal/domain/aggregations_test.go</code> covering root sessions with diverse roles (<code class="language-plaintext highlighter-rouge">general</code>, <code class="language-plaintext highlighter-rouge">build</code>, <code class="language-plaintext highlighter-rouge">orchestrator</code>, <code class="language-plaintext highlighter-rouge">po</code>, and custom roles).</li>
+      <li>Verify single-invocation sessions (e.g. <code class="language-plaintext highlighter-rouge">GEN-1</code>, <code class="language-plaintext highlighter-rouge">PO-1</code>) produce 0 subagent peak tokens and <code class="language-plaintext highlighter-rouge">"none"</code> subagent peak role.</li>
+      <li>Update <code class="language-plaintext highlighter-rouge">internal/adapters/parity_test.go</code> baselines and fixtures to match authentic <code class="language-plaintext highlighter-rouge">"general"</code> root sessions and correct subagent attributions, ensuring all parity test cases pass.</li>
+      <li>Pass <code class="language-plaintext highlighter-rouge">go test -race ./...</code> and static checks with zero <code class="language-plaintext highlighter-rouge">any</code>.</li>
+    </ul>
+  </li>
+</ul>
+
+<p><em>ACCEPTANCE CRITERIA</em></p>
+
+<ul>
+  <li>Invocations with <code class="language-plaintext highlighter-rouge">ParentID == nil</code> are never included in <code class="language-plaintext highlighter-rouge">SubagentsPeakTokens</code>, <code class="language-plaintext highlighter-rouge">SubagentsPeakRole</code>, or subagent effort distribution.</li>
+  <li>Root sessions with persona <code class="language-plaintext highlighter-rouge">"general"</code>, <code class="language-plaintext highlighter-rouge">"build"</code>, or custom roles correctly report peak context tokens in <code class="language-plaintext highlighter-rouge">OrchestratorPeakTokens</code> (root coordination peak) and saturation percentage.</li>
+  <li>Single-invocation sessions with no subagents report <code class="language-plaintext highlighter-rouge">SubagentsPeakTokens: 0</code> and <code class="language-plaintext highlighter-rouge">SubagentsPeakRole: "none"</code>.</li>
+  <li>Subagent effort distribution percentages reflect strictly child invocations (<code class="language-plaintext highlighter-rouge">ParentID != nil</code>).</li>
+  <li>All tests in <code class="language-plaintext highlighter-rouge">backend/internal/adapters/parity_test.go</code> and <code class="language-plaintext highlighter-rouge">backend/internal/domain/aggregations_test.go</code> pass.</li>
+  <li>Zero <code class="language-plaintext highlighter-rouge">any</code> and zero emojis across all modified code and documentation.</li>
+</ul>
+
+<p><em>DEFINITION OF DONE</em></p>
+
+<ul>
+  <li>Code and tests merged to target branch.</li>
+  <li>Quality gates passing (<code class="language-plaintext highlighter-rouge">make check</code>, <code class="language-plaintext highlighter-rouge">make test</code>, or <code class="language-plaintext highlighter-rouge">make</code>).</li>
+  <li>Go and TypeScript type checking clean with zero any.</li>
+  <li>Telemetry tested with <code class="language-plaintext highlighter-rouge">agentic-lens</code> CLI.</li>
+</ul>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>

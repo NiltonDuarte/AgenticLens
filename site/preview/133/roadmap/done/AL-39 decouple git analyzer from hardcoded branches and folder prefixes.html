@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AL-39 decouple git analyzer from hardcoded branches and folder prefixes.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/preview/133/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/preview/133/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><p>h3. Title: AL-39: Decouple Git Analyzer from Hardcoded Branches and Folder Prefixes</p>
+
+<table>
+  <tbody>
+    <tr>
+      <td>
+<em>TARGET</em>: AgenticLens (adapters</td>
+      <td>git</td>
+      <td>domain</td>
+      <td>config</td>
+      <td>tests)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><em>AUDIT REPORT REFERENCE</em></p>
+
+<p>Fixes findings from <code class="language-plaintext highlighter-rouge">workspaces/AL-35/AUDIT_REPORT.md</code>:</p>
+<ul>
+  <li>Section 3: <code class="language-plaintext highlighter-rouge">[High]: Hardcoded Git Base Branch origin/main</code>
+</li>
+  <li>Section 3: <code class="language-plaintext highlighter-rouge">[High]: Hardcoded Source Folder Prefixes in Git Analyzer</code>
+</li>
+  <li>Section 3: <code class="language-plaintext highlighter-rouge">[Medium]: Hardcoded "workspaces/" Directory Across Adapters</code>
+</li>
+  <li>Section 3: <code class="language-plaintext highlighter-rouge">[Low]: Duplicate Directory Prefix Conditions in Git Analyzer</code>
+</li>
+  <li>Section 4: Recommendation 1 (AL-39)</li>
+</ul>
+
+<p><em>CONTEXT</em></p>
+
+<p>The pre-release source code audit (AL-35) revealed that <code class="language-plaintext highlighter-rouge">backend/internal/adapters/git/analyzer.go</code> explicitly hardcodes <code class="language-plaintext highlighter-rouge">origin/main</code> across four separate git diff and log invocations (<code class="language-plaintext highlighter-rouge">origin/main...HEAD</code>, <code class="language-plaintext highlighter-rouge">origin/main</code>, <code class="language-plaintext highlighter-rouge">log origin/main</code>, <code class="language-plaintext highlighter-rouge">origin/main...&lt;branch&gt;</code>). This causes git diff analysis to fail when operating on repositories where the default branch is <code class="language-plaintext highlighter-rouge">main</code> (local without remotes), <code class="language-plaintext highlighter-rouge">master</code>, <code class="language-plaintext highlighter-rouge">trunk</code>, or <code class="language-plaintext highlighter-rouge">development</code>, or when running detached in CI/CD without an upstream <code class="language-plaintext highlighter-rouge">origin</code>. Furthermore, <code class="language-plaintext highlighter-rouge">analyzer.go</code> filters out all diff entries unless at least one modified file path matches a hardcoded directory list (<code class="language-plaintext highlighter-rouge">src/</code>, <code class="language-plaintext highlighter-rouge">backend/</code>, <code class="language-plaintext highlighter-rouge">internal/</code>, <code class="language-plaintext highlighter-rouge">cmd/</code>, <code class="language-plaintext highlighter-rouge">web/</code>, <code class="language-plaintext highlighter-rouge">tests/</code>), completely ignoring user configuration (<code class="language-plaintext highlighter-rouge">ProjectConfig.Workspaces.SrcFolders</code> and <code class="language-plaintext highlighter-rouge">ProjectConfig.CodeMetrics.Include</code>) and discarding diffs in repositories with alternative folder structures (such as <code class="language-plaintext highlighter-rouge">app/</code>, <code class="language-plaintext highlighter-rouge">pkg/</code>, <code class="language-plaintext highlighter-rouge">services/</code>, <code class="language-plaintext highlighter-rouge">client/</code>, <code class="language-plaintext highlighter-rouge">ui/</code>, or root files). Finally, adapters hardcode <code class="language-plaintext highlighter-rouge">"workspaces/"</code> path strings rather than referencing <code class="language-plaintext highlighter-rouge">ProjectConfig.Workspaces.Dir</code>.</p>
+
+<p><em>GOAL</em></p>
+
+<p>Decouple the Git analyzer from hardcoded branch names and directory prefixes by implementing dynamic upstream base branch detection with explicit failure on unresolved branch, requiring configured <code class="language-plaintext highlighter-rouge">workspaces.src_folders</code> and failing if empty, removing duplicated conditional chains, and resolving workspace directories dynamically.</p>
+
+<p><em>VERTICAL SLICE SCOPE</em></p>
+
+<ul>
+  <li>Dynamic Upstream Base Branch Resolution (<code class="language-plaintext highlighter-rouge">backend/internal/adapters/git/analyzer.go</code>):
+    <ul>
+      <li>Implement <code class="language-plaintext highlighter-rouge">ResolveBaseBranch(repoRoot string, cfg *domain.ProjectConfig) (string, error)</code>.</li>
+      <li>Strategy:
+        <ol>
+          <li>Check <code class="language-plaintext highlighter-rouge">cfg.CodeMetrics.BaseBranch</code> if explicitly specified.</li>
+          <li>Check <code class="language-plaintext highlighter-rouge">git symbolic-ref refs/remotes/origin/HEAD</code> for default remote tracking branch.</li>
+          <li>Probe candidates: <code class="language-plaintext highlighter-rouge">origin/main</code>, <code class="language-plaintext highlighter-rouge">main</code>, <code class="language-plaintext highlighter-rouge">origin/master</code>, <code class="language-plaintext highlighter-rouge">master</code>.</li>
+          <li>Explicit Failure Invariant: If no upstream branch is reachable or resolved, fail execution immediately and output a clear error prompting the user or agent to configure <code class="language-plaintext highlighter-rouge">code_metrics.base_branch</code> in <code class="language-plaintext highlighter-rouge">.agenticlens-config.yaml</code>. Never silently fall back to <code class="language-plaintext highlighter-rouge">HEAD</code>.</li>
+        </ol>
+      </li>
+      <li>Replace all hardcoded <code class="language-plaintext highlighter-rouge">"origin/main"</code> occurrences in <code class="language-plaintext highlighter-rouge">GetTicketNumstat</code> with dynamic base branch resolution.</li>
+    </ul>
+  </li>
+  <li>Dynamic Monitored Folder Filtering (<code class="language-plaintext highlighter-rouge">backend/internal/adapters/git/analyzer.go</code>):
+    <ul>
+      <li>Remove duplicate 6-condition checks at lines 135-140 and lines 167-172.</li>
+      <li>Implement pure helper <code class="language-plaintext highlighter-rouge">IsMonitoredSourcePath(path string, srcFolders []string, cfg *ClassificationConfig) bool</code>.</li>
+      <li>Explicit Failure Invariant: If <code class="language-plaintext highlighter-rouge">src_folders</code> is empty or unconfigured in <code class="language-plaintext highlighter-rouge">ProjectConfig</code>, fail execution immediately and output a clear error prompting the user or agent to configure <code class="language-plaintext highlighter-rouge">workspaces.src_folders</code> in <code class="language-plaintext highlighter-rouge">.agenticlens-config.yaml</code>. Never silently fall back or permit all files.</li>
+      <li>Validate modified diff paths against configured <code class="language-plaintext highlighter-rouge">src_folders</code> and <code class="language-plaintext highlighter-rouge">cfg.Include</code>/<code class="language-plaintext highlighter-rouge">cfg.ProdPatterns</code>.</li>
+    </ul>
+  </li>
+  <li>Configured Workspaces Directory Resolution (<code class="language-plaintext highlighter-rouge">backend/internal/adapters/git/classifier.go</code>, <code class="language-plaintext highlighter-rouge">inference.go</code>):
+    <ul>
+      <li>Update <code class="language-plaintext highlighter-rouge">classifier.go</code> to use <code class="language-plaintext highlighter-rouge">cfg.Workspaces.Dir</code> (fallback: <code class="language-plaintext highlighter-rouge">"workspaces"</code>) when checking ignored paths.</li>
+      <li>Update <code class="language-plaintext highlighter-rouge">inference.go</code> <code class="language-plaintext highlighter-rouge">findWorkspaceDir</code> to accept workspaces directory name instead of hardcoded <code class="language-plaintext highlighter-rouge">"workspaces"</code>.</li>
+    </ul>
+  </li>
+  <li>Testing &amp; Verification:
+    <ul>
+      <li>Unit tests verifying base branch resolution against local-only repos, master-based repos, and custom-configured base branches.</li>
+      <li>Unit tests asserting that when base branch cannot be resolved, execution fails with the exact configuration prompt error.</li>
+      <li>Unit tests asserting that when <code class="language-plaintext highlighter-rouge">src_folders</code> is empty, execution fails with the exact configuration prompt error.</li>
+      <li>Table-driven tests in <code class="language-plaintext highlighter-rouge">analyzer_test.go</code> verifying diff inclusion across custom folder layouts (<code class="language-plaintext highlighter-rouge">app/</code>, <code class="language-plaintext highlighter-rouge">pkg/</code>, root files).</li>
+      <li>Verify zero regressions in existing ticket metrics extraction.</li>
+    </ul>
+  </li>
+</ul>
+
+<p><em>ACCEPTANCE CRITERIA</em></p>
+
+<ul>
+  <li>Base branch is dynamically resolved without hardcoded <code class="language-plaintext highlighter-rouge">origin/main</code> requirements.</li>
+  <li>If no upstream base branch is resolved, execution fails with an explicit error requesting user/agent configuration instead of falling back to HEAD.</li>
+  <li>Configured source code folders (<code class="language-plaintext highlighter-rouge">src_folders</code>) and pattern configurations are strictly respected by the git diff analyzer.</li>
+  <li>If <code class="language-plaintext highlighter-rouge">src_folders</code> is empty or unconfigured, execution fails with an explicit error requesting user/agent configuration.</li>
+  <li>Duplicate folder prefix conditional checks in <code class="language-plaintext highlighter-rouge">analyzer.go</code> are completely removed.</li>
+  <li>Classifier and inference adapters respect custom workspace directory configurations.</li>
+  <li>Quality gates pass (<code class="language-plaintext highlighter-rouge">make check</code>, <code class="language-plaintext highlighter-rouge">make test</code>, <code class="language-plaintext highlighter-rouge">make build</code>) with zero any and zero emojis.</li>
+</ul>
+
+<p><em>DEFINITION OF DONE</em></p>
+
+<ul>
+  <li>Code changes merged to target branch.</li>
+  <li>Quality gates passing (<code class="language-plaintext highlighter-rouge">make check</code>, <code class="language-plaintext highlighter-rouge">make test</code>, <code class="language-plaintext highlighter-rouge">make build</code>).</li>
+  <li>Zero any and zero emojis across all files.</li>
+</ul>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>
