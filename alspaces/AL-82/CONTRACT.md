@@ -1,0 +1,15 @@
+# AL-82: Durable metric tags and cohort analysis
+
+Approved with the user's steering: “Approved. Be sure the tags are in the ticket scope/level”. The [iteration 02 delta](iterations/02/PLAN.md) supersedes the session-level ownership/filtering and Mixed-category requirements in the [ticket](../plan/to-do/AL-82%20filter%20and%20compare%20metrics%20by%20tags.md), [product specification](../PO-21/SPEC.md) and iteration 01. Other guarantees remain under the [technical guidelines](../../TECHNICAL_GUIDELINES.md).
+
+Shared and selected private local YAML accept a top-level string map, `tags`. Repeatable `generate --tag KEY=VALUE` overrides local, then shared, per key. Trim outer whitespace and preserve case/internal text; split CLI input at its first equals sign and use the last repeated key. Reject blank/non-string entries and duplicate normalized YAML keys before publication. Preserve unrelated keys and support tags-only local files and configuration round trips. Documentation explains that effective private tags become shared ledger data.
+
+Tags belong to the ticket ledger, independently of session `User` and harness. A successful manual or automatic generation merges effective tags over recorded ticket tags. Missing keys preserve saved values; there is no deletion syntax. Failed generation/publication must not change saved tags. Sessions and their metrics retain existing refresh/preservation semantics and carry no tag attribution. Reads and backfill never apply reader configuration to relabel history. Save/reload, supported explicit migration and Git sharing preserve ticket tags without original source/capture state.
+
+Persist an optional root `tags` map alongside ticket metadata in schema 6, without a version bump: existing untagged schema-6 ledgers remain valid. Older schemas retain the existing explicit migration requirement; reads never migrate or rewrite them.
+
+Retrospective dashboard metric views provide initially unset filters: OR values within a key, AND keys on the same ticket, composing with existing filters. Missing is distinct from literal text. Choices precede tag filtering; clear/reset and empty-result recovery stay usable. Include or exclude whole tickets and aggregate their complete metrics; do not allocate totals among owners. No-filter numerical behavior remains unchanged.
+
+Comparison coloring defaults to completion. Optional tag coloring keeps one point per ticket, coordinates, metric exclusions and manual exclusions. Stable typed categories distinguish literal values from neutral Missing; legend, tooltip and accessible text identify the ticket value and completion status. Mixed is unnecessary because each ticket has one value per key; a literal value named Mixed remains ordinary text.
+
+Exclude deletion/bulk retagging, tag CRUD, numeric tag aggregation, live-source tag inference, live-stream filtering and per-session tag allocation. Acceptance requires precedence, ticket publication atomicity, portability, idempotence, whole-ticket filter totals and accessible comparison cases, plus integrated build/embedding verification.

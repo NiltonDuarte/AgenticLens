@@ -11,6 +11,38 @@ describe('FleetOverview View Component', () => {
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({ data: [] });
   });
 
+  it('sends ticket tag cohorts to both fleet requests and restores results from empty filters', async () => {
+    const user = userEvent.setup();
+    const base = mockAgenticMetricsLedgers['AL-1']!;
+    vi.mocked(apiClient.fetchWorkspaceLedgers).mockResolvedValue({ data: [
+      { ...base, facts: { ...base.facts, tags: { team: 'core', environment: 'dev' } } },
+      { ...base, facts: { ...base.facts, tags: { environment: 'prod' } } },
+      base,
+    ] });
+    const fleet = vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({ data: mockFleetSummary });
+    const workspaces = vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({ data: [...mockTicketComparisonRows] });
+    render(<FleetOverview />);
+    await screen.findByText('Total Cost');
+    await user.click(screen.getByRole('combobox', { name: 'Tag: team selector' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Value: core' }));
+    const filters = [{ key: 'team', values: ['core'], missing: false }];
+    await waitFor(() => expect(fleet).toHaveBeenLastCalledWith('all', undefined, undefined, undefined, undefined, filters));
+    expect(workspaces).toHaveBeenLastCalledWith('all', '', '', undefined, undefined, undefined, undefined, filters);
+    fleet.mockResolvedValue({ data: { ...mockFleetSummary, total_tickets: 0 } });
+    workspaces.mockResolvedValue({ data: [] });
+    await user.click(screen.getByRole('combobox', { name: 'Tag: environment selector' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Value: prod' }));
+    expect(await screen.findByText('No tickets match the selected tags. Clear tag filters to restore all tickets.')).toBeInTheDocument();
+    fleet.mockResolvedValue({ data: mockFleetSummary });
+    workspaces.mockResolvedValue({ data: [...mockTicketComparisonRows] });
+    await user.click(screen.getByRole('button', { name: 'Clear tag filters' }));
+    expect(await screen.findByText('Total Cost')).toBeInTheDocument();
+    expect(fleet).toHaveBeenLastCalledWith('all', undefined, undefined);
+    await user.click(screen.getByRole('combobox', { name: 'Tag: team selector' }));
+    expect(screen.getByRole('checkbox', { name: 'Value: core' })).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Missing (key absent)' })).toBeInTheDocument();
+  });
+
   it('keeps the fleet cost primary compact and the partial scope in secondary and tooltip', async () => {
     vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({ data: { ...mockFleetSummary, total_cost_usd: null, total_invocations: 3,
       cost_summary: { state: 'partial', known_subtotal_usd: 2, fully_observed: 1, partial: 1, unavailable: 1, total: 3 } } });

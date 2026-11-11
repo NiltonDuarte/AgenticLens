@@ -2094,7 +2094,7 @@ func TestBackfillCodexCompleteParentRefreshesWhileMissingChildFactsSurvive(t *te
 	count := int64(3)
 	role, secondary := domain.AgentRole("coder"), domain.AgentRole("tester")
 	cachedGroup := domain.Anomaly{RuleID: domain.RuleSubagentReworkLoop, Severity: domain.SeverityWarning, Context: domain.AnomalyContext{Role: &role, SecondaryRole: &secondary, Count: &count}}
-	ledger := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticket, TicketTitle: &title, Anomalies: []domain.Anomaly{{RuleID: domain.RuleContextSaturationSpike, Severity: domain.SeverityWarning}}, Sessions: []domain.SessionFact{
+	ledger := domain.AgenticFactLedger{Tags: map[string]string{"team": "recorded-on-other-machine"}, SchemaVersion: &version, TicketID: &ticket, TicketTitle: &title, Anomalies: []domain.Anomaly{{RuleID: domain.RuleContextSaturationSpike, Severity: domain.SeverityWarning}}, Sessions: []domain.SessionFact{
 		{ID: parentID, Source: domain.SourceCodex, User: "local", Anomalies: []domain.Anomaly{cachedGroup}, Skills: []domain.SkillFact{{Name: "stale-parent"}}},
 		{ID: "missing-child", ParentID: &parentID, Source: domain.SourceCodex, User: "remote", Skills: []domain.SkillFact{{Name: "remote-child"}}, Delegations: []domain.DelegationFact{{Description: "remote-task"}}},
 	}}
@@ -2117,6 +2117,9 @@ func TestBackfillCodexCompleteParentRefreshesWhileMissingChildFactsSurvive(t *te
 			t.Fatal("missing child source became complete coverage")
 		}
 		loaded, _ := readRecoveryLedger(t, workspace)
+		if loaded.ToDomain().Tags["team"] != "recorded-on-other-machine" {
+			t.Fatalf("backfill erased historical ticket tags: %v", loaded.ToDomain().Tags)
+		}
 		owners := map[string]domain.SessionFact{}
 		for _, owner := range loaded.ToDomain().Sessions {
 			owners[owner.ID] = owner

@@ -1,3 +1,5 @@
+import { TagFilters } from '../components/TagFilters';
+import { tagChoices, type TagChoice, type TagFilter } from '../domain/tags';
 import { useProjectConfig, ticketPolicy } from '../contexts/ProjectConfigContext';
 import { durationDescription } from '../domain/duration';
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
@@ -43,6 +45,8 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
 }) => {
   const projectConfig = useProjectConfig();
   const recognitionPolicy = useMemo(() => ticketPolicy(projectConfig), [projectConfig]);
+  const [tagFilters, setTagFilters] = useState<readonly TagFilter[]>([]);
+  const [tagOptions, setTagOptions] = useState<readonly TagChoice[]>([]);
   const [summary, setSummary] = useState<FleetSummary | null>(null);
   const [workspaces, setWorkspaces] = useState<TicketComparisonRow[]>([]);
   const [diagnostics, setDiagnostics] = useState<readonly WorkspaceDiagnostic[]>([]);
@@ -59,6 +63,7 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
     try {
       const response = await fetchWorkspaceLedgers();
       if (request !== inspectionRequest.current) return;
+      setTagOptions(tagChoices(response.data.map((ledger) => ledger.facts.tags)));
       setInspection({ state: 'ready', projection: deriveSessionOverlaps(response.data), diagnostics: response.diagnostics ?? [] });
     } catch (err: unknown) {
       if (request !== inspectionRequest.current) return;
@@ -116,11 +121,11 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
           : selectedPrefixes.map((prefix) => prefix.slice('prefix:'.length));
 
       const [fleetRes, workspacesRes] = await Promise.all([
-        typesParam || prefixesParam
-          ? fetchFleetSummary(windowParam, sinceParam, untilParam, typesParam, prefixesParam)
+        typesParam || prefixesParam || tagFilters.length
+          ? fetchFleetSummary(windowParam, sinceParam, untilParam, typesParam, prefixesParam, ...(tagFilters.length ? [tagFilters] as const : [] as const))
           : fetchFleetSummary(windowParam, sinceParam, untilParam),
-        typesParam || prefixesParam
-          ? fetchWorkspaces(windowParam, '', '', sinceParam, untilParam, typesParam, prefixesParam)
+        typesParam || prefixesParam || tagFilters.length
+          ? fetchWorkspaces(windowParam, '', '', sinceParam, untilParam, typesParam, prefixesParam, ...(tagFilters.length ? [tagFilters] as const : [] as const))
           : fetchWorkspaces(windowParam, '', '', sinceParam, untilParam),
       ]);
 
@@ -135,7 +140,7 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
     } finally {
       if (request === metricsRequest.current) setLoading(false);
     }
-  }, [windowPreset, customSince, customUntil, selectedTicketTypes, selectedPrefixes]);
+  }, [windowPreset, customSince, customUntil, selectedTicketTypes, selectedPrefixes, tagFilters]);
 
   useEffect(() => {
     const requests = metricsRequest;
@@ -225,6 +230,7 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
       <WorkspaceLoadWarning diagnostics={diagnostics} />
       {/* Date Range Filter Bar */}
       {dateFilterControl}
+      <TagFilters choices={tagOptions} filters={tagFilters} onChange={setTagFilters} />
       <div className="fleet-refresh-controls">
         <button type="button" className="btn-secondary" onClick={refreshData}>Refresh Data</button>
       </div>
@@ -244,7 +250,7 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
       ) : !summary || summary.total_tickets === 0 ? (
         <EmptyState
           title="Zero Telemetry Workspaces Available"
-          message="No workspaces with recorded session metrics were discovered. Ensure tickets contain agentic_metrics.json ledgers."
+          message={tagFilters.length ? 'No tickets match the selected tags. Clear tag filters to restore all tickets.' : 'No workspaces with recorded session metrics were discovered. Ensure tickets contain agentic_metrics.json ledgers.'}
         />
       ) : (
         <>

@@ -1000,6 +1000,7 @@ func BuildComparisonRows(ledgers []AgenticMetricsLedger, policies ...TicketConfi
 		}
 
 		rows = append(rows, TicketComparisonRow{
+			Tags:                    MergeTags(nil, ledger.Facts.Tags),
 			TicketID:                tid,
 			SkillsUsed:              SkillNames(ledger.Facts),
 			UpdatedAt:               ledger.UpdatedAt,

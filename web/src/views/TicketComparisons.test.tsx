@@ -1,3 +1,4 @@
+import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, within } from '../test/render';
 import { TicketComparisons } from './TicketComparisons';
@@ -8,6 +9,67 @@ import { mockAgenticMetricsLedgers } from '../test/fixtures/mockData';
 describe('TicketComparisons View Component', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it('reconciles newly recorded tags after a filtered refetch while retaining outside-cohort choices', async () => {
+    const user = userEvent.setup();
+    const base = mockAgenticMetricsLedgers['AL-1']!;
+    const original = { ...base, facts: { ...base.facts, tags: { team: 'core' } } };
+    const outside = { ...base, ticket_id: 'AL-elsewhere', facts: { ...base.facts, tags: { team: 'outside' } } };
+    const updated = { ...base, facts: { ...base.facts, tags: { team: 'new' } } };
+    vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValueOnce({ data: [original, outside] }).mockResolvedValue({ data: [updated] });
+    render(<TicketComparisons />);
+    await screen.findByRole('button', { name: /AL-1:/ });
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Color by tag' }), 'team');
+    await user.click(screen.getByRole('combobox', { name: 'Ticket Type selector' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Feature' }));
+    const point = await screen.findByRole('button', { name: /AL-1:.*Tag team: Value: new/ });
+    expect(point.getAttribute('fill')).toBeTruthy();
+    const legend = screen.getByLabelText('Tag team legend');
+    expect(within(legend).getByText('Value: new')).toBeInTheDocument();
+    expect(within(legend).getByText('Value: outside')).toBeInTheDocument();
+    expect(within(legend).queryByText('Value: core')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('combobox', { name: 'Tag: team selector' }));
+    expect(screen.getByRole('checkbox', { name: 'Value: new' })).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Value: outside' })).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: 'Value: core' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('checkbox', { name: 'Value: new' }));
+    expect(screen.getByRole('button', { name: /AL-1:/ })).toHaveAttribute('fill', point.getAttribute('fill'));
+  });
+
+  it('selects whole tickets by tags and keeps controls usable for empty and Missing results', async () => {
+    const user = userEvent.setup();
+    const ledgers = ['AL-1', 'AL-2', 'AL-3'].map((id, index) => {
+      const ledger = mockAgenticMetricsLedgers[id]!;
+      const tags = index === 0 ? { team: 'core', environment: 'dev' } : index === 1 ? { team: 'Missing', environment: 'prod' } : undefined;
+      return { ...ledger, facts: { ...ledger.facts, ...(tags ? { tags } : {}) } };
+    });
+    vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({ data: ledgers });
+    const { container } = render(<TicketComparisons />);
+    await screen.findByText('AL-1');
+    const ids = () => [...container.querySelectorAll('.clickable-comparison-row .ticket-link-btn')].map((node) => node.textContent?.trim());
+    expect(ids()).toHaveLength(3);
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Color by tag' }), 'team');
+    const initialColor = screen.getByRole('button', { name: /AL-1:/ }).getAttribute('fill');
+    await user.click(screen.getByRole('combobox', { name: 'Tag: team selector' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Value: core' }));
+    expect(ids()).toEqual(['AL-1']);
+    expect(screen.getByRole('button', { name: /AL-1:/ })).toHaveAttribute('fill', initialColor);
+    expect(within(screen.getByLabelText('Tag team legend')).getByText('Value: Missing')).toBeInTheDocument();
+    expect(screen.getByText('Benchmarked Workspaces').closest('.kpi-card')).toHaveTextContent('1');
+    await user.click(screen.getByRole('combobox', { name: 'Tag: environment selector' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Value: prod' }));
+    expect(ids()).toHaveLength(0);
+    expect(screen.getByText('No tickets match the selected filters.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Clear tag filters' }));
+    expect(ids()).toHaveLength(3);
+    await user.click(screen.getByRole('combobox', { name: 'Tag: team selector' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Missing (key absent)' }));
+    expect(ids()).toEqual(['AL-3']);
+    await user.click(screen.getByRole('checkbox', { name: 'Value: Missing' }));
+    expect(ids().sort()).toEqual(['AL-2', 'AL-3']);
+    await user.click(screen.getByRole('button', { name: 'Clear tag filters' }));
+    expect(ids()).toHaveLength(3);
   });
 
   it('matches literal skill names with OR semantics, composes filters, and recovers from empty results', async () => {

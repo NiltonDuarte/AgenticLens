@@ -1364,7 +1364,7 @@ func assertFactJSONFieldOrder(t *testing.T, data []byte) {
 }
 
 func TestOwnedFactsSurviveV5ToV6MigrationSaveReloadAndRejectRetiredRuntimeShapes(t *testing.T) {
-	const old = `{"schema_version":5,"ticket_id":"TEST-OWNED","ticket_title":"Explicit migration","sessions":[{"id":"owner","source":"codex","user":"alice","invocations":[],"tools":[]}],"skills":[{"session_id":"owner","name":"kept","success":true,"provenance":{"message_id":"native-message"}},{"name":"discarded","success":true}],"task_links":[{"session_id":"owner","description":"kept","child_session_id":"unavailable","cost_usd":null,"cost_evidence":{"state":"unavailable","known_subtotal_usd":null}}]}`
+	const old = `{"schema_version":5,"tags":{"team":"portable","literal":"Missing"},"ticket_id":"TEST-OWNED","ticket_title":"Explicit migration","sessions":[{"id":"owner","source":"codex","user":"alice","invocations":[],"tools":[]}],"skills":[{"session_id":"owner","name":"kept","success":true,"provenance":{"message_id":"native-message"}},{"name":"discarded","success":true}],"task_links":[{"session_id":"owner","description":"kept","child_session_id":"unavailable","cost_usd":null,"cost_evidence":{"state":"unavailable","known_subtotal_usd":null}}]}`
 	if err := adapters.ValidateRuntimeFactLedger([]byte(old)); err == nil || !strings.Contains(strings.ToLower(err.Error()), "migrat") {
 		t.Fatalf("old runtime ingestion did not require migration: %v", err)
 	}
@@ -1400,6 +1400,9 @@ func TestOwnedFactsSurviveV5ToV6MigrationSaveReloadAndRejectRetiredRuntimeShapes
 		t.Fatal(err)
 	}
 	got := dto.ToDomain()
+	if got.Tags["team"] != "portable" || got.Tags["literal"] != "Missing" {
+		t.Fatalf("migration/save/reload lost ticket tags: %v", got.Tags)
+	}
 	if len(got.SkillFacts()) != 1 || len(got.DelegationFacts()) != 1 || got.Sessions[0].ID != "owner" || got.SkillFacts()[0].Name != "kept" || got.DelegationFacts()[0].ChildSession != "unavailable" {
 		t.Fatalf("owned migration facts lost after persistence: %+v", got)
 	}

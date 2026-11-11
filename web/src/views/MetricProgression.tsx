@@ -1,3 +1,5 @@
+import { TagFilters } from '../components/TagFilters';
+import { tagChoices, filterLedgersByTags, reconcileTagCatalog, type TagFilter } from '../domain/tags';
 import { useProjectConfig, ticketPolicy } from '../contexts/ProjectConfigContext';
 import { completeCost, costSummaryForAmount, mergeCostSummaries } from '../domain/cost';
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
@@ -43,6 +45,8 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({
 }) => {
   const projectConfig = useProjectConfig();
   const recognitionPolicy = useMemo(() => ticketPolicy(projectConfig), [projectConfig]);
+  const [tagCatalog, setTagCatalog] = useState<readonly AgenticMetricsLedger[]>([]);
+  const [tagFilters, setTagFilters] = useState<readonly TagFilter[]>([]);
   const [ledgers, setLedgers] = useState<readonly AgenticMetricsLedger[]>([]);
   const [diagnostics, setDiagnostics] = useState<readonly WorkspaceDiagnostic[]>([]);
   const [knownPrefixes, setKnownPrefixes] = useState<readonly string[]>([]);
@@ -78,6 +82,7 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({
           ? await fetchWorkspaceLedgers(preset, undefined, undefined, typesParam, prefixesParam)
           : await fetchWorkspaceLedgers('all');
       setLedgers(res.data);
+      setTagCatalog((previous) => typesParam || prefixesParam ? reconcileTagCatalog(previous, res.data) : res.data);
       setDiagnostics(res.diagnostics ?? []);
       hasLoadedRef.current = true;
     } catch (err: unknown) {
@@ -118,8 +123,8 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({
     let list = ledgers;
     list = filterLedgersByTicketTypes(list, selectedTicketTypes);
     list = filterLedgersByPrefixes(list, selectedPrefixes.includes('all') ? [] : selectedPrefixes.map((prefix) => prefix.slice('prefix:'.length)), projectConfig?.case_insensitive);
-    return list;
-  }, [ledgers, selectedTicketTypes, selectedPrefixes, projectConfig]);
+    return filterLedgersByTags(list, tagFilters);
+  }, [tagFilters, ledgers, selectedTicketTypes, selectedPrefixes, projectConfig]);
 
   // Compute date boundaries based on preset and filtered ledger dates
   const { startDate, endDate } = useMemo(() => {
@@ -248,6 +253,7 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({
 
   return (
     <div className="progression-container">
+      <TagFilters choices={tagChoices(tagCatalog.map((ledger) => ledger.facts.tags))} filters={tagFilters} onChange={setTagFilters} />
       {/* Top Filter and Controls Bar */}
       <div className="progression-controls-bar">
         <div className="controls-left">
@@ -392,7 +398,7 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({
       ) : ledgers.length === 0 || filteredLedgers.length === 0 ? (
         <EmptyState
           title="Zero Progression Telemetry Available"
-          message="No workspace telemetry files were found. Run an agentic workflow to populate longitudinal progression charts."
+          message={tagFilters.length ? 'No tickets match the selected tags. Clear tag filters to restore all tickets.' : 'No workspace telemetry files were found. Run an agentic workflow to populate longitudinal progression charts.'}
         />
       ) : (
         <>

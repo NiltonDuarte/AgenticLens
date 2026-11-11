@@ -32,6 +32,9 @@ func (e *ConfigValidationError) Is(target error) bool { return target == ErrInva
 // ValidateConfig validates shared policy needed to interpret project records.
 // Optional source/live/generation policy is required only by its actual consumer.
 func ValidateConfig(cfg domain.ProjectConfig) error {
+	if err := domain.ValidateTags(cfg.Tags); err != nil {
+		return err
+	}
 	for _, entry := range []struct{ key, value string }{{"project_name", cfg.ProjectName}, {"code_metrics.base_branch", cfg.CodeMetrics.BaseBranch}} {
 		if strings.TrimSpace(entry.value) == "" {
 			return &ConfigValidationError{MissingFields: []string{entry.key}}
@@ -217,9 +220,15 @@ func decodeSharedConfig(path string, validateBootstrap bool) (domain.ProjectConf
 	if err = validateSharedNodes(nodes); err != nil {
 		return cfg, fmt.Errorf("configuration %s: %w", path, err)
 	}
+	tags, tagErr := decodeTags(nodes["tags"])
+	if tagErr != nil {
+		return cfg, fmt.Errorf("configuration %s: %w", path, tagErr)
+	}
 	if err = yaml.Unmarshal(data, &cfg); err != nil {
 		return cfg, fmt.Errorf("decoding YAML configuration %s: %w", path, err)
 	}
+	cfg.Tags = tags
+	cfg.SharedTags = domain.MergeTags(nil, tags)
 	cfg.Settings = make(map[string]bool, len(nodes))
 	for key := range nodes {
 		cfg.Settings[key] = true
@@ -278,6 +287,11 @@ func Load(project string) (domain.ProjectConfig, error) {
 	if err != nil {
 		return cfg, fmt.Errorf("local configuration %s: %w", selection.LocalPath, err)
 	}
+	localTags, tagErr := decodeTags(nodes["tags"])
+	if tagErr != nil {
+		return cfg, fmt.Errorf("local configuration %s: %w", selection.LocalPath, tagErr)
+	}
+	cfg.Tags = domain.MergeTags(cfg.Tags, localTags)
 	cfg.LocalConfigPath = selection.LocalPath
 	if _, exists := nodes["agenticlens"]; exists {
 		entry, err := parseEntrypoint(data, true)

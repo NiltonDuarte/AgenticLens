@@ -51,6 +51,9 @@ func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
 	if err := ValidateReleaseVersion(cfg.AgenticLens.Version); err != nil {
 		return nil, err
 	}
+	if cfg.LocalConfigPath != "" {
+		cfg.Tags = domain.MergeTags(nil, cfg.SharedTags)
+	}
 	cfg.Telemetry = domain.TelemetryConfig{}
 	var node yaml.Node
 	if err := node.Encode(cfg); err != nil {

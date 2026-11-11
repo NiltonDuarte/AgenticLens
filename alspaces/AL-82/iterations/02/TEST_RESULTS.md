@@ -1,0 +1,26 @@
+# AL-82: Targeted tester verification
+
+The tester filled the material backend gaps in the approved ticket-level contract. No product changes were needed. Baseline commit: `4e5c458322a2cddfdb5911b26a4569ea75f06a09`. Tested backend Go/mod/sum source fingerprint: `c56fa4218430c44de735a5d8527a8f95e70f7022e3330d38f8379b67952856c1` across 352 files, computed from sorted tracked and nonignored untracked backend paths and their bytes. Parent integration and independent review remain required.
+
+Changes owned by the tester:
+
+- `backend/cmd/agentic-lens/tags_test.go`: actual native worker creates a fresh ticket publication with shared/local precedence and retained root metrics. This reaches the worker's generator subprocess; the coder's direct `--capture-auto` preservation case remains separate. A second case copies A's tagged ledger into B's checkout, removes A's source store, verifies source-free reading ignores B's tag defaults, then generates twice with B's available source. It asserts per-key override/retention, exact distinct owner IDs and unchanged unavailable owner facts.
+- `backend/internal/adapters/http/server_test.go`: extend the coder's existing tag-filter case with a second owner on the selected ticket. List, fleet, comparison and progression preserve the complete ticket: cost 3.25, input 5700, active duration 23 seconds where exposed, and ticket code counted once. Comparison returns the ticket tag map. Snapshot comparisons prove successful and rejected GET requests do not rewrite ledger bytes.
+
+Execution:
+
+1. `make test-unit` passed: both Go domain/migration packages and 14 frontend unit files containing 229 cases. This ran before diagnostic integration probes; the coder had already completed `make web-assets`.
+2. From `backend/`, `go test ./cmd/agentic-lens ./internal/adapters/http -run 'Test(GenerateTicketTag|CaptureWorkerPublishesFreshTicketTag|TicketTagsFilter)' -count=1` passed on the final tester changes: CLI package 3.761 seconds, HTTP package 0.041 seconds. A prior run also passed before tightening the exact-owner assertions.
+3. `git diff --check` passed.
+
+The backend coder separately reported passing config/HTTP/adapters/backfill/CLI focused checks, including supported v5-to-v6 tag migration and repeated Codex backfill preservation; these assertions were inspected and retained rather than duplicated. Frontend view/scatter/API checks belong to the frontend coder. This tester pass does not claim integrated `make`, race coverage, standalone binary verification or independent review completion. Raw command logs remain outside Git in `/tmp/al82-tester-*.log`.
+
+## Review correction verification
+
+Data-integrity reviewer discovery DATA-01 identified a late summary error after ledger replacement. The tester added `TestGenerateTicketTagsLateSummaryFailureRestoresReadablePriorSet`, using a regular summary with an unterminated generated-metrics marker. Unlike the earlier destination failure, this reaches the summary-content rejection after publication begins. Before the coder's correction, `go test ./cmd/agentic-lens -run '^TestGenerateTicketTagsLateSummaryFailureRestoresReadablePriorSet$' -count=1 -v` failed: prior ledger bytes/tags changed, `LoadExistingFactLedger` rejected the interrupted publication, and the pending journal remained. Original summary bytes stayed unchanged. The coder held product edits until this red result was captured in `/tmp/al82-tester-late-red.log`. The regression also requires an ordinary successful retry after repairing the caller's summary.
+
+The Unicode correction adds independent Go producer/consumer oracles: leading/trailing U+FEFF remains literal tag text; U+0085 is trimmed by the producer and rejected as noncanonical persisted outer whitespace. The existing CLI precedence/preservation test now publishes and reloads these values; the domain normalization test checks exact expected maps and `ValidateTags` acceptance/rejection. `make test-unit` passed again after these test changes: both Go packages and 14 frontend files/229 cases.
+
+After the coder's eager rollback correction, the late-summary regression passed, including immediate supported reading, absent pending journal, unchanged prior bytes and normal successful retry. A small internal helper test uses actual Begin/CommitPublication and an obstructed recovery destination to verify original-cause preservation and honest incomplete/unknown restoration diagnostics. A completed set with no journal remains committed; a failed rollback retains the pending recovery marker. The fixture was corrected to publish its summary member before committing; this was a test-setup failure, not a product defect.
+
+Final affected command from `backend/`: `go test ./cmd/agentic-lens -run 'Test(GenerateTicketTag|CaptureWorkerPublishesFreshTicketTag|RecoverFailedGenerationPublication)' -count=1 -v` passed in 3.670 seconds. This executed the four external CLI cases and both helper branch subcases. `git diff --check` passed. Backend source fingerprint after correction: `4d6de66e1bc17d2bf721985fdfb61ac6a7fd102888c11a1f07c910d6b72f8fb8`, using the earlier path/content method. Logs remain private at `/tmp/al82-tester-late-red.log`, `/tmp/al82-tester-correction-unit.log` and `/tmp/al82-tester-correction-green-final.log`. Parent integrated/review gates remain outstanding.
