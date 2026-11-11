@@ -2377,9 +2377,9 @@ func TestBackfillEngine_PreservesUnavailableAnalysisOutsideCompleteRefresh(t *te
 					if (local.Anomalies == nil) != tc.missingChild || len(local.Anomalies) != 0 || len(local.Tools) != 0 {
 						t.Fatalf("complete source did not restore recorded-empty analysis for exactly its owner: %+v", local)
 					}
-					// Metadata-only Codex sessions retain a default invocation;
+					// Metadata-only Codex sessions retain one aggregate with unknown model identity;
 					// its unavailable cost is not a successful measured zero.
-					if len(local.Invocations) != 1 || local.Invocations[0].Model != "default" || local.Invocations[0].Turns != 0 || local.Invocations[0].CostEvidence.State != domain.CostUnavailable {
+					if len(local.Invocations) != 1 || local.Invocations[0].Model != "" || local.Invocations[0].Turns != 0 || local.Invocations[0].CostEvidence.State != domain.CostUnavailable {
 						t.Fatalf("complete native snapshot did not replace stale ordinary work: %+v", local.Invocations)
 					}
 				}

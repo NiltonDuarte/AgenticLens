@@ -17,3 +17,15 @@ Codex tests distinguish absent map entries from a present empty model through la
 - **Reads relabel or rewrite historical facts: refuted by repeated API reads and byte comparisons for source DB and ledger fixtures.**
 
 **Verification evidence:** Reviewed the frozen diff and new test bodies; independently checked manifest hashes. Reused tester evidence at `/tmp/al70-a12-tester-evidence.json`: affected backend packages, focused frontend unit/consumer suites, and `git diff --check` passed. No suites rerun. No material test-effectiveness limit found within this assignment; parent integration and broader delivery verification remain outside this verdict.
+
+## Revision recheck — backfill A12-TEST-01
+
+**Rechecked revision:** baseline `f6a2f5439a91c622341d72f7b8e838760b2dee0b`; r2 candidate fingerprint `60b88d9ec2ab79b0e92a21cc5acd06e2e7a182b27d622e556ea12c53d1b9178c`. All 30 r2 manifest hashes match the checkout; the original 29 candidate paths retain their r1 hashes. This recheck was limited to the affected backfill oracle and preservation around it. Runtime identity reported for this pass: `gpt-6-luna/medium` (source-observed).
+
+The coordinator confirmed **A12-TEST-01 (severity 3)**: on a complete native Codex refresh whose metadata-only owner has no model, the old test expected `default`, while the approved representation is empty. The correction changes only that expected model and its adjacent explanatory comment. It still requires exactly one aggregate, zero turns and `CostUnavailable`; thus it does not weaken row, activity or cost-state behavior.
+
+The surrounding table cases and assertions remain intact: two backfill passes, incomplete-refresh status where source/children are unavailable, exact equality of the unrefreshed remote owner, preservation of recorded-empty other-source shape and known unrelated findings, canonical validation and reload, no obsolete availability marker, explicit empty arrays for completely observed categories, unavailable aggregate health, honest summary wording, and finding visibility. The changed complete-owner case still checks that stale ordinary work is replaced only for that owner and that complete-empty analysis is recorded as empty arrays. The change does not mask the other-source/history/category or counter oracles.
+
+**Verification:** the focused four-case test passed in 0.172s (`/tmp/al70-a12-backfill-focused.log`); the complete backfill package with race detector passed in 19.237s (`/tmp/al70-a12-backfill-race.log`). The supplied correction evidence records unchanged backend test input after checks. I did not rerun broader suites. The earlier assertion failure is resolved by aligning its expected model identity to A12; no remaining test-effectiveness finding in this affected oracle. Parent owns the integrated `make` result and final delivery gate.
+
+**Recheck verdict: APPROVED.**

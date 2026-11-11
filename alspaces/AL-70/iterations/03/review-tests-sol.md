@@ -14,3 +14,14 @@ The principal regression hypotheses were refuted:
 Verification reused: tester evidence `/tmp/al70-a12-tester-evidence.json` and its logs confirm affected backend packages, 112 formatter/debug unit cases and 149 consumer integrations passed without skips. Independent commands were `go test -count=1 -overlay <variant.json> ./internal/adapters/codex -run <target>`; exact commands, overlay files and complete expected-failure/control logs are in `/tmp/al70-tests-sol-nvkwgzjx/`.
 
 Limits: bounded review, not exhaustive mutation coverage or browser geometry/release verification. UI HTTP responses are fixture-backed; backend HTTP tests independently cover production serialization/history. No whole-suite rerun. Parent owns integrated make, standalone verification, consolidation and delivery.
+
+
+## Verification phase: corrected backfill oracle
+
+APPROVED for the supplied A12-TEST-01 correction; no additional findings. Discovery credit belongs to the coordinator (severity 3); this is verification, not independent rediscovery. Profile remains gpt-6.1-sol/high, reported source-observed by the parent; this reviewer did not independently inspect source-session metadata.
+
+Revision: base `f6a2f5439a91c622341d72f7b8e838760b2dee0b`, r2 fingerprint `60b88d9ec2ab79b0e92a21cc5acd06e2e7a182b27d622e556ea12c53d1b9178c`. All 30 manifest files matched at entry/exit; the original 29 hashes are unchanged. The sole additional delta is engine_test.go:2382's required model changing from literal default to empty, plus its adjacent explanation. The first integrated make exposed the obsolete assertion in two metadata-only complete-owner subcases; original scoped passing evidence did not establish that broader gate.
+
+The fixture writes an actual metadata-only Codex rollout and executes backfill twice. Empty identity is correct under approved A12. The assertion still requires exactly one replacement aggregate, zero turns and unavailable cost; it cannot pass by dropping the row or retaining stale work. Surrounding checks still require complete-owner tool clearing, appropriate empty versus unavailable anomaly state, exact preservation of the unavailable remote owner's invocation/history/counters/categories, owner multiplicity, unrelated recorded-empty shapes/findings, canonical validation/reload, omitted retired policy/availability markers, explicit optional-category arrays and honest unavailable aggregate health/summary. No category or preservation oracle was weakened.
+
+Reused focused four-case PASS (0.172s), `/tmp/al70-a12-backfill-focused.log`; full backfill race log now also reports PASS (19.237s), `/tmp/al70-a12-backfill-race.log`. No tests rerun by this reviewer. Full integrated make and final standalone verification remain parent-owned. Product and tests stayed read-only.
