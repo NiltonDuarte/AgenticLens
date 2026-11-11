@@ -1,6 +1,6 @@
 # AL-82: Targeted tester verification
 
-The tester filled the material backend gaps in the approved ticket-level contract. No product changes were needed. Baseline commit: `4e5c458322a2cddfdb5911b26a4569ea75f06a09`. Tested backend Go/mod/sum source fingerprint: `c56fa4218430c44de735a5d8527a8f95e70f7022e3330d38f8379b67952856c1` across 352 files, computed from sorted tracked and nonignored untracked backend paths and their bytes. Parent integration and independent review remain required.
+The tester filled backend coverage gaps and independently verified the review corrections; product fixes belonged to the coders. Baseline commit: `4e5c458322a2cddfdb5911b26a4569ea75f06a09`. Tested backend Go/mod/sum source fingerprint: `c56fa4218430c44de735a5d8527a8f95e70f7022e3330d38f8379b67952856c1` across 352 files, computed from sorted tracked and nonignored untracked backend paths and their bytes. Parent integration and independent review remain required.
 
 Changes owned by the tester:
 

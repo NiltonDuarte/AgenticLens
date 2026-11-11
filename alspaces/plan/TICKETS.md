@@ -6,10 +6,6 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
 
 ## In Progress
 
-- **AL-82**: Filter and compare metrics by tags
-  - **Status**: In Progress; approved ticket-level scope, implementation underway; **Blocked by**: None; **Blocks**: None
-  - **File**: [AL-82](to-do/AL-82%20filter%20and%20compare%20metrics%20by%20tags.md)
-
 - **AL-83**: Present AgenticLens on GitHub Pages
   - **Status**: In Progress; implementation verified, awaiting publication; **Blocked by**: None; **Blocks**: None
   - **File**: [AL-83](to-do/AL-83%20present%20agenticlens%20on%20github%20pages.md)

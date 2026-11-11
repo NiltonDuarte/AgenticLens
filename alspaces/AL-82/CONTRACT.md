@@ -1,6 +1,6 @@
 # AL-82: Durable metric tags and cohort analysis
 
-Approved with the user's steering: “Approved. Be sure the tags are in the ticket scope/level”. The [iteration 02 delta](iterations/02/PLAN.md) supersedes the session-level ownership/filtering and Mixed-category requirements in the [ticket](../plan/to-do/AL-82%20filter%20and%20compare%20metrics%20by%20tags.md), [product specification](../PO-21/SPEC.md) and iteration 01. Other guarantees remain under the [technical guidelines](../../TECHNICAL_GUIDELINES.md).
+Approved with the user's steering: “Approved. Be sure the tags are in the ticket scope/level”. The [iteration 02 delta](iterations/02/PLAN.md) supersedes the session-level ownership/filtering and Mixed-category requirements in the [ticket](../plan/done/AL-82%20filter%20and%20compare%20metrics%20by%20tags.md), [product specification](../PO-21/SPEC.md) and iteration 01. Other guarantees remain under the [technical guidelines](../../TECHNICAL_GUIDELINES.md).
 
 Shared and selected private local YAML accept a top-level string map, `tags`. Repeatable `generate --tag KEY=VALUE` overrides local, then shared, per key. Trim outer whitespace and preserve case/internal text; split CLI input at its first equals sign and use the last repeated key. Reject blank/non-string entries and duplicate normalized YAML keys before publication. Preserve unrelated keys and support tags-only local files and configuration round trips. Documentation explains that effective private tags become shared ledger data.
 
