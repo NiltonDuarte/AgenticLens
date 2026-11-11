@@ -2,7 +2,7 @@
 
 Delivered durable ticket-level tags from shared YAML, private local YAML and repeatable generation flags through ledger persistence, APIs, dashboard filters and comparison colors. Per-key precedence is CLI over local over shared; absent inputs preserve saved keys. Tags belong to the whole ticket, independently of session users and harnesses. Filters select complete tickets and totals. Comparison coloring preserves point identity, coordinates, completion details and exclusions, with Missing distinct from literal tag text.
 
-The user approved with “Approved. Be sure the tags are in the ticket scope/level”. The [iteration 02 delta](iterations/02/PLAN.md) supersedes the original session-level ownership, partial-owner aggregation and Mixed contributor proposal. The [contract](CONTRACT.md) records current acceptance. Untagged schema-6 ledgers remain valid; reads, backfill, supported explicit migration and Git sharing preserve recorded tags without relabeling from reader configuration. Effective private tags deliberately become shared ledger data.
+The user approved with “Approved. Be sure the tags are in the ticket scope/level”. The [iteration 02 delta](iterations/02/PLAN.md) supersedes the original session-level ownership, partial-owner aggregation and Mixed contributor proposal. The [contract](CONTRACT.md) records current acceptance. Untagged schema-6 ledgers remain valid; reads, backfill, supported explicit migration and Git sharing preserve recorded tags without relabeling from reader configuration. Effective private tags deliberately become shared ledger data. This ticket records `agentic-lens-dev=0.1.1`, taken from the applied [development skill VERSION](../../.agents/skills/agentic-lens-dev/VERSION), as requested in the delivery follow-up. The tag is stored once on the ticket ledger; project defaults and session attribution are unchanged.
 
 The reviewed source began at `4e5c458322a2cddfdb5911b26a4569ea75f06a09`. Final reviewed candidate SHA256 was `a6bf5c30a5390bad2e22cacacc25659f68c1128e7b33dcbadb54231e0e6bc4f5`; implementation/integrated revision is `57b1a45c3f706cd79d010db2c33920df8a41f6b5`. Fetch/merge of origin/main required no changes. Final artifacts and telemetry do not alter this verified application source.
 
@@ -16,15 +16,15 @@ Physical power-loss/real sync-error injection and real assistive-technology exec
 
 <!-- agentic-lens:metrics:start -->
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 4
-- **Active Agent Duration:** 1h 44m (recorded duration including 2574s provisional)
-- **Context Window Health:** HEALTHY — Root agent peak 217.8k tokens (48% of 450k healthy ceiling, 0 compactions) | Subagents peak 185.2k (Tester)
+- **Software Development Life Cycle Iterations:** 5
+- **Active Agent Duration:** 1h 46m (recorded duration including 65s provisional)
+- **Context Window Health:** ELEVATED — Root agent peak 230.9k tokens (51% of 450k healthy ceiling, 0 compactions) | Subagents peak 185.2k (Tester)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 1.4 avg turns/run (peak: 4 turns) | Planner 3.0, Coder 3.0, Tester 4.0, Reviewer-architecture 1.0, Reviewer-behavior 1.0, Reviewer-data 1.0, Reviewer-tests 1.0
 - **Test-to-Production Code Ratio:** 1.3:1 (+704 test lines / +563 prod lines)
 - **Code Delivered:** +1,267 / -54 lines across 43 code files (excluding docs)
-- **Reasoning Effort:** 60,495 reasoning tokens (24.0% of generated output)
-- **Tool Health & Self-Correction:** 616 tool calls (36 self-corrections, 94.2% success rate)
+- **Reasoning Effort:** 62,489 reasoning tokens (24.3% of generated output)
+- **Tool Health & Self-Correction:** 623 tool calls (36 self-corrections, 94.2% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 7 execution anomalies detected (4 CRITICAL, 3 WARNING).
@@ -46,36 +46,36 @@ Physical power-loss/real sync-error injection and real assistive-technology exec
 | **planner** | 1 | 76,588 | 7,391 | 1,220,992 | 94.1% | 81.2k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **coder** | 2 | 228,237 | 40,537 | 15,000,960 | 98.5% | 163.8k | HEALTHY | Unavailable (0 observed, 0 partial, 2 unavailable / 2 invocations) |
 | **tester** | 1 | 124,601 | 18,076 | 8,806,656 | 98.6% | 185.2k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Unknown** | 1 | 191,229 | 67,375 | 31,626,752 | 99.4% | 217.8k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Unknown** | 1 | 201,455 | 71,196 | 33,850,880 | 99.4% | 230.9k | ELEVATED | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **reviewer-architecture** | 4 | 219,163 | 11,908 | 1,886,464 | 89.6% | 97.1k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
 | **reviewer-behavior** | 5 | 279,464 | 17,288 | 2,359,808 | 89.4% | 78.5k | HEALTHY | Unavailable (0 observed, 0 partial, 5 unavailable / 5 invocations) |
 | **reviewer-data** | 4 | 209,051 | 13,430 | 2,893,824 | 93.3% | 111.3k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
 | **reviewer-tests** | 4 | 228,468 | 15,272 | 2,645,760 | 92.1% | 105.9k | HEALTHY | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
-| **Total** | **22** | **1,556,801** | **191,277** | **66,441,216** | **97.7%** | **217.8k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 22 unavailable / 22 invocations)** |
+| **Total** | **22** | **1,567,027** | **195,098** | **68,665,344** | **97.8%** | **230.9k** | **ELEVATED** | **Unavailable (0 observed, 0 partial, 22 unavailable / 22 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
 | **gpt-6-luna** | 9 | 391,927 | 21,039 | 3,117,824 | 88.8% | Unavailable (0 observed, 0 partial, 9 unavailable / 9 invocations) |
-| **gpt-6.1-sol** | 13 | 1,164,874 | 170,238 | 63,323,392 | 98.2% | Unavailable (0 observed, 0 partial, 13 unavailable / 13 invocations) |
-| **Total** | **22** | **1,556,801** | **191,277** | **66,441,216** | **97.7%** | **Unavailable (0 observed, 0 partial, 22 unavailable / 22 invocations)** |
+| **gpt-6.1-sol** | 13 | 1,175,100 | 174,059 | 65,547,520 | 98.2% | Unavailable (0 observed, 0 partial, 13 unavailable / 13 invocations) |
+| **Total** | **22** | **1,567,027** | **195,098** | **68,665,344** | **97.8%** | **Unavailable (0 observed, 0 partial, 22 unavailable / 22 invocations)** |
 
-Capture observation finalized: 2026-11-11T18:56:44.324885876Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 22; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 22; reserved bytes: 21667976. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
-Owner codex/01a1cbea-bf98-70d2-9122-d0894960d903: current; last successful source read 2026-11-11T18:56:43.664741877Z; accepted source checkpoint 2026-11-11T18:42:57.355Z.
-Owner codex/01a1cbe3-88ff-7a12-80c3-58d840d18a5b: current; last successful source read 2026-11-11T18:56:43.683197439Z; accepted source checkpoint 2026-11-11T18:35:53.977Z.
-Owner codex/01a1cbe8-9d65-7911-98e1-495ad47eda57: current; last successful source read 2026-11-11T18:56:43.704400493Z; accepted source checkpoint 2026-11-11T18:41:47.792Z.
-Owner codex/01a1cbeb-2ab1-7440-b591-5603276c64ed: current; last successful source read 2026-11-11T18:56:43.721394601Z; accepted source checkpoint 2026-11-11T18:43:24.849Z.
-Owner codex/01a1cbe1-5565-7822-a66a-811016c2b264: current; last successful source read 2026-11-11T18:56:43.738459606Z; accepted source checkpoint 2026-11-11T18:32:47.457Z.
-Owner codex/01a1cbc8-55a6-7ff0-889a-4b602637ea08: current; last successful source read 2026-11-11T18:56:43.759708625Z; accepted source checkpoint 2026-11-11T18:15:55.21Z.
-Owner codex/01a1cbe8-b89a-7210-9bde-54d58a00e90b: current; last successful source read 2026-11-11T18:56:43.77750016Z; accepted source checkpoint 2026-11-11T18:41:35.964Z.
-Owner codex/01a1cbdb-ec11-7920-b24b-67fd46080cb7: current; last successful source read 2026-11-11T18:56:43.793094204Z; accepted source checkpoint 2026-11-11T18:26:24.943Z.
-Owner codex/01a1cbda-471c-7291-9eac-e534877fc162: current; last successful source read 2026-11-11T18:56:43.815241776Z; accepted source checkpoint 2026-11-11T18:26:55.185Z.
-Owner codex/01a1cbda-7a9b-7df3-87a6-c3cb76ed53ab: current; last successful source read 2026-11-11T18:56:43.847930608Z; accepted source checkpoint 2026-11-11T18:27:07.884Z.
-Owner codex/01a1cbe1-1bf0-7eb2-8303-3f1993e8a528: current; last successful source read 2026-11-11T18:56:43.877027324Z; accepted source checkpoint 2026-11-11T18:33:32.688Z.
-Owner codex/01a1cbea-6360-7372-985f-b19ac9f42a7a: current; last successful source read 2026-11-11T18:56:43.894067075Z; accepted source checkpoint 2026-11-11T18:42:45.57Z.
-Owner codex/01a1cbe1-3658-7f13-8333-beb92692c69c: current; last successful source read 2026-11-11T18:56:43.922028154Z; accepted source checkpoint 2026-11-11T18:35:26.454Z.
-Owner codex/01a1cbdb-1bf3-7b10-84ef-9516fd48187e: current; last successful source read 2026-11-11T18:56:43.938631603Z; accepted source checkpoint 2026-11-11T18:25:39.081Z.
-Owner codex/01a1cbd2-1e4e-7e11-a10d-e15d05422815: current; last successful source read 2026-11-11T18:56:43.975607235Z; accepted source checkpoint 2026-11-11T18:38:53.08Z.
-Owner codex/01a1cbe2-8b14-74f1-9498-f3d3dd40f895: current; last successful source read 2026-11-11T18:56:43.994867544Z; accepted source checkpoint 2026-11-11T18:34:04.735Z.
+Capture observation finalized: 2026-11-11T19:51:02.255066281Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 22; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 22; reserved bytes: 21841390. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
+Owner codex/01a1cbea-bf98-70d2-9122-d0894960d903: current; last successful source read 2026-11-11T19:51:01.168476855Z; accepted source checkpoint 2026-11-11T18:42:57.355Z.
+Owner codex/01a1cbe3-88ff-7a12-80c3-58d840d18a5b: current; last successful source read 2026-11-11T19:51:01.189200455Z; accepted source checkpoint 2026-11-11T18:35:53.977Z.
+Owner codex/01a1cbe8-9d65-7911-98e1-495ad47eda57: current; last successful source read 2026-11-11T19:51:01.222003533Z; accepted source checkpoint 2026-11-11T18:41:47.792Z.
+Owner codex/01a1cbeb-2ab1-7440-b591-5603276c64ed: current; last successful source read 2026-11-11T19:51:01.249941959Z; accepted source checkpoint 2026-11-11T18:43:24.849Z.
+Owner codex/01a1cbe1-5565-7822-a66a-811016c2b264: current; last successful source read 2026-11-11T19:51:01.281615849Z; accepted source checkpoint 2026-11-11T18:32:47.457Z.
+Owner codex/01a1cbc8-55a6-7ff0-889a-4b602637ea08: current; last successful source read 2026-11-11T19:51:01.321080484Z; accepted source checkpoint 2026-11-11T18:15:55.21Z.
+Owner codex/01a1cbe8-b89a-7210-9bde-54d58a00e90b: current; last successful source read 2026-11-11T19:51:01.351955078Z; accepted source checkpoint 2026-11-11T18:41:35.964Z.
+Owner codex/01a1cbdb-ec11-7920-b24b-67fd46080cb7: current; last successful source read 2026-11-11T19:51:01.378461155Z; accepted source checkpoint 2026-11-11T18:26:24.943Z.
+Owner codex/01a1cbda-471c-7291-9eac-e534877fc162: current; last successful source read 2026-11-11T19:51:01.415054474Z; accepted source checkpoint 2026-11-11T18:26:55.185Z.
+Owner codex/01a1cbda-7a9b-7df3-87a6-c3cb76ed53ab: current; last successful source read 2026-11-11T19:51:01.465811219Z; accepted source checkpoint 2026-11-11T18:27:07.884Z.
+Owner codex/01a1cbe1-1bf0-7eb2-8303-3f1993e8a528: current; last successful source read 2026-11-11T19:51:01.50387606Z; accepted source checkpoint 2026-11-11T18:33:32.688Z.
+Owner codex/01a1cbea-6360-7372-985f-b19ac9f42a7a: current; last successful source read 2026-11-11T19:51:01.524571807Z; accepted source checkpoint 2026-11-11T18:42:45.57Z.
+Owner codex/01a1cbe1-3658-7f13-8333-beb92692c69c: current; last successful source read 2026-11-11T19:51:01.565429659Z; accepted source checkpoint 2026-11-11T18:35:26.454Z.
+Owner codex/01a1cbdb-1bf3-7b10-84ef-9516fd48187e: current; last successful source read 2026-11-11T19:51:01.590008215Z; accepted source checkpoint 2026-11-11T18:25:39.081Z.
+Owner codex/01a1cbd2-1e4e-7e11-a10d-e15d05422815: current; last successful source read 2026-11-11T19:51:01.643088609Z; accepted source checkpoint 2026-11-11T18:38:53.08Z.
+Owner codex/01a1cbe2-8b14-74f1-9498-f3d3dd40f895: current; last successful source read 2026-11-11T19:51:01.672766069Z; accepted source checkpoint 2026-11-11T18:34:04.735Z.
 Additional owner freshness details remain in local capture diagnostics.
 <!-- agentic-lens:metrics:end -->

@@ -33,3 +33,7 @@ After tester handoff, freeze the application/test candidate before discovery. Pr
 | Tests: do executed tests reach precedence, publication, portability, totals and accessibility with meaningful oracles? | gpt-6.1-sol/high; gpt-6-luna/medium | Both approved; reviewer-tests |
 
 All eight focus/profile cells are approved or explicitly carried forward under the summary's dependency rationale. The parent approved delivery only after full integrated `make`, host binary checks and standalone embedding verification passed. All three confirmed findings are fixed; final artifacts and telemetry are parent-owned.
+
+## Delivery metadata follow-up
+
+The user requested “add the dev skill version tag”. Record `agentic-lens-dev=0.1.1` from the applied skill's VERSION file on AL-82 through `generate --tag`. This is metadata maintenance within the approved ticket-level tag contract, with no application/acceptance change or new iteration. Preserve existing tags, session ownership and portable history; verify the saved root map and all 22 owner IDs. The prior integrated application/build/review evidence remains valid because application and test sources are unchanged.

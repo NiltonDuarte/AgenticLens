@@ -1,11 +1,14 @@
 {
+  "tags": {
+    "agentic-lens-dev": "0.1.1"
+  },
   "schema_version": 6,
   "ticket_id": "AL-82",
   "ticket_title": "Filter and compare metrics by ticket tags",
   "ticket_type": "feat",
   "started_at": "2026-11-11T18:04:06.584Z",
-  "completed_at": "2026-11-11T18:56:47.285967+00:00",
-  "updated_at": "2026-11-11T18:56:47.285967+00:00",
+  "completed_at": "2026-11-11T19:51:07.026421+00:00",
+  "updated_at": "2026-11-11T19:51:07.026421+00:00",
   "code": {
     "lines_added": 1267,
     "lines_deleted": 54,
@@ -14,7 +17,7 @@
     "prod_lines_added": 563,
     "prod_lines_deleted": 52,
     "files_changed": 43,
-    "sdlc_iterations": 4
+    "sdlc_iterations": 5
   },
   "sessions": [
     {
@@ -158,22 +161,22 @@
       "user": "Nilton Duarte",
       "invocations": [
         {
-          "provisional_seconds": 2574,
+          "provisional_seconds": 65,
           "role": "",
           "model": "gpt-6.1-sol",
           "started_at": "2026-11-11T18:04:08.587Z",
           "completed_at": null,
-          "active_duration_seconds": 2704,
-          "turns": 2,
-          "tokens": {"input": 191229, "output": 67375, "cache_read": 31626752, "reasoning": 33426, "peak_context": 217844},
+          "active_duration_seconds": 2831,
+          "turns": 3,
+          "tokens": {"input": 201455, "output": 71196, "cache_read": 33850880, "reasoning": 35420, "peak_context": 230942},
           "cost_usd": null,
           "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
-          "user_iterations": 4
+          "user_iterations": 5
         }
       ],
       "tools": [
-        {"name": "command", "calls": 111, "errors": 8},
+        {"name": "command", "calls": 118, "errors": 8},
         {"name": "followup_task", "calls": 9, "errors": 0},
         {"name": "list_agents", "calls": 1, "errors": 0},
         {"name": "send_message", "calls": 29, "errors": 0},
