@@ -90,7 +90,7 @@ func TestCaptureSharedDatabasePublishesSameTicketToExactWorktrees(t *testing.T) 
 			defer group.Done()
 			output := filepath.Join(project, "records", "TEST-100", "agentic_metrics.json")
 			summary := filepath.Join(project, "records", "TEST-100", "SUMMARY.md")
-			cmd := exec.Command(cliBinaryPath, "generate", "--source", "codex", "--codex-home", source, "--capture-dir", registry, "--ticket-id", "TEST-100", "--ticket-title", "Shared ticket", "--ticket-type", "feat", "--json-output", output, "--append", summary)
+			cmd := exec.Command(cliBinaryPath, "generate", "--capture-auto", "--source", "codex", "--codex-home", source, "--capture-dir", registry, "--ticket-id", "TEST-100", "--ticket-title", "Shared ticket", "--ticket-type", "feat", "--json-output", output, "--append", summary)
 			cmd.Dir = project
 			if out, e := cmd.CombinedOutput(); e != nil {
 				errors <- fmt.Sprintf("%s: %v %s", project, e, out)

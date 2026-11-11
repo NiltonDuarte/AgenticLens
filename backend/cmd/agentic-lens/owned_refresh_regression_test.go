@@ -1,6 +1,8 @@
 package main_test
 
 import (
+	"bytes"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -174,5 +176,150 @@ func TestGenerateCompleteParentRetainsGroupSummaryForUnavailableChild(t *testing
 		if !foundParent || !foundChild {
 			t.Fatalf("pass %d lost incomplete group's recorded summary or child: %+v", pass, got.Sessions)
 		}
+	}
+}
+
+func TestGeneratePostGroupingWarningsPreserveAcceptedLedgerAndSummary(t *testing.T) {
+	f := newCaptureGenerationFixture(t)
+	path := f.write(t, 17)
+	base := readCaptureFile(t, path)
+	spawn := `{"type":"response_item","payload":{"type":"function_call","call_id":"spawn","name":"spawn_agent","arguments":"{\"agent_type\":\"tester\",\"task_name\":\"check\"}"}}
+{"type":"response_item","payload":{"type":"function_call_output","call_id":"spawn","output":"{\"session_id\":\"grandchild\"}"}}
+`
+	if err := os.WriteFile(path, append(base, []byte(spawn)...), 0600); err != nil {
+		t.Fatal(err)
+	}
+	metadata := func(id, parent string) []byte {
+		return []byte(fmt.Sprintf("{\"type\":\"session_meta\",\"payload\":{\"id\":%q,\"parent_thread_id\":%q,\"cwd\":%q}}\n", id, parent, f.project))
+	}
+	for _, id := range []string{"child", "grandchild"} {
+		if err := os.WriteFile(filepath.Join(f.store, "sessions", id+".jsonl"), metadata(id, "root"), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	summary := filepath.Join(f.project, "SUMMARY.md")
+	run := func() ([]byte, error) {
+		command := exec.Command(cliBinaryPath, "generate", "--source", "codex", "--codex-home", f.store, "--session-id", "root", "--ticket-id", "TEST-100", "--ticket-title", "Grouping completeness", "--ticket-type", "fix", "--json-output", f.output, "--append", summary)
+		command.Dir = f.project
+		return command.CombinedOutput()
+	}
+	if out, err := run(); err != nil {
+		t.Fatalf("complete grouping control: %v %s", err, out)
+	}
+	accepted := f.ledger(t)
+	if len(accepted.Sessions) != 3 || len(accepted.DelegationFacts()) != 1 || accepted.DelegationFacts()[0].ChildSession != "grandchild" {
+		t.Fatalf("control lacks source-proven owner/link: %+v", accepted)
+	}
+	ledgerBefore, summaryBefore := readCaptureFile(t, f.output), readCaptureFile(t, summary)
+	// Parsing each owner still succeeds; only cross-owner grouping can discover
+	// that the source-proven spawn output disagrees with the child's native parent.
+	if err := os.WriteFile(filepath.Join(f.store, "sessions", "grandchild.jsonl"), metadata("grandchild", "child"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	out, err := run()
+	if err == nil {
+		t.Fatalf("post-parse grouping warning published incomplete owner: %s", out)
+	}
+	if !strings.Contains(string(out), "incomplete Codex grouping") || !strings.Contains(string(out), "stored snapshots preserved") {
+		t.Fatalf("missing grouping completeness diagnostic: %s", out)
+	}
+	if !bytes.Equal(ledgerBefore, readCaptureFile(t, f.output)) || !bytes.Equal(summaryBefore, readCaptureFile(t, summary)) {
+		t.Fatal("post-grouping warning changed accepted ledger or summary")
+	}
+}
+
+func TestGenerateDiscoveryErrorsRespectSelectedNativeFamily(t *testing.T) {
+	for _, tc := range []struct {
+		name, selector, corrupt string
+		wantFailure             bool
+	}{
+		{"nonce_selected_child", "--nonce", "child", true},
+		{"session_selected_child", "--session-id", "child", true},
+		{"nonce_unrelated_native_owner", "--nonce", "unrelated", false},
+		{"nonce_unidentifiable_file", "--nonce", "unidentifiable", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newCaptureGenerationFixture(t)
+			rootPath := f.write(t, 17)
+			rootBody := append(readCaptureFile(t, rootPath), []byte(`{"type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"discovery-regression-nonce"}]}}`+"\n")...)
+			if err := os.WriteFile(rootPath, rootBody, 0600); err != nil {
+				t.Fatal(err)
+			}
+			metadata := func(id, parent string) string {
+				return fmt.Sprintf("{\"type\":\"session_meta\",\"payload\":{\"id\":%q,\"parent_thread_id\":%q,\"cwd\":%q}}\n", id, parent, f.project)
+			}
+			childPath := filepath.Join(f.store, "sessions", "child.jsonl")
+			if err := os.WriteFile(childPath, []byte(metadata("child", "root")), 0600); err != nil {
+				t.Fatal(err)
+			}
+			summary := filepath.Join(f.project, "SUMMARY.md")
+			selectorValue := "root"
+			if tc.selector == "--nonce" {
+				selectorValue = "discovery-regression-nonce"
+			}
+			run := func() ([]byte, error) {
+				cmd := exec.Command(cliBinaryPath, "generate", "--source", "codex", "--codex-home", f.store, tc.selector, selectorValue, "--ticket-id", "TEST-100", "--ticket-title", "Native discovery boundary", "--ticket-type", "fix", "--json-output", f.output, "--append", summary)
+				cmd.Dir = f.project
+				return cmd.CombinedOutput()
+			}
+			if out, err := run(); err != nil {
+				t.Fatalf("valid root/child control: %v %s", err, out)
+			}
+			control := f.ledger(t)
+			if len(control.Sessions) != 2 {
+				t.Fatalf("control lacks native child: %+v", control.Sessions)
+			}
+			beforeLedger, beforeSummary := readCaptureFile(t, f.output), readCaptureFile(t, summary)
+			corruptPath := childPath
+			// The scanner-boundary failure occurs after valid native identity. A nonce
+			// scan must retain that identity when classifying selected-family failures.
+			corruptBody := metadata("child", "root") + strings.Repeat("x", 9*1024*1024) + "\n"
+			if tc.corrupt == "unrelated" {
+				corruptPath = filepath.Join(f.store, "sessions", "unrelated.jsonl")
+				corruptBody = metadata("unrelated", "other-root") + strings.Repeat("x", 9*1024*1024) + "\n"
+			}
+			if tc.corrupt == "unidentifiable" {
+				corruptPath = filepath.Join(f.store, "sessions", "unidentifiable.jsonl")
+				corruptBody = "invalid native metadata\n"
+			}
+			if err := os.WriteFile(corruptPath, []byte(corruptBody), 0600); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(rootPath, []byte(strings.Replace(string(rootBody), `"input_tokens":17`, `"input_tokens":29`, 1)), 0600); err != nil {
+				t.Fatal(err)
+			}
+			out, err := run()
+			if tc.wantFailure {
+				if err == nil {
+					t.Fatalf("incomplete selected child admitted as complete discovery: %s", out)
+				}
+				if !strings.Contains(string(out), "child") || (tc.selector == "--nonce" && !strings.Contains(string(out), "incomplete")) || (tc.selector == "--session-id" && !strings.Contains(string(out), "Error reading selected Codex source")) {
+					t.Fatalf("missing attributable child source diagnostic: %s", out)
+				}
+				if !bytes.Equal(beforeLedger, readCaptureFile(t, f.output)) || !bytes.Equal(beforeSummary, readCaptureFile(t, summary)) {
+					t.Fatal("selected-child discovery failure changed accepted ledger or summary")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unrelated/unidentifiable source poisoned selected family: %v %s", err, out)
+			}
+			after := f.ledger(t)
+			if len(after.Sessions) != 2 {
+				t.Fatalf("unrelated source imported or known child lost: %+v", after.Sessions)
+			}
+			for _, owner := range after.Sessions {
+				if owner.ID == "root" && (len(owner.Invocations) != 1 || owner.Invocations[0].Tokens.Input != 29) {
+					t.Fatalf("complete selected root did not refresh: %+v", owner)
+				}
+				if owner.ID == "child" {
+					for _, original := range control.Sessions {
+						if original.ID == "child" && !reflect.DeepEqual(owner, original) {
+							t.Fatalf("unchanged selected child changed: %+v", owner)
+						}
+					}
+				}
+			}
+		})
 	}
 }

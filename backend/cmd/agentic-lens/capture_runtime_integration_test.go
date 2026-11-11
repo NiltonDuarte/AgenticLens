@@ -315,7 +315,11 @@ func TestCaptureNativeGitAdvisoryKeepsActualWorktreeHealthIsolated(t *testing.T)
 	for i, f := range []captureGenerationFixture{first, second} {
 		writeLocal(f, true)
 		prepareCaptureOwner(t, f, fmt.Sprintf("worktree-%d", i), "TEST-100", 23+i)
+		// Advisory coverage is an automatic-publication fact; a manual ledger
+		// intentionally does not acknowledge capture ownership or publication.
+		writeCapturePolicy(t, f, true, 0)
 		f.generate(t)
+		writeLocal(f, true)
 	}
 	sharedHooks := filepath.Join(t.TempDir(), "shared hooks")
 	git(first.project, "config", "core.hooksPath", sharedHooks)

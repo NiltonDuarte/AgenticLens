@@ -270,6 +270,23 @@ func TestCaptureManualAuxiliaryPublicationSurvivesUnavailableSource(t *testing.T
 	if len(first.SkillFacts()) != 1 || len(first.DelegationFacts()) != 1 {
 		t.Fatalf("source did not produce auxiliary facts: %+v %+v", first.SkillFacts(), first.DelegationFacts())
 	}
+	// Manual generation leaves capture state untouched. Automatic retained-source
+	// coverage must establish its own explicit ownership before reconciliation.
+	registry, err := capture.OpenProject(f.state, f.project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity := domain.CaptureIdentity{Source: domain.SourceOpenCode, Store: path, SessionID: "manual-root"}
+	registration, err := registry.Register(context.Background(), identity, "", "session.created")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = registry.Bind(context.Background(), identity, "TEST-100", registration.Request); err != nil {
+		t.Fatal(err)
+	}
+	if err = registry.Close(); err != nil {
+		t.Fatal(err)
+	}
 	registered := f.generate(t, "--source", "opencode", "--db-path", path)
 	if len(registered.SkillFacts()) != 1 || len(registered.DelegationFacts()) != 1 || !reflect.DeepEqual(registered.SkillFacts(), first.SkillFacts()) || !reflect.DeepEqual(registered.DelegationFacts(), first.DelegationFacts()) {
 		t.Fatalf("BEH-05 registered-only OpenCode capture omitted owned source facts: %+v", registered)

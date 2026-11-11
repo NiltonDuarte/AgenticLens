@@ -6,6 +6,10 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
 
 ## In Progress
 
+- **AL-81**: Generate metrics without capture registry access
+  - **Status**: In Progress; implementation complete, correction review underway; **Blocked by**: None; **Blocks**: None
+  - **File**: [AL-81](to-do/AL-81%20generate%20metrics%20without%20capture%20registry%20access.md)
+
 - **AL-83**: Present AgenticLens on GitHub Pages
   - **Status**: In Progress; implementation verified, awaiting publication; **Blocked by**: None; **Blocks**: None
   - **File**: [AL-83](to-do/AL-83%20present%20agenticlens%20on%20github%20pages.md)
@@ -43,10 +47,6 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
 - **AL-78**: Make completion feedback effective across harnesses
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None
   - **File**: [AL-78](to-do/AL-78%20make%20completion%20feedback%20effective%20across%20harnesses.md)
-
-- **AL-81**: Generate metrics without capture registry access
-  - **Status**: Ready; **Blocked by**: None; **Blocks**: None
-  - **File**: [AL-81](to-do/AL-81%20generate%20metrics%20without%20capture%20registry%20access.md)
 
 - **AL-82**: Filter and compare metrics by tags
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None

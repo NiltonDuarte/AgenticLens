@@ -252,6 +252,16 @@ func validateLoadedConfig(cfg domain.ProjectConfig, path string) (domain.Project
 
 // Load selects one whole local file while preserving shared-only persisted reads.
 func Load(project string) (domain.ProjectConfig, error) {
+	return loadSelected(project, true)
+}
+
+// LoadManualGeneration loads the source and project settings used by ad hoc
+// generation without interpreting unused capture-only policy.
+func LoadManualGeneration(project string) (domain.ProjectConfig, error) {
+	return loadSelected(project, false)
+}
+
+func loadSelected(project string, capturePolicy bool) (domain.ProjectConfig, error) {
 	path, err := FindConfigFile(project)
 	if err != nil {
 		return domain.ProjectConfig{}, err
@@ -315,9 +325,11 @@ func Load(project string) (domain.ProjectConfig, error) {
 			}
 		}
 	}
-	cfg.Telemetry.Capture, err = decodeCapturePolicy(data)
-	if err != nil {
-		return cfg, fmt.Errorf("local configuration %s: %w", selection.LocalPath, err)
+	if capturePolicy {
+		cfg.Telemetry.Capture, err = decodeCapturePolicy(data)
+		if err != nil {
+			return cfg, fmt.Errorf("local configuration %s: %w", selection.LocalPath, err)
+		}
 	}
 	return validateLoadedConfig(cfg, path)
 }

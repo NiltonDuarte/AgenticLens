@@ -17,7 +17,6 @@ import (
 
 	"agenticlens/internal/adapters"
 	"agenticlens/internal/adapters/capture"
-	"agenticlens/internal/adapters/codex"
 	adaptersconfig "agenticlens/internal/adapters/config"
 	"agenticlens/internal/adapters/git"
 	"agenticlens/internal/domain"
@@ -553,17 +552,6 @@ func recordGenerationPublication(project, directory, ticket, outcome, destinatio
 	defer cancel()
 	return errors.Join(s.RecordPublication(ctx, ticket, outcome, destination, summary, owners, detail, refreshed...), s.Close())
 }
-func hasBoundRegistrations(result *capture.ReconcileResult) bool {
-	if result == nil {
-		return false
-	}
-	for _, r := range result.Registrations {
-		if strings.TrimSpace(r.TicketID) == result.TicketID {
-			return true
-		}
-	}
-	return false
-}
 
 func fillMissingCaptureSessions(existing, fallback []domain.SessionFact) []domain.SessionFact {
 	seen := map[string]bool{}
@@ -579,7 +567,7 @@ func fillMissingCaptureSessions(existing, fallback []domain.SessionFact) []domai
 	}
 	return result
 }
-func validateCaptureSelection(project, dir, ticket string, source domain.SourceHarness, store string, selected []domain.SessionFact, baseline []domain.SessionFact, exactPaths map[string]string) error {
+func validateManualSelection(project, ticket string, source domain.SourceHarness, store string, selected []domain.SessionFact, baseline []domain.SessionFact, exactPaths map[string]string, cfg domain.ProjectConfig) error {
 	trusted := make(map[string]bool)
 	for _, owner := range baseline {
 		if owner.Source == source {
@@ -595,7 +583,6 @@ func validateCaptureSelection(project, dir, ticket string, source domain.SourceH
 			}
 		}
 	}
-	var err error
 	for _, owner := range selected {
 		registration := domain.CaptureRegistration{Identity: domain.CaptureIdentity{Source: source, Store: store, SessionID: owner.ID}, TranscriptPath: exactPaths[owner.ID]}
 		if trusted[owner.ID] {
@@ -604,82 +591,11 @@ func validateCaptureSelection(project, dir, ticket string, source domain.SourceH
 			registration.ProjectDirectory = project
 			registration.ProjectProof = domain.CaptureProjectVerified
 		}
-		if err = capture.ValidateOwner(context.Background(), project, registration); err != nil {
+		if err := capture.ValidateManualOwner(context.Background(), project, registration, cfg); err != nil {
 			return fmt.Errorf("selected source owner %s: %w", owner.ID, err)
 		}
 	}
 
-	s, err := capture.OpenProject(dir, project)
-	if err != nil {
-		return err
-	}
-	defer s.Close()
-	absoluteStore, err := capture.CanonicalStore(store)
-	if err != nil {
-		return err
-	}
-	if err = s.RejectSessionAssociations(context.Background(), ticket, absoluteStore, selected); err != nil {
-		return err
-	}
-	owners, err := s.List(context.Background())
-	if err != nil {
-		return err
-	}
-	selectedIDs := map[string]bool{}
-	for _, session := range selected {
-		selectedIDs[session.ID] = true
-	}
-	for _, owner := range owners {
-		if owner.Identity.Source != source || !selectedIDs[owner.Identity.SessionID] || owner.TicketID == "" || owner.TicketID == ticket {
-			continue
-		}
-		sameStore, compareErr := capture.SameStore(owner.Identity.Store, absoluteStore)
-		if compareErr != nil {
-			return compareErr
-		}
-		if sameStore {
-			return fmt.Errorf("exact session %s is bound to ticket %s, refusing selection for %s", owner.Identity.SessionID, owner.TicketID, ticket)
-		}
-	}
-	for _, owner := range selected {
-		id := domain.CaptureIdentity{Source: source, Store: absoluteStore, SessionID: owner.ID}
-		_, e := s.Change(context.Background(), id, func(r domain.CaptureRegistration) (domain.CaptureRegistration, error) {
-			if r.TicketID != "" && r.TicketID != ticket {
-				return r, errors.New("selected owner has conflicting ticket binding")
-			}
-			r.TicketID = ticket
-			r.ProjectDirectory = project
-			r.ProjectProof = domain.CaptureProjectVerified
-			if r.Binding == "" {
-				r.Binding = "explicit_manual_selection"
-			}
-			if source == domain.SourceCodex && r.TranscriptPath == "" {
-				if path := exactPaths[owner.ID]; path != "" {
-					if err := codex.ValidateRolloutStore(absoluteStore, path); err != nil {
-						return r, err
-					}
-					r.TranscriptPath = path
-					return r, nil
-				}
-				cfg, err := adaptersconfig.Load(project)
-				if err != nil {
-					return r, err
-				}
-				if err := cfg.Telemetry.Capture.ValidateBudgets(); err != nil {
-					return r, err
-				}
-				path, err := codex.DiscoverExactRolloutPathWithBudget(absoluteStore, owner.ID, &codex.DiscoveryBudget{MaxSessions: cfg.Telemetry.Capture.MaxSessions, MaxSourceBytes: cfg.Telemetry.Capture.MaxSourceBytes})
-				if err != nil {
-					return r, err
-				}
-				r.TranscriptPath = path
-			}
-			return r, nil
-		})
-		if e != nil {
-			return e
-		}
-	}
 	return nil
 }
 
@@ -735,14 +651,10 @@ func filterCapturePrecedence(baseline []domain.SessionFact, result *capture.Reco
 	}
 	return capture.ValidateSessionMerge(baseline, result.RefreshedSessions)
 }
-func checkCaptureInstallation(project, selected string, explicit bool) error {
-	return checkCaptureInstallationScope(project, selected, explicit, false)
-}
 
-// Manual generation may recover from known unsupported configured mappings.
-// Healthy configured state retains local installation-manifest validation even
-// when both its discovery anchor and native integration have disappeared.
-func checkCaptureInstallationScope(project, selected string, explicit, recoverCoordinates bool) error {
+// checkCaptureInstallation validates configured and explicitly selected state
+// against retained installation ownership before automatic capture operations.
+func checkCaptureInstallation(project, selected string, explicit bool) error {
 	if _, err := adaptersconfig.SelectConfig(project); err == nil {
 		return nil
 	}
@@ -760,16 +672,6 @@ func checkCaptureInstallationScope(project, selected string, explicit, recoverCo
 	}
 	configuredLocation, err := capture.PreviewStateLocation(policy.StateDir, project)
 	if err != nil {
-		if explicit && recoverCoordinates && errors.Is(err, capture.ErrUnsupportedCoordinateLayout) {
-			// An explicitly configured coordination directory is already known,
-			// even when its registry cannot map it. Inspect its retained manifest
-			// directly rather than guessing any unavailable coordination paths.
-			if installedErr := capture.CheckInstalledState(project, policy.StateDir, explicit); installedErr != nil {
-				return installedErr
-			}
-			fmt.Fprintln(os.Stderr, "Configured capture coordinates are unsupported; explicit manual generation uses selected state and preserves configured state:", err)
-			return capture.CheckInstalledState(project, selected, explicit)
-		}
 		return err
 	}
 	configured := configuredLocation.CoordinationDirectory

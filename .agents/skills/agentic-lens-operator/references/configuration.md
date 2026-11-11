@@ -88,7 +88,7 @@ Ordinary current-schema reads reject former `generation_policy` and session `ano
 
 ## Local capture policy
 
-Capture enablement, installation and manual generation are separate choices. `enabled: false` disables automatic collection while permitting manual generation with required explicit state policy. Never silently enable capture, install hooks or alter Git settings.
+Capture enablement, installation and manual generation are separate choices. `enabled: false` disables automatic collection. Manual generation requires source and project/metrics settings but does not read or modify the capture registry and needs no capture-only configuration. Never silently enable capture, install hooks or alter Git settings.
 
 | `telemetry.capture` setting | When used and validity |
 | --- | --- |

@@ -49,7 +49,7 @@ func runGenerate(args []string) {
 	dbPathFlag := genFlags.String("db-path", "", "Path to OpenCode SQLite database")
 	codexHomeFlag := genFlags.String("codex-home", "", "Explicit Codex source store; otherwise selected local telemetry.sources.codex.home")
 	anomaliesFlag := genFlags.Bool("anomalies", false, "Display anomalies and health flags; generation.metrics.anomalies=false reports disabled and never re-enables analysis")
-	captureDirFlag := genFlags.String("capture-dir", "", "Local lifecycle registry to reconcile before final publication")
+	captureDirFlag := genFlags.String("capture-dir", "", "Automatic capture registry override; ignored by manual generation")
 	autoFlag := genFlags.Bool("capture-auto", false, "Native lifecycle publication (registered owners only)")
 	maxSessionsFlag := genFlags.Int("max-sessions", 0, "Explicit positive capture session budget; otherwise selected local policy")
 	maxBytesFlag := genFlags.Int64("max-source-bytes", 0, "Explicit positive capture source-byte budget; otherwise selected local policy")
@@ -77,7 +77,11 @@ func runGenerate(args []string) {
 		fmt.Fprintln(os.Stderr, projectErr)
 		os.Exit(1)
 	}
-	projCfg, err := adaptersconfig.Load(project)
+	loadConfig := adaptersconfig.LoadManualGeneration
+	if *autoFlag {
+		loadConfig = adaptersconfig.Load
+	}
+	projCfg, err := loadConfig(project)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Error loading configuration:", err)
 		os.Exit(1)
@@ -146,99 +150,100 @@ func runGenerate(args []string) {
 		os.Exit(1)
 	}
 	*appendFlag = effectiveSummary
-	admissionCtx, admissionCancel := context.WithTimeout(context.Background(), 2*time.Second)
-	admission, admissionErr := adaptersconfig.AcquireGenerationAdmission(admissionCtx, project)
-	defer admissionCancel()
-	if admissionErr != nil {
-		if errors.Is(admissionErr, adaptersconfig.ErrConfigNotFound) {
-			fmt.Fprintln(os.Stderr, "Project configuration not found. Please run 'agentic-lens init' to initialize the project.")
-		} else {
-			fmt.Fprintln(os.Stderr, "Capture configuration admission:", admissionErr)
-		}
+	if *autoFlag && (*sessionIDFlag != "" || *nonceFlag != "") {
+		fmt.Fprintln(os.Stderr, "--capture-auto requires registered ticket owners and cannot be combined with --session-id or --nonce")
 		os.Exit(1)
 	}
-	defer func() {
-		if admission != nil {
-			if err := admission.Close(); err != nil {
-				fmt.Fprintln(os.Stderr, "Capture configuration unlock:", err)
+	if provided["max-sessions"] && *maxSessionsFlag < 1 {
+		fmt.Fprintln(os.Stderr, "--max-sessions must be a positive integer")
+		os.Exit(1)
+	}
+	if provided["max-source-bytes"] && *maxBytesFlag < 1 {
+		fmt.Fprintln(os.Stderr, "--max-source-bytes must be a positive integer")
+		os.Exit(1)
+	}
+	var policy domain.CaptureConfig
+	if *autoFlag {
+		admissionCtx, admissionCancel := context.WithTimeout(context.Background(), 2*time.Second)
+		admission, admissionErr := adaptersconfig.AcquireCaptureAdmission(admissionCtx, project)
+		defer admissionCancel()
+		if admissionErr != nil {
+			if errors.Is(admissionErr, adaptersconfig.ErrConfigNotFound) {
+				fmt.Fprintln(os.Stderr, "Project configuration not found. Please run 'agentic-lens init' to initialize the project.")
+			} else {
+				fmt.Fprintln(os.Stderr, "Capture configuration admission:", admissionErr)
+			}
+			os.Exit(1)
+		}
+		defer func() {
+			if admission != nil {
+				if err := admission.Close(); err != nil {
+					fmt.Fprintln(os.Stderr, "Capture configuration unlock:", err)
+				}
+			}
+		}()
+		selectedPolicy, policyErr := admission.ResolveCapture(*captureDirFlag)
+		policy = selectedPolicy
+		if policyErr != nil {
+			if errors.Is(policyErr, adaptersconfig.ErrConfigNotFound) {
+				fmt.Fprintln(os.Stderr, "Project configuration not found. Please run 'agentic-lens init' to initialize the project.")
+			} else {
+				fmt.Fprintln(os.Stderr, policyErr)
+			}
+			os.Exit(1)
+		}
+		if !policy.Enabled {
+			fmt.Fprintln(os.Stderr, "Automatic publication disabled by selected local policy")
+			os.Exit(1)
+		}
+		if provided["max-sessions"] {
+			policy.MaxSessions = *maxSessionsFlag
+			if policy.Settings != nil {
+				policy.Settings["max_sessions"] = true
 			}
 		}
-	}()
-	policy, policyErr := admission.ResolveGenerationCapture(*captureDirFlag)
-	if *autoFlag {
-		policy, policyErr = admission.ResolveCapture(*captureDirFlag)
-	}
-	if policyErr != nil {
-		if errors.Is(policyErr, adaptersconfig.ErrConfigNotFound) {
-			fmt.Fprintln(os.Stderr, "Project configuration not found. Please run 'agentic-lens init' to initialize the project.")
-		} else {
-			fmt.Fprintln(os.Stderr, policyErr)
+		if provided["max-source-bytes"] {
+			policy.MaxSourceBytes = *maxBytesFlag
+			if policy.Settings != nil {
+				policy.Settings["max_source_bytes"] = true
+			}
 		}
-		os.Exit(1)
-	}
-	if *autoFlag && !policy.Enabled {
-		fmt.Fprintln(os.Stderr, "Automatic publication disabled by selected local policy")
-		os.Exit(1)
-	}
-	if provided["max-sessions"] {
-		if *maxSessionsFlag < 1 {
-			fmt.Fprintln(os.Stderr, "--max-sessions must be a positive integer")
+		if err := errors.Join(policy.ValidatePass(), policy.ValidateBudgets()); err != nil {
+			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
-		policy.MaxSessions = *maxSessionsFlag
-		if policy.Settings != nil {
-			policy.Settings["max_sessions"] = true
-		}
-	}
-	if provided["max-source-bytes"] {
-		if *maxBytesFlag < 1 {
-			fmt.Fprintln(os.Stderr, "--max-source-bytes must be a positive integer")
+		resolvedState, stateErr := capture.ProjectState(policy.StateDir, project)
+		if stateErr != nil {
+			fmt.Fprintln(os.Stderr, stateErr)
 			os.Exit(1)
 		}
-		policy.MaxSourceBytes = *maxBytesFlag
-		if policy.Settings != nil {
-			policy.Settings["max_source_bytes"] = true
+		if e := checkCaptureInstallation(project, resolvedState, *captureDirFlag != ""); e != nil {
+			fmt.Fprintln(os.Stderr, e)
+			os.Exit(1)
 		}
-	}
-	if err := errors.Join(policy.ValidatePass(), policy.ValidateBudgets()); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-	resolvedState, stateErr := capture.ProjectState(policy.StateDir, project)
-	if stateErr != nil {
-		fmt.Fprintln(os.Stderr, stateErr)
-		os.Exit(1)
-	}
-	// Only explicit manual recovery may use independent healthy state when
-	// configured coordinate mappings are unsupported. Other guards still apply.
-	if e := checkCaptureInstallationScope(project, resolvedState, *captureDirFlag != "", *captureDirFlag != "" && !*autoFlag); e != nil {
-		fmt.Fprintln(os.Stderr, e)
-		os.Exit(1)
-	}
-	if *autoFlag {
 		enabled, e := automaticCaptureEnabled(project, resolvedState)
 		if e != nil || !enabled {
 			fmt.Fprintln(os.Stderr, "Automatic publication disabled or unavailable:", e)
 			os.Exit(1)
 		}
-	}
 
-	// Materialize the selected scope while configuration admission is held.
-	// Subsequent path-only maintenance must observe this database and refuse
-	// detaching it, so no global config lease spans source parsing/publication.
-	admissionStore, admissionStoreErr := capture.OpenProjectContext(admissionCtx, resolvedState, project)
-	if admissionStoreErr != nil {
-		fmt.Fprintln(os.Stderr, "Capture state admission:", admissionStoreErr)
-		os.Exit(1)
+		// Materialize the selected scope while configuration admission is held.
+		// Subsequent path-only maintenance must observe this database and refuse
+		// detaching it, so no global config lease spans source parsing/publication.
+		admissionStore, admissionStoreErr := capture.OpenProjectContext(admissionCtx, resolvedState, project)
+		if admissionStoreErr != nil {
+			fmt.Fprintln(os.Stderr, "Capture state admission:", admissionStoreErr)
+			os.Exit(1)
+		}
+		admissionCloseErr := errors.Join(admissionStore.Close(), admission.Close())
+		admission = nil
+		admissionCancel()
+		if admissionCloseErr != nil {
+			fmt.Fprintln(os.Stderr, "Capture state admission:", admissionCloseErr)
+			os.Exit(1)
+		}
+		*captureDirFlag = resolvedState
 	}
-	admissionCloseErr := errors.Join(admissionStore.Close(), admission.Close())
-	admission = nil
-	admissionCancel()
-	if admissionCloseErr != nil {
-		fmt.Fprintln(os.Stderr, "Capture state admission:", admissionCloseErr)
-		os.Exit(1)
-	}
-	*captureDirFlag = resolvedState
 	destinations := []string{*jsonOutputFlag, *appendFlag}
 	for _, dest := range destinations {
 		if dest != "" {
@@ -302,7 +307,7 @@ func runGenerate(args []string) {
 		os.Exit(1)
 	}
 
-	if *jsonOutputFlag != "" {
+	if *autoFlag && *jsonOutputFlag != "" {
 		if e := recordGenerationPublication(project, *captureDirFlag, activeTicketID, "preparing", *jsonOutputFlag, *appendFlag, nil, "Generation began before source extraction. No replacement has been acknowledged; inspect latest reconciliation and retry generation if this attempt remains unfinished."); e != nil {
 			fmt.Fprintln(os.Stderr, "Cannot persist generation attempt diagnostic:", e)
 			os.Exit(1)
@@ -404,16 +409,20 @@ func runGenerate(args []string) {
 	exactRolloutPaths := make(map[string]string)
 	var sourceEvents domain.SourceEvents
 	generationPolicy := projCfg.Generation.Metrics
-	captureResult, captureErr := reconcileCaptureGenerationAtWithPolicy(project, *captureDirFlag, activeTicketID, snapshotCutoff, policy, generationPolicy)
-	if captureErr != nil {
-		fmt.Fprintf(os.Stderr, "Error reconciling capture registry; publication not completed: %v\n", captureErr)
-		os.Exit(1)
+	var captureResult *capture.ReconcileResult
+	if *autoFlag {
+		var captureErr error
+		captureResult, captureErr = reconcileCaptureGenerationAtWithPolicy(project, *captureDirFlag, activeTicketID, snapshotCutoff, policy, generationPolicy)
+		if captureErr != nil {
+			fmt.Fprintf(os.Stderr, "Error reconciling capture registry; publication not completed: %v\n", captureErr)
+			os.Exit(1)
+		}
+		if precedenceErr := filterCapturePrecedence(sessions, captureResult); precedenceErr != nil {
+			fmt.Fprintln(os.Stderr, "Capture checkpoint comparison:", precedenceErr)
+			os.Exit(1)
+		}
 	}
-	if precedenceErr := filterCapturePrecedence(sessions, captureResult); precedenceErr != nil {
-		fmt.Fprintln(os.Stderr, "Capture checkpoint comparison:", precedenceErr)
-		os.Exit(1)
-	}
-	registeredOnly := (*autoFlag || hasBoundRegistrations(captureResult)) && strings.TrimSpace(*nonceFlag) == "" && strings.TrimSpace(*sessionIDFlag) == ""
+	registeredOnly := *autoFlag
 	if registeredOnly {
 		configuredStores := make(map[domain.SourceHarness]string)
 		if *codexHomeFlag != "" || projCfg.Telemetry.Sources.CodexHome != "" {
@@ -436,7 +445,9 @@ func runGenerate(args []string) {
 			fmt.Fprintln(os.Stderr, "Baseline ticket association conflict:", associationErr)
 			os.Exit(1)
 		}
-		freshSessions = captureResult.RefreshedSessions
+		if captureResult != nil {
+			freshSessions = captureResult.RefreshedSessions
+		}
 	} else if activeSource == "codex" {
 		codexHome, pathErr := adaptersconfig.ResolveCodexHome(*codexHomeFlag, projCfg.Telemetry.Sources.CodexHome)
 		if pathErr != nil {
@@ -474,8 +485,9 @@ func runGenerate(args []string) {
 			fmt.Fprintf(os.Stderr, "Error combining Codex session facts: %v\n", combineErr)
 			os.Exit(1)
 		}
-		for _, warning := range combined.Warnings {
-			fmt.Fprintf(os.Stderr, "Warning: Codex rollout: %s\n", warning)
+		if len(combined.Warnings) > 0 {
+			fmt.Fprintf(os.Stderr, "Error: incomplete Codex grouping; stored snapshots preserved: %s\n", strings.Join(combined.Warnings, "; "))
+			os.Exit(1)
 		}
 		freshCodex, factErr := combined.SessionFacts(generationPolicy)
 		if factErr != nil {
@@ -486,8 +498,8 @@ func runGenerate(args []string) {
 			fmt.Fprintln(os.Stderr, collisionErr)
 			os.Exit(1)
 		}
-		if ownerErr := validateCaptureSelection(project, *captureDirFlag, activeTicketID, domain.SourceCodex, codexHome, freshCodex, baseline.Current, exactRolloutPaths); ownerErr != nil {
-			fmt.Fprintln(os.Stderr, "Capture ownership conflict:", ownerErr)
+		if ownerErr := validateManualSelection(project, activeTicketID, domain.SourceCodex, codexHome, freshCodex, baseline.Current, exactRolloutPaths, projCfg); ownerErr != nil {
+			fmt.Fprintln(os.Stderr, "Source ownership conflict:", ownerErr)
 			os.Exit(1)
 		}
 		resolveCodexSessionUsers(freshCodex, userBySessionID, currentUser)
@@ -554,8 +566,8 @@ func runGenerate(args []string) {
 						fmt.Fprintln(os.Stderr, collisionErr)
 						os.Exit(1)
 					}
-					if ownerErr := validateCaptureSelection(project, *captureDirFlag, activeTicketID, domain.SourceOpenCode, dbPath, extractedSessions, baseline.Current, nil); ownerErr != nil {
-						fmt.Fprintln(os.Stderr, "Capture ownership conflict:", ownerErr)
+					if ownerErr := validateManualSelection(project, activeTicketID, domain.SourceOpenCode, dbPath, extractedSessions, baseline.Current, nil, projCfg); ownerErr != nil {
+						fmt.Fprintln(os.Stderr, "Source ownership conflict:", ownerErr)
 						os.Exit(1)
 					}
 					freshSessions = extractedSessions
@@ -604,9 +616,11 @@ func runGenerate(args []string) {
 	}
 	// Retained facts join only after owned extraction and checkpoint decisions.
 	retainUnrefreshedGenerationOwners(&baseline, freshSessions)
-	if err := recordGenerationHistory(project, *captureDirFlag, activeTicketID, baseline); err != nil {
-		fmt.Fprintln(os.Stderr, "Cannot record retained history:", err)
-		os.Exit(1)
+	if *autoFlag {
+		if err := recordGenerationHistory(project, *captureDirFlag, activeTicketID, baseline); err != nil {
+			fmt.Fprintln(os.Stderr, "Cannot record retained history:", err)
+			os.Exit(1)
+		}
 	}
 	invocations := (domain.AgenticFactLedger{Sessions: sessions}).InvocationFacts()
 
@@ -647,8 +661,12 @@ func runGenerate(args []string) {
 		}
 	}
 
-	cfg, err := git.LoadConfig(project)
-	if err != nil {
+	cfg := &git.ClassificationConfig{
+		BaseBranch: projCfg.CodeMetrics.BaseBranch,
+		Production: projCfg.CodeMetrics.Production,
+		Tests:      projCfg.CodeMetrics.Tests,
+	}
+	if err := git.ValidateClassificationConfig(cfg); err != nil {
 		fmt.Fprintln(os.Stderr, "Error loading code-metric policy:", err)
 		os.Exit(1)
 	}
@@ -724,9 +742,11 @@ func runGenerate(args []string) {
 		if *appendFlag != "" {
 			publicationPaths = append(publicationPaths, *appendFlag)
 		}
-		if e := recordGenerationPublication(project, *captureDirFlag, activeTicketID, "staging", *jsonOutputFlag, *appendFlag, factLedger.Sessions, "Artifact replacement started; success is unconfirmed until journal commit and diagnostic acknowledgement. If interrupted, rerun generate to recover the prior accepted set.", freshSessions); e != nil {
-			fmt.Fprintln(os.Stderr, "Cannot persist publication diagnostic:", e)
-			os.Exit(1)
+		if *autoFlag {
+			if e := recordGenerationPublication(project, *captureDirFlag, activeTicketID, "staging", *jsonOutputFlag, *appendFlag, factLedger.Sessions, "Artifact replacement started; success is unconfirmed until journal commit and diagnostic acknowledgement. If interrupted, rerun generate to recover the prior accepted set.", freshSessions); e != nil {
+				fmt.Fprintln(os.Stderr, "Cannot persist publication diagnostic:", e)
+				os.Exit(1)
+			}
 		}
 		if e := adapters.BeginPublication(*jsonOutputFlag, publicationPaths); e != nil {
 			fmt.Fprintln(os.Stderr, "Cannot stage recoverable publication:", e)
@@ -772,9 +792,11 @@ func runGenerate(args []string) {
 			fmt.Fprintln(os.Stderr, "Publication remains interrupted; regenerate to restore prior accepted set:", e)
 			os.Exit(1)
 		}
-		if e := recordGenerationPublication(project, *captureDirFlag, activeTicketID, "committed", *jsonOutputFlag, *appendFlag, factLedger.Sessions, "Ledger and requested summary replacement committed.", freshSessions); e != nil {
-			fmt.Fprintln(os.Stderr, "Artifacts committed but diagnostic acknowledgement failed; publication verification remains incomplete:", e)
-			os.Exit(1)
+		if *autoFlag {
+			if e := recordGenerationPublication(project, *captureDirFlag, activeTicketID, "committed", *jsonOutputFlag, *appendFlag, factLedger.Sessions, "Ledger and requested summary replacement committed.", freshSessions); e != nil {
+				fmt.Fprintln(os.Stderr, "Artifacts committed but diagnostic acknowledgement failed; publication verification remains incomplete:", e)
+				os.Exit(1)
+			}
 		}
 	}
 	if !*autoFlag {

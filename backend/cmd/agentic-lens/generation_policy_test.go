@@ -541,6 +541,7 @@ CREATE TABLE session_message(id TEXT PRIMARY KEY,session_id TEXT,type TEXT,seq I
 				if selection == "explicit" {
 					args = append(args, "--source", string(source), "--session-id", "root")
 				} else {
+					args = append(args, "--capture-auto")
 					store, err := capture.OpenProject(f.state, f.project)
 					if err != nil {
 						t.Fatal(err)
@@ -570,8 +571,12 @@ CREATE TABLE session_message(id TEXT PRIMARY KEY,session_id TEXT,type TEXT,seq I
 				if err := cmd.Run(); err != nil {
 					t.Fatalf("generate: %v %s %s", err, stdout.String(), stderr.String())
 				}
-				if strings.Contains(stdout.String(), "AgenticLens checkpoint:") || strings.Count(stderr.String(), "AgenticLens checkpoint:") != 2 || !strings.Contains(stderr.String(), "invoking caller is unverified") || strings.Contains(stderr.String(), "Your verified current") || strings.Contains(stderr.String(), "automatic next-turn") {
-					t.Fatalf("extraction root falsely certified caller or lost owners: stdout=%s stderr=%s", stdout.String(), stderr.String())
+				if selection == "explicit" {
+					if strings.Contains(stdout.String(), "AgenticLens checkpoint:") || strings.Count(stderr.String(), "AgenticLens checkpoint:") != 2 || !strings.Contains(stderr.String(), "invoking caller is unverified") || strings.Contains(stderr.String(), "Your verified current") || strings.Contains(stderr.String(), "automatic next-turn") {
+						t.Fatalf("extraction root falsely certified caller or lost owners: stdout=%s stderr=%s", stdout.String(), stderr.String())
+					}
+				} else if strings.Contains(stdout.String()+stderr.String(), "AgenticLens checkpoint:") {
+					t.Fatalf("automatic publication emitted manual checkpoint feedback: stdout=%s stderr=%s", stdout.String(), stderr.String())
 				}
 				for _, body := range [][]byte{readCaptureFile(t, f.output), readCaptureFile(t, filepath.Join(f.project, "SUMMARY.md"))} {
 					if strings.Contains(string(body), "AgenticLens checkpoint:") || strings.Contains(string(body), "CheckpointEvidence") || strings.Contains(string(body), "checkpoint_evidence") {
@@ -671,8 +676,12 @@ CREATE TABLE session_message(id TEXT PRIMARY KEY,session_id TEXT,type TEXT,seq I
 					if err := cmd.Run(); err != nil {
 						t.Fatalf("completion with unavailable child: %v %s %s", err, stdout.String(), stderr.String())
 					}
-					if strings.Count(stderr.String(), "AgenticLens checkpoint:") != 1 || !strings.Contains(stderr.String(), "session=child;") || !strings.Contains(stderr.String(), "Current native interval evidence is unavailable or unverified") || strings.Contains(stdout.String(), "AgenticLens checkpoint:") {
-						t.Fatalf("retained-only feedback must be F04 for child: stdout=%s stderr=%s", stdout.String(), stderr.String())
+					if selection == "explicit" {
+						if strings.Count(stderr.String(), "AgenticLens checkpoint:") != 1 || !strings.Contains(stderr.String(), "session=child;") || !strings.Contains(stderr.String(), "Current native interval evidence is unavailable or unverified") || strings.Contains(stdout.String(), "AgenticLens checkpoint:") {
+							t.Fatalf("retained-only feedback must be F04 for child: stdout=%s stderr=%s", stdout.String(), stderr.String())
+						}
+					} else if strings.Contains(stdout.String()+stderr.String(), "AgenticLens checkpoint:") {
+						t.Fatalf("automatic retained-history publication emitted manual feedback: stdout=%s stderr=%s", stdout.String(), stderr.String())
 					}
 					assertWrittenPolicy(t, f.output, domain.GenerationPolicy{}, 2)
 					body := readCaptureFile(t, f.output)
