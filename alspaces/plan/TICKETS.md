@@ -4,6 +4,12 @@ Active tickets live in `to-do/`; completed specifications move to `done/` and le
 
 Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946` on 2026-11-08. Historical evidence and previously accepted product decisions remain authoritative within their stated limits. Existing IDs and accepted ticket groupings are preserved across earlier batches.
 
+## In Progress
+
+- **AL-83**: Present AgenticLens on GitHub Pages
+  - **Status**: In Progress; implementation verified, awaiting publication; **Blocked by**: None; **Blocks**: None
+  - **File**: [AL-83](to-do/AL-83%20present%20agenticlens%20on%20github%20pages.md)
+
 ## Ready
 
 - **AL-80**: Capture OpenCode sessions across worktrees

@@ -115,8 +115,8 @@ class TicketsSiteTest < Minitest::Test
     end
     assert_build
     welcome = document(@output.join("index.html"))
-    assert_includes welcome.at_css("main h1").text, "AgenticLens"
-    assert_match(/welcome/i, welcome.at_css("main").text)
+    assert_includes welcome.at_css("title").text, "AgenticLens"
+    assert_match(/local.*telemetry|telemetry.*local/im, welcome.at_css("main").text)
     assert_includes links(welcome.at_css("main")), "/FixtureRepo/roadmap/"
     assert welcome.at_css("meta[name='viewport']"), "The welcome page must support narrow screens"
     roadmap = document(@output.join("roadmap/index.html"))
@@ -152,6 +152,59 @@ class TicketsSiteTest < Minitest::Test
     assert_empty @output.glob("**/*.json")
     @output.glob("**/*", File::FNM_DOTMATCH).select(&:file?).each do |path|
       refute_includes path.binread, "UNPUBLISHED_CAPTURE_SENTINEL"
+    end
+  end
+
+  def test_presentation_assets_fragments_and_accessible_structure_at_project_and_host_roots
+    fixture
+    ["/FixtureRepo", ""].each do |base_path|
+      assert_build(base_path: base_path)
+      presentation = document(@output.join("index.html"))
+      assert_equal "en", presentation.at_css("html")["lang"]
+      assert_equal 1, presentation.css("main").length
+      assert_equal 1, presentation.css("h1").length
+      assert presentation.at_css("header nav"), "Visitors need a primary navigation landmark"
+      skip = presentation.at_css("body > a[href='#main']")
+      assert skip, "Keyboard visitors need a skip link before the navigation"
+      assert presentation.at_css("main#main"), "The skip link must reach the content landmark"
+      assert_empty presentation.css("script, iframe, form"), "The presentation works without executable services or visitor data collection"
+      presentation.css("[tabindex]").each do |node|
+        assert_operator node["tabindex"].to_i, :<=, 0, "Natural keyboard order must not be overridden"
+      end
+      ids = presentation.css("[id]").map { |node| node["id"] }
+      assert_equal ids.uniq, ids, "Duplicate IDs make deep-link destinations ambiguous"
+      heading_levels = presentation.css("h1, h2, h3, h4, h5, h6").map { |node| node.name[1].to_i }
+      heading_levels.each_cons(2) { |previous, current| assert_operator current, :<=, previous + 1 }
+
+      presentation.css("a[href], link[href], img[src]").each do |node|
+        target = node[node.name == "img" ? "src" : "href"]
+        uri = URI.parse(target)
+        next if uri.host || uri.scheme
+        unless uri.path.empty?
+          assert uri.path.start_with?("#{base_path}/"), "Local links must respect project hosting: #{target}"
+        end
+        relative = uri.path.delete_prefix(base_path).delete_prefix("/")
+        relative = "index.html" if relative.empty?
+        relative += "index.html" if relative.end_with?("/")
+        destination = @output.join(URI::DEFAULT_PARSER.unescape(relative))
+        assert destination.file?, "Missing local page or asset: #{target}"
+        if uri.fragment && !uri.fragment.empty?
+          assert document(destination).at_css("[id='#{uri.fragment}']"), "Missing fragment: #{target}"
+        end
+      end
+      illustrations = presentation.css("figure img[src$='.svg']")
+      assert_operator illustrations.length, :>=, 4, "Product and architecture explanations need captioned visuals"
+      illustrations.each do |node|
+        refute_empty node["alt"].to_s.strip, "Every explanatory image needs a text alternative"
+        figure = node.ancestors("figure").first
+        refute_empty figure.at_css("figcaption")&.text.to_s.strip, "Visuals need visible captions"
+        asset = @output.join(node["src"].delete_prefix(base_path).delete_prefix("/"))
+        svg = Nokogiri::XML(asset.read) { |config| config.strict.nonet }
+        assert_equal "svg", svg.root.name
+        assert svg.at_css("title"), "SVG explanations need an accessible title"
+        assert_empty svg.css("script, foreignObject, image"), "Illustrations must be self-contained, not embedded private captures"
+      end
+      assert presentation.at_css("link[rel='stylesheet'][href^='#{base_path}/presentation/']"), "The trusted stylesheet must be published beneath the project path"
     end
   end
 
@@ -224,7 +277,7 @@ class TicketsSiteTest < Minitest::Test
       [path.relative_path_from(@output), path.binread]
     end
     assert original_artifact.key?(Pathname("index.html")), "The preserved artifact must include the welcome page"
-    ["/", "/index.html", "/roadmap/%2e%2e/index.html"].each do |permalink|
+    ["/", "/index.html", "/roadmap/%2e%2e/index.html", "/presentation/style.css", "/presentation/private.html"].each do |permalink|
       content = "---\npermalink: #{permalink}\n---\n# Unexpected root page\n"
       @ticket.write(content)
       stdout, stderr, status = build

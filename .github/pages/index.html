@@ -1,7 +1,109 @@
 ---
-layout: ticket
-title: Welcome to AgenticLens
+layout: null
+title: AgenticLens — Understand the work behind the code
 ---
-<h1>Welcome to AgenticLens</h1>
-<p>Browse the project roadmap and read the tickets behind the plan.</p>
-<p><a href="{{ '/roadmap/' | relative_url }}">View the roadmap</a></p>
+{% assign repository_url = 'https://github.com/' | append: site.ticket_repository %}
+{% assign encoded_revision = site.ticket_revision | url_encode %}
+{% assign source_url = repository_url | append: '/blob/' | append: encoded_revision %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Local telemetry and observability for multi-agent development. Investigate execution, understand ticket effort, and share durable project history with AgenticLens.">
+  <meta name="theme-color" content="#f5f3ec">
+  <title>{{ page.title | escape }}</title>
+  <link rel="stylesheet" href="{{ '/presentation/style.css' | relative_url }}">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header wrap">
+    <a class="brand" href="{{ '/' | relative_url }}"><span class="brand-mark" aria-hidden="true">al</span>AgenticLens</a>
+    <nav aria-label="Main navigation">
+      <a href="#workflow">How it works</a>
+      <a href="#investigate">Use cases</a>
+      <a href="{{ '/roadmap/' | relative_url }}">Roadmap</a>
+      <a class="nav-repository" href="{{ repository_url }}">GitHub <span aria-hidden="true">↗</span></a>
+    </nav>
+  </header>
+  <main id="main" tabindex="-1">
+    <section class="hero wrap" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="status-dot" aria-hidden="true"></span> Local telemetry. Durable history.</p>
+        <h1 id="hero-title">Understand the work <em>behind the code.</em></h1>
+        <p class="hero-description">Your agents write code. AgenticLens helps you see how the work unfolded.</p>
+        <p class="hero-detail">Local multi-agent development telemetry and observability for developers and engineering leads. Follow execution, investigate friction, and carry the evidence into your next project decision.</p>
+        <div class="actions">
+          <a class="button button-primary" href="#start">Get started <span aria-hidden="true">↗</span></a>
+          <a class="text-link" href="#workflow">Explore the workflow <span aria-hidden="true">↓</span></a>
+        </div>
+        <p class="hero-note">Runs on your machine. History travels with Git.</p>
+      </div>
+      <figure class="hero-visual">
+        <div class="figure-bar"><span class="small-label">A closer look at execution</span><span class="figure-tag">Illustration</span></div>
+        <img src="{{ '/presentation/investigation.svg' | relative_url }}" width="600" height="470" alt="Illustrative execution trace: a planner hands work to a coder; repeated tool attempts lead to an anomaly inspection, followed by testing.">
+        <figcaption>Illustrative trace and anomaly panel, not a product screenshot or measured session. Follow a handoff, inspect retries, then decide what to change.</figcaption>
+      </figure>
+    </section>
+
+    <div class="principles wrap" aria-label="Product principles">
+      <p><span class="principle-index">01 /</span> Observe agent execution</p>
+      <p><span class="principle-index">02 /</span> Investigate with context</p>
+      <p><span class="principle-index">03 /</span> Keep a shared record</p>
+    </div>
+
+    <section class="section wrap" id="workflow" aria-labelledby="workflow-title">
+      <div class="section-heading"><p class="eyebrow">From a session to a project record</p><h2 id="workflow-title">One workflow. A clearer picture.</h2><p>Bring the work into view without changing who does it.</p></div>
+      <ol class="workflow-grid">
+        <li><span class="step-number">01</span><h3>Configure &amp; capture</h3><p>Choose the project release, harness source and ticket workspace. Configure capture for supported local sessions.</p></li>
+        <li><span class="step-number">02</span><h3>Generate</h3><p>Extract session facts into a versioned JSON ledger and a readable ticket summary. Keep missing evidence explicit.</p></li>
+        <li><span class="step-number">03</span><h3>Inspect</h3><p>Use the CLI or local embedded dashboard to explore anomalies, delegation, model activity and ticket trends.</p></li>
+        <li><span class="step-number">04</span><h3>Share</h3><p>Commit the ledger and summary with the project. Give the next developer recorded context, even on another machine.</p></li>
+      </ol>
+    </section>
+
+    <section class="investigation-section" id="investigate" aria-labelledby="investigate-title">
+      <div class="wrap section">
+        <div class="section-heading"><p class="eyebrow">Questions worth asking</p><h2 id="investigate-title">Turn activity into investigation.</h2><p>Metrics become useful when they help a person choose the next step.</p></div>
+        <article class="use-case use-case-trace">
+          <div><p class="case-label">01 / Diagnose tool retries</p><h3>Where did the run get stuck?</h3><p>A tool keeps failing, or work passes back and forth between agents. Open the anomaly inspector and execution/delegation trace to connect the pattern to its context.</p><p class="decision"><strong>Your decision:</strong> repair the environment, narrow the task, or change the next instruction after inspecting the underlying evidence.</p><a class="text-link" href="{{ source_url }}/ARCHITECTURE.md#31-detection-rules">Read the anomaly rules <span aria-hidden="true">↗</span></a></div>
+          <div class="feature-note"><span class="mini-label">Investigation views</span><h4>Trace → anomaly → context</h4><p>The hero illustration shows this path. An anomaly is a prompt to investigate; it does not establish that the code is wrong.</p><ul><li>Execution order and delegation handoffs</li><li>Tool retry and failure patterns</li><li>Context pressure and available diagnostics</li></ul></div>
+        </article>
+        <article class="use-case">
+          <div><p class="case-label">02 / Compare ticket effort</p><h3>What changed between tickets?</h3><p>Use ticket comparison and metric progression to examine role and model activity, tokens, cache use and recorded cost alongside elapsed and active duration.</p><p class="decision"><strong>Your decision:</strong> review an expensive investigation step, adjust task boundaries, or inspect a change in cache use. Account for task difficulty and missing evidence before drawing a conclusion.</p></div>
+          <figure class="product-figure"><img src="{{ '/presentation/analytics.svg' | relative_url }}" width="600" height="360" loading="lazy" alt="Qualitative illustration of ticket comparison, role and model activity, token and cache analysis, and metric progression. No numeric outcomes are shown."><figcaption>Illustrative analytics views. Shapes explain the questions these views support; they represent no measured ticket ranking, efficiency or productivity result.</figcaption></figure>
+        </article>
+        <article class="use-case">
+          <div><p class="case-label">03 / Preserve handoff history</p><h3>Keep the context after the session ends.</h3><p>A teammate joins from another machine or harness. Git-shareable ledgers and ticket summaries preserve recorded facts without copying your private session database.</p><p class="decision"><strong>Your decision:</strong> use the recorded history to plan follow-up work and identify what still needs investigation. Original sources are needed to recover missing detail; a shared ledger does not recreate a missing trace.</p></div>
+          <figure class="product-figure"><img src="{{ '/presentation/history.svg' | relative_url }}" width="600" height="300" loading="lazy" alt="Illustrative handoff: a developer commits a session ledger and ticket summary to Git, and a teammate on another machine reads the recorded history."><figcaption>Illustrative handoff, not a captured session. Supported recorded facts remain useful when the original machine or harness source is unavailable.</figcaption></figure>
+        </article>
+        <aside class="evidence-note" aria-labelledby="evidence-title"><span class="note-mark" aria-hidden="true">i</span><div><h3 id="evidence-title">Evidence has limits. Keep them visible.</h3><p>Anomaly verdicts and test/production ratios support investigation. They do not establish test coverage, productivity or code quality. A token count alone does not explain why a ticket was difficult.</p><p><strong>Observed cost</strong> is a reported amount, including a reported zero. <strong>Partial cost</strong> is a known subtotal with missing contributions. <strong>Unavailable cost</strong> is unknown, not zero. Current Codex extraction does not establish USD cost. These are not verified invoice amounts or promised savings. <a href="{{ source_url }}/docs/COST_SEMANTICS.md">Read cost semantics</a>.</p></div></aside>
+      </div>
+    </section>
+
+    <section class="section wrap" id="modes" aria-labelledby="modes-title">
+      <div class="section-heading"><p class="eyebrow">Choose the right observation mode</p><h2 id="modes-title">Local first. Source aware.</h2><p>Live observation and retrospective history answer different questions.</p></div>
+      <div class="mode-grid">
+        <article class="mode-card"><span class="mode-label">During the work</span><h3>OpenCode live monitoring</h3><p>Watch supported OpenCode sessions through the local dashboard. Follow turns, tools, token growth and agent handoffs as the work unfolds.</p></article>
+        <article class="mode-card"><span class="mode-label">After the work</span><h3>OpenCode &amp; Codex generation</h3><p>Generate offline ledgers from local harness stores. Source capabilities differ; unavailable detail stays unavailable rather than becoming a successful zero.</p></article>
+        <article class="mode-card"><span class="mode-label">Across project history</span><h3>Backfill &amp; migration</h3><p>Reconcile recoverable historical facts and explicitly migrate supported ledger schemas. Preserve unavailable history; original source data is needed for new extraction.</p></article>
+      </div>
+      <p class="compatibility">This presentation describes the repository revision linked by its documentation. Installed capabilities depend on your selected release. Support is bounded by tested harness/schema evidence, not a promise for every version or coding agent. See <a href="{{ source_url }}/ARCHITECTURE.md#2-subsystem-breakdown">current compatibility evidence</a> and <a href="{{ source_url }}/docs/SETUP_MANUAL.md#telemetry-source-and-session-selection">source selection</a>; check the corresponding documentation in your release.</p>
+      <div class="boundary"><h3>AgenticLens observes the work.</h3><p>It is not an agent executor or orchestrator, a coding assistant, a hosted monitoring service, or proof of code quality. Your harness runs the agents. You interpret the evidence.</p></div>
+    </section>
+
+    <section class="architecture-section" id="architecture" aria-labelledby="architecture-title">
+      <div class="wrap section architecture-grid">
+        <div><p class="eyebrow">A small, local architecture</p><h2 id="architecture-title">Your machine.<br>Your project history.</h2><p>Local harness stores and Git provide inputs. Adapters read them; pure analysis derives the recorded metrics. Durable ledgers retain project facts for the CLI and the local embedded dashboard.</p><p>Local sources are authoritative when successfully refreshed. Unavailable sessions remain preserved in supported shared ledgers, across developers, machines and harnesses. Optional source detail enriches the record when available.</p><p>The native <code>agentic-lens</code> manager installs and selects the project’s pinned engine. The separate <code>agentic-lens-engine</code> performs telemetry work and embeds the dashboard. The installed application needs no production Node runtime.</p><a class="text-link" href="{{ source_url }}/TECHNICAL_GUIDELINES.md#portable-ledger-contract">Read the portable ledger contract <span aria-hidden="true">↗</span></a></div>
+        <figure class="architecture-figure"><img src="{{ '/presentation/architecture.svg' | relative_url }}" width="540" height="560" loading="lazy" alt="Data flow: local harness stores and Git feed adapters and pure analysis, then durable ledgers, then the CLI and local embedded dashboard. Separately, the native manager installs and selects the pinned engine that owns telemetry and the dashboard."><figcaption>Architecture diagram. Installation and engine selection are separate from the telemetry data flow. The adjacent text provides the same explanation.</figcaption></figure>
+      </div>
+    </section>
+
+    <section class="section wrap start-section" id="start" aria-labelledby="start-title">
+      <div><p class="eyebrow">Bring the evidence into view</p><h2 id="start-title">Start with one project.</h2><p>Follow the maintained setup guide for your platform and coding harness. Use the project’s approved exact release pin; for a fresh unpinned installation, resolve the latest stable release. Retrieve setup files and binaries from that same tag.</p><p>Development documentation can describe capabilities beyond the latest stable release. Check the selected release’s documentation before adopting a workflow.</p><div class="actions"><a class="button button-primary" href="{{ source_url }}/docs/SETUP_MANUAL.md">Read the setup guide <span aria-hidden="true">↗</span></a><a class="text-link" href="{{ repository_url }}/releases/latest">Latest stable release <span aria-hidden="true">↗</span></a></div></div>
+      <nav class="resource-links" aria-label="Project resources"><a href="{{ source_url }}/README.md">Documentation <span aria-hidden="true">↗</span></a><a href="{{ source_url }}/ARCHITECTURE.md">Architecture <span aria-hidden="true">↗</span></a><a href="{{ '/roadmap/' | relative_url }}">Project roadmap <span aria-hidden="true">↗</span></a><a href="{{ repository_url }}">Source on GitHub <span aria-hidden="true">↗</span></a></nav>
+    </section>
+  </main>
+  <footer class="site-footer wrap"><a class="brand" href="{{ '/' | relative_url }}"><span class="brand-mark" aria-hidden="true">al</span>AgenticLens</a><p>Local observation. Shared understanding.</p><p>This static presentation needs no account or local engine.</p><a href="{{ source_url }}/LICENSE">MIT License</a></footer>
+</body>
+</html>

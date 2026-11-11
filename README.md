@@ -4,6 +4,8 @@ AgenticLens records multi-agent development telemetry, detects execution anomali
 
 Ledgers are trusted, durable project records designed to be committed and shared through Git across developers, machines and harnesses. Local source sessions take precedence when refreshed; unavailable sessions remain preserved in the ledger, and the runtime aggregates the full result. Migration is best-effort and resumable across machines. See the [portable ledger contract](TECHNICAL_GUIDELINES.md#portable-ledger-contract) for preservation, refresh and compatibility guarantees.
 
+Explore the [AgenticLens project presentation](https://niltonduarte.github.io/AgenticLens/) for the workflow, practical investigation examples and architecture.
+
 ## Install AgenticLens with Your Coding Agent
 
 Ask your coding agent to install and configure AgenticLens in the repository. For an OpenCode agent, use this prompt:

@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "TEST-01",
+      "severity": 3,
+      "issue": "Header brand accessible name excluded visible decorative text.",
+      "reporters": [
+        {
+          "persona": "tester",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed by coder: remove redundant aria-label, hide decorative monogram; tester reran all widths with zero axe violations."
+    },
+    {
+      "finding_id": "DATA-01",
+      "severity": 2,
+      "issue": "Existing delete-before-rename/copy can lose prior generated output on final filesystem failure.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Accepted pre-existing debt: parent verified identical baseline ordering and failed-build deployment gate. Owner Pages builder maintainers; follow-up transactional replacement. Sol approved; Luna requested changes; parent retains dissent and finds no AL-83 regression."
+    },
+    {
+      "finding_id": "COPY-01",
+      "severity": 2,
+      "issue": "Reviewer requested automated assertions guarding required explanatory copy.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Refuted as blocker: no absent or incorrect current content; parent/behavior review verified static explanations. Literal copy snapshots are not acceptance and conflict with proportional testing guidance. Optional suggestion retained; original changes-requested verdict preserved."
+    }
+  ]
+}
