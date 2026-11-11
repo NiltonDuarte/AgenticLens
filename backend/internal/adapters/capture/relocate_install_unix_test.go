@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -15,7 +16,7 @@ import (
 	adaptersconfig "agenticlens/internal/adapters/config"
 )
 
-// The Unix native/POSIX-wrapper fixture is the same imperative boundary used
+// The Unix engine/native-manager fixture is the same imperative boundary used
 // by installation_unix_test.go. This is a real filesystem-prefix interruption,
 // not a domain mock or a claim of an actual agent lifecycle exchange.
 func TestRelocationResumesInterruptedOwnedHookAndPluginBeforeManifest(t *testing.T) {
@@ -27,7 +28,7 @@ func TestRelocationResumesInterruptedOwnedHookAndPluginBeforeManifest(t *testing
 			t.Setenv("GORACE", "atexit_sleep_ms=0")
 			cache := filepath.Join(t.TempDir(), "native-cache")
 			local := filepath.Join(project, ".agenticlens-config.local.yaml")
-			if err := os.WriteFile(local, []byte(fmt.Sprintf("agenticlens:\n  install_root: %q\n", cache)), 0600); err != nil {
+			if err := os.WriteFile(local, []byte(fmt.Sprintf("agenticlens:\n  install_root: %q\ntelemetry:\n  capture:\n    enabled: true\n    state_dir: %q\n", cache, source)), 0600); err != nil {
 				t.Fatal(err)
 			}
 			entry, err := adaptersconfig.ResolveEntrypoint(project)
@@ -48,7 +49,7 @@ func TestRelocationResumesInterruptedOwnedHookAndPluginBeforeManifest(t *testing
 			if err = os.Symlink(executable, binary); err != nil {
 				t.Fatal(err)
 			}
-			wrapperBody, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "scripts", "agentic-lens-wrapper.sh"))
+			wrapperBody, err := os.ReadFile(relocationManagerExecutable(t))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -195,4 +196,15 @@ func TestRelocationResumesInterruptedOwnedHookAndPluginBeforeManifest(t *testing
 			}
 		})
 	}
+}
+
+func relocationManagerExecutable(t *testing.T) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "agentic-lens")
+	command := exec.Command("go", "build", "-ldflags", "-X agenticlens/internal/domain.Version=v9.8.7", "-o", path, "./cmd/agentic-lens-manager")
+	command.Dir = filepath.Join("..", "..", "..")
+	if output, err := command.CombinedOutput(); err != nil {
+		t.Fatalf("build manager: %v: %s", err, output)
+	}
+	return path
 }

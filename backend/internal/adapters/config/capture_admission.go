@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"agenticlens/internal/domain"
@@ -30,6 +31,16 @@ type CaptureAdmission struct {
 // AcquireCaptureAdmission coordinates the shared and existing local settings.
 // It never creates configuration, registry state or persistent lock artifacts.
 func AcquireCaptureAdmission(ctx context.Context, project string) (*CaptureAdmission, error) {
+	return acquireCaptureAdmission(ctx, project, false)
+}
+
+// AcquireGenerationAdmission preserves manual generation for existing shared-only
+// projects while automatic callbacks require the selected complete local policy.
+func AcquireGenerationAdmission(ctx context.Context, project string) (*CaptureAdmission, error) {
+	return acquireCaptureAdmission(ctx, project, true)
+}
+
+func acquireCaptureAdmission(ctx context.Context, project string, manual bool) (*CaptureAdmission, error) {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 	shared, err := FindConfigFile(project)
@@ -45,15 +56,14 @@ func AcquireCaptureAdmission(ctx context.Context, project string) (*CaptureAdmis
 	}
 	root := filepath.Dir(shared)
 	paths := []string{shared}
-	local := filepath.Join(root, ".agenticlens-config.local.yaml")
-	if info, e := os.Stat(local); e == nil {
-		if !info.Mode().IsRegular() {
-			return nil, fmt.Errorf("local configuration must be a regular file: %s", local)
-		}
-		paths = append(paths, local)
-	} else if !errors.Is(e, os.ErrNotExist) {
-		return nil, e
+	selection, err := SelectConfig(project)
+	if err != nil && !(manual && errors.Is(err, os.ErrNotExist)) {
+		return nil, err
 	}
+	if err == nil {
+		paths = append(paths, selection.LocalPath)
+	}
+
 	sort.Strings(paths)
 	for {
 		if err := ctx.Err(); err != nil {
@@ -114,6 +124,10 @@ func (admission *CaptureAdmission) Close() error {
 	return result
 }
 
+func (admission *CaptureAdmission) ResolveGenerationCapture(stateOverride string) (domain.CaptureConfig, error) {
+	return ResolveGenerationCapture(admission.project, stateOverride)
+}
+
 func (admission *CaptureAdmission) ResolveCapture(stateOverride string) (domain.CaptureConfig, error) {
 	return ResolveCapture(admission.project, stateOverride)
 }
@@ -143,69 +157,63 @@ func WriteCaptureConfigUpdateChecked(ctx context.Context, filePath string, updat
 	if err != nil {
 		return err
 	}
+	selection, selectErr := SelectConfig(admission.project)
+	if selectErr != nil {
+		return selectErr
+	}
+	wanted, e := os.Lstat(path)
+	if e != nil {
+		return e
+	}
+	selected, e := os.Lstat(selection.LocalPath)
+	if e != nil {
+		return e
+	}
+	if !os.SameFile(wanted, selected) {
+		return errors.New("capture state maintenance must target the selected local configuration")
+	}
+	original, e := os.ReadFile(selection.LocalPath)
+	if e != nil {
+		return e
+	}
+	if !bytes.Equal(original, update.Original) {
+		return errors.New("configuration changed after preview; retry without overwriting the newer file")
+	}
 	var target *captureConfigLock
-	before, after := captureReadPolicy(), captureReadPolicy()
-	shared, err := FindConfigFile(admission.project)
-	if err != nil {
-		return err
-	}
-	for _, name := range []string{shared, filepath.Join(admission.project, ".agenticlens-config.local.yaml")} {
-		data, e := os.ReadFile(name)
-		if errors.Is(e, os.ErrNotExist) {
-			continue
-		}
+	for _, item := range admission.files {
+		info, e := item.lock.Stat()
 		if e != nil {
 			return e
 		}
-		next := data
-		info, e := os.Lstat(name)
-		if e != nil {
-			return e
-		}
-		wanted, e := os.Lstat(path)
-		if e != nil {
-			return e
-		}
-		isTarget := os.SameFile(info, wanted)
-		value, present, valueErr := captureStateValue(data)
-		if valueErr != nil && !isTarget {
-			return valueErr
-		}
-		if present {
-			before.StateDir = value
-		}
-		if isTarget {
-			if !bytes.Equal(data, update.Original) {
-				return errors.New("configuration changed after preview; retry without overwriting the newer file")
-			}
-			next = update.Data
-			for _, item := range admission.files {
-				lockedInfo, e := item.lock.Stat()
-				if e != nil {
-					return e
-				}
-				if os.SameFile(lockedInfo, wanted) {
-					target = item.lock
-					break
-				}
-			}
-		}
-		value, present, valueErr = captureStateValue(next)
-		if valueErr != nil {
-			return valueErr
-		}
-		if present {
-			after.StateDir = value
+		if os.SameFile(info, wanted) {
+			target = item.lock
+			break
 		}
 	}
-	if err := after.Validate(); err != nil {
-		return err
+	previous, _, e := captureStateValue(original)
+	if e != nil {
+		return e
+	}
+	next, _, e := captureStateValue(update.Data)
+	if e != nil {
+		return e
+	}
+	origin := filepath.Dir(selection.LocalPath)
+	if strings.TrimSpace(previous) != "" {
+		previous, e = ResolveCaptureStatePath(origin, previous)
+		if e != nil {
+			return e
+		}
+	}
+	next, e = ResolveCaptureStatePath(origin, next)
+	if e != nil {
+		return e
 	}
 	if target == nil {
 		return errors.New("configuration update target does not belong to the admitted project")
 	}
 	if check != nil {
-		if err = check(CaptureConfigChange{admission.project, before.StateDir, after.StateDir}); err != nil {
+		if err = check(CaptureConfigChange{admission.project, previous, next}); err != nil {
 			return err
 		}
 	}

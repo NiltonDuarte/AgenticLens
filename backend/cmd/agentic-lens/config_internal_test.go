@@ -73,34 +73,40 @@ func TestCaptureConfigUpdatePreviewAndApplyPreserveLocalSettings(t *testing.T) {
 	root := t.TempDir()
 	path := filepath.Join(root, ".agenticlens-config.yaml")
 	localPath := filepath.Join(root, ".agenticlens-config.local.yaml")
-	shared := []byte("# Keep project policy\nproject_name: Example\ncustom_policy: retained\n")
-	local := []byte("telemetry:\n  capture:\n    state_dir: private-local-state\n")
+	shared := []byte("project_name: Example\n")
+	local := []byte("# Keep local policy\ntelemetry:\n  capture:\n    enabled: false\n    state_dir: private-local-state\n")
 	if err := os.WriteFile(path, shared, 0640); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(localPath, local, 0600); err != nil {
 		t.Fatal(err)
 	}
-	if err := runCaptureConfigUpdate(path, "", true); err != nil {
+	if err := runCaptureConfigUpdate(path, "replacement-local-state", true); err != nil {
 		t.Fatal(err)
 	}
-	original, err := os.ReadFile(path)
-	if err != nil || string(original) != string(shared) {
-		t.Fatalf("dry run wrote config: %v", err)
+	if string(readInternalConfig(t, path)) != string(shared) || string(readInternalConfig(t, localPath)) != string(local) {
+		t.Fatal("preview changed selected files")
 	}
-	if err := runCaptureConfigUpdate(path, "", false); err != nil {
+	if err := runCaptureConfigUpdate(path, "replacement-local-state", false); err != nil {
 		t.Fatal(err)
 	}
-	changed, err := os.ReadFile(path)
-	if err != nil || !strings.Contains(string(changed), "state_dir: ~/.agenticlens/state") || !strings.Contains(string(changed), "custom_policy: retained") {
-		t.Fatalf("unexpected update %s %v", changed, err)
+	changed := string(readInternalConfig(t, localPath))
+	if !strings.Contains(changed, "state_dir: replacement-local-state") || !strings.Contains(changed, "enabled: false") || !strings.Contains(changed, "Keep local policy") {
+		t.Fatalf("local settings changed: %s", changed)
 	}
-	currentLocal, err := os.ReadFile(localPath)
-	if err != nil || string(currentLocal) != string(local) {
-		t.Fatalf("local config changed: %v", err)
+	if string(readInternalConfig(t, path)) != string(shared) {
+		t.Fatal("state-only update changed shared policy")
 	}
 	entries, err := os.ReadDir(root)
 	if err != nil || len(entries) != 2 {
-		t.Fatalf("update leaked artifacts: %v %v", entries, err)
+		t.Fatalf("update artifacts: %v %v", entries, err)
 	}
+}
+func readInternalConfig(t *testing.T, path string) []byte {
+	t.Helper()
+	body, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return body
 }

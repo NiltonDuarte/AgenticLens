@@ -12,10 +12,11 @@ type LiveAnomalyRuleName string
 
 // Canonical live anomaly rule names.
 const (
-	RuleConsecutiveToolErrors  LiveAnomalyRuleName = "ConsecutiveToolErrors"
-	RuleContextCeilingApproach LiveAnomalyRuleName = "ContextCeilingApproach"
-	RuleTokenVelocityRunaway   LiveAnomalyRuleName = "TokenVelocityRunaway"
-	RuleToolThrashing          LiveAnomalyRuleName = "ToolThrashing"
+	RuleConsecutiveToolErrors   LiveAnomalyRuleName = "ConsecutiveToolErrors"
+	RuleContextCeilingApproach  LiveAnomalyRuleName = "ContextCeilingApproach"
+	RuleTokenVelocityRunaway    LiveAnomalyRuleName = "TokenVelocityRunaway"
+	RuleToolThrashing           LiveAnomalyRuleName = "ToolThrashing"
+	RuleLiveToolHighFailureRate LiveAnomalyRuleName = "ToolHighFailureRate"
 )
 
 // LiveAnomalySeverity defines the severity tier of a live anomaly alert.
@@ -28,22 +29,10 @@ const (
 	LiveSeverityCritical LiveAnomalySeverity = "CRITICAL"
 )
 
-// Default thresholds for live anomaly detection rules.
-const (
-	ConsecutiveToolErrorsStreakWarning        = 3
-	ConsecutiveToolErrorsStreakCritical       = 5
-	ContextCeilingWarningTokens         int64 = 160_000
-	ContextCeilingCriticalTokens        int64 = 200_000
-	TokenVelocityWarningTokens          int64 = 30_000
-	TokenVelocityCriticalTokens         int64 = 60_000
-	TokenVelocityWarningDeltaTokens     int64 = 40_000
-	TokenVelocityCriticalDeltaTokens    int64 = 80_000
-	ToolThrashingMinFailures                  = 3
-	ToolThrashingCriticalFailures             = 5
-)
-
 // LiveAnomalyAlert represents an active health degradation or operational failure alert in a live session.
 type LiveAnomalyAlert struct {
+	ToolName     string              `json:"tool_name,omitempty"`
+	PartID       string              `json:"part_id,omitempty"`
 	SessionID    string              `json:"session_id"`
 	RuleName     LiveAnomalyRuleName `json:"rule_name"`
 	Severity     LiveAnomalySeverity `json:"severity"`
@@ -66,20 +55,14 @@ type LiveAnomalyOptions struct {
 }
 
 // EvaluateConsecutiveToolErrors evaluates the chronological sequence of tool parts in LiveTraceView.
-// It triggers when the count of consecutive tool execution failures reaches or exceeds 3.
+// It uses the explicit warning and critical streak counts.
 // Any successful tool execution immediately resets the consecutive error counter.
-func EvaluateConsecutiveToolErrors(trace *LiveTraceView, streakThresholds ...int) []LiveAnomalyAlert {
-	if trace == nil || len(trace.Messages) == 0 {
+func EvaluateConsecutiveToolErrors(trace *LiveTraceView, warnStreak, critStreak int) []LiveAnomalyAlert {
+	if warnStreak <= 0 || critStreak < warnStreak {
 		return []LiveAnomalyAlert{}
 	}
-
-	warnStreak := ConsecutiveToolErrorsStreakWarning
-	critStreak := ConsecutiveToolErrorsStreakCritical
-	if len(streakThresholds) > 0 && streakThresholds[0] > 0 {
-		warnStreak = streakThresholds[0]
-	}
-	if len(streakThresholds) > 1 && streakThresholds[1] > 0 {
-		critStreak = streakThresholds[1]
+	if trace == nil || len(trace.Messages) == 0 {
+		return []LiveAnomalyAlert{}
 	}
 
 	streak := 0
@@ -143,23 +126,20 @@ func EvaluateConsecutiveToolErrors(trace *LiveTraceView, streakThresholds ...int
 			Message:      msg,
 			Timestamp:    lastFailingTimestamp,
 			TriggerEvent: triggerEvent,
-			Count:        &streakCount,
+			ToolName:     toolName, PartID: lastFailingPart.ID,
+			Count: &streakCount,
 		},
 	}
 }
 
 // EvaluateContextCeilingApproach warns operators when an active session's context token accumulation
-// reaches or exceeds the warning (160,000) or critical (200,000) context ceiling thresholds.
+// reaches or exceeds the explicitly configured warning or critical token ceiling.
 func EvaluateContextCeilingApproach(trace *LiveTraceView, warningTokens int64, criticalTokens int64) []LiveAnomalyAlert {
-	if trace == nil || len(trace.Messages) == 0 {
+	if warningTokens <= 0 || criticalTokens < warningTokens {
 		return []LiveAnomalyAlert{}
 	}
-
-	if warningTokens <= 0 {
-		warningTokens = ContextCeilingWarningTokens
-	}
-	if criticalTokens <= 0 {
-		criticalTokens = ContextCeilingCriticalTokens
+	if trace == nil || len(trace.Messages) == 0 {
+		return []LiveAnomalyAlert{}
 	}
 
 	var peakContext int64
@@ -214,37 +194,13 @@ func EvaluateContextCeilingApproach(trace *LiveTraceView, warningTokens int64, c
 	}
 }
 
-// EvaluateTokenVelocityRunaway detects sudden token consumption surges in a single turn.
-func EvaluateTokenVelocityRunaway(trace *LiveTraceView, warningThreshold int64, criticalThreshold int64, deltaThresholds ...int64) []LiveAnomalyAlert {
-	if trace == nil || len(trace.Messages) == 0 {
+// EvaluateTokenVelocityRunaway detects token usage surges using explicit absolute and context-growth counts.
+func EvaluateTokenVelocityRunaway(trace *LiveTraceView, warningThreshold int64, criticalThreshold int64, warnDeltaThreshold int64, critDeltaThreshold int64) []LiveAnomalyAlert {
+	if warningThreshold <= 0 || criticalThreshold < warningThreshold || warnDeltaThreshold <= 0 || critDeltaThreshold < warnDeltaThreshold {
 		return []LiveAnomalyAlert{}
 	}
-
-	if warningThreshold <= 0 {
-		warningThreshold = TokenVelocityWarningTokens
-	}
-	if criticalThreshold <= 0 {
-		criticalThreshold = TokenVelocityCriticalTokens
-	}
-
-	warnDeltaThreshold := TokenVelocityWarningDeltaTokens
-	if len(deltaThresholds) > 0 && deltaThresholds[0] > 0 {
-		warnDeltaThreshold = deltaThresholds[0]
-	} else {
-		calc := warningThreshold * 4 / 3
-		if calc >= warningThreshold {
-			warnDeltaThreshold = calc
-		}
-	}
-
-	critDeltaThreshold := TokenVelocityCriticalDeltaTokens
-	if len(deltaThresholds) > 1 && deltaThresholds[1] > 0 {
-		critDeltaThreshold = deltaThresholds[1]
-	} else {
-		calc := criticalThreshold * 4 / 3
-		if calc >= criticalThreshold {
-			critDeltaThreshold = calc
-		}
+	if trace == nil || len(trace.Messages) == 0 {
+		return []LiveAnomalyAlert{}
 	}
 
 	var alerts []LiveAnomalyAlert
@@ -291,7 +247,7 @@ func EvaluateTokenVelocityRunaway(trace *LiveTraceView, warningThreshold int64, 
 		}
 
 		if severity != "" {
-			alertMsg := fmt.Sprintf("Abnormally high token velocity of %s tokens consumed in turn %d (threshold: %s tokens).", FormatTokensK(surgingTokens), turnNum, FormatTokensK(thresholdUsed))
+			alertMsg := fmt.Sprintf("Token usage surge of %s tokens consumed in turn %d (threshold: %s tokens).", FormatTokensK(surgingTokens), turnNum, FormatTokensK(thresholdUsed))
 			trigger := fmt.Sprintf("%s (turn %d)", msg.ID, turnNum)
 			if msg.ID == "" {
 				trigger = fmt.Sprintf("turn %d", turnNum)
@@ -318,18 +274,12 @@ func EvaluateTokenVelocityRunaway(trace *LiveTraceView, warningThreshold int64, 
 
 // EvaluateToolThrashing evaluates the sequence of tool calls in LiveTraceView, tracking repeat invocations
 // of the identical tool name where executions fail without intermediate success.
-func EvaluateToolThrashing(trace *LiveTraceView, failureThresholds ...int) []LiveAnomalyAlert {
-	if trace == nil || len(trace.Messages) == 0 {
+func EvaluateToolThrashing(trace *LiveTraceView, minFailures, critFailures int) []LiveAnomalyAlert {
+	if minFailures <= 0 || critFailures < minFailures {
 		return []LiveAnomalyAlert{}
 	}
-
-	minFailures := ToolThrashingMinFailures
-	critFailures := ToolThrashingCriticalFailures
-	if len(failureThresholds) > 0 && failureThresholds[0] > 0 {
-		minFailures = failureThresholds[0]
-	}
-	if len(failureThresholds) > 1 && failureThresholds[1] > 0 {
-		critFailures = failureThresholds[1]
+	if trace == nil || len(trace.Messages) == 0 {
+		return []LiveAnomalyAlert{}
 	}
 
 	var calls []toolCallRecord
@@ -473,6 +423,7 @@ func EvaluateToolThrashing(trace *LiveTraceView, failureThresholds ...int) []Liv
 			Message:      msg,
 			Timestamp:    cand.timestamp,
 			TriggerEvent: trigger,
+			ToolName:     cand.toolName,
 			Count:        &failCount,
 		})
 	}
@@ -522,50 +473,16 @@ func SortLiveAnomalies(alerts []LiveAnomalyAlert) {
 // Safely handles nil tree or nil trace arguments.
 // Returns a deterministically ordered slice sorted primarily by Severity descending,
 // secondarily by RuleName ascending, and tertiary by Timestamp descending.
-func EvaluateLiveAnomalies(tree *LiveSessionTree, trace *LiveTraceView, opts ...LiveAnomalyOptions) []LiveAnomalyAlert {
+func EvaluateLiveAnomalies(tree *LiveSessionTree, trace *LiveTraceView, opts LiveAnomalyOptions) []LiveAnomalyAlert {
 	var collected []LiveAnomalyAlert
 
-	thresholds := DefaultProjectConfig().AnomalyThresholds
-
-	if len(opts) > 0 {
-		opt := opts[0]
-		t := opt.Thresholds
-		if t.ConsecutiveErrorsStreakWarning > 0 {
-			thresholds.ConsecutiveErrorsStreakWarning = t.ConsecutiveErrorsStreakWarning
-		}
-		if t.ConsecutiveErrorsStreakCritical > 0 {
-			thresholds.ConsecutiveErrorsStreakCritical = t.ConsecutiveErrorsStreakCritical
-		}
-		if t.ContextCeilingWarningTokens > 0 {
-			thresholds.ContextCeilingWarningTokens = t.ContextCeilingWarningTokens
-		}
-		if t.ContextCeilingCriticalTokens > 0 {
-			thresholds.ContextCeilingCriticalTokens = t.ContextCeilingCriticalTokens
-		}
-		if t.TokenVelocityWarningTokens > 0 {
-			thresholds.TokenVelocityWarningTokens = t.TokenVelocityWarningTokens
-		}
-		if t.TokenVelocityCriticalTokens > 0 {
-			thresholds.TokenVelocityCriticalTokens = t.TokenVelocityCriticalTokens
-		}
-		if t.TokenVelocityWarningDeltaTokens > 0 {
-			thresholds.TokenVelocityWarningDeltaTokens = t.TokenVelocityWarningDeltaTokens
-		}
-		if t.TokenVelocityCriticalDeltaTokens > 0 {
-			thresholds.TokenVelocityCriticalDeltaTokens = t.TokenVelocityCriticalDeltaTokens
-		}
-		if t.ToolThrashingMinFailures > 0 {
-			thresholds.ToolThrashingMinFailures = t.ToolThrashingMinFailures
-		}
-		if t.ToolThrashingCriticalFailures > 0 {
-			thresholds.ToolThrashingCriticalFailures = t.ToolThrashingCriticalFailures
-		}
-	}
+	thresholds := opts.Thresholds
 
 	if trace != nil {
+		collected = append(collected, EvaluateLiveToolFailureRates(trace, thresholds)...)
 		collected = append(collected, EvaluateConsecutiveToolErrors(trace, thresholds.ConsecutiveErrorsStreakWarning, thresholds.ConsecutiveErrorsStreakCritical)...)
 		collected = append(collected, EvaluateContextCeilingApproach(trace, thresholds.ContextCeilingWarningTokens, thresholds.ContextCeilingCriticalTokens)...)
-		collected = append(collected, EvaluateTokenVelocityRunaway(trace, thresholds.TokenVelocityWarningTokens, thresholds.TokenVelocityCriticalTokens, thresholds.TokenVelocityWarningDeltaTokens, thresholds.TokenVelocityCriticalDeltaTokens)...)
+		collected = append(collected, EvaluateTokenVelocityRunaway(trace, thresholds.TurnUsageWarningTokens, thresholds.TurnUsageCriticalTokens, thresholds.ContextGrowthWarningTokens, thresholds.ContextGrowthCriticalTokens)...)
 		collected = append(collected, EvaluateToolThrashing(trace, thresholds.ToolThrashingMinFailures, thresholds.ToolThrashingCriticalFailures)...)
 	}
 
@@ -601,4 +518,50 @@ func EvaluateLiveAnomalies(tree *LiveSessionTree, trace *LiveTraceView, opts ...
 
 	SortLiveAnomalies(unique)
 	return unique
+}
+
+// EvaluateLiveToolFailureRates uses the same configured rate policy as offline detection.
+func EvaluateLiveToolFailureRates(trace *LiveTraceView, thresholds AnomalyThresholdsConfig) []LiveAnomalyAlert {
+	if trace == nil {
+		return nil
+	}
+	type stats struct {
+		calls, errors      int64
+		lastPart, lastTime string
+	}
+	tools := map[string]*stats{}
+	for _, message := range trace.Messages {
+		for _, part := range message.Parts {
+			if part.Type != "tool" || part.ToolName == nil || *part.ToolName == "" {
+				continue
+			}
+			name := *part.ToolName
+			st := tools[name]
+			if st == nil {
+				st = &stats{}
+				tools[name] = st
+			}
+			st.calls++
+			if part.IsError {
+				st.errors++
+				st.lastPart = part.ID
+				st.lastTime = message.Timestamp
+			}
+		}
+	}
+	var alerts []LiveAnomalyAlert
+	for name, st := range tools {
+		severity, threshold, detected := EvaluateToolFailureRate(st.calls, st.errors, thresholds)
+		if !detected {
+			continue
+		}
+		liveSeverity := LiveSeverityWarning
+		if severity == SeverityCritical {
+			liveSeverity = LiveSeverityCritical
+		}
+		count := st.errors
+		alerts = append(alerts, LiveAnomalyAlert{SessionID: trace.SessionID, RuleName: RuleLiveToolHighFailureRate, Severity: liveSeverity, ToolName: name, PartID: st.lastPart, Message: fmt.Sprintf("Tool '%s' failed %d out of %d calls (threshold: %s).", name, st.errors, st.calls, threshold), Timestamp: st.lastTime, TriggerEvent: st.lastPart, Count: &count})
+	}
+	SortLiveAnomalies(alerts)
+	return alerts
 }

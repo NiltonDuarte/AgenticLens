@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"agenticlens/internal/adapters/capture"
+	adaptersconfig "agenticlens/internal/adapters/config"
 	"agenticlens/internal/domain"
 )
 
@@ -57,7 +58,7 @@ func TestReconcileReplacesCompleteRestoredSnapshotAndPreservesMissingSource(t *t
 	row := registerBound(t, s, store, path, "root", "TEST-100")
 	reconcile := func() capture.ReconcileResult {
 		t.Helper()
-		result, err := s.Reconcile(ctx, "TEST-100", "tester", 20, capture.DefaultByteBudget)
+		result, err := s.Reconcile(ctx, "TEST-100", "tester", 20, fixtureByteBudget, fixtureGenerationPolicy())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -122,7 +123,7 @@ func TestReconcileVerifiesChildSourceAndIsolatesIndependentTickets(t *testing.T)
 	if _, err := s.Register(ctx, domain.CaptureIdentity{Source: domain.SourceCodex, Store: store, SessionID: "unbound"}, unboundPath, "SessionStart"); err != nil {
 		t.Fatal(err)
 	}
-	result, err := s.Reconcile(ctx, "TEST-100", "tester", 20, capture.DefaultByteBudget)
+	result, err := s.Reconcile(ctx, "TEST-100", "tester", 20, fixtureByteBudget, fixtureGenerationPolicy())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -186,7 +187,7 @@ func TestReconcileChargesEachSourceOnceAndContinuesBudgetedWork(t *testing.T) {
 	path := filepath.Join(store, "sessions", "root.jsonl")
 	contents := writeRollout(t, path, "root", "", 10)
 	registerBound(t, s, store, path, "root", "TEST-100")
-	result, err := s.Reconcile(ctx, "TEST-100", "tester", 1, int64(len(contents)))
+	result, err := s.Reconcile(ctx, "TEST-100", "tester", 1, int64(len(contents)), fixtureGenerationPolicy())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -199,7 +200,7 @@ func TestReconcileChargesEachSourceOnceAndContinuesBudgetedWork(t *testing.T) {
 		registerBound(t, s, store, path, id, "TEST-100")
 	}
 	for i := 0; i < 3; i++ {
-		if _, err := s.Reconcile(ctx, "TEST-100", "tester", 1, capture.DefaultByteBudget); err != nil {
+		if _, err := s.Reconcile(ctx, "TEST-100", "tester", 1, fixtureByteBudget, fixtureGenerationPolicy()); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -225,7 +226,7 @@ func TestReconcileRejectsCanonicalIdentityCollisionAcrossStores(t *testing.T) {
 		writeRollout(t, path, "same-session", "", tokens)
 		registerBound(t, s, store, path, "same-session", "TEST-100")
 	}
-	if result, err := s.Reconcile(context.Background(), "TEST-100", "tester", 20, capture.DefaultByteBudget); err == nil {
+	if result, err := s.Reconcile(context.Background(), "TEST-100", "tester", 20, fixtureByteBudget, fixtureGenerationPolicy()); err == nil {
 		t.Fatalf("canonical v5 cannot distinguish these owners: %+v", result.Sessions)
 	}
 }
@@ -240,7 +241,7 @@ func TestReconcilePreservesFactsWhenSourceParsingIsPartial(t *testing.T) {
 	path := filepath.Join(store, "sessions", "root.jsonl")
 	original := writeRollout(t, path, "root", "", 10)
 	registerBound(t, s, store, path, "root", "TEST-100")
-	before, err := s.Reconcile(ctx, "TEST-100", "tester", 10, capture.DefaultByteBudget)
+	before, err := s.Reconcile(ctx, "TEST-100", "tester", 10, fixtureByteBudget, fixtureGenerationPolicy())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -249,7 +250,7 @@ func TestReconcilePreservesFactsWhenSourceParsingIsPartial(t *testing.T) {
 	if err := os.WriteFile(path, partial, 0600); err != nil {
 		t.Fatal(err)
 	}
-	after, err := s.Reconcile(ctx, "TEST-100", "tester", 10, capture.DefaultByteBudget)
+	after, err := s.Reconcile(ctx, "TEST-100", "tester", 10, fixtureByteBudget, fixtureGenerationPolicy())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -274,7 +275,7 @@ func TestReconcileFailedReadsConsumeSharedByteBudget(t *testing.T) {
 		size = int64(len(contents))
 		registerBound(t, s, store, path, id, "TEST-100")
 	}
-	result, err := s.Reconcile(context.Background(), "TEST-100", "tester", 2, size)
+	result, err := s.Reconcile(context.Background(), "TEST-100", "tester", 2, size, fixtureGenerationPolicy())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -313,7 +314,7 @@ func TestReconcileRecoversSourceProvenChildAfterStartWithoutStop(t *testing.T) {
 		t.Fatal(err)
 	}
 	writeRollout(t, filepath.Join(sessions, "child.jsonl"), "actual-source-child", "root", 3)
-	result, err := s.Reconcile(ctx, "TEST-100", "tester", 10, capture.DefaultByteBudget)
+	result, err := s.Reconcile(ctx, "TEST-100", "tester", 10, fixtureByteBudget, fixtureGenerationPolicy())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -364,7 +365,7 @@ func TestReconcileUnassignedRootsDoNotConsumeTicketWorkOrPublishIdentities(t *te
 		}
 		unassigned = append(unassigned, id.SessionID)
 	}
-	result, err := s.Reconcile(ctx, "TEST-100", "tester", 1, int64(len(contents)))
+	result, err := s.Reconcile(ctx, "TEST-100", "tester", 1, int64(len(contents)), fixtureGenerationPolicy())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -393,7 +394,7 @@ func TestReconcileReportsCompletionAfterOwnerCheckpoint(t *testing.T) {
 	writeRollout(t, path, "root", "", 10)
 	registerBound(t, s, store, path, "root", "TEST-100")
 	start := time.Now().UTC()
-	result, err := s.Reconcile(context.Background(), "TEST-100", "tester", 10, capture.DefaultByteBudget)
+	result, err := s.Reconcile(context.Background(), "TEST-100", "tester", 10, fixtureByteBudget, fixtureGenerationPolicy())
 	end := time.Now().UTC()
 	if err != nil {
 		t.Fatal(err)
@@ -435,7 +436,7 @@ func TestQueuedCodexChildRecoveryContinuesPastMalformedAndMismatchedMetadata(t *
 	rootPath := filepath.Join(store, "sessions", "root.jsonl")
 	writeRollout(t, rootPath, "root", "", 10)
 	registerBound(t, s, store, rootPath, "root", "TEST-100")
-	baseline, err := s.Reconcile(ctx, "TEST-100", "tester", 10, capture.DefaultByteBudget)
+	baseline, err := s.Reconcile(ctx, "TEST-100", "tester", 10, fixtureByteBudget, fixtureGenerationPolicy())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -458,7 +459,7 @@ func TestQueuedCodexChildRecoveryContinuesPastMalformedAndMismatchedMetadata(t *
 	recovered := false
 	var latest capture.ReconcileResult
 	for pass := 0; pass < 20; pass++ {
-		latest, err = s.Reconcile(ctx, "TEST-100", "tester", 2, capture.DefaultByteBudget)
+		latest, err = s.Reconcile(ctx, "TEST-100", "tester", 2, fixtureByteBudget, fixtureGenerationPolicy())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -504,7 +505,7 @@ func TestReconcileSchedulerEventuallyRefreshesOwnerWhenFailedMetadataConsumesByt
 		t.Fatal(err)
 	}
 	registerBound(t, s, store, rootPath, "root", "TEST-100")
-	before, err := s.Reconcile(ctx, "TEST-100", "tester", 10, capture.DefaultByteBudget)
+	before, err := s.Reconcile(ctx, "TEST-100", "tester", 10, fixtureByteBudget, fixtureGenerationPolicy())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -527,7 +528,7 @@ func TestReconcileSchedulerEventuallyRefreshesOwnerWhenFailedMetadataConsumesByt
 	}
 	progress := false
 	for pass := 0; pass < 8; pass++ {
-		result, err := s.Reconcile(ctx, "TEST-100", "tester", 2, 1024)
+		result, err := s.Reconcile(ctx, "TEST-100", "tester", 2, 1024, fixtureGenerationPolicy())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -570,7 +571,7 @@ func TestReconcileSchedulerEventuallyDiscoversStartOnlyChildWithPersistentFailed
 			rootPath := filepath.Join(sessions, "root.jsonl")
 			writeRollout(t, rootPath, "root", "", 10)
 			registerBound(t, s, store, rootPath, "root", "TEST-100")
-			if _, err := s.Reconcile(ctx, "TEST-100", "tester", 10, capture.DefaultByteBudget); err != nil {
+			if _, err := s.Reconcile(ctx, "TEST-100", "tester", 10, fixtureByteBudget, fixtureGenerationPolicy()); err != nil {
 				t.Fatal(err)
 			}
 			if withFailedStop {
@@ -588,11 +589,11 @@ func TestReconcileSchedulerEventuallyDiscoversStartOnlyChildWithPersistentFailed
 			}
 			progress := false
 			for pass := 0; pass < 20; pass++ {
-				result, err := s.Reconcile(ctx, "TEST-100", "tester", 2, capture.DefaultByteBudget)
+				result, err := s.Reconcile(ctx, "TEST-100", "tester", 2, fixtureByteBudget, fixtureGenerationPolicy())
 				if err != nil {
 					t.Fatal(err)
 				}
-				if result.SourceAttempts > 2 || result.SourceBytes > capture.DefaultByteBudget {
+				if result.SourceAttempts > 2 || result.SourceBytes > fixtureByteBudget {
 					t.Fatalf("cross-queue progress exceeded its unchanged allowance: %+v", result)
 				}
 				if withFailedStop && result.PendingChildren < 1 {
@@ -655,7 +656,7 @@ func TestReconcileFatalCollisionRetainsCollectionFailureUntilCompletedRecovery(t
 	if err != nil {
 		t.Fatal(err)
 	}
-	baseline, err := s.Reconcile(ctx, "TEST-100", "reviewer", 20, capture.DefaultByteBudget)
+	baseline, err := s.Reconcile(ctx, "TEST-100", "reviewer", 20, fixtureByteBudget, fixtureGenerationPolicy())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -669,7 +670,7 @@ func TestReconcileFatalCollisionRetainsCollectionFailureUntilCompletedRecovery(t
 	secondPath := filepath.Join(secondStore, "sessions", "root.jsonl")
 	writeProjectRollout(secondPath, 30)
 	second := registerBound(t, s, secondStore, secondPath, "root", "TEST-100")
-	result, err := s.Reconcile(ctx, "TEST-100", "reviewer", 20, capture.DefaultByteBudget)
+	result, err := s.Reconcile(ctx, "TEST-100", "reviewer", 20, fixtureByteBudget, fixtureGenerationPolicy())
 	if err == nil || !strings.Contains(err.Error(), "identity collision") {
 		t.Fatalf("collision not reached: %+v %v", result, err)
 	}
@@ -688,14 +689,14 @@ func TestReconcileFatalCollisionRetainsCollectionFailureUntilCompletedRecovery(t
 			selected = r
 		}
 	}
-	page, err := s.ReadDiagnostics(ctx, capture.DiagnosticReadOptions{Current: true, Tickets: []string{"TEST-100"}, ExactOwners: []capture.DiagnosticOwner{{TicketID: "TEST-100", Identity: first.Identity}}, Limit: 18, MaxBytes: capture.DefaultByteBudget})
+	page, err := s.ReadDiagnostics(ctx, capture.DiagnosticReadOptions{Current: true, Tickets: []string{"TEST-100"}, ExactOwners: []capture.DiagnosticOwner{{TicketID: "TEST-100", Identity: first.Identity}}, Limit: 18, MaxBytes: fixtureByteBudget})
 	if err != nil || !page.MetadataComplete || page.More {
 		t.Fatalf("current evidence incomplete: %+v %v", page, err)
 	}
 	h := domain.CaptureVerification([]domain.CaptureRegistration{selected}, page.Records)
 	issues := domain.CaptureAdvisoryIssues(domain.CaptureAdvisoryEvidence{Registrations: []domain.CaptureRegistration{selected}, Diagnostics: page.Records, Publications: []domain.CapturePublicationEvidence{{TicketID: "TEST-100", Available: true, Sessions: baseline.Sessions, PublishedAt: baseline.Cutoff}}, Caller: &first.Identity})
 	t.Logf("current complete=%t more=%t advisory=%v", page.MetadataComplete, page.More, issues)
-	feedback, err := s.SessionFailureFeedback(ctx, first.Identity)
+	feedback, err := s.SessionFailureFeedback(ctx, first.Identity, fixtureByteBudget)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -706,12 +707,12 @@ func TestReconcileFatalCollisionRetainsCollectionFailureUntilCompletedRecovery(t
 	}
 	assertCollection := func(wantFailed bool) {
 		t.Helper()
-		current, e := s.ReadDiagnostics(ctx, capture.DiagnosticReadOptions{Current: true, Tickets: []string{"TEST-100"}, ExactOwners: []capture.DiagnosticOwner{{TicketID: "TEST-100", Identity: first.Identity}}, Limit: 24, MaxBytes: capture.DefaultByteBudget})
+		current, e := s.ReadDiagnostics(ctx, capture.DiagnosticReadOptions{Current: true, Tickets: []string{"TEST-100"}, ExactOwners: []capture.DiagnosticOwner{{TicketID: "TEST-100", Identity: first.Identity}}, Limit: 24, MaxBytes: fixtureByteBudget})
 		if e != nil || !current.MetadataComplete || current.More {
 			t.Fatalf("current collection evidence unavailable: %+v %v", current, e)
 		}
 		f := domain.CaptureCurrentFailures(selected, current.Records)
-		message, e := s.SessionFailureFeedback(ctx, first.Identity)
+		message, e := s.SessionFailureFeedback(ctx, first.Identity, fixtureByteBudget)
 		health := domain.CaptureVerification([]domain.CaptureRegistration{selected}, current.Records)
 		if e != nil || f.Collection != wantFailed || (health.State == "degraded") != wantFailed || strings.Contains(message, "whole-collection reconciliation failed") != wantFailed {
 			t.Fatalf("collection recovery wrong: %+v %+v %q %v", f, health, message, e)
@@ -737,11 +738,11 @@ func TestReconcileFatalCollisionRetainsCollectionFailureUntilCompletedRecovery(t
 	}); e != nil {
 		t.Fatal(e)
 	}
-	if _, e := s.Reconcile(ctx, "TEST-100", "reviewer", 1, 1); e != nil {
+	if _, e := s.Reconcile(ctx, "TEST-100", "reviewer", 1, 1, fixtureGenerationPolicy()); e != nil {
 		t.Fatal(e)
 	}
 	assertCollection(true)
-	recovered, e := s.Reconcile(ctx, "TEST-100", "reviewer", 20, capture.DefaultByteBudget)
+	recovered, e := s.Reconcile(ctx, "TEST-100", "reviewer", 20, fixtureByteBudget, fixtureGenerationPolicy())
 	if e != nil || len(recovered.Sessions) != 1 || recovered.Sessions[0].ID != "root" {
 		t.Fatalf("whole collection repair did not complete: %+v %v", recovered, e)
 	}
@@ -777,14 +778,14 @@ func TestReconcileSuccessfulReadPreservesParentConflictAndNormalPendingRecovery(
 	// Positive control: an unchanged successful read may normalize retained
 	// lifecycle Pending, without changing accepted source facts or registration.
 	normal := registerBound(t, s, store, write("normal", ""), "normal", "TEST-300")
-	original, e := s.Reconcile(ctx, "TEST-300", "reviewer", 20, capture.DefaultByteBudget)
+	original, e := s.Reconcile(ctx, "TEST-300", "reviewer", 20, fixtureByteBudget, fixtureGenerationPolicy())
 	if e != nil {
 		t.Fatal(e)
 	}
 	if _, e = s.Register(ctx, normal.Identity, normal.TranscriptPath, "UserPromptSubmit"); e != nil {
 		t.Fatal(e)
 	}
-	normalRead, e := s.Reconcile(ctx, "TEST-300", "reviewer", 20, capture.DefaultByteBudget)
+	normalRead, e := s.Reconcile(ctx, "TEST-300", "reviewer", 20, fixtureByteBudget, fixtureGenerationPolicy())
 	if e != nil || len(normalRead.Registrations) != 1 || normalRead.Registrations[0].State != domain.CaptureCurrent || normalRead.SourceAttempts < 1 {
 		t.Fatalf("complete unchanged-read control not reached: %+v %v", normalRead, e)
 	}
@@ -796,30 +797,58 @@ func TestReconcileSuccessfulReadPreservesParentConflictAndNormalPendingRecovery(
 	if normalLast.Reconciliation.Attempt != domain.CaptureAttemptCompleted || normalLast.Reconciliation.Owners[0].State != domain.CaptureCurrent || !reflect.DeepEqual(original.Sessions, normalRead.Sessions) {
 		t.Fatalf("safe pending normalization regressed: %+v", normalLast)
 	}
-	child := registerBound(t, s, store, write("child", "parent"), "child", "TEST-200")
-	if _, err = s.Change(ctx, child.Identity, func(r domain.CaptureRegistration) (domain.CaptureRegistration, error) {
-		r.InstallationID = "install"
-		r.BindingInstallationID = "install"
-		return r, nil
-	}); err != nil {
+	// Establish actual inherited ownership, then accept a complete source refresh
+	// naming a different, not-yet-registered parent. Its later explicit binding
+	// can contradict inherited ownership; explicit child choices remain independent.
+	registerBound(t, s, store, write("original-parent", ""), "original-parent", "TEST-200")
+	childPath := write("child", "original-parent")
+	if err = s.QueueChild(ctx, store, childPath, "original-parent"); err != nil {
 		t.Fatal(err)
 	}
-	baseline, err := s.Reconcile(ctx, "TEST-200", "reviewer", 20, capture.DefaultByteBudget)
-	if err != nil || len(baseline.Registrations) != 1 || baseline.Registrations[0].State == domain.CaptureFailed {
+	inherited, err := s.Reconcile(ctx, "TEST-200", "reviewer", 20, fixtureByteBudget, fixtureGenerationPolicy())
+	if err != nil {
+		t.Fatal(err)
+	}
+	findChild := func(owners []domain.CaptureRegistration) domain.CaptureRegistration {
+		t.Helper()
+		for _, owner := range owners {
+			if owner.Identity.SessionID == "child" {
+				return owner
+			}
+		}
+		t.Fatal("source-proven child registration missing")
+		return domain.CaptureRegistration{}
+	}
+	child := findChild(inherited.Registrations)
+	if child.Binding != "source_parent" || child.TicketID != "TEST-200" || child.ParentID != "original-parent" || child.State != domain.CaptureCurrent {
+		t.Fatalf("actual inherited control not reached: %+v", child)
+	}
+	write("child", "parent")
+	if _, err = s.Register(ctx, child.Identity, childPath, "SessionStart"); err != nil {
+		t.Fatal(err)
+	}
+	baseline, err := s.Reconcile(ctx, "TEST-200", "reviewer", 20, fixtureByteBudget, fixtureGenerationPolicy())
+	if err != nil || len(baseline.Registrations) != 2 {
 		t.Fatalf("baseline unavailable: %+v %v", baseline, err)
+	}
+	baselineChild := findChild(baseline.Registrations)
+	if baselineChild.State != domain.CaptureCurrent || baselineChild.Binding != "source_parent" || baselineChild.ParentID != "parent" || len(baselineChild.Snapshot) != 1 || baselineChild.Snapshot[0].ParentID == nil || *baselineChild.Snapshot[0].ParentID != "parent" {
+		t.Fatalf("complete source parent refresh not accepted: %+v", baselineChild)
 	}
 	if err = s.RecordPublication(ctx, "TEST-200", "committed", "metrics.json", "", baseline.Sessions, ""); err != nil {
 		t.Fatal(err)
 	}
-	registerBound(t, s, store, write("parent", ""), "parent", "TEST-100")
-	if _, err = s.Reconcile(ctx, "TEST-100", "reviewer", 20, capture.DefaultByteBudget); err != nil {
+	parent := registerBound(t, s, store, write("parent", ""), "parent", "TEST-100")
+	parentRead, err := s.Reconcile(ctx, "TEST-100", "reviewer", 20, fixtureByteBudget, fixtureGenerationPolicy())
+	if err != nil || len(parentRead.Registrations) != 1 {
 		t.Fatal(err)
 	}
-	result, err := s.Reconcile(ctx, "TEST-200", "reviewer", 20, capture.DefaultByteBudget)
+	result, err := s.Reconcile(ctx, "TEST-200", "reviewer", 20, fixtureByteBudget, fixtureGenerationPolicy())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(result.Registrations) != 1 || result.Registrations[0].State != domain.CaptureFailed || !strings.Contains(result.Registrations[0].Detail, "Conflicting source-proven parent") {
+	resultChild := findChild(result.Registrations)
+	if len(result.Registrations) != 2 || resultChild.State != domain.CaptureFailed || !strings.Contains(resultChild.Detail, "Conflicting source-proven parent") {
 		t.Fatalf("did not reach supported parent conflict: %+v", result)
 	}
 	rows, err := s.List(ctx)
@@ -831,13 +860,19 @@ func TestReconcileSuccessfulReadPreservesParentConflictAndNormalPendingRecovery(
 		if r.Identity == child.Identity {
 			selected = r
 		}
+		if r.Identity == parent.Identity && !reflect.DeepEqual(r, parentRead.Registrations[0]) {
+			t.Fatal("child conflict mutated the independently bound parent")
+		}
 	}
-	page, err := s.ReadDiagnostics(ctx, capture.DiagnosticReadOptions{Current: true, Tickets: []string{"TEST-200"}, ExactOwners: []capture.DiagnosticOwner{{TicketID: "TEST-200", Identity: child.Identity}}, Limit: 24, MaxBytes: capture.DefaultByteBudget})
+	if selected.TicketID != baselineChild.TicketID || selected.Binding != baselineChild.Binding || selected.ParentID != baselineChild.ParentID || !reflect.DeepEqual(selected.Snapshot, baselineChild.Snapshot) {
+		t.Fatal("child conflict changed inherited attribution or accepted facts")
+	}
+	page, err := s.ReadDiagnostics(ctx, capture.DiagnosticReadOptions{Current: true, Tickets: []string{"TEST-200"}, ExactOwners: []capture.DiagnosticOwner{{TicketID: "TEST-200", Identity: child.Identity}}, Limit: 24, MaxBytes: fixtureByteBudget})
 	if err != nil || !page.MetadataComplete || page.More {
 		t.Fatalf("metadata incomplete: %+v %v", page, err)
 	}
 	h := domain.CaptureVerification([]domain.CaptureRegistration{selected}, page.Records)
-	feedback, err := s.SessionFailureFeedback(ctx, child.Identity)
+	feedback, err := s.SessionFailureFeedback(ctx, child.Identity, fixtureByteBudget)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -850,18 +885,141 @@ func TestReconcileSuccessfulReadPreservesParentConflictAndNormalPendingRecovery(
 	if !reflect.DeepEqual(baseline.Sessions, result.Sessions) {
 		t.Fatal("numeric/source facts changed")
 	}
-	if result.SourceAttempts < 1 || selected.RefreshedAt == baseline.Registrations[0].RefreshedAt || selected.SourceFingerprint != baseline.Registrations[0].SourceFingerprint {
+	if result.SourceAttempts < 1 || selected.RefreshedAt == baselineChild.RefreshedAt || selected.SourceFingerprint != baselineChild.SourceFingerprint {
 		t.Fatal("conflict did not follow a successful unchanged read")
 	}
-	if latest.Outcome != "failed" || latest.Reconciliation.Attempt != domain.CaptureAttemptPartial || !strings.Contains(latest.Reconciliation.Owners[0].Detail, "Conflicting source-proven parent") {
+	diagnosticChild := findChild(latest.Reconciliation.Owners)
+	if latest.Outcome != "failed" || latest.Reconciliation.Attempt != domain.CaptureAttemptPartial || !strings.Contains(diagnosticChild.Detail, "Conflicting source-proven parent") {
 		t.Fatalf("post-read validation was normalized or acknowledged: %+v", latest)
 	}
 	if !h.CallbackObserved || !h.BindingAccepted || !h.SourceAccepted || !h.PublicationAccepted {
 		t.Fatalf("historical exchange flags lost: %+v", h)
 	}
 
-	t.Logf("result state=%s detail=%q; stored state=%s; diagnostic outcome=%s attempt=%s owner state=%s; health=%+v feedback=%q advisory=%v", result.Registrations[0].State, result.Registrations[0].Detail, selected.State, latest.Outcome, latest.Reconciliation.Attempt, latest.Reconciliation.Owners[0].State, h, feedback, issues)
-	if latest.Reconciliation.Attempt == domain.CaptureAttemptCompleted || latest.Reconciliation.Owners[0].State != domain.CaptureFailed || h.State != "degraded" || feedback == "" || len(issues) == 0 {
-		t.Fatalf("parent binding conflict rewritten to successful completion: health=%+v feedback=%q advisory=%v", h, feedback, issues)
+	t.Logf("result state=%s detail=%q; stored state=%s; diagnostic outcome=%s attempt=%s owner state=%s; health=%+v feedback=%q advisory=%v", resultChild.State, resultChild.Detail, selected.State, latest.Outcome, latest.Reconciliation.Attempt, diagnosticChild.State, h, feedback, issues)
+	if latest.Reconciliation.Attempt == domain.CaptureAttemptCompleted || diagnosticChild.State != domain.CaptureFailed || h.State != "degraded" || feedback == "" || len(issues) == 0 {
+		t.Fatalf("inherited parent binding conflict rewritten to successful completion: health=%+v feedback=%q advisory=%v", h, feedback, issues)
+	}
+}
+
+func TestReconcileExplicitChildTicketDoesNotBlockOrReassignParent(t *testing.T) {
+	ctx := context.Background()
+	s := openStore(t, t.TempDir())
+	source := t.TempDir()
+	if err := os.Mkdir(filepath.Join(source, "sessions"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	parentPath := filepath.Join(source, "sessions", "parent.jsonl")
+	childPath := filepath.Join(source, "sessions", "child.jsonl")
+	writeRollout(t, parentPath, "parent", "", 10)
+	writeRollout(t, childPath, "child", "parent", 31)
+	registerBound(t, s, source, parentPath, "parent", "TEST-100")
+	registerBound(t, s, source, childPath, "child", "TEST-200")
+	if err := s.QueueChild(ctx, source, childPath, "parent"); err != nil {
+		t.Fatal(err)
+	}
+	parent, err := s.Reconcile(ctx, "TEST-100", "tester", 20, fixtureByteBudget, fixtureGenerationPolicy())
+	if err != nil {
+		t.Fatalf("explicit child blocked parent: %v", err)
+	}
+	if len(parent.Sessions) != 1 || parent.Sessions[0].ID != "parent" || parent.Sessions[0].Invocations[0].Tokens.Input != 10 {
+		t.Fatalf("child crossed into parent ticket: %+v", parent.Sessions)
+	}
+	child, err := s.Reconcile(ctx, "TEST-200", "tester", 20, fixtureByteBudget, fixtureGenerationPolicy())
+	if err != nil {
+		t.Fatalf("child's own ticket blocked: %v", err)
+	}
+	if len(child.Sessions) != 1 || child.Sessions[0].ID != "child" || child.Sessions[0].ParentID == nil || *child.Sessions[0].ParentID != "parent" || child.Sessions[0].Invocations[0].Tokens.Input != 31 {
+		t.Fatalf("explicit child identity/source ownership lost: %+v", child.Sessions)
+	}
+	if len(child.Registrations) != 1 || child.Registrations[0].State != domain.CaptureCurrent || child.Registrations[0].Binding != "explicit_agent_response" || child.Registrations[0].TicketID != "TEST-200" {
+		t.Fatalf("explicit child choice became a parent conflict: %+v", child.Registrations)
+	}
+	diagnostics, err := s.Diagnostics(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	latest := diagnostics[len(diagnostics)-1]
+	if latest.TicketID != "TEST-200" || latest.Outcome != "accepted" || latest.Reconciliation == nil || latest.Reconciliation.Attempt != domain.CaptureAttemptCompleted || len(latest.Reconciliation.Owners) != 1 || latest.Reconciliation.Owners[0].State != domain.CaptureCurrent {
+		t.Fatalf("explicit child reconciliation did not complete: %+v", latest)
+	}
+	rows, err := s.List(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, row := range rows {
+		if row.Identity.SessionID == "child" && (row.TicketID != "TEST-200" || row.Binding != "explicit_agent_response" || row.ParentID != "parent") {
+			t.Fatalf("explicit child binding rewritten: %+v", row)
+		}
+	}
+	again, err := s.Reconcile(ctx, "TEST-100", "tester", 20, fixtureByteBudget, fixtureGenerationPolicy())
+	if err != nil || len(again.Sessions) != 1 || again.Sessions[0].ID != "parent" {
+		t.Fatalf("settled child work blocked/reassigned repeated parent: %+v %v", again.Sessions, err)
+	}
+}
+
+func TestProjectReconciliationReceivesConfiguredAnomalyPolicy(t *testing.T) {
+	project := t.TempDir()
+	state := filepath.Join(project, "capture-state")
+	data, err := fixtureSharedYAML(t, "ReconcilePolicy", "records")
+	if err != nil {
+		t.Fatal(err)
+	}
+	shared := filepath.Join(project, ".agenticlens-config.yaml")
+	if err := os.WriteFile(shared, data, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.local.yaml"), []byte("telemetry:\n  capture:\n    enabled: true\n    state_dir: capture-state\n    max_sessions: 256\n    max_source_bytes: 67108864\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := adaptersconfig.LoadShared(project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.AnomalyThresholds.ErrorRateMinCalls = 3
+	cfg.AnomalyThresholds.ErrorRateThreshold = .40
+	cfg.AnomalyThresholds.ErrorRateCriticalThreshold = .80
+	cfg.AnomalyThresholds.ConsecutiveErrorsStreakWarning = 2
+	cfg.AnomalyThresholds.ConsecutiveErrorsStreakCritical = 2
+	data, err = adaptersconfig.GenerateConfigYAML(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(shared, data, 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	home := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(home, "sessions"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(home, "sessions", "source.jsonl")
+	source := writeRollout(t, path, "policy-owner", "", 5)
+	source = []byte(strings.Replace(string(source), `"payload":{"id":`, fmt.Sprintf(`"payload":{"cwd":%q,"id":`, project), 1))
+	for i, exit := range []int{1, 1, 0} {
+		source = append(source, []byte(fmt.Sprintf(`{"timestamp":"2026-01-01T00:00:0%dZ","type":"event_msg","payload":{"type":"exec_command_end","call_id":"call-%d","turn_id":"turn-one","exit_code":%d}}`+"\n", i+3, i, exit))...)
+	}
+	if err := os.WriteFile(path, source, 0600); err != nil {
+		t.Fatal(err)
+	}
+	registry, err := capture.OpenProjectContext(context.Background(), state, project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer registry.Close()
+	registerBound(t, registry, home, path, "policy-owner", "TEST-100")
+	result, err := registry.Reconcile(context.Background(), "TEST-100", "tester", 10, fixtureByteBudget, domain.GenerationPolicy{Skills: true, Delegations: true, Anomalies: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Sessions) != 1 || result.Sessions[0].Anomalies == nil {
+		t.Fatalf("configured analysis was not recorded: %+v", result)
+	}
+	found := false
+	for _, a := range result.Sessions[0].Anomalies {
+		found = found || (a.RuleID == domain.RuleToolRetryStreak && a.Severity == domain.SeverityCritical && a.Context.Count != nil && *a.Context.Count == 2)
+	}
+	if !found {
+		t.Fatalf("reconciliation lost configured two-error critical rule: %+v", result.Sessions[0].Anomalies)
 	}
 }

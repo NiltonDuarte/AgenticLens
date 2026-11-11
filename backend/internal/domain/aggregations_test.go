@@ -14,7 +14,7 @@ func TestComputeTotals(t *testing.T) {
 	t.Parallel()
 	t.Run("empty invocations", func(t *testing.T) {
 		t.Parallel()
-		res := domain.ComputeTotals(nil)
+		res := domain.ComputeTotals(nil, 200000)
 		if res.Invocations != 0 {
 			t.Errorf("expected 0 invocations, got %d", res.Invocations)
 		}
@@ -46,7 +46,7 @@ func TestComputeTotals(t *testing.T) {
 		}
 		for _, tc := range cases {
 			t.Run(tc.name, func(t *testing.T) {
-				metric := domain.ComputeTotals(tc.invs)
+				metric := domain.ComputeTotals(tc.invs, 200000)
 				if metric.CostUSD != tc.rounded || metric.Invocations != int64(len(tc.invs)) {
 					t.Fatalf("rounded cost/row count=%+v, want %v/%d", metric, tc.rounded, len(tc.invs))
 				}
@@ -92,7 +92,7 @@ func TestComputeTotals(t *testing.T) {
 			},
 		}
 
-		res := domain.ComputeTotals(invs)
+		res := domain.ComputeTotals(invs, 200000)
 		if res.Invocations != 3 {
 			t.Errorf("expected 3 invocation rows, got %d", res.Invocations)
 		}
@@ -127,7 +127,7 @@ func TestComputeWorkflowEfficiency(t *testing.T) {
 				[]domain.ToolFact{}, nil),
 		}
 
-		eff := domain.ComputeWorkflowEfficiency(ledger)
+		eff := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000)
 		if eff.ActiveDurationFormatted != "0m 0s" {
 			t.Errorf("expected '0m 0s', got %q", eff.ActiveDurationFormatted)
 		}
@@ -216,7 +216,7 @@ func TestComputeWorkflowEfficiency(t *testing.T) {
 				}, nil),
 		}
 
-		eff := domain.ComputeWorkflowEfficiency(ledger)
+		eff := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000)
 		if eff.ActiveDurationSeconds != 3900 || eff.ProvisionalSeconds != 720 {
 			t.Fatalf("total/provisional rollup must not double-count: %+v", eff)
 		}
@@ -270,8 +270,8 @@ func TestComputeRoleAndModelMetrics(t *testing.T) {
 				t.Fatalf("model token/cache/health projection changed: %+v", models[0])
 			}
 		}
-		assertModels(t, domain.ComputeModelMetrics(rows))
-		threads := domain.ComputeThreadSummariesWithCeiling([]domain.SessionFact{{ID: "root", Invocations: rows}}, domain.ContextCeilingCriticalTokens)
+		assertModels(t, domain.ComputeModelMetrics(rows, 200000))
+		threads := domain.ComputeThreadSummariesWithCeiling([]domain.SessionFact{{ID: "root", Invocations: rows}}, int64(200000))
 		if len(threads) != 1 || len(threads[0].Roles) != 1 {
 			t.Fatalf("thread projections=%+v", threads)
 		}
@@ -303,7 +303,7 @@ func TestComputeRoleAndModelMetrics(t *testing.T) {
 		},
 	}
 
-	roles := domain.ComputeRoleMetricsWithCeiling(invs, domain.ContextCeilingCriticalTokens)
+	roles := domain.ComputeRoleMetricsWithCeiling(invs, int64(200000))
 	if len(roles) != 2 {
 		t.Fatalf("expected 2 roles, got %d", len(roles))
 	}
@@ -315,7 +315,7 @@ func TestComputeRoleAndModelMetrics(t *testing.T) {
 		t.Errorf("expected second role to be reviewer, got %s", roles[1].Role)
 	}
 
-	models := domain.ComputeModelMetrics(invs)
+	models := domain.ComputeModelMetrics(invs, 200000)
 	if len(models) != 2 {
 		t.Fatalf("expected 2 models, got %d", len(models))
 	}
@@ -355,7 +355,7 @@ func TestComputeThreadSummaries(t *testing.T) {
 		},
 	}
 
-	records := domain.ComputeThreadSummariesWithCeiling(sessions, domain.ContextCeilingCriticalTokens)
+	records := domain.ComputeThreadSummariesWithCeiling(sessions, int64(200000))
 	if len(records) != 1 {
 		t.Fatalf("expected 1 thread record, got %d", len(records))
 	}
@@ -382,7 +382,7 @@ func TestCalculateFleetSummary(t *testing.T) {
 					Tokens: domain.InvocationTokens{Input: 100, Output: 10, CacheRead: 100, PeakContext: 75000},
 				}}}},
 			}
-			ledgers = append(ledgers, domain.DeriveMetricsLedger(facts, domain.DefaultProjectConfig()))
+			ledgers = append(ledgers, domain.DeriveMetricsLedger(facts, testMetricsProjectConfig()))
 		}
 		fleet := domain.CalculateFleetSummary(ledgers)
 		if fleet.TotalCostUSD != 0 || fleet.RoleCosts["coder"] != 0 || fleet.ModelCosts["model-a"] != 0 {
@@ -588,14 +588,14 @@ func TestFilterLedgersByCompletionDate_Ranges(t *testing.T) {
 func TestSortLedgers(t *testing.T) {
 	t.Run("cost precision governs ordering rather than rounded totals", func(t *testing.T) {
 		rows := []domain.AgenticMetricsLedger{
-			{TicketID: ptr("T-A"), UpdatedAt: "2026-01-01", Totals: domain.ComputeTotals([]domain.InvocationFact{{CostUSD: 0.00002}})},
-			{TicketID: ptr("T-Z"), UpdatedAt: "2026-01-02", Totals: domain.ComputeTotals([]domain.InvocationFact{{CostUSD: 0.00001}})},
+			{TicketID: ptr("T-A"), UpdatedAt: "2026-01-01", Totals: domain.ComputeTotals([]domain.InvocationFact{{CostUSD: 0.00002}}, 200000)},
+			{TicketID: ptr("T-Z"), UpdatedAt: "2026-01-02", Totals: domain.ComputeTotals([]domain.InvocationFact{{CostUSD: 0.00001}}, 200000)},
 		}
 		for _, tc := range []struct {
 			ascending     bool
 			first, second string
 		}{{true, "T-Z", "T-A"}, {false, "T-A", "T-Z"}} {
-			got := domain.SortLedgers(rows, domain.SortFieldCost, tc.ascending)
+			got := domain.SortLedgers(rows, domain.SortFieldCost, tc.ascending, testMetricsProjectConfig().Ticket)
 			if *got[0].TicketID != tc.first || *got[1].TicketID != tc.second {
 				t.Fatalf("ascending=%v order=%s,%s", tc.ascending, *got[0].TicketID, *got[1].TicketID)
 			}
@@ -639,56 +639,56 @@ func TestSortLedgers(t *testing.T) {
 	}
 
 	t.Run("sort by cost ascending", func(t *testing.T) {
-		res := domain.SortLedgers(ledgers, domain.SortFieldCost, true)
+		res := domain.SortLedgers(ledgers, domain.SortFieldCost, true, testMetricsProjectConfig().Ticket)
 		if *res[0].TicketID != "T-3" || *res[1].TicketID != "T-1" || *res[2].TicketID != "T-2" {
 			t.Errorf("unexpected sort order: %v, %v, %v", *res[0].TicketID, *res[1].TicketID, *res[2].TicketID)
 		}
 	})
 
 	t.Run("sort by cost descending", func(t *testing.T) {
-		res := domain.SortLedgers(ledgers, domain.SortFieldCost, false)
+		res := domain.SortLedgers(ledgers, domain.SortFieldCost, false, testMetricsProjectConfig().Ticket)
 		if *res[0].TicketID != "T-2" || *res[1].TicketID != "T-1" || *res[2].TicketID != "T-3" {
 			t.Errorf("unexpected sort order: %v, %v, %v", *res[0].TicketID, *res[1].TicketID, *res[2].TicketID)
 		}
 	})
 
 	t.Run("sort by duration ascending", func(t *testing.T) {
-		res := domain.SortLedgers(ledgers, domain.SortFieldDuration, true)
+		res := domain.SortLedgers(ledgers, domain.SortFieldDuration, true, testMetricsProjectConfig().Ticket)
 		if *res[0].TicketID != "T-2" || *res[1].TicketID != "T-1" || *res[2].TicketID != "T-3" {
 			t.Errorf("unexpected sort order: %v, %v, %v", *res[0].TicketID, *res[1].TicketID, *res[2].TicketID)
 		}
 	})
 
 	t.Run("sort by duration descending", func(t *testing.T) {
-		res := domain.SortLedgers(ledgers, domain.SortFieldDuration, false)
+		res := domain.SortLedgers(ledgers, domain.SortFieldDuration, false, testMetricsProjectConfig().Ticket)
 		if *res[0].TicketID != "T-3" || *res[1].TicketID != "T-1" || *res[2].TicketID != "T-2" {
 			t.Errorf("unexpected sort order: %v, %v, %v", *res[0].TicketID, *res[1].TicketID, *res[2].TicketID)
 		}
 	})
 
 	t.Run("sort by invocations ascending", func(t *testing.T) {
-		res := domain.SortLedgers(ledgers, domain.SortFieldInvocations, true)
+		res := domain.SortLedgers(ledgers, domain.SortFieldInvocations, true, testMetricsProjectConfig().Ticket)
 		if *res[0].TicketID != "T-2" || *res[1].TicketID != "T-1" || *res[2].TicketID != "T-3" {
 			t.Errorf("unexpected sort order: %v, %v, %v", *res[0].TicketID, *res[1].TicketID, *res[2].TicketID)
 		}
 	})
 
 	t.Run("sort by invocations descending", func(t *testing.T) {
-		res := domain.SortLedgers(ledgers, domain.SortFieldInvocations, false)
+		res := domain.SortLedgers(ledgers, domain.SortFieldInvocations, false, testMetricsProjectConfig().Ticket)
 		if *res[0].TicketID != "T-3" || *res[1].TicketID != "T-1" || *res[2].TicketID != "T-2" {
 			t.Errorf("unexpected sort order: %v, %v, %v", *res[0].TicketID, *res[1].TicketID, *res[2].TicketID)
 		}
 	})
 
 	t.Run("sort by updated_at ascending", func(t *testing.T) {
-		res := domain.SortLedgers(ledgers, domain.SortFieldUpdatedAt, true)
+		res := domain.SortLedgers(ledgers, domain.SortFieldUpdatedAt, true, testMetricsProjectConfig().Ticket)
 		if *res[0].TicketID != "T-1" || *res[1].TicketID != "T-2" || *res[2].TicketID != "T-3" {
 			t.Errorf("unexpected sort order: %v, %v, %v", *res[0].TicketID, *res[1].TicketID, *res[2].TicketID)
 		}
 	})
 
 	t.Run("sort by updated_at descending", func(t *testing.T) {
-		res := domain.SortLedgers(ledgers, domain.SortFieldUpdatedAt, false)
+		res := domain.SortLedgers(ledgers, domain.SortFieldUpdatedAt, false, testMetricsProjectConfig().Ticket)
 		if *res[0].TicketID != "T-3" || *res[1].TicketID != "T-2" || *res[2].TicketID != "T-1" {
 			t.Errorf("unexpected sort order: %v, %v, %v", *res[0].TicketID, *res[1].TicketID, *res[2].TicketID)
 		}
@@ -696,7 +696,7 @@ func TestSortLedgers(t *testing.T) {
 
 	t.Run("immutability check", func(t *testing.T) {
 		originalFirst := *ledgers[0].TicketID
-		sorted := domain.SortLedgers(ledgers, domain.SortFieldCost, false)
+		sorted := domain.SortLedgers(ledgers, domain.SortFieldCost, false, testMetricsProjectConfig().Ticket)
 		if len(sorted) != len(ledgers) {
 			t.Fatalf("expected %d sorted ledgers, got %d", len(ledgers), len(sorted))
 		}
@@ -759,7 +759,7 @@ func TestBuildComparisonRows(t *testing.T) {
 		},
 	}
 
-	rows := domain.BuildComparisonRows(ledgers)
+	rows := domain.BuildComparisonRows(ledgers, testMetricsProjectConfig().Ticket)
 	if len(rows) != 1 {
 		t.Fatalf("expected 1 row, got %d", len(rows))
 	}
@@ -799,14 +799,14 @@ func TestFleetSummaryAndComparisonEdgeCases(t *testing.T) {
 	})
 
 	t.Run("empty comparison rows", func(t *testing.T) {
-		rows := domain.BuildComparisonRows(nil)
+		rows := domain.BuildComparisonRows(nil, testMetricsProjectConfig().Ticket)
 		if len(rows) != 0 {
 			t.Errorf("expected 0 comparison rows, got %d", len(rows))
 		}
 	})
 
 	t.Run("empty thread summaries", func(t *testing.T) {
-		threads := domain.ComputeThreadSummariesWithCeiling(nil, domain.ContextCeilingCriticalTokens)
+		threads := domain.ComputeThreadSummariesWithCeiling(nil, int64(200000))
 		if len(threads) != 0 {
 			t.Errorf("expected 0 threads, got %d", len(threads))
 		}
@@ -899,7 +899,7 @@ func TestAdversarialDomainAggregations(t *testing.T) {
 						},
 					},
 				}
-				totals := domain.ComputeTotals(inv)
+				totals := domain.ComputeTotals(inv, 200000)
 				if totals.ContextHealth != tc.expectedHealth {
 					t.Errorf("expected health %s for %d tokens, got %s", tc.expectedHealth, tc.peakTokens, totals.ContextHealth)
 				}
@@ -924,7 +924,7 @@ func TestAdversarialDomainAggregations(t *testing.T) {
 			},
 		}
 
-		totals := domain.ComputeTotals(inv)
+		totals := domain.ComputeTotals(inv, 200000)
 		if totals.Invocations != 1 {
 			t.Errorf("expected 1 invocation, got %d", totals.Invocations)
 		}
@@ -1002,12 +1002,12 @@ func TestAdversarialDomainAggregations(t *testing.T) {
 		}
 
 		// Equal observed costs use stable identity ties in either direction.
-		asc := domain.SortLedgers(tied, domain.SortFieldCost, true)
+		asc := domain.SortLedgers(tied, domain.SortFieldCost, true, testMetricsProjectConfig().Ticket)
 		if *asc[0].TicketID != "T-A" || *asc[1].TicketID != "T-B" {
 			t.Errorf("expected tie-breaker to order T-A then T-B, got %s, %s", *asc[0].TicketID, *asc[1].TicketID)
 		}
 
-		desc := domain.SortLedgers(tied, domain.SortFieldCost, false)
+		desc := domain.SortLedgers(tied, domain.SortFieldCost, false, testMetricsProjectConfig().Ticket)
 		if *desc[0].TicketID != "T-A" || *desc[1].TicketID != "T-B" {
 			t.Errorf("expected stable identity tie in descending, got %s, %s", *desc[0].TicketID, *desc[1].TicketID)
 		}
@@ -1019,8 +1019,8 @@ func TestAdversarialDomainAggregations(t *testing.T) {
 				Code: domain.CodeFacts{}, Sessions: sessionFacts(nil,
 					nil, nil),
 			}
-			eff := domain.ComputeWorkflowEfficiency(emptyLedger)
-			tot := domain.ComputeTotals(emptyLedger.InvocationFacts())
+			eff := domain.ComputeWorkflowEfficiencyWithCeiling(emptyLedger, 200000)
+			tot := domain.ComputeTotals(emptyLedger.InvocationFacts(), 200000)
 
 			if tot.Invocations != 0 {
 				t.Errorf("expected 0 invocations, got %d", tot.Invocations)
@@ -1058,7 +1058,7 @@ func TestAdversarialDomainAggregations(t *testing.T) {
 					ProdLinesAdded: 0,
 				},
 			}
-			eff := domain.ComputeWorkflowEfficiency(ledger)
+			eff := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000)
 			if eff.TestToProductionRatio.Ratio != "50:0" {
 				t.Errorf("expected 50:0, got %s", eff.TestToProductionRatio.Ratio)
 			}
@@ -1071,7 +1071,7 @@ func TestAdversarialDomainAggregations(t *testing.T) {
 					ProdLinesAdded: 50,
 				},
 			}
-			eff := domain.ComputeWorkflowEfficiency(ledger)
+			eff := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000)
 			if eff.TestToProductionRatio.Ratio != "0.0:1" {
 				t.Errorf("expected 0.0:1, got %s", eff.TestToProductionRatio.Ratio)
 			}
@@ -1102,7 +1102,7 @@ func TestAdversarialDomainAggregations(t *testing.T) {
 				},
 			}, nil, nil),
 			}
-			eff := domain.ComputeWorkflowEfficiency(ledger)
+			eff := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000)
 			if eff.ContextWindowHealth.Status != domain.ContextHealthBloated {
 				t.Errorf("expected BLOATED, got %s", eff.ContextWindowHealth.Status)
 			}
@@ -1127,7 +1127,7 @@ func TestAdversarialDomainAggregations(t *testing.T) {
 				},
 			}, nil, nil),
 			}
-			eff := domain.ComputeWorkflowEfficiency(ledger)
+			eff := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000)
 			if eff.ContextWindowHealth.Status != domain.ContextHealthCritical {
 				t.Errorf("expected CRITICAL, got %s", eff.ContextWindowHealth.Status)
 			}
@@ -1141,138 +1141,42 @@ func TestDeriveMetricsLedger_LeanDelegationsDoNotChangeInvocationTotals(t *testi
 	if metrics.Totals.Invocations != 1 || metrics.Totals.CostSummary.FullyObserved != 1 || metrics.Totals.CostSummary.Partial != 0 || metrics.Totals.CostSummary.CompleteAmount() == nil || *metrics.Totals.CostSummary.CompleteAmount() != 1 {
 		t.Fatalf("delegations changed invocation totals: %+v", metrics.Totals)
 	}
-	empty := domain.DeriveMetricsLedger(domain.AgenticFactLedger{}, domain.DefaultProjectConfig())
+	empty := domain.DeriveMetricsLedger(domain.AgenticFactLedger{}, testMetricsProjectConfig())
 	if empty.Totals.Invocations != 0 || empty.Totals.CacheHitRatePct != 0 || empty.WorkflowEfficiency.ActiveDurationFormatted != "0m 0s" || empty.WorkflowEfficiency.ToolExecution.SuccessRatePct != 100 {
 		t.Fatalf("empty-ledger defaults changed: %+v", empty)
 	}
 }
 
 func TestCompareTicketIDs(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name     string
-		a        string
-		b        string
-		expected int
+	cfg := testMetricsProjectConfig().Ticket
+	for _, tc := range []struct {
+		name, a, b string
+		want       int
 	}{
-		// Identity and empty checks
-		{"identical identifiers", "AL-1", "AL-1", 0},
-		{"identical with whitespace", "  AL-1 ", "AL-1", 0},
-		{"both empty", "", "", 0},
-		{"empty a sorts before non-empty b", "", "AL-1", -1},
-		{"non-empty a sorts after empty b", "AL-1", "", 1},
-
-		// Standard prefix natural progression
-		{"AL-1 vs AL-2", "AL-1", "AL-2", -1},
-		{"AL-2 vs AL-1", "AL-2", "AL-1", 1},
-		{"AL-2 vs AL-9", "AL-2", "AL-9", -1},
-		{"AL-9 vs AL-10", "AL-9", "AL-10", -1},
-		{"AL-10 vs AL-11", "AL-10", "AL-11", -1},
-		{"AL-11 vs AL-22", "AL-11", "AL-22", -1},
-		{"AL-2 vs AL-10", "AL-2", "AL-10", -1},
-		{"AL-10 vs AL-2", "AL-10", "AL-2", 1},
-
-		// Prefix without hyphen
-		{"AL1 vs AL2", "AL1", "AL2", -1},
-		{"AL2 vs AL10", "AL2", "AL10", -1},
-		{"AL10 vs AL1", "AL10", "AL1", 1},
-
-		// Prefix with underscore
-		{"AL_1 vs AL_2", "AL_1", "AL_2", -1},
-		{"AL_2 vs AL_10", "AL_2", "AL_10", -1},
-
-		// Mixed distinct prefixes
-		{"AL-10 vs GEN-1", "AL-10", "GEN-1", -1},
-		{"GEN-1 vs GEN-2", "GEN-1", "GEN-2", -1},
-		{"GEN-2 vs PO-1", "GEN-2", "PO-1", -1},
-		{"PO-1 vs AL-10", "PO-1", "AL-10", 1},
-
-		// Case insensitivity
-		{"al-2 vs AL-10", "al-2", "AL-10", -1},
-		{"AL-2 vs al-10", "AL-2", "al-10", -1},
-		{"al-10 vs AL-2", "al-10", "AL-2", 1},
-
-		// Leading zeroes tie-breaking
-		{"AL-1 vs AL-01", "AL-1", "AL-01", 1},
-		{"AL-01 vs AL-1", "AL-01", "AL-1", -1},
-
-		// Conforming vs non-conforming
-		{"conforming AL-1 sorts before non-conforming AL-", "AL-1", "AL-", -1},
-		{"non-conforming AL- sorts after conforming AL-1", "AL-", "AL-1", 1},
-		{"conforming AL-1 sorts before ticket-xyz", "AL-1", "ticket-xyz", -1},
-		{"ticket-xyz sorts after conforming AL-1", "ticket-xyz", "AL-1", 1},
-		{"conforming AL-2 sorts before UNKNOWN", "AL-2", "UNKNOWN", -1},
-		{"UNKNOWN sorts after conforming AL-2", "UNKNOWN", "AL-2", 1},
-		{"conforming AL-1 sorts before purely numeric 123", "AL-1", "123", -1},
-		{"purely numeric 123 sorts after conforming AL-1", "123", "AL-1", 1},
-
-		// Missing numbers / prefix-only (neither conforms)
-		{"missing numbers lex order", "AL-", "GEN-", -1},
-		{"missing numbers without hyphen", "AL", "AL-1", 1},
-
-		// Purely numeric strings (neither conforms, fallback to lexicographical)
-		{"purely numeric lex order", "123", "456", -1},
-		{"purely numeric lex order reverse", "456", "123", 1},
-		{"purely numeric lex order unequal length", "100", "20", -1},
-
-		// Leading zeroes variations
-		{"multiple leading zeroes AL-001 vs AL-01", "AL-001", "AL-01", -1},
-		{"leading zeroes AL-02 vs AL-10", "AL-02", "AL-10", -1},
-		{"leading zeroes AL-009 vs AL-1", "AL-009", "AL-1", 1},
-		{"leading zeroes AL-00 vs AL-0", "AL-00", "AL-0", 1},
-		{"leading zeroes AL-0 vs AL-00", "AL-0", "AL-00", -1},
-
-		// Mixed case variations
-		{"mixed case al-10 vs AL-2", "al-10", "AL-2", 1},
-		{"mixed case AL-2 vs al-10", "AL-2", "al-10", -1},
-		{"mixed case Al-100 vs aL-99", "Al-100", "aL-99", 1},
-		{"identical numbers different case al-1 vs AL-1", "al-1", "AL-1", 1},
-		{"identical numbers different case AL-1 vs al-1", "AL-1", "al-1", -1},
-
-		// Delimiter variations
-		{"delimiter hyphen vs underscore AL-1 vs AL_1", "AL-1", "AL_1", -1},
-		{"delimiter underscore vs hyphen AL_1 vs AL-1", "AL_1", "AL-1", 1},
-		{"mixed delimiters AL-10 vs AL_2", "AL-10", "AL_2", 1},
-		{"mixed delimiters AL_2 vs AL-10", "AL_2", "AL-10", -1},
-		{"non-standard delimiter AL.1 vs AL.2 lex fallback", "AL.1", "AL.2", -1},
-		{"non-standard delimiter AL/1 vs AL/2 lex fallback", "AL/1", "AL/2", -1},
-
-		// Whitespace variations
-		{"whitespace tab and newline \tAL-1\n vs AL-2", "\tAL-1\n", "AL-2", -1},
-		{"whitespace only vs empty", "   ", "", 0},
-		{"empty vs whitespace only", "", "   ", 0},
-		{"whitespace only vs AL-1", "   ", "AL-1", -1},
-		{"AL-1 vs whitespace only", "AL-1", "   ", 1},
-		{"whitespace surrounding AL-2 vs AL-10", "  AL-2  ", "AL-10", -1},
-
-		// Suffix variations
-		{"suffix comparison AL-1-a vs AL-1-b", "AL-1-a", "AL-1-b", -1},
-		{"suffix comparison AL-1-b vs AL-1-a", "AL-1-b", "AL-1-a", 1},
-		{"suffix comparison AL-1-hotfix vs AL-2-hotfix", "AL-1-hotfix", "AL-2-hotfix", -1},
-		{"suffix comparison AL-2-beta vs AL-10-alpha", "AL-2-beta", "AL-10-alpha", -1},
-		{"suffix comparison AL-1 vs AL-1-hotfix", "AL-1", "AL-1-hotfix", -1},
-		{"suffix comparison AL-1-hotfix vs AL-1", "AL-1-hotfix", "AL-1", 1},
-
-		// Large numbers and overflow boundaries
-		{"max int64 sequence AL-9223372036854775807 vs AL-1", "AL-9223372036854775807", "AL-1", 1},
-		{"AL-1 vs max int64 sequence", "AL-1", "AL-9223372036854775807", -1},
-		{"overflowing int64 sequence does not panic", "AL-9999999999999999999999999999999", "AL-1", 1},
-
-		// Neither conforms (lexicographical fallback)
-		{"non-conforming lex order", "abc", "xyz", -1},
-		{"non-conforming lex order reverse", "xyz", "abc", 1},
-	}
-
-	for _, tc := range tests {
-		tc := tc
+		{"identity", "AL-1", "AL-1", 0}, {"numeric", "AL-2", "AL-10", -1}, {"reverse", "AL-10", "AL-2", 1},
+		{"plain", "AL2", "AL10", -1}, {"underscore", "AL_2", "AL_10", -1}, {"mixed separators", "AL-10", "AL_2", 1},
+		{"prefixes", "AL-10", "GEN-1", -1}, {"case-insensitive recognition", "al-2", "AL-10", -1},
+		{"leading zeros", "AL-01", "AL-1", -1}, {"zero text tie", "AL-00", "AL-0", 1}, {"case spelling tie", "AL-1", "al-1", -1},
+		{"huge numbers", "AL-9999999999999999999999999999999", "AL-10000000000000000000000000000000", -1},
+		{"unknown after known", "AL-1", "123", -1}, {"empty unknown after known", "", "AL-1", 1}, {"unknown raw text", "100", "20", -1},
+		{"unknown suffix raw text", "AL-2-beta", "AL-10-alpha", 1}, {"recorded spaces remain", " AL-1", "AL-1", 1},
+		{"unknown case text", "X", "a", -1}, {"unknown codepoint order", "\uE000", "\U00010000", -1},
+	} {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			got := domain.CompareTicketIDs(tc.a, tc.b)
-			if got != tc.expected {
-				t.Errorf("CompareTicketIDs(%q, %q) = %d; expected %d", tc.a, tc.b, got, tc.expected)
+			if got := domain.CompareTicketIDs(tc.a, tc.b, cfg); got != tc.want {
+				t.Errorf("compare %q %q got%d want%d", tc.a, tc.b, got, tc.want)
 			}
 		})
+	}
+	if got := domain.CompareTicketIDs("AL-2", "AL-10"); got != -1 && got != 1 {
+		t.Fatalf("unexpected text comparator result %d", got)
+	}
+	if got := domain.CompareTicketIDs("AL-2", "AL-10"); got != 1 {
+		t.Fatal("missing grammar invented natural prefix")
+	}
+	cfg.CaseInsensitive = false
+	if got := domain.CompareTicketIDs("al-2", "AL-10", cfg); got != 1 {
+		t.Fatal("case-sensitive unknown prefix was recognized")
 	}
 }
 
@@ -1290,7 +1194,7 @@ func TestSortLedgers_TicketID(t *testing.T) {
 	}
 
 	// Ascending sort
-	ascSorted := domain.SortLedgers(input, domain.SortFieldTicketID, true)
+	ascSorted := domain.SortLedgers(input, domain.SortFieldTicketID, true, testMetricsProjectConfig().Ticket)
 	expectedAsc := []string{"AL-1", "AL-2", "AL-10", "AL-22", "GEN-5", "PO-1"}
 	if len(ascSorted) != len(expectedAsc) {
 		t.Fatalf("expected %d ledgers, got %d", len(expectedAsc), len(ascSorted))
@@ -1302,7 +1206,7 @@ func TestSortLedgers_TicketID(t *testing.T) {
 	}
 
 	// Descending sort
-	descSorted := domain.SortLedgers(input, domain.SortFieldTicketID, false)
+	descSorted := domain.SortLedgers(input, domain.SortFieldTicketID, false, testMetricsProjectConfig().Ticket)
 	expectedDesc := []string{"PO-1", "GEN-5", "AL-22", "AL-10", "AL-2", "AL-1"}
 	if len(descSorted) != len(expectedDesc) {
 		t.Fatalf("expected %d ledgers, got %d", len(expectedDesc), len(descSorted))
@@ -1333,40 +1237,32 @@ func TestSortLedgers_TicketID(t *testing.T) {
 			{TicketID: &tid2, UpdatedAt: "2026-10-18T13:00:00Z"},
 		}
 
-		asc := domain.SortLedgers(ledgers, domain.SortFieldTicketID, true)
+		asc := domain.SortLedgers(ledgers, domain.SortFieldTicketID, true, testMetricsProjectConfig().Ticket)
 		if len(asc) != 4 {
 			t.Fatalf("expected 4 ledgers, got %d", len(asc))
 		}
-		// Empty / nil tickets sort first in ascending
-		if asc[0].TicketID != nil && *asc[0].TicketID != "" {
-			t.Errorf("expected first to be nil or empty, got %v", asc[0].TicketID)
+		if *asc[0].TicketID != "AL-2" || *asc[1].TicketID != "AL-10" || asc[2].TicketID != nil || asc[3].TicketID == nil || *asc[3].TicketID != "" {
+			t.Fatalf("recognized IDs / stable unknowns wrong: %+v", asc)
 		}
-		if *asc[2].TicketID != "AL-2" || *asc[3].TicketID != "AL-10" {
-			t.Errorf("expected AL-2 then AL-10 at end of asc, got %v then %v", *asc[2].TicketID, *asc[3].TicketID)
-		}
-
-		desc := domain.SortLedgers(ledgers, domain.SortFieldTicketID, false)
-		if len(desc) != 4 {
-			t.Fatalf("expected 4 ledgers, got %d", len(desc))
-		}
-		if *desc[0].TicketID != "AL-10" || *desc[1].TicketID != "AL-2" {
-			t.Errorf("expected AL-10 then AL-2 at start of desc, got %v then %v", *desc[0].TicketID, *desc[1].TicketID)
+		desc := domain.SortLedgers(ledgers, domain.SortFieldTicketID, false, testMetricsProjectConfig().Ticket)
+		if desc[0].TicketID != nil || desc[1].TicketID == nil || *desc[1].TicketID != "" || *desc[2].TicketID != "AL-10" || *desc[3].TicketID != "AL-2" {
+			t.Fatalf("descending did not reverse strict comparisons/stableties: %+v", desc)
 		}
 	})
 
 	t.Run("empty and nil slices", func(t *testing.T) {
 		t.Parallel()
-		resNil := domain.SortLedgers(nil, domain.SortFieldTicketID, true)
+		resNil := domain.SortLedgers(nil, domain.SortFieldTicketID, true, testMetricsProjectConfig().Ticket)
 		if len(resNil) != 0 {
 			t.Errorf("expected 0 ledgers for nil slice, got %d", len(resNil))
 		}
-		resEmpty := domain.SortLedgers([]domain.AgenticMetricsLedger{}, domain.SortFieldTicketID, false)
+		resEmpty := domain.SortLedgers([]domain.AgenticMetricsLedger{}, domain.SortFieldTicketID, false, testMetricsProjectConfig().Ticket)
 		if len(resEmpty) != 0 {
 			t.Errorf("expected 0 ledgers for empty slice, got %d", len(resEmpty))
 		}
 	})
 
-	t.Run("duplicate ticket ID deterministic tie breaking by updated_at", func(t *testing.T) {
+	t.Run("equal recorded ticket IDs retain input order", func(t *testing.T) {
 		t.Parallel()
 		tid := "AL-1"
 		dups := []domain.AgenticMetricsLedger{
@@ -1374,12 +1270,11 @@ func TestSortLedgers_TicketID(t *testing.T) {
 			{TicketID: &tid, UpdatedAt: "2026-10-18T10:00:00Z"},
 			{TicketID: &tid, UpdatedAt: "2026-10-18T12:00:00Z"},
 		}
-		asc := domain.SortLedgers(dups, domain.SortFieldTicketID, true)
-		if asc[0].UpdatedAt != "2026-10-18T10:00:00Z" ||
-			asc[1].UpdatedAt != "2026-10-18T12:00:00Z" ||
-			asc[2].UpdatedAt != "2026-10-18T14:00:00Z" {
-			t.Errorf("expected tie-break by updated_at asc, got %s, %s, %s",
-				asc[0].UpdatedAt, asc[1].UpdatedAt, asc[2].UpdatedAt)
+		for _, ascending := range []bool{true, false} {
+			got := domain.SortLedgers(dups, domain.SortFieldTicketID, ascending, testMetricsProjectConfig().Ticket)
+			if !reflect.DeepEqual(got, dups) {
+				t.Fatalf("complete ties reordered input ascending=%v: %+v", ascending, got)
+			}
 		}
 	})
 }
@@ -1398,7 +1293,7 @@ func TestWorkflowEfficiency_DynamicSubagents(t *testing.T) {
 		}, nil, nil),
 		}
 
-		eff := domain.ComputeWorkflowEfficiency(ledger)
+		eff := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000)
 		dist := eff.RoleEffortDistributionPct
 
 		if _, hasOrch := dist["orchestrator"]; hasOrch {
@@ -1425,7 +1320,7 @@ func TestWorkflowEfficiency_DynamicSubagents(t *testing.T) {
 		}, nil, nil),
 		}
 
-		eff := domain.ComputeWorkflowEfficiency(ledger)
+		eff := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000)
 		vel := eff.SubagentTurnVelocity
 
 		if vel.AvgTurnsPerInvocation != 6.0 {
@@ -1475,7 +1370,7 @@ func TestWorkflowEfficiency_DynamicSubagents(t *testing.T) {
 		}, nil, nil),
 		}
 
-		eff := domain.ComputeWorkflowEfficiency(ledger)
+		eff := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000)
 		cwh := eff.ContextWindowHealth
 
 		if cwh.SubagentsPeakTokens != 180000 {
@@ -1510,13 +1405,13 @@ func TestWorkflowEfficiency_DynamicSubagents(t *testing.T) {
 		}, nil, nil),
 		}
 
-		eff1 := domain.ComputeWorkflowEfficiency(ledgerCanonicalVsCustom)
+		eff1 := domain.ComputeWorkflowEfficiencyWithCeiling(ledgerCanonicalVsCustom, 200000)
 		if eff1.ContextWindowHealth.SubagentsPeakRole != "advisor" {
 			t.Errorf("expected alphabetical role 'advisor' to win default tie-breaker, got %s", eff1.ContextWindowHealth.SubagentsPeakRole)
 		}
 
 		// Custom order tie-break: custom order slice takes precedence (coder before advisor)
-		eff1Custom := domain.ComputeWorkflowEfficiency(ledgerCanonicalVsCustom, []string{"coder", "advisor"})
+		eff1Custom := domain.ComputeWorkflowEfficiencyWithCeiling(ledgerCanonicalVsCustom, 200000, []string{"coder", "advisor"})
 		if eff1Custom.ContextWindowHealth.SubagentsPeakRole != "coder" {
 			t.Errorf("expected custom role 'coder' to win tie-breaker, got %s", eff1Custom.ContextWindowHealth.SubagentsPeakRole)
 		}
@@ -1542,7 +1437,7 @@ func TestWorkflowEfficiency_DynamicSubagents(t *testing.T) {
 		}, nil, nil),
 		}
 
-		eff2 := domain.ComputeWorkflowEfficiency(ledgerCustomVsCustom)
+		eff2 := domain.ComputeWorkflowEfficiencyWithCeiling(ledgerCustomVsCustom, 200000)
 		if eff2.ContextWindowHealth.SubagentsPeakRole != "advisor" {
 			t.Errorf("expected alphabetical role 'advisor' to win tie-breaker, got %s", eff2.ContextWindowHealth.SubagentsPeakRole)
 		}
@@ -1560,7 +1455,7 @@ func TestWorkflowEfficiency_DynamicSubagents(t *testing.T) {
 		}, nil, nil),
 		}
 
-		eff := domain.ComputeWorkflowEfficiency(ledger)
+		eff := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000)
 		if eff.ContextWindowHealth.SubagentsPeakTokens != 0 {
 			t.Errorf("expected 0 subagent peak tokens, got %d", eff.ContextWindowHealth.SubagentsPeakTokens)
 		}
@@ -1584,7 +1479,7 @@ func TestComputeModelMetrics_DeterministicTieBreaking(t *testing.T) {
 		{Model: "model-top", CostUSD: 5.0},
 	}
 
-	models := domain.ComputeModelMetrics(invs)
+	models := domain.ComputeModelMetrics(invs, 200000)
 	if len(models) != 3 {
 		t.Fatalf("expected 3 models, got %d", len(models))
 	}
@@ -1612,7 +1507,7 @@ func TestComputeRoleMetrics_DynamicOrdering(t *testing.T) {
 	}
 
 	// Default alphabetical ordering when no custom order provided
-	metricsAlpha := domain.ComputeRoleMetricsWithCeiling(invs, domain.ContextCeilingCriticalTokens)
+	metricsAlpha := domain.ComputeRoleMetricsWithCeiling(invs, int64(200000))
 	if len(metricsAlpha) != 6 {
 		t.Fatalf("expected 6 roles, got %d", len(metricsAlpha))
 	}
@@ -1625,7 +1520,7 @@ func TestComputeRoleMetrics_DynamicOrdering(t *testing.T) {
 
 	// Custom order priority followed by alphabetical remainder
 	customOrder := []string{"orchestrator", "planner", "reviewer"}
-	metricsCustom := domain.ComputeRoleMetricsWithCeiling(invs, domain.ContextCeilingCriticalTokens, customOrder)
+	metricsCustom := domain.ComputeRoleMetricsWithCeiling(invs, int64(200000), customOrder)
 	if len(metricsCustom) != 6 {
 		t.Fatalf("expected 6 roles, got %d", len(metricsCustom))
 	}
@@ -1688,7 +1583,7 @@ func TestComputeThreadSummaries_DynamicOrderingAndTieBreaking(t *testing.T) {
 
 	// With custom order prioritizing orchestrator, coder
 	customOrder := []string{"orchestrator", "coder"}
-	records := domain.ComputeThreadSummariesWithCeiling(sessions, domain.ContextCeilingCriticalTokens, customOrder)
+	records := domain.ComputeThreadSummariesWithCeiling(sessions, int64(200000), customOrder)
 	if len(records) != 1 {
 		t.Fatalf("expected 1 thread record, got %d", len(records))
 	}
@@ -1718,7 +1613,7 @@ func TestComputeThreadSummaries_DynamicOrderingAndTieBreaking(t *testing.T) {
 	t.Run("unknown personas retain all per-model thread facts", func(t *testing.T) {
 		sessions[1].Invocations[0].Role = "  "
 		sessions[2].Invocations[0].Role = ""
-		unknownThreads := domain.ComputeThreadSummariesWithCeiling(sessions, domain.ContextCeilingCriticalTokens, customOrder)
+		unknownThreads := domain.ComputeThreadSummariesWithCeiling(sessions, int64(200000), customOrder)
 		if len(unknownThreads) != 1 || len(unknownThreads[0].Roles) != 3 {
 			t.Fatalf("lost unknown thread grouping: %+v", unknownThreads)
 		}
@@ -1736,7 +1631,7 @@ func TestWorkflowEfficiency_AdversarialEdgeCases(t *testing.T) {
 	t.Run("completely empty fact ledger zero division defenses", func(t *testing.T) {
 		t.Parallel()
 		ledger := domain.AgenticFactLedger{}
-		eff := domain.ComputeWorkflowEfficiency(ledger)
+		eff := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000)
 
 		if eff.ContextWindowHealth.SubagentsPeakTokens != 0 {
 			t.Errorf("expected 0 subagent peak tokens, got %d", eff.ContextWindowHealth.SubagentsPeakTokens)
@@ -1765,7 +1660,7 @@ func TestWorkflowEfficiency_AdversarialEdgeCases(t *testing.T) {
 		}, nil, nil),
 		}
 
-		eff := domain.ComputeWorkflowEfficiency(ledger)
+		eff := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000)
 		if len(eff.RoleEffortDistributionPct) != 0 {
 			t.Errorf("expected empty effort distribution when total subagent cost is 0, got %+v", eff.RoleEffortDistributionPct)
 		}
@@ -1786,7 +1681,7 @@ func TestWorkflowEfficiency_AdversarialEdgeCases(t *testing.T) {
 		}, nil, nil),
 		}
 
-		eff := domain.ComputeWorkflowEfficiency(ledger)
+		eff := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000)
 		if eff.SubagentTurnVelocity.AvgTurnsPerInvocation != 0.0 {
 			t.Errorf("expected 0.0 avg turns, got %f", eff.SubagentTurnVelocity.AvgTurnsPerInvocation)
 		}
@@ -1810,13 +1705,13 @@ func TestWorkflowEfficiency_AdversarialEdgeCases(t *testing.T) {
 			{ID: "4", ParentID: &parentID, Invocations: []domain.InvocationFact{{Role: "planner", Tokens: domain.InvocationTokens{PeakContext: 120000}}}},
 		}, nil, nil),
 		}
-		effA := domain.ComputeWorkflowEfficiency(canonicalTiedLedger)
+		effA := domain.ComputeWorkflowEfficiencyWithCeiling(canonicalTiedLedger, 200000)
 		if effA.ContextWindowHealth.SubagentsPeakRole != "coder" {
 			t.Errorf("expected 'coder' to win 4-way alphabetical tie-breaker, got %s", effA.ContextWindowHealth.SubagentsPeakRole)
 		}
 		// With custom order: planner > coder > tester > reviewer
 		customOrderA := []string{"planner", "coder", "tester", "reviewer"}
-		effACustom := domain.ComputeWorkflowEfficiency(canonicalTiedLedger, customOrderA)
+		effACustom := domain.ComputeWorkflowEfficiencyWithCeiling(canonicalTiedLedger, 200000, customOrderA)
 		if effACustom.ContextWindowHealth.SubagentsPeakRole != "planner" {
 			t.Errorf("expected 'planner' to win with custom order, got %s", effACustom.ContextWindowHealth.SubagentsPeakRole)
 		}
@@ -1829,7 +1724,7 @@ func TestWorkflowEfficiency_AdversarialEdgeCases(t *testing.T) {
 			testSession("4", &parentID, "advisor", withTokens(domain.InvocationTokens{PeakContext: 120000})),
 		}, nil, nil),
 		}
-		effB := domain.ComputeWorkflowEfficiency(customTiedLedger)
+		effB := domain.ComputeWorkflowEfficiencyWithCeiling(customTiedLedger, 200000)
 		if effB.ContextWindowHealth.SubagentsPeakRole != "advisor" {
 			t.Errorf("expected 'advisor' to win 4-way custom tie-breaker, got %s", effB.ContextWindowHealth.SubagentsPeakRole)
 		}
@@ -1841,12 +1736,12 @@ func TestWorkflowEfficiency_AdversarialEdgeCases(t *testing.T) {
 			testSession("2", &parentID, "reviewer", withTokens(domain.InvocationTokens{PeakContext: 120000})),
 		}, nil, nil),
 		}
-		effC := domain.ComputeWorkflowEfficiency(mixedTiedLedger)
+		effC := domain.ComputeWorkflowEfficiencyWithCeiling(mixedTiedLedger, 200000)
 		if effC.ContextWindowHealth.SubagentsPeakRole != "advisor" {
 			t.Errorf("expected alphabetical 'advisor' to beat 'reviewer' on default tie-break, got %s", effC.ContextWindowHealth.SubagentsPeakRole)
 		}
 		// With custom order prioritizing reviewer:
-		effCCustom := domain.ComputeWorkflowEfficiency(mixedTiedLedger, []string{"reviewer", "advisor"})
+		effCCustom := domain.ComputeWorkflowEfficiencyWithCeiling(mixedTiedLedger, 200000, []string{"reviewer", "advisor"})
 		if effCCustom.ContextWindowHealth.SubagentsPeakRole != "reviewer" {
 			t.Errorf("expected custom order 'reviewer' to beat 'advisor' on tie-break, got %s", effCCustom.ContextWindowHealth.SubagentsPeakRole)
 		}
@@ -1859,7 +1754,7 @@ func TestWorkflowEfficiency_AdversarialEdgeCases(t *testing.T) {
 		}, nil, nil),
 		}
 
-		eff := domain.ComputeWorkflowEfficiency(ledger)
+		eff := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000)
 		// Excluded from subagent effort distribution:
 		if len(eff.RoleEffortDistributionPct) != 0 {
 			t.Errorf("expected empty effort distribution for root session, got %+v", eff.RoleEffortDistributionPct)
@@ -1887,11 +1782,11 @@ func TestComputeModelMetrics_AdversarialEdgeCases(t *testing.T) {
 
 	t.Run("empty invocations returns empty slice", func(t *testing.T) {
 		t.Parallel()
-		models := domain.ComputeModelMetrics(nil)
+		models := domain.ComputeModelMetrics(nil, 200000)
 		if len(models) != 0 {
 			t.Errorf("expected 0 models for nil invocations, got %d", len(models))
 		}
-		models = domain.ComputeModelMetrics([]domain.InvocationFact{})
+		models = domain.ComputeModelMetrics([]domain.InvocationFact{}, 200000)
 		if len(models) != 0 {
 			t.Errorf("expected 0 models for empty invocations, got %d", len(models))
 		}
@@ -1904,7 +1799,7 @@ func TestComputeModelMetrics_AdversarialEdgeCases(t *testing.T) {
 			{Model: "known-model", CostUSD: 2.0},
 		}
 
-		models := domain.ComputeModelMetrics(invs)
+		models := domain.ComputeModelMetrics(invs, 200000)
 		if len(models) != 2 {
 			t.Fatalf("expected 2 models, got %d", len(models))
 		}
@@ -1925,7 +1820,7 @@ func TestComputeModelMetrics_AdversarialEdgeCases(t *testing.T) {
 			{Model: "model-b", CostUSD: 0.0},
 		}
 
-		models := domain.ComputeModelMetrics(invs)
+		models := domain.ComputeModelMetrics(invs, 200000)
 		expected := []string{"model-a", "model-b", "model-m", "model-z"}
 		for i, exp := range expected {
 			if models[i].Model != exp {
@@ -1940,7 +1835,7 @@ func TestComputeRoleMetrics_AdversarialEdgeCases(t *testing.T) {
 
 	t.Run("empty invocations returns empty slice", func(t *testing.T) {
 		t.Parallel()
-		metrics := domain.ComputeRoleMetricsWithCeiling(nil, domain.ContextCeilingCriticalTokens)
+		metrics := domain.ComputeRoleMetricsWithCeiling(nil, int64(200000))
 		if len(metrics) != 0 {
 			t.Errorf("expected 0 metrics, got %d", len(metrics))
 		}
@@ -1956,7 +1851,7 @@ func TestComputeRoleMetrics_AdversarialEdgeCases(t *testing.T) {
 		}
 
 		// Default alphabetical ordering:
-		metrics := domain.ComputeRoleMetricsWithCeiling(invs, domain.ContextCeilingCriticalTokens)
+		metrics := domain.ComputeRoleMetricsWithCeiling(invs, int64(200000))
 		expected := []domain.AgentRole{"advisor", "coder", "reviewer", "security-auditor"}
 		if len(metrics) != len(expected) {
 			t.Fatalf("expected %d metrics, got %d", len(expected), len(metrics))
@@ -1969,7 +1864,7 @@ func TestComputeRoleMetrics_AdversarialEdgeCases(t *testing.T) {
 
 		// With custom order prioritizing coder and reviewer:
 		customOrder := []string{"coder", "reviewer"}
-		metricsCustom := domain.ComputeRoleMetricsWithCeiling(invs, domain.ContextCeilingCriticalTokens, customOrder)
+		metricsCustom := domain.ComputeRoleMetricsWithCeiling(invs, int64(200000), customOrder)
 		expectedCustom := []domain.AgentRole{"coder", "reviewer", "advisor", "security-auditor"}
 		if len(metricsCustom) != len(expectedCustom) {
 			t.Fatalf("expected %d custom metrics, got %d", len(expectedCustom), len(metricsCustom))
@@ -2019,7 +1914,7 @@ func TestDeriveMetricsLedger_RoleMappings(t *testing.T) {
 			"orchestrator": "orchestrator",
 		}
 
-		cfg := domain.DefaultProjectConfig()
+		cfg := testMetricsProjectConfig()
 		cfg.RoleMappings = customMappings
 		metrics := domain.DeriveMetricsLedger(factLedger, cfg)
 
@@ -2075,7 +1970,7 @@ func TestDeriveMetricsLedger_RoleMappings(t *testing.T) {
 			"custom-qa": "tester",
 		}
 
-		cfg := domain.DefaultProjectConfig()
+		cfg := testMetricsProjectConfig()
 		cfg.RoleMappings = customMappings
 		metrics := domain.DeriveMetricsLedger(factLedger, cfg)
 
@@ -2133,7 +2028,7 @@ func TestDeriveMetricsLedger_RoleOrder(t *testing.T) {
 	}
 
 	t.Run("empty role order defaults strictly to alphabetical sorting", func(t *testing.T) {
-		cfg := domain.DefaultProjectConfig()
+		cfg := testMetricsProjectConfig()
 		metrics := domain.DeriveMetricsLedger(factLedger, cfg)
 
 		roleNames := make([]string, len(metrics.Roles))
@@ -2152,7 +2047,7 @@ func TestDeriveMetricsLedger_RoleOrder(t *testing.T) {
 	})
 
 	t.Run("custom role order prioritizes specified sequence then alphabetical remainder", func(t *testing.T) {
-		cfg := domain.DefaultProjectConfig()
+		cfg := testMetricsProjectConfig()
 		cfg.RoleOrder = []string{"tester", "orchestrator"}
 		metrics := domain.DeriveMetricsLedger(factLedger, cfg)
 
@@ -2187,7 +2082,7 @@ func TestDeriveMetricsLedger_SubagentClassificationUnderRoleMapping(t *testing.T
 		mappings := domain.RoleMappings{
 			"custom-bot": "orchestrator",
 		}
-		cfg := domain.DefaultProjectConfig()
+		cfg := testMetricsProjectConfig()
 		cfg.RoleMappings = mappings
 		metrics := domain.DeriveMetricsLedger(baseLedger, cfg)
 
@@ -2206,7 +2101,7 @@ func TestDeriveMetricsLedger_SubagentClassificationUnderRoleMapping(t *testing.T
 		mappings := domain.RoleMappings{
 			"custom-bot": "coder",
 		}
-		cfg := domain.DefaultProjectConfig()
+		cfg := testMetricsProjectConfig()
 		cfg.RoleMappings = mappings
 		metrics := domain.DeriveMetricsLedger(baseLedger, cfg)
 
@@ -2229,7 +2124,7 @@ func TestDeriveMetricsLedger_SubagentClassificationUnderRoleMapping(t *testing.T
 			"orchestrator": "orchestrator",
 			"build":        "orchestrator",
 		}
-		cfg := domain.DefaultProjectConfig()
+		cfg := testMetricsProjectConfig()
 		cfg.RoleMappings = mappings
 		metrics := domain.DeriveMetricsLedger(baseLedger, cfg)
 
@@ -2315,7 +2210,7 @@ func TestDeriveMetricsLedger_AdversarialDeepImmutabilityAndEdgeCases(t *testing.
 			"custom-qa": "tester",
 		}
 
-		cfg := domain.DefaultProjectConfig()
+		cfg := testMetricsProjectConfig()
 		cfg.RoleMappings = mappings
 		derived := domain.DeriveMetricsLedger(factLedger, cfg)
 
@@ -2386,7 +2281,7 @@ func TestDeriveMetricsLedger_AdversarialDeepImmutabilityAndEdgeCases(t *testing.
 
 		// Case A: completely empty fact ledger
 		emptyLedger := domain.AgenticFactLedger{}
-		derivedEmpty := domain.DeriveMetricsLedger(emptyLedger, domain.DefaultProjectConfig())
+		derivedEmpty := domain.DeriveMetricsLedger(emptyLedger, testMetricsProjectConfig())
 
 		if derivedEmpty.Totals.Invocations != 0 {
 			t.Errorf("expected 0 invocations, got %d", derivedEmpty.Totals.Invocations)
@@ -2441,7 +2336,7 @@ func TestDeriveMetricsLedger_AdversarialDeepImmutabilityAndEdgeCases(t *testing.
 		}
 
 		mappings := domain.RoleMappings{"build": "orchestrator"}
-		cfg := domain.DefaultProjectConfig()
+		cfg := testMetricsProjectConfig()
 		cfg.RoleMappings = mappings
 		derivedZero := domain.DeriveMetricsLedger(zeroInvLedger, cfg)
 
@@ -2475,14 +2370,14 @@ func TestDeriveMetricsLedger_AdversarialDeepImmutabilityAndEdgeCases(t *testing.
 		}
 
 		// Default configuration: with empty RoleMappings, raw roles are preserved
-		cfgDefault := domain.DefaultProjectConfig()
+		cfgDefault := testMetricsProjectConfig()
 		derivedDefault := domain.DeriveMetricsLedger(ledger, cfgDefault)
 		if len(derivedDefault.Roles) != 2 || (derivedDefault.Roles[0].Role != "build" && derivedDefault.Roles[1].Role != "build") {
 			t.Errorf("expected default config to preserve raw roles, got: %+v", derivedDefault.Roles)
 		}
 
 		// Nil mapping: also preserves raw roles
-		cfgNil := domain.DefaultProjectConfig()
+		cfgNil := testMetricsProjectConfig()
 		cfgNil.RoleMappings = nil
 		derivedNil := domain.DeriveMetricsLedger(ledger, cfgNil)
 		if len(derivedNil.Roles) != 2 || (derivedNil.Roles[0].Role != "build" && derivedNil.Roles[1].Role != "build") {
@@ -2490,7 +2385,7 @@ func TestDeriveMetricsLedger_AdversarialDeepImmutabilityAndEdgeCases(t *testing.
 		}
 
 		// Custom mapping overriding default build: maps build to custom-builder
-		cfgOverride := domain.DefaultProjectConfig()
+		cfgOverride := testMetricsProjectConfig()
 		cfgOverride.RoleMappings = domain.RoleMappings{"build": "custom-builder"}
 		derivedOverride := domain.DeriveMetricsLedger(ledger, cfgOverride)
 		if len(derivedOverride.Roles) != 2 || derivedOverride.Roles[1].Role != "custom-builder" {
@@ -2502,7 +2397,7 @@ func TestDeriveMetricsLedger_AdversarialDeepImmutabilityAndEdgeCases(t *testing.
 			{Role: "specialist-agent", CostUSD: 3.0},
 		}, nil, nil),
 		}
-		cfgEmptyMap := domain.DefaultProjectConfig()
+		cfgEmptyMap := testMetricsProjectConfig()
 		cfgEmptyMap.RoleMappings = domain.RoleMappings{}
 		derivedEmptyMap := domain.DeriveMetricsLedger(ledgerWithCustom, cfgEmptyMap)
 		if len(derivedEmptyMap.Roles) != 1 || derivedEmptyMap.Roles[0].Role != "specialist-agent" {
@@ -2577,7 +2472,7 @@ func TestDeriveMetricsLedger_AdversarialDeepImmutabilityAndEdgeCases(t *testing.
 				mappings := domain.RoleMappings{
 					tc.rawRole: string(tc.targetRole),
 				}
-				cfg := domain.DefaultProjectConfig()
+				cfg := testMetricsProjectConfig()
 				cfg.RoleMappings = mappings
 				metrics := domain.DeriveMetricsLedger(factLedger, cfg)
 
@@ -2945,7 +2840,7 @@ func TestSortLedgersByCompletedAt(t *testing.T) {
 			{TicketID: ptr("AL-5"), CompletedAt: nil, UpdatedAt: ""},
 		}
 
-		sorted := domain.SortLedgers(items, domain.SortFieldCompletedAt, false)
+		sorted := domain.SortLedgers(items, domain.SortFieldCompletedAt, false, testMetricsProjectConfig().Ticket)
 		expectedIDs := []string{"AL-2", "AL-4", "AL-1", "AL-3", "AL-5"}
 		for i, id := range expectedIDs {
 			if *sorted[i].TicketID != id {
@@ -2964,7 +2859,7 @@ func TestSortLedgersByCompletedAt(t *testing.T) {
 			{TicketID: ptr("AL-5"), CompletedAt: nil, UpdatedAt: ""},
 		}
 
-		sorted := domain.SortLedgers(items, domain.SortFieldCompletedAt, true)
+		sorted := domain.SortLedgers(items, domain.SortFieldCompletedAt, true, testMetricsProjectConfig().Ticket)
 		expectedIDs := []string{"AL-1", "AL-4", "AL-2", "AL-3", "AL-5"}
 		for i, id := range expectedIDs {
 			if *sorted[i].TicketID != id {
@@ -2981,7 +2876,7 @@ func TestSortLedgersByCompletedAt(t *testing.T) {
 			{TicketID: ptr("AL-1"), CompletedAt: &dMid},
 		}
 
-		sorted := domain.SortLedgers(items, domain.SortFieldCompletedAt, false)
+		sorted := domain.SortLedgers(items, domain.SortFieldCompletedAt, false, testMetricsProjectConfig().Ticket)
 		expectedIDs := []string{"AL-1", "AL-2", "AL-10"}
 		for i, id := range expectedIDs {
 			if *sorted[i].TicketID != id {
@@ -3292,7 +3187,7 @@ func TestSortLedgersByCompletedAt_AdversarialEdgeCases(t *testing.T) {
 		}
 
 		// Descending: non-null AL-1 first, then AL-01, AL-2, AL-10 (natural ticket ID)
-		sortedDesc := domain.SortLedgers(items, domain.SortFieldCompletedAt, false)
+		sortedDesc := domain.SortLedgers(items, domain.SortFieldCompletedAt, false, testMetricsProjectConfig().Ticket)
 		expectedDesc := []string{"AL-1", "AL-01", "AL-2", "AL-10"}
 		for i, exp := range expectedDesc {
 			if *sortedDesc[i].TicketID != exp {
@@ -3301,7 +3196,7 @@ func TestSortLedgersByCompletedAt_AdversarialEdgeCases(t *testing.T) {
 		}
 
 		// Ascending: non-null AL-1 still precedes nulls! Nulls are always last!
-		sortedAsc := domain.SortLedgers(items, domain.SortFieldCompletedAt, true)
+		sortedAsc := domain.SortLedgers(items, domain.SortFieldCompletedAt, true, testMetricsProjectConfig().Ticket)
 		expectedAsc := []string{"AL-1", "AL-01", "AL-2", "AL-10"}
 		for i, exp := range expectedAsc {
 			if *sortedAsc[i].TicketID != exp {
@@ -3318,7 +3213,7 @@ func TestSortLedgersByCompletedAt_AdversarialEdgeCases(t *testing.T) {
 			{TicketID: ptr("LATE-STARTED"), CompletedAt: nil, UpdatedAt: "", StartedAt: &dLate},
 		}
 
-		sortedDesc := domain.SortLedgers(items, domain.SortFieldCompletedAt, false)
+		sortedDesc := domain.SortLedgers(items, domain.SortFieldCompletedAt, false, testMetricsProjectConfig().Ticket)
 		expectedIDs := []string{"EARLY-COMPLETED", "LATE-STARTED", "MID-UPDATED"}
 		for i, exp := range expectedIDs {
 			if *sortedDesc[i].TicketID != exp {
@@ -3334,7 +3229,7 @@ func TestSortLedgersByCompletedAt_AdversarialEdgeCases(t *testing.T) {
 			{TicketID: ptr("AL-2"), CompletedAt: &dMid},
 		}
 
-		sorted := domain.SortLedgers(items, domain.SortFieldCompletedAt, false)
+		sorted := domain.SortLedgers(items, domain.SortFieldCompletedAt, false, testMetricsProjectConfig().Ticket)
 		if *sorted[0].TicketID != "AL-2" || *sorted[1].TicketID != "AL-10" {
 			t.Errorf("expected natural order AL-2 before AL-10, got %s, %s", *sorted[0].TicketID, *sorted[1].TicketID)
 		}
@@ -3347,7 +3242,7 @@ func TestSortLedgersByCompletedAt_AdversarialEdgeCases(t *testing.T) {
 			{TicketID: ptr("AL-2"), CompletedAt: &dLate},
 		}
 
-		_ = domain.SortLedgers(items, domain.SortFieldCompletedAt, false)
+		_ = domain.SortLedgers(items, domain.SortFieldCompletedAt, false, testMetricsProjectConfig().Ticket)
 		if *items[0].TicketID != "AL-1" || *items[1].TicketID != "AL-2" {
 			t.Errorf("original slice was modified!")
 		}
@@ -4032,42 +3927,6 @@ func TestFilterLedgersByTicketTypes_AllAndAliases(t *testing.T) {
 	})
 }
 
-func TestExtractTicketPrefix(t *testing.T) {
-	t.Parallel()
-	cases := []struct {
-		input    string
-		expected string
-	}{
-		{"AL-1", "AL"},
-		{"al-1", "AL"},
-		{"AL-28", "AL"},
-		{"GEN_4", "GEN"},
-		{"gen_4", "GEN"},
-		{"PO-2", "PO"},
-		{"al10", "AL"},
-		{"AL-", "AL"},
-		{"ticket-xyz", "TICKET"},
-		{"ticket_xyz", "TICKET"},
-		{"123-abc", ""},
-		{"123", ""},
-		{"", ""},
-		{"   ", ""},
-		{"UNKNOWN", ""},
-		{"AL.1", ""},
-	}
-
-	for _, tc := range cases {
-		tc := tc
-		t.Run(tc.input, func(t *testing.T) {
-			t.Parallel()
-			got := domain.ExtractTicketPrefix(tc.input)
-			if got != tc.expected {
-				t.Errorf("ExtractTicketPrefix(%q) = %q, expected %q", tc.input, got, tc.expected)
-			}
-		})
-	}
-}
-
 func TestFilterLedgersByPrefixes(t *testing.T) {
 	t.Parallel()
 	al1 := domain.AgenticMetricsLedger{TicketID: ptr("AL-1")}
@@ -4081,7 +3940,7 @@ func TestFilterLedgersByPrefixes(t *testing.T) {
 
 	t.Run("empty ledgers returns empty slice", func(t *testing.T) {
 		t.Parallel()
-		res := domain.FilterLedgersByPrefixes(nil, []string{"AL"})
+		res := domain.FilterLedgersByPrefixes(nil, []string{"AL"}, true)
 		if len(res) != 0 {
 			t.Errorf("expected 0 ledgers, got %d", len(res))
 		}
@@ -4089,31 +3948,29 @@ func TestFilterLedgersByPrefixes(t *testing.T) {
 
 	t.Run("empty prefixes returns copy of all ledgers", func(t *testing.T) {
 		t.Parallel()
-		res := domain.FilterLedgersByPrefixes(allLedgers, nil)
+		res := domain.FilterLedgersByPrefixes(allLedgers, nil, true)
 		if len(res) != len(allLedgers) {
 			t.Fatalf("expected %d ledgers, got %d", len(allLedgers), len(res))
 		}
 	})
 
-	t.Run("prefixes with all or empty string returns all ledgers", func(t *testing.T) {
-		t.Parallel()
-		res1 := domain.FilterLedgersByPrefixes(allLedgers, []string{"all"})
-		if len(res1) != len(allLedgers) {
-			t.Errorf("expected all ledgers for ['all'], got %d", len(res1))
+	t.Run("all is literal and empty selection is unfiltered", func(t *testing.T) {
+		withLiteral := append(append([]domain.AgenticMetricsLedger{}, allLedgers...), domain.AgenticMetricsLedger{TicketID: ptr("all-01")})
+		literal := domain.FilterLedgersByPrefixes(withLiteral, []string{"all"}, true)
+		if len(literal) != 1 || *literal[0].TicketID != "all-01" {
+			t.Fatalf("literal all selected unrelated rows: %+v", literal)
 		}
-		res2 := domain.FilterLedgersByPrefixes(allLedgers, []string{"AL", "all"})
-		if len(res2) != len(allLedgers) {
-			t.Errorf("expected all ledgers when 'all' is included, got %d", len(res2))
+		if got := domain.FilterLedgersByPrefixes(allLedgers, nil, true); len(got) != len(allLedgers) {
+			t.Fatal("empty selection hid recorded IDs")
 		}
-		res3 := domain.FilterLedgersByPrefixes(allLedgers, []string{""})
-		if len(res3) != len(allLedgers) {
-			t.Errorf("expected all ledgers for [''], got %d", len(res3))
+		if got := domain.FilterLedgersByPrefixes(allLedgers, []string{""}, true); len(got) != 0 {
+			t.Fatal("blank prefix fabricated membership")
 		}
 	})
 
 	t.Run("multi-prefix selection", func(t *testing.T) {
 		t.Parallel()
-		res := domain.FilterLedgersByPrefixes(allLedgers, []string{"AL", "GEN"})
+		res := domain.FilterLedgersByPrefixes(allLedgers, []string{"AL", "GEN"}, true)
 		if len(res) != 3 {
 			t.Fatalf("expected 3 ledgers (AL + GEN), got %d", len(res))
 		}
@@ -4127,7 +3984,7 @@ func TestFilterLedgersByPrefixes(t *testing.T) {
 
 	t.Run("case insensitivity", func(t *testing.T) {
 		t.Parallel()
-		res := domain.FilterLedgersByPrefixes(allLedgers, []string{"al", "gen"})
+		res := domain.FilterLedgersByPrefixes(allLedgers, []string{"al", "gen"}, true)
 		if len(res) != 3 {
 			t.Fatalf("expected 3 ledgers, got %d", len(res))
 		}
@@ -4135,7 +3992,7 @@ func TestFilterLedgersByPrefixes(t *testing.T) {
 
 	t.Run("disjoint prefix query returns empty slice", func(t *testing.T) {
 		t.Parallel()
-		res := domain.FilterLedgersByPrefixes(allLedgers, []string{"XYZ"})
+		res := domain.FilterLedgersByPrefixes(allLedgers, []string{"XYZ"}, true)
 		if len(res) != 0 {
 			t.Errorf("expected 0 ledgers for XYZ, got %d", len(res))
 		}
@@ -4150,7 +4007,7 @@ func TestFilterLedgersByPrefixes_AllAndMultiple(t *testing.T) {
 
 	t.Run("multiple prefixes", func(t *testing.T) {
 		t.Parallel()
-		res := domain.FilterLedgersByPrefixes(allLedgers, []string{"AL", "GEN"})
+		res := domain.FilterLedgersByPrefixes(allLedgers, []string{"AL", "GEN"}, true)
 		if len(res) != 2 {
 			t.Errorf("expected 2 ledgers, got %d", len(res))
 		}
@@ -4158,11 +4015,11 @@ func TestFilterLedgersByPrefixes_AllAndMultiple(t *testing.T) {
 
 	t.Run("empty string and all pass through", func(t *testing.T) {
 		t.Parallel()
-		res1 := domain.FilterLedgersByPrefixes(allLedgers, []string{""})
+		res1 := domain.FilterLedgersByPrefixes(allLedgers, nil, true)
 		if len(res1) != 2 {
 			t.Errorf("expected 2 ledgers, got %d", len(res1))
 		}
-		res2 := domain.FilterLedgersByPrefixes(allLedgers, []string{"all"})
+		res2 := domain.FilterLedgersByPrefixes(allLedgers, nil, true)
 		if len(res2) != 2 {
 			t.Errorf("expected 2 ledgers, got %d", len(res2))
 		}
@@ -4202,24 +4059,24 @@ func TestMultiFilter_AdversarialEdgeCases(t *testing.T) {
 		}
 
 		// FilterLedgersByPrefixes with nil and empty slices
-		resNilPrefixes := domain.FilterLedgersByPrefixes(nil, []string{"AL"})
+		resNilPrefixes := domain.FilterLedgersByPrefixes(nil, []string{"AL"}, true)
 		if resNilPrefixes == nil || len(resNilPrefixes) != 0 {
 			t.Errorf("expected non-nil empty slice for nil ledgers, got %+v", resNilPrefixes)
 		}
 
-		resEmptyPrefixLedgers := domain.FilterLedgersByPrefixes([]domain.AgenticMetricsLedger{}, []string{"AL"})
+		resEmptyPrefixLedgers := domain.FilterLedgersByPrefixes([]domain.AgenticMetricsLedger{}, []string{"AL"}, true)
 		if resEmptyPrefixLedgers == nil || len(resEmptyPrefixLedgers) != 0 {
 			t.Errorf("expected non-nil empty slice for empty ledgers, got %+v", resEmptyPrefixLedgers)
 		}
 
-		resEmptyPrefixes := domain.FilterLedgersByPrefixes(sample, []string{})
+		resEmptyPrefixes := domain.FilterLedgersByPrefixes(sample, []string{}, true)
 		if len(resEmptyPrefixes) != 2 {
 			t.Errorf("expected 2 ledgers for empty prefixes, got %d", len(resEmptyPrefixes))
 		}
 
-		resWhitespacePrefixes := domain.FilterLedgersByPrefixes(sample, []string{"   ", "\t", "\n"})
-		if len(resWhitespacePrefixes) != 2 {
-			t.Errorf("expected all ledgers retained for whitespace prefixes, got %d", len(resWhitespacePrefixes))
+		resWhitespacePrefixes := domain.FilterLedgersByPrefixes(sample, []string{"   ", "\t", "\n"}, true)
+		if len(resWhitespacePrefixes) != 0 {
+			t.Errorf("blank prefixes selected rows: %d", len(resWhitespacePrefixes))
 		}
 
 	})
@@ -4249,13 +4106,13 @@ func TestMultiFilter_AdversarialEdgeCases(t *testing.T) {
 		}
 
 		// Querying concrete prefix excludes nil/empty/unparseable IDs
-		resPrefix := domain.FilterLedgersByPrefixes(pathologicalLedgers, []string{"AL"})
+		resPrefix := domain.FilterLedgersByPrefixes(pathologicalLedgers, []string{"AL"}, true)
 		if len(resPrefix) != 1 || *resPrefix[0].TicketID != "AL-1" {
 			t.Fatalf("expected only AL-1 for prefix AL query, got %+v", resPrefix)
 		}
 
 		// Querying all prefixes retains all 6 ledgers
-		resAllPrefix := domain.FilterLedgersByPrefixes(pathologicalLedgers, []string{"all"})
+		resAllPrefix := domain.FilterLedgersByPrefixes(pathologicalLedgers, nil, true)
 		if len(resAllPrefix) != len(pathologicalLedgers) {
 			t.Errorf("expected all 6 ledgers retained for 'all' prefix query, got %d", len(resAllPrefix))
 		}
@@ -4328,41 +4185,6 @@ func TestMultiFilter_AdversarialEdgeCases(t *testing.T) {
 		}
 	})
 
-	t.Run("prefix extraction corner cases", func(t *testing.T) {
-		t.Parallel()
-
-		cases := []struct {
-			id       string
-			expected string
-		}{
-			{"AL-100", "AL"},
-			{"al_200", "AL"},
-			{"GEN-0", "GEN"},
-			{"PO-9999", "PO"},
-			{"PROD_FIX-1", "PROD"},
-			{"FEATURE-42", "FEATURE"},
-			{"al123", "AL"},
-			{"AL-", "AL"},
-			{"AL_", "AL"},
-			{"---", ""},
-			{"___", ""},
-			{"-123", ""},
-			{"_123", ""},
-			{"123-AL", ""},
-			{"123_AL", ""},
-			{"123456", ""},
-			{"", ""},
-			{"   ", ""},
-			{"\t\n", ""},
-		}
-
-		for _, tc := range cases {
-			got := domain.ExtractTicketPrefix(tc.id)
-			if got != tc.expected {
-				t.Errorf("ExtractTicketPrefix(%q) = %q, expected %q", tc.id, got, tc.expected)
-			}
-		}
-	})
 }
 
 func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
@@ -4384,11 +4206,11 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 		}, nil, nil),
 		}
 
-		eff := domain.ComputeWorkflowEfficiency(ledger)
+		eff := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000)
 		if eff.ContextWindowHealth.RootPeakTokens != 60000 {
 			t.Errorf("expected RootPeakTokens 60000, got %d", eff.ContextWindowHealth.RootPeakTokens)
 		}
-		expectedSat := math.Round(60000.0/float64(domain.HealthyCeilingTokens)*1000.0) / 10.0
+		expectedSat := math.Round(60000.0/float64(int64(200000))*1000.0) / 10.0
 		if eff.ContextWindowHealth.RootSaturationPct != expectedSat {
 			t.Errorf("expected RootSaturationPct %f, got %f", expectedSat, eff.ContextWindowHealth.RootSaturationPct)
 		}
@@ -4425,7 +4247,7 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 		}, nil, nil),
 		}
 
-		eff := domain.ComputeWorkflowEfficiency(ledger)
+		eff := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000)
 		if eff.ContextWindowHealth.RootPeakTokens != 75000 {
 			t.Errorf("expected RootPeakTokens 75000, got %d", eff.ContextWindowHealth.RootPeakTokens)
 		}
@@ -4497,7 +4319,7 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 		}, nil, nil),
 		}
 
-		eff := domain.ComputeWorkflowEfficiency(ledger)
+		eff := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000)
 		if eff.ContextWindowHealth.RootPeakTokens != 40000 {
 			t.Errorf("expected RootPeakTokens 40000, got %d", eff.ContextWindowHealth.RootPeakTokens)
 		}
@@ -4531,7 +4353,7 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 		t.Parallel()
 		ledger := domain.AgenticFactLedger{Sessions: sessionFactsWithInvs([]testInvFact{}, nil, nil)}
 
-		eff := domain.ComputeWorkflowEfficiency(ledger)
+		eff := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000)
 		if eff.ContextWindowHealth.RootPeakTokens != 0 {
 			t.Errorf("expected RootPeakTokens 0, got %d", eff.ContextWindowHealth.RootPeakTokens)
 		}
@@ -4604,7 +4426,7 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 		}, nil, nil),
 		}
 
-		eff := domain.ComputeWorkflowEfficiency(ledger)
+		eff := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000)
 
 		// Root coordination metrics must exclusively capture the ParentID == nil invocation
 		if eff.ContextWindowHealth.RootPeakTokens != 35000 {
@@ -4679,7 +4501,7 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 				}, nil, nil),
 				}
 
-				eff := domain.ComputeWorkflowEfficiency(ledger)
+				eff := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000)
 				if eff.ContextWindowHealth.RootPeakTokens != tc.peakContext {
 					t.Errorf("role %q: expected RootPeakTokens %d, got %d", tc.role, tc.peakContext, eff.ContextWindowHealth.RootPeakTokens)
 				}
@@ -4745,7 +4567,7 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 		}, nil, nil),
 		}
 
-		eff := domain.ComputeWorkflowEfficiency(ledger)
+		eff := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000)
 		if eff.ContextWindowHealth.SubagentsPeakTokens != 0 {
 			t.Errorf("expected SubagentsPeakTokens 0, got %d", eff.ContextWindowHealth.SubagentsPeakTokens)
 		}
@@ -4755,7 +4577,7 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 			t.Errorf("expected SubagentsPeakRole 'coder' via default tie-break, got %s", eff.ContextWindowHealth.SubagentsPeakRole)
 		}
 		// When custom role order is supplied, it takes priority:
-		effCustom := domain.ComputeWorkflowEfficiency(ledger, []string{"planner", "coder", "reviewer"})
+		effCustom := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000, []string{"planner", "coder", "reviewer"})
 		if effCustom.ContextWindowHealth.SubagentsPeakRole != "planner" {
 			t.Errorf("expected SubagentsPeakRole 'planner' via custom tie-break, got %s", effCustom.ContextWindowHealth.SubagentsPeakRole)
 		}
@@ -4799,7 +4621,7 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 			}, nil, nil),
 			}
 
-			eff := domain.ComputeWorkflowEfficiency(ledger)
+			eff := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000)
 			if len(eff.RoleEffortDistributionPct) != 0 {
 				t.Errorf("expected empty RoleEffortDistributionPct on 0 subagent cost, got %+v", eff.RoleEffortDistributionPct)
 			}
@@ -4814,7 +4636,7 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 		t.Run("nil invocations slice", func(t *testing.T) {
 			t.Parallel()
 			ledger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, nil)}
-			eff := domain.ComputeWorkflowEfficiency(ledger)
+			eff := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000)
 			if eff.ContextWindowHealth.RootPeakTokens != 0 {
 				t.Errorf("expected RootPeakTokens 0, got %d", eff.ContextWindowHealth.RootPeakTokens)
 			}
@@ -4852,7 +4674,7 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 			}, nil, nil),
 			}
 
-			eff := domain.ComputeWorkflowEfficiency(ledger)
+			eff := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000)
 			// Root peak is 30000 from the ParentID == nil invocation
 			if eff.ContextWindowHealth.RootPeakTokens != 30000 {
 				t.Errorf("expected RootPeakTokens 30000, got %d", eff.ContextWindowHealth.RootPeakTokens)
@@ -4888,7 +4710,7 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 			}, nil, nil),
 			}
 
-			eff := domain.ComputeWorkflowEfficiency(ledger)
+			eff := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000)
 			if eff.ContextWindowHealth.RootPeakTokens != 25000 || eff.SubagentTurnVelocity.AvgTurnsPerInvocation != 6 {
 				t.Fatalf("unknown persona conflated ancestry: %+v", eff)
 			}
@@ -4921,7 +4743,7 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 			}, nil, nil),
 			}
 
-			eff := domain.ComputeWorkflowEfficiency(ledger)
+			eff := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000)
 			if eff.ContextWindowHealth.RootPeakTokens != 68000 {
 				t.Errorf("expected RootPeakTokens 68000, got %d", eff.ContextWindowHealth.RootPeakTokens)
 			}
@@ -4969,7 +4791,7 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 			}, nil, nil),
 			}
 
-			eff := domain.ComputeWorkflowEfficiency(ledger)
+			eff := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000)
 			if eff.ContextWindowHealth.RootPeakTokens != 20000 {
 				t.Errorf("expected RootPeakTokens 20000, got %d", eff.ContextWindowHealth.RootPeakTokens)
 			}
@@ -5020,13 +4842,13 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 				},
 			}, nil, nil),
 			}
-			eff := domain.ComputeWorkflowEfficiency(ledger)
+			eff := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000)
 			// reviewer comes before tester in default alphabetical order
 			if eff.ContextWindowHealth.SubagentsPeakRole != "reviewer" {
 				t.Errorf("expected SubagentsPeakRole 'reviewer' via default alphabetical tie-break, got %s", eff.ContextWindowHealth.SubagentsPeakRole)
 			}
 			// When custom role order is supplied, tester comes before reviewer
-			effCustom := domain.ComputeWorkflowEfficiency(ledger, []string{"tester", "reviewer"})
+			effCustom := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000, []string{"tester", "reviewer"})
 			if effCustom.ContextWindowHealth.SubagentsPeakRole != "tester" {
 				t.Errorf("expected SubagentsPeakRole 'tester' via custom tie-break, got %s", effCustom.ContextWindowHealth.SubagentsPeakRole)
 			}
@@ -5057,7 +4879,7 @@ func TestComputeWorkflowEfficiency_HierarchyDecoupling(t *testing.T) {
 				},
 			}, nil, nil),
 			}
-			eff := domain.ComputeWorkflowEfficiency(ledger)
+			eff := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000)
 			// alpha-agent comes before zebra-agent alphabetically
 			if eff.ContextWindowHealth.SubagentsPeakRole != "alpha-agent" {
 				t.Errorf("expected SubagentsPeakRole 'alpha-agent', got %s", eff.ContextWindowHealth.SubagentsPeakRole)
@@ -5092,7 +4914,7 @@ func TestComputeWorkflowEfficiency_AdversarialStructuralHierarchy(t *testing.T) 
 		}, nil, nil),
 		}
 
-		eff := domain.ComputeWorkflowEfficiency(ledger)
+		eff := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000)
 
 		// Root coordination is strictly ParentID == nil (even though role is coder)
 		if eff.ContextWindowHealth.RootPeakTokens != 120000 {
@@ -5160,7 +4982,7 @@ func TestComputeWorkflowEfficiency_AdversarialStructuralHierarchy(t *testing.T) 
 		}, nil, nil),
 		}
 
-		eff := domain.ComputeWorkflowEfficiency(ledger)
+		eff := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000)
 
 		// Max root peak is 110000
 		if eff.ContextWindowHealth.RootPeakTokens != 110000 {
@@ -5215,7 +5037,7 @@ func TestComputeWorkflowEfficiency_AdversarialStructuralHierarchy(t *testing.T) 
 		}, nil, nil),
 		}
 
-		eff := domain.ComputeWorkflowEfficiency(ledger)
+		eff := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000)
 
 		// Both children are combined under unknown role
 		if eff.ContextWindowHealth.SubagentsPeakTokens != 70000 {
@@ -5257,7 +5079,7 @@ func TestComputeWorkflowEfficiency_AdversarialTieBreaking(t *testing.T) {
 		}
 
 		// Alphabetical default: architect < developer < lead-qa < researcher < reviewer
-		effAlpha := domain.ComputeWorkflowEfficiency(ledger)
+		effAlpha := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000)
 		if effAlpha.ContextWindowHealth.SubagentsPeakTokens != 125000 {
 			t.Errorf("expected SubagentsPeakTokens 125000, got %d", effAlpha.ContextWindowHealth.SubagentsPeakTokens)
 		}
@@ -5266,37 +5088,37 @@ func TestComputeWorkflowEfficiency_AdversarialTieBreaking(t *testing.T) {
 		}
 
 		// Empty custom order slice falls back to alphabetical
-		effEmptyCustom := domain.ComputeWorkflowEfficiency(ledger, []string{})
+		effEmptyCustom := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000, []string{})
 		if effEmptyCustom.ContextWindowHealth.SubagentsPeakRole != "architect" {
 			t.Errorf("expected 'architect' via empty custom order, got %q", effEmptyCustom.ContextWindowHealth.SubagentsPeakRole)
 		}
 
 		// Custom order prioritizing lead-qa
-		effLeadQA := domain.ComputeWorkflowEfficiency(ledger, []string{"lead-qa", "developer"})
+		effLeadQA := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000, []string{"lead-qa", "developer"})
 		if effLeadQA.ContextWindowHealth.SubagentsPeakRole != "lead-qa" {
 			t.Errorf("expected 'lead-qa' via custom order, got %q", effLeadQA.ContextWindowHealth.SubagentsPeakRole)
 		}
 
 		// Custom order prioritizing researcher
-		effResearcher := domain.ComputeWorkflowEfficiency(ledger, []string{"researcher", "architect"})
+		effResearcher := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000, []string{"researcher", "architect"})
 		if effResearcher.ContextWindowHealth.SubagentsPeakRole != "researcher" {
 			t.Errorf("expected 'researcher' via custom order, got %q", effResearcher.ContextWindowHealth.SubagentsPeakRole)
 		}
 
 		// Custom order prioritizing reviewer
-		effReviewer := domain.ComputeWorkflowEfficiency(ledger, []string{"reviewer"})
+		effReviewer := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000, []string{"reviewer"})
 		if effReviewer.ContextWindowHealth.SubagentsPeakRole != "reviewer" {
 			t.Errorf("expected 'reviewer' via custom order, got %q", effReviewer.ContextWindowHealth.SubagentsPeakRole)
 		}
 
 		// Custom order with unlisted/nonexistent roles first, then matching role
-		effUnlisted := domain.ComputeWorkflowEfficiency(ledger, []string{"ghost-agent", "nonexistent", "developer"})
+		effUnlisted := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000, []string{"ghost-agent", "nonexistent", "developer"})
 		if effUnlisted.ContextWindowHealth.SubagentsPeakRole != "developer" {
 			t.Errorf("expected 'developer' via custom order with unlisted prefix, got %q", effUnlisted.ContextWindowHealth.SubagentsPeakRole)
 		}
 
 		// Custom order with ONLY nonexistent roles falls back to full alphabetical
-		effGhostOnly := domain.ComputeWorkflowEfficiency(ledger, []string{"ghost-1", "ghost-2"})
+		effGhostOnly := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000, []string{"ghost-1", "ghost-2"})
 		if effGhostOnly.ContextWindowHealth.SubagentsPeakRole != "architect" {
 			t.Errorf("expected 'architect' fallback when custom order has no matches, got %q", effGhostOnly.ContextWindowHealth.SubagentsPeakRole)
 		}
@@ -5315,7 +5137,7 @@ func TestComputeWorkflowEfficiency_AdversarialTieBreaking(t *testing.T) {
 		}
 
 		// Alphabetical default: coder < tester
-		effAlpha := domain.ComputeWorkflowEfficiency(ledger)
+		effAlpha := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000)
 		if effAlpha.ContextWindowHealth.SubagentsPeakTokens != 90000 {
 			t.Errorf("expected SubagentsPeakTokens 90000, got %d", effAlpha.ContextWindowHealth.SubagentsPeakTokens)
 		}
@@ -5324,7 +5146,7 @@ func TestComputeWorkflowEfficiency_AdversarialTieBreaking(t *testing.T) {
 		}
 
 		// Custom order prioritizing tester over coder
-		effTester := domain.ComputeWorkflowEfficiency(ledger, []string{"tester", "coder"})
+		effTester := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000, []string{"tester", "coder"})
 		if effTester.ContextWindowHealth.SubagentsPeakRole != "tester" {
 			t.Errorf("expected 'tester' via custom order, got %q", effTester.ContextWindowHealth.SubagentsPeakRole)
 		}
@@ -5340,7 +5162,7 @@ func TestComputeWorkflowEfficiency_AdversarialTieBreaking(t *testing.T) {
 		}
 
 		// Alphabetical default: blank < advisor
-		effAlpha := domain.ComputeWorkflowEfficiency(ledger)
+		effAlpha := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000)
 		if effAlpha.ContextWindowHealth.SubagentsPeakTokens != 85000 {
 			t.Errorf("expected SubagentsPeakTokens 85000, got %d", effAlpha.ContextWindowHealth.SubagentsPeakTokens)
 		}
@@ -5349,7 +5171,7 @@ func TestComputeWorkflowEfficiency_AdversarialTieBreaking(t *testing.T) {
 		}
 
 		// Custom order prioritizing advisor
-		effAdvisor := domain.ComputeWorkflowEfficiency(ledger, []string{"advisor", string(domain.AgentRole(""))})
+		effAdvisor := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000, []string{"advisor", string(domain.AgentRole(""))})
 		if effAdvisor.ContextWindowHealth.SubagentsPeakRole != "advisor" {
 			t.Errorf("expected 'advisor' via custom tie-break, got %q", effAdvisor.ContextWindowHealth.SubagentsPeakRole)
 		}
@@ -5366,7 +5188,7 @@ func TestComputeWorkflowEfficiency_AdversarialTieBreaking(t *testing.T) {
 		}, nil, nil),
 		}
 
-		effAlpha := domain.ComputeWorkflowEfficiency(ledger)
+		effAlpha := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000)
 		if effAlpha.ContextWindowHealth.RootPeakTokens != 200000 {
 			t.Errorf("expected RootPeakTokens 200000, got %d", effAlpha.ContextWindowHealth.RootPeakTokens)
 		}
@@ -5379,13 +5201,13 @@ func TestComputeWorkflowEfficiency_AdversarialTieBreaking(t *testing.T) {
 		}
 
 		// Custom order prioritizing developer
-		effDev := domain.ComputeWorkflowEfficiency(ledger, []string{"developer", "architect"})
+		effDev := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000, []string{"developer", "architect"})
 		if effDev.ContextWindowHealth.SubagentsPeakRole != "developer" {
 			t.Errorf("expected SubagentsPeakRole 'developer', got %q", effDev.ContextWindowHealth.SubagentsPeakRole)
 		}
 
 		// Custom order prioritizing root personas does not cause root to become SubagentsPeakRole
-		effRootOrder := domain.ComputeWorkflowEfficiency(ledger, []string{"orchestrator", "general", "developer", "architect"})
+		effRootOrder := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000, []string{"orchestrator", "general", "developer", "architect"})
 		if effRootOrder.ContextWindowHealth.SubagentsPeakRole != "developer" {
 			t.Errorf("expected SubagentsPeakRole 'developer' (excluding root personas), got %q", effRootOrder.ContextWindowHealth.SubagentsPeakRole)
 		}
@@ -5400,7 +5222,7 @@ func TestComputeWorkflowEfficiency_AdversarialTieBreaking(t *testing.T) {
 		}, nil, nil),
 		}
 
-		eff := domain.ComputeWorkflowEfficiency(ledger, []string{"orchestrator", "planner", "coder", "general"})
+		eff := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, 200000, []string{"orchestrator", "planner", "coder", "general"})
 		if eff.ContextWindowHealth.SubagentsPeakTokens != 0 {
 			t.Errorf("expected SubagentsPeakTokens 0, got %d", eff.ContextWindowHealth.SubagentsPeakTokens)
 		}
@@ -5675,7 +5497,7 @@ func TestConfigurableHealthyCeilingAggregations(t *testing.T) {
 	}
 
 	t.Run("ComputeTotals respects custom ceiling", func(t *testing.T) {
-		totalsDefault := domain.ComputeTotals(invocations)
+		totalsDefault := domain.ComputeTotals(invocations, 200000)
 		// 75k under 200k default ceiling is HEALTHY (< 100k)
 		if totalsDefault.ContextHealth != domain.ContextHealthHealthy {
 			t.Errorf("expected HEALTHY under default ceiling, got %s", totalsDefault.ContextHealth)
@@ -5711,7 +5533,7 @@ func TestConfigurableHealthyCeilingAggregations(t *testing.T) {
 	})
 
 	t.Run("ComputeWorkflowEfficiencyWithCeiling respects cfg.AnomalyThresholds.ContextCeilingCriticalTokens", func(t *testing.T) {
-		cfg := domain.DefaultProjectConfig()
+		cfg := testMetricsProjectConfig()
 		cfg.AnomalyThresholds.ContextCeilingCriticalTokens = customCeiling
 
 		eff := domain.ComputeWorkflowEfficiencyWithCeiling(ledger, cfg.EffectiveHealthyCeiling(), cfg.RoleOrder)
@@ -5721,7 +5543,7 @@ func TestConfigurableHealthyCeilingAggregations(t *testing.T) {
 	})
 
 	t.Run("DeriveMetricsLedger propagates cfg.AnomalyThresholds.ContextCeilingCriticalTokens", func(t *testing.T) {
-		cfg := domain.DefaultProjectConfig()
+		cfg := testMetricsProjectConfig()
 		cfg.AnomalyThresholds.ContextCeilingCriticalTokens = customCeiling
 
 		derived := domain.DeriveMetricsLedger(ledger, cfg)
@@ -5774,7 +5596,7 @@ func TestComputeSkillAdoption(t *testing.T) {
 	if got := domain.CalculateFleetSummary(metrics).SkillAdoption; !reflect.DeepEqual(got, want) {
 		t.Fatalf("fleet adoption = %#v", got)
 	}
-	rows := domain.BuildComparisonRows(metrics[:1])
+	rows := domain.BuildComparisonRows(metrics[:1], testMetricsProjectConfig().Ticket)
 	if !reflect.DeepEqual(rows[0].SkillsUsed, []string{"alpha", "beta"}) {
 		t.Fatalf("comparison skill names = %#v", rows[0].SkillsUsed)
 	}
@@ -5807,7 +5629,7 @@ func TestSkillAdoptionOrderingAndEmptyProjections(t *testing.T) {
 	if adoption := domain.CalculateFleetSummary(nil).SkillAdoption; adoption != nil {
 		t.Fatalf("empty fleet adoption = %#v", adoption)
 	}
-	if names := domain.BuildComparisonRows([]domain.AgenticMetricsLedger{{}})[0].SkillsUsed; names != nil {
+	if names := domain.BuildComparisonRows([]domain.AgenticMetricsLedger{{}}, testMetricsProjectConfig().Ticket)[0].SkillsUsed; names != nil {
 		t.Fatalf("missing skills = %#v", names)
 	}
 }

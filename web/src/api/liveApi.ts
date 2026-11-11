@@ -1,8 +1,10 @@
 import type {
   LiveAnomalyAlert,
+  LiveAnomalyRule,
   LiveSessionNode,
   LiveSessionTree,
   LiveTraceView,
+  LiveTraceDiagnostic,
 } from '../domain/live';
 
 export type ConnectionStatus =
@@ -20,45 +22,95 @@ export interface LiveStreamCallbacks {
   readonly onError?: ((error: Error) => void) | undefined;
 }
 
-export function parseLiveSessionTree(data: unknown): LiveSessionTree {
-  if (data && typeof data === 'object') {
-    if (Array.isArray(data)) {
-      return {
-        root_sessions: data as readonly LiveSessionNode[],
-        last_refreshed_at: new Date().toISOString(),
-        total_active_sessions: data.length,
-        active_anomalies: [],
-      };
-    }
-    const obj = data as Partial<LiveSessionTree>;
-    const rootSessions = Array.isArray(obj.root_sessions) ? obj.root_sessions : [];
-    const activeAnomalies = Array.isArray(obj.active_anomalies) ? obj.active_anomalies : [];
-    const totalActive = typeof obj.total_active_sessions === 'number'
-      ? obj.total_active_sessions
-      : rootSessions.length;
-    const lastRefreshed = typeof obj.last_refreshed_at === 'string' && obj.last_refreshed_at.length > 0
-      ? obj.last_refreshed_at
-      : new Date().toISOString();
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
 
-    return {
-      root_sessions: rootSessions,
-      last_refreshed_at: lastRefreshed,
-      total_active_sessions: totalActive,
-      active_anomalies: activeAnomalies,
-    };
+function isLiveAnomalyRule(value: unknown): value is LiveAnomalyRule {
+  return value === 'ConsecutiveToolErrors' || value === 'ToolHighFailureRate' ||
+    value === 'ContextCeilingApproach' || value === 'TokenVelocityRunaway' || value === 'ToolThrashing';
+}
+
+/** Validate alert facts without interpreting or normalizing source evidence. */
+export function parseLiveAnomalyAlert(data: unknown): LiveAnomalyAlert {
+  if (!isRecord(data) || typeof data.session_id !== 'string' || !isLiveAnomalyRule(data.rule_name) ||
+    (data.severity !== 'WARNING' && data.severity !== 'HIGH' && data.severity !== 'CRITICAL') ||
+    typeof data.message !== 'string' || typeof data.trigger_event !== 'string' || typeof data.timestamp !== 'string') {
+    throw new Error('Invalid live anomaly alert');
   }
-
+  if (data.count !== undefined && data.count !== null &&
+    (typeof data.count !== 'number' || !Number.isSafeInteger(data.count) || data.count < 0)) {
+    throw new Error('Invalid live anomaly count');
+  }
+  for (const key of ['tool_name', 'part_id'] as const) {
+    if (data[key] !== undefined && data[key] !== null && typeof data[key] !== 'string') {
+      throw new Error(`Invalid live anomaly ${key}`);
+    }
+  }
   return {
-    root_sessions: [],
-    last_refreshed_at: new Date().toISOString(),
-    total_active_sessions: 0,
-    active_anomalies: [],
+    session_id: data.session_id,
+    rule_name: data.rule_name,
+    severity: data.severity,
+    message: data.message,
+    trigger_event: data.trigger_event,
+    timestamp: data.timestamp,
+    ...(data.count !== undefined ? { count: data.count as number | null } : {}),
+    ...(data.tool_name !== undefined ? { tool_name: data.tool_name as string | null } : {}),
+    ...(data.part_id !== undefined ? { part_id: data.part_id as string | null } : {}),
+  };
+}
+
+function parseRelationships(data: unknown): LiveTraceView['relationships'] {
+  if (data === undefined) return undefined;
+  if (!isRecord(data) || (data.state !== 'complete' && data.state !== 'unavailable')) {
+    throw new Error('Invalid live trace relationship completeness');
+  }
+  return { state: data.state };
+}
+
+function parseTraceDiagnostics(data: unknown): readonly LiveTraceDiagnostic[] | undefined {
+  if (data === undefined) return undefined;
+  if (!Array.isArray(data)) throw new Error('Invalid live trace diagnostics');
+  return data.map((value: unknown): LiveTraceDiagnostic => {
+    if (!isRecord(value) || value.code !== 'child_relationship_lookup_failed' || typeof value.message !== 'string') {
+      throw new Error('Invalid live trace diagnostic');
+    }
+    return { code: value.code, message: value.message };
+  });
+}
+
+function isLiveSessionNode(data: unknown): data is LiveSessionNode {
+  if (!isRecord(data) || !['id', 'agent', 'role', 'model', 'title', 'time_created', 'time_updated', 'status']
+    .every((key) => typeof data[key] === 'string') ||
+    typeof data.ticket_confidence !== 'number' || !Number.isFinite(data.ticket_confidence) ||
+    !Array.isArray(data.sub_sessions) || !data.sub_sessions.every(isLiveSessionNode) ||
+    !Array.isArray(data.anomalies)) return false;
+  for (const key of ['parent_id', 'guessed_ticket_id']) {
+    if (data[key] !== undefined && data[key] !== null && typeof data[key] !== 'string') return false;
+  }
+  data.anomalies.forEach(parseLiveAnomalyAlert);
+  return true;
+}
+
+/** A successful current API response is measured data; malformed input is unavailable. */
+export function parseLiveSessionTree(data: unknown): LiveSessionTree {
+  if (!isRecord(data) || !Array.isArray(data.root_sessions) || !data.root_sessions.every(isLiveSessionNode) ||
+    typeof data.last_refreshed_at !== 'string' || typeof data.total_active_sessions !== 'number' ||
+    !Number.isSafeInteger(data.total_active_sessions) || data.total_active_sessions < 0 ||
+    !Array.isArray(data.active_anomalies)) throw new Error('Invalid live session tree');
+  return {
+    root_sessions: data.root_sessions,
+    last_refreshed_at: data.last_refreshed_at,
+    total_active_sessions: data.total_active_sessions,
+    active_anomalies: data.active_anomalies.map(parseLiveAnomalyAlert),
   };
 }
 
 export function parseLiveTraceView(data: unknown, fallbackSessionId: string): LiveTraceView {
   if (data && typeof data === 'object') {
     const obj = data as Partial<LiveTraceView>;
+    const relationships = parseRelationships(obj.relationships);
+    const diagnostics = parseTraceDiagnostics(obj.diagnostics);
     return {
       session_id: typeof obj.session_id === 'string' && obj.session_id.length > 0
         ? obj.session_id
@@ -67,7 +119,9 @@ export function parseLiveTraceView(data: unknown, fallbackSessionId: string): Li
       total_tool_calls: typeof obj.total_tool_calls === 'number' ? obj.total_tool_calls : 0,
       failed_tool_calls: typeof obj.failed_tool_calls === 'number' ? obj.failed_tool_calls : 0,
       recent_errors: Array.isArray(obj.recent_errors) ? obj.recent_errors : [],
-      anomalies: Array.isArray(obj.anomalies) ? obj.anomalies : [],
+      anomalies: Array.isArray(obj.anomalies) ? obj.anomalies.map(parseLiveAnomalyAlert) : [],
+      ...(relationships !== undefined ? { relationships } : {}),
+      ...(diagnostics !== undefined ? { diagnostics } : {}),
     };
   }
 
@@ -115,13 +169,15 @@ export async function fetchLiveTrace(sessionId: string): Promise<LiveTraceView> 
   }
 }
 
-export function subscribeToLiveStream(callbacks: LiveStreamCallbacks): () => void {
+export function subscribeToLiveStream(callbacks: LiveStreamCallbacks, pollIntervalMs: number | undefined): () => void {
   let isClosed = false;
   let eventSource: EventSource | null = null;
   let pollingTimer: ReturnType<typeof setInterval> | null = null;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   let sseConsecutiveErrors = 0;
   let pollingConsecutiveErrors = 0;
+  let nextPoll = 0;
+  let lastAcceptedPoll = -1;
   let reconnectDelayMs = 1000;
   let sseDirectlyFailed = false;
 
@@ -152,14 +208,23 @@ export function subscribeToLiveStream(callbacks: LiveStreamCallbacks): () => voi
       reconnectTimer = null;
     }
 
+    if (pollIntervalMs === undefined || !Number.isSafeInteger(pollIntervalMs) || pollIntervalMs <= 0 || pollIntervalMs > 2_147_483_647) {
+      callbacks.onStatusChange?.('error');
+      callbacks.onError?.(new Error('live.poll_interval_ms must be explicitly configured as an integer from 1 through 2147483647 milliseconds for dashboard polling. Complete setup in the selected shared YAML configuration.'));
+      return;
+    }
     callbacks.onStatusChange?.('fallback-polling');
 
     const poll = async () => {
       if (isClosed) return;
+      const request = nextPoll++;
       try {
         const tree = await fetchLiveSessionTree();
-        if (!isClosed) {
+        if (!isClosed && request > lastAcceptedPoll) {
+          lastAcceptedPoll = request;
           pollingConsecutiveErrors = 0;
+          callbacks.onStatusChange?.('fallback-polling');
+          if (isClosed) return;
           try {
             callbacks.onSessionTree(tree);
           } catch (callbackErr: unknown) {
@@ -171,7 +236,8 @@ export function subscribeToLiveStream(callbacks: LiveStreamCallbacks): () => voi
           }
         }
       } catch (err: unknown) {
-        if (!isClosed) {
+        if (!isClosed && request > lastAcceptedPoll) {
+          lastAcceptedPoll = request;
           pollingConsecutiveErrors++;
           const error = err instanceof Error ? err : new Error(String(err));
           callbacks.onError?.(error);
@@ -186,7 +252,7 @@ export function subscribeToLiveStream(callbacks: LiveStreamCallbacks): () => voi
     if (pollingTimer === null) {
       pollingTimer = setInterval(() => {
         void poll();
-      }, 2000);
+      }, pollIntervalMs);
     }
   };
 
@@ -233,8 +299,8 @@ export function subscribeToLiveStream(callbacks: LiveStreamCallbacks): () => voi
     eventSource.addEventListener('anomaly_alert', (event: MessageEvent<string>) => {
       if (isClosed) return;
       try {
-        const alert = JSON.parse(event.data) as LiveAnomalyAlert;
-        callbacks.onAnomalyAlert?.(alert);
+        const data: unknown = JSON.parse(event.data);
+        callbacks.onAnomalyAlert?.(parseLiveAnomalyAlert(data));
       } catch (err: unknown) {
         const error = err instanceof Error ? err : new Error(String(err));
         callbacks.onError?.(error);
@@ -244,8 +310,9 @@ export function subscribeToLiveStream(callbacks: LiveStreamCallbacks): () => voi
     eventSource.addEventListener('trace_update', (event: MessageEvent<string>) => {
       if (isClosed) return;
       try {
-        const trace = JSON.parse(event.data) as LiveTraceView;
-        callbacks.onTraceUpdate?.(trace);
+        const data: unknown = JSON.parse(event.data);
+        const sessionId = isRecord(data) && typeof data.session_id === 'string' ? data.session_id : '';
+        callbacks.onTraceUpdate?.(parseLiveTraceView(data, sessionId));
       } catch (err: unknown) {
         const error = err instanceof Error ? err : new Error(String(err));
         callbacks.onError?.(error);

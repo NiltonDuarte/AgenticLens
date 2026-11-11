@@ -1,0 +1,15 @@
+# AL-83: Public project presentation
+
+Approved scope. The user’s “$agentic-lens-dev continue” instruction on 2026-11-10, responding to the presented contract and plan, authorizes implementation. The [ticket](../plan/to-do/AL-83%20present%20agenticlens%20on%20github%20pages.md) supplies acceptance, with product direction in [PO-23](../PO-23/SPEC.md).
+
+Developers and engineering leads should understand AgenticLens and reach trustworthy setup instructions from the English presentation at `https://niltonduarte.github.io/AgenticLens/`. Extend the existing native Jekyll presentation scaffold and Pages workflow; retain `/AgenticLens/roadmap/`, ticket routes, fragments and supporting-source links. The README links to the presentation.
+
+The page explains local multi-agent development telemetry, its audience and boundaries; configure/capture → generate → inspect → share; OpenCode live observation versus OpenCode/Codex offline generation; historical backfill and migration; and evidence-bounded compatibility linked to maintained documentation. It covers anomalies, execution/delegation traces, role/model/token/cache analytics, comparisons, progression and Git-shareable ledgers. Three practical examples connect tool retries, ticket effort and handoff history to views and human decisions. Anomaly verdicts and test/production ratios inform investigation, without claiming coverage, productivity or code quality. Observed, partial and unavailable cost remain distinct.
+
+Use captioned, clearly labeled illustrative product panels containing no measured outcomes or private session data. An accessible architecture diagram and adjacent text explain harness stores/Git → adapters and pure analysis → durable ledgers → CLI/local embedded dashboard. Native manager/engine selection appears separately. Explain local execution, cross-machine/harness history portability and no production Node dependency.
+
+Publish static semantic HTML/CSS and local SVG assets through the existing single deployment. Verify project-path assets, anchor/deep links, responsive layout, keyboard access, heading order, contrast, alternatives and animation-independent content. The presentation needs no engine, account, private API, telemetry service or third-party font. Setup links preserve release selection guidance rather than introducing another installer.
+
+Exclude backend/dashboard changes, hosted demos, custom domains, documentation migration and new product capabilities. Follow [technical guidelines](../../TECHNICAL_GUIDELINES.md), especially native separation and portable history. No new persisted schema or runtime behavior is authorized.
+
+Delivery includes a reproducible build and reviewed PR. Repository Pages settings currently select workflow deployment from main, as checked by the parent. Publication acceptance remains incomplete until the merged-main deployment and public page/assets are verified. A feature-branch build does not establish publication; this scope does not authorize merging the PR. Record any exact settings, permission or environment blocker rather than claiming the site is live.

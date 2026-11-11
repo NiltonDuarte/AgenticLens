@@ -56,11 +56,8 @@ export function formatCurrency(amount: number): string {
   it('renders rich document headings, paragraphs, blockquotes, and lists by default', () => {
     render(
       <ArtifactViewer
-        artifacts={{
-          ticket_id: 'AL-22',
-          contract_content: sampleContract,
-          summary_content: sampleSummary,
-        }}
+        artifacts={{ticket_id: 'AL-22',
+items: [{path: 'CONTRACT.md', title: 'CONTRACT.md', description: '', content: sampleContract}, {path: 'SUMMARY.md', title: 'SUMMARY.md', description: '', content: sampleSummary}]}}
       />
     );
 
@@ -88,11 +85,8 @@ export function formatCurrency(amount: number): string {
   it('renders GitHub Flavored Markdown tables with styled headers, cells, and responsive wrapper', () => {
     render(
       <ArtifactViewer
-        artifacts={{
-          ticket_id: 'AL-22',
-          contract_content: sampleContract,
-          summary_content: sampleSummary,
-        }}
+        artifacts={{ticket_id: 'AL-22',
+items: [{path: 'CONTRACT.md', title: 'CONTRACT.md', description: '', content: sampleContract}, {path: 'SUMMARY.md', title: 'SUMMARY.md', description: '', content: sampleSummary}]}}
       />
     );
 
@@ -116,11 +110,8 @@ export function formatCurrency(amount: number): string {
   it('renders task lists with checkboxes reflecting checked and unchecked states', () => {
     render(
       <ArtifactViewer
-        artifacts={{
-          ticket_id: 'AL-22',
-          contract_content: sampleContract,
-          summary_content: sampleSummary,
-        }}
+        artifacts={{ticket_id: 'AL-22',
+items: [{path: 'CONTRACT.md', title: 'CONTRACT.md', description: '', content: sampleContract}, {path: 'SUMMARY.md', title: 'SUMMARY.md', description: '', content: sampleSummary}]}}
       />
     );
 
@@ -141,11 +132,8 @@ export function formatCurrency(amount: number): string {
   it('renders inline code badges and formatted code blocks', () => {
     render(
       <ArtifactViewer
-        artifacts={{
-          ticket_id: 'AL-22',
-          contract_content: sampleContract,
-          summary_content: sampleSummary,
-        }}
+        artifacts={{ticket_id: 'AL-22',
+items: [{path: 'CONTRACT.md', title: 'CONTRACT.md', description: '', content: sampleContract}, {path: 'SUMMARY.md', title: 'SUMMARY.md', description: '', content: sampleSummary}]}}
       />
     );
 
@@ -163,11 +151,8 @@ export function formatCurrency(amount: number): string {
   it('toggles between rich document and raw source views', () => {
     render(
       <ArtifactViewer
-        artifacts={{
-          ticket_id: 'AL-22',
-          contract_content: sampleContract,
-          summary_content: sampleSummary,
-        }}
+        artifacts={{ticket_id: 'AL-22',
+items: [{path: 'CONTRACT.md', title: 'CONTRACT.md', description: '', content: sampleContract}, {path: 'SUMMARY.md', title: 'SUMMARY.md', description: '', content: sampleSummary}]}}
       />
     );
 
@@ -194,11 +179,8 @@ export function formatCurrency(amount: number): string {
   it('switches between CONTRACT.md and SUMMARY.md documents', () => {
     render(
       <ArtifactViewer
-        artifacts={{
-          ticket_id: 'AL-22',
-          contract_content: sampleContract,
-          summary_content: sampleSummary,
-        }}
+        artifacts={{ticket_id: 'AL-22',
+items: [{path: 'CONTRACT.md', title: 'CONTRACT.md', description: '', content: sampleContract}, {path: 'SUMMARY.md', title: 'SUMMARY.md', description: '', content: sampleSummary}]}}
       />
     );
 
@@ -228,11 +210,8 @@ export function formatCurrency(amount: number): string {
 
     render(
       <ArtifactViewer
-        artifacts={{
-          ticket_id: 'AL-22',
-          contract_content: sampleContract,
-          summary_content: sampleSummary,
-        }}
+        artifacts={{ticket_id: 'AL-22',
+items: [{path: 'CONTRACT.md', title: 'CONTRACT.md', description: '', content: sampleContract}, {path: 'SUMMARY.md', title: 'SUMMARY.md', description: '', content: sampleSummary}]}}
       />
     );
 
@@ -273,11 +252,8 @@ export function formatCurrency(amount: number): string {
 
     render(
       <ArtifactViewer
-        artifacts={{
-          ticket_id: 'AL-22',
-          contract_content: sampleContract,
-          summary_content: sampleSummary,
-        }}
+        artifacts={{ticket_id: 'AL-22',
+items: [{path: 'CONTRACT.md', title: 'CONTRACT.md', description: '', content: sampleContract}, {path: 'SUMMARY.md', title: 'SUMMARY.md', description: '', content: sampleSummary}]}}
       />
     );
 
@@ -304,11 +280,8 @@ export function formatCurrency(amount: number): string {
 
     render(
       <ArtifactViewer
-        artifacts={{
-          ticket_id: 'AL-22',
-          contract_content: 'Fallback text test',
-          summary_content: null,
-        }}
+        artifacts={{ticket_id: 'AL-22',
+items: [{path: 'CONTRACT.md', title: 'CONTRACT.md', description: '', content: 'Fallback text test'}, {path: 'SUMMARY.md', title: 'SUMMARY.md', description: '', content: null}]}}
       />
     );
 
@@ -324,35 +297,44 @@ export function formatCurrency(amount: number): string {
     Object.assign(navigator, { clipboard: originalClipboard });
   });
 
-  it('defensively handles null, undefined, empty, or whitespace contents', () => {
-    const { rerender } = render(<ArtifactViewer artifacts={null} />);
-    expect(screen.getByText('No CONTRACT.md document found for this workspace.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Copy' })).toBeDisabled();
-
+  it('shows a genuine empty artifact list without invented tabs', () => {
+    const {rerender} = render(<ArtifactViewer artifacts={null} />);
+    expect(screen.getByText('No artifacts configured for this workspace.')).toBeVisible();
+    expect(screen.getByRole('button', {name: 'Copy'})).toBeDisabled();
     rerender(<ArtifactViewer artifacts={undefined} />);
-    expect(screen.getByText('No CONTRACT.md document found for this workspace.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Copy' })).toBeDisabled();
+    expect(screen.getByText('No artifacts configured for this workspace.')).toBeVisible();
+    rerender(<ArtifactViewer artifacts={{ticket_id: 'TEST-1', items: []}} />);
+    expect(screen.queryByRole('button', {name: /contract\.md|summary\.md/i})).not.toBeInTheDocument();
+    expect(screen.getByText('No artifacts configured for this workspace.')).toBeVisible();
+  });
 
-    rerender(
-      <ArtifactViewer
-        artifacts={{
-          ticket_id: 'AL-22',
-          contract_content: '   \n\t  ',
-          summary_content: '',
-        }}
-      />
-    );
-    expect(screen.getByText('No CONTRACT.md document found for this workspace.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Copy' })).toBeDisabled();
-
-    // Tab button shows (Empty) suffix
-    expect(screen.getByRole('button', { name: /contract\.md \(empty\)/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /summary\.md \(empty\)/i })).toBeInTheDocument();
-
-    // Clicking copy while disabled does nothing
-    const copyBtn = screen.getByRole('button', { name: 'Copy' });
-    fireEvent.click(copyBtn);
-    expect(copyBtn).toHaveTextContent('Copy');
+  it.each([
+    {content: null, state: 'Unavailable', note: 'Content unavailable for Notes.'},
+    {content: '', state: 'Empty', note: 'The Notes document is empty.'},
+    {content: '  \n\t ', state: 'Whitespace', note: 'The Notes document contains only whitespace.'},
+  ])('distinguishes $state contents and preserves available raw bytes', async ({content, state, note}) => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, {clipboard: {writeText}});
+    const {container} = render(<ArtifactViewer artifacts={{ticket_id: 'TEST-1', items: [
+      {path: 'notes.txt', title: 'Notes', description: '', content},
+    ]}} />);
+    expect(screen.getByRole('button', {name: `Notes (${state})`})).toBeVisible();
+    expect(screen.getByText(note)).toBeVisible();
+    fireEvent.click(screen.getByRole('button', {name: 'Raw Source'}));
+    const copy = screen.getByRole('button', {name: 'Copy'});
+    if (content === null) {
+      expect(screen.getByText(note)).toBeVisible();
+      expect(container.querySelector('pre code')).toBeNull();
+      expect(copy).toBeDisabled();
+      fireEvent.click(copy);
+      expect(writeText).not.toHaveBeenCalled();
+    } else {
+      expect(container.querySelector('pre code')?.textContent).toBe(content);
+      expect(copy).toBeEnabled();
+      await act(async () => fireEvent.click(copy));
+      expect(writeText).toHaveBeenCalledWith(content);
+      expect(screen.getByRole('button', {name: 'Copied'})).toBeVisible();
+    }
   });
 
   it('gracefully renders malformed, incomplete, and unclosed markdown structures without crashing', () => {
@@ -392,11 +374,8 @@ function unclosedBlockAtEOF() {
 
     render(
       <ArtifactViewer
-        artifacts={{
-          ticket_id: 'AL-22',
-          contract_content: malformedContent,
-          summary_content: null,
-        }}
+        artifacts={{ticket_id: 'AL-22',
+items: [{path: 'CONTRACT.md', title: 'CONTRACT.md', description: '', content: malformedContent}, {path: 'SUMMARY.md', title: 'SUMMARY.md', description: '', content: null}]}}
       />
     );
 
@@ -438,11 +417,8 @@ function unclosedBlockAtEOF() {
 
     render(
       <ArtifactViewer
-        artifacts={{
-          ticket_id: 'AL-22',
-          contract_content: xssPayload,
-          summary_content: null,
-        }}
+        artifacts={{ticket_id: 'AL-22',
+items: [{path: 'CONTRACT.md', title: 'CONTRACT.md', description: '', content: xssPayload}, {path: 'SUMMARY.md', title: 'SUMMARY.md', description: '', content: null}]}}
       />
     );
 
@@ -477,11 +453,8 @@ function unclosedBlockAtEOF() {
   it('handles rapid consecutive view mode and tab toggling without state corruption or display drift', () => {
     render(
       <ArtifactViewer
-        artifacts={{
-          ticket_id: 'AL-22',
-          contract_content: sampleContract,
-          summary_content: sampleSummary,
-        }}
+        artifacts={{ticket_id: 'AL-22',
+items: [{path: 'CONTRACT.md', title: 'CONTRACT.md', description: '', content: sampleContract}, {path: 'SUMMARY.md', title: 'SUMMARY.md', description: '', content: sampleSummary}]}}
       />
     );
 
@@ -556,11 +529,8 @@ ${codeBlock}
 
     render(
       <ArtifactViewer
-        artifacts={{
-          ticket_id: 'AL-22',
-          contract_content: largeDocument,
-          summary_content: null,
-        }}
+        artifacts={{ticket_id: 'AL-22',
+items: [{path: 'CONTRACT.md', title: 'CONTRACT.md', description: '', content: largeDocument}, {path: 'SUMMARY.md', title: 'SUMMARY.md', description: '', content: null}]}}
       />
     );
 
@@ -609,11 +579,8 @@ ${codeBlock}
 
     render(
       <ArtifactViewer
-        artifacts={{
-          ticket_id: 'AL-22',
-          contract_content: sampleContract,
-          summary_content: sampleSummary,
-        }}
+        artifacts={{ticket_id: 'AL-22',
+items: [{path: 'CONTRACT.md', title: 'CONTRACT.md', description: '', content: sampleContract}, {path: 'SUMMARY.md', title: 'SUMMARY.md', description: '', content: sampleSummary}]}}
       />
     );
 
@@ -644,11 +611,8 @@ Here is ~~obsolete text~~ and https://example.com/status
 
     render(
       <ArtifactViewer
-        artifacts={{
-          ticket_id: 'AL-22',
-          contract_content: specialContent,
-          summary_content: null,
-        }}
+        artifacts={{ticket_id: 'AL-22',
+items: [{path: 'CONTRACT.md', title: 'CONTRACT.md', description: '', content: specialContent}, {path: 'SUMMARY.md', title: 'SUMMARY.md', description: '', content: null}]}}
       />
     );
 
@@ -677,11 +641,8 @@ Here is ~~obsolete text~~ and https://example.com/status
   it('displays empty note in both rich and raw view modes when tab has no content', () => {
     render(
       <ArtifactViewer
-        artifacts={{
-          ticket_id: 'AL-22',
-          contract_content: '# Non-empty Contract',
-          summary_content: null,
-        }}
+        artifacts={{ticket_id: 'AL-22',
+items: [{path: 'CONTRACT.md', title: 'CONTRACT.md', description: '', content: '# Non-empty Contract'}, {path: 'SUMMARY.md', title: 'SUMMARY.md', description: '', content: null}]}}
       />
     );
 
@@ -692,13 +653,13 @@ Here is ~~obsolete text~~ and https://example.com/status
 
     // In rich mode, summary tab shows empty note
     fireEvent.click(summaryTab);
-    expect(screen.getByText('No SUMMARY.md document found for this workspace.')).toBeInTheDocument();
+    expect(screen.getByText('Content unavailable for SUMMARY.md.')).toBeInTheDocument();
     expect(document.querySelector('.artifact-markdown-container')).not.toBeInTheDocument();
     expect(document.querySelector('.artifact-pre')).not.toBeInTheDocument();
 
     // Switch to raw mode while on empty summary tab: still shows empty note
     fireEvent.click(rawBtn);
-    expect(screen.getByText('No SUMMARY.md document found for this workspace.')).toBeInTheDocument();
+    expect(screen.getByText('Content unavailable for SUMMARY.md.')).toBeInTheDocument();
     expect(document.querySelector('.artifact-pre')).not.toBeInTheDocument();
 
     // Switch back to contract tab: displays raw code block
@@ -722,11 +683,8 @@ Here is ~~obsolete text~~ and https://example.com/status
 
     const { unmount } = render(
       <ArtifactViewer
-        artifacts={{
-          ticket_id: 'AL-22',
-          contract_content: sampleContract,
-          summary_content: sampleSummary,
-        }}
+        artifacts={{ticket_id: 'AL-22',
+items: [{path: 'CONTRACT.md', title: 'CONTRACT.md', description: '', content: sampleContract}, {path: 'SUMMARY.md', title: 'SUMMARY.md', description: '', content: sampleSummary}]}}
       />
     );
 
@@ -785,11 +743,8 @@ Here is ~~obsolete text~~ and https://example.com/status
 
     render(
       <ArtifactViewer
-        artifacts={{
-          ticket_id: 'AL-22',
-          contract_content: maliciousHtml,
-          summary_content: null,
-        }}
+        artifacts={{ticket_id: 'AL-22',
+items: [{path: 'CONTRACT.md', title: 'CONTRACT.md', description: '', content: maliciousHtml}, {path: 'SUMMARY.md', title: 'SUMMARY.md', description: '', content: null}]}}
       />
     );
 
@@ -830,12 +785,14 @@ Here is ~~obsolete text~~ and https://example.com/status
           description: 'Audit feedback',
           content: null,
         },
+        {path: 'notes/DECISIONS.txt', title: '   ', description: '', content: 'Recorded decision'},
       ],
     };
 
     render(<ArtifactViewer artifacts={customArtifacts} />);
 
-    // Verify all 3 custom tabs rendered with appropriate labels and descriptions
+    // Configured titles take precedence; absent titles use the basename including extension.
+    expect(screen.getByRole('button', {name: 'DECISIONS.txt'})).toBeInTheDocument();
     const contractTab = screen.getByRole('button', { name: 'Technical Contract' });
     expect(contractTab).toBeInTheDocument();
     expect(contractTab).toHaveAttribute('title', 'Technical constraints');
@@ -844,7 +801,7 @@ Here is ~~obsolete text~~ and https://example.com/status
     expect(planTab).toBeInTheDocument();
     expect(planTab).toHaveAttribute('title', 'Step by step plan');
 
-    const reviewTab = screen.getByRole('button', { name: /Code Review \(Empty\)/i });
+    const reviewTab = screen.getByRole('button', { name: /Code Review \(Unavailable\)/i });
     expect(reviewTab).toBeInTheDocument();
     expect(reviewTab).toHaveAttribute('title', 'Audit feedback');
 
@@ -858,6 +815,6 @@ Here is ~~obsolete text~~ and https://example.com/status
 
     // Click empty tab
     fireEvent.click(reviewTab);
-    expect(screen.getByText('No Code Review document found for this workspace.')).toBeInTheDocument();
+    expect(screen.getByText('Content unavailable for Code Review.')).toBeInTheDocument();
   });
 });

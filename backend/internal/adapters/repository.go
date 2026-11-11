@@ -15,28 +15,61 @@ import (
 
 	"agenticlens/internal/adapters/capture"
 	"agenticlens/internal/adapters/config"
+	"agenticlens/internal/adapters/filesystem"
 	"agenticlens/internal/domain"
 )
 
 // ErrWorkspacesDirNotFound is returned when no workspaces directory is specified via argument/flag or project configuration.
 var ErrWorkspacesDirNotFound = errors.New("workspaces directory not found")
 
-// ResolveWorkspacesDir resolves workspaces directory from argument, config.
-// Prioritizes explicit overrides, followed by configured project paths.
-func ResolveWorkspacesDir(overridePath string) (string, error) {
-	if trimmed := strings.TrimSpace(overridePath); trimmed != "" {
-		return trimmed, nil
+// ResolveWorkspaceContext selects the target project's own policy and physical root.
+func ResolveWorkspaceContext(overridePath string) (string, domain.ProjectConfig, error) {
+	root, err := ResolveWorkspacesDir(overridePath)
+	if err != nil {
+		return "", domain.ProjectConfig{}, fmt.Errorf("select workspaces with --workspaces or shared workspaces.dir; complete project setup if required: %w", err)
 	}
+	cfg, err := config.LoadShared(root)
+	if err != nil {
+		return "", cfg, fmt.Errorf("loading target workspace policy: %w", err)
+	}
+	return root, cfg, nil
+}
 
-	// 1. Configured workspace dir from centralized config loader
-	cfg, err := config.Load("")
-	if err == nil && strings.TrimSpace(cfg.Workspaces.Dir) != "" {
-		return strings.TrimSpace(cfg.Workspaces.Dir), nil
+// ResolveWorkspacesDir resolves only the selected path. Explicit representation-only
+// operations do not need unrelated project/classification/source settings.
+func ResolveWorkspacesDir(overridePath string) (string, error) {
+	selected := strings.TrimSpace(overridePath)
+	if selected == "" {
+		cfg, err := config.LoadShared("")
+		if err != nil {
+			return "", errors.Join(ErrWorkspacesDirNotFound, err)
+		}
+		if strings.TrimSpace(cfg.Workspaces.Dir) == "" {
+			return "", fmt.Errorf("workspaces root is required: supply --workspaces or configure workspaces.dir in %s", cfg.ConfigPath)
+		}
+		selected, err = config.ResolveConfiguredPath(filepath.Dir(cfg.ConfigPath), cfg.Workspaces.Dir)
+		if err != nil {
+			return "", err
+		}
+	} else {
+		var err error
+		selected, err = config.ExpandHomePath(selected)
+		if err != nil {
+			return "", err
+		}
 	}
-	if err != nil && !errors.Is(err, config.ErrConfigNotFound) {
-		return "", errors.Join(ErrWorkspacesDirNotFound, fmt.Errorf("loading workspace configuration: %w", err))
+	root, err := filesystem.PhysicalPath(selected)
+	if err != nil {
+		return "", err
 	}
-	return "", ErrWorkspacesDirNotFound
+	info, err := os.Stat(root)
+	if err != nil {
+		return "", fmt.Errorf("selected workspaces root %s: %w", root, err)
+	}
+	if !info.IsDir() {
+		return "", fmt.Errorf("selected workspaces root %s must be a directory", root)
+	}
+	return root, nil
 }
 
 // ScanWorkspaces scans target workspaces directory for all agentic_metrics.json ledgers.
@@ -60,9 +93,18 @@ func ScanWorkspaces(basePath string) domain.ScanReport {
 	}
 
 	var metricFiles []string
+	type scanWalkFailure struct {
+		path string
+		err  error
+	}
+	var walkFailures []scanWalkFailure
 	err = filepath.WalkDir(targetDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return err
+			if path == targetDir {
+				return err
+			}
+			walkFailures = append(walkFailures, scanWalkFailure{path: path, err: err})
+			return nil
 		}
 		if !d.IsDir() && d.Name() == "agentic_metrics.json" {
 			metricFiles = append(metricFiles, path)
@@ -79,8 +121,8 @@ func ScanWorkspaces(basePath string) domain.ScanReport {
 
 	sort.Strings(metricFiles)
 
-	cfg, configErr := config.Load(basePath)
-	if configErr != nil && !errors.Is(configErr, config.ErrConfigNotFound) {
+	cfg, configErr := config.LoadShared(targetDir)
+	if configErr != nil {
 		return domain.ScanReport{Ledgers: []domain.AgenticMetricsLedger{}, Errors: []string{configErr.Error()}, FatalError: configErr.Error()}
 	}
 
@@ -98,6 +140,14 @@ func ScanWorkspaces(basePath string) domain.ScanReport {
 			TicketID: ticketID,
 			Message:  fmt.Sprintf("Ticket workspace %s was skipped: %s", ticketID, guidance),
 		})
+	}
+
+	for _, failure := range walkFailures {
+		metricPath := failure.path
+		if filepath.Base(metricPath) != "agentic_metrics.json" {
+			metricPath = filepath.Join(metricPath, "agentic_metrics.json")
+		}
+		addDiagnostic(metricPath, fmt.Errorf("workspace traversal unavailable: %w", failure.err))
 	}
 
 	for _, metricFile := range metricFiles {
@@ -132,117 +182,87 @@ func ScanWorkspaces(basePath string) domain.ScanReport {
 		ledgers = append(ledgers, ledger)
 	}
 
-	sortedLedgers := domain.SortLedgers(ledgers, domain.SortFieldTicketID, true)
+	sortedLedgers := domain.SortLedgers(ledgers, domain.SortFieldTicketID, true, cfg.Ticket)
 
 	return domain.ScanReport{
-		Ledgers:     sortedLedgers,
-		Errors:      scanErrors,
-		Diagnostics: diagnostics,
+		TicketPolicy: cfg.Ticket,
+		Ledgers:      sortedLedgers,
+		Errors:       scanErrors,
+		Diagnostics:  diagnostics,
 	}
 }
 
 // ReadTicketArtifacts safely reads configured documentation artifacts for a ticket workspace.
-func ReadTicketArtifacts(ticketID string, basePath string, configuredArtifacts ...[]domain.WorkspaceArtifactConfig) domain.TicketArtifacts {
-	targetDir, err := ResolveWorkspacesDir(basePath)
+func ReadTicketArtifacts(ticketID, basePath string, configuredArtifacts ...[]domain.WorkspaceArtifactConfig) (domain.TicketArtifacts, error) {
+	result := domain.TicketArtifacts{TicketID: ticketID, Items: []domain.TicketArtifactItem{}}
+	if strings.TrimSpace(ticketID) == "" || ticketID == "." || ticketID == ".." || strings.ContainsAny(ticketID, "/\\\x00") {
+		return result, fmt.Errorf("invalid ticket workspace ID %q", ticketID)
+	}
+	root, err := ResolveWorkspacesDir(basePath)
 	if err != nil {
-		return domain.TicketArtifacts{TicketID: ticketID, Items: []domain.TicketArtifactItem{}}
+		return result, err
 	}
-	absTargetDir, err := filepath.Abs(targetDir)
+	ticketDir, err := filesystem.PhysicalPath(filepath.Join(root, ticketID))
 	if err != nil {
-		return domain.TicketArtifacts{TicketID: ticketID, Items: []domain.TicketArtifactItem{}}
+		return result, err
 	}
-
-	ticketDir := filepath.Join(absTargetDir, ticketID)
-	absTicketDir, err := filepath.Abs(ticketDir)
-	if err != nil {
-		return domain.TicketArtifacts{TicketID: ticketID, Items: []domain.TicketArtifactItem{}}
+	rel, err := filepath.Rel(root, ticketDir)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return result, fmt.Errorf("ticket workspace is outside the selected workspace root")
 	}
-
-	// Verify path containment to prevent directory traversal
-	rel, err := filepath.Rel(absTargetDir, absTicketDir)
-	if err != nil || strings.HasPrefix(rel, "..") || rel == "." {
-		return domain.TicketArtifacts{TicketID: ticketID, Items: []domain.TicketArtifactItem{}}
+	if info, err := os.Stat(ticketDir); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return result, nil
+		}
+		return result, err
+	} else if !info.IsDir() {
+		return result, fmt.Errorf("ticket workspace must be a directory")
 	}
-
-	fi, err := os.Stat(absTicketDir)
-	if err != nil || !fi.IsDir() {
-		return domain.TicketArtifacts{TicketID: ticketID, Items: []domain.TicketArtifactItem{}}
-	}
-
-	var configs []domain.WorkspaceArtifactConfig
-	if len(configuredArtifacts) > 0 && configuredArtifacts[0] != nil {
-		configs = configuredArtifacts[0]
+	var entries []domain.WorkspaceArtifactConfig
+	if len(configuredArtifacts) > 0 {
+		entries = configuredArtifacts[0]
+		if entries == nil {
+			return result, fmt.Errorf("workspaces.artifacts must be an explicit list")
+		}
 	} else {
-		// Try to load configured artifacts from project config
-		if projCfg, err := config.Load(basePath); err == nil && len(projCfg.Workspaces.Artifacts) > 0 {
-			configs = projCfg.Workspaces.Artifacts
-		} else if err != nil && !errors.Is(err, config.ErrConfigNotFound) {
-			fmt.Fprintf(os.Stderr, "Cannot read ticket artifacts with invalid project configuration: %v\n", err)
-			return domain.TicketArtifacts{TicketID: ticketID, Items: []domain.TicketArtifactItem{}}
-		}
-	}
-
-	if len(configs) == 0 {
-		return domain.TicketArtifacts{TicketID: ticketID, Items: []domain.TicketArtifactItem{}}
-	}
-
-	items := make([]domain.TicketArtifactItem, 0, len(configs))
-	var legacyContract *string
-	var legacySummary *string
-
-	for _, cfg := range configs {
-		cleanRelPath := filepath.Clean(strings.TrimSpace(cfg.Path))
-		if cleanRelPath == "" || filepath.IsAbs(cleanRelPath) || strings.HasPrefix(cleanRelPath, "..") || cleanRelPath == "." {
-			continue
-		}
-
-		fullArtifactPath := filepath.Join(absTicketDir, cleanRelPath)
-		absArtifactPath, err := filepath.Abs(fullArtifactPath)
+		cfg, err := config.LoadShared(root)
 		if err != nil {
-			continue
+			return result, err
 		}
-
-		// Ensure artifact file is inside ticket directory
-		artRel, err := filepath.Rel(absTicketDir, absArtifactPath)
-		if err != nil || strings.HasPrefix(artRel, "..") {
-			continue
+		entries = cfg.Workspaces.Artifacts
+	}
+	for i, entry := range entries {
+		path := entry.Path
+		if strings.TrimSpace(path) == "" || filepath.IsAbs(path) || strings.ContainsAny(path, "\\\x00") {
+			return result, fmt.Errorf("workspaces.artifacts[%d].path must be a safe ticket-workspace-relative path", i)
 		}
-
-		var contentPtr *string
-		if afi, err := os.Stat(absArtifactPath); err == nil && !afi.IsDir() {
-			if data, err := os.ReadFile(absArtifactPath); err == nil {
-				s := string(data)
-				contentPtr = &s
+		for _, part := range strings.Split(path, "/") {
+			if part == "" || part == "." || part == ".." {
+				return result, fmt.Errorf("workspaces.artifacts[%d].path must be a safe ticket-workspace-relative path", i)
 			}
 		}
-
-		title := strings.TrimSpace(cfg.Title)
+		artifactPath, err := filesystem.PhysicalPath(filepath.Join(ticketDir, path))
+		if err != nil {
+			return result, err
+		}
+		relative, err := filepath.Rel(ticketDir, artifactPath)
+		if err != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+			return result, fmt.Errorf("artifact %q resolves outside its ticket workspace", path)
+		}
+		var content *string
+		if info, err := os.Stat(artifactPath); err == nil && !info.IsDir() {
+			if data, err := os.ReadFile(artifactPath); err == nil {
+				text := string(data)
+				content = &text
+			}
+		}
+		title := strings.TrimSpace(entry.Title)
 		if title == "" {
-			title = filepath.Base(cleanRelPath)
+			title = filepath.Base(path)
 		}
-
-		item := domain.TicketArtifactItem{
-			Path:        cleanRelPath,
-			Title:       title,
-			Description: strings.TrimSpace(cfg.Description),
-			Content:     contentPtr,
-		}
-		items = append(items, item)
-
-		if strings.EqualFold(cleanRelPath, "CONTRACT.md") && legacyContract == nil {
-			legacyContract = contentPtr
-		}
-		if strings.EqualFold(cleanRelPath, "SUMMARY.md") && legacySummary == nil {
-			legacySummary = contentPtr
-		}
+		result.Items = append(result.Items, domain.TicketArtifactItem{Path: path, Title: title, Description: entry.Description, Content: content})
 	}
-
-	return domain.TicketArtifacts{
-		TicketID:        ticketID,
-		ContractContent: legacyContract,
-		SummaryContent:  legacySummary,
-		Items:           items,
-	}
+	return result, nil
 }
 
 // LoadTicketWorkspace loads a single ticket's agentic_metrics.json, converts it to domain, and derives the metrics ledger.
@@ -295,65 +315,29 @@ func LoadTicketWorkspace(ticketID, basePath string) (*domain.AgenticMetricsLedge
 	if err != nil {
 		return nil, fmt.Errorf("normalizing metrics for ticket %s: %w", cleanID, err)
 	}
-	cfg, configErr := config.Load(basePath)
-	if configErr != nil && !errors.Is(configErr, config.ErrConfigNotFound) {
+	cfg, configErr := config.LoadShared(targetDir)
+	if configErr != nil {
 		return nil, fmt.Errorf("loading ticket configuration: %w", configErr)
 	}
 	ledger := domain.DeriveMetricsLedger(factLedger, cfg)
 	return &ledger, nil
 }
 
-// UpdateSummaryFile idempotently updates or appends the metrics table inside the summary file.
-func UpdateSummaryFile(destPath string, tableMD string) error {
-	parentDir := filepath.Dir(destPath)
-	if err := os.MkdirAll(parentDir, 0755); err != nil {
-		return fmt.Errorf("creating parent directories for %s: %w", destPath, err)
+// UpdateSummaryFile replaces only the managed metrics block, preserving other evidence.
+func UpdateSummaryFile(destPath, tableMD string) error {
+	if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
+		return fmt.Errorf("creating summary directory: %w", err)
 	}
-
-	header := "### Workflow Efficiency"
-	legacyHeader := "### Agentic Execution Metrics"
-
-	if data, err := os.ReadFile(destPath); err == nil {
-		content := string(data)
-		targetIdx := -1
-		if idx := strings.Index(content, header); idx != -1 {
-			targetIdx = idx
-		} else if idx := strings.Index(content, legacyHeader); idx != -1 {
-			targetIdx = idx
-		}
-
-		if targetIdx != -1 {
-			nextHeading := strings.Index(content[targetIdx+len(header):], "\n## ")
-			var newContent string
-			if nextHeading != -1 {
-				absNextHeading := targetIdx + len(header) + nextHeading
-				newContent = strings.TrimRight(content[:targetIdx], " \t\r\n") +
-					"\n\n" +
-					strings.TrimSpace(tableMD) +
-					"\n\n" +
-					strings.TrimLeft(content[absNextHeading:], " \t\r\n")
-			} else {
-				newContent = strings.TrimRight(content[:targetIdx], " \t\r\n") +
-					"\n\n" +
-					strings.TrimSpace(tableMD) +
-					"\n"
-			}
-			if err := os.WriteFile(destPath, []byte(newContent), 0644); err != nil {
-				return fmt.Errorf("writing updated summary to %s: %w", destPath, err)
-			}
-			return nil
-		}
+	data, err := os.ReadFile(destPath)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("reading summary %s: %w", destPath, err)
 	}
-
-	f, err := os.OpenFile(destPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	updated, err := replaceSummaryMetrics(string(data), tableMD)
 	if err != nil {
-		return fmt.Errorf("opening %s for appending: %w", destPath, err)
+		return fmt.Errorf("updating summary %s: %w", destPath, err)
 	}
-	defer f.Close()
-
-	tableContent := "\n" + strings.TrimSpace(tableMD) + "\n"
-	if _, err := f.WriteString(tableContent); err != nil {
-		return fmt.Errorf("writing metrics table to %s: %w", destPath, err)
+	if err := os.WriteFile(destPath, []byte(updated), 0644); err != nil {
+		return fmt.Errorf("writing summary %s: %w", destPath, err)
 	}
 	return nil
 }
@@ -465,7 +449,7 @@ func NormalizeHistorySessionForPublication(owner SessionFactDTO, schemaVersion i
 // previously authorized immutable historical DTOs through the same canonical
 // validation and writer. Supported lean facts, summaries, order and nullable
 // values in retained rows never pass through source persistence transforms.
-func SaveFactLedgerPreservingHistory(path string, ledger domain.AgenticFactLedger, history []SessionFactDTO, policies ...domain.GenerationPolicy) error {
+func SaveFactLedgerPreservingHistory(path string, ledger domain.AgenticFactLedger, history []SessionFactDTO) error {
 
 	if ledger.TicketID == nil || strings.TrimSpace(*ledger.TicketID) == "" {
 		return fmt.Errorf("cannot save fact ledger: TicketID is required and cannot be empty")
@@ -521,7 +505,6 @@ func SaveFactLedgerPreservingHistory(path string, ledger domain.AgenticFactLedge
 		}
 		dto.Sessions = append(dto.Sessions, cloned)
 	}
-	dto = ProjectGenerationDTO(dto, policies...)
 	if err := dto.Validate(); err != nil {
 		return fmt.Errorf("cannot save fact ledger: %w", err)
 	}

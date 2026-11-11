@@ -1,0 +1,58 @@
+# Self-contained explicit project policy used only by configuration tests.
+project_name: Fixture
+agenticlens:
+  version: v9.8.7
+ticket:
+  prefixes:
+    - prefix: T
+      description: Development
+      ticket_type: feat
+    - prefix: T-
+      description: Documents
+      ticket_type: docs
+    - prefix: _TEAM
+      description: Team work
+  case_insensitive: false
+workspaces:
+  dir: records
+  artifacts: []
+code_metrics:
+  base_branch: fixture-base
+  production:
+    include: ['src/**/*.go']
+    exclude: ['**/*_test.go']
+  tests:
+    include: ['**/*_test.go']
+    exclude: []
+generation:
+  metrics:
+    skills: false
+    delegations: true
+    anomalies: true
+  feedback:
+    provisional_threshold_seconds: 0
+  summary:
+    enabled: true
+    filename: METRICS.md
+database:
+  busy_timeout_ms: 0
+live:
+  active_threshold_seconds: 91
+  poll_interval_ms: 333
+anomaly_thresholds:
+  stall_threshold_seconds: 47
+  error_rate_min_calls: 7
+  error_rate_threshold: 0.31
+  error_rate_critical_threshold: 0.81
+  context_ceiling_warning_tokens: 170001
+  context_ceiling_critical_tokens: 220003
+  consecutive_errors_streak_warning: 4
+  consecutive_errors_streak_critical: 9
+  tool_thrashing_min_failures: 2
+  tool_thrashing_critical_failures: 6
+  turn_usage_warning_tokens: 31001
+  turn_usage_critical_tokens: 61003
+  context_growth_warning_tokens: 41001
+  context_growth_critical_tokens: 81003
+role_mappings: {}
+role_order: []

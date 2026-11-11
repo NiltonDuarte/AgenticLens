@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -11,711 +12,364 @@ import (
 	"agenticlens/internal/domain"
 )
 
-func TestParseNumstatOutput(t *testing.T) {
+func TestParseNumstatOutputPreservesPathsAndRenames(t *testing.T) {
 	t.Parallel()
-	raw := `
-12	4	internal/adapters/git/analyzer.go
-100	0	internal/adapters/git/analyzer_test.go
--	-	image.png
-3	1	path with spaces/file.go
-`
-	entries := git.ParseNumstatOutput(raw)
-	if len(entries) != 3 {
-		t.Fatalf("expected 3 parsed entries, got %d", len(entries))
+	raw := "12\t4\tinternal/analyzer.go\x00" +
+		"3\t1\t path with\tspaces\nand newline.go \x00" +
+		"-\t-\timage.png\x00" +
+		"2\t1\t\x00old/name.go\x00tests/new\tname.go\x00"
+	got, err := git.ParseNumstatOutput(raw)
+	want := []git.NumstatEntry{
+		{Added: 12, Deleted: 4, Path: "internal/analyzer.go"},
+		{Added: 3, Deleted: 1, Path: " path with\tspaces\nand newline.go "},
+		{Path: "image.png", Binary: true},
+		{Added: 2, Deleted: 1, Path: "tests/new\tname.go"},
 	}
-
-	if entries[0].Added != 12 || entries[0].Deleted != 4 || entries[0].Path != "internal/adapters/git/analyzer.go" {
-		t.Errorf("unexpected entry 0: %+v", entries[0])
+	if err != nil || !reflect.DeepEqual(got, want) {
+		t.Fatalf("ParseNumstatOutput = %#v, %v; want %#v", got, err, want)
 	}
-	if entries[1].Added != 100 || entries[1].Deleted != 0 || entries[1].Path != "internal/adapters/git/analyzer_test.go" {
-		t.Errorf("unexpected entry 1: %+v", entries[1])
-	}
-	if entries[2].Added != 3 || entries[2].Deleted != 1 || entries[2].Path != "path with spaces/file.go" {
-		t.Errorf("unexpected entry 2: %+v", entries[2])
+	if entries, err := git.ParseNumstatOutput(""); err != nil || len(entries) != 0 {
+		t.Fatalf("successful empty diff: %#v, %v", entries, err)
 	}
 }
 
-func TestClassifyFile(t *testing.T) {
+func TestParseNumstatOutputRejectsMalformedMeasurements(t *testing.T) {
 	t.Parallel()
-	tests := []struct {
-		path     string
-		cfg      *git.ClassificationConfig
-		expected git.FileCategory
-	}{
-		// Ignored files: lockfiles, dotfiles, and configured workspaces
-		{"go.sum", nil, git.CategoryIgnored},
-		{"package-lock.json", nil, git.CategoryIgnored},
-		{"pnpm-lock.yaml", nil, git.CategoryIgnored},
-		{"yarn.lock", nil, git.CategoryIgnored},
-		{".gitignore", nil, git.CategoryIgnored},
-		{".env", nil, git.CategoryIgnored},
-		{"workspaces/AL-11/CONTRACT.md", &git.ClassificationConfig{WorkspacesDir: "workspaces"}, git.CategoryIgnored},
-		{"workspaces/AL-11/agentic_metrics.json", &git.ClassificationConfig{WorkspacesDir: "workspaces"}, git.CategoryIgnored},
-		{"workspaces/file.go", &git.ClassificationConfig{WorkspacesDir: "workspaces"}, git.CategoryIgnored},
-		{"workspaces/spec.md", &git.ClassificationConfig{WorkspacesDir: "workspaces"}, git.CategoryIgnored},
-
-		// Other files: markdown, json, lock without specific lockfile names, or workspaces with nil config
-		{"README.md", nil, git.CategoryOther},
-		{"docs/ARCH.md", nil, git.CategoryOther},
-		{"package.json", nil, git.CategoryOther},
-		{"test.md", nil, git.CategoryOther},
-		{"data.json", nil, git.CategoryOther},
-		{"tool.lock", nil, git.CategoryOther},
-		{"workspaces/AL-11/CONTRACT.md", nil, git.CategoryOther},
-		{"workspaces/AL-11/agentic_metrics.json", nil, git.CategoryOther},
-		{"workspaces/spec.md", nil, git.CategoryOther},
-
-		// Test files
-		{"internal/adapters/git/analyzer_test.go", &git.ClassificationConfig{TestPatterns: []string{"**"}}, git.CategoryTest},
-		{"tests/test_api.py", &git.ClassificationConfig{TestPatterns: []string{"**"}}, git.CategoryTest},
-		{"src/components/Card.test.tsx", &git.ClassificationConfig{TestPatterns: []string{"**"}}, git.CategoryTest},
-		{"src/utils/math.spec.ts", &git.ClassificationConfig{TestPatterns: []string{"**"}}, git.CategoryTest},
-		{"tests/unit/test_runner.py", &git.ClassificationConfig{TestPatterns: []string{"**"}}, git.CategoryTest},
-		{"__tests__/dashboard.test.js", &git.ClassificationConfig{TestPatterns: []string{"**"}}, git.CategoryTest},
-
-		// Production files
-		{"internal/domain/models.go", &git.ClassificationConfig{ProdPatterns: []string{"**"}}, git.CategoryProd},
-		{"workspaces/file.go", &git.ClassificationConfig{ProdPatterns: []string{"**"}}, git.CategoryProd},
-		{"cmd/agentic-lens/main.go", &git.ClassificationConfig{ProdPatterns: []string{"**"}}, git.CategoryProd},
-		{"web/src/App.tsx", &git.ClassificationConfig{ProdPatterns: []string{"**"}}, git.CategoryProd},
-		{"web/src/main.ts", &git.ClassificationConfig{ProdPatterns: []string{"**"}}, git.CategoryProd},
-		{"web/index.html", &git.ClassificationConfig{ProdPatterns: []string{"**"}}, git.CategoryProd},
-		{"web/src/style.css", &git.ClassificationConfig{ProdPatterns: []string{"**"}}, git.CategoryProd},
-		{"Makefile", &git.ClassificationConfig{ProdPatterns: []string{"**"}}, git.CategoryProd},
-		{"scripts/setup.sh", &git.ClassificationConfig{ProdPatterns: []string{"**"}}, git.CategoryProd},
-		{"db/schema.sql", &git.ClassificationConfig{ProdPatterns: []string{"**"}}, git.CategoryProd},
-
-		// Config overrides
-		{
-			"custom/special.xyz",
-			&git.ClassificationConfig{
-				ProdPatterns: []string{"custom/*.xyz"},
-			},
-			git.CategoryProd,
-		},
-		{
-			"internal/domain/models.go",
-			&git.ClassificationConfig{
-				Exclude: []string{"internal/domain/**"},
-			},
-			git.CategoryIgnored,
-		},
-		{
-			"custom/test.xyz",
-			&git.ClassificationConfig{
-				TestPatterns: []string{"custom/test.*"},
-			},
-			git.CategoryTest,
-		},
-	}
-
-	for _, tt := range tests {
-		actual := git.ClassifyFile(tt.path, tt.cfg)
-		if actual != tt.expected {
-			t.Errorf("ClassifyFile(%q) = %s, expected %s", tt.path, actual, tt.expected)
+	for _, raw := range []string{
+		"1\t2\tfile.go", "\x00", "1\t2\x00", "x\t1\tfile.go\x00", "-1\t2\tfile.go\x00",
+		"1\t-\tfile.go\x00", "-\t1\tfile.go\x00", "9223372036854775808\t1\tfile.go\x00",
+		"1\t2\t\x00", "1\t2\t\x00old.go\x00", "1\t2\t\x00\x00new.go\x00", "1\t2\t\x00old.go\x00\x00",
+	} {
+		if entries, err := git.ParseNumstatOutput(raw); err == nil {
+			t.Errorf("malformed %q accepted as %#v", raw, entries)
 		}
 	}
 }
 
-func TestInferenceOnActiveWorkspace(t *testing.T) {
-	tempDir := t.TempDir()
-	initTestGitRepo(t, tempDir, "main")
+func gitRun(t *testing.T, dir string, args ...string) string {
+	t.Helper()
+	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("git %v: %v: %s", args, err, out)
+	}
+	return strings.TrimSpace(string(out))
+}
 
-	origDir, err := os.Getwd()
+func writeFile(t *testing.T, dir, name string, contents []byte) {
+	t.Helper()
+	full := filepath.Join(dir, name)
+	if err := os.MkdirAll(filepath.Dir(full), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(full, contents, 0600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func initTestGitRepo(t *testing.T, dir, branch string) {
+	t.Helper()
+	gitRun(t, dir, "init", "-b", branch)
+	gitRun(t, dir, "config", "user.name", "TestUser")
+	gitRun(t, dir, "config", "user.email", "test@example.com")
+	writeFile(t, dir, "README.md", []byte("# Test Repo\n"))
+	gitRun(t, dir, "add", "README.md")
+	gitRun(t, dir, "commit", "-m", "initial commit")
+}
+
+func commitFiles(t *testing.T, repo, message string) {
+	t.Helper()
+	gitRun(t, repo, "add", "--all")
+	gitRun(t, repo, "commit", "-m", message)
+}
+
+func withWorkingDirectory(t *testing.T, dir string) {
+	t.Helper()
+	original, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Chdir(tempDir); err != nil {
+	if err := os.Chdir(dir); err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
-		_ = os.Chdir(origDir)
+		if err := os.Chdir(original); err != nil {
+			t.Errorf("restore working directory: %v", err)
+		}
 	})
+}
 
-	// Test branch inference purely in memory without mutating disk branches
-	branchList := "  feat/AL-11-ci-fixture\n"
-	ticketType := git.InferTicketTypeFromBranchList(branchList, "AL-11")
-	if ticketType == nil || *ticketType != "feat" {
-		t.Errorf("expected feat ticket type for AL-11, got %v", ticketType)
+func TestGitUserAndWorkspaceCommitRange(t *testing.T) {
+	repo := t.TempDir()
+	initTestGitRepo(t, repo, "main")
+	writeFile(t, repo, "tickets/CASE-1/SUMMARY.md", []byte("# Summary\n"))
+	commitFiles(t, repo, "ticket summary")
+	withWorkingDirectory(t, repo)
+	if user := git.GetGitUser(); user != "TestUser" || strings.Contains(user, "@") {
+		t.Fatalf("Git user should use isolated configured name: %q", user)
 	}
-
-	user := git.GetGitUser()
-	if user == "" {
-		t.Errorf("expected non-empty git user")
+	other := t.TempDir()
+	initTestGitRepo(t, other, "main")
+	gitRun(t, other, "config", "user.name", "TargetProjectUser")
+	if user := git.GetGitUserInDir(other); user != "TargetProjectUser" {
+		t.Fatalf("foreign target borrowed invocation-project user: %q", user)
 	}
-	if strings.Contains(user, "@") {
-		t.Errorf("expected git user not to leak full email domain, got: %s", user)
+	min, max, found := git.GetWorkspaceCommitTimeRange("tickets/CASE-1")
+	if !found || min <= 0 || max < min {
+		t.Fatalf("workspace commit range: min=%d max=%d found=%v", min, max, found)
 	}
-	if user != "TestUser" {
-		t.Errorf("expected git user 'TestUser' from isolated config, got: %s", user)
+	if _, _, found := git.GetWorkspaceCommitTimeRange("tickets/CASE-2"); found {
+		t.Fatal("uncommitted workspace must not acquire a commit range")
 	}
 }
 
-func TestGitAnalyzer_AdversarialEdgeCases(t *testing.T) {
-	malformedText := "\nnot_a_number\tnot_a_number\tfile.go\n10\n10\t20\n-\t-\tbinary.png\n\t\n15\t5\n-5\t-10\tnegative.go\n"
-	parsed := git.ParseNumstatOutput(malformedText)
-	if len(parsed) != 1 || parsed[0].Path != "negative.go" {
-		t.Fatalf("expected only the three-field numeric row to parse, got %+v", parsed)
-	}
-
-	tempDir := t.TempDir()
-	initTestGitRepo(t, tempDir, "main")
-	file := filepath.Join(tempDir, "tickets", "AL-1", "SUMMARY.md")
-	if err := os.MkdirAll(filepath.Dir(file), 0755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(file, []byte("# Summary\n"), 0644); err != nil {
-		t.Fatal(err)
-	}
-	cmd := exec.Command("git", "add", "tickets/AL-1/SUMMARY.md")
-	cmd.Dir = tempDir
-	if out, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("git add: %v (%s)", err, out)
-	}
-	cmd = exec.Command("git", "commit", "-m", "add fixture summary")
-	cmd.Dir = tempDir
-	if out, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("git commit: %v (%s)", err, out)
-	}
-
-	origDir, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chdir(tempDir); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = os.Chdir(origDir) })
-	minTs, maxTs, found := git.GetWorkspaceCommitTimeRange("tickets/AL-1")
-	if !found || minTs <= 0 || maxTs < minTs {
-		t.Fatalf("expected valid workspace commit range, got min=%d max=%d found=%v", minTs, maxTs, found)
-	}
-}
-
-func TestLoadConfig_CentralizedIntegration(t *testing.T) {
+func TestResolveBaseBranchRequiresOnlyConfiguredRef(t *testing.T) {
 	t.Parallel()
-	tempDir := t.TempDir()
-
-	yamlContent := `
-project_name: GitAnalyzerTest
-ticket:
-  prefixes:
-    - prefix: AL
-workspaces:
-code_metrics:
-  source_roots:
-    - src
-  include:
-    - "custom/include/**"
-  exclude:
-    - "custom/exclude/**"
-  test_patterns:
-    - "*_test_custom.go"
-  prod_patterns:
-    - "*.custom_prod"
-anomaly_thresholds:
-  context_ceiling_warning_tokens: 160000
-  context_ceiling_critical_tokens: 200000
-
-telemetry:
-  capture:
-    state_dir: capture-state
-`
-	if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	cfg, err := git.LoadConfig(tempDir)
-	if err != nil {
-		t.Fatalf("unexpected error loading config: %v", err)
-	}
-	if cfg == nil {
-		t.Fatal("expected non-nil ClassificationConfig")
-	}
-
-	if len(cfg.Include) != 1 || cfg.Include[0] != "custom/include/**" {
-		t.Errorf("unexpected include: %v", cfg.Include)
-	}
-	if len(cfg.Exclude) != 1 || cfg.Exclude[0] != "custom/exclude/**" {
-		t.Errorf("unexpected exclude: %v", cfg.Exclude)
-	}
-	if len(cfg.TestPatterns) != 1 || cfg.TestPatterns[0] != "*_test_custom.go" {
-		t.Errorf("unexpected test_patterns: %v", cfg.TestPatterns)
-	}
-	if len(cfg.ProdPatterns) != 1 || cfg.ProdPatterns[0] != "*.custom_prod" {
-		t.Errorf("unexpected prod_patterns: %v", cfg.ProdPatterns)
-	}
-
-	if got := git.ClassifyFile("checks/example_test_custom.go", cfg); got != git.CategoryTest {
-		t.Fatalf("loaded test pattern: %s", got)
-	}
-	if got := git.ClassifyFile("runtime/example.custom_prod", cfg); got != git.CategoryProd {
-		t.Fatalf("loaded production pattern: %s", got)
-	}
-	// Verify classification applies loaded patterns
-	catInc := git.ClassifyFile("custom/include/file.xyz", cfg)
-	if catInc != git.CategoryProd {
-		t.Errorf("expected CategoryProd for custom/include/file.xyz, got %s", catInc)
-	}
-
-	catExc := git.ClassifyFile("custom/exclude/file.go", cfg)
-	if catExc != git.CategoryIgnored {
-		t.Errorf("expected CategoryIgnored for custom/exclude/file.go, got %s", catExc)
-	}
-}
-
-func initTestGitRepo(t *testing.T, dir string, branch string) {
-	t.Helper()
-	runCmd := func(args ...string) {
-		t.Helper()
-		cmd := exec.Command("git", args...)
-		cmd.Dir = dir
-		if out, err := cmd.CombinedOutput(); err != nil {
-			t.Fatalf("git %v failed: %v (output: %s)", args, err, string(out))
-		}
-	}
-	runCmd("init", "-b", branch)
-	runCmd("config", "user.name", "TestUser")
-	runCmd("config", "user.email", "test@example.com")
-
-	readmePath := filepath.Join(dir, "README.md")
-	if err := os.WriteFile(readmePath, []byte("# Test Repo\n"), 0644); err != nil {
-		t.Fatal(err)
-	}
-	runCmd("add", "README.md")
-	runCmd("commit", "-m", "initial commit")
-}
-
-func TestResolveBaseBranch_Configured(t *testing.T) {
-	t.Run("configured branch exists succeeds", func(t *testing.T) {
-		tempDir := t.TempDir()
-		initTestGitRepo(t, tempDir, "main")
-
-		cmd := exec.Command("git", "checkout", "-b", "release-1.0")
-		cmd.Dir = tempDir
-		if out, err := cmd.CombinedOutput(); err != nil {
-			t.Fatalf("failed creating branch release-1.0: %v (%s)", err, string(out))
-		}
-
-		cfg := &domain.ProjectConfig{
-			CodeMetrics: domain.CodeMetricsConfig{
-				BaseBranch: "release-1.0",
-			},
-		}
-		branch, err := git.ResolveBaseBranch(tempDir, cfg)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if branch != "release-1.0" {
-			t.Errorf("expected release-1.0, got %q", branch)
-		}
-	})
-
-	t.Run("configured branch with whitespace trimmed succeeds", func(t *testing.T) {
-		tempDir := t.TempDir()
-		initTestGitRepo(t, tempDir, "main")
-
-		cmd := exec.Command("git", "checkout", "-b", "release-2.0")
-		cmd.Dir = tempDir
-		if out, err := cmd.CombinedOutput(); err != nil {
-			t.Fatalf("failed creating branch release-2.0: %v (%s)", err, string(out))
-		}
-
-		cfg := &domain.ProjectConfig{
-			CodeMetrics: domain.CodeMetricsConfig{
-				BaseBranch: "  release-2.0  ",
-			},
-		}
-		branch, err := git.ResolveBaseBranch(tempDir, cfg)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if branch != "release-2.0" {
-			t.Errorf("expected release-2.0, got %q", branch)
-		}
-	})
-
-	t.Run("configured empty string falls through to candidate probing", func(t *testing.T) {
-		tempDir := t.TempDir()
-		initTestGitRepo(t, tempDir, "main")
-
-		cfg := &domain.ProjectConfig{
-			CodeMetrics: domain.CodeMetricsConfig{
-				BaseBranch: "   ",
-			},
-		}
-		branch, err := git.ResolveBaseBranch(tempDir, cfg)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if branch != "main" {
-			t.Errorf("expected main, got %q", branch)
-		}
-	})
-}
-
-func TestResolveBaseBranch_Configured_Missing(t *testing.T) {
-	tempDir := t.TempDir()
-	initTestGitRepo(t, tempDir, "main")
-
-	cfg := &domain.ProjectConfig{
-		CodeMetrics: domain.CodeMetricsConfig{
-			BaseBranch: "nonexistent-branch",
-		},
-	}
-	branch, err := git.ResolveBaseBranch(tempDir, cfg)
-	if err == nil {
-		t.Fatal("expected error for nonexistent configured branch, got nil")
-	}
-	if !strings.Contains(err.Error(), "nonexistent-branch") {
-		t.Errorf("expected error mentioning nonexistent-branch, got: %v", err)
-	}
-	if branch != "" {
-		t.Errorf("expected empty branch string on error, got %q", branch)
-	}
-	if branch == "HEAD" {
-		t.Error("prohibition violation: returned HEAD on missing configured branch")
-	}
-}
-
-func TestResolveBaseBranch_SymbolicRef(t *testing.T) {
-	t.Run("valid symbolic ref detects remote tracking branch", func(t *testing.T) {
-		tempDir := t.TempDir()
-		initTestGitRepo(t, tempDir, "trunk")
-
-		cmd := exec.Command("git", "update-ref", "refs/remotes/origin/trunk", "HEAD")
-		cmd.Dir = tempDir
-		if out, err := cmd.CombinedOutput(); err != nil {
-			t.Fatalf("failed update-ref: %v (%s)", err, string(out))
-		}
-		cmd = exec.Command("git", "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/trunk")
-		cmd.Dir = tempDir
-		if out, err := cmd.CombinedOutput(); err != nil {
-			t.Fatalf("failed symbolic-ref: %v (%s)", err, string(out))
-		}
-
-		branch, err := git.ResolveBaseBranch(tempDir, nil)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if branch != "origin/trunk" {
-			t.Errorf("expected origin/trunk, got %q", branch)
-		}
-	})
-
-	t.Run("broken symbolic ref falls through to candidate probes", func(t *testing.T) {
-		tempDir := t.TempDir()
-		initTestGitRepo(t, tempDir, "main")
-
-		cmd := exec.Command("git", "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/nonexistent")
-		cmd.Dir = tempDir
-		if out, err := cmd.CombinedOutput(); err != nil {
-			t.Fatalf("failed symbolic-ref: %v (%s)", err, string(out))
-		}
-
-		branch, err := git.ResolveBaseBranch(tempDir, nil)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if branch != "main" {
-			t.Errorf("expected main after broken symbolic ref fallthrough, got %q", branch)
-		}
-	})
-}
-
-func TestResolveBaseBranch_ProbeCandidates(t *testing.T) {
-	t.Run("probe candidate priority 1: origin/main beats all candidates", func(t *testing.T) {
-		tempDir := t.TempDir()
-		initTestGitRepo(t, tempDir, "main")
-
-		runCmd := func(args ...string) {
-			t.Helper()
-			cmd := exec.Command("git", args...)
-			cmd.Dir = tempDir
-			if out, err := cmd.CombinedOutput(); err != nil {
-				t.Fatalf("git %v failed: %v (%s)", args, err, string(out))
-			}
-		}
-		runCmd("update-ref", "refs/remotes/origin/main", "HEAD")
-		runCmd("update-ref", "refs/remotes/origin/master", "HEAD")
-		runCmd("branch", "master", "HEAD")
-
-		branch, err := git.ResolveBaseBranch(tempDir, nil)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if branch != "origin/main" {
-			t.Errorf("expected origin/main, got %q", branch)
-		}
-	})
-
-	t.Run("probe candidate priority 2: main beats origin/master and master", func(t *testing.T) {
-		tempDir := t.TempDir()
-		initTestGitRepo(t, tempDir, "main")
-
-		runCmd := func(args ...string) {
-			t.Helper()
-			cmd := exec.Command("git", args...)
-			cmd.Dir = tempDir
-			if out, err := cmd.CombinedOutput(); err != nil {
-				t.Fatalf("git %v failed: %v (%s)", args, err, string(out))
-			}
-		}
-		runCmd("update-ref", "refs/remotes/origin/master", "HEAD")
-		runCmd("branch", "master", "HEAD")
-
-		branch, err := git.ResolveBaseBranch(tempDir, nil)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if branch != "main" {
-			t.Errorf("expected main, got %q", branch)
-		}
-	})
-
-	t.Run("probe candidate priority 3: origin/master beats master", func(t *testing.T) {
-		tempDir := t.TempDir()
-		initTestGitRepo(t, tempDir, "dev-temp")
-
-		runCmd := func(args ...string) {
-			t.Helper()
-			cmd := exec.Command("git", args...)
-			cmd.Dir = tempDir
-			if out, err := cmd.CombinedOutput(); err != nil {
-				t.Fatalf("git %v failed: %v (%s)", args, err, string(out))
-			}
-		}
-		runCmd("update-ref", "refs/remotes/origin/master", "HEAD")
-		runCmd("branch", "master", "HEAD")
-
-		branch, err := git.ResolveBaseBranch(tempDir, nil)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if branch != "origin/master" {
-			t.Errorf("expected origin/master, got %q", branch)
-		}
-	})
-
-	t.Run("probe candidate priority 4: master succeeds when only candidate", func(t *testing.T) {
-		tempDir := t.TempDir()
-		initTestGitRepo(t, tempDir, "master")
-
-		branch, err := git.ResolveBaseBranch(tempDir, nil)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if branch != "master" {
-			t.Errorf("expected master, got %q", branch)
-		}
-	})
-}
-
-func TestResolveBaseBranch_Unresolvable_FailureInvariant(t *testing.T) {
-	tempDir := t.TempDir()
-	initTestGitRepo(t, tempDir, "dev-temp")
-
-	branch, err := git.ResolveBaseBranch(tempDir, nil)
-	if err == nil {
-		t.Fatalf("expected error for unresolvable branch, got branch: %q", branch)
-	}
-	expectedMsg := "unable to resolve upstream base branch: configure 'code_metrics.base_branch' in .agenticlens-config.yaml"
-	if !strings.Contains(err.Error(), expectedMsg) {
-		t.Errorf("expected error %q, got %q", expectedMsg, err.Error())
-	}
-	if branch != "" {
-		t.Errorf("expected empty branch string on failure, got %q", branch)
-	}
-	if branch == "HEAD" {
-		t.Error("prohibition violation: returned HEAD as base branch")
-	}
-}
-
-func TestValidateSourceRoots(t *testing.T) {
-	expectedMsg := "code_metrics.source_roots is empty or unconfigured: configure 'code_metrics.source_roots' in .agenticlens-config.yaml"
-
-	t.Run("nil slice fails with exact configuration prompt", func(t *testing.T) {
-		err := git.ValidateSourceRoots(nil)
-		if err == nil {
-			t.Fatal("expected error for nil code_metrics.source_roots, got nil")
-		}
-		if !strings.Contains(err.Error(), expectedMsg) {
-			t.Errorf("expected error %q, got %q", expectedMsg, err.Error())
-		}
-	})
-
-	t.Run("empty slice fails with exact configuration prompt", func(t *testing.T) {
-		err := git.ValidateSourceRoots([]string{})
-		if err == nil {
-			t.Fatal("expected error for empty code_metrics.source_roots, got nil")
-		}
-		if !strings.Contains(err.Error(), expectedMsg) {
-			t.Errorf("expected error %q, got %q", expectedMsg, err.Error())
-		}
-	})
-
-	t.Run("whitespace only slices fail with exact configuration prompt", func(t *testing.T) {
-		whitespaceCases := [][]string{
-			{"   "},
-			{"\t", "\n"},
-			{"", "  ", "\t", "\r\n"},
-		}
-		for _, tc := range whitespaceCases {
-			err := git.ValidateSourceRoots(tc)
-			if err == nil {
-				t.Fatalf("expected error for whitespace source_roots %v, got nil", tc)
-			}
-			if !strings.Contains(err.Error(), expectedMsg) {
-				t.Errorf("expected error %q, got %q", expectedMsg, err.Error())
-			}
-		}
-	})
-
-	t.Run("valid slice succeeds", func(t *testing.T) {
-		err := git.ValidateSourceRoots([]string{"backend", "web"})
-		if err != nil {
-			t.Errorf("unexpected error for valid source_roots: %v", err)
-		}
-	})
-
-	t.Run("slice with empty strings but at least one valid folder succeeds", func(t *testing.T) {
-		err := git.ValidateSourceRoots([]string{"", "   ", "services", "\t"})
-		if err != nil {
-			t.Errorf("unexpected error for mixed source_roots: %v", err)
-		}
-	})
-}
-
-func TestIsMonitoredSourcePath(t *testing.T) {
-	srcFolders := []string{"app", "pkg", "services"}
-	cfgWithInclude := &git.ClassificationConfig{
-		Include: []string{"main.py", "docker-compose.yml", "*.config.ts"},
-	}
-	cfgWithProd := &git.ClassificationConfig{
-		ProdPatterns: []string{"*.vue", "core/**"},
-	}
-
-	tests := []struct {
-		name       string
-		path       string
-		srcFolders []string
-		cfg        *git.ClassificationConfig
-		expected   bool
+	repo := t.TempDir()
+	initTestGitRepo(t, repo, "main")
+	gitRun(t, repo, "branch", "release-1.0")
+	gitRun(t, repo, "branch", "master")
+	gitRun(t, repo, "update-ref", "refs/remotes/origin/main", "HEAD")
+	gitRun(t, repo, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main")
+	for _, tc := range []struct {
+		base string
+		want string
 	}{
-		// Custom folder structures: app/, pkg/, services/
-		{"app root subfile", "app/main.go", srcFolders, nil, true},
-		{"app nested file", "app/controllers/user.go", srcFolders, nil, true},
-		{"pkg root subfile", "pkg/util.go", srcFolders, nil, true},
-		{"pkg nested file", "pkg/storage/db.go", srcFolders, nil, true},
-		{"services root subfile", "services/worker.go", srcFolders, nil, true},
-		{"services nested file", "services/auth/jwt.go", srcFolders, nil, true},
-		{"exact folder name app", "app", srcFolders, nil, true},
-		{"exact folder name services", "services", srcFolders, nil, true},
-		{"exact folder name pkg", "pkg", srcFolders, nil, true},
-
-		// Leading dot and slashes normalization
-		{"dot slash prefix", "./app/main.go", srcFolders, nil, true},
-		{"leading slash prefix", "/services/api/handler.go", srcFolders, nil, true},
-
-		// Configured folders with slashes inside slice
-		{"folders with leading and trailing slashes", "app/server.go", []string{"/app/", "pkg/", "/services"}, nil, true},
-		{"folders with leading and trailing slashes pkg", "pkg/helper.go", []string{"/app/", "pkg/", "/services"}, nil, true},
-		{"folders with leading and trailing slashes services", "services/worker.go", []string{"/app/", "pkg/", "/services"}, nil, true},
-
-		// Boundary false prefix matches (must NOT match)
-		{"file with app prefix but not in app folder", "app_helper.go", srcFolders, nil, false},
-		{"folder starting with app name", "application/main.go", srcFolders, nil, false},
-		{"folder starting with services name", "services_old/file.go", srcFolders, nil, false},
-		{"folder starting with pkg name", "pkg-utils/main.go", srcFolders, nil, false},
-
-		// Root files matching cfg.Include
-		{"root python file matching include", "main.py", []string{"backend"}, cfgWithInclude, true},
-		{"docker compose file matching include", "docker-compose.yml", []string{"backend"}, cfgWithInclude, true},
-		{"config typescript file matching include glob", "vite.config.ts", []string{"backend"}, cfgWithInclude, true},
-
-		// Files matching cfg.ProdPatterns
-		{"vue component matching prod pattern", "web/src/view.vue", []string{"backend"}, cfgWithProd, true},
-		{"cpp file inside core folder matching prod pattern", "core/engine.cpp", []string{"backend"}, cfgWithProd, true},
-
-		// Non-monitored files
-		{"documentation markdown file", "docs/spec.md", srcFolders, nil, false},
-		{"random data binary file", "random/data.bin", srcFolders, nil, false},
-		{"root notes file", "notes.txt", srcFolders, nil, false},
-		{"workspace contract file", "workspaces/AL-39/CONTRACT.md", srcFolders, nil, false},
-		{"github workflow file", ".github/workflows/ci.yml", srcFolders, nil, false},
-
-		// Empty and whitespace paths
-		{"empty path", "", srcFolders, nil, false},
-		{"whitespace path", "   ", srcFolders, nil, false},
-		{"tab path", "\t", srcFolders, nil, false},
+		{"release-1.0", "release-1.0"},
+		{"  release-1.0  ", "release-1.0"},
+		{"origin/main", "origin/main"},
+		{"", ""},
+		{"  ", ""},
+		{"missing-branch", ""},
+		{"--all", ""},
+	} {
+		cfg := &domain.ProjectConfig{CodeMetrics: domain.CodeMetricsConfig{BaseBranch: tc.base}}
+		got, err := git.ResolveBaseBranch(repo, cfg)
+		if tc.want == "" {
+			if err == nil || got != "" || !strings.Contains(err.Error(), "code_metrics.base_branch") {
+				t.Errorf("base %q used another available ref: %q, %v", tc.base, got, err)
+			}
+		} else if err != nil || got != tc.want {
+			t.Errorf("base %q: %q, %v; want %q", tc.base, got, err, tc.want)
+		}
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cfg := tt.cfg
-			if cfg == nil {
-				cfg = &git.ClassificationConfig{SourceRoots: tt.srcFolders}
-			}
-			actual := git.IsMonitoredSourcePath(tt.path, cfg)
-			if actual != tt.expected {
-				t.Errorf("IsMonitoredSourcePath(%q, %v) = %v, expected %v", tt.path, tt.srcFolders, actual, tt.expected)
-			}
-		})
+	if got, err := git.ResolveBaseBranch(repo, nil); err == nil || got != "" {
+		t.Fatalf("missing configuration selected another branch: %q, %v", got, err)
 	}
 }
 
-func TestExplicitCodeRefDoesNotDependOnTicketOrBranchNaming(t *testing.T) {
+func TestComputeCodeFactsUsesNetContributionAcrossBaseMerges(t *testing.T) {
+	t.Parallel()
 	repo := t.TempDir()
 	initTestGitRepo(t, repo, "baseline")
-	before, err := os.Getwd()
-	if err != nil {
+	writeFile(t, repo, "src/main.go", []byte("one\ntwo\nthree\n"))
+	commitFiles(t, repo, "baseline source")
+	gitRun(t, repo, "checkout", "-b", "research/adapter")
+	writeFile(t, repo, "src/main.go", []byte("one\nthree\n"))
+	writeFile(t, repo, "src/feature.go", []byte("a\nb\nc\n"))
+	writeFile(t, repo, "src/feature_test.go", []byte("test a\ntest b\n"))
+	writeFile(t, repo, "src/reverted.go", []byte("temporary\n"))
+	writeFile(t, repo, "docs/feature.md", []byte("documentation\n"))
+	commitFiles(t, repo, "branch code, tests and temporary change")
+	if err := os.Remove(filepath.Join(repo, "src/reverted.go")); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Chdir(repo); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = os.Chdir(before) })
-	run := func(args ...string) {
+	commitFiles(t, repo, "revert temporary code")
+	historical := gitRun(t, repo, "rev-parse", "HEAD")
+	gitRun(t, repo, "checkout", "baseline")
+	writeFile(t, repo, "src/upstream.go", []byte("upstream a\nupstream b\nupstream c\nupstream d\n"))
+	commitFiles(t, repo, "incoming base source")
+	gitRun(t, repo, "checkout", "research/adapter")
+	gitRun(t, repo, "merge", "baseline", "--no-edit")
+	cfg := classification([]string{"src/**/*.go"}, []string{"**/*_test.go"}, []string{"**/*_test.go"}, nil)
+	want := domain.CodeFacts{LinesAdded: 5, LinesDeleted: 1, FilesChanged: 3, ProdLinesAdded: 3, ProdLinesDeleted: 1, TestLinesAdded: 2}
+	assertFacts := func(ref string) {
 		t.Helper()
-		if out, err := exec.Command("git", args...).CombinedOutput(); err != nil {
-			t.Fatalf("git %v: %v: %s", args, err, out)
+		got, err := git.ComputeCodeFactsAtRefInDir(repo, ref, cfg)
+		if err != nil || got != want {
+			t.Fatalf("net contribution at %q: %+v, %v; want %+v", ref, got, err, want)
 		}
 	}
-	run("checkout", "-b", "research/adapter")
-	if err := os.Mkdir("src", 0700); err != nil {
+	assertFacts("HEAD")
+	assertFacts(historical)
+	writeFile(t, repo, "src/feature.go", []byte("uncommitted change\n"))
+	gitRun(t, repo, "add", "src/feature.go")
+	assertFacts("HEAD")
+	gitRun(t, repo, "reset", "--hard", "HEAD")
+	gitRun(t, repo, "checkout", "baseline")
+	writeFile(t, repo, "src/next.go", []byte("later upstream\n"))
+	commitFiles(t, repo, "advance base again")
+	gitRun(t, repo, "checkout", "research/adapter")
+	assertFacts("HEAD")
+	gitRun(t, repo, "merge", "baseline", "--no-edit")
+	assertFacts("HEAD")
+	if _, err := git.ComputeCodeFactsAtRefInDir(repo, "", cfg); err == nil {
+		t.Fatal("empty explicit target accepted")
+	}
+	if _, err := git.ComputeCodeFactsAtRefInDir(repo, "missing-ref", cfg); err == nil {
+		t.Fatal("unavailable explicit target accepted")
+	}
+}
+
+func TestCodeFactsPreserveUnusualPathsAndDestinationOwnedRename(t *testing.T) {
+	t.Parallel()
+	repo := t.TempDir()
+	initTestGitRepo(t, repo, "baseline")
+	writeFile(t, repo, "src/source.go", []byte("one\ntwo\nthree\nfour\nfive\nsix\nseven\neight\nnine\nten\n"))
+	commitFiles(t, repo, "baseline source")
+	gitRun(t, repo, "checkout", "-b", "topic")
+	if err := os.MkdirAll(filepath.Join(repo, "tests"), 0700); err != nil {
 		t.Fatal(err)
 	}
-	for path, contents := range map[string]string{
-		"src/app.go":               "package app\n",
-		"src/app_test.go":          "package app\n",
-		"src/testdata/input.jsonl": "{}\n",
-		"runtime/service.custom":   "fixture\n",
-	} {
-		if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(path, []byte(contents), 0600); err != nil {
-			t.Fatal(err)
-		}
+	gitRun(t, repo, "mv", "src/source.go", "tests/moved\tcode.go")
+	writeFile(t, repo, "tests/moved\tcode.go", []byte("one\ntwo\nthree\nfour\nfive\nsix\nseven\neight\nnine\nten\neleven\n"))
+	for _, name := range []string{"src/tab\tname.go", "src/line\nname.go", "src/ spaced name.go "} {
+		writeFile(t, repo, name, []byte("source\n"))
 	}
-	run("add", ".")
-	run("commit", "-m", "implementation under a ticket-free branch")
-	cfg := &git.ClassificationConfig{
-		BaseBranch: "baseline", SourceRoots: []string{"src"},
-		TestPatterns: []string{"**/*_test.go", "**/testdata/**"},
-		ProdPatterns: []string{"src/**/*.go", "runtime/**"},
+	writeFile(t, repo, "src/binary.bin", []byte{0, 1, 2, 0, 3})
+	writeFile(t, repo, "docs/ignored.go", []byte("ignored\n"))
+	commitFiles(t, repo, "rename into tests and add unusual source names")
+	cfg := classification([]string{"src/**"}, nil, []string{"tests/**"}, nil)
+	facts, err := git.ComputeCodeFactsAtRefInDir(repo, "HEAD", cfg)
+	want := domain.CodeFacts{LinesAdded: 4, FilesChanged: 5, ProdLinesAdded: 3, TestLinesAdded: 1}
+	if err != nil || facts != want {
+		t.Fatalf("lossless destination-owned diff: %+v, %v; want %+v", facts, err, want)
 	}
-	facts, err := git.ComputeCodeFactsAtRef("HEAD", cfg)
+	cfg.Tests.Include = []string{"**/*.go"}
+	if facts, err := git.ComputeCodeFactsAtRefInDir(repo, "HEAD", cfg); err == nil || facts != (domain.CodeFacts{}) || !strings.Contains(err.Error(), "classification conflict") {
+		t.Fatalf("overlap must fail entire measurement: %+v, %v", facts, err)
+	}
+}
+
+func TestCodeFactsRequiredPolicyAndRepositoryFailures(t *testing.T) {
+	t.Parallel()
+	cfg := classification([]string{"**/*.go"}, nil, nil, nil)
+	if facts, err := git.ComputeCodeFactsAtRefInDir(t.TempDir(), "HEAD", cfg); err == nil || facts != (domain.CodeFacts{}) {
+		t.Fatalf("outside Git fabricated a successful measurement: %+v, %v", facts, err)
+	}
+	repo := t.TempDir()
+	initTestGitRepo(t, repo, "main")
+	if facts, err := git.ComputeCodeFactsAtRefInDir(repo, "HEAD", nil); err == nil || facts != (domain.CodeFacts{}) {
+		t.Fatalf("missing selected config fabricated measurement: %+v, %v", facts, err)
+	}
+	cfg.BaseBranch = ""
+	if _, err := git.ComputeCodeFactsAtRefInDir(repo, "HEAD", cfg); err == nil {
+		t.Fatal("missing base silently used available main")
+	}
+	cfg.BaseBranch = "main"
+	cfg.Tests.Exclude = nil
+	if _, err := git.ComputeCodeFactsAtRefInDir(repo, "HEAD", cfg); err == nil || !strings.Contains(err.Error(), "tests.exclude") {
+		t.Fatalf("missing required list accepted for empty diff: %v", err)
+	}
+	cfg.Tests.Exclude = []string{}
+	cfg.Production.Include = []string{"[invalid"}
+	if _, err := git.ComputeCodeFactsAtRefInDir(repo, "HEAD", cfg); err == nil || !strings.Contains(err.Error(), "production.include") {
+		t.Fatalf("invalid glob accepted for empty diff: %v", err)
+	}
+}
+
+func TestCodeFactsUsesSelectedRepositoryDespiteInheritedGitOverrides(t *testing.T) {
+	selected := t.TempDir()
+	other := t.TempDir()
+	for _, repo := range []string{selected, other} {
+		initTestGitRepo(t, repo, "baseline")
+		gitRun(t, repo, "checkout", "-b", "topic")
+	}
+	writeFile(t, selected, "src/selected.go", []byte("selected\n"))
+	commitFiles(t, selected, "selected contribution")
+	writeFile(t, other, "src/unrelated.go", []byte("one\ntwo\nthree\n"))
+	commitFiles(t, other, "unrelated contribution")
+	t.Setenv("GIT_DIR", filepath.Join(other, ".git"))
+	t.Setenv("GIT_WORK_TREE", other)
+	t.Setenv("GIT_INDEX_FILE", filepath.Join(other, ".git", "index"))
+	t.Setenv("GIT_CONFIG_COUNT", "1")
+	t.Setenv("GIT_CONFIG_KEY_0", "core.bare")
+	t.Setenv("GIT_CONFIG_VALUE_0", "true")
+	cfg := classification([]string{"src/**"}, nil, nil, nil)
+	facts, err := git.ComputeCodeFactsAtRefInDir(selected, "HEAD", cfg)
+	want := domain.CodeFacts{LinesAdded: 1, FilesChanged: 1, ProdLinesAdded: 1}
+	if err != nil || facts != want {
+		t.Fatalf("inherited repository settings redirected measurement: %+v, %v; want %+v", facts, err, want)
+	}
+	if facts, err := git.ComputeCodeFactsAtRefInDir(t.TempDir(), "HEAD", cfg); err == nil || facts != (domain.CodeFacts{}) {
+		t.Fatalf("unavailable selected repository used inherited repository: %+v, %v", facts, err)
+	}
+}
+
+func TestLoadConfigCentralizedClassification(t *testing.T) {
+	t.Parallel()
+	repo := t.TempDir()
+	const content = `project_name: GitAnalyzerTest
+agenticlens:
+  version: v1.2.3
+ticket:
+  prefixes:
+    - prefix: CASE-
+      description: Isolated test tickets
+  case_insensitive: false
+workspaces:
+  dir: tickets
+  artifacts: []
+role_mappings: {}
+role_order: []
+generation:
+  metrics:
+    skills: false
+    delegations: false
+    anomalies: false
+  feedback:
+    provisional_threshold_seconds: 0
+  summary:
+    enabled: false
+code_metrics:
+  base_branch: missing-but-not-needed-for-classification
+  production:
+    include: ["custom/include/**", "*.custom_prod"]
+    exclude: ["custom/include/excluded/**"]
+  tests:
+    include: ["*_test_custom.go"]
+    exclude: []
+database:
+  busy_timeout_ms: 17
+live:
+  active_threshold_seconds: 60
+  poll_interval_ms: 100
+anomaly_thresholds:
+  stall_threshold_seconds: 15
+  error_rate_min_calls: 5
+  error_rate_threshold: 0.25
+  error_rate_critical_threshold: 0.7
+  context_ceiling_warning_tokens: 160000
+  context_ceiling_critical_tokens: 200000
+  consecutive_errors_streak_warning: 2
+  consecutive_errors_streak_critical: 4
+  tool_thrashing_min_failures: 3
+  tool_thrashing_critical_failures: 5
+  turn_usage_warning_tokens: 1000
+  turn_usage_critical_tokens: 2000
+  context_growth_warning_tokens: 500
+  context_growth_critical_tokens: 1000
+`
+	writeFile(t, repo, ".agenticlens-config.yaml", []byte(content))
+	cfg, err := git.LoadConfig(repo)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("load explicit current policy: %v", err)
 	}
-	if facts.LinesAdded != 4 || facts.FilesChanged != 4 || facts.TestLinesAdded != 2 || facts.ProdLinesAdded != 2 {
-		t.Fatalf("explicit ref did not produce expected classified facts: %+v", facts)
+	if cfg.BaseBranch != "missing-but-not-needed-for-classification" || !reflect.DeepEqual(cfg.Production.Include, []string{"custom/include/**", "*.custom_prod"}) || !reflect.DeepEqual(cfg.Production.Exclude, []string{"custom/include/excluded/**"}) || !reflect.DeepEqual(cfg.Tests.Include, []string{"*_test_custom.go"}) || cfg.Tests.Exclude == nil || len(cfg.Tests.Exclude) != 0 {
+		t.Fatalf("loaded policy changed explicit lists/base: %+v", cfg)
 	}
-	if _, err := git.ComputeCodeFactsAtRef("", cfg); err == nil {
-		t.Fatal("empty code ref must fail instead of invoking ticket discovery")
-	}
-	if _, err := git.ComputeCodeFactsAtRef("missing-ref", cfg); err == nil {
-		t.Fatal("invalid code ref silently accepted")
+	for _, tc := range []struct {
+		name string
+		want git.FileCategory
+	}{
+		{"checks/example_test_custom.go", git.CategoryTest},
+		{"runtime/example.custom_prod", git.CategoryProd},
+		{"custom/include/file.xyz", git.CategoryProd},
+		{"custom/include/excluded/file.xyz", git.CategoryOther},
+	} {
+		if got, err := git.ClassifyFile(tc.name, cfg); err != nil || got != tc.want {
+			t.Errorf("loaded %q: %q, %v; want %q", tc.name, got, err, tc.want)
+		}
 	}
 }

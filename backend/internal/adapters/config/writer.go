@@ -3,497 +3,95 @@ package config
 import (
 	"errors"
 	"fmt"
-	"path/filepath"
-	"sort"
 	"strings"
 
-	"gopkg.in/yaml.v3"
-
 	"agenticlens/internal/domain"
+	"gopkg.in/yaml.v3"
 )
 
-// ErrFileExists is returned when target configuration file already exists and force is false.
 var ErrFileExists = errors.New("configuration file already exists")
 
-// DefaultTestPatterns defines standard fallback glob patterns for identifying test code.
-var DefaultTestPatterns = []string{
-	"**/*_test.go",
-	"**/*.test.ts",
-	"**/*.test.tsx",
-	"**/*.spec.ts",
-	"**/*.spec.tsx",
-	"**/*.test.js",
-	"**/*.test.jsx",
-	"**/*.spec.js",
-	"**/*.spec.jsx",
-	"**/test_*.py",
-	"**/*_test.py",
-	"**/testdata/**",
-	"**/__tests__/**",
-}
-
-// DefaultProdPatterns defines standard fallback glob patterns for identifying production runtime code.
-var DefaultProdPatterns = []string{
-	"**/*.go",
-	"**/*.ts",
-	"**/*.tsx",
-	"**/*.py",
-	"**/*.js",
-	"**/*.jsx",
-	"**/*.html",
-	"**/*.css",
-}
-
-// FileExistsError is an explicit typed error containing the conflicting file path.
-type FileExistsError struct {
-	Path string
-}
+type FileExistsError struct{ Path string }
 
 func (e *FileExistsError) Error() string {
 	return fmt.Sprintf("configuration file already exists: %s", e.Path)
 }
+func (e *FileExistsError) Is(target error) bool { return target == ErrFileExists }
 
-func (e *FileExistsError) Is(target error) bool {
-	return target == ErrFileExists
-}
-
-// GenerateConfigYAML produces cleanly formatted, richly commented YAML bytes for a ProjectConfig.
+// GenerateConfigYAML emits explicit shared policy. YAML nodes quote scalar values
+// according to their types, preserving metacharacters and deliberate empty lists.
 func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
-	var b strings.Builder
-
-	b.WriteString("# AgenticLens Global Configuration\n")
-	b.WriteString("# Defines project parameters, ticket identification patterns, workspace layout,\n")
-	b.WriteString("# database connectivity, live observability thresholds, code metrics classification,\n")
-	b.WriteString("# and agent-backend bridge role mappings.\n\n")
-
-	b.WriteString("# Optional generate metrics default to enabled; checkpoint feedback defaults to 180s.\n")
-	b.WriteString("# Shared project settings; local machine overrides and CLI do not override these.\n")
-	b.WriteString(fmt.Sprintf("generation:\n  metrics:\n    skills: %t\n    delegations: %t\n    anomalies: %t\n  feedback:\n    # Human stderr diagnostics only; 0 disables them.\n    provisional_threshold_seconds: %d\n\n", cfg.Generation.Metrics.Skills, cfg.Generation.Metrics.Delegations, cfg.Generation.Metrics.Anomalies, cfg.Generation.Feedback.ProvisionalThresholdSeconds))
-
-	// Project Name
-	projName := strings.TrimSpace(cfg.ProjectName)
-	if projName == "" {
-		return nil, fmt.Errorf("project_name cannot be empty")
+	if strings.TrimSpace(cfg.Workspaces.Dir) == "" {
+		return nil, fmt.Errorf("workspaces.dir must be explicitly configured before writing shared YAML")
 	}
-	b.WriteString("# Human-readable name of the project.\n")
-	b.WriteString(fmt.Sprintf("project_name: %s\n\n", projName))
-	if cfg.AgenticLens.Version != "" {
-		if err := ValidateReleaseVersion(cfg.AgenticLens.Version); err != nil {
-			return nil, err
-		}
-		b.WriteString("# Exact shared release authority; dispatch is offline.\nagenticlens:\n  version: " + cfg.AgenticLens.Version + "\n")
-		if cfg.AgenticLens.InstallRoot != "" {
-			if strings.ContainsAny(cfg.AgenticLens.InstallRoot, "'\r\n\x00") {
-				return nil, errors.New("install_root contains unsupported bootstrap characters")
-			}
-			b.WriteString("  install_root: '" + cfg.AgenticLens.InstallRoot + "'\n")
-		}
-		b.WriteString("\n")
-	}
-
-	// Ticket Settings
-	var cleanPrefixes []domain.TicketPrefix
-	for _, p := range cfg.Ticket.Prefixes {
-		cleanPrefix := strings.TrimSpace(p.Prefix)
-		if cleanPrefix != "" {
-			cleanPrefixes = append(cleanPrefixes, domain.TicketPrefix{
-				Prefix:      cleanPrefix,
-				Description: strings.TrimSpace(p.Description),
-				TicketType:  strings.TrimSpace(p.TicketType),
-			})
-		}
-	}
-	if len(cleanPrefixes) == 0 {
-		return nil, fmt.Errorf("ticket.prefixes cannot be empty")
-	}
-
-	b.WriteString("# Ticket identification and normalization settings.\n")
-	b.WriteString("ticket:\n")
-	b.WriteString("  # Supported ticket prefix identifiers for this repository.\n")
-	b.WriteString("  # Accepts structured mappings (prefix and description) or plain string scalars.\n")
-	b.WriteString("  prefixes:\n")
-
-	for _, p := range cleanPrefixes {
-		b.WriteString(fmt.Sprintf("    - prefix: %s\n", p.Prefix))
-		if strings.TrimSpace(p.Description) != "" {
-			b.WriteString(fmt.Sprintf("      description: %s\n", strings.TrimSpace(p.Description)))
-		}
-		if strings.TrimSpace(p.TicketType) != "" {
-			b.WriteString(fmt.Sprintf("      ticket_type: %s\n", strings.TrimSpace(p.TicketType)))
-		}
-	}
-
-	b.WriteString("  # Enable case-insensitive prefix parsing (e.g. al-21 -> AL-21).\n")
-	b.WriteString(fmt.Sprintf("  case_insensitive: %t\n", cfg.Ticket.CaseInsensitive))
-	b.WriteString("  # Additional regex patterns to match unconventional ticket naming formats.\n")
-	b.WriteString("  custom_patterns:")
-	formatStringList(&b, cfg.Ticket.CustomPatterns, "    ")
-	b.WriteString("\n")
-
-	// Workspaces Settings
-	wsDir := strings.TrimSpace(cfg.Workspaces.Dir)
-	var cleanSourceRoots []string
-	for _, sr := range cfg.CodeMetrics.SourceRoots {
-		clean := strings.TrimSpace(sr)
-		if clean != "" {
-			cleanSourceRoots = append(cleanSourceRoots, clean)
-		}
-	}
-	if len(cleanSourceRoots) == 0 {
-		return nil, fmt.Errorf("code_metrics.source_roots cannot be empty")
-	}
-
-	b.WriteString("# Workspace storage settings.\n")
-	b.WriteString("workspaces:\n")
-	b.WriteString("  # Directory where ticket artifacts and session telemetry ledgers are stored.\n")
-	if wsDir != "" {
-		b.WriteString(fmt.Sprintf("  dir: %s\n", wsDir))
-	}
-	b.WriteString("  # Configured workspace documentation artifacts to read and render in dashboard.\n")
-	artifacts := cfg.Workspaces.Artifacts
-	if len(artifacts) == 0 {
-		b.WriteString("  artifacts: []\n\n")
-	} else {
-		b.WriteString("  artifacts:\n")
-		for _, art := range artifacts {
-			cleanPath := strings.TrimSpace(art.Path)
-			cleanTitle := strings.TrimSpace(art.Title)
-			if cleanPath == "" {
-				continue
-			}
-			if cleanTitle == "" {
-				cleanTitle = filepath.Base(cleanPath)
-			}
-			b.WriteString(fmt.Sprintf("    - path: %s\n", cleanPath))
-			b.WriteString(fmt.Sprintf("      title: %s\n", cleanTitle))
-			if strings.TrimSpace(art.Description) != "" {
-				b.WriteString(fmt.Sprintf("      description: %s\n", strings.TrimSpace(art.Description)))
-			}
-		}
-		b.WriteString("\n")
-	}
-
-	// Database Settings
-	dbPath := strings.TrimSpace(cfg.Database.Path)
-	if dbPath == "" {
-		dbPath = "~/.local/share/opencode/opencode.db"
-	}
-	queryTimeout := cfg.Database.QueryTimeoutMs
-	if queryTimeout <= 0 {
-		queryTimeout = 5000
-	}
-	busyTimeout := cfg.Database.BusyTimeoutMs
-	if busyTimeout <= 0 {
-		busyTimeout = 5000
-	}
-	b.WriteString("# OpenCode SQLite database connectivity and timeout parameters.\n")
-	b.WriteString("database:\n")
-	b.WriteString("  # Path to local OpenCode SQLite database file.\n")
-	b.WriteString(fmt.Sprintf("  path: %s\n", dbPath))
-	b.WriteString("  # Query execution timeout in milliseconds.\n")
-	b.WriteString(fmt.Sprintf("  query_timeout_ms: %d\n", queryTimeout))
-	b.WriteString("  # SQLite busy handler wait timeout in milliseconds.\n")
-	b.WriteString(fmt.Sprintf("  busy_timeout_ms: %d\n", busyTimeout))
-	b.WriteString("  # Enforce read-only connection to prevent unintended database mutations.\n")
-	b.WriteString(fmt.Sprintf("  read_only: %t\n\n", cfg.Database.ReadOnly))
-
-	// Live Settings
-	activeSec := cfg.Live.ActiveThresholdSeconds
-	if activeSec <= 0 {
-		activeSec = 300
-	}
-	pollMs := cfg.Live.PollIntervalMs
-	if pollMs <= 0 {
-		pollMs = 2000
-	}
-	maxTrace := cfg.Live.MaxTraceBufferMessages
-	if maxTrace <= 0 {
-		maxTrace = 500
-	}
-
-	b.WriteString("# Live session observability and real-time streaming engine configuration.\n")
-	b.WriteString("live:\n")
-	b.WriteString("  # Window in seconds within which a session is considered actively running.\n")
-	b.WriteString(fmt.Sprintf("  active_threshold_seconds: %d\n", activeSec))
-	b.WriteString("  # SQLite polling interval in milliseconds for live session updates.\n")
-	b.WriteString(fmt.Sprintf("  poll_interval_ms: %d\n", pollMs))
-	b.WriteString("  # Maximum number of recent trace messages retained in memory buffer per session.\n")
-	b.WriteString("  # Legacy compatibility setting; full live traces are not truncated.\n")
-	b.WriteString(fmt.Sprintf("  max_trace_buffer_messages: %d\n\n", maxTrace))
-
-	// Anomaly Thresholds Settings
-	stallSec := cfg.AnomalyThresholds.StallThresholdSeconds
-	if stallSec <= 0 {
-		stallSec = 120
-	}
-	errorRate := cfg.AnomalyThresholds.ErrorRateThreshold
-	if errorRate <= 0 {
-		errorRate = 0.25
-	}
-	contextPct := cfg.AnomalyThresholds.ContextExhaustionPct
-	if contextPct <= 0 {
-		contextPct = 0.85
-	}
-
-	b.WriteString("# Automated anomaly detection rules governing offline generation and live stream monitoring.\n")
-	b.WriteString("anomaly_thresholds:\n")
-	b.WriteString("  # Time in seconds without session turn activity before flagging a stall anomaly.\n")
-	b.WriteString(fmt.Sprintf("  stall_threshold_seconds: %d\n", stallSec))
-	b.WriteString("  # Ratio of tool errors to total invocations triggering a high failure anomaly.\n")
-	b.WriteString(fmt.Sprintf("  error_rate_threshold: %0.2f\n", errorRate))
-	b.WriteString("  # Token context window utilization percentage triggering saturation warnings.\n")
-	b.WriteString(fmt.Sprintf("  context_exhaustion_pct: %0.2f\n", contextPct))
-	at := cfg.AnomalyThresholds
-	if at.ConsecutiveErrorsStreakWarning > 0 {
-		b.WriteString(fmt.Sprintf("  consecutive_errors_streak_warning: %d\n", at.ConsecutiveErrorsStreakWarning))
-	}
-	if at.ConsecutiveErrorsStreakCritical > 0 {
-		b.WriteString(fmt.Sprintf("  consecutive_errors_streak_critical: %d\n", at.ConsecutiveErrorsStreakCritical))
-	}
-	b.WriteString("  # Fixed context ceiling token thresholds triggering warning and critical alerts.\n")
-	b.WriteString("  # context_ceiling_critical_tokens governs context saturation percentage and health status grading.\n")
-	ceilingWarn := at.ContextCeilingWarningTokens
-	if ceilingWarn <= 0 {
-		ceilingWarn = domain.ContextCeilingWarningTokens
-	}
-	ceilingCrit := at.ContextCeilingCriticalTokens
-	if ceilingCrit <= 0 {
-		ceilingCrit = domain.ContextCeilingCriticalTokens
-	}
-	b.WriteString(fmt.Sprintf("  context_ceiling_warning_tokens: %d\n", ceilingWarn))
-	b.WriteString(fmt.Sprintf("  context_ceiling_critical_tokens: %d\n", ceilingCrit))
-	if at.TokenVelocityWarningTokens > 0 {
-		b.WriteString(fmt.Sprintf("  token_velocity_warning_tokens: %d\n", at.TokenVelocityWarningTokens))
-	}
-	if at.TokenVelocityCriticalTokens > 0 {
-		b.WriteString(fmt.Sprintf("  token_velocity_critical_tokens: %d\n", at.TokenVelocityCriticalTokens))
-	}
-	if at.TokenVelocityWarningDeltaTokens > 0 {
-		b.WriteString(fmt.Sprintf("  token_velocity_warning_delta_tokens: %d\n", at.TokenVelocityWarningDeltaTokens))
-	}
-	if at.TokenVelocityCriticalDeltaTokens > 0 {
-		b.WriteString(fmt.Sprintf("  token_velocity_critical_delta_tokens: %d\n", at.TokenVelocityCriticalDeltaTokens))
-	}
-	if at.ToolThrashingMinFailures > 0 {
-		b.WriteString(fmt.Sprintf("  tool_thrashing_min_failures: %d\n", at.ToolThrashingMinFailures))
-	}
-	if at.ToolThrashingCriticalFailures > 0 {
-		b.WriteString(fmt.Sprintf("  tool_thrashing_critical_failures: %d\n", at.ToolThrashingCriticalFailures))
-	}
-	b.WriteString("\n")
-
-	// Code Metrics Settings
-	b.WriteString("# Git commit diff analysis and code classification glob patterns.\n")
-	b.WriteString("code_metrics:\n")
-	b.WriteString("  # Monitored source code root directories for project telemetry and change tracking.\n")
-	b.WriteString("  source_roots:")
-	formatStringList(&b, cleanSourceRoots, "    ")
-	b.WriteString("  # Specific files or glob patterns explicitly included as production code.\n")
-	b.WriteString("  include:")
-	formatStringList(&b, cfg.CodeMetrics.Include, "    ")
-	b.WriteString("  # Files or directories excluded from code volume and diff calculations.\n")
-	b.WriteString("  exclude:")
-	formatStringList(&b, cfg.CodeMetrics.Exclude, "    ")
-	b.WriteString("  # Glob patterns identifying test files, test fixtures, and test utilities.\n")
-	b.WriteString("  test_patterns:")
-	formatStringList(&b, cfg.CodeMetrics.TestPatterns, "    ")
-	b.WriteString("  # Glob patterns identifying production runtime code.\n")
-	b.WriteString("  prod_patterns:")
-	formatStringList(&b, cfg.CodeMetrics.ProdPatterns, "    ")
-	b.WriteString("\n")
-
-	// Role Mappings
-	b.WriteString("# Bridge definitions mapping agent persona names to canonical AgentRole enums.\n")
-	b.WriteString("# Canonical domain roles: orchestrator, planner, coder, tester, reviewer.\n")
-	mappings := cfg.RoleMappings
-	if len(mappings) == 0 {
-		b.WriteString("role_mappings: {}\n\n")
-	} else {
-		b.WriteString("role_mappings:\n")
-		roleKeys := make([]string, 0, len(mappings))
-		for k := range mappings {
-			roleKeys = append(roleKeys, k)
-		}
-		sort.Strings(roleKeys)
-		for _, k := range roleKeys {
-			b.WriteString(fmt.Sprintf("  %s: %s\n", k, mappings[k]))
-		}
-		b.WriteString("\n")
-	}
-
-	// Role Order
-	b.WriteString("# Configurable sequence for sorting agent roles in CLI tables and metric cards.\n")
-	b.WriteString("# Roles appearing here are sorted first in this exact order; unlisted roles follow alphabetically.\n")
-	roleOrder := cfg.RoleOrder
-	if len(roleOrder) == 0 {
-		b.WriteString("role_order: []\n")
-	} else {
-		b.WriteString("role_order:\n")
-		for _, r := range roleOrder {
-			b.WriteString(fmt.Sprintf("  - %s\n", r))
-		}
-	}
-
-	capturePolicy := cfg.Telemetry.Capture
-	if capturePolicy == (domain.CaptureConfig{}) {
-		capturePolicy = domain.DefaultCaptureConfig()
-	}
-	if capturePolicy.StateDir == "" {
-		capturePolicy.StateDir = domain.DefaultCaptureConfig().StateDir
-	}
-	capturePolicy.DetailedReport = false
-	if err := capturePolicy.Validate(); err != nil {
-		return nil, fmt.Errorf("encoding capture configuration: %w", err)
-	}
-	captureBytes, err := yaml.Marshal(struct {
-		Telemetry struct {
-			Capture domain.CaptureConfig `yaml:"capture"`
-		} `yaml:"telemetry"`
-	}{Telemetry: struct {
-		Capture domain.CaptureConfig `yaml:"capture"`
-	}{Capture: capturePolicy}})
-	if err != nil {
-		return nil, fmt.Errorf("encoding capture configuration: %w", err)
-	}
-	b.Write(captureBytes)
-	result := []byte(b.String())
-
-	// Validate output syntax with yaml parser
-	var validationNode yaml.Node
-	if err := yaml.Unmarshal(result, &validationNode); err != nil {
-		return nil, fmt.Errorf("validating generated yaml syntax: %w", err)
-	}
-	if cfg.AgenticLens.Version != "" {
-		if _, err := parseEntrypoint(result, false); err != nil {
-			return nil, fmt.Errorf("generated bootstrap syntax: %w", err)
-		}
-	}
-
-	return result, nil
-}
-
-// GenerateDefaultYAMLForVersion pins generated setup to the explicitly selected release.
-// Legacy direct callers may still use GenerateDefaultYAML without claiming wrapper readiness.
-func GenerateDefaultYAMLForVersion(version, projectName, workspacesDir, dbPath string, srcFolders []string, prefixes []domain.TicketPrefix, customArtifacts ...[]domain.WorkspaceArtifactConfig) ([]byte, error) {
-	if err := ValidateReleaseVersion(version); err != nil {
+	if err := ValidateConfig(cfg); err != nil {
 		return nil, err
 	}
-	data, err := GenerateDefaultYAML(projectName, workspacesDir, dbPath, srcFolders, prefixes, customArtifacts...)
-	if err != nil {
+	if err := ValidateGenerationPolicy(cfg); err != nil {
 		return nil, err
 	}
-	result := append([]byte("# Exact shared release authority; dispatch is offline.\nagenticlens:\n  version: "+version+"\n\n"), data...)
-	if _, err := parseEntrypoint(result, false); err != nil {
+	if err := ValidateFeedbackPolicy(cfg); err != nil {
+		return nil, err
+	}
+	if err := ValidateSummaryPolicy(cfg); err != nil {
+		return nil, err
+	}
+	if err := ValidateDatabasePolicy(cfg); err != nil {
+		return nil, err
+	}
+	if err := ValidateActivityPolicy(cfg); err != nil {
+		return nil, err
+	}
+	if err := ValidatePollingPolicy(cfg); err != nil {
+		return nil, err
+	}
+	if err := ValidateAnomalyPolicy(cfg); err != nil {
+		return nil, err
+	}
+	if err := ValidateReleaseVersion(cfg.AgenticLens.Version); err != nil {
+		return nil, err
+	}
+	cfg.Telemetry = domain.TelemetryConfig{}
+	var node yaml.Node
+	if err := node.Encode(cfg); err != nil {
+		return nil, fmt.Errorf("encoding shared configuration: %w", err)
+	}
+	// Machine-local telemetry is selected independently and never written to shared policy.
+	for i := 0; i+1 < len(node.Content); i += 2 {
+		if node.Content[i].Value == "telemetry" {
+			node.Content = append(node.Content[:i], node.Content[i+2:]...)
+			break
+		}
+	}
+	node.HeadComment = "AgenticLens shared project policy. Values are explicit approved choices."
+	for i := 0; i+1 < len(node.Content); i += 2 {
+		key := node.Content[i]
+		switch key.Value {
+		case "generation":
+			key.HeadComment = "Shared optional-output policy. A zero feedback threshold disables human stderr feedback."
+		case "ticket":
+			key.HeadComment = "Literal prefix mappings preserve spelling and separators; case matching is explicit."
+		case "code_metrics":
+			key.HeadComment = "Committed net branch contribution. Production/tests include/exclude rules are independent; overlaps fail."
+		case "role_order":
+			key.HeadComment = "Observed listed roles first, then unlisted observed roles alphabetically. [] orders all alphabetically."
+		case "database":
+			key.HeadComment = "Source database lock waiting in milliseconds. Zero means no lock waiting."
+		}
+	}
+	applyConfigurationComments(&node, cfg.Comments)
+	var out strings.Builder
+	encoder := yaml.NewEncoder(&out)
+	encoder.SetIndent(2)
+	if err := encoder.Encode(&node); err != nil {
+		return nil, fmt.Errorf("writing shared YAML: %w", err)
+	}
+	if err := encoder.Close(); err != nil {
+		return nil, err
+	}
+	data := []byte(out.String())
+	if _, err := parseEntrypoint(data, false); err != nil {
 		return nil, fmt.Errorf("generated bootstrap syntax: %w", err)
 	}
-	return result, nil
-}
-
-// GenerateDefaultYAML creates configuration YAML bytes initialized from default settings with overrides.
-func GenerateDefaultYAML(projectName string, workspacesDir string, dbPath string, srcFolders []string, prefixes []domain.TicketPrefix, customArtifacts ...[]domain.WorkspaceArtifactConfig) ([]byte, error) {
-	projName := strings.TrimSpace(projectName)
-	if projName == "" {
-		return nil, fmt.Errorf("project name cannot be empty")
-	}
-	wsDir := strings.TrimSpace(workspacesDir)
-	if wsDir == "" {
-		wsDir = "workspaces"
-	}
-	databasePath := strings.TrimSpace(dbPath)
-	if databasePath == "" {
-		databasePath = "~/.local/share/opencode/opencode.db"
-	}
-	var cleanFolders []string
-	for _, f := range srcFolders {
-		trimmed := strings.TrimSpace(f)
-		if trimmed != "" {
-			cleanFolders = append(cleanFolders, trimmed)
-		}
-	}
-	if len(cleanFolders) == 0 {
-		return nil, fmt.Errorf("source folders cannot be empty")
-	}
-	var cleanPrefixes []domain.TicketPrefix
-	for _, p := range prefixes {
-		trimmed := strings.TrimSpace(p.Prefix)
-		if trimmed != "" {
-			cleanPrefixes = append(cleanPrefixes, domain.TicketPrefix{
-				Prefix:      trimmed,
-				Description: strings.TrimSpace(p.Description),
-				TicketType:  strings.TrimSpace(p.TicketType),
-			})
-		}
-	}
-	if len(cleanPrefixes) == 0 {
-		return nil, fmt.Errorf("ticket prefixes cannot be empty")
-	}
-
-	var artifacts []domain.WorkspaceArtifactConfig
-	if len(customArtifacts) > 0 && len(customArtifacts[0]) > 0 {
-		artifacts = customArtifacts[0]
-	}
-
-	cfg := domain.ProjectConfig{
-		Generation:  domain.GenerationConfig{Metrics: domain.DefaultGenerationPolicy(), Feedback: domain.DefaultGenerationFeedbackConfig()},
-		ProjectName: projName,
-		Ticket: domain.TicketConfig{
-			Prefixes:        cleanPrefixes,
-			CaseInsensitive: true,
-			CustomPatterns:  []string{},
-		},
-		Workspaces: domain.WorkspacesConfig{
-			Dir:       wsDir,
-			Artifacts: artifacts,
-		},
-		Database: domain.DatabaseConfig{
-			Path:           databasePath,
-			QueryTimeoutMs: 5000,
-			BusyTimeoutMs:  5000,
-			ReadOnly:       true,
-		},
-		Live: domain.LiveConfig{
-			ActiveThresholdSeconds: 300,
-			PollIntervalMs:         2000,
-			MaxTraceBufferMessages: 500,
-		},
-		AnomalyThresholds: domain.DefaultAnomalyThresholdsConfig(),
-		CodeMetrics: domain.CodeMetricsConfig{
-			SourceRoots:  cleanFolders,
-			Include:      []string{},
-			Exclude:      []string{},
-			TestPatterns: append([]string(nil), DefaultTestPatterns...),
-			ProdPatterns: append([]string(nil), DefaultProdPatterns...),
-		},
-		RoleMappings: domain.RoleMappings{},
-		RoleOrder:    []string{},
-	}
-
-	return GenerateConfigYAML(cfg)
-}
-
-func formatStringList(b *strings.Builder, items []string, indent string) {
-	if len(items) == 0 {
-		b.WriteString(" []\n")
-		return
-	}
-	b.WriteString("\n")
-	for _, item := range items {
-		clean := strings.TrimSpace(item)
-		if clean != "" {
-			b.WriteString(fmt.Sprintf("%s- %s\n", indent, formatStringItem(clean)))
-		}
-	}
-}
-
-func formatStringItem(item string) string {
-	if strings.HasPrefix(item, "\"") && strings.HasSuffix(item, "\"") && len(item) >= 2 {
-		return item
-	}
-	if strings.HasPrefix(item, "'") && strings.HasSuffix(item, "'") && len(item) >= 2 {
-		return item
-	}
-	if strings.ContainsAny(item, "*?[]{}#:&@!`") || strings.HasPrefix(item, "-") {
-		return fmt.Sprintf("%q", item)
-	}
-	return item
+	return data, nil
 }

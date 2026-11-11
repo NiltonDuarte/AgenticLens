@@ -1,6 +1,7 @@
 package backfill
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 
@@ -12,9 +13,11 @@ import (
 // currentLedgerPreparation validates the original wire input before any decoding
 // can normalize it, and retains a duration-canonical candidate for explicit cleanup.
 type currentLedgerPreparation struct {
-	Ledger           domain.AgenticFactLedger
-	WithoutMigration []byte
-	Completed        bool
+	Ledger                domain.AgenticFactLedger
+	WithoutMigration      []byte
+	Completed             bool
+	FormerMetadataRemoved bool
+	CleanupCandidate      []byte
 }
 
 func prepareCurrentLedger(content []byte) (currentLedgerPreparation, error) {
@@ -27,6 +30,7 @@ func prepareCurrentLedger(content []byte) (currentLedgerPreparation, error) {
 	// Use normalized bytes for domain decoding and the raw cleanup candidate;
 	// neither path may re-emit former policy/reason fields. Duration receives
 	// its own canonical output projection after original input validation.
+	formerRemoved := !bytes.Equal(content, normalized)
 	content = normalized
 	ledger, err := migration.NewEngine(nil).Migrate(content, domain.CurrentSchemaVersion)
 	if err != nil {
@@ -72,9 +76,20 @@ func prepareCurrentLedger(content []byte) (currentLedgerPreparation, error) {
 	if err != nil {
 		return currentLedgerPreparation{}, fmt.Errorf("formatting current cleanup candidate: %w", err)
 	}
+	completed := ledger.Migration != nil && ledger.Migration.Status == domain.MigrationStatusCompleted
+	candidate := canonicalDuration
+	if completed {
+		candidate = withoutMigration
+	}
+	candidate, err = adapters.FormatLedgerJSON(candidate)
+	if err != nil {
+		return currentLedgerPreparation{}, fmt.Errorf("formatting metadata cleanup candidate: %w", err)
+	}
 	return currentLedgerPreparation{
-		Ledger:           ledger,
-		WithoutMigration: withoutMigration,
-		Completed:        ledger.Migration != nil && ledger.Migration.Status == domain.MigrationStatusCompleted,
+		FormerMetadataRemoved: formerRemoved,
+		CleanupCandidate:      candidate,
+		Ledger:                ledger,
+		WithoutMigration:      withoutMigration,
+		Completed:             ledger.Migration != nil && ledger.Migration.Status == domain.MigrationStatusCompleted,
 	}, nil
 }

@@ -1,0 +1,63 @@
+# Self-contained explicit project policy used only by configuration tests.
+project_name: CaptureFixture
+agenticlens:
+  version: v9.8.7
+ticket:
+  prefixes:
+    - prefix: AL-
+      description: Development
+    - prefix: GEN-
+      description: General maintenance
+      ticket_type: chore
+    - prefix: PO-
+      description: Product planning
+      ticket_type: docs
+    - prefix: FIX-
+      description: Bug fixes
+      ticket_type: fix
+    - prefix: TEST-
+      description: Fixture tasks
+  case_insensitive: true
+workspaces:
+  dir: records
+  artifacts: []
+code_metrics:
+  base_branch: fixture-base
+  production:
+    include: ['src/**/*.go']
+    exclude: ['**/*_test.go']
+  tests:
+    include: ['**/*_test.go']
+    exclude: []
+generation:
+  metrics:
+    skills: true
+    delegations: true
+    anomalies: true
+  feedback:
+    provisional_threshold_seconds: 180
+  summary:
+    enabled: false
+    filename: SUMMARY.md
+database:
+  busy_timeout_ms: 0
+live:
+  active_threshold_seconds: 91
+  poll_interval_ms: 333
+anomaly_thresholds:
+  stall_threshold_seconds: 47
+  error_rate_min_calls: 5
+  error_rate_threshold: 0.25
+  error_rate_critical_threshold: 0.70
+  context_ceiling_warning_tokens: 160000
+  context_ceiling_critical_tokens: 200000
+  consecutive_errors_streak_warning: 4
+  consecutive_errors_streak_critical: 9
+  tool_thrashing_min_failures: 2
+  tool_thrashing_critical_failures: 6
+  turn_usage_warning_tokens: 31001
+  turn_usage_critical_tokens: 61003
+  context_growth_warning_tokens: 41001
+  context_growth_critical_tokens: 81003
+role_mappings: {build: orchestrator}
+role_order: []

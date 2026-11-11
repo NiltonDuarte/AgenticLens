@@ -68,6 +68,8 @@ func FormatMarkdownMetricsTableWithPolicy(ledger domain.AgenticMetricsLedger, po
 func formatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, policy *domain.GenerationPolicy, roleOrder ...[]string) string {
 	anomaliesEnabled := policy == nil || policy.Anomalies
 	incompleteAnalysis := !ledger.Facts.CompleteAnomalyCoverage()
+	externalParentContext := ledger.Facts.HasExternalParentReference()
+	unrecordedScopes := ledger.Facts.UnrecordedAnomalyScopes()
 	we := ledger.WorkflowEfficiency
 	cwh := we.ContextWindowHealth
 	totals := ledger.Totals
@@ -142,24 +144,22 @@ func formatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, policy *doma
 	subPeakRoleStr := titleCase(cwh.SubagentsPeakRole)
 
 	effectiveCeiling := cwh.HealthyCeilingTokens
+	ceilingLabel := domain.FormatTokensK(effectiveCeiling)
 	if effectiveCeiling <= 0 {
-		effectiveCeiling = domain.ContextCeilingCriticalTokens
+		ceilingLabel = "unavailable"
+		rootPctStr = "unavailable"
+	}
+
+	contextHealthLine := fmt.Sprintf("- **Context Window Health:** %s — Root agent peak %s tokens (%s of %s healthy ceiling, %d compactions) | Subagents peak %s (%s)", cwh.Status, rootTokStr, rootPctStr, ceilingLabel, cwh.Compactions, subTokStr, subPeakRoleStr)
+	if effectiveCeiling <= 0 {
+		contextHealthLine = fmt.Sprintf("- **Context Window Health:** unavailable — Root agent peak %s tokens (%d compactions) | Subagents peak %s (%s). No context ceiling is configured.", rootTokStr, cwh.Compactions, subTokStr, subPeakRoleStr)
 	}
 
 	lines := []string{
 		"### Workflow Efficiency",
 		fmt.Sprintf("- **Software Development Life Cycle Iterations:** %d", we.SDLCIterations),
 		fmt.Sprintf("- **Active Agent Duration:** %s (%s)", we.ActiveDurationFormatted, domain.DurationDescription(we.ProvisionalSeconds)),
-		fmt.Sprintf(
-			"- **Context Window Health:** %s — Root agent peak %s tokens (%s of %s healthy ceiling, %d compactions) | Subagents peak %s (%s)",
-			cwh.Status,
-			rootTokStr,
-			rootPctStr,
-			domain.FormatTokensK(effectiveCeiling),
-			cwh.Compactions,
-			subTokStr,
-			subPeakRoleStr,
-		),
+		contextHealthLine,
 		fmt.Sprintf("- **Role Effort Distribution (Subagents):** %s", roleDistStr),
 		fmt.Sprintf(
 			"- **Subagent Turn Velocity & Thrashing:** %.1f avg turns/run (peak: %d turns)%s",
@@ -196,10 +196,17 @@ func formatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, policy *doma
 
 	if !anomaliesEnabled {
 		lines = lines[:len(lines)-1]
-		lines[3] = fmt.Sprintf("- **Context Window Usage:** Root peak %s tokens (%s of %s reference ceiling, %d compactions) | Subagents peak %s (%s)", rootTokStr, rootPctStr, domain.FormatTokensK(effectiveCeiling), cwh.Compactions, subTokStr, subPeakRoleStr)
+		lines[3] = fmt.Sprintf("- **Context Window Usage:** Root peak %s tokens (%s of %s reference ceiling, %d compactions) | Subagents peak %s (%s)", rootTokStr, rootPctStr, ceilingLabel, cwh.Compactions, subTokStr, subPeakRoleStr)
 		lines = append(lines, "Optional anomaly analysis: disabled by generation policy.")
 	} else if len(ledger.Anomalies) == 0 && incompleteAnalysis {
-		lines = append(lines, "- **Status:** Anomaly analysis is not recorded for the full ledger; no clean-session conclusion is available.")
+		if externalParentContext && unrecordedScopes == 0 {
+			lines = append(lines, "- **Status:** Recorded anomaly summaries are available, but parent/group context outside this ticket is partial; no complete clean-session conclusion is available.")
+		} else if externalParentContext {
+			lines = append(lines, "- **Status:** Parent/group anomaly coverage outside this ticket is incomplete; no clean-session conclusion is available.")
+		} else {
+			lines = append(lines, "- **Status:** Anomaly analysis is not recorded for the full ledger; no clean-session conclusion is available.")
+		}
+
 	} else if len(ledger.Anomalies) == 0 {
 		lines = append(lines, "- **Status:** No execution anomalies detected (clean session).")
 	} else {
@@ -233,8 +240,16 @@ func formatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, policy *doma
 	}
 
 	if anomaliesEnabled && incompleteAnalysis {
-		lines[3] = fmt.Sprintf("- **Context Window Usage:** Root peak %s tokens (%s of %s reference ceiling, %d compactions) | Subagents peak %s (%s)", rootTokStr, rootPctStr, domain.FormatTokensK(effectiveCeiling), cwh.Compactions, subTokStr, subPeakRoleStr)
-		lines = append(lines, "Anomaly analysis is not recorded for every required owner/group; recorded findings remain visible. A complete source-backed refresh is required for recovery.")
+		lines[3] = fmt.Sprintf("- **Context Window Usage:** Root peak %s tokens (%s of %s reference ceiling, %d compactions) | Subagents peak %s (%s)", rootTokStr, rootPctStr, ceilingLabel, cwh.Compactions, subTokStr, subPeakRoleStr)
+		if externalParentContext {
+			if unrecordedScopes > 0 {
+				lines = append(lines, "Some owner/group scopes have no recorded analysis. Parent/group context outside this ticket remains incomplete; recorded findings remain visible.")
+			} else {
+				lines = append(lines, "Recorded anomaly summaries remain visible. Parent/group context outside this ticket is partial, so a complete group conclusion is unavailable.")
+			}
+		} else {
+			lines = append(lines, "Anomaly analysis is not recorded for every required owner/group; recorded findings remain visible. A complete source-backed refresh is required for recovery.")
+		}
 	}
 	lines = append(lines,
 		"",
@@ -313,9 +328,13 @@ func formatMarkdownMetricsTable(ledger domain.AgenticMetricsLedger, policy *doma
 	})
 
 	for _, m := range sortedModels {
+		modelLabel := m.Model
+		if modelLabel == "" {
+			modelLabel = "Unknown"
+		}
 		lines = append(lines, fmt.Sprintf(
 			"| **%s** | %d | %s | %s | %s | %.1f%% | %s |",
-			m.Model,
+			modelLabel,
 			m.Invocations,
 			FormatNumber(m.InputTokens),
 			FormatNumber(m.OutputTokens),

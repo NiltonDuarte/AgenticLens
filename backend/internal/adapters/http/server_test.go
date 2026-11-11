@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -15,6 +16,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"sort"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -31,13 +33,31 @@ import (
 
 func mustNewServer(t *testing.T, workspacesDir string, staticFS fs.FS, liveService ...adaptershttp.LiveServiceInterface) *adaptershttp.Server {
 	t.Helper()
-	cfg, err := config.Load(workspacesDir)
-	if errors.Is(err, config.ErrConfigNotFound) {
-		cfg = domain.DefaultProjectConfig()
-		cfg.Workspaces.Artifacts = []domain.WorkspaceArtifactConfig{{Path: "CONTRACT.md", Title: "Contract"}, {Path: "SUMMARY.md", Title: "Summary"}}
-	} else if err != nil {
-		t.Fatalf("mustNewServer failed: %v", err)
+	cfg := httpFixturePolicy()
+	if filepath.IsAbs(workspacesDir) {
+		loaded, err := config.LoadShared(workspacesDir)
+		if errors.Is(err, config.ErrConfigNotFound) {
+			if info, e := os.Stat(workspacesDir); e == nil && info.IsDir() {
+				cfg.Workspaces.Dir = "."
+				data, e := config.GenerateConfigYAML(cfg)
+				if e != nil {
+					t.Fatal(e)
+				}
+				if e = os.WriteFile(filepath.Join(workspacesDir, ".agenticlens-config.yaml"), data, 0600); e != nil {
+					t.Fatal(e)
+				}
+				loaded, err = config.LoadShared(workspacesDir)
+			} else {
+				err = nil
+				loaded = cfg
+			}
+		}
+		if err != nil {
+			t.Fatalf("fixture target configuration: %v", err)
+		}
+		cfg = loaded
 	}
+
 	return adaptershttp.NewServerWithConfig(workspacesDir, staticFS, cfg, liveService...)
 }
 
@@ -48,6 +68,14 @@ func sampleTestLedgerJSON(ticketID, title string, duration int64, cost float64, 
 func setupFixtureWorkspaces(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
+	policy := httpFixturePolicy()
+	data, err := config.GenerateConfigYAML(policy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, ".agenticlens-config.yaml"), data, 0600); err != nil {
+		t.Fatal(err)
+	}
 	wsDir := filepath.Join(root, "workspaces")
 	if err := os.MkdirAll(wsDir, 0755); err != nil {
 		t.Fatalf("failed creating workspaces dir: %v", err)
@@ -245,11 +273,10 @@ func TestGetWorkspaces(t *testing.T) {
 	})
 
 	t.Run("shared stored IDs survive source absence without read side effects", func(t *testing.T) {
-		root := t.TempDir()
+		root := httpWorkspaceRoot(t)
 		wsDir := filepath.Join(root, "custom-ledgers")
-		cfg := domain.DefaultProjectConfig()
-		cfg.Database.Path = filepath.Join(root, "missing-private-state", "opencode.db")
-		cfg.Telemetry.Sources.OpenCodeDatabasePath = cfg.Database.Path
+		cfg := httpFixturePolicy()
+		cfg.Telemetry.Sources.OpenCodeDatabasePath = filepath.Join(root, "missing-private-state", "opencode.db")
 		cfg.Telemetry.Sources.CodexHome = filepath.Join(root, "missing-private-state", "codex")
 		expected := map[string]string{}
 		for _, ticket := range []string{"TEST-1", "TEST-2"} {
@@ -681,7 +708,7 @@ func TestGetWorkspaces(t *testing.T) {
 }
 
 func TestHTTPRejectsLegacySchemaVersionsWithoutPartialPayload(t *testing.T) {
-	workspaceRoot := t.TempDir()
+	workspaceRoot := httpWorkspaceRoot(t)
 	ticketID := "AL-LEGACY-HTTP"
 	ticketDir := filepath.Join(workspaceRoot, ticketID)
 	if err := os.MkdirAll(ticketDir, 0755); err != nil {
@@ -736,7 +763,7 @@ func TestHTTPRejectsLegacySchemaVersionsWithoutPartialPayload(t *testing.T) {
 }
 
 func TestHTTPRejectsRetiredCurrentFieldsAndKeepsValidSibling(t *testing.T) {
-	root := t.TempDir()
+	root := httpWorkspaceRoot(t)
 	for _, id := range []string{"TEST-VALID", "TEST-BAD"} {
 		if err := os.MkdirAll(filepath.Join(root, id), 0700); err != nil {
 			t.Fatal(err)
@@ -877,7 +904,7 @@ func TestAggregateEndpointFailsWhenWorkspaceScanSetupIsFatal(t *testing.T) {
 	if recorder.Code != http.StatusServiceUnavailable {
 		t.Fatalf("expected fatal workspace setup to return 503, got %d: %s", recorder.Code, recorder.Body.String())
 	}
-	if !strings.Contains(recorder.Body.String(), "Workspaces directory not found") {
+	if !strings.Contains(recorder.Body.String(), missingWorkspaceRoot) {
 		t.Fatalf("expected fatal setup diagnostic in response, got %s", recorder.Body.String())
 	}
 }
@@ -904,10 +931,10 @@ func TestGetWorkspaceDetail(t *testing.T) {
 		if detail.Ledger.TicketID == nil || *detail.Ledger.TicketID != "AL-1" {
 			t.Errorf("expected ticket ID AL-1")
 		}
-		if detail.Artifacts.ContractContent == nil || *detail.Artifacts.ContractContent != "# AL-1 Contract Content" {
+		if fixtureArtifactContent(detail.Artifacts, "CONTRACT.md") == nil || *fixtureArtifactContent(detail.Artifacts, "CONTRACT.md") != "# AL-1 Contract Content" {
 			t.Errorf("expected contract content matching fixture")
 		}
-		if detail.Artifacts.SummaryContent == nil || *detail.Artifacts.SummaryContent != "# AL-1 Summary Content" {
+		if fixtureArtifactContent(detail.Artifacts, "SUMMARY.md") == nil || *fixtureArtifactContent(detail.Artifacts, "SUMMARY.md") != "# AL-1 Summary Content" {
 			t.Errorf("expected summary content matching fixture")
 		}
 	})
@@ -953,6 +980,9 @@ func TestGetWorkspaceDetail(t *testing.T) {
 			},
 		}
 
+		shared := httpFixturePolicy()
+		shared.Workspaces = customCfg.Workspaces
+		writeHTTPFixturePolicy(t, tempDir, shared)
 		customSrv := adaptershttp.NewServerWithConfig(wsDir, fstest.MapFS{}, customCfg)
 		customTS := httptest.NewServer(customSrv.Handler())
 		defer customTS.Close()
@@ -1028,7 +1058,7 @@ func TestGetWorkspaceDetail(t *testing.T) {
 
 func TestGetFleet(t *testing.T) {
 	t.Run("mixed current cost evidence survives HTTP reads without ledger rewrites", func(t *testing.T) {
-		root := t.TempDir()
+		root := httpWorkspaceRoot(t)
 		inputs := map[string]string{
 			"TEST-0": sampleTestLedgerJSON("TEST-0", "Legacy zero", 1, 0, 1),
 			"TEST-1": strings.Replace(sampleTestLedgerJSON("TEST-1", "Missing amount", 1, 1, 1), `"cost_usd":1.000000,"cost_evidence":{"state":"observed","known_subtotal_usd":1.000000}`, `"cost_usd":null,"cost_evidence":{"state":"unavailable","known_subtotal_usd":null}`, 1),
@@ -1378,10 +1408,10 @@ func TestAdversarialHTTPEdgeCases(t *testing.T) {
 			t.Fatalf("failed decoding: %v", err)
 		}
 
-		if detail.Artifacts.ContractContent != nil {
+		if fixtureArtifactContent(detail.Artifacts, "CONTRACT.md") != nil {
 			t.Errorf("expected nil ContractContent for AL-2")
 		}
-		if detail.Artifacts.SummaryContent != nil {
+		if fixtureArtifactContent(detail.Artifacts, "SUMMARY.md") != nil {
 			t.Errorf("expected nil SummaryContent for AL-2")
 		}
 	})
@@ -2021,7 +2051,7 @@ func TestGetVersion(t *testing.T) {
 }
 
 func TestWorkspaceEventsAndAnomaliesHTTP(t *testing.T) {
-	root := t.TempDir()
+	root := httpWorkspaceRoot(t)
 	wsDir := filepath.Join(root, "workspaces")
 	if err := os.MkdirAll(wsDir, 0755); err != nil {
 		t.Fatalf("failed creating workspaces dir: %v", err)
@@ -2392,6 +2422,9 @@ func TestWorkspaceEventsHandler_AdversarialEdgeCases(t *testing.T) {
 
 	tempDir := t.TempDir()
 	wsDir := filepath.Join(tempDir, "workspaces")
+	cfg := httpFixturePolicy()
+	cfg.Workspaces.Dir = wsDir
+	writeHTTPFixturePolicy(t, tempDir, cfg)
 	if err := os.MkdirAll(wsDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -2670,7 +2703,7 @@ type mockHydrator struct {
 }
 
 func TestLeanFactsSurviveSourceTraceAvailabilityWithoutGETWrites(t *testing.T) {
-	root := t.TempDir()
+	root := httpWorkspaceRoot(t)
 	ticket := "TEST-TRACE"
 	ticketDir := filepath.Join(root, ticket)
 	if err := os.MkdirAll(ticketDir, 0700); err != nil {
@@ -2781,7 +2814,7 @@ func TestLeanFactsSurviveSourceTraceAvailabilityWithoutGETWrites(t *testing.T) {
 }
 
 func TestWorkspaceSourceEventsPreserveIndependentEqualOccurrencesAcrossReads(t *testing.T) {
-	root := t.TempDir()
+	root := httpWorkspaceRoot(t)
 	dir := filepath.Join(root, "TEST-TRACE")
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		t.Fatal(err)
@@ -2819,7 +2852,7 @@ func TestWorkspaceSourceEventsPreserveIndependentEqualOccurrencesAcrossReads(t *
 }
 
 func TestSummaryOnlyLeanEventsResponseAllocatesEmptyEventsAndKeepsAnomalies(t *testing.T) {
-	root := t.TempDir()
+	root := httpWorkspaceRoot(t)
 	path := filepath.Join(root, "FIX-12")
 	if err := os.MkdirAll(path, 0700); err != nil {
 		t.Fatal(err)
@@ -3253,7 +3286,7 @@ func TestWorkspaceEvents_EndToEndLiveServiceHydrationAndPathTraversal(t *testing
 
 func setupMultiFilterWorkspaces(t *testing.T) string {
 	t.Helper()
-	root := t.TempDir()
+	root := httpWorkspaceRoot(t)
 	wsDir := filepath.Join(root, "workspaces")
 	if err := os.MkdirAll(wsDir, 0755); err != nil {
 		t.Fatalf("failed creating workspaces dir: %v", err)
@@ -3400,8 +3433,8 @@ func TestMultiFilterEndpoints(t *testing.T) {
 			t.Fatalf("expected AL-2, got %+v", ledgers5)
 		}
 
-		// 6. 'all' resets filter -> all 4 ledgers
-		resp6, err := http.Get(ts.URL + "/api/workspaces?prefix=all&ticket_type=all")
+		// 6. Omit the prefix selection to request all four ledgers.
+		resp6, err := http.Get(ts.URL + "/api/workspaces?ticket_type=all")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -3463,8 +3496,11 @@ func TestMultiFilterEndpoints(t *testing.T) {
 		if rows[0].TicketID != "AL-2" {
 			t.Errorf("expected ticket ID AL-2, got %s", rows[0].TicketID)
 		}
-		if rows[0].TicketType == nil || *rows[0].TicketType != domain.TicketTypeFix {
-			t.Errorf("expected ticket_type fix, got %v", rows[0].TicketType)
+		if rows[0].TicketType == nil {
+			t.Fatal("recorded ticket_type bug was omitted")
+		}
+		if *rows[0].TicketType != domain.ConventionalTicketType("bug") {
+			t.Errorf("expected preserved ticket_type bug, got %q", *rows[0].TicketType)
 		}
 
 		// 2. Bad request on invalid temporal filter
@@ -3917,7 +3953,7 @@ func TestProgressionHandler(t *testing.T) {
 
 	t.Run("window=1d filters last 24 hours dynamically", func(t *testing.T) {
 		// Create temporary workspace with one recent ticket and one old ticket
-		root := t.TempDir()
+		root := httpWorkspaceRoot(t)
 		wsDir := filepath.Join(root, "workspaces")
 		if err := os.MkdirAll(wsDir, 0755); err != nil {
 			t.Fatal(err)
@@ -4289,7 +4325,7 @@ func TestConfigHandler_DefaultConfig(t *testing.T) {
 	staticFS := fstest.MapFS{
 		"index.html": &fstest.MapFile{Data: []byte("<html><body>Mock SPA</body></html>")},
 	}
-	cfg := domain.DefaultProjectConfig()
+	cfg := httpFixturePolicy()
 	cfg.ProjectName = "AgenticLens"
 	cfg.Ticket.Prefixes = []domain.TicketPrefix{{Prefix: "AL"}, {Prefix: "AL2"}, {Prefix: "GEN", TicketType: "chore"}, {Prefix: "PO", TicketType: "docs"}, {Prefix: "FIX", TicketType: "fix"}}
 	cfg.RoleOrder = []string{"orchestrator", "planner", "coder", "tester", "reviewer"}
@@ -4494,7 +4530,7 @@ func TestConfigHandler_DefaultProjectConfig(t *testing.T) {
 	staticFS := fstest.MapFS{
 		"index.html": &fstest.MapFile{Data: []byte("<html><body>Mock SPA</body></html>")},
 	}
-	server := adaptershttp.NewServerWithConfig("workspaces", staticFS, domain.DefaultProjectConfig())
+	server := adaptershttp.NewServerWithConfig("workspaces", staticFS, httpFixturePolicy())
 
 	req := httptest.NewRequest(http.MethodGet, "/api/config", nil)
 	rec := httptest.NewRecorder()
@@ -4719,10 +4755,10 @@ func TestServerWithTestDataWorkspaces(t *testing.T) {
 			t.Fatalf("failed unmarshaling /api/workspaces/AL-1: %v", err)
 		}
 
-		if detail.Artifacts.ContractContent == nil || !strings.Contains(*detail.Artifacts.ContractContent, "AL-1") {
+		if fixtureArtifactContent(detail.Artifacts, "CONTRACT.md") == nil || !strings.Contains(*fixtureArtifactContent(detail.Artifacts, "CONTRACT.md"), "AL-1") {
 			t.Errorf("expected contract content to contain 'AL-1'")
 		}
-		if detail.Artifacts.SummaryContent == nil || !strings.Contains(*detail.Artifacts.SummaryContent, "AL-1") {
+		if fixtureArtifactContent(detail.Artifacts, "SUMMARY.md") == nil || !strings.Contains(*fixtureArtifactContent(detail.Artifacts, "SUMMARY.md"), "AL-1") {
 			t.Errorf("expected summary content to contain 'AL-1'")
 		}
 	})
@@ -4873,6 +4909,10 @@ func TestServerWorkspaceDirConfigSynchronization(t *testing.T) {
 		t.Fatalf("failed writing ledger: %v", err)
 	}
 
+	shared := httpFixturePolicy()
+	shared.Workspaces.Dir = cfgSpaceDir
+	writeHTTPFixturePolicy(t, tempDir, shared)
+
 	t.Run("resolves workspaces dir from ProjectConfig when workspacesDir argument is empty", func(t *testing.T) {
 		cfg := domain.ProjectConfig{
 			ProjectName: "AutoResolveTest",
@@ -4988,14 +5028,14 @@ func TestServerWorkspaceDirConfigSynchronization(t *testing.T) {
 	})
 }
 
-func TestGeneratedPolicyHTTPReadPreservesOmissionWithoutWriting(t *testing.T) {
-	root := t.TempDir()
+func TestCanonicalOmittedCategoriesHTTPReadPreservesOmissionWithoutWriting(t *testing.T) {
+	root := httpWorkspaceRoot(t)
 	ticket := "TEST-POLICY"
 	dir := filepath.Join(root, ticket)
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		t.Fatal(err)
 	}
-	ledger := `{"schema_version":6,"ticket_id":"TEST-POLICY","generation_policy":{"skills":false,"delegations":false,"anomalies":false},"sessions":[{"id":"recorded-owner","source":"codex","user":"tester","invocations":[],"tools":[{"name":"bash","calls":3,"errors":2}]}]}`
+	ledger := `{"schema_version":6,"ticket_id":"TEST-POLICY","sessions":[{"id":"recorded-owner","source":"codex","user":"tester","invocations":[],"tools":[{"name":"bash","calls":3,"errors":2}]}]}`
 	path := filepath.Join(dir, "agentic_metrics.json")
 	if err := os.WriteFile(path, []byte(ledger), 0600); err != nil {
 		t.Fatal(err)
@@ -5047,5 +5087,167 @@ func TestGeneratedPolicyHTTPReadPreservesOmissionWithoutWriting(t *testing.T) {
 	}
 	if string(after) != ledger {
 		t.Fatal("GET rewrote generation policy ledger")
+	}
+}
+
+func TestWorkspaceDetailShowsExternalParentChildWithoutPrivateSource(t *testing.T) {
+	root := httpWorkspaceRoot(t)
+	records := filepath.Join(root, "records")
+	ticket := "TEST-200"
+	path := filepath.Join(records, ticket, "agentic_metrics.json")
+	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+		t.Fatal(err)
+	}
+	raw := sampleTestLedgerJSON(ticket, "Explicit child ticket", 1, 0.5, 1)
+	raw = strings.Replace(raw, `"id":"ses-orch"`, `"id":"explicit-child","parent_id":"parent-owned-by-another-ticket"`, 1)
+	if err := os.WriteFile(path, []byte(raw), 0600); err != nil {
+		t.Fatal(err)
+	}
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	t.Setenv("CODEX_HOME", filepath.Join(home, "unavailable-source"))
+	request := httptest.NewRequest(http.MethodGet, "/api/workspaces/"+ticket, nil)
+	request.SetPathValue("ticketId", ticket)
+	response := httptest.NewRecorder()
+	adaptershttp.WorkspaceDetailHandler(records)(response, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("valid external-parent child hidden by API: %d %s", response.Code, response.Body.String())
+	}
+	var detail adaptershttp.WorkspaceDetailResponse
+	if err := json.Unmarshal(response.Body.Bytes(), &detail); err != nil {
+		t.Fatal(err)
+	}
+	children := detail.Ledger.Facts.Sessions
+	if len(children) != 1 || children[0].ID != "explicit-child" || children[0].ParentID == nil || *children[0].ParentID != "parent-owned-by-another-ticket" || len(children[0].Invocations) != 1 {
+		t.Fatalf("public response changed source ancestry/owner: %+v", children)
+	}
+	if !strings.Contains(response.Body.String(), `"root_peak_tokens":0`) || !strings.Contains(response.Body.String(), `"status":"UNAVAILABLE"`) {
+		t.Fatalf("external-parent data fabricated healthy root analysis: %s", response.Body.String())
+	}
+	if after, err := os.ReadFile(path); err != nil || string(after) != raw {
+		t.Fatalf("baseline read rewrote portable history: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".agenticlens")); !os.IsNotExist(err) {
+		t.Fatalf("API baseline read required private capture state: %v", err)
+	}
+}
+
+func fixtureArtifactContent(art domain.TicketArtifacts, path string) *string {
+	for _, item := range art.Items {
+		if item.Path == path {
+			return item.Content
+		}
+	}
+	return nil
+}
+
+func httpFixturePolicy() domain.ProjectConfig {
+	return domain.ProjectConfig{
+		ProjectName: "HTTP fixture", AgenticLens: domain.EntrypointConfig{Version: "v9.8.7"}, Workspaces: domain.WorkspacesConfig{Dir: "workspaces", Artifacts: []domain.WorkspaceArtifactConfig{{Path: "CONTRACT.md", Title: "Contract"}, {Path: "SUMMARY.md", Title: "Summary"}}}, Ticket: domain.TicketConfig{CaseInsensitive: true, Prefixes: []domain.TicketPrefix{{Prefix: "AL", Description: "Development"}, {Prefix: "GEN", Description: "General"}, {Prefix: "PO", Description: "Planning"}, {Prefix: "FIX", Description: "Fixes"}, {Prefix: "T", Description: "Fixture"}}}, RoleMappings: domain.RoleMappings{}, RoleOrder: []string{}, CodeMetrics: domain.CodeMetricsConfig{BaseBranch: "fixture-base", Production: domain.CodeCategoryConfig{Include: []string{}, Exclude: []string{}}, Tests: domain.CodeCategoryConfig{Include: []string{}, Exclude: []string{}}}, Generation: domain.GenerationConfig{Metrics: domain.GenerationPolicy{Skills: true, Delegations: true, Anomalies: true}, Feedback: domain.GenerationFeedbackConfig{ProvisionalThresholdSeconds: 0}, Summary: domain.GenerationSummaryConfig{Enabled: false}}, Database: domain.DatabaseConfig{BusyTimeoutMs: 0}, Live: domain.LiveConfig{ActiveThresholdSeconds: 300, PollIntervalMs: 2000}, AnomalyThresholds: domain.AnomalyThresholdsConfig{StallThresholdSeconds: 120, ErrorRateMinCalls: 5, ErrorRateThreshold: .25, ErrorRateCriticalThreshold: .7, ContextCeilingWarningTokens: 160000, ContextCeilingCriticalTokens: 200000, ConsecutiveErrorsStreakWarning: 3, ConsecutiveErrorsStreakCritical: 5, ToolThrashingMinFailures: 3, ToolThrashingCriticalFailures: 5, TurnUsageWarningTokens: 30000, TurnUsageCriticalTokens: 60000, ContextGrowthWarningTokens: 40000, ContextGrowthCriticalTokens: 80000}}
+}
+
+func writeHTTPFixturePolicy(t *testing.T, root string, cfg domain.ProjectConfig) {
+	t.Helper()
+	data, err := config.GenerateConfigYAML(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, ".agenticlens-config.yaml"), data, 0600); err != nil {
+		t.Fatal(err)
+	}
+}
+func httpWorkspaceRoot(t *testing.T) string {
+	t.Helper()
+	root := t.TempDir()
+	cfg := httpFixturePolicy()
+	cfg.Workspaces.Dir = "."
+	writeHTTPFixturePolicy(t, root, cfg)
+	return root
+}
+
+func TestPrefixQueryPreservesLiteralConfiguredChoices(t *testing.T) {
+	root := httpWorkspaceRoot(t)
+	cfg := httpFixturePolicy()
+	cfg.Workspaces.Dir = "."
+	cfg.Ticket.CaseInsensitive = false
+	cfg.Ticket.Prefixes = []domain.TicketPrefix{
+		{Prefix: "AL-", Description: "ordinary"},
+		{Prefix: "AL,PO", Description: "literal comma"},
+		{Prefix: "TEAM OPS", Description: "internal space"},
+		{Prefix: "all", Description: "literal all"},
+	}
+	writeHTTPFixturePolicy(t, root, cfg)
+	for _, id := range []string{"AL-1", "PO-2", "AL,PO3", "TEAM OPS4", "all05"} {
+		dir := filepath.Join(root, id)
+		if err := os.Mkdir(dir, 0700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "agentic_metrics.json"), []byte(sampleTestLedgerJSON(id, id, 10, .1, 1)), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, tc := range []struct {
+		query string
+		want  []string
+	}{
+		{"prefix=AL%2CPO", []string{"AL,PO3"}},
+		{"prefix=TEAM+OPS", []string{"TEAM OPS4"}},
+		{"prefix=all", []string{"all05"}},
+		{"prefix=AL-&prefix=AL%2CPO", []string{"AL,PO3", "AL-1"}},
+		{"prefix=ALL", []string{}},
+	} {
+		t.Run(tc.query, func(t *testing.T) {
+			rec := httptest.NewRecorder()
+			adaptershttp.WorkspacesHandler(root).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/workspaces?"+tc.query, nil))
+			if rec.Code != 200 {
+				t.Fatalf("status %d: %s", rec.Code, rec.Body.String())
+			}
+			var ledgers []domain.AgenticMetricsLedger
+			if err := json.Unmarshal(rec.Body.Bytes(), &ledgers); err != nil {
+				t.Fatal(err)
+			}
+			ids := []string{}
+			for _, ledger := range ledgers {
+				ids = append(ids, *ledger.TicketID)
+			}
+			sort.Strings(ids)
+			sort.Strings(tc.want)
+			if !reflect.DeepEqual(ids, tc.want) {
+				t.Fatalf("literal prefix selection: got %v want %v", ids, tc.want)
+			}
+		})
+	}
+}
+
+func TestServerBindUsesOneValidatedLoopbackPort(t *testing.T) {
+	server := adaptershttp.NewServerWithConfig("unused", fstest.MapFS{}, httpFixturePolicy())
+	for _, port := range []int{-1, 0, 65536} {
+		if listener, err := server.Bind(port); err == nil {
+			listener.Close()
+			t.Fatalf("invalid port %d bound", port)
+		}
+	}
+	occupied, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	port := occupied.Addr().(*net.TCPAddr).Port
+	if listener, err := server.Bind(port); err == nil {
+		listener.Close()
+		occupied.Close()
+		t.Fatal("occupied port selected a different listener")
+	}
+	if err := occupied.Close(); err != nil {
+		t.Fatal(err)
+	}
+	listener, err := server.Bind(port)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+	actual := listener.Addr().(*net.TCPAddr)
+	if actual.Port != port || !actual.IP.Equal(net.ParseIP("127.0.0.1")) {
+		t.Fatalf("listener differs from selected loopback address: %s", actual)
 	}
 }

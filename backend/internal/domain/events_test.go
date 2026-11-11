@@ -287,7 +287,7 @@ func TestPersistAnomalySummariesDropsEventsAndEvidenceButKeepsFacts(t *testing.T
 		Invocations: []domain.InvocationFact{{Role: "orchestrator"}},
 		Tools:       []domain.SessionToolFact{{Name: tool, Calls: 6, Errors: 6}},
 	}}}
-	persisted, err := domain.PersistSourceAnomalySummaries(facts, domain.SourceEvents{Events: []domain.EventFact{{SessionID: sessionID, EventID: "e1", Timestamp: "2026-01-01T00:00:00Z", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "error"}}, CompleteSessionIDs: []string{sessionID}})
+	persisted, err := domain.PersistSourceAnomalySummaries(facts, domain.SourceEvents{Events: []domain.EventFact{{SessionID: sessionID, EventID: "e1", Timestamp: "2026-01-01T00:00:00Z", Turn: 1, EventType: domain.EventTypeToolCall, ToolName: &tool, Status: "error"}}, CompleteSessionIDs: []string{sessionID}}, fixtureAnomalyPolicy())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -321,7 +321,7 @@ func TestPersistAnomalySummariesRefreshesNewSessionsAndAggregates(t *testing.T) 
 		{ID: "old-root", Invocations: []domain.InvocationFact{{Role: "orchestrator"}}, Tools: []domain.SessionToolFact{{Name: tool, Calls: 6, Errors: 5}}, Anomalies: []domain.Anomaly{oldSummary}},
 		{ID: "new-root", Invocations: []domain.InvocationFact{{Role: "orchestrator"}}, Tools: []domain.SessionToolFact{{Name: tool, Calls: 3, Errors: 3}}, Anomalies: []domain.Anomaly{}},
 	}}
-	persisted, err := domain.PersistSourceAnomalySummaries(merged, domain.SourceEvents{Events: newEvents, CompleteSessionIDs: []string{"new-root"}})
+	persisted, err := domain.PersistSourceAnomalySummaries(merged, domain.SourceEvents{Events: newEvents, CompleteSessionIDs: []string{"new-root"}}, fixtureAnomalyPolicy())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -346,7 +346,7 @@ func TestPersistAnomalySummariesRefreshesNewSessionsAndAggregates(t *testing.T) 
 	if aggregate == nil || aggregate.Context.TotalCalls == nil || *aggregate.Context.TotalCalls != 6 || aggregate.Context.Count == nil || *aggregate.Context.Count != 5 {
 		t.Fatalf("partial source erased historical root/group summary: %#v", persisted.Anomalies)
 	}
-	projected := domain.DeriveMetricsLedger(persisted, domain.DefaultProjectConfig())
+	projected := domain.DeriveMetricsLedger(persisted, testMetricsProjectConfig())
 	projectedOld, projectedRetry, projectedAggregate := false, false, false
 	for _, anomaly := range projected.Anomalies {
 		projectedOld = projectedOld || anomaly.RuleID == domain.RuleContextSaturationSpike
@@ -356,7 +356,7 @@ func TestPersistAnomalySummariesRefreshesNewSessionsAndAggregates(t *testing.T) 
 	if !projectedOld || !projectedRetry || !projectedAggregate {
 		t.Fatalf("projection lost cached/new/aggregate anomaly coverage: %#v", projected.Anomalies)
 	}
-	complete, err := domain.PersistSourceAnomalySummaries(persisted, domain.SourceEvents{Events: newEvents, CompleteSessionIDs: []string{"old-root", "new-root"}})
+	complete, err := domain.PersistSourceAnomalySummaries(persisted, domain.SourceEvents{Events: newEvents, CompleteSessionIDs: []string{"old-root", "new-root"}}, fixtureAnomalyPolicy())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -821,5 +821,30 @@ func TestSourceSummaryRefreshRequiresCompleteChildGroup(t *testing.T) {
 	completeFresh := domain.RetainIncompleteGroupSummaries(facts.Sessions, []domain.SessionFact{{ID: parent, Anomalies: []domain.Anomaly{}}, {ID: "child", ParentID: &parent, Anomalies: []domain.Anomaly{}}})
 	if len(completeFresh[0].Anomalies) != 0 {
 		t.Fatalf("complete group kept obsolete summary: %+v", completeFresh)
+	}
+}
+
+func TestUnconfiguredRateRefreshPreservesRecordedPolicyEvidence(t *testing.T) {
+	tool := "read"
+	calls, count := int64(10), int64(6)
+	rate := 60.0
+	threshold := "saved configured threshold"
+	recorded := domain.Anomaly{RuleID: domain.RuleToolHighFailureRate, Severity: domain.SeverityWarning, Context: domain.AnomalyContext{ToolName: &tool, Count: &count, TotalCalls: &calls, FailureRatePct: &rate, Threshold: &threshold}}
+	facts := domain.AgenticFactLedger{Anomalies: []domain.Anomaly{recorded}, Sessions: []domain.SessionFact{{ID: "owner", Source: domain.SourceOpenCode, Tools: []domain.SessionToolFact{{Name: tool, Calls: 10, Errors: 0}}, Anomalies: []domain.Anomaly{}}}}
+	source := domain.SourceEvents{Events: []domain.EventFact{}, CompleteSessionIDs: []string{"owner"}}
+	preserved := domain.RefreshAnomalySummariesFromSource(facts, source)
+	if len(preserved) != 1 || !reflect.DeepEqual(preserved[0], recorded) {
+		t.Fatalf("cfg-less analysis erased recorded policy: %+v", preserved)
+	}
+	for _, invalid := range []domain.AnomalyThresholdsConfig{{ErrorRateMinCalls: 5, ErrorRateCriticalThreshold: .70}, {ErrorRateMinCalls: 5, ErrorRateThreshold: .90, ErrorRateCriticalThreshold: .70}} {
+		retained := domain.RefreshAnomalySummariesFromSource(facts, source, invalid)
+		if len(retained) != 1 || !reflect.DeepEqual(retained[0], recorded) {
+			t.Fatalf("invalid rate policy erased recorded summary: %+v", retained)
+		}
+	}
+	configured := domain.AnomalyThresholdsConfig{ErrorRateMinCalls: 5, ErrorRateThreshold: .35, ErrorRateCriticalThreshold: .70}
+	refreshed := domain.RefreshAnomalySummariesFromSource(facts, source, configured)
+	if len(refreshed) != 0 {
+		t.Fatalf("complete supported refresh retained stale rate summary: %+v", refreshed)
 	}
 }

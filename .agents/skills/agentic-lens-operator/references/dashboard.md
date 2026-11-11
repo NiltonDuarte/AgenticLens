@@ -1,6 +1,6 @@
 # Dashboard Reference
 
-Start the embedded dashboard with `agentic-lens server`. The current CLI defaults to port `8085` (or valid `PORT`); `--port` overrides it. Open `http://localhost:<port>/`. The server embeds the dashboard in the Go binary, so a separate Node runtime is not needed.
+Start the embedded dashboard with `agentic-lens server`. The current CLI defaults to port `8085`; `--port` overrides it. Use the advertised `http://127.0.0.1:<port>/` after successful bind; invalid/in-use ports fail without probing. The server embeds the dashboard in the Go binary, so a separate Node runtime is not needed.
 
 ## Fleet Overview `/`
 
@@ -44,7 +44,7 @@ Use for longitudinal trends such as cost per ticket, turn velocity, test-to-prod
 ## Dashboard Troubleshooting
 
 1. Confirm the server process is running and use its actual port.
-2. Confirm `.agenticlens-config.yaml` loads and `workspaces.dir` points to an existing directory.
-3. For live data, confirm `telemetry.sources.opencode.database_path` or `database.path`, or pass `--db-path`; paths are machine-local.
+2. Confirm the selected `.agenticlens-config.yaml` or `.agenticlens-config.yml` loads and `workspaces.dir` points to an existing directory. Both canonical shared files in one directory are an error.
+3. For live data, supply `--db-path` or configure `telemetry.sources.opencode.database_path` in the [selected local configuration](configuration.md). The CLI path takes precedence. Relative CLI paths use the invocation directory; relative configured paths use the selected local file's directory.
 4. Distinguish an empty live feed from missing historical ledgers: live data comes from the local source, historical views come from workspace ledgers.
 5. Treat all config edits, server restarts, or ledger changes according to the user's authorization.

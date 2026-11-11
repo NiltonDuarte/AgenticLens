@@ -3,60 +3,188 @@ name: Ticket roadmap pages
 on:
   push:
     branches: [main]
-  pull_request:
+  # The workflow comes from the trusted base. PR code runs only in the separate,
+  # read-only candidate job, with no secrets, saved credentials or shared caches.
+  pull_request_target:
     branches: [main]
+    types: [opened, synchronize, reopened, edited, closed]
   workflow_dispatch:
+    inputs:
+      preview_pr:
+        description: 'Open same-repository PR number (empty publishes main and prunes closed previews)'
+        required: false
+        type: string
 
 permissions:
   contents: read
 
-concurrency:
-  group: tickets-pages-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  build:
+  resolve:
+    if: github.event_name != 'pull_request_target' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    outputs:
+      main_revision: ${{ steps.resolve.outputs.main_revision }}
+      preview_number: ${{ steps.resolve.outputs.preview_number }}
+      preview_revision: ${{ steps.resolve.outputs.preview_revision }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Test trusted preview composition
+        run: python3 .github/pages/tests/preview_test.py
+      - name: Resolve current main and eligible PR
+        id: resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .github/pages/preview.py resolve
+
+  production:
+    needs: resolve
     runs-on: ubuntu-latest
     steps:
-      - name: Check out source
-        uses: actions/checkout@v4
-      - name: Set up Ruby and pinned Jekyll dependencies
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.main_revision }}
+          persist-credentials: false
+      - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.3'
-          bundler-cache: true
-          working-directory: .github/pages
-      - name: Test native Jekyll output
+      - name: Build main with its pinned dependencies
         env:
           BUNDLE_GEMFILE: .github/pages/Gemfile
-        run: bundle exec ruby .github/pages/tests/site_test.rb
-      - name: Build ticket pages
-        env:
           REPOSITORY: ${{ github.repository }}
-          REVISION: ${{ github.sha }}
+          REVISION: ${{ needs.resolve.outputs.main_revision }}
           REPOSITORY_NAME: ${{ github.event.repository.name }}
-          BUNDLE_GEMFILE: .github/pages/Gemfile
-        run: >-
-          bundle exec ruby .github/pages/build.rb
-          --repository "$REPOSITORY"
-          --revision "$REVISION"
-          --base-path "/$REPOSITORY_NAME"
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        run: |
+          bundle config set --local path vendor/bundle
+          bundle install
+          bundle exec ruby .github/pages/tests/site_test.rb
+          bundle exec ruby .github/pages/build.rb --repository "$REPOSITORY" --revision "$REVISION" --base-path "/$REPOSITORY_NAME"
+      - uses: actions/upload-artifact@v4
         with:
+          name: portal-production
           path: dist/tickets-site
+          include-hidden-files: true
+          retention-days: 7
 
-  deploy:
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    needs: build
+  candidate:
+    needs: resolve
+    if: needs.resolve.outputs.preview_number != ''
     runs-on: ubuntu-latest
     permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.preview_revision }}
+          persist-credentials: false
+      - name: Set up Ruby without shared caches
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+      - name: Verify and build the preview
+        env:
+          BUNDLE_GEMFILE: .github/pages/Gemfile
+          REPOSITORY: ${{ github.repository }}
+          REVISION: ${{ needs.resolve.outputs.preview_revision }}
+          PREVIEW_NUMBER: ${{ needs.resolve.outputs.preview_number }}
+          REPOSITORY_NAME: ${{ github.event.repository.name }}
+        run: |
+          bundle config set --local path vendor/bundle
+          bundle install
+          bundle exec ruby .github/pages/tests/site_test.rb
+          bundle exec ruby .github/pages/build.rb --repository "$REPOSITORY" --revision "$REVISION" --base-path "/$REPOSITORY_NAME/preview/$PREVIEW_NUMBER"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: portal-candidate
+          path: dist/tickets-site
+          include-hidden-files: true
+          retention-days: 7
+
+  publish:
+    needs: [resolve, production, candidate]
+    if: >-
+      always() && needs.resolve.result == 'success' && needs.production.result == 'success' &&
+      (needs.candidate.result == 'success' || needs.candidate.result == 'skipped')
+    runs-on: ubuntu-latest
+    # The lock includes state read, composition, deployment and state retention.
+    concurrency:
+      group: portal-pages-publication
+      queue: max
+      cancel-in-progress: false
+    permissions:
+      contents: write
       pages: write
       id-token: write
     environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      name: ${{ github.ref == 'refs/heads/main' && 'github-pages' || 'github-pages-preview' }}
+      url: ${{ steps.deploy.outputs.page_url }}
     steps:
+      - name: Check out trusted workflow scripts
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: portal-production
+          path: ${{ runner.temp }}/portal-production
+      - uses: actions/download-artifact@v4
+        if: needs.resolve.outputs.preview_number != ''
+        with:
+          name: portal-candidate
+          path: ${{ runner.temp }}/portal-candidate
+      - name: Load durable static publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .github/pages/preview.py load-state --directory "$RUNNER_TEMP/portal-state"
+      - name: Validate current revisions and compose static output
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MAIN_REVISION: ${{ needs.resolve.outputs.main_revision }}
+          PREVIEW_NUMBER: ${{ needs.resolve.outputs.preview_number }}
+          PREVIEW_REVISION: ${{ needs.resolve.outputs.preview_revision }}
+        run: >-
+          python3 .github/pages/preview.py prepare
+          --production "$RUNNER_TEMP/portal-production"
+          --previous "$RUNNER_TEMP/portal-state/site"
+          --candidate "$RUNNER_TEMP/portal-candidate"
+          --output "$RUNNER_TEMP/portal-publication"
+          --main-revision "$MAIN_REVISION"
+          --preview-number "$PREVIEW_NUMBER"
+          --preview-revision "$PREVIEW_REVISION"
+      - name: Keep recoverable composition before deployment
+        uses: actions/upload-artifact@v4
+        with:
+          name: portal-publication-recovery
+          path: ${{ runner.temp }}/portal-publication
+          include-hidden-files: true
+          retention-days: 90
+      - name: Record publication transaction before deploying
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .github/pages/preview.py begin-state --directory "$RUNNER_TEMP/portal-state"
+      - name: Prepare public artifact without private publication metadata
+        run: |
+          cp -R "$RUNNER_TEMP/portal-publication" "$RUNNER_TEMP/portal-public"
+          rm "$RUNNER_TEMP/portal-public/.portal-state.json"
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ runner.temp }}/portal-public
       - name: Deploy ticket pages
-        id: deployment
+        id: deploy
         uses: actions/deploy-pages@v4
+      - name: Retain successfully published static state
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .github/pages/preview.py save-state --directory "$RUNNER_TEMP/portal-state" --site "$RUNNER_TEMP/portal-publication"
+      - name: Report preview
+        env:
+          PAGE_URL: ${{ steps.deploy.outputs.page_url }}
+          PREVIEW_NUMBER: ${{ needs.resolve.outputs.preview_number }}
+          PREVIEW_REVISION: ${{ needs.resolve.outputs.preview_revision }}
+        run: |
+          if [ -n "$PREVIEW_NUMBER" ]; then
+            echo "Preview: ${PAGE_URL%/}/preview/$PREVIEW_NUMBER/" >> "$GITHUB_STEP_SUMMARY"
+            echo "Revision: $PREVIEW_REVISION" >> "$GITHUB_STEP_SUMMARY"
+          fi

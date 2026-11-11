@@ -83,13 +83,6 @@ const (
 // AgentRole defines the role of an agent invocation.
 type AgentRole string
 
-// Legacy role placeholders remain readable in historical ledgers. New source
-// extraction represents unavailable personas with an empty AgentRole.
-const (
-	RoleRootAgent          AgentRole = "RootAgent"
-	RoleUnassignedSubAgent AgentRole = "UnassignedSubAgent"
-)
-
 // TimeGranularity defines aggregation time windows for progression charts.
 type TimeGranularity string
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { LivePartFact, FailureSeverity } from '../domain/live';
+import type { LivePartFact } from '../domain/live';
 import type { AgentRole } from '../domain/types';
 import { copyTextToClipboard } from '../utils/clipboard';
 import { generateExecutionIssuePrompt } from '../utils/debugPrompt';
@@ -27,7 +27,7 @@ export const FailedToolAlertCard: React.FC<FailedToolAlertCardProps> = ({
   const [expanded, setExpanded] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
 
-  const effectiveSeverity: FailureSeverity = part.severity || 'high';
+  const effectiveSeverity = part.severity ?? 'unknown';
   const severityClass = effectiveSeverity.toLowerCase();
   const toolName = part.tool_name || 'unknown_tool';
   const errorMessage = part.output_snippet || part.error_message || 'Execution error without output message';

@@ -165,14 +165,14 @@ export function decodeFleet(value: unknown): FleetSummary {
 function isDetail(value: unknown): value is WorkspaceDetail {
   if (!isRecord(value) || !isLedger(value.ledger) || !isRecord(value.artifacts)) return false;
   const artifacts = value.artifacts;
-  return string(artifacts.ticket_id) && fields(artifacts, ['contract_content', 'summary_content'], optionalString) &&
-    optionalArray(artifacts.items, (v) => isRecord(v) && fields(v, ['path', 'title', 'description'], string) && nullableString(v.content)) && optionalArray(value.anomalies, isAnomaly);
+  return string(artifacts.ticket_id) &&
+    array(artifacts.items, (v) => isRecord(v) && fields(v, ['path', 'title', 'description'], string) && nullableString(v.content)) && optionalArray(value.anomalies, isAnomaly);
 }
 export function decodeDetail(value: unknown): WorkspaceDetail {
   const result = collections(value);
   if (isRecord(result)) {
     result.ledger = prepareLedger(result.ledger);
-    const artifacts = collections(result.artifacts, ['items']);
+    const artifacts = collections(result.artifacts);
     if (isRecord(artifacts) && Array.isArray(artifacts.items)) {
       // Go omits an empty description; the frontend model keeps it as a string.
       artifacts.items = artifacts.items.map((item: unknown) =>
@@ -188,8 +188,12 @@ export function isBuildInfo(value: unknown): value is BuildInfo {
   return isRecord(value) && fields(value, ['version', 'commit', 'build_date'], string);
 }
 export function isProjectConfig(value: unknown): value is ProjectConfigResponse {
-  return isRecord(value) && fields(value, ['project_name', 'workspaces_dir', 'version'], string) && strings(value.role_order) &&
-    array(value.prefixes, (v) => isRecord(v) && fields(v, ['prefix', 'description'], string) && (v.ticket_type === undefined || string(v.ticket_type)));
+  return isRecord(value) && fields(value, ['project_name', 'workspaces_dir', 'version'], string) && array(value.role_order, (role) => string(role) && role.trim().length > 0) &&
+    typeof value.case_insensitive === 'boolean' && (value.live_poll_interval_ms === undefined || number(value.live_poll_interval_ms)) && isRecord(value.role_mappings) &&
+    Object.entries(value.role_mappings).every(([name, role]) => name.trim().length > 0 && string(role) && role.trim().length > 0) &&
+    array(value.prefixes, (v) => isRecord(v) && fields(v, ['prefix', 'description'], string) &&
+      typeof v.prefix === 'string' && v.prefix.trim().length > 0 && typeof v.description === 'string' && v.description.trim().length > 0 &&
+      (v.ticket_type === undefined || string(v.ticket_type)));
 }
 
 /** Validate the same source-only availability and owner coverage as the Go trace response. */

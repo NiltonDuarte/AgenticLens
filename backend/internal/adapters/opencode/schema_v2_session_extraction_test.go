@@ -35,7 +35,7 @@ func TestSchemaV2SessionRuntimeEvidenceExtractsNormalizedFacts(t *testing.T) {
 	}
 	defer db.Close()
 	createSchemaV2TestDB(t, db)
-	id, err := opencode.ResolveActiveRootSession(db, "", "AL-58", "")
+	id, err := opencode.ResolveActiveRootSession(db, "", "AL-58", "ses_root")
 	if err != nil || id == nil || *id != "ses_root" {
 		t.Fatalf("resolve=%v err=%v", id, err)
 	}

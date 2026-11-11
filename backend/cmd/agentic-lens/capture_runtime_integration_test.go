@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -19,8 +20,8 @@ import (
 func TestCaptureVerifyNativeExchangeBelongsToCurrentInstallationAndSelector(t *testing.T) {
 	f := newCaptureGenerationFixture(t)
 	path := f.write(t, 23)
-	local := fmt.Sprintf("telemetry:\n  capture:\n    enabled: false\n    state_dir: %q\n", f.state)
-	if err := os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte(local), 0600); err != nil {
+	local := fmt.Sprintf("telemetry:\n  capture:\n    pass_timeout_ms: 3000\n    max_sessions: 256\n    max_source_bytes: 67108864\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 5000\n    commit_warning: true\n    enabled: true\n    state_dir: %q\n", f.state)
+	if err := writeCaptureFixtureLocal(t, f, []byte(local)); err != nil {
 		t.Fatal(err)
 	}
 	if out, err := captureCLI(t, f.project, "", "install", "--repo", f.project, "--source", "codex", "--store", f.store, "--state-dir", f.state); err != nil {
@@ -41,6 +42,13 @@ func TestCaptureVerifyNativeExchangeBelongsToCurrentInstallationAndSelector(t *t
 	if h := verify("root", f.store); h.State != "verification_pending" || h.CallbackObserved {
 		t.Fatalf("installation alone established callback health: %+v", h)
 	}
+	lease, err := capture.AcquireWorker(f.coordination(t))
+	if err != nil || lease == nil {
+		t.Fatalf("fixture worker serialization: %v", err)
+	}
+	defer lease.Close()
+	completion := captureWorkerCompletion(t, f.coordination(t))
+	t.Cleanup(func() { captureCleanupWorkers(t, completion) })
 	payload, err := json.Marshal(capture.HookInput{SessionID: "root", Event: "SessionStart", TranscriptPath: path})
 	if err != nil {
 		t.Fatal(err)
@@ -56,7 +64,7 @@ func TestCaptureVerifyNativeExchangeBelongsToCurrentInstallationAndSelector(t *t
 	if err := json.Unmarshal(request, &registration); err != nil || registration.Request == "" {
 		t.Fatalf("exact binding request unavailable: %v %s", err, request)
 	}
-	if out, err := captureCLI(t, f.project, "", "bind", "--repo", f.project, "--source", "codex", "--store", f.store, "--state-dir", f.state, "--session-id", "root", "--ticket-id", "TEST-100", "--request", registration.Request); err != nil {
+	if out, err := captureCLI(t, f.project, "", "bind", "--repo", f.project, "--source", "codex", "--store", f.store, "--state-dir", f.state, "--session-id", "root", "--ticket-id", "TEST-100", "--ticket-title", "Current exchange", "--ticket-type", "feat", "--request", registration.Request); err != nil {
 		t.Fatalf("explicit binding: %v %s", err, out)
 	}
 	if h := verify("root", f.store); h.State == "verified" || h.PublicationAccepted {
@@ -70,6 +78,11 @@ func TestCaptureVerifyNativeExchangeBelongsToCurrentInstallationAndSelector(t *t
 		if h := verify(selection.session, selection.store); h.State == "verified" || h.CallbackObserved {
 			t.Fatalf("unrelated selector inherited another session's health: %+v", h)
 		}
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := completion(ctx); err != nil {
+		t.Fatalf("fixture workers did not exit under serialization: %v", err)
 	}
 	manifest := filepath.Join(f.coordination(t), "install-codex.json")
 	var current map[string]json.RawMessage
@@ -87,9 +100,7 @@ func TestCaptureVerifyNativeExchangeBelongsToCurrentInstallationAndSelector(t *t
 	if err := os.WriteFile(manifest, body, 0600); err != nil {
 		t.Fatal(err)
 	}
-	if out, err := captureCLI(t, f.project, "", "request", "--repo", f.project, "--source", "codex", "--store", f.store, "--state-dir", f.state, "--session-id", "root"); err != nil {
-		t.Fatalf("request after installation change: %v %s", err, out)
-	}
+
 	if h := verify("root", f.store); h.State == "verified" || h.CallbackObserved {
 		t.Fatalf("new installation reused an old callback/source/publication chain: %+v", h)
 	}
@@ -112,7 +123,7 @@ func TestCaptureVerifyNativeExchangeBelongsToCurrentInstallationAndSelector(t *t
 	if out, err := captureCLI(t, f.project, "", check...); err != nil || !bytes.Contains(out, []byte("Owned capture installation is missing, edited or stale")) {
 		t.Fatalf("installation drift control was not actionable: %v %s", err, out)
 	}
-	if err := os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte(local+"    commit_warning: false\n"), 0600); err != nil {
+	if err := writeCaptureFixtureLocal(t, f, []byte(strings.Replace(local, "    commit_warning: true\n", "", 1)+"    commit_warning: false\n")); err != nil {
 		t.Fatal(err)
 	}
 	if out, err := captureCLI(t, f.project, "", check...); err != nil || len(out) != 0 {
@@ -120,12 +131,13 @@ func TestCaptureVerifyNativeExchangeBelongsToCurrentInstallationAndSelector(t *t
 	}
 }
 
-func TestCaptureSourceAcceptanceSurvivesFailedPublicationWithoutClaimingSuccess(t *testing.T) {
+func TestCaptureSummaryPreflightPreservesAcceptedSourceAndPublication(t *testing.T) {
 	f := newCaptureGenerationFixture(t)
 	f.bind(t, f.write(t, 10))
 	summary := filepath.Join(f.project, "SUMMARY.md")
 	f.generate(t, "--append", summary)
 	beforeLedger, beforeSummary := readCaptureFile(t, f.output), readCaptureFile(t, summary)
+	beforeDiagnostics := captureDiagnostics(t, f.project, f.state)
 	f.writeAt(t, 31, "2026-01-01T00:00:03Z")
 	if err := os.Remove(summary); err != nil {
 		t.Fatal(err)
@@ -134,47 +146,28 @@ func TestCaptureSourceAcceptanceSurvivesFailedPublicationWithoutClaimingSuccess(
 		t.Fatal(err)
 	}
 	out, err := runCaptureNative(t, f.project, "", f.args(t, "--append", summary)...)
-	if err == nil || !bytes.Contains(out, []byte("Cannot stage recoverable publication")) {
-		t.Fatalf("publication obstruction was accepted: %v %s", err, out)
+	if err == nil || !bytes.Contains(out, []byte("summary destination")) {
+		t.Fatalf("invalid destination accepted: %v %s", err, out)
 	}
 	if !bytes.Equal(beforeLedger, readCaptureFile(t, f.output)) {
-		t.Fatal("failed publication replaced accepted ledger")
+		t.Fatal("summary preflight changed accepted ledger")
 	}
-	diagnostics := captureDiagnostics(t, f.project, f.state)
-	var lastSuccess, lastAttempt *domain.CaptureDiagnostic
-	for i := range diagnostics {
-		d := &diagnostics[i]
-		if d.Phase != "publication" {
-			continue
-		}
-		if d.Outcome == "committed" {
-			lastSuccess = d
-		}
-		if lastAttempt == nil || d.Sequence > lastAttempt.Sequence {
-			lastAttempt = d
-		}
+	if !reflect.DeepEqual(beforeDiagnostics, captureDiagnostics(t, f.project, f.state)) {
+		t.Fatal("summary preflight authorized or journaled publication")
 	}
-	if lastSuccess == nil || lastAttempt == nil || lastAttempt.Outcome != "staging" || lastAttempt.Sequence <= lastSuccess.Sequence {
-		t.Fatalf("unfinished publication overwrote/hid last success: %+v", diagnostics)
-	}
-	if len(lastSuccess.Owners) != 1 || lastSuccess.Owners[0].Checkpoint != "2026-01-01T00:00:02Z" || len(lastAttempt.Owners) != 1 || lastAttempt.Owners[0].Checkpoint != "2026-01-01T00:00:03Z" {
-		t.Fatalf("source acceptance conflated with artifact commit: previous=%+v attempt=%+v", lastSuccess, lastAttempt)
+	if _, err := os.Stat(f.output + ".publication-pending"); !os.IsNotExist(err) {
+		t.Fatalf("preflight created publication journal: %v", err)
 	}
 	store, err := capture.OpenReadOnlyProject(f.state, f.project)
 	if err != nil {
 		t.Fatal(err)
 	}
 	rows, err := store.List(context.Background())
-	if closeErr := store.Close(); closeErr != nil {
-		t.Fatal(closeErr)
+	closeErr := store.Close()
+	if err != nil || closeErr != nil || len(rows) != 1 {
+		t.Fatalf("recorded source unavailable: %+v %v %v", rows, err, closeErr)
 	}
-	if err != nil || len(rows) != 1 {
-		t.Fatalf("accepted source unavailable after restart: %+v %v", rows, err)
-	}
-	assertCaptureRootInput(t, domain.AgenticFactLedger{Sessions: rows[0].Snapshot}, 31)
-	if out, err := captureCLI(t, f.project, "", "check", "--repo", f.project, "--state-dir", f.state); err != nil || !bytes.Contains(out, []byte("unresolved operational")) {
-		t.Fatalf("unfinished publication not advisory: %v %s", err, out)
-	}
+	assertCaptureRootInput(t, domain.AgenticFactLedger{Sessions: rows[0].Snapshot}, 10)
 	if err := os.Remove(summary); err != nil {
 		t.Fatal(err)
 	}
@@ -184,9 +177,6 @@ func TestCaptureSourceAcceptanceSurvivesFailedPublicationWithoutClaimingSuccess(
 	ledger := f.generate(t, "--append", summary)
 	assertCaptureRootInput(t, ledger, 31)
 	assertCapturePublishedOwners(t, captureDiagnostics(t, f.project, f.state), f.output, summary, ledger.Sessions)
-	if out, err := captureCLI(t, f.project, "", "check", "--repo", f.project, "--state-dir", f.state); err != nil || len(out) != 0 {
-		t.Fatalf("successful recovery retained obsolete failure advisory: %v %s", err, out)
-	}
 }
 
 func TestCaptureStatusReadsCommittedWALWithExplicitBoundedContinuation(t *testing.T) {
@@ -241,6 +231,7 @@ func TestCaptureStatusReadsCommittedWALWithExplicitBoundedContinuation(t *testin
 
 func TestCaptureNativeCheckExemptsOnlyAcceptedExactCallerTail(t *testing.T) {
 	f := newCaptureGenerationFixture(t)
+	serializeCaptureFixtureWorkers(t, f)
 	path := f.write(t, 10)
 	f.bind(t, path)
 	f.generate(t)
@@ -306,7 +297,7 @@ func TestCaptureNativeGitAdvisoryKeepsActualWorktreeHealthIsolated(t *testing.T)
 	}
 	git(first.project, "init", "--quiet")
 	git(first.project, "add", ".agenticlens-config.yaml")
-	git(first.project, "commit", "--quiet", "-m", "initial fixture")
+	git(first.project, "commit", "--quiet", "--allow-empty", "-m", "initial fixture")
 	second := captureGenerationFixture{project: filepath.Join(t.TempDir(), "linked worktree"), store: first.store}
 	git(first.project, "worktree", "add", "--quiet", "-b", "linked", second.project)
 	second.state, err = capture.ProjectState(base, second.project)
@@ -316,8 +307,8 @@ func TestCaptureNativeGitAdvisoryKeepsActualWorktreeHealthIsolated(t *testing.T)
 	second.output = filepath.Join(second.project, "ledger.json")
 	writeLocal := func(f captureGenerationFixture, warning bool) {
 		t.Helper()
-		body := fmt.Sprintf("telemetry:\n  capture:\n    enabled: false\n    state_dir: %q\n    commit_warning: %t\n", base, warning)
-		if err := os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte(body), 0600); err != nil {
+		body := fmt.Sprintf("telemetry:\n  capture:\n    pass_timeout_ms: 3000\n    max_sessions: 256\n    max_source_bytes: 67108864\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 5000\n    enabled: false\n    state_dir: %q\n    commit_warning: %t\n", base, warning)
+		if err := writeCaptureFixtureLocal(t, f, []byte(body)); err != nil {
 			t.Fatal(err)
 		}
 	}

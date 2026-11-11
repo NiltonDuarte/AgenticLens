@@ -59,3 +59,14 @@ func captureWorkerCompletion(t *testing.T, directory string) func(context.Contex
 		}
 	}
 }
+
+func captureNativeProcessExited(pid int) (bool, error) {
+	if pid <= 0 {
+		return false, nil
+	}
+	err := syscall.Kill(pid, 0)
+	if errors.Is(err, syscall.ESRCH) {
+		return true, nil
+	}
+	return false, err
+}

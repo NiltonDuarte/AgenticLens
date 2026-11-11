@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import type { ActiveTab, ProjectConfigResponse } from './domain/types';
+import { ProjectConfigContext } from './contexts/ProjectConfigContext';
 import { fetchProjectConfig } from './api/client';
 import { Navbar } from './components/Navbar';
 import { LandingPage } from './views/LandingPage';
@@ -39,6 +40,7 @@ export const App: React.FC = () => {
   };
 
   return (
+    <ProjectConfigContext.Provider value={projectConfig}>
     <div className="app-container">
       <Navbar
         activeTab={activeTab}
@@ -85,5 +87,6 @@ export const App: React.FC = () => {
         )}
       </main>
     </div>
+    </ProjectConfigContext.Provider>
   );
 };

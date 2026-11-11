@@ -38,9 +38,18 @@ if output.exist? && (!output.directory? || (!output.children.empty? && !output.j
   raise "Refusing to replace unmanaged output"
 end
 
+# Keep presentation staging explicit: never copy repository captures, ledgers or arbitrary assets.
+presentation_assets = %w[style.css investigation.svg analytics.svg history.svg architecture.svg]
+
 Dir.mktmpdir("ticket-jekyll-") do |staging|
   source = Pathname.new(staging)
   %w[index.html _layouts _plugins roadmap].each { |name| FileUtils.cp_r(File.join(__dir__, name), source.join(name)) }
+  source.join("presentation").mkpath
+  presentation_assets.each do |name|
+    asset = Pathname.new(__dir__).join("presentation", name)
+    raise "Presentation asset must be a regular non-symlink file: #{name}" unless asset.file? && !asset.symlink?
+    FileUtils.cp(asset, source.join("presentation", name))
+  end
   Dir.glob(plan.join("**/*.md")).each do |path|
     file = Pathname.new(path)
     raise "Plan source escapes through a symlink: #{file}" unless file.realpath.to_s.start_with?("#{plan}/")
@@ -61,8 +70,19 @@ Dir.mktmpdir("ticket-jekyll-") do |staging|
   raise "Jekyll did not render the welcome page" unless built.join("index.html").file?
   raise "Jekyll did not render the roadmap" unless built.join("roadmap/index.html").file?
   unless built.children.all? { |entry| (entry.basename.to_s == "roadmap" && entry.directory?) ||
-                                     (entry.basename.to_s == "index.html" && entry.file?) }
-    raise "Jekyll output must be the welcome page or stay under roadmap/"
+                                     (entry.basename.to_s == "index.html" && entry.file?) ||
+                                     (entry.basename.to_s == "presentation" && entry.directory?) }
+    raise "Jekyll output must be the presentation, trusted assets or stay under roadmap/"
+  end
+  published_assets = built.join("presentation").children
+  unless published_assets.all? { |asset| asset.file? && !asset.symlink? } &&
+         published_assets.map { |asset| asset.basename.to_s }.sort == presentation_assets.sort
+    raise "Jekyll output contains unexpected presentation assets"
+  end
+  presentation_assets.each do |name|
+    unless built.join("presentation", name).binread == source.join("presentation", name).binread
+      raise "Jekyll changed a trusted presentation asset: #{name}"
+    end
   end
   built.join(".tickets-site-output").write("Generated ticket website\n")
   FileUtils.mkdir_p(output.dirname)

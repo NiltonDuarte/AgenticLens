@@ -51,17 +51,17 @@ cd web && npm run dev
 
 Open `http://localhost:5173` to interact with the dashboard.
 
-### 3.2 Compiling the Standalone Production Binary
+### 3.2 Compiling the Native Manager and Engine
 
-AgenticLens compiles into a single, self-contained binary embedding all web assets. Zero external Node.js runtime is required in production:
+AgenticLens builds a small native manager and a separate telemetry engine. The engine embeds all web assets; neither executable requires Node.js in production. `make server` runs the current source engine directly:
 
 ```bash
-# Build frontend bundle and compile host executable
+# Build frontend bundle and compile manager/engine artifacts
 make build
 
 # Launch production server
 make server
-# Or directly on POSIX: ./bin/agentic-lens-$(go env GOHOSTOS)-$(go env GOHOSTARCH) server --port 8085
+# Or directly on POSIX: ./bin/agentic-lens-engine-$(go env GOHOSTOS)-$(go env GOHOSTARCH) server --port 8085
 ```
 
 Open `http://localhost:8085` to view the standalone dashboard.
@@ -72,7 +72,7 @@ Open `http://localhost:8085` to view the standalone dashboard.
 
 | Target | Description |
 |---|---|
-| `make all` | Default target: install dependencies, run static checks, run test suites, and build binary |
+| `make all` | Default target: install dependencies, run static checks, run test suites, and build manager/engine artifacts |
 | `make install` | Install all backend Go dependencies and frontend npm packages |
 | `make install-backend` | Download Go modules (`go mod download` in `backend/`) |
 | `make install-frontend` | Prepare web dependencies with `npm ci` when manifests changed or dependencies are absent |
@@ -90,11 +90,11 @@ Open `http://localhost:8085` to view the standalone dashboard.
 | `make vet` | Run `go vet` across all Go packages |
 | `make lint` | Run Go vet, TypeScript typecheck, and ESLint |
 | `make build` | Compile frontend bundle and build multi-platform binaries in `bin/` |
-| `make server` | Build and run HTTP server on configured `PORT` (default: 8085) |
+| `make server` | Build and run the loopback HTTP server on port 8085; CLI --port selects another explicit port |
 | `make serve` | Alias for `make server` |
 | `make release-build` | Cross-compile binaries for all supported platforms into `dist/bin/` |
 | `make release-package` | Package platform archives (`.tar.gz` and `.zip`) and generate `SHA256SUMS` |
-| `make release-verify` | Validate release archive checksums and verify host binary execution |
+| `make release-verify` | Validate release archive checksums and verify host manager/engine execution |
 | `make release-clean` | Remove release distribution artifacts in `dist/` |
 | `make clean` | Clean local build outputs and distribution directories |
 | `make help` | Display available targets and descriptions |
@@ -186,4 +186,6 @@ Keep status questions, review corrections, and routine synchronization in the cu
 
 ### Installed release entrypoints
 
-The contributor build produces explicit native bin/agentic-lens-<os>-<arch> files (Windows adds .exe). make server and make verify-build execute that current host native directly; they never install into or select from the user release cache. Adopting repositories use the user-level shared-YAML-pinned common wrapper; see the [setup manual](docs/SETUP_MANUAL.md#1-quick-start-and-setup-pathways). Ordinary commands/hooks are offline and require explicit cache installation. Both developer download entrypoints share exact-pin/checksum/version/protocol validation and rollback. Tests use isolated HOME/cache/project fixtures; native Windows distribution runs real PowerShell/PE cases separately from POSIX fixtures.
+The contributor build produces `bin/agentic-lens-<os>-<arch>` (manager) and `bin/agentic-lens-engine-<os>-<arch>` (engine); Windows adds `.exe`. `make server` and the engine checks in `make verify-build` execute the current host engine directly, without selecting the user release cache. The same verification target checks the manager's own identity separately. In a configured adopting repository, the installed `agentic-lens server` command remains supported: the manager selects the project engine and forwards `server` unchanged.
+
+The installed native manager handles offline engine selection and explicit installation/self-update; see the [setup manual](docs/SETUP_MANUAL.md#1-quick-start-and-setup-pathways). It is installed directly on PATH, with no shell launcher or separate dispatcher copy. Project engine pins and manager updates are independent. Setup verifies exact artifact identity/checksum/protocol; tests isolate HOME, cache and project fixtures. Windows build/transport targets remain, while native Windows certification and loaded-manager replacement remain limited; no Windows test CI gate is required by the current scope.

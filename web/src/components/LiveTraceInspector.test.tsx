@@ -38,6 +38,17 @@ describe('LiveTraceInspector Component', () => {
     sub_sessions: [],
   };
 
+  it.each([['', 'Unknown'], ['default', 'default'], ['unknown', 'unknown']])('labels model %j as %j in the inspector and human session summary', async (model, label) => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    mockClipboard(writeText);
+    const node = {...mockNode, model};
+    const {container} = render(<LiveTraceInspector sessionNode={node} trace={mockLiveTraceView} loading={false} onClose={vi.fn()} />);
+    expect(container.querySelector('.inspector-model-badge')).toHaveTextContent(label);
+    await act(async () => fireEvent.click(screen.getByRole('button', {name: 'Copy session overview debug prompt'})));
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining(`running \`${label}\``));
+    expect(node.model).toBe(model);
+  });
+
   it('keeps completed task navigation, output copy and execution expansion beside rich invocations', async () => {
     const select = vi.fn();
     const writeText = vi.fn().mockResolvedValue(undefined);
@@ -78,6 +89,14 @@ describe('LiveTraceInspector Component', () => {
     expect(screen.getByTitle('Child session pending-child is pending or unavailable in this view')).toHaveTextContent('pending-child');
     expect(select).toHaveBeenCalledTimes(1);
 
+  });
+
+  it('discloses unavailable child lookup without hiding available trace evidence', () => {
+    const message=mockLiveTraceView.messages[0];if(!message) throw new Error('missing trace fixture');
+    const trace:LiveTraceView={...mockLiveTraceView,relationships:{state:'unavailable'},diagnostics:[{code:'child_relationship_lookup_failed',message:'Native child lookup failed'}],messages:[{...message,content:'Saved useful trace evidence',parts:[]}]};
+    render(<LiveTraceInspector sessionNode={mockNode} trace={trace} loading={false} onClose={vi.fn()} />);
+    expect(screen.getByText('Child-session relationships are unavailable. Available trace messages remain visible.')).toBeInTheDocument();
+    expect(screen.getByText('Saved useful trace evidence')).toBeInTheDocument();
   });
 
   it('renders placeholder prompt when sessionNode is null', () => {

@@ -6,18 +6,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
 	"agenticlens/internal/adapters/codex"
+	adaptersconfig "agenticlens/internal/adapters/config"
 	"agenticlens/internal/adapters/opencode"
 	"agenticlens/internal/domain"
 )
 
 var (
+	ErrSourceUnavailable = errors.New("live OpenCode source unavailable; configure an accessible telemetry.sources.opencode.database_path in the selected local YAML")
 	// ErrSessionNotFound is returned when a session ID does not exist in the database.
 	ErrSessionNotFound = errors.New("session not found")
 	// ErrInvalidSessionID is returned when a session ID is blank or contains path traversal characters.
@@ -63,13 +63,7 @@ type LiveService struct {
 
 // NewLiveService constructs a new LiveService instance.
 func NewLiveService(hook *SQLiteHook, cfg domain.ProjectConfig) *LiveService {
-	codexHome := strings.TrimSpace(os.Getenv("CODEX_HOME"))
-	if codexHome == "" {
-		if home, err := os.UserHomeDir(); err == nil {
-			codexHome = filepath.Join(home, ".codex")
-		}
-	}
-	return NewLiveServiceWithCodexHome(hook, cfg, codexHome)
+	return NewLiveServiceWithCodexHome(hook, cfg, cfg.Telemetry.Sources.CodexHome)
 }
 
 // NewLiveServiceWithCodexHome constructs a hydrator with an explicit local Codex data root.
@@ -132,11 +126,11 @@ func (s *LiveService) broadcast(event LiveEvent) {
 }
 
 // Start begins the background polling loop on live.poll_interval_ms.
-func (s *LiveService) Start(ctx context.Context) {
-	intervalMs := s.cfg.Live.PollIntervalMs
-	if intervalMs <= 0 {
-		intervalMs = 2000
+func (s *LiveService) Start(ctx context.Context) error {
+	if err := errors.Join(adaptersconfig.ValidatePollingPolicy(s.cfg), adaptersconfig.ValidateActivityPolicy(s.cfg), adaptersconfig.ValidateAnomalyPolicy(s.cfg)); err != nil {
+		return err
 	}
+	intervalMs := s.cfg.Live.PollIntervalMs
 	interval := time.Duration(intervalMs) * time.Millisecond
 
 	ticker := time.NewTicker(interval)
@@ -153,6 +147,7 @@ func (s *LiveService) Start(ctx context.Context) {
 			}
 		}
 	}()
+	return nil
 }
 
 func (s *LiveService) pollAndBroadcast(ctx context.Context) {
@@ -261,22 +256,26 @@ func (s *LiveService) checkAndBroadcastAnomalies(anomalies []domain.LiveAnomalyA
 	}
 }
 
+// CheckAvailability distinguishes an unconfigured/unavailable source from a
+// selected read-only database containing no active sessions.
+func (s *LiveService) CheckAvailability() error {
+	if s.hook == nil {
+		return ErrSourceUnavailable
+	}
+	return nil
+}
+
 // GetSessionTree queries active sessions, runs title ticket inference, and constructs the session tree.
 // Zero Git branch calls, zero workspace scans.
 func (s *LiveService) GetSessionTree(ctx context.Context) (domain.LiveSessionTree, error) {
-	if s.hook == nil {
-		return domain.LiveSessionTree{
-			RootSessions:        []*domain.LiveSessionNode{},
-			LastRefreshedAt:     "",
-			TotalActiveSessions: 0,
-			ActiveAnomalies:     []domain.LiveAnomalyAlert{},
-		}, nil
+	if err := s.CheckAvailability(); err != nil {
+		return domain.LiveSessionTree{}, err
 	}
 
-	activeThresholdSec := int64(s.cfg.Live.ActiveThresholdSeconds)
-	if activeThresholdSec <= 0 {
-		activeThresholdSec = 300
+	if err := adaptersconfig.ValidateActivityPolicy(s.cfg); err != nil {
+		return domain.LiveSessionTree{}, err
 	}
+	activeThresholdSec := int64(s.cfg.Live.ActiveThresholdSeconds)
 	nowMs := time.Now().UnixMilli()
 
 	records, err := s.hook.FetchActiveSessions(activeThresholdSec, nowMs)
@@ -297,9 +296,6 @@ func (s *LiveService) GetSessionTree(ctx context.Context) (domain.LiveSessionTre
 	s.traceMu.Unlock()
 
 	stallThresholdSec := int64(s.cfg.AnomalyThresholds.StallThresholdSeconds)
-	if stallThresholdSec <= 0 {
-		stallThresholdSec = 120
-	}
 
 	nodes := make([]*domain.LiveSessionNode, 0, len(records))
 	for _, rec := range records {
@@ -397,7 +393,7 @@ func (s *LiveService) sessionTraceSnapshot(ctx context.Context, sessionID string
 		return nil, fmt.Errorf("%w: %s", ErrInvalidSessionID, err.Error())
 	}
 	if s.hook == nil {
-		return nil, ErrSessionNotFound
+		return nil, ErrSourceUnavailable
 	}
 	s.traceMu.Lock()
 	defer s.traceMu.Unlock()
@@ -571,13 +567,23 @@ func (s *LiveService) readSessionTrace(ctx context.Context, sessionID string) (t
 		recentErrors[i], recentErrors[j] = recentErrors[j], recentErrors[i]
 	}
 
+	relationships := domain.LiveRelationships{State: domain.LiveRelationshipsComplete}
+	diagnostics := []domain.LiveTraceDiagnostic{}
+	if childErr != nil {
+		relationships.State = domain.LiveRelationshipsUnavailable
+		diagnostics = append(diagnostics, domain.LiveTraceDiagnostic{Code: domain.DiagnosticChildRelationshipLookupFailed, Message: fmt.Sprintf("Native child relationships could not be checked: %v", childErr)})
+	}
 	trace := domain.LiveTraceView{
+		Relationships: relationships, Diagnostics: diagnostics,
 		SessionID:       sessionID,
 		Messages:        messages,
 		TotalToolCalls:  totalTools,
 		FailedToolCalls: failedTools,
 		RecentErrors:    recentErrors,
 		Anomalies:       []domain.LiveAnomalyAlert{},
+	}
+	if err := adaptersconfig.ValidateAnomalyPolicy(s.cfg); err != nil {
+		return traceSnapshot{}, err
 	}
 	anomalyOpts := domain.LiveAnomalyOptions{
 		Thresholds: s.cfg.AnomalyThresholds,
@@ -605,22 +611,14 @@ func assistantPersonaEvidence(messages []RawMessageRecord) domain.PersonaEvidenc
 }
 
 func parsePartRecord(rp RawPartRecord, consecutiveErrors *int) domain.LivePartFact {
-	partType := "tool"
+	partType := "unknown"
 	var toolName *string
 	var inputSnippet, outputSnippet, status string
 	var skillName, subagentType string
+	var process domain.ToolProcessEvidence
 
 	if strings.TrimSpace(rp.Data) != "" {
-		var pData struct {
-			Type  *string `json:"type"`
-			Tool  *string `json:"tool"`
-			Text  *string `json:"text"`
-			State *struct {
-				Status *string         `json:"status"`
-				Input  json.RawMessage `json:"input"`
-				Output json.RawMessage `json:"output"`
-			} `json:"state"`
-		}
+		var pData opencode.SchemaV1PartData
 		if err := json.Unmarshal([]byte(rp.Data), &pData); err == nil {
 			if pData.Type != nil && strings.TrimSpace(*pData.Type) != "" {
 				partType = strings.TrimSpace(*pData.Type)
@@ -629,11 +627,15 @@ func parsePartRecord(rp RawPartRecord, consecutiveErrors *int) domain.LivePartFa
 				toolName = pData.Tool
 			}
 			if pData.State != nil {
+				process = pData.ProcessEvidence()
 				if pData.State.Status != nil {
 					status = strings.TrimSpace(*pData.State.Status)
 				}
 				inputSnippet = rawMessageToString(pData.State.Input)
 				outputSnippet = rawMessageToString(pData.State.Output)
+				if outputSnippet == "" && pData.State.Error != nil {
+					outputSnippet = opencode.SchemaV1RawValue(pData.State.Error)
+				}
 				var input map[string]json.RawMessage
 				if json.Unmarshal(pData.State.Input, &input) == nil {
 					if toolName != nil && strings.TrimSpace(*toolName) == "skill" {
@@ -651,13 +653,13 @@ func parsePartRecord(rp RawPartRecord, consecutiveErrors *int) domain.LivePartFa
 				}
 			}
 			if outputSnippet == "" && pData.Text != nil {
-				outputSnippet = strings.TrimSpace(*pData.Text)
+				outputSnippet = *pData.Text
 			}
 		}
 	}
 
 	if status == "" {
-		status = "completed"
+		status = "unknown"
 	}
 
 	var isError bool
@@ -669,8 +671,9 @@ func parsePartRecord(rp RawPartRecord, consecutiveErrors *int) domain.LivePartFa
 		if toolName != nil {
 			tName = *toolName
 		}
-		classification := domain.ClassifyToolExecution(tName, status, outputSnippet, *consecutiveErrors)
+		classification := domain.ClassifyToolExecution(tName, status, outputSnippet, *consecutiveErrors, process)
 		isError, severity, errorMessage = classification.IsError, classification.Severity, classification.ErrorMessage
+		status = classification.Status
 		if isError {
 			*consecutiveErrors++
 			status = "error"
@@ -679,14 +682,6 @@ func parsePartRecord(rp RawPartRecord, consecutiveErrors *int) domain.LivePartFa
 		}
 	} else {
 		severity = domain.SeverityNone
-	}
-
-	// Bound snippets
-	if len(inputSnippet) > 500 {
-		inputSnippet = inputSnippet[:500]
-	}
-	if len(outputSnippet) > 1000 {
-		outputSnippet = outputSnippet[:1000]
 	}
 
 	return domain.LivePartFact{
@@ -740,14 +735,7 @@ func validateSessionID(id string) error {
 }
 
 func rawMessageToString(raw json.RawMessage) string {
-	if len(raw) == 0 {
-		return ""
-	}
-	var str string
-	if err := json.Unmarshal(raw, &str); err == nil {
-		return strings.TrimSpace(str)
-	}
-	return strings.TrimSpace(string(raw))
+	return opencode.SchemaV1RawValue(raw)
 }
 
 func extractMessageContent(raw json.RawMessage) string {
@@ -780,7 +768,7 @@ func extractMessageContent(raw json.RawMessage) string {
 func resolveModelName(rawModel string) string {
 	trimmed := strings.TrimSpace(rawModel)
 	if trimmed == "" {
-		return "default"
+		return ""
 	}
 	if strings.HasPrefix(trimmed, "{") {
 		var m struct {
@@ -921,16 +909,20 @@ func (s *LiveService) HydrateWorkspaceEvents(ctx context.Context, ticketID strin
 	response.IsHydrated = response.Availability != domain.TraceUnavailable
 	response.Events = domain.SortEvents(response.Events)
 	source := domain.SourceEvents{Events: response.Events, CompleteSessionIDs: response.Coverage.CompleteSessionIDs}
-	response.Anomalies = hydrateAnomalyAssociations(ledger.Facts, source)
+	var thresholds []domain.AnomalyThresholdsConfig
+	if s != nil {
+		thresholds = append(thresholds, s.cfg.AnomalyThresholds)
+	}
+	response.Anomalies = hydrateAnomalyAssociations(ledger.Facts, source, thresholds...)
 	if err := response.Validate(); err != nil {
 		return domain.WorkspaceEventsResponse{}, err
 	}
 	return response, nil
 }
-func hydrateAnomalyAssociations(facts domain.AgenticFactLedger, source domain.SourceEvents) []domain.Anomaly {
-	anomalies, err := domain.DetectAnomaliesWithEvidence(facts, source)
+func hydrateAnomalyAssociations(facts domain.AgenticFactLedger, source domain.SourceEvents, thresholds ...domain.AnomalyThresholdsConfig) []domain.Anomaly {
+	anomalies, err := domain.DetectAnomaliesWithEvidence(facts, source, thresholds...)
 	if err != nil {
-		return domain.RefreshAnomalySummariesFromSource(facts, source)
+		return domain.RefreshAnomalySummariesFromSource(facts, source, thresholds...)
 	}
 	return anomalies
 }

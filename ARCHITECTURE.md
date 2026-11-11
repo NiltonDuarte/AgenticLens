@@ -1,6 +1,6 @@
 # AgenticLens System Architecture and Internals
 
-AgenticLens is engineered to provide deterministic observability and telemetry aggregation for autonomous multi-agent software engineering workflows. The platform operates on the Functional Core, Imperative Shell (FCIS) pattern, distributing as a self-contained, single Go executable that embeds a strict TypeScript single-page application (SPA).
+AgenticLens is engineered to provide deterministic observability and telemetry aggregation for autonomous multi-agent software engineering workflows. The platform operates on the Functional Core, Imperative Shell (FCIS) pattern, distributing a native manager for installation and engine selection alongside a self-contained telemetry engine that embeds a strict TypeScript single-page application (SPA).
 
 ---
 
@@ -49,7 +49,7 @@ The domain package contains zero I/O operations, network calls, clock queries, o
 
 - **Aggregations (`domain/aggregations.go`)**: Pure metric rollups across sessions, turns, tool calls, and model invocations. Recomputes token sums, cache hit percentages, reasoning ratios, and subagent turn velocity.
 - **Anomaly Detection (`domain/anomalies.go`)**: Deterministic rule evaluation over chronological tool executions, context token growth series, and subagent delegation transitions.
-- **Context Health Scoring (`domain/context_health.go`)**: Computes context window utilization against defined model boundaries (healthy, elevated, critical).
+- **Context Health Scoring (`domain/context_health.go`)**: Projects context utilization against explicitly configured token ceilings; unavailable policy yields an unavailable projection while recorded facts remain intact.
 - **Cost Calculations (`domain/pricing.go`)**: Computes USD expenditures based on explicit per-model input, output, reasoning, and cached token pricing tables.
 - **Migration Framework (`domain/migration/`)**: Pure migration pipeline contracts defining stepwise ledger upgrades and invariant assertions.
 
@@ -57,16 +57,20 @@ The domain package contains zero I/O operations, network calls, clock queries, o
 
 The adapter package manages all interactions with the operating system, file system, database, and network:
 
-- **OpenCode Extractor (`adapters/opencode/`)**: Opens the configured SQLite database read-only and infers one supported schema family from its complete required table/column set. Evidence-backed v1.19.5 extraction reads `session`/`message`/`part`; v2.2.0 extraction reads `session_v2`/`session_message`. Partial, mixed, malformed, and unknown layouts return diagnostics instead of falling back. `--db-path` remains the explicit override; the default remains `~/.local/share/opencode/opencode.db`. Detection identifies a schema family, not an exact OpenCode release.
+- **OpenCode Extractor (`adapters/opencode/`)**: Opens the configured SQLite database read-only and infers one supported schema family from its complete required table/column set. Evidence-backed v1.19.5 extraction reads `session`/`message`/`part`; v2.2.0 extraction reads `session_v2`/`session_message`. Partial, mixed, malformed, and unknown layouts return diagnostics instead of falling back. `--db-path` precedes the selected-local source path; missing/invalid/unavailable selection fails without another store. Detection identifies a schema family, not an exact OpenCode release.
 
 The compatibility evidence window is OpenCode v1.19.5 and npm `@opencode/cli` v2.2.0 (resolved as `latest` on 2026-10-29). Run `make opencode-compat-v1`, `make opencode-compat-v2`, or `make opencode-compat`; each runtime target creates separate temporary HOME/XDG roots, project, and absolute `OPENCODE_DB`, and requires the matching runtime plus a local deterministic provider already running. Fixture-based tests do not require installed OpenCode. Nonzero native pricing, imported history, partial migration, duplicate handling, and releases outside these two pinned versions remain unverified.
-- **Git Analyzer (`adapters/git/`)**: Inspects git repository history, calculates commit diffs against upstream base branches, and categorizes code changes into production code, test code, or documentation.
+- **Git Analyzer (`adapters/git/`)**: Inspects git repository history, measures committed merge-base-to-target net contribution against an explicit configured base. Independent production/tests include/exclude lists classify counted paths; unmatched files are uncounted and category overlap fails.
 - **Workspace Traversal & Validation (`adapters/workspaces.go`, `adapters/schemas.go`)**: Scans workspace directories, validates `agentic_metrics.json` ledgers against JSON schema definitions, and writes atomic updates.
 - **Backfill Engine (`adapters/backfill/`)**: Drives batch reconciliation across workspaces, recomputing git code facts and SQLite telemetry.
 - **Migration Runner (`adapters/migration/`)**: Implements atomic file persistence, backup creation, and execution of domain migration plans.
 - **Web & HTTP Delivery (`adapters/web/`)**: Configures standard library HTTP multiplexers, REST endpoints, Server-Sent Events (SSE) for live streaming, and static asset serving from embedded files.
 
-### 2.3 CLI & Command Routing (`backend/cmd/agentic-lens`)
+### 2.3 Native Manager and Engine CLI
+
+`backend/cmd/agentic-lens-manager` builds the public `agentic-lens` command. It owns exact artifact installation, its own explicit self-update and offline project engine selection. It never imports the engine CLI or embedded web assets. Manager identity uses `--manager-version`; ordinary `version` reports the selected engine. Shared `agenticlens.version` pins the engine, while configured binary_dir requires its valid host development engine without installed-cache substitution.
+
+`backend/cmd/agentic-lens` builds `agentic-lens-engine`. It executes utility commands directly, with no dispatch mode or automatic selection. Native Codex hooks call the manager, which forwards the exact callback to the selected engine's `capture user-hook` handler. That handler validates source/session context before collection; workers retain immutable engine bytes through normal exit.
 
 The command-line interface provides unified execution pathways for local observation and automation:
 
@@ -92,26 +96,28 @@ The anomaly detection engine is implemented as a deterministic, pure-functional 
 
 ### 3.1 Detection Rules
 
-| Rule Identifier | Description | Warning Threshold | Critical Threshold |
-|---|---|---|---|
-| `TOOL_RETRY_STREAK` | Detects repeated consecutive failures on the same tool name without interleaved successful actions. | 3 consecutive failures | 5 consecutive failures |
-| `TOOL_HIGH_FAILURE_RATE` | Detects elevated tool failure rates for tools with at least 5 total invocations within the session. | Failure rate > 20% | Failure rate >= 50% |
-| `CONTEXT_SATURATION_SPIKE` | Identifies sudden token context surges or context window exhaustion threatening model degradation. | Single-turn delta > 40,000 tokens | Single-turn delta > 80,000 tokens, or peak tokens >= 160,000 (80% of ceiling) |
-| `SUBAGENT_REWORK_LOOP` | Identifies ping-pong delegation bouncing between subagent roles (e.g. coder and tester alternating without progress). | 3 alternating cycles | 5 alternating cycles |
+| Rule identifier | Policy |
+| --- | --- |
+| `TOOL_RETRY_STREAK` | Explicit consecutive_errors_streak_warning/critical values. |
+| `TOOL_HIGH_FAILURE_RATE` | Explicit minimum calls and warning/critical failure-rate ratios. |
+| `CONTEXT_SATURATION_SPIKE` | Explicit context-growth and absolute context-ceiling token thresholds. |
+| `SUBAGENT_REWORK_LOOP` | Existing source-grounded cycle criteria and session ownership. |
+
+Live context ceilings, repeated-tool failures and token usage surge also consume explicit shared anomaly_thresholds. Turn usage measures absolute counts; context growth measures increases between observations. The stored live rule identifier TokenVelocityRunaway remains stable while labels say “Token usage surge”. No numerical policy or model capacity is substituted. Read-only recorded alerts preserve facts; existing explicit historical migration transforms keep their audited version-owned inputs.
 
 ### 3.2 CLI Inspection and Reporting
 
-Inspect anomalies via the CLI across one or more workspaces:
+Inspect anomalies through the source-built engine across one or more workspaces. These POSIX examples use the current host engine directly. The installed `agentic-lens` manager accepts the same utility commands and selects the configured project engine.
 
 ```bash
 # List all workspaces with anomaly counts
-./bin/agentic-lens --workspaces alspaces --list
+./bin/agentic-lens-engine-$(go env GOHOSTOS)-$(go env GOHOSTARCH) --workspaces alspaces --list
 
 # View detailed anomaly diagnosis table for a specific ticket
-./bin/agentic-lens --workspaces alspaces --ticket-id AL-15 --anomalies
+./bin/agentic-lens-engine-$(go env GOHOSTOS)-$(go env GOHOSTARCH) --workspaces alspaces --ticket-id AL-15 --anomalies
 
 # Append or update markdown metrics and anomalies table in SUMMARY.md
-./bin/agentic-lens --workspaces alspaces --ticket-id AL-15 --append alspaces/AL-15/SUMMARY.md
+./bin/agentic-lens-engine-$(go env GOHOSTOS)-$(go env GOHOSTARCH) --workspaces alspaces --ticket-id AL-15 --append alspaces/AL-15/SUMMARY.md
 ```
 
 ---
@@ -128,7 +134,7 @@ The telemetry backfill engine provides batch reconciliation across workspaces, r
 - `--recompute-db`: Recompute OpenCode invocations, turn counts, token metrics, and tool facts from local SQLite DB.
 - `--migrate-schema`: Upgrade telemetry ledgers through the supported migration steps.
 - `--dry-run`: Preview planned changes and modifications without writing changes to disk.
-- `--update-summaries`: Idempotently update `SUMMARY.md` markdown metrics tables in processed workspace directories.
+- `--update-summaries`: Idempotently update the shared configured summary filename and markdown metrics tables in processed workspace directories.
 - `--db-path <path>`: Explicit path to OpenCode SQLite database file.
 - `--force`: Force recomputation and migration even if the ledger is marked as completed.
 
@@ -136,13 +142,13 @@ The telemetry backfill engine provides batch reconciliation across workspaces, r
 
 ```bash
 # Dry-run preview of Git code facts recomputation across all workspaces
-./bin/agentic-lens backfill --source opencode --workspaces alspaces --recompute-git --dry-run
+./bin/agentic-lens-engine-$(go env GOHOSTOS)-$(go env GOHOSTARCH) backfill --source opencode --workspaces alspaces --recompute-git --dry-run
 
 # Full batch telemetry backfill with schema migration and summary table updates
-./bin/agentic-lens backfill --source opencode --workspaces alspaces --recompute-git --recompute-db --migrate-schema --update-summaries
+./bin/agentic-lens-engine-$(go env GOHOSTOS)-$(go env GOHOSTARCH) backfill --source opencode --workspaces alspaces --recompute-git --recompute-db --migrate-schema --update-summaries
 
 # Single ticket targeted backfill with Git facts recomputation and schema migration
-./bin/agentic-lens backfill --source opencode --workspaces alspaces --ticket-id AL-15 --recompute-git --migrate-schema --update-summaries
+./bin/agentic-lens-engine-$(go env GOHOSTOS)-$(go env GOHOSTARCH) backfill --source opencode --workspaces alspaces --ticket-id AL-15 --recompute-git --migrate-schema --update-summaries
 ```
 
 ---
@@ -166,19 +172,19 @@ The migration engine provides stepwise upgrades for `agentic_metrics.json` ledge
 - `--target-version <int>`: Target migration version integer. By default, the installed CLI selects its current supported version.
 - `--dry-run`: Preview planned version transitions without modifying files on disk.
 - `--backup`: Create `.bak` backup copy of original `agentic_metrics.json` file prior to overwriting.
-- `--update-summaries`: Idempotently update `SUMMARY.md` markdown metrics tables in migrated workspaces.
+- `--update-summaries`: Idempotently update the shared configured summary filename and markdown metrics tables in migrated workspaces.
 
 ### 5.3 CLI Usage Examples
 
 ```bash
 # Dry-run preview of pending schema migrations across all workspaces
-./bin/agentic-lens migrate --workspaces alspaces --dry-run
+./bin/agentic-lens-engine-$(go env GOHOSTOS)-$(go env GOHOSTARCH) migrate --workspaces alspaces --dry-run
 
 # Batch upgrade historical workspaces with backup file generation
-./bin/agentic-lens migrate --workspaces alspaces --backup
+./bin/agentic-lens-engine-$(go env GOHOSTOS)-$(go env GOHOSTARCH) migrate --workspaces alspaces --backup
 
 # Migrate single ticket workspace with backup creation and summary table regeneration
-./bin/agentic-lens migrate --workspaces alspaces --ticket-id AL-15 --backup --update-summaries
+./bin/agentic-lens-engine-$(go env GOHOSTOS)-$(go env GOHOSTARCH) migrate --workspaces alspaces --ticket-id AL-15 --backup --update-summaries
 ```
 
 ---

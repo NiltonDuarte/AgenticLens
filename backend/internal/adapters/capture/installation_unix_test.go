@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 
 	"agenticlens/internal/adapters/capture"
@@ -23,6 +24,10 @@ import (
 
 func TestMain(m *testing.M) {
 	if os.Getenv("AL_CAPTURE_INSTALL_FIXTURE") == "1" {
+		if len(os.Args) == 3 && os.Args[1] == "engine" && os.Args[2] == "protocol" {
+			fmt.Println("1")
+			os.Exit(0)
+		}
 		if len(os.Args) == 3 && os.Args[1] == "capture" && os.Args[2] == "protocol" {
 			fmt.Println(capture.HandlerProtocolVersion)
 			os.Exit(0)
@@ -31,8 +36,16 @@ func TestMain(m *testing.M) {
 			fmt.Println("v9.8.7")
 			os.Exit(0)
 		}
+		if len(os.Args) == 3 && os.Args[1] == "version" && os.Args[2] == "--json" {
+			fmt.Println(`{"version":"v9.8.7","commit":"adapter-fixture","build_date":"fixture"}`)
+			os.Exit(0)
+		}
 	}
-	os.Exit(m.Run())
+	code := m.Run()
+	if installationManagerRoot != "" {
+		os.RemoveAll(installationManagerRoot)
+	}
+	os.Exit(code)
 }
 
 func TestInstalledHealthOwnedConfigurationReadOnly(t *testing.T) {
@@ -327,7 +340,7 @@ func installFixture(t *testing.T, project string) (string, string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	config := "agenticlens:\n  version: v9.8.7\n  install_root: '" + cache + "'\n" + string(originalConfig)
+	config := strings.Replace(string(originalConfig), "  version: v9.8.7\n", "  version: v9.8.7\n  install_root: '"+cache+"'\n", 1)
 	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), []byte(config), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -349,7 +362,7 @@ func installFixture(t *testing.T, project string) (string, string) {
 	if err := os.Symlink(testBinary, binary); err != nil {
 		t.Fatal(err)
 	}
-	body, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "scripts", "agentic-lens-wrapper.sh"))
+	body, err := os.ReadFile(installationManagerExecutable(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -592,4 +605,28 @@ func TestCompatibleGlobalWrapperUpdatePreservesOtherPinnedProject(t *testing.T) 
 			t.Fatalf("project dispatch %s: %s %v", project, out, err)
 		}
 	}
+}
+
+var installationManagerOnce sync.Once
+var installationManagerRoot, installationManagerPath string
+var installationManagerErr error
+
+func installationManagerExecutable(t *testing.T) string {
+	t.Helper()
+	installationManagerOnce.Do(func() {
+		installationManagerRoot, installationManagerErr = os.MkdirTemp("", "agenticlens-adapter-manager-")
+		if installationManagerErr != nil {
+			return
+		}
+		installationManagerPath = filepath.Join(installationManagerRoot, "agentic-lens")
+		command := exec.Command("go", "build", "-ldflags", "-X agenticlens/internal/domain.Version=v9.8.7", "-o", installationManagerPath, "./cmd/agentic-lens-manager")
+		command.Dir = filepath.Join("..", "..", "..")
+		if output, err := command.CombinedOutput(); err != nil {
+			installationManagerErr = fmt.Errorf("build manager: %w: %s", err, output)
+		}
+	})
+	if installationManagerErr != nil {
+		t.Fatal(installationManagerErr)
+	}
+	return installationManagerPath
 }

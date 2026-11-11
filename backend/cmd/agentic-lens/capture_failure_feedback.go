@@ -25,5 +25,8 @@ func captureSessionFailureFeedback(ctx context.Context, store *capture.Store, id
 	if err == nil && !manifest.Active {
 		return "", nil
 	}
-	return store.SessionFailureFeedback(ctx, identity)
+	if err := policy.RequireSettings("max_source_bytes"); err != nil {
+		return "", err
+	}
+	return store.SessionFailureFeedback(ctx, identity, policy.MaxSourceBytes)
 }

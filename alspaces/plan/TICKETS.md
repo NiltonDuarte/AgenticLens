@@ -4,19 +4,21 @@ Active tickets live in `to-do/`; completed specifications move to `done/` and le
 
 Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946` on 2026-11-08. Historical evidence and previously accepted product decisions remain authoritative within their stated limits. Existing IDs and accepted ticket groupings are preserved across earlier batches.
 
+## In Progress
+
+- **AL-83**: Present AgenticLens on GitHub Pages
+  - **Status**: In Progress; implementation verified, awaiting publication; **Blocked by**: None; **Blocks**: None
+  - **File**: [AL-83](to-do/AL-83%20present%20agenticlens%20on%20github%20pages.md)
+
 ## Ready
 
 - **AL-65**: Recommend safe source-backed backfill defaults
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None
   - **File**: [AL-65](to-do/AL-65%20recommend%20safe%20source%20backed%20backfill%20defaults.md)
 
-- **AL-69**: Preserve accurate telemetry and evidence
+- **AL-80**: Capture OpenCode sessions across worktrees
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None
-  - **File**: [AL-69](to-do/AL-69%20preserve%20accurate%20telemetry%20and%20evidence.md)
-
-- **AL-70**: Honor configuration paths and ticket identity
-  - **Status**: Ready; **Blocked by**: None; **Blocks**: None
-  - **File**: [AL-70](to-do/AL-70%20honor%20configuration%20paths%20and%20ticket%20identity.md)
+  - **File**: [AL-80](to-do/AL-80%20capture%20opencode%20sessions%20across%20worktrees.md)
 
 - **AL-71**: Keep dashboard requests and live data reliable
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None
@@ -41,10 +43,6 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
 - **AL-78**: Make completion feedback effective across harnesses
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None
   - **File**: [AL-78](to-do/AL-78%20make%20completion%20feedback%20effective%20across%20harnesses.md)
-
-- **AL-79**: Capture Codex sessions across worktrees
-  - **Status**: Ready; **Blocked by**: None; **Blocks**: AL-80
-  - **File**: [AL-79](to-do/AL-79%20capture%20codex%20sessions%20across%20worktrees.md)
 
 - **AL-81**: Generate metrics without capture registry access
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None
@@ -95,10 +93,6 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
   - **File**: [REV-7](to-do/REV-7%20review%20source%20read%20guarantees.md)
 
 ## Blocked
-
-- **AL-80**: Capture OpenCode sessions across worktrees
-  - **Status**: Blocked; **Blocked by**: AL-79; **Blocks**: None
-  - **File**: [AL-80](to-do/AL-80%20capture%20opencode%20sessions%20across%20worktrees.md)
 
 - **AL2-4**: Monitor and refresh remote Git projects
   - **Status**: Blocked; **Blocked by**: AL2-3; **Blocks**: AL2-5

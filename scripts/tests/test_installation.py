@@ -3,10 +3,11 @@ import json
 import os
 from pathlib import Path
 import shutil
+import shlex
 import subprocess
 import unittest
 
-from distribution_fixture import DistributionFixture, ROOT, SETUP, digest, build_app
+from distribution_fixture import DistributionFixture, ROOT, SETUP, digest, build_app, shared_policy
 
 INSTALL = SETUP / 'install.sh'
 BUNDLE_SETUP = Path('.agents/skills/agentic-lens-setup')
@@ -24,7 +25,7 @@ class InstallationTest(DistributionFixture):
                            GOMODCACHE=subprocess.check_output(['go', 'env', 'GOMODCACHE'], text=True).strip())
         for key in ('VERSION', 'GIT_COMMIT', 'BUILD_DATE'):
             environment.pop(key, None)
-        native = destination / f'agentic-lens-{host_os}-{host_arch}'
+        native = destination / f'agentic-lens-engine-{host_os}-{host_arch}'
         if host_os == 'windows': native = native.with_suffix('.exe')
         source_version = subprocess.check_output(['git', 'describe', '--tags', '--always', '--dirty'], cwd=ROOT, text=True).strip()
         candidate = {'VERSION': 'v9.8.8-rc.1+abcdef0', 'GIT_COMMIT': 'abcdef0', 'BUILD_DATE': '2026-01-02T03:04:05Z'}
@@ -45,7 +46,7 @@ class InstallationTest(DistributionFixture):
                 self.assertTrue(os.path.samestat(before, cached.stat()))
                 self.assertEqual(cached.read_bytes(), cached_bytes)
                 self.assertEqual(self.launch('version', '--short').stdout.strip(), self.pin)
-                self.assertFalse((destination / 'agentic-lens').exists(), 'source build copied a release-cache wrapper')
+                self.assertFalse((destination / 'agentic-lens').exists(), 'source build copied an unqualified installed command')
 
     def test_printed_completion_scopes_both_files_to_selected_project_from_another_scaffold(self):
         self.config.unlink()
@@ -56,28 +57,45 @@ class InstallationTest(DistributionFixture):
         caller_shared = caller / '.agenticlens-config.yaml'; caller_shared.write_bytes(self.config.read_bytes())
         caller_local = caller / '.agenticlens-config.local.yaml'; caller_local.write_text('# preserve caller local\n')
         before = (caller_shared.read_bytes(), caller_local.read_bytes())
-        selected_local = self.repo / '.agenticlens-config.local.yaml'; selected_local.write_text('# selected local settings\n')
+        selected_local = self.repo / '.agenticlens-config.local.yaml'
+        selected_local.write_text(f"# selected local settings\ntelemetry:\n  capture:\n    enabled: false\n    state_dir: '{self.root / 'capture state'}'\n  default_source: codex\n  sources:\n    codex:\n      home: '{self.home / '.codex'}'\n")
         local_before = selected_local.read_bytes()
-        command = completion.replace('--project-name NAME', '--project-name Selected').replace('--src-folders DIRS', '--src-folders src').replace('--ticket-prefixes PREFIXES', '--ticket-prefixes FX')
+        approved = self.approved_settings('Selected')
+        approved.write_text(shared_policy(self.pin, self.home / '.agenticlens', name='Selected'))
+        candidate = self.root / 'approved local.yaml'
+        candidate.write_bytes(local_before)
+        command = completion.replace('APPROVED_SHARED.yaml', shlex.quote(str(approved))).replace('--workspaces DIR', '--workspaces workspaces').replace('APPROVED_LOCAL.yaml', shlex.quote(str(candidate)))
+        scaffold_before = self.config.read_bytes()
+        selected_local.unlink()
+        candidate.unlink()
+        missing_choices = subprocess.run(['bash', '-c', command], cwd=caller, env=self.env, text=True, capture_output=True, timeout=15)
+        self.assertNotEqual(missing_choices.returncode, 0)
+        self.assertIn(str(candidate), missing_choices.stderr)
+        self.assertEqual(self.config.read_bytes(), scaffold_before)
+        self.assertFalse(selected_local.exists())
+        selected_local.write_bytes(local_before)
+        candidate.write_bytes(local_before)
         result = subprocess.run(['bash', '-c', command], cwd=caller, env=self.env, text=True, capture_output=True, timeout=15)
         self.succeeds(result)
         self.assertIn('project_name: Selected', self.config.read_text())
         self.assertEqual(selected_local.read_bytes(), local_before)
         self.assertEqual((caller_shared.read_bytes(), caller_local.read_bytes()), before)
         completed = self.config.read_bytes()
-        self.config.write_text(''.join(line for line in completed.decode().splitlines(keepends=True)
-                                       if not line.lstrip().startswith('state_dir:')))
+        self.assertNotIn('state_dir:', completed.decode())
+        selected_local.write_text(''.join(line for line in local_before.decode().splitlines(keepends=True)
+                                          if not line.lstrip().startswith('state_dir:')))
         missing = self.launch('capture', 'status', '--repo', self.repo, '--state-dir', self.root / 'CLI rescue')
         self.assertNotEqual(missing.returncode, 0)
         self.assertIn('telemetry.capture.state_dir', missing.stderr)
         self.assertFalse((self.root / 'CLI rescue').exists())
         self.assertFalse((self.home / '.agenticlens/state').exists())
         self.config.write_bytes(completed)
+        selected_local.write_bytes(local_before)
 
-    def test_compatibility_launcher_missing_bootstrap_and_default_user_entrypoint(self):
+    def test_operator_launcher_missing_installation_and_default_user_entrypoint(self):
         launcher = ROOT / '.agents/skills/agentic-lens-operator/scripts/agentic-lens.sh'
         def launch():
-            return subprocess.run(['sh', str(launcher), 'capture', 'status', '--repo', str(self.repo)],
+            return subprocess.run(['sh', str(launcher), 'version', '--short'],
                                   cwd=self.repo, env=self.env, input='', text=True, capture_output=True, timeout=10)
         missing = launch()
         self.assertNotEqual(missing.returncode, 0)
@@ -85,7 +103,7 @@ class InstallationTest(DistributionFixture):
         self.assertIn('https://github.com/', missing.stderr)
         self.assertEqual(missing.stdout, '')
         self.succeeds(self.install_local('--dest', self.home / '.local/bin'))
-        self.assertEqual(json.loads(self.succeeds(launch()).stdout)['args'], ['capture', 'status', '--repo', str(self.repo)])
+        self.assertEqual(self.succeeds(launch()).stdout.strip(), self.pin)
         self.assertEqual(self.requests(), [])
 
     def git(self, *arguments, cwd=None):
@@ -101,7 +119,7 @@ class InstallationTest(DistributionFixture):
         ignore = self.repo / '.gitignore'; ignore.write_text('# owner policy\n')
         before = self.config.read_bytes(); ignored = ignore.read_bytes()
         self.succeeds(self.bundle())
-        for relative in ['scripts/install.sh', 'scripts/download.sh', 'scripts/download.ps1', 'scripts/agentic-lens-wrapper.sh', 'scripts/agentic-lens-wrapper.ps1', 'SKILL.md']:
+        for relative in ['scripts/install.sh', 'scripts/download.sh', 'scripts/download.ps1', 'SKILL.md']:
             self.assertTrue((self.repo / BUNDLE_SETUP / relative).is_file(), relative)
         self.assertEqual((self.repo / BUNDLE_SETUP / 'RELEASE_VERSION').read_text(), self.pin + '\n')
         self.succeeds(self.install_local(script=self.repo / BUNDLE_SETUP / 'scripts/download.sh'))
@@ -115,10 +133,9 @@ class InstallationTest(DistributionFixture):
         self.assertTrue(self.requests())
         self.assertTrue(all('/' + self.pin + '/' in url for url in self.requests()))
         self.network_log.unlink()
-        self.succeeds(self.install(script=self.repo / BUNDLE_SETUP / 'scripts/download.sh'))
-        self.assertEqual(self.requests(), [f'https://github.com/NiltonDuarte/AgenticLens/releases/download/{self.pin}/SHA256SUMS',
-                                          f'https://github.com/NiltonDuarte/AgenticLens/releases/download/{self.pin}/{self.native().name}'])
-        self.succeeds(self.launch())
+        self.succeeds(self.install_local(script=self.repo / BUNDLE_SETUP / 'scripts/download.sh'))
+        self.assertEqual(self.requests(), [])
+        self.succeeds(self.launch('version', '--short'))
 
     def test_bundle_conflict_preflight_preserves_every_existing_file(self):
         conflict = self.repo / BUNDLE_OPERATOR / 'references/dashboard.md'
@@ -130,6 +147,7 @@ class InstallationTest(DistributionFixture):
         self.assertFalse((self.repo / BUNDLE_SETUP / 'RELEASE_VERSION').exists())
 
     def test_worktree_uses_shared_pin_without_release_marker_or_repository_binary(self):
+        (self.repo / '.agenticlens-config.local.yaml').unlink()
         self.git('init', '-q'); self.git('config', 'user.name', 'Fixture'); self.git('config', 'user.email', 'fixture@example.invalid')
         self.succeeds(self.bundle())
         marker = self.repo / BUNDLE_SETUP / 'RELEASE_VERSION'; marker.unlink()
@@ -137,13 +155,25 @@ class InstallationTest(DistributionFixture):
         worktree = self.root / 'worktree without marker'
         self.git('worktree', 'add', '-qb', 'fixture-worktree', worktree)
         self.succeeds(self.install_local(script=worktree / BUNDLE_SETUP / 'scripts/download.sh'))
-        result = self.succeeds(self.launch('--al-project', worktree, 'capture', 'status', '--repo', worktree, cwd=worktree))
-        self.assertEqual(json.loads(result.stdout)['version'], self.pin)
+        result = self.succeeds(self.launch('--al-project', worktree, 'version', '--short', cwd=worktree))
+        self.assertEqual(result.stdout.strip(), self.pin)
         self.assertEqual(self.git('status', '--porcelain', cwd=worktree), '')
         self.assertFalse((worktree / BUNDLE_OPERATOR / 'bin').exists())
         self.assertFalse((worktree / BUNDLE_SETUP / 'RELEASE_VERSION').exists())
+        shared_before = self.config.read_bytes()
+        self.succeeds(self.install_local('--force', probe=build_app()))
+        refused = self.launch('--al-project', worktree, 'init', '--local-only', '--capture-enabled', 'true',
+                              '--source', 'codex', '--codex-home', self.home / '.codex',
+                              '--state-dir', self.root / 'explicit state', cwd=worktree)
+        self.assertNotEqual(refused.returncode, 0)
+        self.assertIn('linked-worktree setup', refused.stderr)
+        self.assertEqual(self.config.read_bytes(), shared_before)
+        self.assertFalse((self.repo / '.agenticlens-config.local.yaml').exists())
+        self.assertFalse((worktree / '.agenticlens-config.local.yaml').exists())
+        self.assertFalse((self.root / 'explicit state').exists())
 
     def test_initial_pin_is_explicit_and_failure_rolls_back_only_created_configuration(self):
+        (self.repo / '.agenticlens-config.local.yaml').unlink()
         self.config.unlink()
         self.assertNotEqual(self.install_local().returncode, 0)
         self.assertFalse(self.cache.exists())
@@ -153,11 +183,12 @@ class InstallationTest(DistributionFixture):
         self.assertNotEqual(result.returncode, 0); self.assertFalse(self.config.exists())
         self.succeeds(self.install_local('--init-config', '--version', self.pin))
         self.assertIn('version: ' + self.pin, self.config.read_text())
-        self.assertIn('state_dir: ~/.agenticlens/state', self.config.read_text())
+        self.assertNotIn('state_dir:', self.config.read_text())
+        self.assertFalse((self.repo / '.agenticlens-config.local.yaml').exists(), 'binary bootstrap guessed local capture choices')
 
     def test_invalid_or_conflicting_versions_and_missing_values_fail_before_fetch(self):
         for version in ['latest', '../v9.8.7', 'v9.8.7/rc', 'v9.8.7 rc', 'v9.8.7+$(touch INJECTED)', 'v1.0.0']:
-            for action in ([lambda: self.install('--version', version)] if version == 'v1.0.0' else [lambda: self.install('--version', version), lambda: self.bundle('--version', version)]):
+            for action in ([lambda: self.install_local('--version', version)] if version == 'v1.0.0' else [lambda: self.install_local('--version', version), lambda: self.bundle('--version', version)]):
                 with self.subTest(version=version):
                     self.assertNotEqual(action().returncode, 0)
         self.assertFalse((self.repo / 'INJECTED').exists()); self.assertEqual(self.requests(), [])
@@ -167,10 +198,10 @@ class InstallationTest(DistributionFixture):
         legacy = self.repo / 'bin'; legacy.mkdir(); (legacy / 'agentic-lens').write_text('owner wrapper\n')
         self.succeeds(self.install_local())
         contents = self.native().read_bytes(); self.native().chmod(0o600)
-        self.assertNotEqual(self.launch().returncode, 0)
+        self.assertNotEqual(self.launch('version', '--short').returncode, 0)
         self.succeeds(self.install_local())
         self.assertEqual(self.native().read_bytes(), contents)
-        self.succeeds(self.launch())
+        self.succeeds(self.launch('version', '--short'))
         self.assertEqual((legacy / 'agentic-lens').read_text(), 'owner wrapper\n')
 
 

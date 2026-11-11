@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	adaptersconfig "agenticlens/internal/adapters/config"
-	"agenticlens/internal/domain"
 )
 
 // prepareCaptureInstall provisions the explicit shared release authority and
@@ -36,21 +36,40 @@ func prepareCaptureInstall(t *testing.T, cwd string, args []string) []string {
 	shared := filepath.Join(root, ".agenticlens-config.yaml")
 	body, err := os.ReadFile(shared)
 	if os.IsNotExist(err) {
-		body = []byte("project_name: Capture installer fixture\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes: [TEST]\nworkspaces:\n  dir: workspaces\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n")
+		body = []byte("agenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: Capture installer fixture\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: \"TEST\"\n      description: Fixture ticket\nworkspaces:\n  artifacts: []\n  dir: workspaces\ncode_metrics:\n  base_branch: fixture-base\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n")
 	} else if err != nil {
 		t.Fatal(err)
 	}
 	if !bytes.HasPrefix(body, []byte("agenticlens:\n")) && !bytes.Contains(body, []byte("\nagenticlens:\n")) {
-		installRoot := filepath.Join(t.TempDir(), "native cache")
-		header := fmt.Sprintf("agenticlens:\n  version: %s\n  install_root: %q\n", domain.DefaultVersion, installRoot)
-		body = append([]byte(header), body...)
-		if err = os.WriteFile(shared, body, 0600); err != nil {
+		body = append([]byte("agenticlens:\n  version: v9.8.7\n"), body...)
+	}
+	if !bytes.Contains(body, []byte("  install_root:")) {
+		body = bytes.Replace(body, []byte("agenticlens:\n"), []byte(fmt.Sprintf("agenticlens:\n  install_root: %q\n", filepath.Join(t.TempDir(), "native cache"))), 1)
+	}
+	if err = os.WriteFile(shared, body, 0600); err != nil {
+		t.Fatal(err)
+	}
+	local := filepath.Join(root, ".agenticlens-config.local.yaml")
+	if _, err := os.Lstat(local); os.IsNotExist(err) {
+		state := ".agenticlens-capture"
+		for i := 0; i+1 < len(args); i++ {
+			if args[i] == "--state-dir" {
+				state = args[i+1]
+			}
+		}
+		policy := fmt.Sprintf("telemetry:\n  capture:\n    pass_timeout_ms: 3000\n    max_sessions: 256\n    max_source_bytes: 67108864\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 5000\n    commit_warning: true\n    enabled: true\n    state_dir: %q\n", state)
+		if err := os.WriteFile(local, []byte(policy), 0600); err != nil {
 			t.Fatal(err)
 		}
+	} else if err != nil {
+		t.Fatal(err)
 	}
 	entry, err := adaptersconfig.ResolveEntrypoint(root)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if !strings.HasPrefix(entry.InstallRoot, os.TempDir()+string(os.PathSeparator)) {
+		t.Fatalf("fixture installation root is not disposable: %s", entry.InstallRoot)
 	}
 	selected, err := entry.NativePath()
 	if err != nil {
@@ -74,8 +93,7 @@ func prepareCaptureInstall(t *testing.T, cwd string, args []string) []string {
 		t.Fatal(err)
 	}
 	wrapper := filepath.Join(entry.InstallRoot, "wrapper __BINARY__ __STATE__ __STORE__")
-	source := filepath.Join("..", "..", "..", "scripts", "agentic-lens-wrapper.sh")
-	wrapperBody, err := os.ReadFile(source)
+	wrapperBody, err := os.ReadFile(managerBinaryPath)
 	if err != nil {
 		t.Fatal(err)
 	}

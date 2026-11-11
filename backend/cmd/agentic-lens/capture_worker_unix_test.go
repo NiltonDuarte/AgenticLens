@@ -27,7 +27,7 @@ func testNativePendingGeneration(t *testing.T, crash bool) {
 	f := newCaptureGenerationFixture(t)
 	f.bind(t, f.write(t, 37))
 	local := []byte("telemetry:\n  capture:\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 10000\n")
-	if err := os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), local, 0600); err != nil {
+	if err := writeCaptureFixtureLocal(t, f, local); err != nil {
 		t.Fatal(err)
 	}
 	store, err := capture.OpenProject(f.state, f.project)
@@ -174,7 +174,7 @@ func testNativePendingGeneration(t *testing.T, crash bool) {
 func TestCaptureLateTicketMustPublishBeforeIdle(t *testing.T) {
 	f := newCaptureGenerationFixture(t)
 	f.bind(t, f.write(t, 37))
-	if err := os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte("telemetry:\n  capture:\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 100\n    max_lifetime_ms: 3000\n"), 0600); err != nil {
+	if err := writeCaptureFixtureLocal(t, f, []byte("telemetry:\n  capture:\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 100\n    max_lifetime_ms: 3000\n")); err != nil {
 		t.Fatal(err)
 	}
 	s, err := capture.OpenProject(f.state, f.project)

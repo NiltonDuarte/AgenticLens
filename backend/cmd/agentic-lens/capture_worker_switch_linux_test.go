@@ -4,6 +4,7 @@ package main_test
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -68,7 +69,7 @@ func init() {
 	os.Exit(0)
 }
 
-func TestCaptureWorkerReleaseSwitchFinishesCapturedPassAndHandsOffPending(t *testing.T) {
+func TestCaptureWorkerRetainsAdmittedBuildAcrossPreferredSwitch(t *testing.T) {
 	t.Run("pending generation", func(t *testing.T) { testCaptureWorkerReleaseSwitch(t, true) })
 	t.Run("active acknowledged root", func(t *testing.T) { testCaptureWorkerReleaseSwitch(t, false) })
 }
@@ -108,11 +109,11 @@ func testCaptureWorkerReleaseSwitch(t *testing.T, queueNext bool) {
 	first, second := native("v9.7.1"), native("v9.7.2")
 	writePin("v9.7.1")
 	local := fmt.Sprintf("telemetry:\n  capture:\n    state_dir: %q\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 10000\n", f.state)
-	if err := os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte(local), 0600); err != nil {
+	if err := writeCaptureFixtureLocal(t, f, []byte(local)); err != nil {
 		t.Fatal(err)
 	}
 	wrapper := filepath.Join(cache, "common wrapper")
-	if err := os.WriteFile(wrapper, readCaptureFile(t, filepath.Join("..", "..", "..", "scripts", "agentic-lens-wrapper.sh")), 0700); err != nil {
+	if err := os.WriteFile(wrapper, readCaptureFile(t, managerBinaryPath), 0700); err != nil {
 		t.Fatal(err)
 	}
 	install := func(binary string) {
@@ -227,9 +228,10 @@ func testCaptureWorkerReleaseSwitch(t *testing.T, queueNext bool) {
 		}
 	}
 	paused, identity := accept()
-	if identity != first {
-		t.Fatalf("first pass used %s instead of %s", identity, first)
+	if identity == first || !bytes.Equal(readCaptureFile(t, identity), readCaptureFile(t, first)) {
+		t.Fatalf("first pass did not use an immutable copy of admitted build: %s", identity)
 	}
+	retained := identity
 	progress, err := capture.WorkerStatus(f.coordination(t))
 	if err != nil {
 		t.Fatal(err)
@@ -252,43 +254,21 @@ func testCaptureWorkerReleaseSwitch(t *testing.T, queueNext bool) {
 	if out, err := contender.CombinedOutput(); err != nil {
 		t.Fatalf("selected worker lock contention: %v %s", err, out)
 	}
+	// Replace the mutable source at the same path while A is still running.
+	replacement := first + ".new"
+	if err := os.WriteFile(replacement, readCaptureFile(t, second), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(replacement, first); err != nil {
+		t.Fatal(err)
+	}
 	release(paused)
-	var successor net.Conn
-	for successor == nil {
-		conn, identity := accept()
-		if identity == first {
-			release(conn)
-			continue
-		}
-		if identity != second {
-			t.Fatalf("unselected native took pass: %s", identity)
-		}
-		successor = conn
+	later, laterIdentity := accept()
+	if laterIdentity != retained {
+		t.Fatalf("active worker changed later child build: %s want %s", laterIdentity, retained)
 	}
-	defer func() {
-		if err := successor.Close(); err != nil && !errors.Is(err, net.ErrClosed) {
-			t.Error(err)
-		}
-	}()
-	if err = old.Wait(); err != nil {
-		t.Fatalf("old native did not retire gracefully: %v %s", err, readCaptureFile(t, log.Name()))
-	}
-	request, err := registry.PublicationRequest(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if request.Generation != wanted || request.Acknowledged != 1 {
-		t.Fatalf("old native consumed post-switch request: %+v", request)
-	}
-	progress, err = capture.WorkerStatus(f.coordination(t))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if progress.PID == old.Process.Pid || !strings.Contains(progress.Detail, fmt.Sprintf("generation=%d acknowledged=1", wanted)) {
-		t.Fatalf("selected successor did not capture pending work: %+v", progress)
-	}
-	release(successor)
-	// Subsequent Git observations are ordinary work by B and can proceed.
+	release(later)
+	// Continue to release real A children until the admitted owner exits normally.
 	go func() {
 		for {
 			conn, err := listener.Accept()
@@ -296,12 +276,11 @@ func testCaptureWorkerReleaseSwitch(t *testing.T, queueNext bool) {
 				return
 			}
 			if err := conn.SetDeadline(time.Now().Add(time.Second)); err != nil {
-				if closeErr := conn.Close(); closeErr != nil && !errors.Is(closeErr, net.ErrClosed) {
-					fmt.Fprintln(os.Stderr, "version gate cleanup:", closeErr)
-				}
+				_ = conn.Close()
 				return
 			}
-			if _, err = bufio.NewReader(conn).ReadString('\n'); err == nil {
+			_, err = bufio.NewReader(conn).ReadString('\n')
+			if err == nil {
 				_, err = conn.Write([]byte("C"))
 			}
 			closeErr := conn.Close()
@@ -321,29 +300,26 @@ func testCaptureWorkerReleaseSwitch(t *testing.T, queueNext bool) {
 			t.Fatal(err)
 		}
 	}
-	deadline := time.Now().Add(5 * time.Second)
-	finished := false
-	for time.Now().Before(deadline) {
-		request, err = registry.PublicationRequest(context.Background())
-		if err != nil {
-			t.Fatal(err)
-		}
-		if request.Generation == wanted && request.Acknowledged == wanted {
-			lock, err := capture.AcquireWorker(f.coordination(t))
-			if err != nil {
-				t.Fatal(err)
-			}
-			if lock != nil {
-				if err = lock.Close(); err != nil {
-					t.Fatal(err)
-				}
-				finished = true
-				break
-			}
-		}
-		time.Sleep(10 * time.Millisecond)
+	if err := old.Wait(); err != nil {
+		t.Fatalf("admitted worker failed normal completion: %v %s", err, readCaptureFile(t, log.Name()))
 	}
-	if !finished {
-		t.Fatalf("selected successor did not drain/finish pending work: %+v; worker log=%s", request, readCaptureFile(t, filepath.Join(f.coordination(t), "worker.log")))
+	request, err := registry.PublicationRequest(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if request.Generation < wanted || request.Acknowledged != request.Generation {
+		t.Fatalf("admitted build stranded pending work: %+v", request)
+	}
+	entry, err := adaptersconfig.ResolveEntrypoint(f.project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	preferred, err := entry.NativePath()
+	if err != nil || preferred != second {
+		t.Fatalf("new invocation did not prefer B: %s %v", preferred, err)
+	}
+	out, err := exec.Command(preferred, "version", "--short").CombinedOutput()
+	if err != nil || strings.TrimSpace(string(out)) != "v9.7.2" {
+		t.Fatalf("preferred build identity: %s %v", out, err)
 	}
 }

@@ -32,7 +32,7 @@ func TestRegistryRetiredCachedSnapshotsRecoverFromUnchangedNativeSource(t *testi
 				t.Fatal(err)
 			}
 			bound := registerBound(t, store, sourceHome, path, "owner", "TEST-100")
-			initial, err := store.Reconcile(ctx, "TEST-100", "tester", 20, 1000000)
+			initial, err := store.Reconcile(ctx, "TEST-100", "tester", 20, 1000000, fixtureGenerationPolicy())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -87,7 +87,7 @@ func TestRegistryRetiredCachedSnapshotsRecoverFromUnchangedNativeSource(t *testi
 			otherPath := filepath.Join(sourceHome, "sessions", "other.jsonl")
 			writeRollout(t, otherPath, "other", "", 7)
 			registerBound(t, store, sourceHome, otherPath, "other", "TEST-200")
-			other, err := store.Reconcile(ctx, "TEST-200", "tester", 20, 1000000)
+			other, err := store.Reconcile(ctx, "TEST-200", "tester", 20, 1000000, fixtureGenerationPolicy())
 			if err != nil {
 				t.Fatalf("old unrelated snapshot blocked independent ticket: %v", err)
 			}
@@ -111,7 +111,7 @@ func TestRegistryRetiredCachedSnapshotsRecoverFromUnchangedNativeSource(t *testi
 			if string(afterCallback["snapshot"]) != string(opaque) {
 				t.Fatal("callback discarded old opaque snapshot before source recovery")
 			}
-			recovered, err := store.Reconcile(ctx, "TEST-100", "tester", 20, 1000000)
+			recovered, err := store.Reconcile(ctx, "TEST-100", "tester", 20, 1000000, fixtureGenerationPolicy())
 			if err != nil {
 				t.Fatal(err)
 			}

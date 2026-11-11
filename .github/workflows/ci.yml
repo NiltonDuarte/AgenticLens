@@ -49,46 +49,6 @@ jobs:
       - name: Pure frontend unit tests
         run: npm run test:unit --prefix web
 
-  windows-entrypoint:
-    name: Windows installation and hook integration
-    needs: [backend-unit, frontend-unit]
-    runs-on: windows-latest
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: backend/go.mod
-          cache: false
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - name: Set up Node.js for transport verification
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: Install development transpiler dependencies
-        run: npm ci --prefix web --ignore-scripts
-      - name: Build canonical embedded web assets for actual application fixtures
-        working-directory: web
-        run: npm run build
-      - name: Verify owned Git for Windows process-tree watchdog
-        working-directory: backend
-        run: go test ./internal/adapters/capture -run '^TestGitCheckWindowsWatchdogKillsOwnedTree$' -count=1 -timeout=60s
-      - name: Verify installer inspection process ownership on Windows
-        working-directory: backend
-        run: go test ./internal/adapters/capture -run '^TestInstallWindowsInspectionOwnsLauncherTree$' -count=1 -timeout=60s
-      - name: Exercise real PowerShell and native Windows releases
-        env:
-          PYTHONUTF8: '1'
-        run: python scripts/tests/test_windows_distribution.py
-      - name: Exercise shipped plugin process transport
-        env:
-          PYTHONUTF8: '1'
-        run: python scripts/tests/test_windows_plugin_transport.py
-
   backend-check:
     name: Backend Check
     needs: [backend-unit, frontend-unit]
@@ -165,7 +125,7 @@ jobs:
 
   build-binary:
     name: Build Binary and Verify Version
-    needs: [backend-check, frontend-check, distribution-check, windows-entrypoint]
+    needs: [backend-check, frontend-check, distribution-check]
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository

@@ -11,12 +11,10 @@ import (
 	"time"
 
 	"agenticlens/internal/adapters/codex"
+	adaptersconfig "agenticlens/internal/adapters/config"
 	"agenticlens/internal/adapters/opencode"
 	"agenticlens/internal/domain"
 )
-
-const DefaultByteBudget int64 = 64 * 1024 * 1024
-const DefaultSessionBudget = 256
 
 // QueueChild durably stores only the source path and claimed parent for later verification.
 func (s *Store) QueueChild(ctx context.Context, store, path, parent string) error {
@@ -187,7 +185,7 @@ func (s *Store) ReconcileAt(ctx context.Context, ticket, user string, sessionBud
 				continue
 			}
 			if r.TicketID != "" {
-				if r.TicketID != parent.TicketID {
+				if r.TicketID != parent.TicketID && r.Binding != "explicit_agent_response" && r.Binding != "explicit_manual_selection" {
 					r.State = domain.CaptureFailed
 					r.Detail = "Conflicting source-proven parent ticket binding"
 					registrations[i] = r
@@ -248,9 +246,10 @@ func (s *Store) ReconcileAt(ctx context.Context, ticket, user string, sessionBud
 
 // sourceRead never enters registry serialization or diagnostic publication.
 type sourceRead struct {
-	policy      *domain.GenerationPolicy
-	transcripts []codex.Transcript
-	events      domain.SourceEvents
+	configuration domain.ProjectConfig
+	policy        *domain.GenerationPolicy
+	transcripts   []codex.Transcript
+	events        domain.SourceEvents
 }
 
 func extractExact(ctx context.Context, r domain.CaptureRegistration, budget int64, user string, source ...*sourceRead) ([]domain.SessionFact, int64, string, error) {
@@ -310,7 +309,11 @@ func extractExactAt(ctx context.Context, r domain.CaptureRegistration, budget in
 		}
 		return sessions, info.Size(), transcript.UpdatedAt, nil
 	}
-	db, err := opencode.OpenDB(r.Identity.Store)
+	var cfg domain.ProjectConfig
+	if len(source) > 0 {
+		cfg = source[0].configuration
+	}
+	db, err := openOpenCodeSource(cfg, r.Identity.Store)
 	if err != nil {
 		return nil, 0, "", err
 	}
@@ -400,7 +403,18 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 	}
 	indexes = append(append([]int{}, indexes[split:]...), indexes[:split]...)
 
-	source := sourceRead{policy: captureGenerationPolicy(policies)}
+	if len(policies) == 0 {
+		if err := adaptersconfig.ValidateGenerationPolicy(s.configuration); err != nil {
+			return nil, nil, err
+		}
+		policies = []domain.GenerationPolicy{s.configuration.Generation.Metrics}
+	}
+	if policies[0].Anomalies {
+		if err := adaptersconfig.ValidateAnomalyPolicy(s.configuration); err != nil {
+			return nil, nil, err
+		}
+	}
+	source := sourceRead{policy: captureGenerationPolicy(policies), configuration: s.configuration}
 	used := 0
 	refreshed := map[string]bool{}
 	for _, i := range indexes {
@@ -422,6 +436,9 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 		var updatedAt string
 		var extractErr error
 		if s.project != "" {
+			if r.Identity.Source == domain.SourceCodex && r.TranscriptPath == "" {
+				extractErr = errors.New("exact Codex transcript path is not registered; retain pending state and supply explicit session binding")
+			}
 			reservation := int64(256)
 			if r.Identity.Source == domain.SourceCodex {
 				reservation = MaxPayloadBytes
@@ -431,7 +448,7 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 			}
 			if budget.bytes < reservation {
 				extractErr = opencode.ErrCaptureBudget
-			} else {
+			} else if extractErr == nil {
 				budget.charge(reservation)
 				extractErr = s.validateOwner(ctx, r)
 			}
@@ -439,7 +456,7 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 		if extractErr == nil && r.Identity.Source == domain.SourceCodex {
 			extractErr = codex.ValidateRolloutStore(r.Identity.Store, r.TranscriptPath)
 		}
-		fingerprint, fingerprintErr := sourceFingerprint(ctx, r)
+		fingerprint, fingerprintErr := sourceFingerprint(ctx, r, s.configuration)
 		// Size/count/timestamp fingerprints are operational hints, not proof
 		// that a restored complete source has identical recorded facts. Read
 		// the exact owner within the existing session/byte budgets.
@@ -552,11 +569,11 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 			all = append(all, registration.Snapshot...)
 		}
 	}
-	effectivePolicy := domain.DefaultGenerationPolicy()
-	if source.policy != nil {
-		effectivePolicy = *source.policy
+	if source.policy == nil {
+		return nil, nil, errors.New("explicit generation policy is required for capture summaries")
 	}
-	summary, summaryErr := domain.PersistSourceAnomalySummariesWithPolicy(domain.AgenticFactLedger{Sessions: all}, source.events, effectivePolicy)
+	effectivePolicy := *source.policy
+	summary, summaryErr := domain.PersistSourceAnomalySummariesWithPolicy(domain.AgenticFactLedger{Sessions: all}, source.events, effectivePolicy, s.anomalyThresholds)
 	if summaryErr != nil {
 		return nil, nil, summaryErr
 	}

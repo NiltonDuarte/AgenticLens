@@ -1,8 +1,9 @@
+import { useRolePresentation } from '../contexts/ProjectConfigContext';
 import React, { useLayoutEffect, useRef, useState } from 'react';
 import type { LiveMessageFact, LiveSessionNode, LiveTraceView, LivePartFact, LiveAnomalyAlert } from '../domain/live';
 import {
+  formatModelLabel,
   formatTokensK,
-  formatRoleLabel,
   truncateMiddle,
   formatLocalTimeWithMs,
   formatLocalDateTimeTooltip,
@@ -250,7 +251,7 @@ const LiveMessageTurnItem: React.FC<MessageTurnProps> = ({
       {message.parts && message.parts.length > 0 && (
         <div className="message-parts-container">
           {message.parts.map((part) => {
-            const matchedAlert = findMatchingLiveAlert(part, anomalies);
+            const matchedAlert = findMatchingLiveAlert(part, anomalies?.filter((alert) => alert.rule_name === 'ConsecutiveToolErrors'), sessionId);
             const streakCount = extractStreakCount(matchedAlert);
             const consecutiveErrors = streakCount && streakCount > 1 ? streakCount : undefined;
             return (
@@ -280,6 +281,7 @@ export const LiveTraceInspector: React.FC<LiveTraceInspectorProps> = ({
   availableSessionIds,
   onSelectSession,
 }) => {
+  const rolePresentation = useRolePresentation();
   const [isSessionCopied, setIsSessionCopied] = useState(false);
   const [messageOrder, setMessageOrder] = useState<LiveMessageOrder>('latest-first');
   const [newTurnsAvailable, setNewTurnsAvailable] = useState(false);
@@ -372,9 +374,9 @@ export const LiveTraceInspector: React.FC<LiveTraceInspectorProps> = ({
               {isSessionCopied ? 'Copied' : 'Copy Prompt'}
             </button>
             <span className={`node-role-badge role-${sessionNode.role.toLowerCase()}`}>
-              {formatRoleLabel(sessionNode.role)}
+              {rolePresentation.projectedLabel(sessionNode.role)}
             </span>
-            <span className="inspector-model-badge">{sessionNode.model}</span>
+            <span className="inspector-model-badge">{formatModelLabel(sessionNode.model)}</span>
           </div>
           <div className="inspector-metrics-row">
             <span className="inspector-stat">
@@ -408,6 +410,15 @@ export const LiveTraceInspector: React.FC<LiveTraceInspectorProps> = ({
         </div>
       )}
 
+      {trace?.relationships?.state === 'unavailable' && (
+        <div className="inspector-loading-indicator" role="status">
+          <p>Child-session relationships are unavailable. Available trace messages remain visible.</p>
+          {trace.diagnostics?.map((diagnostic) => (
+            <p key={diagnostic.code}>{diagnostic.message}</p>
+          ))}
+        </div>
+      )}
+
       {hasFailedTools && trace && trace.recent_errors.length > 0 && (
         <section
           className="inspector-failed-tools-section"
@@ -437,7 +448,7 @@ export const LiveTraceInspector: React.FC<LiveTraceInspectorProps> = ({
             hidden={!isFailedToolsExpanded}
           >
             {isFailedToolsExpanded && trace.recent_errors.map((errorPart, idx) => {
-              const matchedAlert = findMatchingLiveAlert(errorPart, trace.anomalies);
+              const matchedAlert = findMatchingLiveAlert(errorPart, trace.anomalies.filter((alert) => alert.rule_name === 'ConsecutiveToolErrors'), trace.session_id);
               const streakCount = extractStreakCount(matchedAlert);
               const parentMsg = trace.messages.find((m) =>
                 m.parts?.some((p) => p.id === errorPart.id)

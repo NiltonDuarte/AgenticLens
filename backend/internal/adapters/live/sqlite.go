@@ -5,13 +5,11 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
 
-	_ "modernc.org/sqlite"
+	"agenticlens/internal/adapters/opencode"
 )
 
 // RawSessionRecord represents an unmarshaled session row from SQLite.
@@ -56,76 +54,14 @@ type SQLiteHook struct {
 
 // OpenReadOnlyHook opens a read-only SQLite database connection configured with non-blocking pragmas.
 func OpenReadOnlyHook(dbPath string, busyTimeoutMs int) (*SQLiteHook, error) {
-	if busyTimeoutMs <= 0 {
-		busyTimeoutMs = 5000
-	}
-
-	cleanPath := strings.TrimSpace(dbPath)
-	if strings.HasPrefix(cleanPath, "~/") {
-		if home, err := os.UserHomeDir(); err == nil {
-			cleanPath = filepath.Join(home, cleanPath[2:])
-		}
-	}
-
-	isMemory := cleanPath == ":memory:" || strings.Contains(cleanPath, "mode=memory")
-	if !isMemory {
-		if _, err := os.Stat(cleanPath); err != nil {
-			return nil, fmt.Errorf("verifying database path %s: %w", cleanPath, err)
-		}
-	}
-
-	var dsn string
-	if strings.HasPrefix(cleanPath, "file:") {
-		dsn = cleanPath
-		if !strings.Contains(dsn, "mode=ro") {
-			if strings.Contains(dsn, "?") {
-				dsn += "&mode=ro"
-			} else {
-				dsn += "?mode=ro"
-			}
-		}
-		if !strings.Contains(dsn, "_busy_timeout") {
-			dsn += fmt.Sprintf("&_busy_timeout=%d", busyTimeoutMs)
-		}
-	} else if isMemory {
-		dsn = cleanPath
-	} else {
-		dsn = fmt.Sprintf("file:%s?mode=ro&_busy_timeout=%d", cleanPath, busyTimeoutMs)
-	}
-
-	db, err := sql.Open("sqlite", dsn)
+	client, err := opencode.OpenDB(dbPath, busyTimeoutMs)
 	if err != nil {
-		return nil, fmt.Errorf("opening read-only sqlite database at %s: %w", cleanPath, err)
+		return nil, err
 	}
-
-	// Connection pool bounds: reader connections only
+	db := client.DB()
 	db.SetMaxOpenConns(5)
 	db.SetMaxIdleConns(2)
-
-	// Execute read-only, non-blocking pragmas
-	pragmas := []string{
-		"PRAGMA query_only = ON;",
-		fmt.Sprintf("PRAGMA busy_timeout = %d;", busyTimeoutMs),
-		"PRAGMA read_uncommitted = ON;",
-	}
-
-	for _, pragma := range pragmas {
-		if _, err := db.Exec(pragma); err != nil {
-			_ = db.Close()
-			return nil, fmt.Errorf("executing pragma %q: %w", pragma, err)
-		}
-	}
-
-	if err := db.Ping(); err != nil {
-		_ = db.Close()
-		return nil, fmt.Errorf("pinging sqlite database at %s: %w", cleanPath, err)
-	}
-
-	return &SQLiteHook{
-		db:            db,
-		dbPath:        cleanPath,
-		busyTimeoutMs: busyTimeoutMs,
-	}, nil
+	return &SQLiteHook{db: db, dbPath: dbPath, busyTimeoutMs: busyTimeoutMs}, nil
 }
 
 // DB returns the underlying database handle for test introspection.
@@ -195,6 +131,9 @@ func (h *SQLiteHook) SessionExists(sessionID string) (bool, error) {
 // FetchActiveSessions retrieves active sessions updated within the threshold window,
 // along with any direct parents or children.
 func (h *SQLiteHook) FetchActiveSessions(activeThresholdSeconds int64, nowMs int64) ([]RawSessionRecord, error) {
+	if activeThresholdSeconds <= 0 || nowMs <= 0 {
+		return nil, errors.New("active session lookup requires a positive explicit activity window and current timestamp")
+	}
 	if h.db == nil {
 		return nil, errors.New("database handle is nil")
 	}
@@ -213,13 +152,6 @@ func (h *SQLiteHook) FetchActiveSessions(activeThresholdSeconds int64, nowMs int
 			ORDER BY time_created ASC
 		`
 		rows, err = h.db.Query(query, cutoffMs, cutoffMs, cutoffMs, cutoffMs, cutoffMs, cutoffMs)
-	} else {
-		query := `
-			SELECT id, parent_id, agent, model, title, time_created, time_updated
-			FROM session
-			ORDER BY time_created ASC
-		`
-		rows, err = h.db.Query(query)
 	}
 
 	if err != nil {

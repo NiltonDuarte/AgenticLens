@@ -53,7 +53,7 @@ func TestSessionsFromFactsPreservesOwnersAndEveryMetricRow(t *testing.T) {
 	if len(sessions[0].Tools) != 0 || len(sessions[1].Tools) != 1 {
 		t.Fatalf("tools or events crossed session boundaries: %+v", sessions)
 	}
-	metrics := domain.DeriveMetricsLedger(domain.AgenticFactLedger{Sessions: sessions}, domain.DefaultProjectConfig())
+	metrics := domain.DeriveMetricsLedger(domain.AgenticFactLedger{Sessions: sessions}, testMetricsProjectConfig())
 	if metrics.Totals.Invocations != 4 || len(metrics.Models) != 2 || len(metrics.Roles) != 2 {
 		t.Fatalf("rows collapsed during aggregation: %+v", metrics)
 	}
@@ -75,7 +75,7 @@ func TestSessionsFromFactsPreservesOwnersAndEveryMetricRow(t *testing.T) {
 			t.Errorf("role %s: expected %d rows, got %d", role.Role, want, role.Invocations)
 		}
 	}
-	threads := domain.ComputeThreadSummariesWithCeiling(sessions, domain.ContextCeilingCriticalTokens)
+	threads := domain.ComputeThreadSummariesWithCeiling(sessions, int64(200000))
 	if len(threads) != 1 || threads[0].SessionID != rootID || threads[0].User != "alice" {
 		t.Fatalf("thread summary lost enclosing session hierarchy: %+v", threads)
 	}

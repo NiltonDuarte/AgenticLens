@@ -51,7 +51,7 @@ func TestCombinedCodexSessionsPreserveRepeatedRowsAndNestedOwners(t *testing.T) 
 					t.Fatalf("owner %d lost its parent %q: %+v", i, transcript.ParentThread, got)
 				}
 			}
-			metrics := domain.DeriveMetricsLedger(domain.AgenticFactLedger{Sessions: sessions}, domain.DefaultProjectConfig())
+			metrics := domain.DeriveMetricsLedger(domain.AgenticFactLedger{Sessions: sessions}, codexMetricConfig())
 			if metrics.Totals.Invocations != 6 || metrics.Totals.InputTokens != 60 || metrics.Totals.CostUSD != 1.5 {
 				t.Fatalf("combined rows were collapsed or counted twice: %+v", metrics.Totals)
 			}

@@ -182,9 +182,9 @@ func WorkspacesHandler(workspacesDir string) http.HandlerFunc {
 			ledgers = domain.FilterLedgersByTicketTypes(ledgers, ticketTypes)
 		}
 
-		prefixes := parseMultiQueryParam(query["prefix"])
+		prefixes := parsePrefixQueryParam(query["prefix"],report.TicketPolicy,report.Ledgers)
 		if len(prefixes) > 0 {
-			ledgers = domain.FilterLedgersByPrefixes(ledgers, prefixes)
+			ledgers = domain.FilterLedgersByPrefixes(ledgers, prefixes, report.TicketPolicy.CaseInsensitive)
 		}
 
 		if sortParam != "" || orderParam != "" {
@@ -193,7 +193,7 @@ func WorkspacesHandler(workspacesDir string) http.HandlerFunc {
 			if orderParam == "" && field == domain.SortFieldTicketID {
 				ascending = true
 			}
-			ledgers = domain.SortLedgers(ledgers, field, ascending)
+			ledgers = domain.SortLedgers(ledgers, field, ascending, report.TicketPolicy)
 		}
 
 		if ledgers == nil {
@@ -225,9 +225,14 @@ func WorkspaceDetailHandler(workspacesDir string, artifactConfigs ...[]domain.Wo
 
 		var artifacts domain.TicketArtifacts
 		if len(artifactConfigs) > 0 && artifactConfigs[0] != nil {
-			artifacts = adapters.ReadTicketArtifacts(ticketID, workspacesDir, artifactConfigs[0])
+			artifacts, err = adapters.ReadTicketArtifacts(ticketID, workspacesDir, artifactConfigs[0])
 		} else {
-			artifacts = adapters.ReadTicketArtifacts(ticketID, workspacesDir)
+			artifacts, err = adapters.ReadTicketArtifacts(ticketID, workspacesDir)
+		}
+
+		if err != nil {
+			WriteError(w, http.StatusInternalServerError, "invalid_configuration", err.Error())
+			return
 		}
 
 		anomalies := targetLedger.Anomalies
@@ -329,9 +334,9 @@ func FleetHandler(workspacesDir string) http.HandlerFunc {
 			ledgers = domain.FilterLedgersByTicketTypes(ledgers, ticketTypes)
 		}
 
-		prefixes := parseMultiQueryParam(query["prefix"])
+		prefixes := parsePrefixQueryParam(query["prefix"],report.TicketPolicy,report.Ledgers)
 		if len(prefixes) > 0 {
-			ledgers = domain.FilterLedgersByPrefixes(ledgers, prefixes)
+			ledgers = domain.FilterLedgersByPrefixes(ledgers, prefixes, report.TicketPolicy.CaseInsensitive)
 		}
 
 		summary := domain.CalculateFleetSummary(ledgers)
@@ -372,12 +377,12 @@ func ComparisonHandler(workspacesDir string) http.HandlerFunc {
 			ledgers = domain.FilterLedgersByTicketTypes(ledgers, ticketTypes)
 		}
 
-		prefixes := parseMultiQueryParam(query["prefix"])
+		prefixes := parsePrefixQueryParam(query["prefix"],report.TicketPolicy,report.Ledgers)
 		if len(prefixes) > 0 {
-			ledgers = domain.FilterLedgersByPrefixes(ledgers, prefixes)
+			ledgers = domain.FilterLedgersByPrefixes(ledgers, prefixes, report.TicketPolicy.CaseInsensitive)
 		}
 
-		rows := domain.BuildComparisonRows(ledgers)
+		rows := domain.BuildComparisonRows(ledgers, report.TicketPolicy)
 		if rows == nil {
 			rows = []domain.TicketComparisonRow{}
 		}
@@ -429,9 +434,9 @@ func ProgressionHandler(workspacesDir string) http.HandlerFunc {
 			ledgers = domain.FilterLedgersByTicketTypes(ledgers, ticketTypes)
 		}
 
-		prefixes := parseMultiQueryParam(query["prefix"])
+		prefixes := parsePrefixQueryParam(query["prefix"],report.TicketPolicy,report.Ledgers)
 		if len(prefixes) > 0 {
-			ledgers = domain.FilterLedgersByPrefixes(ledgers, prefixes)
+			ledgers = domain.FilterLedgersByPrefixes(ledgers, prefixes, report.TicketPolicy.CaseInsensitive)
 		}
 
 		buckets := domain.AggregateMetricsOverTime(ledgers, string(granularity), since, until)
@@ -445,4 +450,22 @@ func VersionHandler() http.HandlerFunc {
 		info := domain.GetBuildInfo()
 		WriteVersionResponse(w, info)
 	}
+}
+
+// A complete configured/observed literal prefix takes precedence over CSV syntax.
+// Repeated values disambiguate multiple selections when a prefix itself contains commas.
+func parsePrefixQueryParam(values []string,policy domain.TicketConfig,ledgers []domain.AgenticMetricsLedger)[]string{
+ result:=[]string{}
+ for _,value:=range values{
+  literal:=strings.TrimSpace(value);if literal==""{continue}
+  selected:=false
+  for _,configured:=range policy.Prefixes{
+   a,b:=literal,configured.Prefix;if policy.CaseInsensitive{a,b=strings.ToLower(a),strings.ToLower(b)}
+   if a==b{selected=true;break}
+  }
+  if !selected{for _,ledger:=range ledgers{if ledger.TicketID!=nil&&domain.MatchTicketPrefix(*ledger.TicketID,literal,policy.CaseInsensitive){selected=true;break}}}
+  if selected{result=append(result,literal);continue}
+  result=append(result,parseMultiQueryParam([]string{literal})...)
+ }
+ return result
 }

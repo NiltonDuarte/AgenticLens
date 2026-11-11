@@ -30,7 +30,7 @@ func TestCheckpointGenerationSuccessAndPublicationFailureBoundaries(t *testing.T
 				}
 				path := filepath.Join(f.project, ".agenticlens-config.yaml")
 				raw := readCaptureFile(t, path)
-				raw = append(raw, []byte(fmt.Sprintf("\ngeneration:\n  feedback:\n    provisional_threshold_seconds: %d\n", threshold))...)
+				raw = bytes.Replace(raw, []byte("provisional_threshold_seconds: 180"), []byte(fmt.Sprintf("provisional_threshold_seconds: %d", threshold)), 1)
 				if err := os.WriteFile(path, raw, 0600); err != nil {
 					t.Fatal(err)
 				}

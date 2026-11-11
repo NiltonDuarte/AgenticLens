@@ -1,9 +1,10 @@
+import { useRolePresentation } from '../contexts/ProjectConfigContext';
 import { sessionMetricCoverage } from '../domain/types';
 import React, { useId, useState } from 'react';
 import type { OwnedSkillFact, OwnedDelegationFact, SessionFact } from '../domain/types';
 import {
   formatHistoricalDateTimeTooltip, getHistoricalTimestampDateTime,
-  formatLocalDateTime, formatSubagentRole,
+  formatLocalDateTime,
 } from '../domain/formatters';
 
 function InvocationTime({ value }: { readonly value: string | null }): React.ReactNode {
@@ -22,6 +23,7 @@ export interface SkillsSubagentsPanelProps {
 export const SkillsSubagentsPanel: React.FC<SkillsSubagentsPanelProps> = ({
   skills, delegations, availableSessionIds, onJumpToSession, sessions,
 }) => {
+  const rolePresentation = useRolePresentation();
   const [expanded, setExpanded] = useState(true);
   const panelId = useId();
   const [sessionId, setSessionId] = useState('');
@@ -68,7 +70,7 @@ export const SkillsSubagentsPanel: React.FC<SkillsSubagentsPanelProps> = ({
                   <th scope="row">{skill.name}</th>
                   <td><InvocationTime value={skill.invoked_at} /></td>
                   <td className="source-text">{skill.session_id}</td>
-                  <td>{skill.caller_role === null ? 'Unavailable' : formatSubagentRole(skill.caller_role)}</td>
+                  <td>{skill.caller_role === null ? 'Unavailable' : rolePresentation.sourceLabel(skill.caller_role)}</td>
                 </tr>
               ))}</tbody>
             </table>
@@ -85,7 +87,7 @@ export const SkillsSubagentsPanel: React.FC<SkillsSubagentsPanelProps> = ({
               </tr></thead>
               <tbody>{visibleDelegations.map((task, index) => (
                 <tr key={index} tabIndex={0}>
-                  <th scope="row">{task.agent_type === null ? 'Unavailable' : formatSubagentRole(task.agent_type)}</th>
+                  <th scope="row">{task.agent_type === null ? 'Unavailable' : rolePresentation.sourceLabel(task.agent_type)}</th>
                   <td className="source-text">{task.description ?? 'Unavailable'}</td>
                   <td><InvocationTime value={task.invoked_at} /></td>
                   <td className="source-text">{task.child_session_id ? (

@@ -1,259 +1,211 @@
 package opencode_test
 
 import (
-	"agenticlens/internal/adapters/opencode"
+	"context"
+	"database/sql"
 	"errors"
-	_ "modernc.org/sqlite"
+	"fmt"
 	"strings"
 	"testing"
+
+	"agenticlens/internal/adapters/opencode"
 )
 
-func TestResolveActiveRootSession(t *testing.T) {
-	db := setupTestDB(t)
-	defer db.Close()
-
-	// Seed sessions
-	_, err := db.Exec(`
-		INSERT INTO session (id, parent_id, agent, model, title, time_created, time_updated) VALUES
-		('ses_root_1', NULL, 'build', '{"id":"claude-3-opus"}', 'Task AL-100 feature', 1000, 2000),
-		('ses_child_1', 'ses_root_1', 'coder', '{"id":"claude-3-opus"}', NULL, 1100, 1900),
-		('ses_root_2', NULL, 'build', '{"id":"claude-3-opus"}', 'Task AL-200 feature', 3000, 4000);
-	`)
-	if err != nil {
-		t.Fatalf("failed inserting test sessions: %v", err)
+func resolutionDB(t *testing.T, family string) (*sql.DB, string) {
+	t.Helper()
+	if family == "v1" {
+		db := setupTestDB(t)
+		db.SetMaxOpenConns(1)
+		t.Cleanup(func() {
+			if err := db.Close(); err != nil {
+				t.Error(err)
+			}
+		})
+		return db, "session"
 	}
-
-	// Seed part with nonce in child session
-	_, err = db.Exec(`
-		INSERT INTO part (id, session_id, message_id, time_created, time_updated, data) VALUES
-		('part_1', 'ses_child_1', 'msg_1', 1500, 1500, '{"type":"tool","tool":"bash","state":{"input":"nonce_abc_123"}}');
-	`)
+	db, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
-		t.Fatalf("failed inserting test part: %v", err)
+		t.Fatal(err)
 	}
-
-	// Test Priority 1: Exact Nonce matching
-	t.Run("Priority 1 Nonce", func(t *testing.T) {
-		res, err := opencode.ResolveActiveRootSession(db, "nonce_abc_123", "AL-200", "")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if res == nil || *res != "ses_root_1" {
-			t.Fatalf("expected ses_root_1, got %v", res)
+	db.SetMaxOpenConns(1)
+	t.Cleanup(func() {
+		if err := db.Close(); err != nil {
+			t.Error(err)
 		}
 	})
-
-	// Test Priority 2: Explicit Session ID
-	t.Run("Priority 2 Explicit Session ID", func(t *testing.T) {
-		res, err := opencode.ResolveActiveRootSession(db, "", "AL-100", "ses_custom_explicit")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if res == nil || *res != "ses_custom_explicit" {
-			t.Fatalf("expected ses_custom_explicit, got %v", res)
-		}
-	})
-
-	// Test Priority 3: Ticket ID matching
-	t.Run("Priority 3 Ticket ID", func(t *testing.T) {
-		res, err := opencode.ResolveActiveRootSession(db, "", "AL-200", "")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if res == nil || *res != "ses_root_2" {
-			t.Fatalf("expected ses_root_2, got %v", res)
-		}
-	})
-
-	// Test that Priority 4 is deleted: fails fast without falling back to latest message
-	t.Run("Fails Fast Without Tier 4 Fallback When Neither Nonce Nor Ticket ID Supplied", func(t *testing.T) {
-		_, err := db.Exec(`
-			INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES
-			('msg_latest', 'ses_child_1', 5000, 5000, '{"role":"assistant"}');
-		`)
-		if err != nil {
-			t.Fatalf("failed inserting message: %v", err)
-		}
-
-		res, err := opencode.ResolveActiveRootSession(db, "", "", "")
-		if err == nil {
-			t.Fatal("expected error when neither nonce nor ticket ID is supplied, got nil")
-		}
-		if !errors.Is(err, opencode.ErrSessionNotFound) {
-			t.Fatalf("expected ErrSessionNotFound, got %v", err)
-		}
-		if res != nil {
-			t.Fatalf("expected nil session ID, got %v", res)
-		}
-	})
-
-	// Test Priority 3 Fallback: Workspace Path matching when title lookup finds no rows
-	t.Run("Priority 3 Workspace Path Fallback", func(t *testing.T) {
-		_, err := db.Exec(`
-			INSERT INTO session (id, parent_id, agent, model, title, time_created, time_updated) VALUES
-			('ses_root_fallback', NULL, 'build', '{"id":"claude-3-opus"}', 'Unrelated Title Without Ticket', 6000, 7000),
-			('ses_child_fallback', 'ses_root_fallback', 'coder', '{"id":"claude-3-opus"}', NULL, 6100, 6900);
-			INSERT INTO part (id, session_id, message_id, time_created, time_updated, data) VALUES
-			('part_fallback', 'ses_child_fallback', 'msg_fb', 6200, 6200, '{"path":"workspaces/AL-300/agentic_metrics.json"}');
-		`)
-		if err != nil {
-			t.Fatalf("failed inserting fallback test records: %v", err)
-		}
-
-		res, err := opencode.ResolveActiveRootSession(db, "", "AL-300", "")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if res == nil || *res != "ses_root_fallback" {
-			t.Fatalf("expected ses_root_fallback, got %v", res)
-		}
-	})
-
-	t.Run("Unresolved Ticket Returns ErrSessionNotFound", func(t *testing.T) {
-		res, err := opencode.ResolveActiveRootSession(db, "", "AL-NON-EXISTENT", "")
-		if err == nil {
-			t.Fatal("expected error for non-existent ticket, got nil")
-		}
-		if !errors.Is(err, opencode.ErrSessionNotFound) {
-			t.Fatalf("expected ErrSessionNotFound, got %v", err)
-		}
-		if res != nil {
-			t.Fatalf("expected nil for non-existent ticket, got %v", *res)
-		}
-	})
-
-	t.Run("Tier 4 is dead: foreign session with latest message is never captured when Tiers 1-3 fail", func(t *testing.T) {
-		// Insert a foreign session and the latest message in the entire DB
-		_, err := db.Exec(`
-			INSERT INTO session (id, parent_id, agent, model, title, time_created, time_updated) VALUES
-			('ses_foreign_root', NULL, 'build', 'default_model', 'Foreign Root Session', 90000, 90000),
-			('ses_foreign_child', 'ses_foreign_root', 'coder', 'default_model', NULL, 90001, 90001);
-			INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES
-			('msg_foreign_latest', 'ses_foreign_child', 9999999, 9999999, '{"role":"assistant","content":"foreign message"}');
-		`)
-		if err != nil {
-			t.Fatalf("failed inserting foreign session and message: %v", err)
-		}
-
-		scenarios := []struct {
-			name      string
-			nonce     string
-			ticketID  string
-			sessionID string
-		}{
-			{name: "unmatched nonce and ticket", nonce: "non-existent-nonce", ticketID: "AL-FOREIGN-GHOST", sessionID: ""},
-			{name: "empty nonce and unmatched ticket", nonce: "", ticketID: "AL-FOREIGN-GHOST", sessionID: ""},
-			{name: "unmatched nonce and empty ticket", nonce: "non-existent-nonce", ticketID: "", sessionID: ""},
-			{name: "all empty parameters", nonce: "", ticketID: "", sessionID: ""},
-		}
-
-		for _, sc := range scenarios {
-			t.Run(sc.name, func(t *testing.T) {
-				res, err := opencode.ResolveActiveRootSession(db, sc.nonce, sc.ticketID, sc.sessionID)
-				if err == nil {
-					t.Fatalf("[%s] expected ErrSessionNotFound, got nil error and session %v", sc.name, res)
-				}
-				if !errors.Is(err, opencode.ErrSessionNotFound) {
-					t.Fatalf("[%s] expected error wrapping ErrSessionNotFound, got: %v", sc.name, err)
-				}
-				if res != nil {
-					t.Fatalf("[%s] expected nil session result, got: %v", sc.name, *res)
-				}
-			})
-		}
-	})
-
-	t.Run("Priority 3 Fallback Database Error Handling", func(t *testing.T) {
-		errDB := setupTestDB(t)
-		defer errDB.Close()
-
-		// Drop part table so ResolveSessionByWorkspacePath will fail with a database error
-		if _, err := errDB.Exec("DROP TABLE part;"); err != nil {
-			t.Fatalf("failed dropping part table: %v", err)
-		}
-
-		res, err := opencode.ResolveActiveRootSession(errDB, "", "AL-FALLBACK-ERR", "")
-		if err == nil {
-			t.Fatal("expected error when part table is missing during fallback, got nil")
-		}
-		if res != nil {
-			t.Fatalf("expected nil session ID on error, got %v", *res)
-		}
-		if !strings.Contains(err.Error(), "unsupported OpenCode database schema") {
-			t.Fatalf("expected actionable unsupported-schema diagnostic, got %v", err)
-		}
-	})
-
-	t.Run("Priority 3 Session Query Database Error Handling", func(t *testing.T) {
-		errDB := setupTestDB(t)
-		defer errDB.Close()
-
-		// Drop session table so initial ticket query fails with a database error
-		if _, err := errDB.Exec("DROP TABLE session;"); err != nil {
-			t.Fatalf("failed dropping session table: %v", err)
-		}
-
-		res, err := opencode.ResolveActiveRootSession(errDB, "", "AL-SESSION-ERR", "")
-		if err == nil {
-			t.Fatal("expected error when session table is missing, got nil")
-		}
-		if res != nil {
-			t.Fatalf("expected nil session ID on error, got %v", *res)
-		}
-		if !strings.Contains(err.Error(), "unsupported OpenCode database schema") {
-			t.Fatalf("expected actionable unsupported-schema diagnostic, got %v", err)
-		}
-	})
+	createSchemaV2TestDB(t, db)
+	if _, err := db.Exec(`DELETE FROM session_message; DELETE FROM session_v2`); err != nil {
+		t.Fatal(err)
+	}
+	return db, "session_v2"
 }
 
-func TestResolveSessionByWorkspacePath(t *testing.T) {
+func resolutionSession(t *testing.T, db *sql.DB, table, id, parent, title string, stamp int64) {
+	t.Helper()
+	if _, err := db.Exec(`INSERT INTO `+table+`(id,parent_id,agent,model,title,time_created,time_updated) VALUES(?,?,'coder','model',?,?,?)`, id, sql.NullString{String: parent, Valid: parent != ""}, title, stamp, stamp); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func resolutionRecord(t *testing.T, db *sql.DB, family, id, session, data string) {
+	t.Helper()
+	var err error
+	if family == "v1" {
+		_, err = db.Exec(`INSERT INTO part(id,session_id,message_id,time_created,time_updated,data) VALUES(?,?,?,1500,1500,?)`, id, session, id, data)
+	} else {
+		_, err = db.Exec(`INSERT INTO session_message(id,session_id,type,seq,time_created,time_updated,data) VALUES(?,?,'user',1,1500,1500,?)`, id, session, data)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func exerciseExplicitRootSelectors(t *testing.T, family string) {
+	t.Helper()
+	db, table := resolutionDB(t, family)
+	resolutionSession(t, db, table, "root_a", "", "CASE-42 matching title", 1000)
+	resolutionSession(t, db, table, "child_a", "root_a", "", 1100)
+	resolutionSession(t, db, table, "grand_a", "child_a", "", 1200)
+	resolutionSession(t, db, table, "root_b", "", "CASE-42 newer matching title", 2000)
+	resolutionRecord(t, db, family, "a1", "root_a", `{"text":"literal%_token"}`)
+	resolutionRecord(t, db, family, "a2", "grand_a", `{"text":"literal%_token repeated same root"}`)
+	resolutionRecord(t, db, family, "a3", "grand_a", `{"path":"custom-tickets/CASE-42/ledger.json","text":"ambiguous-token"}`)
+	resolutionRecord(t, db, family, "b1", "root_b", `{"text":"literalXXtoken ambiguous-token other-root-token"}`)
+	for _, tc := range []struct {
+		name, nonce, explicit, want string
+		ambiguous                   bool
+	}{
+		{name: "existing exact root", explicit: "root_a", want: "root_a"},
+		{name: "literal wildcard token groups descendant matches by root", nonce: "literal%_token", want: "root_a"},
+		{name: "both selectors agree", nonce: "literal%_token", explicit: "root_a", want: "root_a"},
+		{name: "ticket title and configured path cannot select"},
+		{name: "unmatched nonce never uses title", nonce: "absent-token"},
+		{name: "unmatched explicit never uses title", explicit: "missing"},
+		{name: "child cannot be supplied as root", explicit: "child_a"},
+		{name: "invalid explicit selector", explicit: "bad/id"},
+		{name: "unmatched nonce cannot use valid explicit", nonce: "absent-token", explicit: "root_a"},
+		{name: "invalid explicit cannot use valid nonce", nonce: "literal%_token", explicit: "missing"},
+		{name: "selectors disagree", nonce: "other-root-token", explicit: "root_a"},
+		{name: "ambiguous nonce never chooses newest", nonce: "ambiguous-token", ambiguous: true},
+		{name: "explicit root cannot disambiguate nonce", nonce: "ambiguous-token", explicit: "root_a", ambiguous: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := opencode.ResolveActiveRootSession(db, tc.nonce, "CASE-42", tc.explicit)
+			if tc.want != "" {
+				if err != nil || got == nil || *got != tc.want {
+					t.Fatalf("root=%v error=%v; want %q", got, err, tc.want)
+				}
+			} else if err == nil || got != nil {
+				t.Fatalf("selector failure returned output: %v, %v", got, err)
+			} else if tc.ambiguous && !errors.Is(err, opencode.ErrSessionAmbiguous) {
+				t.Fatalf("ambiguous root not reported: %v", err)
+			}
+		})
+	}
+	if family == "v1" {
+		if _, err := db.Exec(`INSERT INTO message(id,session_id,time_created,time_updated,data) VALUES('message_nonce','grand_a',1000,1000,'{"text":"message-only-token"}')`); err != nil {
+			t.Fatal(err)
+		}
+		if got, err := opencode.ResolveActiveRootSession(db, "message-only-token", "", ""); err != nil || got == nil || *got != "root_a" {
+			t.Fatalf("native message nonce must resolve its root: %v, %v", got, err)
+		}
+	}
+}
+
+func TestSchemaV1ExplicitRootSelectors(t *testing.T) {
+	exerciseExplicitRootSelectors(t, "v1")
+}
+
+func TestRootSelectorRequiresSupportedSelectedSchema(t *testing.T) {
+	if _, err := opencode.ResolveActiveRootSession(nil, "token", "CASE-42", ""); err == nil {
+		t.Fatal("nil database accepted")
+	}
+	db, table := resolutionDB(t, "v1")
+	resolutionSession(t, db, table, "root", "", "CASE-42", 1000)
+	if _, err := db.Exec(`DROP TABLE part`); err != nil {
+		t.Fatal(err)
+	}
+	if root, err := opencode.ResolveActiveRootSession(db, "", "CASE-42", "root"); err == nil || root != nil || !strings.Contains(err.Error(), "schema") {
+		t.Fatalf("incomplete selected schema used explicit/title fallback: %v, %v", root, err)
+	}
+}
+
+func exerciseExplicitRecovery(t *testing.T, family string) {
+	t.Helper()
+	db, table := resolutionDB(t, family)
+	resolutionSession(t, db, table, "root_a", "", "CASE-%_42 work", 1000)
+	resolutionSession(t, db, table, "child_a", "root_a", "", 1100)
+	resolutionSession(t, db, table, "root_b", "", "CASE-XX42 unrelated wildcard title", 2000)
+	resolutionRecord(t, db, family, "a1", "child_a", `{"path":"custom-tickets/PATH-%_42/ledger.json"}`)
+	resolutionRecord(t, db, family, "b1", "root_b", `{"path":"workspaces/PATH-%_42/ledger.json"}`)
+	for _, tc := range []struct {
+		name, ticket, workspace, want string
+		min, max                      int64
+	}{
+		{name: "literal title", ticket: "CASE-%_42", workspace: "custom-tickets/CASE-%_42", want: "root_a"},
+		{name: "configured child workspace", ticket: "PATH-%_42", workspace: "custom-tickets/PATH-%_42", want: "root_a"},
+		{name: "no invented conventional root", ticket: "PATH-%_42", workspace: "other-tickets/PATH-%_42"},
+		{name: "time window excludes match", ticket: "PATH-%_42", workspace: "custom-tickets/PATH-%_42", min: 3000, max: 4000},
+		{name: "time window includes match", ticket: "PATH-%_42", workspace: "custom-tickets/PATH-%_42", min: 500, max: 1500, want: "root_a"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root, err := opencode.DiscoverRootSessionForRecovery(db, tc.ticket, []string{tc.workspace}, tc.min, tc.max)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tc.want == "" && root != nil || tc.want != "" && (root == nil || *root != tc.want) {
+				t.Fatalf("recovery root=%v; want %q", root, tc.want)
+			}
+		})
+	}
+	if _, err := opencode.DiscoverRootSessionForRecovery(db, "CASE-%_42", nil, 0, 0); err == nil {
+		t.Fatal("title recovery accepted missing configured roots")
+	}
+	resolutionRecord(t, db, family, "b2", "root_b", `{"path":"custom-tickets/CASE-%_42/ledger.json"}`)
+	if root, err := opencode.DiscoverRootSessionForRecovery(db, "CASE-%_42", []string{"custom-tickets/CASE-%_42"}, 0, 0); root != nil || !errors.Is(err, opencode.ErrSessionAmbiguous) {
+		t.Fatalf("conflicting title/path evidence chose a root: %v, %v", root, err)
+	}
+	resolutionRecord(t, db, family, "neighbor", "root_a", `{"path":"custom-tickets/NEIGHBOR-420/ledger.json"}`)
+	if root, err := opencode.DiscoverRootSessionForRecovery(db, "NEIGHBOR-42", []string{"custom-tickets/NEIGHBOR-42"}, 0, 0); err != nil || root != nil {
+		t.Fatalf("neighbor directory matched literal ticket workspace: %v, %v", root, err)
+	}
+}
+
+func TestSchemaV1ExplicitRecoveryUsesConfiguredLiteralEvidence(t *testing.T) {
+	exerciseExplicitRecovery(t, "v1")
+}
+
+func TestCaptureRejectsMixedFamiliesBeforeReadingExactOwner(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
-
-	_, err := db.Exec(`
-		INSERT INTO session (id, parent_id, agent, model, title, time_created, time_updated) VALUES
-		('ses_root_target', NULL, 'orchestrator', 'gpt-4o', 'Feature work', 10000, 11000),
-		('ses_root_other', NULL, 'orchestrator', 'gpt-4o', 'Other work', 20000, 21000);
-
-		INSERT INTO part (id, session_id, message_id, time_created, time_updated, data) VALUES
-		('p_target', 'ses_root_target', 'm1', 10500, 10500, '{"path":"workspaces/PO-3/agentic_metrics.json"}'),
-		('p_other', 'ses_root_other', 'm2', 20500, 20500, '{"path":"workspaces/PO-3/agentic_metrics.json"}');
-	`)
-	if err != nil {
-		t.Fatalf("seeding failed: %v", err)
+	if _, err := db.Exec(`INSERT INTO session VALUES('only_v1',NULL,'coder','model','test',1000,2000); CREATE TABLE session_v2(id TEXT,parent_id TEXT,agent TEXT,model TEXT,title TEXT,time_created INTEGER,time_updated INTEGER); CREATE TABLE session_message(id TEXT,session_id TEXT,type TEXT,seq INTEGER,time_created INTEGER,time_updated INTEGER,data TEXT);`); err != nil {
+		t.Fatal(err)
 	}
+	if sessions, _, _, err := opencode.CaptureSessionSnapshot(context.Background(), db, "only_v1", "tester", 1024); err == nil || len(sessions) != 0 || !strings.Contains(err.Error(), "mixed") {
+		t.Fatalf("capture bypassed full-layout validation: %v, %v", sessions, err)
+	}
+	if events, err := opencode.ExtractSessionSourceEvents(db, "only_v1", "tester"); err == nil || len(events) != 0 || !strings.Contains(err.Error(), "mixed") {
+		t.Fatalf("hydration bypassed full-layout validation: %v, %v", events, err)
+	}
+}
 
-	t.Run("nil DB error", func(t *testing.T) {
-		_, err := opencode.ResolveSessionByWorkspacePath(nil, "PO-3", 9000, 12000)
-		if err == nil {
-			t.Fatal("expected error for nil DB")
-		}
-	})
-
-	t.Run("empty ticket returns nil", func(t *testing.T) {
-		res, err := opencode.ResolveSessionByWorkspacePath(db, "", 9000, 12000)
-		if err != nil || res != nil {
-			t.Fatalf("expected nil result, got %v, err=%v", res, err)
-		}
-	})
-
-	t.Run("resolves root session within timestamp window", func(t *testing.T) {
-		res, err := opencode.ResolveSessionByWorkspacePath(db, "PO-3", 9000, 12000)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if res == nil || *res != "ses_root_target" {
-			t.Fatalf("expected ses_root_target, got %v", res)
-		}
-	})
-
-	t.Run("filters out session outside timestamp window", func(t *testing.T) {
-		res, err := opencode.ResolveSessionByWorkspacePath(db, "PO-3", 30000, 40000)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if res != nil {
-			t.Fatalf("expected nil for out of window range, got %v", res)
-		}
-	})
+func TestRecoveryValidationErrors(t *testing.T) {
+	db, _ := resolutionDB(t, "v1")
+	for _, tc := range []struct {
+		ticket   string
+		paths    []string
+		min, max int64
+	}{
+		{"", []string{"tickets/CASE-1"}, 0, 0},
+		{"CASE-1", []string{""}, 0, 0},
+		{"CASE-1", []string{"/"}, 0, 0},
+		{"CASE-1", []string{"tickets/CASE-1"}, 10, 0},
+		{"CASE-1", []string{"tickets/CASE-1"}, 20, 10},
+	} {
+		t.Run(fmt.Sprintf("%q/%v/%d/%d", tc.ticket, tc.paths, tc.min, tc.max), func(t *testing.T) {
+			if _, err := opencode.DiscoverRootSessionForRecovery(db, tc.ticket, tc.paths, tc.min, tc.max); err == nil {
+				t.Fatal("invalid recovery inputs accepted")
+			}
+		})
+	}
 }

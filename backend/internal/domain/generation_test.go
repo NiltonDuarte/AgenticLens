@@ -39,7 +39,7 @@ func TestReadDerivationPreservesUnrecordedAndRecordedEmptyAnalysis(t *testing.T)
 			ledger.Anomalies = []Anomaly{}
 			ledger.Sessions[0].Anomalies = []Anomaly{}
 		}
-		got := DeriveMetricsLedger(ledger, DefaultProjectConfig())
+		got := DeriveMetricsLedger(ledger, ProjectConfig{Generation: GenerationConfig{Metrics: GenerationPolicy{Skills: true, Delegations: true, Anomalies: true}}})
 		if len(got.Anomalies) != 0 {
 			t.Fatalf("ordinary read invented analysis from independent tool totals: %+v", got.Anomalies)
 		}
@@ -58,14 +58,15 @@ func TestReadDerivationPreservesUnrecordedAndRecordedEmptyAnalysis(t *testing.T)
 func TestSourceAnomalyPreparationRequiresRootAndChildCoverage(t *testing.T) {
 	parent := "root"
 	original := AgenticFactLedger{Sessions: []SessionFact{{ID: parent}, {ID: "child", ParentID: &parent}}}
-	partial, err := PersistSourceAnomalySummaries(original, SourceEvents{CompleteSessionIDs: []string{parent}})
+	policy := fixtureCompleteAnomalyPolicy()
+	partial, err := PersistSourceAnomalySummaries(original, SourceEvents{CompleteSessionIDs: []string{parent}}, policy)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if partial.Anomalies != nil || partial.Sessions[0].Anomalies != nil || partial.Sessions[1].Anomalies != nil {
 		t.Fatalf("complete parent fabricated root/child observation: %+v", partial)
 	}
-	complete, err := PersistSourceAnomalySummaries(original, SourceEvents{CompleteSessionIDs: []string{parent, "child"}})
+	complete, err := PersistSourceAnomalySummaries(original, SourceEvents{CompleteSessionIDs: []string{parent, "child"}}, policy)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,11 +77,130 @@ func TestSourceAnomalyPreparationRequiresRootAndChildCoverage(t *testing.T) {
 	tool := "recorded-source-only"
 	known := Anomaly{RuleID: RuleToolRetryStreak, Severity: SeverityWarning, Context: AnomalyContext{ToolName: &tool, Count: &count}}
 	original.Anomalies = []Anomaly{known}
-	retained, err := PersistSourceAnomalySummaries(original, SourceEvents{CompleteSessionIDs: []string{parent}})
+	retained, err := PersistSourceAnomalySummaries(original, SourceEvents{CompleteSessionIDs: []string{parent}}, policy)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(retained.Anomalies, original.Anomalies) {
 		t.Fatal("partial source coverage erased recorded root/group history")
 	}
+}
+
+func TestExternalParentAnomalyCoverageRemainsPartial(t *testing.T) {
+	parent := "external-parent"
+	known := Anomaly{RuleID: RuleToolRetryStreak, Severity: SeverityWarning}
+	policy := fixtureCompleteAnomalyPolicy()
+	for _, history := range []string{"fresh", "recorded-empty", "recorded-warning"} {
+		t.Run(history, func(t *testing.T) {
+			original := AgenticFactLedger{Sessions: []SessionFact{{ID: "child", ParentID: &parent, Source: SourceCodex, Invocations: []InvocationFact{{Role: "coder", Tokens: InvocationTokens{Input: 31}}}}}}
+			switch history {
+			case "recorded-empty":
+				original.Anomalies = []Anomaly{}
+				original.Sessions[0].Anomalies = []Anomaly{}
+			case "recorded-warning":
+				original.Anomalies = []Anomaly{known}
+				original.Sessions[0].Anomalies = []Anomaly{known}
+			}
+			unavailable, err := PersistSourceAnomalySummaries(original, SourceEvents{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(unavailable, original) {
+				t.Fatal("unavailable source erased recorded external-parent history")
+			}
+			fresh, err := PersistSourceAnomalySummaries(original, SourceEvents{CompleteSessionIDs: []string{"child"}}, policy)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(fresh.Anomalies, original.Anomalies) || fresh.Sessions[0].Anomalies == nil {
+				t.Fatalf("complete child replaced unavailable group history or lost independent owner analysis: %+v", fresh)
+			}
+			unrecordedScopes := 0
+			if history == "fresh" {
+				unrecordedScopes = 1
+			}
+			if fresh.CompleteAnomalyCoverage() || fresh.UnrecordedAnomalyScopes() != unrecordedScopes || fresh.UnrecordedAnomalySessions() != 0 {
+				t.Fatalf("external-parent context fabricated completeness or discarded recorded coverage: %+v", fresh)
+			}
+			if len(fresh.Sessions) != 1 || fresh.Sessions[0].ParentID == nil || *fresh.Sessions[0].ParentID != parent || !reflect.DeepEqual(fresh.Sessions[0].Invocations, original.Sessions[0].Invocations) {
+				t.Fatal("partial group analysis changed ancestry or owner metrics")
+			}
+			if history == "fresh" && (original.Anomalies != nil || original.Sessions[0].Anomalies != nil) || history == "recorded-warning" && (len(original.Anomalies) != 1 || len(original.Sessions[0].Anomalies) != 1) {
+				t.Fatal("analysis mutated caller-owned source facts")
+			}
+		})
+	}
+}
+
+func TestAnomalyCompletenessRequiresPolicyAndNativeGroupCoverage(t *testing.T) {
+	valid := fixtureCompleteAnomalyPolicy()
+	for _, history := range []string{"fresh", "recorded-group"} {
+		for _, tc := range []struct {
+			name          string
+			includeParent bool
+			policy        AnomalyThresholdsConfig
+			canAnalyze    bool
+		}{
+			{"closed group configured", true, valid, true},
+			{"external parent configured", false, valid, true},
+			{"closed group missing policy", true, AnomalyThresholdsConfig{}, false},
+			{"external parent missing policy", false, AnomalyThresholdsConfig{}, false},
+			{"closed group invalid policy", true, AnomalyThresholdsConfig{ErrorRateMinCalls: 5, ErrorRateThreshold: .90, ErrorRateCriticalThreshold: .70}, false},
+		} {
+			t.Run(history+"/"+tc.name, func(t *testing.T) {
+				parent := "parent"
+				original := AgenticFactLedger{Sessions: []SessionFact{{ID: "child", ParentID: &parent, Source: SourceCodex, Invocations: []InvocationFact{{Role: "coder", Tokens: InvocationTokens{Input: 31}}}}}}
+				complete := []string{"child"}
+				if tc.includeParent {
+					original.Sessions = append(original.Sessions, SessionFact{ID: parent, Source: SourceCodex})
+					complete = append(complete, parent)
+				}
+				if history == "recorded-group" {
+					original.Anomalies = []Anomaly{{RuleID: RuleToolHighFailureRate, Severity: SeverityWarning}}
+					for i := range original.Sessions {
+						original.Sessions[i].Anomalies = []Anomaly{}
+					}
+				}
+				got, err := PersistSourceAnomalySummaries(original, SourceEvents{CompleteSessionIDs: complete}, tc.policy)
+				if !tc.canAnalyze {
+					if err == nil {
+						t.Fatal("fresh analysis accepted missing/invalid policy")
+					}
+					if !reflect.DeepEqual(got, original) {
+						t.Fatal("failed analysis changed recorded facts")
+					}
+					return
+				}
+				if err != nil {
+					t.Fatal(err)
+				}
+				if tc.includeParent && tc.canAnalyze {
+					if got.Anomalies == nil || len(got.Anomalies) != 0 || !got.CompleteAnomalyCoverage() {
+						t.Fatalf("complete configured native group did not establish empty analysis: %+v", got)
+					}
+				} else {
+					if !reflect.DeepEqual(got.Anomalies, original.Anomalies) {
+						t.Fatalf("partial group or missing policy replaced recorded group facts: %+v", got)
+					}
+					if history == "fresh" && got.CompleteAnomalyCoverage() {
+						t.Fatalf("partial source/policy fabricated complete clean analysis: %+v", got)
+					}
+				}
+				if !tc.includeParent && got.CompleteAnomalyCoverage() {
+					t.Fatalf("external native parent was treated as complete: %+v", got)
+				}
+				ownerRecorded := tc.canAnalyze || history == "recorded-group"
+				if (got.Sessions[0].Anomalies != nil) != ownerRecorded {
+					t.Fatalf("independent child analysis presence changed incorrectly: %+v", got.Sessions[0])
+				}
+				if got.Sessions[0].ParentID == nil || *got.Sessions[0].ParentID != parent || got.Sessions[0].Invocations[0].Tokens.Input != 31 {
+					t.Fatal("coverage handling changed ancestry or numeric facts")
+				}
+			})
+		}
+	}
+}
+
+func fixtureCompleteAnomalyPolicy() AnomalyThresholdsConfig {
+	return AnomalyThresholdsConfig{ErrorRateMinCalls: 5, ErrorRateThreshold: .35, ErrorRateCriticalThreshold: .70, ContextCeilingWarningTokens: 160000, ContextCeilingCriticalTokens: 200000, ConsecutiveErrorsStreakWarning: 3, ConsecutiveErrorsStreakCritical: 5, TurnUsageWarningTokens: 30000, TurnUsageCriticalTokens: 60000, ContextGrowthWarningTokens: 40000, ContextGrowthCriticalTokens: 80000, ToolThrashingMinFailures: 3, ToolThrashingCriticalFailures: 5}
 }

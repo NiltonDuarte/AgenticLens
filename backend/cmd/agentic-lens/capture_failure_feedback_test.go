@@ -3,8 +3,10 @@ package main_test
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,9 +19,11 @@ import (
 
 func TestCaptureLaterAgentChannelReportsBoundPublicationFailure(t *testing.T) {
 	f := newCaptureGenerationFixture(t)
+	enableCLIFixtureSummary(t, f.project)
 	f.output = filepath.Join(f.project, "records", "TEST-100", "agentic_metrics.json")
 	path := f.write(t, 10)
 	f.bind(t, path)
+	earlyCallbacksDone := captureWorkerCompletion(t, f.coordination(t))
 	held, err := capture.AcquireWorker(f.coordination(t))
 	if err != nil || held == nil {
 		t.Fatalf("fixture worker ownership: %v", err)
@@ -34,8 +38,8 @@ func TestCaptureLaterAgentChannelReportsBoundPublicationFailure(t *testing.T) {
 	if out, err := captureCLI(t, f.project, "", "install", "--repo", f.project, "--state-dir", f.state, "--source", "codex", "--store", f.store, "--binary", cliBinaryPath); err != nil {
 		t.Fatalf("installed fixture: %v %s", err, out)
 	}
-	local := fmt.Sprintf("telemetry:\n  capture:\n    enabled: true\n    state_dir: %q\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 1000\n    pass_timeout_ms: 500\n", f.state)
-	if err = os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte(local), 0600); err != nil {
+	local := fmt.Sprintf("telemetry:\n  capture:\n    max_sessions: 256\n    max_source_bytes: 67108864\n    commit_warning: true\n    enabled: true\n    state_dir: %q\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 1000\n    pass_timeout_ms: 500\n", f.state)
+	if err = writeCaptureFixtureLocal(t, f, []byte(local)); err != nil {
 		t.Fatal(err)
 	}
 	args := []string{"--repo", f.project, "--state-dir", f.state, "--source", "codex", "--store", f.store}
@@ -153,10 +157,12 @@ func TestCaptureLaterAgentChannelReportsBoundPublicationFailure(t *testing.T) {
 	}
 	prepareCaptureOwner(t, f, "other", "TEST-200", 9)
 	assertQuiet(query("other", f.store))
-	if err = os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte(strings.Replace(local, "enabled: true", "enabled: false", 1)), 0600); err != nil {
+	if err = writeCaptureFixtureLocal(t, f, []byte(strings.Replace(local, "enabled: true", "enabled: false", 1))); err != nil {
 		t.Fatal(err)
 	}
-	assertQuiet(query("root", f.store))
+	if out := query("root", f.store); strings.TrimSpace(string(out)) != "" {
+		t.Fatalf("disabled request did not stop before capture IO: %s", out)
+	}
 	disabledInput, err := json.Marshal(capture.HookInput{SessionID: "root", Event: "UserPromptSubmit", TranscriptPath: path})
 	if err != nil {
 		t.Fatal(err)
@@ -166,7 +172,7 @@ func TestCaptureLaterAgentChannelReportsBoundPublicationFailure(t *testing.T) {
 		t.Fatalf("disabled callback: %v %s", err, disabledOut)
 	}
 	assertQuiet(disabledOut)
-	if err = os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte(local), 0600); err != nil {
+	if err = writeCaptureFixtureLocal(t, f, []byte(local)); err != nil {
 		t.Fatal(err)
 	}
 	if err = os.Remove(summary); err != nil {
@@ -188,7 +194,19 @@ func TestCaptureLaterAgentChannelReportsBoundPublicationFailure(t *testing.T) {
 	// available facts succeeds, and a budget-pending retry cannot clear it.
 	// This phase must complete real generation, unlike the earlier intentionally
 	// failing publication phase with its short lifetime/pass policy.
-	writeCaptureSuccessfulPublicationPolicy(t, f.project, f.state, false)
+	// Callback launches open their log descriptor before returning. With the
+	// worker lease held, EOF proves every earlier detached child has exited;
+	// none can carry the intentionally short policy into this distinct phase.
+	drainCtx, drainCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	drainErr := earlyCallbacksDone(drainCtx)
+	drainCancel()
+	if drainErr != nil {
+		t.Fatalf("earlier callback workers still own short-policy descriptors: %v", drainErr)
+	}
+	if err = os.Remove(filepath.Join(f.coordination(t), "worker.log")); err != nil {
+		t.Fatal(err)
+	}
+	writeCaptureSuccessfulPublicationPolicy(t, f.project, f.state)
 	sourceBody := readCaptureFile(t, path)
 	if err = os.Remove(path); err != nil {
 		t.Fatal(err)
@@ -220,13 +238,14 @@ func TestCaptureLaterAgentChannelReportsBoundPublicationFailure(t *testing.T) {
 	if out, err := runCaptureNative(t, f.project, "", "capture", "worker", "--repo", f.project, "--state-dir", f.state); err != nil {
 		t.Fatalf("available retained facts publication failed: %v %s", err, out)
 	}
-	// A successful competing invocation can return without owning the lease.
-	// Observe the actual generation acknowledgement, then hold the released
-	// lease so subsequent feedback controls cannot race another source pass.
+	// The explicit worker is the only phase owner after the descriptor drain.
+	// Observe its acknowledgement and hold the released lease before querying
+	// feedback; no old-policy attempt may replace its terminal diagnostics.
 	completion := time.NewTimer(5 * time.Second)
 	defer completion.Stop()
 	poll := time.NewTicker(10 * time.Millisecond)
 	defer poll.Stop()
+	var observedAcknowledgement capture.PublicationRequest
 	for held == nil {
 		request, err := registry.PublicationRequest(context.Background())
 		if err != nil {
@@ -238,6 +257,7 @@ func TestCaptureLaterAgentChannelReportsBoundPublicationFailure(t *testing.T) {
 				t.Fatal(err)
 			}
 			if held != nil {
+				observedAcknowledgement = request
 				break
 			}
 		}
@@ -256,7 +276,8 @@ func TestCaptureLaterAgentChannelReportsBoundPublicationFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !strings.Contains(sourceFeedback.Feedback, "source reconciliation failed") || strings.Contains(sourceFeedback.Feedback, "publication failed") {
-		t.Fatalf("confirmed source failure conflated with successful partial publication: %s", sourceResponse)
+		evidence, saveErr := saveCaptureFeedbackFailure(f, partialRequest, observedAcknowledgement, sourceResponse)
+		t.Fatalf("confirmed source failure conflated with successful partial publication: %s; target=%+v observedAck=%+v leaseHeld=%t evidence=%s saveError=%v; diagnostics=%+v", sourceResponse, partialRequest, observedAcknowledgement, held != nil, evidence, saveErr, captureDiagnostics(t, f.project, f.state))
 	}
 	if _, err = registry.Reconcile(context.Background(), "TEST-100", "fixture", 1, 1); err != nil {
 		t.Fatal(err)
@@ -281,7 +302,7 @@ func TestCaptureLaterAgentChannelReportsBoundPublicationFailure(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	foreignFeedback, err := reader.SessionFailureFeedback(context.Background(), domain.CaptureIdentity{Source: domain.SourceCodex, Store: t.TempDir(), SessionID: "root"})
+	foreignFeedback, err := reader.SessionFailureFeedback(context.Background(), domain.CaptureIdentity{Source: domain.SourceCodex, Store: t.TempDir(), SessionID: "root"}, 0)
 	closeErr := reader.Close()
 	if err != nil || closeErr != nil || foreignFeedback != "" {
 		t.Fatalf("foreign exact store inherited failure: %q %v %v", foreignFeedback, err, closeErr)
@@ -321,4 +342,86 @@ func TestCaptureLaterAgentChannelReportsBoundPublicationFailure(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 	}
 	t.Fatalf("native feedback callback workers did not finish: %s", readCaptureFile(t, filepath.Join(f.coordination(t), "worker.log")))
+}
+
+// Save only bounded test-owned evidence before TempDir cleanup removes a failed
+// asynchronous fixture. This observer never changes capture state or the oracle.
+func saveCaptureFeedbackFailure(f captureGenerationFixture, target, observed capture.PublicationRequest, response []byte) (string, error) {
+	dir, err := os.MkdirTemp("", "al70-cli-feedback-failure-")
+	if err != nil {
+		return "", err
+	}
+	type diagnosticEvidence struct {
+		Sequence int64  `json:"sequence"`
+		Record   string `json:"record"`
+	}
+	evidence := struct {
+		Target                  capture.PublicationRequest `json:"target"`
+		ObservedAcknowledgement capture.PublicationRequest `json:"observed_acknowledgement_at_lease_acquisition"`
+		LeaseHeld               bool                       `json:"lease_held_at_assertion"`
+		Response                string                     `json:"response"`
+		Diagnostics             []diagnosticEvidence       `json:"bounded_diagnostics_latest_first"`
+		Errors                  []string                   `json:"collection_errors"`
+	}{Target: target, ObservedAcknowledgement: observed, LeaseHeld: true, Response: string(response)}
+	db, err := sql.Open("sqlite", "file:"+filepath.ToSlash(filepath.Join(f.state, "registry.db"))+"?mode=ro")
+	if err != nil {
+		evidence.Errors = append(evidence.Errors, err.Error())
+	} else {
+		rows, queryErr := db.Query(`SELECT sequence,substr(record,1,8192) FROM capture_diagnostics ORDER BY sequence DESC LIMIT 16`)
+		if queryErr != nil {
+			evidence.Errors = append(evidence.Errors, queryErr.Error())
+		} else {
+			for rows.Next() {
+				var row diagnosticEvidence
+				if err := rows.Scan(&row.Sequence, &row.Record); err != nil {
+					evidence.Errors = append(evidence.Errors, err.Error())
+					break
+				}
+				evidence.Diagnostics = append(evidence.Diagnostics, row)
+			}
+			if err := rows.Err(); err != nil {
+				evidence.Errors = append(evidence.Errors, err.Error())
+			}
+			rows.Close()
+		}
+		db.Close()
+	}
+	location, locationErr := capture.ExistingLocation(f.state, f.project)
+	if locationErr != nil {
+		evidence.Errors = append(evidence.Errors, locationErr.Error())
+	} else {
+		for _, name := range []string{"worker.log", "worker-status.json"} {
+			info, statErr := os.Lstat(filepath.Join(location.CoordinationDirectory, name))
+			if statErr == nil && !info.Mode().IsRegular() {
+				evidence.Errors = append(evidence.Errors, "not reading non-regular "+name)
+				continue
+			}
+			file, readErr := os.Open(filepath.Join(location.CoordinationDirectory, name))
+			if os.IsNotExist(readErr) {
+				continue
+			}
+			if readErr != nil {
+				evidence.Errors = append(evidence.Errors, readErr.Error())
+				continue
+			}
+			size, statErr := file.Stat()
+			if statErr == nil && size.Size() > 65536 {
+				_, readErr = file.Seek(-65536, io.SeekEnd)
+			}
+			body, copyErr := io.ReadAll(io.LimitReader(file, 65536))
+			file.Close()
+			if readErr != nil || copyErr != nil {
+				evidence.Errors = append(evidence.Errors, fmt.Sprintf("copy %s: %v %v", name, readErr, copyErr))
+				continue
+			}
+			if writeErr := os.WriteFile(filepath.Join(dir, name), body, 0600); writeErr != nil {
+				evidence.Errors = append(evidence.Errors, writeErr.Error())
+			}
+		}
+	}
+	body, err := json.MarshalIndent(evidence, "", "  ")
+	if err != nil {
+		return dir, err
+	}
+	return dir, os.WriteFile(filepath.Join(dir, "observed.json"), body, 0600)
 }

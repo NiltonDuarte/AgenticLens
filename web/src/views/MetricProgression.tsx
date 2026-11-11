@@ -1,3 +1,4 @@
+import { useProjectConfig, ticketPolicy } from '../contexts/ProjectConfigContext';
 import { completeCost, costSummaryForAmount, mergeCostSummaries } from '../domain/cost';
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import type { AgenticMetricsLedger, TimeGranularity, TimeWindowPreset, WorkspaceDiagnostic } from '../domain/types';
@@ -13,7 +14,6 @@ import {
   formatLinesCompact,
   formatPercentage,
   formatTokensK,
-  HEALTHY_CEILING_TOKENS,
 } from '../domain/formatters';
 import { KPICard } from '../components/KPICard';
 import { CostKPICard } from '../components/CostKPICard';
@@ -41,6 +41,8 @@ export interface MetricProgressionProps {
 export const MetricProgression: React.FC<MetricProgressionProps> = ({
   configuredPrefixes,
 }) => {
+  const projectConfig = useProjectConfig();
+  const recognitionPolicy = useMemo(() => ticketPolicy(projectConfig), [projectConfig]);
   const [ledgers, setLedgers] = useState<readonly AgenticMetricsLedger[]>([]);
   const [diagnostics, setDiagnostics] = useState<readonly WorkspaceDiagnostic[]>([]);
   const [knownPrefixes, setKnownPrefixes] = useState<readonly string[]>([]);
@@ -69,7 +71,7 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({
         selectedPrefixes.length === 0 ||
         (selectedPrefixes.length === 1 && selectedPrefixes[0] === 'all')
           ? undefined
-          : selectedPrefixes;
+          : selectedPrefixes.map((prefix) => prefix.slice('prefix:'.length));
 
       const res =
         typesParam || prefixesParam
@@ -97,27 +99,27 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({
         const nextSet = new Set(prev);
         for (const l of ledgers) {
           if (l.ticket_id) {
-            const p = extractTicketPrefix(l.ticket_id);
+            const p = extractTicketPrefix(l.ticket_id, recognitionPolicy);
             if (p) nextSet.add(p);
           }
         }
         return Array.from(nextSet).sort();
       });
     }
-  }, [ledgers]);
+  }, [ledgers, recognitionPolicy]);
 
   const prefixOptions: readonly MultiSelectOption[] = useMemo(() => {
-    const combined = combineDistinctPrefixes(knownPrefixes, configuredPrefixes);
-    return combined.map((p) => ({ value: p, label: p }));
-  }, [knownPrefixes, configuredPrefixes]);
+    const combined = combineDistinctPrefixes(knownPrefixes, configuredPrefixes ?? recognitionPolicy?.prefixes, projectConfig?.case_insensitive);
+    return combined.map((p) => ({ value: `prefix:${p}`, label: p }));
+  }, [knownPrefixes, configuredPrefixes, projectConfig, recognitionPolicy]);
 
   // Apply pure domain filtering across selected types and prefixes
   const filteredLedgers = useMemo(() => {
     let list = ledgers;
     list = filterLedgersByTicketTypes(list, selectedTicketTypes);
-    list = filterLedgersByPrefixes(list, selectedPrefixes);
+    list = filterLedgersByPrefixes(list, selectedPrefixes.includes('all') ? [] : selectedPrefixes.map((prefix) => prefix.slice('prefix:'.length)), projectConfig?.case_insensitive);
     return list;
-  }, [ledgers, selectedTicketTypes, selectedPrefixes]);
+  }, [ledgers, selectedTicketTypes, selectedPrefixes, projectConfig]);
 
   // Compute date boundaries based on preset and filtered ledger dates
   const { startDate, endDate } = useMemo(() => {
@@ -215,6 +217,13 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({
       netLines: linesAdded - linesDeleted,
     };
   }, [buckets]);
+
+  const recordedCeiling = useMemo(() => {
+    const ceilings = filteredLedgers.map((ledger) => ledger.workflow_efficiency.context_window_health.healthy_ceiling_tokens);
+    if (ceilings.length === 0 || ceilings.some((ceiling) => !Number.isFinite(ceiling) || ceiling <= 0)) return null;
+    const distinct = new Set(ceilings);
+    return distinct.size === 1 ? ceilings[0]! : null;
+  }, [filteredLedgers]);
 
   const chartData = useMemo(
     () =>
@@ -555,12 +564,12 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({
             height={260}
             data={chartData}
             granularity={granularity}
-            tooltip="Peak active context tokens per time bucket measured against the standard 200,000 token healthy context ceiling."
+            tooltip="Peak recorded context tokens per time bucket. A ceiling is shown only when the selected records provide one common explicit value."
             valueFormatter={(v) => `${formatTokensK(v)} tokens`}
-            referenceLines={[
+            referenceLines={recordedCeiling === null ? [] : [
               {
-                value: HEALTHY_CEILING_TOKENS,
-                label: '200k Ceiling',
+                value: recordedCeiling,
+                label: `${formatTokensK(recordedCeiling)} Ceiling (recorded)`,
                 color: CHART_COLORS.ceilingMarker,
                 strokeDasharray: '5 5',
               },

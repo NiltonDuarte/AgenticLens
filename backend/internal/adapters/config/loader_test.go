@@ -4,2603 +4,403 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"slices"
+	"reflect"
 	"strings"
 	"testing"
 
 	"agenticlens/internal/adapters/config"
 	"agenticlens/internal/domain"
+	"gopkg.in/yaml.v3"
 )
 
-const (
-	testValidSuffixYAML = "\ntelemetry:\n  capture:\n    state_dir: capture-state\nticket:\n  prefixes:\n    - prefix: AL\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
-	testValidSuffixJSON = `,"telemetry":{"capture":{"state_dir":"capture-state"}},"ticket":{"prefixes":[{"prefix":"AL"}]},"code_metrics":{"source_roots":["src"]},"anomaly_thresholds":{"context_ceiling_warning_tokens":160000,"context_ceiling_critical_tokens":200000}}`
-)
-
+func fixtureSharedBody(t *testing.T) string {
+	t.Helper()
+	b, err := os.ReadFile("testdata/shared-policy.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(b)
+}
 func testProjectConfig() domain.ProjectConfig {
-	return domain.ProjectConfig{
-		ProjectName: "AgenticLens",
-		Telemetry:   domain.TelemetryConfig{Capture: domain.DefaultCaptureConfig()},
-		Ticket: domain.TicketConfig{
-			Prefixes: []domain.TicketPrefix{
-				{
-					Prefix:      "AL",
-					Description: "Core AgenticLens development features, bugfixes, and technical initiatives",
-				},
-				{
-					Prefix:      "GEN",
-					Description: "General multi-agent engineering tasks and ad-hoc untracked work",
-					TicketType:  "chore",
-				},
-				{
-					Prefix:      "PO",
-					Description: "Product Owner specifications, requirements definitions, and roadmap breakdowns",
-					TicketType:  "docs",
-				},
-			},
-			CaseInsensitive: true,
-			CustomPatterns:  []string{},
-		},
-		Workspaces: domain.WorkspacesConfig{
-			Dir:       "",
-			Artifacts: []domain.WorkspaceArtifactConfig{},
-		},
-		Database: domain.DatabaseConfig{
-			Path:           "~/.local/share/opencode/opencode.db",
-			QueryTimeoutMs: 5000,
-			BusyTimeoutMs:  5000,
-			ReadOnly:       true,
-		},
-		Live: domain.LiveConfig{
-			ActiveThresholdSeconds: 300,
-			PollIntervalMs:         2000,
-			MaxTraceBufferMessages: 500,
-		},
-		AnomalyThresholds: domain.AnomalyThresholdsConfig{
-			StallThresholdSeconds:        120,
-			ErrorRateThreshold:           0.25,
-			ContextExhaustionPct:         0.85,
-			ContextCeilingWarningTokens:  160000,
-			ContextCeilingCriticalTokens: 200000,
-		},
-		CodeMetrics: domain.CodeMetricsConfig{
-			SourceRoots:  []string{"web", "backend"},
-			Include:      []string{},
-			Exclude:      []string{},
-			TestPatterns: []string{},
-			ProdPatterns: []string{},
-		},
-		RoleMappings: domain.RoleMappings{
-			"orchestrator": "orchestrator",
-			"build":        "orchestrator",
-			"planner":      "planner",
-			"coder":        "coder",
-			"tester":       "tester",
-			"reviewer":     "reviewer",
-		},
-		RoleOrder: []string{
-			"orchestrator",
-			"planner",
-			"coder",
-			"tester",
-			"reviewer",
-		},
+	return domain.ProjectConfig{ProjectName: "Fixture", AgenticLens: domain.EntrypointConfig{Version: "v9.8.7"}, Ticket: domain.TicketConfig{Prefixes: []domain.TicketPrefix{{Prefix: "T-", Description: "Development", TicketType: "feat"}}, CaseInsensitive: false}, Workspaces: domain.WorkspacesConfig{Dir: "records", Artifacts: []domain.WorkspaceArtifactConfig{}}, CodeMetrics: domain.CodeMetricsConfig{BaseBranch: "main", Production: domain.CodeCategoryConfig{Include: []string{"src/**/*.go"}, Exclude: []string{"**/*_test.go"}}, Tests: domain.CodeCategoryConfig{Include: []string{"**/*_test.go"}, Exclude: []string{}}}, Generation: domain.GenerationConfig{Metrics: domain.GenerationPolicy{Skills: false, Delegations: true, Anomalies: true}, Feedback: domain.GenerationFeedbackConfig{ProvisionalThresholdSeconds: 0}, Summary: domain.GenerationSummaryConfig{Enabled: true, Filename: "METRICS.md"}}, Database: domain.DatabaseConfig{BusyTimeoutMs: 0}, Live: domain.LiveConfig{ActiveThresholdSeconds: 91, PollIntervalMs: 333}, AnomalyThresholds: domain.AnomalyThresholdsConfig{StallThresholdSeconds: 47, ErrorRateMinCalls: 7, ErrorRateThreshold: .31, ErrorRateCriticalThreshold: .81, ContextCeilingWarningTokens: 170001, ContextCeilingCriticalTokens: 220003, ConsecutiveErrorsStreakWarning: 4, ConsecutiveErrorsStreakCritical: 9, ToolThrashingMinFailures: 2, ToolThrashingCriticalFailures: 6, TurnUsageWarningTokens: 31001, TurnUsageCriticalTokens: 61003, ContextGrowthWarningTokens: 41001, ContextGrowthCriticalTokens: 81003}, RoleMappings: domain.RoleMappings{}, RoleOrder: []string{}}
+}
+func writeConfig(t *testing.T, root, name, body string) string {
+	t.Helper()
+	path := filepath.Join(root, name)
+	if err := os.WriteFile(path, []byte(body), 0600); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+func replaceSetting(t *testing.T, body, key, value string) string {
+	t.Helper()
+	var doc yaml.Node
+	if err := yaml.Unmarshal([]byte(body), &doc); err != nil {
+		t.Fatal(err)
+	}
+	parts := strings.Split(key, ".")
+	node := doc.Content[0]
+	for i, part := range parts {
+		found := false
+		for j := 0; j < len(node.Content); j += 2 {
+			if node.Content[j].Value != part {
+				continue
+			}
+			found = true
+			if i == len(parts)-1 {
+				if value == "<missing>" {
+					node.Content = append(node.Content[:j], node.Content[j+2:]...)
+				} else {
+					var v yaml.Node
+					if err := yaml.Unmarshal([]byte(value), &v); err != nil {
+						t.Fatal(err)
+					}
+					node.Content[j+1] = v.Content[0]
+				}
+			} else {
+				node = node.Content[j+1]
+			}
+			break
+		}
+		if !found {
+			t.Fatalf("fixture setting absent: %s", key)
+		}
+	}
+	var out strings.Builder
+	enc := yaml.NewEncoder(&out)
+	enc.SetIndent(2)
+	if err := enc.Encode(&doc); err != nil {
+		t.Fatal(err)
+	}
+	if err := enc.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return out.String()
+}
+func loadBody(t *testing.T, body string) (domain.ProjectConfig, error) {
+	t.Helper()
+	path := writeConfig(t, t.TempDir(), ".agenticlens-config.yaml", body)
+	return config.LoadFromFile(path)
+}
+
+func TestLoadExplicitYAMLValuesAndSourceFreePolicy(t *testing.T) {
+	for _, suffix := range []string{"yaml", "yml"} {
+		t.Run(suffix, func(t *testing.T) {
+			root := t.TempDir()
+			path := writeConfig(t, root, ".agenticlens-config."+suffix, fixtureSharedBody(t))
+			cfg, err := config.Load(root)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if cfg.ConfigPath != path || cfg.ProjectName != "Fixture" || cfg.Ticket.CaseInsensitive || cfg.Ticket.Prefixes[1].Prefix != "T-" || cfg.Ticket.Prefixes[2].Prefix != "_TEAM" {
+				t.Fatalf("explicit identity/origin lost: %+v", cfg)
+			}
+			if cfg.Database.BusyTimeoutMs != 0 || cfg.Generation.Feedback.ProvisionalThresholdSeconds != 0 || cfg.Generation.Metrics.Skills || !cfg.Generation.Metrics.Delegations || cfg.Generation.Summary.Filename != "METRICS.md" {
+				t.Fatalf("explicit zero/false/output lost: %+v", cfg)
+			}
+			if cfg.RoleMappings == nil || len(cfg.RoleMappings) != 0 || cfg.RoleOrder == nil || len(cfg.RoleOrder) != 0 || cfg.Workspaces.Artifacts == nil {
+				t.Fatal("explicit empty collections changed")
+			}
+			if cfg.CodeMetrics.BaseBranch != "fixture-base" || cfg.CodeMetrics.Production.Include[0] != "src/**/*.go" || cfg.AnomalyThresholds.ContextCeilingCriticalTokens != 220003 {
+				t.Fatal("configured comparison/classification/threshold changed")
+			}
+		})
+	}
+	body := fixtureSharedBody(t)
+	for _, key := range []string{"database", "live", "anomaly_thresholds", "generation"} {
+		body = replaceSetting(t, body, key, "<missing>")
+	}
+	cfg, err := loadBody(t, body)
+	if err != nil {
+		t.Fatalf("source-free shared read required unused settings: %v", err)
+	}
+	for _, tc := range []struct {
+		key      string
+		validate func(domain.ProjectConfig) error
+	}{{"database.busy_timeout_ms", config.ValidateDatabasePolicy}, {"generation.metrics.skills", config.ValidateGenerationPolicy}, {"generation.feedback.provisional_threshold_seconds", config.ValidateFeedbackPolicy}, {"generation.summary.enabled", config.ValidateSummaryPolicy}, {"live.poll_interval_ms", config.ValidatePollingPolicy}, {"live.active_threshold_seconds", config.ValidateActivityPolicy}, {"anomaly_thresholds.error_rate_min_calls", config.ValidateAnomalyPolicy}} {
+		if err := tc.validate(cfg); err == nil || !strings.Contains(err.Error(), tc.key) {
+			t.Errorf("consumer did not require %s: %v", tc.key, err)
+		}
 	}
 }
 
-func TestLoad_LocalTelemetrySourcesMergeAndValidate(t *testing.T) {
+func TestSharedDiscoveryAmbiguityNearestAndGitBoundary(t *testing.T) {
 	root := t.TempDir()
-	shared := "project_name: Shared\nticket:\n  prefixes: [AL]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n\ntelemetry:\n  capture:\n    state_dir: capture-state\n"
-	if err := os.WriteFile(filepath.Join(root, ".agenticlens-config.yaml"), []byte(shared), 0600); err != nil {
+	body := fixtureSharedBody(t)
+	a := writeConfig(t, root, ".agenticlens-config.yaml", body)
+	b := writeConfig(t, root, ".agenticlens-config.yml", body)
+	if _, err := config.Load(root); err == nil || !strings.Contains(err.Error(), a) || !strings.Contains(err.Error(), b) {
+		t.Fatalf("dual names not rejected: %v", err)
+	}
+	if err := os.Remove(b); err != nil {
 		t.Fatal(err)
 	}
-	local := "telemetry:\n  default_source: codex\n  sources:\n    codex:\n      home: ~/private-codex\n    opencode:\n      database_path: ~/opencode.db\n"
-	localPath := filepath.Join(root, ".agenticlens-config.local.yaml")
-	if err := os.WriteFile(localPath, []byte(local), 0600); err != nil {
+	nested := filepath.Join(root, "nested")
+	if err := os.MkdirAll(filepath.Join(nested, "src"), 0700); err != nil {
 		t.Fatal(err)
 	}
+	got, err := config.FindConfigFile(filepath.Join(nested, "src"))
+	if err != nil || got != a {
+		t.Fatalf("nearest discovery %q %v", got, err)
+	}
+	bad := writeConfig(t, nested, ".agenticlens-config.yml", "project_name: [broken")
+	if _, err := config.Load(filepath.Join(nested, "src")); err == nil || !strings.Contains(err.Error(), bad) {
+		t.Fatalf("invalid nearest bypassed: %v", err)
+	}
+	if err := os.Remove(bad); err != nil {
+		t.Fatal(err)
+	}
+	writeConfig(t, nested, ".git", "gitdir: unrelated\n")
+	if _, err := config.Load(filepath.Join(nested, "src")); !errors.Is(err, config.ErrConfigNotFound) {
+		t.Fatalf("crossed Git boundary: %v", err)
+	}
+	if err := os.Remove(filepath.Join(nested, ".git")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(filepath.Join(nested, ".agenticlens-config.yaml"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := config.Load(nested); err == nil || !strings.Contains(err.Error(), "regular file") {
+		t.Fatalf("invalid selected directory bypassed: %v", err)
+	}
+}
+
+func TestLoadExplicitFileAndErrorBoundaries(t *testing.T) {
+	for _, name := range []string{"chosen.yaml", "chosen.yml"} {
+		t.Run(name, func(t *testing.T) {
+			root := t.TempDir()
+			path := writeConfig(t, root, name, fixtureSharedBody(t))
+			if _, err := config.LoadFromFile(path); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := config.Load(root); !errors.Is(err, config.ErrConfigNotFound) {
+				t.Fatalf("custom basename automatically discovered: %v", err)
+			}
+		})
+	}
+	if _, err := config.LoadFromFile(filepath.Join(t.TempDir(), "missing.yaml")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("missing file error not wrapped: %v", err)
+	}
+	for _, body := range []string{"", "[]", "project_name: [bad", "project_name: A\nproject_name: B\n"} {
+		if _, err := loadBody(t, body); err == nil {
+			t.Fatalf("invalid document accepted %q", body)
+		}
+	}
+	if _, err := loadBody(t, replaceSetting(t, fixtureSharedBody(t), "project_name", "<missing>")); !errors.Is(err, config.ErrInvalidConfig) {
+		t.Fatalf("required configuration identity error lost: %v", err)
+	}
+}
+
+func TestRequiredCurrentSharedShapeAndIntentionalEmptyLists(t *testing.T) {
+	base := fixtureSharedBody(t)
+	for _, key := range []string{"ticket.prefixes", "ticket.case_insensitive", "workspaces.artifacts", "code_metrics.base_branch", "code_metrics.production.include", "code_metrics.production.exclude", "code_metrics.tests.include", "code_metrics.tests.exclude", "role_mappings", "role_order"} {
+		for _, value := range []string{"<missing>", "null"} {
+			t.Run(key+"/"+value, func(t *testing.T) {
+				body := replaceSetting(t, base, key, value)
+				_, err := loadBody(t, body)
+				if err == nil || !strings.Contains(err.Error(), strings.Split(key, ".")[0]) {
+					t.Fatalf("missing/invalid required %s accepted or unidentified: %v", key, err)
+				}
+			})
+		}
+	}
+	// A caller may select --workspaces instead; an explicitly invalid value
+	// still cannot bypass ordinary shared configuration validation.
+	withoutWorkspace := replaceSetting(t, base, "workspaces.dir", "<missing>")
+	if _, err := loadBody(t, withoutWorkspace); err != nil {
+		t.Fatalf("optional configured root blocked explicit CLI selection: %v", err)
+	}
+	if _, err := loadBody(t, replaceSetting(t, base, "workspaces.dir", "null")); err == nil || !strings.Contains(err.Error(), "workspaces.dir") {
+		t.Fatalf("invalid configured workspace root accepted: %v", err)
+	}
+	for _, key := range []string{"code_metrics.production.include", "code_metrics.production.exclude", "code_metrics.tests.include", "code_metrics.tests.exclude"} {
+		for _, value := range []string{"{}", "['']", "['[']", "[17]"} {
+			t.Run(key+value, func(t *testing.T) {
+				if _, err := loadBody(t, replaceSetting(t, base, key, value)); err == nil || !strings.Contains(err.Error(), key) {
+					t.Fatalf("bad list/glob %s accepted: %v", key, err)
+				}
+			})
+		}
+	}
+	body := base
+	for _, key := range []string{"code_metrics.production.include", "code_metrics.production.exclude", "code_metrics.tests.include", "code_metrics.tests.exclude"} {
+		body = replaceSetting(t, body, key, "[]")
+	}
+	cfg, err := loadBody(t, body)
+	if err != nil || cfg.CodeMetrics.Production.Include == nil || cfg.CodeMetrics.Tests.Exclude == nil {
+		t.Fatalf("intentional empty lists rejected: %+v %v", cfg.CodeMetrics, err)
+	}
+	for _, tc := range []struct{ key, value string }{{"ticket.case_insensitive", "'false'"}, {"ticket.prefixes", "[{prefix: T}]"}, {"ticket.prefixes", "[{prefix: '', description: Work}]"}, {"ticket.prefixes", "[{prefix: T, description: '', ticket_type: feat}]"}, {"ticket.prefixes", "[{prefix: T, description: Work, ticket_type: invalid}]"}, {"role_mappings", "{'': coder}"}, {"role_mappings", "{custom: ''}"}, {"role_mappings", "{custom: 5}"}, {"role_order", "['']"}, {"role_order", "{}"}, {"workspaces.artifacts", "[{path: '../outside.md'}]"}, {"workspaces.artifacts", "[{path: '/outside.md'}]"}, {"workspaces.artifacts", "[{path: ''}]"}, {"workspaces.artifacts", "[{}]"}} {
+		if _, err := loadBody(t, replaceSetting(t, base, tc.key, tc.value)); err == nil {
+			t.Errorf("malformed %s accepted %s", tc.key, tc.value)
+		}
+	}
+	cfg, err = loadBody(t, replaceSetting(t, base, "workspaces.artifacts", "[{path: nested/NOTES.md}]"))
+	if err != nil || cfg.Workspaces.Artifacts[0].Title != "" {
+		t.Fatalf("optional artifact title was required/invented: %+v %v", cfg.Workspaces.Artifacts, err)
+	}
+}
+
+func TestOperationPolicyTypeBoundsAndOrdering(t *testing.T) {
+	base := fixtureSharedBody(t)
+	for _, tc := range []struct {
+		key      string
+		values   []string
+		validate func(domain.ProjectConfig) error
+	}{
+		{"database.busy_timeout_ms", []string{"<missing>", "null", "-1", "1.5", "'0'"}, config.ValidateDatabasePolicy},
+		{"live.active_threshold_seconds", []string{"<missing>", "0", "-1", "3.0"}, config.ValidateActivityPolicy},
+		{"live.poll_interval_ms", []string{"<missing>", "0", "-1"}, config.ValidatePollingPolicy},
+		{"anomaly_thresholds.stall_threshold_seconds", []string{"<missing>", "0"}, config.ValidateActivityPolicy},
+		{"anomaly_thresholds.error_rate_min_calls", []string{"<missing>", "0", "7.0"}, config.ValidateAnomalyPolicy},
+		{"anomaly_thresholds.error_rate_threshold", []string{"<missing>", "0", "1.1", ".nan", ".inf", "0.9"}, config.ValidateAnomalyPolicy},
+		{"anomaly_thresholds.error_rate_critical_threshold", []string{"<missing>", "0", "0.2"}, config.ValidateAnomalyPolicy},
+		{"anomaly_thresholds.context_ceiling_warning_tokens", []string{"<missing>", "0", "220004"}, config.ValidateAnomalyPolicy},
+		{"anomaly_thresholds.consecutive_errors_streak_warning", []string{"<missing>", "0", "10"}, config.ValidateAnomalyPolicy},
+		{"anomaly_thresholds.tool_thrashing_min_failures", []string{"<missing>", "0", "7"}, config.ValidateAnomalyPolicy},
+		{"anomaly_thresholds.turn_usage_warning_tokens", []string{"<missing>", "0", "61004"}, config.ValidateAnomalyPolicy},
+		{"anomaly_thresholds.context_growth_warning_tokens", []string{"<missing>", "0", "81004"}, config.ValidateAnomalyPolicy},
+	} {
+		for _, value := range tc.values {
+			t.Run(tc.key+value, func(t *testing.T) {
+				body := replaceSetting(t, base, tc.key, value)
+				cfg, err := loadBody(t, body)
+				if err == nil {
+					err = tc.validate(cfg)
+				}
+				if err == nil {
+					t.Fatalf("invalid consumed policy accepted: %s=%s", tc.key, value)
+				}
+			})
+		}
+	}
+	for _, key := range []string{"generation.metrics.skills", "generation.metrics.delegations", "generation.metrics.anomalies"} {
+		for _, value := range []string{"<missing>", "null", "'false'", "0", "[]", "{}"} {
+			t.Run(key+value, func(t *testing.T) {
+				cfg, err := loadBody(t, replaceSetting(t, base, key, value))
+				if err == nil {
+					err = config.ValidateGenerationPolicy(cfg)
+				}
+				if err == nil {
+					t.Fatalf("invalid generation switch accepted %s=%s", key, value)
+				}
+			})
+		}
+	}
+	body := replaceSetting(t, base, "anomaly_thresholds.error_rate_threshold", "1")
+	body = replaceSetting(t, body, "anomaly_thresholds.error_rate_critical_threshold", "1")
+	cfg, err := loadBody(t, body)
+	if err != nil || config.ValidateAnomalyPolicy(cfg) != nil {
+		t.Fatalf("equal unit ratios rejected: %v", err)
+	}
+}
+
+func TestLoadLocalTelemetrySelectionIsIndependent(t *testing.T) {
+	root := t.TempDir()
+	shared := writeConfig(t, root, ".agenticlens-config.yaml", fixtureSharedBody(t))
+	local := writeConfig(t, root, ".agenticlens-config.local.yaml", "telemetry:\n  default_source: codex\n  sources:\n    codex:\n      home: selected-codex\n    opencode:\n      database_path: selected.db\n  capture:\n    enabled: false\n    state_dir: selected-state\n    max_sessions: 7\n")
 	cfg, err := config.Load(root)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.ProjectName != "Shared" || cfg.Telemetry.DefaultSource != "codex" || cfg.Telemetry.Sources.CodexHome != "~/private-codex" || cfg.Telemetry.Sources.OpenCodeDatabasePath != "~/opencode.db" {
-		t.Fatalf("unexpected merged config: %+v", cfg)
+	if cfg.Telemetry.DefaultSource != "codex" || cfg.Telemetry.Sources.CodexHome != filepath.Join(root, "selected-codex") || cfg.Telemetry.Sources.OpenCodeDatabasePath != filepath.Join(root, "selected.db") || cfg.LocalConfigPath != local {
+		t.Fatalf("local source origin lost: %+v", cfg)
 	}
-	if err := os.WriteFile(localPath, []byte("telemetry:\n  default_source: both\n"), 0600); err != nil {
+	raw, err := os.ReadFile(shared)
+	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(localPath, []byte("telemetry:\n  default_source: ''\n"), 0600); err != nil {
-		t.Fatal(err)
+	writeConfig(t, root, ".agenticlens-config.local.yaml", "telemetry: [broken")
+	if _, err := config.Load(root); err == nil || !strings.Contains(err.Error(), local) {
+		t.Fatalf("invalid selected local bypassed: %v", err)
 	}
-	if _, err := config.Load(root); err == nil || !strings.Contains(err.Error(), "default_source") {
-		t.Fatalf("expected empty local source validation error, got %v", err)
+	read, err := config.LoadShared(root)
+	if err != nil || !reflect.DeepEqual(read.Ticket, cfg.Ticket) {
+		t.Fatalf("source-free shared read required local: %+v %v", read, err)
 	}
-	if _, err := config.Load(root); err == nil || !strings.Contains(err.Error(), ".agenticlens-config.local.yaml") {
-		t.Fatalf("expected actionable local validation error, got %v", err)
-	}
-	if err := os.WriteFile(localPath, []byte("telemetry: [broken"), 0600); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := config.Load(root); err == nil || !strings.Contains(err.Error(), ".agenticlens-config.local.yaml") {
-		t.Fatalf("expected malformed local YAML error, got %v", err)
+	after, err := os.ReadFile(shared)
+	if err != nil || string(after) != string(raw) {
+		t.Fatal("read modified shared policy")
 	}
 }
 
-func TestLoad_LocalTelemetrySourceCombinations(t *testing.T) {
-	shared := "project_name: Shared\nticket:\n  prefixes: [AL]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n\ntelemetry:\n  capture:\n    state_dir: capture-state\n"
+func TestDiscoveryDoesNotBypassPresentAliasesOrDanglingFiles(t *testing.T) {
+	root := t.TempDir()
+	body := fixtureSharedBody(t)
+	shared := writeConfig(t, root, ".agenticlens-config.yaml", body)
+	alias := filepath.Join(root, ".agenticlens-config.yml")
+	if err := os.Symlink(shared, alias); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := config.Load(root); err == nil || !strings.Contains(err.Error(), shared) || !strings.Contains(err.Error(), alias) {
+		t.Fatalf("same-file aliases bypassed ambiguity: %v", err)
+	}
+	if err := os.Remove(alias); err != nil {
+		t.Fatal(err)
+	}
+	nested := filepath.Join(root, "nested")
+	if err := os.Mkdir(nested, 0700); err != nil {
+		t.Fatal(err)
+	}
+	dangling := filepath.Join(nested, ".agenticlens-config.yaml")
+	if err := os.Symlink(filepath.Join(nested, "absent-target"), dangling); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := config.Load(nested); err == nil || !strings.Contains(err.Error(), dangling) {
+		t.Fatalf("dangling nearest file fell through to ancestor: %v", err)
+	}
+}
+
+func TestPolicyPresenceFollowsStructuralYAMLKeys(t *testing.T) {
 	for _, tc := range []struct {
-		name       string
-		local      string
-		defaultSrc string
-		opencode   string
-		codex      string
+		key, value string
+		validate   func(domain.ProjectConfig) error
 	}{
-		{name: "Codex only", local: "telemetry:\n  default_source: codex\n  sources:\n    codex:\n      home: ~/codex\n", defaultSrc: "codex", codex: "~/codex"},
-		{name: "OpenCode only", local: "telemetry:\n  sources:\n    opencode:\n      database_path: ~/opencode.db\n", opencode: "~/opencode.db"},
-		{name: "both sources", local: "telemetry:\n  default_source: codex\n  sources:\n    opencode:\n      database_path: ~/opencode.db\n    codex:\n      home: ~/codex\n", defaultSrc: "codex", opencode: "~/opencode.db", codex: "~/codex"},
+		{"ticket.case_insensitive", "true", nil},
+		{"generation.metrics.skills", "false", config.ValidateGenerationPolicy},
+		{"database.busy_timeout_ms", "0", config.ValidateDatabasePolicy},
 	} {
-		t.Run(tc.name, func(t *testing.T) {
-			root := t.TempDir()
-			if err := os.WriteFile(filepath.Join(root, ".agenticlens-config.yaml"), []byte(shared), 0600); err != nil {
-				t.Fatal(err)
+		t.Run(tc.key, func(t *testing.T) {
+			base := fixtureSharedBody(t)
+			for _, prefix := range []bool{false, true} {
+				spoof := tc.key + ": " + tc.value + "\n"
+				missing := replaceSetting(t, base, tc.key, "<missing>")
+				if prefix {
+					missing = spoof + missing
+				} else {
+					missing += spoof
+				}
+				cfg, err := loadBody(t, missing)
+				if err == nil && tc.validate != nil {
+					err = tc.validate(cfg)
+				}
+				if err == nil || !strings.Contains(err.Error(), tc.key) {
+					t.Fatalf("literal dotted key supplied absent structural policy: %v", err)
+				}
 			}
-			if err := os.WriteFile(filepath.Join(root, ".agenticlens-config.local.yaml"), []byte(tc.local), 0600); err != nil {
-				t.Fatal(err)
-			}
-			cfg, err := config.Load(root)
+			// A literal dotted sibling must not replace a deliberate false/zero.
+			body := replaceSetting(t, base, tc.key, tc.value) + tc.key + ": wrong-type\n"
+			cfg, err := loadBody(t, body)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if cfg.Telemetry.DefaultSource != tc.defaultSrc || cfg.Telemetry.Sources.CodexHome != tc.codex || cfg.Telemetry.Sources.OpenCodeDatabasePath != tc.opencode {
-				t.Fatalf("unexpected source settings: %+v", cfg.Telemetry)
-			}
-		})
-	}
-}
-
-func TestLoad_YAMLConfigurationParsing(t *testing.T) {
-	tempDir := t.TempDir()
-
-	yamlContent := `
-project_name: CustomProject
-ticket:
-  prefixes:
-    - prefix: CUSTOM
-      description: Custom initiatives
-    - prefix: TICK
-      description: Ticket trackers
-  case_insensitive: false
-  custom_patterns:
-    - PAT-(\d+)
-workspaces:
-  dir: custom_workspaces
-code_metrics:
-  source_roots:
-    - frontend
-    - services
-  include:
-    - "services/**"
-  exclude:
-    - "legacy/**"
-  test_patterns:
-    - "*_spec.go"
-  prod_patterns:
-    - "*.go"
-database:
-  path: /tmp/test.db
-  query_timeout_ms: 8000
-  busy_timeout_ms: 9000
-  read_only: false
-live:
-  active_threshold_seconds: 400
-  poll_interval_ms: 3000
-  max_trace_buffer_messages: 800
-anomaly_thresholds:
-  stall_threshold_seconds: 150
-  error_rate_threshold: 0.35
-  context_exhaustion_pct: 0.90
-  context_ceiling_warning_tokens: 160000
-  context_ceiling_critical_tokens: 200000
-role_mappings:
-  architect: planner
-  qa: tester
-role_order:
-  - tester
-  - planner
-  - coder
-
-telemetry:
-  capture:
-    state_dir: capture-state
-`
-	if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	cfg, err := config.Load(tempDir)
-	if err != nil {
-		t.Fatalf("unexpected error loading config: %v", err)
-	}
-
-	if cfg.ProjectName != "CustomProject" {
-		t.Errorf("expected CustomProject, got %s", cfg.ProjectName)
-	}
-	if len(cfg.Ticket.Prefixes) != 2 || cfg.Ticket.Prefixes[0].Prefix != "CUSTOM" || cfg.Ticket.Prefixes[1].Prefix != "TICK" {
-		t.Errorf("unexpected ticket prefixes: %v", cfg.Ticket.Prefixes)
-	}
-	if cfg.Ticket.Prefixes[0].Description != "Custom initiatives" {
-		t.Errorf("expected description 'Custom initiatives', got %s", cfg.Ticket.Prefixes[0].Description)
-	}
-	if cfg.Ticket.Prefixes[1].Description != "Ticket trackers" {
-		t.Errorf("expected description 'Ticket trackers', got %s", cfg.Ticket.Prefixes[1].Description)
-	}
-	names := cfg.Ticket.PrefixNames()
-	if len(names) != 2 || names[0] != "CUSTOM" || names[1] != "TICK" {
-		t.Errorf("unexpected PrefixNames: %v", names)
-	}
-	if cfg.Ticket.CaseInsensitive {
-		t.Errorf("expected CaseInsensitive to be false")
-	}
-	if len(cfg.Ticket.CustomPatterns) != 1 || cfg.Ticket.CustomPatterns[0] != `PAT-(\d+)` {
-		t.Errorf("unexpected custom patterns: %v", cfg.Ticket.CustomPatterns)
-	}
-	if cfg.Workspaces.Dir != "custom_workspaces" {
-		t.Errorf("expected custom_workspaces, got %s", cfg.Workspaces.Dir)
-	}
-	if len(cfg.CodeMetrics.SourceRoots) != 2 || cfg.CodeMetrics.SourceRoots[0] != "frontend" || cfg.CodeMetrics.SourceRoots[1] != "services" {
-		t.Errorf("unexpected code_metrics.source_roots: %v", cfg.CodeMetrics.SourceRoots)
-	}
-	if cfg.Database.Path != "/tmp/test.db" {
-		t.Errorf("unexpected Database.Path: %s", cfg.Database.Path)
-	}
-	if cfg.Database.QueryTimeoutMs != 8000 || cfg.Database.BusyTimeoutMs != 9000 || cfg.Database.ReadOnly {
-		t.Errorf("unexpected database config: %+v", cfg.Database)
-	}
-	if cfg.Live.ActiveThresholdSeconds != 400 || cfg.Live.PollIntervalMs != 3000 || cfg.Live.MaxTraceBufferMessages != 800 {
-		t.Errorf("unexpected live config: %+v", cfg.Live)
-	}
-	if cfg.AnomalyThresholds.StallThresholdSeconds != 150 || cfg.AnomalyThresholds.ErrorRateThreshold != 0.35 || cfg.AnomalyThresholds.ContextExhaustionPct != 0.90 {
-		t.Errorf("unexpected anomaly thresholds: %+v", cfg.AnomalyThresholds)
-	}
-	if len(cfg.CodeMetrics.Include) != 1 || cfg.CodeMetrics.Include[0] != "services/**" {
-		t.Errorf("unexpected code metrics include: %v", cfg.CodeMetrics.Include)
-	}
-	if cfg.RoleMappings.ResolveRole("architect") != domain.AgentRole("planner") {
-		t.Errorf("expected RolePlanner for architect, got %s", cfg.RoleMappings.ResolveRole("architect"))
-	}
-	if cfg.RoleMappings.ResolveRole("qa") != domain.AgentRole("tester") {
-		t.Errorf("expected RoleTester for qa, got %s", cfg.RoleMappings.ResolveRole("qa"))
-	}
-	if len(cfg.RoleOrder) != 3 || cfg.RoleOrder[0] != "tester" || cfg.RoleOrder[1] != "planner" || cfg.RoleOrder[2] != "coder" {
-		t.Errorf("unexpected RoleOrder: %v", cfg.RoleOrder)
-	}
-}
-
-func TestLoad_FilePriorityResolution(t *testing.T) {
-	t.Run("yaml takes precedence over json", func(t *testing.T) {
-		tempDir := t.TempDir()
-
-		yamlContent := `project_name: FromYAML` + testValidSuffixYAML
-		jsonContent := `{"project_name": "FromJSON"` + testValidSuffixJSON
-
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.json"), []byte(jsonContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		cfg, err := config.Load(tempDir)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if cfg.ProjectName != "FromYAML" {
-			t.Errorf("expected FromYAML, got %s", cfg.ProjectName)
-		}
-	})
-
-	t.Run("yaml takes precedence over yml", func(t *testing.T) {
-		tempDir := t.TempDir()
-
-		yamlContent := `project_name: FromYAML` + testValidSuffixYAML
-		ymlContent := `project_name: FromYML` + testValidSuffixYAML
-
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yml"), []byte(ymlContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		cfg, err := config.Load(tempDir)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if cfg.ProjectName != "FromYAML" {
-			t.Errorf("expected FromYAML, got %s", cfg.ProjectName)
-		}
-	})
-
-	t.Run("yml takes precedence over json", func(t *testing.T) {
-		tempDir := t.TempDir()
-
-		ymlContent := `project_name: FromYML` + testValidSuffixYAML
-		jsonContent := `{"project_name": "FromJSON"` + testValidSuffixJSON
-
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yml"), []byte(ymlContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.json"), []byte(jsonContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		cfg, err := config.Load(tempDir)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if cfg.ProjectName != "FromYML" {
-			t.Errorf("expected FromYML, got %s", cfg.ProjectName)
-		}
-	})
-
-	t.Run("json used when yaml absent", func(t *testing.T) {
-		tempDir := t.TempDir()
-
-		jsonContent := `{"project_name": "FromJSON"` + testValidSuffixJSON
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.json"), []byte(jsonContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		cfg, err := config.Load(tempDir)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if cfg.ProjectName != "FromJSON" {
-			t.Errorf("expected FromJSON, got %s", cfg.ProjectName)
-		}
-	})
-}
-
-func TestLoad_LegacyJSONRejected(t *testing.T) {
-	tempDir := t.TempDir()
-
-	legacyJSON := `{
-		"project_name": "LegacyProject",
-		"ticket_prefix": "LEG",
-		"workspaces_dir": "custom_workspaces_dir",
-		"src_folders": ["api", "ui"]
-	,"telemetry":{"capture":{"state_dir":"capture-state"}}}`
-	if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.json"), []byte(legacyJSON), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	_, err := config.Load(tempDir)
-	if err == nil {
-		t.Fatalf("expected error loading legacy json without canonical sections, got nil")
-	}
-	if !errors.Is(err, config.ErrInvalidConfig) {
-		t.Errorf("expected ErrInvalidConfig, got %v", err)
-	}
-}
-
-func TestLoad_MissingConfigurationReturnsErrConfigNotFound(t *testing.T) {
-	tempDir := t.TempDir()
-
-	_, err := config.Load(tempDir)
-	if err == nil {
-		t.Fatalf("expected error on missing config, got nil")
-	}
-	if !errors.Is(err, config.ErrConfigNotFound) {
-		t.Errorf("expected ErrConfigNotFound, got %v", err)
-	}
-}
-
-func TestLoad_PartialConfigurationMerging(t *testing.T) {
-	tempDir := t.TempDir()
-
-	partialYAML := `
-project_name: PartialLens
-ticket:
-  prefixes:
-    - prefix: AL
-workspaces:
-code_metrics:
-  source_roots:
-    - src
-database:
-  path: /custom/path/db.sqlite
-anomaly_thresholds:
-  context_ceiling_warning_tokens: 160000
-  context_ceiling_critical_tokens: 200000
-
-telemetry:
-  capture:
-    state_dir: capture-state
-`
-	if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(partialYAML), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	cfg, err := config.Load(tempDir)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	if cfg.ProjectName != "PartialLens" {
-		t.Errorf("expected PartialLens, got %s", cfg.ProjectName)
-	}
-	if cfg.Database.Path != "/custom/path/db.sqlite" {
-		t.Errorf("expected /custom/path/db.sqlite, got %s", cfg.Database.Path)
-	}
-
-	// Unspecified workspaces.dir retains empty string without silent defaulting
-	if cfg.Workspaces.Dir != "" {
-		t.Errorf("expected empty workspaces dir when omitted, got %s", cfg.Workspaces.Dir)
-	}
-	if len(cfg.Workspaces.Artifacts) != 0 {
-		t.Errorf("expected empty artifacts, got %v", cfg.Workspaces.Artifacts)
-	}
-	if cfg.Database.QueryTimeoutMs != 5000 {
-		t.Errorf("expected default query timeout 5000, got %d", cfg.Database.QueryTimeoutMs)
-	}
-	if cfg.Live.ActiveThresholdSeconds != 300 {
-		t.Errorf("expected default active threshold 300, got %d", cfg.Live.ActiveThresholdSeconds)
-	}
-	if len(cfg.RoleMappings) != 0 || cfg.RoleMappings == nil {
-		t.Errorf("expected empty non-nil RoleMappings, got %v", cfg.RoleMappings)
-	}
-	if len(cfg.RoleOrder) != 0 || cfg.RoleOrder == nil {
-		t.Errorf("expected empty non-nil RoleOrder, got %v", cfg.RoleOrder)
-	}
-}
-
-func TestLoad_MalformedFileErrorHandling(t *testing.T) {
-	tempDir := t.TempDir()
-
-	malformedYAML := `
-project_name: [invalid yaml unclosed
-  test: {
-
-telemetry:
-  capture:
-    state_dir: capture-state
-`
-	if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(malformedYAML), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	_, err := config.Load(tempDir)
-	if err == nil {
-		t.Errorf("expected error loading malformed yaml, got nil")
-	}
-
-	malformedJSON := `{"project_name": "broken", invalid}`
-	_ = os.Remove(filepath.Join(tempDir, ".agenticlens-config.yaml"))
-	if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.json"), []byte(malformedJSON), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	_, err = config.Load(tempDir)
-	if err == nil {
-		t.Errorf("expected error loading malformed json, got nil")
-	}
-}
-
-func TestFindConfigFile_UpwardTraversal(t *testing.T) {
-	tempDir := t.TempDir()
-	expected := filepath.Join(tempDir, ".agenticlens-config.yaml")
-	if err := os.WriteFile(expected, []byte("project_name: Root"), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	subDir := filepath.Join(tempDir, "sub1", "sub2", "sub3")
-	if err := os.MkdirAll(subDir, 0755); err != nil {
-		t.Fatal(err)
-	}
-
-	found, err := config.FindConfigFile(subDir)
-	if err != nil {
-		t.Fatalf("unexpected error finding config file: %v", err)
-	}
-	if found != expected {
-		t.Errorf("expected %s, got %s", expected, found)
-	}
-}
-
-func TestLoad_AdversarialDiscoveryAndFallbackOrder(t *testing.T) {
-	t.Run("all three formats present selects yaml", func(t *testing.T) {
-		tempDir := t.TempDir()
-
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte("project_name: FromYAML"+testValidSuffixYAML), 0644); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yml"), []byte("project_name: FromYML"+testValidSuffixYAML), 0644); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.json"), []byte(`{"project_name": "FromJSON"`+testValidSuffixJSON), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		cfg, err := config.Load(tempDir)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if cfg.ProjectName != "FromYAML" {
-			t.Errorf("expected FromYAML, got %s", cfg.ProjectName)
-		}
-	})
-
-	t.Run("yml and json present selects yml", func(t *testing.T) {
-		tempDir := t.TempDir()
-
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yml"), []byte("project_name: FromYML"+testValidSuffixYAML), 0644); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.json"), []byte(`{"project_name": "FromJSON"`+testValidSuffixJSON), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		cfg, err := config.Load(tempDir)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if cfg.ProjectName != "FromYML" {
-			t.Errorf("expected FromYML, got %s", cfg.ProjectName)
-		}
-	})
-}
-
-func TestLoad_AdversarialErrorWrapping(t *testing.T) {
-	tempDir := t.TempDir()
-
-	t.Run("malformed yaml wrapped error", func(t *testing.T) {
-		yamlPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
-		if err := os.WriteFile(yamlPath, []byte("project_name: [unclosed"), 0644); err != nil {
-			t.Fatal(err)
-		}
-		defer os.Remove(yamlPath)
-
-		_, err := config.LoadFromFile(yamlPath)
-		if err == nil {
-			t.Fatal("expected error on malformed yaml, got nil")
-		}
-		if !containsSubstr(err.Error(), "decoding yaml configuration") {
-			t.Errorf("expected descriptive wrapped error mentioning yaml decoding, got %v", err)
-		}
-	})
-
-	t.Run("malformed yml wrapped error", func(t *testing.T) {
-		ymlPath := filepath.Join(tempDir, ".agenticlens-config.yml")
-		if err := os.WriteFile(ymlPath, []byte("project_name: [unclosed"), 0644); err != nil {
-			t.Fatal(err)
-		}
-		defer os.Remove(ymlPath)
-
-		_, err := config.LoadFromFile(ymlPath)
-		if err == nil {
-			t.Fatal("expected error on malformed yml, got nil")
-		}
-		if !containsSubstr(err.Error(), "decoding yaml configuration") {
-			t.Errorf("expected descriptive wrapped error mentioning yaml decoding, got %v", err)
-		}
-	})
-
-	t.Run("malformed json wrapped error", func(t *testing.T) {
-		jsonPath := filepath.Join(tempDir, ".agenticlens-config.json")
-		if err := os.WriteFile(jsonPath, []byte(`{"project_name": broken}`), 0644); err != nil {
-			t.Fatal(err)
-		}
-		defer os.Remove(jsonPath)
-
-		_, err := config.LoadFromFile(jsonPath)
-		if err == nil {
-			t.Fatal("expected error on malformed json, got nil")
-		}
-		if !containsSubstr(err.Error(), "decoding json configuration") {
-			t.Errorf("expected descriptive wrapped error mentioning json decoding, got %v", err)
-		}
-	})
-
-	t.Run("nonexistent file wrapped read error", func(t *testing.T) {
-		nonexistent := filepath.Join(tempDir, "does_not_exist.yaml")
-		_, err := config.LoadFromFile(nonexistent)
-		if err == nil {
-			t.Fatal("expected error for nonexistent file, got nil")
-		}
-		if !containsSubstr(err.Error(), "reading configuration file") {
-			t.Errorf("expected descriptive wrapped error mentioning reading file, got %v", err)
-		}
-	})
-}
-
-func TestLoad_AdversarialPartialConfigs(t *testing.T) {
-	t.Run("zero byte empty file returns validation error", func(t *testing.T) {
-		tempDir := t.TempDir()
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(""), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		_, err := config.Load(tempDir)
-		if err == nil {
-			t.Fatalf("expected error on empty file, got nil")
-		}
-		if !errors.Is(err, config.ErrInvalidConfig) {
-			t.Errorf("expected ErrInvalidConfig, got %v", err)
-		}
-	})
-
-	t.Run("empty object returns validation error", func(t *testing.T) {
-		tempDir := t.TempDir()
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte("{}\n"), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		_, err := config.Load(tempDir)
-		if err == nil {
-			t.Fatalf("expected error on empty object, got nil")
-		}
-		if !errors.Is(err, config.ErrInvalidConfig) {
-			t.Errorf("expected ErrInvalidConfig, got %v", err)
-		}
-	})
-
-	t.Run("missing project_name returns validation error", func(t *testing.T) {
-		tempDir := t.TempDir()
-		yamlContent := "ticket:\n  prefixes:\n    - prefix: AL\ncode_metrics:\n  source_roots:\n    - src\n"
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		_, err := config.Load(tempDir)
-		if err == nil {
-			t.Fatalf("expected error for missing project_name, got nil")
-		}
-		if !errors.Is(err, config.ErrInvalidConfig) {
-			t.Errorf("expected ErrInvalidConfig, got %v", err)
-		}
-	})
-
-	t.Run("missing prefixes returns validation error", func(t *testing.T) {
-		tempDir := t.TempDir()
-		yamlContent := "project_name: TestProject\ncode_metrics:\n  source_roots:\n    - src\n\ntelemetry:\n  capture:\n    state_dir: capture-state\n"
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		_, err := config.Load(tempDir)
-		if err == nil {
-			t.Fatalf("expected error for missing prefixes, got nil")
-		}
-		if !errors.Is(err, config.ErrInvalidConfig) {
-			t.Errorf("expected ErrInvalidConfig, got %v", err)
-		}
-	})
-
-	t.Run("missing source_roots returns validation error", func(t *testing.T) {
-		tempDir := t.TempDir()
-		yamlContent := "project_name: TestProject\nticket:\n  prefixes:\n    - prefix: AL\n\ntelemetry:\n  capture:\n    state_dir: capture-state\n"
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		_, err := config.Load(tempDir)
-		if err == nil {
-			t.Fatalf("expected error for missing code_metrics.source_roots, got nil")
-		}
-		if !errors.Is(err, config.ErrInvalidConfig) {
-			t.Errorf("expected ErrInvalidConfig, got %v", err)
-		}
-	})
-
-	t.Run("nested single field overrides retain other defaults", func(t *testing.T) {
-		tempDir := t.TempDir()
-
-		partialContent := `
-project_name: CustomApp
-ticket:
-  case_insensitive: false
-  prefixes:
-    - prefix: AL
-workspaces:
-  dir: custom_workspaces_only
-code_metrics:
-  source_roots:
-    - src
-database:
-  read_only: false
-live:
-  poll_interval_ms: 1234
-anomaly_thresholds:
-  stall_threshold_seconds: 45
-  context_ceiling_warning_tokens: 160000
-  context_ceiling_critical_tokens: 200000
-
-telemetry:
-  capture:
-    state_dir: capture-state
-`
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(partialContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		cfg, err := config.Load(tempDir)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		// Verified overridden fields
-		if cfg.Ticket.CaseInsensitive {
-			t.Errorf("expected CaseInsensitive to be false")
-		}
-		if cfg.Workspaces.Dir != "custom_workspaces_only" {
-			t.Errorf("expected custom_workspaces_only, got %s", cfg.Workspaces.Dir)
-		}
-		if cfg.Database.ReadOnly {
-			t.Errorf("expected ReadOnly to be false")
-		}
-		if cfg.Live.PollIntervalMs != 1234 {
-			t.Errorf("expected PollIntervalMs 1234, got %d", cfg.Live.PollIntervalMs)
-		}
-		if cfg.AnomalyThresholds.StallThresholdSeconds != 45 {
-			t.Errorf("expected StallThresholdSeconds 45, got %d", cfg.AnomalyThresholds.StallThresholdSeconds)
-		}
-
-		// Explicitly configured fields match
-		if len(cfg.Ticket.Prefixes) != 1 || cfg.Ticket.Prefixes[0].Prefix != "AL" {
-			t.Errorf("unexpected ticket prefixes: %v", cfg.Ticket.Prefixes)
-		}
-		if len(cfg.CodeMetrics.SourceRoots) != 1 || cfg.CodeMetrics.SourceRoots[0] != "src" {
-			t.Errorf("unexpected code_metrics.source_roots: %v", cfg.CodeMetrics.SourceRoots)
-		}
-		if len(cfg.Workspaces.Artifacts) != 0 {
-			t.Errorf("expected zero default artifacts, got: %v", cfg.Workspaces.Artifacts)
-		}
-		if cfg.Database.Path != "~/.local/share/opencode/opencode.db" || cfg.Database.QueryTimeoutMs != 5000 || cfg.Database.BusyTimeoutMs != 5000 {
-			t.Errorf("unexpected database defaults: %+v", cfg.Database)
-		}
-		if cfg.Live.ActiveThresholdSeconds != 300 || cfg.Live.MaxTraceBufferMessages != 500 {
-			t.Errorf("unexpected live defaults: %+v", cfg.Live)
-		}
-		if cfg.AnomalyThresholds.ErrorRateThreshold != 0.25 || cfg.AnomalyThresholds.ContextExhaustionPct != 0.85 {
-			t.Errorf("unexpected anomaly threshold defaults: %+v", cfg.AnomalyThresholds)
-		}
-	})
-}
-
-func TestLoad_LegacyWorkspaceSourceFoldersDoNotSatisfySourceRoots(t *testing.T) {
-	tests := []struct {
-		name string
-		file string
-		body string
-	}{
-		{
-			name: "yaml",
-			file: ".agenticlens-config.yaml",
-			body: "project_name: Legacy\nticket:\n  prefixes: [AL]\nworkspaces:\n  src_folders: [src]\n\ntelemetry:\n  capture:\n    state_dir: capture-state\n",
-		},
-		{
-			name: "json",
-			file: ".agenticlens-config.json",
-			body: `{"project_name":"Legacy","ticket":{"prefixes":["AL"]},"workspaces":{"src_folders":["src"]},"telemetry":{"capture":{"state_dir":"capture-state"}}}`,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			dir := t.TempDir()
-			path := filepath.Join(dir, tt.file)
-			if err := os.WriteFile(path, []byte(tt.body), 0644); err != nil {
-				t.Fatal(err)
-			}
-			_, err := config.LoadFromFile(path)
-			if err == nil {
-				t.Fatal("expected legacy-only source roots to fail validation")
-			}
-			var validationErr *config.ConfigValidationError
-			if !errors.As(err, &validationErr) {
-				t.Fatalf("expected ConfigValidationError, got %v", err)
-			}
-			if !slices.Contains(validationErr.MissingFields, "code_metrics.source_roots") {
-				t.Errorf("expected code_metrics.source_roots validation error, got %v", validationErr.MissingFields)
-			}
-		})
-	}
-}
-
-func TestLoad_AdversarialLegacyJSONAndCanonicalPriority(t *testing.T) {
-	t.Run("legacy-only keys fail required validation", func(t *testing.T) {
-		tempDir := t.TempDir()
-
-		legacyEmptyJSON := `{
-			"ticket_prefix": "   ",
-			"workspaces_dir": "",
-			"src_folders": []
-		}`
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.json"), []byte(legacyEmptyJSON), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		_, err := config.Load(tempDir)
-		if err == nil {
-			t.Fatalf("expected error on empty legacy config, got nil")
-		}
-		if !errors.Is(err, config.ErrInvalidConfig) {
-			t.Errorf("expected ErrInvalidConfig, got %v", err)
-		}
-	})
-
-	t.Run("canonical roots are retained alongside ignored legacy keys", func(t *testing.T) {
-		tempDir := t.TempDir()
-
-		mixedJSON := `{
-			"project_name": "ModernSupersede",
-			"ticket_prefix": "LEGACY",
-			"workspaces_dir": "legacy_workspaces",
-			"src_folders": ["legacy_src"],
-			"ticket": {
-				"prefixes": ["MODERN"]
-			},
-			"workspaces": {
-				"dir": "modern_workspaces",
-				"src_folders": ["modern_web", "modern_backend"]
-			},
-			"code_metrics": {"source_roots": ["canonical_web", "canonical_backend"]},
-			"anomaly_thresholds": {
-				"context_ceiling_warning_tokens": 160000,
-				"context_ceiling_critical_tokens": 200000
-			}
-		,"telemetry":{"capture":{"state_dir":"capture-state"}}}`
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.json"), []byte(mixedJSON), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		cfg, err := config.Load(tempDir)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		if len(cfg.Ticket.Prefixes) != 1 || cfg.Ticket.Prefixes[0].Prefix != "MODERN" {
-			t.Errorf("expected MODERN ticket prefix, got %v", cfg.Ticket.Prefixes)
-		}
-		if cfg.Workspaces.Dir != "modern_workspaces" {
-			t.Errorf("expected modern_workspaces, got %s", cfg.Workspaces.Dir)
-		}
-		if len(cfg.CodeMetrics.SourceRoots) != 2 || cfg.CodeMetrics.SourceRoots[0] != "canonical_web" {
-			t.Errorf("expected canonical source roots, got %v", cfg.CodeMetrics.SourceRoots)
-		}
-	})
-}
-
-func TestLoad_AdversarialNonexistentPathsResilience(t *testing.T) {
-	t.Run("nonexistent directory returns ErrConfigNotFound", func(t *testing.T) {
-		nonexistentDir := filepath.Join(os.TempDir(), "agenticlens_nonexistent_test_dir_12345")
-		_ = os.RemoveAll(nonexistentDir)
-
-		_, err := config.Load(nonexistentDir)
-		if err == nil {
-			t.Fatalf("expected error on nonexistent directory, got nil")
-		}
-		if !errors.Is(err, config.ErrConfigNotFound) {
-			t.Errorf("expected ErrConfigNotFound, got %v", err)
-		}
-	})
-
-	t.Run("FindConfigFile on nonexistent directory returns empty string and nil error", func(t *testing.T) {
-		nonexistentDir := filepath.Join(os.TempDir(), "agenticlens_nonexistent_test_dir_67890")
-		_ = os.RemoveAll(nonexistentDir)
-
-		path, err := config.FindConfigFile(nonexistentDir)
-		if err != nil {
-			t.Fatalf("expected nil error for FindConfigFile on nonexistent dir, got %v", err)
-		}
-		if path != "" {
-			t.Errorf("expected empty string path for nonexistent directory, got %s", path)
-		}
-	})
-}
-
-func containsSubstr(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || filepath.Base(s) == substr || (len(substr) > 0 && searchSubstr(s, substr)))
-}
-
-func searchSubstr(s, substr string) bool {
-	for i := 0; i+len(substr) <= len(s); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
-}
-
-func assertConfigMatchesDefaults(t *testing.T, actual, expected domain.ProjectConfig) {
-	t.Helper()
-	if actual.ProjectName != expected.ProjectName {
-		t.Errorf("ProjectName mismatch: got %s, expected %s", actual.ProjectName, expected.ProjectName)
-	}
-	if actual.Workspaces.Dir != expected.Workspaces.Dir {
-		t.Errorf("Workspaces.Dir mismatch: got %s, expected %s", actual.Workspaces.Dir, expected.Workspaces.Dir)
-	}
-	if len(actual.Ticket.Prefixes) != len(expected.Ticket.Prefixes) {
-		t.Errorf("Ticket.Prefixes length mismatch: got %v, expected %v", actual.Ticket.Prefixes, expected.Ticket.Prefixes)
-	}
-	for i := 0; i < len(actual.Ticket.Prefixes) && i < len(expected.Ticket.Prefixes); i++ {
-		if actual.Ticket.Prefixes[i] != expected.Ticket.Prefixes[i] {
-			t.Errorf("Ticket.Prefixes[%d] mismatch: got %+v, expected %+v", i, actual.Ticket.Prefixes[i], expected.Ticket.Prefixes[i])
-		}
-	}
-	if actual.Database.QueryTimeoutMs != expected.Database.QueryTimeoutMs {
-		t.Errorf("Database.QueryTimeoutMs mismatch: got %d, expected %d", actual.Database.QueryTimeoutMs, expected.Database.QueryTimeoutMs)
-	}
-	if actual.Live.ActiveThresholdSeconds != expected.Live.ActiveThresholdSeconds {
-		t.Errorf("Live.ActiveThresholdSeconds mismatch: got %d, expected %d", actual.Live.ActiveThresholdSeconds, expected.Live.ActiveThresholdSeconds)
-	}
-	if actual.AnomalyThresholds.StallThresholdSeconds != expected.AnomalyThresholds.StallThresholdSeconds {
-		t.Errorf("StallThresholdSeconds mismatch: got %d, expected %d", actual.AnomalyThresholds.StallThresholdSeconds, expected.AnomalyThresholds.StallThresholdSeconds)
-	}
-}
-
-func TestLoad_FlexiblePrefixParsing(t *testing.T) {
-	t.Run("YAML structured prefix objects", func(t *testing.T) {
-		tempDir := t.TempDir()
-
-		yamlContent := `
-project_name: PrefixApp
-ticket:
-  prefixes:
-    - prefix: AL
-      description: Core features
-    - prefix: GEN
-      description: General tasks
-    - prefix: PO
-      description: Product owner
-workspaces:
-code_metrics:
-  source_roots:
-    - src
-anomaly_thresholds:
-  context_ceiling_warning_tokens: 160000
-  context_ceiling_critical_tokens: 200000
-
-telemetry:
-  capture:
-    state_dir: capture-state
-`
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		cfg, err := config.Load(tempDir)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		if len(cfg.Ticket.Prefixes) != 3 {
-			t.Fatalf("expected 3 prefixes, got %d", len(cfg.Ticket.Prefixes))
-		}
-		if cfg.Ticket.Prefixes[0].Prefix != "AL" || cfg.Ticket.Prefixes[0].Description != "Core features" {
-			t.Errorf("unexpected AL prefix: %+v", cfg.Ticket.Prefixes[0])
-		}
-		if cfg.Ticket.Prefixes[1].Prefix != "GEN" || cfg.Ticket.Prefixes[1].Description != "General tasks" {
-			t.Errorf("unexpected GEN prefix: %+v", cfg.Ticket.Prefixes[1])
-		}
-		if cfg.Ticket.Prefixes[2].Prefix != "PO" || cfg.Ticket.Prefixes[2].Description != "Product owner" {
-			t.Errorf("unexpected PO prefix: %+v", cfg.Ticket.Prefixes[2])
-		}
-		names := cfg.Ticket.PrefixNames()
-		if len(names) != 3 || names[0] != "AL" || names[1] != "GEN" || names[2] != "PO" {
-			t.Errorf("unexpected PrefixNames: %v", names)
-		}
-	})
-
-	t.Run("YAML plain string scalars", func(t *testing.T) {
-		tempDir := t.TempDir()
-
-		yamlContent := `
-project_name: PrefixApp
-ticket:
-  prefixes:
-    - AL
-    - GEN
-    - PO
-workspaces:
-code_metrics:
-  source_roots:
-    - src
-anomaly_thresholds:
-  context_ceiling_warning_tokens: 160000
-  context_ceiling_critical_tokens: 200000
-
-telemetry:
-  capture:
-    state_dir: capture-state
-`
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		cfg, err := config.Load(tempDir)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		if len(cfg.Ticket.Prefixes) != 3 {
-			t.Fatalf("expected 3 prefixes, got %d", len(cfg.Ticket.Prefixes))
-		}
-		for i, name := range []string{"AL", "GEN", "PO"} {
-			if cfg.Ticket.Prefixes[i].Prefix != name {
-				t.Errorf("expected prefix[%d] %s, got %s", i, name, cfg.Ticket.Prefixes[i].Prefix)
-			}
-			if cfg.Ticket.Prefixes[i].Description != "" {
-				t.Errorf("expected empty description for scalar, got %q", cfg.Ticket.Prefixes[i].Description)
-			}
-		}
-		names := cfg.Ticket.PrefixNames()
-		if len(names) != 3 || names[0] != "AL" || names[1] != "GEN" || names[2] != "PO" {
-			t.Errorf("unexpected PrefixNames: %v", names)
-		}
-	})
-
-	t.Run("YAML mixed prefix formats", func(t *testing.T) {
-		tempDir := t.TempDir()
-
-		yamlContent := `
-project_name: PrefixApp
-ticket:
-  prefixes:
-    - prefix: AL
-      description: Core features
-    - GEN
-    - prefix: PO
-      description: Product owner
-workspaces:
-code_metrics:
-  source_roots:
-    - src
-anomaly_thresholds:
-  context_ceiling_warning_tokens: 160000
-  context_ceiling_critical_tokens: 200000
-
-telemetry:
-  capture:
-    state_dir: capture-state
-`
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		cfg, err := config.Load(tempDir)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		if len(cfg.Ticket.Prefixes) != 3 {
-			t.Fatalf("expected 3 prefixes, got %d", len(cfg.Ticket.Prefixes))
-		}
-		if cfg.Ticket.Prefixes[0].Prefix != "AL" || cfg.Ticket.Prefixes[0].Description != "Core features" {
-			t.Errorf("unexpected AL prefix: %+v", cfg.Ticket.Prefixes[0])
-		}
-		if cfg.Ticket.Prefixes[1].Prefix != "GEN" || cfg.Ticket.Prefixes[1].Description != "" {
-			t.Errorf("unexpected GEN prefix: %+v", cfg.Ticket.Prefixes[1])
-		}
-		if cfg.Ticket.Prefixes[2].Prefix != "PO" || cfg.Ticket.Prefixes[2].Description != "Product owner" {
-			t.Errorf("unexpected PO prefix: %+v", cfg.Ticket.Prefixes[2])
-		}
-	})
-
-	t.Run("JSON structured and string prefix compatibility", func(t *testing.T) {
-		tempDir := t.TempDir()
-		structuredPath := filepath.Join(tempDir, "structured.json")
-		scalarPath := filepath.Join(tempDir, "scalar.json")
-
-		structuredJSON := `{
-			"project_name": "PrefixApp",
-			"code_metrics": {"source_roots": ["src"]},
-			"anomaly_thresholds": {
-				"context_ceiling_warning_tokens": 160000,
-				"context_ceiling_critical_tokens": 200000
-			},
-			"ticket": {
-				"prefixes": [
-					{"prefix": "AL", "description": "Core features"},
-					{"prefix": "PO", "description": "Product Owner"}
-				]
-			}
-		,"telemetry":{"capture":{"state_dir":"capture-state"}}}`
-		scalarJSON := `{
-			"project_name": "PrefixApp",
-			"code_metrics": {"source_roots": ["src"]},
-			"anomaly_thresholds": {
-				"context_ceiling_warning_tokens": 160000,
-				"context_ceiling_critical_tokens": 200000
-			},
-			"ticket": {
-				"prefixes": ["AL", "PO"]
-			}
-		,"telemetry":{"capture":{"state_dir":"capture-state"}}}`
-
-		if err := os.WriteFile(structuredPath, []byte(structuredJSON), 0644); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(scalarPath, []byte(scalarJSON), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		cfgStruct, err := config.LoadFromFile(structuredPath)
-		if err != nil {
-			t.Fatalf("unexpected error loading structured json: %v", err)
-		}
-		cfgScalar, err := config.LoadFromFile(scalarPath)
-		if err != nil {
-			t.Fatalf("unexpected error loading scalar json: %v", err)
-		}
-
-		namesStruct := cfgStruct.Ticket.PrefixNames()
-		namesScalar := cfgScalar.Ticket.PrefixNames()
-
-		if len(namesStruct) != 2 || namesStruct[0] != "AL" || namesStruct[1] != "PO" {
-			t.Errorf("unexpected structured names: %v", namesStruct)
-		}
-		if len(namesScalar) != 2 || namesScalar[0] != "AL" || namesScalar[1] != "PO" {
-			t.Errorf("unexpected scalar names: %v", namesScalar)
-		}
-		if cfgStruct.Ticket.Prefixes[0].Description != "Core features" {
-			t.Errorf("expected description 'Core features', got %q", cfgStruct.Ticket.Prefixes[0].Description)
-		}
-		if cfgScalar.Ticket.Prefixes[0].Description != "" {
-			t.Errorf("expected empty description for scalar, got %q", cfgScalar.Ticket.Prefixes[0].Description)
-		}
-	})
-
-	t.Run("legacy flat JSON with PO prefix rejected", func(t *testing.T) {
-		tempDir := t.TempDir()
-
-		legacyJSON := `{"project_name": "LegacyPO", "code_metrics": {"source_roots": ["src"]}, "ticket_prefix": "PO","telemetry":{"capture":{"state_dir":"capture-state"}}}`
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.json"), []byte(legacyJSON), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		_, err := config.Load(tempDir)
-		if err == nil {
-			t.Fatalf("expected error for legacy flat ticket_prefix without canonical section, got nil")
-		}
-		if !errors.Is(err, config.ErrInvalidConfig) {
-			t.Errorf("expected ErrInvalidConfig, got %v", err)
-		}
-	})
-
-	t.Run("priority after config.json deletion", func(t *testing.T) {
-		tempDir := t.TempDir()
-
-		yamlContent := `project_name: ModernOnly` + testValidSuffixYAML
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		cfg, err := config.Load(tempDir)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if cfg.ProjectName != "ModernOnly" {
-			t.Errorf("expected ModernOnly, got %s", cfg.ProjectName)
-		}
-	})
-
-	t.Run("invalid prefix format handling in YAML and JSON", func(t *testing.T) {
-		tempDir := t.TempDir()
-
-		// YAML with integer prefix
-		yamlInt := `ticket: { prefixes: [123] }`
-		yamlIntPath := filepath.Join(tempDir, "invalid_int.yaml")
-		if err := os.WriteFile(yamlIntPath, []byte(yamlInt), 0644); err != nil {
-			t.Fatal(err)
-		}
-		_, err := config.LoadFromFile(yamlIntPath)
-		if err == nil {
-			t.Fatal("expected error on integer prefix in YAML, got nil")
-		}
-
-		// YAML with bool prefix
-		yamlBool := `ticket: { prefixes: [true] }`
-		yamlBoolPath := filepath.Join(tempDir, "invalid_bool.yaml")
-		if err := os.WriteFile(yamlBoolPath, []byte(yamlBool), 0644); err != nil {
-			t.Fatal(err)
-		}
-		_, err = config.LoadFromFile(yamlBoolPath)
-		if err == nil {
-			t.Fatal("expected error on boolean prefix in YAML, got nil")
-		}
-
-		// YAML with nested array prefix
-		yamlArray := `ticket: { prefixes: [[nested]] }`
-		yamlArrayPath := filepath.Join(tempDir, "invalid_array.yaml")
-		if err := os.WriteFile(yamlArrayPath, []byte(yamlArray), 0644); err != nil {
-			t.Fatal(err)
-		}
-		_, err = config.LoadFromFile(yamlArrayPath)
-		if err == nil {
-			t.Fatal("expected error on nested array prefix in YAML, got nil")
-		}
-
-		// JSON with integer prefix
-		jsonInt := `{"ticket": {"prefixes": [123]}}`
-		jsonIntPath := filepath.Join(tempDir, "invalid_int.json")
-		if err := os.WriteFile(jsonIntPath, []byte(jsonInt), 0644); err != nil {
-			t.Fatal(err)
-		}
-		_, err = config.LoadFromFile(jsonIntPath)
-		if err == nil {
-			t.Fatal("expected error on integer prefix in JSON, got nil")
-		}
-
-		// JSON with boolean prefix
-		jsonBool := `{"ticket": {"prefixes": [false]}}`
-		jsonBoolPath := filepath.Join(tempDir, "invalid_bool.json")
-		if err := os.WriteFile(jsonBoolPath, []byte(jsonBool), 0644); err != nil {
-			t.Fatal(err)
-		}
-		_, err = config.LoadFromFile(jsonBoolPath)
-		if err == nil {
-			t.Fatal("expected error on boolean prefix in JSON, got nil")
-		}
-	})
-}
-
-func TestLoad_TicketTypePrefixParsing(t *testing.T) {
-	t.Parallel()
-
-	t.Run("YAML structured prefix with ticket_type", func(t *testing.T) {
-		t.Parallel()
-		tempDir := t.TempDir()
-
-		yamlContent := `
-project_name: TicketTypeApp
-ticket:
-  prefixes:
-    - prefix: AL
-      description: Core features
-    - prefix: GEN
-      description: General tasks
-      ticket_type: chore
-    - prefix: PO
-      description: Product owner
-      ticket_type: docs
-    - prefix: FIX
-      ticket_type: " fix "
-workspaces:
-code_metrics:
-  source_roots:
-    - src
-anomaly_thresholds:
-  context_ceiling_warning_tokens: 160000
-  context_ceiling_critical_tokens: 200000
-
-telemetry:
-  capture:
-    state_dir: capture-state
-`
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		cfg, err := config.Load(tempDir)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		if len(cfg.Ticket.Prefixes) != 4 {
-			t.Fatalf("expected 4 prefixes, got %d", len(cfg.Ticket.Prefixes))
-		}
-		if cfg.Ticket.Prefixes[0].Prefix != "AL" || cfg.Ticket.Prefixes[0].TicketType != "" {
-			t.Errorf("expected AL with empty ticket_type, got %+v", cfg.Ticket.Prefixes[0])
-		}
-		if cfg.Ticket.Prefixes[1].Prefix != "GEN" || cfg.Ticket.Prefixes[1].TicketType != "chore" {
-			t.Errorf("expected GEN with ticket_type chore, got %+v", cfg.Ticket.Prefixes[1])
-		}
-		if cfg.Ticket.Prefixes[2].Prefix != "PO" || cfg.Ticket.Prefixes[2].TicketType != "docs" {
-			t.Errorf("expected PO with ticket_type docs, got %+v", cfg.Ticket.Prefixes[2])
-		}
-		if cfg.Ticket.Prefixes[3].Prefix != "FIX" || cfg.Ticket.Prefixes[3].TicketType != "fix" {
-			t.Errorf("expected FIX with trimmed ticket_type fix, got %+v", cfg.Ticket.Prefixes[3])
-		}
-	})
-
-	t.Run("JSON structured prefix with ticket_type", func(t *testing.T) {
-		t.Parallel()
-		tempDir := t.TempDir()
-		jsonPath := filepath.Join(tempDir, "config.json")
-
-		jsonContent := `{
-			"project_name": "TicketTypeApp",
-			"code_metrics": {"source_roots": ["src"]},
-			"anomaly_thresholds": {
-				"context_ceiling_warning_tokens": 160000,
-				"context_ceiling_critical_tokens": 200000
-			},
-			"ticket": {
-				"prefixes": [
-					{"prefix": "AL", "description": "Core"},
-					{"prefix": "GEN", "description": "Tasks", "ticket_type": "chore"},
-					{"prefix": "PO", "ticket_type": "docs"},
-					"SCALAR"
-				]
-			}
-		,"telemetry":{"capture":{"state_dir":"capture-state"}}}`
-		if err := os.WriteFile(jsonPath, []byte(jsonContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		cfg, err := config.LoadFromFile(jsonPath)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		if len(cfg.Ticket.Prefixes) != 4 {
-			t.Fatalf("expected 4 prefixes, got %d", len(cfg.Ticket.Prefixes))
-		}
-		if cfg.Ticket.Prefixes[0].Prefix != "AL" || cfg.Ticket.Prefixes[0].TicketType != "" {
-			t.Errorf("expected AL with empty ticket_type, got %+v", cfg.Ticket.Prefixes[0])
-		}
-		if cfg.Ticket.Prefixes[1].Prefix != "GEN" || cfg.Ticket.Prefixes[1].TicketType != "chore" {
-			t.Errorf("expected GEN with ticket_type chore, got %+v", cfg.Ticket.Prefixes[1])
-		}
-		if cfg.Ticket.Prefixes[2].Prefix != "PO" || cfg.Ticket.Prefixes[2].TicketType != "docs" {
-			t.Errorf("expected PO with ticket_type docs, got %+v", cfg.Ticket.Prefixes[2])
-		}
-		if cfg.Ticket.Prefixes[3].Prefix != "SCALAR" || cfg.Ticket.Prefixes[3].TicketType != "" {
-			t.Errorf("expected SCALAR with empty ticket_type, got %+v", cfg.Ticket.Prefixes[3])
-		}
-	})
-}
-
-func TestLoad_RoleOrderParsingAndFallback(t *testing.T) {
-	t.Parallel()
-
-	defaultOrder := domain.DefaultProjectConfig().RoleOrder
-
-	t.Run("role_order parsed accurately from JSON", func(t *testing.T) {
-		t.Parallel()
-		tempDir := t.TempDir()
-
-		jsonContent := `{
-			"project_name": "JSONRoleOrderProject",
-			"code_metrics": {"source_roots": ["src"]},
-			"anomaly_thresholds": {
-				"context_ceiling_warning_tokens": 160000,
-				"context_ceiling_critical_tokens": 200000
-			},
-			"ticket": {"prefixes": [{"prefix": "AL"}]},
-			"role_order": ["tester", "researcher", "developer", "coder"]
-		,"telemetry":{"capture":{"state_dir":"capture-state"}}}`
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.json"), []byte(jsonContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		cfg, err := config.Load(tempDir)
-		if err != nil {
-			t.Fatalf("unexpected error loading config: %v", err)
-		}
-
-		expected := []string{"tester", "researcher", "developer", "coder"}
-		if len(cfg.RoleOrder) != len(expected) {
-			t.Fatalf("expected RoleOrder len %d, got %d: %v", len(expected), len(cfg.RoleOrder), cfg.RoleOrder)
-		}
-		for i, r := range expected {
-			if cfg.RoleOrder[i] != r {
-				t.Errorf("expected RoleOrder[%d] %q, got %q", i, r, cfg.RoleOrder[i])
-			}
-		}
-	})
-
-	t.Run("role_order parsed accurately from YAML", func(t *testing.T) {
-		t.Parallel()
-		tempDir := t.TempDir()
-
-		yamlContent := `
-project_name: YAMLRoleOrderProject
-ticket:
-  prefixes:
-    - prefix: AL
-workspaces:
-code_metrics:
-  source_roots:
-    - src
-anomaly_thresholds:
-  context_ceiling_warning_tokens: 160000
-  context_ceiling_critical_tokens: 200000
-role_order:
-  - lead-qa
-  - architect
-  - researcher
-
-telemetry:
-  capture:
-    state_dir: capture-state
-`
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		cfg, err := config.Load(tempDir)
-		if err != nil {
-			t.Fatalf("unexpected error loading config: %v", err)
-		}
-
-		expected := []string{"lead-qa", "architect", "researcher"}
-		if len(cfg.RoleOrder) != len(expected) {
-			t.Fatalf("expected RoleOrder len %d, got %d: %v", len(expected), len(cfg.RoleOrder), cfg.RoleOrder)
-		}
-		for i, r := range expected {
-			if cfg.RoleOrder[i] != r {
-				t.Errorf("expected RoleOrder[%d] %q, got %q", i, r, cfg.RoleOrder[i])
-			}
-		}
-	})
-
-	t.Run("fallback to DefaultProjectConfig when role_order omitted from YAML", func(t *testing.T) {
-		t.Parallel()
-		tempDir := t.TempDir()
-
-		yamlContent := `project_name: OmittedRoleOrderYAML` + testValidSuffixYAML
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		cfg, err := config.Load(tempDir)
-		if err != nil {
-			t.Fatalf("unexpected error loading config: %v", err)
-		}
-
-		if len(cfg.RoleOrder) != 0 || cfg.RoleOrder == nil {
-			t.Fatalf("expected empty non-nil RoleOrder, got %v", cfg.RoleOrder)
-		}
-		if len(cfg.RoleOrder) != len(defaultOrder) {
-			t.Fatalf("expected default RoleOrder len %d, got %d: %v", len(defaultOrder), len(cfg.RoleOrder), cfg.RoleOrder)
-		}
-	})
-
-	t.Run("fallback to DefaultProjectConfig when role_order omitted from JSON", func(t *testing.T) {
-		t.Parallel()
-		tempDir := t.TempDir()
-
-		jsonContent := `{"project_name": "OmittedRoleOrderJSON"` + testValidSuffixJSON
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.json"), []byte(jsonContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		cfg, err := config.Load(tempDir)
-		if err != nil {
-			t.Fatalf("unexpected error loading config: %v", err)
-		}
-
-		if len(cfg.RoleOrder) != 0 || cfg.RoleOrder == nil {
-			t.Fatalf("expected empty non-nil RoleOrder, got %v", cfg.RoleOrder)
-		}
-		if len(cfg.RoleOrder) != len(defaultOrder) {
-			t.Fatalf("expected default RoleOrder len %d, got %d: %v", len(defaultOrder), len(cfg.RoleOrder), cfg.RoleOrder)
-		}
-	})
-
-	t.Run("returns ErrConfigNotFound when config file completely absent", func(t *testing.T) {
-		t.Parallel()
-		tempDir := t.TempDir()
-
-		_, err := config.Load(tempDir)
-		if err == nil {
-			t.Fatalf("expected error loading config from empty dir, got nil")
-		}
-		if !errors.Is(err, config.ErrConfigNotFound) {
-			t.Errorf("expected ErrConfigNotFound, got: %v", err)
-		}
-	})
-
-	t.Run("role_order sanitization trims whitespace lowercases and filters empty in YAML", func(t *testing.T) {
-		t.Parallel()
-		tempDir := t.TempDir()
-
-		yamlContent := `
-project_name: SanitizedYAML
-ticket:
-  prefixes:
-    - prefix: AL
-workspaces:
-code_metrics:
-  source_roots:
-    - src
-anomaly_thresholds:
-  context_ceiling_warning_tokens: 160000
-  context_ceiling_critical_tokens: 200000
-role_order:
-  - "  TESTER  "
-  - "   "
-  - ""
-  - "  RESEARCHER\t"
-  - "DeVeLoPeR"
-
-telemetry:
-  capture:
-    state_dir: capture-state
-`
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		cfg, err := config.Load(tempDir)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		expected := []string{"tester", "researcher", "developer"}
-		if len(cfg.RoleOrder) != len(expected) {
-			t.Fatalf("expected len %d, got %d: %v", len(expected), len(cfg.RoleOrder), cfg.RoleOrder)
-		}
-		for i, r := range expected {
-			if cfg.RoleOrder[i] != r {
-				t.Errorf("at index %d: expected %q, got %q", i, r, cfg.RoleOrder[i])
-			}
-		}
-	})
-
-	t.Run("role_order sanitization trims whitespace lowercases and filters empty in JSON", func(t *testing.T) {
-		t.Parallel()
-		tempDir := t.TempDir()
-
-		jsonContent := `{
-			"project_name": "SanitizedJSON",
-			"code_metrics": {"source_roots": ["src"]},
-			"anomaly_thresholds": {
-				"context_ceiling_warning_tokens": 160000,
-				"context_ceiling_critical_tokens": 200000
-			},
-			"ticket": {"prefixes": [{"prefix": "AL"}]},
-			"role_order": ["  LEAD-QA  ", "  \n  ", "", "ArChItEcT"]
-		,"telemetry":{"capture":{"state_dir":"capture-state"}}}`
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.json"), []byte(jsonContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		cfg, err := config.Load(tempDir)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		expected := []string{"lead-qa", "architect"}
-		if len(cfg.RoleOrder) != len(expected) {
-			t.Fatalf("expected len %d, got %d: %v", len(expected), len(cfg.RoleOrder), cfg.RoleOrder)
-		}
-		for i, r := range expected {
-			if cfg.RoleOrder[i] != r {
-				t.Errorf("at index %d: expected %q, got %q", i, r, cfg.RoleOrder[i])
-			}
-		}
-	})
-
-	t.Run("role_order containing only whitespace items collapses to empty non-nil slice", func(t *testing.T) {
-		t.Parallel()
-		tempDir := t.TempDir()
-
-		yamlContent := `
-project_name: WhitespaceRoles
-ticket:
-  prefixes:
-    - prefix: AL
-workspaces:
-code_metrics:
-  source_roots:
-    - src
-anomaly_thresholds:
-  context_ceiling_warning_tokens: 160000
-  context_ceiling_critical_tokens: 200000
-role_order:
-  - "   "
-  - "\t"
-  - "\n"
-
-telemetry:
-  capture:
-    state_dir: capture-state
-`
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		cfg, err := config.Load(tempDir)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		if len(cfg.RoleOrder) != 0 || cfg.RoleOrder == nil {
-			t.Fatalf("expected empty non-nil RoleOrder, got %v", cfg.RoleOrder)
-		}
-	})
-}
-
-func TestLoad_RootConfigurationParsing(t *testing.T) {
-	t.Parallel()
-	tempDir := t.TempDir()
-
-	yamlContent := `
-project_name: RootProject
-ticket:
-  prefixes:
-    - prefix: ROOT
-      description: Root initiatives
-      ticket_type: feat
-    - prefix: TASK
-      description: Task trackers
-      ticket_type: chore
-  case_insensitive: true
-  custom_patterns:
-    - ROOT-(\d+)
-workspaces:
-  dir: root_workspaces
-code_metrics:
-  source_roots:
-    - web
-    - backend
-  include:
-    - "backend/**"
-  exclude:
-    - "vendor/**"
-  test_patterns:
-    - "*_test.go"
-  prod_patterns:
-    - "*.go"
-database:
-  path: /tmp/root.db
-  query_timeout_ms: 6000
-  busy_timeout_ms: 7000
-  read_only: true
-live:
-  active_threshold_seconds: 250
-  poll_interval_ms: 1500
-  max_trace_buffer_messages: 600
-anomaly_thresholds:
-  stall_threshold_seconds: 90
-  error_rate_threshold: 0.20
-  context_exhaustion_pct: 0.80
-  context_ceiling_warning_tokens: 160000
-  context_ceiling_critical_tokens: 200000
-role_mappings:
-  architect: planner
-  qa: tester
-role_order:
-  - orchestrator
-  - planner
-  - coder
-
-telemetry:
-  capture:
-    state_dir: capture-state
-`
-	if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(yamlContent), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	cfg, err := config.Load(tempDir)
-	if err != nil {
-		t.Fatalf("unexpected error loading root config: %v", err)
-	}
-
-	if cfg.ProjectName != "RootProject" {
-		t.Errorf("expected RootProject, got %s", cfg.ProjectName)
-	}
-	if len(cfg.Ticket.Prefixes) != 2 || cfg.Ticket.Prefixes[0].Prefix != "ROOT" || cfg.Ticket.Prefixes[1].Prefix != "TASK" {
-		t.Errorf("unexpected ticket prefixes: %v", cfg.Ticket.Prefixes)
-	}
-	if cfg.Ticket.Prefixes[0].TicketType != "feat" || cfg.Ticket.Prefixes[1].TicketType != "chore" {
-		t.Errorf("unexpected ticket types: %v", cfg.Ticket.Prefixes)
-	}
-	if !cfg.Ticket.CaseInsensitive {
-		t.Errorf("expected CaseInsensitive to be true")
-	}
-	if len(cfg.Ticket.CustomPatterns) != 1 || cfg.Ticket.CustomPatterns[0] != `ROOT-(\d+)` {
-		t.Errorf("unexpected custom patterns: %v", cfg.Ticket.CustomPatterns)
-	}
-	if cfg.Workspaces.Dir != "root_workspaces" {
-		t.Errorf("expected root_workspaces, got %s", cfg.Workspaces.Dir)
-	}
-	if len(cfg.CodeMetrics.SourceRoots) != 2 || cfg.CodeMetrics.SourceRoots[0] != "web" || cfg.CodeMetrics.SourceRoots[1] != "backend" {
-		t.Errorf("unexpected code_metrics.source_roots: %v", cfg.CodeMetrics.SourceRoots)
-	}
-	if cfg.Database.Path != "/tmp/root.db" {
-		t.Errorf("unexpected Database.Path: %s", cfg.Database.Path)
-	}
-	if cfg.Database.QueryTimeoutMs != 6000 || cfg.Database.BusyTimeoutMs != 7000 || !cfg.Database.ReadOnly {
-		t.Errorf("unexpected database config: %+v", cfg.Database)
-	}
-	if cfg.Live.ActiveThresholdSeconds != 250 || cfg.Live.PollIntervalMs != 1500 || cfg.Live.MaxTraceBufferMessages != 600 {
-		t.Errorf("unexpected live config: %+v", cfg.Live)
-	}
-	if cfg.AnomalyThresholds.StallThresholdSeconds != 90 || cfg.AnomalyThresholds.ErrorRateThreshold != 0.20 || cfg.AnomalyThresholds.ContextExhaustionPct != 0.80 {
-		t.Errorf("unexpected anomaly thresholds: %+v", cfg.AnomalyThresholds)
-	}
-	if len(cfg.CodeMetrics.Include) != 1 || cfg.CodeMetrics.Include[0] != "backend/**" {
-		t.Errorf("unexpected code metrics include: %v", cfg.CodeMetrics.Include)
-	}
-	if cfg.RoleMappings.ResolveRole("architect") != domain.AgentRole("planner") {
-		t.Errorf("expected RolePlanner for architect, got %s", cfg.RoleMappings.ResolveRole("architect"))
-	}
-	if len(cfg.RoleOrder) != 3 || cfg.RoleOrder[0] != "orchestrator" || cfg.RoleOrder[1] != "planner" || cfg.RoleOrder[2] != "coder" {
-		t.Errorf("unexpected RoleOrder: %v", cfg.RoleOrder)
-	}
-}
-
-func TestLoad_RootFilePriorityAndPrecedence(t *testing.T) {
-	t.Parallel()
-
-	t.Run("root yaml takes precedence over root yml and root json", func(t *testing.T) {
-		t.Parallel()
-		tempDir := t.TempDir()
-
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte("project_name: FromRootYAML"+testValidSuffixYAML), 0644); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yml"), []byte("project_name: FromRootYML"+testValidSuffixYAML), 0644); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.json"), []byte(`{"project_name": "FromRootJSON"`+testValidSuffixJSON), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		cfg, err := config.Load(tempDir)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if cfg.ProjectName != "FromRootYAML" {
-			t.Errorf("expected FromRootYAML, got %s", cfg.ProjectName)
-		}
-	})
-
-	t.Run("root yml takes precedence over root json", func(t *testing.T) {
-		t.Parallel()
-		tempDir := t.TempDir()
-
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yml"), []byte("project_name: FromRootYML"+testValidSuffixYAML), 0644); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.json"), []byte(`{"project_name": "FromRootJSON"`+testValidSuffixJSON), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		cfg, err := config.Load(tempDir)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if cfg.ProjectName != "FromRootYML" {
-			t.Errorf("expected FromRootYML, got %s", cfg.ProjectName)
-		}
-	})
-
-	t.Run("root json selected when root yaml and yml absent", func(t *testing.T) {
-		t.Parallel()
-		tempDir := t.TempDir()
-
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.json"), []byte(`{"project_name": "FromRootJSON"`+testValidSuffixJSON), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		cfg, err := config.Load(tempDir)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if cfg.ProjectName != "FromRootJSON" {
-			t.Errorf("expected FromRootJSON, got %s", cfg.ProjectName)
-		}
-	})
-
-	t.Run("legacy subfolder .agenticlens is ignored and returns ErrConfigNotFound", func(t *testing.T) {
-		t.Parallel()
-		tempDir := t.TempDir()
-		legacyDir := filepath.Join(tempDir, ".agenticlens")
-		if err := os.MkdirAll(legacyDir, 0755); err != nil {
-			t.Fatal(err)
-		}
-
-		if err := os.WriteFile(filepath.Join(legacyDir, "config.yaml"), []byte("project_name: LegacyYAML"+testValidSuffixYAML), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		_, err := config.Load(tempDir)
-		if err == nil {
-			t.Fatalf("expected ErrConfigNotFound when only legacy .agenticlens exists, got nil")
-		}
-		if !errors.Is(err, config.ErrConfigNotFound) {
-			t.Errorf("expected ErrConfigNotFound, got %v", err)
-		}
-	})
-}
-
-func TestFindConfigFile_RootUpwardTraversal(t *testing.T) {
-	t.Parallel()
-	tempDir := t.TempDir()
-	expectedPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
-	if err := os.WriteFile(expectedPath, []byte("project_name: RootTraversal"), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	subDir := filepath.Join(tempDir, "sub1", "sub2", "sub3")
-	if err := os.MkdirAll(subDir, 0755); err != nil {
-		t.Fatal(err)
-	}
-
-	found, err := config.FindConfigFile(subDir)
-	if err != nil {
-		t.Fatalf("unexpected error finding config file: %v", err)
-	}
-	if found != expectedPath {
-		t.Errorf("expected %s, got %s", expectedPath, found)
-	}
-}
-
-func TestLoad_StrictThreeTierCandidatePriorityElimination(t *testing.T) {
-	t.Parallel()
-	tempDir := t.TempDir()
-
-	c1 := filepath.Join(tempDir, ".agenticlens-config.yaml")
-	c2 := filepath.Join(tempDir, ".agenticlens-config.yml")
-	c3 := filepath.Join(tempDir, ".agenticlens-config.json")
-
-	if err := os.WriteFile(c1, []byte("project_name: Tier1_RootYAML"+testValidSuffixYAML), 0644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(c2, []byte("project_name: Tier2_RootYML"+testValidSuffixYAML), 0644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(c3, []byte(`{"project_name": "Tier3_RootJSON"`+testValidSuffixJSON), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	tiers := []struct {
-		name         string
-		expectedPath string
-		expectedName string
-		toDelete     string
-	}{
-		{
-			name:         "Tier 1: Root YAML",
-			expectedPath: c1,
-			expectedName: "Tier1_RootYAML",
-			toDelete:     c1,
-		},
-		{
-			name:         "Tier 2: Root YML",
-			expectedPath: c2,
-			expectedName: "Tier2_RootYML",
-			toDelete:     c2,
-		},
-		{
-			name:         "Tier 3: Root JSON",
-			expectedPath: c3,
-			expectedName: "Tier3_RootJSON",
-			toDelete:     c3,
-		},
-	}
-
-	for _, tc := range tiers {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			found, err := config.FindConfigFile(tempDir)
-			if err != nil {
-				t.Fatalf("unexpected error finding config: %v", err)
-			}
-			if found != tc.expectedPath {
-				t.Errorf("expected path %s, got %s", tc.expectedPath, found)
-			}
-
-			cfg, err := config.Load(tempDir)
-			if err != nil {
-				t.Fatalf("unexpected error loading config: %v", err)
-			}
-			if cfg.ProjectName != tc.expectedName {
-				t.Errorf("expected project name %s, got %s", tc.expectedName, cfg.ProjectName)
-			}
-
-			if err := os.Remove(tc.toDelete); err != nil {
-				t.Fatalf("failed removing %s: %v", tc.toDelete, err)
-			}
-		})
-	}
-
-	t.Run("Tier 4: Default fallback after all candidates removed returns ErrConfigNotFound", func(t *testing.T) {
-		found, err := config.FindConfigFile(tempDir)
-		if err != nil {
-			t.Fatalf("unexpected error finding config: %v", err)
-		}
-		if found != "" {
-			t.Errorf("expected empty path, got %s", found)
-		}
-
-		_, err = config.Load(tempDir)
-		if err == nil {
-			t.Fatalf("expected error loading absent config, got nil")
-		}
-		if !errors.Is(err, config.ErrConfigNotFound) {
-			t.Errorf("expected ErrConfigNotFound, got %v", err)
-		}
-	})
-}
-
-func TestLoad_HostileFilesystemEdgeCases(t *testing.T) {
-	t.Parallel()
-
-	t.Run("root yaml is a directory should be skipped in favor of root yml", func(t *testing.T) {
-		t.Parallel()
-		tempDir := t.TempDir()
-
-		dirCandidate := filepath.Join(tempDir, ".agenticlens-config.yaml")
-		if err := os.MkdirAll(dirCandidate, 0755); err != nil {
-			t.Fatal(err)
-		}
-		fileCandidate := filepath.Join(tempDir, ".agenticlens-config.yml")
-		if err := os.WriteFile(fileCandidate, []byte("project_name: SkipDirYML"+testValidSuffixYAML), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		found, err := config.FindConfigFile(tempDir)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if found != fileCandidate {
-			t.Errorf("expected %s, got %s", fileCandidate, found)
-		}
-
-		cfg, err := config.Load(tempDir)
-		if err != nil {
-			t.Fatalf("unexpected load error: %v", err)
-		}
-		if cfg.ProjectName != "SkipDirYML" {
-			t.Errorf("expected SkipDirYML, got %s", cfg.ProjectName)
-		}
-	})
-
-	t.Run("legacy .agenticlens path is a file rather than directory", func(t *testing.T) {
-		t.Parallel()
-		tempDir := t.TempDir()
-
-		legacyFile := filepath.Join(tempDir, ".agenticlens")
-		if err := os.WriteFile(legacyFile, []byte("regular file, not directory"), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		jsonCandidate := filepath.Join(tempDir, ".agenticlens-config.json")
-		if err := os.WriteFile(jsonCandidate, []byte(`{"project_name": "LegacyFileSafeJSON"`+testValidSuffixJSON), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		found, err := config.FindConfigFile(tempDir)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if found != jsonCandidate {
-			t.Errorf("expected %s, got %s", jsonCandidate, found)
-		}
-
-		cfg, err := config.Load(tempDir)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if cfg.ProjectName != "LegacyFileSafeJSON" {
-			t.Errorf("expected LegacyFileSafeJSON, got %s", cfg.ProjectName)
-		}
-	})
-
-	t.Run("empty legacy directory in child does not shadow root config in parent", func(t *testing.T) {
-		t.Parallel()
-		tempDir := t.TempDir()
-
-		parentConfig := filepath.Join(tempDir, ".agenticlens-config.yaml")
-		if err := os.WriteFile(parentConfig, []byte("project_name: ParentRootYAML"+testValidSuffixYAML), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		childDir := filepath.Join(tempDir, "child_repo")
-		emptyLegacyDir := filepath.Join(childDir, ".agenticlens")
-		if err := os.MkdirAll(emptyLegacyDir, 0755); err != nil {
-			t.Fatal(err)
-		}
-
-		found, err := config.FindConfigFile(childDir)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if found != parentConfig {
-			t.Errorf("expected parent config %s, got %s", parentConfig, found)
-		}
-
-		cfg, err := config.Load(childDir)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if cfg.ProjectName != "ParentRootYAML" {
-			t.Errorf("expected ParentRootYAML, got %s", cfg.ProjectName)
-		}
-	})
-}
-
-func TestLoad_BoundaryAndCorruptedConfigs(t *testing.T) {
-	t.Parallel()
-
-	t.Run("empty root yaml config file returns validation error", func(t *testing.T) {
-		t.Parallel()
-		tempDir := t.TempDir()
-		cfgPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
-		if err := os.WriteFile(cfgPath, []byte(""), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		_, err := config.Load(tempDir)
-		if err == nil {
-			t.Fatalf("expected error on empty file, got nil")
-		}
-		if !errors.Is(err, config.ErrInvalidConfig) {
-			t.Errorf("expected ErrInvalidConfig, got: %v", err)
-		}
-	})
-
-	t.Run("whitespace-only root yaml config file returns validation error", func(t *testing.T) {
-		t.Parallel()
-		tempDir := t.TempDir()
-		cfgPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
-		if err := os.WriteFile(cfgPath, []byte("   \n\n   \n"), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		_, err := config.Load(tempDir)
-		if err == nil {
-			t.Fatalf("expected error on whitespace file, got nil")
-		}
-		if !errors.Is(err, config.ErrInvalidConfig) {
-			t.Errorf("expected ErrInvalidConfig, got: %v", err)
-		}
-	})
-
-	t.Run("tab-character in root yaml config file returns descriptive error", func(t *testing.T) {
-		t.Parallel()
-		tempDir := t.TempDir()
-		cfgPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
-		if err := os.WriteFile(cfgPath, []byte("\tinvalid_tab: true\n"), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		_, err := config.Load(tempDir)
-		if err == nil {
-			t.Fatalf("expected error on tab-character yaml file, got nil")
-		}
-		if !strings.Contains(err.Error(), "decoding yaml configuration") {
-			t.Errorf("expected error containing 'decoding yaml configuration', got: %v", err)
-		}
-	})
-
-	t.Run("corrupted root yaml syntax returns descriptive error without panicking", func(t *testing.T) {
-		t.Parallel()
-		tempDir := t.TempDir()
-		cfgPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
-		if err := os.WriteFile(cfgPath, []byte("project_name: [unclosed_mapping:\n\ntelemetry:\n  capture:\n    state_dir: capture-state\n"), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		_, err := config.Load(tempDir)
-		if err == nil {
-			t.Fatalf("expected error loading corrupted yaml, got nil")
-		}
-		if !strings.Contains(err.Error(), "decoding yaml configuration") {
-			t.Errorf("expected error containing 'decoding yaml configuration', got: %v", err)
-		}
-	})
-
-	t.Run("corrupted root json syntax returns descriptive error without panicking", func(t *testing.T) {
-		t.Parallel()
-		tempDir := t.TempDir()
-		cfgPath := filepath.Join(tempDir, ".agenticlens-config.json")
-		if err := os.WriteFile(cfgPath, []byte(`{"project_name": "bad_json", `), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		_, err := config.Load(tempDir)
-		if err == nil {
-			t.Fatalf("expected error loading corrupted json, got nil")
-		}
-		if !strings.Contains(err.Error(), "decoding json configuration") {
-			t.Errorf("expected error containing 'decoding json configuration', got: %v", err)
-		}
-	})
-
-	t.Run("malformed ticket prefix scalar tag in root config returns descriptive error", func(t *testing.T) {
-		t.Parallel()
-		tempDir := t.TempDir()
-		cfgPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
-		content := `
-ticket:
-  prefixes:
-    - !!int 12345
-`
-		if err := os.WriteFile(cfgPath, []byte(content), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		_, err := config.Load(tempDir)
-		if err == nil {
-			t.Fatalf("expected error decoding non-string scalar prefix, got nil")
-		}
-		if !strings.Contains(err.Error(), "invalid ticket prefix scalar type") {
-			t.Errorf("expected error containing 'invalid ticket prefix scalar type', got: %v", err)
-		}
-	})
-
-	t.Run("legacy subfolder .agenticlens/config.yml is ignored and returns ErrConfigNotFound", func(t *testing.T) {
-		t.Parallel()
-		tempDir := t.TempDir()
-		legacyDir := filepath.Join(tempDir, ".agenticlens")
-		if err := os.MkdirAll(legacyDir, 0755); err != nil {
-			t.Fatal(err)
-		}
-		cfgPath := filepath.Join(legacyDir, "config.yml")
-		if err := os.WriteFile(cfgPath, []byte("project_name: LegacyYMLOnly"+testValidSuffixYAML), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		_, err := config.Load(tempDir)
-		if err == nil {
-			t.Fatalf("expected ErrConfigNotFound, got nil")
-		}
-		if !errors.Is(err, config.ErrConfigNotFound) {
-			t.Errorf("expected ErrConfigNotFound, got %v", err)
-		}
-	})
-
-	t.Run("legacy subfolder .agenticlens/config.json is ignored and returns ErrConfigNotFound", func(t *testing.T) {
-		t.Parallel()
-		tempDir := t.TempDir()
-		legacyDir := filepath.Join(tempDir, ".agenticlens")
-		if err := os.MkdirAll(legacyDir, 0755); err != nil {
-			t.Fatal(err)
-		}
-		cfgPath := filepath.Join(legacyDir, "config.json")
-		content := `{
-			"project_name": "LegacyProject",
-			"ticket_prefix": "LEGACYPREFIX",
-			"workspaces_dir": "legacy_workspaces_dir",
-			"src_folders": ["src_legacy_1", "src_legacy_2"]
-		,"telemetry":{"capture":{"state_dir":"capture-state"}}}`
-		if err := os.WriteFile(cfgPath, []byte(content), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		_, err := config.Load(tempDir)
-		if err == nil {
-			t.Fatalf("expected ErrConfigNotFound, got nil")
-		}
-		if !errors.Is(err, config.ErrConfigNotFound) {
-			t.Errorf("expected ErrConfigNotFound, got %v", err)
-		}
-	})
-}
-
-func TestLoad_CustomExtensionAndEmptyPathEdgeCases(t *testing.T) {
-	t.Run("FindConfigFile with empty string uses working directory", func(t *testing.T) {
-		tempDir := t.TempDir()
-		expectedPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
-		if err := os.WriteFile(expectedPath, []byte("project_name: CwdTest"+testValidSuffixYAML), 0644); err != nil {
-			t.Fatal(err)
-		}
-		origDir, _ := os.Getwd()
-		defer os.Chdir(origDir)
-		if err := os.Chdir(tempDir); err != nil {
-			t.Fatal(err)
-		}
-
-		found, err := config.FindConfigFile("")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if found != expectedPath {
-			t.Errorf("expected %s, got %s", expectedPath, found)
-		}
-
-		cfg, err := config.Load("")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if cfg.ProjectName != "CwdTest" {
-			t.Errorf("expected CwdTest, got %s", cfg.ProjectName)
-		}
-	})
-
-	t.Run("LoadFromFile with non-standard extension falls back to YAML then JSON", func(t *testing.T) {
-		tempDir := t.TempDir()
-		yamlConf := filepath.Join(tempDir, "config.conf")
-		if err := os.WriteFile(yamlConf, []byte("project_name: NonStandardYAML"+testValidSuffixYAML), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		cfg, err := config.LoadFromFile(yamlConf)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if cfg.ProjectName != "NonStandardYAML" {
-			t.Errorf("expected NonStandardYAML, got %s", cfg.ProjectName)
-		}
-
-		jsonConf := filepath.Join(tempDir, "config.ext")
-		if err := os.WriteFile(jsonConf, []byte(`{"project_name": "NonStandardJSON"`+testValidSuffixJSON), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		cfg2, err := config.LoadFromFile(jsonConf)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if cfg2.ProjectName != "NonStandardJSON" {
-			t.Errorf("expected NonStandardJSON, got %s", cfg2.ProjectName)
-		}
-
-		badConf := filepath.Join(tempDir, "config.bad")
-		if err := os.WriteFile(badConf, []byte(`[invalid: {`), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		_, err = config.LoadFromFile(badConf)
-		if err == nil {
-			t.Fatalf("expected error on invalid file, got nil")
-		}
-	})
-}
-
-func TestLoad_CodeMetricsBaseBranch(t *testing.T) {
-	t.Run("unmarshals base_branch from yaml", func(t *testing.T) {
-		tempDir := t.TempDir()
-		cfgFile := filepath.Join(tempDir, ".agenticlens-config.yaml")
-		content := `project_name: "TestProject"
-ticket:
-  prefixes: [AL]
-code_metrics:
-  source_roots: [src]
-  base_branch: "release/v1.0"
-anomaly_thresholds:
-  context_ceiling_warning_tokens: 160000
-  context_ceiling_critical_tokens: 200000
-
-telemetry:
-  capture:
-    state_dir: capture-state
-`
-		if err := os.WriteFile(cfgFile, []byte(content), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		cfg, err := config.LoadFromFile(cfgFile)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if cfg.CodeMetrics.BaseBranch != "release/v1.0" {
-			t.Errorf("expected base_branch 'release/v1.0', got %q", cfg.CodeMetrics.BaseBranch)
-		}
-	})
-
-	t.Run("unmarshals base_branch from json", func(t *testing.T) {
-		tempDir := t.TempDir()
-		cfgFile := filepath.Join(tempDir, ".agenticlens-config.json")
-		content := `{"project_name": "TestProject", "code_metrics": {"base_branch": "master"}` + testValidSuffixJSON
-		if err := os.WriteFile(cfgFile, []byte(content), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		cfg, err := config.LoadFromFile(cfgFile)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if cfg.CodeMetrics.BaseBranch != "master" {
-			t.Errorf("expected base_branch 'master', got %q", cfg.CodeMetrics.BaseBranch)
-		}
-	})
-
-	t.Run("defaults base_branch to empty string when omitted", func(t *testing.T) {
-		tempDir := t.TempDir()
-		cfgFile := filepath.Join(tempDir, ".agenticlens-config.yaml")
-		content := `project_name: "TestProject"` + testValidSuffixYAML
-		if err := os.WriteFile(cfgFile, []byte(content), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		cfg, err := config.LoadFromFile(cfgFile)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if cfg.CodeMetrics.BaseBranch != "" {
-			t.Errorf("expected default base_branch '', got %q", cfg.CodeMetrics.BaseBranch)
-		}
-	})
-}
-
-func TestLoadFromFile(t *testing.T) {
-	t.Run("loads fixture project policy independently of ancestor configuration", func(t *testing.T) {
-		ancestor := t.TempDir()
-		if err := os.WriteFile(filepath.Join(ancestor, ".agenticlens-config.yaml"), []byte("project_name: [invalid ancestor configuration\n"), 0600); err != nil {
-			t.Fatal(err)
-		}
-		project := filepath.Join(ancestor, "project")
-		if err := os.Mkdir(project, 0700); err != nil {
-			t.Fatal(err)
-		}
-		configPath := filepath.Join(project, ".agenticlens-config.yaml")
-		content := `project_name: FixtureProject
-telemetry:
-  capture:
-    state_dir: capture-state
-ticket:
-  prefixes: [AL]
-code_metrics:
-  source_roots: [web, backend]
-  base_branch: origin/main
-anomaly_thresholds:
-  context_ceiling_warning_tokens: 160000
-  context_ceiling_critical_tokens: 200000
-  consecutive_errors_streak_warning: 3
-`
-		if err := os.WriteFile(configPath, []byte(content), 0600); err != nil {
-			t.Fatal(err)
-		}
-		cfg, err := config.LoadFromFile(configPath)
-		if err != nil {
-			t.Fatalf("failed to load isolated fixture configuration: %v", err)
-		}
-		if cfg.CodeMetrics.BaseBranch != "origin/main" {
-			t.Errorf("expected base_branch %q, got %q", "origin/main", cfg.CodeMetrics.BaseBranch)
-		}
-		if cfg.AnomalyThresholds.ContextCeilingCriticalTokens != 200000 {
-			t.Errorf("expected context_ceiling_critical_tokens 200000, got %d", cfg.AnomalyThresholds.ContextCeilingCriticalTokens)
-		}
-		if len(cfg.CodeMetrics.SourceRoots) != 2 || cfg.CodeMetrics.SourceRoots[0] != "web" || cfg.CodeMetrics.SourceRoots[1] != "backend" {
-			t.Errorf("expected source_roots [web backend], got %v", cfg.CodeMetrics.SourceRoots)
-		}
-		if cfg.AnomalyThresholds.ConsecutiveErrorsStreakWarning != 3 {
-			t.Errorf("expected consecutive errors streak warning 3, got %d", cfg.AnomalyThresholds.ConsecutiveErrorsStreakWarning)
-		}
-		if cfg.AnomalyThresholds.ContextCeilingWarningTokens != 160000 {
-			t.Errorf("expected ceiling warning tokens 160000, got %d", cfg.AnomalyThresholds.ContextCeilingWarningTokens)
-		}
-	})
-
-	t.Run("correctly loads custom base_branch from yaml file", func(t *testing.T) {
-		tempDir := t.TempDir()
-		cfgFile := filepath.Join(tempDir, ".agenticlens-config.yaml")
-		content := `project_name: "TestProject"
-ticket:
-  prefixes: [AL]
-code_metrics:
-  source_roots: [src]
-  base_branch: "origin/release-2.0"
-anomaly_thresholds:
-  context_ceiling_warning_tokens: 160000
-  context_ceiling_critical_tokens: 200000
-
-telemetry:
-  capture:
-    state_dir: capture-state
-`
-		if err := os.WriteFile(cfgFile, []byte(content), 0644); err != nil {
-			t.Fatal(err)
-		}
-		cfg, err := config.LoadFromFile(cfgFile)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if cfg.CodeMetrics.BaseBranch != "origin/release-2.0" {
-			t.Errorf("expected base_branch %q, got %q", "origin/release-2.0", cfg.CodeMetrics.BaseBranch)
-		}
-	})
-}
-
-func TestLoad_ContextCeilingValidation(t *testing.T) {
-	t.Parallel()
-
-	baseConfig := `
-project_name: CeilingValidationApp
-ticket:
-  prefixes:
-    - prefix: AL
-workspaces:
-code_metrics:
-  source_roots:
-    - src
-
-telemetry:
-  capture:
-    state_dir: capture-state
-`
-
-	t.Run("missing context_ceiling_critical_tokens returns validation error", func(t *testing.T) {
-		t.Parallel()
-		tempDir := t.TempDir()
-		yamlContent := baseConfig + `
-anomaly_thresholds:
-  context_ceiling_warning_tokens: 160000
-`
-		cfgPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
-		if err := os.WriteFile(cfgPath, []byte(yamlContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-		_, err := config.Load(tempDir)
-		if err == nil {
-			t.Fatal("expected error, got nil")
-		}
-		if !errors.Is(err, config.ErrInvalidConfig) {
-			t.Errorf("expected ErrInvalidConfig, got %v", err)
-		}
-		if !strings.Contains(err.Error(), "anomaly_thresholds.context_ceiling_critical_tokens") {
-			t.Errorf("expected missing critical tokens in error message, got %v", err)
-		}
-	})
-
-	t.Run("missing context_ceiling_warning_tokens returns validation error", func(t *testing.T) {
-		t.Parallel()
-		tempDir := t.TempDir()
-		yamlContent := baseConfig + `
-anomaly_thresholds:
-  context_ceiling_critical_tokens: 200000
-`
-		cfgPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
-		if err := os.WriteFile(cfgPath, []byte(yamlContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-		_, err := config.Load(tempDir)
-		if err == nil {
-			t.Fatal("expected error, got nil")
-		}
-		if !errors.Is(err, config.ErrInvalidConfig) {
-			t.Errorf("expected ErrInvalidConfig, got %v", err)
-		}
-		if !strings.Contains(err.Error(), "anomaly_thresholds.context_ceiling_warning_tokens") {
-			t.Errorf("expected missing warning tokens in error message, got %v", err)
-		}
-	})
-
-	t.Run("non-positive context_ceiling_critical_tokens returns validation error", func(t *testing.T) {
-		t.Parallel()
-		tempDir := t.TempDir()
-		yamlContent := baseConfig + `
-anomaly_thresholds:
-  context_ceiling_warning_tokens: 160000
-  context_ceiling_critical_tokens: 0
-`
-		cfgPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
-		if err := os.WriteFile(cfgPath, []byte(yamlContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-		_, err := config.Load(tempDir)
-		if err == nil {
-			t.Fatal("expected error, got nil")
-		}
-		if !errors.Is(err, config.ErrInvalidConfig) {
-			t.Errorf("expected ErrInvalidConfig, got %v", err)
-		}
-	})
-
-	t.Run("non-positive context_ceiling_warning_tokens returns validation error", func(t *testing.T) {
-		t.Parallel()
-		tempDir := t.TempDir()
-		yamlContent := baseConfig + `
-anomaly_thresholds:
-  context_ceiling_warning_tokens: -10
-  context_ceiling_critical_tokens: 200000
-`
-		cfgPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
-		if err := os.WriteFile(cfgPath, []byte(yamlContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-		_, err := config.Load(tempDir)
-		if err == nil {
-			t.Fatal("expected error, got nil")
-		}
-		if !errors.Is(err, config.ErrInvalidConfig) {
-			t.Errorf("expected ErrInvalidConfig, got %v", err)
-		}
-	})
-
-	t.Run("warning tokens exceeding critical tokens returns validation error", func(t *testing.T) {
-		t.Parallel()
-		tempDir := t.TempDir()
-		yamlContent := baseConfig + `
-anomaly_thresholds:
-  context_ceiling_warning_tokens: 250000
-  context_ceiling_critical_tokens: 200000
-`
-		cfgPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
-		if err := os.WriteFile(cfgPath, []byte(yamlContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-		_, err := config.Load(tempDir)
-		if err == nil {
-			t.Fatal("expected error, got nil")
-		}
-		if !errors.Is(err, config.ErrInvalidConfig) {
-			t.Errorf("expected ErrInvalidConfig, got %v", err)
-		}
-		if !strings.Contains(err.Error(), "cannot exceed") {
-			t.Errorf("expected relationship error message, got %v", err)
-		}
-	})
-
-	t.Run("valid ceiling tokens loads successfully", func(t *testing.T) {
-		t.Parallel()
-		tempDir := t.TempDir()
-		yamlContent := baseConfig + `
-anomaly_thresholds:
-  context_ceiling_warning_tokens: 160000
-  context_ceiling_critical_tokens: 200000
-`
-		cfgPath := filepath.Join(tempDir, ".agenticlens-config.yaml")
-		if err := os.WriteFile(cfgPath, []byte(yamlContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-		cfg, err := config.Load(tempDir)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if cfg.AnomalyThresholds.ContextCeilingWarningTokens != 160000 {
-			t.Errorf("expected warning tokens 160000, got %d", cfg.AnomalyThresholds.ContextCeilingWarningTokens)
-		}
-		if cfg.AnomalyThresholds.ContextCeilingCriticalTokens != 200000 {
-			t.Errorf("expected critical tokens 200000, got %d", cfg.AnomalyThresholds.ContextCeilingCriticalTokens)
-		}
-		if cfg.EffectiveHealthyCeiling() != 200000 {
-			t.Errorf("expected EffectiveHealthyCeiling 200000, got %d", cfg.EffectiveHealthyCeiling())
-		}
-	})
-}
-
-func TestLoadGenerationMetricsStrictIndependentDefaults(t *testing.T) {
-	for _, tc := range []struct {
-		name, metrics string
-		want          domain.GenerationPolicy
-	}{
-		{"omitted", "", domain.GenerationPolicy{Skills: true, Delegations: true, Anomalies: true}},
-		{"empty", "generation:\n  metrics: {}\n", domain.GenerationPolicy{Skills: true, Delegations: true, Anomalies: true}},
-		{"skills", "generation:\n  metrics:\n    skills: false\n", domain.GenerationPolicy{Delegations: true, Anomalies: true}},
-		{"delegations", "generation:\n  metrics:\n    delegations: false\n", domain.GenerationPolicy{Skills: true, Anomalies: true}},
-		{"anomalies", "generation:\n  metrics:\n    anomalies: false\n", domain.GenerationPolicy{Skills: true, Delegations: true}},
-		{"mixed", "generation:\n  metrics:\n    skills: false\n    delegations: true\n    anomalies: false\n", domain.GenerationPolicy{Delegations: true}},
-		{"all_off", "generation:\n  metrics:\n    skills: false\n    delegations: false\n    anomalies: false\n", domain.GenerationPolicy{}},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			root := t.TempDir()
-			path := filepath.Join(root, ".agenticlens-config.yaml")
-			if err := os.WriteFile(path, []byte("project_name: Policy\n"+tc.metrics+testValidSuffixYAML), 0600); err != nil {
-				t.Fatal(err)
-			}
-			cfg, err := config.Load(root)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if cfg.Generation.Metrics != tc.want {
-				t.Fatalf("got %+v want %+v", cfg.Generation.Metrics, tc.want)
-			}
-			rendered, err := config.GenerateConfigYAML(cfg)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if err := os.WriteFile(path, []byte(rendered), 0600); err != nil {
-				t.Fatal(err)
-			}
-			roundtrip, err := config.Load(root)
-			if err != nil || roundtrip.Generation.Metrics != tc.want {
-				t.Fatalf("writer lost false/default policy: %+v %v", roundtrip.Generation.Metrics, err)
-			}
-		})
-	}
-	for _, value := range []string{"null", "'false'", "0", "[]", "{}"} {
-		for _, key := range []string{"skills", "delegations", "anomalies"} {
-			t.Run(key+"_invalid_"+value, func(t *testing.T) {
-				root := t.TempDir()
-				path := filepath.Join(root, ".agenticlens-config.yaml")
-				input := "project_name: Policy\ngeneration:\n  metrics:\n    " + key + ": " + value + "\n" + testValidSuffixYAML
-				if err := os.WriteFile(path, []byte(input), 0600); err != nil {
+			if tc.validate != nil {
+				if err := tc.validate(cfg); err != nil {
 					t.Fatal(err)
 				}
-				_, err := config.Load(root)
-				if err == nil || !strings.Contains(err.Error(), "generation.metrics."+key) || !strings.Contains(err.Error(), "boolean") {
-					t.Fatalf("invalid type lacked actionable error: %v", err)
-				}
-			})
-		}
+			}
+			if tc.key == "generation.metrics.skills" && cfg.Generation.Metrics.Skills {
+				t.Fatal("explicit false replaced")
+			}
+			if tc.key == "database.busy_timeout_ms" && cfg.Database.BusyTimeoutMs != 0 {
+				t.Fatal("explicit zero replaced")
+			}
+		})
+	}
+	root := t.TempDir()
+	writeConfig(t, root, ".agenticlens-config.yaml", fixtureSharedBody(t))
+	writeConfig(t, root, ".agenticlens-config.local.yaml", "telemetry:\n  capture:\n    state_dir: state\ntelemetry.capture.enabled: false\n")
+	if _, err := config.ResolveCapture(root, ""); err == nil || !strings.Contains(err.Error(), "enabled") {
+		t.Fatalf("dotted local key satisfied required capture bool: %v", err)
 	}
 }

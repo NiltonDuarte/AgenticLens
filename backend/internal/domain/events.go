@@ -209,6 +209,7 @@ func RefreshAnomalySummariesFromSource(ledger AgenticFactLedger, source SourceEv
 		return ledger.AnomalyFacts()
 	}
 	cached := ledger.AnomalyFacts()
+	ratePolicyAvailable := HasConfiguredFailureRatePolicy(resolveAnomalyThresholds(thresholds...))
 	currentSessions := make(map[string]bool)
 	for _, id := range source.CompleteSessionIDs {
 		currentSessions[id] = true
@@ -227,8 +228,12 @@ func RefreshAnomalySummariesFromSource(ledger AgenticFactLedger, source SourceEv
 		}
 	}
 	detected := DetectAnomaliesFromEvents(observed, events, thresholds...)
+	owned := make(map[string]bool, len(ledger.Sessions))
+	for _, owner := range ledger.Sessions {
+		owned[owner.ID] = true
+	}
 	groupComplete := func(parent string) bool {
-		if !currentSessions[parent] {
+		if !currentSessions[parent] || !owned[parent] {
 			return false
 		}
 		for _, owner := range ledger.Sessions {
@@ -246,12 +251,7 @@ func RefreshAnomalySummariesFromSource(ledger AgenticFactLedger, source SourceEv
 		filtered = append(filtered, anomaly)
 	}
 	detected = filtered
-	allComplete := len(ledger.Sessions) > 0
-	for _, owner := range ledger.Sessions {
-		if !currentSessions[owner.ID] {
-			allComplete = false
-		}
-	}
+	allComplete := completeAnomalySourceCoverage(ledger, currentSessions)
 	refreshed := make([]Anomaly, 0, len(cached)+len(detected))
 	for _, anomaly := range detected {
 		if (anomaly.Context.SessionID == nil || *anomaly.Context.SessionID == "") && allComplete {
@@ -266,6 +266,9 @@ func RefreshAnomalySummariesFromSource(ledger AgenticFactLedger, source SourceEv
 		} else {
 			sid := *anomaly.Context.SessionID
 			retain = !currentSessions[sid] || anomaly.RuleID == RuleSubagentReworkLoop && !groupComplete(sid)
+		}
+		if anomaly.RuleID == RuleToolHighFailureRate && !ratePolicyAvailable {
+			retain = true
 		}
 		if retain {
 			anomaly.Evidence = nil
@@ -334,7 +337,14 @@ func PersistSourceAnomalySummaries(ledger AgenticFactLedger, source SourceEvents
 	if len(source.CompleteSessionIDs) == 0 {
 		return ledger, nil
 	}
+	if len(thresholds) != 1 {
+		return ledger, fmt.Errorf("explicit anomaly_thresholds policy is required before source summary calculation")
+	}
+	if err := thresholds[0].ValidateCalculation(); err != nil {
+		return ledger, err
+	}
 	anomalies := RefreshAnomalySummariesFromSource(ledger, source, thresholds...)
+	ratePolicyAvailable := HasConfiguredFailureRatePolicy(resolveAnomalyThresholds(thresholds...))
 	bySession := make(map[string][]Anomaly)
 	ticket := []Anomaly{}
 	for _, anomaly := range anomalies {
@@ -366,15 +376,15 @@ func PersistSourceAnomalySummaries(ledger AgenticFactLedger, source SourceEvents
 		if incompleteGroup && owner.Anomalies == nil && len(bySession[owner.ID]) == 0 {
 			continue
 		}
+		// Without required policy, source parsing cannot create a fresh
+		// recorded-empty analysis. Preserve prior presence and known facts.
+		if !ratePolicyAvailable && len(bySession[owner.ID]) == 0 && owner.Anomalies == nil {
+			continue
+		}
 		ledger.Sessions[i].Anomalies = append([]Anomaly{}, bySession[owner.ID]...)
 	}
-	allComplete := len(ledger.Sessions) > 0
-	for _, owner := range ledger.Sessions {
-		if !complete[owner.ID] {
-			allComplete = false
-		}
-	}
-	if allComplete {
+	allComplete := completeAnomalySourceCoverage(ledger, complete)
+	if allComplete && (ratePolicyAvailable || len(ticket) > 0 || ledger.Anomalies != nil) {
 		ledger.Anomalies = ticket
 	}
 	return ledger, nil

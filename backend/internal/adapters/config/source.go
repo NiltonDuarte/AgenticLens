@@ -7,14 +7,14 @@ import (
 	"strings"
 )
 
-// ResolveSource selects one telemetry harness without probing either source.
+// ResolveSource selects explicit CLI input, otherwise explicitly configured policy.
 func ResolveSource(explicit, configured string) (string, error) {
 	selected := strings.ToLower(strings.TrimSpace(explicit))
 	if selected == "" {
 		selected = strings.ToLower(strings.TrimSpace(configured))
 	}
 	if selected == "" {
-		selected = "opencode"
+		return "", fmt.Errorf("telemetry source is required: supply --source codex|opencode or configure telemetry.default_source in the selected local YAML")
 	}
 	if selected != "opencode" && selected != "codex" {
 		return "", fmt.Errorf("unsupported source %q: use opencode or codex", selected)
@@ -22,46 +22,50 @@ func ResolveSource(explicit, configured string) (string, error) {
 	return selected, nil
 }
 
-// ResolveOpenCodePath applies explicit, local, shared-legacy, then adapter-default precedence.
-func ResolveOpenCodePath(explicit, local, legacy string) string {
-	for _, candidate := range []string{explicit, local, legacy} {
-		if value := strings.TrimSpace(candidate); value != "" {
-			return ExpandHomePath(value)
-		}
+func ResolveOpenCodePath(explicit, configured string) (string, error) {
+	return resolveSourcePath(explicit, configured, "--db-path", "telemetry.sources.opencode.database_path")
+}
+func ResolveCodexHome(explicit, configured string) (string, error) {
+	return resolveSourcePath(explicit, configured, "--codex-home", "telemetry.sources.codex.home")
+}
+func resolveSourcePath(explicit, configured, flag, key string) (string, error) {
+	value := strings.TrimSpace(explicit)
+	if value == "" {
+		value = strings.TrimSpace(configured)
 	}
-	return ""
+	if value == "" {
+		return "", fmt.Errorf("source path is required: supply %s or configure %s in the selected local YAML", flag, key)
+	}
+	return ExpandHomePath(value)
 }
 
-// ResolveCodexHome applies explicit, local, environment, then built-in precedence.
-func ResolveCodexHome(explicit, local, environment, builtin string) string {
-	for _, candidate := range []string{explicit, local, environment, builtin} {
-		if value := strings.TrimSpace(candidate); value != "" {
-			return ExpandHomePath(value)
+// ExpandHomePath interprets explicitly supplied ~/ paths without selecting a store.
+func ExpandHomePath(path string) (string, error) {
+	if path == "~" || strings.HasPrefix(path, "~/") {
+		home, err := os.UserHomeDir()
+		if err != nil || strings.TrimSpace(home) == "" {
+			return "", fmt.Errorf("expanding explicit path %q: user home is unavailable", path)
 		}
+		if path == "~" {
+			return home, nil
+		}
+		return home + string(filepath.Separator) + path[2:], nil
 	}
-	return ""
+	if strings.IndexByte(path, 0) >= 0 {
+		return "", fmt.Errorf("path contains a NUL byte")
+	}
+	return path, nil
 }
 
-// ExpandHomePath expands the supported ~/ notation at an imperative boundary.
-func ExpandHomePath(path string) string {
-	if strings.HasPrefix(path, "~/") {
-		if home, err := os.UserHomeDir(); err == nil {
-			return home + string(filepath.Separator) + path[2:]
-		}
+// ResolveConfiguredPath retains physical symlink/.. traversal by concatenating
+// relative components without filepath.Clean or filepath.Join.
+func ResolveConfiguredPath(origin, path string) (string, error) {
+	expanded, err := ExpandHomePath(path)
+	if err != nil {
+		return "", err
 	}
-	return path
-}
-
-// ProjectSourcePath anchors configured relative source locations to their owning
-// project. Explicit CLI paths retain the caller's normal path semantics.
-func ProjectSourcePath(project, configured string) string {
-	if strings.TrimSpace(configured) == "" {
-		return ""
+	if !filepath.IsAbs(expanded) {
+		return origin + string(filepath.Separator) + expanded, nil
 	}
-	path := ExpandHomePath(configured)
-	if !filepath.IsAbs(path) {
-		// Preserve raw symlink/.. traversal until the physical source boundary.
-		return project + string(filepath.Separator) + path
-	}
-	return path
+	return expanded, nil
 }

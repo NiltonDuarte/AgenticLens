@@ -38,7 +38,7 @@ func CaptureSessionSnapshotWithPolicyAt(ctx context.Context, db *sql.DB, id, use
 		_, rollbackErr := db.ExecContext(context.Background(), `ROLLBACK`)
 		err = errors.Join(err, rollbackErr)
 	}()
-	family, e := captureSchemaFamily(ctx, db, id)
+	family, e := detectSchemaFamily(db)
 	if e != nil {
 		err = e
 		return
@@ -97,49 +97,6 @@ func CaptureSessionSnapshotWithPolicyAt(ctx context.Context, db *sql.DB, id, use
 // ErrCaptureBudget marks pending work rather than failed or zero source data.
 var ErrCaptureBudget = errors.New("capture source byte budget reached")
 
-// captureSchemaFamily selects only by exact authoritative session membership.
-// Mixed stores are safe only when one complete family owns the requested ID.
-func captureSchemaFamily(ctx context.Context, db *sql.DB, id string) (schemaFamily, error) {
-	columns, err := tableColumns(db)
-	if err != nil {
-		return "", err
-	}
-	matches := []schemaFamily{}
-	for _, family := range []schemaFamily{schemaFamilyV1, schemaFamilyV2} {
-		complete := true
-		for table, names := range requiredColumns[family] {
-			for _, name := range names {
-				if !columns[table][name] {
-					complete = false
-				}
-			}
-		}
-		if !complete {
-			continue
-		}
-		table := "session"
-		if family == schemaFamilyV2 {
-			table = "session_v2"
-		}
-		var count int
-		if err = db.QueryRowContext(ctx, `SELECT count(*) FROM `+table+` WHERE id=?`, id).Scan(&count); err != nil {
-			return "", err
-		}
-		if count == 1 {
-			matches = append(matches, family)
-		}
-	}
-	if len(matches) == 1 {
-		return matches[0], nil
-	}
-	if len(matches) > 1 {
-		return "", errors.New("exact source session ID exists in multiple OpenCode families; refusing ambiguous extraction")
-	}
-	// No session has flushed. Validate a single family layout to distinguish pending
-	// from unsupported, without selecting by title or directory.
-	return detectSchemaFamily(db)
-}
-
 // CaptureChildIDs returns only source-proven native children of the exact parent.
 func CaptureChildIDs(ctx context.Context, db *sql.DB, parent string, limit int) ([]string, error) {
 	ids, _, err := CaptureChildPage(ctx, db, parent, "", limit)
@@ -152,7 +109,7 @@ func CaptureChildPage(ctx context.Context, db *sql.DB, parent, after string, lim
 	if limit < 1 {
 		return nil, false, errors.New("child discovery limit must be positive")
 	}
-	family, err := captureSchemaFamily(ctx, db, parent)
+	family, err := detectSchemaFamily(db)
 	if err != nil {
 		return nil, false, err
 	}
@@ -186,7 +143,7 @@ func CaptureChildPage(ctx context.Context, db *sql.DB, parent, after string, lim
 // CaptureProjectDirectory reads authoritative per-session directory metadata.
 // Older layouts without it remain unresolved rather than borrowing caller cwd.
 func CaptureProjectDirectory(ctx context.Context, db *sql.DB, id string) (string, error) {
-	family, err := captureSchemaFamily(ctx, db, id)
+	family, err := detectSchemaFamily(db)
 	if err != nil {
 		return "", err
 	}
@@ -208,7 +165,7 @@ func CaptureProjectDirectory(ctx context.Context, db *sql.DB, id string) (string
 
 // CaptureSourceFingerprint probes cumulative source revision without decoding bodies.
 func CaptureSourceFingerprint(ctx context.Context, db *sql.DB, id string) (string, error) {
-	family, err := captureSchemaFamily(ctx, db, id)
+	family, err := detectSchemaFamily(db)
 	if err != nil {
 		return "", err
 	}

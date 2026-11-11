@@ -213,9 +213,26 @@ func fixtureSourceSummaries(sessions []domain.SessionFact, events []domain.Event
 	for _, session := range sessions {
 		ids = append(ids, session.ID)
 	}
-	ledger, err := domain.PersistSourceAnomalySummaries(domain.AgenticFactLedger{Sessions: sessions}, domain.SourceEvents{Events: events, CompleteSessionIDs: ids})
+	ledger, err := domain.PersistSourceAnomalySummaries(domain.AgenticFactLedger{Sessions: sessions}, domain.SourceEvents{Events: events, CompleteSessionIDs: ids}, fixtureAnomalyPolicy())
 	if err != nil {
 		panic(err)
 	}
 	return ledger.Sessions
+}
+
+// Fixture policy is explicit test input, never an application fallback.
+func fixtureAnomalyPolicy() domain.AnomalyThresholdsConfig {
+	return domain.AnomalyThresholdsConfig{ErrorRateMinCalls: 5, ErrorRateThreshold: .25, ErrorRateCriticalThreshold: .50, ContextCeilingWarningTokens: 160000, ContextCeilingCriticalTokens: 200000, ConsecutiveErrorsStreakWarning: 3, ConsecutiveErrorsStreakCritical: 5, TurnUsageWarningTokens: 30000, TurnUsageCriticalTokens: 60000, ContextGrowthWarningTokens: 40000, ContextGrowthCriticalTokens: 80000, ToolThrashingMinFailures: 3, ToolThrashingCriticalFailures: 5}
+}
+func detectFixtureAnomaliesFromEvents(ledger domain.AgenticFactLedger, events []domain.EventFact, policy ...domain.AnomalyThresholdsConfig) []domain.Anomaly {
+	if len(policy) == 0 {
+		policy = []domain.AnomalyThresholdsConfig{fixtureAnomalyPolicy()}
+	}
+	return domain.DetectAnomaliesFromEvents(ledger, events, policy...)
+}
+func computeFixtureFleetAnomalies(ledgers []domain.AgenticFactLedger, policy ...domain.AnomalyThresholdsConfig) domain.FleetAnomalySummary {
+	if len(policy) == 0 {
+		policy = []domain.AnomalyThresholdsConfig{fixtureAnomalyPolicy()}
+	}
+	return domain.ComputeFleetAnomalies(ledgers, policy...)
 }

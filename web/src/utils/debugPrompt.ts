@@ -1,3 +1,5 @@
+import { formatModelLabel } from '../domain/formatters';
+
 /** Markdown debug prompts that preserve captured runtime evidence verbatim. */
 
 export interface ToolExecutionPromptParams {
@@ -76,11 +78,12 @@ export function translateRuleToPlainEnglish(ruleId: string, toolName?: string): 
     TOOL_RETRY_STREAK: tool ? `Consecutive tool failures on \`${tool}\`` : 'Consecutive tool failure streak',
     ConsecutiveToolErrors: tool ? `Consecutive tool failures on \`${tool}\`` : 'Consecutive tool failure streak',
     TOOL_HIGH_FAILURE_RATE: tool ? `High failure rate on \`${tool}\`` : 'High tool failure rate',
+    ToolHighFailureRate: tool ? `High failure rate on \`${tool}\`` : 'High tool failure rate',
     CONTEXT_SATURATION_SPIKE: 'Context window saturation approach',
     ContextCeilingApproach: 'Context window saturation approach',
     SUBAGENT_REWORK_LOOP: tool ? `Repeated tool thrashing on \`${tool}\`` : 'Repeated tool thrashing',
     ToolThrashing: tool ? `Repeated tool thrashing on \`${tool}\`` : 'Repeated tool thrashing',
-    TokenVelocityRunaway: 'Rapid token consumption velocity',
+    TokenVelocityRunaway: 'Token usage surge',
   };
   return labels[ruleId] ?? ruleId;
 }
@@ -96,11 +99,12 @@ const location = (sessionId: string, turn?: number): string => turn === undefine
 export function generateToolExecutionPrompt(params: ToolExecutionPromptParams): string {
   const tool = metadata(params.toolName, 'unknown_tool');
   const failed = ['error', 'failed'].includes(params.status.toLowerCase());
+  const completed = ['completed', 'success', 'succeeded'].includes(params.status.toLowerCase());
   const outcome = failed
     ? params.consecutiveErrors !== undefined && params.consecutiveErrors > 1
       ? `failed with ${params.consecutiveErrors} consecutive failures on this tool.`
       : 'failed with an execution error.'
-    : 'completed successfully.';
+    : completed ? 'completed successfully.' : `has reported status \`${metadata(params.status, 'unknown')}\`; its execution outcome is unconfirmed.`;
   const ids = [
     present(params.messageId) ? `message \`${params.messageId}\`` : '',
     present(params.partId) ? `part \`${params.partId}\`` : '',
@@ -123,7 +127,7 @@ export function generateToolExecutionPrompt(params: ToolExecutionPromptParams): 
 export function generateExecutionIssuePrompt(params: ExecutionIssuePromptParams): string {
   const summary = titleMetadata(params.summary, 'Operational Execution Issue');
   const role = params.role?.trim();
-  const model = params.model?.trim();
+  const model = params.model === undefined ? undefined : formatModelLabel(params.model.trim());
   const agent = role && model
     ? `agent \`${role}\` running \`${model}\``
     : role ? `agent \`${role}\`` : model ? `running \`${model}\`` : '';
@@ -144,7 +148,7 @@ export function generateExecutionIssuePrompt(params: ExecutionIssuePromptParams)
 /** Layer 3: review a single message turn. */
 export function generateMessageTurnPrompt(params: MessageTurnPromptParams): string {
   const role = metadata(params.role, 'assistant');
-  const model = present(params.model) ? ` / \`${params.model.trim()}\`` : '';
+  const model = params.model === undefined ? '' : ` / \`${formatModelLabel(params.model.trim())}\``;
   const messageId = present(params.messageId) ? ` (message \`${params.messageId}\`)` : '';
   const tools = params.toolsExecuted?.length
     ? params.toolsExecuted.map((tool) => {
@@ -175,7 +179,7 @@ export function generateSessionOverviewPrompt(params: SessionOverviewPromptParam
 
   return [
     `# Session Overview: \`${sessionId}\``,
-    `Session \`${sessionId}\` is a \`${metadata(params.role, 'agent')}\` subagent running \`${metadata(params.model, 'unknown-model')}\`${parent ? ` (parent session: ${params.parentId})` : ''}. The session is currently **${metadata(params.status, 'unknown')}** after ${params.turnCount} turns and ${params.totalToolCalls} tool executions (${params.failedToolCalls} failed).`,
+    `Session \`${sessionId}\` is a \`${metadata(params.role, 'agent')}\` subagent running \`${formatModelLabel(params.model.trim())}\`${parent ? ` (parent session: ${params.parentId})` : ''}. The session is currently **${metadata(params.status, 'unknown')}** after ${params.turnCount} turns and ${params.totalToolCalls} tool executions (${params.failedToolCalls} failed).`,
     '### Flagged Issues',
     ...(issues.length > 0
       ? issues.map((issue) => evidence(issue, ''))

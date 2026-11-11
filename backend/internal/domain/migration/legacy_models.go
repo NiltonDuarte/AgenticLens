@@ -164,7 +164,11 @@ func legacyPersistAnomalySummaries(ledger legacyLedger, thresholds ...domain.Ano
 			source.CompleteSessionIDs = append(source.CompleteSessionIDs, owner.ID)
 		}
 	}
-	current, err := domain.PersistSourceAnomalySummaries(ledger.current(), source, thresholds...)
+	policy := historicalV2AnomalyPolicy()
+	if len(thresholds) > 0 {
+		policy = thresholds[0]
+	}
+	current, err := persistHistoricalAnomalySummaries(ledger.current(), source, policy)
 	if err != nil {
 		return legacyLedger{}, err
 	}
@@ -240,4 +244,63 @@ func (value *legacySessionFact) UnmarshalJSON(data []byte) error {
 	_, value.partialMarkerPresent = fields["events_are_partial"]
 	_, value.agentPathPresent = fields["agent_path"]
 	return nil
+}
+
+// persistHistoricalAnomalySummaries freezes the registered historical sanitizer's
+// owner/presence rules. Runtime validation is intentionally not a migration input:
+// this transform predates failure-rate configuration and never invents that rule.
+func persistHistoricalAnomalySummaries(ledger domain.AgenticFactLedger, source domain.SourceEvents, policy domain.AnomalyThresholdsConfig) (domain.AgenticFactLedger, error) {
+	if len(source.CompleteSessionIDs) == 0 {
+		return ledger, nil
+	}
+	anomalies := domain.RefreshAnomalySummariesFromSource(ledger, source, policy)
+	rateAvailable := domain.HasConfiguredFailureRatePolicy(policy)
+	bySession := map[string][]domain.Anomaly{}
+	ticket := []domain.Anomaly{}
+	for _, a := range anomalies {
+		a.Evidence = nil
+		if a.Context.SessionID == nil || *a.Context.SessionID == "" {
+			ticket = append(ticket, a)
+			continue
+		}
+		id := *a.Context.SessionID
+		a.Context.SessionID = nil
+		bySession[id] = append(bySession[id], a)
+	}
+	complete := map[string]bool{}
+	for _, id := range source.CompleteSessionIDs {
+		complete[id] = true
+	}
+	ledger.Sessions = append([]domain.SessionFact{}, ledger.Sessions...)
+	for i, owner := range ledger.Sessions {
+		if !complete[owner.ID] {
+			continue
+		}
+		incompleteGroup := false
+		for _, child := range ledger.Sessions {
+			if child.ParentID != nil && *child.ParentID == owner.ID && !complete[child.ID] {
+				incompleteGroup = true
+			}
+		}
+		if incompleteGroup && owner.Anomalies == nil && len(bySession[owner.ID]) == 0 {
+			continue
+		}
+		if !rateAvailable && len(bySession[owner.ID]) == 0 && owner.Anomalies == nil {
+			continue
+		}
+		ledger.Sessions[i].Anomalies = append([]domain.Anomaly{}, bySession[owner.ID]...)
+	}
+	allComplete := len(ledger.Sessions) > 0 && !ledger.HasExternalParentReference()
+	for _, owner := range ledger.Sessions {
+		if !complete[owner.ID] {
+			allComplete = false
+		}
+		if owner.ParentID != nil && *owner.ParentID != "" && !complete[*owner.ParentID] {
+			allComplete = false
+		}
+	}
+	if allComplete && (rateAvailable || len(ticket) > 0 || ledger.Anomalies != nil) {
+		ledger.Anomalies = ticket
+	}
+	return ledger, nil
 }

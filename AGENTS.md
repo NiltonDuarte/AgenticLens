@@ -9,13 +9,13 @@ Mandatory operational policies for all agents and contributors working in this r
 Every task, feature, bugfix, or refactoring in this repository must have a ticket identifier and an isolated ticket workspace. A planning specification or index entry under `plan/` is not required for an ad hoc ticket.
 
 ### Configurable Workspace Root
-- Define `<WORKSPACES_DIR>` as the `workspaces.dir` value in `.agenticlens-config.yaml`.
-- If `.agenticlens-config.yaml` or the `workspaces.dir` key is absent, use `workspaces` as the fallback.
+- Define `<WORKSPACES_DIR>` from required `workspaces.dir` in the selected `.agenticlens-config.yaml` or `.agenticlens-config.yml`. Both names in one directory are an error.
+- Missing/invalid required configuration requires explicit setup; never invent a workspace root.
 - Use `<WORKSPACES_DIR>` as the root for all ticket workspaces and plan paths below.
 
 ### Rules
 1. **Mandatory Ticket Identifier**:
-   - A ticket ID is required before starting any work. If the request does not provide one, ask the user or assign an ad hoc `GEN-#` identifier using the configured prefixes in `.agenticlens-config.yaml` (fallback: `GEN`).
+   - A ticket ID is required before starting any work. If the request does not provide one, ask the user or assign an ad hoc identifier using an explicitly configured literal prefix. Never invent a prefix or description when configuration is absent.
    - Use an existing ticket ID when one is provided; do not create a duplicate.
    - An ad hoc ticket ID does not require a corresponding specification or entry under `<WORKSPACES_DIR>/plan/`.
 2. **Single-Ticket Exclusivity**:
@@ -98,8 +98,9 @@ Role workflows have one owner:
 
 [TECHNICAL_GUIDELINES.md](TECHNICAL_GUIDELINES.md) owns engineering rules:
 Go 1.23+ in backend, TypeScript 5.x+ strict in web, pure immutable domain logic,
-I/O in adapters/CLI, typed states and zero any/interface{}. Embed the compiled
-frontend in the single Go binary; no production Node runtime. Zero emojis in
+I/O in adapters/CLI, typed states and zero any/interface{}. Distribute a native installation/router manager and a separate engine; embed the compiled
+frontend in the engine. The manager must not import engine CLI or web assets; the
+engine must not dispatch to another build. No production Node runtime. Zero emojis in
 code, comments, UI/logs, commits, PRs or artifacts.
 
 

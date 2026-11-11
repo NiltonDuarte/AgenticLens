@@ -1,27 +1,21 @@
 package config
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"gopkg.in/yaml.v3"
-
 	"agenticlens/internal/adapters/filesystem"
 	"agenticlens/internal/domain"
+	"gopkg.in/yaml.v3"
 )
 
-// ErrConfigNotFound indicates that .agenticlens-config.yaml was not found in the directory hierarchy.
 var ErrConfigNotFound = errors.New("configuration file not found")
-
-// ErrInvalidConfig indicates that the configuration is missing required parameters.
 var ErrInvalidConfig = errors.New("invalid configuration: missing required fields")
 
-// ConfigValidationError specifies missing mandatory fields or validation errors in the configuration.
 type ConfigValidationError struct {
 	MissingFields []string
 	Message       string
@@ -29,458 +23,142 @@ type ConfigValidationError struct {
 
 func (e *ConfigValidationError) Error() string {
 	if e.Message != "" {
-		if len(e.MissingFields) > 0 {
-			return fmt.Sprintf("invalid configuration: %s (missing required fields: %s)", e.Message, strings.Join(e.MissingFields, ", "))
-		}
-		return fmt.Sprintf("invalid configuration: %s", e.Message)
+		return "invalid configuration: " + e.Message
 	}
-	return fmt.Sprintf("invalid configuration: missing required fields: %s", strings.Join(e.MissingFields, ", "))
+	return "invalid configuration: missing required fields: " + strings.Join(e.MissingFields, ", ")
 }
+func (e *ConfigValidationError) Is(target error) bool { return target == ErrInvalidConfig }
 
-func (e *ConfigValidationError) Is(target error) bool {
-	return target == ErrInvalidConfig
-}
-
-// ValidateConfig checks that mandatory configuration fields are present and non-empty.
+// ValidateConfig validates shared policy needed to interpret project records.
+// Optional source/live/generation policy is required only by its actual consumer.
 func ValidateConfig(cfg domain.ProjectConfig) error {
-	if cfg.Generation.Feedback.ProvisionalThresholdSeconds < 0 {
-		return &ConfigValidationError{Message: "generation.feedback.provisional_threshold_seconds must be a nonnegative integer"}
-	}
-	var missing []string
-	if strings.TrimSpace(cfg.ProjectName) == "" {
-		missing = append(missing, "project_name")
-	}
-
-	hasPrefix := false
-	for _, p := range cfg.Ticket.Prefixes {
-		if strings.TrimSpace(p.Prefix) != "" {
-			hasPrefix = true
-			break
+	for _, entry := range []struct{ key, value string }{{"project_name", cfg.ProjectName}, {"code_metrics.base_branch", cfg.CodeMetrics.BaseBranch}} {
+		if strings.TrimSpace(entry.value) == "" {
+			return &ConfigValidationError{MissingFields: []string{entry.key}}
 		}
 	}
-	if !hasPrefix {
-		missing = append(missing, "ticket.prefixes")
+	if len(cfg.Ticket.Prefixes) == 0 {
+		return &ConfigValidationError{MissingFields: []string{"ticket.prefixes"}}
 	}
-
-	hasSourceRoot := false
-	for _, sr := range cfg.CodeMetrics.SourceRoots {
-		if strings.TrimSpace(sr) != "" {
-			hasSourceRoot = true
-			break
+	for i, p := range cfg.Ticket.Prefixes {
+		if strings.TrimSpace(p.Prefix) == "" || strings.TrimSpace(p.Description) == "" {
+			return fmt.Errorf("ticket.prefixes[%d] requires nonblank prefix and description", i)
+		}
+		if p.TicketType != "" {
+			if _, ok := domain.NormalizeTicketType(p.TicketType); !ok {
+				return fmt.Errorf("ticket.prefixes[%d].ticket_type is invalid: %q", i, p.TicketType)
+			}
 		}
 	}
-	if !hasSourceRoot {
-		missing = append(missing, "code_metrics.source_roots")
+	if err := cfg.RequireSettings("ticket.case_insensitive", "workspaces.artifacts", "role_mappings", "role_order", "code_metrics.production.include", "code_metrics.production.exclude", "code_metrics.tests.include", "code_metrics.tests.exclude"); err != nil {
+		return err
 	}
-
-	if strings.TrimSpace(cfg.Telemetry.Capture.StateDir) == "" {
-		missing = append(missing, "telemetry.capture.state_dir")
-	}
-
-	if cfg.AnomalyThresholds.ContextCeilingCriticalTokens <= 0 {
-		missing = append(missing, "anomaly_thresholds.context_ceiling_critical_tokens")
-	}
-	if cfg.AnomalyThresholds.ContextCeilingWarningTokens <= 0 {
-		missing = append(missing, "anomaly_thresholds.context_ceiling_warning_tokens")
-	}
-
-	if len(missing) > 0 {
-		return &ConfigValidationError{MissingFields: missing}
-	}
-
-	if cfg.AnomalyThresholds.ContextCeilingWarningTokens > cfg.AnomalyThresholds.ContextCeilingCriticalTokens {
-		return &ConfigValidationError{
-			Message: "anomaly_thresholds.context_ceiling_warning_tokens cannot exceed anomaly_thresholds.context_ceiling_critical_tokens",
+	for _, list := range []struct {
+		key   string
+		value []string
+	}{{"code_metrics.production.include", cfg.CodeMetrics.Production.Include}, {"code_metrics.production.exclude", cfg.CodeMetrics.Production.Exclude}, {"code_metrics.tests.include", cfg.CodeMetrics.Tests.Include}, {"code_metrics.tests.exclude", cfg.CodeMetrics.Tests.Exclude}} {
+		if list.value == nil {
+			return fmt.Errorf("%s must be an explicit list; [] selects no patterns", list.key)
+		}
+		for _, pattern := range list.value {
+			if strings.TrimSpace(pattern) == "" {
+				return fmt.Errorf("%s contains a blank glob", list.key)
+			}
+			for _, segment := range strings.Split(pattern, "/") {
+				if _, err := filepath.Match(segment, ""); err != nil {
+					return fmt.Errorf("%s has invalid glob %q: %w", list.key, pattern, err)
+				}
+			}
 		}
 	}
-
+	if cfg.Workspaces.Artifacts == nil {
+		return fmt.Errorf("workspaces.artifacts must be an explicit list; [] means none")
+	}
+	for i, a := range cfg.Workspaces.Artifacts {
+		path := a.Path
+		if strings.TrimSpace(path) == "" || filepath.IsAbs(path) || strings.ContainsAny(path, "\\\x00") {
+			return fmt.Errorf("workspaces.artifacts[%d].path must be a safe ticket-workspace-relative path", i)
+		}
+		for _, part := range strings.Split(path, "/") {
+			if part == ".." || part == "" || part == "." {
+				return fmt.Errorf("workspaces.artifacts[%d].path must be a safe ticket-workspace-relative path", i)
+			}
+		}
+	}
+	if cfg.RoleMappings == nil {
+		return fmt.Errorf("role_mappings must be an explicit mapping; {} means none")
+	}
+	for k, v := range cfg.RoleMappings {
+		if strings.TrimSpace(k) == "" || strings.TrimSpace(v) == "" {
+			return fmt.Errorf("role_mappings requires nonblank string names and values")
+		}
+	}
+	if cfg.RoleOrder == nil {
+		return fmt.Errorf("role_order must be an explicit list; [] means alphabetical observed roles")
+	}
+	for _, role := range cfg.RoleOrder {
+		if strings.TrimSpace(role) == "" {
+			return fmt.Errorf("role_order contains a blank role")
+		}
+	}
 	return nil
 }
 
-type rawPrefixItem struct {
-	Prefix      string `json:"prefix" yaml:"prefix"`
-	Description string `json:"description" yaml:"description"`
-	TicketType  string `json:"ticket_type" yaml:"ticket_type"`
+func validateErrorRatePolicy(t domain.AnomalyThresholdsConfig) error {
+	if t.ErrorRateMinCalls < 1 {
+		return fmt.Errorf("anomaly_thresholds.error_rate_min_calls must be a positive integer")
+	}
+	for _, rate := range []struct {
+		key   string
+		value float64
+	}{{"error_rate_threshold", t.ErrorRateThreshold}, {"error_rate_critical_threshold", t.ErrorRateCriticalThreshold}} {
+		if math.IsNaN(rate.value) || math.IsInf(rate.value, 0) || rate.value <= 0 || rate.value > 1 {
+			return fmt.Errorf("anomaly_thresholds.%s must be a finite ratio greater than 0 and at most 1", rate.key)
+		}
+	}
+	if t.ErrorRateThreshold > t.ErrorRateCriticalThreshold {
+		return fmt.Errorf("anomaly_thresholds.error_rate_threshold cannot exceed anomaly_thresholds.error_rate_critical_threshold")
+	}
+	return nil
 }
 
-func (r *rawPrefixItem) UnmarshalYAML(node *yaml.Node) error {
-	if node.Kind == yaml.ScalarNode {
-		if node.Tag != "" && node.Tag != "!!str" {
-			return fmt.Errorf("invalid ticket prefix scalar type %s", node.Tag)
-		}
-		r.Prefix = strings.TrimSpace(node.Value)
-		r.Description = ""
-		r.TicketType = ""
-		return nil
-	}
-	if node.Kind == yaml.MappingNode {
-		var item struct {
-			Prefix      string `yaml:"prefix"`
-			Description string `yaml:"description"`
-			TicketType  string `yaml:"ticket_type"`
-		}
-		if err := node.Decode(&item); err != nil {
-			return fmt.Errorf("decoding ticket prefix mapping: %w", err)
-		}
-		r.Prefix = strings.TrimSpace(item.Prefix)
-		r.Description = strings.TrimSpace(item.Description)
-		r.TicketType = strings.TrimSpace(item.TicketType)
-		return nil
-	}
-	return fmt.Errorf("invalid ticket prefix format: expected string or mapping, got node kind %d", node.Kind)
-}
-
-func (r *rawPrefixItem) UnmarshalJSON(data []byte) error {
-	trimmed := bytes.TrimSpace(data)
-	if len(trimmed) == 0 {
-		return fmt.Errorf("empty ticket prefix data")
-	}
-
-	if trimmed[0] == '"' {
-		var s string
-		if err := json.Unmarshal(trimmed, &s); err != nil {
-			return fmt.Errorf("decoding string ticket prefix: %w", err)
-		}
-		r.Prefix = strings.TrimSpace(s)
-		r.Description = ""
-		r.TicketType = ""
-		return nil
-	}
-
-	if trimmed[0] == '{' {
-		var item struct {
-			Prefix      string `json:"prefix"`
-			Description string `json:"description"`
-			TicketType  string `json:"ticket_type"`
-		}
-		if err := json.Unmarshal(trimmed, &item); err != nil {
-			return fmt.Errorf("decoding object ticket prefix: %w", err)
-		}
-		r.Prefix = strings.TrimSpace(item.Prefix)
-		r.Description = strings.TrimSpace(item.Description)
-		r.TicketType = strings.TrimSpace(item.TicketType)
-		return nil
-	}
-
-	return fmt.Errorf("invalid ticket prefix format: expected string or object, got %s", string(trimmed))
-}
-
-type rawTicketConfig struct {
-	Prefixes        []rawPrefixItem `json:"prefixes" yaml:"prefixes"`
-	CaseInsensitive *bool           `json:"case_insensitive" yaml:"case_insensitive"`
-	CustomPatterns  []string        `json:"custom_patterns" yaml:"custom_patterns"`
-}
-
-type rawWorkspaceArtifactConfig struct {
-	Path        string `json:"path" yaml:"path"`
-	Title       string `json:"title" yaml:"title"`
-	Description string `json:"description" yaml:"description"`
-}
-
-type rawWorkspacesConfig struct {
-	Dir       *string                      `json:"dir" yaml:"dir"`
-	Artifacts []rawWorkspaceArtifactConfig `json:"artifacts" yaml:"artifacts"`
-}
-
-type rawDatabaseConfig struct {
-	Path           *string `json:"path" yaml:"path"`
-	QueryTimeoutMs *int    `json:"query_timeout_ms" yaml:"query_timeout_ms"`
-	BusyTimeoutMs  *int    `json:"busy_timeout_ms" yaml:"busy_timeout_ms"`
-	ReadOnly       *bool   `json:"read_only" yaml:"read_only"`
-}
-
-type rawTelemetryConfig struct {
-	DefaultSource *string `json:"default_source" yaml:"default_source"`
-	Sources       *struct {
-		OpenCode *struct {
-			DatabasePath *string `json:"database_path" yaml:"database_path"`
-		} `json:"opencode" yaml:"opencode"`
-		Codex *struct {
-			Home *string `json:"home" yaml:"home"`
-		} `json:"codex" yaml:"codex"`
-	} `json:"sources" yaml:"sources"`
-}
-
-type rawAnomalyThresholdsConfig struct {
-	StallThresholdSeconds               *int     `json:"stall_threshold_seconds" yaml:"stall_threshold_seconds"`
-	ErrorRateThreshold                  *float64 `json:"error_rate_threshold" yaml:"error_rate_threshold"`
-	ContextExhaustionPct                *float64 `json:"context_exhaustion_pct" yaml:"context_exhaustion_pct"`
-	ConsecutiveErrorsStreakWarning      *int     `json:"consecutive_errors_streak_warning" yaml:"consecutive_errors_streak_warning"`
-	ConsecutiveErrorsStreakCritical     *int     `json:"consecutive_errors_streak_critical" yaml:"consecutive_errors_streak_critical"`
-	ContextCeilingWarningTokens         *int64   `json:"context_ceiling_warning_tokens" yaml:"context_ceiling_warning_tokens"`
-	ContextCeilingCriticalTokens        *int64   `json:"context_ceiling_critical_tokens" yaml:"context_ceiling_critical_tokens"`
-	ContextCeilingApproachRatioWarning  *float64 `json:"context_ceiling_approach_ratio_warning" yaml:"context_ceiling_approach_ratio_warning"`
-	ContextCeilingApproachRatioCritical *float64 `json:"context_ceiling_approach_ratio_critical" yaml:"context_ceiling_approach_ratio_critical"`
-	TokenVelocityWarningTokens          *int64   `json:"token_velocity_warning_tokens" yaml:"token_velocity_warning_tokens"`
-	TokenVelocityCriticalTokens         *int64   `json:"token_velocity_critical_tokens" yaml:"token_velocity_critical_tokens"`
-	TokenVelocityWarningDeltaTokens     *int64   `json:"token_velocity_warning_delta_tokens" yaml:"token_velocity_warning_delta_tokens"`
-	TokenVelocityCriticalDeltaTokens    *int64   `json:"token_velocity_critical_delta_tokens" yaml:"token_velocity_critical_delta_tokens"`
-	ToolThrashingMinFailures            *int     `json:"tool_thrashing_min_failures" yaml:"tool_thrashing_min_failures"`
-	ToolThrashingCriticalFailures       *int     `json:"tool_thrashing_critical_failures" yaml:"tool_thrashing_critical_failures"`
-}
-
-type rawLiveConfig struct {
-	ActiveThresholdSeconds *int                        `json:"active_threshold_seconds" yaml:"active_threshold_seconds"`
-	PollIntervalMs         *int                        `json:"poll_interval_ms" yaml:"poll_interval_ms"`
-	MaxTraceBufferMessages *int                        `json:"max_trace_buffer_messages" yaml:"max_trace_buffer_messages"`
-	AnomalyThresholds      *rawAnomalyThresholdsConfig `json:"anomaly_thresholds" yaml:"anomaly_thresholds"`
-}
-
-type rawCodeMetricsConfig struct {
-	SourceRoots  []string `json:"source_roots" yaml:"source_roots"`
-	BaseBranch   *string  `json:"base_branch" yaml:"base_branch"`
-	Include      []string `json:"include" yaml:"include"`
-	Exclude      []string `json:"exclude" yaml:"exclude"`
-	TestPatterns []string `json:"test_patterns" yaml:"test_patterns"`
-	ProdPatterns []string `json:"prod_patterns" yaml:"prod_patterns"`
-}
-
-type rawProjectConfigDTO struct {
-	AgenticLens       *domain.EntrypointConfig    `json:"agenticlens" yaml:"agenticlens"`
-	ProjectName       *string                     `json:"project_name" yaml:"project_name"`
-	Ticket            *rawTicketConfig            `json:"ticket" yaml:"ticket"`
-	Workspaces        *rawWorkspacesConfig        `json:"workspaces" yaml:"workspaces"`
-	Database          *rawDatabaseConfig          `json:"database" yaml:"database"`
-	Telemetry         *rawTelemetryConfig         `json:"telemetry" yaml:"telemetry"`
-	Live              *rawLiveConfig              `json:"live" yaml:"live"`
-	AnomalyThresholds *rawAnomalyThresholdsConfig `json:"anomaly_thresholds" yaml:"anomaly_thresholds"`
-	CodeMetrics       *rawCodeMetricsConfig       `json:"code_metrics" yaml:"code_metrics"`
-	RoleMappings      map[string]string           `json:"role_mappings" yaml:"role_mappings"`
-	RoleOrder         []string                    `json:"role_order" yaml:"role_order"`
-}
-
-func mergeConfig(dto rawProjectConfigDTO) domain.ProjectConfig {
-	cfg := domain.DefaultProjectConfig()
-	if dto.AgenticLens != nil {
-		cfg.AgenticLens = *dto.AgenticLens
-	}
-	cfg.AnomalyThresholds.ContextCeilingWarningTokens = 0
-	cfg.AnomalyThresholds.ContextCeilingCriticalTokens = 0
-
-	if dto.ProjectName != nil && strings.TrimSpace(*dto.ProjectName) != "" {
-		cfg.ProjectName = strings.TrimSpace(*dto.ProjectName)
-	}
-
-	if dto.Ticket != nil && len(dto.Ticket.Prefixes) > 0 {
-		prefixes := make([]domain.TicketPrefix, 0, len(dto.Ticket.Prefixes))
-		for _, item := range dto.Ticket.Prefixes {
-			cleanPrefix := strings.TrimSpace(item.Prefix)
-			if cleanPrefix != "" {
-				prefixes = append(prefixes, domain.TicketPrefix{
-					Prefix:      cleanPrefix,
-					Description: strings.TrimSpace(item.Description),
-					TicketType:  strings.TrimSpace(item.TicketType),
-				})
-			}
-		}
-		if len(prefixes) > 0 {
-			cfg.Ticket.Prefixes = prefixes
-		}
-	}
-
-	if dto.Ticket != nil {
-		if dto.Ticket.CaseInsensitive != nil {
-			cfg.Ticket.CaseInsensitive = *dto.Ticket.CaseInsensitive
-		}
-		if dto.Ticket.CustomPatterns != nil {
-			cfg.Ticket.CustomPatterns = dto.Ticket.CustomPatterns
-		}
-	}
-
-	if dto.Workspaces != nil {
-		if dto.Workspaces.Dir != nil {
-			cfg.Workspaces.Dir = strings.TrimSpace(*dto.Workspaces.Dir)
-		}
-		if len(dto.Workspaces.Artifacts) > 0 {
-			artifacts := make([]domain.WorkspaceArtifactConfig, 0, len(dto.Workspaces.Artifacts))
-			for _, item := range dto.Workspaces.Artifacts {
-				cleanPath := strings.TrimSpace(item.Path)
-				cleanTitle := strings.TrimSpace(item.Title)
-				if cleanPath != "" {
-					if cleanTitle == "" {
-						cleanTitle = filepath.Base(cleanPath)
-					}
-					artifacts = append(artifacts, domain.WorkspaceArtifactConfig{
-						Path:        cleanPath,
-						Title:       cleanTitle,
-						Description: strings.TrimSpace(item.Description),
-					})
-				}
-			}
-			if len(artifacts) > 0 {
-				cfg.Workspaces.Artifacts = artifacts
-			}
-		}
-	}
-
-	if dto.Database != nil {
-		if dto.Database.Path != nil && strings.TrimSpace(*dto.Database.Path) != "" {
-			cfg.Database.Path = strings.TrimSpace(*dto.Database.Path)
-		}
-		if dto.Database.QueryTimeoutMs != nil {
-			cfg.Database.QueryTimeoutMs = *dto.Database.QueryTimeoutMs
-		}
-		if dto.Database.BusyTimeoutMs != nil {
-			cfg.Database.BusyTimeoutMs = *dto.Database.BusyTimeoutMs
-		}
-		if dto.Database.ReadOnly != nil {
-			cfg.Database.ReadOnly = *dto.Database.ReadOnly
-		}
-	}
-
-	if dto.Live != nil {
-		if dto.Live.ActiveThresholdSeconds != nil {
-			cfg.Live.ActiveThresholdSeconds = *dto.Live.ActiveThresholdSeconds
-		}
-		if dto.Live.PollIntervalMs != nil {
-			cfg.Live.PollIntervalMs = *dto.Live.PollIntervalMs
-		}
-		if dto.Live.MaxTraceBufferMessages != nil {
-			cfg.Live.MaxTraceBufferMessages = *dto.Live.MaxTraceBufferMessages
-		}
-	}
-
-	rawAT := dto.AnomalyThresholds
-	if rawAT == nil && dto.Live != nil && dto.Live.AnomalyThresholds != nil {
-		rawAT = dto.Live.AnomalyThresholds
-	}
-	if rawAT != nil {
-		if rawAT.StallThresholdSeconds != nil {
-			cfg.AnomalyThresholds.StallThresholdSeconds = *rawAT.StallThresholdSeconds
-		}
-		if rawAT.ErrorRateThreshold != nil {
-			cfg.AnomalyThresholds.ErrorRateThreshold = *rawAT.ErrorRateThreshold
-		}
-		if rawAT.ContextExhaustionPct != nil {
-			cfg.AnomalyThresholds.ContextExhaustionPct = *rawAT.ContextExhaustionPct
-		}
-		if rawAT.ConsecutiveErrorsStreakWarning != nil && *rawAT.ConsecutiveErrorsStreakWarning > 0 {
-			cfg.AnomalyThresholds.ConsecutiveErrorsStreakWarning = *rawAT.ConsecutiveErrorsStreakWarning
-		}
-		if rawAT.ConsecutiveErrorsStreakCritical != nil && *rawAT.ConsecutiveErrorsStreakCritical > 0 {
-			cfg.AnomalyThresholds.ConsecutiveErrorsStreakCritical = *rawAT.ConsecutiveErrorsStreakCritical
-		}
-		if rawAT.ContextCeilingCriticalTokens != nil {
-			cfg.AnomalyThresholds.ContextCeilingCriticalTokens = *rawAT.ContextCeilingCriticalTokens
-		}
-		if rawAT.ContextCeilingWarningTokens != nil {
-			cfg.AnomalyThresholds.ContextCeilingWarningTokens = *rawAT.ContextCeilingWarningTokens
-		} else if rawAT.ContextCeilingApproachRatioWarning != nil && *rawAT.ContextCeilingApproachRatioWarning > 0 && cfg.AnomalyThresholds.ContextCeilingCriticalTokens > 0 {
-			cfg.AnomalyThresholds.ContextCeilingWarningTokens = int64(float64(cfg.AnomalyThresholds.ContextCeilingCriticalTokens) * *rawAT.ContextCeilingApproachRatioWarning)
-		}
-		if rawAT.TokenVelocityWarningTokens != nil && *rawAT.TokenVelocityWarningTokens > 0 {
-			cfg.AnomalyThresholds.TokenVelocityWarningTokens = *rawAT.TokenVelocityWarningTokens
-		}
-		if rawAT.TokenVelocityCriticalTokens != nil && *rawAT.TokenVelocityCriticalTokens > 0 {
-			cfg.AnomalyThresholds.TokenVelocityCriticalTokens = *rawAT.TokenVelocityCriticalTokens
-		}
-		if rawAT.TokenVelocityWarningDeltaTokens != nil && *rawAT.TokenVelocityWarningDeltaTokens > 0 {
-			cfg.AnomalyThresholds.TokenVelocityWarningDeltaTokens = *rawAT.TokenVelocityWarningDeltaTokens
-		}
-		if rawAT.TokenVelocityCriticalDeltaTokens != nil && *rawAT.TokenVelocityCriticalDeltaTokens > 0 {
-			cfg.AnomalyThresholds.TokenVelocityCriticalDeltaTokens = *rawAT.TokenVelocityCriticalDeltaTokens
-		}
-		if rawAT.ToolThrashingMinFailures != nil && *rawAT.ToolThrashingMinFailures > 0 {
-			cfg.AnomalyThresholds.ToolThrashingMinFailures = *rawAT.ToolThrashingMinFailures
-		}
-		if rawAT.ToolThrashingCriticalFailures != nil && *rawAT.ToolThrashingCriticalFailures > 0 {
-			cfg.AnomalyThresholds.ToolThrashingCriticalFailures = *rawAT.ToolThrashingCriticalFailures
-		}
-	}
-
-	if dto.CodeMetrics != nil {
-		if dto.CodeMetrics.SourceRoots != nil {
-			var cleanRoots []string
-			for _, r := range dto.CodeMetrics.SourceRoots {
-				t := strings.TrimSpace(r)
-				if t != "" {
-					cleanRoots = append(cleanRoots, t)
-				}
-			}
-			cfg.CodeMetrics.SourceRoots = cleanRoots
-		}
-		if dto.CodeMetrics.BaseBranch != nil && strings.TrimSpace(*dto.CodeMetrics.BaseBranch) != "" {
-			cfg.CodeMetrics.BaseBranch = strings.TrimSpace(*dto.CodeMetrics.BaseBranch)
-		}
-		if dto.CodeMetrics.Include != nil {
-			cfg.CodeMetrics.Include = dto.CodeMetrics.Include
-		}
-		if dto.CodeMetrics.Exclude != nil {
-			cfg.CodeMetrics.Exclude = dto.CodeMetrics.Exclude
-		}
-		if dto.CodeMetrics.TestPatterns != nil {
-			cfg.CodeMetrics.TestPatterns = dto.CodeMetrics.TestPatterns
-		}
-		if dto.CodeMetrics.ProdPatterns != nil {
-			cfg.CodeMetrics.ProdPatterns = dto.CodeMetrics.ProdPatterns
-		}
-	}
-
-	if dto.RoleMappings != nil {
-		for k, v := range dto.RoleMappings {
-			cleanKey := strings.TrimSpace(k)
-			cleanVal := strings.TrimSpace(v)
-			if cleanKey != "" && cleanVal != "" {
-				cfg.RoleMappings[cleanKey] = cleanVal
-			}
-		}
-	}
-
-	if dto.RoleOrder != nil {
-		cleanOrder := make([]string, 0, len(dto.RoleOrder))
-		for _, r := range dto.RoleOrder {
-			trimmed := strings.ToLower(strings.TrimSpace(r))
-			if trimmed != "" {
-				cleanOrder = append(cleanOrder, trimmed)
-			}
-		}
-		cfg.RoleOrder = cleanOrder
-	}
-
-	return cfg
-}
-
-// FindConfigFile traverses upwards from startDir looking for AgenticLens configuration files.
-// At each directory level, candidates are evaluated in priority order:
-// 1. .agenticlens-config.yaml (root)
-// 2. .agenticlens-config.yml (root)
-// 3. .agenticlens-config.json (root)
+// FindConfigFile finds the nearest shared configuration without crossing a Git root.
 func FindConfigFile(startDir string) (string, error) {
-	curr := startDir
-	if curr == "" {
-		cwd, err := os.Getwd()
+	if startDir == "" {
+		var err error
+		startDir, err = os.Getwd()
 		if err != nil {
-			return "", fmt.Errorf("resolving working directory: %w", err)
+			return "", err
 		}
-		curr = cwd
 	}
-
-	absDir, err := filesystem.PhysicalPath(curr)
+	curr, err := filesystem.PhysicalPath(startDir)
 	if err != nil {
-		return "", fmt.Errorf("resolving absolute path for %s: %w", curr, err)
+		return "", fmt.Errorf("resolving configuration origin %s: %w", startDir, err)
 	}
-
-	curr = absDir
 	for {
-		candidates := []string{
-			filepath.Join(curr, ".agenticlens-config.yaml"),
-			filepath.Join(curr, ".agenticlens-config.yml"),
-			filepath.Join(curr, ".agenticlens-config.json"),
-		}
-		for _, cfgPath := range candidates {
-			if fi, err := os.Stat(cfgPath); err == nil {
-				if fi.IsDir() {
+		selected := ""
+		for _, name := range []string{".agenticlens-config.yaml", ".agenticlens-config.yml"} {
+			path := filepath.Join(curr, name)
+			if _, err := os.Lstat(path); err != nil {
+				if errors.Is(err, os.ErrNotExist) {
 					continue
 				}
-				if !fi.Mode().IsRegular() {
-					return "", fmt.Errorf("configuration must be a regular file: %s", cfgPath)
-				}
-				return cfgPath, nil
-			} else if !errors.Is(err, os.ErrNotExist) {
-				return "", fmt.Errorf("configuration path %s: %w", cfgPath, err)
-			} else if _, linkErr := os.Lstat(cfgPath); linkErr == nil {
-				return "", fmt.Errorf("configuration exists but is unavailable: %s", cfgPath)
+				return "", fmt.Errorf("configuration path %s: %w", path, err)
 			}
+			if selected != "" {
+				return "", fmt.Errorf("ambiguous shared configuration: both %s and %s exist; keep one canonical configuration file", selected, path)
+			}
+			selected = path
+		}
+		if selected != "" {
+			info, err := os.Stat(selected)
+			if err != nil {
+				return "", fmt.Errorf("configuration %s: %w", selected, err)
+			}
+			if !info.Mode().IsRegular() {
+				return "", fmt.Errorf("configuration must be a regular file: %s", selected)
+			}
+			return selected, nil
 		}
 		if _, err := os.Lstat(filepath.Join(curr, ".git")); err == nil {
 			break
@@ -493,146 +171,157 @@ func FindConfigFile(startDir string) (string, error) {
 		}
 		curr = parent
 	}
-
 	return "", nil
 }
 
-// LoadFromFile unmarshals a configuration file by path, merging values over domain defaults.
-func LoadFromFile(filePath string) (domain.ProjectConfig, error) {
-	cfg, err := loadFromFile(filePath)
+// LoadShared reads project policy without consulting machine-local source/capture state.
+func LoadShared(project string) (domain.ProjectConfig, error) {
+	path, err := FindConfigFile(project)
 	if err != nil {
 		return domain.ProjectConfig{}, err
 	}
-	return validateLoadedConfig(cfg, filePath)
-}
-
-// loadFromFile decodes without operational validation so local settings can supply
-// required values before the effective configuration is checked.
-func loadFromFile(filePath string) (domain.ProjectConfig, error) {
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		return domain.ProjectConfig{}, fmt.Errorf("reading configuration file %s: %w", filePath, err)
-	}
-
-	var dto rawProjectConfigDTO
-	ext := strings.ToLower(filepath.Ext(filePath))
-
-	if ext == ".yaml" || ext == ".yml" {
-		if err := yaml.Unmarshal(data, &dto); err != nil {
-			return domain.ProjectConfig{}, fmt.Errorf("decoding yaml configuration %s: %w", filePath, err)
-		}
-	} else if ext == ".json" {
-		if err := json.Unmarshal(data, &dto); err != nil {
-			return domain.ProjectConfig{}, fmt.Errorf("decoding json configuration %s: %w", filePath, err)
-		}
-	} else {
-		if err := yaml.Unmarshal(data, &dto); err != nil {
-			if jsonErr := json.Unmarshal(data, &dto); jsonErr != nil {
-				return domain.ProjectConfig{}, fmt.Errorf("decoding configuration %s: %w", filePath, err)
-			}
-		}
-	}
-
-	cfg := mergeConfig(dto)
-	generation, policyErr := decodeGenerationConfig(data)
-	if policyErr != nil {
-		return domain.ProjectConfig{}, fmt.Errorf("configuration %s: %w", filePath, policyErr)
-	}
-	cfg.Generation = generation
-	if dto.AgenticLens != nil && ext != ".json" {
-		if _, err := parseEntrypoint(data, false); err != nil {
-			return domain.ProjectConfig{}, fmt.Errorf("bootstrap configuration %s: %w", filePath, err)
-		}
-	}
-	capturePolicy, captureErr := decodeCapturePolicy(data, captureReadPolicy())
-	if captureErr != nil {
-		return domain.ProjectConfig{}, captureErr
-	}
-	cfg.Telemetry.Capture = capturePolicy
-	return cfg, nil
-}
-
-func validateLoadedConfig(cfg domain.ProjectConfig, filePath string) (domain.ProjectConfig, error) {
-	if err := ValidateConfig(cfg); err != nil {
-		return domain.ProjectConfig{}, fmt.Errorf("validating configuration %s: %w", filePath, err)
-	}
-	if err := cfg.Telemetry.Capture.Validate(); err != nil {
-		return domain.ProjectConfig{}, fmt.Errorf("validating configuration %s: %w", filePath, err)
-	}
-	return cfg, nil
-}
-
-// Load finds the configuration file traversing upwards from repoRoot and parses it.
-// If no configuration file is discovered, ErrConfigNotFound is returned.
-func Load(repoRoot string) (domain.ProjectConfig, error) {
-	cfgFile, err := FindConfigFile(repoRoot)
-	if err != nil {
-		return domain.ProjectConfig{}, err
-	}
-	if cfgFile == "" {
+	if path == "" {
 		return domain.ProjectConfig{}, ErrConfigNotFound
 	}
-	cfg, err := loadFromFile(cfgFile)
+	return LoadFromFile(path)
+}
+
+func LoadFromFile(path string) (domain.ProjectConfig, error) {
+	cfg, err := loadFromFile(path)
+	if err != nil {
+		return cfg, err
+	}
+	return validateLoadedConfig(cfg, path)
+}
+
+// ReadConfigCandidate decodes explicitly supplied setup choices before CLI
+// overrides complete the candidate. It never selects runtime configuration.
+func ReadConfigCandidate(path string) (domain.ProjectConfig, error) {
+	return decodeSharedConfig(path, false)
+}
+func loadFromFile(path string) (domain.ProjectConfig, error) { return decodeSharedConfig(path, true) }
+func decodeSharedConfig(path string, validateBootstrap bool) (domain.ProjectConfig, error) {
+	var cfg domain.ProjectConfig
+	ext := strings.ToLower(filepath.Ext(path))
+	if ext != ".yaml" && ext != ".yml" {
+		return cfg, fmt.Errorf("configuration %s must have a .yaml or .yml suffix", path)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return cfg, fmt.Errorf("reading configuration %s: %w", path, err)
+	}
+	nodes, err := configurationNodes(data)
+	if err != nil {
+		return cfg, fmt.Errorf("configuration %s: %w", path, err)
+	}
+	if err = validateSharedNodes(nodes); err != nil {
+		return cfg, fmt.Errorf("configuration %s: %w", path, err)
+	}
+	if err = yaml.Unmarshal(data, &cfg); err != nil {
+		return cfg, fmt.Errorf("decoding YAML configuration %s: %w", path, err)
+	}
+	cfg.Settings = make(map[string]bool, len(nodes))
+	for key := range nodes {
+		cfg.Settings[key] = true
+	}
+	cfg.ConfigPath = path
+	cfg.Comments = readConfigurationComments(data)
+	cfg.ProjectName = strings.TrimSpace(cfg.ProjectName)
+	for i := range cfg.Ticket.Prefixes {
+		p := &cfg.Ticket.Prefixes[i]
+		p.Prefix = strings.TrimSpace(p.Prefix)
+		p.Description = strings.TrimSpace(p.Description)
+		p.TicketType = strings.TrimSpace(p.TicketType)
+	}
+	// Shared policy never provides machine source or capture state authority.
+	cfg.Telemetry = domain.TelemetryConfig{}
+	if _, ok := nodes["agenticlens"]; ok && validateBootstrap {
+		if _, err := parseEntrypoint(data, false); err != nil {
+			return cfg, fmt.Errorf("bootstrap configuration %s: %w", path, err)
+		}
+	}
+	return cfg, nil
+}
+
+func validateLoadedConfig(cfg domain.ProjectConfig, path string) (domain.ProjectConfig, error) {
+	if err := ValidateConfig(cfg); err != nil {
+		return domain.ProjectConfig{}, fmt.Errorf("validating configuration %s: %w", path, err)
+	}
+	return cfg, nil
+}
+
+// Load selects one whole local file while preserving shared-only persisted reads.
+func Load(project string) (domain.ProjectConfig, error) {
+	path, err := FindConfigFile(project)
 	if err != nil {
 		return domain.ProjectConfig{}, err
 	}
-	localPath := filepath.Join(filepath.Dir(cfgFile), ".agenticlens-config.local.yaml")
-	data, err := os.ReadFile(localPath)
-	if errors.Is(err, os.ErrNotExist) {
-		return validateLoadedConfig(cfg, cfgFile)
+	if path == "" {
+		return domain.ProjectConfig{}, ErrConfigNotFound
 	}
+	cfg, err := loadFromFile(path)
 	if err != nil {
-		return domain.ProjectConfig{}, fmt.Errorf("reading local configuration %s: %w", localPath, err)
+		return cfg, err
 	}
-	var local rawProjectConfigDTO
-	if err := yaml.Unmarshal(data, &local); err != nil {
-		return domain.ProjectConfig{}, fmt.Errorf("decoding local configuration %s: %w", localPath, err)
+	selection, err := SelectConfig(project)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return validateLoadedConfig(cfg, path)
+		}
+		return cfg, err
 	}
-	if local.AgenticLens != nil {
+	data, err := readSelectedLocal(selection)
+	if err != nil {
+		return cfg, err
+	}
+	nodes, err := configurationNodes(data)
+	if err != nil {
+		return cfg, fmt.Errorf("local configuration %s: %w", selection.LocalPath, err)
+	}
+	cfg.LocalConfigPath = selection.LocalPath
+	if _, exists := nodes["agenticlens"]; exists {
 		entry, err := parseEntrypoint(data, true)
 		if err != nil {
-			return domain.ProjectConfig{}, fmt.Errorf("local entrypoint configuration: %w", err)
+			return cfg, fmt.Errorf("local configuration %s: %w", selection.LocalPath, err)
 		}
 		if entry.InstallRoot != "" {
 			cfg.AgenticLens.InstallRoot = entry.InstallRoot
 		}
 	}
-	capturePolicy, captureErr := decodeCapturePolicy(data, cfg.Telemetry.Capture)
-	if captureErr != nil {
-		return domain.ProjectConfig{}, captureErr
-	}
-	cfg.Telemetry.Capture = capturePolicy
-	if local.Telemetry == nil {
-		return validateLoadedConfig(cfg, cfgFile+" with "+localPath)
-	}
-	telemetry := local.Telemetry
-	if telemetry.DefaultSource != nil {
-		value := strings.ToLower(strings.TrimSpace(*telemetry.DefaultSource))
+	if n := nodes["telemetry.default_source"]; n != nil {
+		if err := requireNodeType(n, "telemetry.default_source", yaml.ScalarNode, "!!str"); err != nil {
+			return cfg, err
+		}
+		value := strings.ToLower(strings.TrimSpace(n.Value))
 		if value != "opencode" && value != "codex" {
-			return domain.ProjectConfig{}, fmt.Errorf("invalid local configuration %s: telemetry.default_source must be opencode or codex", localPath)
+			return cfg, fmt.Errorf("local configuration %s: telemetry.default_source must be opencode or codex", selection.LocalPath)
 		}
 		cfg.Telemetry.DefaultSource = value
 	}
-	if telemetry.Sources != nil {
-		if source := telemetry.Sources.OpenCode; source != nil && source.DatabasePath != nil {
-			value := strings.TrimSpace(*source.DatabasePath)
-			if value == "" {
-				return domain.ProjectConfig{}, fmt.Errorf("invalid local configuration %s: telemetry.sources.opencode.database_path cannot be empty", localPath)
+	for _, source := range []struct {
+		key    string
+		target *string
+	}{{"telemetry.sources.opencode.database_path", &cfg.Telemetry.Sources.OpenCodeDatabasePath}, {"telemetry.sources.codex.home", &cfg.Telemetry.Sources.CodexHome}} {
+		if n := nodes[source.key]; n != nil {
+			if err := requireNodeType(n, source.key, yaml.ScalarNode, "!!str"); err != nil {
+				return cfg, err
 			}
-			cfg.Telemetry.Sources.OpenCodeDatabasePath = value
-		}
-		if source := telemetry.Sources.Codex; source != nil && source.Home != nil {
-			value := strings.TrimSpace(*source.Home)
-			if value == "" {
-				return domain.ProjectConfig{}, fmt.Errorf("invalid local configuration %s: telemetry.sources.codex.home cannot be empty", localPath)
+			if strings.TrimSpace(n.Value) == "" {
+				return cfg, fmt.Errorf("local configuration %s: %s must be nonblank", selection.LocalPath, source.key)
 			}
-			cfg.Telemetry.Sources.CodexHome = value
+			*source.target, err = ResolveConfiguredPath(filepath.Dir(selection.LocalPath), n.Value)
+			if err != nil {
+				return cfg, fmt.Errorf("local configuration %s: %s: %w", selection.LocalPath, source.key, err)
+			}
 		}
 	}
-	return validateLoadedConfig(cfg, cfgFile+" with "+localPath)
+	cfg.Telemetry.Capture, err = decodeCapturePolicy(data)
+	if err != nil {
+		return cfg, fmt.Errorf("local configuration %s: %w", selection.LocalPath, err)
+	}
+	return validateLoadedConfig(cfg, path)
 }
 
-// ProjectRoot resolves the owning configuration directory without crossing a nearer Git boundary.
 func ProjectRoot(start string) (string, error) {
 	path, err := FindConfigFile(start)
 	if err != nil {
@@ -644,9 +333,5 @@ func ProjectRoot(start string) (string, error) {
 	if start == "" {
 		start = "."
 	}
-	path, err = filesystem.PhysicalPath(start)
-	if err != nil {
-		return "", err
-	}
-	return filepath.EvalSymlinks(path)
+	return filesystem.PhysicalPath(start)
 }

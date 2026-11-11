@@ -1,7 +1,9 @@
 package main_test
 
 import (
+	"database/sql"
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -32,12 +34,12 @@ func testCodexRefresh(t *testing.T, ticketID, prefix, workspaceDir string) {
 	// Run outside the checkout so configuration, Git history, and ticket
 	// directories cannot be inherited from the development repository.
 	project := t.TempDir()
-	config := "project_name: FixtureProject\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes:\n    - prefix: " + prefix + "\nworkspaces:\n  dir: " + workspaceDir + "\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+	config := "agenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: FixtureProject\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: " + prefix + "\n      description: Fixture tickets\nworkspaces:\n  artifacts: []\n  dir: " + workspaceDir + "\ncode_metrics:\n  base_branch: fixture-base\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), []byte(config), 0600); err != nil {
 		t.Fatal(err)
 	}
 	home := t.TempDir()
-	localConfig := "telemetry:\n  default_source: codex\n  sources:\n    codex:\n      home: " + home + "\n"
+	localConfig := "telemetry:\n  capture:\n    enabled: false\n    state_dir: .agenticlens-capture\n    pass_timeout_ms: 3000\n    max_sessions: 256\n    max_source_bytes: 67108864\n  default_source: codex\n  sources:\n    codex:\n      home: " + home + "\n"
 	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.local.yaml"), []byte(localConfig), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -61,6 +63,7 @@ func testCodexRefresh(t *testing.T, ticketID, prefix, workspaceDir string) {
 			"--session-id", "thread-01", "--ticket-id", ticketID, "--ticket-title", "Codex refresh regression",
 			"--ticket-type", "chore", "--json-output", output)
 		cmd.Dir = project
+		prepareGenerateFixture(t, cmd)
 		if result, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("generate failed: %v\n%s", err, result)
 		}
@@ -113,7 +116,7 @@ func testCodexRefresh(t *testing.T, ticketID, prefix, workspaceDir string) {
 
 func TestGenerateCodexPreservesChildIdentityAndExcludesInheritedUsage(t *testing.T) {
 	project := t.TempDir()
-	config := "project_name: ChildFixture\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  dir: records\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\nrole_mappings:\n  coder: tester\n"
+	config := "agenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nproject_name: ChildFixture\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: TEST\n      description: Fixture ticket\nworkspaces:\n  artifacts: []\n  dir: records\ncode_metrics:\n  base_branch: fixture-base\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\nrole_mappings:\n  coder: tester\n"
 	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), []byte(config), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -155,6 +158,7 @@ func TestGenerateCodexPreservesChildIdentityAndExcludesInheritedUsage(t *testing
 			"--nonce", "fixture-nonce-child-discovery", "--ticket-id", "TEST-303", "--ticket-title", "Child attribution regression",
 			"--ticket-type", "test", "--json-output", output)
 		cmd.Dir = project
+		prepareGenerateFixture(t, cmd)
 		if result, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("generate attempt %d failed: %v\n%s", attempt, err, result)
 		}
@@ -203,53 +207,73 @@ func TestGenerateCodexPreservesChildIdentityAndExcludesInheritedUsage(t *testing
 }
 
 func TestGenerateSelectedSourceDoesNotFallback(t *testing.T) {
-	sharedConfig := "project_name: SourceFixture\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes: [TEST]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\ndatabase:\n  path: ./legacy-opencode.db\n"
-	for _, tc := range []struct {
-		name        string
-		local       string
-		args        []string
-		wantMessage string
-		wantPath    string
-	}{
-		{
-			name:        "omitted source honors Codex-only local default and does not fall back",
-			local:       "telemetry:\n  default_source: codex\n  sources:\n    codex:\n      home: ./missing-codex-home\n    opencode:\n      database_path: ./available-opencode.db\n",
-			wantMessage: "selected Codex source", wantPath: "missing-codex-home",
-		},
-		{
-			name:        "explicit source overrides local default and does not fall back",
-			local:       "telemetry:\n  default_source: codex\n  sources:\n    codex:\n      home: ./available-codex-home\n    opencode:\n      database_path: ./local-opencode.db\n",
-			args:        []string{"--source", "opencode", "--db-path", "./missing-cli-opencode.db"},
-			wantMessage: "selected OpenCode source", wantPath: "missing-cli-opencode.db",
-		},
-		{
-			name:        "legacy shared OpenCode path works without local config",
-			wantMessage: "selected OpenCode source", wantPath: "legacy-opencode.db",
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			project := t.TempDir()
-			if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), []byte(sharedConfig), 0600); err != nil {
+	for _, scenario := range []string{"missing-source", "invalid-source", "blank-source", "missing-codex-home", "invalid-codex-home", "blank-codex-home", "missing-db-path", "invalid-db-path", "blank-db-path", "missing-selector"} {
+		t.Run(scenario, func(t *testing.T) {
+			f := newCaptureGenerationFixture(t)
+			f.write(t, 17)
+			dbPath := setupIsolatedEmptyDB(t)
+			db, err := sql.Open("sqlite", dbPath)
+			if err != nil {
 				t.Fatal(err)
 			}
-			if tc.local != "" {
-				if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.local.yaml"), []byte(tc.local), 0600); err != nil {
-					t.Fatal(err)
-				}
+			if _, err = db.Exec(`INSERT INTO session(id)VALUES('root')`); err != nil {
+				t.Fatal(err)
 			}
-			args := append([]string{"generate"}, tc.args...)
-			args = append(args, "--ticket-id", "TEST-59", "--ticket-title", "Source selection", "--ticket-type", "test", "--json-output", filepath.Join(project, "metrics.json"))
+			if err = db.Close(); err != nil {
+				t.Fatal(err)
+			}
+			setOpenCodeFixtureProject(t, dbPath, f.project)
+			local := fmt.Sprintf("telemetry:\n  default_source: codex\n  sources:\n    codex:\n      home: %q\n    opencode:\n      database_path: %q\n  capture:\n    enabled: false\n    state_dir: %q\n    pass_timeout_ms: 3000\n    max_sessions: 256\n    max_source_bytes: 67108864\n", f.store, dbPath, f.stateBase)
+			args := []string{"generate", "--session-id", "root", "--ticket-id", "TEST-100", "--ticket-title", "Explicit selection", "--json-output", f.output, "--append", filepath.Join(f.project, "SUMMARY.md")}
+			want := ""
+			switch scenario {
+			case "missing-source":
+				local = strings.Replace(local, "  default_source: codex\n", "", 1)
+				want = "source is required"
+			case "invalid-source":
+				args = append(args, "--source", "unknown")
+				want = "source"
+			case "blank-source":
+				args = append(args, "--source", "")
+				want = "--source"
+			case "missing-codex-home":
+				local = strings.Replace(local, fmt.Sprintf("    codex:\n      home: %q\n", f.store), "", 1)
+				want = "codex.home"
+			case "invalid-codex-home":
+				args = append(args, "--codex-home", filepath.Join(t.TempDir(), "missing-selected-store"))
+				want = "missing-selected-store"
+			case "blank-codex-home":
+				args = append(args, "--codex-home", "")
+				want = "--codex-home"
+			case "missing-db-path":
+				local = strings.Replace(local, fmt.Sprintf("    opencode:\n      database_path: %q\n", dbPath), "", 1)
+				args = append(args, "--source", "opencode")
+				want = "database_path"
+			case "invalid-db-path":
+				args = append(args, "--source", "opencode", "--db-path", filepath.Join(t.TempDir(), "missing-selected.db"))
+				want = "missing-selected.db"
+			case "blank-db-path":
+				args = append(args, "--source", "opencode", "--db-path", "")
+				want = "--db-path"
+			case "missing-selector":
+				args = append(args[:1], args[3:]...)
+				want = "session-id"
+			}
+			if err = os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte(local), 0600); err != nil {
+				t.Fatal(err)
+			}
 			cmd := exec.Command(cliBinaryPath, args...)
-			cmd.Dir = project
-			output, err := cmd.CombinedOutput()
-			if err == nil {
-				t.Fatalf("expected selected source failure, output: %s", output)
+			cmd.Dir = f.project
+			// A usable competing environment store must never satisfy omitted policy.
+			cmd.Env = append(os.Environ(), "CODEX_HOME="+f.store)
+			out, err := cmd.CombinedOutput()
+			if err == nil || !strings.Contains(string(out), want) {
+				t.Fatalf("selected failure %q: %v %s", want, err, out)
 			}
-			if !strings.Contains(string(output), tc.wantMessage) || !strings.Contains(string(output), tc.wantPath) {
-				t.Fatalf("expected selected source error containing %q and %q, got:\n%s", tc.wantMessage, tc.wantPath, output)
-			}
-			if _, statErr := os.Stat(filepath.Join(project, "metrics.json")); !os.IsNotExist(statErr) {
-				t.Fatalf("source failure unexpectedly wrote metrics: stat err=%v", statErr)
+			for _, path := range []string{f.output, filepath.Join(f.project, "SUMMARY.md")} {
+				if _, err = os.Stat(path); !os.IsNotExist(err) {
+					t.Fatalf("selection failure wrote %s: %v", path, err)
+				}
 			}
 		})
 	}

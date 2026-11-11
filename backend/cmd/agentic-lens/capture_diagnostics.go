@@ -18,27 +18,43 @@ import (
 )
 
 type captureInspection struct {
-	DiagnosticMetadataComplete     bool                         `json:"diagnostic_metadata_complete"`
-	DiagnosticsAvailable           bool                         `json:"diagnostics_available"`
-	DiagnosticsContinuation        bool                         `json:"diagnostics_continuation"`
-	CurrentDiagnosticsContinuation bool                         `json:"current_diagnostics_continuation"`
-	DiagnosticsBefore              int64                        `json:"diagnostics_before,omitempty"`
-	DiagnosticBytes                int64                        `json:"diagnostic_bytes_read"`
-	InstallationIssues             []string                     `json:"installation_issues"`
-	Continuation                   bool                         `json:"registrations_continuation"`
-	Publication                    capture.PublicationRequest   `json:"publication"`
-	Worker                         capture.WorkerProgress       `json:"worker"`
-	Registrations                  []domain.CaptureRegistration `json:"registrations"`
-	Installation                   []capture.Manifest           `json:"installation"`
-	Diagnostics                    []domain.CaptureDiagnostic   `json:"diagnostics"`
-	Verification                   domain.CaptureHealth         `json:"verification"`
-	Limits                         []string                     `json:"limits"`
+	Configuration                  adaptersconfig.SelectedConfig `json:"configuration"`
+	PreferredPath                  string                        `json:"preferred_executable,omitempty"`
+	PreferredBuild                 domain.BuildInfo              `json:"preferred_build"`
+	SelectionError                 string                        `json:"selection_error,omitempty"`
+	DiagnosticMetadataComplete     bool                          `json:"diagnostic_metadata_complete"`
+	DiagnosticsAvailable           bool                          `json:"diagnostics_available"`
+	DiagnosticsContinuation        bool                          `json:"diagnostics_continuation"`
+	CurrentDiagnosticsContinuation bool                          `json:"current_diagnostics_continuation"`
+	DiagnosticsBefore              int64                         `json:"diagnostics_before,omitempty"`
+	DiagnosticBytes                int64                         `json:"diagnostic_bytes_read"`
+	InstallationIssues             []string                      `json:"installation_issues"`
+	Continuation                   bool                          `json:"registrations_continuation"`
+	Publication                    capture.PublicationRequest    `json:"publication"`
+	Worker                         capture.WorkerProgress        `json:"worker"`
+	Registrations                  []domain.CaptureRegistration  `json:"registrations"`
+	Installation                   []capture.Manifest            `json:"installation"`
+	Diagnostics                    []domain.CaptureDiagnostic    `json:"diagnostics"`
+	Verification                   domain.CaptureHealth          `json:"verification"`
+	Limits                         []string                      `json:"limits"`
 }
 
 func inspectCapture(ctx context.Context, command, directory, project string, policy domain.CaptureConfig, caller domain.CaptureIdentity, beforeDiagnostic int64, output io.Writer) (returnErr error) {
 	view := captureInspection{Registrations: []domain.CaptureRegistration{}, Installation: []capture.Manifest{}, Diagnostics: []domain.CaptureDiagnostic{}, Limits: []string{"Recorded observations only; no source discovery, extraction, binding or worker launch performed. Harness trust and unobserved sessions are unknown."}}
-	if policy.DeprecatedDetailedReport {
-		view.Limits = append(view.Limits, "telemetry.capture.detailed_report is deprecated and has no effect. Remove it; publication uses ledger and summary only, with detailed diagnostics kept locally.")
+	selection, err := adaptersconfig.SelectConfig(project)
+	if err != nil {
+		return err
+	}
+	view.Configuration = selection
+	entry, selectionErr := adaptersconfig.ResolveEntrypoint(project)
+	if selectionErr == nil {
+		view.PreferredPath, selectionErr = entry.NativePath()
+		if selectionErr == nil {
+			view.PreferredBuild, selectionErr = adaptersconfig.ValidateNativeExecutable(view.PreferredPath)
+		}
+	}
+	if selectionErr != nil {
+		view.SelectionError = selectionErr.Error()
 	}
 	location, err := capture.PreviewStateLocation(directory, project)
 	if err != nil {
@@ -195,6 +211,33 @@ func inspectCapture(ctx context.Context, command, directory, project string, pol
 			}
 		}
 		if row.ProjectProof != domain.CaptureProjectVerified || row.ProjectDirectory != project {
+			continue
+		}
+		if row.InstallationID == "" {
+			// Native user adoption has no per-worktree receipt. The source-proven exact
+			// registration and its stored exchange observations remain evidence in their
+			// own right; missing installation metadata must not erase observed stages.
+			cfg, e := adaptersconfig.Load(project)
+			if e != nil {
+				return e
+			}
+			configuredStore := ""
+			switch row.Identity.Source {
+			case domain.SourceCodex:
+				configuredStore = cfg.Telemetry.Sources.CodexHome
+			case domain.SourceOpenCode:
+				configuredStore = cfg.Telemetry.Sources.OpenCodeDatabasePath
+			}
+			if configuredStore != "" {
+				same, e := capture.SameStore(configuredStore, row.Identity.Store)
+				if e != nil {
+					return e
+				}
+				if !same {
+					continue
+				}
+			}
+			verifiedRows = append(verifiedRows, row)
 			continue
 		}
 		installation, configuredStore, e := capture.InstallationIdentity(directory, string(row.Identity.Source))

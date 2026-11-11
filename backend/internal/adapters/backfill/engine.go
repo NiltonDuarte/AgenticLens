@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -28,16 +27,16 @@ import (
 type BackfillEngine struct {
 	snapshotCutoff        time.Time
 	discoverCodexRollouts func(codex.DiscoveryOptions) ([]string, error)
-	parseCodexRollout     func(string) (codex.Transcript, error)
-	combineCodex          func([]codex.Transcript) (codex.Transcript, error)
+	freshCode             *domain.CodeFacts
+	projectRoot           string
+	budget                *sourceReadBudget
+	generationPolicy      *domain.GenerationPolicy
 }
 
 // NewEngine creates a new BackfillEngine instance.
 func NewEngine() *BackfillEngine {
 	return &BackfillEngine{
 		discoverCodexRollouts: codex.DiscoverRolloutPaths,
-
-		combineCodex: codex.CombineTranscripts,
 	}
 }
 
@@ -50,10 +49,10 @@ func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) 
 	run.snapshotCutoff = opts.SnapshotCutoff
 	e = &run
 	cleanSource := strings.ToLower(strings.TrimSpace(opts.Source))
-	if cleanSource == "" {
-		cleanSource = "opencode"
+	if cleanSource == "" && opts.RecomputeDB {
+		return nil, fmt.Errorf("--source is required for source backfill: select opencode, codex or both")
 	}
-	if cleanSource != "opencode" && cleanSource != "codex" && cleanSource != "both" && cleanSource != "all" {
+	if cleanSource != "" && cleanSource != "opencode" && cleanSource != "codex" && cleanSource != "both" && cleanSource != "all" {
 		return nil, fmt.Errorf("invalid source %q: must be 'opencode', 'codex', or 'both'", opts.Source)
 	}
 	opts.Source = cleanSource
@@ -66,23 +65,13 @@ func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) 
 			return nil, fmt.Errorf("a Git code ref is required when recomputing code facts")
 		}
 	}
-	targetDir, err := adapters.ResolveWorkspacesDir(opts.WorkspacesDir)
+	targetDir, cfg, err := adapters.ResolveWorkspaceContext(opts.WorkspacesDir)
 	if err != nil {
-		return nil, fmt.Errorf("resolving workspaces directory: %w", err)
+		return nil, fmt.Errorf("loading required backfill configuration and workspaces: %w", errors.Join(adapters.ErrWorkspacesDirNotFound, err))
 	}
+	e.projectRoot = filepath.Dir(cfg.ConfigPath)
 
-	fi, err := os.Stat(targetDir)
-	if err != nil || !fi.IsDir() {
-		return nil, fmt.Errorf("workspaces directory not found: %s", targetDir)
-	}
-
-	cfg, err := config.Load(targetDir)
-	if errors.Is(err, config.ErrConfigNotFound) {
-		cfg, err = config.Load("")
-	}
-	if err != nil && !errors.Is(err, config.ErrConfigNotFound) {
-		return nil, fmt.Errorf("loading backfill configuration: %w", err)
-	}
+	opts.WorkspacesDir = targetDir
 
 	report := &BackfillReport{
 		Warnings: []string{},
@@ -90,21 +79,12 @@ func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) 
 	}
 
 	// 1. Discover all agentic_metrics.json files
-	var metricFiles []string
-	err = filepath.WalkDir(targetDir, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return nil
-		}
-		if !d.IsDir() && d.Name() == "agentic_metrics.json" {
-			metricFiles = append(metricFiles, path)
-		}
-		return nil
-	})
+	metricFiles, discoveryDiagnostics, err := discoverWorkspaceLedgers(targetDir)
 	if err != nil {
-		return nil, fmt.Errorf("walking workspaces directory %s: %w", targetDir, err)
+		return nil, err
 	}
 
-	sort.Strings(metricFiles)
+	report.Warnings = append(report.Warnings, discoveryDiagnostics...)
 
 	// Filter by ticket ID if specified
 	var targetFiles []string
@@ -112,7 +92,7 @@ func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) 
 	for _, f := range metricFiles {
 		parentDir := filepath.Dir(f)
 		parentName := filepath.Base(parentDir)
-		if cleanTicketID != "" && !strings.EqualFold(parentName, cleanTicketID) {
+		if cleanTicketID != "" && !ticketMatches(parentName, cleanTicketID, cfg.Ticket.CaseInsensitive) {
 			continue
 		}
 		targetFiles = append(targetFiles, f)
@@ -123,14 +103,88 @@ func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) 
 		return report, nil
 	}
 
+	if opts.RecomputeDB {
+		cfg, err = config.Load(e.projectRoot)
+		if err != nil {
+			return nil, fmt.Errorf("loading selected backfill source policy: %w", err)
+		}
+		if err := config.ValidateGenerationPolicy(cfg); err != nil {
+			return nil, err
+		}
+		if err := cfg.Telemetry.Capture.ValidateBudgets(); err != nil {
+			return nil, err
+		}
+		e.budget = &sourceReadBudget{sessions: cfg.Telemetry.Capture.MaxSessions, bytes: cfg.Telemetry.Capture.MaxSourceBytes}
+		policy := cfg.Generation.Metrics
+		e.generationPolicy = &policy
+	}
+
+	classificationCfg := &git.ClassificationConfig{BaseBranch: cfg.CodeMetrics.BaseBranch, Production: cfg.CodeMetrics.Production, Tests: cfg.CodeMetrics.Tests}
+	if opts.RecomputeGit {
+		fresh, err := git.ComputeCodeFactsAtRefInDir(e.projectRoot, opts.CodeRef, classificationCfg)
+		if err != nil {
+			for _, metricPath := range targetFiles {
+				report.Results = append(report.Results, TicketMigrationResult{TicketID: filepath.Base(filepath.Dir(metricPath)), WorkspacePath: filepath.Dir(metricPath), LedgerPath: metricPath, Error: fmt.Errorf("recomputing Git facts: %w", err)})
+			}
+			report.Warnings = append(report.Warnings, fmt.Sprintf("requested Git measurement failed before publication: %v", err))
+			return report, nil
+		}
+		e.freshCode = &fresh
+	}
+
+	// Open only the explicitly selected stores. Unavailable selected paths fail
+	// the requested extraction before any schema or ledger publication.
+	var opencodeDB *opencode.OpenCodeDB
+	wantsOpenCode := cleanSource == "opencode" || cleanSource == "both" || cleanSource == "all"
+	wantsCodex := cleanSource == "codex" || cleanSource == "both" || cleanSource == "all"
+	if opts.RecomputeDB && wantsOpenCode {
+		if err := config.ValidateDatabasePolicy(cfg); err != nil {
+			return nil, err
+		}
+		opts.DBPath, err = config.ResolveOpenCodePath(opts.DBPath, cfg.Telemetry.Sources.OpenCodeDatabasePath)
+		if err != nil {
+			return nil, err
+		}
+		opencodeDB, err = opencode.OpenDB(opts.DBPath, cfg.Database.BusyTimeoutMs)
+		if err != nil {
+			return nil, fmt.Errorf("opening selected OpenCode source for backfill: %w", err)
+		}
+		defer func() {
+			if err := opencodeDB.Close(); err != nil {
+				report.Warnings = append(report.Warnings, fmt.Sprintf("closing OpenCode source: %v", err))
+			}
+		}()
+	}
+	if opts.RecomputeDB && wantsCodex {
+		opts.CodexHome, err = config.ResolveCodexHome(opts.CodexHome, cfg.Telemetry.Sources.CodexHome)
+		if err != nil {
+			return nil, err
+		}
+		opts.CodexHome, err = capture.ProjectDirectory(opts.CodexHome)
+		if err != nil {
+			return nil, fmt.Errorf("resolving selected Codex store: %w", err)
+		}
+		info, err := os.Stat(opts.CodexHome)
+		if err != nil {
+			return nil, fmt.Errorf("accessing selected Codex store %q: %w", opts.CodexHome, err)
+		}
+		if !info.IsDir() {
+			return nil, fmt.Errorf("selected Codex store %q must be a directory", opts.CodexHome)
+		}
+	}
+
+	gitUser := git.GetGitUserInDir(e.projectRoot)
+
 	// 1.5. If schema migration requested, execute universal schema migration runner first
 	if opts.MigrateSchema {
 		migRunner := NewMigrationRunner(nil)
 		migOpts := MigrationOptions{
-			WorkspacesDir:   opts.WorkspacesDir,
-			TicketID:        opts.TicketID,
-			TargetVersion:   domain.CurrentSchemaVersion,
-			DryRun:          opts.DryRun,
+			WorkspacesDir: opts.WorkspacesDir,
+			TicketID:      opts.TicketID,
+			TargetVersion: domain.CurrentSchemaVersion,
+			// Validate/report the existing migration chain without publishing
+			// ahead of the integrated source/Git/summary candidate.
+			DryRun:          true,
 			Backup:          false,
 			UpdateSummaries: false,
 		}
@@ -145,22 +199,6 @@ func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) 
 		}
 	}
 
-	// Prepare SQLite DB handle if DB recompute requested and source targets OpenCode
-	var opencodeDB *opencode.OpenCodeDB
-	wantsOpenCode := cleanSource == "opencode" || cleanSource == "both" || cleanSource == "all"
-	if opts.RecomputeDB && wantsOpenCode {
-		dbHandle, err := opencode.OpenDB(opts.DBPath)
-		if err != nil {
-			// If DB cannot be opened at all, warn and proceed without local DB (preserving telemetry)
-			report.Warnings = append(report.Warnings, fmt.Sprintf("OpenCode SQLite DB unavailable (%v); will preserve existing telemetry", err))
-		} else {
-			opencodeDB = dbHandle
-			defer opencodeDB.Close()
-		}
-	}
-
-	gitUser := git.GetGitUser()
-	classificationCfg, _ := git.LoadConfig("")
 	nowISO := opts.SnapshotCutoff.UTC().Format(time.RFC3339Nano)
 
 	// 2. Iterate each discovered workspace with per-ticket error isolation
@@ -202,6 +240,24 @@ func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) 
 			}
 		}
 
+		if report.SchemaMigration != nil && !opts.DryRun {
+			for i := range report.SchemaMigration.Results {
+				schema := &report.SchemaMigration.Results[i]
+				if schema.LedgerPath != ticketResult.LedgerPath {
+					continue
+				}
+				if ticketResult.Error != nil {
+					if schema.Status == "migrated (dry-run)" {
+						report.SchemaMigration.Migrated--
+					}
+					schema.Status = "error"
+					schema.Error = ticketResult.Error
+					report.SchemaMigration.Errors = append(report.SchemaMigration.Errors, ticketResult.Error.Error())
+				} else if schema.Status == "migrated (dry-run)" {
+					schema.Status = "migrated"
+				}
+			}
+		}
 		report.Results = append(report.Results, ticketResult)
 	}
 
@@ -230,7 +286,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 	// One target is owned at a time, before any baseline read and through the
 	// ledger/summary writes. Batch callers never retain a lock while taking the
 	// next, so they cannot invert the formatter's canonical multi-lock order.
-	canonicalPath, err := capture.ProjectDirectory(metricPath)
+	canonicalPath, summaryPath, err := backfillPublicationPaths(metricPath, opts.UpdateSummaries, cfg)
 	if err != nil {
 		result.Error = fmt.Errorf("resolving ledger publication: %w", err)
 		return result
@@ -277,30 +333,32 @@ func (e *BackfillEngine) processSingleWorkspace(
 			return result
 		}
 	}
-	if current != nil && current.Completed && !opts.RecomputeGit && !opts.RecomputeDB {
+	if current != nil && (current.Completed || current.FormerMetadataRemoved) && !opts.RecomputeGit && !opts.RecomputeDB {
 		// An explicit metadata-only cleanup is not a source refresh or a new
 		// observability snapshot. Preserve every other raw member unchanged.
 		if canonical.TicketID != nil && strings.TrimSpace(*canonical.TicketID) != "" {
 			result.TicketID = strings.TrimSpace(*canonical.TicketID)
 		}
-		result.PreviousStatus = string(domain.MigrationStatusCompleted)
-		result.NewStatus = string(domain.MigrationStatusCompleted)
+		status := domain.MigrationStatusCompleted
+		if canonical.Migration != nil && !current.Completed {
+			status = canonical.Migration.Status
+			result.PendingSteps = append([]string{}, canonical.Migration.StepsPending...)
+		}
+		result.PreviousStatus = string(status)
+		result.NewStatus = string(status)
 		result.Notes = migrationAuditSummary(canonical.Migration)
 		if opts.DryRun {
 			return result
 		}
-		if err := publishBackfillLedger(metricPath, current.WithoutMigration); err != nil {
-			result.Error = err
-			return result
-		}
-		if opts.UpdateSummaries {
-			summaryPath := filepath.Join(workspaceDir, "SUMMARY.md")
+		var tableMD string
+		if summaryPath != "" {
 			derivedLedger := domain.DeriveMetricsLedger(canonical, cfg)
-			tableMD := adapters.FormatMarkdownMetricsTable(derivedLedger, cfg.RoleOrder)
-			if err := adapters.UpdateSummaryFile(summaryPath, tableMD); err != nil {
-				result.Error = fmt.Errorf("updating summary file %s: %w", summaryPath, err)
-			}
+			tableMD = adapters.FormatMarkdownMetricsTable(derivedLedger, cfg.RoleOrder)
 		}
+		if err := publishBackfillArtifacts(metricPath, current.CleanupCandidate, summaryPath, tableMD); err != nil {
+			result.Error = err
+		}
+
 		return result
 	}
 	dto := adapters.AgenticFactLedgerDTOFromDomain(canonical)
@@ -325,9 +383,6 @@ func (e *BackfillEngine) processSingleWorkspace(
 	}
 
 	cleanSource := strings.ToLower(strings.TrimSpace(opts.Source))
-	if cleanSource == "" {
-		cleanSource = "opencode"
-	}
 	wantsOpenCode := cleanSource == "opencode" || cleanSource == "both" || cleanSource == "all"
 	wantsCodex := cleanSource == "codex" || cleanSource == "both" || cleanSource == "all"
 
@@ -392,11 +447,12 @@ func (e *BackfillEngine) processSingleWorkspace(
 	// 1. Git Recomputation
 	gitSucceeded := false
 	if opts.RecomputeGit {
-		newCode, err := git.ComputeCodeFactsAtRef(opts.CodeRef, classificationCfg)
-		if err != nil {
-			result.Error = fmt.Errorf("recomputing git facts for %s: %w", ticketID, err)
+		if e.freshCode == nil {
+			result.Error = fmt.Errorf("fresh Git measurement must be prepared for the selected target before publication")
 			return result
 		}
+		newCode := *e.freshCode
+
 		if factLedger.Code.SDLCIterations > 0 {
 			newCode.SDLCIterations = factLedger.Code.SDLCIterations
 		}
@@ -426,7 +482,16 @@ func (e *BackfillEngine) processSingleWorkspace(
 		if opencodeDB != nil {
 			db = opencodeDB.DB()
 		}
-		recovery := recoverOpenCodeAt(db, openCodeSessions, gitUser, ticketID, workspaceDir, opts.AllowFallbacks, opts.SnapshotCutoff)
+		protected := make(map[string]bool, len(codexSessions)+len(otherSessions))
+		for _, owner := range append(append([]domain.SessionFact{}, codexSessions...), otherSessions...) {
+			protected[owner.ID] = true
+		}
+		workspacePaths := []string{workspaceDir}
+		relative, err := filepath.Rel(filepath.Dir(cfg.ConfigPath), workspaceDir)
+		if err == nil && relative != "." && relative != ".." && !strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+			workspacePaths = append(workspacePaths, filepath.ToSlash(relative))
+		}
+		recovery := recoverOpenCodeAt(db, openCodeSessions, gitUser, ticketID, workspacePaths, opts.AllowFallbacks, opts.SnapshotCutoff, e.budget, e.generationPolicy, protected)
 		openCodeSessions = recovery.sessions
 		sourceEvents = domain.MergeSourceEvents(sourceEvents, recovery.source)
 		openCodeComplete = recovery.complete
@@ -451,16 +516,11 @@ func (e *BackfillEngine) processSingleWorkspace(
 		}
 	}
 	if opts.RecomputeDB && wantsCodex && (len(codexSessions) > 0 || len(factLedger.Sessions) == 0) {
-		codexHome := strings.TrimSpace(opts.CodexHome)
-		if codexHome == "" {
-			codexHome = strings.TrimSpace(os.Getenv("CODEX_HOME"))
+		protected := make(map[string]bool, len(openCodeSessions)+len(otherSessions))
+		for _, owner := range append(append([]domain.SessionFact{}, openCodeSessions...), otherSessions...) {
+			protected[owner.ID] = true
 		}
-		if codexHome == "" {
-			if home, err := os.UserHomeDir(); err == nil {
-				codexHome = filepath.Join(home, ".codex")
-			}
-		}
-		recovery := e.recoverCodex(codexSessions, codexHome, gitUser)
+		recovery := e.recoverCodex(codexSessions, opts.CodexHome, gitUser, protected)
 		codexSessions = recovery.sessions
 		sourceEvents = domain.MergeSourceEvents(sourceEvents, recovery.source)
 		codexComplete = recovery.complete
@@ -571,10 +631,24 @@ func (e *BackfillEngine) processSingleWorkspace(
 
 	// 4. Prepare and validate the entire candidate before dry-run or publication.
 
-	persistedLedger, err := domain.PersistSourceAnomalySummaries(factLedger, sourceEvents)
-	if err != nil {
-		result.Error = fmt.Errorf("preparing session-owned facts: %w", err)
-		return result
+	persistedLedger := factLedger
+	if len(sourceEvents.CompleteSessionIDs) > 0 {
+		if e.generationPolicy == nil {
+			result.Error = fmt.Errorf("explicit generation policy is required for source backfill")
+			return result
+		}
+		if e.generationPolicy.Anomalies {
+			if err := config.ValidateAnomalyPolicy(cfg); err != nil {
+				result.Error = err
+				return result
+			}
+		}
+		var err error
+		persistedLedger, err = domain.PersistSourceAnomalySummariesWithPolicy(factLedger, sourceEvents, *e.generationPolicy, cfg.AnomalyThresholds)
+		if err != nil {
+			result.Error = fmt.Errorf("preparing session-owned facts: %w", err)
+			return result
+		}
 	}
 	dtoToSave := adapters.AgenticFactLedgerDTOFromDomain(persistedLedger)
 	if err := dtoToSave.Validate(); err != nil {
@@ -595,20 +669,14 @@ func (e *BackfillEngine) processSingleWorkspace(
 		return result
 	}
 
-	if err := publishBackfillLedger(metricPath, data); err != nil {
+	var tableMD string
+	if summaryPath != "" {
+		derivedLedger := domain.DeriveMetricsLedger(persistedLedger, cfg)
+		tableMD = adapters.FormatMarkdownMetricsTable(derivedLedger, cfg.RoleOrder)
+	}
+	if err := publishBackfillArtifacts(metricPath, data, summaryPath, tableMD); err != nil {
 		result.Error = err
 		return result
-	}
-
-	// 5. Update Markdown Summary if requested
-	if opts.UpdateSummaries {
-		summaryPath := filepath.Join(workspaceDir, "SUMMARY.md")
-		derivedLedger := domain.DeriveMetricsLedger(persistedLedger, cfg)
-		tableMD := adapters.FormatMarkdownMetricsTable(derivedLedger, cfg.RoleOrder)
-		if err := adapters.UpdateSummaryFile(summaryPath, tableMD); err != nil {
-			result.Error = fmt.Errorf("updating summary file %s: %w", summaryPath, err)
-			return result
-		}
 	}
 
 	return result
@@ -644,7 +712,7 @@ func resolveCodexSessionUsers(fresh []domain.SessionFact, existing []domain.Sess
 // replaceRecoveredOwners applies complete exact-owner snapshots while retaining
 // all owners outside the successful refresh set, including unavailable children.
 func replaceRecoveredOwners(stored *[]domain.SessionFact, refreshed []domain.SessionFact) {
-	refreshed = domain.RetainIncompleteGroupSummaries(*stored, refreshed)
+	refreshed = domain.RetainUnrecordedCategories(*stored, domain.RetainIncompleteGroupSummaries(*stored, refreshed))
 	replaced := make(map[string]bool, len(refreshed))
 	for _, owner := range refreshed {
 		replaced[owner.ID] = true

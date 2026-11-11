@@ -1,6 +1,7 @@
 package main_test
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -157,7 +158,7 @@ func TestCaptureCommittedHistorySurvivesDeletedWorktreeAndRepeatedOwnPublication
 	}
 }
 func TestGenerationPreservesValidCopiedHistoryAndRejectsMalformedOwnership(t *testing.T) {
-	for _, kind := range []string{"tokens", "model", "parent", "user", "source", "missing committed path", "symlink destination", "fresh collision", "uncommitted foreign addition"} {
+	for _, kind := range []string{"tokens", "model", "external parent", "blank parent", "whitespace parent", "padded parent", "user", "source", "missing committed path", "symlink destination", "fresh collision", "uncommitted foreign addition"} {
 		t.Run(kind, func(t *testing.T) {
 			a, b, _ := newCommittedHistoryFixture(t)
 			original := b.ledger(t)
@@ -166,8 +167,16 @@ func TestGenerationPreservesValidCopiedHistoryAndRejectsMalformedOwnership(t *te
 				original.Sessions[0].Invocations[0].Tokens.Input++
 			case "model":
 				original.Sessions[0].Invocations[0].Model = "changed"
-			case "parent":
-				parent := "invented"
+			case "external parent", "blank parent", "whitespace parent", "padded parent":
+				parent := "external-parent"
+				switch kind {
+				case "blank parent":
+					parent = ""
+				case "whitespace parent":
+					parent = " \t "
+				case "padded parent":
+					parent = " external-parent "
+				}
 				original.Sessions[0].ParentID = &parent
 			case "user":
 				original.Sessions[0].User = "changed"
@@ -207,9 +216,9 @@ func TestGenerationPreservesValidCopiedHistoryAndRejectsMalformedOwnership(t *te
 			cmd := exec.Command(cliBinaryPath, b.args(t)...)
 			cmd.Dir = b.project
 			out, runErr := cmd.CombinedOutput()
-			if kind == "parent" {
-				if runErr == nil {
-					t.Fatalf("malformed parent identity accepted: %s", out)
+			if kind == "blank parent" || kind == "whitespace parent" || kind == "padded parent" {
+				if runErr == nil || !strings.Contains(string(out), "parent_id") {
+					t.Fatalf("malformed parent identity did not fail ownership validation: %v %s", runErr, out)
 				}
 				if !reflect.DeepEqual(accepted, readCaptureFile(t, b.output)) {
 					t.Fatal("rejected malformed ownership changed baseline")
@@ -230,7 +239,7 @@ func TestGenerationPreservesValidCopiedHistoryAndRejectsMalformedOwnership(t *te
 			}
 
 			if foreignHistoryState(t, a) != before {
-				t.Fatal("failed authorization mutated foreign state")
+				t.Fatal("generation mutated foreign state")
 			}
 		})
 	}
@@ -277,8 +286,12 @@ func TestCaptureManualAuxiliaryPublicationSurvivesUnavailableSource(t *testing.T
 		}
 	}
 	withoutGit.Env = append(withoutGit.Env, "PATH="+t.TempDir())
-	if out, err := withoutGit.CombinedOutput(); err != nil {
-		t.Fatalf("current-only stored data gained optional Git dependency: %v %s", err, out)
+	gitFailureBaseline := readCaptureFile(t, f.output)
+	if out, err := withoutGit.CombinedOutput(); err == nil || !bytes.Contains(out, []byte("Fresh Git calculation failed")) {
+		t.Fatalf("fresh Git failure bypassed: %v %s", err, out)
+	}
+	if !bytes.Equal(gitFailureBaseline, readCaptureFile(t, f.output)) {
+		t.Fatal("Git failure changed portable auxiliary history")
 	}
 	if !reflect.DeepEqual(first.SkillFacts(), second.SkillFacts()) || !reflect.DeepEqual(first.DelegationFacts(), second.DelegationFacts()) {
 		t.Fatal("own manual auxiliary rows lost without hydration")

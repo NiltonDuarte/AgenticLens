@@ -5,8 +5,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"agenticlens/internal/domain"
 )
 
 func TestEntrypointLiteralAuthorityAndLocalPaths(t *testing.T) {
@@ -24,7 +22,7 @@ func TestEntrypointLiteralAuthorityAndLocalPaths(t *testing.T) {
 			}
 			install := filepath.Join(t.TempDir(), "local path")
 			local := filepath.Join(root, ".agenticlens-config.local.yaml")
-			if err := os.WriteFile(local, []byte("agenticlens:\n  install_root: '"+filepath.ToSlash(install)+"'\ntelemetry:\n  capture:\n    commit_warning: false\n"), 0600); err != nil {
+			if err := os.WriteFile(local, []byte("agenticlens:\n  install_root: '"+filepath.ToSlash(install)+"'\ntelemetry:\n  capture:\n    enabled: true\n    state_dir: state\n    commit_warning: false\n"), 0600); err != nil {
 				t.Fatal(err)
 			}
 			entry, err := ResolveEntrypoint(nested)
@@ -52,13 +50,12 @@ func TestEntrypointRejectsAmbiguousUnsafeUnsupportedAndOversized(t *testing.T) {
 	for _, data := range []string{
 		"agenticlens:\n  version: v1.2.3\n  version: v2.0.0\n",
 		"agenticlens:\n  version: v1.2.3\nagenticlens:\n  version: v2.0.0\n",
-		`agenticlens: {version: v1.2.3}`, "\"agenticlens\":\n  version: v1.2.3\n",
 		"agenticlens:\n  version: latest\n", "agenticlens:\n  version: \u00a0v1.2.3\u00a0\n", "agenticlens:\n  version: ../v1.2.3\n",
 		"agenticlens:\n  version: \"v1.2.3+$(touch INJECTED)\"\n",
-		"agenticlens:\n  version: v1.2.3/other\n", "agenticlens:\n  version: !!str v1.2.3\n",
-		"agenticlens:\n  version: &pin v1.2.3\n", "agenticlens: *pin\n",
+		"agenticlens:\n  version: v1.2.3/other\n",
+		"agenticlens: *pin\n",
 		"agenticlens:\n  <<: *pin\n  version: v1.2.3\n", "agenticlens:\n  version: |\n    v1.2.3\n",
-		"agenticlens:\n   version: v1.2.3\n", "agenticlens:\n\tversion: v1.2.3\n",
+		"agenticlens:\n\tversion: v1.2.3\n",
 		"agenticlens:\n  version: v1.2.3\n---\nproject_name: x\n",
 		"agenticlens:\n  version:v1.2.3\n", "project_name: Missing\n",
 		"agenticlens:\n  version: v1.2.3\n  install_root: relative/path\n",
@@ -76,7 +73,7 @@ func TestEntrypointRejectsAmbiguousUnsafeUnsupportedAndOversized(t *testing.T) {
 	}
 }
 
-func TestEntrypointStopsAtNearerJSONAndGitBoundary(t *testing.T) {
+func TestEntrypointStopsAtNearerConfigurationAndGitBoundary(t *testing.T) {
 	parent := t.TempDir()
 	if err := os.WriteFile(filepath.Join(parent, ".agenticlens-config.yaml"), []byte("agenticlens:\n  version: v1.2.3\n"), 0600); err != nil {
 		t.Fatal(err)
@@ -85,31 +82,28 @@ func TestEntrypointStopsAtNearerJSONAndGitBoundary(t *testing.T) {
 	if err := os.Mkdir(root, 0700); err != nil {
 		t.Fatal(err)
 	}
-	jsonPath := filepath.Join(root, ".agenticlens-config.json")
-	if err := os.WriteFile(jsonPath, []byte(`{"agenticlens":{"version":"v2.0.0"}}`), 0600); err != nil {
+	path := filepath.Join(root, ".agenticlens-config.yml")
+	if err := os.WriteFile(path, []byte("agenticlens: [invalid"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := ResolveEntrypoint(root); err == nil || !strings.Contains(err.Error(), "migrate") {
-		t.Fatalf("JSON fell through: %v", err)
+	if _, err := ResolveEntrypoint(root); err == nil {
+		t.Fatal("invalid nearer configuration bypassed")
 	}
-	if err := os.Remove(jsonPath); err != nil {
+	if err := os.Remove(path); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(root, ".git"), []byte("gitdir: somewhere\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := ResolveEntrypoint(root); err == nil {
-		t.Fatal("crossed git boundary")
+		t.Fatal("crossed Git boundary")
 	}
 }
 
-func TestGeneratedPinnedConfigRoundTripsWithoutRetiredReportKey(t *testing.T) {
-	data, err := GenerateDefaultYAMLForVersion("v9.8.7", "John's Project", "custom-work", "/source/store", []string{"src"}, []domain.TicketPrefix{{Prefix: "FX"}})
+func TestGeneratedPinnedConfigRoundTrips(t *testing.T) {
+	data, err := fixtureSharedYAML(t, "John's Project", "custom-work")
 	if err != nil {
 		t.Fatal(err)
-	}
-	if strings.Contains(string(data), "detailed_report:") {
-		t.Fatal("generated retired key")
 	}
 	root := t.TempDir()
 	path := filepath.Join(root, ".agenticlens-config.yaml")
@@ -120,7 +114,7 @@ func TestGeneratedPinnedConfigRoundTripsWithoutRetiredReportKey(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.AgenticLens.Version != "v9.8.7" || cfg.Workspaces.Dir != "custom-work" || cfg.Telemetry.Capture.StateDir != "~/.agenticlens/state" || !cfg.Telemetry.Capture.CommitWarning {
+	if cfg.AgenticLens.Version != "v9.8.7" || cfg.Workspaces.Dir != "custom-work" || cfg.Telemetry.Capture.StateDir != "" {
 		t.Fatalf("configuration %+v", cfg)
 	}
 	entry, err := ResolveEntrypoint(root)
@@ -144,6 +138,19 @@ func TestScaffoldCompletionAcceptsOnlyExactOwnedVersion(t *testing.T) {
 	for _, changed := range [][]byte{append(append([]byte{}, data...), []byte("project_name: Owner\n")...), []byte(strings.Replace(string(data), "v9.8.7", "v9.8.8", 1)), []byte(strings.Replace(string(data), "incomplete", "edited", 1))} {
 		if err := ValidateBootstrapScaffold(changed, "v9.8.7"); err == nil {
 			t.Fatal("changed scaffold granted replacement authority")
+		}
+	}
+}
+
+func TestEntrypointAcceptsSupportedYAMLRepresentations(t *testing.T) {
+	for _, body := range []string{`agenticlens: {version: v1.2.3}`, "\"agenticlens\":\n  version: v1.2.3\n", "agenticlens:\n  version: !!str v1.2.3\n", "agenticlens:\n  version: &pin v1.2.3\n", "agenticlens:\n    version: v1.2.3\n"} {
+		root := t.TempDir()
+		if err := os.WriteFile(filepath.Join(root, ".agenticlens-config.yaml"), []byte(body), 0600); err != nil {
+			t.Fatal(err)
+		}
+		got, err := ResolveEntrypoint(root)
+		if err != nil || got.Version != "v1.2.3" {
+			t.Fatalf("supported YAML changed exactpin: %+v %v", got, err)
 		}
 	}
 }

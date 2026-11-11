@@ -15,8 +15,14 @@ import (
 
 func captureProjectConfig(t *testing.T, project, name string) {
 	t.Helper()
-	data := fmt.Sprintf("project_name: %q\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes: [TEST]\nworkspaces:\n  dir: records\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n", name)
+	data, err := fixtureSharedYAML(t, name, "records")
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), []byte(data), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.local.yaml"), []byte("telemetry:\n  capture:\n    enabled: true\n    state_dir: .agenticlens-capture\n    max_sessions: 256\n    max_source_bytes: 67108864\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 }

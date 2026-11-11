@@ -398,7 +398,7 @@ func extractSchemaV2SessionsWithCheckpointAt(db *sql.DB, roots []string, default
 		}
 		model := strings.TrimSpace(s.model.String)
 		if len(models) == 0 {
-			fallback := "default"
+			fallback := ""
 			if model != "" {
 				var raw schemaV2ModelJSON
 				if err := json.Unmarshal([]byte(model), &raw); err == nil && raw.ID != nil && strings.TrimSpace(*raw.ID) != "" {

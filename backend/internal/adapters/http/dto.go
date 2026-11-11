@@ -30,11 +30,14 @@ type BuildInfoDTO struct {
 
 // ProjectConfigDTO represents the sanitized project configuration payload.
 type ProjectConfigDTO struct {
-	ProjectName   string                `json:"project_name"`
-	Prefixes      []domain.TicketPrefix `json:"prefixes"`
-	WorkspacesDir string                `json:"workspaces_dir"`
-	RoleOrder     []string              `json:"role_order"`
-	Version       string                `json:"version"`
+	ProjectName        string                `json:"project_name"`
+	Prefixes           []domain.TicketPrefix `json:"prefixes"`
+	CaseInsensitive    bool                  `json:"case_insensitive"`
+	RoleMappings       domain.RoleMappings   `json:"role_mappings"`
+	WorkspacesDir      string                `json:"workspaces_dir"`
+	RoleOrder          []string              `json:"role_order"`
+	Version            string                `json:"version"`
+	LivePollIntervalMS *int                  `json:"live_poll_interval_ms,omitempty"`
 }
 
 // ResponsePayload defines the permitted concrete types for JSON responses.

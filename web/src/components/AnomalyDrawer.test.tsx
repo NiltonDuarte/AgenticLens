@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { AnomalyDrawer } from './AnomalyDrawer';
+import { ProjectConfigContext } from '../contexts/ProjectConfigContext';
+import { mockProjectConfig } from '../test/fixtures/mockData';
 import type { Anomaly, EventFact } from '../domain/types';
 
 describe('AnomalyDrawer Component', () => {
@@ -33,9 +35,50 @@ describe('AnomalyDrawer Component', () => {
     context_tokens: 45000,
   };
 
+  it.each([
+    {origin: 'projected' as const, contextRole: 'planner', primary: 'planner', secondary: 'tester'},
+    {origin: 'source' as const, contextRole: 'planner', primary: 'other', secondary: 'helper'},
+    {origin: 'projected' as const, contextRole: undefined, primary: 'other', secondary: 'tester'},
+  ])('labels $origin anomaly roles independently from raw event fallbacks and prompts', async ({origin, contextRole, primary, secondary}) => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, {clipboard: {writeText}});
+    const anomaly: Anomaly = {...sampleAnomaly, context: {...sampleAnomaly.context,
+      ...(contextRole === undefined ? {role: null} : {role: contextRole}), secondary_role: 'tester',
+    }};
+    const event = {...sampleEvent, role: 'planner'};
+    const before = JSON.stringify({anomaly, event});
+    render(<ProjectConfigContext.Provider value={{...mockProjectConfig, role_mappings: {builder: 'planner', planner: 'other', tester: 'helper'}}}>
+      <AnomalyDrawer anomalyRoleOrigin={origin} isOpen={true} onClose={vi.fn()} anomaly={anomaly} event={event} />
+    </ProjectConfigContext.Provider>);
+    expect(screen.getByText('Subagent Role').parentElement).toHaveTextContent(`Subagent Role${primary}`);
+    expect(screen.getByText('Secondary Role').parentElement).toHaveTextContent(`Secondary Role${secondary}`);
+    await act(async () => fireEvent.click(screen.getByRole('button', {name: 'Copy execution issue debug prompt'})));
+    expect(writeText.mock.calls[0]?.[0]).toContain('agent `planner`');
+    expect(JSON.stringify({anomaly, event})).toBe(before);
+  });
+
+  it.each([
+    {origin: 'source' as const, primary: 'other', secondary: 'helper'},
+    {origin: 'projected' as const, primary: 'planner', secondary: 'tester'},
+  ])('uses $origin ownership exactly once for generated copy while copied diagnostics stay unchanged', async ({origin, primary, secondary}) => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, {clipboard: {writeText}});
+    const anomaly: Anomaly = {rule_id: 'SUBAGENT_REWORK_LOOP', severity: 'WARNING', context: {session_id: 'owner', role: 'planner', secondary_role: 'tester', count: 3}};
+    const before = JSON.stringify(anomaly);
+    render(<ProjectConfigContext.Provider value={{...mockProjectConfig, role_mappings: {builder: 'planner', planner: 'other', tester: 'helper'}}}>
+      <AnomalyDrawer anomalyRoleOrigin={origin} isOpen={true} onClose={vi.fn()} anomaly={anomaly} />
+    </ProjectConfigContext.Provider>);
+    expect(screen.getByRole('heading', {name: `Subagent rework loop: ${primary} <-> ${secondary} (3 cycles)`})).toBeVisible();
+    expect(screen.getByText(`Subagent roles '${primary}' and '${secondary}' alternated for 3 consecutive cycles.`)).toBeVisible();
+    await act(async () => fireEvent.click(screen.getByRole('button', {name: 'Copy execution issue debug prompt'})));
+    expect(writeText.mock.calls[0]?.[0]).toContain('# Agent Execution Issue: Subagent rework loop: planner <-> tester (3 cycles)');
+    expect(writeText.mock.calls[0]?.[0]).toContain("Subagent roles 'planner' and 'tester' alternated for 3 consecutive cycles.");
+    expect(JSON.stringify(anomaly)).toBe(before);
+  });
+
   it('returns null or remains hidden when isOpen is false', () => {
     const { container } = render(
-      <AnomalyDrawer
+      <AnomalyDrawer anomalyRoleOrigin="source"
         isOpen={false}
         onClose={vi.fn()}
         anomaly={sampleAnomaly}
@@ -47,7 +90,7 @@ describe('AnomalyDrawer Component', () => {
 
   it('derives title and description from the rule context when open', () => {
     render(
-      <AnomalyDrawer
+      <AnomalyDrawer anomalyRoleOrigin="source"
         isOpen={true}
         onClose={vi.fn()}
         anomaly={sampleAnomaly}
@@ -64,7 +107,7 @@ describe('AnomalyDrawer Component', () => {
 
   it('shows a historical local date with source instant and preserves invalid evidence', () => {
     const timestamp = '2026-10-18T10:15:30.987Z';
-    const { container, rerender } = render(<AnomalyDrawer isOpen={true} onClose={vi.fn()} event={{ ...sampleEvent, timestamp }} />);
+    const { container, rerender } = render(<AnomalyDrawer anomalyRoleOrigin="source" isOpen={true} onClose={vi.fn()} event={{ ...sampleEvent, timestamp }} />);
     const time = container.querySelector('time');
     expect(time).toHaveTextContent('2026');
     expect(time).toHaveTextContent(/\d{2}:\d{2}:\d{2}/);
@@ -72,13 +115,13 @@ describe('AnomalyDrawer Component', () => {
     expect(time).toHaveAttribute('datetime', timestamp);
     expect(time).toHaveAttribute('title', expect.stringContaining('.987 [UTC'));
     for (const invalid of ['not-a-date', '2026-02-30T10:15:30Z']) {
-      rerender(<AnomalyDrawer isOpen={true} onClose={vi.fn()} event={{ ...sampleEvent, timestamp: invalid }} />);
+      rerender(<AnomalyDrawer anomalyRoleOrigin="source" isOpen={true} onClose={vi.fn()} event={{ ...sampleEvent, timestamp: invalid }} />);
       expect(container.querySelector('time')).toHaveTextContent(invalid);
       expect(container.querySelector('time')).toHaveAttribute('title', invalid);
       expect(container.querySelector('time')).not.toHaveAttribute('datetime');
     }
     const leapTimestamp = '2024-02-29T05:15:30-05:00';
-    rerender(<AnomalyDrawer isOpen={true} onClose={vi.fn()} event={{ ...sampleEvent, timestamp: leapTimestamp }} />);
+    rerender(<AnomalyDrawer anomalyRoleOrigin="source" isOpen={true} onClose={vi.fn()} event={{ ...sampleEvent, timestamp: leapTimestamp }} />);
     expect(container.querySelector('time')).toHaveAttribute('datetime', leapTimestamp);
     expect(container.querySelector('time')).toHaveTextContent('2024');
     expect(container.querySelector('time')?.textContent).not.toBe(leapTimestamp);
@@ -86,7 +129,7 @@ describe('AnomalyDrawer Component', () => {
 
   it('renders diagnostic context fields: turn number, session ID, tool name, threshold, and token delta', () => {
     render(
-      <AnomalyDrawer
+      <AnomalyDrawer anomalyRoleOrigin="source"
         isOpen={true}
         onClose={vi.fn()}
         anomaly={sampleAnomaly}
@@ -105,7 +148,7 @@ describe('AnomalyDrawer Component', () => {
 
   it('renders error message container in monospace font when event.error_message is present', () => {
     render(
-      <AnomalyDrawer
+      <AnomalyDrawer anomalyRoleOrigin="source"
         isOpen={true}
         onClose={vi.fn()}
         anomaly={sampleAnomaly}
@@ -133,7 +176,7 @@ describe('AnomalyDrawer Component', () => {
     };
 
     render(
-      <AnomalyDrawer
+      <AnomalyDrawer anomalyRoleOrigin="source"
         isOpen={true}
         onClose={vi.fn()}
         anomaly={undefined}
@@ -181,7 +224,7 @@ describe('AnomalyDrawer Component', () => {
     };
 
     render(
-      <AnomalyDrawer
+      <AnomalyDrawer anomalyRoleOrigin="source"
         isOpen={true}
         onClose={vi.fn()}
         anomaly={undefined}
@@ -197,7 +240,7 @@ describe('AnomalyDrawer Component', () => {
   it('invokes onClose when close button is clicked', () => {
     const handleClose = vi.fn();
     render(
-      <AnomalyDrawer
+      <AnomalyDrawer anomalyRoleOrigin="source"
         isOpen={true}
         onClose={handleClose}
         anomaly={sampleAnomaly}
@@ -214,7 +257,7 @@ describe('AnomalyDrawer Component', () => {
   it('invokes onClose when backdrop overlay is clicked', () => {
     const handleClose = vi.fn();
     render(
-      <AnomalyDrawer
+      <AnomalyDrawer anomalyRoleOrigin="source"
         isOpen={true}
         onClose={handleClose}
         anomaly={sampleAnomaly}
@@ -231,7 +274,7 @@ describe('AnomalyDrawer Component', () => {
   it('invokes onClose when Escape key is pressed', () => {
     const handleClose = vi.fn();
     render(
-      <AnomalyDrawer
+      <AnomalyDrawer anomalyRoleOrigin="source"
         isOpen={true}
         onClose={handleClose}
         anomaly={sampleAnomaly}
@@ -251,7 +294,7 @@ describe('AnomalyDrawer Component', () => {
     };
 
     render(
-      <AnomalyDrawer
+      <AnomalyDrawer anomalyRoleOrigin="source"
         isOpen={true}
         onClose={vi.fn()}
         anomaly={minimalAnomaly}
@@ -266,7 +309,7 @@ describe('AnomalyDrawer Component', () => {
 
   it('handles completely undefined anomaly and event gracefully with neutral title and no fake diagnostics', () => {
     render(
-      <AnomalyDrawer
+      <AnomalyDrawer anomalyRoleOrigin="source"
         isOpen={true}
         onClose={vi.fn()}
       />
@@ -287,7 +330,7 @@ describe('AnomalyDrawer Component', () => {
     };
 
     render(
-      <AnomalyDrawer
+      <AnomalyDrawer anomalyRoleOrigin="source"
         isOpen={true}
         onClose={vi.fn()}
         anomaly={anomalyWithoutContext}
@@ -315,7 +358,7 @@ describe('AnomalyDrawer Component', () => {
       };
 
       render(
-        <AnomalyDrawer
+        <AnomalyDrawer anomalyRoleOrigin="source"
           isOpen={true}
           onClose={vi.fn()}
           anomaly={sampleAnomaly}
@@ -346,7 +389,7 @@ describe('AnomalyDrawer Component', () => {
 
     it('omits diagnostic payload sections when event does not have payload fields', () => {
       render(
-        <AnomalyDrawer
+        <AnomalyDrawer anomalyRoleOrigin="source"
           isOpen={true}
           onClose={vi.fn()}
           anomaly={sampleAnomaly}
@@ -387,7 +430,7 @@ describe('AnomalyDrawer Component', () => {
       };
 
       render(
-        <AnomalyDrawer
+        <AnomalyDrawer anomalyRoleOrigin="source"
           isOpen={true}
           onClose={vi.fn()}
           anomaly={fix3Anomaly}
@@ -461,7 +504,7 @@ describe('AnomalyDrawer Component', () => {
       };
 
       render(
-        <AnomalyDrawer
+        <AnomalyDrawer anomalyRoleOrigin="source"
           isOpen={true}
           onClose={vi.fn()}
           event={eventWithoutMsgId}
@@ -489,7 +532,7 @@ describe('AnomalyDrawer Component', () => {
       };
 
       render(
-        <AnomalyDrawer
+        <AnomalyDrawer anomalyRoleOrigin="source"
           isOpen={true}
           onClose={vi.fn()}
           event={eventNoSession}
@@ -510,7 +553,7 @@ describe('AnomalyDrawer Component', () => {
       });
 
       render(
-        <AnomalyDrawer
+        <AnomalyDrawer anomalyRoleOrigin="source"
           isOpen={true}
           onClose={vi.fn()}
           anomaly={sampleAnomaly}
@@ -567,7 +610,7 @@ describe('AnomalyDrawer Component', () => {
       };
 
       render(
-        <AnomalyDrawer
+        <AnomalyDrawer anomalyRoleOrigin="source"
           isOpen={true}
           onClose={vi.fn()}
           event={cleanEvent}
@@ -595,4 +638,21 @@ describe('AnomalyDrawer Component', () => {
       vi.useRealTimers();
     });
   });
+});
+
+describe('rate anomaly inspector count semantics', () => {
+ it('retains a failure total and raw evidence without describing a consecutive streak', async () => {
+  const output='  quoted source evidence\nexit status 2\n';
+  const writeText=vi.fn().mockResolvedValue(undefined);
+  Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText}});
+  const anomaly:Anomaly={rule_id:'TOOL_HIGH_FAILURE_RATE',severity:'WARNING',context:{tool_name:'read',session_id:'source',turn:1,count:7,total_calls:20,failure_rate_pct:35,threshold:'>=35%'}};
+  const event:EventFact={session_id:'source',turn:1,role:'coder',event_type:'tool_call',tool_name:'read',status:'error',timestamp:'2026-11-08T10:00:00Z',tool_output:output,context_tokens:1};
+  render(<AnomalyDrawer anomalyRoleOrigin="source" isOpen={true} onClose={vi.fn()} anomaly={anomaly} event={event} />);
+  expect(screen.getByText('Failure / Loop Count')).toBeInTheDocument();
+  expect(screen.getByText("Tool 'read' failed 7 out of 20 calls (35.0% failure rate, threshold: >=35%).")).toBeInTheDocument();
+  await act(async()=>{fireEvent.click(screen.getByRole('button',{name:'Copy execution issue debug prompt'}));});
+  const prompt=String(writeText.mock.calls[0]?.[0]);
+  expect(prompt).not.toContain('consecutive');
+  expect(prompt).toContain('```\n'+output+'\n```');
+ });
 });

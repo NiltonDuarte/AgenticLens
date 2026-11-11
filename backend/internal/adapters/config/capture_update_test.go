@@ -15,19 +15,16 @@ import (
 )
 
 func TestCaptureConfigUpdateInsertionPreservationAndCAS(t *testing.T) {
-	for _, ext := range []string{"yaml", "json"} {
+	for _, ext := range []string{"yaml", "yml"} {
 		t.Run(ext, func(t *testing.T) {
 			root := t.TempDir()
 			path := filepath.Join(root, "config."+ext)
 			body := "# Preserve comment\nproject_name: Example\nagenticlens:\n  version: v9.8.7\ntelemetry:\n  capture:\n    enabled: false\n    max_sessions: 7\ncustom_policy: retained\n"
-			if ext == "json" {
-				body = `{"project_name":"Example","agenticlens":{"version":"v9.8.7"},"telemetry":{"capture":{"enabled":false,"max_sessions":7}},"custom_policy":"retained"}`
-			}
 			if err := os.WriteFile(path, []byte(body), 0640); err != nil {
 				t.Fatal(err)
 			}
-			preview, err := PrepareCaptureConfigUpdate(path, "")
-			if err != nil || !preview.Changed || preview.StateDir != "~/.agenticlens/state" {
+			preview, err := PrepareCaptureConfigUpdate(path, "chosen-state")
+			if err != nil || !preview.Changed || preview.StateDir != "chosen-state" {
 				t.Fatalf("preview %+v %v", preview, err)
 			}
 			current, err := os.ReadFile(path)
@@ -47,8 +44,8 @@ func TestCaptureConfigUpdateInsertionPreservationAndCAS(t *testing.T) {
 			if ext == "yaml" && !bytes.Contains(result, []byte("# Preserve comment")) {
 				t.Fatal("YAML comment lost")
 			}
-			cfg, err := decodeCapturePolicy(result, captureReadPolicy())
-			if err != nil || cfg.StateDir != "~/.agenticlens/state" || cfg.Enabled || cfg.MaxSessions != 7 {
+			cfg, err := decodeCapturePolicy(result)
+			if err != nil || cfg.StateDir != "chosen-state" || cfg.Enabled || cfg.MaxSessions != 7 {
 				t.Fatalf("capture policy changed: %+v %v", cfg, err)
 			}
 			info, err := os.Stat(path)
@@ -111,10 +108,10 @@ func TestCaptureUpdateRejectsInvalidValuesAndPreservesExplicitPolicy(t *testing.
 	if err != nil || result.Changed || !bytes.Equal(result.Data, original) {
 		t.Fatalf("explicit path replaced: %+v %v", result, err)
 	}
-	cfg := domain.DefaultProjectConfig()
+	cfg := fixtureProjectPolicy(t)
 	cfg.ProjectName = "Example"
-	cfg.Ticket.Prefixes = []domain.TicketPrefix{{Prefix: "AL"}}
-	cfg.CodeMetrics.SourceRoots = []string{"src"}
+	cfg.Ticket.Prefixes = []domain.TicketPrefix{{Prefix: "AL", Description: "Fixture work"}}
+	cfg.CodeMetrics.Production.Include = []string{"src/**"}
 	cfg.Telemetry.Capture.StateDir = ""
 	cfg.Telemetry.Capture.Enabled = false
 	cfg.Telemetry.Capture.MaxSessions = 7
@@ -122,9 +119,8 @@ func TestCaptureUpdateRejectsInvalidValuesAndPreservesExplicitPolicy(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	policy, err := decodeCapturePolicy(generated, captureReadPolicy())
-	if err != nil || policy.StateDir != "~/.agenticlens/state" || policy.Enabled || policy.MaxSessions != 7 {
-		t.Fatalf("writer reset explicit policy: %+v %v", policy, err)
+	if strings.Contains(string(generated), "capture:") {
+		t.Fatal("shared writer leaked machine capture policy")
 	}
 	if _, err := PrepareCaptureConfigUpdate(path+"-absent", ""); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("created missing config: %v", err)
@@ -133,31 +129,34 @@ func TestCaptureUpdateRejectsInvalidValuesAndPreservesExplicitPolicy(t *testing.
 
 func TestCaptureConfigUpdatePreservesPinnedOperationalConfiguration(t *testing.T) {
 	root := t.TempDir()
-	path := filepath.Join(root, ".agenticlens-config.yaml")
-	generated, err := GenerateDefaultYAMLForVersion("v9.8.7", "PinnedProject", "records", "", []string{"src"}, []domain.TicketPrefix{{Prefix: "TEST"}})
-	if err != nil {
+	shared := filepath.Join(root, ".agenticlens-config.yaml")
+	body := fixtureSharedBody(t)
+	if err := os.WriteFile(shared, body, 0600); err != nil {
 		t.Fatal(err)
 	}
-	if err = os.WriteFile(path, generated, 0600); err != nil {
+	local := filepath.Join(root, ".agenticlens-config.local.yaml")
+	before := []byte("telemetry:\n  capture:\n    enabled: false\n    state_dir: before-state\n")
+	if err := os.WriteFile(local, before, 0600); err != nil {
 		t.Fatal(err)
 	}
-	preview, err := PrepareCaptureConfigUpdate(path, "fixture-state")
+	preview, err := PrepareCaptureConfigUpdate(local, "fixture-state")
 	if err != nil || !preview.Changed {
-		t.Fatalf("update: %+v %v", preview, err)
+		t.Fatalf("preview %+v %v", preview, err)
 	}
-	if err = WriteCaptureConfigUpdate(path, preview); err != nil {
+	if err := WriteCaptureConfigUpdateChecked(context.Background(), local, preview, func(CaptureConfigChange) error { return nil }); err != nil {
 		t.Fatal(err)
 	}
 	cfg, err := Load(root)
-	if err != nil {
-		t.Fatalf("updated pinned config no longer loads: %v", err)
-	}
-	if cfg.AgenticLens.Version != "v9.8.7" || cfg.ProjectName != "PinnedProject" || cfg.Telemetry.Capture.StateDir != "fixture-state" {
-		t.Fatalf("operational configuration changed: %+v", cfg)
+	if err != nil || cfg.AgenticLens.Version != "v9.8.7" || cfg.ProjectName != "Fixture" || cfg.Telemetry.Capture.StateDir != "fixture-state" {
+		t.Fatalf("operational configuration changed: %+v %v", cfg, err)
 	}
 	entry, err := ResolveEntrypoint(root)
 	if err != nil || entry.Version != "v9.8.7" {
-		t.Fatalf("shared entrypoint pin became invalid: %+v %v", entry, err)
+		t.Fatalf("pin %+v %v", entry, err)
+	}
+	after, err := os.ReadFile(shared)
+	if err != nil || !bytes.Equal(after, body) {
+		t.Fatal("local update modified shared policy")
 	}
 }
 
@@ -197,11 +196,11 @@ func TestCaptureConfigUpdateSurvivesProcessDeath(t *testing.T) {
 	for _, stage := range []string{"staged", "activated"} {
 		t.Run(stage, func(t *testing.T) {
 			root := t.TempDir()
-			path := filepath.Join(root, ".agenticlens-config.yaml")
-			original, err := GenerateDefaultYAMLForVersion("v9.8.7", "Example", "workspaces", "local.db", []string{"src"}, []domain.TicketPrefix{{Prefix: "AL"}})
-			if err != nil {
+			path := filepath.Join(root, ".agenticlens-config.local.yaml")
+			if err := os.WriteFile(filepath.Join(root, ".agenticlens-config.yaml"), fixtureSharedBody(t), 0600); err != nil {
 				t.Fatal(err)
 			}
+			original := []byte("# Preserve local comment\ntelemetry:\n  capture:\n    enabled: false\n    state_dir: before-crash-state\n")
 			if err := os.WriteFile(path, original, 0640); err != nil {
 				t.Fatal(err)
 			}
@@ -259,7 +258,7 @@ func TestCaptureConfigUpdateSurvivesProcessDeath(t *testing.T) {
 			if err != nil {
 				t.Fatalf("config disappeared at %s: %v", stage, err)
 			}
-			want := domain.DefaultCaptureConfig().StateDir
+			want := "before-crash-state"
 			if stage == "activated" {
 				want = "after-crash-state"
 			}

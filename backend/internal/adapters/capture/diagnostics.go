@@ -112,7 +112,12 @@ func OpenReadOnlyProject(directory, project string) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
-	return openRegistry(directory, cfg.ProjectName, project, true)
+	store, err := openRegistry(directory, cfg.ProjectName, project, true)
+	if err != nil {
+		return nil, err
+	}
+	store.configuration = cfg
+	return store, nil
 }
 
 func (s *Store) RecordPublication(ctx context.Context, ticket, outcome, destination, summary string, owners []domain.SessionFact, detail string, refreshed ...[]domain.SessionFact) error {

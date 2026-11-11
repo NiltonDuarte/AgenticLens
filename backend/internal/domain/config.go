@@ -2,98 +2,42 @@ package domain
 
 import (
 	"fmt"
-	"regexp"
-	"sort"
+	"math"
 	"strings"
+	"unicode"
 )
 
 // ProjectConfig holds the complete configuration settings for AgenticLens.
 type ProjectConfig struct {
-	Generation        GenerationConfig        `json:"generation" yaml:"generation"`
-	AgenticLens       EntrypointConfig        `json:"agenticlens,omitempty" yaml:"agenticlens,omitempty"`
-	ProjectName       string                  `json:"project_name" yaml:"project_name"`
-	Ticket            TicketConfig            `json:"ticket" yaml:"ticket"`
-	Workspaces        WorkspacesConfig        `json:"workspaces" yaml:"workspaces"`
-	Database          DatabaseConfig          `json:"database" yaml:"database"`
-	Telemetry         TelemetryConfig         `json:"telemetry,omitempty" yaml:"telemetry,omitempty"`
-	Live              LiveConfig              `json:"live" yaml:"live"`
-	AnomalyThresholds AnomalyThresholdsConfig `json:"anomaly_thresholds" yaml:"anomaly_thresholds"`
-	CodeMetrics       CodeMetricsConfig       `json:"code_metrics" yaml:"code_metrics"`
-	RoleMappings      RoleMappings            `json:"role_mappings" yaml:"role_mappings"`
-	RoleOrder         []string                `json:"role_order" yaml:"role_order"`
+	Comments          map[string]ConfigComment `json:"-" yaml:"-"`
+	Settings          map[string]bool          `json:"-" yaml:"-"`
+	ConfigPath        string                   `json:"-" yaml:"-"`
+	LocalConfigPath   string                   `json:"-" yaml:"-"`
+	Generation        GenerationConfig         `json:"generation" yaml:"generation"`
+	AgenticLens       EntrypointConfig         `json:"agenticlens,omitempty" yaml:"agenticlens,omitempty"`
+	ProjectName       string                   `json:"project_name" yaml:"project_name"`
+	Ticket            TicketConfig             `json:"ticket" yaml:"ticket"`
+	Workspaces        WorkspacesConfig         `json:"workspaces" yaml:"workspaces"`
+	Database          DatabaseConfig           `json:"database" yaml:"database"`
+	Telemetry         TelemetryConfig          `json:"telemetry,omitempty" yaml:"telemetry,omitempty"`
+	Live              LiveConfig               `json:"live" yaml:"live"`
+	AnomalyThresholds AnomalyThresholdsConfig  `json:"anomaly_thresholds" yaml:"anomaly_thresholds"`
+	CodeMetrics       CodeMetricsConfig        `json:"code_metrics" yaml:"code_metrics"`
+	RoleMappings      RoleMappings             `json:"role_mappings" yaml:"role_mappings"`
+	RoleOrder         []string                 `json:"role_order" yaml:"role_order"`
 }
 
 // EntrypointConfig separates shared release authority from machine-local installation paths.
 type EntrypointConfig struct {
+	BinaryDir   string `json:"binary_dir,omitempty" yaml:"binary_dir,omitempty"`
 	Version     string `json:"version" yaml:"version"`
 	InstallRoot string `json:"install_root,omitempty" yaml:"install_root,omitempty"`
 }
 
-// EffectiveHealthyCeiling returns the configured context ceiling critical tokens,
-// falling back to ContextCeilingCriticalTokens domain constant (200,000) when non-positive.
+// EffectiveHealthyCeiling returns the configured denominator. Callers must validate
+// context policy before calculating; zero represents unavailable policy, never a guessed capacity.
 func (c ProjectConfig) EffectiveHealthyCeiling() int64 {
-	if c.AnomalyThresholds.ContextCeilingCriticalTokens > 0 {
-		return c.AnomalyThresholds.ContextCeilingCriticalTokens
-	}
-	return ContextCeilingCriticalTokens
-}
-
-// DefaultAnomalyThresholdsConfig returns default numerical thresholds for anomaly detection rules.
-func DefaultAnomalyThresholdsConfig() AnomalyThresholdsConfig {
-	return AnomalyThresholdsConfig{
-		StallThresholdSeconds:            120,
-		ErrorRateThreshold:               0.25,
-		ContextExhaustionPct:             0.85,
-		ConsecutiveErrorsStreakWarning:   ConsecutiveToolErrorsStreakWarning,
-		ConsecutiveErrorsStreakCritical:  ConsecutiveToolErrorsStreakCritical,
-		ContextCeilingWarningTokens:      ContextCeilingWarningTokens,
-		ContextCeilingCriticalTokens:     ContextCeilingCriticalTokens,
-		TokenVelocityWarningTokens:       TokenVelocityWarningTokens,
-		TokenVelocityCriticalTokens:      TokenVelocityCriticalTokens,
-		TokenVelocityWarningDeltaTokens:  TokenVelocityWarningDeltaTokens,
-		TokenVelocityCriticalDeltaTokens: TokenVelocityCriticalDeltaTokens,
-		ToolThrashingMinFailures:         ToolThrashingMinFailures,
-		ToolThrashingCriticalFailures:    ToolThrashingCriticalFailures,
-	}
-}
-
-// DefaultProjectConfig returns a baseline ProjectConfig with pure defaults.
-func DefaultProjectConfig() ProjectConfig {
-	return ProjectConfig{
-		Generation:  GenerationConfig{Metrics: DefaultGenerationPolicy(), Feedback: DefaultGenerationFeedbackConfig()},
-		Telemetry:   TelemetryConfig{Capture: DefaultCaptureConfig()},
-		ProjectName: "",
-		Ticket: TicketConfig{
-			Prefixes:        []TicketPrefix{},
-			CaseInsensitive: true,
-			CustomPatterns:  []string{},
-		},
-		Workspaces: WorkspacesConfig{
-			Dir:       "",
-			Artifacts: []WorkspaceArtifactConfig{},
-		},
-		Database: DatabaseConfig{
-			Path:           "~/.local/share/opencode/opencode.db",
-			QueryTimeoutMs: 5000,
-			BusyTimeoutMs:  5000,
-			ReadOnly:       true,
-		},
-		Live: LiveConfig{
-			ActiveThresholdSeconds: 300,
-			PollIntervalMs:         2000,
-			MaxTraceBufferMessages: 500,
-		},
-		AnomalyThresholds: DefaultAnomalyThresholdsConfig(),
-		CodeMetrics: CodeMetricsConfig{
-			SourceRoots:  []string{},
-			Include:      []string{},
-			Exclude:      []string{},
-			TestPatterns: []string{},
-			ProdPatterns: []string{},
-		},
-		RoleMappings: RoleMappings{},
-		RoleOrder:    []string{},
-	}
+	return c.AnomalyThresholds.ContextCeilingCriticalTokens
 }
 
 // TicketPrefix represents a configured ticket identifier prefix and its operational description.
@@ -107,7 +51,6 @@ type TicketPrefix struct {
 type TicketConfig struct {
 	Prefixes        []TicketPrefix `json:"prefixes" yaml:"prefixes"`
 	CaseInsensitive bool           `json:"case_insensitive" yaml:"case_insensitive"`
-	CustomPatterns  []string       `json:"custom_patterns" yaml:"custom_patterns"`
 }
 
 // PrefixNames returns a slice of non-empty prefix strings configured in TicketConfig.
@@ -122,53 +65,58 @@ func (t TicketConfig) PrefixNames() []string {
 	return names
 }
 
-// InferTicketType determines conventional commit type from ticket identifier using configured prefixes.
-func (t TicketConfig) InferTicketType(ticketID string) (ConventionalTicketType, bool) {
-	return InferTicketTypeFromPrefix(ticketID, t.Prefixes)
+// MatchTicketPrefix recognizes a whole recorded ID against one literal prefix.
+// An optional separator belongs to the ID; it never changes the configured prefix.
+func MatchTicketPrefix(ticketID, prefix string, insensitive bool) bool {
+	_, ok := literalTicketNumber(ticketID, prefix, insensitive)
+	return ok
 }
-
-// InferTicketTypeFromPrefix determines conventional commit type from ticket identifier using configured prefixes.
-func InferTicketTypeFromPrefix(ticketID string, prefixes []TicketPrefix) (ConventionalTicketType, bool) {
-	cleanTicket := strings.TrimSpace(ticketID)
-	if cleanTicket == "" {
+func literalTicketNumber(ticketID, prefix string, insensitive bool) (string, bool) {
+	prefix = strings.TrimSpace(prefix)
+	if prefix == "" {
 		return "", false
 	}
-
-	for _, p := range prefixes {
-		rawType := strings.TrimSpace(p.TicketType)
-		if rawType == "" {
-			continue
-		}
-
-		normType, ok := NormalizeTicketType(rawType)
-		if !ok {
-			continue
-		}
-
-		cleanPrefix := strings.TrimSpace(p.Prefix)
-		cleanPrefix = strings.TrimRight(cleanPrefix, "-_")
-		cleanPrefix = strings.TrimSpace(cleanPrefix)
-		if cleanPrefix == "" {
-			continue
-		}
-
-		prefixLen := len(cleanPrefix)
-		if len(cleanTicket) <= prefixLen {
-			continue
-		}
-
-		if strings.EqualFold(cleanTicket[:prefixLen], cleanPrefix) {
-			delim := cleanTicket[prefixLen]
-			if delim == '-' || delim == '_' {
-				remainder := strings.TrimSpace(cleanTicket[prefixLen+1:])
-				if remainder != "" {
-					return normType, true
-				}
-			}
+	if insensitive {
+		ticketID = strings.ToLower(ticketID)
+		prefix = strings.ToLower(prefix)
+	}
+	if !strings.HasPrefix(ticketID, prefix) {
+		return "", false
+	}
+	number := ticketID[len(prefix):]
+	if len(number) > 0 && (number[0] == '-' || number[0] == '_') {
+		number = number[1:]
+	}
+	if number == "" {
+		return "", false
+	}
+	for i := range number {
+		if number[i] < '0' || number[i] > '9' {
+			return "", false
 		}
 	}
+	return number, true
+}
 
-	return "", false
+// ResolveTicketTypeMapping requires all applicable configured type mappings to agree.
+func (t TicketConfig) ResolveTicketTypeMapping(ticketID string) (ConventionalTicketType, bool, error) {
+	var selected ConventionalTicketType
+	var mappings []string
+	for _, p := range t.Prefixes {
+		if p.TicketType == "" || !MatchTicketPrefix(ticketID, p.Prefix, t.CaseInsensitive) {
+			continue
+		}
+		value, ok := NormalizeTicketType(p.TicketType)
+		if !ok {
+			return "", false, fmt.Errorf("ticket.prefixes[%s].ticket_type is invalid: %q", p.Prefix, p.TicketType)
+		}
+		mappings = append(mappings, p.Prefix+"="+string(value))
+		if selected != "" && selected != value {
+			return "", false, fmt.Errorf("conflicting ticket type mappings %s for %s; supply --ticket-type", strings.Join(mappings, ", "), ticketID)
+		}
+		selected = value
+	}
+	return selected, selected != "", nil
 }
 
 // WorkspaceArtifactConfig defines a project-level documentation artifact inside ticket workspaces.
@@ -181,15 +129,12 @@ type WorkspaceArtifactConfig struct {
 // WorkspacesConfig defines filesystem paths for ticket workspaces and artifacts.
 type WorkspacesConfig struct {
 	Dir       string                    `json:"dir" yaml:"dir"`
-	Artifacts []WorkspaceArtifactConfig `json:"artifacts,omitempty" yaml:"artifacts,omitempty"`
+	Artifacts []WorkspaceArtifactConfig `json:"artifacts" yaml:"artifacts"`
 }
 
 // DatabaseConfig specifies SQLite database connection and query execution parameters.
 type DatabaseConfig struct {
-	Path           string `json:"path" yaml:"path"`
-	QueryTimeoutMs int    `json:"query_timeout_ms" yaml:"query_timeout_ms"`
-	BusyTimeoutMs  int    `json:"busy_timeout_ms" yaml:"busy_timeout_ms"`
-	ReadOnly       bool   `json:"read_only" yaml:"read_only"`
+	BusyTimeoutMs int `json:"busy_timeout_ms" yaml:"busy_timeout_ms"`
 }
 
 // TelemetryConfig contains optional machine-local telemetry source preferences.
@@ -207,37 +152,50 @@ type TelemetrySourcePaths struct {
 
 // AnomalyThresholdsConfig defines numerical thresholds for anomaly detection rules.
 type AnomalyThresholdsConfig struct {
-	StallThresholdSeconds            int     `json:"stall_threshold_seconds" yaml:"stall_threshold_seconds"`
-	ErrorRateThreshold               float64 `json:"error_rate_threshold" yaml:"error_rate_threshold"`
-	ContextExhaustionPct             float64 `json:"context_exhaustion_pct" yaml:"context_exhaustion_pct"`
-	ConsecutiveErrorsStreakWarning   int     `json:"consecutive_errors_streak_warning" yaml:"consecutive_errors_streak_warning"`
-	ConsecutiveErrorsStreakCritical  int     `json:"consecutive_errors_streak_critical" yaml:"consecutive_errors_streak_critical"`
-	ContextCeilingWarningTokens      int64   `json:"context_ceiling_warning_tokens" yaml:"context_ceiling_warning_tokens"`
-	ContextCeilingCriticalTokens     int64   `json:"context_ceiling_critical_tokens" yaml:"context_ceiling_critical_tokens"`
-	TokenVelocityWarningTokens       int64   `json:"token_velocity_warning_tokens" yaml:"token_velocity_warning_tokens"`
-	TokenVelocityCriticalTokens      int64   `json:"token_velocity_critical_tokens" yaml:"token_velocity_critical_tokens"`
-	TokenVelocityWarningDeltaTokens  int64   `json:"token_velocity_warning_delta_tokens" yaml:"token_velocity_warning_delta_tokens"`
-	TokenVelocityCriticalDeltaTokens int64   `json:"token_velocity_critical_delta_tokens" yaml:"token_velocity_critical_delta_tokens"`
-	ToolThrashingMinFailures         int     `json:"tool_thrashing_min_failures" yaml:"tool_thrashing_min_failures"`
-	ToolThrashingCriticalFailures    int     `json:"tool_thrashing_critical_failures" yaml:"tool_thrashing_critical_failures"`
+	StallThresholdSeconds           int     `json:"stall_threshold_seconds" yaml:"stall_threshold_seconds"`
+	ErrorRateMinCalls               int     `json:"error_rate_min_calls" yaml:"error_rate_min_calls"`
+	ErrorRateThreshold              float64 `json:"error_rate_threshold" yaml:"error_rate_threshold"`
+	ErrorRateCriticalThreshold      float64 `json:"error_rate_critical_threshold" yaml:"error_rate_critical_threshold"`
+	ConsecutiveErrorsStreakWarning  int     `json:"consecutive_errors_streak_warning" yaml:"consecutive_errors_streak_warning"`
+	ConsecutiveErrorsStreakCritical int     `json:"consecutive_errors_streak_critical" yaml:"consecutive_errors_streak_critical"`
+	ContextCeilingWarningTokens     int64   `json:"context_ceiling_warning_tokens" yaml:"context_ceiling_warning_tokens"`
+	ContextCeilingCriticalTokens    int64   `json:"context_ceiling_critical_tokens" yaml:"context_ceiling_critical_tokens"`
+	TurnUsageWarningTokens          int64   `json:"turn_usage_warning_tokens" yaml:"turn_usage_warning_tokens"`
+	TurnUsageCriticalTokens         int64   `json:"turn_usage_critical_tokens" yaml:"turn_usage_critical_tokens"`
+	ContextGrowthWarningTokens      int64   `json:"context_growth_warning_tokens" yaml:"context_growth_warning_tokens"`
+	ContextGrowthCriticalTokens     int64   `json:"context_growth_critical_tokens" yaml:"context_growth_critical_tokens"`
+	ToolThrashingMinFailures        int     `json:"tool_thrashing_min_failures" yaml:"tool_thrashing_min_failures"`
+	ToolThrashingCriticalFailures   int     `json:"tool_thrashing_critical_failures" yaml:"tool_thrashing_critical_failures"`
 }
 
 // LiveConfig controls real-time session tracking and polling intervals.
 type LiveConfig struct {
 	ActiveThresholdSeconds int `json:"active_threshold_seconds" yaml:"active_threshold_seconds"`
 	PollIntervalMs         int `json:"poll_interval_ms" yaml:"poll_interval_ms"`
-	// MaxTraceBufferMessages is accepted for legacy configuration compatibility; live traces are not truncated.
-	MaxTraceBufferMessages int `json:"max_trace_buffer_messages" yaml:"max_trace_buffer_messages"`
 }
 
 // CodeMetricsConfig defines file classification glob patterns for git metrics.
 type CodeMetricsConfig struct {
-	BaseBranch   string   `json:"base_branch,omitempty" yaml:"base_branch,omitempty"`
-	SourceRoots  []string `json:"source_roots,omitempty" yaml:"source_roots,omitempty"`
-	Include      []string `json:"include" yaml:"include"`
-	Exclude      []string `json:"exclude" yaml:"exclude"`
-	TestPatterns []string `json:"test_patterns" yaml:"test_patterns"`
-	ProdPatterns []string `json:"prod_patterns" yaml:"prod_patterns"`
+	BaseBranch string             `json:"base_branch" yaml:"base_branch"`
+	Production CodeCategoryConfig `json:"production" yaml:"production"`
+	Tests      CodeCategoryConfig `json:"tests" yaml:"tests"`
+}
+
+// CodeCategoryConfig independently includes and excludes repository-relative paths.
+type CodeCategoryConfig struct {
+	Include []string `json:"include" yaml:"include"`
+	Exclude []string `json:"exclude" yaml:"exclude"`
+}
+
+// RequireSettings checks presence in decoded policy. Programmatically constructed
+// values are explicit inputs; decoded files always carry their setting inventory.
+func (c ProjectConfig) RequireSettings(keys ...string) error {
+	for _, key := range keys {
+		if c.Settings != nil && !c.Settings[key] {
+			return fmt.Errorf("configuration %s: %s is required; configure it explicitly", c.ConfigPath, key)
+		}
+	}
+	return nil
 }
 
 // RoleMappings maps agent persona names to AgentRole enums.
@@ -245,93 +203,98 @@ type RoleMappings map[string]string
 
 // ResolveRole resolves an agent persona name to an AgentRole enum.
 func (m RoleMappings) ResolveRole(rawAgent string) AgentRole {
-	cleaned := strings.ToLower(strings.TrimSpace(rawAgent))
-	if cleaned == "" {
+	if strings.TrimSpace(rawAgent) == "" {
 		return ""
 	}
-
-	if m != nil {
-		if mapped, ok := m[cleaned]; ok && strings.TrimSpace(mapped) != "" {
-			return AgentRole(strings.ToLower(strings.TrimSpace(mapped)))
-		}
-		if mapped, ok := m[rawAgent]; ok && strings.TrimSpace(mapped) != "" {
-			return AgentRole(strings.ToLower(strings.TrimSpace(mapped)))
-		}
-		for k, v := range m {
-			if strings.EqualFold(strings.TrimSpace(k), cleaned) && strings.TrimSpace(v) != "" {
-				return AgentRole(strings.ToLower(strings.TrimSpace(v)))
-			}
-		}
+	if mapped, exists := m[rawAgent]; exists {
+		return AgentRole(mapped)
 	}
-
-	return AgentRole(cleaned)
+	return AgentRole(rawAgent)
 }
 
-// NormalizeTicketID extracts and normalizes a ticket identifier according to configuration rules.
+// NormalizeTicketID extracts configured literal-prefix IDs without rewriting spelling.
 func NormalizeTicketID(raw string, cfg TicketConfig) (string, bool) {
-	trimmed := strings.TrimSpace(raw)
-	if trimmed == "" {
-		return "", false
-	}
-
-	prefixes := cfg.PrefixNames()
-	if len(prefixes) == 0 {
-		prefixes = []string{"AL", "GEN", "PO"}
-	}
-
-	sortedPrefixes := make([]string, 0, len(prefixes))
-	for _, p := range prefixes {
-		clean := strings.TrimSpace(p)
-		clean = strings.TrimSuffix(clean, "-")
-		clean = strings.TrimSuffix(clean, "_")
-		if clean != "" {
-			sortedPrefixes = append(sortedPrefixes, clean)
+	input := raw
+	var offsets []int
+	if cfg.CaseInsensitive {
+		var lower strings.Builder
+		for start, r := range raw {
+			encoded := string(unicode.ToLower(r))
+			for range []byte(encoded) {
+				offsets = append(offsets, start)
+			}
+			lower.WriteString(encoded)
 		}
+		offsets = append(offsets, len(raw))
+		input = lower.String()
 	}
-	if len(sortedPrefixes) == 0 {
-		sortedPrefixes = []string{"AL", "GEN", "PO"}
-	}
-	sort.Slice(sortedPrefixes, func(i, j int) bool {
-		return len(sortedPrefixes[i]) > len(sortedPrefixes[j])
-	})
-
-	for _, prefix := range sortedPrefixes {
-		var pattern string
-		escaped := regexp.QuoteMeta(prefix)
+	selected := ""
+	start := -1
+	for _, p := range cfg.Prefixes {
+		prefix := strings.TrimSpace(p.Prefix)
+		if prefix == "" {
+			continue
+		}
 		if cfg.CaseInsensitive {
-			pattern = `(?i)(?:^|[^a-zA-Z0-9])` + escaped + `-(\d+)(?:[^a-zA-Z0-9]|$)`
-		} else {
-			pattern = `(?:^|[^a-zA-Z0-9])` + escaped + `-(\d+)(?:[^a-zA-Z0-9]|$)`
+			prefix = strings.ToLower(prefix)
+		}
+		for offset := 0; offset < len(input); {
+			relative := strings.Index(input[offset:], prefix)
+			if relative < 0 {
+				break
+			}
+			at := offset + relative
+			offset = at + len(prefix)
+			if at > 0 && asciiAlphaNumeric(input[at-1]) {
+				continue
+			}
+			end := at + len(prefix)
+			if end < len(input) && (input[end] == '-' || input[end] == '_') {
+				end++
+			}
+			digits := end
+			for end < len(input) && input[end] >= '0' && input[end] <= '9' {
+				end++
+			}
+			if end == digits || (end < len(input) && asciiAlphaNumeric(input[end])) {
+				continue
+			}
+			originalAt, originalEnd := at, end
+			if cfg.CaseInsensitive {
+				originalAt, originalEnd = offsets[at], offsets[end]
+			}
+			if start < 0 || originalAt < start || (originalAt == start && originalEnd-originalAt > len(selected)) {
+				selected = raw[originalAt:originalEnd]
+				start = originalAt
+			}
 		}
 
-		re, err := regexp.Compile(pattern)
-		if err != nil {
-			continue
-		}
+	}
+	return selected, selected != ""
+}
 
-		matches := re.FindStringSubmatch(trimmed)
-		if len(matches) > 1 {
-			digits := matches[1]
-			canonical := fmt.Sprintf("%s-%s", strings.ToUpper(prefix), digits)
-			return canonical, true
+// ValidateCalculation requires every threshold consumed by fresh anomaly rules.
+func (t AnomalyThresholdsConfig) ValidateCalculation() error {
+	if t.ErrorRateMinCalls < 1 {
+		return fmt.Errorf("anomaly_thresholds.error_rate_min_calls must be a positive integer")
+	}
+	if math.IsNaN(t.ErrorRateThreshold) || math.IsInf(t.ErrorRateThreshold, 0) || t.ErrorRateThreshold <= 0 || t.ErrorRateThreshold > 1 || math.IsNaN(t.ErrorRateCriticalThreshold) || math.IsInf(t.ErrorRateCriticalThreshold, 0) || t.ErrorRateCriticalThreshold < t.ErrorRateThreshold || t.ErrorRateCriticalThreshold > 1 {
+		return fmt.Errorf("anomaly_thresholds failure-rate ratios must be finite, greater than 0, at most 1, warning <= critical")
+	}
+	for _, p := range []struct {
+		key            string
+		warn, critical int64
+	}{{"context_ceiling", t.ContextCeilingWarningTokens, t.ContextCeilingCriticalTokens}, {"consecutive_errors_streak", int64(t.ConsecutiveErrorsStreakWarning), int64(t.ConsecutiveErrorsStreakCritical)}, {"tool_thrashing", int64(t.ToolThrashingMinFailures), int64(t.ToolThrashingCriticalFailures)}, {"turn_usage", t.TurnUsageWarningTokens, t.TurnUsageCriticalTokens}, {"context_growth", t.ContextGrowthWarningTokens, t.ContextGrowthCriticalTokens}} {
+		if p.warn <= 0 || p.critical < p.warn {
+			return fmt.Errorf("anomaly_thresholds.%s requires positive warning/critical values, warning <= critical", p.key)
 		}
 	}
+	return nil
+}
 
-	for _, pattern := range cfg.CustomPatterns {
-		if strings.TrimSpace(pattern) == "" {
-			continue
-		}
-		re, err := regexp.Compile(pattern)
-		if err != nil {
-			continue
-		}
-		matches := re.FindStringSubmatch(trimmed)
-		if len(matches) > 1 && matches[1] != "" {
-			return strings.ToUpper(strings.TrimSpace(matches[1])), true
-		} else if len(matches) > 0 && matches[0] != "" {
-			return strings.ToUpper(strings.TrimSpace(matches[0])), true
-		}
-	}
+// ConfigComment retains supported YAML comments through explicit configuration rewrites.
+type ConfigComment struct{ Head, Line, Foot, KeyHead, KeyLine, KeyFoot string }
 
-	return "", false
+func asciiAlphaNumeric(value byte) bool {
+	return value >= 'a' && value <= 'z' || value >= 'A' && value <= 'Z' || value >= '0' && value <= '9'
 }

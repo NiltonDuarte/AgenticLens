@@ -1,6 +1,7 @@
 package capture
 
 import (
+	"agenticlens/internal/domain"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -64,6 +65,11 @@ func AcquireWorker(directory string) (*PublicationLock, error) {
 // LaunchWorker disconnects callback pipes and process group. It never invokes a
 // wrapper, model, shell, network client or separately installed service.
 func LaunchWorker(binary, project, state string) error {
+	retained, err := RetainExecutable(binary, state)
+	if err != nil {
+		return fmt.Errorf("retaining selected worker build: %w", err)
+	}
+	binary = retained
 	cmd := exec.Command(binary, "capture", "worker", "--repo", project, "--state-dir", state)
 	cmd.Dir = project
 	configureWorkerProcess(cmd)
@@ -92,12 +98,14 @@ func LaunchWorker(binary, project, state string) error {
 
 // WorkerProgress is local operational evidence, never source telemetry.
 type WorkerProgress struct {
-	PID         int    `json:"pid"`
-	State       string `json:"state"`
-	Heartbeat   int64  `json:"heartbeat"`
-	Deadline    int64  `json:"deadline"`
-	NextAttempt int64  `json:"next_attempt"`
-	Detail      string `json:"detail"`
+	Executable  string           `json:"executable,omitempty"`
+	Build       domain.BuildInfo `json:"build"`
+	PID         int              `json:"pid"`
+	State       string           `json:"state"`
+	Heartbeat   int64            `json:"heartbeat"`
+	Deadline    int64            `json:"deadline"`
+	NextAttempt int64            `json:"next_attempt"`
+	Detail      string           `json:"detail"`
 }
 
 func WriteWorkerProgress(directory string, progress WorkerProgress) error {

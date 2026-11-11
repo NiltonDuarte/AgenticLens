@@ -2716,3 +2716,23 @@ describe('native source invocation badges', () => {
     expect(traceBadgeMetadata([missingPayload, malformedPayload]).size).toBe(0);
   });
 });
+
+describe('failure-rate counts remain totals in trace actions', () => {
+ it.each([false,true])('exports only an actual retry streak (retry present: %s)', async withRetry => {
+  const writeText=vi.fn().mockResolvedValue(undefined);
+  Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText}});
+  const output='  original source evidence\nexit status 2\n';
+  const event:EventFact={timestamp:'2026-11-08T10:00:00Z',session_id:'source',turn:1,role:'coder',event_type:'tool_call',tool_name:'read',status:'error',tool_output:output,context_tokens:1};
+  const rate:Anomaly={rule_id:'TOOL_HIGH_FAILURE_RATE',severity:'WARNING',context:{session_id:'source',tool_name:'read',turn:1,count:7,total_calls:20,failure_rate_pct:35,threshold:'>=35%'}};
+  const retry:Anomaly={rule_id:'TOOL_RETRY_STREAK',severity:'WARNING',context:{session_id:'source',tool_name:'read',turn:1,count:3}};
+  const select=vi.fn();
+  render(<TraceWaterfall events={[event]} anomalies={withRetry?[rate,retry]:[rate]} defaultExpanded={true} onSelectAnomaly={select} />);
+  fireEvent.click(screen.getByRole('button',{name:'All Events'}));
+  expect(screen.queryByRole('button',{name:'WARNING 7'})).not.toBeInTheDocument();
+  await act(async()=>{fireEvent.click(screen.getByRole('button',{name:'Copy debug prompt for turn 1'}));});
+  const prompt=String(writeText.mock.calls[0]?.[0]);
+  expect(prompt).toContain('```\n'+output+'\n```');
+  expect(prompt).not.toContain('7 consecutive');
+  if(withRetry) expect(prompt).toContain('3 consecutive');else expect(prompt).not.toContain('consecutive failures');
+ });
+});

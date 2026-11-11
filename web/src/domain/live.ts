@@ -6,6 +6,7 @@ export type FailureSeverity = 'none' | 'low' | 'medium' | 'high';
 
 export type LiveAnomalyRule =
   | 'ConsecutiveToolErrors'
+  | 'ToolHighFailureRate'
   | 'ContextCeilingApproach'
   | 'TokenVelocityRunaway'
   | 'ToolThrashing';
@@ -18,6 +19,8 @@ export interface LiveAnomalyAlert {
   readonly trigger_event: string;
   readonly timestamp: string;
   readonly count?: number | null;
+  readonly tool_name?: string | null;
+  readonly part_id?: string | null;
 }
 
 export interface LivePartFact {
@@ -57,6 +60,13 @@ export interface LiveTraceView {
   readonly failed_tool_calls: number;
   readonly recent_errors: readonly LivePartFact[];
   readonly anomalies: readonly LiveAnomalyAlert[];
+  readonly relationships?: { readonly state: 'complete' | 'unavailable' };
+  readonly diagnostics?: readonly LiveTraceDiagnostic[];
+}
+
+export interface LiveTraceDiagnostic {
+  readonly code: 'child_relationship_lookup_failed';
+  readonly message: string;
 }
 
 export interface LiveSessionNode {

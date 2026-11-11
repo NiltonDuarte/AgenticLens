@@ -3,6 +3,7 @@ package main_test
 import (
 	"agenticlens/internal/adapters"
 	"agenticlens/internal/adapters/capture"
+	adaptersconfig "agenticlens/internal/adapters/config"
 	adaptershttp "agenticlens/internal/adapters/http"
 	"agenticlens/internal/domain"
 	"bytes"
@@ -24,8 +25,19 @@ import (
 
 func writeGenerationPolicy(t *testing.T, f captureGenerationFixture, base []byte, policy domain.GenerationPolicy) {
 	t.Helper()
-	config := fmt.Sprintf("\ngeneration:\n  metrics:\n    skills: %t\n    delegations: %t\n    anomalies: %t\n", policy.Skills, policy.Delegations, policy.Anomalies)
-	if err := os.WriteFile(filepath.Join(f.project, ".agenticlens-config.yaml"), append(append([]byte{}, base...), []byte(config)...), 0600); err != nil {
+	cfg, err := adaptersconfig.LoadFromFile(filepath.Join(f.project, ".agenticlens-config.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.Generation.Metrics = policy
+	if cfg.AgenticLens.Version == "" {
+		cfg.AgenticLens.Version = "v9.8.7"
+	}
+	body, err := adaptersconfig.GenerateConfigYAML(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = os.WriteFile(filepath.Join(f.project, ".agenticlens-config.yaml"), body, 0600); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -147,7 +159,8 @@ func TestGenerateOptionalMetricsOmissionRetainedOwnersAndSummary(t *testing.T) {
 			occurrences := `{"timestamp":"2026-01-01T00:00:03Z","type":"response_item","payload":{"type":"function_call","call_id":"skill-call","name":"load_skill","arguments":"{\"name\":\"inspect-source\"}"}}
 {"timestamp":"2026-01-01T00:00:04Z","type":"response_item","payload":{"type":"function_call","call_id":"spawn-call","name":"spawn_agent","arguments":"{\"agent_type\":\"tester\",\"task_name\":\"review-source\"}"}}
 `
-			if err := os.WriteFile(source, append(readCaptureFile(t, source), []byte(occurrences)...), 0600); err != nil {
+			sourceBytes := append(readCaptureFile(t, source), []byte(occurrences)...)
+			if err := os.WriteFile(source, sourceBytes, 0600); err != nil {
 				t.Fatal(err)
 			}
 			base := readCaptureFile(t, filepath.Join(f.project, ".agenticlens-config.yaml"))
@@ -156,33 +169,34 @@ func TestGenerateOptionalMetricsOmissionRetainedOwnersAndSummary(t *testing.T) {
 			if err := os.WriteFile(summary, []byte(prose), 0600); err != nil {
 				t.Fatal(err)
 			}
-			initialPolicy := domain.GenerationPolicy{Skills: mask&1 != 0, Delegations: mask&2 != 0, Anomalies: mask&4 != 0}
-			writeGenerationPolicy(t, f, base, initialPolicy)
+			policy := domain.GenerationPolicy{Skills: mask&1 != 0, Delegations: mask&2 != 0, Anomalies: mask&4 != 0}
+			writeGenerationPolicy(t, f, base, policy)
 			if out, err := policyGenerate(t, f, summary); err != nil {
-				t.Fatalf("configured first creation failed: %v %s", err, out)
+				t.Fatalf("fresh configured generation: %v %s", err, out)
 			}
-			assertWrittenPolicy(t, f.output, initialPolicy, 1)
-			writeGenerationPolicy(t, f, base, domain.DefaultGenerationPolicy())
+			assertWrittenPolicy(t, f.output, policy, 1)
+			// Establish source-backed positive controls before transporting recorded facts.
+			writeGenerationPolicy(t, f, base, domain.GenerationPolicy{Skills: true, Delegations: true, Anomalies: true})
 			if out, err := policyGenerate(t, f, summary); err != nil {
-				t.Fatalf("default creation failed: %v %s", err, out)
+				t.Fatalf("positive control: %v %s", err, out)
 			}
 			baseline := f.ledger(t)
-			if len(baseline.SkillFacts()) == 0 || len(baseline.DelegationFacts()) == 0 || len(baseline.Sessions[0].Anomalies) == 0 {
-				t.Fatalf("fixture lacks nonempty optional control facts: %+v", baseline)
-			}
 			root := baseline.Sessions[0]
-			for _, id := range []string{"unavailable-same-source", "unavailable-child", "unavailable-other-source"} {
+			if len(root.Skills) == 0 || len(root.Delegations) == 0 || len(root.Anomalies) == 0 {
+				t.Fatalf("control lacks nonempty categories: %+v", root)
+			}
+			for _, id := range []string{"unavailable-same-source", "unavailable-child", "unavailable-other-harness"} {
 				owner := root
 				owner.ID = id
 				owner.Skills = append(append([]domain.SkillFact{}, root.Skills...), domain.SkillFact{Name: "retained-" + id}, domain.SkillFact{Name: "retained-" + id})
 				owner.Delegations = append(append([]domain.DelegationFact{}, root.Delegations...), domain.DelegationFact{Description: "retained-" + id}, domain.DelegationFact{Description: "retained-" + id})
-				toolName, count := "event-only-"+id, int64(3)
-				owner.Anomalies = append(append([]domain.Anomaly{}, root.Anomalies...), domain.Anomaly{RuleID: domain.RuleToolRetryStreak, Severity: domain.SeverityWarning, Context: domain.AnomalyContext{ToolName: &toolName, Count: &count}})
+				tool, count := "event-only-"+id, int64(3)
+				owner.Anomalies = append(append([]domain.Anomaly{}, root.Anomalies...), domain.Anomaly{RuleID: domain.RuleToolRetryStreak, Severity: domain.SeverityWarning, Context: domain.AnomalyContext{ToolName: &tool, Count: &count}})
 				if id == "unavailable-child" {
 					parent := "root"
 					owner.ParentID = &parent
 				}
-				if id == "unavailable-other-source" {
+				if id == "unavailable-other-harness" {
 					owner.Source = domain.SourceOpenCode
 				}
 				baseline.Sessions = append(baseline.Sessions, owner)
@@ -190,128 +204,77 @@ func TestGenerateOptionalMetricsOmissionRetainedOwnersAndSummary(t *testing.T) {
 			if err := adapters.SaveFactLedger(f.output, baseline); err != nil {
 				t.Fatal(err)
 			}
-			baselineByID := map[string]domain.SessionFact{}
-			for _, owner := range canonicalPolicyLedger(t, f).Sessions {
-				baselineByID[owner.ID] = owner
+			baseline = canonicalPolicyLedger(t, f)
+			recorded := map[string]domain.SessionFact{}
+			for _, owner := range baseline.Sessions {
+				recorded[owner.ID] = owner
 			}
-			policy := domain.GenerationPolicy{Skills: mask&1 != 0, Delegations: mask&2 != 0, Anomalies: mask&4 != 0}
+			// The receiving project has only a distinct fresh native owner; no private
+			// source/capture receipts exist for the transported recorded owners.
+			if err := os.Remove(source); err != nil {
+				t.Fatal(err)
+			}
+			fresh := strings.ReplaceAll(strings.ReplaceAll(string(sourceBytes), `"id":"root"`, `"id":"fresh"`), `"thread_id":"root"`, `"thread_id":"fresh"`)
+			if err := os.WriteFile(filepath.Join(f.store, "sessions", "fresh.jsonl"), []byte(fresh), 0600); err != nil {
+				t.Fatal(err)
+			}
 			writeGenerationPolicy(t, f, base, policy)
-			out, err := policyGenerate(t, f, summary)
-			if err != nil {
-				t.Fatalf("configured generation failed: %v %s", err, out)
-			}
-			assertWrittenPolicy(t, f.output, policy, 4)
-			got := f.ledger(t)
-			for _, owner := range got.Sessions {
-				expected := baselineByID[owner.ID]
-				if owner.Source != expected.Source {
-					t.Fatalf("source attribution changed for %s", owner.ID)
+			var previous []domain.SessionFact
+			for pass := 0; pass < 2; pass++ {
+				out, err := policyGenerate(t, f, summary, "fresh")
+				if err != nil {
+					t.Fatalf("recorded history publication: %v %s", err, out)
 				}
-				if policy.Skills && !reflect.DeepEqual(owner.Skills, expected.Skills) {
-					t.Fatalf("enabled skills/multiplicity changed for %s: got %+v want %+v", owner.ID, owner.Skills, expected.Skills)
+				got := canonicalPolicyLedger(t, f)
+				if len(got.Sessions) != 5 {
+					t.Fatalf("owner count: %d", len(got.Sessions))
 				}
-				if policy.Delegations && !reflect.DeepEqual(owner.Delegations, expected.Delegations) {
-					t.Fatalf("enabled delegations/multiplicity changed for %s: got %+v want %+v", owner.ID, owner.Delegations, expected.Delegations)
-				}
-				if policy.Anomalies && owner.ID != "root" && !reflect.DeepEqual(owner.Anomalies, expected.Anomalies) {
-					t.Fatalf("enabled retained anomalies changed for %s: got %+v want %+v", owner.ID, owner.Anomalies, expected.Anomalies)
-				}
-				if !reflect.DeepEqual(owner.Invocations, root.Invocations) || !reflect.DeepEqual(owner.Tools, root.Tools) {
-					t.Fatalf("policy changed ordinary execution facts of %s", owner.ID)
-				}
-				if owner.ID == "unavailable-child" && (owner.ParentID == nil || *owner.ParentID != "root") {
-					t.Fatal("delegation suppression removed child linkage")
-				}
-			}
-			markdown := string(readCaptureFile(t, summary))
-			if !strings.Contains(markdown, prose) {
-				t.Fatal("managed summary replacement damaged user prose")
-			}
-			if !policy.Anomalies {
-				for _, stale := range []string{"| Anomalies |", "HEALTHY", "CRITICAL", "Anomaly Breakdown"} {
-					if strings.Contains(markdown, stale) {
-						t.Fatalf("disabled summary retained %q", stale)
+				for _, owner := range got.Sessions {
+					if owner.ID != "fresh" {
+						if !reflect.DeepEqual(owner, recorded[owner.ID]) {
+							t.Fatalf("recorded identity/multiplicity/category presence changed for %s:\ngot %+v\nwant %+v", owner.ID, owner, recorded[owner.ID])
+						}
+						continue
+					}
+					if (owner.Skills != nil) != policy.Skills || (owner.Delegations != nil) != policy.Delegations || (owner.Anomalies != nil) != policy.Anomalies {
+						t.Fatalf("fresh analysis ignored explicit switches: %+v", owner)
 					}
 				}
-				if !strings.Contains(strings.ToLower(string(out)), "disabled") || strings.Contains(string(out), "No anomalies detected") {
-					t.Fatalf("disabled diagnostic implied measured analysis: %s", out)
+				if !policy.Anomalies && !reflect.DeepEqual(got.Anomalies, baseline.Anomalies) {
+					t.Fatalf("recorded root summary changed: got %+v want %+v", got.Anomalies, baseline.Anomalies)
 				}
-			}
-			first := f.ledger(t)
-			if out, err = policyGenerate(t, f, summary); err != nil {
-				t.Fatalf("repeat generation: %v %s", err, out)
-			}
-			assertWrittenPolicy(t, f.output, policy, 4)
-			second := f.ledger(t)
-			if !reflect.DeepEqual(first.Sessions, second.Sessions) {
-				t.Fatal("unchanged repeat changed owners/occurrences")
-			}
-			writeGenerationPolicy(t, f, base, domain.DefaultGenerationPolicy())
-			if out, err = policyGenerate(t, f, summary); err != nil {
-				t.Fatalf("re-enable generation: %v %s", err, out)
-			}
-			enabled := canonicalPolicyLedger(t, f)
-			recoveredMarkdown := string(readCaptureFile(t, summary))
-			if !strings.Contains(recoveredMarkdown, prose) || !strings.Contains(recoveredMarkdown, "### Anomalies & Health Flags") || strings.Contains(recoveredMarkdown, "Optional anomaly analysis: disabled") {
-				t.Fatalf("re-enabled managed summary stale or damaged: %s", recoveredMarkdown)
-			}
-			if !strings.Contains(recoveredMarkdown, "CONTEXT_SATURATION_SPIKE") {
-				t.Fatalf("re-enabled summary lost source-backed anomaly: %s", recoveredMarkdown)
-			}
-			for _, owner := range enabled.Sessions {
-				if owner.ID == "root" && (len(owner.Skills) != 1 || len(owner.Delegations) != 1 || len(owner.Anomalies) == 0) {
-					t.Fatalf("source-backed categories not recovered: %+v", owner)
+				markdown := string(readCaptureFile(t, summary))
+				if !strings.Contains(markdown, prose) {
+					t.Fatal("managed projection damaged human prose")
 				}
-				if owner.ID == "root" && owner.Anomalies == nil {
-					t.Fatal("fresh source-backed root marked unavailable")
-				}
-				if owner.ID != "root" && !policy.Anomalies {
-					if owner.Anomalies != nil {
-						t.Fatalf("unavailable historical analysis became measured-empty: %+v", owner)
-					}
-					for _, anomaly := range owner.Anomalies {
-						if anomaly.RuleID == domain.RuleToolRetryStreak && anomaly.Context.ToolName != nil && strings.HasPrefix(*anomaly.Context.ToolName, "event-only-") {
-							t.Fatalf("fabricated unavailable event-only summary for %s", owner.ID)
+				if !policy.Anomalies {
+					for _, stale := range []string{"| Anomalies |", "HEALTHY", "CRITICAL", "Anomaly Breakdown"} {
+						if strings.Contains(markdown, stale) {
+							t.Fatalf("disabled rendered projection contains %q", stale)
 						}
 					}
-				}
-				if owner.ID != "root" && (!policy.Skills && len(owner.Skills) > 0 || !policy.Delegations && len(owner.Delegations) > 0) {
-					t.Fatalf("unavailable omitted facts fabricated: %+v", owner)
-				}
-			}
-			if out, err = policyGenerate(t, f, summary); err != nil {
-				t.Fatalf("subsequent generate cannot read re-enabled ledger: %v %s", err, out)
-			}
-			canonicalPolicyLedger(t, f)
-			if mask == 0 {
-				// This owner was genuinely absent until this point. Once its
-				// native source becomes readable, only that owner's marker clears.
-				restoredID := "unavailable-same-source"
-				restoredPath := filepath.Join(f.store, "sessions", restoredID+".jsonl")
-				if _, err := os.Stat(restoredPath); !os.IsNotExist(err) {
-					t.Fatalf("restoration fixture source was not unavailable: %v", err)
-				}
-				contents := strings.ReplaceAll(string(readCaptureFile(t, source)), `"id":"root"`, `"id":"`+restoredID+`"`)
-				contents = strings.ReplaceAll(contents, `"thread_id":"root"`, `"thread_id":"`+restoredID+`"`)
-				if err := os.WriteFile(restoredPath, []byte(contents), 0600); err != nil {
-					t.Fatal(err)
-				}
-				if out, err = policyGenerate(t, f, summary, restoredID); err != nil {
-					t.Fatalf("restored native source refresh failed: %v %s", err, out)
-				}
-				restored := canonicalPolicyLedger(t, f)
-				for _, owner := range restored.Sessions {
-					if owner.ID == restoredID && (len(owner.Anomalies) == 0 || len(owner.Skills) != 1 || len(owner.Delegations) != 1) {
-						t.Fatalf("complete source refresh failed to restore recorded state: %+v", owner)
+					if !strings.Contains(strings.ToLower(string(out)), "disabled") || strings.Contains(string(out), "No anomalies detected") {
+						t.Fatalf("disabled analysis reported measured success: %s", out)
 					}
-					if (owner.ID == "unavailable-child" || owner.ID == "unavailable-other-source") && owner.Anomalies != nil {
-						t.Fatalf("restored another source changed unavailable owner's state: %+v", owner)
-					}
+				}
+				if pass == 1 && !reflect.DeepEqual(previous, got.Sessions) {
+					t.Fatal("repeated publication changed recorded occurrences")
+				}
+				previous = got.Sessions
+			}
+			writeGenerationPolicy(t, f, base, domain.GenerationPolicy{Skills: true, Delegations: true, Anomalies: true})
+			if out, err := policyGenerate(t, f, summary, "fresh"); err != nil {
+				t.Fatalf("re-enable analysis: %v %s", err, out)
+			}
+			for _, owner := range canonicalPolicyLedger(t, f).Sessions {
+				if owner.ID == "fresh" && (len(owner.Skills) != 1 || len(owner.Delegations) != 1 || len(owner.Anomalies) == 0) {
+					t.Fatalf("fresh source categories not recovered: %+v", owner)
 				}
 			}
 		})
 	}
 }
+
 func TestGenerateInvalidPolicyLeavesLedgerAndSummaryUntouched(t *testing.T) {
 	f := newCaptureGenerationFixture(t)
 	f.write(t, 17)
@@ -324,7 +287,7 @@ func TestGenerateInvalidPolicyLeavesLedgerAndSummaryUntouched(t *testing.T) {
 	}
 	ledgerBefore, summaryBefore := readCaptureFile(t, f.output), readCaptureFile(t, summary)
 	configPath := filepath.Join(f.project, ".agenticlens-config.yaml")
-	config := append(readCaptureFile(t, configPath), []byte("\ngeneration:\n  metrics:\n    delegations: 'false'\n")...)
+	config := bytes.Replace(readCaptureFile(t, configPath), []byte("    delegations: true"), []byte("    delegations: 'false'"), 1)
 	if err := os.WriteFile(configPath, config, 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -376,24 +339,16 @@ func TestRegisteredGenerateHonorsDisabledAnomalies(t *testing.T) {
 	if len(got.Sessions) != 1 || len(got.Sessions[0].Invocations) != 1 || got.Sessions[0].Invocations[0].Tokens.Input != 300000 {
 		t.Fatalf("registered policy dropped core facts: %+v", got)
 	}
-	raw := readCaptureFile(t, f.output)
-	var written struct {
-		Anomalies json.RawMessage `json:"anomalies"`
-		Sessions  []struct {
-			Anomalies json.RawMessage `json:"anomalies"`
-		} `json:"sessions"`
-	}
-	if err := json.Unmarshal(raw, &written); err != nil {
-		t.Fatal(err)
-	}
-	if len(written.Anomalies) != 0 || len(written.Sessions[0].Anomalies) != 0 {
-		t.Fatalf("registered path restored disabled anomaly facts: %s", raw)
+	if !reflect.DeepEqual(got.Sessions[0].Anomalies, control.Sessions[0].Anomalies) || !reflect.DeepEqual(got.Anomalies, control.Anomalies) {
+		t.Fatal("disabled fresh analysis erased recorded summaries")
 	}
 	writeGenerationPolicy(t, f, base, domain.GenerationPolicy{})
-	f.generate(t)
-	assertWrittenPolicy(t, f.output, domain.GenerationPolicy{}, 1)
+	allDisabled := f.generate(t)
+	if !reflect.DeepEqual(allDisabled.Sessions, got.Sessions) {
+		t.Fatal("disabled collection changed recorded owner categories")
+	}
 	f.write(t, 17)
-	writeGenerationPolicy(t, f, base, domain.DefaultGenerationPolicy())
+	writeGenerationPolicy(t, f, base, domain.GenerationPolicy{Skills: true, Delegations: true, Anomalies: true})
 	f.generate(t)
 	assertRecordedEmptyGeneration(t, f.output)
 }
@@ -468,8 +423,10 @@ CREATE TABLE session_message(id TEXT PRIMARY KEY,session_id TEXT,type TEXT,seq I
 			base := readCaptureFile(t, filepath.Join(f.project, ".agenticlens-config.yaml"))
 			writeGenerationPolicy(t, f, base, domain.GenerationPolicy{})
 			generate()
-			assertWrittenPolicy(t, f.output, domain.GenerationPolicy{}, 1)
 			got := f.ledger(t)
+			if !reflect.DeepEqual(got.Sessions, control.Sessions) {
+				t.Fatal("disabled collection erased recorded source categories")
+			}
 			if !reflect.DeepEqual(control.Sessions[0].Invocations, got.Sessions[0].Invocations) || !reflect.DeepEqual(control.Sessions[0].Tools, got.Sessions[0].Tools) {
 				t.Fatalf("%s suppression changed ordinary facts", family)
 			}
@@ -487,7 +444,7 @@ CREATE TABLE session_message(id TEXT PRIMARY KEY,session_id TEXT,type TEXT,seq I
 					t.Fatal(err)
 				}
 			}
-			writeGenerationPolicy(t, f, base, domain.DefaultGenerationPolicy())
+			writeGenerationPolicy(t, f, base, domain.GenerationPolicy{Skills: true, Delegations: true, Anomalies: true})
 			generate()
 			assertRecordedEmptyGeneration(t, f.output)
 		})

@@ -198,7 +198,13 @@ func OpenProjectContext(ctx context.Context, directory, project string) (*Store,
 	if err != nil {
 		return nil, err
 	}
-	return openRegistryContext(ctx, directory, cfg.ProjectName, project, false)
+	store, err := openRegistryContext(ctx, directory, cfg.ProjectName, project, false)
+	if err != nil {
+		return nil, err
+	}
+	store.anomalyThresholds = cfg.AnomalyThresholds
+	store.configuration = cfg
+	return store, nil
 }
 func ExistingLocation(directory, project string) (StateLocation, error) {
 	s, err := OpenReadOnlyProject(directory, project)
@@ -229,7 +235,7 @@ func ValidateProject(project, sourceDirectory string) error {
 		return errors.New("source project directory conflicts with configured project")
 	}
 	for dir := actual; dir != expected; dir = filepath.Dir(dir) {
-		for _, marker := range []string{".agenticlens-config.yaml", ".agenticlens-config.yml", ".agenticlens-config.json", ".git"} {
+		for _, marker := range []string{".agenticlens-config.yaml", ".agenticlens-config.yml", ".git"} {
 			if _, e := os.Lstat(filepath.Join(dir, marker)); e == nil {
 				return fmt.Errorf("source belongs to nearer project %s; explicit project resolution required", dir)
 			} else if !errors.Is(e, os.ErrNotExist) {
@@ -240,6 +246,13 @@ func ValidateProject(project, sourceDirectory string) error {
 	return nil
 }
 func ValidateOwner(ctx context.Context, project string, r domain.CaptureRegistration) error {
+	cfg, err := adaptersconfig.Load(project)
+	if err != nil {
+		return err
+	}
+	return validateOwnerWithConfig(ctx, project, r, cfg)
+}
+func validateOwnerWithConfig(ctx context.Context, project string, r domain.CaptureRegistration, cfg domain.ProjectConfig) error {
 	// Exact explicit ticket selection, or its source-proven child binding,
 	// authorizes portable source identity across original checkout paths.
 	bound := r.TicketID != "" && r.ProjectDirectory == project && hasExplicitSourceBinding(r)
@@ -247,7 +260,7 @@ func ValidateOwner(ctx context.Context, project string, r domain.CaptureRegistra
 		path := r.TranscriptPath
 		if path == "" {
 			var err error
-			path, err = codex.DiscoverExactRolloutPath(r.Identity.Store, r.Identity.SessionID)
+			path, err = discoverExactCaptureRollout(cfg, r.Identity.Store, r.Identity.SessionID)
 			if err != nil {
 				return err
 			}
@@ -255,20 +268,22 @@ func ValidateOwner(ctx context.Context, project string, r domain.CaptureRegistra
 		if err := codex.ValidateRolloutStore(r.Identity.Store, path); err != nil {
 			return err
 		}
-		b := &workBudget{sessions: 1, bytes: MaxPayloadBytes}
-		t, err := readMetadata(ctx, path, b)
+		if err := cfg.Telemetry.Capture.ValidateBudgets(); err != nil {
+			return err
+		}
+		t, err := codex.ReadSessionContextWithinBudget(path, cfg.Telemetry.Capture.MaxSourceBytes)
 		if err != nil {
 			return err
 		}
-		if t.ThreadID != r.Identity.SessionID {
+		if t.ID != r.Identity.SessionID {
 			return errors.New("source identity mismatch")
 		}
 		if bound {
 			return nil
 		}
-		return ValidateProject(project, t.WorkingDir)
+		return ValidateProject(project, t.WorkingDirectory)
 	}
-	db, err := opencode.OpenDB(r.Identity.Store)
+	db, err := openOpenCodeSource(cfg, r.Identity.Store)
 	if err != nil {
 		return err
 	}
@@ -287,7 +302,7 @@ func (s *Store) validateOwner(ctx context.Context, r domain.CaptureRegistration)
 	if s.project == "" {
 		return nil
 	}
-	return ValidateOwner(ctx, s.project, r)
+	return validateOwnerWithConfig(ctx, s.project, r, s.configuration)
 }
 
 // ValidateDestination forbids publication outside the configured project, including
@@ -398,7 +413,7 @@ func isCoordinationPath(state string) bool {
 }
 
 func validateStatePlacement(project, registry string) (string, error) {
-	for _, file := range []string{".codex/hooks.json", ".codex/agenticlens-installation.json", ".opencode/plugins/agenticlens-capture.ts", ".opencode/agenticlens-installation.json", ".agenticlens-config.yaml", ".agenticlens-config.yml", ".agenticlens-config.json", ".agenticlens-config.local.yaml"} {
+	for _, file := range []string{".codex/hooks.json", ".codex/agenticlens-installation.json", ".opencode/plugins/agenticlens-capture.ts", ".opencode/agenticlens-installation.json", ".agenticlens-config.yaml", ".agenticlens-config.yml", ".agenticlens-config.local.yaml"} {
 		target := filepath.Join(project, filepath.FromSlash(file))
 		_, contained, err := relativeContainedPath(target, registry)
 		if err != nil {

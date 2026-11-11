@@ -15,6 +15,7 @@ import (
 
 // LiveServiceInterface defines the contract consumed by HTTP live handlers.
 type LiveServiceInterface interface {
+	CheckAvailability() error
 	GetSessionTree(ctx context.Context) (domain.LiveSessionTree, error)
 	GetSessionTrace(ctx context.Context, sessionID string) (domain.LiveTraceView, error)
 	Subscribe() (<-chan live.LiveEvent, func())
@@ -24,17 +25,16 @@ type LiveServiceInterface interface {
 func LiveSessionsHandler(service LiveServiceInterface) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if service == nil {
-			WriteLiveSessionTreeResponse(w, domain.LiveSessionTree{
-				RootSessions:        []*domain.LiveSessionNode{},
-				LastRefreshedAt:     "",
-				TotalActiveSessions: 0,
-				ActiveAnomalies:     []domain.LiveAnomalyAlert{},
-			})
+			WriteError(w, http.StatusServiceUnavailable, "source_unavailable", live.ErrSourceUnavailable.Error())
 			return
 		}
 
 		tree, err := service.GetSessionTree(r.Context())
 		if err != nil {
+			if errors.Is(err, live.ErrSourceUnavailable) {
+				WriteError(w, http.StatusServiceUnavailable, "source_unavailable", err.Error())
+				return
+			}
 			WriteError(w, http.StatusInternalServerError, "database_error", err.Error())
 			return
 		}
@@ -57,12 +57,16 @@ func LiveTraceHandler(service LiveServiceInterface) http.HandlerFunc {
 		}
 
 		if service == nil {
-			WriteError(w, http.StatusNotFound, "session_not_found", fmt.Sprintf("session %s not found", cleanID))
+			WriteError(w, http.StatusServiceUnavailable, "source_unavailable", live.ErrSourceUnavailable.Error())
 			return
 		}
 
 		trace, err := service.GetSessionTrace(r.Context(), cleanID)
 		if err != nil {
+			if errors.Is(err, live.ErrSourceUnavailable) {
+				WriteError(w, http.StatusServiceUnavailable, "source_unavailable", err.Error())
+				return
+			}
 			if errors.Is(err, live.ErrInvalidSessionID) {
 				WriteError(w, http.StatusBadRequest, "invalid_session_id", err.Error())
 				return
@@ -97,6 +101,15 @@ func LiveStreamHandler(service LiveServiceInterface) http.HandlerFunc {
 			defer unsubscribe()
 		}
 
+		if service == nil {
+			WriteError(w, http.StatusServiceUnavailable, "source_unavailable", live.ErrSourceUnavailable.Error())
+			return
+		}
+		if err := service.CheckAvailability(); err != nil {
+			WriteError(w, http.StatusServiceUnavailable, "source_unavailable", err.Error())
+			return
+		}
+
 		w.Header().Set("Content-Type", "text/event-stream")
 		w.Header().Set("Cache-Control", "no-cache")
 		w.Header().Set("Connection", "keep-alive")
@@ -108,14 +121,9 @@ func LiveStreamHandler(service LiveServiceInterface) http.HandlerFunc {
 
 		flusher.Flush()
 
-		if service == nil {
-			<-r.Context().Done()
-			return
-		}
-
-		// Push initial session_tree event upon connection
-		tree, err := service.GetSessionTree(r.Context())
-		if err == nil {
+		// Read after subscribing so events arriving during an optional initial
+		// lookup stay queued. A transient lookup error can recover by polling.
+		if tree, err := service.GetSessionTree(r.Context()); err == nil {
 			if treeData, err := json.Marshal(tree); err == nil {
 				fmt.Fprintf(w, "event: session_tree\ndata: %s\n\n", treeData)
 				flusher.Flush()

@@ -1,98 +1,52 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"os"
+	"runtime"
 
 	"agenticlens/internal/adapters/capture"
 	adaptersconfig "agenticlens/internal/adapters/config"
 	"agenticlens/internal/domain"
 )
 
-// captureWorkerFence retains the executable and installations that admitted the
-// owner. A pass captures its generation before checking this fence; later events
-// cannot be acknowledged by a process admitted under an older selection.
+// captureWorkerFence retains admitted executable bytes and checks operational
+// disablement. A newly preferred build does not retire an active worker.
 type captureWorkerFence struct {
-	binary        string
-	artifact      os.FileInfo
-	pin           string
-	installations map[string]string
+	binary   string
+	artifact os.FileInfo
+	sources  domain.TelemetrySourcePaths
 }
 
 func newCaptureWorkerFence(project, state, binary string, cfg domain.ProjectConfig) (captureWorkerFence, error) {
-	physical, err := capture.ProjectDirectory(binary)
+	source := binary
+	if runtime.GOOS == "linux" {
+		source = "/proc/self/exe"
+	}
+	physical, err := capture.RetainExecutable(source, state)
 	if err != nil {
 		return captureWorkerFence{}, err
+	}
+	identity, err := adaptersconfig.ValidateNativeExecutable(physical)
+	if err != nil {
+		return captureWorkerFence{}, err
+	}
+	if identity != domain.GetBuildInfo() {
+		return captureWorkerFence{}, fmt.Errorf("retained worker build differs from admitted running build; pending work retained")
 	}
 	info, err := os.Stat(physical)
 	if err != nil {
 		return captureWorkerFence{}, err
 	}
-	fence := captureWorkerFence{binary: physical, artifact: info, pin: cfg.AgenticLens.Version}
-	if fence.pin != "" {
-		entry, err := adaptersconfig.ResolveEntrypoint(project)
-		if err != nil {
-			return fence, err
-		}
-		selected, err := entry.NativePath()
-		if err != nil {
-			return fence, err
-		}
-		selected, err = capture.ProjectDirectory(selected)
-		if err != nil {
-			return fence, err
-		}
-		if entry.Version != domain.GetBuildInfo().Version || selected != physical {
-			return fence, errors.New("native worker does not match the exact current project release; pending work retained for the selected native")
-		}
-	}
-	fence.installations, err = activeWorkerInstallations(state)
-	return fence, err
-}
-
-func activeWorkerInstallations(state string) (map[string]string, error) {
-	identities := map[string]string{}
-	for _, source := range []string{"codex", "opencode"} {
-		identity, _, err := capture.InstallationIdentity(state, source)
-		if errors.Is(err, os.ErrNotExist) {
-			continue
-		}
-		if err != nil {
-			return nil, err
-		}
-		if identity != "" {
-			identities[source] = identity
-		}
-	}
-	return identities, nil
+	return captureWorkerFence{binary: physical, artifact: info, sources: cfg.Telemetry.Sources}, nil
 }
 
 func (f captureWorkerFence) current(project, state string) (bool, error) {
-	cfg, err := adaptersconfig.Load(project)
-	if err != nil {
+	policy, err := adaptersconfig.ResolveCapture(project, "")
+	if err != nil || !policy.Enabled {
 		return false, err
 	}
-	if cfg.AgenticLens.Version != f.pin {
-		return false, nil
-	}
-	if f.pin != "" {
-		entry, err := adaptersconfig.ResolveEntrypoint(project)
-		if err != nil {
-			return false, err
-		}
-		selected, err := entry.NativePath()
-		if err != nil {
-			return false, err
-		}
-		selected, err = capture.ProjectDirectory(selected)
-		if err != nil {
-			return false, err
-		}
-		if selected != f.binary || entry.Version != domain.GetBuildInfo().Version {
-			return false, nil
-		}
-	}
+
 	info, err := os.Stat(f.binary)
 	if err != nil {
 		return false, fmt.Errorf("worker native artifact unavailable; pending work retained: %w", err)
@@ -100,16 +54,28 @@ func (f captureWorkerFence) current(project, state string) (bool, error) {
 	if !os.SameFile(info, f.artifact) || info.Size() != f.artifact.Size() || !info.ModTime().Equal(f.artifact.ModTime()) {
 		return false, nil
 	}
-	current, err := activeWorkerInstallations(state)
+	// Installation and selection identify preferred future invocations, not the
+	// admitted owner. Reinstalling B must not redirect A's later children to B.
+	// Local source/state changes remain operational boundaries and stop this owner
+	// without acknowledging pending work or silently retargeting another checkout.
+	configured, err := capture.PreviewStateLocation(policy.StateDir, project)
 	if err != nil {
 		return false, err
 	}
-	// Disabling one source preserves a surviving unchanged integration. An added
-	// or replaced active integration requires a fresh owner, even at the same pin.
-	for source, identity := range current {
-		if f.installations[source] != identity {
-			return false, nil
-		}
+	same, err := capture.SameStore(configured.CoordinationDirectory, state)
+	if err != nil {
+		return false, err
 	}
+	if !same {
+		return false, fmt.Errorf("configured capture state changed from active %s to %s; pending work retained", state, configured.CoordinationDirectory)
+	}
+	cfg, err := adaptersconfig.Load(project)
+	if err != nil {
+		return false, err
+	}
+	if cfg.Telemetry.Sources != f.sources {
+		return false, fmt.Errorf("configured capture source changed during active worker lifetime; pending work retained in original source/state scope")
+	}
+
 	return true, nil
 }

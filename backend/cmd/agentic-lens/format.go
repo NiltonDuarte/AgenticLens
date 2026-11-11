@@ -36,6 +36,10 @@ func executeFormat(args []string, out, diagnostics io.Writer) int {
 	}
 	selected := map[string]bool{}
 	flags.Visit(func(f *flag.Flag) { selected[f.Name] = true })
+	if selected["workspaces"] && strings.TrimSpace(*workspaces) == "" {
+		fmt.Fprintln(diagnostics, "format: --workspaces must be nonblank when supplied")
+		return 2
+	}
 	selectors := 0
 	for _, key := range []string{"all", "ticket-id", "ticket-ids"} {
 		if selected[key] {

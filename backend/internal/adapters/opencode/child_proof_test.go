@@ -3,6 +3,7 @@ package opencode_test
 import (
 	"context"
 	"database/sql"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -94,11 +95,41 @@ func TestOpenCodeDelegationChildProofUsesKnownNativeParentOutsideSelection(t *te
 				}
 				assertDelegationChild(t, saveReloadSourceOwners(t, snapshot), owner, tc.want)
 				// Registry reconciliation must apply the same source proof before publishing.
+				project := t.TempDir()
+				const projectPolicy = `project_name: NativeChildProof
+ticket:
+  prefixes: [{prefix: "TEST-", description: "Native child evidence"}]
+  case_insensitive: false
+workspaces:
+  dir: tickets
+  artifacts: []
+role_mappings: {}
+role_order: []
+code_metrics:
+  base_branch: baseline
+  production: {include: [], exclude: []}
+  tests: {include: [], exclude: []}
+generation:
+  metrics: {skills: true, delegations: true, anomalies: false}
+  summary: {enabled: false}
+database:
+  busy_timeout_ms: 0
+`
+				if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), []byte(projectPolicy), 0600); err != nil {
+					t.Fatal(err)
+				}
+				table := "session"
+				if family == "v2" {
+					table = "session_v2"
+				}
+				if _, err := db.Exec(`ALTER TABLE `+table+` ADD COLUMN directory TEXT; UPDATE `+table+` SET directory=?`, project); err != nil {
+					t.Fatal(err)
+				}
 				sourcePath := filepath.Join(t.TempDir(), "native.db")
 				if _, err = db.Exec(`VACUUM INTO ?`, sourcePath); err != nil {
 					t.Fatal(err)
 				}
-				store, err := capture.Open(t.TempDir())
+				store, err := capture.OpenProjectContext(context.Background(), t.TempDir(), project)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -111,7 +142,7 @@ func TestOpenCodeDelegationChildProofUsesKnownNativeParentOutsideSelection(t *te
 				if _, err = store.Bind(context.Background(), identity, "TEST-100", row.Request); err != nil {
 					t.Fatal(err)
 				}
-				result, err := store.Reconcile(context.Background(), "TEST-100", "tester", 20, capture.DefaultByteBudget)
+				result, err := store.Reconcile(context.Background(), "TEST-100", "tester", 20, 1_000_000)
 				if err != nil {
 					t.Fatal(err)
 				}

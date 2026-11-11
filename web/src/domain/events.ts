@@ -1,3 +1,5 @@
+import { rebindAnomaly } from './anomalies';
+import type { AgenticFactLedger } from './types';
 import type { Anomaly, EventFact, WorkspaceEventsResponse } from '../types/telemetry';
 
 export function sortEvents(events: readonly EventFact[]): readonly EventFact[] {
@@ -93,17 +95,67 @@ export function selectWorkspaceEvents(response: WorkspaceEventsResponse): Worksp
   return { ...response, events: sortEvents(response.events) };
 }
 
-/** Only complete owner reads can replace a recorded anomaly summary. */
-export function selectWorkspaceAnomalies(recorded: readonly Anomaly[], response: WorkspaceEventsResponse): readonly Anomaly[] {
-  if (response.availability === 'unavailable' || response.anomalies === undefined) return recorded;
-  if (response.availability === 'complete') return response.anomalies ?? recorded;
+export type AnomalyRoleOrigin = 'source' | 'projected';
+
+/** Presentation provenance is internal; canonical facts and API schemas stay unchanged. */
+export interface PresentedAnomaly {
+  readonly anomaly: Anomaly;
+  readonly roleOrigin: AnomalyRoleOrigin;
+}
+
+/** Recover raw occurrences from canonical facts, restoring only their enclosing session owner. */
+export function recordedAnomalyFacts(ledger: AgenticFactLedger): readonly Anomaly[] | undefined {
+  const recorded = ledger.anomalies === undefined && ledger.sessions.every((owner) => owner.anomalies === undefined)
+    ? undefined : [...(ledger.anomalies ?? [])];
+  if (recorded === undefined) return undefined;
+  for (const owner of ledger.sessions) {
+    for (const anomaly of owner.anomalies ?? []) {
+      recorded.push(anomaly.context.session_id == null ? {...anomaly, context: {...anomaly.context, session_id: owner.id}} : anomaly);
+    }
+  }
+  return recorded;
+}
+
+export function recordedAnomalyEntries(ledger: AgenticFactLedger): readonly PresentedAnomaly[] {
+  return (recordedAnomalyFacts(ledger) ?? []).map((anomaly) => ({anomaly, roleOrigin: 'source'}));
+}
+
+/** Only complete owner/group reads replace raw recorded occurrences. Display aliases are never identity. */
+export function selectWorkspaceAnomalyEntries(ledger: AgenticFactLedger, response: WorkspaceEventsResponse): readonly PresentedAnomaly[] {
+  const recorded = recordedAnomalyFacts(ledger) ?? [];
+  const rawEntry = (anomaly: Anomaly): PresentedAnomaly => ({anomaly, roleOrigin: 'source'});
+  if (response.availability === 'unavailable' || response.anomalies === undefined) return recorded.map(rawEntry);
+  if (response.availability === 'complete') return response.anomalies.map(rawEntry);
   const completeOwners = new Set(response.coverage.complete_session_ids);
-  const retained = recorded.filter((anomaly) => !anomaly.context.session_id || !completeOwners.has(anomaly.context.session_id));
+  const retained = recorded.filter((anomaly) => {
+    const owner = anomaly.context.session_id;
+    if (!owner || !completeOwners.has(owner)) return true;
+    return anomaly.rule_id === 'SUBAGENT_REWORK_LOOP' && ledger.sessions.some((child) => child.parent_id === owner && !completeOwners.has(child.id));
+  });
   const identity = (anomaly: Anomaly) => JSON.stringify([anomaly.rule_id, Object.entries(anomaly.context).sort()]);
-  const retainedKeys = new Set(retained.map(identity));
-  const source = response.anomalies ?? [];
-  return [...source.filter((anomaly) => !retainedKeys.has(identity(anomaly))), ...retained.map((anomaly) => {
-    const enrichment = source.find((candidate) => identity(candidate) === identity(anomaly));
-    return enrichment?.evidence ? { ...anomaly, evidence: enrichment.evidence } : anomaly;
-  })];
+  const occurrences = new Map<string, number[]>();
+  retained.forEach((anomaly, index) => {
+    const key = identity(anomaly);
+    const indexes = occurrences.get(key) ?? [];
+    indexes.push(index);
+    occurrences.set(key, indexes);
+  });
+  const enriched = [...retained];
+  const refreshed: PresentedAnomaly[] = [];
+  for (const anomaly of response.anomalies) {
+    const indexes = occurrences.get(identity(anomaly));
+    const sameSeverity = indexes?.findIndex((index) => retained[index]!.severity === anomaly.severity) ?? -1;
+    const index = sameSeverity >= 0 ? indexes!.splice(sameSeverity, 1)[0] : indexes?.shift();
+    if (index === undefined) refreshed.push(rawEntry(anomaly));
+    else if (anomaly.evidence !== undefined) enriched[index] = {...retained[index]!, evidence: anomaly.evidence};
+  }
+  return [...refreshed, ...enriched.map(rawEntry)];
+}
+
+/** Trace entries have trustworthy raw roles; projected section selections stay separately owned. */
+export function rebindPresentedAnomaly(selected: PresentedAnomaly | null, entries: readonly PresentedAnomaly[]): PresentedAnomaly | null {
+  if (!selected) return null;
+  const candidates = entries.filter((entry) => entry.roleOrigin === selected.roleOrigin);
+  const match = rebindAnomaly(selected.anomaly, candidates.map((entry) => entry.anomaly));
+  return candidates.find((entry) => entry.anomaly === match) ?? null;
 }

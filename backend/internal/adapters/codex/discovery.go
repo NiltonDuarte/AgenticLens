@@ -24,6 +24,7 @@ type DiscoveryOptions struct {
 	CodexHome string
 	Nonce     string
 	SessionID string
+	Budget    *DiscoveryBudget
 }
 
 type rolloutCandidate struct {
@@ -34,22 +35,28 @@ type rolloutCandidate struct {
 }
 
 // DiscoverRolloutPaths finds the selected root thread and its known child
-// threads under CODEX_HOME/sessions and CODEX_HOME/archived_sessions. It reads
+// threads under the explicitly selected home's sessions and archived_sessions. It reads
 // rollout records only to inspect session metadata and compare the requested
 // nonce/ticket text; it does not retain or return transcript content.
 func DiscoverRolloutPaths(options DiscoveryOptions) ([]string, error) {
-	home := strings.TrimSpace(options.CodexHome)
-	if home == "" {
-		return nil, errors.New("Codex home is empty")
+	home := options.CodexHome
+	if strings.TrimSpace(home) == "" {
+		return nil, errors.New("Codex home is required: supply an explicit source store")
 	}
-	paths, err := listRolloutPaths(home)
+	if err := options.Budget.validate(); err != nil {
+		return nil, err
+	}
+	paths, err := listRolloutPathsWithBudget(home, options.Budget)
 	if err != nil {
 		return nil, err
 	}
 	candidates := make([]rolloutCandidate, 0, len(paths))
 	for _, path := range paths {
-		candidate, inspectErr := inspectRollout(path, options.Nonce)
+		candidate, inspectErr := inspectRolloutWithBudget(path, options.Nonce, options.Budget)
 		if inspectErr != nil {
+			if errors.Is(inspectErr, ErrDiscoveryBudget) {
+				return nil, inspectErr
+			}
 			// A partially written or future-format rollout should not hide other
 			// usable sessions. Explicit selection reports a not-found error below.
 			continue
@@ -135,29 +142,35 @@ func ParseRolloutPath(path string) (Transcript, error) {
 	return ParseRolloutPathAt(path, time.Now().UTC())
 }
 
-func ParseRolloutPathAt(path string, cutoff time.Time) (Transcript, error) {
+func ParseRolloutPathAt(path string, cutoff time.Time) (transcript Transcript, err error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return Transcript{}, err
 	}
-	defer file.Close()
+	defer func() { err = errors.Join(err, file.Close()) }()
 	var reader io.Reader = file
 	if strings.HasSuffix(path, ".gz") {
 		compressed, gzipErr := gzip.NewReader(file)
 		if gzipErr != nil {
 			return Transcript{}, fmt.Errorf("opening compressed Codex rollout: %w", gzipErr)
 		}
-		defer compressed.Close()
+		defer func() { err = errors.Join(err, compressed.Close()) }()
 		reader = compressed
 	}
-	transcript, err := ParseRolloutAt(reader, cutoff)
+	transcript, err = ParseRolloutAt(reader, cutoff)
 	if err != nil {
 		return Transcript{}, fmt.Errorf("parsing Codex rollout %s: %w", path, err)
 	}
 	return transcript, nil
 }
 
-func listRolloutPaths(home string) ([]string, error) {
+func listRolloutPathsWithBudget(home string, budget *DiscoveryBudget) ([]string, error) {
+	if strings.TrimSpace(home) == "" {
+		return nil, errors.New("Codex home is required: supply --codex-home or telemetry.sources.codex.home in the selected local YAML")
+	}
+	if err := budget.validate(); err != nil {
+		return nil, err
+	}
 	var err error
 	home, err = physicalRolloutPath(home)
 	if err != nil {
@@ -180,6 +193,9 @@ func listRolloutPaths(home string) ([]string, error) {
 				return nil
 			}
 			if strings.HasSuffix(entry.Name(), ".jsonl") || strings.HasSuffix(entry.Name(), ".jsonl.gz") {
+				if err := budget.claim(path); err != nil {
+					return err
+				}
 				paths = append(paths, path)
 			}
 			return nil
@@ -195,22 +211,34 @@ func listRolloutPaths(home string) ([]string, error) {
 	return paths, nil
 }
 
-func inspectRollout(path, nonce string) (rolloutCandidate, error) {
+func inspectRolloutWithBudget(path, nonce string, budget *DiscoveryBudget) (candidate rolloutCandidate, err error) {
+	if err := budget.claim(path); err != nil {
+		return candidate, err
+	}
 	file, err := os.Open(path)
 	if err != nil {
 		return rolloutCandidate{}, err
 	}
-	defer file.Close()
+	defer func() { err = errors.Join(err, file.Close()) }()
+	info, err := file.Stat()
+	if err != nil {
+		return candidate, err
+	}
+	sourceSize := info.Size()
 	var reader io.Reader = file
 	if strings.HasSuffix(path, ".gz") {
+		sourceSize = -1
 		compressed, gzipErr := gzip.NewReader(file)
 		if gzipErr != nil {
 			return rolloutCandidate{}, gzipErr
 		}
-		defer compressed.Close()
+		defer func() { err = errors.Join(err, compressed.Close()) }()
 		reader = compressed
 	}
-	candidate := rolloutCandidate{path: path}
+	if budget != nil {
+		reader = &discoveryBudgetReader{reader: reader, budget: budget, remainingSize: sourceSize}
+	}
+	candidate = rolloutCandidate{path: path}
 	scanner := bufio.NewScanner(reader)
 	scanner.Buffer(make([]byte, 64*1024), maxDiscoveryLineBytes)
 	for scanner.Scan() {
@@ -308,28 +336,27 @@ func isDescendant(candidates []rolloutCandidate, threadID, rootID string) bool {
 	return false
 }
 
-func cleanPath(path string) string {
-	if strings.TrimSpace(path) == "" {
-		return ""
-	}
-	clean, err := filepath.Abs(filepath.Clean(path))
-	if err != nil {
-		return filepath.Clean(path)
-	}
-	return clean
-}
-
 // DiscoverExactRolloutPath selects one owner rather than its complete native
 // family. Family discovery remains separate so children validate their own cwd.
 func DiscoverExactRolloutPath(home, sessionID string) (string, error) {
-	paths, err := listRolloutPaths(home)
+	return DiscoverExactRolloutPathWithBudget(home, sessionID, nil)
+}
+
+func DiscoverExactRolloutPathWithBudget(home, sessionID string, budget *DiscoveryBudget) (string, error) {
+	if strings.TrimSpace(sessionID) == "" {
+		return "", errors.New("exact Codex session ID is required")
+	}
+	paths, err := listRolloutPathsWithBudget(home, budget)
 	if err != nil {
 		return "", err
 	}
 	selected := ""
 	for _, path := range paths {
-		candidate, e := inspectRollout(path, "")
+		candidate, e := inspectRolloutWithBudget(path, "", budget)
 		if e != nil {
+			if errors.Is(e, ErrDiscoveryBudget) {
+				return "", e
+			}
 			continue
 		}
 		if candidate.threadID != sessionID {
@@ -377,5 +404,8 @@ func ValidateRolloutStore(home, path string) error {
 }
 
 func physicalRolloutPath(path string) (string, error) {
+	if strings.TrimSpace(path) == "" {
+		return "", errors.New("explicit Codex source path must be nonblank")
+	}
 	return filesystem.PhysicalPath(path)
 }

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"agenticlens/internal/adapters"
+	adaptersconfig "agenticlens/internal/adapters/config"
 	"agenticlens/internal/domain"
 )
 
@@ -113,33 +114,20 @@ func isolatedParityWorkspacesDir(t *testing.T) string {
 	if err := os.Mkdir(project, 0700); err != nil {
 		t.Fatal(err)
 	}
-	policy := `project_name: ParityFixture
-telemetry:
-  capture:
-    state_dir: capture-state
-ticket:
-  prefixes: [AL, GEN, PO]
-workspaces:
-  dir: workspaces
-code_metrics:
-  source_roots: [web, backend]
-  base_branch: origin/main
-anomaly_thresholds:
-  context_ceiling_warning_tokens: 160000
-  context_ceiling_critical_tokens: 200000
-  consecutive_errors_streak_warning: 3
-role_mappings:
-  orchestrator: orchestrator
-  build: orchestrator
-  planner: planner
-  coder: coder
-  tester: tester
-  reviewer: reviewer
-role_order: [orchestrator, planner, coder, tester, reviewer]
-`
-	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), []byte(policy), 0600); err != nil {
+	cfg := fixtureReadPolicy(t)
+	cfg.Workspaces.Dir = "workspaces"
+	cfg.ProjectName = "ParityFixture"
+	cfg.Ticket = domain.TicketConfig{CaseInsensitive: true, Prefixes: []domain.TicketPrefix{{Prefix: "AL", Description: "Development"}, {Prefix: "GEN", Description: "General"}, {Prefix: "PO", Description: "Planning"}}}
+	cfg.RoleMappings = domain.RoleMappings{"orchestrator": "orchestrator", "build": "orchestrator", "planner": "planner", "coder": "coder", "tester": "tester", "reviewer": "reviewer"}
+	cfg.RoleOrder = []string{"orchestrator", "planner", "coder", "tester", "reviewer"}
+	policy, err := adaptersconfig.GenerateConfigYAML(cfg)
+	if err != nil {
 		t.Fatal(err)
 	}
+	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), policy, 0600); err != nil {
+		t.Fatal(err)
+	}
+
 	workspaces := filepath.Join(project, "workspaces")
 	if err := os.CopyFS(workspaces, os.DirFS(findParityWorkspacesDir())); err != nil {
 		t.Fatalf("copying parity fixture ledgers: %v", err)

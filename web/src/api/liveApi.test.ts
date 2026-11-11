@@ -5,6 +5,7 @@ import {
   fetchLiveTrace,
   parseLiveSessionTree,
   parseLiveTraceView,
+  parseLiveAnomalyAlert,
   type LiveStreamCallbacks,
 } from './liveApi';
 import type {
@@ -12,6 +13,13 @@ import type {
   LiveTraceView,
 } from '../domain/live';
 import { mockLiveSessionTree, mockLiveAnomalyAlerts, mockLiveTraceView } from '../test/fixtures/mockData';
+
+function pendingResponse() {
+  let resolve!: (response: Response) => void;
+  let reject!: (error: Error) => void;
+  const promise = new Promise<Response>((accept, fail) => {resolve = accept; reject = fail;});
+  return {promise, resolve, reject};
+}
 
 class MockEventSource {
   static instances: MockEventSource[] = [];
@@ -59,46 +67,24 @@ describe('liveApi Streaming and Boundary Layer', () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.useRealTimers();
     vi.unstubAllGlobals();
   });
 
   describe('Boundary Parsers', () => {
-    it('parseLiveSessionTree safely parses null or non-object input', () => {
-      const parsed = parseLiveSessionTree(null);
-      expect(parsed.root_sessions).toEqual([]);
-      expect(parsed.total_active_sessions).toBe(0);
-      expect(parsed.active_anomalies).toEqual([]);
+    it.each([
+      null, undefined, 42, true, 'corrupted', [], {},
+      {...mockLiveSessionTree, root_sessions: null},
+      {...mockLiveSessionTree, total_active_sessions: -1},
+      {...mockLiveSessionTree, root_sessions: [{...mockLiveSessionTree.root_sessions[0]!, role: undefined}]},
+    ])('rejects malformed live tree %j instead of inventing measured zero activity', (input) => {
+      expect(() => parseLiveSessionTree(input)).toThrow('Invalid live session tree');
     });
 
-    it('parseLiveSessionTree handles corrupted primitive types (numbers, booleans, strings)', () => {
-      for (const input of [42, true, false, 'corrupted_string', undefined]) {
-        const parsed = parseLiveSessionTree(input);
-        expect(parsed.root_sessions).toEqual([]);
-        expect(parsed.total_active_sessions).toBe(0);
-        expect(parsed.active_anomalies).toEqual([]);
-        expect(typeof parsed.last_refreshed_at).toBe('string');
-      }
-    });
-
-    it('parseLiveSessionTree handles empty object and corrupted properties safely', () => {
-      const parsed = parseLiveSessionTree({
-        root_sessions: 'not-an-array' as unknown,
-        total_active_sessions: 'not-a-number' as unknown,
-        active_anomalies: null as unknown,
-        last_refreshed_at: '' as unknown,
-      });
-
-      expect(parsed.root_sessions).toEqual([]);
-      expect(parsed.total_active_sessions).toBe(0);
-      expect(parsed.active_anomalies).toEqual([]);
-      expect(Date.parse(parsed.last_refreshed_at)).not.toBeNaN();
-    });
-
-    it('parseLiveSessionTree converts raw array into valid LiveSessionTree', () => {
-      const parsed = parseLiveSessionTree(mockLiveSessionTree.root_sessions);
-      expect(parsed.root_sessions).toHaveLength(mockLiveSessionTree.root_sessions.length);
-      expect(parsed.total_active_sessions).toBe(mockLiveSessionTree.root_sessions.length);
+    it('preserves a successful explicitly empty current tree and its recorded refresh timestamp', () => {
+      const empty = {root_sessions: [], total_active_sessions: 0, active_anomalies: [], last_refreshed_at: '2026-11-11T12:00:00Z'};
+      expect(parseLiveSessionTree(empty)).toEqual(empty);
     });
 
     it('parseLiveTraceView provides safe defaults on invalid input', () => {
@@ -147,6 +133,109 @@ describe('liveApi Streaming and Boundary Layer', () => {
     });
   });
 
+  it.each([undefined, 0, -1, 1.5, Infinity, 2_147_483_648])('rejects unusable polling cadence %s without starting a substitute timer', (cadence) => {
+    vi.stubGlobal('EventSource', undefined);
+    const fetch = vi.fn();
+    vi.stubGlobal('fetch', fetch);
+    const timer = vi.spyOn(globalThis, 'setInterval');
+    const onError = vi.fn();
+    const onStatusChange = vi.fn();
+    const unsubscribe = subscribeToLiveStream({onSessionTree: vi.fn(), onError, onStatusChange}, cadence);
+    expect(timer).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
+    expect(onError.mock.calls.at(-1)?.[0]).toHaveProperty('message', expect.stringContaining('live.poll_interval_ms'));
+    expect(onStatusChange).toHaveBeenLastCalledWith('error');
+    unsubscribe();
+  });
+
+  it('uses the configured nonpreset cadence, recovers REST status and cancels subsequent polls', async () => {
+    vi.stubGlobal('EventSource', undefined);
+    let calls = 0;
+    const fetch = vi.fn(async () => ++calls === 1 ? new Response('', {status: 503})
+      : new Response(JSON.stringify(mockLiveSessionTree), {status: 200}));
+    vi.stubGlobal('fetch', fetch);
+    const onStatusChange = vi.fn();
+    const onSessionTree = vi.fn();
+    const unsubscribe = subscribeToLiveStream({onSessionTree, onStatusChange}, 333);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(onStatusChange).toHaveBeenLastCalledWith('error');
+    await vi.advanceTimersByTimeAsync(332);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(onSessionTree).toHaveBeenCalledWith(mockLiveSessionTree);
+    expect(onStatusChange).toHaveBeenLastCalledWith('fallback-polling');
+    unsubscribe();
+    const statusCount = onStatusChange.mock.calls.length;
+    await vi.advanceTimersByTimeAsync(999);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(onStatusChange).toHaveBeenCalledTimes(statusCount);
+  });
+
+  it.each(['success', 'failure'] as const)('ignores an older poll %s after a newer success', async (olderResult) => {
+    vi.stubGlobal('EventSource', undefined);
+    const older = pendingResponse(), newer = pendingResponse();
+    const fetch = vi.fn().mockReturnValueOnce(older.promise).mockReturnValueOnce(newer.promise);
+    vi.stubGlobal('fetch', fetch);
+    const onSessionTree = vi.fn(), onStatusChange = vi.fn(), onError = vi.fn();
+    const unsubscribe = subscribeToLiveStream({onSessionTree, onStatusChange, onError}, 333);
+    await vi.advanceTimersByTimeAsync(333);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    const current = {...mockLiveSessionTree, last_refreshed_at: '2026-11-11T13:00:02Z'};
+    newer.resolve(new Response(JSON.stringify(current), {status: 200}));
+    await vi.advanceTimersByTimeAsync(0);
+    const statusCount = onStatusChange.mock.calls.length, errorCount = onError.mock.calls.length;
+    if (olderResult === 'success') older.resolve(new Response(JSON.stringify({...current, last_refreshed_at: '2026-11-11T13:00:01Z'}), {status: 200}));
+    else older.reject(new Error('Older failed request'));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(onSessionTree.mock.calls).toEqual([[current]]);
+    expect(onStatusChange).toHaveBeenCalledTimes(statusCount);
+    expect(onError).toHaveBeenCalledTimes(errorCount);
+    unsubscribe();
+  });
+
+  it('keeps a newer failure authoritative over an older success, then accepts a current recovery', async () => {
+    vi.stubGlobal('EventSource', undefined);
+    const older = pendingResponse(), newer = pendingResponse();
+    const fetch = vi.fn().mockReturnValueOnce(older.promise).mockReturnValueOnce(newer.promise)
+      .mockImplementation(async () => new Response(JSON.stringify(mockLiveSessionTree), {status: 200}));
+    vi.stubGlobal('fetch', fetch);
+    const onSessionTree = vi.fn(), onStatusChange = vi.fn(), onError = vi.fn();
+    const unsubscribe = subscribeToLiveStream({onSessionTree, onStatusChange, onError}, 333);
+    await vi.advanceTimersByTimeAsync(333);
+    newer.resolve(new Response('', {status: 503}));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(onStatusChange).toHaveBeenLastCalledWith('error');
+    const statusCount = onStatusChange.mock.calls.length;
+    older.resolve(new Response(JSON.stringify(mockLiveSessionTree), {status: 200}));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(onSessionTree).not.toHaveBeenCalled();
+    expect(onStatusChange).toHaveBeenCalledTimes(statusCount);
+    await vi.advanceTimersByTimeAsync(333);
+    expect(onSessionTree).toHaveBeenCalledWith(mockLiveSessionTree);
+    expect(onStatusChange).toHaveBeenLastCalledWith('fallback-polling');
+    unsubscribe();
+  });
+
+  it('accepts useful progress while newer work is pending and suppresses completion after teardown', async () => {
+    vi.stubGlobal('EventSource', undefined);
+    const useful = pendingResponse(), pending = pendingResponse();
+    const fetch = vi.fn().mockReturnValueOnce(useful.promise).mockReturnValueOnce(pending.promise);
+    vi.stubGlobal('fetch', fetch);
+    const onSessionTree = vi.fn(), onStatusChange = vi.fn(), onError = vi.fn();
+    const unsubscribe = subscribeToLiveStream({onSessionTree, onStatusChange, onError}, 333);
+    await vi.advanceTimersByTimeAsync(333);
+    useful.resolve(new Response(JSON.stringify(mockLiveSessionTree), {status: 200}));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(onSessionTree).toHaveBeenCalledWith(mockLiveSessionTree);
+    unsubscribe();
+    const counts = [onSessionTree.mock.calls.length, onStatusChange.mock.calls.length, onError.mock.calls.length];
+    pending.resolve(new Response(JSON.stringify({...mockLiveSessionTree, last_refreshed_at: '2026-11-11T13:00:03Z'}), {status: 200}));
+    await vi.advanceTimersByTimeAsync(999);
+    expect([onSessionTree.mock.calls.length, onStatusChange.mock.calls.length, onError.mock.calls.length]).toEqual(counts);
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
   describe('subscribeToLiveStream in Live SSE Mode', () => {
     it('initializes EventSource with /api/live/stream and routes SSE events to callbacks', () => {
       const onSessionTree = vi.fn();
@@ -161,7 +250,7 @@ describe('liveApi Streaming and Boundary Layer', () => {
         onStatusChange,
       };
 
-      const unsubscribe = subscribeToLiveStream(callbacks);
+      const unsubscribe = subscribeToLiveStream(callbacks, 2000);
       expect(MockEventSource.instances).toHaveLength(1);
       const es = MockEventSource.instances[0]!;
       expect(es.url).toBe('/api/live/stream');
@@ -181,7 +270,7 @@ describe('liveApi Streaming and Boundary Layer', () => {
       expect(onAnomalyAlert).toHaveBeenCalledWith(alert);
 
       // Dispatch trace_update
-      const trace: LiveTraceView = mockLiveTraceView;
+      const trace: LiveTraceView = { ...mockLiveTraceView, relationships:{state:"unavailable"},diagnostics:[{code:"child_relationship_lookup_failed",message:"Native query failed"}] };
       es.dispatchEvent('trace_update', JSON.stringify(trace));
       expect(onTraceUpdate).toHaveBeenCalledWith(trace);
 
@@ -203,7 +292,7 @@ describe('liveApi Streaming and Boundary Layer', () => {
         onError,
       };
 
-      const unsubscribe = subscribeToLiveStream(callbacks);
+      const unsubscribe = subscribeToLiveStream(callbacks, 2000);
       const es = MockEventSource.instances[0]!;
       es.onopen?.();
 
@@ -247,7 +336,7 @@ describe('liveApi Streaming and Boundary Layer', () => {
         onError,
       };
 
-      const unsubscribe = subscribeToLiveStream(callbacks);
+      const unsubscribe = subscribeToLiveStream(callbacks, 2000);
       expect(onError).toHaveBeenCalledTimes(1);
       expect(onError.mock.calls[0]![0].message).toContain('Blocked by Content Security Policy');
       expect(onStatusChange).toHaveBeenCalledWith('fallback-polling');
@@ -265,7 +354,7 @@ describe('liveApi Streaming and Boundary Layer', () => {
         onStatusChange,
       };
 
-      subscribeToLiveStream(callbacks);
+      subscribeToLiveStream(callbacks, 2000);
       const es1 = MockEventSource.instances[0]!;
 
       // 1st error
@@ -291,7 +380,7 @@ describe('liveApi Streaming and Boundary Layer', () => {
         onSessionTree: vi.fn(),
       };
 
-      const unsubscribe = subscribeToLiveStream(callbacks);
+      const unsubscribe = subscribeToLiveStream(callbacks, 2000);
       const es1 = MockEventSource.instances[0]!;
 
       // Trigger error, scheduling reconnect timer
@@ -331,7 +420,7 @@ describe('liveApi Streaming and Boundary Layer', () => {
         onError,
       };
 
-      const unsubscribe = subscribeToLiveStream(callbacks);
+      const unsubscribe = subscribeToLiveStream(callbacks, 2000);
 
       // Trigger 3 consecutive errors to enter fallback polling
       MockEventSource.instances[0]!.onerror?.();
@@ -375,7 +464,7 @@ describe('liveApi Streaming and Boundary Layer', () => {
         onError,
       };
 
-      const unsubscribe = subscribeToLiveStream(callbacks);
+      const unsubscribe = subscribeToLiveStream(callbacks, 2000);
 
       // 3 consecutive SSE errors -> transitions to fallback-polling
       MockEventSource.instances[0]!.onerror?.();
@@ -416,7 +505,7 @@ describe('liveApi Streaming and Boundary Layer', () => {
         onError,
       };
 
-      const unsubscribe = subscribeToLiveStream(callbacks);
+      const unsubscribe = subscribeToLiveStream(callbacks, 2000);
 
       // Trigger 3 errors to start fallback polling
       MockEventSource.instances[0]!.onerror?.();
@@ -442,7 +531,7 @@ describe('liveApi Streaming and Boundary Layer', () => {
         onError,
       };
 
-      subscribeToLiveStream(callbacks);
+      subscribeToLiveStream(callbacks, 2000);
       const es1 = MockEventSource.instances[0]!;
 
       // Simulate error
@@ -471,7 +560,7 @@ describe('liveApi Streaming and Boundary Layer', () => {
         onStatusChange,
       };
 
-      subscribeToLiveStream(callbacks);
+      subscribeToLiveStream(callbacks, 2000);
 
       // 1st error
       MockEventSource.instances[0]!.onerror?.();
@@ -505,7 +594,7 @@ describe('liveApi Streaming and Boundary Layer', () => {
         onStatusChange,
       };
 
-      const unsubscribe = subscribeToLiveStream(callbacks);
+      const unsubscribe = subscribeToLiveStream(callbacks, 2000);
       expect(onStatusChange).toHaveBeenCalledWith('fallback-polling');
 
       await vi.advanceTimersByTimeAsync(10);
@@ -639,4 +728,30 @@ describe('liveApi Streaming and Boundary Layer', () => {
       await expect(fetchLiveTrace('ses-malformed-json')).rejects.toThrow(/Unexpected token/i);
     });
   });
+});
+
+
+describe('live relationship completeness boundary', () => {
+ it('preserves partial relationship diagnostics alongside usable messages', () => {
+  const trace = parseLiveTraceView({session_id:'parent',messages:[{id:'message',parts:[{id:'part',type:'text',text:'useful content'}]}],relationships:{state:'unavailable'},diagnostics:[{code:'child_relationship_lookup_failed',message:'child query unavailable'}]}, 'parent');
+  expect(trace.relationships?.state).toBe('unavailable');
+  expect(trace.diagnostics).toEqual([{code:'child_relationship_lookup_failed',message:'child query unavailable'}]);
+  expect(trace.messages).toHaveLength(1);
+ });
+ it('distinguishes proven complete relationship lookup from legacy unknown metadata', () => {
+  expect(parseLiveTraceView({session_id:'parent',messages:[],relationships:{state:'complete'},diagnostics:[]}, 'parent').relationships?.state).toBe('complete');
+  expect(parseLiveTraceView({session_id:'parent',messages:[]}, 'parent').relationships).toBeUndefined();
+ });
+});
+
+
+describe('live rate alert structured fields', () => {
+ it('preserves exact structured identities and raw evidence without turning totals into streaks', () => {
+  const message='  7 separated failures\n';const alert=parseLiveAnomalyAlert({session_id:'parent',rule_name:'ToolHighFailureRate',severity:'WARNING',message,trigger_event:'part-1',timestamp:'2026-11-08T10:00:00Z',tool_name:'read',part_id:'part-1',count:7});
+  expect(alert?.rule_name).toBe('ToolHighFailureRate');expect(alert?.tool_name).toBe('read');expect(alert?.part_id).toBe('part-1');expect(alert?.count).toBe(7);expect(alert?.message).toBe(message);
+ });
+ it('rejects malformed supplied completeness instead of claiming a complete lookup', () => {
+  expect(()=>parseLiveTraceView({session_id:'parent',messages:[],relationships:{state:'garbage'}},'parent')).toThrow();
+  expect(()=>parseLiveTraceView({session_id:'parent',messages:[],relationships:{state:'complete'},diagnostics:[{code:'child_relationship_lookup_failed',message:17}]},'parent')).toThrow();
+ });
 });

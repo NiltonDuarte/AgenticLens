@@ -447,7 +447,7 @@ func TestDiagnosticCurrentFailuresSurvivePendingAndUnrelatedHistory(t *testing.T
 	for i := 0; i < 40; i++ {
 		record(domain.CaptureDiagnostic{TicketID: "TEST-200", Phase: "publication", Outcome: "failed"})
 	}
-	feedback, err := s.SessionFailureFeedback(ctx, id)
+	feedback, err := s.SessionFailureFeedback(ctx, id, fixtureByteBudget)
 	if err != nil || !strings.Contains(feedback, "publication failed") || !strings.Contains(feedback, "source reconciliation failed") {
 		t.Fatalf("unresolved terminal evidence erased by pending/unrelated churn: %q %v", feedback, err)
 	}
@@ -456,7 +456,7 @@ func TestDiagnosticCurrentFailuresSurvivePendingAndUnrelatedHistory(t *testing.T
 	successful.State = domain.CaptureCurrent
 	successful.RefreshedAt = "2026-01-01T00:00:00Z"
 	record(domain.CaptureDiagnostic{TicketID: "TEST-100", Phase: "reconciliation", Outcome: "accepted", Reconciliation: &domain.CaptureReconciliationDiagnostic{Attempt: domain.CaptureAttemptPartial, Owners: []domain.CaptureRegistration{successful}}})
-	feedback, err = s.SessionFailureFeedback(ctx, id)
+	feedback, err = s.SessionFailureFeedback(ctx, id, fixtureByteBudget)
 	if err != nil || feedback != "" {
 		t.Fatalf("relevant terminal success did not supersede failure: %q %v", feedback, err)
 	}

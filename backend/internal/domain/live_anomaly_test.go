@@ -23,7 +23,7 @@ func TestConsecutiveToolErrorsRule(t *testing.T) {
 			},
 		}
 
-		alerts := domain.EvaluateConsecutiveToolErrors(trace)
+		alerts := domain.EvaluateConsecutiveToolErrors(trace, 3, 5)
 		if len(alerts) != 0 {
 			t.Fatalf("expected 0 alerts, got %d", len(alerts))
 		}
@@ -45,7 +45,7 @@ func TestConsecutiveToolErrorsRule(t *testing.T) {
 			},
 		}
 
-		alerts := domain.EvaluateConsecutiveToolErrors(trace)
+		alerts := domain.EvaluateConsecutiveToolErrors(trace, 3, 5)
 		if len(alerts) != 0 {
 			t.Fatalf("expected 0 alerts, got %d", len(alerts))
 		}
@@ -68,7 +68,7 @@ func TestConsecutiveToolErrorsRule(t *testing.T) {
 			},
 		}
 
-		alerts := domain.EvaluateConsecutiveToolErrors(trace)
+		alerts := domain.EvaluateConsecutiveToolErrors(trace, 3, 5)
 		if len(alerts) != 1 {
 			t.Fatalf("expected 1 alert, got %d", len(alerts))
 		}
@@ -112,7 +112,7 @@ func TestConsecutiveToolErrorsRule(t *testing.T) {
 			},
 		}
 
-		alerts := domain.EvaluateConsecutiveToolErrors(trace)
+		alerts := domain.EvaluateConsecutiveToolErrors(trace, 3, 5)
 		if len(alerts) != 1 {
 			t.Fatalf("expected 1 alert, got %d", len(alerts))
 		}
@@ -143,7 +143,7 @@ func TestConsecutiveToolErrorsRule(t *testing.T) {
 			},
 		}
 
-		alerts := domain.EvaluateConsecutiveToolErrors(trace)
+		alerts := domain.EvaluateConsecutiveToolErrors(trace, 3, 5)
 		if len(alerts) != 1 {
 			t.Fatalf("expected 1 alert, got %d", len(alerts))
 		}
@@ -174,7 +174,7 @@ func TestConsecutiveToolErrorsRule(t *testing.T) {
 			},
 		}
 
-		alerts := domain.EvaluateConsecutiveToolErrors(trace)
+		alerts := domain.EvaluateConsecutiveToolErrors(trace, 3, 5)
 		if len(alerts) != 0 {
 			t.Fatalf("expected 0 alerts after streak reset, got %d", len(alerts))
 		}
@@ -197,7 +197,7 @@ func TestConsecutiveToolErrorsRule(t *testing.T) {
 			},
 		}
 
-		alerts := domain.EvaluateConsecutiveToolErrors(trace)
+		alerts := domain.EvaluateConsecutiveToolErrors(trace, 3, 5)
 		if len(alerts) != 1 {
 			t.Fatalf("expected 1 alert across different tools, got %d", len(alerts))
 		}
@@ -233,7 +233,7 @@ func TestConsecutiveToolErrorsRule(t *testing.T) {
 			},
 		}
 
-		alerts := domain.EvaluateConsecutiveToolErrors(trace)
+		alerts := domain.EvaluateConsecutiveToolErrors(trace, 3, 5)
 		if len(alerts) != 1 {
 			t.Fatalf("expected 1 alert spanning 2 messages, got %d", len(alerts))
 		}
@@ -243,10 +243,10 @@ func TestConsecutiveToolErrorsRule(t *testing.T) {
 	})
 
 	t.Run("nil trace or empty messages safely returns empty slice", func(t *testing.T) {
-		if alerts := domain.EvaluateConsecutiveToolErrors(nil); len(alerts) != 0 {
+		if alerts := domain.EvaluateConsecutiveToolErrors(nil, 3, 5); len(alerts) != 0 {
 			t.Errorf("expected 0 alerts for nil trace, got %d", len(alerts))
 		}
-		if alerts := domain.EvaluateConsecutiveToolErrors(&domain.LiveTraceView{}); len(alerts) != 0 {
+		if alerts := domain.EvaluateConsecutiveToolErrors(&domain.LiveTraceView{}, 3, 5); len(alerts) != 0 {
 			t.Errorf("expected 0 alerts for empty trace, got %d", len(alerts))
 		}
 	})
@@ -278,58 +278,50 @@ func TestContextCeilingApproachRule(t *testing.T) {
 		{
 			name:             "160k tokens triggers WARNING alert",
 			tokens:           160_000,
-			warnTokens:     160_000,
-			critTokens:     200_000,
+			warnTokens:       160_000,
+			critTokens:       200_000,
 			expectedAlerts:   1,
 			expectedSeverity: domain.LiveSeverityWarning,
 		},
 		{
 			name:             "199k tokens triggers WARNING alert",
 			tokens:           199_000,
-			warnTokens:     160_000,
-			critTokens:     200_000,
+			warnTokens:       160_000,
+			critTokens:       200_000,
 			expectedAlerts:   1,
 			expectedSeverity: domain.LiveSeverityWarning,
 		},
 		{
 			name:             "200k tokens triggers CRITICAL alert",
 			tokens:           200_000,
-			warnTokens:     160_000,
-			critTokens:     200_000,
+			warnTokens:       160_000,
+			critTokens:       200_000,
 			expectedAlerts:   1,
 			expectedSeverity: domain.LiveSeverityCritical,
 		},
 		{
 			name:             "250k tokens triggers CRITICAL alert",
 			tokens:           250_000,
-			warnTokens:     160_000,
-			critTokens:     200_000,
+			warnTokens:       160_000,
+			critTokens:       200_000,
 			expectedAlerts:   1,
 			expectedSeverity: domain.LiveSeverityCritical,
 		},
 		{
 			name:             "custom ceiling: 80k warning, 100k critical: 80k triggers WARNING",
 			tokens:           80_000,
-			warnTokens:     80_000,
-			critTokens:     100_000,
+			warnTokens:       80_000,
+			critTokens:       100_000,
 			expectedAlerts:   1,
 			expectedSeverity: domain.LiveSeverityWarning,
 		},
 		{
 			name:             "custom ceiling: 80k warning, 100k critical: 100k triggers CRITICAL",
 			tokens:           100_000,
-			warnTokens:     80_000,
-			critTokens:     100_000,
+			warnTokens:       80_000,
+			critTokens:       100_000,
 			expectedAlerts:   1,
 			expectedSeverity: domain.LiveSeverityCritical,
-		},
-		{
-			name:             "fallback ceiling when zero or negative passed",
-			tokens:           160_000,
-			warnTokens:     0,
-			critTokens:     0,
-			expectedAlerts:   1,
-			expectedSeverity: domain.LiveSeverityWarning,
 		},
 	}
 
@@ -381,7 +373,7 @@ func TestTokenVelocityRunawayRule(t *testing.T) {
 			},
 		}
 
-		alerts := domain.EvaluateTokenVelocityRunaway(trace, 0, 0)
+		alerts := domain.EvaluateTokenVelocityRunaway(trace, 30000, 60000, 40000, 80000)
 		if len(alerts) != 0 {
 			t.Fatalf("expected 0 alerts, got %d", len(alerts))
 		}
@@ -396,15 +388,15 @@ func TestTokenVelocityRunawayRule(t *testing.T) {
 			},
 		}
 
-		alerts := domain.EvaluateTokenVelocityRunaway(trace, 0, 0)
+		alerts := domain.EvaluateTokenVelocityRunaway(trace, 30000, 60000, 40000, 80000)
 		if len(alerts) != 1 {
 			t.Fatalf("expected 1 alert, got %d", len(alerts))
 		}
 		if alerts[0].Severity != domain.LiveSeverityWarning {
 			t.Errorf("expected WARNING severity, got %s", alerts[0].Severity)
 		}
-		if !strings.Contains(alerts[0].Message, "Abnormally high token velocity") {
-			t.Errorf("expected high token velocity message, got %s", alerts[0].Message)
+		if !strings.Contains(alerts[0].Message, "Token usage surge") {
+			t.Errorf("expected token usage surge message, got %s", alerts[0].Message)
 		}
 		if !strings.Contains(alerts[0].TriggerEvent, "turn 2") {
 			t.Errorf("expected trigger event to reference turn 2, got %s", alerts[0].TriggerEvent)
@@ -419,7 +411,7 @@ func TestTokenVelocityRunawayRule(t *testing.T) {
 			},
 		}
 
-		alerts := domain.EvaluateTokenVelocityRunaway(trace, 0, 0)
+		alerts := domain.EvaluateTokenVelocityRunaway(trace, 30000, 60000, 40000, 80000)
 		if len(alerts) != 1 {
 			t.Fatalf("expected 1 alert, got %d", len(alerts))
 		}
@@ -436,7 +428,7 @@ func TestTokenVelocityRunawayRule(t *testing.T) {
 			},
 		}
 
-		alerts := domain.EvaluateTokenVelocityRunaway(trace, 0, 0)
+		alerts := domain.EvaluateTokenVelocityRunaway(trace, 30000, 60000, 40000, 80000)
 		if len(alerts) != 0 {
 			t.Fatalf("expected 0 alerts, got %d", len(alerts))
 		}
@@ -451,7 +443,7 @@ func TestTokenVelocityRunawayRule(t *testing.T) {
 			},
 		}
 
-		alerts := domain.EvaluateTokenVelocityRunaway(trace, 0, 0)
+		alerts := domain.EvaluateTokenVelocityRunaway(trace, 30000, 60000, 40000, 80000)
 		if len(alerts) != 1 {
 			t.Fatalf("expected 1 alert for context delta, got %d", len(alerts))
 		}
@@ -469,7 +461,7 @@ func TestTokenVelocityRunawayRule(t *testing.T) {
 			},
 		}
 
-		alerts := domain.EvaluateTokenVelocityRunaway(trace, 0, 0)
+		alerts := domain.EvaluateTokenVelocityRunaway(trace, 30000, 60000, 40000, 80000)
 		if len(alerts) != 1 {
 			t.Fatalf("expected 1 alert for critical delta, got %d", len(alerts))
 		}
@@ -487,7 +479,7 @@ func TestTokenVelocityRunawayRule(t *testing.T) {
 			},
 		}
 
-		alerts := domain.EvaluateTokenVelocityRunaway(trace, 0, 0)
+		alerts := domain.EvaluateTokenVelocityRunaway(trace, 30000, 60000, 40000, 80000)
 		if len(alerts) != 0 {
 			t.Fatalf("expected 0 alerts for compaction reduction, got %d", len(alerts))
 		}
@@ -510,7 +502,7 @@ func TestToolThrashingRule(t *testing.T) {
 			},
 		}
 
-		alerts := domain.EvaluateToolThrashing(trace)
+		alerts := domain.EvaluateToolThrashing(trace, 3, 5)
 		if len(alerts) != 0 {
 			t.Fatalf("expected 0 alerts, got %d", len(alerts))
 		}
@@ -531,7 +523,7 @@ func TestToolThrashingRule(t *testing.T) {
 			},
 		}
 
-		alerts := domain.EvaluateToolThrashing(trace)
+		alerts := domain.EvaluateToolThrashing(trace, 3, 5)
 		if len(alerts) != 0 {
 			t.Fatalf("expected 0 alerts for different tools, got %d", len(alerts))
 		}
@@ -552,7 +544,7 @@ func TestToolThrashingRule(t *testing.T) {
 			},
 		}
 
-		alerts := domain.EvaluateToolThrashing(trace)
+		alerts := domain.EvaluateToolThrashing(trace, 3, 5)
 		if len(alerts) != 1 {
 			t.Fatalf("expected 1 thrashing alert, got %d", len(alerts))
 		}
@@ -587,7 +579,7 @@ func TestToolThrashingRule(t *testing.T) {
 			},
 		}
 
-		alerts := domain.EvaluateToolThrashing(trace)
+		alerts := domain.EvaluateToolThrashing(trace, 3, 5)
 		if len(alerts) != 1 {
 			t.Fatalf("expected 1 alert, got %d", len(alerts))
 		}
@@ -612,7 +604,7 @@ func TestToolThrashingRule(t *testing.T) {
 			},
 		}
 
-		alerts := domain.EvaluateToolThrashing(trace)
+		alerts := domain.EvaluateToolThrashing(trace, 3, 5)
 		if len(alerts) != 0 {
 			t.Fatalf("expected 0 alerts when intermediate success occurred, got %d", len(alerts))
 		}
@@ -635,7 +627,7 @@ func TestToolThrashingRule(t *testing.T) {
 			},
 		}
 
-		alerts := domain.EvaluateToolThrashing(trace)
+		alerts := domain.EvaluateToolThrashing(trace, 3, 5)
 		if len(alerts) != 1 {
 			t.Fatalf("expected 1 alert for window thrashing, got %d", len(alerts))
 		}
@@ -663,7 +655,7 @@ func TestToolThrashingRule(t *testing.T) {
 			},
 		}
 
-		alerts := domain.EvaluateToolThrashing(trace)
+		alerts := domain.EvaluateToolThrashing(trace, 3, 5)
 		if len(alerts) != 1 {
 			t.Fatalf("expected 1 alert for 4 thrashing failures, got %d", len(alerts))
 		}
@@ -675,7 +667,7 @@ func TestToolThrashingRule(t *testing.T) {
 
 func TestCompositeEvaluateLiveAnomalies(t *testing.T) {
 	t.Run("nil tree and nil trace returns empty slice without panicking", func(t *testing.T) {
-		alerts := domain.EvaluateLiveAnomalies(nil, nil)
+		alerts := domain.EvaluateLiveAnomalies(nil, nil, domain.LiveAnomalyOptions{Thresholds: testMetricsProjectConfig().AnomalyThresholds})
 		if alerts == nil {
 			t.Fatal("expected non-nil empty slice")
 		}
@@ -690,7 +682,7 @@ func TestCompositeEvaluateLiveAnomalies(t *testing.T) {
 				{SessionID: "s1", RuleName: "TestRule", Severity: domain.LiveSeverityWarning},
 			},
 		}
-		alerts := domain.EvaluateLiveAnomalies(tree, nil)
+		alerts := domain.EvaluateLiveAnomalies(tree, nil, domain.LiveAnomalyOptions{Thresholds: testMetricsProjectConfig().AnomalyThresholds})
 		if len(alerts) != 1 {
 			t.Fatalf("expected 1 alert, got %d", len(alerts))
 		}
@@ -707,7 +699,7 @@ func TestCompositeEvaluateLiveAnomalies(t *testing.T) {
 				},
 			},
 		}
-		alerts := domain.EvaluateLiveAnomalies(nil, trace)
+		alerts := domain.EvaluateLiveAnomalies(nil, trace, domain.LiveAnomalyOptions{Thresholds: testMetricsProjectConfig().AnomalyThresholds})
 		if len(alerts) != 1 {
 			t.Fatalf("expected 1 alert, got %d", len(alerts))
 		}
@@ -735,7 +727,7 @@ func TestCompositeEvaluateLiveAnomalies(t *testing.T) {
 			},
 		}
 
-		alerts := domain.EvaluateLiveAnomalies(nil, trace)
+		alerts := domain.EvaluateLiveAnomalies(nil, trace, domain.LiveAnomalyOptions{Thresholds: testMetricsProjectConfig().AnomalyThresholds})
 		if len(alerts) < 3 {
 			t.Fatalf("expected at least 3 alerts, got %d", len(alerts))
 		}
@@ -789,7 +781,7 @@ func TestConsecutiveToolErrorsRule_Adversarial(t *testing.T) {
 			},
 		}
 
-		alerts := domain.EvaluateConsecutiveToolErrors(trace)
+		alerts := domain.EvaluateConsecutiveToolErrors(trace, 3, 5)
 		if len(alerts) != 1 {
 			t.Fatalf("expected 1 alert despite non-tool parts in streak, got %d", len(alerts))
 		}
@@ -816,7 +808,7 @@ func TestConsecutiveToolErrorsRule_Adversarial(t *testing.T) {
 			},
 		}
 
-		alerts := domain.EvaluateConsecutiveToolErrors(trace)
+		alerts := domain.EvaluateConsecutiveToolErrors(trace, 3, 5)
 		if len(alerts) != 1 {
 			t.Fatalf("expected 1 alert, got %d", len(alerts))
 		}
@@ -843,7 +835,7 @@ func TestConsecutiveToolErrorsRule_Adversarial(t *testing.T) {
 			},
 		}
 
-		alerts := domain.EvaluateConsecutiveToolErrors(trace)
+		alerts := domain.EvaluateConsecutiveToolErrors(trace, 3, 5)
 		if len(alerts) != 1 {
 			t.Fatalf("expected 1 alert, got %d", len(alerts))
 		}
@@ -882,7 +874,7 @@ func TestConsecutiveToolErrorsRule_Adversarial(t *testing.T) {
 			},
 		}
 
-		alerts := domain.EvaluateConsecutiveToolErrors(trace)
+		alerts := domain.EvaluateConsecutiveToolErrors(trace, 3, 5)
 		if len(alerts) != 1 {
 			t.Fatalf("expected 1 alert across messages, got %d", len(alerts))
 		}
@@ -908,7 +900,7 @@ func TestConsecutiveToolErrorsRule_Adversarial(t *testing.T) {
 			},
 		}
 
-		alerts := domain.EvaluateConsecutiveToolErrors(trace)
+		alerts := domain.EvaluateConsecutiveToolErrors(trace, 3, 5)
 		if len(alerts) != 0 {
 			t.Fatalf("expected 0 alerts after streak was reset by recovery, got %d", len(alerts))
 		}
@@ -977,22 +969,6 @@ func TestContextCeilingApproachRule_Adversarial(t *testing.T) {
 		}
 	})
 
-	t.Run("negative ceiling tokens safely falls back to default 160k/200k ceiling", func(t *testing.T) {
-		trace := &domain.LiveTraceView{
-			SessionID: "s_neg_ceil",
-			Messages: []domain.LiveMessageFact{
-				{ID: "m1", Role: "assistant", ContextTokens: 160_000},
-			},
-		}
-		alerts := domain.EvaluateContextCeilingApproach(trace, -50_000, -100_000)
-		if len(alerts) != 1 {
-			t.Fatalf("expected 1 alert with fallback ceiling, got %d", len(alerts))
-		}
-		if alerts[0].Severity != domain.LiveSeverityWarning {
-			t.Errorf("expected WARNING with fallback ceiling, got %s", alerts[0].Severity)
-		}
-	})
-
 	t.Run("first breach message is selected for timestamp and triggerEvent", func(t *testing.T) {
 		trace := &domain.LiveTraceView{
 			SessionID: "s_first_breach",
@@ -1023,7 +999,7 @@ func TestTokenVelocityRunawayRule_Adversarial(t *testing.T) {
 				{ID: "m1", Role: "assistant", TotalTokens: 30_000},
 			},
 		}
-		alerts30k := domain.EvaluateTokenVelocityRunaway(trace30k, 0, 0)
+		alerts30k := domain.EvaluateTokenVelocityRunaway(trace30k, 30000, 60000, 40000, 80000)
 		if len(alerts30k) != 0 {
 			t.Fatalf("expected 0 alerts for exactly 30000 tokens, got %d", len(alerts30k))
 		}
@@ -1034,7 +1010,7 @@ func TestTokenVelocityRunawayRule_Adversarial(t *testing.T) {
 				{ID: "m1", Role: "assistant", TotalTokens: 30_001},
 			},
 		}
-		alerts30k1 := domain.EvaluateTokenVelocityRunaway(trace30k1, 0, 0)
+		alerts30k1 := domain.EvaluateTokenVelocityRunaway(trace30k1, 30000, 60000, 40000, 80000)
 		if len(alerts30k1) != 1 {
 			t.Fatalf("expected 1 alert for 30001 tokens, got %d", len(alerts30k1))
 		}
@@ -1050,7 +1026,7 @@ func TestTokenVelocityRunawayRule_Adversarial(t *testing.T) {
 				{ID: "m1", Role: "assistant", TotalTokens: 60_000},
 			},
 		}
-		alerts60k := domain.EvaluateTokenVelocityRunaway(trace60k, 0, 0)
+		alerts60k := domain.EvaluateTokenVelocityRunaway(trace60k, 30000, 60000, 40000, 80000)
 		if len(alerts60k) != 1 || alerts60k[0].Severity != domain.LiveSeverityWarning {
 			t.Fatalf("expected WARNING for exactly 60000 tokens, got %+v", alerts60k)
 		}
@@ -1061,7 +1037,7 @@ func TestTokenVelocityRunawayRule_Adversarial(t *testing.T) {
 				{ID: "m1", Role: "assistant", TotalTokens: 60_001},
 			},
 		}
-		alerts60k1 := domain.EvaluateTokenVelocityRunaway(trace60k1, 0, 0)
+		alerts60k1 := domain.EvaluateTokenVelocityRunaway(trace60k1, 30000, 60000, 40000, 80000)
 		if len(alerts60k1) != 1 || alerts60k1[0].Severity != domain.LiveSeverityCritical {
 			t.Fatalf("expected CRITICAL for 60001 tokens, got %+v", alerts60k1)
 		}
@@ -1075,7 +1051,7 @@ func TestTokenVelocityRunawayRule_Adversarial(t *testing.T) {
 				{ID: "m2", Role: "assistant", ContextTokens: 50_000, TotalTokens: 5_000}, // delta 40k
 			},
 		}
-		alerts40k := domain.EvaluateTokenVelocityRunaway(trace40k, 0, 0)
+		alerts40k := domain.EvaluateTokenVelocityRunaway(trace40k, 30000, 60000, 40000, 80000)
 		if len(alerts40k) != 0 {
 			t.Fatalf("expected 0 alerts for exactly 40k delta, got %d", len(alerts40k))
 		}
@@ -1087,7 +1063,7 @@ func TestTokenVelocityRunawayRule_Adversarial(t *testing.T) {
 				{ID: "m2", Role: "assistant", ContextTokens: 50_001, TotalTokens: 5_000}, // delta 40001
 			},
 		}
-		alerts40k1 := domain.EvaluateTokenVelocityRunaway(trace40k1, 0, 0)
+		alerts40k1 := domain.EvaluateTokenVelocityRunaway(trace40k1, 30000, 60000, 40000, 80000)
 		if len(alerts40k1) != 1 {
 			t.Fatalf("expected 1 alert for 40001 delta, got %d", len(alerts40k1))
 		}
@@ -1104,7 +1080,7 @@ func TestTokenVelocityRunawayRule_Adversarial(t *testing.T) {
 				{ID: "m2", Role: "assistant", ContextTokens: 90_000, TotalTokens: 5_000}, // delta 80k
 			},
 		}
-		alerts80k := domain.EvaluateTokenVelocityRunaway(trace80k, 0, 0)
+		alerts80k := domain.EvaluateTokenVelocityRunaway(trace80k, 30000, 60000, 40000, 80000)
 		if len(alerts80k) != 1 || alerts80k[0].Severity != domain.LiveSeverityWarning {
 			t.Fatalf("expected WARNING for 80k delta, got %+v", alerts80k)
 		}
@@ -1116,7 +1092,7 @@ func TestTokenVelocityRunawayRule_Adversarial(t *testing.T) {
 				{ID: "m2", Role: "assistant", ContextTokens: 90_001, TotalTokens: 5_000}, // delta 80001
 			},
 		}
-		alerts80k1 := domain.EvaluateTokenVelocityRunaway(trace80k1, 0, 0)
+		alerts80k1 := domain.EvaluateTokenVelocityRunaway(trace80k1, 30000, 60000, 40000, 80000)
 		if len(alerts80k1) != 1 || alerts80k1[0].Severity != domain.LiveSeverityCritical {
 			t.Fatalf("expected CRITICAL for 80001 delta, got %+v", alerts80k1)
 		}
@@ -1130,7 +1106,7 @@ func TestTokenVelocityRunawayRule_Adversarial(t *testing.T) {
 				{ID: "m_sys", Role: "system", TotalTokens: 100_000, ContextTokens: 100_000},
 			},
 		}
-		alerts := domain.EvaluateTokenVelocityRunaway(trace, 0, 0)
+		alerts := domain.EvaluateTokenVelocityRunaway(trace, 30000, 60000, 40000, 80000)
 		if len(alerts) != 0 {
 			t.Fatalf("expected 0 alerts for non-assistant roles, got %d", len(alerts))
 		}
@@ -1155,7 +1131,7 @@ func TestToolThrashingRule_Adversarial(t *testing.T) {
 			},
 		}
 
-		alerts := domain.EvaluateToolThrashing(trace)
+		alerts := domain.EvaluateToolThrashing(trace, 3, 5)
 		// "read" has 3 failures in 5 calls (WARNING)
 		if len(alerts) != 1 {
 			t.Fatalf("expected 1 alert for read thrashing, got %d", len(alerts))
@@ -1183,7 +1159,7 @@ func TestToolThrashingRule_Adversarial(t *testing.T) {
 			},
 		}
 
-		alerts := domain.EvaluateToolThrashing(trace)
+		alerts := domain.EvaluateToolThrashing(trace, 3, 5)
 		if len(alerts) != 1 {
 			t.Fatalf("expected 1 alert for unknown tool thrashing, got %d", len(alerts))
 		}
@@ -1206,7 +1182,7 @@ func TestToolThrashingRule_Adversarial(t *testing.T) {
 			},
 		}
 
-		alerts := domain.EvaluateToolThrashing(trace)
+		alerts := domain.EvaluateToolThrashing(trace, 3, 5)
 		if len(alerts) != 0 {
 			t.Fatalf("expected 0 alerts for 2 calls, got %d", len(alerts))
 		}
@@ -1307,7 +1283,7 @@ func TestCompositeEvaluateLiveAnomalies_DeepHierarchyAndDeduplication(t *testing
 			RootSessions: []*domain.LiveSessionNode{root, nil},
 		}
 
-		alerts := domain.EvaluateLiveAnomalies(tree, nil)
+		alerts := domain.EvaluateLiveAnomalies(tree, nil, domain.LiveAnomalyOptions{Thresholds: testMetricsProjectConfig().AnomalyThresholds})
 		if len(alerts) != 3 {
 			t.Fatalf("expected 3 alerts collected recursively, got %d", len(alerts))
 		}
@@ -1341,7 +1317,7 @@ func TestCompositeEvaluateLiveAnomalies_DeepHierarchyAndDeduplication(t *testing
 			},
 		}
 
-		alerts := domain.EvaluateLiveAnomalies(tree, nil)
+		alerts := domain.EvaluateLiveAnomalies(tree, nil, domain.LiveAnomalyOptions{Thresholds: testMetricsProjectConfig().AnomalyThresholds})
 		if len(alerts) != 1 {
 			t.Fatalf("expected 1 deduplicated alert, got %d", len(alerts))
 		}
@@ -1389,10 +1365,10 @@ func TestCompositeEvaluateLiveAnomalies_DeepHierarchyAndDeduplication(t *testing
 				ConsecutiveErrorsStreakCritical: 4,
 				ContextCeilingWarningTokens:     70_000,
 				ContextCeilingCriticalTokens:    90_000,
-				TokenVelocityWarningTokens:      10_000,
-				TokenVelocityCriticalTokens:     20_000,
-				TokenVelocityWarningDeltaTokens: 15_000,
-				TokenVelocityCriticalDeltaTokens: 30_000,
+				TurnUsageWarningTokens:          10_000,
+				TurnUsageCriticalTokens:         20_000,
+				ContextGrowthWarningTokens:      15_000,
+				ContextGrowthCriticalTokens:     30_000,
 				ToolThrashingMinFailures:        2,
 				ToolThrashingCriticalFailures:   4,
 			},
@@ -1414,7 +1390,7 @@ func TestCompositeEvaluateLiveAnomalies_DeepHierarchyAndDeduplication(t *testing
 		}
 
 		// With default thresholds (warning=3), 2 errors does not trigger alert
-		defaultAlerts := domain.EvaluateConsecutiveToolErrors(trace)
+		defaultAlerts := domain.EvaluateConsecutiveToolErrors(trace, 3, 5)
 		if len(defaultAlerts) != 0 {
 			t.Fatalf("expected 0 default alerts for 2 errors, got %d", len(defaultAlerts))
 		}
@@ -1442,7 +1418,7 @@ func TestCompositeEvaluateLiveAnomalies_DeepHierarchyAndDeduplication(t *testing
 		}
 
 		// Default ceiling (160k warning, 200k critical): 75k produces no alert
-		if alerts := domain.EvaluateContextCeilingApproach(traceCeiling, domain.ContextCeilingWarningTokens, domain.ContextCeilingCriticalTokens); len(alerts) != 0 {
+		if alerts := domain.EvaluateContextCeilingApproach(traceCeiling, int64(160000), int64(200000)); len(alerts) != 0 {
 			t.Fatalf("expected 0 default ceiling alerts, got %d", len(alerts))
 		}
 

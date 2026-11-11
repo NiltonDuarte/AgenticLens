@@ -10,13 +10,21 @@ import (
 	"testing"
 
 	"agenticlens/internal/adapters/capture"
+	adaptersconfig "agenticlens/internal/adapters/config"
 	"agenticlens/internal/domain"
 )
 
 func openStore(t *testing.T, directory string) *capture.Store {
 	t.Helper()
-	s, err := capture.Open(directory)
+	cfg, err := adaptersconfig.LoadFromFile("../config/testdata/shared-policy.yaml")
 	if err != nil {
+		t.Fatal(err)
+	}
+	s, err := capture.Open(directory, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetSourceBudgets(256, fixtureByteBudget); err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {

@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -16,8 +17,30 @@ var version = "v9.8.7"
 var protocol = "3"
 
 func main() {
+	if len(os.Args) == 3 && os.Args[1] == "engine" && os.Args[2] == "protocol" {
+		fmt.Println("1")
+		return
+	}
+
 	if len(os.Args) == 3 && os.Args[1] == "version" && os.Args[2] == "--short" {
 		fmt.Println(version)
+		return
+	}
+	if len(os.Args) == 3 && os.Args[1] == "version" && os.Args[2] == "--json" {
+		fmt.Printf("{\"version\":%q,\"commit\":\"fixture\",\"build_date\":\"fixture\"}\n", version)
+		return
+	}
+	if application := os.Getenv("AL_PROBE_CAPTURE_APPLY"); application != "" && len(os.Args) > 1 && os.Args[1] == "dispatch" {
+		if len(os.Args) == 3 && os.Args[2] == "protocol" {
+			fmt.Println("1")
+			return
+		}
+		command := exec.Command(application, os.Args[1:]...)
+		command.Stdin, command.Stdout, command.Stderr = os.Stdin, os.Stdout, os.Stderr
+		if err := command.Run(); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(89)
+		}
 		return
 	}
 	if len(os.Args) == 3 && os.Args[1] == "capture" && os.Args[2] == "protocol" {
@@ -32,6 +55,16 @@ func main() {
 		fmt.Println(actualProtocol)
 		return
 	}
+	if len(os.Args) > 2 && os.Args[1] == "capture" && os.Args[2] == "check" && os.Getenv("AL_PROBE_HANG") == "1" {
+		if path := os.Getenv("AL_PROBE_PID"); path != "" {
+			if err := os.WriteFile(path, []byte(strconv.Itoa(os.Getpid())), 0600); err != nil {
+				os.Exit(95)
+			}
+		}
+		for {
+			time.Sleep(time.Hour)
+		}
+	}
 	if application := os.Getenv("AL_PROBE_CAPTURE_APPLY"); application != "" && len(os.Args) > 2 && os.Args[1] == "capture" {
 		command := exec.Command(application, os.Args[1:]...)
 		command.Stdin, command.Stdout, command.Stderr = os.Stdin, os.Stdout, os.Stderr
@@ -39,7 +72,7 @@ func main() {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(89)
 		}
-		if os.Args[2] == "install" {
+		if os.Args[2] == "install" || os.Args[2] == "install-user" {
 			if path := os.Getenv("AL_PROBE_PID"); path != "" {
 				if err := os.WriteFile(path, []byte(strconv.Itoa(os.Getpid())), 0600); err != nil {
 					os.Exit(88)
@@ -64,6 +97,22 @@ func main() {
 		}
 		return
 	}
+	if value := os.Getenv("AL_PROBE_SELF_SIGNAL"); value != "" {
+		number, err := strconv.Atoi(value)
+		if err != nil {
+			os.Exit(94)
+		}
+		process, err := os.FindProcess(os.Getpid())
+		if err != nil {
+			os.Exit(94)
+		}
+		if err := process.Signal(syscall.Signal(number)); err != nil {
+			os.Exit(94)
+		}
+		for {
+			time.Sleep(time.Hour)
+		}
+	}
 	mode := os.Getenv("AL_PROBE_TRANSPORT_MODE")
 	if mode != "" {
 		for _, entry := range []struct {
@@ -75,6 +124,9 @@ func main() {
 					os.Exit(93)
 				}
 			}
+		}
+		if os.Getenv("AL_PROBE_READY") == "1" {
+			fmt.Println("ready")
 		}
 		switch mode {
 		case "delay":
@@ -96,16 +148,6 @@ func main() {
 			for {
 				time.Sleep(time.Hour)
 			}
-		}
-	}
-	if len(os.Args) > 2 && os.Args[1] == "capture" && os.Args[2] == "check" && os.Getenv("AL_PROBE_HANG") == "1" {
-		if path := os.Getenv("AL_PROBE_PID"); path != "" {
-			if err := os.WriteFile(path, []byte(strconv.Itoa(os.Getpid())), 0600); err != nil {
-				os.Exit(95)
-			}
-		}
-		for {
-			time.Sleep(time.Hour)
 		}
 	}
 	input, err := io.ReadAll(os.Stdin)
