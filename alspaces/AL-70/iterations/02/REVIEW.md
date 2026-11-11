@@ -151,3 +151,10 @@ Parent standalone R5 result passes at /tmp/al70-r5-standalone-tjq42onb/RESULT.js
 All four R5 cells approve the mechanical display correction on matching274-input evidence. Both R4 data/test profiles carry forward only for the documented unchanged dependency/oracle scopes. Every canonical finding is fixed with verification references; discovery attribution remains separate, including shared UI-04 credit. No blocking application finding or material scoped review gap remains. A12 is an unapproved proposal, not an implemented acceptance change.
 
 The parent may now commit the reviewed candidate, integrate main and execute the required full make gate. Consolidated delivery approval is still INCOMPLETE until actual integration impact and required checks pass. Working reports/structured records remain retained until approved compaction. No telemetry, push, PR or remote merge has occurred.
+
+
+## Main integration and impact assessment
+
+Reviewed candidate committed69e17b44ca9e1d98d901d8e8c3f2de321029a325 with a clean working tree, then fetched/merged origin/main3384fa482a9568cfced2db2e0ee943527a8a22cf without conflicts at172091096ae1e0cbf50553eebae11df34487d085. Incoming changes are GitHub Pages/planning documentation only. All274 reviewed inputs match except README.md's preserved upstream presentation link; no Go/TypeScript/test/embed input changed. Current application approvals and documented carries remain valid.
+
+The incoming site's fresh-release sentence was aligned with confirmed C09d explicit exact-release approval and same-tag bundle selection, preserving layout and browsing links. This prose-only correction was inspected against the contract; no runtime logic changed. Diff check passes. Existing Pages tests could not run because ruby is absent (exit127); no tooling was installed. This low-risk copy limit does not replace or waive the required application make gate. Consolidated delivery approval remains pending that actual result.
