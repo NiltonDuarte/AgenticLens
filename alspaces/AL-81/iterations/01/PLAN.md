@@ -25,12 +25,12 @@ Freeze the candidate for four independent focus reviews: behavior/integration, d
 
 The frozen candidate will be recorded before dispatch. Each reviewer owns only its unique report under this iteration; product and test edits pause during review. Every cell reads the same contract, baseline/candidate diff and raw test evidence independently.
 
-| Focus | Risk question | Report paths (Sol high / Luna medium) |
+| Focus | Risk question | Completed evidence |
 | --- | --- | --- |
-| Behavior and integration | Do manual sources work without capture state while worker and explicit-selector automatic paths retain admission? | `review-behavior-sol.md` / `review-behavior-luna.md` |
-| Data integrity and failure handling | Are incomplete/unavailable owners preserved and writes serialized and recoverable across both paths? | `review-data-sol.md` / `review-data-luna.md` |
-| Architecture and maintainability | Is configuration/source validation separated without relaxing automatic policy or scattering authority? | `review-architecture-sol.md` / `review-architecture-luna.md` |
-| Test effectiveness | Do real adapter fixtures and failure oracles cover registry independence, refresh and automatic guards? | `review-tests-sol.md` / `review-tests-luna.md` |
+| Behavior and integration | Do manual sources work without capture state while worker and explicit-selector automatic paths retain admission? | `REVIEW_SUMMARY.json` and ticket `SUMMARY.md` |
+| Data integrity and failure handling | Are incomplete/unavailable owners preserved and writes serialized and recoverable across both paths? | `REVIEW_SUMMARY.json` and ticket `SUMMARY.md` |
+| Architecture and maintainability | Is configuration/source validation separated without relaxing automatic policy or scattering authority? | `REVIEW_SUMMARY.json` and ticket `SUMMARY.md` |
+| Test effectiveness | Do real adapter fixtures and failure oracles cover registry independence, refresh and automatic guards? | `REVIEW_SUMMARY.json` and ticket `SUMMARY.md` |
 
 Configured profiles: `gpt-6.1-sol` / high and `gpt-6-luna` / medium. Runs use capacity-limited waves. Parent owns consolidation, telemetry and publication.
 
@@ -41,3 +41,7 @@ Candidate frozen for independent review: `cfdc01ae4049c0cd34cb6bc5859e7786c6766a
 Independent data reviews identified two pre-existing paths that defeat the accepted partial-source preservation/reporting guarantee: grouping warnings could erase an accepted child link, and nonce scanning discarded an already identified child after a later scanner error. The coder owns rejection before publication for both paths; tester owns root/child ledger-and-summary regressions and unrelated-corrupt-source controls. No new scope or authenticity policy is introduced: known selected-family failures are actionable, while wholly unattributable/unrelated files cannot be assigned to a ticket by inference. The architecture review also identified unused manual admission/recovery branches, now removed without changing automatic policy. Verification requires corrected candidate tests and affected focus re-checks, followed by integrated `make`.
 
 Corrected candidate frozen for affected focus/model re-checks: `5de23fa986778b4e8048c9a42f13321e950e2e4d5b3c0ab36bdc7ee06e65e62b`, same complete-file fingerprint method. New grouping/discovery regressions pass; restoring baseline discovery in a disposable overlay fails only the selected nonce-child case. All four focuses re-check the small correction set under both original profiles; reports append revision-scoped outcomes.
+
+## Completion evidence
+
+Reviewed source was committed as `39356cee20080152906e61ef9c668e0548628adb`; origin/main integration was already current, so all eight rechecks remain applicable without a product diff. Integrated `make` passed every lane, including full CLI race tests and actual frontend integration. Standalone version/help and embedded-asset equality passed. Native source root/eleven-child extraction matched registry-absent/present with unchanged state; [native evidence](NATIVE_EVIDENCE.json) records IDs, source hashes, facts and cutoff/runtime limits. Consolidated review is APPROVED. Completed reports are compacted into [retained findings](REVIEW_SUMMARY.json), with scope, actors and initial/final outcomes retained in ticket SUMMARY.md. Final telemetry follows this completion account immediately before the artifact commit.

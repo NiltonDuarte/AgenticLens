@@ -2,7 +2,7 @@
 
 Status: Approved. User approved the plan with “$agentic-lens-dev plan is approved” on 2026-11-11.
 
-Manual `generate` must extract selected harness facts using project/metrics/source configuration and the existing output ledger without reading, creating or changing AgenticLens's capture registry. The goal and acceptance boundaries come from the [ticket](../plan/to-do/AL-81%20generate%20metrics%20without%20capture%20registry%20access.md) and [PO-20 F7](../PO-20/SPEC.md#f7-ad-hoc-manual-generation-without-capture-state-dependency).
+Manual `generate` must extract selected harness facts using project/metrics/source configuration and the existing output ledger without reading, creating or changing AgenticLens's capture registry. The goal and acceptance boundaries come from the [ticket](../plan/done/AL-81%20generate%20metrics%20without%20capture%20registry%20access.md) and [PO-20 F7](../PO-20/SPEC.md#f7-ad-hoc-manual-generation-without-capture-state-dependency).
 
 An explicit ticket and supported session/nonce selection must work without capture installation, enablement, state directory or worker settings. Missing, corrupt, conflicting or inaccessible capture state cannot affect manual extraction or acquire new bindings. Existing `--capture-dir` invocations remain compatible but the supplied location has no manual state effect. Explicit invalid flag values still receive actionable errors; manual operation does not require capture budgets. Project, generation, selected-source, feedback, classification and output settings actually consumed remain validated. Capture-only policy must not become an indirect prerequisite through configuration loading.
 

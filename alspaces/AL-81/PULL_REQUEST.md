@@ -1,9 +1,9 @@
 # fix: generate manual metrics without capture registry access
 
-Manual `generate` currently opens capture state and can be blocked by machine-local bindings even when authoritative source transcripts and the requested output ledger are available. This change separates manual extraction from automatic capture admission.
+Manual `generate` could be blocked by machine-local capture bindings even when authoritative source data and the requested ledger were available. It now uses project/metrics/source configuration without reading or initializing the capture registry. Capture-only settings are unnecessary, and explicit manual attribution leaves automatic bindings unchanged.
 
-Manual generation uses project, metrics and selected harness source configuration without reading or initializing the capture registry. It retains source/project validation, portable owner refresh, shared publication serialization and interruption recovery. `--capture-dir` remains accepted for compatibility and has no manual state effect. Automatic worker generation retains capture configuration and registry ownership checks; explicit session/nonce selectors cannot bypass registered-owner selection.
+Source/project validation, portable owner replacement/preservation, shared publication locking and interruption recovery remain intact. `--capture-dir` is accepted but ignored manually. Automatic worker publication retains enabled-policy and registered-owner admission; session/nonce selectors cannot bypass it. Grouping warnings and identifiable selected-family discovery failures now preserve accepted artifacts instead of publishing incomplete facts.
 
-Validation is in progress. Final results, real Codex root/child parity evidence and any limits will be recorded before publication.
+Validation: full `make` passed, including Go race integration, frontend units/integration, static checks, installation/distribution checks and multi-platform builds. Both configured models approved all four review focuses after corrections. Real Codex extraction matched for one root and eleven native children with registry absent/present, with no capture-state changes.
 
-See [contract](CONTRACT.md) and [summary](SUMMARY.md).
+Native proof covers manual Codex extraction; automatic safeguards and OpenCode use isolated fixtures. Separate extraction cutoffs can change provisional durations. See [contract](CONTRACT.md), [summary](SUMMARY.md) and [retained findings](iterations/01/REVIEW_SUMMARY.json).

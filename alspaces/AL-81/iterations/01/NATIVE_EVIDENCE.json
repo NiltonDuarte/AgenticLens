@@ -1,0 +1,151 @@
+{
+  "revision": "39356cee20080152906e61ef9c668e0548628adb",
+  "root_id": "01a1cbc8-e25f-7b63-8c5e-da429f951a17",
+  "originator": "T3 Code",
+  "cli_version": "0.167.0",
+  "source_snapshot": "Unmodified native rollout bytes copied into isolated source store outside Git",
+  "runs": [
+    {
+      "registry": "absent",
+      "exit_code": 0
+    },
+    {
+      "registry": "present",
+      "exit_code": 0
+    }
+  ],
+  "matching_source_facts": true,
+  "absent_registry_stays_absent": true,
+  "present_registry_unchanged": true,
+  "present_registry": "Isolated protocol-2 schema-compatible SQLite fixture, not a native callback/install demonstration",
+  "comparison_excludes_dynamic_invocation_fields": [
+    "active_duration_seconds",
+    "provisional_seconds"
+  ],
+  "limits": [
+    "Separate generation cutoffs can change provisional/active duration; those fields are excluded from parity comparison.",
+    "Manual source extraction only; no native automatic callback/trust/capture certification is claimed."
+  ],
+  "sessions": [
+    {
+      "id": "01a1cbc8-e25f-7b63-8c5e-da429f951a17",
+      "parent_id": null,
+      "source": "codex",
+      "invocations": 1,
+      "input_tokens": 224877,
+      "output_tokens": 55561,
+      "source_sha256": "6792a7441bca260cb591ef1c31d41d1b98f60e3a1fff43657d35b8a6b9a023e4",
+      "source_bytes": 2977037
+    },
+    {
+      "id": "01a1cbc9-2adf-7021-97df-d30414d969ff",
+      "parent_id": "01a1cbc8-e25f-7b63-8c5e-da429f951a17",
+      "source": "codex",
+      "invocations": 1,
+      "input_tokens": 74530,
+      "output_tokens": 3159,
+      "source_sha256": "8e4724b89d505c209ce9497959c42da54de70468826908dbe77491a2f75bd47a",
+      "source_bytes": 656277
+    },
+    {
+      "id": "01a1cbd4-bee3-7d91-912b-a2f249fb2a38",
+      "parent_id": "01a1cbc8-e25f-7b63-8c5e-da429f951a17",
+      "source": "codex",
+      "invocations": 1,
+      "input_tokens": 126845,
+      "output_tokens": 12976,
+      "source_sha256": "d671433ebf92b85f9de6a78db7be7fe8510a32d2fe51611b48e233473d81800a",
+      "source_bytes": 1444210
+    },
+    {
+      "id": "01a1cbd4-f191-7c43-ba28-ae1e682b5ec3",
+      "parent_id": "01a1cbc8-e25f-7b63-8c5e-da429f951a17",
+      "source": "codex",
+      "invocations": 1,
+      "input_tokens": 106725,
+      "output_tokens": 27883,
+      "source_sha256": "f29b948680b39a5c805da8ecd90865656d126de5e3bb036c6155fb5e050e0849",
+      "source_bytes": 1915723
+    },
+    {
+      "id": "01a1cbdd-43cf-7b92-80dc-f38b7972d6fa",
+      "parent_id": "01a1cbc8-e25f-7b63-8c5e-da429f951a17",
+      "source": "codex",
+      "invocations": 1,
+      "input_tokens": 237293,
+      "output_tokens": 7237,
+      "source_sha256": "da74ea2c81774def6b1d27ac1a36a2f1a23d0f94b694f8ec14f824af2dfec5a8",
+      "source_bytes": 1289353
+    },
+    {
+      "id": "01a1cbdd-6023-7463-b93f-26f810cdaded",
+      "parent_id": "01a1cbc8-e25f-7b63-8c5e-da429f951a17",
+      "source": "codex",
+      "invocations": 1,
+      "input_tokens": 101969,
+      "output_tokens": 8945,
+      "source_sha256": "3b5d362963c115a81c4aebef95fb24d424d13977301b7fb0410cc405566dcf7d",
+      "source_bytes": 1214137
+    },
+    {
+      "id": "01a1cbdd-eeb5-7dd0-957c-c5d4c0ca4112",
+      "parent_id": "01a1cbc8-e25f-7b63-8c5e-da429f951a17",
+      "source": "codex",
+      "invocations": 1,
+      "input_tokens": 95214,
+      "output_tokens": 5069,
+      "source_sha256": "3e87de6753f8a6d16c70bae5bff84947d42e70ac4ebaa2398c9f810855f62684",
+      "source_bytes": 1094265
+    },
+    {
+      "id": "01a1cbdf-aa70-7162-ab05-7997ae99fac7",
+      "parent_id": "01a1cbc8-e25f-7b63-8c5e-da429f951a17",
+      "source": "codex",
+      "invocations": 1,
+      "input_tokens": 105908,
+      "output_tokens": 7604,
+      "source_sha256": "a87e2ee4e5ac6787a3bdd24510b67f616827c36bff29fb89f3a429fe338f6d32",
+      "source_bytes": 1198388
+    },
+    {
+      "id": "01a1cbdf-c5d8-7582-a26d-b9abf790be93",
+      "parent_id": "01a1cbc8-e25f-7b63-8c5e-da429f951a17",
+      "source": "codex",
+      "invocations": 1,
+      "input_tokens": 83051,
+      "output_tokens": 3707,
+      "source_sha256": "9aad5146c981b5a0bfad7b2b348329ddd7024526dd30e3385273890c65a9d16d",
+      "source_bytes": 865600
+    },
+    {
+      "id": "01a1cbe0-bbd0-7db0-9015-fa696915681f",
+      "parent_id": "01a1cbc8-e25f-7b63-8c5e-da429f951a17",
+      "source": "codex",
+      "invocations": 1,
+      "input_tokens": 66729,
+      "output_tokens": 5704,
+      "source_sha256": "2c46bdf3ff275fcdda3bc645af6d5bf99f563e276a8633c0d4c6e53f59a5ab78",
+      "source_bytes": 795780
+    },
+    {
+      "id": "01a1cbe0-d6a4-7942-a89c-989ef2beefa0",
+      "parent_id": "01a1cbc8-e25f-7b63-8c5e-da429f951a17",
+      "source": "codex",
+      "invocations": 1,
+      "input_tokens": 61831,
+      "output_tokens": 3219,
+      "source_sha256": "9725400157dd5b495baa913f9d1c8ac31fd8c4b6eb017af09f7a6aafe97304a4",
+      "source_bytes": 759544
+    },
+    {
+      "id": "01a1cbe1-b36b-75f1-8819-c8720376ed9c",
+      "parent_id": "01a1cbc8-e25f-7b63-8c5e-da429f951a17",
+      "source": "codex",
+      "invocations": 1,
+      "input_tokens": 54432,
+      "output_tokens": 3581,
+      "source_sha256": "a4e904d23d08ce455792b8d483aa1067703290c177108c8c30e68b8e77e0a6e9",
+      "source_bytes": 647228
+    }
+  ]
+}
