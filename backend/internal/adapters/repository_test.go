@@ -12,421 +12,55 @@ import (
 	"testing"
 
 	"agenticlens/internal/adapters"
+	adaptersconfig "agenticlens/internal/adapters/config"
 	adaptershttp "agenticlens/internal/adapters/http"
 	"agenticlens/internal/domain"
 )
 
 func TestResolveWorkspacesDir(t *testing.T) {
-	t.Run("explicit override", func(t *testing.T) {
-		got, err := adapters.ResolveWorkspacesDir("/custom/path")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if got != "/custom/path" {
-			t.Errorf("expected /custom/path, got %s", got)
-		}
-	})
-
-	t.Run("empty configuration returns empty string without defaulting", func(t *testing.T) {
-		tempDir := t.TempDir()
-		cfgContent := `{"project_name": "Test", "ticket": {"prefixes": [{"prefix": "TEST"}]},"telemetry":{"capture":{"state_dir":"capture-state"}}}`
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.json"), []byte(cfgContent), 0644); err != nil {
+	root := t.TempDir()
+	configured := filepath.Join(root, "configured")
+	explicit := filepath.Join(root, "explicit")
+	for _, dir := range []string{configured, explicit} {
+		if err := os.Mkdir(dir, 0700); err != nil {
 			t.Fatal(err)
 		}
-
-		origDir, _ := os.Getwd()
-		defer os.Chdir(origDir)
-		if err := os.Chdir(tempDir); err != nil {
-			t.Fatal(err)
-		}
-
-		resolved, err := adapters.ResolveWorkspacesDir("")
-		if resolved != "" {
-			t.Errorf("expected empty string when workspaces.dir is unconfigured, got %q", resolved)
-		}
-		if !errors.Is(err, adapters.ErrWorkspacesDirNotFound) {
-			t.Errorf("expected ErrWorkspacesDirNotFound, got %v", err)
-		}
-	})
-
-	t.Run("empty override with no config returns empty string", func(t *testing.T) {
-		tempDir := t.TempDir()
-		origDir, _ := os.Getwd()
-		defer os.Chdir(origDir)
-		if err := os.Chdir(tempDir); err != nil {
-			t.Fatal(err)
-		}
-
-		resolved, err := adapters.ResolveWorkspacesDir("")
-		if resolved != "" {
-			t.Errorf("expected empty string when unconfigured, got %s", resolved)
-		}
-		if !errors.Is(err, adapters.ErrWorkspacesDirNotFound) {
-			t.Errorf("expected ErrWorkspacesDirNotFound, got %v", err)
-		}
-	})
-
-	t.Run("empty override with config missing workspaces.dir returns empty string", func(t *testing.T) {
-		tempDir := t.TempDir()
-		cfgContent := "project_name: Test\nticket:\n  prefixes:\n    - prefix: TEST\ncode_metrics:\n  source_roots:\n    - src\n\ntelemetry:\n  capture:\n    state_dir: capture-state\n"
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		origDir, _ := os.Getwd()
-		defer os.Chdir(origDir)
-		if err := os.Chdir(tempDir); err != nil {
-			t.Fatal(err)
-		}
-
-		resolved, err := adapters.ResolveWorkspacesDir("")
-		if resolved != "" {
-			t.Errorf("expected empty string when workspaces.dir is unconfigured, got %s", resolved)
-		}
-		if !errors.Is(err, adapters.ErrWorkspacesDirNotFound) {
-			t.Errorf("expected ErrWorkspacesDirNotFound, got %v", err)
-		}
-	})
-
-	t.Run("does not fall back to existing workspaces directory when unconfigured", func(t *testing.T) {
-		tempDir := t.TempDir()
-		// Hostile scenario: a physical ./workspaces directory exists on disk,
-		// but configuration has empty workspaces.dir or does not exist.
-		existingWs := filepath.Join(tempDir, "workspaces")
-		if err := os.MkdirAll(existingWs, 0755); err != nil {
-			t.Fatal(err)
-		}
-
-		origDir, _ := os.Getwd()
-		defer os.Chdir(origDir)
-		if err := os.Chdir(tempDir); err != nil {
-			t.Fatal(err)
-		}
-
-		// 1. Without config file
-		resolvedNoCfg, err := adapters.ResolveWorkspacesDir("")
-		if resolvedNoCfg != "" {
-			t.Errorf("expected empty string when unconfigured even if ./workspaces exists, got %s", resolvedNoCfg)
-		}
-		if !errors.Is(err, adapters.ErrWorkspacesDirNotFound) {
-			t.Errorf("expected ErrWorkspacesDirNotFound, got %v", err)
-		}
-
-		// 2. With config file but missing workspaces.dir
-		cfgContent := "project_name: Test\nticket:\n  prefixes:\n    - prefix: TEST\ncode_metrics:\n  source_roots:\n    - src\n\ntelemetry:\n  capture:\n    state_dir: capture-state\n"
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-		resolvedEmptyWs, err := adapters.ResolveWorkspacesDir("")
-		if resolvedEmptyWs != "" {
-			t.Errorf("expected empty string when workspaces.dir unconfigured even if ./workspaces exists, got %s", resolvedEmptyWs)
-		}
-		if !errors.Is(err, adapters.ErrWorkspacesDirNotFound) {
-			t.Errorf("expected ErrWorkspacesDirNotFound, got %v", err)
-		}
-	})
-
-	t.Run("root yaml config file resolution", func(t *testing.T) {
-		tempDir := t.TempDir()
-		wsDir := filepath.Join(tempDir, "root_yaml_workspaces")
-		if err := os.MkdirAll(wsDir, 0755); err != nil {
-			t.Fatal(err)
-		}
-		cfgContent := "project_name: Test\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  dir: root_yaml_workspaces\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n\ntelemetry:\n  capture:\n    state_dir: capture-state\n"
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		origDir, _ := os.Getwd()
-		defer os.Chdir(origDir)
-		if err := os.Chdir(tempDir); err != nil {
-			t.Fatal(err)
-		}
-
-		resolved, err := adapters.ResolveWorkspacesDir("")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if resolved != "root_yaml_workspaces" {
-			t.Errorf("expected root_yaml_workspaces, got %s", resolved)
-		}
-	})
-
-	t.Run("root yml config file resolution", func(t *testing.T) {
-		tempDir := t.TempDir()
-		wsDir := filepath.Join(tempDir, "root_yml_workspaces")
-		if err := os.MkdirAll(wsDir, 0755); err != nil {
-			t.Fatal(err)
-		}
-		cfgContent := "project_name: Test\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  dir: root_yml_workspaces\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n\ntelemetry:\n  capture:\n    state_dir: capture-state\n"
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yml"), []byte(cfgContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		origDir, _ := os.Getwd()
-		defer os.Chdir(origDir)
-		if err := os.Chdir(tempDir); err != nil {
-			t.Fatal(err)
-		}
-
-		resolved, err := adapters.ResolveWorkspacesDir("")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if resolved != "root_yml_workspaces" {
-			t.Errorf("expected root_yml_workspaces, got %s", resolved)
-		}
-	})
-
-	t.Run("root json config file resolution", func(t *testing.T) {
-		tempDir := t.TempDir()
-		wsDir := filepath.Join(tempDir, "root_json_workspaces")
-		if err := os.MkdirAll(wsDir, 0755); err != nil {
-			t.Fatal(err)
-		}
-		cfgContent := `{"project_name": "Test", "ticket": {"prefixes": [{"prefix": "TEST"}]}, "workspaces": {"dir": "root_json_workspaces"}, "code_metrics": {"source_roots": ["src"]}, "anomaly_thresholds": {"error_rate_min_calls":5,"error_rate_threshold":0.25,"error_rate_critical_threshold":0.70,"context_ceiling_warning_tokens": 160000, "context_ceiling_critical_tokens": 200000},"telemetry":{"capture":{"state_dir":"capture-state"}}}`
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.json"), []byte(cfgContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		origDir, _ := os.Getwd()
-		defer os.Chdir(origDir)
-		if err := os.Chdir(tempDir); err != nil {
-			t.Fatal(err)
-		}
-
-		resolved, err := adapters.ResolveWorkspacesDir("")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if resolved != "root_json_workspaces" {
-			t.Errorf("expected root_json_workspaces, got %s", resolved)
-		}
-	})
-
-	t.Run("nested execution ascends to root config file resolution", func(t *testing.T) {
-		tempDir := t.TempDir()
-		wsDir := filepath.Join(tempDir, "deep_root_ws")
-		if err := os.MkdirAll(wsDir, 0755); err != nil {
-			t.Fatal(err)
-		}
-		cfgContent := "project_name: Test\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  dir: deep_root_ws\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n\ntelemetry:\n  capture:\n    state_dir: capture-state\n"
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		nestedDir := filepath.Join(tempDir, "sub1", "sub2", "sub3")
-		if err := os.MkdirAll(nestedDir, 0755); err != nil {
-			t.Fatal(err)
-		}
-
-		origDir, _ := os.Getwd()
-		defer os.Chdir(origDir)
-		if err := os.Chdir(nestedDir); err != nil {
-			t.Fatal(err)
-		}
-
-		resolved, err := adapters.ResolveWorkspacesDir("")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if resolved != "deep_root_ws" {
-			t.Errorf("expected deep_root_ws, got %s", resolved)
-		}
-	})
-	t.Run("precedence between override and config", func(t *testing.T) {
-		tempDir := t.TempDir()
-		wsDir := filepath.Join(tempDir, "precedence_workspaces")
-		if err := os.MkdirAll(wsDir, 0755); err != nil {
-			t.Fatal(err)
-		}
-		// Also create a default workspaces directory in the same root
-		defaultWsDir := filepath.Join(tempDir, "workspaces")
-		if err := os.MkdirAll(defaultWsDir, 0755); err != nil {
-			t.Fatal(err)
-		}
-
-		cfgContent := "project_name: TestPrecedence\nticket:\n  prefixes:\n    - prefix: PREC\nworkspaces:\n  dir: precedence_workspaces\ncode_metrics:\n  source_roots:\n    - src\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n\ntelemetry:\n  capture:\n    state_dir: capture-state\n"
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		origDir, _ := os.Getwd()
-		defer os.Chdir(origDir)
-		if err := os.Chdir(tempDir); err != nil {
-			t.Fatal(err)
-		}
-
-		// Configured workspaces directory takes precedence over default workspaces
-		resolved, err := adapters.ResolveWorkspacesDir("")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if resolved != "precedence_workspaces" {
-			t.Errorf("expected precedence_workspaces, got %s", resolved)
-		}
-
-		// Explicit override takes precedence over configured workspaces directory
-		overridePath := filepath.Join(tempDir, "explicit_override")
-		resolvedOverride, err := adapters.ResolveWorkspacesDir(overridePath)
-		if err != nil {
-			t.Fatalf("unexpected error on override: %v", err)
-		}
-		if resolvedOverride != overridePath {
-			t.Errorf("expected override %s, got %s", overridePath, resolvedOverride)
-		}
-	})
-
-	t.Run("fails fast when no command flag and no config exists", func(t *testing.T) {
-		tempDir := t.TempDir()
-		cwdWs := filepath.Join(tempDir, "workspaces")
-		if err := os.MkdirAll(cwdWs, 0755); err != nil {
-			t.Fatal(err)
-		}
-
-		origDir, _ := os.Getwd()
-		defer os.Chdir(origDir)
-		if err := os.Chdir(tempDir); err != nil {
-			t.Fatal(err)
-		}
-
-		resolved, err := adapters.ResolveWorkspacesDir("")
-		if resolved != "" {
-			t.Errorf("expected empty string, got %s", resolved)
-		}
-		if !errors.Is(err, adapters.ErrWorkspacesDirNotFound) {
-			t.Errorf("expected ErrWorkspacesDirNotFound, got %v", err)
-		}
-	})
-
-	t.Run("fails fast when config exists but workspaces dir is empty", func(t *testing.T) {
-		tempDir := t.TempDir()
-		cfgContent := "project_name: TestEmptyWS\nticket:\n  prefixes:\n    - prefix: TEST\nworkspaces:\n  dir: \"\"\ncode_metrics:\n  source_roots:\n    - src\n\ntelemetry:\n  capture:\n    state_dir: capture-state\n"
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		origDir, _ := os.Getwd()
-		defer os.Chdir(origDir)
-		if err := os.Chdir(tempDir); err != nil {
-			t.Fatal(err)
-		}
-
-		resolved, err := adapters.ResolveWorkspacesDir("")
-		if resolved != "" {
-			t.Errorf("expected empty string, got %s", resolved)
-		}
-		if !errors.Is(err, adapters.ErrWorkspacesDirNotFound) {
-			t.Errorf("expected ErrWorkspacesDirNotFound, got %v", err)
-		}
-	})
-
-	t.Run("parent traversal workspaces directory is never searched or selected", func(t *testing.T) {
-		parentDir := t.TempDir()
-		parentWs := filepath.Join(parentDir, "workspaces")
-		if err := os.MkdirAll(parentWs, 0755); err != nil {
-			t.Fatal(err)
-		}
-		childDir := filepath.Join(parentDir, "subproject", "nested")
-		if err := os.MkdirAll(childDir, 0755); err != nil {
-			t.Fatal(err)
-		}
-
-		origDir, _ := os.Getwd()
-		defer os.Chdir(origDir)
-		if err := os.Chdir(childDir); err != nil {
-			t.Fatal(err)
-		}
-
-		resolved, err := adapters.ResolveWorkspacesDir("")
-		if resolved != "" {
-			t.Errorf("expected empty string, got %s", resolved)
-		}
-		if !errors.Is(err, adapters.ErrWorkspacesDirNotFound) {
-			t.Errorf("expected ErrWorkspacesDirNotFound, got %v", err)
-		}
-	})
-
-	t.Run("container path is never selected when unconfigured", func(t *testing.T) {
-		tempDir := t.TempDir()
-		origDir, _ := os.Getwd()
-		defer os.Chdir(origDir)
-		if err := os.Chdir(tempDir); err != nil {
-			t.Fatal(err)
-		}
-
-		resolved, err := adapters.ResolveWorkspacesDir("")
-		if resolved != "" {
-			t.Errorf("expected empty string, got %s", resolved)
-		}
-		if !errors.Is(err, adapters.ErrWorkspacesDirNotFound) {
-			t.Errorf("expected ErrWorkspacesDirNotFound, got %v", err)
-		}
-	})
-
-	t.Run("ScanWorkspaces returns error in scan report when unconfigured", func(t *testing.T) {
-		tempDir := t.TempDir()
-		origDir, _ := os.Getwd()
-		defer os.Chdir(origDir)
-		if err := os.Chdir(tempDir); err != nil {
-			t.Fatal(err)
-		}
-
-		report := adapters.ScanWorkspaces("")
-		if len(report.Ledgers) != 0 {
-			t.Errorf("expected 0 ledgers, got %d", len(report.Ledgers))
-		}
-		if len(report.Errors) == 0 {
-			t.Fatal("expected error in report, got none")
-		}
-		if report.FatalError == "" {
-			t.Fatal("expected unconfigured workspace directory to be a fatal scan error")
-		}
-		if !strings.Contains(report.Errors[0], "workspaces directory not found") {
-			t.Errorf("expected 'workspaces directory not found' in error, got: %s", report.Errors[0])
-		}
-	})
-
-	t.Run("LoadTicketWorkspace fails with wrapped error when unconfigured", func(t *testing.T) {
-		tempDir := t.TempDir()
-		origDir, _ := os.Getwd()
-		defer os.Chdir(origDir)
-		if err := os.Chdir(tempDir); err != nil {
-			t.Fatal(err)
-		}
-
-		ledger, err := adapters.LoadTicketWorkspace("AL-1", "")
-		if ledger != nil {
-			t.Errorf("expected nil ledger, got %+v", ledger)
-		}
-		if err == nil {
-			t.Fatal("expected error, got nil")
-		}
-		if !errors.Is(err, adapters.ErrWorkspacesDirNotFound) {
-			t.Errorf("expected ErrWorkspacesDirNotFound, got %v", err)
-		}
-	})
-
-	t.Run("ReadTicketArtifacts returns empty artifacts when unconfigured", func(t *testing.T) {
-		tempDir := t.TempDir()
-		origDir, _ := os.Getwd()
-		defer os.Chdir(origDir)
-		if err := os.Chdir(tempDir); err != nil {
-			t.Fatal(err)
-		}
-
-		artifacts := adapters.ReadTicketArtifacts("AL-1", "")
-		if artifacts.TicketID != "AL-1" {
-			t.Errorf("expected TicketID AL-1, got %s", artifacts.TicketID)
-		}
-		if len(artifacts.Items) != 0 {
-			t.Errorf("expected 0 items, got %d", len(artifacts.Items))
-		}
-	})
+	}
+	writeWorkspacePolicy(t, root, "configured")
+	previous, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(root); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := os.Chdir(previous); err != nil {
+			t.Error(err)
+		}
+	}()
+	for _, tc := range []struct{ selected, want string }{{"", configured}, {explicit, explicit}, {"explicit", explicit}} {
+		got, err := adapters.ResolveWorkspacesDir(tc.selected)
+		if err != nil || got != tc.want {
+			t.Errorf("root %q got%q %v want%q", tc.selected, got, err, tc.want)
+		}
+	}
+	if _, err := adapters.ResolveWorkspacesDir(filepath.Join(root, "missing")); err == nil {
+		t.Fatal("missing explicit root used configured alternative")
+	}
+	if err := os.Remove(filepath.Join(root, ".agenticlens-config.yaml")); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := adapters.ResolveWorkspacesDir(explicit); err != nil || got != explicit {
+		t.Fatalf("explicit representation-only root required unrelatedpolicy: %s %v", got, err)
+	}
+	if _, err := adapters.ResolveWorkspacesDir(""); !errors.Is(err, adapters.ErrWorkspacesDirNotFound) {
+		t.Fatalf("missing workspace policy invented root: %v", err)
+	}
 }
 
 func TestScanWorkspaces(t *testing.T) {
-	tempDir := t.TempDir()
+	tempDir := workspaceFixtureRoot(t)
 	ticketDir := filepath.Join(tempDir, "TEST-1")
 	if err := os.MkdirAll(ticketDir, 0755); err != nil {
 		t.Fatal(err)
@@ -548,7 +182,7 @@ func TestScanWorkspaces(t *testing.T) {
 }
 
 func TestScanWorkspaces_NaturalOrdering(t *testing.T) {
-	tempDir := t.TempDir()
+	tempDir := workspaceFixtureRoot(t)
 
 	tickets := []string{"AL-10", "AL-2", "AL-1", "GEN-1", "AL-22"}
 	for _, tid := range tickets {
@@ -576,7 +210,7 @@ func TestScanWorkspaces_NaturalOrdering(t *testing.T) {
 }
 
 func TestScanWorkspaces_AdversarialResilienceAndOrdering(t *testing.T) {
-	tempDir := t.TempDir()
+	tempDir := workspaceFixtureRoot(t)
 
 	validWorkspaces := []string{
 		"AL-10",
@@ -649,7 +283,7 @@ func TestScanWorkspaces_AdversarialResilienceAndOrdering(t *testing.T) {
 }
 
 func TestReadTicketArtifacts(t *testing.T) {
-	tempDir := t.TempDir()
+	tempDir := workspaceFixtureRoot(t)
 	ticketDir := filepath.Join(tempDir, "TICKET-10")
 	if err := os.MkdirAll(ticketDir, 0755); err != nil {
 		t.Fatal(err)
@@ -663,12 +297,15 @@ func TestReadTicketArtifacts(t *testing.T) {
 	}
 
 	t.Run("valid read with zero artifact defaults", func(t *testing.T) {
-		art := adapters.ReadTicketArtifacts("TICKET-10", tempDir)
-		if art.ContractContent != nil {
-			t.Errorf("expected nil ContractContent without configured artifacts, got: %v", art.ContractContent)
+		art, err := adapters.ReadTicketArtifacts("TICKET-10", tempDir, []domain.WorkspaceArtifactConfig{})
+		if err != nil {
+			t.Fatal(err)
 		}
-		if art.SummaryContent != nil {
-			t.Errorf("expected nil SummaryContent without configured artifacts, got: %v", art.SummaryContent)
+		if fixtureArtifactContent(art, "CONTRACT.md") != nil {
+			t.Errorf("expected nil ContractContent without configured artifacts, got: %v", fixtureArtifactContent(art, "CONTRACT.md"))
+		}
+		if fixtureArtifactContent(art, "SUMMARY.md") != nil {
+			t.Errorf("expected nil SummaryContent without configured artifacts, got: %v", fixtureArtifactContent(art, "SUMMARY.md"))
 		}
 		if len(art.Items) != 0 {
 			t.Fatalf("expected empty Items slice without configured artifacts, got %d", len(art.Items))
@@ -680,12 +317,15 @@ func TestReadTicketArtifacts(t *testing.T) {
 			{Path: "CONTRACT.md", Title: "Contract", Description: "Contract file"},
 			{Path: "SUMMARY.md", Title: "Summary", Description: "Summary file"},
 		}
-		art := adapters.ReadTicketArtifacts("TICKET-10", tempDir, cfgArtifacts)
-		if art.ContractContent == nil || *art.ContractContent != "# Contract" {
-			t.Errorf("contract content mismatch: %v", art.ContractContent)
+		art, err := adapters.ReadTicketArtifacts("TICKET-10", tempDir, cfgArtifacts)
+		if err != nil {
+			t.Fatal(err)
 		}
-		if art.SummaryContent == nil || *art.SummaryContent != "# Summary" {
-			t.Errorf("summary content mismatch: %v", art.SummaryContent)
+		if fixtureArtifactContent(art, "CONTRACT.md") == nil || *fixtureArtifactContent(art, "CONTRACT.md") != "# Contract" {
+			t.Errorf("contract content mismatch: %v", fixtureArtifactContent(art, "CONTRACT.md"))
+		}
+		if fixtureArtifactContent(art, "SUMMARY.md") == nil || *fixtureArtifactContent(art, "SUMMARY.md") != "# Summary" {
+			t.Errorf("summary content mismatch: %v", fixtureArtifactContent(art, "SUMMARY.md"))
 		}
 		if len(art.Items) != 2 {
 			t.Fatalf("expected 2 Items, got %d", len(art.Items))
@@ -741,7 +381,15 @@ func TestReadTicketArtifacts(t *testing.T) {
 			},
 		}
 
-		art := adapters.ReadTicketArtifacts("TICKET-10", tempDir, customConfigs)
+		art, err := adapters.ReadTicketArtifacts("TICKET-10", tempDir, customConfigs[:3])
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, bad := range customConfigs[3:] {
+			if _, err := adapters.ReadTicketArtifacts("TICKET-10", tempDir, []domain.WorkspaceArtifactConfig{bad}); err == nil {
+				t.Fatalf("malformed configured path silently dropped: %q", bad.Path)
+			}
+		}
 		if len(art.Items) != 3 {
 			t.Fatalf("expected exactly 3 valid items (traversals excluded), got %d", len(art.Items))
 		}
@@ -758,8 +406,11 @@ func TestReadTicketArtifacts(t *testing.T) {
 	})
 
 	t.Run("path traversal attack prevention", func(t *testing.T) {
-		art := adapters.ReadTicketArtifacts("../../../etc", tempDir)
-		if art.ContractContent != nil || art.SummaryContent != nil {
+		art, err := adapters.ReadTicketArtifacts("../../../etc", tempDir)
+		if err == nil {
+			t.Fatal("invalid/unavailable selected artifact path accepted")
+		}
+		if fixtureArtifactContent(art, "CONTRACT.md") != nil || fixtureArtifactContent(art, "SUMMARY.md") != nil {
 			t.Errorf("expected traversal attempt to yield nil contents")
 		}
 	})
@@ -773,16 +424,22 @@ func TestReadTicketArtifacts(t *testing.T) {
 			"./../",
 		}
 		for _, v := range variants {
-			art := adapters.ReadTicketArtifacts(v, tempDir)
-			if art.ContractContent != nil || art.SummaryContent != nil {
+			art, err := adapters.ReadTicketArtifacts(v, tempDir)
+			if err == nil {
+				t.Fatal("invalid/unavailable selected artifact path accepted")
+			}
+			if fixtureArtifactContent(art, "CONTRACT.md") != nil || fixtureArtifactContent(art, "SUMMARY.md") != nil {
 				t.Errorf("expected path traversal variant %q to yield nil contents", v)
 			}
 		}
 	})
 
 	t.Run("missing workspace directory", func(t *testing.T) {
-		art := adapters.ReadTicketArtifacts("NONEXISTENT", filepath.Join(tempDir, "does_not_exist"))
-		if art.ContractContent != nil || art.SummaryContent != nil {
+		art, err := adapters.ReadTicketArtifacts("NONEXISTENT", filepath.Join(tempDir, "does_not_exist"))
+		if err == nil {
+			t.Fatal("invalid/unavailable selected artifact path accepted")
+		}
+		if fixtureArtifactContent(art, "CONTRACT.md") != nil || fixtureArtifactContent(art, "SUMMARY.md") != nil {
 			t.Errorf("expected missing workspace dir to yield nil contents")
 		}
 	})
@@ -790,9 +447,9 @@ func TestReadTicketArtifacts(t *testing.T) {
 
 func TestScanWorkspacesResilience(t *testing.T) {
 	t.Run("unconfigured workspaces directory returns clear error", func(t *testing.T) {
-		tempDir := t.TempDir()
-		cfgContent := `{"project_name": "Test", "ticket": {"prefixes": [{"prefix": "TEST"}]},"telemetry":{"capture":{"state_dir":"capture-state"}}}`
-		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.json"), []byte(cfgContent), 0644); err != nil {
+		tempDir := workspaceFixtureRoot(t)
+		cfgContent := "project_name: MissingWorkspace"
+		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -819,13 +476,13 @@ func TestScanWorkspacesResilience(t *testing.T) {
 		if len(report.Errors) != 1 {
 			t.Errorf("expected 1 error, got %d", len(report.Errors))
 		}
-		if !strings.Contains(report.Errors[0], "Workspaces directory not found") {
+		if !strings.Contains(report.Errors[0], "/non/existent/path/for/sure") {
 			t.Errorf("unexpected error message: %s", report.Errors[0])
 		}
 	})
 
 	t.Run("empty directory with no files", func(t *testing.T) {
-		emptyDir := t.TempDir()
+		emptyDir := workspaceFixtureRoot(t)
 		report := adapters.ScanWorkspaces(emptyDir)
 		if len(report.Ledgers) != 0 {
 			t.Errorf("expected 0 ledgers, got %d", len(report.Ledgers))
@@ -836,7 +493,7 @@ func TestScanWorkspacesResilience(t *testing.T) {
 	})
 
 	t.Run("rejects omitted ticket ID instead of inferring the parent directory", func(t *testing.T) {
-		tempDir := t.TempDir()
+		tempDir := workspaceFixtureRoot(t)
 		ticketDir := filepath.Join(tempDir, "INFERRED-42")
 		if err := os.MkdirAll(ticketDir, 0755); err != nil {
 			t.Fatal(err)
@@ -1080,7 +737,7 @@ func TestAdversarialBoundarySchemaAndRepository(t *testing.T) {
 	})
 
 	t.Run("scan workspaces with mixed valid, empty, non-metric, and zero-byte files", func(t *testing.T) {
-		tempDir := t.TempDir()
+		tempDir := workspaceFixtureRoot(t)
 
 		// 1. Valid workspace
 		validDir := filepath.Join(tempDir, "VALID-1")
@@ -1154,7 +811,7 @@ func TestAdversarialBoundarySchemaAndRepository(t *testing.T) {
 	})
 
 	t.Run("hostile path traversal attempts on ReadTicketArtifacts", func(t *testing.T) {
-		tempDir := t.TempDir()
+		tempDir := workspaceFixtureRoot(t)
 		safeTicketDir := filepath.Join(tempDir, "AL-SAFE")
 		if err := os.MkdirAll(safeTicketDir, 0755); err != nil {
 			t.Fatal(err)
@@ -1176,8 +833,11 @@ func TestAdversarialBoundarySchemaAndRepository(t *testing.T) {
 		}
 
 		for _, payload := range traversalPayloads {
-			art := adapters.ReadTicketArtifacts(payload, tempDir)
-			if art.ContractContent != nil || art.SummaryContent != nil {
+			art, err := adapters.ReadTicketArtifacts(payload, tempDir)
+			if err == nil {
+				t.Fatal("invalid/unavailable selected artifact path accepted")
+			}
+			if fixtureArtifactContent(art, "CONTRACT.md") != nil || fixtureArtifactContent(art, "SUMMARY.md") != nil {
 				t.Errorf("path traversal payload %q succeeded in reading artifacts: %+v", payload, art)
 			}
 		}
@@ -1185,7 +845,7 @@ func TestAdversarialBoundarySchemaAndRepository(t *testing.T) {
 }
 
 func TestCurrentRichSessionEventsAreRejectedWithoutRewrite(t *testing.T) {
-	temp := t.TempDir()
+	temp := workspaceFixtureRoot(t)
 	ws := filepath.Join(temp, "AL-COMPACT")
 	if err := os.MkdirAll(ws, 0700); err != nil {
 		t.Fatal(err)
@@ -1272,7 +932,7 @@ func TestCurrentRichSessionEventsAreRejectedWithoutRewrite(t *testing.T) {
 }
 
 func TestLoadTicketWorkspace(t *testing.T) {
-	tempDir := t.TempDir()
+	tempDir := workspaceFixtureRoot(t)
 	ticketDir := filepath.Join(tempDir, "AL-TARGET")
 	if err := os.MkdirAll(ticketDir, 0755); err != nil {
 		t.Fatal(err)
@@ -1431,8 +1091,8 @@ func TestLoadTicketWorkspace(t *testing.T) {
 
 	t.Run("unconfigured workspaces directory returns error", func(t *testing.T) {
 		noCfgDir := t.TempDir()
-		cfgContent := `{"project_name": "Test", "ticket": {"prefixes": [{"prefix": "TEST"}]},"telemetry":{"capture":{"state_dir":"capture-state"}}}`
-		if err := os.WriteFile(filepath.Join(noCfgDir, ".agenticlens-config.json"), []byte(cfgContent), 0644); err != nil {
+		cfgContent := "project_name: MissingWorkspace"
+		if err := os.WriteFile(filepath.Join(noCfgDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -1496,7 +1156,7 @@ func TestLoadTicketWorkspace(t *testing.T) {
 }
 
 func TestUpdateSummaryFile(t *testing.T) {
-	tempDir := t.TempDir()
+	tempDir := workspaceFixtureRoot(t)
 	summaryFile := filepath.Join(tempDir, "SUMMARY.md")
 
 	tableMD := "### Workflow Efficiency\n- **Iterations:** 1\n\n### Anomalies & Health Flags\n- **Status:** No execution anomalies detected (clean session).\n"
@@ -1610,7 +1270,7 @@ func TestSaveFactLedger(t *testing.T) {
 
 	t.Run("creates nested directories, writes indented JSON with trailing newline", func(t *testing.T) {
 		t.Parallel()
-		tempDir := t.TempDir()
+		tempDir := workspaceFixtureRoot(t)
 		outPath := filepath.Join(tempDir, "sub", "dir", "facts.json")
 
 		tid := "AL-PERSIST-1"
@@ -1680,7 +1340,7 @@ func TestSaveFactLedger(t *testing.T) {
 
 	t.Run("returns wrapped error when directory cannot be created", func(t *testing.T) {
 		t.Parallel()
-		tempDir := t.TempDir()
+		tempDir := workspaceFixtureRoot(t)
 		blockingFile := filepath.Join(tempDir, "blocker")
 		if err := os.WriteFile(blockingFile, []byte("file"), 0644); err != nil {
 			t.Fatal(err)
@@ -1706,7 +1366,7 @@ func TestSaveFactLedger(t *testing.T) {
 
 	t.Run("fails defensive validation when TicketID or TicketTitle is missing or empty", func(t *testing.T) {
 		t.Parallel()
-		tempDir := t.TempDir()
+		tempDir := workspaceFixtureRoot(t)
 		outPath := filepath.Join(tempDir, "facts.json")
 
 		validID := "AL-VALID"
@@ -1813,7 +1473,7 @@ func TestSaveMetricsLedger(t *testing.T) {
 
 	t.Run("creates nested directories, serializes DTO and writes formatted JSON", func(t *testing.T) {
 		t.Parallel()
-		tempDir := t.TempDir()
+		tempDir := workspaceFixtureRoot(t)
 		outPath := filepath.Join(tempDir, "metrics", "computed.json")
 
 		tid := "AL-METRICS-1"
@@ -1881,7 +1541,7 @@ func TestSaveMetricsLedger(t *testing.T) {
 
 	t.Run("returns wrapped error when directory cannot be created", func(t *testing.T) {
 		t.Parallel()
-		tempDir := t.TempDir()
+		tempDir := workspaceFixtureRoot(t)
 		blockingFile := filepath.Join(tempDir, "blocker")
 		if err := os.WriteFile(blockingFile, []byte("file"), 0644); err != nil {
 			t.Fatal(err)
@@ -1903,7 +1563,7 @@ func TestSaveLedgers_AdversarialEdgeCases(t *testing.T) {
 
 	t.Run("SaveFactLedger fails when destination path is an existing directory", func(t *testing.T) {
 		t.Parallel()
-		tempDir := t.TempDir()
+		tempDir := workspaceFixtureRoot(t)
 		dirAsFile := filepath.Join(tempDir, "existing_dir")
 		if err := os.MkdirAll(dirAsFile, 0755); err != nil {
 			t.Fatal(err)
@@ -1926,7 +1586,7 @@ func TestSaveLedgers_AdversarialEdgeCases(t *testing.T) {
 
 	t.Run("SaveMetricsLedger fails when destination path is an existing directory", func(t *testing.T) {
 		t.Parallel()
-		tempDir := t.TempDir()
+		tempDir := workspaceFixtureRoot(t)
 		dirAsFile := filepath.Join(tempDir, "existing_metrics_dir")
 		if err := os.MkdirAll(dirAsFile, 0755); err != nil {
 			t.Fatal(err)
@@ -1943,7 +1603,7 @@ func TestSaveLedgers_AdversarialEdgeCases(t *testing.T) {
 
 	t.Run("SaveFactLedger overwrites existing file cleanly without appending or corrupting", func(t *testing.T) {
 		t.Parallel()
-		tempDir := t.TempDir()
+		tempDir := workspaceFixtureRoot(t)
 		filePath := filepath.Join(tempDir, "overwrite_test", "agentic_metrics.json")
 
 		// First write: large payload
@@ -1985,7 +1645,7 @@ func TestSaveLedgers_AdversarialEdgeCases(t *testing.T) {
 
 	t.Run("SaveMetricsLedger overwrites existing file cleanly without appending or corrupting", func(t *testing.T) {
 		t.Parallel()
-		tempDir := t.TempDir()
+		tempDir := workspaceFixtureRoot(t)
 		filePath := filepath.Join(tempDir, "overwrite_metrics_test", "metrics.json")
 
 		tid1 := "AL-INITIAL-LONG-TICKET-ID-12345"
@@ -2029,7 +1689,7 @@ func TestSaveLedgers_AdversarialEdgeCases(t *testing.T) {
 
 	t.Run("zero-value ledgers marshal to valid JSON with trailing newline", func(t *testing.T) {
 		t.Parallel()
-		tempDir := t.TempDir()
+		tempDir := workspaceFixtureRoot(t)
 
 		factPath := filepath.Join(tempDir, "zero_facts.json")
 		tid := "AL-ZERO"
@@ -2060,33 +1720,18 @@ func TestSaveLedgers_AdversarialEdgeCases(t *testing.T) {
 }
 
 func TestWorkspaceLoad_ConfiguredRoleMappings(t *testing.T) {
-	tempDir := t.TempDir()
+	tempDir := workspaceFixtureRoot(t)
 
 	// 1. Create root .agenticlens-config.yaml with custom role mappings
-	cfgContent := `
-project_name: TestProject
-ticket:
-  prefixes:
-    - prefix: AL
-workspaces:
-  dir: workspaces
-code_metrics:
-  source_roots:
-    - src
-anomaly_thresholds:
-  error_rate_min_calls: 5
-  error_rate_threshold: 0.25
-  error_rate_critical_threshold: 0.70
-  context_ceiling_warning_tokens: 160000
-  context_ceiling_critical_tokens: 200000
-role_mappings:
-  build: orchestrator
-  qa-bot: tester
+	cfg := fixtureReadPolicy(t)
+	cfg.Workspaces.Dir = "workspaces"
+	cfg.RoleMappings = domain.RoleMappings{"build": "orchestrator", "qa-bot": "tester"}
+	cfg.Ticket = domain.TicketConfig{CaseInsensitive: true, Prefixes: []domain.TicketPrefix{{Prefix: "AL", Description: "Development"}}}
+	cfgContent, err := adaptersconfig.GenerateConfigYAML(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-telemetry:
-  capture:
-    state_dir: capture-state
-`
 	if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -2240,33 +1885,18 @@ telemetry:
 }
 
 func TestWorkspaceLoad_ConfiguredRoleMappings_RootConfig(t *testing.T) {
-	tempDir := t.TempDir()
+	tempDir := workspaceFixtureRoot(t)
 
 	// 1. Create root .agenticlens-config.yaml with custom role mappings
-	cfgContent := `
-project_name: RootTestProject
-ticket:
-  prefixes:
-    - prefix: AL
-workspaces:
-  dir: root_workspaces
-code_metrics:
-  source_roots:
-    - src
-anomaly_thresholds:
-  error_rate_min_calls: 5
-  error_rate_threshold: 0.25
-  error_rate_critical_threshold: 0.70
-  context_ceiling_warning_tokens: 160000
-  context_ceiling_critical_tokens: 200000
-role_mappings:
-  sys-engineer: coder
-  lead-tester: tester
+	cfg := fixtureReadPolicy(t)
+	cfg.Workspaces.Dir = "root_workspaces"
+	cfg.RoleMappings = domain.RoleMappings{"sys-engineer": "coder", "lead-tester": "tester"}
+	cfg.Ticket = domain.TicketConfig{CaseInsensitive: true, Prefixes: []domain.TicketPrefix{{Prefix: "AL", Description: "Development"}}}
+	cfgContent, err := adaptersconfig.GenerateConfigYAML(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-telemetry:
-  capture:
-    state_dir: capture-state
-`
 	if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -2369,7 +1999,7 @@ telemetry:
 	if err != nil {
 		t.Fatalf("unexpected error resolving workspaces: %v", err)
 	}
-	if workspacesRoot != "root_workspaces" {
+	if workspacesRoot != filepath.Join(tempDir, "root_workspaces") {
 		t.Fatalf("expected workspacesRoot root_workspaces, got %s", workspacesRoot)
 	}
 
@@ -2394,7 +2024,7 @@ telemetry:
 }
 
 func TestLoadTicketWorkspace_AdversarialResilience(t *testing.T) {
-	tempDir := t.TempDir()
+	tempDir := workspaceFixtureRoot(t)
 	wsDir := filepath.Join(tempDir, "workspaces")
 	if err := os.MkdirAll(wsDir, 0755); err != nil {
 		t.Fatal(err)
@@ -2491,12 +2121,12 @@ func TestLoadTicketWorkspace_AdversarialResilience(t *testing.T) {
 			TicketID:      &ticketID,
 			TicketTitle:   &ticketTitle, Sessions: sessionFacts([]domain.InvocationFact{
 				{
-					Role:           domain.RoleRootAgent,
+					Role:           domain.AgentRole("RootAgent"),
 					Model:          "gpt-4o",
 					UserIterations: 7,
 				},
 				{
-					Role:           domain.RoleUnassignedSubAgent,
+					Role:           domain.AgentRole("UnassignedSubAgent"),
 					Model:          "gpt-4o",
 					UserIterations: 0,
 				},
@@ -2541,7 +2171,7 @@ func TestLedgerFileReadsOwnedOptionalSkillTaskCollections(t *testing.T) {
 		{name: "malformed tasks", fields: `,"delegations":"unknown"`, invalid: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			root := t.TempDir()
+			root := workspaceFixtureRoot(t)
 			ticket := "CUSTOM-READ"
 			dir := filepath.Join(root, ticket)
 			if err := os.Mkdir(dir, 0755); err != nil {
@@ -2582,63 +2212,6 @@ func TestLedgerFileReadsOwnedOptionalSkillTaskCollections(t *testing.T) {
 			}
 			if !bytes.Equal(after, data) {
 				t.Fatal("read normalization rewrote optional wire fields")
-			}
-		})
-	}
-}
-
-func TestScanWorkspacesRejectsInvalidStateConfiguration(t *testing.T) {
-	for _, malformedLocal := range []bool{false, true} {
-		name := "shared-only history needs no machine state"
-		if malformedLocal {
-			name = "malformed selected local state is rejected"
-		}
-		t.Run(name, func(t *testing.T) {
-			root := t.TempDir()
-			workspaces := filepath.Join(root, "workspaces")
-			ticketDir := filepath.Join(workspaces, "AL-1")
-			if err := os.MkdirAll(ticketDir, 0700); err != nil {
-				t.Fatal(err)
-			}
-			shared := []byte("project_name: Example\nticket:\n  prefixes: [AL]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n")
-			sharedPath := filepath.Join(root, ".agenticlens-config.yaml")
-			if err := os.WriteFile(sharedPath, shared, 0600); err != nil {
-				t.Fatal(err)
-			}
-			localPath := filepath.Join(root, ".agenticlens-config.local.yaml")
-			local := []byte("telemetry:\n  capture:\n    enabled: false\n    state_dir: []\n")
-			if malformedLocal {
-				if err := os.WriteFile(localPath, local, 0600); err != nil {
-					t.Fatal(err)
-				}
-			}
-			ledgerPath := filepath.Join(ticketDir, "agentic_metrics.json")
-			ledger := []byte(`{"schema_version":6,"ticket_id":"AL-1","sessions":[{"id":"remote","source":"codex","user":"fixture","invocations":[],"tools":[]}]}`)
-			if err := os.WriteFile(ledgerPath, ledger, 0600); err != nil {
-				t.Fatal(err)
-			}
-			report := adapters.ScanWorkspaces(workspaces)
-			if malformedLocal {
-				if !strings.Contains(report.FatalError, "telemetry.capture.state_dir") || len(report.Ledgers) != 0 {
-					t.Fatalf("malformed selected local state silently ignored: %+v", report)
-				}
-				actual, err := os.ReadFile(localPath)
-				if err != nil || !bytes.Equal(actual, local) {
-					t.Fatalf("scan repaired local config without authorization: %v", err)
-				}
-			} else {
-				if report.FatalError != "" || len(report.Errors) != 0 || len(report.Ledgers) != 1 || len(report.Ledgers[0].Facts.Sessions) != 1 || report.Ledgers[0].Facts.Sessions[0].ID != "remote" {
-					t.Fatalf("shared-only history acquired a machine-state prerequisite: %+v", report)
-				}
-				if _, err := os.Stat(localPath); !errors.Is(err, os.ErrNotExist) {
-					t.Fatalf("scan created local configuration: %v", err)
-				}
-			}
-			for path, expected := range map[string][]byte{sharedPath: shared, ledgerPath: ledger} {
-				actual, err := os.ReadFile(path)
-				if err != nil || !bytes.Equal(actual, expected) {
-					t.Fatalf("scan changed %s: %v", path, err)
-				}
 			}
 		})
 	}
@@ -2709,7 +2282,7 @@ func TestSummaryWriterRejectsAmbiguousMarkersWithoutChangingEvidence(t *testing.
 }
 
 func TestScanRetainsValidSiblingWhenPublicationIsUnavailable(t *testing.T) {
-	root := t.TempDir()
+	root := workspaceFixtureRoot(t)
 	version := domain.CurrentSchemaVersion
 	for _, ticket := range []string{"FX-VALID", "FX-UNAVAILABLE"} {
 		title := ticket
@@ -2791,7 +2364,7 @@ func TestLegacySummaryMigratesExternalParentFormatterOutput(t *testing.T) {
 				facts.Anomalies = []domain.Anomaly{}
 				facts.Sessions[0].Anomalies = []domain.Anomaly{}
 			}
-			cfg := domain.DefaultProjectConfig()
+			cfg := fixtureReadPolicy(t)
 			cfg.AnomalyThresholds.ErrorRateMinCalls = 5
 			cfg.AnomalyThresholds.ErrorRateThreshold = .35
 			cfg.AnomalyThresholds.ErrorRateCriticalThreshold = .70
@@ -2830,5 +2403,121 @@ func TestLegacySummaryMigratesExternalParentFormatterOutput(t *testing.T) {
 				t.Fatalf("repeat changed managed metrics/evidence: %v", err)
 			}
 		})
+	}
+}
+
+func fixtureArtifactContent(art domain.TicketArtifacts, path string) *string {
+	for _, item := range art.Items {
+		if item.Path == path {
+			return item.Content
+		}
+	}
+	return nil
+}
+
+func fixtureReadPolicy(t *testing.T) domain.ProjectConfig {
+	t.Helper()
+	cfg, err := adaptersconfig.LoadFromFile("config/testdata/shared-policy.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.Generation.Metrics = domain.GenerationPolicy{Skills: true, Delegations: true, Anomalies: true}
+	cfg.AnomalyThresholds.ContextCeilingWarningTokens = 160000
+	cfg.AnomalyThresholds.ContextCeilingCriticalTokens = 200000
+	return cfg
+}
+
+func writeWorkspacePolicy(t *testing.T, root, workspace string) {
+	t.Helper()
+	cfg := fixtureReadPolicy(t)
+	cfg.Workspaces.Dir = workspace
+	cfg.Ticket = domain.TicketConfig{CaseInsensitive: true, Prefixes: []domain.TicketPrefix{{Prefix: "AL", Description: "Development"}, {Prefix: "GEN", Description: "General"}, {Prefix: "PO", Description: "Planning"}, {Prefix: "FIX", Description: "Fixes"}, {Prefix: "TEST", Description: "Tests"}, {Prefix: "T", Description: "Fixture"}}}
+	data, err := adaptersconfig.GenerateConfigYAML(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, ".agenticlens-config.yaml"), data, 0600); err != nil {
+		t.Fatal(err)
+	}
+}
+func workspaceFixtureRoot(t *testing.T) string {
+	t.Helper()
+	root := t.TempDir()
+	writeWorkspacePolicy(t, root, ".")
+	return root
+}
+
+func TestPersistedReadsIgnoreUnusedLocalPolicyWithoutWriting(t *testing.T) {
+	root := workspaceFixtureRoot(t)
+	ticket, title := "T-01", "Portable owner facts"
+	version := domain.CurrentSchemaVersion
+	owner := domain.SessionFact{ID: "remote-owner", Source: domain.SourceCodex, User: "remote-user", Invocations: []domain.InvocationFact{{Role: "RootAgent", Model: "recorded", Turns: 2, Tokens: domain.InvocationTokens{Input: 37}}}, Tools: []domain.SessionToolFact{{Name: "read", Calls: 2}}, Skills: []domain.SkillFact{{Name: "kept"}, {Name: "kept"}}, Delegations: []domain.DelegationFact{{Description: "kept delegation"}}, Anomalies: []domain.Anomaly{}}
+	ledger := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticket, TicketTitle: &title, Sessions: []domain.SessionFact{owner}, Anomalies: []domain.Anomaly{}}
+	path := filepath.Join(root, ticket, "agentic_metrics.json")
+	if err := adapters.SaveFactLedger(path, ledger); err != nil {
+		t.Fatal(err)
+	}
+	baseline, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	local := filepath.Join(root, ".agenticlens-config.local.yaml")
+	for _, state := range []string{"absent", "invalid", "unavailable"} {
+		t.Run(state, func(t *testing.T) {
+			if err := os.RemoveAll(local); err != nil {
+				t.Fatal(err)
+			}
+			if state == "invalid" {
+				if err := os.WriteFile(local, []byte("telemetry: [broken"), 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if state == "unavailable" {
+				if err := os.Symlink(filepath.Join(root, "unavailable-policy"), local); err != nil {
+					t.Fatal(err)
+				}
+			}
+			report := adapters.ScanWorkspaces(root)
+			if report.FatalError != "" || len(report.Ledgers) != 1 || len(report.Errors) != 0 {
+				t.Fatalf("unusedlocal%s hid persisted facts: %+v", state, report)
+			}
+			detail, err := adapters.LoadTicketWorkspace(ticket, root)
+			if err != nil || detail == nil {
+				t.Fatalf("detail required unusedlocal%s: %v", state, err)
+			}
+			if detail.Totals.Invocations != 1 || detail.Totals.InputTokens != 37 {
+				t.Fatalf("source-unavailable facts replaced: %+v", detail)
+			}
+			artifacts, err := adapters.ReadTicketArtifacts(ticket, root, []domain.WorkspaceArtifactConfig{})
+			if err != nil || artifacts.Items == nil || len(artifacts.Items) != 0 {
+				t.Fatalf("explicit emptyartifactpolicy %+v %v", artifacts, err)
+			}
+			after, err := os.ReadFile(path)
+			if err != nil || !bytes.Equal(after, baseline) {
+				t.Fatal("ordinary read rewrote ledger")
+			}
+		})
+	}
+	// The same read pipeline rejects former metadata without repairing it or hiding valid siblings.
+	legacyID := "T-02"
+	legacyDir := filepath.Join(root, legacyID)
+	if err := os.Mkdir(legacyDir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	former := bytes.Replace(baseline, []byte(`"ticket_id": "T-01"`), []byte(`"ticket_id": "T-02", "generation_policy":{"skills":true,"delegations":true,"anomalies":true}`), 1)
+	formerPath := filepath.Join(legacyDir, "agentic_metrics.json")
+	if err := os.WriteFile(formerPath, former, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := adapters.LoadTicketWorkspace(legacyID, root); err == nil {
+		t.Fatal("ordinary detail cleaned former metadata")
+	}
+	report := adapters.ScanWorkspaces(root)
+	if len(report.Ledgers) != 1 || len(report.Errors) != 1 || !strings.Contains(report.Errors[0], legacyID) {
+		t.Fatalf("per-ledger read failure hid sibling or acceptedmetadata: %+v", report)
+	}
+	after, err := os.ReadFile(formerPath)
+	if err != nil || !bytes.Equal(after, former) {
+		t.Fatal("rejected former metadata rewritten")
 	}
 }

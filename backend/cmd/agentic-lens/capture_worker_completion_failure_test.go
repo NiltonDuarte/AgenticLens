@@ -18,7 +18,7 @@ func TestCaptureWorkerCompletionSurvivesFixtureEarlyReturn(t *testing.T) {
 	t.Run("returns with native still blocked", func(t *testing.T) {
 		f := newCaptureGenerationFixture(t)
 		directory = f.project
-		if err := writeCaptureFixtureLocal(t, f, []byte("telemetry:\n  capture:\n    enabled: true\n")); err != nil {
+		if err := writeCaptureFixtureLocal(t, f, []byte("telemetry:\n  capture:\n    pass_timeout_ms: 3000\n    max_sessions: 256\n    max_source_bytes: 67108864\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 5000\n    commit_warning: true\n    enabled: true\n")); err != nil {
 			t.Fatal(err)
 		}
 		store, err := capture.OpenProject(f.state, f.project)

@@ -3,10 +3,11 @@ import json
 import os
 from pathlib import Path
 import shutil
+import shlex
 import subprocess
 import unittest
 
-from distribution_fixture import DistributionFixture, ROOT, SETUP, digest, build_app
+from distribution_fixture import DistributionFixture, ROOT, SETUP, digest, build_app, shared_policy
 
 INSTALL = SETUP / 'install.sh'
 BUNDLE_SETUP = Path('.agents/skills/agentic-lens-setup')
@@ -59,15 +60,21 @@ class InstallationTest(DistributionFixture):
         selected_local = self.repo / '.agenticlens-config.local.yaml'
         selected_local.write_text(f"# selected local settings\ntelemetry:\n  capture:\n    enabled: false\n    state_dir: '{self.root / 'capture state'}'\n  default_source: codex\n  sources:\n    codex:\n      home: '{self.home / '.codex'}'\n")
         local_before = selected_local.read_bytes()
-        command = completion.replace('--project-name NAME', '--project-name Selected').replace('--src-folders DIRS', '--src-folders src').replace('--ticket-prefixes PREFIXES', '--ticket-prefixes FX')
+        approved = self.approved_settings('Selected')
+        approved.write_text(shared_policy(self.pin, self.home / '.agenticlens', name='Selected'))
+        candidate = self.root / 'approved local.yaml'
+        candidate.write_bytes(local_before)
+        command = completion.replace('APPROVED_SHARED.yaml', shlex.quote(str(approved))).replace('--workspaces DIR', '--workspaces workspaces').replace('APPROVED_LOCAL.yaml', shlex.quote(str(candidate)))
         scaffold_before = self.config.read_bytes()
         selected_local.unlink()
+        candidate.unlink()
         missing_choices = subprocess.run(['bash', '-c', command], cwd=caller, env=self.env, text=True, capture_output=True, timeout=15)
         self.assertNotEqual(missing_choices.returncode, 0)
-        self.assertIn('telemetry.capture.enabled', missing_choices.stderr)
+        self.assertIn(str(candidate), missing_choices.stderr)
         self.assertEqual(self.config.read_bytes(), scaffold_before)
         self.assertFalse(selected_local.exists())
         selected_local.write_bytes(local_before)
+        candidate.write_bytes(local_before)
         result = subprocess.run(['bash', '-c', command], cwd=caller, env=self.env, text=True, capture_output=True, timeout=15)
         self.succeeds(result)
         self.assertIn('project_name: Selected', self.config.read_text())
@@ -140,6 +147,7 @@ class InstallationTest(DistributionFixture):
         self.assertFalse((self.repo / BUNDLE_SETUP / 'RELEASE_VERSION').exists())
 
     def test_worktree_uses_shared_pin_without_release_marker_or_repository_binary(self):
+        (self.repo / '.agenticlens-config.local.yaml').unlink()
         self.git('init', '-q'); self.git('config', 'user.name', 'Fixture'); self.git('config', 'user.email', 'fixture@example.invalid')
         self.succeeds(self.bundle())
         marker = self.repo / BUNDLE_SETUP / 'RELEASE_VERSION'; marker.unlink()
@@ -165,6 +173,7 @@ class InstallationTest(DistributionFixture):
         self.assertFalse((self.root / 'explicit state').exists())
 
     def test_initial_pin_is_explicit_and_failure_rolls_back_only_created_configuration(self):
+        (self.repo / '.agenticlens-config.local.yaml').unlink()
         self.config.unlink()
         self.assertNotEqual(self.install_local().returncode, 0)
         self.assertFalse(self.cache.exists())

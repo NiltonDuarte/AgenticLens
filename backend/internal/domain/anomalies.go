@@ -130,14 +130,11 @@ func detectToolRetryStreaksWithIndexes(events []EventFact, thresholds AnomalyThr
 	}
 	sort.Strings(sessionIDs)
 
+	if thresholds.ConsecutiveErrorsStreakWarning < 1 || thresholds.ConsecutiveErrorsStreakCritical < thresholds.ConsecutiveErrorsStreakWarning {
+		return nil
+	}
 	warnStreak := int64(thresholds.ConsecutiveErrorsStreakWarning)
-	if warnStreak <= 0 {
-		warnStreak = ConsecutiveToolErrorsStreakWarning
-	}
 	critStreak := int64(thresholds.ConsecutiveErrorsStreakCritical)
-	if critStreak <= 0 {
-		critStreak = ConsecutiveToolErrorsStreakCritical
-	}
 
 	for _, sessionID := range sessionIDs {
 		indices := bySession[sessionID]
@@ -305,22 +302,13 @@ func detectToolHighFailureRates(ledger AgenticFactLedger, events []EventFact, th
 func detectContextSaturationSpikes(ledger AgenticFactLedger, events []EventFact, thresholds AnomalyThresholdsConfig) []Anomaly {
 	var anomalies []Anomaly
 
-	warnDelta := thresholds.TokenVelocityWarningDeltaTokens
-	if warnDelta <= 0 {
-		warnDelta = TokenVelocityWarningDeltaTokens
+	if thresholds.ContextGrowthWarningTokens < 1 || thresholds.ContextGrowthCriticalTokens < thresholds.ContextGrowthWarningTokens || thresholds.ContextCeilingWarningTokens < 1 || thresholds.ContextCeilingCriticalTokens < thresholds.ContextCeilingWarningTokens {
+		return nil
 	}
-	critDelta := thresholds.TokenVelocityCriticalDeltaTokens
-	if critDelta <= 0 {
-		critDelta = TokenVelocityCriticalDeltaTokens
-	}
+	warnDelta := thresholds.ContextGrowthWarningTokens
+	critDelta := thresholds.ContextGrowthCriticalTokens
 	warnCeiling := thresholds.ContextCeilingWarningTokens
-	if warnCeiling <= 0 {
-		warnCeiling = ContextCeilingWarningTokens
-	}
 	critCeiling := thresholds.ContextCeilingCriticalTokens
-	if critCeiling <= 0 {
-		critCeiling = ContextCeilingCriticalTokens
-	}
 
 	if len(events) > 0 {
 		sessionEvents := make(map[string][]EventFact)
@@ -518,49 +506,10 @@ func appendDistinctRole(roles []string, role string) []string {
 }
 
 func resolveAnomalyThresholds(thresholds ...AnomalyThresholdsConfig) AnomalyThresholdsConfig {
-	def := DefaultAnomalyThresholdsConfig()
 	if len(thresholds) == 0 {
-		return def
+		return AnomalyThresholdsConfig{}
 	}
-	t := thresholds[0]
-	if t.StallThresholdSeconds <= 0 {
-		t.StallThresholdSeconds = def.StallThresholdSeconds
-	}
-	// Failure-rate values are required configuration, never runtime defaults.
-	if t.ContextExhaustionPct <= 0 {
-		t.ContextExhaustionPct = def.ContextExhaustionPct
-	}
-	if t.ConsecutiveErrorsStreakWarning <= 0 {
-		t.ConsecutiveErrorsStreakWarning = def.ConsecutiveErrorsStreakWarning
-	}
-	if t.ConsecutiveErrorsStreakCritical <= 0 {
-		t.ConsecutiveErrorsStreakCritical = def.ConsecutiveErrorsStreakCritical
-	}
-	if t.ContextCeilingWarningTokens <= 0 {
-		t.ContextCeilingWarningTokens = def.ContextCeilingWarningTokens
-	}
-	if t.ContextCeilingCriticalTokens <= 0 {
-		t.ContextCeilingCriticalTokens = def.ContextCeilingCriticalTokens
-	}
-	if t.TokenVelocityWarningTokens <= 0 {
-		t.TokenVelocityWarningTokens = def.TokenVelocityWarningTokens
-	}
-	if t.TokenVelocityCriticalTokens <= 0 {
-		t.TokenVelocityCriticalTokens = def.TokenVelocityCriticalTokens
-	}
-	if t.TokenVelocityWarningDeltaTokens <= 0 {
-		t.TokenVelocityWarningDeltaTokens = def.TokenVelocityWarningDeltaTokens
-	}
-	if t.TokenVelocityCriticalDeltaTokens <= 0 {
-		t.TokenVelocityCriticalDeltaTokens = def.TokenVelocityCriticalDeltaTokens
-	}
-	if t.ToolThrashingMinFailures <= 0 {
-		t.ToolThrashingMinFailures = def.ToolThrashingMinFailures
-	}
-	if t.ToolThrashingCriticalFailures <= 0 {
-		t.ToolThrashingCriticalFailures = def.ToolThrashingCriticalFailures
-	}
-	return t
+	return thresholds[0]
 }
 
 // DetectAnomalies evaluates deterministic operational rules against the fact ledger.

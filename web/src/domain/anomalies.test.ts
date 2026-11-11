@@ -24,6 +24,17 @@ describe('Domain Anomalies Logic', () => {
       expect(formatAnomaly(anomaly)).toEqual({ title, description });
     });
 
+    it('projects only generated display roles while preserving canonical context and raw formatting', () => {
+      const anomaly: Anomaly = {rule_id: 'SUBAGENT_REWORK_LOOP', severity: 'WARNING', context: {role: 'builder', secondary_role: 'source-tester', count: 3}};
+      const before = JSON.stringify(anomaly);
+      expect(formatAnomaly(anomaly, (role) => ({builder: 'planner', 'source-tester': 'tester'}[role] ?? role))).toEqual({
+        title: 'Subagent rework loop: planner <-> tester (3 cycles)',
+        description: "Subagent roles 'planner' and 'tester' alternated for 3 consecutive cycles.",
+      });
+      expect(formatAnomaly(anomaly).title).toBe('Subagent rework loop: builder <-> source-tester (3 cycles)');
+      expect(JSON.stringify(anomaly)).toBe(before);
+    });
+
     it('uses a safe fallback for incomplete context', () => {
       expect(formatAnomaly({ rule_id: 'TOOL_RETRY_STREAK', severity: 'WARNING', context: {} })).toEqual({
         title: 'Tool retry streak',

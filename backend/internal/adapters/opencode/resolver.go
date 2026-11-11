@@ -3,42 +3,117 @@ package opencode
 import (
 	"database/sql"
 	"errors"
+	"fmt"
+	"strings"
 )
 
-// ErrSessionNotFound is returned when an OpenCode root session cannot be resolved through nonce, explicit ID, or ticket identifiers.
 var ErrSessionNotFound = errors.New("opencode root session not found")
+var ErrSessionAmbiguous = errors.New("opencode root session selection is ambiguous")
 
-// ResolveActiveRootSession resolves the active root session identifier using prioritized matching strategies:
-// Priority 1: Exact Nonce matching against stored message/tool records.
-// Priority 2: Explicit session ID passed directly as parameter.
-// Priority 3: Ticket ID matching against root session titles. If title matching yields no rows, falls back to workspace path matching via ResolveSessionByWorkspacePath.
-// If all strategies fail, returns nil and an error wrapping ErrSessionNotFound.
-func ResolveActiveRootSession(db *sql.DB, nonce string, ticketID string, explicitSessionID string) (*string, error) {
+// ResolveActiveRootSession uses only explicit root IDs and literal nonces. The
+// ticket ID provides diagnostic context; it never selects a source session.
+// When both selectors are supplied, each must independently identify one root
+// and both must agree.
+func ResolveActiveRootSession(db *sql.DB, nonce, ticketID, explicitSessionID string) (*string, error) {
 	if db == nil {
 		return nil, errors.New("database connection is nil")
+	}
+	if strings.TrimSpace(nonce) == "" && strings.TrimSpace(explicitSessionID) == "" {
+		return nil, fmt.Errorf("%w: ticket %q cannot select a session; supply --session-id with an existing root or --nonce with a unique literal token", ErrSessionNotFound, strings.TrimSpace(ticketID))
 	}
 	family, err := detectSchemaFamily(db)
 	if err != nil {
 		return nil, err
 	}
-	if family == schemaFamilyV2 {
-		return resolveSchemaV2RootSession(db, nonce, ticketID, explicitSessionID)
+	table, records := resolutionTables(family)
+	var explicitRoot *string
+	if strings.TrimSpace(explicitSessionID) != "" {
+		id, err := sanitizeSessionID(explicitSessionID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid --session-id: %w", err)
+		}
+		rows, err := db.Query(`SELECT id FROM `+table+` WHERE id=? AND parent_id IS NULL LIMIT 2`, id)
+		if err != nil {
+			return nil, fmt.Errorf("OpenCode schema family %s: validating --session-id: %w", family, err)
+		}
+		explicitRoot, err = uniqueRoot(rows)
+		if err != nil {
+			return nil, fmt.Errorf("--session-id %q must identify exactly one existing root: %w", id, err)
+		}
 	}
-	return resolveSchemaV1RootSession(db, nonce, ticketID, explicitSessionID)
+	if strings.TrimSpace(nonce) == "" {
+		return explicitRoot, nil
+	}
+	query := sessionTreeCTE(table, records) + `
+SELECT DISTINCT tree.root_id FROM tree JOIN records ON records.session_id=tree.id
+WHERE instr(records.data,?)>0 ORDER BY tree.root_id LIMIT 2`
+	rows, err := db.Query(query, nonce)
+	if err != nil {
+		return nil, fmt.Errorf("OpenCode schema family %s: resolving literal --nonce: %w", family, err)
+	}
+	nonceRoot, err := uniqueRoot(rows)
+	if err != nil {
+		return nil, fmt.Errorf("--nonce must identify exactly one root in the selected OpenCode source: %w", err)
+	}
+	if explicitRoot != nil && *explicitRoot != *nonceRoot {
+		return nil, fmt.Errorf("--session-id selects root %q but --nonce selects root %q; supply agreeing selectors", *explicitRoot, *nonceRoot)
+	}
+	return nonceRoot, nil
 }
 
-// ResolveSessionByWorkspacePath searches for root sessions whose stored message/tool records reference the workspace directory,
-// constrained by an optional timestamp window (minTimeMs, maxTimeMs) to prevent matching conversations outside the commit range.
-func ResolveSessionByWorkspacePath(db *sql.DB, ticketID string, minTimeMs int64, maxTimeMs int64) (*string, error) {
+// SessionTable validates the selected store's complete supported layout before
+// callers perform exact-owner metadata discovery.
+func SessionTable(db *sql.DB) (string, error) {
 	if db == nil {
-		return nil, errors.New("database connection is nil")
+		return "", errors.New("database connection is nil")
 	}
 	family, err := detectSchemaFamily(db)
 	if err != nil {
+		return "", err
+	}
+	table, _ := resolutionTables(family)
+	return table, nil
+}
+
+func resolutionTables(family schemaFamily) (string, string) {
+	if family == schemaFamilyV2 {
+		return "session_v2", `SELECT session_id,data FROM session_message`
+	}
+	return "session", `SELECT session_id,data FROM message UNION ALL SELECT session_id,data FROM part`
+}
+
+func sessionTreeCTE(table, records string) string {
+	// UNION keeps traversal finite even for malformed duplicate/cyclic links.
+	return `WITH RECURSIVE tree(id,root_id) AS (
+ SELECT id,id FROM ` + table + ` WHERE parent_id IS NULL
+ UNION
+ SELECT child.id,tree.root_id FROM ` + table + ` child JOIN tree ON child.parent_id=tree.id
+), records AS (` + records + `)
+`
+}
+
+func uniqueRoot(rows *sql.Rows) (root *string, err error) {
+	defer func() { err = errors.Join(err, rows.Close()) }()
+	ids := make([]string, 0, 2)
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		clean, err := sanitizeSessionID(id)
+		if err != nil || clean != id {
+			return nil, fmt.Errorf("source root %q has an invalid native session ID", id)
+		}
+		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	if family == schemaFamilyV2 {
-		return resolveSchemaV2WorkspacePath(db, ticketID, minTimeMs, maxTimeMs)
+	if len(ids) == 0 {
+		return nil, ErrSessionNotFound
 	}
-	return resolveSchemaV1WorkspacePath(db, ticketID, minTimeMs, maxTimeMs)
+	if len(ids) > 1 {
+		return nil, fmt.Errorf("%w: roots %q and %q both match", ErrSessionAmbiguous, ids[0], ids[1])
+	}
+	return &ids[0], nil
 }

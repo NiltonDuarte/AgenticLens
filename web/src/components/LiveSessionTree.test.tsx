@@ -2,7 +2,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { LiveSessionTree } from './LiveSessionTree';
 import type { LiveSessionTree as LiveSessionTreeType } from '../domain/live';
-import { mockLiveSessionTree } from '../test/fixtures/mockData';
+import { ProjectConfigContext } from '../contexts/ProjectConfigContext';
+import { mockProjectConfig, mockLiveSessionTree } from '../test/fixtures/mockData';
 
 describe('LiveSessionTree Component', () => {
   it('renders informative empty state when root_sessions is empty', () => {
@@ -26,6 +27,21 @@ describe('LiveSessionTree Component', () => {
     expect(
       screen.getByText('There are no active agent sessions currently running in the environment.')
     ).toBeInTheDocument();
+  });
+
+  it('preserves API-projected role labels and raw source personas without applying aliases twice', () => {
+    const original = mockLiveSessionTree.root_sessions[0]!;
+    const builder = {...original, id: 'source-builder', agent: 'builder', role: 'planner', sub_sessions: []};
+    const unknown = {...original, id: 'source-constructor', role: 'constructor', sub_sessions: []};
+    const tree = {...mockLiveSessionTree, root_sessions: [builder, unknown]};
+    render(<ProjectConfigContext.Provider value={{...mockProjectConfig, role_mappings: {builder: 'planner', planner: 'other'}}}>
+      <LiveSessionTree tree={tree} selectedSessionId={null} onSelectSession={vi.fn()} />
+    </ProjectConfigContext.Provider>);
+    expect(within(screen.getByTestId('session-node-source-builder')).getByText('planner')).toBeVisible();
+    expect(within(screen.getByTestId('session-node-source-constructor')).getByText('constructor')).toBeVisible();
+    expect(screen.queryByText('other')).not.toBeInTheDocument();
+    expect(within(screen.getByTestId('session-node-source-builder')).getByText('builder')).toBeVisible();
+    expect(tree.root_sessions.map((owner) => owner.role)).toEqual(['planner', 'constructor']);
   });
 
   it('renders multiple concurrent root sessions with agent names, roles, and status pills', () => {

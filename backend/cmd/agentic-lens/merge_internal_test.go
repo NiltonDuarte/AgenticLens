@@ -10,7 +10,7 @@ import (
 func TestMergeSessionsReplacesRefreshedOwnerSnapshot(t *testing.T) {
 	start, firstEnd, nextEnd := "2026-10-25T09:00:00Z", "2026-10-25T09:00:07Z", "2026-10-25T09:01:02Z"
 	row := domain.InvocationFact{
-		Role: domain.RoleRootAgent, Model: "gpt-example", StartedAt: &start, CompletedAt: &firstEnd,
+		Role: domain.AgentRole("RootAgent"), Model: "gpt-example", StartedAt: &start, CompletedAt: &firstEnd,
 		Turns: 1, Tokens: domain.InvocationTokens{Input: 40, Output: 25},
 	}
 	active := row

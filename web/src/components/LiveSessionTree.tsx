@@ -1,6 +1,7 @@
+import { useRolePresentation } from '../contexts/ProjectConfigContext';
 import React, { useState } from 'react';
 import type { LiveSessionNode, LiveSessionTree as LiveSessionTreeType } from '../domain/live';
-import { formatDurationSeconds, formatRoleLabel } from '../domain/formatters';
+import { formatDurationSeconds } from '../domain/formatters';
 
 export interface LiveSessionTreeProps {
   readonly tree: LiveSessionTreeType;
@@ -28,6 +29,7 @@ const LiveSessionNodeItem: React.FC<NodeItemProps> = ({
   onToggleCollapse,
   depth,
 }) => {
+  const rolePresentation = useRolePresentation();
   const isSelected = selectedSessionId === node.id;
   const isCollapsed = collapsedNodes.has(node.id);
   const hasSubSessions = node.sub_sessions && node.sub_sessions.length > 0;
@@ -63,7 +65,7 @@ const LiveSessionNodeItem: React.FC<NodeItemProps> = ({
           <div className="node-title-group">
             <span className="node-agent-name">{node.agent}</span>
             <span className={`node-role-badge role-${node.role.toLowerCase()}`}>
-              {formatRoleLabel(node.role)}
+              {rolePresentation.projectedLabel(node.role)}
             </span>
             <span className="node-model-name">{node.model}</span>
           </div>

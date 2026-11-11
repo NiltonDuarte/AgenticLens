@@ -1,3 +1,4 @@
+import { useRolePresentation } from '../contexts/ProjectConfigContext';
 import React, { useEffect, useRef, useState } from 'react';
 import type { ThreadExecutionRecord } from '../domain/types';
 import { formatRoleLabel, formatCostUSD, formatPercentage, formatTokensK } from '../domain/formatters';
@@ -9,6 +10,7 @@ export interface ThreadViewerProps {
 }
 
 export const ThreadViewer: React.FC<ThreadViewerProps> = ({ threads, focusSession }) => {
+  const rolePresentation = useRolePresentation();
   const [expandedSessions, setExpandedSessions] = useState<ReadonlySet<string>>(() => {
     // Expand the first thread by default
     if (threads.length > 0 && threads[0]) {
@@ -198,7 +200,7 @@ export const ThreadViewer: React.FC<ThreadViewerProps> = ({ threads, focusSessio
                         </tr>
                       </thead>
                       <tbody>
-                        {thread.roles.flatMap((r) =>
+                        {[...thread.roles].sort((a, b) => rolePresentation.compareProjected(a.role, b.role)).flatMap((r) =>
                           r.models.map((m, mIdx) => (
                             <tr key={`${r.role}-${m.model}-${mIdx}`}>
                               <td className="role-col">{formatRoleLabel(r.role)}</td>

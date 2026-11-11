@@ -1,5 +1,6 @@
+import { useRolePresentation } from '../contexts/ProjectConfigContext';
 import { durationLabel, durationDescription } from '../domain/duration';
-import React, { useEffect, useState, useCallback, useRef, useId } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useId, useMemo } from 'react';
 import type {
   AgenticMetricsLedger,
   Anomaly,
@@ -8,7 +9,7 @@ import type {
   WorkspaceDetail,
 } from '../domain/types';
 import { ledgerSkills, ledgerDelegations, sessionTools, ledgerMetricCoverage } from '../domain/types';
-import { rebindEvent, selectWorkspaceEvents, selectWorkspaceAnomalies } from '../domain/events';
+import { rebindEvent, selectWorkspaceEvents, selectWorkspaceAnomalyEntries, recordedAnomalyEntries, rebindPresentedAnomaly, type PresentedAnomaly } from '../domain/events';
 import {
   fetchWorkspaceById,
   fetchWorkspaceEvents,
@@ -39,7 +40,7 @@ import { ArtifactViewer } from '../components/ArtifactViewer';
 import { getRoleColor, getModelColor } from '../utils/theme';
 import { TraceWaterfall } from '../components/TraceWaterfall';
 import { AnomalyDrawer } from '../components/AnomalyDrawer';
-import { findMatchingAnomaly, rebindAnomaly } from '../domain/anomalies';
+import { findMatchingAnomaly } from '../domain/anomalies';
 import { InfoTooltip } from '../components/InfoTooltip';
 
 export interface TicketDeepDiveProps {
@@ -51,6 +52,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
   selectedTicketId,
   onSelectTicket,
 }) => {
+  const rolePresentation = useRolePresentation();
   const [ledgers, setLedgers] = useState<readonly AgenticMetricsLedger[]>([]);
   const [detail, setDetail] = useState<WorkspaceDetail | null>(null);
   const [events, setEvents] = useState<readonly EventFact[]>([]);
@@ -58,15 +60,17 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
   const [dataSource, setDataSource] = useState<DataSource>('unavailable');
   const [traceAvailability, setTraceAvailability] = useState<'pending' | 'failed' | 'complete' | 'partial' | 'unavailable'>('pending');
   const [traceDiagnostics, setTraceDiagnostics] = useState<readonly string[]>([]);
-  const [traceAnomalies, setTraceAnomalies] = useState<readonly Anomaly[]>([]);
+  const [traceAnomalyEntries, setTraceAnomalyEntries] = useState<readonly PresentedAnomaly[]>([]);
+  const traceAnomalies = useMemo(() => traceAnomalyEntries.map((entry) => entry.anomaly), [traceAnomalyEntries]);
   const [selection, setSelection] = useState<{
     readonly event: EventFact | null;
-    readonly anomaly: Anomaly | null;
+    readonly anomaly: PresentedAnomaly | null;
     readonly origin: 'source' | 'recorded';
   }>({ event: null, anomaly: null, origin: 'source' });
   const [recordedSummariesExpanded, setRecordedSummariesExpanded] = useState(false);
   const recordedSummaryId = useId();
-  const { event: selectedEvent, anomaly: selectedAnomaly } = selection;
+  const selectedEvent = selection.event;
+  const selectedAnomaly = selection.anomaly?.anomaly ?? null;
   const [focusedThread, setFocusedThread] = useState<{ readonly id: string } | undefined>();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [activeTicketId, setActiveTicketId] = useState<string | null>(selectedTicketId ?? null);
@@ -92,7 +96,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
     setEvents([]);
     setTraceAvailability('pending');
     setTraceDiagnostics([]);
-    setTraceAnomalies([]);
+    setTraceAnomalyEntries([]);
     setIsHydrated(false);
     setDataSource('unavailable');
     setFocusedThread(undefined);
@@ -121,7 +125,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
         const detailRes = await fetchWorkspaceById(targetId);
         if (!isCurrentRequest()) return;
         setDetail(detailRes.data);
-        setTraceAnomalies(detailRes.data.anomalies ?? []);
+        setTraceAnomalyEntries(detailRes.data.ledger?.facts ? recordedAnomalyEntries(detailRes.data.ledger.facts) : []);
         setLoading(false);
 
         // Enrichment is optional: committed facts are already visible while it runs.
@@ -130,25 +134,27 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
           if (!isCurrentRequest()) return;
           if (eventsRes.data.ticket_id !== targetId) return;
           const selected = selectWorkspaceEvents(eventsRes.data);
-          const anomalies = selectWorkspaceAnomalies(detailRes.data.anomalies ?? [], selected);
+          const entries = detailRes.data.ledger?.facts ? selectWorkspaceAnomalyEntries(detailRes.data.ledger.facts, selected) : [];
+          const anomalies = entries.map((entry) => entry.anomaly);
           setTraceAvailability(selected.availability);
           setTraceDiagnostics(selected.coverage.diagnostics);
           setEvents(selected.events);
           setIsHydrated(selected.is_hydrated);
           setDataSource(selected.data_source);
-          setTraceAnomalies(anomalies);
+          setTraceAnomalyEntries(entries);
           setSelection((current) => {
             if (current.origin === 'recorded') return current;
             const event = rebindEvent(current.event, [], selected.events);
             const sameRule = current.anomaly
-              ? anomalies.filter((anomaly) => anomaly.rule_id === current.anomaly?.rule_id)
+              ? anomalies.filter((anomaly) => anomaly.rule_id === current.anomaly?.anomaly.rule_id)
               : anomalies;
+            const matching = event ? findMatchingAnomaly(event, sameRule) ?? findMatchingAnomaly(event, anomalies) : null;
             return {
               origin: 'source',
               event,
               anomaly: event
-                ? findMatchingAnomaly(event, sameRule) ?? findMatchingAnomaly(event, anomalies) ?? null
-                : rebindAnomaly(current.anomaly, anomalies),
+                ? entries.find((entry) => entry.anomaly === matching) ?? null
+                : rebindPresentedAnomaly(current.anomaly, entries),
             };
           });
         } catch {
@@ -189,13 +195,13 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
   };
 
   const handleSelectEvent = (event: EventFact, anomaly?: Anomaly) => {
-    setSelection({ event, anomaly: anomaly ?? null, origin: 'source' });
+    setSelection({ event, anomaly: traceAnomalyEntries.find((entry) => entry.anomaly === anomaly) ?? null, origin: 'source' });
     const isFlagged = Boolean(anomaly) || event.status === 'error' || event.status === 'failed';
     setIsDrawerOpen(isFlagged);
   };
 
   const handleSelectAnomaly = (anomaly: Anomaly) => {
-    setSelection({ event: null, anomaly, origin: 'source' });
+    setSelection({ event: null, anomaly: traceAnomalyEntries.find((entry) => entry.anomaly === anomaly) ?? null, origin: 'source' });
     setIsDrawerOpen(true);
   };
 
@@ -248,7 +254,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
     started_at: l.started_at,
   }));
 
-  const turnEntries = Object.entries(subTurns.by_role ?? {}).sort((a, b) => b[1] - a[1]);
+  const turnEntries = Object.entries(subTurns.by_role ?? {}).sort((a, b) => rolePresentation.compareProjected(a[0], b[0]));
 
   return (
     <div className="deep-dive-container">
@@ -519,7 +525,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {ledger.roles.map((r) => {
+                {[...ledger.roles].sort((a, b) => rolePresentation.compareProjected(a.role, b.role)).map((r) => {
                   const roleColor = getRoleColor(r.role);
                   return (
                     <tr key={r.role}>
@@ -679,9 +685,9 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
           {recordedSummariesExpanded && <>
             <p>Recorded summaries remain available independently of current source coverage.</p>
             {detail.anomalies?.map((anomaly, index) => <button key={index} type="button" className="legacy-anomaly-item"
-              aria-label={`Inspect recorded anomaly: ${formatAnomaly(anomaly).title}`}
-              onClick={() => { setSelection({ event: null, anomaly, origin: 'recorded' }); setIsDrawerOpen(true); }}>
-              {formatAnomaly(anomaly).title} · {anomaly.severity}
+              aria-label={`Inspect recorded anomaly: ${formatAnomaly(anomaly, rolePresentation.projectedLabel).title}`}
+              onClick={() => { setSelection({ event: null, anomaly: {anomaly, roleOrigin: 'projected'}, origin: 'recorded' }); setIsDrawerOpen(true); }}>
+              {formatAnomaly(anomaly, rolePresentation.projectedLabel).title} · {anomaly.severity}
             </button>)}
           </>}
         </div>
@@ -707,6 +713,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
         isOpen={isDrawerOpen && Boolean(selectedEvent || selectedAnomaly)}
         onClose={() => setIsDrawerOpen(false)}
         anomaly={selectedAnomaly}
+        anomalyRoleOrigin={selection.anomaly?.roleOrigin ?? 'source'}
         event={selectedEvent}
       />
     </div>

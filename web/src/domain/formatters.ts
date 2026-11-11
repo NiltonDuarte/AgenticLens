@@ -10,7 +10,7 @@ import type {
   TimeGranularity,
 } from './types';
 
-export const HEALTHY_CEILING_TOKENS = 200_000;
+import { compareConfiguredTicketIds, compareText, ticketNumber, lowercaseTicketText, type TicketRecognitionPolicy } from './tickets';
 
 export function formatSkillStatus(success: boolean): 'Success' | 'Failed' {
   return success ? 'Success' : 'Failed';
@@ -19,17 +19,6 @@ export function formatSkillStatus(success: boolean): 'Success' | 'Failed' {
 // Preserve persona spelling while making unavailable source roles visible.
 export function formatRoleLabel(role: string): string {
   return role.trim() || 'Unknown';
-}
-
-export function formatSubagentRole(role: string): string {
-  switch (role) {
-    case 'orchestrator': return 'Orchestrator';
-    case 'planner': return 'Planner';
-    case 'coder': return 'Coder';
-    case 'tester': return 'Tester';
-    case 'reviewer': return 'Reviewer';
-    default: return role || 'Unknown';
-  }
 }
 
 export function truncateMiddle(
@@ -230,53 +219,8 @@ export function formatIsoDateTimeShort(isoString: string | null | undefined): st
   return datePart;
 }
 
-const TICKET_ID_REGEX = /^([a-zA-Z]+)[-_]?([0-9]+)(.*)$/;
-
-export function compareTicketIds(a: string, b: string): number {
-  const cleanA = a.trim();
-  const cleanB = b.trim();
-
-  if (cleanA === cleanB) {
-    return 0;
-  }
-  if (cleanA === '') {
-    return -1;
-  }
-  if (cleanB === '') {
-    return 1;
-  }
-
-  const matchA = TICKET_ID_REGEX.exec(cleanA);
-  const matchB = TICKET_ID_REGEX.exec(cleanB);
-
-  const hasMatchA = matchA !== null;
-  const hasMatchB = matchB !== null;
-
-  if (hasMatchA && hasMatchB) {
-    const prefixA = matchA[1]!.toUpperCase();
-    const prefixB = matchB[1]!.toUpperCase();
-    if (prefixA !== prefixB) {
-      return prefixA < prefixB ? -1 : 1;
-    }
-
-    const numA = parseInt(matchA[2]!, 10);
-    const numB = parseInt(matchB[2]!, 10);
-
-    if (numA !== numB) {
-      return numA - numB;
-    }
-
-    return cleanA < cleanB ? -1 : cleanA > cleanB ? 1 : 0;
-  }
-
-  if (hasMatchA && !hasMatchB) {
-    return -1;
-  }
-  if (!hasMatchA && hasMatchB) {
-    return 1;
-  }
-
-  return cleanA < cleanB ? -1 : cleanA > cleanB ? 1 : 0;
+export function compareTicketIds(a: string, b: string, policy?: TicketRecognitionPolicy): number {
+  return compareConfiguredTicketIds(a, b, policy);
 }
 
 export interface TicketDateComparable {
@@ -299,7 +243,8 @@ export function getEffectiveCompletionDateMs(item: TicketDateComparable): number
 
 export function compareTicketCompletionDate(
   a: TicketDateComparable,
-  b: TicketDateComparable
+  b: TicketDateComparable,
+  policy?: TicketRecognitionPolicy
 ): number {
   const dateA = getEffectiveCompletionDateMs(a);
   const dateB = getEffectiveCompletionDateMs(b);
@@ -313,13 +258,14 @@ export function compareTicketCompletionDate(
   if (dateA !== null && dateB !== null && dateA !== dateB) {
     return dateB - dateA;
   }
-  return compareTicketIds(a.ticket_id ?? '', b.ticket_id ?? '');
+  return compareTicketIds(a.ticket_id ?? '', b.ticket_id ?? '', policy);
 }
 
 export function deriveTicketComparisonRows(
   ledgers: readonly AgenticMetricsLedger[],
   sortField?: ComparisonSortField,
-  sortOrder: ComparisonSortOrder = 'desc'
+  sortOrder: ComparisonSortOrder = 'desc',
+  policy?: TicketRecognitionPolicy
 ): TicketComparisonRow[] {
   const rows: TicketComparisonRow[] = ledgers.map((ledger) => {
     const tid = ledger.ticket_id && ledger.ticket_id.length > 0 ? ledger.ticket_id : 'unknown';
@@ -376,7 +322,7 @@ export function deriveTicketComparisonRows(
         return startBStr.localeCompare(startAStr);
       }
 
-      return compareTicketIds(b.ticket_id, a.ticket_id);
+      return compareTicketIds(b.ticket_id, a.ticket_id, policy);
     });
   }
 
@@ -412,10 +358,10 @@ export function deriveTicketComparisonRows(
         break;
       }
       case 'ticket_id':
-        cmp = compareTicketIds(a.ticket_id, b.ticket_id);
+        cmp = compareTicketIds(a.ticket_id, b.ticket_id, policy);
         break;
       case 'cost_usd':
-        return compareCosts(a.cost_usd, b.cost_usd, sortOrder === 'asc') || compareTicketIds(a.ticket_id, b.ticket_id);
+        return compareCosts(a.cost_usd, b.cost_usd, sortOrder === 'asc') || compareTicketIds(a.ticket_id, b.ticket_id, policy);
       case 'active_duration_seconds':
         cmp = a.active_duration_seconds - b.active_duration_seconds;
         break;
@@ -439,7 +385,7 @@ export function deriveTicketComparisonRows(
     if (cmp !== 0) {
       return sortOrder === 'asc' ? cmp : -cmp;
     }
-    return compareTicketIds(a.ticket_id, b.ticket_id);
+    return compareTicketIds(a.ticket_id, b.ticket_id, policy);
   });
 }
 
@@ -477,60 +423,31 @@ export function canonicalTicketType(raw: string): string {
   }
 }
 
-/**
- * Extracts ticket prefix in uppercase (e.g. "AL" from "AL-12" or "GEN" from "GEN_4").
- * Returns an empty string if no valid alphabetic prefix is identified.
- */
-export function extractTicketPrefix(ticketId: string): string {
-  const clean = ticketId.trim();
-  if (!clean) return '';
-
-  const delimMatch = /^([A-Za-z]+)[-_]/.exec(clean);
-  if (delimMatch) {
-    return delimMatch[1].toUpperCase();
+/** Discover only prefix spelling present in a numeric recorded identifier. */
+export function extractTicketPrefix(ticketId: string, policy?: TicketRecognitionPolicy): string {
+  if (policy) {
+    const matching = policy.prefixes.filter((prefix) => ticketNumber(ticketId, prefix, policy.caseInsensitive) !== null);
+    matching.sort((a, b) => b.length - a.length || compareText(a, b));
+    if (matching.length > 0) return matching[0]!;
   }
-
-  const digitMatch = /^([A-Za-z]+)[0-9]/.exec(clean);
-  if (digitMatch) {
-    return digitMatch[1].toUpperCase();
-  }
-
-  return '';
+  const match = /^(.*?[^0-9])[0-9]+$/.exec(ticketId);
+  return match?.[1] ?? '';
 }
 
-/**
- * Combines discovered ticket prefixes with configured prefixes, deduplicates,
- * trims tokens, normalizes to uppercase, sorts ascending alphabetically,
- * and falls back to canonical defaults ['AL', 'GEN', 'PO'] if empty.
- */
+/** Preserve literal configured/observed spelling; empty evidence produces no options. */
 export function combineDistinctPrefixes(
   discovered: readonly string[],
-  configured?: readonly string[]
+  configured: readonly string[] = [],
+  caseInsensitive?: boolean
 ): readonly string[] {
-  const prefixSet = new Set<string>();
-
-  const addToken = (token: string) => {
-    const clean = token.replace(/^[\s-_]+|[\s-_]+$/g, '');
-    if (clean) {
-      prefixSet.add(clean.toUpperCase());
-    }
-  };
-
-  for (const item of discovered) {
-    addToken(item);
+  const values = new Map<string, string>();
+  for (const token of [...configured, ...discovered]) {
+    const clean = token.trim();
+    if (!clean) continue;
+    const key = caseInsensitive ? lowercaseTicketText(clean) : clean;
+    if (!values.has(key)) values.set(key, clean);
   }
-
-  if (configured) {
-    for (const item of configured) {
-      addToken(item);
-    }
-  }
-
-  if (prefixSet.size === 0) {
-    return ['AL', 'GEN', 'PO'];
-  }
-
-  return Array.from(prefixSet).sort((a, b) => a.localeCompare(b));
+  return [...values.values()].sort(compareText);
 }
 
 /**
@@ -555,26 +472,16 @@ export function filterLedgersByTicketTypes(
   });
 }
 
-/**
- * Filters ledgers by workspace prefixes case-insensitively.
- * Returns all ledgers if prefixes is empty or contains 'all'.
- */
+/** A selected literal prefix may overlap another selected prefix. */
 export function filterLedgersByPrefixes(
   ledgers: readonly AgenticMetricsLedger[],
-  prefixes: readonly string[]
+  prefixes: readonly string[],
+  caseInsensitive: boolean | undefined
 ): readonly AgenticMetricsLedger[] {
-  if (prefixes.length === 0) return ledgers;
-  const normalizedPrefixes = prefixes.map((p) => p.trim().toUpperCase()).filter(Boolean);
-  if (normalizedPrefixes.length === 0 || normalizedPrefixes.includes('ALL')) {
-    return ledgers;
-  }
-  const prefixSet = new Set(normalizedPrefixes);
-
-  return ledgers.filter((ledger) => {
-    if (!ledger.ticket_id) return false;
-    const p = extractTicketPrefix(ledger.ticket_id);
-    return prefixSet.has(p);
-  });
+  if (caseInsensitive === undefined || prefixes.length === 0) return ledgers;
+  const selected = prefixes.map((prefix) => prefix.trim()).filter(Boolean);
+  if (selected.length === 0) return ledgers;
+  return ledgers.filter((ledger) => selected.some((prefix) => ticketNumber(ledger.ticket_id ?? '', prefix, caseInsensitive) !== null));
 }
 
 export function formatChartAxisTimestamp(

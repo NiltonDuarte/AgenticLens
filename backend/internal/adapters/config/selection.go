@@ -5,11 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"agenticlens/internal/adapters/filesystem"
 	"gopkg.in/yaml.v3"
 )
 
@@ -45,10 +45,10 @@ func SelectConfig(start string) (SelectedConfig, error) {
 	// Only Git metadata establishes the base; directory naming is not authority.
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	command := exec.CommandContext(ctx, "git", "-C", result.Project, "worktree", "list", "--porcelain")
+	command := filesystem.RepositoryGitCommand(ctx, result.Project, "worktree", "list", "--porcelain", "-z")
 	output, gitErr := command.Output()
 	if gitErr == nil {
-		for _, line := range strings.Split(string(output), "\n") {
+		for _, line := range strings.Split(string(output), "\x00") {
 			if strings.HasPrefix(line, "worktree ") {
 				base := strings.TrimPrefix(line, "worktree ")
 				result.LocalPath = filepath.Join(base, ".agenticlens-config.local.yaml")

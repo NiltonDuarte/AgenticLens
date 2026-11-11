@@ -9,9 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-
-	adaptersconfig "agenticlens/internal/adapters/config"
-	"agenticlens/internal/domain"
 )
 
 type installTransactionFixture struct {
@@ -25,7 +22,7 @@ func newInstallTransactionFixture(t *testing.T, source string) installTransactio
 	t.Helper()
 	repo := t.TempDir()
 	state := filepath.Join(repo, ".capture", "projects", "Fixture", "worktrees", "1")
-	data, err := adaptersconfig.GenerateDefaultYAMLForVersion("v9.8.7", "Fixture", "workspaces", "", []string{"src"}, []domain.TicketPrefix{{Prefix: "T"}})
+	data, err := fixtureSharedYAML(t, "Fixture", "workspaces")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -332,6 +332,8 @@ describe('Navbar Component', () => {
       ok: true,
       json: async () => ({
         project_name: 'FetchedProject',
+        case_insensitive: true,
+        role_mappings: {},
         prefixes: [],
         workspaces_dir: 'workspaces',
         role_order: [],

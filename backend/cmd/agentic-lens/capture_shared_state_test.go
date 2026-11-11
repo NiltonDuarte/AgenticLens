@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -38,12 +37,16 @@ func TestCaptureSharedDatabasePublishesSameTicketToExactWorktrees(t *testing.T) 
 		}
 	}
 	git("init", "-qb", "main")
-	cfg := "project_name: SharedCLI\ntelemetry:\n  capture:\n    state_dir: " + strconv.Quote(base) + "\nticket:\n  prefixes: [TEST]\nworkspaces:\n  dir: records\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+	cfg := "agenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: SharedCLI\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: \"TEST\"\n      description: Fixture ticket\nworkspaces:\n  artifacts: []\n  dir: records\ncode_metrics:\n  base_branch: fixture-base\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 	if err := os.WriteFile(filepath.Join(repo, ".agenticlens-config.yaml"), []byte(cfg), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := writeCaptureFixtureLocal(t, captureGenerationFixture{project: repo, state: base, store: source}, []byte("telemetry:\n  capture:\n    enabled: true\n")); err != nil {
 		t.Fatal(err)
 	}
 	git("add", ".agenticlens-config.yaml")
 	git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "fixture")
+	git("branch", "fixture-base")
 	a, b := filepath.Join(root, "a"), filepath.Join(root, "b")
 	git("worktree", "add", "-qb", "a", a)
 	git("worktree", "add", "-qb", "b", b)
@@ -141,7 +144,7 @@ func TestCaptureSharedDatabasePublishesSameTicketToExactWorktrees(t *testing.T) 
 func TestCaptureConfigUpdateRefusesLegacyStateWithoutConfiguredPath(t *testing.T) {
 	root := t.TempDir()
 	config := filepath.Join(root, ".agenticlens-config.yaml")
-	body := []byte("project_name: LegacyProject\nticket:\n  prefixes: [TEST]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n")
+	body := []byte("workspaces:\n  artifacts: []\n  dir: records\nagenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: LegacyProject\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: \"TEST\"\n      description: Fixture ticket\ncode_metrics:\n  base_branch: fixture-base\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n")
 	if err := os.WriteFile(config, body, 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -176,11 +179,11 @@ func TestCaptureConfigUpdateRefusesLegacyStateWithoutConfiguredPath(t *testing.T
 func TestCaptureInstallIgnoresLogicalRegistryAndPreservesUserRules(t *testing.T) {
 	project := t.TempDir()
 	source := t.TempDir()
-	config := []byte("project_name: LocalCapture\ntelemetry:\n  capture:\n    state_dir: .capture-local\nticket:\n  prefixes: [TEST]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n")
+	config := []byte("workspaces:\n  artifacts: []\n  dir: records\nagenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: LocalCapture\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: \"TEST\"\n      description: Fixture ticket\ncode_metrics:\n  base_branch: fixture-base\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n")
 	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), config, 0600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.local.yaml"), []byte("telemetry:\n  capture:\n    enabled: true\n    state_dir: .capture-local\n"), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.local.yaml"), []byte("telemetry:\n  capture:\n    pass_timeout_ms: 3000\n    max_sessions: 256\n    max_source_bytes: 67108864\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 5000\n    commit_warning: true\n    enabled: true\n    state_dir: .capture-local\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	ownerRules := []byte("# Owner rules retained\n/retained-legacy/\nunrelated-output\n")

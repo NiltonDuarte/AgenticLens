@@ -371,9 +371,7 @@ export interface TicketArtifactItem {
 
 export interface TicketArtifacts {
   readonly ticket_id: string;
-  readonly contract_content?: string | null;
-  readonly summary_content?: string | null;
-  readonly items?: readonly TicketArtifactItem[];
+  readonly items: readonly TicketArtifactItem[];
 }
 
 export interface WorkspaceDetail {
@@ -449,6 +447,9 @@ export interface ProjectConfigResponse {
   readonly prefixes: readonly TicketPrefixConfig[];
   readonly workspaces_dir: string;
   readonly role_order: readonly string[];
+  readonly role_mappings: Readonly<Record<string, string>>;
+  readonly case_insensitive: boolean;
+  readonly live_poll_interval_ms?: number;
   readonly version: string;
 }
 

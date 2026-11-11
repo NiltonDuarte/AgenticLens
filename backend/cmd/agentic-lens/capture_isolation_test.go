@@ -96,7 +96,7 @@ func TestCaptureCopiedCanonicalBaselineCannotCrossProjects(t *testing.T) {
 		t.Fatal(err)
 	}
 	before := readCaptureFile(t, other.output)
-	cmd := exec.Command(cliBinaryPath, other.args(t, "--allow-empty")...)
+	cmd := exec.Command(cliBinaryPath, other.args(t, "--session-id", "fixture-empty-root")...)
 	cmd.Dir = other.project
 	if out, err := cmd.CombinedOutput(); err == nil {
 		t.Fatalf("copied baseline accepted as local: %s", out)
@@ -186,7 +186,7 @@ func TestCaptureAutomaticSharedStoreAndTicketStayInExactProjects(t *testing.T) {
 	base := t.TempDir()
 	fixtures := []captureGenerationFixture{first, second}
 	for index, f := range fixtures {
-		writeCaptureSuccessfulPublicationPolicy(t, f.project, base, false)
+		writeCaptureSuccessfulPublicationPolicy(t, f.project, base)
 		scoped, err := capture.ProjectState(base, f.project)
 		if err != nil {
 			t.Fatal(err)
@@ -219,7 +219,7 @@ func TestCaptureAutomaticSharedStoreAndTicketStayInExactProjects(t *testing.T) {
 		t.Cleanup(func() {
 			defer func() {
 				// Stop future passes/handoffs even if a callback or assertion failed.
-				if err := writeCaptureFixtureLocal(t, f, []byte("telemetry:\n  capture:\n    enabled: false\n")); err != nil {
+				if err := writeCaptureFixtureLocal(t, f, []byte("telemetry:\n  capture:\n    pass_timeout_ms: 3000\n    max_sessions: 256\n    max_source_bytes: 67108864\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 5000\n    commit_warning: true\n    enabled: false\n")); err != nil {
 					t.Error(err)
 				}
 				captureCleanupWorkers(t, completion)
@@ -297,7 +297,7 @@ func TestCaptureAutomaticSharedStoreAndTicketStayInExactProjects(t *testing.T) {
 
 func TestCaptureWorkerCompletionIncludesDelayedNativeStartup(t *testing.T) {
 	f := newCaptureGenerationFixture(t)
-	if err := writeCaptureFixtureLocal(t, f, []byte("telemetry:\n  capture:\n    enabled: true\n")); err != nil {
+	if err := writeCaptureFixtureLocal(t, f, []byte("telemetry:\n  capture:\n    pass_timeout_ms: 3000\n    max_sessions: 256\n    max_source_bytes: 67108864\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 5000\n    commit_warning: true\n    enabled: true\n")); err != nil {
 		t.Fatal(err)
 	}
 	store, err := capture.OpenProject(f.state, f.project)
@@ -460,7 +460,7 @@ func TestCaptureInstallerUsesLocalAndExplicitStatePolicy(t *testing.T) {
 			want := "shared-state"
 			if level != "shared" {
 				want = "local-state"
-				if err := writeCaptureFixtureLocal(t, f, []byte("telemetry:\n  capture:\n    enabled: false\n    state_dir: local-state\n")); err != nil {
+				if err := writeCaptureFixtureLocal(t, f, []byte("telemetry:\n  capture:\n    pass_timeout_ms: 3000\n    max_sessions: 256\n    max_source_bytes: 67108864\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 5000\n    commit_warning: true\n    enabled: false\n    state_dir: local-state\n")); err != nil {
 					t.Fatal(err)
 				}
 			}

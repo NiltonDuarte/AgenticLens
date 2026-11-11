@@ -1,55 +1,98 @@
 package git
 
 import (
-	"agenticlens/internal/adapters/config"
 	"bytes"
-	"errors"
 	"fmt"
+	"os"
 	"os/exec"
-	"path"
-	"path/filepath"
 	"strconv"
 	"strings"
 
 	"agenticlens/internal/domain"
 )
 
-// NumstatEntry represents lines added, lines deleted, and file path from git diff --numstat.
+// NumstatEntry retains one NUL-delimited Git numstat record. Rename records
+// belong to their destination. Binary records have no line measurements.
 type NumstatEntry struct {
 	Added   int64
 	Deleted int64
 	Path    string
+	Binary  bool
 }
 
-// ParseNumstatOutput parses raw git diff --numstat stdout into a list of NumstatEntry.
-func ParseNumstatOutput(stdout string) []NumstatEntry {
-	var entries []NumstatEntry
-	lines := strings.Split(stdout, "\n")
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if trimmed == "" {
-			continue
+// ParseNumstatOutput parses git diff --numstat -z without interpreting or
+// trimming filenames. Malformed records fail the measurement instead of being
+// silently omitted.
+func ParseNumstatOutput(stdout string) ([]NumstatEntry, error) {
+	entries := make([]NumstatEntry, 0)
+	if stdout == "" {
+		return entries, nil
+	}
+	if !strings.HasSuffix(stdout, "\x00") {
+		return nil, fmt.Errorf("Git numstat output is not NUL-terminated")
+	}
+	records := strings.Split(stdout[:len(stdout)-1], "\x00")
+	for i := 0; i < len(records); i++ {
+		fields := strings.SplitN(records[i], "\t", 3)
+		if len(fields) != 3 {
+			return nil, fmt.Errorf("invalid Git numstat record %d: expected line counts and a path", i+1)
 		}
-		parts := strings.Fields(trimmed)
-		if len(parts) >= 3 {
-			added, err1 := strconv.ParseInt(parts[0], 10, 64)
-			deleted, err2 := strconv.ParseInt(parts[1], 10, 64)
-			if err1 == nil && err2 == nil {
-				// Rejoin path in case it had spaces
-				filePath := strings.Join(parts[2:], " ")
-				entries = append(entries, NumstatEntry{
-					Added:   added,
-					Deleted: deleted,
-					Path:    filePath,
-				})
+		filePath := fields[2]
+		if filePath == "" {
+			if i+2 >= len(records) || records[i+1] == "" || records[i+2] == "" {
+				return nil, fmt.Errorf("invalid Git numstat rename record %d: missing source or destination", i+1)
+			}
+			filePath = records[i+2]
+			i += 2
+		}
+		entry := NumstatEntry{Path: filePath}
+		if fields[0] == "-" && fields[1] == "-" {
+			entry.Binary = true
+		} else {
+			var err error
+			entry.Added, err = parseLineCount(fields[0])
+			if err != nil {
+				return nil, fmt.Errorf("invalid added line count for %q: %w", filePath, err)
+			}
+			entry.Deleted, err = parseLineCount(fields[1])
+			if err != nil {
+				return nil, fmt.Errorf("invalid deleted line count for %q: %w", filePath, err)
 			}
 		}
+		entries = append(entries, entry)
 	}
-	return entries
+	return entries, nil
+}
+
+func parseLineCount(value string) (int64, error) {
+	if value == "" {
+		return 0, fmt.Errorf("expected a nonnegative decimal integer")
+	}
+	for _, digit := range value {
+		if digit < '0' || digit > '9' {
+			return 0, fmt.Errorf("expected a nonnegative decimal integer, got %q", value)
+		}
+	}
+	count, err := strconv.ParseInt(value, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
 }
 
 func runGitCommandInDir(dir string, args ...string) (string, error) {
+	return runGitCommandWithEnvironment(dir, nil, args...)
+}
+
+func runMetricGitCommandInDir(dir string, args ...string) (string, error) {
+	return runGitCommandWithEnvironment(dir, historyGitEnvironment(os.Environ()), args...)
+}
+
+func runGitCommandWithEnvironment(dir string, environment []string, args ...string) (string, error) {
 	cmd := exec.Command("git", args...)
+	if environment != nil {
+		cmd.Env = environment
+	}
 	if dir != "" {
 		cmd.Dir = dir
 	}
@@ -57,7 +100,11 @@ func runGitCommandInDir(dir string, args ...string) (string, error) {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return "", err
+		detail := strings.TrimSpace(stderr.String())
+		if detail != "" {
+			return "", fmt.Errorf("git %s: %s: %w", args[0], detail, err)
+		}
+		return "", fmt.Errorf("git %s: %w", args[0], err)
 	}
 	return stdout.String(), nil
 }
@@ -66,170 +113,97 @@ func runGitCommand(args ...string) (string, error) {
 	return runGitCommandInDir("", args...)
 }
 
-// ResolveBaseBranch resolves the upstream comparison branch using a 4-tier strategy.
+func resolveCommit(repoRoot, ref string) (string, error) {
+	resolved, err := runMetricGitCommandInDir(repoRoot, "rev-parse", "--verify", "--end-of-options", ref+"^{commit}")
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(resolved), nil
+}
+
+func configuredBase(repoRoot string, cfg *domain.ProjectConfig) (string, string, error) {
+	if cfg == nil || strings.TrimSpace(cfg.CodeMetrics.BaseBranch) == "" {
+		return "", "", fmt.Errorf("code_metrics.base_branch is required: configure an explicit comparison ref in shared project configuration")
+	}
+	branch := strings.TrimSpace(cfg.CodeMetrics.BaseBranch)
+	commit, err := resolveCommit(repoRoot, branch)
+	if err != nil {
+		return "", "", fmt.Errorf("code_metrics.base_branch %q does not resolve to a commit in the target repository: %w", branch, err)
+	}
+	return branch, commit, nil
+}
+
+// ResolveBaseBranch validates only the explicitly configured comparison ref.
+// It neither discovers other branches nor fetches unavailable refs.
 func ResolveBaseBranch(repoRoot string, cfg *domain.ProjectConfig) (string, error) {
-	// Tier 1: Explicit Configuration Tier
-	if cfg != nil {
-		configured := strings.TrimSpace(cfg.CodeMetrics.BaseBranch)
-		if configured != "" {
-			_, err := runGitCommandInDir(repoRoot, "rev-parse", "--verify", "--quiet", configured+"^{commit}")
-			if err == nil {
-				return configured, nil
-			}
-			return "", fmt.Errorf("configured base branch %q not found: cannot resolve upstream base branch in repository", configured)
-		}
-	}
-
-	// Tier 2: Symbolic Reference Remote Tracking Tier
-	symOut, err := runGitCommandInDir(repoRoot, "symbolic-ref", "refs/remotes/origin/HEAD")
-	if err == nil {
-		ref := strings.TrimSpace(symOut)
-		ref = strings.TrimPrefix(ref, "refs/remotes/")
-		if ref != "" {
-			_, err := runGitCommandInDir(repoRoot, "rev-parse", "--verify", "--quiet", ref+"^{commit}")
-			if err == nil {
-				return ref, nil
-			}
-		}
-	}
-
-	// Tier 3: Candidate Probing Tier
-	candidates := []string{
-		path.Join("origin", "main"),
-		"main",
-		path.Join("origin", "master"),
-		"master",
-	}
-	for _, candidate := range candidates {
-		_, err := runGitCommandInDir(repoRoot, "rev-parse", "--verify", "--quiet", candidate+"^{commit}")
-		if err == nil {
-			return candidate, nil
-		}
-	}
-
-	// Tier 4: Explicit Failure Invariant
-	return "", fmt.Errorf("unable to resolve upstream base branch: configure 'code_metrics.base_branch' in .agenticlens-config.yaml")
+	branch, _, err := configuredBase(repoRoot, cfg)
+	return branch, err
 }
 
-// ValidateSourceRoots verifies that code_metrics.source_roots contains at least one non-empty source directory.
-func ValidateSourceRoots(sourceRoots []string) error {
-	if len(sourceRoots) == 0 {
-		return fmt.Errorf("code_metrics.source_roots is empty or unconfigured: configure 'code_metrics.source_roots' in .agenticlens-config.yaml")
-	}
-	hasNonEmpty := false
-	for _, folder := range sourceRoots {
-		if strings.TrimSpace(folder) != "" {
-			hasNonEmpty = true
-			break
-		}
-	}
-	if !hasNonEmpty {
-		return fmt.Errorf("code_metrics.source_roots is empty or unconfigured: configure 'code_metrics.source_roots' in .agenticlens-config.yaml")
-	}
-	return nil
-}
-
-// IsMonitoredSourcePath reports whether a file path falls within configured source folders or configured test/production inclusion patterns.
-func IsMonitoredSourcePath(path string, cfg *ClassificationConfig) bool {
-	cleanPath := filepath.ToSlash(strings.TrimSpace(path))
-	cleanPath = strings.TrimPrefix(cleanPath, "./")
-	cleanPath = strings.TrimPrefix(cleanPath, "/")
-	if cleanPath == "" {
-		return false
-	}
-
-	var folders []string
-	if cfg != nil {
-		folders = cfg.SourceRoots
-	}
-
-	for _, folder := range folders {
-		normFolder := filepath.ToSlash(strings.TrimSpace(folder))
-		normFolder = strings.Trim(normFolder, "/")
-		if normFolder == "" {
-			continue
-		}
-		if cleanPath == normFolder || strings.HasPrefix(cleanPath, normFolder+"/") {
-			return true
-		}
-	}
-
-	if cfg != nil {
-		for _, pattern := range cfg.Include {
-			if matchPattern(pattern, cleanPath) {
-				return true
-			}
-		}
-		for _, pattern := range cfg.ProdPatterns {
-			if matchPattern(pattern, cleanPath) {
-				return true
-			}
-		}
-		for _, pattern := range cfg.TestPatterns {
-			if matchPattern(pattern, cleanPath) {
-				return true
-			}
-		}
-	}
-
-	return false
-}
-
-// ComputeCodeFactsAtRef measures committed code changes at an explicit Git ref.
-// Ticket names and branch-name heuristics are intentionally not used.
+// ComputeCodeFactsAtRef measures an explicitly selected committed target in the
+// invocation repository. Callers selecting another project use the directory
+// variant so repository ownership never depends on global working-directory changes.
 func ComputeCodeFactsAtRef(codeRef string, cfg *ClassificationConfig) (domain.CodeFacts, error) {
+	return ComputeCodeFactsAtRefInDir("", codeRef, cfg)
+}
+
+// ComputeCodeFactsAtRefInDir measures the target's net committed contribution
+// since its merge base with the configured comparison ref. Only explicitly
+// classified production/test files contribute to the totals.
+func ComputeCodeFactsAtRefInDir(repoRoot, codeRef string, cfg *ClassificationConfig) (domain.CodeFacts, error) {
 	ref := strings.TrimSpace(codeRef)
 	if ref == "" {
-		return domain.CodeFacts{}, fmt.Errorf("code ref is required; pass --code-ref with a branch or commit")
+		return domain.CodeFacts{}, fmt.Errorf("code ref is required; pass --code-ref with a branch, tag or commit")
 	}
-	if _, err := runGitCommand("rev-parse", "--show-toplevel"); err != nil {
-		if ref == "HEAD" {
-			return domain.CodeFacts{SDLCIterations: 1}, nil
-		}
-		return domain.CodeFacts{}, fmt.Errorf("cannot resolve code ref outside a Git repository")
+	if _, err := runMetricGitCommandInDir(repoRoot, "rev-parse", "--show-toplevel"); err != nil {
+		return domain.CodeFacts{}, fmt.Errorf("cannot measure code ref %q in the target Git repository: %w", ref, err)
 	}
 	if cfg == nil {
-		loaded, err := LoadConfig("")
-		if err == nil {
-			cfg = loaded
-		} else if !errors.Is(err, config.ErrConfigNotFound) {
+		loaded, err := LoadConfig(repoRoot)
+		if err != nil {
 			return domain.CodeFacts{}, fmt.Errorf("loading Git classification configuration: %w", err)
 		}
+		cfg = loaded
 	}
-	if cfg == nil {
-		return domain.CodeFacts{}, ValidateSourceRoots(nil)
-	}
-	if err := ValidateSourceRoots(cfg.SourceRoots); err != nil {
+	if err := ValidateClassificationConfig(cfg); err != nil {
 		return domain.CodeFacts{}, err
 	}
-
-	projectConfig := &domain.ProjectConfig{CodeMetrics: domain.CodeMetricsConfig{BaseBranch: cfg.BaseBranch}}
-	baseBranch, err := ResolveBaseBranch("", projectConfig)
+	project := &domain.ProjectConfig{CodeMetrics: domain.CodeMetricsConfig{BaseBranch: cfg.BaseBranch}}
+	baseName, baseCommit, err := configuredBase(repoRoot, project)
 	if err != nil {
 		return domain.CodeFacts{}, err
 	}
-	resolved, err := runGitCommand("rev-parse", "--verify", "--end-of-options", ref+"^{commit}")
+	targetCommit, err := resolveCommit(repoRoot, ref)
 	if err != nil {
-		return domain.CodeFacts{}, fmt.Errorf("invalid code ref %q", ref)
+		return domain.CodeFacts{}, fmt.Errorf("code ref %q does not resolve to a commit in the target repository: %w", ref, err)
 	}
-	out, err := runGitCommand("diff", "--numstat", baseBranch+"..."+strings.TrimSpace(resolved), "--")
+	mergeBase, err := runMetricGitCommandInDir(repoRoot, "merge-base", baseCommit, targetCommit)
 	if err != nil {
-		return domain.CodeFacts{}, fmt.Errorf("comparing code ref %q with %q: %w", ref, baseBranch, err)
+		return domain.CodeFacts{}, fmt.Errorf("finding merge base of code ref %q and configured base %q: %w", ref, baseName, err)
 	}
-
+	out, err := runMetricGitCommandInDir(repoRoot, "diff", "--numstat", "-z", "--no-ext-diff", "--no-textconv", "--find-renames", strings.TrimSpace(mergeBase), targetCommit, "--")
+	if err != nil {
+		return domain.CodeFacts{}, fmt.Errorf("comparing code ref %q with configured base %q: %w", ref, baseName, err)
+	}
+	entries, err := ParseNumstatOutput(out)
+	if err != nil {
+		return domain.CodeFacts{}, err
+	}
 	var facts domain.CodeFacts
-	facts.SDLCIterations = 1
-	for _, entry := range ParseNumstatOutput(out) {
-		if !IsMonitoredSourcePath(entry.Path, cfg) {
+	for _, entry := range entries {
+		category, err := classifyFile(entry.Path, cfg)
+		if err != nil {
+			return domain.CodeFacts{}, err
+		}
+		if category == CategoryOther {
 			continue
 		}
-		category := ClassifyFile(entry.Path, cfg)
-		if category == CategoryIgnored {
+		facts.FilesChanged++
+		if entry.Binary {
 			continue
 		}
 		facts.LinesAdded += entry.Added
 		facts.LinesDeleted += entry.Deleted
-		facts.FilesChanged++
 		switch category {
 		case CategoryTest:
 			facts.TestLinesAdded += entry.Added

@@ -267,7 +267,7 @@ func TestFormatMarkdownMetricsTable_WithAnomalies(t *testing.T) {
 			if hasWarning {
 				facts.Anomalies = []domain.Anomaly{{RuleID: domain.RuleToolRetryStreak, Severity: domain.SeverityWarning, Context: domain.AnomalyContext{ToolName: &toolBash, Count: &count5}}}
 			}
-			metrics := domain.DeriveMetricsLedger(facts, domain.DefaultProjectConfig())
+			metrics := domain.DeriveMetricsLedger(facts, fixtureReadPolicy(t))
 			tableMD := adapters.FormatMarkdownMetricsTable(metrics)
 			if strings.Contains(tableMD, "No execution anomalies detected (clean session)") || strings.Contains(tableMD, "not recorded for the full ledger") || strings.Contains(tableMD, "not recorded for every required owner/group") {
 				t.Fatalf("cached analysis was declared absent or unqualified clean: %s", tableMD)
@@ -486,12 +486,13 @@ func TestFormatMarkdownMetricsTable_SingleRootAndZeroSubagents(t *testing.T) {
 				ByRole:                map[domain.AgentRole]float64{},
 			},
 			ContextWindowHealth: domain.ContextWindowHealth{
-				Status:              "HEALTHY",
-				RootPeakTokens:      60000,
-				RootSaturationPct:   30.0,
-				SubagentsPeakTokens: 0,
-				SubagentsPeakRole:   "none",
-				Compactions:         0,
+				Status:               "HEALTHY",
+				HealthyCeilingTokens: 200000,
+				RootPeakTokens:       60000,
+				RootSaturationPct:    30.0,
+				SubagentsPeakTokens:  0,
+				SubagentsPeakRole:    "none",
+				Compactions:          0,
 			},
 		},
 		Totals: domain.GroupedMetric{

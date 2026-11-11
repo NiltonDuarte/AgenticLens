@@ -1019,10 +1019,6 @@ func (transcript Transcript) SessionFacts(policies ...domain.GenerationPolicy) (
 	if err != nil {
 		return nil, fmt.Errorf("grouping Codex facts by session: %w", err)
 	}
-	completeOwners := transcript.completeOwners
-	if completeOwners == nil && len(transcript.Warnings) == 0 {
-		completeOwners = sessionIDs(sessions)
-	}
 	if len(transcript.Warnings) > 0 && transcript.sessions == nil {
 		for i, owner := range sessions {
 			if len(owner.Skills) == 0 {
@@ -1033,16 +1029,15 @@ func (transcript Transcript) SessionFacts(policies ...domain.GenerationPolicy) (
 			}
 		}
 	}
-	policy := domain.DefaultGenerationPolicy()
+	// Source grouping records occurrences only. The owning operation calculates
+	// anomaly summaries after owner reconciliation with explicit project thresholds.
+	for i := range sessions {
+		sessions[i].Anomalies = nil
+	}
 	if len(policies) > 0 {
-		policy = policies[0]
+		sessions = domain.ProjectGenerationFacts(domain.AgenticFactLedger{Sessions: sessions}, policies[0]).Sessions
 	}
-	facts, err := domain.PersistSourceAnomalySummariesWithPolicy(domain.AgenticFactLedger{Sessions: sessions}, domain.SourceEvents{Events: transcript.Events, CompleteSessionIDs: completeOwners}, policy)
-	facts = domain.ProjectGenerationFacts(facts, policy)
-	if err != nil {
-		return nil, err
-	}
-	return facts.Sessions, nil
+	return sessions, nil
 }
 
 // CombineTranscripts merges a discovered root thread and its child threads

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { fetchFleetSummary, fetchWorkspaces, fetchWorkspaceById, fetchWorkspaceLedgers, fetchWorkspaceEvents, fetchVersion, fetchProjectConfig, } from './client';
-import { mockFleetSummary, mockWorkspaceDetails, mockAgenticMetricsLedgers, } from '../test/fixtures/mockData';
+import { mockFleetSummary, mockWorkspaceDetails, mockAgenticMetricsLedgers, mockProjectConfig, } from '../test/fixtures/mockData';
 describe('Boundary API Client', () => {
     beforeEach(() => {
         vi.restoreAllMocks();
@@ -35,12 +35,24 @@ describe('Boundary API Client', () => {
             ['ledger malformed task link', () => fetchWorkspaceLedgers(), [{ ...ledger, facts: { ...ledger.facts, sessions: [{ id: 'owner', invocations: [], tools: [], task_links: [{ parent_turn: '1', cost_usd: null, cost_evidence: { state: 'unavailable', known_subtotal_usd: null } }] }] } }]],
             ['comparison malformed workflow', () => fetchWorkspaces(), [{ ...ledger, workflow_efficiency: { ...ledger.workflow_efficiency, context_window_health: null } }]],
             ['detail missing ledger', () => fetchWorkspaceById('AL-1'), { ...detail, ledger: null }],
+            ['detail missing items', () => fetchWorkspaceById('AL-1'), { ...detail, artifacts: {ticket_id: 'AL-1'} }],
+            ['detail null items', () => fetchWorkspaceById('AL-1'), { ...detail, artifacts: {ticket_id: 'AL-1', items: null} }],
             ['detail malformed artifact', () => fetchWorkspaceById('AL-1'), { ...detail, artifacts: { ticket_id: 'AL-1', items: [{ path: 'SUMMARY.md', content: 42 }] } }],
             ['detail malformed artifact description', () => fetchWorkspaceById('AL-1'), { ...detail, artifacts: { ticket_id: 'AL-1', items: [{ path: 'SUMMARY.md', title: 'Summary', description: null, content: null }] } }],
             ['detail malformed anomaly', () => fetchWorkspaceById('AL-1'), { ...detail, anomalies: [{ rule_id: 'UNKNOWN', severity: 'WARNING', context: {} }] }],
             ['version malformed commit', () => fetchVersion(), { version: 'v1', commit: 123, build_date: '' }],
-            ['config malformed prefix', () => fetchProjectConfig(), { project_name: 'P', workspaces_dir: 'tickets', version: 'v1', role_order: [], prefixes: [null] }],
-            ['config malformed role order', () => fetchProjectConfig(), { project_name: 'P', workspaces_dir: 'tickets', version: 'v1', role_order: [1], prefixes: [] }],
+            ['config malformed prefix', () => fetchProjectConfig(), { ...mockProjectConfig, prefixes: [null] }],
+            ['config malformed role order', () => fetchProjectConfig(), { ...mockProjectConfig, role_order: [1] }],
+            ['config absent case policy', () => fetchProjectConfig(), {...mockProjectConfig, case_insensitive: undefined}],
+            ['config null case policy', () => fetchProjectConfig(), {...mockProjectConfig, case_insensitive: null}],
+            ['config nonboolean case policy', () => fetchProjectConfig(), {...mockProjectConfig, case_insensitive: 'false'}],
+            ['config scalar prefix', () => fetchProjectConfig(), {...mockProjectConfig, prefixes: ['T-']}],
+            ['config blank literal prefix', () => fetchProjectConfig(), {...mockProjectConfig, prefixes: [{prefix: ' ', description: 'Tickets'}]}],
+            ['config blank description', () => fetchProjectConfig(), {...mockProjectConfig, prefixes: [{prefix: '_TEAM', description: ' '}]}],
+            ['config null role mappings', () => fetchProjectConfig(), {...mockProjectConfig, role_mappings: null}],
+            ['config blank alias', () => fetchProjectConfig(), {...mockProjectConfig, role_mappings: {' ': 'planner'}}],
+            ['config nonstring alias', () => fetchProjectConfig(), {...mockProjectConfig, role_mappings: {builder: 42}}],
+            ['config blank role order', () => fetchProjectConfig(), {...mockProjectConfig, role_order: [' ']}],
             ['events malformed envelope', () => fetchWorkspaceEvents('AL-1'), { ticket_id: 'AL-1', events: [] }],
             ['events null', () => fetchWorkspaceEvents('AL-1'), null],
         ];
@@ -96,7 +108,7 @@ describe('Boundary API Client', () => {
             expect((await fetchWorkspaceLedgers()).diagnostics).toEqual([warning, { scope: 'response', message: expect.any(String) }]);
         });
         it.each([
-            [{ ticket_id: 'AL-1' }, { ticket_id: 'AL-1' }],
+            [{ ticket_id: 'AL-1', items: [] }, { ticket_id: 'AL-1', items: [] }],
             [{ ticket_id: 'AL-1', items: [{ path: 'SUMMARY.md', title: 'Summary', content: null }] }, { ticket_id: 'AL-1', items: [{ path: 'SUMMARY.md', title: 'Summary', description: '', content: null }] }],
         ])('accepts omitted optional ledger facts and artifact fields: %j', async (artifacts, expectedArtifacts) => {
             const { anomalies, migration, ...facts } = ledger.facts;
@@ -164,6 +176,19 @@ describe('Boundary API Client', () => {
             vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ...payload, ledger: { ...payload.ledger, facts: { ...payload.ledger.facts, sessions: [session] } } }) }));
             await expect(fetchWorkspaceById('AL-1')).rejects.toThrow(/Invalid workspace detail response/);
         });
+    });
+
+    it.each([
+        ['fleet', () => fetchFleetSummary('all', undefined, undefined, ['all'], ['all','ALL','T[1]-']), mockFleetSummary],
+        ['ledgers', () => fetchWorkspaceLedgers('all', undefined, undefined, ['all'], ['all','ALL','T[1]-']), [mockAgenticMetricsLedgers['AL-1']!]],
+        ['workspaces', () => fetchWorkspaces('all', '', '', undefined, undefined, ['all'], ['all','ALL','T[1]-']), [mockAgenticMetricsLedgers['AL-1']!]],
+    ] as const)('sends literal all prefixes to the %s endpoint separately from the ticket-type sentinel', async (_name, request, payload) => {
+        const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify(payload), {status: 200}));
+        vi.stubGlobal('fetch', fetch);
+        await request();
+        const query = new URL(String(fetch.mock.calls[0]![0]), 'http://fixture.invalid').searchParams;
+        expect(query.getAll('prefix')).toEqual(['all','ALL','T[1]-']);
+        expect(query.has('ticket_type')).toBe(false);
     });
 
     describe('fetchFleetSummary', () => {
@@ -712,6 +737,8 @@ describe('Boundary API Client', () => {
         it('returns live project config on successful HTTP 200 response', async () => {
             const liveConfig = {
                 project_name: 'CustomObserver',
+                case_insensitive: false,
+                role_mappings: {},
                 prefixes: [
                     { prefix: 'FEAT', description: 'Feature tickets', ticket_type: 'feat' },
                 ],

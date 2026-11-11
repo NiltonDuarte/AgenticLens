@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	adaptersconfig "agenticlens/internal/adapters/config"
 	"agenticlens/internal/domain"
 )
 
@@ -45,7 +46,11 @@ CREATE TABLE part(id TEXT PRIMARY KEY,session_id TEXT,message_id TEXT,time_creat
 			t.Error(err)
 		}
 	})
-	service := NewLiveService(hook, domain.DefaultProjectConfig())
+	cfg, err := adaptersconfig.LoadFromFile("../config/testdata/shared-policy.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	service := NewLiveService(hook, cfg)
 	t.Cleanup(func() {
 		if err := service.Close(); err != nil {
 			t.Error(err)

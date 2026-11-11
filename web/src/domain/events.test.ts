@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest';
-import { rebindEvent, selectWorkspaceEvents, selectWorkspaceAnomalies } from './events';
+import { rebindEvent, selectWorkspaceEvents, recordedAnomalyFacts, selectWorkspaceAnomalyEntries, rebindPresentedAnomaly } from './events';
+import { mockAgenticMetricsLedgers } from '../test/fixtures/mockData';
 import { sessionTools, sessionInvocations, type Anomaly, type EventFact, type SessionFact } from './types';
 
 describe('transient source traces', () => {
@@ -41,16 +42,66 @@ describe('transient source traces', () => {
     const updated: Anomaly = { ...summary, severity: 'CRITICAL', context: { session_id: 'owner', count: 6 }, evidence: [{ session_id: 'owner', event_id: 'native-call' }] };
     const remoteEnriched = { ...remote, severity: 'CRITICAL' as const, evidence: [{ session_id: 'remote-owner', event_id: 'remote-call' }] };
     const summaries = Object.freeze([Object.freeze(summary), Object.freeze(remote), Object.freeze(ownerless)]);
+    const facts = {...mockAgenticMetricsLedgers['AL-1']!.facts, sessions: [], anomalies: summaries};
+    const selected = (response: Parameters<typeof selectWorkspaceAnomalyEntries>[1]) => selectWorkspaceAnomalyEntries(facts, response).map((entry) => entry.anomaly);
     const before = JSON.stringify(summaries);
     const response = { ticket_id: 'TEST-1', is_hydrated: true, availability: 'partial' as const, data_source: 'local_codex' as const,
       coverage: { required_session_ids: ['owner', 'remote-owner'], complete_session_ids: ['owner'], diagnostics: ['remote unavailable'] }, events: [recorded],
       anomalies: [updated, remoteEnriched] };
-    expect(selectWorkspaceAnomalies(summaries, response)).toEqual([updated, { ...remote, evidence: remoteEnriched.evidence }, ownerless]);
-    expect(selectWorkspaceAnomalies(summaries, { ...response, anomalies: [] })).toEqual([remote, ownerless]);
-    expect(selectWorkspaceAnomalies(summaries, { ...response, anomalies: undefined })).toBe(summaries);
-    expect(selectWorkspaceAnomalies(summaries, { ...response, availability: 'unavailable' })).toBe(summaries);
-    expect(selectWorkspaceAnomalies(summaries, { ...response, availability: 'complete', anomalies: [] })).toEqual([]);
+    expect(selectWorkspaceAnomalyEntries(facts, response).map((entry) => entry.roleOrigin)).toEqual(['source', 'source', 'source']);
+    expect(selectWorkspaceAnomalyEntries(facts, {...response, availability: 'unavailable'}).map((entry) => entry.roleOrigin)).toEqual(['source', 'source', 'source']);
+    expect(selected(response)).toEqual([updated, { ...remote, evidence: remoteEnriched.evidence }, ownerless]);
+    expect(selected({ ...response, anomalies: [] })).toEqual([remote, ownerless]);
+    expect(selected({ ...response, anomalies: undefined })).toEqual(summaries);
+    expect(selected({ ...response, availability: 'unavailable' })).toEqual(summaries);
+    expect(selected({ ...response, availability: 'complete', anomalies: [] })).toEqual([]);
     expect(JSON.stringify(summaries)).toBe(before);
+  });
+
+  it('rebinds raw occurrences without confusing distinct personas that share a presentation alias', () => {
+    const raw: Anomaly = {rule_id: 'SUBAGENT_REWORK_LOOP', severity: 'WARNING', context: {session_id: 'owner', role: 'builder', secondary_role: 'tester', count: 3}};
+    const updated: Anomaly = {...raw, severity: 'CRITICAL', context: {...raw.context, count: 6}};
+    const selected = {anomaly: raw, roleOrigin: 'source' as const};
+    const refreshed = {anomaly: updated, roleOrigin: 'source' as const};
+    expect(rebindPresentedAnomaly(selected, [refreshed])).toBe(refreshed);
+    expect(rebindPresentedAnomaly(selected, [{...refreshed, anomaly: {...updated, context: {...updated.context, role: 'engineer'}}}])).toBeNull();
+    expect(rebindPresentedAnomaly(selected, [{...refreshed, roleOrigin: 'projected'}])).toBeNull();
+  });
+
+  it('restores canonical owners and preserves raw multiplicity and per-occurrence evidence without alias keys', () => {
+    const occurrence: Anomaly = {rule_id: 'SUBAGENT_REWORK_LOOP', severity: 'WARNING', context: {role: 'builder', secondary_role: 'tester', count: 3}};
+    const engineer = {...occurrence, context: {...occurrence.context, role: 'engineer'}};
+    const facts = {...mockAgenticMetricsLedgers['AL-1']!.facts, anomalies: [], sessions: [
+      {id: 'remote', invocations: [], tools: [], anomalies: [occurrence, {...occurrence}, engineer]},
+      {id: 'current', invocations: [], tools: [], anomalies: []},
+    ]};
+    const before = JSON.stringify(facts);
+    const raw = recordedAnomalyFacts(facts)!;
+    expect(raw.map((anomaly) => [anomaly.context.session_id, anomaly.context.role])).toEqual([['remote','builder'], ['remote','builder'], ['remote','engineer']]);
+    const response = {ticket_id: 'TEST-1', availability: 'partial' as const, is_hydrated: true, data_source: 'local_codex' as const,
+      coverage: {required_session_ids: ['remote','current'], complete_session_ids: ['current'], diagnostics: ['remote unavailable']}, events: [],
+      anomalies: raw.map((anomaly, index) => ({...anomaly, evidence: [{session_id: 'remote', event_id: `event-${index}`}]})),
+    };
+    const selected = selectWorkspaceAnomalyEntries(facts, response);
+    expect(selected).toHaveLength(3);
+    expect(selected.map((entry) => entry.anomaly.context.role)).toEqual(['builder','builder','engineer']);
+    expect(selected.map((entry) => entry.anomaly.evidence?.[0]?.event_id)).toEqual(['event-0','event-1','event-2']);
+    expect(selectWorkspaceAnomalyEntries(facts, {...response, anomalies: [response.anomalies[0]!]})).toHaveLength(3);
+    expect(selectWorkspaceAnomalyEntries(facts, {...response, availability: 'complete', anomalies: []})).toEqual([]);
+    expect(selectWorkspaceAnomalyEntries(facts, {...response, availability: 'complete', anomalies: [...response.anomalies, response.anomalies[0]!]})).toHaveLength(4);
+    expect(JSON.stringify(facts)).toBe(before);
+    const warning = {...raw[0]!, evidence: [{session_id: 'remote', event_id: 'warning-proof'}]};
+    const critical = {...warning, severity: 'CRITICAL' as const, evidence: [{session_id: 'remote', event_id: 'critical-proof'}]};
+    const severityFacts = {...facts, anomalies: [warning, critical], sessions: []};
+    expect(selectWorkspaceAnomalyEntries(severityFacts, {...response, anomalies: [critical, warning]})
+      .map((entry) => [entry.anomaly.severity, entry.anomaly.evidence?.[0]?.event_id])).toEqual([['WARNING','warning-proof'], ['CRITICAL','critical-proof']]);
+    const group = {...facts, sessions: [facts.sessions[0]!, {id: 'child', parent_id: 'remote', invocations: [], tools: [], anomalies: []}]};
+    expect(selectWorkspaceAnomalyEntries(group, {...response, coverage: {required_session_ids: ['remote','child'], complete_session_ids: ['remote'], diagnostics: ['child unavailable']}, anomalies: []})).toHaveLength(3);
+    const {anomalies: category, ...withoutCategory} = facts;
+    void category;
+    const noCategory = {...withoutCategory, sessions: [{id: 'unknown', invocations: [], tools: []}]};
+    expect(recordedAnomalyFacts(noCategory)).toBeUndefined();
+    expect(recordedAnomalyFacts({...noCategory, anomalies: []})).toEqual([]);
   });
 
   it('keeps missing collection recovery in session metric helpers', () => {

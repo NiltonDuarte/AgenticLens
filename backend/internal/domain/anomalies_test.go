@@ -1005,7 +1005,7 @@ func TestDetectAnomalies_ContextSaturationSpike(t *testing.T) {
 		if len(preserved.Sessions[0].Anomalies) != 0 {
 			t.Fatal("source-less normalization changed the recorded owner snapshot")
 		}
-		persisted, err := domain.PersistSourceAnomalySummaries(ledger, domain.SourceEvents{CompleteSessionIDs: []string{sessionID}})
+		persisted, err := domain.PersistSourceAnomalySummaries(ledger, domain.SourceEvents{CompleteSessionIDs: []string{sessionID}}, fixtureAnomalyPolicy())
 		if err != nil {
 			t.Fatalf("PersistAnomalySummaries failed: %v", err)
 		}
@@ -1997,7 +1997,7 @@ func TestDeriveMetricsLedger_IntegratesAnomalies(t *testing.T) {
 	}
 	factLedger := domain.AgenticFactLedger{Sessions: sessionFacts(nil, nil, factLedgerSourceEvents)}
 
-	metrics := domain.DeriveMetricsLedger(factLedger, domain.DefaultProjectConfig())
+	metrics := domain.DeriveMetricsLedger(factLedger, testMetricsProjectConfig())
 	if len(metrics.Anomalies) != 1 {
 		t.Fatalf("expected DeriveMetricsLedger to populate Anomalies with 1 entry, got %d", len(metrics.Anomalies))
 	}

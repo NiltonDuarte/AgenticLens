@@ -17,9 +17,6 @@ const (
 	MigrationStepSourceBackfill  = "source_backfill"
 )
 
-// HealthyCeilingTokens is the threshold constant for a healthy context window (200,000 tokens).
-const HealthyCeilingTokens int64 = 200_000
-
 // FormatTokensK formats token count into human-readable compact notation (e.g., 900.8k, 200k, 1.2M, 450).
 func FormatTokensK(toks int64) string {
 	if toks >= 1_000_000 {
@@ -42,9 +39,9 @@ func FormatTokensK(toks int64) string {
 // GetBaseHealthStatus returns the base context health status without percentage annotations.
 func GetBaseHealthStatus(toks int64, ceiling int64) ContextHealthStatus {
 	if ceiling <= 0 {
-		ceiling = HealthyCeilingTokens
+		return ContextHealthUnavailable
 	}
-	if toks > 2*ceiling {
+	if toks > ceiling && toks-ceiling > ceiling {
 		return ContextHealthCritical
 	}
 	if toks > ceiling {
@@ -59,9 +56,9 @@ func GetBaseHealthStatus(toks int64, ceiling int64) ContextHealthStatus {
 // GetHealthLabel formats a granular health label including saturation percentage for bloated/critical states.
 func GetHealthLabel(toks int64, ceiling int64) string {
 	if ceiling <= 0 {
-		ceiling = HealthyCeilingTokens
+		return "UNAVAILABLE"
 	}
-	if toks > 2*ceiling {
+	if toks > ceiling && toks-ceiling > ceiling {
 		pct := math.Round(float64(toks) / float64(ceiling) * 100.0)
 		return fmt.Sprintf("CRITICAL (%.0f%%)", pct)
 	}

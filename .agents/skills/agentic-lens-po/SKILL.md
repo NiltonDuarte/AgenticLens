@@ -7,8 +7,7 @@ description: Use when acting as the Product / Project Owner for AgenticLens to e
 
 Elicit requirements and produce specs/tickets only. Follow
 [AGENTS.md](../../../AGENTS.md) for ticket isolation, role boundaries and delivery.
-Read configured prefixes and `workspaces.dir` (default `workspaces`); paths below
-are relative to that root. The PO never writes application/tests/runtime code or
+Read required literal prefix mappings and workspaces.dir from the selected canonical shared YAML; missing/invalid policy requires explicit setup. Paths below are relative to that configured root. The PO never writes application/tests/runtime code or
 developer contracts. End this session at planning delivery; implementation needs
 a separate development session.
 

@@ -9,10 +9,10 @@ Ledgers are trusted, durable project records designed to be committed and shared
 Ask your coding agent to install and configure AgenticLens in the repository. For an OpenCode agent, use this prompt:
 
 ```text
-For an existing repository, use its approved shared agenticlens.version pin as <RELEASE_TAG>; otherwise resolve the latest stable AgenticLens release at https://api.github.com/repos/NiltonDuarte/AgenticLens/releases/latest and use its tag_name as <RELEASE_TAG>. Read https://raw.githubusercontent.com/NiltonDuarte/AgenticLens/<RELEASE_TAG>/.agents/skills/agentic-lens-setup/SKILL.md and follow it to install and configure AgenticLens in this repository. Use that tag for the setup bundle and exact engine pin. Review the manager version separately; its own update does not change project engine pins. Replace main or latest download references in older manifests. If a required file is absent, report it instead of falling back to main. Explain the proposed changes and ask before modifying agent policy files.
+For an existing repository, use its approved shared agenticlens.version pin as <RELEASE_TAG>; otherwise ask me to approve an exact published release as <RELEASE_TAG> before installing or writing a pin. Read https://raw.githubusercontent.com/NiltonDuarte/AgenticLens/<RELEASE_TAG>/.agents/skills/agentic-lens-setup/SKILL.md and follow it to install and configure AgenticLens in this repository. Use that tag for the setup bundle and exact engine pin. Review the manager version separately; its own update does not change project engine pins. Replace main or latest download references in older manifests. If a required file is absent, report it instead of falling back to main. Explain the proposed changes and ask before modifying agent policy files.
 ```
 
-The `main` branch contains development for future releases. Fresh installations without an approved pin default to the [latest stable release](https://github.com/NiltonDuarte/AgenticLens/releases/latest). Repairs honor the existing shared pin; upgrades require explicit approval. Retrieve every installation file from the selected exact tag, including when a prerelease pin was explicitly approved.
+The `main` branch contains development for future releases. Fresh installations require an explicitly approved exact release pin. Repairs honor the existing shared pin; upgrades require explicit approval. Retrieve every installation file from the selected exact tag, including when a prerelease pin was explicitly approved.
 
 The setup skill guides the agent through downloading the platform binaries, configuring the repository, and installing the skills available in that release. For releases containing the complete setup bundle, explicit setup provisions shared cached platform binaries using the local setup scripts; configured Codex worktrees adopt through the user-level native hook without per-worktree installation; if the scripts are also absent, follow the complete bootstrap in the setup manifest. Git tracking and ignore choices for all installed files belong to the repository owner. Review the [Platform Setup Manual](docs/SETUP_MANUAL.md) for the complete setup process and manual installation options.
 
@@ -73,7 +73,7 @@ AgenticLens provides a unified CLI for automation and local workflows. Installed
 agentic-lens server --port 8085
 
 # Ingest active session telemetry and generate summary markdown block
-agentic-lens generate --ticket-id AL-15 --ticket-type feat --json-output alspaces/AL-15/agentic_metrics.json --append alspaces/AL-15/SUMMARY.md
+agentic-lens generate --source opencode --session-id "ROOT_SESSION_ID" --ticket-title "Feature delivery" --ticket-id AL-15 --ticket-type feat --json-output alspaces/AL-15/agentic_metrics.json --append alspaces/AL-15/SUMMARY.md
 
 # Replace ses_abc123 with the Codex root session ID; child threads are discovered from it
 agentic-lens generate --source codex --session-id ses_abc123 --code-ref HEAD --ticket-id AL-56 --ticket-title "Codex metrics research" --ticket-type chore --json-output alspaces/AL-56/agentic_metrics.json --append alspaces/AL-56/SUMMARY.md
@@ -85,7 +85,7 @@ agentic-lens --list
 agentic-lens --ticket-id AL-15 --anomalies
 
 # Batch reconcile git facts and database telemetry across historical workspaces
-agentic-lens backfill --source opencode --recompute-git --code-ref HEAD --recompute-db --migrate-schema --update-summaries
+agentic-lens backfill --source opencode --ticket-id AL-15 --recompute-git --code-ref HEAD --recompute-db --migrate-schema --update-summaries
 
 # Run stepwise schema migrations across workspace ledgers
 agentic-lens migrate --backup --update-summaries

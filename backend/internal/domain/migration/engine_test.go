@@ -1852,7 +1852,7 @@ func TestCostEvidenceMigrationPreservesObservedHistoryAndMissingPresence(t *test
 					if tasks[0].SubagentType != "coder" || tasks[0].Description != "delegated" || tasks[0].ParentTurn != 4 || tasks[0].ChildSession != "child" || tasks[0].Timestamp != "2026-10-31T09:00:00Z" || tasks[0].DurationMs != 12 {
 						t.Fatalf("task metadata changed during typed conversion: %+v", tasks[0])
 					}
-					if summary := domain.ComputeTotals(ledger.InvocationFacts()).CostSummary; summary.Total != 0 || summary.State != domain.CostSummaryEmpty {
+					if summary := domain.ComputeTotals(ledger.InvocationFacts(), 200000).CostSummary; summary.Total != 0 || summary.State != domain.CostSummaryEmpty {
 						t.Fatalf("task references entered invocation cost totals: %+v", summary)
 					}
 				})
@@ -1955,7 +1955,7 @@ func TestCostEvidenceMigrationPreservesObservedHistoryAndMissingPresence(t *test
 	if len(rows) != 4 || rows[0].CostEvidence.State != domain.CostObserved || rows[0].CostUSD != 0 || rows[1].CostEvidence.State != domain.CostUnavailable || rows[2].CostUSD != 7 || rows[3].CostEvidence.State != domain.CostUnavailable {
 		t.Fatalf("numeric/absent cost changed: %+v", rows)
 	}
-	summary := domain.ComputeTotals(rows).CostSummary
+	summary := domain.ComputeTotals(rows, 200000).CostSummary
 	if summary.KnownSubtotalUSD == nil || *summary.KnownSubtotalUSD != 7 || summary.CompleteAmount() != nil || summary.FullyObserved != 2 || summary.Unavailable != 2 {
 		t.Fatalf("unexpected migrated coverage: %+v", summary)
 	}

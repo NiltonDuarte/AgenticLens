@@ -1,5 +1,6 @@
 """Shared real-native fixtures for versioned release/entrypoint boundary tests."""
 import hashlib
+import json
 import os
 from pathlib import Path
 import platform
@@ -52,6 +53,21 @@ def build_manager(version='v9.8.7', operating_system=None, arch=None):
     return target
 
 
+def shared_policy(pin, cache, workspace='workspaces', name='Fixture'):
+    """Explicit approved current policy; never rely on runtime numerical presets."""
+    body = (ROOT / 'scripts/tests/fixtures/project-policy.yaml').read_text()
+    body = body.replace('project_name: Fixture', 'project_name: ' + json.dumps(name))
+    body = body.replace('version: v9.8.7', 'version: ' + pin + '\n  install_root: ' + json.dumps(str(cache)))
+    return body.replace('dir: records', 'dir: ' + json.dumps(str(workspace)))
+
+
+def local_policy(state, source, cache=None):
+    install = 'agenticlens:\n  install_root: ' + json.dumps(str(cache)) + '\n' if cache else ''
+    return install + ('telemetry:\n  default_source: codex\n  sources:\n    codex:\n      home: ' + json.dumps(str(source)) +
+                      '\n  capture:\n    enabled: false\n    state_dir: ' + json.dumps(str(state)) +
+                      '\n    max_sessions: 19\n    max_source_bytes: 16777217\n')
+
+
 class DistributionFixture(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -72,6 +88,7 @@ class DistributionFixture(unittest.TestCase):
         self.config = self.repo / '.agenticlens-config.yaml'
         self.pin = 'v9.8.7'
         self.write_config()
+        self.write_local_policy()
         self.probe = self.fixture_probe
         self.application = self.fixture_application
         self.manager = self.fixture_manager
@@ -80,7 +97,8 @@ class DistributionFixture(unittest.TestCase):
         commands.mkdir()
         curl = commands / 'curl'
         curl.write_text('#!' + __import__('sys').executable + '\n' + '''
-import hashlib, os, pathlib, shutil, sys
+import hashlib
+import json, os, pathlib, shutil, sys
 args = sys.argv[1:]
 url = args[-1]
 with open(os.environ['AL_FETCH_LOG'], 'a') as log: log.write(url + '\\n')
@@ -100,12 +118,22 @@ else: shutil.copyfile(os.environ['AL_FIXTURE_RELEASE'], target)
         self.env = {key: value for key, value in os.environ.items() if not key.startswith(('AGENTIC_LENS_', 'AL_PROBE_'))}
         self.env.update(HOME=str(self.home), USERPROFILE=str(self.home), CODEX_HOME=str(self.home / '.codex'),
                         XDG_CONFIG_HOME=str(self.home / '.config'), XDG_CACHE_HOME=str(self.home / '.cache'),
-                        XDG_STATE_HOME=str(self.home / '.state'), PATH=str(commands) + os.pathsep + os.environ['PATH'], AL_FETCH_LOG=str(self.network_log),
+                        XDG_STATE_HOME=str(self.home / '.state'), XDG_DATA_HOME=str(self.home / '.local/share'), PATH=str(commands) + os.pathsep + os.environ['PATH'], AL_FETCH_LOG=str(self.network_log),
                         AL_FIXTURE_SOURCE=str(ROOT), AL_FIXTURE_RELEASE=str(self.application), AL_FIXTURE_NAME=self.native().name)
 
     def write_config(self, pin=None):
         self.pin = pin or self.pin
-        self.config.write_text(f"project_name: Fixture\nagenticlens:\n  version: {self.pin}\n  install_root: '{self.cache}'\ntelemetry:\n  capture:\n    state_dir: '{self.root / 'capture state'}'\n")
+        self.config.write_text(shared_policy(self.pin, self.cache))
+
+    def write_local_policy(self):
+        path = self.repo / '.agenticlens-config.local.yaml'
+        path.write_text(local_policy(self.root / 'capture state', self.home / '.codex'))
+        return path
+
+    def approved_settings(self, name='Fixture'):
+        path = self.root / 'approved shared.yaml'
+        path.write_text(shared_policy(self.pin, self.cache, name=name))
+        return path
 
     def native(self, pin=None):
         operating_system = {'Linux': 'linux', 'Darwin': 'darwin', 'Windows': 'windows'}[platform.system()]

@@ -1,157 +1,163 @@
 package git
 
 import (
+	"fmt"
+	"path"
 	"path/filepath"
 	"strings"
 
 	"agenticlens/internal/adapters/config"
+	"agenticlens/internal/domain"
 )
 
-// ClassificationConfig holds user-configured file glob patterns and workspace layout options.
+// ClassificationConfig contains the explicit repository-relative policies used
+// for committed code measurements. Categories are evaluated independently.
 type ClassificationConfig struct {
-	Include       []string `json:"include"`
-	Exclude       []string `json:"exclude"`
-	TestPatterns  []string `json:"test_patterns"`
-	ProdPatterns  []string `json:"prod_patterns"`
-	BaseBranch    string   `json:"base_branch,omitempty"`
-	SourceRoots   []string `json:"source_roots,omitempty"`
-	WorkspacesDir string   `json:"workspaces_dir,omitempty"`
+	BaseBranch string                    `json:"base_branch"`
+	Production domain.CodeCategoryConfig `json:"production"`
+	Tests      domain.CodeCategoryConfig `json:"tests"`
 }
 
-// LoadConfig attempts to load ClassificationConfig from repository configuration.
+// LoadConfig loads the selected project's shared classification policy.
 func LoadConfig(repoRoot string) (*ClassificationConfig, error) {
 	cfg, err := config.Load(repoRoot)
 	if err != nil {
 		return nil, err
 	}
-
-	return &ClassificationConfig{
-		Include:       cfg.CodeMetrics.Include,
-		Exclude:       cfg.CodeMetrics.Exclude,
-		TestPatterns:  cfg.CodeMetrics.TestPatterns,
-		ProdPatterns:  cfg.CodeMetrics.ProdPatterns,
-		BaseBranch:    cfg.CodeMetrics.BaseBranch,
-		SourceRoots:   cfg.CodeMetrics.SourceRoots,
-		WorkspacesDir: cfg.Workspaces.Dir,
-	}, nil
+	classification := &ClassificationConfig{
+		BaseBranch: cfg.CodeMetrics.BaseBranch,
+		Production: cfg.CodeMetrics.Production,
+		Tests:      cfg.CodeMetrics.Tests,
+	}
+	if err := ValidateClassificationConfig(classification); err != nil {
+		return nil, err
+	}
+	return classification, nil
 }
 
-// FileCategory represents the category of a modified file.
 type FileCategory string
 
 const (
-	CategoryIgnored FileCategory = "ignored"
-	CategoryTest    FileCategory = "test"
-	CategoryProd    FileCategory = "prod"
-	CategoryOther   FileCategory = "other"
+	CategoryTest  FileCategory = "test"
+	CategoryProd  FileCategory = "prod"
+	CategoryOther FileCategory = "other"
 )
 
-func hasPatterns(patterns []string) bool {
-	for _, p := range patterns {
-		if strings.TrimSpace(p) != "" {
-			return true
+// ValidateClassificationConfig distinguishes an explicit empty list from an
+// absent list and validates every configured glob before measuring any paths.
+func ValidateClassificationConfig(cfg *ClassificationConfig) error {
+	if cfg == nil {
+		return fmt.Errorf("code_metrics classification is required: configure production.include/exclude and tests.include/exclude")
+	}
+	for _, list := range []struct {
+		name     string
+		patterns []string
+	}{
+		{"production.include", cfg.Production.Include},
+		{"production.exclude", cfg.Production.Exclude},
+		{"tests.include", cfg.Tests.Include},
+		{"tests.exclude", cfg.Tests.Exclude},
+	} {
+		if list.patterns == nil {
+			return fmt.Errorf("code_metrics.%s is required: configure a string list, using [] for an intentional empty list", list.name)
+		}
+		for i, pattern := range list.patterns {
+			if strings.TrimSpace(pattern) == "" {
+				return fmt.Errorf("code_metrics.%s[%d] must be a nonblank glob", list.name, i)
+			}
+			if _, err := path.Match(pattern, ""); err != nil {
+				return fmt.Errorf("code_metrics.%s[%d] contains invalid glob %q: %w", list.name, i, pattern, err)
+			}
 		}
 	}
-	return false
+	return nil
 }
 
-// CheckUnconfiguredPatterns checks if test_patterns or prod_patterns are empty or unconfigured.
-// It returns human-actionable warning messages.
-func CheckUnconfiguredPatterns(cfg *ClassificationConfig) []string {
-	var warnings []string
-	if cfg == nil || !hasPatterns(cfg.TestPatterns) {
-		warnings = append(warnings, "code_metrics.test_patterns is empty or unconfigured: configure 'code_metrics.test_patterns' in .agenticlens-config.yaml")
-	}
-	if cfg == nil || !hasPatterns(cfg.ProdPatterns) {
-		warnings = append(warnings, "code_metrics.prod_patterns is empty or unconfigured: configure 'code_metrics.prod_patterns' in .agenticlens-config.yaml")
-	}
-	return warnings
-}
-
-// Patterns containing a slash are relative to the repository root. A ** path
-// component matches zero or more directories; patterns without slashes match basenames.
-func matchPattern(pattern, path string) bool {
-	pattern = strings.TrimPrefix(filepath.ToSlash(strings.TrimSpace(pattern)), "./")
-	path = filepath.ToSlash(path)
+// Patterns containing a slash are repository-relative. A ** path component
+// matches zero or more directories; slashless patterns match basenames.
+func matchPattern(pattern, filePath string) (bool, error) {
+	pattern = strings.TrimPrefix(pattern, "./")
 	if !strings.Contains(pattern, "/") {
-		matched, _ := filepath.Match(pattern, filepath.Base(path))
-		return matched
+		return path.Match(pattern, path.Base(filePath))
 	}
-	return matchSegments(strings.Split(pattern, "/"), strings.Split(path, "/"))
+	return matchSegments(strings.Split(pattern, "/"), strings.Split(filePath, "/"))
 }
 
-func matchSegments(pattern, path []string) bool {
+func matchSegments(pattern, filePath []string) (bool, error) {
 	if len(pattern) == 0 {
-		return len(path) == 0
+		return len(filePath) == 0, nil
 	}
 	if pattern[0] == "**" {
-		return matchSegments(pattern[1:], path) || (len(path) > 0 && matchSegments(pattern, path[1:]))
+		matched, err := matchSegments(pattern[1:], filePath)
+		if err != nil || matched || len(filePath) == 0 {
+			return matched, err
+		}
+		return matchSegments(pattern, filePath[1:])
 	}
-	if len(path) == 0 {
-		return false
+	if len(filePath) == 0 {
+		return false, nil
 	}
-	matched, _ := filepath.Match(pattern[0], path[0])
-	return matched && matchSegments(pattern[1:], path[1:])
+	matched, err := path.Match(pattern[0], filePath[0])
+	if err != nil || !matched {
+		return matched, err
+	}
+	return matchSegments(pattern[1:], filePath[1:])
 }
 
-// ClassifyFile classifies a repository file path as ignored, test, prod, or other.
-func ClassifyFile(rawPath string, cfg *ClassificationConfig) FileCategory {
-	cleanPath := filepath.ToSlash(strings.TrimSpace(rawPath))
-	cleanPath = strings.TrimPrefix(cleanPath, "./")
-	cleanPath = strings.TrimPrefix(cleanPath, "/")
-	baseName := filepath.Base(cleanPath)
-
-	// 1. Workspace directory check - classify immediately as CategoryIgnored
-	if cfg != nil && strings.TrimSpace(cfg.WorkspacesDir) != "" {
-		wsDir := strings.Trim(strings.TrimSpace(cfg.WorkspacesDir), "/")
-		if cleanPath == wsDir || strings.HasPrefix(cleanPath, wsDir+"/") || strings.Contains(cleanPath, "/"+wsDir+"/") {
-			return CategoryIgnored
+func categoryMatches(filePath string, cfg domain.CodeCategoryConfig) (bool, error) {
+	included := false
+	for _, pattern := range cfg.Include {
+		matched, err := matchPattern(pattern, filePath)
+		if err != nil {
+			return false, err
+		}
+		if matched {
+			included = true
+			break
 		}
 	}
-
-	// 2. Explicit exclusions
-	if cfg != nil {
-		for _, p := range cfg.Exclude {
-			if matchPattern(p, cleanPath) {
-				return CategoryIgnored
-			}
+	if !included {
+		return false, nil
+	}
+	for _, pattern := range cfg.Exclude {
+		matched, err := matchPattern(pattern, filePath)
+		if err != nil {
+			return false, err
+		}
+		if matched {
+			return false, nil
 		}
 	}
+	return true, nil
+}
 
-	// 3. Explicit test patterns (take precedence over production rules)
-	if cfg != nil && hasPatterns(cfg.TestPatterns) {
-		for _, p := range cfg.TestPatterns {
-			if matchPattern(p, cleanPath) {
-				return CategoryTest
-			}
-		}
+// ClassifyFile applies only the explicitly configured category policies. It
+// preserves filename whitespace and does not infer roots, extensions or priority.
+func ClassifyFile(rawPath string, cfg *ClassificationConfig) (FileCategory, error) {
+	if err := ValidateClassificationConfig(cfg); err != nil {
+		return CategoryOther, err
 	}
+	return classifyFile(rawPath, cfg)
+}
 
-	// 4. Explicit production patterns
-	if cfg != nil && hasPatterns(cfg.ProdPatterns) {
-		for _, p := range cfg.ProdPatterns {
-			if matchPattern(p, cleanPath) {
-				return CategoryProd
-			}
-		}
+func classifyFile(rawPath string, cfg *ClassificationConfig) (FileCategory, error) {
+	filePath := strings.TrimPrefix(filepath.ToSlash(rawPath), "./")
+	production, err := categoryMatches(filePath, cfg.Production)
+	if err != nil {
+		return CategoryOther, fmt.Errorf("matching code_metrics.production policy for %q: %w", rawPath, err)
 	}
-
-	// 5. Explicit includes
-	if cfg != nil {
-		for _, p := range cfg.Include {
-			if matchPattern(p, cleanPath) {
-				return CategoryProd
-			}
-		}
+	tests, err := categoryMatches(filePath, cfg.Tests)
+	if err != nil {
+		return CategoryOther, fmt.Errorf("matching code_metrics.tests policy for %q: %w", rawPath, err)
 	}
-
-	// 6. Specific lockfiles and dotfiles ignored
-	if baseName == "go.sum" || baseName == "package-lock.json" || baseName == "pnpm-lock.yaml" || baseName == "yarn.lock" {
-		return CategoryIgnored
+	switch {
+	case production && tests:
+		return CategoryOther, fmt.Errorf("code_metrics classification conflict for %q: both production and tests match; adjust their include/exclude lists so the path matches at most one category", rawPath)
+	case production:
+		return CategoryProd, nil
+	case tests:
+		return CategoryTest, nil
+	default:
+		return CategoryOther, nil
 	}
-	if strings.HasPrefix(baseName, ".") {
-		return CategoryIgnored
-	}
-
-	return CategoryOther
 }

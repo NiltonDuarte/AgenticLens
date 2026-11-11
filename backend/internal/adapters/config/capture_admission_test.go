@@ -8,26 +8,24 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
-
-	"agenticlens/internal/domain"
 )
 
 func TestCaptureAdmissionSerializesEffectiveLocalConfigGuard(t *testing.T) {
 	root := t.TempDir()
 	shared := filepath.Join(root, ".agenticlens-config.yaml")
 	local := filepath.Join(root, ".agenticlens-config.local.yaml")
-	data, err := GenerateDefaultYAMLForVersion("v9.8.7", "Example", "records", "local.db", []string{"src"}, []domain.TicketPrefix{{Prefix: "AL"}})
+	data, err := fixtureSharedYAML(t, "Example", "records")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(shared, data, 0600); err != nil {
 		t.Fatal(err)
 	}
-	localData := []byte("telemetry:\n  capture:\n    state_dir: machine-local-state\n")
+	localData := []byte("telemetry:\n  capture:\n    enabled: false\n    state_dir: machine-local-state\n")
 	if err := os.WriteFile(local, localData, 0600); err != nil {
 		t.Fatal(err)
 	}
-	preview, err := PrepareCaptureConfigUpdate(shared, "new-shared-state")
+	preview, err := PrepareCaptureConfigUpdate(local, "new-local-state")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,7 +43,7 @@ func TestCaptureAdmissionSerializesEffectiveLocalConfigGuard(t *testing.T) {
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 40*time.Millisecond)
 		defer cancel()
-		result <- WriteCaptureConfigUpdateChecked(ctx, shared, preview, func(CaptureConfigChange) error { called.Store(true); return nil })
+		result <- WriteCaptureConfigUpdateChecked(ctx, local, preview, func(CaptureConfigChange) error { called.Store(true); return nil })
 	}()
 	if err := <-result; !errors.Is(err, context.DeadlineExceeded) || called.Load() {
 		t.Fatalf("checked guard bypassed active admission: %v guard=%t", err, called.Load())
@@ -53,9 +51,9 @@ func TestCaptureAdmissionSerializesEffectiveLocalConfigGuard(t *testing.T) {
 	if err := lease.Close(); err != nil {
 		t.Fatal(err)
 	}
-	if err := WriteCaptureConfigUpdateChecked(context.Background(), shared, preview, func(change CaptureConfigChange) error {
+	if err := WriteCaptureConfigUpdateChecked(context.Background(), local, preview, func(change CaptureConfigChange) error {
 		called.Store(true)
-		if change.PreviousStateDir != "machine-local-state" || change.StateDir != "machine-local-state" || change.ProjectRoot != root {
+		if change.PreviousStateDir != filepath.Join(root, "machine-local-state") || change.StateDir != filepath.Join(root, "new-local-state") || change.ProjectRoot != root {
 			t.Fatalf("guard did not inspect effective local overrides: %+v", change)
 		}
 		return nil
@@ -66,11 +64,11 @@ func TestCaptureAdmissionSerializesEffectiveLocalConfigGuard(t *testing.T) {
 		t.Fatal("operational state guard was omitted")
 	}
 	cfg, err := Load(root)
-	if err != nil || cfg.Telemetry.Capture.StateDir != "machine-local-state" {
+	if err != nil || cfg.Telemetry.Capture.StateDir != "new-local-state" {
 		t.Fatalf("local setting changed: %+v %v", cfg, err)
 	}
 	actual, err := os.ReadFile(local)
-	if err != nil || string(actual) != string(localData) {
+	if err != nil || string(actual) != string(preview.Data) {
 		t.Fatalf("local config was rewritten: %v", err)
 	}
 	cancelled, cancel := context.WithCancel(context.Background())

@@ -2,9 +2,11 @@ package codex
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 )
 
@@ -20,24 +22,53 @@ type SessionMetadataContext struct {
 	WorkingDirectory string
 }
 
-// ReadSessionContext reads only the first bounded native metadata record.
+const maxSessionMetadataBytes int64 = 64 * 1024
+
+// ReadSessionContext retains the intrinsic structural record bound for callers
+// which do not consume a configured capture byte budget.
 func ReadSessionContext(path string) (SessionMetadataContext, error) {
-	var result SessionMetadataContext
+	return readSessionContext(path, maxSessionMetadataBytes)
+}
+
+// ReadSessionContextWithinBudget applies the explicit capture allowance before
+// any read, while preserving the existing maximum native metadata record size.
+func ReadSessionContextWithinBudget(path string, maxSourceBytes int64) (SessionMetadataContext, error) {
+	if maxSourceBytes < 1 {
+		return SessionMetadataContext{}, errors.New("native session metadata requires a positive explicit source byte budget")
+	}
+	if maxSourceBytes > maxSessionMetadataBytes {
+		maxSourceBytes = maxSessionMetadataBytes
+	}
+	return readSessionContext(path, maxSourceBytes)
+}
+
+func readSessionContext(path string, limit int64) (result SessionMetadataContext, err error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return result, err
 	}
-	scanner := bufio.NewScanner(file)
-	scanner.Buffer(make([]byte, 4096), 64*1024)
-	found := scanner.Scan()
-	if err := errors.Join(scanner.Err(), file.Close()); err != nil {
+	defer func() { err = errors.Join(err, file.Close()) }()
+	info, err := file.Stat()
+	if err != nil {
 		return result, err
 	}
-	if !found {
+	reader := bufio.NewReader(io.LimitReader(file, limit))
+	line, err := reader.ReadBytes('\n')
+	if err != nil && !errors.Is(err, io.EOF) {
+		return result, err
+	}
+	if len(line) == 0 {
 		return result, errors.New("session metadata has not flushed")
 	}
+	if !bytes.HasSuffix(line, []byte{'\n'}) && info.Size() > limit {
+		if limit < maxSessionMetadataBytes {
+			return result, ErrDiscoveryBudget
+		}
+		return result, errors.New("native session metadata exceeds its structural record limit")
+	}
+
 	var record rolloutRecord
-	if err := json.Unmarshal(scanner.Bytes(), &record); err != nil {
+	if err := json.Unmarshal(line, &record); err != nil {
 		return result, err
 	}
 	if record.Type != "session_meta" {

@@ -22,6 +22,7 @@ import (
 
 func createTestWorkspace(t *testing.T, baseDir string, ticketID string, ledger domain.AgenticFactLedger) string {
 	t.Helper()
+	writeBackfillProject(t, baseDir)
 	wsDir := filepath.Join(baseDir, ticketID)
 	if err := os.MkdirAll(wsDir, 0755); err != nil {
 		t.Fatalf("failed to create test workspace dir: %v", err)
@@ -46,9 +47,13 @@ func createTestWorkspace(t *testing.T, baseDir string, ticketID string, ledger d
 
 	// Also write minimal CONTRACT.md and SUMMARY.md
 	contractPath := filepath.Join(wsDir, "CONTRACT.md")
-	_ = os.WriteFile(contractPath, []byte("# Contract "+ticketID), 0644)
+	if err := os.WriteFile(contractPath, []byte("# Contract "+ticketID), 0644); err != nil {
+		t.Fatal(err)
+	}
 	summaryPath := filepath.Join(wsDir, "SUMMARY.md")
-	_ = os.WriteFile(summaryPath, []byte("# Summary "+ticketID+"\n\n### Workflow Efficiency\nInitial table\n"), 0644)
+	if err := os.WriteFile(summaryPath, []byte("# Summary "+ticketID+"\n\n### Workflow Efficiency\nInitial table\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
 
 	return wsDir
 }
@@ -117,7 +122,7 @@ func setupMockOpenCodeDB(t *testing.T, dbPath string, sessionID string, ticketID
 }
 
 func TestBackfillEngine_CleansCompletedMigrationMetadata(t *testing.T) {
-	tempDir := t.TempDir()
+	tempDir := newBackfillProject(t)
 	ticketID := "AL-COMPLETED-METADATA"
 	version := domain.CurrentSchemaVersion
 	workspace := filepath.Join(tempDir, ticketID)
@@ -210,7 +215,7 @@ func TestBackfillEngine_PreservesIncompleteMetadataWithoutRefresh(t *testing.T) 
 		{"pending without work", domain.MigrationStatusPending, []string{}, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			root := t.TempDir()
+			root := newBackfillProject(t)
 			version, ticket := domain.CurrentSchemaVersion, "TEST-INCOMPLETE"
 			completed := []string{}
 			if tc.status == domain.MigrationStatusPartial && len(tc.pending) > 0 {
@@ -257,7 +262,7 @@ func TestBackfillEngine_ExplicitRecomputeDBDoesNotSkipCompletedLedger(t *testing
 	for _, metadata := range []bool{false, true} {
 		for _, available := range []bool{false, true} {
 			t.Run(fmt.Sprintf("metadata=%t/source=%t", metadata, available), func(t *testing.T) {
-				root := t.TempDir()
+				root := newBackfillProject(t)
 				ticket := "CUSTOM-RECOMPUTE"
 				version := domain.CurrentSchemaVersion
 				ledger := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticket, Sessions: sessionFactsWithInvs([]testInvFact{{SessionID: "inv-existing", Role: "coder", Model: "stale"}}, nil, nil)}
@@ -268,6 +273,8 @@ func TestBackfillEngine_ExplicitRecomputeDBDoesNotSkipCompletedLedger(t *testing
 				dbPath := filepath.Join(root, "source.db")
 				if available {
 					setupMockOpenCodeDB(t, dbPath, "inv-existing", ticket)
+				} else {
+					setupMockOpenCodeDB(t, dbPath, "unavailable-owner", "OTHER")
 				}
 				report, err := NewEngine().Execute(BackfillOptions{WorkspacesDir: root, TicketID: ticket, Source: "opencode", RecomputeDB: true, DBPath: dbPath})
 				if err != nil {
@@ -309,7 +316,7 @@ func TestBackfillEngine_ExplicitRecomputeDBDoesNotSkipCompletedLedger(t *testing
 }
 
 func TestBackfillEngine_DryRunPreservesFiles(t *testing.T) {
-	tempDir := t.TempDir()
+	tempDir := newBackfillProject(t)
 	tid := "AL-101"
 	origLedger := domain.AgenticFactLedger{
 		TicketID: &tid,
@@ -379,7 +386,7 @@ func TestBackfillEngine_DryRunPreservesFiles(t *testing.T) {
 }
 
 func TestBackfillEngine_MigrationThenSourceBackfillMakesLedgerReady(t *testing.T) {
-	tempDir := t.TempDir()
+	tempDir := newBackfillProject(t)
 	ticketID := "AL-SOURCE-BACKFILL"
 	workspace := filepath.Join(tempDir, ticketID)
 	if err := os.MkdirAll(workspace, 0755); err != nil {
@@ -446,7 +453,7 @@ func TestBackfillEngine_SourceBackfillFailuresRemainPendingAndRuntimeIneligible(
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			tempDir := t.TempDir()
+			tempDir := newBackfillProject(t)
 			ticketID := "AL-SOURCE-FAILURE"
 			workspace := filepath.Join(tempDir, ticketID)
 			if err := os.MkdirAll(workspace, 0755); err != nil {
@@ -462,6 +469,10 @@ func TestBackfillEngine_SourceBackfillFailuresRemainPendingAndRuntimeIneligible(
 			}
 
 			dbPath := filepath.Join(tempDir, "opencode.db")
+			baseline, err := os.ReadFile(metricPath)
+			if err != nil {
+				t.Fatal(err)
+			}
 			tc.makeSource(t, dbPath)
 			report, err := NewEngine().Execute(BackfillOptions{
 				WorkspacesDir: tempDir,
@@ -470,6 +481,16 @@ func TestBackfillEngine_SourceBackfillFailuresRemainPendingAndRuntimeIneligible(
 				DBPath:        dbPath,
 				Source:        "opencode",
 			})
+			if tc.name == "source unavailable" {
+				if err == nil {
+					t.Fatal("missing selected store did not fail")
+				}
+				after, readErr := os.ReadFile(metricPath)
+				if readErr != nil || !reflect.DeepEqual(after, baseline) {
+					t.Fatal("selected store failure changed persisted bytes")
+				}
+				return
+			}
 			if err != nil {
 				t.Fatalf("backfill execute failed: %v", err)
 			}
@@ -496,7 +517,7 @@ func TestBackfillEngine_SourceBackfillFailuresRemainPendingAndRuntimeIneligible(
 }
 
 func TestBackfillEngine_RecomputeDBPreservesGitAndExactZeroInvocationSteering(t *testing.T) {
-	tempDir := t.TempDir()
+	tempDir := newBackfillProject(t)
 	ticketID := "AL-ZERO-TURNS"
 	ledger := domain.AgenticFactLedger{
 		TicketID: &ticketID,
@@ -513,6 +534,7 @@ func TestBackfillEngine_RecomputeDBPreservesGitAndExactZeroInvocationSteering(t 
 		WorkspacesDir: tempDir,
 		TicketID:      ticketID,
 		RecomputeDB:   true,
+		Source:        "opencode",
 		DBPath:        dbPath,
 	})
 	if err != nil {
@@ -539,7 +561,7 @@ func TestBackfillEngine_RecomputeDBPreservesGitAndExactZeroInvocationSteering(t 
 }
 
 func TestBackfillEngine_MultiMachineLifecycle(t *testing.T) {
-	tempDir := t.TempDir()
+	tempDir := newBackfillProject(t)
 	tidA := "AL-AUTHORED-ON-A"
 	tidB := "AL-AUTHORED-ON-B"
 
@@ -575,6 +597,7 @@ func TestBackfillEngine_MultiMachineLifecycle(t *testing.T) {
 		WorkspacesDir:   tempDir,
 		RecomputeGit:    false,
 		RecomputeDB:     true,
+		Source:          "opencode",
 		DBPath:          dbPathA,
 		UpdateSummaries: true,
 	})
@@ -626,6 +649,7 @@ func TestBackfillEngine_MultiMachineLifecycle(t *testing.T) {
 		WorkspacesDir:   tempDir,
 		RecomputeGit:    false,
 		RecomputeDB:     true,
+		Source:          "opencode",
 		DBPath:          dbPathB,
 		UpdateSummaries: true,
 	})
@@ -681,7 +705,7 @@ func containsMigrationStep(steps []string, expected string) bool {
 }
 
 func TestBackfillEngine_CorruptedFileResilience(t *testing.T) {
-	tempDir := t.TempDir()
+	tempDir := newBackfillProject(t)
 	tidGood1 := "AL-GOOD-1"
 	tidBad1 := "AL-BAD-TRUNCATED"
 	tidBad2 := "AL-BAD-EMPTY"
@@ -781,7 +805,7 @@ func TestBackfillEngine_MissingWorkspacesDir(t *testing.T) {
 }
 
 func TestBackfillEngine_RecomputeGitRequiresTicketID(t *testing.T) {
-	tempDir := t.TempDir()
+	tempDir := newBackfillProject(t)
 	engine := NewEngine()
 	_, err := engine.Execute(BackfillOptions{
 		WorkspacesDir: tempDir,
@@ -797,7 +821,7 @@ func TestBackfillEngine_RecomputeGitRequiresTicketID(t *testing.T) {
 }
 
 func TestBackfillEngine_SourceValidation(t *testing.T) {
-	tempDir := t.TempDir()
+	tempDir := newBackfillProject(t)
 	engine := NewEngine()
 	_, err := engine.Execute(BackfillOptions{
 		WorkspacesDir: tempDir,
@@ -809,7 +833,7 @@ func TestBackfillEngine_SourceValidation(t *testing.T) {
 }
 
 func TestBackfillEngine_SourceOpenCodeSkipsCodexSessions(t *testing.T) {
-	tempDir := t.TempDir()
+	tempDir := newBackfillProject(t)
 	tid := "AL-HYBRID"
 	dbPath := filepath.Join(tempDir, "test_opencode.db")
 	setupMockOpenCodeDB(t, dbPath, "opencode-root-1", tid)
@@ -899,7 +923,7 @@ func TestBackfillEngine_SourceOpenCodeSkipsCodexSessions(t *testing.T) {
 }
 
 func TestBackfillEngine_SourceCodexSkipsOpenCodeSessions(t *testing.T) {
-	tempDir := t.TempDir()
+	tempDir := newBackfillProject(t)
 	tid := "AL-HYBRID-2"
 
 	origLedger := domain.AgenticFactLedger{
@@ -1019,7 +1043,7 @@ func TestReplaceRecoveredOwnersPreservesUnavailableChildWithoutDuplication(t *te
 }
 
 func TestBackfillEngine_CodexDiscoveryFailurePreservesSessions(t *testing.T) {
-	tempDir := t.TempDir()
+	tempDir := newBackfillProject(t)
 	ticketID := "FIX-8-FAILURE"
 	ledger := domain.AgenticFactLedger{
 		TicketID: &ticketID,
@@ -1069,7 +1093,7 @@ func TestBackfillEngine_CodexDiscoveryFailurePreservesSessions(t *testing.T) {
 }
 
 func TestBackfillEngine_CodexRefreshesRootTreeOnce(t *testing.T) {
-	tempDir := t.TempDir()
+	tempDir := newBackfillProject(t)
 	ticketID := "FIX-8-TREE"
 	childParent := "root"
 	ledger := domain.AgenticFactLedger{
@@ -1083,6 +1107,8 @@ func TestBackfillEngine_CodexRefreshesRootTreeOnce(t *testing.T) {
 	}
 	createTestWorkspace(t, tempDir, ticketID, ledger)
 	engine := NewEngine()
+	rootPath := writeBackfillRollout(t, tempDir, "root", "", "orchestrator", "fresh-model", map[string]int{"fresh-root": 2}, "")
+	childPath := writeBackfillRollout(t, tempDir, "child", "root", "coder", "fresh-model", map[string]int{"fresh-child": 3}, "")
 	discoveries := 0
 	engine.discoverCodexRollouts = func(options codex.DiscoveryOptions) ([]string, error) {
 		if options.SessionID == "unrelated-codex" {
@@ -1092,22 +1118,9 @@ func TestBackfillEngine_CodexRefreshesRootTreeOnce(t *testing.T) {
 		if options.SessionID != "root" {
 			t.Fatalf("expected root discovery for child tree, got session %q", options.SessionID)
 		}
-		return []string{"root-rollout"}, nil
+		return []string{rootPath, childPath}, nil
 	}
-	engine.parseCodexRollout = func(string) (codex.Transcript, error) {
-		return codex.CombineTranscripts([]codex.Transcript{
-			{
-				ThreadID:    "root",
-				Invocations: []domain.InvocationFact{{Role: "orchestrator", Model: "fresh-model"}},
-				Tools:       []domain.ToolFact{{SessionID: "root", Name: "fresh-root", Calls: 2}},
-			},
-			{
-				ThreadID: "child", ParentThread: "root",
-				Invocations: []domain.InvocationFact{{Role: "coder", Model: "fresh-model"}},
-				Tools:       []domain.ToolFact{{SessionID: "child", Name: "fresh-child", Calls: 3}},
-			},
-		})
-	}
+
 	report, err := engine.Execute(BackfillOptions{
 		WorkspacesDir: tempDir,
 		TicketID:      ticketID,
@@ -1151,7 +1164,7 @@ func TestBackfillEngine_CodexRefreshesRootTreeOnce(t *testing.T) {
 }
 
 func TestBackfillEngine_CodexParseFailurePreservesTree(t *testing.T) {
-	tempDir := t.TempDir()
+	tempDir := newBackfillProject(t)
 	ticketID := "FIX-8-PARSE-FAILURE"
 	childParent := "root"
 	ledger := domain.AgenticFactLedger{
@@ -1164,13 +1177,15 @@ func TestBackfillEngine_CodexParseFailurePreservesTree(t *testing.T) {
 		},
 	}
 	createTestWorkspace(t, tempDir, ticketID, ledger)
+	broken := filepath.Join(tempDir, "broken.jsonl")
+	if err := os.WriteFile(broken, []byte("{broken\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
 	engine := NewEngine()
 	engine.discoverCodexRollouts = func(codex.DiscoveryOptions) ([]string, error) {
-		return []string{"root-rollout"}, nil
+		return []string{broken}, nil
 	}
-	engine.parseCodexRollout = func(string) (codex.Transcript, error) {
-		return codex.Transcript{}, errors.New("parse failed")
-	}
+
 	report, err := engine.Execute(BackfillOptions{
 		WorkspacesDir: tempDir,
 		TicketID:      ticketID,
@@ -1262,7 +1277,7 @@ func setupMockOpenCodeMultiRootDB(t *testing.T, dbPath string, rootIDs []string,
 }
 
 func TestBackfillEngine_MultiRootSessionsExtracted(t *testing.T) {
-	tempDir := t.TempDir()
+	tempDir := newBackfillProject(t)
 	ticketID := "AL-MULTI-ROOT"
 	ledger := domain.AgenticFactLedger{
 		TicketID: &ticketID,
@@ -1332,7 +1347,7 @@ func TestBackfillEngine_MultiRootSessionsExtracted(t *testing.T) {
 }
 
 func TestBackfillEngine_StrictSessionTrustRejectsUntrustedTitleFallback(t *testing.T) {
-	tempDir := t.TempDir()
+	tempDir := newBackfillProject(t)
 	ticketID := "AL-REJECT-FALLBACK"
 	ledger := domain.AgenticFactLedger{
 		TicketID: &ticketID,
@@ -1394,7 +1409,7 @@ func TestBackfillEngine_StrictSessionTrustRejectsUntrustedTitleFallback(t *testi
 }
 
 func TestBackfillEngine_ExplicitFallbackResolvesWhenAllowed(t *testing.T) {
-	tempDir := t.TempDir()
+	tempDir := newBackfillProject(t)
 	ticketID := "AL-EXPLICIT-FALLBACK"
 	ledger := domain.AgenticFactLedger{
 		TicketID: &ticketID,
@@ -1476,7 +1491,7 @@ func TestBackfillEngine_ExplicitFallbackResolvesWhenAllowed(t *testing.T) {
 }
 
 func TestBackfillEngine_CodexPreservesChildParentIDAndUser(t *testing.T) {
-	tempDir := t.TempDir()
+	tempDir := newBackfillProject(t)
 	ticketID := "FIX-10-CODEX-HIERARCHY"
 	parentID := "codex-root"
 	version := domain.CurrentSchemaVersion
@@ -1507,37 +1522,14 @@ func TestBackfillEngine_CodexPreservesChildParentIDAndUser(t *testing.T) {
 	}
 	createTestWorkspace(t, tempDir, ticketID, ledger)
 
+	rootPath := writeBackfillRollout(t, tempDir, "codex-root", "", "orchestrator", "gpt-4o", map[string]int{"bash": 3}, "")
+	childPath := writeBackfillRollout(t, tempDir, "codex-child", "codex-root", "coder", "gpt-4o", map[string]int{"edit": 5}, "")
 	engine := NewEngine()
 	engine.discoverCodexRollouts = func(options codex.DiscoveryOptions) ([]string, error) {
 		if options.SessionID == "codex-root" {
-			return []string{"root-path", "child-path"}, nil
+			return []string{rootPath, childPath}, nil
 		}
 		return nil, nil
-	}
-	engine.parseCodexRollout = func(path string) (codex.Transcript, error) {
-		if path == "root-path" {
-			return codex.Transcript{
-				ThreadID:  "codex-root",
-				SessionID: "codex-root",
-				Invocations: []domain.InvocationFact{
-					{Role: "orchestrator", Model: "gpt-4o"},
-				},
-				Tools: []domain.ToolFact{
-					{SessionID: "codex-root", Name: "bash", Calls: 3},
-				},
-			}, nil
-		}
-		return codex.Transcript{
-			ThreadID:     "codex-child",
-			SessionID:    "codex-child",
-			ParentThread: "codex-root",
-			Invocations: []domain.InvocationFact{
-				{Role: "coder", Model: "gpt-4o"},
-			},
-			Tools: []domain.ToolFact{
-				{SessionID: "codex-child", Name: "edit", Calls: 5},
-			},
-		}, nil
 	}
 
 	report, err := engine.Execute(BackfillOptions{
@@ -1618,7 +1610,7 @@ func TestBackfillEngine_SkillTaskRecoverySnapshots(t *testing.T) {
 		{name: "dry run incomplete", missingRoot: true, dryRun: true}, {name: "temporary write failure", blockWrite: true}, {name: "unrooted cycle", cyclic: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			root := t.TempDir()
+			root := newBackfillProject(t)
 			ticket := "CUSTOM-SNAPSHOT"
 			v := domain.CurrentSchemaVersion
 			oldSkill := domain.SkillFact{Name: "historical"}
@@ -1792,16 +1784,15 @@ func boolInt(v bool) int {
 
 func TestBackfillEngine_GlobalRecoveryRequiresEveryKnownTree(t *testing.T) {
 	for _, tc := range []struct {
-		name, source                                        string
-		missingChild, lateParse, groupFailure, parseWarning bool
+		name, source                          string
+		missingChild, lateParse, parseWarning bool
 	}{
 		{name: "unavailable Codex sibling", source: "both"}, {name: "unselected OpenCode obligation", source: "codex"},
 		{name: "missing stored child", source: "both", missingChild: true}, {name: "late parse failure", source: "both", lateParse: true},
-		{name: "group failure", source: "both", groupFailure: true},
 		{name: "successful parse with warnings", source: "both", parseWarning: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			root := t.TempDir()
+			root := newBackfillProject(t)
 			ticket := "CUSTOM-GLOBAL"
 			v := domain.CurrentSchemaVersion
 			parent := "codex-a"
@@ -1814,31 +1805,29 @@ func TestBackfillEngine_GlobalRecoveryRequiresEveryKnownTree(t *testing.T) {
 				ledger.Sessions = append(ledger.Sessions, domain.SessionFact{ID: "missing-child", ParentID: &parent, Source: domain.SourceCodex, Invocations: []domain.InvocationFact{{Role: "coder", Model: "old-child"}}})
 			}
 			workspace := createTestWorkspace(t, root, ticket, ledger)
+			suffix := ""
+			if tc.parseWarning {
+				suffix = "{broken}\n"
+			}
+			goodPath := writeBackfillRollout(t, root, "codex-a", "", "coder", "fresh-a", nil, suffix)
+			badPath := filepath.Join(root, "bad.jsonl")
+			if err := os.WriteFile(badPath, []byte("{broken\n"), 0600); err != nil {
+				t.Fatal(err)
+			}
 			engine := NewEngine()
 			engine.discoverCodexRollouts = func(opts codex.DiscoveryOptions) ([]string, error) {
 				if opts.SessionID == "codex-b" {
 					return nil, errors.New("source not on this machine")
 				}
 				if tc.lateParse {
-					return []string{"good", "bad"}, nil
+					return []string{goodPath, badPath}, nil
 				}
-				return []string{"good"}, nil
+				return []string{goodPath}, nil
 			}
-			engine.parseCodexRollout = func(path string) (codex.Transcript, error) {
-				if path == "bad" {
-					return codex.Transcript{}, errors.New("malformed late source")
-				}
-				if tc.parseWarning {
-					return codex.Transcript{ThreadID: "codex-a", Warnings: []string{"line 3: malformed JSON record"}}, nil
-				}
-				return codex.Transcript{ThreadID: "codex-a", Invocations: []domain.InvocationFact{{Role: "coder", Model: "fresh-a"}}}, nil
-			}
-			if tc.groupFailure {
-				engine.combineCodex = func([]codex.Transcript) (codex.Transcript, error) {
-					return codex.Transcript{}, errors.New("ambiguous grouping")
-				}
-			}
-			report, err := engine.Execute(BackfillOptions{WorkspacesDir: root, TicketID: ticket, Source: tc.source, CodexHome: root, DBPath: filepath.Join(root, "missing.db"), RecomputeDB: true})
+
+			emptyDB := filepath.Join(root, "empty-opencode.db")
+			setupMockOpenCodeDB(t, emptyDB, "unrelated-owner", "OTHER")
+			report, err := engine.Execute(BackfillOptions{WorkspacesDir: root, TicketID: ticket, Source: tc.source, CodexHome: root, DBPath: emptyDB, RecomputeDB: true})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -1858,7 +1847,7 @@ func TestBackfillEngine_GlobalRecoveryRequiresEveryKnownTree(t *testing.T) {
 				models[s.ID] = s.Invocations[0].Model
 			}
 			wantA := "fresh-a"
-			if tc.groupFailure || tc.parseWarning {
+			if tc.parseWarning {
 				wantA = "old-a"
 			}
 			if models["codex-a"] != wantA || models["codex-b"] != "old-b" || models["opencode-c"] != "old-c" {
@@ -1880,7 +1869,7 @@ func TestBackfillEngine_GlobalRecoveryRequiresEveryKnownTree(t *testing.T) {
 func TestBackfillEngine_SchemaV2RecoversKnownGrandchildren(t *testing.T) {
 	for _, malformed := range []bool{false, true} {
 		t.Run(fmt.Sprintf("malformed=%t", malformed), func(t *testing.T) {
-			root := t.TempDir()
+			root := newBackfillProject(t)
 			ticket := "CUSTOM-V2"
 			v := domain.CurrentSchemaVersion
 			parent, grandparent := "v2-root", "v2-child"
@@ -1942,51 +1931,10 @@ func TestBackfillEngine_SchemaV2RecoversKnownGrandchildren(t *testing.T) {
 	}
 }
 
-func TestBackfillEngine_InvalidCandidatePreservesFiles(t *testing.T) {
-	for _, dryRun := range []bool{false, true} {
-		t.Run(fmt.Sprintf("dry-run=%t", dryRun), func(t *testing.T) {
-			root := t.TempDir()
-			ticket := "CUSTOM-INVALID-CANDIDATE"
-			v := domain.CurrentSchemaVersion
-			ledger := domain.AgenticFactLedger{SchemaVersion: &v, TicketID: &ticket, Sessions: []domain.SessionFact{{ID: "root", Source: domain.SourceCodex, Invocations: []domain.InvocationFact{{Role: "coder", Model: "stored"}}}}}
-			workspace := createTestWorkspace(t, root, ticket, ledger)
-			_, before := readRecoveryLedger(t, workspace)
-			summary := filepath.Join(workspace, "SUMMARY.md")
-			summaryBefore, err := os.ReadFile(summary)
-			if err != nil {
-				t.Fatal(err)
-			}
-			engine := NewEngine()
-			engine.discoverCodexRollouts = func(codex.DiscoveryOptions) ([]string, error) { return []string{"source"}, nil }
-			engine.parseCodexRollout = func(string) (codex.Transcript, error) {
-				return codex.Transcript{ThreadID: "root", Invocations: []domain.InvocationFact{{Role: "coder", Model: "fresh"}}, Tools: []domain.ToolFact{{SessionID: "root", Name: "read", Calls: -1}}}, nil
-			}
-			report, err := engine.Execute(BackfillOptions{WorkspacesDir: root, TicketID: ticket, Source: "codex", CodexHome: root, RecomputeDB: true, DryRun: dryRun, UpdateSummaries: true})
-			if err != nil {
-				t.Fatal(err)
-			}
-			if len(report.Results) != 1 || report.Results[0].Error == nil || !strings.Contains(report.Results[0].Error.Error(), "validating updated ledger") {
-				t.Fatalf("invalid candidate did not reach final validation guard: %+v", report.Results)
-			}
-			_, after := readRecoveryLedger(t, workspace)
-			summaryAfter, err := os.ReadFile(summary)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if string(before) != string(after) || string(summaryBefore) != string(summaryAfter) {
-				t.Fatal("final validation failure published candidate/summary")
-			}
-			if _, err := os.Stat(filepath.Join(workspace, "agentic_metrics.json.tmp")); !os.IsNotExist(err) {
-				t.Fatalf("validation failure reached write boundary: %v", err)
-			}
-		})
-	}
-}
-
 func TestRecoverOpenCodeRetainsUnavailableOrphanSiblingTree(t *testing.T) {
 	for _, intermediary := range []bool{false, true} {
 		t.Run(fmt.Sprintf("intermediary=%t", intermediary), func(t *testing.T) {
-			root := t.TempDir()
+			root := newBackfillProject(t)
 			path := filepath.Join(root, "source.db")
 			setupMockOpenCodeMultiRootDB(t, path, []string{"source-root", "independent"}, "CUSTOM-ORPHAN")
 			db, err := sql.Open("sqlite", path)
@@ -2011,7 +1959,7 @@ func TestRecoverOpenCodeRetainsUnavailableOrphanSiblingTree(t *testing.T) {
 			}
 			// Exercise the source-recovery boundary directly: runtime file validation
 			// independently rejects absent parents, but recovery must also preserve branches.
-			recovered := recoverOpenCode(db, stored, "tester", "CUSTOM-ORPHAN", root, false)
+			recovered := recoverOpenCodeAt(db, stored, "tester", "CUSTOM-ORPHAN", []string{root}, false, time.Time{}, &sourceReadBudget{sessions: 20, bytes: 1000000}, &domain.GenerationPolicy{Skills: true, Delegations: true, Anomalies: true}, nil)
 			if recovered.complete || !recovered.updated || len(recovered.diagnostics) == 0 {
 				t.Fatalf("missing sibling falsely certified or independent refresh lost: %+v", recovered)
 			}
@@ -2036,7 +1984,7 @@ func TestBackfillEngine_WarningBearingRolloutsPreserveTree(t *testing.T) {
 		{"invalid usage", "{\"type\":\"token_usage_record\",\"payload\":{\"usage\":\"invalid\"}}\n"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			root := t.TempDir()
+			root := newBackfillProject(t)
 			v, ticket, parent := domain.CurrentSchemaVersion, "CUSTOM-WARNINGS", "damaged"
 			old := func(id string, parentID *string, source domain.SourceHarness) domain.SessionFact {
 				return domain.SessionFact{ID: id, ParentID: parentID, Source: source, User: "stored-user", Invocations: []domain.InvocationFact{
@@ -2139,7 +2087,7 @@ func TestBackfillEngine_WarningBearingRolloutsPreserveTree(t *testing.T) {
 }
 
 func TestBackfillCodexCompleteParentRefreshesWhileMissingChildFactsSurvive(t *testing.T) {
-	root := t.TempDir()
+	root := newBackfillProject(t)
 	ticket, title := "TEST-OWNER-REFRESH", "Complete parent with unavailable child"
 	version := 6
 	parentID := "local-parent"
@@ -2468,7 +2416,7 @@ func TestBackfillEngine_PreservesUnavailableAnalysisOutsideCompleteRefresh(t *te
 						t.Fatalf("complete empty analysis not recorded as an array: %+v", owner)
 					}
 				}
-				metrics := domain.DeriveMetricsLedger(facts, domain.DefaultProjectConfig())
+				metrics := domain.DeriveMetricsLedger(facts, domain.ProjectConfig{Generation: domain.GenerationConfig{Metrics: domain.GenerationPolicy{Skills: true, Delegations: true, Anomalies: true}}})
 				if metrics.Totals.ContextHealth != domain.ContextHealthUnavailable {
 					t.Fatalf("incomplete analysis claimed aggregate health %s", metrics.Totals.ContextHealth)
 				}
@@ -2528,7 +2476,7 @@ func TestReplaceRecoveredOwnersPreservesUnrecordedNativeCategories(t *testing.T)
 			if fresh[0].Anomalies != nil {
 				t.Fatalf("raw source without policy claimed complete anomaly analysis: %+v", fresh)
 			}
-			configured, err := domain.PersistSourceAnomalySummaries(domain.AgenticFactLedger{Sessions: fresh}, domain.SourceEvents{Events: complete.Events, CompleteSessionIDs: []string{"native"}}, domain.AnomalyThresholdsConfig{ErrorRateMinCalls: 5, ErrorRateThreshold: .35, ErrorRateCriticalThreshold: .70})
+			configured, err := domain.PersistSourceAnomalySummaries(domain.AgenticFactLedger{Sessions: fresh}, domain.SourceEvents{Events: complete.Events, CompleteSessionIDs: []string{"native"}}, fixtureCompleteAnomalyPolicy())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -2542,11 +2490,8 @@ func TestReplaceRecoveredOwnersPreservesUnrecordedNativeCategories(t *testing.T)
 
 func writePresenceRecoveryConfig(t *testing.T, root string) domain.ProjectConfig {
 	t.Helper()
-	input := fmt.Sprintf("project_name: PresenceRecoveryFixture\ntelemetry:\n  capture:\n    state_dir: %q\nticket:\n  prefixes: [TEST]\nworkspaces:\n  dir: records\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n", filepath.Join(root, "capture-state"))
-	if err := os.WriteFile(filepath.Join(root, ".agenticlens-config.yaml"), []byte(input), 0600); err != nil {
-		t.Fatal(err)
-	}
-	cfg, err := adaptersconfig.Load(root)
+	writeBackfillProject(t, root)
+	cfg, err := adaptersconfig.LoadShared(root)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2614,7 +2559,7 @@ func TestFormerGenerationMetadataRecoveryWorkflows(t *testing.T) {
 	} {
 		for _, workflow := range []string{"backfill", "migration"} {
 			t.Run(tc.name+"/"+workflow, func(t *testing.T) {
-				root := t.TempDir()
+				root := newBackfillProject(t)
 				cfg := writePresenceRecoveryConfig(t, root)
 				ticket := "TEST-COMPAT-CLEANUP"
 				workspace := filepath.Join(root, ticket)
@@ -2633,8 +2578,21 @@ func TestFormerGenerationMetadataRecoveryWorkflows(t *testing.T) {
 				}
 				var baseline adapters.AgenticFactLedgerDTO
 				if !tc.invalid {
-					if err := json.Unmarshal(raw, &baseline); err != nil {
-						t.Fatalf("supported canonical compatibility control rejected: %v", err)
+					cleaned, err := adapters.NormalizeFormerGenerationMetadata(raw)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if err := json.Unmarshal(cleaned, &baseline); err != nil {
+						t.Fatal(err)
+					}
+					if tc.root != "" || strings.Contains(tc.owner, "anomaly_availability") {
+						if _, err := adapters.LoadExistingFactLedger(path); err == nil {
+							t.Fatal("ordinary read cleaned former metadata")
+						}
+						unchanged, err := os.ReadFile(path)
+						if err != nil || !reflect.DeepEqual(unchanged, raw) {
+							t.Fatal("ordinary read wrote cleanup")
+						}
 					}
 				}
 				var runErr error
@@ -2728,7 +2686,7 @@ func TestBackfillRequiresConfiguredPolicyBeforePublication(t *testing.T) {
 }
 
 func TestBackfillRefreshReceivesConfiguredFailureRatePolicy(t *testing.T) {
-	root := t.TempDir()
+	root := newBackfillProject(t)
 	ticket := "TEST-POLICY"
 	version := domain.CurrentSchemaVersion
 	workspace := createTestWorkspace(t, root, ticket, domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticket, Sessions: sessionFactsWithInvs([]testInvFact{{SessionID: "owner", Role: "coder", Model: "stale"}}, nil, nil)})
@@ -2749,10 +2707,21 @@ func TestBackfillRefreshReceivesConfiguredFailureRatePolicy(t *testing.T) {
 		critical float64
 		severity domain.AnomalySeverity
 	}{{3, .8, domain.SeverityWarning}, {4, .8, ""}, {3, .6, domain.SeverityCritical}} {
-		cfg := fmt.Sprintf("project_name: BackfillPolicy\ntelemetry:\n  capture:\n    state_dir: capture-state\nticket:\n  prefixes: [TEST]\nworkspaces:\n  dir: .\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: %d\n  error_rate_threshold: 0.40\n  error_rate_critical_threshold: %g\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n", tc.minimum, tc.critical)
-		if err := os.WriteFile(filepath.Join(root, ".agenticlens-config.yaml"), []byte(cfg), 0600); err != nil {
+		policy, err := adaptersconfig.LoadShared(root)
+		if err != nil {
 			t.Fatal(err)
 		}
+		policy.AnomalyThresholds.ErrorRateMinCalls = tc.minimum
+		policy.AnomalyThresholds.ErrorRateThreshold = .40
+		policy.AnomalyThresholds.ErrorRateCriticalThreshold = tc.critical
+		cfg, err := adaptersconfig.GenerateConfigYAML(policy)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(root, ".agenticlens-config.yaml"), cfg, 0600); err != nil {
+			t.Fatal(err)
+		}
+
 		report, err := NewEngine().Execute(BackfillOptions{WorkspacesDir: root, TicketID: ticket, Source: "opencode", RecomputeDB: true, DBPath: dbPath})
 		if err != nil {
 			t.Fatal(err)

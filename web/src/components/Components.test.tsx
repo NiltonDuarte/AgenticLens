@@ -1,5 +1,7 @@
+import { ProjectConfigContext } from '../contexts/ProjectConfigContext';
+import { mockProjectConfig } from '../test/fixtures/mockData';
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '../test/render';
 import { EmptyState } from './EmptyState';
 import { KPICard } from './KPICard';
 import { CostKPICard } from './CostKPICard';
@@ -202,6 +204,21 @@ describe('Presentation Components Boundary Tests', () => {
       expect(container.querySelectorAll('.progress-track:not([hidden])')).toHaveLength(0);
       const names = Array.from(container.querySelectorAll('.distribution-name')).map((item) => item.textContent);
       expect(names).toEqual(['known', 'missing', 'partial']);
+    });
+
+    it('orders observed role rows by configured order then text without applying aliases twice', () => {
+      const {container, rerender} = render(
+        <ProjectConfigContext.Provider value={{...mockProjectConfig, role_order: ['zeta', 'planner', 'absent'], role_mappings: {planner: 'other'}}}>
+          <DistributionCard title="Role Costs" colorType="role" items={{omega: 9, planner: 1, zeta: 2, alpha: 3}} totalCostUSD={15} />
+        </ProjectConfigContext.Provider>
+      );
+      expect([...container.querySelectorAll('.distribution-name')].map((node) => node.textContent)).toEqual(['zeta','planner','alpha','omega']);
+      expect(screen.queryByText('absent')).not.toBeInTheDocument();
+      expect(screen.queryByText('other')).not.toBeInTheDocument();
+      rerender(<ProjectConfigContext.Provider value={{...mockProjectConfig, role_order: [], role_mappings: {}}}>
+        <DistributionCard title="Role Costs" colorType="role" items={{zeta: 9, alpha: 1}} totalCostUSD={10} />
+      </ProjectConfigContext.Provider>);
+      expect([...container.querySelectorAll('.distribution-name')].map((node) => node.textContent)).toEqual(['alpha','zeta']);
     });
 
     it('handles single item with 100% cost allocation cleanly', () => {
@@ -464,7 +481,7 @@ describe('Presentation Components Boundary Tests', () => {
         screen.getByRole('button', { name: 'Information about Context Window Saturation' })
       ).toBeInTheDocument();
       expect(screen.getByRole('tooltip')).toHaveTextContent(
-        'Context window utilization of the root agent and subagents evaluated against the 200,000 token healthy operating ceiling.'
+        'Context usage evaluated against the recorded 200,000 token ceiling.'
       );
       rerender(
         <SaturationBar
@@ -529,7 +546,7 @@ describe('Presentation Components Boundary Tests', () => {
       expect(screen.getByText(/105\.0%/)).toBeInTheDocument();
     });
 
-    it('handles zero or negative healthy ceiling tokens with defensive fallback and tooltip rendering', () => {
+    it('shows missing ceilings without inventing a denominator and retains tooltip rendering', () => {
       const { rerender } = render(
         <SaturationBar
           contextHealth={{
@@ -548,14 +565,14 @@ describe('Presentation Components Boundary Tests', () => {
 
       expect(screen.getByText('None')).toBeInTheDocument();
       expect(screen.getByText('HEALTHY')).toBeInTheDocument();
-      expect(screen.getByText('Ceiling: 200k tokens')).toBeInTheDocument();
-      expect(screen.getByText('(0.0% of ceiling)')).toBeInTheDocument();
+      expect(screen.getByText('Ceiling: Not recorded')).toBeInTheDocument();
+      expect(screen.getByText('Saturation not recorded')).toBeInTheDocument();
       expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
       expect(
         screen.getByRole('button', { name: 'Information about Context Window Saturation' })
       ).toBeInTheDocument();
 
-      // Negative ceiling tokens falls back to 200k
+      // An invalid explicit ceiling does not select another value.
       rerender(
         <SaturationBar
           contextHealth={{
@@ -569,14 +586,14 @@ describe('Presentation Components Boundary Tests', () => {
             peak_by_role: { orchestrator: 150000 },
           }}
           healthyCeilingTokens={-50000}
-          tooltip="Negative ceiling fallback explanation"
+          tooltip="Explicit unavailable ceiling explanation"
         />
       );
 
-      expect(screen.getByText('Ceiling: 200k tokens')).toBeInTheDocument();
+      expect(screen.getByText('Ceiling: Not recorded')).toBeInTheDocument();
       expect(screen.getByText('ELEVATED')).toBeInTheDocument();
       expect(screen.getByRole('tooltip')).toHaveTextContent(
-        'Negative ceiling fallback explanation'
+        'Explicit unavailable ceiling explanation'
       );
     });
   });

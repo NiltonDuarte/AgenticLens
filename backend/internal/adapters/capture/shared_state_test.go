@@ -13,7 +13,6 @@ import (
 	"sync"
 	"testing"
 
-	adaptersconfig "agenticlens/internal/adapters/config"
 	"agenticlens/internal/domain"
 )
 
@@ -33,7 +32,7 @@ func sharedWorktrees(t *testing.T) (string, string, string) {
 		}
 	}
 	run("init", "-q")
-	cfg, err := adaptersconfig.GenerateDefaultYAML("SharedProject", "workspaces", "", []string{"src"}, []domain.TicketPrefix{{Prefix: "TEST"}})
+	cfg, err := fixtureSharedYAML(t, "SharedProject", "workspaces")
 	if err != nil {
 		t.Fatal(err)
 	}

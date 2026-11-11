@@ -92,7 +92,7 @@ func legacyV3Events(ledger legacyLedger) []domain.EventFact {
 	}
 	turns := make(map[anomalyTurn]bool)
 	wildcardTurns := make(map[int64]bool)
-	for _, anomaly := range domain.DetectAnomaliesFromEvents(ledger.current(), ledger.EventFacts()) {
+	for _, anomaly := range domain.DetectAnomaliesFromEvents(ledger.current(), ledger.EventFacts(), historicalV2AnomalyPolicy()) {
 		if anomaly.Context.Turn == nil {
 			continue
 		}
@@ -112,4 +112,16 @@ func legacyV3Events(ledger legacyLedger) []domain.EventFact {
 		retained = append(retained, event)
 	}
 	return domain.SortEvents(retained)
+}
+
+// historicalV2AnomalyPolicy freezes the audited v2-to-v3 transform's original
+// detector semantics. It is explicit migration input, never runtime project policy.
+// Failure-rate analysis was unavailable in this transform and remains unavailable.
+func historicalV2AnomalyPolicy() domain.AnomalyThresholdsConfig {
+	return domain.AnomalyThresholdsConfig{
+		StallThresholdSeconds: 120, ConsecutiveErrorsStreakWarning: 3, ConsecutiveErrorsStreakCritical: 5,
+		ContextCeilingWarningTokens: 160000, ContextCeilingCriticalTokens: 200000,
+		TurnUsageWarningTokens: 30000, TurnUsageCriticalTokens: 60000, ContextGrowthWarningTokens: 40000, ContextGrowthCriticalTokens: 80000,
+		ToolThrashingMinFailures: 3, ToolThrashingCriticalFailures: 5,
+	}
 }

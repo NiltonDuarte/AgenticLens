@@ -6,20 +6,34 @@ import (
 
 	"agenticlens/internal/adapters/codex"
 	config "agenticlens/internal/adapters/config"
+	"agenticlens/internal/domain"
 )
 
 // NormalizeCodexSubagentStart handles the native start shape: session_id names
 // the parent while transcript_path may name the new child's rollout. Retain the
 // child only as a pending source pointer and resolve the parent's own transcript
 // independently. Delayed child metadata is not an authoritative contradiction.
-func NormalizeCodexSubagentStart(input HookInput, store, project string) (HookInput, error) {
+func NormalizeCodexSubagentStart(input HookInput, store, project string, policies ...domain.CaptureConfig) (HookInput, error) {
 	if input.Event != "SubagentStart" || input.TranscriptPath == "" {
 		return input, nil
+	}
+	var policy domain.CaptureConfig
+	if len(policies) > 0 {
+		policy = policies[0]
+	} else {
+		cfg, err := config.Load(project)
+		if err != nil {
+			return input, err
+		}
+		policy = cfg.Telemetry.Capture
+	}
+	if err := policy.ValidateBudgets(); err != nil {
+		return input, err
 	}
 	if err := codex.ValidateRolloutStore(store, input.TranscriptPath); err != nil {
 		return input, err
 	}
-	metadata, readErr := codex.ReadSessionContext(input.TranscriptPath)
+	metadata, readErr := codex.ReadSessionContextWithinBudget(input.TranscriptPath, policy.MaxSourceBytes)
 	if errors.Is(readErr, codex.ErrSessionContextMismatch) {
 		return input, readErr
 	}
@@ -47,8 +61,12 @@ func NormalizeCodexSubagentStart(input HookInput, store, project string) (HookIn
 	childPath := input.TranscriptPath
 	input.TranscriptPath = ""
 	input.AgentTranscriptPath = childPath
-	if parentPath, err := codex.DiscoverExactRolloutPath(store, input.SessionID); err == nil {
-		input.TranscriptPath = parentPath
+	remainingBytes := policy.MaxSourceBytes - min(policy.MaxSourceBytes, int64(MaxPayloadBytes))
+	if policy.MaxSessions > 1 && remainingBytes > 0 {
+		budget := &codex.DiscoveryBudget{MaxSessions: policy.MaxSessions - 1, MaxSourceBytes: remainingBytes}
+		if parentPath, err := codex.DiscoverExactRolloutPathWithBudget(store, input.SessionID, budget); err == nil {
+			input.TranscriptPath = parentPath
+		}
 	}
 	return input, nil
 }

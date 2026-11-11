@@ -65,7 +65,7 @@ func TestParseRolloutMapsPrivacySafeMetadataUsageAndEventKinds(t *testing.T) {
 	version := domain.CurrentSchemaVersion
 	ticketID := "TEST-101"
 	factsForMetrics := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticketID, Sessions: sessions}
-	ledger := domain.DeriveMetricsLedger(factsForMetrics, domain.DefaultProjectConfig())
+	ledger := domain.DeriveMetricsLedger(factsForMetrics, codexMetricConfig())
 	ledger.Facts, err = domain.PersistAnomalySummaries(factsForMetrics)
 	if err != nil {
 		t.Fatal(err)
@@ -140,7 +140,7 @@ func TestMetricsLedgerUsesCodexThreadIDForInvocationHierarchy(t *testing.T) {
 	version := domain.CurrentSchemaVersion
 	ticketID := "TEST-101"
 	factsForMetrics := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticketID, Sessions: sessions}
-	ledger := domain.DeriveMetricsLedger(factsForMetrics, domain.DefaultProjectConfig())
+	ledger := domain.DeriveMetricsLedger(factsForMetrics, codexMetricConfig())
 	ledger.Facts, err = domain.PersistAnomalySummaries(factsForMetrics)
 	if err != nil {
 		t.Fatal(err)

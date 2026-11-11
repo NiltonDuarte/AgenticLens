@@ -39,7 +39,7 @@ function diagnosticsFromResponse(res: Response): readonly WorkspaceDiagnostic[] 
 
 function appendMultiParams(params: URLSearchParams, key: string, values?: readonly string[]): void {
   if (!values || values.length === 0) return;
-  const filtered = values.map((v) => v.trim()).filter((v) => v !== '' && v.toLowerCase() !== 'all');
+  const filtered = values.map((v) => v.trim()).filter((v) => v !== '' && (key === 'prefix' || v.toLowerCase() !== 'all'));
   if (filtered.length === 0) return;
   for (const v of filtered) {
     params.append(key, v);

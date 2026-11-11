@@ -110,24 +110,12 @@ func projectSourceFacts(sessions []domain.SessionFact, events []domain.EventFact
 		}
 	}
 	sessions = WithOwnedSkillTaskFacts(sessions, events)
-	complete := make([]string, 0, len(sessions))
-	for _, owner := range sessions {
-		partial := partialOwners[owner.ID]
-		if !partial {
-			complete = append(complete, owner.ID)
-		}
-	}
-	ledger := domain.AgenticFactLedger{Sessions: sessions}
+	// Source extraction records observed occurrences. Anomaly analysis belongs to
+	// the owning operation after all refreshed/retained owners are assembled and
+	// explicit configured thresholds are available.
+	facts := domain.AgenticFactLedger{Sessions: sessions}
 	if policy != nil {
-		ledger = domain.ProjectGenerationFacts(ledger, *policy)
-	}
-	effective := domain.DefaultGenerationPolicy()
-	if policy != nil {
-		effective = *policy
-	}
-	facts, err := domain.PersistSourceAnomalySummariesWithPolicy(ledger, domain.SourceEvents{Events: events, CompleteSessionIDs: complete}, effective)
-	if err != nil {
-		return nil, err
+		facts = domain.ProjectGenerationFacts(facts, *policy)
 	}
 	for i, owner := range facts.Sessions {
 		if partialOwners[owner.ID] {

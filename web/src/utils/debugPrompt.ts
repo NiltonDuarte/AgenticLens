@@ -81,7 +81,7 @@ export function translateRuleToPlainEnglish(ruleId: string, toolName?: string): 
     ContextCeilingApproach: 'Context window saturation approach',
     SUBAGENT_REWORK_LOOP: tool ? `Repeated tool thrashing on \`${tool}\`` : 'Repeated tool thrashing',
     ToolThrashing: tool ? `Repeated tool thrashing on \`${tool}\`` : 'Repeated tool thrashing',
-    TokenVelocityRunaway: 'Rapid token consumption velocity',
+    TokenVelocityRunaway: 'Token usage surge',
   };
   return labels[ruleId] ?? ruleId;
 }

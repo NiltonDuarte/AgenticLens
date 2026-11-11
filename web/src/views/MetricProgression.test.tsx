@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent, act, within } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act, within } from '../test/render';
 import { MetricProgression } from './MetricProgression';
 import * as apiClient from '../api/client';
 import { mockAgenticMetricsLedgers } from '../test/fixtures/mockData';
@@ -83,7 +83,7 @@ describe('MetricProgression View Component', () => {
         expect(screen.getByRole('button', {
             name: 'Information about Peak Context Window Saturation vs Ceiling',
         })).toBeInTheDocument();
-        expect(screen.getByText('Peak active context tokens per time bucket measured against the standard 200,000 token healthy context ceiling.')).toBeInTheDocument();
+        expect(screen.getByText('Peak recorded context tokens per time bucket. A ceiling is shown only when the selected records provide one common explicit value.')).toBeInTheDocument();
         const trigger = screen.getByRole('button', {
             name: 'Information about Token Volume Distribution',
         });

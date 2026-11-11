@@ -660,24 +660,21 @@ func fenceLegacyRegistry(ctx context.Context, db *sql.DB, project string) (retur
 	return nil
 }
 func prepareRelocationConfiguration(project, replacement string) (string, adaptersconfig.CaptureConfigUpdate, error) {
-	path, err := adaptersconfig.FindConfigFile(project)
+	selection, err := adaptersconfig.SelectConfig(project)
 	if err != nil {
 		return "", adaptersconfig.CaptureConfigUpdate{}, err
 	}
-	local := filepath.Join(project, ".agenticlens-config.local.yaml")
-	if _, e := os.Stat(local); e == nil {
-		preview, prepareErr := adaptersconfig.PrepareCaptureConfigUpdate(local, "")
-		if prepareErr != nil {
-			return "", adaptersconfig.CaptureConfigUpdate{}, prepareErr
+	if selection.LocalOrigin == "base" {
+		same, err := SameStore(selection.Project, filepath.Dir(selection.LocalPath))
+		if err != nil {
+			return "", adaptersconfig.CaptureConfigUpdate{}, err
 		}
-		if preview.PreviousStateDir != "" {
-			path = local
+		if !same {
+			return "", adaptersconfig.CaptureConfigUpdate{}, errors.New("relocation cannot rewrite inherited base policy for a linked worktree; provide an explicit worktree-local policy or run base setup from the base checkout")
 		}
-	} else if !errors.Is(e, os.ErrNotExist) {
-		return "", adaptersconfig.CaptureConfigUpdate{}, e
 	}
-	update, err := adaptersconfig.PrepareCaptureConfigUpdate(path, replacement)
-	return path, update, err
+	update, err := adaptersconfig.PrepareCaptureConfigUpdate(selection.LocalPath, replacement)
+	return selection.LocalPath, update, err
 }
 func relocationManifests(source, project string) ([]Manifest, error) {
 	result := []Manifest{}

@@ -337,6 +337,12 @@ func PersistSourceAnomalySummaries(ledger AgenticFactLedger, source SourceEvents
 	if len(source.CompleteSessionIDs) == 0 {
 		return ledger, nil
 	}
+	if len(thresholds) != 1 {
+		return ledger, fmt.Errorf("explicit anomaly_thresholds policy is required before source summary calculation")
+	}
+	if err := thresholds[0].ValidateCalculation(); err != nil {
+		return ledger, err
+	}
 	anomalies := RefreshAnomalySummariesFromSource(ledger, source, thresholds...)
 	ratePolicyAvailable := HasConfiguredFailureRatePolicy(resolveAnomalyThresholds(thresholds...))
 	bySession := make(map[string][]Anomaly)

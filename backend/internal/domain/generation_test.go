@@ -39,7 +39,7 @@ func TestReadDerivationPreservesUnrecordedAndRecordedEmptyAnalysis(t *testing.T)
 			ledger.Anomalies = []Anomaly{}
 			ledger.Sessions[0].Anomalies = []Anomaly{}
 		}
-		got := DeriveMetricsLedger(ledger, DefaultProjectConfig())
+		got := DeriveMetricsLedger(ledger, ProjectConfig{Generation: GenerationConfig{Metrics: GenerationPolicy{Skills: true, Delegations: true, Anomalies: true}}})
 		if len(got.Anomalies) != 0 {
 			t.Fatalf("ordinary read invented analysis from independent tool totals: %+v", got.Anomalies)
 		}
@@ -58,7 +58,7 @@ func TestReadDerivationPreservesUnrecordedAndRecordedEmptyAnalysis(t *testing.T)
 func TestSourceAnomalyPreparationRequiresRootAndChildCoverage(t *testing.T) {
 	parent := "root"
 	original := AgenticFactLedger{Sessions: []SessionFact{{ID: parent}, {ID: "child", ParentID: &parent}}}
-	policy := AnomalyThresholdsConfig{ErrorRateMinCalls: 5, ErrorRateThreshold: .35, ErrorRateCriticalThreshold: .70}
+	policy := fixtureCompleteAnomalyPolicy()
 	partial, err := PersistSourceAnomalySummaries(original, SourceEvents{CompleteSessionIDs: []string{parent}}, policy)
 	if err != nil {
 		t.Fatal(err)
@@ -89,7 +89,7 @@ func TestSourceAnomalyPreparationRequiresRootAndChildCoverage(t *testing.T) {
 func TestExternalParentAnomalyCoverageRemainsPartial(t *testing.T) {
 	parent := "external-parent"
 	known := Anomaly{RuleID: RuleToolRetryStreak, Severity: SeverityWarning}
-	policy := AnomalyThresholdsConfig{ErrorRateMinCalls: 5, ErrorRateThreshold: .35, ErrorRateCriticalThreshold: .70}
+	policy := fixtureCompleteAnomalyPolicy()
 	for _, history := range []string{"fresh", "recorded-empty", "recorded-warning"} {
 		t.Run(history, func(t *testing.T) {
 			original := AgenticFactLedger{Sessions: []SessionFact{{ID: "child", ParentID: &parent, Source: SourceCodex, Invocations: []InvocationFact{{Role: "coder", Tokens: InvocationTokens{Input: 31}}}}}}
@@ -133,7 +133,7 @@ func TestExternalParentAnomalyCoverageRemainsPartial(t *testing.T) {
 }
 
 func TestAnomalyCompletenessRequiresPolicyAndNativeGroupCoverage(t *testing.T) {
-	valid := AnomalyThresholdsConfig{ErrorRateMinCalls: 5, ErrorRateThreshold: .35, ErrorRateCriticalThreshold: .70}
+	valid := fixtureCompleteAnomalyPolicy()
 	for _, history := range []string{"fresh", "recorded-group"} {
 		for _, tc := range []struct {
 			name          string
@@ -162,6 +162,15 @@ func TestAnomalyCompletenessRequiresPolicyAndNativeGroupCoverage(t *testing.T) {
 					}
 				}
 				got, err := PersistSourceAnomalySummaries(original, SourceEvents{CompleteSessionIDs: complete}, tc.policy)
+				if !tc.canAnalyze {
+					if err == nil {
+						t.Fatal("fresh analysis accepted missing/invalid policy")
+					}
+					if !reflect.DeepEqual(got, original) {
+						t.Fatal("failed analysis changed recorded facts")
+					}
+					return
+				}
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -190,4 +199,8 @@ func TestAnomalyCompletenessRequiresPolicyAndNativeGroupCoverage(t *testing.T) {
 			})
 		}
 	}
+}
+
+func fixtureCompleteAnomalyPolicy() AnomalyThresholdsConfig {
+	return AnomalyThresholdsConfig{ErrorRateMinCalls: 5, ErrorRateThreshold: .35, ErrorRateCriticalThreshold: .70, ContextCeilingWarningTokens: 160000, ContextCeilingCriticalTokens: 200000, ConsecutiveErrorsStreakWarning: 3, ConsecutiveErrorsStreakCritical: 5, TurnUsageWarningTokens: 30000, TurnUsageCriticalTokens: 60000, ContextGrowthWarningTokens: 40000, ContextGrowthCriticalTokens: 80000, ToolThrashingMinFailures: 3, ToolThrashingCriticalFailures: 5}
 }

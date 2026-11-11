@@ -3,6 +3,7 @@ package live_test
 import (
 	adaptershttp "agenticlens/internal/adapters/http"
 	"context"
+	"crypto/sha256"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -30,29 +31,24 @@ func testProjectConfig() domain.ProjectConfig {
 				{Prefix: "PO", Description: "Product Owner specs", TicketType: "docs"},
 			},
 			CaseInsensitive: true,
-			CustomPatterns:  []string{},
 		},
 		Workspaces: domain.WorkspacesConfig{
-			Dir: "workspaces",
+			Dir: "workspaces", Artifacts: []domain.WorkspaceArtifactConfig{},
 		},
-		CodeMetrics: domain.CodeMetricsConfig{SourceRoots: []string{"web", "backend"}},
+		CodeMetrics: domain.CodeMetricsConfig{BaseBranch: "fixture-base", Production: domain.CodeCategoryConfig{Include: []string{}, Exclude: []string{}}, Tests: domain.CodeCategoryConfig{Include: []string{}, Exclude: []string{}}},
 		Database: domain.DatabaseConfig{
-			Path:           "~/.local/share/opencode/opencode.db",
-			QueryTimeoutMs: 5000,
-			BusyTimeoutMs:  5000,
-			ReadOnly:       true,
+			BusyTimeoutMs: 5000,
 		},
 		Live: domain.LiveConfig{
 			ActiveThresholdSeconds: 300,
 			PollIntervalMs:         2000,
-			MaxTraceBufferMessages: 500,
 		},
 		AnomalyThresholds: domain.AnomalyThresholdsConfig{
-			StallThresholdSeconds:      120,
-			ErrorRateThreshold:         0.25,
-			ErrorRateMinCalls:          5,
-			ErrorRateCriticalThreshold: 0.70,
-			ContextExhaustionPct:       0.85,
+			StallThresholdSeconds:       120,
+			ErrorRateThreshold:          0.25,
+			ErrorRateMinCalls:           5,
+			ErrorRateCriticalThreshold:  0.70,
+			ContextCeilingWarningTokens: 160000, ContextCeilingCriticalTokens: 200000, ConsecutiveErrorsStreakWarning: 3, ConsecutiveErrorsStreakCritical: 5, ToolThrashingMinFailures: 3, ToolThrashingCriticalFailures: 5, TurnUsageWarningTokens: 30000, TurnUsageCriticalTokens: 60000, ContextGrowthWarningTokens: 40000, ContextGrowthCriticalTokens: 80000,
 		},
 		RoleMappings: domain.RoleMappings{
 			"orchestrator": "orchestrator",
@@ -238,27 +234,43 @@ func TestZeroDiskPersistenceVerification(t *testing.T) {
 	}
 	defer hook.Close()
 
-	// Snapshot workspaces directory modification times
-	workspacesDir := "workspaces"
-	type fileMeta struct {
-		modTime time.Time
-		size    int64
+	workspacesDir := t.TempDir()
+	for _, name := range []string{"T-1/agentic_metrics.json", "T-1/METRICS.md"} {
+		path := filepath.Join(workspacesDir, name)
+		if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte("retained portable history: "+name), 0600); err != nil {
+			t.Fatal(err)
+		}
 	}
-	beforeSnapshot := make(map[string]fileMeta)
-
-	if fi, statErr := os.Stat(workspacesDir); statErr == nil && fi.IsDir() {
-		_ = filepath.Walk(workspacesDir, func(path string, info os.FileInfo, err error) error {
-			if err == nil && !info.IsDir() {
-				beforeSnapshot[path] = fileMeta{
-					modTime: info.ModTime(),
-					size:    info.Size(),
-				}
+	snapshot := func() map[string][32]byte {
+		t.Helper()
+		files := map[string][32]byte{}
+		if err := filepath.Walk(workspacesDir, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
 			}
+			if info.IsDir() {
+				return nil
+			}
+			body, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			files[path] = sha256.Sum256(body)
 			return nil
-		})
+		}); err != nil {
+			t.Fatal(err)
+		}
+		return files
 	}
-
+	beforeSnapshot := snapshot()
+	if len(beforeSnapshot) != 2 {
+		t.Fatal("owned persistence sentinels missing")
+	}
 	cfg := testProjectConfig()
+	cfg.Workspaces.Dir = workspacesDir
 	service := live.NewLiveService(hook, cfg)
 	defer service.Close()
 
@@ -294,19 +306,8 @@ func TestZeroDiskPersistenceVerification(t *testing.T) {
 
 	// Verify buffer contains message transiently
 
-	// Verify zero persistence to workspaces/
-	if fi, statErr := os.Stat(workspacesDir); statErr == nil && fi.IsDir() {
-		_ = filepath.Walk(workspacesDir, func(path string, info os.FileInfo, err error) error {
-			if err == nil && !info.IsDir() {
-				before, existed := beforeSnapshot[path]
-				if !existed {
-					t.Errorf("Zero persistence violation: new file created in workspaces: %s", path)
-				} else if info.ModTime() != before.modTime || info.Size() != before.size {
-					t.Errorf("Zero persistence violation: file modified in workspaces: %s", path)
-				}
-			}
-			return nil
-		})
+	if after := snapshot(); !reflect.DeepEqual(beforeSnapshot, after) {
+		t.Fatalf("live read changed configured workspace files: before=%v after=%v", beforeSnapshot, after)
 	}
 }
 
@@ -414,6 +415,7 @@ func TestFetchActiveSessions_NullAndMalformedColumns(t *testing.T) {
 	_, err = rwDB.Exec(`
 		INSERT INTO session (id, parent_id, agent, model, title, time_created, time_updated)
 		VALUES ('s_nulls', NULL, NULL, NULL, NULL, NULL, NULL);
+		INSERT INTO session(id,parent_id,time_updated) VALUES('active-child','s_nulls',1);
 	`)
 	if err != nil {
 		t.Fatalf("inserting null-heavy session: %v", err)
@@ -425,15 +427,18 @@ func TestFetchActiveSessions_NullAndMalformedColumns(t *testing.T) {
 	}
 	defer hook.Close()
 
-	// Query without time cutoff to fetch all rows
-	records, err := hook.FetchActiveSessions(0, 0)
+	// An active child makes its NULL-heavy direct parent part of the result.
+	records, err := hook.FetchActiveSessions(300, 1)
 	if err != nil {
 		t.Fatalf("FetchActiveSessions failed scanning row with NULL columns: %v", err)
 	}
-	if len(records) != 1 {
-		t.Fatalf("expected 1 record, got %d", len(records))
+	if len(records) != 2 {
+		t.Fatalf("expected parent and active child, got %d records", len(records))
 	}
 	rec := records[0]
+	if rec.ID != "s_nulls" {
+		rec = records[1]
+	}
 	if rec.ID != "s_nulls" {
 		t.Errorf("expected ID s_nulls, got %s", rec.ID)
 	}
@@ -1534,7 +1539,7 @@ func TestHydrateWorkspaceEvents_FallbackWhenSessionNotFound(t *testing.T) {
 		t.Fatalf("missing local session discarded recorded facts: %#v", resp.Events)
 	}
 
-	for _, legacy := range []domain.AgentRole{domain.RoleRootAgent, domain.RoleUnassignedSubAgent} {
+	for _, legacy := range []domain.AgentRole{domain.AgentRole("RootAgent"), domain.AgentRole("UnassignedSubAgent")} {
 		t.Run(string(legacy), func(t *testing.T) {
 			for i := range ledger.Facts.Sessions {
 				for j := range ledger.Facts.Sessions[i].Invocations {

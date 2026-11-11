@@ -1,12 +1,12 @@
 package capture
 
 import (
+	"agenticlens/internal/adapters/filesystem"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -14,10 +14,9 @@ import (
 // UserCodexInstalled observes global activation only when a preserved legacy
 // receipt explicitly deactivated a project integration. It is never an adoption
 // prerequisite for configured projects without legacy installation state.
-func UserCodexInstalled() (bool, error) {
-	home, err := EffectiveCodexHome()
-	if err != nil {
-		return false, err
+func UserCodexInstalled(home string) (bool, error) {
+	if strings.TrimSpace(home) == "" {
+		return false, errors.New("telemetry.sources.codex.home is required to inspect Codex integration")
 	}
 	data, err := os.ReadFile(filepath.Join(home, "agenticlens-user-installation.json"))
 	if errors.Is(err, os.ErrNotExist) {
@@ -46,7 +45,7 @@ func legacyUserProjects(ctx context.Context, project string) ([]string, error) {
 	candidates := []string{project}
 	// Native Codex project hooks are discovered from the original checkout, so a
 	// worktree-local scan alone cannot establish absence of duplicate callbacks.
-	output, gitErr := exec.CommandContext(ctx, "git", "-C", project, "worktree", "list", "--porcelain").Output()
+	output, gitErr := filesystem.RepositoryGitCommand(ctx, project, "worktree", "list", "--porcelain").Output()
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
@@ -63,7 +62,7 @@ func legacyUserProjects(ctx context.Context, project string) ([]string, error) {
 			}
 		}
 	}
-	if output, err := exec.CommandContext(ctx, "git", "-C", project, "rev-parse", "--show-toplevel").Output(); err == nil {
+	if output, err := filesystem.RepositoryGitCommand(ctx, project, "rev-parse", "--show-toplevel").Output(); err == nil {
 		candidates = append(candidates, strings.TrimSpace(string(output)))
 	}
 	return candidates, nil

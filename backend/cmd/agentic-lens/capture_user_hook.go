@@ -26,7 +26,7 @@ func nativeCodexUserHook(input io.Reader, output, diagnostic io.Writer) error {
 	if err != nil {
 		return err
 	}
-	if shared == "" || filepath.Base(shared) != ".agenticlens-config.yaml" {
+	if shared == "" {
 		_, err = io.WriteString(output, "{}\n")
 		return err
 	}
@@ -60,7 +60,7 @@ func nativeCodexUserHook(input io.Reader, output, diagnostic io.Writer) error {
 			return fmt.Errorf("configured Codex source %s differs from established runtime source %s", store, runtimeHome)
 		}
 	}
-	value, err = capture.NormalizeCodexSubagentStart(value, store, project)
+	value, err = capture.NormalizeCodexSubagentStart(value, store, project, policy)
 	if err != nil {
 		return err
 	}

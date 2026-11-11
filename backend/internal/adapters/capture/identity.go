@@ -3,6 +3,7 @@ package capture
 import (
 	"errors"
 	"os"
+	"strings"
 
 	"agenticlens/internal/domain"
 )
@@ -10,6 +11,9 @@ import (
 // CanonicalStore resolves existing filesystem aliases. An unavailable store
 // retains an explicit absolute path; absence never establishes source evidence.
 func CanonicalStore(path string) (string, error) {
+	if strings.TrimSpace(path) == "" {
+		return "", errors.New("an explicit nonblank source store is required")
+	}
 	return ProjectDirectory(path)
 }
 

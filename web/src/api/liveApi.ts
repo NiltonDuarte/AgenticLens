@@ -79,39 +79,30 @@ function parseTraceDiagnostics(data: unknown): readonly LiveTraceDiagnostic[] | 
   });
 }
 
-export function parseLiveSessionTree(data: unknown): LiveSessionTree {
-  if (data && typeof data === 'object') {
-    if (Array.isArray(data)) {
-      return {
-        root_sessions: data as readonly LiveSessionNode[],
-        last_refreshed_at: new Date().toISOString(),
-        total_active_sessions: data.length,
-        active_anomalies: [],
-      };
-    }
-    const obj = data as Partial<LiveSessionTree>;
-    const rootSessions = Array.isArray(obj.root_sessions) ? obj.root_sessions : [];
-    const activeAnomalies = Array.isArray(obj.active_anomalies) ? obj.active_anomalies.map(parseLiveAnomalyAlert) : [];
-    const totalActive = typeof obj.total_active_sessions === 'number'
-      ? obj.total_active_sessions
-      : rootSessions.length;
-    const lastRefreshed = typeof obj.last_refreshed_at === 'string' && obj.last_refreshed_at.length > 0
-      ? obj.last_refreshed_at
-      : new Date().toISOString();
-
-    return {
-      root_sessions: rootSessions,
-      last_refreshed_at: lastRefreshed,
-      total_active_sessions: totalActive,
-      active_anomalies: activeAnomalies,
-    };
+function isLiveSessionNode(data: unknown): data is LiveSessionNode {
+  if (!isRecord(data) || !['id', 'agent', 'role', 'model', 'title', 'time_created', 'time_updated', 'status']
+    .every((key) => typeof data[key] === 'string') ||
+    typeof data.ticket_confidence !== 'number' || !Number.isFinite(data.ticket_confidence) ||
+    !Array.isArray(data.sub_sessions) || !data.sub_sessions.every(isLiveSessionNode) ||
+    !Array.isArray(data.anomalies)) return false;
+  for (const key of ['parent_id', 'guessed_ticket_id']) {
+    if (data[key] !== undefined && data[key] !== null && typeof data[key] !== 'string') return false;
   }
+  data.anomalies.forEach(parseLiveAnomalyAlert);
+  return true;
+}
 
+/** A successful current API response is measured data; malformed input is unavailable. */
+export function parseLiveSessionTree(data: unknown): LiveSessionTree {
+  if (!isRecord(data) || !Array.isArray(data.root_sessions) || !data.root_sessions.every(isLiveSessionNode) ||
+    typeof data.last_refreshed_at !== 'string' || typeof data.total_active_sessions !== 'number' ||
+    !Number.isSafeInteger(data.total_active_sessions) || data.total_active_sessions < 0 ||
+    !Array.isArray(data.active_anomalies)) throw new Error('Invalid live session tree');
   return {
-    root_sessions: [],
-    last_refreshed_at: new Date().toISOString(),
-    total_active_sessions: 0,
-    active_anomalies: [],
+    root_sessions: data.root_sessions,
+    last_refreshed_at: data.last_refreshed_at,
+    total_active_sessions: data.total_active_sessions,
+    active_anomalies: data.active_anomalies.map(parseLiveAnomalyAlert),
   };
 }
 
@@ -178,13 +169,15 @@ export async function fetchLiveTrace(sessionId: string): Promise<LiveTraceView> 
   }
 }
 
-export function subscribeToLiveStream(callbacks: LiveStreamCallbacks): () => void {
+export function subscribeToLiveStream(callbacks: LiveStreamCallbacks, pollIntervalMs: number | undefined): () => void {
   let isClosed = false;
   let eventSource: EventSource | null = null;
   let pollingTimer: ReturnType<typeof setInterval> | null = null;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   let sseConsecutiveErrors = 0;
   let pollingConsecutiveErrors = 0;
+  let nextPoll = 0;
+  let lastAcceptedPoll = -1;
   let reconnectDelayMs = 1000;
   let sseDirectlyFailed = false;
 
@@ -215,14 +208,23 @@ export function subscribeToLiveStream(callbacks: LiveStreamCallbacks): () => voi
       reconnectTimer = null;
     }
 
+    if (pollIntervalMs === undefined || !Number.isSafeInteger(pollIntervalMs) || pollIntervalMs <= 0 || pollIntervalMs > 2_147_483_647) {
+      callbacks.onStatusChange?.('error');
+      callbacks.onError?.(new Error('live.poll_interval_ms must be explicitly configured as an integer from 1 through 2147483647 milliseconds for dashboard polling. Complete setup in the selected shared YAML configuration.'));
+      return;
+    }
     callbacks.onStatusChange?.('fallback-polling');
 
     const poll = async () => {
       if (isClosed) return;
+      const request = nextPoll++;
       try {
         const tree = await fetchLiveSessionTree();
-        if (!isClosed) {
+        if (!isClosed && request > lastAcceptedPoll) {
+          lastAcceptedPoll = request;
           pollingConsecutiveErrors = 0;
+          callbacks.onStatusChange?.('fallback-polling');
+          if (isClosed) return;
           try {
             callbacks.onSessionTree(tree);
           } catch (callbackErr: unknown) {
@@ -234,7 +236,8 @@ export function subscribeToLiveStream(callbacks: LiveStreamCallbacks): () => voi
           }
         }
       } catch (err: unknown) {
-        if (!isClosed) {
+        if (!isClosed && request > lastAcceptedPoll) {
+          lastAcceptedPoll = request;
           pollingConsecutiveErrors++;
           const error = err instanceof Error ? err : new Error(String(err));
           callbacks.onError?.(error);
@@ -249,7 +252,7 @@ export function subscribeToLiveStream(callbacks: LiveStreamCallbacks): () => voi
     if (pollingTimer === null) {
       pollingTimer = setInterval(() => {
         void poll();
-      }, 2000);
+      }, pollIntervalMs);
     }
   };
 

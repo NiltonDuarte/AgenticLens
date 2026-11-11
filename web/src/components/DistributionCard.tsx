@@ -1,3 +1,4 @@
+import { useRolePresentation } from '../contexts/ProjectConfigContext';
 import type { CostSummary } from '../domain/types';
 import { compareCosts } from '../domain/cost';
 import React from 'react';
@@ -28,6 +29,7 @@ export const DistributionCard: React.FC<DistributionCardProps> = ({
   colorType,
   tooltip,
 }) => {
+  const rolePresentation = useRolePresentation();
   const resolvedColorType = colorType ?? (
     title.toLowerCase().includes('role')
       ? 'role'
@@ -55,7 +57,7 @@ export const DistributionCard: React.FC<DistributionCardProps> = ({
         percentage: pct,
       };
     })
-    .sort((a, b) => compareCosts(a.cost, b.cost, false) || a.name.localeCompare(b.name));
+    .sort((a, b) => resolvedColorType === 'role' ? rolePresentation.compareProjected(a.name, b.name) : compareCosts(a.cost, b.cost, false) || a.name.localeCompare(b.name));
 
   return (
     <div className="distribution-card">

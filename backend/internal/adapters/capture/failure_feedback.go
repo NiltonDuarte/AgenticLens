@@ -13,7 +13,7 @@ import (
 // stored exact owner/ticket. Pending observations cannot hide retained failures.
 // It neither refreshes facts nor acknowledges/deletes failures or private detail.
 
-func (s *Store) SessionFailureFeedback(ctx context.Context, identity domain.CaptureIdentity) (feedback string, returnErr error) {
+func (s *Store) SessionFailureFeedback(ctx context.Context, identity domain.CaptureIdentity, byteBudget int64) (feedback string, returnErr error) {
 	if err := identity.Validate(); err != nil {
 		return "", err
 	}
@@ -74,7 +74,10 @@ func (s *Store) SessionFailureFeedback(ctx context.Context, identity domain.Capt
 		return "", err
 	}
 	diagnostics := []domain.CaptureDiagnostic{}
-	remaining := int64(DefaultByteBudget)
+	if byteBudget <= 0 {
+		return "", errors.New("capture diagnostic byte budget must be a positive explicit value")
+	}
+	remaining := byteBudget
 	seen := map[int64]bool{}
 	for _, sequence := range []int64{publication, source, collection, ambiguous} {
 		if sequence == 0 || seen[sequence] {

@@ -8,14 +8,19 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"time"
 
 	"agenticlens/internal/adapters/capture"
 	adaptersconfig "agenticlens/internal/adapters/config"
+	"agenticlens/internal/adapters/filesystem"
 	"agenticlens/internal/domain"
 )
 
 func captureWorker(s *capture.Store, project, state string, policy domain.CaptureConfig) (returnErr error) {
+	if err := policy.ValidateWorker(); err != nil {
+		return err
+	}
 	defer func() {
 		if returnErr == nil {
 			return
@@ -124,8 +129,12 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 		if err := capture.WriteWorkerProgress(state, capture.WorkerProgress{Executable: binary, Build: domain.GetBuildInfo(), PID: os.Getpid(), State: "running", Heartbeat: now.UnixMilli(), Deadline: started.Add(time.Duration(policy.MaxLifetimeMS) * time.Millisecond).UnixMilli(), NextAttempt: nextAttempt.UnixMilli(), Detail: lastFailure + fmt.Sprintf(" generation=%d acknowledged=%d pass_timeout_ms=%d max_sessions=%d max_source_bytes=%d", req.Generation, req.Acknowledged, policy.PassTimeoutMS, policy.MaxSessions, policy.MaxSourceBytes)}); err != nil {
 			return err
 		}
-		proofCtx, proofCancel := context.WithTimeout(context.Background(), time.Second)
-		proofErr := s.RefreshProjectProofs(proofCtx, min(4, policy.MaxSessions), int64(4*capture.MaxPayloadBytes))
+		remaining := time.Duration(policy.MaxLifetimeMS)*time.Millisecond - time.Since(started)
+		if remaining <= 0 {
+			break
+		}
+		proofCtx, proofCancel := context.WithTimeout(context.Background(), min(remaining, time.Duration(policy.PassTimeoutMS)*time.Millisecond))
+		proofErr := s.RefreshProjectProofs(proofCtx, min(4, policy.MaxSessions), min(policy.MaxSourceBytes, int64(4*capture.MaxPayloadBytes)))
 		proofCancel()
 		if proofErr != nil {
 			return proofErr
@@ -174,7 +183,11 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 			if !current {
 				return retire()
 			}
-			unassignedCtx, unassignedCancel := context.WithTimeout(context.Background(), time.Duration(policy.PassTimeoutMS)*time.Millisecond)
+			remaining := time.Duration(policy.MaxLifetimeMS)*time.Millisecond - time.Since(started)
+			if remaining <= 0 {
+				break
+			}
+			unassignedCtx, unassignedCancel := context.WithTimeout(context.Background(), min(remaining, time.Duration(policy.PassTimeoutMS)*time.Millisecond))
 			unassigned, unassignedErr := s.Reconcile(unassignedCtx, "", "", policy.MaxSessions, policy.MaxSourceBytes)
 			unassignedCancel()
 			if unassignedErr != nil {
@@ -210,11 +223,19 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 				if e != nil || !enabled {
 					return e
 				}
-				dest := filepath.Join(project, cfg.Workspaces.Dir, ticket, "agentic_metrics.json")
+				workspaceRoot, pathErr := adaptersconfig.ResolveConfiguredPath(filepath.Dir(cfg.ConfigPath), cfg.Workspaces.Dir)
+				if pathErr != nil {
+					return pathErr
+				}
+				workspaceRoot, pathErr = filesystem.PhysicalPath(workspaceRoot)
+				if pathErr != nil {
+					return pathErr
+				}
+				dest := filepath.Join(workspaceRoot, ticket, "agentic_metrics.json")
 				if err = capture.ValidateDestination(project, dest); err != nil {
 					return err
 				}
-				args := []string{"generate", "--ticket-id", ticket, "--json-output", dest, "--capture-dir", state, "--capture-auto"}
+				args := []string{"generate", "--ticket-id", ticket, "--json-output", dest, "--capture-dir", state, "--capture-auto", "--max-sessions", strconv.Itoa(policy.MaxSessions), "--max-source-bytes", strconv.FormatInt(policy.MaxSourceBytes, 10)}
 				title, kind, metadataErr := domain.CaptureTicketMetadata(rows, ticket)
 				if metadataErr != nil {
 					success = false
@@ -230,9 +251,6 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 				}
 				if kind != "" {
 					args = append(args, "--ticket-type", kind)
-				}
-				if policy.Summary {
-					args = append(args, "--append", filepath.Join(filepath.Dir(dest), "SUMMARY.md"))
 				}
 				remaining := time.Duration(policy.MaxLifetimeMS)*time.Millisecond - time.Since(started)
 				if remaining <= 0 {
@@ -352,5 +370,9 @@ func automaticCaptureEnabled(project, state string) (bool, error) {
 	}
 	// A migrated user integration remains active independently of its preserved
 	// inactive legacy receipt; fresh native adoption needs no project receipt.
-	return capture.UserCodexInstalled()
+	cfg, err := adaptersconfig.Load(project)
+	if err != nil {
+		return false, err
+	}
+	return capture.UserCodexInstalled(cfg.Telemetry.Sources.CodexHome)
 }

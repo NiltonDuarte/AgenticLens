@@ -1,8 +1,14 @@
 package backfill
 
 import (
+	adaptersconfig "agenticlens/internal/adapters/config"
 	"agenticlens/internal/domain"
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
+	"sort"
+	"testing"
 )
 
 func sessionFacts(invocations []domain.InvocationFact, tools []domain.ToolFact, events []domain.EventFact) []domain.SessionFact {
@@ -155,4 +161,82 @@ func fixtureInvocationSessions(invocations []domain.InvocationFact) []domain.Ses
 		return nil
 	}
 	return []domain.SessionFact{{ID: "fixture-session", Source: domain.SourceOpenCode, User: "fixture-user", Invocations: invocations}}
+}
+
+// A complete target project and explicit local budgets make source tests independent
+// of the calling checkout and machine. These values are fixture choices only.
+func writeBackfillProject(t *testing.T, root string) {
+	t.Helper()
+	path := filepath.Join(root, ".agenticlens-config.yaml")
+	if _, err := os.Stat(path); err == nil {
+		return
+	} else if !os.IsNotExist(err) {
+		t.Fatal(err)
+	}
+	cfg, err := adaptersconfig.LoadFromFile("../config/testdata/shared-policy.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.ProjectName = "Backfill fixture"
+	cfg.Workspaces.Dir = "."
+	cfg.CodeMetrics.BaseBranch = "main"
+	cfg.Generation.Metrics = domain.GenerationPolicy{Skills: true, Delegations: true, Anomalies: true}
+	cfg.Generation.Summary = domain.GenerationSummaryConfig{Enabled: true, Filename: "SUMMARY.md"}
+	data, err := adaptersconfig.GenerateConfigYAML(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, data, 0600); err != nil {
+		t.Fatal(err)
+	}
+	local := []byte("telemetry:\n  sources:\n    codex:\n      home: .\n  capture:\n    enabled: false\n    state_dir: fixture-state\n    max_sessions: 256\n    max_source_bytes: 67108864\n")
+	if err := os.WriteFile(filepath.Join(root, ".agenticlens-config.local.yaml"), local, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(root, "sessions"), 0700); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func writeBackfillRollout(t *testing.T, dir, id, parent, role, model string, tools map[string]int, suffix string) string {
+	t.Helper()
+	meta := struct {
+		ID     string `json:"id"`
+		Parent string `json:"parent_thread_id,omitempty"`
+		Role   string `json:"agent_role,omitempty"`
+	}{id, parent, role}
+	encoded, err := json.Marshal(meta)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := fmt.Sprintf("{\"timestamp\":\"2026-01-01T00:00:00Z\",\"type\":\"session_meta\",\"payload\":%s}\n", encoded)
+	body += fmt.Sprintf("{\"timestamp\":\"2026-01-01T00:00:01Z\",\"type\":\"token_usage_record\",\"payload\":{\"model\":%q,\"usage\":{\"input_tokens\":1}}}\n", model)
+	names := make([]string, 0, len(tools))
+	for name := range tools {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		for i := 0; i < tools[name]; i++ {
+			call := fmt.Sprintf("%s-%s-%d", id, name, i)
+			body += fmt.Sprintf("{\"timestamp\":\"2026-01-01T00:00:02Z\",\"type\":\"response_item\",\"payload\":{\"type\":\"function_call\",\"call_id\":%q,\"name\":%q,\"arguments\":\"{}\"}}\n", call, name)
+			body += fmt.Sprintf("{\"timestamp\":\"2026-01-01T00:00:03Z\",\"type\":\"response_item\",\"payload\":{\"type\":\"function_call_output\",\"call_id\":%q,\"output\":\"success\"}}\n", call)
+		}
+	}
+	path := filepath.Join(dir, id+".jsonl")
+	if err := os.WriteFile(path, []byte(body+suffix), 0600); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+func newBackfillProject(t *testing.T) string {
+	t.Helper()
+	root := t.TempDir()
+	writeBackfillProject(t, root)
+	return root
+}
+
+func fixtureCompleteAnomalyPolicy() domain.AnomalyThresholdsConfig {
+	return domain.AnomalyThresholdsConfig{ErrorRateMinCalls: 5, ErrorRateThreshold: .35, ErrorRateCriticalThreshold: .70, ContextCeilingWarningTokens: 160000, ContextCeilingCriticalTokens: 200000, ConsecutiveErrorsStreakWarning: 3, ConsecutiveErrorsStreakCritical: 5, ToolThrashingMinFailures: 3, ToolThrashingCriticalFailures: 5, TurnUsageWarningTokens: 30000, TurnUsageCriticalTokens: 60000, ContextGrowthWarningTokens: 40000, ContextGrowthCriticalTokens: 80000}
 }

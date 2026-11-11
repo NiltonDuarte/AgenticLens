@@ -1,8 +1,13 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest';
-import { formatTokensK, formatCurrencyUSD, formatPercentage, formatDurationSeconds, formatLeadTime, computeLeadTimeSeconds, deriveTicketComparisonRows, formatIsoDateTimeShort, compareTicketIds, getEffectiveCompletionDateMs, compareTicketCompletionDate, canonicalTicketType, extractTicketPrefix, combineDistinctPrefixes, filterLedgersByTicketTypes, filterLedgersByPrefixes, formatChartAxisTimestamp, formatCompactCount, formatLinesCompact, truncateMiddle, formatLocalTimeWithMs, formatLocalDateTimeTooltip, getClientTimezoneBadge, formatLocalDateTime, formatHistoricalDateTimeTooltip, } from './formatters';
+import { formatTokensK, formatCurrencyUSD, formatPercentage, formatDurationSeconds, formatLeadTime, computeLeadTimeSeconds, deriveTicketComparisonRows as configuredDeriveTicketComparisonRows, formatIsoDateTimeShort, compareTicketIds as configuredCompareTicketIds, getEffectiveCompletionDateMs, compareTicketCompletionDate as configuredCompareTicketCompletionDate, canonicalTicketType, extractTicketPrefix, combineDistinctPrefixes, filterLedgersByTicketTypes, filterLedgersByPrefixes as configuredFilterLedgersByPrefixes, formatChartAxisTimestamp, formatCompactCount, formatLinesCompact, truncateMiddle, formatLocalTimeWithMs, formatLocalDateTimeTooltip, getClientTimezoneBadge, formatLocalDateTime, formatHistoricalDateTimeTooltip, } from './formatters';
 import { mockAgenticMetricsLedgers } from '../test/fixtures/mockData';
 import type { AgenticMetricsLedger, ContextHealthStatus, ConventionalTicketType, } from './types';
+const policy = {prefixes: ['AL', 'BL', 'GEN', 'PO', 'TEST'], caseInsensitive: true};
+const compareTicketIds = (a: string, b: string) => configuredCompareTicketIds(a, b, policy);
+const compareTicketCompletionDate = (...args: Parameters<typeof configuredCompareTicketCompletionDate>) => configuredCompareTicketCompletionDate(args[0], args[1], policy);
+const deriveTicketComparisonRows = (...args: Parameters<typeof configuredDeriveTicketComparisonRows>) => configuredDeriveTicketComparisonRows(args[0], args[1], args[2], policy);
+const filterLedgersByPrefixes = (...args: [readonly AgenticMetricsLedger[], readonly string[]]) => configuredFilterLedgersByPrefixes(args[0], args[1], true);
 describe('Domain Pure Formatters', () => {
     describe('truncateMiddle', () => {
         it('keeps the default leading and trailing characters around an ellipsis', () => {
@@ -462,105 +467,39 @@ describe('Domain Pure Formatters', () => {
         });
     });
     describe('compareTicketIds', () => {
-        it('sorts naturally so AL-2 precedes AL-10', () => {
-            expect(compareTicketIds('AL-2', 'AL-10')).toBeLessThan(0);
-            expect(compareTicketIds('AL-10', 'AL-2')).toBeGreaterThan(0);
-            expect(compareTicketIds('AL-1', 'AL-2')).toBeLessThan(0);
+        it.each([
+            ['AL-2', 'AL-10'], ['AL_2', 'AL-10'], ['AL2', 'AL10'],
+            ['AL-01', 'AL-1'], ['AL-001', 'AL-01'], ['AL-0', 'AL-00'],
+            ['AL-1', 'AL_1'], ['AL-1', 'al-1'], ['AL-99', 'BL-1'],
+            ['AL-1', 'unknown'], ['AL-1', ''], ['AL-1', '123'],
+            ['AL-1', 'AL-'], ['AL-1', 'AL-1-hotfix'], ['AL-10', 'AL-2-hotfix'],
+            ['AL-9007199254740992', 'AL-9007199254740993'],
+        ])('orders %s before %s using explicit grammar', (left, right) => {
+            expect(compareTicketIds(left, right)).toBeLessThan(0);
+            expect(compareTicketIds(right, left)).toBeGreaterThan(0);
         });
-        it('sorts identically formatted tickets correctly', () => {
-            expect(compareTicketIds('AL-1', 'AL-1')).toBe(0);
-            expect(compareTicketIds('AL-1', 'al-1')).toBeLessThan(0);
-            expect(compareTicketIds('al-1', 'AL-1')).toBeGreaterThan(0);
+        it('matches case with the same per-code-point lowercase semantics as Go', () => {
+            expect(configuredCompareTicketIds('ΟΣ2', 'ΟΣ10', {prefixes:['οσ'],caseInsensitive:true})).toBeLessThan(0);
+            expect(configuredCompareTicketIds('İ2', 'İ10', {prefixes:['i'],caseInsensitive:true})).toBeLessThan(0);
         });
-        it('orders by prefix first', () => {
-            expect(compareTicketIds('AL-99', 'BL-1')).toBeLessThan(0);
-            expect(compareTicketIds('PO-1', 'AL-10')).toBeGreaterThan(0);
-        });
-        it('supports delimiter variations', () => {
-            expect(compareTicketIds('AL_2', 'AL-10')).toBeLessThan(0);
-            expect(compareTicketIds('AL2', 'AL10')).toBeLessThan(0);
-        });
-        it('places conforming tickets before non-conforming strings', () => {
-            expect(compareTicketIds('AL-1', 'unknown')).toBeLessThan(0);
-            expect(compareTicketIds('unknown', 'AL-1')).toBeGreaterThan(0);
-        });
-        it('handles empty strings and whitespace defensively', () => {
-            expect(compareTicketIds('', 'AL-1')).toBeLessThan(0);
-            expect(compareTicketIds('AL-1', '')).toBeGreaterThan(0);
+        it('preserves complete ties and unmatched recorded text', () => {
+            expect(compareTicketIds('AL-01', 'AL-01')).toBe(0);
             expect(compareTicketIds('', '')).toBe(0);
-            expect(compareTicketIds('   ', '')).toBe(0);
-            expect(compareTicketIds('', '   ')).toBe(0);
-            expect(compareTicketIds('   ', 'AL-1')).toBeLessThan(0);
-            expect(compareTicketIds('AL-1', '   ')).toBeGreaterThan(0);
-            expect(compareTicketIds('\tAL-1\n', 'AL-2')).toBeLessThan(0);
-            expect(compareTicketIds('  AL-2  ', 'AL-10')).toBeLessThan(0);
-        });
-        it('handles missing prefixes, missing numbers, and purely numeric strings', () => {
-            // Purely numeric vs conforming
-            expect(compareTicketIds('AL-1', '123')).toBeLessThan(0);
-            expect(compareTicketIds('123', 'AL-1')).toBeGreaterThan(0);
-            // Purely numeric fallback to lexicographical
-            expect(compareTicketIds('123', '456')).toBeLessThan(0);
-            expect(compareTicketIds('456', '123')).toBeGreaterThan(0);
-            expect(compareTicketIds('100', '20')).toBeLessThan(0);
-            // Missing numbers (conforming sorts before non-conforming)
-            expect(compareTicketIds('AL-', 'AL-1')).toBeGreaterThan(0);
-            expect(compareTicketIds('AL', 'AL-1')).toBeGreaterThan(0);
+            expect(compareTicketIds('   ', '')).toBeGreaterThan(0);
             expect(compareTicketIds('AL-', 'GEN-')).toBeLessThan(0);
+            expect(configuredCompareTicketIds('AL-10', 'AL-2')).toBeLessThan(0);
         });
-        it('handles leading zeroes variations correctly', () => {
-            expect(compareTicketIds('AL-01', 'AL-1')).toBeLessThan(0);
-            expect(compareTicketIds('AL-1', 'AL-01')).toBeGreaterThan(0);
-            expect(compareTicketIds('AL-001', 'AL-01')).toBeLessThan(0);
-            expect(compareTicketIds('AL-02', 'AL-10')).toBeLessThan(0);
-            expect(compareTicketIds('AL-009', 'AL-1')).toBeGreaterThan(0);
-            expect(compareTicketIds('AL-0', 'AL-00')).toBeLessThan(0);
-            expect(compareTicketIds('AL-00', 'AL-0')).toBeGreaterThan(0);
+        it('honors exact case, literal nested prefixes and Unicode codepoint ties', () => {
+            const exact = {prefixes: ['T', 'T1-', '_TEAM', 'Ω-'], caseInsensitive: false};
+            expect(configuredCompareTicketIds('T1-02', 'T1-10', exact)).toBeLessThan(0);
+            expect(configuredCompareTicketIds('T2', 't1', exact)).toBeLessThan(0);
+            expect(configuredCompareTicketIds('_TEAM2', '_TEAM10', exact)).toBeLessThan(0);
+            expect(configuredCompareTicketIds('Ω-2', 'Ω-10', exact)).toBeLessThan(0);
+            expect(configuredCompareTicketIds('\uE000', '\u{10400}', exact)).toBeLessThan(0);
         });
-        it('handles mixed case and suffixes', () => {
-            expect(compareTicketIds('al-10', 'AL-2')).toBeGreaterThan(0);
-            expect(compareTicketIds('AL-2', 'al-10')).toBeLessThan(0);
-            expect(compareTicketIds('Al-100', 'aL-99')).toBeGreaterThan(0);
-            expect(compareTicketIds('AL-1-a', 'AL-1-b')).toBeLessThan(0);
-            expect(compareTicketIds('AL-1-b', 'AL-1-a')).toBeGreaterThan(0);
-            expect(compareTicketIds('AL-1-hotfix', 'AL-2-hotfix')).toBeLessThan(0);
-            expect(compareTicketIds('AL-2-beta', 'AL-10-alpha')).toBeLessThan(0);
-            expect(compareTicketIds('AL-1', 'AL-1-hotfix')).toBeLessThan(0);
-        });
-        it('handles delimiter variations between hyphen and underscore', () => {
-            expect(compareTicketIds('AL-10', 'AL_2')).toBeGreaterThan(0);
-            expect(compareTicketIds('AL_2', 'AL-10')).toBeLessThan(0);
-            expect(compareTicketIds('AL-1', 'AL_1')).toBeLessThan(0);
-            expect(compareTicketIds('AL_1', 'AL-1')).toBeGreaterThan(0);
-        });
-        it('correctly sorts an entire array of mixed ticket IDs', () => {
-            const input = [
-                'AL-10',
-                '123',
-                'AL-01',
-                'al-2',
-                'AL-1',
-                'AL_2',
-                'AL-',
-                '',
-                'GEN-1',
-                'unknown',
-                '456',
-            ];
-            const sorted = [...input].sort(compareTicketIds);
-            expect(sorted).toEqual([
-                '',
-                'AL-01',
-                'AL-1',
-                'AL_2',
-                'al-2',
-                'AL-10',
-                'GEN-1',
-                '123',
-                '456',
-                'AL-',
-                'unknown',
-            ]);
+        it('keeps recognized IDs before unmatched text in an entire sorted array', () => {
+            const input = ['AL-10', '123', 'AL-01', 'al-2', 'AL-1', 'AL_2', 'AL-', '', 'GEN-1', 'unknown', '456'];
+            expect([...input].sort(compareTicketIds)).toEqual(['AL-01', 'AL-1', 'AL_2', 'al-2', 'AL-10', 'GEN-1', '', '123', '456', 'AL-', 'unknown']);
         });
     });
     describe('Completion Date Parsing, Comparison, and Filtering', () => {
@@ -670,55 +609,24 @@ describe('Domain Pure Formatters', () => {
         });
     });
     describe('extractTicketPrefix', () => {
-        it('extracts uppercase alphabetic prefix before delimiter or digits', () => {
-            expect(extractTicketPrefix('AL-1')).toBe('AL');
-            expect(extractTicketPrefix('al-28')).toBe('AL');
-            expect(extractTicketPrefix('GEN_4')).toBe('GEN');
-            expect(extractTicketPrefix('po-2')).toBe('PO');
-            expect(extractTicketPrefix('al10')).toBe('AL');
-            expect(extractTicketPrefix('AL-')).toBe('AL');
-            expect(extractTicketPrefix('ticket-xyz')).toBe('TICKET');
-            expect(extractTicketPrefix('123-abc')).toBe('');
-            expect(extractTicketPrefix('123')).toBe('');
-            expect(extractTicketPrefix('UNKNOWN')).toBe('');
-            expect(extractTicketPrefix('AL.1')).toBe('');
-            expect(extractTicketPrefix('')).toBe('');
+        it.each([['AL-1','AL-'], ['al-28','al-'], ['GEN_4','GEN_'], ['AL2-10','AL2-'], ['_TEAM2','_TEAM'], ['al10','al'], ['123',''], ['UNKNOWN',''], ['','']])('preserves observed prefix spelling of %s', (id, expected) => {
+            expect(extractTicketPrefix(id)).toBe(expected);
+        });
+        it('uses the complete matching configured prefix rather than inventing another', () => {
+            expect(extractTicketPrefix('T1-02', {prefixes:['T','T1-'],caseInsensitive:false})).toBe('T1-');
         });
     });
     describe('combineDistinctPrefixes', () => {
-        it('returns canonical fallback when both discovered and configured are empty', () => {
-            expect(combineDistinctPrefixes([])).toEqual(['AL', 'GEN', 'PO']);
-            expect(combineDistinctPrefixes([], [])).toEqual(['AL', 'GEN', 'PO']);
-            expect(combineDistinctPrefixes(['', '   '], ['  '])).toEqual(['AL', 'GEN', 'PO']);
+        it('has a genuine empty state when no values exist', () => {
+            expect(combineDistinctPrefixes([])).toEqual([]);
+            expect(combineDistinctPrefixes(['', '   '], ['  '])).toEqual([]);
         });
-        it('returns canonical fallback when all tokens resolve to empty after trimming hyphens and underscores', () => {
-            expect(combineDistinctPrefixes(['---', '___', ' - _ '])).toEqual(['AL', 'GEN', 'PO']);
-            expect(combineDistinctPrefixes(['---'], ['___', '   '])).toEqual(['AL', 'GEN', 'PO']);
+        it('trims whitespace only, preserving separator prefixes and exact case', () => {
+            expect(combineDistinctPrefixes(['  T  ', 'T-', 'T_', '_TEAM', '---'], ['t'])).toEqual(['---','T','T-','T_','_TEAM','t']);
         });
-        it('combines configured prefixes with empty discovered prefixes', () => {
-            expect(combineDistinctPrefixes([], ['FEAT', 'BUG'])).toEqual(['BUG', 'FEAT']);
-            expect(combineDistinctPrefixes([], ['CUSTOM'])).toEqual(['CUSTOM']);
-        });
-        it('merges overlapping configured and discovered prefixes without duplicates', () => {
-            const discovered = ['AL', 'GEN', 'CUSTOM'];
-            const configured = ['GEN', 'PO', 'CUSTOM', 'INFRA'];
-            expect(combineDistinctPrefixes(discovered, configured)).toEqual([
-                'AL',
-                'CUSTOM',
-                'GEN',
-                'INFRA',
-                'PO',
-            ]);
-        });
-        it('handles case differences, whitespace trimming, trailing hyphens, and alphabetical sort', () => {
-            const discovered = ['  al  ', 'feat-', 'infra_'];
-            const configured = ['AL', 'FEAT', 'bug'];
-            expect(combineDistinctPrefixes(discovered, configured)).toEqual(['AL', 'BUG', 'FEAT', 'INFRA']);
-        });
-        it('preserves interior hyphens and numbers while deduplicating hostile variations', () => {
-            const discovered = ['  proj-x--  ', 'CORE-1_'];
-            const configured = ['proj-x', 'CORE-1', 'api-v2'];
-            expect(combineDistinctPrefixes(discovered, configured)).toEqual(['API-V2', 'CORE-1', 'PROJ-X']);
+        it('deduplicates only according to the explicit case policy and keeps configured spelling', () => {
+            expect(combineDistinctPrefixes(['al-', 'AL2-'], ['AL-'], true)).toEqual(['AL-', 'AL2-']);
+            expect(combineDistinctPrefixes(['al-'], ['AL-'], false)).toEqual(['AL-', 'al-']);
         });
     });
     describe('filterLedgersByTicketTypes', () => {
@@ -750,10 +658,20 @@ describe('Domain Pure Formatters', () => {
         const gen1 = { ...baseLedger, ticket_id: 'GEN_1' };
         const nullId = { ...baseLedger, ticket_id: null };
         const all = [al1, al2, po1, gen1, nullId];
-        it('returns all ledgers if prefixes is empty or contains all', () => {
+        it('returns all ledgers only when no prefix is selected', () => {
             expect(filterLedgersByPrefixes(all, [])).toEqual(all);
-            expect(filterLedgersByPrefixes(all, ['all'])).toEqual(all);
-            expect(filterLedgersByPrefixes(all, ['AL', 'all'])).toEqual(all);
+            expect(filterLedgersByPrefixes(all, ['all'])).toEqual([]);
+        });
+        it('keeps overlapping literal prefixes independent, including exact case and all', () => {
+            const ids = ['T01', 'T02', 'T-01', 'T-02', 'T_01', 'T_02', 't-01', 'all01', 'T1-02'];
+            const entries = ids.map((ticket_id) => ({...baseLedger, ticket_id}));
+            const filtered = (prefix: string, insensitive: boolean) => configuredFilterLedgersByPrefixes(entries, [prefix], insensitive).map((entry) => entry.ticket_id);
+            expect(filtered('T', false)).toEqual(ids.slice(0, 6));
+            expect(filtered('T-', false)).toEqual(['T-01','T-02']);
+            expect(filtered('T_', false)).toEqual(['T_01','T_02']);
+            expect(filtered('T-', true)).toEqual(['T-01','T-02','t-01']);
+            expect(filtered('T1-', false)).toEqual(['T1-02']);
+            expect(filtered('all', false)).toEqual(['all01']);
         });
         it('filters ledgers by prefix case-insensitively', () => {
             const res = filterLedgersByPrefixes(all, ['al']);

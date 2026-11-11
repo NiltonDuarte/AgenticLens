@@ -486,14 +486,3 @@ func TestOrderRoles_GenericAgentRoleType(t *testing.T) {
 		}
 	}
 }
-
-func TestAgentRole_FallbackConstants(t *testing.T) {
-	t.Parallel()
-
-	if domain.RoleRootAgent != "RootAgent" {
-		t.Errorf("expected RoleRootAgent to be 'RootAgent', got %q", domain.RoleRootAgent)
-	}
-	if domain.RoleUnassignedSubAgent != "UnassignedSubAgent" {
-		t.Errorf("expected RoleUnassignedSubAgent to be 'UnassignedSubAgent', got %q", domain.RoleUnassignedSubAgent)
-	}
-}

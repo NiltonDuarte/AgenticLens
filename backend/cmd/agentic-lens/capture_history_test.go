@@ -1,6 +1,7 @@
 package main_test
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -285,8 +286,12 @@ func TestCaptureManualAuxiliaryPublicationSurvivesUnavailableSource(t *testing.T
 		}
 	}
 	withoutGit.Env = append(withoutGit.Env, "PATH="+t.TempDir())
-	if out, err := withoutGit.CombinedOutput(); err != nil {
-		t.Fatalf("current-only stored data gained optional Git dependency: %v %s", err, out)
+	gitFailureBaseline := readCaptureFile(t, f.output)
+	if out, err := withoutGit.CombinedOutput(); err == nil || !bytes.Contains(out, []byte("Fresh Git calculation failed")) {
+		t.Fatalf("fresh Git failure bypassed: %v %s", err, out)
+	}
+	if !bytes.Equal(gitFailureBaseline, readCaptureFile(t, f.output)) {
+		t.Fatal("Git failure changed portable auxiliary history")
 	}
 	if !reflect.DeepEqual(first.SkillFacts(), second.SkillFacts()) || !reflect.DeepEqual(first.DelegationFacts(), second.DelegationFacts()) {
 		t.Fatal("own manual auxiliary rows lost without hydration")

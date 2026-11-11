@@ -1,3 +1,4 @@
+import { useProjectConfig, ticketPolicy } from '../contexts/ProjectConfigContext';
 import { durationLabel, durationDescription } from '../domain/duration';
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import type { ActiveTab, FleetSummary, ProjectConfigResponse, TicketComparisonRow, WorkspaceDiagnostic } from '../domain/types';
@@ -29,6 +30,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   projectConfig,
   projectName,
 }) => {
+  const contextConfig = useProjectConfig();
+  const recognitionPolicy = useMemo(() => ticketPolicy(projectConfig ?? contextConfig), [projectConfig, contextConfig]);
   const [summary, setSummary] = useState<FleetSummary | null>(null);
   const [workspaces, setWorkspaces] = useState<readonly TicketComparisonRow[]>([]);
   const [diagnostics, setDiagnostics] = useState<readonly WorkspaceDiagnostic[]>([]);
@@ -56,7 +59,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       let diff = 0;
       switch (sortField) {
         case 'ticket_id':
-          diff = compareTicketIds(a.ticket_id, b.ticket_id);
+          diff = compareTicketIds(a.ticket_id, b.ticket_id, recognitionPolicy);
           break;
         case 'ticket_title':
           diff = a.ticket_title.localeCompare(b.ticket_title);
@@ -74,9 +77,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       if (diff !== 0) {
         return sortOrder === 'asc' ? diff : -diff;
       }
-      return compareTicketIds(a.ticket_id, b.ticket_id);
+      return compareTicketIds(a.ticket_id, b.ticket_id, recognitionPolicy);
     });
-  }, [workspaces, sortField, sortOrder]);
+  }, [workspaces, sortField, sortOrder, recognitionPolicy]);
 
   const loadData = useCallback(async () => {
     setLoading(true);

@@ -346,7 +346,7 @@ func TestPersistAnomalySummariesRefreshesNewSessionsAndAggregates(t *testing.T) 
 	if aggregate == nil || aggregate.Context.TotalCalls == nil || *aggregate.Context.TotalCalls != 6 || aggregate.Context.Count == nil || *aggregate.Context.Count != 5 {
 		t.Fatalf("partial source erased historical root/group summary: %#v", persisted.Anomalies)
 	}
-	projected := domain.DeriveMetricsLedger(persisted, domain.DefaultProjectConfig())
+	projected := domain.DeriveMetricsLedger(persisted, testMetricsProjectConfig())
 	projectedOld, projectedRetry, projectedAggregate := false, false, false
 	for _, anomaly := range projected.Anomalies {
 		projectedOld = projectedOld || anomaly.RuleID == domain.RuleContextSaturationSpike

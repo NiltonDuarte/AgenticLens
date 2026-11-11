@@ -9,13 +9,13 @@ Mandatory operational policies for all agents and contributors working in this r
 Every task, feature, bugfix, or refactoring in this repository must have a ticket identifier and an isolated ticket workspace. A planning specification or index entry under `plan/` is not required for an ad hoc ticket.
 
 ### Configurable Workspace Root
-- Define `<WORKSPACES_DIR>` as the `workspaces.dir` value in `.agenticlens-config.yaml`.
-- If `.agenticlens-config.yaml` or the `workspaces.dir` key is absent, use `workspaces` as the fallback.
+- Define `<WORKSPACES_DIR>` from required `workspaces.dir` in the selected `.agenticlens-config.yaml` or `.agenticlens-config.yml`. Both names in one directory are an error.
+- Missing/invalid required configuration requires explicit setup; never invent a workspace root.
 - Use `<WORKSPACES_DIR>` as the root for all ticket workspaces and plan paths below.
 
 ### Rules
 1. **Mandatory Ticket Identifier**:
-   - A ticket ID is required before starting any work. If the request does not provide one, ask the user or assign an ad hoc `GEN-#` identifier using the configured prefixes in `.agenticlens-config.yaml` (fallback: `GEN`).
+   - A ticket ID is required before starting any work. If the request does not provide one, ask the user or assign an ad hoc identifier using an explicitly configured literal prefix. Never invent a prefix or description when configuration is absent.
    - Use an existing ticket ID when one is provided; do not create a duplicate.
    - An ad hoc ticket ID does not require a corresponding specification or entry under `<WORKSPACES_DIR>/plan/`.
 2. **Single-Ticket Exclusivity**:

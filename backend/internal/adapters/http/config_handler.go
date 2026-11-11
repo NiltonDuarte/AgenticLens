@@ -36,11 +36,20 @@ func ConfigHandler(cfg domain.ProjectConfig, workspacesDir string) http.HandlerF
 		version := domain.GetBuildInfo().Version
 
 		dto := ProjectConfigDTO{
-			ProjectName:   projectName,
-			Prefixes:      sanitizedPrefixes,
-			WorkspacesDir: dir,
-			RoleOrder:     sanitizedRoleOrder,
-			Version:       version,
+			ProjectName:     projectName,
+			Prefixes:        sanitizedPrefixes,
+			CaseInsensitive: cfg.Ticket.CaseInsensitive,
+			RoleMappings:    cfg.RoleMappings,
+			WorkspacesDir:   dir,
+			RoleOrder:       sanitizedRoleOrder,
+			Version:         version,
+		}
+
+		// Unused live policy may be absent for persisted-ledger views. Preserve
+		// an explicitly supplied zero/negative value for validation at use.
+		if cfg.Settings == nil || cfg.Settings["live.poll_interval_ms"] {
+			interval := cfg.Live.PollIntervalMs
+			dto.LivePollIntervalMS = &interval
 		}
 
 		WriteProjectConfigResponse(w, dto)

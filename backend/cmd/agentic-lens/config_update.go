@@ -19,6 +19,14 @@ func runCaptureConfigUpdate(output, replacement string, dryRun bool) error {
 	if err != nil {
 		return err
 	}
+	if err := adaptersconfig.CheckBaseSetup(filepath.Dir(path)); err != nil {
+		return err
+	}
+	selection, err := adaptersconfig.SelectConfig(filepath.Dir(path))
+	if err != nil {
+		return err
+	}
+	path = selection.LocalPath
 	update, err := adaptersconfig.PrepareCaptureConfigUpdate(path, replacement)
 	if err != nil {
 		return err

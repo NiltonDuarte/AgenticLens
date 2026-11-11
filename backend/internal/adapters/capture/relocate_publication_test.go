@@ -33,7 +33,7 @@ func TestRelocationPreservesActualRecoverablePublicationJournal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	config, err := adaptersconfig.GenerateDefaultYAMLForVersion("v9.8.7", "Publication migration", "records", "", []string{"src"}, []domain.TicketPrefix{{Prefix: "T"}})
+	config, err := fixtureSharedYAML(t, "Publication migration", "records")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,11 +41,15 @@ func TestRelocationPreservesActualRecoverablePublicationJournal(t *testing.T) {
 	if err = os.WriteFile(configPath, config, 0600); err != nil {
 		t.Fatal(err)
 	}
-	update, err := adaptersconfig.PrepareCaptureConfigUpdate(configPath, source)
+	localPath := filepath.Join(project, ".agenticlens-config.local.yaml")
+	if err = os.WriteFile(localPath, []byte("telemetry:\n  capture:\n    enabled: true\n    state_dir: before-update\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	update, err := adaptersconfig.PrepareCaptureConfigUpdate(localPath, source)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = adaptersconfig.WriteCaptureConfigUpdate(configPath, update); err != nil {
+	if err = adaptersconfig.WriteCaptureConfigUpdate(localPath, update); err != nil {
 		t.Fatal(err)
 	}
 

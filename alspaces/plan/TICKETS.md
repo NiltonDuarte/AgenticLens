@@ -14,10 +14,6 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
   - **Status**: Ready; **Blocked by**: None; **Blocks**: AL-65
   - **File**: [AL-63](to-do/AL-63%20verify%20source%20capabilities%20across%20harnesses.md)
 
-- **AL-70**: Honor configuration paths and ticket identity
-  - **Status**: Ready; **Blocked by**: None; **Blocks**: None
-  - **File**: [AL-70](to-do/AL-70%20honor%20configuration%20paths%20and%20ticket%20identity.md)
-
 - **AL-71**: Keep dashboard requests and live data reliable
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None
   - **File**: [AL-71](to-do/AL-71%20keep%20dashboard%20requests%20and%20live%20data%20reliable.md)
@@ -89,6 +85,12 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
 - **REV-7**: Review source read guarantees
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None
   - **File**: [REV-7](to-do/REV-7%20review%20source%20read%20guarantees.md)
+
+## In Progress
+
+- **AL-70**: Honor configuration paths and ticket identity
+  - **Status**: In Progress; **Blocked by**: None; **Blocks**: None
+  - **File**: [AL-70](to-do/AL-70%20honor%20configuration%20paths%20and%20ticket%20identity.md)
 
 ## Blocked
 

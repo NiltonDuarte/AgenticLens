@@ -6,18 +6,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
 	"agenticlens/internal/adapters/codex"
+	adaptersconfig "agenticlens/internal/adapters/config"
 	"agenticlens/internal/adapters/opencode"
 	"agenticlens/internal/domain"
 )
 
 var (
+	ErrSourceUnavailable = errors.New("live OpenCode source unavailable; configure an accessible telemetry.sources.opencode.database_path in the selected local YAML")
 	// ErrSessionNotFound is returned when a session ID does not exist in the database.
 	ErrSessionNotFound = errors.New("session not found")
 	// ErrInvalidSessionID is returned when a session ID is blank or contains path traversal characters.
@@ -63,13 +63,7 @@ type LiveService struct {
 
 // NewLiveService constructs a new LiveService instance.
 func NewLiveService(hook *SQLiteHook, cfg domain.ProjectConfig) *LiveService {
-	codexHome := strings.TrimSpace(os.Getenv("CODEX_HOME"))
-	if codexHome == "" {
-		if home, err := os.UserHomeDir(); err == nil {
-			codexHome = filepath.Join(home, ".codex")
-		}
-	}
-	return NewLiveServiceWithCodexHome(hook, cfg, codexHome)
+	return NewLiveServiceWithCodexHome(hook, cfg, cfg.Telemetry.Sources.CodexHome)
 }
 
 // NewLiveServiceWithCodexHome constructs a hydrator with an explicit local Codex data root.
@@ -132,11 +126,11 @@ func (s *LiveService) broadcast(event LiveEvent) {
 }
 
 // Start begins the background polling loop on live.poll_interval_ms.
-func (s *LiveService) Start(ctx context.Context) {
-	intervalMs := s.cfg.Live.PollIntervalMs
-	if intervalMs <= 0 {
-		intervalMs = 2000
+func (s *LiveService) Start(ctx context.Context) error {
+	if err := errors.Join(adaptersconfig.ValidatePollingPolicy(s.cfg), adaptersconfig.ValidateActivityPolicy(s.cfg), adaptersconfig.ValidateAnomalyPolicy(s.cfg)); err != nil {
+		return err
 	}
+	intervalMs := s.cfg.Live.PollIntervalMs
 	interval := time.Duration(intervalMs) * time.Millisecond
 
 	ticker := time.NewTicker(interval)
@@ -153,6 +147,7 @@ func (s *LiveService) Start(ctx context.Context) {
 			}
 		}
 	}()
+	return nil
 }
 
 func (s *LiveService) pollAndBroadcast(ctx context.Context) {
@@ -261,22 +256,26 @@ func (s *LiveService) checkAndBroadcastAnomalies(anomalies []domain.LiveAnomalyA
 	}
 }
 
+// CheckAvailability distinguishes an unconfigured/unavailable source from a
+// selected read-only database containing no active sessions.
+func (s *LiveService) CheckAvailability() error {
+	if s.hook == nil {
+		return ErrSourceUnavailable
+	}
+	return nil
+}
+
 // GetSessionTree queries active sessions, runs title ticket inference, and constructs the session tree.
 // Zero Git branch calls, zero workspace scans.
 func (s *LiveService) GetSessionTree(ctx context.Context) (domain.LiveSessionTree, error) {
-	if s.hook == nil {
-		return domain.LiveSessionTree{
-			RootSessions:        []*domain.LiveSessionNode{},
-			LastRefreshedAt:     "",
-			TotalActiveSessions: 0,
-			ActiveAnomalies:     []domain.LiveAnomalyAlert{},
-		}, nil
+	if err := s.CheckAvailability(); err != nil {
+		return domain.LiveSessionTree{}, err
 	}
 
-	activeThresholdSec := int64(s.cfg.Live.ActiveThresholdSeconds)
-	if activeThresholdSec <= 0 {
-		activeThresholdSec = 300
+	if err := adaptersconfig.ValidateActivityPolicy(s.cfg); err != nil {
+		return domain.LiveSessionTree{}, err
 	}
+	activeThresholdSec := int64(s.cfg.Live.ActiveThresholdSeconds)
 	nowMs := time.Now().UnixMilli()
 
 	records, err := s.hook.FetchActiveSessions(activeThresholdSec, nowMs)
@@ -297,9 +296,6 @@ func (s *LiveService) GetSessionTree(ctx context.Context) (domain.LiveSessionTre
 	s.traceMu.Unlock()
 
 	stallThresholdSec := int64(s.cfg.AnomalyThresholds.StallThresholdSeconds)
-	if stallThresholdSec <= 0 {
-		stallThresholdSec = 120
-	}
 
 	nodes := make([]*domain.LiveSessionNode, 0, len(records))
 	for _, rec := range records {
@@ -397,7 +393,7 @@ func (s *LiveService) sessionTraceSnapshot(ctx context.Context, sessionID string
 		return nil, fmt.Errorf("%w: %s", ErrInvalidSessionID, err.Error())
 	}
 	if s.hook == nil {
-		return nil, ErrSessionNotFound
+		return nil, ErrSourceUnavailable
 	}
 	s.traceMu.Lock()
 	defer s.traceMu.Unlock()
@@ -585,6 +581,9 @@ func (s *LiveService) readSessionTrace(ctx context.Context, sessionID string) (t
 		FailedToolCalls: failedTools,
 		RecentErrors:    recentErrors,
 		Anomalies:       []domain.LiveAnomalyAlert{},
+	}
+	if err := adaptersconfig.ValidateAnomalyPolicy(s.cfg); err != nil {
+		return traceSnapshot{}, err
 	}
 	anomalyOpts := domain.LiveAnomalyOptions{
 		Thresholds: s.cfg.AnomalyThresholds,

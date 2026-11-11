@@ -5,11 +5,22 @@ import { render, screen, waitFor, fireEvent, within, act } from '@testing-librar
 import userEvent from '@testing-library/user-event';
 import { TicketDeepDive } from './TicketDeepDive';
 import * as apiClient from '../api/client';
+import { ProjectConfigContext } from '../contexts/ProjectConfigContext';
 import { type Anomaly, type EventFact } from '../types/telemetry';
 import { type AgenticMetricsLedger, type ContextHealthStatus, type WorkspaceDetail, type SessionFact, type SkillFact, type DelegationFact } from '../domain/types';
-import { mockAgenticMetricsLedgers, mockWorkspaceDetails, mockAL2Events } from '../test/fixtures/mockData';
+import { mockProjectConfig, mockAgenticMetricsLedgers, mockWorkspaceDetails, mockAL2Events } from '../test/fixtures/mockData';
 import codexOwnedDetail from '../test/fixtures/codexOwnedDetail.json';
 import codexSourceEvents from '../test/fixtures/codexSourceEvents.json';
+import partialDetailWire from '../test/fixtures/partial-detail-wire.json';
+import partialEventsWire from '../test/fixtures/partial-events-wire.json';
+
+/** Match the recorded API projection with explicit raw facts in isolated detail fixtures. */
+function withAnomalyFacts(detail: WorkspaceDetail, raw: readonly Anomaly[] | undefined = detail.anomalies): WorkspaceDetail {
+    if (!detail.ledger || !raw?.length) return detail;
+    return {...detail, ledger: {...detail.ledger, facts: {...detail.ledger.facts, anomalies: raw,
+        sessions: detail.ledger.facts.sessions.map(({anomalies, ...owner}) => anomalies === undefined ? owner : {...owner, anomalies: []}),
+    }}};
+}
 
 function withSessionOwners(detail: WorkspaceDetail, events: readonly EventFact[]): WorkspaceDetail {
     const owners = [...new Set(events.map((event) => event.session_id))];
@@ -57,7 +68,7 @@ describe('Skills and subagents autopsy', () => {
 
     it('shows unknown role metrics and turn groups when optional hydration is unavailable', async () => {
         const detail = makeDetail();
-        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: {
+        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: withAnomalyFacts({
             ...detail,
             ledger: {
                 ...detail.ledger,
@@ -67,7 +78,7 @@ describe('Skills and subagents autopsy', () => {
                     subagent_turn_velocity: { ...detail.ledger.workflow_efficiency.subagent_turn_velocity, by_role: { '': 7 } },
                 },
             },
-        } });
+        }) });
         render(<TicketDeepDive selectedTicketId="AL-1" />);
         await screen.findByText('7.0 turns/inv');
         expect(screen.getAllByText('Unknown').length).toBeGreaterThanOrEqual(2);
@@ -75,11 +86,11 @@ describe('Skills and subagents autopsy', () => {
 
     it('keeps persisted provisional duration visible when source hydration is unavailable', async () => {
         const detail = makeDetail();
-        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: { ...detail, ledger: { ...detail.ledger,
+        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: withAnomalyFacts({ ...detail, ledger: { ...detail.ledger,
             workflow_efficiency: { ...detail.ledger.workflow_efficiency, active_duration_seconds: 10, active_duration_formatted: '10s',
                 provisional_seconds: 7,
             },
-        } } });
+        } }) });
         render(<TicketDeepDive selectedTicketId="AL-1" />);
         const card = (await screen.findByText('Active Compute Duration')).closest<HTMLElement>('.kpi-card')!;
         expect(card.querySelector('.kpi-value')).toHaveTextContent('10s (includes 7s provisional)');
@@ -90,10 +101,10 @@ describe('Skills and subagents autopsy', () => {
 
     it('uses compact cost presentation for the selected ticket with full evidence in the tooltip', async () => {
         const detail = makeDetail();
-        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: { ...detail, ledger: { ...detail.ledger, totals: {
+        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: withAnomalyFacts({ ...detail, ledger: { ...detail.ledger, totals: {
             ...detail.ledger.totals, invocations: 3, cost_usd: null,
             cost_summary: { state: 'partial', known_subtotal_usd: 2, fully_observed: 1, partial: 1, unavailable: 1, total: 3 },
-        } } } });
+        } } }) });
         render(<TicketDeepDive selectedTicketId="AL-1" />);
         const card = (await screen.findByText('Total Cost')).closest<HTMLElement>('.kpi-card')!;
         expect(card.querySelector('.kpi-value')).toHaveTextContent(/^\$2\.00$/);
@@ -104,7 +115,7 @@ describe('Skills and subagents autopsy', () => {
     it.each(['omitted', 'empty'] as const)('renders a current v6 ledger with %s optional collections and keyboard collapse', async (mode) => {
         const errors = vi.spyOn(console, 'error');
         vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
-            data: mode === 'omitted' ? makeDetail() : (() => { const detail = makeDetail([], []); return { ...detail, ledger: { ...detail.ledger, facts: { ...detail.ledger.facts, sessions: detail.ledger.facts.sessions.map((owner) => ({ ...owner, skills: [], delegations: [] })) } } }; })(),
+            data: withAnomalyFacts(mode === 'omitted' ? makeDetail() : (() => { const detail = makeDetail([], []); return { ...detail, ledger: { ...detail.ledger, facts: { ...detail.ledger.facts, sessions: detail.ledger.facts.sessions.map((owner) => ({ ...owner, skills: [], delegations: [] })) } } }; })()),
         });
         const user = userEvent.setup();
         render(<TicketDeepDive selectedTicketId="AL-1" />);
@@ -128,9 +139,9 @@ describe('Skills and subagents autopsy', () => {
 
     it('explains unrecorded categories without guessing why source hydration is unavailable', async () => {
         const detail = makeDetail();
-        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: {
+        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: withAnomalyFacts({
             ...detail, ledger: { ...detail.ledger, facts: { ...detail.ledger.facts } },
-        } });
+        }) });
         render(<TicketDeepDive selectedTicketId="AL-1" />);
         const panel = await screen.findByRole('region', { name: /Skills & Subagents/ });
         expect(panel).toHaveTextContent(/not recorded/i);
@@ -142,7 +153,7 @@ describe('Skills and subagents autopsy', () => {
 
     it('explains unavailable historical analysis while retaining supported skills after source hydration fails', async () => {
         const detail = makeDetail([skill], [delegation]);
-        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: {
+        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: withAnomalyFacts({
             ...detail, ledger: { ...detail.ledger, facts: { ...detail.ledger.facts,
                 sessions: detail.ledger.facts.sessions.map((owner, index) => {
                     if (index !== 0) return owner;
@@ -151,7 +162,7 @@ describe('Skills and subagents autopsy', () => {
                     return recorded;
                 }),
             } },
-        } });
+        }) });
         render(<TicketDeepDive selectedTicketId="AL-1" />);
         expect(await screen.findByText(/anomaly analysis.*not recorded|anomalies.*not recorded/i)).toBeVisible();
         expect(await screen.findByRole('table', { name: 'Modular skills' })).toHaveTextContent('inspect-source');
@@ -165,11 +176,11 @@ describe('Skills and subagents autopsy', () => {
             { id: 'empty', source: 'codex', invocations: [], tools: [], skills: [], delegations: [] },
             { id: 'missing', source: 'opencode', invocations: [], tools: [] },
         ];
-        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: {
+        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: withAnomalyFacts({
             ...detail, ledger: { ...detail.ledger, facts: { ...detail.ledger.facts, sessions },
                 threads: sessions.map((owner) => ({ ...detail.ledger.threads[0]!, session_id: owner.id })),
             },
-        } });
+        }) });
         const user = userEvent.setup();
         render(<TicketDeepDive selectedTicketId="AL-1" />);
         const panel = await screen.findByRole('region', { name: /Skills & Subagents/ });
@@ -190,14 +201,14 @@ describe('Skills and subagents autopsy', () => {
     it('shows lean native owners and nullable activations, filters exactly by session and preserves unavailable owned facts after failed enrichment', async () => {
         const detail = makeDetail();
         const base = { ...skill, caller_role: null, invoked_at: null };
-        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: { ...detail, ledger: { ...detail.ledger, facts: {
+        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: withAnomalyFacts({ ...detail, ledger: { ...detail.ledger, facts: {
             ...detail.ledger.facts, schema_version: 6,
             sessions: [
                 { id: 'root', source: 'codex', invocations: [], tools: [], skills: [base, base], delegations: [{ ...delegation, child_session_id: 'unavailable-known-child' }] },
                 { id: 'child', parent_id: 'root', source: 'opencode', invocations: [], tools: [], skills: [{ ...skill, name: 'child-only' }] },
                 { id: 'remote-owner', source: 'codex', invocations: [], tools: [], skills: [{ ...skill, name: 'historical' }] },
             ],
-        } } } });
+        } } }) });
         const user = userEvent.setup();
         render(<TicketDeepDive selectedTicketId="AL-1" />);
         const table = await screen.findByRole('table', { name: 'Modular skills' });
@@ -222,11 +233,11 @@ describe('Skills and subagents autopsy', () => {
     });
 
     it('preserves repeated skill invocations, nullable roles, timestamps and keyboard access', async () => {
-        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: makeDetail([
+        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: withAnomalyFacts(makeDetail([
             skill,
             { ...skill, caller_role: 'custom-investigator' },
             { ...skill, name: 'review-change', caller_role: null, invoked_at: null },
-        ]) });
+        ])) });
         const user = userEvent.setup();
         render(<TicketDeepDive selectedTicketId="AL-1" />);
         const table = await screen.findByRole('table', { name: 'Modular skills' });
@@ -240,7 +251,7 @@ describe('Skills and subagents autopsy', () => {
         expect(within(table).getAllByRole('rowheader', { name: 'inspect-source' })).toHaveLength(2);
         const success = within(rows[0]!);
         expect(within(table).queryByText(/Success|Failed|Outcome/)).not.toBeInTheDocument();
-        expect(success.getByText('Orchestrator')).toBeVisible();
+        expect(success.getByText('orchestrator')).toBeVisible();
         const time = rows[0]!.querySelector('time');
         expect(time).toHaveAttribute('datetime', timestamp);
         expect(time).toHaveAttribute('title', expect.stringMatching(/2026.*\.007 \[UTC[+-]\d{2}:\d{2}\]/));
@@ -261,18 +272,18 @@ describe('Skills and subagents autopsy', () => {
             { ...delegation, description: 'Missing child thread', child_session_id: 'child-a-unavailable' },
         ]);
         const root = detail.ledger.threads[0]!;
-        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: {
+        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: withAnomalyFacts({
             ...detail, ledger: { ...detail.ledger, threads: [
                 { ...root, session_id: 'root' }, { ...root, session_id: 'child-ab' }, { ...root, session_id: 'child-a' },
             ] },
-        } });
+        }) });
         const user = userEvent.setup();
         render(<TicketDeepDive selectedTicketId="AL-1" />);
         const table = await screen.findByRole('table', { name: 'Subagent delegations' });
         expect(screen.queryByRole('table', { name: 'Modular skills' })).not.toBeInTheDocument();
         const rows = within(table).getAllByRole('row').slice(1);
         expect(rows).toHaveLength(4);
-        expect(rows[0]!.children[0]).toHaveTextContent('Coder');
+        expect(rows[0]!.children[0]).toHaveTextContent('coder');
         expect(rows[0]!.children[1]?.textContent).toBe(longDescription);
         expect(rows[0]!.querySelector('time')).toHaveAttribute('datetime', timestamp);
         expect(within(rows[1]!).getAllByText('Unavailable')).toHaveLength(2);
@@ -306,7 +317,7 @@ describe('Skills and subagents autopsy', () => {
     it('keeps persisted skill and delegation facts visible before and after optional enrichment fails', async () => {
         const pending = deferred<Awaited<ReturnType<typeof apiClient.fetchWorkspaceEvents>>>();
         vi.mocked(apiClient.fetchWorkspaceEvents).mockReturnValue(pending.promise);
-        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: makeDetail([skill], [delegation]) });
+        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: withAnomalyFacts(makeDetail([skill], [delegation])) });
         render(<TicketDeepDive selectedTicketId="AL-1" />);
         const skills = await screen.findByRole('table', { name: 'Modular skills' });
         const tasks = screen.getByRole('table', { name: 'Subagent delegations' });
@@ -345,11 +356,69 @@ describe('Source trace and stored facts lifecycle', () => {
         vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockRejectedValue(new Error('Optional source unavailable'));
     });
 
+    it.each(['failed', 'unavailable', 'partial', 'complete'] as const)('preserves anomaly role ownership through pending and %s trace inspection', async (state) => {
+        const pending = deferred<Awaited<ReturnType<typeof apiClient.fetchWorkspaceEvents>>>();
+        vi.mocked(apiClient.fetchWorkspaceEvents).mockReturnValue(pending.promise);
+        const anomaly: Anomaly = {rule_id: 'SUBAGENT_REWORK_LOOP', severity: 'WARNING', context: {session_id: 'owner', role: 'planner', secondary_role: 'tester', count: 3}};
+        const sourceAnomaly: Anomaly = {...anomaly, context: {...anomaly.context, role: 'builder', secondary_role: 'source-tester'}};
+        vi.mocked(apiClient.fetchWorkspaceById).mockResolvedValue({data: withAnomalyFacts({...makeDetail(), anomalies: [anomaly]}, [sourceAnomaly])});
+        render(<ProjectConfigContext.Provider value={{...mockProjectConfig, role_mappings: {builder: 'planner', planner: 'other', 'source-tester': 'tester', tester: 'helper'}}}>
+          <TicketDeepDive selectedTicketId="AL-1" />
+        </ProjectConfigContext.Provider>);
+        const toggle = await screen.findByRole('button', {name: 'Expand Trace Waterfall'});
+        fireEvent.click(toggle);
+        fireEvent.click(screen.getByRole('button', {name: /Inspect anomaly: Subagent rework loop/}));
+        const dialog = screen.getByRole('dialog');
+        const checkRoles = () => {
+            const dialog = screen.getByRole('dialog');
+            expect(within(dialog).getByText('Subagent Role').parentElement).toHaveTextContent('Subagent Roleplanner');
+            expect(within(dialog).getByText('Secondary Role').parentElement).toHaveTextContent('Secondary Roletester');
+        };
+        checkRoles();
+        await act(async () => {
+            if (state === 'failed') pending.reject(new Error('Source unavailable'));
+            else pending.resolve({data: {...emptyResponse().data, availability: state,
+                is_hydrated: state !== 'unavailable', data_source: state === 'unavailable' ? 'unavailable' : 'local_codex',
+                coverage: state === 'complete' ? coverage : {...coverage, complete_session_ids: []},
+                anomalies: state === 'complete' ? [sourceAnomaly] : [],
+            }});
+        });
+        expect(screen.getByRole('dialog')).toBe(dialog);
+        checkRoles();
+        expect(toggle).toHaveAttribute('aria-expanded', 'true');
+        fireEvent.keyDown(window, {key: 'Escape'});
+        fireEvent.click(screen.getByRole('button', {name: 'Recorded anomaly summaries (1)'}));
+        fireEvent.click(screen.getByRole('button', {name: /Inspect recorded anomaly: Subagent rework loop/}));
+        checkRoles();
+        expect(anomaly.context.role).toBe('planner');
+        expect(sourceAnomaly.context.role).toBe('builder');
+    });
+
+    it('keeps canonical raw event and retained anomaly roles consistent when inspecting a partial source trace', async () => {
+        const anomaly: Anomaly = {rule_id: 'TOOL_RETRY_STREAK', severity: 'WARNING', context: {session_id: 'owner', tool_name: 'bash', turn: 1, secondary_role: 'planner', count: 3}};
+        const event: EventFact = {...recorded[0]!, role: 'builder'};
+        vi.mocked(apiClient.fetchWorkspaceById).mockResolvedValue({data: withAnomalyFacts({...makeDetail(), anomalies: [anomaly]}, [{...anomaly, context: {...anomaly.context, secondary_role: 'builder'}}])});
+        vi.mocked(apiClient.fetchWorkspaceEvents).mockResolvedValue({data: {...emptyResponse().data,
+            availability: 'partial', is_hydrated: true, data_source: 'local_codex', events: [event], anomalies: [],
+        }});
+        render(<ProjectConfigContext.Provider value={{...mockProjectConfig, role_mappings: {builder: 'planner', planner: 'other'}}}>
+          <TicketDeepDive selectedTicketId="AL-1" />
+        </ProjectConfigContext.Provider>);
+        fireEvent.click(await screen.findByRole('button', {name: 'Expand Trace Waterfall'}));
+        fireEvent.click(await screen.findByTestId('timeline-item-1'));
+        const dialog = screen.getByRole('dialog');
+        expect(within(dialog).getByText('Subagent Role').parentElement).toHaveTextContent('Subagent Roleplanner');
+        expect(within(dialog).getByText('Secondary Role').parentElement).toHaveTextContent('Secondary Roleplanner');
+        expect(within(dialog).getByText('source-message')).toBeVisible();
+        expect(event.role).toBe('builder');
+        expect(anomaly.context.secondary_role).toBe('planner');
+    });
+
     it.each(['failed', 'unavailable', 'partial', 'complete'] as const)('keeps stored facts before and after %s source hydration without artificial rows', async (state) => {
         const pending = deferred<Awaited<ReturnType<typeof apiClient.fetchWorkspaceEvents>>>();
         vi.mocked(apiClient.fetchWorkspaceEvents).mockReturnValue(pending.promise);
         const anomaly: Anomaly = { rule_id: 'TOOL_RETRY_STREAK', severity: 'WARNING', context: { tool_name: 'bash', count: 3 } };
-        vi.mocked(apiClient.fetchWorkspaceById).mockResolvedValue({ data: { ...makeDetail(), anomalies: [anomaly] } });
+        vi.mocked(apiClient.fetchWorkspaceById).mockResolvedValue({ data: withAnomalyFacts({ ...makeDetail(), anomalies: [anomaly] }) });
         render(<TicketDeepDive selectedTicketId="AL-1" />);
         const skills = await screen.findByRole('table', { name: 'Modular skills' });
         expect(within(skills).getByText('stored-activation')).toBeVisible();
@@ -387,7 +456,7 @@ describe('Source trace and stored facts lifecycle', () => {
     it('ignores ticket A source response after ticket B and resets the inspected summary', async () => {
         const pendingA = deferred<Awaited<ReturnType<typeof apiClient.fetchWorkspaceEvents>>>();
         const anomaly: Anomaly = { rule_id: 'TOOL_RETRY_STREAK', severity: 'WARNING', context: { tool_name: 'bash', count: 3 } };
-        vi.mocked(apiClient.fetchWorkspaceById).mockImplementation(async (id) => ({ data: { ...makeDetail(id), anomalies: id === 'AL-1' ? [anomaly] : [] } }));
+        vi.mocked(apiClient.fetchWorkspaceById).mockImplementation(async (id) => ({ data: withAnomalyFacts({ ...makeDetail(id), anomalies: id === 'AL-1' ? [anomaly] : [] }) }));
         const bEvent = { ...recorded[0]!, session_id: 'b-session', turn: 8, tool_output: 'B details' };
         vi.mocked(apiClient.fetchWorkspaceEvents).mockImplementation((id) => id === 'AL-1' ? pendingA.promise : Promise.resolve({ data: {
             ...emptyResponse(id).data, availability: 'complete', is_hydrated: true, coverage, data_source: 'local_codex', events: [bEvent] } }));
@@ -439,9 +508,9 @@ describe('Source trace and stored facts lifecycle', () => {
         const started = '2026-10-29T12:34:56.007Z';
         const completed = '2026-10-30T12:34:56.123Z';
         const updated = '2026-10-31T12:34:56.456Z';
-        vi.mocked(apiClient.fetchWorkspaceById).mockResolvedValue({ data: {
+        vi.mocked(apiClient.fetchWorkspaceById).mockResolvedValue({ data: withAnomalyFacts({
             ...detail, ledger: { ...detail.ledger, started_at: started, completed_at: completed, updated_at: updated },
-        } });
+        }) });
         const { container, rerender } = render(<TicketDeepDive selectedTicketId="AL-1" />);
         await screen.findByText('Started:');
         const times = container.querySelectorAll('.timestamp-group time');
@@ -454,9 +523,9 @@ describe('Source trace and stored facts lifecycle', () => {
             expect(times[index]).toHaveAttribute('title', expect.stringContaining('[UTC'));
         });
         expect(new Set(Array.from(times, (time) => time.textContent)).size).toBe(3);
-        vi.mocked(apiClient.fetchWorkspaceById).mockResolvedValue({ data: {
+        vi.mocked(apiClient.fetchWorkspaceById).mockResolvedValue({ data: withAnomalyFacts({
             ...detail, ledger: { ...detail.ledger, started_at: '', completed_at: '', updated_at: '' },
-        } });
+        }) });
         rerender(<TicketDeepDive selectedTicketId="AL-2" />);
         await waitFor(() => expect(container.querySelector('.timestamp-group')).toHaveTextContent('Completed: In Progress'));
         expect(container.querySelector('.timestamp-group')).toHaveTextContent('Started: N/A');
@@ -470,7 +539,7 @@ describe('Source trace and stored facts lifecycle', () => {
             ...detail,
             ledger: { ...detail.ledger, started_at: malformedTimestamp, updated_at: malformedTimestamp },
         };
-        vi.mocked(apiClient.fetchWorkspaceById).mockResolvedValue({ data: malformedDetail });
+        vi.mocked(apiClient.fetchWorkspaceById).mockResolvedValue({ data: withAnomalyFacts(malformedDetail) });
 
         render(<TicketDeepDive selectedTicketId="AL-1" />);
 
@@ -486,9 +555,9 @@ describe('Source trace and stored facts lifecycle', () => {
             rule_id: 'TOOL_RETRY_STREAK', severity: 'WARNING',
             context: { session_id: 'summary-session', tool_name: 'bash', count: 3 },
         };
-        vi.mocked(apiClient.fetchWorkspaceById).mockResolvedValue({ data: {
+        vi.mocked(apiClient.fetchWorkspaceById).mockResolvedValue({ data: withAnomalyFacts({
             ...makeDetail('AL-1'), anomalies: [anomaly],
-        } });
+        }) });
         vi.mocked(apiClient.fetchWorkspaceEvents).mockReturnValue(pending.promise);
         render(<TicketDeepDive selectedTicketId="AL-1" />);
         await user.click(await screen.findByRole('button', { name: 'Expand Trace Waterfall' }));
@@ -519,9 +588,9 @@ describe('Source trace and stored facts lifecycle', () => {
             rule_id: 'TOOL_RETRY_STREAK', severity: 'WARNING',
             context: { session_id: recorded[0]!.session_id, tool_name: 'bash', count: 3 },
         };
-        vi.mocked(apiClient.fetchWorkspaceById).mockResolvedValue({ data: {
+        vi.mocked(apiClient.fetchWorkspaceById).mockResolvedValue({ data: withAnomalyFacts({
             ...makeDetail('AL-1'), anomalies: [anomaly],
-        } });
+        }) });
         vi.mocked(apiClient.fetchWorkspaceEvents).mockReturnValue(pending.promise);
         render(<TicketDeepDive selectedTicketId="AL-1" />);
         await waitFor(() => expect(screen.getByTestId('waterfall-event-count')).toHaveTextContent('0 Events Recorded'));
@@ -574,7 +643,7 @@ describe('TicketDeepDive View Component', () => {
             data: ledgers,
         });
         vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
-            data: mockWorkspaceDetails['AL-1']!,
+            data: withAnomalyFacts(mockWorkspaceDetails['AL-1']!),
         });
         render(<TicketDeepDive selectedTicketId="AL-1"/>);
         expect(screen.getByText(/loading workspace autopsy telemetry/i)).toBeInTheDocument();
@@ -637,11 +706,12 @@ describe('TicketDeepDive View Component', () => {
             data: [elevatedLedger],
         });
         vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
-            data: {
+            data: withAnomalyFacts({
                 ledger: elevatedLedger,
-                artifacts: { ticket_id: 'AL-1', contract_content: null, summary_content: null },
+                artifacts: {ticket_id: 'AL-1',
+items: [{path: 'CONTRACT.md', title: 'CONTRACT.md', description: '', content: null}, {path: 'SUMMARY.md', title: 'SUMMARY.md', description: '', content: null}]},
                 anomalies: [],
-            },
+            }),
         });
         render(<TicketDeepDive selectedTicketId="AL-1"/>);
         await waitFor(() => {
@@ -675,11 +745,12 @@ describe('TicketDeepDive View Component', () => {
             data: [criticalLedger],
         });
         vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
-            data: {
+            data: withAnomalyFacts({
                 ledger: criticalLedger,
-                artifacts: { ticket_id: 'AL-CRIT', contract_content: null, summary_content: null },
+                artifacts: {ticket_id: 'AL-CRIT',
+items: [{path: 'CONTRACT.md', title: 'CONTRACT.md', description: '', content: null}, {path: 'SUMMARY.md', title: 'SUMMARY.md', description: '', content: null}]},
                 anomalies: [],
-            },
+            }),
         });
         render(<TicketDeepDive selectedTicketId="AL-CRIT"/>);
         await waitFor(() => {
@@ -693,11 +764,12 @@ describe('TicketDeepDive View Component', () => {
             data: Object.values(mockAgenticMetricsLedgers),
         });
         vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
-            data: {
+            data: withAnomalyFacts({
                 ledger: null as unknown as typeof mockAgenticMetricsLedgers['AL-1'],
-                artifacts: { ticket_id: 'MISSING', contract_content: null, summary_content: null },
+                artifacts: {ticket_id: 'MISSING',
+items: [{path: 'CONTRACT.md', title: 'CONTRACT.md', description: '', content: null}, {path: 'SUMMARY.md', title: 'SUMMARY.md', description: '', content: null}]},
                 anomalies: [],
-            },
+            }),
         });
         render(<TicketDeepDive selectedTicketId="MISSING"/>);
         await waitFor(() => {
@@ -712,7 +784,8 @@ describe('TicketDeepDive View Component', () => {
         const fetchByIdSpy = vi.spyOn(apiClient, 'fetchWorkspaceById').mockImplementation(async (id) => {
             const detail = mockWorkspaceDetails[id] ?? {
                 ledger: mockAgenticMetricsLedgers[id]!,
-                artifacts: { ticket_id: id, contract_content: null, summary_content: null },
+                artifacts: {ticket_id: id,
+items: [{path: 'CONTRACT.md', title: 'CONTRACT.md', description: '', content: null}, {path: 'SUMMARY.md', title: 'SUMMARY.md', description: '', content: null}]},
             };
             return { data: detail };
         });
@@ -741,11 +814,12 @@ describe('TicketDeepDive View Component', () => {
             data: [noTurnsLedger],
         });
         vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
-            data: {
+            data: withAnomalyFacts({
                 ledger: noTurnsLedger,
-                artifacts: { ticket_id: 'AL-1', contract_content: null, summary_content: null },
+                artifacts: {ticket_id: 'AL-1',
+items: [{path: 'CONTRACT.md', title: 'CONTRACT.md', description: '', content: null}, {path: 'SUMMARY.md', title: 'SUMMARY.md', description: '', content: null}]},
                 anomalies: [],
-            },
+            }),
         });
         render(<TicketDeepDive selectedTicketId="AL-1"/>);
         await waitFor(() => {
@@ -758,7 +832,7 @@ describe('TicketDeepDive View Component', () => {
             data: ledgers,
         });
         vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
-            data: mockWorkspaceDetails['AL-1']!,
+            data: withAnomalyFacts(mockWorkspaceDetails['AL-1']!),
         });
         render(<TicketDeepDive selectedTicketId="AL-1"/>);
         await waitFor(() => {
@@ -776,7 +850,8 @@ describe('TicketDeepDive View Component', () => {
         const fetchByIdSpy = vi.spyOn(apiClient, 'fetchWorkspaceById').mockImplementation(async (id) => {
             const detail = mockWorkspaceDetails[id] ?? {
                 ledger: mockAgenticMetricsLedgers[id]!,
-                artifacts: { ticket_id: id, contract_content: null, summary_content: null },
+                artifacts: {ticket_id: id,
+items: [{path: 'CONTRACT.md', title: 'CONTRACT.md', description: '', content: null}, {path: 'SUMMARY.md', title: 'SUMMARY.md', description: '', content: null}]},
             };
             return { data: detail };
         });
@@ -800,7 +875,8 @@ describe('TicketDeepDive View Component', () => {
         const fetchByIdSpy = vi.spyOn(apiClient, 'fetchWorkspaceById').mockImplementation(async (id) => {
             const detail = mockWorkspaceDetails[id] ?? {
                 ledger: mockAgenticMetricsLedgers[id]!,
-                artifacts: { ticket_id: id, contract_content: null, summary_content: null },
+                artifacts: {ticket_id: id,
+items: [{path: 'CONTRACT.md', title: 'CONTRACT.md', description: '', content: null}, {path: 'SUMMARY.md', title: 'SUMMARY.md', description: '', content: null}]},
             };
             return { data: detail };
         });
@@ -835,7 +911,7 @@ describe('TicketDeepDive View Component', () => {
             data: ledgers,
         });
         const fetchByIdSpy = vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
-            data: mockWorkspaceDetails['AL-1']!,
+            data: withAnomalyFacts(mockWorkspaceDetails['AL-1']!),
         });
         render(<TicketDeepDive />);
         await waitFor(() => {
@@ -867,7 +943,7 @@ describe('TicketDeepDive View Component', () => {
             data: ledgers,
         });
         vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
-            data: mockWorkspaceDetails['AL-1']!,
+            data: withAnomalyFacts(mockWorkspaceDetails['AL-1']!),
         });
         render(<TicketDeepDive selectedTicketId="AL-1"/>);
         await waitFor(() => {
@@ -975,18 +1051,15 @@ describe('TicketDeepDive View Component', () => {
         };
         const emptyWorkspace = {
             ledger: emptyLedger,
-            artifacts: {
-                ticket_id: 'AL-EMPTY',
-                contract_content: null,
-                summary_content: null,
-            },
+            artifacts: {ticket_id: 'AL-EMPTY',
+items: [{path: 'CONTRACT.md', title: 'CONTRACT.md', description: '', content: null}, {path: 'SUMMARY.md', title: 'SUMMARY.md', description: '', content: null}]},
             anomalies: [],
         };
         vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({
             data: [emptyLedger],
         });
         vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
-            data: emptyWorkspace,
+            data: withAnomalyFacts(emptyWorkspace),
         });
         render(<TicketDeepDive selectedTicketId="AL-EMPTY"/>);
         await waitFor(() => {
@@ -1050,7 +1123,7 @@ describe('TicketDeepDive View Component', () => {
             data: ledgers,
         });
         vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
-            data: mockWorkspaceDetails['AL-1']!,
+            data: withAnomalyFacts(mockWorkspaceDetails['AL-1']!),
         });
         const { container } = render(<TicketDeepDive selectedTicketId="AL-1"/>);
         await waitFor(() => {
@@ -1202,11 +1275,12 @@ describe('TicketDeepDive View Component', () => {
             data: [customRoleLedger],
         });
         vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
-            data: {
+            data: withAnomalyFacts({
                 ledger: customRoleLedger,
-                artifacts: { ticket_id: 'AL-CUSTOM', contract_content: null, summary_content: null },
+                artifacts: {ticket_id: 'AL-CUSTOM',
+items: [{path: 'CONTRACT.md', title: 'CONTRACT.md', description: '', content: null}, {path: 'SUMMARY.md', title: 'SUMMARY.md', description: '', content: null}]},
                 anomalies: [],
-            },
+            }),
         });
         render(<TicketDeepDive selectedTicketId="AL-CUSTOM"/>);
         await waitFor(() => {
@@ -1225,7 +1299,7 @@ describe('TicketDeepDive View Component', () => {
                 data: Object.values(mockAgenticMetricsLedgers),
             });
             vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
-                data: withSessionOwners(mockWorkspaceDetails['AL-1']!, []),
+                data: withAnomalyFacts(withSessionOwners(mockWorkspaceDetails['AL-1']!, [])),
             });
             vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
                 data: {
@@ -1264,7 +1338,7 @@ describe('TicketDeepDive View Component', () => {
                 data: Object.values(mockAgenticMetricsLedgers),
             });
             vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
-                data: summaryWithAnomalies,
+                data: withAnomalyFacts(summaryWithAnomalies),
             });
             vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
                 data: {
@@ -1318,7 +1392,7 @@ describe('TicketDeepDive View Component', () => {
                 data: Object.values(mockAgenticMetricsLedgers),
             });
             vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
-                data: mockWorkspaceDetails['AL-2']!,
+                data: withAnomalyFacts(mockWorkspaceDetails['AL-2']!),
             });
             vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
                 data: {
@@ -1339,7 +1413,7 @@ describe('TicketDeepDive View Component', () => {
                 data: Object.values(mockAgenticMetricsLedgers),
             });
             vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
-                data: mockWorkspaceDetails['AL-2']!,
+                data: withAnomalyFacts(mockWorkspaceDetails['AL-2']!),
             });
             vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
                 data: {
@@ -1381,7 +1455,7 @@ describe('TicketDeepDive View Component', () => {
                 data: Object.values(mockAgenticMetricsLedgers),
             });
             vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
-                data: mockWorkspaceDetails['AL-2']!,
+                data: withAnomalyFacts(mockWorkspaceDetails['AL-2']!),
             });
             vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
                 data: {
@@ -1418,7 +1492,7 @@ describe('TicketDeepDive View Component', () => {
                 data: Object.values(mockAgenticMetricsLedgers),
             });
             vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
-                data: mockWorkspaceDetails['AL-2']!,
+                data: withAnomalyFacts(mockWorkspaceDetails['AL-2']!),
             });
             vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
                 data: {
@@ -1474,7 +1548,7 @@ describe('TicketDeepDive View Component', () => {
                 data: Object.values(mockAgenticMetricsLedgers),
             });
             vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
-                data: plainDetail,
+                data: withAnomalyFacts(plainDetail),
             });
             vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
                 data: {
@@ -1525,7 +1599,7 @@ describe('TicketDeepDive View Component', () => {
                 data: Object.values(mockAgenticMetricsLedgers),
             });
             vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
-                data: plainDetail,
+                data: withAnomalyFacts(plainDetail),
             });
             vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
                 data: {
@@ -1576,7 +1650,7 @@ describe('TicketDeepDive View Component', () => {
                 data: Object.values(mockAgenticMetricsLedgers),
             });
             vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
-                data: richDetail,
+                data: withAnomalyFacts(richDetail),
             });
             vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
                 data: {
@@ -1614,7 +1688,7 @@ describe('TicketDeepDive View Component', () => {
                 data: Object.values(mockAgenticMetricsLedgers),
             });
             vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
-                data: offlineDetail,
+                data: withAnomalyFacts(offlineDetail),
             });
             vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockResolvedValue({
                 data: {
@@ -1649,7 +1723,7 @@ describe('TicketDeepDive View Component', () => {
                 data: Object.values(mockAgenticMetricsLedgers),
             });
             vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
-                data: unclassifiedDetail,
+                data: withAnomalyFacts(unclassifiedDetail),
             });
             render(<TicketDeepDive selectedTicketId="AL-1"/>);
             await waitFor(() => {
@@ -1674,7 +1748,7 @@ describe('TicketDeepDive View Component', () => {
                 data: Object.values(mockAgenticMetricsLedgers),
             });
             vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({
-                data: unclassifiedDetail,
+                data: withAnomalyFacts(unclassifiedDetail),
             });
             render(<TicketDeepDive selectedTicketId="AL-1"/>);
             await waitFor(() => {
@@ -1690,7 +1764,7 @@ describe('TicketDeepDive View Component', () => {
 });
 
 
-describe('Native producer wire through API validation and ticket presentation', () => {
+describe('Recorded fixture JSON through API validation and ticket presentation', () => {
     it('renders lean activations and separate source badges without saved traces or opaque child links', async () => {
         vi.restoreAllMocks();
         const fetch = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
@@ -1731,5 +1805,64 @@ describe('Native producer wire through API validation and ticket presentation', 
         } finally {
             fetch.mockRestore();
         }
+    });
+});
+
+describe('Shared native partial-hydration HTTP wire', () => {
+    it.each(['partial', 'unavailable'] as const)('keeps one raw occurrence and consistent generated display across projected detail and %s source responses', async (availability) => {
+        vi.restoreAllMocks();
+        const pending = deferred<Response>();
+        const user = userEvent.setup();
+        const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined);
+        const displayTitle = 'Subagent rework loop: planner <-> tester (3 cycles)';
+        const displayDescription = "Subagent roles 'planner' and 'tester' alternated for 3 consecutive cycles.";
+        const before = JSON.stringify({partialDetailWire, partialEventsWire});
+        vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+            const route = String(input).split('?')[0];
+            if (route === '/api/workspaces/T-01/events') return pending.promise;
+            const payload: unknown = route === '/api/workspaces' ? [partialDetailWire.ledger]
+                : route === '/api/workspaces/T-01' ? partialDetailWire : undefined;
+            if (payload === undefined) throw new Error(`Unexpected native fixture route: ${route}`);
+            return new Response(JSON.stringify(payload), {status: 200, headers: {'Content-Type': 'application/json'}});
+        });
+        render(<ProjectConfigContext.Provider value={{...mockProjectConfig, role_mappings: {
+            builder: 'planner', planner: 'other', 'source-tester': 'tester', tester: 'helper',
+        }}}><TicketDeepDive selectedTicketId="T-01" /></ProjectConfigContext.Provider>);
+        fireEvent.click(await screen.findByRole('button', {name: 'Expand Trace Waterfall'}));
+        const occurrences = () => within(screen.getByTestId('workspace-anomalies')).getAllByRole('button', {name: /Inspect anomaly: Subagent rework loop/});
+        expect(occurrences()).toHaveLength(1);
+        expect(occurrences()[0]).toHaveAccessibleName(`Inspect anomaly: ${displayTitle}`);
+        expect(occurrences()[0]).toHaveAttribute('title', displayDescription);
+        fireEvent.click(occurrences()[0]!);
+        const dialog = screen.getByRole('dialog');
+        expect(within(dialog).getByText('Subagent Role').parentElement).toHaveTextContent('Subagent Roleplanner');
+        expect(within(dialog).getByRole('heading', {name: displayTitle})).toBeVisible();
+        expect(within(dialog).getByText(displayDescription)).toBeVisible();
+        expect(within(dialog).getByText('Secondary Role').parentElement).toHaveTextContent('Secondary Roletester');
+        await user.click(within(dialog).getByRole('button', {name: 'Copy execution issue debug prompt'}));
+        expect(writeText.mock.calls[0]?.[0]).toContain('# Agent Execution Issue: Subagent rework loop: builder <-> source-tester (3 cycles)');
+        expect(writeText.mock.calls[0]?.[0]).toContain("Subagent roles 'builder' and 'source-tester' alternated for 3 consecutive cycles.");
+        const response = availability === 'partial' ? partialEventsWire : {...partialEventsWire,
+            availability: 'unavailable', is_hydrated: false, data_source: 'unavailable', events: [],
+            coverage: {...partialEventsWire.coverage, complete_session_ids: []},
+        };
+        await act(async () => pending.resolve(new Response(JSON.stringify(response), {status: 200, headers: {'Content-Type': 'application/json'}})));
+        expect(screen.getByText(availability === 'partial' ? /Partial source trace/ : /Source trace unavailable/)).toBeVisible();
+        expect(occurrences()).toHaveLength(1);
+        expect(screen.getByTestId('waterfall-issues-summary')).toHaveTextContent('1 Anomaly');
+        expect(screen.getByRole('dialog')).toBe(dialog);
+        expect(within(dialog).getByText('Subagent Role').parentElement).toHaveTextContent('Subagent Roleplanner');
+        expect(within(dialog).getByRole('heading', {name: displayTitle})).toBeVisible();
+        expect(within(dialog).getByText(displayDescription)).toBeVisible();
+        expect(occurrences()[0]).toHaveAccessibleName(`Inspect anomaly: ${displayTitle}`);
+        expect(occurrences()[0]).toHaveAttribute('title', displayDescription);
+        await user.click(within(dialog).getByRole('button', {name: 'Copy execution issue debug prompt'}));
+        expect(writeText.mock.calls[1]?.[0]).toBe(writeText.mock.calls[0]?.[0]);
+        fireEvent.keyDown(window, {key: 'Escape'});
+        fireEvent.click(screen.getByRole('button', {name: 'Recorded anomaly summaries (1)'}));
+        fireEvent.click(screen.getByRole('button', {name: `Inspect recorded anomaly: ${displayTitle}`}));
+        expect(screen.getByRole('heading', {name: displayTitle})).toBeVisible();
+        expect(within(screen.getByRole('dialog')).getByText(displayDescription)).toBeVisible();
+        expect(JSON.stringify({partialDetailWire, partialEventsWire})).toBe(before);
     });
 });

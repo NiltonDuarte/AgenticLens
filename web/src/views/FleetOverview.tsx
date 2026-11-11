@@ -1,3 +1,4 @@
+import { useProjectConfig, ticketPolicy } from '../contexts/ProjectConfigContext';
 import { durationDescription } from '../domain/duration';
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import type { FleetSummary, TicketComparisonRow, TimeWindowPreset, WorkspaceDiagnostic } from '../domain/types';
@@ -40,6 +41,8 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
   onSelectTicket,
   configuredPrefixes,
 }) => {
+  const projectConfig = useProjectConfig();
+  const recognitionPolicy = useMemo(() => ticketPolicy(projectConfig), [projectConfig]);
   const [summary, setSummary] = useState<FleetSummary | null>(null);
   const [workspaces, setWorkspaces] = useState<TicketComparisonRow[]>([]);
   const [diagnostics, setDiagnostics] = useState<readonly WorkspaceDiagnostic[]>([]);
@@ -81,18 +84,18 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
       setKnownPrefixes((prev) => {
         const nextSet = new Set(prev);
         for (const w of workspaces) {
-          const p = extractTicketPrefix(w.ticket_id);
+          const p = extractTicketPrefix(w.ticket_id, recognitionPolicy);
           if (p) nextSet.add(p);
         }
         return Array.from(nextSet).sort();
       });
     }
-  }, [workspaces]);
+  }, [workspaces, recognitionPolicy]);
 
   const prefixOptions = useMemo(() => {
-    const combined = combineDistinctPrefixes(knownPrefixes, configuredPrefixes);
-    return combined.map((p) => ({ value: p, label: p }));
-  }, [knownPrefixes, configuredPrefixes]);
+    const combined = combineDistinctPrefixes(knownPrefixes, configuredPrefixes ?? recognitionPolicy?.prefixes, projectConfig?.case_insensitive);
+    return combined.map((p) => ({ value: `prefix:${p}`, label: p }));
+  }, [knownPrefixes, configuredPrefixes, projectConfig, recognitionPolicy]);
 
   const loadData = useCallback(async () => {
     const request = ++metricsRequest.current;
@@ -110,7 +113,7 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
       const prefixesParam =
         selectedPrefixes.length === 0 || (selectedPrefixes.length === 1 && selectedPrefixes[0] === 'all')
           ? undefined
-          : selectedPrefixes;
+          : selectedPrefixes.map((prefix) => prefix.slice('prefix:'.length));
 
       const [fleetRes, workspacesRes] = await Promise.all([
         typesParam || prefixesParam

@@ -125,7 +125,7 @@ func TestOpenDBRemainsReadOnly(t *testing.T) {
 	if err := db.Close(); err != nil {
 		t.Fatal(err)
 	}
-	client, err := opencode.OpenDB(path)
+	client, err := opencode.OpenDB(path, 0)
 	if err != nil {
 		t.Fatal(err)
 	}

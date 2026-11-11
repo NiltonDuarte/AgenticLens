@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '../test/render';
 import { TicketComparisons } from './TicketComparisons';
 import type { SkillFact } from '../domain/types';
 import * as apiClient from '../api/client';

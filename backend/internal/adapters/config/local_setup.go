@@ -1,10 +1,11 @@
 package config
 
 import (
+	"agenticlens/internal/adapters/filesystem"
+	"context"
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -14,11 +15,11 @@ import (
 // CheckBaseSetup prevents guided local configuration writes from linked trees.
 // Worktree local files remain independently user-managed.
 func CheckBaseSetup(project string) error {
-	root, err := filepath.Abs(project)
+	root, err := filesystem.PhysicalPath(project)
 	if err != nil {
 		return err
 	}
-	if output, e := exec.Command("git", "-C", root, "rev-parse", "--show-toplevel").Output(); e == nil {
+	if output, e := filesystem.RepositoryGitCommand(context.Background(), root, "rev-parse", "--show-toplevel").Output(); e == nil {
 		root = strings.TrimSpace(string(output))
 	}
 	marker, err := os.ReadFile(filepath.Join(root, ".git"))
@@ -32,7 +33,7 @@ func CheckBaseSetup(project string) error {
 		return err
 	}
 	if strings.HasPrefix(strings.TrimSpace(string(marker)), "gitdir:") {
-		output, err := exec.Command("git", "-C", root, "rev-parse", "--git-common-dir").Output()
+		output, err := filesystem.RepositoryGitCommand(context.Background(), root, "rev-parse", "--git-common-dir").Output()
 		if err != nil {
 			return err
 		}
@@ -40,7 +41,7 @@ func CheckBaseSetup(project string) error {
 		if !filepath.IsAbs(common) {
 			common = filepath.Join(root, common)
 		}
-		gitDirOutput, err := exec.Command("git", "-C", root, "rev-parse", "--git-dir").Output()
+		gitDirOutput, err := filesystem.RepositoryGitCommand(context.Background(), root, "rev-parse", "--git-dir").Output()
 		if err != nil {
 			return err
 		}
@@ -58,6 +59,21 @@ func CheckBaseSetup(project string) error {
 // InitialLocalYAML fills only missing explicitly supplied local choices. Existing
 // valid values survive repeated setup, including an explicit disabled policy.
 func InitialLocalYAML(project, enabled, source, codexHome, database string, statePaths ...string) ([]byte, error) {
+	state := ""
+	if len(statePaths) > 0 {
+		state = statePaths[0]
+	}
+	return InitialLocalYAMLWithSettings(project, "", enabled, source, codexHome, database, state)
+}
+
+// InitialLocalYAMLWithSettings fills missing approved choices only; the settings
+// candidate is explicit input, never a discovered local policy or installation request.
+func InitialLocalYAMLWithSettings(project, candidatePath, enabled, source, codexHome, database, state string) ([]byte, error) {
+	physical, err := filesystem.PhysicalPath(project)
+	if err != nil {
+		return nil, err
+	}
+	project = physical
 	if err := CheckBaseSetup(project); err != nil {
 		return nil, err
 	}
@@ -81,6 +97,64 @@ func InitialLocalYAML(project, enabled, source, codexHome, database string, stat
 	}
 	root := document.Content[0]
 	changed := false
+	if candidatePath != "" {
+		ext := strings.ToLower(filepath.Ext(candidatePath))
+		if ext != ".yaml" && ext != ".yml" {
+			return nil, fmt.Errorf("--local-settings must have a .yaml or .yml suffix")
+		}
+		candidate, err := os.ReadFile(candidatePath)
+		if err != nil {
+			return nil, err
+		}
+		nodes, err := configurationNodes(candidate)
+		if err != nil {
+			return nil, err
+		}
+		allowed := map[string]bool{"telemetry.default_source": true, "telemetry.sources.opencode.database_path": true, "telemetry.sources.codex.home": true, "agenticlens.install_root": true}
+		for _, key := range []string{"enabled", "state_dir", "refresh_ms", "debounce_ms", "idle_ms", "max_lifetime_ms", "pass_timeout_ms", "max_sessions", "max_source_bytes", "commit_warning"} {
+			allowed["telemetry.capture."+key] = true
+		}
+		for key, node := range nodes {
+			if node.Kind == yaml.MappingNode {
+				continue
+			}
+			if !allowed[key] {
+				return nil, fmt.Errorf("unsupported local setup setting %s", key)
+			}
+		}
+		var prepared yaml.Node
+		if err := yaml.Unmarshal(candidate, &prepared); err != nil {
+			return nil, err
+		}
+		var fillMissing func(*yaml.Node, *yaml.Node) error
+		fillMissing = func(target, input *yaml.Node) error {
+			if target.Kind != yaml.MappingNode || input.Kind != yaml.MappingNode {
+				return errors.New("local settings must use mappings")
+			}
+			for i := 0; i < len(input.Content); i += 2 {
+				key, value := input.Content[i], input.Content[i+1]
+				var existing *yaml.Node
+				for j := 0; j < len(target.Content); j += 2 {
+					if target.Content[j].Value == key.Value {
+						existing = target.Content[j+1]
+						break
+					}
+				}
+				if existing == nil {
+					target.Content = append(target.Content, key, value)
+					changed = true
+				} else if value.Kind == yaml.MappingNode {
+					if err := fillMissing(existing, value); err != nil {
+						return err
+					}
+				}
+			}
+			return nil
+		}
+		if err := fillMissing(root, prepared.Content[0]); err != nil {
+			return nil, err
+		}
+	}
 	fill := func(keys []string, value, tag string) (string, error) {
 		current := root
 		for i, key := range keys {
@@ -132,10 +206,6 @@ func InitialLocalYAML(project, enabled, source, codexHome, database string, stat
 	if _, err := fill([]string{"telemetry", "capture", "enabled"}, enabled, "!!bool"); err != nil {
 		return nil, err
 	}
-	state := ""
-	if len(statePaths) > 0 {
-		state = statePaths[0]
-	}
 	if _, err := fill([]string{"telemetry", "capture", "state_dir"}, state, "!!str"); err != nil {
 		return nil, err
 	}
@@ -161,15 +231,37 @@ func InitialLocalYAML(project, enabled, source, codexHome, database string, stat
 	if err := localCaptureEnabled(result); err != nil {
 		return nil, err
 	}
-	cfg, err := decodeCapturePolicy(result, captureReadPolicy())
+	cfg, err := decodeCapturePolicy(result)
 	if err != nil {
 		return nil, err
 	}
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
+	if cfg.Enabled {
+		if err := cfg.ValidateWorker(); err != nil {
+			return nil, err
+		}
+	}
+	if _, present := findMappingValue(root, "agenticlens"); present {
+		if _, err := parseEntrypoint(result, true); err != nil {
+			return nil, err
+		}
+	}
 	if !changed {
 		return data, nil
 	}
 	return result, nil
+}
+
+func findMappingValue(root *yaml.Node, key string) (*yaml.Node, bool) {
+	if root.Kind != yaml.MappingNode {
+		return nil, false
+	}
+	for i := 0; i < len(root.Content); i += 2 {
+		if root.Content[i].Value == key {
+			return root.Content[i+1], true
+		}
+	}
+	return nil, false
 }
