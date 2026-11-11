@@ -14,6 +14,20 @@
         }
       ],
       "disposition": "Fixed: expect the approved empty model identity while retaining aggregate, cost, replacement and portable-history assertions. Focused/full backfill race checks, both test-review rechecks and the integrated make gate passed."
+    },
+    {
+      "finding_id": "A12-TEST-02",
+      "severity": 3,
+      "issue": "The native exact-caller test leaves detached reconciliation workers unjoined, racing fixture cleanup and retained-ledger assertions.",
+      "reporters": [
+        {
+          "persona": "tester",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: serialize fixture workers with the existing lease/completion helper before native launches. Unchanged count20 race reproduction failed; corrected count20, sibling controls, both test-review profiles and integrated make passed. No product/helper or functional assertion changes."
     }
   ]
 }
