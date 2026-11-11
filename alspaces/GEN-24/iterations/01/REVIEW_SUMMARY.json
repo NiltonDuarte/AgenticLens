@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "PUB-01",
+      "severity": 5,
+      "issue": "Single pending queue could discard a different PR publication.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed with queue:max (up to100 pending); both configured models rechecked affected publication coverage."
+    },
+    {
+      "finding_id": "PUB-02",
+      "severity": 5,
+      "issue": "Older PR heads lacked a newly required composer test file.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed by running composer tests from trusted workflow source; actual candidate build passed on pre-change source."
+    },
+    {
+      "finding_id": "PUB-03",
+      "severity": 3,
+      "issue": "Retargeted PR previews used eligibility inconsistent with the main-base resolver.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed main-base eligibility and retarget regression. Sol initially assessed impact as nonblocking; retained for consistency."
+    },
+    {
+      "finding_id": "PUB-04",
+      "severity": 0,
+      "issue": "Manual feature-branch bootstrap was alleged to execute untrusted code with publishing authority.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Refuted under explicitly approved reviewed-branch bootstrap and exact-branch environment; original concern applies if that branch is treated as untrusted. Parent reviews exact head before manual dispatch; automatic PR builds remain isolated."
+    }
+  ]
+}
