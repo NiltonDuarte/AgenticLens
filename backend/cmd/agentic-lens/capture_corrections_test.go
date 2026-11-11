@@ -11,13 +11,13 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	"agenticlens/internal/adapters"
 	"agenticlens/internal/adapters/capture"
+	adaptersconfig "agenticlens/internal/adapters/config"
 	"agenticlens/internal/domain"
 )
 
@@ -35,7 +35,7 @@ func runCaptureNative(t *testing.T, cwd, input string, args ...string) ([]byte, 
 }
 func writeCapturePolicy(t *testing.T, f captureGenerationFixture, enabled bool, debounce int) {
 	t.Helper()
-	b := fmt.Sprintf("telemetry:\n  capture:\n    enabled: %t\n    refresh_ms: 100\n    debounce_ms: %d\n    idle_ms: 200\n    max_lifetime_ms: 2000\n", enabled, debounce)
+	b := fmt.Sprintf("telemetry:\n  capture:\n    pass_timeout_ms: 3000\n    max_sessions: 256\n    max_source_bytes: 67108864\n    commit_warning: true\n    enabled: %t\n    refresh_ms: 100\n    debounce_ms: %d\n    idle_ms: 200\n    max_lifetime_ms: 2000\n", enabled, debounce)
 	if err := writeCaptureFixtureLocal(t, f, []byte(b)); err != nil {
 		t.Fatal(err)
 	}
@@ -43,11 +43,18 @@ func writeCapturePolicy(t *testing.T, f captureGenerationFixture, enabled bool, 
 
 // Successful integration cases exercise real generation, not a deliberately
 // exhausted worker budget. Expiry tests configure their short policy explicitly.
-func writeCaptureSuccessfulPublicationPolicy(t *testing.T, project, state string, detailed bool) {
+func writeCaptureSuccessfulPublicationPolicy(t *testing.T, project, state string) {
 	t.Helper()
-	body := fmt.Sprintf("telemetry:\n  capture:\n    enabled: true\n    state_dir: %q\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 10000\n    pass_timeout_ms: 5000\n", state)
-	if detailed {
-		body += "    detailed_report: true\n"
+	enableCLIFixtureSummary(t, project)
+	body := fmt.Sprintf("telemetry:\n  capture:\n    max_sessions: 256\n    max_source_bytes: 67108864\n    commit_warning: true\n    enabled: true\n    state_dir: %q\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 10000\n    pass_timeout_ms: 5000\n", state)
+
+	cfg, err := adaptersconfig.Load(project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body += fmt.Sprintf("  default_source: %s\n", cfg.Telemetry.DefaultSource)
+	if cfg.Telemetry.Sources.CodexHome != "" {
+		body += fmt.Sprintf("  sources:\n    codex:\n      home: %q\n", cfg.Telemetry.Sources.CodexHome)
 	}
 	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.local.yaml"), []byte(body), 0600); err != nil {
 		t.Fatal(err)
@@ -91,7 +98,7 @@ func TestCapturePublicationBudgetExpiryRetainsPendingAndRecovers(t *testing.T) {
 			}
 		}
 	}()
-	policy := fmt.Sprintf("telemetry:\n  capture:\n    enabled: true\n    state_dir: %q\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 1000\n    pass_timeout_ms: 100\n", f.state)
+	policy := fmt.Sprintf("telemetry:\n  capture:\n    max_sessions: 256\n    max_source_bytes: 67108864\n    commit_warning: true\n    enabled: true\n    state_dir: %q\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 1000\n    pass_timeout_ms: 100\n", f.state)
 	if err = writeCaptureFixtureLocal(t, f, []byte(policy)); err != nil {
 		t.Fatal(err)
 	}
@@ -120,7 +127,7 @@ func TestCapturePublicationBudgetExpiryRetainsPendingAndRecovers(t *testing.T) {
 		t.Fatal(err)
 	}
 	publication = nil
-	writeCaptureSuccessfulPublicationPolicy(t, f.project, f.state, false)
+	writeCaptureSuccessfulPublicationPolicy(t, f.project, f.state)
 	if out, err = runCaptureNative(t, f.project, "", "capture", "worker", "--repo", f.project, "--state-dir", f.state); err != nil {
 		t.Fatalf("pending generation recovery failed: %v %s", err, out)
 	}
@@ -196,7 +203,7 @@ func TestCaptureCopiedBaselineCannotCrossTicketEvenWithCorrectedHeader(t *testin
 					t.Fatal(err)
 				}
 			}
-			out, err := runCaptureNative(t, f.project, "", f.args(t, "--ticket-id", "TEST-200", "--capture-auto", "--allow-empty")...)
+			out, err := runCaptureNative(t, f.project, "", f.args(t, "--ticket-id", "TEST-200", "--capture-auto")...)
 			if err == nil || !bytes.Contains(bytes.ToLower(out), []byte("ticket")) {
 				t.Errorf("ticket guard: %v %s", err, out)
 			}
@@ -289,22 +296,19 @@ func TestCaptureInspectionWithoutStateDoesNotInitialize(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if len(entries) != 2 || !bytes.Equal(configuration, readCaptureFile(t, filepath.Join(f.project, ".agenticlens-config.yaml"))) {
+			if len(entries) != 3 || !bytes.Equal(configuration, readCaptureFile(t, filepath.Join(f.project, ".agenticlens-config.yaml"))) {
 				t.Fatalf("inspection changed project files: %+v", entries)
 			}
 		})
 	}
 }
 func TestCaptureGenerateUsesOwningConfigurationRoot(t *testing.T) {
-	for _, format := range []string{"yaml", "yml", "json"} {
+	for _, format := range []string{"yaml", "yml"} {
 		t.Run(format, func(t *testing.T) {
 			f := newCaptureGenerationFixture(t)
 			f.write(t, 23)
 			old := filepath.Join(f.project, ".agenticlens-config.yaml")
 			body := readCaptureFile(t, old)
-			if format == "json" {
-				body = []byte(`{"project_name":"CaptureFixture","telemetry":{"capture":{"state_dir":` + strconv.Quote(f.state) + `}},"ticket":{"prefixes":["TEST"]},"workspaces":{"dir":"records"},"code_metrics":{"source_roots":["src"]},"anomaly_thresholds":{"error_rate_min_calls":5,"error_rate_threshold":0.25,"error_rate_critical_threshold":0.70,"context_ceiling_warning_tokens":160000,"context_ceiling_critical_tokens":200000}}`)
-			}
 			if format != "yaml" {
 				if err := os.Remove(old); err != nil {
 					t.Fatal(err)
@@ -616,7 +620,7 @@ func TestCaptureRejectsMissingLeafOutputAppendAlias(t *testing.T) {
 				before = readCaptureFile(t, f.output)
 			}
 			out, err := runCaptureNative(t, f.project, "", f.args(t, "--append", filepath.Join(alias, filepath.Base(f.output)))...)
-			if err == nil || !bytes.Contains(bytes.ToLower(out), []byte("overlap")) {
+			if err == nil || !bytes.Contains(bytes.ToLower(out), []byte("collid")) {
 				t.Errorf("alias guard: %v %s", err, out)
 			}
 			if existing {
@@ -745,7 +749,7 @@ func TestCaptureLiveDisableStopsWritesAndManualRecoverySurvives(t *testing.T) {
 			}
 			// Remain live well beyond the post-disable assertions: idle exit cannot
 			// satisfy the deactivation oracle on its own.
-			live := fmt.Sprintf("telemetry:\n  capture:\n    enabled: true\n    state_dir: %q\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 5000\n    max_lifetime_ms: 20000\n    pass_timeout_ms: 5000\n", f.stateBase)
+			live := fmt.Sprintf("telemetry:\n  capture:\n    max_sessions: 256\n    max_source_bytes: 67108864\n    commit_warning: true\n    enabled: true\n    state_dir: %q\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 5000\n    max_lifetime_ms: 20000\n    pass_timeout_ms: 5000\n", f.stateBase)
 			if err := writeCaptureFixtureLocal(t, f, []byte(live)); err != nil {
 				t.Fatal(err)
 			}
@@ -817,7 +821,7 @@ func TestCaptureInstallerUsesSelectedProjectSourceAndTrueAliases(t *testing.T) {
 	f := newCaptureGenerationFixture(t)
 	caller := newCaptureGenerationFixture(t)
 	for _, fixture := range []captureGenerationFixture{f, caller} {
-		b := []byte(fmt.Sprintf("telemetry:\n  capture:\n    enabled: false\n  sources:\n    codex:\n      home: %q\n", fixture.store))
+		b := []byte(fmt.Sprintf("telemetry:\n  capture:\n    pass_timeout_ms: 3000\n    max_sessions: 256\n    max_source_bytes: 67108864\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 5000\n    commit_warning: true\n    enabled: false\n  sources:\n    codex:\n      home: %q\n", fixture.store))
 		if err := writeCaptureFixtureLocal(t, fixture, b); err != nil {
 			t.Fatal(err)
 		}
@@ -1019,7 +1023,7 @@ func TestCaptureInstalledRawSourceAliasesMatchNativeRead(t *testing.T) {
 				if err := os.Symlink(child, filepath.Join(aliasParent, "hop")); err != nil {
 					t.Fatal(err)
 				}
-				cfg := fmt.Sprintf("telemetry:\n  capture:\n    enabled: false\n    state_dir: %q\n  sources:\n    codex:\n      home: %q\n", f.state, raw)
+				cfg := fmt.Sprintf("telemetry:\n  capture:\n    pass_timeout_ms: 3000\n    max_sessions: 256\n    max_source_bytes: 67108864\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 5000\n    commit_warning: true\n    enabled: false\n    state_dir: %q\n  sources:\n    codex:\n      home: %q\n", f.state, raw)
 				if err := writeCaptureFixtureLocal(t, f, []byte(cfg)); err != nil {
 					t.Fatal(err)
 				}
@@ -1066,7 +1070,7 @@ func TestCaptureInstalledStateDriftIsDiagnosedAndRecoveryPreservesOldRegistry(t 
 	local := filepath.Join(f.project, ".agenticlens-config.local.yaml")
 	set := func(name string) {
 		t.Helper()
-		if err := os.WriteFile(local, []byte("telemetry:\n  capture:\n    enabled: false\n    state_dir: "+name+"\n"), 0600); err != nil {
+		if err := os.WriteFile(local, []byte("telemetry:\n  capture:\n    pass_timeout_ms: 3000\n    max_sessions: 256\n    max_source_bytes: 67108864\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 5000\n    commit_warning: true\n    enabled: false\n    state_dir: "+name+"\n"), 0600); err != nil {
 			t.Fatal(err)
 		}
 	}

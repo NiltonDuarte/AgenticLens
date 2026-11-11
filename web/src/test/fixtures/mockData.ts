@@ -6,6 +6,9 @@ export const mockBuildInfo: BuildInfo = {
     build_date: '2026-10-18T10:00:00Z',
 };
 export const mockProjectConfig: ProjectConfigResponse = {
+    live_poll_interval_ms: 2000,
+    case_insensitive: true,
+    role_mappings: {},
     project_name: 'AgenticLens',
     prefixes: [
         {
@@ -1657,9 +1660,8 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
 export const mockWorkspaceDetails: Readonly<Record<string, WorkspaceDetail>> = {
     'AL-1': {
         ledger: mockAgenticMetricsLedgers['AL-1']!,
-        artifacts: {
-            ticket_id: 'AL-1',
-            contract_content: `# Contract: AL-1 Core Go Domain Models and Aggregations Engine
+        artifacts: {ticket_id: 'AL-1',
+items: [{path: 'CONTRACT.md', title: 'CONTRACT.md', description: '', content: `# Contract: AL-1 Core Go Domain Models and Aggregations Engine
 
 ## 1. Problem Statement
 Build the foundational Go domain model for AgenticLens representing atomic telemetry facts, workflow efficiency profiles, thread structures, and multi-ticket aggregations.
@@ -1667,20 +1669,17 @@ Build the foundational Go domain model for AgenticLens representing atomic telem
 ## 2. Invariants
 - Functional Core, Imperative Shell (FCIS): Zero IO in domain layer.
 - Static typing: Zero interface{} or any in Go domain packages.
-- Zero emojis across all log strings, comments, and identifiers.`,
-            summary_content: `# Summary: AL-1 Completed
+- Zero emojis across all log strings, comments, and identifiers.`}, {path: 'SUMMARY.md', title: 'SUMMARY.md', description: '', content: `# Summary: AL-1 Completed
 
 - Developed internal/domain/models.go with immutable value structs.
 - Implemented ComputeTotals, ComputeWorkflowEfficiency, and CalculateFleetSummary in internal/domain/aggregations.go.
-- 100% test coverage achieved across domain rollups.`,
-        },
+- 100% test coverage achieved across domain rollups.`}]},
         anomalies: [],
     },
     'AL-2': {
         ledger: mockAgenticMetricsLedgers['AL-2']!,
-        artifacts: {
-            ticket_id: 'AL-2',
-            contract_content: `# Contract: AL-2 Go HTTP REST API and Embedded Filesystem Server
+        artifacts: {ticket_id: 'AL-2',
+items: [{path: 'CONTRACT.md', title: 'CONTRACT.md', description: '', content: `# Contract: AL-2 Go HTTP REST API and Embedded Filesystem Server
 
 ## 1. Problem Statement
 Expose telemetry datasets via high-performance Go HTTP REST endpoints (/api/fleet, /api/workspaces, /api/workspaces/{ticketId}).
@@ -1688,20 +1687,17 @@ Expose telemetry datasets via high-performance Go HTTP REST endpoints (/api/flee
 ## 2. Invariants
 - Query parameters window and sort must be strictly validated.
 - Static files served from embed.FS fallback to index.html for SPA routes.
-- Zero emojis in log lines or response payloads.`,
-            summary_content: `# Summary: AL-2 Completed
+- Zero emojis in log lines or response payloads.`}, {path: 'SUMMARY.md', title: 'SUMMARY.md', description: '', content: `# Summary: AL-2 Completed
 
 - Implemented HTTP handlers in internal/adapters/http/handlers.go.
 - Verified path traversal protection for workspace directory scans.
-- All endpoints tested under race detector.`,
-        },
+- All endpoints tested under race detector.`}]},
         anomalies: mockAL2Anomalies,
     },
     'AL-3': {
         ledger: mockAgenticMetricsLedgers['AL-3']!,
-        artifacts: {
-            ticket_id: 'AL-3',
-            contract_content: `# Contract: AL-3 TypeScript SPA Dashboard and Embedded Single Binary
+        artifacts: {ticket_id: 'AL-3',
+items: [{path: 'CONTRACT.md', title: 'CONTRACT.md', description: '', content: `# Contract: AL-3 TypeScript SPA Dashboard and Embedded Single Binary
 
 ## 1. Problem Statement
 Scaffold the TypeScript React web frontend with Vite and provide the initial Fleet Overview screen with dark mode UI.
@@ -1709,51 +1705,43 @@ Scaffold the TypeScript React web frontend with Vite and provide the initial Fle
 ## 2. Invariants
 - Zero any across all TypeScript files.
 - Resilient API client with automatic mock fixture fallbacks.
-- Zero emojis across components and tables.`,
-            summary_content: `# Summary: AL-3 Completed
+- Zero emojis across components and tables.`}, {path: 'SUMMARY.md', title: 'SUMMARY.md', description: '', content: `# Summary: AL-3 Completed
 
 - Scaffolding complete in web/ with strict TypeScript configuration.
 - Fleet Overview renders top-level KPIs, role cost distribution, and ticket table.
-- Embedded Go binary compiles and serves the SPA bundle seamlessly.`,
-        },
+- Embedded Go binary compiles and serves the SPA bundle seamlessly.`}]},
         anomalies: [],
     },
     'PO-1': {
         ledger: mockAgenticMetricsLedgers['PO-1']!,
-        artifacts: {
-            ticket_id: 'PO-1',
-            contract_content: `# Contract: PO-1 Product Requirements Decomposition
+        artifacts: {ticket_id: 'PO-1',
+items: [{path: 'CONTRACT.md', title: 'CONTRACT.md', description: '', content: `# Contract: PO-1 Product Requirements Decomposition
 
 ## 1. Problem Statement
 Define product specifications, tracer-bullet roadmap, and functional architecture for the AgenticLens observability platform.
 
 ## 2. Invariants
 - Traceable ticket taxonomy (AL, PO, GEN prefixes).
-- Strictly zero emojis in technical specifications.`,
-            summary_content: `# Summary: PO-1 Completed
+- Strictly zero emojis in technical specifications.`}, {path: 'SUMMARY.md', title: 'SUMMARY.md', description: '', content: `# Summary: PO-1 Completed
 
 - Structured roadmap decomposition into vertical tracer-bullet tickets.
-- Established telemetry schema and KPI calculation guidelines.`,
-        },
+- Established telemetry schema and KPI calculation guidelines.`}]},
         anomalies: [],
     },
     'GEN-1': {
         ledger: mockAgenticMetricsLedgers['GEN-1']!,
-        artifacts: {
-            ticket_id: 'GEN-1',
-            contract_content: `# Contract: GEN-1 Telemetry Extraction Script and Session Verification
+        artifacts: {ticket_id: 'GEN-1',
+items: [{path: 'CONTRACT.md', title: 'CONTRACT.md', description: '', content: `# Contract: GEN-1 Telemetry Extraction Script and Session Verification
 
 ## 1. Problem Statement
 Provide a lightweight Python telemetry extractor to harvest session metrics, tokens, and git diff statistics into agentic_metrics.json.
 
 ## 2. Invariants
 - Fast execution with zero heavyweight dependencies.
-- Defensively handle missing files or unfinished sessions.`,
-            summary_content: `# Summary: GEN-1 In Progress
+- Defensively handle missing files or unfinished sessions.`}, {path: 'SUMMARY.md', title: 'SUMMARY.md', description: '', content: `# Summary: GEN-1 In Progress
 
 - Initial extractor script written and tested against live session logs.
-- Fine-tuning git diff line churn extraction across subagent commits.`,
-        },
+- Fine-tuning git diff line churn extraction across subagent commits.`}]},
         anomalies: mockGEN1Anomalies,
     },
 };

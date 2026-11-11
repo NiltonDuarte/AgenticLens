@@ -1,3 +1,4 @@
+import { useProjectConfig, ticketPolicy } from '../contexts/ProjectConfigContext';
 import { durationLabel, durationDescription } from '../domain/duration';
 import { compareCosts } from '../domain/cost';
 import React, { useState, useMemo } from 'react';
@@ -17,6 +18,8 @@ export const TicketTable: React.FC<TicketTableProps> = ({
   rows,
   onSelectTicket,
 }) => {
+  const projectConfig = useProjectConfig();
+  const recognitionPolicy = useMemo(() => ticketPolicy(projectConfig), [projectConfig]);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState<SortField>('ticket_id');
   const [sortAscending, setSortAscending] = useState(true);
@@ -44,10 +47,10 @@ export const TicketTable: React.FC<TicketTableProps> = ({
       let diff = 0;
       switch (sortField) {
         case 'ticket_id':
-          diff = compareTicketIds(a.ticket_id, b.ticket_id);
+          diff = compareTicketIds(a.ticket_id, b.ticket_id, recognitionPolicy);
           break;
         case 'cost_usd':
-          return compareCosts(a.cost_usd, b.cost_usd, sortAscending) || compareTicketIds(a.ticket_id, b.ticket_id);
+          return compareCosts(a.cost_usd, b.cost_usd, sortAscending) || compareTicketIds(a.ticket_id, b.ticket_id, recognitionPolicy);
         case 'active_duration_seconds':
           diff = a.active_duration_seconds - b.active_duration_seconds;
           break;
@@ -58,9 +61,9 @@ export const TicketTable: React.FC<TicketTableProps> = ({
       if (diff !== 0) {
         return sortAscending ? diff : -diff;
       }
-      return compareTicketIds(a.ticket_id, b.ticket_id);
+      return compareTicketIds(a.ticket_id, b.ticket_id, recognitionPolicy);
     });
-  }, [rows, searchTerm, sortField, sortAscending]);
+  }, [rows, searchTerm, sortField, sortAscending, recognitionPolicy]);
 
   const getSortIndicator = (field: SortField) => {
     if (sortField !== field) return '';

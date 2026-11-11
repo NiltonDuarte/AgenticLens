@@ -62,7 +62,7 @@ func sampleHistoricalJSON(ticketID string) string {
 
 func setupMigrationTestWorkspaces(t *testing.T) string {
 	t.Helper()
-	root := t.TempDir()
+	root := migrationTestRoot(t)
 	wsDir := filepath.Join(root, "workspaces")
 	if err := os.MkdirAll(wsDir, 0755); err != nil {
 		t.Fatalf("failed to create workspaces dir: %v", err)
@@ -181,7 +181,7 @@ func TestMigrationRunner_Batch(t *testing.T) {
 }
 
 func TestMigrationRunner_DryRun(t *testing.T) {
-	root := t.TempDir()
+	root := migrationTestRoot(t)
 	wsDir := filepath.Join(root, "workspaces")
 	alDir := filepath.Join(wsDir, "AL-DRY")
 	_ = os.MkdirAll(alDir, 0755)
@@ -220,7 +220,7 @@ func TestMigrationRunner_DryRun(t *testing.T) {
 }
 
 func TestMigrationRunner_Backup(t *testing.T) {
-	root := t.TempDir()
+	root := migrationTestRoot(t)
 	wsDir := filepath.Join(root, "workspaces")
 	alDir := filepath.Join(wsDir, "AL-BAK")
 	_ = os.MkdirAll(alDir, 0755)
@@ -273,7 +273,7 @@ func TestMigrationRunner_Backup(t *testing.T) {
 }
 
 func TestMigrationRunner_CleansCompletedCurrentMetadataWithoutChangingFacts(t *testing.T) {
-	root := t.TempDir()
+	root := migrationTestRoot(t)
 	workspace := filepath.Join(root, "records", "TEST-CLEAN", "iterations", "07")
 	if err := os.MkdirAll(workspace, 0700); err != nil {
 		t.Fatal(err)
@@ -379,7 +379,7 @@ func TestMigrationRunner_TicketFilter(t *testing.T) {
 }
 
 func TestMigrationRunner_UpdateSummaries(t *testing.T) {
-	root := t.TempDir()
+	root := migrationTestRoot(t)
 	wsDir := filepath.Join(root, "workspaces")
 	alDir := filepath.Join(wsDir, "AL-SUM")
 	_ = os.MkdirAll(alDir, 0755)
@@ -458,7 +458,7 @@ func TestMigrationRunner_DirectoryEdgeCases(t *testing.T) {
 	})
 
 	t.Run("empty workspaces directory produces zero results cleanly", func(t *testing.T) {
-		emptyDir := t.TempDir()
+		emptyDir := migrationTestRoot(t)
 		report, err := runner.Run(backfill.MigrationOptions{
 			WorkspacesDir: emptyDir,
 			TargetVersion: domain.CurrentSchemaVersion,
@@ -472,7 +472,7 @@ func TestMigrationRunner_DirectoryEdgeCases(t *testing.T) {
 	})
 
 	t.Run("workspaces directory with subdirectories containing no ledgers", func(t *testing.T) {
-		root := t.TempDir()
+		root := migrationTestRoot(t)
 		_ = os.MkdirAll(filepath.Join(root, "TICKET-EMPTY-1"), 0755)
 		_ = os.MkdirAll(filepath.Join(root, "TICKET-EMPTY-2"), 0755)
 		_ = os.WriteFile(filepath.Join(root, "TICKET-EMPTY-1", "notes.md"), []byte("# Notes"), 0644)
@@ -491,7 +491,7 @@ func TestMigrationRunner_DirectoryEdgeCases(t *testing.T) {
 }
 
 func TestMigrationRunner_CorruptedAndDefectiveLedgerResilience(t *testing.T) {
-	root := t.TempDir()
+	root := migrationTestRoot(t)
 	wsDir := filepath.Join(root, "workspaces")
 	_ = os.MkdirAll(wsDir, 0755)
 
@@ -567,7 +567,7 @@ func TestMigrationRunner_CorruptedAndDefectiveLedgerResilience(t *testing.T) {
 }
 
 func TestMigrationRunner_DryRunImmutabilityStrict(t *testing.T) {
-	root := t.TempDir()
+	root := migrationTestRoot(t)
 	wsDir := filepath.Join(root, "workspaces")
 	_ = os.MkdirAll(wsDir, 0755)
 
@@ -616,7 +616,7 @@ func TestMigrationRunner_DryRunImmutabilityStrict(t *testing.T) {
 }
 
 func TestMigrationRunner_IdempotencyStrictAcrossRepeatedRuns(t *testing.T) {
-	root := t.TempDir()
+	root := migrationTestRoot(t)
 	wsDir := filepath.Join(root, "workspaces")
 	_ = os.MkdirAll(wsDir, 0755)
 
@@ -886,7 +886,7 @@ func TestMigrationRunner_BatchCurrentMigrationState(t *testing.T) {
 }
 
 func TestMigrationRunner_NormalizesInterimV4AndReportsDroppedUnscopedTools(t *testing.T) {
-	root := t.TempDir()
+	root := migrationTestRoot(t)
 	workspace := filepath.Join(root, "workspaces", "TEST-SESSION")
 	if err := os.MkdirAll(workspace, 0755); err != nil {
 		t.Fatal(err)
@@ -931,7 +931,7 @@ func TestMigrationRunner_NormalizesInterimV4AndReportsDroppedUnscopedTools(t *te
 }
 
 func TestMigrationRunner_RejectsMixedCanonicalAndLegacyCollectionsAtomically(t *testing.T) {
-	workspace := filepath.Join(t.TempDir(), "workspaces", "TEST-MIXED")
+	workspace := filepath.Join(migrationTestRoot(t), "workspaces", "TEST-MIXED")
 	if err := os.MkdirAll(workspace, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1043,7 +1043,7 @@ func TestMigrationRunner_ValidatesCurrentBeforeUpToDateFastPath(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			workspace := filepath.Join(t.TempDir(), "workspaces", "TEST-CURRENT")
+			workspace := filepath.Join(migrationTestRoot(t), "workspaces", "TEST-CURRENT")
 			if err := os.MkdirAll(workspace, 0755); err != nil {
 				t.Fatal(err)
 			}
@@ -1121,7 +1121,7 @@ func TestMigrationCommandsValidateRawCleanupBeforePublication(t *testing.T) {
 			}},
 		} {
 			t.Run(command.name+"/"+tc.name, func(t *testing.T) {
-				root := t.TempDir()
+				root := migrationTestRoot(t)
 				workspace := filepath.Join(root, "TEST-RAW-ADMISSION")
 				if err := os.MkdirAll(workspace, 0700); err != nil {
 					t.Fatal(err)
@@ -1178,7 +1178,7 @@ func TestMigrationCommandsValidateRawCleanupBeforePublication(t *testing.T) {
 }
 
 func TestMigrationRunner_NormalizesPreIterationV4AnomalySummaries(t *testing.T) {
-	workspace := filepath.Join(t.TempDir(), "workspaces", "TEST-CANONICAL")
+	workspace := filepath.Join(migrationTestRoot(t), "workspaces", "TEST-CANONICAL")
 	if err := os.MkdirAll(workspace, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1209,7 +1209,7 @@ func TestMigrationRunner_NormalizesPreIterationV4AnomalySummaries(t *testing.T) 
 }
 
 func TestMigrationRunner_SanitizesCanonicalV4EventPayloads(t *testing.T) {
-	workspace := filepath.Join(t.TempDir(), "workspaces", "TEST-PRIVACY")
+	workspace := filepath.Join(migrationTestRoot(t), "workspaces", "TEST-PRIVACY")
 	if err := os.MkdirAll(workspace, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1265,18 +1265,18 @@ func TestMigrationRunner_MissingWorkspacesDir(t *testing.T) {
 	}
 }
 
-func TestMigrationRunnerRejectsExistingInvalidStateConfigWithoutMutation(t *testing.T) {
+func TestMigrationRunnerIgnoresUnusedLocalStateWithoutChangingPolicy(t *testing.T) {
 	for _, malformedLocal := range []bool{false, true} {
-		name := "shared-only migration needs no machine state"
+		name := "absent local policy"
 		if malformedLocal {
-			name = "malformed selected local state is rejected"
+			name = "malformed unused local policy"
 		}
 		t.Run(name, func(t *testing.T) {
 			ws := setupMigrationTestWorkspaces(t)
 			root := filepath.Dir(ws)
-			shared := []byte("project_name: Example\nticket:\n  prefixes: [AL]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n")
 			sharedPath := filepath.Join(root, ".agenticlens-config.yaml")
-			if err := os.WriteFile(sharedPath, shared, 0600); err != nil {
+			shared, err := os.ReadFile(sharedPath)
+			if err != nil {
 				t.Fatal(err)
 			}
 			localPath := filepath.Join(root, ".agenticlens-config.local.yaml")
@@ -1291,37 +1291,27 @@ func TestMigrationRunnerRejectsExistingInvalidStateConfigWithoutMutation(t *test
 			if err != nil {
 				t.Fatal(err)
 			}
-			report, runErr := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{WorkspacesDir: ws, TicketID: "AL-1", TargetVersion: domain.CurrentSchemaVersion})
+			report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{WorkspacesDir: ws, TicketID: "AL-1", TargetVersion: domain.CurrentSchemaVersion})
+			if err != nil || report == nil || report.Scanned != 1 || report.Migrated != 1 || len(report.Errors) != 0 {
+				t.Fatalf("state-independent migration acquired an unused local prerequisite: %+v, %v", report, err)
+			}
 			after, err := os.ReadFile(ledgerPath)
-			if err != nil {
-				t.Fatal(err)
+			if err != nil || bytes.Equal(before, after) {
+				t.Fatalf("migration did not publish supported historical conversion: %s, %v", after, err)
+			}
+			var migrated adapters.AgenticFactLedgerDTO
+			if err := json.Unmarshal(after, &migrated); err != nil || migrated.SchemaVersion == nil || *migrated.SchemaVersion != domain.CurrentSchemaVersion {
+				t.Fatalf("invalid migrated ledger: %v", err)
 			}
 			if malformedLocal {
-				if runErr == nil || !strings.Contains(runErr.Error(), "telemetry.capture.state_dir") || report != nil {
-					t.Fatalf("malformed selected local config fell back to caller config: %+v %v", report, runErr)
-				}
-				if !bytes.Equal(before, after) {
-					t.Fatal("rejected migration changed ledger")
-				}
 				actual, err := os.ReadFile(localPath)
 				if err != nil || !bytes.Equal(actual, local) {
-					t.Fatalf("rejected migration changed local config: %v", err)
-				}
-			} else {
-				if runErr != nil || report == nil || report.Scanned != 1 || report.Migrated != 1 || len(report.Errors) != 0 {
-					t.Fatalf("shared-only migration acquired a machine-state prerequisite: %+v %v", report, runErr)
-				}
-				var migrated adapters.AgenticFactLedgerDTO
-				if err := json.Unmarshal(after, &migrated); err != nil || migrated.SchemaVersion == nil || *migrated.SchemaVersion != domain.CurrentSchemaVersion || bytes.Equal(before, after) {
-					t.Fatalf("migration did not publish current schema: %v", err)
-				}
-				if _, err := os.Stat(localPath); !errors.Is(err, os.ErrNotExist) {
-					t.Fatalf("migration created local configuration: %v", err)
+					t.Fatalf("migration changed unused local policy: %v", err)
 				}
 			}
 			actual, err := os.ReadFile(sharedPath)
 			if err != nil || !bytes.Equal(actual, shared) {
-				t.Fatalf("migration changed shared config: %v", err)
+				t.Fatalf("migration changed shared policy: %v", err)
 			}
 		})
 	}
@@ -1363,7 +1353,7 @@ func TestMigrationCommandsCanonicalizeCompletedDraftDuration(t *testing.T) {
 	}
 	for _, command := range []string{"migrate", "backfill", "backfill_force"} {
 		t.Run(command, func(t *testing.T) {
-			root := t.TempDir()
+			root := migrationTestRoot(t)
 			workspace := filepath.Join(root, "TEST-DURATION-CLEANUP")
 			if err := os.MkdirAll(workspace, 0700); err != nil {
 				t.Fatal(err)

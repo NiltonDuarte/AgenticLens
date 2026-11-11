@@ -31,6 +31,13 @@ type mockLiveService struct {
 	unsubChan    chan struct{}
 }
 
+func (m *mockLiveService) CheckAvailability() error {
+	if errors.Is(m.treeErr, live.ErrSourceUnavailable) {
+		return m.treeErr
+	}
+	return nil
+}
+
 func (m *mockLiveService) GetSessionTree(ctx context.Context) (domain.LiveSessionTree, error) {
 	if m.treeErr != nil {
 		return domain.LiveSessionTree{}, m.treeErr
@@ -78,7 +85,7 @@ func setupLiveTestServer(mock *mockLiveService) *httptest.Server {
 	if mock != nil {
 		svc = mock
 	}
-	server := adaptershttp.NewServerWithConfig("workspaces", mockFS, domain.DefaultProjectConfig(), svc)
+	server := adaptershttp.NewServerWithConfig("workspaces", mockFS, httpFixturePolicy(), svc)
 	return httptest.NewServer(server.Handler())
 }
 
@@ -151,17 +158,17 @@ func TestLiveSessionsHandler_NilService(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("expected status 200 for nil service fallback, got %d", resp.StatusCode)
+	if resp.StatusCode != http.StatusServiceUnavailable {
+		t.Fatalf("expected unavailable source, got %d", resp.StatusCode)
+	}
+	var body map[string]json.RawMessage
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		t.Fatal(err)
+	}
+	if _, measured := body["total_active_sessions"]; measured {
+		t.Fatal("unavailable source fabricated measured activity")
 	}
 
-	var tree domain.LiveSessionTree
-	if err := json.NewDecoder(resp.Body).Decode(&tree); err != nil {
-		t.Fatalf("failed decoding json: %v", err)
-	}
-	if len(tree.RootSessions) != 0 {
-		t.Errorf("expected empty root sessions, got %d", len(tree.RootSessions))
-	}
 }
 
 func TestLiveTraceHandler_SuccessAndNotFound(t *testing.T) {
@@ -800,7 +807,7 @@ func TestLiveStreamAndTraceRecoverInPlaceSQLiteUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cfg := domain.DefaultProjectConfig()
+	cfg := httpFixturePolicy()
 	cfg.Live.PollIntervalMs = 15
 	service := live.NewLiveServiceWithCodexHome(hook, cfg, filepath.Join(t.TempDir(), "absent-codex"))
 	defer service.Close()
@@ -917,9 +924,24 @@ func TestLiveStreamHandler_InitialTreeSubscriptionCleanup(t *testing.T) {
 			name = "initial_tree_error_then_cancel"
 		}
 		t.Run(name, func(t *testing.T) {
-			cfg := domain.DefaultProjectConfig()
+			cfg := httpFixturePolicy()
 			cfg.Live.PollIntervalMs = 15
-			service := live.NewLiveServiceWithCodexHome(nil, cfg, filepath.Join(t.TempDir(), "absent-codex"))
+			dbPath := filepath.Join(t.TempDir(), "empty.db")
+			db, err := sql.Open("sqlite", dbPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := db.Exec(`CREATE TABLE session(id TEXT PRIMARY KEY,parent_id TEXT,agent TEXT,model TEXT,title TEXT,time_created INTEGER,time_updated INTEGER); CREATE TABLE message(id TEXT PRIMARY KEY,session_id TEXT,time_created INTEGER,data TEXT); CREATE TABLE part(id TEXT PRIMARY KEY,session_id TEXT,message_id TEXT,time_created INTEGER,data TEXT);`); err != nil {
+				t.Fatal(err)
+			}
+			if err := db.Close(); err != nil {
+				t.Fatal(err)
+			}
+			hook, err := live.OpenReadOnlyHook(dbPath, 0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			service := live.NewLiveServiceWithCodexHome(hook, cfg, filepath.Join(t.TempDir(), "absent-codex"))
 			defer service.Close()
 			blocked := &blockedInitialLiveTree{
 				LiveService: service,

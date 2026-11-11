@@ -24,7 +24,7 @@ func TestNativeUserHookDisabledSessionUsesContextAndAvoidsCaptureIO(t *testing.T
 	}
 	source := filepath.Join(f.project, "unavailable-source")
 	state := filepath.Join(f.project, "uncreated-state")
-	local := "telemetry:\n  capture:\n    enabled: false\n    state_dir: " + state + "\n  sources:\n    codex:\n      home: " + source + "\n"
+	local := "telemetry:\n  capture:\n    pass_timeout_ms: 3000\n    max_sessions: 256\n    max_source_bytes: 67108864\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 5000\n    commit_warning: true\n    enabled: false\n    state_dir: " + state + "\n  sources:\n    codex:\n      home: " + source + "\n"
 	if err := os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte(local), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -128,12 +128,12 @@ func TestBaseLocalSetupRequiresChoiceAndPreservesExistingValues(t *testing.T) {
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
 		t.Fatalf("missing choice mutated local: %v", err)
 	}
-	original := "telemetry:\n  capture:\n    enabled: false\n    max_sessions: 7\n  default_source: codex\n  sources:\n    codex:\n      home: " + f.store + "\n"
+	original := "telemetry:\n  capture:\n    pass_timeout_ms: 3000\n    max_source_bytes: 67108864\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 5000\n    commit_warning: true\n    enabled: false\n    max_sessions: 7\n  default_source: codex\n  sources:\n    codex:\n      home: " + f.store + "\n"
 	if err := os.WriteFile(path, []byte(original), 0600); err != nil {
 		t.Fatal(err)
 	}
 	shared := readCaptureFile(t, filepath.Join(f.project, ".agenticlens-config.yaml"))
-	command = exec.Command(cliBinaryPath, "init", "--agenticlens-version", "v9.8.7", "--project-name", "Fixture", "--src-folders", "src", "--ticket-prefixes", "TEST", "--capture-enabled", "true", "--source", "codex", "--codex-home", f.store, "--state-dir", f.stateBase)
+	command = exec.Command(cliBinaryPath, "init", "--agenticlens-version", "v9.8.7", "--project-name", "Fixture", "--settings", cliFixtureSettings(t), "--workspaces", "records", "--capture-enabled", "true", "--source", "codex", "--codex-home", f.store, "--state-dir", f.stateBase)
 	command.Dir = f.project
 	if out, err := command.CombinedOutput(); err == nil || !strings.Contains(string(out), "--local-only") {
 		t.Fatalf("ordinary init silently left missing local choices: %s %v", out, err)
@@ -245,7 +245,7 @@ func TestNativeSubagentStartUsesProvenChildTranscriptWithoutRelabelingParent(t *
 		t.Fatal("callback parent identity lost")
 	}
 	assertParent()
-	result, err := store.Reconcile(context.Background(), "TEST-100", "tester", capture.DefaultSessionBudget, capture.DefaultByteBudget)
+	result, err := store.Reconcile(context.Background(), "TEST-100", "tester", 256, 67108864)
 	if err != nil {
 		t.Fatal(err)
 	}

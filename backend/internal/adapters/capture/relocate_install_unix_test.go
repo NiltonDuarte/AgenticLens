@@ -28,7 +28,7 @@ func TestRelocationResumesInterruptedOwnedHookAndPluginBeforeManifest(t *testing
 			t.Setenv("GORACE", "atexit_sleep_ms=0")
 			cache := filepath.Join(t.TempDir(), "native-cache")
 			local := filepath.Join(project, ".agenticlens-config.local.yaml")
-			if err := os.WriteFile(local, []byte(fmt.Sprintf("agenticlens:\n  install_root: %q\n", cache)), 0600); err != nil {
+			if err := os.WriteFile(local, []byte(fmt.Sprintf("agenticlens:\n  install_root: %q\ntelemetry:\n  capture:\n    enabled: true\n    state_dir: %q\n", cache, source)), 0600); err != nil {
 				t.Fatal(err)
 			}
 			entry, err := adaptersconfig.ResolveEntrypoint(project)

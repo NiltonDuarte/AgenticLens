@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '../test/render';
 import { LandingPage } from './LandingPage';
 import * as apiClient from '../api/client';
 import { mockFleetSummary, mockTicketComparisonRows } from '../test/fixtures/mockData';
@@ -708,6 +708,8 @@ describe('LandingPage View Component', () => {
         onSelectTicket={vi.fn()}
         projectConfig={{
           project_name: 'ConfiguredTarget',
+          case_insensitive: true,
+          role_mappings: {},
           prefixes: [],
           workspaces_dir: 'workspaces',
           role_order: [],

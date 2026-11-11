@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	adaptersconfig "agenticlens/internal/adapters/config"
 	"agenticlens/internal/adapters/opencode"
 	"agenticlens/internal/domain"
 )
@@ -26,7 +27,14 @@ func captureWorkerActive(project string, rows []domain.CaptureRegistration, budg
 		}
 		if row.ParentID != "" && row.Identity.Source == domain.SourceOpenCode && row.ProjectDirectory == project && budget >= 4*1024*1024 {
 			budget -= 4 * 1024 * 1024
-			db, err := opencode.OpenDB(row.Identity.Store)
+			cfg, err := adaptersconfig.Load(project)
+			if err != nil {
+				return true, fmt.Sprintf("child activity configuration unavailable: %v", err)
+			}
+			if err := adaptersconfig.ValidateDatabasePolicy(cfg); err != nil {
+				return true, err.Error()
+			}
+			db, err := opencode.OpenDB(row.Identity.Store, cfg.Database.BusyTimeoutMs)
 			if err == nil {
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 				finished, proofErr := opencode.CaptureChildFinished(ctx, db.DB(), row.ParentID, row.Identity.SessionID)

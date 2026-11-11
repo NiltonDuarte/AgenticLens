@@ -69,29 +69,13 @@ const markdownComponents: Components = {
   h6: ({ node: _node, ...props }) => <h6 className="markdown-h6" {...props} />,
 };
 
+const artifactTitle = (item: TicketArtifactItem): string => item.title.trim() ? item.title : item.path.split('/').at(-1) ?? item.path;
+
 export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({ artifacts }) => {
-  const resolvedItems: readonly TicketArtifactItem[] = useMemo(() => {
-    if (artifacts?.items && artifacts.items.length > 0) {
-      return artifacts.items;
-    }
-    return [
-      {
-        path: 'CONTRACT.md',
-        title: 'CONTRACT.md',
-        description: 'Frozen big-picture technical contract',
-        content: artifacts?.contract_content ?? null,
-      },
-      {
-        path: 'SUMMARY.md',
-        title: 'SUMMARY.md',
-        description: 'Implementation summary and verification log',
-        content: artifacts?.summary_content ?? null,
-      },
-    ];
-  }, [artifacts]);
+  const resolvedItems: readonly TicketArtifactItem[] = useMemo(() => artifacts?.items ?? [], [artifacts]);
 
   const [activeItemPath, setActiveItemPath] = useState<string>(() => {
-    return resolvedItems.length > 0 ? resolvedItems[0].path : 'CONTRACT.md';
+    return resolvedItems.length > 0 ? resolvedItems[0].path : '';
   });
   const [viewMode, setViewMode] = useState<ViewMode>('rich');
   const [copyStatus, setCopyStatus] = useState<CopyStatus>('Copy');
@@ -117,8 +101,9 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({ artifacts }) => 
   const activeItem = resolvedItems.find((item) => item.path === activeItemPath) ?? (resolvedItems.length > 0 ? resolvedItems[0] : null);
 
   const currentContent = activeItem?.content ?? null;
-  const currentTitle = activeItem?.title || activeItem?.path || 'document';
-  const hasCurrentContent = Boolean(currentContent && currentContent.trim().length > 0);
+  const currentTitle = activeItem ? artifactTitle(activeItem) : 'document';
+  const hasCurrentContent = currentContent !== null;
+  const hasVisibleContent = currentContent !== null && currentContent.trim().length > 0;
 
   const handleTabChange = (path: string) => {
     setActiveItemPath(path);
@@ -130,7 +115,7 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({ artifacts }) => 
   };
 
   const handleCopy = async () => {
-    if (!currentContent || currentContent.trim().length === 0) {
+    if (currentContent === null) {
       return;
     }
     try {
@@ -166,8 +151,10 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({ artifacts }) => 
           <div className="artifact-tabs">
             {resolvedItems.map((item) => {
               const isActive = activeItem?.path === item.path;
-              const hasContent = Boolean(item.content && item.content.trim().length > 0);
-              const label = item.title || item.path;
+              const contentState = item.content === null ? ' (Unavailable)'
+                : item.content.length === 0 ? ' (Empty)'
+                : item.content.trim().length === 0 ? ' (Whitespace)' : '';
+              const label = artifactTitle(item);
               return (
                 <button
                   key={item.path}
@@ -176,7 +163,7 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({ artifacts }) => 
                   onClick={() => handleTabChange(item.path)}
                   title={item.description || label}
                 >
-                  {label} {hasContent ? '' : '(Empty)'}
+                  {label}{contentState}
                 </button>
               );
             })}
@@ -210,12 +197,12 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({ artifacts }) => 
       </div>
 
       <div className="artifact-body">
-        {hasCurrentContent && currentContent ? (
+        {hasCurrentContent ? (
           viewMode === 'raw' ? (
             <pre className="artifact-pre">
               <code>{currentContent}</code>
             </pre>
-          ) : (
+          ) : hasVisibleContent ? (
             <div className="artifact-markdown-container">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
@@ -224,10 +211,14 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({ artifacts }) => 
                 {currentContent}
               </ReactMarkdown>
             </div>
+          ) : (
+            <div className="artifact-empty-note">
+              {currentContent === '' ? `The ${currentTitle} document is empty.` : `The ${currentTitle} document contains only whitespace.`}
+            </div>
           )
         ) : (
           <div className="artifact-empty-note">
-            No {currentTitle} document found for this workspace.
+            {resolvedItems.length === 0 ? 'No artifacts configured for this workspace.' : `Content unavailable for ${currentTitle}.`}
           </div>
         )}
       </div>

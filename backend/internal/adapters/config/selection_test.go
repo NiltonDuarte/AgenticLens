@@ -30,7 +30,8 @@ func TestSelectedLocalOriginAcrossLinkedWorktrees(t *testing.T) {
 		}
 	}
 	git(base, "init", "-b", "main")
-	shared := "project_name: Portable\nagenticlens:\n  version: v9.8.7\nworkspaces:\n  dir: custom-records\nticket:\n  prefixes: [CUSTOM]\ncode_metrics:\n  source_roots: [custom-src]\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.35\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+	shared := strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(string(fixtureSharedBody(t)), "project_name: Fixture", "project_name: Portable"), "dir: records", "dir: custom-records"), "src/**/*.go", "custom-src/**")
+	shared = strings.ReplaceAll(shared, "prefix: T\n", "prefix: CUSTOM\n")
 	write(filepath.Join(base, ".agenticlens-config.yaml"), shared)
 	git(base, "add", ".agenticlens-config.yaml")
 	git(base, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-m", "fixture")
@@ -65,14 +66,14 @@ func TestSelectedLocalOriginAcrossLinkedWorktrees(t *testing.T) {
 			t.Fatalf("base-relative policy: %+v %v", policy, err)
 		}
 		cfg, err := Load(cwd)
-		if err != nil || cfg.Telemetry.Sources.CodexHome != filepath.Join(base, "base-codex") || cfg.Workspaces.Dir != "custom-records" || cfg.Ticket.Prefixes[0].Prefix != "CUSTOM" || cfg.CodeMetrics.SourceRoots[0] != "custom-src" {
+		if err != nil || cfg.Telemetry.Sources.CodexHome != filepath.Join(base, "base-codex") || cfg.Workspaces.Dir != "custom-records" || cfg.Ticket.Prefixes[0].Prefix != "CUSTOM" || cfg.CodeMetrics.Production.Include[0] != "custom-src/**" {
 			t.Fatalf("project/source origin lost: %+v %v", cfg, err)
 		}
 	}
 	local := filepath.Join(one, ".agenticlens-config.local.yaml")
 	write(local, "telemetry:\n  capture:\n    enabled: false\n    state_dir: local-state\n")
 	policy, err := ResolveCapture(nested, "")
-	if err != nil || policy.Enabled || policy.StateDir != filepath.Join(one, "local-state") || policy.MaxSessions != 256 {
+	if err != nil || policy.Enabled || policy.StateDir != filepath.Join(one, "local-state") || policy.MaxSessions != 0 {
 		t.Fatalf("base key leaked into local: %+v %v", policy, err)
 	}
 	cfg, err := Load(nested)
@@ -133,7 +134,7 @@ func TestCaptureEnablementMustBeExplicitBoolean(t *testing.T) {
 
 func TestSelectedLocalCapturePolicyCannotOverrideSharedFailureRateSettings(t *testing.T) {
 	root := t.TempDir()
-	shared := "project_name: SharedRates\nticket:\n  prefixes: [AL]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: 13\n  error_rate_threshold: 0.35123456789\n  error_rate_critical_threshold: 0.81234567891\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+	shared := strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(string(fixtureSharedBody(t)), "error_rate_min_calls: 7", "error_rate_min_calls: 13"), "error_rate_threshold: 0.31", "error_rate_threshold: 0.35123456789"), "error_rate_critical_threshold: 0.81", "error_rate_critical_threshold: 0.81234567891")
 	sharedPath := filepath.Join(root, ".agenticlens-config.yaml")
 	if err := os.WriteFile(sharedPath, []byte(shared), 0600); err != nil {
 		t.Fatal(err)
@@ -162,7 +163,11 @@ func TestSelectedLocalCapturePolicyCannotOverrideSharedFailureRateSettings(t *te
 		if err := os.WriteFile(sharedPath, []byte(missing), 0600); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := Load(root); err == nil || !strings.Contains(err.Error(), key) {
+		cfg, err := Load(root)
+		if err == nil {
+			err = ValidateAnomalyPolicy(cfg)
+		}
+		if err == nil || !strings.Contains(err.Error(), key) {
 			t.Fatalf("local file supplied missing shared %s: %v", key, err)
 		}
 	}
@@ -172,5 +177,44 @@ func TestSelectedLocalCapturePolicyCannotOverrideSharedFailureRateSettings(t *te
 	}
 	if _, err := os.Stat(filepath.Join(root, "local-capture-state")); !os.IsNotExist(err) {
 		t.Fatalf("read-only configuration selection allocated capture state: %v", err)
+	}
+}
+
+func TestBaseLocalSelectionPreservesGitPathBytes(t *testing.T) {
+	root := t.TempDir()
+	base := filepath.Join(root, "base \"quoted\"\nsecond line")
+	linked := filepath.Join(root, "linked")
+	if err := os.Mkdir(base, 0700); err != nil {
+		t.Fatal(err)
+	}
+	git := func(args ...string) {
+		t.Helper()
+		command := exec.Command("git", append([]string{"-C", base}, args...)...)
+		if out, err := command.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v %s", args, err, out)
+		}
+	}
+	shared, err := os.ReadFile("testdata/shared-policy.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(base, ".agenticlens-config.yaml"), shared, 0600); err != nil {
+		t.Fatal(err)
+	}
+	git("init", "-b", "main")
+	git("add", ".agenticlens-config.yaml")
+	git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-m", "fixture")
+	git("worktree", "add", "-b", "linked", linked)
+	local := filepath.Join(base, ".agenticlens-config.local.yaml")
+	if err := os.WriteFile(local, []byte("telemetry:\n  capture:\n    enabled: false\n    state_dir: state\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	selection, err := SelectConfig(linked)
+	if err != nil || selection.LocalPath != local || selection.LocalOrigin != "base" {
+		t.Fatalf("lossy Git path selection: %+v %v", selection, err)
+	}
+	policy, err := ResolveCapture(linked, "")
+	if err != nil || policy.StateDir != filepath.Join(base, "state") {
+		t.Fatalf("relative origin corrupted: %+v %v", policy, err)
 	}
 }

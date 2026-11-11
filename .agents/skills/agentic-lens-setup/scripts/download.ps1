@@ -203,7 +203,7 @@ try {
     $resolveProject = $projectPath
     if ($InitConfig) {
         if (-not (Exact-Version $Version)) { throw '-InitConfig requires exact -Version' }
-        foreach ($suffix in @('yaml', 'yml', 'json')) { if (Test-Path -LiteralPath ([IO.Path]::Combine($projectPath, ".agenticlens-config.$suffix"))) { throw 'Shared configuration exists; edit its pin explicitly' } }
+        foreach ($suffix in @('yaml', 'yml')) { if (Test-Path -LiteralPath ([IO.Path]::Combine($projectPath, ".agenticlens-config.$suffix"))) { throw 'Shared configuration exists; edit its pin explicitly' } }
         $scaffoldContent = "# AgenticLens bootstrap scaffold v1: incomplete project configuration`nagenticlens:`n  version: $Version`n"
         [IO.File]::WriteAllText([IO.Path]::Combine($stage, '.agenticlens-config.yaml'), $scaffoldContent, [Text.UTF8Encoding]::new($false))
         $resolveProject = $stage
@@ -225,11 +225,18 @@ try {
     if ($LocalBin) { $arguments += @('--local-bin', (Resolve-Path -LiteralPath $LocalBin).ProviderPath, '--sha256', $Sha256) }
     Write-SetupLine (Run-Probe $manager $arguments 300000)
     Write-SetupLine (Run-Probe $manager @('self-update', '--version', $ManagerVersion, '--local-bin', $manager, '--sha256', (Hash-File $manager), '--dest', $entrypoint) 300000)
-    if ($InitConfig) { Write-SetupLine 'Configuration incomplete: complete the installer-owned scaffold with agentic-lens init before capture setup.' }
+    if ($InitConfig) {
+        Write-SetupLine 'Configuration incomplete: review and approve explicit shared/local YAML candidates before capture setup.'
+        $quotedEntrypoint = $entrypoint.Replace("'", "''")
+        $quotedProject = $projectPath.Replace("'", "''")
+        $quotedOutput = ([IO.Path]::Combine($projectPath, '.agenticlens-config.yaml')).Replace("'", "''")
+        $quotedPin = $pin.Replace("'", "''")
+        Write-SetupLine ("Complete unchanged owned scaffold: & '$quotedEntrypoint' --al-project '$quotedProject' init --complete-scaffold --agenticlens-version '$quotedPin' --output '$quotedOutput' --settings 'APPROVED_SHARED.yaml' --local-settings 'APPROVED_LOCAL.yaml' --workspaces 'DIR'")
+    }
     if ($CaptureSource) {
         if ($InitConfig) { throw 'Complete project configuration before capture installation' }
         $arguments = @('--al-project', $projectPath, 'capture', 'install', '--source', $CaptureSource, '--store', $CaptureStore, '--repo', $projectPath, '--wrapper', $entrypoint)
-        if ($CaptureSource -ceq 'codex') { $arguments = @('--al-project', $projectPath, 'capture', 'install-user', '--repo', $projectPath, '--entrypoint', $entrypoint) }
+        if ($CaptureSource -ceq 'codex') { $arguments = @('--al-project', $projectPath, 'capture', 'install-user', '--repo', $projectPath, '--entrypoint', $entrypoint, '--store', $CaptureStore) }
         if ($CaptureStateDir) { $arguments += @('--state-dir', $CaptureStateDir) }
         Write-SetupLine (Run-Probe $entrypoint $arguments 300000)
     }
@@ -239,5 +246,17 @@ try {
     Write-SetupError $_.Exception.Message
     exit 1
 } finally {
-    if ($stage -and [IO.Directory]::Exists($stage)) { [IO.Directory]::Delete($stage, $true) }
+    if ($stage -and [IO.Directory]::Exists($stage)) {
+        # File.Copy may retain ReadOnly on the two files this bootstrap owns.
+        # Never change attributes on user inputs, installed engines or cache files.
+        foreach ($name in @('manager.exe', '.agenticlens-config.yaml')) {
+            $ownedStageFile = [IO.Path]::Combine($stage, $name)
+            if ([IO.File]::Exists($ownedStageFile)) {
+                $attributes = [IO.File]::GetAttributes($ownedStageFile)
+                if (($attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'Owned bootstrap staging file became a reparse point; cleanup refused' }
+                [IO.File]::SetAttributes($ownedStageFile, [IO.FileAttributes]([int]$attributes -band (-bnot [int][IO.FileAttributes]::ReadOnly)))
+            }
+        }
+        [IO.Directory]::Delete($stage, $true)
+    }
 }

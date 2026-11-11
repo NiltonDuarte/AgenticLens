@@ -8,7 +8,7 @@ export interface AnomalyDisplayText {
 }
 
 /** Derives presentation strings from the canonical rule and structured context. */
-export function formatAnomaly(anomaly: Anomaly): AnomalyDisplayText {
+export function formatAnomaly(anomaly: Anomaly, roleLabel: (role: string) => string = (role) => role): AnomalyDisplayText {
   const context = anomaly.context;
   const tool = context.tool_name?.trim() || 'tool';
   switch (anomaly.rule_id) {
@@ -39,8 +39,8 @@ export function formatAnomaly(anomaly: Anomaly): AnomalyDisplayText {
     case 'SUBAGENT_REWORK_LOOP':
       if (context.role && context.secondary_role && context.count !== undefined) {
         return {
-          title: `Subagent rework loop: ${context.role} <-> ${context.secondary_role} (${context.count} cycles)`,
-          description: `Subagent roles '${context.role}' and '${context.secondary_role}' alternated for ${context.count} consecutive cycles.`,
+          title: `Subagent rework loop: ${roleLabel(context.role)} <-> ${roleLabel(context.secondary_role)} (${context.count} cycles)`,
+          description: `Subagent roles '${roleLabel(context.role)}' and '${roleLabel(context.secondary_role)}' alternated for ${context.count} consecutive cycles.`,
         };
       }
       break;

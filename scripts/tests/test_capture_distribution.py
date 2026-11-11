@@ -9,7 +9,7 @@ import fcntl
 import subprocess
 import unittest
 
-from distribution_fixture import DistributionFixture, ROOT, SETUP, build_probe, build_app, build_manager, digest
+from distribution_fixture import DistributionFixture, ROOT, SETUP, build_probe, build_app, build_manager, digest, shared_policy, local_policy
 
 
 class CaptureDistributionTest(DistributionFixture):
@@ -72,7 +72,7 @@ class CaptureDistributionTest(DistributionFixture):
         for script in [ROOT / 'scripts/download-agentic-lens.sh', SETUP / 'download.sh']:
             with self.subTest(script=script):
                 self.succeeds(self.install_local('--capture-source', 'codex', '--capture-store', store, script=script))
-                hooks = json.loads((Path(self.env['CODEX_HOME']) / 'hooks.json').read_text())['hooks']
+                hooks = json.loads((store / 'hooks.json').read_text())['hooks']
                 self.assertEqual(set(hooks), {'SessionStart', 'UserPromptSubmit', 'SubagentStart', 'SubagentStop', 'Stop', 'SessionEnd'})
                 for groups in hooks.values():
                     self.assertEqual(len(groups), 1)
@@ -151,8 +151,8 @@ class CaptureDistributionTest(DistributionFixture):
         companion = self.home / '.agenticlens'
         self.succeeds(self.launch('install', self.pin, '--install-root', companion,
                                   '--local-bin', self.application, '--sha256', digest(self.application), cwd=outside))
-        self.succeeds(self.launch('init', '--project-name', 'Standalone', '--src-folders', 'src',
-                                  '--ticket-prefixes', 'FX', '--agenticlens-version', self.pin,
+        self.succeeds(self.launch('init', '--project-name', 'Standalone', '--settings', self.approved_settings(),
+                                  '--workspaces', 'workspaces', '--agenticlens-version', self.pin,
                                   '--capture-enabled', 'false', '--source', 'codex',
                                   '--codex-home', self.home / '.codex', '--state-dir', self.root / 'unused state', cwd=outside))
         self.assertIn('project_name: Standalone', (outside / '.agenticlens-config.yaml').read_text())
@@ -178,7 +178,10 @@ class CaptureDistributionTest(DistributionFixture):
         self.assertNotEqual(rejected.returncode, 0)
         self.assertIn('development output', rejected.stderr)
         candidate.unlink()
-        self.assertEqual(self.succeeds(self.launch('version', '--short')).stdout.strip(), self.pin)
+        missing = self.launch('version', '--short')
+        self.assertNotEqual(missing.returncode, 0)
+        self.assertIn('development output', missing.stderr)
+        self.assertTrue(self.native().is_file())
         self.assertEqual(self.requests(), [])
 
     def test_plugin_uses_native_manager_for_windows_and_posix_with_bounded_cleanup(self):
@@ -267,7 +270,6 @@ class CaptureDistributionTest(DistributionFixture):
         source = Path(self.env['CODEX_HOME']); source.mkdir(parents=True, exist_ok=True)
         (source / 'sessions').mkdir()
         state = self.root / 'legacy capture state'
-        self.config.write_text(self.config.read_text() + 'ticket:\n  prefixes: [FX]\nworkspaces:\n  dir: workspaces\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.35\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n')
         (self.repo / 'src').mkdir()
         local = self.repo / '.agenticlens-config.local.yaml'
         local.write_text(f"telemetry:\n  default_source: codex\n  sources:\n    codex:\n      home: '{source}'\n  capture:\n    enabled: true\n    state_dir: '{state}'\n")
@@ -383,19 +385,28 @@ class CaptureDistributionTest(DistributionFixture):
         self.assertEqual(self.requests(), [])
         self.assertEqual(before, sorted(str(path.relative_to(self.cache)) for path in self.cache.rglob('*')))
 
-    def test_unsupported_duplicate_and_unsafe_yaml_reject_before_native(self):
-        self.succeeds(self.install_local())
-        for document in ['agenticlens: {version: v9.8.7}\n', 'agenticlens:\n  version: latest\n',
+    def test_yaml_styles_and_invalid_authority_before_native(self):
+        self.succeeds(self.install_local(probe=self.probe))
+        local = self.repo / '.agenticlens-config.local.yaml'
+        local.write_text(local_policy(self.root / 'capture state', self.home / '.codex', self.cache))
+        marker = self.root / 'unexpected dispatch.json'
+        for document in ['agenticlens:\n  version: latest\n',
                          'agenticlens:\n  version: v9.8.7\n  version: v9.8.7\n',
                          'agenticlens:\n  version: "v9.8.7+$(touch INJECTED)"\n',
-                         '"agenticlens":\n  version: v9.8.7\n',
                          'agenticlens:\n  version: v9.8.7\n---\nproject_name: Other\n',
-                         'agenticlens:\n  version: &pin v9.8.7\n', 'agenticlens:\n  version: |\n    v9.8.7\n']:
+                         'agenticlens:\n  version: |\n    v9.8.7\n']:
             with self.subTest(document=document):
                 self.config.write_text(document)
-                result = self.launch('capture', 'receive')
+                result = self.launch('fixture-authority', env=dict(self.env, AL_PROBE_LOG=str(marker)))
                 self.assertNotEqual(result.returncode, 0)
                 self.assertEqual(result.stdout, '')
+                self.assertFalse(marker.exists(), 'invalid authority reached selected native engine')
+        for document in ['agenticlens: {version: v9.8.7}\n',
+                         '"agenticlens":\n  version: v9.8.7\n',
+                         'agenticlens:\n  version: &pin v9.8.7\n']:
+            with self.subTest(document=document):
+                self.config.write_text(document)
+                self.assertEqual(self.succeeds(self.launch('version', '--short')).stdout.strip(), self.pin)
         self.assertFalse((self.repo / 'INJECTED').exists())
         self.assertEqual(self.requests(), [])
 
@@ -411,24 +422,25 @@ class CaptureDistributionTest(DistributionFixture):
         local.unlink(); self.write_config()
         self.assertIn('conflicts', self.launch(env=dict(self.env, AGENTIC_LENS_VERSION='v1.0.0')).stderr)
 
-    def test_nearer_json_git_boundary_and_native_repo_mismatch_cannot_select_parent(self):
+    def test_git_boundary_and_native_repo_mismatch_cannot_select_parent(self):
         self.succeeds(self.install_local())
         child = self.repo / 'child'; child.mkdir()
-        (child / '.agenticlens-config.json').write_text('{"agenticlens":{"version":"v9.8.7"}}')
-        self.assertIn('migrate', self.launch(cwd=child).stderr)
-        (child / '.agenticlens-config.json').unlink(); (child / '.git').write_text('gitdir: somewhere\n')
+        (child / '.git').write_text('gitdir: somewhere\n')
         self.assertNotEqual(self.launch(cwd=child).returncode, 0)
         other = self.root / 'other'; other.mkdir()
-        (other / '.agenticlens-config.yaml').write_text(self.config.read_text() + 'ticket:\n  prefixes: [FX]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.35\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n')
-        (other / '.agenticlens-config.local.yaml').write_text(f"telemetry:\n  capture:\n    enabled: false\n    state_dir: '{self.root / 'other state'}'\n  default_source: codex\n  sources:\n    codex:\n      home: '{self.home / '.codex'}'\n")
+        (other / '.agenticlens-config.yaml').write_text(shared_policy(self.pin, self.cache))
+        (other / '.agenticlens-config.local.yaml').write_text(local_policy(self.root / 'other state', self.home / '.codex'))
         self.assertIn('--al-project', self.launch('capture', 'status', '--repo', other).stderr)
         self.succeeds(self.launch('--al-project', other, 'capture', 'status', '--repo', other))
 
-    def test_legacy_yml_suffix_ignores_a_directory_at_yaml_filename(self):
+    def test_yml_and_present_yaml_directory_are_ambiguous(self):
         self.succeeds(self.install_local())
         self.config.rename(self.repo / '.agenticlens-config.yml')
         self.config.mkdir()
-        self.assertEqual(self.succeeds(self.launch('version', '--short')).stdout.strip(), self.pin)
+        rejected = self.launch('version', '--short')
+        self.assertNotEqual(rejected.returncode, 0)
+        self.assertIn('.agenticlens-config.yaml', rejected.stderr)
+        self.assertIn('.agenticlens-config.yml', rejected.stderr)
 
     def test_physical_project_and_cache_symlink_dotdot_resolution(self):
         self.succeeds(self.install_local())
@@ -477,8 +489,7 @@ class CaptureDistributionTest(DistributionFixture):
             self.assertEqual(self.native().read_bytes(), before)
             self.assertEqual((self.dest / 'agentic-lens').read_bytes(), wrapper_before)
         store = self.root / 'store'; store.mkdir()
-        home = Path(self.env['CODEX_HOME']); home.mkdir(parents=True)
-        hooks = home / 'hooks.json'
+        hooks = store / 'hooks.json'
         hooks.write_text(json.dumps({'hooks': {'Stop': [{'name': 'AgenticLens native user capture v1', 'hooks': [{'type': 'command', 'command': 'owner customization'}]}]}}))
         hooks_before = hooks.read_bytes()
         result = self.install_local('--force', '--capture-source', 'codex', '--capture-store', store)

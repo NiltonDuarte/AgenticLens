@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent, within, act } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within, act } from '../test/render';
 import userEvent from '@testing-library/user-event';
 import { FleetOverview } from './FleetOverview';
 import * as apiClient from '../api/client';

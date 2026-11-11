@@ -1,3 +1,4 @@
+import { useProjectConfig, ticketPolicy } from '../contexts/ProjectConfigContext';
 import React, { useState, useMemo } from 'react';
 import type { AutopsySortMode, ContextHealthStatus } from '../domain/types';
 import { compareTicketIds, compareTicketCompletionDate } from '../domain/formatters';
@@ -22,14 +23,16 @@ export const TicketSelector: React.FC<TicketSelectorProps> = ({
   selectedTicketId,
   onSelectTicket,
 }) => {
+  const projectConfig = useProjectConfig();
+  const recognitionPolicy = useMemo(() => ticketPolicy(projectConfig), [projectConfig]);
   const [sortMode, setSortMode] = useState<AutopsySortMode>('ticket_id');
 
   const sortedTickets = useMemo(() => {
     if (sortMode === 'completed_at') {
-      return [...tickets].sort(compareTicketCompletionDate);
+      return [...tickets].sort((a, b) => compareTicketCompletionDate(a, b, recognitionPolicy));
     }
-    return [...tickets].sort((a, b) => compareTicketIds(a.ticket_id, b.ticket_id));
-  }, [tickets, sortMode]);
+    return [...tickets].sort((a, b) => compareTicketIds(a.ticket_id, b.ticket_id, recognitionPolicy));
+  }, [tickets, sortMode, recognitionPolicy]);
 
   return (
     <div className="ticket-selector-bar">

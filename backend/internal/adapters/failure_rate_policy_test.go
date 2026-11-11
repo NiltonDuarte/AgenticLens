@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"agenticlens/internal/adapters"
+	adaptersconfig "agenticlens/internal/adapters/config"
 	"agenticlens/internal/domain"
 )
 
@@ -33,11 +34,20 @@ func TestConfiguredFailureRateSurvivesPersistenceAndFleet(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			root := t.TempDir()
 			workspaces := filepath.Join(root, "tickets")
-			cfg := fmt.Sprintf("project_name: Policy\nticket:\n  prefixes: [FX]\nworkspaces:\n  dir: tickets\ntelemetry:\n  capture:\n    state_dir: capture-state\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: %d\n  error_rate_threshold: %g\n  error_rate_critical_threshold: %g\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n", tc.minimum, tc.warning, tc.critical)
-			if err := os.WriteFile(filepath.Join(root, ".agenticlens-config.yaml"), []byte(cfg), 0600); err != nil {
+			project := fixtureReadPolicy(t)
+			project.Workspaces.Dir = "tickets"
+			project.Ticket = domain.TicketConfig{CaseInsensitive: false, Prefixes: []domain.TicketPrefix{{Prefix: "FX", Description: "Policyfixture"}}}
+			project.AnomalyThresholds.ErrorRateMinCalls = tc.minimum
+			project.AnomalyThresholds.ErrorRateThreshold = tc.warning
+			project.AnomalyThresholds.ErrorRateCriticalThreshold = tc.critical
+			cfg, err := adaptersconfig.GenerateConfigYAML(project)
+			if err != nil {
 				t.Fatal(err)
 			}
-			policy := domain.AnomalyThresholdsConfig{ErrorRateMinCalls: tc.minimum, ErrorRateThreshold: tc.warning, ErrorRateCriticalThreshold: tc.critical}
+			if err := os.WriteFile(filepath.Join(root, ".agenticlens-config.yaml"), cfg, 0600); err != nil {
+				t.Fatal(err)
+			}
+			policy := project.AnomalyThresholds
 			tool, tid, title := "read", "FX-1", "Configured rate"
 			events := []domain.EventFact{}
 			parts := []domain.LivePartFact{}

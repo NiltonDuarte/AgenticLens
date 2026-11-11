@@ -1,9 +1,22 @@
-# Sanitized machine-local telemetry source settings.
-# Copy to .agenticlens-config.local.yaml and adjust paths for this machine.
+# Review candidate only: runtime never discovers this example file.
+# Choose the harness and actual paths explicitly, then approve the local candidate
+# through base-checkout setup. These example values are not runtime defaults.
+# Manual telemetry, automatic capture and integration installation are separate.
 telemetry:
   default_source: opencode
   sources:
     opencode:
-      database_path: ~/.local/share/opencode/opencode.db
+      database_path: /choose/actual/opencode.db
     codex:
-      home: ~/.codex
+      home: /choose/actual/codex-home
+  capture:
+    # This candidate permits manual generation and does not enable automatic capture.
+    enabled: false
+    state_dir: /choose/actual/capture-state
+    # Suggested manual-pass budgets; approve or replace every numerical choice.
+    pass_timeout_ms: 30000
+    max_sessions: 256
+    max_source_bytes: 67108864
+# Enabling a worker additionally requires explicit refresh/debounce/idle/lifetime
+# choices. Commit-advisory policy is required only when that feature is used.
+# No integration is installed by approving or writing local configuration.

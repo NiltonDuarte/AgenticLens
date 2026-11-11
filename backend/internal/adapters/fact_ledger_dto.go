@@ -269,7 +269,7 @@ func AgenticFactLedgerDTOFromDomain(ledger domain.AgenticFactLedger) AgenticFact
 		sessions[i] = SessionFactDTOFromDomain(session)
 	}
 
-	return ProjectGenerationDTO(AgenticFactLedgerDTO{
+	return AgenticFactLedgerDTO{
 		SchemaVersion: ledger.SchemaVersion,
 		Migration:     MigrationInfoDTOFromDomain(ledger.Migration),
 		TicketID:      ledger.TicketID,
@@ -290,7 +290,7 @@ func AgenticFactLedgerDTOFromDomain(ledger domain.AgenticFactLedger) AgenticFact
 		},
 		Sessions:  sessions,
 		Anomalies: anomaliesFromDomain(ledger.Anomalies),
-	})
+	}
 }
 
 func (dto AgenticFactLedgerDTO) validateCostFields(required bool) error {
@@ -310,11 +310,6 @@ func (dto AgenticFactLedgerDTO) validateCostFields(required bool) error {
 // ValidateRuntimeFactLedger rejects legacy or explicitly incomplete ledgers before
 // any fact collections are decoded by ordinary ingestion paths.
 func ValidateRuntimeFactLedger(data []byte) error {
-	normalized, err := normalizeFormerGenerationMetadata(data)
-	if err != nil {
-		return fmt.Errorf("decoding ledger metadata: %w", err)
-	}
-	data = normalized
 	var fields map[string]json.RawMessage
 	if err := json.Unmarshal(data, &fields); err != nil {
 		return fmt.Errorf("decoding ledger metadata: %w", err)
@@ -436,15 +431,10 @@ func ValidateRuntimeFactLedger(data []byte) error {
 	return decoded.Validate()
 }
 
-func toDomainTicketType(raw *string) *domain.ConventionalTicketType {
-	if raw == nil {
-		return nil
-	}
-	if tt, ok := domain.NormalizeTicketType(*raw); ok {
-		return &tt
-	}
-	ct := domain.ConventionalTicketType(*raw)
-	return &ct
+func toDomainTicketType(raw *string)*domain.ConventionalTicketType{
+ if raw==nil{return nil}
+ value:=domain.ConventionalTicketType(*raw)
+ return &value
 }
 
 func fromDomainTicketType(tt *domain.ConventionalTicketType) *string {

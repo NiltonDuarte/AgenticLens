@@ -7,31 +7,6 @@ import (
 	"fmt"
 )
 
-// ProjectGenerationDTO runs only after original retained owners pass equality
-// checks. Enabled slices retain their nil/empty/value distinction.
-func ProjectGenerationDTO(dto AgenticFactLedgerDTO, policies ...domain.GenerationPolicy) AgenticFactLedgerDTO {
-	if len(policies) == 0 {
-		return dto
-	}
-	policy := policies[0]
-	dto.Sessions = append([]SessionFactDTO{}, dto.Sessions...)
-	if !policy.Anomalies {
-		dto.Anomalies = nil
-	}
-	for i := range dto.Sessions {
-		if !policy.Skills {
-			dto.Sessions[i].Skills = nil
-		}
-		if !policy.Delegations {
-			dto.Sessions[i].Delegations = nil
-		}
-		if !policy.Anomalies {
-			dto.Sessions[i].Anomalies = nil
-		}
-	}
-	return dto
-}
-
 func validateOptionalCategory(fields map[string]json.RawMessage, key string) error {
 	raw, exists := fields[key]
 	if !exists {
@@ -124,8 +99,8 @@ func normalizeFormerGenerationMetadata(data []byte) ([]byte, error) {
 }
 
 // NormalizeFormerGenerationMetadata validates original JSON members before
-// removing supported transitional metadata. Recovery adapters use the same
-// compatibility boundary as canonical DTO reads without importing it into domain.
+// removing supported transitional metadata. Only explicit migrate/backfill preparation invokes this cleanup; ordinary reads
+// require current metadata without normalization.
 func NormalizeFormerGenerationMetadata(data []byte) ([]byte, error) {
 	if _, err := FormatLedgerJSON(data); err != nil {
 		return nil, fmt.Errorf("validating original ledger JSON: %w", err)

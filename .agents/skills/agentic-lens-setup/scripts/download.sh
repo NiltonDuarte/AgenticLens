@@ -95,7 +95,7 @@ MANAGER_VERSION=$actual_manager_version
 RESOLVE_PROJECT=$PROJECT
 if ((INIT)); then
  exact "$VERSION" || fail '--init-config requires exact --version'
- for suffix in yaml yml json; do [[ ! -e "$PROJECT/.agenticlens-config.$suffix" && ! -L "$PROJECT/.agenticlens-config.$suffix" ]] || fail 'Shared config exists; edit its pin explicitly'; done
+ for suffix in yaml yml; do [[ ! -e "$PROJECT/.agenticlens-config.$suffix" && ! -L "$PROJECT/.agenticlens-config.$suffix" ]] || fail 'Shared config exists; edit its pin explicitly'; done
  printf '# AgenticLens bootstrap scaffold v1: incomplete project configuration\nagenticlens:\n  version: %s\n' "$VERSION" > "$STAGE/.agenticlens-config.yaml"
  RESOLVE_PROJECT=$STAGE
 fi
@@ -136,13 +136,13 @@ for item in "${PLATFORMS[@]}"; do
 done
 "$MANAGER" self-update --version "$MANAGER_VERSION" --local-bin "$MANAGER" --sha256 "$(digest "$MANAGER")" --dest "$ENTRYPOINT"
 if ((INIT)); then
- printf 'Configuration incomplete: bootstrap scaffold defines no project/ticket/code roots.\n'
- printf 'Complete only this unchanged owned scaffold, preserving local settings:\n  (cd -P -- %q && %q --al-project %q init --complete-scaffold --agenticlens-version %q --project-name NAME --src-folders DIRS --ticket-prefixes PREFIXES)\n' "$PROJECT" "$ENTRYPOINT" "$PROJECT" "$PIN"
+ printf 'Configuration incomplete: review explicit shared and local policy before completing setup.\n'
+ printf 'Complete only this unchanged owned scaffold, preserving local settings:\n  (cd -P -- %q && %q --al-project %q init --complete-scaffold --agenticlens-version %q --settings APPROVED_SHARED.yaml --workspaces DIR --local-settings APPROVED_LOCAL.yaml)\n' "$PROJECT" "$ENTRYPOINT" "$PROJECT" "$PIN"
 fi
 if [[ -n "$SOURCE" ]]; then
  ((INIT==0)) || fail 'Complete project configuration before capture installation'
  args=(capture install --source "$SOURCE" --store "$STORE" --repo "$PROJECT" --wrapper "$ENTRYPOINT")
- if [[ "$SOURCE" == codex ]]; then args=(capture install-user --repo "$PROJECT" --entrypoint "$ENTRYPOINT"); fi
+ if [[ "$SOURCE" == codex ]]; then args=(capture install-user --repo "$PROJECT" --entrypoint "$ENTRYPOINT" --store "$STORE"); fi
  [[ -z "$STATE" ]] || args+=(--state-dir "$STATE")
  "$ENTRYPOINT" --al-project "$PROJECT" "${args[@]}"
 else printf 'Binary installation only; lifecycle capture not configured.\n'; fi

@@ -1,3 +1,4 @@
+import { useProjectConfig, ticketPolicy } from '../contexts/ProjectConfigContext';
 import { durationLabel, durationDescription } from '../domain/duration';
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import type {
@@ -47,6 +48,8 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
   onSelectTicket,
   configuredPrefixes,
 }) => {
+  const projectConfig = useProjectConfig();
+  const recognitionPolicy = useMemo(() => ticketPolicy(projectConfig), [projectConfig]);
   const [ledgers, setLedgers] = useState<readonly AgenticMetricsLedger[]>([]);
   const [diagnostics, setDiagnostics] = useState<readonly WorkspaceDiagnostic[]>([]);
   const [knownPrefixes, setKnownPrefixes] = useState<readonly string[]>([]);
@@ -75,7 +78,7 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
         selectedPrefixes.length === 0 ||
         (selectedPrefixes.length === 1 && selectedPrefixes[0] === 'all')
           ? undefined
-          : selectedPrefixes;
+          : selectedPrefixes.map((prefix) => prefix.slice('prefix:'.length));
 
       const res = typesParam || prefixesParam
         ? await fetchWorkspaceLedgers('all', undefined, undefined, typesParam, prefixesParam)
@@ -102,19 +105,19 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
         const nextSet = new Set(prev);
         for (const l of ledgers) {
           if (l.ticket_id) {
-            const p = extractTicketPrefix(l.ticket_id);
+            const p = extractTicketPrefix(l.ticket_id, recognitionPolicy);
             if (p) nextSet.add(p);
           }
         }
         return Array.from(nextSet).sort();
       });
     }
-  }, [ledgers]);
+  }, [ledgers, recognitionPolicy]);
 
   const prefixOptions: readonly MultiSelectOption[] = useMemo(() => {
-    const combined = combineDistinctPrefixes(knownPrefixes, configuredPrefixes);
-    return combined.map((p) => ({ value: p, label: p }));
-  }, [knownPrefixes, configuredPrefixes]);
+    const combined = combineDistinctPrefixes(knownPrefixes, configuredPrefixes ?? recognitionPolicy?.prefixes, projectConfig?.case_insensitive);
+    return combined.map((p) => ({ value: `prefix:${p}`, label: p }));
+  }, [knownPrefixes, configuredPrefixes, projectConfig, recognitionPolicy]);
 
   const skillOptions: readonly MultiSelectOption[] = useMemo(() => {
     const names = new Set(ledgers.flatMap((ledger) => skillNames(ledger.facts)));
@@ -124,16 +127,16 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
   const filteredLedgers = useMemo(() => {
     let list = ledgers;
     list = filterLedgersByTicketTypes(list, selectedTicketTypes);
-    list = filterLedgersByPrefixes(list, selectedPrefixes);
+    list = filterLedgersByPrefixes(list, selectedPrefixes.includes('all') ? [] : selectedPrefixes.map((prefix) => prefix.slice('prefix:'.length)), projectConfig?.case_insensitive);
     if (selectedSkills.length > 0 && !selectedSkills.includes('all')) {
       list = list.filter((ledger) => skillNames(ledger.facts).some((name) => selectedSkills.includes(`skill:${name}`)));
     }
     return list;
-  }, [ledgers, selectedTicketTypes, selectedPrefixes, selectedSkills]);
+  }, [ledgers, selectedTicketTypes, selectedPrefixes, selectedSkills, projectConfig]);
 
   const allRows = useMemo(() => {
-    return deriveTicketComparisonRows(filteredLedgers, sortField, sortOrder);
-  }, [filteredLedgers, sortField, sortOrder]);
+    return deriveTicketComparisonRows(filteredLedgers, sortField, sortOrder, recognitionPolicy);
+  }, [filteredLedgers, sortField, sortOrder, recognitionPolicy]);
 
   const filteredRows = useMemo(() => {
     if (!searchQuery.trim()) {

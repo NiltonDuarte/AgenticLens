@@ -45,13 +45,14 @@ INSERT INTO session_v2 VALUES('unrelated',NULL,'reviewer','source-model','TEST-1
 			if _, err := s.Bind(context.Background(), id, "TEST-100", registration.Request); err != nil {
 				t.Fatal(err)
 			}
-			result, err := s.Reconcile(context.Background(), "TEST-100", "tester", 10, capture.DefaultByteBudget)
+			result, err := s.Reconcile(context.Background(), "TEST-100", "tester", 10, fixtureByteBudget, fixtureGenerationPolicy())
 			if err != nil {
 				t.Fatal(err)
 			}
 			if len(result.Sessions) != 0 || len(result.Registrations) != 1 || result.Registrations[0].Identity.SessionID != "missing-exact-session" || result.Registrations[0].State == domain.CaptureCurrent {
-				t.Fatalf("missing exact ID became a matched title/zero success: %+v", result)
+				t.Fatalf("ambient title selected missing exact owner: %+v", result)
 			}
+
 		})
 	}
 }
@@ -82,7 +83,7 @@ CREATE TABLE session_message(id TEXT PRIMARY KEY,session_id TEXT,type TEXT,seq I
 func seedCaptureFamily(t *testing.T, db *sql.DB, family, id string) {
 	t.Helper()
 	if family == "v1" {
-		if _, err := db.Exec(`INSERT INTO session VALUES(?,NULL,'reviewer','source-v1','TEST-100 review',1000,3000)`, id); err != nil {
+		if _, err := db.Exec(`INSERT INTO session(id,parent_id,agent,model,title,time_created,time_updated) VALUES(?,NULL,'reviewer','source-v1','TEST-100 review',1000,3000)`, id); err != nil {
 			t.Fatal(err)
 		}
 		data := `{"role":"assistant","modelID":"source-v1","time":{"created":1500,"completed":2500},"tokens":{"input":11,"output":2}}`
@@ -91,7 +92,7 @@ func seedCaptureFamily(t *testing.T, db *sql.DB, family, id string) {
 		}
 		return
 	}
-	if _, err := db.Exec(`INSERT INTO session_v2 VALUES(?,NULL,'reviewer','source-v2','TEST-100 review',1000,3000)`, id); err != nil {
+	if _, err := db.Exec(`INSERT INTO session_v2(id,parent_id,agent,model,title,time_created,time_updated) VALUES(?,NULL,'reviewer','source-v2','TEST-100 review',1000,3000)`, id); err != nil {
 		t.Fatal(err)
 	}
 	data := `{"agent":"reviewer","model":{"id":"source-v2"},"time":{"created":1500,"completed":2500},"content":[{"type":"text","text":"fixture reply"}],"tokens":{"input":23,"output":3}}`
@@ -112,7 +113,7 @@ func bindOpenCodeCapture(t *testing.T, s *capture.Store, path, id string) {
 	}
 }
 
-func TestOpenCodeCaptureSelectsExactMembershipInCoexistingFamilies(t *testing.T) {
+func TestOpenCodeCaptureRejectsMixedFamiliesRegardlessOfExactMembership(t *testing.T) {
 	for _, tc := range []struct {
 		name   string
 		v1, v2 bool
@@ -138,29 +139,14 @@ func TestOpenCodeCaptureSelectsExactMembershipInCoexistingFamilies(t *testing.T)
 			}
 			s := openStore(t, t.TempDir())
 			bindOpenCodeCapture(t, s, path, "exact-owner")
-			result, err := s.Reconcile(context.Background(), "TEST-100", "tester", 10, capture.DefaultByteBudget)
+			result, err := s.Reconcile(context.Background(), "TEST-100", "tester", 10, fixtureByteBudget, fixtureGenerationPolicy())
 			if err != nil {
 				t.Fatal(err)
 			}
-			if len(result.Registrations) != 1 {
-				t.Fatalf("lost exact registration: %+v", result)
+			if len(result.Sessions) != 0 || len(result.Registrations) != 1 || result.Registrations[0].State != domain.CaptureFailed {
+				t.Fatalf("mixed schema produced accepted source facts: %+v", result)
 			}
-			if tc.model == "" {
-				if len(result.Sessions) != 0 || result.Registrations[0].State == domain.CaptureCurrent {
-					t.Fatalf("ambiguous/missing exact owner became complete source facts: %+v", result)
-				}
-				if tc.v1 && tc.v2 && result.Registrations[0].State != domain.CaptureFailed {
-					t.Fatalf("ambiguous duplicate not reported failed: %+v", result.Registrations[0])
-				}
-				return
-			}
-			if result.Registrations[0].State != domain.CaptureCurrent || len(result.Sessions) != 1 || result.Sessions[0].ID != "exact-owner" || len(result.Sessions[0].Invocations) != 1 {
-				t.Fatalf("exact owner not reconciled: %+v", result)
-			}
-			invocation := result.Sessions[0].Invocations[0]
-			if invocation.Model != tc.model || invocation.Tokens.Input != tc.input {
-				t.Fatalf("selected another family's source facts: %+v", invocation)
-			}
+
 		})
 	}
 }
@@ -170,10 +156,12 @@ func TestOpenCodeCapturePreservesSnapshotWhenCoexistingOwnerBecomesAmbiguousOrMi
 		t.Run(disposition, func(t *testing.T) {
 			path, db := mixedCaptureDB(t)
 			seedCaptureFamily(t, db, "v1", "exact-owner")
-			seedCaptureFamily(t, db, "v2", "foreign-owner")
+			if _, err := db.Exec(`DROP TABLE session_v2; DROP TABLE session_message`); err != nil {
+				t.Fatal(err)
+			}
 			s := openStore(t, t.TempDir())
 			bindOpenCodeCapture(t, s, path, "exact-owner")
-			before, err := s.Reconcile(context.Background(), "TEST-100", "tester", 10, capture.DefaultByteBudget)
+			before, err := s.Reconcile(context.Background(), "TEST-100", "tester", 10, fixtureByteBudget, fixtureGenerationPolicy())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -181,11 +169,14 @@ func TestOpenCodeCapturePreservesSnapshotWhenCoexistingOwnerBecomesAmbiguousOrMi
 				t.Fatalf("fixture did not establish an accepted source snapshot: %+v", before)
 			}
 			if disposition == "ambiguous" {
+				if _, err := db.Exec(`CREATE TABLE session_v2(id TEXT PRIMARY KEY,parent_id TEXT,agent TEXT,model TEXT,title TEXT,time_created INTEGER,time_updated INTEGER); CREATE TABLE session_message(id TEXT PRIMARY KEY,session_id TEXT,type TEXT,seq INTEGER,time_created INTEGER,time_updated INTEGER,data TEXT)`); err != nil {
+					t.Fatal(err)
+				}
 				seedCaptureFamily(t, db, "v2", "exact-owner")
 			} else if _, err := db.Exec(`DELETE FROM session WHERE id='exact-owner'`); err != nil {
 				t.Fatal(err)
 			}
-			after, err := s.Reconcile(context.Background(), "TEST-100", "tester", 10, capture.DefaultByteBudget)
+			after, err := s.Reconcile(context.Background(), "TEST-100", "tester", 10, fixtureByteBudget, fixtureGenerationPolicy())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -198,6 +189,9 @@ func TestOpenCodeCapturePreservesSnapshotWhenCoexistingOwnerBecomesAmbiguousOrMi
 
 func TestOpenCodeChildDiscoveryContinuesPastAlreadyKnownPrefix(t *testing.T) {
 	path, db := mixedCaptureDB(t)
+	if _, err := db.Exec(`DROP TABLE session_v2; DROP TABLE session_message`); err != nil {
+		t.Fatal(err)
+	}
 	seedCaptureFamily(t, db, "v1", "root")
 	seedCaptureFamily(t, db, "v1", "child-a")
 	if _, err := db.Exec(`UPDATE session SET parent_id='root' WHERE id='child-a'`); err != nil {
@@ -205,7 +199,7 @@ func TestOpenCodeChildDiscoveryContinuesPastAlreadyKnownPrefix(t *testing.T) {
 	}
 	s := openStore(t, t.TempDir())
 	bindOpenCodeCapture(t, s, path, "root")
-	if _, err := s.Reconcile(context.Background(), "TEST-100", "tester", 10, capture.DefaultByteBudget); err != nil {
+	if _, err := s.Reconcile(context.Background(), "TEST-100", "tester", 10, fixtureByteBudget, fixtureGenerationPolicy()); err != nil {
 		t.Fatal(err)
 	}
 	seedCaptureFamily(t, db, "v1", "child-z")
@@ -223,7 +217,7 @@ func TestOpenCodeChildDiscoveryContinuesPastAlreadyKnownPrefix(t *testing.T) {
 	}
 	recovered := false
 	for pass := 0; pass < 12; pass++ {
-		result, err := s.Reconcile(context.Background(), "TEST-100", "tester", 1, capture.DefaultByteBudget)
+		result, err := s.Reconcile(context.Background(), "TEST-100", "tester", 1, fixtureByteBudget, fixtureGenerationPolicy())
 		if err != nil {
 			t.Fatal(err)
 		}

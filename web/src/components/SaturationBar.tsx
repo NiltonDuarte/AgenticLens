@@ -1,6 +1,7 @@
+import { useRolePresentation } from '../contexts/ProjectConfigContext';
 import React from 'react';
 import type { ContextWindowHealth } from '../domain/types';
-import { formatRoleLabel, formatTokensK, HEALTHY_CEILING_TOKENS } from '../domain/formatters';
+import { formatRoleLabel, formatTokensK } from '../domain/formatters';
 import { getHealthStatusColor, getRoleColor, THEME_COLORS } from '../utils/theme';
 import { InfoTooltip } from './InfoTooltip';
 
@@ -12,22 +13,24 @@ export interface SaturationBarProps {
 
 export const SaturationBar: React.FC<SaturationBarProps> = ({
   contextHealth,
-  healthyCeilingTokens = HEALTHY_CEILING_TOKENS,
+  healthyCeilingTokens,
   tooltip,
 }) => {
-  const ceiling = healthyCeilingTokens > 0 ? healthyCeilingTokens : HEALTHY_CEILING_TOKENS;
+  const rolePresentation = useRolePresentation();
+  const recordedCeiling = healthyCeilingTokens ?? contextHealth.healthy_ceiling_tokens;
+  const ceiling = Number.isFinite(recordedCeiling) && recordedCeiling > 0 ? recordedCeiling : null;
   const rootTokens = contextHealth.root_peak_tokens;
   const satPct = contextHealth.root_saturation_pct;
   const status = contextHealth.status;
 
-  const maxScaleTokens = Math.max(ceiling, rootTokens, contextHealth.subagents_peak_tokens);
+  const maxScaleTokens = Math.max(ceiling ?? 0, rootTokens, contextHealth.subagents_peak_tokens);
   const fillPct = maxScaleTokens > 0 ? Math.min(100, (rootTokens / maxScaleTokens) * 100) : 0;
-  const ceilingMarkerPct = maxScaleTokens > 0 ? (ceiling / maxScaleTokens) * 100 : 100;
+  const ceilingMarkerPct = ceiling !== null && maxScaleTokens > 0 ? (ceiling / maxScaleTokens) * 100 : null;
 
   const statusColor = getHealthStatusColor(status);
 
   const rolePeaks = contextHealth.peak_by_role ?? {};
-  const roleEntries = Object.entries(rolePeaks).sort((a, b) => b[1] - a[1]);
+  const roleEntries = Object.entries(rolePeaks).sort((a, b) => rolePresentation.compareProjected(a[0], b[0]));
 
   return (
     <div className="saturation-card">
@@ -37,11 +40,11 @@ export const SaturationBar: React.FC<SaturationBarProps> = ({
           <InfoTooltip
             content={
               tooltip ??
-              (status === 'UNAVAILABLE' ? 'Recorded context usage. Complete anomaly analysis is not recorded for this ledger.' : 'Context window utilization of the root agent and subagents evaluated against the 200,000 token healthy operating ceiling.')
+              (status === 'UNAVAILABLE' ? 'Recorded context usage. Complete anomaly analysis is not recorded for this ledger.' : (ceiling === null ? 'Recorded context usage; a context ceiling is unavailable.' : `Context usage evaluated against the recorded ${ceiling.toLocaleString()} token ceiling.`))
             }
             ariaLabel="Information about Context Window Saturation"
           />
-          <span className="ceiling-label">Ceiling: {formatTokensK(ceiling)} tokens</span>
+          <span className="ceiling-label">Ceiling: {ceiling === null ? 'Not recorded' : `${formatTokensK(ceiling)} tokens`}</span>
         </div>
         <div className="saturation-status-badge" style={{ borderColor: statusColor, color: statusColor }}>
           <span className="status-dot" style={{ backgroundColor: statusColor }} />
@@ -53,7 +56,7 @@ export const SaturationBar: React.FC<SaturationBarProps> = ({
         <div className="saturation-metric">
           <span className="metric-label">Root Agent Peak</span>
           <span className="metric-val">{formatTokensK(rootTokens)} tokens</span>
-          <span className="metric-sub">({satPct.toFixed(1)}% of ceiling)</span>
+          <span className="metric-sub">{ceiling === null ? 'Saturation not recorded' : `(${satPct.toFixed(1)}% of ceiling)`}</span>
         </div>
         <div className="saturation-metric">
           <span className="metric-label">Subagents Peak Role</span>
@@ -75,7 +78,7 @@ export const SaturationBar: React.FC<SaturationBarProps> = ({
             backgroundColor: statusColor,
           }}
         />
-        {ceilingMarkerPct < 100 && (
+        {ceilingMarkerPct !== null && ceilingMarkerPct < 100 && ceiling !== null && (
           <div
             className="saturation-ceiling-marker"
             style={{ left: `${ceilingMarkerPct}%` }}
@@ -93,7 +96,7 @@ export const SaturationBar: React.FC<SaturationBarProps> = ({
           <h5 className="roles-breakdown-title">Peak Context by Agent Role</h5>
           <div className="roles-grid">
             {roleEntries.map(([role, tokens]) => {
-              const rolePct = ceiling > 0 ? (tokens / ceiling) * 100 : 0;
+              const rolePct = ceiling !== null ? (tokens / ceiling) * 100 : 0;
               const roleColor = getRoleColor(role);
               return (
                 <div key={role} className="role-token-item">
@@ -120,7 +123,7 @@ export const SaturationBar: React.FC<SaturationBarProps> = ({
                       className="role-mini-fill"
                       style={{
                         width: `${Math.min(100, rolePct)}%`,
-                        backgroundColor: tokens > ceiling ? THEME_COLORS.red : roleColor,
+                        backgroundColor: ceiling !== null && tokens > ceiling ? THEME_COLORS.red : roleColor,
                       }}
                     />
                   </div>

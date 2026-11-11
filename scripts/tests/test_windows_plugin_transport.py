@@ -38,7 +38,7 @@ class WindowsPluginTransportTest(unittest.TestCase):
         self.module = self.root / 'transport.mjs'
         source = (ROOT / 'backend/internal/adapters/capture/plugin.ts').read_text().split('const base =', 1)[0]
         source = '\n'.join(line for line in source.splitlines() if '@opencode-ai/plugin' not in line)
-        for marker, path in [('__WRAPPER__', self.fixture.dest / 'agentic-lens.ps1'), ('__PROJECT__', self.fixture.repo),
+        for marker, path in [('__WRAPPER__', self.fixture.dest / 'agentic-lens.exe'), ('__PROJECT__', self.fixture.repo),
                              ('__STATE__', self.root / 'capture state'), ('__STORE__', self.root / 'source store')]:
             source = source.replace(marker, json.dumps(windows_boundary.win(path)))
         source += '''
@@ -73,7 +73,7 @@ try {
     def environment(self, **extra):
         result = dict(self.env, **extra)
         if not IS_WINDOWS:
-            forwarded = [key for key in result if key.startswith(('AL_PROBE_', 'AGENTIC_LENS_')) or key in ('ELECTRON_RUN_AS_NODE', 'SystemRoot', 'HOME', 'USERPROFILE', 'CODEX_HOME', 'XDG_CONFIG_HOME', 'XDG_CACHE_HOME', 'XDG_STATE_HOME')]
+            forwarded = [key for key in result if key.startswith(('AL_PROBE_', 'AGENTIC_LENS_')) or key in ('ELECTRON_RUN_AS_NODE', 'SystemRoot', 'HOME', 'USERPROFILE', 'CODEX_HOME', 'XDG_CONFIG_HOME', 'XDG_CACHE_HOME', 'XDG_STATE_HOME', 'XDG_DATA_HOME')]
             result['WSLENV'] = ':'.join(filter(None, [result.get('WSLENV', ''), *forwarded]))
         return result
 

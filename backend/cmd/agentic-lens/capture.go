@@ -20,7 +20,6 @@ import (
 	"agenticlens/internal/adapters/codex"
 	adaptersconfig "agenticlens/internal/adapters/config"
 	"agenticlens/internal/adapters/git"
-	"agenticlens/internal/adapters/opencode"
 	"agenticlens/internal/domain"
 )
 
@@ -94,8 +93,8 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 	userLevel := flags.Bool("user-level", false, "Native user-level handoff; binding has no project wrapper dependency")
 	legacyRepository := flags.String("migrate-legacy-repo", "", "Explicit original checkout whose unchanged owned Codex project hooks should migrate to user hooks")
 	dryRun := flags.Bool("dry-run", false, "Show owned installation changes without writing")
-	byteBudget := flags.Int64("max-source-bytes", capture.DefaultByteBudget, "Source or diagnostic payload bytes per bounded pass")
-	sessionBudget := flags.Int("max-sessions", capture.DefaultSessionBudget, "Session work budget per reconciliation or inspection pass")
+	byteBudget := flags.Int64("max-source-bytes", 0, "Source or diagnostic payload bytes per bounded pass")
+	sessionBudget := flags.Int("max-sessions", 0, "Session work budget per reconciliation or inspection pass")
 	beforeDiagnostic := flags.Int64("before-diagnostic", 0, "Read retained diagnostic history before this sequence (status/diagnostics only)")
 	timeout := flags.Duration("timeout", 2*time.Second, "Bound handler/registry work or each required installation phase; optional harness inspection has a separate budget")
 	if err := flags.Parse(args[1:]); err != nil {
@@ -103,6 +102,13 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 			return nil
 		}
 		return err
+	}
+	provided := map[string]bool{}
+	flags.Visit(func(f *flag.Flag) { provided[f.Name] = true })
+	for _, choice := range []struct{ flag, value string }{{"store", *sourceStore}, {"state-dir", *state}, {"source", *source}, {"repo", *repo}} {
+		if provided[choice.flag] && strings.TrimSpace(choice.value) == "" {
+			return fmt.Errorf("--%s must be nonblank when supplied", choice.flag)
+		}
 	}
 	if flags.NArg() != 0 {
 		return errors.New("unexpected capture arguments")
@@ -122,7 +128,11 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 	ctx, cancel := context.WithTimeout(callerCtx, *timeout)
 	defer cancel()
 	if command == "install-user" || command == "uninstall-user" {
-		home, err := capture.EffectiveCodexHome()
+		home := strings.TrimSpace(*sourceStore)
+		var err error
+		if home == "" {
+			home, err = captureSourceStore("codex", *repo)
+		}
 		if err != nil {
 			return err
 		}
@@ -180,22 +190,43 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 	}
 	// A valid explicit local disable is authoritative before inspecting state
 	// or installation health. Diagnostics for other commands remain visible.
-	if command == "check" && !policy.CommitWarning {
-		return nil
+	if command == "check" {
+		if err := policy.RequireSettings("commit_warning"); err != nil {
+			return err
+		}
+		if !policy.CommitWarning {
+			return nil
+		}
 	}
-	if command != "check" && policy.DeprecatedDetailedReport {
-		fmt.Fprintln(os.Stderr, "telemetry.capture.detailed_report is deprecated and has no effect; remove it and use capture diagnostics. Publication writes ledger and summary only.")
+	if provided["max-sessions"] && *sessionBudget < 1 {
+		return errors.New("--max-sessions must be a positive integer")
 	}
-	if _, legacyErr := os.Stat(filepath.Join(policy.StateDir, "registry.db")); legacyErr == nil && filepath.Base(filepath.Dir(policy.StateDir)) != "projects" {
-		fmt.Fprintln(os.Stderr, "Legacy unscoped capture registry preserved; source-verified explicit recovery required. New registrations use project-scoped state.")
+	if provided["max-source-bytes"] && *byteBudget < 1 {
+		return errors.New("--max-source-bytes must be a positive integer")
 	}
-	provided := map[string]bool{}
-	flags.Visit(func(f *flag.Flag) { provided[f.Name] = true })
-	if !provided["max-sessions"] {
-		*sessionBudget = policy.MaxSessions
-	}
-	if !provided["max-source-bytes"] {
-		*byteBudget = policy.MaxSourceBytes
+	usesBudgets := inspection || command == "reconcile" || command == "worker" || command == "receive" || command == "request" || command == "bind"
+	if usesBudgets {
+		if !provided["max-sessions"] {
+			if err := policy.RequireSettings("max_sessions"); err != nil {
+				return err
+			}
+			*sessionBudget = policy.MaxSessions
+		}
+		if !provided["max-source-bytes"] {
+			if err := policy.RequireSettings("max_source_bytes"); err != nil {
+				return err
+			}
+			*byteBudget = policy.MaxSourceBytes
+		}
+		if *sessionBudget < 1 || *byteBudget < 1 {
+			return errors.New("capture session/byte budgets must be positive integers")
+		}
+		policy.MaxSessions = *sessionBudget
+		policy.MaxSourceBytes = *byteBudget
+		if policy.Settings != nil {
+			policy.Settings["max_sessions"] = true
+			policy.Settings["max_source_bytes"] = true
+		}
 	}
 	absState, err := capture.ProjectState(policy.StateDir, project)
 	if err != nil {
@@ -284,6 +315,11 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 			fmt.Fprintln(os.Stderr, "capture registry close:", e)
 		}
 	}()
+	if usesBudgets {
+		if err := s.SetSourceBudgets(policy.MaxSessions, policy.MaxSourceBytes); err != nil {
+			return err
+		}
+	}
 	if command == "worker" {
 		return captureWorker(s, project, s.CoordinationDirectory(), policy)
 	}
@@ -459,25 +495,14 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 }
 func captureSourceStore(source, project string) (string, error) {
 	cfg, err := adaptersconfig.Load(project)
-	if err != nil && !errors.Is(err, adaptersconfig.ErrConfigNotFound) {
+	if err != nil {
 		return "", err
 	}
-	if source == "codex" {
-		home, e := os.UserHomeDir()
-		if e != nil {
-			return "", e
-		}
-		configured := ""
-		if err == nil {
-			configured = adaptersconfig.ProjectSourcePath(project, cfg.Telemetry.Sources.CodexHome)
-		}
-		return adaptersconfig.ResolveCodexHome("", configured, os.Getenv("CODEX_HOME"), filepath.Join(home, ".codex")), nil
-	}
-	if source == "opencode" {
-		if err == nil {
-			return adaptersconfig.ResolveOpenCodePath("", adaptersconfig.ProjectSourcePath(project, cfg.Telemetry.Sources.OpenCodeDatabasePath), adaptersconfig.ProjectSourcePath(project, cfg.Database.Path)), nil
-		}
-		return opencode.DefaultDBPath()
+	switch source {
+	case "codex":
+		return adaptersconfig.ResolveCodexHome("", cfg.Telemetry.Sources.CodexHome)
+	case "opencode":
+		return adaptersconfig.ResolveOpenCodePath("", cfg.Telemetry.Sources.OpenCodeDatabasePath)
 	}
 	return "", errors.New("install requires --source codex or opencode")
 }
@@ -505,7 +530,13 @@ func reconcileCaptureGenerationAtWithPolicy(project, dir, ticket string, cutoff 
 		return nil, err
 	}
 	defer s.Close()
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	if err := errors.Join(policy.ValidatePass(), policy.ValidateBudgets()); err != nil {
+		return nil, err
+	}
+	if err := s.SetSourceBudgets(policy.MaxSessions, policy.MaxSourceBytes); err != nil {
+		return nil, err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(policy.PassTimeoutMS)*time.Millisecond)
 	defer cancel()
 	result, err := s.ReconcileAt(ctx, ticket, git.GetGitUser(), policy.MaxSessions, policy.MaxSourceBytes, cutoff, generationPolicies...)
 	if err != nil {
@@ -548,13 +579,11 @@ func fillMissingCaptureSessions(existing, fallback []domain.SessionFact) []domai
 	}
 	return result
 }
-func validateCaptureSelection(project, dir, ticket string, source domain.SourceHarness, store string, selected []domain.SessionFact, baseline ...[]domain.SessionFact) error {
+func validateCaptureSelection(project, dir, ticket string, source domain.SourceHarness, store string, selected []domain.SessionFact, baseline []domain.SessionFact, exactPaths map[string]string) error {
 	trusted := make(map[string]bool)
-	for _, snapshot := range baseline {
-		for _, owner := range snapshot {
-			if owner.Source == source {
-				trusted[owner.ID] = true
-			}
+	for _, owner := range baseline {
+		if owner.Source == source {
+			trusted[owner.ID] = true
 		}
 	}
 	for changed := true; changed; {
@@ -568,7 +597,7 @@ func validateCaptureSelection(project, dir, ticket string, source domain.SourceH
 	}
 	var err error
 	for _, owner := range selected {
-		registration := domain.CaptureRegistration{Identity: domain.CaptureIdentity{Source: source, Store: store, SessionID: owner.ID}}
+		registration := domain.CaptureRegistration{Identity: domain.CaptureIdentity{Source: source, Store: store, SessionID: owner.ID}, TranscriptPath: exactPaths[owner.ID]}
 		if trusted[owner.ID] {
 			registration.TicketID = ticket
 			registration.Binding = "explicit_manual_selection"
@@ -625,7 +654,21 @@ func validateCaptureSelection(project, dir, ticket string, source domain.SourceH
 				r.Binding = "explicit_manual_selection"
 			}
 			if source == domain.SourceCodex && r.TranscriptPath == "" {
-				path, err := codex.DiscoverExactRolloutPath(absoluteStore, owner.ID)
+				if path := exactPaths[owner.ID]; path != "" {
+					if err := codex.ValidateRolloutStore(absoluteStore, path); err != nil {
+						return r, err
+					}
+					r.TranscriptPath = path
+					return r, nil
+				}
+				cfg, err := adaptersconfig.Load(project)
+				if err != nil {
+					return r, err
+				}
+				if err := cfg.Telemetry.Capture.ValidateBudgets(); err != nil {
+					return r, err
+				}
+				path, err := codex.DiscoverExactRolloutPathWithBudget(absoluteStore, owner.ID, &codex.DiscoveryBudget{MaxSessions: cfg.Telemetry.Capture.MaxSessions, MaxSourceBytes: cfg.Telemetry.Capture.MaxSourceBytes})
 				if err != nil {
 					return r, err
 				}
@@ -647,7 +690,7 @@ func saveGenerationLedger(path string, ledger domain.AgenticFactLedger) error {
 	return saveGenerationLedgerPreservingHistory(path, ledger, nil)
 }
 
-func saveGenerationLedgerPreservingHistory(path string, ledger domain.AgenticFactLedger, history []adapters.SessionFactDTO, policies ...domain.GenerationPolicy) error {
+func saveGenerationLedgerPreservingHistory(path string, ledger domain.AgenticFactLedger, history []adapters.SessionFactDTO) error {
 	target, err := capture.ProjectDirectory(path)
 	if err != nil {
 		return err
@@ -668,7 +711,7 @@ func saveGenerationLedgerPreservingHistory(path string, ledger domain.AgenticFac
 			fmt.Fprintln(os.Stderr, "Generation staging cleanup:", removeErr)
 		}
 	}()
-	if err = adapters.SaveFactLedgerPreservingHistory(temp, ledger, history, policies...); err != nil {
+	if err = adapters.SaveFactLedgerPreservingHistory(temp, ledger, history); err != nil {
 		return err
 	}
 	file, err = os.OpenFile(temp, os.O_RDWR, 0)

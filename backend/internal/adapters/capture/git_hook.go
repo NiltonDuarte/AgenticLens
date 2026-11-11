@@ -1,13 +1,13 @@
 package capture
 
 import (
+	"agenticlens/internal/adapters/filesystem"
 	"bytes"
 	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -39,7 +39,7 @@ func InstallCheck(ctx context.Context, options CheckInstallOptions) (CheckInstal
 	if err != nil {
 		return result, fmt.Errorf("resolve advisory repository: %w", err)
 	}
-	command := exec.CommandContext(ctx, "git", "-C", repo, "rev-parse", "--path-format=absolute", "--git-path", "hooks")
+	command := filesystem.RepositoryGitCommand(ctx, repo, "rev-parse", "--path-format=absolute", "--git-path", "hooks")
 	output, err := command.Output()
 	if err != nil {
 		return result, fmt.Errorf("resolve effective Git hooks directory: %w", err)
@@ -156,8 +156,7 @@ project=$(git rev-parse --show-toplevel 2>/dev/null) || {
   exit 0
 }
 if [ ! -f "$project/.agenticlens-config.yaml" ] &&
-   [ ! -f "$project/.agenticlens-config.yml" ] &&
-   [ ! -f "$project/.agenticlens-config.json" ]; then
+   [ ! -f "$project/.agenticlens-config.yml" ]; then
   exit 0
 fi
 tree_kill=

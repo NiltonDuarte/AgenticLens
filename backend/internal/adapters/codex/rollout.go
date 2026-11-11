@@ -235,7 +235,6 @@ func ParseRolloutAt(reader io.Reader, cutoff time.Time) (Transcript, error) {
 		turnModels:          make(map[string]string),
 		turnNumbers:         make(map[string]int64),
 		toolIDs:             make(map[string]struct{}),
-		currentModel:        "default",
 		pendingSelection:    -1,
 	}
 	usageRecordSeen := false
@@ -304,7 +303,7 @@ func ParseRolloutAt(reader io.Reader, cutoff time.Time) (Transcript, error) {
 			// Context is the last request's input, including cache reads; the
 			// running usage sum is lifetime consumption, not a prompt size.
 			transcript.currentContext = usage.Usage.Input
-			model := usage.Model
+			model := strings.TrimSpace(usage.Model)
 			if model == "" {
 				model = transcript.currentModel
 			}
@@ -328,10 +327,13 @@ func ParseRolloutAt(reader io.Reader, cutoff time.Time) (Transcript, error) {
 			transcript.readResponseItem(record.Payload, record.Timestamp, rolloutEventID(lineNumber))
 		case "turn_context":
 			var context turnContext
-			if err := json.Unmarshal(record.Payload, &context); err == nil && context.Model != "" {
-				transcript.assignTurnModel(context.TurnID, context.Model)
-				transcript.Model = context.Model
-				transcript.currentModel = context.Model
+			if err := json.Unmarshal(record.Payload, &context); err == nil {
+				model := strings.TrimSpace(context.Model)
+				if model != "" {
+					transcript.assignTurnModel(context.TurnID, model)
+					transcript.Model = model
+					transcript.currentModel = model
+				}
 			}
 		case "compacted":
 			transcript.addCompactionEvent(record.Timestamp, rolloutEventID(lineNumber))
@@ -526,9 +528,6 @@ func readEvent(payload json.RawMessage, timestamp string, transcript *Transcript
 
 func (transcript *Transcript) modelUsageFor(model string) *modelUsage {
 	cleanModel := strings.TrimSpace(model)
-	if cleanModel == "" {
-		cleanModel = "default"
-	}
 	if transcript.modelUsage[cleanModel] == nil {
 		transcript.modelUsage[cleanModel] = &modelUsage{turns: make(map[string]struct{})}
 	}
@@ -536,11 +535,12 @@ func (transcript *Transcript) modelUsageFor(model string) *modelUsage {
 }
 
 func (transcript *Transcript) assignTurnModel(turnID, model string) {
-	if turnID == "" || transcript.turnModels[turnID] != "default" {
+	previousModel, present := transcript.turnModels[turnID]
+	if turnID == "" || !present || previousModel != "" || model == "" {
 		return
 	}
 	transcript.turnModels[turnID] = model
-	previous := transcript.modelUsage["default"]
+	previous := transcript.modelUsage[""]
 	next := transcript.modelUsageFor(model)
 	if previous == nil {
 		return
@@ -551,7 +551,7 @@ func (transcript *Transcript) assignTurnModel(turnID, model string) {
 		next.startedAt = previous.startedAt
 	}
 	if len(previous.turns) == 0 && previous.usage == (Usage{}) && previous.activeMillis == 0 {
-		delete(transcript.modelUsage, "default")
+		delete(transcript.modelUsage, "")
 	}
 }
 
@@ -893,7 +893,7 @@ func (transcript *Transcript) sessionIDOrThread() string {
 }
 
 func (transcript *Transcript) turnNumber(turnID string) int64 {
-	if model := transcript.turnModels[turnID]; model != "" {
+	if model, present := transcript.turnModels[turnID]; present {
 		if usage := transcript.modelUsage[model]; usage != nil {
 			return transcript.turnNumbers[turnID]
 		}
@@ -1019,10 +1019,6 @@ func (transcript Transcript) SessionFacts(policies ...domain.GenerationPolicy) (
 	if err != nil {
 		return nil, fmt.Errorf("grouping Codex facts by session: %w", err)
 	}
-	completeOwners := transcript.completeOwners
-	if completeOwners == nil && len(transcript.Warnings) == 0 {
-		completeOwners = sessionIDs(sessions)
-	}
 	if len(transcript.Warnings) > 0 && transcript.sessions == nil {
 		for i, owner := range sessions {
 			if len(owner.Skills) == 0 {
@@ -1033,16 +1029,15 @@ func (transcript Transcript) SessionFacts(policies ...domain.GenerationPolicy) (
 			}
 		}
 	}
-	policy := domain.DefaultGenerationPolicy()
+	// Source grouping records occurrences only. The owning operation calculates
+	// anomaly summaries after owner reconciliation with explicit project thresholds.
+	for i := range sessions {
+		sessions[i].Anomalies = nil
+	}
 	if len(policies) > 0 {
-		policy = policies[0]
+		sessions = domain.ProjectGenerationFacts(domain.AgenticFactLedger{Sessions: sessions}, policies[0]).Sessions
 	}
-	facts, err := domain.PersistSourceAnomalySummariesWithPolicy(domain.AgenticFactLedger{Sessions: sessions}, domain.SourceEvents{Events: transcript.Events, CompleteSessionIDs: completeOwners}, policy)
-	facts = domain.ProjectGenerationFacts(facts, policy)
-	if err != nil {
-		return nil, err
-	}
-	return facts.Sessions, nil
+	return sessions, nil
 }
 
 // CombineTranscripts merges a discovered root thread and its child threads

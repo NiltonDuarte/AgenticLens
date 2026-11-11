@@ -38,7 +38,7 @@ func TestInferTicketID(t *testing.T) {
 			name:           "case-insensitive lowercase prefix",
 			title:          "working on al-17",
 			expectedConf:   1.0,
-			expectedTarget: "AL-17",
+			expectedTarget: "al-17",
 		},
 		{
 			name:           "alternate configured prefix GEN",
@@ -50,7 +50,7 @@ func TestInferTicketID(t *testing.T) {
 			name:           "alternate configured prefix lowercase po",
 			title:          "po-3 spec decomposition",
 			expectedConf:   1.0,
-			expectedTarget: "PO-3",
+			expectedTarget: "po-3",
 		},
 		{
 			name:         "general debugging title without ticket",
@@ -117,25 +117,25 @@ func TestInferTicketID_AdversarialSuite(t *testing.T) {
 			name:           "mixed case Al-17",
 			title:          "Working on Al-17 refactoring",
 			expectedConf:   1.0,
-			expectedTarget: "AL-17",
+			expectedTarget: "Al-17",
 		},
 		{
 			name:           "mixed case aL-17",
 			title:          "Fix for aL-17 here",
 			expectedConf:   1.0,
-			expectedTarget: "AL-17",
+			expectedTarget: "aL-17",
 		},
 		{
 			name:           "mixed case Gen-4",
 			title:          "Session Gen-4 cleanup",
 			expectedConf:   1.0,
-			expectedTarget: "GEN-4",
+			expectedTarget: "Gen-4",
 		},
 		{
 			name:           "mixed case Po-2",
 			title:          "Requirements Po-2 spec",
 			expectedConf:   1.0,
-			expectedTarget: "PO-2",
+			expectedTarget: "Po-2",
 		},
 		// Delimiters and punctuation surrounding ticket
 		{
@@ -154,7 +154,7 @@ func TestInferTicketID_AdversarialSuite(t *testing.T) {
 			name:           "conventional commit style feat(al-17):",
 			title:          "feat(al-17): implement live telemetry endpoint",
 			expectedConf:   1.0,
-			expectedTarget: "AL-17",
+			expectedTarget: "al-17",
 		},
 		{
 			name:           "colon prefix AL-17:",
@@ -185,7 +185,7 @@ func TestInferTicketID_AdversarialSuite(t *testing.T) {
 			name:           "extra spaces between words and ticket",
 			title:          "Investigating    database    lock    in    al-17    now",
 			expectedConf:   1.0,
-			expectedTarget: "AL-17",
+			expectedTarget: "al-17",
 		},
 		{
 			name:         "pure spaces",
@@ -215,9 +215,10 @@ func TestInferTicketID_AdversarialSuite(t *testing.T) {
 		},
 		// Malformed numbers and missing parts
 		{
-			name:         "prefix without dash AL17",
-			title:        "Working on AL17",
-			expectedConf: 0.0,
+			name:           "separator-free configured ID",
+			title:          "Working on AL17",
+			expectedConf:   1.0,
+			expectedTarget: "AL17",
 		},
 		{
 			name:         "prefix with dash but no digits AL-",

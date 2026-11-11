@@ -2,7 +2,6 @@ package config
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -10,7 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"agenticlens/internal/domain"
 	"gopkg.in/yaml.v3"
 )
 
@@ -52,12 +50,10 @@ func PrepareCaptureConfigUpdate(filePath, replacement string) (CaptureConfigUpda
 		result.Data = append([]byte(nil), result.Original...)
 		return result, nil
 	}
-	if replacement == "" {
-		replacement = domain.DefaultCaptureConfig().StateDir
+	if strings.TrimSpace(replacement) == "" {
+		return result, errors.New("an explicit telemetry.capture.state_dir replacement is required; no state path is inferred")
 	}
-	policy := domain.DefaultCaptureConfig()
-	policy.StateDir = replacement
-	if err := policy.Validate(); err != nil {
+	if _, err := ResolveCaptureStatePath(filepath.Dir(filePath), replacement); err != nil {
 		return result, err
 	}
 	result.StateDir = replacement
@@ -65,11 +61,10 @@ func PrepareCaptureConfigUpdate(filePath, replacement string) (CaptureConfigUpda
 		result.Data = append([]byte(nil), result.Original...)
 		return result, nil
 	}
-	if strings.EqualFold(filepath.Ext(filePath), ".json") || bytes.HasPrefix(bytes.TrimSpace(result.Original), []byte("{")) {
-		result.Data, err = updateCaptureJSON(result.Original, replacement)
-	} else {
-		result.Data, err = updateCaptureYAML(result.Original, replacement)
+	if ext := strings.ToLower(filepath.Ext(filePath)); ext != ".yaml" && ext != ".yml" {
+		return result, errors.New("configuration must have a .yaml or .yml suffix")
 	}
+	result.Data, err = updateCaptureYAML(result.Original, replacement)
 	if err != nil {
 		return result, err
 	}
@@ -137,69 +132,6 @@ func updateCaptureYAML(data []byte, replacement string) ([]byte, error) {
 		return nil, err
 	}
 	return output.Bytes(), nil
-}
-
-func updateCaptureJSON(data []byte, replacement string) ([]byte, error) {
-	var document yaml.Node
-	if err := yaml.Unmarshal(data, &document); err != nil {
-		return nil, err
-	}
-	if len(document.Content) == 0 {
-		return nil, errors.New("configuration update requires a JSON object")
-	}
-	if err := validateCaptureDocument(document.Content[0]); err != nil {
-		return nil, err
-	}
-	var root map[string]json.RawMessage
-	if err := json.Unmarshal(data, &root); err != nil {
-		return nil, err
-	}
-	if root == nil {
-		return nil, errors.New("configuration update requires a JSON object")
-	}
-	telemetry, err := jsonObjectField(root, "telemetry")
-	if err != nil {
-		return nil, err
-	}
-	capture, err := jsonObjectField(telemetry, "capture")
-	if err != nil {
-		return nil, err
-	}
-	value, err := json.Marshal(replacement)
-	if err != nil {
-		return nil, err
-	}
-	capture["state_dir"] = value
-	encoded, err := json.Marshal(capture)
-	if err != nil {
-		return nil, err
-	}
-	telemetry["capture"] = encoded
-	encoded, err = json.Marshal(telemetry)
-	if err != nil {
-		return nil, err
-	}
-	root["telemetry"] = encoded
-	result, err := json.MarshalIndent(root, "", "  ")
-	if err != nil {
-		return nil, err
-	}
-	return append(result, '\n'), nil
-}
-
-func jsonObjectField(parent map[string]json.RawMessage, key string) (map[string]json.RawMessage, error) {
-	raw, present := parent[key]
-	if !present {
-		return make(map[string]json.RawMessage), nil
-	}
-	var result map[string]json.RawMessage
-	if err := json.Unmarshal(raw, &result); err != nil {
-		return nil, fmt.Errorf("configuration %s must be an object: %w", key, err)
-	}
-	if result == nil {
-		return nil, fmt.Errorf("configuration %s must be an object", key)
-	}
-	return result, nil
 }
 
 // WriteCaptureConfigUpdate commits a preview under crash-released OS coordination for

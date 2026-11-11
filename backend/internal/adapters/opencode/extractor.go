@@ -2,7 +2,6 @@ package opencode
 
 import (
 	"bytes"
-	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -192,7 +191,7 @@ func (acc sessionModelAccumulator) costEvidence() domain.CostEvidence {
 // ExtractSessionSourceEvents reads one exact owner and returns source-only trace
 // rows. Successful empty extraction is distinct from a missing native session.
 func ExtractSessionSourceEvents(db *sql.DB, id, user string) ([]domain.EventFact, error) {
-	family, err := captureSchemaFamily(context.Background(), db, id)
+	family, err := detectSchemaFamily(db)
 	if err != nil {
 		return nil, err
 	}

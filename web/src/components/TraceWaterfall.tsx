@@ -1,6 +1,7 @@
+import { useRolePresentation } from '../contexts/ProjectConfigContext';
 import React, { useState, useMemo, useId } from 'react';
 import type { EventFact, Anomaly, DataSource } from '../types/telemetry';
-import { formatRoleLabel, formatTokensK, formatLocalDateTime, formatHistoricalDateTimeTooltip, getHistoricalTimestampDateTime } from '../domain/formatters';
+import { formatTokensK, formatLocalDateTime, formatHistoricalDateTimeTooltip, getHistoricalTimestampDateTime } from '../domain/formatters';
 import { rebindEvent, sortEvents } from '../domain/events';
 import { traceBadgeMetadata } from '../domain/traceBadges';
 import { TraceInvocationBadge, type ChildSessionNavigation } from './TraceInvocationBadge';
@@ -34,6 +35,7 @@ export interface TraceWaterfallProps extends ChildSessionNavigation {
   readonly traceAvailability?: 'pending' | 'failed' | 'complete' | 'partial' | 'unavailable' | undefined;
   readonly traceDiagnostics?: readonly string[] | undefined;
   readonly events: readonly EventFact[];
+  /** Canonical or hydrated raw contexts; projected recorded summaries have a separate presentation owner. */
   readonly anomalies?: readonly Anomaly[] | undefined;
   readonly selectedEvent?: EventFact | null | undefined;
   readonly onSelectEvent?: ((event: EventFact, anomaly?: Anomaly | undefined) => void) | undefined;
@@ -89,6 +91,7 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
   dataSource = 'unavailable',
   defaultExpanded = false,
 }) => {
+  const rolePresentation = useRolePresentation();
   const [isWaterfallExpanded, setIsWaterfallExpanded] = useState<boolean>(defaultExpanded);
   const [filterMode, setFilterMode] = useState<FilterMode>('errors_anomalies');
   const [selectedRoles, setSelectedRoles] = useState<readonly string[]>(['all']);
@@ -186,15 +189,15 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
     for (const e of events) {
       roleSet.add(e.role.trim());
     }
-    return Array.from(roleSet).sort((a, b) => a.localeCompare(b));
-  }, [events]);
+    return Array.from(roleSet).sort(rolePresentation.compareSource);
+  }, [events, rolePresentation]);
 
   const roleOptions: readonly MultiSelectOption[] = useMemo(() => {
     return availableRoles.map((role) => ({
       value: role,
-      label: formatRoleLabel(role),
+      label: rolePresentation.sourceLabel(role),
     }));
-  }, [availableRoles]);
+  }, [availableRoles, rolePresentation]);
 
   // Unique tools for filter dropdown
   const availableTools = useMemo(() => {
@@ -399,7 +402,7 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
           <span className="legacy-anomalies-heading">Detected Workspace Anomalies:</span>
           <div className="legacy-anomalies-list">
             {anomalies?.map((anomaly, index) => {
-              const display = formatAnomaly(anomaly);
+              const display = formatAnomaly(anomaly, rolePresentation.sourceLabel);
               return (
                 <button
                   key={`${anomaly.rule_id}-${index}`}
@@ -407,6 +410,7 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
                   className="legacy-anomaly-item"
                   onClick={() => onSelectAnomaly?.(anomaly)}
                   aria-label={`Inspect anomaly: ${display.title}`}
+                  title={display.description}
                 >
                   <span className="legacy-anomaly-info">
                     <span className="legacy-anomaly-title">{display.title}</span>
@@ -535,7 +539,7 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
                     handleItemSelect(ev, matchingAnomaly);
                   }
                 }}
-                aria-label={`Event Turn ${ev.turn} ${formatRoleLabel(ev.role)} ${ev.event_type}`}
+                aria-label={`Event Turn ${ev.turn} ${rolePresentation.sourceLabel(ev.role)} ${ev.event_type}`}
               >
                 <div className="timeline-rail">
                   <div className={`timeline-node ${hasError ? 'node-error' : ''}`} />
@@ -545,7 +549,7 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
                 <div className="timeline-content">
                   <div className="timeline-top-row">
                     <span className="turn-pill">Turn {ev.turn}</span>
-                    <span className={roleClass}>{formatRoleLabel(ev.role)}</span>
+                    <span className={roleClass}>{rolePresentation.sourceLabel(ev.role)}</span>
                     <span className="event-type-badge">
                       {formatEventTypeLabel(ev.event_type)}
                     </span>

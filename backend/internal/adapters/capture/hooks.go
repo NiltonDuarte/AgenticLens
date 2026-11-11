@@ -126,7 +126,7 @@ func receiveCodex(ctx context.Context, s *Store, input HookInput, sourceStore, b
 		return HookOutput{}, normalizeErr
 	}
 	sourceStore = canonicalStore
-	input, normalizeErr = NormalizeCodexSubagentStart(input, sourceStore, s.project)
+	input, normalizeErr = NormalizeCodexSubagentStart(input, sourceStore, s.project, s.configuration.Telemetry.Capture)
 	if normalizeErr != nil {
 		return HookOutput{}, normalizeErr
 	}

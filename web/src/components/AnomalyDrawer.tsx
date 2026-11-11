@@ -1,6 +1,8 @@
+import { useRolePresentation } from '../contexts/ProjectConfigContext';
 import React, { useEffect, useState } from 'react';
+import type { AnomalyRoleOrigin } from '../domain/events';
 import type { Anomaly, EventFact } from '../types/telemetry';
-import { formatRoleLabel, formatLocalDateTime, formatHistoricalDateTimeTooltip, getHistoricalTimestampDateTime } from '../domain/formatters';
+import { formatLocalDateTime, formatHistoricalDateTimeTooltip, getHistoricalTimestampDateTime } from '../domain/formatters';
 import { AnomalyBadge } from './AnomalyBadge';
 import { formatAnomaly } from '../domain/anomalies';
 import { copyTextToClipboard } from '../utils/clipboard';
@@ -13,6 +15,7 @@ export interface AnomalyDrawerProps {
   readonly isOpen: boolean;
   readonly onClose: () => void;
   readonly anomaly?: Anomaly | null | undefined;
+  readonly anomalyRoleOrigin: AnomalyRoleOrigin;
   readonly event?: EventFact | null | undefined;
 }
 
@@ -20,8 +23,10 @@ export const AnomalyDrawer: React.FC<AnomalyDrawerProps> = ({
   isOpen,
   onClose,
   anomaly,
+  anomalyRoleOrigin,
   event,
 }) => {
+  const rolePresentation = useRolePresentation();
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [isPromptCopied, setIsPromptCopied] = useState(false);
 
@@ -60,7 +65,8 @@ export const AnomalyDrawer: React.FC<AnomalyDrawerProps> = ({
     }
   };
 
-  const display = anomaly ? formatAnomaly(anomaly) : undefined;
+  const displayRole = anomalyRoleOrigin === 'projected' ? rolePresentation.projectedLabel : rolePresentation.sourceLabel;
+  const display = anomaly ? formatAnomaly(anomaly, displayRole) : undefined;
   const title = display?.title ?? (event?.status === 'error' ? 'Tool Execution Failure' : 'Execution Details');
   const errorMessage = event?.error_message;
 
@@ -71,6 +77,10 @@ export const AnomalyDrawer: React.FC<AnomalyDrawerProps> = ({
   const toolName = ctx?.tool_name ?? event?.tool_name;
   const role = ctx?.role ?? event?.role;
   const secondaryRole = ctx?.secondary_role;
+  const roleLabel = ctx?.role != null && anomalyRoleOrigin === 'projected'
+    ? rolePresentation.projectedLabel : rolePresentation.sourceLabel;
+  const secondaryRoleLabel = anomalyRoleOrigin === 'projected'
+    ? rolePresentation.projectedLabel : rolePresentation.sourceLabel;
   const count = ctx?.count;
   const totalCalls = ctx?.total_calls;
   const threshold = ctx?.threshold;
@@ -83,12 +93,13 @@ export const AnomalyDrawer: React.FC<AnomalyDrawerProps> = ({
   const turnDebugId = turn !== undefined ? (sessionId ? `${sessionId}:turn:${turn}` : `turn-${turn}`) : undefined;
 
   const handleCopyPrompt = async () => {
-    const summary = display?.title ?? (anomaly?.rule_id
+    const promptDisplay = anomaly ? formatAnomaly(anomaly) : undefined;
+    const summary = promptDisplay?.title ?? (anomaly?.rule_id
       ? translateRuleToPlainEnglish(anomaly.rule_id, toolName ?? undefined)
       : title);
 
     const description =
-      display?.description ||
+      promptDisplay?.description ||
       (errorMessage ? `Execution error: ${errorMessage}` : 'An execution anomaly was detected.');
 
     const errorDetails =
@@ -232,13 +243,13 @@ export const AnomalyDrawer: React.FC<AnomalyDrawerProps> = ({
               {role !== undefined && (
                 <div className="drawer-meta-item">
                   <span className="drawer-label">Subagent Role</span>
-                  <span className="drawer-val">{formatRoleLabel(role)}</span>
+                  <span className="drawer-val">{roleLabel(role)}</span>
                 </div>
               )}
               {secondaryRole !== undefined && secondaryRole !== null && (
                 <div className="drawer-meta-item">
                   <span className="drawer-label">Secondary Role</span>
-                  <span className="drawer-val">{formatRoleLabel(secondaryRole)}</span>
+                  <span className="drawer-val">{secondaryRoleLabel(secondaryRole)}</span>
                 </div>
               )}
               {count !== undefined && (

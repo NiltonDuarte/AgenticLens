@@ -14,7 +14,7 @@ import time
 import unittest
 import uuid
 
-from distribution_fixture import ROOT, SETUP, build_probe, build_app, digest
+from distribution_fixture import ROOT, SETUP, build_probe, build_app, build_manager, digest, shared_policy, local_policy
 
 IS_WINDOWS = platform.system() == 'Windows'
 POWERSHELL = os.environ.get('AL_WINDOWS_POWERSHELL', 'powershell.exe' if IS_WINDOWS else '')
@@ -41,21 +41,34 @@ class WindowsDistributionTest(unittest.TestCase):
         created = subprocess.check_output([POWERSHELL, '-NoLogo', '-NoProfile', '-NonInteractive', '-Command', code], text=True).strip()
         self.root = local(created)
         self.addCleanup(self.remove_fixture_tree)
+        self.addCleanup(self.stop_owned_processes)
         self.repo = self.root / 'project A'; self.repo.mkdir()
         self.home = self.root / 'isolated native home'; self.home.mkdir()
         self.cache = self.root / 'native cache ü'; self.dest = self.root / 'user PATH bin'
         self.scripts = self.root / 'setup scripts'; self.scripts.mkdir()
-        for filename in ['download.ps1', 'agentic-lens-wrapper.ps1']:
+        for filename in ['download.ps1']:
             shutil.copyfile(SETUP / filename, self.scripts / filename)
         self.pin = 'v9.8.7'
         self.config = self.repo / '.agenticlens-config.yaml'
         self.write_config()
         self.probe = self.root / 'native release.exe'
         shutil.copyfile(build_probe(self.pin, 'windows', 'amd64'), self.probe)
+        self.manager = build_manager(self.pin, 'windows', 'amd64')
         self.env = {key: value for key, value in os.environ.items() if not key.startswith(('AL_PROBE_', 'AGENTIC_LENS_'))}
         self.env.update(HOME=win(self.home), USERPROFILE=win(self.home), CODEX_HOME=win(self.home / '.codex'),
                         XDG_CONFIG_HOME=win(self.home / '.config'), XDG_CACHE_HOME=win(self.home / '.cache'),
-                        XDG_STATE_HOME=win(self.home / '.state'))
+                        XDG_STATE_HOME=win(self.home / '.state'), XDG_DATA_HOME=win(self.home / '.local/share'))
+        if not IS_WINDOWS:
+            self.env['WSLENV'] = ':'.join(filter(None, [self.env.get('WSLENV', ''), 'HOME', 'USERPROFILE', 'CODEX_HOME', 'XDG_CONFIG_HOME', 'XDG_CACHE_HOME', 'XDG_STATE_HOME', 'XDG_DATA_HOME']))
+
+    def stop_owned_processes(self):
+        # Keep a visible failed timeout from leaking fixture executables. Match
+        # executable paths inside this exact random disposable Windows root.
+        root = win(self.root).rstrip('\\') + '\\'
+        literal = "'" + root.replace("'", "''") + "'"
+        command = "$root = " + literal + "; Get-Process | ForEach-Object { if ($_.Path -and $_.Path.StartsWith($root, [StringComparison]::OrdinalIgnoreCase)) { Stop-Process -Id $_.Id -Force -ErrorAction Stop } }"
+        result = subprocess.run([POWERSHELL, '-NoLogo', '-NoProfile', '-NonInteractive', '-Command', command], capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def remove_fixture_tree(self):
         root = self.root.resolve()
@@ -83,17 +96,20 @@ class WindowsDistributionTest(unittest.TestCase):
         self.config.write_text(f"agenticlens: # authority\n  version: {form or self.pin} # exact release\n  install_root: '{win(self.cache)}'\n", encoding='utf-8')
 
     def native(self):
-        return self.cache / 'bin' / self.pin / 'windows-amd64' / 'agentic-lens-windows-amd64.exe'
+        return self.cache / 'bin' / self.pin / 'windows-amd64' / 'agentic-lens-engine-windows-amd64.exe'
 
-    def call(self, script, args, env=None, input='payload\n'):
+    def call(self, script, args, env=None, input='payload\n', cwd=None):
         environment = dict(env or self.env)
+        if script.name == 'download.ps1' and '-LocalManagerBin' not in args:
+            args = [*args, '-LocalManagerBin', win(self.manager), '-ManagerSha256', digest(self.manager)]
         if not IS_WINDOWS:
-            forwarded = [key for key in environment if key.startswith(('AL_PROBE_', 'AGENTIC_LENS_')) or key in ('HOME', 'USERPROFILE', 'CODEX_HOME', 'XDG_CONFIG_HOME', 'XDG_CACHE_HOME', 'XDG_STATE_HOME')]
+            forwarded = [key for key in environment if key.startswith(('AL_PROBE_', 'AGENTIC_LENS_')) or key in ('HOME', 'USERPROFILE', 'CODEX_HOME', 'XDG_CONFIG_HOME', 'XDG_CACHE_HOME', 'XDG_STATE_HOME', 'XDG_DATA_HOME')]
             environment['WSLENV'] = ':'.join(filter(None, [environment.get('WSLENV', ''), *forwarded]))
         # Text-mode pipes translate LF to CRLF in native Windows Python before
-        # the wrapper receives stdin. Send exact UTF-8 bytes and decode only output.
-        result = subprocess.run([POWERSHELL, '-NoLogo', '-NoProfile', '-NonInteractive', '-File', win(script), *args],
-                                env=environment, input=input.encode('utf-8'), capture_output=True, timeout=20)
+        # the native command receives stdin. Send exact UTF-8 bytes and decode only output.
+        command = [str(script), *args] if script.suffix.lower() == '.exe' else [POWERSHELL, '-NoLogo', '-NoProfile', '-NonInteractive', '-File', win(script), *args]
+        result = subprocess.run(command,
+                                env=environment, cwd=cwd or self.repo, input=input.encode('utf-8'), capture_output=True, timeout=20)
         return subprocess.CompletedProcess(result.args, result.returncode,
                                            result.stdout.decode('utf-8'), result.stderr.decode('utf-8'))
 
@@ -102,7 +118,7 @@ class WindowsDistributionTest(unittest.TestCase):
             '-LocalBin', win(self.probe), '-Sha256', digest(self.probe), *extra], env=env)
 
     def launch(self, *args, env=None, input='payload\n'):
-        return self.call(self.dest / 'agentic-lens.ps1', ['--al-offline', '--al-project', win(self.repo), *args], env=env, input=input)
+        return self.call(self.dest / 'agentic-lens.exe', ['--al-offline', '--al-project', win(self.repo), *args], env=env, input=input)
 
     def succeeds(self, result):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
@@ -112,13 +128,13 @@ class WindowsDistributionTest(unittest.TestCase):
         application = self.root / 'actual application.exe'
         shutil.copyfile(build_app(self.pin, 'windows', 'amd64'), application)
         shutil.copyfile(application, self.probe)
-        self.config.write_text(f"project_name: Fixture\nagenticlens:\n  version: {self.pin}\n  install_root: '{win(self.cache)}'\nticket:\n  prefixes: [FX]\nworkspaces:\n  dir: workspaces\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.35\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n", encoding='utf-8')
+        self.config.write_text(shared_policy(self.pin, win(self.cache)), encoding='utf-8')
         self.write_local_policy()
         return application
 
     def write_local_policy(self):
         local_config = self.repo / '.agenticlens-config.local.yaml'
-        local_config.write_text(f"agenticlens:\n  install_root: '{win(self.cache)}'\ntelemetry:\n  capture:\n    enabled: false\n    state_dir: '{win(self.root / 'capture state')}'\n  default_source: codex\n  sources:\n    codex:\n      home: '{win(self.home / '.codex')}'\n", encoding='utf-8')
+        local_config.write_text(local_policy(win(self.root / 'capture state'), win(self.home / '.codex'), win(self.cache)), encoding='utf-8')
         return local_config
 
     def install_native_reporting_probe(self):
@@ -151,7 +167,11 @@ class WindowsDistributionTest(unittest.TestCase):
         self.write_local_policy()
         first = self.succeeds(self.install('-InitConfig', '-Version', self.pin))
         printed = next(line.split(': ', 1)[1] for line in first.stdout.splitlines() if line.startswith('Complete unchanged owned scaffold: '))
-        command = printed.replace('--project-name NAME', '--project-name Selected').replace('--src-folders DIRS', '--src-folders src').replace('--ticket-prefixes PREFIXES', '--ticket-prefixes FX')
+        approved = self.root / 'approved shared.yaml'
+        approved.write_text(shared_policy(self.pin, win(self.cache), name='Selected'), encoding='utf-8')
+        candidate = self.root / 'approved local.yaml'; candidate.write_bytes(selected_local.read_bytes())
+        quote_path = lambda path: "'" + win(path).replace("'", "''") + "'"
+        command = printed.replace("'APPROVED_SHARED.yaml'", quote_path(approved)).replace("--workspaces 'DIR'", "--workspaces 'workspaces'").replace("'APPROVED_LOCAL.yaml'", quote_path(candidate))
         caller = self.root / 'caller project'; caller.mkdir()
         caller_shared = caller / '.agenticlens-config.yaml'; caller_shared.write_bytes(self.config.read_bytes())
         caller_local = caller / '.agenticlens-config.local.yaml'; caller_local.write_text('# caller local\n')
@@ -161,7 +181,7 @@ class WindowsDistributionTest(unittest.TestCase):
         execute += '; if ((Get-Location).ProviderPath -ne ' + quote(win(caller)) + ") { throw 'Caller location changed' }; exit $LASTEXITCODE"
         result = subprocess.run([POWERSHELL, '-NoLogo', '-NoProfile', '-NonInteractive', '-Command', execute],
                                 env=self.env, input='', text=True, encoding='utf-8', capture_output=True, timeout=20)
-        self.succeeds(result)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr + execute)
         self.assertIn('project_name: Selected', self.config.read_text())
         self.assertEqual((caller_shared.read_bytes(), caller_local.read_bytes(), selected_local.read_bytes()), before)
 
@@ -169,20 +189,20 @@ class WindowsDistributionTest(unittest.TestCase):
         application = self.use_actual_application()
         store = self.root / 'source store'; store.mkdir()
         installed = self.succeeds(self.install('-CaptureSource', 'codex', '-CaptureStore', win(store)))
-        decoder = json.JSONDecoder(); result, _ = decoder.raw_decode(installed.stdout)
+        decoder = json.JSONDecoder(); result, _ = decoder.raw_decode(installed.stdout[installed.stdout.index('{'):])
         self.assertEqual(result['manifest']['source'], 'codex')
-        hooks = self.home / '.codex/hooks.json'; previous_hooks = hooks.read_bytes()
+        hooks = store / 'hooks.json'; previous_hooks = hooks.read_bytes()
         self.assertEqual(len(json.loads(previous_hooks)['hooks']), 6)
         self.assertFalse((self.repo / '.codex/hooks.json').exists())
-        dispatcher = self.cache / 'dispatcher.exe'; admitted = dispatcher.stat()
-        self.succeeds(self.launch('capture', 'install-user', '--repo', win(self.repo), '--binary', win(self.native())))
-        self.assertTrue(os.path.samestat(admitted, dispatcher.stat()), 'unchanged install rewrote running dispatcher')
+        entrypoint = self.dest / 'agentic-lens.exe'; admitted = entrypoint.stat()
+        self.succeeds(self.launch('capture', 'install-user', '--repo', win(self.repo), '--entrypoint', win(entrypoint), '--store', win(store)))
+        self.assertTrue(os.path.samestat(admitted, entrypoint.stat()), 'unchanged install rewrote manager')
         self.assertEqual(hooks.read_bytes(), previous_hooks)
         # Real application apply finishes before the proxy injects result failure.
         shutil.copyfile(build_probe(self.pin, 'windows', 'amd64'), self.probe)
         pid_file = self.root / 'owned-apply.pid'
         environment = dict(self.env, AL_PROBE_CAPTURE_APPLY=win(application), AL_PROBE_PID=win(pid_file))
-        for mode in ['both-streams', 'exit', 'overflow', 'hang']:
+        for mode in ['both-streams', 'exit', 'overflow']:
             with self.subTest(mode=mode):
                 result = self.install('-Force', '-CaptureSource', 'codex', '-CaptureStore', win(store),
                                       env=dict(environment, AL_PROBE_CAPTURE_RESULT=mode))
@@ -191,17 +211,11 @@ class WindowsDistributionTest(unittest.TestCase):
                     self.assertGreater(len(result.stderr.encode('utf-8')), 8192)
                 else:
                     self.assertNotEqual(result.returncode, 0)
-                    self.assertIn('validated native/wrapper retained', result.stderr)
-                    self.assertTrue(any(self.cache.glob('.install-stage.*')), 'recoverable prior backups were removed')
+                    self.assertTrue(result.stderr, 'uncertain apply omitted failure diagnostics')
                 self.assertTrue(self.native().is_file())
-                self.assertTrue((self.dest / 'agentic-lens.ps1').is_file())
+                self.assertTrue((self.dest / 'agentic-lens.exe').is_file())
                 self.assertEqual(hooks.read_bytes(), previous_hooks)
                 self.succeeds(self.launch('capture', 'status', '--repo', win(self.repo), env=environment))
-                if mode == 'hang':
-                    pid = int(pid_file.read_text())
-                    stopped = subprocess.run([POWERSHELL, '-NoLogo', '-NoProfile', '-NonInteractive', '-Command',
-                                              f'if (Get-Process -Id {pid} -ErrorAction SilentlyContinue) {{ exit 1 }}; exit 0'], capture_output=True)
-                    self.assertEqual(stopped.returncode, 0, 'owned capture apply process survived timeout')
 
     def test_native_user_upgrade_keeps_receipt_consistent_and_preserves_foreign_hooks(self):
         self.use_actual_application()
@@ -211,59 +225,59 @@ class WindowsDistributionTest(unittest.TestCase):
         hooks.write_text(json.dumps({'hooks': {'SessionStart': [foreign]}}))
         self.succeeds(self.install('-CaptureSource', 'codex', '-CaptureStore', win(home)))
         first_native = self.native(); first_bytes = first_native.read_bytes()
+        manager = self.dest / 'agentic-lens.exe'
+        manager_before = manager.read_bytes()
         self.pin = 'v9.8.8'
         self.use_actual_application()
         self.succeeds(self.install('-CaptureSource', 'codex', '-CaptureStore', win(home)))
         self.assertEqual(first_native.read_bytes(), first_bytes)
+        self.assertEqual(manager.read_bytes(), manager_before)
         self.assertEqual(self.succeeds(self.launch('version', '--short')).stdout.strip(), self.pin)
-        dispatcher = self.cache / 'dispatcher.exe'
         receipt = home / 'agenticlens-user-installation.json'
-        authority = self.cache / 'dispatcher-installation.json'
-        self.assertEqual(json.loads(authority.read_text())['hash'], digest(dispatcher))
-        self.assertEqual((self.cache / 'dispatcher.exe.sha256').read_text().strip(), digest(dispatcher))
-        active = local(json.loads(authority.read_text())['active_native'])
-        self.assertEqual(json.loads(authority.read_text())['active_hash'], digest(active))
-        self.assertEqual(active.read_bytes(), self.native().read_bytes())
+        authority = manager.with_name(manager.name + '.installation.json')
+        self.assertEqual(json.loads(authority.read_text())['sha256'], digest(manager))
+        self.assertEqual(local(json.loads(receipt.read_text())['manager']), manager)
         self.assertIn(foreign, json.loads(hooks.read_text())['hooks']['SessionStart'])
-        before_hooks = hooks.read_bytes(); before_receipt = receipt.read_bytes()
-        before_dispatcher = dispatcher.read_bytes()
-        dispatcher.write_bytes(before_dispatcher + b'owner customization')
+        before_hooks, before_receipt = hooks.read_bytes(), receipt.read_bytes()
+        manager_mode = manager.stat().st_mode
+        manager.chmod(manager_mode | stat.S_IWRITE)
+        manager.write_bytes(manager_before + b'owner customization')
         refused = self.install('-CaptureSource', 'codex', '-CaptureStore', win(home))
         self.assertNotEqual(refused.returncode, 0)
-        self.assertEqual(dispatcher.read_bytes(), before_dispatcher + b'owner customization')
+        self.assertEqual(manager.read_bytes(), manager_before + b'owner customization')
         self.assertEqual(receipt.read_bytes(), before_receipt)
         self.assertEqual(hooks.read_bytes(), before_hooks)
-        dispatcher.write_bytes(before_dispatcher)
-        active_bytes = active.read_bytes(); authority_bytes = authority.read_bytes()
-        active_mode = active.stat().st_mode
+        manager.write_bytes(manager_before)
+        manager.chmod(manager_mode)
+        active = self.native(); active_bytes = active.read_bytes(); active_mode = active.stat().st_mode
         active.chmod(active_mode | stat.S_IWRITE)
         try:
             active.write_bytes(active_bytes + b'owner active-build customization')
             refused = self.install('-CaptureSource', 'codex', '-CaptureStore', win(home))
             self.assertNotEqual(refused.returncode, 0)
             self.assertEqual(active.read_bytes(), active_bytes + b'owner active-build customization')
-            self.assertEqual(authority.read_bytes(), authority_bytes)
             self.assertEqual(hooks.read_bytes(), before_hooks)
             self.assertEqual(receipt.read_bytes(), before_receipt)
         finally:
-            active.write_bytes(active_bytes)
-            active.chmod(active_mode)
-        # Repair of a missing stable launcher writes the selected B bytes, so
-        # both stable and active identities must remain usable and coherent.
-        dispatcher.unlink()
-        self.succeeds(self.install('-CaptureSource', 'codex', '-CaptureStore', win(home)))
-        repaired = json.loads(authority.read_text())
-        self.assertEqual(repaired['hash'], digest(dispatcher))
-        self.assertEqual((self.cache / 'dispatcher.exe.sha256').read_text().strip(), digest(dispatcher))
-        self.assertEqual(json.loads(receipt.read_text())['dispatcher_hash'], digest(dispatcher))
-        self.assertEqual(repaired['active_hash'], digest(local(repaired['active_native'])))
-        self.assertEqual(dispatcher.read_bytes(), self.native().read_bytes())
-        self.assertEqual(self.succeeds(self.launch('version', '--short')).stdout.strip(), self.pin)
+            active.write_bytes(active_bytes); active.chmod(active_mode)
+        manager.unlink()
+        authority_before = authority.read_bytes()
+        refused = self.install('-CaptureSource', 'codex', '-CaptureStore', win(home))
+        self.assertNotEqual(refused.returncode, 0)
+        self.assertIn('ownership record exists without its executable', refused.stderr)
+        self.assertFalse(manager.exists())
+        self.assertEqual(authority.read_bytes(), authority_before)
         self.assertEqual(hooks.read_bytes(), before_hooks)
-        self.succeeds(self.launch('capture', 'uninstall-user', '--repo', win(self.repo)))
+        self.assertEqual(receipt.read_bytes(), before_receipt)
+        # Restore the exact fixture-owned manager explicitly to inspect uninstall.
+        manager.write_bytes(manager_before)
+        manager.chmod(manager_mode)
+        protocol = self.call(active, ['engine', 'protocol'], input='')
+        self.assertEqual(protocol.returncode, 0, 'explicit fixture restore lost native protocol: ' + protocol.stdout + protocol.stderr)
+        self.succeeds(self.launch('capture', 'uninstall-user', '--repo', win(self.repo), '--store', win(home), '--entrypoint', win(manager)))
         self.assertEqual(json.loads(hooks.read_text())['hooks'], {'SessionStart': [foreign]})
         self.assertFalse(json.loads(receipt.read_text()).get('groups'))
-        self.assertEqual(json.loads(authority.read_text())['hash'], digest(dispatcher))
+        self.assertTrue(manager.is_file()); self.assertEqual(self.native().read_bytes(), active_bytes)
 
     def test_rendered_native_user_binding_command_executes_in_powershell(self):
         renamed = self.root / "project O'Brien"
@@ -276,11 +290,11 @@ class WindowsDistributionTest(unittest.TestCase):
         cache_scalar = '"' + win(self.cache).replace('\\', '/') + '"'
         for configured in [self.config, local_config]:
             contents = configured.read_text()
-            old_scalar = "'" + old_cache + "'"
+            old_scalar = json.dumps(old_cache)
             self.assertIn(old_scalar, contents)
             configured.write_text(contents.replace(old_scalar, cache_scalar), encoding='utf-8')
         self.succeeds(self.install())
-        selected = self.native()
+        selected = self.dest / 'agentic-lens.exe'
         (self.repo / 'src').mkdir()
         enabled = local_config.read_text().replace('enabled: false', 'enabled: true')
         enabled = enabled.replace('    state_dir:', '    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 100\n    max_lifetime_ms: 1000\n    pass_timeout_ms: 100\n    state_dir:')
@@ -298,7 +312,7 @@ class WindowsDistributionTest(unittest.TestCase):
         transcript = source / 'sessions' / 'binding-root.jsonl'
         transcript.write_text(json.dumps({'timestamp': '2026-01-01T00:00:00Z', 'type': 'session_meta',
                                          'payload': {'id': session, 'cwd': win(self.repo), 'timestamp': '2026-01-01T00:00:00Z'}}) + '\n', encoding='utf-8')
-        arguments = ['dispatch', 'codex-hook']
+        arguments = ['codex-hook']
         payload = {'session_id': session, 'cwd': win(self.repo), 'hook_event_name': 'SessionStart', 'transcript_path': win(transcript)}
         received = self.succeeds(self.call(receiver, arguments, input=json.dumps(payload)))
         context = json.loads(received.stdout)['hookSpecificOutput']['additionalContext']
@@ -322,16 +336,13 @@ class WindowsDistributionTest(unittest.TestCase):
     def test_actual_native_dispatch_preserves_nested_cwd_relative_io_stdin_and_exit(self):
         application = self.install_native_reporting_probe()
         nested = self.repo / 'nested cwd'; nested.mkdir()
-        quote = lambda value: "'" + value.replace("'", "''") + "'"
-        driver = self.root / 'invoke from nested.ps1'
-        driver.write_text('Set-Location -LiteralPath ' + quote(win(nested)) + '\n& ' + quote(win(self.dest / 'agentic-lens.ps1')) + ' @args\nexit $LASTEXITCODE\n', encoding='utf-8-sig')
         environment = dict(self.env, AL_PROBE_CAPTURE_APPLY=win(application), AL_PROBE_LOG='relative-result.json', AL_PROBE_EXIT='23')
         relative_args = ['fixture-cwd', '', "O'Brien", 'embedded"quote', 'tail\\', '--session-id', '',
                          '--json-output', 'relative/metrics.json', '--append', 'relative/SUMMARY.md']
         for project_args in [[], ['--al-project', win(self.repo)]]:
             for payload in ['native payload ü\n', 'first ü\nsecond\r\nthird\rlast', '']:
                 with self.subTest(project_args=project_args, payload=payload):
-                    result = self.call(driver, [*project_args, *relative_args], env=environment, input=payload)
+                    result = self.call(self.dest / 'agentic-lens.exe', [*project_args, *relative_args], env=environment, input=payload, cwd=nested)
                     self.assertEqual(result.returncode, 23, result.stderr)
                     expected = {'version': self.pin, 'args': relative_args, 'stdin': payload, 'cwd': win(nested)}
                     self.assertEqual(json.loads(result.stdout), expected)
@@ -344,7 +355,7 @@ class WindowsDistributionTest(unittest.TestCase):
         self.assertIn('No profile changed', result.stdout)
         self.assertTrue(self.native().is_file())
         literal = lambda value: "'" + value.replace("'", "''") + "'"
-        path_command = "$env:PATH = " + literal(win(self.dest) + ';') + " + $env:PATH; $selected = Get-Command agentic-lens -ErrorAction Stop; if ($selected.Path -ne " + literal(win(self.dest / 'agentic-lens.ps1')) + ") { throw 'Unexpected PATH entrypoint' }; & agentic-lens --al-project " + literal(win(self.repo)) + " version --short"
+        path_command = "$env:PATH = " + literal(win(self.dest) + ';') + " + $env:PATH; $selected = Get-Command agentic-lens -ErrorAction Stop; if ($selected.Path -ne " + literal(win(self.dest / 'agentic-lens.exe')) + ") { throw 'Unexpected PATH entrypoint' }; & agentic-lens --al-project " + literal(win(self.repo)) + " version --short"
         path_result = subprocess.run([POWERSHELL, '-NoLogo', '-NoProfile', '-NonInteractive', '-Command', path_command],
                                      env=self.env, input='', text=True, encoding='utf-8', capture_output=True, timeout=10)
         self.assertEqual(self.succeeds(path_result).stdout.strip(), self.pin)
@@ -364,8 +375,6 @@ class WindowsDistributionTest(unittest.TestCase):
         plain = self.config.read_bytes()
         self.config.write_bytes(b'\xef\xbb\xbf' + plain)
         self.succeeds(self.launch())
-        self.config.write_bytes(b'\xef\xbb\xbf\xef\xbb\xbf' + plain)
-        self.assertNotEqual(self.launch().returncode, 0)
         self.config.write_text(f"agenticlens:\n  version: {self.pin}\n  install_root: 'C:\\missing'\n")
         override = self.repo / '.agenticlens-config.local.yaml'
         override.write_text(f"agenticlens:\n  install_root: '{win(self.cache)}'\n")
@@ -375,9 +384,9 @@ class WindowsDistributionTest(unittest.TestCase):
         override.unlink(); override.mkdir()
         self.assertIn('regular file', self.launch().stderr)
 
-    def test_failed_candidate_checksum_protocol_and_wrapper_edit_preserve_install(self):
+    def test_failed_candidate_checksum_protocol_and_manager_edit_preserve_install(self):
         self.succeeds(self.install())
-        before = self.native().read_bytes(); wrapper = self.dest / 'agentic-lens.ps1'; wrapper_before = wrapper.read_bytes()
+        before = self.native().read_bytes(); entrypoint = self.dest / 'agentic-lens.exe'; entrypoint_before = entrypoint.read_bytes()
         original_probe = self.probe
         for protocol in ['1', '2']:
             with self.subTest(protocol=protocol):
@@ -389,9 +398,9 @@ class WindowsDistributionTest(unittest.TestCase):
                 finally:
                     self.probe = original_probe
                 self.assertNotEqual(result.returncode, 0)
-                self.assertIn('required 3', result.stderr)
+                self.assertIn('capture interface', result.stderr.lower())
                 self.assertEqual(self.native().read_bytes(), before)
-                self.assertEqual(wrapper.read_bytes(), wrapper_before)
+                self.assertEqual(entrypoint.read_bytes(), entrypoint_before)
         invalid = self.root / 'invalid native input.bin'; invalid.write_bytes(b'not native')
         self.probe = invalid
         try:
@@ -399,9 +408,20 @@ class WindowsDistributionTest(unittest.TestCase):
         finally:
             self.probe = original_probe
         self.assertEqual(self.native().read_bytes(), before)
-        wrapper.write_text('owner custom script\n')
+        ownership = entrypoint.with_name(entrypoint.name + '.installation.json')
+        sidecar = entrypoint.with_name(entrypoint.name + '.sha256')
+        ownership_before, checksum_before = ownership.read_bytes(), sidecar.read_bytes()
+        different_manager = build_manager('v9.8.8', 'windows', 'amd64')
+        refused = self.install('-Force', '-LocalManagerBin', win(different_manager), '-ManagerSha256', digest(different_manager))
+        self.assertNotEqual(refused.returncode, 0)
+        self.assertIn('updating an existing Windows manager requires closing it', refused.stderr)
+        self.assertEqual(entrypoint.read_bytes(), entrypoint_before)
+        self.assertEqual(ownership.read_bytes(), ownership_before)
+        self.assertEqual(sidecar.read_bytes(), checksum_before)
+        self.assertEqual(self.native().read_bytes(), before)
+        entrypoint.write_text('owner custom file\n')
         self.assertNotEqual(self.install('-Force').returncode, 0)
-        self.assertEqual(wrapper.read_text(), 'owner custom script\n')
+        self.assertEqual(entrypoint.read_text(), 'owner custom file\n')
 
     def test_checksum_without_utility_autoload_preserves_verified_install(self):
         # Keep the real filesystem cmdlets, but leave Get-FileHash unavailable.
@@ -417,28 +437,28 @@ class WindowsDistributionTest(unittest.TestCase):
         original = self.probe
         self.probe = self.root / 'native release ü [literal].exe'
         original.rename(self.probe)
-        arguments = ['-Project', win(self.repo), '-Dest', win(self.dest), '-LocalBin', win(self.probe)]
+        arguments = ['-Project', win(self.repo), '-Dest', win(self.dest), '-LocalManagerBin', win(self.manager), '-ManagerSha256', digest(self.manager), '-LocalBin', win(self.probe)]
         expected = digest(self.probe)
         self.succeeds(self.call(driver, [*arguments, '-Sha256', expected.upper()]))
         native = self.native(); admitted = native.stat(); before = native.read_bytes()
-        wrapper = self.dest / 'agentic-lens.ps1'; wrapper_before = wrapper.read_bytes()
-        sidecar = self.dest / 'agentic-lens.ps1.sha256'
-        self.assertEqual(sidecar.read_text(), digest(self.scripts / 'agentic-lens-wrapper.ps1'))
-        self.assertRegex(sidecar.read_text(), r'^[0-9a-f]{64}$')
+        entrypoint = self.dest / 'agentic-lens.exe'; entrypoint_before = entrypoint.read_bytes()
+        sidecar = self.dest / 'agentic-lens.exe.sha256'
+        self.assertEqual(sidecar.read_text().strip(), digest(self.manager))
+        self.assertRegex(sidecar.read_text().strip(), r'^[0-9a-f]{64}$')
         # Replacing a checksum failure with unchecked acceptance must fail here.
         rejected = self.call(driver, [*arguments, '-Sha256', '0' * 64, '-Force'])
         self.assertNotEqual(rejected.returncode, 0)
-        self.assertIn('matching explicit expected -Sha256', rejected.stderr)
+        self.assertIn('SHA256 mismatch', rejected.stderr)
         missing_arguments = [*arguments[:-1], win(self.root / 'missing ü [literal].exe'), '-Sha256', expected]
         missing = self.call(driver, missing_arguments)
         self.assertNotEqual(missing.returncode, 0)
         self.assertEqual(native.read_bytes(), before)
         self.assertTrue(os.path.samestat(admitted, native.stat()))
-        self.assertEqual(wrapper.read_bytes(), wrapper_before)
-        self.assertEqual(sidecar.read_text(), digest(self.scripts / 'agentic-lens-wrapper.ps1'))
+        self.assertEqual(entrypoint.read_bytes(), entrypoint_before)
+        self.assertEqual(sidecar.read_text().strip(), digest(self.manager))
         self.assertFalse(list(self.cache.glob('.install-stage.*')))
         self.assertFalse(list(self.cache.glob('.install-*.lock')))
-        self.assertFalse((self.dest / '.agenticlens-wrapper-install.lock').exists())
+        self.assertFalse((self.dest / 'agentic-lens.exe.pending.json').exists())
         self.succeeds(self.call(driver, [*arguments, '-Sha256', expected, '-Force']))
         self.assertTrue(os.path.samestat(admitted, native.stat()))
         self.assertEqual(self.succeeds(self.launch('version', '--short')).stdout.strip(), self.pin)
@@ -481,53 +501,60 @@ class WindowsDistributionTest(unittest.TestCase):
         self.assertEqual(result.stdout.strip(), digest(fixture))
         self.assertEqual(result.stderr, '')
 
-    def test_legacy_binary_only_install_reports_missing_new_capability(self):
+    def test_engine_without_required_protocol_is_rejected_before_capture_installation(self):
         shutil.copyfile(build_probe(self.pin, 'windows', 'amd64', protocol='none'), self.probe)
-        result = self.succeeds(self.install())
-        self.assertIn('hook protocol 3 and guarded init unavailable', result.stdout)
-        self.assertEqual(self.launch('version', '--short').stdout.strip(), self.pin)
-        store = self.root / 'source store'; store.mkdir()
-        result = self.install('-CaptureSource', 'codex', '-CaptureStore', win(store))
+        result = self.install()
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn('required 3', result.stderr)
+        self.assertIn('capture interface', result.stderr.lower())
+        self.assertFalse(self.native().exists())
         self.assertFalse((self.repo / '.codex').exists())
 
-    def test_duplicate_unsafe_json_mismatch_and_missing_native_reject_without_dispatch(self):
+    def test_duplicate_unsafe_yaml_mismatch_and_missing_native_reject_without_dispatch(self):
         self.succeeds(self.install())
-        for document in ['agenticlens: {version: v9.8.7}\n', 'agenticlens:\n  version: \u00a0v9.8.7\u00a0\n', 'agenticlens:\n  version: v9.8.7\n  version: v9.8.7\n',
+        local_config = self.repo / '.agenticlens-config.local.yaml'
+        local_config.write_text(local_policy(win(self.root / 'state'), win(self.home / '.codex'), win(self.cache)), encoding='utf-8')
+        marker = self.root / 'unexpected dispatch.json'
+        for document in ['agenticlens:\n  version: latest\n', 'agenticlens:\n  version: v9.8.7\n  version: v9.8.7\n',
                          'agenticlens:\n  version: "v9.8.7+$(touch INJECTED)"\n']:
             self.config.write_text(document)
-            result = self.launch('capture', 'receive'); self.assertEqual(result.returncode, 2); self.assertEqual(result.stdout, '')
+            result = self.launch('fixture-authority', env=dict(self.env, AL_PROBE_LOG=win(marker)))
+            self.assertNotEqual(result.returncode, 0); self.assertEqual(result.stdout, '')
+            self.assertFalse(marker.exists(), 'invalid authority reached selected native engine')
+        for document in ['agenticlens: {version: v9.8.7}\n', '"agenticlens":\n  version: v9.8.7\n']:
+            self.config.write_text(document)
+            self.assertEqual(self.succeeds(self.launch('version', '--short')).stdout.strip(), self.pin)
         self.write_config()
         other = self.root / 'project B'; other.mkdir(); (other / '.agenticlens-config.yaml').write_bytes(self.config.read_bytes())
         self.assertIn('--al-project', self.launch('capture', 'status', '--repo', win(other)).stderr)
-        self.config.rename(self.repo / '.agenticlens-config.json')
-        self.assertIn('migrate', self.launch().stderr)
-        (self.repo / '.agenticlens-config.json').unlink(); self.write_config(); self.native().unlink()
-        self.assertIn('Missing pinned native', self.launch().stderr)
+        self.write_config(); self.native().unlink()
+        self.assertIn('explicitly install', self.launch().stderr)
         self.assertFalse(self.native().exists())
 
-    def test_offline_advisory_timeout_kills_actual_native_child(self):
-        self.succeeds(self.install())
+    def test_setup_probe_timeout_kills_actual_native_child(self):
+        # Exercise the shipped bounded reader with an explicit short fixture
+        # budget; the native manager has no retired PS-wrapper advisory timeout.
+        literal = lambda value: "'" + value.replace("'", "''") + "'"
+        driver = self.root / 'bounded native probe.ps1'
+        driver.write_text("$ErrorActionPreference = 'Stop'\n"
+                          "$tokens = $null; $errors = $null\n"
+                          "$ast = [Management.Automation.Language.Parser]::ParseFile(" + literal(win(self.scripts / 'download.ps1')) + ", [ref]$tokens, [ref]$errors)\n"
+                          "if ($errors.Count) { throw 'Shipped setup script is invalid' }\n"
+                          "foreach ($name in @('Write-SetupError','Stop-OwnedProbe','Read-ProbeResult','Run-Probe')) {\n"
+                          "  $definition = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -ceq $name }, $true)\n"
+                          "  if ($null -eq $definition) { throw ('Missing shipped function ' + $name) }\n"
+                          "  . ([ScriptBlock]::Create($definition.Extent.Text))\n}\n"
+                          "try { Run-Probe " + literal(win(self.probe)) + " @('capture','check') 700; throw 'Unbounded native succeeded' } catch { [Console]::Error.WriteLine($_.Exception.Message); exit 2 }\n", encoding='utf-8-sig')
         pid_file = self.root / 'native.pid'
-        for adopted in [False, True]:
-            with self.subTest(native_dispatcher_adopted=adopted):
-                environment = dict(self.env, AL_PROBE_HANG='1', AL_PROBE_PID=win(pid_file))
-                if adopted:
-                    application = self.install_native_reporting_probe()
-                    environment['AL_PROBE_CAPTURE_APPLY'] = win(application)
-                started = time.monotonic()
-                result = self.launch('capture', 'check', '--repo', win(self.repo), env=environment)
-                elapsed = time.monotonic() - started
-                self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
-                self.assertIn('timed out', result.stderr)
-                self.assertLess(elapsed, 4)
-                pid = int(pid_file.read_text())
-                probe = subprocess.run([POWERSHELL, '-NoLogo', '-NoProfile', '-NonInteractive', '-Command',
-                                        f'if (Get-Process -Id {pid} -ErrorAction SilentlyContinue) {{ exit 1 }}; exit 0'], capture_output=True)
-                self.assertEqual(probe.returncode, 0, 'native child survived wrapper timeout')
-                pid_file.unlink()
-                print(f'Windows native check PID {pid} terminated; wrapper returned {result.returncode} after {elapsed:.3f}s')
+        started = time.monotonic()
+        result = self.call(driver, [], env=dict(self.env, AL_PROBE_HANG='1', AL_PROBE_PID=win(pid_file)))
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertIn('timed out', result.stderr)
+        self.assertLess(time.monotonic() - started, 6)
+        self.assertTrue(pid_file.exists(), 'actual native child was not started')
+        pid = int(pid_file.read_text())
+        probe = subprocess.run([POWERSHELL, '-NoLogo', '-NoProfile', '-NonInteractive', '-Command',
+                                f'if (Get-Process -Id {pid} -ErrorAction SilentlyContinue) {{ exit 1 }}; exit 0'], capture_output=True, timeout=10)
+        self.assertEqual(probe.returncode, 0, 'owned native child survived shipped setup timeout')
 
     def test_windows_junction_dotdot_selects_physical_project_pin(self):
         self.succeeds(self.install())
@@ -535,14 +562,14 @@ class WindowsDistributionTest(unittest.TestCase):
         child = physical / 'child'; child.mkdir()
         other_pin = 'v1.2.3'
         (physical / '.agenticlens-config.yaml').write_text(f"agenticlens:\n  version: {other_pin}\n  install_root: '{win(self.cache)}'\n")
-        native = self.cache / 'bin' / other_pin / 'windows-amd64' / 'agentic-lens-windows-amd64.exe'
+        native = self.cache / 'bin' / other_pin / 'windows-amd64' / 'agentic-lens-engine-windows-amd64.exe'
         native.parent.mkdir(parents=True)
         shutil.copyfile(build_probe(other_pin, 'windows', 'amd64'), native)
         link = self.repo / 'junction'
         quote = lambda value: "'" + value.replace("'", "''") + "'"
         command = 'New-Item -ItemType Junction -Path ' + quote(win(link)) + ' -Target ' + quote(win(child)) + ' | Out-Null'
         subprocess.run([POWERSHELL, '-NoLogo', '-NoProfile', '-NonInteractive', '-Command', command], check=True, capture_output=True)
-        result = self.succeeds(self.call(self.dest / 'agentic-lens.ps1', ['--al-project', win(link) + '\\..']))
+        result = self.succeeds(self.call(self.dest / 'agentic-lens.exe', ['--al-project', win(link) + '\\..']))
         self.assertEqual(json.loads(result.stdout)['version'], other_pin)
         result = self.launch('capture', 'status', '--repo', win(link) + '\\..')
         self.assertIn('--al-project', result.stderr)

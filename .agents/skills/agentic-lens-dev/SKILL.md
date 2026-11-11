@@ -9,8 +9,7 @@ Coordinate application changes through planner, coder, tester and independent
 reviewers. Follow [repository policy](../../../AGENTS.md) for ticket isolation,
 role boundaries, approvals, telemetry and delivery, and
 [technical guidelines](../../../TECHNICAL_GUIDELINES.md) for engineering rules.
-Read `.agenticlens-config.yaml` for ticket prefixes and `workspaces.dir`
-(default `workspaces`); paths below are relative to the active ticket workspace.
+Read the selected canonical shared YAML for explicit ticket prefixes and workspaces.dir; missing/invalid policy fails with setup guidance. Both canonical suffixes in one directory are an error. Paths below are relative to the configured ticket workspace.
 
 ## Setup & Workspace Structure
 

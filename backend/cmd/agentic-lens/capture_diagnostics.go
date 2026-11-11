@@ -56,9 +56,6 @@ func inspectCapture(ctx context.Context, command, directory, project string, pol
 	if selectionErr != nil {
 		view.SelectionError = selectionErr.Error()
 	}
-	if policy.DeprecatedDetailedReport {
-		view.Limits = append(view.Limits, "telemetry.capture.detailed_report is deprecated and has no effect. Remove it; publication uses ledger and summary only, with detailed diagnostics kept locally.")
-	}
 	location, err := capture.PreviewStateLocation(directory, project)
 	if err != nil {
 		return err

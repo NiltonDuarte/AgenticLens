@@ -1,0 +1,31 @@
+{
+  "ticket_id": "T-01",
+  "is_hydrated": true,
+  "events": [],
+  "data_source": "local_codex",
+  "anomalies": [
+    {
+      "rule_id": "SUBAGENT_REWORK_LOOP",
+      "severity": "WARNING",
+      "context": {
+        "session_id": "root-missing",
+        "role": "builder",
+        "secondary_role": "source-tester",
+        "count": 3
+      }
+    }
+  ],
+  "availability": "partial",
+  "coverage": {
+    "required_session_ids": [
+      "root-missing",
+      "root-present"
+    ],
+    "complete_session_ids": [
+      "root-present"
+    ],
+    "diagnostics": [
+      "root-missing: Codex native session unavailable"
+    ]
+  }
+}

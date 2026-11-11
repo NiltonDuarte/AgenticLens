@@ -50,11 +50,11 @@ func TestCodexAndOpenCodeAdaptersPersistEquivalentCompactSummaries(t *testing.T)
 		t.Fatal(err)
 	}
 	ocSource := domain.SourceEvents{Events: ocEvents, CompleteSessionIDs: []string{"shared-session"}}
-	opencodeLiveAnomalies, err := domain.DetectAnomaliesWithEvidence(opencodeTransient, ocSource)
+	opencodeLiveAnomalies, err := domain.DetectAnomaliesWithEvidence(opencodeTransient, ocSource, codexMetricConfig().AnomalyThresholds)
 	if err != nil {
 		t.Fatal(err)
 	}
-	opencodeFacts, err := domain.PersistSourceAnomalySummaries(opencodeTransient, ocSource)
+	opencodeFacts, err := domain.PersistSourceAnomalySummaries(opencodeTransient, ocSource, codexMetricConfig().AnomalyThresholds)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,7 +75,7 @@ func TestCodexAndOpenCodeAdaptersPersistEquivalentCompactSummaries(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	codexLiveAnomalies, err := domain.DetectAnomaliesWithEvidence(domain.AgenticFactLedger{Sessions: codexTransientSessions}, domain.SourceEvents{Events: transcript.Events, CompleteSessionIDs: []string{"shared-session"}})
+	codexLiveAnomalies, err := domain.DetectAnomaliesWithEvidence(domain.AgenticFactLedger{Sessions: codexTransientSessions}, domain.SourceEvents{Events: transcript.Events, CompleteSessionIDs: []string{"shared-session"}}, codexMetricConfig().AnomalyThresholds)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,7 +94,7 @@ func TestCodexAndOpenCodeAdaptersPersistEquivalentCompactSummaries(t *testing.T)
 	version := domain.CurrentSchemaVersion
 	ticketID := "TEST-101"
 	factsForMetrics := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticketID, Sessions: sessions}
-	codexLedger := domain.DeriveMetricsLedger(factsForMetrics, domain.DefaultProjectConfig())
+	codexLedger := domain.DeriveMetricsLedger(factsForMetrics, codexMetricConfig())
 	unsourced, err := domain.PersistAnomalySummaries(factsForMetrics)
 	if err != nil {
 		t.Fatal(err)
@@ -102,7 +102,7 @@ func TestCodexAndOpenCodeAdaptersPersistEquivalentCompactSummaries(t *testing.T)
 	if unsourced.Anomalies != nil {
 		t.Fatalf("unsourced read invented root analysis: %#v", unsourced.Anomalies)
 	}
-	codexLedger.Facts, err = domain.PersistSourceAnomalySummaries(factsForMetrics, domain.SourceEvents{Events: transcript.Events, CompleteSessionIDs: []string{"shared-session"}})
+	codexLedger.Facts, err = domain.PersistSourceAnomalySummaries(factsForMetrics, domain.SourceEvents{Events: transcript.Events, CompleteSessionIDs: []string{"shared-session"}}, codexMetricConfig().AnomalyThresholds)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -161,11 +161,7 @@ func TestRoutineCodexEventsUseRequestContextInsteadOfCumulativeUsage(t *testing.
 			version := domain.CurrentSchemaVersion
 			ticketID := "TEST-101"
 			factsForMetrics := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticketID, Sessions: sessions}
-			ledger := domain.DeriveMetricsLedger(factsForMetrics, domain.DefaultProjectConfig())
-			ledger.Facts, err = domain.PersistAnomalySummaries(factsForMetrics)
-			if err != nil {
-				t.Fatal(err)
-			}
+			ledger := deriveCodexSourceMetrics(t, factsForMetrics, transcript.Events)
 			for _, anomaly := range ledger.Anomalies {
 				if anomaly.RuleID == domain.RuleContextSaturationSpike {
 					t.Fatalf("cumulative usage triggered a false context anomaly: %#v", anomaly)
@@ -199,11 +195,12 @@ func TestCodexLedgerOmitsEventsButRetainsAnomalySummaries(t *testing.T) {
 	version := domain.CurrentSchemaVersion
 	ticketID := "TEST-101"
 	factsForMetrics := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticketID, Sessions: sessions}
-	ledger := domain.DeriveMetricsLedger(factsForMetrics, domain.DefaultProjectConfig())
-	ledger.Facts, err = domain.PersistAnomalySummaries(factsForMetrics)
-	if err != nil {
-		t.Fatal(err)
+	for _, owner := range sessions {
+		if owner.Anomalies != nil {
+			t.Fatal("raw source grouping invented anomaly policy or a healthy result")
+		}
 	}
+	ledger := deriveCodexSourceMetrics(t, factsForMetrics, transcript.Events)
 	assertNoSavedEvents(t, ledger.Facts)
 	if len(ledger.Anomalies) == 0 {
 		t.Fatal("expected anomaly summaries to be retained")

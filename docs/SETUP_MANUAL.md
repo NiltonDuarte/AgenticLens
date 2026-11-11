@@ -4,10 +4,10 @@ AgenticLens is a developer telemetry and observability platform for OpenCode and
 
 Workspace ledgers are durable project records designed for Git-based sharing across developers, machines and harnesses. A new installation's local sources enable collection and enrichment; missing another developer's private logs/capture database must not invalidate supported recorded history. See the [portable ledger contract](../TECHNICAL_GUIDELINES.md#portable-ledger-contract) for the distinction between preservation and source refresh. This is a product requirement; check the installed release's documented limits rather than assuming every compatibility path is already verified.
 
-OpenCode traces are extracted read-only from its local SQLite database (`~/.local/share/opencode/opencode.db`). The supported evidence window is OpenCode v1.19.5 (`session`/`message`/`part`) and npm `@opencode/cli` v2.2.0 (`session_v2`/`session_message`), whose `latest` tag was resolved on 2026-10-29. AgenticLens validates the complete required table and column set and automatically selects exactly one schema family. Partial, mixed, malformed, and unknown schemas fail with diagnostics; schema detection does not identify the exact runtime release. `--db-path` remains the explicit path override and the default OpenCode database path remains unchanged.
+OpenCode traces are extracted read-only from its explicitly selected local SQLite database. The supported evidence window is OpenCode v1.19.5 (`session`/`message`/`part`) and npm `@opencode/cli` v2.2.0 (`session_v2`/`session_message`), whose `latest` tag was resolved on 2026-10-29. AgenticLens validates the complete required table and column set and automatically selects exactly one schema family. Partial, mixed, malformed, and unknown schemas fail with diagnostics; schema detection does not identify the exact runtime release. `--db-path` overrides the selected-local database path. Missing or unavailable selected paths fail without another location.
 
 Compatibility workflows are `make opencode-compat-v1`, `make opencode-compat-v2`, and `make opencode-compat`. They require the corresponding runtime (`OPENCODE_V1_BIN` / `OPENCODE_V2_BIN` can select explicit binaries) and a local deterministic provider already running. The workflows create isolated temporary HOME, XDG data/config/state roots, project roots, and absolute `OPENCODE_DB` paths, then remove them at exit. Ordinary adapter tests use deterministic SQLite fixtures and need no OpenCode installation. Evidence fixtures are sanitized runtime-produced records, not synthesized runtime integration runs. Nonzero native-provider pricing, imported-history extraction after migration, partial migration states, duplicate handling, and releases outside v1.19.5/v2.2.0 are not verified.
-Codex traces are read from rollout files beneath a Codex home directory (`~/.codex`). OpenCode and Codex are independent sources; selecting one never falls back to the other.
+Codex traces are read from rollout files beneath its explicitly selected home directory. OpenCode and Codex are independent sources; selecting one never falls back to the other.
 
 Use this guide to install, configure, and operate AgenticLens in an adopting repository.
 
@@ -17,10 +17,9 @@ Use this guide to install, configure, and operate AgenticLens in an adopting rep
 
 Use the canonical [setup skill](../.agents/skills/agentic-lens-setup/SKILL.md) for complete bundle installation, approval boundaries, full configuration, normal harness trust and actual callback/binding/source verification. Install official precompiled releases only; adopting projects need no Go/Node/Python/yq runtime.
 
-Fresh unpinned installations default to the [latest stable release](https://github.com/NiltonDuarte/AgenticLens/releases/latest); resolve its exact tag once. Existing projects retain their approved shared pin for repair. Follow [release selection and tagged bootstrap](../.agents/skills/agentic-lens-setup/SKILL.md#step-1-install-complete-skills-and-the-user-entrypoint): retrieve manifests, scripts and binaries from that tag, and report missing bundle files rather than mixing revisions. Older tagged installations do not establish support for the new wrapper/lifecycle protocol.
+Retain an existing approved exact release pin. For fresh setup, obtain approval for an exact published release before retrieving its bundle or writing configuration. A valid running release may be suggested; dev, dirty or unknown builds cannot select a pin. Retrieve manifests, scripts and binaries from that exact tag and report missing bundle files without mixing revisions.
 
-Select one exact published release. Shared `.agenticlens-config.yaml` owns `agenticlens.version`; the user-level native manager resolves that pin from the project/subdirectory and detects the executing platform. Local `agenticlens.install_root` customizes cache placement independently of telemetry.capture.state_dir. Ordinary commands and integrations are offline and never install a missing release.
-
+Shared `.agenticlens-config.yaml` or `.agenticlens-config.yml` owns `agenticlens.version`; the native manager detects the executing platform. Installation-cache placement is separate from telemetry state. Ordinary commands and integrations never install a missing release.
 The commands below require a selected release containing the complete setup bundle. Review and retrieve its installer before running it.
 
 ```sh
@@ -30,7 +29,7 @@ bash .agents/skills/agentic-lens-setup/scripts/download.sh --project <PROJECT> -
 agentic-lens --al-project <PROJECT> version --short
 ```
 
-The first command bootstraps both setup/operator skills from the selected tag. Restore missing setup scripts from that tag after reviewing them. Existing configurations/files are preserved; do not fetch moving-main wrappers or moving latest artifact URLs. For a new project use explicit --init-config --version only as a bootstrap scaffold; complete full native init with project/source roots/ticket prefixes before claiming publication readiness. Never overwrite arbitrary project/local config using --force.
+The first command bootstraps both setup/operator skills from the selected tag. Restore missing setup scripts from that tag after reviewing them. Existing configurations/files are preserved; do not fetch moving-main wrappers or moving latest artifact URLs. For a new project use explicit --init-config --version only as a bootstrap scaffold; complete reviewed shared/local candidates through native init before claiming publication readiness. Never overwrite arbitrary project/local config using --force.
 
 The native manager defaults to `~/.local/bin/agentic-lens` on POSIX and `~/.agenticlens/agentic-lens.exe` on Windows. The explicit Windows bootstrap is:
 
@@ -54,7 +53,7 @@ Review exact additive hooks/plugin/state-ignore changes, then repeat without --d
 
 After a shared pin change, explicitly install the release, preview owned setup refresh with the original store/state and repeat live verification. Old in-flight workers may finish; other cache versions remain intact. User hooks invoke the stable native manager; ordinary CLI and callbacks use the same offline resolver. No automatic trust changes or repository updater is supported. The optional install-check/uninstall-check integration is separately opt-in and advisory; it honors hooksPath, derives the committing worktree and refuses arbitrary-hook overwrites. No adopting-project CI/global Git settings are changed.
 
-Publication produces ledger plus SUMMARY.md, preserving available facts and explaining coverage/freshness/failure. Detailed reconciliation/publication evidence stays in local database diagnostics; old detailed_report keys are deprecated/no-effect and old sidecars remain obsolete, never automatically deleted. Local state deletion can lose bindings and pending observations; the native home cache does not move the capture database.
+Publication writes the ledger and the summary selected by shared generation.summary policy, preserving facts and explaining coverage/freshness/failure. Reconciliation/publication evidence stays in local diagnostics. Unowned standalone report files are ignored and untouched; exact interrupted transactions retain authorized recovery. Local state deletion can lose bindings and pending observations; the native home cache does not move the capture database.
 
 See [CLI operations](../.agents/skills/agentic-lens-operator/references/cli.md) and [release/configuration profile](../.agents/skills/agentic-lens-operator/references/configuration.md#shared-release-authority-and-user-entrypoint).
 
@@ -72,194 +71,110 @@ Configure ticket prefixes as equal peers, any workspace root, and custom persona
 
 ## 3. Configuration Reference
 
-Shared project settings live in `.agenticlens-config.yaml`. Machine-specific source settings live in optional `.agenticlens-config.local.yaml`, which is ignored by Git. Review its default harness and paths, verify it is ignored before committing, and never put credentials in either file. The sanitized `.agenticlens-config.local.example.yaml` can be copied as a starting point.
-
-```yaml
-telemetry:
-  default_source: opencode
-  sources:
-    opencode:
-      database_path: ~/.local/share/opencode/opencode.db
-    codex:
-      home: ~/.codex
-```
+The [configuration reference](../.agents/skills/agentic-lens-operator/references/configuration.md) owns current fields, bounds, selection and editing rules. Shared discovery accepts either canonical YAML suffix, fails if both names exist in one directory and respects project/Git boundaries. Local configuration remains `.agenticlens-config.local.yaml`; keep it out of Git and never store credentials.
 
 ### Telemetry Source and Session Selection
 
-`agentic-lens init` creates shared `.agenticlens-config.yaml` and machine-local `.agenticlens-config.local.yaml`. The local file is ignored by Git; check `.gitignore` before committing and keep credentials out of both files. Configure `telemetry.default_source`, `telemetry.sources.opencode.database_path` (OpenCode SQLite), and `telemetry.sources.codex.home` (Codex rollout directory). The tracked `.agenticlens-config.local.example.yaml` provides sanitized portable defaults. `generate --source` overrides the local default; otherwise `telemetry.default_source` is used, then OpenCode. Source locations resolve from CLI path override, local harness path, legacy shared OpenCode `database.path`, then adapter defaults. A missing selected source is an error and never triggers a switch to the other harness.
+Generation selects `--source` first, otherwise the selected-local `telemetry.default_source`, otherwise fails without output. OpenCode uses `--db-path` before local `telemetry.sources.opencode.database_path`; Codex uses supported `--codex-home` before local `telemetry.sources.codex.home`. No automatic store/harness search follows a selected failure.
 
-Use `--nonce <literal>` to select the exact Codex rollout containing a unique run nonce, or `--session-id <thread-id>` to select a known thread. `--codex-home <path>` overrides local Codex home, `$CODEX_HOME`, and `~/.codex`.
+Choose a root with `--session-id` or supply a unique literal `--nonce`. Direct OpenCode validates exact roots, searches nonce text literally, requires one matching root and requires both supplied selectors to agree. Ticket text alone cannot choose a session. Codex uses explicit selectors too. Root selection can discover source-proven children; it cannot invent parent identities or trust a UI task identifier as a native session ID.
 
-Code metrics always compare an explicit Git ref with the configured `code_metrics.base_branch`; `generate` defaults to `HEAD`, and `backfill --recompute-git` requires `--code-ref`. Empty or invalid refs fail instead of trying to infer a branch or commits from the ticket ID. Comparisons include committed changes and exclude the uncommitted working tree. Codex session discovery requires `--nonce` or `--session-id`; ticket text and working-directory heuristics are not reliable session identifiers. Codex SDLC iterations count root-session user messages, not folders, commits, model requests, or child-agent prompts. Schema-v4 and schema-v5 sessions own invocation records, per-session tool summaries, and retained events; cross-session totals are derived for display. Migration reports and removes legacy aggregate tool rows without reliable session attribution. Re-extract from source logs to recover those counts when available.
+Select one whole worktree-local file; only when absent, use the same repository's Git-established base-local file. A present invalid file never triggers base selection. Relative configured source paths belong to the selected file, CLI paths to invocation cwd; explicit `~/` expands or fails. Preserve physical symlink/`..` traversal. Guided setup is base-only; no local copy or per-worktree enrollment is required when the base file is shared.
 
-New ledgers and runtime reads require schema v6, including session-owned skill/delegation facts and nullable cost evidence. Older files require explicit migration; ownerless legacy skill/task rows are deleted with reported counts. See [session-owned occurrences](OWNED_OCCURRENCES.md) for migration and backup requirements and [reported cost semantics](COST_SEMANTICS.md) for financial evidence.
+Source-free recorded-ledger reads do not require local sources or capture state. Optional hydration reports unavailable and preserves accepted facts. Required extraction/Git failures prevent affected publication. Current runtime ingestion requires supported schema v6; use explicit migration for historical data. See [owned occurrences](OWNED_OCCURRENCES.md) and [cost evidence](COST_SEMANTICS.md).
 
 ### Code Classification and Interpretation
 
-Code classification is configured under `code_metrics` in `.agenticlens-config.yaml`:
-`test_patterns` identifies tests and fixtures; `prod_patterns` and `include` identify production files. There are no implicit test directory, test filename, or production extension rules. Empty patterns leave files unclassified (`Other`), which can contribute to total lines without contributing to test/production subtotals.
+Git metrics measure the committed net contribution from merge-base(configured `code_metrics.base_branch`, target) to target. Normal generation targets worktree HEAD; historical backfill targets are explicit. Incoming upstream-only merges do not count, reverted edits contribute only their remaining net effect, and staged/uncommitted work is excluded. Refresh/integrate the base through the delivery workflow before final delivery measurements; measurement never fetches.
 
-Patterns containing `/` are relative to the repository root; a `**` path component matches zero or more directories. Patterns without `/` match basenames. Workspace exclusions and `exclude` win, followed by test patterns, then production/include patterns. The existing lockfile/dotfile exclusions apply to otherwise unmatched files. Both Git discovery modes monitor the required `code_metrics.source_roots` plus configured test, production, and include patterns, allowing fixtures outside source roots.
+Production and tests each have explicit include/exclude lists. A category matches included paths not excluded by its own list. Evaluate independently: one match counts, neither is uncounted, both fail before affected publication. No priority or double counting. `[]` deliberately includes none or excludes none; missing/invalid lists fail. Patterns with `/` are repository-relative, `**` matches zero or more directories and basename patterns match basenames. No implicit roots, extensions, workspace exclusions, dotfiles or lockfile rules are added.
 
-Interpret ratios using the configured classification and counting basis. Test helpers can be counted as production if no test pattern matches them; generated files, fixtures, comments, and blank lines also affect comparisons. Whole-repository source counts and session diff-added counts answer different questions. There is no universal target ratio; use the [test metrics guidance](../TECHNICAL_GUIDELINES.md#interpreting-test-metrics) and [contributor test review steps](../CONTRIBUTING.md#51-before-adding-or-removing-tests) to assess coverage and maintenance cost.
+Ratios use the configured categories and changed-line basis; whole-tree counts answer a different question. There is no universal ratio target. See [test metrics guidance](../TECHNICAL_GUIDELINES.md#interpreting-test-metrics).
 
-### 3.1 Complete Configuration Schema Example
+### 3.1 Reviewed Configuration Candidates
+
+These examples illustrate syntax, not presets. Review and approve each value for the adopting project, including empty lists/mappings. Preserve valid existing values. Setup must explain manual telemetry, capture enablement and installation separately; it never silently activates or installs an integration.
 
 ```yaml
-# AgenticLens Global Configuration Reference
 project_name: PaymentGateway
-
 agenticlens:
-  version: v1.2.3 # example; replace with the selected published release
-
-telemetry:
-  capture:
-    state_dir: ~/.agenticlens/state
-    commit_warning: true
-
+  version: v1.2.3 # replace with the approved exact published release
 ticket:
   prefixes:
-    - prefix: PAY
-      description: Payment core transactions and ledger logic
+    - prefix: PAY-
+      description: Payment service development
       ticket_type: feat
-    - prefix: SEC
-      description: Security scanning, vulnerability remediation, and audits
-      ticket_type: fix
-    - prefix: OPS
-      description: Infrastructure, deployment pipelines, and chores
-      ticket_type: chore
-    - prefix: DOCS
-      description: Architecture decision records and API references
-      ticket_type: docs
   case_insensitive: true
-  custom_patterns: []
-
 workspaces:
-  dir: workspaces
-  artifacts:
-    - path: CONTRACT.md
-      title: Technical Contract
-      description: Frozen technical contract and scope invariants
-    - path: SUMMARY.md
-      title: Work Summary
-      description: Implementation summary log and verification records
-
-database:
-  path: ~/.local/share/opencode/opencode.db
-  query_timeout_ms: 5000
-  busy_timeout_ms: 5000
-  read_only: true
-
-live:
-  active_threshold_seconds: 300
-  poll_interval_ms: 2000
-  max_trace_buffer_messages: 500
-
-anomaly_thresholds:
-  stall_threshold_seconds: 120
-  error_rate_min_calls: 5
-  error_rate_threshold: 0.25
-  error_rate_critical_threshold: 0.70
-  context_exhaustion_pct: 0.85
-  context_ceiling_warning_tokens: 160000
-  context_ceiling_critical_tokens: 200000
-
+  dir: tickets
+  artifacts: []
 code_metrics:
   base_branch: origin/main
-  source_roots:
-    - src
-    - pkg
-    - cmd
-  include: []
-  exclude: []
-  test_patterns: []
-  prod_patterns: []
-
-role_mappings:
-  security-scanner: security
-  perf-analyzer: tester
-  integration-tester: tester
-  frontend-specialist: developer
-  backend-specialist: developer
-
-role_order:
-  - security
-  - developer
-  - tester
+  production:
+    include: ["service/**/*.go"]
+    exclude: ["**/*_test.go"]
+  tests:
+    include: ["service/**/*_test.go"]
+    exclude: []
+database:
+  busy_timeout_ms: 1000
+live:
+  active_threshold_seconds: 60
+  poll_interval_ms: 1000
+anomaly_thresholds:
+  stall_threshold_seconds: 30
+  error_rate_min_calls: 5
+  error_rate_threshold: 0.35
+  error_rate_critical_threshold: 0.7
+  consecutive_errors_streak_warning: 4
+  consecutive_errors_streak_critical: 8
+  context_ceiling_warning_tokens: 100000
+  context_ceiling_critical_tokens: 200000
+  turn_usage_warning_tokens: 30000
+  turn_usage_critical_tokens: 60000
+  context_growth_warning_tokens: 40000
+  context_growth_critical_tokens: 80000
+  tool_thrashing_min_failures: 3
+  tool_thrashing_critical_failures: 5
+generation:
+  metrics:
+    skills: true
+    delegations: true
+    anomalies: true
+  feedback:
+    provisional_threshold_seconds: 0
+  summary:
+    enabled: true
+    filename: METRICS.md
+role_mappings: {}
+role_order: []
 ```
 
-### 3.2 Schema Field Definitions
+An illustrative local candidate for manual-only telemetry follows. Replace its paths with approved actual locations. Disabled automatic capture permits manual generation; worker-only timing fields are not needed until workers are enabled.
 
-#### `project_name`
-- **Type**: String
-- **Default**: None (Mandatory during `init`)
-- **Description**: Human-readable name of the project. Displayed in web dashboard headers, page titles, CLI summary tables, and JSON export metadata.
+```yaml
+telemetry:
+  default_source: codex
+  sources:
+    codex:
+      home: /srv/codex-home
+  capture:
+    enabled: false
+    state_dir: ~/.agenticlens/state
+    pass_timeout_ms: 20000
+    max_sessions: 32
+    max_source_bytes: 8388608
+```
 
-#### `ticket`
-Controls ticket identifier parsing, prefix matching, and normalization.
-- **`prefixes`** (List of Objects or Strings): Recognized ticket prefixes.
-  - `prefix` (String): Prefix string (e.g. `PAY`, `SEC`, `OPS`).
-  - `description` (String): Operational description of the ticket domain.
-  - `ticket_type` (String, Optional): Default conventional commit type inferred for this prefix (`feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `ci`, `perf`, `build`).
-- **`case_insensitive`** (Boolean, Default: `true`): When true, matches ticket identifiers regardless of casing (e.g. `pay-101` normalizes to `PAY-101`).
-- **`custom_patterns`** (List of Strings, Default: `[]`): Additional regular expressions to match custom ticket naming formats when standard `<PREFIX>-<NUMBER>` is insufficient.
+### 3.2 Applying Approved Choices
 
-#### `workspaces`
-Defines filesystem layout for ticket telemetry and change tracking.
-- **`dir`** (String, Default: `workspaces`): Directory where ticket workspace folders live (e.g. `workspaces/<TICKET_ID>/`).
-- **`artifacts`** (List of Objects, Default: `[]`): Workspace documentation files tracked and displayed in the web dashboard artifact viewer.
-  - `path` (String): File path relative to the ticket workspace (e.g. `CONTRACT.md`).
-  - `title` (String): Display title in web dashboard tabs.
-  - `description` (String, Optional): Explanatory subtitle.
+From the base checkout, preview `init --settings <SHARED_CANDIDATE.yaml> --local-settings <LOCAL_CANDIDATE.yaml> --workspaces <ROOT> --dry-run`. New shared configuration requires nonblank explicit `--workspaces`; output defaults to `.agenticlens-config.yaml`, or an explicit destination with either canonical basename. The local file is beside it. Validate both candidates before writes. Existing local completion uses `--local-only` and preserves valid values. An exact unchanged installer scaffold can use `--complete-scaffold`; arbitrary configs are not scaffolds.
 
-#### `database`
-Specifies local OpenCode SQLite database connectivity parameters.
-- **`path`** (String, Default: `~/.local/share/opencode/opencode.db`): Filesystem path to the OpenCode SQLite database. Supports home directory tilde expansion (`~`).
-- **`query_timeout_ms`** (Integer, Default: `5000`): Maximum execution duration in milliseconds for database queries before timing out.
-- **`busy_timeout_ms`** (Integer, Default: `5000`): SQLite busy handler wait duration in milliseconds before returning a busy lock error.
-- **`read_only`** (Boolean, Default: `true`): Opens database connection in immutable read-only mode to prevent accidental writes or lock contention with OpenCode.
-
-#### `live`
-Configures real-time session polling and automated anomaly detection.
-- **`active_threshold_seconds`** (Integer, Default: `300`): Sliding window in seconds. Sessions with turn activity within this window are classified as active.
-- **`poll_interval_ms`** (Integer, Default: `2000`): Frequency in milliseconds at which the embedded server polls SQLite for new session turns.
-- **`max_trace_buffer_messages`** (Integer, Default: `500`): Legacy compatibility setting, still accepted when loading configuration. It does not truncate live trace responses.
-
-#### `anomaly_thresholds`
-Configures anomaly policy in a top-level section. Legacy files may place the section under `live`; when both sections exist, the top-level section takes precedence as a whole.
-
-- **`stall_threshold_seconds`** (Integer, Default: `120`): Elapsed seconds without turn activity in an active session before raising a stall anomaly.
-- **`error_rate_min_calls`** (Positive integer, Required): Minimum calls to a tool before evaluating its failure rate. The configuration writer emits `5` when no authoring value is supplied.
-- **`error_rate_threshold`** (Ratio, Required): Warning failure-rate ratio. The configuration writer emits `0.25` when unspecified; `0.35` means 35%.
-- **`error_rate_critical_threshold`** (Ratio, Required): Critical failure-rate ratio. The configuration writer emits `0.70` when unspecified; this means 70%, not the numeric value `70`.
-- **`context_exhaustion_pct`** (Float, Default: `0.85`): Token usage percentage of model context window capacity triggering a saturation warning (e.g. 0.85 = 85%).
-
-Failure-rate ratios must be finite, greater than zero and at most one; the warning ratio cannot exceed the critical ratio. Writer defaults are materialized in generated files. Loading an existing file requires all three failure-rate fields explicitly and reports missing or invalid values instead of supplying runtime defaults. Explicit valid writer overrides retain their precision.
-
-#### `code_metrics`
-Configures git commit diff extraction and file classification.
-- **`base_branch`** (String, Optional, Default: automatic probing): Comparison branch for computing diff metrics. If omitted or empty, AgenticLens probes `origin/HEAD`, `origin/main`, `main`, `origin/master`, and `master`.
-- **`source_roots`** (List of Strings, Required): Source code folders monitored for Git changes and code metrics (e.g. `src`, `pkg`, `cmd`).
-- **`include`** (List of Strings, Default: `[]`): Glob patterns explicitly included as production code.
-- **`exclude`** (List of Strings, Default: `[]`): Glob patterns excluded from diff and code volume calculations (e.g. vendor folders, minified assets).
-- **`test_patterns`** (List of Strings, Default: `[]`): Glob patterns identifying test code and fixtures.
-- **`prod_patterns`** (List of Strings, Default: `[]`): Glob patterns identifying production runtime code.
-
-#### `role_mappings`
-Maps raw agent persona strings recorded in OpenCode traces to canonical role categories:
-- Unmapped personas are categorized under their raw name or as unassigned subagents.
-- Custom personas can be mapped directly to canonical roles or preserved as standalone custom roles.
-
-#### `role_order`
-- **Type**: List of Strings
-- **Default**: `[orchestrator, planner, coder, tester, reviewer]`
-- **Description**: Explicit sorting sequence for agent roles in CLI tables, summary markdowns, and web dashboard charts. Listed roles appear first in the specified order; any unlisted roles follow in alphabetical order.
-
----
+Prefix mappings preserve literal separators and descriptions; scalar shortcuts are not part of the current schema. Explicit case policy applies consistently. Generation type order is CLI, existing recorded type, then agreeing configured mappings. Conflicts require an explicit type; no available type remains unknown or fails with `--strict-type`. Summary output follows shared policy, with manual `--append` overriding enablement and destination. The full [field reference](../.agents/skills/agentic-lens-operator/references/configuration.md#shared-policy) explains numerical requirements and intentional false/zero/empty values.
 
 ## 4. OpenCode Agent Workflow Integration Guide
 
-Integrating AgenticLens into your repository requires zero changes to agent reasoning loops, model selection, or coding styles. Installed native lifecycle capture publishes automatically after explicit session-ticket binding. Agents answer the binding request; manual generation below is a recovery fallback.
+Integrating AgenticLens into your repository requires zero changes to agent reasoning loops, model selection, or coding styles. Installed native lifecycle capture publishes automatically after explicit session-ticket binding. Agents answer the binding request; manual generation below is an explicit telemetry operation and recovery option.
 
 ### 4.1 Automatic publication and manual recovery
 
@@ -271,11 +186,12 @@ For manual recovery, select the actual harness and exact root session ID or pass
 
 ```bash
 agentic-lens generate \
-  --nonce <GENERATED_NONCE> \
+  --source "<opencode-or-codex>" \
+  --nonce "<GENERATED_NONCE>" \
   --ticket-id "<TICKET_ID>" \
   --ticket-type "<CONVENTIONAL_TYPE>" \
-  --json-output "workspaces/<TICKET_ID>/agentic_metrics.json" \
-  --append "workspaces/<TICKET_ID>/SUMMARY.md"
+  --json-output "<WORKSPACES_DIR>/<TICKET_ID>/agentic_metrics.json" \
+  --append "<WORKSPACES_DIR>/<TICKET_ID>/<SUMMARY_FILENAME>"
 ```
 
 #### Literal Nonce Mandate (FIX-5)
@@ -296,7 +212,7 @@ AgenticLens requires explicit commit type classification to generate accurate en
 
 ### 4.4 Custom Persona Role Mapping
 
-Configure `role_mappings` as shown in the [configuration example](#31-complete-configuration-schema-example). Tokens, costs, and durations aggregate under mapped roles while raw ledgers preserve persona identifiers.
+Configure `role_mappings` as shown in the [configuration example](#31-reviewed-configuration-candidates). Tokens, costs, and durations aggregate under mapped roles while raw ledgers preserve persona identifiers.
 
 ### 4.5 Standard Repository Agent Guidelines Policy Block
 
@@ -306,8 +222,8 @@ Below is the standard policy block that can be added to your repository's OpenCo
 ## AgenticLens Telemetry Guidelines
 
 1. Ticket Tracking Mandate:
-   - Every task requires a ticket ID and a workspace under `workspaces/<TICKET_ID>/`.
-   - Use an existing ticket when one is provided. For ad hoc work without an ID, assign a `GEN-#` identifier; do not create a planning specification or index entry under `plan/` solely for it.
+   - Every task requires an explicit ticket ID and workspace under the configured `workspaces.dir`. Missing configuration requires setup, without inventing a root.
+   - Use an existing ticket when one is provided. For ad hoc work without an ID, obtain an identifier using the configured literal prefixes; do not create a planning specification or index entry under `plan/` solely for it.
    - Agents work on one ticket at a time. All turns belong to the active ticket.
 
 2. Plan Lifecycle:
@@ -315,13 +231,13 @@ Below is the standard policy block that can be added to your repository's OpenCo
    - Remove the ticket entry from `plan/TICKETS.md` if present. Do not create a specification or index entry just to complete this step; ad hoc tickets still have an ID and workspace.
 
 3. Dedicated Workspace Allocation:
-   - Store task documentation and metrics in `workspaces/<TICKET_ID>/`.
+   - Store task documentation and metrics in `<WORKSPACES_DIR>/<TICKET_ID>/`.
    - Maintain `CONTRACT.md` (scope boundaries) and `SUMMARY.md` (current outcome, verification and limits) as required by the project's artifact list.
 
 4. Automatic Telemetry Publication:
    - Answer the native lifecycle session-specific binding request with the explicitly supplied ticket and title; never infer ticket ownership.
-   - Verify automatic ledger/summary publication and coverage before committing. Manual `generate` is a recovery fallback, using the selected harness and an exact session ID or literal nonce.
-   - Verify SUMMARY.md coverage and local capture diagnostics. No sidecar is produced; retained older reports are obsolete and require explicit owner removal.
+   - Verify automatic ledger/summary publication and coverage before committing. Manual `generate` is available independently, using the selected harness and an exact session ID or literal nonce.
+   - Verify configured-summary coverage and local capture diagnostics. Existing standalone reports are left untouched; interrupted publication recovery is explicit.
    - Stage only reviewed task-owned deliverables and telemetry together. Keep raw transcripts and local capture state out of Git.
 
 ```
@@ -334,84 +250,22 @@ AgenticLens provides a unified command-line interface and an embedded web dashbo
 
 ### 5.1 CLI Subcommands Reference
 
-#### `agentic-lens init`
-Scaffolds `.agenticlens-config.yaml` and `.agenticlens-config.local.yaml` at the repository root. The local file contains only source settings and is Git-ignored.
-- Flags:
-  - `--project-name <NAME>` (Required): Human-readable name of the project.
-  - `--ticket-prefixes <LIST>` (Required): Comma-separated list of ticket prefixes (e.g. `PAY,SEC,OPS`).
-  - `--src-folders <LIST>` (Required): Comma-separated list of monitored source code directories.
-  - `--workspaces <DIR>` (Optional, Default: `workspaces`): Root directory for ticket workspaces.
-  - `--db-path <PATH>` (Optional): Custom path to OpenCode SQLite database.
-  - `--output <FILE>` (Optional, Default: `.agenticlens-config.yaml`): Destination output file.
-  - `--force` (Optional): Overwrite existing configuration file without prompting.
-  - `--dry-run` (Optional): Print generated configuration YAML to stdout without writing to disk.
+Use the [CLI reference](../.agents/skills/agentic-lens-operator/references/cli.md) and the selected release's help for exact arguments. Ordinary native-manager dispatch never installs a missing engine. Installation and self-update are explicit commands with exact approved versions.
+
+| Command | Operation |
+| --- | --- |
+| `init` | Preview/apply explicit reviewed YAML candidates; preserve valid completion values. |
+| `generate` | Exact source extraction and committed Git metrics; requested failures preserve existing publications. |
+| root scan | Read current supported ledgers, report invalid siblings, preserve recorded history without optional sources. |
+| `server --port 8085` | Embedded UI/API on 127.0.0.1; explicit port overrides deliberate default 8085. Invalid/in-use ports fail without probing. |
+| `backfill` | Explicit exact-owner recovery/recomputation; heuristics require opt-in, recompute-Git requires a target. |
+| `migrate --backup` | Existing audited/resumable schema transforms and supported explicit metadata cleanup. |
+| `format` | Representation-only historical/current JSON formatting, without source hydration or schema changes. |
+| `capture status` / `diagnostics` | Read-only installation/state/coverage evidence and bounded continuation. |
 
 #### `agentic-lens generate`
-Ingests session telemetry from OpenCode's SQLite database and git commit history into a workspace ledger.
-- Flags:
-  - `--ticket-id <ID>` (Required): Active ticket identifier.
-  - `--ticket-type <TYPE>` (Required): Conventional commit classification.
-  - `--nonce <STRING>` (Optional): Unique execution nonce for OpenCode session resolution. Must be passed as a directly generated literal token; shell variables (`$NONCE`) must not be used.
-  - `--session-id <ID>` (Optional): Explicit source session ID override.
-  - `--db-path <PATH>` (Optional): OpenCode SQLite path override; see [source selection](#telemetry-source-and-session-selection) for Codex and harness options.
-  - `--ticket-title <TITLE>` (Optional): Title of the ticket.
-  - `--strict-type` (Optional): Fail with error if ticket type does not match conventional taxonomy.
-  - `--json-output <FILE>` (Optional): Destination path for `agentic_metrics.json`.
-  - `--append <FILE>` (Optional): Destination Markdown file for summary table append.
-  - `--anomalies` (Optional): Run anomaly detection rules and record results in output ledger.
-  - `--allow-empty` (Optional): Allow generation when zero git diffs or zero session turns exist.
 
-#### `agentic-lens scan` (or root command)
-Scans workspace directories and displays summary tables of all recorded ticket ledgers.
-- Flags:
-  - `--list` (Optional): Scan and print tabular overview of all discovered ticket workspaces.
-  - `--ticket-id <ID>` (Optional): Filter scan output to a single ticket identifier.
-  - `--workspaces <DIR>` (Optional): Override workspaces directory path.
-  - `--anomalies` (Optional): Display detected anomalies across scanned workspaces.
-  - `--json-output <FILE>` (Optional): Export aggregated scan results as JSON.
-  - `--append <FILE>` (Optional): Append scan results table to a Markdown document.
-
-#### `agentic-lens server`
-Launches the embedded HTTP server and real-time SSE live streaming service.
-- Flags:
-  - `--port <PORT>` (Optional, Default: `8080`): TCP port to bind HTTP server.
-  - `--workspaces <DIR>` (Optional): Override workspaces directory path.
-  - `--db-path <PATH>` (Optional): Override SQLite database path.
-
-#### `agentic-lens version`
-Prints binary version, build metadata, and schema version.
-- Flags:
-  - `--json` (Optional): Output metadata formatted as JSON.
-  - `--short` (Optional): Output version string only.
-
-#### Explicit release installation
-
-Change the shared exact pin as an authorized project change, then use setup download.sh --project PROJECT (native Windows download.ps1 -Project PROJECT). Runtime update performs no installation. Explicit --force repairs only the selected version/platform leaf; native checksum/version/protocol checks and rollback preserve existing working files. Preview owned capture refresh after a pin/template switch; binary installation alone does not establish health.
-
-#### `agentic-lens backfill`
-Batch recomputes git diff metrics, recalculates token costs against updated model pricing, or upgrades schema across historical workspace ledgers.
-- Flags:
-  - `--workspaces <DIR>` (Optional): Directory containing ticket workspaces.
-  - `--ticket-id <ID>` (Optional): Limit backfill to a single ticket.
-  - `--recompute-git` (Optional): Recompute Git code facts from an explicit ref; requires `--code-ref`.
-  - `--code-ref <REF>` (Required with `--recompute-git`): Branch or commit to compare with the configured base branch.
-  - `--recompute-db` (Optional): Re-query OpenCode SQLite database for session turns and tokens.
-  - `--migrate-schema` (Optional): Upgrade legacy ledger files to current schema version.
-  - `--dry-run` (Optional): Simulate backfill operations without modifying disk files.
-  - `--update-summaries` (Optional): Update `SUMMARY.md` tables with recomputed values.
-  - `--force` (Optional): Bypass safety confirmation checks.
-
-#### `agentic-lens migrate`
-Runs stepwise schema migrations across ticket workspace ledgers.
-- Flags:
-  - `--workspaces <DIR>` (Optional): Directory containing ticket workspaces.
-  - `--ticket-id <ID>` (Optional): Limit migration to a specific ticket.
-  - `--target-version <VER>` (Optional): Target schema version to migrate toward.
-  - `--dry-run` (Optional): Preview migrations without modifying files.
-  - `--backup` (Optional): Create `.bak` backup copies before modifying ledgers.
-  - `--update-summaries` (Optional): Refresh Markdown summary tables after migration.
-
----
+Manual `--append` explicitly selects a summary path. Otherwise enabled shared generation.summary writes its filename beside the requested ledger, or in the resolved configured ticket workspace if no ledger path is supplied. Disabled policy writes no summary absent `--append`. Resolve one destination before publication authorization/locks/journals. Preserve user content and idempotent atomic updates; never delete existing summaries automatically.
 
 ### 5.2 Embedded Web Dashboard Views
 
@@ -433,7 +287,7 @@ When running `agentic-lens server --port 8080`, navigate to `http://localhost:80
 - Multi-iteration timeline breaking down SDLC passes, subagent roles, and turn progression.
 - Tool invocation distribution chart detailing tool call frequencies and failure rates.
 - Model usage and cost breakdown (e.g. GPT-4o, Claude 3.5 Sonnet, Gemini Flash).
-- Interactive Artifact Viewer rendering `CONTRACT.md` and `SUMMARY.md` as formatted Markdown with raw view toggles.
+- Interactive Artifact Viewer rendering configured items and titles as Markdown with raw view toggles; an empty items list shows an empty state.
 
 #### 4. Ticket Comparisons (`/comparisons`)
 - Side-by-side comparative analysis of two or more tickets.
@@ -447,21 +301,13 @@ When running `agentic-lens server --port 8080`, navigate to `http://localhost:80
 
 ## 6. Operational Troubleshooting and Best Practices
 
-### 6.1 SQLite Concurrency, Busy Timeouts, and WAL Mode
+### 6.1 SQLite Concurrency and Busy Timeouts
 
-AgenticLens accesses the local OpenCode SQLite database concurrently while OpenCode writes session traces:
-- **Busy Timeouts**: If OpenCode holds an exclusive lock during a database transaction, SQLite queries can experience transient lock contention. AgenticLens mitigates this using a configurable busy timeout handler (`database.busy_timeout_ms`, default 5000 ms).
-- **WAL Mode**: OpenCode operates in SQLite Write-Ahead Logging (WAL) mode, allowing concurrent readers without blocking active writers.
-- **Read-Only Connections**: Keep `database.read_only: true` enabled in `.agenticlens-config.yaml`. This guarantees that AgenticLens opens connections with `SQLITE_OPEN_READONLY`, ensuring zero lock escalation and eliminating the risk of corrupting OpenCode state.
+OpenCode source connections are always read-only. Choose explicit nonnegative shared `database.busy_timeout_ms`: zero means no lock waiting, positive values are the lock-wait budget in milliseconds on every pooled connection. Internal writable capture state is separate. A missing/invalid required source setting fails; unavailable optional hydration preserves persisted ledgers.
 
-### 6.2 Cross-Platform Database Paths with Tilde Expansion
+### 6.2 Explicit Paths and Home Expansion
 
-The OpenCode SQLite database location varies across operating systems. Configure `database.path` accordingly:
-- **Linux**: `~/.local/share/opencode/opencode.db`
-- **macOS**: `~/Library/Application Support/opencode/opencode.db`
-- **Windows**: `%APPDATA%\opencode\opencode.db` (or `C:\Users\<USER>\AppData\Roaming\opencode\opencode.db`)
-
-AgenticLens automatically performs tilde expansion (`~`) on Linux and macOS, resolving paths to the user home directory. If running in a containerized or CI environment, set the database path via command-line flag: `--db-path /path/to/opencode.db`.
+Set the actual database/home path in the selected local file or a supported CLI override. Explicit `~/` expands to the current user's home; ordinary environment-variable strings are not path discovery. Configured relative paths belong to their owning file; CLI paths to invocation cwd. Resolve symlinks before later `..`. Missing/invalid/unavailable selection never tries a conventional home path or another harness. Quote paths with spaces.
 
 ### 6.3 Executable Permissions and macOS Quarantine Flags
 
@@ -473,30 +319,13 @@ When installing precompiled binaries manually on Unix systems (Linux and macOS):
   ```
 - Store the binary in the selected installation directory (such as `./bin/` or `.agents/skills/agentic-lens-operator/bin/`). The repository owner decides what to track or ignore; installation/repair preserves that policy.
 
-### 6.4 Git Upstream Base Branch Inference and Fallback Probing
+### 6.4 Explicit Git Base and Calculation Failures
 
-When extracting commit diff metrics, AgenticLens compares the active branch against an upstream base branch:
-- By default, if `code_metrics.base_branch` is omitted or empty, AgenticLens automatically probes:
-  1. `origin/HEAD`
-  2. `origin/main`
-  3. `main`
-  4. `origin/master`
-  5. `master`
-- In CI or detached HEAD environments where remote tracking branches may not be fetched, explicitly specify the base branch in `.agenticlens-config.yaml`:
-  ```yaml
-  code_metrics:
-    base_branch: origin/main
-  ```
-- Ensure git fetch includes the base branch in CI pipelines (`git fetch origin main`).
+Require shared `code_metrics.base_branch`, chosen and approved during setup. It must resolve in the target repository for fresh calculation; measurement does not fetch or try other branches. Fetch/integrate deliberately in the project's delivery workflow. A requested failed calculation preserves existing ledger/summary bytes and does not publish cached or zero metrics. Recorded-ledger reads need no Git history availability.
 
 ### 6.5 Workspace Directory Path Resolution
 
-AgenticLens resolves workspace directories relative to the current working directory or git repository root:
-- Paths with spaces (e.g. `my workspaces/ticket 1`) are fully supported by wrapping arguments in quotes:
-  ```bash
-  agentic-lens --workspaces "my workspaces"
-  ```
-- Always verify that the configured `workspaces.dir` in `.agenticlens-config.yaml` matches the directory used in CLI commands and agent prompts.
+Explicit `--workspaces` overrides shared `workspaces.dir`; absent/invalid/unavailable required roots fail without conventional directory guesses. Relative CLI paths belong to invocation cwd and configured paths to their shared file. A foreign target supplies its own required project policy. Explicit portable formatting can operate on its selected workspace without unrelated source/capture policy. Keep agent instructions aligned with the actual configured root.
 
 ### 6.6 Worktrees and Container/Host Platforms
 
@@ -510,14 +339,14 @@ See [architecture and subsystem responsibilities](../ARCHITECTURE.md) and the ma
 
 ### A.2 Native Manager and Self-Contained Engine
 
-Go 1.23+ builds with `CGO_ENABLED=0`; `modernc.org/sqlite` needs no C compiler or shared C libraries. Vite compiles the TypeScript dashboard into `web/dist`, embedded via `embed.FS`. The resulting executable provides both CLI and web UI without external runtimes.
+Go 1.23+ builds with `CGO_ENABLED=0`; `modernc.org/sqlite` needs no C compiler or shared C libraries. Vite compiles the TypeScript dashboard into `web/dist`, embedded via `embed.FS`. The standalone engine provides CLI and embedded web UI without external runtimes; the separate native manager handles installation/routing.
 
 ### A.3 Local Immutable Telemetry Fact Ledgers (`agentic_metrics.json`)
 
 Rather than transmitting proprietary code or execution telemetry to external cloud services, AgenticLens operates entirely locally:
 - Telemetry facts are captured per ticket or task in isolated workspace directories: `workspaces/<TICKET_ID>/agentic_metrics.json`.
 - Schema-v4 and schema-v5 sessions own invocation records, per-session tool summaries, session-specific anomaly summaries, and sparse direct-evidence events. Cross-session anomaly summaries (including high tool failure rates) live at ticket level without session IDs or event rows. Metrics are derived from summaries and tool totals, not by rerunning sequence detectors over sparse evidence. When OpenCode hydration is unavailable, the timeline shows committed anomaly evidence only; full Codex event hydration is not provided. Migration reports and removes legacy aggregate tool rows without reliable session attribution; re-extract from OpenCode/Codex source logs to recover those counts when available.
-- Each ledger is an immutable JSON document recording session identifiers, wall-clock duration, token volume (input, output, cache-read, and cache-write tokens), financial costs calculated from precise model pricing matrices, turn counts, tool invocation distributions, error rates, and git commit diff volumes (insertions, deletions, and affected files).
+- Each ledger is an immutable JSON document recording session identifiers, wall-clock duration, token volume (input, output, cache-read, and cache-write tokens), financial cost evidence where known, preserving unknown cost explicitly, turn counts, tool invocation distributions, error rates, and git commit diff volumes (insertions, deletions, and affected files).
 - These ledgers are committed directly to version control alongside code deliverables, establishing an auditable, repository-native history of agent engineering metrics with zero cloud egress.
 
 #### Recovering unscoped tool totals
@@ -542,21 +371,21 @@ Use `--source opencode` and repeat with each OpenCode root session ID for OpenCo
 ### A.4 Real-Time Live Observability and SSE Event Streaming
 
 In addition to post-turn historical ledgers, AgenticLens provides live observability of active agent sessions:
-- The embedded server continuously polls the local OpenCode SQLite database at configurable intervals (`poll_interval_ms`, default 2000 ms).
-- Active sessions are identified based on recent turn activity within a sliding time window (`active_threshold_seconds`, default 300 seconds).
+- The embedded server polls the local OpenCode SQLite database at the explicit positive `live.poll_interval_ms` cadence. Dashboard REST fallback polling uses the same configured interval; it does not select another cadence when policy is missing or invalid.
+- Active sessions are identified based on recent turn activity within a sliding time window (`live.active_threshold_seconds`, explicit positive seconds).
 - Telemetry events, tool calls, and status updates are broadcast to connected browsers via Server-Sent Events (SSE) through the `/api/live/stream` endpoint.
 - Live traces use a source-revision cache to reuse unchanged snapshots, providing visibility into subagent handoffs, prompt dispatches, and tool outputs.
 
 ### A.5 Automated Anomaly Detection
 
 AgenticLens continuously analyzes active sessions and historical ledgers against configurable statistical thresholds to detect engineering inefficiencies:
-- **Session Stalls**: Sessions that remain open with no new turn activity beyond a configurable duration (`stall_threshold_seconds`, default 120 seconds).
+- **Session Stalls**: Sessions that remain open with no new turn activity beyond a configurable duration (`anomaly_thresholds.stall_threshold_seconds`, explicit positive seconds).
 - **High Tool Error Rates**: The configuration records a minimum tool-call count, warning ratio (`error_rate_threshold`) and critical ratio (`error_rate_critical_threshold`). Ratios are explicit values between zero and one; configuration generation supplies initial values, while runtime loading requires the fields to be present.
-- **Context Window Exhaustion**: Sessions where cumulative prompt and generation tokens reach or exceed a critical percentage of model capacity (`context_exhaustion_pct`, default 0.85 or 85%).
+- **Context Ceilings and Token Usage Surge**: Explicit absolute token ceilings and turn-usage/context-growth thresholds drive existing detectors; no model capacity or time rate is guessed.
 
 ### A.6 Context Window Health States
 
-Context saturation severely impacts model reasoning quality, instruction adherence, and cost. AgenticLens classifies context health into four discrete states based on utilization percentage:
+Context saturation severely impacts model reasoning quality, instruction adherence, and cost. AgenticLens classifies context health into display states based on utilization against the explicit configured denominator. Without a denominator, the projection is **UNAVAILABLE** and preserves recorded facts. These bands do not infer model capacity:
 - **HEALTHY** (0% to 50% utilization): Optimal operating envelope. The model retains complete instruction adherence and context fidelity with minimal compaction pressure.
 - **ELEVATED** (50% to 75% utilization): Normal working range for complex implementations. The agent operates effectively, but monitoring is recommended.
 - **BLOATED** (75% to 85% utilization): High context saturation. Model reasoning degradation and prompt compaction risks increase significantly.
@@ -567,7 +396,7 @@ Context saturation severely impacts model reasoning quality, instruction adheren
 
 Installed lifecycle callbacks hand off to a bounded native worker; contributing agents only answer the explicit session-ticket binding request, including the user-supplied human-readable title (`--ticket-title`) and optional conventional type (`--ticket-type`). Missing titles remain pending because the current schema requires them. No contributing agent needs to run `generate`. The command remains available for manual recovery. Automatic publication uses the same canonical-output lock as manual generation, before reading baseline or source facts.
 
-Automatic capture selects one whole `.agenticlens-config.local.yaml`: worktree-local if present, otherwise base-local through Git metadata. It never inherits missing worktree-local keys from base-local/shared capture settings. Explicit boolean `telemetry.capture.enabled` and valid `state_dir` are required; numeric defaults remain bounded. Relative state/source paths resolve from the selected local file. Shared YAML must exist in the active checkout. Native Codex user hooks route validated session context through the installed native manager and freeze no project/source/state path. Disabled callbacks validate configuration, then avoid capture-only I/O. No CI settings or harness trust changes are installed.
+Automatic capture selects one whole `.agenticlens-config.local.yaml`: worktree-local if present, otherwise base-local through Git metadata. It never inherits missing worktree-local keys from base-local/shared capture settings. Explicit boolean `telemetry.capture.enabled` and valid `state_dir` are required; consumed timings/budgets require explicit approved values with the bounds in the configuration reference. Relative state/source paths resolve from the selected local file. Shared YAML must exist in the active checkout. Native Codex user hooks route validated session context through the installed native manager and freeze no project/source/state path. Disabled callbacks validate configuration, then avoid capture-only I/O. No CI settings or harness trust changes are installed.
 
 ```yaml
 telemetry:
@@ -582,10 +411,9 @@ telemetry:
     max_sessions: 256
     max_source_bytes: 67108864
     commit_warning: true
-    summary: true
 ```
 
-Base-local setup requires explicit enablement, source/source path and state choices; `~/.agenticlens/state` is a recommended state location, not a runtime fallback. `init --local-only` fills only missing supplied choices and preserves valid existing values. Worktree-local files remain user-managed; setup from a linked worktree cannot create/copy them or write base settings. Missing/invalid automatic policy errors before mutation. Discovery does not create state. Relative paths belong to the selected local file directory; `~` expands using the executing user home.
+The preceding numeric/path values are example choices requiring approval, not presets. Base-local setup requires explicit capture enable/disable, source/source path, state and consumed timing/budget choices. `init --local-only` fills only missing supplied choices and preserves valid existing values. Worktree-local files remain user-managed; setup from a linked worktree cannot create/copy them or write base settings. Missing/invalid automatic policy errors before mutation. Discovery does not create state. Relative paths belong to the selected local file directory; `~` expands using the executing user home.
 
 The shared database is `state_dir/projects/<configured-project-name>/registry.db`. The namespace comes from required `project_name`; unsafe literal names use the supported reversible representation, never a checkout-derived project hash. Exact name metadata rejects filesystem aliases/collisions. Worktrees sharing that name concurrently use separate exact-worktree records, bindings, source ownership, publication requests/cursors and worker coordination. For the same ticket, publication may retain unchanged committed history from a verified worktree of the same actual Git repository. New capture and workers remain isolated and never acknowledge another worktree's pending work. A shared project name alone grants no history access.
 
@@ -599,7 +427,7 @@ The worker uses durable request generations and acknowledges only the generation
 
 The ledger uses schema v6 at `<workspaces.dir>/<ticket>/agentic_metrics.json`. Top-level `completed_at` is the observability snapshot finalization boundary, equal to artifact `updated_at`; it does not assert source-session termination or ticket merge. Source invocation completion timestamps remain unchanged. Each owner has its own source-read checkpoint; there is no simultaneous source-read guarantee. Source failures preserve accepted facts and visibly degrade coverage.
 
-`detailed_report` is deprecated/no-effect. Publication writes ledger/SUMMARY.md; durable local database diagnostics retain reconciliation/publication evidence. Old sidecars remain obsolete until explicitly removed.
+Publication uses shared generation.summary policy. Durable local diagnostics retain reconciliation/publication evidence; standalone report files are ignored and preserved.
 
 ### Explicit installation consistency and completion scope
 
@@ -619,15 +447,15 @@ generation:
     anomalies: true
 ```
 
-Every omitted member defaults to true. Explicit false disables that category; values must be actual booleans, not null, strings or numbers. The public key is `delegations`; there is no `task_links` alias. Invalid settings fail before ledger or summary replacement.
+All three members must be explicitly configured before generation; missing/null/wrong-type members fail. Explicit false disables that category; values must be actual booleans, not null, strings or numbers. The public key is `delegations`; there is no `task_links` alias. Invalid settings fail before ledger or summary replacement.
 
-Configuration discovery searches upward within the project boundary and selects `.agenticlens-config.yaml`, `.agenticlens-config.yml`, then `.agenticlens-config.json` at each directory. These are alternatives, not merged files. The selected shared file overlays enabled defaults per member. `.agenticlens-config.local.yaml` retains its machine-source/capture override whitelist and cannot override these generation settings. No environment or CLI override exists for them.
+Shared YAML discovery respects project boundaries and rejects two canonical suffixes in one directory; values are explicit, without member substitutions. `.agenticlens-config.local.yaml` retains its machine-source/capture override whitelist and cannot override these generation settings. No environment or CLI override exists for them.
 
-Disabled categories are absent from saved JSON, including retained sessions from unavailable or other harness sources. New ledger/API output contains no `generation_policy`, `anomaly_availability` or replacement persisted reason marker. Field presence carries the contract for skills, delegations and anomalies at every canonical owner: omitted means not recorded, `[]` means a complete supported inspection recorded no rows, and values mean recorded facts. Explicit null arrays are invalid. Legacy AL-66 marker shapes remain validated read-compatible at the canonical DTO boundary but are never emitted again and do not justify filling in missing arrays. There is no schema version bump or bulk rewrite.
+Disabled categories do not authorize deleting unavailable, partial or other-harness owners' recorded facts. Complete successful owner refresh remains the authority boundary; no new analysis is performed for deliberately disabled categories. New ledger/API output contains no `generation_policy`, `anomaly_availability` or replacement persisted reason marker. Field presence carries the contract for skills, delegations and anomalies at every canonical owner: omitted means not recorded, `[]` means a complete supported inspection recorded no rows, and values mean recorded facts. Explicit null arrays are invalid. Former generation-policy/availability metadata is rejected by ordinary reads and cleaned only through existing explicit migrate/backfill preparation, preserving contradiction checks and absent/empty categories. There is no schema version bump or bulk rewrite.
 
 Ordinary execution, tool errors, child identities, tokens, costs and code metrics remain available. The managed Markdown section is replaced without stale disabled values or changes to user-authored prose. Current `generate --anomalies` reports disabled when `generation.metrics.anomalies` is false; it never re-enables analysis or persistence. The running command may explain its effective settings. Later readers use field presence and say not recorded/partial; they cannot distinguish disabled from unavailable or unsupported evidence and do not infer today's configuration for historical records.
 
-Regeneration intentionally removes disabled categories from that target's retained history. Re-enabling can recover available source-backed facts; it cannot recover omitted facts after the original sources become unavailable. Complete supported snapshots establish empty arrays or values only for their exact owners. Missing, partial or other-source owners keep their existing field presence and known facts. Root/group anomaly analysis requires complete coverage of its required owners, independently of session-local evidence; cached known group findings survive unavailable children. Reads and non-source writes preserve absence rather than deriving successful zero or healthy analysis from ordinary tool counts. Partial known findings remain visible, and incomplete population rates are omitted.
+Re-enabling can recover source-backed observations where the original source remains available. Unavailable recorded history remains preserved; omission never proves an empty successful inspection. Complete supported snapshots establish empty arrays or values only for their exact owners. Missing, partial or other-source owners keep their existing field presence and known facts. Root/group anomaly analysis requires complete coverage of its required owners, independently of session-local evidence; cached known group findings survive unavailable children. Reads and non-source writes preserve absence rather than deriving successful zero or healthy analysis from ordinary tool counts. Partial known findings remain visible, and incomplete population rates are omitted.
 
 These settings apply to manual and automatic generate only: they do not rewrite other ledgers, suppress live trace collection, redact raw text, globally filter the dashboard, or change explicit backfill defaults. Explicit backfill may replace successfully complete supported owners, including recorded-empty results, while preserving missing/partial/other-harness owners. Fleet tool reliability remains visible independently of anomaly recording.
 
@@ -641,7 +469,7 @@ generation:
     provisional_threshold_seconds: 180
 ```
 
-The default is 180 seconds, zero disables these diagnostics, and a positive integer overrides the threshold. Negative, fractional, quoted, null and unrepresentable values are invalid. Configuration discovery and the local override whitelist follow the generation settings above; there is no CLI or environment override. This threshold is independent of stall and live activity settings.
+The explicit nonnegative integer is required when manual feedback is used: zero disables diagnostics, and positive values set the threshold. Negative, fractional, quoted, null and unrepresentable values are invalid. Configuration discovery and the local override whitelist follow the generation settings above; there is no CLI or environment override. This threshold is independent of stall and live activity settings.
 
 Fresh native interval age is compared before rounding: 179999ms does not qualify, and 180000ms does. Individually known short intervals produce no feedback when only their sum reaches the threshold. Retained or unavailable native evidence may instead produce qualified invocation-subtotal guidance. Each diagnostic identifies the owning source/session/invocation, and source-open evidence does not establish that the invoking caller owns the interval or that a process remains executing.
 
@@ -651,7 +479,7 @@ Installed generic command transports do not currently verify the caller's exact 
 
 Codex uses `capture install-user` in the effective user home; `uninstall-user` removes only unchanged owned groups and retains state. Installation is additive and journaled. Explicit `--migrate-legacy-repo <ORIGINAL_CHECKOUT>` removes unchanged owned project callbacks while preserving state; unknown/modified callbacks error and remain untouched. No per-worktree installation manifest is required by this path. Legacy OpenCode project-plugin commands remain separate until its global integration is delivered.
 
-Shared `agenticlens.version` is always an exact required fallback pin. Optional shared `agenticlens.binary_dir` prefers valid host output `agentic-lens-engine-GOOS-GOARCH[.exe]` in that directory. Missing output selects the exact already installed cache; invalid present output errors without fallback. Local files cannot override these selectors. Workers retain immutable executable bytes for later children through normal exit; new invocations select the current preferred build. Status exposes local configuration origin and active/preferred identity.
+Shared `agenticlens.version` is an exact required pin. Configured `agenticlens.binary_dir` requires valid host output `agentic-lens-engine-GOOS-GOARCH[.exe]`; missing/invalid selected output fails. Absent development mode deliberately selects the exact pinned installed engine. Local files cannot override these selectors. Workers retain immutable executable bytes for later children through normal exit; new invocations select the current preferred build. Status exposes local configuration origin and active/preferred identity.
 
 The native manager owns installation and routing. `agentic-lens install <EXACT_ENGINE_VERSION>` provisions an engine; `agentic-lens self-update --version <EXACT_MANAGER_VERSION>` explicitly updates the installed manager without editing any project pin. Both verify staged artifacts, preserve modified/unowned destinations and recover interrupted replacements under a destination lease. Codex hook installation only writes owned hooks and their receipt; it does not copy an engine into a dispatcher path. Hook removal retains the installed manager and engine cache.
 

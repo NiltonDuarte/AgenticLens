@@ -260,7 +260,7 @@ func codexHook(input io.Reader, output, diagnostic io.Writer) error {
 	if err != nil {
 		return err
 	}
-	if shared == "" || filepath.Base(shared) != ".agenticlens-config.yaml" {
+	if shared == "" {
 		_, err := io.WriteString(output, "{}\n")
 		return err
 	}

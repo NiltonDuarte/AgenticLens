@@ -156,19 +156,12 @@ func assertRelocationContinuations(t *testing.T, store *Store, project string) {
 
 func writeRelocationConfig(t *testing.T, project, state string) {
 	t.Helper()
-	data, err := adaptersconfig.GenerateDefaultYAMLForVersion("v9.8.7", "Shared", "workspaces", "", []string{"src"}, []domain.TicketPrefix{{Prefix: "T"}})
+	data, err := fixtureSharedYAML(t, "Shared", "workspaces")
 	if err != nil {
 		t.Fatal(err)
 	}
 	path := filepath.Join(project, ".agenticlens-config.yaml")
 	if err = os.WriteFile(path, data, 0600); err != nil {
-		t.Fatal(err)
-	}
-	update, err := adaptersconfig.PrepareCaptureConfigUpdate(path, state)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err = adaptersconfig.WriteCaptureConfigUpdate(path, update); err != nil {
 		t.Fatal(err)
 	}
 	local := fmt.Sprintf("telemetry:\n  capture:\n    enabled: true\n    state_dir: %q\n", state)
@@ -447,7 +440,7 @@ func TestAdministrativeRelocationGuardReadsIncompleteConfigWithoutLoadFallback(t
 	lines := strings.Split(string(body), "\n")
 	kept := lines[:0]
 	for _, line := range lines {
-		if !strings.HasPrefix(strings.TrimSpace(line), "state_dir:") {
+		if !strings.HasPrefix(strings.TrimSpace(line), "base_branch:") {
 			kept = append(kept, line)
 		}
 	}
@@ -754,6 +747,13 @@ func TestRelocationRejectsReplacedDestinationOwnerAtEveryReservationBoundary(t *
 			if err = os.WriteFile(configPath, body, 0600); err != nil {
 				t.Fatal(err)
 			}
+			local, err := os.ReadFile(filepath.Join(project+"-original", ".agenticlens-config.local.yaml"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err = os.WriteFile(filepath.Join(project, ".agenticlens-config.local.yaml"), local, 0600); err != nil {
+				t.Fatal(err)
+			}
 			if normal, e := OpenProject(target, project); e == nil {
 				normal.Close()
 				t.Fatal("negative ownership control accepted replacement")
@@ -864,15 +864,10 @@ func TestRelocationReservationRefusesPriorDestinationWorkBeforeRetiringSource(t 
 func TestAdministrativeRelocationGuardUsesCanonicalConfiguredName(t *testing.T) {
 	for _, input := range []struct {
 		label, projectField, expected string
-		json                          bool
 	}{
-		{"plain", "project_name: SpacedName", "SpacedName", false},
-		{"spaced", "project_name: ' SpacedName '", "SpacedName", false},
-		{"alias", "shared_label: &label ' SpacedName '\nproject_name: *label", "SpacedName", false},
-		{"merge", "shared_defaults: &defaults\n  project_name: ' SpacedName '\n<<: *defaults", "SpacedName", false},
-		{"numeric-scalar", "project_name: 12345", "12345", false},
-		{"explicit-string-scalar", "project_name: !!str 12345", "12345", false},
-		{"json-case-insensitive", "", "SpacedName", true},
+		{"plain", "project_name: SpacedName", "SpacedName"},
+		{"spaced", "project_name: ' SpacedName '", "SpacedName"},
+		{"explicit-string-scalar", "project_name: !!str 12345", "12345"},
 	} {
 		t.Run(input.label, func(t *testing.T) {
 			root := t.TempDir()
@@ -886,36 +881,10 @@ func TestAdministrativeRelocationGuardUsesCanonicalConfiguredName(t *testing.T) 
 			if err != nil {
 				t.Fatal(err)
 			}
-			if input.json {
-				cfg, loadErr := adaptersconfig.Load(project)
-				if loadErr != nil {
-					t.Fatal(loadErr)
-				}
-				cfg.ProjectName = " SpacedName "
-				body, err = json.Marshal(cfg)
-				if err != nil {
-					t.Fatal(err)
-				}
-				body = bytes.Replace(body, []byte("\"project_name\":"), []byte("\"PROJECT_NAME\":"), 1)
-				if err = os.Remove(path); err != nil {
-					t.Fatal(err)
-				}
-				path = filepath.Join(project, ".agenticlens-config.json")
-			} else {
-				if !bytes.Contains(body, []byte("project_name: Shared")) {
-					t.Fatal("fixture project field is missing")
-				}
-				body = bytes.Replace(body, []byte("project_name: Shared"), []byte(input.projectField), 1)
+			if !bytes.Contains(body, []byte("project_name: Shared")) {
+				t.Fatal("fixture project field missing")
 			}
-			if input.label == "alias" || input.label == "merge" || input.label == "explicit-string-scalar" {
-				// Legacy unversioned readers support these YAML forms. The
-				// strict pinned entrypoint profile intentionally rejects them.
-				pin := []byte("agenticlens:\n  version: v9.8.7\n")
-				if !bytes.Contains(body, pin) {
-					t.Fatal("fixture release block missing")
-				}
-				body = bytes.Replace(body, pin, nil, 1)
-			}
+			body = bytes.Replace(body, []byte("project_name: Shared"), []byte(input.projectField), 1)
 			if err = os.WriteFile(path, body, 0600); err != nil {
 				t.Fatal(err)
 			}
@@ -955,13 +924,13 @@ func TestAdministrativeRelocationGuardUsesCanonicalConfiguredName(t *testing.T) 
 			if _, err = os.Stat(newBase); !errors.Is(err, os.ErrNotExist) {
 				t.Fatal("guard created the proposed state location")
 			}
-			// Raw repair must still find the same name when required capture
-			// configuration is absent; no full operational Load is permitted.
-			if !input.json {
+			// Raw repair still finds the name without required code-metric policy;
+			// it must not depend on a full operational configuration load.
+			{
 				lines := strings.Split(string(body), "\n")
 				kept := lines[:0]
 				for _, line := range lines {
-					if !strings.HasPrefix(strings.TrimSpace(line), "state_dir:") {
+					if !strings.HasPrefix(strings.TrimSpace(line), "base_branch:") {
 						kept = append(kept, line)
 					}
 				}
@@ -976,6 +945,43 @@ func TestAdministrativeRelocationGuardUsesCanonicalConfiguredName(t *testing.T) 
 				if err != nil || !bytes.Equal(after, incomplete) {
 					t.Fatal("raw name check rewrote incomplete configuration")
 				}
+			}
+		})
+	}
+}
+
+func TestAdministrativeRelocationRejectsUnsupportedNameShapesWithoutWrites(t *testing.T) {
+	for _, field := range []string{
+		"label: &label SpacedName\nproject_name: *label",
+		"defaults: &defaults\n  project_name: SpacedName\n<<: *defaults",
+		"project_name: 12345",
+	} {
+		t.Run(field, func(t *testing.T) {
+			project := t.TempDir()
+			oldBase := t.TempDir()
+			newBase := filepath.Join(t.TempDir(), "not-created")
+			writeRelocationConfig(t, project, oldBase)
+			path := filepath.Join(project, ".agenticlens-config.yaml")
+			body, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			body = bytes.Replace(body, []byte("project_name: Shared"), []byte(field), 1)
+			if err = os.WriteFile(path, body, 0600); err != nil {
+				t.Fatal(err)
+			}
+			if _, err = adaptersconfig.Load(project); err == nil {
+				t.Fatal("unsupported typed name accepted by operational reader")
+			}
+			if err = CheckStateRelocation(project, oldBase, newBase); err == nil {
+				t.Fatal("unsupported name bypassed maintenance validation")
+			}
+			after, err := os.ReadFile(path)
+			if err != nil || !bytes.Equal(after, body) {
+				t.Fatal("rejected name changed configuration")
+			}
+			if _, err = os.Stat(newBase); !errors.Is(err, os.ErrNotExist) {
+				t.Fatal("rejected name allocated a new state directory")
 			}
 		})
 	}

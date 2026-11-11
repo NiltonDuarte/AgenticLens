@@ -29,8 +29,13 @@ func TestDevelopmentSelectionPrefersValidHostOutputAndRejectsInvalidPresent(t *t
 	if err != nil {
 		t.Fatal(err)
 	}
-	if selected, err := entry.NativePath(); err != nil || selected != pinned {
-		t.Fatalf("absent development did not select exact cache: %s %v", selected, err)
+	if selected, err := entry.NativePath(); err == nil {
+		t.Fatalf("missing configured development output selected %s", selected)
+	}
+	installed := entry
+	installed.BinaryDir = ""
+	if selected, err := installed.NativePath(); err != nil || selected != pinned {
+		t.Fatalf("explicit installed mode: %s %v", selected, err)
 	}
 	source := filepath.Join(root, "fixture.go")
 	program := "package main\nimport (\"fmt\";\"os\";\"strings\")\nfunc main(){switch strings.Join(os.Args[1:],\" \"){case \"capture protocol\":fmt.Println(\"3\");case \"engine protocol\":fmt.Println(\"1\");case \"version --json\":fmt.Println(`{\"version\":\"v0.0.0-development\",\"commit\":\"actual-dev\",\"build_date\":\"fixture\"}`);default:os.Exit(2)}}\n"

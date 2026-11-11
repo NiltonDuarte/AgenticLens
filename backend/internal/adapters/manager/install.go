@@ -56,13 +56,6 @@ func selfUpdate(args []string, output io.Writer) error {
 	if err != nil {
 		return err
 	}
-	if runtime.GOOS == "windows" {
-		if _, err := os.Stat(path); err == nil {
-			return errors.New("updating an existing Windows manager requires closing it and installing the downloaded manager manually; current installation preserved")
-		} else if !errors.Is(err, os.ErrNotExist) {
-			return err
-		}
-	}
 	staged, clean, err := stageArtifact(*version, "agentic-lens", *local, *checksum)
 	if err != nil {
 		return err

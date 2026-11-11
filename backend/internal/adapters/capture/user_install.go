@@ -33,19 +33,6 @@ type userInstallation struct {
 	Groups   []OwnedGroup `json:"groups"`
 }
 
-// EffectiveCodexHome is the harness configuration home, independently of any
-// project's configured telemetry store. Installation never freezes that store.
-func EffectiveCodexHome() (string, error) {
-	if value := os.Getenv("CODEX_HOME"); value != "" {
-		return absolute(value)
-	}
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(home, ".codex"), nil
-}
-
 // InstallUserCodex owns only unchanged groups in the effective user hooks file.
 // The ownership receipt is machine-wide; adoption needs no per-project receipt.
 func InstallUserCodex(ctx context.Context, options UserInstallOptions) (InstallResult, error) {

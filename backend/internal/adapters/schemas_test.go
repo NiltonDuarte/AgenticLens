@@ -1552,8 +1552,8 @@ func TestFullSourceAnomaliesSurviveLeanPersistenceAndPartialRefresh(t *testing.T
 	}
 	ledger := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticket, TicketTitle: &title, Sessions: []domain.SessionFact{owner}}
 	source := domain.SourceEvents{Events: events, CompleteSessionIDs: []string{"owner"}}
-	expected := domain.RefreshAnomalySummariesFromSource(ledger, source)
-	ledger, err := domain.PersistSourceAnomalySummaries(ledger, source)
+	expected := domain.RefreshAnomalySummariesFromSource(ledger, source, fixtureExplicitAnomalyPolicy(t))
+	ledger, err := domain.PersistSourceAnomalySummaries(ledger, source, fixtureExplicitAnomalyPolicy(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1756,109 +1756,73 @@ func TestRetainedDraftDurationNormalizesWithoutMutatingBaseline(t *testing.T) {
 	}
 }
 
-func TestCurrentLedgerGenerationPolicyReadBoundary(t *testing.T) {
-	for _, tc := range []struct {
-		name, policy string
-		valid        bool
-		wantCause    string
-	}{
-		{"historical_absent", "", true, ""},
-		{"all_enabled", `,"generation_policy":{"skills":true,"delegations":true,"anomalies":true}`, true, ""},
-		{"all_disabled", `,"generation_policy":{"skills":false,"delegations":false,"anomalies":false}`, true, ""},
-		{"null", `,"generation_policy":null`, false, "generation_policy requires exactly"},
-		{"partial", `,"generation_policy":{"skills":false}`, false, "generation_policy requires exactly"},
-		{"wrong_type", `,"generation_policy":{"skills":false,"delegations":"false","anomalies":false}`, false, "generation_policy.delegations must be a boolean"},
-		{"retired_spelling", `,"generation_policy":{"skills":false,"task_links":false,"anomalies":false}`, false, "generation_policy.delegations must be a boolean"},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			raw := `{"schema_version":6,"ticket_id":"TEST-POLICY","sessions":[{"id":"owner","source":"codex","user":"tester","invocations":[],"tools":[]}]` + tc.policy + `}`
-			if tc.name != "all_disabled" {
-				raw = strings.Replace(raw, `"tools":[]`, `"tools":[],"anomalies":[]`, 1)
-			}
-			existing, err := adapters.DecodeExistingFactLedger([]byte(raw))
-			if (err == nil) != tc.valid {
-				t.Fatalf("valid=%t, decode error=%v", tc.valid, err)
-			}
-			if !tc.valid && !strings.Contains(err.Error(), tc.wantCause) {
-				t.Fatalf("rejected for unrelated cause; want %q, got %v", tc.wantCause, err)
-			}
-			if tc.valid && existing == nil {
-				t.Fatal("valid portable ledger unavailable")
-			}
-			if tc.valid {
-				if existing.TicketID == nil || *existing.TicketID != "TEST-POLICY" || len(existing.Sessions) != 1 || existing.Sessions[0].ID != "owner" {
-					t.Fatalf("compatible metadata changed recorded identity: %+v", existing)
-				}
-				if (existing.Sessions[0].Anomalies == nil) != (tc.name == "all_disabled") {
-					t.Fatal("compatible policy changed omitted versus recorded-empty anomalies")
-				}
-				var dto adapters.AgenticFactLedgerDTO
-				if err := json.Unmarshal([]byte(raw), &dto); err != nil {
-					t.Fatal(err)
-				}
-				rewritten, err := json.Marshal(dto)
-				if err != nil {
-					t.Fatal(err)
-				}
-				if bytes.Contains(rewritten, []byte(`"generation_policy"`)) || bytes.Contains(rewritten, []byte(`"anomaly_availability"`)) {
-					t.Fatalf("read-compatible metadata re-emitted: %s", rewritten)
-				}
-				if err := adapters.ValidateRuntimeFactLedger(rewritten); err != nil {
-					t.Fatalf("metadata-free output rejected: %v", err)
-				}
-			}
-		})
+func TestCurrentLedgerRejectsFormerGenerationMetadata(t *testing.T) {
+	for _, fields := range []string{`"generation_policy":{},`, `"generation_policy":null,`, `"generation_policy":{"skills":true,"delegations":true,"anomalies":true},`, `"generation_policy":{"skills":false,"delegations":false,"anomalies":false},`} {
+		raw := []byte(`{"schema_version":6,"ticket_id":"T-01",` + fields + `"sessions":[{"id":"owner","source":"codex","user":"remote","invocations":[],"tools":[]}]}`)
+		if _, err := adapters.DecodeExistingFactLedger(raw); err == nil || !strings.Contains(err.Error(), "generation_policy") {
+			t.Fatalf("ordinary decoder accepted former metadata: %v", err)
+		}
+		if err := adapters.ValidateRuntimeFactLedger(raw); err == nil {
+			t.Fatal("ordinary validator accepted former metadata")
+		}
+	}
+	for _, fields := range []string{`,"anomaly_availability":"unavailable"`, `,"anomaly_availability":null`, `,"anomaly_availability":"unavailable","anomalies":[]`} {
+		raw := []byte(`{"schema_version":6,"ticket_id":"T-01","sessions":[{"id":"owner","source":"codex","user":"remote","invocations":[],"tools":[]` + fields + `}]}`)
+		if _, err := adapters.DecodeExistingFactLedger(raw); err == nil || !strings.Contains(err.Error(), "anomaly_availability") {
+			t.Fatalf("ordinary decoder accepted former availability: %v", err)
+		}
+		if err := adapters.ValidateRuntimeFactLedger(raw); err == nil {
+			t.Fatal("ordinary validator accepted former availability")
+		}
 	}
 }
 
-func TestCurrentLedgerUnavailableAnomalyBoundary(t *testing.T) {
+func TestExplicitFormerMetadataCleanupPreservesValidationAndPresence(t *testing.T) {
 	for _, tc := range []struct {
-		name, fields string
-		valid        bool
-		wantCause    string
+		name, root, owner string
+		valid             bool
+		wantCause         string
+		empty             bool
 	}{
-		{"omitted_unavailable", `,"anomaly_availability":"unavailable"`, true, ""},
-		{"unknown_marker", `,"anomaly_availability":"missing"`, false, "anomaly_availability must be unavailable"},
-		{"null_marker", `,"anomaly_availability":null`, false, "anomaly_availability must be unavailable"},
-		{"boolean_marker", `,"anomaly_availability":false`, false, "anomaly_availability must be unavailable"},
-		{"contradictory_empty", `,"anomaly_availability":"unavailable","anomalies":[]`, false, "unavailable analysis requires omitted anomalies"},
-		{"contradictory_null", `,"anomaly_availability":"unavailable","anomalies":null`, false, "anomalies must be an array"},
-		{"unmarked_null", `,"anomalies":null`, false, "anomalies must be an array"},
-		{"unmarked_measured_empty", `,"anomalies":[]`, true, ""},
+		{"absent", "", "", true, "", false},
+		{"enabled", `,"generation_policy":{"skills":true,"delegations":true,"anomalies":true}`, `,"anomalies":[]`, true, "", true},
+		{"disabled", `,"generation_policy":{"skills":false,"delegations":false,"anomalies":false}`, "", true, "", false},
+		{"unavailable", "", `,"anomaly_availability":"unavailable"`, true, "", false},
+		{"policy null", `,"generation_policy":null`, "", false, "generation_policy", false},
+		{"partial", `,"generation_policy":{"skills":false}`, "", false, "generation_policy", false},
+		{"wrong bool", `,"generation_policy":{"skills":false,"delegations":"false","anomalies":false}`, "", false, "generation_policy.delegations", false},
+		{"unknown availability", "", `,"anomaly_availability":"missing"`, false, "anomaly_availability", false},
+		{"null availability", "", `,"anomaly_availability":null`, false, "anomaly_availability", false},
+		{"availability contradiction", "", `,"anomaly_availability":"unavailable","anomalies":[]`, false, "omitted anomalies", false},
+		{"disabled contradiction", `,"generation_policy":{"skills":false,"delegations":true,"anomalies":true}`, `,"skills":[]`, false, "contradicts", false},
+		{"null category", "", `,"anomalies":null`, false, "array", false},
+		{"explicit empty", "", `,"anomalies":[]`, true, "", true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			raw := `{"schema_version":6,"ticket_id":"TEST-ANOMALY","sessions":[{"id":"owner","source":"codex","user":"tester","invocations":[],"tools":[]` + tc.fields + `}]}`
-			existing, err := adapters.DecodeExistingFactLedger([]byte(raw))
+			raw := []byte(`{"schema_version":6,"ticket_id":"T-01","sessions":[{"id":"owner","source":"codex","user":"remote","invocations":[],"tools":[]` + tc.owner + `}]` + tc.root + `}`)
+			before := append([]byte(nil), raw...)
+			cleaned, err := adapters.NormalizeFormerGenerationMetadata(raw)
 			if (err == nil) != tc.valid {
-				t.Fatalf("valid=%t error=%v", tc.valid, err)
+				t.Fatalf("valid=%v cleanup error=%v", tc.valid, err)
 			}
-			if !tc.valid && !strings.Contains(err.Error(), tc.wantCause) {
-				t.Fatalf("rejected for unrelated cause; want %q, got %v", tc.wantCause, err)
+			if !tc.valid {
+				if !strings.Contains(err.Error(), tc.wantCause) {
+					t.Fatalf("wrong rejection: %v", err)
+				}
+				return
 			}
-			if tc.valid && existing == nil {
-				t.Fatal("valid portable ledger unavailable")
+			if !bytes.Equal(raw, before) {
+				t.Fatal("cleanup mutated input bytes")
 			}
-			if tc.valid {
-				if existing.TicketID == nil || *existing.TicketID != "TEST-ANOMALY" || len(existing.Sessions) != 1 || existing.Sessions[0].ID != "owner" {
-					t.Fatalf("compatible metadata changed recorded identity: %+v", existing)
-				}
-				if (existing.Sessions[0].Anomalies == nil) != (tc.name == "omitted_unavailable") {
-					t.Fatal("compatibility read changed unavailable versus measured-empty anomalies")
-				}
-				var dto adapters.AgenticFactLedgerDTO
-				if err := json.Unmarshal([]byte(raw), &dto); err != nil {
-					t.Fatal(err)
-				}
-				rewritten, err := json.Marshal(dto)
-				if err != nil {
-					t.Fatal(err)
-				}
-				if bytes.Contains(rewritten, []byte(`"generation_policy"`)) || bytes.Contains(rewritten, []byte(`"anomaly_availability"`)) {
-					t.Fatalf("read-compatible metadata re-emitted: %s", rewritten)
-				}
-				if err := adapters.ValidateRuntimeFactLedger(rewritten); err != nil {
-					t.Fatalf("metadata-free output rejected: %v", err)
-				}
+			if err := adapters.ValidateRuntimeFactLedger(cleaned); err != nil {
+				t.Fatalf("explicit cleaned ledger rejected: %v", err)
+			}
+			ledger, err := adapters.DecodeExistingFactLedger(cleaned)
+			if err != nil || ledger.TicketID == nil || *ledger.TicketID != "T-01" || len(ledger.Sessions) != 1 || ledger.Sessions[0].ID != "owner" || ledger.Sessions[0].User != "remote" {
+				t.Fatalf("cleanup changed recorded identity: %+v %v", ledger, err)
+			}
+			if (ledger.Sessions[0].Anomalies != nil) != tc.empty {
+				t.Fatal("cleanup conflated absent versus measured empty")
 			}
 		})
 	}
@@ -1960,7 +1924,7 @@ func TestExternalParentReferenceSurvivesPortableSaveReloadAndReadProjection(t *t
 	if err := adapters.SaveFactLedger(original, facts); err != nil {
 		t.Fatalf("legitimate external source parent rejected: %v", err)
 	}
-	transferred := filepath.Join(t.TempDir(), "records", ticket, "agentic_metrics.json")
+	transferred := filepath.Join(workspaceFixtureRoot(t), "records", ticket, "agentic_metrics.json")
 	if err := os.MkdirAll(filepath.Dir(transferred), 0700); err != nil {
 		t.Fatal(err)
 	}
@@ -2000,4 +1964,12 @@ func TestExternalParentReferenceSurvivesPortableSaveReloadAndReadProjection(t *t
 	if after, err := os.ReadFile(transferred); err != nil || !bytes.Equal(encoded, after) {
 		t.Fatalf("read projection rewrote shared parent reference: %v", err)
 	}
+}
+
+func fixtureExplicitAnomalyPolicy(t *testing.T) domain.AnomalyThresholdsConfig {
+	t.Helper()
+	cfg := fixtureReadPolicy(t).AnomalyThresholds
+	cfg.ConsecutiveErrorsStreakWarning = 3
+	cfg.ConsecutiveErrorsStreakCritical = 5
+	return cfg
 }

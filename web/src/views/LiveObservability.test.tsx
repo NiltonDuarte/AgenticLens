@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within, act } from '../test/render';
 import { LiveObservability } from './LiveObservability';
-import { mockLiveSessionTree, mockLiveTraceView } from '../test/fixtures/mockData';
+import nativeLiveTree from '../test/fixtures/live-session-wire.json';
+import { ProjectConfigContext } from '../contexts/ProjectConfigContext';
+import { mockProjectConfig, mockLiveSessionTree, mockLiveTraceView } from '../test/fixtures/mockData';
 
 class MockEventSource {
   static instances: MockEventSource[] = [];
@@ -61,6 +63,69 @@ describe('LiveObservability View Integration', () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.unstubAllGlobals();
+  });
+
+  it('shows unavailable initial source separately from a successful measured-empty response', async () => {
+    class UnavailableStream { constructor() { throw new Error('Live source unavailable'); } }
+    vi.stubGlobal('EventSource', UnavailableStream);
+    const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({error: {code: 'source_unavailable', message: 'Selected source unavailable'}}), {status: 503}));
+    vi.stubGlobal('fetch', fetch);
+    render(<LiveObservability onSelectTicket={vi.fn()} />);
+    await screen.findByText('Live session data unavailable.');
+    expect(screen.queryByText('No Active Sessions')).not.toBeInTheDocument();
+    expect(screen.getAllByText('Not available')).toHaveLength(2);
+    expect(screen.getByText('Sessions unavailable')).toBeVisible();
+
+    const empty = {root_sessions: [], active_anomalies: [], total_active_sessions: 0, last_refreshed_at: '2026-11-11T12:00:00Z'};
+    fetch.mockImplementation(async () => new Response(JSON.stringify(empty), {status: 200}));
+    fireEvent.click(screen.getByRole('button', {name: 'Manual Refresh'}));
+    await screen.findByText('No Active Sessions');
+    expect(screen.queryByText('Live session data unavailable.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Not available')).not.toBeInTheDocument();
+    expect(screen.getByText('0 Root Sessions')).toBeVisible();
+  });
+
+  it('retains the last successful live tree when a later connection fails', async () => {
+    render(<LiveObservability onSelectTicket={vi.fn()} />);
+    const stream = MockEventSource.instances[0]!;
+    act(() => {
+      stream.onopen?.();
+      stream.dispatchEvent('session_tree', JSON.stringify(mockLiveSessionTree));
+    });
+    await screen.findByText('AL-20 TypeScript Live Observability Implementation');
+    act(() => stream.onerror?.());
+    expect(screen.getByText('AL-20 TypeScript Live Observability Implementation')).toBeVisible();
+    expect(within(screen.getByTestId('live-status-bar')).getByRole('alert')).toHaveTextContent('SSE connection error');
+    expect(screen.queryByText('No Active Sessions')).not.toBeInTheDocument();
+  });
+
+  it('renders the shared native SQLite-to-HTTP wire through API validation without projecting roles twice', async () => {
+    // The Go producer test compares its complete native HTTP bytes with this same JSON fixture.
+    vi.stubGlobal('EventSource', undefined);
+    const fetch = vi.fn(async (input: string | URL | Request) => {
+      const route = String(input);
+      const payload: unknown = route === '/api/live/sessions' ? nativeLiveTree
+        : route === '/api/live/sessions/wire-root/trace' ? {
+          session_id: 'wire-root', messages: [], total_tool_calls: 0, failed_tool_calls: 0, recent_errors: [], anomalies: [],
+        } : undefined;
+      if (payload === undefined) throw new Error(`Unexpected native fixture route: ${route}`);
+      return new Response(JSON.stringify(payload), {status: 200, headers: {'Content-Type': 'application/json'}});
+    });
+    vi.stubGlobal('fetch', fetch);
+    render(<ProjectConfigContext.Provider value={{...mockProjectConfig,
+      prefixes: [{prefix: 'T-', description: 'Wire fixture'}], case_insensitive: false,
+      role_mappings: {builder: 'planner', planner: 'other'}, role_order: ['planner'],
+    }}><LiveObservability onSelectTicket={vi.fn()} /></ProjectConfigContext.Provider>);
+    const node = await screen.findByTestId('session-node-wire-root');
+    expect(within(node).getByText('builder')).toBeVisible();
+    expect(within(node).getByText('planner')).toHaveClass('node-role-badge');
+    expect(within(node).getByText('T-02 wire projection')).toBeVisible();
+    fireEvent.click(within(node).getByText('T-02 wire projection'));
+    const inspector = await screen.findByTestId('live-trace-inspector');
+    expect(within(inspector).getByText('planner')).toHaveClass('node-role-badge');
+    expect(screen.queryByText('other')).not.toBeInTheDocument();
+    expect(fetch).toHaveBeenCalledWith('/api/live/sessions');
+    await waitFor(() => expect(fetch).toHaveBeenCalledWith('/api/live/sessions/wire-root/trace'));
   });
 
   it('mounts, initializes stream, and displays status bar and session tree', async () => {

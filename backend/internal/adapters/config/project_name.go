@@ -1,42 +1,35 @@
 package config
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
+	"gopkg.in/yaml.v3"
 	"os"
 	"path/filepath"
 	"strings"
-
-	"gopkg.in/yaml.v3"
 )
 
-// ReadProjectNameForMaintenance interprets the shared label using the same raw
-// DTO, format rules and merge semantics as operational loading. It intentionally
-// does not validate the remaining configuration or supply an operational state
-// path: explicit maintenance must be able to repair a missing required key.
-func ReadProjectNameForMaintenance(filePath string) (string, error) {
-	data, err := os.ReadFile(filePath)
+// ReadProjectNameForMaintenance reads the shared label without requiring the
+// operational policy that explicit maintenance may be repairing.
+func ReadProjectNameForMaintenance(path string) (string, error) {
+	ext := strings.ToLower(filepath.Ext(path))
+	if ext != ".yaml" && ext != ".yml" {
+		return "", fmt.Errorf("configuration %s must have a .yaml or .yml suffix", path)
+	}
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return "", fmt.Errorf("reading project name for maintenance: %w", err)
 	}
-	var dto rawProjectConfigDTO
-	switch strings.ToLower(filepath.Ext(filePath)) {
-	case ".yaml", ".yml":
-		err = yaml.Unmarshal(data, &dto)
-	case ".json":
-		err = json.Unmarshal(data, &dto)
-	default:
-		err = yaml.Unmarshal(data, &dto)
-		if err != nil {
-			err = json.Unmarshal(data, &dto)
-		}
-	}
+	nodes, err := configurationNodes(data)
 	if err != nil {
-		return "", fmt.Errorf("decoding project name from %s: %w", filePath, err)
+		return "", err
 	}
-	if dto.ProjectName == nil || strings.TrimSpace(*dto.ProjectName) == "" {
-		return "", errors.New("configured project_name is required before updating capture state")
+	n := nodes["project_name"]
+	if err := requireNodeType(n, "project_name", yaml.ScalarNode, "!!str"); err != nil {
+		return "", err
 	}
-	return mergeConfig(dto).ProjectName, nil
+	name := strings.TrimSpace(n.Value)
+	if name == "" {
+		return "", fmt.Errorf("configured project_name is required before updating capture state")
+	}
+	return name, nil
 }

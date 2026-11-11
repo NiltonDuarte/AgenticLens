@@ -3,71 +3,64 @@ package domain
 import (
 	"fmt"
 	"math"
-	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 )
 
-var ticketIDPattern = regexp.MustCompile(`^([a-zA-Z]+)[-_]?([0-9]+)(.*)$`)
-
-// CompareTicketIDs compares two ticket identifiers using natural numerical sequence ordering.
-// Conforming ticket identifiers have a letter prefix, optional hyphen/underscore, and numeric sequence.
-// Conforming tickets sort before non-conforming strings.
-// Returns -1 if a < b, 0 if a == b, and 1 if a > b.
-func CompareTicketIDs(a, b string) int {
-	cleanA := strings.TrimSpace(a)
-	cleanB := strings.TrimSpace(b)
-
-	if cleanA == cleanB {
-		return 0
+// CompareTicketIDs sorts only configured recognized IDs naturally. Without a
+// supplied grammar all recorded IDs retain ordinary codepoint text ordering.
+func CompareTicketIDs(a, b string, policies ...TicketConfig) int {
+	var cfg TicketConfig
+	if len(policies) > 0 {
+		cfg = policies[0]
 	}
-	if cleanA == "" {
-		return -1
-	}
-	if cleanB == "" {
+	prefixA, numA, knownA := ticketSortParts(a, cfg)
+	prefixB, numB, knownB := ticketSortParts(b, cfg)
+	if knownA != knownB {
+		if knownA {
+			return -1
+		}
 		return 1
 	}
-
-	matchA := ticketIDPattern.FindStringSubmatch(cleanA)
-	matchB := ticketIDPattern.FindStringSubmatch(cleanB)
-
-	hasMatchA := len(matchA) == 4
-	hasMatchB := len(matchB) == 4
-
-	if hasMatchA && hasMatchB {
-		prefixA := strings.ToUpper(matchA[1])
-		prefixB := strings.ToUpper(matchB[1])
-		if prefixA != prefixB {
-			if prefixA < prefixB {
+	if knownA {
+		if c := strings.Compare(prefixA, prefixB); c != 0 {
+			return c
+		}
+		numA = strings.TrimLeft(numA, "0")
+		numB = strings.TrimLeft(numB, "0")
+		if len(numA) != len(numB) {
+			if len(numA) < len(numB) {
 				return -1
 			}
 			return 1
 		}
-
-		numA, errA := strconv.ParseInt(matchA[2], 10, 64)
-		numB, errB := strconv.ParseInt(matchB[2], 10, 64)
-		if errA == nil && errB == nil {
-			if numA != numB {
-				if numA < numB {
-					return -1
-				}
-				return 1
-			}
-			// When numerical values are equal (e.g. AL-1 vs AL-01), fall back to raw string comparison.
-			return strings.Compare(cleanA, cleanB)
+		if c := strings.Compare(numA, numB); c != 0 {
+			return c
 		}
 	}
-
-	if hasMatchA && !hasMatchB {
-		return -1
+	return strings.Compare(a, b)
+}
+func ticketSortParts(id string, cfg TicketConfig) (string, string, bool) {
+	selected, num := "", ""
+	input := id
+	if cfg.CaseInsensitive {
+		input = strings.ToLower(input)
 	}
-	if !hasMatchA && hasMatchB {
-		return 1
+	for _, p := range cfg.Prefixes {
+		prefix := strings.TrimSpace(p.Prefix)
+		if prefix == "" {
+			continue
+		}
+		if cfg.CaseInsensitive {
+			prefix = strings.ToLower(prefix)
+		}
+		number, matched := literalTicketNumber(input, prefix, false)
+		if matched && (selected == "" || len([]rune(prefix)) > len([]rune(selected))) {
+			selected, num = prefix, number
+		}
 	}
-
-	return strings.Compare(cleanA, cleanB)
+	return selected, num, selected != ""
 }
 
 type invocationAccumulator struct {
@@ -115,7 +108,7 @@ func accumulateInvocations(invs []InvocationFact) invocationAccumulator {
 
 // ComputeTotals calculates aggregate invocation metrics from a slice of invocation facts.
 func ComputeTotals(invocations []InvocationFact, ceiling ...int64) GroupedMetric {
-	effCeiling := ContextCeilingCriticalTokens
+	var effCeiling int64
 	if len(ceiling) > 0 && ceiling[0] > 0 {
 		effCeiling = ceiling[0]
 	}
@@ -130,7 +123,7 @@ func ComputeTotals(invocations []InvocationFact, ceiling ...int64) GroupedMetric
 			CostUSD:           0.0,
 			CostSummary:       FinalizeCostSummary(CostSummary{}),
 			PeakContextTokens: 0,
-			ContextHealth:     ContextHealthHealthy,
+			ContextHealth:     GetBaseHealthStatus(0, effCeiling),
 		}
 	}
 
@@ -152,14 +145,11 @@ func ComputeTotals(invocations []InvocationFact, ceiling ...int64) GroupedMetric
 
 // ComputeWorkflowEfficiency derives workflow efficiency profile from an atomic fact ledger.
 func ComputeWorkflowEfficiency(ledger AgenticFactLedger, roleOrder ...[]string) WorkflowEfficiency {
-	return ComputeWorkflowEfficiencyWithCeiling(ledger, ContextCeilingCriticalTokens, roleOrder...)
+	return ComputeWorkflowEfficiencyWithCeiling(ledger, 0, roleOrder...)
 }
 
 // ComputeWorkflowEfficiencyWithCeiling derives workflow efficiency profile with an explicit context ceiling.
 func ComputeWorkflowEfficiencyWithCeiling(ledger AgenticFactLedger, ceiling int64, roleOrder ...[]string) WorkflowEfficiency {
-	if ceiling <= 0 {
-		ceiling = ContextCeilingCriticalTokens
-	}
 	tools := ledger.ToolFacts()
 	code := ledger.Code
 
@@ -424,9 +414,6 @@ func ComputeWorkflowEfficiencyWithCeiling(ledger AgenticFactLedger, ceiling int6
 
 // ComputeRoleMetricsWithCeiling calculates aggregated metrics grouped by agent role with an explicit context ceiling.
 func ComputeRoleMetricsWithCeiling(invocations []InvocationFact, ceiling int64, roleOrder ...[]string) []RoleMetric {
-	if ceiling <= 0 {
-		ceiling = ContextCeilingCriticalTokens
-	}
 
 	byRole := make(map[AgentRole][]InvocationFact)
 	for _, inv := range invocations {
@@ -479,7 +466,7 @@ func ComputeRoleMetricsWithCeiling(invocations []InvocationFact, ceiling int64, 
 // ComputeModelMetrics calculates aggregated metrics grouped by model, sorted by cost descending
 // with secondary tie-breaking on model name ascending.
 func ComputeModelMetrics(invocations []InvocationFact, ceiling ...int64) []ModelMetric {
-	effCeiling := ContextCeilingCriticalTokens
+	var effCeiling int64
 	if len(ceiling) > 0 && ceiling[0] > 0 {
 		effCeiling = ceiling[0]
 	}
@@ -527,9 +514,6 @@ func ComputeModelMetrics(invocations []InvocationFact, ceiling ...int64) []Model
 
 // ComputeThreadSummariesWithCeiling groups session-owned invocation rows by their root session with an explicit context ceiling.
 func ComputeThreadSummariesWithCeiling(sessions []SessionFact, ceiling int64, roleOrder ...[]string) []ThreadExecutionRecord {
-	if ceiling <= 0 {
-		ceiling = ContextCeilingCriticalTokens
-	}
 
 	if len(sessions) == 0 {
 		return []ThreadExecutionRecord{}
@@ -999,7 +983,7 @@ func FormatLeadTime(seconds *int64) string {
 }
 
 // BuildComparisonRows constructs comparison rows sorted chronologically.
-func BuildComparisonRows(ledgers []AgenticMetricsLedger) []TicketComparisonRow {
+func BuildComparisonRows(ledgers []AgenticMetricsLedger, policies ...TicketConfig) []TicketComparisonRow {
 	var rows []TicketComparisonRow
 	for _, ledger := range ledgers {
 		tid := "unknown"
@@ -1043,7 +1027,7 @@ func BuildComparisonRows(ledgers []AgenticMetricsLedger) []TicketComparisonRow {
 		})
 	}
 
-	sort.Slice(rows, func(i, j int) bool {
+	sort.SliceStable(rows, func(i, j int) bool {
 		rI := rows[i]
 		rJ := rows[j]
 
@@ -1078,7 +1062,7 @@ func BuildComparisonRows(ledgers []AgenticMetricsLedger) []TicketComparisonRow {
 			return startIStr > startJStr
 		}
 
-		cmp := CompareTicketIDs(rI.TicketID, rJ.TicketID)
+		cmp := CompareTicketIDs(rI.TicketID, rJ.TicketID, policies...)
 		if cmp != 0 {
 			return cmp > 0
 		}
@@ -1194,89 +1178,30 @@ func FilterLedgersByTicketTypes(ledgers []AgenticMetricsLedger, ticketTypes []st
 	return filtered
 }
 
-func isAllASCIIAlpha(s string) bool {
-	if len(s) == 0 {
-		return false
+// FilterLedgersByPrefixes treats each supplied prefix literally, including all/ALL.
+// Omitted/empty selection is unfiltered; membership may overlap across prefixes.
+func FilterLedgersByPrefixes(ledgers []AgenticMetricsLedger, prefixes []string, caseInsensitive ...bool) []AgenticMetricsLedger {
+	result := make([]AgenticMetricsLedger, 0, len(ledgers))
+	insensitive := false
+	if len(caseInsensitive) > 0 {
+		insensitive = caseInsensitive[0]
 	}
-	for i := 0; i < len(s); i++ {
-		c := s[i]
-		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
-			return false
-		}
-	}
-	return true
-}
-
-// ExtractTicketPrefix extracts the uppercase ticket prefix (e.g. "AL", "GEN", "PO").
-// Evaluates conforming patterns (leading letters followed by digits) or leading alphabetic tokens before delimiters.
-func ExtractTicketPrefix(ticketID string) string {
-	clean := strings.TrimSpace(ticketID)
-	if clean == "" {
-		return ""
-	}
-	match := ticketIDPattern.FindStringSubmatch(clean)
-	if len(match) >= 2 && match[1] != "" {
-		return strings.ToUpper(match[1])
-	}
-	idx := strings.IndexAny(clean, "-_")
-	if idx > 0 {
-		candidate := clean[:idx]
-		if isAllASCIIAlpha(candidate) {
-			return strings.ToUpper(candidate)
-		}
-	}
-	return ""
-}
-
-// FilterLedgersByPrefixes filters ledgers whose extracted ticket prefix matches any of the supplied prefixes.
-// If prefixes is empty, or contains "all" (case-insensitive) or an empty token, all ledgers are retained.
-// Returns a newly allocated slice.
-func FilterLedgersByPrefixes(ledgers []AgenticMetricsLedger, prefixes []string) []AgenticMetricsLedger {
-	if len(ledgers) == 0 {
-		return []AgenticMetricsLedger{}
-	}
-	if len(prefixes) == 0 {
-		result := make([]AgenticMetricsLedger, len(ledgers))
-		copy(result, ledgers)
-		return result
-	}
-
-	for _, raw := range prefixes {
-		clean := strings.ToLower(strings.TrimSpace(raw))
-		if clean == "" || clean == "all" {
-			result := make([]AgenticMetricsLedger, len(ledgers))
-			copy(result, ledgers)
-			return result
-		}
-	}
-
-	targetSet := make(map[string]struct{})
-	for _, raw := range prefixes {
-		clean := strings.ToUpper(strings.TrimSpace(raw))
-		if clean != "" {
-			targetSet[clean] = struct{}{}
-		}
-	}
-
-	if len(targetSet) == 0 {
-		result := make([]AgenticMetricsLedger, len(ledgers))
-		copy(result, ledgers)
-		return result
-	}
-
-	filtered := make([]AgenticMetricsLedger, 0, len(ledgers))
 	for _, ledger := range ledgers {
-		if ledger.TicketID != nil {
-			prefix := ExtractTicketPrefix(*ledger.TicketID)
-			if prefix != "" {
-				if _, ok := targetSet[prefix]; ok {
-					filtered = append(filtered, ledger)
-				}
+		if len(prefixes) == 0 {
+			result = append(result, ledger)
+			continue
+		}
+		if ledger.TicketID == nil {
+			continue
+		}
+		for _, prefix := range prefixes {
+			if MatchTicketPrefix(*ledger.TicketID, prefix, insensitive) {
+				result = append(result, ledger)
+				break
 			}
 		}
 	}
-
-	return filtered
+	return result
 }
 
 // FilterLedgersByCompletionDate filters ledgers based on their effective completion date within inclusive bounds.
@@ -1312,7 +1237,7 @@ func FilterLedgersByCompletionDate(ledgers []AgenticMetricsLedger, since, until 
 
 // SortLedgers deterministically sorts a slice of AgenticMetricsLedger according to field and order.
 // It returns a newly allocated sorted slice without mutating the original input slice.
-func SortLedgers(ledgers []AgenticMetricsLedger, field LedgerSortField, ascending bool) []AgenticMetricsLedger {
+func SortLedgers(ledgers []AgenticMetricsLedger, field LedgerSortField, ascending bool, policies ...TicketConfig) []AgenticMetricsLedger {
 	result := make([]AgenticMetricsLedger, len(ledgers))
 	copy(result, ledgers)
 
@@ -1348,7 +1273,7 @@ func SortLedgers(ledgers []AgenticMetricsLedger, field LedgerSortField, ascendin
 			if b.TicketID != nil {
 				tidB = *b.TicketID
 			}
-			cmp := CompareTicketIDs(tidA, tidB)
+			cmp := CompareTicketIDs(tidA, tidB, policies...)
 			if cmp != 0 {
 				return cmp < 0
 			}
@@ -1369,45 +1294,40 @@ func SortLedgers(ledgers []AgenticMetricsLedger, field LedgerSortField, ascendin
 			}
 			return *ac > *bc
 		}
-		var less bool
+		comparison := 0
 		switch field {
 		case SortFieldTicketID:
-			tidA := ""
+			idA, idB := "", ""
 			if a.TicketID != nil {
-				tidA = *a.TicketID
+				idA = *a.TicketID
 			}
-			tidB := ""
 			if b.TicketID != nil {
-				tidB = *b.TicketID
+				idB = *b.TicketID
 			}
-			cmp := CompareTicketIDs(tidA, tidB)
-			if cmp == 0 {
-				less = a.UpdatedAt < b.UpdatedAt
-			} else {
-				less = cmp < 0
-			}
+			comparison = CompareTicketIDs(idA, idB, policies...)
 		case SortFieldDuration:
-			if a.WorkflowEfficiency.ActiveDurationSeconds == b.WorkflowEfficiency.ActiveDurationSeconds {
-				less = a.UpdatedAt < b.UpdatedAt
+			if a.WorkflowEfficiency.ActiveDurationSeconds < b.WorkflowEfficiency.ActiveDurationSeconds {
+				comparison = -1
+			} else if a.WorkflowEfficiency.ActiveDurationSeconds > b.WorkflowEfficiency.ActiveDurationSeconds {
+				comparison = 1
 			} else {
-				less = a.WorkflowEfficiency.ActiveDurationSeconds < b.WorkflowEfficiency.ActiveDurationSeconds
+				comparison = strings.Compare(a.UpdatedAt, b.UpdatedAt)
 			}
 		case SortFieldInvocations:
-			if a.Totals.Invocations == b.Totals.Invocations {
-				less = a.UpdatedAt < b.UpdatedAt
+			if a.Totals.Invocations < b.Totals.Invocations {
+				comparison = -1
+			} else if a.Totals.Invocations > b.Totals.Invocations {
+				comparison = 1
 			} else {
-				less = a.Totals.Invocations < b.Totals.Invocations
+				comparison = strings.Compare(a.UpdatedAt, b.UpdatedAt)
 			}
-		case SortFieldUpdatedAt:
-			fallthrough
 		default:
-			less = a.UpdatedAt < b.UpdatedAt
+			comparison = strings.Compare(a.UpdatedAt, b.UpdatedAt)
 		}
-
 		if ascending {
-			return less
+			return comparison < 0
 		}
-		return !less
+		return comparison > 0
 	})
 
 	return result

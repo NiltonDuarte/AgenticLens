@@ -26,7 +26,7 @@ type correctionCaptureStatus struct {
 func correctionCaptureHistory(t *testing.T) captureGenerationFixture {
 	t.Helper()
 	f := newCaptureGenerationFixture(t)
-	local := fmt.Sprintf("telemetry:\n  capture:\n    enabled: true\n    state_dir: %q\n", f.state)
+	local := fmt.Sprintf("telemetry:\n  capture:\n    pass_timeout_ms: 3000\n    max_sessions: 256\n    max_source_bytes: 67108864\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 5000\n    commit_warning: true\n    enabled: true\n    state_dir: %q\n", f.state)
 	if err := writeCaptureFixtureLocal(t, f, []byte(local)); err != nil {
 		t.Fatal(err)
 	}
@@ -132,7 +132,7 @@ func TestCaptureStaleProvenanceAllowsPublicInspectionAndOwnedRepair(t *testing.T
 				}
 				if drift == "actual release switch" {
 					shared := filepath.Join(f.project, ".agenticlens-config.yaml")
-					body := bytes.Replace(readCaptureFile(t, shared), []byte("version: "+domain.DefaultVersion+"\n"), []byte("version: "+newVersion+"\n"), 1)
+					body := bytes.Replace(readCaptureFile(t, shared), []byte("version: "+"v9.8.7"+"\n"), []byte("version: "+newVersion+"\n"), 1)
 					if err := os.WriteFile(shared, body, 0600); err != nil {
 						t.Fatal(err)
 					}
@@ -273,14 +273,14 @@ func TestCapturePendingSourceRetryRetainsFailureUntilExactRead(t *testing.T) {
 	reconcile := func(budget int64, want domain.CaptureState) domain.CaptureRegistration {
 		t.Helper()
 		if budget == 0 {
-			budget = capture.DefaultByteBudget
+			budget = 67108864
 		}
 		store, err := capture.OpenProject(f.state, f.project)
 		if err != nil {
 			t.Fatal(err)
 		}
 		defer store.Close()
-		result, err := store.Reconcile(context.Background(), "TEST-100", "tester", capture.DefaultSessionBudget, budget)
+		result, err := store.Reconcile(context.Background(), "TEST-100", "tester", 256, budget)
 		if err != nil {
 			t.Fatalf("source reconciliation: %v", err)
 		}
@@ -350,14 +350,16 @@ func TestCapturePendingSourceRetryRetainsFailureUntilExactRead(t *testing.T) {
 
 func TestCaptureSamePinOtherProjectInstallPreservesAcknowledgedActiveWorker(t *testing.T) {
 	f := newCaptureGenerationFixture(t)
+	enableCLIFixtureSummary(t, f.project)
 	f.output = filepath.Join(f.project, "records", "TEST-100", "agentic_metrics.json")
 	cache, wrappers := t.TempDir(), t.TempDir()
-	header := fmt.Sprintf("agenticlens:\n  version: %s\n  install_root: %q\n", domain.DefaultVersion, cache)
+	header := fmt.Sprintf("agenticlens:\n  version: %s\n  install_root: %q\n", "v9.8.7", cache)
 	shared := append([]byte(header), readCaptureFile(t, filepath.Join(f.project, ".agenticlens-config.yaml"))...)
 	if err := os.WriteFile(filepath.Join(f.project, ".agenticlens-config.yaml"), shared, 0600); err != nil {
 		t.Fatal(err)
 	}
-	local := fmt.Sprintf("telemetry:\n  capture:\n    enabled: false\n    state_dir: %q\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 1000\n    max_lifetime_ms: 20000\n", f.state)
+	local := fmt.Sprintf("telemetry:\n  capture:\n    pass_timeout_ms: 3000\n    max_sessions: 256\n    max_source_bytes: 67108864\n    commit_warning: true\n    enabled: false\n    state_dir: %q\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 1000\n    max_lifetime_ms: 20000\n", f.state)
+	local += fmt.Sprintf("  default_source: codex\n  sources:\n    codex:\n      home: %q\n", f.store)
 	localPath := filepath.Join(f.project, ".agenticlens-config.local.yaml")
 	if err := os.WriteFile(localPath, []byte(local), 0600); err != nil {
 		t.Fatal(err)

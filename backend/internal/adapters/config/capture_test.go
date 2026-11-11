@@ -10,7 +10,7 @@ import (
 
 func TestCapturePolicyWholeLocalFileAndProjectRelativeState(t *testing.T) {
 	project := t.TempDir()
-	for name, body := range map[string]string{".agenticlens-config.yaml": "telemetry:\n  capture:\n    refresh_ms: 800\n    state_dir: portable\n    detailed_report: true\n", ".agenticlens-config.local.yaml": "telemetry:\n  capture:\n    enabled: true\n    state_dir: local\n    max_sessions: 7\n"} {
+	for name, body := range map[string]string{".agenticlens-config.yaml": "telemetry:\n  capture:\n    refresh_ms: 800\n    state_dir: portable\n", ".agenticlens-config.local.yaml": "telemetry:\n  capture:\n    enabled: true\n    state_dir: local\n    max_sessions: 7\n"} {
 		if err := os.WriteFile(filepath.Join(project, name), []byte(body), 0600); err != nil {
 			t.Fatal(err)
 		}
@@ -19,11 +19,11 @@ func TestCapturePolicyWholeLocalFileAndProjectRelativeState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.RefreshMS != 15000 || cfg.MaxSessions != 7 || cfg.DetailedReport || cfg.DeprecatedDetailedReport || cfg.StateDir != filepath.Join(project, "local") {
+	if cfg.RefreshMS != 0 || cfg.MaxSessions != 7 || cfg.StateDir != filepath.Join(project, "local") {
 		t.Fatalf("shared capture values leaked into selected local policy: %+v", cfg)
 	}
 	override, err := ResolveCapture(project, "explicit")
-	if err != nil || override.StateDir != filepath.Join(project, "explicit") {
+	if err != nil || override.StateDir != filepath.Join(mustInvocationDir(t), "explicit") {
 		t.Fatalf("CLI override: %+v %v", override, err)
 	}
 	if err = os.WriteFile(filepath.Join(project, ".agenticlens-config.local.yaml"), []byte("telemetry:\n  capture:\n    enabled: true\n    state_dir: local\n    max_sessions: -1\n"), 0600); err != nil {
@@ -35,7 +35,7 @@ func TestCapturePolicyWholeLocalFileAndProjectRelativeState(t *testing.T) {
 }
 
 func TestCaptureOwningProjectFormatsAndNestedBoundary(t *testing.T) {
-	for _, ext := range []string{"yaml", "yml", "json"} {
+	for _, ext := range []string{"yaml", "yml"} {
 		t.Run(ext, func(t *testing.T) {
 			project := t.TempDir()
 			child := filepath.Join(project, "src")
@@ -43,9 +43,6 @@ func TestCaptureOwningProjectFormatsAndNestedBoundary(t *testing.T) {
 				t.Fatal(err)
 			}
 			body := "telemetry:\n  capture:\n    state_dir: configured\n    enabled: false\n"
-			if ext == "json" {
-				body = `{"telemetry":{"capture":{"state_dir":"configured","enabled":false}}}`
-			}
 			if err := os.WriteFile(filepath.Join(project, ".agenticlens-config."+ext), []byte(body), 0600); err != nil {
 				t.Fatal(err)
 			}
@@ -102,7 +99,7 @@ func TestRequiredCaptureStateInSelectedLocalPolicy(t *testing.T) {
 func TestLocalOnlyCaptureStateAndMissingFilesystemDoNotNeedFallback(t *testing.T) {
 	root := t.TempDir()
 	shared := filepath.Join(root, ".agenticlens-config.yaml")
-	body := "project_name: Example\nticket:\n  prefixes: [AL]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+	body := string(fixtureSharedBody(t))
 	if err := os.WriteFile(shared, []byte(body), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -132,4 +129,13 @@ func TestLocalOnlyCaptureStateAndMissingFilesystemDoNotNeedFallback(t *testing.T
 	if _, err := ResolveCapture(root, ""); err == nil || !strings.Contains(err.Error(), "home") {
 		t.Fatalf("unavailable home was silently replaced: %v", err)
 	}
+}
+
+func mustInvocationDir(t *testing.T) string {
+	t.Helper()
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return cwd
 }

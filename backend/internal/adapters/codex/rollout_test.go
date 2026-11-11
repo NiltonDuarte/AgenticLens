@@ -65,7 +65,7 @@ func TestParseRolloutMapsPrivacySafeMetadataUsageAndEventKinds(t *testing.T) {
 	version := domain.CurrentSchemaVersion
 	ticketID := "TEST-101"
 	factsForMetrics := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticketID, Sessions: sessions}
-	ledger := domain.DeriveMetricsLedger(factsForMetrics, domain.DefaultProjectConfig())
+	ledger := domain.DeriveMetricsLedger(factsForMetrics, codexMetricConfig())
 	ledger.Facts, err = domain.PersistAnomalySummaries(factsForMetrics)
 	if err != nil {
 		t.Fatal(err)
@@ -140,7 +140,7 @@ func TestMetricsLedgerUsesCodexThreadIDForInvocationHierarchy(t *testing.T) {
 	version := domain.CurrentSchemaVersion
 	ticketID := "TEST-101"
 	factsForMetrics := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticketID, Sessions: sessions}
-	ledger := domain.DeriveMetricsLedger(factsForMetrics, domain.DefaultProjectConfig())
+	ledger := domain.DeriveMetricsLedger(factsForMetrics, codexMetricConfig())
 	ledger.Facts, err = domain.PersistAnomalySummaries(factsForMetrics)
 	if err != nil {
 		t.Fatal(err)
@@ -186,18 +186,26 @@ func TestParseRolloutMapsCodexCommandItemsAndPairedCustomCalls(t *testing.T) {
 }
 
 func TestParseRolloutUpdatesModelWhenTurnContextFollowsTurnStart(t *testing.T) {
-	input := strings.Join([]string{
-		`{"timestamp":"2026-10-25T09:00:00Z","type":"event_msg","payload":{"type":"task_started","turn_id":"turn-1"}}`,
-		`{"timestamp":"2026-10-25T09:00:01Z","type":"turn_context","payload":{"turn_id":"turn-1","model":"gpt-real-shape"}}`,
-		`{"timestamp":"2026-10-25T09:00:02Z","type":"token_usage_record","payload":{"turn_id":"turn-1","usage":{"input_tokens":10,"cached_input_tokens":4,"output_tokens":2}}}`,
-		`{"timestamp":"2026-10-25T09:00:03Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"turn-1"}}`,
-	}, "\n")
-	transcript, err := codex.ParseRollout(strings.NewReader(input))
-	if err != nil {
-		t.Fatalf("ParseRollout returned an error: %v", err)
-	}
-	if len(transcript.Invocations) != 1 || transcript.Invocations[0].Model != "gpt-real-shape" || transcript.Invocations[0].Turns != 1 {
-		t.Fatalf("turn context should replace the pre-context default model, got %#v", transcript.Invocations)
+	for _, model := range []string{"gpt-real-shape", "default", "unknown"} {
+		t.Run(model, func(t *testing.T) {
+			input := strings.Join([]string{
+				`{"timestamp":"2026-10-25T09:00:00Z","type":"event_msg","payload":{"type":"task_started","turn_id":"turn-1"}}`,
+				fmt.Sprintf(`{"timestamp":"2026-10-25T09:00:01Z","type":"turn_context","payload":{"turn_id":"turn-1","model":%q}}`, model),
+				`{"timestamp":"2026-10-25T09:00:02Z","type":"token_usage_record","payload":{"turn_id":"turn-1","usage":{"input_tokens":10,"cached_input_tokens":4,"output_tokens":2}}}`,
+				`{"timestamp":"2026-10-25T09:00:03Z","type":"event_msg","payload":{"type":"task_complete","turn_id":"turn-1"}}`,
+			}, "\n")
+			transcript, err := codex.ParseRollout(strings.NewReader(input))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(transcript.Invocations) != 1 {
+				t.Fatalf("empty provisional row retained: %+v", transcript.Invocations)
+			}
+			inv := transcript.Invocations[0]
+			if inv.Model != model || inv.Turns != 1 || inv.Tokens.Input != 6 || inv.Tokens.CacheRead != 4 || inv.Tokens.Output != 2 || inv.ActiveDurationSeconds != 3 {
+				t.Fatalf("late model attribution changed counters: %+v", inv)
+			}
+		})
 	}
 }
 

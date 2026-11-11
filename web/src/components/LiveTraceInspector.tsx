@@ -1,8 +1,9 @@
+import { useRolePresentation } from '../contexts/ProjectConfigContext';
 import React, { useLayoutEffect, useRef, useState } from 'react';
 import type { LiveMessageFact, LiveSessionNode, LiveTraceView, LivePartFact, LiveAnomalyAlert } from '../domain/live';
 import {
+  formatModelLabel,
   formatTokensK,
-  formatRoleLabel,
   truncateMiddle,
   formatLocalTimeWithMs,
   formatLocalDateTimeTooltip,
@@ -280,6 +281,7 @@ export const LiveTraceInspector: React.FC<LiveTraceInspectorProps> = ({
   availableSessionIds,
   onSelectSession,
 }) => {
+  const rolePresentation = useRolePresentation();
   const [isSessionCopied, setIsSessionCopied] = useState(false);
   const [messageOrder, setMessageOrder] = useState<LiveMessageOrder>('latest-first');
   const [newTurnsAvailable, setNewTurnsAvailable] = useState(false);
@@ -372,9 +374,9 @@ export const LiveTraceInspector: React.FC<LiveTraceInspectorProps> = ({
               {isSessionCopied ? 'Copied' : 'Copy Prompt'}
             </button>
             <span className={`node-role-badge role-${sessionNode.role.toLowerCase()}`}>
-              {formatRoleLabel(sessionNode.role)}
+              {rolePresentation.projectedLabel(sessionNode.role)}
             </span>
-            <span className="inspector-model-badge">{sessionNode.model}</span>
+            <span className="inspector-model-badge">{formatModelLabel(sessionNode.model)}</span>
           </div>
           <div className="inspector-metrics-row">
             <span className="inspector-stat">

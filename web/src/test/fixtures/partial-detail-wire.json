@@ -1,0 +1,318 @@
+{
+  "ledger": {
+    "ticket_id": "T-01",
+    "ticket_title": "Partial role wire",
+    "ticket_type": "feat",
+    "started_at": "2026-10-17T10:00:00Z",
+    "completed_at": "2026-10-17T11:00:00Z",
+    "updated_at": "2026-10-17T11:00:00Z",
+    "facts": {
+      "schema_version": 6,
+      "migration": {
+        "schema_version": 6,
+        "status": "completed",
+        "steps_completed": [
+          "source_backfill"
+        ],
+        "steps_pending": [],
+        "last_migrated_at": "",
+        "last_migrated_by": ""
+      },
+      "ticket_id": "T-01",
+      "ticket_title": "Partial role wire",
+      "ticket_type": "feat",
+      "started_at": "2026-10-17T10:00:00Z",
+      "completed_at": "2026-10-17T11:00:00Z",
+      "updated_at": "2026-10-17T11:00:00Z",
+      "code": {
+        "lines_added": 0,
+        "lines_deleted": 0,
+        "test_lines_added": 0,
+        "test_lines_deleted": 0,
+        "prod_lines_added": 0,
+        "prod_lines_deleted": 0,
+        "files_changed": 0,
+        "sdlc_iterations": 0
+      },
+      "sessions": [
+        {
+          "id": "root-missing",
+          "source": "codex",
+          "user": "fixture",
+          "invocations": [
+            {
+              "role": "builder",
+              "model": "source-model",
+              "started_at": null,
+              "completed_at": null,
+              "active_duration_seconds": 10,
+              "turns": 1,
+              "tokens": {
+                "input": 17,
+                "output": 3,
+                "cache_read": 0,
+                "reasoning": 0,
+                "peak_context": 17
+              },
+              "cost_usd": 0.1,
+              "cost_evidence": {
+                "state": "observed",
+                "known_subtotal_usd": 0.1
+              },
+              "compactions": 0,
+              "user_iterations": 1
+            }
+          ],
+          "tools": [
+            {
+              "name": "bash",
+              "calls": 1,
+              "errors": 0
+            }
+          ],
+          "anomalies": [
+            {
+              "rule_id": "SUBAGENT_REWORK_LOOP",
+              "severity": "WARNING",
+              "context": {
+                "role": "builder",
+                "secondary_role": "source-tester",
+                "count": 3
+              }
+            }
+          ]
+        },
+        {
+          "id": "root-present",
+          "source": "codex",
+          "user": "fixture",
+          "invocations": [
+            {
+              "role": "builder",
+              "model": "source-model",
+              "started_at": null,
+              "completed_at": null,
+              "active_duration_seconds": 10,
+              "turns": 1,
+              "tokens": {
+                "input": 17,
+                "output": 3,
+                "cache_read": 0,
+                "reasoning": 0,
+                "peak_context": 17
+              },
+              "cost_usd": 0.1,
+              "cost_evidence": {
+                "state": "observed",
+                "known_subtotal_usd": 0.1
+              },
+              "compactions": 0,
+              "user_iterations": 1
+            }
+          ],
+          "tools": [
+            {
+              "name": "bash",
+              "calls": 1,
+              "errors": 0
+            }
+          ],
+          "anomalies": []
+        }
+      ]
+    },
+    "workflow_efficiency": {
+      "sdlc_iterations": 0,
+      "active_duration_seconds": 20,
+      "active_duration_formatted": "0m 20s",
+      "role_effort_distribution_pct": {},
+      "role_effort_unavailable_reason": "Complete nonzero subagent cost is required",
+      "subagent_turn_velocity": {
+        "avg_turns_per_invocation": 0,
+        "peak_turns": 0,
+        "by_role": {}
+      },
+      "test_to_production_ratio": {
+        "ratio": "0:0",
+        "test_lines_added": 0,
+        "prod_lines_added": 0
+      },
+      "reasoning_tokens": 0,
+      "reasoning_ratio_pct": 0,
+      "code_delivered": {
+        "lines_added": 0,
+        "lines_deleted": 0,
+        "files_changed": 0
+      },
+      "tool_execution": {
+        "total_calls": 2,
+        "errors_and_corrections": 0,
+        "success_rate_pct": 100
+      },
+      "context_window_health": {
+        "healthy_ceiling_tokens": 200000,
+        "status": "UNAVAILABLE",
+        "root_peak_tokens": 17,
+        "root_saturation_pct": 0,
+        "subagents_peak_tokens": 0,
+        "subagents_peak_role": "none",
+        "compactions": 0,
+        "peak_by_role": {
+          "planner": 17
+        }
+      }
+    },
+    "threads": [
+      {
+        "session_id": "root-missing",
+        "user": "fixture",
+        "roles": [
+          {
+            "role": "planner",
+            "models": [
+              {
+                "model": "source-model",
+                "invocations": 1,
+                "input_tokens": 17,
+                "output_tokens": 3,
+                "cache_read_tokens": 0,
+                "cache_hit_rate_pct": 0,
+                "cost_usd": 0.1,
+                "cost_summary": {
+                  "state": "complete",
+                  "known_subtotal_usd": 0.1,
+                  "fully_observed": 1,
+                  "partial": 0,
+                  "unavailable": 0,
+                  "total": 1
+                },
+                "peak_context_tokens": 17,
+                "context_health": "UNAVAILABLE"
+              }
+            ]
+          }
+        ],
+        "compactions": 0
+      },
+      {
+        "session_id": "root-present",
+        "user": "fixture",
+        "roles": [
+          {
+            "role": "planner",
+            "models": [
+              {
+                "model": "source-model",
+                "invocations": 1,
+                "input_tokens": 17,
+                "output_tokens": 3,
+                "cache_read_tokens": 0,
+                "cache_hit_rate_pct": 0,
+                "cost_usd": 0.1,
+                "cost_summary": {
+                  "state": "complete",
+                  "known_subtotal_usd": 0.1,
+                  "fully_observed": 1,
+                  "partial": 0,
+                  "unavailable": 0,
+                  "total": 1
+                },
+                "peak_context_tokens": 17,
+                "context_health": "UNAVAILABLE"
+              }
+            ]
+          }
+        ],
+        "compactions": 0
+      }
+    ],
+    "totals": {
+      "invocations": 2,
+      "input_tokens": 34,
+      "output_tokens": 6,
+      "cache_read_tokens": 0,
+      "cache_hit_rate_pct": 0,
+      "cost_usd": 0.2,
+      "cost_summary": {
+        "state": "complete",
+        "known_subtotal_usd": 0.2,
+        "fully_observed": 2,
+        "partial": 0,
+        "unavailable": 0,
+        "total": 2
+      },
+      "peak_context_tokens": 17,
+      "context_health": "UNAVAILABLE"
+    },
+    "roles": [
+      {
+        "role": "planner",
+        "invocations": 2,
+        "input_tokens": 34,
+        "output_tokens": 6,
+        "cache_read_tokens": 0,
+        "cache_hit_rate_pct": 0,
+        "cost_usd": 0.2,
+        "cost_summary": {
+          "state": "complete",
+          "known_subtotal_usd": 0.2,
+          "fully_observed": 2,
+          "partial": 0,
+          "unavailable": 0,
+          "total": 2
+        },
+        "peak_context_tokens": 17,
+        "context_health": "UNAVAILABLE"
+      }
+    ],
+    "models": [
+      {
+        "model": "source-model",
+        "invocations": 2,
+        "input_tokens": 34,
+        "output_tokens": 6,
+        "cache_read_tokens": 0,
+        "cache_hit_rate_pct": 0,
+        "cost_usd": 0.2,
+        "cost_summary": {
+          "state": "complete",
+          "known_subtotal_usd": 0.2,
+          "fully_observed": 2,
+          "partial": 0,
+          "unavailable": 0,
+          "total": 2
+        },
+        "peak_context_tokens": 17,
+        "context_health": "UNAVAILABLE"
+      }
+    ],
+    "anomalies": [
+      {
+        "rule_id": "SUBAGENT_REWORK_LOOP",
+        "severity": "WARNING",
+        "context": {
+          "session_id": "root-missing",
+          "role": "planner",
+          "secondary_role": "tester",
+          "count": 3
+        }
+      }
+    ]
+  },
+  "artifacts": {
+    "ticket_id": "T-01",
+    "items": []
+  },
+  "anomalies": [
+    {
+      "rule_id": "SUBAGENT_REWORK_LOOP",
+      "severity": "WARNING",
+      "context": {
+        "session_id": "root-missing",
+        "role": "planner",
+        "secondary_role": "tester",
+        "count": 3
+      }
+    }
+  ]
+}

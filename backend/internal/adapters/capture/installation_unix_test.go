@@ -340,7 +340,7 @@ func installFixture(t *testing.T, project string) (string, string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	config := "agenticlens:\n  version: v9.8.7\n  install_root: '" + cache + "'\n" + string(originalConfig)
+	config := strings.Replace(string(originalConfig), "  version: v9.8.7\n", "  version: v9.8.7\n  install_root: '"+cache+"'\n", 1)
 	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), []byte(config), 0600); err != nil {
 		t.Fatal(err)
 	}

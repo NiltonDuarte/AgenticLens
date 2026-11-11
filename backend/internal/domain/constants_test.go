@@ -32,7 +32,7 @@ func TestFormatTokensK(t *testing.T) {
 }
 
 func TestGetBaseHealthStatus(t *testing.T) {
-	ceiling := domain.HealthyCeilingTokens // 200,000
+	ceiling := int64(200000) // 200,000
 
 	tests := []struct {
 		name     string
@@ -53,13 +53,13 @@ func TestGetBaseHealthStatus(t *testing.T) {
 		{name: "boundary just above double standard ceiling", toks: 400001, ceiling: ceiling, expected: domain.ContextHealthCritical},
 		{name: "substantially above critical threshold", toks: 600000, ceiling: ceiling, expected: domain.ContextHealthCritical},
 
-		// Unassigned or non-positive ceiling defaulting to HealthyCeilingTokens (200,000)
-		{name: "zero ceiling defaults to 200k (healthy)", toks: 50000, ceiling: 0, expected: domain.ContextHealthHealthy},
-		{name: "zero ceiling defaults to 200k (elevated)", toks: 150000, ceiling: 0, expected: domain.ContextHealthElevated},
-		{name: "zero ceiling defaults to 200k (bloated)", toks: 250000, ceiling: 0, expected: domain.ContextHealthBloated},
-		{name: "zero ceiling defaults to 200k (critical)", toks: 450000, ceiling: 0, expected: domain.ContextHealthCritical},
-		{name: "negative ceiling defaults to 200k (healthy)", toks: 50000, ceiling: -1, expected: domain.ContextHealthHealthy},
-		{name: "negative ceiling defaults to 200k (bloated)", toks: 200001, ceiling: -50000, expected: domain.ContextHealthBloated},
+		// Missing/nonpositive policy cannot invent a denominator.
+		{name: "missing ceiling remains unavailable (healthy)", toks: 50000, ceiling: 0, expected: domain.ContextHealthUnavailable},
+		{name: "missing ceiling remains unavailable (elevated)", toks: 150000, ceiling: 0, expected: domain.ContextHealthUnavailable},
+		{name: "missing ceiling remains unavailable (bloated)", toks: 250000, ceiling: 0, expected: domain.ContextHealthUnavailable},
+		{name: "missing ceiling remains unavailable (critical)", toks: 450000, ceiling: 0, expected: domain.ContextHealthUnavailable},
+		{name: "missing ceiling remains unavailable (healthy)", toks: 50000, ceiling: -1, expected: domain.ContextHealthUnavailable},
+		{name: "missing ceiling remains unavailable (bloated)", toks: 200001, ceiling: -50000, expected: domain.ContextHealthUnavailable},
 
 		// Custom lower ceiling (50,000)
 		{name: "custom 50k ceiling under elevated", toks: 24999, ceiling: 50000, expected: domain.ContextHealthHealthy},
@@ -89,7 +89,7 @@ func TestGetBaseHealthStatus(t *testing.T) {
 }
 
 func TestGetHealthLabel(t *testing.T) {
-	ceiling := domain.HealthyCeilingTokens
+	ceiling := int64(200000)
 
 	tests := []struct {
 		toks     int64

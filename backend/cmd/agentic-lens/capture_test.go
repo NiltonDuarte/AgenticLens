@@ -20,6 +20,7 @@ import (
 	"agenticlens/internal/adapters"
 	"agenticlens/internal/adapters/capture"
 	adaptersconfig "agenticlens/internal/adapters/config"
+	"agenticlens/internal/adapters/filesystem"
 	"agenticlens/internal/domain"
 )
 
@@ -68,11 +69,13 @@ type captureGenerationFixture struct{ project, store, state, stateBase, output s
 func newCaptureGenerationFixture(t *testing.T) captureGenerationFixture {
 	t.Helper()
 	f := captureGenerationFixture{project: t.TempDir(), store: t.TempDir(), state: t.TempDir()}
+	initCLIGitFixture(t, f.project)
 	t.Setenv("CODEX_HOME", f.store)
 	f.stateBase = f.state
 	f.output = filepath.Join(f.project, "ledger.json")
-	config := "project_name: CaptureFixture\ntelemetry:\n  capture:\n    state_dir: " + strconv.Quote(f.state) + "\nticket:\n  prefixes: [TEST]\nworkspaces:\n  dir: records\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
-	if err := os.WriteFile(filepath.Join(f.project, ".agenticlens-config.yaml"), []byte(config), 0600); err != nil {
+	writeCLISharedPolicy(t, f.project)
+	sharedPath := filepath.Join(f.project, ".agenticlens-config.yaml")
+	if err := os.WriteFile(sharedPath, bytes.Replace(readCaptureFile(t, sharedPath), []byte("agenticlens:\n  version: v9.8.7\n"), nil, 1), 0600); err != nil {
 		t.Fatal(err)
 	}
 	if err := writeCaptureFixtureLocal(t, f, []byte("telemetry:\n  capture:\n")); err != nil {
@@ -175,7 +178,7 @@ func (f captureGenerationFixture) args(t *testing.T, extra ...string) []string {
 			}
 		}
 	}
-	return append([]string{"generate", "--source", "codex", "--capture-dir", f.state, "--ticket-id", "TEST-100", "--ticket-title", "Capture regression", "--ticket-type", "feat", "--json-output", f.output}, extra...)
+	return append([]string{"generate", "--source", "codex", "--codex-home", f.store, "--capture-dir", f.state, "--ticket-id", "TEST-100", "--ticket-title", "Capture regression", "--ticket-type", "feat", "--json-output", f.output}, extra...)
 }
 
 func (f captureGenerationFixture) generate(t *testing.T, extra ...string) domain.AgenticFactLedger {
@@ -257,6 +260,17 @@ func captureDiagnostics(t *testing.T, project, state string) []domain.CaptureDia
 
 func assertCapturePublishedOwners(t *testing.T, diagnostics []domain.CaptureDiagnostic, output, summary string, sessions []domain.SessionFact) {
 	t.Helper()
+	var err error
+	output, err = filesystem.PhysicalPath(output)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if summary != "" {
+		summary, err = filesystem.PhysicalPath(summary)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
 	var committed *domain.CaptureDiagnostic
 	for i := range diagnostics {
 		d := &diagnostics[i]
@@ -432,7 +446,8 @@ func TestCaptureCLIRequestExposesUnassignedTicketToPlugin(t *testing.T) {
 
 func TestCaptureCLIGenerateIncludesBoundIndependentSessionsAndSummaryDiagnostics(t *testing.T) {
 	project := t.TempDir()
-	configuration := "project_name: CaptureFixture\ntelemetry:\n  capture:\n    state_dir: .agenticlens-capture\nticket:\n  prefixes: [TEST]\nworkspaces:\n  dir: custom records\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+	initCLIGitFixture(t, project)
+	configuration := "agenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: CaptureFixture\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: \"TEST\"\n      description: Fixture ticket\nworkspaces:\n  artifacts: []\n  dir: custom records\ncode_metrics:\n  base_branch: fixture-base\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), []byte(configuration), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -581,16 +596,7 @@ func TestCaptureGenerationRetainedRegistryCannotOverrideNewerCanonicalOrExplicit
 				newer.Sessions[0].Skills = []domain.SkillFact{{Name: "stored-skill"}, {Name: "stored-skill"}}
 				link := domain.DelegationFact{AgentType: domain.KnownString("reviewer"), Description: "stored delegation", ChildSession: "stored-child", InvokedAt: domain.KnownString("2026-01-01T00:00:00Z")}
 				newer.Sessions[0].Delegations = []domain.DelegationFact{link, link}
-				acceptFixtureOwners(t, f.project, f.state, "TEST-100", newer.Sessions)
-				// The owned snapshot above represents an accepted native publication.
-				accepted, err := capture.OpenProject(f.state, f.project)
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				if err = accepted.Close(); err != nil {
-					t.Fatal(err)
-				}
+				// Portable canonical history needs no local source/registry receipts.
 				body, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(newer))
 				if err != nil {
 					t.Fatal(err)
@@ -820,6 +826,7 @@ func testCaptureOverlappingPublishers(t *testing.T, explicitNewer, automatic boo
 	t.Helper()
 	f := newCaptureGenerationFixture(t)
 	if automatic {
+		enableCLIFixtureSummary(t, f.project)
 		f.output = filepath.Join(f.project, "records", "TEST-100", "agentic_metrics.json")
 		if err := writeCaptureFixtureLocal(t, f, []byte("telemetry:\n  capture:\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 10000\n")); err != nil {
 			t.Fatal(err)
@@ -1060,7 +1067,7 @@ func TestCaptureNativeWorkerPublishesMultipleRootsAndRefreshesWithoutGenerate(t 
 		}
 	}
 	state := filepath.Join(f.project, ".agenticlens-capture")
-	writeCaptureSuccessfulPublicationPolicy(t, f.project, state, true)
+	writeCaptureSuccessfulPublicationPolicy(t, f.project, state)
 	receive := func(id, event string) {
 		t.Helper()
 		payload, _ := json.Marshal(capture.HookInput{SessionID: id, Event: event, TranscriptPath: filepath.Join(f.store, "sessions", id+".jsonl")})
@@ -1089,9 +1096,7 @@ func TestCaptureNativeWorkerPublishesMultipleRootsAndRefreshesWithoutGenerate(t 
 		if err != nil {
 			t.Fatalf("request %v %s", err, requestError.String())
 		}
-		if !strings.Contains(requestError.String(), "detailed_report is deprecated") {
-			t.Fatalf("legacy option diagnosis missing from stderr: %s", requestError.String())
-		}
+
 		var row domain.CaptureRegistration
 		if err = json.Unmarshal(out, &row); err != nil {
 			t.Fatal(err)
@@ -1187,10 +1192,10 @@ func TestCaptureNativeWorkerPublishesMultipleRootsAndRefreshesWithoutGenerate(t 
 		t.Fatal(err)
 	}
 	if strings.Contains(string(summary), "](capture_report.json)") {
-		t.Fatal("deprecated detailed_report produced dangling link")
+		t.Fatal("publication produced dangling retired report link")
 	}
 	if _, err = os.Stat(filepath.Join(filepath.Dir(output), "capture_report.json")); !os.IsNotExist(err) {
-		t.Fatalf("deprecated detailed_report produced sidecar: %v", err)
+		t.Fatalf("publication produced retired sidecar: %v", err)
 	}
 }
 
@@ -1210,12 +1215,18 @@ func writeCaptureFixtureLocal(t *testing.T, f captureGenerationFixture, body []b
 		}
 		extra += "    state_dir: '" + strings.ReplaceAll(state, "'", "''") + "'\n"
 	}
-	for _, setting := range []struct{ key, value string }{{"refresh_ms", "100"}, {"debounce_ms", "0"}, {"idle_ms", "300"}, {"max_lifetime_ms", "5000"}, {"pass_timeout_ms", "3000"}} {
+	for _, setting := range []struct{ key, value string }{{"refresh_ms", "100"}, {"debounce_ms", "0"}, {"idle_ms", "300"}, {"max_lifetime_ms", "5000"}, {"pass_timeout_ms", "3000"}, {"max_sessions", "256"}, {"max_source_bytes", "67108864"}, {"commit_warning", "true"}} {
 		if !strings.Contains(text, "    "+setting.key+":") {
 			extra += "    " + setting.key + ": " + setting.value + "\n"
 		}
 	}
 	text = strings.Replace(text, "  capture:\n", "  capture:\n"+extra, 1)
+	if !strings.Contains(text, "  default_source:") {
+		text = strings.Replace(text, "telemetry:\n", "telemetry:\n  default_source: codex\n", 1)
+	}
+	if f.store != "" && !strings.Contains(text, "  sources:") {
+		text += fmt.Sprintf("  sources:\n    codex:\n      home: %q\n", f.store)
+	}
 	return os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte(text), 0600)
 }
 
@@ -1249,23 +1260,17 @@ func serializeCaptureFixtureWorkers(t *testing.T, f captureGenerationFixture) {
 	})
 }
 
-func TestAutomaticGenerationUsesSelectedLocalDefaultsRatherThanSharedBudget(t *testing.T) {
+func TestAutomaticGenerationUsesExplicitSelectedLocalBudget(t *testing.T) {
 	f := newCaptureGenerationFixture(t)
 	f.bind(t, f.write(t, 10))
 	assertCaptureRootInput(t, f.generate(t), 10)
-	sharedPath := filepath.Join(f.project, ".agenticlens-config.yaml")
-	shared := strings.Replace(string(readCaptureFile(t, sharedPath)), "  capture:\n", "  capture:\n    max_source_bytes: 1\n", 1)
-	if err := os.WriteFile(sharedPath, []byte(shared), 0600); err != nil {
-		t.Fatal(err)
-	}
-	// Omission means documented automatic defaults, not machine keys from shared YAML.
-	local := fmt.Sprintf("telemetry:\n  capture:\n    enabled: true\n    state_dir: %q\n  sources:\n    codex:\n      home: %q\n", f.stateBase, f.store)
-	if err := os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte(local), 0600); err != nil {
+	local := fmt.Sprintf("telemetry:\n  capture:\n    enabled: true\n    state_dir: %q\n    max_source_bytes: 67108864\n  sources:\n    codex:\n      home: %q\n", f.stateBase, f.store)
+	if err := writeCaptureFixtureLocal(t, f, []byte(local)); err != nil {
 		t.Fatal(err)
 	}
 	policy, err := adaptersconfig.ResolveCapture(f.project, "")
-	if err != nil || policy.MaxSourceBytes != capture.DefaultByteBudget {
-		t.Fatalf("worker's local default policy: %+v %v", policy, err)
+	if err != nil || policy.MaxSourceBytes != 67108864 {
+		t.Fatalf("explicit selected budget: %+v %v", policy, err)
 	}
 	f.writeAt(t, 31, "2026-01-01T00:00:03Z")
 	assertCaptureRootInput(t, f.generate(t, "--capture-auto"), 31)

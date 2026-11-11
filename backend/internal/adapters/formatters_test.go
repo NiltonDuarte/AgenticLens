@@ -1,6 +1,7 @@
 package adapters_test
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 
@@ -267,7 +268,7 @@ func TestFormatMarkdownMetricsTable_WithAnomalies(t *testing.T) {
 			if hasWarning {
 				facts.Anomalies = []domain.Anomaly{{RuleID: domain.RuleToolRetryStreak, Severity: domain.SeverityWarning, Context: domain.AnomalyContext{ToolName: &toolBash, Count: &count5}}}
 			}
-			metrics := domain.DeriveMetricsLedger(facts, domain.DefaultProjectConfig())
+			metrics := domain.DeriveMetricsLedger(facts, fixtureReadPolicy(t))
 			tableMD := adapters.FormatMarkdownMetricsTable(metrics)
 			if strings.Contains(tableMD, "No execution anomalies detected (clean session)") || strings.Contains(tableMD, "not recorded for the full ledger") || strings.Contains(tableMD, "not recorded for every required owner/group") {
 				t.Fatalf("cached analysis was declared absent or unqualified clean: %s", tableMD)
@@ -486,12 +487,13 @@ func TestFormatMarkdownMetricsTable_SingleRootAndZeroSubagents(t *testing.T) {
 				ByRole:                map[domain.AgentRole]float64{},
 			},
 			ContextWindowHealth: domain.ContextWindowHealth{
-				Status:              "HEALTHY",
-				RootPeakTokens:      60000,
-				RootSaturationPct:   30.0,
-				SubagentsPeakTokens: 0,
-				SubagentsPeakRole:   "none",
-				Compactions:         0,
+				Status:               "HEALTHY",
+				HealthyCeilingTokens: 200000,
+				RootPeakTokens:       60000,
+				RootSaturationPct:    30.0,
+				SubagentsPeakTokens:  0,
+				SubagentsPeakRole:    "none",
+				Compactions:          0,
 			},
 		},
 		Totals: domain.GroupedMetric{
@@ -515,5 +517,35 @@ func TestFormatMarkdownMetricsTable_SingleRootAndZeroSubagents(t *testing.T) {
 	expectedVel := "- **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)"
 	if !strings.Contains(tableMD, expectedVel) {
 		t.Errorf("expected zero turn velocity format:\nwant: %s\ngot:\n%s", expectedVel, tableMD)
+	}
+}
+
+func TestModelSummaryLabelsUnknownWithoutChangingGroups(t *testing.T) {
+	ledger := domain.AgenticMetricsLedger{
+		Totals: domain.GroupedMetric{Invocations: 10, InputTokens: 100},
+		Models: []domain.ModelMetric{
+			{Model: "default", Invocations: 3, InputTokens: 30},
+			{Model: "", Invocations: 2, InputTokens: 20},
+			{Model: "unknown", Invocations: 4, InputTokens: 40},
+			{Model: "Alpha", Invocations: 1, InputTokens: 10},
+		},
+	}
+	before := append([]domain.ModelMetric(nil), ledger.Models...)
+	markdown := adapters.FormatMarkdownMetricsTable(ledger)
+	previous := -1
+	for _, row := range []string{
+		"| **Unknown** | 2 | 20 |",
+		"| **Alpha** | 1 | 10 |",
+		"| **default** | 3 | 30 |",
+		"| **unknown** | 4 | 40 |",
+	} {
+		position := strings.Index(markdown, row)
+		if position < 0 || position <= previous {
+			t.Fatalf("model label/count/raw-key ordering changed for %q: %s", row, markdown)
+		}
+		previous = position
+	}
+	if !reflect.DeepEqual(before, ledger.Models) {
+		t.Fatalf("human label rewrote canonical model groups: before=%+v after=%+v", before, ledger.Models)
 	}
 }

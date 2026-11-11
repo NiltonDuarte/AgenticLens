@@ -228,7 +228,7 @@ func (s *Store) recoverChildren(ctx context.Context, ticket string, budget *work
 				budget.discoveryPending = true
 				continue
 			}
-			db, e := opencode.OpenDB(parent.Identity.Store)
+			db, e := openOpenCodeSource(s.configuration, parent.Identity.Store)
 			if e != nil {
 				continue
 			}

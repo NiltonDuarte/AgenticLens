@@ -85,7 +85,7 @@ func TestMigrationPreservesRepeatedRowsWithinLegacySessionOwners(t *testing.T) {
 						}
 					}
 				}
-				if got := domain.ComputeTotals(migrated.InvocationFacts()); got.Invocations != 4 || got.InputTokens != 80 || got.CostUSD != 0.5 {
+				if got := domain.ComputeTotals(migrated.InvocationFacts(), 200000); got.Invocations != 4 || got.InputTokens != 80 || got.CostUSD != 0.5 {
 					t.Fatalf("migration collapsed or duplicated metric contributions: %+v", got)
 				}
 			})

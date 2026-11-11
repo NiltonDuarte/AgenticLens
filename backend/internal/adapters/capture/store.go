@@ -16,7 +16,6 @@ import (
 	"strings"
 	"time"
 
-	"agenticlens/internal/adapters/codex"
 	"agenticlens/internal/domain"
 	"agenticlens/internal/domain/migration"
 	"modernc.org/sqlite"
@@ -40,6 +39,7 @@ const DefaultDirectory = ".agenticlens-capture"
 const MaxPayloadBytes = 64 * 1024
 
 type Store struct {
+	configuration     domain.ProjectConfig
 	anomalyThresholds domain.AnomalyThresholdsConfig
 	db                *sql.DB
 	project           string
@@ -56,7 +56,24 @@ type storedRegistration struct {
 
 // Open creates an isolated unassociated registry for adapter callers. Production
 // lifecycle commands use OpenProject and require configured project ownership.
-func Open(directory string) (*Store, error) { return openRegistry(directory, "", "", false) }
+// Programmatic source consumers supply their explicit policy; state-only reads
+// do not require unused source settings and never receive numeric defaults.
+func Open(directory string, policies ...domain.ProjectConfig) (*Store, error) {
+	if len(policies) > 1 {
+		return nil, errors.New("capture registry accepts one explicit operation policy")
+	}
+	store, err := openRegistry(directory, "", "", false)
+	if err != nil {
+		return nil, err
+	}
+	if len(policies) == 1 {
+		store.configuration = policies[0]
+		store.anomalyThresholds = policies[0].AnomalyThresholds
+	} else {
+		store.configuration.Settings = map[string]bool{}
+	}
+	return store, nil
+}
 
 func openRegistry(directory, name, project string, readOnly bool) (*Store, error) {
 	return openRegistryMode(directory, name, project, readOnly, "")
@@ -689,7 +706,7 @@ func (s *Store) Bind(ctx context.Context, id domain.CaptureIdentity, ticket, req
 			return r, errors.New("binding requires explicit ticket ID")
 		}
 		if s.project != "" && r.Identity.Source == domain.SourceCodex && r.TranscriptPath == "" {
-			path, err := codex.DiscoverExactRolloutPath(r.Identity.Store, r.Identity.SessionID)
+			path, err := discoverExactCaptureRollout(s.configuration, r.Identity.Store, r.Identity.SessionID)
 			if err != nil {
 				return r, fmt.Errorf("binding source identity unavailable; minimal registration retained: %w", err)
 			}

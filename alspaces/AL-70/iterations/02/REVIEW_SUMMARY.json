@@ -1,0 +1,351 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "CFG-01",
+      "severity": 6,
+      "issue": "Root dotted YAML keys can satisfy structural presence while typed values remain absent/zero.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: presence follows structural YAML keys, including explicit false and zero."
+    },
+    {
+      "finding_id": "CAP-01",
+      "severity": 6,
+      "issue": "Manager Codex callbacks silently skip canonical .yml projects.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: canonical YAML/YML projects share callback discovery and validation."
+    },
+    {
+      "finding_id": "UI-01",
+      "severity": 5,
+      "issue": "Projected live API roles are mapped again in the UI.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: live tree and inspector consume projected roles once."
+    },
+    {
+      "finding_id": "PATH-01",
+      "severity": 3,
+      "issue": "Newline-delimited Git metadata truncates legal base checkout paths.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: NUL-delimited Git metadata preserves checkout path bytes."
+    },
+    {
+      "finding_id": "DATA-01",
+      "severity": 5,
+      "issue": "An unreadable unrelated directory aborts valid migration/backfill targets.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: descendant failures report incomplete coverage while reachable siblings continue; root failures stay fatal."
+    },
+    {
+      "finding_id": "CAP-02",
+      "severity": 5,
+      "issue": "Effective worker budget overrides are lost when launching generate.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: admitted positive budgets reach native generation and reconciliation without configuration writes."
+    },
+    {
+      "finding_id": "DOC-01",
+      "severity": 3,
+      "issue": "Operator guidance still promises removed session/byte presets.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: operator guidance requires explicit CLI/local budgets."
+    },
+    {
+      "finding_id": "DOC-02",
+      "severity": 3,
+      "issue": "Dashboard guidance still lists shared database.path as a live source.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: dashboard guidance names current CLI and selected-local source paths."
+    },
+    {
+      "finding_id": "LIVE-01",
+      "severity": 4,
+      "issue": "Unavailable live source is reported as successful measured zero activity.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: unavailable REST/SSE sources differ from successfully measured empty data."
+    },
+    {
+      "finding_id": "UI-02",
+      "severity": 2,
+      "issue": "Empty/whitespace artifact content is presented as missing and raw bytes are inaccessible.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed bounded existing UX: unavailable, empty and whitespace content remain distinct and available bytes stay copyable."
+    },
+    {
+      "finding_id": "TEST-01",
+      "severity": 4,
+      "issue": "Tests bypass the real App configuration-provider handoff.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: real App fetched-policy regression detects a disconnected configuration provider."
+    },
+    {
+      "finding_id": "TEST-02",
+      "severity": 5,
+      "issue": "HTTP comparison test expects a forbidden historical type rewrite.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: preserve historical type spelling while retaining alias-filter assertions."
+    },
+    {
+      "finding_id": "TEST-03",
+      "severity": 2,
+      "issue": "Conditional no-write assertions inspect an absent live workspace and provide no persistence evidence.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed bounded test gap: owned fixture bytes are asserted unconditionally."
+    },
+    {
+      "finding_id": "TEST-04",
+      "severity": 3,
+      "issue": "The native-wire-labelled UI test has only hand-authored payloads, with no shared producer contract guard.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed coverage gap with shared native HTTP JSON and actual frontend validation/render; the original static fixture test predated this change, contrary to its introduction claim."
+    },
+    {
+      "finding_id": "FE-01",
+      "severity": 4,
+      "issue": "Literal configured prefixes named all or ALL are silently dropped from API requests.",
+      "reporters": [
+        {
+          "persona": "coder",
+          "model": null,
+          "effort": null,
+          "identity_note": "Exact execution model and effort were not independently recorded for this correction audit."
+        }
+      ],
+      "disposition": "Fixed during coder correction audit: literal all/ALL prefixes survive request construction independently of the type sentinel."
+    },
+    {
+      "finding_id": "CTX-01",
+      "severity": 4,
+      "issue": "Summary-only migrate/backfill publication bypasses required context-ceiling validation.",
+      "reporters": [
+        {
+          "persona": "coder",
+          "model": null,
+          "effort": null,
+          "identity_note": "Exact execution model and effort were not independently recorded for this correction audit."
+        }
+      ],
+      "disposition": "Fixed during coder correction audit: summary-only publication validates context policy before mutations; unused-policy controls remain."
+    },
+    {
+      "finding_id": "UI-03",
+      "severity": 4,
+      "issue": "Recorded anomaly roles are projected again by the drawer.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed after re-review discovery: explicit presentation origin prevents remapping recorded anomalies; the suspected backend double map was refuted."
+    },
+    {
+      "finding_id": "LIVE-02",
+      "severity": 3,
+      "issue": "Successful REST recovery leaves the live connection-error banner visible.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed after re-review discovery: successful current REST recovery restores truthful transport status."
+    },
+    {
+      "finding_id": "POLL-01",
+      "severity": 4,
+      "issue": "Frontend fallback polling ignores the explicit shared cadence and uses two seconds.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": null,
+          "effort": null,
+          "identity_note": "Exact execution model and effort were not independently recorded for this correction audit."
+        }
+      ],
+      "disposition": "Fixed after coordinator audit: the existing configured cadence reaches browser polling without a preset; static views permit unused absent policy."
+    },
+    {
+      "finding_id": "UI-04",
+      "severity": 4,
+      "issue": "Partial hydration duplicates one retained anomaly across raw and projected role contexts.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed after re-review discovery: canonical raw occurrences reconcile one-to-one, preserving repeats, persona distinctions, evidence, coverage and selection."
+    },
+    {
+      "finding_id": "LIVE-03",
+      "severity": 4,
+      "issue": "Overlapping live polls allow stale responses to replace newer data or recovery status.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed after re-review discovery: accepted-completion ordering prevents stale tree/status replacement without starving useful progress."
+    },
+    {
+      "finding_id": "UI-05",
+      "severity": 3,
+      "issue": "Generated anomaly headings use raw roles while adjacent fields show configured aliases.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed after re-review discovery: generated display roles project once while raw facts, evidence and debug prompts remain unchanged."
+    },
+    {
+      "finding_id": "TEST-05",
+      "severity": 2,
+      "issue": "Two migration CLI assertions still expect the previous empty-result wording.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": null,
+          "effort": null,
+          "identity_note": "Exact execution model and effort were not independently recorded for this integration audit."
+        }
+      ],
+      "disposition": "Fixed after required integrated-gate discovery: current readable-workspace expectations preserve successful-exit and all other CLI oracles."
+    }
+  ]
+}

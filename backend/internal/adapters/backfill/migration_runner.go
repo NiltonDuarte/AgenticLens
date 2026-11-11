@@ -5,16 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
 
 	"agenticlens/internal/adapters"
 	"agenticlens/internal/adapters/capture"
-	"agenticlens/internal/adapters/config"
 	"agenticlens/internal/domain"
 	"agenticlens/internal/domain/migration"
 )
@@ -44,45 +41,22 @@ func (r *MigrationRunner) Run(opts MigrationOptions) (*SchemaMigrationReport, er
 		return nil, fmt.Errorf("migration publication requires current target version %d; intermediate transformations are migration-engine internals", domain.CurrentSchemaVersion)
 	}
 
-	targetDir, err := adapters.ResolveWorkspacesDir(opts.WorkspacesDir)
+	targetDir, cfg, err := adapters.ResolveWorkspaceContext(opts.WorkspacesDir)
 	if err != nil {
-		return nil, fmt.Errorf("resolving workspaces directory: %w", err)
-	}
-	fi, err := os.Stat(targetDir)
-	if err != nil || !fi.IsDir() {
-		return nil, fmt.Errorf("workspaces directory not found: %s", targetDir)
+		return nil, fmt.Errorf("loading required migration target configuration and workspaces: %w", errors.Join(adapters.ErrWorkspacesDirNotFound, err))
 	}
 
-	cfg, err := config.Load(targetDir)
-	if errors.Is(err, config.ErrConfigNotFound) {
-		cfg, err = config.Load("")
-	}
-	if err != nil && !errors.Is(err, config.ErrConfigNotFound) {
-		return nil, fmt.Errorf("loading backfill configuration: %w", err)
-	}
-
-	var metricFiles []string
-	err = filepath.WalkDir(targetDir, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return nil
-		}
-		if !d.IsDir() && d.Name() == "agentic_metrics.json" {
-			metricFiles = append(metricFiles, path)
-		}
-		return nil
-	})
+	metricFiles, discoveryDiagnostics, err := discoverWorkspaceLedgers(targetDir)
 	if err != nil {
-		return nil, fmt.Errorf("walking workspaces directory %s: %w", targetDir, err)
+		return nil, err
 	}
-
-	sort.Strings(metricFiles)
 
 	var targetFiles []string
 	cleanTicketID := strings.TrimSpace(opts.TicketID)
 	for _, f := range metricFiles {
 		parentDir := filepath.Dir(f)
 		parentName := filepath.Base(parentDir)
-		if cleanTicketID != "" && !strings.EqualFold(parentName, cleanTicketID) {
+		if cleanTicketID != "" && !ticketMatches(parentName, cleanTicketID, cfg.Ticket.CaseInsensitive) {
 			continue
 		}
 		targetFiles = append(targetFiles, f)
@@ -90,7 +64,7 @@ func (r *MigrationRunner) Run(opts MigrationOptions) (*SchemaMigrationReport, er
 
 	report := &SchemaMigrationReport{
 		Scanned: len(targetFiles),
-		Errors:  []string{},
+		Errors:  append([]string{}, discoveryDiagnostics...),
 		Results: []TicketSchemaMigrationResult{},
 	}
 
@@ -131,7 +105,7 @@ func (r *MigrationRunner) migrateWorkspace(ctx context.Context, metricPath strin
 		TargetVersion: targetVer,
 	}
 
-	canonicalPath, err := capture.ProjectDirectory(metricPath)
+	canonicalPath, summaryPath, err := backfillPublicationPaths(metricPath, opts.UpdateSummaries, cfg)
 	if err != nil {
 		res.Status = "error"
 		res.Error = fmt.Errorf("resolving ledger publication: %w", err)
@@ -194,7 +168,9 @@ func (r *MigrationRunner) migrateWorkspace(ctx context.Context, metricPath strin
 		current = &prepared
 	}
 	cleanupCompleted := current != nil && current.Completed
-	if sourceVer >= targetVer && !cleanupCompleted && !(sourceVer >= 4 && sourceVer <= domain.CurrentSchemaVersion && (hasLegacyFacts || needsSanitization)) {
+	cleanupFormer := current != nil && current.FormerMetadataRemoved
+	cleanupCurrent := cleanupCompleted || cleanupFormer
+	if sourceVer >= targetVer && !cleanupCurrent && !(sourceVer >= 4 && sourceVer <= domain.CurrentSchemaVersion && (hasLegacyFacts || needsSanitization)) {
 		res.Status = "up-to-date"
 		res.DiffSummary = fmt.Sprintf("Schema version %d is already up-to-date", sourceVer)
 		return res, issues
@@ -220,6 +196,13 @@ func (r *MigrationRunner) migrateWorkspace(ctx context.Context, metricPath strin
 	if cleanupCompleted {
 		res.DiffSummary = "Removed completed migration metadata"
 	}
+	if cleanupFormer {
+		if cleanupCompleted {
+			res.DiffSummary += " and former generation metadata"
+		} else {
+			res.DiffSummary = "Removed former generation metadata"
+		}
+	}
 	if audit := migrationAuditSummary(migrated.Migration); audit != "" {
 		res.DiffSummary += "; " + audit
 	}
@@ -236,8 +219,8 @@ func (r *MigrationRunner) migrateWorkspace(ctx context.Context, metricPath strin
 		return res, []string{res.Error.Error()}
 	}
 	var data []byte
-	if cleanupCompleted {
-		data = current.WithoutMigration
+	if cleanupCurrent {
+		data = current.CleanupCandidate
 	} else {
 		data, err = json.Marshal(dto)
 	}
@@ -270,29 +253,16 @@ func (r *MigrationRunner) migrateWorkspace(ctx context.Context, metricPath strin
 		res.BackupPath = backupPath
 	}
 
-	tempPath := metricPath + ".tmp"
-	if err := os.WriteFile(tempPath, data, 0644); err != nil {
-		res.Status = "error"
-		res.Error = fmt.Errorf("writing temporary file %s: %w", tempPath, err)
-		issues = append(issues, fmt.Sprintf("Workspace %s: %v", metricPath, res.Error))
-		return res, issues
-	}
-
-	if err := os.Rename(tempPath, metricPath); err != nil {
-		_ = os.Remove(tempPath)
-		res.Status = "error"
-		res.Error = fmt.Errorf("atomic rename to %s: %w", metricPath, err)
-		issues = append(issues, fmt.Sprintf("Workspace %s: %v", metricPath, res.Error))
-		return res, issues
-	}
-
-	if opts.UpdateSummaries {
-		summaryPath := filepath.Join(wsDir, "SUMMARY.md")
+	var tableMD string
+	if summaryPath != "" {
 		derivedLedger := domain.DeriveMetricsLedger(migrated, cfg)
-		tableMD := adapters.FormatMarkdownMetricsTable(derivedLedger, cfg.RoleOrder)
-		if err := adapters.UpdateSummaryFile(summaryPath, tableMD); err != nil {
-			issues = append(issues, fmt.Sprintf("Workspace %s: updating summary: %v", metricPath, err))
-		}
+		tableMD = adapters.FormatMarkdownMetricsTable(derivedLedger, cfg.RoleOrder)
+	}
+	if err := publishBackfillArtifacts(metricPath, data, summaryPath, tableMD); err != nil {
+		res.Status = "error"
+		res.Error = err
+		issues = append(issues, fmt.Sprintf("Workspace %s: %v", metricPath, err))
+		return res, issues
 	}
 
 	res.Status = "migrated"

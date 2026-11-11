@@ -1,0 +1,21 @@
+{
+  "root_sessions": [
+    {
+      "id": "wire-root",
+      "agent": "builder",
+      "role": "planner",
+      "model": "wire-model",
+      "title": "T-02 wire projection",
+      "time_created": "2100-01-01T00:00:00.000000+00:00",
+      "time_updated": "2100-01-01T00:00:00.000000+00:00",
+      "status": "running",
+      "guessed_ticket_id": "T-02",
+      "ticket_confidence": 1,
+      "anomalies": [],
+      "sub_sessions": []
+    }
+  ],
+  "last_refreshed_at": "2100-01-01T00:00:00.000Z",
+  "total_active_sessions": 1,
+  "active_anomalies": []
+}

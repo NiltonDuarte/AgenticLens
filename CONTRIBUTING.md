@@ -90,7 +90,7 @@ Open `http://localhost:8085` to view the standalone dashboard.
 | `make vet` | Run `go vet` across all Go packages |
 | `make lint` | Run Go vet, TypeScript typecheck, and ESLint |
 | `make build` | Compile frontend bundle and build multi-platform binaries in `bin/` |
-| `make server` | Build and run HTTP server on configured `PORT` (default: 8085) |
+| `make server` | Build and run the loopback HTTP server on port 8085; CLI --port selects another explicit port |
 | `make serve` | Alias for `make server` |
 | `make release-build` | Cross-compile binaries for all supported platforms into `dist/bin/` |
 | `make release-package` | Package platform archives (`.tar.gz` and `.zip`) and generate `SHA256SUMS` |

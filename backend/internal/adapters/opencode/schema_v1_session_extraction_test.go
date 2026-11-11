@@ -532,7 +532,7 @@ func TestSchemaV1ExtractSessions_AdversarialEdgeCases(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		client, err := opencode.OpenDB(corruptDBPath)
+		client, err := opencode.OpenDB(corruptDBPath, 0)
 		if err == nil && client != nil {
 			// modernc.org/sqlite might open and ping, but query fails
 			defer client.Close()
@@ -1776,6 +1776,15 @@ func TestSchemaV1ActiveDurationSnapshotAndCompletion(t *testing.T) {
 }
 
 func TestSchemaV1PermissivePartialPartsPreservePresenceAndKnownFacts(t *testing.T) {
+	policy := domain.AnomalyThresholdsConfig{
+		ErrorRateMinCalls: 5, ErrorRateThreshold: .35, ErrorRateCriticalThreshold: .70,
+		ContextCeilingWarningTokens: 160000, ContextCeilingCriticalTokens: 200000,
+		ConsecutiveErrorsStreakWarning: 3, ConsecutiveErrorsStreakCritical: 5,
+		ToolThrashingMinFailures: 3, ToolThrashingCriticalFailures: 5,
+		TurnUsageWarningTokens: 60000, TurnUsageCriticalTokens: 120000,
+		ContextGrowthWarningTokens: 80000, ContextGrowthCriticalTokens: 160000,
+		StallThresholdSeconds: 120,
+	}
 	for _, tc := range []struct {
 		name, malformed string
 		knownSkill      bool
@@ -1819,7 +1828,7 @@ INSERT INTO message(id,session_id,time_created,time_updated,data) VALUES('presen
 					if owner.Skills == nil || owner.Delegations == nil || owner.Anomalies != nil || len(owner.Skills) != 0 || len(owner.Delegations) != 0 {
 						t.Fatalf("raw native completeness invented configured anomaly analysis: %+v", owner)
 					}
-					configured, err := domain.PersistSourceAnomalySummaries(domain.AgenticFactLedger{Sessions: snapshot}, domain.SourceEvents{Events: []domain.EventFact{}, CompleteSessionIDs: []string{"presence-owner"}}, domain.AnomalyThresholdsConfig{ErrorRateMinCalls: 5, ErrorRateThreshold: .35, ErrorRateCriticalThreshold: .70})
+					configured, err := domain.PersistSourceAnomalySummaries(domain.AgenticFactLedger{Sessions: snapshot}, domain.SourceEvents{Events: []domain.EventFact{}, CompleteSessionIDs: []string{"presence-owner"}}, policy)
 					if err != nil || configured.Sessions[0].Anomalies == nil || configured.Anomalies == nil {
 						t.Fatalf("complete configured final analysis did not record empty arrays: %+v %v", configured, err)
 					}

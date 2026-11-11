@@ -222,7 +222,7 @@ func fixtureSourceSummaries(sessions []domain.SessionFact, events []domain.Event
 
 // Fixture policy is explicit test input, never an application fallback.
 func fixtureAnomalyPolicy() domain.AnomalyThresholdsConfig {
-	return domain.AnomalyThresholdsConfig{ErrorRateMinCalls: 5, ErrorRateThreshold: .25, ErrorRateCriticalThreshold: .50}
+	return domain.AnomalyThresholdsConfig{ErrorRateMinCalls: 5, ErrorRateThreshold: .25, ErrorRateCriticalThreshold: .50, ContextCeilingWarningTokens: 160000, ContextCeilingCriticalTokens: 200000, ConsecutiveErrorsStreakWarning: 3, ConsecutiveErrorsStreakCritical: 5, TurnUsageWarningTokens: 30000, TurnUsageCriticalTokens: 60000, ContextGrowthWarningTokens: 40000, ContextGrowthCriticalTokens: 80000, ToolThrashingMinFailures: 3, ToolThrashingCriticalFailures: 5}
 }
 func detectFixtureAnomaliesFromEvents(ledger domain.AgenticFactLedger, events []domain.EventFact, policy ...domain.AnomalyThresholdsConfig) []domain.Anomaly {
 	if len(policy) == 0 {

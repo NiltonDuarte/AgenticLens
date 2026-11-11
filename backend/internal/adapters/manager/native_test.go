@@ -317,19 +317,35 @@ func TestManagerDisabledHookValidatesWithoutSourceOrCacheIO(t *testing.T) {
 	t.Setenv("USERPROFILE", home)
 	state := filepath.Join(root, "uninitialized-state")
 	source := filepath.Join(root, "unavailable-source")
-	managerWrite(t, filepath.Join(project, ".agenticlens-config.yaml"), []byte("project_name: Fixture\nagenticlens:\n  version: v9.4.2\nticket:\n  prefixes: [TEST]\ncode_metrics:\n  source_roots: [src]\nanomaly_thresholds:\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.35\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"), 0600)
-	local := filepath.Join(project, ".agenticlens-config.local.yaml")
-	configuration := fmt.Sprintf("telemetry:\n  capture:\n    enabled: false\n    state_dir: %q\n  default_source: codex\n  sources:\n    codex:\n      home: %q\n", state, source)
-	managerWrite(t, local, []byte(configuration), 0600)
-	payload := []byte(fmt.Sprintf(`{"cwd":%q,"session_id":"session-disabled","hook_event_name":"SessionStart"}`, project))
+	shared, err := os.ReadFile("../config/testdata/shared-policy.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	shared = bytes.Replace(shared, []byte("version: v9.8.7"), []byte("version: v9.4.2"), 1)
+	for _, suffix := range []string{"yaml", "yml"} {
+		sharedPath := filepath.Join(project, ".agenticlens-config."+suffix)
+		managerWrite(t, sharedPath, shared, 0600)
+		local := filepath.Join(project, ".agenticlens-config.local.yaml")
+		configuration := fmt.Sprintf("telemetry:\n  capture:\n    enabled: false\n    state_dir: %q\n  default_source: codex\n  sources:\n    codex:\n      home: %q\n", state, source)
+		managerWrite(t, local, []byte(configuration), 0600)
+		payload := []byte(fmt.Sprintf(`{"cwd":%q,"session_id":"session-disabled","hook_event_name":"SessionStart"}`, project))
+		var output bytes.Buffer
+		if err := Run([]string{"codex-hook"}, bytes.NewReader(payload), &output, &output); err != nil || strings.TrimSpace(output.String()) != "{}" {
+			t.Fatalf("disabled hook performed engine selection: %q %v", output.String(), err)
+		}
+		managerWrite(t, local, []byte(strings.Replace(configuration, "enabled: false", "enabled: wrong", 1)), 0600)
+		output.Reset()
+		if err := Run([]string{"codex-hook"}, bytes.NewReader(payload), &output, &output); err == nil {
+			t.Fatal("invalid disabled policy bypassed validation")
+		}
+		if err := os.Remove(sharedPath); err != nil {
+			t.Fatal(err)
+		}
+	}
+	payload := []byte(fmt.Sprintf(`{"cwd":%q,"session_id":"outside","hook_event_name":"SessionStart"}`, root))
 	var output bytes.Buffer
 	if err := Run([]string{"codex-hook"}, bytes.NewReader(payload), &output, &output); err != nil || strings.TrimSpace(output.String()) != "{}" {
-		t.Fatalf("disabled hook performed engine selection: %q %v", output.String(), err)
-	}
-	managerWrite(t, local, []byte(strings.Replace(configuration, "enabled: false", "enabled: wrong", 1)), 0600)
-	output.Reset()
-	if err := Run([]string{"codex-hook"}, bytes.NewReader(payload), &output, &output); err == nil {
-		t.Fatal("invalid disabled policy bypassed validation")
+		t.Fatalf("no-project callback must remain no-op: %q %v", output.String(), err)
 	}
 	for _, path := range []string{state, source, filepath.Join(home, ".agenticlens")} {
 		if _, err := os.Stat(path); !os.IsNotExist(err) {

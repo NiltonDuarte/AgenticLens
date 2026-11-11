@@ -13,10 +13,7 @@ type GenerationPolicy struct {
 type GenerationConfig struct {
 	Metrics  GenerationPolicy         `json:"metrics" yaml:"metrics"`
 	Feedback GenerationFeedbackConfig `json:"feedback" yaml:"feedback"`
-}
-
-func DefaultGenerationPolicy() GenerationPolicy {
-	return GenerationPolicy{Skills: true, Delegations: true, Anomalies: true}
+	Summary  GenerationSummaryConfig  `json:"summary" yaml:"summary"`
 }
 
 // ProjectGenerationFacts preserves slice presence for enabled categories and
@@ -127,6 +124,8 @@ type GenerationFeedbackConfig struct {
 	ProvisionalThresholdSeconds int64 `json:"provisional_threshold_seconds" yaml:"provisional_threshold_seconds"`
 }
 
-func DefaultGenerationFeedbackConfig() GenerationFeedbackConfig {
-	return GenerationFeedbackConfig{ProvisionalThresholdSeconds: 180}
+// GenerationSummaryConfig is shared by manual and automatic publication.
+type GenerationSummaryConfig struct {
+	Enabled  bool   `json:"enabled" yaml:"enabled"`
+	Filename string `json:"filename" yaml:"filename"`
 }

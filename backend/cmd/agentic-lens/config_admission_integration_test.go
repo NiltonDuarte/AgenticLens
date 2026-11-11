@@ -20,7 +20,7 @@ func captureAdmissionFixture(t *testing.T) (captureGenerationFixture, string, st
 	t.Helper()
 	f := newCaptureGenerationFixture(t)
 	f.write(t, 11)
-	if err := writeCaptureFixtureLocal(t, f, []byte("telemetry:\n  capture:\n    enabled: true\n")); err != nil {
+	if err := writeCaptureFixtureLocal(t, f, []byte("telemetry:\n  capture:\n    pass_timeout_ms: 3000\n    max_sessions: 256\n    max_source_bytes: 67108864\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 5000\n    commit_warning: true\n    enabled: true\n")); err != nil {
 		t.Fatal(err)
 	}
 	return f, filepath.Dir(filepath.Dir(f.state)), filepath.Join(t.TempDir(), "new-state")
@@ -273,7 +273,8 @@ func TestConfigUpdateAdmissionBeforeNativeRequestSelectsNewState(t *testing.T) {
 func TestCaptureConfigUpdateGuardsEffectiveLocalSelection(t *testing.T) {
 	f, oldBase, next := captureAdmissionFixture(t)
 	localPath := filepath.Join(f.project, ".agenticlens-config.local.yaml")
-	local := []byte(fmt.Sprintf("telemetry:\n  capture:\n    enabled: true\n    state_dir: %q\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 5000\n    pass_timeout_ms: 3000\n", oldBase))
+	local := []byte(fmt.Sprintf("telemetry:\n  capture:\n    max_sessions: 256\n    max_source_bytes: 67108864\n    commit_warning: true\n    enabled: true\n    state_dir: %q\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 5000\n    pass_timeout_ms: 3000\n", oldBase))
+	local = append(local, []byte(fmt.Sprintf("  default_source: codex\n  sources:\n    codex:\n      home: %q\n", f.store))...)
 	if err := os.WriteFile(localPath, local, 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -281,8 +282,8 @@ func TestCaptureConfigUpdateGuardsEffectiveLocalSelection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("request: %v %s", err, request)
 	}
-	if output, err := admissionUpdate(f, next, filepath.Join(f.project, ".agenticlens-config.yaml")).CombinedOutput(); err != nil {
-		t.Fatalf("shadowed shared setting should not move effective state: %v %s", err, output)
+	if output, err := admissionUpdate(f, next, filepath.Join(f.project, ".agenticlens-config.yaml")).CombinedOutput(); err == nil {
+		t.Fatalf("shared entrypoint bypassed selected populated local state: %s", output)
 	}
 	if output, err := admissionUpdate(f, next, localPath).CombinedOutput(); err == nil {
 		t.Fatalf("local-only movement abandoned accepted work: %s", output)

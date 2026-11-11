@@ -1,3 +1,4 @@
+import { useProjectConfig } from '../contexts/ProjectConfigContext';
 import React, { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
 import type {
   LiveAnomalyAlert,
@@ -17,13 +18,6 @@ import { LiveAnomalyBanner } from '../components/LiveAnomalyBanner';
 export interface LiveObservabilityProps {
   readonly onSelectTicket: (ticketId: string) => void;
 }
-
-const EMPTY_TREE: LiveSessionTreeType = {
-  root_sessions: [],
-  last_refreshed_at: '',
-  total_active_sessions: 0,
-  active_anomalies: [],
-};
 
 function findSessionNode(
   nodes: readonly LiveSessionNode[],
@@ -50,15 +44,17 @@ function sessionIds(nodes: readonly LiveSessionNode[]): readonly string[] {
 export const LiveObservability: React.FC<LiveObservabilityProps> = ({
   onSelectTicket,
 }) => {
+  const projectConfig = useProjectConfig();
+  const pollIntervalMs = projectConfig?.live_poll_interval_ms;
   const [isPaused, setIsPaused] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting');
-  const [sessionTree, setSessionTree] = useState<LiveSessionTreeType>(EMPTY_TREE);
+  const [sessionTree, setSessionTree] = useState<LiveSessionTreeType | null>(null);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
 
   const selectedNode = selectedSessionId
-    ? findSessionNode(sessionTree.root_sessions, selectedSessionId)
+    ? findSessionNode(sessionTree?.root_sessions ?? [], selectedSessionId)
     : null;
   const { trace: traceView, loading: loadingTrace, error: traceError, onTraceUpdate, captureRefresh } =
     useLiveTrace(selectedSessionId, isPaused, selectedNode);
@@ -115,6 +111,7 @@ export const LiveObservability: React.FC<LiveObservabilityProps> = ({
       onAnomalyAlert: (alert: LiveAnomalyAlert) => {
         if (!subscribed) return;
         setSessionTree((prev) => {
+          if (prev === null) return prev;
           const alreadyExists = prev.active_anomalies.some(
             (a) => a.session_id === alert.session_id && a.rule_name === alert.rule_name
           );
@@ -136,13 +133,13 @@ export const LiveObservability: React.FC<LiveObservabilityProps> = ({
         if (!subscribed) return;
         setErrorMessage(err.message);
       },
-    });
+    }, pollIntervalMs);
 
     return () => {
       subscribed = false;
       unsubscribe();
     };
-  }, [isPaused, retryCount, onTraceUpdate]);
+  }, [isPaused, retryCount, onTraceUpdate, pollIntervalMs]);
 
   return (
     <div className="live-observability-view" data-testid="live-observability-view">
@@ -158,14 +155,14 @@ export const LiveObservability: React.FC<LiveObservabilityProps> = ({
           </span>
 
           <span className="status-bar-stat">
-            Active Sessions: <strong>{sessionTree.total_active_sessions}</strong>
+            Active Sessions: <strong>{sessionTree?.total_active_sessions ?? 'Not available'}</strong>
           </span>
 
           <span className="status-bar-stat">
-            Active Anomalies: <strong>{sessionTree.active_anomalies.length}</strong>
+            Active Anomalies: <strong>{sessionTree?.active_anomalies.length ?? 'Not available'}</strong>
           </span>
 
-          {sessionTree.last_refreshed_at && (
+          {sessionTree?.last_refreshed_at && (
             <span className="status-bar-stat refreshed-time">
               Refreshed: {sessionTree.last_refreshed_at}
             </span>
@@ -218,7 +215,7 @@ export const LiveObservability: React.FC<LiveObservabilityProps> = ({
         </div>
       )}
 
-      {sessionTree.active_anomalies && sessionTree.active_anomalies.length > 0 && (
+      {sessionTree && sessionTree.active_anomalies.length > 0 && (
         <LiveAnomalyBanner
           anomalies={sessionTree.active_anomalies}
           onSelectSession={handleSelectSession}
@@ -230,15 +227,17 @@ export const LiveObservability: React.FC<LiveObservabilityProps> = ({
           <div className="pane-section-header">
             <h2 className="pane-title">Active Root Sessions & Lineage</h2>
             <span className="pane-count-badge">
-              {sessionTree.root_sessions.length} Root {sessionTree.root_sessions.length === 1 ? 'Session' : 'Sessions'}
+              {sessionTree ? `${sessionTree.root_sessions.length} Root ${sessionTree.root_sessions.length === 1 ? 'Session' : 'Sessions'}` : 'Sessions unavailable'}
             </span>
           </div>
-          <LiveSessionTree
+          {sessionTree ? <LiveSessionTree
             tree={sessionTree}
             selectedSessionId={selectedSessionId}
             onSelectSession={handleSelectSession}
             onSelectTicket={onSelectTicket}
-          />
+          /> : <div className="empty-state" role="status">
+            {errorMessage || connectionStatus === 'error' ? 'Live session data unavailable.' : 'Waiting for live session data.'}
+          </div>}
         </div>
 
         <div className="live-split-pane right-inspector-pane">
@@ -246,7 +245,7 @@ export const LiveObservability: React.FC<LiveObservabilityProps> = ({
             key={selectedSessionId ?? 'no-selection'}
             sessionNode={selectedNode}
             trace={traceView?.session_id === selectedSessionId ? traceView : null}
-            availableSessionIds={sessionIds(sessionTree.root_sessions)}
+            availableSessionIds={sessionIds(sessionTree?.root_sessions ?? [])}
             onSelectSession={handleSelectSession}
             loading={loadingTrace}
             onClose={() => setSelectedSessionId(null)}

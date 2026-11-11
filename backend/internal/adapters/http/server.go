@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/fs"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -87,10 +88,26 @@ func (s *Server) Handler() http.Handler {
 	return s.httpServer.Handler
 }
 
-// ListenAndServe starts the server on the specified port.
+// Bind validates and binds exactly one loopback port before it is advertised.
+func (s *Server) Bind(port int) (net.Listener, error) {
+	if port < 1 || port > 65535 {
+		return nil, fmt.Errorf("port must be between 1 and 65535")
+	}
+	address := fmt.Sprintf("127.0.0.1:%d", port)
+	listener, err := net.Listen("tcp", address)
+	if err != nil {
+		return nil, err
+	}
+	s.httpServer.Addr = listener.Addr().String()
+	return listener, nil
+}
+func (s *Server) Serve(listener net.Listener) error { return s.httpServer.Serve(listener) }
 func (s *Server) ListenAndServe(port int) error {
-	s.httpServer.Addr = fmt.Sprintf(":%d", port)
-	return s.httpServer.ListenAndServe()
+	listener, err := s.Bind(port)
+	if err != nil {
+		return err
+	}
+	return s.Serve(listener)
 }
 
 // Shutdown gracefully shuts down the server.
