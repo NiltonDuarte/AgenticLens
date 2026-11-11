@@ -253,7 +253,6 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({
 
   return (
     <div className="progression-container">
-      <TagFilters choices={tagChoices(tagCatalog.map((ledger) => ledger.facts.tags))} filters={tagFilters} onChange={setTagFilters} />
       {/* Top Filter and Controls Bar */}
       <div className="progression-controls-bar">
         <div className="controls-left">
@@ -305,6 +304,7 @@ export const MetricProgression: React.FC<MetricProgressionProps> = ({
         </div>
 
         <div className="controls-filters">
+          <TagFilters choices={tagChoices(tagCatalog.map((ledger) => ledger.facts.tags))} filters={tagFilters} onChange={setTagFilters} />
           <MultiSelectDropdown
             id="prog-ticket-type"
             label="Ticket Type"

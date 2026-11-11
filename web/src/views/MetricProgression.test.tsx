@@ -4,6 +4,13 @@ import { render, screen, waitFor, fireEvent, act, within } from '../test/render'
 import { MetricProgression } from './MetricProgression';
 import * as apiClient from '../api/client';
 import { mockAgenticMetricsLedgers } from '../test/fixtures/mockData';
+async function selectTagKey(user: ReturnType<typeof userEvent.setup>, key: string): Promise<void> {
+  if (!screen.queryByRole('dialog', { name: 'Ticket tag filters' })) {
+    await user.click(screen.getByRole('button', { name: 'Ticket tags filter' }));
+  }
+  await user.selectOptions(screen.getByRole('combobox', { name: 'Tag key' }), key);
+}
+
 describe('MetricProgression View Component', () => {
     beforeEach(() => {
         vi.restoreAllMocks();
@@ -16,11 +23,11 @@ describe('MetricProgression View Component', () => {
         const updated = { ...base, facts: { ...base.facts, tags: { team: 'new' } } };
         vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValueOnce({ data: [original, outside] }).mockResolvedValue({ data: [updated] });
         render(<MetricProgression />);
-        await screen.findByRole('combobox', { name: 'Tag: team selector' });
+        await screen.findByRole('button', { name: 'Ticket tags filter' });
         await user.click(screen.getByRole('combobox', { name: 'Ticket Type selector' }));
         await user.click(screen.getByRole('checkbox', { name: 'Feature' }));
         await waitFor(() => expect(apiClient.fetchWorkspaceLedgers).toHaveBeenCalledTimes(2));
-        await user.click(screen.getByRole('combobox', { name: 'Tag: team selector' }));
+        await selectTagKey(user, 'team');
         expect(screen.getByRole('checkbox', { name: 'Value: new' })).toBeInTheDocument();
         expect(screen.getByRole('checkbox', { name: 'Value: outside' })).toBeInTheDocument();
         expect(screen.queryByRole('checkbox', { name: 'Value: core' })).not.toBeInTheDocument();

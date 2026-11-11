@@ -637,6 +637,40 @@ describe('TicketDeepDive View Component', () => {
     beforeEach(() => {
         vi.restoreAllMocks();
     });
+    it('keeps the compact tag editor in the selector toolbar through mismatch and clear recovery', async () => {
+        const user = userEvent.setup();
+        const detail = withAnomalyFacts(mockWorkspaceDetails['AL-1']!);
+        const current = { ...detail.ledger, facts: { ...detail.ledger.facts, tags: { team: 'core' } } };
+        const other = mockAgenticMetricsLedgers['AL-2']!;
+        vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({ data: [current,
+            { ...other, facts: { ...other.facts, tags: { team: 'outside' } } },
+        ] });
+        vi.spyOn(apiClient, 'fetchWorkspaceById').mockResolvedValue({ data: { ...detail, ledger: current } });
+        vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockRejectedValue(new Error('Optional source unavailable'));
+        render(<TicketDeepDive selectedTicketId="AL-1" />);
+        const cost = (await screen.findByText('Total Cost')).closest('.kpi-card')?.textContent;
+        expect(cost).toBeTruthy();
+        const trigger = screen.getByRole('button', { name: 'Ticket tags filter' });
+        expect(screen.getAllByRole('button', { name: 'Ticket tags filter' })).toHaveLength(1);
+        expect(trigger.closest('.deep-dive-top-bar')).toContainElement(screen.getByRole('combobox', { name: 'Workspace Autopsy:' }));
+        await user.click(trigger);
+        const editor = screen.getByRole('dialog', { name: 'Ticket tag filters' });
+        await user.selectOptions(within(editor).getByRole('combobox', { name: 'Tag key' }), 'team');
+        await user.click(within(editor).getByRole('checkbox', { name: 'Value: outside' }));
+        expect(screen.getByRole('status')).toHaveTextContent('This ticket does not match the selected tags.');
+        expect(screen.queryByText('Total Cost')).not.toBeInTheDocument();
+        const mismatchTrigger = screen.getByRole('button', { name: 'Ticket tags filter' });
+        expect(mismatchTrigger.closest('.deep-dive-top-bar')).toContainElement(screen.getByRole('combobox', { name: 'Workspace Autopsy:' }));
+        expect(screen.getAllByRole('button', { name: 'Ticket tags filter' })).toHaveLength(1);
+        expect(screen.getByRole('dialog', { name: 'Ticket tag filters' })).toBe(editor);
+        expect(within(editor).getByRole('checkbox', { name: 'Value: outside' })).toBeChecked();
+        await user.click(within(editor).getByRole('button', { name: 'Clear tag filters' }));
+        expect(screen.queryByText('This ticket does not match the selected tags. Choose another ticket or clear tag filters.')).not.toBeInTheDocument();
+        expect(screen.getByText('Total Cost').closest('.kpi-card')?.textContent).toBe(cost);
+        expect(screen.getByRole('button', { name: 'Ticket tags filter' })).toHaveTextContent('All');
+        expect(screen.getByRole('button', { name: 'Ticket tags filter' }).closest('.deep-dive-top-bar'))
+            .toContainElement(screen.getByRole('combobox', { name: 'Workspace Autopsy:' }));
+    });
     it('renders loading state initially and then displays full autopsy KPIs', async () => {
         const ledgers = Object.values(mockAgenticMetricsLedgers);
         vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({

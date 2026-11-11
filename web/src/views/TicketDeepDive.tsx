@@ -261,8 +261,10 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
   const tagControls = <TagFilters choices={tagChoices([...ledgers.map((item) => item.facts.tags), ledger.facts.tags])} filters={tagFilters} onChange={setTagFilters} />;
   if (!matchesTags(ledger.facts.tags, tagFilters)) {
     return <div className="deep-dive-container">
-      {tagControls}
-      <TicketSelector tickets={ticketOptions} selectedTicketId={activeTicketId} onSelectTicket={handleSelectTicket} />
+      <div className="deep-dive-top-bar">
+        <TicketSelector tickets={ticketOptions} selectedTicketId={activeTicketId} onSelectTicket={handleSelectTicket} />
+        {tagControls}
+      </div>
       <p role="status">This ticket does not match the selected tags. Choose another ticket or clear tag filters.</p>
     </div>;
   }
@@ -271,7 +273,6 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
 
   return (
     <div className="deep-dive-container">
-      {tagControls}
       {/* Ticket Selection Bar */}
       <div className="deep-dive-top-bar">
         <TicketSelector
@@ -279,6 +280,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
           selectedTicketId={activeTicketId}
           onSelectTicket={handleSelectTicket}
         />
+        {tagControls}
       </div>
 
       <div aria-label="Recorded ticket tags">

@@ -277,7 +277,6 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
         />
       </div>
 
-      <TagFilters choices={tagChoices(tagCatalog.map((ledger) => ledger.facts.tags))} filters={tagFilters} onChange={setTagFilters} />
       {/* Search and Filters Bar */}
       <div className="table-controls-bar">
         <div className="search-box">
@@ -318,6 +317,8 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
           onChange={setSelectedSkills}
           collapseCompleteSelection={false}
         />
+
+        <TagFilters choices={tagChoices(tagCatalog.map((ledger) => ledger.facts.tags))} filters={tagFilters} onChange={setTagFilters} />
 
         <div className="table-row-count">
           Showing {filteredRows.length} of {allRows.length} tickets

@@ -222,6 +222,7 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
         selectedValues={selectedPrefixes}
         onChange={setSelectedPrefixes}
       />
+      <TagFilters choices={tagOptions} filters={tagFilters} onChange={setTagFilters} />
     </section>
   );
 
@@ -230,7 +231,6 @@ export const FleetOverview: React.FC<FleetOverviewProps> = ({
       <WorkspaceLoadWarning diagnostics={diagnostics} />
       {/* Date Range Filter Bar */}
       {dateFilterControl}
-      <TagFilters choices={tagOptions} filters={tagFilters} onChange={setTagFilters} />
       <div className="fleet-refresh-controls">
         <button type="button" className="btn-secondary" onClick={refreshData}>Refresh Data</button>
       </div>
