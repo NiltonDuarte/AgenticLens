@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AL-47 live trace dynamic refresh and active session polling.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/preview/141/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/preview/141/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><p>h3. Title: AL-47: Real-Time Live Trace Dynamic Refresh and Active Session Polling</p>
+
+<p><em>TARGET</em>: AgenticLens (backend / live / http / presentation / web / tests)</p>
+
+<p><em>CONTEXT</em></p>
+
+<p>In Live Observability (<code class="language-plaintext highlighter-rouge">div#root &gt; div.app-container &gt; main.main-content &gt; div.live-observability-view &gt; div.live-split-layout &gt; div.live-split-pane.right-inspector-pane</code>), the trace inspector does not update when an active agent session executes new turns, tool invocations, or deliberations.
+Currently, <code class="language-plaintext highlighter-rouge">LiveTraceHandler</code> serves <code class="language-plaintext highlighter-rouge">/api/live/sessions/:id/trace</code> on demand, but <code class="language-plaintext highlighter-rouge">LiveObservability.tsx</code> only calls <code class="language-plaintext highlighter-rouge">fetchLiveTrace</code> once upon initial node selection or manual full-page refresh. While the SSE connection broadcasts <code class="language-plaintext highlighter-rouge">session_tree</code> when session nodes update, the backend never emits <code class="language-plaintext highlighter-rouge">trace_update</code>, and the frontend does not re-fetch the active session trace when the session receives new events. Operators watching an ongoing run are left staring at a static snapshot unless they refresh the browser.</p>
+
+<p><em>GOAL</em></p>
+
+<p>Enable seamless, real-time live updates in the right inspector pane for actively running sessions, so that incoming message turns, model reasoning, token counts, and tool errors stream dynamically into the view without requiring a manual page refresh.</p>
+
+<p><em>VERTICAL SLICE SCOPE</em></p>
+
+<ul>
+  <li>Domain Core: Pure comparison logic determining if a trace view has advanced (e.g. message count increased, token totals changed, or newest timestamp advanced) to avoid unnecessary re-renders.</li>
+  <li>Boundary Adapter:
+    <ul>
+      <li>In <code class="language-plaintext highlighter-rouge">backend/internal/adapters/live/service.go</code>: track session trace revisions or updated timestamps. When polling SQLite hook, broadcast <code class="language-plaintext highlighter-rouge">LiveEventTraceUpdate</code> when an active session’s trace content changes, or ensure session nodes expose an updated revision timestamp.</li>
+      <li>In <code class="language-plaintext highlighter-rouge">backend/internal/adapters/http/live_handlers.go</code>: verify SSE streaming flushes trace events correctly without blocking subscribers.</li>
+    </ul>
+  </li>
+  <li>Presentation:
+    <ul>
+      <li>In <code class="language-plaintext highlighter-rouge">web/src/views/LiveObservability.tsx</code>:
+        <ul>
+          <li>Listen for <code class="language-plaintext highlighter-rouge">onTraceUpdate</code> in SSE stream to update <code class="language-plaintext highlighter-rouge">traceView</code> when <code class="language-plaintext highlighter-rouge">trace.session_id === selectedSessionId</code>.</li>
+          <li>As a robust dual-plane guarantee: when <code class="language-plaintext highlighter-rouge">selectedSessionId</code> corresponds to an active session (<code class="language-plaintext highlighter-rouge">status === 'running'</code> or <code class="language-plaintext highlighter-rouge">status === 'active'</code>), automatically re-fetch <code class="language-plaintext highlighter-rouge">fetchLiveTrace(selectedSessionId)</code> on incoming <code class="language-plaintext highlighter-rouge">session_tree</code> updates or on a 2000ms active interval if the session node’s <code class="language-plaintext highlighter-rouge">time_updated</code> has changed.</li>
+          <li>Preserve user scroll position and reasoning toggle states (<code class="language-plaintext highlighter-rouge">showReasoning</code>) during incremental trace updates so active reading is not interrupted.</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li>Quality:
+    <ul>
+      <li>Backend integration test in <code class="language-plaintext highlighter-rouge">live_handlers_test.go</code> verifying trace update emission or on-demand retrieval.</li>
+      <li>TypeScript integration tests in <code class="language-plaintext highlighter-rouge">LiveObservability.test.tsx</code> verifying that incoming SSE trace updates or active polling dynamically update the inspector messages list without full component remount.</li>
+    </ul>
+  </li>
+</ul>
+
+<p><em>ACCEPTANCE CRITERIA</em></p>
+
+<ul>
+  <li>When an active session is selected in <code class="language-plaintext highlighter-rouge">LiveObservability</code>, new turns and tool calls appear in the right inspector pane automatically without user intervention or manual page reload.</li>
+  <li>Token metrics (total, context, input, output, reasoning) and failed tool count update in real time.</li>
+  <li>If a session has completed (<code class="language-plaintext highlighter-rouge">status === 'completed'</code>), automatic polling for that session ceases to prevent unnecessary network or database traffic.</li>
+  <li>Incremental trace updates do not reset or jump the user’s scroll position or collapse open reasoning bubbles.</li>
+  <li>SSE disconnect/fallback-polling cleanly continues updating active traces.</li>
+  <li>All Go tests (<code class="language-plaintext highlighter-rouge">go test ./...</code>) and TypeScript tests (<code class="language-plaintext highlighter-rouge">npm test</code>) pass cleanly.</li>
+</ul>
+
+<p><em>DEFINITION OF DONE</em></p>
+
+<ul>
+  <li>Code and tests merged to target branch.</li>
+  <li>Quality gates passing (<code class="language-plaintext highlighter-rouge">make check</code>, <code class="language-plaintext highlighter-rouge">make test</code>, or <code class="language-plaintext highlighter-rouge">make</code>).</li>
+  <li>Go and TypeScript type checking clean with zero any.</li>
+  <li>Telemetry tested with <code class="language-plaintext highlighter-rouge">agentic-lens</code> CLI.</li>
+</ul>
+
+<p><em>PLANNING STATUS (2026-10-31)</em></p>
+
+<p>Still open. The current backend emits <code class="language-plaintext highlighter-rouge">trace_update</code> and <code class="language-plaintext highlighter-rouge">LiveObservability.tsx</code> already handles <code class="language-plaintext highlighter-rouge">onTraceUpdate</code>, so the context above describes the original report rather than the entire current implementation. AL-49 supplies inspector scroll preservation. Before implementation, verify the remaining active-session refresh, completed-session cessation, SSE fallback, and reading-state acceptance cases; existing streaming alone does not establish completion.</p>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>

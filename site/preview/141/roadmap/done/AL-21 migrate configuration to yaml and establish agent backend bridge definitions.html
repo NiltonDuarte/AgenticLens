@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AL-21 migrate configuration to yaml and establish agent backend bridge definitions.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/preview/141/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/preview/141/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><p>h3. Title: AL-21: Migrate Configuration to YAML and Establish Agent-Backend Bridge Definitions</p>
+
+<table>
+  <tbody>
+    <tr>
+      <td>
+<em>TARGET</em>: AgenticLens (adapters</td>
+      <td>domain</td>
+      <td>cli</td>
+      <td>tests)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><em>CONTEXT</em></p>
+
+<p>Currently, configuration is minimally defined in <code class="language-plaintext highlighter-rouge">.agenticlens/config.json</code> and only used for basic workspace path resolution and git metric patterns. JSON lacks readability and comments, and the backend duplicates hardcoded assumptions (such as ticket prefix regexes, role classifications, database timeouts, and active session windows). Migrating configuration to YAML and enriching it with concrete, structured definitions bridges the gap between agent workflows and the Go backend, allowing both to share consistent operational parameters.</p>
+
+<p><em>GOAL</em></p>
+
+<p>Migrate <code class="language-plaintext highlighter-rouge">.agenticlens/config.json</code> to human-readable <code class="language-plaintext highlighter-rouge">.agenticlens/config.yaml</code> with a backward-compatible Go configuration parser (YAML with JSON fallback), establishing rich configuration definitions for ticket pattern matching (case-insensitive prefixes), database access pragmas, live observability thresholds, agent-to-role mappings, and workspace layouts.</p>
+
+<p><em>VERTICAL SLICE SCOPE</em></p>
+
+<ul>
+  <li>Domain Core:
+    <ul>
+      <li>Create configuration models in <code class="language-plaintext highlighter-rouge">internal/domain/config.go</code>:
+        <ul>
+          <li>
+<code class="language-plaintext highlighter-rouge">ProjectConfig</code> (<code class="language-plaintext highlighter-rouge">ProjectName</code>, <code class="language-plaintext highlighter-rouge">TicketConfig</code>, <code class="language-plaintext highlighter-rouge">WorkspacesConfig</code>, <code class="language-plaintext highlighter-rouge">DatabaseConfig</code>, <code class="language-plaintext highlighter-rouge">LiveConfig</code>, <code class="language-plaintext highlighter-rouge">CodeMetricsConfig</code>, <code class="language-plaintext highlighter-rouge">RoleMappings</code>).</li>
+          <li>
+<code class="language-plaintext highlighter-rouge">TicketConfig</code> (<code class="language-plaintext highlighter-rouge">Prefixes []string</code>, <code class="language-plaintext highlighter-rouge">CaseInsensitive bool</code>, <code class="language-plaintext highlighter-rouge">CustomPatterns []string</code>).</li>
+          <li>
+<code class="language-plaintext highlighter-rouge">LiveConfig</code> (<code class="language-plaintext highlighter-rouge">ActiveThresholdSeconds int</code>, <code class="language-plaintext highlighter-rouge">PollIntervalMs int</code>, <code class="language-plaintext highlighter-rouge">MaxTraceBufferMessages int</code>, <code class="language-plaintext highlighter-rouge">AnomalyThresholds AnomalyThresholdsConfig</code>).</li>
+          <li>
+<code class="language-plaintext highlighter-rouge">DatabaseConfig</code> (<code class="language-plaintext highlighter-rouge">Path string</code>, <code class="language-plaintext highlighter-rouge">QueryTimeoutMs int</code>, <code class="language-plaintext highlighter-rouge">BusyTimeoutMs int</code>, <code class="language-plaintext highlighter-rouge">ReadOnly bool</code>).</li>
+        </ul>
+      </li>
+      <li>Pure helper to compile regex and normalize ticket IDs: <code class="language-plaintext highlighter-rouge">NormalizeTicketID(raw string, cfg TicketConfig) (string, bool)</code>.</li>
+    </ul>
+  </li>
+  <li>Boundary Adapter:
+    <ul>
+      <li>Create <code class="language-plaintext highlighter-rouge">internal/adapters/config/loader.go</code> using a robust Go YAML parser (<code class="language-plaintext highlighter-rouge">gopkg.in/yaml.v3</code>):
+        <ul>
+          <li>Searches for <code class="language-plaintext highlighter-rouge">.agenticlens/config.yaml</code> or <code class="language-plaintext highlighter-rouge">.agenticlens/config.yml</code>.</li>
+          <li>Falls back to <code class="language-plaintext highlighter-rouge">.agenticlens/config.json</code> if YAML is not present.</li>
+          <li>Applies sensible domain defaults when fields are omitted.</li>
+        </ul>
+      </li>
+      <li>Update <code class="language-plaintext highlighter-rouge">internal/adapters/repository.go</code> and <code class="language-plaintext highlighter-rouge">internal/adapters/git/classifier.go</code> to use the unified configuration loader.</li>
+      <li>Convert <code class="language-plaintext highlighter-rouge">.agenticlens/config.json</code> to <code class="language-plaintext highlighter-rouge">.agenticlens/config.yaml</code> in repository root.</li>
+    </ul>
+  </li>
+  <li>Quality:
+    <ul>
+      <li>Go unit tests verifying YAML parsing, JSON fallback, missing file handling, and default value population.</li>
+      <li>Ticket normalization tests asserting case-insensitive matching (e.g. <code class="language-plaintext highlighter-rouge">al-12</code> -&gt; <code class="language-plaintext highlighter-rouge">AL-12</code>).</li>
+      <li>Validation that zero <code class="language-plaintext highlighter-rouge">any</code> types and zero emojis exist across added code.</li>
+    </ul>
+  </li>
+</ul>
+
+<p><em>ACCEPTANCE CRITERIA</em></p>
+
+<ul>
+  <li>
+<code class="language-plaintext highlighter-rouge">.agenticlens/config.yaml</code> is created and validated as the primary configuration format.</li>
+  <li>The Go backend loads <code class="language-plaintext highlighter-rouge">.agenticlens/config.yaml</code> and seamlessly falls back to <code class="language-plaintext highlighter-rouge">.agenticlens/config.json</code> if YAML is absent.</li>
+  <li>Ticket pattern matching in configuration supports case-insensitive prefixes (<code class="language-plaintext highlighter-rouge">al-1</code> matches prefix <code class="language-plaintext highlighter-rouge">AL</code>).</li>
+  <li>Database connection, live observability thresholds, and role mappings are loaded dynamically from configuration.</li>
+  <li>All Go tests and static checks pass cleanly (<code class="language-plaintext highlighter-rouge">go vet ./...</code>, <code class="language-plaintext highlighter-rouge">go test -race ./...</code>).</li>
+</ul>
+
+<p><em>DEFINITION OF DONE</em></p>
+
+<ul>
+  <li>Code and tests merged to target branch.</li>
+  <li>Quality gates passing (<code class="language-plaintext highlighter-rouge">go vet ./...</code>, <code class="language-plaintext highlighter-rouge">go test -race ./...</code>).</li>
+  <li>Verified backward-compatible configuration loading with table-driven tests.</li>
+  <li>Telemetry tested with <code class="language-plaintext highlighter-rouge">agentic-lens</code> CLI.</li>
+</ul>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>

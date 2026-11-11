@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AL-1 go domain aggregations scanner cli.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/preview/141/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/preview/141/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><p>h3. Title: AL-1: Implement Go Domain Aggregations, Workspace Scanner, and CLI Engine</p>
+
+<table>
+  <tbody>
+    <tr>
+      <td>
+<em>TARGET</em>: AgenticLens (domain</td>
+      <td>adapters</td>
+      <td>cli</td>
+      <td>tests)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><em>CONTEXT</em></p>
+
+<p>The Python CLI and domain logic in <code class="language-plaintext highlighter-rouge">agentic_lens/domain</code> and <code class="language-plaintext highlighter-rouge">agentic_lens/adapters</code> compute session rollups and update summary Markdown files. We need the foundational Go implementation that executes these pure aggregations and provides CLI parity with the Python script.</p>
+
+<p><em>GOAL</em></p>
+
+<p>Deliver the pure Go functional domain model, repository filesystem scanner, and CLI executable capable of scanning workspaces, serializing JSON, and idempotently updating summary Markdown tables.</p>
+
+<p><em>VERTICAL SLICE SCOPE</em></p>
+
+<ul>
+  <li>Domain Core: Pure structs and functions in <code class="language-plaintext highlighter-rouge">internal/domain/</code>: models (<code class="language-plaintext highlighter-rouge">AgenticFactLedger</code>, <code class="language-plaintext highlighter-rouge">AgenticMetricsLedger</code>, <code class="language-plaintext highlighter-rouge">WorkflowEfficiency</code>, <code class="language-plaintext highlighter-rouge">GroupedMetric</code>), constants/thresholds (<code class="language-plaintext highlighter-rouge">HEALTHY_CEILING_TOKENS = 200000</code>), rollups (<code class="language-plaintext highlighter-rouge">ComputeTotals</code>, <code class="language-plaintext highlighter-rouge">ComputeWorkflowEfficiency</code>, <code class="language-plaintext highlighter-rouge">ComputeRoleMetrics</code>, <code class="language-plaintext highlighter-rouge">ComputeModelMetrics</code>, <code class="language-plaintext highlighter-rouge">BuildMetricsLedger</code>, <code class="language-plaintext highlighter-rouge">ComputeFleetSummary</code>).</li>
+  <li>Boundary Adapter: <code class="language-plaintext highlighter-rouge">internal/adapters/fsrepo</code>: directory walker traversing <code class="language-plaintext highlighter-rouge">workspaces/*/agentic_metrics.json</code>, strict JSON unmarshaling, loading <code class="language-plaintext highlighter-rouge">SUMMARY.md</code>.</li>
+  <li>Presentation: <code class="language-plaintext highlighter-rouge">cmd/agentic-lens/main.go</code> with CLI flags: <code class="language-plaintext highlighter-rouge">--ticket-id</code>, <code class="language-plaintext highlighter-rouge">--workspaces</code>, <code class="language-plaintext highlighter-rouge">--append</code>, <code class="language-plaintext highlighter-rouge">--json-output</code>, and <code class="language-plaintext highlighter-rouge">--list</code>. Markdown table formatter.</li>
+  <li>Quality: Table-driven unit tests in <code class="language-plaintext highlighter-rouge">internal/domain</code> covering zero division, empty slices, role aggregations, and markdown table rendering. Zero domain mocks.</li>
+</ul>
+
+<p><em>ACCEPTANCE CRITERIA</em></p>
+
+<ul>
+  <li>
+<code class="language-plaintext highlighter-rouge">go build ./cmd/agentic-lens</code> compiles cleanly.</li>
+  <li>Running <code class="language-plaintext highlighter-rouge">agentic-lens --list</code> prints tabular summary of scanned workspaces matching the schema.</li>
+  <li>Running <code class="language-plaintext highlighter-rouge">agentic-lens --ticket-id &lt;ID&gt; --append &lt;SUMMARY.md&gt;</code> updates the metrics table section idempotently.</li>
+  <li>Running <code class="language-plaintext highlighter-rouge">agentic-lens --json-output &lt;path&gt;</code> produces schema-compliant JSON matching the existing <code class="language-plaintext highlighter-rouge">AgenticMetricsLedger</code> contract.</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">go test -race ./...</code> and <code class="language-plaintext highlighter-rouge">go vet ./...</code> pass with zero errors.</li>
+</ul>
+
+<p><em>DEFINITION OF DONE</em></p>
+
+<ul>
+  <li>Code and tests merged to target branch.</li>
+  <li>Quality gates passing (<code class="language-plaintext highlighter-rouge">go vet ./...</code>, <code class="language-plaintext highlighter-rouge">go test -race ./...</code>).</li>
+  <li>Go type checking clean with zero any or empty <code class="language-plaintext highlighter-rouge">interface{}</code>.</li>
+  <li>Telemetry tested with <code class="language-plaintext highlighter-rouge">agentic-lens</code> CLI.</li>
+</ul>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>

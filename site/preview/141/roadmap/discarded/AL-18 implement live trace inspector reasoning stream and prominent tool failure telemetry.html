@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AL-18 implement live trace inspector reasoning stream and prominent tool failure telemetry.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/preview/141/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/preview/141/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><p>h3. Title: AL-18: Implement Live Trace Inspector, Reasoning Stream, and Prominent Tool Failure Telemetry</p>
+
+<p><em>STATUS</em>: Discarded (Superseded and Merged into AL-17)</p>
+
+<p><em>DISCARD REASONING</em></p>
+
+<p>This ticket was discarded and consolidated into AL-17. AL-18 represented an artificial split of the live backend SQLite extraction vertical slice already initiated in AL-17. Both tickets target the exact same subsystem (<code class="language-plaintext highlighter-rouge">AgenticLens (domain | adapters | http | tests)</code>), modify the exact same files (<code class="language-plaintext highlighter-rouge">internal/domain/live.go</code>, <code class="language-plaintext highlighter-rouge">internal/adapters/live/sqlite.go</code>, and <code class="language-plaintext highlighter-rouge">internal/adapters/http/handlers.go</code>), and share the same non-locking SQLite database connection. Rather than separating session tree discovery from message/reasoning trace extraction across two fragmented tickets, all live backend trace extraction capabilities are incorporated directly into the scope and acceptance criteria of AL-17.</p>
+
+<table>
+  <tbody>
+    <tr>
+      <td>
+<em>TARGET</em>: AgenticLens (domain</td>
+      <td>adapters</td>
+      <td>http</td>
+      <td>tests)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><em>CONTEXT</em></p>
+
+<p>When monitoring active agent workflows, developers need to inspect what is happening under the hood in real time without persisting transient data into disk ledgers. This includes inspecting the actual message contents exchanged between the user and agents, reasoning/thinking blocks produced by LLMs, and tool calls. Crucially, failed tool calls must be highlighted with high importance and severity so developers can immediately detect agent errors and execution loops.</p>
+
+<p><em>GOAL</em></p>
+
+<p>Build an in-memory transient trace extraction engine and HTTP API in Go to stream live message contents, reasoning thoughts, and tool executions for any active session, categorizing failed tool calls with high importance and delivering detailed error traces without persisting transient data to disk.</p>
+
+<p><em>VERTICAL SLICE SCOPE</em></p>
+
+<ul>
+  <li>Domain Core:
+    <ul>
+      <li>Create live trace models in <code class="language-plaintext highlighter-rouge">internal/domain/live.go</code>:
+        <ul>
+          <li>
+<code class="language-plaintext highlighter-rouge">LiveMessageFact</code> (<code class="language-plaintext highlighter-rouge">ID</code>, <code class="language-plaintext highlighter-rouge">Role</code>, <code class="language-plaintext highlighter-rouge">Content</code>, <code class="language-plaintext highlighter-rouge">Timestamp</code>, <code class="language-plaintext highlighter-rouge">ReasoningContent *string</code>, <code class="language-plaintext highlighter-rouge">Parts []LivePartFact</code>).</li>
+          <li>
+<code class="language-plaintext highlighter-rouge">LivePartFact</code> (<code class="language-plaintext highlighter-rouge">Type</code>, <code class="language-plaintext highlighter-rouge">ToolName</code>, <code class="language-plaintext highlighter-rouge">InputSnippet</code>, <code class="language-plaintext highlighter-rouge">OutputSnippet</code>, <code class="language-plaintext highlighter-rouge">Status</code>, <code class="language-plaintext highlighter-rouge">IsError</code>, <code class="language-plaintext highlighter-rouge">ErrorMessage *string</code>, <code class="language-plaintext highlighter-rouge">Severity string</code>).</li>
+          <li>
+<code class="language-plaintext highlighter-rouge">LiveTraceView</code> (<code class="language-plaintext highlighter-rouge">SessionID</code>, <code class="language-plaintext highlighter-rouge">Messages []LiveMessageFact</code>, <code class="language-plaintext highlighter-rouge">TotalToolCalls int</code>, <code class="language-plaintext highlighter-rouge">FailedToolCalls int</code>, <code class="language-plaintext highlighter-rouge">RecentErrors []LivePartFact</code>).</li>
+        </ul>
+      </li>
+      <li>Pure tool failure classifier: determines severity (<code class="language-plaintext highlighter-rouge">high</code>, <code class="language-plaintext highlighter-rouge">medium</code>, <code class="language-plaintext highlighter-rouge">low</code>) based on error signatures (e.g. command failure, syntax error, exception traceback, repeated failure).</li>
+    </ul>
+  </li>
+  <li>Boundary Adapter &amp; HTTP:
+    <ul>
+      <li>Add query methods in <code class="language-plaintext highlighter-rouge">internal/adapters/live/</code> to fetch messages and parts for a specific session ID without modifying DB state.</li>
+      <li>Parse <code class="language-plaintext highlighter-rouge">reasoning</code> content blocks and <code class="language-plaintext highlighter-rouge">tool</code> part states (<code class="language-plaintext highlighter-rouge">error</code>, <code class="language-plaintext highlighter-rouge">completed</code>) in memory.</li>
+      <li>Implement transient in-memory cache/ring buffer holding recent trace snapshots.</li>
+      <li>Expose HTTP endpoint: <code class="language-plaintext highlighter-rouge">GET /api/live/sessions/:id/trace</code> returning the structured <code class="language-plaintext highlighter-rouge">LiveTraceView</code>.</li>
+    </ul>
+  </li>
+  <li>Quality:
+    <ul>
+      <li>Table-driven Go tests for message and reasoning parsing, tool failure classification, and transient buffer boundaries.</li>
+      <li>Zero disk persistence assertions (guaranteeing nothing is written to <code class="language-plaintext highlighter-rouge">workspaces/</code> or database).</li>
+      <li>Race condition tests with <code class="language-plaintext highlighter-rouge">go test -race ./...</code>.</li>
+    </ul>
+  </li>
+</ul>
+
+<p><em>ACCEPTANCE CRITERIA</em></p>
+
+<ul>
+  <li>Querying <code class="language-plaintext highlighter-rouge">/api/live/sessions/:id/trace</code> returns full message contents, thinking/reasoning blocks, and tool executions.</li>
+  <li>Failed tool calls are tagged with <code class="language-plaintext highlighter-rouge">is_error: true</code>, elevated severity, and clear error message extracts.</li>
+  <li>All live trace data remains strictly in-memory and transient, with zero disk writes to <code class="language-plaintext highlighter-rouge">agentic_metrics.json</code> or database tables.</li>
+  <li>Database queries execute using read-only non-blocking queries.</li>
+  <li>Go checks pass cleanly (<code class="language-plaintext highlighter-rouge">go vet ./...</code>, <code class="language-plaintext highlighter-rouge">go test -race ./...</code>) with zero <code class="language-plaintext highlighter-rouge">any</code>.</li>
+</ul>
+
+<p><em>DEFINITION OF DONE</em></p>
+
+<ul>
+  <li>Code and tests merged to target branch.</li>
+  <li>Quality gates passing (<code class="language-plaintext highlighter-rouge">go vet ./...</code>, <code class="language-plaintext highlighter-rouge">go test -race ./...</code>).</li>
+  <li>Verified error prioritization logic with table-driven tests.</li>
+  <li>Telemetry tested with <code class="language-plaintext highlighter-rouge">agentic-lens</code> CLI.</li>
+</ul>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>

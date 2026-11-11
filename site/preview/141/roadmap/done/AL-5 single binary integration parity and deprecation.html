@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AL-5 single binary integration parity and deprecation.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/preview/141/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/preview/141/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><p>h3. Title: AL-5: Integrate Single Binary Build, Verify Parity, and Deprecate Python App</p>
+
+<table>
+  <tbody>
+    <tr>
+      <td>
+<em>TARGET</em>: AgenticLens (cli</td>
+      <td>build</td>
+      <td>tests)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><em>CONTEXT</em></p>
+
+<p>To finalize the rewrite, the frontend build must embed into the Go binary distribution, parity between Go rollups and legacy Python outputs must be verified on sample fixtures, and the legacy Python presentation code must be cleaned up.</p>
+
+<p><em>GOAL</em></p>
+
+<p>Bundle <code class="language-plaintext highlighter-rouge">web/dist</code> into <code class="language-plaintext highlighter-rouge">cmd/agentic-lens</code>, implement automated cross-engine parity tests comparing Go aggregations with Python outputs, and deprecate the Python presentation layer.</p>
+
+<p><em>VERTICAL SLICE SCOPE</em></p>
+
+<ul>
+  <li>Build &amp; Packaging: Build script / Makefile coordinating <code class="language-plaintext highlighter-rouge">npm run build</code> and <code class="language-plaintext highlighter-rouge">go build -o bin/agentic-lens ./cmd/agentic-lens</code>.</li>
+  <li>Adapters: <code class="language-plaintext highlighter-rouge">internal/adapters/web</code>: wire embedded filesystem with production build.</li>
+  <li>Quality: Cross-validation test comparing Go domain calculations against Python output on fixture ledgers. Ensure 100% numerical parity.</li>
+  <li>Cleanup: Deprecate <code class="language-plaintext highlighter-rouge">agentic_lens/presentation/</code>, <code class="language-plaintext highlighter-rouge">agentic_lens/domain/</code>, and Streamlit dependencies while preserving <code class="language-plaintext highlighter-rouge">scripts/extract_agentic_metrics.py</code>.</li>
+</ul>
+
+<p><em>ACCEPTANCE CRITERIA</em></p>
+
+<ul>
+  <li>
+<code class="language-plaintext highlighter-rouge">make build</code> (or build script) compiles standalone executable containing the full web app.</li>
+  <li>Running <code class="language-plaintext highlighter-rouge">./bin/agentic-lens server</code> opens and serves the SPA without Node.js or Python.</li>
+  <li>Parity test suite confirms identical token rollups, cost calculations, and health classifications between Go and Python.</li>
+  <li>Streamlit dependencies removed from <code class="language-plaintext highlighter-rouge">pyproject.toml</code>.</li>
+  <li>All Go and TypeScript checks pass (<code class="language-plaintext highlighter-rouge">go vet</code>, <code class="language-plaintext highlighter-rouge">go test -race</code>, <code class="language-plaintext highlighter-rouge">npm run typecheck</code>).</li>
+</ul>
+
+<p><em>DEFINITION OF DONE</em></p>
+
+<ul>
+  <li>Code and tests merged to target branch.</li>
+  <li>Single standalone executable verified.</li>
+  <li>Quality gates passing across Go and TypeScript.</li>
+  <li>Telemetry recorded via <code class="language-plaintext highlighter-rouge">agentic-lens</code> CLI.</li>
+</ul>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>
