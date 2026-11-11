@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AL-42 unify tool execution error classification and offline live pipeline parity.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/preview/139/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/preview/139/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><p>h3. Title: AL-42: Unify Tool Execution Error Classification and Offline-Live Pipeline Parity</p>
+
+<table>
+  <tbody>
+    <tr>
+      <td>
+<em>TARGET</em>: AgenticLens (domain</td>
+      <td>adapters</td>
+      <td>live</td>
+      <td>opencode</td>
+      <td>tests)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><em>CONTEXT</em></p>
+
+<p>Currently, tool error classification is broken across two dimensions:</p>
+<ol>
+  <li>Conflation: <code class="language-plaintext highlighter-rouge">domain.ClassifyToolFailure</code> combines process-level failures (non-zero exit codes, crashed processes, command failed) with arbitrary stdout/stderr content searches (traces, syntax errors, and even benign empty grep/glob results with 0 matches). When string matches occur, completed tool executions are overridden to <code class="language-plaintext highlighter-rouge">status: "error"</code>, misrepresenting benign or normal tool completions as broken tooling and triggering false-positive <code class="language-plaintext highlighter-rouge">TOOL_RETRY_STREAK</code> and <code class="language-plaintext highlighter-rouge">TOOL_HIGH_FAILURE_RATE</code> anomalies. While commit <code class="language-plaintext highlighter-rouge">22dd699</code> (PR #21 / FIX-3) whitelisted four inspection tools (<code class="language-plaintext highlighter-rouge">read</code>, <code class="language-plaintext highlighter-rouge">grep</code>, <code class="language-plaintext highlighter-rouge">glob</code>, <code class="language-plaintext highlighter-rouge">webfetch</code>) when <code class="language-plaintext highlighter-rouge">status == "completed"</code>, all other tools (e.g. <code class="language-plaintext highlighter-rouge">bash</code>, <code class="language-plaintext highlighter-rouge">edit</code>, <code class="language-plaintext highlighter-rouge">task</code>, <code class="language-plaintext highlighter-rouge">mcp-*</code>) still suffer from false error overrides when output text contains error tokens. Furthermore, completed calls are still mutated to <code class="language-plaintext highlighter-rouge">status = "error"</code>.</li>
+  <li>Divergence: The offline telemetry generation engine (<code class="language-plaintext highlighter-rouge">internal/adapters/opencode/extractor.go</code>) does not use <code class="language-plaintext highlighter-rouge">domain.ClassifyToolFailure</code>. Instead, it uses an ad-hoc inline conditional check (<code class="language-plaintext highlighter-rouge">var isError bool; if cleanTool in whitelist ... else isError = stat == "error" || ...</code>). The live observability service (<code class="language-plaintext highlighter-rouge">internal/adapters/live/service.go</code>) uses <code class="language-plaintext highlighter-rouge">domain.ClassifyToolFailure</code>. Consequently, identical agent runs produce different error metrics when viewed live versus after telemetry generation.</li>
+</ol>
+
+<p><em>GOAL</em></p>
+
+<p>Refactor domain tool failure classification into a pure execution-level classifier (<code class="language-plaintext highlighter-rouge">ClassifyToolExecution</code>), eliminate erroneous classifications for benign operations (such as empty search results in grep and glob), wire both the offline extractor and live service to the single unified domain function, and ensure strict parity in tool execution error counts across offline and live pipelines.</p>
+
+<p><em>VERTICAL SLICE SCOPE</em></p>
+
+<ul>
+  <li>Domain Core (<code class="language-plaintext highlighter-rouge">internal/domain/live.go</code> &amp; <code class="language-plaintext highlighter-rouge">internal/domain/anomalies.go</code>):
+    <ul>
+      <li>Refactor or introduce <code class="language-plaintext highlighter-rouge">ClassifyToolExecution(toolName string, status string, output string, consecutiveErrors int) ToolExecutionResult</code> returning structured execution status (<code class="language-plaintext highlighter-rouge">IsError bool</code>, <code class="language-plaintext highlighter-rouge">Severity FailureSeverity</code>, <code class="language-plaintext highlighter-rouge">ErrorMessage *string</code>).</li>
+      <li>Restrict execution failure detection to hard process execution errors: non-zero exit codes, <code class="language-plaintext highlighter-rouge">status == "error"</code> or <code class="language-plaintext highlighter-rouge">status == "failed"</code>, process crash/signal terminations (e.g., segfault, killed, OOM), timeouts, and permission denied.</li>
+      <li>Fix benign search misclassification: ensure <code class="language-plaintext highlighter-rouge">grep</code> and <code class="language-plaintext highlighter-rouge">glob</code> with exit code 1 or empty output indicating 0 matches are classified as clean completions (<code class="language-plaintext highlighter-rouge">IsError: false</code>, <code class="language-plaintext highlighter-rouge">Severity: SeverityNone</code>).</li>
+      <li>Ensure <code class="language-plaintext highlighter-rouge">detectToolRetryStreaks</code> and <code class="language-plaintext highlighter-rouge">detectToolHighFailureRates</code> in <code class="language-plaintext highlighter-rouge">internal/domain/anomalies.go</code> evaluate strictly against authentic execution errors.</li>
+    </ul>
+  </li>
+  <li>Boundary Adapters (<code class="language-plaintext highlighter-rouge">internal/adapters/opencode/extractor.go</code> &amp; <code class="language-plaintext highlighter-rouge">internal/adapters/live/service.go</code>):
+    <ul>
+      <li>Replace ad-hoc inline error conditionals in <code class="language-plaintext highlighter-rouge">internal/adapters/opencode/extractor.go</code> with calls to <code class="language-plaintext highlighter-rouge">domain.ClassifyToolExecution</code>.</li>
+      <li>Update <code class="language-plaintext highlighter-rouge">internal/adapters/live/service.go</code> to use the refactored execution classifier for both trace assembly and live event stream transformations.</li>
+      <li>Ensure consecutive error escalation and error message sanitization (capped at 2048 chars) behave identically in both adapters.</li>
+    </ul>
+  </li>
+  <li>Quality:
+    <ul>
+      <li>Table-driven Go unit tests in <code class="language-plaintext highlighter-rouge">internal/domain/</code> testing execution classification across various tools (bash, read, edit, grep, glob), exit codes, signal crashes, and timeouts.</li>
+      <li>Explicit test case asserting that grep/glob 0-match results return <code class="language-plaintext highlighter-rouge">IsError: false</code> and do not increment tool error counts.</li>
+      <li>Parity test suite feeding identical synthetic SQLite part records to both <code class="language-plaintext highlighter-rouge">opencode.ExtractFacts</code> and <code class="language-plaintext highlighter-rouge">live.Service</code> and asserting identical <code class="language-plaintext highlighter-rouge">ToolFact.Errors</code> and <code class="language-plaintext highlighter-rouge">EventFact.Status</code>.</li>
+    </ul>
+  </li>
+</ul>
+
+<p><em>ACCEPTANCE CRITERIA</em></p>
+
+<ul>
+  <li>
+<code class="language-plaintext highlighter-rouge">ClassifyToolExecution</code> returns <code class="language-plaintext highlighter-rouge">IsError: true</code> strictly for genuine execution failures, process crashes, timeouts, and non-zero exit codes.</li>
+  <li>Grep and glob operations returning 0 matches are never classified as tool execution failures.</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">internal/adapters/opencode/extractor.go</code> and <code class="language-plaintext highlighter-rouge">internal/adapters/live/service.go</code> both invoke the pure domain execution classifier.</li>
+  <li>Given the same underlying SQLite part records, offline extracted facts and live streaming facts produce identical tool call error counts and event statuses.</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">TOOL_RETRY_STREAK</code> and <code class="language-plaintext highlighter-rouge">TOOL_HIGH_FAILURE_RATE</code> anomalies only trigger on true execution failures.</li>
+  <li>Go test suite (<code class="language-plaintext highlighter-rouge">go test -race ./...</code>) and lint checks pass cleanly with zero warnings.</li>
+</ul>
+
+<p><em>DEFINITION OF DONE</em></p>
+
+<ul>
+  <li>Code and tests merged to target branch.</li>
+  <li>Quality gates passing (<code class="language-plaintext highlighter-rouge">make check</code>, <code class="language-plaintext highlighter-rouge">make test</code>, or <code class="language-plaintext highlighter-rouge">make</code>).</li>
+  <li>Go and TypeScript type checking clean with zero any.</li>
+  <li>Telemetry tested with <code class="language-plaintext highlighter-rouge">agentic-lens</code> CLI.</li>
+</ul>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>
