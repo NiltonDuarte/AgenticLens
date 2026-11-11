@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="540" height="560" viewBox="0 0 540 560" role="img" aria-labelledby="title desc">
+  <title id="title">AgenticLens architecture and data flow</title>
+  <desc id="desc">Telemetry flow: harness stores and Git feed adapters and pure analysis, then durable ledgers, then CLI and local embedded dashboard. Separate installation flow: native manager installs and selects the pinned engine. The engine owns telemetry and embeds the dashboard.</desc>
+  <rect width="540" height="560" fill="#172f31"/>
+  <g font-family="system-ui, sans-serif">
+    <text x="28" y="34" fill="#afcfc0" font-size="13" letter-spacing="1.5">LOCAL TELEMETRY FLOW</text>
+    <g fill="#254143" stroke="#526c69"><rect x="28" y="55" width="484" height="66" rx="6"/><rect x="28" y="151" width="484" height="66" rx="6"/><rect x="28" y="247" width="484" height="66" rx="6"/><rect x="28" y="343" width="484" height="66" rx="6"/></g>
+    <g fill="#fffef9" font-size="18" font-weight="600"><text x="48" y="83">Harness stores + Git</text><text x="48" y="179">Adapters + pure analysis</text><text x="48" y="275">Durable session ledgers</text><text x="48" y="371">CLI + local embedded dashboard</text></g>
+    <g fill="#d2dfd5" font-size="14"><text x="48" y="106">Read local sources and committed project context</text><text x="48" y="202">Extract facts and derive metrics</text><text x="48" y="298">Preserve supported recorded history</text><text x="48" y="394">Inspect recorded facts and available source detail</text></g>
+    <g stroke="#afcfc0" stroke-width="2" fill="none"><path d="M270 122v27m-5-7 5 7 5-7 M270 218v27m-5-7 5 7 5-7 M270 314v27m-5-7 5 7 5-7"/></g>
+    <path d="M28 435h484" stroke="#526c69" stroke-dasharray="4 5"/>
+    <text x="28" y="462" fill="#afcfc0" font-size="13" letter-spacing="1.5">SEPARATE INSTALLATION / SELECTION</text>
+    <g fill="#254143" stroke="#526c69"><rect x="28" y="481" width="203" height="54" rx="5"/><rect x="309" y="481" width="203" height="54" rx="5"/></g>
+    <g fill="#fffef9" font-size="15" font-weight="600"><text x="46" y="514">Native manager</text><text x="327" y="514">Pinned native engine</text></g>
+    <path d="M233 508h73m-7-5 7 5-7 5" fill="none" stroke="#afcfc0" stroke-width="2"/>
+  </g>
+</svg>
