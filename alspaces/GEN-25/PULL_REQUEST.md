@@ -1,9 +1,9 @@
 # chore(GEN-25): remove Windows support
 
-AgenticLens is moving forward with macOS and Linux support only. This ticket removes the remaining Windows runtime, distribution, installer, plugin transport and test paths after Windows CI was removed, and updates current support guidance.
+AgenticLens now supports macOS and Linux on amd64 and arm64 only. Remove Windows native implementations, executable/PE handling, PowerShell bootstrap, hook/plugin transports, distribution targets and Windows execution suites. Update active setup/operator/contributor guidance and bundled installer contents.
 
-The proposed scope preserves macOS/Linux amd64 and arm64 behavior, installation safety, manager/engine separation and portable recorded history. Historical audits and release notes remain historical records.
+Unsupported platform requests fail before downloading or changing installation state. Releases package tar.gz archives and select only supported binaries/archives for checksums and uploads, even when stale Windows files remain in the output directory. Exact prior generated advisory hooks can still be refreshed or removed; edited hooks remain protected.
 
-Implementation, verification and independent review are pending scope approval. This is a planning draft, not a completed delivery claim.
+Historical records, portable ledgers, user configuration ownership and supported argument/cancellation/atomicity behavior are preserved. Integrated `make` passes, including Go race suites, frontend checks/tests and all four manager/engine targets. Real release packaging/checksums, standalone host identities and disposable before/after regressions also pass. Native macOS execution and hosted release publication were not exercised.
 
-See the [contract](CONTRACT.md), [plan](iterations/01/PLAN.md) and [summary](SUMMARY.md) for acceptance boundaries and current evidence.
+See the [contract](CONTRACT.md), [plan](iterations/01/PLAN.md) and [summary](SUMMARY.md) for acceptance, review attribution and verification limits.

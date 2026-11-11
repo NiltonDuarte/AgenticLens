@@ -30,3 +30,9 @@ All discovery runs inspect the same frozen candidate against baseline `4e5c4583`
 | tests | Do removed suites contain supported-platform assertions still needed, and do remaining/new fixtures execute real acceptance boundaries with meaningful oracles? |
 
 Parent review before freeze identified and coder corrected ignored unsupported `--include-host` when combined with `--all-platforms`; tester added that adversarial case. This is an approval-preserving correction within the contract.
+
+## Completed verification
+
+The corrected reviewed tree `70fc7848f062903fb2a2c199234ce59250c946e4` became commit `e67991f3`; fetched main was already current. Integrated `make` passed with Go vet/race integrations, TypeScript checks, frontend unit/integration lanes and all eight four-target binaries. Real disposable release packaging/checksums and standalone host identities passed; disposable absent/repeated assets and before/after hook/checksum/upload regressions passed. No product changes followed those checks.
+
+Initial Sol behavior/architecture findings and coder-discovered hook compatibility were fixed and re-reviewed under all eight cells. Parent retained test-effectiveness Luna's dissent about an extra execution sentinel and refuted materiality through the complete no-evaluation source path; no unresolved finding remains. Parent consolidated APPROVED. Native macOS/live harness callback/hosted upload execution remain explicit limits. See SUMMARY.md and retained REVIEW_SUMMARY.json for attribution/evidence.
