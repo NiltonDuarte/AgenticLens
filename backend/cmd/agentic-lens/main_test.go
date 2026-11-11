@@ -2705,8 +2705,8 @@ func TestCLIMigrateCommand_Adversarial(t *testing.T) {
 		}
 
 		out := stdout.String()
-		if !strings.Contains(out, "No matching ticket workspaces found to migrate") {
-			t.Errorf("expected 'No matching ticket workspaces found to migrate', got: %s", out)
+		if !strings.Contains(out, "No readable matching ticket workspaces found to migrate") {
+			t.Errorf("expected 'No readable matching ticket workspaces found to migrate', got: %s", out)
 		}
 	})
 
@@ -2727,7 +2727,7 @@ func TestCLIMigrateCommand_Adversarial(t *testing.T) {
 		}
 
 		out := stdout.String()
-		if !strings.Contains(out, "No matching ticket workspaces found to migrate") {
+		if !strings.Contains(out, "No readable matching ticket workspaces found to migrate") {
 			t.Errorf("expected clean message for unmatching ticket filter, got: %s", out)
 		}
 	})

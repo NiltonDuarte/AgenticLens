@@ -23,3 +23,6 @@ Current application review gate: R5 fingerprint53216836c57b58aea99790ea61b6556e9
 
 
 Main integration completed cleanly at172091096ae1e0cbf50553eebae11df34487d085 after candidate69e17b44 and fetched main3384fa48. Only README's upstream link differs among274 reviewed inputs; application/tests/embedded inputs remain unchanged. Incoming Pages setup prose now requires approved exact release selection under C09d. Its diff was checked; the Ruby site suite is unavailable because ruby is not installed (exit127), with no tooling installed. Required integrated make is next.
+
+
+The first required integrated make on76d84397 stopped at two stale CLI empty-result wording assertions after all other backend race packages passed; frontend integration/native builds had not run. The tester aligned only those expectations with correct readable-workspace output, preserving every exit/oracle check; the complete uncached adversarial test passes2.165s. Parent inspected the mechanical diff; raw failed run remains /tmp/al70-integrated-make-first.log. Full make is being rerun before approval.
