@@ -231,6 +231,7 @@ func TestCaptureStatusReadsCommittedWALWithExplicitBoundedContinuation(t *testin
 
 func TestCaptureNativeCheckExemptsOnlyAcceptedExactCallerTail(t *testing.T) {
 	f := newCaptureGenerationFixture(t)
+	serializeCaptureFixtureWorkers(t, f)
 	path := f.write(t, 10)
 	f.bind(t, path)
 	f.generate(t)

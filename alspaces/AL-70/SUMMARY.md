@@ -10,6 +10,8 @@ Approved shared classification/generation choices and the five-field base-local 
 
 ## Verification and review
 
+CI follow-up is in progress at clean baseline 07129d42. Hosted Backend Check failed during temporary-directory cleanup of the native exact-caller advisory test (run 42988883853); no behavior assertion failed. Earlier local results below remain valid for their revisions; CI correction and new delivery checks are pending.
+
 The checkout began clean at eb7d169c; requested initial main integration reached f63e3db6. Iteration02 candidate 69e17b44 integrated main 3384fa48 without conflicts, and full make passed at 604d6338 (462.902s). Its two stale CLI empty-result expectations were corrected before that green rerun. A12 began clean at 54d58be4. Reviewed implementation f6a2f543 and test correction 07d07a9d remain integrated with current origin/main 3384fa48; both follow-up fetch/merge checks were already up to date.
 
 Required **make passed at `07d07a9d61f3bcdae70fb2a72cf1ac7cdef38c96`**, exit 0 in 426.197s. It exercised Go units/race integration, 227 frontend units, 751 frontend integrations, static checks, 14 release-workflow, 10 installation, 23 distribution and 6 orchestration cases, plus five-platform native builds. Both host manager/engine identities were executed separately. Standalone embedded UI/API served 12 synthetic v6 ledgers without sources/Git, preserved their bytes and checked explicit/unused configuration and listener behavior. Raw results: /tmp/al70-a12-integrated-make-r2-result.json and /tmp/al70-a12-standalone-1333hom5/RESULT.json.
