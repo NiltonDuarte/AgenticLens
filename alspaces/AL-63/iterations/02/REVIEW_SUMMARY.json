@@ -41,7 +41,7 @@
           "identity_basis": "observed"
         }
       ],
-      "disposition": "Open AL-70 effective-source-settings correction; configured-only source/control probe confirmed. Original B-SOL-02."
+      "disposition": "Fixed upstream by AL-70 (167c204f); November11 integrated source and configured-home fixture confirm complete hydration. Historical B-SOL-02 discovery credit retained."
     },
     {
       "finding_id": "CAP-04",
@@ -69,7 +69,7 @@
           "identity_basis": "observed"
         }
       ],
-      "disposition": "Open AL-69 child diagnostics; malformed-part disclosure needs scoped follow-up. Original B-SOL-04."
+      "disposition": "Partially fixed upstream by AL-69 (f63e3db6): typed child-lookup diagnostic/content preservation confirmed by current test. Malformed-part disclosure remains a static residual. Historical B-SOL-04 credit retained."
     },
     {
       "finding_id": "CAP-06",
@@ -83,7 +83,7 @@
           "identity_basis": "observed"
         }
       ],
-      "disposition": "Known REV-7 policy divergence, not promised generic mixed-schema recovery or data loss; retained as a capability limitation. Original DATA-SOL-01."
+      "disposition": "Former table-existence selector superseded upstream by AL-70; current complete-family SessionTable explicitly rejects mixed layout (fixture confirmed). Generic mixed recovery remains unsupported; REV-7 owns broader policy. Historical DATA-SOL-01 credit retained."
     },
     {
       "finding_id": "EVID-01",
