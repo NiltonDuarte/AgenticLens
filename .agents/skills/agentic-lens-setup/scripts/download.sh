@@ -53,9 +53,18 @@ fetch() {
  elif command -v wget >/dev/null 2>&1; then wget -q --timeout=120 -O "$2" "$1"
  else fail 'Download requires curl or wget'; fi
 }
-case "$(uname -s)" in Linux) OS=linux ;; Darwin) OS=darwin ;; *) fail 'Use download.ps1 on Windows' ;; esac
+case "$(uname -s)" in Linux) OS=linux ;; Darwin) OS=darwin ;; *) fail 'Unsupported operating system; AgenticLens supports macOS and Linux' ;; esac
 case "$(uname -m)" in x86_64|amd64) ARCH=amd64 ;; arm64|aarch64) ARCH=arm64 ;; *) fail 'Unsupported host architecture' ;; esac
 PLATFORM="$OS-$ARCH" ENTRYPOINT="${DEST%/}/agentic-lens"
+if [[ -n "$INCLUDE" ]]; then
+ INCLUDE="$(printf '%s' "${INCLUDE//\//-}" | tr '[:upper:]' '[:lower:]')"
+ case "$INCLUDE" in macos-arm64|mac-arm64|m1|m2|m3|apple-silicon) INCLUDE=darwin-arm64 ;; macos-amd64|mac-amd64|mac-intel) INCLUDE=darwin-amd64 ;; esac
+ case "$INCLUDE" in linux-amd64|linux-arm64|darwin-amd64|darwin-arm64) ;; *) fail "Unsupported platform $INCLUDE" ;; esac
+fi
+PLATFORMS=("$PLATFORM")
+if ((ALL)); then PLATFORMS=(linux-amd64 linux-arm64 darwin-amd64 darwin-arm64)
+elif [[ -n "$INCLUDE" && "$INCLUDE" != "$PLATFORM" ]]; then PLATFORMS+=("$INCLUDE"); fi
+for item in "${PLATFORMS[@]}"; do case "$item" in linux-amd64|linux-arm64|darwin-amd64|darwin-arm64) ;; *) fail "Unsupported platform $item" ;; esac; done
 STAGE="$(mktemp -d)" SCAFFOLD=''
 cleanup() {
  local status=$?
@@ -106,14 +115,6 @@ PIN=${VALUES[0]} INSTALL_ROOT=${VALUES[2]}
 [[ -z "$VERSION" || "$VERSION" == "$PIN" ]] || fail '--version conflicts with shared YAML pin'
 [[ -z "${AGENTIC_LENS_VERSION:-}" || "$AGENTIC_LENS_VERSION" == "$PIN" ]] || fail 'AGENTIC_LENS_VERSION conflicts with shared YAML pin'
 if ((!INIT)); then PROJECT=${VALUES[1]}; fi
-if [[ -n "$INCLUDE" ]]; then
- INCLUDE="$(printf '%s' "${INCLUDE//\//-}" | tr '[:upper:]' '[:lower:]')"
- case "$INCLUDE" in macos-arm64|mac-arm64|m1|m2|m3|apple-silicon) INCLUDE=darwin-arm64 ;; macos-amd64|mac-amd64|mac-intel) INCLUDE=darwin-amd64 ;; esac
-fi
-PLATFORMS=("$PLATFORM")
-if ((ALL)); then PLATFORMS=(linux-amd64 linux-arm64 darwin-amd64 darwin-arm64 windows-amd64)
-elif [[ -n "$INCLUDE" && "$INCLUDE" != "$PLATFORM" ]]; then PLATFORMS+=("$INCLUDE"); fi
-for item in "${PLATFORMS[@]}"; do case "$item" in linux-amd64|linux-arm64|darwin-amd64|darwin-arm64|windows-amd64) ;; *) fail "Unsupported platform $item" ;; esac; done
 if [[ -n "$ENGINE" ]]; then
  [[ -f "$ENGINE" && "$ENGINE_SHA" =~ ^[a-fA-F0-9]{64}$ ]] || fail '--local-bin requires --sha256'
  [[ "$(digest "$ENGINE")" == "$(printf %s "$ENGINE_SHA" | tr A-F a-f)" ]] || fail 'Local engine checksum mismatch'
@@ -121,7 +122,7 @@ if [[ -n "$ENGINE" ]]; then
 fi
 if ((DRY)); then
  printf 'Project: %s\nEngine version: %s\nManager version: %s\nNative command: %s\nEngine cache: %s\n' "$PROJECT" "$PIN" "$MANAGER_VERSION" "$ENTRYPOINT" "$INSTALL_ROOT"
- for item in "${PLATFORMS[@]}"; do ext=''; [[ "$item" != windows-* ]] || ext=.exe; printf 'Engine artifact: agentic-lens-engine-%s%s\n' "$item" "$ext"; done
+ for item in "${PLATFORMS[@]}"; do printf 'Engine artifact: agentic-lens-engine-%s\n' "$item"; done
  printf 'No network or destination writes. Required PATH entry: %s.\n' "$DEST"; exit 0
 fi
 if ((INIT)); then

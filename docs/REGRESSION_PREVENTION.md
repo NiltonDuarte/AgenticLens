@@ -55,7 +55,7 @@ These are acceptance scenarios for affected application work, not a claim that d
 
 Exercise a custom workspace directory, custom ticket prefixes, source roots, thresholds, and explicit overrides. Missing required configuration must fail clearly; pre-existing container/parent directories must not silently select a project. Verify the effective value through the API and UI as well as the loader. Renaming ticket artifacts must not affect tests: use self-contained fixtures. Production clients must surface request failures; synthetic fixtures belong to tests.
 
-Installer and entrypoint fixtures must explicitly isolate every writable cache, wrapper, state and configuration destination and assert that resolved targets stay under the fixture directory before applying changes. A temporary HOME alone is insufficient: native Windows profile APIs can resolve the real user profile independently. Use temporary shared/local install-root and destination settings through the production resolver. If a fixture escapes isolation, identify its exact generated artifact before cleanup; preserve unrelated or uncertain files and record the correction.
+Installer and entrypoint fixtures must explicitly isolate every writable cache, wrapper, state and configuration destination and assert that resolved targets stay under the fixture directory before applying changes. A temporary HOME alone is insufficient when explicit configuration selects destinations outside it. Use temporary shared/local install-root and destination settings through the production resolver. If a fixture escapes isolation, identify its exact generated artifact before cleanup; preserve unrelated or uncertain files and record the correction.
 
 ### Classification, anomalies, and exported prompts
 

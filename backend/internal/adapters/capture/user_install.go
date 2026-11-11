@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"strings"
 
@@ -298,12 +297,12 @@ func installUserCodexWithCheckpoint(ctx context.Context, options UserInstallOpti
 	next := userInstallation{Protocol: userCaptureOwnershipProtocol, Manager: manager, Groups: []OwnedGroup{}}
 	changes := append([]fileChange(nil), legacyChanges...)
 	if !options.Remove {
-		command, err := staticCommand([]string{manager, "codex-hook"}, runtime.GOOS == "windows")
+		command, err := staticCommand([]string{manager, "codex-hook"})
 		if err != nil {
 			return result, err
 		}
 		for _, event := range []string{"SessionStart", "UserPromptSubmit", "SubagentStart", "SubagentStop", "Stop", "SessionEnd"} {
-			group, err := codexHookGroup(event, command, "", runtime.GOOS == "windows")
+			group, err := codexHookGroup(event, command)
 			if err != nil {
 				return result, err
 			}

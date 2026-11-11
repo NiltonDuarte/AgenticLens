@@ -3,14 +3,19 @@
 BIN_DIR := bin
 HOST_OS := $(shell go env GOHOSTOS)
 HOST_ARCH := $(shell go env GOHOSTARCH)
-HOST_EXT := $(if $(filter windows,$(HOST_OS)),.exe,)
-BINARY := $(BIN_DIR)/agentic-lens-engine-$(HOST_OS)-$(HOST_ARCH)$(HOST_EXT)
-MANAGER := $(BIN_DIR)/agentic-lens-$(HOST_OS)-$(HOST_ARCH)$(HOST_EXT)
+BINARY := $(BIN_DIR)/agentic-lens-engine-$(HOST_OS)-$(HOST_ARCH)
+MANAGER := $(BIN_DIR)/agentic-lens-$(HOST_OS)-$(HOST_ARCH)
 WEB_DIR := web
 BACKEND_DIR := backend
 PORT ?= 8085
 RELEASE_DIR ?= dist
-PLATFORMS ?= linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64
+SUPPORTED_PLATFORMS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64
+PLATFORMS ?= $(SUPPORTED_PLATFORMS)
+RELEASE_BINARIES = $(foreach platform,$(PLATFORMS),bin/agentic-lens-$(subst /,-,$(platform)) bin/agentic-lens-engine-$(subst /,-,$(platform)))
+RELEASE_ARCHIVES = $(foreach platform,$(PLATFORMS),agentic-lens-$(VERSION)-$(subst /,-,$(platform)).tar.gz)
+ifneq ($(filter-out $(SUPPORTED_PLATFORMS),$(PLATFORMS)),)
+$(error Unsupported platforms: $(filter-out $(SUPPORTED_PLATFORMS),$(PLATFORMS)))
+endif
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "v0.0.0-dev")
 GIT_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
@@ -88,6 +93,7 @@ check: test-unit vet lint test-release-workflow test-installation test-capture-d
 .PHONY: test-release-workflow test-installation test-capture-distribution
 test-installation: test-unit web-assets
 	python3 scripts/tests/test_installation.py
+	python3 scripts/tests/test_platform_support.py
 
 test-release-workflow: test-unit
 	python3 scripts/tests/test_release_revision.py
@@ -158,11 +164,10 @@ build:
 	@echo "Building multi-platform binaries..."
 	@build_dir=$$(CDPATH= cd -P -- "$(BIN_DIR)" && pwd -P) || exit 1; \
 	for platform in $(PLATFORMS); do \
-		os=$${platform%/*}; arch=$${platform#*/}; ext=""; \
-		if [ "$$os" = windows ]; then ext=".exe"; fi; \
-		output="$$build_dir/agentic-lens-engine-$$os-$$arch$$ext"; \
+		os=$${platform%/*}; arch=$${platform#*/}; \
+		output="$$build_dir/agentic-lens-engine-$$os-$$arch"; \
 		(cd "$(BACKEND_DIR)" && CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build -ldflags "$(LDFLAGS)" -o "$$output" ./cmd/agentic-lens) || exit 1; \
-		(cd "$(BACKEND_DIR)" && CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build -ldflags "$(LDFLAGS)" -o "$$build_dir/agentic-lens-$$os-$$arch$$ext" ./cmd/agentic-lens-manager) || exit 1; \
+		(cd "$(BACKEND_DIR)" && CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build -ldflags "$(LDFLAGS)" -o "$$build_dir/agentic-lens-$$os-$$arch" ./cmd/agentic-lens-manager) || exit 1; \
 	done
 
 # Source development must exercise this build, never a shared-pin installed release.
@@ -184,12 +189,10 @@ release-build:
 	@for platform in $(PLATFORMS); do \
 		os=$${platform%/*}; \
 		arch=$${platform#*/}; \
-		ext=""; \
-		if [ "$$os" = "windows" ]; then ext=".exe"; fi; \
-		output="$(RELEASE_DIR)/bin/agentic-lens-engine-$$os-$$arch$$ext"; \
+		output="$(RELEASE_DIR)/bin/agentic-lens-engine-$$os-$$arch"; \
 		echo "Compiling $$output for $$os/$$arch (CGO_ENABLED=0)..."; \
 		(cd "$(BACKEND_DIR)" && CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build -ldflags "$(LDFLAGS)" -o ../$$output ./cmd/agentic-lens) || exit 1; \
-		(cd "$(BACKEND_DIR)" && CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build -ldflags "$(LDFLAGS)" -o ../$(RELEASE_DIR)/bin/agentic-lens-$$os-$$arch$$ext ./cmd/agentic-lens-manager) || exit 1; \
+		(cd "$(BACKEND_DIR)" && CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build -ldflags "$(LDFLAGS)" -o ../$(RELEASE_DIR)/bin/agentic-lens-$$os-$$arch ./cmd/agentic-lens-manager) || exit 1; \
 	done
 
 release-package:
@@ -197,11 +200,9 @@ release-package:
 	@for platform in $(PLATFORMS); do \
 		os=$${platform%/*}; \
 		arch=$${platform#*/}; \
-		ext=""; \
-		if [ "$$os" = "windows" ]; then ext=".exe"; fi; \
-		bin_name="agentic-lens-$$os-$$arch$$ext"; \
+		bin_name="agentic-lens-$$os-$$arch"; \
 		bin_path="$(RELEASE_DIR)/bin/$$bin_name"; \
-		engine_name="agentic-lens-engine-$$os-$$arch$$ext"; \
+		engine_name="agentic-lens-engine-$$os-$$arch"; \
 		engine_path="$(RELEASE_DIR)/bin/$$engine_name"; \
 		if [ ! -f "$$engine_path" ]; then echo "Missing engine $$engine_path" >&2; exit 1; fi; \
 		if [ ! -f "$$bin_path" ]; then \
@@ -210,20 +211,13 @@ release-package:
 		fi; \
 		license_file=""; \
 		if [ -f "$(CURDIR)/LICENSE" ]; then license_file="LICENSE"; fi; \
-		if [ "$$os" = "windows" ]; then \
-			archive_name="agentic-lens-$(VERSION)-$$os-$$arch.zip"; \
-			echo "Packaging $$archive_name..."; \
-			rm -f "$(RELEASE_DIR)/$$archive_name"; \
-			zip -q -j "$(RELEASE_DIR)/$$archive_name" "$$bin_path" "$$engine_path" "$(CURDIR)/README.md" $$( [ -n "$$license_file" ] && echo "$(CURDIR)/$$license_file" ) || exit 1; \
-		else \
-			archive_name="agentic-lens-$(VERSION)-$$os-$$arch.tar.gz"; \
-			echo "Packaging $$archive_name..."; \
-			rm -f "$(RELEASE_DIR)/$$archive_name"; \
-			tar -czf "$(RELEASE_DIR)/$$archive_name" -C "$(RELEASE_DIR)/bin" "$$bin_name" "$$engine_name" -C "$(CURDIR)" README.md $$license_file || exit 1; \
-		fi; \
+		archive_name="agentic-lens-$(VERSION)-$$os-$$arch.tar.gz"; \
+		echo "Packaging $$archive_name..."; \
+		rm -f "$(RELEASE_DIR)/$$archive_name"; \
+		tar -czf "$(RELEASE_DIR)/$$archive_name" -C "$(RELEASE_DIR)/bin" "$$bin_name" "$$engine_name" -C "$(CURDIR)" README.md $$license_file || exit 1; \
 	done
 	@echo "Generating SHA256SUMS..."
-	@(cd $(RELEASE_DIR) && sha256sum agentic-lens-$(VERSION)-*.tar.gz agentic-lens-$(VERSION)-*.zip bin/agentic-lens-* | sort -k2 > SHA256SUMS)
+	@(cd $(RELEASE_DIR) && sha256sum $(RELEASE_ARCHIVES) $(RELEASE_BINARIES) > SHA256SUMS.unsorted && sort -k2 SHA256SUMS.unsorted > SHA256SUMS && rm SHA256SUMS.unsorted)
 
 release-verify:
 	@if [ ! -f "$(RELEASE_DIR)/SHA256SUMS" ]; then \
@@ -234,10 +228,8 @@ release-verify:
 	@(cd $(RELEASE_DIR) && sha256sum -c SHA256SUMS)
 	@host_os=$$(go env GOOS); \
 	host_arch=$$(go env GOARCH); \
-	ext=""; \
-	if [ "$$host_os" = "windows" ]; then ext=".exe"; fi; \
-	host_bin="$(RELEASE_DIR)/bin/agentic-lens-engine-$$host_os-$$host_arch$$ext"; \
-	host_manager="$(RELEASE_DIR)/bin/agentic-lens-$$host_os-$$host_arch$$ext"; \
+	host_bin="$(RELEASE_DIR)/bin/agentic-lens-engine-$$host_os-$$host_arch"; \
+	host_manager="$(RELEASE_DIR)/bin/agentic-lens-$$host_os-$$host_arch"; \
 	if [ -f "$$host_manager" ]; then ./$$host_manager --manager-version --json || exit 1; fi; \
 	if [ -f "$$host_bin" ]; then \
 		echo "Verifying host binary: $$host_bin"; \

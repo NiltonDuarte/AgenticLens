@@ -135,6 +135,7 @@ func legacyCaptureGroupsRemain(hooks map[string][]json.RawMessage) bool {
 				Hooks []struct {
 					Type    string `json:"type"`
 					Command string `json:"command"`
+					// Inspect legacy fields only to preserve existing integration ownership.
 					Windows string `json:"commandWindows"`
 				} `json:"hooks"`
 			}

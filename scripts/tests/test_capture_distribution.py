@@ -184,13 +184,13 @@ class CaptureDistributionTest(DistributionFixture):
         self.assertTrue(self.native().is_file())
         self.assertEqual(self.requests(), [])
 
-    def test_plugin_uses_native_manager_for_windows_and_posix_with_bounded_cleanup(self):
+    def test_plugin_uses_native_manager_for_posix_with_bounded_transport(self):
         result = subprocess.run(['node', str(ROOT / 'scripts/tests/fixtures/plugin_native_transport.cjs'),
                                  str(ROOT / 'backend/internal/adapters/capture/plugin.ts'),
                                  str(ROOT / 'web/node_modules/typescript/lib/typescript.js')],
                                 cwd=ROOT, env=self.env, text=True, capture_output=True, timeout=15)
         self.succeeds(result)
-        self.assertIn('Linux VM construction only', result.stdout)
+        self.assertIn('POSIX VM construction only', result.stdout)
 
     def test_manager_preserves_arguments_stdin_stdout_cwd_and_exit(self):
         _, candidate = self.install_native_reporting_probe()
@@ -503,7 +503,7 @@ class CaptureDistributionTest(DistributionFixture):
             self.assertNotEqual(self.install(option).returncode, 0)
         preview_args = ('--local-manager-bin', self.manager, '--manager-sha256', digest(self.manager), '--version', self.pin)
         preview = self.succeeds(self.install(*preview_args, '--all-platforms', '--dry-run'))
-        for artifact in ['linux-amd64', 'linux-arm64', 'darwin-amd64', 'darwin-arm64', 'windows-amd64.exe']:
+        for artifact in ['linux-amd64', 'linux-arm64', 'darwin-amd64', 'darwin-arm64']:
             self.assertIn(f'agentic-lens-engine-{artifact}', preview.stdout)
         self.assertIn('agentic-lens-engine-darwin-arm64', self.succeeds(self.install(*preview_args, '--include-host', 'm1', '--dry-run')).stdout)
         self.assertFalse(self.dest.exists()); self.assertFalse(self.cache.exists()); self.assertEqual(self.requests(), [])

@@ -26,7 +26,6 @@ class InstallationTest(DistributionFixture):
         for key in ('VERSION', 'GIT_COMMIT', 'BUILD_DATE'):
             environment.pop(key, None)
         native = destination / f'agentic-lens-engine-{host_os}-{host_arch}'
-        if host_os == 'windows': native = native.with_suffix('.exe')
         source_version = subprocess.check_output(['git', 'describe', '--tags', '--always', '--dirty'], cwd=ROOT, text=True).strip()
         candidate = {'VERSION': 'v9.8.8-rc.1+abcdef0', 'GIT_COMMIT': 'abcdef0', 'BUILD_DATE': '2026-01-02T03:04:05Z'}
         for name, metadata, expected in [('default', {}, source_version), ('candidate', candidate, candidate['VERSION'])]:
@@ -119,7 +118,7 @@ class InstallationTest(DistributionFixture):
         ignore = self.repo / '.gitignore'; ignore.write_text('# owner policy\n')
         before = self.config.read_bytes(); ignored = ignore.read_bytes()
         self.succeeds(self.bundle())
-        for relative in ['scripts/install.sh', 'scripts/download.sh', 'scripts/download.ps1', 'SKILL.md']:
+        for relative in ['scripts/install.sh', 'scripts/download.sh', 'SKILL.md']:
             self.assertTrue((self.repo / BUNDLE_SETUP / relative).is_file(), relative)
         self.assertEqual((self.repo / BUNDLE_SETUP / 'RELEASE_VERSION').read_text(), self.pin + '\n')
         self.succeeds(self.install_local(script=self.repo / BUNDLE_SETUP / 'scripts/download.sh'))
