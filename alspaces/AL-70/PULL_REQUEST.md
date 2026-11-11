@@ -1,11 +1,9 @@
-# refactor(AL-70): make configuration and ticket identity explicit
+# refactor(AL-70): honor explicit configuration and ticket identity
 
-Implementation draft; validation and delivery remain pending.
+AgenticLens now applies explicit configuration and owning-file path origins consistently across CLI, adapters and dashboard. Literal prefix mappings, exact session selectors and natural ordering preserve recorded ticket identity. Git metrics measure committed net branch contribution using independent production/test rules.
 
-AgenticLens currently substitutes source paths, configuration values and ticket identities inconsistently across CLI, adapters and dashboard consumers. The approved change uses explicit policy and owning-file path origins, literal ticket prefixes with consistent filtering/sorting, exact direct session selectors and committed net production/test contribution metrics. Shared summary policy and generic artifact API/UI align manual capture and dashboard behavior.
+Shared configurable summary output and generic artifact items replace fixed destinations/contracts. Live views distinguish unavailable data from measured emptiness, preserve occurrence identity and reject stale polling replies. Retired configuration/CLI features are removed cleanly; portable history, explicit migration/formatting and authorized publication/state recovery remain supported.
 
-Retired configuration/CLI features are removed cleanly. Preserve portable recorded history, explicit data migration/formatting, exact interrupted-publication recovery, recognized source schemas and capture-state safeguards. Former generation metadata cleanup remains only in explicit migrate/backfill preparation.
+Validation: full make passed at `604d6338`, including Go race integration, 218 frontend units, 741 integrations, static checks, installation/distribution/orchestration and five-platform native builds. Both host binaries execute; standalone UI/API preserved 12 source-free fixture ledgers. Reviews and verification closed 23 findings; compact evidence is in alspaces/AL-70/iterations/02/REVIEW_SUMMARY.json.
 
-Acceptance: [contract](CONTRACT.md) and [confirmed inventory](LEGACY_AND_FALLBACKS.md). Execution/verification: [iteration 02](iterations/02/PLAN.md). Current results and limits: [summary](SUMMARY.md).
-
-Main was merged before implementation at f63e3db6. Replace this draft's pending status with actual verification and review evidence before publication.
+Limits: Pages prose was inspected but Ruby tests were unavailable locally. Windows evidence is scoped native fixtures. A12 model-placeholder cleanup remains unapproved and unchanged. No hooks were installed or automatic capture enabled.

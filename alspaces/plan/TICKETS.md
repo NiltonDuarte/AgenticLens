@@ -92,12 +92,6 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None
   - **File**: [REV-7](to-do/REV-7%20review%20source%20read%20guarantees.md)
 
-## In Progress
-
-- **AL-70**: Honor configuration paths and ticket identity
-  - **Status**: In Progress; **Blocked by**: None; **Blocks**: None
-  - **File**: [AL-70](to-do/AL-70%20honor%20configuration%20paths%20and%20ticket%20identity.md)
-
 ## Blocked
 
 - **AL-65**: Recommend safe source-backed backfill defaults
