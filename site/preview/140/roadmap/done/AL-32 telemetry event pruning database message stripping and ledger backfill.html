@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AL-32 telemetry event pruning database message stripping and ledger backfill.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/preview/140/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/preview/140/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><p>h3. Title: AL-32: Telemetry Event Pruning, Database Message Stripping, Agent Data Investigation, and Ledger Backfill</p>
+
+<table>
+  <tbody>
+    <tr>
+      <td>
+<em>TARGET</em>: AgenticLens (domain</td>
+      <td>adapters</td>
+      <td>cli</td>
+      <td>migration</td>
+      <td>tests)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><em>CONTEXT</em></p>
+
+<p>Currently, <code class="language-plaintext highlighter-rouge">agentic-lens generate</code> dumps raw chronological event streams into <code class="language-plaintext highlighter-rouge">workspaces/&lt;TICKET_ID&gt;/agentic_metrics.json</code>. Persisting raw messages and error strings from the database creates critical security vulnerabilities (permanently leaking environment secrets, API keys, credentials, local filesystem paths, and customer data into git history) and repository bloat (thousands of lines of routine completed tool calls and turn messages).
+Attempting regex-based secret redaction on database messages is inherently fragile and leak-prone. Therefore, the committed Git plane must strictly enforce zero database message retention: no prompts, no assistant messages, and no raw database error strings are ever written to Git.
+Failed tool calls in committed ledgers must be recorded as bare failure indicators (<code class="language-plaintext highlighter-rouge">tool_name</code>, <code class="language-plaintext highlighter-rouge">status: "error"</code>, turn number, timestamp, duration) without any contextual message from the database. The full diagnostic context is reserved strictly for local hydration from the developer’s SQLite database. Additionally, an investigation step is required to determine whether clean, structured metadata can be obtained directly from the agent itself (e.g. self-reported exit codes, error classifications) versus relying solely on local hydration.
+Finally, historical workspace ledgers must be retroactively migrated and backfilled to purge routine events and strip all database message text across existing workspaces.</p>
+
+<p><em>GOAL</em></p>
+
+<p>Enforce zero database message persistence in committed ledgers by pruning routine events, stripping all database error and prompt messages from persisted ledgers (saving bare error indicators without DB context), investigating agent-reported metadata pathways, and implementing a schema migration backfill to sanitize historical workspace ledgers.</p>
+
+<p><em>VERTICAL SLICE SCOPE</em></p>
+
+<ul>
+  <li>Domain Core (<code class="language-plaintext highlighter-rouge">internal/domain/</code>, <code class="language-plaintext highlighter-rouge">internal/domain/migration/</code>):
+    <ul>
+      <li>Event Fact Serialization: ensure committed <code class="language-plaintext highlighter-rouge">EventFact</code> models omit database messages (<code class="language-plaintext highlighter-rouge">ErrorMessage: nil</code> or omitted when writing to Git plane; no prompts or reasoning strings).</li>
+      <li>Bare Error Indicator: preserve only structural metadata for failed tool calls (<code class="language-plaintext highlighter-rouge">ToolName</code>, <code class="language-plaintext highlighter-rouge">Status: "error"</code>, <code class="language-plaintext highlighter-rouge">Turn</code>, <code class="language-plaintext highlighter-rouge">Timestamp</code>, <code class="language-plaintext highlighter-rouge">DurationMS</code>).</li>
+      <li>In-Memory Aggregations: compute all token totals, active durations, cost, tool health rollups, and anomaly evaluations over the complete raw event stream in memory <em>before</em> pruning/stripping events for ledger persistence.</li>
+      <li>Migration Step: register schema migration step <code class="language-plaintext highlighter-rouge">StepV2ToV3Sanitized</code> in <code class="language-plaintext highlighter-rouge">internal/domain/migration/registry.go</code> to prune routine completed events and strip legacy database message strings from existing ledgers while asserting bit-identical aggregate metrics.</li>
+    </ul>
+  </li>
+  <li>Boundary Adapter &amp; CLI (<code class="language-plaintext highlighter-rouge">internal/adapters/</code>, <code class="language-plaintext highlighter-rouge">internal/adapters/backfill/</code>, <code class="language-plaintext highlighter-rouge">cmd/agentic-lens/</code>):
+    <ul>
+      <li>Event Filtering: in <code class="language-plaintext highlighter-rouge">internal/adapters/opencode/extractor.go</code> and <code class="language-plaintext highlighter-rouge">cmd/agentic-lens/main.go</code>, filter persisted events to strictly:
+        <ul>
+          <li>Tool calls with <code class="language-plaintext highlighter-rouge">Status == "error"</code> (stripped of raw database error messages / text).</li>
+          <li>Compaction events (<code class="language-plaintext highlighter-rouge">EventType == "compaction"</code>).</li>
+          <li>Events directly associated with detected domain anomalies.</li>
+          <li>Omit all routine <code class="language-plaintext highlighter-rouge">completed</code> turn messages and successful tool calls.</li>
+        </ul>
+      </li>
+      <li>Investigation Task: document and evaluate options for capturing structured error metadata directly from the agent runtime (e.g. exit codes, error enum types, agent self-reported diagnostics) without reading raw error text from the database.</li>
+      <li>Ledger Backfill Runner: wire migration step into <code class="language-plaintext highlighter-rouge">agentic-lens migrate</code> and <code class="language-plaintext highlighter-rouge">internal/adapters/backfill/engine.go</code> with <code class="language-plaintext highlighter-rouge">--dry-run</code> support, verifying historical ledgers drop to &lt;5 KB.</li>
+    </ul>
+  </li>
+  <li>Quality &amp; Tests:
+    <ul>
+      <li>Table-driven tests asserting that zero message strings, prompts, or raw database error outputs are present in serialized ledger JSON.</li>
+      <li>Tests verifying bare error events retain tool name, turn, and error status correctly.</li>
+      <li>Table-driven tests verifying all in-memory calculations (tokens, cost, anomalies, tool health) match raw values exactly.</li>
+      <li>End-to-end backfill test on historical workspace fixtures verifying file size reduction (&lt;5 KB) and zero residual database text.</li>
+      <li>Static checks and test suite pass with zero <code class="language-plaintext highlighter-rouge">any</code> and zero emojis.</li>
+    </ul>
+  </li>
+</ul>
+
+<p><em>ACCEPTANCE CRITERIA</em></p>
+
+<ul>
+  <li>
+<code class="language-plaintext highlighter-rouge">workspaces/&lt;TICKET_ID&gt;/agentic_metrics.json</code> contains strictly bare error events, compactions, and anomaly-associated events with zero raw database messages, prompts, or error strings.</li>
+  <li>No regex sanitization is performed; database messages are omitted completely rather than masked.</li>
+  <li>In-memory token totals, active durations, costs, tool execution metrics, and anomaly flags match exact raw values.</li>
+  <li>Investigation report or architecture note evaluates pathways for obtaining structured data directly from the agent versus dynamic local hydration.</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">agentic-lens migrate</code> successfully prunes routine events and strips legacy database messages across existing workspace ledgers.</li>
+  <li>File size of generated and migrated <code class="language-plaintext highlighter-rouge">agentic_metrics.json</code> ledgers is reduced to &lt;5 KB for typical sessions.</li>
+  <li>Zero <code class="language-plaintext highlighter-rouge">any</code> and zero emojis across all code and tests.</li>
+</ul>
+
+<p><em>DEFINITION OF DONE</em></p>
+
+<ul>
+  <li>Code and tests merged to target branch.</li>
+  <li>Quality gates passing (<code class="language-plaintext highlighter-rouge">make check</code>, <code class="language-plaintext highlighter-rouge">make test</code>, or <code class="language-plaintext highlighter-rouge">make</code>).</li>
+  <li>Go and TypeScript type checking clean with zero any.</li>
+  <li>Telemetry tested with <code class="language-plaintext highlighter-rouge">agentic-lens</code> CLI.</li>
+</ul>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>

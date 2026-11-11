@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AL-37 cross-project setup manual and telemetry integration guide.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/preview/140/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/preview/140/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><p>h3. Title: AL-37: Cross-Project Platform Setup Manual and Telemetry Integration Guide</p>
+
+<table>
+  <tbody>
+    <tr>
+      <td>
+<em>TARGET</em>: AgenticLens (docs</td>
+      <td>packaging</td>
+      <td>cli)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><em>CONTEXT</em></p>
+
+<p>External engineering organizations, platform architects, and developers require comprehensive documentation to onboard and operate AgenticLens across diverse repositories. Crucially, the internal skills used to build this repository (<code class="language-plaintext highlighter-rouge">agentic-lens-dev</code>, <code class="language-plaintext highlighter-rouge">agentic-lens-po</code>, and <code class="language-plaintext highlighter-rouge">agentic-lens-review</code>) are part of this repository’s own git project structure, NOT parts of the general AgenticLens product platform. External projects adopting AgenticLens must define their own ways of working, agent personas, and delivery workflows rather than copying the multi-agent conventions of this repository. They need a definitive manual explaining platform installation, root configuration schema, CLI flags, web dashboard navigation, and how to integrate AgenticLens telemetry generation into their own custom agent workflows.</p>
+
+<p><em>GOAL</em></p>
+
+<p>Author the comprehensive cross-project setup manual (<code class="language-plaintext highlighter-rouge">docs/SETUP_MANUAL.md</code>) and package the standalone <code class="language-plaintext highlighter-rouge">agentic-lens-setup</code> skill for external distribution, establishing a clear separation between the AgenticLens product platform and project-specific development methodologies.</p>
+
+<p><em>VERTICAL SLICE SCOPE</em></p>
+
+<ul>
+  <li>Documentation Core (<code class="language-plaintext highlighter-rouge">docs/SETUP_MANUAL.md</code>):
+    <ul>
+      <li>Platform Overview &amp; Value: Zero-dependency single-binary architecture, local telemetry ledgers, live observability, and context health analytics.</li>
+      <li>Setup Pathways:
+        <ul>
+          <li>Agent-Driven Onboarding: Running <code class="language-plaintext highlighter-rouge">agentic-lens-setup</code> to self-install the precompiled binary into a co-located git-ignored folder, configure <code class="language-plaintext highlighter-rouge">.agenticlens-config.yaml</code>, and confirm agent instructions.</li>
+          <li>Manual Developer Installation: Downloading precompiled binaries from GitHub Releases, making executable, and generating <code class="language-plaintext highlighter-rouge">.agenticlens-config.yaml</code>.</li>
+        </ul>
+      </li>
+      <li>Configuration Reference: Exhaustive <code class="language-plaintext highlighter-rouge">.agenticlens-config.yaml</code> schema reference for root configuration (<code class="language-plaintext highlighter-rouge">project_name</code>, <code class="language-plaintext highlighter-rouge">ticket</code>, <code class="language-plaintext highlighter-rouge">workspaces</code>, <code class="language-plaintext highlighter-rouge">database</code>, <code class="language-plaintext highlighter-rouge">live</code>, <code class="language-plaintext highlighter-rouge">code_metrics</code>, <code class="language-plaintext highlighter-rouge">role_mappings</code>, <code class="language-plaintext highlighter-rouge">role_order</code>).</li>
+      <li>Agnostic Agent Workflow Integration:
+        <ul>
+          <li>Guide for any agent setup (single-agent, multi-agent, custom harnesses) on how to invoke <code class="language-plaintext highlighter-rouge">./bin/agentic-lens generate ...</code> as the final turn before committing work.</li>
+          <li>Demonstrating that projects define their own workflows, personas, and commit strategies, integrating the telemetry ledger without inheriting AgenticLens-specific roles.</li>
+        </ul>
+      </li>
+      <li>CLI &amp; Web Dashboard Reference: Full operational guide for <code class="language-plaintext highlighter-rouge">server</code>, <code class="language-plaintext highlighter-rouge">generate</code>, <code class="language-plaintext highlighter-rouge">scan</code>, <code class="language-plaintext highlighter-rouge">version</code>, <code class="language-plaintext highlighter-rouge">migrate</code>, and <code class="language-plaintext highlighter-rouge">backfill</code>.</li>
+      <li>Troubleshooting &amp; Best Practices: Database locks, permissions, SQLite paths, and git branch inference.</li>
+    </ul>
+  </li>
+  <li>Standalone Setup Skill Packaging:
+    <ul>
+      <li>Provide a clean distribution mechanism for the single platform onboarding skill (<code class="language-plaintext highlighter-rouge">agentic-lens-setup</code> in <code class="language-plaintext highlighter-rouge">.opencode/skills/agentic-lens-setup/</code>).</li>
+      <li>Ensure zero export or bundling of internal repository skills (<code class="language-plaintext highlighter-rouge">agentic-lens-dev</code>, <code class="language-plaintext highlighter-rouge">agentic-lens-po</code>, <code class="language-plaintext highlighter-rouge">agentic-lens-review</code>).</li>
+    </ul>
+  </li>
+  <li>Quality:
+    <ul>
+      <li>Verify all CLI examples, config snippets, and command flags.</li>
+      <li>Ensure zero emojis across all documentation and guides.</li>
+    </ul>
+  </li>
+</ul>
+
+<p><em>ACCEPTANCE CRITERIA</em></p>
+
+<ul>
+  <li>
+<code class="language-plaintext highlighter-rouge">docs/SETUP_MANUAL.md</code> authored, structured, and validated against technical guidelines.</li>
+  <li>Explicitly distinguishes the AgenticLens product platform from project-specific internal skills.</li>
+  <li>Clear instructions for both agent-driven setup and manual installation.</li>
+  <li>Exhaustive <code class="language-plaintext highlighter-rouge">.agenticlens-config.yaml</code> reference included with typed examples.</li>
+  <li>Only the platform setup skill <code class="language-plaintext highlighter-rouge">agentic-lens-setup</code> is packaged for distribution; internal repo skills are excluded.</li>
+  <li>Quality gates pass (<code class="language-plaintext highlighter-rouge">make check</code>, <code class="language-plaintext highlighter-rouge">make test</code>, <code class="language-plaintext highlighter-rouge">make build</code>) with zero emojis.</li>
+</ul>
+
+<p><em>DEFINITION OF DONE</em></p>
+
+<ul>
+  <li>Documentation and skill distribution files merged to target branch.</li>
+  <li>Quality gates passing (<code class="language-plaintext highlighter-rouge">make check</code>, <code class="language-plaintext highlighter-rouge">make test</code>, <code class="language-plaintext highlighter-rouge">make build</code>).</li>
+  <li>Zero any and zero emojis across all files.</li>
+</ul>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>

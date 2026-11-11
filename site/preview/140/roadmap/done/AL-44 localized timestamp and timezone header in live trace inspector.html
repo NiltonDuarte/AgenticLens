@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AL-44 localized timestamp and timezone header in live trace inspector.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/preview/140/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/preview/140/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><p>h3. Title: AL-44: Global Localized Millisecond Timestamp Formatting and Timezone Header</p>
+
+<p><em>TARGET</em>: AgenticLens (presentation / web / formatters / components / tests)</p>
+
+<p><em>CONTEXT</em></p>
+
+<p>Across AgenticLens (Live Observability inspector, Trace Waterfall timeline, and Ticket Deep Dive autopsy views), event and message timestamps currently render full raw ISO-8601 UTC strings (e.g. <code class="language-plaintext highlighter-rouge">2026-10-22T14:32:10.123Z</code>).
+In <code class="language-plaintext highlighter-rouge">LiveTraceInspector.tsx</code> (<code class="language-plaintext highlighter-rouge">span.turn-timestamp</code>), <code class="language-plaintext highlighter-rouge">TraceWaterfall.tsx</code>, and <code class="language-plaintext highlighter-rouge">TicketDeepDive.tsx</code>, this takes excessive horizontal space (24+ characters), causes premature wrapping of metadata chips, and forces operators to mentally compute timezone offsets from UTC. In live monitoring, operators understand that sessions naturally roll over midnight, but need compact local time (<code class="language-plaintext highlighter-rouge">HH:mm:ss.SSS</code>) with explicit timezone indicators.</p>
+
+<p><em>GOAL</em></p>
+
+<p>Format event and turn timestamps globally across the application as compact, localized <code class="language-plaintext highlighter-rouge">HH:mm:ss.SSS</code> in the client’s local timezone with full ISO datetime preserved in a hover tooltip, and display the active client timezone indicator in the Live Inspector header.</p>
+
+<p><em>VERTICAL SLICE SCOPE</em></p>
+
+<ul>
+  <li>Domain Core: Pure date formatter functions in <code class="language-plaintext highlighter-rouge">web/src/domain/formatters.ts</code> (<code class="language-plaintext highlighter-rouge">formatLocalTimeWithMs(iso: string): string</code> and <code class="language-plaintext highlighter-rouge">getClientTimezoneBadge(): string</code>) handling valid dates, invalid date strings, millisecond zero-padding (<code class="language-plaintext highlighter-rouge">007</code> ms), and client timezone resolution via <code class="language-plaintext highlighter-rouge">Intl.DateTimeFormat().resolvedOptions().timeZone</code>.</li>
+  <li>Boundary Adapter: Zero network changes; leverages standard browser localization APIs.</li>
+  <li>Presentation:
+    <ul>
+      <li>Update <code class="language-plaintext highlighter-rouge">LiveMessageTurnItem</code> in <code class="language-plaintext highlighter-rouge">LiveTraceInspector.tsx</code> to render the compact localized timestamp with a hover <code class="language-plaintext highlighter-rouge">title</code> containing full localized ISO datetime (<code class="language-plaintext highlighter-rouge">YYYY-MM-DD HH:mm:ss.SSS [TZ]</code>). Display the detected timezone badge in the inspector header (<code class="language-plaintext highlighter-rouge">.inspector-title-group</code>).</li>
+      <li>Update <code class="language-plaintext highlighter-rouge">TraceWaterfall.tsx</code> timeline node timestamps to use <code class="language-plaintext highlighter-rouge">formatLocalTimeWithMs</code> with full date tooltip.</li>
+      <li>Update <code class="language-plaintext highlighter-rouge">TicketDeepDive.tsx</code> event timestamps and timeline markers to use localized formatting.</li>
+    </ul>
+  </li>
+  <li>Quality: Unit tests in <code class="language-plaintext highlighter-rouge">formatters.test.ts</code> validating timestamp formatting, edge cases, invalid date fallbacks, and timezone badge resolution. Component tests in <code class="language-plaintext highlighter-rouge">LiveTraceInspector.test.tsx</code> and <code class="language-plaintext highlighter-rouge">TraceWaterfall.test.tsx</code> asserting localized rendering.</li>
+</ul>
+
+<p><em>ACCEPTANCE CRITERIA</em></p>
+
+<ul>
+  <li>Message turn timestamps in <code class="language-plaintext highlighter-rouge">LiveTraceInspector</code> display strictly <code class="language-plaintext highlighter-rouge">HH:mm:ss.SSS</code> in local client time (e.g. <code class="language-plaintext highlighter-rouge">16:42:05.120</code>).</li>
+  <li>Timestamps across Trace Waterfall and Ticket Deep Dive utilize localized <code class="language-plaintext highlighter-rouge">HH:mm:ss.SSS</code> formatting.</li>
+  <li>Timestamp elements retain a <code class="language-plaintext highlighter-rouge">title</code> attribute containing the full localized datetime and timezone offset for complete date context.</li>
+  <li>Inspector header contains a visible badge displaying the active client timezone (e.g. <code class="language-plaintext highlighter-rouge">TZ: Europe/Berlin</code> or <code class="language-plaintext highlighter-rouge">TZ: America/New_York (UTC-4)</code>).</li>
+  <li>Gracefully falls back to the original string or empty indicator if an unparseable timestamp is encountered.</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">npm run typecheck</code>, <code class="language-plaintext highlighter-rouge">npm run lint</code>, and <code class="language-plaintext highlighter-rouge">npm test</code> pass with zero errors.</li>
+</ul>
+
+<p><em>DEFINITION OF DONE</em></p>
+
+<ul>
+  <li>Code and tests merged to target branch.</li>
+  <li>Quality gates passing (<code class="language-plaintext highlighter-rouge">make check</code>, <code class="language-plaintext highlighter-rouge">make test</code>, or <code class="language-plaintext highlighter-rouge">make</code>).</li>
+  <li>Go and TypeScript type checking clean with zero any.</li>
+  <li>Telemetry tested with <code class="language-plaintext highlighter-rouge">agentic-lens</code> CLI.</li>
+</ul>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>
