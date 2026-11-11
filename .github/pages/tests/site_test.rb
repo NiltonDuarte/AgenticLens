@@ -155,9 +155,9 @@ class TicketsSiteTest < Minitest::Test
     end
   end
 
-  def test_presentation_assets_fragments_and_accessible_structure_at_project_and_host_roots
+  def test_presentation_assets_fragments_and_accessible_structure_at_project_host_and_preview_roots
     fixture
-    ["/FixtureRepo", ""].each do |base_path|
+    ["/FixtureRepo", "", "/FixtureRepo/preview/24"].each do |base_path|
       assert_build(base_path: base_path)
       presentation = document(@output.join("index.html"))
       assert_equal "en", presentation.at_css("html")["lang"]
@@ -205,6 +205,12 @@ class TicketsSiteTest < Minitest::Test
         assert_empty svg.css("script, foreignObject, image"), "Illustrations must be self-contained, not embedded private captures"
       end
       assert presentation.at_css("link[rel='stylesheet'][href^='#{base_path}/presentation/']"), "The trusted stylesheet must be published beneath the project path"
+      roadmap = document(@output.join("roadmap/index.html"))
+      assert_includes links(roadmap), "#{base_path}/roadmap/to-do/TASK-Z%20sample.html#details"
+      ticket = document(@output.join("roadmap/to-do/TASK-Z sample.html"))
+      assert_includes links(ticket), "#{base_path}/roadmap/"
+      assert_includes links(ticket), "#{base_path}/roadmap/done/TASK-OLD%20archived.html"
+      assert_includes links(ticket), "https://github.com/fixture-owner/FixtureRepo/blob/0123456789abcdef/custom%20tickets/PO-fixture/SPEC.md#context"
     end
   end
 

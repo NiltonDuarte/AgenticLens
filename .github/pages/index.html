@@ -1,6 +1,6 @@
 ---
 layout: null
-title: AgenticLens — Understand the work behind the code
+title: AgenticLens — Telemetry for agentic development
 ---
 {% assign repository_url = 'https://github.com/' | append: site.ticket_repository %}
 {% assign encoded_revision = site.ticket_revision | url_encode %}
@@ -10,8 +10,8 @@ title: AgenticLens — Understand the work behind the code
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Local telemetry and observability for multi-agent development. Investigate execution, understand ticket effort, and share durable project history with AgenticLens.">
-  <meta name="theme-color" content="#f5f3ec">
+  <meta name="description" content="Local telemetry for agentic development. Understand skills, agents, models and context use; compare tickets and project trends through Git-shared history.">
+  <meta name="theme-color" content="#0a0d14">
   <title>{{ page.title | escape }}</title>
   <link rel="stylesheet" href="{{ '/presentation/style.css' | relative_url }}">
 </head>
@@ -30,9 +30,9 @@ title: AgenticLens — Understand the work behind the code
     <section class="hero wrap" aria-labelledby="hero-title">
       <div class="hero-copy">
         <p class="eyebrow"><span class="status-dot" aria-hidden="true"></span> Local telemetry. Durable history.</p>
-        <h1 id="hero-title">Understand the work <em>behind the code.</em></h1>
-        <p class="hero-description">Your agents write code. AgenticLens helps you see how the work unfolded.</p>
-        <p class="hero-detail">Local multi-agent development telemetry and observability for developers and engineering leads. Follow execution, investigate friction, and carry the evidence into your next project decision.</p>
+        <h1 id="hero-title">Understand how your team <em>works with agents.</em></h1>
+        <p class="hero-description">Telemetry for the people shaping agentic development.</p>
+        <p class="hero-detail">See how your team uses skills, agents, roles and models. Track context window saturation, compare ticket effort, and follow how your project evolves as your tools and guidance change.</p>
         <div class="actions">
           <a class="button button-primary" href="#start">Get started <span aria-hidden="true">↗</span></a>
           <a class="text-link" href="#workflow">Explore the workflow <span aria-hidden="true">↓</span></a>
@@ -40,15 +40,15 @@ title: AgenticLens — Understand the work behind the code
         <p class="hero-note">Runs on your machine. History travels with Git.</p>
       </div>
       <figure class="hero-visual">
-        <div class="figure-bar"><span class="small-label">A closer look at execution</span><span class="figure-tag">Illustration</span></div>
-        <img src="{{ '/presentation/investigation.svg' | relative_url }}" width="600" height="470" alt="Illustrative execution trace: a planner hands work to a coder; repeated tool attempts lead to an anomaly inspection, followed by testing.">
-        <figcaption>Illustrative trace and anomaly panel, not a product screenshot or measured session. Follow a handoff, inspect retries, then decide what to change.</figcaption>
+        <div class="figure-bar"><span class="small-label">Your development telemetry</span><span class="figure-tag">Illustration</span></div>
+        <img src="{{ '/presentation/investigation.svg' | relative_url }}" width="600" height="470" alt="Conceptual telemetry views for skill use, agent roles, model activity and context window use, connected to a shared project record. No measured values are shown.">
+        <figcaption>Illustrative telemetry views, not a product screenshot or measured session. Connect team activity to a history you can compare.</figcaption>
       </figure>
     </section>
 
     <div class="principles wrap" aria-label="Product principles">
-      <p><span class="principle-index">01 /</span> Observe agent execution</p>
-      <p><span class="principle-index">02 /</span> Investigate with context</p>
+      <p><span class="principle-index">01 /</span> Understand team activity</p>
+      <p><span class="principle-index">02 /</span> Compare project evolution</p>
       <p><span class="principle-index">03 /</span> Keep a shared record</p>
     </div>
 
@@ -57,27 +57,28 @@ title: AgenticLens — Understand the work behind the code
       <ol class="workflow-grid">
         <li><span class="step-number">01</span><h3>Configure &amp; capture</h3><p>Choose the project release, harness source and ticket workspace. Configure capture for supported local sessions.</p></li>
         <li><span class="step-number">02</span><h3>Generate</h3><p>Extract session facts into a versioned JSON ledger and a readable ticket summary. Keep missing evidence explicit.</p></li>
-        <li><span class="step-number">03</span><h3>Inspect</h3><p>Use the CLI or local embedded dashboard to explore anomalies, delegation, model activity and ticket trends.</p></li>
+        <li><span class="step-number">03</span><h3>Inspect</h3><p>Use the CLI or local embedded dashboard to explore skills, roles, models, context use and ticket trends.</p></li>
         <li><span class="step-number">04</span><h3>Share</h3><p>Commit the ledger and summary with the project. Give the next developer recorded context, even on another machine.</p></li>
       </ol>
     </section>
 
     <section class="investigation-section" id="investigate" aria-labelledby="investigate-title">
       <div class="wrap section">
-        <div class="section-heading"><p class="eyebrow">Questions worth asking</p><h2 id="investigate-title">Turn activity into investigation.</h2><p>Metrics become useful when they help a person choose the next step.</p></div>
-        <article class="use-case use-case-trace">
-          <div><p class="case-label">01 / Diagnose tool retries</p><h3>Where did the run get stuck?</h3><p>A tool keeps failing, or work passes back and forth between agents. Open the anomaly inspector and execution/delegation trace to connect the pattern to its context.</p><p class="decision"><strong>Your decision:</strong> repair the environment, narrow the task, or change the next instruction after inspecting the underlying evidence.</p><a class="text-link" href="{{ source_url }}/ARCHITECTURE.md#31-detection-rules">Read the anomaly rules <span aria-hidden="true">↗</span></a></div>
-          <div class="feature-note"><span class="mini-label">Investigation views</span><h4>Trace → anomaly → context</h4><p>The hero illustration shows this path. An anomaly is a prompt to investigate; it does not establish that the code is wrong.</p><ul><li>Execution order and delegation handoffs</li><li>Tool retry and failure patterns</li><li>Context pressure and available diagnostics</li></ul></div>
+        <div class="section-heading"><p class="eyebrow">Questions worth asking</p><h2 id="investigate-title">See the work. Learn from the changes.</h2><p>Build a shared understanding of how your team develops with agents, across sessions and tickets.</p></div>
+        <article class="use-case">
+          <div><p class="case-label">01 / Understand team telemetry</p><h3>How does your team work with agents?</h3><p>Follow skill use, agent and role activity, model choices and context window saturation. Bring the activity of planners, coders, testers and reviewers into the same project view.</p><p class="decision"><strong>Explore:</strong> which skills are used, how work passes between roles, where tokens are spent, and which sessions need a closer look at context pressure.</p></div>
+          <div class="feature-note"><span class="mini-label">From sessions to understanding</span><h4>Skills. Roles. Models. Context.</h4><ul><li>Skill invocations and delegation activity</li><li>Agent roles and model usage</li><li>Token use, cache use and context growth</li><li>Recorded activity across tickets</li></ul></div>
         </article>
         <article class="use-case">
-          <div><p class="case-label">02 / Compare ticket effort</p><h3>What changed between tickets?</h3><p>Use ticket comparison and metric progression to examine role and model activity, tokens, cache use and recorded cost alongside elapsed and active duration.</p><p class="decision"><strong>Your decision:</strong> review an expensive investigation step, adjust task boundaries, or inspect a change in cache use. Account for task difficulty and missing evidence before drawing a conclusion.</p></div>
-          <figure class="product-figure"><img src="{{ '/presentation/analytics.svg' | relative_url }}" width="600" height="360" loading="lazy" alt="Qualitative illustration of ticket comparison, role and model activity, token and cache analysis, and metric progression. No numeric outcomes are shown."><figcaption>Illustrative analytics views. Shapes explain the questions these views support; they represent no measured ticket ranking, efficiency or productivity result.</figcaption></figure>
+          <div><p class="case-label">02 / Track evolution &amp; compare tickets</p><h3>Are changes helping your development cycle?</h3><p>Follow lines of code, recorded cost, token use and cache use as the project grows. Compare tickets by elapsed and active time, token spend and developer steering to explore how development changes over time.</p><p class="decision"><strong>Ask:</strong> after a change to AGENTS.md, skills, guidance or specifications, do comparable tickets need less steering, time or tokens? Use the charts to investigate; account for task difficulty and missing data before attributing a change to your guidance.</p></div>
+          <figure class="product-figure"><img src="{{ '/presentation/analytics.svg' | relative_url }}" width="600" height="360" loading="lazy" alt="Qualitative illustration of ticket comparison and project trends in code, cost, tokens, cache use and developer steering. No measured outcomes are shown."><figcaption>Illustrative analytics views. Shapes explain the questions these views support; they represent no measured ticket ranking, efficiency or productivity result.</figcaption></figure>
         </article>
         <article class="use-case">
-          <div><p class="case-label">03 / Preserve handoff history</p><h3>Keep the context after the session ends.</h3><p>A teammate joins from another machine or harness. Git-shareable ledgers and ticket summaries preserve recorded facts without copying your private session database.</p><p class="decision"><strong>Your decision:</strong> use the recorded history to plan follow-up work and identify what still needs investigation. Original sources are needed to recover missing detail; a shared ledger does not recreate a missing trace.</p></div>
-          <figure class="product-figure"><img src="{{ '/presentation/history.svg' | relative_url }}" width="600" height="300" loading="lazy" alt="Illustrative handoff: a developer commits a session ledger and ticket summary to Git, and a teammate on another machine reads the recorded history."><figcaption>Illustrative handoff, not a captured session. Supported recorded facts remain useful when the original machine or harness source is unavailable.</figcaption></figure>
+          <div><p class="case-label">03 / Share the project record</p><h3>Keep team history where the project lives.</h3><p>Commit the telemetry ledger with the code. Git provides a natural shared history, so teammates, team leads and engineering managers can see how the project and its development practices evolve across machines and harnesses.</p><p class="decision"><strong>Review together:</strong> inspect ticket summaries and project charts, compare the work over time, and choose the next improvement from a shared record. Private session stores stay local; original sources are still needed to recover missing trace detail.</p></div>
+          <figure class="product-figure"><img src="{{ '/presentation/history.svg' | relative_url }}" width="600" height="300" loading="lazy" alt="Illustrative shared history: a developer commits a ledger and ticket summary to Git, and the team reviews the recorded facts from another machine."><figcaption>Illustrative handoff, not a captured session. Supported recorded facts remain useful when the original machine or harness source is unavailable.</figcaption></figure>
         </article>
-        <aside class="evidence-note" aria-labelledby="evidence-title"><span class="note-mark" aria-hidden="true">i</span><div><h3 id="evidence-title">Evidence has limits. Keep them visible.</h3><p>Anomaly verdicts and test/production ratios support investigation. They do not establish test coverage, productivity or code quality. A token count alone does not explain why a ticket was difficult.</p><p><strong>Observed cost</strong> is a reported amount, including a reported zero. <strong>Partial cost</strong> is a known subtotal with missing contributions. <strong>Unavailable cost</strong> is unknown, not zero. Current Codex extraction does not establish USD cost. These are not verified invoice amounts or promised savings. <a href="{{ source_url }}/docs/COST_SEMANTICS.md">Read cost semantics</a>.</p></div></aside>
+        <aside class="supporting-note"><h3>Context diagnostics when you need them.</h3><p>Anomaly detection can help identify context pressure, repeated tool failures and other patterns worth inspecting. Follow the underlying evidence before deciding what to change. <a href="{{ source_url }}/ARCHITECTURE.md#31-detection-rules">Read the diagnostic rules</a>.</p></aside>
+        <aside class="evidence-note" aria-labelledby="evidence-title"><span class="note-mark" aria-hidden="true">i</span><div><h3 id="evidence-title">Evidence has limits. Keep them visible.</h3><p>Comparisons support investigation, not a causal verdict on a skill or instruction change. Task scope, model choice and missing evidence can affect the picture. A token count alone does not explain why a ticket was difficult.</p><p><strong>Observed cost</strong> is a reported amount, including a reported zero. <strong>Partial cost</strong> is a known subtotal with missing contributions. <strong>Unavailable cost</strong> is unknown, not zero. Current Codex extraction does not establish USD cost. These are not verified invoice amounts or promised savings. <a href="{{ source_url }}/docs/COST_SEMANTICS.md">Read cost semantics</a>.</p></div></aside>
       </div>
     </section>
 
@@ -104,6 +105,6 @@ title: AgenticLens — Understand the work behind the code
       <nav class="resource-links" aria-label="Project resources"><a href="{{ source_url }}/README.md">Documentation <span aria-hidden="true">↗</span></a><a href="{{ source_url }}/ARCHITECTURE.md">Architecture <span aria-hidden="true">↗</span></a><a href="{{ '/roadmap/' | relative_url }}">Project roadmap <span aria-hidden="true">↗</span></a><a href="{{ repository_url }}">Source on GitHub <span aria-hidden="true">↗</span></a></nav>
     </section>
   </main>
-  <footer class="site-footer wrap"><a class="brand" href="{{ '/' | relative_url }}"><span class="brand-mark" aria-hidden="true">al</span>AgenticLens</a><p>Local observation. Shared understanding.</p><p>This static presentation needs no account or local engine.</p><a href="{{ source_url }}/LICENSE">MIT License</a></footer>
+  <footer class="site-footer wrap"><a class="brand" href="{{ '/' | relative_url }}"><span class="brand-mark" aria-hidden="true">al</span>AgenticLens</a><p>Team telemetry. Shared understanding.</p><p>This static presentation needs no account or local engine.</p><a href="{{ source_url }}/LICENSE">MIT License</a></footer>
 </body>
 </html>
