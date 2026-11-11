@@ -1937,7 +1937,6 @@ func TestExternalParentReferenceSurvivesPortableSaveReloadAndReadProjection(t *t
 	}
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	t.Setenv("USERPROFILE", home)
 	t.Setenv("CODEX_HOME", filepath.Join(home, "unavailable-source"))
 	if err := adapters.ValidateRuntimeFactLedger(encoded); err != nil {
 		t.Fatal(err)

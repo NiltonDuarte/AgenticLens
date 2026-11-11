@@ -9,6 +9,10 @@ AgenticLens will support Linux and macOS on amd64 and arm64. Windows support rem
 - Linux and macOS retain exact project pin selection, separate manager/engine identity, checksum/protocol validation, atomic installation, ownership preservation, cancellation, bounded handoff and capture publication. Supported hook commands preserve literal argument values and project context.
 - Active user/contributor documentation, setup/operator skills and generated installation guidance consistently describe macOS/Linux support. Remove obsolete Windows execution tests and Windows-only assertions; preserve distinct supported-platform and data-portability assertions in mixed tests.
 
+## Approved iteration 02 boundary
+
+The user's subsequent explicit instruction establishes that Windows has never been installed and no Windows compatibility is needed. Remove `commandWindows` inspection and historical multi-platform hook recognition/fixtures/tests. Only the current supported hook template is owned automatically; unknown or edited hooks remain protected. Remove obsolete Windows-only test environment scaffolding. Retain negative Windows rejection tests, historical audit records and portable-data/security assertions: none provide Windows runtime or upgrade compatibility. See [iteration 02](iterations/02/PLAN.md) for the superseding decision and verification.
+
 ## Preserved boundaries
 
 Historical tickets, changelogs and previously published releases remain historical records. Existing portable ledgers, recorded source paths and cross-machine facts remain usable under the [portable ledger contract](../../TECHNICAL_GUIDELINES.md#portable-ledger-contract); dropping host support does not authorize ledger/schema migration, history deletion or a new authenticity policy. Incidental references such as context windows are outside the removal. Existing user-owned integration configuration must remain protected when inspected or refreshed.

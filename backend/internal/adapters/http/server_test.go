@@ -5105,7 +5105,6 @@ func TestWorkspaceDetailShowsExternalParentChildWithoutPrivateSource(t *testing.
 	}
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	t.Setenv("USERPROFILE", home)
 	t.Setenv("CODEX_HOME", filepath.Join(home, "unavailable-source"))
 	request := httptest.NewRequest(http.MethodGet, "/api/workspaces/"+ticket, nil)
 	request.SetPathValue("ticketId", ticket)

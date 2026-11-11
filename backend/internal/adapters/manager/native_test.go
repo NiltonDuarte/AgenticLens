@@ -65,7 +65,6 @@ func TestNativeArtifactAdmissionAndStandaloneCompanion(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Setenv("HOME", home)
-	t.Setenv("USERPROFILE", home)
 	outside := filepath.Join(root, "unconfigured")
 	if err := os.Mkdir(outside, 0700); err != nil {
 		t.Fatal(err)
@@ -314,7 +313,6 @@ func TestManagerDisabledHookValidatesWithoutSourceOrCacheIO(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Setenv("HOME", home)
-	t.Setenv("USERPROFILE", home)
 	state := filepath.Join(root, "uninitialized-state")
 	source := filepath.Join(root, "unavailable-source")
 	shared, err := os.ReadFile("../config/testdata/shared-policy.yaml")

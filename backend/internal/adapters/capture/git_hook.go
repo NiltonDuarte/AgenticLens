@@ -128,7 +128,7 @@ func ownedCheckHook(body []byte) bool {
 	if !bytes.HasPrefix(body, []byte(checkHookHeader)) {
 		return false
 	}
-	encoded, script, ok := strings.Cut(string(body[len(checkHookHeader):]), "\n")
+	encoded, _, ok := strings.Cut(string(body[len(checkHookHeader):]), "\n")
 	if !ok {
 		return false
 	}
@@ -136,20 +136,7 @@ func ownedCheckHook(body []byte) bool {
 	if err != nil || len(wrapper) == 0 || strings.ContainsAny(string(wrapper), "\r\n\x00") {
 		return false
 	}
-	if bytes.Equal(body, renderCheckHook(string(wrapper))) {
-		return true
-	}
-	// Recognize the exact previously generated template for safe refresh/removal.
-	// The retired script is never generated or executed by this compatibility check.
-	if base64.StdEncoding.EncodeToString(wrapper) != encoded {
-		return false
-	}
-	invocation := QuoteArgument(filepath.ToSlash(string(wrapper))) + " '--al-offline' '--al-project'"
-	if strings.Count(script, invocation) != 1 {
-		return false
-	}
-	normalized := strings.Replace(script, invocation, "__AGENTICLENS_MANAGER__ '--al-offline' '--al-project'", 1)
-	return hash([]byte(normalized)) == "b740ee74c5fa10e0cea61e0e43dfa2622995164650065b37842b33c788745c44"
+	return bytes.Equal(body, renderCheckHook(string(wrapper)))
 }
 
 func renderCheckHook(wrapper string) []byte {
