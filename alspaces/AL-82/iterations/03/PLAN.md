@@ -20,17 +20,17 @@ Add focused `TagFilters.test.tsx` interaction coverage; adapt existing Fleet/Com
 
 Select independent behavior, architecture and test-effectiveness focuses, each on gpt-6.1-sol/high and gpt-6-luna/medium. Behavior covers editor accessibility, responsive containment and page integration; architecture covers local UI-state ownership and unchanged matching/transport boundaries; tests cover meaningful state and retained view oracles. Omit data-integrity focus because persisted facts, generation/configuration, codecs, domain predicates and numerical aggregation remain byte-identical; behavior/architecture verify this scope boundary. Freeze the candidate and assign separate private report paths before discovery. Prior backend/persistence evidence carries only while those paths remain unchanged.
 
-## Focus/profile roster
+## Completed focus/profile roster
 
-The parent freezes the staged candidate after tester handoff. Each cell has an independent private report; no reviewer writes product/tests or reads sibling first-pass conclusions.
+The parent froze the candidate after tester handoff. All six current cells approved corrected source `650d370c`; initial Sol behavior/architecture findings required correction and re-review. [Retained findings](REVIEW_SUMMARY.json) preserve all reporting actors; the ticket summary records scope, outcomes and integration evidence.
 
-| Focus | Profile | Private report |
+| Focus | Profile | Final outcome |
 | --- | --- | --- |
-| Behavior | gpt-6.1-sol/high | behavior-sol.md |
-| Behavior | gpt-6-luna/medium | behavior-luna.md |
-| Architecture | gpt-6.1-sol/high | architecture-sol.md |
-| Architecture | gpt-6-luna/medium | architecture-luna.md |
-| Test effectiveness | gpt-6.1-sol/high | tests-sol.md |
-| Test effectiveness | gpt-6-luna/medium | tests-luna.md |
+| Behavior | gpt-6.1-sol/high | APPROVED |
+| Behavior | gpt-6-luna/medium | APPROVED |
+| Architecture | gpt-6.1-sol/high | APPROVED |
+| Architecture | gpt-6-luna/medium | APPROVED |
+| Test effectiveness | gpt-6.1-sol/high | APPROVED |
+| Test effectiveness | gpt-6-luna/medium | APPROVED |
 
-Reports and working findings remain outside Git until approved-review compaction. The ticket summary retains final scope/revision, outcomes, actors and checks. Prior iteration 02 review records remain retained and are not cleanup targets.
+Full integrated checks and standalone embedding verification passed on `650d370c`; the first host attempt hit an occupied-port environment conflict, resolved with an isolated network namespace and the same UID. The summary retains commands/results and limits. Completed private reports were compacted after approval. Iteration 02 evidence remains retained for unchanged backend/data boundaries.
