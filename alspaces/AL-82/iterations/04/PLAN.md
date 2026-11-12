@@ -22,4 +22,6 @@ Use paired behavior and test-effectiveness reviews on gpt-6.1-sol/high and gpt-6
 
 ## Delivery outcome
 
-All four behavior/test profile cells approved candidate `8d28749f56a8007014e4f329e470fdaea8db0567c540824a5914d22ade5e5676` without findings. Source was committed/integrated as `1655ba45`; origin/main needed no merge changes. Full canonical make in the isolated network, host binary checks and standalone current-asset serving passed. [Retained review](REVIEW_SUMMARY.json), [test evidence](TEST_RESULTS.md) and the ticket summary record scope, actual checks and limits. Completed private review records were compacted after approval.
+All four behavior/test profile cells approved candidate `8d28749f56a8007014e4f329e470fdaea8db0567c540824a5914d22ade5e5676` without findings. Source was committed/integrated as `1655ba45`; origin/main needed no merge changes. Full canonical make in the isolated network, host binary checks and standalone current-asset serving passed. [Retained review](REVIEW_SUMMARY.json) and the [ticket summary](../../SUMMARY.md) record scope, actual checks and limits. Completed private review records were compacted after approval.
+
+The user requested deletion of iteration test-result documents. The three files were removed and their essential checks, before/after outcomes, limits and raw-log locations consolidated in the ticket summary. Application/test sources and existing approvals are unchanged.
