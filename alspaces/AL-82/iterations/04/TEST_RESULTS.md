@@ -8,8 +8,14 @@ The tester found one small remaining oracle gap: after Clear all removes its own
 
 ## Actual checks
 
-- Coder evidence: `/tmp/al82-active-filters-check.log` records typecheck/lint, 230 frontend units and all 136 DOM cases across the component and four affected views passing. `/tmp/al82-active-filters-component-final.log` records a later 230-unit/12-component pass after strengthening the first component case. These logs were inspected; the final tester assertion changes do not alter product or page-test source.
+- Coder evidence: typecheck/lint were reported separately in the coder handoff; `/tmp/al82-active-filters-check.log` records 230 frontend units and all 136 DOM cases across the component and four affected views passing. `/tmp/al82-active-filters-component-final.log` records a later 230-unit/12-component pass after strengthening the first component case. These logs were inspected; the final tester assertion changes do not alter product or page-test source.
 - From `web/`, `npm run test:integration -- src/components/TagFilters.test.tsx` passed the canonical frontend unit prerequisite (14 files/230 cases) and all 12 component cases on the final tester source. Log: `/tmp/al82-active-filters-tester-final.log`.
 - `git diff --check -- web/src/components/TagFilters.test.tsx` passed.
 
 This pass exercises actual controlled React state, native checkbox/button/keyboard events and the production component. Styling is assessed by scoped structure/CSS and retained numeric placement tests; no real rendered browser viewport or screen-reader execution is claimed. Parent independent review, full integrated make and standalone embedded-asset verification remain pending. Raw logs stay outside Git. The tester changed only the assigned component test and this report; no publication or telemetry was performed.
+
+## Parent integration and delivery
+
+The source candidate was committed as `1655ba4541a451ec266b4286be357f775b65d203`; origin/main merge required no changes. The parent ran `unshare --user --map-current-user --net --keep-caps -- sh -c 'ip link set lo up && exec setpriv --ambient-caps=-all --inh-caps=-all make'` to isolate the occupied host port 8085 while retaining normal UID 1000. The complete gate passed: static/type/lint and workflow/distribution checks, Go race suites, 230 frontend units, all 781 DOM integrations across 27 files and multi-platform builds. Log: `/tmp/al82-active-integrated-make.log`.
+
+`make verify-build PLATFORMS=linux/amd64` passed (`/tmp/al82-active-verify-build.log`). `python3 /tmp/al82-standalone-check.py` passed with a temporary cwd and Node absent from PATH: all three frontend/embed files matched, HTTP served current Active filters/Clear all code and exact index/JS, and engine identity was `1655ba45` (`/tmp/al82-active-standalone-result.json`). Application source and tests were unchanged after the reviewed commit. All four selected paired behavior/test cells approved with no findings; real browser/screen-reader limits remain explicit above.
