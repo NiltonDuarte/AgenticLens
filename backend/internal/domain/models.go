@@ -178,6 +178,7 @@ type MigrationInfo struct {
 
 // AgenticFactLedger is the root raw session facts ledger extracted for a ticket workspace.
 type AgenticFactLedger struct {
+	Tags          map[string]string       `json:"tags,omitempty"`
 	SchemaVersion *int                    `json:"schema_version,omitempty"`
 	Migration     *MigrationInfo          `json:"migration,omitempty"`
 	TicketID      *string                 `json:"ticket_id"`
@@ -550,6 +551,7 @@ type FleetSummary struct {
 
 // TicketComparisonRow summarizes a single ticket for cross-ticket matrix presentation.
 type TicketComparisonRow struct {
+	Tags                    map[string]string       `json:"tags,omitempty"`
 	ProvisionalSeconds      int64                   `json:"provisional_seconds,omitempty"`
 	SkillsUsed              []string                `json:"skills_used,omitzero"`
 	TicketID                string                  `json:"ticket_id"`

@@ -9,6 +9,8 @@ import (
 
 // ProjectConfig holds the complete configuration settings for AgenticLens.
 type ProjectConfig struct {
+	Tags              map[string]string        `json:"tags,omitempty" yaml:"tags,omitempty"`
+	SharedTags        map[string]string        `json:"-" yaml:"-"`
 	Comments          map[string]ConfigComment `json:"-" yaml:"-"`
 	Settings          map[string]bool          `json:"-" yaml:"-"`
 	ConfigPath        string                   `json:"-" yaml:"-"`

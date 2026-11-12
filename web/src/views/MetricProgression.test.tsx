@@ -1,12 +1,38 @@
+import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, act, within } from '../test/render';
 import { MetricProgression } from './MetricProgression';
 import * as apiClient from '../api/client';
 import { mockAgenticMetricsLedgers } from '../test/fixtures/mockData';
+async function selectTagKey(user: ReturnType<typeof userEvent.setup>, key: string): Promise<void> {
+  if (!screen.queryByRole('dialog', { name: 'Ticket tag filters' })) {
+    await user.click(screen.getByRole('button', { name: 'Ticket tags filter' }));
+  }
+  await user.selectOptions(screen.getByRole('combobox', { name: 'Tag key' }), key);
+}
+
 describe('MetricProgression View Component', () => {
     beforeEach(() => {
         vi.restoreAllMocks();
     });
+    it('reconciles tag choices after filtered refetches without losing outside-cohort values', async () => {
+        const user = userEvent.setup();
+        const base = mockAgenticMetricsLedgers['AL-1']!;
+        const original = { ...base, facts: { ...base.facts, tags: { team: 'core' } } };
+        const outside = { ...base, ticket_id: 'AL-outside', facts: { ...base.facts, tags: { team: 'outside' } } };
+        const updated = { ...base, facts: { ...base.facts, tags: { team: 'new' } } };
+        vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValueOnce({ data: [original, outside] }).mockResolvedValue({ data: [updated] });
+        render(<MetricProgression />);
+        await screen.findByRole('button', { name: 'Ticket tags filter' });
+        await user.click(screen.getByRole('combobox', { name: 'Ticket Type selector' }));
+        await user.click(screen.getByRole('checkbox', { name: 'Feature' }));
+        await waitFor(() => expect(apiClient.fetchWorkspaceLedgers).toHaveBeenCalledTimes(2));
+        await selectTagKey(user, 'team');
+        expect(screen.getByRole('checkbox', { name: 'Value: new' })).toBeInTheDocument();
+        expect(screen.getByRole('checkbox', { name: 'Value: outside' })).toBeInTheDocument();
+        expect(screen.queryByRole('checkbox', { name: 'Value: core' })).not.toBeInTheDocument();
+    });
+
     it('keeps period subtotal currency compact for the selected invocation buckets', async () => {
         const base = mockAgenticMetricsLedgers['AL-1']!;
         const owner = base.facts.sessions[0]!;

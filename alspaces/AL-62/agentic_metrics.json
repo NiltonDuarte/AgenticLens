@@ -1,4 +1,9 @@
 {
+  "tags": {
+    "agentic-lens-dev": "0.1.0",
+    "agentic-lens-po": "0.1.0",
+    "agentic-lens-review": "0.1.0"
+  },
   "schema_version": 6,
   "ticket_id": "AL-62",
   "ticket_title": "Lean source-owned skill and delegation facts",

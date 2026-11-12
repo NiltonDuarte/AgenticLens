@@ -1,3 +1,5 @@
+import { TagFilters } from '../components/TagFilters';
+import { tagChoices, filterLedgersByTags, matchesTags, type TagFilter } from '../domain/tags';
 import { useRolePresentation } from '../contexts/ProjectConfigContext';
 import { durationLabel, durationDescription } from '../domain/duration';
 import React, { useEffect, useState, useCallback, useRef, useId, useMemo } from 'react';
@@ -54,6 +56,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
   onSelectTicket,
 }) => {
   const rolePresentation = useRolePresentation();
+  const [tagFilters, setTagFilters] = useState<readonly TagFilter[]>([]);
   const [ledgers, setLedgers] = useState<readonly AgenticMetricsLedger[]>([]);
   const [detail, setDetail] = useState<WorkspaceDetail | null>(null);
   const [events, setEvents] = useState<readonly EventFact[]>([]);
@@ -246,7 +249,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
   const toolUsageByName = aggregateToolUsage(sessionTools(ledger.facts?.sessions));
   const subTurns = eff.subagent_turn_velocity;
 
-  const ticketOptions = ledgers.map((l) => ({
+  const ticketOptions = filterLedgersByTags(ledgers, tagFilters).map((l) => ({
     ticket_id: l.ticket_id ?? 'unknown',
     ticket_title: l.ticket_title,
     context_health_status: l.workflow_efficiency?.context_window_health?.status,
@@ -254,6 +257,17 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
     updated_at: l.updated_at,
     started_at: l.started_at,
   }));
+
+  const tagControls = <TagFilters choices={tagChoices([...ledgers.map((item) => item.facts.tags), ledger.facts.tags])} filters={tagFilters} onChange={setTagFilters} />;
+  if (!matchesTags(ledger.facts.tags, tagFilters)) {
+    return <div className="deep-dive-container">
+      <div className="deep-dive-top-bar">
+        <TicketSelector tickets={ticketOptions} selectedTicketId={activeTicketId} onSelectTicket={handleSelectTicket} />
+        {tagControls}
+      </div>
+      <p role="status">This ticket does not match the selected tags. Choose another ticket or clear tag filters.</p>
+    </div>;
+  }
 
   const turnEntries = Object.entries(subTurns.by_role ?? {}).sort((a, b) => rolePresentation.compareProjected(a[0], b[0]));
 
@@ -266,8 +280,12 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
           selectedTicketId={activeTicketId}
           onSelectTicket={handleSelectTicket}
         />
+        {tagControls}
       </div>
 
+      <div aria-label="Recorded ticket tags">
+        {Object.entries(ledger.facts.tags ?? {}).map(([key, value]) => <span key={key}>{key}: {value}; </span>)}
+      </div>
       {/* Workspace Header Information */}
       <div className="workspace-header-card">
         <div className="header-meta-row">

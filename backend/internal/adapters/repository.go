@@ -344,6 +344,7 @@ func UpdateSummaryFile(destPath, tableMD string) error {
 
 // ExistingLedgerFacts encapsulates raw facts extracted from an existing on-disk ledger.
 type ExistingLedgerFacts struct {
+	Tags              map[string]string
 	Anomalies         []domain.Anomaly
 	SchemaVersion     *int
 	Migration         *domain.MigrationInfo
@@ -415,7 +416,7 @@ func DecodeExistingFactLedger(data []byte) (*ExistingLedgerFacts, error) {
 			roots = append(roots, session.ID)
 		}
 	}
-	return &ExistingLedgerFacts{Anomalies: ledger.Anomalies, SchemaVersion: ledger.SchemaVersion, Migration: ledger.Migration, TicketID: ledger.TicketID, TicketTitle: ledger.TicketTitle, TicketType: ledger.TicketType, StartedAt: ledger.StartedAt, CompletedAt: ledger.CompletedAt, RootThreadIDs: roots, Code: &ledger.Code, Sessions: ledger.Sessions, PersistedSessions: dto.Sessions}, nil
+	return &ExistingLedgerFacts{Tags: domain.MergeTags(nil, ledger.Tags), Anomalies: ledger.Anomalies, SchemaVersion: ledger.SchemaVersion, Migration: ledger.Migration, TicketID: ledger.TicketID, TicketTitle: ledger.TicketTitle, TicketType: ledger.TicketType, StartedAt: ledger.StartedAt, CompletedAt: ledger.CompletedAt, RootThreadIDs: roots, Code: &ledger.Code, Sessions: ledger.Sessions, PersistedSessions: dto.Sessions}, nil
 }
 
 // SaveFactLedger writes an AgenticFactLedger to the specified file path, creating parent directories if needed.

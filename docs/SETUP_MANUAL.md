@@ -478,3 +478,36 @@ Shared `agenticlens.version` is an exact required pin. Configured `agenticlens.b
 The native manager owns installation and routing. `agentic-lens install <EXACT_ENGINE_VERSION>` provisions an engine; `agentic-lens self-update --version <EXACT_MANAGER_VERSION>` explicitly updates the installed manager without editing any project pin. Both verify staged artifacts, preserve modified/unowned destinations and recover interrupted replacements under a destination lease. Codex hook installation only writes owned hooks and their receipt; it does not copy an engine into a dispatcher path. Hook removal retains the installed manager and engine cache.
 
 Ordinary engine commands preserve caller cwd and relative-argument meaning even with `--al-project`. The manager validates the selected engine and forwards ordinary argv. Engines contain no dispatch mode and workers execute their retained engine directly.
+
+## Ticket tags
+
+Add optional ticket metadata in shared `.agenticlens-config.yaml`:
+
+```yaml
+tags:
+  team: core
+  environment: dev
+```
+
+Private `.agenticlens-config.local.yaml` can contain only a `tags` mapping, for
+example `tags: {environment: staging}`. Invocation overrides use repeatable
+`generate --tag environment=prod --tag experiment=baseline`. Precedence is per
+key: CLI overrides local, which overrides shared; unrelated lower-layer keys
+survive. Repeated CLI keys use the last value and split at the first `=`, so a
+value may itself contain `=`. Keys and values must be nonblank strings. Outer
+whitespace is trimmed; internal text and case remain unchanged. Quote YAML
+values such as `"true"`, `"12"` and `"null"` to keep them strings. Duplicate keys
+including whitespace-normalized collisions are errors.
+
+A successful generation merges effective tags into the ticket ledger. Missing
+inputs preserve recorded keys; there is no deletion syntax. Automatic publication
+uses shared/local defaults. CLI tags apply only to that invocation and do not
+change configuration or capture registrations. Backfill and dashboard reads
+preserve historical tags without applying the current reader's defaults.
+
+Local configuration remains private, but its **effective tags become shared
+ledger data**, including after committing the ledger to Git. Do not put secrets
+in tags. Dashboard tag filters select whole tickets (OR values within a key,
+AND across keys). Missing identifies absence separately from a literal value
+named `Missing`. Comparison coloring by tag changes visual identity while
+preserving ticket metrics and point coordinates.

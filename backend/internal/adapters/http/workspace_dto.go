@@ -96,6 +96,7 @@ func SessionFactResponseDTOsFromDomain(values []domain.SessionFact) []SessionFac
 
 // FactLedgerResponseDTO is the concrete nullable cost projection of AgenticFactLedger.
 type FactLedgerResponseDTO struct {
+	Tags          map[string]string              `json:"tags,omitempty"`
 	SchemaVersion *int                           `json:"schema_version,omitempty"`
 	Migration     *domain.MigrationInfo          `json:"migration,omitempty"`
 	TicketID      *string                        `json:"ticket_id"`
@@ -112,6 +113,7 @@ type FactLedgerResponseDTO struct {
 func FactLedgerResponseDTOFromDomain(value domain.AgenticFactLedger) FactLedgerResponseDTO {
 
 	return FactLedgerResponseDTO{
+		Tags:          domain.MergeTags(nil, value.Tags),
 		SchemaVersion: value.SchemaVersion,
 		Migration:     value.Migration,
 		TicketID:      value.TicketID,

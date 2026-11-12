@@ -282,6 +282,7 @@ export function deriveTicketComparisonRows(
 
     return {
       ticket_id: tid,
+      ...(ledger.facts.tags ? { tags: ledger.facts.tags } : {}),
       ...(ledgerMetricCoverage(ledger.facts, 'skills') === 'recorded' || skillNames(ledger.facts).length > 0 ? { skills_used: skillNames(ledger.facts) } : {}),
       ticket_type: ledger.ticket_type,
       updated_at: ledger.updated_at,

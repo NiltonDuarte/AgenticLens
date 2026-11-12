@@ -5250,3 +5250,110 @@ func TestServerBindUsesOneValidatedLoopbackPort(t *testing.T) {
 		t.Fatalf("listener differs from selected loopback address: %s", actual)
 	}
 }
+
+func TestTicketTagsFilterWholeLedgerTotalsAndSourceFreeReads(t *testing.T) {
+	root := t.TempDir()
+	before := make(map[string]string)
+	for _, ticket := range []struct {
+		id, tags string
+		cost     float64
+	}{{"AL-1", `{"team":"core","environment":"prod"}`, 2}, {"AL-2", `{"team":"core","environment":"dev"}`, 3}, {"AL-3", `{"team":"Missing"}`, 5}, {"AL-4", `{}`, 7}} {
+		dir := filepath.Join(root, ticket.id)
+		if err := os.MkdirAll(dir, 0700); err != nil {
+			t.Fatal(err)
+		}
+		data := strings.Replace(sampleTestLedgerJSON(ticket.id, ticket.id, 10, ticket.cost, 2), `"schema_version":6`, `"schema_version":6,"tags":`+ticket.tags, 1)
+		if ticket.id == "AL-1" {
+			var ledger domain.AgenticFactLedger
+			if err := json.Unmarshal([]byte(data), &ledger); err != nil {
+				t.Fatal(err)
+			}
+			child := ledger.Sessions[0]
+			child.ID, child.ParentID, child.User = "second-owner", domain.KnownString("ses-orch"), "other-developer"
+			invocation := child.Invocations[0]
+			invocation.CostUSD, invocation.CostEvidence = 1.25, domain.ObservedCost(1.25)
+			invocation.Tokens.Input, invocation.ActiveDurationSeconds = 700, 13
+			child.Invocations = []domain.InvocationFact{invocation}
+			ledger.Sessions = append(ledger.Sessions, child)
+			body, err := json.Marshal(adapters.AgenticFactLedgerDTOFromDomain(ledger))
+			if err != nil {
+				t.Fatal(err)
+			}
+			data = string(body)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "agentic_metrics.json"), []byte(data), 0600); err != nil {
+			t.Fatal(err)
+		}
+		before[filepath.Join(dir, "agentic_metrics.json")] = data
+	}
+	server := mustNewServer(t, root, nil)
+	filter := url.QueryEscape(`[{"key":"team","values":["other","core"],"missing":false},{"key":"environment","values":["prod"],"missing":false}]`)
+	for _, endpoint := range []string{"/api/workspaces", "/api/fleet", "/api/comparison", "/api/progression"} {
+		rr := httptest.NewRecorder()
+		server.Handler().ServeHTTP(rr, httptest.NewRequest(http.MethodGet, endpoint+"?tag_filter="+filter, nil))
+		if rr.Code != http.StatusOK {
+			t.Fatalf("%s: %d %s", endpoint, rr.Code, rr.Body.String())
+		}
+		if endpoint == "/api/fleet" {
+			var fleet struct {
+				Tickets int64   `json:"total_tickets"`
+				Cost    float64 `json:"total_cost_usd"`
+			}
+			if err := json.Unmarshal(rr.Body.Bytes(), &fleet); err != nil {
+				t.Fatal(err)
+			}
+			if fleet.Tickets != 1 || fleet.Cost != 3.25 {
+				t.Fatalf("whole ticket fleet totals: %+v", fleet)
+			}
+		}
+		if endpoint == "/api/workspaces" {
+			var ledgers []domain.AgenticMetricsLedger
+			if err := json.Unmarshal(rr.Body.Bytes(), &ledgers); err != nil {
+				t.Fatal(err)
+			}
+			if len(ledgers) != 1 || ledgers[0].Facts.Tags["environment"] != "prod" || len(ledgers[0].Facts.Sessions) != 2 || ledgers[0].Totals.InputTokens != 5700 || ledgers[0].Facts.Code.LinesAdded != 120 {
+				t.Fatalf("ticket selection: %+v", ledgers)
+			}
+		}
+		if endpoint == "/api/comparison" {
+			var rows []domain.TicketComparisonRow
+			if err := json.Unmarshal(rr.Body.Bytes(), &rows); err != nil {
+				t.Fatal(err)
+			}
+			if len(rows) != 1 || rows[0].TicketID != "AL-1" || rows[0].CostUSD != 3.25 || rows[0].ActiveDurationSeconds != 23 || rows[0].LinesAdded != 120 || rows[0].Tags["environment"] != "prod" {
+				t.Fatalf("comparison split ticket owners or code: %+v", rows)
+			}
+		}
+		if endpoint == "/api/progression" {
+			var buckets []domain.TimeBucketMetric
+			if err := json.Unmarshal(rr.Body.Bytes(), &buckets); err != nil {
+				t.Fatal(err)
+			}
+			if len(buckets) != 1 || buckets[0].CostUSD != 3.25 || buckets[0].InputTokens != 5700 || buckets[0].Invocations != 2 || buckets[0].LinesAdded != 120 || buckets[0].ActiveDurationSeconds != 23 {
+				t.Fatalf("progression split ticket owners or code: %+v", buckets)
+			}
+		}
+	}
+	missing := url.QueryEscape(`[{"key":"team","values":[],"missing":true}]`)
+	rr := httptest.NewRecorder()
+	server.Handler().ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/api/workspaces?tag_filter="+missing, nil))
+	var missingLedgers []domain.AgenticMetricsLedger
+	if rr.Code != 200 || json.Unmarshal(rr.Body.Bytes(), &missingLedgers) != nil || len(missingLedgers) != 1 || *missingLedgers[0].TicketID != "AL-4" {
+		t.Fatalf("Missing literal collision: %d %s", rr.Code, rr.Body.String())
+	}
+	for _, invalid := range []string{"null", `[{"key":"team","values":[]}]`, `[{"key":"team","values":[12]}]`, `[{"key":"team","values":["core"],"unknown":true}]`, `[{"key":"team","values":["core"]},{"key":"team","missing":true}]`} {
+		for _, endpoint := range []string{"/api/workspaces", "/api/workspaces/AL-1", "/api/fleet", "/api/comparison", "/api/progression"} {
+			rr := httptest.NewRecorder()
+			server.Handler().ServeHTTP(rr, httptest.NewRequest(http.MethodGet, endpoint+"?tag_filter="+url.QueryEscape(invalid), nil))
+			if rr.Code != http.StatusBadRequest {
+				t.Fatalf("%s accepted %s: %d", endpoint, invalid, rr.Code)
+			}
+		}
+	}
+	for path, expected := range before {
+		actual, err := os.ReadFile(path)
+		if err != nil || string(actual) != expected {
+			t.Fatalf("source-free tag GET rewrote %s: %v", path, err)
+		}
+	}
+}

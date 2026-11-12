@@ -150,6 +150,12 @@ func parseMultiQueryParam(values []string) []string {
 // WorkspacesHandler handles GET /api/workspaces
 func WorkspacesHandler(workspacesDir string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		tagFilters, tagErr := parseTagFilters(r.URL.Query())
+		if tagErr != nil {
+			WriteError(w, http.StatusBadRequest, "bad_request", tagErr.Error())
+			return
+		}
+
 		report := adapters.ScanWorkspaces(workspacesDir)
 		if rejectFatalWorkspaceScan(w, report) {
 			return
@@ -182,10 +188,12 @@ func WorkspacesHandler(workspacesDir string) http.HandlerFunc {
 			ledgers = domain.FilterLedgersByTicketTypes(ledgers, ticketTypes)
 		}
 
-		prefixes := parsePrefixQueryParam(query["prefix"],report.TicketPolicy,report.Ledgers)
+		prefixes := parsePrefixQueryParam(query["prefix"], report.TicketPolicy, report.Ledgers)
 		if len(prefixes) > 0 {
 			ledgers = domain.FilterLedgersByPrefixes(ledgers, prefixes, report.TicketPolicy.CaseInsensitive)
 		}
+
+		ledgers = domain.FilterLedgersByTags(ledgers, tagFilters)
 
 		if sortParam != "" || orderParam != "" {
 			field := domain.ParseLedgerSortField(sortParam)
@@ -207,6 +215,12 @@ func WorkspacesHandler(workspacesDir string) http.HandlerFunc {
 // WorkspaceDetailHandler handles GET /api/workspaces/{ticketId}
 func WorkspaceDetailHandler(workspacesDir string, artifactConfigs ...[]domain.WorkspaceArtifactConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		tagFilters, tagErr := parseTagFilters(r.URL.Query())
+		if tagErr != nil {
+			WriteError(w, http.StatusBadRequest, "bad_request", tagErr.Error())
+			return
+		}
+
 		ticketID := r.PathValue("ticketId")
 		if ticketID == "" || strings.Contains(ticketID, "..") || strings.Contains(ticketID, "/") || strings.Contains(ticketID, "\\") {
 			WriteError(w, http.StatusBadRequest, "bad_request", "invalid ticketId parameter")
@@ -220,6 +234,11 @@ func WorkspaceDetailHandler(workspacesDir string, artifactConfigs ...[]domain.Wo
 		}
 		if targetLedger == nil {
 			WriteError(w, http.StatusNotFound, "not_found", "Ticket workspace not found")
+			return
+		}
+
+		if !domain.MatchTicketTags(targetLedger.Facts.Tags, tagFilters) {
+			WriteError(w, http.StatusNotFound, "not_found", "Ticket does not match selected tag filters")
 			return
 		}
 
@@ -304,6 +323,12 @@ func WorkspaceEventsHandler(workspacesDir string, hydrator ...WorkspaceEventHydr
 // FleetHandler handles GET /api/fleet
 func FleetHandler(workspacesDir string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		tagFilters, tagErr := parseTagFilters(r.URL.Query())
+		if tagErr != nil {
+			WriteError(w, http.StatusBadRequest, "bad_request", tagErr.Error())
+			return
+		}
+
 		report := adapters.ScanWorkspaces(workspacesDir)
 		if rejectFatalWorkspaceScan(w, report) {
 			return
@@ -334,10 +359,12 @@ func FleetHandler(workspacesDir string) http.HandlerFunc {
 			ledgers = domain.FilterLedgersByTicketTypes(ledgers, ticketTypes)
 		}
 
-		prefixes := parsePrefixQueryParam(query["prefix"],report.TicketPolicy,report.Ledgers)
+		prefixes := parsePrefixQueryParam(query["prefix"], report.TicketPolicy, report.Ledgers)
 		if len(prefixes) > 0 {
 			ledgers = domain.FilterLedgersByPrefixes(ledgers, prefixes, report.TicketPolicy.CaseInsensitive)
 		}
+
+		ledgers = domain.FilterLedgersByTags(ledgers, tagFilters)
 
 		summary := domain.CalculateFleetSummary(ledgers)
 		WriteFleetResponse(w, summary)
@@ -347,6 +374,12 @@ func FleetHandler(workspacesDir string) http.HandlerFunc {
 // ComparisonHandler handles GET /api/comparison
 func ComparisonHandler(workspacesDir string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		tagFilters, tagErr := parseTagFilters(r.URL.Query())
+		if tagErr != nil {
+			WriteError(w, http.StatusBadRequest, "bad_request", tagErr.Error())
+			return
+		}
+
 		report := adapters.ScanWorkspaces(workspacesDir)
 		if rejectFatalWorkspaceScan(w, report) {
 			return
@@ -377,10 +410,12 @@ func ComparisonHandler(workspacesDir string) http.HandlerFunc {
 			ledgers = domain.FilterLedgersByTicketTypes(ledgers, ticketTypes)
 		}
 
-		prefixes := parsePrefixQueryParam(query["prefix"],report.TicketPolicy,report.Ledgers)
+		prefixes := parsePrefixQueryParam(query["prefix"], report.TicketPolicy, report.Ledgers)
 		if len(prefixes) > 0 {
 			ledgers = domain.FilterLedgersByPrefixes(ledgers, prefixes, report.TicketPolicy.CaseInsensitive)
 		}
+
+		ledgers = domain.FilterLedgersByTags(ledgers, tagFilters)
 
 		rows := domain.BuildComparisonRows(ledgers, report.TicketPolicy)
 		if rows == nil {
@@ -393,6 +428,12 @@ func ComparisonHandler(workspacesDir string) http.HandlerFunc {
 // ProgressionHandler handles GET /api/progression
 func ProgressionHandler(workspacesDir string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		tagFilters, tagErr := parseTagFilters(r.URL.Query())
+		if tagErr != nil {
+			WriteError(w, http.StatusBadRequest, "bad_request", tagErr.Error())
+			return
+		}
+
 		report := adapters.ScanWorkspaces(workspacesDir)
 		if rejectFatalWorkspaceScan(w, report) {
 			return
@@ -434,10 +475,12 @@ func ProgressionHandler(workspacesDir string) http.HandlerFunc {
 			ledgers = domain.FilterLedgersByTicketTypes(ledgers, ticketTypes)
 		}
 
-		prefixes := parsePrefixQueryParam(query["prefix"],report.TicketPolicy,report.Ledgers)
+		prefixes := parsePrefixQueryParam(query["prefix"], report.TicketPolicy, report.Ledgers)
 		if len(prefixes) > 0 {
 			ledgers = domain.FilterLedgersByPrefixes(ledgers, prefixes, report.TicketPolicy.CaseInsensitive)
 		}
+
+		ledgers = domain.FilterLedgersByTags(ledgers, tagFilters)
 
 		buckets := domain.AggregateMetricsOverTime(ledgers, string(granularity), since, until)
 		WriteProgressionResponse(w, buckets)
@@ -454,18 +497,37 @@ func VersionHandler() http.HandlerFunc {
 
 // A complete configured/observed literal prefix takes precedence over CSV syntax.
 // Repeated values disambiguate multiple selections when a prefix itself contains commas.
-func parsePrefixQueryParam(values []string,policy domain.TicketConfig,ledgers []domain.AgenticMetricsLedger)[]string{
- result:=[]string{}
- for _,value:=range values{
-  literal:=strings.TrimSpace(value);if literal==""{continue}
-  selected:=false
-  for _,configured:=range policy.Prefixes{
-   a,b:=literal,configured.Prefix;if policy.CaseInsensitive{a,b=strings.ToLower(a),strings.ToLower(b)}
-   if a==b{selected=true;break}
-  }
-  if !selected{for _,ledger:=range ledgers{if ledger.TicketID!=nil&&domain.MatchTicketPrefix(*ledger.TicketID,literal,policy.CaseInsensitive){selected=true;break}}}
-  if selected{result=append(result,literal);continue}
-  result=append(result,parseMultiQueryParam([]string{literal})...)
- }
- return result
+func parsePrefixQueryParam(values []string, policy domain.TicketConfig, ledgers []domain.AgenticMetricsLedger) []string {
+	result := []string{}
+	for _, value := range values {
+		literal := strings.TrimSpace(value)
+		if literal == "" {
+			continue
+		}
+		selected := false
+		for _, configured := range policy.Prefixes {
+			a, b := literal, configured.Prefix
+			if policy.CaseInsensitive {
+				a, b = strings.ToLower(a), strings.ToLower(b)
+			}
+			if a == b {
+				selected = true
+				break
+			}
+		}
+		if !selected {
+			for _, ledger := range ledgers {
+				if ledger.TicketID != nil && domain.MatchTicketPrefix(*ledger.TicketID, literal, policy.CaseInsensitive) {
+					selected = true
+					break
+				}
+			}
+		}
+		if selected {
+			result = append(result, literal)
+			continue
+		}
+		result = append(result, parseMultiQueryParam([]string{literal})...)
+	}
+	return result
 }
