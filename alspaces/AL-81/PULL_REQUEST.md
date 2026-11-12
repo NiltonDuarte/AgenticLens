@@ -1,4 +1,4 @@
-# fix: generate manual metrics without capture registry access
+# fix: [AL-81] generate manual metrics without capture registry access
 
 Manual `generate` could be blocked by machine-local capture bindings even when authoritative source data and the requested ledger were available. It now uses project/metrics/source configuration without reading or initializing the capture registry. Capture-only settings are unnecessary, and explicit manual attribution leaves automatic bindings unchanged.
 
