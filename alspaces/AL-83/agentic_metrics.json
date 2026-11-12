@@ -1,4 +1,9 @@
 {
+  "tags": {
+    "agentic-lens-dev": "0.1.1",
+    "agentic-lens-po": "0.1.1",
+    "agentic-lens-review": "0.1.1"
+  },
   "schema_version": 6,
   "ticket_id": "AL-83",
   "ticket_title": "Present AgenticLens on GitHub Pages",
