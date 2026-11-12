@@ -9,8 +9,8 @@
   "ticket_title": "Filter and compare metrics by ticket tags",
   "ticket_type": "feat",
   "started_at": "2026-11-11T18:04:06.584Z",
-  "completed_at": "2026-11-12T21:50:14.443192+00:00",
-  "updated_at": "2026-11-12T21:50:14.443192+00:00",
+  "completed_at": "2026-11-12T22:03:00.715752+00:00",
+  "updated_at": "2026-11-12T22:03:00.715752+00:00",
   "code": {
     "lines_added": 1733,
     "lines_deleted": 55,
@@ -19,7 +19,7 @@
     "prod_lines_added": 713,
     "prod_lines_deleted": 52,
     "files_changed": 45,
-    "sdlc_iterations": 10
+    "sdlc_iterations": 11
   },
   "sessions": [
     {
@@ -277,22 +277,22 @@
       "user": "Nilton Duarte",
       "invocations": [
         {
-          "provisional_seconds": 151,
+          "provisional_seconds": 646,
           "role": "",
           "model": "gpt-6.1-sol",
           "started_at": "2026-11-11T18:04:08.587Z",
           "completed_at": null,
-          "active_duration_seconds": 7833,
-          "turns": 6,
-          "tokens": {"input": 1104628, "output": 196859, "cache_read": 101982208, "reasoning": 127032, "peak_context": 425243},
+          "active_duration_seconds": 8559,
+          "turns": 7,
+          "tokens": {"input": 1156621, "output": 221716, "cache_read": 107821952, "reasoning": 139191, "peak_context": 450544},
           "cost_usd": null,
           "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
-          "compactions": 0,
-          "user_iterations": 10
+          "compactions": 1,
+          "user_iterations": 11
         }
       ],
       "tools": [
-        {"name": "command", "calls": 220, "errors": 12},
+        {"name": "command", "calls": 245, "errors": 13},
         {"name": "followup_task", "calls": 13, "errors": 0},
         {"name": "list_agents", "calls": 1, "errors": 0},
         {"name": "send_message", "calls": 45, "errors": 0},
@@ -301,6 +301,7 @@
         {"name": "wait_agent", "calls": 48, "errors": 0}
       ],
       "anomalies": [
+        {"rule_id": "CONTEXT_SATURATION_SPIKE", "severity": "CRITICAL", "context": {"turn": 0, "context_tokens": 450544, "threshold": "450000"}},
         {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "CRITICAL", "context": {"role": "tester", "secondary_role": "coder", "count": 17, "threshold": "5"}},
         {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "CRITICAL", "context": {"role": "reviewer-behavior", "secondary_role": "reviewer-data", "count": 7, "threshold": "5"}},
         {"rule_id": "SUBAGENT_REWORK_LOOP", "severity": "CRITICAL", "context": {"role": "coder", "secondary_role": "tester", "count": 11, "threshold": "5"}},
