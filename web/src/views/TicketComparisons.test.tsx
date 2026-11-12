@@ -68,14 +68,14 @@ describe('TicketComparisons View Component', () => {
     await user.click(screen.getByRole('checkbox', { name: 'Value: prod' }));
     expect(ids()).toHaveLength(0);
     expect(screen.getByText('No tickets match the selected filters.')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Clear tag filters' }));
+    await user.click(screen.getByRole('button', { name: 'Clear all' }));
     expect(ids()).toHaveLength(3);
     await selectTagKey(user, 'team');
     await user.click(screen.getByRole('checkbox', { name: 'Missing (key absent)' }));
     expect(ids()).toEqual(['AL-3']);
     await user.click(screen.getByRole('checkbox', { name: 'Value: Missing' }));
     expect(ids().sort()).toEqual(['AL-2', 'AL-3']);
-    await user.click(screen.getByRole('button', { name: 'Clear tag filters' }));
+    await user.click(screen.getByRole('button', { name: 'Clear all' }));
     expect(ids()).toHaveLength(3);
   });
 

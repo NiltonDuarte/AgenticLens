@@ -1,0 +1,15 @@
+# AL-82 iteration 04: Active-filter list verification
+
+Baseline: `e2255c0396dc90b4a390665d9baad963e6984e38`. Final frontend source/test fingerprint: `54574af9e4e57a179f2b46f2941edb3b26ee0ae6eece12579884555ba74cea54` across 126 sorted tracked and nonignored untracked `web/` paths, hashing each path, NUL, eight-byte content length and bytes. Product and tests are frozen for parent review. The [approved plan](PLAN.md) adds active key clauses with X removal and one Clear all action inside the existing compact popup; backend, matching, transport and numerical behavior are unchanged.
+
+The coder adapted the existing multi-key component oracle rather than adding a matching matrix. It checks key/value membership with literal `Value: Missing` distinct from `Missing (key absent)`, removes team while environment is being edited, verifies environment and its selected value survive, recreates a second clause and clears both. It also asserts the old Clear key / Clear tag filters buttons are absent and the new Clear all disappears after reset. The stale/prototype-key case verifies the active label remains readable with an empty catalog, keyboard X removes the final clause, focus falls back to Close and Escape returns to the trigger. Existing page cases retain their request, totals, refreshed-catalog and mismatch-recovery assertions with clear-action labels updated.
+
+The tester found one small remaining oracle gap: after Clear all removes its own focused button while available keys remain, the editor must retain keyboard focus and Escape recovery. Four assertions were added to the existing multi-key case, covering editor focus containment, Escape dismissal and trigger focus. No new test case or product change was required. No product defect was identified in this tester pass; existing focus/removal regressions remain intact.
+
+## Actual checks
+
+- Coder evidence: `/tmp/al82-active-filters-check.log` records typecheck/lint, 230 frontend units and all 136 DOM cases across the component and four affected views passing. `/tmp/al82-active-filters-component-final.log` records a later 230-unit/12-component pass after strengthening the first component case. These logs were inspected; the final tester assertion changes do not alter product or page-test source.
+- From `web/`, `npm run test:integration -- src/components/TagFilters.test.tsx` passed the canonical frontend unit prerequisite (14 files/230 cases) and all 12 component cases on the final tester source. Log: `/tmp/al82-active-filters-tester-final.log`.
+- `git diff --check -- web/src/components/TagFilters.test.tsx` passed.
+
+This pass exercises actual controlled React state, native checkbox/button/keyboard events and the production component. Styling is assessed by scoped structure/CSS and retained numeric placement tests; no real rendered browser viewport or screen-reader execution is claimed. Parent independent review, full integrated make and standalone embedded-asset verification remain pending. Raw logs stay outside Git. The tester changed only the assigned component test and this report; no publication or telemetry was performed.

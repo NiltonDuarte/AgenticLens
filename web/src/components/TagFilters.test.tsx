@@ -20,7 +20,7 @@ function Harness({ available = choices, initial = [], changed = () => undefined 
 }
 
 describe('compact ticket tag filter', () => {
-  it('edits multiple key clauses in one control and independently clears a key or all filters', async () => {
+  it('lists active clauses and removes a nonedited key independently before clearing all', async () => {
     const user = userEvent.setup();
     const changed = vi.fn();
     render(<Harness changed={changed} />);
@@ -44,13 +44,33 @@ describe('compact ticket tag filter', () => {
       { key: 'environment', values: ['prod'], missing: false },
     ]);
     expect(trigger).toHaveTextContent('2 keys');
-    await user.selectOptions(key, 'team');
-    expect(within(editor).getByRole('checkbox', { name: 'Value: core' })).toBeChecked();
-    await user.click(within(editor).getByRole('button', { name: 'Clear key' }));
+    const active = within(editor).getByRole('list', { name: 'Active ticket filters' });
+    expect(within(active).getAllByRole('listitem')).toHaveLength(2);
+    expect(active).toHaveTextContent('team');
+    expect(active).toHaveTextContent('Value: core or Value: Missing or Missing (key absent)');
+    expect(active).toHaveTextContent('environment');
+    expect(active).toHaveTextContent('Value: prod');
+    expect(key).toHaveValue('environment');
+    expect(within(editor).queryByRole('button', { name: 'Clear key' })).not.toBeInTheDocument();
+    expect(within(editor).queryByRole('button', { name: 'Clear tag filters' })).not.toBeInTheDocument();
+    await user.click(within(active).getByRole('button', { name: 'Remove filter for team' }));
     expect(changed).toHaveBeenLastCalledWith([{ key: 'environment', values: ['prod'], missing: false }]);
-    await user.click(within(editor).getByRole('button', { name: 'Clear tag filters' }));
+    expect(key).toHaveValue('environment');
+    expect(within(editor).getByRole('checkbox', { name: 'Value: prod' })).toBeChecked();
+    expect(within(active).getAllByRole('listitem')).toHaveLength(1);
+    expect(editor.contains(document.activeElement)).toBe(true);
+    await user.selectOptions(key, 'team');
+    await user.click(within(editor).getByRole('checkbox', { name: 'Value: core' }));
+    expect(within(active).getAllByRole('listitem')).toHaveLength(2);
+    await user.click(within(editor).getByRole('button', { name: 'Clear all' }));
     expect(changed).toHaveBeenLastCalledWith([]);
     expect(trigger).toHaveTextContent('All');
+    expect(within(editor).getByText('No active filters.')).toBeInTheDocument();
+    expect(within(editor).queryByRole('button', { name: 'Clear all' })).not.toBeInTheDocument();
+    expect(editor.contains(document.activeElement)).toBe(true);
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
   });
 
   it('dismisses with Escape or an outside control without trapping or stealing focus', async () => {
@@ -78,9 +98,15 @@ describe('compact ticket tag filter', () => {
     await user.click(screen.getByRole('button', { name: 'Ticket tags filter' }));
     expect(screen.getByRole('combobox', { name: 'Tag key' })).toHaveValue('__proto__');
     expect(screen.getByRole('checkbox', { name: 'Value: old=value' })).toBeChecked();
-    await user.click(screen.getByRole('button', { name: 'Clear tag filters' }));
+    const active = screen.getByRole('list', { name: 'Active ticket filters' });
+    expect(active).toHaveTextContent('__proto__');
+    expect(active).toHaveTextContent('Value: old=value or Missing (key absent)');
+    const remove = within(active).getByRole('button', { name: 'Remove filter for __proto__' });
+    remove.focus();
+    await user.keyboard('{Enter}');
     expect(changed).toHaveBeenLastCalledWith([]);
     expect(screen.getByText('No ticket tags recorded.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Close ticket tags' })).toHaveFocus();
     await user.keyboard('{Escape}');
     expect(screen.getByRole('button', { name: 'Ticket tags filter' })).toHaveFocus();
   });
@@ -134,7 +160,7 @@ describe('compact ticket tag filter', () => {
       expect(within(editor).getByRole('combobox', { name: 'Tag key' })).toHaveValue(longKey);
       await user.click(within(editor).getByRole('checkbox', { name: `Value: ${longValue}` }));
       expect(within(editor).getByRole('checkbox', { name: `Value: ${longValue}` })).toBeChecked();
-      await user.click(within(editor).getByRole('button', { name: 'Clear tag filters' }));
+      await user.click(within(editor).getByRole('button', { name: 'Clear all' }));
       expect(trigger).toHaveTextContent('All');
     } finally {
       Object.defineProperty(window, 'innerWidth', originalWidth);

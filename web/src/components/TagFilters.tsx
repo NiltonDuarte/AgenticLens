@@ -117,6 +117,22 @@ export const TagFilters: React.FC<TagFiltersProps> = ({ choices, filters, onChan
         <div ref={editorRef} id={`${id}-editor`} className="tag-filters-editor" role="dialog" aria-label="Ticket tag filters" style={position}
           onFocusCapture={(event) => { if (event.target instanceof HTMLElement) focusedEditorElementRef.current = event.target; }}>
           <div className="tag-filters-heading"><strong>Ticket tags</strong><button ref={closeRef} type="button" onClick={closeEditor} aria-label="Close ticket tags">Close</button></div>
+          <section className="tag-filters-active">
+            <div className="tag-filters-active-heading">
+              <strong>Active filters</strong>
+              {filters.length > 0 && <button type="button" className="tag-filters-clear" onClick={() => onChange([])}>Clear all</button>}
+            </div>
+            {filters.length === 0 ? <p className="tag-filters-none">No active filters.</p> : <ul className="tag-filters-active-list" aria-label="Active ticket filters">
+              {filters.map((filter) => <li key={filter.key}>
+                <span className="tag-filters-active-label">
+                  <strong>{filter.key}</strong>
+                  <span>{[...filter.values.map((value) => `Value: ${value}`), ...(filter.missing ? ['Missing (key absent)'] : [])].join(' or ')}</span>
+                </span>
+                <button type="button" className="tag-filters-remove" aria-label={`Remove filter for ${filter.key}`}
+                  onClick={() => onChange(filters.filter((item) => item.key !== filter.key))}><span aria-hidden="true">X</span></button>
+              </li>)}
+            </ul>}
+          </section>
           {keys.length === 0 ? <p>No ticket tags recorded.</p> : <>
             <label className="tag-filters-key-label" htmlFor={`${id}-key`}>Tag key</label>
             <select ref={keyRef} id={`${id}-key`} value={key} onChange={(event) => setSelectedKey(event.target.value)}>
@@ -129,10 +145,6 @@ export const TagFilters: React.FC<TagFiltersProps> = ({ choices, filters, onChan
               {values.map((value) => <label key={value} className="multiselect-option"><input type="checkbox" checked={selected?.values.includes(value) ?? false} onChange={() => toggleValue(value)} /><span>Value: {value}</span></label>)}
             </fieldset>
           </>}
-          <div className="tag-filters-actions">
-            <button type="button" disabled={selected === undefined} onClick={() => { changeKeyFilter(undefined); closeRef.current?.focus(); }}>Clear key</button>
-            <button type="button" disabled={filters.length === 0} onClick={() => { onChange([]); closeRef.current?.focus(); }}>Clear tag filters</button>
-          </div>
         </div>, document.body)}
     </div>
   );

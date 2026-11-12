@@ -664,7 +664,7 @@ describe('TicketDeepDive View Component', () => {
         expect(screen.getAllByRole('button', { name: 'Ticket tags filter' })).toHaveLength(1);
         expect(screen.getByRole('dialog', { name: 'Ticket tag filters' })).toBe(editor);
         expect(within(editor).getByRole('checkbox', { name: 'Value: outside' })).toBeChecked();
-        await user.click(within(editor).getByRole('button', { name: 'Clear tag filters' }));
+        await user.click(within(editor).getByRole('button', { name: 'Clear all' }));
         expect(screen.queryByText('This ticket does not match the selected tags. Choose another ticket or clear tag filters.')).not.toBeInTheDocument();
         expect(screen.getByText('Total Cost').closest('.kpi-card')?.textContent).toBe(cost);
         expect(screen.getByRole('button', { name: 'Ticket tags filter' })).toHaveTextContent('All');

@@ -42,7 +42,7 @@ describe('FleetOverview View Component', () => {
     expect(await screen.findByText('No tickets match the selected tags. Clear tag filters to restore all tickets.')).toBeInTheDocument();
     fleet.mockResolvedValue({ data: mockFleetSummary });
     workspaces.mockResolvedValue({ data: [...mockTicketComparisonRows] });
-    await user.click(screen.getByRole('button', { name: 'Clear tag filters' }));
+    await user.click(screen.getByRole('button', { name: 'Clear all' }));
     expect(await screen.findByText('Total Cost')).toBeInTheDocument();
     expect(fleet).toHaveBeenLastCalledWith('all', undefined, undefined);
     await selectTagKey(user, 'team');
