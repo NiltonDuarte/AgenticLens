@@ -1,3 +1,4 @@
+import type { TagFilter } from '../domain/tags';
 import type {
   AgenticMetricsLedger,
   BuildInfo,
@@ -61,7 +62,8 @@ export async function fetchFleetSummary(
   sinceParam?: string,
   untilParam?: string,
   ticketTypes?: readonly string[],
-  prefixes?: readonly string[]
+  prefixes?: readonly string[],
+  tagFilters?: readonly TagFilter[]
 ): Promise<ApiResponse<FleetSummary>> {
   const params = new URLSearchParams();
   if (windowParam && windowParam !== 'all') {
@@ -75,6 +77,7 @@ export async function fetchFleetSummary(
   }
   appendMultiParams(params, 'ticket_type', ticketTypes);
   appendMultiParams(params, 'prefix', prefixes);
+  if (tagFilters?.length) params.set('tag_filter', JSON.stringify(tagFilters));
 
   const query = params.toString() ? `?${params.toString()}` : '';
   const url = `/api/fleet${query}`;
@@ -96,7 +99,8 @@ export async function fetchWorkspaceLedgers(
   sinceParam?: string,
   untilParam?: string,
   ticketTypes?: readonly string[],
-  prefixes?: readonly string[]
+  prefixes?: readonly string[],
+  tagFilters?: readonly TagFilter[]
 ): Promise<ApiResponse<readonly AgenticMetricsLedger[]>> {
   const params = new URLSearchParams();
   if (windowParam && windowParam !== 'all') {
@@ -110,6 +114,7 @@ export async function fetchWorkspaceLedgers(
   }
   appendMultiParams(params, 'ticket_type', ticketTypes);
   appendMultiParams(params, 'prefix', prefixes);
+  if (tagFilters?.length) params.set('tag_filter', JSON.stringify(tagFilters));
 
   const query = params.toString() ? `?${params.toString()}` : '';
   const url = `/api/workspaces${query}`;
@@ -133,7 +138,8 @@ export async function fetchWorkspaces(
   sinceParam?: string,
   untilParam?: string,
   ticketTypes?: readonly string[],
-  prefixes?: readonly string[]
+  prefixes?: readonly string[],
+  tagFilters?: readonly TagFilter[]
 ): Promise<ApiResponse<TicketComparisonRow[]>> {
   const params = new URLSearchParams();
   if (windowParam && windowParam !== 'all') {
@@ -153,6 +159,7 @@ export async function fetchWorkspaces(
   }
   appendMultiParams(params, 'ticket_type', ticketTypes);
   appendMultiParams(params, 'prefix', prefixes);
+  if (tagFilters?.length) params.set('tag_filter', JSON.stringify(tagFilters));
 
   const qs = params.toString() ? `?${params.toString()}` : '';
   const url = `/api/workspaces${qs}`;
@@ -171,9 +178,11 @@ export async function fetchWorkspaces(
 }
 
 export async function fetchWorkspaceById(
-  ticketId: string
+  ticketId: string,
+  tagFilters?: readonly TagFilter[]
 ): Promise<ApiResponse<WorkspaceDetail>> {
-  const url = `/api/workspaces/${encodeURIComponent(ticketId)}`;
+  const query = tagFilters?.length ? `?${new URLSearchParams({ tag_filter: JSON.stringify(tagFilters) })}` : '';
+  const url = `/api/workspaces/${encodeURIComponent(ticketId)}${query}`;
   try {
     const res = await fetch(url);
     if (!res.ok) {

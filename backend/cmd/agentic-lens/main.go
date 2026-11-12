@@ -34,6 +34,8 @@ func runGenerate(args []string) {
 	snapshotCutoff := time.Now().UTC()
 	genFlags := flag.NewFlagSet("generate", flag.ExitOnError)
 
+	var cliTags tagFlags
+	genFlags.Var(&cliTags, "tag", "Ticket tag KEY=VALUE (repeatable; CLI overrides local and shared per key)")
 	ticketIDFlag := genFlags.String("ticket-id", "", "Target ticket identifier to lock session resolution to")
 	codeRefFlag := genFlags.String("code-ref", "HEAD", "Git branch or commit to measure against the configured base (defaults to HEAD; committed changes only)")
 	sourceFlag := genFlags.String("source", "", "Telemetry harness: explicit value or selected local telemetry.default_source")
@@ -82,6 +84,7 @@ func runGenerate(args []string) {
 		fmt.Fprintln(os.Stderr, "Error loading configuration:", err)
 		os.Exit(1)
 	}
+	projCfg.Tags = domain.MergeTags(projCfg.Tags, map[string]string(cliTags))
 	if err := adaptersconfig.ValidateGenerationPolicy(projCfg); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -680,7 +683,12 @@ func runGenerate(args []string) {
 	}
 
 	schemaVer := domain.CurrentSchemaVersion
+	var recordedTags map[string]string
+	if cachedFacts != nil {
+		recordedTags = cachedFacts.Tags
+	}
 	factLedger := domain.AgenticFactLedger{
+		Tags:          domain.MergeTags(recordedTags, projCfg.Tags),
 		SchemaVersion: &schemaVer,
 		TicketID:      ticketIDPtr,
 		TicketTitle:   activeTicketTitle,
@@ -735,7 +743,7 @@ func runGenerate(args []string) {
 	}
 	if *jsonOutputFlag != "" {
 		if err := saveGenerationLedgerPreservingHistory(*jsonOutputFlag, factLedger, baseline.HistoryDTOs); err != nil {
-			fmt.Fprintf(os.Stderr, "Error writing JSON to %s: %v\n", *jsonOutputFlag, err)
+			fmt.Fprintln(os.Stderr, recoverFailedGenerationPublication(*jsonOutputFlag, publicationPaths, fmt.Errorf("writing JSON to %s: %w", *jsonOutputFlag, err)))
 			os.Exit(1)
 		}
 		fmt.Printf("Structured metrics ledger written to %s\n", *jsonOutputFlag)
@@ -756,11 +764,11 @@ func runGenerate(args []string) {
 	if *appendFlag != "" {
 		summaryPath, err := capture.ProjectDirectory(*appendFlag)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error resolving summary file %s: %v\n", *appendFlag, err)
+			fmt.Fprintln(os.Stderr, recoverFailedGenerationPublication(*jsonOutputFlag, publicationPaths, fmt.Errorf("resolving summary file %s: %w", *appendFlag, err)))
 			os.Exit(1)
 		}
 		if err := adapters.UpdateSummaryFile(summaryPath, tableMD); err != nil {
-			fmt.Fprintf(os.Stderr, "Error updating summary file %s: %v\n", *appendFlag, err)
+			fmt.Fprintln(os.Stderr, recoverFailedGenerationPublication(*jsonOutputFlag, publicationPaths, fmt.Errorf("updating summary file %s: %w", *appendFlag, err)))
 			os.Exit(1)
 		}
 		fmt.Printf("Metrics table successfully updated in %s\n", *appendFlag)
@@ -769,7 +777,7 @@ func runGenerate(args []string) {
 	}
 	if *jsonOutputFlag != "" {
 		if e := adapters.CommitPublication(*jsonOutputFlag, publicationPaths); e != nil {
-			fmt.Fprintln(os.Stderr, "Publication remains interrupted; regenerate to restore prior accepted set:", e)
+			fmt.Fprintln(os.Stderr, recoverFailedGenerationPublication(*jsonOutputFlag, publicationPaths, fmt.Errorf("committing artifact publication: %w", e)))
 			os.Exit(1)
 		}
 		if e := recordGenerationPublication(project, *captureDirFlag, activeTicketID, "committed", *jsonOutputFlag, *appendFlag, factLedger.Sessions, "Ledger and requested summary replacement committed.", freshSessions); e != nil {

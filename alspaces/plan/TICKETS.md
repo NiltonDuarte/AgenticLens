@@ -48,10 +48,6 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None
   - **File**: [AL-81](to-do/AL-81%20generate%20metrics%20without%20capture%20registry%20access.md)
 
-- **AL-82**: Filter and compare metrics by tags
-  - **Status**: Ready; **Blocked by**: None; **Blocks**: None
-  - **File**: [AL-82](to-do/AL-82%20filter%20and%20compare%20metrics%20by%20tags.md)
-
 - **AL2-1**: Generate and preview anomaly debug prompts
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None
   - **File**: [AL2-1](to-do/AL2-1%20generate%20and%20preview%20anomaly%20debug%20prompts.md)

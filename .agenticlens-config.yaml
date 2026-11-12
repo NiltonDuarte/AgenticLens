@@ -16,6 +16,11 @@ agenticlens:
   version: v3.0.0-rc.131+03f5b05-2-g57a3503e
 # Human-readable name of the project.
 project_name: AgenticLens
+# Skill versions applied as project defaults to ticket tags during generation.
+tags:
+  agentic-lens-dev: "0.1.1"
+  agentic-lens-po: "0.1.1"
+  agentic-lens-review: "0.1.1"
 # Ticket identification and normalization settings.
 ticket:
   # Supported ticket prefix identifiers for this repository.
