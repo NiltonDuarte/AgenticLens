@@ -5,11 +5,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AL-84 support flexible workspace layouts and adopt openspec.md | AgenticLens roadmap</title>
-  <link rel="stylesheet" href="/AgenticLens/preview/143/roadmap/style.css">
+  <link rel="stylesheet" href="/AgenticLens/roadmap/style.css">
 </head>
 <body>
   <header><nav aria-label="Main navigation">
-    <a href="/AgenticLens/preview/143/roadmap/">Back to roadmap</a>
+    <a href="/AgenticLens/roadmap/">Back to roadmap</a>
     <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
   </nav></header>
   <main><h1 id="al-84-support-flexible-workspace-layouts-and-adopt-openspec">AL-84: Support flexible workspace layouts and adopt OpenSpec</h1>
@@ -20,7 +20,7 @@
 
 <h2 id="context">Context</h2>
 
-<p>The <a href="https://github.com/NiltonDuarte/AgenticLens/blob/1180237a0060b7b5ebf30db01cac0249d3c5c816/alspaces/PO-24/ASSESSMENT.md">PO-24 assessment</a> confirmed that configuration can discover ledgers inside OpenSpec changes, but detail readers and publishers reconstruct a direct path from the ticket ID. Multiple roots alone cannot follow archive renames or prevent active-folder recreation. Users also need ordinary layouts such as <code class="language-plaintext highlighter-rouge">alspaces/archive</code>, <code class="language-plaintext highlighter-rouge">alspaces/al</code>, <code class="language-plaintext highlighter-rouge">alspaces/al2</code>, <code class="language-plaintext highlighter-rouge">alspaces/po</code>, <code class="language-plaintext highlighter-rouge">alspaces/fix</code> and documentation folders, alone or together with an OpenSpec tree. These directories are equal first-class workspaces, not compatibility roots or OpenSpec-specific modes. Repository agents, skills and backlog still assume a single ticket root. This ticket delivers the complete adoption outcome in one slice, as explicitly requested by the user; platform support without the repository/guidance cutover is incomplete.</p>
+<p>The <a href="https://github.com/NiltonDuarte/AgenticLens/blob/f1339266be0fc985af765e733003aca22b6fe6c5/alspaces/PO-24/ASSESSMENT.md">PO-24 assessment</a> confirmed that configuration can discover ledgers inside OpenSpec changes, but detail readers and publishers reconstruct a direct path from the ticket ID. Multiple roots alone cannot follow archive renames or prevent active-folder recreation. Users also need ordinary layouts such as <code class="language-plaintext highlighter-rouge">alspaces/archive</code>, <code class="language-plaintext highlighter-rouge">alspaces/al</code>, <code class="language-plaintext highlighter-rouge">alspaces/al2</code>, <code class="language-plaintext highlighter-rouge">alspaces/po</code>, <code class="language-plaintext highlighter-rouge">alspaces/fix</code> and documentation folders, alone or together with an OpenSpec tree. These directories are equal first-class workspaces, not compatibility roots or OpenSpec-specific modes. Repository agents, skills and backlog still assume a single ticket root. This ticket delivers the complete adoption outcome in one slice, as explicitly requested by the user; platform support without the repository/guidance cutover is incomplete.</p>
 
 <h2 id="acceptance-criteria">Acceptance criteria</h2>
 
@@ -46,7 +46,7 @@
 
 <h2 id="implementation-notes">Implementation notes</h2>
 
-<p><a href="https://github.com/NiltonDuarte/AgenticLens/blob/1180237a0060b7b5ebf30db01cac0249d3c5c816/alspaces/PO-24/SPEC.md">PO-24 SPEC.md</a> owns the initiative context; this ticket owns implementation acceptance. This is one delivery slice, not a set of independently completable sub-tickets. Concrete configuration syntax, discovery bounds, resolver contracts and supported custom-schema design belong to the developer contract. The root collection and identity/location resolution are generic platform capabilities; OpenSpec integration supplies workflow/naming/artifact guidance instead of a second scanner, binder or publisher. Preserve the <a href="https://github.com/NiltonDuarte/AgenticLens/blob/1180237a0060b7b5ebf30db01cac0249d3c5c816/TECHNICAL_GUIDELINES.md#portable-ledger-contract">portable ledger contract</a> and relevant <a href="https://github.com/NiltonDuarte/AgenticLens/blob/1180237a0060b7b5ebf30db01cac0249d3c5c816/docs/REGRESSION_PREVENTION.md">regression boundaries</a>.</p>
+<p><a href="https://github.com/NiltonDuarte/AgenticLens/blob/f1339266be0fc985af765e733003aca22b6fe6c5/alspaces/PO-24/SPEC.md">PO-24 SPEC.md</a> owns the initiative context; this ticket owns implementation acceptance. This is one delivery slice, not a set of independently completable sub-tickets. Concrete configuration syntax, discovery bounds, resolver contracts and supported custom-schema design belong to the developer contract. The root collection and identity/location resolution are generic platform capabilities; OpenSpec integration supplies workflow/naming/artifact guidance instead of a second scanner, binder or publisher. Preserve the <a href="https://github.com/NiltonDuarte/AgenticLens/blob/f1339266be0fc985af765e733003aca22b6fe6c5/TECHNICAL_GUIDELINES.md#portable-ledger-contract">portable ledger contract</a> and relevant <a href="https://github.com/NiltonDuarte/AgenticLens/blob/f1339266be0fc985af765e733003aca22b6fe6c5/docs/REGRESSION_PREVENTION.md">regression boundaries</a>.</p>
 
 <p>AL2-2 retains ownership of compressed archive packages and their precedence rules; OpenSpec archive folders need no package archiver. AL-81 independently separates manual generation from capture-registry access; do not reintroduce that dependency or weaken automatic ownership. Coordinate shared worktree/capture paths with AL-80 without taking its scope. Cross-repo OpenSpec stores, additional harness adapters, dynamic capability/spec-glob browsing and phase/progress analytics are not required for this adoption slice.</p>
 </main>
