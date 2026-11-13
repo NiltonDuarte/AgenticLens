@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>REV-6 review test performance and unit integration boundaries.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/preview/144/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/preview/144/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><p>h3. Title: REV-6: Review test performance and unit/integration boundaries</p>
+
+<p><em>TARGET</em>: AgenticLens (Test architecture / Capture CLI and adapters / CI sequencing)</p>
+
+<p><em>Status</em>: Done
+<em>Work type</em>: review
+<em>Blocked by</em>: None
+<em>Blocks</em>: None
+<em>Origin</em>: User requested a review after the MGT-2 batch, citing slow capture tests and requiring fast, cheap unit checks before slower integration checks. MGT-2 is ending at the user’s request; AL-62 will restart separately. Creating this ticket does not claim its old PR merged or start this review.
+<em>Related</em>: AL-74 owns its existing scoped test-reliability/unused-code fixes. Reuse its findings where relevant; do not duplicate that implementation scope.</p>
+
+<p><em>CONTEXT</em></p>
+
+<p>Capture/CLI verification is expensive. A reported duration near 43 seconds needs measurement: a single test, a whole package, subprocess builds, startup, waits and race instrumentation have different causes. Genuine integration coverage must remain meaningful, while the unit suite should be fast and inexpensive to run.</p>
+
+<p><em>GOAL</em></p>
+
+<p>Produce a measured review and bounded follow-up recommendations for fast unit checks followed by slower integration checks. This is a review ticket, not authorization to refactor tests, change timeouts or weaken coverage.</p>
+
+<p><em>SCOPE AND ACCEPTANCE</em></p>
+
+<ul>
+  <li>Measure per-test and per-package duration, subprocess/build overhead, waits and resource cost, beginning with capture. State cache, race-detector, concurrency, hardware/OS and source revision assumptions so timings are comparable.</li>
+  <li>Classify tests by the boundaries actually exercised. Native CLI processes, lifecycle hooks, external harnesses and genuine filesystem/SQLite/Git behavior may require integration tests; renaming a slow test does not solve its cost.</li>
+  <li>Identify slow unit work that can be made deterministic/cheaper and genuine integration tests that should run separately. Preserve independent assertions, native ownership/pending/ACK guarantees and realistic boundary fixtures.</li>
+  <li>Recommend practical budgets, commands and CI dependencies so slower integration execution starts only after fast unit checks pass. Account for local and hosted workflows, shared fixture builds and platform-specific coverage.</li>
+  <li>Distinguish individual-test slowness from package/suite duration. Do not use blanket timeout inflation, silent skips, arbitrary coverage removal or test-count targets as a fix.</li>
+  <li>Deliver concise measured findings with actionable scoped follow-ups and review limits. Use separate FIX tickets for unrelated concrete defects under the management routing rule; do not implement them in this review session.</li>
+  <li>Inspect the then-current main and any delivered AL-62 changes at review start. This ticket makes no claim about the unfinished/closed AL-62 candidate.</li>
+</ul>
+
+<p><em>DEFINITION OF DONE</em></p>
+
+<ul>
+  <li>Measured review delivered with clear unit/integration classification, recommended sequencing and prioritized follow-ups.</li>
+  <li>Existing coverage preserved during the review; any later implementation has its own approved ticket and verification.</li>
+  <li>No review/development thread is launched by this planning-only ticket creation.</li>
+</ul>
+
+<p><em>REFERENCES</em></p>
+
+<ul>
+  <li><a href="https://github.com/NiltonDuarte/AgenticLens/blob/2b4118736b5bde24d17cc382da7445c8046ce884/TECHNICAL_GUIDELINES.md#test-purpose-and-proportionality">Test purpose and proportionality</a></li>
+  <li><a href="https://github.com/NiltonDuarte/AgenticLens/blob/2b4118736b5bde24d17cc382da7445c8046ce884/docs/REGRESSION_PREVENTION.md#adding-reviewing-or-reducing-tests">Test review checklist</a></li>
+</ul>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>

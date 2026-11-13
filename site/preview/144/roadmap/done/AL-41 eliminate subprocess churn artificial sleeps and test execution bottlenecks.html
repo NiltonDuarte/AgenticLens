@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AL-41 eliminate subprocess churn artificial sleeps and test execution bottlenecks.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/preview/144/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/preview/144/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><p>h3. Title: AL-41: Eliminate Subprocess Churn, Artificial Sleeps, and Test Execution Bottlenecks</p>
+
+<table>
+  <tbody>
+    <tr>
+      <td>
+<em>TARGET</em>: AgenticLens (tests</td>
+      <td>adapters</td>
+      <td>git</td>
+      <td>cli</td>
+      <td>http)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><em>AUDIT REPORT REFERENCE</em></p>
+
+<p>Fixes findings from <code class="language-plaintext highlighter-rouge">workspaces/AL-35/AUDIT_REPORT.md</code>:</p>
+<ul>
+  <li>Section 2: <code class="language-plaintext highlighter-rouge">Test Performance Findings &amp; Concrete Patches</code> (Artificial Sleeps &amp; Subprocess Git Invocations)</li>
+  <li>Section 3: <code class="language-plaintext highlighter-rouge">[High]: Subprocess Spawning Churn and Branch Mutation in Git Test Suite</code>
+</li>
+  <li>Section 3: <code class="language-plaintext highlighter-rouge">[Medium]: Artificial Sleeps in Test Suites</code>
+</li>
+  <li>Section 3: <code class="language-plaintext highlighter-rouge">[Medium]: Shallow Passthrough Functions in Formatters Adapter</code>
+</li>
+  <li>Section 4: Recommendation 3 (AL-41)</li>
+</ul>
+
+<p><em>CONTEXT</em></p>
+
+<p>The pre-release source code audit (AL-35) revealed severe execution bottlenecks across the automated test suites. In <code class="language-plaintext highlighter-rouge">backend/cmd/agentic-lens/main_test.go</code>, subtests in <code class="language-plaintext highlighter-rouge">TestCLITicketTypeClassification</code> take over 6.3 seconds each under <code class="language-plaintext highlighter-rouge">-race</code> concurrency because nearly 100 subprocess executions compete for live git branch lookups and host OpenCode SQLite database access. In <code class="language-plaintext highlighter-rouge">backend/internal/adapters/git/inference_test.go</code>, test helpers shell out to <code class="language-plaintext highlighter-rouge">git branch</code> and <code class="language-plaintext highlighter-rouge">git branch -D</code> on disk, creating physical branch churn in the host repository. Furthermore, 5 instances of <code class="language-plaintext highlighter-rouge">time.Sleep</code> exist in test loops (<code class="language-plaintext highlighter-rouge">main_test.go:393, 583, 628, 665</code> and <code class="language-plaintext highlighter-rouge">live_handlers_test.go:333</code>), adding non-deterministic latency. Finally, shallow passthrough functions in <code class="language-plaintext highlighter-rouge">backend/internal/adapters/formatters.go</code> (<code class="language-plaintext highlighter-rouge">FormatLeadTime</code>, <code class="language-plaintext highlighter-rouge">FormatTokens</code>) introduce unnecessary layers of indirection.</p>
+
+<p><em>GOAL</em></p>
+
+<p>Eliminate test bottlenecks, remove all artificial sleeps, decouple unit tests from host git branch mutations by using in-memory branch resolution, isolate CLI integration test environments with temporary SQLite databases, and inline shallow forwarding wrappers.</p>
+
+<p><em>VERTICAL SLICE SCOPE</em></p>
+
+<ul>
+  <li>Banish Artificial Sleeps (<code class="language-plaintext highlighter-rouge">backend/cmd/agentic-lens/main_test.go</code>, <code class="language-plaintext highlighter-rouge">internal/adapters/http/live_handlers_test.go</code>):
+    <ul>
+      <li>Replace 10ms server readiness polling loops in <code class="language-plaintext highlighter-rouge">main_test.go</code> with deterministic TCP port dial checks and microsecond backoff.</li>
+      <li>Replace 50ms sleep in <code class="language-plaintext highlighter-rouge">live_handlers_test.go</code> with explicit channel notification upon event broadcast.</li>
+    </ul>
+  </li>
+  <li>In-Memory Branch Resolution for Git Tests (<code class="language-plaintext highlighter-rouge">backend/internal/adapters/git/inference_test.go</code>):
+    <ul>
+      <li>Remove <code class="language-plaintext highlighter-rouge">createTestBranch</code> helper shelling out to <code class="language-plaintext highlighter-rouge">git branch</code>.</li>
+      <li>Refactor test cases to test pure string branch parser <code class="language-plaintext highlighter-rouge">InferTicketTypeFromBranchList</code> using deterministic in-memory fixtures.</li>
+      <li>Evaluate configured prefix rules before shelling out to git in <code class="language-plaintext highlighter-rouge">InferTicketType</code>.</li>
+    </ul>
+  </li>
+  <li>CLI Integration Test Isolation (<code class="language-plaintext highlighter-rouge">backend/cmd/agentic-lens/main_test.go</code>):
+    <ul>
+      <li>Pass <code class="language-plaintext highlighter-rouge">--db-path</code> pointing to an isolated empty temporary SQLite database or disable live DB resolution during pure ticket classification CLI tests.</li>
+      <li>Mitigate subprocess contention in table-driven classification tests.</li>
+    </ul>
+  </li>
+  <li>Inline Shallow Passthrough Wrappers (<code class="language-plaintext highlighter-rouge">backend/internal/adapters/formatters.go</code>):
+    <ul>
+      <li>Remove or inline <code class="language-plaintext highlighter-rouge">adapters.FormatLeadTime</code> and <code class="language-plaintext highlighter-rouge">adapters.FormatTokens</code>, directing callers straight to pure domain functions <code class="language-plaintext highlighter-rouge">domain.FormatLeadTime</code> and <code class="language-plaintext highlighter-rouge">domain.FormatTokensK</code>.</li>
+    </ul>
+  </li>
+  <li>Quality &amp; Verification:
+    <ul>
+      <li>Assert backend test suite executes under 1.0 second wall-clock.</li>
+      <li>Assert zero <code class="language-plaintext highlighter-rouge">time.Sleep</code> calls remain across <code class="language-plaintext highlighter-rouge">*_test.go</code>.</li>
+      <li>Verify zero git branch creation or deletion occurs during test execution.</li>
+    </ul>
+  </li>
+</ul>
+
+<p><em>ACCEPTANCE CRITERIA</em></p>
+
+<ul>
+  <li>Zero <code class="language-plaintext highlighter-rouge">time.Sleep</code> calls remain in the Go backend test suite.</li>
+  <li>Git unit tests execute in memory without creating host git branches.</li>
+  <li>CLI ticket type classification test suite runtime drops from &gt;6s per subtest to &lt;300ms.</li>
+  <li>Shallow passthrough functions are eliminated.</li>
+  <li>Total test execution time is significantly reduced.</li>
+  <li>Quality gates pass (<code class="language-plaintext highlighter-rouge">make check</code>, <code class="language-plaintext highlighter-rouge">make test</code>, <code class="language-plaintext highlighter-rouge">make build</code>) with zero emojis.</li>
+</ul>
+
+<p><em>DEFINITION OF DONE</em></p>
+
+<ul>
+  <li>Code and tests merged to target branch.</li>
+  <li>Quality gates passing (<code class="language-plaintext highlighter-rouge">make check</code>, <code class="language-plaintext highlighter-rouge">make test</code>, <code class="language-plaintext highlighter-rouge">make build</code>).</li>
+  <li>Zero any and zero emojis across all files.</li>
+</ul>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>

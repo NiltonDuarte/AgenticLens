@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AL-16 execute codebase and skills refactoring with provided review skill.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/preview/144/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/preview/144/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><p>h3. Title: AL-16: Execute Codebase and Skills Refactoring with Provided Review Skill</p>
+
+<table>
+  <tbody>
+    <tr>
+      <td>
+<em>TARGET</em>: AgenticLens (domain</td>
+      <td>adapters</td>
+      <td>presentation</td>
+      <td>cli</td>
+      <td>tests)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><em>CONTEXT</em></p>
+
+<p>Substantial feature work has expanded AgenticLens across Go backend adapters, CLI subcommands, and TypeScript web views. As the codebase grows, code divergence, duplicated utility functions, minor violations of FCIS separation, and potential typing issues can emerge. A provided <code class="language-plaintext highlighter-rouge">agentic-lens-review</code> skill will be supplied externally to orchestrate and guide deep audits. We must execute a comprehensive review and refactoring pass guided by this provided skill to ensure strict architectural hygiene and maintainability.</p>
+
+<p><em>GOAL</em></p>
+
+<p>Using the provided <code class="language-plaintext highlighter-rouge">agentic-lens-review</code> skill, execute a comprehensive audit and refactoring pass across the Go backend, TypeScript frontend, and skill configurations to ensure strict FCIS adherence, zero <code class="language-plaintext highlighter-rouge">any</code>, zero emojis, consolidated shared logic, and clean separation of concerns.</p>
+
+<p><em>VERTICAL SLICE SCOPE</em></p>
+
+<ul>
+  <li>Provided Skill Integration:
+    <ul>
+      <li>Ground execution against the externally provided <code class="language-plaintext highlighter-rouge">agentic-lens-review</code> skill and its audit checklists (FCIS purity, zero <code class="language-plaintext highlighter-rouge">any</code>, zero emojis, zero domain mocks, dead code elimination).</li>
+      <li>Note: Authoring or generating the review skill itself is out of scope for this ticket as it is provided externally.</li>
+    </ul>
+  </li>
+  <li>Backend Refactoring:
+    <ul>
+      <li>Audit <code class="language-plaintext highlighter-rouge">internal/domain/</code>, <code class="language-plaintext highlighter-rouge">internal/adapters/</code>, and <code class="language-plaintext highlighter-rouge">cmd/agentic-lens/</code>.</li>
+      <li>Consolidate duplicated string formatters and date handlers into unified domain helpers.</li>
+      <li>Eliminate dead code, unused structs, and orphaned imports across adapters.</li>
+      <li>Validate that <code class="language-plaintext highlighter-rouge">internal/domain</code> has zero I/O imports and remains 100% pure.</li>
+    </ul>
+  </li>
+  <li>Frontend Refactoring:
+    <ul>
+      <li>Audit <code class="language-plaintext highlighter-rouge">web/src/</code> for unused components, redundant types, and unoptimized state updates.</li>
+      <li>Consolidate shared chart color definitions and formatting helpers.</li>
+      <li>Enforce strict typing with zero <code class="language-plaintext highlighter-rouge">any</code> or empty type casts.</li>
+    </ul>
+  </li>
+  <li>Quality:
+    <ul>
+      <li>All existing unit, integration, and UI tests pass after refactoring without regressions.</li>
+      <li>Zero <code class="language-plaintext highlighter-rouge">any</code> across Go and TypeScript verified via <code class="language-plaintext highlighter-rouge">go vet ./...</code> and <code class="language-plaintext highlighter-rouge">npm run typecheck</code>.</li>
+      <li>Zero emojis across all modified files.</li>
+    </ul>
+  </li>
+</ul>
+
+<p><em>ACCEPTANCE CRITERIA</em></p>
+
+<ul>
+  <li>Codebase audit is completed using the provided <code class="language-plaintext highlighter-rouge">agentic-lens-review</code> skill.</li>
+  <li>Redundant code and duplicate helpers are eliminated across backend and frontend.</li>
+  <li>All Go packages in <code class="language-plaintext highlighter-rouge">internal/domain</code> remain strictly pure with zero I/O imports.</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">npm run typecheck</code>, <code class="language-plaintext highlighter-rouge">npm run lint</code>, <code class="language-plaintext highlighter-rouge">go vet ./...</code>, and <code class="language-plaintext highlighter-rouge">go test -race ./...</code> pass cleanly.</li>
+  <li>Single-binary build succeeds (<code class="language-plaintext highlighter-rouge">make build</code>).</li>
+</ul>
+
+<p><em>DEFINITION OF DONE</em></p>
+
+<ul>
+  <li>Refactored code and tests merged to target branch.</li>
+  <li>Quality gates passing (<code class="language-plaintext highlighter-rouge">make check</code>, <code class="language-plaintext highlighter-rouge">make test</code>, <code class="language-plaintext highlighter-rouge">make build</code>).</li>
+  <li>Zero any and zero emojis across all files.</li>
+  <li>Telemetry tested with <code class="language-plaintext highlighter-rouge">agentic-lens</code> CLI.</li>
+</ul>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>

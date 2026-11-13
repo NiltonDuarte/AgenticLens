@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AL-8 anomaly api endpoints and fleet health aggregation.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/preview/144/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/preview/144/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><p>h3. Title: AL-8: Anomaly API Endpoints and Fleet Health Aggregation</p>
+
+<table>
+  <tbody>
+    <tr>
+      <td>
+<em>TARGET</em>: AgenticLens (adapters</td>
+      <td>http</td>
+      <td>server</td>
+      <td>tests)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><em>CONTEXT</em></p>
+
+<p>With the domain anomaly engine and v2 event facts in place, the HTTP server must expose anomaly findings and chronological events to API consumers, and roll up fleet-wide anomaly metrics to help team leads assess agent stability across tickets.</p>
+
+<p><em>GOAL</em></p>
+
+<p>Expose REST endpoints for ticket anomalies and event timelines, and integrate fleet-wide anomaly statistics into the <code class="language-plaintext highlighter-rouge">/api/fleet</code> endpoint.</p>
+
+<p><em>VERTICAL SLICE SCOPE</em></p>
+
+<ul>
+  <li>Domain Core: Pure fleet anomaly rollup function <code class="language-plaintext highlighter-rouge">ComputeFleetAnomalies(ledgers []AgenticFactLedger) FleetAnomalySummary</code> calculating total anomalies, anomaly rates per ticket, most brittle tools, and severity breakdown.</li>
+  <li>Boundary Adapter &amp; HTTP Server:
+    <ul>
+      <li>Update <code class="language-plaintext highlighter-rouge">internal/adapters/http</code>:
+        <ul>
+          <li>Extend <code class="language-plaintext highlighter-rouge">GET /api/workspaces/:ticketId</code> response DTO to include <code class="language-plaintext highlighter-rouge">anomalies: []AnomalyDTO</code>.</li>
+          <li>Implement <code class="language-plaintext highlighter-rouge">GET /api/workspaces/:ticketId/events</code> returning chronologically sorted event facts.</li>
+          <li>Extend <code class="language-plaintext highlighter-rouge">GET /api/fleet</code> response DTO to include <code class="language-plaintext highlighter-rouge">anomaly_summary: FleetAnomalySummaryDTO</code>.</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li>Quality: HTTP integration tests using <code class="language-plaintext highlighter-rouge">net/http/httptest</code> asserting accurate JSON responses for ticket anomalies, event streams, and fleet rollups. Zero domain mocks.</li>
+</ul>
+
+<p><em>ACCEPTANCE CRITERIA</em></p>
+
+<ul>
+  <li>
+<code class="language-plaintext highlighter-rouge">GET /api/workspaces/:ticketId</code> includes evaluated anomalies array in response payload.</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">GET /api/workspaces/:ticketId/events</code> returns ordered chronological event list for v2 workspaces and empty list for legacy v1 workspaces.</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">GET /api/fleet</code> reports fleet-level anomaly counts and high-frequency failure tools.</li>
+  <li>Unmatched workspace returns clean 404 response.</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">go test -race ./...</code> and <code class="language-plaintext highlighter-rouge">go vet ./...</code> pass with zero errors.</li>
+</ul>
+
+<p><em>DEFINITION OF DONE</em></p>
+
+<ul>
+  <li>Code and tests merged to target branch.</li>
+  <li>Quality gates passing (<code class="language-plaintext highlighter-rouge">go vet ./...</code>, <code class="language-plaintext highlighter-rouge">go test -race ./...</code>).</li>
+  <li>Go type checking clean with zero any or empty <code class="language-plaintext highlighter-rouge">interface{}</code>.</li>
+  <li>Telemetry tested with <code class="language-plaintext highlighter-rouge">agentic-lens</code> CLI.</li>
+</ul>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>

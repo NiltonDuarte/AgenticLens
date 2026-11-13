@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AL-66 configure optional metric output for generate.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/preview/144/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/preview/144/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><p>h3. Title: AL-66: Configure optional skills, delegations and anomalies output for generate</p>
+
+<p><em>TARGET</em>: AgenticLens (Configuration / Domain / Source Adapters / CLI / Persistence / Summary / Dashboard Compatibility / Tests)</p>
+
+<p><em>Status</em>: Done
+<em>Work type</em>: feat
+<em>Blocked by</em>: None
+<em>Blocks</em>: None
+<em>Origin</em>: PO-18 consolidated specification; user requests config toggles for generate features including delegations, skills and anomalies. Disabled metrics must not be written.</p>
+
+<p><em>CONTEXT</em></p>
+
+<p>Operators need control over optional telemetry emitted by generate. The current command gathers skills/delegations, derives metrics and persists anomaly summaries; –anomalies is a diagnostic display flag, not a configuration toggle for persisted anomaly facts. Output policy must consistently apply across source extraction, retained facts, persistence and generated summaries, including the granular ownership planned in AL-62.</p>
+
+<p><em>GOAL</em></p>
+
+<p>As an operator, I want independent configuration toggles for skills, delegations and anomalies so that generate writes only enabled metric categories. Keep enabled-by-default settings. Use omitted optional collections for not-recorded evidence, explicit empty arrays for recorded-empty measurements, and nonempty arrays for recorded facts. Configuration may explain disabled collection in the current command; persisted JSON intentionally does not retain disabled versus unavailable reasons.</p>
+
+<p><em>VERTICAL SLICE SCOPE</em></p>
+
+<ul>
+  <li>Domain Core: Model an explicit typed generation policy and apply it consistently to optional fact/derived-output categories. Preserve omitted, recorded-empty and nonempty collection states without persisted generation-policy or availability metadata; keep unrelated metrics intact. Disabled versus unavailable reason remains runtime/configuration context only.</li>
+  <li>Boundary Adapter: Load independent booleans from the existing project configuration through normal validation/defaulting. Pass the effective policy through OpenCode v1/v2 and Codex generation paths and output preparation; do not require a source to support a metric merely because its toggle is enabled.</li>
+  <li>Persistence: Apply the policy to the complete emitted ledger, including nested session/invocation collections, derived duplicates and facts retained from an existing output ledger. Coordinate with AL-62’s source ownership without relying solely on root-field omission.</li>
+  <li>Presentation: Apply toggles to generate JSON and generated Markdown metrics sections; document effective settings and –anomalies interaction in help/config examples. Existing API/dashboard readers must accept intentionally omitted categories without implying successful zero measurements. No new dashboard settings UI is required.</li>
+  <li>Quality: Focused config/domain tests and actual generate persistence/summary integration tests cover enabled/default/disabled combinations, existing ledgers, multiple owners/sources, and repeated runs. Fixtures remain self-contained.</li>
+</ul>
+
+<p><em>ACCEPTANCE CRITERIA</em></p>
+
+<ul>
+  <li>Project configuration provides independent boolean enable/disable settings for skills, delegations and anomalies. Missing settings preserve current behavior (enabled); explicit false survives defaults/merging. Invalid values fail with an actionable configuration error before output files are modified. Document the exact keys and effective configuration precedence in the developer contract and user-facing config reference.</li>
+  <li>Disabling a category makes generate omit its structured facts and category-specific derived metrics from written output, rather than writing empty arrays, null placeholders or zero counts as if measured. Apply this at every canonical owner and any compatibility projection, including session/invocation scope introduced by AL-62. No generation_policy object, anomaly_availability marker or replacement status metadata is emitted. Field presence is the wire contract: omitted means not recorded, [] means actually recorded-empty, nonempty arrays contain recorded facts. Current-command diagnostics may explain disabled settings.</li>
+  <li>Each toggle works independently and all three can be off together. Enabled categories and core session/invocation identity, token/cost/duration/code metrics, source attribution and parent-child structure remain intact. Disabling delegations does not remove child sessions; disabling skills does not remove the ordinary invocation metrics for work that used a skill.</li>
+  <li>Anomalies disabled suppresses persisted anomaly facts at root/session scope and anomaly-derived generated counts, breakdowns and health claims. Do not replace absent anomaly analysis with healthy/zero-error assertions. Ordinary tool execution/error facts remain valid independent telemetry; toggles do not redact raw transcript text or unrelated tool evidence merely because it mentions a category name.</li>
+  <li>Regenerating an existing target output with a category disabled omits previously persisted facts of that category from the new output as an intentional policy choice; retained-session merging or optional hydration must not silently restore them during generate. Preserve existing safe-write/backup guarantees and all enabled/unrelated history. This deliberate configured omission is distinct from source-unavailable recovery, which must still retain enabled stored facts safely.</li>
+  <li>Generated Markdown metrics sections reflect the effective policy, including when –append replaces an earlier generated section; disabled metric values must not remain stale in that managed section. Preserve user-authored summary prose. Any category-specific console diagnostic requested while disabled reports that it is disabled; existing –anomalies does not silently re-enable persistence or analysis. No new CLI override flags are required by this ticket.</li>
+  <li>Re-enabling permits source-backed recovery of available category facts on a later generation; do not promise recovery of previously omitted facts when original source data is unavailable. Enabled but unsupported or unavailable categories remain omitted (not recorded), never fabricated empty arrays or successful zeros. Saved JSON does not preserve omission reasons.</li>
+  <li>Configuration applies to generate; no automatic rewriting of other ledgers, global dashboard filtering, live feature suppression, or change to backfill defaults is included. Later explicit backfill/hydration policies are separate scope; document that these generation toggles are not a global source redaction guarantee. Consumers must continue to display supported persisted facts when enrichment is unavailable.</li>
+  <li>Demonstrate config omission/defaults, each false separately, all false, mixed values, invalid types, and off/on regeneration using meaningful nonempty fixtures. Cover both first creation and existing target ledgers, nested owners, an unrelated source’s retained session, safe failure and unchanged repeat stability. Assert emitted JSON field absence and managed Markdown omission rather than only in-memory filtering.</li>
+  <li>Keep schema/read compatibility explicit for field-presence semantics. Existing schema-6 ledgers remain readable; transitional AL-66 metadata may be interpreted on reads but is not emitted by new writes. Do not introduce a schema version solely by assumption. Pass required make gates and existing frontend compatibility checks; any frontend change includes canonical embedded-asset verification.</li>
+</ul>
+
+<p><em>DEFINITION OF DONE</em></p>
+
+<ul>
+  <li>Execute in a separate agentic-lens-dev session with a reviewed typed policy/config/output contract and implementation scope approval under the usual gate. This PO task authors the ticket only.</li>
+  <li>Deliver configuration-to-output behavior and regression tests end to end, with documented keys, enabled-by-default semantics, intentional omission on regeneration, restoration limits and command scope.</li>
+  <li>Follow TECHNICAL_GUIDELINES.md and docs/REGRESSION_PREVENTION.md: FCIS, strict Go/TypeScript, zero any/interface{}, zero emojis, no domain mocks and self-contained fixtures. Preserve the original AL-55 evidence.</li>
+  <li>Publish reviewed changes, verification evidence and source-grounded telemetry in the ticket’s implementation PR. No developer workspace or CONTRACT.md is created by this PO session.</li>
+</ul>
+
+<p><em>ITERATION 02 USER STEERING</em></p>
+
+<p>User approved “the suggested field presence. omitted, empty and non empty approach” after rejecting the new JSON metadata object. This supersedes iteration01 policy/availability metadata persistence while preserving independent toggles, source-backed recovery limits, portable history, core metrics, safe writes and honest readers. Persisted JSON no longer distinguishes why a metric was not recorded.</p>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>

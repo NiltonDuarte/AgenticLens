@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AL-77 warn when a session appears in multiple tickets.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/preview/144/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/preview/144/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><p>h3. Title: AL-77: Warn when a session appears in multiple tickets</p>
+
+<p><em>TARGET</em>: AgenticLens (Frontend / read-only session-to-ticket projection)</p>
+
+<p><em>Status</em>: Done
+<em>Work type</em>: feat
+<em>Blocked by</em>: None
+<em>Blocks</em>: None
+<em>Origin</em>: Explicit user request during MGT-2 platform-definition clarification.</p>
+
+<p><em>CONTEXT</em></p>
+
+<p>Ledgers are trusted project records shared through Git. A single session ID can be recorded in multiple tickets, making ticket comparisons and combined metrics overlap. AgenticLens cannot determine which attribution the user intended. The platform should make the overlap visible and provide enough context for the user to resolve it at their end.</p>
+
+<p><em>GOAL</em></p>
+
+<p>Show a clear frontend warning identifying each shared session and its affected tickets, while preserving recorded data and existing aggregation behavior. Session ID is the stable identity; no machine-local receipts, source access or new identity scheme is required to detect the overlap.</p>
+
+<p><em>VERTICAL SLICE SCOPE</em></p>
+
+<ul>
+  <li>Derive an index from stored session IDs to distinct ticket IDs in the loaded project ledger dataset. Keep source labels as context, not an additional machine-specific matching requirement.</li>
+  <li>Use existing read projections; if necessary, expose the minimal read-only identifiers needed by the frontend. No extraction, ledger-schema or storage redesign is included.</li>
+  <li>Surface the warning in the frontend’s ticket/fleet context with a discoverable detail view. Reuse existing navigation to affected tickets where available.</li>
+  <li>This ticket is queued only. No development thread or implementation is started by its creation.</li>
+</ul>
+
+<p><em>ACCEPTANCE CRITERIA</em></p>
+
+<ul>
+  <li>A session ID appearing in at least two distinct ticket IDs produces a warning. Repeated rows or repeated projections of the same ticket alone do not create a cross-ticket warning.</li>
+  <li>Warning details identify the session ID and all affected tickets within the inspected dataset, with readable labels and available ticket links. Explain that metrics may overlap and the user must decide how to correct attribution; do not declare one ticket correct.</li>
+  <li>Detection uses the available project dataset rather than silently interpreting a filtered subset as complete. State the inspected scope when data is partial; do not claim that no overlap exists outside it.</li>
+  <li>Valid persisted ledgers suffice even when all original sources and private capture databases are unavailable. Missing session IDs do not get guessed from names, timestamps, paths or developer identities.</li>
+  <li>Do not delete, move, reassign or silently deduplicate sessions across tickets. Do not change ledger contents, per-ticket totals or fleet allocation as an automatic response to the warning. Refreshing the view is read-only.</li>
+  <li>A single-ticket session produces no warning. When the user corrects their records and the data is reloaded, the warning reflects the new dataset without retaining stale conflicts.</li>
+  <li>Warning details and ticket navigation work with keyboard and assistive technology; preserve existing filtering and selection behavior.</li>
+  <li>Verification exercises a genuine two-ticket overlap, same-ticket repetition, no-overlap, source-unavailable records, partial/filtered scope and resolution after reload. Use self-contained fixtures, not live ticket history. Follow normal development/review/build/embed gates when implementing.</li>
+</ul>
+
+<p><em>DEFINITION OF DONE</em></p>
+
+<ul>
+  <li>The warning and its read-only projection are implemented and verified through actual frontend consumers.</li>
+  <li>Applicable checks and required integrated make pass; shipped embedded assets match the frontend build.</li>
+  <li>No automatic data repair or aggregate-policy change is introduced. The user retains the decision about correcting attribution.</li>
+</ul>
+
+<p><em>CANONICAL REFERENCES</em></p>
+
+<ul>
+  <li><a href="https://github.com/NiltonDuarte/AgenticLens/blob/2b4118736b5bde24d17cc382da7445c8046ce884/TECHNICAL_GUIDELINES.md#portable-ledger-contract">Portable ledger contract</a></li>
+  <li><a href="https://github.com/NiltonDuarte/AgenticLens/blob/2b4118736b5bde24d17cc382da7445c8046ce884/docs/REGRESSION_PREVENTION.md#portable-ledgers-across-developers-and-machines">Portable ledger acceptance scenarios</a></li>
+</ul>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>

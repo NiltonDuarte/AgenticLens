@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AL-82 filter and compare metrics by tags.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/preview/144/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/preview/144/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><h1 id="al-82-filter-and-compare-metrics-by-tags">AL-82: Filter and compare metrics by tags</h1>
+
+<p>Completed through active-filter refinement at implementation revision <code class="language-plaintext highlighter-rouge">1655ba45</code>; <a href="https://github.com/NiltonDuarte/AgenticLens/blob/2b4118736b5bde24d17cc382da7445c8046ce884/alspaces/AL-82/SUMMARY.md">delivery evidence</a> records checks and review. The user’s approval, “Approved. Be sure the tags are in the ticket scope/level”, supersedes the original PO-21 session-level ownership and Mixed contributor proposal. The <a href="https://github.com/NiltonDuarte/AgenticLens/blob/2b4118736b5bde24d17cc382da7445c8046ce884/alspaces/AL-82/CONTRACT.md">approved contract</a> and <a href="https://github.com/NiltonDuarte/AgenticLens/blob/2b4118736b5bde24d17cc382da7445c8046ce884/alspaces/AL-82/iterations/02/PLAN.md">iteration 02 delta</a> own current acceptance.</p>
+
+<h2 id="goal">Goal</h2>
+
+<p>Deliver ticket-level tags from shared/local configuration and CLI through durable metric records and API responses to dashboard filters and comparison identity. Preserve user identity, portable history and numerical metrics when no tag filter is selected.</p>
+
+<h2 id="acceptance-criteria">Acceptance criteria</h2>
+
+<ul>
+  <li>Shared and private local YAML accept a top-level string mapping. Repeatable <code class="language-plaintext highlighter-rouge">generate --tag KEY=VALUE</code> overrides local, which overrides shared, per key; unrelated keys survive. Tags-only local files work. CLI repeats use the last value, splitting at the first equals sign. Trim outer Unicode whitespace and preserve internal text/case. Reject blank/non-string entries and duplicate normalized YAML keys before publication. Document examples and that effective local tags become shared ledger data.</li>
+  <li>Tags are one map on the ticket ledger, independent of SessionFact.User and harness. Successful manual/automatic generation merges effective keys over saved ticket tags; absent keys never erase metadata. Failed handled publication restores the prior accepted set. Interrupted or obstructed recovery remains explicitly incomplete rather than claiming success.</li>
+  <li>Save/reload, source-unavailable reading, backfill, supported explicit migration and cross-machine Git sharing preserve tags and session facts. Reader configuration does not relabel history. Untagged schema-6 ledgers remain valid without forced migration; older schemas retain the existing explicit migration gate.</li>
+  <li>One compact Ticket tags key/value control sits inside each existing page filter bar, preserving clauses across key changes and keyboard/empty-result recovery. The popup lists active clauses with per-key X removal and one quiet Clear all action. Dashboard filters start unset; OR values within a key and AND keys on one ticket. Compose with existing filters and include Missing distinctly from literal values. Select whole tickets and complete totals, never owner allocations. Keep choices before tag filtering, reconcile fresh server values, and retain usable reset/empty-result controls.</li>
+  <li>Comparison Color by tag defaults off, retaining completion coloring. Selecting a key uses stable identities across unchanged-data filtering/sorting, with legend and textual/accessibility identification. Preserve one point per ticket, coordinates, completion status, unavailable-metric and manual exclusions. Missing remains neutral and visible; literal Missing and Mixed are ordinary values, with no contributor Mixed state.</li>
+  <li>Tests prove precedence/config round trips/validation; root ticket publication through both harnesses and the actual worker; unavailable and cross-developer history; absent-input and repeated refresh/backfill preservation; supported migration; no-filter compatibility; complete multi-session ticket totals; Missing/literal distinction, refreshed-catalog recovery and accessible stable comparison identities.</li>
+</ul>
+
+<p>Shared product history: <a href="https://github.com/NiltonDuarte/AgenticLens/blob/2b4118736b5bde24d17cc382da7445c8046ce884/alspaces/PO-21/SPEC.md">PO-21</a>. Related AL-70 configuration preservation and AL-72 UI correctness were coordination references, not prerequisites. <a href="https://github.com/NiltonDuarte/AgenticLens/blob/2b4118736b5bde24d17cc382da7445c8046ce884/TECHNICAL_GUIDELINES.md">Engineering rules</a> and <a href="https://github.com/NiltonDuarte/AgenticLens/blob/2b4118736b5bde24d17cc382da7445c8046ce884/docs/REGRESSION_PREVENTION.md">regression boundaries</a> apply. No downstream ticket depends on AL-82.</p>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>
