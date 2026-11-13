@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AL-13 implement semantic versioning and automated ci for pull requests and main merges.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/preview/142/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/preview/142/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><p>h3. Title: AL-13: Implement Semantic Versioning and Automated CI for Pull Requests and Main Merges</p>
+
+<table>
+  <tbody>
+    <tr>
+      <td>
+<em>TARGET</em>: AgenticLens (domain</td>
+      <td>adapters</td>
+      <td>presentation</td>
+      <td>cli</td>
+      <td>tests)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><em>CONTEXT</em></p>
+
+<p>The AgenticLens project currently lacks automated CI on GitHub Actions for pull requests and main branch merges. Without automated validation running on every PR, regressions in Go race conditions, TypeScript compilation, code formatting, or single-binary packaging can easily slip into <code class="language-plaintext highlighter-rouge">main</code>. Furthermore, the software has no compiled-in semantic versioning, preventing users and downstream pipelines from querying the active release version via CLI or API.</p>
+
+<p><em>GOAL</em></p>
+
+<p>Deliver software semantic versioning with build-time <code class="language-plaintext highlighter-rouge">-ldflags</code> injection, CLI version commands, HTTP version endpoints, and web UI version indicators, backed by a GitHub Actions CI workflow that enforces code checks, tests, and binary build verification on pull requests and pushes to <code class="language-plaintext highlighter-rouge">main</code>.</p>
+
+<p><em>VERTICAL SLICE SCOPE</em></p>
+
+<ul>
+  <li>Domain Core: Create <code class="language-plaintext highlighter-rouge">internal/domain/version.go</code> defining <code class="language-plaintext highlighter-rouge">BuildInfo</code> struct (<code class="language-plaintext highlighter-rouge">Version</code>, <code class="language-plaintext highlighter-rouge">GitCommit</code>, <code class="language-plaintext highlighter-rouge">BuildDate</code>) and version string formatting functions.</li>
+  <li>Boundary Adapter:
+    <ul>
+      <li>Expose <code class="language-plaintext highlighter-rouge">/api/version</code> GET route in <code class="language-plaintext highlighter-rouge">internal/adapters/http/</code> returning structured JSON <code class="language-plaintext highlighter-rouge">BuildInfoDTO</code>.</li>
+      <li>Update <code class="language-plaintext highlighter-rouge">cmd/agentic-lens/main.go</code> to support <code class="language-plaintext highlighter-rouge">agentic-lens version</code> subcommand and <code class="language-plaintext highlighter-rouge">-v</code>/<code class="language-plaintext highlighter-rouge">--version</code> flags.</li>
+      <li>Update <code class="language-plaintext highlighter-rouge">Makefile</code> to pass <code class="language-plaintext highlighter-rouge">-ldflags "-X ..."</code> for version, git commit, and build date.</li>
+    </ul>
+  </li>
+  <li>Presentation:
+    <ul>
+      <li>Add version badge/indicator in <code class="language-plaintext highlighter-rouge">web/src/components/Navbar.tsx</code> displaying the current application version queried from <code class="language-plaintext highlighter-rouge">/api/version</code>.</li>
+      <li>Provide fallback display when running in offline or embedded preview mode.</li>
+    </ul>
+  </li>
+  <li>CI Workflow:
+    <ul>
+      <li>Create <code class="language-plaintext highlighter-rouge">.github/workflows/ci.yml</code> running on <code class="language-plaintext highlighter-rouge">pull_request</code> targeting <code class="language-plaintext highlighter-rouge">main</code> and <code class="language-plaintext highlighter-rouge">push</code> to <code class="language-plaintext highlighter-rouge">main</code>.</li>
+      <li>Matrix / jobs for Go 1.23+ and Node.js 20+: runs <code class="language-plaintext highlighter-rouge">make check</code>, <code class="language-plaintext highlighter-rouge">make test-backend</code> (<code class="language-plaintext highlighter-rouge">-race</code>), <code class="language-plaintext highlighter-rouge">make test-frontend</code>, and <code class="language-plaintext highlighter-rouge">make build</code>.</li>
+    </ul>
+  </li>
+  <li>Quality:
+    <ul>
+      <li>Table-driven Go unit tests for version string generation and API response serialization.</li>
+      <li>Vitest component test for Navbar version display.</li>
+      <li>Validation that zero emojis and zero <code class="language-plaintext highlighter-rouge">any</code> types exist across added code.</li>
+    </ul>
+  </li>
+</ul>
+
+<p><em>ACCEPTANCE CRITERIA</em></p>
+
+<ul>
+  <li>Running <code class="language-plaintext highlighter-rouge">agentic-lens version</code> or <code class="language-plaintext highlighter-rouge">agentic-lens --version</code> prints the semantic version, git commit SHA, and build timestamp.</li>
+  <li>Querying <code class="language-plaintext highlighter-rouge">GET /api/version</code> returns status 200 with <code class="language-plaintext highlighter-rouge">{ "version": string, "commit": string, "build_date": string }</code>.</li>
+  <li>The TypeScript web dashboard displays the active semantic version in the navigation header.</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">.github/workflows/ci.yml</code> is configured and passes all steps: <code class="language-plaintext highlighter-rouge">make check</code>, <code class="language-plaintext highlighter-rouge">make test</code>, and <code class="language-plaintext highlighter-rouge">make build</code>.</li>
+  <li>Pull requests targeting <code class="language-plaintext highlighter-rouge">main</code> and pushes to <code class="language-plaintext highlighter-rouge">main</code> trigger the CI workflow and require all checks to pass before merging.</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">go test -race ./...</code> and <code class="language-plaintext highlighter-rouge">go vet ./...</code> pass with zero errors.</li>
+</ul>
+
+<p><em>DEFINITION OF DONE</em></p>
+
+<ul>
+  <li>Code and tests merged to target branch.</li>
+  <li>Quality gates passing (<code class="language-plaintext highlighter-rouge">make check</code>, <code class="language-plaintext highlighter-rouge">make test</code>, <code class="language-plaintext highlighter-rouge">make build</code>).</li>
+  <li>Go and TypeScript type checking clean with zero any.</li>
+  <li>Telemetry tested with <code class="language-plaintext highlighter-rouge">agentic-lens</code> CLI.</li>
+</ul>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>

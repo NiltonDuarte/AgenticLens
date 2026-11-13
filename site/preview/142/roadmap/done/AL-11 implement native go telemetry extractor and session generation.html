@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AL-11 implement native go telemetry extractor and session generation.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/preview/142/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/preview/142/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><p>h3. Title: AL-11: Implement Native Go Telemetry Extractor and Active Session Metric Generation</p>
+
+<table>
+  <tbody>
+    <tr>
+      <td>
+<em>TARGET</em>: AgenticLens (adapters</td>
+      <td>domain</td>
+      <td>cli</td>
+      <td>tests)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><em>CONTEXT</em></p>
+
+<p>Currently, active session telemetry extraction depends entirely on <code class="language-plaintext highlighter-rouge">scripts/extract_agentic_metrics.py</code>. As part of the single-binary Go rewrite and operational decoupling, the Go application (<code class="language-plaintext highlighter-rouge">cmd/agentic-lens</code>) must natively extract active session telemetry directly from the OpenCode SQLite database and git repository, writing the atomic facts ledger and updating markdown summary tables.</p>
+
+<p><em>PORTING REQUIREMENTS &amp; PYTHON EXTRACTOR ISSUES TO FIX (FROM AL-10)</em></p>
+
+<p>Investigation of <code class="language-plaintext highlighter-rouge">scripts/extract_agentic_metrics.py</code> revealed several critical flaws that must be resolved in the native Go implementation (<code class="language-plaintext highlighter-rouge">internal/adapters/git</code>):</p>
+<ol>
+  <li>
+<em>Eliminate Hardcoded Path Filtering</em>: The Python script restricted <code class="language-plaintext highlighter-rouge">git numstat</code> parsing to path prefixes starting with <code class="language-plaintext highlighter-rouge">('src/', 'tests/', 'infra/', 'cli/')</code>, which filtered out all Go files in <code class="language-plaintext highlighter-rouge">internal/</code>, <code class="language-plaintext highlighter-rouge">cmd/</code>, and TypeScript files in <code class="language-plaintext highlighter-rouge">web/</code>, resulting in 0 lines added/deleted. The Go adapter must process all repository files without hardcoded directory exclusions.</li>
+  <li>
+<em>Multi-Language File Classification (Hybrid Configuration)</em>: The Python script only identified test files if they started with <code class="language-plaintext highlighter-rouge">tests/</code> and prod files if they started with <code class="language-plaintext highlighter-rouge">src/</code>. This misclassified Go <code class="language-plaintext highlighter-rouge">*_test.go</code> and TS <code class="language-plaintext highlighter-rouge">*.test.ts</code>/<code class="language-plaintext highlighter-rouge">*.test.tsx</code> as non-test or discarded them. The Go adapter must:
+    <ul>
+      <li>Support optional <code class="language-plaintext highlighter-rouge">code_metrics</code> configuration from <code class="language-plaintext highlighter-rouge">.agenticlens/config.json</code> (<code class="language-plaintext highlighter-rouge">include</code>, <code class="language-plaintext highlighter-rouge">exclude</code>, <code class="language-plaintext highlighter-rouge">test_patterns</code>, <code class="language-plaintext highlighter-rouge">prod_patterns</code>).</li>
+      <li>When omitted, apply universal multi-language defaults:
+        <ul>
+          <li>Test files: <code class="language-plaintext highlighter-rouge">*_test.go</code>, <code class="language-plaintext highlighter-rouge">*.test.ts</code>, <code class="language-plaintext highlighter-rouge">*.test.tsx</code>, <code class="language-plaintext highlighter-rouge">*.spec.ts</code>, <code class="language-plaintext highlighter-rouge">*.spec.tsx</code>, <code class="language-plaintext highlighter-rouge">test_*.py</code>, <code class="language-plaintext highlighter-rouge">*_test.py</code>, <code class="language-plaintext highlighter-rouge">test/**</code>, <code class="language-plaintext highlighter-rouge">tests/**</code>, <code class="language-plaintext highlighter-rouge">__tests__/**</code>.</li>
+          <li>Production files: <code class="language-plaintext highlighter-rouge">.go</code>, <code class="language-plaintext highlighter-rouge">.ts</code>, <code class="language-plaintext highlighter-rouge">.tsx</code>, <code class="language-plaintext highlighter-rouge">.py</code>, <code class="language-plaintext highlighter-rouge">.js</code>, <code class="language-plaintext highlighter-rouge">.jsx</code>, <code class="language-plaintext highlighter-rouge">.html</code>, <code class="language-plaintext highlighter-rouge">.css</code>, <code class="language-plaintext highlighter-rouge">Makefile</code> (excluding test files).</li>
+          <li>Excluded: <code class="language-plaintext highlighter-rouge">*.md</code>, <code class="language-plaintext highlighter-rouge">*.json</code>, <code class="language-plaintext highlighter-rouge">*.lock</code>, <code class="language-plaintext highlighter-rouge">go.sum</code>, <code class="language-plaintext highlighter-rouge">package-lock.json</code>, <code class="language-plaintext highlighter-rouge">workspaces/**</code>, <code class="language-plaintext highlighter-rouge">.agenticlens/**</code>, <code class="language-plaintext highlighter-rouge">dist/**</code>, <code class="language-plaintext highlighter-rouge">node_modules/**</code>, <code class="language-plaintext highlighter-rouge">.git/**</code>, <code class="language-plaintext highlighter-rouge">.opencode/**</code>.</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li>
+<em>Robust Git Revision Range &amp; Branch Resolution</em>: The Python script relied heavily on <code class="language-plaintext highlighter-rouge">origin/main...HEAD</code> queries, which fail when <code class="language-plaintext highlighter-rouge">origin/main</code> is unpushed, absent, or when running in detached HEAD or worktree environments. The Go adapter must implement a multi-stage fallback resolution strategy:
+    <ul>
+      <li>Determine base branch merge-base dynamically (<code class="language-plaintext highlighter-rouge">git merge-base HEAD main</code> or <code class="language-plaintext highlighter-rouge">origin/main</code>).</li>
+      <li>If active branch matches the ticket ID, diff against merge-base.</li>
+      <li>If not on ticket branch, scan commit history with <code class="language-plaintext highlighter-rouge">git log --all --grep=&lt;ticket_id&gt;</code> across local and remote commits.</li>
+      <li>If a ticket branch exists locally or remotely, diff its head against <code class="language-plaintext highlighter-rouge">main</code> merge-base.</li>
+      <li>Fall back to commit body search if commit subjects do not match.</li>
+    </ul>
+  </li>
+  <li>
+<em>Division by Zero &amp; Ratio Safety</em>: Ensure test-to-production ratio derivations handle zero production lines gracefully without panic or invalid floating-point values.</li>
+  <li>
+<em>Clean Idempotent Summary Updates</em>: Ensure updating Markdown summaries is idempotent, preserves existing sections, and maintains zero emojis across all output.</li>
+</ol>
+
+<p><em>GOAL</em></p>
+
+<p>Implement a native Go extraction engine in <code class="language-plaintext highlighter-rouge">internal/adapters</code> and expose the <code class="language-plaintext highlighter-rouge">agentic-lens generate</code> CLI subcommand to resolve sessions, query OpenCode SQLite, compute multi-language git code metrics, and output compliant <code class="language-plaintext highlighter-rouge">agentic_metrics.json</code> ledgers.</p>
+
+<p><em>VERTICAL SLICE SCOPE</em></p>
+
+<ul>
+  <li>Domain Core: Ensure domain models in <code class="language-plaintext highlighter-rouge">internal/domain/models.go</code> support extraction input facts and code metrics.</li>
+  <li>SQLite Adapter: Create <code class="language-plaintext highlighter-rouge">internal/adapters/opencode/</code> using pure Go SQLite driver (<code class="language-plaintext highlighter-rouge">modernc.org/sqlite</code>) to query <code class="language-plaintext highlighter-rouge">session</code>, <code class="language-plaintext highlighter-rouge">part</code>, and <code class="language-plaintext highlighter-rouge">message</code> tables from <code class="language-plaintext highlighter-rouge">~/.local/share/opencode/opencode.db</code>. Extract invocations, roles, tokens, costs, durations, and tool executions.</li>
+  <li>Git Adapter: Create <code class="language-plaintext highlighter-rouge">internal/adapters/git/</code> to compute lines added/deleted, test/prod breakdown, and files changed with hybrid classification: load optional <code class="language-plaintext highlighter-rouge">code_metrics</code> patterns from <code class="language-plaintext highlighter-rouge">.agenticlens/config.json</code>, falling back to multi-language file extension and directory defaults.</li>
+  <li>CLI Engine: Add <code class="language-plaintext highlighter-rouge">generate</code> subcommand to <code class="language-plaintext highlighter-rouge">cmd/agentic-lens/main.go</code> accepting <code class="language-plaintext highlighter-rouge">--ticket-id</code>, <code class="language-plaintext highlighter-rouge">--nonce</code>, <code class="language-plaintext highlighter-rouge">--session-id</code>, <code class="language-plaintext highlighter-rouge">--json-output</code>, and <code class="language-plaintext highlighter-rouge">--append</code>.</li>
+  <li>Quality: Table-driven tests for OpenCode DB extraction using a test SQLite fixture and git parser tests. Zero CGO dependencies.</li>
+</ul>
+
+<p><em>ACCEPTANCE CRITERIA</em></p>
+
+<ul>
+  <li>
+<code class="language-plaintext highlighter-rouge">agentic-lens generate --ticket-id &lt;ID&gt; --json-output workspaces/&lt;ID&gt;/agentic_metrics.json</code> extracts and writes a valid ledger without Python.</li>
+  <li>Generated JSON matches existing schema specifications with identical token, cost, and code metrics.</li>
+  <li>Code facts accurately reflect multi-language code changes (Go, TypeScript, Python) with proper test vs prod breakdown and zero hardcoded directory exclusions.</li>
+  <li>Hybrid pattern overrides in <code class="language-plaintext highlighter-rouge">.agenticlens/config.json</code> are respected, falling back to universal multi-language defaults when omitted.</li>
+  <li>Robust git revision resolution correctly identifies changes across active branches, merge-bases, and commit searches even without remote <code class="language-plaintext highlighter-rouge">origin/main</code>.</li>
+  <li>Passing <code class="language-plaintext highlighter-rouge">--append &lt;path&gt;</code> updates the Markdown summary table idempotently.</li>
+  <li>Pure Go build succeeds with CGO_ENABLED=0 (<code class="language-plaintext highlighter-rouge">go test -race ./...</code>, <code class="language-plaintext highlighter-rouge">go vet ./...</code>).</li>
+  <li>Zero <code class="language-plaintext highlighter-rouge">any</code> or empty <code class="language-plaintext highlighter-rouge">interface{}</code> across new Go packages.</li>
+</ul>
+
+<p><em>DEFINITION OF DONE</em></p>
+
+<ul>
+  <li>Code and tests merged to target branch.</li>
+  <li>Quality gates passing (<code class="language-plaintext highlighter-rouge">go vet ./...</code>, <code class="language-plaintext highlighter-rouge">go test -race ./...</code>).</li>
+  <li>End-to-end extraction verified against active session.</li>
+</ul>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AL-58 support opencode v1 and v2 concurrently with dual version test environments.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/preview/142/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/preview/142/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><p>h3. Title: AL-58: Support OpenCode v1 and v2 Concurrently with Dual-Version Test Environments</p>
+
+<table>
+  <tbody>
+    <tr>
+      <td>
+<em>TARGET</em>: AgenticLens (OpenCode</td>
+      <td>domain</td>
+      <td>adapters</td>
+      <td>CLI/config</td>
+      <td>tests</td>
+      <td>documentation)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><em>CONTEXT</em></p>
+
+<p>OpenCode v2 is released, while AgenticLens currently supports the v1 runtime/data environment. Users need both versions supported during migration. Developers also need both versions runnable in the current environment so they can exercise compatibility and regression tests without state from one version contaminating the other. Exact v2 schema and storage differences must be verified from the released runtime as part of implementation discovery.</p>
+
+<p><em>GOAL</em></p>
+
+<p>Add concurrent OpenCode v1 and v2 compatibility while preserving v1 behavior, and provide an isolated, repeatable local workflow for running each version’s compatibility tests independently or together.</p>
+
+<p><em>VERTICAL SLICE SCOPE</em></p>
+
+<ul>
+  <li>OpenCode boundary adapters: identify source/runtime version and handle version-specific configuration, storage, and schema differences; normalize both versions into existing domain telemetry contracts.</li>
+  <li>Domain: keep calculations version-agnostic and pure; introduce only value-level distinctions needed to represent normalized facts or source version.</li>
+  <li>CLI/configuration: allow explicit selection where discovery is ambiguous and surface actionable errors for unsupported or malformed source data.</li>
+  <li>Test workflow: provide isolated v1 and v2 environments or fixtures, dedicated test entry points, and a combined compatibility run. Ensure each version has separate configuration and state. Unit tests must not require installed runtime binaries.</li>
+  <li>Presentation/diagnostics: expose source version where it aids traceability and explain supported versions and test setup in repository documentation.</li>
+  <li>Tests: preserve v1 regression coverage; add representative v2 compatibility and cross-version parity coverage. Exercise missing runtime, ambiguous selection, malformed input, and state isolation.</li>
+</ul>
+
+<p><em>ACCEPTANCE CRITERIA</em></p>
+
+<h1 id="existing-v1-fixtures-and-representative-v1-data-continue-to-ingest-with-equivalent-normalized-telemetry">Existing v1 fixtures and representative v1 data continue to ingest with equivalent normalized telemetry.</h1>
+<h1 id="representative-v2-data-ingests-into-the-same-domain-contracts-with-schema-differences-handled-explicitly-and-verified-against-released-v2">Representative v2 data ingests into the same domain contracts, with schema differences handled explicitly and verified against released v2.</h1>
+<h1 id="users-can-independently-select-v1-or-v2-sources-unsupported-malformed-or-ambiguous-inputs-produce-actionable-diagnostics-rather-than-silent-fallback">Users can independently select v1 or v2 sources; unsupported, malformed, or ambiguous inputs produce actionable diagnostics rather than silent fallback.</h1>
+<h1 id="a-documented-repeatable-workflow-runs-v1-and-v2-compatibility-suites-independently-and-together-in-the-current-development-environment">A documented repeatable workflow runs v1 and v2 compatibility suites independently and together in the current development environment.</h1>
+<h1 id="each-version-uses-isolated-runtime-configurationdatabase-state-running-one-suite-does-not-overwrite-or-contaminate-the-other">Each version uses isolated runtime configuration/database state; running one suite does not overwrite or contaminate the other.</h1>
+<h1 id="unit-tests-remain-deterministic-and-binary-independent-integration-tests-exercise-both-versions-using-isolated-runtimes-or-versioned-fixtures">Unit tests remain deterministic and binary-independent; integration tests exercise both versions using isolated runtimes or versioned fixtures.</h1>
+<h1 id="domain-logic-remains-pure-and-version-specific-io-remains-in-adapters-go-and-typescript-stay-strictly-typed-with-zero-interface--any">Domain logic remains pure and version-specific I/O remains in adapters; Go and TypeScript stay strictly typed with zero <code class="language-plaintext highlighter-rouge">interface{}</code> / <code class="language-plaintext highlighter-rouge">any</code>.</h1>
+<h1 id="no-emojis-are-added-to-code-comments-documentation-commands-or-output">No emojis are added to code, comments, documentation, commands, or output.</h1>
+
+<p><em>DEFINITION OF DONE</em></p>
+
+<p>Implementation and tests are reviewed; v1 regression and v2 compatibility suites pass; both per-version and combined test commands are documented and verified; configuration/state isolation and migration limitations are documented.</p>
+
+<p><em>Blocked by</em>: None</p>
+
+<p><em>Blocks</em>: None</p>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>
