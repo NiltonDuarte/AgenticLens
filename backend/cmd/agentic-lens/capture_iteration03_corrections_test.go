@@ -26,6 +26,7 @@ type correctionCaptureStatus struct {
 func correctionCaptureHistory(t *testing.T) captureGenerationFixture {
 	t.Helper()
 	f := newCaptureGenerationFixture(t)
+	seedEmptyCaptureLedger(t, f.output, "TEST-100")
 	local := fmt.Sprintf("telemetry:\n  capture:\n    pass_timeout_ms: 3000\n    max_sessions: 256\n    max_source_bytes: 67108864\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 5000\n    commit_warning: true\n    enabled: true\n    state_dir: %q\n", f.state)
 	if err := writeCaptureFixtureLocal(t, f, []byte(local)); err != nil {
 		t.Fatal(err)
@@ -352,6 +353,9 @@ func TestCaptureSamePinOtherProjectInstallPreservesAcknowledgedActiveWorker(t *t
 	f := newCaptureGenerationFixture(t)
 	enableCLIFixtureSummary(t, f.project)
 	f.output = filepath.Join(f.project, "records", "TEST-100", "agentic_metrics.json")
+	if err := os.MkdirAll(filepath.Dir(f.output), 0700); err != nil {
+		t.Fatal(err)
+	}
 	cache, wrappers := t.TempDir(), t.TempDir()
 	header := fmt.Sprintf("agenticlens:\n  version: %s\n  install_root: %q\n", "v9.8.7", cache)
 	shared := append([]byte(header), readCaptureFile(t, filepath.Join(f.project, ".agenticlens-config.yaml"))...)
@@ -360,6 +364,8 @@ func TestCaptureSamePinOtherProjectInstallPreservesAcknowledgedActiveWorker(t *t
 	}
 	local := fmt.Sprintf("telemetry:\n  capture:\n    pass_timeout_ms: 3000\n    max_sessions: 256\n    max_source_bytes: 67108864\n    commit_warning: true\n    enabled: false\n    state_dir: %q\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 1000\n    max_lifetime_ms: 20000\n", f.state)
 	local += fmt.Sprintf("  default_source: codex\n  sources:\n    codex:\n      home: %q\n", f.store)
+	local += fmt.Sprintf("agenticlens:\n  state_dir: %q\n", filepath.Join(f.project, ".publication-state"))
+	seedEmptyCaptureLedger(t, f.output, "TEST-100")
 	localPath := filepath.Join(f.project, ".agenticlens-config.local.yaml")
 	if err := os.WriteFile(localPath, []byte(local), 0600); err != nil {
 		t.Fatal(err)

@@ -23,3 +23,5 @@ The coordinator supplies a unique run ID, phase, candidate revision and requeste
 ## Handoff
 
 Use the review skill's evidence format and `APPROVED`, `CHANGES_REQUESTED` or `INCOMPLETE` outcomes. Report missing evidence rather than granting approval. Keep product correctness, existing debt and suggestions distinct. A scoped approval never certifies the whole repository. Reuse valid tests without substituting their status for your own investigation.
+
+Execution scope and approval live in the assigned change’s design.md, current steps in tasks.md, and human verification/PR evidence in delivery.md. Review/test evidence stays change-local under evidence/iterations/<NN>/. The roadmap ticket and index remain separate; follow AGENTS.md for their lifecycle.

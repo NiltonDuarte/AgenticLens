@@ -26,7 +26,7 @@ export const mockProjectConfig: ProjectConfigResponse = {
             ticket_type: 'docs',
         },
     ],
-    workspaces_dir: 'workspaces',
+    workspaces_roots: [{ path: 'workspaces', discovery: { max_depth: 1, max_directories: 300 } }],
     role_order: ['orchestrator', 'planner', 'coder', 'tester', 'reviewer'],
     version: 'v0.1.0-dev',
 };
@@ -414,6 +414,7 @@ export const mockTicketComparisonRows: readonly TicketComparisonRow[] = [
 ];
 export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLedger>> = {
     'AL-1': {
+        workspace_path: '/records/AL-1',
         ticket_id: 'AL-1',
         ticket_title: 'Core Go domain models and aggregations engine',
         ticket_type: 'feat',
@@ -763,6 +764,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
         ],
     },
     'AL-2': {
+        workspace_path: '/records/AL-2',
         ticket_id: 'AL-2',
         ticket_title: 'Go HTTP REST API and embedded filesystem server',
         ticket_type: 'feat',
@@ -998,6 +1000,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
         anomalies: mockAL2Anomalies,
     },
     'AL-3': {
+        workspace_path: '/records/AL-3',
         ticket_id: 'AL-3',
         ticket_title: 'TypeScript SPA dashboard and embedded single binary',
         ticket_type: 'feat',
@@ -1253,6 +1256,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
         ],
     },
     'PO-1': {
+        workspace_path: '/records/PO-1',
         ticket_id: 'PO-1',
         ticket_title: 'Product requirements decomposition and spec drafting',
         ticket_type: 'docs',
@@ -1420,6 +1424,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
         ],
     },
     'GEN-1': {
+        workspace_path: '/records/GEN-1',
         ticket_id: 'GEN-1',
         ticket_title: 'Telemetry extraction script and session verification',
         ticket_type: 'chore',
@@ -1659,6 +1664,7 @@ export const mockAgenticMetricsLedgers: Readonly<Record<string, AgenticMetricsLe
 };
 export const mockWorkspaceDetails: Readonly<Record<string, WorkspaceDetail>> = {
     'AL-1': {
+        workspace_path: '/records/AL-1',
         ledger: mockAgenticMetricsLedgers['AL-1']!,
         artifacts: {ticket_id: 'AL-1',
 items: [{path: 'CONTRACT.md', title: 'CONTRACT.md', description: '', content: `# Contract: AL-1 Core Go Domain Models and Aggregations Engine
@@ -1677,6 +1683,7 @@ Build the foundational Go domain model for AgenticLens representing atomic telem
         anomalies: [],
     },
     'AL-2': {
+        workspace_path: '/records/AL-2',
         ledger: mockAgenticMetricsLedgers['AL-2']!,
         artifacts: {ticket_id: 'AL-2',
 items: [{path: 'CONTRACT.md', title: 'CONTRACT.md', description: '', content: `# Contract: AL-2 Go HTTP REST API and Embedded Filesystem Server
@@ -1695,6 +1702,7 @@ Expose telemetry datasets via high-performance Go HTTP REST endpoints (/api/flee
         anomalies: mockAL2Anomalies,
     },
     'AL-3': {
+        workspace_path: '/records/AL-3',
         ledger: mockAgenticMetricsLedgers['AL-3']!,
         artifacts: {ticket_id: 'AL-3',
 items: [{path: 'CONTRACT.md', title: 'CONTRACT.md', description: '', content: `# Contract: AL-3 TypeScript SPA Dashboard and Embedded Single Binary
@@ -1713,6 +1721,7 @@ Scaffold the TypeScript React web frontend with Vite and provide the initial Fle
         anomalies: [],
     },
     'PO-1': {
+        workspace_path: '/records/PO-1',
         ledger: mockAgenticMetricsLedgers['PO-1']!,
         artifacts: {ticket_id: 'PO-1',
 items: [{path: 'CONTRACT.md', title: 'CONTRACT.md', description: '', content: `# Contract: PO-1 Product Requirements Decomposition
@@ -1729,6 +1738,7 @@ Define product specifications, tracer-bullet roadmap, and functional architectur
         anomalies: [],
     },
     'GEN-1': {
+        workspace_path: '/records/GEN-1',
         ledger: mockAgenticMetricsLedgers['GEN-1']!,
         artifacts: {ticket_id: 'GEN-1',
 items: [{path: 'CONTRACT.md', title: 'CONTRACT.md', description: '', content: `# Contract: GEN-1 Telemetry Extraction Script and Session Verification

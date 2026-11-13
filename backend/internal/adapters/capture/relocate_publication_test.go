@@ -16,9 +16,9 @@ import (
 	"agenticlens/internal/domain"
 )
 
-// Relocating capture storage must preserve an interrupted public artifact set at
-// its exact authorized destination. State copying must not invent a second
-// journal or turn the partially replaced ledger into accepted source evidence.
+// Relocating capture storage preserves public pending artifacts and their
+// separate private operational journal. It must not copy transaction state into
+// the capture registry or accept a partially replaced ledger as source evidence.
 func TestRelocationPreservesActualRecoverablePublicationJournal(t *testing.T) {
 	root := t.TempDir()
 	t.Setenv("XDG_CACHE_HOME", filepath.Join(root, "cache"))
@@ -42,7 +42,7 @@ func TestRelocationPreservesActualRecoverablePublicationJournal(t *testing.T) {
 		t.Fatal(err)
 	}
 	localPath := filepath.Join(project, ".agenticlens-config.local.yaml")
-	if err = os.WriteFile(localPath, []byte("telemetry:\n  capture:\n    enabled: true\n    state_dir: before-update\n"), 0600); err != nil {
+	if err = os.WriteFile(localPath, []byte("agenticlens:\n  state_dir: publication-state\ntelemetry:\n  capture:\n    enabled: true\n    state_dir: before-update\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	update, err := adaptersconfig.PrepareCaptureConfigUpdate(localPath, source)
@@ -80,13 +80,22 @@ func TestRelocationPreservesActualRecoverablePublicationJournal(t *testing.T) {
 		}
 	}
 	members := []string{ledger, summary}
+	publication, err := capture.AcquirePublication(context.Background(), ledger)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err = adapters.BeginPublication(ledger, members); err != nil {
 		t.Fatal(err)
 	}
 	if err = os.WriteFile(ledger, []byte("uncommitted partial replacement"), 0600); err != nil {
 		t.Fatal(err)
 	}
+	if err = publication.Close(); err != nil {
+		t.Fatal(err)
+	}
 	journal := ledger + ".publication-pending"
+	privateDirectory := filepath.Join(project, "publication-state", "publication")
+	privateBefore := publicationPrivateFiles(t, privateDirectory)
 	before := map[string][]byte{}
 	identities := map[string]os.FileInfo{}
 	for _, path := range []string{ledger, summary, journal} {
@@ -167,6 +176,10 @@ func TestRelocationPreservesActualRecoverablePublicationJournal(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
+	privateAfter := publicationPrivateFiles(t, privateDirectory)
+	if !reflect.DeepEqual(privateAfter, privateBefore) {
+		t.Fatal("capture relocation changed private operational publication state")
+	}
 	current, err := capture.OpenProject(result.Destination, project)
 	if err != nil {
 		t.Fatal(err)
@@ -180,6 +193,11 @@ func TestRelocationPreservesActualRecoverablePublicationJournal(t *testing.T) {
 	if err != nil || pending.Generation != 9 || pending.Acknowledged != 4 {
 		t.Fatalf("interrupted publication was falsely acknowledged: %+v %v", pending, err)
 	}
+	publication, err = capture.AcquirePublication(context.Background(), ledger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer publication.Close()
 	if recovered, err := adapters.RecoverPublication(ledger, members); err != nil || !recovered {
 		t.Fatalf("original public journal no longer recovers: %v %v", recovered, err)
 	}
@@ -195,4 +213,30 @@ func TestRelocationPreservesActualRecoverablePublicationJournal(t *testing.T) {
 	if recovered, err := adapters.RecoverPublication(ledger, members); err != nil || recovered {
 		t.Fatalf("public recovery not idempotent: %v %v", recovered, err)
 	}
+}
+
+func publicationPrivateFiles(t *testing.T, root string) map[string]string {
+	t.Helper()
+	files := map[string]string{}
+	if err := filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+		files[rel] = string(data)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	return files
 }

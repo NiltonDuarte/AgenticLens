@@ -34,6 +34,7 @@ type EntrypointConfig struct {
 	BinaryDir   string `json:"binary_dir,omitempty" yaml:"binary_dir,omitempty"`
 	Version     string `json:"version" yaml:"version"`
 	InstallRoot string `json:"install_root,omitempty" yaml:"install_root,omitempty"`
+	StateDir    string `json:"-" yaml:"state_dir,omitempty"`
 }
 
 // EffectiveHealthyCeiling returns the configured denominator. Callers must validate
@@ -130,8 +131,21 @@ type WorkspaceArtifactConfig struct {
 
 // WorkspacesConfig defines filesystem paths for ticket workspaces and artifacts.
 type WorkspacesConfig struct {
-	Dir       string                    `json:"dir" yaml:"dir"`
+	Roots     []WorkspaceRootConfig     `json:"roots" yaml:"roots"`
 	Artifacts []WorkspaceArtifactConfig `json:"artifacts" yaml:"artifacts"`
+}
+
+// WorkspaceDiscoveryConfig bounds the explicitly selected filesystem search.
+type WorkspaceDiscoveryConfig struct {
+	MaxDepth       int `json:"max_depth" yaml:"max_depth"`
+	MaxDirectories int `json:"max_directories" yaml:"max_directories"`
+}
+
+// WorkspaceRootConfig associates an explicit search path with its scope and artifacts.
+type WorkspaceRootConfig struct {
+	Path      string                    `json:"path" yaml:"path"`
+	Discovery WorkspaceDiscoveryConfig  `json:"discovery" yaml:"discovery"`
+	Artifacts []WorkspaceArtifactConfig `json:"artifacts,omitempty" yaml:"artifacts,omitempty"`
 }
 
 // DatabaseConfig specifies SQLite database connection and query execution parameters.

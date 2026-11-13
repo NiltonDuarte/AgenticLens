@@ -23,8 +23,9 @@ class TicketsSiteTest < Minitest::Test
   end
 
   def fixture(workspace: "custom tickets", config: true)
-    @project.join(".agenticlens-config.yaml").write("workspaces:\n  dir: #{workspace.inspect}\n") if config
-    plan = @project.join(workspace, "plan")
+    @project.join(".agenticlens-config.yaml").write("workspaces:\n  roots: []\n") if config
+    @roadmap = @project.join(workspace, "plan")
+    plan = @roadmap
     plan.join("to-do").mkpath
     plan.join("done").mkpath
     plan.join("TICKETS.md").write(<<~MARKDOWN)
@@ -86,10 +87,10 @@ class TicketsSiteTest < Minitest::Test
     plan
   end
 
-  def build(base_path: "/FixtureRepo", output: @output, process_options: {})
+  def build(base_path: "/FixtureRepo", output: @output, process_options: {}, roadmap: @roadmap)
     Open3.capture3(
       RbConfig.ruby, BUILDER, "--project", @project.to_s,
-      "--output", output.to_s, "--repository", "fixture-owner/FixtureRepo",
+      "--roadmap", roadmap.to_s, "--output", output.to_s, "--repository", "fixture-owner/FixtureRepo",
       "--revision", "0123456789abcdef", "--base-path", base_path,
       **process_options
     )
@@ -214,9 +215,9 @@ class TicketsSiteTest < Minitest::Test
     end
   end
 
-  def test_default_workspace_without_configuration_or_workspace_key
+  def test_explicit_roadmap_is_independent_of_telemetry_configuration
     fixture(workspace: "workspaces", config: false)
-    [nil, "project_name: Fixture\n", "workspaces: {}\n"].each do |config|
+    [nil, "project_name: Fixture\n", "workspaces:\n  roots: []\n"].each do |config|
       @project.join(".agenticlens-config.yaml").write(config) if config
       assert_build(base_path: "")
       welcome = document(@output.join("index.html"))
@@ -224,6 +225,14 @@ class TicketsSiteTest < Minitest::Test
       roadmap = document(@output.join("roadmap/index.html"))
       assert_includes links(roadmap), "/roadmap/to-do/TASK-Z%20sample.html#details"
     end
+  end
+
+  def test_missing_roadmap_requires_explicit_selection
+    fixture
+    stdout, stderr, status = build(roadmap: "")
+    refute status.success?
+    assert_includes stdout + stderr, "--roadmap PATH is required"
+    refute @output.exist?
   end
 
   def test_repeated_build_removes_stale_pages_and_renders_source_updates

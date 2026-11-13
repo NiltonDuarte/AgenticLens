@@ -300,57 +300,7 @@ func TestCodeFactsUsesSelectedRepositoryDespiteInheritedGitOverrides(t *testing.
 func TestLoadConfigCentralizedClassification(t *testing.T) {
 	t.Parallel()
 	repo := t.TempDir()
-	const content = `project_name: GitAnalyzerTest
-agenticlens:
-  version: v1.2.3
-ticket:
-  prefixes:
-    - prefix: CASE-
-      description: Isolated test tickets
-  case_insensitive: false
-workspaces:
-  dir: tickets
-  artifacts: []
-role_mappings: {}
-role_order: []
-generation:
-  metrics:
-    skills: false
-    delegations: false
-    anomalies: false
-  feedback:
-    provisional_threshold_seconds: 0
-  summary:
-    enabled: false
-code_metrics:
-  base_branch: missing-but-not-needed-for-classification
-  production:
-    include: ["custom/include/**", "*.custom_prod"]
-    exclude: ["custom/include/excluded/**"]
-  tests:
-    include: ["*_test_custom.go"]
-    exclude: []
-database:
-  busy_timeout_ms: 17
-live:
-  active_threshold_seconds: 60
-  poll_interval_ms: 100
-anomaly_thresholds:
-  stall_threshold_seconds: 15
-  error_rate_min_calls: 5
-  error_rate_threshold: 0.25
-  error_rate_critical_threshold: 0.7
-  context_ceiling_warning_tokens: 160000
-  context_ceiling_critical_tokens: 200000
-  consecutive_errors_streak_warning: 2
-  consecutive_errors_streak_critical: 4
-  tool_thrashing_min_failures: 3
-  tool_thrashing_critical_failures: 5
-  turn_usage_warning_tokens: 1000
-  turn_usage_critical_tokens: 2000
-  context_growth_warning_tokens: 500
-  context_growth_critical_tokens: 1000
-`
+	const content = "project_name: GitAnalyzerTest\nagenticlens:\n  version: v1.2.3\nticket:\n  prefixes:\n    - prefix: CASE-\n      description: Isolated test tickets\n  case_insensitive: false\nworkspaces:\n  roots:\n    - path: tickets\n      discovery:\n        max_depth: 8\n        max_directories: 300\n  artifacts: []\nrole_mappings: {}\nrole_order: []\ngeneration:\n  metrics:\n    skills: false\n    delegations: false\n    anomalies: false\n  feedback:\n    provisional_threshold_seconds: 0\n  summary:\n    enabled: false\ncode_metrics:\n  base_branch: missing-but-not-needed-for-classification\n  production:\n    include: [\"custom/include/**\", \"*.custom_prod\"]\n    exclude: [\"custom/include/excluded/**\"]\n  tests:\n    include: [\"*_test_custom.go\"]\n    exclude: []\ndatabase:\n  busy_timeout_ms: 17\nlive:\n  active_threshold_seconds: 60\n  poll_interval_ms: 100\nanomaly_thresholds:\n  stall_threshold_seconds: 15\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.7\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n  consecutive_errors_streak_warning: 2\n  consecutive_errors_streak_critical: 4\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  turn_usage_warning_tokens: 1000\n  turn_usage_critical_tokens: 2000\n  context_growth_warning_tokens: 500\n  context_growth_critical_tokens: 1000\n"
 	writeFile(t, repo, ".agenticlens-config.yaml", []byte(content))
 	cfg, err := git.LoadConfig(repo)
 	if err != nil {

@@ -20,11 +20,6 @@ func ConfigHandler(cfg domain.ProjectConfig, workspacesDir string) http.HandlerF
 			copy(sanitizedPrefixes, cfg.Ticket.Prefixes)
 		}
 
-		dir := strings.TrimSpace(workspacesDir)
-		if dir == "" {
-			dir = strings.TrimSpace(cfg.Workspaces.Dir)
-		}
-
 		var sanitizedRoleOrder []string
 		if len(cfg.RoleOrder) == 0 {
 			sanitizedRoleOrder = make([]string, 0)
@@ -35,12 +30,17 @@ func ConfigHandler(cfg domain.ProjectConfig, workspacesDir string) http.HandlerF
 
 		version := domain.GetBuildInfo().Version
 
+		roots := make([]domain.WorkspaceRootConfig, len(cfg.Workspaces.Roots))
+		for i, root := range cfg.Workspaces.Roots {
+			roots[i] = domain.WorkspaceRootConfig{Path: root.Path, Discovery: root.Discovery}
+		}
+
 		dto := ProjectConfigDTO{
 			ProjectName:     projectName,
 			Prefixes:        sanitizedPrefixes,
 			CaseInsensitive: cfg.Ticket.CaseInsensitive,
 			RoleMappings:    cfg.RoleMappings,
-			WorkspacesDir:   dir,
+			WorkspacesRoots: roots,
 			RoleOrder:       sanitizedRoleOrder,
 			Version:         version,
 		}

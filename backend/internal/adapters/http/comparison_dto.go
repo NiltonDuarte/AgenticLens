@@ -6,6 +6,7 @@ import (
 
 // TicketComparisonRowDTO is the concrete nullable cost projection of TicketComparisonRow.
 type TicketComparisonRowDTO struct {
+	WorkspacePath           string                         `json:"workspace_path"`
 	Tags                    map[string]string              `json:"tags,omitempty"`
 	ProvisionalSeconds      int64                          `json:"provisional_seconds,omitempty"`
 	SkillsUsed              []string                       `json:"skills_used,omitzero"`
@@ -36,6 +37,7 @@ type TicketComparisonRowDTO struct {
 func TicketComparisonRowDTOFromDomain(value domain.TicketComparisonRow) TicketComparisonRowDTO {
 	summary := domain.EffectiveCostSummary(value.CostSummary, value.CostUSD, int64(0))
 	return TicketComparisonRowDTO{
+		WorkspacePath:           value.WorkspacePath,
 		Tags:                    domain.MergeTags(nil, value.Tags),
 		ProvisionalSeconds:      value.ProvisionalSeconds,
 		SkillsUsed:              value.SkillsUsed,

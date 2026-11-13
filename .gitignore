@@ -60,3 +60,6 @@ coverage.html
 
 # Kernel-owned ledger publication coordination (not ticket artifacts)
 *.agenticlens-lock
+
+# Pinned development-only OpenSpec dependencies
+tools/openspec/node_modules/

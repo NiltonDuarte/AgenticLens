@@ -81,6 +81,7 @@ func TestServerOptionalSourcePolicyPreservesRecordedLedger(t *testing.T) {
 	for _, scenario := range []string{"source-free", "missing-busy-timeout", "explicit-zero-control"} {
 		t.Run(scenario, func(t *testing.T) {
 			workspaces := setupTestWorkspace(t)
+			configureExplicitPolicyWorkspace(t, workspaces)
 			project := filepath.Dir(workspaces)
 			shared := filepath.Join(project, ".agenticlens-config.yaml")
 			body := readCaptureFile(t, shared)
@@ -129,7 +130,7 @@ func TestServerOptionalSourcePolicyPreservesRecordedLedger(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			cmd := exec.Command(cliBinaryPath, "server", "--workspaces", workspaces, "--port", fmt.Sprint(port))
+			cmd := exec.Command(cliBinaryPath, "server", "--port", fmt.Sprint(port))
 			cmd.Dir = project
 			cmd.Stdout = log
 			cmd.Stderr = log
@@ -177,6 +178,9 @@ func TestServerOptionalSourcePolicyPreservesRecordedLedger(t *testing.T) {
 func TestGenerateSharedSummaryNameAppendPrecedenceAndAdmission(t *testing.T) {
 	f := newCaptureGenerationFixture(t)
 	f.output = filepath.Join(f.project, "records", "TEST-100", "agentic_metrics.json")
+	if err := os.MkdirAll(filepath.Dir(f.output), 0700); err != nil {
+		t.Fatal(err)
+	}
 	f.bind(t, f.write(t, 17))
 	cfg, err := adaptersconfig.LoadShared(f.project)
 	if err != nil {
@@ -205,7 +209,7 @@ func TestGenerateSharedSummaryNameAppendPrecedenceAndAdmission(t *testing.T) {
 		t.Fatalf("invented summary filename: %v", err)
 	}
 	configuredBefore := readCaptureFile(t, configured)
-	override := filepath.Join(f.project, "manual-summary.md")
+	override := filepath.Join(filepath.Dir(f.output), "manual-summary.md")
 	cfg.Generation.Summary.Enabled = false
 	write()
 	f.writeAt(t, 31, "2026-01-01T00:00:03Z")
@@ -236,7 +240,13 @@ func TestBackfillFreshGitFailurePreservesPreparedMigrationBytes(t *testing.T) {
 	for _, version := range []int{5, 6} {
 		t.Run(fmt.Sprint(version), func(t *testing.T) {
 			workspaces := setupTestWorkspace(t)
+			configureExplicitPolicyWorkspace(t, workspaces)
 			project := filepath.Dir(workspaces)
+			localPath := filepath.Join(project, ".agenticlens-config.local.yaml")
+			local := append([]byte(fmt.Sprintf("agenticlens:\n  state_dir: %q\n", filepath.Join(project, "publication-state"))), readCaptureFile(t, localPath)...)
+			if err := os.WriteFile(localPath, local, 0600); err != nil {
+				t.Fatal(err)
+			}
 			path := filepath.Join(workspaces, "TICKET-1", "agentic_metrics.json")
 			var root map[string]json.RawMessage
 			if err := json.Unmarshal(readCaptureFile(t, path), &root); err != nil {
@@ -256,7 +266,7 @@ func TestBackfillFreshGitFailurePreservesPreparedMigrationBytes(t *testing.T) {
 			if err = os.WriteFile(summary, summaryBefore, 0600); err != nil {
 				t.Fatal(err)
 			}
-			cmd := exec.Command(cliBinaryPath, "backfill", "--source", "opencode", "--workspaces", workspaces, "--ticket-id", "TICKET-1", "--migrate-schema", "--update-summaries", "--recompute-git", "--code-ref", "missing-selected-ref")
+			cmd := exec.Command(cliBinaryPath, "backfill", "--source", "opencode", "--ticket-id", "TICKET-1", "--migrate-schema", "--update-summaries", "--recompute-git", "--code-ref", "missing-selected-ref")
 			cmd.Dir = project
 			out, runErr := cmd.CombinedOutput()
 			if !bytes.Contains(out, []byte("missing-selected-ref")) || !bytes.Contains(out, []byte("requested Git measurement failed before publication")) || !bytes.Contains(out, []byte("Updated: 0")) {
@@ -269,5 +279,22 @@ func TestBackfillFreshGitFailurePreservesPreparedMigrationBytes(t *testing.T) {
 				t.Fatalf("failed fresh calculation installed migration backup: %v", err)
 			}
 		})
+	}
+}
+
+// configureExplicitPolicyWorkspace selects this fixture's actual ledger container.
+// It leaves source policy untouched so the source-free cases can remove it entirely.
+func configureExplicitPolicyWorkspace(t *testing.T, root string) {
+	t.Helper()
+	path := filepath.Join(filepath.Dir(root), ".agenticlens-config.yaml")
+	body := readCaptureFile(t, path)
+	before := []byte("    - path: records\n")
+	if !bytes.Contains(body, before) {
+		t.Fatal("fixture workspace root policy not found")
+	}
+	body = bytes.Replace(body, before, []byte(fmt.Sprintf("    - path: %q\n", root)), 1)
+	body = bytes.Replace(body, []byte("max_depth: 8"), []byte("max_depth: 1"), 1)
+	if err := os.WriteFile(path, body, 0600); err != nil {
+		t.Fatal(err)
 	}
 }

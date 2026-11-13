@@ -35,7 +35,7 @@ func TestCLIMigrationUsesDirectV5ToFinalV6AndRejectsUnreleasedSchemas(t *testing
 				t.Fatal(err)
 			}
 			if tc.success {
-				dry := exec.Command(cliBinaryPath, "migrate", "--workspaces", root, "--target-version", "6", "--backup", "--dry-run")
+				dry := exec.Command(cliBinaryPath, "migrate", "--target-version", "6", "--backup", "--dry-run")
 				dry.Dir = fixture.project
 				preview, err := dry.CombinedOutput()
 				if err != nil || !strings.Contains(string(preview), "dropped ownerless skills=1 task_links=0") || !strings.Contains(string(preview), "Dry run: no ledgers or backups were written") || strings.Contains(string(preview), "  Backup:") {
@@ -48,7 +48,7 @@ func TestCLIMigrationUsesDirectV5ToFinalV6AndRejectsUnreleasedSchemas(t *testing
 					t.Fatalf("dry-run created rollback backup: %v", err)
 				}
 			}
-			cmd := exec.Command(cliBinaryPath, "migrate", "--workspaces", root, "--ticket-id", "TEST-100", "--target-version", "6", "--backup")
+			cmd := exec.Command(cliBinaryPath, "migrate", "--ticket-id", "TEST-100", "--target-version", "6", "--backup")
 			cmd.Dir = fixture.project
 			out, err := cmd.CombinedOutput()
 			if err != nil {
@@ -99,7 +99,7 @@ func TestCLIBackfillReportsCompletedAuditBeforeRemovingMetadata(t *testing.T) {
 	if err := os.WriteFile(path, before, 0600); err != nil {
 		t.Fatal(err)
 	}
-	cmd := exec.Command(cliBinaryPath, "backfill", "--source", "codex", "--workspaces", root)
+	cmd := exec.Command(cliBinaryPath, "backfill", "--source", "codex")
 	cmd.Dir = fixture.project
 	out, err := cmd.CombinedOutput()
 	if err != nil {

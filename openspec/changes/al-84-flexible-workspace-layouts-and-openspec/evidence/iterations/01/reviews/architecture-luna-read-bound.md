@@ -1,0 +1,17 @@
+# AL-84 architecture read-binding recheck: APPROVED
+
+Run `/root/al84_architecture_final`, iteration 01 read-binding verification; requested profile `gpt-6.1-sol` / high. Runtime model, usage and cost were not independently observed. Reviewed baseline `163181428ee9a5a599a2da1e91d3af5e618a9682` plus candidate `build/al84-review/READ_BOUND_MANIFEST.json`, embedded content-map hash `41a2ee0b246538aba898442b36c22015511557d4fca7e231504f6f9a3d068720`. All 674 listed file hashes match the checkout. The delta contains three production files and two tests. No product or test files were changed in this review.
+
+## Findings
+
+No blocking architecture or lifecycle finding in the scoped correction. `resolveTicketReadLocation` retains a descriptor only for internal repository read resolution. The descriptor keeps the selected physical directory inode alive without holding the publication flock. Final admission opens the path again and compares its directory identity with the observed `FileInfo`; on mismatch or stat failure it closes the attempted lease and returns an unavailable/retry error. On success, ledger bytes, both pending-marker checks, and configured artifacts are read through the same held directory root. Thus same-ID replacement cannot silently substitute another copy or mix its ledger and artifacts.
+
+Reference ownership is bounded: rejected identities close their candidate reference; nonmatches and surplus matches close immediately; ambiguity, incomplete uniqueness and later resolver errors close the retained candidate in the resolver defer. Every repository consumer closes its reference on success and error. Final leases close before retained references. Public runtime and maintenance resolver modes retain no descriptor; writer admission and ownership continue to use their existing lock path. The independent reference therefore does not add reader/writer deadlock or alter publication ownership.
+
+The `publication_set.go` change only extracts `readDirectoryLedger`; its pre-read and post-read pending checks remain around the same descriptor-rooted ledger read. ARCH-01 journal ancestry durability and marker/member ordering are untouched. Capture package behavior, FCIS boundaries, configuration/API contracts, private journal state and workspace identity rules are unchanged. Prior architecture evidence carries forward for those unchanged surfaces; this report does not re-audit them.
+
+## Hypotheses and evidence
+
+Inspected the five-file diff, resolution and repository callers, descriptor/lease implementation in `capture`, error cleanup paths, and the corrected snapshot and Linux replacement tests. The tests establish deterministic resolved-A then same-ID-B rejection, fresh resolution of B, coherent ledger/artifact detail during replacement, and writer admission while the reference is held. `SAME_ID_TEST_RECEIPT.json` reports affected ordinary and race adapter/capture/HTTP checks, focused CLI selection checks, and an expected failure when the physical-directory guard is disabled. Its 362 backend source hashes were independently reported as matching in the receipt; these runs were read from the receipt, not rerun here. I independently verified all 674 candidate manifest hashes.
+
+Limits: no tests or integrated `make` were run in this architecture recheck; parent-owned integrated verification remains pending. No macOS, native extraction, or physical power-loss test was repeated. This scoped approval covers the read-binding delta only and does not authorize merge or establish whole-change approval.

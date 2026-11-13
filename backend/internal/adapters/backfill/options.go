@@ -6,7 +6,8 @@ import "time"
 type BackfillOptions struct {
 	// SnapshotCutoff is optional for deterministic callers; zero selects the operation start.
 	SnapshotCutoff  time.Time
-	WorkspacesDir   string
+	Project         string
+	Workspace       string
 	TicketID        string
 	Source          string
 	CodexHome       string
@@ -23,7 +24,8 @@ type BackfillOptions struct {
 
 // MigrationOptions specifies parameters for standalone universal schema migration.
 type MigrationOptions struct {
-	WorkspacesDir   string
+	Project         string
+	Workspace       string
 	TicketID        string
 	TargetVersion   int
 	DryRun          bool

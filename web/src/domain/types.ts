@@ -160,7 +160,8 @@ export function ledgerDelegations(ledger: OwnedFactLedger | undefined, sessionId
 
 export type WorkspaceDiagnostic = {
   readonly scope?: 'workspace';
-  readonly ticket_id: string;
+  readonly ticket_id?: string;
+  readonly path?: string;
   readonly message: string;
 } | {
   /** Local response warning, not a rejected ticket or persisted fact. */
@@ -290,6 +291,8 @@ export interface ThreadExecutionRecord {
 }
 
 export interface AgenticMetricsLedger {
+  /** Resolved location supplied by the API; never ticket identity. */
+  readonly workspace_path?: string;
   readonly ticket_id: string | null;
   readonly ticket_title: string | null;
   readonly ticket_type: TicketType | null;
@@ -337,6 +340,7 @@ export interface FleetSummary {
 }
 
 export interface TicketComparisonRow {
+  readonly workspace_path?: string;
   readonly tags?: Readonly<Record<string, string>>;
  readonly provisional_seconds?: number;
   readonly skills_used?: readonly string[];
@@ -377,6 +381,7 @@ export interface TicketArtifacts {
 }
 
 export interface WorkspaceDetail {
+  readonly workspace_path?: string;
   readonly ledger: AgenticMetricsLedger;
   readonly artifacts: TicketArtifacts;
   readonly anomalies?: readonly Anomaly[];
@@ -444,10 +449,15 @@ export interface TicketPrefixConfig {
   readonly ticket_type?: string;
 }
 
+export interface WorkspaceRootConfig {
+  readonly path: string;
+  readonly discovery: { readonly max_depth: number; readonly max_directories: number };
+}
+
 export interface ProjectConfigResponse {
   readonly project_name: string;
   readonly prefixes: readonly TicketPrefixConfig[];
-  readonly workspaces_dir: string;
+  readonly workspaces_roots: readonly WorkspaceRootConfig[];
   readonly role_order: readonly string[];
   readonly role_mappings: Readonly<Record<string, string>>;
   readonly case_insensitive: boolean;

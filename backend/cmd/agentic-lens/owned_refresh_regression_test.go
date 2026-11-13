@@ -12,6 +12,7 @@ import (
 
 	"agenticlens/internal/adapters"
 	"agenticlens/internal/domain"
+	"gopkg.in/yaml.v3"
 )
 
 // Invoke the actual CLI without fixture.args: a receiving machine has no
@@ -60,7 +61,9 @@ func TestGenerateCopiedLedgerPreservesUnavailableOwnedFactsWithoutPinnedDestinat
 	ledger := b.ledger(t)
 	ledger.Sessions[0].Skills = []domain.SkillFact{{Name: "unavailable-skill"}}
 	ledger.Sessions[0].Delegations = []domain.DelegationFact{{Description: "unavailable-task"}}
-	copied := filepath.Join(b.project, "copied-ledger.json")
+	copied := filepath.Join(b.project, "copied-ledger", "agentic_metrics.json")
+	restoreScope := selectGenerateControlHome(t, b.project, filepath.Dir(copied))
+	defer restoreScope()
 	if err := adapters.SaveFactLedger(copied, ledger); err != nil {
 		t.Fatal(err)
 	}
@@ -321,5 +324,42 @@ func TestGenerateDiscoveryErrorsRespectSelectedNativeFamily(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// Independent authoritative controls use their own explicitly configured home,
+// while retaining the native source's project identity and private-state absence.
+func selectGenerateControlHome(t *testing.T, project, home string) func() {
+	t.Helper()
+	if err := os.MkdirAll(home, 0700); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(project, ".agenticlens-config.yaml")
+	prior, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var document yaml.Node
+	if err := yaml.Unmarshal(prior, &document); err != nil {
+		t.Fatal(err)
+	}
+	var roots yaml.Node
+	selected := fmt.Sprintf("- path: %q\n  discovery:\n    max_depth: 0\n    max_directories: 300\n", home)
+	if err := yaml.Unmarshal([]byte(selected), &roots); err != nil {
+		t.Fatal(err)
+	}
+	workspaces := fixtureMapping(document.Content[0], "workspaces")
+	fixtureSet(workspaces, "roots", roots.Content[0])
+	body, err := yaml.Marshal(&document)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, body, 0600); err != nil {
+		t.Fatal(err)
+	}
+	return func() {
+		if err := os.WriteFile(path, prior, 0600); err != nil {
+			t.Fatal(err)
+		}
 	}
 }

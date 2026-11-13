@@ -297,7 +297,8 @@
           "count": 3
         }
       }
-    ]
+    ],
+    "workspace_path": "/records/T-01"
   },
   "artifacts": {
     "ticket_id": "T-01",
@@ -314,5 +315,6 @@
         "count": 3
       }
     }
-  ]
+  ],
+  "workspace_path": "/records/T-01"
 }

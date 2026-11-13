@@ -60,7 +60,7 @@ jobs:
           bundle config set --local path vendor/bundle
           bundle install
           bundle exec ruby .github/pages/tests/site_test.rb
-          bundle exec ruby .github/pages/build.rb --repository "$REPOSITORY" --revision "$REVISION" --base-path "/$REPOSITORY_NAME"
+          bundle exec ruby .github/pages/build.rb --roadmap alspaces/plan --repository "$REPOSITORY" --revision "$REVISION" --base-path "/$REPOSITORY_NAME"
       - uses: actions/upload-artifact@v4
         with:
           name: portal-production
@@ -94,7 +94,7 @@ jobs:
           bundle config set --local path vendor/bundle
           bundle install
           bundle exec ruby .github/pages/tests/site_test.rb
-          bundle exec ruby .github/pages/build.rb --repository "$REPOSITORY" --revision "$REVISION" --base-path "/$REPOSITORY_NAME/preview/$PREVIEW_NUMBER"
+          bundle exec ruby .github/pages/build.rb --roadmap alspaces/plan --repository "$REPOSITORY" --revision "$REVISION" --base-path "/$REPOSITORY_NAME/preview/$PREVIEW_NUMBER"
       - uses: actions/upload-artifact@v4
         with:
           name: portal-candidate

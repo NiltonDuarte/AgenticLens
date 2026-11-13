@@ -22,10 +22,11 @@ const (
 )
 
 type LedgerFormatOptions struct {
-	Workspaces string
-	All        bool
-	TicketIDs  []string
-	Mode       LedgerFormatMode
+	Project   string
+	Workspace string
+	All       bool
+	TicketIDs []string
+	Mode      LedgerFormatMode
 }
 type LedgerFormatResult struct {
 	Path    string
@@ -34,11 +35,12 @@ type LedgerFormatResult struct {
 	Error   error
 }
 type formatTarget struct {
-	path   string
-	data   []byte
-	mode   fs.FileMode
-	lock   *capture.PublicationLock
-	result int
+	path     string
+	data     []byte
+	mode     fs.FileMode
+	lock     *capture.PublicationLock
+	readLock *capture.ReadDirectory
+	result   int
 }
 
 func withinFormatRoot(root, path string) bool {
@@ -49,51 +51,29 @@ func formatLedgerPaths(opts LedgerFormatOptions) ([]string, string, error) {
 	if opts.All == (len(opts.TicketIDs) > 0) {
 		return nil, "", errors.New("exactly one ledger selection is required")
 	}
-	root, err := ResolveWorkspacesDir(opts.Workspaces)
+	root, cfg, err := LoadWorkspaceProject(opts.Project)
 	if err != nil {
 		return nil, "", err
 	}
-	root, err = filepath.Abs(root)
-	if err != nil {
-		return nil, "", err
-	}
-	root, err = filepath.EvalSymlinks(root)
-	if err != nil {
-		return nil, "", fmt.Errorf("workspace root: %w", err)
-	}
-	info, err := os.Stat(root)
-	if err != nil {
-		return nil, "", err
-	}
-	if !info.IsDir() {
-		return nil, "", errors.New("workspace root must be a directory")
+	locations, diagnostics := DiscoverWorkspaceLocations(cfg)
+	if opts.All && len(diagnostics) > 0 {
+		return nil, "", fmt.Errorf("incomplete discovery: %s", diagnostics[0].Message)
 	}
 	paths := []string{}
 	if opts.All {
-		err = filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
-			if walkErr != nil {
-				return walkErr
-			}
-			if !entry.IsDir() && entry.Name() == "agentic_metrics.json" {
-				paths = append(paths, path)
-			}
-			return nil
-		})
-		if err != nil {
-			return nil, "", fmt.Errorf("discovering ledgers: %w", err)
+		for _, location := range locations {
+			paths = append(paths, location.LedgerPath)
 		}
 	} else {
-		seen := map[string]bool{}
 		for _, id := range opts.TicketIDs {
-			if id == "" || id == "." || id == ".." || strings.TrimSpace(id) != id || strings.ContainsAny(id, "/\\\x00") || filepath.IsAbs(id) {
-				return nil, "", fmt.Errorf("unsafe or empty ticket ID %q", id)
+			location, e := ResolveMaintenanceLocation(cfg, id, opts.Workspace)
+			if e != nil {
+				return nil, "", e
 			}
-			if !seen[id] {
-				paths = append(paths, filepath.Join(root, id, "agentic_metrics.json"))
-				seen[id] = true
-			}
+			paths = append(paths, location.LedgerPath)
 		}
 	}
+
 	sort.Strings(paths)
 	return paths, root, nil
 }
@@ -104,7 +84,7 @@ func FormatLedgerFiles(ctx context.Context, opts LedgerFormatOptions) (results [
 	if opts.Mode != "" && opts.Mode != LedgerFormatWrite && opts.Mode != LedgerFormatDryRun && opts.Mode != LedgerFormatCheck {
 		return nil, errors.New("invalid format mode")
 	}
-	paths, root, err := formatLedgerPaths(opts)
+	paths, _, err := formatLedgerPaths(opts)
 	if err != nil {
 		return nil, err
 	}
@@ -112,20 +92,22 @@ func FormatLedgerFiles(ctx context.Context, opts LedgerFormatOptions) (results [
 	seen := map[string]bool{}
 	infos := []os.FileInfo{}
 	defer func() {
-		for _, t := range targets {
-			if e := t.lock.Close(); e != nil {
-				err = errors.Join(err, fmt.Errorf("publication unlock %s: %w", t.path, e))
+		for _, target := range targets {
+			if target.lock != nil {
+				err = errors.Join(err, target.lock.Close())
+			}
+			if target.readLock != nil {
+				err = errors.Join(err, target.readLock.Close())
 			}
 		}
 	}()
+
 	// Resolve and sort physical paths before taking multiple locks, so overlapping
 	// selections use one global order and cannot deadlock each other.
 	physical := map[string]string{}
 	for _, path := range paths {
 		canonical, e := filepath.EvalSymlinks(path)
-		if e == nil && !withinFormatRoot(root, canonical) {
-			e = errors.New("ledger physical path escapes selected workspace root")
-		}
+
 		if e == nil && filepath.Base(canonical) != "agentic_metrics.json" {
 			e = errors.New("ledger alias must resolve to agentic_metrics.json")
 		}
@@ -149,13 +131,20 @@ func FormatLedgerFiles(ctx context.Context, opts LedgerFormatOptions) (results [
 		r := LedgerFormatResult{Path: physical[path]}
 		index := len(results)
 		results = append(results, r)
-		lock, e := capture.AcquirePublication(ctx, path)
+		var lock *capture.PublicationLock
+		var readLock *capture.ReadDirectory
+		var e error
+		if opts.Mode == LedgerFormatCheck || opts.Mode == LedgerFormatDryRun {
+			readLock, e = capture.ReadPublicationDirectory(path)
+		} else {
+			lock, e = capture.AcquirePublication(ctx, path, opts.Project)
+		}
 		if e != nil {
 			results[index].Error = e
 			err = errors.Join(err, e)
 			continue
 		}
-		t := formatTarget{path: path, lock: lock, result: index}
+		t := formatTarget{path: path, lock: lock, readLock: readLock, result: index}
 		targets = append(targets, t)
 		target := &targets[len(targets)-1]
 		// Revalidate aliases after ownership, before reading any bytes.
@@ -165,7 +154,11 @@ func FormatLedgerFiles(ctx context.Context, opts LedgerFormatOptions) (results [
 		}
 		var info os.FileInfo
 		if e == nil {
-			info, e = os.Stat(path)
+			if readLock != nil {
+				info, e = readLock.Stat(filepath.Base(path))
+			} else {
+				info, e = capture.StatPublicationFile(path)
+			}
 		}
 		if e == nil && (!info.Mode().IsRegular() || info.Size() > publicationLimit) {
 			e = errors.New("ledger must be a bounded regular file")
@@ -182,7 +175,35 @@ func FormatLedgerFiles(ctx context.Context, opts LedgerFormatOptions) (results [
 		}
 		var data []byte
 		if e == nil {
-			data, e = readOwnedLedger(path)
+			if readLock != nil {
+				if _, pending := readLock.Lstat(filepath.Base(path) + ".publication-pending"); pending == nil {
+					e = ErrPublicationPending
+				} else if !errors.Is(pending, os.ErrNotExist) {
+					e = pending
+				}
+				if e == nil {
+					data, e = readLock.ReadFile(filepath.Base(path))
+				}
+			} else {
+				data, e = readOwnedLedger(path)
+			}
+		}
+		if e == nil {
+			var identity string
+			identity, e = RecordedLedgerTicket(data)
+			if e == nil && !opts.All {
+				_, cfg, loadErr := LoadWorkspaceProject(opts.Project)
+				e = loadErr
+				matched := false
+				for _, id := range opts.TicketIDs {
+					if sameTicket(identity, id, cfg.Ticket) {
+						matched = true
+					}
+				}
+				if e == nil && !matched {
+					e = errors.New("ledger identity changed while acquiring ownership; resolve and retry")
+				}
+			}
 		}
 		if e == nil {
 			target.data, e = FormatLedgerJSON(data)
@@ -215,15 +236,21 @@ func FormatLedgerFiles(ctx context.Context, opts LedgerFormatOptions) (results [
 	return results, err
 }
 func replaceFormattedLedger(path string, data []byte, mode fs.FileMode) error {
+	if owner := capture.PublicationOwner(path); owner != nil {
+		if err := owner.ValidateLocation(); err != nil {
+			return err
+		}
+	}
+	path = capture.PublicationPath(path)
 	// One-file atomic replacement needs no multi-artifact journal. Reject pending
 	// sets above; an interrupted stage leaves the original ledger accepted.
-	f, err := os.CreateTemp(filepath.Dir(path), ".ledger-format-")
+	f, err := capture.CreatePublicationTemp(filepath.Dir(path), ".ledger-format-")
 	if err != nil {
 		return err
 	}
 	name := f.Name()
 	defer func() {
-		if e := os.Remove(name); e != nil && !errors.Is(e, os.ErrNotExist) {
+		if e := capture.RemovePublicationFile(name); e != nil && !errors.Is(e, os.ErrNotExist) {
 			fmt.Fprintln(os.Stderr, "format staging cleanup:", e)
 		}
 	}()
@@ -233,7 +260,7 @@ func replaceFormattedLedger(path string, data []byte, mode fs.FileMode) error {
 	if e := errors.Join(err, f.Sync(), f.Close()); e != nil {
 		return e
 	}
-	if err = os.Rename(name, path); err != nil {
+	if err = capture.RenamePublicationFile(name, path); err != nil {
 		return err
 	}
 	return syncDirectory(filepath.Dir(path))

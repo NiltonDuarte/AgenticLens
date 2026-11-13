@@ -24,7 +24,7 @@ func TestNativePartialAnomalyWiresMatchFrontendFixtures(t *testing.T) {
 	root := t.TempDir()
 	cfg := testProjectConfig()
 	cfg.AgenticLens.Version = "v9.8.7"
-	cfg.Workspaces.Dir = "."
+	cfg.Workspaces.Roots[0].Path = "."
 	cfg.Ticket = domain.TicketConfig{Prefixes: []domain.TicketPrefix{{Prefix: "T-", Description: "Wire fixture"}}, CaseInsensitive: false}
 	cfg.RoleMappings = domain.RoleMappings{"builder": "planner", "planner": "other", "source-tester": "tester", "tester": "helper"}
 	cfg.Generation.Metrics = domain.GenerationPolicy{Skills: true, Delegations: true, Anomalies: true}

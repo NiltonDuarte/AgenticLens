@@ -32,3 +32,18 @@ describe('WorkspaceLoadWarning', () => {
     expect(container).toBeEmptyDOMElement();
   });
 });
+
+
+it('preserves separate warnings for the same ticket at different locations and root-only failures', () => {
+  const diagnostics = mergeWorkspaceDiagnostics([
+    {ticket_id: 'T-7', path: '/records/first', message: 'Publication pending.'},
+    {ticket_id: 'T-7', path: '/archive/second', message: 'Publication pending.'},
+    {path: '/missing/root', message: 'Root unavailable; retry or update configuration.'},
+  ]);
+  render(<WorkspaceLoadWarning diagnostics={diagnostics} />);
+  expect(screen.getByRole('status')).toHaveTextContent('/records/first');
+  expect(screen.getByRole('status')).toHaveTextContent('/archive/second');
+  expect(screen.getByRole('status')).toHaveTextContent('/missing/root');
+  expect(screen.getByRole('status')).not.toHaveTextContent('undefined');
+  expect(diagnostics).toHaveLength(3);
+});

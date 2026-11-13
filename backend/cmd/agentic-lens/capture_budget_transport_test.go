@@ -16,6 +16,7 @@ func TestNativeWorkerPublicationKeepsExplicitBudgetOverrides(t *testing.T) {
 	for _, mode := range []string{"missing-local-budgets", "different-local-budgets"} {
 		t.Run(mode, func(t *testing.T) {
 			f := newCaptureGenerationFixture(t)
+			seedCaptureTicketHome(t, f, "TEST-100")
 			path := f.write(t, 37)
 			f.bind(t, path)
 			writeCaptureSuccessfulPublicationPolicy(t, f.project, f.state)

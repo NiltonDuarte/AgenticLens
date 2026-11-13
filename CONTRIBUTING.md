@@ -9,7 +9,7 @@ Guidelines, developer workflow, and build instructions for contributors and auto
 Ensure the following tools are installed on your workstation or development container:
 
 - **Go**: Version 1.23 or newer
-- **Node.js**: Version 20 LTS or newer
+- **Node.js**: Version 22.12.0 or newer (frontend builds and pinned OpenSpec development tooling)
 - **npm**: Version 10 or newer
 - **Git**: For version control and diff calculations
 - **Make**: Standard GNU Make
@@ -36,7 +36,13 @@ make install-frontend  # Installs npm dependencies in web/
 
 ## 3. Development Workflow
 
-### 3.1 Development Mode with Hot Reload
+### 3.1 Ticket and execution workflow
+
+Keep roadmap tickets and their prioritization in `alspaces/plan/`. When selected work begins, create a linked OpenSpec change using the [pinned workflow](docs/OPENSPEC_WORKFLOW.md). Its proposal/specs/design/tasks/delivery are the execution artifacts; the roadmap ticket remains separate. Follow [AGENTS.md](AGENTS.md) for explicit scope approval, specialist role boundaries, review and final telemetry. OpenSpec readiness, task checkboxes and archive do not establish implementation approval or ticket completion.
+
+Install its pinned development tool with `npm ci --prefix tools/openspec`; use `scripts/openspec.sh` rather than a moving global version. Node is not needed to run the resulting AgenticLens engine.
+
+### 3.2 Development Mode with Hot Reload
 
 For rapid frontend iteration with hot module replacement (HMR), run the backend server and the Vite dev server concurrently:
 
@@ -51,7 +57,7 @@ cd web && npm run dev
 
 Open `http://localhost:5173` to interact with the dashboard.
 
-### 3.2 Compiling the Native Manager and Engine
+### 3.3 Compiling the Native Manager and Engine
 
 AgenticLens builds a small native manager and a separate telemetry engine. The engine embeds all web assets; neither executable requires Node.js in production. `make server` runs the current source engine directly:
 
@@ -172,7 +178,7 @@ Apply the [shared writing rules](AGENTS.md#artifact-writing-rules). Artifact pur
 
 ### 7.1 Recording steering without restarting the ticket
 
-For material scope changes, write a short delta in the next iteration plan:
+For material scope changes, write a short delta in the next change design and tasks:
 
 - **Source and intent:** summarize the current user instruction or linked review finding; label inference separately.
 - **Baseline:** link the contract and applicable accepted plan/review, and name the current commit.

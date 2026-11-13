@@ -3,7 +3,6 @@ package adapters_test
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http/httptest"
 	"os"
@@ -17,45 +16,17 @@ import (
 	"agenticlens/internal/domain"
 )
 
-func TestResolveWorkspacesDir(t *testing.T) {
-	root := t.TempDir()
-	configured := filepath.Join(root, "configured")
-	explicit := filepath.Join(root, "explicit")
-	for _, dir := range []string{configured, explicit} {
-		if err := os.Mkdir(dir, 0700); err != nil {
-			t.Fatal(err)
-		}
+func TestLoadWorkspaceProjectUsesExplicitRootPolicy(t *testing.T) {
+	root := workspaceFixtureRoot(t)
+	project, cfg, err := adapters.LoadWorkspaceProject(root)
+	if err != nil || project != root || len(cfg.Workspaces.Roots) != 1 {
+		t.Fatalf("project policy %s %+v %v", project, cfg.Workspaces, err)
 	}
-	writeWorkspacePolicy(t, root, "configured")
-	previous, err := os.Getwd()
-	if err != nil {
+	if err = os.Remove(filepath.Join(root, ".agenticlens-config.yaml")); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Chdir(root); err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err := os.Chdir(previous); err != nil {
-			t.Error(err)
-		}
-	}()
-	for _, tc := range []struct{ selected, want string }{{"", configured}, {explicit, explicit}, {"explicit", explicit}} {
-		got, err := adapters.ResolveWorkspacesDir(tc.selected)
-		if err != nil || got != tc.want {
-			t.Errorf("root %q got%q %v want%q", tc.selected, got, err, tc.want)
-		}
-	}
-	if _, err := adapters.ResolveWorkspacesDir(filepath.Join(root, "missing")); err == nil {
-		t.Fatal("missing explicit root used configured alternative")
-	}
-	if err := os.Remove(filepath.Join(root, ".agenticlens-config.yaml")); err != nil {
-		t.Fatal(err)
-	}
-	if got, err := adapters.ResolveWorkspacesDir(explicit); err != nil || got != explicit {
-		t.Fatalf("explicit representation-only root required unrelatedpolicy: %s %v", got, err)
-	}
-	if _, err := adapters.ResolveWorkspacesDir(""); !errors.Is(err, adapters.ErrWorkspacesDirNotFound) {
-		t.Fatalf("missing workspace policy invented root: %v", err)
+	if _, _, err = adapters.LoadWorkspaceProject(root); err == nil {
+		t.Fatal("absent shared roots policy invented workspace configuration")
 	}
 }
 
@@ -149,7 +120,7 @@ func TestScanWorkspaces(t *testing.T) {
 	if !strings.Contains(report.Errors[0], "CORRUPT-1") {
 		t.Errorf("expected error to mention CORRUPT-1, got %s", report.Errors[0])
 	}
-	if len(report.Diagnostics) != 1 || report.Diagnostics[0].TicketID != "CORRUPT-1" || !strings.Contains(report.Diagnostics[0].Message, "CORRUPT-1") {
+	if len(report.Diagnostics) != 1 || report.Diagnostics[0].TicketID != "" || !strings.Contains(report.Diagnostics[0].Path, "CORRUPT-1") {
 		t.Fatalf("expected ticket-scoped diagnostic for skipped workspace, got %+v", report.Diagnostics)
 	}
 
@@ -170,7 +141,7 @@ func TestScanWorkspaces(t *testing.T) {
 		}
 		foundExpected := false
 		for _, e := range report.Errors {
-			if strings.Contains(e, "Workspaces directory is unconfigured or not found") {
+			if strings.Contains(e, "configuration file not found") {
 				foundExpected = true
 				break
 			}
@@ -286,6 +257,12 @@ func TestReadTicketArtifacts(t *testing.T) {
 	tempDir := workspaceFixtureRoot(t)
 	ticketDir := filepath.Join(tempDir, "TICKET-10")
 	if err := os.MkdirAll(ticketDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	version, id := domain.CurrentSchemaVersion, "TICKET-10"
+	title := "Artifact fixture"
+	if err := saveFixtureFactLedger(t, filepath.Join(ticketDir, "agentic_metrics.json"), domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &id, TicketTitle: &title, Sessions: []domain.SessionFact{}, Anomalies: []domain.Anomaly{}}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -463,7 +440,7 @@ func TestScanWorkspacesResilience(t *testing.T) {
 		if len(report.Ledgers) != 0 {
 			t.Errorf("expected 0 ledgers, got %d", len(report.Ledgers))
 		}
-		if len(report.Errors) != 1 || !strings.Contains(report.Errors[0], "Workspaces directory must be configured") {
+		if len(report.Errors) != 1 || !strings.Contains(report.Errors[0], "configuration") {
 			t.Errorf("expected configuration error message, got: %v", report.Errors)
 		}
 	})
@@ -476,7 +453,7 @@ func TestScanWorkspacesResilience(t *testing.T) {
 		if len(report.Errors) != 1 {
 			t.Errorf("expected 1 error, got %d", len(report.Errors))
 		}
-		if !strings.Contains(report.Errors[0], "/non/existent/path/for/sure") {
+		if !strings.Contains(report.Errors[0], "configuration file not found") {
 			t.Errorf("unexpected error message: %s", report.Errors[0])
 		}
 	})
@@ -516,7 +493,7 @@ func TestScanWorkspacesResilience(t *testing.T) {
 		}
 
 		report := adapters.ScanWorkspaces(tempDir)
-		if len(report.Ledgers) != 0 || len(report.Diagnostics) != 1 || report.Diagnostics[0].TicketID != "INFERRED-42" || !strings.Contains(report.Diagnostics[0].Message, "ticket_id is required") {
+		if len(report.Ledgers) != 0 || len(report.Diagnostics) != 1 || report.Diagnostics[0].TicketID != "" || !strings.Contains(report.Diagnostics[0].Path, "INFERRED-42") || !strings.Contains(report.Diagnostics[0].Message, "ticket_id is required") {
 			t.Fatalf("expected missing identity rejection with directory diagnostic, got %+v", report)
 		}
 	})
@@ -1056,7 +1033,7 @@ func TestLoadTicketWorkspace(t *testing.T) {
 		{"absent", ""}, {"null", `,"ticket_id":null`}, {"empty", `,"ticket_id":""`}, {"whitespace", `,"ticket_id":" \t"`},
 	} {
 		t.Run("rejects "+identity.name+" ticket ID instead of borrowing the requested path", func(t *testing.T) {
-			noIDDir := filepath.Join(t.TempDir(), "PATH-ONLY")
+			noIDDir := filepath.Join(workspaceFixtureRoot(t), "PATH-ONLY")
 			if err := os.MkdirAll(noIDDir, 0755); err != nil {
 				t.Fatal(err)
 			}
@@ -1103,7 +1080,7 @@ func TestLoadTicketWorkspace(t *testing.T) {
 		}
 
 		ledger, err := adapters.LoadTicketWorkspace("TEST-1", "")
-		if err == nil || !strings.Contains(err.Error(), "workspaces directory is not configured") {
+		if err == nil || !strings.Contains(err.Error(), "configuration") {
 			t.Fatalf("expected 'workspaces directory is not configured' error, got %v", err)
 		}
 		if ledger != nil {
@@ -1289,7 +1266,7 @@ func TestSaveFactLedger(t *testing.T) {
 			}, nil, nil),
 		}
 
-		err := adapters.SaveFactLedger(outPath, ledger)
+		err := saveFixtureFactLedger(t, outPath, ledger)
 		if err != nil {
 			t.Fatalf("unexpected error saving fact ledger: %v", err)
 		}
@@ -1303,7 +1280,7 @@ func TestSaveFactLedger(t *testing.T) {
 		if !bytes.Contains(data, []byte(`"tokens": {"input":`)) {
 			t.Fatalf("fact writer expanded compact token record: %s", data)
 		}
-		if err := adapters.SaveFactLedger(outPath, ledger); err != nil {
+		if err := saveFixtureFactLedger(t, outPath, ledger); err != nil {
 			t.Fatal(err)
 		}
 		repeated, err := os.ReadFile(outPath)
@@ -1355,7 +1332,7 @@ func TestSaveFactLedger(t *testing.T) {
 			TicketID:      &tid,
 			TicketTitle:   &title,
 		}
-		err := adapters.SaveFactLedger(invalidPath, ledger)
+		err := saveFixtureFactLedger(t, invalidPath, ledger)
 		if err == nil {
 			t.Fatal("expected error when parent directory cannot be created, got nil")
 		}
@@ -1396,7 +1373,7 @@ func TestSaveFactLedger(t *testing.T) {
 					TicketID:    tc.ticketID,
 					TicketTitle: tc.ticketTitle,
 				}
-				err := adapters.SaveFactLedger(outPath, ledger)
+				err := saveFixtureFactLedger(t, outPath, ledger)
 				if err == nil {
 					t.Fatalf("expected error for %s, got nil", tc.name)
 				}
@@ -1412,10 +1389,11 @@ func TestSaveMetricsLedger(t *testing.T) {
 	t.Run("preserves DTO and HTTP field order with nullable partial totals", func(t *testing.T) {
 		version := domain.CurrentSchemaVersion
 		id := "TEST-ORDER"
-		facts := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &id, Sessions: []domain.SessionFact{{ID: "owner", Source: domain.SourceCodex, User: "tester", Invocations: []domain.InvocationFact{{Role: "coder", Model: "m", CostUSD: 2, CostEvidence: domain.PartialCost(2)}}, Tools: []domain.SessionToolFact{}, Anomalies: []domain.Anomaly{}}}, Anomalies: []domain.Anomaly{}}
+		title := "Computed export fixture"
+		facts := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &id, TicketTitle: &title, Sessions: []domain.SessionFact{{ID: "owner", Source: domain.SourceCodex, User: "tester", Invocations: []domain.InvocationFact{{Role: "coder", Model: "m", CostUSD: 2, CostEvidence: domain.PartialCost(2)}}, Tools: []domain.SessionToolFact{}, Anomalies: []domain.Anomaly{}}}, Anomalies: []domain.Anomaly{}}
 		ledger := domain.DeriveMetricsLedger(facts, domain.ProjectConfig{})
 		path := filepath.Join(t.TempDir(), "metrics.json")
-		if err := adapters.SaveMetricsLedger(path, ledger); err != nil {
+		if err := saveFixtureMetricsLedger(t, path, ledger); err != nil {
 			t.Fatal(err)
 		}
 		data, err := os.ReadFile(path)
@@ -1443,7 +1421,7 @@ func TestSaveMetricsLedger(t *testing.T) {
 				t.Fatalf("metrics export gained HTTP-only field %s", httpOnly)
 			}
 		}
-		if err := adapters.SaveMetricsLedger(path, ledger); err != nil {
+		if err := saveFixtureMetricsLedger(t, path, ledger); err != nil {
 			t.Fatal(err)
 		}
 		repeated, err := os.ReadFile(path)
@@ -1491,7 +1469,7 @@ func TestSaveMetricsLedger(t *testing.T) {
 			},
 		}
 
-		err := adapters.SaveMetricsLedger(outPath, ledger)
+		err := saveFixtureMetricsLedger(t, outPath, ledger)
 		if err != nil {
 			t.Fatalf("unexpected error saving metrics ledger: %v", err)
 		}
@@ -1515,7 +1493,7 @@ func TestSaveMetricsLedger(t *testing.T) {
 		if !strings.Contains(content, "\"anomalies\": [\n    {\"rule_id\": \"TOOL_RETRY_STREAK\", \"severity\": \"WARNING\", \"context\": {\"tool_name\": \"read\", \"count\": 3}}\n  ]") {
 			t.Fatalf("computed writer expanded anomaly/context record: %s", data)
 		}
-		if err := adapters.SaveMetricsLedger(outPath, ledger); err != nil {
+		if err := saveFixtureMetricsLedger(t, outPath, ledger); err != nil {
 			t.Fatal(err)
 		}
 		repeated, err := os.ReadFile(outPath)
@@ -1548,7 +1526,7 @@ func TestSaveMetricsLedger(t *testing.T) {
 		}
 
 		invalidPath := filepath.Join(blockingFile, "nested", "metrics.json")
-		err := adapters.SaveMetricsLedger(invalidPath, domain.AgenticMetricsLedger{})
+		err := saveFixtureMetricsLedger(t, invalidPath, domain.AgenticMetricsLedger{})
 		if err == nil {
 			t.Fatal("expected error when parent directory cannot be created, got nil")
 		}
@@ -1571,7 +1549,7 @@ func TestSaveLedgers_AdversarialEdgeCases(t *testing.T) {
 
 		tid := "AL-ERR-DIR"
 		title := "Test Dir Failure"
-		err := adapters.SaveFactLedger(dirAsFile, domain.AgenticFactLedger{
+		err := saveFixtureFactLedger(t, dirAsFile, domain.AgenticFactLedger{
 			SchemaVersion: func() *int { v := domain.CurrentSchemaVersion; return &v }(),
 			TicketID:      &tid,
 			TicketTitle:   &title,
@@ -1592,7 +1570,7 @@ func TestSaveLedgers_AdversarialEdgeCases(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		err := adapters.SaveMetricsLedger(dirAsFile, domain.AgenticMetricsLedger{})
+		err := saveFixtureMetricsLedger(t, dirAsFile, domain.AgenticMetricsLedger{})
 		if err == nil {
 			t.Fatal("expected error writing metrics ledger to existing directory, got nil")
 		}
@@ -1614,7 +1592,7 @@ func TestSaveLedgers_AdversarialEdgeCases(t *testing.T) {
 			TicketID:      &tid,
 			TicketTitle:   &longTitle,
 		}
-		if err := adapters.SaveFactLedger(filePath, firstLedger); err != nil {
+		if err := saveFixtureFactLedger(t, filePath, firstLedger); err != nil {
 			t.Fatalf("first write failed: %v", err)
 		}
 
@@ -1625,7 +1603,7 @@ func TestSaveLedgers_AdversarialEdgeCases(t *testing.T) {
 			TicketID:      &tid,
 			TicketTitle:   &shortTitle,
 		}
-		if err := adapters.SaveFactLedger(filePath, secondLedger); err != nil {
+		if err := saveFixtureFactLedger(t, filePath, secondLedger); err != nil {
 			t.Fatalf("second write failed: %v", err)
 		}
 
@@ -1656,7 +1634,7 @@ func TestSaveLedgers_AdversarialEdgeCases(t *testing.T) {
 				InputTokens: 888888,
 			},
 		}
-		if err := adapters.SaveMetricsLedger(filePath, firstLedger); err != nil {
+		if err := saveFixtureMetricsLedger(t, filePath, firstLedger); err != nil {
 			t.Fatalf("first write failed: %v", err)
 		}
 
@@ -1667,7 +1645,7 @@ func TestSaveLedgers_AdversarialEdgeCases(t *testing.T) {
 				Invocations: 1,
 			},
 		}
-		if err := adapters.SaveMetricsLedger(filePath, secondLedger); err != nil {
+		if err := saveFixtureMetricsLedger(t, filePath, secondLedger); err != nil {
 			t.Fatalf("second write failed: %v", err)
 		}
 
@@ -1694,7 +1672,7 @@ func TestSaveLedgers_AdversarialEdgeCases(t *testing.T) {
 		factPath := filepath.Join(tempDir, "zero_facts.json")
 		tid := "AL-ZERO"
 		title := "Zero Facts"
-		if err := adapters.SaveFactLedger(factPath, domain.AgenticFactLedger{SchemaVersion: func() *int { v := domain.CurrentSchemaVersion; return &v }(), TicketID: &tid, TicketTitle: &title}); err != nil {
+		if err := saveFixtureFactLedger(t, factPath, domain.AgenticFactLedger{SchemaVersion: func() *int { v := domain.CurrentSchemaVersion; return &v }(), TicketID: &tid, TicketTitle: &title}); err != nil {
 			t.Fatalf("saving zero fact ledger failed: %v", err)
 		}
 		factData, err := os.ReadFile(factPath)
@@ -1706,7 +1684,7 @@ func TestSaveLedgers_AdversarialEdgeCases(t *testing.T) {
 		}
 
 		metricsPath := filepath.Join(tempDir, "zero_metrics.json")
-		if err := adapters.SaveMetricsLedger(metricsPath, domain.AgenticMetricsLedger{}); err != nil {
+		if err := saveFixtureMetricsLedger(t, metricsPath, domain.AgenticMetricsLedger{}); err != nil {
 			t.Fatalf("saving zero metrics ledger failed: %v", err)
 		}
 		metricsData, err := os.ReadFile(metricsPath)
@@ -1724,7 +1702,7 @@ func TestWorkspaceLoad_ConfiguredRoleMappings(t *testing.T) {
 
 	// 1. Create root .agenticlens-config.yaml with custom role mappings
 	cfg := fixtureReadPolicy(t)
-	cfg.Workspaces.Dir = "workspaces"
+	cfg.Workspaces.Roots[0].Path = "workspaces"
 	cfg.RoleMappings = domain.RoleMappings{"build": "orchestrator", "qa-bot": "tester"}
 	cfg.Ticket = domain.TicketConfig{CaseInsensitive: true, Prefixes: []domain.TicketPrefix{{Prefix: "AL", Description: "Development"}}}
 	cfgContent, err := adaptersconfig.GenerateConfigYAML(cfg)
@@ -1889,7 +1867,7 @@ func TestWorkspaceLoad_ConfiguredRoleMappings_RootConfig(t *testing.T) {
 
 	// 1. Create root .agenticlens-config.yaml with custom role mappings
 	cfg := fixtureReadPolicy(t)
-	cfg.Workspaces.Dir = "root_workspaces"
+	cfg.Workspaces.Roots[0].Path = "root_workspaces"
 	cfg.RoleMappings = domain.RoleMappings{"sys-engineer": "coder", "lead-tester": "tester"}
 	cfg.Ticket = domain.TicketConfig{CaseInsensitive: true, Prefixes: []domain.TicketPrefix{{Prefix: "AL", Description: "Development"}}}
 	cfgContent, err := adaptersconfig.GenerateConfigYAML(cfg)
@@ -1995,11 +1973,11 @@ func TestWorkspaceLoad_ConfiguredRoleMappings_RootConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	workspacesRoot, err := adapters.ResolveWorkspacesDir("")
+	workspacesRoot, selectedCfg, err := adapters.LoadWorkspaceProject("")
 	if err != nil {
 		t.Fatalf("unexpected error resolving workspaces: %v", err)
 	}
-	if workspacesRoot != filepath.Join(tempDir, "root_workspaces") {
+	if workspacesRoot != tempDir || selectedCfg.Workspaces.Roots[0].Path != "root_workspaces" {
 		t.Fatalf("expected workspacesRoot root_workspaces, got %s", workspacesRoot)
 	}
 
@@ -2064,7 +2042,7 @@ func TestLoadTicketWorkspace_AdversarialResilience(t *testing.T) {
 		if ledger != nil {
 			t.Fatalf("expected nil ledger for non-existent ticket")
 		}
-		if !strings.Contains(err.Error(), "reading metrics file") {
+		if !strings.Contains(err.Error(), "workspace not_found") {
 			t.Errorf("expected 'reading metrics file' in error, got %v", err)
 		}
 	})
@@ -2133,7 +2111,7 @@ func TestLoadTicketWorkspace_AdversarialResilience(t *testing.T) {
 			}, nil, nil),
 		}
 
-		if err := adapters.SaveFactLedger(roundTripPath, original); err != nil {
+		if err := saveFixtureFactLedger(t, roundTripPath, original); err != nil {
 			t.Fatalf("failed saving fact ledger: %v", err)
 		}
 
@@ -2288,7 +2266,7 @@ func TestScanRetainsValidSiblingWhenPublicationIsUnavailable(t *testing.T) {
 		title := ticket
 		ledger := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &title, TicketTitle: &title, Sessions: sessionFactsWithInvs([]testInvFact{{SessionID: ticket, Role: "coder", Model: "fixture"}}, nil, nil)}
 		path := filepath.Join(root, ticket, "agentic_metrics.json")
-		if err := adapters.SaveFactLedger(path, ledger); err != nil {
+		if err := saveFixtureFactLedger(t, path, ledger); err != nil {
 			t.Fatal(err)
 		}
 		if ticket == "FX-UNAVAILABLE" {
@@ -2298,7 +2276,7 @@ func TestScanRetainsValidSiblingWhenPublicationIsUnavailable(t *testing.T) {
 		}
 	}
 	report := adapters.ScanWorkspaces(root)
-	if report.FatalError != "" || len(report.Ledgers) != 1 || report.Ledgers[0].TicketID == nil || *report.Ledgers[0].TicketID != "FX-VALID" || len(report.Diagnostics) != 1 || report.Diagnostics[0].TicketID != "FX-UNAVAILABLE" || !strings.Contains(report.Diagnostics[0].Message, "interrupted artifact publication") {
+	if report.FatalError != "" || len(report.Ledgers) != 1 || report.Ledgers[0].TicketID == nil || *report.Ledgers[0].TicketID != "FX-VALID" || len(report.Diagnostics) != 1 || report.Diagnostics[0].TicketID != "" || !strings.Contains(report.Diagnostics[0].Path, "FX-UNAVAILABLE") || !strings.Contains(report.Diagnostics[0].Message, "incomplete artifact publication") {
 		t.Fatalf("unavailable read hid valid siblings or rejection reason: %+v", report)
 	}
 }
@@ -2430,7 +2408,7 @@ func fixtureReadPolicy(t *testing.T) domain.ProjectConfig {
 func writeWorkspacePolicy(t *testing.T, root, workspace string) {
 	t.Helper()
 	cfg := fixtureReadPolicy(t)
-	cfg.Workspaces.Dir = workspace
+	cfg.Workspaces.Roots[0].Path = workspace
 	cfg.Ticket = domain.TicketConfig{CaseInsensitive: true, Prefixes: []domain.TicketPrefix{{Prefix: "AL", Description: "Development"}, {Prefix: "GEN", Description: "General"}, {Prefix: "PO", Description: "Planning"}, {Prefix: "FIX", Description: "Fixes"}, {Prefix: "TEST", Description: "Tests"}, {Prefix: "T", Description: "Fixture"}}}
 	data, err := adaptersconfig.GenerateConfigYAML(cfg)
 	if err != nil {
@@ -2454,7 +2432,7 @@ func TestPersistedReadsIgnoreUnusedLocalPolicyWithoutWriting(t *testing.T) {
 	owner := domain.SessionFact{ID: "remote-owner", Source: domain.SourceCodex, User: "remote-user", Invocations: []domain.InvocationFact{{Role: "RootAgent", Model: "recorded", Turns: 2, Tokens: domain.InvocationTokens{Input: 37}}}, Tools: []domain.SessionToolFact{{Name: "read", Calls: 2}}, Skills: []domain.SkillFact{{Name: "kept"}, {Name: "kept"}}, Delegations: []domain.DelegationFact{{Description: "kept delegation"}}, Anomalies: []domain.Anomaly{}}
 	ledger := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticket, TicketTitle: &title, Sessions: []domain.SessionFact{owner}, Anomalies: []domain.Anomaly{}}
 	path := filepath.Join(root, ticket, "agentic_metrics.json")
-	if err := adapters.SaveFactLedger(path, ledger); err != nil {
+	if err := saveFixtureFactLedger(t, path, ledger); err != nil {
 		t.Fatal(err)
 	}
 	baseline, err := os.ReadFile(path)

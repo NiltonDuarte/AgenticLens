@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
+	"io"
 	"path/filepath"
 	"strings"
 	"time"
@@ -41,25 +41,14 @@ func (r *MigrationRunner) Run(opts MigrationOptions) (*SchemaMigrationReport, er
 		return nil, fmt.Errorf("migration publication requires current target version %d; intermediate transformations are migration-engine internals", domain.CurrentSchemaVersion)
 	}
 
-	targetDir, cfg, err := adapters.ResolveWorkspaceContext(opts.WorkspacesDir)
+	_, cfg, err := adapters.LoadWorkspaceProject(opts.Project)
 	if err != nil {
-		return nil, fmt.Errorf("loading required migration target configuration and workspaces: %w", errors.Join(adapters.ErrWorkspacesDirNotFound, err))
+		return nil, fmt.Errorf("loading required migration target configuration and workspaces: %w", errors.Join(err))
 	}
 
-	metricFiles, discoveryDiagnostics, err := discoverWorkspaceLedgers(targetDir)
+	targetFiles, discoveryDiagnostics, err := discoverWorkspaceLedgers(cfg, opts.TicketID, opts.Workspace)
 	if err != nil {
 		return nil, err
-	}
-
-	var targetFiles []string
-	cleanTicketID := strings.TrimSpace(opts.TicketID)
-	for _, f := range metricFiles {
-		parentDir := filepath.Dir(f)
-		parentName := filepath.Base(parentDir)
-		if cleanTicketID != "" && !ticketMatches(parentName, cleanTicketID, cfg.Ticket.CaseInsensitive) {
-			continue
-		}
-		targetFiles = append(targetFiles, f)
 	}
 
 	report := &SchemaMigrationReport{
@@ -96,7 +85,7 @@ func (r *MigrationRunner) Run(opts MigrationOptions) (*SchemaMigrationReport, er
 func (r *MigrationRunner) migrateWorkspace(ctx context.Context, metricPath string, opts MigrationOptions, targetVer int, cfg domain.ProjectConfig) (res TicketSchemaMigrationResult, issues []string) {
 
 	wsDir := filepath.Dir(metricPath)
-	wsName := filepath.Base(wsDir)
+	wsName, _ := recordedTicket(metricPath)
 
 	res = TicketSchemaMigrationResult{
 		TicketID:      wsName,
@@ -111,7 +100,21 @@ func (r *MigrationRunner) migrateWorkspace(ctx context.Context, metricPath strin
 		res.Error = fmt.Errorf("resolving ledger publication: %w", err)
 		return res, []string{res.Error.Error()}
 	}
-	owner, err := capture.AcquirePublication(ctx, canonicalPath)
+	var owner io.Closer
+	if opts.DryRun {
+		directory, e := capture.ReadPublicationDirectory(canonicalPath)
+		err = e
+		if e == nil {
+			owner = directory
+		}
+	} else {
+		publisher, e := capture.AcquirePublication(ctx, canonicalPath, publicationProject(cfg, canonicalPath))
+		err = e
+		if e == nil {
+			owner = publisher
+		}
+	}
+
 	if err != nil {
 		res.Status = "error"
 		res.Error = fmt.Errorf("acquiring ledger publication ownership: %w", err)
@@ -124,21 +127,22 @@ func (r *MigrationRunner) migrateWorkspace(ctx context.Context, metricPath strin
 			issues = append(issues, fmt.Sprintf("Workspace %s: publication unlock: %v", metricPath, err))
 		}
 	}()
-	metricPath = canonicalPath
-	res.LedgerPath = metricPath
+	metricPath = capture.PublicationPath(canonicalPath)
+	res.LedgerPath = canonicalPath
 	if err := adapters.CheckPublication(metricPath); err != nil {
 		res.Status = "error"
 		res.Error = err
 		return res, []string{err.Error()}
 	}
 
-	content, err := os.ReadFile(metricPath)
+	content, identity, err := readMaintenanceLedger(owner, metricPath, opts.TicketID, cfg.Ticket.CaseInsensitive)
 	if err != nil {
 		res.Status = "error"
 		res.Error = fmt.Errorf("reading file: %w", err)
 		issues = append(issues, fmt.Sprintf("Workspace %s: %v", metricPath, res.Error))
 		return res, issues
 	}
+	res.TicketID = identity
 
 	sourceVer, err := r.engine.DetectVersion(content)
 	if err != nil {
@@ -243,14 +247,14 @@ func (r *MigrationRunner) migrateWorkspace(ctx context.Context, metricPath strin
 
 	if opts.Backup {
 		backupPath := metricPath + ".bak"
-		if err := os.WriteFile(backupPath, content, 0644); err != nil {
+		if err := capture.WritePublicationFile(backupPath, content, 0644); err != nil {
 			res.Status = "error"
 			res.Error = fmt.Errorf("creating backup file %s: %w", backupPath, err)
 			issues = append(issues, fmt.Sprintf("Workspace %s: %v", metricPath, res.Error))
 			return res, issues
 		}
 		res.BackupCreated = true
-		res.BackupPath = backupPath
+		res.BackupPath = canonicalPath + ".bak"
 	}
 
 	var tableMD string

@@ -74,6 +74,9 @@ func ValidateConfig(cfg domain.ProjectConfig) error {
 			}
 		}
 	}
+	if err := ValidateWorkspacePolicy(cfg.Workspaces); err != nil {
+		return err
+	}
 	if cfg.Workspaces.Artifacts == nil {
 		return fmt.Errorf("workspaces.artifacts must be an explicit list; [] means none")
 	}
@@ -308,6 +311,7 @@ func loadSelected(project string, capturePolicy bool) (domain.ProjectConfig, err
 		if err != nil {
 			return cfg, fmt.Errorf("local configuration %s: %w", selection.LocalPath, err)
 		}
+		cfg.AgenticLens.StateDir = entry.StateDir
 		if entry.InstallRoot != "" {
 			cfg.AgenticLens.InstallRoot = entry.InstallRoot
 		}

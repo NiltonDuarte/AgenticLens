@@ -19,7 +19,7 @@ func fixtureSharedYAML(t *testing.T, name, workspace string) ([]byte, error) {
 	t.Helper()
 	cfg := fixtureProjectPolicy(t)
 	cfg.ProjectName = name
-	cfg.Workspaces.Dir = workspace
+	cfg.Workspaces.Roots[0].Path = workspace
 	return GenerateConfigYAML(cfg)
 }
 

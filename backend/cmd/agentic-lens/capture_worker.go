@@ -6,14 +6,13 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"sort"
 	"strconv"
 	"time"
 
+	"agenticlens/internal/adapters"
 	"agenticlens/internal/adapters/capture"
 	adaptersconfig "agenticlens/internal/adapters/config"
-	"agenticlens/internal/adapters/filesystem"
 	"agenticlens/internal/domain"
 )
 
@@ -223,18 +222,17 @@ func captureWorker(s *capture.Store, project, state string, policy domain.Captur
 				if e != nil || !enabled {
 					return e
 				}
-				workspaceRoot, pathErr := adaptersconfig.ResolveConfiguredPath(filepath.Dir(cfg.ConfigPath), cfg.Workspaces.Dir)
+				location, pathErr := adapters.ResolveTicketLocation(cfg, ticket, "")
 				if pathErr != nil {
-					return pathErr
+					success = false
+					lastFailure = pathErr.Error()
+					if e := s.RecordDiagnostic(context.Background(), domain.CaptureDiagnostic{TicketID: ticket, Phase: "publication", Outcome: "failed", Detail: "Resolve an existing ledger or explicitly generate its first destination: " + pathErr.Error()}); e != nil {
+						return e
+					}
+					continue
 				}
-				workspaceRoot, pathErr = filesystem.PhysicalPath(workspaceRoot)
-				if pathErr != nil {
-					return pathErr
-				}
-				dest := filepath.Join(workspaceRoot, ticket, "agentic_metrics.json")
-				if err = capture.ValidateDestination(project, dest); err != nil {
-					return err
-				}
+				dest := location.LedgerPath
+
 				args := []string{"generate", "--ticket-id", ticket, "--json-output", dest, "--capture-dir", state, "--capture-auto", "--max-sessions", strconv.Itoa(policy.MaxSessions), "--max-source-bytes", strconv.FormatInt(policy.MaxSourceBytes, 10)}
 				title, kind, metadataErr := domain.CaptureTicketMetadata(rows, ticket)
 				if metadataErr != nil {

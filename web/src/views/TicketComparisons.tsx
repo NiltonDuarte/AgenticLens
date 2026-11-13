@@ -1,3 +1,4 @@
+import { workspaceKey, selectWorkspace } from '../domain/workspaces';
 import { TagFilters } from '../components/TagFilters';
 import { tagChoices, filterLedgersByTags, reconcileTagCatalog, type TagFilter } from '../domain/tags';
 import { useProjectConfig, ticketPolicy } from '../contexts/ProjectConfigContext';
@@ -42,7 +43,7 @@ const TICKET_TYPE_OPTIONS: readonly MultiSelectOption[] = [
 ];
 
 export interface TicketComparisonsProps {
-  readonly onSelectTicket?: ((ticketId: string) => void) | undefined;
+  readonly onSelectTicket?: ((ticketId: string, workspacePath?: string) => void) | undefined;
   readonly configuredPrefixes?: readonly string[] | undefined;
 }
 
@@ -546,9 +547,9 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
                   const isCompleted = row.completed_at !== null;
                   return (
                     <tr
-                      key={row.ticket_id}
+                      key={workspaceKey(row)}
                       className="clickable-comparison-row"
-                      onClick={() => onSelectTicket?.(row.ticket_id)}
+                      onClick={() => selectWorkspace(onSelectTicket, row)}
                       title="Click to view Ticket Deep Dive autopsy"
                     >
                       <td className="ticket-id-cell">
@@ -557,7 +558,7 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
                           className="ticket-link-btn"
                           onClick={(e) => {
                             e.stopPropagation();
-                            onSelectTicket?.(row.ticket_id);
+                            selectWorkspace(onSelectTicket, row);
                           }}
                         >
                           {row.ticket_id}
@@ -565,6 +566,7 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
                       </td>
                       <td className="ticket-title-cell" title={row.ticket_title}>
                         {row.ticket_title}
+                        {row.workspace_path && <small className="workspace-location">{row.workspace_path}</small>}
                       </td>
                       <td title={row.skills_used?.join(', ')}>{row.skills_used === undefined ? 'Skills not recorded' : row.skills_used?.length ? row.skills_used.join(', ') : 'No recorded skills'}</td>
                       <td>

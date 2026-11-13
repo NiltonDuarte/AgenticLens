@@ -15,4 +15,4 @@
 
 ## Implementation notes
 
-<Optional: necessary technical constraints, shared specification/evidence links or ownership boundaries beyond standard repository gates. Omit this section when unnecessary. Do not duplicate roadmap metadata or the development workflow. Remove all prompts before delivery.>
+<Optional: necessary technical constraints, shared specification/evidence links or ownership boundaries beyond standard repository gates. Link an execution change only after work is selected; the long-term ticket remains separate. Omit this section when unnecessary. Do not duplicate roadmap metadata or the development workflow. Remove all prompts before delivery.>

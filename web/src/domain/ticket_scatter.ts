@@ -1,3 +1,4 @@
+import { workspaceKey } from './workspaces';
 import type { TicketComparisonRow } from './types';
 
 export type ScatterMetricKey =
@@ -115,7 +116,7 @@ export function deriveScatterPlotData(
   let unavailableCount = 0;
   const activeRows: Array<{ row: TicketComparisonRow; x: number; y: number }> = [];
   for (const row of rows) {
-    if (excludedTicketIds.has(row.ticket_id)) continue;
+    if (excludedTicketIds.has(workspaceKey(row))) continue;
     const rawX = getScatterMetricValue(row, xMetric);
     const rawY = getScatterMetricValue(row, yMetric);
     if (rawX === null || rawY === null || !Number.isFinite(rawX) || !Number.isFinite(rawY)) { unavailableCount += 1; continue; }

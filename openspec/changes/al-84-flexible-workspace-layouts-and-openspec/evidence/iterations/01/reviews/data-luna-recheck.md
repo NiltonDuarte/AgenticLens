@@ -1,0 +1,17 @@
+# AL-84 data recheck: CHANGES_REQUESTED
+
+Run `al84_data_luna_recheck`, iteration 01. Requested profile: `gpt-6-luna` / medium. Reviewed baseline `163181428ee9a5a599a2da1e91d3af5e618a9682` plus final corrected candidate manifest SHA-256 `9a78b592e2863c8ed07ef99f89f37a41d7052855d52749273c6fe4a9f40aab6f` (673-file content map; all 673 listed file hashes match the checkout). Product and test files remained unchanged. This is a focused data-integrity recheck, not a whole-change approval.
+
+## Finding D-LUNA-1: same-ID replacement still returns another location's facts
+
+**Severity: 5/10. Introduced location-integrity defect; DATA-01 correction is incomplete.** `backend/internal/adapters/repository.go:177-188` resolves a home, then reopens its pathname with `readWorkspaceLedger` and validates only that the final ticket ID matches the request. During a real `renameat2(RENAME_EXCHANGE)` race, I exchanged the selected home with a distinct copy carrying the same canonical ID (`Recorded-A`) but a different `ticket_title`. A disposable overlay test (no tracked test/source changes) completed 287 successful reads; 145 returned the replacement copy's title while the selection named the original home. The different-ID race test proves the new identity guard, but its oracle checks only ticket ID and cannot detect this case. The contract preserves same-ID ledgers as distinct locations and requires explicit location selection; hold the resolved physical home through the final read or return a retry/conflict if it changes.
+
+## Corrected findings and consequential checks
+
+- **DATA-01:** the final identity comparison rejects a replacement with another ticket ID. The supplied real two-directory exchange test exercises 1,500 reads and permits only the requested ID or an explicit read error. The same-ID residual above remains open.
+- **ARCH-01:** source now syncs each created private state directory and its parent before journal publication; the journal is durable before the public pending marker, and artifact replacements follow the marker. The supplied Ubuntu `strace` 6.8 trace receipt covers fresh-state and new-project paths plus four injected `fsync` EIO cases; failures preserved accepted bytes before the marker. This is syscall-ordering/fault-injection evidence, not a physical power-loss claim.
+- **BEH-02 / BEH-03:** final native receipts retain partial-list results and diagnostics, reject implicit selection on incomplete enumeration, permit explicit existing homes omitted by the budget, and reject duplicate first publication. Maintenance receipts cover explicit hidden and nested homes, explicit migration without a ticket ID, and complete valid absence as an empty no-op. Latest focused backfill ordinary/race runs passed in 8.406s/29.055s; affected CLI checks passed in 38.724s.
+- **Movement oracle:** the full begin/rename/replacement/commit and reopened-recovery test checks bytes and pending markers at both homes. The supplied old-rename mutant fails both outcomes, demonstrating the oracle detects the prior defect.
+- **Native preservation:** corrected native receipts report exact mixed-owner objects retained, archive/external refresh without former-home recreation, and maintenance before/after controls. Synthetic fixtures remain separate from this native evidence.
+
+No broad suite was repeated. Integrated `make`, remaining reviewer consolidation and delivery are pending. This verdict covers the named data/recovery boundaries at the manifest above and does not certify other focus areas.

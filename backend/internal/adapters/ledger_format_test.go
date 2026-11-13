@@ -61,6 +61,7 @@ func TestFormatLedgerJSONRejectsAmbiguousInputs(t *testing.T) {
 }
 func putFormatLedger(t *testing.T, root, id, body string) string {
 	t.Helper()
+	writePublicationTestPolicy(t, root)
 	path := filepath.Join(root, id, "agentic_metrics.json")
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		t.Fatal(err)
@@ -78,7 +79,7 @@ func TestFormatLedgerFilesSelectionAndPreflight(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, mode := range []LedgerFormatMode{LedgerFormatDryRun, LedgerFormatCheck} {
-		results, err := FormatLedgerFiles(context.Background(), LedgerFormatOptions{Workspaces: root, TicketIDs: []string{"T-1", "T-1"}, Mode: mode})
+		results, err := FormatLedgerFiles(context.Background(), LedgerFormatOptions{Project: root, TicketIDs: []string{"T-1", "T-1"}, Mode: mode})
 		if err != nil || len(results) != 1 || !results[0].Changed || results[0].Written {
 			t.Fatalf("preview: %+v %v", results, err)
 		}
@@ -88,7 +89,7 @@ func TestFormatLedgerFilesSelectionAndPreflight(t *testing.T) {
 		}
 	}
 	broken := putFormatLedger(t, root, "T-2", "{")
-	if _, err := FormatLedgerFiles(context.Background(), LedgerFormatOptions{Workspaces: root, All: true}); err == nil {
+	if _, err := FormatLedgerFiles(context.Background(), LedgerFormatOptions{Project: root, All: true}); err == nil {
 		t.Fatal("expected preflight failure")
 	}
 	body, err := os.ReadFile(path)
@@ -98,7 +99,7 @@ func TestFormatLedgerFilesSelectionAndPreflight(t *testing.T) {
 	if err := os.Remove(broken); err != nil {
 		t.Fatal(err)
 	}
-	results, err := FormatLedgerFiles(context.Background(), LedgerFormatOptions{Workspaces: root, All: true})
+	results, err := FormatLedgerFiles(context.Background(), LedgerFormatOptions{Project: root, All: true})
 	if err != nil || !results[0].Written {
 		t.Fatalf("write: %+v %v", results, err)
 	}
@@ -110,7 +111,7 @@ func TestFormatLedgerFilesSelectionAndPreflight(t *testing.T) {
 	if err := os.Chtimes(path, mark, mark); err != nil {
 		t.Fatal(err)
 	}
-	results, err = FormatLedgerFiles(context.Background(), LedgerFormatOptions{Workspaces: root, All: true})
+	results, err = FormatLedgerFiles(context.Background(), LedgerFormatOptions{Project: root, All: true})
 	if err != nil || results[0].Changed {
 		t.Fatalf("idempotent: %+v %v", results, err)
 	}
@@ -119,7 +120,7 @@ func TestFormatLedgerFilesSelectionAndPreflight(t *testing.T) {
 		t.Fatal("unchanged rewritten")
 	}
 	for _, ids := range [][]string{{"missing"}, {"../escape"}, {""}} {
-		if _, err := FormatLedgerFiles(context.Background(), LedgerFormatOptions{Workspaces: root, TicketIDs: ids}); err == nil {
+		if _, err := FormatLedgerFiles(context.Background(), LedgerFormatOptions{Project: root, TicketIDs: ids}); err == nil {
 			t.Errorf("accepted %q", ids)
 		}
 	}
@@ -131,7 +132,7 @@ func TestFormatLedgerFilesAliasAndJournalSafety(t *testing.T) {
 	if err := os.Symlink(filepath.Dir(path), alias); err != nil {
 		t.Fatal(err)
 	}
-	results, err := FormatLedgerFiles(context.Background(), LedgerFormatOptions{Workspaces: root, TicketIDs: []string{"T-1", "T-2"}})
+	results, err := FormatLedgerFiles(context.Background(), LedgerFormatOptions{Project: root, TicketIDs: []string{"T-1", "T-1"}})
 	if err != nil || len(results) != 1 {
 		t.Fatalf("alias %+v %v", results, err)
 	}
@@ -139,13 +140,16 @@ func TestFormatLedgerFilesAliasAndJournalSafety(t *testing.T) {
 	if err := os.Symlink(filepath.Dir(outside), filepath.Join(root, "escape")); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := FormatLedgerFiles(context.Background(), LedgerFormatOptions{Workspaces: root, TicketIDs: []string{"escape"}}); err == nil || !strings.Contains(err.Error(), "escapes") {
+	if _, err := FormatLedgerFiles(context.Background(), LedgerFormatOptions{Project: root, TicketIDs: []string{"escape"}}); err == nil || !strings.Contains(err.Error(), "outside") {
 		t.Fatalf("escape: %v", err)
 	}
-	if err := BeginPublication(path, []string{path}); err != nil {
+	if err := beginTestPublication(t, path, []string{path}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := FormatLedgerFiles(context.Background(), LedgerFormatOptions{Workspaces: root, TicketIDs: []string{"T-1"}}); err == nil || !strings.Contains(err.Error(), "interrupted") {
+	if err := capture.PublicationOwner(path).Close(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := FormatLedgerFiles(context.Background(), LedgerFormatOptions{Project: root, TicketIDs: []string{"T-1"}}); err == nil || !strings.Contains(err.Error(), "incomplete") {
 		t.Fatalf("pending publication: %v", err)
 	}
 }
@@ -186,7 +190,7 @@ func TestFormatLedgerFilesWaitsForPublisherBeforeReading(t *testing.T) {
 	}
 	finished := make(chan outcome, 1)
 	go func() {
-		results, err := FormatLedgerFiles(ctx, LedgerFormatOptions{Workspaces: root, TicketIDs: []string{"T-1"}})
+		results, err := FormatLedgerFiles(ctx, LedgerFormatOptions{Project: root, TicketIDs: []string{"T-1"}})
 		finished <- outcome{results, err}
 	}()
 	select {
@@ -227,7 +231,8 @@ func TestFormatLedgerFilesWaitsForPublisherBeforeReading(t *testing.T) {
 func TestFormatLedgerFilesRetiredSidecarAndSelectionIsolation(t *testing.T) {
 	root := t.TempDir()
 	selected := putFormatLedger(t, root, "T-1", formatFixture)
-	unselected := putFormatLedger(t, root, "T-2", formatFixture)
+	unselectedBody := strings.Replace(formatFixture, `"ticket_id":"T-1"`, `"ticket_id":"T-2"`, 1)
+	unselected := putFormatLedger(t, root, "T-2", unselectedBody)
 	retired := filepath.Join(filepath.Dir(selected), "capture_report.json")
 	summary := filepath.Join(filepath.Dir(selected), "SUMMARY.md")
 	for _, path := range []string{retired, summary} {
@@ -235,7 +240,7 @@ func TestFormatLedgerFilesRetiredSidecarAndSelectionIsolation(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	results, err := FormatLedgerFiles(context.Background(), LedgerFormatOptions{Workspaces: root, TicketIDs: []string{"T-1"}})
+	results, err := FormatLedgerFiles(context.Background(), LedgerFormatOptions{Project: root, TicketIDs: []string{"T-1"}})
 	if err != nil || len(results) != 1 || !results[0].Written {
 		t.Fatalf("selected format: %+v %v", results, err)
 	}
@@ -246,7 +251,7 @@ func TestFormatLedgerFilesRetiredSidecarAndSelectionIsolation(t *testing.T) {
 		}
 		want := "historical evidence remains verbatim"
 		if path == unselected {
-			want = formatFixture
+			want = unselectedBody
 		}
 		if string(actual) != want {
 			t.Errorf("unselected artifact changed: %s", path)
@@ -274,7 +279,7 @@ func TestFormatLedgerFilesHardLinkRefusalPreservesBothTargets(t *testing.T) {
 	if err := os.Link(first, second); err != nil {
 		t.Fatal(err)
 	}
-	results, err := FormatLedgerFiles(context.Background(), LedgerFormatOptions{Workspaces: root, TicketIDs: []string{"T-2", "T-1"}})
+	results, err := FormatLedgerFiles(context.Background(), LedgerFormatOptions{Project: root, All: true})
 	if err == nil || !strings.Contains(err.Error(), "hard-linked") || len(results) != 2 {
 		t.Fatalf("hard link outcome: %+v %v", results, err)
 	}
@@ -314,7 +319,7 @@ func TestFormatLedgerFilesReportsPartialLatePublicationFailure(t *testing.T) {
 	}
 	finished := make(chan outcome, 1)
 	go func() {
-		results, err := FormatLedgerFiles(ctx, LedgerFormatOptions{Workspaces: root, All: true})
+		results, err := FormatLedgerFiles(ctx, LedgerFormatOptions{Project: root, All: true})
 		finished <- outcome{results, err}
 	}()
 	select {

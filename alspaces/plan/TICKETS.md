@@ -6,15 +6,15 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
 
 ## In Progress
 
+- **AL-84**: Support flexible workspace layouts and adopt OpenSpec
+  - **Status**: In Progress; iteration 01 approved; implementation in progress; **Blocked by**: None; **Blocks**: None
+  - **File**: [AL-84](to-do/AL-84%20support%20flexible%20workspace%20layouts%20and%20adopt%20openspec.md)
+
 - **AL-83**: Present AgenticLens on GitHub Pages
   - **Status**: In Progress; implementation verified, awaiting publication; **Blocked by**: None; **Blocks**: None
   - **File**: [AL-83](to-do/AL-83%20present%20agenticlens%20on%20github%20pages.md)
 
 ## Ready
-
-- **AL-84**: Support flexible workspace layouts and adopt OpenSpec
-  - **Status**: Ready; **Blocked by**: None; **Blocks**: None
-  - **File**: [AL-84](to-do/AL-84%20support%20flexible%20workspace%20layouts%20and%20adopt%20openspec.md)
 
 - **AL-80**: Capture OpenCode sessions across worktrees
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None

@@ -63,7 +63,7 @@ class InstallationTest(DistributionFixture):
         approved.write_text(shared_policy(self.pin, self.home / '.agenticlens', name='Selected'))
         candidate = self.root / 'approved local.yaml'
         candidate.write_bytes(local_before)
-        command = completion.replace('APPROVED_SHARED.yaml', shlex.quote(str(approved))).replace('--workspaces DIR', '--workspaces workspaces').replace('APPROVED_LOCAL.yaml', shlex.quote(str(candidate)))
+        command = completion.replace('APPROVED_SHARED.yaml', shlex.quote(str(approved))).replace('--workspace-root DIR', '--workspace-root workspaces').replace('APPROVED_LOCAL.yaml', shlex.quote(str(candidate)))
         scaffold_before = self.config.read_bytes()
         selected_local.unlink()
         candidate.unlink()

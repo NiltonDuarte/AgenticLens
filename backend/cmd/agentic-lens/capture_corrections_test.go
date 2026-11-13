@@ -56,6 +56,7 @@ func writeCaptureSuccessfulPublicationPolicy(t *testing.T, project, state string
 	if cfg.Telemetry.Sources.CodexHome != "" {
 		body += fmt.Sprintf("  sources:\n    codex:\n      home: %q\n", cfg.Telemetry.Sources.CodexHome)
 	}
+	body += fmt.Sprintf("agenticlens:\n  state_dir: %q\n", cfg.AgenticLens.StateDir)
 	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.local.yaml"), []byte(body), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -65,6 +66,9 @@ func TestCapturePublicationBudgetExpiryRetainsPendingAndRecovers(t *testing.T) {
 	t.Setenv("XDG_CACHE_HOME", t.TempDir())
 	f := newCaptureGenerationFixture(t)
 	f.output = filepath.Join(f.project, "records", "TEST-100", "agentic_metrics.json")
+	if err := os.MkdirAll(filepath.Dir(f.output), 0700); err != nil {
+		t.Fatal(err)
+	}
 	prepareCaptureOwner(t, f, "root", "TEST-100", 11)
 	f.generate(t)
 	before := readCaptureFile(t, f.output)
@@ -332,7 +336,7 @@ func TestCaptureGenerateUsesOwningConfigurationRoot(t *testing.T) {
 				t.Fatal(err)
 			}
 			out, err = runCaptureNative(t, sub, "", args...)
-			if err == nil || !bytes.Contains(out, []byte("project")) {
+			if err == nil || !bytes.Contains(out, []byte("configured workspace discovery scope")) {
 				t.Errorf("nested configured project imported parent source: %v %s", err, out)
 			}
 			if !bytes.Equal(before, readCaptureFile(t, f.output)) {
@@ -353,10 +357,18 @@ func TestCaptureRejectsOutsideRecoveryJournalBeforeAnyMutation(t *testing.T) {
 			if err := os.WriteFile(victim, accepted, 0600); err != nil {
 				t.Fatal(err)
 			}
-			if err := adapters.BeginPublication(f.output, []string{f.output, filepath.Join(f.project, "capture_report.json")}); err != nil {
+			owner, err := capture.AcquirePublication(context.Background(), f.output, f.project)
+			if err != nil {
 				t.Fatal(err)
 			}
-			journal := f.output + ".publication-pending"
+			if err := adapters.BeginPublication(f.output, []string{f.output, filepath.Join(f.project, "capture_report.json")}); err != nil {
+				owner.Close()
+				t.Fatal(err)
+			}
+			journal := captureFixturePrivateJournal(t, f)
+			if err := owner.Close(); err != nil {
+				t.Fatal(err)
+			}
 			var raw map[string]json.RawMessage
 			if err := json.Unmarshal(readCaptureFile(t, journal), &raw); err != nil {
 				t.Fatal(err)
@@ -372,7 +384,6 @@ func TestCaptureRejectsOutsideRecoveryJournalBeforeAnyMutation(t *testing.T) {
 			}
 			members[0].Data = []byte("must not restore authorized first member")
 			members[1] = member{victim, present, []byte("attacker replacement")}
-			var err error
 			raw["artifacts"], err = json.Marshal(members)
 			if err != nil {
 				t.Fatal(err)
@@ -442,7 +453,7 @@ func TestCaptureRejectsDanglingOutsideSummaryBeforePublicationOrRecovery(t *test
 				}
 			}
 			out, err := runCaptureNative(t, f.project, "", f.args(t, "--append", summary)...)
-			if err == nil || !bytes.Contains(out, []byte("escapes project")) {
+			if err == nil || !bytes.Contains(out, []byte("inside the selected ledger directory")) {
 				t.Errorf("dangling destination accepted: %v %s", err, out)
 			}
 			if _, err := os.Lstat(victim); !os.IsNotExist(err) {
@@ -501,7 +512,7 @@ func TestCaptureRejectsSymlinkDotDotOutsideSummary(t *testing.T) {
 					}
 				}
 				out, err := runCaptureNative(t, f.project, "", f.args(t, "--append", appendPath)...)
-				if err == nil || !bytes.Contains(out, []byte("escapes project")) {
+				if err == nil || !bytes.Contains(out, []byte("inside the selected ledger directory")) {
 					t.Errorf("physical traversal accepted: %v %s", err, out)
 				}
 				if existing {
@@ -538,6 +549,36 @@ func TestCapturePublishesThroughPhysicalArtifactAliases(t *testing.T) {
 					}
 				}
 				aliases := map[string]string{}
+				ledgerHome := f.project
+				if kind == "ledger" || kind == "all" {
+					// A physical alias still names a canonical ledger in an
+					// explicitly provisioned and configured home.
+					ledgerHome = filepath.Join(f.project, "physical-ledger")
+					if state == "missing-parent" {
+						ledgerHome = filepath.Join(ledgerHome, "nested")
+					}
+					if err := os.MkdirAll(ledgerHome, 0700); err != nil {
+						t.Fatal(err)
+					}
+					shared := filepath.Join(f.project, ".agenticlens-config.yaml")
+					policy := readCaptureFile(t, shared)
+					policy = bytes.Replace(policy, []byte("  roots:\n"), []byte(fmt.Sprintf("  roots:\n    - path: %q\n      discovery:\n        max_depth: 0\n        max_directories: 300\n", ledgerHome)), 1)
+					if err := os.WriteFile(shared, policy, 0600); err != nil {
+						t.Fatal(err)
+					}
+					if kind == "ledger" {
+						target := filepath.Join(ledgerHome, "physical-SUMMARY.md")
+						if state == "existing" {
+							if err := os.Rename(summary, target); err != nil {
+								t.Fatal(err)
+							}
+						}
+						if err := os.Symlink(target, summary); err != nil {
+							t.Fatal(err)
+						}
+						aliases[summary] = target
+					}
+				}
 				for name, path := range map[string]string{"ledger": f.output, "report": report, "summary": summary} {
 					if name != kind && kind != "all" {
 						continue
@@ -546,7 +587,13 @@ func TestCapturePublishesThroughPhysicalArtifactAliases(t *testing.T) {
 					if state == "missing-parent" {
 						parent = filepath.Join(parent, "physical-"+name, "nested")
 					}
+					if name == "ledger" || name == "summary" && kind == "all" {
+						parent = ledgerHome
+					}
 					target := filepath.Join(parent, "physical-"+filepath.Base(path))
+					if name == "ledger" {
+						target = filepath.Join(parent, "agentic_metrics.json")
+					}
 					if state == "existing" {
 						if err := os.Rename(path, target); err != nil {
 							t.Fatal(err)
@@ -703,6 +750,8 @@ func waitCorrectionLedger(t *testing.T, path, id string, tokens int64) {
 }
 func TestCaptureContinuousNativeCallbacksDoNotStarveAllTickets(t *testing.T) {
 	f := newCaptureGenerationFixture(t)
+	seedCaptureTicketHome(t, f, "TEST-100")
+	seedCaptureTicketHome(t, f, "TEST-200")
 	root := prepareCaptureOwner(t, f, "root", "TEST-100", 10)
 	prepareCaptureOwner(t, f, "second", "TEST-200", 20)
 	// 100ms coalescing with 100ms refresh: supported events remain closer together
@@ -724,11 +773,22 @@ func TestCaptureContinuousNativeCallbacksDoNotStarveAllTickets(t *testing.T) {
 			t.Fatalf("callback: %v %s", err, out)
 		}
 		callbacks++
-		if _, e := os.Stat(first); e == nil {
-			if _, e = os.Stat(second); e == nil {
-				published = true
-				break
+		publishedInput := func(path, id string, want int64) bool {
+			body, err := os.ReadFile(path)
+			var ledger domain.AgenticFactLedger
+			if err != nil || json.Unmarshal(body, &ledger) != nil {
+				return false
 			}
+			for _, session := range ledger.Sessions {
+				if session.ID == id && len(session.Invocations) == 1 && session.Invocations[0].Tokens.Input == want {
+					return true
+				}
+			}
+			return false
+		}
+		if publishedInput(first, "root", 10) && publishedInput(second, "second", 20) {
+			published = true
+			break
 		}
 		time.Sleep(15 * time.Millisecond)
 	}
@@ -742,6 +802,7 @@ func TestCaptureLiveDisableStopsWritesAndManualRecoverySurvives(t *testing.T) {
 	for _, mode := range []string{"yaml", "disable", "uninstall", "dry-run"} {
 		t.Run(mode, func(t *testing.T) {
 			f := newCaptureGenerationFixture(t)
+			seedCaptureTicketHome(t, f, "TEST-100")
 			prepareCaptureOwner(t, f, "root", "TEST-100", 10)
 			writeCapturePolicy(t, f, false, 0)
 			if out, err := runCaptureNative(t, f.project, "", "capture", "install", "--repo", f.project, "--source", "codex", "--store", f.store, "--state-dir", f.state, "--binary", cliBinaryPath); err != nil {
@@ -1212,6 +1273,7 @@ func TestCaptureQueuedForeignChildCannotImportFromAnotherHome(t *testing.T) {
 
 func TestCaptureDisablingOneIntegrationKeepsOtherSourceAutomatic(t *testing.T) {
 	f := newCaptureGenerationFixture(t)
+	seedCaptureTicketHome(t, f, "TEST-200")
 	writeCapturePolicy(t, f, false, 0)
 	dbPath := setupIsolatedEmptyDB(t)
 	db, err := sql.Open("sqlite", dbPath)
@@ -1417,7 +1479,7 @@ func TestCaptureLegacyReportPhysicalEscapePreservesOutsideAndAcceptedArtifacts(t
 				t.Fatal(err)
 			}
 			out, err := runCaptureNative(t, f.project, "", f.args(t)...)
-			if err == nil || !bytes.Contains(out, []byte("outside exact project")) {
+			if err == nil || !bytes.Contains(out, []byte("unsupported/retired publication state")) {
 				t.Fatalf("native legacy recovery granted outside authority: %v %s", err, out)
 			}
 			for path, want := range map[string][]byte{f.output: before, victim: accepted, marker: body} {

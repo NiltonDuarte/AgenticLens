@@ -1,0 +1,36 @@
+name: agenticlens-planning
+version: 1
+description: Planning-only delivery for a selected PO ticket, without developer contracts
+artifacts:
+  - id: proposal
+    generates: proposal.md
+    description: Planning outcome and links to separate roadmap specifications
+    template: proposal.md
+    instruction: |
+      Follow agentic-lens-po. Describe the selected PO planning task and link its roadmap outputs.
+      Keep requested product outcomes in roadmap tickets, with priority/status in the roadmap index.
+      Do not author application code, tests, runtime scripts or developer contracts.
+    requires: []
+  - id: tasks
+    generates: tasks.md
+    description: Planning work and review steps only
+    template: tasks.md
+    instruction: |
+      Track requirements discovery, roadmap editing and planning verification only.
+      Never schedule application implementation within the PO session.
+    requires: [proposal]
+  - id: delivery
+    generates: delivery.md
+    description: Planning outcome, verification, limits, telemetry and PR context
+    template: delivery.md
+    instruction: |
+      Record planning outputs, readiness/dependency decisions, verification and unresolved questions.
+      Use ticket type docs for final telemetry. Implementation requires a separate development session.
+    requires: [tasks]
+apply:
+  requires: [tasks]
+  tracks: tasks.md
+  instruction: |
+    Perform only the approved PO planning task using agentic-lens-po.
+    Do not implement product code, tests, runtime scripts or developer contracts.
+    End at planning delivery with final telemetry and PR evidence.

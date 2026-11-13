@@ -64,10 +64,10 @@ func TestCaptureExactSourceRemainsAuthoritativeDespiteForeignGitEnvironment(t *t
 		t.Run(mode, func(t *testing.T) {
 			actual, foreign := historyAuthorityFixture(t)
 			trusted := historyAuthorityAuxiliary(t, actual, "actual-committed")
-			historyGit(t, actual.project, "add", "ledger.json")
+			historyGit(t, actual.project, "add", "agentic_metrics.json")
 			historyGit(t, actual.project, "commit", "-qm", "actual auxiliary authority")
 			historyAuthorityAuxiliary(t, foreign, "foreign-forged")
-			historyGit(t, foreign.project, "add", "ledger.json")
+			historyGit(t, foreign.project, "add", "agentic_metrics.json")
 			historyGit(t, foreign.project, "commit", "-qm", "foreign same-ticket auxiliary rows")
 			forged := historyAuthorityAuxiliary(t, actual, "foreign-forged")
 			summary := readCaptureFile(t, filepath.Join(actual.project, "SUMMARY.md"))
@@ -122,11 +122,11 @@ func TestCaptureExactSourceRemainsAuthoritativeDespiteForeignGitEnvironment(t *t
 func TestCaptureExactSourceDoesNotRequireAncestorGitAuthority(t *testing.T) {
 	actual, foreign := historyAuthorityFixture(t)
 	historyAuthorityAuxiliary(t, actual, "ancestor-committed")
-	historyGit(t, actual.project, "add", "ledger.json")
+	historyGit(t, actual.project, "add", "agentic_metrics.json")
 	historyGit(t, actual.project, "commit", "-qm", "ancestor auxiliary ledger")
 	nested := actual
 	nested.project = filepath.Join(actual.project, "nested project")
-	nested.output = filepath.Join(nested.project, "ledger.json")
+	nested.output = filepath.Join(nested.project, "agentic_metrics.json")
 	nested.store = t.TempDir()
 	if err := os.Mkdir(nested.project, 0700); err != nil {
 		t.Fatal(err)
@@ -134,12 +134,15 @@ func TestCaptureExactSourceDoesNotRequireAncestorGitAuthority(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(nested.project, ".agenticlens-config.yaml"), readCaptureFile(t, filepath.Join(actual.project, ".agenticlens-config.yaml")), 0600); err != nil {
 		t.Fatal(err)
 	}
+	if err := writeCaptureFixtureLocal(t, nested, []byte("telemetry:\n  capture:\n")); err != nil {
+		t.Fatal(err)
+	}
 	historyBind(t, nested, "nested-root")
 	// Ordinary current-scope publication remains supported without an observed
 	// worktree Git marker or committed-history dependency.
 	nested.generate(t, "--append", filepath.Join(nested.project, "SUMMARY.md"))
 	candidate := historyAuthorityAuxiliary(t, nested, "ancestor-committed")
-	historyGit(t, actual.project, "add", "nested project/ledger.json")
+	historyGit(t, actual.project, "add", "nested project/agentic_metrics.json")
 	historyGit(t, actual.project, "commit", "-qm", "nested scope committed auxiliary ledger")
 	foreignBefore := foreignHistoryState(t, foreign)
 	if out, err := runHistoryAuthorityGeneration(t, nested); err != nil {

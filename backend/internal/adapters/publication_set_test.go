@@ -1,8 +1,13 @@
 package adapters
 
 import (
+	"agenticlens/internal/adapters/capture"
+	"agenticlens/internal/adapters/config"
+	"agenticlens/internal/domain"
 	"bytes"
+	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -20,7 +25,7 @@ func TestPublicationSetInterruptedRecovery(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			if err := BeginPublication(paths[0], paths); err != nil {
+			if err := beginTestPublication(t, paths[0], paths); err != nil {
 				t.Fatal(err)
 			}
 			for _, p := range paths[:writes] {
@@ -28,7 +33,7 @@ func TestPublicationSetInterruptedRecovery(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			if _, err := readPublishedLedger(paths[0]); err == nil {
+			if _, err := readOwnedLedger(paths[0]); err == nil {
 				t.Fatal("interrupted publication exposed as successful read")
 			}
 			// Model process death/restart by discarding all in-memory transaction state.
@@ -47,7 +52,7 @@ func TestPublicationSetInterruptedRecovery(t *testing.T) {
 			if recovered, err := RecoverPublication(paths[0], paths); recovered || err != nil {
 				t.Fatalf("recovery not idempotent %v %v", recovered, err)
 			}
-			if err := BeginPublication(paths[0], paths); err != nil {
+			if err := beginTestPublication(t, paths[0], paths); err != nil {
 				t.Fatal(err)
 			}
 			for _, p := range paths {
@@ -58,8 +63,56 @@ func TestPublicationSetInterruptedRecovery(t *testing.T) {
 			if err := CommitPublication(paths[0], paths); err != nil {
 				t.Fatal(err)
 			}
-			if b, err := readPublishedLedger(paths[0]); err != nil || string(b) != "accepted" {
+			if b, err := readOwnedLedger(paths[0]); err != nil || string(b) != "accepted" {
 				t.Fatalf("commit %s %v", b, err)
+			}
+		})
+	}
+}
+
+func TestPublicationNestedSummaryCreationAndRecovery(t *testing.T) {
+	for _, outcome := range []string{"before-summary", "after-summary", "commit"} {
+		t.Run(outcome, func(t *testing.T) {
+			dir := t.TempDir()
+			ledger := filepath.Join(dir, "ledger.json")
+			summary := filepath.Join(dir, "reports", "nested", "SUMMARY.md")
+			paths := []string{ledger, summary}
+			if err := os.WriteFile(ledger, []byte("accepted ledger"), 0600); err != nil {
+				t.Fatal(err)
+			}
+			if err := beginTestPublication(t, ledger, paths); err != nil {
+				t.Fatal(err)
+			}
+			if err := capture.WritePublicationFile(ledger, []byte("replacement ledger"), 0600); err != nil {
+				t.Fatal(err)
+			}
+			if outcome != "before-summary" {
+				if err := UpdateSummaryFile(summary, "nested metrics table"); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if outcome == "commit" {
+				if err := CommitPublication(ledger, paths); err != nil {
+					t.Fatal(err)
+				}
+				body, err := os.ReadFile(summary)
+				if err != nil || !bytes.Contains(body, []byte("nested metrics table")) {
+					t.Fatalf("nested summary not published: %q %v", body, err)
+				}
+			} else {
+				if recovered, err := RecoverPublication(ledger, paths); !recovered || err != nil {
+					t.Fatalf("nested rollback incomplete: %v %v", recovered, err)
+				}
+				body, err := os.ReadFile(ledger)
+				if err != nil || string(body) != "accepted ledger" {
+					t.Fatalf("prior ledger lost: %q %v", body, err)
+				}
+				if _, err := os.Stat(summary); !os.IsNotExist(err) {
+					t.Fatalf("absent summary survived rollback: %v", err)
+				}
+			}
+			if err := CheckPublication(ledger); err != nil {
+				t.Fatalf("completed publication remains pending: %v", err)
 			}
 		})
 	}
@@ -72,7 +125,7 @@ func TestPublicationRecoveryFailureRetainsPriorGoodJournal(t *testing.T) {
 	if err := os.WriteFile(ledger, []byte("original"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if err := BeginPublication(ledger, []string{ledger, report}); err != nil {
+	if err := beginTestPublication(t, ledger, []string{ledger, report}); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.Mkdir(report, 0700); err != nil {
@@ -118,7 +171,7 @@ func TestPublicationRejectsMissingAliasDestinations(t *testing.T) {
 				leaf = filepath.Join("missing", "deeper", leaf)
 			}
 			ledger := filepath.Join(real, leaf)
-			if err := BeginPublication(ledger, []string{ledger, filepath.Join(alias, leaf)}); err == nil {
+			if err := beginTestPublication(t, ledger, []string{ledger, filepath.Join(alias, leaf)}); err == nil {
 				t.Fatal("overlapping first publication accepted")
 			}
 			if _, err := os.Stat(journalPath(ledger)); !os.IsNotExist(err) {
@@ -150,7 +203,7 @@ func TestPublicationRejectsExistingPhysicalAliases(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if err := BeginPublication(ledger, []string{ledger, alias}); err == nil {
+			if err := beginTestPublication(t, ledger, []string{ledger, alias}); err == nil {
 				t.Fatal("physical aliases accepted")
 			}
 			if kind != "dangling-leaf" {
@@ -185,10 +238,10 @@ func TestPublicationUntrustedJournalCannotMutateAnyMember(t *testing.T) {
 				}
 			}
 			paths := []string{ledger, report}
-			if err := BeginPublication(ledger, paths); err != nil {
+			if err := beginTestPublication(t, ledger, paths); err != nil {
 				t.Fatal(err)
 			}
-			original, err := os.ReadFile(journalPath(ledger))
+			original, err := os.ReadFile(testPrivateJournal(t, ledger))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -236,7 +289,7 @@ func TestPublicationUntrustedJournalCannotMutateAnyMember(t *testing.T) {
 				j.Ledger = ""
 				j.MemberCount = 0
 			case "version":
-				j.Version = 2
+				j.Version = 3
 			case "count":
 				j.MemberCount = 3
 			case "missing-member":
@@ -299,7 +352,16 @@ func TestPublicationUntrustedJournalCannotMutateAnyMember(t *testing.T) {
 			if name == "trailing" {
 				body = append(body, []byte(` {}`)...)
 			}
-			marker := journalPath(recoveryLedger)
+			marker := testPrivateJournal(t, ledger)
+			if recoveryLedger != ledger {
+				indicator, e := os.ReadFile(journalPath(ledger))
+				if e != nil {
+					t.Fatal(e)
+				}
+				if e = os.WriteFile(journalPath(recoveryLedger), indicator, 0600); e != nil {
+					t.Fatal(e)
+				}
+			}
 			if err := os.WriteFile(marker, body, 0600); err != nil {
 				t.Fatal(err)
 			}
@@ -307,11 +369,10 @@ func TestPublicationUntrustedJournalCannotMutateAnyMember(t *testing.T) {
 			if !recovered || err == nil {
 				t.Fatalf("untrusted journal accepted: %v %v", recovered, err)
 			}
-			// The compatibility retry must preserve the same full prevalidation:
-			// recognizing a retired report never authorizes a journal's other paths.
-			recovered, err = RecoverPublicationWithLegacyReport(filepath.Dir(recoveryLedger), recoveryLedger, allowed)
+			// Retrying a rejected journal must preserve full prevalidation and all bytes.
+			recovered, err = RecoverPublication(recoveryLedger, allowed)
 			if !recovered || err == nil {
-				t.Fatalf("legacy recovery retry accepted untrusted journal: %v %v", recovered, err)
+				t.Fatalf("recovery retry accepted untrusted journal: %v %v", recovered, err)
 			}
 			for _, path := range paths {
 				b, err := os.ReadFile(path)
@@ -342,7 +403,7 @@ func TestPublicationMissingSetRecoveryThroughParentAlias(t *testing.T) {
 	}
 	ledger, report := filepath.Join(alias, "ledger"), filepath.Join(real, "report")
 	paths := []string{ledger, report}
-	if err := BeginPublication(ledger, paths); err != nil {
+	if err := beginTestPublication(t, ledger, paths); err != nil {
 		t.Fatal(err)
 	}
 	for _, p := range paths {
@@ -375,7 +436,7 @@ func TestPublicationPartialRecoveryCanRetry(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if err := BeginPublication(ledger, paths); err != nil {
+	if err := beginTestPublication(t, ledger, paths); err != nil {
 		t.Fatal(err)
 	}
 	journal, err := os.ReadFile(journalPath(ledger))
@@ -448,7 +509,7 @@ func TestPublicationLegacyRecoveryRejectsPhysicalReportEscapeBeforeMutation(t *t
 			if err = os.WriteFile(marker, body, 0600); err != nil {
 				t.Fatal(err)
 			}
-			if recovered, err := RecoverPublicationWithLegacyReport(project, ledger, []string{ledger}); !recovered || err == nil {
+			if recovered, err := RecoverPublication(ledger, []string{ledger}); !recovered || err == nil {
 				t.Fatalf("outside legacy authority accepted: %v %v", recovered, err)
 			}
 			for path, want := range map[string][]byte{ledger: []byte("accepted ledger"), victim: []byte("accepted outside"), marker: body} {
@@ -457,5 +518,75 @@ func TestPublicationLegacyRecoveryRejectsPhysicalReportEscapeBeforeMutation(t *t
 				}
 			}
 		})
+	}
+}
+
+// Publication tests use isolated explicit policy and real directory ownership;
+// no developer state path or capture registry participates.
+func beginTestPublication(t *testing.T, ledger string, paths []string) error {
+	t.Helper()
+	if capture.PublicationOwner(ledger) == nil {
+		project := filepath.Dir(ledger)
+		if _, err := os.Stat(project); err != nil {
+			return err
+		}
+		cfg, err := config.LoadFromFile("config/testdata/shared-policy.yaml")
+		if err != nil {
+			t.Fatal(err)
+		}
+		cfg.Workspaces.Roots = []domain.WorkspaceRootConfig{{Path: ".", Discovery: domain.WorkspaceDiscoveryConfig{MaxDepth: 8, MaxDirectories: 300}}}
+		body, err := config.GenerateConfigYAML(cfg)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err = os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), body, 0600); err != nil {
+			t.Fatal(err)
+		}
+		local := fmt.Sprintf("agenticlens:\n  state_dir: %q\n", filepath.Join(t.TempDir(), "state"))
+		if err = os.WriteFile(filepath.Join(project, ".agenticlens-config.local.yaml"), []byte(local), 0600); err != nil {
+			t.Fatal(err)
+		}
+		owner, err := capture.AcquirePublication(context.Background(), ledger, project)
+		if err != nil {
+			return err
+		}
+		t.Cleanup(func() {
+			if capture.PublicationOwner(ledger) == owner {
+				if err := owner.Close(); err != nil {
+					t.Error(err)
+				}
+			}
+		})
+	}
+	return BeginPublication(ledger, paths)
+}
+func testPrivateJournal(t *testing.T, ledger string) string {
+	t.Helper()
+	pending, present, err := loadPending(ledger)
+	if err != nil || !present {
+		t.Fatalf("pending indicator unavailable: %v %v", present, err)
+	}
+	return privateJournalPath(capture.PublicationOwner(ledger), pending.Transaction)
+}
+
+func writePublicationTestPolicy(t *testing.T, project string) {
+	t.Helper()
+	if _, err := os.Stat(filepath.Join(project, ".agenticlens-config.yaml")); err == nil {
+		return
+	}
+	cfg, err := config.LoadFromFile("config/testdata/shared-policy.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.Workspaces.Roots = []domain.WorkspaceRootConfig{{Path: ".", Discovery: domain.WorkspaceDiscoveryConfig{MaxDepth: 8, MaxDirectories: 300}}}
+	body, err := config.GenerateConfigYAML(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), body, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err = os.WriteFile(filepath.Join(project, ".agenticlens-config.local.yaml"), []byte("agenticlens:\n  state_dir: .publication-state\n"), 0600); err != nil {
+		t.Fatal(err)
 	}
 }

@@ -5328,3 +5328,7 @@ button.trace-invocation-badge { cursor: pointer; }
 .deep-dive-top-bar { flex-wrap: wrap; gap: 12px; }
 .deep-dive-top-bar .ticket-selector-bar { flex: 1 1 24rem; width: auto; min-width: 0; }
 .ticket-scatter-legend { flex-wrap: wrap; overflow-wrap: anywhere; }
+
+.workspace-roots { display: flex; flex-wrap: wrap; gap: 0.4rem; min-width: 0; }
+.workspace-roots .workspace-pill { max-width: 24rem; overflow-wrap: anywhere; white-space: normal; }
+.workspace-location { display: block; overflow-wrap: anywhere; white-space: normal; font-size: 0.8rem; color: var(--text-muted, #8793a3); }

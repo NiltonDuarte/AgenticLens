@@ -10,6 +10,7 @@ require "yaml"
 options = {project: ".", output: "dist/tickets-site", base_path: ""}
 OptionParser.new do |parser|
   parser.on("--project PATH") { |value| options[:project] = value }
+  parser.on("--roadmap PATH") { |value| options[:roadmap] = value }
   parser.on("--output PATH") { |value| options[:output] = value }
   parser.on("--repository OWNER/REPO") { |value| options[:repository] = value }
   parser.on("--revision SHA") { |value| options[:revision] = value }
@@ -20,11 +21,9 @@ raise "--revision is required" if options[:revision].to_s.strip.empty?
 raise "--base-path must be an absolute URL path" unless options[:base_path].empty? || options[:base_path].match?(%r{\A/(?!/)[^?#]*\z})
 
 project = Pathname.new(options[:project]).realpath
-config_path = project.join(".agenticlens-config.yaml")
-config = config_path.file? ? YAML.safe_load_file(config_path) || {} : {}
-workspace = config.fetch("workspaces", {}).fetch("dir", "workspaces")
-raise "workspaces.dir must be a nonempty path" unless workspace.is_a?(String) && !workspace.strip.empty?
-plan = project.join(workspace, "plan").realpath
+raise "--roadmap PATH is required" if options[:roadmap].to_s.strip.empty?
+# The roadmap is repository planning input, independent of telemetry-ledger roots.
+plan = project.join(options[:roadmap]).realpath
 raise "Plan must be inside the repository" unless plan.to_s.start_with?("#{project}/")
 raise "Roadmap not found: #{plan}/TICKETS.md" unless plan.join("TICKETS.md").file?
 output = project.join(options[:output]).expand_path

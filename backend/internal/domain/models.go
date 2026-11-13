@@ -450,19 +450,21 @@ type ThreadExecutionRecord struct {
 
 // AgenticMetricsLedger is the full projected metrics ledger combining raw facts with derived rollups.
 type AgenticMetricsLedger struct {
-	TicketID           *string                 `json:"ticket_id"`
-	TicketTitle        *string                 `json:"ticket_title"`
-	TicketType         *ConventionalTicketType `json:"ticket_type"`
-	StartedAt          *string                 `json:"started_at"`
-	CompletedAt        *string                 `json:"completed_at"`
-	UpdatedAt          string                  `json:"updated_at"`
-	Facts              AgenticFactLedger       `json:"facts"`
-	WorkflowEfficiency WorkflowEfficiency      `json:"workflow_efficiency"`
-	Threads            []ThreadExecutionRecord `json:"threads"`
-	Totals             GroupedMetric           `json:"totals"`
-	Roles              []RoleMetric            `json:"roles"`
-	Models             []ModelMetric           `json:"models"`
-	Anomalies          []Anomaly               `json:"anomalies,omitzero"`
+	WorkspaceDiagnostics []WorkspaceDiagnostic   `json:"-"`
+	WorkspacePath        string                  `json:"workspace_path"`
+	TicketID             *string                 `json:"ticket_id"`
+	TicketTitle          *string                 `json:"ticket_title"`
+	TicketType           *ConventionalTicketType `json:"ticket_type"`
+	StartedAt            *string                 `json:"started_at"`
+	CompletedAt          *string                 `json:"completed_at"`
+	UpdatedAt            string                  `json:"updated_at"`
+	Facts                AgenticFactLedger       `json:"facts"`
+	WorkflowEfficiency   WorkflowEfficiency      `json:"workflow_efficiency"`
+	Threads              []ThreadExecutionRecord `json:"threads"`
+	Totals               GroupedMetric           `json:"totals"`
+	Roles                []RoleMetric            `json:"roles"`
+	Models               []ModelMetric           `json:"models"`
+	Anomalies            []Anomaly               `json:"anomalies,omitzero"`
 }
 
 // TimeBucketMetric captures telemetry aggregates for a chronological time bucket.
@@ -551,6 +553,7 @@ type FleetSummary struct {
 
 // TicketComparisonRow summarizes a single ticket for cross-ticket matrix presentation.
 type TicketComparisonRow struct {
+	WorkspacePath           string                  `json:"workspace_path"`
 	Tags                    map[string]string       `json:"tags,omitempty"`
 	ProvisionalSeconds      int64                   `json:"provisional_seconds,omitempty"`
 	SkillsUsed              []string                `json:"skills_used,omitzero"`
@@ -589,6 +592,7 @@ type ScanReport struct {
 
 // WorkspaceDiagnostic describes one skipped ticket ledger without exposing its contents.
 type WorkspaceDiagnostic struct {
+	Path     string `json:"path"`
 	TicketID string `json:"ticket_id"`
 	Message  string `json:"message"`
 }

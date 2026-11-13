@@ -1,0 +1,59 @@
+name: agenticlens
+version: 1
+description: Ticket-linked execution with explicit approval and attributed delivery evidence
+artifacts:
+  - id: proposal
+    generates: proposal.md
+    description: Selected execution intent linked to its separate roadmap ticket
+    template: proposal.md
+    instruction: |
+      Link the existing roadmap ticket and describe the selected execution outcome.
+      Declare new or modified capabilities. Do not copy roadmap status, priorities or dependencies.
+      Follow AGENTS.md. Planning readiness never authorizes implementation.
+    requires: []
+  - id: specs
+    generates: "specs/**/*.md"
+    description: Observable acceptance for the selected change
+    template: spec.md
+    instruction: |
+      Write capability delta specifications with ADDED/MODIFIED/REMOVED Requirements.
+      Each requirement uses SHALL or MUST and has a four-hash Scenario with WHEN and THEN.
+      Link the ticket context; do not replace its evolving roadmap intent.
+      Use skip_specs only through supported OpenSpec metadata for work with no behavior change.
+    requires: [proposal]
+  - id: design
+    generates: design.md
+    description: Technical contract, scope approval and steering evidence
+    template: design.md
+    instruction: |
+      Record agreed outcome, exclusions, owners, decisions and explicit approval evidence.
+      Keep material steering with source, acceptance delta, preserved guarantees and verification impact.
+      Do not treat the presence of this document or tasks as approval to code.
+    requires: [proposal]
+  - id: tasks
+    generates: tasks.md
+    description: Implementation sequence, ownership and verification work
+    template: tasks.md
+    instruction: |
+      Group implementation with its tests and documentation, with named writable-path owners.
+      Separate pending steps from actual results; reference design approval before execution.
+      Follow agentic-lens-dev role boundaries and review protocol.
+    requires: [specs, design]
+  - id: delivery
+    generates: delivery.md
+    description: Current outcome, verification, attributed review, telemetry and PR context
+    template: delivery.md
+    instruction: |
+      Record the delivered behavior, tested revision/diff, executed commands/results and limits.
+      Retain incomplete review evidence, discovery attribution and compact findings links.
+      Summarize PR context here; derive a temporary PR body rather than maintaining another editable copy.
+      Generate telemetry only as the final extraction step and append its rendered summary here.
+    requires: [tasks]
+apply:
+  requires: [tasks]
+  tracks: tasks.md
+  instruction: |
+    Read AGENTS.md and invoke the owning AgenticLens skill.
+    Require explicit scope approval recorded in design.md before implementation.
+    Planner plans; coder implements; tester verifies; independent reviewers investigate.
+    Stop on a scope conflict or material missing evidence. The orchestrator owns integration and delivery.
