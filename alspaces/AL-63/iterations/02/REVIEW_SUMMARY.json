@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "CAP-01",
+      "severity": 6,
+      "issue": "Native OpenCode task metadata child identity is dropped by occurrence/event projection.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Open follow-up: proposed metadata-backed child-link correction; no new ticket or fix, related AL-69. Original AS-1; derived native-data probe confirmed."
+    },
+    {
+      "finding_id": "CAP-02",
+      "severity": 6,
+      "issue": "V2-only OpenCode owners fail the v1-only live reader despite working historical hydration.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Open FIX-18 follow-up for accurate unsupported-live reporting; v2 live implementation is outside this audit. Original B-SOL-01."
+    },
+    {
+      "finding_id": "CAP-03",
+      "severity": 6,
+      "issue": "Server hydration ignores the configured Codex home.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed upstream by AL-70 (167c204f); November11 integrated source and configured-home fixture confirm complete hydration. Historical B-SOL-02 discovery credit retained."
+    },
+    {
+      "finding_id": "CAP-04",
+      "severity": 5,
+      "issue": "Explicit failed Codex function outputs leave persisted tool-error counters at zero.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Open proposed bounded function-output error-counter correction; no ticket allocated or fix, related AL-69. Synthetic supported branch only. Original B-SOL-03."
+    },
+    {
+      "finding_id": "CAP-05",
+      "severity": 4,
+      "issue": "Live child lookup and malformed-part failures omit completeness diagnostics.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Partially fixed upstream by AL-69 (f63e3db6): typed child-lookup diagnostic/content preservation confirmed by current test. Malformed-part disclosure remains a static residual. Historical B-SOL-04 credit retained."
+    },
+    {
+      "finding_id": "CAP-06",
+      "severity": 3,
+      "issue": "Mixed-family backfill can miss a valid v1 owner and preserve stale facts.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Former table-existence selector superseded upstream by AL-70; current complete-family SessionTable explicitly rejects mixed layout (fixture confirmed). Generic mixed recovery remains unsupported; REV-7 owns broader policy. Historical DATA-SOL-01 credit retained."
+    },
+    {
+      "finding_id": "EVID-01",
+      "severity": 4,
+      "issue": "V2 durable tests lack discriminating prior occurrence-preservation and growing-repeat recovery cases.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Original TS-01 audit evidence gap resolved by parent disposable CLI probes: prior child/same/other-owner facts retained, counts1to2, repeat/malformed/missing arrays identical. No durable test added; not a proven product defect."
+    },
+    {
+      "finding_id": "EVID-02",
+      "severity": 3,
+      "issue": "V2 durable tests lack an explicit failed-tool versus successful error-like-output oracle.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Original TS-02 audit evidence gap resolved by parent two-read probe with exactly one error. Native failing v2 sample and durable regression remain unexecuted/unimplemented; not a proven defect."
+    }
+  ]
+}

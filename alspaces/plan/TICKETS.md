@@ -12,13 +12,13 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
 
 ## Ready
 
+- **AL-65**: Recommend safe source-backed backfill defaults
+  - **Status**: Ready; **Blocked by**: None; **Blocks**: None
+  - **File**: [AL-65](to-do/AL-65%20recommend%20safe%20source%20backed%20backfill%20defaults.md)
+
 - **AL-80**: Capture OpenCode sessions across worktrees
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None
   - **File**: [AL-80](to-do/AL-80%20capture%20opencode%20sessions%20across%20worktrees.md)
-
-- **AL-63**: Verify source capabilities across harnesses
-  - **Status**: Ready; **Blocked by**: None; **Blocks**: AL-65
-  - **File**: [AL-63](to-do/AL-63%20verify%20source%20capabilities%20across%20harnesses.md)
 
 - **AL-71**: Keep dashboard requests and live data reliable
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None
@@ -89,10 +89,6 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
   - **File**: [REV-7](to-do/REV-7%20review%20source%20read%20guarantees.md)
 
 ## Blocked
-
-- **AL-65**: Recommend safe source-backed backfill defaults
-  - **Status**: Blocked; **Blocked by**: AL-63; **Blocks**: None
-  - **File**: [AL-65](to-do/AL-65%20recommend%20safe%20source%20backed%20backfill%20defaults.md)
 
 - **AL2-4**: Monitor and refresh remote Git projects
   - **Status**: Blocked; **Blocked by**: AL2-3; **Blocks**: AL2-5
