@@ -12,17 +12,13 @@ OpenSpec already accepts lowercase ticket-prefixed names. The remaining platform
 
 ## Expected behavior and acceptance
 
-- **One change home.** Future work uses ticket-prefixed OpenSpec changes with telemetry and delivery evidence inside that change. Canonical ticket identity remains stable when the description or archive path changes. OpenSpec owns change creation; AgenticLens owns source-backed telemetry. No separate per-ticket AgenticLens directory is required.
-- **Consistent multi-root operation.** The platform supports explicitly configured active/archive roots and bounded immediate-child discovery for this mode. All readers and publishers resolve the same unique change. Existing single-root recursive configurations remain supported; missing or ambiguous identity is visible rather than silently selecting a destination.
-- **Safe lifecycle.** Archive, late telemetry updates and interrupted/concurrent publication preserve supported history and never recreate a missing active change. Binding remains scoped to the existing project/worktree and exact native session; changing a directory does not reassign ownership.
-- **OpenSpec-native guidance.** Agent roles, all affected skills/templates, setup materials and repository instructions use one authoritative set of OpenSpec artifacts. Planning readiness, approval to implement, implementation progress, review evidence and archive are distinct. OpenSpec's defaults cannot bypass human scope approval or verification gates.
-- **Repository adoption.** Cut over active roadmap work and future ticket creation while preserving ticket IDs, dependency/readiness information and existing links. Historical alspaces ledgers remain readable through an explicit legacy root without copying or rewriting their facts. No parallel editable backlog or new telemetry workspace is introduced.
+[AL-84](../plan/to-do/AL-84%20adopt%20openspec%20across%20the%20platform%20and%20repository.md) owns the observable acceptance for the complete slice: multi-root discovery and shared location resolution, archive-safe publication, stable ticket/session binding, ticket-prefixed OpenSpec setup, reconciled agents/skills/guidance, and the live repository/backlog cutover. Platform support alone is not completion.
 
-Ticket-specific acceptance is owned by the linked tickets. Implementing phase analytics, additional harness adapters, cross-repository OpenSpec stores and compressed archive packages is outside this initiative.
+Future work has one change home. Historical alspaces data remains supported through an explicit legacy root rather than being copied or silently reclassified. OpenSpec owns change creation; AgenticLens owns source-backed telemetry. Existing non-OpenSpec configurations remain supported. The single slice includes the repository's operating guidance and migration evidence, preserving human scope approval, role boundaries, review attribution and portable history.
 
 ## Delivery
 
-[AL-84](../plan/to-do/AL-84%20resolve%20workspaces%20across%20configured%20roots.md) makes multi-root changes readable. [AL-85](../plan/to-do/AL-85%20publish%20telemetry%20safely%20across%20change%20moves.md) preserves publication/binding through moves. [AL-86](../plan/to-do/AL-86%20set%20up%20ticket%20prefixed%20openspec%20changes.md) supplies a usable OpenSpec setup and creation workflow. [AL-87](../plan/to-do/AL-87%20align%20agents%20and%20skills%20with%20openspec.md) aligns operating guidance. [AL-88](../plan/to-do/AL-88%20cut%20over%20the%20repository%20to%20openspec.md) migrates the live repository and backlog. Readiness and dependency edges are recorded only in [the roadmap index](../plan/TICKETS.md).
+Deliver this initiative through the single AL-84 ticket, as the user explicitly requested after reviewing the initial decomposition. There are no separate rollout tickets or ticket dependencies for this batch; readiness is recorded only in [the roadmap index](../plan/TICKETS.md). This larger end-to-end boundary is intentional. Developers may organize internal work without treating partial platform/guidance/cutover outcomes as delivered acceptance.
 
 ## Implementation notes
 
