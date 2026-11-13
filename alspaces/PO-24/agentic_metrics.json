@@ -1,0 +1,55 @@
+{
+  "tags": {
+    "agentic-lens-dev": "0.1.1",
+    "agentic-lens-po": "0.1.1",
+    "agentic-lens-review": "0.1.1"
+  },
+  "schema_version": 6,
+  "ticket_id": "GEN-26",
+  "ticket_title": "Assess direct OpenSpec workspace integration",
+  "ticket_type": "chore",
+  "started_at": "2026-11-13T12:38:28.139Z",
+  "completed_at": "2026-11-13T13:02:48.870836+00:00",
+  "updated_at": "2026-11-13T13:02:48.870836+00:00",
+  "code": {
+    "lines_added": 0,
+    "lines_deleted": 0,
+    "test_lines_added": 0,
+    "test_lines_deleted": 0,
+    "prod_lines_added": 0,
+    "prod_lines_deleted": 0,
+    "files_changed": 0,
+    "sdlc_iterations": 4
+  },
+  "sessions": [
+    {
+      "skills": [],
+      "delegations": [],
+      "id": "01a1d4ea-9e1b-7242-909c-42d7410438f3",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "provisional_seconds": 124,
+          "role": "",
+          "model": "gpt-6.1-sol",
+          "started_at": "2026-11-13T12:38:29.044Z",
+          "completed_at": null,
+          "active_duration_seconds": 902,
+          "turns": 2,
+          "tokens": {"input": 117531, "output": 22802, "cache_read": 5378816, "reasoning": 5680, "peak_context": 132220},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
+          "compactions": 0,
+          "user_iterations": 4
+        }
+      ],
+      "tools": [
+        {"name": "command", "calls": 51, "errors": 3},
+        {"name": "wait", "calls": 6, "errors": 0}
+      ],
+      "anomalies": []
+    }
+  ],
+  "anomalies": []
+}

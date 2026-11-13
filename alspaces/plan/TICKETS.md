@@ -12,6 +12,10 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
 
 ## Ready
 
+- **AL-84**: Resolve workspaces across configured roots
+  - **Status**: Ready; **Blocked by**: None; **Blocks**: AL-85
+  - **File**: [AL-84](to-do/AL-84%20resolve%20workspaces%20across%20configured%20roots.md)
+
 - **AL-80**: Capture OpenCode sessions across worktrees
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None
   - **File**: [AL-80](to-do/AL-80%20capture%20opencode%20sessions%20across%20worktrees.md)
@@ -89,6 +93,22 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
   - **File**: [REV-7](to-do/REV-7%20review%20source%20read%20guarantees.md)
 
 ## Blocked
+
+- **AL-85**: Publish telemetry safely across change moves
+  - **Status**: Blocked; **Blocked by**: AL-84; **Blocks**: AL-86
+  - **File**: [AL-85](to-do/AL-85%20publish%20telemetry%20safely%20across%20change%20moves.md)
+
+- **AL-86**: Set up ticket-prefixed OpenSpec changes
+  - **Status**: Blocked; **Blocked by**: AL-85; **Blocks**: AL-87
+  - **File**: [AL-86](to-do/AL-86%20set%20up%20ticket%20prefixed%20openspec%20changes.md)
+
+- **AL-87**: Align agents and skills with OpenSpec
+  - **Status**: Blocked; **Blocked by**: AL-86; **Blocks**: AL-88
+  - **File**: [AL-87](to-do/AL-87%20align%20agents%20and%20skills%20with%20openspec.md)
+
+- **AL-88**: Cut over the repository to OpenSpec
+  - **Status**: Blocked; **Blocked by**: AL-87; **Blocks**: None
+  - **File**: [AL-88](to-do/AL-88%20cut%20over%20the%20repository%20to%20openspec.md)
 
 - **AL-65**: Recommend safe source-backed backfill defaults
   - **Status**: Blocked; **Blocked by**: AL-63; **Blocks**: None
