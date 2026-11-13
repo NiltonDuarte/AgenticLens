@@ -12,3 +12,5 @@ Implementation and verification are complete. Explicit user approval: “$agenti
 - [x] Extract final telemetry, verify all expected source owners and prepare the final artifact commit and PR handoff.
 
 [Delivery](delivery.md) owns the tested revision, outcome, verification and publication context. [Test evidence](evidence/iterations/01/TEST_RESULTS.md) retains actual failures, corrections, current passes and limits; [compact findings](evidence/iterations/01/REVIEW_SUMMARY.json) retains every canonical finding and reporter tuple. The parent publishes the prepared commit and PR and links the actual URL in the handoff. No merge is authorized.
+
+Hosted Pages caller follow-up: both behavior profiles approved explicit Pages configuration plus CLI precedence; old/new callers and11 site/9 preview tests passed. Core sources remain unchanged. The parent refreshes telemetry and watches PR144 checks after pushing the correction.

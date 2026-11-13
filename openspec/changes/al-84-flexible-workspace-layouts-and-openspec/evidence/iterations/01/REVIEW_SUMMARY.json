@@ -104,6 +104,20 @@
         }
       ],
       "disposition": "Fixed: maintenance consumers share selection guards and propagate explicit home into nested migration; complete valid absence remains a no-op."
+    },
+    {
+      "finding_id": "CI-01",
+      "severity": 5,
+      "issue": "The trusted base workflow omitted the new roadmap flag required by the candidate Pages builder.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: explicit Pages roadmap_path config supplies normal input; CLI override and containment remain enforced."
     }
   ]
 }
