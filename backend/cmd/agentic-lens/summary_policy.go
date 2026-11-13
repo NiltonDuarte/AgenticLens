@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"agenticlens/internal/adapters"
 	adaptersconfig "agenticlens/internal/adapters/config"
 	"agenticlens/internal/adapters/filesystem"
 	"agenticlens/internal/domain"
@@ -65,22 +66,11 @@ func resolveGenerationSummaryPath(project string, cfg domain.ProjectConfig, appe
 	if ticket == "." || ticket == ".." || strings.ContainsAny(ticket, "/\\\x00") {
 		return "", fmt.Errorf("ticket ID is unsafe for configured summary workspace")
 	}
-	origin := filepath.Dir(cfg.ConfigPath)
-	if cfg.ConfigPath == "" {
-		origin = project
-	}
-	if strings.TrimSpace(cfg.Workspaces.Dir) == "" {
-		return "", fmt.Errorf("workspaces.dir is required for configured ticket-workspace summary output")
-	}
-	root, err := adaptersconfig.ResolveConfiguredPath(origin, cfg.Workspaces.Dir)
+	location, err := adapters.ResolveTicketLocation(cfg, ticket, "")
 	if err != nil {
 		return "", err
 	}
-	physical, err := filesystem.PhysicalPath(root)
-	if err != nil {
-		return "", err
-	}
-	return validateEffectiveSummaryPath(filepath.Join(physical, ticket, name), ledger)
+	return validateEffectiveSummaryPath(filepath.Join(location.Path, name), ledger)
 }
 
 func validateEffectiveSummaryPath(path, ledger string) (string, error) {

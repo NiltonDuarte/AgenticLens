@@ -3,6 +3,7 @@ package backfill
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,6 +13,32 @@ import (
 	"agenticlens/internal/adapters/config"
 	"agenticlens/internal/domain"
 )
+
+func readMaintenanceLedger(owner io.Closer, path, requested string, ignoreCase bool) ([]byte, string, error) {
+	var body []byte
+	var err error
+	if directory, ok := owner.(*capture.ReadDirectory); ok {
+		if _, e := directory.Lstat(filepath.Base(path) + ".publication-pending"); e == nil {
+			return nil, "", adapters.ErrPublicationPending
+		} else if !errors.Is(e, os.ErrNotExist) {
+			return nil, "", e
+		}
+		body, err = directory.ReadFile(filepath.Base(path))
+	} else {
+		body, err = capture.ReadPublicationFile(path)
+	}
+	if err != nil {
+		return nil, "", err
+	}
+	identity, err := adapters.RecordedLedgerTicket(body)
+	if err != nil {
+		return nil, "", err
+	}
+	if requested != "" && !ticketMatches(identity, strings.TrimSpace(requested), ignoreCase) {
+		return nil, "", fmt.Errorf("ledger identity changed while acquiring ownership; resolve and retry")
+	}
+	return body, identity, nil
+}
 
 func ticketMatches(recorded, selected string, ignoreCase bool) bool {
 	if ignoreCase {
@@ -29,7 +56,7 @@ func backfillPublicationPaths(metricPath string, summary bool, cfg domain.Projec
 		return "", "", err
 	}
 	if cfg.ConfigPath != "" {
-		if err := capture.ValidateDestination(filepath.Dir(cfg.ConfigPath), ledger); err != nil {
+		if err := adapters.ValidateLedgerDestinationScope(cfg, ledger); err != nil {
 			return "", "", err
 		}
 	}
@@ -50,7 +77,7 @@ func backfillPublicationPaths(metricPath string, summary bool, cfg domain.Projec
 		return "", "", err
 	}
 	if cfg.ConfigPath != "" {
-		if err := capture.ValidateDestination(filepath.Dir(cfg.ConfigPath), destination); err != nil {
+		if err := adapters.ValidateWorkspaceArtifactDestination(cfg, ledger, destination); err != nil {
 			return "", "", err
 		}
 	}
@@ -100,4 +127,11 @@ func publishBackfillArtifacts(metricPath string, data []byte, summaryPath, table
 		return fmt.Errorf("updating configured summary %s: %w", summaryPath, err)
 	}
 	return adapters.CommitPublication(metricPath, paths)
+}
+
+func publicationProject(cfg domain.ProjectConfig, ledger string) string {
+	if cfg.ConfigPath != "" {
+		return filepath.Dir(cfg.ConfigPath)
+	}
+	return filepath.Dir(ledger)
 }

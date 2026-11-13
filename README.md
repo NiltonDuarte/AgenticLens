@@ -75,10 +75,10 @@ AgenticLens provides a unified CLI for automation and local workflows. Installed
 agentic-lens server --port 8085
 
 # Ingest active session telemetry and generate summary markdown block
-agentic-lens generate --source opencode --session-id "ROOT_SESSION_ID" --ticket-title "Feature delivery" --ticket-id AL-15 --ticket-type feat --json-output alspaces/AL-15/agentic_metrics.json --append alspaces/AL-15/SUMMARY.md
+agentic-lens generate --source opencode --session-id "ROOT_SESSION_ID" --ticket-title "Feature delivery" --ticket-id AL-15 --ticket-type feat --json-output openspec/changes/al-15-feature-delivery/agentic_metrics.json --append openspec/changes/al-15-feature-delivery/delivery.md
 
 # Replace ses_abc123 with the Codex root session ID; child threads are discovered from it
-agentic-lens generate --source codex --session-id ses_abc123 --code-ref HEAD --ticket-id AL-56 --ticket-title "Codex metrics research" --ticket-type chore --json-output alspaces/AL-56/agentic_metrics.json --append alspaces/AL-56/SUMMARY.md
+agentic-lens generate --source codex --session-id ses_abc123 --code-ref HEAD --ticket-id AL-56 --ticket-title "Codex metrics research" --ticket-type chore --json-output openspec/changes/al-56-codex-research/agentic_metrics.json --append openspec/changes/al-56-codex-research/delivery.md
 
 # List all tracked workspaces with detected anomaly counts
 agentic-lens --list
@@ -109,3 +109,7 @@ For cost availability, partial subtotals, and explicit legacy migration, see [re
 ## License
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+
+## Roadmap and execution
+
+The long-term [roadmap](alspaces/plan/TICKETS.md) remains separate from selected execution work in OpenSpec. See the [OpenSpec workflow](docs/OPENSPEC_WORKFLOW.md) for the pinned development tool, explicit implementation approval, ticket/change links, evidence and archive. AgenticLens discovers only ledger-backed directories under explicit `workspaces.roots`; folder names and planning files do not identify telemetry tickets. All layouts, including alspaces, remain first-class configured locations.

@@ -34,7 +34,7 @@ func testCodexRefresh(t *testing.T, ticketID, prefix, workspaceDir string) {
 	// Run outside the checkout so configuration, Git history, and ticket
 	// directories cannot be inherited from the development repository.
 	project := t.TempDir()
-	config := "agenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: FixtureProject\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: " + prefix + "\n      description: Fixture tickets\nworkspaces:\n  artifacts: []\n  dir: " + workspaceDir + "\ncode_metrics:\n  base_branch: fixture-base\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+	config := "agenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: FixtureProject\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: " + prefix + "\n      description: Fixture tickets\nworkspaces:\n  artifacts: []\n  roots:\n    - path: " + workspaceDir + "\n      discovery:\n        max_depth: 0\n        max_directories: 300\ncode_metrics:\n  base_branch: fixture-base\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), []byte(config), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -56,14 +56,14 @@ func testCodexRefresh(t *testing.T, ticketID, prefix, workspaceDir string) {
 	if err := os.WriteFile(rollout, fixture, 0600); err != nil {
 		t.Fatal(err)
 	}
-	output := filepath.Join(project, "agentic_metrics.json")
+	output := filepath.Join(project, workspaceDir, "agentic_metrics.json")
 	generate := func() domain.AgenticFactLedger {
 		t.Helper()
 		cmd := exec.Command(cliBinaryPath, "generate",
 			"--session-id", "thread-01", "--ticket-id", ticketID, "--ticket-title", "Codex refresh regression",
 			"--ticket-type", "chore", "--json-output", output)
 		cmd.Dir = project
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 		if result, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("generate failed: %v\n%s", err, result)
 		}
@@ -116,7 +116,7 @@ func testCodexRefresh(t *testing.T, ticketID, prefix, workspaceDir string) {
 
 func TestGenerateCodexPreservesChildIdentityAndExcludesInheritedUsage(t *testing.T) {
 	project := t.TempDir()
-	config := "agenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nproject_name: ChildFixture\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: TEST\n      description: Fixture ticket\nworkspaces:\n  artifacts: []\n  dir: records\ncode_metrics:\n  base_branch: fixture-base\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\nrole_mappings:\n  coder: tester\n"
+	config := "agenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nproject_name: ChildFixture\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: TEST\n      description: Fixture ticket\nworkspaces:\n  artifacts: []\n  roots:\n    - path: records\n      discovery:\n        max_depth: 8\n        max_directories: 300\ncode_metrics:\n  base_branch: fixture-base\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\nrole_mappings:\n  coder: tester\n"
 	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), []byte(config), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -152,13 +152,13 @@ func TestGenerateCodexPreservesChildIdentityAndExcludesInheritedUsage(t *testing
 			t.Fatal(err)
 		}
 	}
-	output := filepath.Join(project, "metrics.json")
+	output := filepath.Join(project, "agentic_metrics.json")
 	for attempt := 0; attempt < 2; attempt++ {
 		cmd := exec.Command(cliBinaryPath, "generate", "--source", "codex", "--codex-home", home,
 			"--nonce", "fixture-nonce-child-discovery", "--ticket-id", "TEST-303", "--ticket-title", "Child attribution regression",
 			"--ticket-type", "test", "--json-output", output)
 		cmd.Dir = project
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 		if result, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("generate attempt %d failed: %v\n%s", attempt, err, result)
 		}
@@ -224,6 +224,7 @@ func TestGenerateSelectedSourceDoesNotFallback(t *testing.T) {
 			}
 			setOpenCodeFixtureProject(t, dbPath, f.project)
 			local := fmt.Sprintf("telemetry:\n  default_source: codex\n  sources:\n    codex:\n      home: %q\n    opencode:\n      database_path: %q\n  capture:\n    enabled: false\n    state_dir: %q\n    pass_timeout_ms: 3000\n    max_sessions: 256\n    max_source_bytes: 67108864\n", f.store, dbPath, f.stateBase)
+			local += fmt.Sprintf("agenticlens:\n  state_dir: %q\n", filepath.Join(f.project, ".publication-state"))
 			args := []string{"generate", "--session-id", "root", "--ticket-id", "TEST-100", "--ticket-title", "Explicit selection", "--json-output", f.output, "--append", filepath.Join(f.project, "SUMMARY.md")}
 			want := ""
 			switch scenario {

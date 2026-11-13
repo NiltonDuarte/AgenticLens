@@ -1385,7 +1385,7 @@ func TestOwnedFactsSurviveV5ToV6MigrationSaveReloadAndRejectRetiredRuntimeShapes
 		t.Fatal(err)
 	}
 	path := filepath.Join(t.TempDir(), "ledger.json")
-	if err := adapters.SaveFactLedger(path, migrated); err != nil {
+	if err := saveFixtureFactLedger(t, path, migrated); err != nil {
 		t.Fatal(err)
 	}
 	data, err := os.ReadFile(path)
@@ -1450,7 +1450,7 @@ func TestNativeNamespaceChildProofSurvivesLeanPersistenceAndRejectsAmbiguity(t *
 		t.Fatalf("unique native namespace should resolve in read projection: %+v", got)
 	}
 	path := filepath.Join(t.TempDir(), "ledger.json")
-	if err := adapters.SaveFactLedger(path, ledger); err != nil {
+	if err := saveFixtureFactLedger(t, path, ledger); err != nil {
 		t.Fatal(err)
 	}
 	data, err := os.ReadFile(path)
@@ -1573,7 +1573,7 @@ func TestFullSourceAnomaliesSurviveLeanPersistenceAndPartialRefresh(t *testing.T
 		t.Fatalf("full source control must have real generic retry only, not interleaved skill retries: %+v", expected)
 	}
 	path := filepath.Join(t.TempDir(), "ledger.json")
-	if err := adapters.SaveFactLedger(path, ledger); err != nil {
+	if err := saveFixtureFactLedger(t, path, ledger); err != nil {
 		t.Fatal(err)
 	}
 	data, err := os.ReadFile(path)
@@ -1736,6 +1736,9 @@ func TestRetainedDraftDurationNormalizesWithoutMutatingBaseline(t *testing.T) {
 	}
 	ledger := domain.AgenticFactLedger{SchemaVersion: existing.SchemaVersion, TicketID: existing.TicketID, TicketTitle: existing.TicketTitle, Sessions: existing.Sessions}
 	path := filepath.Join(t.TempDir(), "copied", "agentic_metrics.json")
+	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+		t.Fatal(err)
+	}
 	if err := adapters.SaveFactLedgerPreservingHistory(path, ledger, existing.PersistedSessions); err != nil {
 		t.Fatal(err)
 	}
@@ -1855,7 +1858,7 @@ func TestOptionalCollectionPresenceSurvivesCanonicalRoundTrip(t *testing.T) {
 				ledger.Anomalies = []domain.Anomaly{anomaly}
 			}
 			path := filepath.Join(t.TempDir(), "ledger.json")
-			if err := adapters.SaveFactLedger(path, ledger); err != nil {
+			if err := saveFixtureFactLedger(t, path, ledger); err != nil {
 				t.Fatal(err)
 			}
 			raw, err := os.ReadFile(path)
@@ -1924,7 +1927,7 @@ func TestExternalParentReferenceSurvivesPortableSaveReloadAndReadProjection(t *t
 	started, completed := "2026-01-01T00:00:01Z", "2026-01-01T00:00:02Z"
 	facts := domain.AgenticFactLedger{SchemaVersion: &version, TicketID: &ticket, TicketTitle: &title, TicketType: &kind, UpdatedAt: "2026-01-01T00:00:03Z", Sessions: []domain.SessionFact{{ID: "explicit-child", ParentID: &parent, Source: domain.SourceCodex, User: "fixture", Invocations: []domain.InvocationFact{{Role: "coder", Model: "recorded-model", StartedAt: &started, CompletedAt: &completed, Tokens: domain.InvocationTokens{Input: 31}, CostEvidence: domain.UnavailableCost()}}, Tools: []domain.SessionToolFact{}}}}
 	original := filepath.Join(t.TempDir(), "agentic_metrics.json")
-	if err := adapters.SaveFactLedger(original, facts); err != nil {
+	if err := saveFixtureFactLedger(t, original, facts); err != nil {
 		t.Fatalf("legitimate external source parent rejected: %v", err)
 	}
 	transferred := filepath.Join(workspaceFixtureRoot(t), "records", ticket, "agentic_metrics.json")

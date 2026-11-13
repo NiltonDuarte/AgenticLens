@@ -62,21 +62,30 @@ func newCommittedHistoryFixture(t *testing.T) (captureGenerationFixture, capture
 	historyGit(t, base.project, "init", "-qb", "main")
 	historyGit(t, base.project, "config", "user.name", "Fixture")
 	historyGit(t, base.project, "config", "user.email", "fixture@example.invalid")
-	historyGit(t, base.project, "add", ".agenticlens-config.yaml")
+	if err := os.WriteFile(filepath.Join(base.project, "records", ".gitkeep"), nil, 0600); err != nil {
+		t.Fatal(err)
+	}
+	historyGit(t, base.project, "add", ".agenticlens-config.yaml", "records/.gitkeep")
 	historyGit(t, base.project, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "initial")
 	a := base
 	a.project = filepath.Join(t.TempDir(), "worktree a")
-	a.output = filepath.Join(a.project, "ledger.json")
+	a.output = filepath.Join(a.project, "agentic_metrics.json")
 	historyGit(t, base.project, "worktree", "add", "-qb", "history-a", a.project)
+	if err := writeCaptureFixtureLocal(t, a, []byte("telemetry:\n  capture:\n")); err != nil {
+		t.Fatal(err)
+	}
 	historyBind(t, a, "prior-root")
 	a.generate(t)
-	historyGit(t, a.project, "add", "ledger.json")
+	historyGit(t, a.project, "add", "agentic_metrics.json")
 	historyGit(t, a.project, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "published history")
 	b := base
 	b.project = filepath.Join(t.TempDir(), "worktree b")
-	b.output = filepath.Join(b.project, "ledger.json")
+	b.output = filepath.Join(b.project, "agentic_metrics.json")
 	b.store = t.TempDir()
 	historyGit(t, base.project, "worktree", "add", "-qb", "history-b", b.project, "history-a")
+	if err := writeCaptureFixtureLocal(t, b, []byte("telemetry:\n  capture:\n")); err != nil {
+		t.Fatal(err)
+	}
 	historyBind(t, b, "current-root")
 	return a, b, base.project
 }
@@ -183,13 +192,17 @@ func TestGenerationPreservesValidCopiedHistoryAndRejectsMalformedOwnership(t *te
 			case "source":
 				original.Sessions[0].Source = domain.SourceOpenCode
 			case "missing committed path":
-				historyGit(t, b.project, "rm", "ledger.json")
+				historyGit(t, b.project, "rm", "agentic_metrics.json")
 				historyGit(t, b.project, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "remove history")
 			case "symlink destination":
-				if err := os.Rename(b.output, b.output+".target"); err != nil {
+				physicalHome := filepath.Join(b.project, "records", "copied-history")
+				if err := os.Mkdir(physicalHome, 0700); err != nil {
 					t.Fatal(err)
 				}
-				if err := os.Symlink("ledger.json.target", b.output); err != nil {
+				if err := os.Rename(b.output, filepath.Join(physicalHome, "agentic_metrics.json")); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Symlink(filepath.Join("records", "copied-history", "agentic_metrics.json"), b.output); err != nil {
 					t.Fatal(err)
 				}
 			case "fresh collision":
@@ -235,6 +248,12 @@ func TestGenerationPreservesValidCopiedHistoryAndRejectsMalformedOwnership(t *te
 					if !reflect.DeepEqual(owners[expected.ID], expected) {
 						t.Fatalf("unavailable supported history changed: owner=%s actual=%+v expected=%+v", expected.ID, owners[expected.ID], expected)
 					}
+				}
+			}
+
+			if kind == "symlink destination" {
+				if info, err := os.Lstat(b.output); err != nil || info.Mode()&os.ModeSymlink == 0 {
+					t.Fatalf("generation replaced the selected ledger alias: %v", err)
 				}
 			}
 
@@ -356,14 +375,17 @@ func TestCaptureManualAuxiliaryPublicationSurvivesUnavailableSource(t *testing.T
 func TestCaptureMergedCommittedLedgerRetainsBothWorktrees(t *testing.T) {
 	a, b, repo := newCommittedHistoryFixture(t)
 	published := b.generate(t)
-	historyGit(t, b.project, "add", "ledger.json")
+	historyGit(t, b.project, "add", "agentic_metrics.json")
 	historyGit(t, b.project, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "union of published worktrees")
 	historyGit(t, a.project, "merge", "--ff-only", "history-b")
 	c := b
 	c.project = filepath.Join(t.TempDir(), "merged worktree")
-	c.output = filepath.Join(c.project, "ledger.json")
+	c.output = filepath.Join(c.project, "agentic_metrics.json")
 	c.store = t.TempDir()
 	historyGit(t, repo, "worktree", "add", "-qb", "history-c", c.project, "history-a")
+	if err := writeCaptureFixtureLocal(t, c, []byte("telemetry:\n  capture:\n")); err != nil {
+		t.Fatal(err)
+	}
 	historyBind(t, c, "third-root")
 	beforeA, beforeB := foreignHistoryState(t, a), foreignHistoryState(t, b)
 	result := c.generate(t)
@@ -399,7 +421,7 @@ func TestCaptureCommittedHistoryPreservesNativeParent(t *testing.T) {
 		t.Fatal(err)
 	}
 	before := a.generate(t)
-	historyGit(t, a.project, "add", "ledger.json")
+	historyGit(t, a.project, "add", "agentic_metrics.json")
 	historyGit(t, a.project, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "native child publication")
 	historyGit(t, b.project, "merge", "--ff-only", "history-a")
 	if err := os.RemoveAll(a.store); err != nil {
@@ -458,7 +480,7 @@ func TestCaptureCommittedHistoryPreservesSupportedStoredEvidence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	historyGit(t, a.project, "add", "ledger.json")
+	historyGit(t, a.project, "add", "agentic_metrics.json")
 	historyGit(t, a.project, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "supported stored evidence")
 	historyGit(t, b.project, "merge", "--ff-only", "history-a")
 	if err = os.RemoveAll(a.store); err != nil {
@@ -532,7 +554,7 @@ func TestCaptureCommittedHistoryRejectsRawBodiesBeforeReplacement(t *testing.T) 
 			if err = os.WriteFile(a.output, body, 0600); err != nil {
 				t.Fatal(err)
 			}
-			historyGit(t, a.project, "add", "ledger.json")
+			historyGit(t, a.project, "add", "agentic_metrics.json")
 			historyGit(t, a.project, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "incompatible historical representation")
 			historyGit(t, b.project, "merge", "--ff-only", "history-a")
 			// Ordinary runtime reads reject unsupported raw payload fields in
@@ -570,7 +592,7 @@ func TestGeneratePreservesUnavailableOwnedAuxiliaryFactsAcrossMachines(t *testin
 	if err := adapters.SaveFactLedger(a.output, remote); err != nil {
 		t.Fatal(err)
 	}
-	historyGit(t, a.project, "add", "ledger.json")
+	historyGit(t, a.project, "add", "agentic_metrics.json")
 	historyGit(t, a.project, "commit", "-qm", "owned remote facts")
 	historyGit(t, b.project, "merge", "--ff-only", "history-a")
 	if err := os.RemoveAll(a.store); err != nil {

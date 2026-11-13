@@ -38,3 +38,12 @@ describe('ticket tag cohorts', () => {
   });
 
 });
+
+
+it('retains independently selected tag facts for two physical locations of one ticket', () => {
+  const base = mockAgenticMetricsLedgers['AL-1']!;
+  const first = {...base, workspace_path: '/records/first', facts: {...base.facts, tags: {team: 'one'}}};
+  const second = {...base, workspace_path: '/records/second', facts: {...base.facts, tags: {team: 'two'}}};
+  const updated = {...second, facts: {...second.facts, tags: {team: 'updated'}}};
+  expect(reconcileTagCatalog([first, second], [updated])).toEqual([first, updated]);
+});

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -65,39 +66,26 @@ func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) 
 			return nil, fmt.Errorf("a Git code ref is required when recomputing code facts")
 		}
 	}
-	targetDir, cfg, err := adapters.ResolveWorkspaceContext(opts.WorkspacesDir)
+	targetDir, cfg, err := adapters.LoadWorkspaceProject(opts.Project)
 	if err != nil {
-		return nil, fmt.Errorf("loading required backfill configuration and workspaces: %w", errors.Join(adapters.ErrWorkspacesDirNotFound, err))
+		return nil, fmt.Errorf("loading required backfill configuration and workspaces: %w", errors.Join(err))
 	}
 	e.projectRoot = filepath.Dir(cfg.ConfigPath)
 
-	opts.WorkspacesDir = targetDir
+	opts.Project = targetDir
 
 	report := &BackfillReport{
 		Warnings: []string{},
 		Results:  []TicketMigrationResult{},
 	}
 
-	// 1. Discover all agentic_metrics.json files
-	metricFiles, discoveryDiagnostics, err := discoverWorkspaceLedgers(targetDir)
+	// 1. Resolve targeted maintenance or discover an unfiltered batch.
+	targetFiles, discoveryDiagnostics, err := discoverWorkspaceLedgers(cfg, opts.TicketID, opts.Workspace)
 	if err != nil {
 		return nil, err
 	}
 
-	report.Warnings = append(report.Warnings, discoveryDiagnostics...)
-
-	// Filter by ticket ID if specified
-	var targetFiles []string
-	cleanTicketID := strings.TrimSpace(opts.TicketID)
-	for _, f := range metricFiles {
-		parentDir := filepath.Dir(f)
-		parentName := filepath.Base(parentDir)
-		if cleanTicketID != "" && !ticketMatches(parentName, cleanTicketID, cfg.Ticket.CaseInsensitive) {
-			continue
-		}
-		targetFiles = append(targetFiles, f)
-	}
-
+	report.Warnings = append([]string{}, discoveryDiagnostics...)
 	report.Scanned = len(targetFiles)
 	if len(targetFiles) == 0 {
 		return report, nil
@@ -124,7 +112,7 @@ func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) 
 		fresh, err := git.ComputeCodeFactsAtRefInDir(e.projectRoot, opts.CodeRef, classificationCfg)
 		if err != nil {
 			for _, metricPath := range targetFiles {
-				report.Results = append(report.Results, TicketMigrationResult{TicketID: filepath.Base(filepath.Dir(metricPath)), WorkspacePath: filepath.Dir(metricPath), LedgerPath: metricPath, Error: fmt.Errorf("recomputing Git facts: %w", err)})
+				report.Results = append(report.Results, TicketMigrationResult{TicketID: func() string { id, _ := recordedTicket(metricPath); return id }(), WorkspacePath: filepath.Dir(metricPath), LedgerPath: metricPath, Error: fmt.Errorf("recomputing Git facts: %w", err)})
 			}
 			report.Warnings = append(report.Warnings, fmt.Sprintf("requested Git measurement failed before publication: %v", err))
 			return report, nil
@@ -179,8 +167,9 @@ func (e *BackfillEngine) Execute(opts BackfillOptions) (*BackfillReport, error) 
 	if opts.MigrateSchema {
 		migRunner := NewMigrationRunner(nil)
 		migOpts := MigrationOptions{
-			WorkspacesDir: opts.WorkspacesDir,
+			Project:       opts.Project,
 			TicketID:      opts.TicketID,
+			Workspace:     opts.Workspace,
 			TargetVersion: domain.CurrentSchemaVersion,
 			// Validate/report the existing migration chain without publishing
 			// ahead of the integrated source/Git/summary candidate.
@@ -275,7 +264,7 @@ func (e *BackfillEngine) processSingleWorkspace(
 	cfg domain.ProjectConfig,
 ) (result TicketMigrationResult) {
 	workspaceDir := filepath.Dir(metricPath)
-	workspaceName := filepath.Base(workspaceDir)
+	workspaceName, _ := recordedTicket(metricPath)
 
 	result = TicketMigrationResult{
 		TicketID:      workspaceName,
@@ -291,25 +280,40 @@ func (e *BackfillEngine) processSingleWorkspace(
 		result.Error = fmt.Errorf("resolving ledger publication: %w", err)
 		return result
 	}
-	owner, err := capture.AcquirePublication(ctx, canonicalPath)
+	var owner io.Closer
+	if opts.DryRun {
+		directory, e := capture.ReadPublicationDirectory(canonicalPath)
+		err = e
+		if e == nil {
+			owner = directory
+		}
+	} else {
+		publisher, e := capture.AcquirePublication(ctx, canonicalPath, publicationProject(cfg, canonicalPath))
+		err = e
+		if e == nil {
+			owner = publisher
+		}
+	}
+
 	if err != nil {
 		result.Error = fmt.Errorf("acquiring ledger publication ownership: %w", err)
 		return result
 	}
 	defer func() { result.Error = errors.Join(result.Error, owner.Close()) }()
-	metricPath = canonicalPath
-	result.LedgerPath = metricPath
+	metricPath = capture.PublicationPath(canonicalPath)
+	result.LedgerPath = canonicalPath
 	if err := adapters.CheckPublication(metricPath); err != nil {
 		result.Error = err
 		return result
 	}
 
 	// Read raw content to check file validity
-	content, err := os.ReadFile(metricPath)
+	content, identity, err := readMaintenanceLedger(owner, metricPath, opts.TicketID, cfg.Ticket.CaseInsensitive)
 	if err != nil {
 		result.Error = fmt.Errorf("reading file: %w", err)
 		return result
 	}
+	result.TicketID = identity
 
 	sourceVersion, err := migration.NewEngine(nil).DetectVersion(content)
 	if err != nil {
@@ -684,12 +688,13 @@ func (e *BackfillEngine) processSingleWorkspace(
 
 // publishBackfillLedger replaces one already-owned ledger atomically.
 func publishBackfillLedger(metricPath string, data []byte) error {
+	metricPath = capture.PublicationPath(metricPath)
 	tempPath := metricPath + ".tmp"
-	if err := os.WriteFile(tempPath, data, 0644); err != nil {
+	if err := capture.WritePublicationFile(tempPath, data, 0644); err != nil {
 		return fmt.Errorf("writing temporary ledger file: %w", err)
 	}
-	if err := os.Rename(tempPath, metricPath); err != nil {
-		if cleanupErr := os.Remove(tempPath); cleanupErr != nil {
+	if err := capture.RenamePublicationFile(tempPath, metricPath); err != nil {
+		if cleanupErr := capture.RemovePublicationFile(tempPath); cleanupErr != nil {
 			return fmt.Errorf("atomic rename to %s: %w; cleaning temporary file: %v", metricPath, err, cleanupErr)
 		}
 		return fmt.Errorf("atomic rename to %s: %w", metricPath, err)

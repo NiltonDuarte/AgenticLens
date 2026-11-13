@@ -5,256 +5,111 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"reflect"
-	"sort"
 	"strings"
 	"time"
 
 	"agenticlens/internal/adapters/capture"
-	"agenticlens/internal/adapters/config"
-	"agenticlens/internal/adapters/filesystem"
 	"agenticlens/internal/domain"
 )
 
-// ErrWorkspacesDirNotFound is returned when no workspaces directory is specified via argument/flag or project configuration.
-var ErrWorkspacesDirNotFound = errors.New("workspaces directory not found")
-
-// ResolveWorkspaceContext selects the target project's own policy and physical root.
-func ResolveWorkspaceContext(overridePath string) (string, domain.ProjectConfig, error) {
-	root, err := ResolveWorkspacesDir(overridePath)
+// ScanWorkspaces loads all ledger-backed homes within the configured project scopes.
+func ScanWorkspaces(project string) domain.ScanReport {
+	_, cfg, err := LoadWorkspaceProject(project)
 	if err != nil {
-		return "", domain.ProjectConfig{}, fmt.Errorf("select workspaces with --workspaces or shared workspaces.dir; complete project setup if required: %w", err)
+		return domain.ScanReport{Ledgers: []domain.AgenticMetricsLedger{}, FatalError: err.Error(), Errors: []string{err.Error()}}
 	}
-	cfg, err := config.LoadShared(root)
-	if err != nil {
-		return "", cfg, fmt.Errorf("loading target workspace policy: %w", err)
-	}
-	return root, cfg, nil
-}
-
-// ResolveWorkspacesDir resolves only the selected path. Explicit representation-only
-// operations do not need unrelated project/classification/source settings.
-func ResolveWorkspacesDir(overridePath string) (string, error) {
-	selected := strings.TrimSpace(overridePath)
-	if selected == "" {
-		cfg, err := config.LoadShared("")
+	locations, diagnostics := DiscoverWorkspaceLocations(cfg)
+	ledgers := []domain.AgenticMetricsLedger{}
+	scanErrors := []string{}
+	for _, location := range locations {
+		ledger, err := readWorkspaceLedger(location, cfg)
 		if err != nil {
-			return "", errors.Join(ErrWorkspacesDirNotFound, err)
-		}
-		if strings.TrimSpace(cfg.Workspaces.Dir) == "" {
-			return "", fmt.Errorf("workspaces root is required: supply --workspaces or configure workspaces.dir in %s", cfg.ConfigPath)
-		}
-		selected, err = config.ResolveConfiguredPath(filepath.Dir(cfg.ConfigPath), cfg.Workspaces.Dir)
-		if err != nil {
-			return "", err
-		}
-	} else {
-		var err error
-		selected, err = config.ExpandHomePath(selected)
-		if err != nil {
-			return "", err
-		}
-	}
-	root, err := filesystem.PhysicalPath(selected)
-	if err != nil {
-		return "", err
-	}
-	info, err := os.Stat(root)
-	if err != nil {
-		return "", fmt.Errorf("selected workspaces root %s: %w", root, err)
-	}
-	if !info.IsDir() {
-		return "", fmt.Errorf("selected workspaces root %s must be a directory", root)
-	}
-	return root, nil
-}
-
-// ScanWorkspaces scans target workspaces directory for all agentic_metrics.json ledgers.
-func ScanWorkspaces(basePath string) domain.ScanReport {
-	targetDir, err := ResolveWorkspacesDir(basePath)
-	if err != nil {
-		return domain.ScanReport{
-			Ledgers:    []domain.AgenticMetricsLedger{},
-			Errors:     []string{fmt.Sprintf("Workspaces directory must be configured in project configuration (workspaces.dir) or provided via --workspaces flag. Workspaces directory is unconfigured or not found: %v", err)},
-			FatalError: fmt.Sprintf("Workspaces directory must be configured in project configuration (workspaces.dir) or provided via --workspaces flag: %v", err),
-		}
-	}
-
-	fi, err := os.Stat(targetDir)
-	if err != nil || !fi.IsDir() {
-		return domain.ScanReport{
-			Ledgers:    []domain.AgenticMetricsLedger{},
-			Errors:     []string{fmt.Sprintf("Workspaces directory not found: %s", targetDir)},
-			FatalError: fmt.Sprintf("Workspaces directory not found: %s", targetDir),
-		}
-	}
-
-	var metricFiles []string
-	type scanWalkFailure struct {
-		path string
-		err  error
-	}
-	var walkFailures []scanWalkFailure
-	err = filepath.WalkDir(targetDir, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			if path == targetDir {
-				return err
-			}
-			walkFailures = append(walkFailures, scanWalkFailure{path: path, err: err})
-			return nil
-		}
-		if !d.IsDir() && d.Name() == "agentic_metrics.json" {
-			metricFiles = append(metricFiles, path)
-		}
-		return nil
-	})
-	if err != nil {
-		return domain.ScanReport{
-			Ledgers:    []domain.AgenticMetricsLedger{},
-			Errors:     []string{fmt.Sprintf("Failed walking workspaces directory: %v", err)},
-			FatalError: fmt.Sprintf("Failed walking workspaces directory: %v", err),
-		}
-	}
-
-	sort.Strings(metricFiles)
-
-	cfg, configErr := config.LoadShared(targetDir)
-	if configErr != nil {
-		return domain.ScanReport{Ledgers: []domain.AgenticMetricsLedger{}, Errors: []string{configErr.Error()}, FatalError: configErr.Error()}
-	}
-
-	var ledgers []domain.AgenticMetricsLedger
-	var scanErrors []string
-	var diagnostics []domain.WorkspaceDiagnostic
-	addDiagnostic := func(metricFile string, reason error) {
-		ticketID := filepath.Base(filepath.Dir(metricFile))
-		scanErrors = append(scanErrors, fmt.Sprintf("Failed to load %s: %v", metricFile, reason))
-		guidance := reason.Error()
-		if !strings.Contains(guidance, "run `agentic-lens") && !strings.Contains(guidance, "resume the explicit") {
-			guidance += "; repair or regenerate this workspace's agentic_metrics.json"
-		}
-		diagnostics = append(diagnostics, domain.WorkspaceDiagnostic{
-			TicketID: ticketID,
-			Message:  fmt.Sprintf("Ticket workspace %s was skipped: %s", ticketID, guidance),
-		})
-	}
-
-	for _, failure := range walkFailures {
-		metricPath := failure.path
-		if filepath.Base(metricPath) != "agentic_metrics.json" {
-			metricPath = filepath.Join(metricPath, "agentic_metrics.json")
-		}
-		addDiagnostic(metricPath, fmt.Errorf("workspace traversal unavailable: %w", failure.err))
-	}
-
-	for _, metricFile := range metricFiles {
-		content, err := readPublishedLedger(metricFile)
-		if err != nil {
-			addDiagnostic(metricFile, err)
+			diagnostics = append(diagnostics, domain.WorkspaceDiagnostic{Path: location.LedgerPath, Message: err.Error()})
 			continue
 		}
-		if err := ValidateRuntimeFactLedger(content); err != nil {
-			addDiagnostic(metricFile, err)
-			continue
-		}
-
-		var dto AgenticFactLedgerDTO
-		if err := json.Unmarshal(content, &dto); err != nil {
-			addDiagnostic(metricFile, err)
-			continue
-		}
-		if err := dto.Validate(); err != nil {
-			addDiagnostic(metricFile, err)
-			continue
-		}
-
-		factLedger := dto.ToDomain()
-		factLedger, err = domain.NormalizeLedgerForRead(factLedger)
-		if err != nil {
-			addDiagnostic(metricFile, fmt.Errorf("normalization failed: %w", err))
-			continue
-		}
-
-		ledger := domain.DeriveMetricsLedger(factLedger, cfg)
 		ledgers = append(ledgers, ledger)
 	}
-
-	sortedLedgers := domain.SortLedgers(ledgers, domain.SortFieldTicketID, true, cfg.Ticket)
-
-	return domain.ScanReport{
-		TicketPolicy: cfg.Ticket,
-		Ledgers:      sortedLedgers,
-		Errors:       scanErrors,
-		Diagnostics:  diagnostics,
+	for _, d := range diagnostics {
+		scanErrors = append(scanErrors, fmt.Sprintf("%s: %s", d.Path, d.Message))
 	}
+	return domain.ScanReport{TicketPolicy: cfg.Ticket, Ledgers: domain.SortLedgers(ledgers, domain.SortFieldTicketID, true, cfg.Ticket), Errors: scanErrors, Diagnostics: diagnostics}
 }
 
-// ReadTicketArtifacts safely reads configured documentation artifacts for a ticket workspace.
-func ReadTicketArtifacts(ticketID, basePath string, configuredArtifacts ...[]domain.WorkspaceArtifactConfig) (domain.TicketArtifacts, error) {
+func ReadTicketArtifacts(ticketID, project string, configured ...[]domain.WorkspaceArtifactConfig) (result domain.TicketArtifacts, err error) {
+	_, cfg, err := LoadWorkspaceProject(project)
+	if err != nil {
+		return domain.TicketArtifacts{}, err
+	}
+	location, reference, err := resolveTicketReadLocation(cfg, ticketID, "")
+	if err != nil {
+		return domain.TicketArtifacts{}, err
+	}
+	defer func() { err = errors.Join(err, reference.Close()) }()
+	entries := location.Artifacts
+	if len(configured) > 0 {
+		if configured[0] == nil {
+			return domain.TicketArtifacts{}, fmt.Errorf("artifact policy must be an explicit list")
+		}
+		entries = configured[0]
+	}
+	return readResolvedArtifacts(ticketID, location, entries)
+}
+
+func ReadTicketArtifactsAt(ticketID, project, selection string) (result domain.TicketArtifacts, err error) {
+	_, cfg, err := LoadWorkspaceProject(project)
+	if err != nil {
+		return domain.TicketArtifacts{}, err
+	}
+	location, reference, err := resolveTicketReadLocation(cfg, ticketID, selection)
+	if err != nil {
+		return domain.TicketArtifacts{}, err
+	}
+	defer func() { err = errors.Join(err, reference.Close()) }()
+	return readResolvedArtifacts(ticketID, location, location.Artifacts)
+}
+func readResolvedArtifacts(ticketID string, location WorkspaceLocation, entries []domain.WorkspaceArtifactConfig) (result domain.TicketArtifacts, err error) {
+	result = domain.TicketArtifacts{TicketID: ticketID, Items: []domain.TicketArtifactItem{}}
+	lease, err := openResolvedWorkspaceDirectory(location)
+	if err != nil {
+		return result, err
+	}
+	defer func() { err = errors.Join(err, lease.Close()) }()
+	return readDirectoryArtifacts(ticketID, location, entries, lease)
+}
+
+func readDirectoryArtifacts(ticketID string, location WorkspaceLocation, entries []domain.WorkspaceArtifactConfig, lease *capture.ReadDirectory) (domain.TicketArtifacts, error) {
 	result := domain.TicketArtifacts{TicketID: ticketID, Items: []domain.TicketArtifactItem{}}
-	if strings.TrimSpace(ticketID) == "" || ticketID == "." || ticketID == ".." || strings.ContainsAny(ticketID, "/\\\x00") {
-		return result, fmt.Errorf("invalid ticket workspace ID %q", ticketID)
-	}
-	root, err := ResolveWorkspacesDir(basePath)
-	if err != nil {
-		return result, err
-	}
-	ticketDir, err := filesystem.PhysicalPath(filepath.Join(root, ticketID))
-	if err != nil {
-		return result, err
-	}
-	rel, err := filepath.Rel(root, ticketDir)
-	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-		return result, fmt.Errorf("ticket workspace is outside the selected workspace root")
-	}
-	if info, err := os.Stat(ticketDir); err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return result, nil
+	check := func() error {
+		if _, e := lease.Lstat("agentic_metrics.json.publication-pending"); e == nil {
+			return fmt.Errorf("%w at %s", ErrPublicationPending, location.Path)
+		} else if !errors.Is(e, os.ErrNotExist) {
+			return e
 		}
-		return result, err
-	} else if !info.IsDir() {
-		return result, fmt.Errorf("ticket workspace must be a directory")
+		return nil
 	}
-	var entries []domain.WorkspaceArtifactConfig
-	if len(configuredArtifacts) > 0 {
-		entries = configuredArtifacts[0]
-		if entries == nil {
-			return result, fmt.Errorf("workspaces.artifacts must be an explicit list")
-		}
-	} else {
-		cfg, err := config.LoadShared(root)
-		if err != nil {
-			return result, err
-		}
-		entries = cfg.Workspaces.Artifacts
+	if err := check(); err != nil {
+		return result, err
 	}
 	for i, entry := range entries {
 		path := entry.Path
 		if strings.TrimSpace(path) == "" || filepath.IsAbs(path) || strings.ContainsAny(path, "\\\x00") {
-			return result, fmt.Errorf("workspaces.artifacts[%d].path must be a safe ticket-workspace-relative path", i)
+			return result, fmt.Errorf("workspaces.artifacts[%d].path must be safe and home-relative", i)
 		}
 		for _, part := range strings.Split(path, "/") {
 			if part == "" || part == "." || part == ".." {
-				return result, fmt.Errorf("workspaces.artifacts[%d].path must be a safe ticket-workspace-relative path", i)
+				return result, fmt.Errorf("unsafe artifact path %q", path)
 			}
-		}
-		artifactPath, err := filesystem.PhysicalPath(filepath.Join(ticketDir, path))
-		if err != nil {
-			return result, err
-		}
-		relative, err := filepath.Rel(ticketDir, artifactPath)
-		if err != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
-			return result, fmt.Errorf("artifact %q resolves outside its ticket workspace", path)
 		}
 		var content *string
-		if info, err := os.Stat(artifactPath); err == nil && !info.IsDir() {
-			if data, err := os.ReadFile(artifactPath); err == nil {
-				text := string(data)
-				content = &text
-			}
+		data, e := lease.ReadFile(path)
+		if e == nil {
+			value := string(data)
+			content = &value
+		} else if !errors.Is(e, os.ErrNotExist) {
+			return result, fmt.Errorf("artifact %q is unavailable or outside selected workspace: %w", path, e)
 		}
 		title := strings.TrimSpace(entry.Title)
 		if title == "" {
@@ -262,73 +117,86 @@ func ReadTicketArtifacts(ticketID, basePath string, configuredArtifacts ...[]dom
 		}
 		result.Items = append(result.Items, domain.TicketArtifactItem{Path: path, Title: title, Description: entry.Description, Content: content})
 	}
+	if err := check(); err != nil {
+		return result, err
+	}
 	return result, nil
 }
 
+// LoadTicketWorkspaceDetail keeps ledger and artifacts in one held physical
+// directory, including when the selected directory is renamed during the read.
+func LoadTicketWorkspaceDetail(ticketID, project, selection string) (result *domain.AgenticMetricsLedger, artifacts domain.TicketArtifacts, err error) {
+	_, cfg, err := LoadWorkspaceProject(project)
+	if err != nil {
+		return nil, domain.TicketArtifacts{}, err
+	}
+	location, reference, err := resolveTicketReadLocation(cfg, ticketID, selection)
+	if err != nil {
+		return nil, domain.TicketArtifacts{}, err
+	}
+	defer func() { err = errors.Join(err, reference.Close()) }()
+	lease, err := openResolvedWorkspaceDirectory(location)
+	if err != nil {
+		return nil, domain.TicketArtifacts{}, err
+	}
+	defer func() { err = errors.Join(err, lease.Close()) }()
+	body, err := readDirectoryLedger(lease, location.LedgerPath)
+	if err != nil {
+		return nil, domain.TicketArtifacts{}, err
+	}
+	ledger, err := decodeWorkspaceLedger(body, location, cfg)
+	if err != nil {
+		return nil, domain.TicketArtifacts{}, err
+	}
+	if !sameTicket(*ledger.TicketID, ticketID, cfg.Ticket) {
+		return nil, domain.TicketArtifacts{}, &WorkspaceResolutionError{Outcome: "identity_conflict", TicketID: ticketID, Candidates: []string{location.Path}}
+	}
+	artifacts, err = readDirectoryArtifacts(ticketID, location, location.Artifacts, lease)
+	if err != nil {
+		return nil, domain.TicketArtifacts{}, err
+	}
+	return &ledger, artifacts, nil
+}
+
 // LoadTicketWorkspace loads a single ticket's agentic_metrics.json, converts it to domain, and derives the metrics ledger.
-func LoadTicketWorkspace(ticketID, basePath string) (*domain.AgenticMetricsLedger, error) {
-	cleanID := strings.TrimSpace(ticketID)
-	if cleanID == "" || strings.Contains(cleanID, "..") || strings.Contains(cleanID, "/") || strings.Contains(cleanID, "\\") {
-		return nil, fmt.Errorf("invalid ticket ID: %q", ticketID)
-	}
-
-	targetDir, err := ResolveWorkspacesDir(basePath)
+func LoadTicketWorkspace(ticketID, project string, selection ...string) (result *domain.AgenticMetricsLedger, err error) {
+	_, cfg, err := LoadWorkspaceProject(project)
 	if err != nil {
-		return nil, fmt.Errorf("workspaces directory is not configured: %w", err)
+		return nil, err
 	}
-	absTargetDir, err := filepath.Abs(targetDir)
+	selected := ""
+	if len(selection) > 0 {
+		selected = selection[0]
+	}
+	location, reference, err := resolveTicketReadLocation(cfg, ticketID, selected)
 	if err != nil {
-		return nil, fmt.Errorf("resolving workspaces directory: %w", err)
+		return nil, err
 	}
-
-	ticketDir := filepath.Join(absTargetDir, cleanID)
-	absTicketDir, err := filepath.Abs(ticketDir)
+	defer func() { err = errors.Join(err, reference.Close()) }()
+	ledger, err := readWorkspaceLedger(location, cfg)
 	if err != nil {
-		return nil, fmt.Errorf("resolving ticket directory: %w", err)
+		return nil, err
 	}
-
-	// Verify path containment to prevent directory traversal
-	rel, err := filepath.Rel(absTargetDir, absTicketDir)
-	if err != nil || strings.HasPrefix(rel, "..") || rel == "." {
-		return nil, fmt.Errorf("invalid ticket path containment: %q", ticketID)
+	if !sameTicket(*ledger.TicketID, ticketID, cfg.Ticket) {
+		return nil, &WorkspaceResolutionError{Outcome: "identity_conflict", TicketID: ticketID, Candidates: []string{location.Path}}
 	}
-
-	metricFile := filepath.Join(absTicketDir, "agentic_metrics.json")
-	content, err := readPublishedLedger(metricFile)
-	if err != nil {
-		return nil, fmt.Errorf("reading metrics file for ticket %s: %w", cleanID, err)
-	}
-	if err := ValidateRuntimeFactLedger(content); err != nil {
-		return nil, fmt.Errorf("loading metrics for ticket %s: %w", cleanID, err)
-	}
-
-	var dto AgenticFactLedgerDTO
-	if err := json.Unmarshal(content, &dto); err != nil {
-		return nil, fmt.Errorf("unmarshaling metrics for ticket %s: %w", cleanID, err)
-	}
-	if err := dto.Validate(); err != nil {
-		return nil, fmt.Errorf("validating metrics for ticket %s: %w", cleanID, err)
-	}
-
-	factLedger := dto.ToDomain()
-	factLedger, err = domain.NormalizeLedgerForRead(factLedger)
-	if err != nil {
-		return nil, fmt.Errorf("normalizing metrics for ticket %s: %w", cleanID, err)
-	}
-	cfg, configErr := config.LoadShared(targetDir)
-	if configErr != nil {
-		return nil, fmt.Errorf("loading ticket configuration: %w", configErr)
-	}
-	ledger := domain.DeriveMetricsLedger(factLedger, cfg)
 	return &ledger, nil
 }
 
 // UpdateSummaryFile replaces only the managed metrics block, preserving other evidence.
 func UpdateSummaryFile(destPath, tableMD string) error {
-	if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
+	destPath = capture.PublicationPath(destPath)
+	parent := filepath.Dir(destPath)
+	// A held root permits creating descendants without recreating a moved or
+	// deleted workspace through its former path.
+	if capture.PublicationOwner(destPath) != nil {
+		if err := capture.MkdirPublicationDirectories(parent, 0755); err != nil {
+			return fmt.Errorf("creating summary directory: %w", err)
+		}
+	} else if _, err := capture.StatPublicationFile(parent); err != nil {
 		return fmt.Errorf("creating summary directory: %w", err)
 	}
-	data, err := os.ReadFile(destPath)
+	data, err := capture.ReadPublicationFile(destPath)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("reading summary %s: %w", destPath, err)
 	}
@@ -336,7 +204,7 @@ func UpdateSummaryFile(destPath, tableMD string) error {
 	if err != nil {
 		return fmt.Errorf("updating summary %s: %w", destPath, err)
 	}
-	if err := os.WriteFile(destPath, []byte(updated), 0644); err != nil {
+	if err := capture.WritePublicationFile(destPath, []byte(updated), 0644); err != nil {
 		return fmt.Errorf("writing summary %s: %w", destPath, err)
 	}
 	return nil
@@ -369,6 +237,7 @@ func LoadOwnedFactLedger(path string) (*ExistingLedgerFacts, error) {
 	return loadExistingFactLedger(path, true)
 }
 func loadExistingFactLedger(path string, owned bool) (*ExistingLedgerFacts, error) {
+	path = capture.PublicationPath(path)
 	if strings.TrimSpace(path) == "" {
 		return nil, nil
 	}
@@ -376,7 +245,7 @@ func loadExistingFactLedger(path string, owned bool) (*ExistingLedgerFacts, erro
 	if err := CheckPublication(path); err != nil {
 		return nil, err
 	}
-	fi, err := os.Stat(path)
+	fi, err := capture.StatPublicationFile(path)
 	if err != nil || fi.IsDir() {
 		return nil, nil
 	}
@@ -513,8 +382,9 @@ func SaveFactLedgerPreservingHistory(path string, ledger domain.AgenticFactLedge
 		return fmt.Errorf("cannot save fact ledger: %w", err)
 	}
 
+	path = capture.PublicationPath(path)
 	parentDir := filepath.Dir(path)
-	if err := os.MkdirAll(parentDir, 0755); err != nil {
+	if _, err := capture.StatPublicationFile(parentDir); err != nil {
 		return fmt.Errorf("failed to create directory %s: %w", parentDir, err)
 	}
 
@@ -527,14 +397,14 @@ func SaveFactLedgerPreservingHistory(path string, ledger domain.AgenticFactLedge
 		return fmt.Errorf("formatting ledger: %w", err)
 	}
 
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	if err := capture.WritePublicationFile(path, data, 0644); err != nil {
 		return fmt.Errorf("failed to write fact ledger to %s: %w", path, err)
 	}
 	return nil
 }
 
-// SaveMetricsLedger writes an AgenticMetricsLedger to the specified file path after serializing to external DTO format,
-// creating parent directories if needed.
+// SaveMetricsLedger publishes an explicit computed snapshot in an existing,
+// configured directory; it never recreates a disappeared output home.
 func SaveMetricsLedger(path string, ledger domain.AgenticMetricsLedger) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
@@ -542,8 +412,9 @@ func SaveMetricsLedger(path string, ledger domain.AgenticMetricsLedger) error {
 }
 
 func saveMetricsLedger(ctx context.Context, path string, ledger domain.AgenticMetricsLedger) (err error) {
+	path = capture.PublicationPath(path)
 	parentDir := filepath.Dir(path)
-	if err := os.MkdirAll(parentDir, 0755); err != nil {
+	if _, err := capture.StatPublicationFile(parentDir); err != nil {
 		return fmt.Errorf("failed to create directory %s: %w", parentDir, err)
 	}
 
@@ -558,6 +429,10 @@ func saveMetricsLedger(ctx context.Context, path string, ledger domain.AgenticMe
 		return fmt.Errorf("acquiring metrics publication ownership: %w", err)
 	}
 	defer func() { err = errors.Join(err, owner.Close()) }()
+	if err = owner.ValidateLocation(); err != nil {
+		return err
+	}
+	path = capture.PublicationPath(path)
 	if err := CheckPublication(path); err != nil {
 		return err
 	}
@@ -573,7 +448,7 @@ func saveMetricsLedger(ctx context.Context, path string, ledger domain.AgenticMe
 		return fmt.Errorf("formatting ledger: %w", err)
 	}
 
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	if err := durableReplace(path, data); err != nil {
 		return fmt.Errorf("failed to write metrics ledger to %s: %w", path, err)
 	}
 	return nil

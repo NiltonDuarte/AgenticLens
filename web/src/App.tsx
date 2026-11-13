@@ -13,6 +13,7 @@ import { LiveObservability } from './views/LiveObservability';
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('landing');
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+  const [selectedWorkspacePath, setSelectedWorkspacePath] = useState<string | null>(null);
   const [projectConfig, setProjectConfig] = useState<ProjectConfigResponse | null>(null);
 
   useEffect(() => {
@@ -34,8 +35,9 @@ export const App: React.FC = () => {
     return projectConfig.prefixes.map((p) => p.prefix);
   }, [projectConfig]);
 
-  const handleSelectTicketFromList = (ticketId: string) => {
+  const handleSelectTicketFromList = (ticketId: string, workspacePath?: string) => {
     setSelectedTicketId(ticketId);
+    setSelectedWorkspacePath(workspacePath ?? null);
     setActiveTab('deep-dive');
   };
 
@@ -66,7 +68,8 @@ export const App: React.FC = () => {
         {activeTab === 'deep-dive' && (
           <TicketDeepDive
             selectedTicketId={selectedTicketId}
-            onSelectTicket={setSelectedTicketId}
+            selectedWorkspacePath={selectedWorkspacePath}
+            onSelectTicket={(ticketId, workspacePath) => { setSelectedTicketId(ticketId); setSelectedWorkspacePath(workspacePath ?? null); }}
           />
         )}
         {activeTab === 'progression' && (

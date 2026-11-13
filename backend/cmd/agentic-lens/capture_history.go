@@ -7,6 +7,7 @@ import (
 
 	"agenticlens/internal/adapters"
 	"agenticlens/internal/adapters/capture"
+	adaptersconfig "agenticlens/internal/adapters/config"
 	"agenticlens/internal/domain"
 )
 
@@ -28,7 +29,11 @@ func classifyGenerationBaseline(project, state, destination, ticket string, fact
 		return result, errors.New("baseline ticket conflicts with publication")
 	}
 	if destination != "" {
-		if err := capture.ValidateDestination(project, destination); err != nil {
+		cfg, err := adaptersconfig.LoadShared(project)
+		if err != nil {
+			return result, err
+		}
+		if err := adapters.ValidateLedgerDestinationScope(cfg, destination); err != nil {
 			return result, err
 		}
 	}

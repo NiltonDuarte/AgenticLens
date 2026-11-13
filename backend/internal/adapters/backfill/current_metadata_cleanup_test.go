@@ -47,7 +47,7 @@ func TestExplicitCurrentMetadataCleanupPreservesFactsAndPendingState(t *testing.
 						t.Fatal("ordinary validation accepted former metadata")
 					}
 					if command == "migrate" {
-						report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{WorkspacesDir: filepath.Dir(workspace), TargetVersion: domain.CurrentSchemaVersion, Backup: true, DryRun: dryRun})
+						report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{Project: filepath.Dir(workspace), TargetVersion: domain.CurrentSchemaVersion, Backup: true, DryRun: dryRun})
 						if err != nil || report == nil || report.Migrated != 1 || len(report.Errors) != 0 {
 							t.Fatalf("explicit cleanup did not run: %+v, %v", report, err)
 						}
@@ -58,7 +58,7 @@ func TestExplicitCurrentMetadataCleanupPreservesFactsAndPendingState(t *testing.
 							}
 						}
 					} else {
-						report, err := backfill.NewEngine().Execute(backfill.BackfillOptions{WorkspacesDir: filepath.Dir(workspace), DryRun: dryRun})
+						report, err := backfill.NewEngine().Execute(backfill.BackfillOptions{Project: filepath.Dir(workspace), DryRun: dryRun})
 						if err != nil || report == nil || report.Updated != 1 || len(report.Results) != 1 || report.Results[0].Error != nil {
 							t.Fatalf("explicit backfill cleanup did not run: %+v, %v", report, err)
 						}
@@ -125,7 +125,7 @@ func TestMetadataSummaryRequiresContextPolicyBeforePublication(t *testing.T) {
 					}
 					var operationErr error
 					if command == "migrate" {
-						report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{WorkspacesDir: filepath.Dir(workspace), TargetVersion: domain.CurrentSchemaVersion, Backup: summary, UpdateSummaries: summary})
+						report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{Project: filepath.Dir(workspace), TargetVersion: domain.CurrentSchemaVersion, Backup: summary, UpdateSummaries: summary})
 						operationErr = err
 						if err == nil {
 							if report == nil || len(report.Results) != 1 {
@@ -134,7 +134,7 @@ func TestMetadataSummaryRequiresContextPolicyBeforePublication(t *testing.T) {
 							operationErr = report.Results[0].Error
 						}
 					} else {
-						report, err := backfill.NewEngine().Execute(backfill.BackfillOptions{WorkspacesDir: filepath.Dir(workspace), UpdateSummaries: summary})
+						report, err := backfill.NewEngine().Execute(backfill.BackfillOptions{Project: filepath.Dir(workspace), UpdateSummaries: summary})
 						operationErr = err
 						if err == nil {
 							if report == nil || len(report.Results) != 1 {

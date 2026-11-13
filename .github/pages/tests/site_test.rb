@@ -7,6 +7,7 @@ require "pathname"
 require "rbconfig"
 require "tmpdir"
 require "uri"
+require "yaml"
 
 class TicketsSiteTest < Minitest::Test
   BUILDER = File.expand_path("../build.rb", __dir__)
@@ -23,8 +24,9 @@ class TicketsSiteTest < Minitest::Test
   end
 
   def fixture(workspace: "custom tickets", config: true)
-    @project.join(".agenticlens-config.yaml").write("workspaces:\n  dir: #{workspace.inspect}\n") if config
-    plan = @project.join(workspace, "plan")
+    @project.join(".agenticlens-config.yaml").write("workspaces:\n  roots: []\n") if config
+    @roadmap = @project.join(workspace, "plan")
+    plan = @roadmap
     plan.join("to-do").mkpath
     plan.join("done").mkpath
     plan.join("TICKETS.md").write(<<~MARKDOWN)
@@ -86,13 +88,27 @@ class TicketsSiteTest < Minitest::Test
     plan
   end
 
-  def build(base_path: "/FixtureRepo", output: @output, process_options: {})
+  def build(base_path: "/FixtureRepo", output: @output, process_options: {}, roadmap: @roadmap)
+    arguments = ["--project", @project.to_s]
+    arguments.concat(["--roadmap", roadmap.to_s]) unless roadmap.nil?
     Open3.capture3(
-      RbConfig.ruby, BUILDER, "--project", @project.to_s,
+      RbConfig.ruby, (@builder || BUILDER).to_s, *arguments,
       "--output", output.to_s, "--repository", "fixture-owner/FixtureRepo",
       "--revision", "0123456789abcdef", "--base-path", base_path,
       **process_options
     )
+  end
+
+  def pages_configuration(roadmap:)
+    unless @builder
+      pages = Pathname(@temporary).join("Pages builder with spaces")
+      FileUtils.cp_r(File.dirname(BUILDER), pages)
+      @builder = pages.join("build.rb")
+    end
+    path = @builder.dirname.join("_config.yml")
+    settings = YAML.safe_load_file(path)
+    roadmap.nil? ? settings.delete("roadmap_path") : settings["roadmap_path"] = roadmap
+    path.write(settings.to_yaml)
   end
 
   def assert_build(**arguments)
@@ -214,9 +230,10 @@ class TicketsSiteTest < Minitest::Test
     end
   end
 
-  def test_default_workspace_without_configuration_or_workspace_key
+  def test_explicit_roadmap_is_independent_of_telemetry_configuration
     fixture(workspace: "workspaces", config: false)
-    [nil, "project_name: Fixture\n", "workspaces: {}\n"].each do |config|
+    pages_configuration(roadmap: "missing configured roadmap")
+    [nil, "project_name: Fixture\n", "workspaces:\n  roots: []\n"].each do |config|
       @project.join(".agenticlens-config.yaml").write(config) if config
       assert_build(base_path: "")
       welcome = document(@output.join("index.html"))
@@ -224,6 +241,57 @@ class TicketsSiteTest < Minitest::Test
       roadmap = document(@output.join("roadmap/index.html"))
       assert_includes links(roadmap), "/roadmap/to-do/TASK-Z%20sample.html#details"
     end
+  end
+
+  def test_missing_roadmap_requires_explicit_selection
+    fixture
+    @project.join(".agenticlens-config.yaml").write("workspaces:\n  dir: custom tickets\n  roots:\n    - path: custom tickets/plan\n      discovery:\n        max_depth: 0\n        max_directories: 300\n")
+    [nil, "", 42].each do |roadmap|
+      pages_configuration(roadmap: roadmap)
+      stdout, stderr, status = build(roadmap: nil)
+      refute status.success?
+      assert_includes stdout + stderr, "--roadmap PATH or Pages roadmap_path is required"
+      refute @output.exist?
+    end
+  end
+
+  def test_configured_roadmap_supports_caller_without_flag_and_ignores_telemetry_roots
+    fixture(config: false)
+    pages_configuration(roadmap: @roadmap.relative_path_from(@project).to_s)
+    [nil, "invalid: [\n", "workspaces:\n  dir: nonexistent\n  roots:\n    - path: other-telemetry\n"].each do |config|
+      @project.join(".agenticlens-config.yaml").write(config) if config
+      assert_build(roadmap: nil)
+      roadmap = document(@output.join("roadmap/index.html"))
+      assert_includes links(roadmap), "/FixtureRepo/roadmap/to-do/TASK-Z%20sample.html#details"
+      assert @output.join("roadmap/to-do/TASK-Z sample.html").file?
+    end
+    stdout, stderr, status = build(roadmap: "")
+    refute status.success?, "An explicitly blank CLI selection must not use configured input"
+    assert_includes stdout + stderr, "--roadmap PATH or Pages roadmap_path is required"
+    assert @output.join("roadmap/to-do/TASK-Z sample.html").file?
+  end
+
+  def test_configured_roadmap_cannot_escape_repository_and_preserves_published_output
+    fixture
+    assert_build
+    original = @output.glob("**/*", File::FNM_DOTMATCH).select(&:file?).to_h do |path|
+      [path.relative_path_from(@output), path.binread]
+    end
+    outside = Pathname(@temporary).join("outside repository")
+    outside.mkpath
+    outside.join("TICKETS.md").write("# Outside source\n")
+    @project.join("roadmap-link").make_symlink(outside)
+    [outside.to_s, "roadmap-link"].each do |roadmap|
+      pages_configuration(roadmap: roadmap)
+      stdout, stderr, status = build(roadmap: nil)
+      refute status.success?, "Configured roadmap escaped the project: #{roadmap}"
+      assert_includes stdout + stderr, "Plan must be inside the repository"
+      after = @output.glob("**/*", File::FNM_DOTMATCH).select(&:file?).to_h do |path|
+        [path.relative_path_from(@output), path.binread]
+      end
+      assert_equal original, after
+    end
+    assert_equal "# Outside source\n", outside.join("TICKETS.md").read
   end
 
   def test_repeated_build_removes_stale_pages_and_renders_source_updates

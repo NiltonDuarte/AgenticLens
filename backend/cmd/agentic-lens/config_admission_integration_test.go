@@ -19,6 +19,7 @@ import (
 func captureAdmissionFixture(t *testing.T) (captureGenerationFixture, string, string) {
 	t.Helper()
 	f := newCaptureGenerationFixture(t)
+	seedCaptureTicketHome(t, f, "TEST-100")
 	f.write(t, 11)
 	if err := writeCaptureFixtureLocal(t, f, []byte("telemetry:\n  capture:\n    pass_timeout_ms: 3000\n    max_sessions: 256\n    max_source_bytes: 67108864\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 5000\n    commit_warning: true\n    enabled: true\n")); err != nil {
 		t.Fatal(err)
@@ -273,7 +274,7 @@ func TestConfigUpdateAdmissionBeforeNativeRequestSelectsNewState(t *testing.T) {
 func TestCaptureConfigUpdateGuardsEffectiveLocalSelection(t *testing.T) {
 	f, oldBase, next := captureAdmissionFixture(t)
 	localPath := filepath.Join(f.project, ".agenticlens-config.local.yaml")
-	local := []byte(fmt.Sprintf("telemetry:\n  capture:\n    max_sessions: 256\n    max_source_bytes: 67108864\n    commit_warning: true\n    enabled: true\n    state_dir: %q\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 5000\n    pass_timeout_ms: 3000\n", oldBase))
+	local := []byte(fmt.Sprintf("agenticlens:\n  state_dir: %q\ntelemetry:\n  capture:\n    max_sessions: 256\n    max_source_bytes: 67108864\n    commit_warning: true\n    enabled: true\n    state_dir: %q\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 5000\n    pass_timeout_ms: 3000\n", filepath.Join(f.project, ".publication-state"), oldBase))
 	local = append(local, []byte(fmt.Sprintf("  default_source: codex\n  sources:\n    codex:\n      home: %q\n", f.store))...)
 	if err := os.WriteFile(localPath, local, 0600); err != nil {
 		t.Fatal(err)

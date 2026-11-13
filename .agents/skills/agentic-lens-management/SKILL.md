@@ -7,16 +7,15 @@ description: Supervise AgenticLens ticket threads and coordinate non-release pul
 
 Apply the [shared artifact writing rules](../../../AGENTS.md#artifact-writing-rules); the artifact definitions below belong to this workflow.
 
-Use one configured MGT ticket for coordination. Follow [AGENTS.md](../../../AGENTS.md) for artifacts, ownership, telemetry and delivery. Read the active management contract and iteration before acting. A management thread controls independent ticket threads as a user proxy; it does not become their application developer or telemetry parent.
+Use one configured MGT ticket for coordination. Follow [AGENTS.md](../../../AGENTS.md) for artifacts, ownership, telemetry and delivery. Read the selected management change’s design/tasks and approval before acting; keep the roadmap ticket/index separate. A management thread controls independent ticket threads as a user proxy; it does not become their application developer or telemetry parent.
 
 ## Management artifact definitions
 
-Keep the contract focused on authorized supervision/merge boundaries; iteration
-plans record priority or acceptance deltas. Use a single control ledger for the
+Keep the contract focused on authorized supervision/merge boundaries; design records iteration priority or acceptance deltas. Use a single control ledger for the
 ownership/status fields below, updating rows instead of appending polling history.
-`SUMMARY.md` explains delivered coordination outcomes, remaining blockers and
+`delivery.md` explains delivered coordination outcomes, remaining blockers and
 external review ownership (usually 150–300 words before generated metrics).
-`PULL_REQUEST.md` describes management guidance/decisions and validation, with a
+The Pull request section in `delivery.md` describes management guidance/decisions and validation, with a
 conventional title first (usually 100–200 words; at most 3000 characters). Link
 the ledger and owning ticket evidence rather than copying their implementation
 reports. The final `agentic_metrics.json` records this management session only.
@@ -42,7 +41,7 @@ During authorized management supervision, every newly discovered issue or bug mu
 
 Proactively create the required FIX ticket and launch its isolated owner using the launch protocol below. The user's authorization to supervise and fix discovered bugs includes these routine FIX launches; do not ask again merely to allocate the ticket or thread. Review-only authority does not authorize execution, and material product decisions still require approval. Reuse an already owning FIX thread instead of creating a duplicate.
 
-Record the defect, concrete reproduction/expected behavior, relevance decision, FIX identifier, owner/thread and dependencies in the management ledger. Check existing ticket usage and ownership before allocating an unused `FIX-#`; the new owner maintains its own configured ticket workspace, implementation, verification and telemetry. Keep the original tickets' acceptance boundaries and completed work intact. Independent fixes may run in parallel; serialize dependent integration and merges after actual predecessor delivery.
+Record the defect, concrete reproduction/expected behavior, relevance decision, FIX identifier, owner/thread and dependencies in the management ledger. Check existing ticket usage and ownership before allocating an unused `FIX-#`; create the separate roadmap ticket, and the new owner maintains its selected linked execution change, implementation, verification and telemetry. Keep the original tickets' acceptance boundaries and completed work intact. Independent fixes may run in parallel; serialize dependent integration and merges after actual predecessor delivery.
 
 ## Instruct the owning thread
 
@@ -100,6 +99,6 @@ Do not say supervision is complete while an eligible PR remains open, blocked, o
 
 ## Telemetry and finalization
 
-Keep the manager's coordination records and native root in its MGT workspace. Each independent ticket thread maintains its own contract, summary and source ledger; never copy its token totals into the manager ledger or invent parent links. Reading a result adds manager context but does not transfer telemetry ownership. T3 MCP tool-count omissions in the current decoder are a known completeness limit, not zero control activity.
+Keep the manager's coordination records and native root in its MGT workspace. Each independent ticket thread maintains its own change design, delivery evidence and source ledger; never copy its token totals into the manager ledger or invent parent links. Reading a result adds manager context but does not transfer telemetry ownership. T3 MCP tool-count omissions in the current decoder are a known completeness limit, not zero control activity.
 
 Append scope deltas and verification to the active iteration. Generate manager telemetry only at the final step of each delivered iteration using its own literal nonce, actual source and native root. Preserve existing source sessions and record unavailable facts. Update or replace the manager PR according to its actual merged state; a merged PR cannot deliver later control-ledger changes. Final handoff identifies merged PRs and merge evidence, remaining blockers, and excluded release PRs without claiming future supervision has already happened.

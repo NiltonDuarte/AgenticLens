@@ -56,6 +56,7 @@ func writeCaptureSuccessfulPublicationPolicy(t *testing.T, project, state string
 	if cfg.Telemetry.Sources.CodexHome != "" {
 		body += fmt.Sprintf("  sources:\n    codex:\n      home: %q\n", cfg.Telemetry.Sources.CodexHome)
 	}
+	body += fmt.Sprintf("agenticlens:\n  state_dir: %q\n", cfg.AgenticLens.StateDir)
 	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.local.yaml"), []byte(body), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -65,6 +66,9 @@ func TestCapturePublicationBudgetExpiryRetainsPendingAndRecovers(t *testing.T) {
 	t.Setenv("XDG_CACHE_HOME", t.TempDir())
 	f := newCaptureGenerationFixture(t)
 	f.output = filepath.Join(f.project, "records", "TEST-100", "agentic_metrics.json")
+	if err := os.MkdirAll(filepath.Dir(f.output), 0700); err != nil {
+		t.Fatal(err)
+	}
 	prepareCaptureOwner(t, f, "root", "TEST-100", 11)
 	f.generate(t)
 	before := readCaptureFile(t, f.output)
@@ -276,6 +280,33 @@ func TestCaptureInspectionWithoutStateDoesNotInitialize(t *testing.T) {
 	f := newCaptureGenerationFixture(t)
 	writeCapturePolicy(t, f, false, 0)
 	configuration := readCaptureFile(t, filepath.Join(f.project, ".agenticlens-config.yaml"))
+	projectTree := func() map[string]string {
+		t.Helper()
+		files := map[string]string{}
+		if err := filepath.WalkDir(f.project, func(path string, entry os.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			rel, err := filepath.Rel(f.project, path)
+			if err != nil {
+				return err
+			}
+			if entry.IsDir() {
+				files[rel+"/"] = "directory"
+				return nil
+			}
+			body, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			files[rel] = string(body)
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+		return files
+	}
+	before := projectTree()
 	for _, command := range []string{"status", "diagnostics", "verify", "check"} {
 		t.Run(command, func(t *testing.T) {
 			out, err := runCaptureNative(t, f.project, "", "capture", command, "--repo", f.project, "--state-dir", f.state)
@@ -292,12 +323,8 @@ func TestCaptureInspectionWithoutStateDoesNotInitialize(t *testing.T) {
 			if _, err := os.Lstat(filepath.Dir(f.state)); !os.IsNotExist(err) {
 				t.Fatalf("read-only %s created capture namespace/database/lock state: %v", command, err)
 			}
-			entries, err := os.ReadDir(f.project)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if len(entries) != 3 || !bytes.Equal(configuration, readCaptureFile(t, filepath.Join(f.project, ".agenticlens-config.yaml"))) {
-				t.Fatalf("inspection changed project files: %+v", entries)
+			if after := projectTree(); !reflect.DeepEqual(before, after) || !bytes.Equal(configuration, readCaptureFile(t, filepath.Join(f.project, ".agenticlens-config.yaml"))) {
+				t.Fatalf("inspection changed project files: before=%v after=%v", before, after)
 			}
 		})
 	}
@@ -332,7 +359,7 @@ func TestCaptureGenerateUsesOwningConfigurationRoot(t *testing.T) {
 				t.Fatal(err)
 			}
 			out, err = runCaptureNative(t, sub, "", args...)
-			if err == nil || !bytes.Contains(out, []byte("project")) {
+			if err == nil || !bytes.Contains(out, []byte("configured workspace discovery scope")) {
 				t.Errorf("nested configured project imported parent source: %v %s", err, out)
 			}
 			if !bytes.Equal(before, readCaptureFile(t, f.output)) {
@@ -353,10 +380,18 @@ func TestCaptureRejectsOutsideRecoveryJournalBeforeAnyMutation(t *testing.T) {
 			if err := os.WriteFile(victim, accepted, 0600); err != nil {
 				t.Fatal(err)
 			}
-			if err := adapters.BeginPublication(f.output, []string{f.output, filepath.Join(f.project, "capture_report.json")}); err != nil {
+			owner, err := capture.AcquirePublication(context.Background(), f.output, f.project)
+			if err != nil {
 				t.Fatal(err)
 			}
-			journal := f.output + ".publication-pending"
+			if err := adapters.BeginPublication(f.output, []string{f.output, filepath.Join(f.project, "capture_report.json")}); err != nil {
+				owner.Close()
+				t.Fatal(err)
+			}
+			journal := captureFixturePrivateJournal(t, f)
+			if err := owner.Close(); err != nil {
+				t.Fatal(err)
+			}
 			var raw map[string]json.RawMessage
 			if err := json.Unmarshal(readCaptureFile(t, journal), &raw); err != nil {
 				t.Fatal(err)
@@ -372,7 +407,6 @@ func TestCaptureRejectsOutsideRecoveryJournalBeforeAnyMutation(t *testing.T) {
 			}
 			members[0].Data = []byte("must not restore authorized first member")
 			members[1] = member{victim, present, []byte("attacker replacement")}
-			var err error
 			raw["artifacts"], err = json.Marshal(members)
 			if err != nil {
 				t.Fatal(err)
@@ -442,7 +476,7 @@ func TestCaptureRejectsDanglingOutsideSummaryBeforePublicationOrRecovery(t *test
 				}
 			}
 			out, err := runCaptureNative(t, f.project, "", f.args(t, "--append", summary)...)
-			if err == nil || !bytes.Contains(out, []byte("escapes project")) {
+			if err == nil || !bytes.Contains(out, []byte("inside the selected ledger directory")) {
 				t.Errorf("dangling destination accepted: %v %s", err, out)
 			}
 			if _, err := os.Lstat(victim); !os.IsNotExist(err) {
@@ -501,7 +535,7 @@ func TestCaptureRejectsSymlinkDotDotOutsideSummary(t *testing.T) {
 					}
 				}
 				out, err := runCaptureNative(t, f.project, "", f.args(t, "--append", appendPath)...)
-				if err == nil || !bytes.Contains(out, []byte("escapes project")) {
+				if err == nil || !bytes.Contains(out, []byte("inside the selected ledger directory")) {
 					t.Errorf("physical traversal accepted: %v %s", err, out)
 				}
 				if existing {
@@ -538,6 +572,36 @@ func TestCapturePublishesThroughPhysicalArtifactAliases(t *testing.T) {
 					}
 				}
 				aliases := map[string]string{}
+				ledgerHome := f.project
+				if kind == "ledger" || kind == "all" {
+					// A physical alias still names a canonical ledger in an
+					// explicitly provisioned and configured home.
+					ledgerHome = filepath.Join(f.project, "physical-ledger")
+					if state == "missing-parent" {
+						ledgerHome = filepath.Join(ledgerHome, "nested")
+					}
+					if err := os.MkdirAll(ledgerHome, 0700); err != nil {
+						t.Fatal(err)
+					}
+					shared := filepath.Join(f.project, ".agenticlens-config.yaml")
+					policy := readCaptureFile(t, shared)
+					policy = bytes.Replace(policy, []byte("  roots:\n"), []byte(fmt.Sprintf("  roots:\n    - path: %q\n      discovery:\n        max_depth: 0\n        max_directories: 300\n", ledgerHome)), 1)
+					if err := os.WriteFile(shared, policy, 0600); err != nil {
+						t.Fatal(err)
+					}
+					if kind == "ledger" {
+						target := filepath.Join(ledgerHome, "physical-SUMMARY.md")
+						if state == "existing" {
+							if err := os.Rename(summary, target); err != nil {
+								t.Fatal(err)
+							}
+						}
+						if err := os.Symlink(target, summary); err != nil {
+							t.Fatal(err)
+						}
+						aliases[summary] = target
+					}
+				}
 				for name, path := range map[string]string{"ledger": f.output, "report": report, "summary": summary} {
 					if name != kind && kind != "all" {
 						continue
@@ -546,7 +610,13 @@ func TestCapturePublishesThroughPhysicalArtifactAliases(t *testing.T) {
 					if state == "missing-parent" {
 						parent = filepath.Join(parent, "physical-"+name, "nested")
 					}
+					if name == "ledger" || name == "summary" && kind == "all" {
+						parent = ledgerHome
+					}
 					target := filepath.Join(parent, "physical-"+filepath.Base(path))
+					if name == "ledger" {
+						target = filepath.Join(parent, "agentic_metrics.json")
+					}
 					if state == "existing" {
 						if err := os.Rename(path, target); err != nil {
 							t.Fatal(err)
@@ -634,7 +704,7 @@ func TestCaptureRejectsMissingLeafOutputAppendAlias(t *testing.T) {
 	}
 }
 
-func startCorrectionWorker(t *testing.T, f captureGenerationFixture) {
+func startCorrectionWorker(t *testing.T, f captureGenerationFixture, budget ...time.Duration) {
 	t.Helper()
 	s, err := capture.OpenProject(f.state, f.project)
 	if err != nil {
@@ -644,7 +714,14 @@ func startCorrectionWorker(t *testing.T, f captureGenerationFixture) {
 		t.Fatal(err)
 	}
 	s.Close()
-	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	processBudget, shutdownBudget := 8*time.Second, 4*time.Second
+	if len(budget) > 0 {
+		processBudget = budget[0]
+	}
+	if len(budget) > 1 {
+		shutdownBudget = budget[1]
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), processBudget)
 	cmd := exec.CommandContext(ctx, cliBinaryPath, "capture", "worker", "--repo", f.project, "--state-dir", f.state)
 	cmd.Dir = f.project
 	log, err := os.CreateTemp(t.TempDir(), "worker")
@@ -665,7 +742,7 @@ func startCorrectionWorker(t *testing.T, f captureGenerationFixture) {
 			if err != nil {
 				t.Errorf("worker: %v %s", err, readCaptureFile(t, log.Name()))
 			}
-		case <-time.After(4 * time.Second):
+		case <-time.After(shutdownBudget):
 			cancel()
 			<-done
 			t.Error("worker did not stop after disabling")
@@ -703,45 +780,113 @@ func waitCorrectionLedger(t *testing.T, path, id string, tokens int64) {
 }
 func TestCaptureContinuousNativeCallbacksDoNotStarveAllTickets(t *testing.T) {
 	f := newCaptureGenerationFixture(t)
+	first := seedCaptureTicketHome(t, f, "TEST-100")
+	second := seedCaptureTicketHome(t, f, "TEST-200")
 	root := prepareCaptureOwner(t, f, "root", "TEST-100", 10)
-	prepareCaptureOwner(t, f, "second", "TEST-200", 20)
-	// 100ms coalescing with 100ms refresh: supported events remain closer together
-	// than debounce, yet the periodic refresh must publish before the stream ends.
-	writeCapturePolicy(t, f, true, 100)
-	startCorrectionWorker(t, f)
-	first := filepath.Join(f.project, "records", "TEST-100", "agentic_metrics.json")
-	second := filepath.Join(f.project, "records", "TEST-200", "agentic_metrics.json")
-	deadline := time.Now().Add(1800 * time.Millisecond)
+	other := prepareCaptureOwner(t, f, "second", "TEST-200", 20)
+	// Separate initial readiness from the next periodic pass. Each phase allows
+	// two bounded generation subprocesses; fairness also includes one refresh.
+	// Measured callback gaps must stay below debounce throughout that phase.
+	const passBudget = 3 * time.Second
+	const refresh = 4 * time.Second
+	const debounce = refresh
+	const readinessBudget = 2*passBudget + time.Second
+	const phaseBudget = refresh + 2*passBudget + time.Second
+	const shutdownBudget = refresh + passBudget + time.Second
+	const lifetime = readinessBudget + phaseBudget + 2*refresh
+	policy := fmt.Sprintf("telemetry:\n  capture:\n    enabled: true\n    refresh_ms: %d\n    debounce_ms: %d\n    idle_ms: %d\n    max_lifetime_ms: %d\n    pass_timeout_ms: %d\n", refresh.Milliseconds(), debounce.Milliseconds(), lifetime.Milliseconds(), lifetime.Milliseconds(), passBudget.Milliseconds())
+	if err := writeCaptureFixtureLocal(t, f, []byte(policy)); err != nil {
+		t.Fatal(err)
+	}
+	startCorrectionWorker(t, f, lifetime+shutdownBudget, shutdownBudget)
+	publishedInput := func(path, id string, want int64) bool {
+		body, err := os.ReadFile(path)
+		var ledger domain.AgenticFactLedger
+		if err != nil || json.Unmarshal(body, &ledger) != nil {
+			return false
+		}
+		return len(ledger.Sessions) == 1 && ledger.Sessions[0].ID == id && len(ledger.Sessions[0].Invocations) == 1 && ledger.Sessions[0].Invocations[0].Tokens.Input == want
+	}
+	readyStarted := time.Now()
+	readyDeadline := readyStarted.Add(readinessBudget)
+	ready := false
+	for time.Now().Before(readyDeadline) {
+		if publishedInput(first, "root", 10) && publishedInput(second, "second", 20) {
+			ready = true
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	if !ready {
+		t.Fatal("worker did not establish both OLD snapshots before callback stream")
+	}
+	readiness := time.Since(readyStarted)
+	payload, err := json.Marshal(capture.HookInput{SessionID: "root", Event: "UserPromptSubmit", TranscriptPath: root})
+	if err != nil {
+		t.Fatal(err)
+	}
+	streamStarted := time.Now()
+	deadline := streamStarted.Add(phaseBudget)
 	callbacks := 0
+	var previousStart time.Time
+	var maxGap time.Duration
 	published := false
 	for time.Now().Before(deadline) {
-		payload, err := json.Marshal(capture.HookInput{SessionID: "root", Event: "UserPromptSubmit", TranscriptPath: root})
-		if err != nil {
-			t.Fatal(err)
+		callbackStarted := time.Now()
+		ctx, cancel := context.WithDeadline(context.Background(), deadline)
+		command := exec.CommandContext(ctx, cliBinaryPath, "capture", "receive", "--repo", f.project, "--source", "codex", "--store", f.store, "--state-dir", f.state)
+		command.Dir = f.project
+		command.Stdin = bytes.NewReader(payload)
+		out, err := command.CombinedOutput()
+		expired := errors.Is(ctx.Err(), context.DeadlineExceeded)
+		cancel()
+		if expired {
+			// Exhaustion must fail the progress assertion below, rather than
+			// obscure starvation with cancellation of the final native callback.
+			break
 		}
-		out, err := runCaptureNative(t, f.project, string(payload), "capture", "receive", "--repo", f.project, "--source", "codex", "--store", f.store, "--state-dir", f.state)
 		if err != nil {
-			t.Fatalf("callback: %v %s", err, out)
+			t.Fatalf("native callback %d: %v %s", callbacks+1, err, out)
 		}
-		callbacks++
-		if _, e := os.Stat(first); e == nil {
-			if _, e = os.Stat(second); e == nil {
-				published = true
-				break
+		// Acceptance occurs within the native command. This start-to-next-end
+		// envelope bounds the actual gap without assuming fast process startup.
+		if !previousStart.IsZero() {
+			maxGap = max(maxGap, time.Since(previousStart))
+			if maxGap >= debounce {
+				t.Fatalf("callback cadence did not establish continuous traffic: max gap bound %s >= debounce %s", maxGap, debounce)
 			}
 		}
-		time.Sleep(15 * time.Millisecond)
+		previousStart = callbackStarted
+		callbacks++
+		if callbacks == 1 {
+			for path, values := range map[string][2]int{root: {10, 31}, other: {20, 41}} {
+				before := readCaptureFile(t, path)
+				after := bytes.Replace(before, []byte(fmt.Sprintf(`"input_tokens":%d`, values[0])), []byte(fmt.Sprintf(`"input_tokens":%d`, values[1])), 1)
+				if bytes.Equal(before, after) {
+					t.Fatal("fixture failed to advance OLD source to NEW snapshot")
+				}
+				if err := os.WriteFile(path, after, 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+		} else if publishedInput(first, "root", 31) && publishedInput(second, "second", 41) {
+			published = true
+			break
+		}
 	}
 	if !published {
-		t.Fatalf("continuous stream (%d callbacks) starved periodic publication of both tickets", callbacks)
+		t.Fatalf("continuous stream (%d callbacks, max gap bound %s < debounce %s) starved both NEW snapshots", callbacks, maxGap, debounce)
 	}
-	waitCorrectionLedger(t, first, "root", 10)
-	waitCorrectionLedger(t, second, "second", 20)
+	waitCorrectionLedger(t, first, "root", 31)
+	waitCorrectionLedger(t, second, "second", 41)
+	t.Logf("OLD->NEW progress for both tickets during %d native callbacks: readiness=%s stream=%s max callback gap bound=%s debounce=%s", callbacks, readiness, time.Since(streamStarted), maxGap, debounce)
 }
+
 func TestCaptureLiveDisableStopsWritesAndManualRecoverySurvives(t *testing.T) {
 	for _, mode := range []string{"yaml", "disable", "uninstall", "dry-run"} {
 		t.Run(mode, func(t *testing.T) {
 			f := newCaptureGenerationFixture(t)
+			seedCaptureTicketHome(t, f, "TEST-100")
 			prepareCaptureOwner(t, f, "root", "TEST-100", 10)
 			writeCapturePolicy(t, f, false, 0)
 			if out, err := runCaptureNative(t, f.project, "", "capture", "install", "--repo", f.project, "--source", "codex", "--store", f.store, "--state-dir", f.state, "--binary", cliBinaryPath); err != nil {
@@ -1212,6 +1357,7 @@ func TestCaptureQueuedForeignChildCannotImportFromAnotherHome(t *testing.T) {
 
 func TestCaptureDisablingOneIntegrationKeepsOtherSourceAutomatic(t *testing.T) {
 	f := newCaptureGenerationFixture(t)
+	seedCaptureTicketHome(t, f, "TEST-200")
 	writeCapturePolicy(t, f, false, 0)
 	dbPath := setupIsolatedEmptyDB(t)
 	db, err := sql.Open("sqlite", dbPath)
@@ -1417,7 +1563,7 @@ func TestCaptureLegacyReportPhysicalEscapePreservesOutsideAndAcceptedArtifacts(t
 				t.Fatal(err)
 			}
 			out, err := runCaptureNative(t, f.project, "", f.args(t)...)
-			if err == nil || !bytes.Contains(out, []byte("outside exact project")) {
+			if err == nil || !bytes.Contains(out, []byte("unsupported/retired publication state")) {
 				t.Fatalf("native legacy recovery granted outside authority: %v %s", err, out)
 			}
 			for path, want := range map[string][]byte{f.output: before, victim: accepted, marker: body} {

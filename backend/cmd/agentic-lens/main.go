@@ -46,7 +46,7 @@ func runGenerate(args []string) {
 	strictTypeFlag := genFlags.Bool("strict-type", false, "Require a valid ticket type, failing if omitted and cannot be inferred")
 	startedAtFlag := genFlags.String("started-at", "", "Explicit start timestamp ISO format")
 	completedAtFlag := genFlags.String("completed-at", "", "Explicit completion timestamp ISO format")
-	jsonOutputFlag := genFlags.String("json-output", "", "Path to write/update structured JSON ledger")
+	jsonOutputFlag := genFlags.String("json-output", "", "Path to write/update the canonical agentic_metrics.json ledger")
 	appendFlag := genFlags.String("append", "", "Path to markdown file to append/update metrics table in")
 	dbPathFlag := genFlags.String("db-path", "", "Path to OpenCode SQLite database")
 	codexHomeFlag := genFlags.String("codex-home", "", "Explicit Codex source store; otherwise selected local telemetry.sources.codex.home")
@@ -130,6 +130,10 @@ func runGenerate(args []string) {
 		os.Exit(1)
 	}
 	if *jsonOutputFlag != "" {
+		if filepath.Base(*jsonOutputFlag) != "agentic_metrics.json" {
+			fmt.Fprintln(os.Stderr, "generate --json-output must name the canonical agentic_metrics.json ledger")
+			os.Exit(1)
+		}
 		expanded, pathErr := adaptersconfig.ExpandHomePath(*jsonOutputFlag)
 		if pathErr != nil {
 			fmt.Fprintln(os.Stderr, pathErr)
@@ -146,6 +150,31 @@ func runGenerate(args []string) {
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
+	}
+	if *jsonOutputFlag == "" {
+		location, resolveErr := adapters.ResolveTicketLocation(projCfg, *ticketIDFlag, "")
+		if resolveErr != nil {
+			fmt.Fprintln(os.Stderr, "Ledger destination required:", resolveErr)
+			os.Exit(1)
+		}
+		*jsonOutputFlag = location.LedgerPath
+	} else {
+		if _, e := os.Stat(*jsonOutputFlag); errors.Is(e, os.ErrNotExist) {
+			if e = adapters.ValidateInitialLedgerDestination(projCfg, *ticketIDFlag, *jsonOutputFlag); e != nil {
+				fmt.Fprintln(os.Stderr, e)
+				os.Exit(1)
+			}
+			_, discoveryIssues := adapters.DiscoverWorkspaceLocations(projCfg)
+			for _, issue := range discoveryIssues {
+				fmt.Fprintf(os.Stderr, "Warning at %s: %s\n", issue.Path, issue.Message)
+			}
+		} else if e != nil {
+			fmt.Fprintln(os.Stderr, e)
+			os.Exit(1)
+		} else if e = adapters.ValidateLedgerDestinationScope(projCfg, *jsonOutputFlag); e != nil {
+			fmt.Fprintln(os.Stderr, e)
+			os.Exit(1)
+		}
 	}
 	effectiveSummary, err := resolveGenerationSummaryPath(project, projCfg, *appendFlag, provided["append"], *jsonOutputFlag, *ticketIDFlag)
 	if err != nil {
@@ -250,7 +279,7 @@ func runGenerate(args []string) {
 	destinations := []string{*jsonOutputFlag, *appendFlag}
 	for _, dest := range destinations {
 		if dest != "" {
-			if e := capture.ValidateDestination(project, dest); e != nil {
+			if e := adapters.ValidateWorkspaceArtifactDestination(projCfg, *jsonOutputFlag, dest); e != nil {
 				fmt.Fprintln(os.Stderr, e)
 				os.Exit(1)
 			}
@@ -260,7 +289,7 @@ func runGenerate(args []string) {
 	// This prevents an earlier source view from publishing after a later generation.
 	if *jsonOutputFlag != "" {
 		lockCtx, lockCancel := context.WithTimeout(context.Background(), 5*time.Minute)
-		publicationLock, lockErr := capture.AcquirePublication(lockCtx, *jsonOutputFlag)
+		publicationLock, lockErr := capture.AcquirePublication(lockCtx, *jsonOutputFlag, project)
 		lockCancel()
 		if lockErr != nil {
 			fmt.Fprintln(os.Stderr, "Error acquiring ledger publication ownership:", lockErr)
@@ -273,7 +302,7 @@ func runGenerate(args []string) {
 		}()
 	}
 	if *jsonOutputFlag != "" {
-		recovered, e := adapters.RecoverPublicationWithLegacyReport(project, *jsonOutputFlag, authorizedPublicationPaths(*jsonOutputFlag, *appendFlag))
+		recovered, e := adapters.RecoverPublication(*jsonOutputFlag, authorizedPublicationPaths(*jsonOutputFlag, *appendFlag))
 		if e != nil {
 			fmt.Fprintln(os.Stderr, "Interrupted publication recovery failed:", e)
 			os.Exit(1)
@@ -827,7 +856,6 @@ func runServer(args []string) {
 
 	serverFlags := flag.NewFlagSet("server", flag.ExitOnError)
 	portFlag := serverFlags.Int("port", 8085, "Port to listen on")
-	workspacesFlag := serverFlags.String("workspaces", "", "Path to workspaces directory")
 	dbPathFlag := serverFlags.String("db-path", "", "Path to OpenCode SQLite database (overrides config)")
 	if len(args) > 0 && args[0] == "help" {
 		serverFlags.Usage()
@@ -840,7 +868,7 @@ func runServer(args []string) {
 	}
 
 	serverFlags.Visit(func(f *flag.Flag) {
-		if (f.Name == "workspaces" && strings.TrimSpace(*workspacesFlag) == "") || (f.Name == "db-path" && strings.TrimSpace(*dbPathFlag) == "") {
+		if f.Name == "db-path" && strings.TrimSpace(*dbPathFlag) == "" {
 			fmt.Fprintf(os.Stderr, "--%s must be nonblank when supplied\n", f.Name)
 			os.Exit(1)
 		}
@@ -851,7 +879,7 @@ func runServer(args []string) {
 		os.Exit(1)
 	}
 
-	workspacesDir, projCfg, err := adapters.ResolveWorkspaceContext(*workspacesFlag)
+	workspacesDir, projCfg, err := adapters.LoadWorkspaceProject("")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Server workspace policy:", err)
 		os.Exit(1)
@@ -933,13 +961,13 @@ func runBackfill(args []string) {
 		fmt.Fprintf(out, "Flags:\n")
 		fmt.Fprintf(out, "  --source <harness>     Required telemetry harness to backfill: opencode, codex, or both\n")
 		fmt.Fprintf(out, "  --codex-home <path>    Explicit Codex source store; otherwise selected local telemetry.sources.codex.home\n")
-		fmt.Fprintf(out, "  --workspaces <path>    Path to root workspaces directory containing agentic_metrics.json ledgers\n")
 		fmt.Fprintf(out, "  --ticket-id <id>       Target single ticket identifier to filter backfill operation\n")
 		fmt.Fprintf(out, "  --recompute-git        Recompute Git code facts and SDLC iterations from repository history\n")
 		fmt.Fprintf(out, "  --code-ref <ref>        Required with --recompute-git; branch or commit to compare with configured base\n")
 		fmt.Fprintf(out, "  --recompute-db         Refresh complete selected-source snapshots without --force; retain unavailable history\n")
 		fmt.Fprintf(out, "  --migrate-schema       Upgrade telemetry ledger schema versions to latest supported version\n")
 		fmt.Fprintf(out, "  --dry-run              Preview planned migrations without writing changes to disk\n")
+		fmt.Fprintln(out, "  --workspace <path>     Select an explicit existing ledger directory")
 		fmt.Fprintf(out, "  --update-summaries     Idempotently update the configured summary filename\n")
 		fmt.Fprintf(out, "  --db-path <path>       Explicit path to OpenCode SQLite database file\n")
 		fmt.Fprintf(out, "  --force                Repeat completed-ledger processing; never bypass preservation or enable fallbacks\n")
@@ -950,7 +978,7 @@ func runBackfill(args []string) {
 		backfillFlags.Usage()
 		return
 	}
-	workspacesFlag := backfillFlags.String("workspaces", "", "Path to root workspaces directory containing agentic_metrics.json ledgers")
+	workspaceSelection := backfillFlags.String("workspace", "", "Explicit existing ledger directory")
 	sourceFlag := backfillFlags.String("source", "", "Telemetry harness to backfill: opencode, codex, or both (required)")
 	codexHomeFlag := backfillFlags.String("codex-home", "", "Explicit Codex source store; otherwise selected local telemetry.sources.codex.home")
 	ticketIDFlag := backfillFlags.String("ticket-id", "", "Target single ticket identifier to filter backfill operation")
@@ -969,7 +997,7 @@ func runBackfill(args []string) {
 		os.Exit(1)
 	}
 	backfillFlags.Visit(func(f *flag.Flag) {
-		if (f.Name == "workspaces" && strings.TrimSpace(*workspacesFlag) == "") || (f.Name == "db-path" && strings.TrimSpace(*dbPathFlag) == "") || (f.Name == "codex-home" && strings.TrimSpace(*codexHomeFlag) == "") {
+		if (f.Name == "db-path" && strings.TrimSpace(*dbPathFlag) == "") || (f.Name == "codex-home" && strings.TrimSpace(*codexHomeFlag) == "") {
 			fmt.Fprintf(os.Stderr, "--%s must be nonblank when supplied\n", f.Name)
 			os.Exit(1)
 		}
@@ -1008,7 +1036,8 @@ func runBackfill(args []string) {
 	}
 
 	opts := backfill.BackfillOptions{
-		WorkspacesDir:   *workspacesFlag,
+		Project:         "",
+		Workspace:       *workspaceSelection,
 		TicketID:        *ticketIDFlag,
 		Source:          cleanSource,
 		CodexHome:       resolvedCodexHome,
@@ -1030,7 +1059,7 @@ func runBackfill(args []string) {
 		os.Exit(1)
 	}
 
-	targetDir, err := adapters.ResolveWorkspacesDir(opts.WorkspacesDir)
+	targetDir, _, err := adapters.LoadWorkspaceProject(opts.Project)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error resolving workspaces directory: %v\n", err)
 		os.Exit(1)
@@ -1146,11 +1175,12 @@ func runMigrate(args []string) {
 		fmt.Fprintf(out, "Usage: agentic-lens migrate [flags]\n\n")
 		fmt.Fprintf(out, "Universal stepwise schema migration engine for telemetry ledgers.\n\n")
 		fmt.Fprintf(out, "Flags:\n")
-		fmt.Fprintf(out, "  --workspaces <path>      Path to root workspaces directory containing agentic_metrics.json ledgers\n")
 		fmt.Fprintf(out, "  --ticket-id <id>         Target single ticket identifier to filter migration\n")
+		fmt.Fprintln(out, "  --workspace <path>      Select an explicit existing ledger directory")
 		fmt.Fprintf(out, "  --target-version <int>   Target schema version integer (default %d)\n", domain.CurrentSchemaVersion)
 		fmt.Fprintf(out, "  --dry-run                Preview planned migrations without writing changes to disk\n")
 		fmt.Fprintf(out, "  --backup                 Create .bak backup copy of original file before writing\n")
+		fmt.Fprintln(out, "  --workspace <path>     Select an explicit existing ledger directory")
 		fmt.Fprintf(out, "  --update-summaries       Idempotently update the configured summary filename\n")
 	}
 	if len(args) > 0 && (args[0] == "help" || args[0] == "-h" || args[0] == "--help" || args[0] == "-help") {
@@ -1158,7 +1188,7 @@ func runMigrate(args []string) {
 		migrateFlags.Usage()
 		return
 	}
-	workspacesFlag := migrateFlags.String("workspaces", "", "Path to root workspaces directory containing agentic_metrics.json ledgers")
+	workspaceSelection := migrateFlags.String("workspace", "", "Explicit existing ledger directory")
 	ticketIDFlag := migrateFlags.String("ticket-id", "", "Target single ticket identifier to filter migration")
 	targetVersionFlag := migrateFlags.Int("target-version", domain.CurrentSchemaVersion, "Target schema version integer")
 	dryRunFlag := migrateFlags.Bool("dry-run", false, "Preview planned migrations without writing changes to disk")
@@ -1170,15 +1200,9 @@ func runMigrate(args []string) {
 		os.Exit(1)
 	}
 
-	migrateFlags.Visit(func(f *flag.Flag) {
-		if f.Name == "workspaces" && strings.TrimSpace(*workspacesFlag) == "" {
-			fmt.Fprintln(os.Stderr, "--workspaces must be nonblank when supplied")
-			os.Exit(1)
-		}
-	})
-
 	opts := backfill.MigrationOptions{
-		WorkspacesDir:   *workspacesFlag,
+		Project:         "",
+		Workspace:       *workspaceSelection,
 		TicketID:        *ticketIDFlag,
 		TargetVersion:   *targetVersionFlag,
 		DryRun:          *dryRunFlag,
@@ -1193,7 +1217,7 @@ func runMigrate(args []string) {
 		os.Exit(1)
 	}
 
-	targetDir, err := adapters.ResolveWorkspacesDir(opts.WorkspacesDir)
+	targetDir, _, err := adapters.LoadWorkspaceProject(opts.Project)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error resolving workspaces directory: %v\n", err)
 		os.Exit(1)
@@ -1357,7 +1381,7 @@ func printRootUsage() {
 	fmt.Fprintln(out, "  version   Print version and build information")
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "Root Workspace Inspection Flags:")
-	fmt.Fprintln(out, "  --workspaces <path>   Path to root workspaces directory containing agentic_metrics.json ledgers")
+	fmt.Fprintln(out, "  --workspace <path>     Select an explicit existing ledger directory")
 	fmt.Fprintln(out, "  --ticket-id <id>      Target ticket identifier to filter and report on")
 	fmt.Fprintln(out, "  --list                List all discovered ticket workspaces and summary metrics")
 	fmt.Fprintln(out, "  --anomalies           Display anomalies and health flags for target ticket")
@@ -1380,7 +1404,11 @@ func initCommand(args []string) error {
 	localSettings := flags.String("local-settings", "", "Explicit approved local YAML choices; fills only missing choices")
 	name := flags.String("project-name", "", "Explicit project label override for the shared candidate")
 	version := flags.String("agenticlens-version", "", "Approved exact release pin; otherwise preserve candidate/existing valid pin")
-	workspaces := flags.String("workspaces", "", "Explicit workspace root (required for new shared configuration)")
+	var workspaces repeatStringFlag
+	flags.Var(&workspaces, "workspace-root", "Explicit workspace search root; repeat for multiple roots")
+	discoveryDepth := flags.Int("discovery-depth", 0, "Maximum discovery depth written for selected roots")
+	directoryBudget := flags.Int("directory-budget", 300, "Directory budget written for selected roots")
+	publicationState := flags.String("publication-state-dir", "~/.agenticlens/state", "Writable local operational publication state home")
 	output := flags.String("output", ".agenticlens-config.yaml", "Canonical shared YAML output path (.agenticlens-config.yaml or .agenticlens-config.yml)")
 	localOnly := flags.Bool("local-only", false, "Fill missing explicitly supplied local choices; preserve valid existing choices")
 	state := flags.String("state-dir", "", "Explicit local capture state directory")
@@ -1404,7 +1432,7 @@ func initCommand(args []string) error {
 	}
 	provided := map[string]bool{}
 	flags.Visit(func(f *flag.Flag) { provided[f.Name] = true })
-	for _, choice := range []struct{ flag, value string }{{"settings", *settings}, {"local-settings", *localSettings}, {"project-name", *name}, {"agenticlens-version", *version}, {"workspaces", *workspaces}, {"state-dir", *state}, {"capture-enabled", *enabled}, {"source", *source}, {"codex-home", *codexHome}, {"db-path", *database}, {"capture-state-dir", *captureState}} {
+	for _, choice := range []struct{ flag, value string }{{"settings", *settings}, {"local-settings", *localSettings}, {"project-name", *name}, {"agenticlens-version", *version}, {"publication-state-dir", *publicationState}, {"state-dir", *state}, {"capture-enabled", *enabled}, {"source", *source}, {"codex-home", *codexHome}, {"db-path", *database}, {"capture-state-dir", *captureState}} {
 		if provided[choice.flag] && strings.TrimSpace(choice.value) == "" {
 			return fmt.Errorf("--%s must be nonblank when supplied", choice.flag)
 		}
@@ -1412,7 +1440,7 @@ func initCommand(args []string) error {
 	if *localOnly {
 		for key := range provided {
 			switch key {
-			case "local-only", "local-settings", "state-dir", "capture-enabled", "source", "codex-home", "db-path", "output", "dry-run":
+			case "local-only", "local-settings", "publication-state-dir", "state-dir", "capture-enabled", "source", "codex-home", "db-path", "output", "dry-run":
 			default:
 				return fmt.Errorf("--local-only cannot be combined with --%s", key)
 			}
@@ -1461,7 +1489,7 @@ func initCommand(args []string) error {
 	for _, choice := range []struct {
 		flag  string
 		value *string
-	}{{"workspaces", workspaces}, {"codex-home", codexHome}, {"db-path", database}, {"state-dir", state}} {
+	}{{"codex-home", codexHome}, {"db-path", database}, {"state-dir", state}, {"publication-state-dir", publicationState}} {
 		if !provided[choice.flag] {
 			continue
 		}
@@ -1475,6 +1503,20 @@ func initCommand(args []string) error {
 		}
 		*choice.value = physical
 	}
+	for i, path := range workspaces {
+		if strings.TrimSpace(path) == "" {
+			return errors.New("--workspace-root must be nonblank when supplied")
+		}
+		expanded, pathErr := adaptersconfig.ExpandHomePath(path)
+		if pathErr != nil {
+			return pathErr
+		}
+		physical, pathErr := filesystem.PhysicalPath(expanded)
+		if pathErr != nil {
+			return fmt.Errorf("--workspace-root: %w", pathErr)
+		}
+		workspaces[i] = physical
+	}
 	for _, candidate := range []*string{settings, localSettings} {
 		if *candidate != "" {
 			expanded, pathErr := adaptersconfig.ExpandHomePath(*candidate)
@@ -1484,7 +1526,7 @@ func initCommand(args []string) error {
 			*candidate = expanded
 		}
 	}
-	localYAML, err := adaptersconfig.InitialLocalYAMLWithSettings(project, *localSettings, *enabled, *source, *codexHome, *database, *state)
+	localYAML, err := adaptersconfig.InitialLocalYAMLWithSettings(project, *localSettings, *enabled, *source, *codexHome, *database, *state, *publicationState)
 	if err != nil {
 		return err
 	}
@@ -1520,14 +1562,13 @@ func initCommand(args []string) error {
 		}
 		cfg.ProjectName = *name
 	}
-	if provided["workspaces"] {
-		if strings.TrimSpace(*workspaces) == "" {
-			return errors.New("--workspaces cannot be blank")
+	if len(workspaces) > 0 {
+		cfg.Workspaces.Roots = []domain.WorkspaceRootConfig{}
+		for _, path := range workspaces {
+			cfg.Workspaces.Roots = append(cfg.Workspaces.Roots, domain.WorkspaceRootConfig{Path: path, Discovery: domain.WorkspaceDiscoveryConfig{MaxDepth: *discoveryDepth, MaxDirectories: *directoryBudget}})
 		}
-		cfg.Workspaces.Dir = *workspaces
-	} else if !*complete {
-		return errors.New("new configuration requires an explicit nonblank --workspaces")
 	}
+
 	if provided["agenticlens-version"] {
 		if err := adaptersconfig.ValidateReleaseVersion(*version); err != nil {
 			return err
@@ -1831,7 +1872,7 @@ func main() {
 	flag.Usage = printRootUsage
 
 	ticketIDFlag := flag.String("ticket-id", "", "Target ticket identifier to filter and report on")
-	workspacesFlag := flag.String("workspaces", "", "Path to root workspaces directory containing agentic_metrics.json ledgers")
+	workspaceSelection := flag.String("workspace", "", "Explicit ledger directory for detail selection")
 	appendFlag := flag.String("append", "", "Path to markdown summary file to idempotently update with metrics table")
 	jsonOutputFlag := flag.String("json-output", "", "Path to write computed metrics ledger as JSON")
 	listFlag := flag.Bool("list", false, "List all discovered ticket workspaces and summary metrics")
@@ -1846,16 +1887,16 @@ func main() {
 		return
 	}
 
-	flag.Visit(func(f *flag.Flag) {
-		if f.Name == "workspaces" && strings.TrimSpace(*workspacesFlag) == "" {
-			fmt.Fprintln(os.Stderr, "--workspaces must be nonblank when supplied")
-			os.Exit(1)
-		}
-	})
-	workspacesDir, projCfg, err := adapters.ResolveWorkspaceContext(*workspacesFlag)
+	workspacesDir, projCfg, err := adapters.LoadWorkspaceProject("")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Error selecting workspace policy:", err)
 		os.Exit(1)
+	}
+	if (*appendFlag != "" || *jsonOutputFlag != "") && *workspaceSelection != "" {
+		if err = adapters.RecoverWorkspaceArtifacts(workspacesDir, *workspaceSelection, *jsonOutputFlag, *appendFlag); err != nil {
+			fmt.Fprintln(os.Stderr, "Artifact recovery:", err)
+			os.Exit(1)
+		}
 	}
 	report := adapters.ScanWorkspaces(workspacesDir)
 	if report.FatalError != "" {
@@ -1863,7 +1904,7 @@ func main() {
 		os.Exit(1)
 	}
 	for _, diagnostic := range report.Diagnostics {
-		fmt.Fprintf(os.Stderr, "Warning: %s\n", diagnostic.Message)
+		fmt.Fprintf(os.Stderr, "Warning at %s: %s\n", diagnostic.Path, diagnostic.Message)
 	}
 	if *ticketIDFlag != "" {
 		for _, diagnostic := range report.Diagnostics {
@@ -1874,7 +1915,7 @@ func main() {
 		}
 	}
 
-	if len(report.Ledgers) == 0 {
+	if len(report.Ledgers) == 0 && (*listFlag || *ticketIDFlag == "") {
 		fmt.Fprintf(os.Stderr, "No valid agentic_metrics.json ledgers found in %s\n", workspacesDir)
 		os.Exit(1)
 	}
@@ -1898,34 +1939,35 @@ func main() {
 			if ledger.TicketTitle != nil && *ledger.TicketTitle != "" {
 				title = *ledger.TicketTitle
 			}
-			fmt.Printf("%-15s %-12s %-10s %-12s %-10s %-16s %s\n", tid, dur, cost, health, iters, anomSummary, title)
+			fmt.Printf("%-15s %-12s %-10s %-12s %-10s %-16s %s [%s]\n", tid, dur, cost, health, iters, anomSummary, title, ledger.WorkspacePath)
 		}
 		return
 	}
 
 	var targetLedger *domain.AgenticMetricsLedger
 	if *ticketIDFlag != "" {
-		for i := range report.Ledgers {
-			l := &report.Ledgers[i]
-			if l.TicketID != nil && *l.TicketID == *ticketIDFlag {
-				targetLedger = l
-				break
-			}
-		}
-		if targetLedger == nil {
-			fmt.Fprintf(os.Stderr, "Error: Ticket '%s' not found in scanned workspaces (%s)\n", *ticketIDFlag, workspacesDir)
-			os.Exit(1)
-		}
+		targetLedger, err = adapters.LoadTicketWorkspace(*ticketIDFlag, workspacesDir, *workspaceSelection)
 	} else {
-		// Default to most recently updated ledger
 		var latest *domain.AgenticMetricsLedger
 		for i := range report.Ledgers {
-			l := &report.Ledgers[i]
-			if latest == nil || l.UpdatedAt > latest.UpdatedAt {
-				latest = l
+			candidate := &report.Ledgers[i]
+			if *workspaceSelection != "" && candidate.WorkspacePath != *workspaceSelection {
+				continue
+			}
+			if latest == nil || candidate.UpdatedAt > latest.UpdatedAt {
+				latest = candidate
 			}
 		}
-		targetLedger = latest
+		if latest == nil {
+			err = fmt.Errorf("no ledger matches selected location")
+		} else {
+			selection := *workspaceSelection
+			targetLedger, err = adapters.LoadTicketWorkspace(*latest.TicketID, workspacesDir, selection)
+		}
+	}
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Workspace selection:", err)
+		os.Exit(1)
 	}
 
 	if *anomaliesFlag {
@@ -1939,20 +1981,17 @@ func main() {
 
 	tableMD := adapters.FormatMarkdownMetricsTable(*targetLedger, projCfg.RoleOrder)
 
-	if *appendFlag != "" {
-		if err := adapters.UpdateSummaryFile(*appendFlag, tableMD); err != nil {
-			fmt.Fprintf(os.Stderr, "Error updating summary file %s: %v\n", *appendFlag, err)
+	if *appendFlag != "" || *jsonOutputFlag != "" {
+		if err := adapters.PublishWorkspaceArtifacts(workspacesDir, *targetLedger, *jsonOutputFlag, *appendFlag); err != nil {
+			fmt.Fprintln(os.Stderr, "Artifact publication:", err)
 			os.Exit(1)
 		}
-		fmt.Printf("AgenticLens metrics table successfully updated in %s\n", *appendFlag)
-	}
-
-	if *jsonOutputFlag != "" {
-		if err := adapters.SaveMetricsLedger(*jsonOutputFlag, *targetLedger); err != nil {
-			fmt.Fprintf(os.Stderr, "Error writing JSON to %s: %v\n", *jsonOutputFlag, err)
-			os.Exit(1)
+		if *appendFlag != "" {
+			fmt.Printf("AgenticLens metrics table successfully updated in %s\n", *appendFlag)
 		}
-		fmt.Printf("AgenticLens computed ledger written to %s\n", *jsonOutputFlag)
+		if *jsonOutputFlag != "" {
+			fmt.Printf("AgenticLens computed ledger written to %s\n", *jsonOutputFlag)
+		}
 	}
 
 	if *appendFlag == "" && *jsonOutputFlag == "" {

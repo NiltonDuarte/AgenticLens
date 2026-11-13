@@ -210,7 +210,7 @@ func TestCLIListCommand(t *testing.T) {
 	t.Parallel()
 	wsDir := setupTestWorkspace(t)
 
-	cmd := exec.Command(cliBinaryPath, "--workspaces", wsDir, "--list")
+	cmd := workspaceCLICommand(t, wsDir, "--list")
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -300,7 +300,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 
 	t.Run("clean ticket shows no anomalies message", func(t *testing.T) {
 		t.Parallel()
-		cmd := exec.Command(cliBinaryPath, "--workspaces", wsDir, "--ticket-id", "TICKET-1", "--anomalies")
+		cmd := workspaceCLICommand(t, wsDir, "--ticket-id", "TICKET-1", "--anomalies")
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -317,7 +317,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 
 	t.Run("ticket with anomalies formats table", func(t *testing.T) {
 		t.Parallel()
-		cmd := exec.Command(cliBinaryPath, "--workspaces", wsDir, "--ticket-id", "AL-ANOMALY", "--anomalies")
+		cmd := workspaceCLICommand(t, wsDir, "--ticket-id", "AL-ANOMALY", "--anomalies")
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -340,7 +340,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 
 	t.Run("list output shows anomaly counts", func(t *testing.T) {
 		t.Parallel()
-		cmd := exec.Command(cliBinaryPath, "--workspaces", wsDir, "--list")
+		cmd := workspaceCLICommand(t, wsDir, "--list")
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -364,7 +364,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 	t.Run("generate rejects legacy aggregate without writing ledger or summary", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
-		outJSON := filepath.Join(tempDir, "anom_gen.json")
+		outJSON := filepath.Join(tempDir, "agentic_metrics.json")
 		// Seed an existing JSON ledger with high failure rate
 		seedJSON := `{
 			"ticket_id": "AL-GEN-ANOM",
@@ -388,7 +388,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 			"--anomalies",
 			"--session-id", "fixture-empty-root",
 		)
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -411,7 +411,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 	t.Run("complete empty native source reports measured clean analysis", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
-		outJSON := filepath.Join(tempDir, "clean_gen.json")
+		outJSON := filepath.Join(tempDir, "agentic_metrics.json")
 
 		cmd := exec.Command(
 			cliBinaryPath,
@@ -423,7 +423,7 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 			"--anomalies",
 			"--session-id", "fixture-empty-root",
 		)
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -444,7 +444,7 @@ func TestCLITicketFilterAndMarkdownOutput(t *testing.T) {
 	wsDir := setupTestWorkspace(t)
 
 	t.Run("specific ticket id outputs markdown", func(t *testing.T) {
-		cmd := exec.Command(cliBinaryPath, "--workspaces", wsDir, "--ticket-id", "TICKET-1")
+		cmd := workspaceCLICommand(t, wsDir, "--ticket-id", "TICKET-1")
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -469,7 +469,7 @@ func TestCLITicketFilterAndMarkdownOutput(t *testing.T) {
 	})
 
 	t.Run("non-existent ticket id returns exit code 1", func(t *testing.T) {
-		cmd := exec.Command(cliBinaryPath, "--workspaces", wsDir, "--ticket-id", "DOES-NOT-EXIST")
+		cmd := workspaceCLICommand(t, wsDir, "--ticket-id", "DOES-NOT-EXIST")
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -478,13 +478,13 @@ func TestCLITicketFilterAndMarkdownOutput(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error for non-existent ticket, got success")
 		}
-		if !strings.Contains(stderr.String(), "Error: Ticket 'DOES-NOT-EXIST' not found") {
-			t.Errorf("expected ticket not found error, got: %s", stderr.String())
+		if !strings.Contains(stderr.String(), "not_found") {
+			t.Errorf("expected ticket absence diagnostic, got: %s", stderr.String())
 		}
 	})
 
 	t.Run("server subcommand starts and responds", func(t *testing.T) {
-		cmd := exec.Command(cliBinaryPath, "server", "--port", "19090", "--workspaces", wsDir)
+		cmd := workspaceCLICommand(t, wsDir, "server", "--port", "19090")
 		if err := cmd.Start(); err != nil {
 			t.Fatalf("failed starting server subcommand: %v", err)
 		}
@@ -510,9 +510,12 @@ func TestCLITicketFilterAndMarkdownOutput(t *testing.T) {
 func TestCLIJsonOutput(t *testing.T) {
 	t.Parallel()
 	wsDir := setupTestWorkspace(t)
-	outJSONPath := filepath.Join(t.TempDir(), "nested", "computed.json")
+	outJSONPath := filepath.Join(wsDir, "TICKET-1", "computed.json")
+	if err := os.MkdirAll(filepath.Dir(outJSONPath), 0700); err != nil {
+		t.Fatal(err)
+	}
 
-	cmd := exec.Command(cliBinaryPath, "--workspaces", wsDir, "--ticket-id", "TICKET-1", "--json-output", outJSONPath)
+	cmd := workspaceCLICommand(t, wsDir, "--ticket-id", "TICKET-1", "--json-output", outJSONPath)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -559,7 +562,7 @@ func TestCLIJsonOutput(t *testing.T) {
 func TestCLIAppendIdempotency(t *testing.T) {
 	t.Parallel()
 	wsDir := setupTestWorkspace(t)
-	summaryFile := filepath.Join(t.TempDir(), "SUMMARY.md")
+	summaryFile := filepath.Join(wsDir, "TICKET-1", "SUMMARY.md")
 
 	initialContent := "# Ticket Summary\n\nSome introductory remarks.\n\n### Workflow Efficiency\n- **Software Development Life Cycle Iterations:** 999\n\n### Verification\nOriginal verification evidence.\n\n```markdown\n## Quoted heading\n```\n\n## Acceptance Criteria\n- [x] All done\n"
 	if err := os.WriteFile(summaryFile, []byte(initialContent), 0644); err != nil {
@@ -567,7 +570,7 @@ func TestCLIAppendIdempotency(t *testing.T) {
 	}
 
 	// First append invocation
-	cmd1 := exec.Command(cliBinaryPath, "--workspaces", wsDir, "--ticket-id", "TICKET-1", "--append", summaryFile)
+	cmd1 := workspaceCLICommand(t, wsDir, "--ticket-id", "TICKET-1", "--append", summaryFile)
 	if out, err := cmd1.CombinedOutput(); err != nil {
 		t.Fatalf("first append failed: %v, output: %s", err, string(out))
 	}
@@ -588,7 +591,7 @@ func TestCLIAppendIdempotency(t *testing.T) {
 	}
 
 	// Second append invocation (should be strictly idempotent)
-	cmd2 := exec.Command(cliBinaryPath, "--workspaces", wsDir, "--ticket-id", "TICKET-1", "--append", summaryFile)
+	cmd2 := workspaceCLICommand(t, wsDir, "--ticket-id", "TICKET-1", "--append", summaryFile)
 	if out, err := cmd2.CombinedOutput(); err != nil {
 		t.Fatalf("second append failed: %v, output: %s", err, string(out))
 	}
@@ -617,7 +620,7 @@ func TestCLINoValidLedgersExit(t *testing.T) {
 	emptyDir := t.TempDir()
 	writeCLISharedPolicy(t, emptyDir)
 
-	cmd := exec.Command(cliBinaryPath, "--workspaces", emptyDir)
+	cmd := workspaceCLICommand(t, emptyDir)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -677,8 +680,8 @@ func TestCLIServerSubcommandEdgeCases(t *testing.T) {
 
 func TestServer_FailsWithoutWorkspacesConfig(t *testing.T) {
 	tempDir := t.TempDir()
-	cfgContent := "workspaces:\n  artifacts: []\n  dir: records\nagenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: Test\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: TEST\n      description: Fixture ticket\ncode_metrics:\n  base_branch: fixture-base\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
-	cfgContent = strings.Replace(cfgContent, "workspaces:\n  artifacts: []\n  dir: records\n", "", 1)
+	cfgContent := "workspaces:\n  artifacts: []\n  roots:\n    - path: records\n      discovery:\n        max_depth: 8\n        max_directories: 300\nagenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: Test\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: TEST\n      description: Fixture ticket\ncode_metrics:\n  base_branch: fixture-base\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+	cfgContent = strings.Replace(cfgContent, "  roots:\n    - path: records\n      discovery:\n        max_depth: 8\n        max_directories: 300\n", "", 1)
 	if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -692,25 +695,18 @@ func TestServer_FailsWithoutWorkspacesConfig(t *testing.T) {
 		t.Fatal("expected server to fail when workspaces config is missing, got nil")
 	}
 
-	expectedErr := "workspaces.dir"
+	expectedErr := "workspaces.roots"
 	if !strings.Contains(stderr.String(), expectedErr) {
 		t.Errorf("expected stderr to contain %q, got: %s", expectedErr, stderr.String())
 	}
 }
 
-func TestServer_FailsWhenWorkspacesDirDoesNotExist(t *testing.T) {
-	nonExistentPath := "/nonexistent/workspaces/dir/xyz"
-	cmd := exec.Command(cliBinaryPath, "server", "--workspaces", nonExistentPath)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	err := cmd.Run()
-	if err == nil {
-		t.Fatal("expected server to fail when workspaces dir does not exist, got nil")
-	}
-
-	expectedErr := nonExistentPath
-	if !strings.Contains(stderr.String(), expectedErr) {
-		t.Errorf("expected stderr to contain %q, got: %s", expectedErr, stderr.String())
+func TestServerRejectsRetiredRootOverride(t *testing.T) {
+	missing := filepath.Join(t.TempDir(), "absent")
+	cmd := exec.Command(cliBinaryPath, "server", "--workspaces", missing)
+	output, err := cmd.CombinedOutput()
+	if err == nil || !strings.Contains(string(output), "flag provided but not defined") {
+		t.Fatalf("retired root override accepted or lacks update diagnostic: %v %s", err, output)
 	}
 }
 
@@ -721,7 +717,7 @@ func TestCLIServerPortEnvironmentIgnored(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer occupied.Close()
-	cmd := exec.Command(cliBinaryPath, "server", "--workspaces", wsDir)
+	cmd := workspaceCLICommand(t, wsDir, "server")
 	cmd.Env = append(os.Environ(), "PORT=not-a-number")
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -753,7 +749,7 @@ func TestCLIServerPortFlagPrecedence(t *testing.T) {
 			envPort = flagPort - 1
 		}
 
-		cmd := exec.Command(cliBinaryPath, "server", "--port", strconv.Itoa(flagPort), "--workspaces", wsDir)
+		cmd := workspaceCLICommand(t, wsDir, "server", "--port", strconv.Itoa(flagPort))
 		cmd.Env = append(os.Environ(), fmt.Sprintf("PORT=%d", envPort))
 
 		if err := cmd.Start(); err != nil {
@@ -780,7 +776,7 @@ func TestCLIServerPortFlagPrecedence(t *testing.T) {
 		flagPort := ln.Addr().(*net.TCPAddr).Port
 		ln.Close()
 
-		cmd := exec.Command(cliBinaryPath, "server", "--port", strconv.Itoa(flagPort), "--workspaces", wsDir)
+		cmd := workspaceCLICommand(t, wsDir, "server", "--port", strconv.Itoa(flagPort))
 		cmd.Env = append(os.Environ(), "PORT=not-a-valid-port")
 
 		if err := cmd.Start(); err != nil {
@@ -802,7 +798,6 @@ func TestCLIServerPortFlagPrecedence(t *testing.T) {
 
 func TestCLIServerInvalidPortRange(t *testing.T) {
 	t.Parallel()
-	wsDir := setupTestWorkspace(t)
 
 	testCases := []struct {
 		name string
@@ -811,23 +806,23 @@ func TestCLIServerInvalidPortRange(t *testing.T) {
 	}{
 		{
 			name: "port 0 via flag",
-			args: []string{"server", "--port", "0", "--workspaces", wsDir},
+			args: []string{"server", "--port", "0"},
 		},
 		{
 			name: "port 70000 via flag",
-			args: []string{"server", "--port", "70000", "--workspaces", wsDir},
+			args: []string{"server", "--port", "70000"},
 		},
 		{
 			name: "port 65536 via flag",
-			args: []string{"server", "--port", "65536", "--workspaces", wsDir},
+			args: []string{"server", "--port", "65536"},
 		},
 		{
 			name: "negative port via flag",
-			args: []string{"server", "--port", "-5", "--workspaces", wsDir},
+			args: []string{"server", "--port", "-5"},
 		},
 		{
 			name: "non-number port via flag",
-			args: []string{"server", "--port", "not-a-number", "--workspaces", wsDir},
+			args: []string{"server", "--port", "not-a-number"},
 		},
 	}
 
@@ -867,7 +862,7 @@ func TestCLIServerAddressAlreadyInUse(t *testing.T) {
 
 		port := ln.Addr().(*net.TCPAddr).Port
 
-		cmd := exec.Command(cliBinaryPath, "server", "--port", strconv.Itoa(port), "--workspaces", wsDir)
+		cmd := workspaceCLICommand(t, wsDir, "server", "--port", strconv.Itoa(port))
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
 
@@ -956,7 +951,7 @@ func TestCLIGenerateCommand(t *testing.T) {
 		"--json-output", outJSON,
 		"--append", summaryMD,
 	)
-	prepareGenerateFixture(t, cmd)
+	prepareScopedGenerateFixture(t, cmd)
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -1017,7 +1012,7 @@ func TestCLIGenerateCommand(t *testing.T) {
 		"--json-output", outJSON,
 		"--append", summaryMD,
 	)
-	prepareGenerateFixture(t, cmd2)
+	prepareScopedGenerateFixture(t, cmd2)
 	if out, err := cmd2.CombinedOutput(); err != nil {
 		t.Fatalf("second generate invocation failed: %v, out: %s", err, string(out))
 	}
@@ -1102,7 +1097,7 @@ func TestCLIGenerate_SparseAnomalyEvidenceAndZeroErrorMessage(t *testing.T) {
 		"--json-output", outJSON,
 		"--append", summaryMD,
 	)
-	prepareGenerateFixture(t, cmd)
+	prepareScopedGenerateFixture(t, cmd)
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -1168,7 +1163,7 @@ func TestCLIGenerate_SparseAnomalyEvidenceAndZeroErrorMessage(t *testing.T) {
 func TestCLIGenerate_HighFailureAggregateKeepsSummaryWithoutPersistedEvents(t *testing.T) {
 	t.Parallel()
 	tempDir := t.TempDir()
-	outJSON := filepath.Join(tempDir, "aggregate.json")
+	outJSON := filepath.Join(tempDir, "agentic_metrics.json")
 	seedJSON := `{
   "schema_version": 6,
   "migration": {
@@ -1203,7 +1198,7 @@ func TestCLIGenerate_HighFailureAggregateKeepsSummaryWithoutPersistedEvents(t *t
 		t.Fatal(err)
 	}
 	cmd := exec.Command(cliBinaryPath, "generate", "--source", "codex", "--codex-home", setupCLIEmptyCodexRoot(t), "--ticket-id", "AL-GEN-EVIDENCE", "--json-output", outJSON, "--session-id", "fixture-empty-root")
-	prepareGenerateFixture(t, cmd)
+	prepareScopedGenerateFixture(t, cmd)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	if err := cmd.Run(); err != nil {
@@ -1251,11 +1246,11 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 
 	t.Run("missing selected database fails without creating output", func(t *testing.T) {
 		project := t.TempDir()
-		output := filepath.Join(project, "metrics.json")
+		output := filepath.Join(project, "agentic_metrics.json")
 		missing := filepath.Join(project, "missing.db")
 		cmd := exec.Command(cliBinaryPath, "generate", "--source", "opencode", "--db-path", missing, "--session-id", "missing", "--ticket-id", "AL-1", "--ticket-title", "Missing source", "--json-output", output)
 		cmd.Dir = project
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 		if out, err := cmd.CombinedOutput(); err == nil || !bytes.Contains(out, []byte(missing)) {
 			t.Fatalf("missing selected DB: %v %s", err, out)
 		}
@@ -1267,7 +1262,7 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 	t.Run("generate with corrupted existing JSON output fails closed", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
-		outJSON := filepath.Join(tempDir, "corrupted_existing.json")
+		outJSON := filepath.Join(tempDir, "agentic_metrics.json")
 		if err := os.WriteFile(outJSON, []byte("{broken json content!"), 0644); err != nil {
 			t.Fatal(err)
 		}
@@ -1281,7 +1276,7 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 			"--json-output", outJSON,
 			"--session-id", "fixture-empty-root",
 		)
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -1331,7 +1326,7 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 			"--session-id", "ses_zero",
 			"--append", summaryMD,
 		)
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -1386,7 +1381,7 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 			"--session-id", "ses_comp",
 			"--json-output", outJSON,
 		)
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -1434,7 +1429,7 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 		db.Close()
 
 		explicitTS := "2026-10-21T15:00:00.000000+00:00"
-		outJSON := filepath.Join(tempDir, "agentic_metrics_explicit.json")
+		outJSON := filepath.Join(tempDir, "agentic_metrics_explicit", "agentic_metrics.json")
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
@@ -1445,7 +1440,7 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 			"--completed-at", explicitTS,
 			"--json-output", outJSON,
 		)
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
@@ -1466,7 +1461,7 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 		}
 
 		// Also verify whitespace-only completed-at falls back to non-zero ISO timestamp
-		outJSONWhitespace := filepath.Join(tempDir, "agentic_metrics_ws.json")
+		outJSONWhitespace := filepath.Join(tempDir, "agentic_metrics_ws", "agentic_metrics.json")
 		cmdWS := exec.Command(
 			cliBinaryPath,
 			"generate",
@@ -1477,7 +1472,7 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 			"--completed-at", "   ",
 			"--json-output", outJSONWhitespace,
 		)
-		prepareGenerateFixture(t, cmdWS)
+		prepareScopedGenerateFixture(t, cmdWS)
 		var stderrWS bytes.Buffer
 		cmdWS.Stderr = &stderrWS
 		if err := cmdWS.Run(); err != nil {
@@ -1561,7 +1556,7 @@ func TestCLIGenerate_AdversarialEdgeCases(t *testing.T) {
 			"--code-ref", "invalid-nonexistent-git-branch-xyz-999",
 			"--json-output", outJSON,
 		)
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
@@ -1617,7 +1612,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 		}
 		db.Close()
 
-		targetJSON := filepath.Join(tempDir, "should_not_exist.json")
+		targetJSON := filepath.Join(tempDir, "agentic_metrics.json")
 		targetMD := filepath.Join(tempDir, "should_not_exist.md")
 
 		cmd := exec.Command(
@@ -1629,7 +1624,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"--json-output", targetJSON,
 			"--append", targetMD,
 		)
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -1694,7 +1689,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"--ticket-title", "Test Fixture Ticket",
 			"--append", summaryMD,
 		)
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -1715,7 +1710,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 	t.Run("selected metadata-only native root can publish", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
-		outJSON := filepath.Join(tempDir, "allowed_empty.json")
+		outJSON := filepath.Join(tempDir, "agentic_metrics.json")
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
@@ -1725,7 +1720,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"--json-output", outJSON,
 			"--session-id", "fixture-empty-root",
 		)
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -1776,7 +1771,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 		}
 		db.Close()
 
-		outJSON := filepath.Join(tempDir, "valid.json")
+		outJSON := filepath.Join(tempDir, "agentic_metrics.json")
 		summaryMD := filepath.Join(tempDir, "SUMMARY.md")
 		cmd := exec.Command(
 			cliBinaryPath,
@@ -1788,7 +1783,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"--json-output", outJSON,
 			"--append", summaryMD,
 		)
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -1805,7 +1800,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 		}
 	})
 
-	t.Run("generate without ticket id displays UNKNOWN on failure", func(t *testing.T) {
+	t.Run("first publication rejects missing ticket identity before source access", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
 		cmd := exec.Command(
@@ -1813,7 +1808,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"generate",
 			"--db-path", filepath.Join(tempDir, "missing.db"),
 		)
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -1822,7 +1817,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected failure without root session or ticket id")
 		}
-		expectedErr := "ticket-id"
+		expectedErr := "ticket ID"
 		if !strings.Contains(stderr.String(), expectedErr) {
 			t.Fatalf("expected stderr to contain:\n%s\ngot:\n%s", expectedErr, stderr.String())
 		}
@@ -1847,7 +1842,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 		}
 		db.Close()
 
-		cachedJSON := filepath.Join(tempDir, "cached_with_inv.json")
+		cachedJSON := filepath.Join(tempDir, "agentic_metrics.json")
 		cachedJSONContent := `{
   "schema_version": 6,
   "migration": {
@@ -1907,7 +1902,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"--json-output", cachedJSON,
 			"--append", summaryMD,
 		)
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -1957,7 +1952,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 		}
 		db.Close()
 
-		cachedJSON := filepath.Join(tempDir, "cached_no_inv.json")
+		cachedJSON := filepath.Join(tempDir, "agentic_metrics.json")
 		initialJSON := `{
   "schema_version": 6,
   "migration": {
@@ -1984,7 +1979,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"--ticket-title", "Test Fixture Ticket",
 			"--json-output", cachedJSON,
 		)
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -2036,7 +2031,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 		}
 		db.Close()
 
-		targetJSON := filepath.Join(tempDir, "should_not_exist.json")
+		targetJSON := filepath.Join(tempDir, "agentic_metrics.json")
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
@@ -2045,7 +2040,7 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 			"--ticket-title", "Test Fixture Ticket",
 			"--json-output", targetJSON,
 		)
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -2078,28 +2073,29 @@ func TestCLIGenerate_UnresolvedSessionEnforcement(t *testing.T) {
 func TestCLIBackfillCommand(t *testing.T) {
 	t.Parallel()
 	wsDir := setupTestWorkspace(t)
-	t.Run("foreign caller malformed local policy does not override selected target", func(t *testing.T) {
+	t.Run("read-only preview ignores unused malformed capture policy", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
-		cfgContent := "workspaces:\n  artifacts: []\n  dir: records\nagenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: Test\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: TEST\n      description: Fixture ticket\ncode_metrics:\n  base_branch: fixture-base\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+		cfgContent := "workspaces:\n  artifacts: []\n  roots:\n    - path: records\n      discovery:\n        max_depth: 8\n        max_directories: 300\nagenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: Test\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: TEST\n      description: Fixture ticket\ncode_metrics:\n  base_branch: fixture-base\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+		cfgContent = strings.Replace(cfgContent, "    - path: records", fmt.Sprintf("    - path: %q", wsDir), 1)
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatal(err)
 		}
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.local.yaml"), []byte("telemetry: [broken"), 0644); err != nil {
 			t.Fatal(err)
 		}
-		cmd := exec.Command(cliBinaryPath, "backfill", "--source", "opencode", "--workspaces", wsDir, "--dry-run")
+		cmd := workspaceCLICommand(t, wsDir, "backfill", "--source", "opencode", "--dry-run")
 		cmd.Dir = tempDir
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
-		if err := cmd.Run(); err != nil {
-			t.Fatalf("caller policy contaminated explicit target: %v %s", err, stderr.String())
+		if err := cmd.Run(); err != nil || !strings.Contains(stdout.String(), "TICKET-1") {
+			t.Fatalf("read-only preview depended on unused malformed capture policy: %v %s", err, stderr.String())
 		}
 	})
 
 	t.Run("backfill requires explicit --source flag", func(t *testing.T) {
-		cmd := exec.Command(cliBinaryPath, "backfill", "--workspaces", wsDir)
+		cmd := workspaceCLICommand(t, wsDir, "backfill")
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -2109,7 +2105,7 @@ func TestCLIBackfillCommand(t *testing.T) {
 	})
 
 	t.Run("recompute-git requires an explicit code ref", func(t *testing.T) {
-		cmd := exec.Command(cliBinaryPath, "backfill", "--source", "opencode", "--workspaces", wsDir, "--recompute-git")
+		cmd := workspaceCLICommand(t, wsDir, "backfill", "--source", "opencode", "--recompute-git")
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -2119,7 +2115,7 @@ func TestCLIBackfillCommand(t *testing.T) {
 	})
 
 	t.Run("recompute-git requires an explicit ticket id", func(t *testing.T) {
-		cmd := exec.Command(cliBinaryPath, "backfill", "--source", "opencode", "--workspaces", wsDir, "--recompute-git", "--code-ref", "HEAD")
+		cmd := workspaceCLICommand(t, wsDir, "backfill", "--source", "opencode", "--recompute-git", "--code-ref", "HEAD")
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -2130,7 +2126,7 @@ func TestCLIBackfillCommand(t *testing.T) {
 
 	t.Run("missing selected backfill source preserves portable retained file", func(t *testing.T) {
 		root := t.TempDir()
-		configuration := "workspaces:\n  artifacts: []\n  dir: records\nagenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: RetentionFixture\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: \"CUSTOM\"\n      description: Fixture ticket\ncode_metrics:\n  base_branch: fixture-base\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.35\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+		configuration := "workspaces:\n  artifacts: []\n  roots:\n    - path: records\n      discovery:\n        max_depth: 8\n        max_directories: 300\nagenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: RetentionFixture\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: \"CUSTOM\"\n      description: Fixture ticket\ncode_metrics:\n  base_branch: fixture-base\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.35\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 		if err := os.WriteFile(filepath.Join(root, ".agenticlens-config.yaml"), []byte(configuration), 0600); err != nil {
 			t.Fatal(err)
 		}
@@ -2148,7 +2144,7 @@ func TestCLIBackfillCommand(t *testing.T) {
 		if err := adapters.SaveFactLedger(path, ledger); err != nil {
 			t.Fatal(err)
 		}
-		cmd := exec.Command(cliBinaryPath, "backfill", "--source", "opencode", "--workspaces", root, "--recompute-db", "--db-path", filepath.Join(root, "missing.db"))
+		cmd := workspaceCLICommand(t, root, "backfill", "--source", "opencode", "--recompute-db", "--db-path", filepath.Join(root, "missing.db"))
 		cmd.Dir = root
 		before := readCaptureFile(t, path)
 		out, err := cmd.CombinedOutput()
@@ -2161,11 +2157,9 @@ func TestCLIBackfillCommand(t *testing.T) {
 	})
 
 	t.Run("dry-run backfill outputs preview without error", func(t *testing.T) {
-		cmd := exec.Command(
-			cliBinaryPath,
-			"backfill",
+		cmd := workspaceCLICommand(t, wsDir, "backfill",
 			"--source", "opencode",
-			"--workspaces", wsDir,
+
 			"--dry-run",
 			"--migrate-schema",
 		)
@@ -2190,11 +2184,9 @@ func TestCLIBackfillCommand(t *testing.T) {
 	})
 
 	t.Run("backfill with ticket-id filter executes and writes migration info", func(t *testing.T) {
-		cmd := exec.Command(
-			cliBinaryPath,
-			"backfill",
+		cmd := workspaceCLICommand(t, wsDir, "backfill",
 			"--source", "opencode",
-			"--workspaces", wsDir,
+
 			"--ticket-id", "TICKET-1",
 			"--recompute-git",
 			"--code-ref", "HEAD",
@@ -2444,39 +2436,39 @@ func TestCLIVersionCommand(t *testing.T) {
 		}
 	})
 
-	t.Run("root flags: -v after --workspaces outputs version and exits cleanly", func(t *testing.T) {
+	t.Run("root version flag works with configured roots", func(t *testing.T) {
 		t.Parallel()
 		wsDir := t.TempDir()
-		cmd := exec.Command(cliBinaryPath, "--workspaces", wsDir, "-v")
+		cmd := workspaceCLICommand(t, wsDir, "-v")
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
 
 		if err := cmd.Run(); err != nil {
-			t.Fatalf("--workspaces ... -v failed: %v, stderr: %s", err, stderr.String())
+			t.Fatalf("configured roots -v failed: %v, stderr: %s", err, stderr.String())
 		}
 
 		out := stdout.String()
 		if !strings.HasPrefix(out, "agentic-lens version ") {
-			t.Errorf("expected version output when -v passed after workspaces flag, got: %s", out)
+			t.Errorf("expected version output when -v passed with configured roots, got: %s", out)
 		}
 	})
 
-	t.Run("root flags: --version after --workspaces outputs version and exits cleanly", func(t *testing.T) {
+	t.Run("root long version flag works with configured roots", func(t *testing.T) {
 		t.Parallel()
 		wsDir := t.TempDir()
-		cmd := exec.Command(cliBinaryPath, "--workspaces", wsDir, "--version")
+		cmd := workspaceCLICommand(t, wsDir, "--version")
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
 
 		if err := cmd.Run(); err != nil {
-			t.Fatalf("--workspaces ... --version failed: %v, stderr: %s", err, stderr.String())
+			t.Fatalf("configured roots --version failed: %v, stderr: %s", err, stderr.String())
 		}
 
 		out := stdout.String()
 		if !strings.HasPrefix(out, "agentic-lens version ") {
-			t.Errorf("expected version output when --version passed after workspaces flag, got: %s", out)
+			t.Errorf("expected version output when --version passed with configured roots, got: %s", out)
 		}
 	})
 }
@@ -2507,10 +2499,8 @@ func TestCLIMigrateCommand(t *testing.T) {
 	}
 
 	t.Run("dry-run preview outputs table without mutating files", func(t *testing.T) {
-		cmd := exec.Command(
-			cliBinaryPath,
-			"migrate",
-			"--workspaces", wsDir,
+		cmd := workspaceCLICommand(t, wsDir, "migrate",
+
 			"--dry-run",
 		)
 		var stdout, stderr bytes.Buffer
@@ -2543,10 +2533,8 @@ func TestCLIMigrateCommand(t *testing.T) {
 	})
 
 	t.Run("migrate with ticket-id filter and backup creates .bak and upgrades schema", func(t *testing.T) {
-		cmd := exec.Command(
-			cliBinaryPath,
-			"migrate",
-			"--workspaces", wsDir,
+		cmd := workspaceCLICommand(t, wsDir, "migrate",
+
 			"--ticket-id", "TICKET-1",
 			"--backup",
 		)
@@ -2602,10 +2590,8 @@ func TestCLIMigrateCommand(t *testing.T) {
 	})
 
 	t.Run("idempotent migration marks already upgraded ledgers up-to-date", func(t *testing.T) {
-		cmd := exec.Command(
-			cliBinaryPath,
-			"migrate",
-			"--workspaces", wsDir,
+		cmd := workspaceCLICommand(t, wsDir, "migrate",
+
 			"--ticket-id", "TICKET-1",
 		)
 		var stdout, stderr bytes.Buffer
@@ -2629,11 +2615,9 @@ func TestCLIMigrateCommand(t *testing.T) {
 func TestCLIBackfillMigrateSchemaFlag(t *testing.T) {
 	wsDir := setupTestWorkspace(t)
 
-	cmd := exec.Command(
-		cliBinaryPath,
-		"backfill",
+	cmd := workspaceCLICommand(t, wsDir, "backfill",
 		"--source", "opencode",
-		"--workspaces", wsDir,
+
 		"--migrate-schema",
 	)
 	var stdout, stderr bytes.Buffer
@@ -2669,33 +2653,25 @@ func TestCLIBackfillMigrateSchemaFlag(t *testing.T) {
 }
 
 func TestCLIMigrateCommand_Adversarial(t *testing.T) {
-	t.Run("fails on non-existent workspaces directory", func(t *testing.T) {
-		cmd := exec.Command(
-			cliBinaryPath,
-			"migrate",
-			"--workspaces", "/non/existent/path/for/sure/workspace",
-		)
+	t.Run("unavailable configured root produces partial diagnostics", func(t *testing.T) {
+		cmd := workspaceCLICommand(t, "/non/existent/path/for/sure/workspace", "migrate")
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
 
 		err := cmd.Run()
-		if err == nil {
-			t.Fatal("expected migrate command to exit with error for non-existent workspaces")
+		if err != nil {
+			t.Fatalf("unavailable root should preserve an explicit partial result: %v %s", err, stderr.String())
 		}
-		if !strings.Contains(stderr.String(), "Migration failed") {
-			t.Errorf("expected 'Migration failed' in stderr, got: %s", stderr.String())
+		if !strings.Contains(stdout.String()+stderr.String(), "No readable matching ticket workspaces") || !strings.Contains(stdout.String()+stderr.String(), "/non/existent/path/for/sure/workspace") || !strings.Contains(stdout.String()+stderr.String(), "unavailable") {
+			t.Errorf("expected explicit no-readable-workspace result, got: %s", stderr.String())
 		}
 	})
 
 	t.Run("empty workspaces directory displays clean message", func(t *testing.T) {
 		emptyDir := t.TempDir()
 		writeCLISharedPolicy(t, emptyDir)
-		cmd := exec.Command(
-			cliBinaryPath,
-			"migrate",
-			"--workspaces", emptyDir,
-		)
+		cmd := workspaceCLICommand(t, emptyDir, "migrate")
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -2712,10 +2688,8 @@ func TestCLIMigrateCommand_Adversarial(t *testing.T) {
 
 	t.Run("filtering for non-existent ticket ID displays clean message", func(t *testing.T) {
 		wsDir := setupTestWorkspace(t)
-		cmd := exec.Command(
-			cliBinaryPath,
-			"migrate",
-			"--workspaces", wsDir,
+		cmd := workspaceCLICommand(t, wsDir, "migrate",
+
 			"--ticket-id", "NON-EXISTENT-TICKET",
 		)
 		var stdout, stderr bytes.Buffer
@@ -2754,10 +2728,8 @@ func TestCLIMigrateCommand_Adversarial(t *testing.T) {
 		_ = os.WriteFile(filepath.Join(t1Dir, "SUMMARY.md"), []byte("# T-SUM Summary\nInitial description.\n"), 0644)
 
 		// Pass 1: Migrate and update summary
-		cmd1 := exec.Command(
-			cliBinaryPath,
-			"migrate",
-			"--workspaces", wsDir,
+		cmd1 := workspaceCLICommand(t, wsDir, "migrate",
+
 			"--update-summaries",
 		)
 		var s1, e1 bytes.Buffer
@@ -2776,10 +2748,8 @@ func TestCLIMigrateCommand_Adversarial(t *testing.T) {
 		}
 
 		// Pass 2: Re-run
-		cmd2 := exec.Command(
-			cliBinaryPath,
-			"migrate",
-			"--workspaces", wsDir,
+		cmd2 := workspaceCLICommand(t, wsDir, "migrate",
+
 			"--update-summaries",
 		)
 		var s2, e2 bytes.Buffer
@@ -2820,7 +2790,7 @@ func TestCLIHelpCommand(t *testing.T) {
 			"backfill",
 			"migrate",
 			"version",
-			"--workspaces",
+			"--workspace",
 			"--ticket-id",
 			"--list",
 			"--anomalies",
@@ -2907,7 +2877,7 @@ func TestCLIHelpCommand(t *testing.T) {
 			"--dry-run",
 			"--update-summaries",
 			"--force",
-			"--workspaces",
+			"--workspace",
 			"--ticket-id",
 			"--db-path",
 			"--code-ref",
@@ -2952,7 +2922,7 @@ func TestCLIHelpCommand(t *testing.T) {
 
 		out := stdout.String() + stderr.String()
 		expectedFlags := []string{
-			"--workspaces",
+			"--workspace",
 			"--ticket-id",
 			"--target-version",
 			"--dry-run",
@@ -3044,7 +3014,7 @@ func TestGenerate_JSONRawVsMarkdownMappedSeparation(t *testing.T) {
 		"--json-output", outJSON,
 		"--append", summaryMD,
 	)
-	prepareGenerateFixture(t, cmd)
+	prepareScopedGenerateFixture(t, cmd)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -3090,7 +3060,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 	t.Run("explicit ticket-type alias feature normalizes to feat in JSON ledger", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
-		outJSON := filepath.Join(tempDir, "facts.json")
+		outJSON := filepath.Join(tempDir, "agentic_metrics.json")
 
 		cmd := exec.Command(
 			cliBinaryPath,
@@ -3102,7 +3072,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--session-id", "fixture-empty-root",
 			"--json-output", outJSON,
 		)
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3132,7 +3102,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 	t.Run("explicit invalid ticket-type exits with status 1 and lists valid types", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
-		outJSON := filepath.Join(tempDir, "facts.json")
+		outJSON := filepath.Join(tempDir, "agentic_metrics.json")
 
 		cmd := exec.Command(
 			cliBinaryPath,
@@ -3144,7 +3114,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--session-id", "fixture-empty-root",
 			"--json-output", outJSON,
 		)
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3176,7 +3146,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 	t.Run("automatic resolution of PO ticket records docs without flag", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
-		outJSON := filepath.Join(tempDir, "facts.json")
+		outJSON := filepath.Join(tempDir, "agentic_metrics.json")
 
 		cmd := exec.Command(
 			cliBinaryPath,
@@ -3187,7 +3157,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--session-id", "fixture-empty-root",
 			"--json-output", outJSON,
 		)
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3217,7 +3187,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 	t.Run("automatic resolution of GEN ticket records chore without flag", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
-		outJSON := filepath.Join(tempDir, "facts.json")
+		outJSON := filepath.Join(tempDir, "agentic_metrics.json")
 
 		cmd := exec.Command(
 			cliBinaryPath,
@@ -3228,7 +3198,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--session-id", "fixture-empty-root",
 			"--json-output", outJSON,
 		)
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3258,7 +3228,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 	t.Run("unmatched ticket without strict-type logs warning and records ticket_type null", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
-		outJSON := filepath.Join(tempDir, "facts.json")
+		outJSON := filepath.Join(tempDir, "agentic_metrics.json")
 
 		cmd := exec.Command(
 			cliBinaryPath,
@@ -3269,7 +3239,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--session-id", "fixture-empty-root",
 			"--json-output", outJSON,
 		)
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3306,7 +3276,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 	t.Run("unmatched ticket with strict-type exits with status 1 and logs error", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
-		outJSON := filepath.Join(tempDir, "facts.json")
+		outJSON := filepath.Join(tempDir, "agentic_metrics.json")
 
 		cmd := exec.Command(
 			cliBinaryPath,
@@ -3318,7 +3288,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--session-id", "fixture-empty-root",
 			"--json-output", outJSON,
 		)
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3351,7 +3321,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		for _, recorded := range []string{"feature", "Feature", "team-maintenance"} {
 			t.Run(recorded, func(t *testing.T) {
 				project := t.TempDir()
-				path := filepath.Join(project, "metrics.json")
+				path := filepath.Join(project, "agentic_metrics.json")
 				before := strings.Replace(sampleFactJSON("AL-29", "Recorded type", 0, 0), `"ticket_type":"feat"`, `"ticket_type":`+strconv.Quote(recorded), 1)
 				if !strings.Contains(before, strconv.Quote(recorded)) {
 					t.Fatal("recorded type fixture not installed")
@@ -3361,7 +3331,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 				}
 				cmd := exec.Command(cliBinaryPath, "generate", "--source", "codex", "--codex-home", setupCLIEmptyCodexRoot(t), "--session-id", "fixture-empty-root", "--ticket-id", "AL-29", "--ticket-title", "Recorded type", "--json-output", path)
 				cmd.Dir = project
-				prepareGenerateFixture(t, cmd)
+				prepareScopedGenerateFixture(t, cmd)
 				cfg, err := adaptersconfig.LoadShared(project)
 				if err != nil {
 					t.Fatal(err)
@@ -3417,7 +3387,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			t.Run(tc.input, func(t *testing.T) {
 				t.Parallel()
 				tempDir := t.TempDir()
-				outJSON := filepath.Join(tempDir, "facts.json")
+				outJSON := filepath.Join(tempDir, "agentic_metrics.json")
 
 				cmd := exec.Command(
 					cliBinaryPath,
@@ -3429,7 +3399,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 					"--session-id", "fixture-empty-root",
 					"--json-output", outJSON,
 				)
-				prepareGenerateFixture(t, cmd)
+				prepareScopedGenerateFixture(t, cmd)
 				var stdout, stderr bytes.Buffer
 				cmd.Stdout = &stdout
 				cmd.Stderr = &stderr
@@ -3461,7 +3431,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 	t.Run("false prefix POD-1 does NOT match PO- and requires explicit type", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
-		outJSON := filepath.Join(tempDir, "facts.json")
+		outJSON := filepath.Join(tempDir, "agentic_metrics.json")
 
 		// Without strict-type: emits warning and writes ticket_type null
 		cmd := exec.Command(
@@ -3473,7 +3443,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--session-id", "fixture-empty-root",
 			"--json-output", outJSON,
 		)
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3505,7 +3475,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		}
 
 		// With strict-type: terminates with exit status 1
-		strictJSON := filepath.Join(tempDir, "strict.json")
+		strictJSON := filepath.Join(tempDir, "strict", "agentic_metrics.json")
 		strictCmd := exec.Command(
 			cliBinaryPath,
 			"generate",
@@ -3516,7 +3486,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--session-id", "fixture-empty-root",
 			"--json-output", strictJSON,
 		)
-		prepareGenerateFixture(t, strictCmd)
+		prepareScopedGenerateFixture(t, strictCmd)
 		var strictOut, strictErr bytes.Buffer
 		strictCmd.Stdout = &strictOut
 		strictCmd.Stderr = &strictErr
@@ -3544,7 +3514,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 	t.Run("false prefix GENTLE-1 does NOT match GEN- and requires explicit type", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
-		outJSON := filepath.Join(tempDir, "facts.json")
+		outJSON := filepath.Join(tempDir, "agentic_metrics.json")
 
 		// Without strict-type: emits warning and writes ticket_type null
 		cmd := exec.Command(
@@ -3556,7 +3526,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--session-id", "fixture-empty-root",
 			"--json-output", outJSON,
 		)
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3588,7 +3558,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		}
 
 		// With strict-type: terminates with exit status 1
-		strictJSON := filepath.Join(tempDir, "strict.json")
+		strictJSON := filepath.Join(tempDir, "strict", "agentic_metrics.json")
 		strictCmd := exec.Command(
 			cliBinaryPath,
 			"generate",
@@ -3599,7 +3569,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--session-id", "fixture-empty-root",
 			"--json-output", strictJSON,
 		)
-		prepareGenerateFixture(t, strictCmd)
+		prepareScopedGenerateFixture(t, strictCmd)
 		var strictOut, strictErr bytes.Buffer
 		strictCmd.Stdout = &strictOut
 		strictCmd.Stderr = &strictErr
@@ -3624,7 +3594,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		}
 	})
 
-	t.Run("strict-type with missing ticket-id uses UNKNOWN fallback in error message", func(t *testing.T) {
+	t.Run("strict-type cannot bypass explicit first-publication ticket identity", func(t *testing.T) {
 		t.Parallel()
 		cmd := exec.Command(
 			cliBinaryPath,
@@ -3633,7 +3603,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--strict-type",
 			"--session-id", "fixture-empty-root",
 		)
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3652,7 +3622,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			t.Fatalf("expected exec.ExitError, got %v", err)
 		}
 
-		expectedErr := "ticket-id"
+		expectedErr := "ticket ID"
 		if !strings.Contains(stderr.String(), expectedErr) {
 			t.Fatalf("expected strict error:\n%s\ngot:\n%s", expectedErr, stderr.String())
 		}
@@ -3670,7 +3640,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--strict-type",
 			"--session-id", "fixture-empty-root",
 		)
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3698,7 +3668,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 	t.Run("strict-type succeeds when explicit ticket-type is provided", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
-		outJSON := filepath.Join(tempDir, "facts.json")
+		outJSON := filepath.Join(tempDir, "agentic_metrics.json")
 
 		cmd := exec.Command(
 			cliBinaryPath,
@@ -3711,7 +3681,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--session-id", "fixture-empty-root",
 			"--json-output", outJSON,
 		)
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3742,7 +3712,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"generate",
 			"--completely-unknown-adversarial-flag",
 		)
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3756,12 +3726,12 @@ func TestCLITicketTypeClassification(t *testing.T) {
 	t.Run("custom prefix resolves automatically from project config", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
-		cfgContent := "workspaces:\n  artifacts: []\n  dir: records\nagenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: \"TestProject\"\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: \"CUSTOM\"\n      description: Fixture ticket\n      ticket_type: \"fix\"\ncode_metrics:\n  base_branch: HEAD\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+		cfgContent := "workspaces:\n  artifacts: []\n  roots:\n    - path: records\n      discovery:\n        max_depth: 8\n        max_directories: 300\nagenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: \"TestProject\"\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: \"CUSTOM\"\n      description: Fixture ticket\n      ticket_type: \"fix\"\ncode_metrics:\n  base_branch: HEAD\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing .agenticlens-config.yaml: %v", err)
 		}
 
-		outJSON := filepath.Join(tempDir, "facts.json")
+		outJSON := filepath.Join(tempDir, "agentic_metrics.json")
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
@@ -3772,7 +3742,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--json-output", outJSON,
 		)
 		cmd.Dir = tempDir
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3802,12 +3772,12 @@ func TestCLITicketTypeClassification(t *testing.T) {
 	t.Run("configured prefix overrides default prefix mapping", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
-		cfgContent := "workspaces:\n  artifacts: []\n  dir: records\nagenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: \"TestProject\"\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: \"PO\"\n      description: Fixture ticket\n      ticket_type: \"feat\"\ncode_metrics:\n  base_branch: HEAD\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+		cfgContent := "workspaces:\n  artifacts: []\n  roots:\n    - path: records\n      discovery:\n        max_depth: 8\n        max_directories: 300\nagenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: \"TestProject\"\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: \"PO\"\n      description: Fixture ticket\n      ticket_type: \"feat\"\ncode_metrics:\n  base_branch: HEAD\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing .agenticlens-config.yaml: %v", err)
 		}
 
-		outJSON := filepath.Join(tempDir, "facts.json")
+		outJSON := filepath.Join(tempDir, "agentic_metrics.json")
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
@@ -3818,7 +3788,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--json-output", outJSON,
 		)
 		cmd.Dir = tempDir
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3848,12 +3818,12 @@ func TestCLITicketTypeClassification(t *testing.T) {
 	t.Run("explicit CLI ticket-type flag overrides configured prefix", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
-		cfgContent := "workspaces:\n  artifacts: []\n  dir: records\nagenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: \"TestProject\"\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: \"CUSTOM\"\n      description: Fixture ticket\n      ticket_type: \"fix\"\ncode_metrics:\n  base_branch: HEAD\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+		cfgContent := "workspaces:\n  artifacts: []\n  roots:\n    - path: records\n      discovery:\n        max_depth: 8\n        max_directories: 300\nagenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: \"TestProject\"\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: \"CUSTOM\"\n      description: Fixture ticket\n      ticket_type: \"fix\"\ncode_metrics:\n  base_branch: HEAD\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing .agenticlens-config.yaml: %v", err)
 		}
 
-		outJSON := filepath.Join(tempDir, "facts.json")
+		outJSON := filepath.Join(tempDir, "agentic_metrics.json")
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
@@ -3865,7 +3835,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--json-output", outJSON,
 		)
 		cmd.Dir = tempDir
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3895,12 +3865,12 @@ func TestCLITicketTypeClassification(t *testing.T) {
 	t.Run("strict-type succeeds when custom prefix matches in project config", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
-		cfgContent := "workspaces:\n  artifacts: []\n  dir: records\nagenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: \"TestProject\"\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: \"HOTFIX\"\n      description: Fixture ticket\n      ticket_type: \"fix\"\ncode_metrics:\n  base_branch: HEAD\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+		cfgContent := "workspaces:\n  artifacts: []\n  roots:\n    - path: records\n      discovery:\n        max_depth: 8\n        max_directories: 300\nagenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: \"TestProject\"\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: \"HOTFIX\"\n      description: Fixture ticket\n      ticket_type: \"fix\"\ncode_metrics:\n  base_branch: HEAD\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing .agenticlens-config.yaml: %v", err)
 		}
 
-		outJSON := filepath.Join(tempDir, "facts.json")
+		outJSON := filepath.Join(tempDir, "agentic_metrics.json")
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
@@ -3912,7 +3882,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--json-output", outJSON,
 		)
 		cmd.Dir = tempDir
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -3960,12 +3930,12 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			t.Fatalf("git checkout -b failed: %v", err)
 		}
 
-		cfgContent := "workspaces:\n  artifacts: []\n  dir: records\nagenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: \"TestProject\"\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: \"AL\"\n      description: Fixture ticket\n      ticket_type: \"docs\"\ncode_metrics:\n  base_branch: HEAD\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+		cfgContent := "workspaces:\n  artifacts: []\n  roots:\n    - path: records\n      discovery:\n        max_depth: 8\n        max_directories: 300\nagenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: \"TestProject\"\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: \"AL\"\n      description: Fixture ticket\n      ticket_type: \"docs\"\ncode_metrics:\n  base_branch: HEAD\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing .agenticlens-config.yaml: %v", err)
 		}
 
-		outJSON := filepath.Join(tempDir, "facts.json")
+		outJSON := filepath.Join(tempDir, "agentic_metrics.json")
 
 		// AL-30 is on branch fix/AL-30-test. Passing --ticket-type chore MUST override the branch prefix "fix".
 		cmd := exec.Command(
@@ -3979,7 +3949,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--json-output", outJSON,
 		)
 		cmd.Dir = tempDir
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -4028,12 +3998,12 @@ func TestCLITicketTypeClassification(t *testing.T) {
 		}
 
 		// Configure AL to map to docs in .agenticlens-config.yaml
-		cfgContent := "workspaces:\n  artifacts: []\n  dir: records\nagenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: \"TestProject\"\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: \"AL\"\n      description: Fixture ticket\n      ticket_type: \"docs\"\ncode_metrics:\n  base_branch: HEAD\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+		cfgContent := "workspaces:\n  artifacts: []\n  roots:\n    - path: records\n      discovery:\n        max_depth: 8\n        max_directories: 300\nagenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: \"TestProject\"\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: \"AL\"\n      description: Fixture ticket\n      ticket_type: \"docs\"\ncode_metrics:\n  base_branch: HEAD\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing .agenticlens-config.yaml: %v", err)
 		}
 
-		outJSON := filepath.Join(tempDir, "facts.json")
+		outJSON := filepath.Join(tempDir, "agentic_metrics.json")
 		// Config prefix "docs" takes precedence over branch prefix "fix".
 		cmd := exec.Command(
 			cliBinaryPath,
@@ -4045,7 +4015,7 @@ func TestCLITicketTypeClassification(t *testing.T) {
 			"--json-output", outJSON,
 		)
 		cmd.Dir = tempDir
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -4085,60 +4055,7 @@ func TestCLI_RootConfigurationDiscovery(t *testing.T) {
 			t.Fatalf("failed creating ticket dir: %v", err)
 		}
 
-		cfgContent := `agenticlens:
-  version: v9.8.7
-database:
-  busy_timeout_ms: 0
-live:
-  active_threshold_seconds: 300
-  poll_interval_ms: 2000
-generation:
-  metrics:
-    skills: true
-    delegations: true
-    anomalies: true
-  feedback:
-    provisional_threshold_seconds: 180
-  summary:
-    enabled: false
-    filename: SUMMARY.md
-role_order: []
-role_mappings: {}
-
-project_name: CustomRootTest
-ticket:
-  case_insensitive: true
-  prefixes:
-    - prefix: "MYROOT"
-      description: Fixture ticket
-      ticket_type: "fix"
-workspaces:
-  artifacts: []
-  dir: "custom_root_ws"
-code_metrics:
-  base_branch: fixture-base
-  production:
-    include: ["src/**"]
-    exclude: ['**/*_test.go']
-  tests:
-    include: ['**/*_test.go']
-    exclude: []
-anomaly_thresholds:
-  stall_threshold_seconds: 120
-  consecutive_errors_streak_warning: 4
-  consecutive_errors_streak_critical: 8
-  turn_usage_warning_tokens: 60000
-  turn_usage_critical_tokens: 120000
-  context_growth_warning_tokens: 80000
-  context_growth_critical_tokens: 120000
-  tool_thrashing_min_failures: 3
-  tool_thrashing_critical_failures: 5
-  error_rate_min_calls: 5
-  error_rate_threshold: 0.25
-  error_rate_critical_threshold: 0.70
-  context_ceiling_warning_tokens: 160000
-  context_ceiling_critical_tokens: 200000
-`
+		cfgContent := "agenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\n\nproject_name: CustomRootTest\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: \"MYROOT\"\n      description: Fixture ticket\n      ticket_type: \"fix\"\nworkspaces:\n  artifacts: []\n  roots:\n    - path: \"custom_root_ws\"\n      discovery:\n        max_depth: 8\n        max_directories: 300\ncode_metrics:\n  base_branch: fixture-base\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatalf("failed writing config: %v", err)
 		}
@@ -4154,7 +4071,7 @@ anomaly_thresholds:
 			"--json-output", outJSON,
 		)
 		genCmd.Dir = tempDir
-		prepareGenerateFixture(t, genCmd)
+		prepareScopedGenerateFixture(t, genCmd)
 		setIsolatedHome(t, genCmd)
 		var genStdout, genStderr bytes.Buffer
 		genCmd.Stdout = &genStdout
@@ -4214,7 +4131,7 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 			"--ticket-title", "Test Fixture Ticket",
 			"--session-id", "fixture-empty-root",
 		)
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -4226,7 +4143,7 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 		if errors.As(err, &exitErr) && exitErr.ExitCode() != 1 {
 			t.Fatalf("expected exit code 1, got %d", exitErr.ExitCode())
 		}
-		if !strings.Contains(stderr.String(), "ticket-id") {
+		if !strings.Contains(stderr.String(), "ticket-id") && !strings.Contains(stderr.String(), "ticket ID") {
 			t.Fatalf("unexpected stderr: %s", stderr.String())
 		}
 
@@ -4239,7 +4156,7 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 			"--ticket-title", "Test Fixture Ticket",
 			"--session-id", "fixture-empty-root",
 		)
-		prepareGenerateFixture(t, cmd2)
+		prepareScopedGenerateFixture(t, cmd2)
 		var stderr2 bytes.Buffer
 		cmd2.Stderr = &stderr2
 		err2 := cmd2.Run()
@@ -4266,7 +4183,7 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 			"--ticket-id", "AL-TITLE-REQ",
 			"--session-id", "fixture-empty-root",
 		)
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -4291,7 +4208,7 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 			"--ticket-title", "   \n\t",
 			"--session-id", "fixture-empty-root",
 		)
-		prepareGenerateFixture(t, cmd2)
+		prepareScopedGenerateFixture(t, cmd2)
 		var stderr2 bytes.Buffer
 		cmd2.Stderr = &stderr2
 		err2 := cmd2.Run()
@@ -4308,7 +4225,7 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 
 		// Case 3: Cached facts has whitespace-only title and flag omitted
 		tempDir := t.TempDir()
-		outJSON := filepath.Join(tempDir, "facts_ws_title.json")
+		outJSON := filepath.Join(tempDir, "agentic_metrics.json")
 		wsCachedJSON := `{
   "schema_version": 6,
   "migration": {
@@ -4334,7 +4251,7 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 			"--json-output", outJSON,
 			"--session-id", "fixture-empty-root",
 		)
-		prepareGenerateFixture(t, cmd3)
+		prepareScopedGenerateFixture(t, cmd3)
 		var stderr3 bytes.Buffer
 		cmd3.Stderr = &stderr3
 		err3 := cmd3.Run()
@@ -4353,7 +4270,7 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 	t.Run("cached title fallback succeeds when ticket-title flag is omitted", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
-		outJSON := filepath.Join(tempDir, "facts.json")
+		outJSON := filepath.Join(tempDir, "agentic_metrics.json")
 		cachedJSON := `{
   "schema_version": 6,
   "migration": {
@@ -4380,7 +4297,7 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 			"--json-output", outJSON,
 			"--session-id", "fixture-empty-root",
 		)
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -4410,7 +4327,7 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 			"--json-output", outJSON,
 			"--session-id", "fixture-empty-root",
 		)
-		prepareGenerateFixture(t, cmdOverride)
+		prepareScopedGenerateFixture(t, cmdOverride)
 		var stdoutO, stderrO bytes.Buffer
 		cmdOverride.Stdout = &stdoutO
 		cmdOverride.Stderr = &stderrO
@@ -4440,7 +4357,7 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 			"--ticket-title", "Test Fixture Ticket",
 			"--session-id", "fixture-empty-root",
 		)
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -4463,7 +4380,7 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 			"--ticket-title", "Test Fixture Ticket",
 			"--session-id", "fixture-empty-root",
 		)
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -4478,7 +4395,7 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 	t.Run("FIX prefix infers ticket_type fix from root .agenticlens-config.yaml", func(t *testing.T) {
 		t.Parallel()
 		tempDir := t.TempDir()
-		outJSON := filepath.Join(tempDir, "facts.json")
+		outJSON := filepath.Join(tempDir, "agentic_metrics.json")
 
 		cmd := exec.Command(
 			cliBinaryPath,
@@ -4489,7 +4406,7 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 			"--session-id", "fixture-empty-root",
 			"--json-output", outJSON,
 		)
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -4514,7 +4431,7 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 		}
 
 		// Also verify case-insensitive prefix inference for lowercase fix-42
-		outJSONLower := filepath.Join(tempDir, "facts_lower.json")
+		outJSONLower := filepath.Join(tempDir, "facts_lower", "agentic_metrics.json")
 		cmdLower := exec.Command(
 			cliBinaryPath,
 			"generate",
@@ -4524,7 +4441,7 @@ func TestCLIGenerate_TicketMetadataValidation(t *testing.T) {
 			"--session-id", "fixture-empty-root",
 			"--json-output", outJSONLower,
 		)
-		prepareGenerateFixture(t, cmdLower)
+		prepareScopedGenerateFixture(t, cmdLower)
 		var stdoutL, stderrL bytes.Buffer
 		cmdLower.Stdout = &stdoutL
 		cmdLower.Stderr = &stderrL
@@ -4568,12 +4485,12 @@ func TestCLI_Invariants(t *testing.T) {
 		runCmd("add", "README.md")
 		runCmd("commit", "--allow-empty", "-m", "initial commit")
 
-		cfgContent := "workspaces:\n  artifacts: []\n  dir: records\nagenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: \"TestProject\"\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: \"DEV\"\n      description: Fixture ticket\ncode_metrics:\n  base_branch: fixture-base\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+		cfgContent := "workspaces:\n  artifacts: []\n  roots:\n    - path: records\n      discovery:\n        max_depth: 8\n        max_directories: 300\nagenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: \"TestProject\"\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: \"DEV\"\n      description: Fixture ticket\ncode_metrics:\n  base_branch: fixture-base\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatal(err)
 		}
 
-		outJSON := filepath.Join(tempDir, "facts.json")
+		outJSON := filepath.Join(tempDir, "agentic_metrics.json")
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
@@ -4584,7 +4501,7 @@ func TestCLI_Invariants(t *testing.T) {
 			"--json-output", outJSON,
 		)
 		cmd.Dir = tempDir
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 		setIsolatedHome(t, cmd)
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
@@ -4621,13 +4538,13 @@ func TestCLI_Invariants(t *testing.T) {
 		runCmd("add", "README.md")
 		runCmd("commit", "--allow-empty", "-m", "initial commit")
 
-		cfgContent := "workspaces:\n  artifacts: []\n  dir: records\nagenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: MissingRootsFixture\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: \"DEV\"\n      description: Fixture ticket\ncode_metrics:\n  base_branch: fixture-base\n  production:\n    include: []\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+		cfgContent := "workspaces:\n  artifacts: []\n  roots:\n    - path: records\n      discovery:\n        max_depth: 8\n        max_directories: 300\nagenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: MissingRootsFixture\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: \"DEV\"\n      description: Fixture ticket\ncode_metrics:\n  base_branch: fixture-base\n  production:\n    include: []\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 		cfgContent = strings.Replace(cfgContent, "    include: []\n", "", 1)
 		if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 			t.Fatal(err)
 		}
 
-		outJSON := filepath.Join(tempDir, "facts.json")
+		outJSON := filepath.Join(tempDir, "agentic_metrics.json")
 		cmd := exec.Command(
 			cliBinaryPath,
 			"generate",
@@ -4637,7 +4554,7 @@ func TestCLI_Invariants(t *testing.T) {
 			"--json-output", outJSON,
 		)
 		cmd.Dir = tempDir
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
 
@@ -4664,7 +4581,7 @@ func TestCLIWithTestDataWorkspaces(t *testing.T) {
 	}
 
 	t.Run("list command finds all 5 workspaces and anomalies", func(t *testing.T) {
-		cmd := exec.Command(cliBinaryPath, "--workspaces", absTestdataDir, "--list")
+		cmd := workspaceCLICommand(t, absTestdataDir, "--list")
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -4693,7 +4610,7 @@ func TestCLIWithTestDataWorkspaces(t *testing.T) {
 
 	t.Run("anomalies command lists identified anomalies in test workspaces", func(t *testing.T) {
 		// Test AL-2 anomaly detection
-		cmdAL2 := exec.Command(cliBinaryPath, "--workspaces", absTestdataDir, "--ticket-id", "AL-2", "--anomalies")
+		cmdAL2 := workspaceCLICommand(t, absTestdataDir, "--ticket-id", "AL-2", "--anomalies")
 		var stdoutAL2, stderrAL2 bytes.Buffer
 		cmdAL2.Stdout = &stdoutAL2
 		cmdAL2.Stderr = &stderrAL2
@@ -4708,7 +4625,7 @@ func TestCLIWithTestDataWorkspaces(t *testing.T) {
 		}
 
 		// Test GEN-1 anomaly detection
-		cmdGEN1 := exec.Command(cliBinaryPath, "--workspaces", absTestdataDir, "--ticket-id", "GEN-1", "--anomalies")
+		cmdGEN1 := workspaceCLICommand(t, absTestdataDir, "--ticket-id", "GEN-1", "--anomalies")
 		var stdoutGEN1, stderrGEN1 bytes.Buffer
 		cmdGEN1.Stdout = &stdoutGEN1
 		cmdGEN1.Stderr = &stderrGEN1
@@ -4723,7 +4640,7 @@ func TestCLIWithTestDataWorkspaces(t *testing.T) {
 		}
 
 		// Test clean ticket AL-1
-		cmdAL1 := exec.Command(cliBinaryPath, "--workspaces", absTestdataDir, "--ticket-id", "AL-1", "--anomalies")
+		cmdAL1 := workspaceCLICommand(t, absTestdataDir, "--ticket-id", "AL-1", "--anomalies")
 		var stdoutAL1, stderrAL1 bytes.Buffer
 		cmdAL1.Stdout = &stdoutAL1
 		cmdAL1.Stderr = &stderrAL1
@@ -4746,7 +4663,7 @@ func TestCLIWithTestDataWorkspaces(t *testing.T) {
 		port := ln.Addr().(*net.TCPAddr).Port
 		_ = ln.Close()
 
-		cmd := exec.Command(cliBinaryPath, "server", "--port", strconv.Itoa(port), "--workspaces", absTestdataDir)
+		cmd := workspaceCLICommand(t, absTestdataDir, "server", "--port", strconv.Itoa(port))
 		if err := cmd.Start(); err != nil {
 			t.Fatalf("failed starting server subcommand: %v", err)
 		}
@@ -4766,13 +4683,13 @@ func TestCLIWithTestDataWorkspaces(t *testing.T) {
 		}
 
 		var cfg struct {
-			WorkspacesDir string `json:"workspaces_dir"`
+			WorkspacesRoots []domain.WorkspaceRootConfig `json:"workspaces_roots"`
 		}
 		if err := json.NewDecoder(resp.Body).Decode(&cfg); err != nil {
 			t.Fatalf("failed decoding /api/config: %v", err)
 		}
-		if !strings.Contains(cfg.WorkspacesDir, "testdata") {
-			t.Errorf("expected workspaces_dir in config to contain testdata, got: %s", cfg.WorkspacesDir)
+		if len(cfg.WorkspacesRoots) != 1 || !strings.Contains(cfg.WorkspacesRoots[0].Path, "testdata") {
+			t.Errorf("expected workspaces_roots in config to contain testdata, got: %s", cfg.WorkspacesRoots[0].Path)
 		}
 
 		wsResp, err := http.Get(baseURL + "/api/workspaces")
@@ -4798,58 +4715,7 @@ func TestCLIWithTestDataWorkspaces(t *testing.T) {
 func TestCLIServerConfigurationResolution(t *testing.T) {
 	tempDir := t.TempDir()
 
-	cfgContent := `agenticlens:
-  version: v9.8.7
-database:
-  busy_timeout_ms: 0
-live:
-  active_threshold_seconds: 300
-  poll_interval_ms: 2000
-generation:
-  metrics:
-    skills: true
-    delegations: true
-    anomalies: true
-  feedback:
-    provisional_threshold_seconds: 180
-  summary:
-    enabled: false
-    filename: SUMMARY.md
-role_order: []
-role_mappings: {}
-project_name: ConfigTest
-ticket:
-  case_insensitive: true
-  prefixes:
-    - prefix: TST
-      description: Fixture ticket
-workspaces:
-  artifacts: []
-  dir: custom_spaces
-code_metrics:
-  base_branch: fixture-base
-  production:
-    include: ["src/**"]
-    exclude: ['**/*_test.go']
-  tests:
-    include: ['**/*_test.go']
-    exclude: []
-anomaly_thresholds:
-  stall_threshold_seconds: 120
-  consecutive_errors_streak_warning: 4
-  consecutive_errors_streak_critical: 8
-  turn_usage_warning_tokens: 60000
-  turn_usage_critical_tokens: 120000
-  context_growth_warning_tokens: 80000
-  context_growth_critical_tokens: 120000
-  tool_thrashing_min_failures: 3
-  tool_thrashing_critical_failures: 5
-  error_rate_min_calls: 5
-  error_rate_threshold: 0.25
-  error_rate_critical_threshold: 0.70
-  context_ceiling_warning_tokens: 160000
-  context_ceiling_critical_tokens: 200000
-`
+	cfgContent := "agenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: ConfigTest\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: TST\n      description: Fixture ticket\nworkspaces:\n  artifacts: []\n  roots:\n    - path: custom_spaces\n      discovery:\n        max_depth: 8\n        max_directories: 300\ncode_metrics:\n  base_branch: fixture-base\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 	if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 		t.Fatalf("failed writing test config: %v", err)
 	}
@@ -4899,13 +4765,13 @@ anomaly_thresholds:
 		}
 
 		var cfg struct {
-			WorkspacesDir string `json:"workspaces_dir"`
+			WorkspacesRoots []domain.WorkspaceRootConfig `json:"workspaces_roots"`
 		}
 		if err := json.NewDecoder(resp.Body).Decode(&cfg); err != nil {
 			t.Fatalf("failed decoding /api/config: %v", err)
 		}
-		if !strings.Contains(cfg.WorkspacesDir, "custom_spaces") {
-			t.Errorf("expected workspaces_dir to contain custom_spaces, got: %s", cfg.WorkspacesDir)
+		if len(cfg.WorkspacesRoots) != 1 || !strings.Contains(cfg.WorkspacesRoots[0].Path, "custom_spaces") {
+			t.Errorf("expected workspaces_roots to contain custom_spaces, got: %s", cfg.WorkspacesRoots[0].Path)
 		}
 
 		wsResp, err := http.Get(baseURL + "/api/workspaces")
@@ -4923,7 +4789,7 @@ anomaly_thresholds:
 		}
 	})
 
-	t.Run("starts server with explicit workspaces flag and overrides config workspaces dir", func(t *testing.T) {
+	t.Run("starts server after explicitly updating configured roots", func(t *testing.T) {
 		ln, err := net.Listen("tcp", "127.0.0.1:0")
 		if err != nil {
 			t.Fatalf("failed finding free port: %v", err)
@@ -4932,7 +4798,7 @@ anomaly_thresholds:
 		_ = ln.Close()
 
 		absOverrideDir := filepath.Join(tempDir, "override_spaces")
-		cmd := exec.Command(cliBinaryPath, "server", "--port", strconv.Itoa(port), "--workspaces", absOverrideDir)
+		cmd := workspaceCLICommand(t, absOverrideDir, "server", "--port", strconv.Itoa(port))
 		cmd.Dir = tempDir
 		if err := cmd.Start(); err != nil {
 			t.Fatalf("failed starting server subcommand with override workspaces flag: %v", err)
@@ -4953,13 +4819,13 @@ anomaly_thresholds:
 		}
 
 		var cfg struct {
-			WorkspacesDir string `json:"workspaces_dir"`
+			WorkspacesRoots []domain.WorkspaceRootConfig `json:"workspaces_roots"`
 		}
 		if err := json.NewDecoder(resp.Body).Decode(&cfg); err != nil {
 			t.Fatalf("failed decoding /api/config: %v", err)
 		}
-		if !strings.Contains(cfg.WorkspacesDir, "override_spaces") {
-			t.Errorf("expected workspaces_dir to contain override_spaces, got: %s", cfg.WorkspacesDir)
+		if len(cfg.WorkspacesRoots) != 1 || !strings.Contains(cfg.WorkspacesRoots[0].Path, "override_spaces") {
+			t.Errorf("expected workspaces_roots to contain override_spaces, got: %s", cfg.WorkspacesRoots[0].Path)
 		}
 
 		wsResp, err := http.Get(baseURL + "/api/workspaces")
@@ -5049,7 +4915,7 @@ anomaly_thresholds:
 			t.Errorf("expected exit status 1, got %d", exitErr.ExitCode())
 		}
 
-		expectedErrMsg := "workspaces.dir"
+		expectedErrMsg := "workspaces.roots"
 		if !strings.Contains(string(out), expectedErrMsg) {
 			t.Errorf("expected output to contain %q, got %q", expectedErrMsg, string(out))
 		}
@@ -5127,113 +4993,29 @@ anomaly_thresholds:
 			t.Errorf("expected exit status 1, got %d", exitErr.ExitCode())
 		}
 
-		expectedErrMsg := "workspaces.dir"
+		expectedErrMsg := "workspaces.roots"
 		if !strings.Contains(string(out), expectedErrMsg) {
 			t.Errorf("expected output to contain %q, got %q", expectedErrMsg, string(out))
 		}
 	})
 
-	t.Run("starts server when workspaces.dir unconfigured in config but --workspaces flag provided", func(t *testing.T) {
-		emptyWsDir := t.TempDir()
-		cfgWithoutWs := `agenticlens:
-  version: v9.8.7
-database:
-  busy_timeout_ms: 0
-live:
-  active_threshold_seconds: 300
-  poll_interval_ms: 2000
-generation:
-  metrics:
-    skills: true
-    delegations: true
-    anomalies: true
-  feedback:
-    provisional_threshold_seconds: 180
-  summary:
-    enabled: false
-    filename: SUMMARY.md
-role_order: []
-role_mappings: {}
-project_name: FlagSuppliedTest
-ticket:
-  case_insensitive: true
-  prefixes:
-    - prefix: TST
-      description: Fixture ticket
-workspaces:
-  artifacts: []
-code_metrics:
-  base_branch: fixture-base
-  production:
-    include: ["src/**"]
-    exclude: ['**/*_test.go']
-  tests:
-    include: ['**/*_test.go']
-    exclude: []
-anomaly_thresholds:
-  stall_threshold_seconds: 120
-  consecutive_errors_streak_warning: 4
-  consecutive_errors_streak_critical: 8
-  turn_usage_warning_tokens: 60000
-  turn_usage_critical_tokens: 120000
-  context_growth_warning_tokens: 80000
-  context_growth_critical_tokens: 120000
-  tool_thrashing_min_failures: 3
-  tool_thrashing_critical_failures: 5
-  error_rate_min_calls: 5
-  error_rate_threshold: 0.25
-  error_rate_critical_threshold: 0.70
-  context_ceiling_warning_tokens: 160000
-  context_ceiling_critical_tokens: 200000
-`
-		if err := os.WriteFile(filepath.Join(emptyWsDir, ".agenticlens-config.yaml"), []byte(cfgWithoutWs), 0644); err != nil {
-			t.Fatalf("failed writing test config: %v", err)
-		}
-
-		flagWsDir := filepath.Join(emptyWsDir, "flag_spaces")
-		ticketDir := filepath.Join(flagWsDir, "TST-99")
-		if err := os.MkdirAll(ticketDir, 0755); err != nil {
-			t.Fatalf("failed creating flag spaces dir: %v", err)
-		}
-		if err := os.WriteFile(filepath.Join(ticketDir, "agentic_metrics.json"), []byte(sampleFactJSON("TST-99", "Flag Space Feature", 45, 0.25)), 0644); err != nil {
-			t.Fatalf("failed writing flag ledger: %v", err)
-		}
-
-		ln, err := net.Listen("tcp", "127.0.0.1:0")
+	t.Run("retired root override cannot rescue missing roots configuration", func(t *testing.T) {
+		project := t.TempDir()
+		writeCLISharedPolicy(t, project)
+		path := filepath.Join(project, ".agenticlens-config.yaml")
+		body, err := os.ReadFile(path)
 		if err != nil {
-			t.Fatalf("failed finding free port: %v", err)
+			t.Fatal(err)
 		}
-		port := ln.Addr().(*net.TCPAddr).Port
-		_ = ln.Close()
-
-		cmd := exec.Command(cliBinaryPath, "server", "--port", strconv.Itoa(port), "--workspaces", flagWsDir)
-		cmd.Dir = emptyWsDir
-		if err := cmd.Start(); err != nil {
-			t.Fatalf("failed starting server with --workspaces flag: %v", err)
+		body = bytes.Replace(body, []byte("workspaces:"), []byte("retired_workspaces:"), 1)
+		if err = os.WriteFile(path, body, 0600); err != nil {
+			t.Fatal(err)
 		}
-		defer func() {
-			if killErr := cmd.Process.Kill(); killErr != nil {
-				// Process might have terminated
-			}
-			_ = cmd.Wait()
-		}()
-
-		baseURL := fmt.Sprintf("http://localhost:%d", port)
-		resp := waitForServerReady(t, baseURL+"/api/config", 3*time.Second)
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			t.Fatalf("expected 200 OK from /api/config, got %d", resp.StatusCode)
-		}
-
-		var cfg struct {
-			WorkspacesDir string `json:"workspaces_dir"`
-		}
-		if err := json.NewDecoder(resp.Body).Decode(&cfg); err != nil {
-			t.Fatalf("failed decoding /api/config: %v", err)
-		}
-		if !strings.Contains(cfg.WorkspacesDir, "flag_spaces") {
-			t.Errorf("expected workspaces_dir to contain flag_spaces, got: %s", cfg.WorkspacesDir)
+		cmd := exec.Command(cliBinaryPath, "server", "--workspaces", filepath.Join(project, "chosen"))
+		cmd.Dir = project
+		output, err := cmd.CombinedOutput()
+		if err == nil || !strings.Contains(string(output), "flag provided but not defined") {
+			t.Fatalf("retired flag bypassed required roots configuration: %v %s", err, output)
 		}
 	})
 }
@@ -5250,58 +5032,7 @@ func TestCLIGenerate_MultiDeviceInvocationsMergeAndSDLC(t *testing.T) {
 	_ = exec.Command("git", "-C", tempDir, "config", "user.email", "[EMAIL_REDACTED]").Run()
 	_ = exec.Command("git", "-C", tempDir, "config", "user.name", "Test User").Run()
 
-	cfgContent := `agenticlens:
-  version: v9.8.7
-live:
-  active_threshold_seconds: 300
-  poll_interval_ms: 2000
-generation:
-  metrics:
-    skills: true
-    delegations: true
-    anomalies: true
-  feedback:
-    provisional_threshold_seconds: 180
-  summary:
-    enabled: false
-    filename: SUMMARY.md
-role_order: []
-role_mappings: {}
-project_name: "Test Multi Device"
-ticket:
-  case_insensitive: true
-  prefixes:
-    - prefix: "AL"
-      description: Fixture ticket
-workspaces:
-  artifacts: []
-  dir: "workspaces"
-code_metrics:
-  base_branch: HEAD
-  production:
-    include: ["**"]
-    exclude: ['**/*_test.go']
-  tests:
-    include: ['**/*_test.go']
-    exclude: []
-database:
-  busy_timeout_ms: 0
-anomaly_thresholds:
-  stall_threshold_seconds: 120
-  consecutive_errors_streak_warning: 4
-  consecutive_errors_streak_critical: 8
-  turn_usage_warning_tokens: 60000
-  turn_usage_critical_tokens: 120000
-  context_growth_warning_tokens: 80000
-  context_growth_critical_tokens: 120000
-  tool_thrashing_min_failures: 3
-  tool_thrashing_critical_failures: 5
-  error_rate_min_calls: 5
-  error_rate_threshold: 0.25
-  error_rate_critical_threshold: 0.70
-  context_ceiling_warning_tokens: 160000
-  context_ceiling_critical_tokens: 200000
-`
+	cfgContent := "agenticlens:\n  version: v9.8.7\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: \"Test Multi Device\"\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: \"AL\"\n      description: Fixture ticket\nworkspaces:\n  artifacts: []\n  roots:\n    - path: \"workspaces\"\n      discovery:\n        max_depth: 8\n        max_directories: 300\ncode_metrics:\n  base_branch: HEAD\n  production:\n    include: [\"**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\ndatabase:\n  busy_timeout_ms: 0\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 	if err := os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644); err != nil {
 		t.Fatalf("failed writing config: %v", err)
 	}
@@ -5412,7 +5143,7 @@ anomaly_thresholds:
 		"--json-output", outJSON,
 	)
 	cmd.Dir = tempDir
-	prepareGenerateFixture(t, cmd)
+	prepareScopedGenerateFixture(t, cmd)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -5468,7 +5199,7 @@ anomaly_thresholds:
 		"--json-output", outJSON,
 	)
 	cmd2.Dir = tempDir
-	prepareGenerateFixture(t, cmd2)
+	prepareScopedGenerateFixture(t, cmd2)
 	if out, err := cmd2.CombinedOutput(); err != nil {
 		t.Fatalf("second generate failed: %v, output: %s", err, string(out))
 	}
@@ -5480,7 +5211,10 @@ anomaly_thresholds:
 		t.Errorf("idempotency check failed: expected 2 invocations, got %d", len(idempDTO.ToDomain().InvocationFacts()))
 	}
 	// 6. Runtime ingestion rejects legacy schemas and requires explicit migration and source backfill.
-	legacyOutJSON := filepath.Join(tempDir, "legacy.json")
+	legacyOutJSON := filepath.Join(tempDir, "legacy", "agentic_metrics.json")
+	if err := os.MkdirAll(filepath.Dir(legacyOutJSON), 0700); err != nil {
+		t.Fatal(err)
+	}
 	legacyVer := 3
 	legacyLedger := domain.AgenticFactLedger{
 		SchemaVersion: &legacyVer,
@@ -5512,7 +5246,7 @@ anomaly_thresholds:
 		"--session-id", "fixture-empty-root",
 	)
 	cmdLegacy.Dir = tempDir
-	prepareGenerateFixture(t, cmdLegacy)
+	prepareScopedGenerateFixture(t, cmdLegacy)
 	var legacyStderr bytes.Buffer
 	cmdLegacy.Stderr = &legacyStderr
 	if err := cmdLegacy.Run(); err == nil {
@@ -5531,58 +5265,7 @@ func TestCLIGenerate_ThreeDeviceHandoffAccumulation(t *testing.T) {
 	_ = exec.Command("git", "-C", tempDir, "config", "user.email", "[EMAIL_REDACTED]").Run()
 	_ = exec.Command("git", "-C", tempDir, "config", "user.name", "Test User").Run()
 
-	cfgContent := `agenticlens:
-  version: v9.8.7
-live:
-  active_threshold_seconds: 300
-  poll_interval_ms: 2000
-generation:
-  metrics:
-    skills: true
-    delegations: true
-    anomalies: true
-  feedback:
-    provisional_threshold_seconds: 180
-  summary:
-    enabled: false
-    filename: SUMMARY.md
-role_order: []
-role_mappings: {}
-project_name: "Test Three Device Handoff"
-ticket:
-  case_insensitive: true
-  prefixes:
-    - prefix: "AL"
-      description: Fixture ticket
-workspaces:
-  artifacts: []
-  dir: "workspaces"
-database:
-  busy_timeout_ms: 0
-code_metrics:
-  base_branch: main
-  production:
-    include: ["**"]
-    exclude: ['**/*_test.go']
-  tests:
-    include: ['**/*_test.go']
-    exclude: []
-anomaly_thresholds:
-  stall_threshold_seconds: 120
-  consecutive_errors_streak_warning: 4
-  consecutive_errors_streak_critical: 8
-  turn_usage_warning_tokens: 60000
-  turn_usage_critical_tokens: 120000
-  context_growth_warning_tokens: 80000
-  context_growth_critical_tokens: 120000
-  tool_thrashing_min_failures: 3
-  tool_thrashing_critical_failures: 5
-  error_rate_min_calls: 5
-  error_rate_threshold: 0.25
-  error_rate_critical_threshold: 0.70
-  context_ceiling_warning_tokens: 160000
-  context_ceiling_critical_tokens: 200000
-`
+	cfgContent := "agenticlens:\n  version: v9.8.7\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: \"Test Three Device Handoff\"\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: \"AL\"\n      description: Fixture ticket\nworkspaces:\n  artifacts: []\n  roots:\n    - path: \"workspaces\"\n      discovery:\n        max_depth: 8\n        max_directories: 300\ndatabase:\n  busy_timeout_ms: 0\ncode_metrics:\n  base_branch: main\n  production:\n    include: [\"**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 	_ = os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644)
 	_ = exec.Command("git", "-C", tempDir, "add", ".").Run()
 	_ = exec.Command("git", "-C", tempDir, "commit", "--allow-empty", "-m", "init").Run()
@@ -5684,7 +5367,7 @@ anomaly_thresholds:
 		"--json-output", outJSON,
 	)
 	cmdB.Dir = tempDir
-	prepareGenerateFixture(t, cmdB)
+	prepareScopedGenerateFixture(t, cmdB)
 	if out, err := cmdB.CombinedOutput(); err != nil {
 		t.Fatalf("generate Device B failed: %v, out: %s", err, string(out))
 	}
@@ -5713,7 +5396,7 @@ anomaly_thresholds:
 		"--json-output", outJSON,
 	)
 	cmdC.Dir = tempDir
-	prepareGenerateFixture(t, cmdC)
+	prepareScopedGenerateFixture(t, cmdC)
 	if out, err := cmdC.CombinedOutput(); err != nil {
 		t.Fatalf("generate Device C failed: %v, out: %s", err, string(out))
 	}
@@ -5760,7 +5443,7 @@ anomaly_thresholds:
 		"--json-output", outJSON,
 	)
 	cmdC2.Dir = tempDir
-	prepareGenerateFixture(t, cmdC2)
+	prepareScopedGenerateFixture(t, cmdC2)
 	if out, err := cmdC2.CombinedOutput(); err != nil {
 		t.Fatalf("repeated generate Device C failed: %v, out: %s", err, string(out))
 	}
@@ -5785,58 +5468,7 @@ func TestCLIGenerate_InvocationsUpdateInPlaceOnSameDevice(t *testing.T) {
 	_ = exec.Command("git", "-C", tempDir, "config", "user.email", "[EMAIL_REDACTED]").Run()
 	_ = exec.Command("git", "-C", tempDir, "config", "user.name", "Test User").Run()
 
-	cfgContent := `agenticlens:
-  version: v9.8.7
-live:
-  active_threshold_seconds: 300
-  poll_interval_ms: 2000
-generation:
-  metrics:
-    skills: true
-    delegations: true
-    anomalies: true
-  feedback:
-    provisional_threshold_seconds: 180
-  summary:
-    enabled: false
-    filename: SUMMARY.md
-role_order: []
-role_mappings: {}
-project_name: "Test Update In Place"
-ticket:
-  case_insensitive: true
-  prefixes:
-    - prefix: "AL"
-      description: Fixture ticket
-workspaces:
-  artifacts: []
-  dir: "workspaces"
-database:
-  busy_timeout_ms: 0
-code_metrics:
-  base_branch: main
-  production:
-    include: ["**"]
-    exclude: ['**/*_test.go']
-  tests:
-    include: ['**/*_test.go']
-    exclude: []
-anomaly_thresholds:
-  stall_threshold_seconds: 120
-  consecutive_errors_streak_warning: 4
-  consecutive_errors_streak_critical: 8
-  turn_usage_warning_tokens: 60000
-  turn_usage_critical_tokens: 120000
-  context_growth_warning_tokens: 80000
-  context_growth_critical_tokens: 120000
-  tool_thrashing_min_failures: 3
-  tool_thrashing_critical_failures: 5
-  error_rate_min_calls: 5
-  error_rate_threshold: 0.25
-  error_rate_critical_threshold: 0.70
-  context_ceiling_warning_tokens: 160000
-  context_ceiling_critical_tokens: 200000
-`
+	cfgContent := "agenticlens:\n  version: v9.8.7\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: \"Test Update In Place\"\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: \"AL\"\n      description: Fixture ticket\nworkspaces:\n  artifacts: []\n  roots:\n    - path: \"workspaces\"\n      discovery:\n        max_depth: 8\n        max_directories: 300\ndatabase:\n  busy_timeout_ms: 0\ncode_metrics:\n  base_branch: main\n  production:\n    include: [\"**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 	_ = os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644)
 	_ = exec.Command("git", "-C", tempDir, "add", ".").Run()
 	_ = exec.Command("git", "-C", tempDir, "commit", "--allow-empty", "-m", "init").Run()
@@ -5893,7 +5525,7 @@ anomaly_thresholds:
 		"--json-output", outJSON,
 	)
 	cmd1.Dir = tempDir
-	prepareGenerateFixture(t, cmd1)
+	prepareScopedGenerateFixture(t, cmd1)
 	if out, err := cmd1.CombinedOutput(); err != nil {
 		t.Fatalf("pass 1 failed: %v, out: %s", err, string(out))
 	}
@@ -5929,7 +5561,7 @@ anomaly_thresholds:
 		"--json-output", outJSON,
 	)
 	cmd2.Dir = tempDir
-	prepareGenerateFixture(t, cmd2)
+	prepareScopedGenerateFixture(t, cmd2)
 	if out, err := cmd2.CombinedOutput(); err != nil {
 		t.Fatalf("pass 2 failed: %v, out: %s", err, string(out))
 	}
@@ -5964,58 +5596,7 @@ func TestCLIGenerate_StrictZeroFallback(t *testing.T) {
 	_ = exec.Command("git", "-C", tempDir, "config", "user.email", "[EMAIL_REDACTED]").Run()
 	_ = exec.Command("git", "-C", tempDir, "config", "user.name", "Test User").Run()
 
-	cfgContent := `agenticlens:
-  version: v9.8.7
-live:
-  active_threshold_seconds: 300
-  poll_interval_ms: 2000
-generation:
-  metrics:
-    skills: true
-    delegations: true
-    anomalies: true
-  feedback:
-    provisional_threshold_seconds: 180
-  summary:
-    enabled: false
-    filename: SUMMARY.md
-role_order: []
-role_mappings: {}
-project_name: "Test Zero Fallback"
-ticket:
-  case_insensitive: true
-  prefixes:
-    - prefix: "AL"
-      description: Fixture ticket
-workspaces:
-  artifacts: []
-  dir: "workspaces"
-database:
-  busy_timeout_ms: 0
-code_metrics:
-  base_branch: main
-  production:
-    include: ["**"]
-    exclude: ['**/*_test.go']
-  tests:
-    include: ['**/*_test.go']
-    exclude: []
-anomaly_thresholds:
-  stall_threshold_seconds: 120
-  consecutive_errors_streak_warning: 4
-  consecutive_errors_streak_critical: 8
-  turn_usage_warning_tokens: 60000
-  turn_usage_critical_tokens: 120000
-  context_growth_warning_tokens: 80000
-  context_growth_critical_tokens: 120000
-  tool_thrashing_min_failures: 3
-  tool_thrashing_critical_failures: 5
-  error_rate_min_calls: 5
-  error_rate_threshold: 0.25
-  error_rate_critical_threshold: 0.70
-  context_ceiling_warning_tokens: 160000
-  context_ceiling_critical_tokens: 200000
-`
+	cfgContent := "agenticlens:\n  version: v9.8.7\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: \"Test Zero Fallback\"\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: \"AL\"\n      description: Fixture ticket\nworkspaces:\n  artifacts: []\n  roots:\n    - path: \"workspaces\"\n      discovery:\n        max_depth: 8\n        max_directories: 300\ndatabase:\n  busy_timeout_ms: 0\ncode_metrics:\n  base_branch: main\n  production:\n    include: [\"**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 	_ = os.WriteFile(filepath.Join(tempDir, ".agenticlens-config.yaml"), []byte(cfgContent), 0644)
 	_ = exec.Command("git", "-C", tempDir, "add", ".").Run()
 	_ = exec.Command("git", "-C", tempDir, "commit", "--allow-empty", "-m", "init").Run()
@@ -6054,7 +5635,7 @@ anomaly_thresholds:
 				"--session-id", "fixture-empty-root",
 			)
 			cmd.Dir = tempDir
-			prepareGenerateFixture(t, cmd)
+			prepareScopedGenerateFixture(t, cmd)
 			var stderr bytes.Buffer
 			cmd.Stderr = &stderr
 			if err := cmd.Run(); err == nil {
@@ -6101,7 +5682,7 @@ anomaly_thresholds:
 			"--session-id", "fixture-empty-root",
 		)
 		cmd.Dir = tempDir
-		prepareGenerateFixture(t, cmd)
+		prepareScopedGenerateFixture(t, cmd)
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
 		if err := cmd.Run(); err != nil {
@@ -6126,7 +5707,7 @@ func TestCLIMigrateReportsDroppedUnscopedToolRows(t *testing.T) {
 	if err := os.WriteFile(ledgerPath, []byte(ledger), 0600); err != nil {
 		t.Fatal(err)
 	}
-	cmd := exec.Command(cliBinaryPath, "migrate", "--workspaces", filepath.Dir(workspace))
+	cmd := workspaceCLICommand(t, filepath.Dir(workspace), "migrate")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("migrate failed: %v\n%s", err, output)
@@ -6166,7 +5747,7 @@ func TestCLIPartialScanDiagnosticsDistinguishRejectedAndMissingTargets(t *testin
 	if err := os.WriteFile(filepath.Join(rejected, "agentic_metrics.json"), []byte(`{"schema_version":999}`), 0600); err != nil {
 		t.Fatal(err)
 	}
-	list := exec.Command(cliBinaryPath, "--workspaces", workspaces, "--list")
+	list := workspaceCLICommand(t, workspaces, "--list")
 	var stdout, stderr bytes.Buffer
 	list.Stdout = &stdout
 	list.Stderr = &stderr
@@ -6176,20 +5757,22 @@ func TestCLIPartialScanDiagnosticsDistinguishRejectedAndMissingTargets(t *testin
 	if !strings.Contains(stdout.String(), "TICKET-1") || !strings.Contains(stderr.String(), "REJECTED") {
 		t.Fatalf("partial scan hid siblings/diagnostics stdout=%s stderr=%s", stdout.String(), stderr.String())
 	}
-	for _, target := range []string{"REJECTED", "MISSING"} {
-		cmd := exec.Command(cliBinaryPath, "--workspaces", workspaces, "--ticket-id", target)
-		output, err := cmd.CombinedOutput()
-		if err == nil {
-			t.Fatalf("invalid target %s accepted", target)
-		}
-		if target == "REJECTED" && (strings.Contains(string(output), "Ticket 'REJECTED' not found") || !strings.Contains(string(output), "REJECTED")) {
-			t.Fatalf("rejected target misreported as missing: %s", output)
-		}
-		if target == "MISSING" && !strings.Contains(string(output), "not found") {
-			t.Fatalf("missing target lacks absence diagnostic: %s", output)
-		}
+	invalid := workspaceCLICommand(t, workspaces, "--ticket-id", "UNTRUSTED-ID", "--workspace", rejected)
+	if output, err := invalid.CombinedOutput(); err == nil || !strings.Contains(string(output), "REJECTED") || !strings.Contains(string(output), "unsupported ledger schema") {
+		t.Fatalf("explicit invalid ledger lost location/schema diagnostic: %v %s", err, output)
 	}
-	cmd := exec.Command(cliBinaryPath, "--workspaces", filepath.Join(t.TempDir(), "absent"), "--list")
+	uncertain := workspaceCLICommand(t, workspaces, "--ticket-id", "MISSING")
+	if output, err := uncertain.CombinedOutput(); err == nil || !strings.Contains(string(output), "unavailable") {
+		t.Fatalf("partial scan claimed definitive absence: %v %s", err, output)
+	}
+	if err := os.Remove(filepath.Join(rejected, "agentic_metrics.json")); err != nil {
+		t.Fatal(err)
+	}
+	missing := workspaceCLICommand(t, workspaces, "--ticket-id", "MISSING")
+	if output, err := missing.CombinedOutput(); err == nil || !strings.Contains(string(output), "not_found") {
+		t.Fatalf("complete scan lost absence diagnostic: %v %s", err, output)
+	}
+	cmd := workspaceCLICommand(t, filepath.Join(t.TempDir(), "absent"), "--list")
 	if output, err := cmd.CombinedOutput(); err == nil || len(output) == 0 {
 		t.Fatalf("fatal scan was not surfaced: %v %s", err, output)
 	}
@@ -6222,13 +5805,13 @@ func TestCLIGenerateAppliesExplicitFailureRatePolicy(t *testing.T) {
 		{"configured critical", 3, .60, domain.SeverityCritical},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			config := fmt.Sprintf("agenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: RateFixture\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: \"FX\"\n      description: Fixture ticket\nworkspaces:\n  artifacts: []\n  dir: records\ncode_metrics:\n  base_branch: fixture-base\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: %d\n  error_rate_threshold: 0.40\n  error_rate_critical_threshold: %g\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n", tc.minimum, tc.critical)
+			config := fmt.Sprintf("agenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: RateFixture\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: \"FX\"\n      description: Fixture ticket\nworkspaces:\n  artifacts: []\n  roots:\n    - path: records\n      discovery:\n        max_depth: 8\n        max_directories: 300\ncode_metrics:\n  base_branch: fixture-base\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: %d\n  error_rate_threshold: 0.40\n  error_rate_critical_threshold: %g\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n", tc.minimum, tc.critical)
 			if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), []byte(config), 0600); err != nil {
 				t.Fatal(err)
 			}
 			cmd := exec.Command(cliBinaryPath, "generate", "--source", "opencode", "--db-path", dbPath, "--session-id", "rate-native", "--ticket-id", "FX-1", "--ticket-title", "Configured rate fixture", "--ticket-type", "fix", "--json-output", output)
 			cmd.Dir = project
-			prepareGenerateFixture(t, cmd)
+			prepareScopedGenerateFixture(t, cmd)
 			if result, err := cmd.CombinedOutput(); err != nil {
 				t.Fatalf("generation failed: %v %s", err, result)
 			}
@@ -6280,14 +5863,14 @@ func TestCLIAppendPreservesUnheadedAndSetextEvidence(t *testing.T) {
 	t.Parallel()
 	for _, suffix := range []string{"Manual verification passed.\nUnheaded authored evidence.\n", "~~~text\nAuthored output\n### Workflow Efficiency\n~~~\n", "Verification\n------------\nOriginal evidence.\n\nRemaining limits\n===============\nSource unavailable at EOF"} {
 		workspaces := setupTestWorkspace(t)
-		summary := filepath.Join(t.TempDir(), "SUMMARY.md")
+		summary := filepath.Join(workspaces, "TICKET-1", "SUMMARY.md")
 		initial := "# Summary\n\n### Workflow Efficiency\n- **Software Development Life Cycle Iterations:** 999\n\n" + suffix
 		if err := os.WriteFile(summary, []byte(initial), 0600); err != nil {
 			t.Fatal(err)
 		}
 		var first []byte
 		for run := 0; run < 2; run++ {
-			cmd := exec.Command(cliBinaryPath, "--workspaces", workspaces, "--ticket-id", "TICKET-1", "--append", summary)
+			cmd := workspaceCLICommand(t, workspaces, "--ticket-id", "TICKET-1", "--append", summary)
 			if out, err := cmd.CombinedOutput(); err != nil {
 				t.Fatalf("CLI summary replacement failed: %v %s", err, out)
 			}

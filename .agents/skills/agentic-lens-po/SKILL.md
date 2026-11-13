@@ -7,7 +7,7 @@ description: Use when acting as the Product / Project Owner for AgenticLens to e
 
 Elicit requirements and produce specs/tickets only. Follow
 [AGENTS.md](../../../AGENTS.md) for ticket isolation, role boundaries and delivery.
-Read required literal prefix mappings and workspaces.dir from the selected canonical shared YAML; missing/invalid policy requires explicit setup. Paths below are relative to that configured root. The PO never writes application/tests/runtime code or
+Read required literal prefix mappings and `workspaces.roots` from the selected canonical shared YAML; missing/invalid policy requires explicit setup. This repository keeps roadmap paths under `alspaces/plan/`, separately from execution changes. PO can maintain that roadmap without creating a change. For a selected PO ticket’s own planning delivery, use the pinned `agenticlens-planning` schema; never create downstream development changes merely by drafting tickets. The PO never writes application/tests/runtime code or
 developer contracts. End this session at planning delivery; implementation needs
 a separate development session.
 
@@ -23,13 +23,12 @@ a separate development session.
    to developers and link canonical rules instead of copying them.
 3. Split independently useful, verifiable outcomes through the affected layers;
    do not force every layer into each ticket. Size for implementation/testing/
-   review in one session. Declare dependencies explicitly. For foundational schema
-   refactors, plan expand, migrate callers in batches, then contract.
+   review in one session. Declare dependencies explicitly. For foundational schema refactors, describe the observable migration boundary; concrete compatibility or implementation phases require product authority and belong to development planning.
 4. Generate tickets with [the ticket template](templates/TICKET_TEMPLATE.txt).
    Allocate unused sequential configured IDs. Use its Markdown headings and short
    outcome title. Keep status and dependency metadata only in `plan/TICKETS.md`,
    never repeated in ticket specifications. Do not add Work type, Origin or a
-   standard metadata block. Priority is optional, only in `plan/TICKETS.md`, and
+   standard metadata block. Link an execution change only when its work is selected; the change links back to the ticket. Priority is optional, only in `plan/TICKETS.md`, and
    only when it expresses a deliberate ordering decision; never fill it by default.
    Link shared requirements precisely while keeping each ticket understandable alone. Include
    related-owner boundaries and ticket-specific evidence only when necessary;
@@ -59,14 +58,14 @@ with a distinct purpose. State acceptance once in its owning spec/ticket.
 
 | Artifact | Content | Usual prose length |
 | --- | --- | --- |
-| `PO-#/SPEC.md` | Shared initiative goal, context, expected behavior/acceptance and delivery dependencies; technical notes last. | 300–600 words |
-| `plan/to-do/<PREFIX>-# <slug>.md` | Ticket-specific goal, context, observable acceptance and optional technical notes; no duplicated roadmap metadata. | 200–400 words |
-| `plan/TICKETS.md` | Shared execution tiers and adjacency lists: status, Blocked by/Blocks and spec links, without copied requirements; priority only when explicitly useful. | One concise entry per active ticket |
-| `PO-#/SUMMARY.md` | Planning outcome, key decisions, ticket readiness, verification and open questions. | 150–300 words before metrics |
-| `PO-#/PULL_REQUEST.md` | Conventional title first; problem, resulting plan, validation and open decisions; link spec/summary. | Usually 100–200 words; at most 3000 characters |
-| `PO-#/agentic_metrics.json` | Final session ledger with ticket type `docs`; rendered metrics follow summary. | Structured output |
+| `alspaces/plan/to-do/<PREFIX>-# <slug>.md` | Ticket-specific goal, context, observable acceptance and optional technical notes; no duplicated roadmap metadata. | 200–400 words |
+| `alspaces/plan/TICKETS.md` | Priority/readiness/dependencies/status and links, without copied acceptance. | One concise entry per active ticket |
+| `<PO_CHANGE>/proposal.md` | The selected PO task's planning outcome and links to initiative/ticket outputs. | 300–600 words |
+| `<PO_CHANGE>/tasks.md` | Requirements discovery, roadmap editing and planning verification only. | Proportionate planning steps |
+| `<PO_CHANGE>/delivery.md` | Planning outcome, readiness/dependency decisions, actual checks, limits and PR context. | 150–300 words before metrics |
+| `<PO_CHANGE>/agentic_metrics.json` | Final PO session ledger with type `docs`; rendered metrics append to delivery.md. | Structured output |
 
 Developers advance index status to In Progress; completed specifications move to
 plan/done and leave the index under repository lifecycle policy, without a Done
 section. Finish with [final telemetry and PR delivery](../../../AGENTS.md#1-ticketed-and-ad-hoc-work)
-for the PO session only; do not create developer workspaces or start development.
+for the PO session only; do not create downstream developer changes or start application development. OpenSpec planning completion/archive does not approve implementation or close roadmap tickets automatically.

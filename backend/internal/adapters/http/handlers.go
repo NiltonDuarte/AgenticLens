@@ -33,6 +33,26 @@ func setWorkspaceDiagnostics(w http.ResponseWriter, diagnostics []domain.Workspa
 }
 
 func writeWorkspaceLoadError(w http.ResponseWriter, err error) {
+	var resolution *adapters.WorkspaceResolutionError
+	if errors.As(err, &resolution) {
+		status := http.StatusNotFound
+		code := "workspace_not_found"
+		if resolution.Outcome == "ambiguous" || resolution.Outcome == "identity_conflict" {
+			status = http.StatusConflict
+			code = "ambiguous_workspace"
+		}
+		if resolution.Outcome == "invalid_ledger" {
+			status = http.StatusUnprocessableEntity
+			code = "invalid_ledger"
+		}
+		if resolution.Outcome == "unavailable" {
+			status = http.StatusServiceUnavailable
+			code = "workspace_unavailable"
+		}
+		setWorkspaceDiagnostics(w, resolution.Diagnostics)
+		WriteError(w, status, code, err.Error())
+		return
+	}
 	if errors.Is(err, os.ErrNotExist) {
 		WriteError(w, http.StatusNotFound, "not_found", "Ticket workspace not found")
 		return
@@ -227,10 +247,13 @@ func WorkspaceDetailHandler(workspacesDir string, artifactConfigs ...[]domain.Wo
 			return
 		}
 
-		targetLedger, err := adapters.LoadTicketWorkspace(ticketID, workspacesDir)
+		targetLedger, artifacts, err := adapters.LoadTicketWorkspaceDetail(ticketID, workspacesDir, r.URL.Query().Get("workspace"))
 		if err != nil {
 			writeWorkspaceLoadError(w, err)
 			return
+		}
+		if targetLedger != nil {
+			setWorkspaceDiagnostics(w, targetLedger.WorkspaceDiagnostics)
 		}
 		if targetLedger == nil {
 			WriteError(w, http.StatusNotFound, "not_found", "Ticket workspace not found")
@@ -242,24 +265,13 @@ func WorkspaceDetailHandler(workspacesDir string, artifactConfigs ...[]domain.Wo
 			return
 		}
 
-		var artifacts domain.TicketArtifacts
-		if len(artifactConfigs) > 0 && artifactConfigs[0] != nil {
-			artifacts, err = adapters.ReadTicketArtifacts(ticketID, workspacesDir, artifactConfigs[0])
-		} else {
-			artifacts, err = adapters.ReadTicketArtifacts(ticketID, workspacesDir)
-		}
-
-		if err != nil {
-			WriteError(w, http.StatusInternalServerError, "invalid_configuration", err.Error())
-			return
-		}
-
 		anomalies := targetLedger.Anomalies
 
 		resp := WorkspaceDetailResponse{
-			Ledger:    MetricsLedgerResponseDTOFromDomain(*targetLedger),
-			Artifacts: artifacts,
-			Anomalies: anomalies,
+			WorkspacePath: targetLedger.WorkspacePath,
+			Ledger:        MetricsLedgerResponseDTOFromDomain(*targetLedger),
+			Artifacts:     artifacts,
+			Anomalies:     anomalies,
 		}
 
 		WriteWorkspaceDetailResponse(w, resp)
@@ -285,10 +297,13 @@ func WorkspaceEventsHandler(workspacesDir string, hydrator ...WorkspaceEventHydr
 			return
 		}
 
-		targetLedger, err := adapters.LoadTicketWorkspace(ticketID, workspacesDir)
+		targetLedger, err := adapters.LoadTicketWorkspace(ticketID, workspacesDir, r.URL.Query().Get("workspace"))
 		if err != nil {
 			writeWorkspaceLoadError(w, err)
 			return
+		}
+		if targetLedger != nil {
+			setWorkspaceDiagnostics(w, targetLedger.WorkspaceDiagnostics)
 		}
 		if targetLedger == nil {
 			WriteError(w, http.StatusNotFound, "not_found", "Ticket workspace not found")

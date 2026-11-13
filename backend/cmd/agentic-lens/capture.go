@@ -607,14 +607,11 @@ func saveGenerationLedger(path string, ledger domain.AgenticFactLedger) error {
 }
 
 func saveGenerationLedgerPreservingHistory(path string, ledger domain.AgenticFactLedger, history []adapters.SessionFactDTO) error {
-	target, err := capture.ProjectDirectory(path)
-	if err != nil {
-		return err
+	target := capture.PublicationPath(path)
+	if _, err := capture.StatPublicationFile(filepath.Dir(target)); err != nil {
+		return fmt.Errorf("workspace moved or unavailable; resolve and retry: %w", err)
 	}
-	if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
-		return err
-	}
-	file, err := os.CreateTemp(filepath.Dir(target), ".agenticlens-ledger-")
+	file, err := capture.CreatePublicationTemp(filepath.Dir(target), ".agenticlens-ledger-")
 	if err != nil {
 		return err
 	}
@@ -623,14 +620,14 @@ func saveGenerationLedgerPreservingHistory(path string, ledger domain.AgenticFac
 		return err
 	}
 	defer func() {
-		if removeErr := os.Remove(temp); removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
+		if removeErr := capture.RemovePublicationFile(temp); removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
 			fmt.Fprintln(os.Stderr, "Generation staging cleanup:", removeErr)
 		}
 	}()
 	if err = adapters.SaveFactLedgerPreservingHistory(temp, ledger, history); err != nil {
 		return err
 	}
-	file, err = os.OpenFile(temp, os.O_RDWR, 0)
+	file, err = capture.OpenPublicationFile(temp, os.O_RDWR, 0)
 	if err != nil {
 		return err
 	}
@@ -640,7 +637,7 @@ func saveGenerationLedgerPreservingHistory(path string, ledger domain.AgenticFac
 	if err = file.Close(); err != nil {
 		return err
 	}
-	return os.Rename(temp, target)
+	return capture.RenamePublicationFile(temp, target)
 }
 
 // filterCapturePrecedence validates identity only. RefreshedSessions contains

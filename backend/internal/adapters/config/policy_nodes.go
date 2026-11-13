@@ -68,6 +68,12 @@ func requireNodeType(n *yaml.Node, key string, kind yaml.Kind, tag string) error
 }
 
 func validateSharedNodes(nodes map[string]*yaml.Node) error {
+	if nodes["agenticlens.state_dir"] != nil {
+		return fmt.Errorf("agenticlens.state_dir belongs only in local YAML")
+	}
+	if err := validateWorkspaceNodes(nodes["workspaces"]); err != nil {
+		return err
+	}
 	for _, key := range []string{"ticket", "workspaces", "database", "live", "anomaly_thresholds", "code_metrics", "code_metrics.production", "code_metrics.tests", "generation", "generation.metrics", "generation.feedback", "generation.summary", "role_mappings"} {
 		if n := nodes[key]; n != nil {
 			if err := requireNodeType(n, key, yaml.MappingNode, ""); err != nil {
@@ -75,7 +81,7 @@ func validateSharedNodes(nodes map[string]*yaml.Node) error {
 			}
 		}
 	}
-	for _, key := range []string{"project_name", "workspaces.dir", "code_metrics.base_branch", "generation.summary.filename"} {
+	for _, key := range []string{"project_name", "code_metrics.base_branch", "generation.summary.filename"} {
 		if n := nodes[key]; n != nil {
 			if err := requireNodeType(n, key, yaml.ScalarNode, "!!str"); err != nil {
 				return err

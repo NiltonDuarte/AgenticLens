@@ -28,6 +28,9 @@ export const Navbar: React.FC<NavbarProps> = ({
     projectConfig ?? null
   );
 
+  const [configError, setConfigError] = useState<string | null>(null);
+  const [configAttempt, setConfigAttempt] = useState(0);
+
   useEffect(() => {
     if (versionInfo) {
       setInternalVersion(versionInfo);
@@ -50,6 +53,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   useEffect(() => {
     if (projectConfig) {
+      setConfigError(null);
       setInternalConfig(projectConfig);
       return;
     }
@@ -57,23 +61,24 @@ export const Navbar: React.FC<NavbarProps> = ({
       return;
     }
     let mounted = true;
+    setConfigError(null);
     void fetchProjectConfig()
       .then((resp) => {
         if (mounted) {
           setInternalConfig(resp.data);
         }
       })
-      .catch(() => {
-        // Keep default config on failure
+      .catch((error: unknown) => {
+        if (mounted) setConfigError(error instanceof Error ? error.message : 'Failed to load workspace configuration');
       });
     return () => {
       mounted = false;
     };
-  }, [projectConfig, projectName]);
+  }, [projectConfig, projectName, configAttempt]);
 
   const displayVersion = internalVersion ?? DEFAULT_BUILD_INFO;
   const observedProject = (projectName ?? internalConfig?.project_name ?? '').trim();
-  const rawWorkspacesDir = (projectConfig?.workspaces_dir ?? internalConfig?.workspaces_dir ?? '').trim();
+  const workspaceRoots = projectConfig?.workspaces_roots ?? internalConfig?.workspaces_roots ?? [];
 
   const handleBrandKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -164,14 +169,22 @@ export const Navbar: React.FC<NavbarProps> = ({
         >
           {displayVersion.version}
         </span>
-        {rawWorkspacesDir ? (
-          <span
-            className="status-pill workspace-pill"
-            title={`Active Workspaces Directory: ${rawWorkspacesDir}`}
-            aria-label={`Active Workspaces Directory: ${rawWorkspacesDir}`}
-          >
-            <span className="status-dot" />
-            {rawWorkspacesDir}
+        {workspaceRoots.length > 0 ? (
+          <div className="workspace-roots" aria-label="Configured workspace directories">
+            {workspaceRoots.map((root) => <span
+              key={root.path}
+              className="status-pill workspace-pill"
+              title={`${root.path}; maximum depth ${root.discovery.max_depth}; directory budget ${root.discovery.max_directories}`}
+              aria-label={`Workspace directory: ${root.path}`}
+            >
+              <span className="status-dot" />
+              {root.path}
+            </span>)}
+          </div>
+        ) : configError ? (
+          <span className="status-pill workspace-pill" role="alert" title={configError}>
+            Workspace configuration unavailable
+            <button type="button" onClick={() => setConfigAttempt((attempt) => attempt + 1)}>Retry configuration</button>
           </span>
         ) : (
           <span

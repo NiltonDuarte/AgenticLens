@@ -22,7 +22,7 @@ func fixtureSharedBody(t *testing.T) string {
 	return string(b)
 }
 func testProjectConfig() domain.ProjectConfig {
-	return domain.ProjectConfig{ProjectName: "Fixture", AgenticLens: domain.EntrypointConfig{Version: "v9.8.7"}, Ticket: domain.TicketConfig{Prefixes: []domain.TicketPrefix{{Prefix: "T-", Description: "Development", TicketType: "feat"}}, CaseInsensitive: false}, Workspaces: domain.WorkspacesConfig{Dir: "records", Artifacts: []domain.WorkspaceArtifactConfig{}}, CodeMetrics: domain.CodeMetricsConfig{BaseBranch: "main", Production: domain.CodeCategoryConfig{Include: []string{"src/**/*.go"}, Exclude: []string{"**/*_test.go"}}, Tests: domain.CodeCategoryConfig{Include: []string{"**/*_test.go"}, Exclude: []string{}}}, Generation: domain.GenerationConfig{Metrics: domain.GenerationPolicy{Skills: false, Delegations: true, Anomalies: true}, Feedback: domain.GenerationFeedbackConfig{ProvisionalThresholdSeconds: 0}, Summary: domain.GenerationSummaryConfig{Enabled: true, Filename: "METRICS.md"}}, Database: domain.DatabaseConfig{BusyTimeoutMs: 0}, Live: domain.LiveConfig{ActiveThresholdSeconds: 91, PollIntervalMs: 333}, AnomalyThresholds: domain.AnomalyThresholdsConfig{StallThresholdSeconds: 47, ErrorRateMinCalls: 7, ErrorRateThreshold: .31, ErrorRateCriticalThreshold: .81, ContextCeilingWarningTokens: 170001, ContextCeilingCriticalTokens: 220003, ConsecutiveErrorsStreakWarning: 4, ConsecutiveErrorsStreakCritical: 9, ToolThrashingMinFailures: 2, ToolThrashingCriticalFailures: 6, TurnUsageWarningTokens: 31001, TurnUsageCriticalTokens: 61003, ContextGrowthWarningTokens: 41001, ContextGrowthCriticalTokens: 81003}, RoleMappings: domain.RoleMappings{}, RoleOrder: []string{}}
+	return domain.ProjectConfig{ProjectName: "Fixture", AgenticLens: domain.EntrypointConfig{Version: "v9.8.7"}, Ticket: domain.TicketConfig{Prefixes: []domain.TicketPrefix{{Prefix: "T-", Description: "Development", TicketType: "feat"}}, CaseInsensitive: false}, Workspaces: domain.WorkspacesConfig{Roots: []domain.WorkspaceRootConfig{{Path: "records", Discovery: domain.WorkspaceDiscoveryConfig{MaxDepth: 8, MaxDirectories: 300}}}, Artifacts: []domain.WorkspaceArtifactConfig{}}, CodeMetrics: domain.CodeMetricsConfig{BaseBranch: "main", Production: domain.CodeCategoryConfig{Include: []string{"src/**/*.go"}, Exclude: []string{"**/*_test.go"}}, Tests: domain.CodeCategoryConfig{Include: []string{"**/*_test.go"}, Exclude: []string{}}}, Generation: domain.GenerationConfig{Metrics: domain.GenerationPolicy{Skills: false, Delegations: true, Anomalies: true}, Feedback: domain.GenerationFeedbackConfig{ProvisionalThresholdSeconds: 0}, Summary: domain.GenerationSummaryConfig{Enabled: true, Filename: "METRICS.md"}}, Database: domain.DatabaseConfig{BusyTimeoutMs: 0}, Live: domain.LiveConfig{ActiveThresholdSeconds: 91, PollIntervalMs: 333}, AnomalyThresholds: domain.AnomalyThresholdsConfig{StallThresholdSeconds: 47, ErrorRateMinCalls: 7, ErrorRateThreshold: .31, ErrorRateCriticalThreshold: .81, ContextCeilingWarningTokens: 170001, ContextCeilingCriticalTokens: 220003, ConsecutiveErrorsStreakWarning: 4, ConsecutiveErrorsStreakCritical: 9, ToolThrashingMinFailures: 2, ToolThrashingCriticalFailures: 6, TurnUsageWarningTokens: 31001, TurnUsageCriticalTokens: 61003, ContextGrowthWarningTokens: 41001, ContextGrowthCriticalTokens: 81003}, RoleMappings: domain.RoleMappings{}, RoleOrder: []string{}}
 }
 func writeConfig(t *testing.T, root, name, body string) string {
 	t.Helper()
@@ -204,14 +204,10 @@ func TestRequiredCurrentSharedShapeAndIntentionalEmptyLists(t *testing.T) {
 			})
 		}
 	}
-	// A caller may select --workspaces instead; an explicitly invalid value
-	// still cannot bypass ordinary shared configuration validation.
-	withoutWorkspace := replaceSetting(t, base, "workspaces.dir", "<missing>")
-	if _, err := loadBody(t, withoutWorkspace); err != nil {
-		t.Fatalf("optional configured root blocked explicit CLI selection: %v", err)
-	}
-	if _, err := loadBody(t, replaceSetting(t, base, "workspaces.dir", "null")); err == nil || !strings.Contains(err.Error(), "workspaces.dir") {
-		t.Fatalf("invalid configured workspace root accepted: %v", err)
+	for _, value := range []string{"<missing>", "null", "[]"} {
+		if _, err := loadBody(t, replaceSetting(t, base, "workspaces.roots", value)); err == nil || !strings.Contains(err.Error(), "workspaces") {
+			t.Fatalf("missing/invalid explicit roots accepted (%s): %v", value, err)
+		}
 	}
 	for _, key := range []string{"code_metrics.production.include", "code_metrics.production.exclude", "code_metrics.tests.include", "code_metrics.tests.exclude"} {
 		for _, value := range []string{"{}", "['']", "['[']", "[17]"} {

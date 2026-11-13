@@ -75,6 +75,7 @@ func TestCaptureWorkerRetainsAdmittedBuildAcrossPreferredSwitch(t *testing.T) {
 }
 func testCaptureWorkerReleaseSwitch(t *testing.T, queueNext bool) {
 	f := newCaptureGenerationFixture(t)
+	seedCaptureTicketHome(t, f, "TEST-100")
 	prepareCaptureOwner(t, f, "root", "TEST-100", 37)
 	originalConfig := readCaptureFile(t, filepath.Join(f.project, ".agenticlens-config.yaml"))
 	cache := t.TempDir()

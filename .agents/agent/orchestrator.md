@@ -27,3 +27,5 @@ code or perform manual implementation fixes. Delegate owned paths with contract,
 plan, baseline and findings, preserving the shared checkout. Announce assignments
 and report concise outcomes. The parent owns consolidation, integration,
 telemetry, commits and PR delivery. Do not duplicate the workflow in prompts.
+
+Execution scope and approval live in the assigned change’s design.md, current steps in tasks.md, and human verification/PR evidence in delivery.md. Review/test evidence stays change-local under evidence/iterations/<NN>/. The roadmap ticket and index remain separate; follow AGENTS.md for their lifecycle.

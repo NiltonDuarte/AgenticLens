@@ -18,7 +18,8 @@ func executeFormat(args []string, out, diagnostics io.Writer) int {
 	all := flags.Bool("all", false, "Select all discovered ticket ledgers")
 	ticket := flags.String("ticket-id", "", "Select exactly one ticket ledger")
 	tickets := flags.String("ticket-ids", "", "Select comma-separated ticket IDs (trimmed and deduplicated)")
-	workspaces := flags.String("workspaces", "", "Workspace root (defaults to project configuration)")
+	project := flags.String("project", ".", "Project configuration directory")
+	workspace := flags.String("workspace", "", "Explicit ledger directory when selecting one ticket")
 	dryRun := flags.Bool("dry-run", false, "Report formatting differences without writing")
 	check := flags.Bool("check", false, "Exit 1 for formatting differences; exit 2 for input/I/O failures; never write")
 	flags.Usage = func() {
@@ -36,8 +37,8 @@ func executeFormat(args []string, out, diagnostics io.Writer) int {
 	}
 	selected := map[string]bool{}
 	flags.Visit(func(f *flag.Flag) { selected[f.Name] = true })
-	if selected["workspaces"] && strings.TrimSpace(*workspaces) == "" {
-		fmt.Fprintln(diagnostics, "format: --workspaces must be nonblank when supplied")
+	if selected["project"] && strings.TrimSpace(*project) == "" {
+		fmt.Fprintln(diagnostics, "format: --project must be nonblank when supplied")
 		return 2
 	}
 	selectors := 0
@@ -73,7 +74,7 @@ func executeFormat(args []string, out, diagnostics io.Writer) int {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
-	results, err := adapters.FormatLedgerFiles(ctx, adapters.LedgerFormatOptions{Workspaces: *workspaces, All: *all, TicketIDs: ids, Mode: mode})
+	results, err := adapters.FormatLedgerFiles(ctx, adapters.LedgerFormatOptions{Project: *project, Workspace: *workspace, All: *all, TicketIDs: ids, Mode: mode})
 	changed, unchanged, failed := 0, 0, 0
 	for _, result := range results {
 		status := "unchanged"

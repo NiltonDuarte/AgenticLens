@@ -22,7 +22,7 @@ func captureProjectConfig(t *testing.T, project, name string) {
 	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), []byte(data), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.local.yaml"), []byte("telemetry:\n  capture:\n    enabled: true\n    state_dir: .agenticlens-capture\n    max_sessions: 256\n    max_source_bytes: 67108864\n"), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.local.yaml"), []byte("agenticlens:\n  state_dir: publication-state\ntelemetry:\n  capture:\n    enabled: true\n    state_dir: .agenticlens-capture\n    max_sessions: 256\n    max_source_bytes: 67108864\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -173,6 +173,7 @@ func TestPublicationLockSharesPhysicalAliasBeforeAndAfterCreation(t *testing.T) 
 			t.Run(fmt.Sprintf("directory=%t/%s", directoryAlias, state), func(t *testing.T) {
 				t.Setenv("XDG_CACHE_HOME", t.TempDir())
 				project := t.TempDir()
+				captureProjectConfig(t, project, "Publication alias fixture")
 				target := filepath.Join(project, "ledger.json")
 				alias := filepath.Join(project, "alias.json")
 				linkTarget := target

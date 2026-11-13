@@ -1,3 +1,4 @@
+import { workspaceKey, selectWorkspace } from '../domain/workspaces';
 import { useProjectConfig, ticketPolicy } from '../contexts/ProjectConfigContext';
 import { durationLabel, durationDescription } from '../domain/duration';
 import { compareCosts } from '../domain/cost';
@@ -9,7 +10,7 @@ import { InfoTooltip } from './InfoTooltip';
 
 export interface TicketTableProps {
   readonly rows: readonly TicketComparisonRow[];
-  readonly onSelectTicket?: ((ticketId: string) => void) | undefined;
+  readonly onSelectTicket?: ((ticketId: string, workspacePath?: string) => void) | undefined;
 }
 
 type SortField = 'ticket_id' | 'cost_usd' | 'active_duration_seconds' | 'sdlc_iterations';
@@ -202,14 +203,14 @@ export const TicketTable: React.FC<TicketTableProps> = ({
 
                 return (
                   <tr
-                    key={r.ticket_id}
-                    onClick={() => onSelectTicket?.(r.ticket_id)}
+                    key={workspaceKey(r)}
+                    onClick={() => selectWorkspace(onSelectTicket, r)}
                     style={{ cursor: onSelectTicket ? 'pointer' : 'default' }}
                   >
                     <td className="mono-number" style={{ fontWeight: 600 }}>
                       {r.ticket_id}
                     </td>
-                    <td>{r.ticket_title}</td>
+                    <td>{r.ticket_title}{r.workspace_path && <small className="workspace-location">{r.workspace_path}</small>}</td>
                     <td>
                       <span className={`health-badge ${statusClass}`}>
                         {r.context_health_status}

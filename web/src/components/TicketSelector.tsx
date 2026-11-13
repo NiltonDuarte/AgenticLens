@@ -1,3 +1,4 @@
+import { selectWorkspace } from '../domain/workspaces';
 import { useProjectConfig, ticketPolicy } from '../contexts/ProjectConfigContext';
 import React, { useState, useMemo } from 'react';
 import type { AutopsySortMode, ContextHealthStatus } from '../domain/types';
@@ -5,6 +6,7 @@ import { compareTicketIds, compareTicketCompletionDate } from '../domain/formatt
 
 export interface TicketSelectorOption {
   readonly ticket_id: string;
+  readonly workspace_path?: string;
   readonly ticket_title?: string | null;
   readonly context_health_status?: ContextHealthStatus;
   readonly completed_at?: string | null;
@@ -15,12 +17,14 @@ export interface TicketSelectorOption {
 export interface TicketSelectorProps {
   readonly tickets: readonly TicketSelectorOption[];
   readonly selectedTicketId: string | null;
-  readonly onSelectTicket: (ticketId: string) => void;
+  readonly selectedWorkspacePath?: string | undefined;
+  readonly onSelectTicket: (ticketId: string, workspacePath?: string) => void;
 }
 
 export const TicketSelector: React.FC<TicketSelectorProps> = ({
   tickets,
   selectedTicketId,
+  selectedWorkspacePath,
   onSelectTicket,
 }) => {
   const projectConfig = useProjectConfig();
@@ -34,6 +38,10 @@ export const TicketSelector: React.FC<TicketSelectorProps> = ({
     return [...tickets].sort((a, b) => compareTicketIds(a.ticket_id, b.ticket_id, recognitionPolicy));
   }, [tickets, sortMode, recognitionPolicy]);
 
+  const matchingTickets = tickets.filter((ticket) => ticket.ticket_id === selectedTicketId);
+  const selectedValue = selectedWorkspacePath ?? (matchingTickets.length === 1
+    ? matchingTickets[0]?.workspace_path ?? selectedTicketId ?? '' : '');
+
   return (
     <div className="ticket-selector-bar">
       <label htmlFor="ticket-select" className="ticket-selector-label">
@@ -43,18 +51,25 @@ export const TicketSelector: React.FC<TicketSelectorProps> = ({
         <select
           id="ticket-select"
           className="ticket-selector-dropdown"
-          value={selectedTicketId ?? ''}
-          onChange={(e) => onSelectTicket(e.target.value)}
+          value={selectedValue}
+          onChange={(e) => {
+            const ticket = tickets.find((item) => (item.workspace_path ?? item.ticket_id) === e.target.value);
+            if (ticket) selectWorkspace(onSelectTicket, ticket);
+          }}
         >
+          {sortedTickets.length > 0 && selectedValue === '' && <option value="" disabled>Select a workspace location</option>}
+          {selectedWorkspacePath && !tickets.some((item) => item.workspace_path === selectedWorkspacePath) &&
+            <option value={selectedWorkspacePath} disabled>{selectedTicketId} — unavailable location: {selectedWorkspacePath}</option>}
           {sortedTickets.length === 0 && (
             <option value="" disabled>
               No workspaces available
             </option>
           )}
           {sortedTickets.map((t) => (
-            <option key={t.ticket_id} value={t.ticket_id}>
+            <option key={t.workspace_path ?? t.ticket_id} value={t.workspace_path ?? t.ticket_id}>
               {t.ticket_id} - {t.ticket_title && t.ticket_title.trim().length > 0 ? t.ticket_title : 'Untitled'}
               {t.context_health_status ? ` [${t.context_health_status}]` : ''}
+              {t.workspace_path ? ` — ${t.workspace_path}` : ''}
             </option>
           ))}
         </select>

@@ -300,11 +300,14 @@ func TestCaptureNativeGitAdvisoryKeepsActualWorktreeHealthIsolated(t *testing.T)
 	git(first.project, "commit", "--quiet", "--allow-empty", "-m", "initial fixture")
 	second := captureGenerationFixture{project: filepath.Join(t.TempDir(), "linked worktree"), store: first.store}
 	git(first.project, "worktree", "add", "--quiet", "-b", "linked", second.project)
+	if err := os.Mkdir(filepath.Join(second.project, "records"), 0700); err != nil {
+		t.Fatal(err)
+	}
 	second.state, err = capture.ProjectState(base, second.project)
 	if err != nil {
 		t.Fatal(err)
 	}
-	second.output = filepath.Join(second.project, "ledger.json")
+	second.output = filepath.Join(second.project, "agentic_metrics.json")
 	writeLocal := func(f captureGenerationFixture, warning bool) {
 		t.Helper()
 		body := fmt.Sprintf("telemetry:\n  capture:\n    pass_timeout_ms: 3000\n    max_sessions: 256\n    max_source_bytes: 67108864\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 5000\n    enabled: false\n    state_dir: %q\n    commit_warning: %t\n", base, warning)

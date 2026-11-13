@@ -1,3 +1,4 @@
+import { WorkspaceLoadWarning, mergeWorkspaceDiagnostics } from '../components/WorkspaceLoadWarning';
 import { TagFilters } from '../components/TagFilters';
 import { tagChoices, filterLedgersByTags, matchesTags, type TagFilter } from '../domain/tags';
 import { useRolePresentation } from '../contexts/ProjectConfigContext';
@@ -9,6 +10,7 @@ import type {
   DataSource,
   EventFact,
   WorkspaceDetail,
+  WorkspaceDiagnostic,
 } from '../domain/types';
 import { ledgerSkills, ledgerDelegations, sessionTools, ledgerMetricCoverage } from '../domain/types';
 import { rebindEvent, selectWorkspaceEvents, selectWorkspaceAnomalyEntries, recordedAnomalyEntries, rebindPresentedAnomaly, type PresentedAnomaly } from '../domain/events';
@@ -48,11 +50,13 @@ import { InfoTooltip } from '../components/InfoTooltip';
 
 export interface TicketDeepDiveProps {
   readonly selectedTicketId?: string | null;
-  readonly onSelectTicket?: (ticketId: string) => void;
+  readonly selectedWorkspacePath?: string | null;
+  readonly onSelectTicket?: (ticketId: string, workspacePath?: string) => void;
 }
 
 export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
   selectedTicketId,
+  selectedWorkspacePath,
   onSelectTicket,
 }) => {
   const rolePresentation = useRolePresentation();
@@ -78,6 +82,8 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
   const [focusedThread, setFocusedThread] = useState<{ readonly id: string } | undefined>();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [activeTicketId, setActiveTicketId] = useState<string | null>(selectedTicketId ?? null);
+  const [activeWorkspacePath, setActiveWorkspacePath] = useState<string | undefined>(selectedWorkspacePath ?? undefined);
+  const [workspaceDiagnostics, setWorkspaceDiagnostics] = useState<readonly WorkspaceDiagnostic[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -88,8 +94,9 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
   useEffect(() => {
     if (selectedTicketId) {
       setActiveTicketId(selectedTicketId);
+      setActiveWorkspacePath(selectedWorkspacePath ?? undefined);
     }
-  }, [selectedTicketId]);
+  }, [selectedTicketId, selectedWorkspacePath]);
 
   const loadData = useCallback(async (forceReloadFleet = false) => {
     const generation = ++requestGenerationRef.current;
@@ -117,6 +124,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
         currentLedgers = ledgersRes.data;
         ledgersRef.current = currentLedgers;
         setLedgers(currentLedgers);
+        setWorkspaceDiagnostics(ledgersRes.diagnostics ?? []);
       }
 
       let targetId = activeTicketId;
@@ -126,15 +134,16 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
       }
 
       if (targetId) {
-        const detailRes = await fetchWorkspaceById(targetId);
+        const detailRes = await (activeWorkspacePath ? fetchWorkspaceById(targetId, undefined, activeWorkspacePath) : fetchWorkspaceById(targetId));
         if (!isCurrentRequest()) return;
         setDetail(detailRes.data);
+        setWorkspaceDiagnostics((current) => mergeWorkspaceDiagnostics(current, detailRes.diagnostics ?? []));
         setTraceAnomalyEntries(detailRes.data.ledger?.facts ? recordedAnomalyEntries(detailRes.data.ledger.facts) : []);
         setLoading(false);
 
         // Enrichment is optional: committed facts are already visible while it runs.
         try {
-          const eventsRes = await fetchWorkspaceEvents(targetId);
+          const eventsRes = await fetchWorkspaceEvents(targetId, detailRes.data.workspace_path);
           if (!isCurrentRequest()) return;
           if (eventsRes.data.ticket_id !== targetId) return;
           const selected = selectWorkspaceEvents(eventsRes.data);
@@ -174,7 +183,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
     } finally {
       if (isCurrentRequest()) setLoading(false);
     }
-  }, [activeTicketId]);
+  }, [activeTicketId, activeWorkspacePath]);
 
   const invalidateRequests = useCallback(() => {
     requestGenerationRef.current += 1;
@@ -189,9 +198,10 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
     void loadData(true);
   }, [loadData]);
 
-  const handleSelectTicket = (ticketId: string) => {
+  const handleSelectTicket = (ticketId: string, workspacePath?: string) => {
     setActiveTicketId(ticketId);
-    onSelectTicket?.(ticketId);
+    setActiveWorkspacePath(workspacePath);
+    onSelectTicket?.(ticketId, workspacePath);
   };
 
   const handleSelectSession = (id: string) => {
@@ -209,6 +219,20 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
     setIsDrawerOpen(true);
   };
 
+  const ticketOptions = filterLedgersByTags(ledgers, tagFilters).map((l) => ({
+    ...(l.workspace_path ? { workspace_path: l.workspace_path } : {}),
+    ticket_id: l.ticket_id ?? 'unknown',
+    ticket_title: l.ticket_title,
+    context_health_status: l.workflow_efficiency?.context_window_health?.status,
+    completed_at: l.completed_at,
+    updated_at: l.updated_at,
+    started_at: l.started_at,
+  }));
+
+  const workspaceSelector = <TicketSelector tickets={ticketOptions} selectedTicketId={activeTicketId}
+    selectedWorkspacePath={activeWorkspacePath} onSelectTicket={handleSelectTicket} />;
+  const workspaceWarnings = <WorkspaceLoadWarning diagnostics={workspaceDiagnostics} />;
+
   if (loading) {
     return (
       <div className="loading-container">
@@ -220,23 +244,30 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
 
   if (error) {
     return (
-      <div className="error-banner">
-        <span className="error-text">{error}</span>
-        <button type="button" className="btn-secondary" onClick={handleRefresh}>
-          Retry Connection
-        </button>
+      <div className="deep-dive-container">
+        {workspaceSelector}
+        {workspaceWarnings}
+        <div className="error-banner" role="alert">
+          <span className="error-text">{error}</span>
+          <button type="button" className="btn-secondary" onClick={handleRefresh}>
+            Retry Connection
+          </button>
+        </div>
       </div>
     );
   }
 
   if (!detail || !detail.ledger) {
     return (
-      <EmptyState
-        title="Zero Telemetry Workspaces Available"
-        message="No workspace autopsy records found. Ensure telemetry ledgers are present in the workspaces directory."
-        actionLabel="Refresh Data"
-        onAction={handleRefresh}
-      />
+      <div className="deep-dive-container">
+        {workspaceWarnings}
+        <EmptyState
+          title="Zero Telemetry Workspaces Available"
+          message="No workspace autopsy records found. Ensure telemetry ledgers are present within the configured directories and discovery scope."
+          actionLabel="Refresh Data"
+          onAction={handleRefresh}
+        />
+      </div>
     );
   }
 
@@ -249,20 +280,11 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
   const toolUsageByName = aggregateToolUsage(sessionTools(ledger.facts?.sessions));
   const subTurns = eff.subagent_turn_velocity;
 
-  const ticketOptions = filterLedgersByTags(ledgers, tagFilters).map((l) => ({
-    ticket_id: l.ticket_id ?? 'unknown',
-    ticket_title: l.ticket_title,
-    context_health_status: l.workflow_efficiency?.context_window_health?.status,
-    completed_at: l.completed_at,
-    updated_at: l.updated_at,
-    started_at: l.started_at,
-  }));
-
   const tagControls = <TagFilters choices={tagChoices([...ledgers.map((item) => item.facts.tags), ledger.facts.tags])} filters={tagFilters} onChange={setTagFilters} />;
   if (!matchesTags(ledger.facts.tags, tagFilters)) {
     return <div className="deep-dive-container">
       <div className="deep-dive-top-bar">
-        <TicketSelector tickets={ticketOptions} selectedTicketId={activeTicketId} onSelectTicket={handleSelectTicket} />
+        {workspaceSelector}
         {tagControls}
       </div>
       <p role="status">This ticket does not match the selected tags. Choose another ticket or clear tag filters.</p>
@@ -275,17 +297,15 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
     <div className="deep-dive-container">
       {/* Ticket Selection Bar */}
       <div className="deep-dive-top-bar">
-        <TicketSelector
-          tickets={ticketOptions}
-          selectedTicketId={activeTicketId}
-          onSelectTicket={handleSelectTicket}
-        />
+        {workspaceSelector}
         {tagControls}
       </div>
 
       <div aria-label="Recorded ticket tags">
         {Object.entries(ledger.facts.tags ?? {}).map(([key, value]) => <span key={key}>{key}: {value}; </span>)}
       </div>
+      {workspaceWarnings}
+      {detail.workspace_path && <p className="workspace-location">Location: <code>{detail.workspace_path}</code></p>}
       {/* Workspace Header Information */}
       <div className="workspace-header-card">
         <div className="header-meta-row">
@@ -714,7 +734,7 @@ export const TicketDeepDive: React.FC<TicketDeepDiveProps> = ({
 
       {/* Row 7: Session Thread Logs */}
       <SkillsSubagentsPanel
-        key={ledger.ticket_id}
+        key={detail.workspace_path ?? ledger.ticket_id}
         skills={ledgerSkills(ledger.facts)}
         sessions={ledger.facts.sessions}
         delegations={ledgerDelegations(ledger.facts)}

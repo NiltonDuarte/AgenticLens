@@ -1,8 +1,12 @@
 package adapters_test
 
 import (
+	"agenticlens/internal/adapters"
 	"agenticlens/internal/domain"
 	"fmt"
+	"os"
+	"path/filepath"
+	"testing"
 )
 
 func sessionFacts(invocations []domain.InvocationFact, tools []domain.ToolFact, events []domain.EventFact) []domain.SessionFact {
@@ -155,4 +159,25 @@ func fixtureInvocationSessions(invocations []domain.InvocationFact) []domain.Ses
 		return nil
 	}
 	return []domain.SessionFact{{ID: "fixture-session", Source: domain.SourceOpenCode, User: "fixture-user", Invocations: invocations}}
+}
+
+func saveFixtureFactLedger(t *testing.T, path string, ledger domain.AgenticFactLedger) error {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+	return adapters.SaveFactLedger(path, ledger)
+}
+
+func saveFixtureMetricsLedger(t *testing.T, path string, ledger domain.AgenticMetricsLedger) error {
+	t.Helper()
+	root := filepath.Dir(path)
+	if err := os.MkdirAll(root, 0700); err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+	writeWorkspacePolicy(t, root, ".")
+	if err := os.WriteFile(filepath.Join(root, ".agenticlens-config.local.yaml"), []byte("agenticlens:\n  state_dir: .publication-state\n"), 0600); err != nil {
+		return err
+	}
+	return adapters.SaveMetricsLedger(path, ledger)
 }

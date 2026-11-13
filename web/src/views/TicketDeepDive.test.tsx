@@ -895,10 +895,10 @@ items: [{path: 'CONTRACT.md', title: 'CONTRACT.md', description: '', content: nu
             expect(screen.getByText('AL-1')).toBeInTheDocument();
         });
         const select = screen.getByLabelText(/workspace autopsy/i);
-        fireEvent.change(select, { target: { value: 'AL-2' } });
-        expect(onSelectTicket).toHaveBeenCalledWith('AL-2');
+        fireEvent.change(select, { target: { value: '/records/AL-2' } });
+        expect(onSelectTicket).toHaveBeenCalledWith('AL-2', '/records/AL-2');
         await waitFor(() => {
-            expect(fetchByIdSpy).toHaveBeenCalledWith('AL-2');
+            expect(fetchByIdSpy).toHaveBeenCalledWith('AL-2', undefined, '/records/AL-2');
         });
     });
     it('does not re-fetch fleet ledgers when switching tickets after initial catalog load', async () => {
@@ -922,10 +922,10 @@ items: [{path: 'CONTRACT.md', title: 'CONTRACT.md', description: '', content: nu
         expect(fetchLedgersSpy).toHaveBeenCalledTimes(1);
         expect(fetchByIdSpy).toHaveBeenCalledWith('AL-1');
         const select = screen.getByLabelText(/workspace autopsy/i);
-        fireEvent.change(select, { target: { value: 'AL-2' } });
-        expect(onSelectTicket).toHaveBeenCalledWith('AL-2');
+        fireEvent.change(select, { target: { value: '/records/AL-2' } });
+        expect(onSelectTicket).toHaveBeenCalledWith('AL-2', '/records/AL-2');
         await waitFor(() => {
-            expect(fetchByIdSpy).toHaveBeenCalledWith('AL-2');
+            expect(fetchByIdSpy).toHaveBeenCalledWith('AL-2', undefined, '/records/AL-2');
         });
         // Verify fleet ledgers was NOT called again on ticket switch
         expect(fetchLedgersSpy).toHaveBeenCalledTimes(1);
@@ -1807,7 +1807,7 @@ describe('Recorded fixture JSON through API validation and ticket presentation',
         for (const owner of detail.ledger.facts.sessions) for (const invocation of owner.invocations) invocation.model = model;
         const before = JSON.stringify(detail);
         const fetch = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
-            const route = String(input);
+            const route = String(input).split('?')[0];
             if (route === '/api/workspaces/TEST-WIRE/events') return new Response('', {status: 503});
             const payload: unknown = route === '/api/workspaces' ? [detail.ledger]
                 : route === '/api/workspaces/TEST-WIRE' ? detail : undefined;
@@ -1827,7 +1827,7 @@ describe('Recorded fixture JSON through API validation and ticket presentation',
     it('renders lean activations and separate source badges without saved traces or opaque child links', async () => {
         vi.restoreAllMocks();
         const fetch = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
-            const route = String(input);
+            const route = String(input).split('?')[0];
             const payload: unknown = route === '/api/workspaces' ? [codexOwnedDetail.ledger]
                 : route === '/api/workspaces/TEST-WIRE' ? codexOwnedDetail
                 : route === '/api/workspaces/TEST-WIRE/events' ? codexSourceEvents
@@ -1923,5 +1923,47 @@ describe('Shared native partial-hydration HTTP wire', () => {
         expect(screen.getByRole('heading', {name: displayTitle})).toBeVisible();
         expect(within(screen.getByRole('dialog')).getByText(displayDescription)).toBeVisible();
         expect(JSON.stringify({partialDetailWire, partialEventsWire})).toBe(before);
+    });
+});
+
+
+describe('Workspace location recovery', () => {
+    beforeEach(() => vi.restoreAllMocks());
+    const base = mockWorkspaceDetails['AL-1']!;
+    const at = (path: string): WorkspaceDetail => ({...base, workspace_path: path, ledger: {...base.ledger, workspace_path: path}});
+
+    it('requires explicit selection for duplicate tickets and keeps the selector available after an ambiguity error', async () => {
+        const first = at('/records/first');
+        const second = at('/archive/renamed');
+        vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({data: [first.ledger, second.ledger]});
+        const fetchDetail = vi.spyOn(apiClient, 'fetchWorkspaceById').mockImplementation(async (_id, _tags, selected) => {
+            if (!selected) throw new Error('More than one ledger for AL-1; select a location.');
+            return {data: selected === second.workspace_path ? second : first};
+        });
+        const events = vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockRejectedValue(new Error('Source unavailable'));
+        render(<TicketDeepDive selectedTicketId="AL-1" />);
+        expect(await screen.findByRole('alert')).toHaveTextContent('select a location');
+        expect(fetchDetail).toHaveBeenCalledTimes(1);
+        fireEvent.change(screen.getByLabelText('Workspace Autopsy:'), {target: {value: '/archive/renamed'}});
+        await waitFor(() => expect(fetchDetail).toHaveBeenLastCalledWith('AL-1', undefined, '/archive/renamed'));
+        await waitFor(() => expect(events).toHaveBeenCalledWith('AL-1', '/archive/renamed'));
+        expect(screen.getByText('/archive/renamed', {selector: 'code'})).toBeInTheDocument();
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+
+    it('ignores a stale detail response when the same ticket selects another location', async () => {
+        const old = deferred<{data: WorkspaceDetail}>();
+        const first = at('/records/first');
+        const second = at('/records/second');
+        vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({data: [first.ledger, second.ledger]});
+        vi.spyOn(apiClient, 'fetchWorkspaceById').mockImplementation((_id, _tags, selected) => selected === first.workspace_path ? old.promise : Promise.resolve({data: second}));
+        const events = vi.spyOn(apiClient, 'fetchWorkspaceEvents').mockRejectedValue(new Error('Source unavailable'));
+        const {rerender} = render(<TicketDeepDive selectedTicketId="AL-1" selectedWorkspacePath="/records/first" />);
+        await waitFor(() => expect(apiClient.fetchWorkspaceById).toHaveBeenCalledWith('AL-1', undefined, '/records/first'));
+        rerender(<TicketDeepDive selectedTicketId="AL-1" selectedWorkspacePath="/records/second" />);
+        await screen.findByText('/records/second', {selector: 'code'});
+        await act(async () => old.resolve({data: first}));
+        expect(screen.queryByText('/records/first', {selector: 'code'})).not.toBeInTheDocument();
+        expect(events).not.toHaveBeenCalledWith('AL-1', '/records/first');
     });
 });

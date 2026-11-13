@@ -82,6 +82,10 @@ Apply the [portable-ledger acceptance scenarios](docs/REGRESSION_PREVENTION.md#p
 
 ### Configuration and Live Work
 
+- Workspace discovery uses only explicit shared `workspaces.roots` entries, each with path and integer maximum depth/directory budget. Ledger IDs are authoritative; folder names and planning metadata are not identity. Enumerate physical aliases once, retain valid sibling results after root failure, and require selection for distinct ledgers sharing an ID. Retired scalar/root overrides have no fallback.
+- All readers/writers resolve the actual ledger location. Moves/archive cannot change source ownership or recreate former parents. Publication journals/backups and locks use explicit selected-local `agenticlens.state_dir`; manual writing can initialize it without capture enablement or registry access. Reads remain private-state independent. A transient adjacent transaction indicator preserves incomplete-publication detection on moved/copied workspaces; missing private recovery data is incomplete, not permission to accept mixed artifacts.
+- Roadmap tickets and their index own evolving intent/priorities/status, separately from linked OpenSpec execution changes. Change design owns explicit approval/steering; tasks own progress; delivery owns evidence. Preserve this distinction in adapters, setup and guidance. OpenSpec schema readiness and archive are not implementation approval or ticket completion.
+
 - Trace shared configuration through loader, validation, writer/templates, CLI, live/offline calculations, API, and UI. Test non-default values end to end. Required settings fail explicitly when absent; do not revive removed configuration aliases implicitly.
 - Polling designs must state a work bound in terms of session count, history size, subscribers, and cadence. Prefer changed-data reads; avoid rebuilding every full trace on unchanged ticks.
 - Failed optional lookups must surface error or partial-data semantics. An unsuccessful lookup is not evidence of an empty result.

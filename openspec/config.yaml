@@ -1,0 +1,29 @@
+# OpenSpec workflow configuration; AgenticLens ledger discovery is separate.
+schema: agenticlens
+context: |
+  Read AGENTS.md and TECHNICAL_GUIDELINES.md before acting.
+  Roadmap tickets remain in alspaces/plan; selected work lives in a linked change.
+  AgenticLens ignores folders without ledgers and reads ticket IDs only from ledgers.
+  A proposal, ready planning artifacts or completed checkboxes do not grant scope approval.
+  The orchestrator coordinates planner, coder, tester and independent reviewers.
+  The user must explicitly approve implementation scope. PO sessions end at planning delivery.
+rules:
+  proposal:
+    - Link the roadmap ticket; describe selected scope without duplicating roadmap priority or status.
+  specs:
+    - Define observable requirements and scenarios for the selected work; preserve portable recorded history.
+  design:
+    - Record scope approval, material steering, preserved guarantees, owners and verification boundaries.
+  tasks:
+    - Assign implementation and verification responsibilities; checkboxes alone are not delivery evidence.
+  delivery:
+    - Record tested revision, actual commands/results, review attribution, unresolved evidence and PR context.
+operations:
+  apply:
+    guidance:
+      - Check explicit implementation approval in design.md before coding; follow agentic-lens-dev.
+      - Do not implement from planning readiness alone or let the orchestrator write product fixes.
+  archive:
+    guidance:
+      - Archive only after the owning workflow's verification and consolidated review gates pass.
+      - Keep delivery evidence and telemetry with the change; archive does not complete its roadmap ticket.

@@ -16,7 +16,7 @@ func TestGenerateConfigYAMLExplicitValuesRoundTrip(t *testing.T) {
 		t.Run(text, func(t *testing.T) {
 			cfg := testProjectConfig()
 			cfg.ProjectName = text
-			cfg.Workspaces.Dir = "records/space # path"
+			cfg.Workspaces.Roots[0].Path = "records/space # path"
 			cfg.Ticket.Prefixes = []domain.TicketPrefix{{Prefix: "T[1]-", Description: text, TicketType: "docs"}}
 			cfg.RoleMappings = domain.RoleMappings{"true": "null", "builder: one": text}
 			cfg.RoleOrder = []string{"true", text}
@@ -34,7 +34,7 @@ func TestGenerateConfigYAMLExplicitValuesRoundTrip(t *testing.T) {
 			if err != nil {
 				t.Fatalf("rendered YAML invalid: %v\n%s", err, rendered)
 			}
-			if got.ProjectName != text || got.Workspaces.Dir != cfg.Workspaces.Dir || !reflect.DeepEqual(got.Ticket, cfg.Ticket) || !reflect.DeepEqual(got.RoleMappings, cfg.RoleMappings) || !reflect.DeepEqual(got.RoleOrder, cfg.RoleOrder) || !reflect.DeepEqual(got.Workspaces.Artifacts, cfg.Workspaces.Artifacts) || !reflect.DeepEqual(got.CodeMetrics, cfg.CodeMetrics) {
+			if got.ProjectName != text || got.Workspaces.Roots[0].Path != cfg.Workspaces.Roots[0].Path || !reflect.DeepEqual(got.Ticket, cfg.Ticket) || !reflect.DeepEqual(got.RoleMappings, cfg.RoleMappings) || !reflect.DeepEqual(got.RoleOrder, cfg.RoleOrder) || !reflect.DeepEqual(got.Workspaces.Artifacts, cfg.Workspaces.Artifacts) || !reflect.DeepEqual(got.CodeMetrics, cfg.CodeMetrics) {
 				t.Fatalf("scalar/policy round trip changed\n got %+v\nwant %+v", got, cfg)
 			}
 			if got.Database.BusyTimeoutMs != 0 || got.Generation.Feedback.ProvisionalThresholdSeconds != 0 || got.Generation.Metrics != cfg.Generation.Metrics || got.Generation.Summary != cfg.Generation.Summary {
@@ -55,7 +55,7 @@ func TestGenerateConfigYAMLRequiredAndInvalidChoices(t *testing.T) {
 		name  string
 		alter func(*domain.ProjectConfig)
 	}{
-		{"workspace", func(c *domain.ProjectConfig) { c.Workspaces.Dir = "  " }},
+		{"workspace", func(c *domain.ProjectConfig) { c.Workspaces.Roots[0].Path = "  " }},
 		{"base", func(c *domain.ProjectConfig) { c.CodeMetrics.BaseBranch = "" }},
 		{"prefix description", func(c *domain.ProjectConfig) { c.Ticket.Prefixes[0].Description = "" }},
 		{"production list", func(c *domain.ProjectConfig) { c.CodeMetrics.Production.Include = nil }},

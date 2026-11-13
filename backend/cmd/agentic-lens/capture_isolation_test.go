@@ -41,6 +41,10 @@ func TestCaptureManualSelectorsRequireExactSourceProject(t *testing.T) {
 					if err := os.WriteFile(filepath.Join(selectedProject, ".agenticlens-config.yaml"), readCaptureFile(t, filepath.Join(f.project, ".agenticlens-config.yaml")), 0600); err != nil {
 						t.Fatal(err)
 					}
+					if err := os.MkdirAll(filepath.Join(selectedProject, "records"), 0700); err != nil {
+						t.Fatal(err)
+					}
+					writeManualStateOnlyConfig(t, selectedProject)
 				}
 				file, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, 0600)
 				if err != nil {
@@ -53,7 +57,7 @@ func TestCaptureManualSelectorsRequireExactSourceProject(t *testing.T) {
 				if err = file.Close(); err != nil {
 					t.Fatal(err)
 				}
-				output := filepath.Join(selectedProject, "isolated.json")
+				output := filepath.Join(selectedProject, "agentic_metrics.json")
 				args := []string{"generate", "--source", "codex", "--codex-home", f.store, "--capture-dir", f.state, "--ticket-id", "TEST-100", "--ticket-title", "Exact project", "--ticket-type", "feat", "--json-output", output}
 				if selector == "session" {
 					args = append(args, "--session-id", "root")
@@ -153,6 +157,24 @@ func TestCaptureCLIRestartsInterruptedArtifactPublication(t *testing.T) {
 				if err = adapters.CheckPublication(f.output); err == nil {
 					t.Fatal("interrupted set claimed complete")
 				}
+				if legacy {
+					// Retired report membership requires explicit recovery with the
+					// complete accepted set; current CLI must not infer an adapter.
+					unchanged := map[string][]byte{}
+					for _, path := range append(paths, f.output+".publication-pending") {
+						unchanged[path] = readCaptureFile(t, path)
+					}
+					out, err := runCaptureNative(t, f.project, "", f.args(t, "--append", summary)...)
+					if err == nil || !bytes.Contains(out, []byte("complete authorized publication set")) {
+						t.Fatalf("retired membership silently adapted: %v %s", err, out)
+					}
+					for path, body := range unchanged {
+						if !bytes.Equal(body, readCaptureFile(t, path)) {
+							t.Fatalf("rejected recovery changed %s", path)
+						}
+					}
+					return
+				}
 				after := f.generate(t, "--append", summary)
 				if !reflect.DeepEqual(before.Sessions, after.Sessions) {
 					t.Fatalf("restart lost accepted source: %+v", after.Sessions)
@@ -166,11 +188,7 @@ func TestCaptureCLIRestartsInterruptedArtifactPublication(t *testing.T) {
 				if bytes.Contains(readCaptureFile(t, summary), []byte("](capture_report.json)")) {
 					t.Fatal("recovered summary linked retired report")
 				}
-				if legacy {
-					if !bytes.Equal(readCaptureFile(t, report), retired) {
-						t.Fatal("legacy recovery failed to restore historical report unchanged")
-					}
-				} else if _, err := os.Stat(report); !os.IsNotExist(err) {
+				if _, err := os.Stat(report); !os.IsNotExist(err) {
 					t.Fatalf("modern publication created report: %v", err)
 				}
 				assertCapturePublishedOwners(t, captureDiagnostics(t, f.project, f.state), f.output, summary, after.Sessions)
@@ -186,6 +204,7 @@ func TestCaptureAutomaticSharedStoreAndTicketStayInExactProjects(t *testing.T) {
 	base := t.TempDir()
 	fixtures := []captureGenerationFixture{first, second}
 	for index, f := range fixtures {
+		seedCaptureTicketHome(t, f, "TEST-100")
 		writeCaptureSuccessfulPublicationPolicy(t, f.project, base)
 		scoped, err := capture.ProjectState(base, f.project)
 		if err != nil {
@@ -280,7 +299,7 @@ func TestCaptureAutomaticSharedStoreAndTicketStayInExactProjects(t *testing.T) {
 		for time.Now().Before(deadline) {
 			body, err := os.ReadFile(output)
 			var ledger domain.AgenticFactLedger
-			if err == nil && json.Unmarshal(body, &ledger) == nil {
+			if err == nil && json.Unmarshal(body, &ledger) == nil && len(ledger.Sessions) > 0 {
 				if len(ledger.Sessions) != 1 || ledger.Sessions[0].ID != fmt.Sprintf("project-%d", index) || len(ledger.Sessions[0].Invocations) != 1 || ledger.Sessions[0].Invocations[0].Tokens.Input != int64(10+index) {
 					t.Fatalf("cross-project automatic import: %+v", ledger.Sessions)
 				}
