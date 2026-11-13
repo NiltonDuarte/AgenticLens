@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AL-46 collapsible failed tool calls section in live inspector.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/preview/143/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/preview/143/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><p>h3. Title: AL-46: Collapsible Failed Tool Calls Section with Prominent Failure Badge and Default-Collapsed State</p>
+
+<p><em>TARGET</em>: AgenticLens (presentation / web / components / tests)</p>
+
+<p><em>CONTEXT</em></p>
+
+<p>In the Live Trace Inspector (<code class="language-plaintext highlighter-rouge">div#root &gt; div.app-container &gt; main.main-content &gt; div.live-observability-view &gt; div.live-split-layout &gt; div.live-split-pane.right-inspector-pane &gt; div.live-trace-inspector-container &gt; section.inspector-failed-tools-section &gt; h4.failed-tools-heading</code>), when an agent session encounters failed tool executions, all <code class="language-plaintext highlighter-rouge">FailedToolAlertCard</code> instances are rendered fully expanded by default.
+In sessions with 3 to 10+ consecutive tool retry errors, the error section takes up hundreds of vertical pixels, pushing the actual execution message stream (<code class="language-plaintext highlighter-rouge">section.inspector-messages-section</code>) completely out of view. However, simply collapsing the section risks hiding critical failure states from operators.</p>
+
+<p><em>GOAL</em></p>
+
+<p>Make the Failed Tool Calls section collapsible and collapsed by default, while rendering a prominent, high-visibility error badge and failure count on the collapsed header summary bar along with an expand/collapse toggle (<code class="language-plaintext highlighter-rouge">data-testid="failed-tools-toggle-btn"</code>), ensuring critical execution issues remain immediately obvious without blocking the message stream.</p>
+
+<p><em>VERTICAL SLICE SCOPE</em></p>
+
+<ul>
+  <li>Domain Core: Zero domain model changes; utilizes existing <code class="language-plaintext highlighter-rouge">LiveTraceView.failed_tool_calls</code> and <code class="language-plaintext highlighter-rouge">LiveTraceView.recent_errors</code>.</li>
+  <li>Boundary Adapter: Zero network changes; state is managed within the inspector component.</li>
+  <li>Presentation:
+    <ul>
+      <li>In <code class="language-plaintext highlighter-rouge">LiveTraceInspector.tsx</code>: Local state <code class="language-plaintext highlighter-rouge">isFailedToolsExpanded</code> (default <code class="language-plaintext highlighter-rouge">false</code>).</li>
+      <li>In collapsed header: Render heading with a prominent failure pill/badge (e.g. <code class="language-plaintext highlighter-rouge">Failed Tool Calls: N</code> in error red/amber styling) alongside an expand button (<code class="language-plaintext highlighter-rouge">data-testid="failed-tools-toggle-btn"</code>).</li>
+      <li>In expanded view: Render the list of <code class="language-plaintext highlighter-rouge">FailedToolAlertCard</code> items.</li>
+      <li>In <code class="language-plaintext highlighter-rouge">web/src/index.css</code>: Add styles for collapsed header bar, prominent failure badge, and toggle button.</li>
+    </ul>
+  </li>
+  <li>Quality: Unit tests in <code class="language-plaintext highlighter-rouge">LiveTraceInspector.test.tsx</code> verifying:
+    <ul>
+      <li>When failed tools exist, section is collapsed by default.</li>
+      <li>Prominent failure badge and exact error count are visible in the collapsed header.</li>
+      <li>Execution message stream is immediately visible below the collapsed header bar.</li>
+      <li>Clicking toggle expands and collapses the card list smoothly.</li>
+      <li>Keyboard accessibility (<code class="language-plaintext highlighter-rouge">Enter</code>/<code class="language-plaintext highlighter-rouge">Space</code>) on toggle button.</li>
+    </ul>
+  </li>
+</ul>
+
+<p><em>ACCEPTANCE CRITERIA</em></p>
+
+<ul>
+  <li>When <code class="language-plaintext highlighter-rouge">hasFailedTools</code> is true, <code class="language-plaintext highlighter-rouge">section.inspector-failed-tools-section</code> is collapsed by default.</li>
+  <li>The collapsed state renders a high-visibility badge displaying the exact failed tools count (e.g. <code class="language-plaintext highlighter-rouge">Failed Tool Calls: N</code>).</li>
+  <li>The individual <code class="language-plaintext highlighter-rouge">FailedToolAlertCard</code> elements are hidden when collapsed and rendered when expanded.</li>
+  <li>Clicking the toggle button expands and collapses the error cards list.</li>
+  <li>If a session has zero failed tool calls, the section is omitted entirely.</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">npm run typecheck</code>, <code class="language-plaintext highlighter-rouge">npm run lint</code>, and <code class="language-plaintext highlighter-rouge">npm test</code> pass with zero errors.</li>
+</ul>
+
+<p><em>DEFINITION OF DONE</em></p>
+
+<ul>
+  <li>Code and tests merged to target branch.</li>
+  <li>Quality gates passing (<code class="language-plaintext highlighter-rouge">make check</code>, <code class="language-plaintext highlighter-rouge">make test</code>, or <code class="language-plaintext highlighter-rouge">make</code>).</li>
+  <li>Go and TypeScript type checking clean with zero any.</li>
+  <li>Telemetry tested with <code class="language-plaintext highlighter-rouge">agentic-lens</code> CLI.</li>
+</ul>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AL-84 adopt openspec across the platform and repository.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/preview/143/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/preview/143/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><h1 id="al-84-adopt-openspec-across-the-platform-and-repository">AL-84: Adopt OpenSpec across the platform and repository</h1>
+
+<h2 id="goal">Goal</h2>
+
+<p>Deliver one usable OpenSpec workflow for AgenticLens itself and adopting repositories: a ticket-prefixed change is the single home for planning, delivery evidence and telemetry, and remains readable and refreshable after archive.</p>
+
+<h2 id="context">Context</h2>
+
+<p>The <a href="https://github.com/NiltonDuarte/AgenticLens/blob/a884bbb2395dce8826be396e3dec56b4d21bca4a/alspaces/PO-24/ASSESSMENT.md">PO-24 assessment</a> confirmed that configuration can discover ledgers inside OpenSpec changes, but detail readers and publishers reconstruct a direct path from the ticket ID. Multiple roots alone cannot follow archive renames or prevent active-folder recreation. Repository agents, skills and backlog still assume separate alspaces ticket folders. This ticket delivers the complete adoption outcome in one slice, as explicitly requested by the user; platform support without the repository/guidance cutover is incomplete.</p>
+
+<h2 id="acceptance-criteria">Acceptance criteria</h2>
+
+<ul>
+  <li>Support multiple explicit shared workspace roots, including OpenSpec active/archive directories and existing historical records. Provide bounded immediate-child discovery for the new mode; retain existing single-root recursive configuration and explicit-override behavior. Missing, invalid or contradictory policy fails clearly rather than selecting an invented root.</li>
+  <li>All workspace consumers use one stable-identity/location resolution contract: listing, detail, configured artifacts, events/traces, comparison, live workspace selection, manual default destination selection and automatic publication. Moving a known change between configured roots preserves its identity, supported facts and ordinary access.</li>
+  <li>Create OpenSpec changes from explicit configured canonical ticket IDs plus descriptions, for example canonical <code class="language-plaintext highlighter-rouge">AL-123</code> with folder <code class="language-plaintext highlighter-rouge">al-123-add-login</code>. Preserve canonical spelling separately from mutable folder names. OpenSpec already accepts this lowercase naming convention; use supported setup/creation extension points rather than requiring an upstream fork or an unverified hook. Reject invalid names/prefixes, collisions and conflicting folder/ledger identity without overwriting content.</li>
+  <li>Existing valid ledgers supply recorded ticket identity. Ledger-free known changes can be resolved through explicit naming/creation association for first publication. Require one change per canonical ticket within the selected project; multiple distinct matches are actionable conflicts, not permission to select the first root, merge facts or silently prefer an active folder.</li>
+  <li>Physical aliases/overlapping roots cannot enumerate one directory twice. Archive containers and nested spec folders are not tickets in immediate-child mode. An unavailable root produces partial-result diagnostics while valid sibling roots remain usable. Expose location/conflict/recovery context consistently in CLI, API and dashboard; absent telemetry is unavailable, not measured zero.</li>
+  <li>In managed OpenSpec mode, publish only inside a unique existing change. AgenticLens may initialize its ledger there but never create a missing change directory. Explicit output paths must agree with the resolved change and cannot bypass containment or missing-parent checks. Preserve supported explicit initialization/output behavior for legacy single-root projects.</li>
+  <li>Refresh an archived change’s existing ledger without reactivating it or creating an active sibling. Concurrent archive/move and interrupted publication must yield one valid update or an explicit recoverable retry, with no lost history, duplicate outputs or recreated parents. Verification must exercise real filesystem movement rather than only compare path strings.</li>
+  <li>Keep exact source/session bindings attached to the canonical ticket within the existing project/worktree boundaries, independent of the selected root. Folder moves need no rebinding; multiple roots do not permit ownership reassignment across worktrees. Preserve unavailable/partial owners, other contributors/harnesses and legitimate multiplicity; complete local refresh remains authoritative and repeated refresh remains idempotent.</li>
+  <li>Extend setup/operator workflows with a supported, verified and pinned OpenSpec option while retaining non-OpenSpec adoption. Configure the active/archive roots and standard proposal/design/tasks paths in place, without a separate per-ticket AgenticLens workspace. Preserve unrelated/custom instructions, skills and configuration; retain existing setup confirmation requirements and distinguish shared policy from local source/capture state.</li>
+  <li>Demonstrate source-backed Codex/OpenCode telemetry in the created change with explicit conventional type, exact ownership and honest missing-source/cost behavior. OpenSpec’s other assistant integrations must not be advertised as new AgenticLens source adapters. Record the tested CLI/schema release; unknown fields and advisory naming rules cannot be presented as enforced behavior.</li>
+  <li>Reconcile AGENTS.md, relevant technical/regression rules, shared personas/references, Codex registrations, applicable OpenCode setup, every affected AgenticLens skill/template, and setup/operator/contributor documentation. Search active sources for conflicting path/lifecycle rules and correct the owning source; preserve unrelated historical audits.</li>
+  <li>Use one authoritative set of OpenSpec artifacts for proposal/acceptance, technical design, tasks, delivery/review evidence and telemetry. Remove parallel independently maintained plans/contracts/backlog truth. Preserve planning-only PO sessions, approval before coding, specialist role boundaries, model/review attribution, required verification, final telemetry and PR handoff. Planning readiness, checkbox completion, approved scope and verified delivery remain distinct.</li>
+  <li>Cut over the live AgenticLens repository to the verified OpenSpec structure/schema and multi-root configuration. Future PO/GEN/development work uses one ticket-prefixed OpenSpec change home. Retain an explicit legacy root for historical alspaces records, with appropriately bounded discovery; do not require new alspaces ticket workspaces after cutover.</li>
+  <li>Migrate remaining active roadmap specifications into OpenSpec while preserving ticket IDs, acceptance, readiness/dependency information and active-owner boundaries. Provide one editable backlog with a navigable dependency/readiness view and update contributor entrypoints. Coordinate active owners before moving writable artifacts; preserve navigation to existing public/historical evidence and leave historical facts intact.</li>
+  <li>Provide a reviewed migration inventory and recoverable cutover. Failure preserves the prior supported configuration/history and exposes partial progress. Do not duplicate ledgers, silently reticket sessions, rewrite completed audits or depend on original session stores/private capture receipts for historical reads.</li>
+  <li>Demonstrate the complete selected workflow: planning, scope change, explicit implementation approval, native source capture/publication, dashboard/CLI detail, retained incomplete-review evidence, completion, OpenSpec archive and late refresh. Include copied-history reads without original sources and confirm no guidance/writer recreates the retired workspace convention. Text searches or synthetic fixtures alone do not establish native runtime compatibility.</li>
+</ul>
+
+<h2 id="implementation-notes">Implementation notes</h2>
+
+<p><a href="https://github.com/NiltonDuarte/AgenticLens/blob/a884bbb2395dce8826be396e3dec56b4d21bca4a/alspaces/PO-24/SPEC.md">PO-24 SPEC.md</a> owns the initiative context; this ticket owns implementation acceptance. This is one delivery slice, not a set of independently completable sub-tickets. Concrete configuration syntax, resolver contracts and supported custom-schema design belong to the developer contract. Preserve the <a href="https://github.com/NiltonDuarte/AgenticLens/blob/a884bbb2395dce8826be396e3dec56b4d21bca4a/TECHNICAL_GUIDELINES.md#portable-ledger-contract">portable ledger contract</a> and relevant <a href="https://github.com/NiltonDuarte/AgenticLens/blob/a884bbb2395dce8826be396e3dec56b4d21bca4a/docs/REGRESSION_PREVENTION.md">regression boundaries</a>.</p>
+
+<p>AL2-2 retains ownership of compressed archive packages and their precedence rules; OpenSpec archive folders need no package archiver. AL-81 independently separates manual generation from capture-registry access; do not reintroduce that dependency or weaken automatic ownership. Coordinate shared worktree/capture paths with AL-80 without taking its scope. Cross-repo OpenSpec stores, additional harness adapters, dynamic capability/spec-glob browsing and phase/progress analytics are not required for this adoption slice.</p>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>

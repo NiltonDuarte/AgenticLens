@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FIX-19 reject ambiguous codex session snapshots.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/preview/143/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/preview/143/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><h1 id="fix-19-reject-ambiguous-codex-session-snapshots">FIX-19: Reject ambiguous Codex session snapshots</h1>
+
+<h2 id="goal">Goal</h2>
+
+<p>Every exact Codex owner is refreshed from an unambiguous native snapshot, with conflicting source copies diagnosed rather than summed or chosen arbitrarily.</p>
+
+<h2 id="context">Context</h2>
+
+<p>Codex family discovery can return two files with the same native session ID, such as an active JSONL and its archived gzip copy. Generation/backfill combine both cumulative snapshots: domain grouping produces one owner but appends their invocation rows and sums tools. Hydration instead accepts the first readable copy. Unique session-ID validation therefore does not catch the duplicated facts.</p>
+
+<p>Example: session A has one tool call in sessions/A.jsonl and the same complete content in archived_sessions/A.jsonl.gz. Counting both files can report two calls for A. Two distinct real tool calls inside one authoritative transcript must still count twice.</p>
+
+<h2 id="acceptance-criteria">Acceptance criteria</h2>
+
+<ul>
+  <li>Identical or divergent readable files for one owner produce an explicit ambiguity/incomplete result before they can be combined or certified complete. Do not choose by filename, timestamp or directory priority without a separately approved authority rule.</li>
+  <li>Generate cannot publish doubled owner facts; failed refresh/backfill preserves that owner’s accepted ledger history and reports the reason. Historical hydration does not select an arbitrary copy; unaffected owners remain usable with truthful coverage.</li>
+  <li>Genuine repeated invocations, skills and delegations inside one selected transcript survive unchanged. Do not repair the bug with broad row deduplication.</li>
+  <li>Verify active/archive and compressed/uncompressed duplicates, warning-bearing/conflicting copies, child relationships, unrelated owners and repeated unchanged runs through actual consuming paths.</li>
+  <li>Exact discovery’s existing ambiguity rejection remains effective. Demonstrate the counterexample before the fix and correct counts/preservation afterward.</li>
+</ul>
+
+<h2 id="implementation-notes">Implementation notes</h2>
+
+<p>Finding references: F04</p>
+
+<p>No broad repository redesign, invented source facts or cleanup of real developer logs. Unavailable same-harness and other-harness history must survive; this ticket does not require source receipts for Git-shared ledgers.</p>
+
+<ul>
+  <li>
+<a href="https://github.com/NiltonDuarte/AgenticLens/blob/a884bbb2395dce8826be396e3dec56b4d21bca4a/alspaces/AL-67/ARCHITECTURE_ASSESSMENT.md">AL-67 assessment</a>, F04; application baseline a84adbe5be46c2ef52ede0987a417562715d38e1. Findings are unimplemented.</li>
+  <li>
+<a href="https://github.com/NiltonDuarte/AgenticLens/blob/a884bbb2395dce8826be396e3dec56b4d21bca4a/alspaces/AL-67/iterations/02/FOLLOW_UP_TICKETS.md">Follow-up ownership</a>.</li>
+</ul>
+
+<p><em>DEVELOPMENT STATE REVIEW (2026-11-05)</em></p>
+
+<p>Still open: AL-67 F04 documents duplicate active/archive owner snapshots through generation/backfill versus first-readable hydration. No merged corrective delivery was found; retain exact-owner ambiguity semantics.</p>
+
+<p>Evidence and review limits: <a href="https://github.com/NiltonDuarte/AgenticLens/blob/a884bbb2395dce8826be396e3dec56b4d21bca4a/alspaces/PO-19/SPEC.md">PO-19 reconciliation</a>, merged baseline <code class="language-plaintext highlighter-rouge">03f5b05d</code>. This planning review does not certify runtime behavior or close unverified acceptance criteria.</p>
+
+<p><a href="https://github.com/NiltonDuarte/AgenticLens/blob/a884bbb2395dce8826be396e3dec56b4d21bca4a/TECHNICAL_GUIDELINES.md">Engineering rules</a> and <a href="https://github.com/NiltonDuarte/AgenticLens/blob/a884bbb2395dce8826be396e3dec56b4d21bca4a/docs/REGRESSION_PREVENTION.md">relevant regression boundaries</a> apply. Historical findings require revalidation; this rewrite is not runtime verification or implementation approval.</p>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>

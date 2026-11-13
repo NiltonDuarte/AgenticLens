@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AL2-1 generate and preview anomaly debug prompts.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/preview/143/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/preview/143/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><h1 id="al2-1-generate-and-preview-anomaly-debug-prompts">AL2-1: Generate and preview anomaly debug prompts</h1>
+
+<h2 id="goal">Goal</h2>
+
+<p>Engineers can generate, preview and copy the same evidence-preserving anomaly debug prompt from the CLI, API and existing dashboard entry points.</p>
+
+<h2 id="context">Context</h2>
+
+<p>AL-50 already delivers browser prompt generation and copying. The remaining gap is CLI/API availability and a consistent preview flow. Engineers diagnosing tool failures, context saturation or subagent rework need available evidence without invented raw payloads.</p>
+
+<h2 id="acceptance-criteria">Acceptance criteria</h2>
+
+<ul>
+  <li>Generate deterministic Markdown containing incident overview, anomaly diagnostics, invocation forensics, preceding trace and rule-specific remediation for retry streak, high failure rate, context saturation and subagent rework anomalies. Available tool input/output and error bodies remain verbatim under the approved redaction policy.</li>
+  <li>GET /api/workspaces/{ticketId}/debug-prompt accepts optional turn, rule_id and tool_name selectors and returns prompt Markdown with diagnostic metadata. Unknown tickets return 404; malformed parameters return 400; valid requests return 200.</li>
+  <li>agentic-lens prompt supports –ticket, –turn, –rule and –output; stdout is the default, file output is explicit, and successful generation exits zero.</li>
+  <li>Existing anomaly drawer, failed waterfall-node and live-alert entry points open a consistent rendered preview and raw text view. Copy reports the actual clipboard outcome with accessible success/failure feedback; loading and request failures remain recoverable.</li>
+  <li>Use available native hydration and supported committed facts when sources are unavailable. Explicitly identify missing evidence and its source; never fabricate raw input/output or mutate a ledger on read.</li>
+</ul>
+
+<h2 id="implementation-notes">Implementation notes</h2>
+
+<p>Reuse existing browser prompt guarantees and controls. AL-69 owns anomaly attribution/count corrections; AL-72 owns shared clipboard reliability. Coordinate those paths without making them prerequisites or rebuilding their features.</p>
+
+<p>Follow <a href="https://github.com/NiltonDuarte/AgenticLens/blob/a884bbb2395dce8826be396e3dec56b4d21bca4a/TECHNICAL_GUIDELINES.md">engineering rules</a> and <a href="https://github.com/NiltonDuarte/AgenticLens/blob/a884bbb2395dce8826be396e3dec56b4d21bca4a/docs/REGRESSION_PREVENTION.md">regression boundaries</a>. <a href="https://github.com/NiltonDuarte/AgenticLens/blob/a884bbb2395dce8826be396e3dec56b4d21bca4a/alspaces/PO-19/SPEC.md">PO-19</a> preserves the earlier development reconciliation; historical observations require revalidation, not an assumption of current runtime support.</p>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>

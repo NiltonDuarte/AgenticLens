@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AL-49 reverse event ordering and quick scroll navigation in live inspector.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/preview/143/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/preview/143/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><p>h3. Title: AL-49: Reverse Event Chronology, Scroll-Lock, and Quick-Scroll Navigation in Live Trace Inspector</p>
+
+<p><em>TARGET</em>: AgenticLens (presentation / web / components / views / tests)</p>
+
+<p><em>CONTEXT</em></p>
+
+<p>In the Live Trace Inspector (<code class="language-plaintext highlighter-rouge">div#root &gt; div.app-container &gt; main.main-content &gt; div.live-observability-view &gt; div.live-split-layout &gt; div.live-split-pane.right-inspector-pane &gt; div.live-trace-inspector-container &gt; section.inspector-messages-section &gt; div.inspector-messages-list</code>), message turns and events are rendered in chronological order (turn 1 at top, latest turn at bottom).
+In long agent sessions with 20 to 50+ turns, operators monitoring real-time activity must repeatedly scroll to the bottom. Furthermore, if reverse chronology is enabled (latest at top), incoming streaming events prepending to the list can violently displace the user’s viewport downward if the user is reading an earlier turn, causing disorientation unless scroll locking is enforced.</p>
+
+<p><em>GOAL</em></p>
+
+<p>Order message turns in reverse chronological order (latest events at top) by default, provide an interactive order toggle allowing operators to switch back to chronological order (Latest First vs Oldest First), implement a pause-on-scroll lock when scrolled down so streaming events do not displace reading position, and add dedicated “Scroll to Top” and “Scroll to Bottom” navigation buttons.</p>
+
+<p><em>VERTICAL SLICE SCOPE</em></p>
+
+<ul>
+  <li>Domain Core: Pure array reversal / sorting helper without mutating the underlying <code class="language-plaintext highlighter-rouge">LiveTraceView.messages</code> readonly array.</li>
+  <li>Boundary Adapter: Zero backend changes; handled purely within inspector presentation.</li>
+  <li>Presentation:
+    <ul>
+      <li>In <code class="language-plaintext highlighter-rouge">LiveTraceInspector.tsx</code>:
+        <ul>
+          <li>Display message turns in reverse chronological order (newest at top) by default.</li>
+          <li>Provide an order toggle button in the messages section header (<code class="language-plaintext highlighter-rouge">data-testid="turn-order-toggle-btn"</code>) allowing operators to toggle back to chronological order (Oldest First).</li>
+          <li>Implement pause-on-scroll lock: attach scroll listener to the container. If <code class="language-plaintext highlighter-rouge">scrollTop &gt; 50px</code> (user has scrolled down to inspect older turns), lock the viewport position so new incoming turns prepend without shifting the visible view, or display a “New turns available [Jump to Top]” indicator.</li>
+          <li>Add quick-navigation buttons in the inspector controls: “Scroll to Top” (<code class="language-plaintext highlighter-rouge">data-testid="scroll-to-top-btn"</code>) and “Scroll to Bottom” (<code class="language-plaintext highlighter-rouge">data-testid="scroll-to-bottom-btn"</code>).</li>
+          <li>Maintain consistent logical turn badges (<code class="language-plaintext highlighter-rouge">Turn 1</code> through <code class="language-plaintext highlighter-rouge">Turn N</code>) regardless of display order.</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li>Quality: Unit tests in <code class="language-plaintext highlighter-rouge">LiveTraceInspector.test.tsx</code> verifying:
+    <ul>
+      <li>Message turns render with the newest turn first by default.</li>
+      <li>Clicking the order toggle switches back to chronological order (oldest first).</li>
+      <li>Pause-on-scroll lock prevents viewport displacement when scrolled down.</li>
+      <li>Turn badges maintain correct logical numbering.</li>
+      <li>“Scroll to Top” and “Scroll to Bottom” buttons invoke DOM scroll handlers.</li>
+    </ul>
+  </li>
+</ul>
+
+<p><em>ACCEPTANCE CRITERIA</em></p>
+
+<ul>
+  <li>The message turns list in <code class="language-plaintext highlighter-rouge">LiveTraceInspector</code> renders the latest turn at the top by default.</li>
+  <li>An accessible toggle button allows operators to switch between “Latest First” and “Oldest First” ordering.</li>
+  <li>When scrolled down into earlier turns, incoming streaming turns do not violently shift or displace the user’s viewport (pause-on-scroll lock).</li>
+  <li>Turn badges continue to display correct logical turn numbering (<code class="language-plaintext highlighter-rouge">Turn 1</code> through <code class="language-plaintext highlighter-rouge">Turn N</code>).</li>
+  <li>The header/toolbar provides accessible buttons to scroll directly to the top and bottom of the messages list.</li>
+  <li>
+<code class="language-plaintext highlighter-rouge">npm run typecheck</code>, <code class="language-plaintext highlighter-rouge">npm run lint</code>, and <code class="language-plaintext highlighter-rouge">npm test</code> pass with zero errors.</li>
+</ul>
+
+<p><em>DEFINITION OF DONE</em></p>
+
+<ul>
+  <li>Code and tests merged to target branch.</li>
+  <li>Quality gates passing (<code class="language-plaintext highlighter-rouge">make check</code>, <code class="language-plaintext highlighter-rouge">make test</code>, or <code class="language-plaintext highlighter-rouge">make</code>).</li>
+  <li>Go and TypeScript type checking clean with zero any.</li>
+  <li>Telemetry tested with <code class="language-plaintext highlighter-rouge">agentic-lens</code> CLI.</li>
+</ul>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AL-52 rich timeline badges and subagent session linking in trace views.md | AgenticLens roadmap</title>
+  <link rel="stylesheet" href="/AgenticLens/preview/143/roadmap/style.css">
+</head>
+<body>
+  <header><nav aria-label="Main navigation">
+    <a href="/AgenticLens/preview/143/roadmap/">Back to roadmap</a>
+    <a href="https://github.com/NiltonDuarte/AgenticLens">View repository</a>
+  </nav></header>
+  <main><h1 id="al-52-rich-timeline-badges-and-subagent-session-linking-in-trace-views">AL-52: Rich Timeline Badges and Subagent Session Linking in Trace Views</h1>
+
+<ul>
+  <li>
+<strong>Subsystem</strong>: Presentation / Web / Components / Waterfall / Inspector / Tests</li>
+  <li>
+<strong>Phase</strong>: Phase 8 (v2 Observability / Skills)</li>
+  <li>
+<strong>Status</strong>: Completed</li>
+  <li>
+<strong>Blocked by</strong>: None</li>
+  <li>
+<strong>Blocks</strong>: AL-55</li>
+</ul>
+
+<h2 id="planning-status-2026-10-31">Planning status (2026-10-31)</h2>
+
+<p>AL-51 merged in <a href="https://github.com/NiltonDuarte/AgenticLens/pull/62">PR #62</a>, providing optional skill/task facts and live attributes. Its dependency is satisfied; this presentation work remains open. Supported v4 ledgers may omit those optional fields; ordinary runtime rejects v1-v3 ledgers until explicit migration and source-backed backfill complete.</p>
+
+<h2 id="context">Context</h2>
+<p>When inspecting agent execution traces in the Trace Waterfall or Live Trace Inspector, tool calls for <code class="language-plaintext highlighter-rouge">skill</code> and <code class="language-plaintext highlighter-rouge">task</code> appear as generic tool invocations. Operators must expand the JSON arguments manually to understand what skill was loaded or what subagent role was spawned.</p>
+
+<h2 id="goal">Goal</h2>
+<p>Surface rich, prominent visual badges for skill invocations and subagent delegations in the Trace Waterfall and Live Inspector message streams, with interactive jump links to navigate to child sessions.</p>
+
+<h2 id="scope-across-layers">Scope Across Layers</h2>
+
+<h3 id="1-presentation-components-websrccomponentstracewaterfalltsx-websrccomponentslivetraceinspectortsx">1. Presentation Components (<code class="language-plaintext highlighter-rouge">web/src/components/TraceWaterfall.tsx</code>, <code class="language-plaintext highlighter-rouge">web/src/components/LiveTraceInspector.tsx</code>)</h3>
+<ul>
+  <li>Render distinct visual badges when a message part represents a skill or task:
+    <ul>
+      <li>Skill badge: <code class="language-plaintext highlighter-rouge">[skill: &lt;name&gt;]</code> styled with an accent badge (e.g. purple/indigo hue) indicating injected capability.</li>
+      <li>Subagent task badge: <code class="language-plaintext highlighter-rouge">[task -&gt; &lt;subagent_type&gt;]</code> styled with a delegation badge (e.g. emerald/cyan hue).</li>
+    </ul>
+  </li>
+  <li>When a <code class="language-plaintext highlighter-rouge">child_session_id</code> is present on a task link or live part:
+    <ul>
+      <li>Render an interactive link/button that navigates the Live Observability tree or deep dive view directly to that child session.</li>
+      <li>If the child session is pending or absent from the current active tree, display an informative tooltip indicating the child session ID with a copy button.</li>
+    </ul>
+  </li>
+</ul>
+
+<h3 id="2-styling-and-responsiveness-websrcindexcss">2. Styling and Responsiveness (<code class="language-plaintext highlighter-rouge">web/src/index.css</code>)</h3>
+<ul>
+  <li>Ensure badges conform to dark and light theme tokens.</li>
+  <li>Apply <code class="language-plaintext highlighter-rouge">white-space: nowrap</code> and <code class="language-plaintext highlighter-rouge">overflow: hidden</code> with <code class="language-plaintext highlighter-rouge">text-overflow: ellipsis</code> on skill names and subagent roles to prevent horizontal layout blowout on narrow viewports.</li>
+</ul>
+
+<h3 id="3-automated-tests">3. Automated Tests</h3>
+<ul>
+  <li>Vitest unit tests in <code class="language-plaintext highlighter-rouge">web/src/components/TraceWaterfall.test.tsx</code> verifying badge rendering for skill and task spans.</li>
+  <li>Vitest unit tests in <code class="language-plaintext highlighter-rouge">web/src/components/LiveTraceInspector.test.tsx</code> verifying interactive jump links and tooltips.</li>
+</ul>
+
+<h2 id="acceptance-criteria">Acceptance Criteria</h2>
+<ol>
+  <li>Trace Waterfall displays prominent <code class="language-plaintext highlighter-rouge">[skill: &lt;name&gt;]</code> badges on skill invocations.</li>
+  <li>Trace Waterfall and Live Inspector display <code class="language-plaintext highlighter-rouge">[task -&gt; &lt;subagent_type&gt;]</code> badges on task delegations.</li>
+  <li>Clicking a task delegation with a valid child session identifier routes the view to inspect the child session.</li>
+  <li>Truncation and tooltips prevent badge text overflow on narrow viewports.</li>
+</ol>
+
+<h2 id="definition-of-done">Definition of Done</h2>
+<ul>
+  <li>Component changes authored and styled cleanly.</li>
+  <li>Vitest test coverage for badge rendering and link navigation.</li>
+  <li>All tests pass (<code class="language-plaintext highlighter-rouge">npm test</code>).</li>
+  <li>Zero emojis across all code, tests, and documentation.</li>
+</ul>
+</main>
+  <footer>Published from the repository's ticket Markdown.</footer>
+</body>
+</html>
