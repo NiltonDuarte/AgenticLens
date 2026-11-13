@@ -57,7 +57,7 @@ class InstallationTest(DistributionFixture):
         caller_local = caller / '.agenticlens-config.local.yaml'; caller_local.write_text('# preserve caller local\n')
         before = (caller_shared.read_bytes(), caller_local.read_bytes())
         selected_local = self.repo / '.agenticlens-config.local.yaml'
-        selected_local.write_text(f"# selected local settings\ntelemetry:\n  capture:\n    enabled: false\n    state_dir: '{self.root / 'capture state'}'\n  default_source: codex\n  sources:\n    codex:\n      home: '{self.home / '.codex'}'\n")
+        selected_local.write_text(f"# selected local settings\nagenticlens:\n  state_dir: '{self.root / 'publication state'}'\ntelemetry:\n  capture:\n    enabled: false\n    state_dir: '{self.root / 'capture state'}'\n  default_source: codex\n  sources:\n    codex:\n      home: '{self.home / '.codex'}'\n")
         local_before = selected_local.read_bytes()
         approved = self.approved_settings('Selected')
         approved.write_text(shared_policy(self.pin, self.home / '.agenticlens', name='Selected'))
@@ -82,7 +82,7 @@ class InstallationTest(DistributionFixture):
         completed = self.config.read_bytes()
         self.assertNotIn('state_dir:', completed.decode())
         selected_local.write_text(''.join(line for line in local_before.decode().splitlines(keepends=True)
-                                          if not line.lstrip().startswith('state_dir:')))
+                                          if not line.startswith('    state_dir:')))
         missing = self.launch('capture', 'status', '--repo', self.repo, '--state-dir', self.root / 'CLI rescue')
         self.assertNotEqual(missing.returncode, 0)
         self.assertIn('telemetry.capture.state_dir', missing.stderr)
