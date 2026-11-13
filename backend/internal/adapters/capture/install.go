@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 
@@ -124,20 +123,13 @@ func probe(ctx context.Context, source string) (string, string) {
 	}
 	return version, "Configuration protocol inspected; runtime callbacks, trust and agent response require smoke verification"
 }
-func staticCommand(args []string, windows bool) (string, error) {
+func staticCommand(args []string) (string, error) {
 	quoted := []string{}
 	for _, arg := range args {
 		if strings.ContainsAny(arg, "\r\n\x00") {
 			return "", errors.New("control character in hook command path")
 		}
-		if windows {
-			if strings.ContainsAny(arg, "% !\"&|<>^()") && strings.ContainsAny(arg, "%!\"&|<>^()") {
-				return "", errors.New("unsupported Windows shell metacharacter in hook path")
-			}
-			quoted = append(quoted, "\""+arg+"\"")
-		} else {
-			quoted = append(quoted, QuoteArgument(arg))
-		}
+		quoted = append(quoted, QuoteArgument(arg))
 	}
 	return strings.Join(quoted, " "), nil
 }
@@ -373,19 +365,12 @@ func installWithWriter(ctx context.Context, options InstallOptions, write func(f
 				}
 			}
 			args := []string{wrapper, "--al-offline", "--al-project", repo, "capture", "receive", "--source", "codex", "--store", store, "--state-dir", logicalRegistryDirectory(dir), "--repo", repo, "--wrapper", wrapper}
-			command, e := staticCommand(args, false)
+			command, e := staticCommand(args)
 			if e != nil {
 				return result, e
 			}
-			windows := ""
-			if runtime.GOOS == "windows" {
-				windows, e = staticCommand(args, true)
-			}
-			if e != nil && runtime.GOOS == "windows" {
-				return result, e
-			}
 			for _, event := range []string{"SessionStart", "UserPromptSubmit", "SubagentStart", "SubagentStop", "Stop", "SessionEnd"} {
-				group, e := codexHookGroup(event, command, windows, runtime.GOOS == "windows")
+				group, e := codexHookGroup(event, command)
 				if e != nil {
 					return result, e
 				}
@@ -511,14 +496,9 @@ func installWithWriter(ctx context.Context, options InstallOptions, write func(f
 	return result, nil
 }
 
-// The native handoff remains two seconds. Windows receives a bounded allowance
-// for starting the native manager and selected engine.
-func codexHookGroup(event, command, windowsCommand string, windows bool) (json.RawMessage, error) {
-	timeout := 2
-	if windows {
-		timeout = 5
-	}
-	handler := typeofHandler{"command", command, windowsCommand, timeout, marker, 0}
+// The native handoff remains bounded to two seconds.
+func codexHookGroup(event, command string) (json.RawMessage, error) {
+	handler := typeofHandler{"command", command, 2, marker, 0}
 	if event == "SessionStart" || event == "UserPromptSubmit" || event == "SubagentStart" {
 		handler.Limit = 1000
 	}
@@ -528,12 +508,11 @@ func codexHookGroup(event, command, windowsCommand string, windows bool) (json.R
 }
 
 type typeofHandler = struct {
-	Type           string `json:"type"`
-	Command        string `json:"command"`
-	CommandWindows string `json:"commandWindows,omitempty"`
-	Timeout        int    `json:"timeout"`
-	Status         string `json:"statusMessage"`
-	Limit          int    `json:"additionalContextLimit,omitempty"`
+	Type    string `json:"type"`
+	Command string `json:"command"`
+	Timeout int    `json:"timeout"`
+	Status  string `json:"statusMessage"`
+	Limit   int    `json:"additionalContextLimit,omitempty"`
 }
 
 func apply(c fileChange) error {

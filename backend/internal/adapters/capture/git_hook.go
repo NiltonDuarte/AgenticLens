@@ -145,9 +145,7 @@ func renderCheckHook(wrapper string) []byte {
 	for i, arg := range command {
 		quoted[i] = QuoteArgument(filepath.ToSlash(arg))
 	}
-	// POSIX managers exec the selected engine. Git for Windows uses a distinct
-	// MSYS surrogate, so its verified WinPID owns the entire manager/engine tree.
-	// Killing just the manager could leave inherited stderr handles open.
+	// Managers exec the selected engine, preserving cancellation and exit status.
 	// Watchdog descriptors are detached so sleep cannot delay EOF.
 	// dd bounds bytes before awk bounds lines, even for malformed native output.
 	return []byte(checkHookHeader + base64.StdEncoding.EncodeToString([]byte(wrapper)) + `
@@ -159,33 +157,11 @@ if [ ! -f "$project/.agenticlens-config.yaml" ] &&
    [ ! -f "$project/.agenticlens-config.yml" ]; then
   exit 0
 fi
-tree_kill=
-case "$(uname -s 2>/dev/null)" in
-  MINGW*|MSYS*|CYGWIN*)
-    tree_kill="${SYSTEMROOT:-$SystemRoot}/System32/taskkill.exe"
-    if [ ! -x "$tree_kill" ] || [ ! -r "/proc/$$/winpid" ]; then
-      printf '%s\n' 'AgenticLens capture advisory: Windows process-tree cleanup unavailable; inspect capture status explicitly.' >&2
-      exit 0
-    fi
-    ;;
-esac
 (
   ` + strings.Join(quoted, " ") + ` "$project" 'capture' 'check' '--repo' "$project" </dev/null >/dev/null &
   handler=$!
-  handler_winpid=
-  if [ -n "$tree_kill" ]; then
-    IFS= read -r handler_winpid 2>/dev/null < "/proc/$handler/winpid" || :
-    case "$handler_winpid" in ''|*[!0-9]*) handler_winpid= ;; esac
-  fi
   (
     sleep 3
-    if [ -n "$handler_winpid" ]; then
-      current_winpid=
-      IFS= read -r current_winpid 2>/dev/null < "/proc/$handler/winpid" || :
-      if [ "$current_winpid" = "$handler_winpid" ]; then
-        MSYS2_ARG_CONV_EXCL='*' "$tree_kill" /PID "$handler_winpid" /T /F
-      fi
-    fi
     kill -TERM "$handler" 2>/dev/null
     sleep 1
     kill -KILL "$handler" 2>/dev/null

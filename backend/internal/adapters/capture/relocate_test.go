@@ -466,7 +466,6 @@ func TestAdministrativeRelocationGuardReadsIncompleteConfigWithoutLoadFallback(t
 func TestRelocationExplicitPathsUseSelectedProjectAndHome(t *testing.T) {
 	project, _, _, _ := relocationFixture(t)
 	t.Setenv("HOME", filepath.Dir(project))
-	t.Setenv("USERPROFILE", filepath.Dir(project))
 	result, err := RelocateState(context.Background(), RelocationOptions{Project: project, FromDirectory: "../old-state", ToBase: "../new-state"})
 	if err != nil {
 		t.Fatal(err)

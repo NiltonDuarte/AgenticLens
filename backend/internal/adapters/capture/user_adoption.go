@@ -135,7 +135,6 @@ func legacyCaptureGroupsRemain(hooks map[string][]json.RawMessage) bool {
 				Hooks []struct {
 					Type    string `json:"type"`
 					Command string `json:"command"`
-					Windows string `json:"commandWindows"`
 				} `json:"hooks"`
 			}
 			if json.Unmarshal(group, &handlers) != nil {
@@ -145,12 +144,10 @@ func legacyCaptureGroupsRemain(hooks map[string][]json.RawMessage) bool {
 				if handler.Type != "command" {
 					continue
 				}
-				for _, command := range []string{handler.Command, handler.Windows} {
-					tokens := strings.Fields(strings.NewReplacer("'", "", "\"", "").Replace(strings.ToLower(command)))
-					for i := 1; i < len(tokens); i++ {
-						if tokens[i-1] == "capture" && tokens[i] == "receive" || tokens[i-1] == "dispatch" && tokens[i] == "codex-hook" {
-							return true
-						}
+				tokens := strings.Fields(strings.NewReplacer("'", "", "\"", "").Replace(strings.ToLower(handler.Command)))
+				for i := 1; i < len(tokens); i++ {
+					if tokens[i-1] == "capture" && tokens[i] == "receive" || tokens[i-1] == "dispatch" && tokens[i] == "codex-hook" {
+						return true
 					}
 				}
 			}

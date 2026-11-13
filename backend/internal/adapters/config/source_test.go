@@ -38,7 +38,6 @@ func TestExplicitHomeAndPhysicalConfiguredPaths(t *testing.T) {
 	root := t.TempDir()
 	home := filepath.Join(root, "home")
 	t.Setenv("HOME", home)
-	t.Setenv("USERPROFILE", home)
 	got, err := config.ResolveCodexHome("~/chosen", "other")
 	if err != nil || got != filepath.Join(home, "chosen") {
 		t.Fatalf("explicit home %q %v", got, err)
@@ -70,7 +69,6 @@ func TestExplicitHomeAndPhysicalConfiguredPaths(t *testing.T) {
 		t.Fatalf("absolute path changed: %q %v", got, err)
 	}
 	t.Setenv("HOME", "")
-	t.Setenv("USERPROFILE", "")
 	if _, err := config.ResolveCodexHome("~/chosen", absolute); err == nil || !strings.Contains(err.Error(), "home") {
 		t.Fatalf("unavailable expansion selected alternative: %v", err)
 	}
