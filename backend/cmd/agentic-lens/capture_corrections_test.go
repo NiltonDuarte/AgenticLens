@@ -812,7 +812,7 @@ func TestCaptureLiveDisableStopsWritesAndManualRecoverySurvives(t *testing.T) {
 			lock.Close()
 			// Explicit manual recovery remains supported with the accepted source binding.
 			f.output = output
-			ledger := f.generate(t)
+			ledger := f.generate(t, "--session-id", "root")
 			assertCaptureRootInput(t, ledger, 30)
 		})
 	}
@@ -1149,19 +1149,10 @@ func TestCaptureManualOverridePreservesIncompatibleConfiguredRegistry(t *testing
 				args = append(args, "--capture-dir", selected)
 			}
 			out, err := runCaptureNative(t, f.project, "", args...)
-			if selection == "fresh" || selection == "healthy" {
-				if err != nil {
-					t.Fatalf("independent manual recovery: %v %s", err, out)
-				}
-				assertCaptureRootInput(t, f.ledger(t), 29)
-			} else {
-				if err == nil || !bytes.Contains(out, []byte("coordinate layout")) {
-					t.Fatalf("configured invalid registry accepted: %v %s", err, out)
-				}
-				if _, err := os.Stat(f.output); !os.IsNotExist(err) {
-					t.Fatalf("rejected generation published: %v", err)
-				}
+			if err != nil {
+				t.Fatalf("registry-independent manual recovery: %v %s", err, out)
 			}
+			assertCaptureRootInput(t, f.ledger(t), 29)
 			if !bytes.Equal(before, readCaptureFile(t, registryPath)) {
 				t.Fatal("generation changed incompatible configured registry")
 			}
@@ -1206,6 +1197,7 @@ func TestCaptureQueuedForeignChildCannotImportFromAnotherHome(t *testing.T) {
 			if err != nil && !bytes.Contains(bytes.ToLower(out), []byte("store")) {
 				t.Fatalf("unexpected callback error: %v %s", err, out)
 			}
+			writeCapturePolicy(t, f, true, 0)
 			ledger := f.generate(t)
 			assertCaptureRootInput(t, ledger, 23)
 			for _, row := range ledger.Sessions {
@@ -1340,6 +1332,7 @@ func TestCaptureCallbackProofFailurePreservesAcceptedProjectBaseline(t *testing.
 	f.bind(t, path)
 	f.generate(t)
 	baseline := f.ledger(t)
+	acceptedBytes := readCaptureFile(t, f.output)
 	writeCapturePolicy(t, f, false, 0)
 	if err := os.Remove(path); err != nil {
 		t.Fatal(err)
@@ -1351,6 +1344,12 @@ func TestCaptureCallbackProofFailurePreservesAcceptedProjectBaseline(t *testing.
 	if out, err := runCaptureNative(t, f.project, string(payload), "capture", "receive", "--repo", f.project, "--state-dir", f.state, "--source", "codex", "--store", f.store); err != nil {
 		t.Fatalf("minimal callback handoff failed: %v %s", err, out)
 	}
+	// Disabled callbacks cannot publish; explicit reconciliation resumes only
+	// after policy is enabled again, retaining the unavailable accepted owner.
+	if !bytes.Equal(readCaptureFile(t, f.output), acceptedBytes) {
+		t.Fatal("disabled callback changed accepted publication")
+	}
+	writeCapturePolicy(t, f, true, 0)
 	f.generate(t)
 	after := f.ledger(t)
 	if !reflect.DeepEqual(baseline.Sessions, after.Sessions) {

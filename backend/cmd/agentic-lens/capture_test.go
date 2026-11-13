@@ -140,43 +140,15 @@ func (f captureGenerationFixture) bind(t *testing.T, path string) {
 }
 
 func (f captureGenerationFixture) args(t *testing.T, extra ...string) []string {
-	explicitOwner := "root"
-	for i, arg := range extra {
-		if arg == "--session-id" && i+1 < len(extra) {
-			explicitOwner = extra[i+1]
-		}
+	// Registry-driven fixtures opt into the automatic path explicitly. Manual
+	// selectors never prepare bindings or allocate a registry as a side effect.
+	explicit, automatic := false, false
+	for _, arg := range extra {
+		explicit = explicit || arg == "--session-id" || arg == "--nonce"
+		automatic = automatic || arg == "--capture-auto"
 	}
-	for i, arg := range extra {
-		if arg == "--capture-dir" && i+1 < len(extra) {
-			dir, err := capture.ProjectState(extra[i+1], f.project)
-			if err != nil {
-				t.Fatal(err)
-			}
-			registry, err := capture.OpenProject(dir, f.project)
-			if err != nil {
-				t.Fatal(err)
-			}
-			r, err := registry.Register(context.Background(), domain.CaptureIdentity{Source: domain.SourceCodex, Store: f.store, SessionID: explicitOwner}, "", "fixture explicit owner")
-			if err != nil {
-				t.Fatal(err)
-			}
-			if err = capture.ValidateOwner(context.Background(), f.project, r); err != nil {
-				t.Fatal(err)
-			}
-			if _, err = registry.Bind(context.Background(), r.Identity, "TEST-100", r.Request); err != nil {
-				t.Fatal(err)
-			}
-			_, err = registry.Change(context.Background(), r.Identity, func(row domain.CaptureRegistration) (domain.CaptureRegistration, error) {
-				row.ProjectDirectory = f.project
-				return row, nil
-			})
-			if err != nil {
-				t.Fatal(err)
-			}
-			if err = registry.Close(); err != nil {
-				t.Fatal(err)
-			}
-		}
+	if !explicit && !automatic {
+		extra = append(extra, "--capture-auto")
 	}
 	return append([]string{"generate", "--source", "codex", "--codex-home", f.store, "--capture-dir", f.state, "--ticket-id", "TEST-100", "--ticket-title", "Capture regression", "--ticket-type", "feat", "--json-output", f.output}, extra...)
 }
@@ -513,7 +485,7 @@ func TestCaptureCLIGenerateIncludesBoundIndependentSessionsAndSummaryDiagnostics
 	}
 	generate := func() domain.AgenticFactLedger {
 		t.Helper()
-		cmd := exec.Command(cliBinaryPath, "generate", "--source", "codex", "--capture-dir", state, "--ticket-id", "TEST-100", "--ticket-title", "Explicit independent roots", "--ticket-type", "feat", "--json-output", output, "--append", summary)
+		cmd := exec.Command(cliBinaryPath, "generate", "--capture-auto", "--source", "codex", "--capture-dir", state, "--ticket-id", "TEST-100", "--ticket-title", "Explicit independent roots", "--ticket-type", "feat", "--json-output", output, "--append", summary)
 		cmd.Dir = project
 		if out, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("generate: %v %s", err, out)
@@ -719,20 +691,26 @@ func TestCaptureGenerationCompleteSnapshotsReplaceRegardlessOfSourceOrder(t *tes
 	}
 }
 
-func TestCaptureGenerationRejectsExplicitSelectionOfAnotherTicketOwner(t *testing.T) {
+func TestManualGenerationExplicitSelectionPreservesAnotherTicketBinding(t *testing.T) {
 	f := newCaptureGenerationFixture(t)
 	f.bind(t, f.write(t, 10))
+	before := manualStateSnapshot(t, f.stateBase)
 	cmd := exec.Command(cliBinaryPath, f.args(t, "--ticket-id", "TEST-200", "--session-id", "root", "--codex-home", f.store)...)
 	cmd.Dir = f.project
-	if out, err := cmd.CombinedOutput(); err == nil {
-		t.Fatalf("explicit selector stole known TEST-100 owner: %s", out)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("explicit manual attribution was blocked by capture binding: %v %s", err, out)
 	}
-	if _, err := os.Stat(f.output); !os.IsNotExist(err) {
-		t.Fatalf("conflicting selector published ledger: %v", err)
+	ledger := f.ledger(t)
+	if ledger.TicketID == nil || *ledger.TicketID != "TEST-200" {
+		t.Fatalf("manual attribution not honored: %+v", ledger.TicketID)
+	}
+	assertCaptureRootInput(t, ledger, 10)
+	if after := manualStateSnapshot(t, f.stateBase); !reflect.DeepEqual(before, after) {
+		t.Fatal("manual selection rebound or otherwise changed capture state")
 	}
 }
 
-func TestCaptureGenerationResolvesStoreAliasesWithoutConflatingDistinctStores(t *testing.T) {
+func TestManualGenerationStoreAliasesDoNotReadOrRebindCaptureOwners(t *testing.T) {
 	for _, bindingUsesAlias := range []bool{false, true} {
 		t.Run(fmt.Sprintf("stored alias %v", bindingUsesAlias), func(t *testing.T) {
 			f := newCaptureGenerationFixture(t)
@@ -785,13 +763,15 @@ func TestCaptureGenerationResolvesStoreAliasesWithoutConflatingDistinctStores(t 
 					t.Fatal(err)
 				}
 			}
+			before := manualStateSnapshot(t, f.stateBase)
 			cmd := exec.Command(cliBinaryPath, f.args(t, "--ticket-id", "TEST-200", "--session-id", "root", "--codex-home", selected)...)
 			cmd.Dir = f.project
-			if out, err := cmd.CombinedOutput(); err == nil {
-				t.Fatalf("actual-store alias bypassed known ticket owner: %s", out)
+			if out, err := cmd.CombinedOutput(); err != nil {
+				t.Fatalf("valid manual source alias was blocked by registry binding: %v %s", err, out)
 			}
-			if _, err := os.Stat(f.output); !os.IsNotExist(err) {
-				t.Fatalf("alias conflict published output: %v", err)
+			assertCaptureRootInput(t, f.ledger(t), 10)
+			if after := manualStateSnapshot(t, f.stateBase); !reflect.DeepEqual(before, after) {
+				t.Fatal("manual source alias changed capture binding")
 			}
 			// A second real store may legitimately reuse a harness-local ID. Its
 			// different native source must not inherit the first store's binding.
@@ -817,9 +797,9 @@ func TestCaptureGenerationResolvesStoreAliasesWithoutConflatingDistinctStores(t 
 }
 
 func TestCaptureGenerationOverlappingPublishersCannotRegressFinalSnapshot(t *testing.T) {
-	t.Run("registered newer publisher", func(t *testing.T) { testCaptureOverlappingPublishers(t, false, false) })
-	t.Run("explicit newer publisher without registry", func(t *testing.T) { testCaptureOverlappingPublishers(t, true, false) })
-	t.Run("automatic newer publisher", func(t *testing.T) { testCaptureOverlappingPublishers(t, false, true) })
+	t.Run("manual older and automatic newer publisher", func(t *testing.T) { testCaptureOverlappingPublishers(t, false, false) })
+	t.Run("manual publishers without registry", func(t *testing.T) { testCaptureOverlappingPublishers(t, true, false) })
+	t.Run("manual older and automatic worker publisher", func(t *testing.T) { testCaptureOverlappingPublishers(t, false, true) })
 }
 
 func testCaptureOverlappingPublishers(t *testing.T, explicitNewer, automatic bool) {
@@ -857,7 +837,7 @@ func testCaptureOverlappingPublishers(t *testing.T, explicitNewer, automatic boo
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	older := exec.CommandContext(ctx, cliBinaryPath, f.args(t)...)
+	older := exec.CommandContext(ctx, cliBinaryPath, f.args(t, "--session-id", "root")...)
 	older.Dir = f.project
 	older.Env = append(os.Environ(), "PATH="+shimDir+string(os.PathListSeparator)+os.Getenv("PATH"), "AL_CAPTURE_TEST_GIT_HELPER=1", "AL_CAPTURE_TEST_GATE_ADDRESS="+listener.Addr().String(), "AL_CAPTURE_TEST_REAL_GIT="+realGit)
 	var olderOutput bytes.Buffer

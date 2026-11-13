@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "DATA-01",
+      "severity": 5,
+      "issue": "Grouping-time Codex warnings permit authoritative refresh and erase an accepted delegation child link.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed and independently rechecked: grouping warnings abort before publication; durable regression preserves ledger and summary. Parent reproduced original failure; test reviewer mutation also detects removal of guard."
+    },
+    {
+      "finding_id": "ARCH-01",
+      "severity": 2,
+      "issue": "Unused manual capture admission helpers and an unreachable recovery branch obscure the new authority boundary.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed and independently rechecked: unused manual admission APIs and unreachable recovery branch removed, strict automatic admission preserved."
+    },
+    {
+      "finding_id": "DATA-02",
+      "severity": 4,
+      "issue": "Nonce discovery drops a source-identified child after a later read error without reporting incomplete extraction.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed and independently rechecked: preserve decoded identity/ancestry on later read error and reject incomplete selected-family discovery; unrelated/unidentifiable corruption stays tolerated. Tester overlay restoring baseline fails only nonce-child regression."
+    }
+  ]
+}

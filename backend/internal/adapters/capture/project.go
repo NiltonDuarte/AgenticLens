@@ -252,13 +252,27 @@ func ValidateOwner(ctx context.Context, project string, r domain.CaptureRegistra
 	}
 	return validateOwnerWithConfig(ctx, project, r, cfg)
 }
+
+// ValidateManualOwner validates authoritative source identity and project membership
+// using the caller's manual configuration. It never accesses capture state.
+func ValidateManualOwner(ctx context.Context, project string, r domain.CaptureRegistration, cfg domain.ProjectConfig) error {
+	return validateOwnerSource(ctx, project, r, cfg, true)
+}
+
 func validateOwnerWithConfig(ctx context.Context, project string, r domain.CaptureRegistration, cfg domain.ProjectConfig) error {
+	return validateOwnerSource(ctx, project, r, cfg, false)
+}
+
+func validateOwnerSource(ctx context.Context, project string, r domain.CaptureRegistration, cfg domain.ProjectConfig, manual bool) error {
 	// Exact explicit ticket selection, or its source-proven child binding,
 	// authorizes portable source identity across original checkout paths.
 	bound := r.TicketID != "" && r.ProjectDirectory == project && hasExplicitSourceBinding(r)
 	if r.Identity.Source == domain.SourceCodex {
 		path := r.TranscriptPath
 		if path == "" {
+			if manual {
+				return errors.New("selected source rollout path unavailable")
+			}
 			var err error
 			path, err = discoverExactCaptureRollout(cfg, r.Identity.Store, r.Identity.SessionID)
 			if err != nil {
@@ -268,10 +282,16 @@ func validateOwnerWithConfig(ctx context.Context, project string, r domain.Captu
 		if err := codex.ValidateRolloutStore(r.Identity.Store, path); err != nil {
 			return err
 		}
-		if err := cfg.Telemetry.Capture.ValidateBudgets(); err != nil {
-			return err
+		var t codex.SessionMetadataContext
+		var err error
+		if manual {
+			t, err = codex.ReadSessionContext(path)
+		} else {
+			if err := cfg.Telemetry.Capture.ValidateBudgets(); err != nil {
+				return err
+			}
+			t, err = codex.ReadSessionContextWithinBudget(path, cfg.Telemetry.Capture.MaxSourceBytes)
 		}
-		t, err := codex.ReadSessionContextWithinBudget(path, cfg.Telemetry.Capture.MaxSourceBytes)
 		if err != nil {
 			return err
 		}
