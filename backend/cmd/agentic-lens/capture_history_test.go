@@ -195,10 +195,14 @@ func TestGenerationPreservesValidCopiedHistoryAndRejectsMalformedOwnership(t *te
 				historyGit(t, b.project, "rm", "agentic_metrics.json")
 				historyGit(t, b.project, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "remove history")
 			case "symlink destination":
-				if err := os.Rename(b.output, b.output+".target"); err != nil {
+				physicalHome := filepath.Join(b.project, "records", "copied-history")
+				if err := os.Mkdir(physicalHome, 0700); err != nil {
 					t.Fatal(err)
 				}
-				if err := os.Symlink("agentic_metrics.json.target", b.output); err != nil {
+				if err := os.Rename(b.output, filepath.Join(physicalHome, "agentic_metrics.json")); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Symlink(filepath.Join("records", "copied-history", "agentic_metrics.json"), b.output); err != nil {
 					t.Fatal(err)
 				}
 			case "fresh collision":
@@ -244,6 +248,12 @@ func TestGenerationPreservesValidCopiedHistoryAndRejectsMalformedOwnership(t *te
 					if !reflect.DeepEqual(owners[expected.ID], expected) {
 						t.Fatalf("unavailable supported history changed: owner=%s actual=%+v expected=%+v", expected.ID, owners[expected.ID], expected)
 					}
+				}
+			}
+
+			if kind == "symlink destination" {
+				if info, err := os.Lstat(b.output); err != nil || info.Mode()&os.ModeSymlink == 0 {
+					t.Fatalf("generation replaced the selected ledger alias: %v", err)
 				}
 			}
 

@@ -134,6 +134,9 @@ func TestCaptureExactSourceDoesNotRequireAncestorGitAuthority(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(nested.project, ".agenticlens-config.yaml"), readCaptureFile(t, filepath.Join(actual.project, ".agenticlens-config.yaml")), 0600); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.Mkdir(filepath.Join(nested.project, "records"), 0700); err != nil {
+		t.Fatal(err)
+	}
 	if err := writeCaptureFixtureLocal(t, nested, []byte("telemetry:\n  capture:\n")); err != nil {
 		t.Fatal(err)
 	}

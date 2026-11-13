@@ -300,6 +300,9 @@ func TestCaptureNativeGitAdvisoryKeepsActualWorktreeHealthIsolated(t *testing.T)
 	git(first.project, "commit", "--quiet", "--allow-empty", "-m", "initial fixture")
 	second := captureGenerationFixture{project: filepath.Join(t.TempDir(), "linked worktree"), store: first.store}
 	git(first.project, "worktree", "add", "--quiet", "-b", "linked", second.project)
+	if err := os.Mkdir(filepath.Join(second.project, "records"), 0700); err != nil {
+		t.Fatal(err)
+	}
 	second.state, err = capture.ProjectState(base, second.project)
 	if err != nil {
 		t.Fatal(err)
