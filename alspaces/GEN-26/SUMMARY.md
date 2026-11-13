@@ -1,0 +1,11 @@
+# GEN-26: OpenSpec compatibility assessment
+
+AgenticLens can plausibly accompany OpenSpec through its existing Codex/OpenCode telemetry adapters. Native change discovery, durable change-to-ticket mapping, archive-aware dashboard detail, external planning artifacts and lifecycle/progress integration are missing. The [assessment and nine-gap map](ASSESSMENT.md) separates current capabilities, confirmed layout behavior, inferred integration gaps and proposed acceptance checks.
+
+The user authorized assessment only. Application code, tests, schemas, runtime configuration and OpenSpec installation were untouched. Keep telemetry in stable configured ticket workspaces and link to OpenSpec changes for an initial pilot. Recommendations do not authorize implementation. Scope and review proportionality are recorded in [iteration 01](iterations/01/PLAN.md); this was a coordinator-led compatibility study without independent review or whole-application approval claims.
+
+Assessed AgenticLens `460c511ef96f9e42f2ecbfdba451828b52d3ce91` and OpenSpec `d12c2817776779e06891d68230773b3bb673b106` (source package version 2.0.0). Initial status was clean. GEN-26 was allocated after checking workspaces, index and fetched refs; the initial generated GEN-13 branch name belonged to an existing unrelated ticket, and GEN-25 also had an active branch.
+
+Verification: current-source native build passed with `make build PLATFORMS=linux/amd64`; generate help confirmed supported flags. Disposable fixture probes confirmed Markdown-only changes are not discovered, slug IDs can load, and recursive scan/root CLI filtering retain archived ledgers. Static HTTP detail tracing identified the direct-directory limitation after archive. Copied fixture history was not treated as a fresh extraction. Full repository gate and final telemetry status will be recorded before handoff.
+
+Limits: no actual OpenSpec assisted workflow, browser interaction, live HTTP archive request, store integration or new harness adapter was exercised. Installed manager rejected the shared configuration at line 100 before help; current-source binaries were used without editing configuration. OpenSpec source revision is pinned; package publication of that SHA was not verified. Findings remain compatibility gaps and proposed work, not implemented fixes.

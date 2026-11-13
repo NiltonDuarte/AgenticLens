@@ -1,0 +1,7 @@
+# GEN-26: OpenSpec compatibility assessment
+
+Assess whether the current AgenticLens implementation can accompany OpenSpec and identify the gaps to deeper integration. Deliver an evidence-linked assessment, prioritized gap map and proposed acceptance checks; do not implement application code, tests, schemas, runtime scripts or install OpenSpec into this project.
+
+The user approved this assessment boundary in the session request. Recommendations do not authorize implementation. Compare supported harness telemetry, ticket identity, workspace discovery, artifacts, lifecycle, configuration, persistence and dashboard representation. Separate source-proven behavior, existing test evidence and unverified interoperability. Preserve portable ledgers and truthful missing-source reporting.
+
+Use the configured GEN- prefix and alspaces root. GEN-26 is free in local workspaces, the ticket index and fetched branch refs; GEN-13 already exists and GEN-25 has an active branch. Baseline: 460c511ef96f9e42f2ecbfdba451828b52d3ce91; initial Git status clean. Own only alspaces/GEN-26/**. Delivery is documentation and session telemetry through a PR; no application changes or implementation tickets are created.
