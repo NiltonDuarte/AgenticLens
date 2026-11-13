@@ -12,9 +12,9 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
 
 ## Ready
 
-- **AL-84**: Adopt OpenSpec across the platform and repository
+- **AL-84**: Support flexible workspace layouts and adopt OpenSpec
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None
-  - **File**: [AL-84](to-do/AL-84%20adopt%20openspec%20across%20the%20platform%20and%20repository.md)
+  - **File**: [AL-84](to-do/AL-84%20support%20flexible%20workspace%20layouts%20and%20adopt%20openspec.md)
 
 - **AL-80**: Capture OpenCode sessions across worktrees
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None
