@@ -1,6 +1,6 @@
 # AL-84: Support flexible workspace layouts and adopt OpenSpec
 
-Execution: [AL-84 OpenSpec change](../../../openspec/changes/al-84-flexible-workspace-layouts-and-openspec/README.md). Approved iteration: 01.
+Execution: [AL-84 OpenSpec change](../../../openspec/changes/al-84-flexible-workspace-layouts-and-openspec/README.md). Approved iteration: 01. Verified delivery: [evidence](../../../openspec/changes/al-84-flexible-workspace-layouts-and-openspec/delivery.md), tested revision `273d90aa16966fe34984b78543fc42cdb6e0c7c0`.
 
 ## Goal
 

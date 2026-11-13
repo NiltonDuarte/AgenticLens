@@ -1,4 +1,10 @@
-# AL-84 verification in progress
+# AL-84 verified delivery evidence
+
+Final integrated gate: `make` exited0 at `273d90aa16966fe34984b78543fc42cdb6e0c7c0`. All backend race packages passed (CLI370.030s; adapters80.899s; backfill76.137s; capture245.859s; HTTP14.445s; live23.214s), frontend231 units/804 integrations passed, and all four manager/engine platform pairs built. Release14, installation10, platform2, capture-distribution23 and orchestration6 tests passed. Earlier failed gates below remain qualified to their revisions.
+
+Three final pinned OpenSpec workflow tests passed6.874s. Host engine SHA-256 `3ba5574e250a029b831da38ecc289ea1ba973f53c1a0c2bcf6402bd309563687` served embedded HTML and config/list/detail with empty PATH, no local config/private state/source stores, retaining both native harness owners and creating no private home/state. Web and embedded asset trees are byte-identical. Both Darwin targets cross-compiled; native macOS and physical power loss were not exercised. Final raw gate/smoke/embed receipts remain private in `build/al84-integrated/`.
+
+All required review cells and final narrow test-only rechecks approved. Consolidated approval follows the actual green integrated gate; [compact findings](REVIEW_SUMMARY.json) retains every finding/reporter. The sections below preserve scoped discovery, control evidence and restart limits, not additional pending delivery gates. Integration tester (`gpt-6.1-sol`/high) independently identified the startup/cadence fairness-oracle gap; both test profiles reviewed its stronger replacement.
 
 Implementation is still changing from baseline `163181428ee9a5a599a2da1e91d3af5e618a9682`. These results cover the stated scopes; they are not final integrated approval. The required integrated `make`, remaining backend fixtures, final native workflow and independent reviews remain pending.
 

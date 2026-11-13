@@ -14,7 +14,7 @@ OpenSpec already accepts lowercase ticket-prefixed names. The remaining platform
 
 ## Expected behavior and acceptance
 
-[AL-84](../plan/to-do/AL-84%20support%20flexible%20workspace%20layouts%20and%20adopt%20openspec.md) owns the observable acceptance for the complete slice: multi-root discovery and shared location resolution, archive-safe publication, stable ticket/session binding, ticket-prefixed OpenSpec setup, reconciled agents/skills/guidance, and the live repository/backlog cutover. Platform support alone is not completion.
+[AL-84](../plan/done/AL-84%20support%20flexible%20workspace%20layouts%20and%20adopt%20openspec.md) owns the observable acceptance for the complete slice: multi-root discovery and shared location resolution, archive-safe publication, stable ticket/session binding, ticket-prefixed OpenSpec setup, reconciled agents/skills/guidance, and the live repository/backlog cutover. Platform support alone is not completion.
 
 Workspace discovery, location resolution, binding and publication use one generic contract for every configured root. Single-directory configuration is the same model with one root. Existing bound workspaces follow moves; new workspace creation requires an explicit selected destination or unambiguous user-configured route. Multiple possible locations require user disambiguation, not a directory-name guess.
 
