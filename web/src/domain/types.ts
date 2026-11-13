@@ -131,6 +131,7 @@ export type OwnedSkillFact = SkillFact & { readonly session_id: string };
 export type OwnedDelegationFact = DelegationFact & { readonly session_id: string };
 
 export interface AgenticFactLedger {
+  readonly tags?: Readonly<Record<string, string>>;
   readonly schema_version: 6;
   readonly migration?: MigrationInfo;
   readonly ticket_id: string | null;
@@ -336,6 +337,7 @@ export interface FleetSummary {
 }
 
 export interface TicketComparisonRow {
+  readonly tags?: Readonly<Record<string, string>>;
  readonly provisional_seconds?: number;
   readonly skills_used?: readonly string[];
   readonly ticket_id: string;

@@ -1,0 +1,3449 @@
+{
+  "operation": "AL-82 one-time historical ticket-root skill-version backfill",
+  "baseline": "01df52e6d0f598dadcff8baa173d31f11e558697",
+  "method": "Use exact VERSION files at latest owning merged PR; primary title ticket overrides contextual IDs and reused branches. For unmatched imported/direct-main tickets use latest mainline commit at or before recorded completed_at from recovered pre-rewrite history and current mainline. Never use ledger updated_at. Apply AL-68 ticket versions to its archived iteration ledger. AL-82 is open and retains provisional current versions. Tags describe available project skill versions, not observed skill invocation.",
+  "version_boundary": {
+    "commit": "731de946d7d4f1d3715a9d647d54889b8871a39c",
+    "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/128",
+    "merged_at": "2026-11-08T17:08:16Z",
+    "before": "0.1.0",
+    "after": "0.1.1"
+  },
+  "no_ledger": {
+    "tickets": [
+      "AL-42",
+      "AL-44",
+      "FIX-15",
+      "PO-14",
+      "PO-15"
+    ],
+    "reason": "No agentic_metrics.json exists; no telemetry or synthetic ledger created. These folders have no persisted ticket metrics to tag."
+  },
+  "tickets": [
+    {
+      "ticket": "AL-1",
+      "ledgers": [
+        "alspaces/AL-1/agentic_metrics.json"
+      ],
+      "basis": "recorded_completion_mainline_snapshot",
+      "completed_at": "2026-10-17T16:05:30.761000+00:00",
+      "cutoff_commit": "c4c4dab37a934bf516c84bf72d0f413080199311",
+      "snapshot_at": "2026-10-17T15:11:55+00:00",
+      "note": "No owning merged PR matched; snapshot approximates project versions at recorded completion, not observed skill execution.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": null,
+          "version": null,
+          "status": "absent_at_cutoff"
+        }
+      }
+    },
+    {
+      "ticket": "AL-10",
+      "ledgers": [
+        "alspaces/AL-10/agentic_metrics.json"
+      ],
+      "basis": "recorded_completion_mainline_snapshot",
+      "completed_at": "2026-10-17T20:07:53.377000+00:00",
+      "cutoff_commit": "24d54ac4f710e5eb2e69ebd3ec3d7f646b2e40eb",
+      "snapshot_at": "2026-10-17T20:07:14+00:00",
+      "note": "No owning merged PR matched; snapshot approximates project versions at recorded completion, not observed skill execution.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": null,
+          "version": null,
+          "status": "absent_at_cutoff"
+        }
+      }
+    },
+    {
+      "ticket": "AL-11",
+      "ledgers": [
+        "alspaces/AL-11/agentic_metrics.json"
+      ],
+      "basis": "recorded_completion_mainline_snapshot",
+      "completed_at": "2026-10-17T21:00:34.775000+00:00",
+      "cutoff_commit": "1af3eac953f4a5fda94863e46a71641fd835388b",
+      "snapshot_at": "2026-10-17T21:00:14+00:00",
+      "note": "No owning merged PR matched; snapshot approximates project versions at recorded completion, not observed skill execution.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": null,
+          "version": null,
+          "status": "absent_at_cutoff"
+        }
+      }
+    },
+    {
+      "ticket": "AL-12",
+      "ledgers": [
+        "alspaces/AL-12/agentic_metrics.json"
+      ],
+      "basis": "recorded_completion_mainline_snapshot",
+      "completed_at": "2026-10-17T23:10:12.007000+00:00",
+      "cutoff_commit": "e867b487b9e22c610bda8eef1877be0fa505f3e4",
+      "snapshot_at": "2026-10-17T23:05:20+00:00",
+      "note": "No owning merged PR matched; snapshot approximates project versions at recorded completion, not observed skill execution.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": null,
+          "version": null,
+          "status": "absent_at_cutoff"
+        }
+      }
+    },
+    {
+      "ticket": "AL-13",
+      "ledgers": [
+        "alspaces/AL-13/agentic_metrics.json"
+      ],
+      "basis": "recorded_completion_mainline_snapshot",
+      "completed_at": "2026-10-18T15:06:29.662000+00:00",
+      "cutoff_commit": "cc0670c613946af8a81799dddf718144599c2280",
+      "snapshot_at": "2026-10-18T15:05:56+00:00",
+      "note": "No owning merged PR matched; snapshot approximates project versions at recorded completion, not observed skill execution.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-14",
+      "ledgers": [
+        "alspaces/AL-14/agentic_metrics.json"
+      ],
+      "basis": "recorded_completion_mainline_snapshot",
+      "completed_at": "2026-10-18T17:27:25.469000+00:00",
+      "cutoff_commit": "e0878b80245a6dad2001b85bcae8432917b2b958",
+      "snapshot_at": "2026-10-18T17:27:00+00:00",
+      "note": "No owning merged PR matched; snapshot approximates project versions at recorded completion, not observed skill execution.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-15",
+      "ledgers": [
+        "alspaces/AL-15/agentic_metrics.json"
+      ],
+      "basis": "recorded_completion_mainline_snapshot",
+      "completed_at": "2026-10-18T15:46:49.123000+00:00",
+      "cutoff_commit": "3b9a2098a7a036e48b112489704bbef43c22d15f",
+      "snapshot_at": "2026-10-18T15:46:23+00:00",
+      "note": "No owning merged PR matched; snapshot approximates project versions at recorded completion, not observed skill execution.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-16",
+      "ledgers": [
+        "alspaces/AL-16/agentic_metrics.json"
+      ],
+      "basis": "recorded_completion_mainline_snapshot",
+      "completed_at": "2026-10-18T18:39:17.606000+00:00",
+      "cutoff_commit": "a815e2629a13b13c5e2e5036eef4951bb4c684ed",
+      "snapshot_at": "2026-10-18T18:38:12+00:00",
+      "note": "No owning merged PR matched; snapshot approximates project versions at recorded completion, not observed skill execution.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-17",
+      "ledgers": [
+        "alspaces/AL-17/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "2c4340e8022b7414bafd7902ce160017238c7776",
+      "cutoff_at": "2026-10-19T22:06:09Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/2",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-19",
+      "ledgers": [
+        "alspaces/AL-19/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "06d37bff511ef9878fb95d27f417f3590a41d7c2",
+      "cutoff_at": "2026-10-20T10:39:14Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/6",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-2",
+      "ledgers": [
+        "alspaces/AL-2/agentic_metrics.json"
+      ],
+      "basis": "recorded_completion_mainline_snapshot",
+      "completed_at": "2026-10-17T18:05:08.487000+00:00",
+      "cutoff_commit": "2b74a814891a6c65f78dfcd46b044c4575fc47f9",
+      "snapshot_at": "2026-10-17T18:04:34+00:00",
+      "note": "No owning merged PR matched; snapshot approximates project versions at recorded completion, not observed skill execution.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": null,
+          "version": null,
+          "status": "absent_at_cutoff"
+        }
+      }
+    },
+    {
+      "ticket": "AL-20",
+      "ledgers": [
+        "alspaces/AL-20/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "f32359e6ec4ef38809fd8f4adc40adec55fc53eb",
+      "cutoff_at": "2026-10-20T13:42:34Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/10",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-21",
+      "ledgers": [
+        "alspaces/AL-21/agentic_metrics.json"
+      ],
+      "basis": "recorded_completion_mainline_snapshot",
+      "completed_at": "2026-10-18T15:34:24.427000+00:00",
+      "cutoff_commit": "f8ffbc9790ba0ca889d769c9d2fa39057ec10c26",
+      "snapshot_at": "2026-10-18T15:34:05+00:00",
+      "note": "No owning merged PR matched; snapshot approximates project versions at recorded completion, not observed skill execution.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-22",
+      "ledgers": [
+        "alspaces/AL-22/agentic_metrics.json"
+      ],
+      "basis": "recorded_completion_mainline_snapshot",
+      "completed_at": "2026-10-18T14:34:42.940000+00:00",
+      "cutoff_commit": "ffeff3344a9e64514ea83fd46a492825696d5f5e",
+      "snapshot_at": "2026-10-18T14:33:54+00:00",
+      "note": "No owning merged PR matched; snapshot approximates project versions at recorded completion, not observed skill execution.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-23",
+      "ledgers": [
+        "alspaces/AL-23/agentic_metrics.json"
+      ],
+      "basis": "recorded_completion_mainline_snapshot",
+      "completed_at": "2026-10-18T19:37:44.281000+00:00",
+      "cutoff_commit": "89f6c772fcf0f59d390fc73940a5c8f622130b44",
+      "snapshot_at": "2026-10-18T19:36:49+00:00",
+      "note": "No owning merged PR matched; snapshot approximates project versions at recorded completion, not observed skill execution.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-24",
+      "ledgers": [
+        "alspaces/AL-24/agentic_metrics.json"
+      ],
+      "basis": "recorded_completion_mainline_snapshot",
+      "completed_at": "2026-10-18T23:41:23.992000+00:00",
+      "cutoff_commit": "2717de36fe62b213cd335998770d926db3291a1a",
+      "snapshot_at": "2026-10-18T23:41:13+00:00",
+      "note": "No owning merged PR matched; snapshot approximates project versions at recorded completion, not observed skill execution.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-25",
+      "ledgers": [
+        "alspaces/AL-25/agentic_metrics.json"
+      ],
+      "basis": "recorded_completion_mainline_snapshot",
+      "completed_at": "2026-10-18T23:04:23.248000+00:00",
+      "cutoff_commit": "aa935bf5bfc82486a3fca28402452b152b2d2f6a",
+      "snapshot_at": "2026-10-18T23:03:59+00:00",
+      "note": "No owning merged PR matched; snapshot approximates project versions at recorded completion, not observed skill execution.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-26",
+      "ledgers": [
+        "alspaces/AL-26/agentic_metrics.json"
+      ],
+      "basis": "recorded_completion_mainline_snapshot",
+      "completed_at": "2026-10-19T11:55:46.776000+00:00",
+      "cutoff_commit": "ee4414caf54713db187da1b8782aed3f01cc72fa",
+      "snapshot_at": "2026-10-19T11:54:51+00:00",
+      "note": "No owning merged PR matched; snapshot approximates project versions at recorded completion, not observed skill execution.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-27",
+      "ledgers": [
+        "alspaces/AL-27/agentic_metrics.json"
+      ],
+      "basis": "recorded_completion_mainline_snapshot",
+      "completed_at": "2026-10-19T14:34:37.854000+00:00",
+      "cutoff_commit": "9ab08b02564a84e35ec0c780b6aec9cbd16ca3c6",
+      "snapshot_at": "2026-10-19T14:33:58+00:00",
+      "note": "No owning merged PR matched; snapshot approximates project versions at recorded completion, not observed skill execution.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-28",
+      "ledgers": [
+        "alspaces/AL-28/agentic_metrics.json"
+      ],
+      "basis": "recorded_completion_mainline_snapshot",
+      "completed_at": "2026-10-19T16:43:49.398000+00:00",
+      "cutoff_commit": "0451d46d230a27edbf5a693e3ef0978664bfca2d",
+      "snapshot_at": "2026-10-19T16:43:36+00:00",
+      "note": "No owning merged PR matched; snapshot approximates project versions at recorded completion, not observed skill execution.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-29",
+      "ledgers": [
+        "alspaces/AL-29/agentic_metrics.json"
+      ],
+      "basis": "recorded_completion_mainline_snapshot",
+      "completed_at": "2026-10-19T14:19:14.853000+00:00",
+      "cutoff_commit": "b6626cc5f0c195c4bea2734212744626328382c9",
+      "snapshot_at": "2026-10-19T14:18:55+00:00",
+      "note": "No owning merged PR matched; snapshot approximates project versions at recorded completion, not observed skill execution.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-3",
+      "ledgers": [
+        "alspaces/AL-3/agentic_metrics.json"
+      ],
+      "basis": "recorded_completion_mainline_snapshot",
+      "completed_at": "2026-10-17T19:28:25.075000+00:00",
+      "cutoff_commit": "e703c58bba706f6040258671372c1a631aff2c56",
+      "snapshot_at": "2026-10-17T19:25:21+00:00",
+      "note": "No owning merged PR matched; snapshot approximates project versions at recorded completion, not observed skill execution.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": null,
+          "version": null,
+          "status": "absent_at_cutoff"
+        }
+      }
+    },
+    {
+      "ticket": "AL-30",
+      "ledgers": [
+        "alspaces/AL-30/agentic_metrics.json"
+      ],
+      "basis": "recorded_completion_mainline_snapshot",
+      "completed_at": "2026-10-18T19:45:06.143000+00:00",
+      "cutoff_commit": "bc8e257226dd285aec08ea32b9ed8136031da16a",
+      "snapshot_at": "2026-10-18T19:44:27+00:00",
+      "note": "No owning merged PR matched; snapshot approximates project versions at recorded completion, not observed skill execution.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-31",
+      "ledgers": [
+        "alspaces/AL-31/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "1856bc575feb543cee88edecc01d4cfff4988fc0",
+      "cutoff_at": "2026-10-19T21:34:10Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/4",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-32",
+      "ledgers": [
+        "alspaces/AL-32/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "1b35fe3f63a2fe330f4b7f142645d8a83dcfc610",
+      "cutoff_at": "2026-10-19T21:45:53Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/3",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-33",
+      "ledgers": [
+        "alspaces/AL-33/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "c0e475eea889a6ff0f27c0f5bad39a06a13a8440",
+      "cutoff_at": "2026-10-20T12:15:13Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/7",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-34",
+      "ledgers": [
+        "alspaces/AL-34/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "7b6f3eff1a47251b8642730be4767c0d7609f046",
+      "cutoff_at": "2026-10-19T22:17:19Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/5",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-35",
+      "ledgers": [
+        "alspaces/AL-35/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "3c7ab0798fc77eae3c53e4fa152992f7952c9b9e",
+      "cutoff_at": "2026-10-20T15:41:32Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/11",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-36",
+      "ledgers": [
+        "alspaces/AL-36/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "7a139c77e7e37265a45977cd51ed47259c1de827",
+      "cutoff_at": "2026-10-20T21:27:11Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/14",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-37",
+      "ledgers": [
+        "alspaces/AL-37/agentic_metrics.json"
+      ],
+      "basis": "recorded_completion_mainline_snapshot",
+      "completed_at": "2026-10-22T20:20:03.912000+00:00",
+      "cutoff_commit": "2ec257c40afe19107be40ca45e91bea1a3658004",
+      "snapshot_at": "2026-10-22T21:51:47+02:00",
+      "note": "No owning merged PR matched; snapshot approximates project versions at recorded completion, not observed skill execution.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-38",
+      "ledgers": [
+        "alspaces/AL-38/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "da7b7a05a5a76b9aa9aca65492f114f086c593a2",
+      "cutoff_at": "2026-10-20T15:08:37Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/12",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-39",
+      "ledgers": [
+        "alspaces/AL-39/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "2fdcd826e09d6309d8767c234a98e1574031f436",
+      "cutoff_at": "2026-10-21T08:16:27Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/17",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-4",
+      "ledgers": [
+        "alspaces/AL-4/agentic_metrics.json"
+      ],
+      "basis": "recorded_completion_mainline_snapshot",
+      "completed_at": "2026-10-17T22:23:18.525000+00:00",
+      "cutoff_commit": "9e85f20ec67e911c286df49fcc0f14d1289ae670",
+      "snapshot_at": "2026-10-17T22:22:52+00:00",
+      "note": "No owning merged PR matched; snapshot approximates project versions at recorded completion, not observed skill execution.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": null,
+          "version": null,
+          "status": "absent_at_cutoff"
+        }
+      }
+    },
+    {
+      "ticket": "AL-40",
+      "ledgers": [
+        "alspaces/AL-40/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "f23e9345a158dee7ed1708a0b52e720565152916",
+      "cutoff_at": "2026-10-20T22:33:52Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/16",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-41",
+      "ledgers": [
+        "alspaces/AL-41/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "7474a77c729ee8a62195821ee0c35c4a72e8538f",
+      "cutoff_at": "2026-10-20T18:34:40Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/15",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-43",
+      "ledgers": [
+        "alspaces/AL-43/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "9707d418921ca7a6f88a9e5e826a55f16323677e",
+      "cutoff_at": "2026-10-31T16:08:21Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/88",
+      "owning_prs": [
+        78,
+        88
+      ],
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-45",
+      "ledgers": [
+        "alspaces/AL-45/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "bbc535ca27ca01bd7feac272ae512f954135433f",
+      "cutoff_at": "2026-10-31T00:49:39Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/56",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-46",
+      "ledgers": [
+        "alspaces/AL-46/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "be27d399242c96199a41a98a1dc2a5f35e9048c2",
+      "cutoff_at": "2026-10-31T00:14:00Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/58",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-47",
+      "ledgers": [
+        "alspaces/AL-47/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "c3ce116611638ea1bee47dc3140d8af992814a44",
+      "cutoff_at": "2026-10-31T14:24:52Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/82",
+      "owning_prs": [
+        76,
+        82
+      ],
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-48",
+      "ledgers": [
+        "alspaces/AL-48/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "d92fdb1edd69e61ecaa1d038a204afaa61024f9d",
+      "cutoff_at": "2026-10-31T00:30:29Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/61",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-49",
+      "ledgers": [
+        "alspaces/AL-49/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "ba53cfc479b2d6a201ca35df56641a1af453d4e6",
+      "cutoff_at": "2026-10-31T00:55:08Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/59",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-5",
+      "ledgers": [
+        "alspaces/AL-5/agentic_metrics.json"
+      ],
+      "basis": "recorded_completion_mainline_snapshot",
+      "completed_at": "2026-10-18T06:56:21.480000+00:00",
+      "cutoff_commit": "3599e78634adf7257234510b2319259359f359e5",
+      "snapshot_at": "2026-10-18T06:55:45+00:00",
+      "note": "No owning merged PR matched; snapshot approximates project versions at recorded completion, not observed skill execution.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": null,
+          "version": null,
+          "status": "absent_at_cutoff"
+        }
+      }
+    },
+    {
+      "ticket": "AL-50",
+      "ledgers": [
+        "alspaces/AL-50/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "791f948f6879c6eea4879bf102f6cc2d5d39f678",
+      "cutoff_at": "2026-10-31T00:46:18Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/60",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-51",
+      "ledgers": [
+        "alspaces/AL-51/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "8c9396a33111bcc296891c0b86e8f7a12f1c51ca",
+      "cutoff_at": "2026-10-31T01:04:18Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/62",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-52",
+      "ledgers": [
+        "alspaces/AL-52/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "6bc1064943ae22e1b6586a6d145543c6a9cd23f2",
+      "cutoff_at": "2026-10-31T14:00:38Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/75",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-53",
+      "ledgers": [
+        "alspaces/AL-53/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "bdef2d0ef98e37fe259921bc30ba2daefbfda717",
+      "cutoff_at": "2026-10-31T14:33:30Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/77",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-54",
+      "ledgers": [
+        "alspaces/AL-54/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "b1268234cde742705728ea33ee89d30581803c47",
+      "cutoff_at": "2026-10-31T13:52:30Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/79",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-55",
+      "ledgers": [
+        "alspaces/AL-55/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "3857fa22f49f825c82ced39c3f81f963b7447545",
+      "cutoff_at": "2026-10-31T15:35:25Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/86",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-56",
+      "ledgers": [
+        "alspaces/AL-56/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "62b55551dd032d0345dab6a62b2b50c481301632",
+      "cutoff_at": "2026-10-28T17:12:11Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/43",
+      "owning_prs": [
+        38,
+        43
+      ],
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-57",
+      "ledgers": [
+        "alspaces/AL-57/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "47af923f5763dc937372ada776c1043c2dd3e7a6",
+      "cutoff_at": "2026-10-31T23:40:58Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/89",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-58",
+      "ledgers": [
+        "alspaces/AL-58/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "8cc2c7cc1ec0d394ead657bcc18c555b457a1dd5",
+      "cutoff_at": "2026-10-30T23:22:24Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/50",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-59",
+      "ledgers": [
+        "alspaces/AL-59/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "7f153b4443914060bcf9de1078e6e13466879db0",
+      "cutoff_at": "2026-10-29T08:46:40Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/51",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-6",
+      "ledgers": [
+        "alspaces/AL-6/agentic_metrics.json"
+      ],
+      "basis": "recorded_completion_mainline_snapshot",
+      "completed_at": "2026-10-18T09:16:39.441000+00:00",
+      "cutoff_commit": "d0191fd66ea3cbb6edb64cb432d573d8d3e01855",
+      "snapshot_at": "2026-10-18T09:16:19+00:00",
+      "note": "No owning merged PR matched; snapshot approximates project versions at recorded completion, not observed skill execution.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": null,
+          "version": null,
+          "status": "absent_at_cutoff"
+        }
+      }
+    },
+    {
+      "ticket": "AL-60",
+      "ledgers": [
+        "alspaces/AL-60/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "3fbecd2576270772462fe37235d90c5f33e2164c",
+      "cutoff_at": "2026-11-03T20:49:59Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/105",
+      "owning_prs": [
+        101,
+        105
+      ],
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-61",
+      "ledgers": [
+        "alspaces/AL-61/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "8b1de5f761ebb92f78b2b462c1ff583724ecbdb5",
+      "cutoff_at": "2026-11-03T21:02:02Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/104",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-62",
+      "ledgers": [
+        "alspaces/AL-62/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "86bea597afe7208cb1836f7cc5747083f7b95f47",
+      "cutoff_at": "2026-11-04T14:56:19Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/109",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-64",
+      "ledgers": [
+        "alspaces/AL-64/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "57a3503e3024f3993ce9391fee604aad0bcc44d5",
+      "cutoff_at": "2026-11-06T16:27:50Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/121",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-66",
+      "ledgers": [
+        "alspaces/AL-66/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "40b16deff869ce9311aeba7b73d2284071296b48",
+      "cutoff_at": "2026-11-04T22:18:20Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/115",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-67",
+      "ledgers": [
+        "alspaces/AL-67/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "313688b1144af7f4b652af76a0ea8e4c7f83e90d",
+      "cutoff_at": "2026-11-04T22:10:01Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/112",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-68",
+      "ledgers": [
+        "alspaces/AL-68/agentic_metrics.json",
+        "alspaces/AL-68/iterations/05/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "733e367ee12b9828cd340759eab855f4d809279c",
+      "cutoff_at": "2026-11-03T18:28:14Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/99",
+      "owning_prs": [
+        93,
+        99
+      ],
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-69",
+      "ledgers": [
+        "alspaces/AL-69/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "f63e3db6b2d4baa8e22452e4ec94eff566867721",
+      "cutoff_at": "2026-11-10T17:30:39Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/134",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.1"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.1"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.1"
+        }
+      }
+    },
+    {
+      "ticket": "AL-7",
+      "ledgers": [
+        "alspaces/AL-7/agentic_metrics.json"
+      ],
+      "basis": "recorded_completion_mainline_snapshot",
+      "completed_at": "2026-10-18T12:33:43.263000+00:00",
+      "cutoff_commit": "3dbc0abf509e439b2319a9c9649024d95be51acd",
+      "snapshot_at": "2026-10-18T12:32:58+00:00",
+      "note": "No owning merged PR matched; snapshot approximates project versions at recorded completion, not observed skill execution.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": null,
+          "version": null,
+          "status": "absent_at_cutoff"
+        }
+      }
+    },
+    {
+      "ticket": "AL-70",
+      "ledgers": [
+        "alspaces/AL-70/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "167c204fc958da34eb82d97129dedd85ac9b8c58",
+      "cutoff_at": "2026-11-11T10:03:47Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/137",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.1"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.1"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.1"
+        }
+      }
+    },
+    {
+      "ticket": "AL-76",
+      "ledgers": [
+        "alspaces/AL-76/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "8d494d2e7bd3705ee400b4bdecad256470f65f73",
+      "cutoff_at": "2026-11-03T21:18:14Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/102",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-77",
+      "ledgers": [
+        "alspaces/AL-77/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "44aa50cc22ed8db65d4db4f6aded08aba233f577",
+      "cutoff_at": "2026-11-04T22:00:06Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/114",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-79",
+      "ledgers": [
+        "alspaces/AL-79/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "583c678de2f0a5d2f5aec472e11ad02003bb684e",
+      "cutoff_at": "2026-11-10T00:31:28Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/130",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.1"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.1"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.1"
+        }
+      }
+    },
+    {
+      "ticket": "AL-8",
+      "ledgers": [
+        "alspaces/AL-8/agentic_metrics.json"
+      ],
+      "basis": "recorded_completion_mainline_snapshot",
+      "completed_at": "2026-10-18T14:11:54.585000+00:00",
+      "cutoff_commit": "e02f64423ac4f671e26a71f91ece407cf427f152",
+      "snapshot_at": "2026-10-18T14:11:22+00:00",
+      "note": "No owning merged PR matched; snapshot approximates project versions at recorded completion, not observed skill execution.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "AL-82",
+      "ledgers": [
+        "alspaces/AL-82/agentic_metrics.json"
+      ],
+      "basis": "current_unmerged",
+      "cutoff_commit": "01df52e6d0f598dadcff8baa173d31f11e558697",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/141",
+      "note": "Provisional current versions; PR is open, no merge version claimed.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.1"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.1"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.1"
+        }
+      }
+    },
+    {
+      "ticket": "AL-83",
+      "ledgers": [
+        "alspaces/AL-83/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "3384fa482a9568cfced2db2e0ee943527a8a22cf",
+      "cutoff_at": "2026-11-11T00:29:00Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/136",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.1"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.1"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.1"
+        }
+      }
+    },
+    {
+      "ticket": "AL-9",
+      "ledgers": [
+        "alspaces/AL-9/agentic_metrics.json"
+      ],
+      "basis": "recorded_completion_mainline_snapshot",
+      "completed_at": "2026-10-18T23:15:55.411000+00:00",
+      "cutoff_commit": "e867ed0374fdc80fe0d2376927b4c83b74614475",
+      "snapshot_at": "2026-10-18T23:15:11+00:00",
+      "note": "No owning merged PR matched; snapshot approximates project versions at recorded completion, not observed skill execution.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "FIX-1",
+      "ledgers": [
+        "alspaces/FIX-1/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "53b8ec0df16e8a4e2da0d3af8bb603ad6cb151d6",
+      "cutoff_at": "2026-10-20T20:56:57Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/18",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "FIX-10",
+      "ledgers": [
+        "alspaces/FIX-10/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "44731989552d63ed2c6937520f80177558caf34d",
+      "cutoff_at": "2026-10-29T11:07:10Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/44",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "FIX-11",
+      "ledgers": [
+        "alspaces/FIX-11/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "193de6611a391119c3e7387143dd5f8cc9183c36",
+      "cutoff_at": "2026-10-29T00:16:12Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/45",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "FIX-12",
+      "ledgers": [
+        "alspaces/FIX-12/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "e825d7682033ec9e6a0c16bd31323fb4894413fd",
+      "cutoff_at": "2026-10-29T14:14:16Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/52",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "FIX-13",
+      "ledgers": [
+        "alspaces/FIX-13/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "6da00a8276d920aa7bda331b5e4f3c09f9589a58",
+      "cutoff_at": "2026-10-31T01:03:51Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/65",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "FIX-14",
+      "ledgers": [
+        "alspaces/FIX-14/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "2e4a70fd458a8d604161aab96f78c509ee81e76e",
+      "cutoff_at": "2026-10-31T01:26:37Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/67",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "FIX-16",
+      "ledgers": [
+        "alspaces/FIX-16/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "33ddada05c64cb8fa41701fd9fce3376ff83ff10",
+      "cutoff_at": "2026-11-03T23:24:26Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/107",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "FIX-17",
+      "ledgers": [
+        "alspaces/FIX-17/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "04c248b7837065ea461767381de19ce90362b41c",
+      "cutoff_at": "2026-11-04T18:25:44Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/111",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "FIX-2",
+      "ledgers": [
+        "alspaces/FIX-2/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "97705ebd30ae7e2950e8ef689552cdba0de5937b",
+      "cutoff_at": "2026-10-21T16:04:15Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/20",
+      "owning_prs": [
+        19,
+        20
+      ],
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "FIX-3",
+      "ledgers": [
+        "alspaces/FIX-3/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "edf719d1aef707922b9945db06a56fbd38d84c66",
+      "cutoff_at": "2026-10-22T14:29:02Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/24",
+      "owning_prs": [
+        21,
+        24
+      ],
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "FIX-4",
+      "ledgers": [
+        "alspaces/FIX-4/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "48db4908694ceae5715d69296f9c3bb41d4ef2fd",
+      "cutoff_at": "2026-10-21T17:49:32Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/23",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "FIX-5",
+      "ledgers": [
+        "alspaces/FIX-5/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "2ec257c40afe19107be40ca45e91bea1a3658004",
+      "cutoff_at": "2026-10-22T19:51:47Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/27",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "FIX-6",
+      "ledgers": [
+        "alspaces/FIX-6/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "edaaa98936df84247f6841fc8e02badd2175b6eb",
+      "cutoff_at": "2026-10-22T21:32:57Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/30",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "FIX-7",
+      "ledgers": [
+        "alspaces/FIX-7/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "3e97ab4290c006dbbb7e70b428a29cf0e1a995dd",
+      "cutoff_at": "2026-10-22T22:48:27Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/32",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "FIX-8",
+      "ledgers": [
+        "alspaces/FIX-8/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "f2b2fb0bccd93c32b289b8720da24b42d64ea084",
+      "cutoff_at": "2026-10-28T10:02:06Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/41",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "FIX-9",
+      "ledgers": [
+        "alspaces/FIX-9/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "68e1feb8463fb067f6a2ec1087fc2f7a34e92989",
+      "cutoff_at": "2026-10-28T09:28:21Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/42",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "GEN-1",
+      "ledgers": [
+        "alspaces/GEN-1/agentic_metrics.json"
+      ],
+      "basis": "recorded_completion_mainline_snapshot",
+      "completed_at": "2026-10-17T15:39:30.399000+00:00",
+      "cutoff_commit": "c4c4dab37a934bf516c84bf72d0f413080199311",
+      "snapshot_at": "2026-10-17T15:11:55+00:00",
+      "note": "No owning merged PR matched; snapshot approximates project versions at recorded completion, not observed skill execution.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": null,
+          "version": null,
+          "status": "absent_at_cutoff"
+        }
+      }
+    },
+    {
+      "ticket": "GEN-10",
+      "ledgers": [
+        "alspaces/GEN-10/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "86fbcf1e9eb2f8d5da5ca92a6878a888d0640175",
+      "cutoff_at": "2026-10-30T10:47:09Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/54",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "GEN-11",
+      "ledgers": [
+        "alspaces/GEN-11/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "1b9775322cb276139e908ca3351fa3cca30f3f8b",
+      "cutoff_at": "2026-10-31T00:35:52Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/63",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "GEN-12",
+      "ledgers": [
+        "alspaces/GEN-12/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "76a74bca6e7a844e41c9a82fa26dae94af1b60cc",
+      "cutoff_at": "2026-10-31T01:47:56Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/69",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "GEN-13",
+      "ledgers": [
+        "alspaces/GEN-13/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "1d20117711aab96a230679d3cdb9406853fe3f04",
+      "cutoff_at": "2026-10-31T12:16:17Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/73",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "GEN-15",
+      "ledgers": [
+        "alspaces/GEN-15/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "99fbcd7be0d0ed05639e4a0cb3be8744a3d5371e",
+      "cutoff_at": "2026-11-02T20:46:29Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/94",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "GEN-16",
+      "ledgers": [
+        "alspaces/GEN-16/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "8f0fd4f7b4f95e739fba41dda9f0e121e3654661",
+      "cutoff_at": "2026-11-02T21:36:22Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/95",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "GEN-17",
+      "ledgers": [
+        "alspaces/GEN-17/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "b1742e96e7631330ba7d3de2a66a5ad82606c259",
+      "cutoff_at": "2026-11-02T23:08:15Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/96",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "GEN-18",
+      "ledgers": [
+        "alspaces/GEN-18/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "036d808b0c77bec400f23ca77a5cf056a0b2078b",
+      "cutoff_at": "2026-11-03T09:40:39Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/97",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "GEN-19",
+      "ledgers": [
+        "alspaces/GEN-19/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "122e983f8c365a2aa248b1b6d492252555e922ae",
+      "cutoff_at": "2026-11-03T17:37:01Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/98",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "GEN-2",
+      "ledgers": [
+        "alspaces/GEN-2/agentic_metrics.json"
+      ],
+      "basis": "recorded_completion_mainline_snapshot",
+      "completed_at": "2026-10-17T16:17:40.613000+00:00",
+      "cutoff_commit": "db57d34b265fa18504ac151bc8d50392992bc3e4",
+      "snapshot_at": "2026-10-17T16:12:21+00:00",
+      "note": "No owning merged PR matched; snapshot approximates project versions at recorded completion, not observed skill execution.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": null,
+          "version": null,
+          "status": "absent_at_cutoff"
+        }
+      }
+    },
+    {
+      "ticket": "GEN-20",
+      "ledgers": [
+        "alspaces/GEN-20/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "19d70574d0e22b00f185c32d048baaf62792743e",
+      "cutoff_at": "2026-11-03T23:49:29Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/108",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "GEN-21",
+      "ledgers": [
+        "alspaces/GEN-21/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "a84adbe5be46c2ef52ede0987a417562715d38e1",
+      "cutoff_at": "2026-11-04T18:33:38Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/110",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "GEN-22",
+      "ledgers": [
+        "alspaces/GEN-22/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "731de946d7d4f1d3715a9d647d54889b8871a39c",
+      "cutoff_at": "2026-11-08T17:08:16Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/128",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.1"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.1"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.1"
+        }
+      }
+    },
+    {
+      "ticket": "GEN-23",
+      "ledgers": [
+        "alspaces/GEN-23/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "eb7d169c7f18fb935d4c2ceac998d4eca2ac36f4",
+      "cutoff_at": "2026-11-08T20:19:14Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/132",
+      "owning_prs": [
+        131,
+        132
+      ],
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.1"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.1"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.1"
+        }
+      }
+    },
+    {
+      "ticket": "GEN-24",
+      "ledgers": [
+        "alspaces/GEN-24/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "4e5c458322a2cddfdb5911b26a4569ea75f06a09",
+      "cutoff_at": "2026-11-11T15:36:09Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/138",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.1"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.1"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.1"
+        }
+      }
+    },
+    {
+      "ticket": "GEN-3",
+      "ledgers": [
+        "alspaces/GEN-3/agentic_metrics.json"
+      ],
+      "basis": "recorded_completion_mainline_snapshot",
+      "completed_at": "2026-10-18T18:46:48.907000+00:00",
+      "cutoff_commit": "a815e2629a13b13c5e2e5036eef4951bb4c684ed",
+      "snapshot_at": "2026-10-18T18:38:12+00:00",
+      "note": "No owning merged PR matched; snapshot approximates project versions at recorded completion, not observed skill execution.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "GEN-4",
+      "ledgers": [
+        "alspaces/GEN-4/agentic_metrics.json"
+      ],
+      "basis": "recorded_completion_mainline_snapshot",
+      "completed_at": "2026-10-19T19:03:46.657000+00:00",
+      "cutoff_commit": "10b6300da85ab2fc7436e2a8d7091c82cffc74ca",
+      "snapshot_at": "2026-10-19T18:27:45+00:00",
+      "note": "No owning merged PR matched; snapshot approximates project versions at recorded completion, not observed skill execution.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "GEN-5",
+      "ledgers": [
+        "alspaces/GEN-5/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "0dbd1972a374a0f9375af97b0fcf69cf974c2210",
+      "cutoff_at": "2026-10-23T10:54:32Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/35",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "GEN-6",
+      "ledgers": [
+        "alspaces/GEN-6/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "86e2c33e827418ecbfd6635bed5b8e788a6e40ff",
+      "cutoff_at": "2026-10-23T11:53:37Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/36",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "GEN-7",
+      "ledgers": [
+        "alspaces/GEN-7/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "0986467d9dc290033c0643bb9fe292c469c70044",
+      "cutoff_at": "2026-10-26T09:35:57Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/37",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "GEN-8",
+      "ledgers": [
+        "alspaces/GEN-8/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "452a8b5a77b2a23d6406d66d7b836fd27650adbe",
+      "cutoff_at": "2026-10-28T07:35:51Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/40",
+      "ownership_evidence": "Only new ticket ledger added by this otherwise unticketed merge.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "GEN-9",
+      "ledgers": [
+        "alspaces/GEN-9/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "c686f668dc341365fcea2029ef14219947b3a5ed",
+      "cutoff_at": "2026-10-29T17:15:06Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/53",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "MGT-1",
+      "ledgers": [
+        "alspaces/MGT-1/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "45cb679f21475cd14b7dd4cbc25996a39d734403",
+      "cutoff_at": "2026-10-31T16:20:51Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/87",
+      "owning_prs": [
+        83,
+        87
+      ],
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "MGT-2",
+      "ledgers": [
+        "alspaces/MGT-2/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "dc44619ae15586fe1194f872743033f523635c92",
+      "cutoff_at": "2026-11-03T22:43:09Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/100",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "PO-1",
+      "ledgers": [
+        "alspaces/PO-1/agentic_metrics.json"
+      ],
+      "basis": "recorded_completion_mainline_snapshot",
+      "completed_at": "2026-10-17T15:12:34.057000+00:00",
+      "cutoff_commit": "c4c4dab37a934bf516c84bf72d0f413080199311",
+      "snapshot_at": "2026-10-17T15:11:55+00:00",
+      "note": "No owning merged PR matched; snapshot approximates project versions at recorded completion, not observed skill execution.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": null,
+          "version": null,
+          "status": "absent_at_cutoff"
+        }
+      }
+    },
+    {
+      "ticket": "PO-10",
+      "ledgers": [
+        "alspaces/PO-10/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "da313195947b3f1c78d6d4444cc351535c6d3cf7",
+      "cutoff_at": "2026-10-21T19:29:36Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/25",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "PO-11",
+      "ledgers": [
+        "alspaces/PO-11/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "46921d08ba3b412e6753130b480aaf6a3b0d7065",
+      "cutoff_at": "2026-10-23T13:52:44Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/34",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "PO-12",
+      "ledgers": [
+        "alspaces/PO-12/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "6d59b5e801a2aa0f889eb14305ef05c476128d34",
+      "cutoff_at": "2026-10-28T23:03:38Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/46",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "PO-13",
+      "ledgers": [
+        "alspaces/PO-13/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "31b438033343eac562f44a537062097e6d603f3a",
+      "cutoff_at": "2026-10-28T23:35:45Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/48",
+      "ownership_evidence": "Only new ticket ledger added by this otherwise unticketed merge.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "PO-16",
+      "ledgers": [
+        "alspaces/PO-16/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "85a2af94b5036b0918aaf9a7a89aed3a990f2650",
+      "cutoff_at": "2026-10-31T12:46:50Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/74",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "PO-17",
+      "ledgers": [
+        "alspaces/PO-17/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "92a6fd2e6db5d383b53f9bcde86c871e9008b8b9",
+      "cutoff_at": "2026-10-31T15:26:00Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/85",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "PO-18",
+      "ledgers": [
+        "alspaces/PO-18/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "36bea1f18f2256392428329136b3241e98d09854",
+      "cutoff_at": "2026-10-31T21:53:37Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/90",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "PO-19",
+      "ledgers": [
+        "alspaces/PO-19/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "29699cc6c584193bec3804ef2f9584fbbcd997c6",
+      "cutoff_at": "2026-11-05T19:12:05Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/123",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "PO-2",
+      "ledgers": [
+        "alspaces/PO-2/agentic_metrics.json"
+      ],
+      "basis": "recorded_completion_mainline_snapshot",
+      "completed_at": "2026-10-17T22:40:08.126000+00:00",
+      "cutoff_commit": "c909a6bd579145ec414c85388ef3bc05e2d07764",
+      "snapshot_at": "2026-10-17T22:39:25+00:00",
+      "note": "No owning merged PR matched; snapshot approximates project versions at recorded completion, not observed skill execution.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": null,
+          "version": null,
+          "status": "absent_at_cutoff"
+        }
+      }
+    },
+    {
+      "ticket": "PO-20",
+      "ledgers": [
+        "alspaces/PO-20/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "4df45967c801824500ac2ea39a8f52fa9cbdcf66",
+      "cutoff_at": "2026-11-08T15:27:18Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/125",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "PO-21",
+      "ledgers": [
+        "alspaces/PO-21/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "aac01e4ab4e022ca66864682fd8a950b8a086948",
+      "cutoff_at": "2026-11-08T15:51:26Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/127",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "PO-22",
+      "ledgers": [
+        "alspaces/PO-22/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "76fa93b5f532d6035d7113636a127da177fc6ac6",
+      "cutoff_at": "2026-11-08T18:34:59Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/129",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.1"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.1"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.1"
+        }
+      }
+    },
+    {
+      "ticket": "PO-23",
+      "ledgers": [
+        "alspaces/PO-23/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "59f7ddeeed4ad4b95283acb2d0fd445317536057",
+      "cutoff_at": "2026-11-10T21:50:15Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/135",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.1"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.1"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.1"
+        }
+      }
+    },
+    {
+      "ticket": "PO-3",
+      "ledgers": [
+        "alspaces/PO-3/agentic_metrics.json"
+      ],
+      "basis": "recorded_completion_mainline_snapshot",
+      "completed_at": "2026-10-17T19:05:58.757000+00:00",
+      "cutoff_commit": "2d4f0abc28c98a610ccbb02eb5bf4b388ea0d361",
+      "snapshot_at": "2026-10-17T19:05:44+00:00",
+      "note": "No owning merged PR matched; snapshot approximates project versions at recorded completion, not observed skill execution.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": null,
+          "version": null,
+          "status": "absent_at_cutoff"
+        }
+      }
+    },
+    {
+      "ticket": "PO-4",
+      "ledgers": [
+        "alspaces/PO-4/agentic_metrics.json"
+      ],
+      "basis": "recorded_completion_mainline_snapshot",
+      "completed_at": "2026-10-18T13:23:41.435000+00:00",
+      "cutoff_commit": "64e3c1a851ad4a82427e57086c4b43376c024df2",
+      "snapshot_at": "2026-10-18T13:23:28+00:00",
+      "note": "No owning merged PR matched; snapshot approximates project versions at recorded completion, not observed skill execution.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "PO-5",
+      "ledgers": [
+        "alspaces/PO-5/agentic_metrics.json"
+      ],
+      "basis": "recorded_completion_mainline_snapshot",
+      "completed_at": "2026-10-18T15:27:49.603000+00:00",
+      "cutoff_commit": "4c275a615d08f3dbd2c1ae4cfaca40728cb3b0b6",
+      "snapshot_at": "2026-10-18T15:27:29+00:00",
+      "note": "No owning merged PR matched; snapshot approximates project versions at recorded completion, not observed skill execution.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "PO-6",
+      "ledgers": [
+        "alspaces/PO-6/agentic_metrics.json"
+      ],
+      "basis": "recorded_completion_mainline_snapshot",
+      "completed_at": "2026-10-19T17:08:44.397000+00:00",
+      "cutoff_commit": "648f937fdd1d13987edb6bdf5f803769d1b0b80f",
+      "snapshot_at": "2026-10-19T17:08:11+00:00",
+      "note": "No owning merged PR matched; snapshot approximates project versions at recorded completion, not observed skill execution.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "PO-7",
+      "ledgers": [
+        "alspaces/PO-7/agentic_metrics.json"
+      ],
+      "basis": "recorded_completion_mainline_snapshot",
+      "completed_at": "2026-10-19T17:46:57.656000+00:00",
+      "cutoff_commit": "3d34f683ff079b802df5d8f1188ca05f245d7495",
+      "snapshot_at": "2026-10-19T17:46:03+00:00",
+      "note": "No owning merged PR matched; snapshot approximates project versions at recorded completion, not observed skill execution.",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "PO-8",
+      "ledgers": [
+        "alspaces/PO-8/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "23305b739f56916c50873e81886c22cb80127abf",
+      "cutoff_at": "2026-10-20T14:12:08Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/9",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "PO-9",
+      "ledgers": [
+        "alspaces/PO-9/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "e8d1f5121568063da6598163cf9c7e9f5ae7e447",
+      "cutoff_at": "2026-10-20T21:03:20Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/13",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "REV-1",
+      "ledgers": [
+        "alspaces/REV-1/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "06e9c4c79804a69ddf306b661f078f2613f0e4bb",
+      "cutoff_at": "2026-10-21T18:34:58Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/22",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".opencode/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".opencode/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".opencode/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "REV-2",
+      "ledgers": [
+        "alspaces/REV-2/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "3481919832272d3a545f8d7a1c6c98a1f678fc58",
+      "cutoff_at": "2026-10-31T01:55:26Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/70",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "REV-3",
+      "ledgers": [
+        "alspaces/REV-3/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "575bb7899156630f9ca6ab27adc4d5c782917eda",
+      "cutoff_at": "2026-10-31T10:42:01Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/71",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "REV-4",
+      "ledgers": [
+        "alspaces/REV-4/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "4770c6422e5e676b9a0c6a3ffe32a672fe307af4",
+      "cutoff_at": "2026-10-31T12:07:27Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/72",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "REV-5",
+      "ledgers": [
+        "alspaces/REV-5/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "7bc670a7f5c9e93a220f3596f3d0e05cb6007332",
+      "cutoff_at": "2026-11-01T17:29:57Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/92",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    },
+    {
+      "ticket": "REV-6",
+      "ledgers": [
+        "alspaces/REV-6/agentic_metrics.json"
+      ],
+      "basis": "latest_owning_merge",
+      "cutoff_commit": "03f5b05de6e9837e351d3b01c1d7120be438c570",
+      "cutoff_at": "2026-11-05T17:29:21Z",
+      "pr": "https://github.com/NiltonDuarte/AgenticLens/pull/113",
+      "skills": {
+        "agentic-lens-dev": {
+          "path": ".agents/skills/agentic-lens-dev/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-po": {
+          "path": ".agents/skills/agentic-lens-po/VERSION",
+          "version": "0.1.0"
+        },
+        "agentic-lens-review": {
+          "path": ".agents/skills/agentic-lens-review/VERSION",
+          "version": "0.1.0"
+        }
+      }
+    }
+  ],
+  "historical_absence": {
+    "skill": "agentic-lens-review",
+    "added_commit": "70aa21d92a64465f1cd826924504113caac077b3",
+    "added_at": "2026-10-18T13:14:06Z",
+    "policy": "Omit the review tag for the 15 completion snapshots predating its existence; do not invent a version."
+  },
+  "validation": {
+    "ticket_ledgers": 138,
+    "archived_iteration_ledgers": 1,
+    "changed_historical_ledgers": 138,
+    "unchanged_current_ledgers": [
+      "alspaces/AL-82/agentic_metrics.json"
+    ],
+    "checks": [
+      "All 139 ledgers accounted for exactly once.",
+      "Every assigned value read from the recorded Git commit and path; missing skills checked absent at both historical locations.",
+      "Parsed non-tag data identical for every ledger.",
+      "Historical raw bytes identical after removing the inserted tags member; no schema, timestamp, owner, session or metric edits.",
+      "No telemetry generated for other tickets."
+    ]
+  }
+}

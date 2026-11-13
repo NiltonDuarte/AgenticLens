@@ -63,7 +63,7 @@ func TestMain(m *testing.M) {
 	if err := os.MkdirAll(testHome, 0700); err != nil {
 		panic(err)
 	}
-	for _, key := range []string{"HOME", "USERPROFILE", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME", "CODEX_HOME"} {
+	for _, key := range []string{"HOME", "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME", "CODEX_HOME"} {
 		if err := os.Setenv(key, filepath.Join(testHome, key)); err != nil {
 			panic(err)
 		}

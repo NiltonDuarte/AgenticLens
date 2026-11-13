@@ -43,9 +43,6 @@ func TestDevelopmentSelectionPrefersValidHostOutputAndRejectsInvalidPresent(t *t
 		t.Fatal(err)
 	}
 	name := "agentic-lens-engine-" + runtime.GOOS + "-" + runtime.GOARCH
-	if runtime.GOOS == "windows" {
-		name += ".exe"
-	}
 	output := filepath.Join(dev, name)
 	build := exec.Command("go", "build", "-o", output, source)
 	if out, err := build.CombinedOutput(); err != nil {

@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -52,7 +51,7 @@ func TestCaptureConfigUpdateInsertionPreservationAndCAS(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if runtime.GOOS != "windows" && info.Mode().Perm() != 0640 {
+			if info.Mode().Perm() != 0640 {
 				t.Fatalf("permissions changed to %o", info.Mode().Perm())
 			}
 			noChange, err := PrepareCaptureConfigUpdate(path, "")
@@ -253,7 +252,7 @@ func TestCaptureConfigUpdateSurvivesProcessDeath(t *testing.T) {
 				}
 			}
 			// Readers must always find a complete configuration while the writer holds
-			// its OS config lock, including immediately after atomic replacement on Windows.
+			// its OS config lock, including immediately after atomic replacement.
 			cfg, err := Load(root)
 			if err != nil {
 				t.Fatalf("config disappeared at %s: %v", stage, err)
@@ -270,9 +269,6 @@ func TestCaptureConfigUpdateSurvivesProcessDeath(t *testing.T) {
 			}
 			if stage == "staged" {
 				contendingPath := path
-				if runtime.GOOS == "windows" {
-					contendingPath = strings.ToUpper(path)
-				}
 				if err := WriteCaptureConfigUpdate(contendingPath, prepared); err == nil {
 					t.Fatal("concurrent updater bypassed the held configuration lock")
 				}

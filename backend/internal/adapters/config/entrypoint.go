@@ -18,7 +18,7 @@ import (
 const bootstrapLimit = 1024 * 1024
 
 var releasePattern = regexp.MustCompile(`^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?(\+[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?$`)
-var absoluteInstallRoot = regexp.MustCompile(`^(/|~/|[A-Za-z]:[\\/]|\\\\[^\\]+\\[^\\]+)`)
+var absoluteInstallRoot = regexp.MustCompile(`^(/|~/)`)
 
 // ValidateReleaseVersion accepts only an exact, path-safe supported release tag.
 func ValidateReleaseVersion(version string) error {
@@ -41,9 +41,6 @@ type Entrypoint struct {
 func (e Entrypoint) NativePath() (string, error) {
 	if e.BinaryDir != "" {
 		name := "agentic-lens-engine-" + runtime.GOOS + "-" + runtime.GOARCH
-		if runtime.GOOS == "windows" {
-			name += ".exe"
-		}
 		development := filepath.Join(e.BinaryDir, name)
 		if _, err := os.Lstat(development); err == nil {
 			if _, err := ValidateNativeExecutable(development); err != nil {
@@ -60,13 +57,10 @@ func (e Entrypoint) NativePath() (string, error) {
 // CachedNativePath identifies only the exact shared pin; provisioning is explicit.
 func (e Entrypoint) CachedNativePath() (string, error) {
 	osName, arch := runtime.GOOS, runtime.GOARCH
-	if (osName != "linux" && osName != "darwin" && osName != "windows") || (arch != "amd64" && arch != "arm64") || (osName == "windows" && arch != "amd64") {
+	if (osName != "linux" && osName != "darwin") || (arch != "amd64" && arch != "arm64") {
 		return "", fmt.Errorf("unsupported native platform %s-%s", osName, arch)
 	}
 	name := "agentic-lens-engine-" + osName + "-" + arch
-	if osName == "windows" {
-		name += ".exe"
-	}
 	return filepath.Join(e.InstallRoot, "bin", e.Version, osName+"-"+arch, name), nil
 }
 
@@ -75,9 +69,6 @@ func UserManagerPath() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("user wrapper home: %w", err)
-	}
-	if runtime.GOOS == "windows" {
-		return filepath.Join(home, ".agenticlens", "agentic-lens.exe"), nil
 	}
 	return filepath.Join(home, ".local", "bin", "agentic-lens"), nil
 }

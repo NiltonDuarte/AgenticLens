@@ -81,8 +81,14 @@ function migration(value: unknown): boolean {
     strings(value.steps_completed) && strings(value.steps_pending) && fields(value, ['last_migrated_at', 'last_migrated_by'], string) &&
     (value.notes === undefined || string(value.notes));
 }
+// Go's strings.TrimSpace uses Unicode White_Space, which includes U+0085
+// and excludes U+FEFF. Reads validate canonical text without normalizing it.
+function canonicalTagText(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0 && !/^\p{White_Space}|\p{White_Space}$/u.test(value);
+}
 function facts(value: unknown): boolean {
   return isRecord(value) && ticketMetadata(value) && value.schema_version === 6 &&
+    (value.tags === undefined || (isRecord(value.tags) && Object.entries(value.tags).every(([key, val]) => canonicalTagText(key) && canonicalTagText(val)))) &&
     (value.migration === undefined || migration(value.migration)) &&
     !Object.hasOwn(value, 'generation_policy') && isRecord(value.code) &&
     fields(value.code, ['lines_added', 'lines_deleted', 'test_lines_added', 'test_lines_deleted', 'prod_lines_added', 'prod_lines_deleted', 'files_changed', 'sdlc_iterations'], number) &&

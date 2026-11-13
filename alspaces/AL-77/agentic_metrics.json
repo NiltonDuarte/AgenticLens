@@ -1,4 +1,9 @@
 {
+  "tags": {
+    "agentic-lens-dev": "0.1.0",
+    "agentic-lens-po": "0.1.0",
+    "agentic-lens-review": "0.1.0"
+  },
   "schema_version": 6,
   "ticket_id": "AL-77",
   "ticket_title": "Warn when a session appears in multiple tickets",

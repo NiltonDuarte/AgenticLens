@@ -1,3 +1,5 @@
+import { TagFilters } from '../components/TagFilters';
+import { tagChoices, filterLedgersByTags, reconcileTagCatalog, type TagFilter } from '../domain/tags';
 import { useProjectConfig, ticketPolicy } from '../contexts/ProjectConfigContext';
 import { durationLabel, durationDescription } from '../domain/duration';
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
@@ -50,6 +52,8 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
 }) => {
   const projectConfig = useProjectConfig();
   const recognitionPolicy = useMemo(() => ticketPolicy(projectConfig), [projectConfig]);
+  const [tagCatalog, setTagCatalog] = useState<readonly AgenticMetricsLedger[]>([]);
+  const [tagFilters, setTagFilters] = useState<readonly TagFilter[]>([]);
   const [ledgers, setLedgers] = useState<readonly AgenticMetricsLedger[]>([]);
   const [diagnostics, setDiagnostics] = useState<readonly WorkspaceDiagnostic[]>([]);
   const [knownPrefixes, setKnownPrefixes] = useState<readonly string[]>([]);
@@ -84,6 +88,7 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
         ? await fetchWorkspaceLedgers('all', undefined, undefined, typesParam, prefixesParam)
         : await fetchWorkspaceLedgers('all');
       setLedgers(res.data);
+      setTagCatalog((previous) => typesParam || prefixesParam ? reconcileTagCatalog(previous, res.data) : res.data);
       setDiagnostics(res.diagnostics ?? []);
       hasLoadedRef.current = true;
     } catch (err: unknown) {
@@ -131,8 +136,8 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
     if (selectedSkills.length > 0 && !selectedSkills.includes('all')) {
       list = list.filter((ledger) => skillNames(ledger.facts).some((name) => selectedSkills.includes(`skill:${name}`)));
     }
-    return list;
-  }, [ledgers, selectedTicketTypes, selectedPrefixes, selectedSkills, projectConfig]);
+    return filterLedgersByTags(list, tagFilters);
+  }, [tagFilters, ledgers, selectedTicketTypes, selectedPrefixes, selectedSkills, projectConfig]);
 
   const allRows = useMemo(() => {
     return deriveTicketComparisonRows(filteredLedgers, sortField, sortOrder, recognitionPolicy);
@@ -313,12 +318,14 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
           collapseCompleteSelection={false}
         />
 
+        <TagFilters choices={tagChoices(tagCatalog.map((ledger) => ledger.facts.tags))} filters={tagFilters} onChange={setTagFilters} />
+
         <div className="table-row-count">
           Showing {filteredRows.length} of {allRows.length} tickets
         </div>
       </div>
 
-      {ledgers.length > 0 && <TicketScatterPlot rows={filteredRows} onSelectTicket={onSelectTicket} />}
+      {ledgers.length > 0 && <TicketScatterPlot categoryRows={deriveTicketComparisonRows(tagCatalog)} rows={filteredRows} onSelectTicket={onSelectTicket} />}
 
       {ledgers.length === 0 ? (
         <EmptyState

@@ -47,3 +47,11 @@ Codex uses native turn lifecycle boundaries; OpenCode v1/v2 retain their assista
 Expanded backend readers accept the earlier draft `duration_evidence` representation, validate its components and supported state/cutoff combinations, and normalize its numeric provisional portion. An explicitly supplied flat value must agree with a coexisting draft value, including an explicit zero. Canonical writes omit the retired object and do not carry duplicate completed totals, duration state/basis objects or aggregate cutoff/count graphs. Compatibility conversion belongs to backend input boundaries; the frontend consumes numeric values only. Older strict readers must be upgraded before writers emit the new scalar field; this contract does not authorize a release rollout.
 
 Exact-owner source refresh replaces cumulative duration facts rather than adding snapshots. Completion replaces the provisional portion with the new measured total. Unavailable owners retain their supported numeric facts; reads do not advance them using the current clock. Explicit target writes and migrations normalize supported legacy input without modifying unrelated ledgers or mutating the retained baseline.
+
+## Ticket tags
+
+Schema 6 optionally stores a root `tags` string mapping alongside ticket metadata.
+Tags apply to the whole ticket across all sessions, users and harnesses. They do
+not change session ownership or attribution. Existing untagged schema-6 ledgers
+remain valid without migration. Explicit supported migrations preserve recorded
+tags; ordinary reads never rewrite them or apply the reader's configuration.

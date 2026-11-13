@@ -165,7 +165,7 @@ func TestCaptureConfigUpdateRefusesLegacyStateWithoutConfiguredPath(t *testing.T
 	cmd := exec.Command(cliBinaryPath, "init", "--update-capture-config")
 	cmd.Dir = root
 	home := t.TempDir()
-	cmd.Env = append(os.Environ(), "HOME="+home, "USERPROFILE="+home, "CODEX_HOME="+filepath.Join(home, ".codex"))
+	cmd.Env = append(os.Environ(), "HOME="+home, "CODEX_HOME="+filepath.Join(home, ".codex"))
 	output, err := cmd.CombinedOutput()
 	if err == nil {
 		t.Fatalf("configuration update orphaned retained legacy state: %s", output)

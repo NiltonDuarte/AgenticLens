@@ -124,4 +124,38 @@ describe('TicketScatterPlot', () => {
     expect(screen.getByRole('img')).toHaveAttribute('aria-label', 'Cache Hit Rate by Active Duration');
     expect(screen.getByRole('img')).toHaveTextContent('(log10)');
   });
+  it('colors ticket tags with stable accessible identities without moving or duplicating points', () => {
+    const rows = mockTicketComparisonRows.slice(0, 3).map((row, index) => ({ ...row, ...(index < 2 ? { tags: { team: index === 0 ? 'Missing' : 'Mixed' } } : {}) }));
+    const { container, rerender } = render(<TicketScatterPlot rows={rows} categoryRows={rows} />);
+    const before = [...container.querySelectorAll('circle')].map((point) => [point.getAttribute('cx'), point.getAttribute('cy')]);
+    fireEvent.change(screen.getByRole('combobox', { name: 'Color by tag' }), { target: { value: 'team' } });
+    const points = [...container.querySelectorAll('circle')];
+    expect(points.map((point) => [point.getAttribute('cx'), point.getAttribute('cy')])).toEqual(before);
+    expect(points).toHaveLength(3);
+    const first = screen.getByRole('button', { name: /AL-1:/ });
+    expect(first).toHaveAccessibleName(expect.stringContaining('Tag team: Value: Missing'));
+    expect(first).toHaveAccessibleName(expect.stringContaining('Status: Completed'));
+    expect(screen.getByRole('button', { name: /AL-3:/ })).toHaveAccessibleName(expect.stringContaining('Tag team: Missing'));
+    expect(screen.getByText('Value: Mixed')).toBeInTheDocument();
+    const fill = first.getAttribute('fill');
+    rerender(<TicketScatterPlot rows={[rows[0]!]} categoryRows={rows} />);
+    expect(screen.getByRole('button', { name: /AL-1:/ })).toHaveAttribute('fill', fill);
+    expect(screen.getByText('Value: Mixed')).toBeInTheDocument();
+    fireEvent.change(screen.getByRole('combobox', { name: 'Color by tag' }), { target: { value: '' } });
+    expect(screen.getByRole('button', { name: /AL-1:/ })).toHaveAttribute('fill', '#4ea1ff');
+  });
+
+  it('assigns current values colors and legend entries when a supplied catalog is stale', () => {
+    const base = mockTicketComparisonRows[0]!;
+    const previous = { ...base, tags: { team: 'old' } };
+    const current = { ...base, tags: { team: 'new' } };
+    const outside = { ...base, ticket_id: 'outside', tags: { team: 'outside' } };
+    render(<TicketScatterPlot rows={[current]} categoryRows={[previous, outside]} />);
+    fireEvent.change(screen.getByRole('combobox', { name: 'Color by tag' }), { target: { value: 'team' } });
+    expect(screen.getByRole('button', { name: /AL-1:.*Tag team: Value: new/ }).getAttribute('fill')).toBeTruthy();
+    expect(screen.getByText('Value: new')).toBeInTheDocument();
+    expect(screen.getByText('Value: outside')).toBeInTheDocument();
+    expect(screen.queryByText('Value: old')).not.toBeInTheDocument();
+  });
+
 });

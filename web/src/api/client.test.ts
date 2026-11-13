@@ -16,6 +16,7 @@ describe('Boundary API Client', () => {
             ['fleet nonfinite totals', () => fetchFleetSummary(), { ...mockFleetSummary, total_cost_usd: Infinity }],
             ['fleet nested costs', () => fetchFleetSummary(), { ...mockFleetSummary, role_costs: { coder: '5' } }],
             ['fleet malformed tools', () => fetchFleetSummary(), { ...mockFleetSummary, anomaly_summary: { ...mockFleetSummary.anomaly_summary, brittle_tools: [{}] } }],
+            ...[null, { team: 3 }, { ' ': 'x' }, { team: '' }, { team: ' x ' }, { '\u0085team': 'core' }, { 'team\u0085': 'core' }, { team: '\u0085core' }, { team: 'core\u0085' }].map((tags): [string, () => Promise<unknown>, unknown] => ['ledger malformed tags', () => fetchWorkspaceLedgers(), [{ ...ledger, facts: { ...ledger.facts, tags } }]]),
             ['ledger missing wrapper', () => fetchWorkspaceLedgers(), ledger],
             ['ledger invalid analysis availability', () => fetchWorkspaceLedgers(), [{ ...ledger, facts: { ...ledger.facts, sessions: [{ id: 'owner', invocations: [], tools: [], anomaly_availability: 'recorded' }] } }]],
             ['ledger null analysis availability', () => fetchWorkspaceLedgers(), [{ ...ledger, facts: { ...ledger.facts, sessions: [{ id: 'owner', invocations: [], tools: [], anomaly_availability: null }] } }]],
@@ -806,4 +807,23 @@ describe('Boundary API Client', () => {
             await expect(fetchWorkspaces('all')).rejects.toThrow('Failed to fetch workspaces');
         });
     });
+    it('preserves backend-canonical Unicode tag text through actual response decoding', async () => {
+        const ledger = mockAgenticMetricsLedgers['AL-1']!;
+        const tags = { '\uFEFFteam': '\uFEFFcore', 'team\uFEFF': 'core\uFEFF', internal: 'co\u0085re \uFEFFtext', '\uFEFF': '\uFEFF' };
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify([{ ...ledger, facts: { ...ledger.facts, tags } }]), { status: 200 })));
+        const result = await fetchWorkspaceLedgers();
+        expect(result.data[0]?.facts.tags).toEqual(tags);
+    });
+
+    it('transports arbitrary tag filter text and reads portable ticket tags', async () => {
+        const ledger = mockAgenticMetricsLedgers['AL-1']!;
+        const filters = [{ key: 'team=&', values: ['all', 'Missing=x'], missing: true }];
+        const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => [{ ...ledger, facts: { ...ledger.facts, tags: { 'team=&': 'Missing=x' } } }] });
+        vi.stubGlobal('fetch', fetchMock);
+        const result = await fetchWorkspaceLedgers('all', undefined, undefined, undefined, undefined, filters);
+        const url = new URL(fetchMock.mock.calls[0]![0] as string, 'http://localhost');
+        expect(JSON.parse(url.searchParams.get('tag_filter')!)).toEqual(filters);
+        expect(result.data[0]?.facts.tags).toEqual({ 'team=&': 'Missing=x' });
+    });
+
 });

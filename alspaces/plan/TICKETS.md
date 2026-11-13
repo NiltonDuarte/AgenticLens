@@ -12,6 +12,10 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
 
 ## Ready
 
+- **AL-84**: Support flexible workspace layouts and adopt OpenSpec
+  - **Status**: Ready; **Blocked by**: None; **Blocks**: None
+  - **File**: [AL-84](to-do/AL-84%20support%20flexible%20workspace%20layouts%20and%20adopt%20openspec.md)
+
 - **AL-80**: Capture OpenCode sessions across worktrees
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None
   - **File**: [AL-80](to-do/AL-80%20capture%20opencode%20sessions%20across%20worktrees.md)
@@ -44,9 +48,6 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None
   - **File**: [AL-78](to-do/AL-78%20make%20completion%20feedback%20effective%20across%20harnesses.md)
 
-- **AL-82**: Filter and compare metrics by tags
-  - **Status**: Ready; **Blocked by**: None; **Blocks**: None
-  - **File**: [AL-82](to-do/AL-82%20filter%20and%20compare%20metrics%20by%20tags.md)
 
 - **AL2-1**: Generate and preview anomaly debug prompts
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None

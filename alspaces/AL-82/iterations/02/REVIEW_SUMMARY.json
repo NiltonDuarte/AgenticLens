@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "BEH-01",
+      "severity": 5,
+      "issue": "Frontend whitespace validation rejects backend-valid ticket tags containing edge U+FEFF text.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: Frontend canonical Unicode whitespace agrees with producer; original accepted historical text remains readable."
+    },
+    {
+      "finding_id": "DATA-01",
+      "severity": 6,
+      "issue": "Handled late summary publication failure leaves unpublished ticket tags in the saved ledger until recovery.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: Handled replacement failures eagerly recover the prior publication set, with honest incomplete/ambiguous recovery diagnostics."
+    },
+    {
+      "finding_id": "BEH-02",
+      "severity": 5,
+      "issue": "Filtered refetches can omit newly observed tag values from controls and legend and leave points without a color.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed: Filtered responses reconcile ticket metadata into catalogs; current values always have controls, legend and assigned colors."
+    }
+  ]
+}
