@@ -12,15 +12,15 @@ Telemetry reclassification: the native Codex root remains `01a1d4ea-9e1b-7242-90
 
 <!-- agentic-lens:metrics:start -->
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 8
-- **Active Agent Duration:** 34m 21s (recorded duration including 265s provisional)
-- **Context Window Health:** HEALTHY — Root agent peak 199.4k tokens (44% of 450k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Software Development Life Cycle Iterations:** 10
+- **Active Agent Duration:** 36m 26s (recorded duration including 28s provisional)
+- **Context Window Health:** HEALTHY — Root agent peak 207.8k tokens (46% of 450k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 20,531 reasoning tokens (26.4% of generated output)
-- **Tool Health & Self-Correction:** 93 tool calls (3 self-corrections, 96.8% success rate)
+- **Reasoning Effort:** 22,010 reasoning tokens (26.6% of generated output)
+- **Tool Health & Self-Correction:** 100 tool calls (3 self-corrections, 97.0% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** No execution anomalies detected (clean session).
@@ -32,17 +32,17 @@ Telemetry reclassification: the native Codex root remains `01a1d4ea-9e1b-7242-90
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **Unknown** | 1 | 157,506 | 57,183 | 12,184,704 | 98.7% | 199.4k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **1** | **157,506** | **57,183** | **12,184,704** | **98.7%** | **199.4k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations)** |
+| **Unknown** | 1 | 365,396 | 60,745 | 14,214,144 | 97.5% | 207.8k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **1** | **365,396** | **60,745** | **14,214,144** | **97.5%** | **207.8k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.1-sol** | 1 | 157,506 | 57,183 | 12,184,704 | 98.7% | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **1** | **157,506** | **57,183** | **12,184,704** | **98.7%** | **Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations)** |
+| **gpt-6.1-sol** | 1 | 365,396 | 60,745 | 14,214,144 | 97.5% | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **1** | **365,396** | **60,745** | **14,214,144** | **97.5%** | **Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations)** |
 
-Capture observation finalized: 2026-11-13T13:33:56.245479195Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 1; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 1; reserved bytes: 2557560. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
-Owner codex/01a1d4ea-9e1b-7242-909c-42d7410438f3: current; last successful source read 2026-11-13T13:33:56.231884405Z; accepted source checkpoint 2026-11-13T13:33:55.981Z.
+Capture observation finalized: 2026-11-13T14:00:05.726411859Z (successful owner reads have independent checkpoints; no common as-of snapshot). Refreshed: 1; retained older facts: 0; pending: 0; failed: 0; unassigned within this collection: 0. Unresolved child evidence: 0; parent links: 0; discovery continuation: false. Source attempts: 1; reserved bytes: 2693884. Source failures preserve accepted facts; pending processing does not establish freshness. Only observed, bound owners are included; unobserved sessions and harness trust remain unverified. Inspect local capture diagnostics and retry capture reconcile for unavailable sources or unfinished child recovery.
+Owner codex/01a1d4ea-9e1b-7242-909c-42d7410438f3: current; last successful source read 2026-11-13T14:00:05.71897491Z; accepted source checkpoint 2026-11-13T14:00:05.403Z.
 <!-- agentic-lens:metrics:end -->
 
 Final extraction exited 0 and retained the expected single native Codex owner, with no child sessions or other-harness records to preserve. Administrative reclassification changed only ledger ticket ID/title; the generated docs type and every session fact remained intact. The source reports an open invocation with an unverified invoking caller, so generated duration remains a checkpoint with provisional intervals, not a final closed-session measurement.
