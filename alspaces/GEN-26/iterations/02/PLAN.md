@@ -1,0 +1,7 @@
+# GEN-26 iteration 02: Direct OpenSpec storage
+
+Steering source: the user clarified that the target is AgenticLens reading and publishing directly inside OpenSpec's structure, without a separate AgenticLens workspace. This changes the assessment's adoption boundary. It supersedes iteration 01's recommendation to keep stable alspaces telemetry folders and manually link changes; it does not authorize application implementation.
+
+Acceptance: determine whether `workspaces.dir: openspec/changes` works today; distinguish active changes from archived changes; identify required ledger placement, identity, artifact and writer behavior; prioritize the minimum gaps to a reliable direct integration. Preserve no-code scope, source-grounded claims, portable ledger history, exact ownership, and all already valid verification. This assessment ticket itself remains under the repository's currently configured alspaces root; that artifact location is not a recommendation for adopting OpenSpec projects.
+
+Execute a disposable configuration-based probe using a self-contained synthetic ledger, then update the assessment, contract, summary and PR description. The full make result from iteration 01 remains valid because application, tests, build inputs and configuration are unchanged. Recheck documentation links/diff; refresh the existing Codex ledger at final delivery so it includes this steering. Earlier telemetry is a checkpoint, not the final iteration record. No independent application review is required for this documentation-only delta.

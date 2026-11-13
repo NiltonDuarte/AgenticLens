@@ -1,7 +1,7 @@
-# chore(GEN-26): assess OpenSpec compatibility and map integration gaps
+# chore(GEN-26): assess direct OpenSpec workspace integration
 
-Assess whether current AgenticLens can accompany OpenSpec without implementing code. The study finds a viable Codex/OpenCode telemetry companion model with manual change-to-ticket links, and maps nine gaps toward native integration, including discovery, identity, archive/detail paths, artifacts, workflow authority, progress, phase attribution, stores and assistant coverage.
+Assess whether AgenticLens can use `openspec/changes` directly, with telemetry in each change folder and no separate AgenticLens workspace. Configuration-based probes confirm active change discovery with slug IDs and continued recursive discovery after archive. Dashboard detail and automatic publication still assume a direct active path, making archive resolution the main lifecycle gap.
 
-The assessment pins both source revisions, links implementation evidence and distinguishes executed layout probes from inferred behavior. It explicitly avoids claiming all slug IDs are rejected or archived ledgers disappear from recursive scans. Proposed follow-ups are not implementation approval.
+The assessment maps nine compatibility gaps, distinguishes currently configurable standard artifacts from dynamic schema discovery, and prioritizes the minimum direct integration work. It pins both source revisions and separates executed fixture evidence from inferred behavior. No application code, tests, runtime configuration or OpenSpec installation is changed; recommendations do not authorize implementation.
 
-Validation: current-source native build and disposable layout probes passed as described in ASSESSMENT.md. Final repository gate and session telemetry facts are recorded in SUMMARY.md. Only GEN-26 documentation and telemetry are delivered; no application code, tests, runtime configuration or OpenSpec installation changes.
+Validation: full `make` passed; native layout/configuration probes and local document-link/diff checks passed. Existing suite evidence remains valid across the documentation-only clarification. Final Codex telemetry and its source/provisional limits are recorded in SUMMARY.md.

@@ -1,7 +1,8 @@
 # GEN-26: Can AgenticLens work with OpenSpec?
 
-Yes, as a telemetry companion to OpenSpec running through Codex or OpenCode. Native OpenSpec integration is absent at the inspected revision: AgenticLens does not discover uninstrumented changes, resolve their planning state, or follow archived change paths. A useful first adoption can preserve AgenticLens ticket workspaces and link them to OpenSpec changes manually. Replacing the workspace layout with OpenSpec's layout is not a configuration-only solution for the complete dashboard.
+**Partly ready: direct storage for active changes is supported by the existing layout, but a reliable full OpenSpec lifecycle is not ready through configuration alone.** The intended target is one structure: `workspaces.dir: openspec/changes`, with each change's `agentic_metrics.json` beside its OpenSpec artifacts. No separate AgenticLens ticket directory is required for this model. Archive-aware dashboard lookup and publication are the principal blockers.
 
+The user clarified this target during delivery; [iteration 02](iterations/02/PLAN.md) supersedes the earlier separate-workspace pilot recommendation. The assessment ticket's own artifacts remain in the repository's currently configured alspaces directory; adopting projects need not copy that arrangement.
 This is an assessment, not an implemented integration or an end-to-end compatibility certification. No application code, tests or runtime configuration were changed.
 
 ## Evidence boundary
@@ -16,20 +17,55 @@ OpenSpec supplies planning artifacts and assistant guidance; it does not replace
 
 AgenticLens can retain normal session, token, tool, cost-availability, anomaly and delegation facts while an agent works on an OpenSpec change. This is a source-based compatibility inference, contingent on the supported harness version, correct source selection and exact session binding. An OpenSpec workflow was not executed here. Cost remains unavailable where the harness lacks pricing; adopting OpenSpec does not fix that.
 
-A stable ticket such as `AL-123` can accompany an OpenSpec change named `al-123-add-login`, with telemetry in `alspaces/AL-123/`. Record a human-readable link and optional `openspec-change`/`openspec-store` tags. Repeatable `generate --tag KEY=VALUE` already exists in [main.go](../../backend/cmd/agentic-lens/main.go); these are ordinary tags, not validated relationships or automatic locators. No such configuration or binding was applied in this session.
+Use the OpenSpec change name itself as AgenticLens's supplied ticket ID, such as `add-login`. Configure the existing shared configuration's workspace fields as follows (illustrative subset, not a complete configuration and not applied here):
 
-Existing artifact configuration supports explicit relative Markdown paths inside each ticket workspace. OpenSpec's [custom schemas](https://github.com/Fission-AI/OpenSpec/blob/d12c2817776779e06891d68230773b3bb673b106/docs/customization.md) can adapt document production. Neither mechanism gives AgenticLens an external OpenSpec-root resolver. Keep OpenSpec as the planning source of truth and use links rather than independently maintained copies of proposal, design and tasks.
+```yaml
+workspaces:
+  dir: openspec/changes
+  artifacts:
+    - path: proposal.md
+      title: Proposal
+      description: OpenSpec change proposal
+    - path: design.md
+      title: Design
+      description: OpenSpec technical design
+    - path: tasks.md
+      title: Tasks
+      description: OpenSpec implementation checklist
+```
 
+The resulting single structure would be:
+
+```text
+openspec/
+  specs/...
+  changes/
+    add-login/
+      .openspec.yaml
+      proposal.md
+      design.md
+      tasks.md
+      specs/.../spec.md
+      agentic_metrics.json
+    archive/
+      2026-11-13-add-login/...
+```
+
+AgenticLens still requires its own configuration and raw telemetry ledger; it does not derive session facts from OpenSpec Markdown. For manual generation, `--ticket-id add-login`, an explicit conventional `--ticket-type`, and `--json-output openspec/changes/add-login/agentic_metrics.json` identify the destination. Exact source/session binding remains necessary. Generic numeric-prefix classification is optional for this slug model and does not establish a hard runtime rejection. The automatic writer already constructs `<configured workspaces.dir>/<bound ticket>/agentic_metrics.json` in [capture_worker.go:234](../../backend/cmd/agentic-lens/capture_worker.go#L234); the path shape fits an active change. Actual end-to-end slug capture was not exercised.
+
+Configured artifact reading can show proposal/design/tasks directly because they are now inside the change directory. Known individual nested spec paths can also be configured. The remaining artifact gap is dynamic enumeration of capability deltas and schema-defined outputs, not a requirement to copy the standard files. Repeatable `--tag` is available for extra metadata but is not required to bridge two directories in the desired model.
+
+The raw ledger is essential for portable session history. A separate configured *workspace directory* is avoidable; machine-local capture state and original harness session stores remain operational dependencies for fresh extraction. Eliminating those is a different requirement. OpenSpec's custom schema/rules can adapt guidance without adding a production Node dependency to AgenticLens.
 ## Gaps and proposed acceptance boundaries
 
-Priorities indicate an adoption sequence, not defect severity or approved implementation tickets. P1 is required for reliable native repo-local integration; P2 adds richer observability; P3 expands deployment coverage.
+Priorities indicate an adoption sequence, not defect severity or approved implementation tickets. P1 is required for reliable direct repo-local integration; P2 adds richer observability; P3 expands deployment coverage.
 
 | ID / priority | Current boundary and consequence | Smallest useful direction / proposed acceptance check |
 |---|---|---|
-| G1 / P1: identity | OpenSpec uses lowercase kebab-case names, including descriptive slugs. AgenticLens preserves supplied string IDs but configured prefix membership and type inference use a numeric suffix (`domain/config.go:70`). A slug is not universally rejected; it simply does not gain GEN-/AL- classification by convention. No change-to-ticket relation exists. | Preserve the canonical ticket and explicitly map it to a change plus planning-root identity. Check lowercase names, renames, duplicate slugs across roots, one change spanning tickets, and ambiguous associations. Never infer ownership from a branch name alone. |
+| G1 / P1: identity | Explicit slug IDs already read successfully. Numeric prefix classification/type inference does not describe arbitrary OpenSpec names. No automatic change-name-to-session binding exists. | Use the change slug as the canonical ID with explicit type/title; define rename/collision behavior and exact session binding. Check duplicate slugs across roots and resumed sessions. A separate AL- ticket mapping is not required for the desired one-change/one-ledger model. |
 | G2 / P1: discovery | `ScanWorkspaces` recursively finds `agentic_metrics.json`, not OpenSpec Markdown. A planning-only change is invisible; absence of telemetry is not zero effort. | Decide whether an OpenSpec change inventory should be visible before capture. Check that an uninstrumented change has explicit unavailable telemetry and is not fabricated as an empty successful ledger. |
-| G3 / P1: archive and detail paths | Scan is recursive, but HTTP detail uses `<workspaces>/<ticketId>/agentic_metrics.json`. OpenSpec moves changes under `archive/<date>-<name>`. Relocating a ledger can leave it listed but inaccessible through ticket detail; slash-containing IDs cannot repair this. | Keep stable ledger locations initially. Native support needs a safe identity-to-path resolver covering active/archived changes, collision handling and historical links. Check detail, events and artifacts after archive with original harness sources absent. |
-| G4 / P1: artifact access | `ReadTicketArtifacts` accepts configured relative files, rejects paths escaping the ticket directory and does not expand a schema's dynamic spec inventory. Default OpenSpec proposal/design/tasks/spec deltas live elsewhere when telemetry stays in alspaces. | Start with links; deeper integration should resolve OpenSpec artifacts through an explicit trusted planning root without weakening containment. Check custom schemas, multiple capability specs, missing optional files and symlink escape rejection. |
+| G3 / P1: archive and detail paths | Scan is recursive, but HTTP detail uses `<workspaces>/<ticketId>/agentic_metrics.json`. OpenSpec moves changes under `archive/<date>-<name>`. Relocating a ledger can leave it listed but inaccessible through ticket detail; slash-containing IDs cannot repair this. | Add one shared active/archive locator for dashboard detail, events, artifacts and writers. The current writer always targets `<root>/<id>` and could recreate an active folder after archive if publication continues. Check post-archive refresh, no duplicate resurrection, collision handling and reads with original harness sources absent. Do not solve this by introducing a second telemetry directory. |
+| G4 / P2: dynamic artifacts | Proposal/design/tasks and explicit nested spec paths can already be configured inside a direct change directory. `ReadTicketArtifacts` does not expand a custom schema's dynamic spec inventory. | Keep static artifacts configuration for initial direct support. Add schema/output discovery only if full capability browsing is required. Check multiple spec deltas, custom schemas, missing optional files and containment. Global `openspec/specs` is outside an individual change's artifact sandbox. |
 | G5 / P1: workflow authority | Repository instructions require ticket isolation, approval before coding, separate PO/development sessions, review, final telemetry and PR delivery. OpenSpec's fluid artifact workflow and default apply/archive guidance do not establish these gates. Its default [schema](https://github.com/Fission-AI/OpenSpec/blob/d12c2817776779e06891d68230773b3bb673b106/schemas/spec-driven/schema.yaml) models artifact dependencies rather than this repository's approval evidence. | Define a policy overlay in project context/rules or a custom schema, with one owner per document. Check that planning completion cannot authorize coding, archive cannot imply review approval, and telemetry/PR evidence survives archive. This is repository adoption work, not a universal AgenticLens runtime requirement. |
 | G6 / P2: lifecycle and progress | No OpenSpec change state, artifact dependency state, task-checkbox progress or validation result is represented in the inspected ledger/API contracts. OpenSpec `status.isComplete` means planning-artifact completion, not completed implementation; task progress is distinct. | Consume versioned CLI JSON through a boundary adapter, separating planning readiness, task progress, validation and archive. Check skipped/custom artifacts, incomplete tasks, validation failure and CLI-unavailable states. Never treat file existence or a completed checkbox as verified correctness. |
 | G7 / P2: phase attribution | Generic skill facts record name, caller and timestamp, not an authoritative OpenSpec phase or task-to-invocation allocation. Codex detects explicit native skill requests/attachments and skill calls; merely reading SKILL.md or mentioning a command is not activation evidence (`codex/occurrences.go`). OpenCode records actual `skill` tool occurrences. | Retain generic telemetry first. Any phase analysis needs source-backed activation/transition rules and an unknown category. Check direct skills, conversational invocation, resumed contexts and overlap without assigning all session cost to the last phase. OpenSpec task checkboxes are not AgenticLens delegation facts. |
@@ -46,8 +82,20 @@ Built the current native engine with `make build PLATFORMS=linux/amd64`; read it
 
 Existing repository coverage includes `TestScanWorkspaces`, `TestReadTicketArtifacts`, `TestLoadTicketWorkspace`, prefix-membership tests and explicit telemetry-source tests. The required repository `make` result is recorded in SUMMARY.md. No OpenSpec installation, generation, apply, archive, store mutation or real assisted workflow was run. The installed manager failed before help on this shared configuration; the freshly built engine worked. That environment/version mismatch is separate from OpenSpec compatibility and was left unchanged.
 
+## Direct configuration probe
+
+A second disposable fixture at `/tmp/gen26-direct-openspec-5kj2m6qb` set the actual shared configuration to `workspaces.dir: openspec/changes` and configured proposal/tasks paths. Unlike the first CLI-override probe, it ran the native engine from the fixture root with no `--workspaces` override. Its schema-6 ledger was self-contained synthetic boundary data with no sessions, not extracted telemetry.
+
+- Markdown-only change: `--list` exited 1 with no valid ledgers.
+- After adding `openspec/changes/add-login/agentic_metrics.json`: `--list` exited 0 and found `add-login` through configuration alone.
+- After moving the same folder under `archive/2026-11-13-add-login`: `--list` still exited 0, but the direct path used by the HTTP loader no longer existed.
+
+This proves configuration-based discovery in the intended single structure. It does not prove live capture, browser artifact display or OpenSpec archive execution.
+
 ## Recommended decision
 
-Proceed with a manually linked, same-repository Codex/OpenCode pilot using stable AgenticLens ticket directories. This requires adoption guidance and explicit mapping, not a new telemetry harness. Preserve recorded history and expose missing linkage honestly. Before claiming native integration, scope G1–G5 as a separate approved effort and verify the proposed archive/detail and artifact boundaries. Add G6–G7 only if planning/progress analytics are wanted; treat stores and additional assistants as later capabilities. These are proposals, not created implementation tickets or approved code changes.
+**Do not claim full direct OpenSpec support yet.** Existing configuration is enough to point discovery at `openspec/changes`, read ledgers in active change folders, and configure standard artifact paths. Keep the change slug as the supplied ID and store telemetry in that folder. No separate AgenticLens workspace is necessary for these supported primitives.
 
-The assessment is complete within its source-and-layout-probe scope. Real OpenSpec/harness interoperability, browser behavior and cross-repo stores remain unverified.
+The minimum reliable direct integration needs an archive-aware locator shared by readers and writers, explicit binding/rename rules, and adoption guidance that replaces separate-ticket-folder assumptions. Those are G3, the remaining binding portion of G1, and G5. G2 is required if planning-only changes must appear before telemetry exists. Dynamic artifacts, task/phase analytics, stores and other harnesses can follow independently.
+
+The source/layout assessment is complete; actual OpenSpec/harness execution and browser/store interoperability remain unverified. No implementation is authorized by this recommendation.
