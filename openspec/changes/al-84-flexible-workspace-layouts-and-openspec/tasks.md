@@ -17,14 +17,14 @@ Hosted Pages caller follow-up: both behavior profiles approved explicit Pages co
 
 ## Requested Astra review
 
-The user requested a fresh Astra review and fixes for any issues found. This is iteration 01 follow-up work on PR144, frozen at `2b4118736b5bde24d17cc382da7445c8046ce884` against `163181428ee9a5a599a2da1e91d3af5e618a9682`. For this request, Astra/high replaces the default paired model profiles without changing repository policy. Product and test files stay frozen during independent discovery.
+The user requested a fresh Astra review and fixes. This iteration 01 follow-up reviewed `2b4118736b5bde24d17cc382da7445c8046ce884` against the original baseline, using Astra/high for all four focuses instead of the default paired profiles for this request. Repository model policy is unchanged.
 
-- [x] Behavior first pass: `CHANGES_REQUESTED`; pending publication can disappear from implicit uniqueness/first-publication admission. Parent reproduced both failures. Report: `evidence/iterations/01/reviews/astra-behavior.md`. Correction and recheck remain open.
-- [x] Data first pass: `CHANGES_REQUESTED`; export/summary publication loses the selected physical directory between load and write admission. Parent reproduced same-ticket replacement writes with the stable control passing. Report: `evidence/iterations/01/reviews/astra-data.md`. Correction and recheck remain open.
-- [x] Architecture first pass: `CHANGES_REQUESTED`; independently found pending identity exclusion and reproduced inconsistent discovery/selection depth for in-root symlinks. Parent reproduced the alias case; discovery advertises a home that explicit selection rejects. Report: `evidence/iterations/01/reviews/astra-architecture.md`. Correction and recheck remain open.
-- [x] Test first pass: `CHANGES_REQUESTED`; independently reproduced pending-duplicate selection and identified the missing fully available-root regression boundary. Report: `evidence/iterations/01/reviews/astra-tests.md`.
-- [ ] Parent reconciles findings, routes necessary fixes and tests, verifies the corrected revision and publishes current evidence. Prior passing checks remain evidence only for unchanged code.
+- [x] Complete independent behavior, data, architecture and test-effectiveness discovery; parent reproduces and deduplicates three defects.
+- [x] Correct operational identity uncertainty, retained physical artifact selection and consistent physical discovery depth; preserve portable history, partial listing, explicit selection, malformed-ledger exclusion and union coverage.
+- [x] Add focused regressions, preserve existing assertions, pass affected ordinary/race suites and five consequential mutation controls.
+- [x] Obtain all four Astra/high correction approvals on the same frozen candidate, without new findings.
+- [x] Commit `9382e92f`, integrate unchanged main, pass full make, strict OpenSpec validation and standalone embedded reads without source/private state.
+- [x] Consolidate findings and all discovery credit into the permanent summary, retaining the unexplained callback observation and verification limits in delivery/test evidence.
+- [x] Refresh telemetry, verify all 47 owners and prepare final evidence for the corrected PR144 handoff. Parent publishes the prepared commit; no merge is authorized.
 
-Three distinct findings are confirmed. Pending identity uncertainty must block implicit uniqueness and first-publication absence while preserving invalid-ledger exclusion, partial listing and explicit healthy selection. Artifact publication must retain physical selection through write admission without persisting identity or blocking writers during ordinary reads. Discovery must apply the same physical depth semantics as explicit selection/publication, including in-root aliases and overlapping configured roots. These are corrections to approved acceptance, not a new iteration or scope boundary. Coder owns affected production Go paths; tester owns regression tests after the API correction; parent owns artifacts and integration.
-
-Corrections and regression tests are implemented. Affected ordinary/race checks pass, including five guard mutations failing at their intended assertions. One broad callback deadline/SQLite rollback failure did not reproduce in six targeted runs or the broad rerun; retain it as an unexplained reliability observation. The corrected source is frozen in the private candidate content manifest for Astra/high rechecks: behavior, data, architecture and tests each own `reviews/astra-<focus>-recheck.md`. Parent integrated make and publication remain pending.
+[Delivery](delivery.md) owns current results and review; [retained findings](evidence/iterations/01/REVIEW_SUMMARY.json) preserves prior and Astra findings.

@@ -118,6 +118,60 @@
         }
       ],
       "disposition": "Fixed: explicit Pages roadmap_path config supplies normal input; CLI override and containment remain enforced."
+    },
+    {
+      "finding_id": "ASTRA-BEH-01",
+      "severity": 7,
+      "issue": "Pending ledger read failures are excluded from implicit uniqueness and first-publication absence decisions.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6-astra",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6-astra",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6-astra",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: operational read uncertainty blocks implicit uniqueness and first-publication absence; explicit healthy selection and invalid-ledger exclusion remain supported."
+    },
+    {
+      "finding_id": "ASTRA-DATA-01",
+      "severity": 6,
+      "issue": "Artifact publication drops physical selection before write admission and accepts a distinct same-ticket replacement.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6-astra",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: retain the selected directory descriptor through physical write admission before recovery can touch a replacement."
+    },
+    {
+      "finding_id": "ASTRA-ARCH-01",
+      "severity": 4,
+      "issue": "Discovery accepts an in-root alias target at traversal depth while explicit selection/publication measure physical depth.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6-astra",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: discovery and explicit selection use physical depth per configured root, preserving independently configured union coverage."
     }
   ]
 }
