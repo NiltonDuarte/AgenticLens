@@ -34,3 +34,9 @@ The user requested a fresh Astra review and fixes. This iteration 01 follow-up r
 - [x] Remove optional publication project and destination inference; update snapshot, relocation, formatting and test callers. Reject blank project selection.
 - [x] Add a real external-home regression with conflicting enclosing project configuration.
 - [x] Complete affected checks and integrated make; retain evidence and prepare final telemetry/publication. This bounded signature/caller correction is directly inspected and tested; prior unrelated review scopes carry forward.
+
+
+## Hosted anomaly fixture correction
+
+- [x] Reproduce shared-configuration contention, prepare configuration before parallel reads, and pass 30 race-enabled repetitions without weakening assertions.
+- [x] Complete all integrated gate stages with documented concurrency limits; retain capture/frontend deadline observations. Refresh final telemetry and prepare the correction for publication.

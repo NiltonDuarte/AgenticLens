@@ -186,6 +186,20 @@
         }
       ],
       "disposition": "Fixed following the user compatibility question: require a nonblank owning project and pass it explicitly through snapshot, relocation, formatting and test callers."
+    },
+    {
+      "finding_id": "CI-02",
+      "severity": 3,
+      "issue": "Parallel anomaly CLI subtests rewrite shared YAML configuration while sibling CLI readers open it, intermittently producing EOF or a fixture panic.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6-astra",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: prepare shared configuration before each subtest calls t.Parallel; CLI execution and all assertions remain parallel and unchanged. The pre-fix repeated race run failed; 30 corrected repetitions passed."
     }
   ]
 }
