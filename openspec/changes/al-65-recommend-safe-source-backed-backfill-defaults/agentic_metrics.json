@@ -1,0 +1,55 @@
+{
+  "tags": {
+    "agentic-lens-dev": "0.1.1",
+    "agentic-lens-po": "0.1.1",
+    "agentic-lens-review": "0.1.1"
+  },
+  "schema_version": 6,
+  "ticket_id": "AL-65",
+  "ticket_title": "Recommend safe source-backed backfill defaults",
+  "ticket_type": "docs",
+  "started_at": "2026-11-17T22:04:03.884Z",
+  "completed_at": "2026-11-17T22:32:05.931161+00:00",
+  "updated_at": "2026-11-17T22:32:05.931161+00:00",
+  "code": {
+    "lines_added": 0,
+    "lines_deleted": 0,
+    "test_lines_added": 0,
+    "test_lines_deleted": 0,
+    "prod_lines_added": 0,
+    "prod_lines_deleted": 0,
+    "files_changed": 0,
+    "sdlc_iterations": 3
+  },
+  "sessions": [
+    {
+      "skills": [],
+      "delegations": [],
+      "id": "01a1eb89-df92-7182-a7aa-031e7876329a",
+      "source": "codex",
+      "user": "Nilton Duarte",
+      "invocations": [
+        {
+          "provisional_seconds": 1472,
+          "role": "",
+          "model": "gpt-6.2-astra",
+          "started_at": "2026-11-17T22:04:04.353Z",
+          "completed_at": null,
+          "active_duration_seconds": 1527,
+          "turns": 2,
+          "tokens": {"input": 92440, "output": 12755, "cache_read": 4916608, "reasoning": 793, "peak_context": 80089},
+          "cost_usd": null,
+          "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
+          "compactions": 0,
+          "user_iterations": 3
+        }
+      ],
+      "tools": [
+        {"name": "command", "calls": 57, "errors": 5},
+        {"name": "wait", "calls": 1, "errors": 0}
+      ],
+      "anomalies": []
+    }
+  ],
+  "anomalies": []
+}

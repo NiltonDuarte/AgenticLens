@@ -4,11 +4,13 @@
 
 Recommend exact-session refresh for ordinary backfill **after unchanged runs can finish without writing**. Keep the current default until that condition and preservation checks pass. Today an operator can request this lookup with `--source <harness> --recompute-db` on a completed ledger. Clearer help can explain that invocation, but the ordinary command still skips it.
 
-Availability means readable original records sufficient to reconstruct the selected owner and its required tree. Saved totals alone provide no evidence of source availability. Use the explicitly selected local store and stored harness, session ID and parent. Retain the prior tree and skill/task snapshots whenever tree or collection coverage is insufficient, preserve unrelated harnesses, and report mixed-age facts. Heuristics must remain explicitly enabled, with ambiguity reported. Keep Git measurement separately selected by ticket and ref.
+Availability means readable original records sufficient to reconstruct the selected owner and its required tree. Saved totals alone provide no evidence of source availability. Use the explicitly selected local store and stored harness, session ID and parent. Retain the prior tree and skill/task snapshots whenever tree or collection coverage is insufficient, preserve unrelated harnesses, and report mixed-age facts. OpenCode title or commit-range matching must remain opt-in via `--allow-fallbacks`. Codex has no title fallback. Report missing identities or ambiguity without guessing an owner. Keep Git measurement separately selected by ticket and ref.
+
+In disposable probes, an unchanged DB repeat rewrote both the ledger and requested summary. In a 12-ledger synthetic batch, the CLI reported 12 completed ledgers alongside four incomplete source refreshes. Both results matter for unattended backfill.
 
 ### Compatibility and rollout
 
-1. Retain Force for callers that deliberately want to reprocess stored facts or rebuild a missing summary. Keep explicit source recomputation working. Today either recompute flag already bypasses the completed-ledger skip.
+1. Retain Force for callers that deliberately want to reprocess stored facts or regenerate a summary from stored facts. Keep explicit source recomputation working. Today either recompute flag already bypasses the completed-ledger skip.
 2. In a separately approved implementation, introduce an opt-in preview of the proposed default and an explicit maintenance-only mode for existing batch scripts. Compare semantic facts before stamping or publishing, compare rendered summary bytes separately, and still repair a missing or stale summary when requested. A dry run should report expected owner coverage and writes.
 3. Change the default only after validating bounded multi-ticket cost, unchanged bytes and mtimes, partial trees and unavailable selected stores. Announce the change before any switch. Keep explicit Git-only calls limited to their selected work and preserve explicit recompute flags and failure signals. Document a maintenance-only invocation before deprecating any Force spelling. The README already combines Git, DB, schema and summary flags; external script usage is unknown.
 
@@ -18,6 +20,8 @@ Proposed operator output, with migration status reported separately:
 - “Codex: 5 sessions verified unchanged. No files written.”
 - “Codex: 4 recorded sessions unavailable. Prior facts retained. Refresh incomplete.”
 - “OpenCode: selected database unavailable. No files written. Refresh incomplete.”
+
+Full `make` timed out in the CLI suite. The affected capture-worker cases passed on isolated retry, as did the two frontend files with timeouts. The build and discovery checks passed.
 
 ## Observed behavior
 
@@ -33,6 +37,8 @@ At b6ab0471, a locally built engine ran in a temporary Git project with the shar
 
 On completed input, ordinary runs took 28–42 ms, Force alone 80–116 ms, DB alone 311–339 ms and Git alone 90–101 ms. Every processed repeat advanced the ledger mtime and rewrote the requested summary even when its bytes were identical. On completed inputs the only changed ledger member on these successful repeats was updated_at. Partial migrations still pending also changed migration metadata. These are individual wall-clock observations from one machine with a small isolated store; they do not estimate a whole-repository scan.
 
+A synthetic batch placed the same five owners in 12 distinct test ledgers under one configured root (256 sessions, 64 MiB per pass). With summaries disabled for the command, ordinary backfill skipped all 12 in 0.11 s. Two DB passes took 1.94 s and 2.11 s; each reported 12 completed ledgers and four incomplete refreshes. A dry run identified source budget exhaustion. Reusing five rollouts deliberately stresses repeated reads and does not model 12 independent real tickets. A default should name the affected tickets and permit a targeted retry against the same exact IDs.
+
 ### Recovery boundaries
 
 - With only the root rollout accessible, the CLI reported incomplete recovery. The four unavailable child records survived field-for-field; the readable root's collection representation changed and four delegations remained. The completed input reported both one completed migration and one incomplete refresh. A pending migration remained partial.
@@ -42,4 +48,40 @@ On completed input, ordinary runs took 28–42 ms, Force alone 80–116 ms, DB a
 
 ## Verification
 
-The ticket owner inspected CLI help, dispatch, current-ledger preparation and publication, ran 44 Codex flag/availability invocations and eight mixed-owner OpenCode invocations, and checked the original ledger against Git. The prior audit supplies independent fixture and native-source evidence. This delivery changes documentation only.
+The ticket owner inspected CLI help, dispatch, current-ledger preparation and publication, ran 44 single-ticket Codex matrix invocations, supplementary root-only and batch controls and eight mixed-owner OpenCode invocations, and checked the original ledger against Git. Four existing backfill tests passed on the integrated revision, covering parse-failure tree preservation, skill/task snapshots, unavailable analysis and a readable parent with a missing child. Strict OpenSpec validation, three workflow tests and local Markdown link resolution passed. The prior audit supplies independent fixture and native-source evidence. This delivery changes documentation only.
+
+On candidate 625837ae, integrated with origin/main b6ab0471, full `make` reported a capture-worker fixture cleanup race and exceeded the Go CLI package timeout of 10 minutes. All remaining backend packages passed. A 20-case CLI continuation reported two worker timing failures; those two passed together under `go test -race -count=1` on isolated retry. The separate frontend integration run passed 799 of 804 cases. Five cases exceeded 5 seconds; both affected files passed all 41 tests with one worker and a 30-second case timeout. All 231 frontend unit tests and the separate multi-platform `make build` passed.
+
+The session ledger contains the one expected Codex root. No child agents were launched. The source reported an open turn at extraction; final duration and cost are unavailable.
+
+<!-- agentic-lens:metrics:start -->
+### Workflow Efficiency
+- **Software Development Life Cycle Iterations:** 3
+- **Active Agent Duration:** 25m 27s (recorded duration including 1472s provisional)
+- **Context Window Health:** HEALTHY — Root agent peak 80.1k tokens (18% of 450k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
+- **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
+- **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
+- **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
+- **Reasoning Effort:** 793 reasoning tokens (5.9% of generated output)
+- **Tool Health & Self-Correction:** 58 tool calls (5 self-corrections, 91.4% success rate)
+
+### Anomalies & Health Flags
+- **Status:** No execution anomalies detected (clean session).
+
+### Agentic Execution Metrics
+
+**Contributors:** Nilton Duarte
+
+#### By Subagent Role
+| Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
+|---|---|---|---|---|---|---|---|---|
+| **Unknown** | 1 | 92,440 | 12,755 | 4,916,608 | 98.2% | 80.1k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **1** | **92,440** | **12,755** | **4,916,608** | **98.2%** | **80.1k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations)** |
+
+#### By Model
+| Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
+|---|---|---|---|---|---|---|
+| **gpt-6.2-astra** | 1 | 92,440 | 12,755 | 4,916,608 | 98.2% | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **1** | **92,440** | **12,755** | **4,916,608** | **98.2%** | **Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations)** |
+<!-- agentic-lens:metrics:end -->
