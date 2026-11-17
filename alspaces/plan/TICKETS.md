@@ -28,10 +28,6 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None
   - **File**: [AL-72](to-do/AL-72%20make%20dashboard%20interactions%20accurate%20and%20accessible.md)
 
-- **AL-73**: Verify release artifacts before installation
-  - **Status**: Ready; **Blocked by**: None; **Blocks**: None
-  - **File**: [AL-73](to-do/AL-73%20verify%20release%20artifacts%20before%20installation.md)
-
 - **AL-74**: Make regression checks reliable and remove unused code
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None
   - **File**: [AL-74](to-do/AL-74%20make%20regression%20checks%20reliable%20and%20remove%20unused%20code.md)
