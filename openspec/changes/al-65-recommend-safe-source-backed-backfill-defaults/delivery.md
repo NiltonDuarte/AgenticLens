@@ -8,6 +8,8 @@ Availability means readable original records sufficient to reconstruct the selec
 
 In disposable probes, an unchanged DB repeat rewrote both the ledger and requested summary. In a 12-ledger synthetic batch, the CLI reported 12 completed ledgers alongside four incomplete source refreshes. Both results matter for unattended backfill.
 
+The roadmap includes two follow-ups. AL-94 is ready for scope review and covers unchanged writes, summary repair and retained-owner reporting. AL-95 depends on AL-94 and covers the opt-in preview, compatibility, bounded batch cost and a decision to switch, defer or retain the current default.
+
 ### Compatibility and rollout
 
 1. Retain Force for callers that deliberately want to reprocess stored facts or regenerate a summary from stored facts. Keep explicit source recomputation working. Today either recompute flag already bypasses the completed-ledger skip.
