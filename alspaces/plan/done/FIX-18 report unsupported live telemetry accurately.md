@@ -1,5 +1,9 @@
 # FIX-18: Report unsupported live telemetry accurately
 
+[Execution change](../../../openspec/changes/archive/2026-11-18-fix-18-report-unsupported-live-telemetry-accurately/)
+
+Delivered and verified on the FIX-18 branch. [Outcome and verification](../../../openspec/changes/archive/2026-11-18-fix-18-report-unsupported-live-telemetry-accurately/delivery.md)
+
 ## Goal
 
 Operators can tell whether live observation is supported, unavailable or failing, while retaining usable historical traces and ledger-backed views.
