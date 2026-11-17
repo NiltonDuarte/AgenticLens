@@ -2,7 +2,7 @@
 
 ## Scope and approval
 
-Implement the existing [roadmap acceptance](../../../alspaces/plan/to-do/FIX-19%20reject%20ambiguous%20codex%20session%20snapshots.md), selected in the [specification](specs/codex-owner-snapshots/spec.md). The user explicitly instructed: “Implement FIX-19 using the existing roadmap ticket” and stated that this authorizes its existing acceptance criteria, with approval recorded here rather than requested again. This approval covers iteration 01; material acceptance changes require renewed approval.
+Implement the existing [roadmap acceptance](../../../alspaces/plan/done/FIX-19%20reject%20ambiguous%20codex%20session%20snapshots.md), selected in the [specification](specs/codex-owner-snapshots/spec.md). The user explicitly instructed: “Implement FIX-19 using the existing roadmap ticket” and stated that this authorizes its existing acceptance criteria, with approval recorded here rather than requested again. This approval covers iteration 01; material acceptance changes require renewed approval.
 
 ## Decisions and preserved guarantees
 
@@ -25,3 +25,5 @@ Baseline and fetched origin/main are b6ab0471224c8bcea7bc00adce867d3ba0de4a37 (A
 Architecture review (Sol 6.1/high) confirmed ARCH-01: registered capture-auto generation bypassed native duplicate discovery and could replace accepted history from one registered path. The existing approval already covers this consuming path; no acceptance boundary changes. Coder ownership extends to scoped capture adapters, and tester adds the actual automatic-generation regression. Re-review covers capture validation/extraction, source budgets and history preservation across all four focuses and both configured profiles.
 
 Architecture re-review confirmed ARCH-02: restarting exact discovery for every registered owner could exceed an operation's source-read budget. The correction must share an operation-local allowance and account discovery reads, retaining incomplete results when exhausted. This preserves existing bounded-capture guarantees within iteration 01; no new authority or acceptance rule is introduced.
+
+Review-model steering: the user changed future Sol dispatches to exact gpt-6.2-sol/high after the completed reviews above. Completed Sol 6.1/high and Luna 6/medium evidence remains valid with its original attribution. Any new review dispatch must reload the local policy. The three shared policy/reference edits are user-owned and excluded from this delivery. Acceptance is unchanged.
