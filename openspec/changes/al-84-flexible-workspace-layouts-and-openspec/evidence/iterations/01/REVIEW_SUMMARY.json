@@ -172,6 +172,20 @@
         }
       ],
       "disposition": "Fixed: discovery and explicit selection use physical depth per configured root, preserving independently configured union coverage."
+    },
+    {
+      "finding_id": "CONFIG-01",
+      "severity": 4,
+      "issue": "Optional publication project inferred ownership from the ledger destination, retaining old callers and risking unrelated configuration for external roots.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6-astra",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed following the user compatibility question: require a nonblank owning project and pass it explicitly through snapshot, relocation, formatting and test callers."
     }
   ]
 }
