@@ -1,0 +1,7 @@
+# AL-63 audit scope and decisions
+
+The November 8 correction, “work on the ticket not to update it” and “Report the capabilities matrix,” superseded the initial planning-only interpretation. The original ticket defines acceptance. Eight independent reports cover architecture, behavior, data integrity and test effectiveness. The parent owns the matrix, reconciliation and delivery. Disposable copies protect source records and accepted ledgers during probes. Product changes, new regression tests and backfill defaults require separate work.
+
+The November 11 branch refresh rechecked upstream changes to source selection and diagnostics. The November 17 requests, “Update the branch and the report” and “review the capabilities. use the new openspec way of work,” move execution into this change and require revision-specific revalidation. The existing discovery scope and approval still apply. The integrated diff affects Codex discovery, publication and workspace selection. A direct review with recorded-source replays and current CLI tests covers that delta. The eight earlier reviewer verdicts apply to their original revision.
+
+The user then requested a single OpenSpec layout for AL-63. The [delivery record](delivery.md) links the matrix and consolidated review, and the [evidence directory](evidence/) holds the eight source reports and their attributed findings. The original roadmap ticket continues to define acceptance.
