@@ -9,3 +9,9 @@ The product owner still needs to choose the preview and maintenance-only interfa
 ## Verification
 
 Checked allocated IDs against roadmap files, worktrees and Git history. Verified all four ticket links and reciprocal dependencies against the index, and checked the PO planning artifacts. PR #145 is the base of this planning delivery. Verification here concerns the plan; the ticket criteria describe future runtime checks.
+
+Strict OpenSpec validation and all three repository workflow tests passed. Application and build inputs match the discovery base; its integrated checks and retry limits are recorded in PR #145.
+
+## Session telemetry
+
+The planning handoff used the existing AL-65 chat. The engine rejected final Codex generation for PO-25 because the recorded source owner belongs to the AL-65 worktree. There is no separately attributable PO session ledger or cost. The original AL-65 telemetry remains in PR #145.
