@@ -83,7 +83,7 @@
           "identity_basis": "observed"
         }
       ],
-      "disposition": "Former table-existence selector superseded upstream by AL-70; current complete-family SessionTable explicitly rejects mixed layout (fixture confirmed). Generic mixed recovery remains unsupported; REV-7 owns broader policy. Historical DATA-SOL-01 credit retained."
+      "disposition": "Former table-existence selector superseded upstream by AL-70; current complete-family SessionTable explicitly rejects mixed layout (fixture confirmed). Generic mixed recovery remains unsupported; REV-7 owns broader policy. Historical DATA-SOL-01 credit retained. November 17 parent replay: current exact historical hydration also rejects both recorded mixed-store owners. Single-family copies hydrate and refresh. The original data-review discovery concerned recovery."
     },
     {
       "finding_id": "EVID-01",
