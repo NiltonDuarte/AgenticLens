@@ -10,15 +10,15 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
   - **Status**: In Progress; implementation verified, awaiting publication; **Blocked by**: None; **Blocks**: None
   - **File**: [AL-83](to-do/AL-83%20present%20agenticlens%20on%20github%20pages.md)
 
+- **AL-80**: Capture OpenCode sessions across worktrees
+  - **Status**: In Progress; **Blocked by**: None; **Blocks**: None
+  - **File**: [AL-80](to-do/AL-80%20capture%20opencode%20sessions%20across%20worktrees.md)
+
 ## Ready
 
 - **AL-65**: Recommend safe source-backed backfill defaults
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None
   - **File**: [AL-65](to-do/AL-65%20recommend%20safe%20source%20backed%20backfill%20defaults.md)
-
-- **AL-80**: Capture OpenCode sessions across worktrees
-  - **Status**: Ready; **Blocked by**: None; **Blocks**: None
-  - **File**: [AL-80](to-do/AL-80%20capture%20opencode%20sessions%20across%20worktrees.md)
 
 - **AL-71**: Keep dashboard requests and live data reliable
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None

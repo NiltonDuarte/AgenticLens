@@ -1,5 +1,7 @@
 # AL-80: Capture OpenCode sessions across worktrees
 
+Execution change: [OpenCode capture across worktrees](../../../openspec/changes/al-80-capture-opencode-sessions-across-worktrees/proposal.md).
+
 ## Goal
 
 Install the OpenCode integration once in the effective user plugin directory and demonstrate a native root/child session in configured base/worktrees reaching the shared collector and publishing ticket metrics with the exact PO-20 policy.

@@ -62,6 +62,9 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 		return errors.New("usage: capture install-user|uninstall-user|install|install-check|uninstall-check|status|diagnostics|inspect-state|verify|check|receive|request|bind|reconcile|relocate-state|disable|uninstall|protocol")
 	}
 	command := args[0]
+	if command == "opencode-hook" {
+		return nativeOpenCodeHook(args[1:], input, output)
+	}
 	if command == "user-hook" {
 		return nativeCodexUserHook(input, output, os.Stderr)
 	}
@@ -90,7 +93,7 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 	ticket := flags.String("ticket-id", "", "Explicit ticket binding or reconciliation target")
 	request := flags.String("request", "", "Exact binding request token delivered by hook feedback")
 	userLevel := flags.Bool("user-level", false, "Native user-level handoff; binding has no project wrapper dependency")
-	legacyRepository := flags.String("migrate-legacy-repo", "", "Explicit original checkout whose unchanged owned Codex project hooks should migrate to user hooks")
+	legacyRepository := flags.String("migrate-legacy-repo", "", "Explicit checkout whose unchanged owned project callbacks should migrate to user capture")
 	dryRun := flags.Bool("dry-run", false, "Show owned installation changes without writing")
 	byteBudget := flags.Int64("max-source-bytes", 0, "Source or diagnostic payload bytes per bounded pass")
 	sessionBudget := flags.Int("max-sessions", 0, "Session work budget per reconciliation or inspection pass")
@@ -127,19 +130,32 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 	ctx, cancel := context.WithTimeout(callerCtx, *timeout)
 	defer cancel()
 	if command == "install-user" || command == "uninstall-user" {
-		home := strings.TrimSpace(*sourceStore)
-		var err error
-		if home == "" {
-			home, err = captureSourceStore("codex", *repo)
-		}
-		if err != nil {
-			return err
-		}
 		entry, err := adaptersconfig.ResolveEntrypoint(*repo)
 		if err != nil {
 			return err
 		}
-		result, err := capture.InstallUserCodex(ctx, capture.UserInstallOptions{Repository: entry.Project, Entrypoint: *entrypoint, LegacyRepository: *legacyRepository, Home: home, DryRun: *dryRun, Remove: command == "uninstall-user"})
+		options := capture.UserInstallOptions{Repository: entry.Project, Entrypoint: *entrypoint, LegacyRepository: *legacyRepository, DryRun: *dryRun, Remove: command == "uninstall-user"}
+		var result capture.InstallResult
+		switch *source {
+		case "", "codex":
+			options.Home = strings.TrimSpace(*sourceStore)
+			if options.Home == "" {
+				options.Home, err = captureSourceStore("codex", *repo)
+			}
+			if err == nil {
+				result, err = capture.InstallUserCodex(ctx, options)
+			}
+		case "opencode":
+			if provided["state-dir"] || provided["store"] {
+				return errors.New("OpenCode user installation reads its config directory from the harness environment; set the source database and capture state in project local settings")
+			}
+			options.Home, err = capture.OpenCodeConfigHome()
+			if err == nil {
+				result, err = capture.InstallUserOpenCode(ctx, options)
+			}
+		default:
+			return errors.New("capture source must be codex or opencode")
+		}
 		if err != nil {
 			return err
 		}
@@ -178,6 +194,10 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 		policy, err = adaptersconfig.ResolveCapture(project, *state)
 	}
 	if err != nil {
+		return err
+	}
+	if !policy.Enabled && *userLevel && *source == "opencode" {
+		_, err := io.WriteString(output, "{}\n")
 		return err
 	}
 	if !policy.Enabled && (command == "receive" || command == "request" || command == "worker") {
@@ -225,6 +245,25 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 		if policy.Settings != nil {
 			policy.Settings["max_sessions"] = true
 			policy.Settings["max_source_bytes"] = true
+		}
+	}
+	var openCodeParent string
+	var openCodePending error
+	if *userLevel && *source == "opencode" {
+		if command != "receive" && command != "bind" && command != "request" {
+			return errors.New("unsupported native OpenCode operation")
+		}
+		cfg, loadErr := adaptersconfig.Load(project)
+		if loadErr != nil {
+			return loadErr
+		}
+		*sourceStore, err = nativeOpenCodeStore(ctx, project, cfg)
+		if err != nil {
+			return err
+		}
+		openCodeParent, openCodePending, err = capture.OpenCodeHandoffParent(ctx, cfg, project, *sourceStore, *sessionID)
+		if err != nil {
+			return err
 		}
 	}
 	absState, err := capture.ProjectState(policy.StateDir, project)
@@ -423,6 +462,9 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 		default:
 			return errors.New("unsupported OpenCode lifecycle event")
 		}
+		if *userLevel && value.SessionID != identity.SessionID {
+			return errors.New("OpenCode callback session differs from verified session")
+		}
 		identity.SessionID = value.SessionID
 		registration, e := s.Register(ctx, identity, "", value.Event)
 		if e != nil {
@@ -431,11 +473,20 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 			return e
 		}
 		handoffAccepted = true
-		registration, e = s.ProveRegistration(ctx, registration)
-		if e != nil {
-			return e
+		if !*userLevel {
+			if _, e = s.ProveRegistration(ctx, registration); e != nil {
+				return e
+			}
 		}
 		registration, e = s.Change(ctx, identity, func(r domain.CaptureRegistration) (domain.CaptureRegistration, error) {
+			if *userLevel {
+				if openCodePending != nil {
+					r.ProjectProof = domain.CaptureProjectUnverified
+				} else {
+					r.ProjectProof = domain.CaptureProjectVerified
+					r.ProjectDirectory = project
+				}
+			}
 			if value.Event == "session.created" {
 				r.Activity = "busy"
 			}
@@ -450,6 +501,9 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 		if e != nil {
 			return e
 		}
+		if openCodePending != nil {
+			return fmt.Errorf("registered OpenCode session pending exact source metadata: %w", openCodePending)
+		}
 		return json.NewEncoder(output).Encode(registration)
 	case "request":
 		r, e := s.Register(ctx, identity, "", "agent_context_request")
@@ -457,12 +511,24 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 			return e
 		}
 		handoffAccepted = true
+		if *userLevel && *source == "opencode" {
+			if openCodePending != nil {
+				return fmt.Errorf("registered OpenCode session pending exact source metadata: %w", openCodePending)
+			}
+			r, e = s.InheritOpenCodeParent(ctx, r, openCodeParent)
+			if e != nil {
+				return e
+			}
+		}
 		feedback, e := captureSessionFailureFeedback(ctx, s, r.Identity, policy, absState)
 		if e != nil {
 			return fmt.Errorf("durable request accepted but failure feedback unavailable; inspect capture diagnostics: %w", e)
 		}
 		return json.NewEncoder(output).Encode(captureAgentResponse{CaptureRegistration: r, CaptureFeedback: feedback})
 	case "bind":
+		if openCodePending != nil {
+			return fmt.Errorf("OpenCode source metadata pending; binding unresolved: %w", openCodePending)
+		}
 		if *ticketType != "" {
 			if _, ok := domain.NormalizeTicketType(*ticketType); !ok {
 				return errors.New("invalid ticket type")

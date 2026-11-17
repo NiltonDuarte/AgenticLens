@@ -372,5 +372,11 @@ func automaticCaptureEnabled(project, state string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return capture.UserCodexInstalled(cfg.Telemetry.Sources.CodexHome)
+	if cfg.Telemetry.Sources.CodexHome != "" {
+		installed, err := capture.UserCodexInstalled(cfg.Telemetry.Sources.CodexHome)
+		if err != nil || installed {
+			return installed, err
+		}
+	}
+	return capture.UserOpenCodeInstalled()
 }

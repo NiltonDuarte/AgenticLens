@@ -13,7 +13,8 @@ Usage: download.sh --project DIR [--version EXACT_ENGINE_TAG] [--dest USER_BIN_D
   --local-bin PATH --sha256 HASH  Verified offline engine
   --init-config                  Create an explicit incomplete shared scaffold
   --all-platforms | --include-host OS-ARCH  Cache additional engine platforms
-  --capture-source codex|opencode --capture-store ABSOLUTE_PATH
+  --capture-source codex --capture-store ABSOLUTE_CODEX_HOME
+  --capture-source opencode       Install into effective OpenCode user config
   --capture-state-dir PATH
   --force                        Repair an immutable engine cache leaf
   --dry-run                      No network or destination writes
@@ -40,7 +41,8 @@ done
 PROJECT="$(CDPATH= cd -P -- "$PROJECT" && pwd -P)"
 [[ "$DEST" == /* ]] || DEST="$PWD/$DEST"
 [[ -z "$SOURCE" || "$SOURCE" == codex || "$SOURCE" == opencode ]] || fail 'capture source must be codex or opencode'
-if [[ -n "$SOURCE" ]]; then [[ "$STORE" == /* ]] || fail 'capture requires an explicit absolute source store'
+if [[ "$SOURCE" == codex ]]; then [[ "$STORE" == /* ]] || fail 'Codex installation requires an explicit absolute source store'
+elif [[ "$SOURCE" == opencode ]]; then [[ -z "$STORE$STATE" ]] || fail 'Configure the OpenCode database and capture state in local project settings; the user plugin uses the effective OpenCode config directory'
 elif [[ -n "$STORE$STATE" ]]; then fail 'capture options require --capture-source'; fi
 exact() { [[ ${#1} -le 128 && "$1" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?(\+[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?$ ]]; }
 digest() {
@@ -142,8 +144,8 @@ if ((INIT)); then
 fi
 if [[ -n "$SOURCE" ]]; then
  ((INIT==0)) || fail 'Complete project configuration before capture installation'
- args=(capture install --source "$SOURCE" --store "$STORE" --repo "$PROJECT" --wrapper "$ENTRYPOINT")
- if [[ "$SOURCE" == codex ]]; then args=(capture install-user --repo "$PROJECT" --entrypoint "$ENTRYPOINT" --store "$STORE"); fi
+ args=(capture install-user --source "$SOURCE" --repo "$PROJECT" --entrypoint "$ENTRYPOINT")
+ [[ -z "$STORE" ]] || args+=(--store "$STORE")
  [[ -z "$STATE" ]] || args+=(--state-dir "$STATE")
  "$ENTRYPOINT" --al-project "$PROJECT" "${args[@]}"
 else printf 'Binary installation only; lifecycle capture not configured.\n'; fi

@@ -69,7 +69,12 @@ parsed:
 		case "versions":
 			return listVersions(project, args[1:], output)
 		case "codex-hook":
-			return codexHook(input, output, diagnostic)
+			return nativeHook("Codex", []string{"capture", "user-hook"}, input, output, diagnostic)
+		case "opencode-hook":
+			if len(args) < 2 {
+				return errors.New("opencode-hook requires receive, request or bind")
+			}
+			return nativeHook("OpenCode", append([]string{"capture", "opencode-hook"}, args[1:]...), input, output, diagnostic)
 		}
 	}
 	entry, err := resolveProject(project, standalone(args) && !resolve && !cache)
@@ -234,13 +239,13 @@ func execute(path string, args []string, input io.Reader, output, diagnostic io.
 	return command.Run()
 }
 
-func codexHook(input io.Reader, output, diagnostic io.Writer) error {
+func nativeHook(harness string, engineArgs []string, input io.Reader, output, diagnostic io.Writer) error {
 	body, err := io.ReadAll(io.LimitReader(input, 65537))
 	if err != nil {
 		return err
 	}
 	if len(body) > 65536 {
-		return errors.New("Codex hook input exceeds 64 KiB")
+		return fmt.Errorf("%s hook input exceeds 64 KiB", harness)
 	}
 	var context struct {
 		WorkingDirectory string `json:"cwd"`
@@ -248,10 +253,10 @@ func codexHook(input io.Reader, output, diagnostic io.Writer) error {
 		Event            string `json:"hook_event_name"`
 	}
 	if err := json.Unmarshal(body, &context); err != nil {
-		return fmt.Errorf("Codex hook context: %w", err)
+		return fmt.Errorf("%s hook context: %w", harness, err)
 	}
 	if !filepath.IsAbs(context.WorkingDirectory) {
-		return errors.New("native Codex callback requires absolute session cwd")
+		return fmt.Errorf("native %s callback requires absolute session cwd", harness)
 	}
 	if context.SessionID == "" || context.Event == "" {
 		return errors.New("hook requires session_id and hook_event_name")
@@ -273,7 +278,10 @@ func codexHook(input io.Reader, output, diagnostic io.Writer) error {
 	if err != nil {
 		return err
 	}
-	if strings.TrimSpace(configuration.Telemetry.Sources.CodexHome) == "" {
+	if harness == "OpenCode" && strings.TrimSpace(configuration.Telemetry.Sources.OpenCodeDatabasePath) == "" {
+		return errors.New("selected local configuration requires telemetry.sources.opencode.database_path")
+	}
+	if harness == "Codex" && strings.TrimSpace(configuration.Telemetry.Sources.CodexHome) == "" {
 		return errors.New("selected local configuration requires telemetry.sources.codex.home")
 	}
 	entry, err := config.ResolveEntrypoint(project)
@@ -288,7 +296,7 @@ func codexHook(input io.Reader, output, diagnostic io.Writer) error {
 	if err != nil {
 		return err
 	}
-	return execute(native, []string{"capture", "user-hook"}, bytes.NewReader(body), output, diagnostic, project)
+	return execute(native, engineArgs, bytes.NewReader(body), output, diagnostic, project)
 }
 
 func listVersions(project string, args []string, output io.Writer) error {
