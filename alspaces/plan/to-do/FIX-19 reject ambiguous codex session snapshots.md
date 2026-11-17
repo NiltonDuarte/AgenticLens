@@ -34,3 +34,5 @@ Still open: AL-67 F04 documents duplicate active/archive owner snapshots through
 Evidence and review limits: [PO-19 reconciliation](../../PO-19/SPEC.md), merged baseline `03f5b05d`. This planning review does not certify runtime behavior or close unverified acceptance criteria.
 
 [Engineering rules](../../../TECHNICAL_GUIDELINES.md) and [relevant regression boundaries](../../../docs/REGRESSION_PREVENTION.md) apply. Historical findings require revalidation; this rewrite is not runtime verification or implementation approval.
+
+Execution change: [FIX-19 implementation](../../../openspec/changes/fix-19-reject-ambiguous-codex-snapshots/proposal.md).

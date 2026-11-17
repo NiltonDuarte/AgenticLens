@@ -17,6 +17,10 @@ import (
 
 const maxDiscoveryLineBytes = 8 * 1024 * 1024
 
+// ErrOwnerUnavailable distinguishes a missing exact owner from ambiguous or
+// failed source discovery, whose diagnostics must remain visible to callers.
+var ErrOwnerUnavailable = errors.New("Codex native session unavailable")
+
 // DiscoveryOptions selects a Codex thread from local rollout files using an
 // explicit nonce or thread ID. Ticket text and working-directory heuristics
 // are intentionally excluded because they can identify the wrong session.
@@ -70,6 +74,13 @@ func DiscoverRolloutPaths(options DiscoveryOptions) ([]string, error) {
 	}
 	if len(candidates) == 0 {
 		return nil, fmt.Errorf("no readable Codex rollout JSONL files found under %s", home)
+	}
+
+	// Check every relationship asserted by a copy before reducing ancestry to
+	// one parent per owner. Otherwise a conflicting copy could route a selected
+	// child into a different family and escape the ambiguity check.
+	if err := rejectAmbiguousFamily(candidates, options); err != nil {
+		return nil, err
 	}
 
 	selectedID := strings.TrimSpace(options.SessionID)
@@ -134,6 +145,41 @@ func DiscoverRolloutPaths(options DiscoveryOptions) ([]string, error) {
 		result = append(result, candidate.path)
 	}
 	return result, nil
+}
+
+// rejectAmbiguousFamily follows all observed relationships, without selecting
+// an authoritative copy. Ambiguity in an unrelated family does not block reads.
+func rejectAmbiguousFamily(candidates []rolloutCandidate, options DiscoveryOptions) error {
+	members := make(map[string]bool)
+	counts := make(map[string]int)
+	relations := make(map[string][]string)
+	pending := make([]string, 0)
+	for _, candidate := range candidates {
+		counts[candidate.threadID]++
+		if candidate.parentID != "" {
+			relations[candidate.threadID] = append(relations[candidate.threadID], candidate.parentID)
+			relations[candidate.parentID] = append(relations[candidate.parentID], candidate.threadID)
+		}
+		if candidate.threadID == strings.TrimSpace(options.SessionID) ||
+			(strings.TrimSpace(options.Nonce) != "" && candidate.nonceMatch) {
+			pending = append(pending, candidate.threadID)
+		}
+	}
+	for len(pending) > 0 {
+		id := pending[len(pending)-1]
+		pending = pending[:len(pending)-1]
+		if members[id] {
+			continue
+		}
+		members[id] = true
+		pending = append(pending, relations[id]...)
+	}
+	for _, candidate := range candidates {
+		if members[candidate.threadID] && counts[candidate.threadID] > 1 {
+			return fmt.Errorf("incomplete Codex discovery: owner %s has ambiguous rollout paths", candidate.threadID)
+		}
+	}
+	return nil
 }
 
 func containsThread(candidates []rolloutCandidate, threadID string) bool {
@@ -365,6 +411,9 @@ func DiscoverExactRolloutPathWithBudget(home, sessionID string, budget *Discover
 			if errors.Is(e, ErrDiscoveryBudget) {
 				return "", e
 			}
+			if candidate.threadID == sessionID {
+				return "", fmt.Errorf("incomplete Codex discovery for exact owner %s at %s: %w", sessionID, path, e)
+			}
 			continue
 		}
 		if candidate.threadID != sessionID {
@@ -376,7 +425,7 @@ func DiscoverExactRolloutPathWithBudget(home, sessionID string, budget *Discover
 		selected = path
 	}
 	if selected == "" {
-		return "", fmt.Errorf("exact Codex owner %s unavailable", sessionID)
+		return "", fmt.Errorf("exact Codex owner %s unavailable: %w", sessionID, ErrOwnerUnavailable)
 	}
 	return selected, nil
 }
