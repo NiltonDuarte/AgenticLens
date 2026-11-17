@@ -439,7 +439,7 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 			return nil, nil, err
 		}
 	}
-	source := sourceRead{policy: captureGenerationPolicy(policies), configuration: s.configuration}
+	source := sourceRead{policy: captureGenerationPolicy(policies), configuration: s.configuration, discoveryBudget: budget.codexDiscovery}
 	used := 0
 	refreshed := map[string]bool{}
 	for _, i := range indexes {
@@ -496,6 +496,7 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 				discoveryBytesBefore = source.discoveryBudget.SourceBytesRead
 			}
 			fresh, revision, updatedAt, extractErr = extractExactAt(ctx, r, budget.bytes, user, cutoff, &source)
+			budget.codexDiscovery = source.discoveryBudget
 			if source.discoveryBudget != nil {
 				budget.charge(source.discoveryBudget.SourceBytesRead - discoveryBytesBefore)
 			}
@@ -505,9 +506,12 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 			if extractErr != nil {
 				current.State = domain.CaptureFailed
 				current.Detail = "Source snapshot unavailable or invalid; previous facts preserved: " + extractErr.Error()
-				if errors.Is(extractErr, opencode.ErrCaptureBudget) || errors.Is(extractErr, codex.ErrDiscoveryBudget) {
+				if errors.Is(extractErr, opencode.ErrCaptureBudget) {
 					current.State = domain.CapturePending
 					current.Detail = "Source byte budget reached; increase --max-source-bytes or continue reconciliation; previous facts preserved"
+				} else if errors.Is(extractErr, codex.ErrDiscoveryBudget) {
+					current.State = domain.CapturePending
+					current.Detail = "Codex discovery session/byte budget reached; increase configured source limits or continue reconciliation; previous facts preserved"
 				}
 				return current, nil
 			}

@@ -56,6 +56,7 @@ func (class workClass) cursorKind() string {
 }
 
 type workBudget struct {
+	codexDiscovery   *codex.DiscoveryBudget
 	bytes            int64
 	sessions         int
 	readBytes        int64
