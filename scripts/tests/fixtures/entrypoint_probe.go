@@ -16,7 +16,53 @@ import (
 var version = "v9.8.7"
 var protocol = "3"
 
+// Older managers supported the generic manager interface but had no OpenCode
+// router. Forward their other operations to the real test manager.
+func simulatePreviousManager(path string, args []string) {
+	if len(args) == 2 && args[0] == "manager" && args[1] == "opencode-hook-protocol" {
+		fmt.Fprintln(os.Stderr, "unknown command")
+		os.Exit(1)
+	}
+	runPreviousBinary(path, args)
+}
+
+// Previous install-user accepted --source but always installed Codex hooks.
+// Its flag parser rejected the newer --user-source before calling the installer.
+func simulatePreviousEngine(path string, args []string) {
+	if len(args) >= 2 && args[0] == "capture" && (args[1] == "install-user" || args[1] == "uninstall-user") {
+		legacyArgs := append([]string{}, args[:2]...)
+		for i := 2; i < len(args); i++ {
+			switch {
+			case args[i] == "--user-source" || strings.HasPrefix(args[i], "--user-source="):
+				fmt.Fprintln(os.Stderr, "flag provided but not defined: -user-source")
+				os.Exit(1)
+			case args[i] == "--source":
+				i++
+			case strings.HasPrefix(args[i], "--source="):
+				continue
+			default:
+				legacyArgs = append(legacyArgs, args[i])
+			}
+		}
+		args = legacyArgs
+	}
+	runPreviousBinary(path, args)
+}
+
+func runPreviousBinary(path string, args []string) {
+	if err := syscall.Exec(path, append([]string{path}, args...), os.Environ()); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+
 func main() {
+	if manager := os.Getenv("AL_PROBE_PREVIOUS_MANAGER"); manager != "" {
+		simulatePreviousManager(manager, os.Args[1:])
+	}
+	if engine := os.Getenv("AL_PROBE_PREVIOUS_ENGINE"); engine != "" {
+		simulatePreviousEngine(engine, os.Args[1:])
+	}
 	if len(os.Args) == 3 && os.Args[1] == "engine" && os.Args[2] == "protocol" {
 		fmt.Println("1")
 		return

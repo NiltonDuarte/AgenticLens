@@ -81,6 +81,11 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 	flags := flag.NewFlagSet("capture "+command, flag.ContinueOnError)
 	flags.SetOutput(output)
 	source := flags.String("source", "", "Harness: codex or opencode")
+	userOperation := command == "install-user" || command == "uninstall-user"
+	userSource := ""
+	if userOperation {
+		flags.StringVar(&userSource, "user-source", "", "User integration to install or remove: codex or opencode")
+	}
 	sourceStore := flags.String("store", "", "Exact source store (Codex home or OpenCode database)")
 	state := flags.String("state-dir", "", "Capture state override (configured telemetry.capture.state_dir is required)")
 	repo := flags.String("repo", ".", "Repository root for additive local hook installation")
@@ -107,6 +112,15 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 	}
 	provided := map[string]bool{}
 	flags.Visit(func(f *flag.Flag) { provided[f.Name] = true })
+	if provided["user-source"] {
+		if userSource != "opencode" && userSource != "codex" {
+			return errors.New("--user-source must select codex or opencode")
+		}
+		if provided["source"] && *source != userSource {
+			return errors.New("--user-source and --source must agree")
+		}
+		*source = userSource
+	}
 	for _, choice := range []struct{ flag, value string }{{"store", *sourceStore}, {"state-dir", *state}, {"source", *source}, {"repo", *repo}} {
 		if provided[choice.flag] && strings.TrimSpace(choice.value) == "" {
 			return fmt.Errorf("--%s must be nonblank when supplied", choice.flag)
@@ -129,7 +143,7 @@ func captureCommandAction(args []string, input io.Reader, output io.Writer) (ret
 	}
 	ctx, cancel := context.WithTimeout(callerCtx, *timeout)
 	defer cancel()
-	if command == "install-user" || command == "uninstall-user" {
+	if userOperation {
 		entry, err := adaptersconfig.ResolveEntrypoint(*repo)
 		if err != nil {
 			return err

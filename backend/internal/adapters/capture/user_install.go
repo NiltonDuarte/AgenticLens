@@ -65,6 +65,11 @@ func installUser(ctx context.Context, options UserInstallOptions, source string,
 		if err := validateManagerEntrypoint(manager); err != nil {
 			return result, fmt.Errorf("native manager unavailable: %w", err)
 		}
+		if source == "opencode" {
+			if err := validateInstallNativeOutput(ctx, manager, "1", "OpenCode user hook protocol", "manager", "opencode-hook-protocol"); err != nil {
+				return result, fmt.Errorf("install a manager with OpenCode user hook support: %w", err)
+			}
+		}
 	}
 	if !options.Remove && options.Repository != "" {
 		if err := checkUserConflicts(ctx, source, options.Repository, options.LegacyRepository); err != nil {

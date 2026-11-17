@@ -120,6 +120,10 @@ magic="$(od -An -tx1 -N4 "$MANAGER" | tr -d ' \n')"
 case "$OS:$magic" in linux:7f454c46|darwin:cffaedfe|darwin:cefaedfe|darwin:feedfacf|darwin:feedface|darwin:cafebabe) ;; *) fail 'Bootstrap is not a native manager' ;; esac
 chmod 700 "$MANAGER"
 [[ "$("$MANAGER" manager protocol)" == 1 ]] || fail 'Native manager interface unavailable'
+if [[ "$SOURCE" == opencode ]]; then
+ hook_protocol="$("$MANAGER" manager opencode-hook-protocol)" || fail 'OpenCode capture requires a manager with the opencode-hook route; explicitly update the manager'
+ [[ "$hook_protocol" == 1 ]] || fail 'Incompatible OpenCode user hook protocol; explicitly update the manager'
+fi
 actual_manager_version="$("$MANAGER" --manager-version --short)"
 exact "$actual_manager_version" || fail 'Manager has no exact version identity'
 [[ -z "$MANAGER_VERSION" || "$MANAGER_VERSION" == "$actual_manager_version" ]] || fail 'Manager version mismatch'
@@ -169,7 +173,8 @@ if ((INIT)); then
 fi
 if [[ -n "$SOURCE" ]]; then
  ((INIT==0)) || fail 'Complete project configuration before capture installation'
- args=(capture install-user --source "$SOURCE" --repo "$PROJECT" --entrypoint "$ENTRYPOINT")
+ args=(capture install-user --repo "$PROJECT" --entrypoint "$ENTRYPOINT")
+ if [[ "$SOURCE" == opencode ]]; then args+=(--user-source opencode); else args+=(--source codex); fi
  [[ -z "$STORE" ]] || args+=(--store "$STORE")
  [[ -z "$STATE" ]] || args+=(--state-dir "$STATE")
  "$ENTRYPOINT" --al-project "$PROJECT" "${args[@]}"

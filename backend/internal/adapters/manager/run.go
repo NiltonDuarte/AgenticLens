@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"agenticlens/internal/adapters/config"
@@ -24,6 +25,10 @@ const Protocol = 1
 func Run(args []string, input io.Reader, output, diagnostic io.Writer) error {
 	if len(args) == 2 && args[0] == "engine" && args[1] == "protocol" {
 		return errors.New("this executable is the AgenticLens manager, not an engine")
+	}
+	if len(args) == 2 && args[0] == "manager" && args[1] == "opencode-hook-protocol" {
+		_, err := fmt.Fprintln(output, "1")
+		return err
 	}
 	if len(args) == 2 && args[0] == "manager" && args[1] == "protocol" {
 		_, err := fmt.Fprintln(output, Protocol)
@@ -81,7 +86,8 @@ parsed:
 	if err != nil {
 		return err
 	}
-	if err := validateCaptureRepository(args, entry.Project); err != nil {
+	args, err = prepareCaptureArgs(args, entry.Project)
+	if err != nil {
 		return err
 	}
 	if cache {
@@ -105,11 +111,11 @@ parsed:
 
 // Capture flags use Go flag arity. Consume values before interpreting later
 // tokens so a literal "--repo" title cannot change project selection.
-func validateCaptureRepository(args []string, selected string) error {
+func prepareCaptureArgs(args []string, selected string) ([]string, error) {
 	if len(args) < 2 || args[0] != "capture" {
-		return nil
+		return args, nil
 	}
-	repository := ""
+	repository, source := "", ""
 	stateDirectory, projectName := "", ""
 	for index := 2; index < len(args); index++ {
 		argument := args[index]
@@ -117,15 +123,17 @@ func validateCaptureRepository(args []string, selected string) error {
 			break
 		}
 		name, value, inline := strings.Cut(strings.TrimLeft(argument, "-"), "=")
-		if name == "repo" || name == "state-dir" || name == "project-name" {
+		if name == "repo" || name == "state-dir" || name == "project-name" || name == "source" {
 			if !inline {
 				index++
 				if index >= len(args) {
-					return fmt.Errorf("capture --%s requires a value", name)
+					return nil, fmt.Errorf("capture --%s requires a value", name)
 				}
 				value = args[index]
 			}
 			switch name {
+			case "source":
+				source = value
 			case "repo":
 				repository = value
 			case "state-dir":
@@ -144,30 +152,35 @@ func validateCaptureRepository(args []string, selected string) error {
 			index++
 		}
 	}
+	// Earlier engines accepted --source opencode on user installation but
+	// operated on Codex. Send an option they reject during flag parsing.
+	if source == "opencode" && (args[1] == "install-user" || args[1] == "uninstall-user") {
+		args = slices.Insert(slices.Clone(args), 2, "--user-source", source)
+	}
 	if repository == "" {
-		return nil
+		return args, nil
 	}
 	// Retained-state inspection validates the explicit registry and stored
 	// project identity in the engine, even when its checkout no longer exists.
 	if args[1] == "inspect-state" && stateDirectory != "" && projectName != "" {
-		return nil
+		return args, nil
 	}
 	root, err := config.ProjectRoot(repository)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	wanted, err := os.Stat(root)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	actual, err := os.Stat(selected)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if !os.SameFile(wanted, actual) {
-		return errors.New("capture --repo differs from selected project; supply matching --al-project DIR before capture")
+		return nil, errors.New("capture --repo differs from selected project; supply matching --al-project DIR before capture")
 	}
-	return nil
+	return args, nil
 }
 
 func defaultRoot() (string, error) {
