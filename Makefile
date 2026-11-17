@@ -195,8 +195,11 @@ release-build:
 		(cd "$(BACKEND_DIR)" && CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch go build -ldflags "$(LDFLAGS)" -o ../$(RELEASE_DIR)/bin/agentic-lens-$$os-$$arch ./cmd/agentic-lens-manager) || exit 1; \
 	done
 
+# Locate the helper beside this Makefile even when called with make -f from a fixture.
+release_checksums = bash "$$(dirname -- "$(MAKEFILE_LIST)")/scripts/release-checksums.sh"
+
 release-package:
-	@mkdir -p $(RELEASE_DIR)
+	@mkdir -p "$(RELEASE_DIR)"
 	@for platform in $(PLATFORMS); do \
 		os=$${platform%/*}; \
 		arch=$${platform#*/}; \
@@ -217,26 +220,18 @@ release-package:
 		tar -czf "$(RELEASE_DIR)/$$archive_name" -C "$(RELEASE_DIR)/bin" "$$bin_name" "$$engine_name" -C "$(CURDIR)" README.md $$license_file || exit 1; \
 	done
 	@echo "Generating SHA256SUMS..."
-	@(cd $(RELEASE_DIR) && sha256sum $(RELEASE_ARCHIVES) $(RELEASE_BINARIES) > SHA256SUMS.unsorted && sort -k2 SHA256SUMS.unsorted > SHA256SUMS && rm SHA256SUMS.unsorted)
+	@$(release_checksums) generate "$(RELEASE_DIR)" $(RELEASE_ARCHIVES) $(RELEASE_BINARIES)
 
 release-verify:
-	@if [ ! -f "$(RELEASE_DIR)/SHA256SUMS" ]; then \
-		echo "SHA256SUMS not found in $(RELEASE_DIR). Run 'make release-package' first." >&2; \
-		exit 1; \
-	fi
 	@echo "Verifying SHA256SUMS in $(RELEASE_DIR)..."
-	@(cd $(RELEASE_DIR) && sha256sum -c SHA256SUMS)
-	@host_os=$$(go env GOOS); \
-	host_arch=$$(go env GOARCH); \
-	host_bin="$(RELEASE_DIR)/bin/agentic-lens-engine-$$host_os-$$host_arch"; \
-	host_manager="$(RELEASE_DIR)/bin/agentic-lens-$$host_os-$$host_arch"; \
-	if [ -f "$$host_manager" ]; then ./$$host_manager --manager-version --json || exit 1; fi; \
-	if [ -f "$$host_bin" ]; then \
-		echo "Verifying host binary: $$host_bin"; \
-		./$$host_bin version || exit 1; \
-		./$$host_bin version --short || exit 1; \
-		./$$host_bin version --json || exit 1; \
-	fi
+	@$(release_checksums) verify "$(RELEASE_DIR)" $(RELEASE_ARCHIVES) $(RELEASE_BINARIES)
+ifneq ($(filter $(HOST_OS)/$(HOST_ARCH),$(PLATFORMS)),)
+	@cd "$(RELEASE_DIR)/bin" && ./agentic-lens-$(HOST_OS)-$(HOST_ARCH) --manager-version --json
+	@cd "$(RELEASE_DIR)/bin" && \
+		engine=./agentic-lens-engine-$(HOST_OS)-$(HOST_ARCH) && \
+		echo "Verifying host binary: $$engine" && \
+		"$$engine" version && "$$engine" version --short && "$$engine" version --json
+endif
 
 release-clean:
 	rm -rf $(RELEASE_DIR)

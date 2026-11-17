@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "DATA-01",
+      "severity": 3,
+      "issue": "A failed repackage can leave the previous complete manifest beside changed build inputs.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Confirmed local build-directory limitation. Packaging fails and independent verification rejects the mismatch. Retry packaging from the intended inputs before upload. Whole-build rollback is outside the approved manifest transaction."
+    },
+    {
+      "finding_id": "TEST-01",
+      "severity": 1,
+      "issue": "The portable regression suite covers missing files and directories but omits direct evidence for an unreadable regular file.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Parent verified the production gate using an isolated regular binary with mode 000 under uid 1000. Verification failed before host execution."
+    }
+  ]
+}
