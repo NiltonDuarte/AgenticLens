@@ -9,8 +9,8 @@
   "ticket_title": "Capture OpenCode sessions across worktrees",
   "ticket_type": "feat",
   "started_at": "2026-11-17T21:59:24.659Z",
-  "completed_at": "2026-11-17T22:55:59.294469+00:00",
-  "updated_at": "2026-11-17T22:55:59.294469+00:00",
+  "completed_at": "2026-11-17T23:13:54.070887+00:00",
+  "updated_at": "2026-11-17T23:13:54.070887+00:00",
   "code": {
     "lines_added": 1083,
     "lines_deleted": 123,
@@ -19,7 +19,7 @@
     "prod_lines_added": 832,
     "prod_lines_deleted": 122,
     "files_changed": 13,
-    "sdlc_iterations": 35
+    "sdlc_iterations": 37
   },
   "sessions": [
     {
@@ -91,22 +91,22 @@
       "user": "Nilton Duarte",
       "invocations": [
         {
-          "provisional_seconds": 2970,
+          "provisional_seconds": 57,
           "role": "",
           "model": "gpt-6.2-astra",
           "started_at": "2026-11-17T21:59:25.149Z",
           "completed_at": null,
-          "active_duration_seconds": 3023,
-          "turns": 2,
-          "tokens": {"input": 318902, "output": 27648, "cache_read": 23513600, "reasoning": 4092, "peak_context": 152637},
+          "active_duration_seconds": 3146,
+          "turns": 3,
+          "tokens": {"input": 330111, "output": 30662, "cache_read": 25388928, "reasoning": 4126, "peak_context": 161890},
           "cost_usd": null,
           "cost_evidence": {"state": "unavailable", "known_subtotal_usd": null},
           "compactions": 0,
-          "user_iterations": 15
+          "user_iterations": 17
         }
       ],
       "tools": [
-        {"name": "command", "calls": 120, "errors": 4},
+        {"name": "command", "calls": 130, "errors": 5},
         {"name": "delegate_task", "calls": 10, "errors": 0},
         {"name": "followup_task", "calls": 8, "errors": 0},
         {"name": "list_agents", "calls": 1, "errors": 0},
