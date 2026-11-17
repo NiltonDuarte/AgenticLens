@@ -28,15 +28,15 @@ The installed manager could not read this checkout’s shared policy. Final extr
 
 <!-- agentic-lens:metrics:start -->
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 18
-- **Active Agent Duration:** 1h 15m (recorded duration including 832s provisional)
-- **Context Window Health:** HEALTHY — Root agent peak 122.7k tokens (27% of 450k healthy ceiling, 0 compactions) | Subagents peak 106.7k (Tester)
+- **Software Development Life Cycle Iterations:** 20
+- **Active Agent Duration:** 1h 16m (recorded duration including 22s provisional)
+- **Context Window Health:** HEALTHY — Root agent peak 129.0k tokens (29% of 450k healthy ceiling, 0 compactions) | Subagents peak 106.7k (Tester)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 1.0 avg turns/run (peak: 1 turns) | Planner 1.0, Coder 1.0, Tester 1.0, Reviewer-architecture 1.0, Reviewer-behavior 1.0, Reviewer-data 1.0, Reviewer-tests 1.0
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 14,777 reasoning tokens (18.0% of generated output)
-- **Tool Health & Self-Correction:** 277 tool calls (18 self-corrections, 93.5% success rate)
+- **Reasoning Effort:** 14,777 reasoning tokens (17.6% of generated output)
+- **Tool Health & Self-Correction:** 282 tool calls (18 self-corrections, 93.6% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 2 execution anomalies detected (1 CRITICAL, 1 WARNING).
@@ -53,20 +53,20 @@ The installed manager could not read this checkout’s shared policy. Final extr
 | **planner** | 1 | 69,724 | 3,717 | 627,328 | 90.0% | 67.8k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **coder** | 1 | 80,582 | 7,211 | 2,275,968 | 96.6% | 101.8k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **tester** | 1 | 45,587 | 6,548 | 3,332,096 | 98.7% | 106.7k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Unknown** | 5 | 469,675 | 31,911 | 13,797,504 | 96.7% | 122.7k | HEALTHY | Unavailable (0 observed, 0 partial, 5 unavailable / 5 invocations) |
+| **Unknown** | 5 | 477,342 | 33,679 | 14,791,680 | 96.9% | 129.0k | HEALTHY | Unavailable (0 observed, 0 partial, 5 unavailable / 5 invocations) |
 | **reviewer-architecture** | 1 | 49,472 | 3,287 | 445,824 | 90.0% | 64.2k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **reviewer-behavior** | 1 | 67,061 | 6,384 | 822,272 | 92.5% | 70.0k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **reviewer-data** | 1 | 74,533 | 3,753 | 426,752 | 85.1% | 69.0k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **reviewer-tests** | 1 | 64,174 | 4,524 | 759,680 | 92.2% | 67.2k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **12** | **920,808** | **67,335** | **22,487,424** | **96.1%** | **122.7k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 12 unavailable / 12 invocations)** |
+| **Total** | **12** | **928,475** | **69,103** | **23,481,600** | **96.2%** | **129.0k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 12 unavailable / 12 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
 | **gpt-6-luna** | 4 | 232,911 | 14,794 | 2,030,080 | 89.7% | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
 | **gpt-6.1-sol** | 4 | 255,240 | 17,948 | 2,454,528 | 90.6% | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
-| **gpt-6.2-astra** | 4 | 432,657 | 34,593 | 18,002,816 | 97.7% | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
-| **Total** | **12** | **920,808** | **67,335** | **22,487,424** | **96.1%** | **Unavailable (0 observed, 0 partial, 12 unavailable / 12 invocations)** |
+| **gpt-6.2-astra** | 4 | 440,324 | 36,361 | 18,996,992 | 97.7% | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
+| **Total** | **12** | **928,475** | **69,103** | **23,481,600** | **96.2%** | **Unavailable (0 observed, 0 partial, 12 unavailable / 12 invocations)** |
 
 Retained recorded history: 4 session(s), unchanged because their sources were not refreshed. They do not establish capture coverage in this worktree.
 <!-- agentic-lens:metrics:end -->
