@@ -1944,9 +1944,28 @@ func main() {
 		return
 	}
 
+	var artifactSelection *adapters.WorkspaceArtifactSelection
+	defer func() {
+		if artifactSelection != nil {
+			if closeErr := artifactSelection.Close(); closeErr != nil {
+				fmt.Fprintln(os.Stderr, "Closing workspace selection:", closeErr)
+			}
+		}
+	}()
+	loadSelected := func(ticket, project, selection string) (*domain.AgenticMetricsLedger, error) {
+		if *appendFlag == "" && *jsonOutputFlag == "" {
+			return adapters.LoadTicketWorkspace(ticket, project, selection)
+		}
+		var loadErr error
+		artifactSelection, loadErr = adapters.LoadWorkspaceArtifactSelection(ticket, project, selection)
+		if loadErr != nil {
+			return nil, loadErr
+		}
+		return &artifactSelection.Ledger, nil
+	}
 	var targetLedger *domain.AgenticMetricsLedger
 	if *ticketIDFlag != "" {
-		targetLedger, err = adapters.LoadTicketWorkspace(*ticketIDFlag, workspacesDir, *workspaceSelection)
+		targetLedger, err = loadSelected(*ticketIDFlag, workspacesDir, *workspaceSelection)
 	} else {
 		var latest *domain.AgenticMetricsLedger
 		for i := range report.Ledgers {
@@ -1962,7 +1981,7 @@ func main() {
 			err = fmt.Errorf("no ledger matches selected location")
 		} else {
 			selection := *workspaceSelection
-			targetLedger, err = adapters.LoadTicketWorkspace(*latest.TicketID, workspacesDir, selection)
+			targetLedger, err = loadSelected(*latest.TicketID, workspacesDir, selection)
 		}
 	}
 	if err != nil {
@@ -1982,7 +2001,7 @@ func main() {
 	tableMD := adapters.FormatMarkdownMetricsTable(*targetLedger, projCfg.RoleOrder)
 
 	if *appendFlag != "" || *jsonOutputFlag != "" {
-		if err := adapters.PublishWorkspaceArtifacts(workspacesDir, *targetLedger, *jsonOutputFlag, *appendFlag); err != nil {
+		if err := adapters.PublishWorkspaceArtifacts(workspacesDir, artifactSelection, *jsonOutputFlag, *appendFlag); err != nil {
 			fmt.Fprintln(os.Stderr, "Artifact publication:", err)
 			os.Exit(1)
 		}

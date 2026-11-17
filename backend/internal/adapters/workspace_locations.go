@@ -61,6 +61,15 @@ func insideWorkspace(root, path string) bool {
 	return e == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) && !filepath.IsAbs(rel)
 }
 
+// Callers establish containment before computing physical depth.
+func workspacePhysicalDepth(root, path string) int {
+	rel, _ := filepath.Rel(root, path)
+	if rel == "." {
+		return 0
+	}
+	return len(strings.Split(rel, string(filepath.Separator)))
+}
+
 // DiscoverWorkspaceLocations applies each configured scope, reporting partial roots independently.
 // Validating full ledger evidence belongs to the common ledger decoder, not folder enumeration.
 func DiscoverWorkspaceLocations(cfg domain.ProjectConfig) ([]WorkspaceLocation, []domain.WorkspaceDiagnostic) {
@@ -117,6 +126,10 @@ func discoverWorkspaceLocations(cfg domain.ProjectConfig) ([]WorkspaceLocation, 
 			}
 			if !insideWorkspace(physical, actual) {
 				reject(current.path, fmt.Errorf("workspace alias points outside configured physical root"))
+				continue
+			}
+			current.depth = workspacePhysicalDepth(physical, actual)
+			if current.depth > root.Discovery.MaxDepth {
 				continue
 			}
 			if seen[actual] {
@@ -180,6 +193,10 @@ func discoverWorkspaceLocations(cfg domain.ProjectConfig) ([]WorkspaceLocation, 
 							reject(path, fmt.Errorf("workspace alias points outside configured physical root"))
 							continue
 						}
+						childDepth := workspacePhysicalDepth(physical, childPhysical)
+						if childDepth > root.Discovery.MaxDepth {
+							continue
+						}
 						if scheduled[childPhysical] {
 							continue
 						}
@@ -188,7 +205,7 @@ func discoverWorkspaceLocations(cfg domain.ProjectConfig) ([]WorkspaceLocation, 
 							break
 						}
 						scheduled[childPhysical] = true
-						queue = append(queue, entry{childPhysical, current.depth + 1})
+						queue = append(queue, entry{childPhysical, childDepth})
 					}
 				}
 				if limited || errors.Is(e, io.EOF) {
@@ -402,6 +419,9 @@ func resolveTicketLocation(cfg domain.ProjectConfig, ticket, selection string, m
 			body, err = capture.ReadPublicationFile(location.LedgerPath)
 			if err == nil {
 				identity, err = RecordedLedgerTicket(body)
+				if err != nil {
+					err = &WorkspaceLedgerValidationError{Cause: err}
+				}
 			}
 		} else {
 			var ledger domain.AgenticMetricsLedger
@@ -422,6 +442,10 @@ func resolveTicketLocation(cfg domain.ProjectConfig, ticket, selection string, m
 				}(), TicketID: ticket, Candidates: []string{location.Path}, Diagnostics: []domain.WorkspaceDiagnostic{diagnostic}}
 			}
 			diagnostics = append(diagnostics, diagnostic)
+			var invalid *WorkspaceLedgerValidationError
+			if !errors.As(err, &invalid) {
+				incomplete = true
+			}
 			continue
 		}
 		if strings.TrimSpace(ticket) != "" && !sameTicket(identity, ticket, cfg.Ticket) {
@@ -558,7 +582,14 @@ func ValidateInitialLedgerDestination(cfg domain.ProjectConfig, ticket, path str
 	}
 	for _, location := range locations {
 		ledger, e := readWorkspaceLedger(location, cfg)
-		if e == nil && sameTicket(*ledger.TicketID, ticket, cfg.Ticket) && location.Path != dir {
+		if e != nil {
+			var invalid *WorkspaceLedgerValidationError
+			if !errors.As(e, &invalid) {
+				return &WorkspaceResolutionError{Outcome: "unavailable", TicketID: ticket, Candidates: []string{dir}, Diagnostics: append(diagnostics, domain.WorkspaceDiagnostic{Path: location.LedgerPath, Message: e.Error()})}
+			}
+			continue
+		}
+		if sameTicket(*ledger.TicketID, ticket, cfg.Ticket) && location.Path != dir {
 			return fmt.Errorf("ticket already has a ledger at %s; resolve its current location rather than recreating a prior destination", location.Path)
 		}
 	}

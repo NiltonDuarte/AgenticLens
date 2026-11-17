@@ -19,19 +19,24 @@ func TestPublishWorkspaceNestedSummaryPreservesSourceFacts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	selected, err := LoadTicketWorkspace("T-1", project)
+	selected, err := LoadWorkspaceArtifactSelection("T-1", project, "")
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(func() {
+		if err := selected.Close(); err != nil {
+			t.Error(err)
+		}
+	})
 	summary := filepath.Join(filepath.Dir(path), "reports", "nested", "SUMMARY.md")
-	if err := PublishWorkspaceArtifacts(project, *selected, "", summary); err != nil {
+	if err := PublishWorkspaceArtifacts(project, selected, "", summary); err != nil {
 		t.Fatal(err)
 	}
 	first, err := os.ReadFile(summary)
 	if err != nil || !bytes.Contains(first, []byte("Workflow Efficiency")) {
 		t.Fatalf("selected nested summary missing: %q %v", first, err)
 	}
-	if err := PublishWorkspaceArtifacts(project, *selected, "", summary); err != nil {
+	if err := PublishWorkspaceArtifacts(project, selected, "", summary); err != nil {
 		t.Fatal(err)
 	}
 	second, err := os.ReadFile(summary)

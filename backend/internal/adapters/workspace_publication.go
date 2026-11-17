@@ -61,17 +61,60 @@ func RecoverWorkspaceArtifacts(project, directory, output, summary string) (err 
 	return err
 }
 
+// WorkspaceArtifactSelection retains physical selection without holding a read
+// lock across writer admission. It is request-scoped and must be closed.
+type WorkspaceArtifactSelection struct {
+	Ledger    domain.AgenticMetricsLedger
+	location  WorkspaceLocation
+	reference *os.File
+}
+
+func (s *WorkspaceArtifactSelection) Close() error {
+	if s == nil || s.reference == nil {
+		return nil
+	}
+	err := s.reference.Close()
+	s.reference = nil
+	return err
+}
+
+// LoadWorkspaceArtifactSelection is the write-intent counterpart of the simple
+// read-only LoadTicketWorkspace API.
+func LoadWorkspaceArtifactSelection(ticket, project, selection string) (result *WorkspaceArtifactSelection, err error) {
+	_, cfg, err := LoadWorkspaceProject(project)
+	if err != nil {
+		return nil, err
+	}
+	location, reference, err := resolveTicketReadLocation(cfg, ticket, selection)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if err != nil {
+			err = errors.Join(err, reference.Close())
+		}
+	}()
+	ledger, err := readWorkspaceLedger(location, cfg)
+	if err != nil {
+		return nil, err
+	}
+	if !sameTicket(*ledger.TicketID, ticket, cfg.Ticket) {
+		return nil, &WorkspaceResolutionError{Outcome: "identity_conflict", TicketID: ticket, Candidates: []string{location.Path}}
+	}
+	return &WorkspaceArtifactSelection{Ledger: ledger, location: location, reference: reference}, nil
+}
+
 // PublishWorkspaceArtifacts keeps source ledger, computed export and summary in one
 // accepted set. Source facts are never replaced by their computed projection.
-func PublishWorkspaceArtifacts(project string, selected domain.AgenticMetricsLedger, output, summary string) (err error) {
-	if selected.WorkspacePath == "" || selected.TicketID == nil {
+func PublishWorkspaceArtifacts(project string, selection *WorkspaceArtifactSelection, output, summary string) (err error) {
+	if selection == nil || selection.reference == nil {
 		return fmt.Errorf("artifact publication requires an explicitly resolved ledger")
 	}
 	_, cfg, err := LoadWorkspaceProject(project)
 	if err != nil {
 		return err
 	}
-	paths, err := workspaceArtifactPaths(selected.WorkspacePath, output, summary)
+	paths, err := workspaceArtifactPaths(selection.location.Path, output, summary)
 	if err != nil {
 		return err
 	}
@@ -86,6 +129,13 @@ func PublishWorkspaceArtifacts(project string, selected domain.AgenticMetricsLed
 		return err
 	}
 	defer func() { err = errors.Join(err, owner.Close()) }()
+	// Compare the retained inode with the owned root before recovery can write.
+	selectedInfo, selectedErr := selection.reference.Stat()
+	ownedInfo, ownedErr := capture.StatPublicationFile(selection.location.Path)
+	if selectedErr != nil || ownedErr != nil || !os.SameFile(selectedInfo, ownedInfo) {
+		return errors.Join(fmt.Errorf("workspace changed after selection; resolve and retry"), selectedErr, ownedErr)
+	}
+
 	if _, err = RecoverPublication(ledger, paths); err != nil {
 		return err
 	}
@@ -107,7 +157,7 @@ func PublishWorkspaceArtifacts(project string, selected domain.AgenticMetricsLed
 	if err != nil {
 		return err
 	}
-	if facts.TicketID == nil || !sameTicket(*facts.TicketID, *selected.TicketID, cfg.Ticket) {
+	if facts.TicketID == nil || !sameTicket(*facts.TicketID, selection.location.TicketID, cfg.Ticket) {
 		return fmt.Errorf("selected ledger identity changed before artifact publication")
 	}
 	current := domain.DeriveMetricsLedger(facts, cfg)
