@@ -10,9 +10,7 @@ The user requested a planning handoff from [AL-65 discovery, PR #145](https://gi
 
 ## Delivery
 
-- [AL-94 — Avoid unchanged writes on exact-source refresh](../../../alspaces/plan/to-do/AL-94%20avoid%20unchanged%20writes%20on%20exact%20source%20refresh.md)
-- [AL-95 — Report exact-source refresh coverage](../../../alspaces/plan/to-do/AL-95%20report%20exact%20source%20refresh%20coverage.md)
-- [AL-96 — Preview source-backed backfill by opt-in](../../../alspaces/plan/to-do/AL-96%20preview%20source%20backed%20backfill%20by%20opt%20in.md)
-- [AL-97 — Decide whether to switch ordinary backfill defaults](../../../alspaces/plan/to-do/AL-97%20decide%20whether%20to%20switch%20ordinary%20backfill%20defaults.md)
+- [AL-94 — Make explicit backfill repeatable and report refresh coverage](../../../alspaces/plan/to-do/AL-94%20make%20explicit%20backfill%20repeatable%20and%20report%20refresh%20coverage.md)
+- [AL-95 — Preview source-backed defaults and decide on rollout](../../../alspaces/plan/to-do/AL-95%20preview%20source%20backed%20defaults%20and%20decide%20on%20rollout.md)
 
-Write suppression concerns publication; coverage concerns what the operator can learn even on a failed or write-free run. Both outcomes can ship independently. The preview needs both. Its evidence informs the final decision. FIX-19 owns ambiguous Codex snapshot selection, FIX-20 owns cancellation and REV-7 owns broader source read guarantees. These tickets consume the supported reader outcomes without expanding those scopes.
+AL-94 delivers safe, observable behavior for the existing explicit command. AL-95 uses that behavior to evaluate the proposed default. The preview can end with a decision to retain current behavior. FIX-19 owns ambiguous Codex snapshot selection, FIX-20 owns cancellation and REV-7 owns broader source read guarantees.

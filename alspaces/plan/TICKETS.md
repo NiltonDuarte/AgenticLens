@@ -12,13 +12,9 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
 
 ## Ready
 
-- **AL-94**: Avoid unchanged writes on exact-source refresh
-  - **Status**: Ready; **Blocked by**: None; **Blocks**: AL-96
-  - **File**: [AL-94](to-do/AL-94%20avoid%20unchanged%20writes%20on%20exact%20source%20refresh.md)
-
-- **AL-95**: Report exact-source refresh coverage
-  - **Status**: Ready; **Blocked by**: None; **Blocks**: AL-96
-  - **File**: [AL-95](to-do/AL-95%20report%20exact%20source%20refresh%20coverage.md)
+- **AL-94**: Make explicit backfill repeatable and report refresh coverage
+  - **Status**: Ready; **Blocked by**: None; **Blocks**: AL-95
+  - **File**: [AL-94](to-do/AL-94%20make%20explicit%20backfill%20repeatable%20and%20report%20refresh%20coverage.md)
 
 - **AL-80**: Capture OpenCode sessions across worktrees
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None
@@ -91,13 +87,9 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
 
 ## Blocked
 
-- **AL-96**: Preview source-backed backfill by opt-in
-  - **Status**: Blocked; **Blocked by**: AL-94, AL-95; **Blocks**: AL-97
-  - **File**: [AL-96](to-do/AL-96%20preview%20source%20backed%20backfill%20by%20opt%20in.md)
-
-- **AL-97**: Decide whether to switch ordinary backfill defaults
-  - **Status**: Blocked; **Blocked by**: AL-96; **Blocks**: None
-  - **File**: [AL-97](to-do/AL-97%20decide%20whether%20to%20switch%20ordinary%20backfill%20defaults.md)
+- **AL-95**: Preview source-backed defaults and decide on rollout
+  - **Status**: Blocked; **Blocked by**: AL-94; **Blocks**: None
+  - **File**: [AL-95](to-do/AL-95%20preview%20source%20backed%20defaults%20and%20decide%20on%20rollout.md)
 
 - **AL2-4**: Monitor and refresh remote Git projects
   - **Status**: Blocked; **Blocked by**: AL2-3; **Blocks**: AL2-5
