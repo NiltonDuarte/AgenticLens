@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "INSTALL-01",
+      "severity": 5,
+      "issue": "Legacy project installation could activate a second plugin when the default user plugin remained loaded alongside a custom configuration directory.",
+      "reporters": [
+        {
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "persona": "reviewer-behavior",
+          "identity_basis": "observed"
+        },
+        {
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "persona": "reviewer-data",
+          "identity_basis": "observed"
+        },
+        {
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "persona": "reviewer-architecture",
+          "identity_basis": "observed"
+        },
+        {
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "persona": "reviewer (security)",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed. Legacy installation checks all loaded user directories and refuses duplicate activation."
+    },
+    {
+      "finding_id": "WORKER-01",
+      "severity": 6,
+      "issue": "A migrated global plugin could accept a binding and suppress publication when OpenCode also loaded an empty custom configuration directory.",
+      "reporters": [
+        {
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "persona": "reviewer-architecture",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed. Worker activation recognizes the existing owned plugin across both loaded directories."
+    },
+    {
+      "finding_id": "ROUTE-01",
+      "severity": 0,
+      "issue": "Review questioned whether resuming a session from another checkout could route ID-only events through that checkout.",
+      "reporters": [
+        {
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "persona": "reviewer-architecture",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Refuted for the supported 1.19.5 interface. All eleven observed callbacks reached the original worktree instance after the real session resumed from a disabled sibling."
+    }
+  ]
+}

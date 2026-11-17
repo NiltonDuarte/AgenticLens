@@ -1,6 +1,6 @@
 # AL-80: Capture OpenCode sessions across worktrees
 
-Execution change: [OpenCode capture across worktrees](../../../openspec/changes/al-80-capture-opencode-sessions-across-worktrees/proposal.md).
+Execution change: [OpenCode capture across worktrees](../../../openspec/changes/archive/2026-11-17-al-80-capture-opencode-sessions-across-worktrees/proposal.md).
 
 ## Goal
 

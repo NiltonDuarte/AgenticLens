@@ -12,7 +12,7 @@ Replace the project-bound behavior of `plugin.ts` with thin runtime notification
 
 Extend the manager in `backend/internal/adapters/manager` and the engine composition alongside `capture_user_hook.go` to route the actual worktree. Share AL-79's admission, binary resolution and user-level registration with existing receive/request/bind and worker paths. Keep collection in the native adapter, using OpenCode's schema-family dispatch, exact-owner snapshot and source parent proof. Preserve installation-independent manual generation, per-project state and shared writer serialization.
 
-Binary selection follows the later [AL-70 contract](../../../alspaces/AL-70/CONTRACT.md). With a configured development directory, missing or invalid host output is an error. Omitting the directory selects the exact installed pin. OpenCode must exercise the same resolver as Codex and the manual CLI.
+Binary selection follows the later [AL-70 contract](../../../../alspaces/AL-70/CONTRACT.md). With a configured development directory, missing or invalid host output is an error. Omitting the directory selects the exact installed pin. OpenCode must exercise the same resolver as Codex and the manual CLI.
 
 ## Iteration 01 verification
 
