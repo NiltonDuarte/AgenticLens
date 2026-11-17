@@ -2,9 +2,9 @@
 
 Use `agentic-lens --al-project <PROJECT>` through the installed native manager, including from project subdirectories. Ordinary dispatch is offline; `--al-offline` explicitly marks integration use. Both controls precede native arguments and are stripped. Native `capture --repo` must belong to the same selected project; use the explicit prefix when cwd belongs elsewhere. Arguments, stdin, JSON stdout and native exit codes are preserved. POSIX dispatch uses exec.
 
-The default stable path is `~/.local/bin/agentic-lens`; native Windows uses `~/.agenticlens/agentic-lens.exe`. Installed integrations use its absolute path and their exact project context. They never depend on a repository binary or an interactive PATH. See [release authority](configuration.md#shared-release-authority-and-user-entrypoint).
+The default stable path on supported Linux and macOS hosts is `~/.local/bin/agentic-lens`. Installed integrations use its absolute path and their exact project context. They never depend on a repository binary or an interactive PATH. See [release authority](configuration.md#shared-release-authority-and-user-entrypoint).
 
-Missing/invalid pins, unsupported platforms and missing exact cache leaves fail visibly without downloads, cache writes, latest selection or environment fallback. Repair explicitly with setup `download.sh --project <PROJECT>` or native `download.ps1 -Project <PROJECT>`, after authorization already covers those effects. The installer verifies checksums/native identity/protocol with rollback and preserves edited files/other versions. Local native repair requires an explicit expected SHA256. No Go/Node/Python/yq runtime is needed. Missing scripts require restoring the complete setup/operator bundle at one selected tag; do not reinitialize existing shared/local configuration.
+Missing/invalid pins, unsupported platforms and missing exact cache leaves fail visibly without downloads, cache writes, latest selection or environment fallback. Repair explicitly with setup `download.sh --project <PROJECT>`, after authorization already covers those effects. The installer verifies checksums/native identity/protocol with rollback and preserves edited files/other versions. Local native repair requires an explicit expected SHA256. No Go/Node/Python/yq runtime is needed. Missing scripts require restoring the complete setup/operator bundle at one selected tag; do not reinitialize existing shared/local configuration.
 
 Missing setup scripts must be restored from the existing shared pin; fresh setup requires an approved exact release. Follow the [setup skill](../../agentic-lens-setup/SKILL.md), preserving the selected bundle revision. Never repair from moving main or combine revisions.
 
@@ -29,12 +29,12 @@ Missing setup scripts must be restored from the existing shared pin; fresh setup
 ## Root Scan and Ticket Inspection
 
 ```bash
-agentic-lens [--workspaces DIR] [--list] [--ticket-id ID] [--anomalies] [--append FILE] [--json-output FILE]
+agentic-lens [--list] [--ticket-id ID] [--anomalies] [--append FILE] [--json-output FILE]
 ```
 
-- `--workspaces DIR`: root containing ticket directories and `agentic_metrics.json`; uses explicit --workspaces first, otherwise required shared workspaces.dir; no conventional directory is selected.
+- Root selection comes only from shared `workspaces.roots`, with explicit per-path discovery settings. The retired runtime `--workspaces` option is rejected.
 - `--list`: list discovered ledgers with duration, cost, context health, iterations, anomalies, and title. Do not combine this with a ticket-specific inspection expectation; it exits after listing.
-- `--ticket-id ID`: select a ledger. Without this, the latest-updated ledger is selected.
+- `--ticket-id ID`: select recorded ledger identity. Distinct matching locations require explicit selection; no root-order precedence applies.
 - `--anomalies`: print anomaly diagnostics for the selected ledger and exit.
 - `--append FILE`: update a Markdown file's metrics table for the selected ledger. This writes the file.
 - `--json-output FILE`: write selected computed metrics as JSON. This writes the file.
@@ -43,29 +43,30 @@ agentic-lens [--workspaces DIR] [--list] [--ticket-id ID] [--anomalies] [--appen
 Examples:
 
 ```bash
-agentic-lens --list --workspaces "alspaces"
-agentic-lens --ticket-id AL-15 --anomalies --workspaces "alspaces"
+agentic-lens --list
+agentic-lens --ticket-id AL-15 --anomalies
 agentic-lens --ticket-id AL-15 --append "alspaces/AL-15/SUMMARY.md"
 ```
 
-Scanning requires a valid project configuration and an existing workspace directory containing at least one valid ledger. `--append` and `--json-output` are write operations; get authorization before using them unless already directly requested.
+Scanning uses valid shared roots and only recorded ledgers; planning-only folders have no rows. A root failure retains valid siblings and reports location/recovery context. `--append` and `--json-output` are write operations; get authorization before using them unless already directly requested.
 
 ## `init`
 
 ```bash
-agentic-lens --al-project PROJECT init --settings SHARED.yaml --local-settings LOCAL.yaml --workspaces DIR --dry-run
+agentic-lens --al-project PROJECT init --settings SHARED.yaml --local-settings LOCAL.yaml --workspace-root DIR --discovery-depth 0 --directory-budget 300 --publication-state-dir STATE --dry-run
 ```
 
 Review all candidate values before applying. Shared/local YAML candidates use `.yaml` or `.yml`; explicit candidate filenames need not be discoverable project names. Runtime project discovery uses only canonical names.
 
 - `--settings PATH`: explicit approved shared candidate, including prefix mappings/descriptions, base ref, independent category lists and consumed runtime/generation policy.
 - `--local-settings PATH`: explicit approved local choices; fills missing values without replacing valid existing choices.
-- `--workspaces DIR`: required explicit nonblank root for new shared configuration. Relative origins follow the selected output file for configured values and invocation cwd for CLI paths.
+- `--workspace-root PATH`: repeatable explicit root selection for setup; `--discovery-depth` and `--directory-budget` write explicit per-root choices (writer initialization 0/300). Approved candidates may instead supply the complete root collection. Relative configured values belong to the output file.
+- `--publication-state-dir PATH`: writes local `agenticlens.state_dir`, independently of capture state. Initial setup suggests `~/.agenticlens/state`; the value is explicit. A narrow `--local-only` operation can initialize publication state without capture/source configuration.
 - `--project-name NAME`: explicit candidate override for project label/capture namespace. Changing a populated namespace is not state relocation.
 - `--agenticlens-version EXACT_TAG`: approved exact pin override; otherwise retain the valid existing/candidate pin. Dev/unknown builds cannot invent a release.
 - `--output FILE`: default `.agenticlens-config.yaml`; an explicit directory may use either canonical basename. Blank/arbitrary basenames or conflicting canonical files fail before writes. The local file is beside the shared output.
 - `--capture-enabled true|false`, `--state-dir`, `--source`, `--codex-home`, `--db-path`: explicit local setup choices. Enabling workers requires their complete approved timing/budget policy; no integration is installed or activated by writing config.
-- `--local-only`: complete missing local choices while preserving valid shared/local values; guided setup remains base-only.
+- `--local-only`: complete missing local choices while preserving valid shared/local values; source/capture setup remains base-only, with narrow selected-checkout publication-state setup allowed independently.
 - `--complete-scaffold`: complete only an exact unchanged installer-owned scaffold; not combined with `--force`.
 - `--dry-run`: preview validated candidate outputs without writing.
 - `--force`: explicit shared replacement, requiring authorization for that replacement; never a repair for absent worktree-local files.
@@ -92,14 +93,15 @@ agentic-lens generate --ticket-id ID --ticket-title TITLE --ticket-type TYPE [op
 - `--append FILE`: explicit summary request overriding shared enablement/destination; idempotently updates its metrics table. Otherwise shared generation.summary selects a safe filename beside the ledger, or in the configured ticket workspace when no ledger path is given.
 - `--db-path PATH`: explicit OpenCode SQLite source path.
 - `--codex-home PATH`: explicit Codex home; otherwise selected-local telemetry.sources.codex.home, with no automatic environment/home discovery.
-- `--capture-dir DIR`: explicit state override where supported; generation still requires selected-local capture enabled/state policy. Disabled automatic capture permits manual generation. Consumed reconciliation/pass/session/byte settings are explicit. Preserve unavailable owners and use shared summary policy with exact atomic publication/recovery. Diagnostics remain in local state.
-- `--max-sessions COUNT`, `--max-source-bytes BYTES`: explicit positive reconciliation budgets, taking precedence over the selected local capture settings. Automatic publication forwards the worker's admitted effective budgets to its generation child; it does not reload competing limits or write configuration.
+- `--capture-dir DIR`: capture-state override for automatic publication only. Manual generation accepts this flag for compatibility but never accesses its path or the registry. Manual generation needs project/metrics/source configuration and supported source selection, without capture installation, enablement, state or worker settings. Explicit ticket selection does not change automatic bindings. Shared publication locking and journal recovery still protect the ledger and summary.
+- `--capture-auto`: automatic lifecycle publication from registered, ticket-bound owners only. Requires enabled capture configuration and valid worktree/registry ownership; cannot be combined with `--session-id` or `--nonce`.
+- `--max-sessions COUNT`, `--max-source-bytes BYTES`: explicit positive automatic reconciliation budgets, taking precedence over selected local capture settings. The worker forwards admitted effective budgets to its generation child. Manual generation does not consume capture budgets; supplied values must still be positive.
 - `--anomalies`: print and record anomaly results for the target ticket.
 
 Example:
 
 ```bash
-agentic-lens generate --source opencode --nonce A7F39B2C --ticket-id PAY-42 --ticket-title "Reduce checkout latency" --ticket-type perf --json-output workspaces/PAY-42/agentic_metrics.json --append workspaces/PAY-42/SUMMARY.md
+agentic-lens generate --source opencode --nonce A7F39B2C --ticket-id PAY-42 --ticket-title "Reduce checkout latency" --ticket-type perf --json-output workspaces/PAY-42/agentic_metrics.json --append workspaces/PAY-42/delivery.md
 ```
 
 Generation writes the requested ledger and/or summary. Confirm those destinations before execution. Use a literal nonce. For Codex, select a known session ID or literal nonce as required by that installed version's help; do not guess a session based only on ticket text.
@@ -126,7 +128,7 @@ agentic-lens capture bind --source codex --store "/absolute/Codex home" --sessio
 
 Do not publish request tokens or local status dumps. Wrong/missing request tokens and conflicting ticket assignments fail. `capture request` is the native session-specific feedback primitive used by the OpenCode plugin, not a heuristic discovery command. `capture receive` accepts bounded hook JSON on stdin; event handlers hand off durable local work and do not perform a full extraction or publish ticket artifacts.
 
-Reconciliation is explicit and bounded. Where supported, supply positive `--max-sessions` and `--max-source-bytes` overrides; otherwise the operation requires `telemetry.capture.max_sessions` and `telemetry.capture.max_source_bytes` in the selected local configuration. No session or byte budget is supplied automatically. `--timeout` defaults to 2s and can be increased up to 5m for an operator pass. Pending work/source flush is distinct from failed, unsupported, unassigned and unresolved parent evidence. Preserve previous accepted facts on source failure; repeated cumulative snapshots must not be added twice. Use `generate --capture-dir` for manual recovery publication; successful `capture reconcile` refreshes local snapshots, prints outcomes and schedules native publication when enabled.
+Reconciliation is explicit and bounded. Where supported, supply positive `--max-sessions` and `--max-source-bytes` overrides; otherwise the operation requires `telemetry.capture.max_sessions` and `telemetry.capture.max_source_bytes` in the selected local configuration. No session or byte budget is supplied automatically. `--timeout` defaults to 2s and can be increased up to 5m for an operator pass. Pending work/source flush is distinct from failed, unsupported, unassigned and unresolved parent evidence. Preserve previous accepted facts on source failure; repeated cumulative snapshots must not be added twice. Use manual `generate` with an explicit source/session selection for recovery publication; successful `capture reconcile` refreshes local snapshots, prints outcomes and schedules native publication when enabled.
 
 After a crash, restore the native handler/source access if needed and rerun reconciliation against the same local state. Do not delete accepted registrations to conceal a gap. After an explicit pin change and installation, inspect protocol/status, preview `capture install` with the original source/store/destinations, resolve conflicting local edits and apply the reviewed upgrade. Installation alone does not trust hooks or prove actual callbacks; review harness trust/plugin loading and verify real session IDs, the agent response and source facts. See [support and local state limits](configuration.md#lifecycle-capture-state-and-support).
 
@@ -148,7 +150,7 @@ agentic-lens backfill --source opencode|codex|both [options]
 ```
 
 - `--source` (required): `opencode`, `codex`, or `both` (`all` is accepted by the current CLI). Choose sources that actually own sessions in the target ledger.
-- `--workspaces DIR`: workspace root; defaults to configured directory.
+- Scan the explicit configured roots; there is no single-directory runtime override.
 - `--ticket-id ID`: restrict work to one workspace. Recommended for targeted recovery.
 - `--codex-home PATH`: local Codex rollout directory; otherwise the selected-local Codex home; missing/invalid selection fails.
 - `--db-path PATH`: local OpenCode SQLite DB; otherwise the selected-local OpenCode path; missing/invalid selection fails.
@@ -177,10 +179,10 @@ The non-dry-run forms modify metrics JSON and may update summaries. The `--dry-r
 ## `migrate`
 
 ```bash
-agentic-lens migrate [--workspaces DIR] [--ticket-id ID] [--target-version N] [--dry-run] [--backup] [--update-summaries]
+agentic-lens migrate [--ticket-id ID] [--target-version N] [--dry-run] [--backup] [--update-summaries]
 ```
 
-- `--workspaces DIR`: workspace root.
+- Scan the explicit configured roots; duplicate ticket locations require explicit selection.
 - `--ticket-id ID`: limit migration to one workspace; omit to scan all matching workspaces.
 - `--target-version N` (default: installed CLI's current schema version): target schema integer. Do not select a lower or arbitrary version without inspecting release guidance; migrations may not support downgrade.
 - `--dry-run`: report planned changes without writing ledgers.
@@ -192,11 +194,11 @@ agentic-lens migrate [--workspaces DIR] [--ticket-id ID] [--target-version N] [-
 ## `server`
 
 ```bash
-agentic-lens server [--port N] [--workspaces DIR] [--db-path PATH]
+agentic-lens server [--port N] [--db-path PATH]
 ```
 
 - `--port N`: listen port, 1–65535. Explicit flag overrides deliberate default `8085`; no environment lookup. Invalid/in-use selected ports fail without probing.
-- `--workspaces DIR`: workspace root; must exist, else server startup fails.
+- Root failures are diagnosed by configured path while valid siblings remain usable.
 - `--db-path PATH`: OpenCode SQLite source override for live session monitoring.
 
 Starts the embedded UI and HTTP/SSE service; leave the process running while using the dashboard. Use the actual advertised `http://127.0.0.1:<port>/` after successful bind. The server reads session data from the configured local SQLite DB using read-only access. Unavailable optional sources preserve historical dashboard data and expose unavailable hydration; required live policy errors clearly. Stop with the normal interrupt for the shell environment.
@@ -245,4 +247,4 @@ Exactly one selector is required:
 - `agentic-lens format --ticket-id AL-42`: one existing ticket ledger.
 - `agentic-lens format --ticket-ids AL-42,AL-43`: an explicit set; trims comma-separated items, rejects empty items and deduplicates IDs.
 
-Add `--workspaces DIR` to override the configured root. `--dry-run` reports differences without writing. `--check` also writes nothing and exits 1 for formatting differences, 2 for selection/input/I/O failures, or 0 when every selected ledger already matches. These two modes are mutually exclusive. Default writes only changed files, preserves permissions and reports per-target results and totals. All selected inputs are validated before any replacement; later I/O failures return a nonzero partial result. Symbolic aliases within the workspace are coordinated; escaping aliases and unsafe hard-linked replacements fail explicitly. Only expected agentic_metrics.json files are selected; use disposable fixtures when evaluating the command instead of mass-formatting committed history.
+Select locations through explicit shared roots; the old `--workspaces` override is rejected. `--dry-run` reports differences without writing. `--check` also writes nothing and exits 1 for formatting differences, 2 for selection/input/I/O failures, or 0 when every selected ledger already matches. These two modes are mutually exclusive. Default writes only changed files, preserves permissions and reports per-target results and totals. All selected inputs are validated before any replacement; later I/O failures return a nonzero partial result. Symbolic aliases within the workspace are coordinated; escaping aliases and unsafe hard-linked replacements fail explicitly. Only expected agentic_metrics.json files are selected; use disposable fixtures when evaluating the command instead of mass-formatting committed history.

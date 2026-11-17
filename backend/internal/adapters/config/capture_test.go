@@ -70,7 +70,6 @@ func TestRequiredCaptureStateInSelectedLocalPolicy(t *testing.T) {
 			root := t.TempDir()
 			home := filepath.Join(root, "uncreated-home")
 			t.Setenv("HOME", home)
-			t.Setenv("USERPROFILE", home)
 			if err := os.WriteFile(filepath.Join(root, ".agenticlens-config.yaml"), []byte("project_name: Example\n"), 0600); err != nil {
 				t.Fatal(err)
 			}
@@ -105,7 +104,6 @@ func TestLocalOnlyCaptureStateAndMissingFilesystemDoNotNeedFallback(t *testing.T
 	}
 	home := filepath.Join(root, "uncreated-home")
 	t.Setenv("HOME", home)
-	t.Setenv("USERPROFILE", home)
 	local := "telemetry:\n  capture:\n    enabled: true\n    state_dir: ~/.agenticlens/state\n    max_sessions: 7\n"
 	if err := os.WriteFile(filepath.Join(root, ".agenticlens-config.local.yaml"), []byte(local), 0600); err != nil {
 		t.Fatal(err)
@@ -125,7 +123,6 @@ func TestLocalOnlyCaptureStateAndMissingFilesystemDoNotNeedFallback(t *testing.T
 		t.Fatalf("manual single-file reader requires capture state: %v", err)
 	}
 	t.Setenv("HOME", "")
-	t.Setenv("USERPROFILE", "")
 	if _, err := ResolveCapture(root, ""); err == nil || !strings.Contains(err.Error(), "home") {
 		t.Fatalf("unavailable home was silently replaced: %v", err)
 	}

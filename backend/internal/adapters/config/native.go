@@ -4,7 +4,6 @@ import (
 	"context"
 	"debug/elf"
 	"debug/macho"
-	"debug/pe"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -112,7 +111,7 @@ func ValidateNativePlatform(path, osName, arch string) error {
 	if err != nil {
 		return err
 	}
-	if !info.Mode().IsRegular() || (osName != "windows" && info.Mode().Perm()&0111 == 0) {
+	if !info.Mode().IsRegular() || info.Mode().Perm()&0111 == 0 {
 		return errors.New("native output must be a regular executable")
 	}
 	valid := false
@@ -132,15 +131,6 @@ func ValidateNativePlatform(path, osName, arch string) error {
 			return err
 		}
 		valid = (arch == "amd64" && file.Cpu == macho.CpuAmd64) || (arch == "arm64" && file.Cpu == macho.CpuArm64)
-		if err := file.Close(); err != nil {
-			return err
-		}
-	case "windows":
-		file, err := pe.Open(path)
-		if err != nil {
-			return err
-		}
-		valid = arch == "amd64" && file.Machine == pe.IMAGE_FILE_MACHINE_AMD64
 		if err := file.Close(); err != nil {
 			return err
 		}

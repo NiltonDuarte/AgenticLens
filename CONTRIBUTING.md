@@ -9,7 +9,7 @@ Guidelines, developer workflow, and build instructions for contributors and auto
 Ensure the following tools are installed on your workstation or development container:
 
 - **Go**: Version 1.23 or newer
-- **Node.js**: Version 20 LTS or newer
+- **Node.js**: Version 22.12.0 or newer (frontend builds and pinned OpenSpec development tooling)
 - **npm**: Version 10 or newer
 - **Git**: For version control and diff calculations
 - **Make**: Standard GNU Make
@@ -36,7 +36,13 @@ make install-frontend  # Installs npm dependencies in web/
 
 ## 3. Development Workflow
 
-### 3.1 Development Mode with Hot Reload
+### 3.1 Ticket and execution workflow
+
+Keep roadmap tickets and their prioritization in `alspaces/plan/`. When selected work begins, create a linked OpenSpec change using the [pinned workflow](docs/OPENSPEC_WORKFLOW.md). Its proposal/specs/design/tasks/delivery are the execution artifacts; the roadmap ticket remains separate. Follow [AGENTS.md](AGENTS.md) for explicit scope approval, specialist role boundaries, review and final telemetry. OpenSpec readiness, task checkboxes and archive do not establish implementation approval or ticket completion.
+
+Install its pinned development tool with `npm ci --prefix tools/openspec`; use `scripts/openspec.sh` rather than a moving global version. Node is not needed to run the resulting AgenticLens engine.
+
+### 3.2 Development Mode with Hot Reload
 
 For rapid frontend iteration with hot module replacement (HMR), run the backend server and the Vite dev server concurrently:
 
@@ -51,7 +57,7 @@ cd web && npm run dev
 
 Open `http://localhost:5173` to interact with the dashboard.
 
-### 3.2 Compiling the Native Manager and Engine
+### 3.3 Compiling the Native Manager and Engine
 
 AgenticLens builds a small native manager and a separate telemetry engine. The engine embeds all web assets; neither executable requires Node.js in production. `make server` runs the current source engine directly:
 
@@ -93,7 +99,7 @@ Open `http://localhost:8085` to view the standalone dashboard.
 | `make server` | Build and run the loopback HTTP server on port 8085; CLI --port selects another explicit port |
 | `make serve` | Alias for `make server` |
 | `make release-build` | Cross-compile binaries for all supported platforms into `dist/bin/` |
-| `make release-package` | Package platform archives (`.tar.gz` and `.zip`) and generate `SHA256SUMS` |
+| `make release-package` | Package platform archives (`.tar.gz`) and generate `SHA256SUMS` |
 | `make release-verify` | Validate release archive checksums and verify host manager/engine execution |
 | `make release-clean` | Remove release distribution artifacts in `dist/` |
 | `make clean` | Clean local build outputs and distribution directories |
@@ -113,7 +119,7 @@ The Go unit lane is `backend/internal/domain/...`; all other packages form a con
 
 The strict TypeScript check covers source plus both Vitest configuration roots and their imported shared selectors.
 
-Frontend classification is shared by `web/test-suites.ts`: domain and the named pure utility owners run under Node, while the disjoint complement retains jsdom, setup and explicit per-file environment annotations. The Node-annotated asset-sync test remains integration because it exercises real files and processes. From `web/`, `npm run test:unit` runs frontend units; `npm test` and `npm run test:integration` always run the complete frontend unit lane before integration. Standalone npm commands are frontend-scoped and do not require Go or Make. Repository Make and CI use the stronger two-language gate. Release workflows invoke the selected revision's established `make check` and `make test` entrypoints; revisions containing this Make graph enforce the unit gate internally. Forced rebuilds of historical tags retain that tag's verification commands and semantics, without importing newer source or requiring newer Make targets. CI's native Windows and Linux distribution jobs wait for both unit jobs; build verification waits for every required integration branch.
+Frontend classification is shared by `web/test-suites.ts`: domain and the named pure utility owners run under Node, while the disjoint complement retains jsdom, setup and explicit per-file environment annotations. The Node-annotated asset-sync test remains integration because it exercises real files and processes. From `web/`, `npm run test:unit` runs frontend units; `npm test` and `npm run test:integration` always run the complete frontend unit lane before integration. Standalone npm commands are frontend-scoped and do not require Go or Make. Repository Make and CI use the stronger two-language gate. Release workflows invoke the selected revision's established `make check` and `make test` entrypoints; revisions containing this Make graph enforce the unit gate internally. Forced rebuilds of historical tags retain that tag's verification commands and semantics, without importing newer source or requiring newer Make targets. CI's Linux distribution job waits for both unit jobs; build verification waits for every required integration branch.
 
 Direct `go test`, `vitest`, Python test files and raw build commands are diagnostic probes, not supported unit-first integration entrypoints. Prepare assets with `make web-assets` before embed-dependent Go probes; pure domain units do not need assets. Standalone `make build`, `make verify-build` and release build/package commands remain build-only. Asset preparation is shared when build and verification goals coexist; an installation fixture may override `WEB_DIR` to reuse already prepared assets without recursively running tests. Build/CI changes require verification with generated assets absent and on a repeated build; frontend source checks alone do not validate the standalone bundle.
 
@@ -148,7 +154,6 @@ Artifacts are built as self-contained standalone executables embedding all web d
 | Linux ARM64 | `linux/arm64` | `.tar.gz` | `agentic-lens-<version>-linux-arm64.tar.gz` |
 | macOS Intel | `darwin/amd64` | `.tar.gz` | `agentic-lens-<version>-darwin-amd64.tar.gz` |
 | macOS Apple Silicon | `darwin/arm64` | `.tar.gz` | `agentic-lens-<version>-darwin-arm64.tar.gz` |
-| Windows x86_64 | `windows/amd64` | `.zip` | `agentic-lens-<version>-windows-amd64.zip` |
 
 ### 6.3 Local Release Validation
 
@@ -173,7 +178,7 @@ Apply the [shared writing rules](AGENTS.md#artifact-writing-rules). Artifact pur
 
 ### 7.1 Recording steering without restarting the ticket
 
-For material scope changes, write a short delta in the next iteration plan:
+For material scope changes, write a short delta in the next change design and tasks:
 
 - **Source and intent:** summarize the current user instruction or linked review finding; label inference separately.
 - **Baseline:** link the contract and applicable accepted plan/review, and name the current commit.
@@ -186,6 +191,6 @@ Keep status questions, review corrections, and routine synchronization in the cu
 
 ### Installed release entrypoints
 
-The contributor build produces `bin/agentic-lens-<os>-<arch>` (manager) and `bin/agentic-lens-engine-<os>-<arch>` (engine); Windows adds `.exe`. `make server` and the engine checks in `make verify-build` execute the current host engine directly, without selecting the user release cache. The same verification target checks the manager's own identity separately. In a configured adopting repository, the installed `agentic-lens server` command remains supported: the manager selects the project engine and forwards `server` unchanged.
+The contributor build produces `bin/agentic-lens-<os>-<arch>` (manager) and `bin/agentic-lens-engine-<os>-<arch>` (engine). `make server` and the engine checks in `make verify-build` execute the current host engine directly, without selecting the user release cache. The same verification target checks the manager's own identity separately. In a configured adopting repository, the installed `agentic-lens server` command remains supported: the manager selects the project engine and forwards `server` unchanged.
 
-The installed native manager handles offline engine selection and explicit installation/self-update; see the [setup manual](docs/SETUP_MANUAL.md#1-quick-start-and-setup-pathways). It is installed directly on PATH, with no shell launcher or separate dispatcher copy. Project engine pins and manager updates are independent. Setup verifies exact artifact identity/checksum/protocol; tests isolate HOME, cache and project fixtures. Windows build/transport targets remain, while native Windows certification and loaded-manager replacement remain limited; no Windows test CI gate is required by the current scope.
+The installed native manager handles offline engine selection and explicit installation/self-update; see the [setup manual](docs/SETUP_MANUAL.md#1-quick-start-and-setup-pathways). It is installed directly on PATH, with no shell launcher or separate dispatcher copy. Project engine pins and manager updates are independent. Setup verifies exact artifact identity/checksum/protocol; tests isolate HOME, cache and project fixtures. Supported platforms are Linux and macOS, each on amd64 and arm64. Windows is unsupported.

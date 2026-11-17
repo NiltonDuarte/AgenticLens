@@ -14,7 +14,11 @@ ticket:
       description: Team work
   case_insensitive: false
 workspaces:
-  dir: records
+  roots:
+    - path: records
+      discovery:
+        max_depth: 8
+        max_directories: 300
   artifacts: []
 code_metrics:
   base_branch: fixture-base

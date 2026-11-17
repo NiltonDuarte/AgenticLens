@@ -178,7 +178,7 @@ func writeBackfillProject(t *testing.T, root string) {
 		t.Fatal(err)
 	}
 	cfg.ProjectName = "Backfill fixture"
-	cfg.Workspaces.Dir = "."
+	cfg.Workspaces.Roots[0].Path = "."
 	cfg.CodeMetrics.BaseBranch = "main"
 	cfg.Generation.Metrics = domain.GenerationPolicy{Skills: true, Delegations: true, Anomalies: true}
 	cfg.Generation.Summary = domain.GenerationSummaryConfig{Enabled: true, Filename: "SUMMARY.md"}
@@ -189,7 +189,7 @@ func writeBackfillProject(t *testing.T, root string) {
 	if err := os.WriteFile(path, data, 0600); err != nil {
 		t.Fatal(err)
 	}
-	local := []byte("telemetry:\n  sources:\n    codex:\n      home: .\n  capture:\n    enabled: false\n    state_dir: fixture-state\n    max_sessions: 256\n    max_source_bytes: 67108864\n")
+	local := []byte("agenticlens:\n  state_dir: .publication-state\ntelemetry:\n  sources:\n    codex:\n      home: .\n  capture:\n    enabled: false\n    state_dir: fixture-state\n    max_sessions: 256\n    max_source_bytes: 67108864\n")
 	if err := os.WriteFile(filepath.Join(root, ".agenticlens-config.local.yaml"), local, 0600); err != nil {
 		t.Fatal(err)
 	}

@@ -1,4 +1,9 @@
 {
+  "tags": {
+    "agentic-lens-dev": "0.1.1",
+    "agentic-lens-po": "0.1.1",
+    "agentic-lens-review": "0.1.1"
+  },
   "schema_version": 6,
   "ticket_id": "PO-22",
   "ticket_title": "Review active tickets with updated PO skill",

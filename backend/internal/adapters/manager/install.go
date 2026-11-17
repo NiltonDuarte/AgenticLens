@@ -175,9 +175,6 @@ func artifactName(kind string) string {
 
 func platformArtifactName(kind, osName, arch string) string {
 	name := kind + "-" + osName + "-" + arch
-	if osName == "windows" {
-		name += ".exe"
-	}
 	return name
 }
 
@@ -191,7 +188,7 @@ func parsePlatform(value string) (string, string, error) {
 		return "", "", fmt.Errorf("unsupported native platform %s", value)
 	}
 	osName, arch := parts[0], parts[1]
-	if ((osName == "linux" || osName == "darwin") && (arch == "amd64" || arch == "arm64")) || (osName == "windows" && arch == "amd64") {
+	if (osName == "linux" || osName == "darwin") && (arch == "amd64" || arch == "arm64") {
 		return osName, arch, nil
 	}
 	return "", "", fmt.Errorf("unsupported native platform %s", value)

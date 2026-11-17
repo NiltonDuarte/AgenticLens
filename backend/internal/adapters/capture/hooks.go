@@ -11,8 +11,6 @@ import (
 	"agenticlens/internal/adapters/codex"
 	"agenticlens/internal/domain"
 	"os"
-	"runtime"
-	"strings"
 )
 
 type HookInput struct {
@@ -88,17 +86,8 @@ func replaceQuotes(s string) string {
 }
 
 func BindingPrompt(r domain.CaptureRegistration, binary, directory string) string {
-	return NativeBindingPrompt(r, binary, directory, runtime.GOOS == "windows")
-}
-
-// NativeBindingPrompt renders the executable command for its supported shell.
-func NativeBindingPrompt(r domain.CaptureRegistration, binary, directory string, windows bool) string {
 	quote := QuoteArgument
 	command := quote(binary)
-	if windows {
-		quote = func(s string) string { return "'" + strings.ReplaceAll(s, "'", "''") + "'" }
-		command = "& " + quote(binary)
-	}
 	return fmt.Sprintf("AgenticLens requires explicit ticket information for this exact %s session %s. Do not infer a ticket from directory, branch, role or timing. If the user has explicitly identified the active ticket, respond now by executing: %s capture bind --state-dir %s --source %s --store %s --session-id %s --request %s --ticket-id <EXPLICIT_TICKET_ID> --ticket-title <EXPLICIT_TICKET_TITLE> [--ticket-type <EXPLICIT_TYPE>]. If no ticket was explicitly supplied, ask the user for it; leave capture unassigned. Do not invent source, parent, model or usage fields.", r.Identity.Source, r.Identity.SessionID, command, quote(directory), r.Identity.Source, quote(r.Identity.Store), quote(r.Identity.SessionID), quote(r.Request))
 }
 
@@ -202,9 +191,6 @@ func projectBindingArgument(s *Store) string {
 		return ""
 	}
 	quote := QuoteArgument
-	if runtime.GOOS == "windows" {
-		quote = func(s string) string { return "'" + strings.ReplaceAll(s, "'", "''") + "'" }
-	}
 	return " Use --repo " + quote(s.project) + " on that binding command to preserve the installed project context."
 }
 
@@ -223,20 +209,8 @@ func installedWrapper(directory, source string) (string, error) {
 // WrapperBindingPrompt routes a future agent response through the same offline
 // project pin. The already-running worker continues to use its native binary.
 func WrapperBindingPrompt(r domain.CaptureRegistration, wrapper, project, directory string) string {
-	return NativeManagerBindingPrompt(r, wrapper, project, directory, runtime.GOOS == "windows")
-}
-
-// NativeManagerBindingPrompt renders the installed native command for the
-// selected shell while retaining project selection and literal argument values.
-func NativeManagerBindingPrompt(r domain.CaptureRegistration, wrapper, project, directory string, windows bool) string {
 	quote := QuoteArgument
-	if windows {
-		quote = func(value string) string { return "'" + strings.ReplaceAll(value, "'", "''") + "'" }
-	}
 	command := quote(wrapper)
-	if windows {
-		command = "& " + command
-	}
 	command += " --al-offline --al-project " + quote(project)
 	return fmt.Sprintf("AgenticLens requires explicit ticket information for this exact %s session %s. Do not infer a ticket from directory, branch, role or timing. If the user explicitly identified the active ticket, respond by executing: %s capture bind --repo %s --state-dir %s --source %s --store %s --session-id %s --request %s --ticket-id <EXPLICIT_TICKET_ID> --ticket-title <EXPLICIT_TICKET_TITLE> [--ticket-type <EXPLICIT_TYPE>]. Otherwise ask the user for the ticket and leave capture unassigned. Do not invent source, parent, model or usage fields.", r.Identity.Source, r.Identity.SessionID, command, quote(project), quote(directory), r.Identity.Source, quote(r.Identity.Store), quote(r.Identity.SessionID), quote(r.Request))
 }

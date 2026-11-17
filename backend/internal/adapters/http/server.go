@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"net"
 	"net/http"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -24,10 +25,8 @@ type Server struct {
 // NewServerWithConfig creates a new HTTP Server instance configured with custom ProjectConfig, API routes, and SPA static serving.
 func NewServerWithConfig(workspacesDir string, staticFS fs.FS, cfg domain.ProjectConfig, liveService ...LiveServiceInterface) *Server {
 	cleanWsDir := strings.TrimSpace(workspacesDir)
-	if cleanWsDir != "" {
-		cfg.Workspaces.Dir = cleanWsDir
-	} else if cfg.Workspaces.Dir != "" {
-		cleanWsDir = cfg.Workspaces.Dir
+	if cfg.ConfigPath != "" {
+		cleanWsDir = filepath.Dir(cfg.ConfigPath)
 	}
 
 	var ls LiveServiceInterface
@@ -40,15 +39,13 @@ func NewServerWithConfig(workspacesDir string, staticFS fs.FS, cfg domain.Projec
 		hydrator = h
 	}
 
-	artifactConfigs := cfg.Workspaces.Artifacts
-
 	mux := http.NewServeMux()
 
 	// Register API endpoints
 	mux.HandleFunc("GET /api/version", VersionHandler())
 	mux.HandleFunc("GET /api/config", ConfigHandler(cfg, cleanWsDir))
 	mux.HandleFunc("GET /api/workspaces", WorkspacesHandler(cleanWsDir))
-	mux.HandleFunc("GET /api/workspaces/{ticketId}", WorkspaceDetailHandler(cleanWsDir, artifactConfigs))
+	mux.HandleFunc("GET /api/workspaces/{ticketId}", WorkspaceDetailHandler(cleanWsDir))
 	mux.HandleFunc("GET /api/workspaces/{ticketId}/events", WorkspaceEventsHandler(cleanWsDir, hydrator))
 	mux.HandleFunc("GET /api/fleet", FleetHandler(cleanWsDir))
 	mux.HandleFunc("GET /api/comparison", ComparisonHandler(cleanWsDir))

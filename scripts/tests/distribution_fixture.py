@@ -15,9 +15,9 @@ COMPILED = tempfile.TemporaryDirectory(prefix='agenticlens native fixtures ')
 
 
 def build_probe(version='v9.8.7', operating_system=None, arch=None, protocol='3'):
-    operating_system = operating_system or {'Linux': 'linux', 'Darwin': 'darwin', 'Windows': 'windows'}[platform.system()]
+    operating_system = operating_system or {'Linux': 'linux', 'Darwin': 'darwin'}[platform.system()]
     arch = arch or {'x86_64': 'amd64', 'amd64': 'amd64', 'aarch64': 'arm64', 'arm64': 'arm64'}[platform.machine().lower()]
-    target = Path(COMPILED.name) / (version + '-p' + protocol + '-' + operating_system + '-' + arch + ('.exe' if operating_system == 'windows' else ''))
+    target = Path(COMPILED.name) / (version + '-p' + protocol + '-' + operating_system + '-' + arch)
     if not target.exists():
         subprocess.run(['go', 'build', '-ldflags', '-X main.version=' + version + ' -X main.protocol=' + protocol, '-o', str(target), str(PROBE)],
                        cwd=ROOT, env=dict(os.environ, GOOS=operating_system, GOARCH=arch), check=True, capture_output=True, timeout=120)
@@ -32,9 +32,9 @@ def build_app(version='v9.8.7', operating_system=None, arch=None):
     """Build actual application fixtures only after the canonical web asset build."""
     if not (ROOT / 'backend/internal/adapters/web/dist/index.html').is_file():
         raise RuntimeError('Actual application fixtures require canonical assets: npm run build --prefix web')
-    operating_system = operating_system or {'Linux': 'linux', 'Darwin': 'darwin', 'Windows': 'windows'}[platform.system()]
+    operating_system = operating_system or {'Linux': 'linux', 'Darwin': 'darwin'}[platform.system()]
     arch = arch or {'x86_64': 'amd64', 'amd64': 'amd64', 'aarch64': 'arm64', 'arm64': 'arm64'}[platform.machine().lower()]
-    target = Path(COMPILED.name) / ('application-' + version + '-' + operating_system + '-' + arch + ('.exe' if operating_system == 'windows' else ''))
+    target = Path(COMPILED.name) / ('application-' + version + '-' + operating_system + '-' + arch)
     if not target.exists():
         subprocess.run(['go', 'build', '-ldflags', '-X agenticlens/internal/domain.Version=' + version, '-o', str(target), './cmd/agentic-lens'],
                        cwd=ROOT / 'backend', env=dict(os.environ, GOOS=operating_system, GOARCH=arch, CGO_ENABLED='0'),
@@ -43,9 +43,9 @@ def build_app(version='v9.8.7', operating_system=None, arch=None):
 
 
 def build_manager(version='v9.8.7', operating_system=None, arch=None):
-    operating_system = operating_system or {'Linux': 'linux', 'Darwin': 'darwin', 'Windows': 'windows'}[platform.system()]
+    operating_system = operating_system or {'Linux': 'linux', 'Darwin': 'darwin'}[platform.system()]
     arch = arch or {'x86_64': 'amd64', 'amd64': 'amd64', 'aarch64': 'arm64', 'arm64': 'arm64'}[platform.machine().lower()]
-    target = Path(COMPILED.name) / ('manager-' + version + '-' + operating_system + '-' + arch + ('.exe' if operating_system == 'windows' else ''))
+    target = Path(COMPILED.name) / ('manager-' + version + '-' + operating_system + '-' + arch)
     if not target.exists():
         subprocess.run(['go', 'build', '-ldflags', '-X agenticlens/internal/domain.Version=' + version, '-o', str(target), './cmd/agentic-lens-manager'],
                        cwd=ROOT / 'backend', env=dict(os.environ, GOOS=operating_system, GOARCH=arch, CGO_ENABLED='0'),
@@ -58,11 +58,13 @@ def shared_policy(pin, cache, workspace='workspaces', name='Fixture'):
     body = (ROOT / 'scripts/tests/fixtures/project-policy.yaml').read_text()
     body = body.replace('project_name: Fixture', 'project_name: ' + json.dumps(name))
     body = body.replace('version: v9.8.7', 'version: ' + pin + '\n  install_root: ' + json.dumps(str(cache)))
-    return body.replace('dir: records', 'dir: ' + json.dumps(str(workspace)))
+    return body.replace('path: records', 'path: ' + json.dumps(str(workspace)))
 
 
 def local_policy(state, source, cache=None):
-    install = 'agenticlens:\n  install_root: ' + json.dumps(str(cache)) + '\n' if cache else ''
+    install = 'agenticlens:\n  state_dir: ' + json.dumps(str(Path(state).parent / 'publication-state')) + '\n'
+    if cache:
+        install += '  install_root: ' + json.dumps(str(cache)) + '\n'
     return install + ('telemetry:\n  default_source: codex\n  sources:\n    codex:\n      home: ' + json.dumps(str(source)) +
                       '\n  capture:\n    enabled: false\n    state_dir: ' + json.dumps(str(state)) +
                       '\n    max_sessions: 19\n    max_source_bytes: 16777217\n')
@@ -116,7 +118,7 @@ else: shutil.copyfile(os.environ['AL_FIXTURE_RELEASE'], target)
 ''')
         curl.chmod(0o755)
         self.env = {key: value for key, value in os.environ.items() if not key.startswith(('AGENTIC_LENS_', 'AL_PROBE_'))}
-        self.env.update(HOME=str(self.home), USERPROFILE=str(self.home), CODEX_HOME=str(self.home / '.codex'),
+        self.env.update(HOME=str(self.home), CODEX_HOME=str(self.home / '.codex'),
                         XDG_CONFIG_HOME=str(self.home / '.config'), XDG_CACHE_HOME=str(self.home / '.cache'),
                         XDG_STATE_HOME=str(self.home / '.state'), XDG_DATA_HOME=str(self.home / '.local/share'), PATH=str(commands) + os.pathsep + os.environ['PATH'], AL_FETCH_LOG=str(self.network_log),
                         AL_FIXTURE_SOURCE=str(ROOT), AL_FIXTURE_RELEASE=str(self.application), AL_FIXTURE_NAME=self.native().name)
@@ -136,9 +138,9 @@ else: shutil.copyfile(os.environ['AL_FIXTURE_RELEASE'], target)
         return path
 
     def native(self, pin=None):
-        operating_system = {'Linux': 'linux', 'Darwin': 'darwin', 'Windows': 'windows'}[platform.system()]
+        operating_system = {'Linux': 'linux', 'Darwin': 'darwin'}[platform.system()]
         arch = {'x86_64': 'amd64', 'amd64': 'amd64', 'aarch64': 'arm64', 'arm64': 'arm64'}[platform.machine().lower()]
-        name = f'agentic-lens-engine-{operating_system}-{arch}' + ('.exe' if operating_system == 'windows' else '')
+        name = f'agentic-lens-engine-{operating_system}-{arch}'
         return self.cache / 'bin' / (pin or self.pin) / f'{operating_system}-{arch}' / name
 
     def install(self, *arguments, script=None, env=None):

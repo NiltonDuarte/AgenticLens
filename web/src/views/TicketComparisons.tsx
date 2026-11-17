@@ -1,3 +1,6 @@
+import { workspaceKey, selectWorkspace } from '../domain/workspaces';
+import { TagFilters } from '../components/TagFilters';
+import { tagChoices, filterLedgersByTags, reconcileTagCatalog, type TagFilter } from '../domain/tags';
 import { useProjectConfig, ticketPolicy } from '../contexts/ProjectConfigContext';
 import { durationLabel, durationDescription } from '../domain/duration';
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
@@ -40,7 +43,7 @@ const TICKET_TYPE_OPTIONS: readonly MultiSelectOption[] = [
 ];
 
 export interface TicketComparisonsProps {
-  readonly onSelectTicket?: ((ticketId: string) => void) | undefined;
+  readonly onSelectTicket?: ((ticketId: string, workspacePath?: string) => void) | undefined;
   readonly configuredPrefixes?: readonly string[] | undefined;
 }
 
@@ -50,6 +53,8 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
 }) => {
   const projectConfig = useProjectConfig();
   const recognitionPolicy = useMemo(() => ticketPolicy(projectConfig), [projectConfig]);
+  const [tagCatalog, setTagCatalog] = useState<readonly AgenticMetricsLedger[]>([]);
+  const [tagFilters, setTagFilters] = useState<readonly TagFilter[]>([]);
   const [ledgers, setLedgers] = useState<readonly AgenticMetricsLedger[]>([]);
   const [diagnostics, setDiagnostics] = useState<readonly WorkspaceDiagnostic[]>([]);
   const [knownPrefixes, setKnownPrefixes] = useState<readonly string[]>([]);
@@ -84,6 +89,7 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
         ? await fetchWorkspaceLedgers('all', undefined, undefined, typesParam, prefixesParam)
         : await fetchWorkspaceLedgers('all');
       setLedgers(res.data);
+      setTagCatalog((previous) => typesParam || prefixesParam ? reconcileTagCatalog(previous, res.data) : res.data);
       setDiagnostics(res.diagnostics ?? []);
       hasLoadedRef.current = true;
     } catch (err: unknown) {
@@ -131,8 +137,8 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
     if (selectedSkills.length > 0 && !selectedSkills.includes('all')) {
       list = list.filter((ledger) => skillNames(ledger.facts).some((name) => selectedSkills.includes(`skill:${name}`)));
     }
-    return list;
-  }, [ledgers, selectedTicketTypes, selectedPrefixes, selectedSkills, projectConfig]);
+    return filterLedgersByTags(list, tagFilters);
+  }, [tagFilters, ledgers, selectedTicketTypes, selectedPrefixes, selectedSkills, projectConfig]);
 
   const allRows = useMemo(() => {
     return deriveTicketComparisonRows(filteredLedgers, sortField, sortOrder, recognitionPolicy);
@@ -313,12 +319,14 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
           collapseCompleteSelection={false}
         />
 
+        <TagFilters choices={tagChoices(tagCatalog.map((ledger) => ledger.facts.tags))} filters={tagFilters} onChange={setTagFilters} />
+
         <div className="table-row-count">
           Showing {filteredRows.length} of {allRows.length} tickets
         </div>
       </div>
 
-      {ledgers.length > 0 && <TicketScatterPlot rows={filteredRows} onSelectTicket={onSelectTicket} />}
+      {ledgers.length > 0 && <TicketScatterPlot categoryRows={deriveTicketComparisonRows(tagCatalog)} rows={filteredRows} onSelectTicket={onSelectTicket} />}
 
       {ledgers.length === 0 ? (
         <EmptyState
@@ -539,9 +547,9 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
                   const isCompleted = row.completed_at !== null;
                   return (
                     <tr
-                      key={row.ticket_id}
+                      key={workspaceKey(row)}
                       className="clickable-comparison-row"
-                      onClick={() => onSelectTicket?.(row.ticket_id)}
+                      onClick={() => selectWorkspace(onSelectTicket, row)}
                       title="Click to view Ticket Deep Dive autopsy"
                     >
                       <td className="ticket-id-cell">
@@ -550,7 +558,7 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
                           className="ticket-link-btn"
                           onClick={(e) => {
                             e.stopPropagation();
-                            onSelectTicket?.(row.ticket_id);
+                            selectWorkspace(onSelectTicket, row);
                           }}
                         >
                           {row.ticket_id}
@@ -558,6 +566,7 @@ export const TicketComparisons: React.FC<TicketComparisonsProps> = ({
                       </td>
                       <td className="ticket-title-cell" title={row.ticket_title}>
                         {row.ticket_title}
+                        {row.workspace_path && <small className="workspace-location">{row.workspace_path}</small>}
                       </td>
                       <td title={row.skills_used?.join(', ')}>{row.skills_used === undefined ? 'Skills not recorded' : row.skills_used?.length ? row.skills_used.join(', ') : 'No recorded skills'}</td>
                       <td>

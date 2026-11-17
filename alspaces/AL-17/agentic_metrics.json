@@ -1,4 +1,9 @@
 {
+  "tags": {
+    "agentic-lens-dev": "0.1.0",
+    "agentic-lens-po": "0.1.0",
+    "agentic-lens-review": "0.1.0"
+  },
   "anomalies": [
     {"rule_id": "TOOL_HIGH_FAILURE_RATE", "severity": "WARNING", "context": {"tool_name": "task", "count": 3, "total_calls": 8, "threshold": "\u003e20%", "failure_rate_pct": 37.5}}
   ],

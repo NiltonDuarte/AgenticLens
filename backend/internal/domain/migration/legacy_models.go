@@ -84,6 +84,7 @@ type legacySessionFact struct {
 type legacyLedger struct {
 	SchemaVersion *int                           `json:"schema_version,omitempty"`
 	Migration     *domain.MigrationInfo          `json:"migration,omitempty"`
+	Tags          map[string]string              `json:"tags,omitempty"`
 	TicketID      *string                        `json:"ticket_id"`
 	TicketTitle   *string                        `json:"ticket_title"`
 	TicketType    *domain.ConventionalTicketType `json:"ticket_type"`
@@ -98,7 +99,7 @@ type legacyLedger struct {
 }
 
 func (ledger legacyLedger) current() domain.AgenticFactLedger {
-	result := domain.AgenticFactLedger{SchemaVersion: ledger.SchemaVersion, Migration: ledger.Migration, TicketID: ledger.TicketID, TicketTitle: ledger.TicketTitle, TicketType: ledger.TicketType, StartedAt: ledger.StartedAt, CompletedAt: ledger.CompletedAt, UpdatedAt: ledger.UpdatedAt, Code: ledger.Code, Anomalies: ledger.Anomalies, Sessions: []domain.SessionFact{}}
+	result := domain.AgenticFactLedger{Tags: domain.MergeTags(nil, ledger.Tags), SchemaVersion: ledger.SchemaVersion, Migration: ledger.Migration, TicketID: ledger.TicketID, TicketTitle: ledger.TicketTitle, TicketType: ledger.TicketType, StartedAt: ledger.StartedAt, CompletedAt: ledger.CompletedAt, UpdatedAt: ledger.UpdatedAt, Code: ledger.Code, Anomalies: ledger.Anomalies, Sessions: []domain.SessionFact{}}
 	for _, session := range ledger.Sessions {
 		owner := domain.SessionFact{ID: session.ID, ParentID: session.ParentID, Source: session.Source, User: session.User, Invocations: session.Invocations, Tools: session.Tools, Anomalies: session.Anomalies}
 		for _, skill := range session.Skills {

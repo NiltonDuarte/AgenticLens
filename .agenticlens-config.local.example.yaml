@@ -2,6 +2,9 @@
 # Choose the harness and actual paths explicitly, then approve the local candidate
 # through base-checkout setup. These example values are not runtime defaults.
 # Manual telemetry, automatic capture and integration installation are separate.
+agenticlens:
+  # Writable publication state, independently of binaries and capture registration.
+  state_dir: ~/.agenticlens/state
 telemetry:
   default_source: opencode
   sources:

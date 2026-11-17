@@ -1,4 +1,4 @@
-import { execFile, spawn } from "node:child_process";
+import { execFile } from "node:child_process";
 import type { Plugin } from "@opencode-ai/plugin";
 import { tool } from "@opencode-ai/plugin";
 
@@ -8,89 +8,12 @@ const projectDir = __PROJECT__;
 const stateDir = __STATE__;
 const sourceStore = __STORE__;
 
-// Windows owns the deadline, buffers and complete native manager/engine tree.
-// Killing only the manager could leave its engine holding inherited pipes.
-function callWindows(executable: string, args: string[], payload?: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const child = spawn(executable, args, { windowsHide: true });
-    const output: Buffer[] = [];
-    let outputBytes = 0;
-    let errorBytes = 0;
-    let settled = false;
-    let cleanupStarted = false;
-    let deadline: ReturnType<typeof setTimeout>;
-    const cleanupTree = () => {
-      if (cleanupStarted || child.pid === undefined || child.exitCode !== null || child.signalCode !== null) return;
-      cleanupStarted = true;
-      const taskkill = `${process.env.SystemRoot || "C:\\Windows"}\\System32\\taskkill.exe`;
-      // child.pid is the actual Windows PID from this spawn, never payload data.
-      const cleanup = spawn(taskkill, ["/PID", String(child.pid), "/T", "/F"], { windowsHide: true, stdio: "ignore" });
-      const cleanupDeadline = setTimeout(() => {
-        cleanup.kill();
-        child.kill();
-        console.error("AgenticLens Windows process-tree cleanup timed out; inspect capture diagnostics and running capture processes.");
-      }, 1000);
-      cleanup.on("error", () => {
-        clearTimeout(cleanupDeadline);
-        child.kill();
-        console.error("AgenticLens Windows process-tree cleanup unavailable; inspect capture diagnostics and running capture processes.");
-      });
-      cleanup.once("exit", (code) => {
-        clearTimeout(cleanupDeadline);
-        if (code !== 0 && child.exitCode === null && child.signalCode === null) {
-          child.kill();
-          console.error("AgenticLens Windows process-tree cleanup failed; inspect capture diagnostics and running capture processes.");
-        }
-      });
-    };
-    const finish = (error: Error | null) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(deadline);
-      if (error) {
-        cleanupTree();
-        // Promise completion never waits for a descendant to release a pipe.
-        child.stdin?.destroy();
-        child.stdout?.destroy();
-        child.stderr?.destroy();
-        output.length = 0;
-        reject(error);
-      } else {
-        resolve(Buffer.concat(output, outputBytes).toString("utf8"));
-      }
-    };
-    deadline = setTimeout(() => finish(new Error("Windows capture handoff timed out; inspect capture diagnostics.")), 5000);
-    child.on("error", (error) => finish(error));
-    child.once("close", (code) => finish(code === 0 ? null : new Error("Windows capture handoff failed; inspect capture diagnostics.")));
-    child.stdout?.on("data", (chunk: Buffer) => {
-      if (settled) return;
-      outputBytes += chunk.length;
-      if (outputBytes > 65536) finish(new Error("Windows capture output exceeded its limit; inspect capture diagnostics."));
-      else output.push(chunk);
-    });
-    child.stderr?.on("data", (chunk: Buffer) => {
-      if (settled) return;
-      errorBytes += chunk.length;
-      if (errorBytes > 65536) finish(new Error("Windows capture diagnostics exceeded their limit; inspect capture diagnostics."));
-    });
-    child.stdin?.on("error", (error: Error) => finish(error));
-    child.stdout?.on("error", (error: Error) => finish(error));
-    child.stderr?.on("error", (error: Error) => finish(error));
-    child.stdin?.end(payload);
-  });
-}
-
 function call(args: string[], payload?: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const prefix = ["--al-offline", "--al-project", projectDir, "capture"];
-    const windows = process.platform === "win32";
     const nativeArgs = [...prefix, ...args, "--state-dir", stateDir, "--repo", projectDir, "--wrapper", wrapper];
-    if (windows) {
-      callWindows(wrapper, nativeArgs, payload).then(resolve, reject);
-      return;
-    }
     const child = execFile(wrapper, nativeArgs,
-      { timeout: 1500, maxBuffer: 65536, windowsHide: true },
+      { timeout: 1500, maxBuffer: 65536 },
       (error, stdout) => error ? reject(error) : resolve(stdout));
     if (payload !== undefined) child.stdin?.end(payload);
   });

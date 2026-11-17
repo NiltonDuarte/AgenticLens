@@ -10,7 +10,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"runtime"
 )
 
 // RetainExecutable gives admitted workers immutable bytes for all their children.
@@ -36,7 +35,7 @@ func retainExecutableWithCheckpoint(binary, directory string, checkpoint func(re
 	if err != nil {
 		return "", err
 	}
-	if !info.Mode().IsRegular() || info.Size() <= 0 || (runtime.GOOS != "windows" && info.Mode().Perm()&0111 == 0) {
+	if !info.Mode().IsRegular() || info.Size() <= 0 || info.Mode().Perm()&0111 == 0 {
 		return "", errors.New("worker executable is not a regular file")
 	}
 	if checkpoint != nil {
@@ -49,9 +48,6 @@ func retainExecutableWithCheckpoint(binary, directory string, checkpoint func(re
 		return "", err
 	}
 	pattern := ".retain-"
-	if runtime.GOOS == "windows" {
-		pattern = ".retain-*.exe"
-	}
 	temp, err := os.CreateTemp(directory, pattern)
 	if err != nil {
 		return "", err
@@ -105,9 +101,6 @@ func retainExecutableWithCheckpoint(binary, directory string, checkpoint func(re
 		return "", fmt.Errorf("retained native admission failed: %w", err)
 	}
 	name := hex.EncodeToString(digest.Sum(nil))
-	if runtime.GOOS == "windows" {
-		name += ".exe"
-	}
 	target := filepath.Join(directory, name)
 	if existingInfo, err := os.Lstat(target); err == nil && !existingInfo.Mode().IsRegular() {
 		return "", errors.New("retained native destination must be an owned regular file")

@@ -10,6 +10,7 @@ require "yaml"
 options = {project: ".", output: "dist/tickets-site", base_path: ""}
 OptionParser.new do |parser|
   parser.on("--project PATH") { |value| options[:project] = value }
+  parser.on("--roadmap PATH") { |value| options[:roadmap] = value }
   parser.on("--output PATH") { |value| options[:output] = value }
   parser.on("--repository OWNER/REPO") { |value| options[:repository] = value }
   parser.on("--revision SHA") { |value| options[:revision] = value }
@@ -20,11 +21,12 @@ raise "--revision is required" if options[:revision].to_s.strip.empty?
 raise "--base-path must be an absolute URL path" unless options[:base_path].empty? || options[:base_path].match?(%r{\A/(?!/)[^?#]*\z})
 
 project = Pathname.new(options[:project]).realpath
-config_path = project.join(".agenticlens-config.yaml")
-config = config_path.file? ? YAML.safe_load_file(config_path) || {} : {}
-workspace = config.fetch("workspaces", {}).fetch("dir", "workspaces")
-raise "workspaces.dir must be a nonempty path" unless workspace.is_a?(String) && !workspace.strip.empty?
-plan = project.join(workspace, "plan").realpath
+settings = YAML.safe_load_file(File.join(__dir__, "_config.yml"))
+raise "Pages configuration must be a mapping" unless settings.is_a?(Hash)
+roadmap = options.key?(:roadmap) ? options[:roadmap] : settings["roadmap_path"]
+raise "--roadmap PATH or Pages roadmap_path is required" unless roadmap.is_a?(String) && !roadmap.strip.empty?
+# The roadmap is repository planning input, independent of telemetry-ledger roots.
+plan = project.join(roadmap).realpath
 raise "Plan must be inside the repository" unless plan.to_s.start_with?("#{project}/")
 raise "Roadmap not found: #{plan}/TICKETS.md" unless plan.join("TICKETS.md").file?
 output = project.join(options[:output]).expand_path
@@ -57,7 +59,7 @@ Dir.mktmpdir("ticket-jekyll-") do |staging|
     FileUtils.mkdir_p(destination.dirname)
     FileUtils.cp(file, destination)
   end
-  settings = YAML.safe_load_file(File.join(__dir__, "_config.yml")).merge(
+  settings = settings.merge(
     "baseurl" => options[:base_path].delete_suffix("/"),
     "ticket_project" => project.to_s, "ticket_plan" => plan.relative_path_from(project).to_s,
     "ticket_repository" => options[:repository], "ticket_revision" => options[:revision]

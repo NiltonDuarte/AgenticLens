@@ -5,12 +5,8 @@ import (
 	"strings"
 )
 
-// relativeContainedPath compares already resolved paths. Different Windows
-// volumes are disjoint; filepath.Rel errors within one volume remain errors.
+// relativeContainedPath compares already resolved paths.
 func relativeContainedPath(base, target string) (string, bool, error) {
-	if !strings.EqualFold(filepath.VolumeName(base), filepath.VolumeName(target)) {
-		return "", false, nil
-	}
 	relative, err := filepath.Rel(base, target)
 	if err != nil {
 		return "", false, err

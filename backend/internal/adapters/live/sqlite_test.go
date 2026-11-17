@@ -33,7 +33,7 @@ func testProjectConfig() domain.ProjectConfig {
 			CaseInsensitive: true,
 		},
 		Workspaces: domain.WorkspacesConfig{
-			Dir: "workspaces", Artifacts: []domain.WorkspaceArtifactConfig{},
+			Roots: []domain.WorkspaceRootConfig{{Path: "workspaces", Discovery: domain.WorkspaceDiscoveryConfig{MaxDepth: 8, MaxDirectories: 300}}}, Artifacts: []domain.WorkspaceArtifactConfig{},
 		},
 		CodeMetrics: domain.CodeMetricsConfig{BaseBranch: "fixture-base", Production: domain.CodeCategoryConfig{Include: []string{}, Exclude: []string{}}, Tests: domain.CodeCategoryConfig{Include: []string{}, Exclude: []string{}}},
 		Database: domain.DatabaseConfig{
@@ -270,7 +270,7 @@ func TestZeroDiskPersistenceVerification(t *testing.T) {
 		t.Fatal("owned persistence sentinels missing")
 	}
 	cfg := testProjectConfig()
-	cfg.Workspaces.Dir = workspacesDir
+	cfg.Workspaces.Roots[0].Path = workspacesDir
 	service := live.NewLiveService(hook, cfg)
 	defer service.Close()
 
@@ -1340,7 +1340,7 @@ func TestHydrationAvailabilityPreservesLeanFactsAndLedgerBytes(t *testing.T) {
 		t.Run(mode, func(t *testing.T) {
 			root := t.TempDir()
 			cfg := testProjectConfig()
-			cfg.Workspaces.Dir = root
+			cfg.Workspaces.Roots[0].Path = root
 			source := domain.SourceOpenCode
 			if strings.Contains(mode, "Codex") {
 				source = domain.SourceCodex

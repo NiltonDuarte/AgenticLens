@@ -1,3 +1,4 @@
+import { workspaceKey, selectWorkspace } from '../domain/workspaces';
 import { useProjectConfig, ticketPolicy } from '../contexts/ProjectConfigContext';
 import { durationLabel, durationDescription } from '../domain/duration';
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
@@ -19,7 +20,7 @@ export type QuickLaunchSortOrder = 'asc' | 'desc';
 
 export interface LandingPageProps {
   readonly onNavigate: (tab: ActiveTab) => void;
-  readonly onSelectTicket: (ticketId: string) => void;
+  readonly onSelectTicket: (ticketId: string, workspacePath?: string) => void;
   readonly projectConfig?: ProjectConfigResponse | null | undefined;
   readonly projectName?: string | undefined;
 }
@@ -415,14 +416,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
                   return (
                     <tr
-                      key={w.ticket_id}
+                      key={workspaceKey(w)}
                       className="quick-launch-row"
-                      onClick={() => onSelectTicket(w.ticket_id)}
+                      onClick={() => selectWorkspace(onSelectTicket, w)}
                     >
                       <td className="mono-number" style={{ fontWeight: 600 }}>
                         {w.ticket_id}
                       </td>
-                      <td className="ticket-title-cell">{w.ticket_title}</td>
+                      <td className="ticket-title-cell">{w.ticket_title}{w.workspace_path && <small className="workspace-location">{w.workspace_path}</small>}</td>
                       <td>
                         <span className={`health-badge ${statusClass}`}>
                           {w.context_health_status}
@@ -438,7 +439,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                           className="quick-launch-btn"
                           onClick={(e) => {
                             e.stopPropagation();
-                            onSelectTicket(w.ticket_id);
+                            selectWorkspace(onSelectTicket, w);
                           }}
                           aria-label={`Open deep dive for ${w.ticket_id}`}
                         >

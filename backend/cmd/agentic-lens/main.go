@@ -34,6 +34,8 @@ func runGenerate(args []string) {
 	snapshotCutoff := time.Now().UTC()
 	genFlags := flag.NewFlagSet("generate", flag.ExitOnError)
 
+	var cliTags tagFlags
+	genFlags.Var(&cliTags, "tag", "Ticket tag KEY=VALUE (repeatable; CLI overrides local and shared per key)")
 	ticketIDFlag := genFlags.String("ticket-id", "", "Target ticket identifier to lock session resolution to")
 	codeRefFlag := genFlags.String("code-ref", "HEAD", "Git branch or commit to measure against the configured base (defaults to HEAD; committed changes only)")
 	sourceFlag := genFlags.String("source", "", "Telemetry harness: explicit value or selected local telemetry.default_source")
@@ -44,12 +46,12 @@ func runGenerate(args []string) {
 	strictTypeFlag := genFlags.Bool("strict-type", false, "Require a valid ticket type, failing if omitted and cannot be inferred")
 	startedAtFlag := genFlags.String("started-at", "", "Explicit start timestamp ISO format")
 	completedAtFlag := genFlags.String("completed-at", "", "Explicit completion timestamp ISO format")
-	jsonOutputFlag := genFlags.String("json-output", "", "Path to write/update structured JSON ledger")
+	jsonOutputFlag := genFlags.String("json-output", "", "Path to write/update the canonical agentic_metrics.json ledger")
 	appendFlag := genFlags.String("append", "", "Path to markdown file to append/update metrics table in")
 	dbPathFlag := genFlags.String("db-path", "", "Path to OpenCode SQLite database")
 	codexHomeFlag := genFlags.String("codex-home", "", "Explicit Codex source store; otherwise selected local telemetry.sources.codex.home")
 	anomaliesFlag := genFlags.Bool("anomalies", false, "Display anomalies and health flags; generation.metrics.anomalies=false reports disabled and never re-enables analysis")
-	captureDirFlag := genFlags.String("capture-dir", "", "Local lifecycle registry to reconcile before final publication")
+	captureDirFlag := genFlags.String("capture-dir", "", "Automatic capture registry override; ignored by manual generation")
 	autoFlag := genFlags.Bool("capture-auto", false, "Native lifecycle publication (registered owners only)")
 	maxSessionsFlag := genFlags.Int("max-sessions", 0, "Explicit positive capture session budget; otherwise selected local policy")
 	maxBytesFlag := genFlags.Int64("max-source-bytes", 0, "Explicit positive capture source-byte budget; otherwise selected local policy")
@@ -77,11 +79,16 @@ func runGenerate(args []string) {
 		fmt.Fprintln(os.Stderr, projectErr)
 		os.Exit(1)
 	}
-	projCfg, err := adaptersconfig.Load(project)
+	loadConfig := adaptersconfig.LoadManualGeneration
+	if *autoFlag {
+		loadConfig = adaptersconfig.Load
+	}
+	projCfg, err := loadConfig(project)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Error loading configuration:", err)
 		os.Exit(1)
 	}
+	projCfg.Tags = domain.MergeTags(projCfg.Tags, map[string]string(cliTags))
 	if err := adaptersconfig.ValidateGenerationPolicy(projCfg); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -123,6 +130,10 @@ func runGenerate(args []string) {
 		os.Exit(1)
 	}
 	if *jsonOutputFlag != "" {
+		if filepath.Base(*jsonOutputFlag) != "agentic_metrics.json" {
+			fmt.Fprintln(os.Stderr, "generate --json-output must name the canonical agentic_metrics.json ledger")
+			os.Exit(1)
+		}
 		expanded, pathErr := adaptersconfig.ExpandHomePath(*jsonOutputFlag)
 		if pathErr != nil {
 			fmt.Fprintln(os.Stderr, pathErr)
@@ -140,109 +151,135 @@ func runGenerate(args []string) {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+	if *jsonOutputFlag == "" {
+		location, resolveErr := adapters.ResolveTicketLocation(projCfg, *ticketIDFlag, "")
+		if resolveErr != nil {
+			fmt.Fprintln(os.Stderr, "Ledger destination required:", resolveErr)
+			os.Exit(1)
+		}
+		*jsonOutputFlag = location.LedgerPath
+	} else {
+		if _, e := os.Stat(*jsonOutputFlag); errors.Is(e, os.ErrNotExist) {
+			if e = adapters.ValidateInitialLedgerDestination(projCfg, *ticketIDFlag, *jsonOutputFlag); e != nil {
+				fmt.Fprintln(os.Stderr, e)
+				os.Exit(1)
+			}
+			_, discoveryIssues := adapters.DiscoverWorkspaceLocations(projCfg)
+			for _, issue := range discoveryIssues {
+				fmt.Fprintf(os.Stderr, "Warning at %s: %s\n", issue.Path, issue.Message)
+			}
+		} else if e != nil {
+			fmt.Fprintln(os.Stderr, e)
+			os.Exit(1)
+		} else if e = adapters.ValidateLedgerDestinationScope(projCfg, *jsonOutputFlag); e != nil {
+			fmt.Fprintln(os.Stderr, e)
+			os.Exit(1)
+		}
+	}
 	effectiveSummary, err := resolveGenerationSummaryPath(project, projCfg, *appendFlag, provided["append"], *jsonOutputFlag, *ticketIDFlag)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 	*appendFlag = effectiveSummary
-	admissionCtx, admissionCancel := context.WithTimeout(context.Background(), 2*time.Second)
-	admission, admissionErr := adaptersconfig.AcquireGenerationAdmission(admissionCtx, project)
-	defer admissionCancel()
-	if admissionErr != nil {
-		if errors.Is(admissionErr, adaptersconfig.ErrConfigNotFound) {
-			fmt.Fprintln(os.Stderr, "Project configuration not found. Please run 'agentic-lens init' to initialize the project.")
-		} else {
-			fmt.Fprintln(os.Stderr, "Capture configuration admission:", admissionErr)
-		}
+	if *autoFlag && (*sessionIDFlag != "" || *nonceFlag != "") {
+		fmt.Fprintln(os.Stderr, "--capture-auto requires registered ticket owners and cannot be combined with --session-id or --nonce")
 		os.Exit(1)
 	}
-	defer func() {
-		if admission != nil {
-			if err := admission.Close(); err != nil {
-				fmt.Fprintln(os.Stderr, "Capture configuration unlock:", err)
+	if provided["max-sessions"] && *maxSessionsFlag < 1 {
+		fmt.Fprintln(os.Stderr, "--max-sessions must be a positive integer")
+		os.Exit(1)
+	}
+	if provided["max-source-bytes"] && *maxBytesFlag < 1 {
+		fmt.Fprintln(os.Stderr, "--max-source-bytes must be a positive integer")
+		os.Exit(1)
+	}
+	var policy domain.CaptureConfig
+	if *autoFlag {
+		admissionCtx, admissionCancel := context.WithTimeout(context.Background(), 2*time.Second)
+		admission, admissionErr := adaptersconfig.AcquireCaptureAdmission(admissionCtx, project)
+		defer admissionCancel()
+		if admissionErr != nil {
+			if errors.Is(admissionErr, adaptersconfig.ErrConfigNotFound) {
+				fmt.Fprintln(os.Stderr, "Project configuration not found. Please run 'agentic-lens init' to initialize the project.")
+			} else {
+				fmt.Fprintln(os.Stderr, "Capture configuration admission:", admissionErr)
+			}
+			os.Exit(1)
+		}
+		defer func() {
+			if admission != nil {
+				if err := admission.Close(); err != nil {
+					fmt.Fprintln(os.Stderr, "Capture configuration unlock:", err)
+				}
+			}
+		}()
+		selectedPolicy, policyErr := admission.ResolveCapture(*captureDirFlag)
+		policy = selectedPolicy
+		if policyErr != nil {
+			if errors.Is(policyErr, adaptersconfig.ErrConfigNotFound) {
+				fmt.Fprintln(os.Stderr, "Project configuration not found. Please run 'agentic-lens init' to initialize the project.")
+			} else {
+				fmt.Fprintln(os.Stderr, policyErr)
+			}
+			os.Exit(1)
+		}
+		if !policy.Enabled {
+			fmt.Fprintln(os.Stderr, "Automatic publication disabled by selected local policy")
+			os.Exit(1)
+		}
+		if provided["max-sessions"] {
+			policy.MaxSessions = *maxSessionsFlag
+			if policy.Settings != nil {
+				policy.Settings["max_sessions"] = true
 			}
 		}
-	}()
-	policy, policyErr := admission.ResolveGenerationCapture(*captureDirFlag)
-	if *autoFlag {
-		policy, policyErr = admission.ResolveCapture(*captureDirFlag)
-	}
-	if policyErr != nil {
-		if errors.Is(policyErr, adaptersconfig.ErrConfigNotFound) {
-			fmt.Fprintln(os.Stderr, "Project configuration not found. Please run 'agentic-lens init' to initialize the project.")
-		} else {
-			fmt.Fprintln(os.Stderr, policyErr)
+		if provided["max-source-bytes"] {
+			policy.MaxSourceBytes = *maxBytesFlag
+			if policy.Settings != nil {
+				policy.Settings["max_source_bytes"] = true
+			}
 		}
-		os.Exit(1)
-	}
-	if *autoFlag && !policy.Enabled {
-		fmt.Fprintln(os.Stderr, "Automatic publication disabled by selected local policy")
-		os.Exit(1)
-	}
-	if provided["max-sessions"] {
-		if *maxSessionsFlag < 1 {
-			fmt.Fprintln(os.Stderr, "--max-sessions must be a positive integer")
+		if err := errors.Join(policy.ValidatePass(), policy.ValidateBudgets()); err != nil {
+			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
-		policy.MaxSessions = *maxSessionsFlag
-		if policy.Settings != nil {
-			policy.Settings["max_sessions"] = true
-		}
-	}
-	if provided["max-source-bytes"] {
-		if *maxBytesFlag < 1 {
-			fmt.Fprintln(os.Stderr, "--max-source-bytes must be a positive integer")
+		resolvedState, stateErr := capture.ProjectState(policy.StateDir, project)
+		if stateErr != nil {
+			fmt.Fprintln(os.Stderr, stateErr)
 			os.Exit(1)
 		}
-		policy.MaxSourceBytes = *maxBytesFlag
-		if policy.Settings != nil {
-			policy.Settings["max_source_bytes"] = true
+		if e := checkCaptureInstallation(project, resolvedState, *captureDirFlag != ""); e != nil {
+			fmt.Fprintln(os.Stderr, e)
+			os.Exit(1)
 		}
-	}
-	if err := errors.Join(policy.ValidatePass(), policy.ValidateBudgets()); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-	resolvedState, stateErr := capture.ProjectState(policy.StateDir, project)
-	if stateErr != nil {
-		fmt.Fprintln(os.Stderr, stateErr)
-		os.Exit(1)
-	}
-	// Only explicit manual recovery may use independent healthy state when
-	// configured coordinate mappings are unsupported. Other guards still apply.
-	if e := checkCaptureInstallationScope(project, resolvedState, *captureDirFlag != "", *captureDirFlag != "" && !*autoFlag); e != nil {
-		fmt.Fprintln(os.Stderr, e)
-		os.Exit(1)
-	}
-	if *autoFlag {
 		enabled, e := automaticCaptureEnabled(project, resolvedState)
 		if e != nil || !enabled {
 			fmt.Fprintln(os.Stderr, "Automatic publication disabled or unavailable:", e)
 			os.Exit(1)
 		}
-	}
 
-	// Materialize the selected scope while configuration admission is held.
-	// Subsequent path-only maintenance must observe this database and refuse
-	// detaching it, so no global config lease spans source parsing/publication.
-	admissionStore, admissionStoreErr := capture.OpenProjectContext(admissionCtx, resolvedState, project)
-	if admissionStoreErr != nil {
-		fmt.Fprintln(os.Stderr, "Capture state admission:", admissionStoreErr)
-		os.Exit(1)
+		// Materialize the selected scope while configuration admission is held.
+		// Subsequent path-only maintenance must observe this database and refuse
+		// detaching it, so no global config lease spans source parsing/publication.
+		admissionStore, admissionStoreErr := capture.OpenProjectContext(admissionCtx, resolvedState, project)
+		if admissionStoreErr != nil {
+			fmt.Fprintln(os.Stderr, "Capture state admission:", admissionStoreErr)
+			os.Exit(1)
+		}
+		admissionCloseErr := errors.Join(admissionStore.Close(), admission.Close())
+		admission = nil
+		admissionCancel()
+		if admissionCloseErr != nil {
+			fmt.Fprintln(os.Stderr, "Capture state admission:", admissionCloseErr)
+			os.Exit(1)
+		}
+		*captureDirFlag = resolvedState
 	}
-	admissionCloseErr := errors.Join(admissionStore.Close(), admission.Close())
-	admission = nil
-	admissionCancel()
-	if admissionCloseErr != nil {
-		fmt.Fprintln(os.Stderr, "Capture state admission:", admissionCloseErr)
-		os.Exit(1)
-	}
-	*captureDirFlag = resolvedState
 	destinations := []string{*jsonOutputFlag, *appendFlag}
 	for _, dest := range destinations {
 		if dest != "" {
-			if e := capture.ValidateDestination(project, dest); e != nil {
+			if e := adapters.ValidateWorkspaceArtifactDestination(projCfg, *jsonOutputFlag, dest); e != nil {
 				fmt.Fprintln(os.Stderr, e)
 				os.Exit(1)
 			}
@@ -252,7 +289,7 @@ func runGenerate(args []string) {
 	// This prevents an earlier source view from publishing after a later generation.
 	if *jsonOutputFlag != "" {
 		lockCtx, lockCancel := context.WithTimeout(context.Background(), 5*time.Minute)
-		publicationLock, lockErr := capture.AcquirePublication(lockCtx, *jsonOutputFlag)
+		publicationLock, lockErr := capture.AcquirePublication(lockCtx, *jsonOutputFlag, project)
 		lockCancel()
 		if lockErr != nil {
 			fmt.Fprintln(os.Stderr, "Error acquiring ledger publication ownership:", lockErr)
@@ -265,7 +302,7 @@ func runGenerate(args []string) {
 		}()
 	}
 	if *jsonOutputFlag != "" {
-		recovered, e := adapters.RecoverPublicationWithLegacyReport(project, *jsonOutputFlag, authorizedPublicationPaths(*jsonOutputFlag, *appendFlag))
+		recovered, e := adapters.RecoverPublication(*jsonOutputFlag, authorizedPublicationPaths(*jsonOutputFlag, *appendFlag))
 		if e != nil {
 			fmt.Fprintln(os.Stderr, "Interrupted publication recovery failed:", e)
 			os.Exit(1)
@@ -302,7 +339,7 @@ func runGenerate(args []string) {
 		os.Exit(1)
 	}
 
-	if *jsonOutputFlag != "" {
+	if *autoFlag && *jsonOutputFlag != "" {
 		if e := recordGenerationPublication(project, *captureDirFlag, activeTicketID, "preparing", *jsonOutputFlag, *appendFlag, nil, "Generation began before source extraction. No replacement has been acknowledged; inspect latest reconciliation and retry generation if this attempt remains unfinished."); e != nil {
 			fmt.Fprintln(os.Stderr, "Cannot persist generation attempt diagnostic:", e)
 			os.Exit(1)
@@ -404,16 +441,20 @@ func runGenerate(args []string) {
 	exactRolloutPaths := make(map[string]string)
 	var sourceEvents domain.SourceEvents
 	generationPolicy := projCfg.Generation.Metrics
-	captureResult, captureErr := reconcileCaptureGenerationAtWithPolicy(project, *captureDirFlag, activeTicketID, snapshotCutoff, policy, generationPolicy)
-	if captureErr != nil {
-		fmt.Fprintf(os.Stderr, "Error reconciling capture registry; publication not completed: %v\n", captureErr)
-		os.Exit(1)
+	var captureResult *capture.ReconcileResult
+	if *autoFlag {
+		var captureErr error
+		captureResult, captureErr = reconcileCaptureGenerationAtWithPolicy(project, *captureDirFlag, activeTicketID, snapshotCutoff, policy, generationPolicy)
+		if captureErr != nil {
+			fmt.Fprintf(os.Stderr, "Error reconciling capture registry; publication not completed: %v\n", captureErr)
+			os.Exit(1)
+		}
+		if precedenceErr := filterCapturePrecedence(sessions, captureResult); precedenceErr != nil {
+			fmt.Fprintln(os.Stderr, "Capture checkpoint comparison:", precedenceErr)
+			os.Exit(1)
+		}
 	}
-	if precedenceErr := filterCapturePrecedence(sessions, captureResult); precedenceErr != nil {
-		fmt.Fprintln(os.Stderr, "Capture checkpoint comparison:", precedenceErr)
-		os.Exit(1)
-	}
-	registeredOnly := (*autoFlag || hasBoundRegistrations(captureResult)) && strings.TrimSpace(*nonceFlag) == "" && strings.TrimSpace(*sessionIDFlag) == ""
+	registeredOnly := *autoFlag
 	if registeredOnly {
 		configuredStores := make(map[domain.SourceHarness]string)
 		if *codexHomeFlag != "" || projCfg.Telemetry.Sources.CodexHome != "" {
@@ -436,7 +477,9 @@ func runGenerate(args []string) {
 			fmt.Fprintln(os.Stderr, "Baseline ticket association conflict:", associationErr)
 			os.Exit(1)
 		}
-		freshSessions = captureResult.RefreshedSessions
+		if captureResult != nil {
+			freshSessions = captureResult.RefreshedSessions
+		}
 	} else if activeSource == "codex" {
 		codexHome, pathErr := adaptersconfig.ResolveCodexHome(*codexHomeFlag, projCfg.Telemetry.Sources.CodexHome)
 		if pathErr != nil {
@@ -474,8 +517,9 @@ func runGenerate(args []string) {
 			fmt.Fprintf(os.Stderr, "Error combining Codex session facts: %v\n", combineErr)
 			os.Exit(1)
 		}
-		for _, warning := range combined.Warnings {
-			fmt.Fprintf(os.Stderr, "Warning: Codex rollout: %s\n", warning)
+		if len(combined.Warnings) > 0 {
+			fmt.Fprintf(os.Stderr, "Error: incomplete Codex grouping; stored snapshots preserved: %s\n", strings.Join(combined.Warnings, "; "))
+			os.Exit(1)
 		}
 		freshCodex, factErr := combined.SessionFacts(generationPolicy)
 		if factErr != nil {
@@ -486,8 +530,8 @@ func runGenerate(args []string) {
 			fmt.Fprintln(os.Stderr, collisionErr)
 			os.Exit(1)
 		}
-		if ownerErr := validateCaptureSelection(project, *captureDirFlag, activeTicketID, domain.SourceCodex, codexHome, freshCodex, baseline.Current, exactRolloutPaths); ownerErr != nil {
-			fmt.Fprintln(os.Stderr, "Capture ownership conflict:", ownerErr)
+		if ownerErr := validateManualSelection(project, activeTicketID, domain.SourceCodex, codexHome, freshCodex, baseline.Current, exactRolloutPaths, projCfg); ownerErr != nil {
+			fmt.Fprintln(os.Stderr, "Source ownership conflict:", ownerErr)
 			os.Exit(1)
 		}
 		resolveCodexSessionUsers(freshCodex, userBySessionID, currentUser)
@@ -554,8 +598,8 @@ func runGenerate(args []string) {
 						fmt.Fprintln(os.Stderr, collisionErr)
 						os.Exit(1)
 					}
-					if ownerErr := validateCaptureSelection(project, *captureDirFlag, activeTicketID, domain.SourceOpenCode, dbPath, extractedSessions, baseline.Current, nil); ownerErr != nil {
-						fmt.Fprintln(os.Stderr, "Capture ownership conflict:", ownerErr)
+					if ownerErr := validateManualSelection(project, activeTicketID, domain.SourceOpenCode, dbPath, extractedSessions, baseline.Current, nil, projCfg); ownerErr != nil {
+						fmt.Fprintln(os.Stderr, "Source ownership conflict:", ownerErr)
 						os.Exit(1)
 					}
 					freshSessions = extractedSessions
@@ -604,9 +648,11 @@ func runGenerate(args []string) {
 	}
 	// Retained facts join only after owned extraction and checkpoint decisions.
 	retainUnrefreshedGenerationOwners(&baseline, freshSessions)
-	if err := recordGenerationHistory(project, *captureDirFlag, activeTicketID, baseline); err != nil {
-		fmt.Fprintln(os.Stderr, "Cannot record retained history:", err)
-		os.Exit(1)
+	if *autoFlag {
+		if err := recordGenerationHistory(project, *captureDirFlag, activeTicketID, baseline); err != nil {
+			fmt.Fprintln(os.Stderr, "Cannot record retained history:", err)
+			os.Exit(1)
+		}
 	}
 	invocations := (domain.AgenticFactLedger{Sessions: sessions}).InvocationFacts()
 
@@ -647,8 +693,12 @@ func runGenerate(args []string) {
 		}
 	}
 
-	cfg, err := git.LoadConfig(project)
-	if err != nil {
+	cfg := &git.ClassificationConfig{
+		BaseBranch: projCfg.CodeMetrics.BaseBranch,
+		Production: projCfg.CodeMetrics.Production,
+		Tests:      projCfg.CodeMetrics.Tests,
+	}
+	if err := git.ValidateClassificationConfig(cfg); err != nil {
 		fmt.Fprintln(os.Stderr, "Error loading code-metric policy:", err)
 		os.Exit(1)
 	}
@@ -680,7 +730,12 @@ func runGenerate(args []string) {
 	}
 
 	schemaVer := domain.CurrentSchemaVersion
+	var recordedTags map[string]string
+	if cachedFacts != nil {
+		recordedTags = cachedFacts.Tags
+	}
 	factLedger := domain.AgenticFactLedger{
+		Tags:          domain.MergeTags(recordedTags, projCfg.Tags),
 		SchemaVersion: &schemaVer,
 		TicketID:      ticketIDPtr,
 		TicketTitle:   activeTicketTitle,
@@ -724,9 +779,11 @@ func runGenerate(args []string) {
 		if *appendFlag != "" {
 			publicationPaths = append(publicationPaths, *appendFlag)
 		}
-		if e := recordGenerationPublication(project, *captureDirFlag, activeTicketID, "staging", *jsonOutputFlag, *appendFlag, factLedger.Sessions, "Artifact replacement started; success is unconfirmed until journal commit and diagnostic acknowledgement. If interrupted, rerun generate to recover the prior accepted set.", freshSessions); e != nil {
-			fmt.Fprintln(os.Stderr, "Cannot persist publication diagnostic:", e)
-			os.Exit(1)
+		if *autoFlag {
+			if e := recordGenerationPublication(project, *captureDirFlag, activeTicketID, "staging", *jsonOutputFlag, *appendFlag, factLedger.Sessions, "Artifact replacement started; success is unconfirmed until journal commit and diagnostic acknowledgement. If interrupted, rerun generate to recover the prior accepted set.", freshSessions); e != nil {
+				fmt.Fprintln(os.Stderr, "Cannot persist publication diagnostic:", e)
+				os.Exit(1)
+			}
 		}
 		if e := adapters.BeginPublication(*jsonOutputFlag, publicationPaths); e != nil {
 			fmt.Fprintln(os.Stderr, "Cannot stage recoverable publication:", e)
@@ -735,7 +792,7 @@ func runGenerate(args []string) {
 	}
 	if *jsonOutputFlag != "" {
 		if err := saveGenerationLedgerPreservingHistory(*jsonOutputFlag, factLedger, baseline.HistoryDTOs); err != nil {
-			fmt.Fprintf(os.Stderr, "Error writing JSON to %s: %v\n", *jsonOutputFlag, err)
+			fmt.Fprintln(os.Stderr, recoverFailedGenerationPublication(*jsonOutputFlag, publicationPaths, fmt.Errorf("writing JSON to %s: %w", *jsonOutputFlag, err)))
 			os.Exit(1)
 		}
 		fmt.Printf("Structured metrics ledger written to %s\n", *jsonOutputFlag)
@@ -756,11 +813,11 @@ func runGenerate(args []string) {
 	if *appendFlag != "" {
 		summaryPath, err := capture.ProjectDirectory(*appendFlag)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error resolving summary file %s: %v\n", *appendFlag, err)
+			fmt.Fprintln(os.Stderr, recoverFailedGenerationPublication(*jsonOutputFlag, publicationPaths, fmt.Errorf("resolving summary file %s: %w", *appendFlag, err)))
 			os.Exit(1)
 		}
 		if err := adapters.UpdateSummaryFile(summaryPath, tableMD); err != nil {
-			fmt.Fprintf(os.Stderr, "Error updating summary file %s: %v\n", *appendFlag, err)
+			fmt.Fprintln(os.Stderr, recoverFailedGenerationPublication(*jsonOutputFlag, publicationPaths, fmt.Errorf("updating summary file %s: %w", *appendFlag, err)))
 			os.Exit(1)
 		}
 		fmt.Printf("Metrics table successfully updated in %s\n", *appendFlag)
@@ -769,12 +826,14 @@ func runGenerate(args []string) {
 	}
 	if *jsonOutputFlag != "" {
 		if e := adapters.CommitPublication(*jsonOutputFlag, publicationPaths); e != nil {
-			fmt.Fprintln(os.Stderr, "Publication remains interrupted; regenerate to restore prior accepted set:", e)
+			fmt.Fprintln(os.Stderr, recoverFailedGenerationPublication(*jsonOutputFlag, publicationPaths, fmt.Errorf("committing artifact publication: %w", e)))
 			os.Exit(1)
 		}
-		if e := recordGenerationPublication(project, *captureDirFlag, activeTicketID, "committed", *jsonOutputFlag, *appendFlag, factLedger.Sessions, "Ledger and requested summary replacement committed.", freshSessions); e != nil {
-			fmt.Fprintln(os.Stderr, "Artifacts committed but diagnostic acknowledgement failed; publication verification remains incomplete:", e)
-			os.Exit(1)
+		if *autoFlag {
+			if e := recordGenerationPublication(project, *captureDirFlag, activeTicketID, "committed", *jsonOutputFlag, *appendFlag, factLedger.Sessions, "Ledger and requested summary replacement committed.", freshSessions); e != nil {
+				fmt.Fprintln(os.Stderr, "Artifacts committed but diagnostic acknowledgement failed; publication verification remains incomplete:", e)
+				os.Exit(1)
+			}
 		}
 	}
 	if !*autoFlag {
@@ -797,7 +856,6 @@ func runServer(args []string) {
 
 	serverFlags := flag.NewFlagSet("server", flag.ExitOnError)
 	portFlag := serverFlags.Int("port", 8085, "Port to listen on")
-	workspacesFlag := serverFlags.String("workspaces", "", "Path to workspaces directory")
 	dbPathFlag := serverFlags.String("db-path", "", "Path to OpenCode SQLite database (overrides config)")
 	if len(args) > 0 && args[0] == "help" {
 		serverFlags.Usage()
@@ -810,7 +868,7 @@ func runServer(args []string) {
 	}
 
 	serverFlags.Visit(func(f *flag.Flag) {
-		if (f.Name == "workspaces" && strings.TrimSpace(*workspacesFlag) == "") || (f.Name == "db-path" && strings.TrimSpace(*dbPathFlag) == "") {
+		if f.Name == "db-path" && strings.TrimSpace(*dbPathFlag) == "" {
 			fmt.Fprintf(os.Stderr, "--%s must be nonblank when supplied\n", f.Name)
 			os.Exit(1)
 		}
@@ -821,7 +879,7 @@ func runServer(args []string) {
 		os.Exit(1)
 	}
 
-	workspacesDir, projCfg, err := adapters.ResolveWorkspaceContext(*workspacesFlag)
+	workspacesDir, projCfg, err := adapters.LoadWorkspaceProject("")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Server workspace policy:", err)
 		os.Exit(1)
@@ -903,13 +961,13 @@ func runBackfill(args []string) {
 		fmt.Fprintf(out, "Flags:\n")
 		fmt.Fprintf(out, "  --source <harness>     Required telemetry harness to backfill: opencode, codex, or both\n")
 		fmt.Fprintf(out, "  --codex-home <path>    Explicit Codex source store; otherwise selected local telemetry.sources.codex.home\n")
-		fmt.Fprintf(out, "  --workspaces <path>    Path to root workspaces directory containing agentic_metrics.json ledgers\n")
 		fmt.Fprintf(out, "  --ticket-id <id>       Target single ticket identifier to filter backfill operation\n")
 		fmt.Fprintf(out, "  --recompute-git        Recompute Git code facts and SDLC iterations from repository history\n")
 		fmt.Fprintf(out, "  --code-ref <ref>        Required with --recompute-git; branch or commit to compare with configured base\n")
 		fmt.Fprintf(out, "  --recompute-db         Refresh complete selected-source snapshots without --force; retain unavailable history\n")
 		fmt.Fprintf(out, "  --migrate-schema       Upgrade telemetry ledger schema versions to latest supported version\n")
 		fmt.Fprintf(out, "  --dry-run              Preview planned migrations without writing changes to disk\n")
+		fmt.Fprintln(out, "  --workspace <path>     Select an explicit existing ledger directory")
 		fmt.Fprintf(out, "  --update-summaries     Idempotently update the configured summary filename\n")
 		fmt.Fprintf(out, "  --db-path <path>       Explicit path to OpenCode SQLite database file\n")
 		fmt.Fprintf(out, "  --force                Repeat completed-ledger processing; never bypass preservation or enable fallbacks\n")
@@ -920,7 +978,7 @@ func runBackfill(args []string) {
 		backfillFlags.Usage()
 		return
 	}
-	workspacesFlag := backfillFlags.String("workspaces", "", "Path to root workspaces directory containing agentic_metrics.json ledgers")
+	workspaceSelection := backfillFlags.String("workspace", "", "Explicit existing ledger directory")
 	sourceFlag := backfillFlags.String("source", "", "Telemetry harness to backfill: opencode, codex, or both (required)")
 	codexHomeFlag := backfillFlags.String("codex-home", "", "Explicit Codex source store; otherwise selected local telemetry.sources.codex.home")
 	ticketIDFlag := backfillFlags.String("ticket-id", "", "Target single ticket identifier to filter backfill operation")
@@ -939,7 +997,7 @@ func runBackfill(args []string) {
 		os.Exit(1)
 	}
 	backfillFlags.Visit(func(f *flag.Flag) {
-		if (f.Name == "workspaces" && strings.TrimSpace(*workspacesFlag) == "") || (f.Name == "db-path" && strings.TrimSpace(*dbPathFlag) == "") || (f.Name == "codex-home" && strings.TrimSpace(*codexHomeFlag) == "") {
+		if (f.Name == "db-path" && strings.TrimSpace(*dbPathFlag) == "") || (f.Name == "codex-home" && strings.TrimSpace(*codexHomeFlag) == "") {
 			fmt.Fprintf(os.Stderr, "--%s must be nonblank when supplied\n", f.Name)
 			os.Exit(1)
 		}
@@ -978,7 +1036,8 @@ func runBackfill(args []string) {
 	}
 
 	opts := backfill.BackfillOptions{
-		WorkspacesDir:   *workspacesFlag,
+		Project:         "",
+		Workspace:       *workspaceSelection,
 		TicketID:        *ticketIDFlag,
 		Source:          cleanSource,
 		CodexHome:       resolvedCodexHome,
@@ -1000,7 +1059,7 @@ func runBackfill(args []string) {
 		os.Exit(1)
 	}
 
-	targetDir, err := adapters.ResolveWorkspacesDir(opts.WorkspacesDir)
+	targetDir, _, err := adapters.LoadWorkspaceProject(opts.Project)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error resolving workspaces directory: %v\n", err)
 		os.Exit(1)
@@ -1116,11 +1175,12 @@ func runMigrate(args []string) {
 		fmt.Fprintf(out, "Usage: agentic-lens migrate [flags]\n\n")
 		fmt.Fprintf(out, "Universal stepwise schema migration engine for telemetry ledgers.\n\n")
 		fmt.Fprintf(out, "Flags:\n")
-		fmt.Fprintf(out, "  --workspaces <path>      Path to root workspaces directory containing agentic_metrics.json ledgers\n")
 		fmt.Fprintf(out, "  --ticket-id <id>         Target single ticket identifier to filter migration\n")
+		fmt.Fprintln(out, "  --workspace <path>      Select an explicit existing ledger directory")
 		fmt.Fprintf(out, "  --target-version <int>   Target schema version integer (default %d)\n", domain.CurrentSchemaVersion)
 		fmt.Fprintf(out, "  --dry-run                Preview planned migrations without writing changes to disk\n")
 		fmt.Fprintf(out, "  --backup                 Create .bak backup copy of original file before writing\n")
+		fmt.Fprintln(out, "  --workspace <path>     Select an explicit existing ledger directory")
 		fmt.Fprintf(out, "  --update-summaries       Idempotently update the configured summary filename\n")
 	}
 	if len(args) > 0 && (args[0] == "help" || args[0] == "-h" || args[0] == "--help" || args[0] == "-help") {
@@ -1128,7 +1188,7 @@ func runMigrate(args []string) {
 		migrateFlags.Usage()
 		return
 	}
-	workspacesFlag := migrateFlags.String("workspaces", "", "Path to root workspaces directory containing agentic_metrics.json ledgers")
+	workspaceSelection := migrateFlags.String("workspace", "", "Explicit existing ledger directory")
 	ticketIDFlag := migrateFlags.String("ticket-id", "", "Target single ticket identifier to filter migration")
 	targetVersionFlag := migrateFlags.Int("target-version", domain.CurrentSchemaVersion, "Target schema version integer")
 	dryRunFlag := migrateFlags.Bool("dry-run", false, "Preview planned migrations without writing changes to disk")
@@ -1140,15 +1200,9 @@ func runMigrate(args []string) {
 		os.Exit(1)
 	}
 
-	migrateFlags.Visit(func(f *flag.Flag) {
-		if f.Name == "workspaces" && strings.TrimSpace(*workspacesFlag) == "" {
-			fmt.Fprintln(os.Stderr, "--workspaces must be nonblank when supplied")
-			os.Exit(1)
-		}
-	})
-
 	opts := backfill.MigrationOptions{
-		WorkspacesDir:   *workspacesFlag,
+		Project:         "",
+		Workspace:       *workspaceSelection,
 		TicketID:        *ticketIDFlag,
 		TargetVersion:   *targetVersionFlag,
 		DryRun:          *dryRunFlag,
@@ -1163,7 +1217,7 @@ func runMigrate(args []string) {
 		os.Exit(1)
 	}
 
-	targetDir, err := adapters.ResolveWorkspacesDir(opts.WorkspacesDir)
+	targetDir, _, err := adapters.LoadWorkspaceProject(opts.Project)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error resolving workspaces directory: %v\n", err)
 		os.Exit(1)
@@ -1327,7 +1381,7 @@ func printRootUsage() {
 	fmt.Fprintln(out, "  version   Print version and build information")
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "Root Workspace Inspection Flags:")
-	fmt.Fprintln(out, "  --workspaces <path>   Path to root workspaces directory containing agentic_metrics.json ledgers")
+	fmt.Fprintln(out, "  --workspace <path>     Select an explicit existing ledger directory")
 	fmt.Fprintln(out, "  --ticket-id <id>      Target ticket identifier to filter and report on")
 	fmt.Fprintln(out, "  --list                List all discovered ticket workspaces and summary metrics")
 	fmt.Fprintln(out, "  --anomalies           Display anomalies and health flags for target ticket")
@@ -1350,7 +1404,11 @@ func initCommand(args []string) error {
 	localSettings := flags.String("local-settings", "", "Explicit approved local YAML choices; fills only missing choices")
 	name := flags.String("project-name", "", "Explicit project label override for the shared candidate")
 	version := flags.String("agenticlens-version", "", "Approved exact release pin; otherwise preserve candidate/existing valid pin")
-	workspaces := flags.String("workspaces", "", "Explicit workspace root (required for new shared configuration)")
+	var workspaces repeatStringFlag
+	flags.Var(&workspaces, "workspace-root", "Explicit workspace search root; repeat for multiple roots")
+	discoveryDepth := flags.Int("discovery-depth", 0, "Maximum discovery depth written for selected roots")
+	directoryBudget := flags.Int("directory-budget", 300, "Directory budget written for selected roots")
+	publicationState := flags.String("publication-state-dir", "~/.agenticlens/state", "Writable local operational publication state home")
 	output := flags.String("output", ".agenticlens-config.yaml", "Canonical shared YAML output path (.agenticlens-config.yaml or .agenticlens-config.yml)")
 	localOnly := flags.Bool("local-only", false, "Fill missing explicitly supplied local choices; preserve valid existing choices")
 	state := flags.String("state-dir", "", "Explicit local capture state directory")
@@ -1374,7 +1432,7 @@ func initCommand(args []string) error {
 	}
 	provided := map[string]bool{}
 	flags.Visit(func(f *flag.Flag) { provided[f.Name] = true })
-	for _, choice := range []struct{ flag, value string }{{"settings", *settings}, {"local-settings", *localSettings}, {"project-name", *name}, {"agenticlens-version", *version}, {"workspaces", *workspaces}, {"state-dir", *state}, {"capture-enabled", *enabled}, {"source", *source}, {"codex-home", *codexHome}, {"db-path", *database}, {"capture-state-dir", *captureState}} {
+	for _, choice := range []struct{ flag, value string }{{"settings", *settings}, {"local-settings", *localSettings}, {"project-name", *name}, {"agenticlens-version", *version}, {"publication-state-dir", *publicationState}, {"state-dir", *state}, {"capture-enabled", *enabled}, {"source", *source}, {"codex-home", *codexHome}, {"db-path", *database}, {"capture-state-dir", *captureState}} {
 		if provided[choice.flag] && strings.TrimSpace(choice.value) == "" {
 			return fmt.Errorf("--%s must be nonblank when supplied", choice.flag)
 		}
@@ -1382,7 +1440,7 @@ func initCommand(args []string) error {
 	if *localOnly {
 		for key := range provided {
 			switch key {
-			case "local-only", "local-settings", "state-dir", "capture-enabled", "source", "codex-home", "db-path", "output", "dry-run":
+			case "local-only", "local-settings", "publication-state-dir", "state-dir", "capture-enabled", "source", "codex-home", "db-path", "output", "dry-run":
 			default:
 				return fmt.Errorf("--local-only cannot be combined with --%s", key)
 			}
@@ -1431,7 +1489,7 @@ func initCommand(args []string) error {
 	for _, choice := range []struct {
 		flag  string
 		value *string
-	}{{"workspaces", workspaces}, {"codex-home", codexHome}, {"db-path", database}, {"state-dir", state}} {
+	}{{"codex-home", codexHome}, {"db-path", database}, {"state-dir", state}, {"publication-state-dir", publicationState}} {
 		if !provided[choice.flag] {
 			continue
 		}
@@ -1445,6 +1503,20 @@ func initCommand(args []string) error {
 		}
 		*choice.value = physical
 	}
+	for i, path := range workspaces {
+		if strings.TrimSpace(path) == "" {
+			return errors.New("--workspace-root must be nonblank when supplied")
+		}
+		expanded, pathErr := adaptersconfig.ExpandHomePath(path)
+		if pathErr != nil {
+			return pathErr
+		}
+		physical, pathErr := filesystem.PhysicalPath(expanded)
+		if pathErr != nil {
+			return fmt.Errorf("--workspace-root: %w", pathErr)
+		}
+		workspaces[i] = physical
+	}
 	for _, candidate := range []*string{settings, localSettings} {
 		if *candidate != "" {
 			expanded, pathErr := adaptersconfig.ExpandHomePath(*candidate)
@@ -1454,7 +1526,7 @@ func initCommand(args []string) error {
 			*candidate = expanded
 		}
 	}
-	localYAML, err := adaptersconfig.InitialLocalYAMLWithSettings(project, *localSettings, *enabled, *source, *codexHome, *database, *state)
+	localYAML, err := adaptersconfig.InitialLocalYAMLWithSettings(project, *localSettings, *enabled, *source, *codexHome, *database, *state, *publicationState)
 	if err != nil {
 		return err
 	}
@@ -1490,14 +1562,13 @@ func initCommand(args []string) error {
 		}
 		cfg.ProjectName = *name
 	}
-	if provided["workspaces"] {
-		if strings.TrimSpace(*workspaces) == "" {
-			return errors.New("--workspaces cannot be blank")
+	if len(workspaces) > 0 {
+		cfg.Workspaces.Roots = []domain.WorkspaceRootConfig{}
+		for _, path := range workspaces {
+			cfg.Workspaces.Roots = append(cfg.Workspaces.Roots, domain.WorkspaceRootConfig{Path: path, Discovery: domain.WorkspaceDiscoveryConfig{MaxDepth: *discoveryDepth, MaxDirectories: *directoryBudget}})
 		}
-		cfg.Workspaces.Dir = *workspaces
-	} else if !*complete {
-		return errors.New("new configuration requires an explicit nonblank --workspaces")
 	}
+
 	if provided["agenticlens-version"] {
 		if err := adaptersconfig.ValidateReleaseVersion(*version); err != nil {
 			return err
@@ -1801,7 +1872,7 @@ func main() {
 	flag.Usage = printRootUsage
 
 	ticketIDFlag := flag.String("ticket-id", "", "Target ticket identifier to filter and report on")
-	workspacesFlag := flag.String("workspaces", "", "Path to root workspaces directory containing agentic_metrics.json ledgers")
+	workspaceSelection := flag.String("workspace", "", "Explicit ledger directory for detail selection")
 	appendFlag := flag.String("append", "", "Path to markdown summary file to idempotently update with metrics table")
 	jsonOutputFlag := flag.String("json-output", "", "Path to write computed metrics ledger as JSON")
 	listFlag := flag.Bool("list", false, "List all discovered ticket workspaces and summary metrics")
@@ -1816,16 +1887,16 @@ func main() {
 		return
 	}
 
-	flag.Visit(func(f *flag.Flag) {
-		if f.Name == "workspaces" && strings.TrimSpace(*workspacesFlag) == "" {
-			fmt.Fprintln(os.Stderr, "--workspaces must be nonblank when supplied")
-			os.Exit(1)
-		}
-	})
-	workspacesDir, projCfg, err := adapters.ResolveWorkspaceContext(*workspacesFlag)
+	workspacesDir, projCfg, err := adapters.LoadWorkspaceProject("")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Error selecting workspace policy:", err)
 		os.Exit(1)
+	}
+	if (*appendFlag != "" || *jsonOutputFlag != "") && *workspaceSelection != "" {
+		if err = adapters.RecoverWorkspaceArtifacts(workspacesDir, *workspaceSelection, *jsonOutputFlag, *appendFlag); err != nil {
+			fmt.Fprintln(os.Stderr, "Artifact recovery:", err)
+			os.Exit(1)
+		}
 	}
 	report := adapters.ScanWorkspaces(workspacesDir)
 	if report.FatalError != "" {
@@ -1833,7 +1904,7 @@ func main() {
 		os.Exit(1)
 	}
 	for _, diagnostic := range report.Diagnostics {
-		fmt.Fprintf(os.Stderr, "Warning: %s\n", diagnostic.Message)
+		fmt.Fprintf(os.Stderr, "Warning at %s: %s\n", diagnostic.Path, diagnostic.Message)
 	}
 	if *ticketIDFlag != "" {
 		for _, diagnostic := range report.Diagnostics {
@@ -1844,7 +1915,7 @@ func main() {
 		}
 	}
 
-	if len(report.Ledgers) == 0 {
+	if len(report.Ledgers) == 0 && (*listFlag || *ticketIDFlag == "") {
 		fmt.Fprintf(os.Stderr, "No valid agentic_metrics.json ledgers found in %s\n", workspacesDir)
 		os.Exit(1)
 	}
@@ -1868,34 +1939,54 @@ func main() {
 			if ledger.TicketTitle != nil && *ledger.TicketTitle != "" {
 				title = *ledger.TicketTitle
 			}
-			fmt.Printf("%-15s %-12s %-10s %-12s %-10s %-16s %s\n", tid, dur, cost, health, iters, anomSummary, title)
+			fmt.Printf("%-15s %-12s %-10s %-12s %-10s %-16s %s [%s]\n", tid, dur, cost, health, iters, anomSummary, title, ledger.WorkspacePath)
 		}
 		return
 	}
 
+	var artifactSelection *adapters.WorkspaceArtifactSelection
+	defer func() {
+		if artifactSelection != nil {
+			if closeErr := artifactSelection.Close(); closeErr != nil {
+				fmt.Fprintln(os.Stderr, "Closing workspace selection:", closeErr)
+			}
+		}
+	}()
+	loadSelected := func(ticket, project, selection string) (*domain.AgenticMetricsLedger, error) {
+		if *appendFlag == "" && *jsonOutputFlag == "" {
+			return adapters.LoadTicketWorkspace(ticket, project, selection)
+		}
+		var loadErr error
+		artifactSelection, loadErr = adapters.LoadWorkspaceArtifactSelection(ticket, project, selection)
+		if loadErr != nil {
+			return nil, loadErr
+		}
+		return &artifactSelection.Ledger, nil
+	}
 	var targetLedger *domain.AgenticMetricsLedger
 	if *ticketIDFlag != "" {
-		for i := range report.Ledgers {
-			l := &report.Ledgers[i]
-			if l.TicketID != nil && *l.TicketID == *ticketIDFlag {
-				targetLedger = l
-				break
-			}
-		}
-		if targetLedger == nil {
-			fmt.Fprintf(os.Stderr, "Error: Ticket '%s' not found in scanned workspaces (%s)\n", *ticketIDFlag, workspacesDir)
-			os.Exit(1)
-		}
+		targetLedger, err = loadSelected(*ticketIDFlag, workspacesDir, *workspaceSelection)
 	} else {
-		// Default to most recently updated ledger
 		var latest *domain.AgenticMetricsLedger
 		for i := range report.Ledgers {
-			l := &report.Ledgers[i]
-			if latest == nil || l.UpdatedAt > latest.UpdatedAt {
-				latest = l
+			candidate := &report.Ledgers[i]
+			if *workspaceSelection != "" && candidate.WorkspacePath != *workspaceSelection {
+				continue
+			}
+			if latest == nil || candidate.UpdatedAt > latest.UpdatedAt {
+				latest = candidate
 			}
 		}
-		targetLedger = latest
+		if latest == nil {
+			err = fmt.Errorf("no ledger matches selected location")
+		} else {
+			selection := *workspaceSelection
+			targetLedger, err = loadSelected(*latest.TicketID, workspacesDir, selection)
+		}
+	}
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Workspace selection:", err)
+		os.Exit(1)
 	}
 
 	if *anomaliesFlag {
@@ -1909,20 +2000,17 @@ func main() {
 
 	tableMD := adapters.FormatMarkdownMetricsTable(*targetLedger, projCfg.RoleOrder)
 
-	if *appendFlag != "" {
-		if err := adapters.UpdateSummaryFile(*appendFlag, tableMD); err != nil {
-			fmt.Fprintf(os.Stderr, "Error updating summary file %s: %v\n", *appendFlag, err)
+	if *appendFlag != "" || *jsonOutputFlag != "" {
+		if err := adapters.PublishWorkspaceArtifacts(workspacesDir, artifactSelection, *jsonOutputFlag, *appendFlag); err != nil {
+			fmt.Fprintln(os.Stderr, "Artifact publication:", err)
 			os.Exit(1)
 		}
-		fmt.Printf("AgenticLens metrics table successfully updated in %s\n", *appendFlag)
-	}
-
-	if *jsonOutputFlag != "" {
-		if err := adapters.SaveMetricsLedger(*jsonOutputFlag, *targetLedger); err != nil {
-			fmt.Fprintf(os.Stderr, "Error writing JSON to %s: %v\n", *jsonOutputFlag, err)
-			os.Exit(1)
+		if *appendFlag != "" {
+			fmt.Printf("AgenticLens metrics table successfully updated in %s\n", *appendFlag)
 		}
-		fmt.Printf("AgenticLens computed ledger written to %s\n", *jsonOutputFlag)
+		if *jsonOutputFlag != "" {
+			fmt.Printf("AgenticLens computed ledger written to %s\n", *jsonOutputFlag)
+		}
 	}
 
 	if *appendFlag == "" && *jsonOutputFlag == "" {

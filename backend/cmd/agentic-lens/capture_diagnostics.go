@@ -327,28 +327,22 @@ func inspectCapture(ctx context.Context, command, directory, project string, pol
 		}
 		sort.Strings(ordered)
 		for _, ticket := range ordered {
-			destination := filepath.Join(project, cfg.Workspaces.Dir, ticket, "agentic_metrics.json")
-			if e = capture.ValidateDestination(project, destination); e != nil {
-				return e
-			}
 			publication := domain.CapturePublicationEvidence{TicketID: ticket}
-			// A persisted explicit destination is authoritative for this collection.
 			for _, d := range view.Diagnostics {
 				if d.TicketID == ticket && d.Phase == "publication" && d.Outcome == "committed" {
-					destination = d.Destination
 					publication.PublishedAt = d.ObservedAt
 				}
 			}
-			if e = capture.ValidateDestination(project, destination); e != nil {
-				return e
-			}
-			ledger, readErr := adapters.LoadObservedFactLedger(destination)
-			if readErr == nil && ledger != nil && ledger.TicketID != nil && *ledger.TicketID == ticket {
-				publication.Available = true
-				publication.Sessions = ledger.Sessions
+			if location, err := adapters.ResolveTicketLocation(cfg, ticket, ""); err == nil {
+				ledger, readErr := adapters.LoadObservedFactLedger(location.LedgerPath)
+				if readErr == nil && ledger != nil && ledger.TicketID != nil && *ledger.TicketID == ticket {
+					publication.Available = true
+					publication.Sessions = ledger.Sessions
+				}
 			}
 			evidence.Publications = append(evidence.Publications, publication)
 		}
+
 	}
 	issues = domain.CaptureAdvisoryIssues(evidence)
 	if len(view.InstallationIssues) > 0 {

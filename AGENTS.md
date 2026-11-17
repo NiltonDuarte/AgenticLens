@@ -6,60 +6,38 @@ Mandatory operational policies for all agents and contributors working in this r
 
 ## 1. Ticketed and Ad Hoc Work
 
-Every task, feature, bugfix, or refactoring in this repository must have a ticket identifier and an isolated ticket workspace. A planning specification or index entry under `plan/` is not required for an ad hoc ticket.
+Every task has one canonical configured ticket ID and one isolated execution home. Roadmap tickets and execution workspaces serve different purposes.
 
-### Configurable Workspace Root
-- Define `<WORKSPACES_DIR>` from required `workspaces.dir` in the selected `.agenticlens-config.yaml` or `.agenticlens-config.yml`. Both names in one directory are an error.
-- Missing/invalid required configuration requires explicit setup; never invent a workspace root.
-- Use `<WORKSPACES_DIR>` as the root for all ticket workspaces and plan paths below.
+### Roadmap, changes and configured ledger roots
+
+- This repository's long-term roadmap remains in `alspaces/plan/to-do`, `alspaces/plan/done` and `alspaces/plan/TICKETS.md`. Tickets own evolving intent; the index owns priority, readiness, dependencies and status. Creating or reprioritizing a ticket does not create an OpenSpec change.
+- Selected work uses a linked change under `openspec/changes/<ticket-prefixed-description>/`; archive moves that same home under `openspec/changes/archive/`. Define `<CHANGE_DIR>` from the selected actual change location, never reconstruct it from a ticket ID. Use the pinned [OpenSpec workflow](docs/OPENSPEC_WORKFLOW.md). A ticket links to its execution change and that change links back to the ticket.
+- Read explicit `workspaces.roots` in the selected `.agenticlens-config.yaml` or `.agenticlens-config.yml`; both suffixes together are an error. Each entry has `path` and `discovery.max_depth`/`max_directories`. No root ID, minimum depth, scalar `workspaces.dir`, runtime single-directory override or invented root is supported. Writers initialize depth 0/budget 300; this repository explicitly selects depth 1/budget 300 for its containers. Missing/invalid policy requires setup.
+- AgenticLens discovers only directories containing `agentic_metrics.json`; ledger ticket identity is authoritative. Folder names, OpenSpec metadata and planning files establish no runtime identity. Before first generation, supply the canonical ID and explicit ledger destination. No workspace registration, identity sidecar or bind/create/resolve command is needed. Distinct ledgers with the same ID require explicit location selection, never root-order precedence or merging.
+- OpenSpec creates its folders; arbitrary other configured layouts remain first-class platform choices. Moving a ledger across configured roots does not change ticket/session identity, type, completion or ownership. All readers/writers use the same resolved location; refresh must not recreate former/deleted destinations.
 
 ### Rules
-1. **Mandatory Ticket Identifier**:
-   - A ticket ID is required before starting any work. If the request does not provide one, ask the user or assign an ad hoc identifier using an explicitly configured literal prefix. Never invent a prefix or description when configuration is absent.
-   - Use an existing ticket ID when one is provided; do not create a duplicate.
-   - An ad hoc ticket ID does not require a corresponding specification or entry under `<WORKSPACES_DIR>/plan/`.
-2. **Single-Ticket Exclusivity**:
-   - Agents are strictly prohibited from working on more than one ticket at a time.
-   - Once work begins on a ticket, the agent is locked to that ticket. Agents must refuse any request to switch to another ticket or work on multiple tickets simultaneously within the same session.
-3. **Prompt Steering & Iterations**:
-   - Once a ticket is active, every subsequent user prompt must be interpreted as steering feedback for that specific ticket.
-   - Advance iterations (`iterations/<NN>/`) when scope or acceptance boundaries change. Keep clarification, status questions, and review corrections within the current iteration; do not create a new plan for each message. Preserve approval and completed verification across compaction. Honor explicit requests to consolidate plans and remove empty iteration folders. Record each material steering delta with its source, changed acceptance criteria, preserved guarantees, superseded decision, and verification impact. A later plan number alone does not establish approval or supersede accepted behavior; current explicit user instructions govern. Distinguish new requirements from review corrections, routine integration, and previously verified work.
-4. **Dedicated Workspace Allocation**:
-   - Every task must have its isolated workspace under `<WORKSPACES_DIR>/<TICKET_ID>/`, including ad hoc tickets.
-   - Never mix artifacts across tickets or leave task-owned changes untracked at handoff. Record the initial Git status and preserve unrelated user or agent changes; stage only files owned by this task.
-   - Check the existing workspace and ticket index before allocating an ad hoc identifier. A generated branch name is not proof that its ticket number is unused.
-   - A rename or relocation of ticket artifacts must not require application or test changes. Tests must use self-contained fixtures, never the live ticket workspace.
-5. **Workspace Deliverables Checklist**:
-   - Apply the [shared writing rules](#artifact-writing-rules); each skill owns its artifact purposes, content and length guidance. Required evidence and unresolved limits must survive shortening.
-   - `<WORKSPACES_DIR>/<TICKET_ID>/SUMMARY.md`: Current outcome, material decisions, verification and remaining limits.
-   - `<WORKSPACES_DIR>/<TICKET_ID>/PULL_REQUEST.md`: Pull request description and context.
-   - `<WORKSPACES_DIR>/<TICKET_ID>/CONTRACT.md`: Frozen technical contract and acceptance boundaries, when required by the configured artifact list.
-   - **Plan Lifecycle Synchronization**: When a matching specification exists in `<WORKSPACES_DIR>/plan/to-do/<TICKET_ID>*.md`, move it to `<WORKSPACES_DIR>/plan/done/` when the ticket is completed. Remove the completed ticket entry from `<WORKSPACES_DIR>/plan/TICKETS.md` only if one exists; do not create a specification, ticket entry, or Done section just to satisfy this lifecycle rule. For ticketed work, unblock downstream tickets whose dependencies are now fully satisfied by promoting them to `## Ready` with `Status: Ready`.
-   - `<WORKSPACES_DIR>/<TICKET_ID>/agentic_metrics.json`: Raw session telemetry ledger (generated at the very final step of the iteration).
-   - Store plans under `iterations/<NN>/PLAN.md`. Review artifacts, all finding/actor attribution and cleanup follow the [canonical retention protocol](.agents/skills/agentic-lens-review/references/parallel-review.md#completed-review-retention). Retain REVIEW_SUMMARY.json and its linked human summary before deleting approved-review working files. Never hide unresolved findings, accepted debt or incomplete evidence; unrelated historical audits are not cleanup targets.
-6. **Telemetry Ingestion as the Final Step & Conventional Commit Type Classification**:
-   - **Delayed Ingestion Mandate**: Generating telemetry must always be delayed to the very last step of the workflow. Running telemetry early causes subsequent turns, tool calls, compactions, and subagent sessions to be omitted from the ledger.
-   - **Literal Nonce Generation**: The agent must generate a unique random nonce directly (by any means, e.g. an 8 to 16 character alphanumeric or hex string) and supply the literal token directly in the command. Shell variables (`$NONCE`) or command substitutions (`$(...)`) must not be used because OpenCode records tool inputs into SQLite before subshell expansion occurs, which causes database searches for the expanded token to fail.
-   - Execute AgenticLens CLI with an explicit conventional commit `type` immediately before final commit:
+
+1. **Ticket identity and exclusivity**: Use the supplied ID. If absent, ask or allocate an unused ID from an explicitly configured literal prefix with description; never invent a prefix. Check the roadmap and existing work before allocation. Ad hoc tickets need no roadmap entry. An agent remains locked to one ticket for the session; subsequent prompts steer that ticket, not another task.
+2. **Execution isolation and preserved work**: Read the actual branch/worktree, initial Git status, ticket, selected change and current approval before writing. Never mix ticket artifacts or discard unrelated changes. Assign one owner per writable path; stage only task-owned deliverables. Do not move another active owner's writable artifacts without coordination. Existing historical audits and supported ledgers remain intact; no wholesale roadmap migration is required.
+3. **Scope and iterations**: `design.md` owns the execution contract, explicit user approval and material steering. `tasks.md` owns current steps and progress. Keep clarification/review corrections in the current iteration; advance an iteration only for a material acceptance boundary change unless the user explicitly consolidates it. Record source, changed acceptance, preserved guarantees, superseded decision and verification impact in design, without a parallel editable plan/contract. A roadmap edit, planning readiness, later iteration or checkbox is not scope approval. Preserve existing approval/evidence across compaction.
+4. **Change artifacts**: `proposal.md` links the roadmap intent; `specs/<capability>/spec.md` owns selected observable acceptance; `design.md` owns technical decisions/approval/steering; `tasks.md` owns execution sequencing; `delivery.md` owns current outcome, tested revision/diff, actual checks, attributed review, limits and PR context; `agentic_metrics.json` owns final raw session telemetry. PO planning changes use the planning schema and never author developer contracts. Do not keep independently editable CONTRACT/PLAN/SUMMARY/PULL_REQUEST copies alongside these artifacts. Review evidence is change-local under `evidence/iterations/<NN>/`, following [canonical retention](.agents/skills/agentic-lens-review/references/parallel-review.md#completed-review-retention); retain compact findings and linked human evidence before deleting completed review working files. Keep unresolved findings/incomplete coverage visible. Tests use self-contained fixtures, never a live ticket workspace or change path.
+5. **Roadmap lifecycle**: Update roadmap status from verified delivered outcomes. Only when a matching ticket is actually complete, move its existing specification from `alspaces/plan/to-do` to `alspaces/plan/done` and remove its existing index entry; never create a ticket/spec/Done section to satisfy this rule. Promote downstream tickets to Ready only when all dependencies are delivered. OpenSpec artifact readiness, task completion, archive and roadmap-ticket completion are separate decisions. Keep navigable links to archived execution evidence.
+6. **Operational publication state**: Local setup explicitly writes `agenticlens.state_dir`, initially `~/.agenticlens/state`, separately from versioned binaries and capture storage. Writers may initialize it without capture enablement/registry access. Journals/backups and locks stay there; only a transient pending-publication indicator accompanies an interrupted ledger. It is transaction status, never workspace identity. Reads require no private state and must report a pending set as incomplete when recovery data is unavailable. Retired journals/configuration require explicit update/recovery, not compatibility fallbacks or deletion of accepted facts.
+7. **Final telemetry and commit type**:
+   - Delay telemetry to the last extraction step immediately before the final artifact commit, so later calls and child sessions are included. Generate a unique literal nonce directly and put that literal in the command; no shell variable or command substitution for the nonce.
+   - Confirm supported options with the built CLI and select the actual source explicitly. A Codex session uses `--source codex`; use `--codex-home` only for an actual nonstandard session-store location.
+   - Publish to the selected change, with an explicit conventional type:
      ```bash
-     agentic-lens --al-offline --al-project . generate --nonce <GENERATED_NONCE> --ticket-id <TICKET_ID> --ticket-type <CONVENTIONAL_TYPE> --json-output <WORKSPACES_DIR>/<TICKET_ID>/agentic_metrics.json --append <WORKSPACES_DIR>/<TICKET_ID>/SUMMARY.md
+     agentic-lens --al-offline --al-project . generate --source codex --nonce <LITERAL_NONCE> --ticket-id <TICKET_ID> --ticket-type <TYPE> --json-output <CHANGE_DIR>/agentic_metrics.json --append <CHANGE_DIR>/delivery.md
      ```
-   - Select the actual harness explicitly when defaults are ambiguous. For a Codex session, add `--source codex`; use `--codex-home` only when its session store is outside the normal configured location. Confirm supported options with the built CLI.
-   - Before committing telemetry, verify the root session, source, expected child sessions, and preservation of existing sessions from other harnesses. A successful exit alone does not establish complete extraction. Record unavailable facts or source errors; never manufacture a successful or empty ledger.
-   - Commit the generated ledger and rendered summary. Keep raw transcripts outside Git. Backfill requires the machine holding the original source sessions; unavailable source data must remain explicitly incomplete.
-   - `<CONVENTIONAL_TYPE>` must match standard conventional commit classifications (`feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `ci`, `perf`, `build`).
-   - PO tickets (`PO-#`) must strictly use `--ticket-type docs`.
-   - Generic tickets (`GEN-#`) must use `--ticket-type chore` unless explicitly a feature (`feat`).
-   - Developer tickets must use the corresponding conventional commit type matching their branch prefix (`feat`, `fix`, `refactor`, etc.). Never default all tickets to `feature`.
-   - Ad hoc tickets use their assigned ticket ID and isolated workspace for telemetry. They do not require a specification or index entry under `plan/`.
-7. **Pull Request Delivery & Handoff**:
-   - Commit all implementation deliverables on the feature branch first (stage the reviewed task-owned paths, then commit). Git requires a clean working tree before merging.
-   - Merge `main` into the feature branch (`git fetch origin main && git merge origin/main --no-edit`) to resolve any upstream conflicts, and verify test suites pass (`make`).
-   - Extract the PR title directly from the first line of `PULL_REQUEST.md` (e.g. `PR_TITLE=$(head -n 1 <WORKSPACES_DIR>/<TICKET_ID>/PULL_REQUEST.md | sed 's/^# *//')`).
-   - Check the existing PR state before follow-up delivery. If it has merged, compare the remaining branch changes with current `origin/main` and open a new PR for any undelivered changes; do not report a merged PR as delivering later work.
-   - Commit final deliverables and telemetry facts on the feature branch, push upstream, and open a GitHub Pull Request via `gh pr create --title "$PR_TITLE" --body-file <WORKSPACES_DIR>/<TICKET_ID>/PULL_REQUEST.md`.
-   - Avoid directly merging or checking out `main` within agent worktrees.
-   - The Pull Request URL must be prominently displayed at the top of the final handoff report.
+   - Verify root/source/expected children and preservation of unavailable owners and other harnesses. Exit zero alone does not establish complete extraction. Record missing sources, unknown costs and incomplete facts; never manufacture an empty/successful ledger. Commit raw ledger and rendered delivery metrics; keep transcripts, private journals and source stores outside Git. Backfill needs the machine with the original sources.
+   - Types are `feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `ci`, `perf` or `build`. PO uses `docs`; GEN uses `chore` unless explicitly a feature. Development uses the actual conventional branch/change classification, never blanket `feature`.
+8. **PR delivery and handoff**:
+   - Inspect/stage owned implementation paths and commit the candidate before integration; preserve unrelated work. Fetch/merge main into the feature branch, resolve both sides' accepted behavior, then run required integrated `make` and affected verification/review.
+   - `delivery.md` starts with the conventional PR title and contains the authored PR context. Derive a temporary body from its Pull request section, excluding generated metrics; do not maintain another editable PR document. Create/update the PR using that derived body file.
+   - Check existing PR state before follow-up delivery: a merged PR cannot deliver later changes. Commit final evidence and telemetry, push, create/update and link the correct PR. Approval to publish is not approval to merge. Never directly check out or merge main within an agent worktree.
+   - Display the PR URL prominently at the top of the final handoff, with delivered behavior, verification and limits.
 
 ### Artifact writing rules
 

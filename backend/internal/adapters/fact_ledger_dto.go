@@ -86,6 +86,7 @@ func MigrationInfoDTOFromDomain(info *domain.MigrationInfo) *MigrationInfoDTO {
 
 // AgenticFactLedgerDTO represents the complete raw agentic_metrics.json schema.
 type AgenticFactLedgerDTO struct {
+	Tags          map[string]string `json:"tags,omitempty"`
 	SchemaVersion *int              `json:"schema_version,omitempty"`
 	Migration     *MigrationInfoDTO `json:"migration,omitempty"`
 	TicketID      *string           `json:"ticket_id"`
@@ -145,6 +146,7 @@ func (dto AgenticFactLedgerDTO) ToDomain() domain.AgenticFactLedger {
 	}
 
 	return domain.AgenticFactLedger{
+		Tags:          domain.MergeTags(nil, dto.Tags),
 		SchemaVersion: dto.SchemaVersion,
 		Migration:     mig,
 		TicketID:      dto.TicketID,
@@ -161,6 +163,9 @@ func (dto AgenticFactLedgerDTO) ToDomain() domain.AgenticFactLedger {
 
 // Validate enforces required fields at the persisted telemetry boundary.
 func (dto AgenticFactLedgerDTO) Validate() error {
+	if err := domain.ValidateTags(dto.Tags); err != nil {
+		return err
+	}
 	for _, session := range dto.Sessions {
 		for _, inv := range session.Invocations {
 			if err := domain.ValidateDuration(inv.ActiveDurationSeconds, inv.ProvisionalSeconds); err != nil {
@@ -270,6 +275,7 @@ func AgenticFactLedgerDTOFromDomain(ledger domain.AgenticFactLedger) AgenticFact
 	}
 
 	return AgenticFactLedgerDTO{
+		Tags:          domain.MergeTags(nil, ledger.Tags),
 		SchemaVersion: ledger.SchemaVersion,
 		Migration:     MigrationInfoDTOFromDomain(ledger.Migration),
 		TicketID:      ledger.TicketID,
@@ -431,10 +437,12 @@ func ValidateRuntimeFactLedger(data []byte) error {
 	return decoded.Validate()
 }
 
-func toDomainTicketType(raw *string)*domain.ConventionalTicketType{
- if raw==nil{return nil}
- value:=domain.ConventionalTicketType(*raw)
- return &value
+func toDomainTicketType(raw *string) *domain.ConventionalTicketType {
+	if raw == nil {
+		return nil
+	}
+	value := domain.ConventionalTicketType(*raw)
+	return &value
 }
 
 func fromDomainTicketType(tt *domain.ConventionalTicketType) *string {

@@ -9,29 +9,27 @@ Coordinate application changes through planner, coder, tester and independent
 reviewers. Follow [repository policy](../../../AGENTS.md) for ticket isolation,
 role boundaries, approvals, telemetry and delivery, and
 [technical guidelines](../../../TECHNICAL_GUIDELINES.md) for engineering rules.
-Read the selected canonical shared YAML for explicit ticket prefixes and workspaces.dir; missing/invalid policy fails with setup guidance. Both canonical suffixes in one directory are an error. Paths below are relative to the configured ticket workspace.
+Read the selected canonical shared YAML for explicit ticket prefixes and `workspaces.roots`; missing/invalid policy fails with setup guidance. Both canonical suffixes together are an error. Roadmap tickets remain separate from execution changes. Select/create the ticket-linked OpenSpec home through the [pinned workflow](../../../docs/OPENSPEC_WORKFLOW.md); paths below are relative to that actual change directory, including after archive.
 
 ## Setup & Workspace Structure
 
 Read configuration and Git status, identify the supplied ticket and actual
 branch/workspace, and record the baseline. Preserve unrelated changes. For a
-resumed ticket, read the contract, active plan, approval, review status and valid
+resumed ticket, read design/tasks, approval, review status and valid
 verification before selecting the next action. Reuse its workspace/branch;
-create a feature branch only when needed, never develop on main. Read a matching
-specification and update an existing index entry to In Progress; ad hoc work
-requires neither a specification nor an index entry.
+create a feature branch only when needed, never develop on main. Read the matching roadmap specification and update its existing index entry to In Progress when work starts; ad hoc work requires neither a roadmap specification nor an index entry. Link ticket and change in both directions without copying roadmap status into execution artifacts.
 
 | Artifact | Content | Usual prose length |
 | --- | --- | --- |
-| `CONTRACT.md` | Frozen problem, agreed outcome, exclusions and observable acceptance; link canonical technical rules. | 200–400 words |
-| `iterations/<NN>/PLAN.md` | Steps, affected components/owners, verification and review coverage; later plans record acceptance deltas. | 200–400 words |
-| `SUMMARY.md` | Current behavior, decisions, actual checks/revision, review outcome and limits. | 300–600 words before metrics |
-| `PULL_REQUEST.md` | Conventional title first; problem, resulting behavior, validation and limits; link contract/summary. | Usually 100–250 words; at most 3000 characters |
-| `agentic_metrics.json` | Final CLI-generated session ledger; rendered metrics follow the authored summary. | Structured output |
+| `proposal.md` and `specs/<capability>/spec.md` | Selected execution intent and observable acceptance linked to the roadmap ticket. | Concise, sufficient for independent review |
+| `design.md` | Frozen technical contract, explicit approval, owners, decisions and material iteration steering. | 200–400 words before necessary decisions/evidence |
+| `tasks.md` | Current implementation/verification steps and progress; design owns scope. | Proportionate task groups |
+| `delivery.md` | Current outcome, actual verification/review, remaining limits and authored PR context; metrics appended last. | 300–600 words before metrics |
+| `evidence/iterations/<NN>/` | Test/review evidence and permanent compact review findings under canonical retention. | Skill-owned evidence definitions |
+| `agentic_metrics.json` | Final CLI-generated session ledger, beside the execution artifacts. | Structured output |
 
-The contract records agreed outcomes and boundaries; the plan describes how the
-current iteration will achieve them. A correction within accepted scope updates
-the plan/implementation, not the frozen contract. Record acceptance changes as a
+`design.md` records agreed outcomes, approval and boundaries; `tasks.md` describes how the current iteration achieves them. Do not retain parallel editable CONTRACT/PLAN/SUMMARY/PULL_REQUEST documents after transfer into the change. A correction within accepted scope updates
+the plan/implementation, not the approved contract in design. Record acceptance changes as a
 steering delta under repository iteration policy and obtain any renewed approval.
 Use the [shared writing rules](../../../AGENTS.md#artifact-writing-rules).
 Review records and retained findings follow the
@@ -40,7 +38,7 @@ Review records and retained findings follow the
 ## Assignment and return contract
 
 Give each agent its role, specific outcome, owned writable paths, preserved
-behavior, baseline/candidate revision, contract/active-plan pointers and relevant
+behavior, baseline/candidate revision, design/tasks pointers and relevant
 entry points or findings. State that the checkout is shared. Use the supported
 harness tools; do not copy technical policy into delegation prompts.
 
@@ -54,7 +52,7 @@ does not establish completion. The orchestrator never implements application fix
 ### 1. Plan
 
 Give the planner the request, existing agreement/approval, baseline and relevant
-code/test context. Expect the initial contract/plan, or an acceptance delta for a
+code/test context. Expect the initial design/tasks, or an acceptance delta for a
 changed scope: proposed behavior, affected boundaries/owners, verification and
 review coverage, plus unresolved product decisions. Ground in existing modules
 and tests; select applicable [regression boundaries](../../../docs/REGRESSION_PREVENTION.md),
@@ -126,15 +124,14 @@ order under [delivery policy](../../../AGENTS.md#1-ticketed-and-ad-hoc-work):
    actual integrated revision/results; resolve failures and review gaps before
    advancing. Reuse unaffected evidence rather than repeating every investigation.
 4. Issue final consolidated approval only after applicable review coverage and
-   integrated checks pass. Update human artifacts and specification/index status;
+   integrated checks pass. Update delivery evidence and the separate roadmap status from verified delivered outcomes; archive alone does not complete a ticket;
    compact approved review records through the retention protocol.
 5. Generate telemetry at the final extraction point before the final artifact
    commit: literal unique nonce, actual source and conventional ticket type.
    Verify root/child membership, prior-session preservation and source limitations;
    a successful exit alone is insufficient. Exact commands belong to delivery policy.
 6. Commit final artifacts, push and create/update the correct PR. Check its actual
-   state: a merged PR cannot deliver later work. Extract the title from
-   PULL_REQUEST.md, link the PR through available host tools and hand off behavior,
+   state: a merged PR cannot deliver later work. Extract the title and derive a temporary PR body from delivery.md, link the PR through available host tools and hand off behavior,
    verification and limits with the URL first. Approval to publish is not approval
    to merge.
 

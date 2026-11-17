@@ -32,6 +32,9 @@ func (e *ConfigValidationError) Is(target error) bool { return target == ErrInva
 // ValidateConfig validates shared policy needed to interpret project records.
 // Optional source/live/generation policy is required only by its actual consumer.
 func ValidateConfig(cfg domain.ProjectConfig) error {
+	if err := domain.ValidateTags(cfg.Tags); err != nil {
+		return err
+	}
 	for _, entry := range []struct{ key, value string }{{"project_name", cfg.ProjectName}, {"code_metrics.base_branch", cfg.CodeMetrics.BaseBranch}} {
 		if strings.TrimSpace(entry.value) == "" {
 			return &ConfigValidationError{MissingFields: []string{entry.key}}
@@ -70,6 +73,9 @@ func ValidateConfig(cfg domain.ProjectConfig) error {
 				}
 			}
 		}
+	}
+	if err := ValidateWorkspacePolicy(cfg.Workspaces); err != nil {
+		return err
 	}
 	if cfg.Workspaces.Artifacts == nil {
 		return fmt.Errorf("workspaces.artifacts must be an explicit list; [] means none")
@@ -217,9 +223,15 @@ func decodeSharedConfig(path string, validateBootstrap bool) (domain.ProjectConf
 	if err = validateSharedNodes(nodes); err != nil {
 		return cfg, fmt.Errorf("configuration %s: %w", path, err)
 	}
+	tags, tagErr := decodeTags(nodes["tags"])
+	if tagErr != nil {
+		return cfg, fmt.Errorf("configuration %s: %w", path, tagErr)
+	}
 	if err = yaml.Unmarshal(data, &cfg); err != nil {
 		return cfg, fmt.Errorf("decoding YAML configuration %s: %w", path, err)
 	}
+	cfg.Tags = tags
+	cfg.SharedTags = domain.MergeTags(nil, tags)
 	cfg.Settings = make(map[string]bool, len(nodes))
 	for key := range nodes {
 		cfg.Settings[key] = true
@@ -252,6 +264,16 @@ func validateLoadedConfig(cfg domain.ProjectConfig, path string) (domain.Project
 
 // Load selects one whole local file while preserving shared-only persisted reads.
 func Load(project string) (domain.ProjectConfig, error) {
+	return loadSelected(project, true)
+}
+
+// LoadManualGeneration loads the source and project settings used by ad hoc
+// generation without interpreting unused capture-only policy.
+func LoadManualGeneration(project string) (domain.ProjectConfig, error) {
+	return loadSelected(project, false)
+}
+
+func loadSelected(project string, capturePolicy bool) (domain.ProjectConfig, error) {
 	path, err := FindConfigFile(project)
 	if err != nil {
 		return domain.ProjectConfig{}, err
@@ -278,12 +300,18 @@ func Load(project string) (domain.ProjectConfig, error) {
 	if err != nil {
 		return cfg, fmt.Errorf("local configuration %s: %w", selection.LocalPath, err)
 	}
+	localTags, tagErr := decodeTags(nodes["tags"])
+	if tagErr != nil {
+		return cfg, fmt.Errorf("local configuration %s: %w", selection.LocalPath, tagErr)
+	}
+	cfg.Tags = domain.MergeTags(cfg.Tags, localTags)
 	cfg.LocalConfigPath = selection.LocalPath
 	if _, exists := nodes["agenticlens"]; exists {
 		entry, err := parseEntrypoint(data, true)
 		if err != nil {
 			return cfg, fmt.Errorf("local configuration %s: %w", selection.LocalPath, err)
 		}
+		cfg.AgenticLens.StateDir = entry.StateDir
 		if entry.InstallRoot != "" {
 			cfg.AgenticLens.InstallRoot = entry.InstallRoot
 		}
@@ -315,9 +343,11 @@ func Load(project string) (domain.ProjectConfig, error) {
 			}
 		}
 	}
-	cfg.Telemetry.Capture, err = decodeCapturePolicy(data)
-	if err != nil {
-		return cfg, fmt.Errorf("local configuration %s: %w", selection.LocalPath, err)
+	if capturePolicy {
+		cfg.Telemetry.Capture, err = decodeCapturePolicy(data)
+		if err != nil {
+			return cfg, fmt.Errorf("local configuration %s: %w", selection.LocalPath, err)
+		}
 	}
 	return validateLoadedConfig(cfg, path)
 }

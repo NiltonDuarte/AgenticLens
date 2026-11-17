@@ -249,7 +249,7 @@ func TestGitCheckAdvisoryFailuresOutputAndDeadline(t *testing.T) {
 
 func TestGitCheckInvokesNativeManagerWithLiteralPath(t *testing.T) {
 	repo := checkRepository(t)
-	manager := filepath.Join(t.TempDir(), "native manager's command.exe")
+	manager := filepath.Join(t.TempDir(), "native manager's command")
 	build := exec.Command("go", "build", "-ldflags", "-X agenticlens/internal/domain.Version=v9.8.7", "-o", manager, "./cmd/agentic-lens-manager")
 	build.Dir = filepath.Join("..", "..", "..")
 	if output, err := build.CombinedOutput(); err != nil {

@@ -22,7 +22,7 @@ func captureProjectConfig(t *testing.T, project, name string) {
 	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), []byte(data), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.local.yaml"), []byte("telemetry:\n  capture:\n    enabled: true\n    state_dir: .agenticlens-capture\n    max_sessions: 256\n    max_source_bytes: 67108864\n"), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.local.yaml"), []byte("agenticlens:\n  state_dir: publication-state\ntelemetry:\n  capture:\n    enabled: true\n    state_dir: .agenticlens-capture\n    max_sessions: 256\n    max_source_bytes: 67108864\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -173,6 +173,7 @@ func TestPublicationLockSharesPhysicalAliasBeforeAndAfterCreation(t *testing.T) 
 			t.Run(fmt.Sprintf("directory=%t/%s", directoryAlias, state), func(t *testing.T) {
 				t.Setenv("XDG_CACHE_HOME", t.TempDir())
 				project := t.TempDir()
+				captureProjectConfig(t, project, "Publication alias fixture")
 				target := filepath.Join(project, "ledger.json")
 				alias := filepath.Join(project, "alias.json")
 				linkTarget := target
@@ -191,7 +192,7 @@ func TestPublicationLockSharesPhysicalAliasBeforeAndAfterCreation(t *testing.T) 
 						t.Fatal(err)
 					}
 				}
-				first, err := capture.AcquirePublication(context.Background(), alias)
+				first, err := capture.AcquirePublication(context.Background(), alias, project)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -207,7 +208,7 @@ func TestPublicationLockSharesPhysicalAliasBeforeAndAfterCreation(t *testing.T) 
 				}
 				ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 				defer cancel()
-				second, err := capture.AcquirePublication(ctx, target)
+				second, err := capture.AcquirePublication(ctx, target, project)
 				if err == nil {
 					second.Close()
 					t.Fatal("same physical ledger has simultaneous publication owners")
@@ -219,7 +220,7 @@ func TestPublicationLockSharesPhysicalAliasBeforeAndAfterCreation(t *testing.T) 
 					t.Fatal(err)
 				}
 				first = nil
-				second, err = capture.AcquirePublication(context.Background(), target)
+				second, err = capture.AcquirePublication(context.Background(), target, project)
 				if err != nil {
 					t.Fatal(err)
 				}

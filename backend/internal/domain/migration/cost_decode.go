@@ -13,6 +13,7 @@ import (
 type ledgerMetadataInput struct {
 	SchemaVersion *int                           `json:"schema_version"`
 	Migration     *domain.MigrationInfo          `json:"migration"`
+	Tags          map[string]string              `json:"tags,omitempty"`
 	TicketID      *string                        `json:"ticket_id"`
 	TicketTitle   *string                        `json:"ticket_title"`
 	TicketType    *domain.ConventionalTicketType `json:"ticket_type"`
@@ -205,7 +206,7 @@ func decodeVersionedLedger(input []byte, version int) (legacyLedger, legacyFactC
 func (input ledgerCollectionsInput) toDomain(metadata ledgerMetadataInput, required bool) (legacyLedger, legacyFactCollections, error) {
 	ledger := legacyLedger{
 		SchemaVersion: metadata.SchemaVersion, Migration: metadata.Migration,
-		TicketID: metadata.TicketID, TicketTitle: metadata.TicketTitle, TicketType: metadata.TicketType,
+		Tags: domain.MergeTags(nil, metadata.Tags), TicketID: metadata.TicketID, TicketTitle: metadata.TicketTitle, TicketType: metadata.TicketType,
 		StartedAt: metadata.StartedAt, CompletedAt: metadata.CompletedAt, UpdatedAt: metadata.UpdatedAt,
 		Code: metadata.Code, Anomalies: metadata.Anomalies, Skills: metadata.Skills,
 	}

@@ -72,10 +72,16 @@ func newCaptureGenerationFixture(t *testing.T) captureGenerationFixture {
 	initCLIGitFixture(t, f.project)
 	t.Setenv("CODEX_HOME", f.store)
 	f.stateBase = f.state
-	f.output = filepath.Join(f.project, "ledger.json")
+	f.output = filepath.Join(f.project, "agentic_metrics.json")
 	writeCLISharedPolicy(t, f.project)
+	if err := os.Mkdir(filepath.Join(f.project, "records"), 0700); err != nil {
+		t.Fatal(err)
+	}
 	sharedPath := filepath.Join(f.project, ".agenticlens-config.yaml")
-	if err := os.WriteFile(sharedPath, bytes.Replace(readCaptureFile(t, sharedPath), []byte("agenticlens:\n  version: v9.8.7\n"), nil, 1), 0600); err != nil {
+	policy := bytes.Replace(readCaptureFile(t, sharedPath), []byte("agenticlens:\n  version: v9.8.7\n"), nil, 1)
+	// Direct ledgers and the explicit records container are separate fixture scopes.
+	policy = bytes.Replace(policy, []byte("  roots:\n"), []byte("  roots:\n    - path: .\n      discovery:\n        max_depth: 0\n        max_directories: 300\n"), 1)
+	if err := os.WriteFile(sharedPath, policy, 0600); err != nil {
 		t.Fatal(err)
 	}
 	if err := writeCaptureFixtureLocal(t, f, []byte("telemetry:\n  capture:\n")); err != nil {
@@ -90,6 +96,56 @@ func newCaptureGenerationFixture(t *testing.T) captureGenerationFixture {
 		t.Fatal(err)
 	}
 	return f
+}
+
+// seedCaptureTicketHome represents a pre-existing admitted workspace. Empty
+// persisted facts cannot satisfy the source-backed worker assertions below.
+func seedCaptureTicketHome(t *testing.T, f captureGenerationFixture, ticket string) string {
+	t.Helper()
+	path := filepath.Join(f.project, "records", ticket, "agentic_metrics.json")
+	seedEmptyCaptureLedger(t, path, ticket)
+	return path
+}
+
+func seedEmptyCaptureLedger(t *testing.T, path, ticket string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+		t.Fatal(err)
+	}
+	body := []byte(fmt.Sprintf(`{"schema_version":6,"ticket_id":%q,"sessions":[]}`, ticket))
+	if err := os.WriteFile(path, body, 0600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func captureFixturePrivateJournal(t *testing.T, f captureGenerationFixture) string {
+	t.Helper()
+	var marker struct {
+		Transaction string `json:"transaction"`
+	}
+	if err := json.Unmarshal(readCaptureFile(t, f.output+".publication-pending"), &marker); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := adaptersconfig.Load(f.project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var result string
+	if err := filepath.WalkDir(cfg.AgenticLens.StateDir, func(path string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.Name() == marker.Transaction+".json" {
+			result = path
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if result == "" {
+		t.Fatal("private publication journal missing")
+	}
+	return result
 }
 
 func (f captureGenerationFixture) coordination(t *testing.T) string {
@@ -140,43 +196,15 @@ func (f captureGenerationFixture) bind(t *testing.T, path string) {
 }
 
 func (f captureGenerationFixture) args(t *testing.T, extra ...string) []string {
-	explicitOwner := "root"
-	for i, arg := range extra {
-		if arg == "--session-id" && i+1 < len(extra) {
-			explicitOwner = extra[i+1]
-		}
+	// Registry-driven fixtures opt into the automatic path explicitly. Manual
+	// selectors never prepare bindings or allocate a registry as a side effect.
+	explicit, automatic := false, false
+	for _, arg := range extra {
+		explicit = explicit || arg == "--session-id" || arg == "--nonce"
+		automatic = automatic || arg == "--capture-auto"
 	}
-	for i, arg := range extra {
-		if arg == "--capture-dir" && i+1 < len(extra) {
-			dir, err := capture.ProjectState(extra[i+1], f.project)
-			if err != nil {
-				t.Fatal(err)
-			}
-			registry, err := capture.OpenProject(dir, f.project)
-			if err != nil {
-				t.Fatal(err)
-			}
-			r, err := registry.Register(context.Background(), domain.CaptureIdentity{Source: domain.SourceCodex, Store: f.store, SessionID: explicitOwner}, "", "fixture explicit owner")
-			if err != nil {
-				t.Fatal(err)
-			}
-			if err = capture.ValidateOwner(context.Background(), f.project, r); err != nil {
-				t.Fatal(err)
-			}
-			if _, err = registry.Bind(context.Background(), r.Identity, "TEST-100", r.Request); err != nil {
-				t.Fatal(err)
-			}
-			_, err = registry.Change(context.Background(), r.Identity, func(row domain.CaptureRegistration) (domain.CaptureRegistration, error) {
-				row.ProjectDirectory = f.project
-				return row, nil
-			})
-			if err != nil {
-				t.Fatal(err)
-			}
-			if err = registry.Close(); err != nil {
-				t.Fatal(err)
-			}
-		}
+	if !explicit && !automatic {
+		extra = append(extra, "--capture-auto")
 	}
 	return append([]string{"generate", "--source", "codex", "--codex-home", f.store, "--capture-dir", f.state, "--ticket-id", "TEST-100", "--ticket-title", "Capture regression", "--ticket-type", "feat", "--json-output", f.output}, extra...)
 }
@@ -447,7 +475,7 @@ func TestCaptureCLIRequestExposesUnassignedTicketToPlugin(t *testing.T) {
 func TestCaptureCLIGenerateIncludesBoundIndependentSessionsAndSummaryDiagnostics(t *testing.T) {
 	project := t.TempDir()
 	initCLIGitFixture(t, project)
-	configuration := "agenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: CaptureFixture\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: \"TEST\"\n      description: Fixture ticket\nworkspaces:\n  artifacts: []\n  dir: custom records\ncode_metrics:\n  base_branch: fixture-base\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+	configuration := "agenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: CaptureFixture\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: \"TEST\"\n      description: Fixture ticket\nworkspaces:\n  artifacts: []\n  roots:\n    - path: custom records\n      discovery:\n        max_depth: 8\n        max_directories: 300\ncode_metrics:\n  base_branch: fixture-base\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), []byte(configuration), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -506,14 +534,18 @@ func TestCaptureCLIGenerateIncludesBoundIndependentSessionsAndSummaryDiagnostics
 	request("independent-two", 20, "TEST-100")
 	request("other-ticket", 50, "TEST-200")
 	request("unassigned", 70, "")
-	output := filepath.Join(project, "metrics.json")
-	summary := filepath.Join(project, "SUMMARY.md")
+	workspace := filepath.Join(project, "custom records", "arbitrary-home")
+	if err := os.MkdirAll(workspace, 0700); err != nil {
+		t.Fatal(err)
+	}
+	output := filepath.Join(workspace, "agentic_metrics.json")
+	summary := filepath.Join(workspace, "SUMMARY.md")
 	if err := os.WriteFile(summary, []byte("# Capture fixture\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	generate := func() domain.AgenticFactLedger {
 		t.Helper()
-		cmd := exec.Command(cliBinaryPath, "generate", "--source", "codex", "--capture-dir", state, "--ticket-id", "TEST-100", "--ticket-title", "Explicit independent roots", "--ticket-type", "feat", "--json-output", output, "--append", summary)
+		cmd := exec.Command(cliBinaryPath, "generate", "--capture-auto", "--source", "codex", "--capture-dir", state, "--ticket-id", "TEST-100", "--ticket-title", "Explicit independent roots", "--ticket-type", "feat", "--json-output", output, "--append", summary)
 		cmd.Dir = project
 		if out, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("generate: %v %s", err, out)
@@ -719,20 +751,26 @@ func TestCaptureGenerationCompleteSnapshotsReplaceRegardlessOfSourceOrder(t *tes
 	}
 }
 
-func TestCaptureGenerationRejectsExplicitSelectionOfAnotherTicketOwner(t *testing.T) {
+func TestManualGenerationExplicitSelectionPreservesAnotherTicketBinding(t *testing.T) {
 	f := newCaptureGenerationFixture(t)
 	f.bind(t, f.write(t, 10))
+	before := manualStateSnapshot(t, f.stateBase)
 	cmd := exec.Command(cliBinaryPath, f.args(t, "--ticket-id", "TEST-200", "--session-id", "root", "--codex-home", f.store)...)
 	cmd.Dir = f.project
-	if out, err := cmd.CombinedOutput(); err == nil {
-		t.Fatalf("explicit selector stole known TEST-100 owner: %s", out)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("explicit manual attribution was blocked by capture binding: %v %s", err, out)
 	}
-	if _, err := os.Stat(f.output); !os.IsNotExist(err) {
-		t.Fatalf("conflicting selector published ledger: %v", err)
+	ledger := f.ledger(t)
+	if ledger.TicketID == nil || *ledger.TicketID != "TEST-200" {
+		t.Fatalf("manual attribution not honored: %+v", ledger.TicketID)
+	}
+	assertCaptureRootInput(t, ledger, 10)
+	if after := manualStateSnapshot(t, f.stateBase); !reflect.DeepEqual(before, after) {
+		t.Fatal("manual selection rebound or otherwise changed capture state")
 	}
 }
 
-func TestCaptureGenerationResolvesStoreAliasesWithoutConflatingDistinctStores(t *testing.T) {
+func TestManualGenerationStoreAliasesDoNotReadOrRebindCaptureOwners(t *testing.T) {
 	for _, bindingUsesAlias := range []bool{false, true} {
 		t.Run(fmt.Sprintf("stored alias %v", bindingUsesAlias), func(t *testing.T) {
 			f := newCaptureGenerationFixture(t)
@@ -785,13 +823,15 @@ func TestCaptureGenerationResolvesStoreAliasesWithoutConflatingDistinctStores(t 
 					t.Fatal(err)
 				}
 			}
+			before := manualStateSnapshot(t, f.stateBase)
 			cmd := exec.Command(cliBinaryPath, f.args(t, "--ticket-id", "TEST-200", "--session-id", "root", "--codex-home", selected)...)
 			cmd.Dir = f.project
-			if out, err := cmd.CombinedOutput(); err == nil {
-				t.Fatalf("actual-store alias bypassed known ticket owner: %s", out)
+			if out, err := cmd.CombinedOutput(); err != nil {
+				t.Fatalf("valid manual source alias was blocked by registry binding: %v %s", err, out)
 			}
-			if _, err := os.Stat(f.output); !os.IsNotExist(err) {
-				t.Fatalf("alias conflict published output: %v", err)
+			assertCaptureRootInput(t, f.ledger(t), 10)
+			if after := manualStateSnapshot(t, f.stateBase); !reflect.DeepEqual(before, after) {
+				t.Fatal("manual source alias changed capture binding")
 			}
 			// A second real store may legitimately reuse a harness-local ID. Its
 			// different native source must not inherit the first store's binding.
@@ -817,9 +857,9 @@ func TestCaptureGenerationResolvesStoreAliasesWithoutConflatingDistinctStores(t 
 }
 
 func TestCaptureGenerationOverlappingPublishersCannotRegressFinalSnapshot(t *testing.T) {
-	t.Run("registered newer publisher", func(t *testing.T) { testCaptureOverlappingPublishers(t, false, false) })
-	t.Run("explicit newer publisher without registry", func(t *testing.T) { testCaptureOverlappingPublishers(t, true, false) })
-	t.Run("automatic newer publisher", func(t *testing.T) { testCaptureOverlappingPublishers(t, false, true) })
+	t.Run("manual older and automatic newer publisher", func(t *testing.T) { testCaptureOverlappingPublishers(t, false, false) })
+	t.Run("manual publishers without registry", func(t *testing.T) { testCaptureOverlappingPublishers(t, true, false) })
+	t.Run("manual older and automatic worker publisher", func(t *testing.T) { testCaptureOverlappingPublishers(t, false, true) })
 }
 
 func testCaptureOverlappingPublishers(t *testing.T, explicitNewer, automatic bool) {
@@ -828,6 +868,9 @@ func testCaptureOverlappingPublishers(t *testing.T, explicitNewer, automatic boo
 	if automatic {
 		enableCLIFixtureSummary(t, f.project)
 		f.output = filepath.Join(f.project, "records", "TEST-100", "agentic_metrics.json")
+		if err := os.MkdirAll(filepath.Dir(f.output), 0700); err != nil {
+			t.Fatal(err)
+		}
 		if err := writeCaptureFixtureLocal(t, f, []byte("telemetry:\n  capture:\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 10000\n")); err != nil {
 			t.Fatal(err)
 		}
@@ -857,7 +900,7 @@ func testCaptureOverlappingPublishers(t *testing.T, explicitNewer, automatic boo
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	older := exec.CommandContext(ctx, cliBinaryPath, f.args(t)...)
+	older := exec.CommandContext(ctx, cliBinaryPath, f.args(t, "--session-id", "root")...)
 	older.Dir = f.project
 	older.Env = append(os.Environ(), "PATH="+shimDir+string(os.PathListSeparator)+os.Getenv("PATH"), "AL_CAPTURE_TEST_GIT_HELPER=1", "AL_CAPTURE_TEST_GATE_ADDRESS="+listener.Addr().String(), "AL_CAPTURE_TEST_REAL_GIT="+realGit)
 	var olderOutput bytes.Buffer
@@ -1059,6 +1102,7 @@ func TestCaptureInstallerRendersMarkerBearingPathsOnceAndRollsBackMidWrite(t *te
 // intentionally separate from the real harness support evidence.
 func TestCaptureNativeWorkerPublishesMultipleRootsAndRefreshesWithoutGenerate(t *testing.T) {
 	f := newCaptureGenerationFixture(t)
+	seedCaptureTicketHome(t, f, "TEST-100")
 	for _, args := range [][]string{{"init", "-b", "main"}, {"config", "user.name", "Probe"}, {"config", "user.email", "probe@example.invalid"}, {"commit", "--allow-empty", "-m", "probe"}, {"update-ref", "refs/remotes/origin/main", "HEAD"}} {
 		cmd := exec.Command("git", args...)
 		cmd.Dir = f.project
@@ -1227,6 +1271,9 @@ func writeCaptureFixtureLocal(t *testing.T, f captureGenerationFixture, body []b
 	if f.store != "" && !strings.Contains(text, "  sources:") {
 		text += fmt.Sprintf("  sources:\n    codex:\n      home: %q\n", f.store)
 	}
+	if !strings.Contains(text, "agenticlens:\n") {
+		text += fmt.Sprintf("agenticlens:\n  state_dir: %q\n", filepath.Join(f.project, ".publication-state"))
+	}
 	return os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte(text), 0600)
 }
 
@@ -1333,7 +1380,11 @@ func TestAutomaticParentAndExplicitOtherTicketChildPublishIndependently(t *testi
 		t.Fatalf("child blocked/crossed parent publication: %+v", parent.Sessions)
 	}
 	acceptedParent := readCaptureFile(t, f.output)
-	child := generate("TEST-200", filepath.Join(f.project, "child-ledger.json"))
+	childOutput := filepath.Join(f.project, "records", "TEST-200", "agentic_metrics.json")
+	if err := os.MkdirAll(filepath.Dir(childOutput), 0700); err != nil {
+		t.Fatal(err)
+	}
+	child := generate("TEST-200", childOutput)
 	if len(child.Sessions) != 1 || child.Sessions[0].ID != "child" || child.Sessions[0].ParentID == nil || *child.Sessions[0].ParentID != "root" || child.Sessions[0].Invocations[0].Tokens.Input != 31 {
 		t.Fatalf("explicit child publication lost source ownership: %+v", child.Sessions)
 	}
@@ -1343,7 +1394,7 @@ func TestAutomaticParentAndExplicitOtherTicketChildPublishIndependently(t *testi
 	if child.Anomalies != nil || child.Sessions[0].Anomalies == nil || child.CompleteAnomalyCoverage() || child.UnrecordedAnomalyScopes() != 1 {
 		t.Fatalf("fresh complete child invented external-parent group coverage: %+v", child)
 	}
-	summary := string(readCaptureFile(t, filepath.Join(f.project, "child-ledger.json.md")))
+	summary := string(readCaptureFile(t, childOutput+".md"))
 	if strings.Contains(summary, "No execution anomalies detected (clean session)") || !strings.Contains(summary, "no clean-session conclusion is available") {
 		t.Fatalf("external-parent summary misrepresented partial analysis: %s", summary)
 	}

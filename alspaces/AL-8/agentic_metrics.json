@@ -1,4 +1,9 @@
 {
+  "tags": {
+    "agentic-lens-dev": "0.1.0",
+    "agentic-lens-po": "0.1.0",
+    "agentic-lens-review": "0.1.0"
+  },
   "anomalies": [],
   "code": {
     "lines_added": 1363,

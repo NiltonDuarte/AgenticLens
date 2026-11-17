@@ -243,11 +243,13 @@
         "peak_context_tokens": 0,
         "context_health": "HEALTHY"
       }
-    ]
+    ],
+    "workspace_path": "/records/TEST-WIRE"
   },
   "artifacts": {
     "ticket_id": "TEST-WIRE",
     "items": []
   },
-  "anomalies": []
+  "anomalies": [],
+  "workspace_path": "/records/TEST-WIRE"
 }

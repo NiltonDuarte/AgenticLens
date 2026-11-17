@@ -1,3 +1,4 @@
+import type { TagFilter } from '../domain/tags';
 import type {
   AgenticMetricsLedger,
   BuildInfo,
@@ -27,8 +28,12 @@ function diagnosticsFromResponse(res: Response): readonly WorkspaceDiagnostic[] 
     const valid: WorkspaceDiagnostic[] = [];
     let invalid = false;
     for (const item of value) {
-      if (isRecord(item) && typeof item.ticket_id === 'string' && typeof item.message === 'string') {
-        valid.push({ ticket_id: item.ticket_id, message: item.message });
+      if (isRecord(item) && typeof item.message === 'string' &&
+        (item.ticket_id === undefined || typeof item.ticket_id === 'string') &&
+        (item.path === undefined || typeof item.path === 'string') &&
+        (typeof item.path === 'string' && item.path.trim() !== '' || typeof item.ticket_id === 'string' && item.ticket_id.trim() !== '')) {
+        valid.push({ message: item.message, ...(typeof item.ticket_id === 'string' ? { ticket_id: item.ticket_id } : {}),
+          ...(typeof item.path === 'string' ? { path: item.path } : {}) });
       } else invalid = true;
     }
     return invalid ? [...valid, warning] : valid;
@@ -61,7 +66,8 @@ export async function fetchFleetSummary(
   sinceParam?: string,
   untilParam?: string,
   ticketTypes?: readonly string[],
-  prefixes?: readonly string[]
+  prefixes?: readonly string[],
+  tagFilters?: readonly TagFilter[]
 ): Promise<ApiResponse<FleetSummary>> {
   const params = new URLSearchParams();
   if (windowParam && windowParam !== 'all') {
@@ -75,6 +81,7 @@ export async function fetchFleetSummary(
   }
   appendMultiParams(params, 'ticket_type', ticketTypes);
   appendMultiParams(params, 'prefix', prefixes);
+  if (tagFilters?.length) params.set('tag_filter', JSON.stringify(tagFilters));
 
   const query = params.toString() ? `?${params.toString()}` : '';
   const url = `/api/fleet${query}`;
@@ -96,7 +103,8 @@ export async function fetchWorkspaceLedgers(
   sinceParam?: string,
   untilParam?: string,
   ticketTypes?: readonly string[],
-  prefixes?: readonly string[]
+  prefixes?: readonly string[],
+  tagFilters?: readonly TagFilter[]
 ): Promise<ApiResponse<readonly AgenticMetricsLedger[]>> {
   const params = new URLSearchParams();
   if (windowParam && windowParam !== 'all') {
@@ -110,6 +118,7 @@ export async function fetchWorkspaceLedgers(
   }
   appendMultiParams(params, 'ticket_type', ticketTypes);
   appendMultiParams(params, 'prefix', prefixes);
+  if (tagFilters?.length) params.set('tag_filter', JSON.stringify(tagFilters));
 
   const query = params.toString() ? `?${params.toString()}` : '';
   const url = `/api/workspaces${query}`;
@@ -133,7 +142,8 @@ export async function fetchWorkspaces(
   sinceParam?: string,
   untilParam?: string,
   ticketTypes?: readonly string[],
-  prefixes?: readonly string[]
+  prefixes?: readonly string[],
+  tagFilters?: readonly TagFilter[]
 ): Promise<ApiResponse<TicketComparisonRow[]>> {
   const params = new URLSearchParams();
   if (windowParam && windowParam !== 'all') {
@@ -153,6 +163,7 @@ export async function fetchWorkspaces(
   }
   appendMultiParams(params, 'ticket_type', ticketTypes);
   appendMultiParams(params, 'prefix', prefixes);
+  if (tagFilters?.length) params.set('tag_filter', JSON.stringify(tagFilters));
 
   const qs = params.toString() ? `?${params.toString()}` : '';
   const url = `/api/workspaces${qs}`;
@@ -171,19 +182,23 @@ export async function fetchWorkspaces(
 }
 
 export async function fetchWorkspaceById(
-  ticketId: string
+  ticketId: string,
+  tagFilters?: readonly TagFilter[],
+  workspacePath?: string
 ): Promise<ApiResponse<WorkspaceDetail>> {
-  const url = `/api/workspaces/${encodeURIComponent(ticketId)}`;
+  const params = new URLSearchParams();
+  if (tagFilters?.length) params.set('tag_filter', JSON.stringify(tagFilters));
+  if (workspacePath) params.set('workspace', workspacePath);
+  const query = params.size ? `?${params}` : '';
+  const url = `/api/workspaces/${encodeURIComponent(ticketId)}${query}`;
   try {
     const res = await fetch(url);
     if (!res.ok) {
-      if (res.status === 404) {
-        throw new Error(`Workspace ${ticketId} not found`);
-      }
-      throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch workspace'}`);
+      throw await workspaceResponseError(res, `Workspace ${ticketId}`, 'Failed to fetch workspace');
     }
     const data = decodeDetail(await res.json());
-    return { data };
+    if (workspacePath && data.workspace_path !== workspacePath) throw new Error(`Workspace ${ticketId} location changed; refresh and select its current location.`);
+    return { data, diagnostics: diagnosticsFromResponse(res) };
   } catch (err: unknown) {
     rethrowError(err, `Failed to fetch workspace ${ticketId}`);
   }
@@ -218,20 +233,28 @@ export async function fetchProjectConfig(): Promise<ApiResponse<ProjectConfigRes
 }
 
 export async function fetchWorkspaceEvents(
-  ticketId: string
+  ticketId: string,
+  workspacePath?: string
 ): Promise<ApiResponse<WorkspaceEventsResponse>> {
-  const url = `/api/workspaces/${encodeURIComponent(ticketId)}/events`;
+  const params = new URLSearchParams();
+  if (workspacePath) params.set('workspace', workspacePath);
+  const url = `/api/workspaces/${encodeURIComponent(ticketId)}/events${params.size ? `?${params}` : ''}`;
   try {
     const res = await fetch(url);
     if (!res.ok) {
-      if (res.status === 404) {
-        throw new Error(`Workspace ${ticketId} not found`);
-      }
-      throw new Error(`HTTP error ${res.status}: ${res.statusText || 'Failed to fetch workspace events'}`);
+      throw await workspaceResponseError(res, `Workspace ${ticketId}`, 'Failed to fetch workspace events');
     }
     const rawData: unknown = await res.json();
     return { data: decodeWorkspaceEvents(rawData, ticketId) };
   } catch (err: unknown) {
     rethrowError(err, `Failed to fetch workspace events for ${ticketId}`);
   }
+}
+
+async function workspaceResponseError(response: Response, target: string, fallback: string): Promise<Error> {
+  try {
+    const body: unknown = await response.json();
+    if (isRecord(body) && typeof body.message === 'string' && body.message.trim()) return new Error(body.message);
+  } catch { /* Retain HTTP context when the error body is absent or malformed. */ }
+  return new Error(response.status === 404 ? `${target} not found` : `HTTP error ${response.status}: ${response.statusText || fallback}`);
 }

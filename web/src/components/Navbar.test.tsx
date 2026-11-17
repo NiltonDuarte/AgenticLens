@@ -160,15 +160,15 @@ describe('Navbar Component', () => {
         versionInfo={mockBuildInfo}
         projectConfig={{
           ...mockProjectConfig,
-          workspaces_dir: 'custom/workspaces',
+          workspaces_roots: [{ path: 'custom/workspaces', discovery: { max_depth: 1, max_directories: 300 } }],
         }}
       />
     );
     expect(screen.getByText('custom/workspaces')).toBeInTheDocument();
     const pill = screen.getByText('custom/workspaces').closest('.status-pill.workspace-pill');
     expect(pill).toBeInTheDocument();
-    expect(pill).toHaveAttribute('title', 'Active Workspaces Directory: custom/workspaces');
-    expect(pill).toHaveAttribute('aria-label', 'Active Workspaces Directory: custom/workspaces');
+    expect(pill).toHaveAttribute('title', 'custom/workspaces; maximum depth 1; directory budget 300');
+    expect(pill).toHaveAttribute('aria-label', 'Workspace directory: custom/workspaces');
     expect(screen.queryByText('Live Server')).not.toBeInTheDocument();
     expect(screen.queryByText('Mock Mode')).not.toBeInTheDocument();
   });
@@ -191,14 +191,14 @@ describe('Navbar Component', () => {
     expect(screen.queryByText('Mock Mode')).not.toBeInTheDocument();
   });
 
-  it('renders loading placeholder and does not guess workspaces when workspaces_dir is empty string', () => {
+  it('renders loading placeholder and does not guess workspaces when the root collection is empty', () => {
     render(
       <Navbar
         activeTab="overview"
         versionInfo={mockBuildInfo}
         projectConfig={{
           ...mockProjectConfig,
-          workspaces_dir: '',
+          workspaces_roots: [],
         }}
       />
     );
@@ -335,7 +335,7 @@ describe('Navbar Component', () => {
         case_insensitive: true,
         role_mappings: {},
         prefixes: [],
-        workspaces_dir: 'workspaces',
+        workspaces_roots: [{ path: 'workspaces', discovery: { max_depth: 1, max_directories: 300 } }],
         role_order: [],
         version: 'v1.0.0',
       }),
@@ -354,4 +354,30 @@ describe('Navbar Component', () => {
 
     vi.unstubAllGlobals();
   });
+});
+
+
+it('shows every configured directory with its explicit discovery bounds', () => {
+  render(<Navbar activeTab="overview" versionInfo={mockBuildInfo} projectConfig={{...mockProjectConfig,
+    workspaces_roots: [
+      {path: '/direct/home', discovery: {max_depth: 0, max_directories: 300}},
+      {path: '/changes/archive', discovery: {max_depth: 1, max_directories: 47}},
+    ],
+  }} />);
+  expect(screen.getByLabelText('Workspace directory: /direct/home')).toHaveAttribute('title', '/direct/home; maximum depth 0; directory budget 300');
+  expect(screen.getByLabelText('Workspace directory: /changes/archive')).toHaveAttribute('title', '/changes/archive; maximum depth 1; directory budget 47');
+});
+
+it('exposes incompatible configuration and allows retry without guessing a directory', async () => {
+  const fetcher = vi.fn().mockResolvedValueOnce({ok: true, json: async () => ({...mockProjectConfig, workspaces_dir: 'retired'})})
+    .mockResolvedValueOnce({ok: true, json: async () => mockProjectConfig});
+  vi.stubGlobal('fetch', fetcher);
+  try {
+    render(<Navbar activeTab="overview" versionInfo={mockBuildInfo} />);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Workspace configuration unavailable');
+    expect(screen.queryByLabelText('Workspace directory: retired')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', {name: 'Retry configuration'}));
+    expect(await screen.findByLabelText('Workspace directory: workspaces')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  } finally { vi.unstubAllGlobals(); }
 });

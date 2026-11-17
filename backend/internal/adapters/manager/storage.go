@@ -9,7 +9,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"runtime"
 
 	"agenticlens/internal/domain"
 )
@@ -91,9 +90,6 @@ func replaceManagerWithCheckpoint(target, candidate string, identity domain.Buil
 	// file identity. Existing ownership and checksum guards above still apply.
 	if existed && bytes.Equal(before, content) && owned.Version == identity.Version && hasChecksum {
 		return nil
-	}
-	if runtime.GOOS == "windows" && existed {
-		return errors.New("updating an existing Windows manager requires closing it and installing the downloaded manager manually; current installation preserved")
 	}
 	receipt := installation{Protocol: Protocol, Path: target, SHA256: digest(content), Version: identity.Version}
 	metadata, err := json.Marshal(receipt)

@@ -164,7 +164,7 @@ func writeRelocationConfig(t *testing.T, project, state string) {
 	if err = os.WriteFile(path, data, 0600); err != nil {
 		t.Fatal(err)
 	}
-	local := fmt.Sprintf("telemetry:\n  capture:\n    enabled: true\n    state_dir: %q\n", state)
+	local := fmt.Sprintf("agenticlens:\n  state_dir: publication-state\ntelemetry:\n  capture:\n    enabled: true\n    state_dir: %q\n", state)
 	if err = os.WriteFile(filepath.Join(project, ".agenticlens-config.local.yaml"), []byte(local), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -466,7 +466,6 @@ func TestAdministrativeRelocationGuardReadsIncompleteConfigWithoutLoadFallback(t
 func TestRelocationExplicitPathsUseSelectedProjectAndHome(t *testing.T) {
 	project, _, _, _ := relocationFixture(t)
 	t.Setenv("HOME", filepath.Dir(project))
-	t.Setenv("USERPROFILE", filepath.Dir(project))
 	result, err := RelocateState(context.Background(), RelocationOptions{Project: project, FromDirectory: "../old-state", ToBase: "../new-state"})
 	if err != nil {
 		t.Fatal(err)

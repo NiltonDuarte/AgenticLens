@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 
@@ -16,7 +15,7 @@ import (
 // Re-executed disposable harnesses handle only the optional inspection protocol.
 // The installed AgenticLens executable and wrapper remain real boundaries.
 func init() {
-	source := strings.TrimSuffix(filepath.Base(os.Args[0]), ".exe")
+	source := filepath.Base(os.Args[0])
 	if source != "codex" && source != "opencode" {
 		return
 	}
@@ -65,9 +64,6 @@ func writeCaptureHarnessExecutable(t *testing.T, dir, source string) string {
 		t.Fatal(err)
 	}
 	name := source
-	if runtime.GOOS == "windows" {
-		name += ".exe"
-	}
 	target := filepath.Join(dir, name)
 	if err := os.Link(binary, target); err != nil {
 		body, readErr := os.ReadFile(binary)

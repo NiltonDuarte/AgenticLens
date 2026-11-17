@@ -26,7 +26,6 @@ class InstallationTest(DistributionFixture):
         for key in ('VERSION', 'GIT_COMMIT', 'BUILD_DATE'):
             environment.pop(key, None)
         native = destination / f'agentic-lens-engine-{host_os}-{host_arch}'
-        if host_os == 'windows': native = native.with_suffix('.exe')
         source_version = subprocess.check_output(['git', 'describe', '--tags', '--always', '--dirty'], cwd=ROOT, text=True).strip()
         candidate = {'VERSION': 'v9.8.8-rc.1+abcdef0', 'GIT_COMMIT': 'abcdef0', 'BUILD_DATE': '2026-01-02T03:04:05Z'}
         for name, metadata, expected in [('default', {}, source_version), ('candidate', candidate, candidate['VERSION'])]:
@@ -58,13 +57,13 @@ class InstallationTest(DistributionFixture):
         caller_local = caller / '.agenticlens-config.local.yaml'; caller_local.write_text('# preserve caller local\n')
         before = (caller_shared.read_bytes(), caller_local.read_bytes())
         selected_local = self.repo / '.agenticlens-config.local.yaml'
-        selected_local.write_text(f"# selected local settings\ntelemetry:\n  capture:\n    enabled: false\n    state_dir: '{self.root / 'capture state'}'\n  default_source: codex\n  sources:\n    codex:\n      home: '{self.home / '.codex'}'\n")
+        selected_local.write_text(f"# selected local settings\nagenticlens:\n  state_dir: '{self.root / 'publication state'}'\ntelemetry:\n  capture:\n    enabled: false\n    state_dir: '{self.root / 'capture state'}'\n  default_source: codex\n  sources:\n    codex:\n      home: '{self.home / '.codex'}'\n")
         local_before = selected_local.read_bytes()
         approved = self.approved_settings('Selected')
         approved.write_text(shared_policy(self.pin, self.home / '.agenticlens', name='Selected'))
         candidate = self.root / 'approved local.yaml'
         candidate.write_bytes(local_before)
-        command = completion.replace('APPROVED_SHARED.yaml', shlex.quote(str(approved))).replace('--workspaces DIR', '--workspaces workspaces').replace('APPROVED_LOCAL.yaml', shlex.quote(str(candidate)))
+        command = completion.replace('APPROVED_SHARED.yaml', shlex.quote(str(approved))).replace('--workspace-root DIR', '--workspace-root workspaces').replace('APPROVED_LOCAL.yaml', shlex.quote(str(candidate)))
         scaffold_before = self.config.read_bytes()
         selected_local.unlink()
         candidate.unlink()
@@ -83,7 +82,7 @@ class InstallationTest(DistributionFixture):
         completed = self.config.read_bytes()
         self.assertNotIn('state_dir:', completed.decode())
         selected_local.write_text(''.join(line for line in local_before.decode().splitlines(keepends=True)
-                                          if not line.lstrip().startswith('state_dir:')))
+                                          if not line.startswith('    state_dir:')))
         missing = self.launch('capture', 'status', '--repo', self.repo, '--state-dir', self.root / 'CLI rescue')
         self.assertNotEqual(missing.returncode, 0)
         self.assertIn('telemetry.capture.state_dir', missing.stderr)
@@ -119,7 +118,7 @@ class InstallationTest(DistributionFixture):
         ignore = self.repo / '.gitignore'; ignore.write_text('# owner policy\n')
         before = self.config.read_bytes(); ignored = ignore.read_bytes()
         self.succeeds(self.bundle())
-        for relative in ['scripts/install.sh', 'scripts/download.sh', 'scripts/download.ps1', 'SKILL.md']:
+        for relative in ['scripts/install.sh', 'scripts/download.sh', 'SKILL.md']:
             self.assertTrue((self.repo / BUNDLE_SETUP / relative).is_file(), relative)
         self.assertEqual((self.repo / BUNDLE_SETUP / 'RELEASE_VERSION').read_text(), self.pin + '\n')
         self.succeeds(self.install_local(script=self.repo / BUNDLE_SETUP / 'scripts/download.sh'))

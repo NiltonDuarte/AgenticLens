@@ -28,10 +28,11 @@ type DiscoveryOptions struct {
 }
 
 type rolloutCandidate struct {
-	path       string
-	threadID   string
-	parentID   string
-	nonceMatch bool
+	path          string
+	threadID      string
+	parentID      string
+	nonceMatch    bool
+	inspectionErr error
 }
 
 // DiscoverRolloutPaths finds the selected root thread and its known child
@@ -57,9 +58,13 @@ func DiscoverRolloutPaths(options DiscoveryOptions) ([]string, error) {
 			if errors.Is(inspectErr, ErrDiscoveryBudget) {
 				return nil, inspectErr
 			}
-			// A partially written or future-format rollout should not hide other
-			// usable sessions. Explicit selection reports a not-found error below.
-			continue
+			// Keep native identity/ancestry already observed before a read failure.
+			// Only an incomplete member of the selected family blocks extraction;
+			// unrelated or entirely unattributable rollouts remain tolerable.
+			if candidate.threadID == "" {
+				continue
+			}
+			candidate.inspectionErr = inspectErr
 		}
 		candidates = append(candidates, candidate)
 	}
@@ -106,6 +111,9 @@ func DiscoverRolloutPaths(options DiscoveryOptions) ([]string, error) {
 	selected := make([]rolloutCandidate, 0)
 	for _, candidate := range candidates {
 		if candidate.threadID == selectedID || isDescendant(candidates, candidate.threadID, selectedID) {
+			if candidate.inspectionErr != nil {
+				return nil, fmt.Errorf("incomplete Codex discovery for selected owner %s at %s: %w", candidate.threadID, candidate.path, candidate.inspectionErr)
+			}
 			selected = append(selected, candidate)
 		}
 	}
@@ -264,7 +272,7 @@ func inspectRolloutWithBudget(path, nonce string, budget *DiscoveryBudget) (cand
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		return rolloutCandidate{}, err
+		return candidate, err
 	}
 	if candidate.threadID == "" {
 		return rolloutCandidate{}, errors.New("rollout has no readable session metadata")

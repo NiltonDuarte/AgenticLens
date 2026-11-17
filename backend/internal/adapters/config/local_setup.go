@@ -68,7 +68,7 @@ func InitialLocalYAML(project, enabled, source, codexHome, database string, stat
 
 // InitialLocalYAMLWithSettings fills missing approved choices only; the settings
 // candidate is explicit input, never a discovered local policy or installation request.
-func InitialLocalYAMLWithSettings(project, candidatePath, enabled, source, codexHome, database, state string) ([]byte, error) {
+func InitialLocalYAMLWithSettings(project, candidatePath, enabled, source, codexHome, database, state string, publicationStates ...string) ([]byte, error) {
 	physical, err := filesystem.PhysicalPath(project)
 	if err != nil {
 		return nil, err
@@ -110,7 +110,7 @@ func InitialLocalYAMLWithSettings(project, candidatePath, enabled, source, codex
 		if err != nil {
 			return nil, err
 		}
-		allowed := map[string]bool{"telemetry.default_source": true, "telemetry.sources.opencode.database_path": true, "telemetry.sources.codex.home": true, "agenticlens.install_root": true}
+		allowed := map[string]bool{"telemetry.default_source": true, "telemetry.sources.opencode.database_path": true, "telemetry.sources.codex.home": true, "agenticlens.install_root": true, "agenticlens.state_dir": true}
 		for _, key := range []string{"enabled", "state_dir", "refresh_ms", "debounce_ms", "idle_ms", "max_lifetime_ms", "pass_timeout_ms", "max_sessions", "max_source_bytes", "commit_warning"} {
 			allowed["telemetry.capture."+key] = true
 		}
@@ -207,6 +207,13 @@ func InitialLocalYAMLWithSettings(project, candidatePath, enabled, source, codex
 		return nil, err
 	}
 	if _, err := fill([]string{"telemetry", "capture", "state_dir"}, state, "!!str"); err != nil {
+		return nil, err
+	}
+	publicationState := "~/.agenticlens/state"
+	if len(publicationStates) > 0 {
+		publicationState = publicationStates[0]
+	}
+	if _, err := fill([]string{"agenticlens", "state_dir"}, publicationState, "!!str"); err != nil {
 		return nil, err
 	}
 	selected, err := fill([]string{"telemetry", "default_source"}, source, "!!str")

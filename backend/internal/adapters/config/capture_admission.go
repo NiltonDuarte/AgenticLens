@@ -31,16 +31,6 @@ type CaptureAdmission struct {
 // AcquireCaptureAdmission coordinates the shared and existing local settings.
 // It never creates configuration, registry state or persistent lock artifacts.
 func AcquireCaptureAdmission(ctx context.Context, project string) (*CaptureAdmission, error) {
-	return acquireCaptureAdmission(ctx, project, false)
-}
-
-// AcquireGenerationAdmission preserves manual generation for existing shared-only
-// projects while automatic callbacks require the selected complete local policy.
-func AcquireGenerationAdmission(ctx context.Context, project string) (*CaptureAdmission, error) {
-	return acquireCaptureAdmission(ctx, project, true)
-}
-
-func acquireCaptureAdmission(ctx context.Context, project string, manual bool) (*CaptureAdmission, error) {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 	shared, err := FindConfigFile(project)
@@ -57,12 +47,10 @@ func acquireCaptureAdmission(ctx context.Context, project string, manual bool) (
 	root := filepath.Dir(shared)
 	paths := []string{shared}
 	selection, err := SelectConfig(project)
-	if err != nil && !(manual && errors.Is(err, os.ErrNotExist)) {
+	if err != nil {
 		return nil, err
 	}
-	if err == nil {
-		paths = append(paths, selection.LocalPath)
-	}
+	paths = append(paths, selection.LocalPath)
 
 	sort.Strings(paths)
 	for {
@@ -122,10 +110,6 @@ func (admission *CaptureAdmission) Close() error {
 	}
 	admission.files = nil
 	return result
-}
-
-func (admission *CaptureAdmission) ResolveGenerationCapture(stateOverride string) (domain.CaptureConfig, error) {
-	return ResolveGenerationCapture(admission.project, stateOverride)
 }
 
 func (admission *CaptureAdmission) ResolveCapture(stateOverride string) (domain.CaptureConfig, error) {

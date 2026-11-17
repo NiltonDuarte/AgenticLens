@@ -96,25 +96,7 @@ func TestOpenCodeDelegationChildProofUsesKnownNativeParentOutsideSelection(t *te
 				assertDelegationChild(t, saveReloadSourceOwners(t, snapshot), owner, tc.want)
 				// Registry reconciliation must apply the same source proof before publishing.
 				project := t.TempDir()
-				const projectPolicy = `project_name: NativeChildProof
-ticket:
-  prefixes: [{prefix: "TEST-", description: "Native child evidence"}]
-  case_insensitive: false
-workspaces:
-  dir: tickets
-  artifacts: []
-role_mappings: {}
-role_order: []
-code_metrics:
-  base_branch: baseline
-  production: {include: [], exclude: []}
-  tests: {include: [], exclude: []}
-generation:
-  metrics: {skills: true, delegations: true, anomalies: false}
-  summary: {enabled: false}
-database:
-  busy_timeout_ms: 0
-`
+				const projectPolicy = "project_name: NativeChildProof\nticket:\n  prefixes: [{prefix: \"TEST-\", description: \"Native child evidence\"}]\n  case_insensitive: false\nworkspaces:\n  roots:\n    - path: tickets\n      discovery:\n        max_depth: 8\n        max_directories: 300\n  artifacts: []\nrole_mappings: {}\nrole_order: []\ncode_metrics:\n  base_branch: baseline\n  production: {include: [], exclude: []}\n  tests: {include: [], exclude: []}\ngeneration:\n  metrics: {skills: true, delegations: true, anomalies: false}\n  summary: {enabled: false}\ndatabase:\n  busy_timeout_ms: 0\n"
 				if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), []byte(projectPolicy), 0600); err != nil {
 					t.Fatal(err)
 				}

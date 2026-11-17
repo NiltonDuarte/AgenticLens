@@ -5,10 +5,49 @@ import { FleetOverview } from './FleetOverview';
 import * as apiClient from '../api/client';
 import { mockFleetSummary, mockTicketComparisonRows, mockAgenticMetricsLedgers } from '../test/fixtures/mockData';
 
+async function selectTagKey(user: ReturnType<typeof userEvent.setup>, key: string): Promise<void> {
+  if (!screen.queryByRole('dialog', { name: 'Ticket tag filters' })) {
+    await user.click(screen.getByRole('button', { name: 'Ticket tags filter' }));
+  }
+  await user.selectOptions(screen.getByRole('combobox', { name: 'Tag key' }), key);
+}
+
 describe('FleetOverview View Component', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.spyOn(apiClient, 'fetchWorkspaceLedgers').mockResolvedValue({ data: [] });
+  });
+
+  it('sends ticket tag cohorts to both fleet requests and restores results from empty filters', async () => {
+    const user = userEvent.setup();
+    const base = mockAgenticMetricsLedgers['AL-1']!;
+    vi.mocked(apiClient.fetchWorkspaceLedgers).mockResolvedValue({ data: [
+      { ...base, facts: { ...base.facts, tags: { team: 'core', environment: 'dev' } } },
+      { ...base, facts: { ...base.facts, tags: { environment: 'prod' } } },
+      base,
+    ] });
+    const fleet = vi.spyOn(apiClient, 'fetchFleetSummary').mockResolvedValue({ data: mockFleetSummary });
+    const workspaces = vi.spyOn(apiClient, 'fetchWorkspaces').mockResolvedValue({ data: [...mockTicketComparisonRows] });
+    render(<FleetOverview />);
+    await screen.findByText('Total Cost');
+    await selectTagKey(user, 'team');
+    await user.click(screen.getByRole('checkbox', { name: 'Value: core' }));
+    const filters = [{ key: 'team', values: ['core'], missing: false }];
+    await waitFor(() => expect(fleet).toHaveBeenLastCalledWith('all', undefined, undefined, undefined, undefined, filters));
+    expect(workspaces).toHaveBeenLastCalledWith('all', '', '', undefined, undefined, undefined, undefined, filters);
+    fleet.mockResolvedValue({ data: { ...mockFleetSummary, total_tickets: 0 } });
+    workspaces.mockResolvedValue({ data: [] });
+    await selectTagKey(user, 'environment');
+    await user.click(screen.getByRole('checkbox', { name: 'Value: prod' }));
+    expect(await screen.findByText('No tickets match the selected tags. Clear tag filters to restore all tickets.')).toBeInTheDocument();
+    fleet.mockResolvedValue({ data: mockFleetSummary });
+    workspaces.mockResolvedValue({ data: [...mockTicketComparisonRows] });
+    await user.click(screen.getByRole('button', { name: 'Clear all' }));
+    expect(await screen.findByText('Total Cost')).toBeInTheDocument();
+    expect(fleet).toHaveBeenLastCalledWith('all', undefined, undefined);
+    await selectTagKey(user, 'team');
+    expect(screen.getByRole('checkbox', { name: 'Value: core' })).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Missing (key absent)' })).toBeInTheDocument();
   });
 
   it('keeps the fleet cost primary compact and the partial scope in secondary and tooltip', async () => {
@@ -160,7 +199,11 @@ describe('FleetOverview View Component', () => {
       const disclosure = within(region).getByText('View shared sessions and affected tickets');
       expect(disclosure.closest('details')).not.toHaveAttribute('open');
       expect(within(region).getByText(sessionId)).not.toBeVisible();
-      for (let i = 0; i < 5; i++) await user.tab();
+      for (let i = 0; i < 4; i++) await user.tab();
+      expect(screen.getByRole('button', { name: 'Ticket tags filter' })).toHaveFocus();
+      await user.tab();
+      expect(screen.getByRole('button', { name: 'Refresh Data' })).toHaveFocus();
+      await user.tab();
       expect(disclosure).toHaveFocus();
       // user-event/jsdom do not implement native summary keyboard activation.
       await user.click(disclosure);

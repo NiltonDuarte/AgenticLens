@@ -19,7 +19,11 @@ ticket:
       description: Fixture tasks
   case_insensitive: true
 workspaces:
-  dir: records
+  roots:
+    - path: records
+      discovery:
+        max_depth: 8
+        max_directories: 300
   artifacts: []
 code_metrics:
   base_branch: fixture-base

@@ -1,0 +1,15 @@
+# AL-81: Manual generation without capture registry access
+
+Status: Approved. User approved the plan with “$agentic-lens-dev plan is approved” on 2026-11-11.
+
+Manual `generate` must extract selected harness facts using project/metrics/source configuration and the existing output ledger without reading, creating or changing AgenticLens's capture registry. The goal and acceptance boundaries come from the [ticket](../plan/done/AL-81%20generate%20metrics%20without%20capture%20registry%20access.md) and [PO-20 F7](../PO-20/SPEC.md#f7-ad-hoc-manual-generation-without-capture-state-dependency).
+
+An explicit ticket and supported session/nonce selection must work without capture installation, enablement, state directory or worker settings. Missing, corrupt, conflicting or inaccessible capture state cannot affect manual extraction or acquire new bindings. Existing `--capture-dir` invocations remain compatible but the supplied location has no manual state effect. Explicit invalid flag values still receive actionable errors; manual operation does not require capture budgets. Project, generation, selected-source, feedback, classification and output settings actually consumed remain validated. Capture-only policy must not become an indirect prerequisite through configuration loading.
+
+Codex continues reading authoritative rollout files; OpenCode continues reading its supported source SQLite database. Preserve exact source identity, physical project validation and supported child discovery independently of registry association. Missing, malformed or unreadable selected root sources remain actionable errors that preserve accepted artifacts. Partial child extraction or discovery must report incomplete evidence and preserve affected owners; independently complete owners may refresh under the portable ledger contract. Explicit manual attribution does not rebind automatic owners, relabel a conflicting existing output ledger, or alter other tickets.
+
+Under the [portable ledger contract](../../TECHNICAL_GUIDELINES.md#portable-ledger-contract), complete exact local snapshots replace their owners, including lower/zero snapshots. Unavailable/partial owners, distinct roots, contributors and other harnesses survive, with no duplicate cumulative snapshots. Preserve output containment, shared manual/automatic publication serialization and interruption-safe ledger/summary recovery.
+
+Automatic `generate --capture-auto`, including worker invocations, retains enabled configuration, valid registry ownership and ticket binding throughout publication. Explicit source selectors cannot bypass these guards; unassigned sessions cannot publish automatically.
+
+Delivery requires isolated regression evidence, integrated `make`, independent review and a real Codex root with a source-proven child extracted with and without local registry presence, recording IDs and observed limits. Fixtures alone cannot satisfy that runtime evidence. No new ledger schema, reticket command, automatic cross-ticket cleanup, dashboard feature, capture installation redesign or native harness certification is included.

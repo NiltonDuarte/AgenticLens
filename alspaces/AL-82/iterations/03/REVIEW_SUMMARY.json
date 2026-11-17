@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "UI03-01",
+      "severity": 4,
+      "issue": "Popup focus loss during updates or noninteractive clicks can prevent keyboard recovery and Escape dismissal.",
+      "reporters": [
+        {
+          "persona": "tester",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        },
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed with owned-focus recovery and open-only Escape handling; retains tester verification, independent behavior/architecture discoveries and the parent-supplied heading trigger."
+    },
+    {
+      "finding_id": "UI03-02",
+      "severity": 4,
+      "issue": "The editor could use above-anchor space for its height while opening below and overflow the viewport.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "acknowledged"
+        }
+      ],
+      "disposition": "Fixed before formal review after parent inspection: chosen-side height caps, viewport clamps and offscreen dismissal; numeric placement tests verify the boundary."
+    }
+  ]
+}

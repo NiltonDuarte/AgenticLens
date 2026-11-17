@@ -6,7 +6,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	adaptersconfig "agenticlens/internal/adapters/config"
+	"agenticlens/internal/domain"
 )
 
 // setOpenCodeFixtureProject writes the supported native session directory column;
@@ -74,10 +78,45 @@ func prepareGenerateFixture(t *testing.T, cmd *exec.Cmd) {
 	path := filepath.Join(cmd.Dir, ".agenticlens-config.yaml")
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		writeCLISharedPolicy(t, cmd.Dir)
+		cfg, err := adaptersconfig.Load(cmd.Dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		directory := cmd.Dir
+		for i, arg := range cmd.Args {
+			if arg == "--json-output" && i+1 < len(cmd.Args) {
+				directory = filepath.Dir(cmd.Args[i+1])
+				if !filepath.IsAbs(directory) {
+					directory = filepath.Join(cmd.Dir, directory)
+				}
+				break
+			}
+		}
+		if err := os.MkdirAll(directory, 0700); err != nil {
+			t.Fatal(err)
+		}
+		cfg.Workspaces.Roots = []domain.WorkspaceRootConfig{{Path: directory, Discovery: domain.WorkspaceDiscoveryConfig{MaxDepth: 0, MaxDirectories: 300}}}
+		body, err := adaptersconfig.GenerateConfigYAML(cfg)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, body, 0600); err != nil {
+			t.Fatal(err)
+		}
 	}
 	local := filepath.Join(cmd.Dir, ".agenticlens-config.local.yaml")
 	if _, err := os.Stat(local); os.IsNotExist(err) {
 		if err := writeCaptureFixtureLocal(t, captureGenerationFixture{project: cmd.Dir, state: filepath.Join(cmd.Dir, ".agenticlens-capture")}, []byte("telemetry:\n  default_source: opencode\n  capture:\n    pass_timeout_ms: 3000\n    max_sessions: 256\n    max_source_bytes: 67108864\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 5000\n    commit_warning: true\n    enabled: false\n")); err != nil {
+			t.Fatal(err)
+		}
+	}
+	localBody, localErr := os.ReadFile(local)
+	if localErr != nil {
+		t.Fatal(localErr)
+	}
+	if !strings.Contains(string(localBody), "agenticlens:\n") {
+		localBody = append(localBody, []byte(fmt.Sprintf("\nagenticlens:\n  state_dir: %q\n", filepath.Join(cmd.Dir, ".publication-state")))...)
+		if err := os.WriteFile(local, localBody, 0600); err != nil {
 			t.Fatal(err)
 		}
 	}

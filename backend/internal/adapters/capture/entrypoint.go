@@ -84,8 +84,6 @@ func validateNativeHeader(path string) error {
 	switch runtime.GOOS {
 	case "linux":
 		valid = bytes.Equal(prefix[:], []byte{0x7f, 'E', 'L', 'F'})
-	case "windows":
-		valid = prefix[0] == 'M' && prefix[1] == 'Z'
 	case "darwin":
 		for _, magic := range [][4]byte{{0xcf, 0xfa, 0xed, 0xfe}, {0xce, 0xfa, 0xed, 0xfe}, {0xfe, 0xed, 0xfa, 0xcf}, {0xfe, 0xed, 0xfa, 0xce}, {0xca, 0xfe, 0xba, 0xbe}} {
 			if prefix == magic {
@@ -140,9 +138,6 @@ func sameEntrypointPath(left, right string) bool {
 	right, err = ProjectDirectory(right)
 	if err != nil {
 		return false
-	}
-	if runtime.GOOS == "windows" {
-		return strings.EqualFold(left, right)
 	}
 	return left == right
 }

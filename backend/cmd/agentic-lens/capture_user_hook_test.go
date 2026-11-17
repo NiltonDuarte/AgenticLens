@@ -133,7 +133,7 @@ func TestBaseLocalSetupRequiresChoiceAndPreservesExistingValues(t *testing.T) {
 		t.Fatal(err)
 	}
 	shared := readCaptureFile(t, filepath.Join(f.project, ".agenticlens-config.yaml"))
-	command = exec.Command(cliBinaryPath, "init", "--agenticlens-version", "v9.8.7", "--project-name", "Fixture", "--settings", cliFixtureSettings(t), "--workspaces", "records", "--capture-enabled", "true", "--source", "codex", "--codex-home", f.store, "--state-dir", f.stateBase)
+	command = exec.Command(cliBinaryPath, "init", "--agenticlens-version", "v9.8.7", "--project-name", "Fixture", "--settings", cliFixtureSettings(t), "--workspace-root", "records", "--capture-enabled", "true", "--source", "codex", "--codex-home", f.store, "--state-dir", f.stateBase)
 	command.Dir = f.project
 	if out, err := command.CombinedOutput(); err == nil || !strings.Contains(string(out), "--local-only") {
 		t.Fatalf("ordinary init silently left missing local choices: %s %v", out, err)
@@ -141,7 +141,7 @@ func TestBaseLocalSetupRequiresChoiceAndPreservesExistingValues(t *testing.T) {
 	if string(readCaptureFile(t, path)) != original || string(readCaptureFile(t, filepath.Join(f.project, ".agenticlens-config.yaml"))) != string(shared) {
 		t.Fatal("rejected init mutated existing configuration")
 	}
-	command = exec.Command(cliBinaryPath, "init", "--local-only", "--capture-enabled", "true", "--source", "codex", "--codex-home", f.store, "--state-dir", f.stateBase)
+	command = exec.Command(cliBinaryPath, "init", "--local-only", "--capture-enabled", "true", "--source", "codex", "--codex-home", f.store, "--state-dir", f.stateBase, "--publication-state-dir", filepath.Join(f.project, ".publication-state"))
 	command.Dir = f.project
 	if out, err := command.CombinedOutput(); err != nil {
 		t.Fatalf("fill missing explicit base choice: %s %v", out, err)

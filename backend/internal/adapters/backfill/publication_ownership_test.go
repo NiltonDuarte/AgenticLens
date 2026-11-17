@@ -28,7 +28,7 @@ func (c *publicationWaitContext) Done() <-chan struct{} {
 func TestManualWritersWaitForFormatterPublication(t *testing.T) {
 	for _, writer := range []string{"migration", "backfill"} {
 		t.Run(writer, func(t *testing.T) {
-			root := t.TempDir()
+			root := newBackfillProject(t)
 			paths := []string{}
 			for _, id := range []string{"A", "B"} {
 				path := filepath.Join(root, id, "agentic_metrics.json")
@@ -41,7 +41,7 @@ func TestManualWritersWaitForFormatterPublication(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			owner, err := capture.AcquirePublication(context.Background(), paths[1])
+			owner, err := capture.AcquirePublication(context.Background(), paths[1], root)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -58,7 +58,7 @@ func TestManualWritersWaitForFormatterPublication(t *testing.T) {
 			formatCtx := &publicationWaitContext{Context: deadline, waiting: make(chan struct{})}
 			formatDone := make(chan error, 1)
 			go func() {
-				_, err := adapters.FormatLedgerFiles(formatCtx, adapters.LedgerFormatOptions{Workspaces: root, All: true})
+				_, err := adapters.FormatLedgerFiles(formatCtx, adapters.LedgerFormatOptions{Project: root, All: true})
 				formatDone <- err
 			}()
 			select {
@@ -136,15 +136,22 @@ func TestManualWritersWaitForFormatterPublication(t *testing.T) {
 func TestManualWritersPreservePendingPublication(t *testing.T) {
 	for _, writer := range []string{"migration", "backfill"} {
 		t.Run(writer, func(t *testing.T) {
-			path := filepath.Join(t.TempDir(), "agentic_metrics.json")
+			project := newBackfillProject(t)
+			path := filepath.Join(project, "agentic_metrics.json")
 			body := []byte(`{"schema_version":4,"ticket_id":"A","ticket_title":"fixture","sessions":[],"anomalies":[]}`)
 			if err := os.WriteFile(path, body, 0644); err != nil {
+				t.Fatal(err)
+			}
+			owner, err := capture.AcquirePublication(context.Background(), path, project)
+			if err != nil {
 				t.Fatal(err)
 			}
 			if err := adapters.BeginPublication(path, []string{path}); err != nil {
 				t.Fatal(err)
 			}
-			var err error
+			if err := owner.Close(); err != nil {
+				t.Fatal(err)
+			}
 			if writer == "migration" {
 				res, _ := NewMigrationRunner(nil).migrateWorkspace(context.Background(), path, MigrationOptions{}, domain.CurrentSchemaVersion, domain.ProjectConfig{})
 				err = res.Error

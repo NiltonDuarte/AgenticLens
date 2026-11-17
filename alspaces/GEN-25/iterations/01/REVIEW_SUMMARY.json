@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "HOOK-01",
+      "severity": 5,
+      "issue": "Previous generated advisory hooks were refused during supported-host refresh or removal.",
+      "reporters": [
+        {
+          "persona": "coder",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: strict prior-template signature permits safe refresh/removal; edited variants remain protected. Before/after regressions pass."
+    },
+    {
+      "finding_id": "REL-01",
+      "severity": 2,
+      "issue": "Stale unsupported artifacts entered release checksums and upload selectors.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: exact supported operands exclude stale binaries/archives from checksums and all three uploads without deleting files."
+    },
+    {
+      "finding_id": "DOC-01",
+      "severity": 3,
+      "issue": "Contributor guidance promised removed ZIP archives.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: contributor target table states tar.gz-only packaging."
+    },
+    {
+      "finding_id": "TEST-01",
+      "severity": 2,
+      "issue": "Reviewer requested an additional execution sentinel in historical-hook tests.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Refuted as a material gap by parent source trace: hook contents are never evaluated; only Git rev-parse is executed. Existing real upgrade/removal/edit-refusal tests plus source proof are proportionate."
+    }
+  ]
+}

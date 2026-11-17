@@ -54,7 +54,7 @@ func acquireInstallLock(state string) (*PublicationLock, error) {
 	if !held {
 		return nil, errors.Join(errors.New("capture installation is already in progress; retry after its owner finishes"), file.Close())
 	}
-	return &PublicationLock{file}, nil
+	return &PublicationLock{file: file}, nil
 }
 
 func currentInstallIdentity(ctx context.Context, options InstallOptions, repo, state string, m Manifest) (installIdentity, error) {

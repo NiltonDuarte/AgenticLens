@@ -77,9 +77,18 @@ jobs:
           make_latest: true
           generate_release_notes: true
           files: |
-            dist/bin/agentic-lens-*
-            dist/agentic-lens-*.tar.gz
-            dist/agentic-lens-*.zip
+            dist/bin/agentic-lens-linux-amd64
+            dist/bin/agentic-lens-engine-linux-amd64
+            dist/bin/agentic-lens-linux-arm64
+            dist/bin/agentic-lens-engine-linux-arm64
+            dist/bin/agentic-lens-darwin-amd64
+            dist/bin/agentic-lens-engine-darwin-amd64
+            dist/bin/agentic-lens-darwin-arm64
+            dist/bin/agentic-lens-engine-darwin-arm64
+            dist/agentic-lens-${{ env.VERSION }}-linux-amd64.tar.gz
+            dist/agentic-lens-${{ env.VERSION }}-linux-arm64.tar.gz
+            dist/agentic-lens-${{ env.VERSION }}-darwin-amd64.tar.gz
+            dist/agentic-lens-${{ env.VERSION }}-darwin-arm64.tar.gz
             dist/SHA256SUMS
 
       - name: Update Floating Latest Tag

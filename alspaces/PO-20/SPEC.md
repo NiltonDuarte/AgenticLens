@@ -118,7 +118,7 @@ Related existing work remains separately owned: AL-70 configuration/path propaga
 
 ## Additional manual-generation correction
 
-[AL-81: Make manual generate independent of the capture registry](../plan/to-do/AL-81%20generate%20metrics%20without%20capture%20registry%20access.md) is Ready with no ticket prerequisite. This separately requested correction addresses F7; the two-ticket capture integration sequence remains AL-79 then AL-80. The user requested ad hoc generation independent of the AgenticLens registry, while retaining harness source access and automatic capture safeguards.
+[AL-81: Make manual generate independent of the capture registry](../plan/done/AL-81%20generate%20metrics%20without%20capture%20registry%20access.md) was completed independently in AL-81. This separately requested correction addresses F7; the two-ticket capture integration sequence remains AL-79 then AL-80. The user requested ad hoc generation independent of the AgenticLens registry, while retaining harness source access and automatic capture safeguards.
 
 ## Handoff limits
 

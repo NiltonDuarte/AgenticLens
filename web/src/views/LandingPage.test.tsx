@@ -711,7 +711,7 @@ describe('LandingPage View Component', () => {
           case_insensitive: true,
           role_mappings: {},
           prefixes: [],
-          workspaces_dir: 'workspaces',
+          workspaces_roots: [{ path: 'workspaces', discovery: { max_depth: 1, max_directories: 300 } }],
           role_order: [],
           version: 'v1.0.0',
         }}

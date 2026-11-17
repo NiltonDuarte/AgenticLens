@@ -1,4 +1,4 @@
-//go:build !windows
+//go:build linux || darwin
 
 package main_test
 
@@ -25,6 +25,7 @@ func TestCaptureNativeCrashReleasesOwnershipAndPreservesPendingGeneration(t *tes
 }
 func testNativePendingGeneration(t *testing.T, crash bool) {
 	f := newCaptureGenerationFixture(t)
+	seedCaptureTicketHome(t, f, "TEST-100")
 	f.bind(t, f.write(t, 37))
 	local := []byte("telemetry:\n  capture:\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 300\n    max_lifetime_ms: 10000\n")
 	if err := writeCaptureFixtureLocal(t, f, local); err != nil {
@@ -49,7 +50,7 @@ func testNativePendingGeneration(t *testing.T, crash bool) {
 		t.Fatal(err)
 	}
 	output := filepath.Join(f.project, "records", "TEST-100", "agentic_metrics.json")
-	lock, err := capture.AcquirePublication(context.Background(), output)
+	lock, err := capture.AcquirePublication(context.Background(), output, f.project)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -173,6 +174,8 @@ func testNativePendingGeneration(t *testing.T, crash bool) {
 
 func TestCaptureLateTicketMustPublishBeforeIdle(t *testing.T) {
 	f := newCaptureGenerationFixture(t)
+	seedCaptureTicketHome(t, f, "TEST-100")
+	seedCaptureTicketHome(t, f, "TEST-200")
 	f.bind(t, f.write(t, 37))
 	if err := writeCaptureFixtureLocal(t, f, []byte("telemetry:\n  capture:\n    refresh_ms: 100\n    debounce_ms: 0\n    idle_ms: 100\n    max_lifetime_ms: 3000\n")); err != nil {
 		t.Fatal(err)

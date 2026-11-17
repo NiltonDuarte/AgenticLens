@@ -59,7 +59,7 @@ func AcquireWorker(directory string) (*PublicationLock, error) {
 	if !held {
 		return nil, file.Close()
 	}
-	return &PublicationLock{file}, nil
+	return &PublicationLock{file: file}, nil
 }
 
 // LaunchWorker disconnects callback pipes and process group. It never invokes a

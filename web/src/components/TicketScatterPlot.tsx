@@ -1,18 +1,26 @@
+import { workspaceKey, selectWorkspace } from '../domain/workspaces';
+import { tagChoices, tagCategory, tagColors } from '../domain/tags';
 import { durationDescription } from '../domain/duration';
 import React, { useMemo, useState } from 'react';
 import type { TicketComparisonRow } from '../domain/types';
 import { deriveScatterPlotData, getScatterMetricValue, SCATTER_METRICS, type ScatterMetricKey, type ScatterScale } from '../domain/ticket_scatter';
 
 export interface TicketScatterPlotProps {
+  readonly categoryRows?: readonly TicketComparisonRow[];
   readonly rows: readonly TicketComparisonRow[];
-  readonly onSelectTicket?: ((ticketId: string) => void) | undefined;
+  readonly onSelectTicket?: ((ticketId: string, workspacePath?: string) => void) | undefined;
 }
 
 const WIDTH = 760;
 const HEIGHT = 400;
 const PADDING = { top: 24, right: 24, bottom: 62, left: 72 };
 
-export const TicketScatterPlot: React.FC<TicketScatterPlotProps> = ({ rows, onSelectTicket }) => {
+export const TicketScatterPlot: React.FC<TicketScatterPlotProps> = ({ rows, categoryRows, onSelectTicket }) => {
+  const [colorKey, setColorKey] = useState('');
+  const catalog = [...new Map([...(categoryRows ?? []), ...rows].map((row) => [workspaceKey(row), row])).values()];
+  const choices = tagChoices(catalog.map((row) => row.tags));
+  const categories = colorKey ? [...new Map(catalog.map((row) => { const category = tagCategory(row.tags, colorKey); return [category.id, category] as const; })).values()] : [];
+  const colors = tagColors(categories.map((category) => category.id));
   const [xMetric, setXMetric] = useState<ScatterMetricKey>('cost_usd');
   const [yMetric, setYMetric] = useState<ScatterMetricKey>('net_lines_added');
   const [scale, setScale] = useState<ScatterScale>('linear');
@@ -61,6 +69,12 @@ export const TicketScatterPlot: React.FC<TicketScatterPlotProps> = ({ rows, onSe
             <option value="logarithmic">Logarithmic</option>
           </select>
         </label>
+        <label>Color by tag
+          <select aria-label="Color by tag" value={colorKey} onChange={(event) => setColorKey(event.target.value)}>
+            <option value="">Completion status</option>
+            {choices.map(({ key }) => <option key={key} value={key}>{key}</option>)}
+          </select>
+        </label>
         {data.recommendsLogarithmic && <span className="ticket-scatter-recommendation" aria-live="polite">Logarithmic scale recommended for this metric span.</span>}
       </div>
       <details className="ticket-scatter-exclusions">
@@ -74,9 +88,9 @@ export const TicketScatterPlot: React.FC<TicketScatterPlotProps> = ({ rows, onSe
         <fieldset>
           <legend>Tickets included in the chart</legend>
           {visibleRows.map((row) => (
-            <label key={row.ticket_id}>
-              <input type="checkbox" checked={!excluded.has(row.ticket_id)} onChange={() => toggleExcluded(row.ticket_id)} />
-              {row.ticket_id} — {row.ticket_title}
+            <label key={workspaceKey(row)}>
+              <input type="checkbox" checked={!excluded.has(workspaceKey(row))} onChange={() => toggleExcluded(workspaceKey(row))} />
+              {row.ticket_id} — {row.ticket_title}{row.workspace_path ? ` — ${row.workspace_path}` : ''}
             </label>
           ))}
           {visibleRows.length === 0 && <p role="status">No tickets match your search.</p>}
@@ -106,31 +120,35 @@ export const TicketScatterPlot: React.FC<TicketScatterPlotProps> = ({ rows, onSe
           <text transform={`translate(18 ${PADDING.top + plotHeight / 2}) rotate(-90)`} textAnchor="middle" className="ticket-scatter-label">{yMeta.label}{scale === 'logarithmic' ? ' (log10)' : ''}</text>
           {data.points.map(({ row, x, y }) => {
             const isCompleted = row.completed_at !== null;
+            const category = colorKey ? tagCategory(row.tags, colorKey) : undefined;
+            const identity = `${row.workspace_path ? `Location: ${row.workspace_path}; ` : ''}Status: ${isCompleted ? 'Completed' : 'In Progress'}${category ? `; Tag ${colorKey}: ${category.label}` : ''}`;
             const rawX = getScatterMetricValue(row, xMetric) ?? 0;
             const rawY = getScatterMetricValue(row, yMetric) ?? 0;
             const skills = row.skills_used === undefined ? 'Skills not recorded' : row.skills_used?.length ? row.skills_used.join(', ') : 'No recorded skills';
             return (
               <circle
-                key={row.ticket_id}
+                key={workspaceKey(row)}
                 cx={positionX(x)}
                 cy={positionY(y)}
                 r={6}
-                fill={isCompleted ? '#4ea1ff' : '#f2a93b'}
+                fill={category ? colors.get(category.id) : isCompleted ? '#4ea1ff' : '#f2a93b'}
                 className="ticket-scatter-point"
                 tabIndex={0}
                 role="button"
-                aria-label={`${row.ticket_id}: ${row.ticket_title}; ${xMeta.label} ${xMeta.format(Number(rawX))}; ${yMeta.label} ${yMeta.format(Number(rawY))}; Skills Used: ${skills}\n${durationDescription(row.provisional_seconds)}`}
-                onClick={() => onSelectTicket?.(row.ticket_id)}
-                onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onSelectTicket?.(row.ticket_id); } }}
+                aria-label={`${row.ticket_id}: ${row.ticket_title}; ${identity}; ${xMeta.label} ${xMeta.format(Number(rawX))}; ${yMeta.label} ${yMeta.format(Number(rawY))}; Skills Used: ${skills}\n${durationDescription(row.provisional_seconds)}`}
+                onClick={() => selectWorkspace(onSelectTicket, row)}
+                onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); selectWorkspace(onSelectTicket, row); } }}
               >
-                <title>{`${row.ticket_id} — ${row.ticket_title}\n${xMeta.label}: ${xMeta.format(Number(rawX))}\n${yMeta.label}: ${yMeta.format(Number(rawY))}; Skills Used: ${skills}\n${durationDescription(row.provisional_seconds)}`}</title>
+                <title>{`${row.ticket_id} — ${row.ticket_title}\n${identity}\n${xMeta.label}: ${xMeta.format(Number(rawX))}\n${yMeta.label}: ${yMeta.format(Number(rawY))}; Skills Used: ${skills}\n${durationDescription(row.provisional_seconds)}`}</title>
               </circle>
             );
           })}
         </svg>
         {data.points.length === 0 && <p className="ticket-scatter-empty">No tickets have values for both selected metrics.</p>}
       </div>
-      <div className="ticket-scatter-legend"><span><i className="completed" />Completed</span><span><i className="in-progress" />In Progress</span></div>
+      <div className="ticket-scatter-legend" aria-label={colorKey ? `Tag ${colorKey} legend` : 'Completion legend'}>
+        {colorKey ? categories.map((category) => <span key={category.id}><i style={{ backgroundColor: colors.get(category.id) }} />{category.label}</span>) : <><span><i className="completed" />Completed</span><span><i className="in-progress" />In Progress</span></>}
+      </div>
     </section>
   );
 };

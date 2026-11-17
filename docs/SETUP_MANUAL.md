@@ -31,15 +31,9 @@ agentic-lens --al-project <PROJECT> version --short
 
 The first command bootstraps both setup/operator skills from the selected tag. Restore missing setup scripts from that tag after reviewing them. Existing configurations/files are preserved; do not fetch moving-main wrappers or moving latest artifact URLs. For a new project use explicit --init-config --version only as a bootstrap scaffold; complete reviewed shared/local candidates through native init before claiming publication readiness. Never overwrite arbitrary project/local config using --force.
 
-The native manager defaults to `~/.local/bin/agentic-lens` on POSIX and `~/.agenticlens/agentic-lens.exe` on Windows. The explicit Windows bootstrap is:
+AgenticLens supports macOS and Linux on amd64 and arm64. The native manager defaults to `~/.local/bin/agentic-lens`. Windows is unsupported.
 
-```powershell
-powershell.exe -NoLogo -NoProfile -NonInteractive -File .\.agents\skills\agentic-lens-setup\scripts\download.ps1 -Project <PROJECT> -ManagerVersion <EXACT_MANAGER_TAG> -DryRun
-powershell.exe -NoLogo -NoProfile -NonInteractive -File .\.agents\skills\agentic-lens-setup\scripts\download.ps1 -Project <PROJECT> -ManagerVersion <EXACT_MANAGER_TAG>
-& <INSTALLED_MANAGER_EXE> --al-project <PROJECT> version --short
-```
-
-Exact engines coexist in `~/.agenticlens/bin/<version>/<os-arch>/agentic-lens-engine-<os>-<arch>[.exe]`. Manager and engine local artifacts require separate expected SHA256 values. The bootstrap provisions the project engine and installs the manager directly; no shell runtime launcher or dispatcher copy is installed. Native installation verifies staged bytes and preserves modified/unowned files and other versions. Installers report the required PATH directory without changing profiles. Windows native transport and build targets remain, with no new Windows runtime certification; replacing a loaded manager can require an explicit manual update.
+Exact engines coexist in `~/.agenticlens/bin/<version>/<os-arch>/agentic-lens-engine-<os>-<arch>`. Manager and engine local artifacts require separate expected SHA256 values. The bootstrap provisions the project engine and installs the manager directly; no shell runtime launcher or dispatcher copy is installed. Native installation verifies staged bytes and preserves modified/unowned files and other versions. Installers report the required PATH directory without changing profiles.
 
 Manager and engine versions are independent. Inspect the manager with `agentic-lens --manager-version --json`, inspect selected engine with `agentic-lens --al-project <PROJECT> version --json`, install engines using `agentic-lens install <EXACT_ENGINE_TAG>` and explicitly update the manager using `agentic-lens self-update --version <EXACT_MANAGER_TAG>`. Updating the manager never edits project pins. Outside configured projects, utility commands require the manager's same-version companion in the default user cache; install it explicitly with `agentic-lens install <MANAGER_VERSION> --install-root <USER_HOME>/.agenticlens` when needed. Native maintenance help remains available without an engine.
 
@@ -106,7 +100,11 @@ ticket:
       ticket_type: feat
   case_insensitive: true
 workspaces:
-  dir: tickets
+  roots:
+    - path: tickets
+      discovery:
+        max_depth: 1
+        max_directories: 300
   artifacts: []
 code_metrics:
   base_branch: origin/main
@@ -153,6 +151,8 @@ role_order: []
 An illustrative local candidate for manual-only telemetry follows. Replace its paths with approved actual locations. Disabled automatic capture permits manual generation; worker-only timing fields are not needed until workers are enabled.
 
 ```yaml
+agenticlens:
+  state_dir: ~/.agenticlens/state
 telemetry:
   default_source: codex
   sources:
@@ -160,7 +160,7 @@ telemetry:
       home: /srv/codex-home
   capture:
     enabled: false
-    state_dir: ~/.agenticlens/state
+    state_dir: ~/.agenticlens/capture
     pass_timeout_ms: 20000
     max_sessions: 32
     max_source_bytes: 8388608
@@ -168,7 +168,7 @@ telemetry:
 
 ### 3.2 Applying Approved Choices
 
-From the base checkout, preview `init --settings <SHARED_CANDIDATE.yaml> --local-settings <LOCAL_CANDIDATE.yaml> --workspaces <ROOT> --dry-run`. New shared configuration requires nonblank explicit `--workspaces`; output defaults to `.agenticlens-config.yaml`, or an explicit destination with either canonical basename. The local file is beside it. Validate both candidates before writes. Existing local completion uses `--local-only` and preserves valid values. An exact unchanged installer scaffold can use `--complete-scaffold`; arbitrary configs are not scaffolds.
+From the base checkout, preview `init --settings <SHARED_CANDIDATE.yaml> --local-settings <LOCAL_CANDIDATE.yaml> --workspace-root <ROOT> --discovery-depth 0 --directory-budget 300 --publication-state-dir <PUBLICATION_STATE> --dry-run`. New shared configuration requires approved explicit `workspaces.roots` entries or repeatable nonblank `--workspace-root` selections; output defaults to `.agenticlens-config.yaml`, or an explicit destination with either canonical basename. The local file is beside it. Validate both candidates before writes. Existing local completion uses `--local-only` and preserves valid values. An exact unchanged installer scaffold can use `--complete-scaffold`; arbitrary configs are not scaffolds.
 
 Prefix mappings preserve literal separators and descriptions; scalar shortcuts are not part of the current schema. Explicit case policy applies consistently. Generation type order is CLI, existing recorded type, then agreeing configured mappings. Conflicts require an explicit type; no available type remains unknown or fails with `--strict-type`. Summary output follows shared policy, with manual `--append` overriding enablement and destination. The full [field reference](../.agents/skills/agentic-lens-operator/references/configuration.md#shared-policy) explains numerical requirements and intentional false/zero/empty values.
 
@@ -190,8 +190,8 @@ agentic-lens generate \
   --nonce "<GENERATED_NONCE>" \
   --ticket-id "<TICKET_ID>" \
   --ticket-type "<CONVENTIONAL_TYPE>" \
-  --json-output "<WORKSPACES_DIR>/<TICKET_ID>/agentic_metrics.json" \
-  --append "<WORKSPACES_DIR>/<TICKET_ID>/<SUMMARY_FILENAME>"
+  --json-output "<SELECTED_CHANGE_DIR>/agentic_metrics.json" \
+  --append "<SELECTED_CHANGE_DIR>/delivery.md"
 ```
 
 #### Literal Nonce Mandate (FIX-5)
@@ -216,30 +216,18 @@ Configure `role_mappings` as shown in the [configuration example](#31-reviewed-c
 
 ### 4.5 Standard Repository Agent Guidelines Policy Block
 
-Below is the standard policy block that can be added to your repository's OpenCode agent instructions file (`AGENTS.md` or `.agents/agent/*.md`):
+Use the canonical [repository policy](../AGENTS.md) and [OpenSpec workflow](OPENSPEC_WORKFLOW.md) rather than maintaining a second full SDLC checklist. For an adopting repository, review its actual instructions and obtain authorization before adding a concise integration block:
 
 ```markdown
-## AgenticLens Telemetry Guidelines
+## AgenticLens telemetry and execution
 
-1. Ticket Tracking Mandate:
-   - Every task requires an explicit ticket ID and workspace under the configured `workspaces.dir`. Missing configuration requires setup, without inventing a root.
-   - Use an existing ticket when one is provided. For ad hoc work without an ID, obtain an identifier using the configured literal prefixes; do not create a planning specification or index entry under `plan/` solely for it.
-   - Agents work on one ticket at a time. All turns belong to the active ticket.
-
-2. Plan Lifecycle:
-   - When a matching specification exists under `plan/to-do/`, move it to `plan/done/` when its ticket is completed.
-   - Remove the ticket entry from `plan/TICKETS.md` if present. Do not create a specification or index entry just to complete this step; ad hoc tickets still have an ID and workspace.
-
-3. Dedicated Workspace Allocation:
-   - Store task documentation and metrics in `<WORKSPACES_DIR>/<TICKET_ID>/`.
-   - Maintain `CONTRACT.md` (scope boundaries) and `SUMMARY.md` (current outcome, verification and limits) as required by the project's artifact list.
-
-4. Automatic Telemetry Publication:
-   - Answer the native lifecycle session-specific binding request with the explicitly supplied ticket and title; never infer ticket ownership.
-   - Verify automatic ledger/summary publication and coverage before committing. Manual `generate` is available independently, using the selected harness and an exact session ID or literal nonce.
-   - Verify configured-summary coverage and local capture diagnostics. Existing standalone reports are left untouched; interrupted publication recovery is explicit.
-   - Stage only reviewed task-owned deliverables and telemetry together. Keep raw transcripts and local capture state out of Git.
-
+- Use one canonical configured ticket per session. Keep the long-term roadmap separate from selected execution work.
+- Configure explicit workspaces.roots entries with path and discovery maximum depth/directory budget. No folder name establishes ticket identity; only a ledger does.
+- First generation receives an explicit ticket ID and ledger destination. Folders without ledgers are outside AgenticLens discovery.
+- When this repository adopts OpenSpec, selected work uses one ticket-linked change with proposal/specs/design/tasks/delivery and final telemetry. Do not create downstream changes merely by drafting roadmap tickets.
+- Require explicit implementation approval, specialist ownership and verified review/delivery. Planning readiness, task completion, archive and roadmap-ticket completion are distinct.
+- Writers use explicit local agenticlens.state_dir without requiring capture enablement; read-only historical access requires no private state. Pending publication stays visibly incomplete without recovery data.
+- Preserve exact source/session ownership, unavailable history and other harnesses. Generate final telemetry with a literal nonce, explicit conventional type and actual source; verify root/child completeness before committing.
 ```
 
 ---
@@ -325,7 +313,7 @@ Require shared `code_metrics.base_branch`, chosen and approved during setup. It 
 
 ### 6.5 Workspace Directory Path Resolution
 
-Explicit `--workspaces` overrides shared `workspaces.dir`; absent/invalid/unavailable required roots fail without conventional directory guesses. Relative CLI paths belong to invocation cwd and configured paths to their shared file. A foreign target supplies its own required project policy. Explicit portable formatting can operate on its selected workspace without unrelated source/capture policy. Keep agent instructions aligned with the actual configured root.
+Shared `workspaces.roots` is the only selection model. Each path has explicit `discovery.max_depth` and `max_directories`; no scalar directory, root ID, minimum depth or runtime single-directory override is supported. Writers initialize 0/300; a container holding child ticket ledgers must explicitly select depth 1 or a suitable deeper bound. Configured paths belong to shared YAML. Invalid policy fails; unavailable roots and invalid individual ledgers produce diagnostics without hiding valid siblings. Alias directories enumerate once and duplicate ticket ledgers require explicit selection. Ticket identity comes only from the ledger, never folder names. Reads require no local source/capture/publication state. Writes require explicit selected-local `agenticlens.state_dir`, initially `~/.agenticlens/state`, independently of capture enablement. Users must update retired configuration/API/CLI shapes explicitly; no compatibility adapter is retained.
 
 ### 6.6 Worktrees and Container/Host Platforms
 
@@ -344,7 +332,7 @@ Go 1.23+ builds with `CGO_ENABLED=0`; `modernc.org/sqlite` needs no C compiler o
 ### A.3 Local Immutable Telemetry Fact Ledgers (`agentic_metrics.json`)
 
 Rather than transmitting proprietary code or execution telemetry to external cloud services, AgenticLens operates entirely locally:
-- Telemetry facts are captured per ticket or task in isolated workspace directories: `workspaces/<TICKET_ID>/agentic_metrics.json`.
+- Telemetry facts are recorded in the explicit selected change/workspace directory’s `agentic_metrics.json`; directory spelling does not determine ticket identity.
 - Schema-v4 and schema-v5 sessions own invocation records, per-session tool summaries, session-specific anomaly summaries, and sparse direct-evidence events. Cross-session anomaly summaries (including high tool failure rates) live at ticket level without session IDs or event rows. Metrics are derived from summaries and tool totals, not by rerunning sequence detectors over sparse evidence. When OpenCode hydration is unavailable, the timeline shows committed anomaly evidence only; full Codex event hydration is not provided. Migration reports and removes legacy aggregate tool rows without reliable session attribution; re-extract from OpenCode/Codex source logs to recover those counts when available.
 - Each ledger is an immutable JSON document recording session identifiers, wall-clock duration, token volume (input, output, cache-read, and cache-write tokens), financial cost evidence where known, preserving unknown cost explicitly, turn counts, tool invocation distributions, error rates, and git commit diff volumes (insertions, deletions, and affected files).
 - These ledgers are committed directly to version control alongside code deliverables, establishing an auditable, repository-native history of agent engineering metrics with zero cloud egress.
@@ -402,7 +390,7 @@ Automatic capture selects one whole `.agenticlens-config.local.yaml`: worktree-l
 telemetry:
   capture:
     enabled: true
-    state_dir: ~/.agenticlens/state
+    state_dir: ~/.agenticlens/capture
     refresh_ms: 15000
     debounce_ms: 500
     idle_ms: 120000
@@ -425,9 +413,9 @@ The relocation command supports only the inspected legacy registry protocol1 fam
 
 The worker uses durable request generations and acknowledges only the generation observed before its pass. Kernel process locks release on crashes. Later callbacks restart workers; workers periodically refresh active sessions, debounce bursts, back off after failed publication, and exit after idle terminal sessions. A finite maximum lifetime transfers active/pending work to a fresh native worker. Check `capture status --repo PROJECT` and local `worker.log` for failures. This is native child-process scheduling, with no separately installed service, model recursion or callback network/self-update work.
 
-The ledger uses schema v6 at `<workspaces.dir>/<ticket>/agentic_metrics.json`. Top-level `completed_at` is the observability snapshot finalization boundary, equal to artifact `updated_at`; it does not assert source-session termination or ticket merge. Source invocation completion timestamps remain unchanged. Each owner has its own source-read checkpoint; there is no simultaneous source-read guarantee. Source failures preserve accepted facts and visibly degrade coverage.
+The ledger uses schema v6 at its actual selected directory’s `agentic_metrics.json`; moving the directory across configured roots does not change recorded identity. Readers and writers resolve that same location instead of reconstructing it from the ticket. Top-level `completed_at` is the observability snapshot finalization boundary, equal to artifact `updated_at`; it does not assert source-session termination or ticket merge. Source invocation completion timestamps remain unchanged. Each owner has its own source-read checkpoint; there is no simultaneous source-read guarantee. Source failures preserve accepted facts and visibly degrade coverage.
 
-Publication uses shared generation.summary policy. Durable local diagnostics retain reconciliation/publication evidence; standalone report files are ignored and preserved.
+Publication uses shared generation.summary policy and the configured operational state home for private journals/backups and locks. A transient adjacent pending indicator follows moved/copied ledgers so another machine can report incomplete publication without private recovery state. Missing recovery data never authorizes accepting a mixed set or clearing the indicator. New writes have no legacy-journal adapter. Durable local capture diagnostics remain separate; unrelated historical files are preserved.
 
 ### Explicit installation consistency and completion scope
 
@@ -479,8 +467,45 @@ Installed generic command transports do not currently verify the caller's exact 
 
 Codex uses `capture install-user` in the effective user home; `uninstall-user` removes only unchanged owned groups and retains state. Installation is additive and journaled. Explicit `--migrate-legacy-repo <ORIGINAL_CHECKOUT>` removes unchanged owned project callbacks while preserving state; unknown/modified callbacks error and remain untouched. No per-worktree installation manifest is required by this path. Legacy OpenCode project-plugin commands remain separate until its global integration is delivered.
 
-Shared `agenticlens.version` is an exact required pin. Configured `agenticlens.binary_dir` requires valid host output `agentic-lens-engine-GOOS-GOARCH[.exe]`; missing/invalid selected output fails. Absent development mode deliberately selects the exact pinned installed engine. Local files cannot override these selectors. Workers retain immutable executable bytes for later children through normal exit; new invocations select the current preferred build. Status exposes local configuration origin and active/preferred identity.
+Shared `agenticlens.version` is an exact required pin. Configured `agenticlens.binary_dir` requires valid host output `agentic-lens-engine-GOOS-GOARCH`; missing/invalid selected output fails. Absent development mode deliberately selects the exact pinned installed engine. Local files cannot override these selectors. Workers retain immutable executable bytes for later children through normal exit; new invocations select the current preferred build. Status exposes local configuration origin and active/preferred identity.
 
 The native manager owns installation and routing. `agentic-lens install <EXACT_ENGINE_VERSION>` provisions an engine; `agentic-lens self-update --version <EXACT_MANAGER_VERSION>` explicitly updates the installed manager without editing any project pin. Both verify staged artifacts, preserve modified/unowned destinations and recover interrupted replacements under a destination lease. Codex hook installation only writes owned hooks and their receipt; it does not copy an engine into a dispatcher path. Hook removal retains the installed manager and engine cache.
 
 Ordinary engine commands preserve caller cwd and relative-argument meaning even with `--al-project`. The manager validates the selected engine and forwards ordinary argv. Engines contain no dispatch mode and workers execute their retained engine directly.
+
+## Ticket tags
+
+Add optional ticket metadata in shared `.agenticlens-config.yaml`:
+
+```yaml
+tags:
+  team: core
+  environment: dev
+```
+
+Private `.agenticlens-config.local.yaml` can contain only a `tags` mapping, for
+example `tags: {environment: staging}`. Invocation overrides use repeatable
+`generate --tag environment=prod --tag experiment=baseline`. Precedence is per
+key: CLI overrides local, which overrides shared; unrelated lower-layer keys
+survive. Repeated CLI keys use the last value and split at the first `=`, so a
+value may itself contain `=`. Keys and values must be nonblank strings. Outer
+whitespace is trimmed; internal text and case remain unchanged. Quote YAML
+values such as `"true"`, `"12"` and `"null"` to keep them strings. Duplicate keys
+including whitespace-normalized collisions are errors.
+
+A successful generation merges effective tags into the ticket ledger. Missing
+inputs preserve recorded keys; there is no deletion syntax. Automatic publication
+uses shared/local defaults. CLI tags apply only to that invocation and do not
+change configuration or capture registrations. Backfill and dashboard reads
+preserve historical tags without applying the current reader's defaults.
+
+Local configuration remains private, but its **effective tags become shared
+ledger data**, including after committing the ledger to Git. Do not put secrets
+in tags. Dashboard tag filters select whole tickets (OR values within a key,
+AND across keys). Missing identifies absence separately from a literal value
+named `Missing`. Comparison coloring by tag changes visual identity while
+preserving ticket metrics and point coordinates.
+
+## OpenSpec execution adoption
+
+Follow [the pinned workflow](OPENSPEC_WORKFLOW.md) for supported setup/custom schemas, ticket-prefixed creation, standard artifacts and archive. The separate roadmap remains editable without creating execution changes. This repository's selected roots include alspaces and OpenSpec changes/archive as equal ordinary locations; the native platform has no OpenSpec storage mode or folder-name identity parser. A planning-only change is invisible until first ledger generation. Actual native Codex/OpenCode extraction/publication must be verified for the delivered engine; installed assistant skills and schema validation alone are not capture evidence.
