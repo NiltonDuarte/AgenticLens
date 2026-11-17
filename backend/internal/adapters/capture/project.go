@@ -279,17 +279,7 @@ func validateOwnerSource(ctx context.Context, project string, r domain.CaptureRe
 				return err
 			}
 		}
-		var budget *codex.DiscoveryBudget
-		if !manual {
-			var err error
-			budget, err = captureDiscoveryBudget(cfg)
-			if err != nil {
-				return err
-			}
-		}
-		selected := r
-		selected.TranscriptPath = path
-		if err := validateRegisteredCodexSnapshot(selected, budget); err != nil {
+		if err := codex.ValidateRolloutStore(r.Identity.Store, path); err != nil {
 			return err
 		}
 		var t codex.SessionMetadataContext

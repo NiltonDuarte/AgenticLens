@@ -275,7 +275,11 @@ func TestReconcileFailedReadsConsumeSharedByteBudget(t *testing.T) {
 		size = int64(len(contents))
 		registerBound(t, s, store, path, id, "TEST-100")
 	}
-	result, err := s.Reconcile(context.Background(), "TEST-100", "tester", 2, size, fixtureGenerationPolicy())
+	// Exact uniqueness inspection reads both source files before the first parse.
+	// Allow that discovery plus one malformed parse so this test still reaches
+	// the failed-read branch and leaves the second owner pending.
+	allowance := 3 * size
+	result, err := s.Reconcile(context.Background(), "TEST-100", "tester", 2, allowance, fixtureGenerationPolicy())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -291,8 +295,8 @@ func TestReconcileFailedReadsConsumeSharedByteBudget(t *testing.T) {
 	if failed != 1 || pending != 1 {
 		t.Fatalf("failed parsing escaped the shared byte budget: failed=%d pending=%d rows=%+v", failed, pending, result.Registrations)
 	}
-	if result.SourceBytes != size || result.SourceAttempts > 2 {
-		t.Fatalf("incorrect failed-read accounting: bytes=%d attempts=%d budget=%d", result.SourceBytes, result.SourceAttempts, size)
+	if result.SourceBytes != allowance || result.SourceAttempts > 2 {
+		t.Fatalf("incorrect failed-read accounting: bytes=%d attempts=%d budget=%d", result.SourceBytes, result.SourceAttempts, allowance)
 	}
 }
 

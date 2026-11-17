@@ -23,3 +23,5 @@ Baseline and fetched origin/main are b6ab0471224c8bcea7bc00adce867d3ba0de4a37 (A
 ## Iteration 01 review correction
 
 Architecture review (Sol 6.1/high) confirmed ARCH-01: registered capture-auto generation bypassed native duplicate discovery and could replace accepted history from one registered path. The existing approval already covers this consuming path; no acceptance boundary changes. Coder ownership extends to scoped capture adapters, and tester adds the actual automatic-generation regression. Re-review covers capture validation/extraction, source budgets and history preservation across all four focuses and both configured profiles.
+
+Architecture re-review confirmed ARCH-02: restarting exact discovery for every registered owner could exceed an operation's source-read budget. The correction must share an operation-local allowance and account discovery reads, retaining incomplete results when exhausted. This preserves existing bounded-capture guarantees within iteration 01; no new authority or acceptance rule is introduced.

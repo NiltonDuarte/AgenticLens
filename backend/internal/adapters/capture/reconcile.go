@@ -246,10 +246,11 @@ func (s *Store) ReconcileAt(ctx context.Context, ticket, user string, sessionBud
 
 // sourceRead never enters registry serialization or diagnostic publication.
 type sourceRead struct {
-	configuration domain.ProjectConfig
-	policy        *domain.GenerationPolicy
-	transcripts   []codex.Transcript
-	events        domain.SourceEvents
+	configuration   domain.ProjectConfig
+	policy          *domain.GenerationPolicy
+	transcripts     []codex.Transcript
+	discoveryBudget *codex.DiscoveryBudget
+	events          domain.SourceEvents
 }
 
 func extractExact(ctx context.Context, r domain.CaptureRegistration, budget int64, user string, source ...*sourceRead) ([]domain.SessionFact, int64, string, error) {
@@ -268,16 +269,32 @@ func extractExactAt(ctx context.Context, r domain.CaptureRegistration, budget in
 		if path == "" {
 			return nil, 0, "", errors.New("exact Codex transcript path not registered; wait for an authoritative hook")
 		}
+		// A uniqueness scan is part of this source read, not a fresh allowance
+		// per owner. Keep actual discovery usage separate from file revision.
 		var discoveryBudget *codex.DiscoveryBudget
-		if len(source) > 0 {
-			var err error
-			discoveryBudget, err = captureDiscoveryBudget(source[0].configuration)
-			if err != nil {
-				return nil, 0, "", err
+		if len(source) > 0 && source[0].discoveryBudget != nil {
+			discoveryBudget = source[0].discoveryBudget
+			discoveryBudget.MaxSourceBytes = discoveryBudget.SourceBytesRead + budget
+		} else {
+			maxSessions := 1
+			if len(source) > 0 {
+				var err error
+				discoveryBudget, err = captureDiscoveryBudget(source[0].configuration)
+				if err != nil {
+					return nil, 0, "", err
+				}
+				maxSessions = discoveryBudget.MaxSessions
+			}
+			discoveryBudget = &codex.DiscoveryBudget{MaxSessions: maxSessions, MaxSourceBytes: budget}
+			if len(source) > 0 {
+				source[0].discoveryBudget = discoveryBudget
 			}
 		}
-		if err := validateRegisteredCodexSnapshot(r, discoveryBudget); err != nil {
-			return nil, 0, "", err
+		before := discoveryBudget.SourceBytesRead
+		uniquenessErr := validateRegisteredCodexSnapshot(r, discoveryBudget)
+		budget -= discoveryBudget.SourceBytesRead - before
+		if uniquenessErr != nil {
+			return nil, 0, "", uniquenessErr
 		}
 		file, err := os.Open(path)
 		if err != nil {
@@ -474,14 +491,21 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 			if parseErr != nil {
 				return nil, nil, parseErr
 			}
+			discoveryBytesBefore := int64(0)
+			if source.discoveryBudget != nil {
+				discoveryBytesBefore = source.discoveryBudget.SourceBytesRead
+			}
 			fresh, revision, updatedAt, extractErr = extractExactAt(ctx, r, budget.bytes, user, cutoff, &source)
+			if source.discoveryBudget != nil {
+				budget.charge(source.discoveryBudget.SourceBytesRead - discoveryBytesBefore)
+			}
 		}
 		budget.charge(revision)
 		updated, updateErr := s.Change(ctx, r.Identity, func(current domain.CaptureRegistration) (domain.CaptureRegistration, error) {
 			if extractErr != nil {
 				current.State = domain.CaptureFailed
 				current.Detail = "Source snapshot unavailable or invalid; previous facts preserved: " + extractErr.Error()
-				if errors.Is(extractErr, opencode.ErrCaptureBudget) {
+				if errors.Is(extractErr, opencode.ErrCaptureBudget) || errors.Is(extractErr, codex.ErrDiscoveryBudget) {
 					current.State = domain.CapturePending
 					current.Detail = "Source byte budget reached; increase --max-source-bytes or continue reconciliation; previous facts preserved"
 				}
