@@ -75,7 +75,7 @@ describe('LiveObservability View Integration', () => {
     expect(screen.queryByText('No Active Sessions')).not.toBeInTheDocument();
     expect(screen.getAllByText('Not available')).toHaveLength(2);
     expect(screen.getByText('Sessions unavailable')).toBeVisible();
-    expect(await screen.findByRole('alert')).toHaveTextContent('OpenCode v2 live observation is unsupported');
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('OpenCode v2 live observation is unsupported'));
 
     const empty = {root_sessions: [], active_anomalies: [], total_active_sessions: 0, last_refreshed_at: '2026-11-11T12:00:00Z'};
     fetch.mockImplementation(async () => new Response(JSON.stringify(empty), {status: 200}));
