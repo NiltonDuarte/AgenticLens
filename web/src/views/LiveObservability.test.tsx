@@ -68,13 +68,14 @@ describe('LiveObservability View Integration', () => {
   it('shows unavailable initial source separately from a successful measured-empty response', async () => {
     class UnavailableStream { constructor() { throw new Error('Live source unavailable'); } }
     vi.stubGlobal('EventSource', UnavailableStream);
-    const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({error: {code: 'source_unavailable', message: 'Selected source unavailable'}}), {status: 503}));
+    const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({error: 'source_unsupported', message: 'OpenCode v2 live observation is unsupported', status_code: 503}), {status: 503}));
     vi.stubGlobal('fetch', fetch);
     render(<LiveObservability onSelectTicket={vi.fn()} />);
     await screen.findByText('Live session data unavailable.');
     expect(screen.queryByText('No Active Sessions')).not.toBeInTheDocument();
     expect(screen.getAllByText('Not available')).toHaveLength(2);
     expect(screen.getByText('Sessions unavailable')).toBeVisible();
+    expect(await screen.findByRole('alert')).toHaveTextContent('OpenCode v2 live observation is unsupported');
 
     const empty = {root_sessions: [], active_anomalies: [], total_active_sessions: 0, last_refreshed_at: '2026-11-11T12:00:00Z'};
     fetch.mockImplementation(async () => new Response(JSON.stringify(empty), {status: 200}));
@@ -83,6 +84,7 @@ describe('LiveObservability View Integration', () => {
     expect(screen.queryByText('Live session data unavailable.')).not.toBeInTheDocument();
     expect(screen.queryByText('Not available')).not.toBeInTheDocument();
     expect(screen.getByText('0 Root Sessions')).toBeVisible();
+    expect(screen.queryByText(/OpenCode v2 live observation is unsupported/)).not.toBeInTheDocument();
   });
 
   it('retains the last successful live tree when a later connection fails', async () => {
@@ -97,6 +99,133 @@ describe('LiveObservability View Integration', () => {
     expect(screen.getByText('AL-20 TypeScript Live Observability Implementation')).toBeVisible();
     expect(within(screen.getByTestId('live-status-bar')).getByRole('alert')).toHaveTextContent('SSE connection error');
     expect(screen.queryByText('No Active Sessions')).not.toBeInTheDocument();
+  });
+
+  it('keeps tree and per-session SSE diagnostics until the corresponding read recovers', async () => {
+    render(<LiveObservability onSelectTicket={vi.fn()} />);
+    const stream = MockEventSource.instances[0]!;
+    const send = (name: string, data: unknown) => act(() => stream.dispatchEvent(name, JSON.stringify(data)));
+    const status = within(screen.getByTestId('live-status-bar'));
+    const root = mockLiveSessionTree.root_sessions[0]!;
+    const child = root.sub_sessions.find((node) => node.id === mockLiveTraceView.session_id)!;
+    send('session_tree', mockLiveSessionTree);
+    fireEvent.click(await screen.findByText(child.title));
+    await screen.findByText('Execution Message Stream (4 turns)');
+    send('source_diagnostic', {error: 'database_error', message: 'Tree query interrupted'});
+    send('source_diagnostic', {error: 'database_error', message: 'Trace query interrupted', session_id: child.id});
+    expect(status.getByRole('alert')).toHaveTextContent('Tree query interrupted');
+    expect(status.getByRole('alert')).toHaveTextContent('Trace query interrupted');
+    expect(within(screen.getByTestId(`session-node-${child.id}`)).getByText(child.title)).toBeVisible();
+    expect(screen.getByText('Execution Message Stream (4 turns)')).toBeVisible();
+    send('trace_update', {...mockLiveTraceView, session_id: root.id});
+    expect(status.getByRole('alert')).toHaveTextContent('Tree query interrupted');
+    expect(status.getByRole('alert')).toHaveTextContent('Trace query interrupted');
+    send('trace_update', {...mockLiveTraceView, session_id: child.id});
+    expect(status.getByRole('alert')).not.toHaveTextContent('Trace query interrupted');
+    expect(status.getByRole('alert')).toHaveTextContent('Tree query interrupted');
+    send('session_tree', mockLiveSessionTree);
+    expect(status.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it.each(['SSE', 'REST fallback'])('recovers an unselected trace diagnosis from the next complete %s tree after resume', async (transport) => {
+    render(<LiveObservability onSelectTicket={vi.fn()} />);
+    const stream = MockEventSource.instances[0]!;
+    act(() => stream.dispatchEvent('session_tree', JSON.stringify(mockLiveSessionTree)));
+    let finish!: (response: Response) => void;
+    vi.mocked(fetch).mockImplementationOnce(() => new Promise<Response>((resolve) => { finish = resolve; }));
+    fireEvent.click(screen.getByRole('button', {name: /manual refresh/i}));
+    const message = 'Reading an active session trace failed';
+    act(() => stream.dispatchEvent('source_diagnostic', JSON.stringify({
+      error: 'database_error', message, session_id: mockLiveTraceView.session_id,
+    })));
+    await act(async () => finish(new Response(JSON.stringify(mockLiveSessionTree))));
+    expect(screen.getByText(message, {exact: false})).toBeVisible();
+
+    fireEvent.click(screen.getByRole('button', {name: /pause streaming/i}));
+    expect(screen.getByText(message, {exact: false})).toBeVisible();
+    if (transport === 'REST fallback') vi.stubGlobal('EventSource', undefined);
+    fireEvent.click(screen.getByRole('button', {name: /resume streaming/i}));
+    if (transport === 'SSE') {
+      const resumedStream = MockEventSource.instances[1]!;
+      act(() => resumedStream.dispatchEvent('session_tree', JSON.stringify(mockLiveSessionTree)));
+    }
+    await waitFor(() => expect(screen.queryByText(message, {exact: false})).not.toBeInTheDocument());
+    expect(screen.getByText('Select a Session to Inspect')).toBeVisible();
+    expect(vi.mocked(fetch).mock.calls.every(([url]) => url === '/api/live/sessions')).toBe(true);
+  });
+
+  it.each([
+    { older: 'poll', newerFails: false },
+    { older: 'poll', newerFails: true },
+    { older: 'manual', newerFails: false },
+    { older: 'manual', newerFails: true },
+  ])('orders an older $older and newer tree read across manual and polling paths (newer failure: $newerFails)', async ({older, newerFails}) => {
+    vi.useFakeTimers();
+    vi.stubGlobal('EventSource', undefined);
+    render(<LiveObservability onSelectTicket={vi.fn()} />);
+    await act(async () => { await Promise.resolve(); });
+    const complete = new Response(JSON.stringify(mockLiveSessionTree));
+    const message = 'Tree read failed while accessing the selected database';
+    const failed = new Response(JSON.stringify({error: 'database_error', message, status_code: 500}), {status: 500});
+    let finishOlder!: (response: Response) => void;
+    vi.mocked(fetch)
+      .mockImplementationOnce(() => new Promise<Response>((resolve) => { finishOlder = resolve; }))
+      .mockResolvedValueOnce(newerFails ? failed : complete);
+    const manual = () => fireEvent.click(screen.getByRole('button', {name: /manual refresh/i}));
+    const scheduled = () => act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+    if (older === 'poll') {
+      await scheduled();
+      manual();
+    } else {
+      manual();
+      await scheduled();
+    }
+    await act(async () => { await Promise.resolve(); });
+    expect(vi.mocked(fetch)).toHaveBeenCalledTimes(3);
+    if (newerFails) expect(screen.getByText(message, {exact: false})).toBeVisible();
+    await act(async () => finishOlder(newerFails ? complete : failed));
+    if (newerFails) {
+      expect(screen.getByText(message, {exact: false})).toBeVisible();
+    } else {
+      expect(screen.queryByText(message, {exact: false})).not.toBeInTheDocument();
+      expect(screen.getByText('Fallback Polling (REST)')).toBeVisible();
+    }
+  });
+
+  it('uses an available fallback tree while a newer manual request remains pending', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('EventSource', undefined);
+    const pending: ((response: Response) => void)[] = [];
+    vi.mocked(fetch).mockImplementation(() => new Promise<Response>((resolve) => pending.push(resolve)));
+    render(<LiveObservability onSelectTicket={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', {name: /manual refresh/i}));
+    await act(async () => pending[0]!(new Response(JSON.stringify(mockLiveSessionTree))));
+    expect(screen.getByText('TypeScript Frontend Implementation')).toBeVisible();
+    const empty = {...mockLiveSessionTree, root_sessions: [], active_anomalies: [], total_active_sessions: 0};
+    await act(async () => pending[1]!(new Response(JSON.stringify(empty))));
+    expect(screen.getByText('No Active Sessions')).toBeVisible();
+  });
+
+  it('preserves observed anomalies when REST fallback fails to read an unselected session', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('EventSource', undefined);
+    const client = vi.mocked(fetch);
+    render(<LiveObservability onSelectTicket={vi.fn()} />);
+    await act(async () => { await Promise.resolve(); });
+    const alerts = () => screen.getByRole('alert', {name: /active live anomalies/i});
+    const observed = mockLiveSessionTree.active_anomalies[0]!.message;
+    expect(alerts()).toHaveTextContent(observed);
+    const failure = 'Failed to read session ses-al20-coder: no such table: message';
+    client.mockResolvedValueOnce(new Response(JSON.stringify({
+      error: 'database_error', message: failure, status_code: 500,
+    }), {status: 500}));
+    await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+    expect(screen.getByText(failure, {exact: false})).toBeVisible();
+    expect(alerts()).toHaveTextContent(observed);
+    await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+    expect(screen.queryByText(failure, {exact: false})).not.toBeInTheDocument();
+    expect(alerts()).toHaveTextContent(observed);
+    expect(client.mock.calls.map(([route]) => route)).toEqual(Array(3).fill('/api/live/sessions'));
   });
 
   it('renders the shared native SQLite-to-HTTP wire through API validation without projecting roles twice', async () => {
@@ -586,6 +715,79 @@ describe('LiveObservability View Integration', () => {
     await act(async () => { finish?.({ ok: true, json: async () => mockLiveTraceView } as Response); });
     expect(screen.getByText('Newest pushed snapshot')).toBeInTheDocument();
   });
+
+  it('keeps a newer trace diagnostic when a pending REST read completes', async () => {
+    render(<LiveObservability onSelectTicket={vi.fn()} />);
+    const stream = MockEventSource.instances[0]!;
+    act(() => stream.dispatchEvent('session_tree', JSON.stringify(mockLiveSessionTree)));
+    let finish!: (response: Response) => void;
+    vi.mocked(fetch).mockImplementationOnce(() => new Promise<Response>((resolve) => { finish = resolve; }));
+    fireEvent.click(screen.getByText('TypeScript Frontend Implementation'));
+    const message = 'The source could not read the selected trace';
+    act(() => stream.dispatchEvent('source_diagnostic', JSON.stringify({
+      error: 'database_error', message, session_id: mockLiveTraceView.session_id,
+    })));
+    expect(screen.getByText(message, {exact: false})).toBeVisible();
+    await act(async () => finish(new Response(JSON.stringify(mockLiveTraceView))));
+    expect(screen.getByText(message, {exact: false})).toBeVisible();
+    expect(screen.queryByText('Execution Message Stream (4 turns)')).not.toBeInTheDocument();
+    act(() => stream.dispatchEvent('trace_update', JSON.stringify(mockLiveTraceView)));
+    expect(screen.queryByText(message, {exact: false})).not.toBeInTheDocument();
+    expect(screen.getByText('Execution Message Stream (4 turns)')).toBeVisible();
+  });
+
+  it('retains a newer selected trace source error across an older complete fallback response', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('EventSource', undefined);
+    render(<LiveObservability onSelectTicket={vi.fn()} />);
+    await act(async () => { await Promise.resolve(); });
+    let finishTree!: (response: Response) => void;
+    vi.mocked(fetch).mockImplementationOnce(() => new Promise<Response>((resolve) => { finishTree = resolve; }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+    const message = 'Newer selected trace read failed';
+    vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify({
+      error: 'database_error', message, status_code: 500,
+    }), {status: 500}));
+    fireEvent.click(screen.getByText('TypeScript Frontend Implementation'));
+    await act(async () => { await Promise.resolve(); });
+    expect(screen.getByText(message, {exact: false})).toBeVisible();
+    await act(async () => finishTree(new Response(JSON.stringify(mockLiveSessionTree))));
+    expect(screen.getByText(message, {exact: false})).toBeVisible();
+  });
+
+  it.each(['failure before tree', 'failure after tree', 'success after tree', 'lookup error after tree'])(
+    'reconciles a selected trace read with a newer complete tree: %s', async (ordering) => {
+      vi.useFakeTimers();
+      render(<LiveObservability onSelectTicket={vi.fn()} />);
+      const stream = MockEventSource.instances[0]!;
+      const sendTree = () => act(() => stream.dispatchEvent('session_tree', JSON.stringify(mockLiveSessionTree)));
+      sendTree();
+      let finish!: (response: Response) => void;
+      vi.mocked(fetch).mockImplementationOnce(() => new Promise<Response>((resolve) => { finish = resolve; }));
+      fireEvent.click(screen.getByText('TypeScript Frontend Implementation'));
+      const sourceMessage = 'Temporary database read failure';
+      const lookupMessage = 'Requested session was not found';
+      let outcome: Response;
+      if (ordering === 'success after tree') {
+        outcome = new Response(JSON.stringify(mockLiveTraceView));
+      } else if (ordering === 'lookup error after tree') {
+        outcome = new Response(JSON.stringify({error: 'session_not_found', message: lookupMessage, status_code: 404}), {status: 404});
+      } else {
+        outcome = new Response(JSON.stringify({error: 'database_error', message: sourceMessage, status_code: 500}), {status: 500});
+      }
+      if (ordering === 'failure before tree') {
+        await act(async () => finish(outcome));
+        expect(screen.getByText(sourceMessage, {exact: false})).toBeVisible();
+        sendTree();
+      } else {
+        sendTree();
+        await act(async () => finish(outcome));
+      }
+      expect(screen.queryByText(sourceMessage, {exact: false})).not.toBeInTheDocument();
+      if (ordering === 'success after tree') expect(screen.getByText('Execution Message Stream (4 turns)')).toBeVisible();
+      if (ordering === 'lookup error after tree') expect(screen.getByText(lookupMessage, {exact: false})).toBeVisible();
+    },
+  );
 
   it('coalesces refreshes, preserves expanded reasoning while loading, and retains trace errors across tree updates', async () => {
     vi.useFakeTimers();

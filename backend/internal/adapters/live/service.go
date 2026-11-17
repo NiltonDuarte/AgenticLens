@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	ErrSourceUnavailable = errors.New("live OpenCode source unavailable; configure an accessible telemetry.sources.opencode.database_path in the selected local YAML")
+	ErrSourceUnavailable = errors.New("live OpenCode source unavailable")
 	// ErrSessionNotFound is returned when a session ID does not exist in the database.
 	ErrSessionNotFound = errors.New("session not found")
 	// ErrInvalidSessionID is returned when a session ID is blank or contains path traversal characters.
@@ -28,9 +28,10 @@ var (
 type LiveEventType string
 
 const (
-	LiveEventSessionTree  LiveEventType = "session_tree"
-	LiveEventTraceUpdate  LiveEventType = "trace_update"
-	LiveEventAnomalyAlert LiveEventType = "anomaly_alert"
+	LiveEventSourceDiagnostic LiveEventType = "source_diagnostic"
+	LiveEventSessionTree      LiveEventType = "session_tree"
+	LiveEventTraceUpdate      LiveEventType = "trace_update"
+	LiveEventAnomalyAlert     LiveEventType = "anomaly_alert"
 )
 
 // LiveEvent represents an event pushed to real-time stream subscribers.
@@ -39,9 +40,22 @@ type LiveEvent struct {
 	Data []byte        `json:"data"`
 }
 
+// SourceDiagnosticEvent reports the read that failed on an admitted stream.
+// An empty session ID identifies a tree failure.
+func SourceDiagnosticEvent(err error, sessionID string) LiveEvent {
+	diagnostic := struct {
+		Error     string `json:"error"`
+		Message   string `json:"message"`
+		SessionID string `json:"session_id,omitempty"`
+	}{"database_error", err.Error(), sessionID}
+	data, _ := json.Marshal(diagnostic) // strings always encode
+	return LiveEvent{Type: LiveEventSourceDiagnostic, Data: data}
+}
+
 // LiveService coordinates SQLite polling, tree reconstruction, and real-time streaming.
 type LiveService struct {
 	hook            *SQLiteHook
+	sourceErr       error
 	cfg             domain.ProjectConfig
 	codexHome       string
 	subscribers     map[chan LiveEvent]struct{}
@@ -69,7 +83,12 @@ func NewLiveService(hook *SQLiteHook, cfg domain.ProjectConfig) *LiveService {
 // NewLiveServiceWithCodexHome constructs a hydrator with an explicit local Codex data root.
 func NewLiveServiceWithCodexHome(hook *SQLiteHook, cfg domain.ProjectConfig, codexHome string) *LiveService {
 
+	sourceErr := ErrSourceUnavailable
+	if hook != nil && hook.DB() != nil {
+		sourceErr = opencode.CheckLiveSchema(hook.DB())
+	}
 	return &LiveService{
+		sourceErr:     sourceErr,
 		hook:          hook,
 		codexHome:     codexHome,
 		cfg:           cfg,
@@ -80,6 +99,30 @@ func NewLiveServiceWithCodexHome(hook *SQLiteHook, cfg domain.ProjectConfig, cod
 		discovered:    make(map[string]struct{}),
 		seenAnomalies: make(map[string]bool),
 	}
+}
+
+// OpenSelectedService retains a readable source for historical hydration even
+// when live queries or the poller configuration are unsupported.
+func OpenSelectedService(cfg domain.ProjectConfig, explicitPath string, localConfigErr error) *LiveService {
+	dbPath, err := adaptersconfig.ResolveOpenCodePath(explicitPath, cfg.Telemetry.Sources.OpenCodeDatabasePath)
+	if err == nil {
+		err = adaptersconfig.ValidateDatabasePolicy(cfg)
+	} else if localConfigErr != nil {
+		err = localConfigErr
+	}
+	var hook *SQLiteHook
+	if err == nil {
+		hook, err = OpenReadOnlyHook(dbPath, cfg.Database.BusyTimeoutMs)
+	}
+	service := NewLiveService(hook, cfg)
+	if err != nil {
+		service.sourceErr = fmt.Errorf("%w: %w", ErrSourceUnavailable, err)
+	} else if service.sourceErr == nil {
+		if policyErr := service.checkPollingPolicy(); policyErr != nil {
+			service.sourceErr = fmt.Errorf("%w: %w", ErrSourceUnavailable, policyErr)
+		}
+	}
+	return service
 }
 
 // Close gracefully stops the background polling loop and closes the SQLite hook.
@@ -125,9 +168,16 @@ func (s *LiveService) broadcast(event LiveEvent) {
 	}
 }
 
+func (s *LiveService) checkPollingPolicy() error {
+	return errors.Join(adaptersconfig.ValidatePollingPolicy(s.cfg), adaptersconfig.ValidateActivityPolicy(s.cfg), adaptersconfig.ValidateAnomalyPolicy(s.cfg))
+}
+
 // Start begins the background polling loop on live.poll_interval_ms.
 func (s *LiveService) Start(ctx context.Context) error {
-	if err := errors.Join(adaptersconfig.ValidatePollingPolicy(s.cfg), adaptersconfig.ValidateActivityPolicy(s.cfg), adaptersconfig.ValidateAnomalyPolicy(s.cfg)); err != nil {
+	if err := s.CheckAvailability(); err != nil {
+		return err
+	}
+	if err := s.checkPollingPolicy(); err != nil {
 		return err
 	}
 	intervalMs := s.cfg.Live.PollIntervalMs
@@ -151,8 +201,15 @@ func (s *LiveService) Start(ctx context.Context) error {
 }
 
 func (s *LiveService) pollAndBroadcast(ctx context.Context) {
-	tree, err := s.GetSessionTree(ctx)
+	tree, reads, err := s.readSessionTree(ctx)
 	if err != nil {
+		if reads == nil {
+			s.broadcast(SourceDiagnosticEvent(err, ""))
+		} else {
+			// An incomplete tree cannot replace the client's last observation.
+			// Independent trace reads still provide updates and scoped errors.
+			s.broadcastTraceUpdates(reads)
+		}
 		return
 	}
 
@@ -183,50 +240,43 @@ func (s *LiveService) pollAndBroadcast(ctx context.Context) {
 			Data: data,
 		})
 	}
-	s.broadcastTraceUpdates(ctx, tree)
+	s.broadcastTraceUpdates(reads)
 }
 
-func (s *LiveService) broadcastTraceUpdates(ctx context.Context, tree domain.LiveSessionTree) {
-	current := make(map[string]struct{})
-	var visit func([]*domain.LiveSessionNode)
-	visit = func(nodes []*domain.LiveSessionNode) {
-		for _, node := range nodes {
-			if node == nil || strings.TrimSpace(node.ID) == "" {
+type sessionTraceRead struct {
+	id       string
+	snapshot *traceSnapshot
+	err      error
+}
+
+func (s *LiveService) broadcastTraceUpdates(reads []sessionTraceRead) {
+	s.lastTraceMu.Lock()
+	defer s.lastTraceMu.Unlock()
+	current := make(map[string]bool, len(reads))
+	for _, read := range reads {
+		current[read.id] = true
+		if read.err != nil {
+			delete(s.lastTraces, read.id)
+			s.broadcast(SourceDiagnosticEvent(read.err, read.id))
+			continue
+		}
+		trace := &read.snapshot.Trace
+		previous := s.lastTraces[read.id]
+		if previous != trace && (previous == nil || !domain.LiveTracesEqual(*previous, *trace)) {
+			data, err := json.Marshal(trace)
+			if err != nil {
+				s.broadcast(SourceDiagnosticEvent(err, read.id))
 				continue
 			}
-			current[node.ID] = struct{}{}
-			snapshot, err := s.sessionTraceSnapshot(ctx, node.ID)
-			if err == nil {
-				trace := &snapshot.Trace
-				s.lastTraceMu.Lock()
-				previous := s.lastTraces[node.ID]
-				changed := previous != trace && (previous == nil || !domain.LiveTracesEqual(*previous, *trace))
-				if !changed {
-					s.lastTraces[node.ID] = trace
-				}
-				s.lastTraceMu.Unlock()
-				if changed {
-					data, marshalErr := json.Marshal(trace)
-					if marshalErr == nil {
-						s.lastTraceMu.Lock()
-						s.lastTraces[node.ID] = trace
-						s.lastTraceMu.Unlock()
-						s.broadcast(LiveEvent{Type: LiveEventTraceUpdate, Data: data})
-					}
-				}
-			}
-			visit(node.SubSessions)
+			s.broadcast(LiveEvent{Type: LiveEventTraceUpdate, Data: data})
 		}
+		s.lastTraces[read.id] = trace
 	}
-	visit(tree.RootSessions)
-
-	s.lastTraceMu.Lock()
 	for sessionID := range s.lastTraces {
-		if _, active := current[sessionID]; !active {
+		if !current[sessionID] {
 			delete(s.lastTraces, sessionID)
 		}
 	}
-	s.lastTraceMu.Unlock()
 }
 
 func (s *LiveService) checkAndBroadcastAnomalies(anomalies []domain.LiveAnomalyAlert) {
@@ -259,28 +309,33 @@ func (s *LiveService) checkAndBroadcastAnomalies(anomalies []domain.LiveAnomalyA
 // CheckAvailability distinguishes an unconfigured/unavailable source from a
 // selected read-only database containing no active sessions.
 func (s *LiveService) CheckAvailability() error {
-	if s.hook == nil {
-		return ErrSourceUnavailable
-	}
-	return nil
+	return s.sourceErr
 }
 
 // GetSessionTree queries active sessions, runs title ticket inference, and constructs the session tree.
 // Zero Git branch calls, zero workspace scans.
 func (s *LiveService) GetSessionTree(ctx context.Context) (domain.LiveSessionTree, error) {
+	tree, _, err := s.readSessionTree(ctx)
+	return tree, err
+}
+
+// readSessionTree returns a complete tree or an error. When session discovery
+// succeeded, individual trace reads remain available to the stream on either path.
+func (s *LiveService) readSessionTree(ctx context.Context) (domain.LiveSessionTree, []sessionTraceRead, error) {
 	if err := s.CheckAvailability(); err != nil {
-		return domain.LiveSessionTree{}, err
+		return domain.LiveSessionTree{}, nil, err
 	}
 
 	if err := adaptersconfig.ValidateActivityPolicy(s.cfg); err != nil {
-		return domain.LiveSessionTree{}, err
+		return domain.LiveSessionTree{}, nil, err
 	}
 	activeThresholdSec := int64(s.cfg.Live.ActiveThresholdSeconds)
 	nowMs := time.Now().UnixMilli()
 
 	records, err := s.hook.FetchActiveSessions(activeThresholdSec, nowMs)
 	if err != nil {
-		return domain.LiveSessionTree{}, fmt.Errorf("fetching active sessions: %w", err)
+		s.retryTreeOnNextPoll()
+		return domain.LiveSessionTree{}, nil, fmt.Errorf("fetching active sessions: %w", err)
 	}
 
 	s.traceMu.Lock()
@@ -297,9 +352,18 @@ func (s *LiveService) GetSessionTree(ctx context.Context) (domain.LiveSessionTre
 
 	stallThresholdSec := int64(s.cfg.AnomalyThresholds.StallThresholdSeconds)
 
+	var traceErrors []error
+	reads := make([]sessionTraceRead, 0, len(records))
 	nodes := make([]*domain.LiveSessionNode, 0, len(records))
 	for _, rec := range records {
-		role := s.cfg.RoleMappings.ResolveRole(rec.Agent)
+		snapshot, err := s.sessionTraceSnapshot(ctx, rec.ID)
+		if err != nil {
+			err = fmt.Errorf("reading trace for session %s: %w", rec.ID, err)
+			traceErrors = append(traceErrors, err)
+			reads = append(reads, sessionTraceRead{id: rec.ID, err: err})
+			continue
+		}
+		reads = append(reads, sessionTraceRead{id: rec.ID, snapshot: snapshot})
 		modelID := resolveModelName(rec.Model)
 
 		// Infer ticket ID strictly from session title
@@ -325,15 +389,12 @@ func (s *LiveService) GetSessionTree(ctx context.Context) (domain.LiveSessionTre
 		}
 
 		sessionAnomalies := []domain.LiveAnomalyAlert{}
-		snapshot, err := s.sessionTraceSnapshot(ctx, rec.ID)
-		if err == nil && len(snapshot.Trace.Anomalies) > 0 {
+		if len(snapshot.Trace.Anomalies) > 0 {
 			sessionAnomalies = snapshot.Trace.Anomalies
 		}
-		if err == nil {
-			persona := snapshot.Persona.Resolve(rec.Agent)
-			rec.Agent = string(persona)
-			role = s.cfg.RoleMappings.ResolveRole(rec.Agent)
-		}
+		persona := snapshot.Persona.Resolve(rec.Agent)
+		rec.Agent = string(persona)
+		role := s.cfg.RoleMappings.ResolveRole(rec.Agent)
 
 		node := &domain.LiveSessionNode{
 			ID:               rec.ID,
@@ -353,6 +414,10 @@ func (s *LiveService) GetSessionTree(ctx context.Context) (domain.LiveSessionTre
 		nodes = append(nodes, node)
 	}
 
+	if len(traceErrors) > 0 {
+		s.retryTreeOnNextPoll()
+		return domain.LiveSessionTree{}, reads, errors.Join(traceErrors...)
+	}
 	roots := domain.BuildSessionTree(nodes)
 	totalActive := countTotalNodes(roots)
 	refreshedAt := formatEpochMilli(nowMs)
@@ -368,7 +433,15 @@ func (s *LiveService) GetSessionTree(ctx context.Context) (domain.LiveSessionTre
 		LastRefreshedAt:     refreshedAt,
 		TotalActiveSessions: totalActive,
 		ActiveAnomalies:     allActiveAnomalies,
-	}, nil
+	}, reads, nil
+}
+
+// The next complete poll must reach subscribers even if its data matches the
+// last tree published before a failed REST, initial stream, or poll read.
+func (s *LiveService) retryTreeOnNextPoll() {
+	s.lastTreeMu.Lock()
+	s.lastTreeJSON = nil
+	s.lastTreeMu.Unlock()
 }
 
 // GetSessionTrace returns a fresh source snapshot, reusing unchanged read-only data.
@@ -392,8 +465,8 @@ func (s *LiveService) sessionTraceSnapshot(ctx context.Context, sessionID string
 	if err := validateSessionID(sessionID); err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrInvalidSessionID, err.Error())
 	}
-	if s.hook == nil {
-		return nil, ErrSourceUnavailable
+	if err := s.CheckAvailability(); err != nil {
+		return nil, err
 	}
 	s.traceMu.Lock()
 	defer s.traceMu.Unlock()

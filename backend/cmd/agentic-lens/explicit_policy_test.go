@@ -117,30 +117,11 @@ func TestServerOptionalSourcePolicyPreservesRecordedLedger(t *testing.T) {
 			}
 			ledgerPath := filepath.Join(workspaces, "TICKET-1", "agentic_metrics.json")
 			before := readCaptureFile(t, ledgerPath)
-			listener, err := net.Listen("tcp", "127.0.0.1:0")
+			address, logPath := startFixtureDashboard(t, project)
+			response, err := http.Get(address + "/api/workspaces/TICKET-1")
 			if err != nil {
 				t.Fatal(err)
 			}
-			port := listener.Addr().(*net.TCPAddr).Port
-			if err = listener.Close(); err != nil {
-				t.Fatal(err)
-			}
-			logPath := filepath.Join(t.TempDir(), "server.log")
-			log, err := os.Create(logPath)
-			if err != nil {
-				t.Fatal(err)
-			}
-			cmd := exec.Command(cliBinaryPath, "server", "--port", fmt.Sprint(port))
-			cmd.Dir = project
-			cmd.Stdout = log
-			cmd.Stderr = log
-			if err = cmd.Start(); err != nil {
-				log.Close()
-				t.Fatal(err)
-			}
-			t.Cleanup(func() { _ = cmd.Process.Kill(); _ = cmd.Wait(); _ = log.Close() })
-			address := fmt.Sprintf("http://127.0.0.1:%d", port)
-			response := waitForServerReady(t, address+"/api/workspaces/TICKET-1", 3*time.Second)
 			if response.StatusCode != http.StatusOK {
 				t.Fatalf("recorded ledger hidden: %d", response.StatusCode)
 			}
@@ -173,6 +154,38 @@ func TestServerOptionalSourcePolicyPreservesRecordedLedger(t *testing.T) {
 			}
 		})
 	}
+}
+
+// startFixtureDashboard runs the compiled engine with the project's actual selected policy.
+func startFixtureDashboard(t *testing.T, project string, flags ...string) (address, logPath string) {
+	t.Helper()
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	port := listener.Addr().(*net.TCPAddr).Port
+	if err = listener.Close(); err != nil {
+		t.Fatal(err)
+	}
+	logPath = filepath.Join(t.TempDir(), "server.log")
+	log, err := os.Create(logPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	args := append([]string{"server", "--port", fmt.Sprint(port)}, flags...)
+	cmd := exec.Command(cliBinaryPath, args...)
+	cmd.Dir = project
+	cmd.Stdout = log
+	cmd.Stderr = log
+	if err = cmd.Start(); err != nil {
+		log.Close()
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = cmd.Process.Kill(); _ = cmd.Wait(); _ = log.Close() })
+	address = fmt.Sprintf("http://127.0.0.1:%d", port)
+	resp := waitForServerReady(t, address+"/api/workspaces", 5*time.Second)
+	resp.Body.Close()
+	return address, logPath
 }
 
 func TestGenerateSharedSummaryNameAppendPrecedenceAndAdmission(t *testing.T) {

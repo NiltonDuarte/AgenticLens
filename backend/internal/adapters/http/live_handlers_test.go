@@ -757,7 +757,6 @@ type blockedInitialLiveTree struct {
 	subscribed   chan struct{}
 	unsubscribed chan struct{}
 	treeReturned chan struct{}
-	treeErr      error
 }
 
 func (s *blockedInitialLiveTree) GetSessionTree(ctx context.Context) (domain.LiveSessionTree, error) {
@@ -767,9 +766,6 @@ func (s *blockedInitialLiveTree) GetSessionTree(ctx context.Context) (domain.Liv
 	}
 	select {
 	case <-s.release:
-		if s.treeErr != nil {
-			return domain.LiveSessionTree{}, s.treeErr
-		}
 		return s.LiveService.GetSessionTree(ctx)
 	case <-ctx.Done():
 		return domain.LiveSessionTree{}, ctx.Err()
@@ -834,31 +830,28 @@ func TestLiveStreamAndTraceRecoverInPlaceSQLiteUpdate(t *testing.T) {
 	}
 	defer response.Body.Close()
 	scanner := bufio.NewScanner(response.Body)
-	firstEvent := true
-	readTrace := func() domain.LiveTraceView {
+	readEvent := func(want string) []byte {
 		t.Helper()
 		event := ""
 		for scanner.Scan() {
 			line := scanner.Text()
 			if strings.HasPrefix(line, "event: ") {
 				event = strings.TrimPrefix(line, "event: ")
-				if firstEvent {
-					firstEvent = false
-					if event != "session_tree" {
-						t.Fatalf("initial snapshot must precede queued events, got %q", event)
-					}
-				}
 			}
-			if event == "trace_update" && strings.HasPrefix(line, "data: ") {
-				var trace domain.LiveTraceView
-				if err := json.Unmarshal([]byte(strings.TrimPrefix(line, "data: ")), &trace); err != nil {
-					t.Fatal(err)
-				}
-				return trace
+			if event == want && strings.HasPrefix(line, "data: ") {
+				return []byte(strings.TrimPrefix(line, "data: "))
 			}
 		}
-		t.Fatalf("stream ended before trace: %v", scanner.Err())
-		return domain.LiveTraceView{}
+		t.Fatalf("stream ended before %s: %v", want, scanner.Err())
+		return nil
+	}
+	readTrace := func() domain.LiveTraceView {
+		t.Helper()
+		var trace domain.LiveTraceView
+		if err := json.Unmarshal(readEvent("trace_update"), &trace); err != nil {
+			t.Fatal(err)
+		}
+		return trace
 	}
 	select {
 	case <-blocked.entered:
@@ -886,6 +879,9 @@ func TestLiveStreamAndTraceRecoverInPlaceSQLiteUpdate(t *testing.T) {
 	close(blocked.release)
 	if !registered {
 		t.Fatal("concrete service published initial trace before HTTP stream subscription")
+	}
+	if !scanner.Scan() || scanner.Text() != "event: session_tree" {
+		t.Fatalf("initial snapshot must precede queued events, got %q (%v)", scanner.Text(), scanner.Err())
 	}
 	initial := readTrace()
 	if len(initial.Messages) != 1 || initial.Messages[0].Content != "before" {
@@ -915,6 +911,60 @@ func TestLiveStreamAndTraceRecoverInPlaceSQLiteUpdate(t *testing.T) {
 	if traceResponse.StatusCode != http.StatusOK || fetched.SessionID != updated.SessionID || len(fetched.Messages) != 1 || fetched.Messages[0].Content != "after" || fetched.Messages[0].TotalTokens != 25 || fetched.Messages[0].ReasoningContent == nil || *fetched.Messages[0].ReasoningContent != "new reasoning" {
 		t.Fatalf("REST recovery disagrees with pushed snapshot: status=%d trace=%+v", traceResponse.StatusCode, fetched)
 	}
+	// Break the reader after it published a known good snapshot. Restoring
+	// the original tables changes neither the tree nor the trace payload.
+	for _, tc := range []struct{ table, sessionID, recovery string }{
+		{"message", "growing", "trace_update"},
+		{"session", "", "session_tree"},
+	} {
+		if _, err := writer.Exec("ALTER TABLE " + tc.table + " RENAME TO temporarily_unavailable"); err != nil {
+			t.Fatal(err)
+		}
+		var failureCode string
+		for {
+			var diag struct {
+				Error     string
+				Message   string
+				SessionID string `json:"session_id"`
+			}
+			if err := json.Unmarshal(readEvent("source_diagnostic"), &diag); err != nil || diag.Error != "database_error" || !strings.Contains(diag.Message, tc.table) {
+				t.Fatalf("%s poll error: %+v (%v)", tc.table, diag, err)
+			}
+			if diag.SessionID == tc.sessionID {
+				failureCode = diag.Error
+				break
+			}
+			// If discovery finished just before session disappeared, the
+			// in-flight trace read reports its owner first. The next discovery
+			// must report the unscoped failure while the table is still absent.
+			if tc.table != "session" || diag.SessionID != "growing" {
+				t.Fatalf("unexpected scope for %s error: %+v", tc.table, diag)
+			}
+		}
+		resp, err := ts.Client().Do(traceReq.Clone(ctx))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var failure adaptershttp.ErrorResponse
+		err = json.NewDecoder(resp.Body).Decode(&failure)
+		resp.Body.Close()
+		if err != nil || resp.StatusCode != http.StatusInternalServerError || failure.Error != failureCode || !strings.Contains(failure.Message, tc.table) {
+			t.Fatalf("REST trace read failure diverged from poller: %+v (%v)", failure, err)
+		}
+		if _, err := writer.Exec("ALTER TABLE temporarily_unavailable RENAME TO " + tc.table); err != nil {
+			t.Fatal(err)
+		}
+		var recovered map[string]json.RawMessage
+		if err := json.Unmarshal(readEvent(tc.recovery), &recovered); err != nil {
+			t.Fatal(err)
+		}
+		if tc.table == "session" && string(recovered["total_active_sessions"]) != "1" {
+			t.Fatalf("unchanged tree missing after recovery: %s", recovered)
+		}
+		if tc.table == "message" && string(recovered["session_id"]) != `"growing"` {
+			t.Fatalf("unchanged trace missing after recovery: %s", recovered)
+		}
+	}
 }
 
 func TestLiveStreamHandler_InitialTreeSubscriptionCleanup(t *testing.T) {
@@ -934,9 +984,7 @@ func TestLiveStreamHandler_InitialTreeSubscriptionCleanup(t *testing.T) {
 			if _, err := db.Exec(`CREATE TABLE session(id TEXT PRIMARY KEY,parent_id TEXT,agent TEXT,model TEXT,title TEXT,time_created INTEGER,time_updated INTEGER); CREATE TABLE message(id TEXT PRIMARY KEY,session_id TEXT,time_created INTEGER,data TEXT); CREATE TABLE part(id TEXT PRIMARY KEY,session_id TEXT,message_id TEXT,time_created INTEGER,data TEXT);`); err != nil {
 				t.Fatal(err)
 			}
-			if err := db.Close(); err != nil {
-				t.Fatal(err)
-			}
+			defer db.Close()
 			hook, err := live.OpenReadOnlyHook(dbPath, 0)
 			if err != nil {
 				t.Fatal(err)
@@ -950,7 +998,9 @@ func TestLiveStreamHandler_InitialTreeSubscriptionCleanup(t *testing.T) {
 				treeReturned: make(chan struct{}),
 			}
 			if treeFails {
-				blocked.treeErr = errors.New("initial source lookup failed")
+				if _, err := db.Exec("ALTER TABLE session RENAME TO unavailable"); err != nil {
+					t.Fatal(err)
+				}
 			}
 			ts := httptest.NewServer(adaptershttp.LiveStreamHandler(blocked))
 			defer ts.Close()
@@ -987,9 +1037,25 @@ func TestLiveStreamHandler_InitialTreeSubscriptionCleanup(t *testing.T) {
 				}
 				// The concrete broadcaster must still reach this stream after the
 				// optional initial snapshot failed, before cancellation cleans up.
-				service.Start(ctx)
 				reader := bufio.NewReader(response.Body)
 				line, err := reader.ReadString('\n')
+				if err != nil || line != "event: source_diagnostic\n" {
+					t.Fatalf("silent initial tree failure: line=%q err=%v", line, err)
+				}
+				data, err := reader.ReadString('\n')
+				if err != nil || !strings.Contains(data, "no such table: session") {
+					t.Fatalf("missing initial read error: %q (%v)", data, err)
+				}
+				if _, err = reader.ReadString('\n'); err != nil {
+					t.Fatal(err)
+				}
+				if _, err = db.Exec("ALTER TABLE unavailable RENAME TO session"); err != nil {
+					t.Fatal(err)
+				}
+				if err = service.Start(ctx); err != nil {
+					t.Fatal(err)
+				}
+				line, err = reader.ReadString('\n')
 				if err != nil || line != "event: session_tree\n" {
 					t.Fatalf("stream did not recover after initial tree error: line=%q err=%v", line, err)
 				}
