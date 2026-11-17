@@ -56,15 +56,15 @@ The session ledger contains the one expected Codex root. No child agents were la
 
 <!-- agentic-lens:metrics:start -->
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 3
-- **Active Agent Duration:** 25m 27s (recorded duration including 1472s provisional)
-- **Context Window Health:** HEALTHY — Root agent peak 80.1k tokens (18% of 450k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
+- **Software Development Life Cycle Iterations:** 8
+- **Active Agent Duration:** 32m 24s (recorded duration including 44s provisional)
+- **Context Window Health:** HEALTHY — Root agent peak 106.4k tokens (24% of 450k healthy ceiling, 0 compactions) | Subagents peak 0 (None)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 0.0 avg turns/run (peak: 0 turns)
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 793 reasoning tokens (5.9% of generated output)
-- **Tool Health & Self-Correction:** 58 tool calls (5 self-corrections, 91.4% success rate)
+- **Reasoning Effort:** 1,394 reasoning tokens (5.9% of generated output)
+- **Tool Health & Self-Correction:** 77 tool calls (8 self-corrections, 89.6% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** No execution anomalies detected (clean session).
@@ -76,12 +76,12 @@ The session ledger contains the one expected Codex root. No child agents were la
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **Unknown** | 1 | 92,440 | 12,755 | 4,916,608 | 98.2% | 80.1k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **1** | **92,440** | **12,755** | **4,916,608** | **98.2%** | **80.1k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations)** |
+| **Unknown** | 1 | 123,758 | 22,036 | 7,562,752 | 98.4% | 106.4k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **1** | **123,758** | **22,036** | **7,562,752** | **98.4%** | **106.4k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.2-astra** | 1 | 92,440 | 12,755 | 4,916,608 | 98.2% | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **1** | **92,440** | **12,755** | **4,916,608** | **98.2%** | **Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations)** |
+| **gpt-6.2-astra** | 1 | 123,758 | 22,036 | 7,562,752 | 98.4% | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Total** | **1** | **123,758** | **22,036** | **7,562,752** | **98.4%** | **Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations)** |
 <!-- agentic-lens:metrics:end -->
