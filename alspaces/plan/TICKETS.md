@@ -10,6 +10,10 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
   - **Status**: In Progress; implementation verified, awaiting publication; **Blocked by**: None; **Blocks**: None
   - **File**: [AL-83](to-do/AL-83%20present%20agenticlens%20on%20github%20pages.md)
 
+- **AL-73**: Verify release artifacts before installation
+  - **Status**: In Progress, awaiting scope approval; **Blocked by**: None; **Blocks**: None
+  - **File**: [AL-73](to-do/AL-73%20verify%20release%20artifacts%20before%20installation.md)
+
 ## Ready
 
 - **AL-65**: Recommend safe source-backed backfill defaults
@@ -27,10 +31,6 @@ Reviewed against the updated PO skill in [PO-22](../PO-22/SPEC.md) at `731de946`
 - **AL-72**: Make dashboard interactions accurate and accessible
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None
   - **File**: [AL-72](to-do/AL-72%20make%20dashboard%20interactions%20accurate%20and%20accessible.md)
-
-- **AL-73**: Verify release artifacts before installation
-  - **Status**: Ready; **Blocked by**: None; **Blocks**: None
-  - **File**: [AL-73](to-do/AL-73%20verify%20release%20artifacts%20before%20installation.md)
 
 - **AL-74**: Make regression checks reliable and remove unused code
   - **Status**: Ready; **Blocked by**: None; **Blocks**: None

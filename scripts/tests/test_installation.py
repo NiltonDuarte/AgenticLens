@@ -1,4 +1,5 @@
 """Installed skill bundle, exact-pin repair and user-level migration boundaries."""
+import fcntl
 import json
 import os
 from pathlib import Path
@@ -7,7 +8,7 @@ import shlex
 import subprocess
 import unittest
 
-from distribution_fixture import DistributionFixture, ROOT, SETUP, digest, build_app, shared_policy
+from distribution_fixture import DistributionFixture, ROOT, SETUP, digest, build_app, build_manager, shared_policy
 
 INSTALL = SETUP / 'install.sh'
 BUNDLE_SETUP = Path('.agents/skills/agentic-lens-setup')
@@ -128,13 +129,142 @@ class InstallationTest(DistributionFixture):
         self.assertEqual(self.requests(), [])
 
     def test_pinned_remote_bundle_and_checksum_repair_never_resolve_latest(self):
+        self.env['AGENTIC_LENS_REPO'] = 'fixture-owner/release.repo'
         self.succeeds(self.bundle(remote=True))
         self.assertTrue(self.requests())
-        self.assertTrue(all('/' + self.pin + '/' in url for url in self.requests()))
+        self.assertTrue(all(url.startswith(f'https://raw.githubusercontent.com/fixture-owner/release.repo/{self.pin}/')
+                            for url in self.requests()))
         self.network_log.unlink()
         self.succeeds(self.install_local(script=self.repo / BUNDLE_SETUP / 'scripts/download.sh'))
         self.assertEqual(self.requests(), [])
         self.succeeds(self.launch('version', '--short'))
+
+    def test_remote_sources_require_a_repository_pair_before_fetch(self):
+        for repository in ('owner', 'owner/repo/extra', 'owner/.', 'owner/repo?ref=x'):
+            with self.subTest(repository=repository):
+                self.env['AGENTIC_LENS_REPO'] = repository
+                for result in (self.install('--manager-version', self.pin), self.bundle(remote=True)):
+                    self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertEqual(self.requests(), [])
+                self.assertFalse(self.dest.exists())
+                self.assertFalse((self.repo / BUNDLE_SETUP).exists())
+
+    def test_bootstrap_rejects_failed_or_ambiguous_hash_before_native_probe(self):
+        candidate = self.root / 'inert-manager'
+        candidate.write_bytes(b'inert bootstrap fixture')
+        name = self.native().name.replace('-engine-', '-')
+        record = f'{digest(candidate)}  bin/{name}'
+        manifest = self.root / 'fixture.SHA256SUMS'
+        environment = dict(self.env, AL_FIXTURE_MANIFEST=str(manifest), AL_FIXTURE_RELEASE=str(candidate))
+        probe_log = self.root / 'format-probed'
+        commands = self.root / 'commands'
+        probe = commands / 'od'
+        probe.write_text('#!/bin/sh\ntouch "$AL_PROBE_LOG"\nexit 1\n')
+        probe.chmod(0o700)
+        environment['AL_PROBE_LOG'] = str(probe_log)
+        broken_hash = commands / 'sha256sum'
+        for case, content in [('malformed', record + ' extra'), ('ambiguous', record + '\n' + record),
+                              ('missing', ''), ('mismatch', '0' * 64 + record[64:]), ('hash failed', record)]:
+            with self.subTest(case=case):
+                manifest.write_text(content + '\n')
+                if case == 'hash failed':
+                    broken_hash.write_text(f'#!/bin/sh\nprintf "%s  %s\\n" {digest(candidate)} "$1"\nexit 7\n')
+                    broken_hash.chmod(0o700)
+                result = self.install('--manager-version', self.pin, env=environment)
+                self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertFalse(probe_log.exists(), 'verification failure reached the executable-format probe')
+                self.assertFalse(self.dest.exists())
+                self.assertFalse(self.native().exists())
+
+    def test_empty_release_manager_with_matching_digest_is_rejected(self):
+        empty = self.root / 'empty-manager'
+        empty.touch()
+        env = dict(self.env, AL_FIXTURE_RELEASE=str(empty), AL_FIXTURE_NAME=self.native().name.replace('-engine-', '-'))
+        result = self.install('--manager-version', self.pin, env=env)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse(self.dest.exists())
+        self.assertFalse(self.native().exists())
+
+    def test_hash_errors_on_local_engine_and_installed_manager_are_propagated(self):
+        self.succeeds(self.install_local(probe=self.probe))
+        real_hash = shlex.quote(shutil.which('sha256sum'))
+        stub = self.root / 'commands/sha256sum'
+        stub.write_text(f'#!/bin/sh\n{real_hash} "$@" || exit 1\n'
+                        'if [ "$1" = "$AL_ENGINE_INPUT" ]; then role=engine; else role=manager; fi\n'
+                        'if [ "$role" = "$AL_FAIL_HASH_ROLE" ]; then exit 7; fi\n')
+        stub.chmod(0o700)
+        engine_args = ['--local-bin', self.application, '--sha256', digest(self.application), '--force']
+        entry = self.dest / 'agentic-lens'
+        state = (entry, entry.with_suffix('.installation.json'), entry.with_suffix('.sha256'))
+        before = [digest(path) for path in state]
+        for role, engine, installed in [('engine', self.probe, False), ('manager', self.application, True)]:
+            with self.subTest(failing_hash=role):
+                result = self.install(*engine_args, env=dict(self.env, AL_FAIL_HASH_ROLE=role,
+                                                             AL_ENGINE_INPUT=str(self.application)))
+                self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertEqual('Installed engine ' in result.stdout, installed)
+                self.assertNotIn('Installed native manager', result.stdout)
+                self.assertEqual(digest(self.native()), digest(engine))
+                self.assertEqual([digest(path) for path in state], before)
+                self.assertEqual(self.requests(), [])
+
+    def test_exact_remote_manager_and_local_engine_can_use_separate_versions(self):
+        manager_version = 'v9.8.6'
+        manager = build_manager(manager_version)
+        name = self.native().name.replace('-engine-', '-')
+        repository = 'fixture-owner/release.repo'
+        environment = dict(self.env, AL_FIXTURE_NAME=name, AL_FIXTURE_RELEASE=str(manager),
+                           AGENTIC_LENS_REPO=repository)
+        self.succeeds(self.install('--manager-version', manager_version, '--local-bin', self.application,
+                                   '--sha256', digest(self.application), env=environment,
+                                   script=ROOT / 'scripts/download-agentic-lens.sh'))
+        base = f'https://github.com/{repository}/releases/download/{manager_version}/'
+        self.assertCountEqual(self.requests(), [base + 'SHA256SUMS', base + name])
+        self.assertEqual(self.succeeds(self.launch('--manager-version', '--short')).stdout.strip(), manager_version)
+        self.assertEqual(self.succeeds(self.launch('version', '--short')).stdout.strip(), self.pin)
+
+    def test_failed_update_and_retry_report_actual_installed_state(self):
+        self.succeeds(self.install_local(probe=self.probe))
+        entry = self.dest / 'agentic-lens'
+        receipt = entry.with_suffix('.installation.json')
+        checksum = entry.with_suffix('.sha256')
+        before = (digest(entry), receipt.read_bytes(), checksum.read_bytes())
+        pin_before = self.config.read_bytes()
+        new_version = 'v9.8.8'
+        manager = build_manager(new_version)
+        args = ['--local-manager-bin', manager, '--manager-sha256', digest(manager),
+                '--local-bin', self.application, '--force']
+        total = self.install(*args, '--sha256', '0' * 64)
+        self.assertNotEqual(total.returncode, 0)
+        self.assertNotIn('Installed engine', total.stdout)
+        self.assertNotIn('Installed native manager', total.stdout)
+        self.assertEqual(digest(self.native()), digest(self.probe))
+        self.assertEqual((digest(entry), receipt.read_bytes(), checksum.read_bytes()), before)
+        self.assertEqual(self.config.read_bytes(), pin_before)
+
+        with (self.dest / '.agenticlens-manager.lock').open('a') as lease:
+            fcntl.flock(lease, fcntl.LOCK_EX)
+            partial = self.install(*args, '--sha256', digest(self.application))
+        self.assertNotEqual(partial.returncode, 0)
+        self.assertIn('Installed engine ' + self.pin, partial.stdout)
+        self.assertNotIn('Installed native manager', partial.stdout)
+        self.assertEqual(digest(self.native()), digest(self.application))
+        self.assertEqual((digest(entry), receipt.read_bytes(), checksum.read_bytes()), before)
+        self.assertEqual(self.succeeds(self.launch('--manager-version', '--short')).stdout.strip(), self.pin)
+        self.assertEqual(self.succeeds(self.launch('version', '--short')).stdout.strip(), self.pin)
+        self.assertEqual(self.config.read_bytes(), pin_before)
+
+        with entry.open('rb') as previous:
+            self.succeeds(self.install(*args, '--sha256', digest(self.application)))
+            self.assertFalse(os.path.samestat(os.fstat(previous.fileno()), entry.stat()))
+        metadata = json.loads(receipt.read_bytes())
+        self.assertEqual(metadata['version'], new_version)
+        self.assertEqual(metadata['sha256'], digest(entry))
+        self.assertEqual(checksum.read_text().strip(), digest(manager))
+        self.assertEqual(digest(entry), digest(manager))
+        self.assertEqual(self.succeeds(self.launch('--manager-version', '--short')).stdout.strip(), new_version)
+        self.assertEqual(self.config.read_bytes(), pin_before)
+        self.assertEqual(self.requests(), [])
 
     def test_bundle_conflict_preflight_preserves_every_existing_file(self):
         conflict = self.repo / BUNDLE_OPERATOR / 'references/dashboard.md'
