@@ -298,9 +298,10 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 		t.Fatalf("failed to write TICKET-ANOMALY ledger: %v", err)
 	}
 
+	// Prepare shared configuration before parallel subtests start their CLI readers.
 	t.Run("clean ticket shows no anomalies message", func(t *testing.T) {
-		t.Parallel()
 		cmd := workspaceCLICommand(t, wsDir, "--ticket-id", "TICKET-1", "--anomalies")
+		t.Parallel()
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -316,8 +317,8 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 	})
 
 	t.Run("ticket with anomalies formats table", func(t *testing.T) {
-		t.Parallel()
 		cmd := workspaceCLICommand(t, wsDir, "--ticket-id", "AL-ANOMALY", "--anomalies")
+		t.Parallel()
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
@@ -339,8 +340,8 @@ func TestCLIAnomaliesCommand(t *testing.T) {
 	})
 
 	t.Run("list output shows anomaly counts", func(t *testing.T) {
-		t.Parallel()
 		cmd := workspaceCLICommand(t, wsDir, "--list")
+		t.Parallel()
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
