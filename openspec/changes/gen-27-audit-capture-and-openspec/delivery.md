@@ -26,15 +26,15 @@ A private snapshot of the four actual GEN-27 Codex rollouts supplied the final e
 
 <!-- agentic-lens:metrics:start -->
 ### Workflow Efficiency
-- **Software Development Life Cycle Iterations:** 3
-- **Active Agent Duration:** 39m 31s (recorded duration including 1232s provisional)
-- **Context Window Health:** HEALTHY — Root agent peak 101.3k tokens (23% of 450k healthy ceiling, 0 compactions) | Subagents peak 79.4k (Opencode)
+- **Software Development Life Cycle Iterations:** 5
+- **Active Agent Duration:** 41m 17s (recorded duration including 62s provisional)
+- **Context Window Health:** HEALTHY — Root agent peak 107.9k tokens (24% of 450k healthy ceiling, 0 compactions) | Subagents peak 79.4k (Opencode)
 - **Role Effort Distribution (Subagents):** Unavailable: Complete nonzero subagent cost is required
 - **Subagent Turn Velocity & Thrashing:** 1.0 avg turns/run (peak: 1 turns) | Native 1.0, Opencode 1.0, Publication 1.0
 - **Test-to-Production Code Ratio:** 0:0 (+0 test lines / +0 prod lines)
 - **Code Delivered:** +0 / -0 lines across 0 code files (excluding docs)
-- **Reasoning Effort:** 2,612 reasoning tokens (6.5% of generated output)
-- **Tool Health & Self-Correction:** 174 tool calls (8 self-corrections, 95.4% success rate)
+- **Reasoning Effort:** 2,639 reasoning tokens (6.3% of generated output)
+- **Tool Health & Self-Correction:** 180 tool calls (8 self-corrections, 95.6% success rate)
 
 ### Anomalies & Health Flags
 - **Status:** 1 execution anomaly detected (1 WARNING).
@@ -47,15 +47,15 @@ A private snapshot of the four actual GEN-27 Codex rollouts supplied the final e
 #### By Subagent Role
 | Role | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Peak Context | Health | Cost (USD) |
 |---|---|---|---|---|---|---|---|---|
-| **Unknown** | 1 | 189,707 | 15,095 | 5,992,704 | 96.9% | 101.3k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
+| **Unknown** | 1 | 197,678 | 16,799 | 6,716,288 | 97.1% | 107.9k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **native** | 1 | 82,961 | 7,538 | 2,619,648 | 96.9% | 75.8k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **opencode** | 1 | 64,050 | 9,170 | 2,752,000 | 97.7% | 79.4k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
 | **publication** | 1 | 58,636 | 5,900 | 2,597,632 | 97.8% | 75.2k | HEALTHY | Unavailable (0 observed, 0 partial, 1 unavailable / 1 invocations) |
-| **Total** | **4** | **395,354** | **37,703** | **13,961,984** | **97.2%** | **101.3k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations)** |
+| **Total** | **4** | **403,325** | **39,407** | **14,685,568** | **97.3%** | **107.9k** | **HEALTHY** | **Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations)** |
 
 #### By Model
 | Model | Invocations | Input Tokens | Output Tokens | Cache Read | Cache Hit % | Cost (USD) |
 |---|---|---|---|---|---|---|
-| **gpt-6.2-astra** | 4 | 395,354 | 37,703 | 13,961,984 | 97.2% | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
-| **Total** | **4** | **395,354** | **37,703** | **13,961,984** | **97.2%** | **Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations)** |
+| **gpt-6.2-astra** | 4 | 403,325 | 39,407 | 14,685,568 | 97.3% | Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations) |
+| **Total** | **4** | **403,325** | **39,407** | **14,685,568** | **97.3%** | **Unavailable (0 observed, 0 partial, 4 unavailable / 4 invocations)** |
 <!-- agentic-lens:metrics:end -->
