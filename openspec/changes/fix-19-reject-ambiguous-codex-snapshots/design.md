@@ -19,3 +19,7 @@ Select extraction/refresh, optional hydration and portable-ledger regression bou
 ## Current-main revalidation
 
 Baseline and fetched origin/main are b6ab0471224c8bcea7bc00adce867d3ba0de4a37 (AL-63, after AL-84). Source inspection confirms the counterexample remains reachable: DiscoverRolloutPaths appends every selected candidate without rejecting repeated threadID; CombineTranscriptsWithPolicy appends session facts, invocations and tools and sums ToolCalls per transcript; CLI generation and backfill readCodexOwners consume this family. HydrateWorkspaceEvents discovers the family then breaks on the first parsed matching owner, certifying it complete when warning-free. DiscoverExactRolloutPathWithBudget already rejects a second matching owner. Executable before/after proof remains a required tester step rather than a claimed runtime result.
+
+## Iteration 01 review correction
+
+Architecture review (Sol 6.1/high) confirmed ARCH-01: registered capture-auto generation bypassed native duplicate discovery and could replace accepted history from one registered path. The existing approval already covers this consuming path; no acceptance boundary changes. Coder ownership extends to scoped capture adapters, and tester adds the actual automatic-generation regression. Re-review covers capture validation/extraction, source budgets and history preservation across all four focuses and both configured profiles.

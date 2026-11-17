@@ -268,7 +268,15 @@ func extractExactAt(ctx context.Context, r domain.CaptureRegistration, budget in
 		if path == "" {
 			return nil, 0, "", errors.New("exact Codex transcript path not registered; wait for an authoritative hook")
 		}
-		if err := codex.ValidateRolloutStore(r.Identity.Store, path); err != nil {
+		var discoveryBudget *codex.DiscoveryBudget
+		if len(source) > 0 {
+			var err error
+			discoveryBudget, err = captureDiscoveryBudget(source[0].configuration)
+			if err != nil {
+				return nil, 0, "", err
+			}
+		}
+		if err := validateRegisteredCodexSnapshot(r, discoveryBudget); err != nil {
 			return nil, 0, "", err
 		}
 		file, err := os.Open(path)
@@ -472,7 +480,7 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 		updated, updateErr := s.Change(ctx, r.Identity, func(current domain.CaptureRegistration) (domain.CaptureRegistration, error) {
 			if extractErr != nil {
 				current.State = domain.CaptureFailed
-				current.Detail = "Source snapshot unavailable or invalid; previous facts preserved. Run capture reconcile after source flush and inspect source configuration."
+				current.Detail = "Source snapshot unavailable or invalid; previous facts preserved: " + extractErr.Error()
 				if errors.Is(extractErr, opencode.ErrCaptureBudget) {
 					current.State = domain.CapturePending
 					current.Detail = "Source byte budget reached; increase --max-source-bytes or continue reconciliation; previous facts preserved"
@@ -526,6 +534,17 @@ func (s *Store) refreshTicketOwners(ctx context.Context, ticket, user string, bu
 	// Native child metadata is request-local. Resolve only successfully read
 	// owners before saving the final lean snapshots; budgets bound these reads.
 	if len(source.transcripts) > 0 {
+		seenTranscriptOwners := make(map[string]bool)
+		for _, transcript := range source.transcripts {
+			id := transcript.ThreadID
+			if id == "" {
+				id = transcript.SessionID
+			}
+			if seenTranscriptOwners[id] {
+				return nil, nil, fmt.Errorf("session identity collision: %s exists in multiple registered source stores; canonical ledger cannot distinguish these owners", id)
+			}
+			seenTranscriptOwners[id] = true
+		}
 		combined, combineErr := codex.CombineTranscriptsWithPolicy(source.transcripts, policies...)
 		if combineErr != nil {
 			return nil, nil, combineErr

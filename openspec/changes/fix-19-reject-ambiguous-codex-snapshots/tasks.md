@@ -14,3 +14,5 @@
 - [ ] Parent: consolidate review, retain compact attributed findings, update delivery and verified roadmap outcome, generate final source-backed telemetry, commit/push and publish/link PR. Leave merge to authorized user/controller.
 
 Review questions: behavior follows generation/backfill/hydration diagnostics and usable siblings; data examines completeness, accepted history and relationship conflicts; architecture examines shared owner-ambiguity guards and FCIS boundaries; tests examines actual consumer reachability and meaningful preservation/multiplicity oracles. Separate report paths use focus/profile suffixes. Parent owns consolidated verdict.
+
+- [ ] Coder/tester: correct ARCH-01 registered capture path bypass and verify automatic generation preserves accepted history on ambiguity.
