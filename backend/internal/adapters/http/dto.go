@@ -16,9 +16,10 @@ type ErrorResponse struct {
 
 // WorkspaceDetailResponse represents the serialized workspace detail payload.
 type WorkspaceDetailResponse struct {
-	Ledger    MetricsLedgerResponseDTO `json:"ledger"`
-	Artifacts domain.TicketArtifacts   `json:"artifacts"`
-	Anomalies []domain.Anomaly         `json:"anomalies,omitzero"`
+	WorkspacePath string                   `json:"workspace_path"`
+	Ledger        MetricsLedgerResponseDTO `json:"ledger"`
+	Artifacts     domain.TicketArtifacts   `json:"artifacts"`
+	Anomalies     []domain.Anomaly         `json:"anomalies,omitzero"`
 }
 
 // BuildInfoDTO represents the serialized build information payload.
@@ -30,14 +31,14 @@ type BuildInfoDTO struct {
 
 // ProjectConfigDTO represents the sanitized project configuration payload.
 type ProjectConfigDTO struct {
-	ProjectName        string                `json:"project_name"`
-	Prefixes           []domain.TicketPrefix `json:"prefixes"`
-	CaseInsensitive    bool                  `json:"case_insensitive"`
-	RoleMappings       domain.RoleMappings   `json:"role_mappings"`
-	WorkspacesDir      string                `json:"workspaces_dir"`
-	RoleOrder          []string              `json:"role_order"`
-	Version            string                `json:"version"`
-	LivePollIntervalMS *int                  `json:"live_poll_interval_ms,omitempty"`
+	ProjectName        string                       `json:"project_name"`
+	Prefixes           []domain.TicketPrefix        `json:"prefixes"`
+	CaseInsensitive    bool                         `json:"case_insensitive"`
+	RoleMappings       domain.RoleMappings          `json:"role_mappings"`
+	WorkspacesRoots    []domain.WorkspaceRootConfig `json:"workspaces_roots"`
+	RoleOrder          []string                     `json:"role_order"`
+	Version            string                       `json:"version"`
+	LivePollIntervalMS *int                         `json:"live_poll_interval_ms,omitempty"`
 }
 
 // ResponsePayload defines the permitted concrete types for JSON responses.

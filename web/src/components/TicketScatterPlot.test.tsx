@@ -159,3 +159,19 @@ describe('TicketScatterPlot', () => {
   });
 
 });
+
+
+it('keeps duplicate ticket locations separate when excluding and opening a plotted workspace', () => {
+  const base = mockTicketComparisonRows[0]!;
+  const onSelectTicket = vi.fn();
+  render(<TicketScatterPlot rows={[
+    {...base, workspace_path: '/records/first'},
+    {...base, workspace_path: '/archive/second'},
+  ]} onSelectTicket={onSelectTicket} />);
+  expect(screen.getAllByRole('button', {name: /AL-1:/})).toHaveLength(2);
+  fireEvent.click(screen.getByText(/Exclude tickets/));
+  fireEvent.click(screen.getByRole('checkbox', {name: /records\/first/}));
+  expect(screen.getAllByRole('button', {name: /AL-1:/})).toHaveLength(1);
+  fireEvent.click(screen.getByRole('button', {name: /Location: \/archive\/second/}));
+  expect(onSelectTicket).toHaveBeenCalledWith('AL-1', '/archive/second');
+});

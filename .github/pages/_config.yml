@@ -1,4 +1,5 @@
 title: AgenticLens roadmap
+roadmap_path: alspaces/plan
 markdown: kramdown
 kramdown:
   input: GFM

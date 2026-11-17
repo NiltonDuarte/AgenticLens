@@ -114,7 +114,7 @@ func TestGeneratedPinnedConfigRoundTrips(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.AgenticLens.Version != "v9.8.7" || cfg.Workspaces.Dir != "custom-work" || cfg.Telemetry.Capture.StateDir != "" {
+	if cfg.AgenticLens.Version != "v9.8.7" || cfg.Workspaces.Roots[0].Path != "custom-work" || cfg.Telemetry.Capture.StateDir != "" {
 		t.Fatalf("configuration %+v", cfg)
 	}
 	entry, err := ResolveEntrypoint(root)

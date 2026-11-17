@@ -152,7 +152,7 @@ class CaptureDistributionTest(DistributionFixture):
         self.succeeds(self.launch('install', self.pin, '--install-root', companion,
                                   '--local-bin', self.application, '--sha256', digest(self.application), cwd=outside))
         self.succeeds(self.launch('init', '--project-name', 'Standalone', '--settings', self.approved_settings(),
-                                  '--workspaces', 'workspaces', '--agenticlens-version', self.pin,
+                                  '--workspace-root', 'workspaces', '--agenticlens-version', self.pin,
                                   '--capture-enabled', 'false', '--source', 'codex',
                                   '--codex-home', self.home / '.codex', '--state-dir', self.root / 'unused state', cwd=outside))
         self.assertIn('project_name: Standalone', (outside / '.agenticlens-config.yaml').read_text())

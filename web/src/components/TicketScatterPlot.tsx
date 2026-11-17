@@ -1,3 +1,4 @@
+import { workspaceKey, selectWorkspace } from '../domain/workspaces';
 import { tagChoices, tagCategory, tagColors } from '../domain/tags';
 import { durationDescription } from '../domain/duration';
 import React, { useMemo, useState } from 'react';
@@ -7,7 +8,7 @@ import { deriveScatterPlotData, getScatterMetricValue, SCATTER_METRICS, type Sca
 export interface TicketScatterPlotProps {
   readonly categoryRows?: readonly TicketComparisonRow[];
   readonly rows: readonly TicketComparisonRow[];
-  readonly onSelectTicket?: ((ticketId: string) => void) | undefined;
+  readonly onSelectTicket?: ((ticketId: string, workspacePath?: string) => void) | undefined;
 }
 
 const WIDTH = 760;
@@ -16,7 +17,7 @@ const PADDING = { top: 24, right: 24, bottom: 62, left: 72 };
 
 export const TicketScatterPlot: React.FC<TicketScatterPlotProps> = ({ rows, categoryRows, onSelectTicket }) => {
   const [colorKey, setColorKey] = useState('');
-  const catalog = [...new Map([...(categoryRows ?? []), ...rows].map((row) => [row.ticket_id, row])).values()];
+  const catalog = [...new Map([...(categoryRows ?? []), ...rows].map((row) => [workspaceKey(row), row])).values()];
   const choices = tagChoices(catalog.map((row) => row.tags));
   const categories = colorKey ? [...new Map(catalog.map((row) => { const category = tagCategory(row.tags, colorKey); return [category.id, category] as const; })).values()] : [];
   const colors = tagColors(categories.map((category) => category.id));
@@ -87,9 +88,9 @@ export const TicketScatterPlot: React.FC<TicketScatterPlotProps> = ({ rows, cate
         <fieldset>
           <legend>Tickets included in the chart</legend>
           {visibleRows.map((row) => (
-            <label key={row.ticket_id}>
-              <input type="checkbox" checked={!excluded.has(row.ticket_id)} onChange={() => toggleExcluded(row.ticket_id)} />
-              {row.ticket_id} — {row.ticket_title}
+            <label key={workspaceKey(row)}>
+              <input type="checkbox" checked={!excluded.has(workspaceKey(row))} onChange={() => toggleExcluded(workspaceKey(row))} />
+              {row.ticket_id} — {row.ticket_title}{row.workspace_path ? ` — ${row.workspace_path}` : ''}
             </label>
           ))}
           {visibleRows.length === 0 && <p role="status">No tickets match your search.</p>}
@@ -120,13 +121,13 @@ export const TicketScatterPlot: React.FC<TicketScatterPlotProps> = ({ rows, cate
           {data.points.map(({ row, x, y }) => {
             const isCompleted = row.completed_at !== null;
             const category = colorKey ? tagCategory(row.tags, colorKey) : undefined;
-            const identity = `Status: ${isCompleted ? 'Completed' : 'In Progress'}${category ? `; Tag ${colorKey}: ${category.label}` : ''}`;
+            const identity = `${row.workspace_path ? `Location: ${row.workspace_path}; ` : ''}Status: ${isCompleted ? 'Completed' : 'In Progress'}${category ? `; Tag ${colorKey}: ${category.label}` : ''}`;
             const rawX = getScatterMetricValue(row, xMetric) ?? 0;
             const rawY = getScatterMetricValue(row, yMetric) ?? 0;
             const skills = row.skills_used === undefined ? 'Skills not recorded' : row.skills_used?.length ? row.skills_used.join(', ') : 'No recorded skills';
             return (
               <circle
-                key={row.ticket_id}
+                key={workspaceKey(row)}
                 cx={positionX(x)}
                 cy={positionY(y)}
                 r={6}
@@ -135,8 +136,8 @@ export const TicketScatterPlot: React.FC<TicketScatterPlotProps> = ({ rows, cate
                 tabIndex={0}
                 role="button"
                 aria-label={`${row.ticket_id}: ${row.ticket_title}; ${identity}; ${xMeta.label} ${xMeta.format(Number(rawX))}; ${yMeta.label} ${yMeta.format(Number(rawY))}; Skills Used: ${skills}\n${durationDescription(row.provisional_seconds)}`}
-                onClick={() => onSelectTicket?.(row.ticket_id)}
-                onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onSelectTicket?.(row.ticket_id); } }}
+                onClick={() => selectWorkspace(onSelectTicket, row)}
+                onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); selectWorkspace(onSelectTicket, row); } }}
               >
                 <title>{`${row.ticket_id} — ${row.ticket_title}\n${identity}\n${xMeta.label}: ${xMeta.format(Number(rawX))}\n${yMeta.label}: ${yMeta.format(Number(rawY))}; Skills Used: ${skills}\n${durationDescription(row.provisional_seconds)}`}</title>
               </circle>

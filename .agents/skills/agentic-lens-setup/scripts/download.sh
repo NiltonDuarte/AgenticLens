@@ -138,7 +138,7 @@ done
 "$MANAGER" self-update --version "$MANAGER_VERSION" --local-bin "$MANAGER" --sha256 "$(digest "$MANAGER")" --dest "$ENTRYPOINT"
 if ((INIT)); then
  printf 'Configuration incomplete: review explicit shared and local policy before completing setup.\n'
- printf 'Complete only this unchanged owned scaffold, preserving local settings:\n  (cd -P -- %q && %q --al-project %q init --complete-scaffold --agenticlens-version %q --settings APPROVED_SHARED.yaml --workspaces DIR --local-settings APPROVED_LOCAL.yaml)\n' "$PROJECT" "$ENTRYPOINT" "$PROJECT" "$PIN"
+ printf 'Complete only this unchanged owned scaffold, preserving local settings:\n  (cd -P -- %q && %q --al-project %q init --complete-scaffold --agenticlens-version %q --settings APPROVED_SHARED.yaml --workspace-root DIR --local-settings APPROVED_LOCAL.yaml)\n' "$PROJECT" "$ENTRYPOINT" "$PROJECT" "$PIN"
 fi
 if [[ -n "$SOURCE" ]]; then
  ((INIT==0)) || fail 'Complete project configuration before capture installation'

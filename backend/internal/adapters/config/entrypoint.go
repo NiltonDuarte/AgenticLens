@@ -224,6 +224,11 @@ func parseEntrypoint(data []byte, local bool) (domain.EntrypointConfig, error) {
 				return result, errors.New("agenticlens.binary_dir exceeds path limit")
 			}
 			result.BinaryDir = value.Value
+		case "state_dir":
+			if !local {
+				return result, errors.New("agenticlens.state_dir belongs only in local YAML")
+			}
+			result.StateDir = value.Value
 		case "install_root":
 			if len(value.Value) > 4096 || !absoluteInstallRoot.MatchString(value.Value) {
 				return result, errors.New("agenticlens.install_root must be absolute or explicitly ~/path")

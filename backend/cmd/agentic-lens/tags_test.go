@@ -160,7 +160,9 @@ func TestGenerateTicketTagsSurviveCopiedHistoryAndRepeatedSecondDeveloperRefresh
 
 func TestCaptureWorkerPublishesFreshTicketTagDefaults(t *testing.T) {
 	f := newCaptureGenerationFixture(t)
-	f.output = filepath.Join(f.project, "records", "TEST-100", "agentic_metrics.json")
+	// Automatic workers resolve an admitted ledger. The empty seed has neither
+	// tags nor source facts, so publication must load current defaults and source.
+	f.output = seedCaptureTicketHome(t, f, "TEST-100")
 	prepareCaptureOwner(t, f, "root", "TEST-100", 19)
 	writeCaptureSuccessfulPublicationPolicy(t, f.project, f.state)
 	for path, tags := range map[string]string{
@@ -186,9 +188,6 @@ func TestCaptureWorkerPublishesFreshTicketTagDefaults(t *testing.T) {
 	}
 	if err := store.Close(); err != nil {
 		t.Fatal(err)
-	}
-	if _, err := os.Stat(f.output); !os.IsNotExist(err) {
-		t.Fatalf("worker must create fresh publication: %v", err)
 	}
 	if out, err := runCaptureNative(t, f.project, "", "capture", "worker", "--repo", f.project, "--state-dir", f.state); err != nil {
 		t.Fatalf("actual worker publication: %v %s", err, out)

@@ -61,17 +61,15 @@ func manualStateSnapshot(t *testing.T, root string) map[string]manualStateFile {
 
 func TestManualGenerateIgnoresCaptureRegistryAndPolicy(t *testing.T) {
 	for _, source := range []string{"codex", "opencode"} {
-		for _, state := range []string{"omitted-policy", "no-local-config", "invalid-capture-only-policy", "missing-registry", "corrupt-registry", "inaccessible-state", "conflicting-binding"} {
+		for _, state := range []string{"omitted-policy", "no-capture-config", "invalid-capture-only-policy", "missing-registry", "corrupt-registry", "inaccessible-state", "conflicting-binding"} {
 			t.Run(source+"/"+state, func(t *testing.T) {
 				f := newCaptureGenerationFixture(t)
 				sourceArgs, sourceFile := manualSourceFixture(t, f, source)
 				local := "telemetry:\n  default_source: " + source + "\n"
 				captureDir := f.state
 				switch state {
-				case "no-local-config":
-					if err := os.Remove(filepath.Join(f.project, ".agenticlens-config.local.yaml")); err != nil {
-						t.Fatal(err)
-					}
+				case "no-capture-config":
+					writeManualStateOnlyConfig(t, f.project)
 				case "invalid-capture-only-policy":
 					local += "  capture:\n    enabled: nonsense\n    state_dir: 42\n    max_sessions: -1\n    pass_timeout_ms: -1\n"
 				case "corrupt-registry":
@@ -109,13 +107,14 @@ func TestManualGenerateIgnoresCaptureRegistryAndPolicy(t *testing.T) {
 						t.Fatal(err)
 					}
 				}
-				if state != "no-local-config" {
+				if state != "no-capture-config" {
 					if state != "invalid-capture-only-policy" {
 						local += fmt.Sprintf("  capture:\n    state_dir: %q\n", captureDir)
 					}
 					if state == "omitted-policy" {
 						local = "telemetry:\n  default_source: " + source + "\n"
 					}
+					local += fmt.Sprintf("agenticlens:\n  state_dir: %q\n", filepath.Join(f.project, ".publication-state"))
 					if err := os.WriteFile(filepath.Join(f.project, ".agenticlens-config.local.yaml"), []byte(local), 0600); err != nil {
 						t.Fatal(err)
 					}
@@ -123,7 +122,7 @@ func TestManualGenerateIgnoresCaptureRegistryAndPolicy(t *testing.T) {
 				before := manualStateSnapshot(t, f.stateBase)
 				args := []string{"generate", "--source", source, "--session-id", "root", "--ticket-id", "TEST-200", "--ticket-title", "Manual extraction", "--ticket-type", "fix", "--json-output", f.output}
 				args = append(args, sourceArgs...)
-				if state != "no-local-config" && state != "omitted-policy" {
+				if state != "no-capture-config" && state != "omitted-policy" {
 					args = append(args, "--capture-dir", captureDir)
 				}
 				for pass := 0; pass < 2; pass++ {
@@ -235,9 +234,7 @@ func TestManualGenerateUnavailableOrInvalidSourcesPreserveAcceptedArtifacts(t *t
 			t.Run(source+"/"+failure, func(t *testing.T) {
 				f := newCaptureGenerationFixture(t)
 				sourceArgs, sourceFile := manualSourceFixture(t, f, source)
-				if err := os.Remove(filepath.Join(f.project, ".agenticlens-config.local.yaml")); err != nil {
-					t.Fatal(err)
-				}
+				writeManualStateOnlyConfig(t, f.project)
 				summary := filepath.Join(f.project, "SUMMARY.md")
 				args := append([]string{"generate", "--source", source, "--session-id", "root", "--ticket-id", "TEST-100", "--ticket-title", "Source error preservation", "--ticket-type", "fix", "--json-output", f.output, "--append", summary}, sourceArgs...)
 				run := func() ([]byte, error) {
@@ -280,9 +277,7 @@ func TestManualGenerateUnavailableOrInvalidSourcesPreserveAcceptedArtifacts(t *t
 func TestManualGenerateLowerAndEmptySnapshotsPreserveOtherOwners(t *testing.T) {
 	f := newCaptureGenerationFixture(t)
 	source := f.write(t, 51)
-	if err := os.Remove(filepath.Join(f.project, ".agenticlens-config.local.yaml")); err != nil {
-		t.Fatal(err)
-	}
+	writeManualStateOnlyConfig(t, f.project)
 	state := filepath.Join(f.stateBase, "must-remain-absent")
 	run := func() {
 		t.Helper()
@@ -307,8 +302,11 @@ func TestManualGenerateLowerAndEmptySnapshotsPreserveOtherOwners(t *testing.T) {
 		} else {
 			f.write(t, tokens)
 		}
-		freshOutput := filepath.Join(f.project, fmt.Sprintf("fresh-%d.json", tokens))
-		if out, err := directOwnedGenerate(t, f.project, f.store, state, "root", freshOutput); err != nil {
+		freshOutput := filepath.Join(f.project, fmt.Sprintf("fresh-%d", tokens), "agentic_metrics.json")
+		restoreScope := selectGenerateControlHome(t, f.project, filepath.Dir(freshOutput))
+		out, err := directOwnedGenerate(t, f.project, f.store, state, "root", freshOutput)
+		restoreScope()
+		if err != nil {
 			t.Fatalf("fresh authoritative control: %v %s", err, out)
 		}
 		freshFixture := f
@@ -373,5 +371,13 @@ func TestManualGenerateRejectsInvalidExplicitCaptureBudgets(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func writeManualStateOnlyConfig(t *testing.T, project string) {
+	t.Helper()
+	body := fmt.Sprintf("agenticlens:\n  state_dir: %q\n", filepath.Join(project, ".publication-state"))
+	if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.local.yaml"), []byte(body), 0600); err != nil {
+		t.Fatal(err)
 	}
 }

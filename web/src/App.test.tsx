@@ -12,7 +12,7 @@ it('hands fetched literal, case-sensitive policy through the real App to fleet s
   }));
   // Raw App rendering deliberately bypasses the component-fixture configuration provider.
   const config = {
-    project_name: 'Wired policy project', workspaces_dir: 'tickets', version: 'v1.0.0',
+    project_name: 'Wired policy project', workspaces_roots: [{ path: 'tickets', discovery: { max_depth: 1, max_directories: 300 } }], version: 'v1.0.0',
     prefixes: [{prefix: 'T[1]-', description: 'Literal bracketed tickets'}],
     case_insensitive: false, role_order: [], role_mappings: {},
   };
@@ -37,7 +37,7 @@ it('uses the fetched shared polling cadence through App and restores the recover
   vi.stubGlobal('EventSource', undefined);
   const cadence = 333;
   const timer = vi.spyOn(globalThis, 'setInterval');
-  const config = {project_name: 'Polling policy project', workspaces_dir: 'tickets', version: 'v1.0.0',
+  const config = {project_name: 'Polling policy project', workspaces_roots: [{ path: 'tickets', discovery: { max_depth: 1, max_directories: 300 } }], version: 'v1.0.0',
     prefixes: [{prefix: 'T-', description: 'Tickets'}], case_insensitive: false, role_order: [], role_mappings: {}, live_poll_interval_ms: cadence};
   const emptyTree = {root_sessions: [], active_anomalies: [], total_active_sessions: 0, last_refreshed_at: '2026-11-11T12:00:00Z'};
   let polls = 0;

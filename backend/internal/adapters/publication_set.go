@@ -3,7 +3,9 @@ package adapters
 import (
 	"agenticlens/internal/adapters/capture"
 	"bytes"
-	"context"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,10 +13,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 )
 
 const publicationLimit = 128 << 20
+
+var ErrPublicationPending = errors.New("incomplete artifact publication")
 
 type priorArtifact struct {
 	Path    string `json:"path"`
@@ -98,133 +101,175 @@ func (a *priorArtifact) UnmarshalJSON(body []byte) error {
 type publicationJournal struct {
 	Version     int             `json:"version"`
 	Ledger      string          `json:"ledger"`
+	Directory   string          `json:"directory"`
+	Project     string          `json:"project"`
 	MemberCount int             `json:"member_count"`
 	Artifacts   []priorArtifact `json:"artifacts"`
 }
+type pendingPublication struct {
+	Version     int    `json:"version"`
+	Transaction string `json:"transaction"`
+}
 
 func (j *publicationJournal) UnmarshalJSON(body []byte) error {
-	if err := validatePublicationObject(body, []string{"version", "ledger", "member_count", "artifacts"}); err != nil {
+	if err := validatePublicationObject(body, []string{"version", "ledger", "directory", "project", "member_count", "artifacts"}); err != nil {
 		return err
 	}
-	type journalWire publicationJournal
-	var wire journalWire
-	if err := json.Unmarshal(body, &wire); err != nil {
+	type wire publicationJournal
+	var value wire
+	decoder := json.NewDecoder(bytes.NewReader(body))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&value); err != nil {
 		return err
 	}
-	*j = publicationJournal(wire)
+	*j = publicationJournal(value)
 	return nil
 }
-
-// canonicalPublicationPath resolves existing ancestors and dangling symlink
-// targets even before the first artifact or its parent directory exists.
 func canonicalPublicationPath(path string) (string, error) {
+	if capture.PublicationOwner(path) != nil {
+		return capture.PublicationPath(path), nil
+	}
 	return capture.ProjectDirectory(path)
 }
-
-// publicationDestinations derives authority only from caller supplied paths.
-// Project/scope validation belongs to the caller; this boundary requires the
-// ledger itself, distinct physical members and a complete bounded set.
+func journalPath(ledger string) string {
+	return capture.PublicationPath(ledger) + ".publication-pending"
+}
+func CheckPublication(ledger string) error {
+	if _, err := capture.LstatPublicationFile(journalPath(ledger)); err == nil {
+		return fmt.Errorf("%w at %s; recovery requires the originating operational state home", ErrPublicationPending, ledger)
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	return nil
+}
 func publicationDestinations(ledger string, paths []string) (string, []string, error) {
-	binding, err := canonicalPublicationPath(ledger)
-	if err != nil {
+	owner := capture.PublicationOwner(ledger)
+	if owner == nil {
+		return "", nil, fmt.Errorf("publication requires ownership of the resolved ledger directory")
+	}
+	if err := owner.ValidateLocation(); err != nil {
 		return "", nil, err
 	}
+	binding := filepath.Base(ledger)
 	targets := []string{}
+	physicalTargets := []string{}
 	infos := []os.FileInfo{}
 	hasLedger := false
 	for _, path := range paths {
 		if path == "" {
 			continue
 		}
-		target, e := canonicalPublicationPath(path)
+		bound := capture.PublicationPath(path)
+		rel, err := filepath.Rel(owner.DirectoryPath(), bound)
+		if err != nil || rel == "." || rel == ".." || filepath.IsAbs(rel) || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			return "", nil, fmt.Errorf("publication member is outside selected ledger directory: %s", path)
+		}
+		// Existing ancestors must not escape the held directory through a symlink.
+		actual, err := owner.PhysicalMemberPath(bound)
+		if err != nil {
+			return "", nil, err
+		}
+		home, err := owner.PhysicalMemberPath(owner.DirectoryPath())
+		if err != nil {
+			return "", nil, err
+		}
+		if !insideWorkspace(home, actual) {
+			return "", nil, fmt.Errorf("publication member escapes selected directory")
+		}
+		info, err := capture.StatPublicationFile(bound)
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
+			return "", nil, err
+		}
+		if info != nil && !info.Mode().IsRegular() {
+			return "", nil, fmt.Errorf("publication member must be regular")
+		}
+		for i, prior := range targets {
+			if actual == physicalTargets[i] || rel == prior || strings.HasPrefix(rel, prior+string(filepath.Separator)) || strings.HasPrefix(prior, rel+string(filepath.Separator)) || (info != nil && infos[i] != nil && os.SameFile(info, infos[i])) {
+				return "", nil, fmt.Errorf("overlapping publication members")
+			}
+		}
+		if rel == binding {
+			hasLedger = true
+		}
+		markerActual, e := owner.PhysicalMemberPath(journalPath(ledger))
 		if e != nil {
 			return "", nil, e
 		}
-		info, e := os.Stat(target)
-		if e != nil && !errors.Is(e, os.ErrNotExist) {
-			return "", nil, e
+		if actual == markerActual || rel == binding+".publication-pending" {
+			return "", nil, fmt.Errorf("artifact overlaps pending indicator")
 		}
-		if info != nil && !info.Mode().IsRegular() {
-			return "", nil, fmt.Errorf("publication destination is not a regular file: %s", target)
-		}
-		for i, prior := range targets {
-			if target == prior || (info != nil && infos[i] != nil && os.SameFile(info, infos[i])) ||
-				strings.HasPrefix(target, prior+string(filepath.Separator)) || strings.HasPrefix(prior, target+string(filepath.Separator)) {
-				return "", nil, fmt.Errorf("artifact destinations overlap: %s", target)
-			}
-		}
-		if target == binding {
-			hasLedger = true
-		}
-		targets = append(targets, target)
+		targets = append(targets, rel)
+		physicalTargets = append(physicalTargets, actual)
 		infos = append(infos, info)
 	}
-	if !hasLedger || len(targets) == 0 || len(targets) > 3 {
-		return "", nil, errors.New("publication requires ledger and one to three distinct authorized members")
-	}
-	marker := binding + ".publication-pending"
-	markerInfo, e := os.Stat(marker)
-	if e != nil && !errors.Is(e, os.ErrNotExist) {
-		return "", nil, e
-	}
-	for i, target := range targets {
-		if target == marker || strings.HasPrefix(marker, target+string(filepath.Separator)) ||
-			(markerInfo != nil && infos[i] != nil && os.SameFile(markerInfo, infos[i])) {
-			return "", nil, errors.New("artifact overlaps publication journal")
-		}
+	if !hasLedger || len(targets) < 1 || len(targets) > 3 {
+		return "", nil, fmt.Errorf("publication requires ledger and one to three authorized members")
 	}
 	return binding, targets, nil
 }
-
-func journalPath(ledger string) string {
-	if real, err := canonicalPublicationPath(ledger); err == nil {
-		ledger = real
-	}
-	return ledger + ".publication-pending"
-}
-
-// CheckPublication makes interrupted sets visibly unavailable to readers. The
-// generator recovers under its per-output lock before reading the baseline.
-func CheckPublication(ledger string) error {
-	if _, err := os.Lstat(journalPath(ledger)); err == nil {
-		return fmt.Errorf("recoverable interrupted artifact publication at %s; rerun generate to restore prior accepted set", ledger)
-	} else if !errors.Is(err, os.ErrNotExist) {
-		return err
-	}
-	return nil
-}
-
 func syncDirectory(path string) error {
-	f, err := os.Open(path)
+	f, err := capture.OpenPublicationFile(path, os.O_RDONLY, 0)
 	if err != nil {
 		return err
 	}
 	return errors.Join(f.Sync(), f.Close())
 }
 func durableReplace(path string, data []byte) error {
-	f, err := os.CreateTemp(filepath.Dir(path), ".publication-stage-")
+	path = capture.PublicationPath(path)
+	f, err := capture.CreatePublicationTemp(filepath.Dir(path), ".publication-stage-")
 	if err != nil {
 		return err
 	}
 	name := f.Name()
 	defer func() {
-		if e := os.Remove(name); e != nil && !errors.Is(e, os.ErrNotExist) {
+		if e := capture.RemovePublicationFile(name); e != nil && !errors.Is(e, os.ErrNotExist) {
 			fmt.Fprintln(os.Stderr, "publication staging cleanup:", e)
 		}
 	}()
-	_, err = f.Write(data)
-	if e := errors.Join(err, f.Sync(), f.Close()); e != nil {
-		return e
+	if err = f.Chmod(0600); err == nil {
+		_, err = f.Write(data)
 	}
-	if err = os.Rename(name, path); err != nil {
+	if err = errors.Join(err, f.Sync(), f.Close()); err != nil {
+		return err
+	}
+	if err = capture.RenamePublicationFile(name, path); err != nil {
 		return err
 	}
 	return syncDirectory(filepath.Dir(path))
 }
-
-// BeginPublication persists a bounded prior-good set before any visible writes.
-// This is a recoverable transaction, not portable atomic multi-file rename.
-// Caller must hold the canonical ledger publication lock through commit/recovery.
+func privateJournalPath(owner *capture.PublicationLock, transaction string) string {
+	digest := sha256.Sum256([]byte(owner.Project()))
+	return filepath.Join(owner.StateHome(), "publication", "journals", hex.EncodeToString(digest[:]), transaction+".json")
+}
+func loadPending(ledger string) (pendingPublication, bool, error) {
+	var pending pendingPublication
+	file, err := capture.OpenPublicationFile(journalPath(ledger), os.O_RDONLY, 0)
+	if errors.Is(err, os.ErrNotExist) {
+		return pending, false, nil
+	}
+	if err != nil {
+		return pending, true, err
+	}
+	body, readErr := io.ReadAll(io.LimitReader(file, 4097))
+	err = errors.Join(readErr, file.Close())
+	if err != nil {
+		return pending, true, err
+	}
+	if len(body) > 4096 {
+		return pending, true, fmt.Errorf("pending-publication indicator exceeds bound")
+	}
+	if err = validatePublicationObject(body, []string{"version", "transaction"}); err != nil {
+		return pending, true, fmt.Errorf("unsupported/retired publication state; recover with matching tool before upgrade: %w", err)
+	}
+	if err = json.Unmarshal(body, &pending); err != nil {
+		return pending, true, err
+	}
+	token, err := hex.DecodeString(pending.Transaction)
+	if err != nil || len(token) != 16 || pending.Version != 2 {
+		return pending, true, fmt.Errorf("unsupported pending publication format; explicit recovery required")
+	}
+	return pending, true, nil
+}
 func BeginPublication(ledger string, paths []string) error {
 	if err := CheckPublication(ledger); err != nil {
 		return err
@@ -233,14 +278,15 @@ func BeginPublication(ledger string, paths []string) error {
 	if err != nil {
 		return err
 	}
-	j := publicationJournal{Version: 1, Ledger: binding, MemberCount: len(targets)}
+	owner := capture.PublicationOwner(ledger)
+	j := publicationJournal{Version: 2, Ledger: binding, Directory: owner.DirectoryIdentity(), Project: owner.Project(), MemberCount: len(targets), Artifacts: []priorArtifact{}}
 	total := 0
-	for _, target := range targets {
-		a := priorArtifact{Path: target}
-		f, err := os.Open(target)
+	for _, rel := range targets {
+		member := priorArtifact{Path: rel}
+		f, err := capture.OpenPublicationFile(filepath.Join(owner.DirectoryPath(), rel), os.O_RDONLY, 0)
 		if err == nil {
-			a.Present = true
-			a.Data, err = io.ReadAll(io.LimitReader(f, int64(publicationLimit-total+1)))
+			member.Present = true
+			member.Data, err = io.ReadAll(io.LimitReader(f, int64(publicationLimit-total+1)))
 			err = errors.Join(err, f.Close())
 		} else if errors.Is(err, os.ErrNotExist) {
 			err = nil
@@ -248,195 +294,216 @@ func BeginPublication(ledger string, paths []string) error {
 		if err != nil {
 			return err
 		}
-		total += len(a.Data)
+		total += len(member.Data)
 		if total > publicationLimit {
-			return errors.New("publication prior-good set exceeds 128 MiB recovery bound")
+			return fmt.Errorf("publication backup exceeds 128 MiB recovery bound")
 		}
-		j.Artifacts = append(j.Artifacts, a)
+		j.Artifacts = append(j.Artifacts, member)
+	}
+	token := make([]byte, 16)
+	if _, err = rand.Read(token); err != nil {
+		return err
+	}
+	pending := pendingPublication{Version: 2, Transaction: hex.EncodeToString(token)}
+	private := privateJournalPath(owner, pending.Transaction)
+	if err = capture.MkdirPublicationStateDirectories(filepath.Dir(private), 0700); err != nil {
+		return err
 	}
 	body, err := json.Marshal(j)
 	if err != nil {
 		return err
 	}
-	return durableReplace(journalPath(ledger), body)
+	if err = durableReplace(private, body); err != nil {
+		return err
+	}
+	indicator, err := json.Marshal(pending)
+	if err != nil {
+		return err
+	}
+	return durableReplace(journalPath(ledger), indicator)
 }
-
-// RecoverPublication rolls back every member; the journal remains until all
-// restoration writes are durable, so a second crash repeats recovery safely.
-// authorizedPaths must come from trusted invocation/configuration after project
-// validation, never from the journal. Missing/legacy authorization fails closed.
-// Caller must hold the canonical ledger publication lock throughout recovery.
-func RecoverPublication(ledger string, authorizedPaths []string) (bool, error) {
-	marker := journalPath(ledger)
-	info, err := os.Lstat(marker)
-	if errors.Is(err, os.ErrNotExist) {
-		return false, nil
+func loadRecovery(ledger string, paths []string) (publicationJournal, pendingPublication, bool, error) {
+	pending, present, err := loadPending(ledger)
+	var j publicationJournal
+	if err != nil || !present {
+		return j, pending, present, err
 	}
+	owner := capture.PublicationOwner(ledger)
+	if owner == nil {
+		return j, pending, true, fmt.Errorf("recovery requires publication ownership and the originating operational state home")
+	}
+	binding, targets, err := publicationDestinations(ledger, paths)
 	if err != nil {
-		return false, err
+		return j, pending, true, err
 	}
-	if !info.Mode().IsRegular() {
-		return true, errors.New("invalid publication journal file; explicit repair required")
-	}
-	f, err := os.Open(marker)
-	if errors.Is(err, os.ErrNotExist) {
-		return false, nil
-	}
+	f, err := capture.OpenPublicationFile(privateJournalPath(owner, pending.Transaction), os.O_RDONLY, 0)
 	if err != nil {
-		return false, err
+		return j, pending, true, fmt.Errorf("private publication recovery unavailable; pending indicator/artifacts retained: %w", err)
 	}
-	body, err := io.ReadAll(io.LimitReader(f, 2*publicationLimit+1))
-	if e := errors.Join(err, f.Close()); e != nil {
-		return true, e
+	body, readErr := io.ReadAll(io.LimitReader(f, 2*publicationLimit+1))
+	err = errors.Join(readErr, f.Close())
+	if err != nil {
+		return j, pending, true, err
 	}
 	if len(body) > 2*publicationLimit {
-		return true, errors.New("publication recovery journal exceeds bound")
+		return j, pending, true, fmt.Errorf("private journal exceeds bound")
 	}
-	// Validate every member before any restoration or deletion. The journal is
-	// untrusted input, including when permissions happen to be 0600.
-	binding, allowed, err := publicationDestinations(ledger, authorizedPaths)
-	if err != nil {
-		return true, fmt.Errorf("publication recovery authorization; explicit repair required: %w", err)
+	if err = json.Unmarshal(body, &j); err != nil {
+		return j, pending, true, err
 	}
-	var j publicationJournal
-	decoder := json.NewDecoder(bytes.NewReader(body))
-	decoder.DisallowUnknownFields()
-	if err = decoder.Decode(&j); err != nil {
-		return true, fmt.Errorf("invalid publication journal; explicit repair required: %w", err)
-	}
-	if _, err = decoder.Token(); !errors.Is(err, io.EOF) {
-		return true, errors.New("invalid trailing publication journal data; explicit repair required")
-	}
-	if j.Version != 1 || j.Ledger != binding || j.MemberCount != len(allowed) || len(j.Artifacts) != len(allowed) {
-		return true, errors.New("invalid publication version, ledger binding or complete member count; explicit repair required")
+	if j.Version != 2 || j.Ledger != binding || j.Directory != owner.DirectoryIdentity() || j.Project != owner.Project() || j.MemberCount != len(targets) || len(j.Artifacts) != len(targets) {
+		return j, pending, true, fmt.Errorf("private journal does not match the complete authorized publication set; recovery incomplete")
 	}
 	seen := map[string]bool{}
 	total := 0
 	for _, a := range j.Artifacts {
-		target, e := canonicalPublicationPath(a.Path)
-		if e != nil {
-			return true, fmt.Errorf("invalid publication destination; explicit repair required: %w", e)
-		}
-		authorized := false
-		for _, path := range allowed {
-			if path == target {
-				authorized = true
+		allowed := false
+		for _, target := range targets {
+			if a.Path == target {
+				allowed = true
 			}
 		}
-		if !filepath.IsAbs(a.Path) || a.Path != target || !authorized || seen[target] {
-			return true, errors.New("unauthorized, relocated or duplicate publication destination; explicit repair required")
+		if !allowed || seen[a.Path] || (!a.Present && len(a.Data) > 0) {
+			return j, pending, true, fmt.Errorf("invalid or conflicting authorized recovery member")
 		}
-		seen[target] = true
+		seen[a.Path] = true
 		total += len(a.Data)
-		if total > publicationLimit || (!a.Present && len(a.Data) != 0) {
-			return true, errors.New("invalid publication prior-good data; explicit repair required")
-		}
 	}
-	for _, a := range j.Artifacts {
-		if a.Present {
-			err = durableReplace(a.Path, a.Data)
-		} else {
-			err = os.Remove(a.Path)
-			if errors.Is(err, os.ErrNotExist) {
-				err = nil
-			}
-			if err == nil {
-				if _, e := os.Stat(filepath.Dir(a.Path)); !errors.Is(e, os.ErrNotExist) {
-					err = syncDirectory(filepath.Dir(a.Path))
-				}
-			}
-		}
-		if err != nil {
-			return true, fmt.Errorf("restoring prior-good artifact %s: %w", a.Path, err)
-		}
+	if total > publicationLimit {
+		return j, pending, true, fmt.Errorf("private recovery data exceeds bound")
 	}
-	return true, CommitPublication(ledger, nil)
+	return j, pending, true, nil
 }
-
-// CommitPublication removes the marker only after all new files and their
-// directories are synced. Failure retains the prior-good journal for recovery.
-func CommitPublication(ledger string, paths []string) error {
-	for _, path := range paths {
-		if path == "" {
-			continue
+func RecoverPublication(ledger string, authorizedPaths []string) (bool, error) {
+	j, pending, present, err := loadRecovery(ledger, authorizedPaths)
+	if err != nil || !present {
+		return present, err
+	}
+	owner := capture.PublicationOwner(ledger)
+	for _, a := range j.Artifacts {
+		path := filepath.Join(owner.DirectoryPath(), a.Path)
+		if a.Present {
+			if err = durableReplace(path, a.Data); err != nil {
+				return true, err
+			}
+		} else {
+			if err = capture.RemovePublicationFile(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+				return true, err
+			}
+			if err = syncDirectory(filepath.Dir(path)); err != nil && !errors.Is(err, os.ErrNotExist) {
+				return true, err
+			}
 		}
-		f, err := os.Open(path)
+	}
+	return true, finishPublication(ledger, pending, owner)
+}
+func finishPublication(ledger string, pending pendingPublication, owner *capture.PublicationLock) error {
+	if err := capture.RemovePublicationFile(journalPath(ledger)); err != nil {
+		return err
+	}
+	if err := syncDirectory(owner.DirectoryPath()); err != nil {
+		return err
+	}
+	path := privateJournalPath(owner, pending.Transaction)
+	if err := capture.RemovePublicationFile(path); err != nil {
+		return err
+	}
+	return syncDirectory(filepath.Dir(path))
+}
+func CommitPublication(ledger string, paths []string) error {
+	_, pending, present, err := loadRecovery(ledger, paths)
+	if err != nil {
+		return err
+	}
+	if !present {
+		return fmt.Errorf("no pending publication to commit")
+	}
+	owner := capture.PublicationOwner(ledger)
+	for _, path := range paths {
+		f, err := capture.OpenPublicationFile(path, os.O_RDONLY, 0)
 		if err != nil {
 			return err
 		}
 		if err = errors.Join(f.Sync(), f.Close()); err != nil {
 			return err
 		}
-		if err = syncDirectory(filepath.Dir(path)); err != nil {
-			return err
+		// Nested member directories must be durable before acknowledging the
+		// complete set, including every newly created ancestor below the root.
+		for parent := filepath.Dir(capture.PublicationPath(path)); parent != owner.DirectoryPath(); parent = filepath.Dir(parent) {
+			if err = syncDirectory(parent); err != nil {
+				return err
+			}
 		}
 	}
-	if err := os.Remove(journalPath(ledger)); err != nil {
+	if err = syncDirectory(owner.DirectoryPath()); err != nil {
 		return err
 	}
-	return syncDirectory(filepath.Dir(journalPath(ledger)))
+	return finishPublication(ledger, pending, owner)
 }
-
 func readPublishedLedger(path string) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	lock, err := capture.AcquirePublication(ctx, path)
+	if err := CheckPublication(path); err != nil {
+		return nil, err
+	}
+	directory, err := capture.ReadPublicationDirectory(path)
 	if err != nil {
 		return nil, err
 	}
 	defer func() {
-		if e := lock.Close(); e != nil {
-			fmt.Fprintln(os.Stderr, "publication read unlock:", e)
+		if err := directory.Close(); err != nil {
+			fmt.Fprintln(os.Stderr, "publication read close:", err)
 		}
 	}()
-	return readOwnedLedger(path)
+	return readDirectoryLedger(directory, path)
 }
-func readOwnedLedger(path string) ([]byte, error) {
-	if err := CheckPublication(path); err != nil {
+
+func readDirectoryLedger(directory *capture.ReadDirectory, path string) ([]byte, error) {
+	pending := filepath.Base(path) + ".publication-pending"
+	check := func() error {
+		if _, err := directory.Lstat(pending); err == nil {
+			return fmt.Errorf("%w at %s; originating operational state is required for recovery", ErrPublicationPending, path)
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+		return nil
+	}
+	if err := check(); err != nil {
 		return nil, err
 	}
-	body, err := os.ReadFile(path)
+	body, err := directory.ReadFile(filepath.Base(path))
+	var pathError *os.PathError
+	if errors.As(err, &pathError) {
+		return nil, fmt.Errorf("ledger %s unavailable: %w", path, pathError.Err)
+	}
 	if err != nil {
 		return nil, err
 	}
-	if err = CheckPublication(path); err != nil {
+	if err := check(); err != nil {
 		return nil, err
 	}
 	return body, nil
 }
 
-// RecoverPublicationWithLegacyReport preserves recovery authority for an older
-// ledger/report/summary journal. New publication sets omit the retired report.
-// Each candidate set still passes the exact member/alias/path validation before
-// any output changes; metadata never grants itself restoration authority.
-func RecoverPublicationWithLegacyReport(project, ledger string, paths []string) (bool, error) {
-	_, markerErr := os.Lstat(journalPath(ledger))
-	present := markerErr == nil
-	if markerErr != nil && !errors.Is(markerErr, os.ErrNotExist) {
-		return false, markerErr
+func readOwnedLedger(path string) ([]byte, error) {
+	path = capture.PublicationPath(path)
+	if err := CheckPublication(path); err != nil {
+		return nil, err
 	}
-	for _, path := range append([]string{ledger}, paths...) {
-		if err := capture.ValidateDestination(project, path); err != nil {
-			return present, fmt.Errorf("publication recovery outside exact project: %w", err)
-		}
+	f, err := capture.OpenPublicationFile(path, os.O_RDONLY, 0)
+	if err != nil {
+		return nil, err
 	}
-	recovered, err := RecoverPublication(ledger, paths)
-	if err == nil {
-		return recovered, nil
+	body, readErr := io.ReadAll(io.LimitReader(f, publicationLimit+1))
+	err = errors.Join(readErr, f.Close())
+	if err != nil {
+		return nil, err
 	}
-	report, resolveErr := capture.ProjectDirectory(filepath.Join(filepath.Dir(ledger), "capture_report.json"))
-	if resolveErr != nil {
-		return recovered, errors.Join(err, resolveErr)
+	if len(body) > publicationLimit {
+		return nil, fmt.Errorf("ledger exceeds 128 MiB read bound")
 	}
-	if scopeErr := capture.ValidateDestination(project, report); scopeErr != nil {
-		return recovered, errors.Join(err, fmt.Errorf("retired report recovery outside exact project; artifacts and journal preserved: %w", scopeErr))
+	if err = CheckPublication(path); err != nil {
+		return nil, err
 	}
-	legacy := append(append([]string{}, paths...), report)
-	legacyRecovered, legacyErr := RecoverPublication(ledger, legacy)
-	if legacyErr == nil {
-		return legacyRecovered, nil
-	}
-	return recovered, errors.Join(err, legacyErr)
+	return body, nil
 }
 
 // LoadObservedFactLedger performs a bounded advisory observation without taking

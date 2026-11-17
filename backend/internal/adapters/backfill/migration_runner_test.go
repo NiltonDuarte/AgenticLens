@@ -13,6 +13,7 @@ import (
 
 	"agenticlens/internal/adapters"
 	"agenticlens/internal/adapters/backfill"
+	adaptersconfig "agenticlens/internal/adapters/config"
 	"agenticlens/internal/domain"
 )
 
@@ -106,7 +107,7 @@ func TestMigrationRunner_Batch(t *testing.T) {
 	runner := backfill.NewMigrationRunner(nil)
 
 	report, err := runner.Run(backfill.MigrationOptions{
-		WorkspacesDir: wsDir,
+		Project:       wsDir,
 		TargetVersion: domain.CurrentSchemaVersion,
 	})
 	if err != nil {
@@ -166,7 +167,7 @@ func TestMigrationRunner_Batch(t *testing.T) {
 
 	// Test idempotency: re-running produces zero migrations and all 3 valid workspaces are up-to-date
 	report2, err := runner.Run(backfill.MigrationOptions{
-		WorkspacesDir: wsDir,
+		Project:       wsDir,
 		TargetVersion: domain.CurrentSchemaVersion,
 	})
 	if err != nil {
@@ -194,7 +195,7 @@ func TestMigrationRunner_DryRun(t *testing.T) {
 
 	runner := backfill.NewMigrationRunner(nil)
 	report, err := runner.Run(backfill.MigrationOptions{
-		WorkspacesDir: wsDir,
+		Project:       wsDir,
 		TargetVersion: domain.CurrentSchemaVersion,
 		DryRun:        true,
 	})
@@ -233,7 +234,7 @@ func TestMigrationRunner_Backup(t *testing.T) {
 
 	runner := backfill.NewMigrationRunner(nil)
 	report, err := runner.Run(backfill.MigrationOptions{
-		WorkspacesDir: wsDir,
+		Project:       wsDir,
 		TargetVersion: domain.CurrentSchemaVersion,
 		Backup:        true,
 	})
@@ -287,7 +288,7 @@ func TestMigrationRunner_CleansCompletedCurrentMetadataWithoutChangingFacts(t *t
 		t.Fatal(err)
 	}
 	runner := backfill.NewMigrationRunner(nil)
-	opts := backfill.MigrationOptions{WorkspacesDir: filepath.Join(root, "records"), TargetVersion: domain.CurrentSchemaVersion, Backup: true, DryRun: true}
+	opts := backfill.MigrationOptions{Project: filepath.Join(root, "records"), TargetVersion: domain.CurrentSchemaVersion, Backup: true, DryRun: true}
 	dry, err := runner.Run(opts)
 	if err != nil || len(dry.Results) != 1 || dry.Migrated != 1 || dry.Results[0].BackupCreated {
 		t.Fatalf("cleanup dry run result: %+v, %v", dry, err)
@@ -362,7 +363,7 @@ func TestMigrationRunner_TicketFilter(t *testing.T) {
 	runner := backfill.NewMigrationRunner(nil)
 
 	report, err := runner.Run(backfill.MigrationOptions{
-		WorkspacesDir: wsDir,
+		Project:       wsDir,
 		TicketID:      "AL-1",
 		TargetVersion: domain.CurrentSchemaVersion,
 	})
@@ -397,7 +398,7 @@ func TestMigrationRunner_UpdateSummaries(t *testing.T) {
 
 	runner := backfill.NewMigrationRunner(nil)
 	report, err := runner.Run(backfill.MigrationOptions{
-		WorkspacesDir:   wsDir,
+		Project:         wsDir,
 		TargetVersion:   domain.CurrentSchemaVersion,
 		UpdateSummaries: true,
 	})
@@ -446,13 +447,13 @@ func TestMigrationRunner_DirectoryEdgeCases(t *testing.T) {
 
 	t.Run("non-existent workspaces directory returns error", func(t *testing.T) {
 		_, err := runner.Run(backfill.MigrationOptions{
-			WorkspacesDir: "/non/existent/path/for/sure/migration",
+			Project:       "/non/existent/path/for/sure/migration",
 			TargetVersion: domain.CurrentSchemaVersion,
 		})
 		if err == nil {
 			t.Fatal("expected error for non-existent directory, got nil")
 		}
-		if !strings.Contains(err.Error(), "workspaces directory not found") {
+		if !errors.Is(err, adaptersconfig.ErrConfigNotFound) {
 			t.Errorf("unexpected error message: %v", err)
 		}
 	})
@@ -460,7 +461,7 @@ func TestMigrationRunner_DirectoryEdgeCases(t *testing.T) {
 	t.Run("empty workspaces directory produces zero results cleanly", func(t *testing.T) {
 		emptyDir := migrationTestRoot(t)
 		report, err := runner.Run(backfill.MigrationOptions{
-			WorkspacesDir: emptyDir,
+			Project:       emptyDir,
 			TargetVersion: domain.CurrentSchemaVersion,
 		})
 		if err != nil {
@@ -478,7 +479,7 @@ func TestMigrationRunner_DirectoryEdgeCases(t *testing.T) {
 		_ = os.WriteFile(filepath.Join(root, "TICKET-EMPTY-1", "notes.md"), []byte("# Notes"), 0644)
 
 		report, err := runner.Run(backfill.MigrationOptions{
-			WorkspacesDir: root,
+			Project:       root,
 			TargetVersion: domain.CurrentSchemaVersion,
 		})
 		if err != nil {
@@ -523,7 +524,7 @@ func TestMigrationRunner_CorruptedAndDefectiveLedgerResilience(t *testing.T) {
 
 	runner := backfill.NewMigrationRunner(nil)
 	report, err := runner.Run(backfill.MigrationOptions{
-		WorkspacesDir: wsDir,
+		Project:       wsDir,
 		TargetVersion: domain.CurrentSchemaVersion,
 	})
 	if err != nil {
@@ -586,7 +587,7 @@ func TestMigrationRunner_DryRunImmutabilityStrict(t *testing.T) {
 
 	runner := backfill.NewMigrationRunner(nil)
 	report, err := runner.Run(backfill.MigrationOptions{
-		WorkspacesDir: wsDir,
+		Project:       wsDir,
 		TargetVersion: domain.CurrentSchemaVersion,
 		DryRun:        true,
 	})
@@ -630,7 +631,7 @@ func TestMigrationRunner_IdempotencyStrictAcrossRepeatedRuns(t *testing.T) {
 
 	// Pass 1: Migrates both to v2
 	r1, err := runner.Run(backfill.MigrationOptions{
-		WorkspacesDir: wsDir,
+		Project:       wsDir,
 		TargetVersion: domain.CurrentSchemaVersion,
 	})
 	if err != nil {
@@ -646,7 +647,7 @@ func TestMigrationRunner_IdempotencyStrictAcrossRepeatedRuns(t *testing.T) {
 
 	// Pass 2: Strictly idempotent (all up-to-date, zero writes)
 	r2, err := runner.Run(backfill.MigrationOptions{
-		WorkspacesDir: wsDir,
+		Project:       wsDir,
 		TargetVersion: domain.CurrentSchemaVersion,
 	})
 	if err != nil {
@@ -659,7 +660,7 @@ func TestMigrationRunner_IdempotencyStrictAcrossRepeatedRuns(t *testing.T) {
 
 	// Pass 3: Repeat again
 	r3, err := runner.Run(backfill.MigrationOptions{
-		WorkspacesDir: wsDir,
+		Project:       wsDir,
 		TargetVersion: domain.CurrentSchemaVersion,
 	})
 	if err != nil {
@@ -691,7 +692,7 @@ func TestMigrationRunner_TicketFilterAdversarial(t *testing.T) {
 
 	t.Run("case insensitive match", func(t *testing.T) {
 		report, err := runner.Run(backfill.MigrationOptions{
-			WorkspacesDir: wsDir,
+			Project:       wsDir,
 			TicketID:      "al-1", // lowercase
 			TargetVersion: domain.CurrentSchemaVersion,
 		})
@@ -705,7 +706,7 @@ func TestMigrationRunner_TicketFilterAdversarial(t *testing.T) {
 
 	t.Run("whitespace trimmed match", func(t *testing.T) {
 		report, err := runner.Run(backfill.MigrationOptions{
-			WorkspacesDir: wsDir,
+			Project:       wsDir,
 			TicketID:      "   AL-2   ",
 			TargetVersion: domain.CurrentSchemaVersion,
 		})
@@ -718,8 +719,14 @@ func TestMigrationRunner_TicketFilterAdversarial(t *testing.T) {
 	})
 
 	t.Run("non-existent ticket filter yields 0 scanned", func(t *testing.T) {
+		// Absence is conclusive only in a complete scan. The shared batch
+		// fixture deliberately contains malformed AL-4, so use a valid home.
+		completeRoot := migrationTestRoot(t)
+		if err := os.WriteFile(filepath.Join(completeRoot, "agentic_metrics.json"), []byte(sampleHistoricalJSON("AL-1")), 0600); err != nil {
+			t.Fatal(err)
+		}
 		report, err := runner.Run(backfill.MigrationOptions{
-			WorkspacesDir: wsDir,
+			Project:       completeRoot,
 			TicketID:      "DOES-NOT-EXIST",
 			TargetVersion: domain.CurrentSchemaVersion,
 		})
@@ -738,7 +745,7 @@ func TestMigrationRunner_BatchCurrentPrivacyBounds(t *testing.T) {
 
 	// Step 1: Dry run to v3 should not modify any files on disk
 	reportDry, err := runner.Run(backfill.MigrationOptions{
-		WorkspacesDir: wsDir,
+		Project:       wsDir,
 		TargetVersion: domain.CurrentSchemaVersion,
 		DryRun:        true,
 	})
@@ -766,7 +773,7 @@ func TestMigrationRunner_BatchCurrentPrivacyBounds(t *testing.T) {
 
 	// Step 2: Live migration to v3
 	report, err := runner.Run(backfill.MigrationOptions{
-		WorkspacesDir: wsDir,
+		Project:       wsDir,
 		TargetVersion: domain.CurrentSchemaVersion,
 	})
 	if err != nil {
@@ -821,7 +828,7 @@ func TestMigrationRunner_BatchCurrentMigrationState(t *testing.T) {
 
 	// Live batch migration directly to schema version 4
 	report, err := runner.Run(backfill.MigrationOptions{
-		WorkspacesDir: wsDir,
+		Project:       wsDir,
 		TargetVersion: domain.CurrentSchemaVersion,
 	})
 	if err != nil {
@@ -899,7 +906,7 @@ func TestMigrationRunner_NormalizesInterimV4AndReportsDroppedUnscopedTools(t *te
 
 	runner := backfill.NewMigrationRunner(nil)
 	report, err := runner.Run(backfill.MigrationOptions{
-		WorkspacesDir: filepath.Dir(workspace),
+		Project:       filepath.Dir(workspace),
 		TargetVersion: domain.CurrentSchemaVersion,
 	})
 	if err != nil {
@@ -940,7 +947,7 @@ func TestMigrationRunner_RejectsMixedCanonicalAndLegacyCollectionsAtomically(t *
 	if err := os.WriteFile(path, original, 0600); err != nil {
 		t.Fatal(err)
 	}
-	report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{WorkspacesDir: filepath.Dir(workspace), TargetVersion: domain.CurrentSchemaVersion})
+	report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{Project: filepath.Dir(workspace), TargetVersion: domain.CurrentSchemaVersion})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1057,7 +1064,7 @@ func TestMigrationRunner_ValidatesCurrentBeforeUpToDateFastPath(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{WorkspacesDir: filepath.Dir(workspace), TargetVersion: domain.CurrentSchemaVersion, Backup: true})
+			report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{Project: filepath.Dir(workspace), TargetVersion: domain.CurrentSchemaVersion, Backup: true})
 			if err != nil {
 				t.Fatalf("unexpected runner error: %v", err)
 			}
@@ -1106,14 +1113,14 @@ func TestMigrationCommandsValidateRawCleanupBeforePublication(t *testing.T) {
 			run  func(string) (string, error)
 		}{
 			{"migrate", func(root string) (string, error) {
-				report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{WorkspacesDir: root, TargetVersion: domain.CurrentSchemaVersion, Backup: true})
+				report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{Project: root, TargetVersion: domain.CurrentSchemaVersion, Backup: true})
 				if err != nil {
 					return "", err
 				}
 				return strings.Join(report.Errors, "; "), nil
 			}},
 			{"backfill", func(root string) (string, error) {
-				report, err := backfill.NewEngine().Execute(backfill.BackfillOptions{WorkspacesDir: root, Source: "codex"})
+				report, err := backfill.NewEngine().Execute(backfill.BackfillOptions{Project: root, Source: "codex"})
 				if err != nil {
 					return "", err
 				}
@@ -1188,7 +1195,7 @@ func TestMigrationRunner_NormalizesPreIterationV4AnomalySummaries(t *testing.T) 
 		t.Fatal(err)
 	}
 
-	report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{WorkspacesDir: filepath.Dir(workspace), TargetVersion: domain.CurrentSchemaVersion})
+	report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{Project: filepath.Dir(workspace), TargetVersion: domain.CurrentSchemaVersion})
 	if err != nil {
 		t.Fatalf("unexpected runner error: %v", err)
 	}
@@ -1218,7 +1225,7 @@ func TestMigrationRunner_SanitizesCanonicalV4EventPayloads(t *testing.T) {
 	if err := os.WriteFile(path, original, 0600); err != nil {
 		t.Fatal(err)
 	}
-	report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{WorkspacesDir: filepath.Dir(workspace), TargetVersion: domain.CurrentSchemaVersion})
+	report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{Project: filepath.Dir(workspace), TargetVersion: domain.CurrentSchemaVersion})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1251,7 +1258,7 @@ func TestMigrationRunner_MissingWorkspacesDir(t *testing.T) {
 
 	runner := backfill.NewMigrationRunner(nil)
 	report, err := runner.Run(backfill.MigrationOptions{
-		WorkspacesDir: "",
+		Project:       "",
 		TargetVersion: domain.CurrentSchemaVersion,
 	})
 	if report != nil {
@@ -1260,16 +1267,16 @@ func TestMigrationRunner_MissingWorkspacesDir(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error when workspaces dir cannot be resolved, got nil")
 	}
-	if !errors.Is(err, adapters.ErrWorkspacesDirNotFound) {
+	if !errors.Is(err, adaptersconfig.ErrConfigNotFound) {
 		t.Errorf("expected ErrWorkspacesDirNotFound, got %v", err)
 	}
 }
 
-func TestMigrationRunnerIgnoresUnusedLocalStateWithoutChangingPolicy(t *testing.T) {
+func TestMigrationRunnerIgnoresUnusedCaptureStateWithExplicitOperationalState(t *testing.T) {
 	for _, malformedLocal := range []bool{false, true} {
-		name := "absent local policy"
+		name := "absent capture policy"
 		if malformedLocal {
-			name = "malformed unused local policy"
+			name = "malformed unused capture policy"
 		}
 		t.Run(name, func(t *testing.T) {
 			ws := setupMigrationTestWorkspaces(t)
@@ -1280,18 +1287,19 @@ func TestMigrationRunnerIgnoresUnusedLocalStateWithoutChangingPolicy(t *testing.
 				t.Fatal(err)
 			}
 			localPath := filepath.Join(root, ".agenticlens-config.local.yaml")
-			local := []byte("telemetry:\n  capture:\n    enabled: false\n    state_dir: []\n")
+			local := []byte("agenticlens:\n  state_dir: .publication-state\n")
 			if malformedLocal {
-				if err := os.WriteFile(localPath, local, 0600); err != nil {
-					t.Fatal(err)
-				}
+				local = append(local, []byte("telemetry:\n  capture:\n    enabled: false\n    state_dir: []\n")...)
+			}
+			if err := os.WriteFile(localPath, local, 0600); err != nil {
+				t.Fatal(err)
 			}
 			ledgerPath := filepath.Join(ws, "AL-1", "agentic_metrics.json")
 			before, err := os.ReadFile(ledgerPath)
 			if err != nil {
 				t.Fatal(err)
 			}
-			report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{WorkspacesDir: ws, TicketID: "AL-1", TargetVersion: domain.CurrentSchemaVersion})
+			report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{Project: ws, TicketID: "AL-1", Workspace: filepath.Dir(ledgerPath), TargetVersion: domain.CurrentSchemaVersion})
 			if err != nil || report == nil || report.Scanned != 1 || report.Migrated != 1 || len(report.Errors) != 0 {
 				t.Fatalf("state-independent migration acquired an unused local prerequisite: %+v, %v", report, err)
 			}
@@ -1324,7 +1332,7 @@ func TestMigrationRunnerRejectsObsoletePublicationTarget(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{WorkspacesDir: ws, TargetVersion: 5, DryRun: true})
+	report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{Project: ws, TargetVersion: 5, DryRun: true})
 	if err == nil || report != nil || !strings.Contains(err.Error(), "current target version 6") {
 		t.Fatalf("obsolete target not rejected: %+v %v", report, err)
 	}
@@ -1366,7 +1374,7 @@ func TestMigrationCommandsCanonicalizeCompletedDraftDuration(t *testing.T) {
 				t.Fatal(err)
 			}
 			if command == "migrate" {
-				report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{WorkspacesDir: root, TargetVersion: domain.CurrentSchemaVersion, Backup: true})
+				report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{Project: root, TargetVersion: domain.CurrentSchemaVersion, Backup: true})
 				if err != nil || report.Migrated != 1 || len(report.Errors) != 0 {
 					t.Fatalf("migration cleanup: %+v %v", report, err)
 				}
@@ -1375,7 +1383,7 @@ func TestMigrationCommandsCanonicalizeCompletedDraftDuration(t *testing.T) {
 					t.Fatalf("lost exact rollback bytes: %v", err)
 				}
 			} else {
-				report, err := backfill.NewEngine().Execute(backfill.BackfillOptions{WorkspacesDir: root, Source: "codex", Force: command == "backfill_force"})
+				report, err := backfill.NewEngine().Execute(backfill.BackfillOptions{Project: root, Source: "codex", Force: command == "backfill_force"})
 				if err != nil || report.Updated != 1 || len(report.Warnings) != 0 {
 					t.Fatalf("backfill cleanup: %+v %v", report, err)
 				}

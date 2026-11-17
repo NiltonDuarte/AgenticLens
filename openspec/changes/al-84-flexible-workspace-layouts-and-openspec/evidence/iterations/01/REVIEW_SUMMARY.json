@@ -1,0 +1,205 @@
+{
+  "schema_version": 1,
+  "findings": [
+    {
+      "finding_id": "BEH-01",
+      "severity": 6,
+      "issue": "Raw generation accepts a filename that shared ledger readers cannot discover.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: raw generation requires canonical ledger filename; intentional computed export remains separate."
+    },
+    {
+      "finding_id": "DATA-01",
+      "severity": 6,
+      "issue": "A final read could reopen a different physical ledger after resolving its home.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: retain an independent directory reference through final admission; a correlated replacement test verifies binding."
+    },
+    {
+      "finding_id": "ARCH-01",
+      "severity": 7,
+      "issue": "New private journal ancestors are not synchronized before public publication writes.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: synchronize new private directory ancestry before pending/public writes; real ordering traces and injected failures verified."
+    },
+    {
+      "finding_id": "BEH-02",
+      "severity": 6,
+      "issue": "Incomplete discovery may conceal another matching ledger during implicit selection or first publication.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6-luna",
+          "effort": "medium",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: incomplete enumeration cannot establish implicit uniqueness or first-publication absence; partial listing and explicit-home access remain usable."
+    },
+    {
+      "finding_id": "TEST-01",
+      "severity": 5,
+      "issue": "Existing movement tests do not detect transaction replacements writing into an unrelated former home.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: full transaction movement/commit/reopened-recovery oracle kills former-path rename mutation."
+    },
+    {
+      "finding_id": "TEST-02",
+      "severity": 3,
+      "issue": "A database-error test accepts an unrelated ticket-ID diagnostic as success.",
+      "reporters": [
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: source/type negative cases require their intended actionable diagnostics; unrelated identity diagnostic mutant is rejected."
+    },
+    {
+      "finding_id": "BEH-03",
+      "severity": 6,
+      "issue": "Backfill and migration bypass shared selection safeguards for incomplete scans and explicit unenumerated homes.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: maintenance consumers share selection guards and propagate explicit home into nested migration; complete valid absence remains a no-op."
+    },
+    {
+      "finding_id": "CI-01",
+      "severity": 5,
+      "issue": "The trusted base workflow omitted the new roadmap flag required by the candidate Pages builder.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6.1-sol",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: explicit Pages roadmap_path config supplies normal input; CLI override and containment remain enforced."
+    },
+    {
+      "finding_id": "ASTRA-BEH-01",
+      "severity": 7,
+      "issue": "Pending ledger read failures are excluded from implicit uniqueness and first-publication absence decisions.",
+      "reporters": [
+        {
+          "persona": "reviewer-behavior",
+          "model": "gpt-6-astra",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6-astra",
+          "effort": "high",
+          "identity_basis": "observed"
+        },
+        {
+          "persona": "reviewer-tests",
+          "model": "gpt-6-astra",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: operational read uncertainty blocks implicit uniqueness and first-publication absence; explicit healthy selection and invalid-ledger exclusion remain supported."
+    },
+    {
+      "finding_id": "ASTRA-DATA-01",
+      "severity": 6,
+      "issue": "Artifact publication drops physical selection before write admission and accepts a distinct same-ticket replacement.",
+      "reporters": [
+        {
+          "persona": "reviewer-data",
+          "model": "gpt-6-astra",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: retain the selected directory descriptor through physical write admission before recovery can touch a replacement."
+    },
+    {
+      "finding_id": "ASTRA-ARCH-01",
+      "severity": 4,
+      "issue": "Discovery accepts an in-root alias target at traversal depth while explicit selection/publication measure physical depth.",
+      "reporters": [
+        {
+          "persona": "reviewer-architecture",
+          "model": "gpt-6-astra",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: discovery and explicit selection use physical depth per configured root, preserving independently configured union coverage."
+    },
+    {
+      "finding_id": "CONFIG-01",
+      "severity": 4,
+      "issue": "Optional publication project inferred ownership from the ledger destination, retaining old callers and risking unrelated configuration for external roots.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6-astra",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed following the user compatibility question: require a nonblank owning project and pass it explicitly through snapshot, relocation, formatting and test callers."
+    },
+    {
+      "finding_id": "CI-02",
+      "severity": 3,
+      "issue": "Parallel anomaly CLI subtests rewrite shared YAML configuration while sibling CLI readers open it, intermittently producing EOF or a fixture panic.",
+      "reporters": [
+        {
+          "persona": "orchestrator",
+          "model": "gpt-6-astra",
+          "effort": "high",
+          "identity_basis": "observed"
+        }
+      ],
+      "disposition": "Fixed: prepare shared configuration before each subtest calls t.Parallel; CLI execution and all assertions remain parallel and unchanged. The pre-fix repeated race run failed; 30 corrected repetitions passed."
+    }
+  ]
+}

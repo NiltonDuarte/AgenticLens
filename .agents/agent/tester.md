@@ -37,3 +37,5 @@ Use the supported [unit-first verification commands](../../CONTRIBUTING.md#5-qua
 Record tested revision/diff, commands, actual results and unavailable stages;
 zero silent skips. Reuse valid results for unchanged code. Keep fixtures
 self-contained and all writes within assigned ownership in the shared checkout.
+
+Execution scope and approval live in the assigned change’s design.md, current steps in tasks.md, and human verification/PR evidence in delivery.md. Review/test evidence stays change-local under evidence/iterations/<NN>/. The roadmap ticket and index remain separate; follow AGENTS.md for their lifecycle.

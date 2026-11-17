@@ -27,3 +27,5 @@ exercise production behavior, extend coherent existing coverage and preserve
 meaningful assertions when consolidating. Report changed behavior, checks and
 limits; return BLOCKED for conflicting requirements. The parent owns integration,
 telemetry and publication.
+
+Execution scope and approval live in the assigned change’s design.md, current steps in tasks.md, and human verification/PR evidence in delivery.md. Review/test evidence stays change-local under evidence/iterations/<NN>/. The roadmap ticket and index remain separate; follow AGENTS.md for their lifecycle.

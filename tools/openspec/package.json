@@ -1,0 +1,13 @@
+{
+  "name": "agenticlens-openspec-toolchain",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Pinned development-only OpenSpec workflow tool",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "devDependencies": {
+    "@fission-ai/openspec": "2.0.0",
+    "yaml": "2.9.1"
+  }
+}

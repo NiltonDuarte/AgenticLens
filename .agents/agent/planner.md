@@ -14,7 +14,7 @@ Produce zero-code plans under the
 and [technical guidelines](../../TECHNICAL_GUIDELINES.md).
 
 Ground in configuration, existing modules and tests; cite paths/symbols that
-locate the change. Initially author CONTRACT.md and iterations/01/PLAN.md.
+locate the change. Author the selected change’s design.md technical contract/approval and tasks.md execution plan, linked to proposal/spec acceptance. Keep material iteration deltas in design.md; do not add a parallel contract/plan tree.
 For changed acceptance, read prior decisions and write a delta plan; do not
 rewrite the frozen contract or create an iteration merely for a resumed session.
 

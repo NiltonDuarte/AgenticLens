@@ -35,7 +35,7 @@ const TICKET_TYPE_OPTIONS: readonly MultiSelectOption[] = [
 ];
 
 export interface FleetOverviewProps {
-  readonly onSelectTicket?: ((ticketId: string) => void) | undefined;
+  readonly onSelectTicket?: ((ticketId: string, workspacePath?: string) => void) | undefined;
   readonly configuredPrefixes?: readonly string[] | undefined;
 }
 

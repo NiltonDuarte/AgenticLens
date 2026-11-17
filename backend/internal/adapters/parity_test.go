@@ -115,7 +115,7 @@ func isolatedParityWorkspacesDir(t *testing.T) string {
 		t.Fatal(err)
 	}
 	cfg := fixtureReadPolicy(t)
-	cfg.Workspaces.Dir = "workspaces"
+	cfg.Workspaces.Roots[0].Path = "workspaces"
 	cfg.ProjectName = "ParityFixture"
 	cfg.Ticket = domain.TicketConfig{CaseInsensitive: true, Prefixes: []domain.TicketPrefix{{Prefix: "AL", Description: "Development"}, {Prefix: "GEN", Description: "General"}, {Prefix: "PO", Description: "Planning"}}}
 	cfg.RoleMappings = domain.RoleMappings{"orchestrator": "orchestrator", "build": "orchestrator", "planner": "planner", "coder": "coder", "tester": "tester", "reviewer": "reviewer"}

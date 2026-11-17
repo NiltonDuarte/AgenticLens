@@ -3,6 +3,7 @@ package adapters
 import (
 	"agenticlens/internal/adapters/capture"
 	"agenticlens/internal/domain"
+	"bytes"
 	"context"
 	"os"
 	"path/filepath"
@@ -11,6 +12,46 @@ import (
 	"time"
 )
 
+func TestPublishWorkspaceNestedSummaryPreservesSourceFacts(t *testing.T) {
+	project := t.TempDir()
+	path := putFormatLedger(t, project, "T-1", `{"schema_version":6,"ticket_id":"T-1","sessions":[{"id":"unavailable-owner","source":"codex","user":"other-machine","invocations":[],"tools":[{"name":"read","calls":2,"errors":0}],"anomalies":[]}]}`)
+	prior, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	selected, err := LoadWorkspaceArtifactSelection("T-1", project, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := selected.Close(); err != nil {
+			t.Error(err)
+		}
+	})
+	summary := filepath.Join(filepath.Dir(path), "reports", "nested", "SUMMARY.md")
+	if err := PublishWorkspaceArtifacts(project, selected, "", summary); err != nil {
+		t.Fatal(err)
+	}
+	first, err := os.ReadFile(summary)
+	if err != nil || !bytes.Contains(first, []byte("Workflow Efficiency")) {
+		t.Fatalf("selected nested summary missing: %q %v", first, err)
+	}
+	if err := PublishWorkspaceArtifacts(project, selected, "", summary); err != nil {
+		t.Fatal(err)
+	}
+	second, err := os.ReadFile(summary)
+	if err != nil || !bytes.Equal(first, second) {
+		t.Fatalf("nested summary changed on repeat: %q %v", second, err)
+	}
+	after, err := os.ReadFile(path)
+	if err != nil || !bytes.Equal(prior, after) {
+		t.Fatalf("summary publication changed source facts: %q %v", after, err)
+	}
+	if err := CheckPublication(path); err != nil {
+		t.Fatalf("successful nested publication left pending state: %v", err)
+	}
+}
+
 func TestSaveMetricsLedgerOwnsPhysicalOutput(t *testing.T) {
 	root := t.TempDir()
 	path := putFormatLedger(t, root, "T-1", formatFixture)
@@ -18,7 +59,7 @@ func TestSaveMetricsLedgerOwnsPhysicalOutput(t *testing.T) {
 	if err := os.Symlink(path, alias); err != nil {
 		t.Fatal(err)
 	}
-	owner, err := capture.AcquirePublication(context.Background(), path)
+	owner, err := capture.AcquirePublication(context.Background(), path, root)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,7 +77,7 @@ func TestSaveMetricsLedgerOwnsPhysicalOutput(t *testing.T) {
 	done := make(chan error, 1)
 	id, title := "T-1", "new export snapshot"
 	ledger := domain.AgenticMetricsLedger{TicketID: &id, TicketTitle: &title}
-	go func() { done <- saveMetricsLedger(ctx, alias, ledger) }()
+	go func() { done <- saveMetricsLedger(ctx, root, alias, ledger) }()
 	select {
 	case <-ctx.waiting:
 	case err := <-done:
@@ -64,10 +105,13 @@ func TestSaveMetricsLedgerOwnsPhysicalOutput(t *testing.T) {
 	if err != nil || !strings.Contains(string(body), title) {
 		t.Fatalf("export did not publish target: %s %v", body, err)
 	}
-	if err := BeginPublication(path, []string{path}); err != nil {
+	if err := beginTestPublication(t, path, []string{path}); err != nil {
 		t.Fatal(err)
 	}
-	if err := SaveMetricsLedger(alias, domain.AgenticMetricsLedger{}); err == nil || !strings.Contains(err.Error(), "interrupted") {
+	if err := capture.PublicationOwner(path).Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveMetricsLedger(root, alias, domain.AgenticMetricsLedger{}); err == nil || !strings.Contains(err.Error(), "incomplete") {
 		t.Fatalf("export accepted pending journal: %v", err)
 	}
 	after, err := os.ReadFile(path)

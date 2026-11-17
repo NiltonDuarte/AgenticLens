@@ -58,11 +58,13 @@ def shared_policy(pin, cache, workspace='workspaces', name='Fixture'):
     body = (ROOT / 'scripts/tests/fixtures/project-policy.yaml').read_text()
     body = body.replace('project_name: Fixture', 'project_name: ' + json.dumps(name))
     body = body.replace('version: v9.8.7', 'version: ' + pin + '\n  install_root: ' + json.dumps(str(cache)))
-    return body.replace('dir: records', 'dir: ' + json.dumps(str(workspace)))
+    return body.replace('path: records', 'path: ' + json.dumps(str(workspace)))
 
 
 def local_policy(state, source, cache=None):
-    install = 'agenticlens:\n  install_root: ' + json.dumps(str(cache)) + '\n' if cache else ''
+    install = 'agenticlens:\n  state_dir: ' + json.dumps(str(Path(state).parent / 'publication-state')) + '\n'
+    if cache:
+        install += '  install_root: ' + json.dumps(str(cache)) + '\n'
     return install + ('telemetry:\n  default_source: codex\n  sources:\n    codex:\n      home: ' + json.dumps(str(source)) +
                       '\n  capture:\n    enabled: false\n    state_dir: ' + json.dumps(str(state)) +
                       '\n    max_sessions: 19\n    max_source_bytes: 16777217\n')

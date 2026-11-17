@@ -9,7 +9,7 @@ Use this checklist when a change touches the corresponding boundary. Put the sel
 - [CONTRIBUTING.md](../CONTRIBUTING.md): executable local build and verification entry points.
 - This checklist: select regression cases before implementation. Historical ticket artifacts record evidence; they are not current command references.
 
-When changing a shared rule, search active instructions, personas, skill references, setup templates, and user docs for the old wording. Update affected guidance or link to its owner. Preserve historical records. Distinguish an artifact-allocation default from a runtime configuration requirement: AGENTS.md's fallback workspace name does not authorize the server to guess an unconfigured path.
+When changing a shared rule, search active instructions, personas, skill references, setup templates, and user docs for the old wording. Update affected guidance or link to its owner. Preserve historical records. Distinguish an artifact-allocation default from a runtime configuration requirement: a setup writer’s explicit workspace choice does not authorize the server to guess an unconfigured path.
 
 ## Interpret steering against the current accepted scope
 
@@ -52,6 +52,10 @@ Apply the [canonical portable ledger contract](../TECHNICAL_GUIDELINES.md#portab
 These are acceptance scenarios for affected application work, not a claim that documentation alone implements or verifies them. If existing tests encode a conflicting requirement, trace its product authority before preserving the assertion; report the conflict instead of adding machinery to satisfy an unsupported rule.
 
 ### Configuration and project portability
+
+For workspace changes, exercise explicit per-path depth/budget (writer 0/300 versus repository containers 1/300), rejection of retired scalar/CLI/API aliases, ledger-only discovery and recorded identity through real moves. Include overlapping/physical aliases, duplicate ticket selection, an unavailable root with valid siblings, grouped/renamed/OpenSpec archive layouts and no recreated old parents. Ledger-free folders must not create dashboard rows or zero-effort placeholders.
+
+Publication-state changes require writable operational state initialization without capture installation/registry access, read-only access with private state absent, durable private-journal/public-indicator ordering, real synchronized archive races, interrupted cleanup and pending copied history on another machine fixture. Missing recovery state must remain visibly incomplete; current-format completed history remains portable. Verify ticket/change links and independent roadmap/archive lifecycle. Native OpenSpec CLI/schema probes establish only that surface; actual Codex/OpenCode telemetry needs source-backed runtime evidence.
 
 Exercise a custom workspace directory, custom ticket prefixes, source roots, thresholds, and explicit overrides. Missing required configuration must fail clearly; pre-existing container/parent directories must not silently select a project. Verify the effective value through the API and UI as well as the loader. Renaming ticket artifacts must not affect tests: use self-contained fixtures. Production clients must surface request failures; synthetic fixtures belong to tests.
 
@@ -105,7 +109,7 @@ Use the [canonical review procedure](../.agents/skills/agentic-lens-review/SKILL
 
 ## Before handoff
 
-For workspace consolidation, follow [completed review retention](../.agents/skills/agentic-lens-review/references/parallel-review.md#completed-review-retention). Verify that REVIEW_SUMMARY.json preserves every canonical candidate, numeric severity, disposition and all distinct reporting persona/model/effort tuples, including shared discovery and refutations. Retain scope/revision, initial/final outcomes (including no-findings, cancelled and incomplete work), separate verification actors, checks and limits in SUMMARY.md. Resolve current references before deleting completed detailed reports and run/finding archives. Do not turn incomplete evidence into approval; historical full evidence may remain in Git history.
+For workspace consolidation, follow [completed review retention](../.agents/skills/agentic-lens-review/references/parallel-review.md#completed-review-retention). Verify that REVIEW_SUMMARY.json preserves every canonical candidate, numeric severity, disposition and all distinct reporting persona/model/effort tuples, including shared discovery and refutations. Retain scope/revision, initial/final outcomes (including no-findings, cancelled and incomplete work), separate verification actors, checks and limits in the change’s delivery.md. Resolve current references before deleting completed detailed reports and run/finding archives. Do not turn incomplete evidence into approval; historical full evidence may remain in Git history.
 
 Record the tested commit/diff, command, result, skipped stages, and environment limits. Reference valid prior results for unchanged code. For each review finding, state fixed, still open, or out of scope with an evidence link; approval does not erase an untested branch. Keep final PR text aligned with delivered scope, and check whether a previous PR has already merged before attaching later work to it.
 

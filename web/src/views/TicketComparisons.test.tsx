@@ -361,7 +361,7 @@ describe('TicketComparisons View Component', () => {
     // Test clicking button inside cell
     const ticketLink = screen.getByRole('button', { name: 'AL-1' });
     fireEvent.click(ticketLink);
-    expect(onSelectTicket).toHaveBeenCalledWith('AL-1');
+    expect(onSelectTicket).toHaveBeenCalledWith('AL-1', '/records/AL-1');
 
     // Test clicking row itself
     const rows = container.querySelectorAll('.clickable-comparison-row');
@@ -377,7 +377,7 @@ describe('TicketComparisons View Component', () => {
     expect(screen.getByRole('combobox', { name: 'X-Axis' })).toHaveValue('cost_usd');
     expect(screen.getByRole('combobox', { name: 'Y-Axis' })).toHaveValue('net_lines_added');
     fireEvent.click(screen.getByRole('button', { name: /AL-1:/ }));
-    expect(onSelectTicket).toHaveBeenCalledWith('AL-1');
+    expect(onSelectTicket).toHaveBeenCalledWith('AL-1', '/records/AL-1');
   });
 
   it('renders zero telemetry state when no ledgers exist', async () => {

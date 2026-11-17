@@ -24,7 +24,7 @@ func TestNativePartialAnomalyWiresMatchFrontendFixtures(t *testing.T) {
 	root := t.TempDir()
 	cfg := testProjectConfig()
 	cfg.AgenticLens.Version = "v9.8.7"
-	cfg.Workspaces.Dir = "."
+	cfg.Workspaces.Roots[0].Path = "."
 	cfg.Ticket = domain.TicketConfig{Prefixes: []domain.TicketPrefix{{Prefix: "T-", Description: "Wire fixture"}}, CaseInsensitive: false}
 	cfg.RoleMappings = domain.RoleMappings{"builder": "planner", "planner": "other", "source-tester": "tester", "tester": "helper"}
 	cfg.Generation.Metrics = domain.GenerationPolicy{Skills: true, Delegations: true, Anomalies: true}
@@ -84,6 +84,13 @@ func TestNativePartialAnomalyWiresMatchFrontendFixtures(t *testing.T) {
 	if err := json.Unmarshal(eventsWire, &events); err != nil {
 		t.Fatal(err)
 	}
+	physicalTicketDir, err := filepath.EvalSymlinks(ticketDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if detail.WorkspacePath != physicalTicketDir || detail.Ledger.WorkspacePath != physicalTicketDir {
+		t.Fatalf("detail locator differs from physical ledger home: detail=%q ledger=%q want=%q", detail.WorkspacePath, detail.Ledger.WorkspacePath, physicalTicketDir)
+	}
 	if events.Availability != domain.TracePartial || !events.IsHydrated || events.DataSource != domain.DataSourceLocalCodex || !reflect.DeepEqual(events.Coverage.RequiredSessionIDs, []string{"root-missing", "root-present"}) || !reflect.DeepEqual(events.Coverage.CompleteSessionIDs, []string{"root-present"}) || !reflect.DeepEqual(events.Coverage.Diagnostics, []string{"root-missing: Codex native session unavailable"}) {
 		t.Fatalf("native owner coverage changed: %+v", events)
 	}
@@ -122,8 +129,9 @@ func TestNativePartialAnomalyWiresMatchFrontendFixtures(t *testing.T) {
 	if after, err := os.ReadFile(ledgerPath); err != nil || !bytes.Equal(after, ledger) {
 		t.Fatalf("partial hydration modified stored facts: %v", err)
 	}
-	// Fixed persisted/source values make these payloads deterministic. No fields,
-	// owner ids, diagnostics or raw role values are normalized before comparison.
+	// Only the expected detail's portable fixture locators depend on this run.
+	// Compare its complete JSON shape without depending on object property order;
+	// preserve the deterministic event wire's byte comparison and all fact values.
 	for _, wire := range []struct {
 		name string
 		body []byte
@@ -138,6 +146,42 @@ func TestNativePartialAnomalyWiresMatchFrontendFixtures(t *testing.T) {
 			t.Errorf("shared fixture %s: %v; producer JSON=%s", wire.name, err, actual.Bytes())
 			continue
 		}
+		if wire.name == "partial-detail-wire.json" {
+			var expectedDetail map[string]json.RawMessage
+			if err := json.Unmarshal(expected, &expectedDetail); err != nil {
+				t.Fatal(err)
+			}
+			var expectedLedger map[string]json.RawMessage
+			if err := json.Unmarshal(expectedDetail["ledger"], &expectedLedger); err != nil {
+				t.Fatal(err)
+			}
+			if _, ok := expectedDetail["workspace_path"]; !ok {
+				t.Fatal("shared detail fixture is missing workspace_path")
+			}
+			if _, ok := expectedLedger["workspace_path"]; !ok {
+				t.Fatal("shared detail ledger fixture is missing workspace_path")
+			}
+			expectedPath, err := json.Marshal(physicalTicketDir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			expectedDetail["workspace_path"] = expectedPath
+			expectedLedger["workspace_path"] = expectedPath
+			expectedDetail["ledger"], err = json.Marshal(expectedLedger)
+			if err != nil {
+				t.Fatal(err)
+			}
+			expected, err = json.Marshal(expectedDetail)
+			if err != nil {
+				t.Fatal(err)
+			}
+			actualJSON := canonicalWireJSON(t, actual.Bytes())
+			expectedJSON := canonicalWireJSON(t, expected)
+			if !bytes.Equal(actualJSON, expectedJSON) {
+				t.Errorf("shared fixture %s differs: producer JSON=%s expected=%s", wire.name, actualJSON, expectedJSON)
+			}
+			continue
+		}
 		var compactExpected bytes.Buffer
 		if err := json.Compact(&compactExpected, expected); err != nil {
 			t.Fatal(err)
@@ -145,5 +189,46 @@ func TestNativePartialAnomalyWiresMatchFrontendFixtures(t *testing.T) {
 		if !bytes.Equal(actual.Bytes(), compactExpected.Bytes()) {
 			t.Errorf("shared fixture %s differs: producer JSON=%s expected=%s", wire.name, actual.Bytes(), compactExpected.Bytes())
 		}
+	}
+}
+
+// canonicalWireJSON sorts object keys recursively while retaining array order,
+// scalar representations and the distinction between absent, null and empty.
+func canonicalWireJSON(t *testing.T, body []byte) []byte {
+	t.Helper()
+	body = bytes.TrimSpace(body)
+	switch body[0] {
+	case '{':
+		var object map[string]json.RawMessage
+		if err := json.Unmarshal(body, &object); err != nil {
+			t.Fatal(err)
+		}
+		for key, value := range object {
+			object[key] = canonicalWireJSON(t, value)
+		}
+		result, err := json.Marshal(object)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return result
+	case '[':
+		var array []json.RawMessage
+		if err := json.Unmarshal(body, &array); err != nil {
+			t.Fatal(err)
+		}
+		for index, value := range array {
+			array[index] = canonicalWireJSON(t, value)
+		}
+		result, err := json.Marshal(array)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return result
+	default:
+		var result bytes.Buffer
+		if err := json.Compact(&result, body); err != nil {
+			t.Fatal(err)
+		}
+		return result.Bytes()
 	}
 }

@@ -28,7 +28,9 @@ Generation source order is explicit `--source`, then selected-local `telemetry.d
 
 Direct OpenCode lookup uses exact `--session-id` roots or literal `--nonce` matches grouped by root. SQL wildcard characters are ordinary text. Both supplied selectors must resolve to the same root; unmatched/ambiguous selectors fail without output or newest-session selection. Codex also requires an explicit selector. Ticket text alone cannot choose a session. Explicit backfill heuristic recovery is separate and requires `--allow-fallbacks`; it must not replace known owners, choose ambiguous roots or hide incomplete exact recovery.
 
-Workspace root order is `--workspaces`, then shared `workspaces.dir`; missing/invalid/unavailable selected roots fail. Foreign targets use their own required project policy.
+Shared `workspaces.roots` is the only workspace-location policy, even for one directory. Every entry has an explicit `path`, `discovery.max_depth` and `discovery.max_directories`; optional per-root `artifacts` overrides the explicit shared artifact list. There is no root ID, minimum depth, scalar directory input or runtime `--workspaces` override. Relative configured paths belong to shared YAML. Writer initialization emits depth 0/budget 300; runtime never inserts missing settings. Depth zero checks the root ledger only; depth one also checks immediate children. A reached depth boundary completes selected scope; a directory-budget exhaustion reports partial results and recovery context. Invalid policy fails; unavailable roots or malformed individual ledgers preserve valid sibling results.
+
+Discover only `agentic_metrics.json` ledgers and read the canonical ticket ID from them. Planning-only folders are ignored. Physical aliases enumerate once; distinct ledger locations for one ticket require explicit selection, never root-order preference or automatic merging. First generation needs an explicit ID and output destination. Moves preserve identity and must not recreate former parents. OpenSpec's naming and artifact workflow are separate from runtime identity. Historical alspaces and any other selected layout remain first-class choices.
 
 `ticket.prefixes` is a required list of mappings with nonblank literal `prefix` and `description`, plus optional `ticket_type`. Trim surrounding whitespace only. Edge separators and digits/internal separators are valid; never append or strip a separator. With prefixes `T`, `T-` and `T_`, filtering `T` includes `T01`, `T-01` and `T_01`; the narrower filters include their respective forms independently. `ticket.case_insensitive` is an explicit boolean. Preserve recorded spelling and leading zeros.
 
@@ -41,7 +43,8 @@ All listed containers/booleans must be explicit where required. Missing/null/wro
 | Setting | Meaning and validity |
 | --- | --- |
 | `project_name` | Project label and capture namespace; nonblank. |
-| `workspaces.dir` | Required workspace root. |
+| `workspaces.roots` | Required list of explicit path/discovery entries, including a one-entry list for a single location. |
+| `workspaces.roots[].discovery` | Required integer `max_depth` >=0 and `max_directories` >0. Writers initialize 0/300; containers require an explicit deeper selection. |
 | `workspaces.artifacts` | Explicit list; `[]` means none. Safe nonblank ticket-relative paths; optional title/description. Nonblank title wins, otherwise basename including extension. Missing files remain unavailable content. API/UI uses required `artifacts.items`; `[]` is a genuine empty state. |
 | `database.busy_timeout_ms` | Required when opening OpenCode source DBs: integer >=0. Zero means no lock waiting. All pooled source connections remain read-only and use the exact budget. |
 | `live.active_threshold_seconds` | Positive integer when detecting recent activity. |
@@ -86,6 +89,13 @@ Optional category fields preserve three states: omitted means not recorded, `[]`
 
 Ordinary current-schema reads reject former `generation_policy` and session `anomaly_availability` metadata without modifying files. Existing explicit migrate/backfill preparation can validate/remove those historical metadata fields, preserving contradiction checks and absent/empty distinctions; no new schema or automatic read repair is involved.
 
+
+## Local publication state
+
+Selected-local `agenticlens.state_dir` is the writable operational home for publication journals/backups and locks. Setup writes it explicitly, initially `~/.agenticlens/state`; it is independent of versioned engine binaries and `telemetry.capture.state_dir`. `init --local-only --publication-state-dir PATH` can initialize this narrow choice without enabling capture or setting source paths. Missing/invalid/unwritable state stops publication before visible output changes. Manual generation never reads or modifies the capture registry.
+
+Completed portable-ledger reads need no state home. A small adjacent pending-publication indicator records temporary transaction status and follows moves/copies; it is not workspace identity. Readers without the originating private journal report pending/incomplete instead of a mixed accepted set. Private recovery data cannot grant authority to recreate old destinations. Retired journal formats require explicit recovery/upgrade with the matching tool; no compatibility converter or automatic deletion is added.
+
 ## Local capture policy
 
 Capture enablement, installation and manual generation are separate choices. `enabled: false` disables automatic collection. Manual generation requires source and project/metrics settings but does not read or modify the capture registry and needs no capture-only configuration. Never silently enable capture, install hooks or alter Git settings.
@@ -114,6 +124,6 @@ Codex user hooks contain no frozen project/source/state paths. Only an explicit 
 
 Installation files/version checks are not proof of collection. Record actual platform/interface/version, callbacks, binding exchange, source-proven children, successful source reads and publication. The previously observed Linux coverage is Codex 0.166.0 exec/resume and OpenCode 1.19.5 CLI/plugin; that evidence does not certify other interfaces, running/interrupted children or native macOS execution. Status/diagnostics distinguish missing binding, pending flush, parse/access failure and unresolved parent evidence; none means measured zero. Engine pin/template changes require explicit installation refresh and actual runtime verification.
 
-`capture install-check`/`uninstall-check` remain opt-in advisory integration honoring hooksPath and preserving arbitrary hooks. Capture diagnostics retain reconciliation/publication evidence. New publication writes ledger plus the selected summary, while exact validated interrupted transactions retain their authorized recovery members. Standalone report files are ignored and untouched.
+`capture install-check`/`uninstall-check` remain opt-in advisory integration honoring hooksPath and preserving arbitrary hooks. Capture diagnostics retain reconciliation/publication evidence. New publication writes ledger plus the selected summary through the configured operational state home and portable pending indicator; supported interrupted transactions retain their exact authorized recovery members. Standalone report files are ignored and untouched.
 
 AgenticLens supports Linux and macOS on amd64 and arm64; Windows is unsupported. Existing bounded transports do not imply verified callback delivery: two-second registration handoff, 64-KiB output limits and owned-process cleanup are transport boundaries, independent of actual harness evidence. No production Python/Node dependency is introduced.

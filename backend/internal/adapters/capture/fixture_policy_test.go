@@ -14,7 +14,7 @@ func fixtureSharedYAML(t *testing.T, name, workspace string) ([]byte, error) {
 	}
 	cfg.ProjectName = name
 	cfg.Generation.Metrics = domain.GenerationPolicy{Skills: true, Delegations: true, Anomalies: true}
-	cfg.Workspaces.Dir = workspace
+	cfg.Workspaces.Roots[0].Path = workspace
 	return adaptersconfig.GenerateConfigYAML(cfg)
 }
 

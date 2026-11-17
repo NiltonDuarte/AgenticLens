@@ -38,7 +38,7 @@ func mustNewServer(t *testing.T, workspacesDir string, staticFS fs.FS, liveServi
 		loaded, err := config.LoadShared(workspacesDir)
 		if errors.Is(err, config.ErrConfigNotFound) {
 			if info, e := os.Stat(workspacesDir); e == nil && info.IsDir() {
-				cfg.Workspaces.Dir = "."
+				cfg.Workspaces.Roots[0].Path = "."
 				data, e := config.GenerateConfigYAML(cfg)
 				if e != nil {
 					t.Fatal(e)
@@ -731,7 +731,11 @@ func TestHTTPRejectsLegacySchemaVersionsWithoutPartialPayload(t *testing.T) {
 			}
 			for _, route := range routes {
 				t.Run(route.name, func(t *testing.T) {
-					req := httptest.NewRequest(http.MethodGet, route.path, nil)
+					path := route.path
+					if route.name != "workspace listing" {
+						path += "?workspace=" + url.QueryEscape(ticketDir)
+					}
+					req := httptest.NewRequest(http.MethodGet, path, nil)
 					if route.name != "workspace listing" {
 						req.SetPathValue("ticketId", ticketID)
 					}
@@ -798,7 +802,7 @@ func TestHTTPRejectsRetiredCurrentFieldsAndKeepsValidSibling(t *testing.T) {
 				path    string
 				handler http.HandlerFunc
 			}{{"/api/workspaces/TEST-BAD", adaptershttp.WorkspaceDetailHandler(root)}, {"/api/workspaces/TEST-BAD/events", adaptershttp.WorkspaceEventsHandler(root)}} {
-				request := httptest.NewRequest(http.MethodGet, route.path, nil)
+				request := httptest.NewRequest(http.MethodGet, route.path+"?workspace="+url.QueryEscape(filepath.Dir(path)), nil)
 				request.SetPathValue("ticketId", "TEST-BAD")
 				recorder := httptest.NewRecorder()
 				route.handler.ServeHTTP(recorder, request)
@@ -888,7 +892,7 @@ func TestAggregateEndpointsKeepValidDataAndReportSkippedWorkspace(t *testing.T) 
 			if err := json.Unmarshal([]byte(resp.Header.Get("X-AgenticLens-Workspace-Diagnostics")), &diagnostics); err != nil {
 				t.Fatalf("expected structured workspace diagnostics header: %v", err)
 			}
-			if len(diagnostics) != 1 || diagnostics[0].TicketID != "AL-BAD" || !strings.Contains(diagnostics[0].Message, "version 3") {
+			if len(diagnostics) != 1 || !strings.Contains(diagnostics[0].Path, filepath.Join("AL-BAD", "agentic_metrics.json")) || !strings.Contains(diagnostics[0].Message, "version 3") {
 				t.Fatalf("expected actionable diagnostic for AL-BAD, got %+v", diagnostics)
 			}
 		})
@@ -904,7 +908,7 @@ func TestAggregateEndpointFailsWhenWorkspaceScanSetupIsFatal(t *testing.T) {
 	if recorder.Code != http.StatusServiceUnavailable {
 		t.Fatalf("expected fatal workspace setup to return 503, got %d: %s", recorder.Code, recorder.Body.String())
 	}
-	if !strings.Contains(recorder.Body.String(), missingWorkspaceRoot) {
+	if !strings.Contains(recorder.Body.String(), "configuration") {
 		t.Fatalf("expected fatal setup diagnostic in response, got %s", recorder.Body.String())
 	}
 }
@@ -959,7 +963,7 @@ func TestGetWorkspaceDetail(t *testing.T) {
 		customCfg := domain.ProjectConfig{
 			ProjectName: "CustomProject",
 			Workspaces: domain.WorkspacesConfig{
-				Dir: wsDir,
+				Roots: []domain.WorkspaceRootConfig{{Path: wsDir, Discovery: domain.WorkspaceDiscoveryConfig{MaxDepth: 8, MaxDirectories: 300}}},
 				Artifacts: []domain.WorkspaceArtifactConfig{
 					{
 						Path:        "DESIGN.md",
@@ -1047,7 +1051,7 @@ func TestGetWorkspaceDetail(t *testing.T) {
 			t.Fatalf("failed decoding error response: %v", err)
 		}
 
-		if errResp.Error != "not_found" {
+		if errResp.Error != "workspace_not_found" {
 			t.Errorf("expected error not_found, got %s", errResp.Error)
 		}
 		if errResp.StatusCode != 404 {
@@ -2305,10 +2309,10 @@ func TestWorkspaceEventsAndAnomaliesHTTP(t *testing.T) {
 		if err := json.NewDecoder(resp.Body).Decode(&errResp); err != nil {
 			t.Fatalf("failed decoding error response: %v", err)
 		}
-		if errResp.Error != "not_found" {
+		if errResp.Error != "workspace_not_found" {
 			t.Errorf("expected not_found, got %s", errResp.Error)
 		}
-		if errResp.Message != "Ticket workspace not found" {
+		if !strings.Contains(errResp.Message, "not_found") {
 			t.Errorf("expected 'Ticket workspace not found', got %q", errResp.Message)
 		}
 	})
@@ -2423,7 +2427,7 @@ func TestWorkspaceEventsHandler_AdversarialEdgeCases(t *testing.T) {
 	tempDir := t.TempDir()
 	wsDir := filepath.Join(tempDir, "workspaces")
 	cfg := httpFixturePolicy()
-	cfg.Workspaces.Dir = wsDir
+	cfg.Workspaces.Roots[0].Path = wsDir
 	writeHTTPFixturePolicy(t, tempDir, cfg)
 	if err := os.MkdirAll(wsDir, 0755); err != nil {
 		t.Fatal(err)
@@ -2546,7 +2550,7 @@ func TestWorkspaceEventsHandler_AdversarialEdgeCases(t *testing.T) {
 
 	t.Run("zero-byte metrics file returns 422 without panicking", func(t *testing.T) {
 		t.Parallel()
-		req := httptest.NewRequest(http.MethodGet, "/api/workspaces/AL-ZERO-BYTE/events", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/workspaces/AL-ZERO-BYTE/events?workspace="+url.QueryEscape(filepath.Join(wsDir, "AL-ZERO-BYTE")), nil)
 		req.SetPathValue("ticketId", "AL-ZERO-BYTE")
 		rec := httptest.NewRecorder()
 
@@ -2558,7 +2562,7 @@ func TestWorkspaceEventsHandler_AdversarialEdgeCases(t *testing.T) {
 
 	t.Run("corrupted JSON metrics file returns 422 without panicking", func(t *testing.T) {
 		t.Parallel()
-		req := httptest.NewRequest(http.MethodGet, "/api/workspaces/AL-CORRUPTED/events", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/workspaces/AL-CORRUPTED/events?workspace="+url.QueryEscape(filepath.Join(wsDir, "AL-CORRUPTED")), nil)
 		req.SetPathValue("ticketId", "AL-CORRUPTED")
 		rec := httptest.NewRecorder()
 
@@ -4353,8 +4357,8 @@ func TestConfigHandler_DefaultConfig(t *testing.T) {
 		t.Errorf("expected default project_name 'AgenticLens', got %q", dto.ProjectName)
 	}
 
-	if dto.WorkspacesDir != wsDir {
-		t.Errorf("expected workspaces_dir %q, got %q", wsDir, dto.WorkspacesDir)
+	if !reflect.DeepEqual(dto.WorkspacesRoots, cfg.Workspaces.Roots) {
+		t.Errorf("configured workspace roots changed: got %+v want %+v", dto.WorkspacesRoots, cfg.Workspaces.Roots)
 	}
 
 	expectedBuildInfo := domain.GetBuildInfo()
@@ -4418,7 +4422,7 @@ func TestConfigHandler_CustomConfig(t *testing.T) {
 			},
 		},
 		Workspaces: domain.WorkspacesConfig{
-			Dir: "custom_workspaces",
+			Roots: []domain.WorkspaceRootConfig{{Path: "custom_workspaces", Discovery: domain.WorkspaceDiscoveryConfig{MaxDepth: 8, MaxDirectories: 300}}},
 		},
 		RoleOrder: []string{"planner", "coder", "reviewer"},
 	}
@@ -4442,8 +4446,8 @@ func TestConfigHandler_CustomConfig(t *testing.T) {
 		t.Errorf("expected project_name 'CustomObservabilityRepo', got %q", dto.ProjectName)
 	}
 
-	if dto.WorkspacesDir != wsDir {
-		t.Errorf("expected workspaces_dir %q, got %q", wsDir, dto.WorkspacesDir)
+	if !reflect.DeepEqual(dto.WorkspacesRoots, customCfg.Workspaces.Roots) {
+		t.Errorf("configured workspace roots changed: got %+v want %+v", dto.WorkspacesRoots, customCfg.Workspaces.Roots)
 	}
 
 	if len(dto.Prefixes) != 2 {
@@ -4475,7 +4479,7 @@ func TestConfigHandler_EmptyConfigPreserved(t *testing.T) {
 			Prefixes: nil,
 		},
 		Workspaces: domain.WorkspacesConfig{
-			Dir: "",
+			Roots: []domain.WorkspaceRootConfig{{Path: "", Discovery: domain.WorkspaceDiscoveryConfig{MaxDepth: 8, MaxDirectories: 300}}},
 		},
 		RoleOrder: nil,
 	}
@@ -4499,8 +4503,8 @@ func TestConfigHandler_EmptyConfigPreserved(t *testing.T) {
 		t.Errorf("expected empty project_name, got %q", dto.ProjectName)
 	}
 
-	if dto.WorkspacesDir != "" {
-		t.Errorf("expected empty workspaces_dir, got %q", dto.WorkspacesDir)
+	if dto.WorkspacesRoots[0].Path != "" {
+		t.Errorf("expected empty workspaces_dir, got %q", dto.WorkspacesRoots[0].Path)
 	}
 
 	if len(dto.Prefixes) != 0 || dto.Prefixes == nil {
@@ -4570,7 +4574,7 @@ func TestConfigHandler_AdversarialEdgeCases(t *testing.T) {
 				Prefixes: nil,
 			},
 			Workspaces: domain.WorkspacesConfig{
-				Dir: "   \n\t   ",
+				Roots: []domain.WorkspaceRootConfig{{Path: "   \n\t   ", Discovery: domain.WorkspaceDiscoveryConfig{MaxDepth: 8, MaxDirectories: 300}}},
 			},
 			RoleOrder: nil,
 		}
@@ -4593,8 +4597,8 @@ func TestConfigHandler_AdversarialEdgeCases(t *testing.T) {
 		if dto.ProjectName != "" {
 			t.Errorf("expected trimmed whitespace project_name to be empty string, got %q", dto.ProjectName)
 		}
-		if dto.WorkspacesDir != "" {
-			t.Errorf("expected trimmed whitespace workspaces_dir to be empty string, got %q", dto.WorkspacesDir)
+		if !reflect.DeepEqual(dto.WorkspacesRoots, hostileCfg.Workspaces.Roots) {
+			t.Errorf("config response changed configured root spelling: %+v", dto.WorkspacesRoots)
 		}
 
 		rawJSON := rec.Body.String()
@@ -4634,7 +4638,7 @@ func TestServerWithTestDataWorkspaces(t *testing.T) {
 		t.Fatalf("testdata/workspaces directory not found at %s: %v", testdataDir, err)
 	}
 
-	server := mustNewServer(t, testdataDir, fstest.MapFS{})
+	server := mustNewServer(t, copyHTTPWorkspaceFixture(t, testdataDir), fstest.MapFS{})
 	handler := server.Handler()
 
 	t.Run("discovers all 5 test workspaces via /api/workspaces", func(t *testing.T) {
@@ -4777,8 +4781,8 @@ func TestServerWithTestDataWorkspaces(t *testing.T) {
 			t.Fatalf("failed unmarshaling /api/config: %v", err)
 		}
 
-		if !strings.Contains(cfg.WorkspacesDir, "testdata/workspaces") && !strings.Contains(cfg.WorkspacesDir, filepath.Join("testdata", "workspaces")) {
-			t.Errorf("expected workspaces_dir to contain testdata/workspaces, got: %s", cfg.WorkspacesDir)
+		if cfg.WorkspacesRoots[0].Path != "workspaces" {
+			t.Errorf("expected explicitly configured copied fixture root, got %+v", cfg.WorkspacesRoots)
 		}
 	})
 
@@ -4805,7 +4809,7 @@ func TestServerWithProductionWorkspaces_DoesNotTouchTestdataWorkspaces(t *testin
 		t.Fatalf("parity workspaces directory not found at %s: %v", parityWorkspacesDir, err)
 	}
 
-	server := mustNewServer(t, parityWorkspacesDir, fstest.MapFS{})
+	server := mustNewServer(t, copyHTTPWorkspaceFixture(t, parityWorkspacesDir), fstest.MapFS{})
 	handler := server.Handler()
 
 	t.Run("reports parity workspaces dir and does not reference testdata/workspaces in /api/config", func(t *testing.T) {
@@ -4822,11 +4826,11 @@ func TestServerWithProductionWorkspaces_DoesNotTouchTestdataWorkspaces(t *testin
 			t.Fatalf("failed unmarshaling /api/config: %v", err)
 		}
 
-		if strings.HasSuffix(cfg.WorkspacesDir, "testdata/workspaces") || strings.HasSuffix(cfg.WorkspacesDir, filepath.Join("testdata", "workspaces")) {
-			t.Errorf("expected workspaces_dir to not be testdata/workspaces, got: %s", cfg.WorkspacesDir)
+		if strings.HasSuffix(cfg.WorkspacesRoots[0].Path, "testdata/workspaces") || strings.HasSuffix(cfg.WorkspacesRoots[0].Path, filepath.Join("testdata", "workspaces")) {
+			t.Errorf("expected workspaces_dir to not be testdata/workspaces, got: %s", cfg.WorkspacesRoots[0].Path)
 		}
-		if !strings.Contains(cfg.WorkspacesDir, "parity_workspaces") {
-			t.Errorf("expected workspaces_dir to contain parity_workspaces, got: %s", cfg.WorkspacesDir)
+		if !strings.Contains(cfg.WorkspacesRoots[0].Path, "parity_workspaces") {
+			t.Errorf("expected workspaces_dir to contain parity_workspaces, got: %s", cfg.WorkspacesRoots[0].Path)
 		}
 	})
 
@@ -4888,144 +4892,73 @@ func TestServerWithProductionWorkspaces_DoesNotTouchTestdataWorkspaces(t *testin
 	})
 }
 
-func TestServerWorkspaceDirConfigSynchronization(t *testing.T) {
-	tempDir := t.TempDir()
-
-	cfgSpaceDir := filepath.Join(tempDir, "config_spaces")
-	if err := os.MkdirAll(filepath.Join(cfgSpaceDir, "CFG-1"), 0755); err != nil {
-		t.Fatalf("failed creating dir: %v", err)
+func TestServerConfiguredRootsAreAuthoritative(t *testing.T) {
+	project := t.TempDir()
+	for _, entry := range []struct{ directory, ticket string }{{"config_spaces", "CFG-1"}, {"other_spaces", "OVR-1"}} {
+		dir := filepath.Join(project, entry.directory, "arbitrary-name")
+		if err := os.MkdirAll(dir, 0700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "agentic_metrics.json"), []byte(sampleTestLedgerJSON(entry.ticket, entry.ticket, 10, .1, 1)), 0600); err != nil {
+			t.Fatal(err)
+		}
 	}
-	sampleCFG := sampleTestLedgerJSON("CFG-1", "Config Feature", 10, 0.10, 1)
-	if err := os.WriteFile(filepath.Join(cfgSpaceDir, "CFG-1", "agentic_metrics.json"), []byte(sampleCFG), 0644); err != nil {
-		t.Fatalf("failed writing ledger: %v", err)
+	for _, tc := range []struct {
+		name    string
+		roots   []string
+		tickets []string
+	}{
+		{"first root", []string{"config_spaces"}, []string{"CFG-1"}},
+		{"second root", []string{"other_spaces"}, []string{"OVR-1"}},
+		{"multiple roots", []string{"config_spaces", "other_spaces"}, []string{"CFG-1", "OVR-1"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := httpFixturePolicy()
+			cfg.ConfigPath = filepath.Join(project, ".agenticlens-config.yaml")
+			cfg.Workspaces.Roots = nil
+			for _, path := range tc.roots {
+				cfg.Workspaces.Roots = append(cfg.Workspaces.Roots, domain.WorkspaceRootConfig{Path: path, Discovery: domain.WorkspaceDiscoveryConfig{MaxDepth: 1, MaxDirectories: 300}})
+			}
+			writeHTTPFixturePolicy(t, project, cfg)
+			// The constructor's project location is not an old single-directory override.
+			server := adaptershttp.NewServerWithConfig(filepath.Join(project, "other_spaces"), fstest.MapFS{}, cfg)
+			response := httptest.NewRecorder()
+			server.Handler().ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/config", nil))
+			if response.Code != http.StatusOK {
+				t.Fatalf("config: %d %s", response.Code, response.Body.String())
+			}
+			var dto adaptershttp.ProjectConfigDTO
+			if err := json.Unmarshal(response.Body.Bytes(), &dto); err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(dto.WorkspacesRoots, cfg.Workspaces.Roots) {
+				t.Fatalf("configured roots changed: %+v", dto.WorkspacesRoots)
+			}
+			if strings.Contains(response.Body.String(), `"workspaces_dir"`) {
+				t.Fatal("retired scalar API alias remains")
+			}
+			response = httptest.NewRecorder()
+			server.Handler().ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/workspaces", nil))
+			if response.Code != http.StatusOK {
+				t.Fatalf("list: %d %s", response.Code, response.Body.String())
+			}
+			var ledgers []domain.AgenticMetricsLedger
+			if err := json.Unmarshal(response.Body.Bytes(), &ledgers); err != nil {
+				t.Fatal(err)
+			}
+			ids := []string{}
+			for _, ledger := range ledgers {
+				if ledger.TicketID == nil {
+					t.Fatal("missing recorded ticket identity")
+				}
+				ids = append(ids, *ledger.TicketID)
+			}
+			sort.Strings(ids)
+			if !reflect.DeepEqual(ids, tc.tickets) {
+				t.Fatalf("list used an unconfigured directory: %v want %v", ids, tc.tickets)
+			}
+		})
 	}
-
-	overrideSpaceDir := filepath.Join(tempDir, "override_spaces")
-	if err := os.MkdirAll(filepath.Join(overrideSpaceDir, "OVR-1"), 0755); err != nil {
-		t.Fatalf("failed creating dir: %v", err)
-	}
-	sampleOVR := sampleTestLedgerJSON("OVR-1", "Override Feature", 20, 0.20, 1)
-	if err := os.WriteFile(filepath.Join(overrideSpaceDir, "OVR-1", "agentic_metrics.json"), []byte(sampleOVR), 0644); err != nil {
-		t.Fatalf("failed writing ledger: %v", err)
-	}
-
-	shared := httpFixturePolicy()
-	shared.Workspaces.Dir = cfgSpaceDir
-	writeHTTPFixturePolicy(t, tempDir, shared)
-
-	t.Run("resolves workspaces dir from ProjectConfig when workspacesDir argument is empty", func(t *testing.T) {
-		cfg := domain.ProjectConfig{
-			ProjectName: "AutoResolveTest",
-			Workspaces: domain.WorkspacesConfig{
-				Dir: cfgSpaceDir,
-			},
-		}
-
-		server := adaptershttp.NewServerWithConfig("", fstest.MapFS{}, cfg)
-		handler := server.Handler()
-
-		req := httptest.NewRequest(http.MethodGet, "/api/config", nil)
-		rec := httptest.NewRecorder()
-		handler.ServeHTTP(rec, req)
-
-		if rec.Code != http.StatusOK {
-			t.Fatalf("expected 200 OK from /api/config, got %d", rec.Code)
-		}
-
-		var dto adaptershttp.ProjectConfigDTO
-		if err := json.Unmarshal(rec.Body.Bytes(), &dto); err != nil {
-			t.Fatalf("failed unmarshaling /api/config: %v", err)
-		}
-
-		if dto.WorkspacesDir != cfgSpaceDir {
-			t.Errorf("expected workspaces_dir %q, got %q", cfgSpaceDir, dto.WorkspacesDir)
-		}
-
-		wsReq := httptest.NewRequest(http.MethodGet, "/api/workspaces", nil)
-		wsRec := httptest.NewRecorder()
-		handler.ServeHTTP(wsRec, wsReq)
-
-		if wsRec.Code != http.StatusOK {
-			t.Fatalf("expected 200 OK from /api/workspaces, got %d", wsRec.Code)
-		}
-
-		var ledgers []domain.AgenticMetricsLedger
-		if err := json.Unmarshal(wsRec.Body.Bytes(), &ledgers); err != nil {
-			t.Fatalf("failed unmarshaling /api/workspaces: %v", err)
-		}
-
-		if len(ledgers) != 1 || *ledgers[0].TicketID != "CFG-1" {
-			t.Errorf("expected 1 ledger CFG-1, got %v", ledgers)
-		}
-	})
-
-	t.Run("prioritizes explicit workspacesDir argument over ProjectConfig", func(t *testing.T) {
-		cfg := domain.ProjectConfig{
-			ProjectName: "OverrideTest",
-			Workspaces: domain.WorkspacesConfig{
-				Dir: cfgSpaceDir,
-			},
-		}
-
-		server := adaptershttp.NewServerWithConfig(overrideSpaceDir, fstest.MapFS{}, cfg)
-		handler := server.Handler()
-
-		req := httptest.NewRequest(http.MethodGet, "/api/config", nil)
-		rec := httptest.NewRecorder()
-		handler.ServeHTTP(rec, req)
-
-		if rec.Code != http.StatusOK {
-			t.Fatalf("expected 200 OK from /api/config, got %d", rec.Code)
-		}
-
-		var dto adaptershttp.ProjectConfigDTO
-		if err := json.Unmarshal(rec.Body.Bytes(), &dto); err != nil {
-			t.Fatalf("failed unmarshaling /api/config: %v", err)
-		}
-
-		if dto.WorkspacesDir != overrideSpaceDir {
-			t.Errorf("expected workspaces_dir %q, got %q", overrideSpaceDir, dto.WorkspacesDir)
-		}
-
-		wsReq := httptest.NewRequest(http.MethodGet, "/api/workspaces", nil)
-		wsRec := httptest.NewRecorder()
-		handler.ServeHTTP(wsRec, wsReq)
-
-		if wsRec.Code != http.StatusOK {
-			t.Fatalf("expected 200 OK from /api/workspaces, got %d", wsRec.Code)
-		}
-
-		var ledgers []domain.AgenticMetricsLedger
-		if err := json.Unmarshal(wsRec.Body.Bytes(), &ledgers); err != nil {
-			t.Fatalf("failed unmarshaling /api/workspaces: %v", err)
-		}
-
-		if len(ledgers) != 1 || *ledgers[0].TicketID != "OVR-1" {
-			t.Errorf("expected 1 ledger OVR-1, got %v", ledgers)
-		}
-	})
-
-	t.Run("NewServerWithConfig constructor synchronizes explicit workspacesDir to config", func(t *testing.T) {
-		server := mustNewServer(t, overrideSpaceDir, fstest.MapFS{})
-		handler := server.Handler()
-
-		req := httptest.NewRequest(http.MethodGet, "/api/config", nil)
-		rec := httptest.NewRecorder()
-		handler.ServeHTTP(rec, req)
-
-		if rec.Code != http.StatusOK {
-			t.Fatalf("expected 200 OK from /api/config, got %d", rec.Code)
-		}
-
-		var dto adaptershttp.ProjectConfigDTO
-		if err := json.Unmarshal(rec.Body.Bytes(), &dto); err != nil {
-			t.Fatalf("failed unmarshaling /api/config: %v", err)
-		}
-
-		if dto.WorkspacesDir != overrideSpaceDir {
-			t.Errorf("expected workspaces_dir %q, got %q", overrideSpaceDir, dto.WorkspacesDir)
-		}
-	})
 }
 
 func TestCanonicalOmittedCategoriesHTTPReadPreservesOmissionWithoutWriting(t *testing.T) {
@@ -5143,7 +5076,7 @@ func fixtureArtifactContent(art domain.TicketArtifacts, path string) *string {
 
 func httpFixturePolicy() domain.ProjectConfig {
 	return domain.ProjectConfig{
-		ProjectName: "HTTP fixture", AgenticLens: domain.EntrypointConfig{Version: "v9.8.7"}, Workspaces: domain.WorkspacesConfig{Dir: "workspaces", Artifacts: []domain.WorkspaceArtifactConfig{{Path: "CONTRACT.md", Title: "Contract"}, {Path: "SUMMARY.md", Title: "Summary"}}}, Ticket: domain.TicketConfig{CaseInsensitive: true, Prefixes: []domain.TicketPrefix{{Prefix: "AL", Description: "Development"}, {Prefix: "GEN", Description: "General"}, {Prefix: "PO", Description: "Planning"}, {Prefix: "FIX", Description: "Fixes"}, {Prefix: "T", Description: "Fixture"}}}, RoleMappings: domain.RoleMappings{}, RoleOrder: []string{}, CodeMetrics: domain.CodeMetricsConfig{BaseBranch: "fixture-base", Production: domain.CodeCategoryConfig{Include: []string{}, Exclude: []string{}}, Tests: domain.CodeCategoryConfig{Include: []string{}, Exclude: []string{}}}, Generation: domain.GenerationConfig{Metrics: domain.GenerationPolicy{Skills: true, Delegations: true, Anomalies: true}, Feedback: domain.GenerationFeedbackConfig{ProvisionalThresholdSeconds: 0}, Summary: domain.GenerationSummaryConfig{Enabled: false}}, Database: domain.DatabaseConfig{BusyTimeoutMs: 0}, Live: domain.LiveConfig{ActiveThresholdSeconds: 300, PollIntervalMs: 2000}, AnomalyThresholds: domain.AnomalyThresholdsConfig{StallThresholdSeconds: 120, ErrorRateMinCalls: 5, ErrorRateThreshold: .25, ErrorRateCriticalThreshold: .7, ContextCeilingWarningTokens: 160000, ContextCeilingCriticalTokens: 200000, ConsecutiveErrorsStreakWarning: 3, ConsecutiveErrorsStreakCritical: 5, ToolThrashingMinFailures: 3, ToolThrashingCriticalFailures: 5, TurnUsageWarningTokens: 30000, TurnUsageCriticalTokens: 60000, ContextGrowthWarningTokens: 40000, ContextGrowthCriticalTokens: 80000}}
+		ProjectName: "HTTP fixture", AgenticLens: domain.EntrypointConfig{Version: "v9.8.7"}, Workspaces: domain.WorkspacesConfig{Roots: []domain.WorkspaceRootConfig{{Path: "workspaces", Discovery: domain.WorkspaceDiscoveryConfig{MaxDepth: 8, MaxDirectories: 300}}}, Artifacts: []domain.WorkspaceArtifactConfig{{Path: "CONTRACT.md", Title: "Contract"}, {Path: "SUMMARY.md", Title: "Summary"}}}, Ticket: domain.TicketConfig{CaseInsensitive: true, Prefixes: []domain.TicketPrefix{{Prefix: "AL", Description: "Development"}, {Prefix: "GEN", Description: "General"}, {Prefix: "PO", Description: "Planning"}, {Prefix: "FIX", Description: "Fixes"}, {Prefix: "T", Description: "Fixture"}}}, RoleMappings: domain.RoleMappings{}, RoleOrder: []string{}, CodeMetrics: domain.CodeMetricsConfig{BaseBranch: "fixture-base", Production: domain.CodeCategoryConfig{Include: []string{}, Exclude: []string{}}, Tests: domain.CodeCategoryConfig{Include: []string{}, Exclude: []string{}}}, Generation: domain.GenerationConfig{Metrics: domain.GenerationPolicy{Skills: true, Delegations: true, Anomalies: true}, Feedback: domain.GenerationFeedbackConfig{ProvisionalThresholdSeconds: 0}, Summary: domain.GenerationSummaryConfig{Enabled: false}}, Database: domain.DatabaseConfig{BusyTimeoutMs: 0}, Live: domain.LiveConfig{ActiveThresholdSeconds: 300, PollIntervalMs: 2000}, AnomalyThresholds: domain.AnomalyThresholdsConfig{StallThresholdSeconds: 120, ErrorRateMinCalls: 5, ErrorRateThreshold: .25, ErrorRateCriticalThreshold: .7, ContextCeilingWarningTokens: 160000, ContextCeilingCriticalTokens: 200000, ConsecutiveErrorsStreakWarning: 3, ConsecutiveErrorsStreakCritical: 5, ToolThrashingMinFailures: 3, ToolThrashingCriticalFailures: 5, TurnUsageWarningTokens: 30000, TurnUsageCriticalTokens: 60000, ContextGrowthWarningTokens: 40000, ContextGrowthCriticalTokens: 80000}}
 }
 
 func writeHTTPFixturePolicy(t *testing.T, root string, cfg domain.ProjectConfig) {
@@ -5160,7 +5093,7 @@ func httpWorkspaceRoot(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
 	cfg := httpFixturePolicy()
-	cfg.Workspaces.Dir = "."
+	cfg.Workspaces.Roots[0].Path = "."
 	writeHTTPFixturePolicy(t, root, cfg)
 	return root
 }
@@ -5168,7 +5101,7 @@ func httpWorkspaceRoot(t *testing.T) string {
 func TestPrefixQueryPreservesLiteralConfiguredChoices(t *testing.T) {
 	root := httpWorkspaceRoot(t)
 	cfg := httpFixturePolicy()
-	cfg.Workspaces.Dir = "."
+	cfg.Workspaces.Roots[0].Path = "."
 	cfg.Ticket.CaseInsensitive = false
 	cfg.Ticket.Prefixes = []domain.TicketPrefix{
 		{Prefix: "AL-", Description: "ordinary"},
@@ -5356,4 +5289,18 @@ func TestTicketTagsFilterWholeLedgerTotalsAndSourceFreeReads(t *testing.T) {
 			t.Fatalf("source-free tag GET rewrote %s: %v", path, err)
 		}
 	}
+}
+
+func copyHTTPWorkspaceFixture(t *testing.T, source string) string {
+	t.Helper()
+	project := t.TempDir()
+	name := filepath.Base(source)
+	target := filepath.Join(project, name)
+	if err := os.CopyFS(target, os.DirFS(source)); err != nil {
+		t.Fatal(err)
+	}
+	cfg := httpFixturePolicy()
+	cfg.Workspaces.Roots[0].Path = name
+	writeHTTPFixturePolicy(t, project, cfg)
+	return target
 }

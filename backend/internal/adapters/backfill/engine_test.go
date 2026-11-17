@@ -144,7 +144,7 @@ func TestBackfillEngine_CleansCompletedMigrationMetadata(t *testing.T) {
 		TicketID:      &metadataFreeTicket,
 	})
 
-	report, err := NewEngine().Execute(BackfillOptions{WorkspacesDir: tempDir})
+	report, err := NewEngine().Execute(BackfillOptions{Project: tempDir})
 	if err != nil {
 		t.Fatalf("backfill execute failed: %v", err)
 	}
@@ -230,7 +230,7 @@ func TestBackfillEngine_PreservesIncompleteMetadataWithoutRefresh(t *testing.T) 
 			if err != nil {
 				t.Fatal(err)
 			}
-			report, err := NewEngine().Execute(BackfillOptions{WorkspacesDir: root, Source: "codex"})
+			report, err := NewEngine().Execute(BackfillOptions{Project: root, Source: "codex"})
 			if err != nil || len(report.Results) != 1 {
 				t.Fatalf("backfill result: %+v, %v", report, err)
 			}
@@ -276,7 +276,7 @@ func TestBackfillEngine_ExplicitRecomputeDBDoesNotSkipCompletedLedger(t *testing
 				} else {
 					setupMockOpenCodeDB(t, dbPath, "unavailable-owner", "OTHER")
 				}
-				report, err := NewEngine().Execute(BackfillOptions{WorkspacesDir: root, TicketID: ticket, Source: "opencode", RecomputeDB: true, DBPath: dbPath})
+				report, err := NewEngine().Execute(BackfillOptions{Project: root, TicketID: ticket, Source: "opencode", RecomputeDB: true, DBPath: dbPath})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -302,7 +302,7 @@ func TestBackfillEngine_ExplicitRecomputeDBDoesNotSkipCompletedLedger(t *testing
 						t.Fatalf("optional failure not preserved/reported: %+v", report.Results)
 					}
 				}
-				routine, err := NewEngine().Execute(BackfillOptions{WorkspacesDir: root, TicketID: ticket, Source: "opencode", DBPath: dbPath})
+				routine, err := NewEngine().Execute(BackfillOptions{Project: root, TicketID: ticket, Source: "opencode", DBPath: dbPath})
 				if err != nil || routine.Skipped != 1 {
 					t.Fatalf("routine completed skip lost: %+v %v", routine, err)
 				}
@@ -341,7 +341,7 @@ func TestBackfillEngine_DryRunPreservesFiles(t *testing.T) {
 
 	engine := NewEngine()
 	report, err := engine.Execute(BackfillOptions{
-		WorkspacesDir:   tempDir,
+		Project:         tempDir,
 		TicketID:        tid,
 		DryRun:          true,
 		RecomputeGit:    true,
@@ -398,7 +398,7 @@ func TestBackfillEngine_MigrationThenSourceBackfillMakesLedgerReady(t *testing.T
 		t.Fatal(err)
 	}
 
-	if _, err := NewMigrationRunner(nil).Run(MigrationOptions{WorkspacesDir: tempDir, TicketID: ticketID, TargetVersion: domain.CurrentSchemaVersion}); err != nil {
+	if _, err := NewMigrationRunner(nil).Run(MigrationOptions{Project: tempDir, TicketID: ticketID, TargetVersion: domain.CurrentSchemaVersion}); err != nil {
 		t.Fatalf("explicit schema migration failed: %v", err)
 	}
 	migrated, err := os.ReadFile(metricPath)
@@ -412,7 +412,7 @@ func TestBackfillEngine_MigrationThenSourceBackfillMakesLedgerReady(t *testing.T
 	dbPath := filepath.Join(tempDir, "opencode.db")
 	setupMockOpenCodeDB(t, dbPath, "source-session", ticketID)
 	report, err := NewEngine().Execute(BackfillOptions{
-		WorkspacesDir:  tempDir,
+		Project:        tempDir,
 		TicketID:       ticketID,
 		RecomputeDB:    true,
 		DBPath:         dbPath,
@@ -464,7 +464,7 @@ func TestBackfillEngine_SourceBackfillFailuresRemainPendingAndRuntimeIneligible(
 			if err := os.WriteFile(metricPath, []byte(legacy), 0644); err != nil {
 				t.Fatal(err)
 			}
-			if _, err := NewMigrationRunner(nil).Run(MigrationOptions{WorkspacesDir: tempDir, TicketID: ticketID, TargetVersion: domain.CurrentSchemaVersion}); err != nil {
+			if _, err := NewMigrationRunner(nil).Run(MigrationOptions{Project: tempDir, TicketID: ticketID, TargetVersion: domain.CurrentSchemaVersion}); err != nil {
 				t.Fatalf("shape-only migration failed: %v", err)
 			}
 
@@ -475,11 +475,11 @@ func TestBackfillEngine_SourceBackfillFailuresRemainPendingAndRuntimeIneligible(
 			}
 			tc.makeSource(t, dbPath)
 			report, err := NewEngine().Execute(BackfillOptions{
-				WorkspacesDir: tempDir,
-				TicketID:      ticketID,
-				RecomputeDB:   true,
-				DBPath:        dbPath,
-				Source:        "opencode",
+				Project:     tempDir,
+				TicketID:    ticketID,
+				RecomputeDB: true,
+				DBPath:      dbPath,
+				Source:      "opencode",
 			})
 			if tc.name == "source unavailable" {
 				if err == nil {
@@ -531,11 +531,11 @@ func TestBackfillEngine_RecomputeDBPreservesGitAndExactZeroInvocationSteering(t 
 	setupMockOpenCodeDB(t, dbPath, "sess-zero", ticketID)
 
 	report, err := NewEngine().Execute(BackfillOptions{
-		WorkspacesDir: tempDir,
-		TicketID:      ticketID,
-		RecomputeDB:   true,
-		Source:        "opencode",
-		DBPath:        dbPath,
+		Project:     tempDir,
+		TicketID:    ticketID,
+		RecomputeDB: true,
+		Source:      "opencode",
+		DBPath:      dbPath,
 	})
 	if err != nil {
 		t.Fatalf("backfill failed: %v", err)
@@ -594,7 +594,7 @@ func TestBackfillEngine_MultiMachineLifecycle(t *testing.T) {
 
 	// Step 1: Run backfill on Machine A
 	reportA, err := engine.Execute(BackfillOptions{
-		WorkspacesDir:   tempDir,
+		Project:         tempDir,
 		RecomputeGit:    false,
 		RecomputeDB:     true,
 		Source:          "opencode",
@@ -646,7 +646,7 @@ func TestBackfillEngine_MultiMachineLifecycle(t *testing.T) {
 	setupMockOpenCodeDB(t, dbPathB, "sess-b1", tidB)
 
 	reportB, err := engine.Execute(BackfillOptions{
-		WorkspacesDir:   tempDir,
+		Project:         tempDir,
 		RecomputeGit:    false,
 		RecomputeDB:     true,
 		Source:          "opencode",
@@ -738,8 +738,8 @@ func TestBackfillEngine_CorruptedFileResilience(t *testing.T) {
 
 	engine := NewEngine()
 	report, err := engine.Execute(BackfillOptions{
-		WorkspacesDir: tempDir,
-		Force:         true,
+		Project: tempDir,
+		Force:   true,
 	})
 	if err != nil {
 		t.Fatalf("engine execute should not fail fatally on corrupt files: %v", err)
@@ -791,7 +791,7 @@ func TestBackfillEngine_MissingWorkspacesDir(t *testing.T) {
 
 	engine := NewEngine()
 	report, err := engine.Execute(BackfillOptions{
-		WorkspacesDir: "",
+		Project: "",
 	})
 	if report != nil {
 		t.Errorf("expected nil report, got %+v", report)
@@ -799,7 +799,7 @@ func TestBackfillEngine_MissingWorkspacesDir(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error when workspaces dir cannot be resolved, got nil")
 	}
-	if !errors.Is(err, adapters.ErrWorkspacesDirNotFound) {
+	if !errors.Is(err, adaptersconfig.ErrConfigNotFound) {
 		t.Errorf("expected ErrWorkspacesDirNotFound, got %v", err)
 	}
 }
@@ -808,9 +808,9 @@ func TestBackfillEngine_RecomputeGitRequiresTicketID(t *testing.T) {
 	tempDir := newBackfillProject(t)
 	engine := NewEngine()
 	_, err := engine.Execute(BackfillOptions{
-		WorkspacesDir: tempDir,
-		RecomputeGit:  true,
-		CodeRef:       "HEAD",
+		Project:      tempDir,
+		RecomputeGit: true,
+		CodeRef:      "HEAD",
 	})
 	if err == nil {
 		t.Fatal("expected error when RecomputeGit is true without TicketID, got nil")
@@ -824,8 +824,8 @@ func TestBackfillEngine_SourceValidation(t *testing.T) {
 	tempDir := newBackfillProject(t)
 	engine := NewEngine()
 	_, err := engine.Execute(BackfillOptions{
-		WorkspacesDir: tempDir,
-		Source:        "invalid-harness",
+		Project: tempDir,
+		Source:  "invalid-harness",
 	})
 	if err == nil || !strings.Contains(err.Error(), "invalid source") {
 		t.Fatalf("expected invalid source error, got %v", err)
@@ -865,12 +865,12 @@ func TestBackfillEngine_SourceOpenCodeSkipsCodexSessions(t *testing.T) {
 
 	engine := NewEngine()
 	report, err := engine.Execute(BackfillOptions{
-		WorkspacesDir: tempDir,
-		TicketID:      tid,
-		Source:        "opencode",
-		RecomputeDB:   true,
-		DBPath:        dbPath,
-		Force:         true,
+		Project:     tempDir,
+		TicketID:    tid,
+		Source:      "opencode",
+		RecomputeDB: true,
+		DBPath:      dbPath,
+		Force:       true,
 	})
 	if err != nil {
 		t.Fatalf("backfill failed: %v", err)
@@ -955,11 +955,11 @@ func TestBackfillEngine_SourceCodexSkipsOpenCodeSessions(t *testing.T) {
 
 	engine := NewEngine()
 	report, err := engine.Execute(BackfillOptions{
-		WorkspacesDir: tempDir,
-		TicketID:      tid,
-		Source:        "codex",
-		RecomputeDB:   true,
-		Force:         true,
+		Project:     tempDir,
+		TicketID:    tid,
+		Source:      "codex",
+		RecomputeDB: true,
+		Force:       true,
 	})
 	if err != nil {
 		t.Fatalf("backfill failed: %v", err)
@@ -1059,12 +1059,12 @@ func TestBackfillEngine_CodexDiscoveryFailurePreservesSessions(t *testing.T) {
 		return nil, errors.New("discovery failed")
 	}
 	report, err := engine.Execute(BackfillOptions{
-		WorkspacesDir: tempDir,
-		TicketID:      ticketID,
-		Source:        "codex",
-		CodexHome:     tempDir,
-		RecomputeDB:   true,
-		Force:         true,
+		Project:     tempDir,
+		TicketID:    ticketID,
+		Source:      "codex",
+		CodexHome:   tempDir,
+		RecomputeDB: true,
+		Force:       true,
 	})
 	if err != nil {
 		t.Fatalf("backfill failed: %v", err)
@@ -1122,12 +1122,12 @@ func TestBackfillEngine_CodexRefreshesRootTreeOnce(t *testing.T) {
 	}
 
 	report, err := engine.Execute(BackfillOptions{
-		WorkspacesDir: tempDir,
-		TicketID:      ticketID,
-		Source:        "codex",
-		CodexHome:     tempDir,
-		RecomputeDB:   true,
-		Force:         true,
+		Project:     tempDir,
+		TicketID:    ticketID,
+		Source:      "codex",
+		CodexHome:   tempDir,
+		RecomputeDB: true,
+		Force:       true,
 	})
 	if err != nil {
 		t.Fatalf("backfill failed: %v", err)
@@ -1187,12 +1187,12 @@ func TestBackfillEngine_CodexParseFailurePreservesTree(t *testing.T) {
 	}
 
 	report, err := engine.Execute(BackfillOptions{
-		WorkspacesDir: tempDir,
-		TicketID:      ticketID,
-		Source:        "codex",
-		CodexHome:     tempDir,
-		RecomputeDB:   true,
-		Force:         true,
+		Project:     tempDir,
+		TicketID:    ticketID,
+		Source:      "codex",
+		CodexHome:   tempDir,
+		RecomputeDB: true,
+		Force:       true,
 	})
 	if err != nil {
 		t.Fatalf("backfill failed: %v", err)
@@ -1304,12 +1304,12 @@ func TestBackfillEngine_MultiRootSessionsExtracted(t *testing.T) {
 	setupMockOpenCodeMultiRootDB(t, dbPath, []string{"ses-root-1", "ses-root-2"}, ticketID)
 
 	report, err := NewEngine().Execute(BackfillOptions{
-		WorkspacesDir: tempDir,
-		TicketID:      ticketID,
-		RecomputeDB:   true,
-		DBPath:        dbPath,
-		Source:        "opencode",
-		Force:         true,
+		Project:     tempDir,
+		TicketID:    ticketID,
+		RecomputeDB: true,
+		DBPath:      dbPath,
+		Source:      "opencode",
+		Force:       true,
 	})
 	if err != nil {
 		t.Fatalf("backfill failed: %v", err)
@@ -1368,7 +1368,7 @@ func TestBackfillEngine_StrictSessionTrustRejectsUntrustedTitleFallback(t *testi
 	setupMockOpenCodeDB(t, dbPath, "ses-review-456", ticketID)
 
 	report, err := NewEngine().Execute(BackfillOptions{
-		WorkspacesDir:  tempDir,
+		Project:        tempDir,
 		TicketID:       ticketID,
 		RecomputeDB:    true,
 		DBPath:         dbPath,
@@ -1440,7 +1440,7 @@ func TestBackfillEngine_ExplicitFallbackResolvesWhenAllowed(t *testing.T) {
 	}
 
 	report, err := NewEngine().Execute(BackfillOptions{
-		WorkspacesDir:  tempDir,
+		Project:        tempDir,
 		TicketID:       ticketID,
 		RecomputeDB:    true,
 		DBPath:         dbPath,
@@ -1533,12 +1533,12 @@ func TestBackfillEngine_CodexPreservesChildParentIDAndUser(t *testing.T) {
 	}
 
 	report, err := engine.Execute(BackfillOptions{
-		WorkspacesDir: tempDir,
-		TicketID:      ticketID,
-		Source:        "codex",
-		CodexHome:     tempDir,
-		RecomputeDB:   true,
-		Force:         true,
+		Project:     tempDir,
+		TicketID:    ticketID,
+		Source:      "codex",
+		CodexHome:   tempDir,
+		RecomputeDB: true,
+		Force:       true,
 	})
 	if err != nil {
 		t.Fatalf("backfill failed: %v", err)
@@ -1671,7 +1671,7 @@ func TestBackfillEngine_SkillTaskRecoverySnapshots(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			opts := BackfillOptions{WorkspacesDir: root, TicketID: ticket, Source: "opencode", RecomputeDB: true, DBPath: dbPath, DryRun: tc.dryRun, UpdateSummaries: tc.dryRun}
+			opts := BackfillOptions{Project: root, TicketID: ticket, Source: "opencode", RecomputeDB: true, DBPath: dbPath, DryRun: tc.dryRun, UpdateSummaries: tc.dryRun}
 			report, err := NewEngine().Execute(opts)
 			if err != nil {
 				t.Fatal(err)
@@ -1827,7 +1827,7 @@ func TestBackfillEngine_GlobalRecoveryRequiresEveryKnownTree(t *testing.T) {
 
 			emptyDB := filepath.Join(root, "empty-opencode.db")
 			setupMockOpenCodeDB(t, emptyDB, "unrelated-owner", "OTHER")
-			report, err := engine.Execute(BackfillOptions{WorkspacesDir: root, TicketID: ticket, Source: tc.source, CodexHome: root, DBPath: emptyDB, RecomputeDB: true})
+			report, err := engine.Execute(BackfillOptions{Project: root, TicketID: ticket, Source: tc.source, CodexHome: root, DBPath: emptyDB, RecomputeDB: true})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -1899,7 +1899,7 @@ func TestBackfillEngine_SchemaV2RecoversKnownGrandchildren(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			report, err := NewEngine().Execute(BackfillOptions{WorkspacesDir: root, TicketID: ticket, Source: "opencode", RecomputeDB: true, DBPath: dbPath})
+			report, err := NewEngine().Execute(BackfillOptions{Project: root, TicketID: ticket, Source: "opencode", RecomputeDB: true, DBPath: dbPath})
 			if err != nil || report.Results[0].Error != nil {
 				t.Fatalf("refresh failed: %+v %v", report, err)
 			}
@@ -2021,7 +2021,7 @@ func TestBackfillEngine_WarningBearingRolloutsPreserveTree(t *testing.T) {
 				}
 				return []string{healthyPath}, nil
 			}
-			opts := BackfillOptions{WorkspacesDir: root, TicketID: ticket, Source: "codex", CodexHome: root, RecomputeDB: true}
+			opts := BackfillOptions{Project: root, TicketID: ticket, Source: "codex", CodexHome: root, RecomputeDB: true}
 			report, err := engine.Execute(opts)
 			if err != nil || len(report.Results) != 1 || report.Results[0].Error != nil {
 				t.Fatalf("refresh: %+v %v", report, err)
@@ -2107,7 +2107,7 @@ func TestBackfillCodexCompleteParentRefreshesWhileMissingChildFactsSurvive(t *te
 	if err := os.WriteFile(filepath.Join(home, "sessions", "parent.jsonl"), []byte(source), 0600); err != nil {
 		t.Fatal(err)
 	}
-	opts := BackfillOptions{WorkspacesDir: root, TicketID: ticket, Source: "codex", CodexHome: home, RecomputeDB: true}
+	opts := BackfillOptions{Project: root, TicketID: ticket, Source: "codex", CodexHome: home, RecomputeDB: true}
 	for pass := 0; pass < 2; pass++ {
 		report, err := NewEngine().Execute(opts)
 		if err != nil || len(report.Results) != 1 || report.Results[0].Error != nil {
@@ -2157,7 +2157,7 @@ func TestBackfillActiveDurationReplacesSnapshotsAcrossSourceFamilies(t *testing.
 					retained[s.ID] = s
 				}
 			}
-			opts := BackfillOptions{WorkspacesDir: root, TicketID: ticket, Source: string(source), CodexHome: home, RecomputeDB: true, UpdateSummaries: true}
+			opts := BackfillOptions{Project: root, TicketID: ticket, Source: string(source), CodexHome: home, RecomputeDB: true, UpdateSummaries: true}
 			base := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 			var complete func()
 			if family == "codex" {
@@ -2347,7 +2347,7 @@ func TestBackfillEngine_PreservesUnavailableAnalysisOutsideCompleteRefresh(t *te
 			for _, owner := range baseline.ToDomain().Sessions {
 				expectedByID[owner.ID] = owner
 			}
-			opts := BackfillOptions{WorkspacesDir: root, TicketID: ticket, Source: "codex", CodexHome: home, RecomputeDB: true, UpdateSummaries: true}
+			opts := BackfillOptions{Project: root, TicketID: ticket, Source: "codex", CodexHome: home, RecomputeDB: true, UpdateSummaries: true}
 			for pass := 0; pass < 2; pass++ {
 				report, err := NewEngine().Execute(opts)
 				if err != nil || len(report.Results) != 1 || report.Results[0].Error != nil {
@@ -2516,7 +2516,7 @@ func TestBackfillRecoveredSummaryMatchesPublishedFactsOnFirstRun(t *testing.T) {
 	}
 	var firstSummary []byte
 	for pass := 0; pass < 2; pass++ {
-		report, err := NewEngine().Execute(BackfillOptions{WorkspacesDir: root, TicketID: ticket, Source: "codex", CodexHome: home, RecomputeDB: true, UpdateSummaries: true})
+		report, err := NewEngine().Execute(BackfillOptions{Project: root, TicketID: ticket, Source: "codex", CodexHome: home, RecomputeDB: true, UpdateSummaries: true})
 		if err != nil || len(report.Results) != 1 || report.Results[0].Error != nil {
 			t.Fatalf("backfill failed: %+v %v", report, err)
 		}
@@ -2600,7 +2600,7 @@ func TestFormerGenerationMetadataRecoveryWorkflows(t *testing.T) {
 				}
 				var runErr error
 				if workflow == "backfill" {
-					report, err := NewEngine().Execute(BackfillOptions{WorkspacesDir: root, TicketID: ticket})
+					report, err := NewEngine().Execute(BackfillOptions{Project: root, TicketID: ticket})
 					runErr = err
 					if runErr == nil {
 						if len(report.Results) != 1 {
@@ -2679,7 +2679,7 @@ func TestBackfillRequiresConfiguredPolicyBeforePublication(t *testing.T) {
 			t.Errorf("restore cwd: %v", err)
 		}
 	}()
-	if _, err := NewEngine().Execute(BackfillOptions{WorkspacesDir: filepath.Join(root, "tickets")}); err == nil || !strings.Contains(err.Error(), "required backfill configuration") {
+	if _, err := NewEngine().Execute(BackfillOptions{Project: filepath.Join(root, "tickets")}); err == nil || !strings.Contains(err.Error(), "required backfill configuration") {
 		t.Fatalf("missing config did not fail before publication: %v", err)
 	}
 	after, err := os.ReadFile(path)
@@ -2725,7 +2725,7 @@ func TestBackfillRefreshReceivesConfiguredFailureRatePolicy(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		report, err := NewEngine().Execute(BackfillOptions{WorkspacesDir: root, TicketID: ticket, Source: "opencode", RecomputeDB: true, DBPath: dbPath})
+		report, err := NewEngine().Execute(BackfillOptions{Project: root, TicketID: ticket, Source: "opencode", RecomputeDB: true, DBPath: dbPath})
 		if err != nil {
 			t.Fatal(err)
 		}

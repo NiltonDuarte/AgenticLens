@@ -49,7 +49,7 @@ export function reconcileTagCatalog(previous: readonly AgenticMetricsLedger[], i
     // Anonymous entries have no stable ticket identity. Retain distinct tag-map
     // representatives only; their numerical metrics are never aggregated here.
     const key = ledger.ticket_id
-      ? JSON.stringify(['ticket', ledger.ticket_id])
+      ? JSON.stringify(['ticket', ledger.ticket_id, ledger.workspace_path])
       : JSON.stringify(['anonymous-tags', Object.entries(ledger.facts.tags ?? {}).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)]);
     catalog.set(key, ledger);
   }

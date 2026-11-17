@@ -130,6 +130,7 @@ func FactLedgerResponseDTOFromDomain(value domain.AgenticFactLedger) FactLedgerR
 
 // MetricsLedgerResponseDTO is the concrete nullable cost projection of AgenticMetricsLedger.
 type MetricsLedgerResponseDTO struct {
+	WorkspacePath      string                         `json:"workspace_path"`
 	TicketID           *string                        `json:"ticket_id"`
 	TicketTitle        *string                        `json:"ticket_title"`
 	TicketType         *domain.ConventionalTicketType `json:"ticket_type"`
@@ -147,6 +148,7 @@ type MetricsLedgerResponseDTO struct {
 
 func MetricsLedgerResponseDTOFromDomain(value domain.AgenticMetricsLedger) MetricsLedgerResponseDTO {
 	return MetricsLedgerResponseDTO{
+		WorkspacePath:      value.WorkspacePath,
 		TicketID:           value.TicketID,
 		TicketTitle:        value.TicketTitle,
 		TicketType:         value.TicketType,

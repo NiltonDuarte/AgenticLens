@@ -9,7 +9,7 @@ generation:
     provisional_threshold_seconds: 180
   summary:
     enabled: true
-    filename: SUMMARY.md
+    filename: delivery.md
 # Exact shared release authority. Install explicitly; dispatch never downloads.
 agenticlens:
   binary_dir: bin
@@ -44,18 +44,55 @@ ticket:
       ticket_type: fix
   # Ignore case while matching; preserve recorded ticket spelling.
   case_insensitive: true
-# Workspace storage and ticket artifact definitions.
+# Explicit ledger search locations. Roadmap tickets remain in alspaces/plan.
 workspaces:
-  # Directory where ticket artifacts and session telemetry ledgers are stored.
-  dir: alspaces
-  # Configured documentation and process artifacts tracked inside ticket workspaces.
+  roots:
+    - path: alspaces
+      discovery:
+        max_depth: 1
+        max_directories: 300
+    - path: openspec/changes
+      discovery:
+        max_depth: 1
+        max_directories: 300
+      artifacts:
+        - path: proposal.md
+          title: Proposal
+          description: Selected execution intent linked to its roadmap ticket
+        - path: design.md
+          title: Design
+          description: Technical contract and scope approval
+        - path: tasks.md
+          title: Tasks
+          description: Execution work and verification progress
+        - path: delivery.md
+          title: Delivery
+          description: Outcome, evidence, review and telemetry summary
+    - path: openspec/changes/archive
+      discovery:
+        max_depth: 1
+        max_directories: 300
+      artifacts:
+        - path: proposal.md
+          title: Proposal
+          description: Archived execution intent
+        - path: design.md
+          title: Design
+          description: Archived technical contract and approval
+        - path: tasks.md
+          title: Tasks
+          description: Archived execution checklist
+        - path: delivery.md
+          title: Delivery
+          description: Retained outcome, verification and telemetry summary
+  # Existing historical homes keep their explicitly configured artifact names.
   artifacts:
     - path: CONTRACT.md
       title: Technical Contract
-      description: Frozen technical contract and acceptance boundaries
+      description: Recorded historical technical contract
     - path: SUMMARY.md
       title: Work Summary
-      description: Implementation summary log and verification records
+      description: Recorded historical outcome and verification
 # OpenCode SQLite database connectivity and timeout parameters.
 database:
   # SQLite busy handler wait timeout in milliseconds.

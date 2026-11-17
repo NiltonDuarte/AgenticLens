@@ -21,7 +21,7 @@ func TestCLIGenerate_SessionRefreshMatchesFreshExtraction(t *testing.T) {
 	for _, source := range []domain.SourceHarness{domain.SourceCodex, domain.SourceOpenCode} {
 		t.Run(string(source), func(t *testing.T) {
 			project := t.TempDir()
-			config := "agenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: RefreshFixture\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: \"FIX\"\n      description: Fixture ticket\nworkspaces:\n  artifacts: []\n  dir: records\ncode_metrics:\n  base_branch: fixture-base\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
+			config := "agenticlens:\n  version: v9.8.7\ndatabase:\n  busy_timeout_ms: 0\nlive:\n  active_threshold_seconds: 300\n  poll_interval_ms: 2000\ngeneration:\n  metrics:\n    skills: true\n    delegations: true\n    anomalies: true\n  feedback:\n    provisional_threshold_seconds: 180\n  summary:\n    enabled: false\n    filename: SUMMARY.md\nrole_order: []\nrole_mappings: {}\nproject_name: RefreshFixture\nticket:\n  case_insensitive: true\n  prefixes:\n    - prefix: \"FIX\"\n      description: Fixture ticket\nworkspaces:\n  artifacts: []\n  roots:\n    - path: records\n      discovery:\n        max_depth: 8\n        max_directories: 300\ncode_metrics:\n  base_branch: fixture-base\n  production:\n    include: [\"src/**\"]\n    exclude: ['**/*_test.go']\n  tests:\n    include: ['**/*_test.go']\n    exclude: []\nanomaly_thresholds:\n  stall_threshold_seconds: 120\n  consecutive_errors_streak_warning: 4\n  consecutive_errors_streak_critical: 8\n  turn_usage_warning_tokens: 60000\n  turn_usage_critical_tokens: 120000\n  context_growth_warning_tokens: 80000\n  context_growth_critical_tokens: 120000\n  tool_thrashing_min_failures: 3\n  tool_thrashing_critical_failures: 5\n  error_rate_min_calls: 5\n  error_rate_threshold: 0.25\n  error_rate_critical_threshold: 0.70\n  context_ceiling_warning_tokens: 160000\n  context_ceiling_critical_tokens: 200000\n"
 			if err := os.WriteFile(filepath.Join(project, ".agenticlens-config.yaml"), []byte(config), 0600); err != nil {
 				t.Fatal(err)
 			}
@@ -101,7 +101,7 @@ func TestCLIGenerate_SessionRefreshMatchesFreshExtraction(t *testing.T) {
 					"--ticket-id", "FIX-10", "--ticket-title", "Snapshot refresh regression", "--ticket-type", "fix", "--json-output", output}
 				cmd := exec.Command(cliBinaryPath, append(args, sourceArgs...)...)
 				cmd.Dir = project
-				prepareGenerateFixture(t, cmd)
+				prepareScopedGenerateFixture(t, cmd)
 				if result, err := cmd.CombinedOutput(); err != nil {
 					t.Fatalf("generate failed: %v\n%s", err, result)
 				}
@@ -133,7 +133,7 @@ func TestCLIGenerate_SessionRefreshMatchesFreshExtraction(t *testing.T) {
 					before := time.Now().UTC()
 					refreshed := generate(t, output)
 					after := time.Now().UTC()
-					fresh := generate(t, filepath.Join(project, fmt.Sprintf("fresh-%d.json", stage)))
+					fresh := generate(t, filepath.Join(project, fmt.Sprintf("fresh-%d", stage), "agentic_metrics.json"))
 					if !reflect.DeepEqual(stableDurationSnapshot(refreshed.Sessions), stableDurationSnapshot(fresh.Sessions)) {
 						t.Errorf("refresh differs from fresh extraction: refreshed=%+v fresh=%+v", refreshed.Sessions, fresh.Sessions)
 					}

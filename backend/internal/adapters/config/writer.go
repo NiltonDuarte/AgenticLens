@@ -21,9 +21,7 @@ func (e *FileExistsError) Is(target error) bool { return target == ErrFileExists
 // GenerateConfigYAML emits explicit shared policy. YAML nodes quote scalar values
 // according to their types, preserving metacharacters and deliberate empty lists.
 func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
-	if strings.TrimSpace(cfg.Workspaces.Dir) == "" {
-		return nil, fmt.Errorf("workspaces.dir must be explicitly configured before writing shared YAML")
-	}
+
 	if err := ValidateConfig(cfg); err != nil {
 		return nil, err
 	}
@@ -55,6 +53,7 @@ func GenerateConfigYAML(cfg domain.ProjectConfig) ([]byte, error) {
 		cfg.Tags = domain.MergeTags(nil, cfg.SharedTags)
 	}
 	cfg.Telemetry = domain.TelemetryConfig{}
+	cfg.AgenticLens.StateDir = ""
 	var node yaml.Node
 	if err := node.Encode(cfg); err != nil {
 		return nil, fmt.Errorf("encoding shared configuration: %w", err)

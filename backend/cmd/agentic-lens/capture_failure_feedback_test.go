@@ -21,6 +21,9 @@ func TestCaptureLaterAgentChannelReportsBoundPublicationFailure(t *testing.T) {
 	f := newCaptureGenerationFixture(t)
 	enableCLIFixtureSummary(t, f.project)
 	f.output = filepath.Join(f.project, "records", "TEST-100", "agentic_metrics.json")
+	if err := os.MkdirAll(filepath.Dir(f.output), 0700); err != nil {
+		t.Fatal(err)
+	}
 	path := f.write(t, 10)
 	f.bind(t, path)
 	earlyCallbacksDone := captureWorkerCompletion(t, f.coordination(t))
@@ -156,6 +159,7 @@ func TestCaptureLaterAgentChannelReportsBoundPublicationFailure(t *testing.T) {
 		}
 	}
 	prepareCaptureOwner(t, f, "other", "TEST-200", 9)
+	seedCaptureTicketHome(t, f, "TEST-200")
 	assertQuiet(query("other", f.store))
 	if err = writeCaptureFixtureLocal(t, f, []byte(strings.Replace(local, "enabled: true", "enabled: false", 1))); err != nil {
 		t.Fatal(err)

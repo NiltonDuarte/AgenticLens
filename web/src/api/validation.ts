@@ -106,7 +106,7 @@ function workflow(value: unknown): boolean {
     isRecord(context) && fields(context, ['healthy_ceiling_tokens', 'root_peak_tokens', 'root_saturation_pct', 'subagents_peak_tokens', 'compactions'], number) && health(context.status) && string(context.subagents_peak_role) && numericMap(context.peak_by_role);
 }
 function isLedger(value: unknown): value is AgenticMetricsLedger {
-  return isRecord(value) && ticketMetadata(value) && facts(value.facts) && workflow(value.workflow_efficiency) && grouped(value.totals) &&
+  return isRecord(value) && ticketMetadata(value) && facts(value.facts) && isRecord(value.facts) && value.ticket_id === value.facts.ticket_id && workflow(value.workflow_efficiency) && grouped(value.totals) &&
     array(value.roles, role) && array(value.models, model) && optionalArray(value.anomalies, isAnomaly) &&
     array(value.threads, (v) => isRecord(v) && fields(v, ['session_id', 'user'], string) && number(v.compactions) &&
       array(v.roles, (r) => isRecord(r) && string(r.role) && array(r.models, model)));
@@ -148,7 +148,7 @@ export function decodeLedgers(value: unknown): AgenticMetricsLedger[] {
   return value.map((entry: unknown) => {
     const ledger = prepareLedger(entry);
     validateLedgerCosts(ledger);
-    if (!isLedger(ledger)) throw new Error('Invalid workspace ledgers response');
+    if (!isLedger(ledger) || !string(ledger.workspace_path) || !ledger.workspace_path.trim()) throw new Error('Invalid workspace ledgers response');
     return ledger;
   });
 }
@@ -169,9 +169,10 @@ export function decodeFleet(value: unknown): FleetSummary {
   return result;
 }
 function isDetail(value: unknown): value is WorkspaceDetail {
-  if (!isRecord(value) || !isLedger(value.ledger) || !isRecord(value.artifacts)) return false;
+  if (!isRecord(value) || !isLedger(value.ledger) || !isRecord(value.artifacts) ||
+    !string(value.workspace_path) || !value.workspace_path.trim() || value.ledger.workspace_path !== value.workspace_path) return false;
   const artifacts = value.artifacts;
-  return string(artifacts.ticket_id) &&
+  return string(artifacts.ticket_id) && artifacts.ticket_id === value.ledger.ticket_id &&
     array(artifacts.items, (v) => isRecord(v) && fields(v, ['path', 'title', 'description'], string) && nullableString(v.content)) && optionalArray(value.anomalies, isAnomaly);
 }
 export function decodeDetail(value: unknown): WorkspaceDetail {
@@ -194,7 +195,12 @@ export function isBuildInfo(value: unknown): value is BuildInfo {
   return isRecord(value) && fields(value, ['version', 'commit', 'build_date'], string);
 }
 export function isProjectConfig(value: unknown): value is ProjectConfigResponse {
-  return isRecord(value) && fields(value, ['project_name', 'workspaces_dir', 'version'], string) && array(value.role_order, (role) => string(role) && role.trim().length > 0) &&
+  return isRecord(value) && !Object.hasOwn(value, 'workspaces_dir') && fields(value, ['project_name', 'version'], string) &&
+    Array.isArray(value.workspaces_roots) && value.workspaces_roots.length > 0 && value.workspaces_roots.every((root: unknown) =>
+      isRecord(root) && exactFields(root, ['path', 'discovery']) && string(root.path) && root.path.trim().length > 0 &&
+      isRecord(root.discovery) && exactFields(root.discovery, ['max_depth', 'max_directories']) &&
+      typeof root.discovery.max_depth === 'number' && Number.isSafeInteger(root.discovery.max_depth) && root.discovery.max_depth >= 0 &&
+      typeof root.discovery.max_directories === 'number' && Number.isSafeInteger(root.discovery.max_directories) && root.discovery.max_directories > 0) && array(value.role_order, (role) => string(role) && role.trim().length > 0) &&
     typeof value.case_insensitive === 'boolean' && (value.live_poll_interval_ms === undefined || number(value.live_poll_interval_ms)) && isRecord(value.role_mappings) &&
     Object.entries(value.role_mappings).every(([name, role]) => name.trim().length > 0 && string(role) && role.trim().length > 0) &&
     array(value.prefixes, (v) => isRecord(v) && fields(v, ['prefix', 'description'], string) &&

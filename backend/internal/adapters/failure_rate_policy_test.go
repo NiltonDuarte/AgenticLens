@@ -35,7 +35,7 @@ func TestConfiguredFailureRateSurvivesPersistenceAndFleet(t *testing.T) {
 			root := t.TempDir()
 			workspaces := filepath.Join(root, "tickets")
 			project := fixtureReadPolicy(t)
-			project.Workspaces.Dir = "tickets"
+			project.Workspaces.Roots[0].Path = "tickets"
 			project.Ticket = domain.TicketConfig{CaseInsensitive: false, Prefixes: []domain.TicketPrefix{{Prefix: "FX", Description: "Policyfixture"}}}
 			project.AnomalyThresholds.ErrorRateMinCalls = tc.minimum
 			project.AnomalyThresholds.ErrorRateThreshold = tc.warning
@@ -109,7 +109,7 @@ func TestConfiguredFailureRateSurvivesPersistenceAndFleet(t *testing.T) {
 				t.Fatalf("live/offline policy mismatch: %+v", live)
 			}
 			target := filepath.Join(workspaces, tid, "agentic_metrics.json")
-			if err := adapters.SaveFactLedger(target, persisted); err != nil {
+			if err := saveFixtureFactLedger(t,target, persisted); err != nil {
 				t.Fatal(err)
 			}
 			body, err := os.ReadFile(target)

@@ -29,7 +29,7 @@ Use for one ticket's history:
 - Iteration timeline and role/turn progression.
 - Tool invocation counts and failures.
 - Model, token, and cost breakdown.
-- Artifact viewer for configured workspace documents, including `CONTRACT.md` and `SUMMARY.md` when present.
+- Artifact viewer for configured workspace documents, including explicitly configured historical artifacts or OpenSpec proposal/design/tasks/delivery, when their ledger exists.
 
 For migration diagnosis, inspect the underlying `agentic_metrics.json` migration status and pending steps. The ticket view is not a team-wide migration coordinator.
 
@@ -44,7 +44,7 @@ Use for longitudinal trends such as cost per ticket, turn velocity, test-to-prod
 ## Dashboard Troubleshooting
 
 1. Confirm the server process is running and use its actual port.
-2. Confirm the selected `.agenticlens-config.yaml` or `.agenticlens-config.yml` loads and `workspaces.dir` points to an existing directory. Both canonical shared files in one directory are an error.
+2. Confirm the selected `.agenticlens-config.yaml` or `.agenticlens-config.yml` loads and `workspaces.roots` selects explicit paths and depth/budget policies; inspect per-root failures and duplicate-ticket location choices. Both canonical shared files in one directory are an error.
 3. For live data, supply `--db-path` or configure `telemetry.sources.opencode.database_path` in the [selected local configuration](configuration.md). The CLI path takes precedence. Relative CLI paths use the invocation directory; relative configured paths use the selected local file's directory.
 4. Distinguish an empty live feed from missing historical ledgers: live data comes from the local source, historical views come from workspace ledgers.
 5. Treat all config edits, server restarts, or ledger changes according to the user's authorization.

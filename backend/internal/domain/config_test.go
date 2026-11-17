@@ -13,7 +13,7 @@ func testProjectConfig() domain.ProjectConfig {
 		Ticket: domain.TicketConfig{CaseInsensitive: true, Prefixes: []domain.TicketPrefix{
 			{Prefix: "AL", Description: "Development"}, {Prefix: "GEN", Description: "General", TicketType: "chore"}, {Prefix: "PO", Description: "Planning", TicketType: "docs"},
 		}},
-		Workspaces:        domain.WorkspacesConfig{Dir: "records", Artifacts: []domain.WorkspaceArtifactConfig{}},
+		Workspaces:        domain.WorkspacesConfig{Roots: []domain.WorkspaceRootConfig{{Path: "records", Discovery: domain.WorkspaceDiscoveryConfig{MaxDepth: 8, MaxDirectories: 300}}}, Artifacts: []domain.WorkspaceArtifactConfig{}},
 		Database:          domain.DatabaseConfig{BusyTimeoutMs: 5000},
 		Live:              domain.LiveConfig{ActiveThresholdSeconds: 300, PollIntervalMs: 2000},
 		Generation:        domain.GenerationConfig{Metrics: domain.GenerationPolicy{Skills: true, Delegations: true, Anomalies: true}, Feedback: domain.GenerationFeedbackConfig{ProvisionalThresholdSeconds: 180}, Summary: domain.GenerationSummaryConfig{Enabled: false}},

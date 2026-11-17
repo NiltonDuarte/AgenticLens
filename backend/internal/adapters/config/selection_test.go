@@ -30,7 +30,7 @@ func TestSelectedLocalOriginAcrossLinkedWorktrees(t *testing.T) {
 		}
 	}
 	git(base, "init", "-b", "main")
-	shared := strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(string(fixtureSharedBody(t)), "project_name: Fixture", "project_name: Portable"), "dir: records", "dir: custom-records"), "src/**/*.go", "custom-src/**")
+	shared := strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(string(fixtureSharedBody(t)), "project_name: Fixture", "project_name: Portable"), "path: records", "path: custom-records"), "src/**/*.go", "custom-src/**")
 	shared = strings.ReplaceAll(shared, "prefix: T\n", "prefix: CUSTOM\n")
 	write(filepath.Join(base, ".agenticlens-config.yaml"), shared)
 	git(base, "add", ".agenticlens-config.yaml")
@@ -66,7 +66,7 @@ func TestSelectedLocalOriginAcrossLinkedWorktrees(t *testing.T) {
 			t.Fatalf("base-relative policy: %+v %v", policy, err)
 		}
 		cfg, err := Load(cwd)
-		if err != nil || cfg.Telemetry.Sources.CodexHome != filepath.Join(base, "base-codex") || cfg.Workspaces.Dir != "custom-records" || cfg.Ticket.Prefixes[0].Prefix != "CUSTOM" || cfg.CodeMetrics.Production.Include[0] != "custom-src/**" {
+		if err != nil || cfg.Telemetry.Sources.CodexHome != filepath.Join(base, "base-codex") || cfg.Workspaces.Roots[0].Path != "custom-records" || cfg.Ticket.Prefixes[0].Prefix != "CUSTOM" || cfg.CodeMetrics.Production.Include[0] != "custom-src/**" {
 			t.Fatalf("project/source origin lost: %+v %v", cfg, err)
 		}
 	}

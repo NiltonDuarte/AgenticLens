@@ -19,8 +19,9 @@ func TestRecoverFailedGenerationPublicationReportsUnconfirmedRestoration(t *test
 		}
 		t.Run(name, func(t *testing.T) {
 			dir := t.TempDir()
+			writeInternalCLIPublicationPolicy(t, dir, ".")
 			ledger, summary := filepath.Join(dir, "ledger.json"), filepath.Join(dir, "SUMMARY.md")
-			lock, err := capture.AcquirePublication(context.Background(), ledger)
+			lock, err := capture.AcquirePublication(context.Background(), ledger, dir)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -29,18 +30,18 @@ func TestRecoverFailedGenerationPublicationReportsUnconfirmedRestoration(t *test
 					t.Error(err)
 				}
 			}()
-			if err := os.WriteFile(ledger, []byte("accepted ledger"), 0600); err != nil {
+			if err := capture.WritePublicationFile(ledger, []byte("accepted ledger"), 0600); err != nil {
 				t.Fatal(err)
 			}
 			paths := []string{ledger, summary}
 			if err := adapters.BeginPublication(ledger, paths); err != nil {
 				t.Fatal(err)
 			}
-			if err := os.WriteFile(ledger, []byte("replacement ledger"), 0600); err != nil {
+			if err := capture.WritePublicationFile(ledger, []byte("replacement ledger"), 0600); err != nil {
 				t.Fatal(err)
 			}
 			if committed {
-				if err := os.WriteFile(summary, []byte("published summary"), 0600); err != nil {
+				if err := capture.WritePublicationFile(summary, []byte("published summary"), 0600); err != nil {
 					t.Fatal(err)
 				}
 				if err := adapters.CommitPublication(ledger, paths); err != nil {

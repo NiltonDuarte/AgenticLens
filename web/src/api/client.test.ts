@@ -42,6 +42,20 @@ describe('Boundary API Client', () => {
             ['detail malformed artifact description', () => fetchWorkspaceById('AL-1'), { ...detail, artifacts: { ticket_id: 'AL-1', items: [{ path: 'SUMMARY.md', title: 'Summary', description: null, content: null }] } }],
             ['detail malformed anomaly', () => fetchWorkspaceById('AL-1'), { ...detail, anomalies: [{ rule_id: 'UNKNOWN', severity: 'WARNING', context: {} }] }],
             ['version malformed commit', () => fetchVersion(), { version: 'v1', commit: 123, build_date: '' }],
+            ['config retired scalar directory', () => fetchProjectConfig(), { ...mockProjectConfig, workspaces_dir: 'old' }],
+            ['config missing roots', () => fetchProjectConfig(), { ...mockProjectConfig, workspaces_roots: undefined }],
+            ['config empty roots', () => fetchProjectConfig(), { ...mockProjectConfig, workspaces_roots: [] }],
+            ['config missing explicit depth', () => fetchProjectConfig(), { ...mockProjectConfig, workspaces_roots: [{path: 'records', discovery: {max_directories: 300}}] }],
+            ['config retired minimum depth', () => fetchProjectConfig(), { ...mockProjectConfig, workspaces_roots: [{path: 'records', discovery: {min_depth: 0, max_depth: 1, max_directories: 300}}] }],
+            ['config retired root id', () => fetchProjectConfig(), { ...mockProjectConfig, workspaces_roots: [{id: 'old', path: 'records', discovery: {max_depth: 1, max_directories: 300}}] }],
+            ['config fractional depth', () => fetchProjectConfig(), { ...mockProjectConfig, workspaces_roots: [{path: 'records', discovery: {max_depth: 1.5, max_directories: 300}}] }],
+            ['config zero budget', () => fetchProjectConfig(), { ...mockProjectConfig, workspaces_roots: [{path: 'records', discovery: {max_depth: 0, max_directories: 0}}] }],
+            ['ledger conflicting canonical identity', () => fetchWorkspaceLedgers(), [{...ledger, ticket_id: 'OTHER-7'}]],
+            ['detail conflicting artifact identity', () => fetchWorkspaceById('AL-1'), {...detail, artifacts: {...detail.artifacts, ticket_id: 'OTHER-7'}}],
+            ['ledger absent location', () => fetchWorkspaceLedgers(), [{ ...ledger, workspace_path: undefined }]],
+            ['ledger blank location', () => fetchWorkspaceLedgers(), [{ ...ledger, workspace_path: ' ' }]],
+            ['detail absent location', () => fetchWorkspaceById('AL-1'), { ...detail, workspace_path: undefined }],
+            ['detail contradictory locations', () => fetchWorkspaceById('AL-1'), { ...detail, workspace_path: '/different' }],
             ['config malformed prefix', () => fetchProjectConfig(), { ...mockProjectConfig, prefixes: [null] }],
             ['config malformed role order', () => fetchProjectConfig(), { ...mockProjectConfig, role_order: [1] }],
             ['config absent case policy', () => fetchProjectConfig(), {...mockProjectConfig, case_insensitive: undefined}],
@@ -269,6 +283,7 @@ describe('Boundary API Client', () => {
         it('returns derived rows on successful response with custom query parameters', async () => {
             const mockLedgers = [
                 {
+                    workspace_path: '/records/TEST-1',
                     ticket_id: 'TEST-1',
                     ticket_title: 'Test ticket',
                     ticket_type: 'feature',
@@ -743,7 +758,7 @@ describe('Boundary API Client', () => {
                 prefixes: [
                     { prefix: 'FEAT', description: 'Feature tickets', ticket_type: 'feat' },
                 ],
-                workspaces_dir: 'custom_workspaces',
+                workspaces_roots: [{ path: 'custom_workspaces', discovery: { max_depth: 1, max_directories: 300 } }],
                 role_order: ['planner', 'coder'],
                 version: 'v1.0.0',
             };
@@ -755,7 +770,7 @@ describe('Boundary API Client', () => {
             expect(res.data.project_name).toBe('CustomObserver');
             expect(res.data.prefixes).toHaveLength(1);
             expect(res.data.prefixes[0]?.prefix).toBe('FEAT');
-            expect(res.data.workspaces_dir).toBe('custom_workspaces');
+            expect(res.data.workspaces_roots).toEqual(liveConfig.workspaces_roots);
             expect(res.data.role_order).toEqual(['planner', 'coder']);
             expect(res.data.version).toBe('v1.0.0');
         });
@@ -826,4 +841,45 @@ describe('Boundary API Client', () => {
         expect(result.data[0]?.facts.tags).toEqual({ 'team=&': 'Missing=x' });
     });
 
+});
+
+
+describe('Workspace location selection', () => {
+    afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+
+    it('uses the selected physical location for both detail and events without changing canonical ticket spelling', async () => {
+        const detail = mockWorkspaceDetails['AL-1']!;
+        const selected = '/records/a renamed folder #1';
+        const payload = { ...detail, workspace_path: selected, ledger: { ...detail.ledger, workspace_path: selected } };
+        const fetcher = vi.fn().mockResolvedValueOnce({ ok: true, json: async () => payload })
+            .mockResolvedValueOnce({ ok: true, json: async () => ({ticket_id: 'AL-1', is_hydrated: false,
+                availability: 'unavailable', data_source: 'unavailable', events: [],
+                coverage: {required_session_ids: ['owner'], complete_session_ids: [], diagnostics: ['Source unavailable']}}) });
+        vi.stubGlobal('fetch', fetcher);
+        expect((await fetchWorkspaceById('AL-1', undefined, selected)).data.workspace_path).toBe(selected);
+        await fetchWorkspaceEvents('AL-1', selected);
+        for (const [index, url] of fetcher.mock.calls.entries()) {
+            const request = new URL(String(url[0]), 'http://fixture');
+            expect(request.pathname).toBe(`/api/workspaces/AL-1${index === 1 ? '/events' : ''}`);
+            expect(request.searchParams.get('workspace')).toBe(selected);
+        }
+    });
+
+    it('keeps duplicate ticket locations distinct in API rows and exposes root diagnostics', async () => {
+        const ledger = mockAgenticMetricsLedgers['AL-1']!;
+        const diagnostics = [{ path: '/unavailable/root', message: 'Root unavailable; update configuration or retry.' },
+            { path: '/records/one', ticket_id: 'AL-1', message: 'More than one ledger matches; select a location.' }];
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => [
+            {...ledger, workspace_path: '/records/one'}, {...ledger, workspace_path: '/records/two'}],
+            headers: { get: () => JSON.stringify(diagnostics) } }));
+        const response = await fetchWorkspaces();
+        expect(response.data.map((row) => [row.ticket_id, row.workspace_path])).toEqual([['AL-1', '/records/one'], ['AL-1', '/records/two']]);
+        expect(response.diagnostics).toEqual(diagnostics);
+    });
+
+    it('surfaces server recovery instructions for ambiguous or interrupted workspaces', async () => {
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 409,
+            json: async () => ({error: 'ambiguous_workspace', message: 'AL-1 has two locations; select a workspace directory.'}) }));
+        await expect(fetchWorkspaceById('AL-1')).rejects.toThrow('AL-1 has two locations; select a workspace directory.');
+    });
 });

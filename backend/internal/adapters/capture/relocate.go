@@ -820,7 +820,7 @@ func acquireRelocationPublications(ctx context.Context, db *sql.DB, project stri
 		} else if e != nil {
 			return nil, e
 		}
-		lock, e := AcquirePublication(ctx, path)
+		lock, e := AcquirePublication(ctx, path, project)
 		if e != nil {
 			for _, prior := range locks {
 				e = errors.Join(e, prior.Close())

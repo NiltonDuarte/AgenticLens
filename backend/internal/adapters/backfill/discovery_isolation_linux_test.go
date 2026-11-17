@@ -40,7 +40,7 @@ func TestWorkspaceDiscoveryPermissionProbe(t *testing.T) {
 	_, denied := os.ReadDir(blocked)
 	outcome := discoveryProbeOutcome{PermissionDenied: os.IsPermission(denied)}
 	if os.Getenv("AL_TEST_DISCOVERY_COMMAND") == "migration" {
-		report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{WorkspacesDir: filepath.Join(root, "records"), TicketID: os.Getenv("AL_TEST_DISCOVERY_TICKET"), TargetVersion: domain.CurrentSchemaVersion})
+		report, err := backfill.NewMigrationRunner(nil).Run(backfill.MigrationOptions{Project: filepath.Join(root, "records"), TicketID: os.Getenv("AL_TEST_DISCOVERY_TICKET"), Workspace: os.Getenv("AL_TEST_DISCOVERY_SELECTION"), TargetVersion: domain.CurrentSchemaVersion})
 		if err != nil {
 			outcome.Error = err.Error()
 		}
@@ -52,7 +52,7 @@ func TestWorkspaceDiscoveryPermissionProbe(t *testing.T) {
 			}
 		}
 	} else {
-		report, err := backfill.NewEngine().Execute(backfill.BackfillOptions{WorkspacesDir: filepath.Join(root, "records"), TicketID: os.Getenv("AL_TEST_DISCOVERY_TICKET"), Source: "codex"})
+		report, err := backfill.NewEngine().Execute(backfill.BackfillOptions{Project: filepath.Join(root, "records"), TicketID: os.Getenv("AL_TEST_DISCOVERY_TICKET"), Workspace: os.Getenv("AL_TEST_DISCOVERY_SELECTION"), Source: "codex"})
 		if err != nil {
 			outcome.Error = err.Error()
 		}
@@ -75,7 +75,7 @@ func TestWorkspaceDiscoveryPermissionProbe(t *testing.T) {
 	os.Exit(0)
 }
 
-func runDiscoveryPermissionProbe(t *testing.T, root, blocked, command, ticket string) discoveryProbeOutcome {
+func runDiscoveryPermissionProbe(t *testing.T, root, blocked, command, ticket string, selection ...string) discoveryProbeOutcome {
 	t.Helper()
 	executable, err := os.Executable()
 	if err != nil {
@@ -117,6 +117,9 @@ func runDiscoveryPermissionProbe(t *testing.T, root, blocked, command, ticket st
 	cmd := exec.CommandContext(ctx, executable, "-test.run=^TestWorkspaceDiscoveryPermissionProbe$")
 	cmd.Dir = root
 	cmd.Env = append(os.Environ(), "AL_TEST_DISCOVERY_CHILD=1", "AL_TEST_DISCOVERY_ROOT="+root, "AL_TEST_DISCOVERY_BLOCKED="+blocked, "AL_TEST_DISCOVERY_COMMAND="+command, "AL_TEST_DISCOVERY_TICKET="+ticket)
+	if len(selection) > 0 {
+		cmd.Env = append(cmd.Env, "AL_TEST_DISCOVERY_SELECTION="+selection[0])
+	}
 	if credentials != nil {
 		cmd.SysProcAttr = &syscall.SysProcAttr{Credential: credentials}
 	}
@@ -136,8 +139,17 @@ func runDiscoveryPermissionProbe(t *testing.T, root, blocked, command, ticket st
 
 func TestWorkspaceDiscoveryIsolatesUnreadableChildren(t *testing.T) {
 	for _, command := range []string{"migration", "backfill"} {
-		for _, ticket := range []string{"GOOD-01", "", "ZZ-INACCESSIBLE"} {
-			t.Run(command+"/"+ticket, func(t *testing.T) {
+		for _, selection := range []struct {
+			name, ticket string
+			explicit     bool
+		}{
+			{"explicit-readable", "GOOD-01", true},
+			{"implicit-readable", "GOOD-01", false},
+			{"unfiltered-siblings", "", false},
+			{"implicit-inaccessible", "ZZ-INACCESSIBLE", false},
+		} {
+			t.Run(command+"/"+selection.name, func(t *testing.T) {
+				ticket := selection.ticket
 				root := migrationTestRoot(t)
 				originals := make(map[string][]byte)
 				for _, id := range []string{"GOOD-01", "GOOD-02", "ZZ-INACCESSIBLE"} {
@@ -160,18 +172,36 @@ func TestWorkspaceDiscoveryIsolatesUnreadableChildren(t *testing.T) {
 						t.Error(err)
 					}
 				})
-				outcome := runDiscoveryPermissionProbe(t, root, blocked, command, ticket)
+				selectedHome := ""
+				if selection.explicit {
+					selectedHome = filepath.Join(root, "records", ticket)
+				}
+				outcome := runDiscoveryPermissionProbe(t, root, blocked, command, ticket, selectedHome)
 				want := 2
 				if ticket == "GOOD-01" {
 					want = 1
 				} else if ticket == "ZZ-INACCESSIBLE" {
 					want = 0
 				}
-				if outcome.Error != "" || outcome.Scanned != want || outcome.Updated != want || len(outcome.Tickets) != want {
+				rejected := ticket != "" && !selection.explicit
+				if rejected {
+					want = 0
+					if !strings.Contains(outcome.Error, "unavailable") || !strings.Contains(outcome.Error, blocked) || !strings.Contains(outcome.Error, "incomplete") {
+						t.Fatalf("partial enumeration claimed targeted uniqueness/absence: %+v", outcome)
+					}
+				} else if outcome.Error != "" {
+					t.Fatalf("readable explicit home or batch failed: %+v", outcome)
+				}
+				if outcome.Scanned != want || outcome.Updated != want || len(outcome.Tickets) != want {
 					t.Fatalf("child failure blocked readable selected/sibling cleanup: %+v", outcome)
 				}
-				if len(outcome.Diagnostics) != 1 || !strings.Contains(outcome.Diagnostics[0], blocked) || !strings.Contains(outcome.Diagnostics[0], "incomplete") {
+				if !rejected && len(outcome.Diagnostics) == 0 {
 					t.Fatalf("uninspected coverage was concealed: %+v", outcome)
+				}
+				for _, diagnostic := range outcome.Diagnostics {
+					if !strings.Contains(diagnostic, blocked) || !strings.Contains(diagnostic, "incomplete") {
+						t.Fatalf("uninspected coverage diagnostic lost its actual path/scope: %+v", outcome)
+					}
 				}
 				if err := os.Chmod(blocked, 0755); err != nil {
 					t.Fatal(err)
@@ -181,7 +211,7 @@ func TestWorkspaceDiscoveryIsolatesUnreadableChildren(t *testing.T) {
 					if err != nil {
 						t.Fatal(err)
 					}
-					shouldChange := id != "ZZ-INACCESSIBLE" && (ticket == "" || ticket == id)
+					shouldChange := !rejected && id != "ZZ-INACCESSIBLE" && (ticket == "" || ticket == id)
 					if shouldChange {
 						expected := bytes.Replace(before, []byte(`,"generation_policy":{"skills":true,"delegations":true,"anomalies":true}`), nil, 1)
 						assertRawCleanupJSONEqual(t, expected, body)

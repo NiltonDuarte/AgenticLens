@@ -14,6 +14,7 @@ import (
 	"math"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -97,7 +98,7 @@ func canonicalPolicyLedger(t *testing.T, f captureGenerationFixture) domain.Agen
 	if _, err := adapters.LoadExistingFactLedger(f.output); err != nil {
 		t.Fatal(err)
 	}
-	request := httptest.NewRequest(http.MethodGet, "/api/workspaces/TEST-100", nil)
+	request := httptest.NewRequest(http.MethodGet, "/api/workspaces/TEST-100?workspace="+url.QueryEscape(filepath.Dir(f.output)), nil)
 	request.SetPathValue("ticketId", "TEST-100")
 	recorder := httptest.NewRecorder()
 	adaptershttp.WorkspaceDetailHandler(filepath.Join(f.project, "records")).ServeHTTP(recorder, request)
@@ -155,6 +156,9 @@ func TestGenerateOptionalMetricsOmissionRetainedOwnersAndSummary(t *testing.T) {
 		t.Run(fmt.Sprintf("policy_%03b", mask), func(t *testing.T) {
 			f := newCaptureGenerationFixture(t)
 			f.output = filepath.Join(f.project, "records", "TEST-100", "agentic_metrics.json")
+			if err := os.MkdirAll(filepath.Dir(f.output), 0700); err != nil {
+				t.Fatal(err)
+			}
 			source := f.write(t, 300000)
 			occurrences := `{"timestamp":"2026-01-01T00:00:03Z","type":"response_item","payload":{"type":"function_call","call_id":"skill-call","name":"load_skill","arguments":"{\"name\":\"inspect-source\"}"}}
 {"timestamp":"2026-01-01T00:00:04Z","type":"response_item","payload":{"type":"function_call","call_id":"spawn-call","name":"spawn_agent","arguments":"{\"agent_type\":\"tester\",\"task_name\":\"review-source\"}"}}
@@ -164,7 +168,7 @@ func TestGenerateOptionalMetricsOmissionRetainedOwnersAndSummary(t *testing.T) {
 				t.Fatal(err)
 			}
 			base := readCaptureFile(t, filepath.Join(f.project, ".agenticlens-config.yaml"))
-			summary := filepath.Join(f.project, "SUMMARY.md")
+			summary := filepath.Join(filepath.Dir(f.output), "SUMMARY.md")
 			prose := "# Human summary\n\nKeep this user-authored paragraph.\n"
 			if err := os.WriteFile(summary, []byte(prose), 0600); err != nil {
 				t.Fatal(err)
@@ -583,7 +587,7 @@ CREATE TABLE session_message(id TEXT PRIMARY KEY,session_id TEXT,type TEXT,seq I
 						t.Fatalf("transient feedback leaked to artifact: %s", body)
 					}
 				}
-				request := httptest.NewRequest(http.MethodGet, "/api/workspaces/TEST-100", nil)
+				request := httptest.NewRequest(http.MethodGet, "/api/workspaces/TEST-100?workspace="+url.QueryEscape(filepath.Dir(f.output)), nil)
 				request.SetPathValue("ticketId", "TEST-100")
 				// Publish a copy under the configured workspace root for the actual API reader.
 				apiPath := filepath.Join(f.project, "records", "TEST-100")
@@ -593,6 +597,7 @@ CREATE TABLE session_message(id TEXT PRIMARY KEY,session_id TEXT,type TEXT,seq I
 				if err := os.WriteFile(filepath.Join(apiPath, "agentic_metrics.json"), readCaptureFile(t, f.output), 0600); err != nil {
 					t.Fatal(err)
 				}
+				request.URL.RawQuery = "workspace=" + url.QueryEscape(apiPath)
 				recorder := httptest.NewRecorder()
 				adaptershttp.WorkspaceDetailHandler(filepath.Join(f.project, "records")).ServeHTTP(recorder, request)
 				if recorder.Code != http.StatusOK || strings.Contains(recorder.Body.String(), "AgenticLens checkpoint:") || strings.Contains(recorder.Body.String(), "checkpoint_evidence") {
