@@ -1,4 +1,4 @@
-# Test evidence review: AL-63 iteration 02
+# Test evidence review: AL-63
 
 **Scope/revision:** Test-oracle strength for the capability audit at `f4152225af06e2594477574c0e9f175a81218053`. Requested profile was Codex / gpt-6-luna / medium; observed runtime settings are unavailable, so this is acknowledged/requested attribution only. I did not inspect sibling reports. Application/test sources are frozen and were inspected only. No tests were run; parent reports `make` passed on unchanged app inputs at `0a8cfcee`.
 
@@ -22,7 +22,7 @@ Native versus constructed evidence must remain explicit: Codex rollout JSON, Ope
 
 ## Commands and outcome
 
-- `git status --short` — ticket plan modified and iteration 02 untracked before report; preserved.
+- `git status --short` — ticket plan modified and audit evidence untracked before report; preserved.
 - `git rev-parse HEAD` — `f4152225af06e2594477574c0e9f175a81218053`.
 - `rg --files .agents | rg 'review-context|canonical'` — located `.agents/agent/references/review-context.md`; read shared context and canonical review skill.
 - `rg -n '^func Test' ...` — inventoried named tests cited above; no execution implied.

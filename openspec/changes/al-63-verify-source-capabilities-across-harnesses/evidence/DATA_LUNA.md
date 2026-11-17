@@ -1,6 +1,6 @@
 # Data review: exact-owner recovery and preservation
 
-**Scope:** AL-63 iteration 02, data focus; application candidate `f4152225af06e2594477574c0e9f175a81218053`. Requested profile: Codex / gpt-6-luna / medium (acknowledged from dispatch; runtime model metadata was not independently available). Static support below is distinct from fixture-verified behavior. No live native stores were inspected.
+**Scope:** AL-63, data focus; application candidate `f4152225af06e2594477574c0e9f175a81218053`. Requested profile: Codex / gpt-6-luna / medium (acknowledged from dispatch; runtime model metadata was not independently available). Static support below is distinct from fixture-verified behavior. No live native stores were inspected.
 
 | Family | Static capability | Existing fixture behavior / limits |
 |---|---|---|

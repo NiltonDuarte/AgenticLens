@@ -1,6 +1,6 @@
-# AL-63 iteration 02 behavior evidence — Sol
+# AL-63 behavior evidence — Sol
 
-Run `/root/behavior_sol`, discovery first pass; application revision `f4152225af06e2594477574c0e9f175a81218053` (parent identifies the same application as `eb7d169c`). Requested/inherited profile: `gpt-6.1-sol/high`; no independent runtime model, usage or cost metadata available. Product, tests and runtime files remained read-only. Initial status contained only the restored ticket modification and untracked iteration 02 directory. No sibling persona/report was read.
+Run `/root/behavior_sol`, discovery first pass; application revision `f4152225af06e2594477574c0e9f175a81218053` (parent identifies the same application as `eb7d169c`). Requested/inherited profile: `gpt-6.1-sol/high`; no independent runtime model, usage or cost metadata available. Product, tests and runtime files remained read-only. Initial status contained only the restored ticket modification and untracked audit directory. No sibling persona/report was read.
 
 **Scoped outcome: CHANGES_REQUESTED for the existing product behaviors below.** AL-63 is a discovery audit: these findings propose follow-up owners, not implementation within this ticket. Historical hydration is implemented for all three families; live observability is narrower. No claim of a whole-repository review or merge approval.
 

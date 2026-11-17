@@ -10,9 +10,9 @@ The November 17 review used application revision `387624b3`, which integrates ma
 
 Focused checks used `go test -count=1` from `backend/`. The CLI, backfill, OpenCode and live packages passed the selected cases for child read errors, manual generation, duplicate location selection, insufficient discovery coverage, child proof, structured execution and mixed-source hydration. The three additional backfill cases for skill/task snapshots, v2 grandchildren and growing duration passed. The November 17 service probes and the CLI command are recorded in the matrix.
 
-Eight independent reviews evaluated the original audit revision. Their findings, identities and initial incomplete outcomes remain attributed. The audit owner rechecked the affected paths and discovered the mixed-store historical qualification during this refresh. [Review record](evidence/iterations/02/REVIEW.md) · [Findings and dispositions](evidence/iterations/02/REVIEW_SUMMARY.json)
+Eight independent reviews evaluated the original audit revision. Their findings, identities and initial incomplete outcomes remain attributed. The audit owner rechecked the affected paths and discovered the mixed-store historical qualification during this refresh. [Review record](evidence/REVIEW.md) · [Findings and dispositions](evidence/REVIEW_SUMMARY.json)
 
-Full `make` exited 0 on the integrated revision, including backend race and integration tests, 231 frontend unit tests, 804 frontend integration tests and four native build targets. Strict OpenSpec validation passed, as did all three repository workflow tests. The report and retained evidence links resolve locally.
+Full `make` exited 0 on the integrated revision, including backend race and integration tests, 231 frontend unit tests, 804 frontend integration tests and four native build targets. Strict OpenSpec validation passed, as did all three repository workflow tests. The layout update passed strict OpenSpec validation and a link check across the change. The application and build inputs match the tested revision.
 
 ## Telemetry
 
@@ -24,7 +24,7 @@ OpenCode v1 metadata-backed child links still disappear. Codex failed/error func
 
 ## Pull request
 
-This audit updates the eight-capability matrix for OpenCode v1, OpenCode v2 and Codex and transfers AL-63 execution to OpenSpec. A replay against integrated main corrected historical OpenCode coverage. Both single-family stores can hydrate their recorded owners, while an intact mixed store returns unavailable with a diagnostic. Codex hydrated all five AL-55 owners and exposed partial coverage when four rollouts were missing.
+This audit updates the eight-capability matrix for OpenCode v1, OpenCode v2 and Codex and collects its review records directly under the OpenSpec change’s evidence directory. A replay against integrated main corrected historical OpenCode coverage. Both single-family stores can hydrate their recorded owners, while an intact mixed store returns unavailable with a diagnostic. Codex hydrated all five AL-55 owners and exposed partial coverage when four rollouts were missing.
 
 Exact-owner backfill passed twice per source on disposable copies. The report retains the broken v1 child-link and Codex error-count cases, the v2 live limit and the bounds of the native evidence. Original roadmap acceptance is preserved.
 

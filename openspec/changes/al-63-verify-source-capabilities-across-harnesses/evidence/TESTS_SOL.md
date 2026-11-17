@@ -1,6 +1,6 @@
 # AL-63 test evidence audit
 
-Scope: iteration 02, first independent tests/Sol pass at `f4152225af06e2594477574c0e9f175a81218053`. Assigned profile: GPT-6.1 Sol/high; runtime model and usage were not independently inspected. Product and tests remained read-only. No sibling conclusions were read.
+Scope: first independent tests/Sol pass at `f4152225af06e2594477574c0e9f175a81218053`. Assigned profile: GPT-6.1 Sol/high; runtime model and usage were not independently inspected. Product and tests remained read-only. No sibling conclusions were read.
 
 **INCOMPLETE for a claim that all requested preservation scenarios are verified across both OpenCode families.** The evidence inventory is complete enough for a capability matrix with explicit limits. No blocking product correctness defect was established. Existing adapter fixtures demonstrate substantial behavior, but neither suite success nor a test named “runtime evidence” establishes current native harness parity.
 
@@ -44,6 +44,6 @@ Live limitations are source facts rather than test defects: `live/service.go:266
 
 ## Verification provenance
 
-Executed read-only commands included `git status --short`, `git rev-parse HEAD`, `git diff --stat f4152225 -- backend web Makefile`, `git diff --stat 0a8cfcee f4152225 -- backend web Makefile`, scoped `rg -n '^func Test|t.Run\('` inventories, and bounded source/assertion reads. Both application/test/Makefile diffs were empty. Initial worktree contained the parent's ticket-spec modification and untracked iteration directory; these were preserved.
+Executed read-only commands included `git status --short`, `git rev-parse HEAD`, `git diff --stat f4152225 -- backend web Makefile`, `git diff --stat 0a8cfcee f4152225 -- backend web Makefile`, scoped `rg -n '^func Test|t.Run\('` inventories, and bounded source/assertion reads. Both application/test/Makefile diffs were empty. Initial worktree contained the parent's ticket-spec modification and untracked audit directory; these were preserved.
 
 Reused verification: parent's successful `make` at `0a8cfcee`, reported as 190 frontend unit tests, 678 frontend integration tests and backend race/integration passes. This pass establishes unchanged inputs and inspects the actual oracles; it does not independently attest the parent's output. No whole suite, native walkthrough, mutation, new test or disposable runtime probe was executed by this reviewer. Current harness versions, native source completeness and actual AL-55 recovery remain the parent's evidence responsibility. Missing native evidence must remain unavailable/unexecuted rather than fixture-verified parity.
